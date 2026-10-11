@@ -16,6 +16,10 @@
 #       --keep             leave the machine running afterwards (stop it with `stop`)
 #   build_release.sh mac [--version V] [--config C]   package the Mac build on this Mac
 #   build_release.sh sign APP ZIP           sign, notarize and zip a Mac .app (mac does it)
+#   build_release.sh release TAG --notes FILE [REF] [--on-demand]
+#                                           all of it: tag REF (default HEAD) as TAG (v0.1.2), build
+#                                           Windows and Linux in AWS and the Mac in the release worktree
+#                                           at once, write SHA256SUMS, publish a GitHub pre-release
 #   build_release.sh test [VERSION] [options]  a GPU machine (g6.2xlarge) with VERSION's Windows package
 #                                           (default: the newest), then the remote desktop to it
 #       --linux            Ubuntu and the Linux package instead; checks the game reaches the home screen
@@ -701,6 +705,62 @@ cmd_dcv() {
 		--parameters 'portNumber=["8443"],localPortNumber=["18443"]'
 }
 
+# ---------------------------------------------------------------- release
+
+# The Mac build runs here, in the worktree: other sessions keep uncommitted
+# work in the main tree, and `mac` packages the working tree.
+release_tree=${AUTOCRAFT_RELEASE_TREE:-$HOME/git/dev/autocraft-release}
+github_repo=ValiDraganescu/ringshadow
+
+cmd_release() {
+	local tag="" notes="" ref=HEAD market=()
+	while [ $# -gt 0 ]; do
+		case $1 in
+			--notes) notes=$2; shift 2 ;;
+			--on-demand) market=(--on-demand); shift ;;
+			-*) die "unknown option $1" ;;
+			*) if [ -z "$tag" ]; then tag=$1; else ref=$1; fi; shift ;;
+		esac
+	done
+	[[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "usage: build_release.sh release vX.Y.Z --notes FILE [REF]"
+	[ -s "$notes" ] || die "--notes: the release notes, a Markdown file (docs/builds.md, A release)"
+	notes=$(cd "$(dirname "$notes")" && pwd)/$(basename "$notes")
+	local version=${tag#v}
+	local sha; sha=$(git -C "$repo" rev-parse --verify "$ref^{commit}") || die "no commit $ref"
+	git -C "$repo" fetch --quiet --tags origin
+	[ -n "$(git -C "$repo" branch -r --contains "$sha")" ] || die "$sha is not on GitHub yet; push it first"
+	if git -C "$repo" rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+		[ "$(git -C "$repo" rev-parse "$tag^{commit}")" = "$sha" ] || die "$tag already names another commit"
+	else
+		git -C "$repo" tag -a "$tag" "$sha" -m "Ringshadow $version"
+	fi
+	[ -d "$release_tree/.git" ] || [ -f "$release_tree/.git" ] || die "no release worktree at $release_tree (git worktree add --detach $release_tree)"
+	[ -z "$(git -C "$release_tree" status --porcelain --untracked-files=no)" ] || die "$release_tree has changes"
+	git -C "$release_tree" fetch --quiet origin
+	git -C "$release_tree" checkout --quiet --detach "$sha"
+
+	local dir="$releases/$version"
+	mkdir -p "$dir"
+	say "release $tag ($sha): Windows and Linux in AWS, the Mac in $release_tree; logs in $dir"
+	"$0" build "$sha" --version "$version" ${market[@]+"${market[@]}"} >"$dir/release-aws.log" 2>&1 &
+	local aws_pid=$!
+	"$release_tree/unreal/Tools/release/build_release.sh" mac --version "$version" >"$dir/release-mac.log" 2>&1 &
+	local mac_pid=$!
+	local failed=""
+	wait $mac_pid || failed="the Mac ($dir/release-mac.log)"
+	say "Mac: ${failed:-done}"
+	wait $aws_pid || failed="${failed:+$failed, }Windows and Linux ($dir/release-aws.log)"
+	[ -z "$failed" ] || die "failed: $failed. The tag $tag is only local (git tag -d $tag)."
+	say "Windows and Linux: done"
+
+	cp "$release_tree/unreal/Saved/Releases/$version/Ringshadow-$version-mac.zip" "$dir/"
+	local files=("Ringshadow-$version-windows.zip" "Ringshadow-$version-linux.tar.gz" "Ringshadow-$version-mac.zip")
+	( cd "$dir" && shasum -a 256 "${files[@]}" >SHA256SUMS )
+	git -C "$repo" push --quiet origin "$tag"
+	( cd "$dir" && gh release create "$tag" --repo "$github_repo" --prerelease --verify-tag \
+		--title "Ringshadow $version" --notes-file "$notes" "${files[@]}" SHA256SUMS )
+}
+
 # ---------------------------------------------------------------- upkeep
 
 cmd_status() {
@@ -730,6 +790,6 @@ if [ "${1:-}" = --region ]; then
 	export AWS_REGION=$2; shift 2
 fi
 case ${1:-} in
-	infra|setup|rdp|image|build|mac|sign|test|dcv|status|stop) c=$1; shift; "cmd_$c" "$@" ;;
-	*) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	infra|setup|rdp|image|build|mac|sign|release|test|dcv|status|stop) c=$1; shift; "cmd_$c" "$@" ;;
+	*) sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

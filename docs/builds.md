@@ -31,16 +31,25 @@ an x86 VM on Apple silicon is too slow for a cook, so those two need a real
 x86 machine.
 
 The packages land in `unreal/Saved/Releases/<version>/` (ignored by git), with
-`SHA256SUMS`. The script uploads nothing to GitHub. Publishing is a GitHub
-Release on the public repo, made by hand with `gh`: copy the Mac zip in beside
-the other two, rewrite `SHA256SUMS` over the three packages (`shasum -a 256`),
-then
+`SHA256SUMS`. Publishing is a GitHub pre-release on the public repo
+(`ValiDraganescu/ringshadow`), and only when the developer says to release.
+One command does all of it:
 
 ```sh
-gh release create v0.1.0 --prerelease --target <commit> --title "Ringshadow 0.1.0" \
-  --notes-file notes.md Ringshadow-<v>-windows.zip Ringshadow-<v>-linux.tar.gz \
-  Ringshadow-<v>-mac.zip SHA256SUMS
+unreal/Tools/release/build_release.sh release v0.1.2 --notes notes.md   # HEAD; or give a commit
 ```
+
+1. Tags the commit, locally.
+2. Builds Windows and Linux in AWS (`build`, log `release-aws.log`) and the
+   Mac in the release worktree (`mac`, log `release-mac.log`), at the same time.
+3. Copies the Mac zip in beside the other two and writes `SHA256SUMS` over
+   the three.
+4. Pushes the tag and runs `gh release create --prerelease` with the notes.
+
+If a build fails, nothing is published and the tag stays local. `--on-demand`
+goes to the AWS build, and `--region` before `release` too. The notes are
+written by hand: what changed, the download table, how to install, the
+known problems, like v0.1.1's on GitHub.
 
 The Windows symbols stay in S3. The first release, `v0.1.0` from `a9e3d2e`,
 went up on 2026-10-09: Windows and Linux 416 and 419 MB, the Mac 535 MB,
@@ -48,8 +57,8 @@ signed and notarized.
 
 The release build tree is the worktree `~/git/dev/autocraft-release`. Other
 sessions keep uncommitted work in `~/git/dev/autocraft`, and `mac` packages
-the working tree, so the Mac build runs from the worktree after a
-`git -C ~/git/dev/autocraft-release checkout --detach <commit>`. Its
+the working tree, so the Mac build runs from the worktree: `release` checks
+it out at the commit (`AUTOCRAFT_RELEASE_TREE` names another). Its
 `unreal/Saved` and `Intermediate` stay between releases, so a release
 recompiles only what changed.
 
