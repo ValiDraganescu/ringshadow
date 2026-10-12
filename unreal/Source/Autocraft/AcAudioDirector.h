@@ -72,8 +72,20 @@ namespace AcSound
 	/// `MusicVolume` under it (`Settings.music`).
 	inline constexpr float Volume = 0.6f;
 	inline constexpr float MusicVolume = 0.5f;
+	/// The world's sounds (units, buildings, the wind and rain; not the
+	/// in-ear ones) under the top-down view and while driving: quieter
+	/// from above, louder in the cockpit, where the driven unit hears only
+	/// as far as it sees (`UAcPilotAudio::HearingRange`).
+	inline constexpr float RtsWorldGain = 0.7f;
+	inline constexpr float DriveWorldGain = 1.2f;
+	/// How far a sound carries while driving, times the driven unit's
+	/// hearing (1.5 × its sight): the blasts, cannons, shells and deaths
+	/// 1.33 (2 × sight), the drills, welders, steps and hums 0.67 (its
+	/// sight), the rest 1. The top-down view hears what it shows.
+	AUTOCRAFT_API float Carry(FName Sound);
 
-	inline constexpr float DrillGain = 0.25f;
+	/// The Prospector's drill: 30% under the Swift game's 0.25.
+	inline constexpr float DrillGain = 0.175f;
 	inline constexpr float WeldLoopGain = 0.4f;
 	inline constexpr float FireflyEngineGain = 0.22f;
 	inline constexpr float DropshipEngineGain = 0.24f;
@@ -211,8 +223,9 @@ class AUTOCRAFT_API FAcAudioRules
 {
 public:
 	/// How much of a sound at a ground point reaches the ears, 0…1
-	/// (`AudioDirector.reach`). Default: all of it.
-	std::function<float(ac::Vec2)> Reach = [](ac::Vec2) { return 1.f; };
+	/// (`AudioDirector.reach`), for a sound that carries `Carry` times the
+	/// hearing range (`AcSound::Carry`). Default: all of it.
+	std::function<float(ac::Vec2, float Carry)> Reach = [](ac::Vec2, float) { return 1.f; };
 	/// How many variants a sound has (0: none on hand, it never plays).
 	std::function<int32(FName)> Variants = [](FName) { return 1; };
 	/// The local player: its buildings hit wake the Oracle.
@@ -378,7 +391,11 @@ public:
 	std::function<bool(const FVector& Ears, const FVector& Sound)> Blocked;
 
 	/// How much of a sound at `P` reaches the ears (`AudioDirector.reach`).
-	float Reach(ac::Vec2 P) const;
+	/// While driving: as far as the driven unit hears, times `Carry`,
+	/// whatever the listener.
+	float Reach(ac::Vec2 P, float Carry = 1.f) const;
+	/// `AcSound::RtsWorldGain` or, while driving, `DriveWorldGain`.
+	float WorldGain() const { return Ears ? AcSound::DriveWorldGain : AcSound::RtsWorldGain; }
 	/// Its pan −1…1 in the top-down view (`AudioDirector.pan`).
 	float Pan(ac::Vec2 P) const;
 

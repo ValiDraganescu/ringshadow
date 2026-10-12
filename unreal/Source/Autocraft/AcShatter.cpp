@@ -1035,6 +1035,9 @@ void FAcShatterLibrary::Read(FJob& J)
 			S.Part = P;
 			S.Mesh = K;
 			S.Asset = Mesh;
+			// Held from the GC: the cut reads it over several frames, and a
+			// whole piece draws it (a kind not on screen holds it nowhere else).
+			Keep.Emplace(Mesh);
 			S.bSeed = Shown[P];
 			S.AssetBox = Mesh->GetBoundingBox();
 			const FString MeshPath = X.Mesh.ToString();
@@ -1267,6 +1270,8 @@ FAcShatterLibrary::FDraw FAcShatterLibrary::MaterialFor(const AcShatter::FModel&
 	UMaterialInterface* Src = Cut.Model->Parts[Sub.Part].Meshes[Sub.Mesh].LoadMaterial();
 	if (!Src) return {};
 	if (const FDraw* Known = Materials.Find(Src)) return *Known;
+	// Held from the GC: `Materials` keys on it and a wreck may draw it as is.
+	Keep.Emplace(Src);
 	FDraw D;
 	static TWeakObjectPtr<UMaterialInterface> Ember;
 	if (!Ember.IsValid()) Ember = LoadObject<UMaterialInterface>(nullptr, MEmber);

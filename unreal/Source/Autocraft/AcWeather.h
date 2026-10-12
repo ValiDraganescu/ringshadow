@@ -27,7 +27,9 @@
 // Flags: `-AcWeather=clear|cloudy|rain|storm` (or a number),
 // `-AcWeatherSeed=N` (else the seed is the game's id, so a saved
 // game keeps its weather), `-AcWeatherT=S` (sample at S seconds of game time
-// instead of the game's, for shots of a moment of the schedule).
+// instead of the game's, for shots of a moment of the schedule),
+// `-AcWeatherFrom=S -AcWeatherSpeed=X` (a time-lapse for clips: the schedule
+// from S seconds on, X times as fast; the clouds race with it).
 #pragma once
 
 #include "CoreMinimal.h"

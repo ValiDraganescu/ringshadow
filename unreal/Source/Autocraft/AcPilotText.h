@@ -122,6 +122,9 @@ struct FAcPilotInfo
 	/// A vehicle's gun marker: off the view's centre in half the view's
 	/// height (+y up). Unset: none (E4 fills it).
 	TOptional<FVector2D> Gun;
+	/// A soldier's spread cone (`Simulation::cone`) in half the view's
+	/// height: the reticle's brackets open by it. Unset: none.
+	TOptional<double> Cone;
 };
 
 /// What `GameCore` says about the driven unit this frame (`PilotFrame`).

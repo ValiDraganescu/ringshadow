@@ -644,6 +644,7 @@ template <class IO> void fields(IO& io, Unit& v) {
     io("autoFollow", v.autoFollow);
     io("burstFrom", v.burstFrom);
     io("firedAt", v.firedAt);
+    io("spread", v.spread);
     io("railCooldown", v.railCooldown);
     io("shotFrom", v.shotFrom);
     io("shield", v.shield);

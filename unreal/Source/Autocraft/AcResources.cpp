@@ -4,6 +4,7 @@
 #include "AcDaylight.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
+#include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
@@ -356,6 +357,13 @@ void AAcResources::DrawParticles(const double Now)
 	}
 	// The engine plane faces +Z: turn it to face the eye.
 	const FQuat Facing = FRotationMatrix::MakeFromZX(-Forward, Right).ToQuat();
+	// Driving, the fog of war's pass is off and the veil only darkens what
+	// writes depth: these glowing sprites would shine through the dark from
+	// every well and field on the map. Only those the side sees now show.
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const AAcPilotPawn* Pilot = AAcPilotPawn::Find(this);
+	const bool bInSightOnly = Sim && Sim->IsRunning() && Pilot && Pilot->Driving();
+	auto Shown = [&](const ac::Vec2 At) { return !bInSightOnly || Sim->Simulation().sees(Sim->LocalPlayer(), At); };
 
 	auto Upload = [&](UInstancedStaticMeshComponent* C, const int32 Count)
 	{
@@ -384,6 +392,7 @@ void AAcResources::DrawParticles(const double Now)
 		const double MaxLife = Life + LifeVar * 0.5;
 		for (const FWell& W : Wells)
 		{
+			if (!Shown(W.Position)) continue;
 			const int64 K1 = int64(FMath::FloorToDouble(Now * Rate));
 			const int64 K0 = int64(FMath::FloorToDouble((Now - MaxLife) * Rate));
 			for (int64 K = K0; K <= K1; ++K)
@@ -420,7 +429,7 @@ void AAcResources::DrawParticles(const double Now)
 		const double MaxLife = Life + LifeVar * 0.5;
 		for (const FPatch& Patch : Patches)
 		{
-			if (Patch.Stage <= 0) continue;
+			if (Patch.Stage <= 0 || !Shown(AcSpace::ToSim(Patch.Emitter.GetTranslation()))) continue;
 			const int64 K1 = int64(FMath::FloorToDouble(Now * Rate));
 			const int64 K0 = int64(FMath::FloorToDouble((Now - MaxLife) * Rate));
 			for (int64 K = K0; K <= K1; ++K)

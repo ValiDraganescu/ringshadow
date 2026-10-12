@@ -63,8 +63,10 @@ struct SystemRandom {
 
 /// The music player's playlist (docs/music.md): every track in a shuffled
 /// order and the one playing. Past the last track it shuffles again,
-/// never starting the new round on the track just played. Pure: the audio
-/// plays what it says.
+/// never starting the new round on the track just played. A track listed
+/// twice plays twice a round (the station's ads have weights, docs/music.md),
+/// never twice running when the round allows it. Pure: the audio plays what
+/// it says.
 template <class Track>
 struct MusicQueue {
     /// Read only (Swift's `private(set)`).
@@ -78,11 +80,13 @@ struct MusicQueue {
 
     template <class G> MusicQueue(std::vector<Track> tracks, G& g) : order(std::move(tracks)) {
         swiftrandom::shuffle(order, g);
+        spread(std::nullopt);
     }
 
     explicit MusicQueue(std::vector<Track> tracks) : order(std::move(tracks)) {
         SystemRandom g;
         swiftrandom::shuffle(order, g);
+        spread(std::nullopt);
     }
 
     std::optional<Track> current() const {
@@ -99,12 +103,43 @@ struct MusicQueue {
         if (order.size() > 1 && order[0] == last) {
             std::swap(order[0], order[static_cast<size_t>(swiftrandom::random(g, 1, static_cast<int64_t>(order.size())))]);
         }
+        spread(last);
         index = 0;
     }
 
     void next() {
         SystemRandom g;
         next(g);
+    }
+
+    /// Swaps a track that would play right after itself (after `before`
+    /// at the start) with the first later one that differs, or, at the end
+    /// of the round, with an earlier one whose neighbours both swaps keep
+    /// apart. No-op when every track is listed once, so a seeded order
+    /// stays Swift's.
+    void spread(std::optional<Track> before) {
+        const size_t n = order.size();
+        // `t` may stand at `k`; `other`, the swap's other place, then holds
+        // a different track, so it never clashes.
+        const auto fits = [&](const Track& t, size_t k, size_t other) {
+            const bool left = k == 0 ? before && *before == t : k - 1 != other && order[k - 1] == t;
+            const bool right = k + 1 < n && k + 1 != other && order[k + 1] == t;
+            return !left && !right;
+        };
+        for (size_t i = 0; i < n; ++i) {
+            const std::optional<Track> prev = i == 0 ? before : std::optional<Track>(order[i - 1]);
+            if (!prev || order[i] != *prev) continue;
+            bool moved = false;
+            for (size_t j = i + 1; j < n && !moved; ++j) {
+                if (order[j] != *prev) { std::swap(order[i], order[j]); moved = true; }
+            }
+            for (size_t k = 0; k < i && !moved; ++k) {
+                if (order[k] != order[i] && fits(order[i], k, i) && fits(order[k], i, k)) {
+                    std::swap(order[i], order[k]);
+                    moved = true;
+                }
+            }
+        }
     }
 
     /// Previous, `position` seconds into the track playing: back to the

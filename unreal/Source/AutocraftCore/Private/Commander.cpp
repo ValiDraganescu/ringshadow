@@ -1953,6 +1953,10 @@ std::vector<Command> Commander::transfers(const GameState& s, const Simulation& 
 /// The nearest free base site. Contested sites (about as far from an
 /// enemy start as from this player's) only when `contested`: an early
 /// race for them hands the game to whoever gets there first.
+/// Teams (C++ only): a site an ally's Prospector is on its way to put a
+/// Citadel on is that ally's (`claimedByAlly`), so allies split the free
+/// sites instead of racing for one (the commanders think one after the
+/// other, so the second sees the first's order).
 std::optional<Vec2> Commander::nextSite(const GameState& s, const Simulation& sim, const std::set<int64_t>& owned, Vec2 from,
                                         bool contested) const {
     const Vec2 home = start(s);
@@ -1965,7 +1969,8 @@ std::optional<Vec2> Commander::nextSite(const GameState& s, const Simulation& si
             if (sim.patchBase[p] == i && s.patches[p].remaining > 0) { hasOre = true; break; }
         }
         if (owned.count(i) || !hasOre
-            || any(s.structures, [&](const Structure& b) { return b.owner != player && distance(b.position, sim.sites[i]) < 16; })) {
+            || any(s.structures, [&](const Structure& b) { return b.owner != player && distance(b.position, sim.sites[i]) < 16; })
+            || claimedByAlly(s, sim.sites[i])) {
             continue;
         }
         if (!contested) {
@@ -1977,6 +1982,15 @@ std::optional<Vec2> Commander::nextSite(const GameState& s, const Simulation& si
         free.push_back(sim.sites[i]);
     }
     return minBy(free, [&](Vec2 a, Vec2 b) { return router.distance(from, a) < router.distance(from, b); });
+}
+
+/// An ally (C++ only, teams) has a Prospector on its way to put a Citadel
+/// on the base site at `site`. Never with no teams.
+bool Commander::claimedByAlly(const GameState& s, Vec2 site) const {
+    return any(s.units, [&](const Unit& u) {
+        return u.owner != player && s.allied(u.owner, player) && u.order && u.order->kind == Structure::Kind::citadel
+            && distance(u.order->position, site) < 16;
+    });
 }
 
 /// A free well at one of its finished bases, the start base first (a

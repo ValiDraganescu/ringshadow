@@ -1,17 +1,17 @@
 ---
-status: proposed
-date:
+status: posted
+date: 2026-10-12
 angle: world
-video: record: one cockpit shot under a sky that turns from broken cumulus to a storm deck: rain darkening the sand, puddles, drops on the glass, a close strike with its bolt and the cloud lit above it; night, so the gas giant shows. Posts 2 and 3 can carry their own clips: a close strike in the sky view (-AcSkyView=21 -AcWeather=storm -AcWeatherSeed=42, the strike at 53.44 s) and the flicker before and after (the clips on https://claude.ai/artifact/DeJV7LodhrH83abULYTH6m)
-posted:
-xdraft:
+video: video/renders/weather-x.mp4
+posted: https://x.com/escu__valentin/status/2109637295884116183
+xdraft: xd_0f8ce56e
 ---
 
 ## Post
 
 Ringshadow is set on Ashfall Reach, a mining frontier under a gas giant, and now it has weather. Clear sky, broken cloud, rain and storms roll in on their own over the day and the night.
 
-In the clip: cumulus over the dunes, then a storm deck. Rain darkens the sand and fills puddles, hulls go glossy, and when you drive a unit (take it over and play it yourself) drops run down the cockpit glass. Lightning lights the cloud above each strike, and the thunder arrives distance / 343 m/s later.
+The clip is a storm passing over, sped up 16 times, from the seat of a Prospector I'm driving: rain darkens the sand and fills puddles, drops run down the cockpit glass, then the sky clears to cumulus. Hulls go glossy in the wet, and lightning lights the cloud above each strike.
 
 Claude Code built all of it. The whole system costs about 1 ms of GPU time at 5K on an M4 Max.
 
@@ -35,7 +35,12 @@ How the weather works, from the cloud material to the thunder delay: github.com/
 
 A thread of four: the Post is post 1, and the Reply holds posts 2 to 4, split at the lines with only `---` (x_create_draft gets four posts). Each post is under 700 characters.
 
-Before posting: docs/weather.md is not committed yet, so the link in post 4 would 404 until the weather work is committed and pushed.
+docs/weather.md is on main since 95beeee (2026-10-12), so the link in post 4 works.
+
+Videos, one per post (all 1920x1080, H.264 with sound, under 10 MB for X):
+- Post 1: video/renders/weather-x.mp4 (26.1 s, 9.5 MB). Sim `weather-storm-clears` in .claude/skills/ringshadow-video/sims.json: a Prospector driven in first person at 16:30, seed 42's schedule from 2185 s at 16x (`-AcWeatherFrom=2185 -AcWeatherSpeed=16`, AcWeather.h): the storm's tail, the rain easing, cumulus by ~2435 s, then the pull-out to the gas giant. At night and at dusk the storm was too dark to read. Cut: `uv run .claude/skills/ringshadow-video/scripts/giantcut.py video/clips/weather-storm-clears.mp4 --down 14.65,19.0 --end 21.0 --title "Storms roll in and pass." --caption "Time-lapse, 16x: a storm passes over" --caption-at 0.5,7 --music rising_pressure_1 --music-at 20 --out video/renders/weather.mp4 --x`. The flashes in it are faint by day; the lightning has its own clip.
+- Post 2: video/renders/weather-lightning-x.mp4 (16.0 s, 9.2 MB). Sim `weather-lightning`: the sky view at 23:00 facing yaw 21, a held storm, weather time from 48 s, so the close strike (2.6 km) lands at ~3.4 s and its thunder ~7.6 s later. Cut: `giantcut.py video/clips/weather-lightning.mp4 --end 14.0 --title "Lightning in the cloud." --caption "A strike 2.6 km out lights its cloud" --caption-at 2.5,8 --music-ends --music night_shift_1 --music-at 10 --out video/renders/weather-lightning.mp4 --x`.
+- Post 3: video/renders/weather-flicker-x.mp4 (5.3 s, 2.2 MB, silent). The comparison clips of 2026-10-12 (sky view at 14:00, seed 42, 50 % render scale, the 2 km sample spread; mode 1 against mode 0), the same cloud edge at 3x side by side, composed with Pillow and played twice. Labels: the measured pops, 56 and 8 per 10,000 cloud pixels.
 
 Facts, all from docs/weather.md and the 2026-10-12 session:
 - Post 1: four states (clear, cloudy, rain, storm) on a seeded schedule tied to the game clock, so day and night carry on under it; wet ground and puddles in M_Terrain; wet hulls; rain on the glass only while driving in first person; thunder after distance / 343 m/s. Cost: bench.py --gpu at 5120x1378 put the weather at +0.7 to +1.0 ms GPU over clear (fight 13.5 to 14.5 ms, pilot 16.2 to 17.0); the cloud pass later dropped to 1.3 ms cloudy in the cockpit.

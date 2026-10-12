@@ -62,6 +62,22 @@ struct UnitStats {
     double pause = 0;
     /// A rail shot: hitscan, with its own cooldown (`Unit::railCooldown`).
     bool rail = false;
+    /// The spread cone, radians (`Simulation::cone`): its radius standing
+    /// still, the extra at full speed, the extra each round adds, and the
+    /// seconds that extra takes to fade by 90%. Every round leaves along the
+    /// sight turned by a random angle inside it (docs/shooter-feel.md).
+    double coneStand = 0.01;
+    double coneMove = 0.03;
+    double coneFire = 0;
+    double coneRecovery = 0.3;
+    /// Past `range` a round flies on and keeps this share of its damage for
+    /// every further `range` it flies; 0: it stops at `range` (a flame, a
+    /// cutter, a sting).
+    double falloff = 0.7;
+    /// Rounds an attack is split into: the damage, less armour, shared
+    /// between them, fired `cooldown / rounds` apart. The same damage a
+    /// second, in smaller, faster rounds.
+    int64_t rounds = 1;
 
     /// `table` in `Unit.Kind.allCases` order, read by `Unit.Kind.ordinal`:
     /// a dictionary keyed by the kind hashes its name on every look-up, and
@@ -122,7 +138,11 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr double rangerDamage = 6.0;
     static constexpr double rangerCooldown = 0.61;
     static constexpr double rangerRange = 5.0;
-    static constexpr double sight = 9.0;
+    static constexpr double sight = 13.0;
+    /// An AI soldier opens fire out to this many times its weapon's range
+    /// (a weapon whose rounds fly on, `UnitStats::falloff`), closing in as it
+    /// shoots: long shots land less often and do less.
+    static constexpr double engageReach = 1.6;
     /// Unit footprint radius (Rangers and Prospectors), for range checks.
     static constexpr double unitRadius = 0.375;
     /// Rangers a Bastion holds, and the range they gain inside it.
@@ -272,6 +292,26 @@ struct AUTOCRAFTCORE_API Rules {
     /// How far each kind sees (sight radii).
     static double vision(UnitKind k);
     static double vision(StructureKind k);
+    /// The day, as the game layer draws it (AAcDaylight): `dayLength`
+    /// seconds of game time, a game starting at `startHour`, the sun up
+    /// from `sunrise` to `sunset`.
+    static constexpr double dayLength = 600.0;
+    static constexpr double startHour = 8.0;
+    static constexpr double sunrise = 5.5;
+    static constexpr double sunset = 18.5;
+    /// The hour (0-24) `time` seconds into a game whose day is `day`
+    /// seconds long; `held` holds the clock at an hour.
+    static double hourAt(double time, double day = dayLength, std::optional<double> held = std::nullopt);
+    /// How high the sun stands at `hour`, degrees (below 0 at night).
+    static double sunHeight(double hour);
+    /// How dark it is at `hour`: 0 with the sun up, 1 soon after sunset
+    /// (the lamps come on with it; sight closes in with it).
+    static double dark(double hour);
+    /// How far everything sees at full night, a share of its day sight.
+    static constexpr double nightSight = 0.5;
+    /// What every sight radius is multiplied by at `hour`: 1 by day,
+    /// `nightSight` at night, eased through dusk and dawn.
+    static double sightScale(double hour) { return 1.0 - (1.0 - nightSight) * dark(hour); }
     /// A ground unit this close to a watchtower's centre holds it, and sees
     /// `towerSight` round the tower (22).
     static constexpr double towerReach = 2.6;
@@ -292,16 +332,18 @@ inline constexpr std::array<UnitStats, 12> UnitStats::byKind{{
     // Fusion cutter: 5 a hit, in melee reach. It fights only when it
     // has to (hit, or driven by the player).
     /* prospector */ {.hp = 45, .speed = Rules::prospectorSpeed, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 12,
-                      .damage = 5, .cooldown = 1.07, .range = 0.1, .light = true, .bio = true, .hitsGround = true},
+                      .damage = 5, .cooldown = 1.07, .range = 0.1, .light = true, .bio = true, .hitsGround = true,
+                      .falloff = 0},
     /* ranger */ {.hp = 45, .speed = 3.15, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 18,
-                  .damage = 6, .cooldown = 0.61, .range = 5, .light = true, .bio = true, .hitsGround = true, .hitsAir = true},
+                  .damage = 6, .cooldown = 0.61, .range = 5, .light = true, .bio = true, .hitsGround = true, .hitsAir = true,
+                  .coneStand = 0.003, .coneMove = 0.12, .coneFire = 0.004, .coneRecovery = 0.35, .falloff = 0.9, .rounds = 3},
     // Twin pistols, 4 (+5 light) each; heals out of combat; jumps cliffs.
     /* comet */ {.hp = 60, .speed = 5.25, .radius = 0.375, .supply = 1, .ore = 50, .hydrogen = 50, .trainTime = 32,
                  .damage = 4, .hits = 2, .bonusVsLight = 5, .cooldown = 0.79, .range = 5, .light = true, .bio = true,
                  .hitsGround = true},
     // Flamethrower, 8 (+6 light) to everything in a line.
     /* firefly */ {.hp = 90, .speed = 5.95, .radius = 0.625, .supply = 2, .ore = 100, .trainTime = 21,
-                   .damage = 8, .bonusVsLight = 6, .cooldown = 1.79, .range = 5, .light = true, .hitsGround = true},
+                   .damage = 8, .bonusVsLight = 6, .cooldown = 1.79, .range = 5, .light = true, .hitsGround = true, .falloff = 0},
     // Breacher grenades, 10 (+10 armoured); each hit slows.
     /* juggernaut */ {.hp = 125, .armor = 1, .speed = 3.15, .radius = 0.5625, .supply = 2, .ore = 100, .hydrogen = 25,
                       .trainTime = 21, .damage = 10, .bonusVsArmored = 10, .cooldown = 1.07, .range = 6, .armored = true,
@@ -336,12 +378,13 @@ inline constexpr std::array<UnitStats, 12> UnitStats::byKind{{
     // is its reload (it ticks while the Scorpion moves, too).
     /* scorpion */ {.hp = 90, .speed = 3.9, .radius = 0.5, .supply = 2, .ore = 75, .hydrogen = 25, .trainTime = 21,
                     .damage = 60, .bonusVsArmored = 30, .cooldown = 25, .range = 5, .light = true, .hitsGround = true,
-                    .hitsAir = true},
+                    .hitsAir = true, .falloff = 0},
 }};
 
 inline constexpr UnitStats UnitStats::minigun{.hp = 45, .speed = 3.15, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 18,
                                               .damage = 4, .cooldown = 0.2, .range = 5, .light = true, .bio = true, .hitsGround = true,
-                                              .hitsAir = true, .burst = 3, .pause = 1};
+                                              .hitsAir = true, .burst = 3, .pause = 1, .coneStand = 0.04, .coneMove = 0.12,
+                                              .coneFire = 0.006, .coneRecovery = 0.5, .falloff = 0.5};
 inline constexpr UnitStats UnitStats::anchor{.hp = 175, .armor = 1, .speed = 0, .radius = 0.875, .supply = 3, .ore = 150, .hydrogen = 125,
                                              .trainTime = 32, .damage = 40, .bonusVsArmored = 30, .cooldown = 2.14, .range = 13,
                                              .minRange = 2, .armored = true, .hitsGround = true};

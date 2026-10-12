@@ -1,7 +1,9 @@
 #include "AcEffects.h"
 
 #include "AcLog.h"
+#include "AcPilotAim.h"
 #include "AcPose.h"
+#include "AcRaysWorld.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcWorldRenderer.h"
@@ -303,11 +305,11 @@ void UAcEffects::Consume(const FAcFrame& F)
 		}
 		else if (const auto* M = E.as<ac::GameEvent::Missed>())
 		{
-			// The sim says where the round is spent on the ground; the pilot
-			// knows where the sight meets it (GameController.pilotMissed).
-			const FVector To = M->unit == PilotFire.DrivenUnit && PilotFire.SightPoint
-				? *PilotFire.SightPoint
-				: AcSpace::ToWorld(M->at, GroundZ(M->at) / Cm);
+			// The sim says where the round comes down on the ground; the
+			// pilot's view casts the driven gun's round, turned inside its
+			// cone, to whatever it meets (GameController.pilotMissed).
+			const TOptional<FVector> Driven = M->unit == PilotFire.DrivenUnit ? DrivenMiss(M->yaw, M->pitch) : TOptional<FVector>();
+			const FVector To = Driven ? *Driven : AcSpace::ToWorld(M->at, GroundZ(M->at) / Cm);
 			Missed(M->unit, To, F.Time);
 		}
 		else if (const auto* B = E.as<ac::GameEvent::Blast>())
@@ -421,6 +423,20 @@ void UAcEffects::OnCue(int64 Id, const FAcPoseCue& Cue)
 
 // --- Pools: tracers, flashes, rounds, slugs ----------------------------------
 
+TOptional<FVector> UAcEffects::DrivenMiss(const double Yaw, const double Pitch) const
+{
+	if (!PilotFire.Eye) return PilotFire.SightPoint;
+	// Turned off the sight by the miss's angles: yaw about the view's up,
+	// pitch about its right (the cone is round, so the sides do not matter).
+	const FQuat Turn = FQuat(PilotFire.View.GetUpVector(), Yaw) * FQuat(PilotFire.View.GetRightVector(), -Pitch);
+	const FVector D = Turn.RotateVector(PilotFire.View.GetForwardVector());
+	const FVector A = *PilotFire.Eye + D * AcSpace::ToCm(0.3), B = *PilotFire.Eye + D * AcSpace::ToCm(AcPilotAim::ShotReach);
+	UAcRaysSubsystem* Rays = UAcRaysSubsystem::Get(this);
+	if (!Rays) return PilotFire.SightPoint;
+	if (const TOptional<FAcRayHit> H = Rays->SightHit(A, B, PilotFire.DrivenUnit)) return H->Point;
+	return B;
+}
+
 void UAcEffects::Tracer(const FVector& A, const FVector& B, const double Time)
 {
 	if (!TracerPool) return;
@@ -429,9 +445,11 @@ void UAcEffects::Tracer(const FVector& A, const FVector& B, const double Time)
 	if (Len <= 0.05 * Cm) return;
 	const int32 I = TracerPool->Next();
 	TracerUntil[I] = Time + 0.06;
-	// Only the front half of the way, so it reads as a round in flight.
+	// Only the front half of the way, so it reads as a round in flight, and
+	// no longer than a streak: a round that flies on is not a beam.
 	const FVector Mid = A + D * 0.6;
-	TracerPool->Set(I, TracerPool->Shape(Mid, FAcEffectPool::Along(D / Len), FVector(0.032 * Cm, 0.032 * Cm, Len * 0.55)));
+	const double Streak = FMath::Min(Len * 0.55, 8.0 * Cm);
+	TracerPool->Set(I, TracerPool->Shape(Mid, FAcEffectPool::Along(D / Len), FVector(0.032 * Cm, 0.032 * Cm, Streak)));
 	++Count.Tracers;
 	Flash(B, 0.7 + 0.6 * double((FlashPool->Peek() * 7919) % 10) / 10, Time);
 }

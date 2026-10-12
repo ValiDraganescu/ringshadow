@@ -39,6 +39,9 @@ namespace
 	TAutoConsoleVariable<float> CVarDayLength(
 		TEXT("ac.DayLength"), 600.0f,
 		TEXT("Seconds of game time in one day and night (Daylight.length)."));
+	TAutoConsoleVariable<float> CVarNightReach(
+		TEXT("ac.NightReach"), 10.0f,
+		TEXT("How far a driven unit's eye sees at night, cells (110 by day): the ground is clear to a quarter of it and lost by it."));
 	TAutoConsoleVariable<int32> CVarClouds(
 		TEXT("ac.Daylight.Clouds"), 1,
 		TEXT("Volumetric clouds and their shadows over the map (1) or none (0)."));
@@ -179,9 +182,9 @@ double AAcDaylight::HeldHour() { return CVarHour.GetValueOnGameThread(); }
 
 double AAcDaylight::HourAt(const double Time)
 {
+	// The core's clock: the sim's sight closes in on the same night.
 	const double Held = HeldHour();
-	if (Held >= 0) return FMath::Fmod(Held, 24.0);
-	return FMath::Fmod(StartHour + Time / DayLength() * 24.0, 24.0);
+	return ac::Rules::hourAt(Time, DayLength(), Held >= 0 ? std::optional<double>(Held) : std::nullopt);
 }
 
 FVector AAcDaylight::SunSceneKit(const double H)
@@ -506,7 +509,8 @@ void AAcDaylight::Update(const double Time)
 	// the sun on the horizon.
 	const double Light = Smoothstep(-9, 8, Deg);
 	const double Glow = Smoothstep(0, 1, 1 - FMath::Abs(Deg - 2) / 11);
-	Dark = 1 - Smoothstep(-6, 10, Deg);
+	// As the core has it (`Rules::dark`): the sight closes in with it.
+	Dark = ac::Rules::dark(Hour);
 	auto Tone = [&](const FLinearColor& Day, const FLinearColor& Night, const FLinearColor& Dusk) {
 		return Mix(Mix(Night, Day, Light), Dusk, Glow * 0.85);
 	};
@@ -655,7 +659,11 @@ void AAcDaylight::Update(const double Time)
 	Tones.Sun = SunDir;
 	Tones.Stars = 1 - Smoothstep(-14, -3, Deg);
 	Tones.Rise = 24 + (12 - 24) * Light;
-	Tones.Reach = (40 + (110 - 40) * Light) * FMath::Lerp(1.0, 0.45, Weather.rain);
+	// Night closes in round the driven unit: the ground clear to a quarter
+	// of it (2.5 cells) and lost by 10 (`ac.NightReach`), about twice how
+	// far a unit sees at night.
+	const double NightReach = FMath::Max(1.0, double(CVarNightReach.GetValueOnGameThread()));
+	Tones.Reach = (NightReach + (110 - NightReach) * Light) * FMath::Lerp(1.0, 0.45, Weather.rain);
 
 	UpdateClouds(Time, SunDir);
 

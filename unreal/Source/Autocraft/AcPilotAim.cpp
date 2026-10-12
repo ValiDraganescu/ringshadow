@@ -99,6 +99,9 @@ double AcPilotAim::Facing(const ac::Unit& U, const double Yaw, const TOptional<F
 TOptional<FAcRangeCue> AcPilotAim::RangeCue(const ac::Simulation& Sim, const ac::Unit& U)
 {
 	if (U.task == ac::Unit::Task::inDerrick) return {};
+	// A soldier on foot has no ring: its rounds fly on, and its aim is
+	// what tells (docs/shooter-feel.md).
+	if (ac::Rules::stats(U.kind).bio) return {};
 	const double R = ac::Rules::radius(U.kind);
 	const std::optional<ac::PilotSight> Sight = Sim.pilotSight(U);
 	FAcRangeCue Cue;

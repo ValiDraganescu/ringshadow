@@ -234,12 +234,15 @@ def build_table(prepared):
     for name, s in sounds.items():
         s.update(uses[name])
     titles = json.load(open(os.path.join(SOUNDS, "ads", "titles.json")))
+    # Plays per round of the ad rotation (ads/plays.json).
+    rotation = json.load(open(os.path.join(SOUNDS, "ads", "plays.json")))
     ads = {}
     for e in prepared["ads"]:
         ad_id = e["file"][:-4]
         path = ad_asset(ad_id)
         ads[ad_id] = {"asset": path + "." + path.rsplit("/", 1)[1], "title": titles.get(ad_id, ad_id),
-                      "source": "ads/" + e["file"], "prepared": e["prepared"], "seconds": e["seconds"]}
+                      "source": "ads/" + e["file"], "prepared": e["prepared"], "seconds": e["seconds"],
+                      "plays": rotation["plays"].get(ad_id, rotation["default"])}
     unused = sorted(n for n, s in sounds.items() if not s["board"] and not s["audioSwiftLines"])
     return {
         "madeBy": SCRIPT,

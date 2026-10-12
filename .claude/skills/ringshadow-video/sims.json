@@ -332,6 +332,249 @@
       "seconds": 12,
       "music": false,
       "notes": "The home screen: the night-base key art with the gas giant, drifting (no pixel snapping since a9e3d2e), RESUME GAME pressed at 5 s of the clip (-AcHomePlay counts from the home screen, 2 s before recording starts), then the RTS view over a staged base, the camera easing over to its army."
+    },
+    {
+      "name": "ranger-night-close",
+      "flags": [
+        "-AcPilot=ranger",
+        "-AcPilotVariant=far",
+        "-AcPilotFoeHp=20",
+        "-AcHour=23",
+        "-AcPilotPullOut=13.5,5",
+        "-AcPilotPath=wait:1.2,left:1.2,right:2.4,left:1.2,w:2.4,aim:0.3,aim+act:3,wait:8"
+      ],
+      "seconds": 19,
+      "notes": "Night, first person: a Ranger at its Citadel looks round into the dark (sight halves at night: the ground is lost 20 cells out), walks ahead, an enemy Ranger staged 7.7 cells off (out of night sight) comes out of the dark at about 4.5 cells, the Ranger guns it down, then the eject to the gas giant."
+    },
+    {
+      "name": "claude-ad-a",
+      "flags": [
+        "-AcPilot=prospector",
+        "-AcPilotStage",
+        "-AcPilotLive",
+        "-AcPilotThird",
+        "-AcHour=7",
+        "-AcPilotPath=act:9,w+left:2,w:5,w+right:3.5,act:8",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=0"
+      ],
+      "seconds": 28,
+      "notes": "Morning, third person: a Prospector drills ore and drives round the field while KSTR plays the Claude ad from its start. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-b",
+      "flags": [
+        "-AcHour=9",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=23.5"
+      ],
+      "seconds": 20,
+      "camera": "0:-8,0,45;19:8,-4,45",
+      "notes": "Day, RTS view: a slow pan across the base, the Claude ad 26 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-c",
+      "flags": [
+        "-AcStageFight=30",
+        "-AcCamAtArmy",
+        "-AcNoFog",
+        "-AcHour=11",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=41.5"
+      ],
+      "seconds": 18,
+      "camera": "0:-6,3,26;17:1,-1,55",
+      "notes": "RTS view: two armies of 30 meet; the Claude ad 44 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-d",
+      "flags": [
+        "-AcPilot=ranger",
+        "-AcPilotVariant=far",
+        "-AcPilotFoeHp=20",
+        "-AcHour=23",
+        "-AcPilotPullOut=13.5,5",
+        "-AcPilotPath=wait:1.2,left:1.2,right:2.4,left:1.2,w:2.4,aim:0.3,aim+act:3,wait:8",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=57.5"
+      ],
+      "seconds": 21,
+      "notes": "Night, first person: ranger-night-close under the Claude ad, 60 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-e",
+      "flags": [
+        "-AcPilot=longbow",
+        "-AcNoAI",
+        "-AcStageBuildings",
+        "-AcPilotAt=enemy",
+        "-AcPilotThird",
+        "-AcHour=19",
+        "-AcPilotPullOut=15,5",
+        "-AcPilotPath=wait:0.3,w:2.4,ability:3,act:4.8,act:12",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=76.5"
+      ],
+      "seconds": 22,
+      "notes": "Dusk, third person: a Longbow anchors and shells the enemy base, then the eject; the Claude ad 79 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-f",
+      "flags": [
+        "-AcPilot=prospector",
+        "-AcPilotStage",
+        "-AcPilotLive",
+        "-AcHour=21",
+        "-AcPilotPullOut=6,5",
+        "-AcPilotPath=act:6,wait:9",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=96.5"
+      ],
+      "seconds": 16,
+      "notes": "Night, first person: a Prospector drills, then the camera rises to the gas giant as the host says 'a giant ringed planet'; the Claude ad 99 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-g",
+      "flags": [
+        "-AcPilot=peregrine",
+        "-AcPilotStage",
+        "-AcPilotLive",
+        "-AcNoAI",
+        "-AcPilotThird",
+        "-AcHour=10",
+        "-AcPilotPath=w:7.5",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=110.5"
+      ],
+      "seconds": 8.5,
+      "notes": "Day, third person: a Peregrine flies out as the host names it; the Claude ad 113 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-h",
+      "flags": [
+        "-AcPilot=atlas",
+        "-AcPilotThird",
+        "-AcHour=10",
+        "-AcPilotPath=wait:0.3,w:5",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=117"
+      ],
+      "seconds": 6,
+      "notes": "Day, third person: an Atlas walks as the host names it; the Claude ad 119.5 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-i",
+      "flags": [
+        "-AcPilot=scorpion",
+        "-AcPilotAt=ridge",
+        "-AcPilotMiners=6",
+        "-AcPilotThird",
+        "-AcHour=7",
+        "-AcPilotPath=wait:1,left:0.6,wait:0.6,right:1.2,ability:1,wait:4",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=121"
+      ],
+      "seconds": 8.5,
+      "notes": "Morning, third person: a Scorpion on a ridge over the base ('the little burrowing mine that chirps'); the Claude ad 123.5 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-k",
+      "flags": [
+        "-AcStageFight=40",
+        "-AcCamAtArmy",
+        "-AcNoFog",
+        "-AcHour=18",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=160.5"
+      ],
+      "seconds": 21,
+      "camera": "0:-8,4,30;20:4,-2,60",
+      "notes": "Dusk, RTS view: two armies of 40 fight ('several going at once'); the Claude ad 163 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-l",
+      "flags": [
+        "-AcPilot=atlas",
+        "-AcNoAI",
+        "-AcStageBuildings",
+        "-AcPilotAt=enemy",
+        "-AcPilotThird",
+        "-AcHour=19",
+        "-AcPilotPath=wait:0.3,w:3,act:13",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=179.5"
+      ],
+      "seconds": 17,
+      "notes": "Dusk, third person: an Atlas walks up to the enemy base firing; the Claude ad 182 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-m",
+      "flags": [
+        "-AcPilot=ranger",
+        "-AcPilotThird",
+        "-AcPilotVariant=minigun+shield+flyer",
+        "-AcPilotFoeHp=20",
+        "-AcPilotPullOut=6.8,5",
+        "-AcPilotPath=wait:0.3,aim:0.3,aim+act:1.8,view:0.1,wait:0.3,aim:0.4,aim+act:2.6,wait:8",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=194.5"
+      ],
+      "seconds": 15,
+      "notes": "ranger-third-to-first under the end of the Claude ad (197 s in), then the eject to the gas giant. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-n",
+      "flags": [
+        "-AcPilot=comet",
+        "-AcPilotThird",
+        "-AcHour=16",
+        "-AcPilotPath=w:2,w+right:1.5,ability:1.5,w:4",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=49.5"
+      ],
+      "seconds": 9,
+      "notes": "Afternoon, third person: a Comet drives out and jumps; the Claude ad 52 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "claude-ad-p",
+      "flags": [
+        "-AcHour=22",
+        "-AcMusicAd=claude",
+        "-AcMusicAdAt=170.75"
+      ],
+      "camera": "0:-4,2,30;10:2,-1,55",
+      "seconds": 10,
+      "notes": "Night, RTS view: the camera pushes in over the base ('one writing the radio ads you hear'); the Claude ad 173 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+    },
+    {
+      "name": "weather-storm-clears",
+      "flags": [
+        "-AcPilot=prospector",
+        "-AcNoAI",
+        "-AcPilotAt=ridge",
+        "-AcHour=16.5",
+        "-AcWeatherSeed=42",
+        "-AcWeatherFrom=2185",
+        "-AcWeatherSpeed=16",
+        "-AcPilotPullOut=15.6,5",
+        "-AcPilotPath=wait:0.3,left:1.6,up:0.35,w:3,w+right:0.6,w:4,w+left:0.6,w:5,wait:9",
+        "-ExecCmds=DisableAllScreenMessages"
+      ],
+      "seconds": 21,
+      "notes": "Afternoon, first person in a Prospector: the end of a storm as a 16x time-lapse of seed 42's schedule (from 2185 s: lightning, the rain easing, the sky clearing to cumulus by ~2435 s), then the pull-out to the gas giant. The weather post (docs/x-posts/weather.md)."
+    },
+    {
+      "name": "weather-lightning",
+      "flags": [
+        "-AcSkyView=21",
+        "-AcHour=23",
+        "-AcWeather=storm",
+        "-AcWeatherSeed=42",
+        "-AcWeatherFrom=48",
+        "-ExecCmds=DisableAllScreenMessages"
+      ],
+      "seconds": 14,
+      "notes": "Night, the sky view facing a held storm (seed 42): the close strike at 53.44 s of weather time (about 3.4 s into the clip) lights the cloud above it from inside, the bolt below; it is 2.6 km off, so its thunder comes 7.6 s later (about 11 s in). The weather post's second part (docs/x-posts/weather.md)."
     }
   ]
 }

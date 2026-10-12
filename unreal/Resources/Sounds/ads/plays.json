@@ -1,0 +1,7 @@
+{
+  "about": "How many times each ad plays in one round of the station's ad rotation (docs/music.md). An ad not listed plays `default` times; 0 takes it off the air. Rerun import_sounds.py after a change.",
+  "default": 1,
+  "plays": {
+    "claude": 2
+  }
+}

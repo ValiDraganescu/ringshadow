@@ -258,7 +258,14 @@ private:
 	void Follow(const FAcFrame& Frame);
 	/// The model root's world (UE cm): the renderer's placement × part 0.
 	FTransform RootOf(const ac::Unit& U) const;
-	void CastCrosshair();
+	/// What the middle of the view is on. `bPredict`: from the view as the
+	/// mouse has turned it since the last `Follow` (`PredictView`), not as
+	/// last followed.
+	void CastCrosshair(bool bPredict = true);
+	/// The last followed eye (`LastEye`, `LastRotation`) turned by the mouse
+	/// since: the yaw about the unit (when the view follows the mouse) and
+	/// the pitch about the view's own right.
+	void PredictView(FVector& OutEye, FQuat& OutRotation) const;
 	void ApplyView();
 	void Hooks(bool bOn);
 	void Sounds(const ac::Unit& U);
@@ -338,6 +345,17 @@ private:
 	TOptional<FCrosshair> Cross;
 	TOptional<FVector> LastEye;
 	FQuat LastRotation = FQuat::Identity;
+	/// What the last `Follow` turned the view by: the mouse's yaw and pitch,
+	/// and the unit's root (the eye turns about it).
+	double LastViewYaw = 0.0, LastViewPitch = 0.0;
+	FVector LastPivot = FVector::ZeroVector;
+	/// The view turns with the mouse's yaw (third person, a turret, or a
+	/// unit that faces where the mouse says), not with a hull.
+	bool bViewOnMouse = false;
+	/// The driven unit took the heading it was sent on the last sim step:
+	/// it faces the mouse, so the renderer poses it at the mouse's heading
+	/// every frame (`UAcWorldRenderer::SetDrivenHeading`).
+	bool bFollowsMouse = false;
 	struct FDive
 	{
 		FVector From = FVector::ZeroVector;

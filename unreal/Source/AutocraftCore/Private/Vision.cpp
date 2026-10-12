@@ -9,6 +9,7 @@
 #include "TerrainField.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <limits>
@@ -55,6 +56,40 @@ struct Viewer { Vec2 c; double r; std::optional<int8_t> level; };
 
 bool hidden(Unit::Task t) {
     return t == Unit::Task::inBastion || t == Unit::Task::aboard || t == Unit::Task::inDerrick;
+}
+
+/// One memory for a team (C++, teams): what any of `members` (players, in
+/// order) has scouted and remembers. Ground explored by any, each site at
+/// the latest any saw it, every building any remembers (the first member's
+/// copy of one several remember) and every unit (the latest sighting).
+Intel teamIntel(const std::vector<Intel>& intel, const std::vector<size_t>& members) {
+    Intel k = intel[members.front()];
+    std::set<int64_t> buildings;
+    for (const auto& b : k.buildings) buildings.insert(b.id);
+    std::map<int64_t, size_t> units;
+    for (size_t i = 0; i < k.units.size(); ++i) units[k.units[i].unit.id] = i;
+    for (size_t m = 1; m < members.size(); ++m) {
+        const Intel& o = intel[members[m]];
+        if (k.explored.size() < o.explored.size()) k.explored.resize(o.explored.size(), 0);
+        for (size_t w = 0; w < o.explored.size(); ++w) k.explored[w] |= o.explored[w];
+        if (k.sites.size() < o.sites.size()) k.sites.resize(o.sites.size(), -std::numeric_limits<double>::infinity());
+        for (size_t j = 0; j < o.sites.size(); ++j) k.sites[j] = max(k.sites[j], o.sites[j]);
+        for (const auto& b : o.buildings) {
+            if (buildings.insert(b.id).second) k.buildings.push_back(b);
+        }
+        for (const auto& seen : o.units) {
+            const auto it = units.find(seen.unit.id);
+            if (it == units.end()) {
+                units[seen.unit.id] = k.units.size();
+                k.units.push_back(seen);
+            } else if (seen.at > k.units[it->second].at) {
+                k.units[it->second] = seen;
+            }
+        }
+    }
+    std::sort(k.buildings.begin(), k.buildings.end(), [](const Structure& a, const Structure& b) { return a.id < b.id; });
+    std::sort(k.units.begin(), k.units.end(), [](const Intel::Seen& a, const Intel::Seen& b) { return a.unit.id < b.unit.id; });
+    return k;
 }
 
 } // namespace
@@ -153,20 +188,22 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
     s.near.assign(static_cast<size_t>(cells), 0);
     const size_t words = static_cast<size_t>((cells + 63) / 64);
     if (explored.size() != words) explored.assign(words, 0);
-    // Every viewer: where, how far, from what level (nil: the air).
+    // Every viewer: where, how far, from what level (nil: the air). At
+    // night everything sees closer in (`Rules::sightScale`).
+    const double night = Rules::sightScale(Rules::hourAt(state.time, state.dayLength, state.heldHour));
     std::vector<Viewer> viewers;
     std::vector<bool> holds(towers.size(), false);
     // Its own and its allies' (C++: teams share their sight).
     for (const auto& b : state.structures) {
         if (!(state.allied(b.owner, p) && b.hp > 0)) continue;
-        viewers.push_back(Viewer{b.position, Rules::vision(b.kind), tierAt(b.position)});
+        viewers.push_back(Viewer{b.position, Rules::vision(b.kind) * night, tierAt(b.position)});
     }
     for (const auto& u : state.units) {
         if (!(state.allied(u.owner, p) && u.hp > 0)) continue;
         if (hidden(u.task)) continue;
         const bool air = u.stats().air;
         auto f = farther.find(u.id);
-        viewers.push_back(Viewer{u.position, f != farther.end() ? f->second : Rules::vision(u.kind),
+        viewers.push_back(Viewer{u.position, (f != farther.end() ? f->second : Rules::vision(u.kind)) * night,
                                  air ? std::nullopt : std::optional<int8_t>(tierAt(u.position))});
         if (!air) {
             for (size_t k = 0; k < towers.size(); ++k) {
@@ -175,7 +212,7 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
         }
     }
     for (size_t k = 0; k < towers.size(); ++k) {
-        if (holds[k]) viewers.push_back(Viewer{towers[k].at, Rules::towerSight, towers[k].tier});
+        if (holds[k]) viewers.push_back(Viewer{towers[k].at, Rules::towerSight * night, towers[k].tier});
     }
     // The widest first; one inside another's circle on its level adds
     // nothing (a Prospector by its Citadel).
@@ -382,25 +419,24 @@ void Simulation::look() {
         }
     }
     sights.clear();
+    std::vector<Sight> seen(state.players.size());
     const double now = state.time;
-    // Allies see alike (C++, teams): worked out once a team, by its first
-    // player; the others take that sight and the ground it has explored.
-    std::map<int64_t, size_t> firstOfTeam;
+    // Allies see and remember alike (C++, teams): a team's sight and its
+    // one memory (`teamIntel`: what any member has scouted) are worked
+    // out once, by its first player, and every member takes a copy.
+    std::set<int64_t> teamsDone;
     for (size_t p = 0; p < state.players.size(); ++p) {
         const int64_t pl = static_cast<int64_t>(p);
-        Intel k = intel_[p];
-        const auto first = firstOfTeam.find(state.team(pl));
-        if (first == firstOfTeam.end()) {
-            firstOfTeam[state.team(pl)] = p;
-            sights.push_back(vision->sight(pl, state, k.explored, farther, reveal));
-        } else {
-            Sight shared = sights[first->second];
-            sights.push_back(std::move(shared));
-            const std::vector<uint64_t>& theirs = intel_[first->second].explored;
-            if (k.explored.size() != theirs.size()) k.explored.assign(theirs.size(), 0);
-            for (size_t w = 0; w < theirs.size(); ++w) k.explored[w] |= theirs[w];
+        if (!teamsDone.insert(state.team(pl)).second) continue;
+        std::vector<size_t> members;
+        for (size_t q = p; q < state.players.size(); ++q) {
+            if (state.allied(static_cast<int64_t>(q), pl)) members.push_back(q);
         }
-        const Sight& s = sights.back();
+        const auto merging = std::chrono::steady_clock::now();
+        Intel k = members.size() == 1 ? intel_[p] : teamIntel(intel_, members);
+        stepTimes.merge += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - merging).count();
+        seen[p] = vision->sight(pl, state, k.explored, farther, reveal);
+        const Sight& s = seen[p];
         if (k.sites.size() != sites.size()) k.sites.assign(sites.size(), -std::numeric_limits<double>::infinity());
         for (size_t j = 0; j < sites.size(); ++j) {
             const auto i = vision->index(sites[j]);
@@ -436,8 +472,12 @@ void Simulation::look() {
         }
         std::sort(units.begin(), units.end(), [](const Intel::Seen& a, const Intel::Seen& b) { return a.unit.id < b.unit.id; });
         k.units = units;
-        intel_[p] = k;
+        for (size_t q : members) {
+            if (q != p) seen[q] = s;
+        }
+        for (size_t q : members) intel_[q] = k;
     }
+    sights = std::move(seen);
     state.intel = intel_;
 }
 

@@ -11,8 +11,10 @@
 #include "Simulation.h"
 #include "WindowMaps.h"
 #include "PathAhead.h"
+#include "LateStage.h"
 
 #include <cstring>
+#include <map>
 #include <memory>
 #include <thread>
 
@@ -109,17 +111,53 @@ void stageFight(Simulation& sim, const MapDefinition& map, int64_t size) {
     }
 }
 
-struct Sample { double ms, at; int64_t units; };
+struct Sample { double ms, at; int64_t units; Simulation::StepTimes parts; };
+
+/// The p-th quantile of `v` (sorted in place), as the step table reads it.
+double quantile(std::vector<double> v, double q) {
+    if (v.empty()) return 0;
+    std::sort(v.begin(), v.end());
+    return v[std::min((size_t)(double(v.size()) * q), v.size() - 1)];
+}
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 3) fail("usage: simbench FIXTURE SECONDS [--army N] [--ahead THREADS] [--hash] [--steps]");
+    // --stage-late8 OUT: stage a late 4v4 on Badlands · Large · 8 (LateStage.h)
+    // and save it as a fixture; nothing is stepped.
+    if (argc == 3 && std::strcmp(argv[1], "--stage-late8") == 0) {
+        const MapChoice choice{MapStyle::badlands, MapSize::large, 8};
+        const MapDefinition map = WindowMaps::build(choice);
+        Session out;
+        out.id = "window";
+        out.mapName = choice.name();
+        out.signature = "window|" + out.mapName;
+        out.mapVersion = map.version;
+        out.created = Date{1791504000};  // 2026-10-09, fixed so a re-stage is the same file
+        out.game = "1A7E8000-0000-4000-8000-000000000008";
+        out.gameStarted = out.created;
+        out.state = bench::stageLate(map, {0, 0, 0, 0, 1, 1, 1, 1});
+        if (!SessionStore::save(out, argv[2])) fail(std::string("could not write ") + argv[2]);
+        std::map<UnitKind, int64_t> units;
+        std::map<StructureKind, int64_t> buildings;
+        for (const Unit& u : out.state.units) units[u.kind] += 1;
+        for (const Structure& b : out.state.structures) buildings[b.kind] += 1;
+        std::printf("%s: %zu units, %zu buildings, %.0f s\n", out.mapName.c_str(), out.state.units.size(),
+                    out.state.structures.size(), out.state.time);
+        for (const auto& [k, n] : units) std::printf("  unit %d: %lld\n", (int)k, (long long)n);
+        for (const auto& [k, n] : buildings) std::printf("  building %d: %lld\n", (int)k, (long long)n);
+        for (size_t p = 0; p < out.state.players.size(); ++p)
+            std::printf("  player %zu (team %lld): supply %lld / %lld\n", p, (long long)out.state.team((int64_t)p),
+                        (long long)out.state.players[p].supplyUsed, (long long)out.state.players[p].supplyCap);
+        return 0;
+    }
+    if (argc < 3) fail("usage: simbench FIXTURE SECONDS [--army N] [--ahead THREADS] [--fast [BUDGET]] [--hash] [--steps] [--parts]\n"
+                       "       simbench --stage-late8 OUT");
     const std::string path = argv[1];
     const double seconds = std::atof(argv[2]);
     std::optional<int64_t> army;
     int ahead = 0;
-    bool hash = false, steps = false;
+    bool hash = false, steps = false, parts = false;
     int64_t fast = 0;  // --fast [BUDGET]: fast paths (Simulation.h), a budget of searches a step
     for (int i = 3; i < argc; ++i) {
         const std::string a = argv[i];
@@ -128,6 +166,7 @@ int main(int argc, char** argv) {
         else if (a == "--fast") fast = (i + 1 < argc && argv[i + 1][0] != '-') ? std::atoll(argv[++i]) : 32;
         else if (a == "--hash") hash = true;
         else if (a == "--steps") steps = true;
+        else if (a == "--parts") parts = true;
     }
 
     std::string error;
@@ -183,7 +222,7 @@ int main(int argc, char** argv) {
             }
             std::printf("\n");
         }
-        times.push_back({ms, sim.state.time, (int64_t)sim.state.units.size()});
+        times.push_back({ms, sim.state.time, (int64_t)sim.state.units.size(), sim.stepTimes});
     }
     const double wall = now() - t0;
     std::vector<double> sorted;
@@ -200,6 +239,37 @@ int main(int argc, char** argv) {
                 (long long)(times.empty() ? 0 : times.front().units), (long long)(times.empty() ? 0 : times.back().units));
     std::printf("searches %lld, cells closed %.1f M\n", (long long)NavGrid::searchesRun.load(), double(NavGrid::cellsClosed.load()) / 1e6);
     if (hash) std::printf("hash %016llx\n", (unsigned long long)digest);
+    if (parts) {
+        // --parts: the step's parts (Simulation::stepTimes). The fog runs
+        // every 0.1 s, the AIs once a game second; "rest" is everything
+        // else in the step (units, fights, paths, buildings).
+        std::vector<double> look, merge, think, thinkMax, rest, plain;
+        double sumLook = 0, sumThink = 0, sumMerge = 0, sumRest = 0;
+        for (const auto& t : times) {
+            const double other = std::max(0.0, t.ms - t.parts.look - t.parts.think);
+            rest.push_back(other);
+            sumRest += other;
+            if (t.parts.look > 0) { look.push_back(t.parts.look); merge.push_back(t.parts.merge); sumLook += t.parts.look; sumMerge += t.parts.merge; }
+            if (t.parts.think > 0) { think.push_back(t.parts.think); thinkMax.push_back(t.parts.thinkMax); sumThink += t.parts.think; }
+            if (t.parts.look == 0 && t.parts.think == 0) plain.push_back(t.ms);
+        }
+        auto line = [](const char* name, const std::vector<double>& v) {
+            double sum = 0;
+            for (double x : v) sum += x;
+            std::printf("  %-28s n %5zu  mean %7.3f  p50 %7.3f  p95 %7.3f  max %8.2f ms\n", name, v.size(),
+                        v.empty() ? 0.0 : sum / double(v.size()), quantile(v, 0.5), quantile(v, 0.95),
+                        v.empty() ? 0.0 : *std::max_element(v.begin(), v.end()));
+        };
+        line("steps with neither", plain);
+        line("look (every 0.1 s)", look);
+        line("  of it, the memory merge", merge);
+        line("think, all AIs (1 s)", think);
+        line("think, slowest AI", thinkMax);
+        line("rest of every step", rest);
+        const double total = sumLook + sumThink + sumRest;
+        std::printf("  share of the step time: look %.1f %% (merge %.1f %%), think %.1f %%, rest %.1f %%\n",
+                    100 * sumLook / total, 100 * sumMerge / total, 100 * sumThink / total, 100 * sumRest / total);
+    }
     std::vector<Sample> slow = times;
     std::stable_sort(slow.begin(), slow.end(), [](const Sample& a, const Sample& b) { return a.ms > b.ms; });
     for (size_t i = 0; i < std::min<size_t>(8, slow.size()); ++i)

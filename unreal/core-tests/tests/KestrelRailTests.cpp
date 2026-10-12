@@ -78,12 +78,13 @@ TEST(kestrel_weaponsKeepTheirOwnCooldowns) {
     const int64_t air = put(s, Unit::Kind::dropship, Vec2(7, 0), 1);
     Simulation sim(s);
     Unit& k = sim.state.units[0];
-    EXPECT_TRUE(sim.fire(k, air, *sim.target(air), 1.0 / 30));
-    EXPECT_TRUE(sim.fire(k, ground, *sim.target(ground), 1.0 / 30)); // the slug did not block it
+    std::vector<GameEvent> events;
+    EXPECT_TRUE(sim.fire(k, air, *sim.target(air), 1.0 / 30, events));
+    EXPECT_TRUE(sim.fire(k, ground, *sim.target(ground), 1.0 / 30, events)); // the slug did not block it
     EXPECT_NEAR(k.railCooldown.value(), UnitStats::railgun.cooldown, 1e-9);
     EXPECT_NEAR(k.cooldown.value(), Rules::stats(Unit::Kind::kestrel).cooldown, 1e-9);
-    EXPECT_TRUE(!sim.fire(k, air, *sim.target(air), 1.0 / 30));      // rail waits
-    EXPECT_TRUE(!sim.fire(k, ground, *sim.target(ground), 1.0 / 30)); // rockets wait
+    EXPECT_TRUE(!sim.fire(k, air, *sim.target(air), 1.0 / 30, events));      // rail waits
+    EXPECT_TRUE(!sim.fire(k, ground, *sim.target(ground), 1.0 / 30, events)); // rockets wait
     // After the rockets' time only the rockets are ready again.
     sim.state.units.erase(std::remove_if(sim.state.units.begin(), sim.state.units.end(),
                                          [&](const Unit& u) { return u.id == air || u.id == ground; }), sim.state.units.end());

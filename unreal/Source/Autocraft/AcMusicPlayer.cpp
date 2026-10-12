@@ -468,12 +468,18 @@ void UAcMusicPlayer::Initialize(FSubsystemCollectionBase& Collection)
 		{
 			const TSharedPtr<FJsonObject> Ad = (*AdTable)->GetObjectField(Id);
 			Ads.Add({{}, Id, TEXT("ad"), Ad->GetStringField(TEXT("asset"))});
+			int32 Plays = 1;
+			Ad->TryGetNumberField(TEXT("plays"), Plays);
+			AdPlays.Add(FMath::Max(0, Plays));
 			Titles.Add(Id, Ad->GetStringField(TEXT("title")));
 		}
 	}
 	TArray<int32> Songs, Spots;
 	for (int32 I = 0; I < Tracks.Num(); ++I) Songs.Add(I);
-	for (int32 I = 0; I < Ads.Num(); ++I) Spots.Add(I);
+	// An ad is in the rotation as many times a round as its "plays" says
+	// (Resources/Sounds/ads/plays.json, through the table); 0 is off the air.
+	for (int32 I = 0; I < Ads.Num(); ++I)
+		for (int32 K = 0; K < AdPlays[I]; ++K) Spots.Add(I);
 	if (bSeeded)
 	{
 		Rng = ac::SeededRandom(Seed);
@@ -551,7 +557,10 @@ void UAcMusicPlayer::Tick(float DeltaTime)
 		FString AdId;
 		const int32 Opening = FParse::Value(FCommandLine::Get(), TEXT("AcMusicAd="), AdId)
 			? Ads.IndexOfByPredicate([&AdId](const FTrack& T) { return T.Id == AdId; }) : INDEX_NONE;
-		if (Opening == INDEX_NONE || !Load(true, Opening)) Start();
+		// -AcMusicAdAt=S: that many seconds into it (clips cut together keep the ad running on).
+		double OpeningAt = 0;
+		FParse::Value(FCommandLine::Get(), TEXT("AcMusicAdAt="), OpeningAt);
+		if (Opening == INDEX_NONE || !Load(true, Opening, OpeningAt)) Start();
 	}
 	if (GapUntil && !bPaused && Clock >= *GapUntil) Advance();
 	if (IsPlaying())
@@ -725,7 +734,7 @@ void UAcMusicPlayer::StopVoice()
 	Voice = nullptr;
 }
 
-bool UAcMusicPlayer::Load(bool bAd, int32 Index)
+bool UAcMusicPlayer::Load(bool bAd, int32 Index, double StartAt)
 {
 	UWorld* World = PlayWorld();
 	if (!World || bSilent) return true;
@@ -755,11 +764,12 @@ bool UAcMusicPlayer::Load(bool bAd, int32 Index)
 	const int32 G = Generation;
 	Voice->OnAudioFinishedNative.AddWeakLambda(this, [this, G](UAudioComponent*) { PendingEnd = G; });
 	Loaded = FLoaded{bAd, Index, Length};
-	Played = 0;
+	StartAt = FMath::Clamp(StartAt, 0.0, Length);
+	Played = StartAt;
 	GapUntil.Reset();
 	Play = FPlay{T.Id, TitleOf(T), T.Source, Length, FDateTime::UtcNow(), 0, 0, {}};
 	UE_LOG(LogAutocraft, Log, TEXT("audio: playing %s"), *FPaths::GetCleanFilename(bAd ? T.Id + TEXT(".wav") : T.Path));
-	Voice->Play();
+	Voice->Play((float)StartAt);
 	if (bPaused) Voice->SetPaused(true);
 	ReadInfo(T);
 	Changed();
@@ -804,7 +814,7 @@ double UAcMusicPlayer::Position() const
 
 float UAcMusicPlayer::VoiceGain(const bool bAd) const
 {
-	// An ad plays +3 dB over the songs (`AdGain`), never past full.
+	// An ad plays +6 dB over the songs (`AdGain`), never past full.
 	const float Music = AcSound::MusicGain();
 	const float Gain = bAd ? FMath::Min(Music * AdGain, 1.f) : Music;
 	return (bMuted ? 0.f : Gain) * AcSound::MasterGain();

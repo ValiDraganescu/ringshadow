@@ -6,6 +6,7 @@
 
 #include "AcAudioDirector.h"
 #include "AcLog.h"
+#include "AcPilotAim.h"
 #include "AcPilotPawn.h"
 #include "AcRtsPawn.h"
 #include "AcSimSubsystem.h"
@@ -319,6 +320,7 @@ FAcVoice3D UAcPilotAudio::Voice(const FAcEars& Ears, const FVector& At, const bo
 	{
 		if (const std::optional<ac::Listener>& L = Sim->Session().listener) Range = L->range;
 	}
+	if (Hearing > 0) Range = Hearing;
 	const bool bTrue = CVarAcPilotHrtf.GetValueOnGameThread() == 1;
 	FAcVoice3D V = AcPilotAudio::Place(Ears, At, Range, bBlocked, bTrue);
 	if (!bTrue)
@@ -386,8 +388,12 @@ void UAcPilotAudio::OnFrame(const FAcFrame& Frame)
 		}
 		L->position = U->position;
 		L->facing = U->look();
-		// Where its misses land (`pilotMissed`): the sound with the dust.
-		const double Reach = S.weapon(*U).range + ac::Rules::radius(U->kind);
+		// It hears past what it sees (the fog of war's radius, night included).
+		const double Sight = ac::Rules::vision(U->kind) * ac::Rules::sightScale(ac::Rules::hourAt(S.state.time, S.state.dayLength, S.state.heldHour));
+		Hearing = FMath::Max(MinHearing, HearingPerSight * Sight);
+		// Where its misses land (`pilotMissed`): the sound with the dust,
+		// where the sight meets something (a round flies on past range).
+		const double Reach = AcPilotAim::ShotReach;
 		const FVector Spent = AcPilotAudio::SightPoint(Pawn->GetActorLocation(), Pawn->GetActorRotation().Vector(), Pawn->ChaseEye(),
 			Pawn->Crosshair() ? TOptional<FVector>(Pawn->Crosshair()->Point) : TOptional<FVector>(), AcSpace::ToCm(Reach));
 		Audio->Rules().PilotSpent = AcSpace::ToSim(Spent);
@@ -398,6 +404,7 @@ void UAcPilotAudio::OnFrame(const FAcFrame& Frame)
 	{
 		// `leavePilot`: back to the camera's centre, facing up the screen.
 		bWasDriving = false;
+		Hearing = 0;
 		Audio->Rules().PilotSpent.reset();
 		if (L)
 		{

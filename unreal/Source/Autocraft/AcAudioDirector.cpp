@@ -60,6 +60,17 @@ float AcSound::MasterGain()
 	return Volume * FMath::Clamp(UAcSettings::Get().MasterVolume, 0.f, 1.f);
 }
 
+float AcSound::Carry(const FName Sound)
+{
+	static const TSet<FName> Far = {"boom", "blast", "cannon", "anchorshot", "anchorhit", "rockets", "missile", "seekers", "flak",
+		"flakhit", "atlasshot", "stomp", "atlasdeath", "cometdeath", "dropshipdeath", "fireflydeath", "hailstormdeath",
+		"juggernautdeath", "kestreldeath", "longbowdeath", "peregrinedeath", "prospectordeath", "rangerdeath", "scorpiondeath"};
+	static const TSet<FName> Near = {"drill", "weld", "step", "atlasstep", "hum", "deposit", "heal", "scorpionbury", "scorpionunbury"};
+	if (Far.Contains(Sound)) return 4.f / 3.f;
+	if (Near.Contains(Sound)) return 2.f / 3.f;
+	return 1.f;
+}
+
 float AcSound::MusicGain()
 {
 	const UAcSettings& S = UAcSettings::Get();
@@ -203,7 +214,7 @@ bool FAcAudioRules::Allow(FName Sound, int32 PerSecond)
 bool FAcAudioRules::OneShot(FName Sound, ac::Vec2 At, float Gain, EAcSoundPool Pool)
 {
 	if (Variants(Sound) <= 0) return false;
-	const float R = Pool == EAcSoundPool::InEar ? 1.f : Reach(At);
+	const float R = Pool == EAcSoundPool::InEar ? 1.f : Reach(At, AcSound::Carry(Sound));
 	if (!(R > AcSound::Audible)) return false;
 	Cues.push_back({Sound, Gain * R, At, Pool});
 	return true;
@@ -588,7 +599,7 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 		W.Key = U.id * 8 + ToolSlot;
 		W.Name = T->Sound;
 		W.Variant = T->Variant;
-		W.Volume = T->Gain * (T->Sound == FName("weld") ? AcSound::WeldLoopGain : AcSound::DrillGain) * Reach(U.position);
+		W.Volume = T->Gain * (T->Sound == FName("weld") ? AcSound::WeldLoopGain : AcSound::DrillGain) * Reach(U.position, AcSound::Carry(T->Sound));
 		W.At = U.position;
 		Out.push_back(W);
 	}
@@ -606,7 +617,7 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 		if (!(U.owner >= 0 && U.owner < (int64)Shown.players.size())) continue;
 		const auto& Ups = Shown.players[U.owner].upgrades;
 		if (!Ups || !Ups->count(ac::Upgrade::minigun)) continue;
-		const float R = Reach(U.position);
+		const float R = Reach(U.position, AcSound::Carry("minigun"));
 		if (R > AcSound::Audible) Near.push_back({&U, R});
 	}
 	std::stable_sort(Near.begin(), Near.end(), [](const auto& A, const auto& B) { return A.second > B.second; });
@@ -636,7 +647,7 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 		W.Key = It.Key() * 8 + MinigunSlot;
 		W.Name = "minigun";
 		W.Variant = It.Value().Variant;
-		W.Volume = It.Value().Gain * AcSound::MinigunGain * Reach(U->position);
+		W.Volume = It.Value().Gain * AcSound::MinigunGain * Reach(U->position, AcSound::Carry("minigun"));
 		W.At = U->position;
 		Out.push_back(W);
 	}
@@ -651,7 +662,7 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 		FAcLoopWant W;
 		W.Key = S.id * 8 + HumSlot;
 		W.Name = "hum";
-		W.Volume = AcSound::HumGain * Reach(S.position);
+		W.Volume = AcSound::HumGain * Reach(S.position, AcSound::Carry("hum"));
 		W.bAmbient = true;
 		W.At = S.position;
 		W.Lift = 1.5f;
@@ -692,7 +703,7 @@ void UAcAudioDirector::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	Collection.InitializeDependency<UAcSimSubsystem>();
 	bLog = FParse::Param(FCommandLine::Get(), TEXT("AcAudioLog"));
-	Brain.Reach = [this](ac::Vec2 P) { return Reach(P); };
+	Brain.Reach = [this](ac::Vec2 P, float Carry) { return Reach(P, Carry); };
 	Brain.Variants = [this](FName N)
 	{
 		const FAcSoundVariants* V = Bank.Find(N);
@@ -881,11 +892,20 @@ double UAcAudioDirector::GroundHeight(ac::Vec2 P) const
 	return Terrain ? Terrain->FieldHeight(P) : 0.0;
 }
 
-float UAcAudioDirector::Reach(ac::Vec2 P) const
+float UAcAudioDirector::Reach(ac::Vec2 P, const float Carry) const
 {
 	const UAcSimSubsystem* Sim = GetWorld() ? GetWorld()->GetSubsystem<UAcSimSubsystem>() : nullptr;
 	if (!Sim || !Sim->IsRunning()) return 1.f;
 	const std::optional<ac::Listener>& L = Sim->Session().listener;
+	// Driving: the unit hears as far as its hearing times the sound's
+	// carry, then nothing (its listener's position, that for range).
+	if (const UAcPilotAudio* Pilot = Ears ? UAcPilotAudio::Get(this) : nullptr; Pilot && L && Pilot->HearingRange() > 0)
+	{
+		ac::Listener Near = *L;
+		Near.range = Pilot->HearingRange() * Carry;
+		Near.local = true;
+		return static_cast<float>(Near.gain(P));
+	}
 	if (L && !L->local) return 1.f;
 	// The top-down window hears what it shows (`GameController.screenGain`).
 	if (!Ears)
@@ -977,14 +997,15 @@ void UAcAudioDirector::Play(const FAcSoundCue& Cue)
 		// hall send, without the pan.
 		TOptional<FAcVoice3D> Voice;
 		if (Cue.Pool != EAcSoundPool::InEar) Place(Cue.At, 0.7f, {}, Voice);
-		C = UGameplayStatics::SpawnSound2D(World, Wave, Cue.Volume * (Voice ? Voice->Gain : 1.f) * AcSound::SfxGain(), 1.f, 0.f,
+		const float World3D = Cue.Pool == EAcSoundPool::InEar ? 1.f : WorldGain();
+		C = UGameplayStatics::SpawnSound2D(World, Wave, Cue.Volume * (Voice ? Voice->Gain : 1.f) * World3D * AcSound::SfxGain(), 1.f, 0.f,
 			Cue.Pool == EAcSoundPool::InEar ? InEarPool.Get() : Cue.Pool == EAcSoundPool::Combat ? CombatPool.Get() : DepositPool.Get());
 		if (Voice)
 		{
 			if (const UAcPilotAudio* Pilot = UAcPilotAudio::Get(this))
 			{
 				Pilot->Apply(C, Voice.GetPtrOrNull());
-				Pilot->Log(Cue.Name, *Voice, Cue.Volume * Voice->Gain * AcSound::SfxGain());
+				Pilot->Log(Cue.Name, *Voice, Cue.Volume * Voice->Gain * World3D * AcSound::SfxGain());
 			}
 		}
 	}
@@ -993,7 +1014,7 @@ void UAcAudioDirector::Play(const FAcSoundCue& Cue)
 		TOptional<FAcVoice3D> Voice;
 		const FVector At = Place(Cue.At, 0.7f, {}, Voice);
 		const UAcPilotAudio* Pilot = Voice ? UAcPilotAudio::Get(this) : nullptr;
-		const float Volume = Cue.Volume * (Voice ? Voice->Gain : 1.f) * AcSound::SfxGain();
+		const float Volume = Cue.Volume * (Voice ? Voice->Gain : 1.f) * WorldGain() * AcSound::SfxGain();
 		C = UGameplayStatics::SpawnSoundAtLocation(World, Wave, At, FRotator::ZeroRotator, Volume, 1.f, 0.f,
 			Pilot ? Pilot->Attenuation() : Panned.Get(), Cue.Pool == EAcSoundPool::Combat ? CombatPool.Get() : DepositPool.Get());
 		if (Pilot)
@@ -1045,7 +1066,8 @@ void UAcAudioDirector::SyncLoops(const std::vector<FAcLoopWant>& Wants)
 	for (const FAcLoopWant& W : Wants)
 	{
 		Seen.Add(W.Key);
-		const float Volume = bMuted || bHeld ? 0.f : W.Volume * (W.bAmbient ? AcSound::AmbientGain() : AcSound::SfxGain());
+		const float Volume = bMuted || bHeld ? 0.f
+			: W.Volume * (W.bInEar ? 1.f : WorldGain()) * (W.bAmbient ? AcSound::AmbientGain() : AcSound::SfxGain());
 		// Where it plays (placed only while heard, as Swift's `place`), and
 		// while driving its 3D voice (E7: gain, filter, hall send).
 		const bool bFlat = W.bInEar || PlaceFlat();

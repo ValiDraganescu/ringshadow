@@ -189,12 +189,29 @@ bool FAcAudioStompTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcAudioCarryTest, "Autocraft.Audio.Rules.Carry", Flags)
+bool FAcAudioCarryTest::RunTest(const FString&)
+{
+	TestTrue(TEXT("a blast carries 2 × sight"), FMath::IsNearlyEqual(AcSound::Carry("boom"), 4.f / 3.f));
+	TestTrue(TEXT("a tank cannon too"), FMath::IsNearlyEqual(AcSound::Carry("cannon"), 4.f / 3.f));
+	TestTrue(TEXT("a drill only to the sight"), FMath::IsNearlyEqual(AcSound::Carry("drill"), 2.f / 3.f));
+	TestTrue(TEXT("a rifle 1.5 × sight"), FMath::IsNearlyEqual(AcSound::Carry("gun"), 1.f));
+	FAcAudioRules R;
+	TArray<float> Asked;
+	R.Reach = [&Asked](ac::Vec2, float Carry) { Asked.Add(Carry); return 1.f; };
+	R.Advance(1);
+	R.Shot(ac::UnitKind::ranger, false, ac::Vec2(0, 0), ac::Vec2(1, 0), 2, false);
+	TestTrue(TEXT("a rifle shot asks the reach with its carry"), Asked.Contains(1.f));
+	TestFalse(TEXT("and nothing farther"), Asked.ContainsByPredicate([](float C) { return C > 1.f; }));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcAudioOracleTest, "Autocraft.Audio.Rules.Oracle", Flags)
 bool FAcAudioOracleTest::RunTest(const FString&)
 {
 	FAcAudioRules R;
 	R.LocalPlayer = 2;
-	R.Reach = [](ac::Vec2) { return 0.f; }; // nothing on screen: the Oracle still speaks, in your ear
+	R.Reach = [](ac::Vec2, float) { return 0.f; }; // nothing on screen: the Oracle still speaks, in your ear
 	R.Advance(1);
 	R.Shot(ac::UnitKind::ranger, false, ac::Vec2(0, 0), ac::Vec2(1, 0), 2, true);
 	std::vector<FAcSoundCue> Cues = R.TakeCues();
@@ -263,7 +280,7 @@ bool FAcAudioVoicesTest::RunTest(const FString&)
 {
 	FAcAudioRules R;
 	bool bOnScreen = false;
-	R.Reach = [&bOnScreen](ac::Vec2) { return bOnScreen ? 0.5f : 0.f; };
+	R.Reach = [&bOnScreen](ac::Vec2, float) { return bOnScreen ? 0.5f : 0.f; };
 	R.Advance(10);
 	// Off screen: no line, and the cool-down is not spent.
 	R.Trained(ac::UnitKind::ranger, ac::Vec2(1, 1));
@@ -326,18 +343,18 @@ bool FAcAudioLoopsTest::RunTest(const FString&)
 		}
 		return -1.f;
 	};
-	TestTrue(TEXT("two thirds in after 0.1 s"), FMath::IsNearlyEqual(Drill(7), 0.25f * (0.1f / 0.15f), 1e-4f));
+	TestTrue(TEXT("two thirds in after 0.1 s"), FMath::IsNearlyEqual(Drill(7), AcSound::DrillGain * (0.1f / 0.15f), 1e-4f));
 	TestTrue(TEXT("idle Prospector silent"), FMath::IsNearlyEqual(Drill(8), 0.f));
 	Ls.clear();
 	R.Loops(S, 0.1, Ls);
-	TestTrue(TEXT("full after 0.15 s"), FMath::IsNearlyEqual(Drill(7), 0.25f));
+	TestTrue(TEXT("full after 0.15 s"), FMath::IsNearlyEqual(Drill(7), AcSound::DrillGain));
 	// It starts building: the drill fades out (0.4 s), then the welder fades in.
 	S.units[0].task = ac::Unit::Task::building;
 	Ls.clear();
 	R.Loops(S, 0.2, Ls);
 	const FAcLoopWant* Tool = nullptr;
 	for (const FAcLoopWant& L : Ls) if (L.Key == 7 * 8) Tool = &L;
-	TestTrue(TEXT("still the drill, half out"), Tool && Tool->Name == FName("drill") && FMath::IsNearlyEqual(Tool->Volume, 0.125f, 1e-4f));
+	TestTrue(TEXT("still the drill, half out"), Tool && Tool->Name == FName("drill") && FMath::IsNearlyEqual(Tool->Volume, AcSound::DrillGain / 2, 1e-4f));
 	Ls.clear();
 	R.Loops(S, 0.2, Ls);
 	Ls.clear();
@@ -352,7 +369,7 @@ bool FAcAudioLoopsTest::RunTest(const FString&)
 		U.firedAt = S.time - 0.05;
 		S.units.push_back(U);
 	}
-	R.Reach = [](ac::Vec2 P) { return static_cast<float>(1.0 / (1.0 + P.x)); };
+	R.Reach = [](ac::Vec2 P, float) { return static_cast<float>(1.0 / (1.0 + P.x)); };
 	Ls.clear();
 	R.Loops(S, 1.0 / 60, Ls);
 	TArray<int64> Guns;

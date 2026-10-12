@@ -77,6 +77,7 @@ grep -E "Test Completed|Error:|Fail" LOGPATH
 - Done when every `Test Completed` line reads `Passed` and no `Error:` line names a test. A failing expectation logs its message and file line under the test's name.
 - An editor start dominates the time (not measured here); start it with `run_in_background` and a `timeout`. A run that writes no log lines at all means the module failed to load: rebuild.
 - Automation tests run in the editor process without a world. A scenario needing a running game belongs in a flow test.
+- A crash that calls into a random address (the stack's top frame some unrelated engine symbol, `SIGBUS`/`SIGSEGV`) after a minute or more of play is often a `UObject` held by a raw pointer that the GC freed. Reproduce it in a hidden sim with the GC every half second: add `-ini:Engine:[/Script/Engine.GarbageCollectionSettings]:gc.TimeBetweenPurgingPendingKillObjects=0.5` to its flags. Hold such objects in a `UPROPERTY` array or `TStrongObjectPtr`. 2026-10-12: the Kestrel's borrowed rocket-lamp material (`AcCockpit.cpp`) and the shatter library's source meshes and materials (`AcShatter.cpp`) crashed this way.
 
 ## Flow tests
 

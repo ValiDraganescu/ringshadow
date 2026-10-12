@@ -133,6 +133,72 @@ TEST(teams_alliedVisionIsShared) {
     }
 }
 
+/// Allies keep one memory: a building, a unit, a site and ground only one
+/// of them remembers (memories that differ, as in a game set up by hand)
+/// are the whole team's after the next look, and stay alike once the scout
+/// that saw an enemy building is gone. With no teams each keeps its own.
+TEST(teams_alliesShareWhatTheyRemember) {
+    const MapDefinition& m = square(MapStyle::openField, 4);
+    for (bool teamed : {true, false}) {
+        GameState s = GameState::new_(m, std::nullopt, 0, teamed ? std::optional(std::vector<int64_t>{0, 0, 1, 1}) : std::nullopt);
+        s.units.clear();
+        s.time = 60;
+        // A Garrison of player 2's beside its main, and a Ranger of player
+        // 3's out in the middle: nothing of players 0 and 1 near either.
+        const Vec2 home2 = startOf(s, m, 2);
+        const int64_t garrison = addStructure(s, Structure::Kind::garrison, home2 + normalize(-home2) * 8, 2);
+        const int64_t ranger = addUnit(s, Unit::Kind::ranger, Vec2(4, -6), 3);
+        Simulation sim(s, m);
+        sim.lookNow();
+        ASSERT_TRUE(!sim.sees(0, garrison) && !sim.sees(1, garrison) && !sim.sees(0, ranger));
+        const Structure g = *sim.state.structure(garrison);
+        const Vec2 at = g.position;
+        size_t site = 0;
+        for (size_t j = 1; j < sim.sites.size(); ++j) {
+            if (distance(sim.sites[j], home2) < distance(sim.sites[site], home2)) site = j;
+        }
+        ASSERT_TRUE(!sim.sees(0, sim.sites[site]));
+        const int64_t cell = *sim.vision->index(at);
+        // Player 1 alone remembers them: it saw the Garrison and its base
+        // 30 s ago, and the Ranger just now.
+        Intel& k1 = (*sim.state.intel)[1];
+        k1.buildings.push_back(g);
+        k1.units.push_back(Intel::Seen{*sim.state.unit(ranger), 60});
+        k1.sites[site] = 30;
+        k1.explored[static_cast<size_t>(cell / 64)] |= uint64_t(1) << (cell % 64);
+        sim.lookNow();
+        const Intel k0 = *sim.intel(0);
+        auto knowsBuilding = [&](const Intel& k) {
+            return std::any_of(k.buildings.begin(), k.buildings.end(), [&](const Structure& b) { return b.id == garrison; });
+        };
+        auto knowsUnit = [&](const Intel& k) {
+            return std::any_of(k.units.begin(), k.units.end(), [&](const Intel::Seen& u) { return u.unit.id == ranger; });
+        };
+        EXPECT_EQ(knowsBuilding(*sim.intel(1)), true);
+        EXPECT_EQ(knowsBuilding(k0), teamed);
+        EXPECT_EQ(knowsUnit(k0), teamed);
+        EXPECT_EQ(k0.sites[site] == 30.0, teamed);
+        EXPECT_EQ(k0.isExplored(cell), teamed);
+        EXPECT_EQ(k0 == *sim.intel(1), teamed);
+        // Player 0's AI plays from it.
+        EXPECT_EQ(sim.known(0).structure(garrison).has_value(), teamed);
+        EXPECT_EQ(sim.known(0).unit(ranger).has_value(), teamed);
+        // Player 1's scout sees a second building and is lost: the team remembers it.
+        GameState t = sim.state;
+        const int64_t dome = addStructure(t, Structure::Kind::habDome, home2 + normalize(-home2) * 11 + Vec2(3, 0), 2);
+        const int64_t scout = addUnit(t, Unit::Kind::ranger, t.structure(dome)->position + normalize(-home2) * 4, 1);
+        Simulation later(t, m);
+        later.lookNow();
+        ASSERT_TRUE(later.sees(1, dome));
+        std::erase_if(later.state.units, [&](const Unit& u) { return u.id == scout; });
+        later.lookNow();
+        EXPECT_TRUE(!later.sees(0, dome) && !later.sees(1, dome));
+        EXPECT_EQ(later.known(0).structure(dome).has_value(), teamed);
+        EXPECT_EQ(later.known(1).structure(dome).has_value(), true);
+        EXPECT_EQ(*later.intel(0) == *later.intel(1), teamed);
+    }
+}
+
 // MARK: - Victory
 
 /// Three teams: losing one team, or one player of a team, ends nothing; the
@@ -409,6 +475,56 @@ TEST(teams_aiDefendsAnAllysBase) {
         if (auto x = cmd.as<Command::Attack>(); x && x->player == 1 && !x->at) home = true;
     }
     EXPECT_TRUE(home);
+}
+
+/// Two allies that both want the same free site (their Citadels side by
+/// side, the base's ore nearly gone) split the free sites: the first to
+/// think sends a Prospector to the nearest, the second, seeing that order,
+/// takes another. With no teams the second races the first for it.
+TEST(teams_alliesSplitTheFreeSites) {
+    const MapDefinition& m = square(MapStyle::openField, 4);
+    for (bool teamed : {true, false}) {
+        GameState s = GameState::new_(m, std::nullopt, 0, teamed ? std::optional(std::vector<int64_t>{0, 0, 1, 1}) : std::nullopt);
+        s.time = 300;
+        // Player 1's Citadel and Prospectors moved beside player 0's on its main.
+        const Vec2 home0 = startOf(s, m, 0);
+        const Vec2 beside = home0 + normalize(Vec2(-home0.y, home0.x)) * 7;
+        for (auto& b : s.structures) {
+            if (b.owner == 1 && b.kind == Structure::Kind::citadel) b.position = beside;
+        }
+        for (auto& u : s.units) {
+            if (u.owner == 1) u.position = beside + (u.position - startOf(s, m, 1)) * 0.3;
+        }
+        for (auto& p : s.patches) p.remaining = ac::min<int64_t>(p.remaining, 300);
+        for (int64_t p : {0, 1}) s.players[static_cast<size_t>(p)].ore = 5000;
+        Simulation sim(s, m, false);
+        const Commander c0(m, 0), c1(m, 1);
+        std::set<int64_t> taken;
+        for (const auto& b : s.structures) if (b.kind == Structure::Kind::citadel) taken.insert(sim.site(b));
+        const auto want0 = c0.nextSite(s, sim, taken, home0), want1 = c1.nextSite(s, sim, taken, beside);
+        ASSERT_TRUE(want0.has_value() && want1.has_value());
+        ASSERT_TRUE(distance(*want0, *want1) < 0.5);
+        auto expansion = [](const std::vector<Command>& cmds, int64_t owner, const GameState& g) -> std::optional<Vec2> {
+            for (const Command& cmd : cmds) {
+                const auto b = cmd.as<Command::Build>();
+                if (b && b->kind == Structure::Kind::citadel && g.unit(b->worker) && g.unit(b->worker)->owner == owner) return b->at;
+            }
+            return std::nullopt;
+        };
+        // Player 0 thinks first and sends a Prospector to the nearest site.
+        const auto first = expansion(c0.economy(sim), 0, sim.state);
+        ASSERT_TRUE(first.has_value());
+        EXPECT_TRUE(distance(*first, *want0) < 0.5);
+        for (const Command& cmd : c0.economy(sim)) {
+            if (const auto b = cmd.as<Command::Build>(); b && b->kind == Structure::Kind::citadel) ASSERT_TRUE(sim.issue(cmd));
+        }
+        EXPECT_EQ(c1.claimedByAlly(sim.state, *first), teamed);
+        EXPECT_EQ(c0.claimedByAlly(sim.state, *first), false);
+        // Player 1 then goes for another site; with no teams for the same.
+        const auto second = expansion(c1.economy(sim), 1, sim.state);
+        ASSERT_TRUE(second.has_value());
+        EXPECT_EQ(distance(*second, *first) >= 16, teamed);
+    }
 }
 
 // MARK: - Saves

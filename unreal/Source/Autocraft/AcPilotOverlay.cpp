@@ -3,6 +3,7 @@
 #include "AcConsole.h"
 #include "AcHUD.h"
 #include "AcLog.h"
+#include "AcPilotCamera.h"
 #include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
 #include "SAcConsole.h"
@@ -14,8 +15,11 @@
 #include "HAL/PlatformTime.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Rules.h"
 #include "Simulation.h"
 #include "Types.h"
+
+#include <cmath>
 
 namespace
 {
@@ -232,6 +236,17 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	FAcPilotInfo Info = AcPilotText::Info(S, *F, Inputs);
 	if (GunMarker) Info.Gun = GunMarker();
 	else Info.Gun = Pawn->GunMarker(); // E4's marker, computed by the pawn each frame
+	// A soldier's gun: the brackets open with its cone, moving and firing
+	// (docs/shooter-feel.md).
+	if (S.pilotShoots(U) && ac::Rules::stats(U.kind).bio)
+	{
+		const ac::UnitStats W = S.weapon(U);
+		if (W.falloff > 0)
+		{
+			const double Half = FMath::DegreesToRadians(FAcPilotCamera::FovDegrees * 0.5);
+			Info.Cone = std::tan(S.cone(U, W, S.pilotPace)) / std::tan(Half);
+		}
+	}
 	if (Widget) Widget->Show(Info, Now);
 
 	if (UAcConsoleSubsystem* Console = UAcConsoleSubsystem::Get(this))

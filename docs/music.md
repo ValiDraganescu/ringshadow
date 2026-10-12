@@ -41,15 +41,20 @@ outside the folders the game reads, and their prompts stay in
 After a song plays out (never after a skip) comes one of the station's
 ads, then the next song: a 1.5 s pause before the ad and 2 s after it,
 where songs alone have 6 s between them. The ads take turns in a
-shuffled order, each once before any comes again. On the player an ad
+shuffled round: each plays as many times a round as
+`unreal/Resources/Sounds/ads/plays.json` says (`default` 1, 0 takes an ad
+off the air), never the same one twice running, and the round shuffles
+again when it is done. Change a weight there and rerun
+`import_sounds.py`, which copies it into `Sounds.json` as `plays`. On the player an ad
 shows the station's card and "AD ·" with its sponsor in amber. Next (⏭)
 skips it to the next song; previous (⏮) goes back to the start of the
 song before it; the thumbs vote on the ad. Its plays and votes go in the
 same tables as the songs', as source `ad`; `make music` lists them after
 the songs.
 
-The thirteen spots, in `unreal/Resources/Sounds/ads/`
-(titles in `titles.json` there):
+The fourteen spots, in `unreal/Resources/Sounds/ads/`
+(titles in `titles.json` there), every one once a round except the
+Claude ad, twice:
 
 | Id | Title | The joke |
 | --- | --- | --- |
@@ -66,6 +71,22 @@ The thirteen spots, in `unreal/Resources/Sounds/ads/`
 | `ministry_of_regrowth` | Ministry of Regrowth | a public notice: fields grow back, stop fighting (a blast in the pause) |
 | `firefly_drivers_ed` | Firefly Driver's Ed | the flamethrower is not the horn |
 | `kstr_ident` | KSTR 88.7 Stardust | the only station on Ashfall Reach, the others got shelled |
+| `claude` | Claude by Anthropic | a real ad, for testing: two morning-show hosts argue whether Claude is a person, then how Claude made Ringshadow's units (3.5 min) |
+
+The Claude ad is the station's first real ad, a test of ads that pay;
+it is not a deal with Anthropic. It is a two-voice dialogue (ElevenLabs
+`text-to-dialogue`, `eleven_v3`): Theo is the library voice "Joe -
+Conversational Storyteller" (`5Xx8kcjjamcaKohQT5wv`), Jules "Hazel -
+Warm, Witty" (`YyqkX0AHv8W5D1vxG9lR`), so neither takes a custom voice
+slot. Under them, a calm Rhodes bed (ElevenLabs Music) 6 dB under the
+voices in the intro and 26 dB under them while they talk; the user found
+an upbeat bed 15 dB under too loud and too joyful. The script, with its
+delivery directions, and the scripts that made it are in
+`Tools/AudioGen/claude-ad/` (`dialogue.py` renders the two parts,
+`tighten.py` joins them with no pause over 0.45 s, `mix.py` lays the
+bed, then `radio.py` as for every ad); the raw takes are
+`Tools/AudioGen/raw/claude_part1.mp3`, `claude_part2.mp3` and
+`claude_bed.mp3`.
 
 The ads say "Metallic Hydrogen" in full, never "MH", so players learn
 what the HUD's MH stands for. Each ends on its fine print, read fast.
@@ -80,8 +101,9 @@ makes any that are missing into `Tools/AudioGen/raw/`, then puts each
 through `radio.py`: trimmed, the broadcast band (110 Hz - 7.5 kHz) with
 a presence lift, a station compressor, the songs' level (-16.5 dBFS over
 the louder half), peaks under -1.7 dBFS; `--boom` lays a distant
-explosion into the Ministry's pause. The player then plays the ads 3 dB
-over the songs (`MusicPlayer.adGain`), so they stand out a little. A new ad is a manifest entry, a
+explosion into the Ministry's pause. The player then plays the ads 6 dB
+over the songs (`UAcMusicPlayer::AdGain`): the spots measure about -17
+LUFS against the songs' -15, so they end up 3-4 dB louder than the music. A new ad is a manifest entry, a
 line in `titles.json`, and a run of that command. The spots were checked
 by transcribing them (Whisper, locally): each says its script and no
 direction aloud.

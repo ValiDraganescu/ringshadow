@@ -97,7 +97,7 @@ public:
     };
 
     /// An attack on its way: it lands at `at`.
-    struct InFlight { double at; Unit shooter; int64_t target; Target aim; };
+    struct InFlight { double at; Unit shooter; int64_t target; Target aim; double share = 1; };
     /// Attacks on their way (grenades, shells, flame): they land at `at`.
     std::vector<InFlight> inFlight;
     /// An attack that landed: who fired and at what.
@@ -182,6 +182,13 @@ public:
     int64_t pathBudget = 32;
     /// Searches started this step.
     int64_t pathsStarted = 0;
+    /// C++ only: wall-clock ms the last `step` spent on the fog (`look`,
+    /// every `lookEvery`; `merge` is its teams' memory merge) and on the AIs
+    /// (`think`, once a game second; `thinkMax` the slowest commander); 0 on
+    /// a step without them. For the bench (`simbench --parts`); never read
+    /// by the game's rules.
+    struct StepTimes { double look = 0, merge = 0, think = 0, thinkMax = 0; };
+    StepTimes stepTimes;
     void setFastPaths(bool on, int64_t budget = 32);
     /// C++ only: a flier keeps its goal while it flies, so under an army
     /// attack-move it flies every step (the Swift game's fliers move one step
@@ -277,6 +284,29 @@ public:
     double cooldownFor(const Unit& u, bool air) const;
     /// `u` just fired weapon `w`: it is ready again after the cooldown.
     void reload(Unit& u, const UnitStats& w);
+    /// The radius of `u`'s spread cone with weapon `w` now, radians: the
+    /// weapon's standing cone, its moving extra by `moving` (0 standing, 1
+    /// at full speed; none below a third, all of it from 95%), and what its
+    /// last rounds added (`Unit::spread`).
+    double cone(const Unit& u, const UnitStats& w, double moving) const;
+    /// The share of its damage a round of `w` keeps after flying `d` cells
+    /// (edge to edge) where its range is `reach`: all of it inside, then
+    /// `falloff` for every further `reach`; all of it for a weapon that
+    /// stops at its range.
+    static double falloffShare(const UnitStats& w, double d, double reach);
+    /// A number in [0, 1) from unit `id`, the game time and `salt`: random
+    /// enough, and the same on every run.
+    double roll(int64_t id, uint64_t salt) const;
+    /// One round of `u` at `t`: a hit, with the share of its damage it keeps,
+    /// or a miss, with how far off the sight it flew and where it comes down.
+    struct Round { bool hit = true; double share = 1; double yaw = 0, pitch = 0; Vec2 at{0, 0}; };
+    /// Rolls a round of weapon `w` inside its cone (`moving` as for `cone`)
+    /// and adds the round's spread. A weapon that stops at its range never
+    /// misses.
+    Round aimRound(Unit& u, const UnitStats& w, const Target& t, double moving);
+    /// The driven unit's speed in its last step, as a share of its full pace
+    /// (`pilotWalk`), for its cone.
+    double pilotPace = 0;
     /// A player has finished this upgrade.
     bool has(int64_t player, Upgrade up) const;
     /// A unit's full hit points, its side's upgrades and leveling picks
@@ -309,17 +339,19 @@ public:
     static constexpr double woundedQuiet = 1.5;
     void stepSoldier(Unit& u, double dt, std::vector<GameEvent>& events);
     /// Turn to the target and shoot when the weapon is ready; true when it
-    /// fired.
-    bool fire(Unit& u, int64_t id, const Target& t, double dt);
+    /// fired. The round goes out as a `Shot`, or a `Missed` when it misses
+    /// (`aimRound`; `moving` as for `cone`).
+    bool fire(Unit& u, int64_t id, const Target& t, double dt, std::vector<GameEvent>& events, double moving = 0);
     /// One attack of `u` on `v`.
     double damage(const Unit& u, const Target& v) const;
     /// `u` attacks `id` (seen as `t`): it lands now, or once its round has
     /// flown (`Rules.flight`).
-    void strike(const Unit& u, int64_t id, const Target& t);
+    /// `share`: of its damage, after falloff.
+    void strike(const Unit& u, int64_t id, const Target& t, double share = 1);
     /// The shooter `u` was unseen by the victim's side `victim` when it fired.
     bool shotUnseen(const Unit& u, int64_t victim) const;
     /// An attack of `u` lands.
-    void land(const Unit& u, int64_t id, const Target& aim);
+    void land(const Unit& u, int64_t id, const Target& aim, double kept = 1);
     /// An anchored shell's or a flak burst's splash round `at`.
     /// Returns the units it hit.
     int64_t splash(const Unit& u, Vec2 at, int64_t skip, bool twice);

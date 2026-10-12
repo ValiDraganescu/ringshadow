@@ -132,6 +132,18 @@ opens Windows, Steam and VR.
   there too. The rules in `AGENTS.md` hold: isolated scenarios only, never a
   whole game played by the AIs.
 
+## Night sight (C++ only)
+
+The day's clock is the core's (`Rules::hourAt`, `sunHeight`, `dark`):
+a game starts at 08:00, a day is `GameState::dayLength` seconds (600), and
+the game layer's sky (`AAcDaylight`) draws that clock. At night every sight
+radius (units, buildings, watchtowers, Spotter picks) shrinks to
+`Rules::nightSight` (half), eased through dusk and dawn by `dark`
+(`Rules::sightScale`, applied in `Vision::sight`). What a side does not see
+it cannot target, so night fights are close. The game layer copies
+`ac.DayLength` and `ac.Hour` into `GameState::dayLength` and `heldHour`
+before each step (they are not saved). Tests: `NightSightTests`.
+
 ## Teams and eight players (C++ only)
 
 From here the C++ core diverges from Swift by design: one human (player 0)
@@ -157,6 +169,15 @@ so every Swift golden still matches bit for bit.
   team's sight out once (by its first player) and gives each ally a copy,
   OR-ing the explored bits. `sees`, `foe`, `known`, `shown`, `unseen` and
   `Intel` treat allies as one's own (never in `Intel`).
+- **Shared memory.** A team remembers as one: `look()` merges its members'
+  `Intel` before updating it (`teamIntel` in `Vision.cpp`: ground any
+  explored, each site at the latest any saw it, every building any
+  remembers, every unit at its latest sighting) and gives every member the
+  same copy, so what any ally scouted the whole team's AIs and humans know.
+  Saves keep one `Intel` per player as before. Memories only differ when set
+  up by hand or loaded that way; the shared sight kept them alike otherwise.
+  With no teams each player is its own team and nothing changes
+  (`teams_alliesShareWhatTheyRemember`).
 - **Victory.** `bury` ends the game when the buildings left belong to one
   team. `winner` is that team's lowest-indexed player still standing (the
   `.victory` event carries it); every player of the team gets +1 in `score`,
@@ -188,6 +209,12 @@ so every Swift golden still matches bit for bit.
   under a real attack (enemy soldiers worth more than `raidSize` within 12
   of an allied building; the human's too) as it defends its own, and goes
   home with it once that base is clear (`teams_aiDefendsAnAllysBase`).
+  Allies split the free base sites: `Commander::nextSite` skips a site an
+  ally's Prospector is on its way to put a Citadel on (`claimedByAlly`,
+  within 16 of the site), as it already skipped one with anyone's building.
+  The commanders think one after the other in a step, so the second sees
+  the first's order and goes for another site
+  (`teams_alliesSplitTheFreeSites`).
 - **Leveling and piloting.** The pilot is player 0's; a pick's `Scope::Team`
   and `Every` mean the driver's own player, not its allies (allies' AIs are
   not boosted), and kills of allies earn nothing.
@@ -195,13 +222,13 @@ so every Swift golden still matches bit for bit.
   allies holding fire, shared sight, victory with three teams, the square
   maps (symmetry, flat far-apart bases, every base reachable from every
   start; all sizes with `AUTOCRAFT_MAP_TESTS=1`), team starts, the AI's
-  enemy team and joining, saves, and the timing of one minute of a 4v4 from
+  enemy team and joining, the team's one memory, allies splitting the free
+  sites, saves, and the timing of one minute of a 4v4 from
   the start (about 0.05-0.06 ms a step at 60 Hz on the M4 Max; AI seconds
   peak near 2 ms).
-- **Left for later.** Shared Intel memory (each
-  ally keeps its own, alike while their sight is), a team's AIs splitting
-  expansions, the human's HUD for teams (GAME-LAYER §3.6), timing of a late
-  8-player game (P1).
+- **Left for later.** Timing of a late 8-player game (P1). Done since:
+  the team's shared memory, allies splitting expansions (2026-10-09); the
+  human's HUD for teams (GAME-LAYER §3.6) was built in F4.
 
 ## Progress
 

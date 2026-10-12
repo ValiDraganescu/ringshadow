@@ -104,6 +104,10 @@ public:
 	/// The crosshair's point (world cm): the driven unit's held guns aim at
 	/// it (`FAcPoseContext::PilotAim`; E4). Unset: none.
 	void SetPilotAim(const TOptional<FVector>& Aim) { PilotAim = Aim; }
+	/// The heading (radians) to pose the driven unit at instead of the sim's:
+	/// the mouse's this frame, so the model and the eye on it turn every
+	/// frame, not on the 60 Hz steps. Unset: the sim's.
+	void SetDrivenHeading(const TOptional<double>& Heading) { DrivenHeading = Heading; }
 	/// Driving: the others' buildings out of sight (`AAcFog::Unseen`) are not
 	/// drawn at all, not even as last seen (`GameScene.veiled`; E4).
 	void SetVeiled(bool bInVeiled) { bVeiled = bInVeiled; }
@@ -252,6 +256,7 @@ private:
 	int64 HiddenUnit = INDEX_NONE;
 	int64 DrivenUnit = INDEX_NONE;
 	TOptional<FVector> PilotAim;
+	TOptional<double> DrivenHeading;
 	bool bVeiled = false;
 	TOptional<double> LastSync;
 	uint32 FrameNumber = 0;

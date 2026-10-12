@@ -128,11 +128,14 @@ struct PilotSight {
     double range = 0;
     /// Closest it can shoot (an anchored Longbow's 2); 0 for most.
     double minRange = 0;
-    /// Between `minRange` and `range`: a shot (or the beam) now would reach.
+    /// A shot (or the beam) now would reach: past `minRange`, and inside
+    /// `range` for a weapon that stops there (`UnitStats::falloff`).
     bool inRange = false;
     /// A unit of its own side (a Dropship's patient), not an enemy.
     /// (`friend` is a C++ keyword.)
     bool friend_ = false;
+    /// The share of its damage a round keeps that far (`falloffShare`).
+    double share = 1;
 
     bool operator==(const PilotSight&) const = default;
 };

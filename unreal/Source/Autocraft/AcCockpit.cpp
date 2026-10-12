@@ -130,6 +130,7 @@ void UAcCockpitSubsystem::Clear()
 	}
 	if (IsValid(Frame)) Frame->DestroyComponent();
 	CompRefs.Reset();
+	MaterialRefs.Reset();
 	Comps.Reset();
 	Lights.Reset();
 	Frame = nullptr;
@@ -177,6 +178,10 @@ void UAcCockpitSubsystem::Build(const ac::UnitKind InKind, const int64 Owner)
 		Lamps.Unlit = M->LoadMaterial();
 	}
 	AcCockpitKinds::SetLamps(*State, Lamps);
+	for (UMaterialInterface* Lamp : {Lamps.EnergyLit, Lamps.CargoLit, Lamps.Unlit})
+	{
+		if (Lamp) MaterialRefs.AddUnique(Lamp);
+	}
 
 	Frame = NewObject<USceneComponent>(Pawn, TEXT("CockpitFrame"));
 	Frame->SetupAttachment(Pawn->CockpitMount());
@@ -196,7 +201,11 @@ void UAcCockpitSubsystem::Build(const ac::UnitKind InKind, const int64 Owner)
 			C->SetMobility(EComponentMobility::Movable);
 			C->SetStaticMesh(SM);
 			UMaterialInterface* Mat = Mesh.LoadMaterial();
-			if (Mat) C->SetMaterial(0, Mat);
+			if (Mat)
+			{
+				C->SetMaterial(0, Mat);
+				MaterialRefs.AddUnique(Mat);
+			}
 			C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			C->SetGenerateOverlapEvents(false);
 			C->SetCastShadow(false);

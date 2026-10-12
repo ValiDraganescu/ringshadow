@@ -17,7 +17,8 @@
 // - `Facing` is `pilotFacing`: third person, the unit turns toward what the
 //   view's centre is on.
 // - `RangeCue` is `GameController.rangeCue`: the driven unit's reach on the
-//   ground (drawn by `AAcPilotAids`, AcPilotAids.h).
+//   ground (drawn by `AAcPilotAids`, AcPilotAids.h); none for a soldier on
+//   foot.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -57,6 +58,11 @@ struct FAcRangeCue
 
 namespace AcPilotAim
 {
+	/// How far the driven unit's sight and its rounds are cast, cells: a
+	/// round flies on until it meets something (docs/shooter-feel.md), and
+	/// past the day's fog veil (110) there is nothing to see.
+	inline constexpr double ShotReach = 120.0;
+
 	/// `Aim.turn`: the turn (in the part's parent frame) that swings a part
 	/// about `Pivot` from orientation `Q`, so its line of fire, along `Axis`
 	/// (the part's own frame) through `Muzzle` (the part's own frame, before

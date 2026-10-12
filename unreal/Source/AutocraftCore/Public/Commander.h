@@ -167,7 +167,8 @@ struct AUTOCRAFTCORE_API Commander {
     /// Swift game's: they mine at the nearest safe base from then on
     /// (`commanderProspectorsRunFromFireflies`; the goldens pass either way).
     bool pullBack = true;
-    static constexpr double fleeDistance = 9;
+    /// A soldier's sight: out of it, behind the Citadel.
+    static constexpr double fleeDistance = Rules::sight;
     static constexpr double calmRadius = 16;
     static constexpr double calmTime = 3;
     std::pair<std::vector<Command>, std::set<int64_t>> pullWorkers(const GameState& s, const Simulation& sim,
@@ -178,6 +179,7 @@ struct AUTOCRAFTCORE_API Commander {
                                    const std::set<int64_t>& avoid = {}) const;
     std::optional<Vec2> nextSite(const GameState& s, const Simulation& sim, const std::set<int64_t>& owned, Vec2 from,
                                  bool contested = true) const;
+    bool claimedByAlly(const GameState& s, Vec2 site) const;
     std::optional<Vec2> derrickSpot(const GameState& s, const std::vector<Structure>& done) const;
     /// `nav` (C++ only): never a spot that walls ground in (`openSpot`).
     std::optional<Vec2> habDomeSpot(const GameState& s, const Structure& citadel, const NavGrid* nav = nullptr) const;

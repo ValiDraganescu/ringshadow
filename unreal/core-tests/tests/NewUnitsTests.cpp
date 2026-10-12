@@ -93,7 +93,7 @@ TEST(newUnits_statsAndRulesMatchTheDesign) {
     EXPECT_EQ(ordinal(UnitKind::hailstorm), int64_t(8));
     EXPECT_EQ(ordinal(UnitKind::peregrine), int64_t(9));
     EXPECT_EQ(ordinal(UnitKind::scorpion), int64_t(11));
-    EXPECT_TRUE(Rules::vision(UnitKind::peregrine) == 11 && Rules::vision(UnitKind::scorpion) == 8);
+    EXPECT_TRUE(Rules::vision(UnitKind::peregrine) == 15 && Rules::vision(UnitKind::scorpion) == 12);
 }
 
 // MARK: - Peregrine

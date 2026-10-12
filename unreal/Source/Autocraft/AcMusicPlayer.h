@@ -8,7 +8,8 @@
 // core's `ac::MusicQueue`, streamed from disk by `UAcMp3Wave` (AcMp3Loader.h).
 // No crossfades: a 6 s gap between songs; after a song that played out (not
 // one skipped) 1.5 s, one of the station's ads (the imported
-// `/Game/Audio/Ads` waves, +3 dB, their own queue), 2 s. Previous within 3 s
+// `/Game/Audio/Ads` waves, +6 dB, their own queue, each ad as many times a
+// round as Resources/Sounds/ads/plays.json says), 2 s. Previous within 3 s
 // of a track's start goes back a track. Titles and covers come from the ID3
 // tags (TIT2, APIC), else a sidecar .jpg/.png, else a drawn planet (the ads:
 // the station's card). The keys: [ and ] vote, F7/F8/F9 previous, pause,
@@ -17,7 +18,8 @@
 // ~/Library/Application Support/Autocraft/Unreal/music.jsonl.
 //
 // Command line: -AcNoMusic (silent), -AcMusicSeed=N (a fixed shuffle),
-// -AcMusicAd=ID (the station opens on that ad: quicksilver_cola, opal_glow...).
+// -AcMusicAd=ID (the station opens on that ad: quicksilver_cola, opal_glow...),
+// -AcMusicAdAt=S (that many seconds into it).
 // Console: `ac.Music next|previous|toggle|up|down|status`.
 #pragma once
 
@@ -91,8 +93,11 @@ public:
 	static constexpr double Gap = 6.0;
 	static constexpr double BeforeAd = 1.5;
 	static constexpr double AfterAd = 2.0;
-	/// The ads play this much over the songs (+3 dB).
-	static constexpr float AdGain = 1.41f;
+	/// The ads play this much over the songs (+6 dB). The ad files sit
+	/// 1.5-3.5 LU under the songs (about -17 LUFS against -15), so this
+	/// leaves them 3-4 dB louder in the game; at the default music volume
+	/// (0.5) an ad plays at full scale.
+	static constexpr float AdGain = 2.0f;
 
 	static UAcMusicPlayer* Get(const UObject* WorldContext);
 
@@ -159,7 +164,8 @@ private:
 	void NextSong();
 	void NextAd();
 	void Start();
-	bool Load(bool bAd, int32 Index);
+	/// `StartAt` seconds into it (-AcMusicAdAt).
+	bool Load(bool bAd, int32 Index, double StartAt = 0);
 	void Ended(int32 ForGeneration);
 	void Finish(const TCHAR* How);
 	void Toggle();
@@ -179,6 +185,8 @@ private:
 
 	TArray<FTrack> Tracks;
 	TArray<FTrack> Ads;
+	/// Per ad, its plays a round in the ad queue (Sounds.json "plays").
+	TArray<int32> AdPlays;
 	std::optional<FQueue> Queue;
 	std::optional<FQueue> AdQueue;
 	bool bAdNext = false;

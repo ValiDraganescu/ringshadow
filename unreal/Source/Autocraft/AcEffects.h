@@ -76,6 +76,10 @@ struct FAcPilotFire
 	/// (`sightPoint(reach:)`), world cm; if unset, a miss lands on the
 	/// ground at the event's `at`.
 	TOptional<FVector> SightPoint;
+	/// The eye the sight is cast from and the view's rotation: a missed
+	/// round is cast from there, turned by the event's yaw and pitch.
+	TOptional<FVector> Eye;
+	FQuat View = FQuat::Identity;
 };
 
 UCLASS()
@@ -165,6 +169,10 @@ public:
 	void Shot(int64 Unit, int64 Target, ac::Vec2 At, double Time);
 	/// `GameScene.missed`: the driven unit's round spent at `To` (cm).
 	void Missed(int64 Unit, const FVector& To, double Time);
+	/// Where the driven gun's missed round comes down: cast from the eye
+	/// along the view turned by the miss's `Yaw` and `Pitch` (radians), out
+	/// to `AcPilotAim::ShotReach`; unset without a view.
+	TOptional<FVector> DrivenMiss(double Yaw, double Pitch) const;
 	/// `GameScene.blast`: a driven unit's Pulse mine went off.
 	void Blast(ac::Vec2 At, double Radius, double Time);
 	/// An Atlas's Quake stomp (`GameEvent::Stomp`): a ring of dust and two

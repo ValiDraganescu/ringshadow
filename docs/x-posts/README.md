@@ -27,6 +27,7 @@ date:                  # the day to post it (YYYY-MM-DD), once approved
 angle: world           # play, build, world, unit, mechanic
 video: docs/media/dive.gif
 posted:                # the post's x.com link, once posted
+xdraft:                # the Orchestrator X draft id (xd_…), once drafted
 ---
 
 ## Post

@@ -461,8 +461,8 @@ TEST(Leveling_theOtherBuildingBlocks) {
                                                    Effect::Stat{Stat::UnitCost{UnitKind::ranger}, Scope::Team{}, Change::Percent{-0.1}}};
     give(sim, UnitKind::ranger, 7, {Perk::rangerDrillSergeant, Perk::rangerQuartermaster, Perk::rangerArmorPiercing});
     // Juggernaut: 1 armour, armoured; the driven rifle ignores the armour
-    // and adds 5.
-    EXPECT_NEAR(sim.strikeDamage(unit(sim, 998), red).value_or(-1), (6 + 5) * Rules::heroDamage, 1e-9);
+    // and adds 5, in three rounds.
+    EXPECT_NEAR(sim.strikeDamage(unit(sim, 998), red).value_or(-1), (6 + 5) * Rules::heroDamage / 3, 1e-9);
     EXPECT_TRUE(isPrice(sim.unitCost(UnitKind::ranger, 0), 45, 0));
     EXPECT_NEAR(sim.teamBoost(Stat::Training{UnitKind::ranger}, 0).rate(), 1.3, 1e-12);
     EXPECT_TRUE(sim.teamBoost(Stat::Training{UnitKind::ranger}, 1) == Boost::none);

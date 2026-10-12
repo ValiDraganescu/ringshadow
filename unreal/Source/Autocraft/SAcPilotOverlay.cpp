@@ -303,10 +303,14 @@ void SAcPilotOverlay::PaintReticle(FAcPilotPen& P, const FVector2D C, const doub
 	const double S = ReticleScale(Now);
 	const FLinearColor Tone = ToneColor(Info.Tone);
 	auto At = [&](double X, double Y) { return C + FVector2D(X, Y) * S; };
-	// Four corner brackets and a centre pip.
+	// Four corner brackets and a centre pip; a soldier's open with its
+	// cone (its edge, past the brackets' inner 6).
+	const double Open = Info.Cone ? FMath::Max(0.0, *Info.Cone * P.H / 2 / S - 6) : 0;
 	for (const FVector2D Sign : {FVector2D(-1, 1), FVector2D(1, 1), FVector2D(1, -1), FVector2D(-1, -1)})
 	{
-		P.Lines({At(Sign.X * 14, Sign.Y * 6), At(Sign.X * 14, Sign.Y * 14), At(Sign.X * 6, Sign.Y * 14)}, Tone, 1.6 * S, 1.2 * S);
+		P.Lines({At(Sign.X * (14 + Open), Sign.Y * (6 + Open)), At(Sign.X * (14 + Open), Sign.Y * (14 + Open)),
+					At(Sign.X * (6 + Open), Sign.Y * (14 + Open))},
+			Tone, 1.6 * S, 1.2 * S);
 	}
 	P.Disc(C, 1.6 * S, LineColor());
 	// The work ring: from the top, clockwise.

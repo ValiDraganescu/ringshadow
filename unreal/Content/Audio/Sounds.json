@@ -2890,91 +2890,112 @@
    "title": "Ash-Away",
    "source": "ads/ash_away.wav",
    "prepared": "Content-src/sounds/ads/ash_away.wav",
-   "seconds": 10.64
+   "seconds": 10.64,
+   "plays": 1
   },
   "citadel_timeshares": {
    "asset": "/Game/Audio/Ads/SW_citadel_timeshares.SW_citadel_timeshares",
    "title": "Citadel Timeshares",
    "source": "ads/citadel_timeshares.wav",
    "prepared": "Content-src/sounds/ads/citadel_timeshares.wav",
-   "seconds": 14.08
+   "seconds": 14.08,
+   "plays": 1
+  },
+  "claude": {
+   "asset": "/Game/Audio/Ads/SW_claude.SW_claude",
+   "title": "Claude by Anthropic",
+   "source": "ads/claude.wav",
+   "prepared": "Content-src/sounds/ads/claude.wav",
+   "seconds": 209.64,
+   "plays": 2
   },
   "comet_jump_academy": {
    "asset": "/Game/Audio/Ads/SW_comet_jump_academy.SW_comet_jump_academy",
    "title": "Comet Jump Academy",
    "source": "ads/comet_jump_academy.wav",
    "prepared": "Content-src/sounds/ads/comet_jump_academy.wav",
-   "seconds": 11.42
+   "seconds": 11.42,
+   "plays": 1
   },
   "dropride": {
    "asset": "/Game/Audio/Ads/SW_dropride.SW_dropride",
    "title": "DropRide",
    "source": "ads/dropride.wav",
    "prepared": "Content-src/sounds/ads/dropride.wav",
-   "seconds": 10.78
+   "seconds": 10.78,
+   "plays": 1
   },
   "firefly_drivers_ed": {
    "asset": "/Game/Audio/Ads/SW_firefly_drivers_ed.SW_firefly_drivers_ed",
    "title": "Firefly Driver's Ed",
    "source": "ads/firefly_drivers_ed.wav",
    "prepared": "Content-src/sounds/ads/firefly_drivers_ed.wav",
-   "seconds": 10.32
+   "seconds": 10.32,
+   "plays": 1
   },
   "hab_dome_deluxe": {
    "asset": "/Game/Audio/Ads/SW_hab_dome_deluxe.SW_hab_dome_deluxe",
    "title": "Hab Dome Deluxe",
    "source": "ads/hab_dome_deluxe.wav",
    "prepared": "Content-src/sounds/ads/hab_dome_deluxe.wav",
-   "seconds": 11.56
+   "seconds": 11.56,
+   "plays": 1
   },
   "kstr_ident": {
    "asset": "/Game/Audio/Ads/SW_kstr_ident.SW_kstr_ident",
    "title": "KSTR 88.7 Stardust",
    "source": "ads/kstr_ident.wav",
    "prepared": "Content-src/sounds/ads/kstr_ident.wav",
-   "seconds": 8.88
+   "seconds": 8.88,
+   "plays": 1
   },
   "longbow_life": {
    "asset": "/Game/Audio/Ads/SW_longbow_life.SW_longbow_life",
    "title": "Longbow Life",
    "source": "ads/longbow_life.wav",
    "prepared": "Content-src/sounds/ads/longbow_life.wav",
-   "seconds": 10.72
+   "seconds": 10.72,
+   "plays": 1
   },
   "ministry_of_regrowth": {
    "asset": "/Game/Audio/Ads/SW_ministry_of_regrowth.SW_ministry_of_regrowth",
    "title": "Ministry of Regrowth",
    "source": "ads/ministry_of_regrowth.wav",
    "prepared": "Content-src/sounds/ads/ministry_of_regrowth.wav",
-   "seconds": 13.82
+   "seconds": 13.82,
+   "plays": 1
   },
   "night_shift_singles": {
    "asset": "/Game/Audio/Ads/SW_night_shift_singles.SW_night_shift_singles",
    "title": "Night Shift Singles",
    "source": "ads/night_shift_singles.wav",
    "prepared": "Content-src/sounds/ads/night_shift_singles.wav",
-   "seconds": 12.78
+   "seconds": 12.78,
+   "plays": 1
   },
   "opal_glow": {
    "asset": "/Game/Audio/Ads/SW_opal_glow.SW_opal_glow",
    "title": "Opal Glow",
    "source": "ads/opal_glow.wav",
    "prepared": "Content-src/sounds/ads/opal_glow.wav",
-   "seconds": 15.28
+   "seconds": 15.28,
+   "plays": 1
   },
   "oracle_premium": {
    "asset": "/Game/Audio/Ads/SW_oracle_premium.SW_oracle_premium",
    "title": "Oracle Premium",
    "source": "ads/oracle_premium.wav",
    "prepared": "Content-src/sounds/ads/oracle_premium.wav",
-   "seconds": 13.2
+   "seconds": 13.2,
+   "plays": 1
   },
   "quicksilver_cola": {
    "asset": "/Game/Audio/Ads/SW_quicksilver_cola.SW_quicksilver_cola",
    "title": "Quicksilver Cola",
    "source": "ads/quicksilver_cola.wav",
    "prepared": "Content-src/sounds/ads/quicksilver_cola.wav",
-   "seconds": 17.76
+   "seconds": 17.76,
+   "plays": 1
   }
  },
  "unusedInSwift": [

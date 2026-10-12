@@ -2,6 +2,7 @@
 
 #include "AcHudStyle.h"
 #include "AcLog.h"
+#include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
@@ -153,12 +154,30 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 	const double Now = FPlatformTime::Seconds();
 	RootWidget->Update(*Frame.State, Frame.LocalPlayer, Frame.RealDelta, Now);
 
-	// Deposits the team sees: "+N" 4 cells over the ground there.
+	// Deposits the team sees: "+N" 4 cells over the ground there. Driving,
+	// only those within the driven unit's own sight (its Spotter picks
+	// counted), not every one the team sees across the map.
+	TOptional<TPair<ac::Vec2, double>> PilotSight;
+	if (const AAcPilotPawn* Pawn = AAcPilotPawn::Find(this); Pawn && Pawn->Driving())
+	{
+		if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsRunning())
+		{
+			const ac::Simulation& S = Sim->Simulation();
+			if (const std::optional<ac::Unit> U = S.pilotUnit())
+			{
+				const ac::Boost B = S.boost(ac::Stat::Sight{}, *U);
+				const double Reach = ac::Rules::vision(U->kind);
+				const double Night = ac::Rules::sightScale(ac::Rules::hourAt(S.state.time, S.state.dayLength, S.state.heldHour));
+				PilotSight = TPair<ac::Vec2, double>(U->position, (B != ac::Boost::none ? B.apply(Reach) : Reach) * Night);
+			}
+		}
+	}
 	const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
 	for (const ac::GameEvent& E : Frame.Events)
 	{
 		const auto* D = E.as<ac::GameEvent::Deposited>();
 		if (!D) continue;
+		if (PilotSight && ac::length(D->at - PilotSight->Key) > PilotSight->Value) continue;
 		const double Ground = Terrain ? Terrain->FieldHeight(D->at) : 0.0;
 		FVector2f At;
 		if (ProjectToPoints(AcSpace::ToWorld(D->at, Ground + 4.0), At))

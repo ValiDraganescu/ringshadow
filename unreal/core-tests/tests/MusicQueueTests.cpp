@@ -58,3 +58,33 @@ TEST(musicQueue_seededOrderIsSwifts) {
     for (int k = 0; k < 24; ++k) { played += *q.current(); q.next(g); }
     EXPECT_EQ(played, std::string("dbhfaegchbafcdegecgbhadf"));
 }
+
+/// A track listed twice (an ad with weight 2) plays twice a round and
+/// never twice running, within a round or across its edge.
+TEST(musicQueue_aTrackListedTwicePlaysTwiceNeverRunning) {
+    SeededRandom g(3);
+    MusicQueue<std::string> q({"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "claude", "claude"}, g);
+    std::string prev;
+    for (int round = 0; round < 50; ++round) {
+        int claude = 0;
+        for (size_t k = 0; k < q.order.size(); ++k) {
+            const std::string now = *q.current();
+            EXPECT_TRUE(now != prev);
+            claude += now == "claude";
+            prev = now;
+            q.next(g);
+        }
+        EXPECT_EQ(claude, 2);
+    }
+}
+
+/// A repeat at the very end of a round moves back into it.
+TEST(musicQueue_aRepeatAtTheEndMovesBack) {
+    MusicQueue<std::string> q(std::vector<std::string>{});
+    q.order = {"a", "b", "c", "x", "x"};
+    q.spread(std::nullopt);
+    for (size_t k = 1; k < q.order.size(); ++k) EXPECT_TRUE(q.order[k] != q.order[k - 1]);
+    q.order = {"x", "a", "b"};
+    q.spread(std::string("x"));
+    EXPECT_TRUE(q.order[0] != "x");
+}

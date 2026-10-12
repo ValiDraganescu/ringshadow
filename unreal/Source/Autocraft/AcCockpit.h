@@ -200,6 +200,13 @@ private:
 	TArray<FMeshComp> Comps;
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UStaticMeshComponent>> CompRefs;
+	/// Every material the cockpit sets or swaps in (`FMeshComp::Material`,
+	/// the lamps), held from the GC: the swaps keep raw pointers, and a lamp
+	/// borrowed from another cockpit's model has nothing else holding it
+	/// (2026-10-12: the Kestrel's rocket lamps, from the Dropship cockpit,
+	/// were collected mid-ride and the next volley crashed in `Apply`).
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInterface>> MaterialRefs;
 	UPROPERTY(Transient)
 	TObjectPtr<USceneComponent> Frame;
 	UPROPERTY(Transient)

@@ -743,6 +743,14 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 		FAcPoseContext C{Shown, O.Unit, O.Structure, Model, *Field, O.Memory, bFrozen ? O.FrozenAt : Time, bFrozen ? 0.0 : Dt,
 			O.bUnit && O.Id == DrivenUnit, Local};
 		if (C.bDriven && PilotAim) C.PilotAim = &*PilotAim;
+		// The driven unit turned to the mouse's heading this frame.
+		std::optional<ac::Unit> Turned;
+		if (C.bDriven && DrivenHeading && O.Unit)
+		{
+			Turned.emplace(*O.Unit);
+			Turned->heading = *DrivenHeading;
+			C.Unit = &*Turned;
+		}
 		C.Dark = Dark;
 		FAcPoseFn Fn;
 		if (O.bUnit)

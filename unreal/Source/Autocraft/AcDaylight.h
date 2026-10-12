@@ -39,6 +39,9 @@
 // - The terrain's `Haze` parameter (the border fading out), from the Swift
 //   top-down haze tone.
 //
+// The clock and `GetDark()` are the core's (`ac::Rules::hourAt`, `dark`), so
+// the sim's sight closes in on the same night (`Rules::sightScale`): the
+// game layer passes `ac.DayLength` and `ac.Hour` into the state each step.
 // `GetDark()` is how dark it is for lamps (C6): 0 with the sun up, 1 soon
 // after sunset. `GetSkyTones()` gives the Swift first-person sky tones for
 // the pilot's fog veil (B10, E2).
@@ -48,6 +51,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "Rules.h"
 
 #include "Weather.h"
 
@@ -83,9 +88,9 @@ class AUTOCRAFT_API AAcDaylight : public AActor
 
 public:
 	/// Hours: a game starts in the morning; the sun is up from sunrise to sunset.
-	static constexpr double StartHour = 8.0;
-	static constexpr double Sunrise = 5.5;
-	static constexpr double Sunset = 18.5;
+	static constexpr double StartHour = ac::Rules::startHour;
+	static constexpr double Sunrise = ac::Rules::sunrise;
+	static constexpr double Sunset = ac::Rules::sunset;
 
 	/// One day and night, seconds of game time (`ac.DayLength`, 600).
 	static double DayLength();

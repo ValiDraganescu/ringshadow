@@ -148,9 +148,14 @@ AAcWeather* AAcWeather::SpawnFor(UWorld* World)
 
 double AAcWeather::WeatherTime(const double Time)
 {
+	const TCHAR* Cmd = FCommandLine::Get();
 	double T = 0;
-	if (FParse::Value(FCommandLine::Get(), TEXT("AcWeatherT="), T)) return T;
-	return Time;
+	if (FParse::Value(Cmd, TEXT("AcWeatherT="), T)) return T;
+	// A time-lapse for clips: the schedule from S, X times as fast.
+	double From = 0, Speed = 1;
+	FParse::Value(Cmd, TEXT("AcWeatherFrom="), From);
+	FParse::Value(Cmd, TEXT("AcWeatherSpeed="), Speed);
+	return From + Time * Speed;
 }
 
 void AAcWeather::BeginPlay()

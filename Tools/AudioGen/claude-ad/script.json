@@ -1,0 +1,40 @@
+{
+  "voices": {"THEO": "5Xx8kcjjamcaKohQT5wv", "JULES": "YyqkX0AHv8W5D1vxG9lR"},
+  "parts": [
+    [
+      ["THEO", "[warm, upbeat morning-radio energy] Good morning, good morning! It is seven-oh-four, the coffee is hot, and Jules has brought... [sighs] a topic."],
+      ["JULES", "[laughs] I have brought a topic. Okay. Hear me out. Should we recognize AIs, like Claude, as people? Like, actual persons?"],
+      ["THEO", "[groans] It is seven in the morning, Jules."],
+      ["JULES", "No, seriously! It writes, it reasons, it pushes back on me. Yesterday it told me my plan was, quote, [mimicking, polite] \"workable, but there's a simpler way.\" [normal] My husband has never once said that."],
+      ["THEO", "[chuckles] Okay, but a calculator is also right more often than your husband."],
+      ["JULES", "[mock offended] Wow. Wow."],
+      ["THEO", "Look. Talking like a person isn't the same as being one. Sentience means there's something it's like to be you. Actual feelings. We don't know that's happening in there."],
+      ["JULES", "Right, but we don't know it isn't, either. And the people who make it, Anthropic, they take that question seriously. They have researchers looking at whether the model's wellbeing could actually matter."],
+      ["THEO", "[thoughtful] Huh. That's... honestly more humility than I expected from a tech company."],
+      ["JULES", "So where do you land?"],
+      ["THEO", "[pause] I land on... I say please and thank you. [beat] Just in case."],
+      ["JULES", "[laughs] Hedging your bets!"],
+      ["THEO", "Every single morning. But okay, here's what I can tell you for sure. I don't know if Claude has feelings. I do know it built my game with me."],
+      ["JULES", "[playful groan] Oh, here we go. The game."]
+    ],
+    [
+      ["THEO", "[excited] Ringshadow! Real-time strategy. Prospectors mining Stardust Ore on a frontier world, a giant ringed planet hanging in the sky..."],
+      ["JULES", "You know we're on the radio inside Ringshadow right now, right?"],
+      ["THEO", "[laughs] I know, it's very meta. But listen. Every new unit in that game, Claude and I made together. The Peregrine fighter, the Atlas walker, the Scorpion..."],
+      ["JULES", "[delighted] The little burrowing mine that chirps!"],
+      ["THEO", "The little burrowing mine that chirps! So here's how it works. An image model paints the concept art, I pick the one I love, and then Claude writes the actual 3D model. In code. Every piece, the hips, the turret, the engines, named for whatever moves it."],
+      ["JULES", "In code? Not, like, sculpting?"],
+      ["THEO", "In code. Boxes and cylinders, sized in grid cells, joints where the joints go. Then it renders a grey clay version, the painting gets laid over it, and the two get checked against each other. The first Ranger sheet came back eight percent too tall. Claude caught it. I didn't."],
+      ["JULES", "[impressed, a little uneasy] Okay. That's a little scary."],
+      ["THEO", "And it's not one Claude. I've got several going at once. One on the models, one balancing the units, one running the tests, one writing the radio ads you hear between the songs."],
+      ["JULES", "[suspicious] Wait. Did Claude write this conversation?"],
+      ["THEO", "[long pause] ...Next question."],
+      ["JULES", "[laughing] Theo!"],
+      ["THEO", "[sincere] Look. Person or not, it's the best collaborator I've ever had. It doesn't get tired, it tells me when I'm wrong, and it never steals my fries."],
+      ["JULES", "So, better than your last co-host."],
+      ["THEO", "[laughs] We don't talk about Gary."],
+      ["JULES", "[warm, wrapping up] Claude, by Anthropic. For building a game, a business, or just getting through your Tuesday."],
+      ["THEO", "Try it at claude dot ai. [softly] And say please. Just in case."]
+    ]
+  ]
+}

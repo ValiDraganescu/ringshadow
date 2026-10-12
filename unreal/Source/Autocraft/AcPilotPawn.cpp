@@ -409,6 +409,8 @@ bool AAcPilotPawn::TakeOver(const int64 Id)
 	// The mouse steers where it looks: a tank's turret, else its heading.
 	PilotYaw = U->look();
 	S.pilot->heading = PilotYaw;
+	bFollowsMouse = !ac::Pilot::steers(U->kind);
+	LastEye.Reset();
 	Cam.Reset();
 	Cam.Pitch = FAcPilotCamera::StartPitch(U->kind);
 	Cam.bThirdPerson = bThird && bChaseCamera;
@@ -619,6 +621,7 @@ void AAcPilotPawn::Hooks(const bool bOn)
 			R->SetDrivenUnit(INDEX_NONE);
 			R->SetHiddenUnit(INDEX_NONE);
 			R->SetPilotAim({});
+			R->SetDrivenHeading({});
 			R->SetVeiled(false);
 		}
 		// E4: the range ring and the fog veil off, no gun marker.
@@ -715,20 +718,44 @@ void AAcPilotPawn::Steer()
 	{
 		S.pilot->crosshair = std::nullopt;
 	}
-	// The driven unit's held guns on the crosshair (E4, `world.pilotAim`).
-	if (UAcWorldRenderer* R = UAcWorldRenderer::Get(this)) R->SetPilotAim(Cross ? TOptional<FVector>(Cross->Point) : TOptional<FVector>());
 	// First person: where the mouse says; third person (E3): toward what the
 	// view's middle is on (`pilotFacing`).
-	if (const std::optional<ac::Unit> U = S.pilotUnit()) S.pilot->heading = AcPilotAim::Facing(*U, PilotYaw, AimPoint());
-	else S.pilot->heading = PilotYaw;
+	const std::optional<ac::Unit> Me = S.pilotUnit();
+	S.pilot->heading = Me ? AcPilotAim::Facing(*Me, PilotYaw, AimPoint()) : PilotYaw;
+	if (UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
+	{
+		// The driven unit's held guns on the crosshair (E4, `world.pilotAim`).
+		R->SetPilotAim(Cross ? TOptional<FVector>(Cross->Point) : TOptional<FVector>());
+		// A unit that faces the mouse is drawn facing it this frame, not on
+		// the next sim step: its eye (first person) and its model (third)
+		// turn as smoothly as the mouse.
+		const bool bTurned = Me && bFollowsMouse && !ac::Pilot::steers(Me->kind);
+		R->SetDrivenHeading(bTurned ? TOptional<double>(std::remainder(S.pilot->heading, 2.0 * Pi)) : TOptional<double>());
+	}
 	S.pilot->hold = bHold && !bPlacing;
 }
 
-void AAcPilotPawn::CastCrosshair()
+void AAcPilotPawn::PredictView(FVector& OutEye, FQuat& OutRotation) const
+{
+	OutEye = *LastEye;
+	OutRotation = LastRotation;
+	const double DYaw = bViewOnMouse ? std::remainder(PilotYaw - LastViewYaw, 2.0 * Pi) : 0.0;
+	if (DYaw != 0.0)
+	{
+		// Heading grows toward the right: a turn about UE's up.
+		const FQuat Turn(FVector::UpVector, DYaw);
+		OutEye = LastPivot + Turn.RotateVector(OutEye - LastPivot);
+		OutRotation = Turn * OutRotation;
+	}
+	const double DPitch = Cam.Pitch - LastViewPitch;
+	if (DPitch != 0.0) OutRotation = OutRotation * FRotator(float(FMath::RadiansToDegrees(DPitch)), 0.f, 0.f).Quaternion();
+}
+
+void AAcPilotPawn::CastCrosshair(const bool bPredict)
 {
 	// What the middle of the view is on, as a shooter's ray finds it, out
-	// to 60 cells; past that the sky (the point 60 out, nothing). The
-	// driven unit never counts.
+	// to `AcPilotAim::ShotReach`; past that the sky (the point that far
+	// out, nothing). The driven unit never counts.
 	if (StageCross)
 	{
 		// A staged jump: the crosshair cast from the edge (`StageTick`).
@@ -741,12 +768,16 @@ void AAcPilotPawn::CastCrosshair()
 		Cross.Reset();
 		return;
 	}
-	const FVector O = *LastEye;
-	const FVector D = LastRotation.GetForwardVector();
+	// Cast from where the view is now: the mouse has turned it since the
+	// last follow, and the guns aim through this point.
+	FVector O = *LastEye;
+	FQuat Rot = LastRotation;
+	if (bPredict) PredictView(O, Rot);
+	const FVector D = Rot.GetForwardVector();
 	// Third person (E3): nothing between the camera and the driven unit counts.
 	const double Near = Cam.bThirdPerson && Chase.Eye()
 		? FMath::Max(AcSpace::ToCm(0.3), FVector::DotProduct(*Chase.Eye() - O, D)) : AcSpace::ToCm(0.05);
-	const FVector A = O + D * Near, B = O + D * AcSpace::ToCm(60.0);
+	const FVector A = O + D * Near, B = O + D * AcSpace::ToCm(AcPilotAim::ShotReach);
 	FCrosshair C;
 	if (const TOptional<FAcRayHit> H = Rays->SightHit(A, B, DrivenId))
 	{
@@ -868,6 +899,14 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 		return;
 	}
 	ac::Unit U = *Found;
+	// Did this frame's steps turn the unit to the heading it was sent? (A
+	// Prospector at the drill, say, does not.) Kept over frames with none.
+	if (Frame.Steps > 0 && S.pilot)
+	{
+		bFollowsMouse = !ac::Pilot::steers(U.kind) && std::abs(std::remainder(U.heading - S.pilot->heading, 2.0 * Pi)) < 1e-6;
+	}
+	// As the renderer drew it (`Steer`): facing the mouse this frame.
+	if (bFollowsMouse && !ac::Pilot::steers(U.kind) && S.pilot) U.heading = std::remainder(S.pilot->heading, 2.0 * Pi);
 	Cam.ChaseYaw = PilotYaw;
 	if (ac::Pilot::steers(U.kind) && !Cam.bThirdPerson)
 	{
@@ -912,6 +951,13 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	SetActorLocationAndRotation(View, ViewRot);
 	LastEye = At;
 	LastRotation = Rot;
+	LastViewYaw = PilotYaw;
+	LastViewPitch = Cam.Pitch;
+	LastPivot = Root.GetTranslation();
+	bViewOnMouse = Cam.bThirdPerson || (ac::Pilot::steers(U.kind) ? ac::Pilot::turretRate(U.kind).has_value() : bFollowsMouse);
+	// The crosshair again from this frame's eye: the cockpit (posed after
+	// this) aims its guns through it.
+	CastCrosshair();
 	Cam.Track(U, S.state.time);
 
 	// E4: the range ring and the fog veil round the unit; the gun marker.
@@ -934,9 +980,12 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 			F.AimOn = Cross->Target;
 		}
 		// E7: a miss is spent at the sight (`sightPoint(reach:)`), from the
-		// unit's eye in third person.
+		// unit's eye in third person; its round flies on past the weapon's
+		// range. The view, for casting a round turned inside the cone.
 		F.SightPoint = AcPilotAudio::SightPoint(At, Rot.Vector(), ChaseEye(), Cross ? TOptional<FVector>(Cross->Point) : TOptional<FVector>(),
-			AcSpace::ToCm(S.weapon(U).range + ac::Rules::radius(U.kind)));
+			AcSpace::ToCm(AcPilotAim::ShotReach));
+		F.Eye = ChaseEye() ? *ChaseEye() : At;
+		F.View = Rot;
 		Fx->SetPilot(F);
 	}
 	if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this))
@@ -1330,7 +1379,7 @@ void AAcPilotPawn::AimAt(const FVector& Target)
 	// `pilotFacing`, cast from the eye as last followed (third person:
 	// toward what the view's middle is on; first person: the yaw). The
 	// still is paused, so the turn is set here.
-	CastCrosshair();
+	CastCrosshair(false);
 	double Facing = PilotYaw;
 	if (const std::optional<ac::Unit> Me = Sim->Simulation().pilotUnit()) Facing = AcPilotAim::Facing(*Me, PilotYaw, AimPoint());
 	for (ac::Unit& U : Sim->Simulation().state.units)

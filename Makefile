@@ -1,3 +1,5 @@
+# `make game` builds the game module and starts the game on the Battlefield map
+# (the Orchestrator's Ringshadow run).
 # `make balance` prints the leveling tracking database (docs/leveling.md,
 # "Tracking") for the latest balance signature, with the sqlite3 that ships
 # with macOS (3.51: `sqrt` and `group_concat(... ORDER BY ...)`, which the views
@@ -7,6 +9,14 @@
 DB ?= $(HOME)/Library/Application Support/Autocraft/Unreal/tracking.sqlite
 VIEW ?= perk_balance
 SQLITE3 := /usr/bin/sqlite3
+.DEFAULT_GOAL := balance
+UE := /Users/Shared/Epic Games/UE_5.8/Engine
+UPROJECT := $(CURDIR)/unreal/Autocraft.uproject
+
+.PHONY: game
+game:
+	"$(UE)/Build/BatchFiles/Mac/Build.sh" AutocraftEditor Mac Development -Project="$(UPROJECT)" -WaitMutex
+	"$(UE)/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor" "$(UPROJECT)" /Game/Maps/Battlefield -game
 
 .PHONY: balance
 balance:

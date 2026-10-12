@@ -224,12 +224,12 @@ TEST(LevelingKinds_cometBounty) {
 /// Spotter: the driven Comet sees 50% farther, and so its side does.
 TEST(LevelingKinds_cometSpotter) {
     Scene s = drive(UnitKind::comet);
-    const Vec2 spot = s.at + s.out * 12;
+    const Vec2 spot = s.at + s.out * 16;
     s.sim.lookNow();
-    EXPECT_TRUE(!s.sim.sees(0, spot)); // past a Comet's 9
+    EXPECT_TRUE(!s.sim.sees(0, spot)); // past a Comet's 13
     give(s.sim, UnitKind::comet, {Perk::cometSpotter});
     s.sim.lookNow();
-    EXPECT_TRUE(s.sim.sees(0, spot)); // inside 13.5
+    EXPECT_TRUE(s.sim.sees(0, spot)); // inside 19.5
 }
 
 // MARK: - Firefly

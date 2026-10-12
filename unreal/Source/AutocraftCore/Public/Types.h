@@ -1015,9 +1015,13 @@ struct AUTOCRAFTCORE_API Unit {
     /// not an order it was given: any order replaces it.
     std::optional<bool> autoFollow;
     /// A gun that fires in bursts (a Ranger's mini gun): when its current
-    /// burst began (nil: none under way) and when it last fired, game time.
+    /// burst began (nil: none under way) and when it last fired, game time
+    /// (also kept by a gun whose attacks are split into rounds).
     std::optional<double> burstFrom;
     std::optional<double> firedAt;
+    /// What its last rounds added to its weapon's spread cone, radians; it
+    /// fades by 90% every `UnitStats::coneRecovery` s (`Simulation::cone`).
+    std::optional<double> spread;
     /// A Kestrel's rail gun has its own clock: seconds until it can fire.
     std::optional<double> railCooldown;
     /// Where a shot from something its side could not see came from (see
@@ -1339,6 +1343,12 @@ struct AUTOCRAFTCORE_API GameState {
     /// Doodads put down by hand in the playground, past the map's own
     /// (nil: none; `Simulation.placeDoodad`).
     std::optional<std::vector<Doodad>> doodads;
+    /// The day's clock as the game layer runs it (`ac.DayLength`, `ac.Hour`):
+    /// how long a day lasts (seconds; `Rules::dayLength`) and the hour it is
+    /// held at (nil: the clock runs). Sight closes in at night
+    /// (`Rules::sightScale`). Not saved: the game layer sets them each frame.
+    double dayLength = 600.0;
+    std::optional<double> heldHour;
 
     /// Player `p`'s team: `Player.team`, else its own index (also for an
     /// index that is no player), so with no teams set `hostile(a, b)` is
@@ -1409,9 +1419,10 @@ struct GameEvent {
     struct Constructed { int64_t structure; StructureKind kind; Vec2 at; bool operator==(const Constructed&) const = default; };
     /// A Ranger fired at a unit or building of `victim` (a player).
     struct Shot { int64_t unit; int64_t target; int64_t victim; Vec2 at; bool operator==(const Shot&) const = default; };
-    /// The driven unit fired with nothing under its sight; `at` is where
-    /// the shot is spent, at its weapon's range.
-    struct Missed { int64_t unit; Vec2 at; bool operator==(const Missed&) const = default; };
+    /// A round that missed: `at` is a ground point past its mark; `yaw`
+    /// and `pitch` (radians, right and up) turn the shooter's sight onto
+    /// the way it flew (the driven gun's view casts along them).
+    struct Missed { int64_t unit; Vec2 at; double yaw = 0; double pitch = 0; bool operator==(const Missed&) const = default; };
     /// A shot of `unit` reached `target` (at once, or when its grenade or
     /// shell came down; see `Rules.flight`): its damage is done.
     struct Landed { int64_t unit; int64_t target; bool operator==(const Landed&) const = default; };

@@ -1,6 +1,7 @@
 // Port of `Rules` of Sources/GameCore/State.swift and Vision.swift.
 #include "Rules.h"
 
+#include <cmath>
 
 namespace ac {
 
@@ -130,12 +131,35 @@ double Rules::damage(const UnitStats& a, bool armored, bool light, double armor)
 /// How far each kind sees (sight radii).
 double Rules::vision(UnitKind k) {
     switch (k) {
-    case UnitKind::prospector: case UnitKind::scorpion: return 8;
-    case UnitKind::ranger: case UnitKind::comet: return 9;
-    case UnitKind::juggernaut: case UnitKind::firefly: case UnitKind::kestrel: return 10;
-    case UnitKind::longbow: case UnitKind::dropship: case UnitKind::hailstorm: case UnitKind::peregrine: case UnitKind::atlas: return 11;
+    // Four cells more than the Swift game's, for guns whose rounds fly on
+    // (docs/shooter-feel.md).
+    case UnitKind::prospector: case UnitKind::scorpion: return 12;
+    case UnitKind::ranger: case UnitKind::comet: return 13;
+    case UnitKind::juggernaut: case UnitKind::firefly: case UnitKind::kestrel: return 14;
+    case UnitKind::longbow: case UnitKind::dropship: case UnitKind::hailstorm: case UnitKind::peregrine: case UnitKind::atlas: return 15;
     }
     return 0;
+}
+
+double Rules::hourAt(double time, double day, std::optional<double> held) {
+    if (held && *held >= 0) return std::fmod(*held, 24.0);
+    return std::fmod(startHour + time / max(1.0, day) * 24.0, 24.0);
+}
+
+double Rules::sunHeight(double hour) {
+    // The sun's arc (`Daylight.sun(hour:)`): from sunrise over the noon
+    // point (-60, 110, -55, SceneKit axes, Y up) to sunset by day, under
+    // the ground by night. Its height is the noon point's, by the cosine.
+    const double noonY = 110.0 / std::sqrt(60.0 * 60.0 + 110.0 * 110.0 + 55.0 * 55.0);
+    const double day = sunset - sunrise;
+    const double a = hour >= sunrise && hour <= sunset ? (hour - sunrise) / day * pi - pi / 2
+                                                       : std::fmod(hour - sunset + 24.0, 24.0) / (24.0 - day) * pi + pi / 2;
+    return std::asin(max(-1.0, min(1.0, std::cos(a) * noonY))) * 180.0 / pi;
+}
+
+double Rules::dark(double hour) {
+    const double t = max(0.0, min(1.0, (sunHeight(hour) + 6.0) / 16.0));
+    return 1.0 - t * t * (3.0 - 2.0 * t);
 }
 
 double Rules::vision(StructureKind k) {

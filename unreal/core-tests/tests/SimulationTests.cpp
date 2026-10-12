@@ -294,10 +294,12 @@ TEST(combat_rangersKillARangerInEightShotsAndBuildingsFall) {
             else if (auto v = e.as<GameEvent::Victory>()) won = v->winner;
         }
     }
-    // 45 hp at 6 a shot: 8 shots, 0.61 s apart.
-    EXPECT_NEAR(died.value_or(0), 7 * Rules::rangerCooldown, 0.6);
-    // Then the Hab Dome: 400 hp at 5 (1 armour) a shot.
-    EXPECT_EQ(shots_, 8 + 80);
+    // 45 hp at 6 an attack, in rounds of 2: 23 rounds, a third of 0.61 s
+    // apart.
+    EXPECT_NEAR(died.value_or(0), 22 * Rules::rangerCooldown / 3, 0.6);
+    // Then the Hab Dome: 400 hp at 5 (1 armour) an attack, 5/3 a round:
+    // 240 rounds leave it a rounding error short, so 241.
+    EXPECT_EQ(shots_, 23 + 241);
     EXPECT_TRUE(destroyed.has_value());
     EXPECT_TRUE(won == 0);
     EXPECT_TRUE(sim.state.score == (std::vector<int64_t>{1, 0}));

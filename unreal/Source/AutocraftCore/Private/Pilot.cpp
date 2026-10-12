@@ -135,6 +135,7 @@ void Simulation::stepPiloted(Unit& u, double dt, std::vector<GameEvent>& events)
     upkeep(u, dt);
     levelUpkeep(u, dt);
     if (p.ability) pilotUse(u, events);
+    pilotPace = 0;
     if (pilotBusy(u, p, dt, events)) return;
     pilotFace(u, p, dt);
     pilotWalk(u, p.walk, dt);
@@ -166,9 +167,17 @@ void Simulation::pilotMiss(Unit& u, std::vector<GameEvent>& events) {
     if (u.kind == Unit::Kind::scorpion) { u.lockTarget = std::nullopt; return; }
     if (!(pilotShoots(u) && u.cooldown.value_or(0) <= 0)) return;
     if (const auto s = pilotSight(u); s && s->distance < s->minRange) return;
-    reload(u, weapon(u));
+    const UnitStats w = weapon(u);
+    reload(u, w);
+    // The round flies on until it meets something: along the sight, turned
+    // inside the cone (the view casts it; `at` is only a ground point on
+    // its way).
+    const double c = cone(u, w, pilotPace);
+    u.spread = u.spread.value_or(0) + w.coneFire;
+    const double turn = 2 * pi * roll(u.id, 1), off = c * roll(u.id, 2);
     const Vec2 f(std::cos(u.look()), std::sin(u.look()));
-    events.push_back(GameEvent::Missed{u.id, u.position + f * weapon(u).range});
+    events.push_back(GameEvent::Missed{u.id, u.position + f * ac::max(Rules::sight, w.range), off * std::cos(turn),
+                                       off * std::sin(turn)});
 }
 
 /// Walk in the unit's own frame; blocked, it slides along whichever axis
@@ -201,6 +210,9 @@ void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
         }
     }
     u.stride += distance(from, u.position);
+    // How fast it went, for its gun's cone.
+    const double full = Rules::speed(u.kind) * dt;
+    pilotPace = full > 0 ? distance(from, u.position) / full : 0;
 }
 
 /// Nothing solid at `p` for the unit: open ground, clear of buildings
@@ -282,8 +294,8 @@ std::optional<int64_t> Simulation::pilotFoe(const Unit& u) const {
     return best->first;
 }
 
-/// The first enemy a gun's line of fire meets within its range (the
-/// high-ground bonus counted), if the first one on the line is in range.
+/// The first enemy a gun's line of fire meets that a round would reach (any
+/// distance, for rounds that fly on), if the first one on the line is.
 std::optional<int64_t> Simulation::pilotAimed(const Unit& u) const {
     const auto s = pilotSight(u);
     if (!s || !s->inRange) return std::nullopt;
@@ -311,7 +323,8 @@ std::optional<PilotSight> Simulation::pilotSight(const Unit& u) const {
         const double reach = range(x.range, u.position, t.position);
         if (best ? *g < best->distance : true) {
             best = PilotSight{.target = id, .distance = *g, .range = reach, .minRange = x.minRange,
-                              .inRange = *g >= x.minRange && *g <= reach + 0.25};
+                              .inRange = *g >= x.minRange && (x.falloff > 0 || *g <= reach + 0.25),
+                              .share = falloffShare(x, *g, reach)};
         }
     };
     for (const Unit& v : state.units) {
@@ -330,7 +343,8 @@ std::optional<PilotSight> Simulation::pilotSight(const Unit& u) const {
 }
 
 /// A gun on foot's sight: the enemy the crosshair is on, if it can hit
-/// it and it is within sight; nothing for a friend, a rock or the sky.
+/// it (at any distance, if its rounds fly on; else within sight); nothing
+/// for a friend, a rock or the sky.
 std::optional<PilotSight> Simulation::crosshairSight(const Unit& u, const Pilot::Crosshair& c) const {
     const auto on = c.as<Pilot::Crosshair::On>();
     if (!on) return std::nullopt;
@@ -339,10 +353,13 @@ std::optional<PilotSight> Simulation::crosshairSight(const Unit& u, const Pilot:
     if (!t || !state.hostile(t->owner, u.owner) || !canHit(u, *t)) return std::nullopt;
     const UnitStats w = weapon(u, t->air);
     const double g = max(0.0, gap(u, *t));
-    if (!(g <= max(Rules::sight, w.range + 1))) return std::nullopt;
+    // A round that flies on reaches whatever the view shows; a flame or a
+    // sting only what is near.
+    if (!(w.falloff > 0 || g <= max(Rules::sight, w.range + 1))) return std::nullopt;
     const double reach = range(w.range, u.position, t->position);
     return PilotSight{.target = id, .distance = g, .range = reach, .minRange = w.minRange,
-                      .inRange = g >= w.minRange && g <= reach + 0.25};
+                      .inRange = g >= w.minRange && (w.falloff > 0 || g <= reach + 0.25),
+                      .share = falloffShare(w, g, reach)};
 }
 
 /// Edge to edge, how far along `u`'s line of sight it meets something of
@@ -393,10 +410,16 @@ void Simulation::pilotAct(Unit& u, const PilotTarget& target_, bool pressed, dou
         // A Scorpion stings only buried, and after a second's lock-on: the
         // fire button is held that long on the target.
         if (u.kind == Unit::Kind::scorpion && !(u.burrowed() && lockOn(u, id, dt))) return;
-        reload(u, weapon(u, t->air));
+        const UnitStats w = weapon(u, t->air);
+        reload(u, w);
         if (u.kind == Unit::Kind::scorpion) u.lockTarget = std::nullopt;
-        strike(u, id, *t);
-        events.push_back(GameEvent::Shot{u.id, id, t->owner, t->position});
+        const Round r = aimRound(u, w, *t, pilotPace);
+        if (r.hit) {
+            strike(u, id, *t, r.share);
+            events.push_back(GameEvent::Shot{u.id, id, t->owner, t->position});
+        } else {
+            events.push_back(GameEvent::Missed{u.id, r.at, r.yaw, r.pitch});
+        }
     } else if (const auto pa = target_.as<PilotTarget::Patch>()) {
         prospectorMine(u, pa->_0);
     } else if (const auto de = target_.as<PilotTarget::Derrick>()) {

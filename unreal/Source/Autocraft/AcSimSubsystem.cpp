@@ -1,5 +1,6 @@
 #include "AcSimSubsystem.h"
 
+#include "AcDaylight.h"
 #include "AcLog.h"
 #include "AcPerf.h"
 #include "AcSaves.h"
@@ -625,6 +626,11 @@ void UAcSimSubsystem::Broadcast()
 
 std::vector<ac::GameEvent> UAcSimSubsystem::StepOnce()
 {
+	// The day's clock as the sky runs it (`ac.DayLength`, `ac.Hour`): sight
+	// closes in at night.
+	Sim->state.dayLength = AAcDaylight::DayLength();
+	const double Held = AAcDaylight::HeldHour();
+	Sim->state.heldHour = Held >= 0 ? std::optional<double>(Held) : std::nullopt;
 	const bool bFast = CVarSimFastPaths.GetValueOnGameThread() != 0;
 	const int64 Budget = FMath::Max(CVarSimPathBudget.GetValueOnGameThread(), 1);
 	if (Sim->fastPaths != bFast || (bFast && Sim->pathBudget != Budget)) Sim->setFastPaths(bFast, Budget);

@@ -1,13 +1,13 @@
 # From idea to posted
 
-The whole path of a post, as the developer and Claude run it: proposals on the review page, the developer's picks and notes, rework, the video, the preview, approval with a date, posting, and the record. Each step says who acts and what changes.
+The whole path of a post, as the developer and Claude run it: proposals on the review page, the developer's picks and notes, rework, the video, the preview, approval with a date, the Orchestrator draft, posting, and the record. Each step says who acts and what changes.
 
 | Status | Who moves it there | What it means |
 |---|---|---|
 | `proposed` | Claude | A draft. Every new post starts here. |
 | `wip` | the developer | Picked. Claude reworks it from the notes and makes its video. |
 | `approved` | the developer, with a date | Ready: the text is final and the video exists. |
-| `posted` | Claude, after posting | On X. `posted` holds the link. Nobody edits it again. |
+| `posted` | Claude, once `x_get_draft` shows the post went out | On X. `posted` holds the link. Nobody edits it again. |
 
 The files in `docs/x-posts/` are the record ([README](../../../docs/x-posts/README.md)); the review page is where the developer reads, picks and comments. Keep them in step: every change made on one goes to the other in the same session.
 
@@ -70,12 +70,21 @@ The developer sets `approved` and a date on the page. Sync, then `calendar.py --
 
 ## 7. Post
 
-On the day, and only after the developer says to post it:
+On the day, and only after the developer says to post it. Claude drafts the post in Orchestrator, and the developer posts it from x.com's composer. Claude never drives x.com.
 
 1. Show the exact text, the reply and the video file in the chat, and wait for a clear yes. Every post needs its own yes.
-2. In Chrome (the developer's own X account), open `https://x.com/compose/post`. Upload the file to that dialog's file input (the inline composer of the home page swallows it), type the text, wait for the video to finish processing ("Ready"), then post. If processing stalls, discard the draft and start a fresh compose window.
-3. Open the new post, reply with the reply text, check the thread shows both.
-4. Set `status: posted`, `date` to the day, `posted` to the post's link, in the file and on the page. Never edit a posted file's text again.
+2. Save it as an Orchestrator X draft with `x_create_draft`: `kind: "thread"`, `title` the slug, and two posts, the text with the video and then the reply. The reply becomes post 2 of the thread, a reply to post 1:
+
+   ```json
+   {"kind": "thread", "title": "<slug>",
+    "posts": [{"text": "<## Post, exactly>", "media": ["video/renders/<slug>-x.mp4"]},
+              {"text": "<## Reply, exactly>"}]}
+   ```
+
+   A post with no reply is `kind: "post"` with one post. Pass `max_chars: 25000`: the developer's account is Premium (Articles need it), and these posts run 450 to 700 characters, past the default 280. Orchestrator checks the text by X's count and the video against X's limits, and copies the file into its drafts library. Fix whatever it reports. Write the draft id into the post file's front matter as `xdraft: xd_…`.
+3. Tell the developer it's ready. They post it themselves: open `https://x.com/compose/post`, click the amber **Orchestrator drafts** button, and pick the draft. "Whole thread" fills the post and its reply through X's "+" composer. "First post, rest as replies" fills only the post, and the reply box on the new post then offers the reply. They wait for the video to finish processing ("Ready") and press Post. If processing stalls, they discard the draft and fill a fresh compose window. X prepares the video in the page before it uploads anything, and that never finishes in a hidden tab: if it sits on "Preparing media..." with no request to upload.x.com, the Chrome window with the tab has to be in front (`document.visibilityState`). Tell the developer to bring it to the front (2026-10-12: a 9.5 MB and a 1 MB video both stuck there while the tab was hidden).
+4. Read the record from Orchestrator: `x_get_draft` with the `xdraft` id (or `x_list_drafts status: posted`). The extension records each post from X's own reply the moment it exists. `posted` means both are out. `posting` ("1 of 2 posted") means the reply hasn't gone yet, and the developer finishes it from the reply box.
+5. Once it's `posted`: set `status: posted`, `date` to the day, and `posted` to post 1's link (`posted[0].url`) in the file and on the page. Never edit a posted file's text again.
 
 ## 8. After
 

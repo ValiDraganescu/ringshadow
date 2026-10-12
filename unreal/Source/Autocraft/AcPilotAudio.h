@@ -197,6 +197,10 @@ public:
 	bool Logging() const;
 	/// `soundBlocked` against the current state and terrain.
 	bool Blocked(const FVector& Ears, const FVector& Sound) const;
+	/// While driving, how far the driven unit hears, cells: 1.5 × as far as
+	/// it sees (`Rules::vision`, closer in at night), at least `MinHearing`;
+	/// 0 when not driving. Each sound carries `AcSound::Carry` times it.
+	double HearingRange() const { return Hearing; }
 
 private:
 	void OnFrame(const FAcFrame& Frame);
@@ -211,6 +215,9 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<USubmixEffectReverbPreset> HallReverb;
 	bool bWasDriving = false;
+	double Hearing = 0;
+	static constexpr double HearingPerSight = 1.5;
+	static constexpr double MinHearing = 12.0;
 	bool bLogFlag = false;
 	bool bProbe = false;
 	double ProbeClock = 0;

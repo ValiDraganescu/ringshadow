@@ -5,6 +5,7 @@
 #include "PathAhead.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 
@@ -161,10 +162,15 @@ void Simulation::refreshNav() {
 std::vector<GameEvent> Simulation::step(double dt) {
     std::vector<GameEvent> events;
     pathsStarted = 0;
+    using Clock = std::chrono::steady_clock;
+    auto ms = [](Clock::time_point a) { return std::chrono::duration<double, std::milli>(Clock::now() - a).count(); };
+    stepTimes = StepTimes{};
     if (state.time >= nextLook - 1e-9) {
         nextLook = state.time + lookEvery;
+        const auto t = Clock::now();
         reindex();
         look();
+        stepTimes.look = ms(t);
     }
     state.time += dt;
     if (!commanders.empty() && state.time >= nextThink) {
@@ -172,7 +178,11 @@ std::vector<GameEvent> Simulation::step(double dt) {
         const std::vector<Commander> cs = commanders;
         for (const auto& c : cs) {
             if (!(!state.winner || state.allied(*state.winner, c.player))) continue;
+            const auto t = Clock::now();
             for (const auto& command : c.orders(*this)) issue(command, events);
+            const double one = ms(t);
+            stepTimes.think += one;
+            stepTimes.thinkMax = ac::max(stepTimes.thinkMax, one);
         }
     }
     stepStructures(dt, events);
@@ -229,7 +239,7 @@ std::vector<GameEvent> Simulation::step(double dt) {
         if (f.at <= state.time + 1e-9) due.push_back(f); else later.push_back(f);
     }
     inFlight = later;
-    for (const auto& f : due) land(f.shooter, f.target, f.aim);
+    for (const auto& f : due) land(f.shooter, f.target, f.aim, f.share);
     for (const auto& l : landings) events.push_back(GameEvent::Landed{l.unit, l.target});
     landings.clear();
     if (pilot || hpBonusHeld || burnsLeft) stepLeveling(dt);
@@ -1124,9 +1134,11 @@ std::optional<Simulation::Target> Simulation::target(int64_t id) const {
     return std::nullopt;
 }
 
-/// Edge-to-edge distance from a unit to a target.
+/// Edge-to-edge distance from a unit to a target, never below 0: a flyer
+/// right above a ground unit overlaps it, and is still in reach of a weapon
+/// with no minimum range (the pilot's sight clamps the same way).
 double Simulation::gap(const Unit& u, const Target& t) const {
-    return distance(u.position, t.position) - t.radius - Rules::radius(u.kind);
+    return ac::max(0.0, distance(u.position, t.position) - t.radius - Rules::radius(u.kind));
 }
 
 /// A Ranger's range from `from` at `to`: longer by
@@ -1169,7 +1181,21 @@ void Simulation::reload(Unit& u, const UnitStats& w) {
     // A Scorpion's sting gives it away to all for `Rules.strikeReveal` s.
     if (u.kind == Unit::Kind::scorpion) u.struckAt = state.time;
     if (w.rail) { u.railCooldown = w.cooldown; return; }
-    u.cooldown = w.cooldown;
+    const double gap_ = w.cooldown / static_cast<double>(ac::max<int64_t>(1, w.rounds));
+    u.cooldown = gap_;
+    if (w.rounds > 1) {
+        // An attack's rounds keep their beat too: one fired a step late
+        // leaves the next due on time.
+        const double now = state.time;
+        double due = now;
+        if (u.firedAt) {
+            const double late = now - (*u.firedAt + gap_);
+            if (late > 0 && late < gap_) due = now - late;
+        }
+        u.firedAt = due;
+        u.cooldown = gap_ - (now - due);
+        return;
+    }
     if (!(w.burst > 0)) return;
     const double now = state.time;
     if (u.firedAt && now - *u.firedAt >= w.pause) u.burstFrom = std::nullopt;
@@ -1188,6 +1214,60 @@ void Simulation::reload(Unit& u, const UnitStats& w) {
     } else {
         u.burstFrom = from;
     }
+}
+
+/// The radius of the spread cone (docs/shooter-feel.md): standing still,
+/// moving (the classic shooter's rule: none below a third of full speed,
+/// all of it from 95%), and what the last rounds added.
+double Simulation::cone(const Unit& u, const UnitStats& w, double moving) const {
+    const double m = ac::max(0.0, ac::min(1.0, (moving - 0.34) / (0.95 - 0.34)));
+    return w.coneStand + m * w.coneMove + u.spread.value_or(0);
+}
+
+double Simulation::falloffShare(const UnitStats& w, double d, double reach) {
+    // A weapon that stops at its range does all its damage wherever it
+    // strikes (a cutter's reach has its own slack).
+    if (!(d > reach) || !(reach > 0) || !(w.falloff > 0)) return 1;
+    return std::pow(w.falloff, (d - reach) / reach);
+}
+
+double Simulation::roll(int64_t id, uint64_t salt) const {
+    // splitmix64 over the unit, the step's time and the salt.
+    uint64_t x = static_cast<uint64_t>(id) * 0x9E3779B97F4A7C15ull
+        ^ static_cast<uint64_t>(std::llround(state.time * 960.0)) * 0xBF58476D1CE4E5B9ull
+        ^ (salt + 1) * 0x94D049BB133111EBull;
+    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ull;
+    x = (x ^ (x >> 27)) * 0x94D049BB133111EBull;
+    x ^= x >> 31;
+    return static_cast<double>(x >> 11) * 0x1.0p-53;
+}
+
+Simulation::Round Simulation::aimRound(Unit& u, const UnitStats& w, const Target& t, double moving) {
+    const double reach = range(w.range, u.position, t.position);
+    Round r;
+    r.at = t.position;
+    r.share = falloffShare(w, gap(u, t), reach);
+    // A flame, a cutter or a sting reaches what it reaches.
+    if (!(w.falloff > 0)) return r;
+    const double c = cone(u, w, moving);
+    u.spread = u.spread.value_or(0) + w.coneFire;
+    // A uniform angle round the sight and a uniform radius out to the
+    // cone's edge: the rounds bunch toward the middle, as a shooter's do.
+    const double turn = 2 * pi * roll(u.id, 1);
+    const double off = c * roll(u.id, 2);
+    const double centre = distance(u.position, t.position);
+    if (centre * std::tan(off) <= t.radius) return r;
+    r.hit = false;
+    r.share = 0;
+    r.yaw = off * std::cos(turn);
+    r.pitch = off * std::sin(turn);
+    // It comes down past its mark when it flew high, short of it when low,
+    // and off to the side it flew.
+    const Vec2 dir = centre > 1e-6 ? (t.position - u.position) / centre : Vec2(std::cos(u.look()), std::sin(u.look()));
+    const Vec2 side(-dir.y, dir.x);
+    const double along = r.pitch >= 0 ? centre * 1.5 + 2 : centre * 0.7;
+    r.at = u.position + dir * along + side * (along * std::tan(r.yaw));
+    return r;
 }
 
 /// A player has finished this upgrade.
@@ -1378,7 +1458,9 @@ void Simulation::stepSoldier(Unit& u, double dt, std::vector<GameEvent>& events)
             const UnitStats w = weapon(u, t->air);
             const double d = gap(u, *t);
             if (d <= range(w.range, u.position, t->position) && d >= w.minRange && cooldownFor(u, t->air) <= 0) {
-                if (fire(u, id, *t, dt)) events.push_back(GameEvent::Shot{u.id, id, t->owner, t->position});
+                // One round per attack's time: it stops no more often than
+                // with whole attacks.
+                if (fire(u, id, *t, dt, events) && w.rounds > 1 && !w.rail) u.cooldown = w.cooldown;
                 if (u.kind != Unit::Kind::longbow) return;
             }
         } else {
@@ -1421,17 +1503,28 @@ void Simulation::stepSoldier(Unit& u, double dt, std::vector<GameEvent>& events)
             if (d <= reach && d >= w.minRange) {
                 u.task = Task::attacking;
                 u.goal = std::nullopt; u.waypoints = std::nullopt;
-                if (fire(u, id, *t, dt)) events.push_back(GameEvent::Shot{u.id, id, t->owner, t->position});
+                fire(u, id, *t, dt, events);
                 return;
             }
-            // A tank anchoring or anchored cannot chase: it waits for targets.
+            // Out of reach but inside engage reach: a gun whose rounds fly on
+            // opens fire, less often on the mark and for less.
+            const bool engage = w.falloff > 0 && d <= reach * Rules::engageReach && d >= w.minRange;
+            // A tank anchoring or anchored cannot chase: it waits for targets,
+            // and shoots at the ones in engage reach.
             const bool planted = u.planted();
+            if (planted && engage) {
+                u.task = Task::attacking;
+                fire(u, id, *t, dt, events);
+                return;
+            }
             // Chase while it stays near; re-path only when it has moved a
             // cell. Defenders and the rally guard stay close to home.
             const auto post = postOf();
             const bool leashed = post ? distance(u.position, *post) > 14 : false;
             if (d <= Rules::sight + 3 && !leashed && !planted && d >= w.minRange) {
                 u.task = Task::attacking;
+                // Closing in, it shoots on the move.
+                if (engage && cooldownFor(u, t->air) <= 0) fire(u, id, *t, dt, events, 1);
                 const Vec2 to = u.goal ? (distance(*u.goal, t->position) < 1 ? *u.goal : t->position) : t->position;
                 (void)travel(u, to, reach + t->radius + st.radius - 0.4, dt);
                 return;
@@ -1508,7 +1601,7 @@ void Simulation::stepSoldier(Unit& u, double dt, std::vector<GameEvent>& events)
 /// Turn to the target and shoot when the weapon is ready; true when it
 /// fired. A tank and a Hailstorm turn their turret and a Firefly its
 /// tail, not the hull; a tank cannot fire while it anchors or packs up.
-bool Simulation::fire(Unit& u, int64_t id, const Target& t, double dt) {
+bool Simulation::fire(Unit& u, int64_t id, const Target& t, double dt, std::vector<GameEvent>& events, double moving) {
     const UnitStats w = weapon(u, t.air);
     bool ready;
     if (u.kind == Unit::Kind::longbow || u.kind == Unit::Kind::firefly || u.kind == Unit::Kind::hailstorm
@@ -1533,7 +1626,13 @@ bool Simulation::fire(Unit& u, int64_t id, const Target& t, double dt) {
     if (!(ready && cooldownFor(u, t.air) <= 0)) return false;
     reload(u, w);
     if (u.kind == Unit::Kind::scorpion) u.lockTarget = std::nullopt;
-    strike(u, id, t);
+    const Round r = aimRound(u, w, t, moving);
+    if (r.hit) {
+        strike(u, id, t, r.share);
+        events.push_back(GameEvent::Shot{u.id, id, t.owner, t.position});
+    } else {
+        events.push_back(GameEvent::Missed{u.id, r.at, r.yaw, r.pitch});
+    }
     return true;
 }
 
@@ -1545,8 +1644,10 @@ bool Simulation::fire(Unit& u, int64_t id, const Target& t, double dt) {
 double Simulation::damage(const Unit& u, const Target& v) const {
     const bool igniter = u.kind == Unit::Kind::firefly && has(u.owner, Upgrade::novaIgniters);
     const UnitStats w = weapon(u, v.air);
+    // Shared between the attack's rounds, armour taken off the whole.
+    const double rounds = static_cast<double>(ac::max<int64_t>(1, w.rounds));
     if (!pilot) {
-        return Rules::damage(w, v.armored, v.light, v.armor) + (igniter && v.light ? 5 : 0);
+        return (Rules::damage(w, v.armored, v.light, v.armor) + (igniter && v.light ? 5 : 0)) / rounds;
     }
     const bool pierce = boost(Stat::IgnoresArmor{}, u).plus > 0;
     double base = Rules::damage(w, v.armored, v.light, pierce ? 0 : v.armor) + (igniter && v.light ? 5 : 0);
@@ -1565,17 +1666,17 @@ double Simulation::damage(const Unit& u, const Target& v) const {
     double share = 1;
     if (u.kind == Unit::Kind::atlas && v.air) share = flakShare(u).value_or(1);
     if (u.kind == Unit::Kind::scorpion && v.structure) share = sapperShare(u).value_or(1);
-    return more.apply(base) * share;
+    return more.apply(base) * share / rounds;
 }
 
 /// `u` attacks `id` (seen as `t`): it lands now, or once its round has
 /// flown (`Rules.flight`).
-void Simulation::strike(const Unit& u, int64_t id, const Target& t) {
+void Simulation::strike(const Unit& u, int64_t id, const Target& t, double share) {
     const bool anchored = u.kind == Unit::Kind::longbow && u.anchor.value_or(0) >= 1;
     // A rail slug is hitscan.
     const double delay = u.kind == Unit::Kind::kestrel && t.air ? 0 : Rules::flight(u.kind, anchored, distance(u.position, t.position));
     if (u.kind == Unit::Kind::scorpion) tally(u, [](Tally& k) { k.strikes += 1; });
-    if (delay > 0) inFlight.push_back(InFlight{state.time + delay, u, id, t}); else land(u, id, t);
+    if (delay > 0) inFlight.push_back(InFlight{state.time + delay, u, id, t, share}); else land(u, id, t, share);
 }
 
 /// The shooter `u` was out of sight of the victim's side (player `victim`)
@@ -1593,12 +1694,12 @@ bool Simulation::shotUnseen(const Unit& u, int64_t victim) const {
 /// An attack of `u` lands: on `id` if it is still there, and, for a
 /// Firefly's flame or an anchored shell, on everyone in its line or splash
 /// (around `aim`, where the target stood, once it is gone).
-void Simulation::land(const Unit& u, int64_t id, const Target& aim) {
+void Simulation::land(const Unit& u, int64_t id, const Target& aim, double kept) {
     const bool anchored = u.kind == Unit::Kind::longbow && u.anchor.value_or(0) >= 1;
     const auto now = target(id);
     // Every third attack of the driven unit may count double (a pick).
     const bool twice = now && thirdTime(Action::attack, u);
-    auto dmg = [&](const Target& v) { return damage(u, v) * (twice ? 2 : 1); };
+    auto dmg = [&](const Target& v) { return damage(u, v) * (twice ? 2 : 1) * kept; };
     const Target t = now ? *now : aim;
     // Burn: what the driven Firefly's flame hits catches fire.
     std::optional<std::pair<double, double>> burn;
@@ -1722,6 +1823,12 @@ int64_t Simulation::splash(const Unit& u, Vec2 at, int64_t skip, bool twice) {
 /// player): a Comet heals out of combat, a Dropship's energy comes back,
 /// a tank anchors up or packs up the way `anchored` says.
 void Simulation::upkeep(Unit& u, double dt) {
+    // The spread its rounds added fades by 90% every `coneRecovery` s.
+    if (u.spread) {
+        const double rec = weapon(u).coneRecovery;
+        u.spread = rec > 0 ? *u.spread * std::pow(0.1, dt / rec) : 0;
+        if (*u.spread < 1e-5) u.spread = std::nullopt;
+    }
     switch (u.kind) {
     case Unit::Kind::comet:
         if (state.time - u.hitAt.value_or(-100) > Rules::cometRegenDelay) {
@@ -1894,7 +2001,7 @@ bool Simulation::stepFollow(Unit& u, double dt, bool think, std::vector<GameEven
         u.task = Task::attacking;
         if (d <= reach && d >= w.minRange) {
             u.goal = std::nullopt; u.waypoints = std::nullopt;
-            if (fire(u, *u.target, *t, dt)) events.push_back(GameEvent::Shot{u.id, *u.target, t->owner, t->position});
+            fire(u, *u.target, *t, dt, events);
         } else {
             (void)travel(u, t->position, reach + t->radius + st.radius - 0.4, dt);
         }
@@ -2947,7 +3054,7 @@ bool Simulation::prospectorDefends(Unit& u, double dt, std::vector<GameEvent>& e
     if (auto m = meleeFoe(u)) {
         const auto [id, t] = *m;
         if (u.task == Task::mining || u.task == Task::waiting) { leavePatch(u); u.task = Task::toPatch; }
-        if (fire(u, id, t, dt)) events.push_back(GameEvent::Shot{u.id, id, t.owner, t.position});
+        fire(u, id, t, dt, events);
         return true;
     }
     const auto near = minBy(filtered(state.units, [&](const Unit& v) {
@@ -3014,7 +3121,7 @@ void Simulation::stepErrand(Unit& u, double dt, std::vector<GameEvent>& events) 
         const Vec2 p = u.mission->as<Mission::Hunt>()->at;
         if (auto m = meleeFoe(u)) {
             const auto [id, t] = *m;
-            if (fire(u, id, t, dt)) events.push_back(GameEvent::Shot{u.id, id, t.owner, t.position});
+            fire(u, id, t, dt, events);
             return;
         }
         const auto foe_ = minBy(filtered(state.units, [&](const Unit& v) {

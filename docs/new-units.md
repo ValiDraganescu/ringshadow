@@ -394,9 +394,59 @@ The Commander picks its army in `Commander::counters` and by style
   brings a Sentinel or a unit to the spot (the existing unseen-chase rule
   does part of this).
 
-Each of these needs isolated scenario tests in `unreal/core-tests` (an
-Atlas against a Longbow line, a Peregrine against a Kestrel, a buried
-Scorpion and a walking Ranger squad), never full AI-against-AI games.
+Each of these has isolated scenario tests in `unreal/core-tests`
+(`tests/NewUnitsTests.cpp`), never full AI-against-AI games. The staged
+fights behind the counter loop are in `tests/NewUnitsBalanceTests.cpp`
+("Balance checks" below).
+
+## Balance checks
+
+Measured 2026-10-09 with the duels in
+`unreal/core-tests/tests/NewUnitsBalanceTests.cpp` (`make -C unreal/core-tests
+FILTER=balance_`): a few units staged on a map-less field, no AI, no
+economy. "Equal cost" adds ore and MH. "Walking in" stages both sides 16
+cells apart on attack-move; "in range" puts the enemy 6 cells off.
+
+| Claim | Duel | Result |
+|---|---|---|
+| A Peregrine beats a Kestrel in about 5.5 s and costs 70% as much | 1 against 1, 6 cells apart | Pass: 5.47 s, the Peregrine keeps 12 of 80 hp; 175 / 250 = 0.70 |
+| Peregrine beats Dropship | 1 against 1 | Pass: 5.4 s, untouched |
+| Rangers (about 10 a second each) shoot it down fast | Rangers under a parked Peregrine | Pass: one Ranger 8.27 s (9.7 a second); three (150, cheaper than it) 2.57 s |
+| Sentinels (24 a second) shoot it down fast | one Sentinel | Pass: 3.37 s |
+| Flak alone is a weak answer (no armoured bonus on it) | one Hailstorm (175, its cost) | Pass: 12 a hit (20 on a Kestrel); 6.53 s, over twice the three Rangers' time |
+| Kestrel beats Atlas | 2 Kestrels (500, equal cost) | Pass: 15.6 s, the Atlas never fires; one Kestrel alone takes 30.8 s |
+| Atlas beats Longbow | 1 and 2 (550) Longbows, in range and walking in | Pass: 1 in 4.0 s (432 hp left) / 6.8 s (364); 2 in 10.0 s / 8.8 s (160 left) |
+| Atlas beats Juggernaut | 1, and 4 (500, equal cost) | 1: pass either way. 4 walking in: pass, 11.4 s, 122 hp left. 4 already in range: **the Juggernauts win** (10.6 s, one left at full hp), not asserted |
+| Atlas beats Firefly | 1, and 5 (500, equal cost) | Pass: 5 in 18.2 s (320 left) in range, 10.9 s (410 left) walking in |
+| Atlas beats a seen Scorpion | 1, and 5 (equal cost) on the surface | Pass: dead in 2.0 to 7.3 s, the Atlas untouched |
+| Scorpion beats clumped light units, Prospectors | buried, against 2 Rangers (its cost) or 2 Prospectors packed together | Pass: one sting kills both in 1.23 s |
+| Scorpion beats careless flyers | buried, a Dropship or a Peregrine staying in reach; a Kestrel | Pass: the Dropship and the Peregrine die to the second sting (27.2 s). A Kestrel kills one lone Scorpion between stings (5.4 s, 50 hp left), but two Scorpions (200, less than the Kestrel's 250) kill it with their first stings |
+| Scorpion is beaten by anything that spots it first | buried, a Longbow walking in, with and without a Sentinel's sight on it | Pass: with the Sentinel the Longbow kills it from beyond the sting's reach and is never stung; without, it takes the 89 sting first |
+| (same) | 4 Rangers walking in, with and without a Sentinel | It stings first both times: the Rangers' reach (5) is the sting's. Without the Sentinel it kills 3 of the 4 and dies (11.6 s). With it, since the longer sight of docs/shooter-feel.md, the Rangers walk in clumped and one sting kills all four (3.4 s, 32 hp left); before that change it died there in 6.2 s. Asserted: the sting comes first and kills at least 3 |
+
+Not claims, measured alongside: an Atlas walking into five buried
+Scorpions (its cost) takes all five stings (440) and still kills them,
+60 hp left; ten Rangers (its cost) lose to an Atlas, 48 to 108 hp left.
+
+One bug found and fixed, no stat changed. `Simulation::gap` (edge to edge)
+went below 0 when a flyer hung right above a ground unit, and every weapon
+check `gap >= minRange` then failed with a minimum range of 0: no Ranger,
+Hailstorm or Scorpion ever picked a flyer overhead. It showed as a Peregrine that chased an unseen sting to
+its spot and sat over the Scorpion for good, never stung again. `gap` now
+stops at 0, as the pilot's sight already did
+(`balance_antiAirShootsAFlyerRightAboveIt`). Every core test and golden
+passed unchanged with the fix.
+
+Open, for the user:
+- **Atlas against Juggernauts at equal cost.** Four Juggernauts that are
+  already in range when the fight starts beat an Atlas; walking in, the
+  Atlas's extra cell of range wins it. Is the loop's "Atlas beats
+  Juggernaut" meant cost for cost, and from any start?
+- **Spotting a Scorpion first.** A Sentinel's sight only helps a unit that
+  outranges the sting (5 cells): Rangers, Comets and Fireflies (range 5)
+  still get stung, because spotting within 2 cells comes after the
+  5-cell lock-on. Is "beaten by any unit within 2 cells" meant as "dies
+  after its strike" (true now), or should it lose before it strikes?
 
 ## Where it lands in the code
 
@@ -419,9 +469,10 @@ appending keeps saved games loading.
   text (`AcConsoleInfo`, `AcPilotText`, `AcPilotCamera`), the playground
   (`AcPlayground`) and the minimap (`SAcMinimap`).
 - Golden tests: `unreal/core-tests/golden/*.json` were computed by the
-  Swift game. The new kinds change the leveling golden and some others.
-  From here the C++ core is its own reference: regenerate the goldens from
-  it and stop comparing with Swift.
+  Swift game. The new kinds changed the leveling golden, which now holds
+  them. The C++ core is its own reference: the goldens are frozen files,
+  and a moved one is reviewed and edited by hand (the `ringshadow-testing`
+  skill, "Goldens and fixtures").
 - Models: the existing meshes came from the Swift export
   (`Content-src/models/*.usda`, imported by `Tools/Editor/import_models.py`),
   which is retired. The new units are modelled in Unreal: an editor Python

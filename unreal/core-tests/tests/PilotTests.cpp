@@ -460,27 +460,31 @@ TEST(PilotTests_drivenRangerFiresAtWhatItsSightIsOn) {
     run(sim, 0.05);
     EXPECT_EQ(sim.pilotTarget(unit(sim, me)), enemyT(990));
     sim.pilot->hold = true;
-    EXPECT_TRUE(shots(run(sim, 1.0), me) == (std::vector<int64_t>{990, 990}));  // one now, one after the 0.61 s cooldown
-    EXPECT_NEAR(unit(sim, 990).hp, Rules::hp(Unit::Kind::ranger) - 2 * Rules::rangerDamage * Rules::heroDamage, 1e-9);
+    // Five rounds a second: an attack's three, a third of 0.61 s apart.
+    EXPECT_TRUE(shots(run(sim, 1.0), me) == (std::vector<int64_t>(5, 990)));
+    EXPECT_NEAR(unit(sim, 990).hp, Rules::hp(Unit::Kind::ranger) - 5 * Rules::rangerDamage * Rules::heroDamage / 3, 1e-9);
     EXPECT_NEAR(unit(sim, 991).hp, Rules::hp(Unit::Kind::ranger), 1e-9);
     EXPECT_NEAR(unit(sim, me).heading, std::atan2(out.y, out.x), 1e-9);
 }
 
-/// The sight sees past the rifle's range: an enemy there is on it but
-/// out of range, one in range is in range, and one shot's damage is
-/// what the target loses.
+/// The sight sees past the rifle's range: an enemy there is on it and a
+/// round reaches it, for a share of its damage; one in range takes it all,
+/// and one round's damage is what the target loses.
 TEST(PilotTests_theSightReadsRangeAndDamage) {
     auto [sim, me, at, out] = drivenRanger();
     sim.state.units.push_back(Unit(990, Unit::Kind::ranger, 1, at + out * 8.5, 0, Unit::Task::idle));
     run(sim, 0.05);
     const auto far = sim.pilotSight(unit(sim, me));
     EXPECT_TRUE(far && far->target == 990);
-    EXPECT_TRUE(far && !far->inRange);
-    EXPECT_NEAR(far ? far->distance : 0, 8.5 - 2 * Rules::radius(Unit::Kind::ranger), 1e-9);
-    EXPECT_NEAR(far ? far->range : 0, Rules::rangerRange * Rules::heroRange, 1e-9);  // the driven rifle reaches farther
+    EXPECT_TRUE(far && far->inRange);
+    const double gap = 8.5 - 2 * Rules::radius(Unit::Kind::ranger), reach = Rules::rangerRange * Rules::heroRange;
+    EXPECT_NEAR(far ? far->distance : 0, gap, 1e-9);
+    EXPECT_NEAR(far ? far->range : 0, reach, 1e-9);  // the driven rifle reaches farther
+    EXPECT_NEAR(far ? far->share : 0, std::pow(0.9, (gap - reach) / reach), 1e-9);
     unitRef(sim, 990).position = at + out * 4;
     const auto near = sim.pilotSight(unit(sim, me));
     EXPECT_TRUE(near && near->inRange);
+    EXPECT_NEAR(near ? near->share : 0, 1.0, 1e-12);
     const auto dmg = sim.strikeDamage(unit(sim, me), 990);
     sim.pilot->hold = true;
     run(sim, 0.05);
@@ -490,8 +494,8 @@ TEST(PilotTests_theSightReadsRangeAndDamage) {
 /// With the view's crosshair, a gun on foot shoots what the crosshair
 /// is on and nothing else: an enemy off its line of sight if the
 /// crosshair is on it, none with the crosshair clear (an enemy right on
-/// the line or not), none on a friend, none out of range, and the sight
-/// reads range to the crosshair's enemy.
+/// the line or not), none on a friend, and one past the rifle's range for
+/// less; the sight reads range to the crosshair's enemy.
 TEST(PilotTests_crosshairDecidesWhatADrivenGunHits) {
     auto [sim, me, at, out] = drivenRanger();
     const Vec2 side(-out.y, out.x);
@@ -523,21 +527,22 @@ TEST(PilotTests_crosshairDecidesWhatADrivenGunHits) {
     EXPECT_EQ(pull(Pilot::Crosshair::Clear{}).missed, int64_t(1));
     EXPECT_TRUE(pull(Pilot::Crosshair::On{992}).hit.empty());  // a friend under the crosshair is not a target
     sim.pilot->crosshair = Pilot::Crosshair(Pilot::Crosshair::On{993});
-    EXPECT_TRUE(sim.pilotSight(u) && !sim.pilotSight(u)->inRange);
-    EXPECT_TRUE(pull(Pilot::Crosshair::On{993}).hit.empty());  // out of range: spent short
-    EXPECT_EQ(pull(Pilot::Crosshair::On{993}).missed, int64_t(1));
+    const auto far = sim.pilotSight(u);
+    EXPECT_TRUE(far && far->inRange && far->share < 1);
+    EXPECT_TRUE(pull(Pilot::Crosshair::On{993}).hit == (std::vector<int64_t>{993}));  // past range: it flies on
 }
 
-/// With nothing under the sight (the one enemy past its range), the
+/// With nothing under the sight (the one enemy off to the side), the
 /// rifle still fires, at the same pace, and hits nothing.
 TEST(PilotTests_drivenRangerFiresAtNothing) {
     auto [sim, me, at, out] = drivenRanger();
-    sim.state.units.push_back(Unit(990, Unit::Kind::ranger, 1, at + out * 8.5, 0, Unit::Task::idle));
+    const Vec2 side(-out.y, out.x);
+    sim.state.units.push_back(Unit(990, Unit::Kind::ranger, 1, at + side * 8.5, 0, Unit::Task::idle));
     EXPECT_TRUE(!sim.pilotTarget(unit(sim, me)));
     sim.pilot->hold = true;
     const auto events = run(sim, 1.0);
     EXPECT_TRUE(shots(events, me).empty());  // hit something
-    EXPECT_EQ(misses(events, me), int64_t(2));
+    EXPECT_EQ(misses(events, me), int64_t(5));
     EXPECT_NEAR(unit(sim, 990).hp, Rules::hp(Unit::Kind::ranger), 1e-9);
 }
 

@@ -1,6 +1,6 @@
 ---
 name: ringshadow-x-posts
-description: Write X (Twitter) posts and replies about Ringshadow, the open-source Mac RTS built by AI agents, in the developer's own voice, and keep them in the post calendar (docs/x-posts/). Use for a caption under a clip or screenshot, a devlog post, a reply, planning what to post, or a long-form X Article (writing it, its images, loading it into X's composer).
+description: Write X (Twitter) posts and replies about Ringshadow, the open-source Mac RTS built by AI agents, in the developer's own voice, keep them in the post calendar (docs/x-posts/), and hand them to the developer as Orchestrator X drafts. Use for a caption under a clip or screenshot, a devlog post, a reply, planning what to post, or a long-form X Article (writing it, its images, saving it as an Orchestrator article draft).
 ---
 
 # X posts for Ringshadow
@@ -87,8 +87,10 @@ Rewrite any sentence that has one.
 
 ## From idea to posted
 
-[WORKFLOW.md](WORKFLOW.md) is the whole path, and every post goes through it: proposals on the review page, the developer's picks and notes, the sync to `docs/x-posts/`, the rework, the video in the gas giant shape (record, check the frames, cut, the X encode), the preview, approval with a date, posting on X after the developer's yes, and the record. It also has the benchmark rounds for tuning this file.
+[WORKFLOW.md](WORKFLOW.md) is the whole path, and every post goes through it: proposals on the review page, the developer's picks and notes, the sync to `docs/x-posts/`, the rework, the video in the gas giant shape (record, check the frames, cut, the X encode), the preview, approval with a date, and after the developer's yes the Orchestrator X draft (`x_create_draft`: the post with its video, the reply as post 2 of a thread). The developer posts it from the amber "Orchestrator drafts" button in x.com's composer, and the record comes from `x_get_draft`. It also has the benchmark rounds for tuning this file.
 
-[ARTICLES.md](ARTICLES.md) is the path of a long-form X Article: the measured, reproducible markdown, the images, loading it into X's composer through the editor's own state (one snippet for the whole body, one upload per image), and its share post.
+[ARTICLES.md](ARTICLES.md) is the path of a long-form X Article: the measured, reproducible markdown, the images, the Orchestrator article draft (`x_create_article_draft`), which the developer loads into x.com's article editor from the same amber button and publishes, and its share post.
 
-The statuses: `proposed` (Claude's draft), `wip` (the developer picked it), `approved` (with a date), `posted` (with its link). Only the developer sets `wip` and `approved`.
+Claude writes and drafts. The developer approves the exact text and presses Post or Publish on x.com. Claude never drives x.com in the browser.
+
+The statuses: `proposed` (Claude's draft), `wip` (the developer picked it), `approved` (with a date), `posted` (with its link, read from `x_get_draft`). Only the developer sets `wip` and `approved`.
