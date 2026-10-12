@@ -1,6 +1,7 @@
 #include "AcGameMode.h"
 
 #include "AcDaylight.h"
+#include "AcWeather.h"
 #include "AcDoodads.h"
 #include "AcEffects.h"
 #include "AcFog.h"
@@ -62,6 +63,8 @@ void AAcGameMode::StartPlay()
 	AAcTerrain::SpawnFor(GetWorld());
 	// Day and night (B9): sun, moon, sky, fog, the clock.
 	AAcDaylight::SpawnFor(GetWorld());
+	// The weather (docs/weather.md): rain, lightning; the daylight reads it.
+	AAcWeather::SpawnFor(GetWorld());
 	// Units and buildings as instances (B1).
 	AAcWorld::SpawnFor(GetWorld());
 	// Tracers, flashes, rounds, slugs (C1), after the renderer: muzzles come from its poses.

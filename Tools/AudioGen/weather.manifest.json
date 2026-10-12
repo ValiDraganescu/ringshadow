@@ -1,0 +1,57 @@
+{
+  "about": "Ringshadow's weather sounds (docs/weather.md): rain = the light rain bed, downpour = the heavy rain bed (both one seamless loop; the game crossfades them on the rain rate and layers each with a copy offset by half, like the wind), thunder = distant rolling thunder after a far strike, crack = a close strike's crack and boom. The game picks thunder or crack by the strike's distance, delayed by distance / 343 m/s. Ids match the game's sound names (sfx/<name>_<n>).",
+  "voices": {},
+  "entries": [
+    {
+      "id": "rain_1",
+      "kind": "sfx",
+      "prompt": "gentle steady rain falling on sand and rocks, soft pattering of individual raindrops, warm and calm, low and mellow, no hiss, no thunder, no wind",
+      "seconds": 30,
+      "loop": true,
+      "influence": 0.6
+    },
+    {
+      "id": "downpour_1",
+      "kind": "sfx",
+      "prompt": "torrential rainstorm outdoors, thick drumming rain on metal and rock, rushing water, full and deep, natural, no static, no thunder",
+      "seconds": 30,
+      "loop": true,
+      "influence": 0.6
+    },
+    {
+      "id": "thunder_1",
+      "kind": "sfx",
+      "prompt": "distant rolling thunder far away over open desert, long low rumble slowly fading out",
+      "seconds": 8,
+      "influence": 0.5
+    },
+    {
+      "id": "thunder_2",
+      "kind": "sfx",
+      "prompt": "thunder rumbling across a wide sky at a distance, deep growl that rolls and echoes then fades",
+      "seconds": 9,
+      "influence": 0.5
+    },
+    {
+      "id": "thunder_3",
+      "kind": "sfx",
+      "prompt": "faraway thunder, soft deep boom followed by a long grumbling roll fading into rain",
+      "seconds": 7,
+      "influence": 0.5
+    },
+    {
+      "id": "crack_1",
+      "kind": "sfx",
+      "prompt": "lightning strike very close, sudden sharp ripping thunder crack then a heavy booming rumble that fades",
+      "seconds": 6,
+      "influence": 0.5
+    },
+    {
+      "id": "crack_2",
+      "kind": "sfx",
+      "prompt": "nearby lightning bolt, loud explosive thunderclap with a crackling tear and a deep rolling boom after it",
+      "seconds": 6,
+      "influence": 0.5
+    }
+  ]
+}

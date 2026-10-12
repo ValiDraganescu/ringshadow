@@ -84,15 +84,21 @@ def is_pool(mat):
 def make_world_mpc():
     mpc = MM.load(MPC_WORLD) or MM.create(MPC_WORLD, unreal.MaterialParameterCollection,
                                           unreal.MaterialParameterCollectionFactoryNew())
-    wanted = (("Dark", 0.0), ("HullEnv", 0.6))
-    have = [(str(x.get_editor_property("parameter_name")), x.get_editor_property("default_value"))
-            for x in mpc.get_editor_property("scalar_parameters")]
-    if [n for n, _ in have] == [n for n, _ in wanted]:
-        # Rewriting the list gives the parameters new ids, which would leave
-        # every material compiled against the old ones stale.
+    # Wetness: how wet the hulls are (AAcWeather, docs/weather.md). It lives
+    # here because a material may read only two collections, and M_Hull
+    # already reads this one and MPC_AcTeams.
+    wanted = (("Dark", 0.0), ("HullEnv", 0.6), ("Wetness", 0.0))
+    kept = list(mpc.get_editor_property("scalar_parameters"))
+    have = [str(x.get_editor_property("parameter_name")) for x in kept]
+    if have == [n for n, _ in wanted]:
         return mpc
-    scalars = []
-    for name, value in wanted:
+    # Rewriting a parameter gives it a new id, which would leave every
+    # material compiled against the old one stale: keep the ones there and
+    # add only the missing ones at the end.
+    if have != [n for n, _ in wanted][:len(have)]:
+        kept = []
+    scalars = kept
+    for name, value in wanted[len(kept):]:
         s = unreal.CollectionScalarParameter()
         s.set_editor_property("parameter_name", name)
         s.set_editor_property("default_value", value)

@@ -6,6 +6,7 @@
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
+#include "AcWeather.h"
 
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
@@ -41,6 +42,36 @@ namespace
 	TAutoConsoleVariable<int32> CVarClouds(
 		TEXT("ac.Daylight.Clouds"), 1,
 		TEXT("Volumetric clouds and their shadows over the map (1) or none (0)."));
+	TAutoConsoleVariable<float> CVarCloudCover(
+		TEXT("ac.Daylight.CloudCover"), -1.0f,
+		TEXT("Hold the cloud cover (0 clear - 1 overcast); negative: the weather drifts through the days."));
+	TAutoConsoleVariable<float> CVarCloudShadows(
+		TEXT("ac.Daylight.CloudShadows"), 1.0f,
+		TEXT("Scale on how dark the clouds' shadows on the map are (0: none)."));
+	TAutoConsoleVariable<float> CVarWet(
+		TEXT("ac.Weather.Wet"), 1.0f,
+		TEXT("Scale on the wet ground after rain (0: always dry)."));
+	TAutoConsoleVariable<float> CVarRipples(
+		TEXT("ac.Weather.Ripples"), 1.0f,
+		TEXT("Scale on the rain rings in the wet ground and the puddles (0: none)."));
+	TAutoConsoleVariable<float> CVarGloss(
+		TEXT("ac.Weather.Gloss"), 1.0f,
+		TEXT("How glossy the wet ground and the puddles get (0: wet ground stays as rough as dry)."));
+	TAutoConsoleVariable<float> CVarCloudDensity(
+		TEXT("ac.Daylight.CloudDensity"), 1.0f,
+		TEXT("Scale on the clouds' density (thicker, darker undersides above 1)."));
+	TAutoConsoleVariable<float> CVarCloudErosion(
+		TEXT("ac.Daylight.CloudErosion"), 1.0f,
+		TEXT("Scale on how much the fine detail noise eats the clouds' thin edges (0: smooth billows only)."));
+	TAutoConsoleVariable<float> CVarCloudShadowSteps(
+		TEXT("ac.Daylight.CloudShadowSteps"), 1.0f,
+		TEXT("Scale on the steps each cloud sample marches toward the sun (10 at 1)."));
+	TAutoConsoleVariable<float> CVarCloudShadowKm(
+		TEXT("ac.Daylight.CloudShadowKm"), 4.0f,
+		TEXT("How far (km) each cloud sample marches toward the sun for its shadow."));
+	TAutoConsoleVariable<float> CVarCloudSun(
+		TEXT("ac.Daylight.CloudSun"), 2.5f,
+		TEXT("Scale on the high sun's light the clouds scatter (not the sky's): sunlit tops against shaded bases."));
 	TAutoConsoleVariable<int32> CVarVolumetricFog(
 		TEXT("ac.Daylight.VolumetricFog"), 1,
 		TEXT("Volumetric fog in the haze (1) or plain height fog (0)."));
@@ -94,9 +125,35 @@ namespace
 	const TCHAR* SkyMaterialPath = TEXT("/Game/Sky/M_AcSky.M_AcSky");
 	const TCHAR* DomeMeshPath = TEXT("/Engine/BasicShapes/Sphere.Sphere");
 	const TCHAR* CloudMaterialPath = TEXT("/Engine/EngineSky/VolumetricClouds/m_SimpleVolumetricCloud_Inst.m_SimpleVolumetricCloud_Inst");
-	/// The engine's clouds thinning out toward the horizon as Swift's
-	/// (`Tools/Editor/make_cloud_material.py`); the engine's if missing.
+	/// Our clouds and their shadows (`Tools/Editor/make_cloud_material.py`);
+	/// the engine's clouds and no shadows if missing.
 	const TCHAR* AcCloudMaterialPath = TEXT("/Game/Sky/MI_AcCloud.MI_AcCloud");
+	const TCHAR* AcCloudShadowMaterialPath = TEXT("/Game/Sky/MI_AcCloudShadow.MI_AcCloudShadow");
+
+	/// The cloud layer (km): fair-weather bases at 1.6 km, towers to 5 km.
+	constexpr float CloudBottomKm = 1.6f;
+	constexpr float CloudHeightKm = 3.4f;
+	/// Weather map and noise tiles across (km): clumps ~2 km, bodies ~1 km,
+	/// edge detail 250 m-1 km (finer is under a pixel and reads as grain).
+	/// Sized with the wind for the map's sake: the shadows are the clouds'
+	/// own, so a medium map gets ~5 passes of shade in 20 min, ~1 min each,
+	/// ~28 % of the time (simulated over the baked noise; the 30 km weather
+	/// and 1.5 km bodies left it in sun for up to 20 min).
+	constexpr double WeatherKm = 12.0, ShapeKm = 4.0, DetailKm = 2.0;
+	/// Extinction per metre at full density, and the edge erosion.
+	constexpr double CloudDensity = 0.15, CloudErosion = 0.35;
+	/// The wind's direction, toward +X a little +Y (Unreal axes); its speed
+	/// and the distance moved are the weather's (`windKm`, 15 m/s clear: a
+	/// cloud's shadow edge crosses the RTS view in ~1.5 s).
+	const FVector2D CloudWind = FVector2D(1.0, 0.35).GetSafeNormal();
+	/// How much of the light a thick cloud takes away, and how much summed
+	/// density (four samples up the light's ray) makes full shade.
+	constexpr double CloudShadowStrength = 0.7, CloudShadowSoftness = 2.5;
+	/// A strike's light in the cloud round it (`Bolt`: a core and a halo out
+	/// to CloudFlashKm), at full flash. Only that cloud lights: lit all over
+	/// the sky, 0.6 already turned the frame white.
+	constexpr double CloudFlashGlow = 0.2;
+	constexpr double CloudFlashKm = 2.5;
 
 	double Smoothstep(double A, double B, double X)
 	{
@@ -165,11 +222,17 @@ AAcDaylight::AAcDaylight()
 	Sun->LightSourceAngle = 0.5357f;
 	Sun->CastShadows = true;
 	Sun->VolumetricScatteringIntensity = 0.0f;
+	// The cloud shadows (a light function, set in BeginPlay) everywhere the
+	// eye goes, never faded to the half-lit default.
+	Sun->LightFunctionFadeDistance = 1.0e7f;
+	Sun->DisabledBrightness = 1.0f;
 	Moon = MakeLight(TEXT("Moon"));
 	Moon->bAtmosphereSunLight = false;
 	Moon->LightSourceAngle = 0.52f;
 	Moon->CastShadows = false;
 	Moon->VolumetricScatteringIntensity = 0.0f;
+	Moon->LightFunctionFadeDistance = 1.0e7f;
+	Moon->DisabledBrightness = 1.0f;
 	// The same in the sky: atmosphere lights 0 and 1, lighting no geometry
 	// (no lighting channel), but the sky, the fog's light shafts and the
 	// clouds.
@@ -231,6 +294,16 @@ AAcDaylight::AAcDaylight()
 
 	Clouds = CreateDefaultSubobject<UVolumetricCloudComponent>(TEXT("Clouds"));
 	Clouds->SetupAttachment(Root);
+	Clouds->LayerBottomAltitude = CloudBottomKm;
+	Clouds->LayerHeight = CloudHeightKm;
+	// The light reddens across the layer at dusk, not once for all of it.
+	Clouds->bUsePerSampleAtmosphericLightTransmittance = true;
+	// Self-shadow rays need not cross the whole layer.
+	Clouds->ShadowTracingDistance = 4.0f;
+	// The bases take the warm ground's bounce (the material's
+	// GroundContribution) and less of the sky's light.
+	Clouds->GroundAlbedo = FColor(150, 128, 105);
+	Clouds->SkyLightCloudBottomOcclusion = 0.6f;
 
 	Dome = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Dome"));
 	Dome->SetupAttachment(Root);
@@ -315,11 +388,19 @@ AAcDaylight* AAcDaylight::SpawnFor(UWorld* World)
 void AAcDaylight::BeginPlay()
 {
 	Super::BeginPlay();
-	UMaterialInterface* Cloud = LoadObject<UMaterialInterface>(nullptr, AcCloudMaterialPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
-	if (!Cloud) Cloud = LoadObject<UMaterialInterface>(nullptr, CloudMaterialPath);
-	if (Cloud)
+	if (UMaterialInterface* Cloud = LoadObject<UMaterialInterface>(nullptr, AcCloudMaterialPath, nullptr, LOAD_NoWarn | LOAD_Quiet))
 	{
-		Clouds->SetMaterial(Cloud);
+		CloudMaterial = UMaterialInstanceDynamic::Create(Cloud, this);
+		Clouds->SetMaterial(CloudMaterial);
+		if (UMaterialInterface* Shadow = LoadObject<UMaterialInterface>(nullptr, AcCloudShadowMaterialPath, nullptr, LOAD_NoWarn | LOAD_Quiet))
+		{
+			CloudShadowMaterial = UMaterialInstanceDynamic::Create(Shadow, this);
+		}
+	}
+	else
+	{
+		UE_LOG(LogAutocraft, Warning, TEXT("daylight: engine clouds (%s missing: run Tools/Editor/make_cloud_material.py)"), AcCloudMaterialPath);
+		if (UMaterialInterface* Engine = LoadObject<UMaterialInterface>(nullptr, CloudMaterialPath)) Clouds->SetMaterial(Engine);
 	}
 	UStaticMesh* Sphere = LoadObject<UStaticMesh>(nullptr, DomeMeshPath);
 	UMaterialInterface* SkyMaterial = LoadObject<UMaterialInterface>(nullptr, SkyMaterialPath);
@@ -432,6 +513,15 @@ void AAcDaylight::Update(const double Time)
 	auto ToneV = [&](double Day, double Night, double Dusk) {
 		return Tone(Rgb(Day, Day, Day), Rgb(Night, Night, Night), Rgb(Dusk, Dusk, Dusk)).R;
 	};
+	// The weather (AcWeather.h, docs/weather.md): under rain and storm cloud
+	// the light is dimmer and flatter, the haze greyer and thicker.
+	AAcWeather* WeatherActor = AAcWeather::Find(GetWorld());
+	Weather = WeatherActor ? WeatherActor->Sample(Time) : ac::WeatherSample();
+	const double Gloom = Weather.gloom;
+	auto Grey = [](const FLinearColor& C, double T) {
+		const float L = (C.R + C.G + C.B) / 3.0f;
+		return Mix(C, FLinearColor(L, L, L * 1.04f, C.A), T);
+	};
 
 	// The sun, warmer as it sinks; the moon opposite. Shadows fade as the
 	// light nears the horizon (they grow very long and sweep fast there).
@@ -449,17 +539,40 @@ void AAcDaylight::Update(const double Time)
 	const double Eclipsed = 1.0 - 0.55 * FAcGasGiant::Eclipse(SunDir);
 	const double SunFull = Deg > 0 ? Eclipsed * 1900 * FMath::Pow(Smoothstep(0, 9, Abs), 0.6) : 0.0;
 	const double MoonFull = Deg < 0 ? 650 * FMath::Pow(Smoothstep(0, 10, Abs), 0.6) : 0.0;
-	Sun->SetIntensity(float(SunFull * SunLux * KeyGain));
+	Sun->SetIntensity(float(SunFull * SunLux * KeyGain * FMath::Lerp(1.0, 0.3, Gloom)));
 	Sun->SetLightColor(Lin(Mix(Rgb(1, 0.5, 0.28), Rgb(1, 0.93, 0.82), Smoothstep(0, 32, Deg > 0 ? Abs : 0))));
-	Moon->SetIntensity(float(MoonFull * MoonLux * KeyGain));
+	Moon->SetIntensity(float(MoonFull * MoonLux * KeyGain * FMath::Lerp(1.0, 0.35, Gloom)));
+	// Under a rain deck there is no sun disc to mirror: the wet ground and
+	// the puddles flared white with the full highlight.
+	Sun->SetSpecularScale(float(FMath::Lerp(1.0, 0.1, Gloom)));
+	Moon->SetSpecularScale(float(FMath::Lerp(1.0, 0.1, Gloom)));
 	Moon->SetLightColor(Lin(Rgb(0.5, 0.64, 1)));
 	// In the sky: the atmosphere dims a low sun or moon a great deal, and the
 	// sky the sky light captures with it; lift it near the horizon so the
 	// ambient follows Swift's tone instead. The sun still lights the sky a
 	// while after it has set (the twilight).
 	auto Lift = [](double E) { return 1.0 + LowLightLift * (1.0 - Smoothstep(0, 25, E)); };
-	SkySun->SetIntensity(float(Eclipsed * SkySunLux * Lift(FMath::Max(Deg, 0.0)) * Smoothstep(-12, 0, Deg)));
-	SkyMoon->SetIntensity(float(SkyMoonLux * Lift(FMath::Max(-Deg, 0.0)) * Smoothstep(-12, 0, -Deg)));
+	// Behind a storm's cloud the sky itself is darker.
+	const double SkyGloom = FMath::Lerp(1.0, 0.45, Gloom);
+	SkySun->SetIntensity(float(Eclipsed * SkySunLux * Lift(FMath::Max(Deg, 0.0)) * Smoothstep(-12, 0, Deg) * SkyGloom));
+	SkyMoon->SetIntensity(float(SkyMoonLux * Lift(FMath::Max(-Deg, 0.0)) * Smoothstep(-12, 0, -Deg) * SkyGloom));
+	// The atmosphere's sun is dim enough for the sky's colour, too dim
+	// against the sky light for a cloud's sunlit side to stand out. Under a
+	// rain deck there is no sunlit side: the lift goes, and then some.
+	// Only a high sun: a low one's red light (lifted for the sky, see
+	// LowLightLift) turned dusk clouds neon, so the clouds take less of it;
+	// and the moon's lifted made night clouds read as day's.
+	const double Lifted = FMath::Lerp(0.6, double(CVarCloudSun.GetValueOnGameThread()), Smoothstep(8, 30, Deg));
+	const float CloudSun = float(FMath::Lerp(Lifted, 0.4, Smoothstep(0, 0.5, Gloom)));
+	const float CloudMoon = float(FMath::Lerp(1.0, 0.4, Smoothstep(0, 0.5, Gloom)));
+	if (!FMath::IsNearlyEqual(SkySun->CloudScatteredLuminanceScale.R, CloudSun, 0.01f) ||
+		!FMath::IsNearlyEqual(SkyMoon->CloudScatteredLuminanceScale.R, CloudMoon, 0.01f))
+	{
+		SkySun->CloudScatteredLuminanceScale = FLinearColor(CloudSun, CloudSun, CloudSun);
+		SkyMoon->CloudScatteredLuminanceScale = FLinearColor(CloudMoon, CloudMoon, CloudMoon);
+		SkySun->MarkRenderStateDirty();
+		SkyMoon->MarkRenderStateDirty();
+	}
 	Sun->SetShadowAmount(float(0.85 * Fade));
 	Moon->SetShadowAmount(float(0.75 * Fade));
 	const bool bDay = Deg > 0;
@@ -479,27 +592,29 @@ void AAcDaylight::Update(const double Time)
 	// The cool fill from the opposite side keeps shadowed faces readable.
 	Fill->SetWorldRotation((-AcSpace::AxesFromSceneKit(50, 40, 60).GetSafeNormal()).Rotation());
 	Fill->SetLightColor(Lin(Tone(Rgb(0.55, 0.65, 0.9), Rgb(0.32, 0.44, 1), Rgb(0.9, 0.55, 0.62))));
-	Fill->SetIntensity(float(ToneV(450, 210, 360) * FillLux * FillGain));
+	Fill->SetIntensity(float(ToneV(450, 210, 360) * FillLux * FillGain * FMath::Lerp(1.0, 0.7, Gloom)));
 
 	// The ambient: the captured sky, at Swift's ambient tone (relative to day).
 	// Only once the sun is well down: at dusk the captured sky is still lit.
 	const double NightLift = 1.0 + (CVarNightAmbient.GetValueOnGameThread() - 1.0) * (1.0 - Smoothstep(-18, -8, Deg));
-	SkyLight->SetIntensity(float(ToneV(0.75, 0.12, 0.4) / 0.75 * SkyLightScale * CVarAmbient.GetValueOnGameThread() * NightLift * SkyGain));
+	// Under cloud a little dimmer; a lightning flash lights the whole sky.
+	const double WeatherAmbient = FMath::Lerp(1.0, 0.8, Gloom) * (1.0 + 0.8 * Weather.flash);
+	SkyLight->SetIntensity(float(ToneV(0.75, 0.12, 0.4) / 0.75 * SkyLightScale * CVarAmbient.GetValueOnGameThread() * NightLift * SkyGain * WeatherAmbient));
 	// At dawn and dusk the captured sky is red, and the sun on the ground is
 	// already the Swift orange: cool the ambient so shade is not red too.
 	const double Blue = CVarAmbientBlue.GetValueOnGameThread();
-	SkyLight->SetLightColor(Mix(Rgb(1, (1 + Blue) / 2, Blue), Rgb(0.8, 1.0, 1.3), Glow * 0.8));
+	SkyLight->SetLightColor(Grey(Mix(Rgb(1, (1 + Blue) / 2, Blue), Rgb(0.8, 1.0, 1.3), Glow * 0.8 * (1.0 - Gloom)), Gloom * 0.6));
 
 	// The haze: the background, the fog, the terrain's border. Top down as in
 	// Swift; the first-person haze is in the tones.
 	Haze = Tone(Rgb(0.27, 0.22, 0.19), Rgb(0.035, 0.045, 0.085), Rgb(0.3, 0.16, 0.12));
+	// Rain greys the haze and darkens it a little.
+	Haze = Grey(Haze, Gloom * 0.7) * float(FMath::Lerp(1.0, 0.8, Gloom));
 	const FLinearColor HazeLinear = FLinearColor::FromSRGBColor(Haze.ToFColor(false));
 	Fog->SetFogInscatteringColor(HazeLinear);
 	Fog->SetVolumetricFogAlbedo(Tone(Rgb(0.95, 0.9, 0.85), Rgb(0.6, 0.7, 1.0), Rgb(1.0, 0.8, 0.7)).ToFColor(false));
-	Fog->SetFogDensity(FogDensity * CVarFog.GetValueOnGameThread());
+	Fog->SetFogDensity(FogDensity * CVarFog.GetValueOnGameThread() * float(1.0 + 2.0 * Weather.rain + 0.6 * Gloom));
 	Fog->SetVolumetricFog(CVarVolumetricFog.GetValueOnGameThread() != 0);
-	const bool bClouds = CVarClouds.GetValueOnGameThread() != 0;
-	if (Clouds->IsVisible() != bClouds) Clouds->SetVisibility(bClouds);
 
 	if (const UWorld* World = GetWorld())
 	{
@@ -513,6 +628,18 @@ void AAcDaylight::Update(const double Time)
 				TerrainHaze = Want;
 				Terrain->GetMaterial()->SetVectorParameterValue(TEXT("Haze"), Want);
 			}
+			// The wet ground (M_Terrain's `Wetness`): darker, glossy, puddles.
+			const float Wet = float(Weather.wetness * CVarWet.GetValueOnGameThread());
+			const float Drops = float(Weather.rain);
+			if (FMath::Abs(Wet - TerrainWet) > 1.0f / 256 || FMath::Abs(Drops - TerrainRain) > 1.0f / 256)
+			{
+				TerrainWet = Wet;
+				TerrainRain = Drops;
+				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("Wetness"), Wet);
+				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("RainRate"), Drops);
+				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("Ripples"), CVarRipples.GetValueOnGameThread());
+				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("Gloss"), CVarGloss.GetValueOnGameThread());
+			}
 		}
 	}
 
@@ -520,14 +647,17 @@ void AAcDaylight::Update(const double Time)
 	Tones.Top = Tone(Rgb(0.07, 0.15, 0.34), Rgb(0.008, 0.012, 0.035), Rgb(0.08, 0.1, 0.26));
 	Tones.High = Tone(Rgb(0.2, 0.34, 0.6), Rgb(0.015, 0.025, 0.06), Rgb(0.3, 0.28, 0.45));
 	Tones.Horizon = Tone(Rgb(0.52, 0.6, 0.72), Rgb(0.05, 0.06, 0.11), Rgb(0.95, 0.5, 0.28));
-	Tones.Haze = Tone(Rgb(0.62, 0.6, 0.58), Rgb(0.06, 0.07, 0.12), Rgb(0.62, 0.4, 0.3));
-	Tones.Glow = Rgb(0.9, 0.38, 0.16) * float(Glow);
+	Tones.Haze = Grey(Tone(Rgb(0.62, 0.6, 0.58), Rgb(0.06, 0.07, 0.12), Rgb(0.62, 0.4, 0.3)), Gloom * 0.7) * float(FMath::Lerp(1.0, 0.75, Gloom));
+	// Full cover hides the sunset.
+	Tones.Glow = Rgb(0.9, 0.38, 0.16) * float(Glow * (1.0 - 0.85 * Smoothstep(0.6, 0.97, Weather.cover)));
 	Tones.Cloud = Tone(Rgb(0.96, 0.95, 0.93), Rgb(0.07, 0.08, 0.12), Rgb(1, 0.66, 0.5));
 	Tones.Shade = Tone(Rgb(0.66, 0.69, 0.76), Rgb(0.035, 0.04, 0.065), Rgb(0.5, 0.36, 0.42));
 	Tones.Sun = SunDir;
 	Tones.Stars = 1 - Smoothstep(-14, -3, Deg);
 	Tones.Rise = 24 + (12 - 24) * Light;
-	Tones.Reach = 40 + (110 - 40) * Light;
+	Tones.Reach = (40 + (110 - 40) * Light) * FMath::Lerp(1.0, 0.45, Weather.rain);
+
+	UpdateClouds(Time, SunDir);
 
 	Exposure->Settings.ToneCurveAmount = CVarToneCurve.GetValueOnGameThread();
 	if (DomeMaterial)
@@ -539,5 +669,104 @@ void AAcDaylight::Update(const double Time)
 		GasGiant->Update(GetWorld(), this, DomeMaterial, SunDir, Dark);
 		if (!SkyFx) SkyFx = MakeShared<FAcSkyFx>();
 		SkyFx->Update(GetWorld(), this, DomeMaterial, SunDir, Dark);
+	}
+}
+
+void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
+{
+	const bool bClouds = CVarClouds.GetValueOnGameThread() != 0;
+	if (Clouds->IsVisible() != bClouds) Clouds->SetVisibility(bClouds);
+	// A rain deck fills every ray with cloud (nothing to skip), so tracing it
+	// cost 2.5 ms in the pilot's view at 5K against 0.8 for broken cloud;
+	// its grey hides the grain fewer samples leave, which bright cumulus
+	// edges show: half the view and shadow samples under a full deck (rain
+	// and storm alike: by cover, not gloom).
+	const float Samples = float(FMath::Lerp(1.0, 0.5, Smoothstep(0.8, 0.96, Weather.cover)));
+	const float ShadowSamples = Samples * CVarCloudShadowSteps.GetValueOnGameThread();
+	if (!FMath::IsNearlyEqual(Clouds->ViewSampleCountScale, Samples, 0.01f) ||
+		!FMath::IsNearlyEqual(Clouds->ShadowViewSampleCountScale, ShadowSamples, 0.01f))
+	{
+		Clouds->SetViewSampleCountScale(Samples);
+		Clouds->SetShadowViewSampleCountScale(ShadowSamples);
+	}
+	const float ShadowKm = CVarCloudShadowKm.GetValueOnGameThread();
+	if (!FMath::IsNearlyEqual(Clouds->ShadowTracingDistance, ShadowKm, 0.01f))
+	{
+		Clouds->ShadowTracingDistance = ShadowKm;
+		Clouds->MarkRenderStateDirty();
+	}
+
+	// The weather: the cover drifts between broken and mostly clear over a
+	// couple of days (two slow waves), unless held.
+	// The weather's cover (AcWeather), unless held.
+	const double Held = CVarCloudCover.GetValueOnGameThread();
+	const double Cover = Held >= 0 ? FMath::Clamp(Held, 0.0, 1.0) : Weather.cover;
+
+	// The coverage moves with the wind; the bodies a little faster, so they
+	// boil as they go instead of sliding by as one picture. The shadow
+	// material takes the same three vectors: it marches the same clouds.
+	const FVector2D W = CloudWind * Weather.windKm;
+	const FVector2D S = W * 1.15;
+	const FLinearColor A(float(-FMath::Fmod(W.X, WeatherKm)), float(-FMath::Fmod(W.Y, WeatherKm)),
+		float(-FMath::Fmod(S.X, ShapeKm)), float(-FMath::Fmod(S.Y, ShapeKm)));
+	// A storm's clouds: denser (darker undersides).
+	const double Density = CloudDensity * CVarCloudDensity.GetValueOnGameThread() * FMath::Lerp(1.0, 1.8, Weather.storm);
+	const FLinearColor B{float(Cover), float(Density), float(WeatherKm), float(ShapeKm)};
+	// The cloud type follows the weather: flat fair-weather cumulus when
+	// clear, cumulus when cloudy (tall thin towers side-on read as curtains),
+	// towers only in a storm.
+	const double TypeBias = FMath::Lerp(-0.6, -0.25, Smoothstep(0.35, 0.7, Cover)) + 0.7 * Weather.storm;
+	// A storm's clouds keep a third of the sky light at their base (Epic's
+	// storm clouds' occlusion), not 0.6: heavy, dark undersides.
+	const double StormLook = Smoothstep(0.3, 1.0, Weather.storm);
+	const FLinearColor C{float(DetailKm), float(CloudErosion * CVarCloudErosion.GetValueOnGameThread()), float(TypeBias), float(StormLook)};
+	if (CloudMaterial)
+	{
+		CloudMaterial->SetVectorParameterValue(TEXT("CloudA"), A);
+		CloudMaterial->SetVectorParameterValue(TEXT("CloudB"), B);
+		CloudMaterial->SetVectorParameterValue(TEXT("CloudC"), C);
+		// Swift's cloud tone (`Daylight.Sky.cloud`) for its hue only: the
+		// atmosphere already dims and reddens the light reaching them, so
+		// half the dusk warmth and none of the night's darkness.
+		const FLinearColor Hue = Tones.Cloud / FMath::Max3(Tones.Cloud.R, Tones.Cloud.G, Tones.Cloud.B);
+		// Rain cloud is grey; a storm's goes the dark blue-grey of Epic's
+		// storm clouds (0.30, 0.34, 0.375).
+		const FLinearColor Grey = Mix(Rgb(1, 1, 1), Hue, 0.5) * float(0.95 * FMath::Lerp(1.0, 0.55, Weather.gloom));
+		CloudMaterial->SetVectorParameterValue(TEXT("Albedo"), Mix(Grey, Rgb(0.3, 0.3375, 0.375), StormLook));
+		// Lightning lights the cloud from inside, round the strike: above the
+		// ground where it hits, the lower part of the cloud.
+		CloudMaterial->SetVectorParameterValue(TEXT("Glow"), FLinearColor(0.7f, 0.78f, 1.0f) * float(Weather.flash * CloudFlashGlow));
+		if (Weather.flash > 0.0)
+		{
+			const AAcWeather* WeatherActor = AAcWeather::Find(GetWorld());
+			FVector Cam = FVector::ZeroVector;
+			if (const APlayerController* PC = GetWorld()->GetFirstPlayerController(); PC && PC->PlayerCameraManager)
+			{
+				Cam = PC->PlayerCameraManager->GetCameraLocation();
+			}
+			const double Az = WeatherActor ? WeatherActor->LastStrikeAzimuth() : 0.0, Km = WeatherActor ? WeatherActor->LastStrikeKm() : 5.0;
+			const FVector2D At = FVector2D(Cam.X, Cam.Y) * 1.0e-5 + FVector2D(FMath::Cos(Az), FMath::Sin(Az)) * Km;
+			CloudMaterial->SetVectorParameterValue(TEXT("Bolt"), FLinearColor(float(At.X), float(At.Y), CloudBottomKm + 0.8f, float(CloudFlashKm)));
+		}
+	}
+
+	const double ShadowGain = CVarCloudShadows.GetValueOnGameThread();
+	const bool bShadows = bClouds && CloudShadowMaterial && ShadowGain > 0;
+	if (bShadows != bCloudShadowsOn)
+	{
+		bCloudShadowsOn = bShadows;
+		Sun->SetLightFunctionMaterial(bShadows ? CloudShadowMaterial.Get() : nullptr);
+		Moon->SetLightFunctionMaterial(bShadows ? CloudShadowMaterial.Get() : nullptr);
+	}
+	if (bShadows)
+	{
+		// Toward whichever light is up: the sun by day, the moon by night.
+		const FVector Toward = SunDir.Z >= 0 ? SunDir : -SunDir;
+		CloudShadowMaterial->SetVectorParameterValue(TEXT("CloudA"), A);
+		CloudShadowMaterial->SetVectorParameterValue(TEXT("CloudB"), B);
+		CloudShadowMaterial->SetVectorParameterValue(TEXT("CloudC"), C);
+		CloudShadowMaterial->SetVectorParameterValue(TEXT("ShadowL"), FLinearColor(float(Toward.X), float(Toward.Y), float(Toward.Z),
+			float(FMath::Clamp(CloudShadowStrength * ShadowGain, 0.0, 1.0))));
+		CloudShadowMaterial->SetVectorParameterValue(TEXT("ShadowC"), FLinearColor(CloudBottomKm, CloudHeightKm, float(CloudShadowSoftness), 0.0f));
 	}
 }

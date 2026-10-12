@@ -118,6 +118,15 @@ def make_mpc():
     return mpc
 
 
+# The weather on hulls (docs/weather.md): rain darkens painted metal and
+# makes it glossier, its top faces the most.
+WET_HLSL = """
+float up = 0.5 + 0.5 * saturate(N.z);
+float w = saturate(Wet) * up;
+Rough = lerp(R, R * 0.45, w);
+return C * lerp(1.0, 0.72, w);
+"""
+
 # --- master materials --------------------------------------------------------
 
 RECOLOUR_HLSL = """
@@ -207,8 +216,10 @@ class Graph:
         return pic
 
 
-def build_master(path, kind, mpc):
-    """kind: 'hull' (lit), 'emissive' (unlit), 'additive' (unlit additive)."""
+def build_master(path, kind, mpc, weather=None):
+    """kind: 'hull' (lit), 'emissive' (unlit), 'additive' (unlit additive).
+    `weather` (MPC_AcWorld, its `Wetness`): hulls get wet in the rain. A
+    material reads at most two collections: `mpc` and this one."""
     mat = load(path) or create(path, unreal.Material, unreal.MaterialFactoryNew())
     MEL.delete_all_material_expressions(mat)
     if kind == "hull":
@@ -280,9 +291,21 @@ def build_master(path, kind, mpc):
         # B8: metals also mirror Swift's studio sky (make_resource_materials.hull_env).
         import make_resource_materials
         e3 = g.binop(unreal.MaterialExpressionAdd, e3, make_resource_materials.hull_env(g, base_color, metallic, roughness))
+        rough_out, rough_pin = roughness, ""
+        if weather is not None:
+            wet = g.custom("AcWet", WET_HLSL, ["C", "R", "Wet", "N"])
+            o = unreal.CustomOutput()
+            o.set_editor_property("output_name", "Rough")
+            o.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+            wet.set_editor_property("additional_outputs", [o])
+            g.link(base_color, "", wet, "C")
+            g.link(roughness, "", wet, "R")
+            g.link(g.mpc(weather, "Wetness"), "", wet, "Wet")
+            g.link(g.node(unreal.MaterialExpressionVertexNormalWS), "", wet, "N")
+            base_color, rough_out, rough_pin = wet, wet, "Rough"
         g.out(base_color, "", unreal.MaterialProperty.MP_BASE_COLOR)
         g.out(metallic, "", unreal.MaterialProperty.MP_METALLIC)
-        g.out(roughness, "", unreal.MaterialProperty.MP_ROUGHNESS)
+        g.out(rough_out, rough_pin, unreal.MaterialProperty.MP_ROUGHNESS)
         g.out(e3, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
         normal_tex = g.texture("NormalTex", "/Engine/EngineMaterials/FlatNormal", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, uv)
         flat = g.node(unreal.MaterialExpressionConstant3Vector, constant=unreal.LinearColor(0, 0, 1, 0))
@@ -432,8 +455,9 @@ def main(info=None):
     info = info or A.analyse(A.load_manifest())
     ensure_dir(A.MASTER_DIR)
     mpc = make_mpc()
+    import make_resource_materials
     masters = {
-        A.M_HULL: build_master(A.M_HULL, "hull", mpc),
+        A.M_HULL: build_master(A.M_HULL, "hull", mpc, make_resource_materials.make_world_mpc()),
         A.M_EMISSIVE: build_master(A.M_EMISSIVE, "emissive", mpc),
         A.M_ADDITIVE: build_master(A.M_ADDITIVE, "additive", mpc),
     }

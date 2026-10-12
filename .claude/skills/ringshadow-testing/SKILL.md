@@ -61,6 +61,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 - Done when `Result: Succeeded` shows. `-waitmutex` queues behind another session's build. A build can fail on a busy machine or miss an edit made seconds earlier: `touch` the file and retry up to three times before treating it as broken.
 - The editor the user has open does not load the new C++ until they restart it. That is their call; the hidden runs below load it fresh.
+- A game run that crashes in code you did not touch, right after another session changed a header (a struct gained a field), can be a stale object: a file that embeds the struct was not recompiled. `touch` the `.cpp` files that include it (no content change) and build again. 2026-10-12: `SAcPilotOverlay::Reset` segfaulted in every pilot run after `FAcPilotInfo` gained `Cone`; touching `SAcPilotOverlay.cpp` and `AcPilotOverlay.cpp` fixed it.
 
 Run one area (the prefix is the name from `IMPLEMENT_SIMPLE_AUTOMATION_TEST`: `Autocraft.Pick`, `Autocraft.Leveling`, `Autocraft.Card`, `Autocraft.Audio`, `Autocraft.Hud`, `Autocraft.Rays`, `Autocraft.Space`, …; `Autocraft` runs them all):
 

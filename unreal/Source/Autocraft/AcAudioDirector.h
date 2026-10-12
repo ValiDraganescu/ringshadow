@@ -94,6 +94,16 @@ namespace AcSound
 	inline constexpr float WindGain = 0.16f;
 	/// The wind's two layers, panned apart for width.
 	inline constexpr float WindPan = 0.6f;
+	/// The weather's beds (docs/weather.md): light rain and the downpour,
+	/// crossfaded on the rain rate; the wind rises in a storm by this much.
+	/// (2026-10-12: new, darker takes, low-passed at 7 kHz; the first ones
+	/// were a clipped hiss 13 dB over the wind. Light rain now sits about
+	/// 2 dB under the wind, the downpour about 4 dB over it.)
+	inline constexpr float RainGain = 0.7f;
+	inline constexpr float DownpourGain = 0.3f;
+	inline constexpr float StormWindLift = 0.7f;
+	/// A strike's thunder: a close one's crack, a far one's roll.
+	inline constexpr float ThunderGain = 1.1f;
 	inline constexpr float BoomGain = 1.0f;
 	inline constexpr float HabDomeBoomGain = 0.7f;
 	inline constexpr float HitMarkGain = 0.5f;
@@ -255,6 +265,11 @@ public:
 	void Picked();
 	void PullAway(ac::UnitKind Kind);
 	void Heal(bool bOn) { bHealing = bOn; }
+	/// The weather now (AAcWeather): the rain beds and the wind follow it.
+	void Weather(double Rain, double Storm) { RainRate = Rain; Storminess = Storm; }
+	/// A lightning strike's thunder reaching the ears now: a crack within
+	/// 2 km, a roll further out, quieter with distance.
+	void Thunder(double DistanceKm, double Power);
 
 	/// The cues decided since the last `TakeCues`.
 	std::vector<FAcSoundCue> TakeCues();
@@ -298,6 +313,7 @@ private:
 	TSet<int64> Hums;
 	float HealFade = 0.f;
 	bool bHealing = false;
+	double RainRate = 0.0, Storminess = 0.0;
 	TSet<int64> Jumping;
 	TSet<int64> Anchoring;
 	TSet<int64> Burrowing, Locking;
@@ -425,6 +441,8 @@ private:
 
 	TOptional<FAcEars> Ears;
 	bool bMuted = false;
+	/// The weather's game time the thunder has been heard up to.
+	double ThunderHeardTo = -1.0;
 	bool bLog = false;
 	TMap<FName, int32> ThisSecond;
 	TMap<FName, int32> Totals;

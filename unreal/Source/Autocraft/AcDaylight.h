@@ -21,8 +21,16 @@
 // - SkyLight with real-time capture of the atmosphere, clouds and stars,
 //   scaled by Swift's ambient tone; Lumen GI carries it.
 // - ExponentialHeightFog with volumetric fog, in the Swift haze colour.
-// - VolumetricCloud (the engine's simple cloud material): cloud shadows
-//   drift over the map; `ac.Daylight.Clouds 0` turns them off.
+// - VolumetricCloud with our own material (`M_AcCloud`, made by
+//   Tools/Editor/make_cloud_material.py from the noise bake_clouds.py
+//   writes): a weather map drifting with the wind, a cloud type per place,
+//   eroded Perlin-Worley shapes, two-lobe phase and multiple scattering.
+//   The cover changes slowly through the days (`ac.Daylight.CloudCover`
+//   holds it). Their shadows on the map are a light function on the
+//   ground's sun and moon (`M_AcCloudShadow`) that marches the same clouds
+//   up the light's ray: the shade is the cloud overhead, its size and
+//   drift (`ac.Daylight.CloudShadows` scales it).
+//   `ac.Daylight.Clouds 0` turns clouds and shadows off.
 // - A sky dome (`M_AcSky`, made by Tools/Editor/make_sky_material.py): the
 //   atmosphere, the sun and moon discs and the Swift star field at night.
 // - Exposure: manual, EV 0 (an unbound post-process component), so the
@@ -40,6 +48,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "Weather.h"
 
 #include "AcDaylight.generated.h"
 
@@ -111,6 +121,8 @@ public:
 	FLinearColor GetHaze() const { return Haze; }
 	/// The Swift first-person sky tones at the current hour.
 	const FAcSkyTones& GetSkyTones() const { return Tones; }
+	/// The weather this frame (AcWeather.h).
+	const ac::WeatherSample& GetWeather() const { return Weather; }
 	/// Swift's haze rising from the horizon (`sky_color`'s `rise`), as the
 	/// sky dome (M_AcSky) and the pilot's veil (M_AcPilotVeil) take it: the
 	/// haze tone in linear light (rgb) and how high it rises, degrees (a).
@@ -152,6 +164,14 @@ private:
 	TObjectPtr<UPostProcessComponent> Exposure;
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> DomeMaterial;
+	/// MI_AcCloud and MI_AcCloudShadow, fed each frame (wind, cover, tone).
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> CloudMaterial;
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> CloudShadowMaterial;
+	/// The clouds' wind, cover and colour at `Time` (Update's tail).
+	void UpdateClouds(double Time, const FVector& SunDir);
+	bool bCloudShadowsOn = false;
 
 	double Hour = StartHour;
 	double Dark = 0;
@@ -160,6 +180,10 @@ private:
 	FAcSkyTones Tones;
 	/// What the terrain's haze was last set to (set again only on change).
 	FLinearColor TerrainHaze = FLinearColor(-1, -1, -1, -1);
+	/// The terrain's wetness and rain rate as last set.
+	float TerrainWet = -1, TerrainRain = -1;
+	/// The weather this frame (AcWeather.h).
+	ac::WeatherSample Weather;
 	bool bSunShadows = true;
 	int32 StandInChecks = 0;
 	/// The gas giant in the sky (AcGasGiant.h); its look is in M_AcSky.

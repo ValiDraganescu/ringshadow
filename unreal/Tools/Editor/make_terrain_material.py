@@ -19,7 +19,9 @@ parameters: `Splat` (the RGBA splat map: grass, highland, plating, scorch),
 `Bounds` (minX, minY, width, depth of the map, cells) and `Haze` (rgb, and
 the border's width in cells). On top of the Swift look: normal maps on every
 ground texture and on the cliff rock, roughness that follows the texture,
-and a faint large-scale tint variation, all in the Swift palette.
+and a faint large-scale tint variation, all in the Swift palette. And the
+weather's wet ground (docs/weather.md; AAcDaylight sets `Wetness` and
+`RainRate`): darker, glossier, puddles on flat ground with rain rings.
 
 Run it in the editor (Tools > Execute Python Script, or `py <path>` in the
 console), or headless when the live editor does not have these assets open:
@@ -160,12 +162,50 @@ float3 nry = Texture2DSample(RockN, RockNSampler, uy).xyz * 2.0 - 1.0;
 float3 dRock = (float3(0.0, nrx.x, -nrx.y) * ax + float3(nry.x, 0.0, -nry.y) * ay) / max(ax + ay, 1e-3);
 float3 nRock = normalize(wn + dRock * Detail * 1.3);
 float3 n = normalize(lerp(nTop, nRock, rockW));
+
+// Wet ground (AcWeather, docs/weather.md: `Wetness` 0-1 lags the rain,
+// `RainRate` 0-1): darker and glossier, steep rock and the border less;
+// puddles spread over flat ground as it soaks, mirror-smooth, holding the
+// sky; rings where the drops land, more of them in heavier rain.
+float wet = Wetness * (1.0 - fade) * (1.0 - rockW * 0.6);
+float puddle = 0.0;
+if (wet > 0.0) {
+    // Puddles: two octaves of value noise (a known spread, so a known
+    // share), 1-3 m patches on flat ground: about 15 % of it when damp,
+    // 21 % soaked. They stay patches: they are what Lumen traces
+    // reflections for, and puddles over most of the map cost 2-3 ms at 5K.
+    float2 q0 = g / 2.2, q1 = g / 0.9 + 17.3;
+    float2 i0 = floor(q0), f0 = frac(q0), i1 = floor(q1), f1 = frac(q1);
+    f0 = f0 * f0 * (3.0 - 2.0 * f0);
+    f1 = f1 * f1 * (3.0 - 2.0 * f1);
+    #define AC_H(p) frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453)
+    float n0 = lerp(lerp(AC_H(i0), AC_H(i0 + float2(1, 0)), f0.x), lerp(AC_H(i0 + float2(0, 1)), AC_H(i0 + float2(1, 1)), f0.x), f0.y);
+    float n1 = lerp(lerp(AC_H(i1), AC_H(i1 + float2(1, 0)), f1.x), lerp(AC_H(i1 + float2(0, 1)), AC_H(i1 + float2(1, 1)), f1.x), f1.y);
+    #undef AC_H
+    float pn = n0 * 0.65 + n1 * 0.35;
+    float level = 0.69 - 0.07 * Wetness;
+    puddle = smoothstep(level, level + 0.04, pn) * smoothstep(0.92, 0.98, wn.z) * wet;
+    c *= lerp(1.0, 0.6, wet);
+    c *= lerp(1.0, 0.6, puddle);
+    float2 rc = g / 0.35;
+    float2 ci = floor(rc);
+    float h = frac(sin(dot(ci, float2(127.1, 311.7))) * 43758.5453);
+    float ph = frac(T * 1.1 + h * 7.0);
+    float2 dd = frac(rc) - 0.5 - (float2(frac(h * 13.1), frac(h * 7.7)) - 0.5) * 0.4;
+    float r = length(dd);
+    float ring = (1.0 - ph) * (1.0 - smoothstep(0.0, 0.05, abs(r - ph * 0.42))) * step(h, RainRate);
+    float2 rip = (r > 1e-3 ? dd / r : float2(0.0, 0.0)) * ring * 0.8;
+    n = normalize(lerp(n, wn, puddle) + float3(rip * (puddle + wet * 0.25) * Ripples, 0.0));
+}
 Nrm = normalize(lerp(n, wn, fade));
 
 // Roughness: the Swift value (plating is smoother and a little metallic),
 // varied by the texture's own light and dark.
 float lum = dot(c, float3(0.3, 0.59, 0.11));
 Rough = saturate(lerp(0.92, 0.55, splat.b) + (0.35 - lum) * 0.25);
+// The wet sheen stays above Lumen's traced-reflection roughness (0.4);
+// only the puddles go below it.
+Rough = lerp(lerp(Rough, 0.55, wet * Gloss), 0.22, puddle * Gloss);
 Metal = splat.b * 0.35;
 Emis = Haze.rgb * fade * HazeGain;
 return c * (1.0 - fade);
@@ -250,6 +290,12 @@ def build_material(tex):
     sources.append(("Haze", vec_param("Haze", (0.27, 0.22, 0.19, 90.0))))
     sources.append(("Detail", scalar_param("DetailNormal", 0.55)))
     sources.append(("HazeGain", scalar_param("HazeGain", 1.0)))
+    # The weather (AAcDaylight sets them): docs/weather.md.
+    sources.append(("Wetness", scalar_param("Wetness", 0.0)))
+    sources.append(("RainRate", scalar_param("RainRate", 0.0)))
+    sources.append(("Ripples", scalar_param("Ripples", 1.0)))
+    sources.append(("Gloss", scalar_param("Gloss", 1.0)))
+    sources.append(("T", node(unreal.MaterialExpressionTime, -900, y)))
 
     inputs = []
     for name, _ in sources:

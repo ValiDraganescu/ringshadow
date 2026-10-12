@@ -419,4 +419,53 @@ bool FAcAudioWatchSightTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcAudioWeatherTest, "Autocraft.Audio.Rules.Weather", Flags)
+bool FAcAudioWeatherTest::RunTest(const FString&)
+{
+	// docs/weather.md: the rain beds follow the rain rate, the wind rises in
+	// a storm, a strike's thunder is a crack close by and a roll far off.
+	FAcAudioRules R;
+	R.Variants = [](FName) { return 1; };
+	ac::GameState S;
+	S.players.resize(2);
+	auto Volume = [&](FName Name)
+	{
+		std::vector<FAcLoopWant> Ls;
+		R.Loops(S, 0.1, Ls);
+		int32 Layers = 0;
+		float V = 0.f;
+		for (const FAcLoopWant& L : Ls)
+		{
+			if (L.Name != Name) continue;
+			++Layers;
+			V = L.Volume;
+			TestTrue(TEXT("a weather bed is ambient and panned"), L.bAmbient && L.Pan.IsSet());
+		}
+		TestTrue(TEXT("two layers or none"), Layers == 0 || Layers == 2);
+		return V;
+	};
+	R.Weather(0.0, 0.0);
+	TestEqual(TEXT("dry: no rain"), Volume("rain"), 0.f);
+	TestEqual(TEXT("dry: no downpour"), Volume("downpour"), 0.f);
+	TestTrue(TEXT("calm wind"), FMath::IsNearlyEqual(Volume("wind"), AcSound::WindGain));
+	R.Weather(0.5, 0.4);
+	const float LightRain = Volume("rain"), SomePour = Volume("downpour");
+	TestTrue(TEXT("rain: the light bed full"), FMath::IsNearlyEqual(LightRain, AcSound::RainGain));
+	TestTrue(TEXT("rain: some downpour"), SomePour > 0.f && SomePour < AcSound::DownpourGain * 0.5f);
+	R.Weather(1.0, 1.0);
+	TestTrue(TEXT("storm: the downpour full"), FMath::IsNearlyEqual(Volume("downpour"), AcSound::DownpourGain));
+	TestTrue(TEXT("storm: the light bed under it"), Volume("rain") < LightRain);
+	TestTrue(TEXT("storm: the wind up"), FMath::IsNearlyEqual(Volume("wind"), AcSound::WindGain * (1.f + AcSound::StormWindLift)));
+
+	R.TakeCues();
+	R.Thunder(1.0, 1.0);
+	R.Thunder(8.0, 1.0);
+	const std::vector<FAcSoundCue> Cues = R.TakeCues();
+	const FAcSoundCue* Crack = First(Cues, "crack");
+	const FAcSoundCue* Roll = First(Cues, "thunder");
+	TestTrue(TEXT("a close strike cracks, in your ear"), Crack && Crack->Pool == EAcSoundPool::InEar);
+	TestTrue(TEXT("a far one rolls, quieter"), Roll && Crack && Roll->Volume < Crack->Volume);
+	return true;
+}
+
 #endif

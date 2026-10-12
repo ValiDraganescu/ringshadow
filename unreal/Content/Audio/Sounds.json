@@ -574,6 +574,26 @@
     763
    ]
   },
+  "crack": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/crack/SW_crack_1.SW_crack_1",
+     "source": "sfx/crack_1.wav",
+     "prepared": "Content-src/sounds/sfx/crack_1.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/crack/SW_crack_2.SW_crack_2",
+     "source": "sfx/crack_2.wav",
+     "prepared": "Content-src/sounds/sfx/crack_2.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "deposit": {
    "variants": [
     {
@@ -659,6 +679,19 @@
     566,
     758
    ]
+  },
+  "downpour": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/downpour/SW_downpour_1.SW_downpour_1",
+     "source": "sfx/downpour_1.wav",
+     "prepared": "Content-src/sounds/sfx/downpour_1.wav",
+     "seconds": 30.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
   },
   "drill": {
    "variants": [
@@ -1879,6 +1912,19 @@
     748
    ]
   },
+  "rain": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rain/SW_rain_1.SW_rain_1",
+     "source": "sfx/rain_1.wav",
+     "prepared": "Content-src/sounds/sfx/rain_1.wav",
+     "seconds": 30.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "rangerdeath": {
    "variants": [
     {
@@ -2219,6 +2265,33 @@
      "source": "sfx/stomp_2.wav",
      "prepared": "Content-src/sounds/sfx/stomp_2.wav",
      "seconds": 2.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "thunder": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/thunder/SW_thunder_1.SW_thunder_1",
+     "source": "sfx/thunder_1.wav",
+     "prepared": "Content-src/sounds/sfx/thunder_1.wav",
+     "seconds": 8.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/thunder/SW_thunder_2.SW_thunder_2",
+     "source": "sfx/thunder_2.wav",
+     "prepared": "Content-src/sounds/sfx/thunder_2.wav",
+     "seconds": 9.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/thunder/SW_thunder_3.SW_thunder_3",
+     "source": "sfx/thunder_3.wav",
+     "prepared": "Content-src/sounds/sfx/thunder_3.wav",
+     "seconds": 7.0,
      "rate": 44100
     }
    ],
@@ -2909,8 +2982,11 @@
   "atlasmove",
   "atlasshot",
   "atlasstep",
+  "crack",
+  "downpour",
   "peregrinedeath",
   "peregrinepass",
+  "rain",
   "scorpionbury",
   "scorpiondeath",
   "scorpionlock",
@@ -2919,6 +2995,7 @@
   "scorpionunbury",
   "seekers",
   "stomp",
+  "thunder",
   "vatlas",
   "vperegrine",
   "vscorpion"

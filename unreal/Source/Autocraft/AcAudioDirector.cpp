@@ -2,6 +2,8 @@
 // SoundBoard.swift, GameController.swift:320-410, GameController+Ears.swift.
 #include "AcAudioDirector.h"
 
+#include "AcWeather.h"
+
 #include "AcLog.h"
 #include "AcShot.h"
 #include "AcNewKinds.h"
@@ -110,11 +112,13 @@ namespace
 	enum ELoopSlot : int64 { ToolSlot = 0, MinigunSlot = 1, HumSlot = 2 };
 	constexpr int64 HealKey = -1;
 	constexpr int64 WindKeys[2] = {-2, -3};
+	constexpr int64 RainKeys[2] = {-4, -5};
+	constexpr int64 DownpourKeys[2] = {-6, -7};
 
 	/// The names of the waves that loop.
 	bool IsLoop(FName Name)
 	{
-		static const FName Loops[] = {"wind", "drill", "weld", "hum", "minigun", "heal"};
+		static const FName Loops[] = {"wind", "drill", "weld", "hum", "minigun", "heal", "rain", "downpour"};
 		for (const FName& L : Loops)
 		{
 			if (L == Name) return true;
@@ -519,6 +523,13 @@ void FAcAudioRules::Watch(const ac::GameState& State, const ac::Sight* Sight)
 	Locking = MoveTemp(Locks);
 }
 
+void FAcAudioRules::Thunder(const double DistanceKm, const double Power)
+{
+	const bool bClose = DistanceKm < 2.0;
+	const float Near = FMath::Lerp(1.f, 0.5f, FMath::Clamp(static_cast<float>((DistanceKm - 0.6) / 8.4), 0.f, 1.f));
+	OneShot(bClose ? FName("crack") : FName("thunder"), ac::Vec2(), AcSound::ThunderGain * static_cast<float>(Power) * Near, EAcSoundPool::InEar);
+}
+
 void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAcLoopWant>& Out)
 {
 	const float D = static_cast<float>(Dt);
@@ -527,19 +538,29 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 		const float Rate = D / (Target > Gain ? In : OutTime);
 		Gain += FMath::Clamp(Target - Gain, -Rate, Rate);
 	};
-	// The wind: two layers, the second half a loop on, panned apart.
-	for (int32 K = 0; K < 2; ++K)
+	// The wind and the weather's rain beds: two layers each, the second
+	// half a loop on, panned apart. The wind rises in a storm; light rain
+	// gives way to the downpour as the rain gets heavier.
+	auto Bed = [&](const int64 (&Keys)[2], FName Name, float Volume)
 	{
-		FAcLoopWant W;
-		W.Key = WindKeys[K];
-		W.Name = "wind";
-		W.Variant = FMath::Max(0, FMath::Min(K, Variants("wind") - 1));
-		W.Volume = AcSound::WindGain;
-		W.bAmbient = true;
-		W.Pan = K == 0 ? -AcSound::WindPan : AcSound::WindPan;
-		W.StartFraction = (K == 1 && Variants("wind") < 2) ? 0.5f : 0.f;
-		Out.push_back(W);
-	}
+		if (Volume <= 0.f) return;
+		for (int32 K = 0; K < 2; ++K)
+		{
+			FAcLoopWant W;
+			W.Key = Keys[K];
+			W.Name = Name;
+			W.Variant = FMath::Max(0, FMath::Min(K, Variants(Name) - 1));
+			W.Volume = Volume;
+			W.bAmbient = true;
+			W.Pan = K == 0 ? -AcSound::WindPan : AcSound::WindPan;
+			W.StartFraction = (K == 1 && Variants(Name) < 2) ? 0.5f : 0.f;
+			Out.push_back(W);
+		}
+	};
+	const float Rain = static_cast<float>(FMath::Clamp(RainRate, 0.0, 1.0));
+	Bed(WindKeys, "wind", AcSound::WindGain * (1.f + AcSound::StormWindLift * static_cast<float>(Storminess)));
+	Bed(RainKeys, "rain", AcSound::RainGain * FMath::Clamp(Rain * 2.5f, 0.f, 1.f) * (1.f - 0.6f * FMath::SmoothStep(0.5f, 1.f, Rain)));
+	Bed(DownpourKeys, "downpour", AcSound::DownpourGain * FMath::SmoothStep(0.35f, 1.f, Rain));
 	// Each Prospector's tool: the drill while it mines, the welder while it builds.
 	TSet<int64> Prospectors;
 	for (const ac::Unit& U : Shown.units)
@@ -1150,6 +1171,17 @@ void UAcAudioDirector::OnFrame(const FAcFrame& Frame)
 	}
 	Brain.Due();
 	for (const FAcSoundCue& Cue : Brain.TakeCues()) Play(Cue);
+	// The weather (AcWeather.h): the rain beds and the thunder arriving.
+	if (AAcWeather* Weather = AAcWeather::Find(GetWorld()))
+	{
+		const ac::WeatherSample& W = Weather->Last();
+		Brain.Weather(W.rain, W.storm);
+		const double T = AAcWeather::WeatherTime(Sim->GameTime());
+		if (T < ThunderHeardTo || T - ThunderHeardTo > 30.0) ThunderHeardTo = T;
+		for (const ac::LightningStrike& S : Weather->Thunder(ThunderHeardTo, T)) Brain.Thunder(S.distanceKm, S.power);
+		ThunderHeardTo = T;
+		for (const FAcSoundCue& Cue : Brain.TakeCues()) Play(Cue);
+	}
 	std::vector<FAcLoopWant> Wants;
 	Brain.Loops(Shown, Frame.RealDelta, Wants);
 	SyncLoops(Wants);
