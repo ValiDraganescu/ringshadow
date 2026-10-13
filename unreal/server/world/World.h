@@ -1,8 +1,11 @@
 // The server's world: one region running the game's simulation headless, the
 // pilots in it, and what each pilot is told (docs/networking.md, "The tick",
-// "Interest"). Engine-free: AutocraftCore only. No network here; the server
-// program serializes a `Snapshot` and reads a `PilotInput` off the wire.
+// "Interest"). Engine-free: AutocraftCore, and the protocol's types from
+// AutocraftNet (NetProtocol.h: `PilotInput`, `Snapshot` and what it holds,
+// `RegionDescription`), which the server program writes to the wire.
 #pragma once
+
+#include "NetProtocol.h"
 
 #include "Pilot.h"
 #include "Simulation.h"
@@ -20,6 +23,15 @@
 #include <vector>
 
 namespace ac::server {
+
+using net::EntityState;
+using net::FogView;
+using net::PatchView;
+using net::PilotInput;
+using net::Rank;
+using net::RegionDescription;
+using net::Snapshot;
+using net::WellView;
 
 /// A pilot: one connected player. Its own number, given by the server.
 using PilotId = uint64_t;
@@ -41,35 +53,6 @@ struct RegionConfig {
     int64_t pathBudget = 32;
 };
 
-/// What a client needs to build the same ground: the map is generated from
-/// its choice (`WindowMaps::build`, or `buildSquare` past 2 starts); name,
-/// version and seed let it check it built the same one.
-struct RegionDescription {
-    MapChoice map;
-    std::string mapName;
-    int64_t mapVersion = 0;
-    uint64_t seed = 0;
-    bool fog = true;
-    /// Seconds of game time a server tick steps.
-    double step = 1.0 / 60;
-};
-
-/// One tick of a client's controls: the `ac::Pilot` fields it sets each
-/// frame (the unit is the region's business), stamped with the client's tick.
-struct PilotInput {
-    int64_t tick = 0;
-    Vec2 walk{0, 0};
-    double heading = 0;
-    /// Key presses since the client's last tick: applied on this input's
-    /// server tick only.
-    bool act = false;
-    bool ability = false;
-    /// Keys held, and the crosshair: kept until the next input.
-    bool hold = false;
-    bool mend = false;
-    std::optional<Pilot::Crosshair> crosshair;
-};
-
 /// Who decides what a pilot is told, and how often (networking.md,
 /// "Interest"). Starting points, to measure.
 struct InterestParams {
@@ -84,78 +67,6 @@ struct InterestParams {
     /// An entity left out for the budget counts this many cells nearer for
     /// every snapshot it has waited, so none waits for ever.
     double agingCells = 8;
-};
-
-/// How much an entity matters to the pilot, most first.
-enum class Rank : uint8_t {
-    /// The unit it drives.
-    driven,
-    /// What shoots at the driven unit, and what it shoots at or aims at.
-    engaged,
-    /// The rest, by distance.
-    nearby,
-};
-
-/// A unit or a building as the pilot's side may know it: the core's own
-/// types, so a client writes it back into its `GameState`. An enemy unit's
-/// plans (where it walks, its errand, its build order) are left out.
-struct EntityState {
-    std::variant<Unit, Structure> value;
-    /// An enemy building as the side last saw it (`Intel`), not in sight now.
-    bool remembered = false;
-    Rank rank = Rank::nearby;
-    /// Cells from the pilot's focus.
-    double distance = 0;
-
-    int64_t id() const { return std::visit([](const auto& v) { return v.id; }, value); }
-    const Unit* unit() const { return std::get_if<Unit>(&value); }
-    const Structure* structure() const { return std::get_if<Structure>(&value); }
-};
-
-/// An ore deposit or an MH well in sight, by its index in the state (a
-/// Prospector's `patch` is that index).
-struct PatchView { int64_t index = 0; OreDeposit patch; };
-struct WellView { int64_t index = 0; Well well; };
-
-/// The side's fog: what it sees now (`Sight::seen`, `Sight::near`, on the
-/// client's own `Vision` grid of the same map) and what it has explored and
-/// when it last saw each base site (`Intel`).
-struct FogView {
-    std::vector<uint8_t> seen;
-    std::vector<uint8_t> near;
-    std::vector<uint64_t> explored;
-    std::vector<double> sites;
-};
-
-/// What a pilot is told after a tick: plain data, not serialized.
-struct Snapshot {
-    int64_t serverTick = 0;
-    /// The last of this pilot's inputs applied (-1: none yet).
-    int64_t lastInputTick = -1;
-    /// Bumped when the region starts the next game after a victory: the
-    /// client starts its mirror over.
-    int64_t game = 0;
-    double time = 0;
-    /// The unit this pilot drives.
-    std::optional<int64_t> driven;
-    std::optional<int64_t> winner;
-    std::optional<double> endedAt;
-    std::vector<int64_t> score;
-    /// Most important first: the driven unit, what it fights, then by
-    /// distance. Only what is due and fits the budget.
-    std::vector<EntityState> entities;
-    /// Ids told before that are gone from the side's knowledge (dead, or
-    /// out of sight).
-    std::vector<int64_t> removed;
-    /// Every player, by index: the side's own and its allies' whole; the
-    /// others' upgrades and team only (what `maxHP` and `weapon` read).
-    std::vector<Player> players;
-    std::vector<PatchView> patches;
-    std::vector<WellView> wells;
-    /// Nil: a region without fog.
-    std::optional<FogView> fog;
-    /// What happened since the pilot's last snapshot that its side may know.
-    std::vector<GameEvent> events;
 };
 
 /// One region: the game's simulation on one map, stepped at 60 Hz, with
@@ -204,6 +115,9 @@ public:
 
     /// What the pilot is told now (call it at the snapshot rate).
     Snapshot snapshot(PilotId pilot, const InterestParams& params = {});
+    /// Entities of the last snapshot that were not sent after all (the
+    /// byte budget ran out): due again at the next, having waited one more.
+    void deferred(PilotId pilot, const std::vector<int64_t>& ids);
 
     /// Events kept for a pilot that takes no snapshots.
     static constexpr size_t maxEvents = 4096;

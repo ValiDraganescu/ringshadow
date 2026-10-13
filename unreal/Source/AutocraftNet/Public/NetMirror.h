@@ -1,0 +1,71 @@
+// The client's mirror of a region (docs/networking.md, "A mirror of the
+// world"): an `ac::Simulation` on the same map, never stepped, whose state
+// the snapshots overwrite, so the game reads it as it reads its own
+// simulation today (docs/mmorpg-m1.md, T3). Units and buildings in view, the
+// players, the patches and wells, the side's fog and what it remembers.
+#pragma once
+
+#include "AutocraftNetApi.h"
+#include "NetSnapshot.h"
+
+#include "Simulation.h"
+
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <optional>
+
+namespace ac::net {
+
+class AUTOCRAFTNET_API Mirror {
+public:
+    /// Builds the region's map from its description. `side`: the player the
+    /// pilot plays (the fog and the memory are its).
+    explicit Mirror(const RegionDescription& region, int64_t side = Pilot::player);
+    ~Mirror();
+    Mirror(const Mirror&) = delete;
+    Mirror& operator=(const Mirror&) = delete;
+
+    /// The map built here is the one the server described (name, version,
+    /// seed).
+    bool matches() const { return matches_; }
+
+    /// Writes what a snapshot message carried into the state.
+    void apply(const SnapshotPart& part);
+
+    const Simulation& simulation() const { return *sim_; }
+    Simulation& simulation() { return *sim_; }
+    const RegionDescription& region() const { return region_; }
+
+    /// The newest snapshot applied, its header.
+    int64_t snapshotId() const { return snapshotId_; }
+    int64_t serverTick() const { return serverTick_; }
+    int64_t lastInputTick() const { return lastInputTick_; }
+    int64_t game() const { return game_; }
+    std::optional<int64_t> driven() const { return driven_; }
+
+    /// A unit or building in the mirror now.
+    const Unit* unit(int64_t id) const;
+    const Structure* structure(int64_t id) const;
+    /// The enemy buildings remembered out of sight.
+    const std::map<int64_t, Structure>& remembered() const { return remembered_; }
+
+private:
+    void startOver();
+    void rebuild();
+
+    RegionDescription region_;
+    int64_t side_;
+    bool matches_ = false;
+    std::unique_ptr<Simulation> sim_;
+    std::map<int64_t, Unit> units_;
+    std::map<int64_t, Structure> structures_;
+    std::map<int64_t, Structure> remembered_;
+    int64_t snapshotId_ = 0;
+    int64_t serverTick_ = 0;
+    int64_t lastInputTick_ = -1;
+    int64_t game_ = -1;
+    std::optional<int64_t> driven_;
+};
+
+} // namespace ac::net

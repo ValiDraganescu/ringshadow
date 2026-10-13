@@ -171,4 +171,15 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
     return out;
 }
 
+void Region::deferred(PilotId pilot, const std::vector<int64_t>& ids) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return;
+    for (int64_t id : ids) {
+        Waiting& w = it->second.waiting[id];
+        // Never sent: due at once, and ahead of those that waited less.
+        w.sentAt = -1;
+        w.waited += 1;
+    }
+}
+
 } // namespace ac::server
