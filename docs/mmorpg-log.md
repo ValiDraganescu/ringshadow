@@ -241,3 +241,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Buildings: blueprints found in the world, with level floors.
 - I Old picks are team buffs: useless for one MMO pilot.
 - T P0 design doc docs/prospector-progression.md → orc worker.
+- D User: manager runs the mode alone for 7 days.
+- D Goal: complete, beautiful game by 2026-10-20.
+- D Manager: arc M6 progression+sky, M7 world, M8 company, M9 feel.
+- D Manager: server owns world clock and weather.
+- T M6 started: P0 design, C1 world clock, R1 first-hour review.
