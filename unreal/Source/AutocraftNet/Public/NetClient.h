@@ -29,6 +29,11 @@ public:
     Client(PacketIo& io, const ClientConfig& config);
 
     void connect(double now);
+    /// Who the pilot is: a reliable Join, sent as soon as the connection is
+    /// up (and again after each `connect`). The server seats the pilot and
+    /// sends the Welcome only after it.
+    void join(const PilotKey& pilot);
+    const std::optional<PilotKey>& pilotKey() const { return pilotKey_; }
     /// One client tick: `receive`, `sendInput`, `flush`.
     void tick(double now);
 
@@ -90,6 +95,7 @@ private:
     uint32_t request(const decltype(RequestMessage::what)& what);
     void message(const std::vector<uint8_t>& data);
     void applyPart(const SnapshotPart& part);
+    void sendJoin();
 
     ClientEndpoint endpoint_;
     SnapshotReader reader_;
@@ -103,6 +109,8 @@ private:
     std::string disconnectReason_;
     int64_t tick_ = 0;
     uint32_t nextRequest_ = 1;
+    std::optional<PilotKey> pilotKey_;
+    bool joinSent_ = false;
 };
 
 } // namespace ac::net

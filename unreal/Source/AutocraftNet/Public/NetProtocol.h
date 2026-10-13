@@ -4,7 +4,8 @@
 // nothing of these; only the protocol files use the core.
 //
 // Every message starts with its type (u8). Client to server: Input
-// (unreliable), Ack (unreliable), Request (reliable). Server to client:
+// (unreliable), Ack (unreliable), Request (reliable), Join (reliable, the
+// first after connected: no Welcome before it). Server to client:
 // Welcome (reliable, the first message after connected), Snapshot
 // (unreliable, NetSnapshot.h), Event (reliable), Reply (reliable),
 // RegionChange and World (reliable). A Welcome or a RegionChange that
@@ -20,10 +21,12 @@
 #include "Types.h"
 #include "WindowMaps.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -39,6 +42,7 @@ enum class MessageType : uint8_t {
     snapshot = 7,
     regionChange = 8,
     world = 9,
+    join = 10,
 };
 
 /// The type of a message, or nil when it is none of ours.
@@ -253,6 +257,25 @@ struct RequestMessage {
     bool operator==(const RequestMessage&) const = default;
 };
 
+/// A pilot's own id: 128 random bits the game keeps (docs/mmorpg-m3.md,
+/// "Pilot identity"). The server saves the pilot under it.
+using PilotKey = std::array<uint8_t, 16>;
+/// 32 lowercase hex digits; `pilotKeyShort`: the first 8, for the log.
+AUTOCRAFTNET_API std::string pilotKeyHex(const PilotKey& key);
+AUTOCRAFTNET_API std::string pilotKeyShort(const PilotKey& key);
+/// From 32 hex digits (either case); nil when it is not that.
+AUTOCRAFTNET_API std::optional<PilotKey> pilotKeyFromHex(std::string_view hex);
+/// A new random key (net::secureRandom); all zeros when there is no source.
+AUTOCRAFTNET_API PilotKey newPilotKey();
+
+/// Client → server, reliable, the first message after connected: who the
+/// pilot is. A known id is seated where it left; an unknown one is a new
+/// pilot at the start pad. The server sends the Welcome after it.
+struct JoinMessage {
+    PilotKey pilot{};
+    bool operator==(const JoinMessage&) const = default;
+};
+
 /// Server → client, reliable: the answer to a request.
 struct ReplyMessage {
     uint32_t request = 0;
@@ -333,6 +356,7 @@ AUTOCRAFTNET_API std::vector<uint8_t> encode(const InputMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const AckMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const RequestMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const ReplyMessage& m);
+AUTOCRAFTNET_API std::vector<uint8_t> encode(const JoinMessage& m);
 /// As many Event messages as the events need, each within a reliable
 /// message's size.
 AUTOCRAFTNET_API std::vector<std::vector<uint8_t>> encodeEvents(int64_t serverTick, const std::vector<GameEvent>& events);
@@ -345,6 +369,7 @@ AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, InputMessage& ou
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, AckMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, RequestMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, ReplyMessage& out);
+AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, JoinMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, EventMessage& out);
 
 // MARK: - Bits the messages share

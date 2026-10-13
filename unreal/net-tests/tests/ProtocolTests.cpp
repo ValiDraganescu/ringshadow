@@ -252,6 +252,27 @@ TEST(protocol_ack_request_reply_round_trip) {
     EXPECT_TRUE(!messageType(std::vector<uint8_t>{99}).has_value());
 }
 
+TEST(protocol_join_round_trips_and_the_key_in_hex) {
+    JoinMessage j;
+    for (size_t i = 0; i < j.pilot.size(); i++) j.pilot[i] = uint8_t(0xa0 + i * 7);
+    JoinMessage jb;
+    ASSERT_TRUE(decode(encode(j), jb));
+    EXPECT_TRUE(jb == j);
+    EXPECT_TRUE(messageType(encode(j)) == MessageType::join);
+    // Cut short: refused.
+    std::vector<uint8_t> cut = encode(j);
+    cut.pop_back();
+    EXPECT_TRUE(!decode(cut, jb));
+    const std::string hex = pilotKeyHex(j.pilot);
+    EXPECT_EQ(hex.size(), size_t(32));
+    EXPECT_TRUE(hex.substr(0, 4) == "a0a7");
+    EXPECT_TRUE(pilotKeyShort(j.pilot) == hex.substr(0, 8));
+    EXPECT_TRUE(pilotKeyFromHex(hex) == j.pilot);
+    EXPECT_TRUE(!pilotKeyFromHex("a0a7").has_value());
+    EXPECT_TRUE(!pilotKeyFromHex(std::string(32, 'g')).has_value());
+    EXPECT_TRUE(newPilotKey() != newPilotKey());
+}
+
 TEST(protocol_events_round_trip_every_kind) {
     using G = GameEvent;
     const Vec2 at(10.25, -20.5);

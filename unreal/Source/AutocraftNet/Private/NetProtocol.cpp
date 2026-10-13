@@ -1,6 +1,7 @@
 #include "NetProtocol.h"
 
 #include "NetCodec.h"
+#include "NetSocket.h"
 #include "NetTypes.h"
 
 #include <algorithm>
@@ -143,7 +144,7 @@ void appendBits(BitWriter& w, const uint8_t* src, size_t from, size_t bits) {
 std::optional<MessageType> messageType(const std::vector<uint8_t>& message) {
     if (message.empty()) return std::nullopt;
     const uint8_t t = message[0];
-    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::world)) return std::nullopt;
+    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::join)) return std::nullopt;
     return static_cast<MessageType>(t);
 }
 
@@ -607,6 +608,54 @@ bool decode(const std::vector<uint8_t>& bytes, ReplyMessage& m) {
     m.request = static_cast<uint32_t>(readVarint(r));
     m.done = r.readBool();
     return readString(r, m.reason) && r.ok();
+}
+
+std::vector<uint8_t> encode(const JoinMessage& m) {
+    BitWriter w = start(MessageType::join);
+    for (uint8_t b : m.pilot) w.writeU8(b);
+    return w.bytes();
+}
+
+bool decode(const std::vector<uint8_t>& bytes, JoinMessage& m) {
+    BitReader r(bytes.data(), bytes.size());
+    if (!open(bytes, MessageType::join, r)) return false;
+    for (uint8_t& b : m.pilot) b = r.readU8();
+    return r.ok();
+}
+
+std::string pilotKeyHex(const PilotKey& key) {
+    static const char digits[] = "0123456789abcdef";
+    std::string out;
+    for (uint8_t b : key) {
+        out.push_back(digits[b >> 4]);
+        out.push_back(digits[b & 15]);
+    }
+    return out;
+}
+
+std::string pilotKeyShort(const PilotKey& key) { return pilotKeyHex(key).substr(0, 8); }
+
+std::optional<PilotKey> pilotKeyFromHex(std::string_view hex) {
+    if (hex.size() != 32) return std::nullopt;
+    auto nibble = [](char c) -> int {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        return -1;
+    };
+    PilotKey out{};
+    for (size_t i = 0; i < 16; i++) {
+        const int hi = nibble(hex[2 * i]), lo = nibble(hex[2 * i + 1]);
+        if (hi < 0 || lo < 0) return std::nullopt;
+        out[i] = uint8_t(hi * 16 + lo);
+    }
+    return out;
+}
+
+PilotKey newPilotKey() {
+    PilotKey out{};
+    if (!secureRandom(out.data(), out.size())) out.fill(0);
+    return out;
 }
 
 std::vector<std::vector<uint8_t>> encodeEvents(int64_t serverTick, const std::vector<GameEvent>& events) {

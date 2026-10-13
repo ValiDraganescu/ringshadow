@@ -9,7 +9,21 @@ void Client::connect(double now) {
     reader_.reset();
     waiting_.clear();
     visit_ = 0;
+    joinSent_ = false;
     endpoint_.connect(now);
+}
+
+void Client::join(const PilotKey& pilot) {
+    pilotKey_ = pilot;
+    joinSent_ = false;
+    sendJoin();
+}
+
+void Client::sendJoin() {
+    if (joinSent_ || !pilotKey_ || !connected()) return;
+    const std::vector<uint8_t> bytes = encode(JoinMessage{*pilotKey_});
+    endpoint_.send(Channel::reliable, bytes.data(), bytes.size());
+    joinSent_ = true;
 }
 
 uint32_t Client::take(int64_t unit) { return request(RequestMessage::Take{unit}); }
@@ -111,6 +125,7 @@ void Client::receive(double now) {
         if (e.type == Event::Type::disconnected) disconnectReason_ = e.reason;
         else if (e.type == Event::Type::message) message(e.data);
     }
+    sendJoin();
 }
 
 std::optional<PilotInput> Client::sendInput() {
