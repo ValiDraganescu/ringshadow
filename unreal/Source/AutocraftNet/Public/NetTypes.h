@@ -3,6 +3,7 @@
 #pragma once
 
 #include "NetPacket.h"
+#include "NetSocket.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -27,10 +28,14 @@ inline constexpr size_t kMaxBulkBytes = size_t(64) << 20;
 using ConnectionId = uint32_t;
 
 struct Event {
-    enum class Type { connected, disconnected, message };
+    /// `refused`: the server turned a handshake away (`reason` says why; no
+    /// connection), for its log.
+    enum class Type { connected, disconnected, message, refused };
 
     Type type = Type::message;
     ConnectionId connection = 0;
+    /// Who: for `connected` and `refused` on the server.
+    Address remote;
     Channel channel = Channel::unreliable;
     std::vector<uint8_t> data;
     /// Why, for `disconnected`: "timed out", a refusal ("the server runs

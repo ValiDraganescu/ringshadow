@@ -62,6 +62,11 @@ void ServerEndpoint::refuse(double now, const Address& to, const std::string& re
     body.push_back(static_cast<uint8_t>(length));
     body.insert(body.end(), reason.begin(), reason.begin() + static_cast<std::ptrdiff_t>(length));
     sendHandshake(now, to, PacketType::refuse, 0, body.data(), body.size(), limit);
+    Event e;
+    e.type = Event::Type::refused;
+    e.remote = to;
+    e.reason = reason;
+    events_.push_back(std::move(e));
 }
 
 void ServerEndpoint::handle(double now, const Address& from, const uint8_t* data, size_t size) {
@@ -118,6 +123,7 @@ void ServerEndpoint::handle(double now, const Address& from, const uint8_t* data
         Event e;
         e.type = Event::Type::connected;
         e.connection = id;
+        e.remote = from;
         events_.push_back(std::move(e));
         sendHandshake(now, from, PacketType::welcome, id, nullptr, 0, size);
         return;

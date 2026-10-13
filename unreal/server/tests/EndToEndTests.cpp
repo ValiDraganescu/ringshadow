@@ -1,0 +1,300 @@
+// The real server program (build/autocraft-server, started as a process the
+// way the game will) and the headless client on 127.0.0.1, in real time. The
+// lag simulator sits at the client's end only. Isolated moments of a few
+// seconds; every server is stopped at the end. Run from unreal/server (as
+// `make test` does).
+
+#include "test.h"
+
+#include "HeadlessClient.h"
+#include "NetLagSimulator.h"
+
+#include <cerrno>
+#include <chrono>
+#include <cmath>
+#include <csignal>
+#include <cstdio>
+#include <cstring>
+#include <fcntl.h>
+#include <optional>
+#include <poll.h>
+#include <spawn.h>
+#include <string>
+#include <sys/wait.h>
+#include <thread>
+#include <unistd.h>
+#include <vector>
+
+extern char** environ;
+
+namespace {
+
+using namespace ac;
+using namespace ac::server;
+
+const char* kProgram = "./build/autocraft-server";
+const std::string kToken = "e2e-token-5f1c";
+
+double clockNow() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+
+std::string logPath(const char* name) { return std::string("build/test-logs/") + name + ".log"; }
+
+std::string readFile(const std::string& path) {
+    std::string out;
+    if (FILE* f = std::fopen(path.c_str(), "r")) {
+        char buf[4096];
+        size_t n;
+        while ((n = std::fread(buf, 1, sizeof buf, f)) > 0) out.append(buf, n);
+        std::fclose(f);
+    }
+    return out;
+}
+
+/// A child process with its standard input and output on pipes.
+struct Process {
+    pid_t pid = -1;
+    int in = -1;
+    int out = -1;
+
+    static std::optional<Process> start(const std::vector<std::string>& args) {
+        int toChild[2], fromChild[2];
+        if (pipe(toChild) != 0 || pipe(fromChild) != 0) return std::nullopt;
+        posix_spawn_file_actions_t actions;
+        posix_spawn_file_actions_init(&actions);
+        posix_spawn_file_actions_adddup2(&actions, toChild[0], 0);
+        posix_spawn_file_actions_adddup2(&actions, fromChild[1], 1);
+        posix_spawn_file_actions_addclose(&actions, toChild[1]);
+        posix_spawn_file_actions_addclose(&actions, fromChild[0]);
+        std::vector<char*> argv;
+        for (const std::string& a : args) argv.push_back(const_cast<char*>(a.c_str()));
+        argv.push_back(nullptr);
+        Process p;
+        const int rc = posix_spawn(&p.pid, argv[0], &actions, nullptr, argv.data(), environ);
+        posix_spawn_file_actions_destroy(&actions);
+        close(toChild[0]);
+        close(fromChild[1]);
+        if (rc != 0) {
+            close(toChild[1]);
+            close(fromChild[0]);
+            return std::nullopt;
+        }
+        p.in = toChild[1];
+        p.out = fromChild[0];
+        return p;
+    }
+
+    /// The next line of its output within `seconds`.
+    std::optional<std::string> line(double seconds) const {
+        std::string got;
+        const double end = clockNow() + seconds;
+        while (clockNow() < end) {
+            pollfd fd{out, POLLIN, 0};
+            if (poll(&fd, 1, 50) <= 0) continue;
+            char c;
+            const ssize_t n = read(out, &c, 1);
+            if (n <= 0) return std::nullopt;
+            if (c == '\n') return got;
+            got.push_back(c);
+        }
+        return std::nullopt;
+    }
+
+    void write(const std::string& s) const { (void)!::write(in, s.data(), s.size()); }
+
+    /// Its exit status if it ends within `seconds`.
+    std::optional<int> wait(double seconds) {
+        const double end = clockNow() + seconds;
+        while (clockNow() < end) {
+            int status = 0;
+            if (waitpid(pid, &status, WNOHANG) == pid) {
+                pid = -1;
+                return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        return std::nullopt;
+    }
+
+    void stop() {
+        if (pid > 0) {
+            kill(pid, SIGTERM);
+            if (!wait(3)) {
+                kill(pid, SIGKILL);
+                wait(1);
+            }
+        }
+        if (in >= 0) close(in);
+        if (out >= 0) close(out);
+        in = out = -1;
+    }
+};
+
+/// A server on Open Field (small), its port read, its token sent.
+struct Started {
+    Process process;
+    uint16_t port = 0;
+};
+
+std::optional<Started> startServer(const char* name, std::vector<std::string> extra = {}) {
+    std::vector<std::string> args = {kProgram, "--map", "openField", "--size", "small", "--log", logPath(name)};
+    args.insert(args.end(), extra.begin(), extra.end());
+    std::remove(logPath(name).c_str());
+    auto p = Process::start(args);
+    if (!p) return std::nullopt;
+    p->write(kToken + "\n");
+    const auto first = p->line(10);
+    unsigned port = 0;
+    if (!first || std::sscanf(first->c_str(), "PORT %u", &port) != 1 || port == 0) {
+        p->stop();
+        return std::nullopt;
+    }
+    return Started{*p, uint16_t(port)};
+}
+
+/// A client on its own UDP socket, behind the lag simulator.
+struct Client {
+    Client(uint16_t port, const std::string& token, const net::LagSettings& lag) : lagged(socket, 31) {
+        socket.open(net::Address::loopback(0));
+        lagged.setDefault(lag);
+        net::ClientConfig c;
+        c.server = net::Address::loopback(port);
+        c.token.assign(token.begin(), token.end());
+        client.emplace(lagged, c);
+    }
+    /// Ticks at 60 Hz in real time until `done` or for `seconds`.
+    template <class F> bool until(F&& done, double seconds) {
+        const double end = clockNow() + seconds;
+        double next = clockNow();
+        while (clockNow() < end) {
+            const double now = clockNow();
+            if (now < next) {
+                std::this_thread::sleep_for(std::chrono::duration<double>(next - now));
+                continue;
+            }
+            next += 1.0 / 60;
+            client->tick(now);
+            if (done()) return true;
+        }
+        return false;
+    }
+    net::UdpSocket socket;
+    net::LagSimulator lagged;
+    std::optional<HeadlessClient> client;
+};
+
+net::LagSettings rough() {
+    net::LagSettings s;
+    s.delay = 0.15;
+    s.jitter = 0.02;
+    s.loss = 0.05;
+    return s;
+}
+
+} // namespace
+
+TEST(e2e_drive_two_seconds_under_lag) {
+    auto server = startServer("drive");
+    ASSERT_TRUE(server.has_value());
+    Client c(server->port, kToken, rough());
+    c.client->connect(clockNow());
+    HeadlessClient& hc = *c.client;
+    ASSERT_TRUE(c.until([&] { return hc.mirror() && !hc.mirror()->simulation().state.units.empty(); }, 10));
+    EXPECT_TRUE(hc.mirror()->matches());
+    // Our side's Prospector.
+    int64_t unit = -1;
+    for (const Unit& u : hc.mirror()->simulation().state.units)
+        if (u.owner == 0 && u.kind == Unit::Kind::prospector) unit = u.id;
+    ASSERT_TRUE(unit >= 0);
+    const uint32_t req = hc.take(unit);
+    ASSERT_TRUE(c.until([&] { return hc.replies.count(req) > 0 && hc.mirror()->driven() == unit; }, 5));
+    EXPECT_TRUE(hc.replies[req].done);
+    const Vec2 from = hc.mirror()->unit(unit)->position;
+    // Where the ground is open longest, as the mirror's own map says.
+    {
+        const Simulation& sim = hc.mirror()->simulation();
+        const Unit& u = *hc.mirror()->unit(unit);
+        double best = -1;
+        for (int k = 0; k < 16; k++) {
+            const double h = k * 6.283185307179586 / 16;
+            double clear = 0;
+            while (clear < 12 && sim.pilotCanStand(u, from + Vec2(std::cos(h), std::sin(h)) * (clear + 0.25))) clear += 0.25;
+            if (clear > best) {
+                best = clear;
+                hc.steer.heading = h;
+            }
+        }
+    }
+    // Forward 2 s, then stand.
+    hc.steer.walk = Vec2(1, 0);
+    c.until([] { return false; }, 2);
+    hc.steer.walk = Vec2(0, 0);
+    const int64_t stopped = hc.clientTick();
+    // Until the server has used every input and the snapshots after it are in.
+    ASSERT_TRUE(c.until([&] { return hc.mirror()->lastInputTick() >= stopped + 30; }, 5));
+    c.until([] { return false; }, 0.7);
+    const Unit mirrored = *hc.mirror()->unit(unit);
+    const double walked = distance(mirrored.position, from);
+    std::printf("  drove %.2f cells in 2 s under 150 ms each way, 5%% loss\n", walked);
+    EXPECT_TRUE(walked > 3);
+
+    // Where the server says it is: a second client, no lag, new to the
+    // region, so every item comes whole.
+    Client o(server->port, kToken, {});
+    o.client->connect(clockNow());
+    ASSERT_TRUE(o.until([&] { return o.client->mirror() && o.client->mirror()->unit(unit) != nullptr; }, 5));
+    // A few ticks for c too, so both read the same standing unit.
+    const Unit truth = *o.client->mirror()->unit(unit);
+    EXPECT_EQ(truth.position.x, mirrored.position.x);
+    EXPECT_EQ(truth.position.y, mirrored.position.y);
+    EXPECT_EQ(truth.heading, mirrored.heading);
+    EXPECT_EQ(truth.hp, mirrored.hp);
+    // A pilot that is not first cannot take the driven unit.
+    const uint32_t second = o.client->take(unit);
+    ASSERT_TRUE(o.until([&] { return o.client->replies.count(second) > 0; }, 3));
+    EXPECT_TRUE(!o.client->replies[second].done);
+    server->process.stop();
+    const std::string log = readFile(logPath("drive"));
+    EXPECT_TRUE(log.find("connect pilot") != std::string::npos);
+    EXPECT_TRUE(log.find("refuse take") != std::string::npos);
+    EXPECT_TRUE(log.find("stop: SIGTERM") != std::string::npos);
+}
+
+TEST(e2e_bad_token_refused) {
+    auto server = startServer("token");
+    ASSERT_TRUE(server.has_value());
+    Client c(server->port, "not-the-token", {});
+    c.client->connect(clockNow());
+    ASSERT_TRUE(c.until([&] { return !c.client->disconnectReason().empty(); }, 5));
+    EXPECT_TRUE(c.client->disconnectReason() == "bad token");
+    EXPECT_TRUE(!c.client->welcome().has_value());
+    server->process.stop();
+    EXPECT_TRUE(readFile(logPath("token")).find("bad token") != std::string::npos);
+}
+
+TEST(e2e_server_exits_when_its_parent_is_gone) {
+    auto parent = Process::start({"/bin/sleep", "30"});
+    ASSERT_TRUE(parent.has_value());
+    auto server = startServer("parent", {"--parent-pid", std::to_string(parent->pid)});
+    ASSERT_TRUE(server.has_value());
+    // Alive while the parent is.
+    EXPECT_TRUE(!server->process.wait(0.8).has_value());
+    kill(parent->pid, SIGKILL);
+    parent->wait(2);
+    parent->stop();
+    const auto code = server->process.wait(3);
+    ASSERT_TRUE(code.has_value());
+    EXPECT_EQ(*code, 0);
+    server->process.stop();
+    EXPECT_TRUE(readFile(logPath("parent")).find("is gone") != std::string::npos);
+}
+
+TEST(e2e_server_exits_cleanly_on_sigint) {
+    auto server = startServer("sigint");
+    ASSERT_TRUE(server.has_value());
+    kill(server->process.pid, SIGINT);
+    const auto code = server->process.wait(3);
+    ASSERT_TRUE(code.has_value());
+    EXPECT_EQ(*code, 0);
+    server->process.stop();
+    EXPECT_TRUE(readFile(logPath("sigint")).find("stop: SIGINT") != std::string::npos);
+}

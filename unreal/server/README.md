@@ -1,31 +1,62 @@
-# The server's world
+# The server
 
-The world half of the MMORPG mode's server ([docs/networking.md](../../docs/networking.md),
-[docs/mmorpg-m1.md](../../docs/mmorpg-m1.md), task T2). Engine-free: `AutocraftCore` only,
-no network yet.
+The MMORPG mode's server ([docs/networking.md](../../docs/networking.md),
+[docs/mmorpg-m1.md](../../docs/mmorpg-m1.md), tasks T2 and T4): one region behind our protocol on
+UDP. Engine-free: `AutocraftCore` and `AutocraftNet`.
 
 | Path | What |
 |---|---|
 | `world/World.h` | `Region`: one `ac::Simulation` on a generated map with its AIs, stepped at 60 Hz; pilots join, take a unit, send inputs; `snapshot()` gives each pilot what its side may know. |
 | `world/Region.cpp` | The tick, the pilots and their inputs, the fog gate on events (`mayKnow`). |
 | `world/Interest.cpp` | The snapshot: fog first, rank (driven, engaged, nearby), distance bands, the budget with aging. |
-| `tests/` | Isolated scenes, `make -C unreal/server test` (under a second). |
-| `bench/RegionBench.cpp` | Step and snapshot times, `make -C unreal/server bench`. |
+| `program/Server.h` | `Server`: the region behind `net::ServerEndpoint`. A connection is a pilot; each tick reads, steps, and every third tick sends each client its events and its snapshot. |
+| `program/main.cpp` | `autocraft-server`, the program the game starts. |
+| `client/HeadlessClient.h` | A client with no engine: a mirror of the region, inputs and acks at 60 Hz, requests. For the tests and the bench. |
+| `tests/` | Isolated scenes, `make -C unreal/server test` (about 7 s: the end-to-end ones run in real time). |
+| `bench/` | `make -C unreal/server bench`: the region's step and snapshot times, and the protocol's bytes a second. |
+
+The protocol itself is in `AutocraftNet` (both ends need it): `NetProtocol.h` (the messages),
+`NetSnapshot.h` (snapshots as deltas), `NetMirror.h` (the client's mirror).
+
+## The program
+
+```
+autocraft-server --map <highlands|openField|ridge|badlands> --size <small|medium|large|huge>
+                 [--starts 2|4|8] [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
+```
+
+It reads the one-time token as the first line of its standard input, binds (port 0: the system
+picks), prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz, sleeping between
+ticks. It stops on SIGTERM or SIGINT, or once the parent pid is gone (checked twice a second), and
+tells its clients. The log (`~/Library/Logs/Autocraft/server.log` unless `--log`) has a line per
+start, stop, connect, disconnect and refusal (a bad token, a take refused), and every 10 s a stats
+line: clients, the tick's mean and max time, bytes a second out per client.
 
 ## Inputs
 
-A client sends one `PilotInput` per tick it runs, stamped with its tick. The region keeps them in
-tick order, drops repeats and old ones, and uses one each server tick. With none waiting, the last
-one holds (walk, heading, held keys); presses (`act`, `ability`) count once. The snapshot says which
-input was used last (`lastInputTick`), for the client's replay.
+A client sends one `PilotInput` per tick it runs, stamped with its tick, with the last three again
+for loss. The region keeps them in tick order, drops repeats and old ones, and uses one each server
+tick. With none waiting, the last one holds (walk, heading, held keys); presses (`act`, `ability`)
+count once. The snapshot says which input was used last (`lastInputTick`), for the client's replay.
+The walk goes in 255ths and the heading in 16 bits; the server applies exactly what arrives
+(`net::quantised`).
 
 ## Snapshots
 
 Entities are the core's own `ac::Unit` and `ac::Structure`, so a client writes them back into the
-`GameState` of an unstepped `ac::Simulation` on the same map. An enemy unit's plans (goal, path,
-errand, build order) are cleared. Enemy buildings the side remembers come as `remembered`. Beside
-them: the players (the side's whole, the others' upgrades and team), patches and wells in sight,
-the side's fog (`seen`, `near`, `explored`, site times), the ids gone since, and the gated events.
+`GameState` of an unstepped `ac::Simulation` on the same map (`net::Mirror`). An enemy unit's plans
+(goal, path, errand, build order) are cleared. Enemy buildings the side remembers come as
+`remembered`. Beside them: the players (the side's whole, the others' upgrades and team), patches
+and wells in sight, the side's fog (`seen`, `near`, `explored`, site times), the ids gone since,
+and the gated events (Event messages).
+
+On the wire every unit, building, player (core, a record per kind driven, a stamp per level),
+patch, well, fog chunk (2,048 cells) and site time is an item with its own baseline: the last
+state the client acked. Changed fields only, whole when there is no baseline, nothing when it is
+unchanged and acked. Positions in centimetres (a step from the baseline in 12 bits a coordinate
+when it is small), angles in 16 bits, hit points in 12 bits of twice the kind's own, times in
+milliseconds. A snapshot fills what the byte budget has left after the reliable messages, the
+driven unit and what it fights first; entities left out wait and gain priority (`Region::deferred`).
 
 Core limits for M1: `Simulation` has one `pilot`, and `Pilot::player` is a constant, so every
 pilot is on side 0 and one drives at a time.
