@@ -167,3 +167,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T Q1 shot harness + review → background agent.
 - T Q3 flight animation, Q4 map keys + MMO HUD: background agents.
 - N Manager reran mmoresume/cross/fly/handback hidden: done, 0 failed.
+- I Orchestrator MCP disconnected entirely ("Connection closed").
+- D User wants orc workers; switch back once orc reconnects.
