@@ -242,14 +242,12 @@ void WorldMap::bankIn(const PilotState& p, size_t r) {
     Player& side = regions_[r]->simulation().state.players[0];
     side.ore = p.wallet.ore;
     side.hydrogen = p.wallet.hydrogen;
-    side.pilot = p.record;
 }
 
 void WorldMap::bankOut(PilotState& p, size_t r) {
     const Player& side = regions_[r]->simulation().state.players[0];
     p.wallet.ore = side.ore;
     p.wallet.hydrogen = side.hydrogen;
-    p.record = side.pilot;
 }
 
 bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Vec2 at, int64_t lastInput) {
@@ -258,6 +256,8 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
     r.join(pilot, lastInput);
     p.region = to;
     bankIn(p, to);
+    // Its own levels: into the simulation as it takes the unit.
+    r.setLevels(pilot, p.record);
     // On open ground at `at`, or the nearest open spot round it.
     Unit v = u;
     const region::Built& places = *r.places();
@@ -292,13 +292,42 @@ bool WorldMap::join(PilotId pilot) {
     const Unit u = r.simulation().freshUnit(UnitKind::prospector, 0, Pilot::player, pad.at, 0);
     PilotState& in = pilots_[pilot] = p;
     arrive(pilot, in, start_, u, r.places()->regionAt(pad.at), -1);
+    if (params_.devXp > 0)
+        if (const auto id = start().driving(pilot))
+            if (const auto seated = start().simulation().state.unit(*id)) start().simulation().earn(params_.devXp, *seated);
     return true;
+}
+
+std::optional<PilotRecord> WorldMap::levels(PilotId pilot) const {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return std::nullopt;
+    const Region& r = *regions_[it->second.region];
+    return r.joined(pilot) ? r.levels(pilot) : it->second.record;
+}
+
+void WorldMap::setLevels(PilotId pilot, const std::optional<PilotRecord>& levels) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return;
+    it->second.record = levels;
+    Region& r = *regions_[it->second.region];
+    if (r.joined(pilot)) r.setLevels(pilot, levels);
+}
+
+std::optional<std::string> WorldMap::pick(PilotId pilot, UnitKind kind, Perk perk) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return "Not joined";
+    Region& r = *regions_[it->second.region];
+    if (!r.joined(pilot)) return "Not joined";
+    if (auto why = r.pick(pilot, kind, perk)) return why;
+    it->second.record = r.levels(pilot);
+    return std::nullopt;
 }
 
 void WorldMap::leave(PilotId pilot) {
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end()) return;
     Region& r = *regions_[it->second.region];
+    it->second.record = r.levels(pilot);
     r.leave(pilot);
     // The side's bank was this pilot's: no one's now.
     if (world_ && r.pilots().empty()) bankIn(PilotState{}, it->second.region);
@@ -328,6 +357,7 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     bankOut(p, p.region);
     Flight f;
     f.unit = *here.release(*unit);
+    p.record = here.levels(pilot);
     f.to = *to;
     f.pad = size_t(pad - pads.begin());
     f.landsAt = tick_ + std::max<int64_t>(1, std::llround(params_.flightTime / here.description().step));
@@ -365,7 +395,10 @@ void WorldMap::step() {
     tick_ += 1;
     if (!world_) return;
     for (auto& [id, p] : pilots_)
-        if (!p.flight) bankOut(p, p.region);
+        if (!p.flight) {
+            bankOut(p, p.region);
+            p.record = regions_[p.region]->levels(id);
+        }
     crossings();
     landings();
 }
@@ -412,6 +445,7 @@ void WorldMap::crossings() {
             if (!inSpan(there.openings[size_t(opposite(e))], along) || regions_[*to]->driven()) continue;
             const Unit leaving = *here.release(*unit);
             const int64_t lastInput = here.lastInputTick(pilot);
+            p.record = here.levels(pilot);
             here.leave(pilot);
             if (here.pilots().empty()) bankIn(PilotState{}, p.region);
             // Its inputs carry on from where they were.
@@ -441,6 +475,8 @@ void WorldMap::landings() {
         const size_t from = p.region;
         Region& before = *regions_[from];
         const int64_t lastInput = before.lastInputTick(pilot);
+        // Picked in flight: its seat there has them.
+        if (before.joined(pilot)) p.record = before.levels(pilot);
         if (f.to != from) {
             before.leave(pilot);
             if (before.pilots().empty()) bankIn(PilotState{}, from);

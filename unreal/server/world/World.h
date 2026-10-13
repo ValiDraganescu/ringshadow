@@ -103,7 +103,8 @@ public:
     /// region change), so its next inputs carry on.
     bool join(PilotId pilot, int64_t lastInput = -1);
     std::vector<PilotId> pilots() const;
-    /// Hands back whatever it drove.
+    /// Hands back whatever it drove. Its levels go with the seat: read
+    /// `levels` first to keep them.
     void leave(PilotId pilot);
     bool joined(PilotId pilot) const { return pilots_.count(pilot) > 0; }
     /// The side the pilot plays (`Pilot::player`).
@@ -114,6 +115,19 @@ public:
     bool take(PilotId pilot, int64_t unit);
     /// Give the driven unit back to its AI.
     void handBack(PilotId pilot);
+
+    /// The pilot's levels and picks, per kind (the core's own record, as
+    /// a game's session saves it; docs/leveling.md). Each pilot has its
+    /// own: the simulation holds the driver's (its side's `pilot`, where
+    /// XP lands and the picks act) while it drives, its seat holds them
+    /// otherwise. Nil: never driven, or not joined.
+    std::optional<PilotRecord> levels(PilotId pilot) const;
+    /// Sets them (a pilot coming in from another region, or from a save).
+    void setLevels(PilotId pilot, const std::optional<PilotRecord>& levels);
+    /// Keep `perk` for `kind` (the core's pick: one of the two on offer at
+    /// the kind's lowest pending level), driving or not. The reason when
+    /// refused.
+    std::optional<std::string> pick(PilotId pilot, UnitKind kind, Perk perk);
     std::optional<int64_t> driving(PilotId pilot) const;
     /// Some pilot drives here (the core drives one unit a region).
     bool driven() const;
@@ -175,6 +189,8 @@ private:
         int64_t snapshots = 0;
         std::unordered_map<int64_t, Waiting> waiting;
         std::set<int64_t> known;
+        /// Its levels while it does not drive (`levels`).
+        std::optional<PilotRecord> levels;
     };
 
     std::optional<region::Built> built_;
@@ -186,6 +202,14 @@ private:
     std::map<PilotId, Seat> pilots_;
 
     Vec2 focus(const Seat& seat, int64_t side) const;
+    /// The seat drives the simulation's pilot now.
+    bool drivesNow(const Seat& seat) const;
+    /// The side's record (`Pilot::player`'s `pilot`).
+    std::optional<PilotRecord>* sideLevels();
+    /// The seat's levels into the simulation (it starts to drive), and
+    /// back out (it stops).
+    void loadLevels(Seat& seat);
+    void stashLevels(Seat& seat);
     void nextInput(Seat& seat);
 };
 

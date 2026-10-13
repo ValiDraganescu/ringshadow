@@ -4,6 +4,7 @@
 //
 //   autocraft-server --world <file> | --map <style> --size <size> [--starts n]
 //                    [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
+//                    [--dev-xp xp]  (dev, tests: a new pilot's Prospector earns that much XP at once)
 //
 // Reads the one-time token as the first line of its standard input, binds,
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
@@ -72,7 +73,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path]\n",
+                 "[--parent-pid pid] [--log path] [--dev-xp xp]\n",
                  why);
     return 2;
 }
@@ -95,6 +96,7 @@ int main(int argc, char** argv) {
     net::Address bind = net::Address::loopback(0);
     long port = 0;
     pid_t parent = 0;
+    double devXp = 0;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
     for (int i = 1; i < argc; i++) {
@@ -109,6 +111,7 @@ int main(int argc, char** argv) {
         else if (a == "--port") port = std::atol(v.c_str());
         else if (a == "--parent-pid") parent = pid_t(std::atol(v.c_str()));
         else if (a == "--log") logPath = v;
+        else if (a == "--dev-xp") devXp = std::atof(v.c_str());
         else return usage(("unknown " + a).c_str());
     }
     std::optional<LoadedWorld> world;
@@ -138,6 +141,7 @@ int main(int argc, char** argv) {
     ServerOptions options;
     if (world) options.world = std::move(world);
     else options.region.map = MapChoice{*style, *size, starts};
+    options.worldParams.devXp = devXp;
     options.token.assign(token.begin(), token.end());
     if (!net::secureRandom(options.secret.data(), options.secret.size())) {
         logLine("start failed: no secure random source");

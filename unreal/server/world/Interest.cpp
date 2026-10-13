@@ -151,6 +151,8 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
             out.players.push_back(other);
         }
     }
+    // The pilot's own levels, not the side's driver's.
+    if (me >= 0 && me < static_cast<int64_t>(out.players.size())) out.players[static_cast<size_t>(me)].pilot = levels(pilot);
     for (size_t i = 0; i < s.patches.size(); ++i)
         if (sim_.sees(me, s.patches[i].position)) out.patches.push_back(PatchView{static_cast<int64_t>(i), s.patches[i]});
     if (s.wells)

@@ -79,6 +79,9 @@ struct WorldParams {
     double padReach = region::padReach;
     /// Seconds a pad-to-pad flight takes.
     double flightTime = 4.0;
+    /// Dev and tests (`--dev-xp`, as the game's -AcEarn): XP a new pilot's
+    /// Prospector earns at once, when seated at the start pad. 0: none.
+    double devXp = 0;
 };
 
 /// What the server tells a pilot after a step: its place in the world
@@ -129,6 +132,16 @@ public:
     };
     /// The pilot's bank: its side's ore and MH in the region it is in.
     std::optional<Wallet> wallet(PilotId pilot) const;
+
+    /// The pilot's levels and picks per kind (the core's `PilotRecord`,
+    /// docs/leveling.md): its own, wherever it is, in flight too. Nil: not
+    /// joined, or never driven.
+    std::optional<PilotRecord> levels(PilotId pilot) const;
+    /// Sets them (a pilot loaded from a save): its region's simulation has
+    /// them at once if it drives.
+    void setLevels(PilotId pilot, const std::optional<PilotRecord>& levels);
+    /// The level-up card pick (`Region::pick`). The reason when refused.
+    std::optional<std::string> pick(PilotId pilot, UnitKind kind, Perk perk);
 
     /// Fly from the pad the driven Prospector stands at to `pad` of `region`.
     /// The reason when refused.

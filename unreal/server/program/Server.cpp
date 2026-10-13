@@ -179,6 +179,16 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
                 reply.done = true;
                 log("build " + what);
             }
+        } else if (const auto* pick = std::get_if<net::RequestMessage::Pick>(&m.what)) {
+            const std::string what = std::string(rawValue(pick->perk)) + " for " + std::string(rawValue(pick->kind)) + " by pilot "
+                                     + std::to_string(client.pilot);
+            if (const auto why = world_.pick(client.pilot, pick->kind, pick->perk)) {
+                reply.reason = *why;
+                log("refuse pick " + what + ": " + *why);
+            } else {
+                reply.done = true;
+                log("pick " + what);
+            }
         } else {
             if (region->driving(client.pilot)) {
                 region->handBack(client.pilot);
