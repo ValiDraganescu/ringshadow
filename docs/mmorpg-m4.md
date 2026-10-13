@@ -14,12 +14,14 @@ no AI units. Log: [mmorpg-log.md](mmorpg-log.md).
 | Q3 | Flight: a lift-off and landing the player sees (the Prospector rises off the pad and comes down on the other), no frozen view | | done |
 | Q4 | World map by keyboard (arrows move the pad pick, Return flies); MMO HUD shows only what applies | | done |
 
-| Q5 | Leftovers: HUD plate frames vanish after a level-up; no building on a pad plate; clipped bar top centre | Q2 | running |
+| Q5 | Leftovers: HUD plate frames vanish after a level-up; no building on a pad plate; clipped bar top centre | Q2 | done |
 
 Moments for Q1: spawn on the pad (3rd person), top-down over the start
 region, the world map, the build menu and ghost, a Citadel going up, a
 Citadel finished, drilling ore, unloading at the Citadel, the level-up
 cards, the edge crossing, landing in another region, after a resume.
+
+Status: done 2026-10-13.
 
 Done when: every moment's picture reads right to a player; all suites and
 the MMO flow and automation tests pass.

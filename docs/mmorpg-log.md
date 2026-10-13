@@ -194,3 +194,11 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Open: HUD plate frames vanish after first level-up.
 - I Open: clipped bar top centre during weld; buildings overlap pad.
 - T Q5 leftovers → background agent.
+- T Q5 done 26d2c26: HUD textures compiled before Slate draws.
+- D No building touching a pad plate (region::touchesPadPlate).
+- D Life bars while driving: whole in view or hidden.
+- T M4 done; re-shoot unreal/server/build/shots/q5 checked.
+- I Open: false wallet gain flash after crossing; no weld progress up close.
+- D M5 = ready to ship: encryption, server in Mac package, leftovers.
+- D Encryption: Monocypher (CC0), X25519 + XChaCha20-Poly1305.
+- D Win/Linux server builds wait for user (AWS cost).
