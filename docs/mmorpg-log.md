@@ -222,3 +222,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Small: pumping dashboard says "drill, strike, repair"; late weld sparks.
 - I Nothing in a world costs MH yet.
 - T Skill ringshadow-mmo-manager (user-invoked) starts a manager session.
+- D User: static game website, Cloudflare later; home + roadmap.
+- T W1 website/ (home, roadmap) → orc worker "website".
