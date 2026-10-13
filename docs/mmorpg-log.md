@@ -183,3 +183,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T Q3 done 10aa90e: lift-off 1.5 s, transit view, landing 1.5 s.
 - D Flight drawn by a copy of the Prospector model; wall-clock timing.
 - I Flight HUD: "0 UNITS", click-to-drive hint → added to Q2b.
+- T Q2a done 2eb97e8: wallet 600, XP ×0.1, Citadel+Derrick only.
+- D Inputs carry visit (protocol v2); stale inputs dropped after crossing.
+- D Simulation::xpScale in core (default 1); world regions 0.1.
+- N New pilot faces nearest ore; region files have no heading.
