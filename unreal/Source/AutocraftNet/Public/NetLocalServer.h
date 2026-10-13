@@ -36,7 +36,9 @@ public:
     State state() const { return state_; }
     uint16_t port() const { return port_; }
     int pid() const { return pid_; }
-    /// Why it did not start or how it ended ("exited with code 1").
+    /// Why it did not start or how it ended: the reason it printed
+    /// (`FAILED <why>` on its standard output: "save … locked (another server
+    /// has it open)"), else "exited with code 1".
     const std::string& error() const { return error_; }
     /// The exit code, or 128 + the signal; -1 while it runs.
     int exitCode() const { return exitCode_; }
@@ -47,6 +49,8 @@ public:
 
 private:
     void exited(int status);
+    /// Reads what it printed so far: the `PORT` line, a `FAILED` reason.
+    void readOut();
     void closePipes();
 
     State state_ = State::idle;

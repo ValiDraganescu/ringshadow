@@ -6,9 +6,13 @@
 //            time played]                      [RESUME]
 //           [RESUME GAME] (when there is one)  [QUIT TO HOME]
 //           [NEW GAME]                         [SETTINGS]
-//           [MMORPG (TEST)]
+//           [MMORPG (TEST)]             (resumes the saved world)
+//           [MMORPG NEW WORLD (TEST)]   (asks first: it deletes the save)
 //           [SETTINGS]
 //           [QUIT]
+//
+// MMORPG NEW WORLD (TEST) opens a page that says what it deletes, with
+// DELETE AND START OVER and BACK (highlighted): only the first picks it.
 //
 // Settings (from either): sliders for the master, music, effects and
 // environment volumes and the mouse turn while driving, then BACK. They
@@ -25,7 +29,7 @@
 class FAcLauncherArt;
 
 enum class EAcMenuMode : uint8 { Home, Pause };
-enum class EAcMenuAction : uint8 { Resume, NewGame, QuitToHome, QuitApp, Settings, Mmo };
+enum class EAcMenuAction : uint8 { Resume, NewGame, QuitToHome, QuitApp, Settings, Mmo, MmoNewWorld, Back };
 
 DECLARE_DELEGATE_OneParam(FAcOnMenuPick, EAcMenuAction);
 
@@ -57,6 +61,10 @@ public:
 	/// Back from the Settings page (stores the settings); false when not on it.
 	bool Back();
 	bool InSettings() const { return bSettings; }
+	/// The new world's page is up (MMORPG NEW WORLD picked, not confirmed).
+	bool ConfirmingNewWorld() const { return bConfirmNewWorld; }
+	/// Highlights the button for `Action` on the page shown; false: none.
+	bool Highlight(EAcMenuAction Action);
 	/// Opens the Settings page whatever buttons there are (stills).
 	void OpenSettings();
 
@@ -100,6 +108,7 @@ private:
 	int32 Highlighted = 0;
 	int32 Pressed = INDEX_NONE;
 	bool bSettings = false;
+	bool bConfirmNewWorld = false;
 	int32 Dragging = INDEX_NONE;
 	FString NowPlaying;
 	/// The key art (home only); the clock of its drift and crossfade starts at the first paint.

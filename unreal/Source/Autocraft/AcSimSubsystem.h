@@ -24,7 +24,9 @@
 //   -AcImport=PATH    import a Swift session JSON as the window game (F1,
 //                     AcSaves.h): saved as the Unreal game's own from then on.
 //   -AcSaveDir=PATH   keep the sessions there instead (tests).
-//   -AcMmo            the MMORPG test mode at once (GameFlow starts it).
+//   -AcMmo            the MMORPG test mode at once (GameFlow starts it),
+//                     resuming the saved world; -AcMmoNewWorld starts it
+//                     over. -AcMmoDir=PATH: its pilot key and save there.
 // With no -AcMap the game opens on the last map played (`UAcSettings`
 // LastMap, F1); with none yet, highlands-medium and `NeedsMapChoice()`.
 #pragma once
@@ -230,8 +232,11 @@ public:
 	/// The local server on the first world (docs/worlds.md), and the game
 	/// drawn from its snapshots: the window game waits (not stepped, not
 	/// saved) until `StopMmo`. A region change rebuilds the game on the new
-	/// region's mirror (`OnGameStarted`).
-	void StartMmo();
+	/// region's mirror (`OnGameStarted`). The world is kept in its save
+	/// (`FAcMmoClient::SaveFile`) and the pilot is the game's own
+	/// (`PilotKeyFile`): it resumes where it left. `bNewWorld`: the save is
+	/// deleted first (the same pilot, new at the start pad).
+	void StartMmo(bool bNewWorld = false);
 	/// Stops the local server and goes back to the window game.
 	void StopMmo();
 	/// In the mode (starting, connected or failed).

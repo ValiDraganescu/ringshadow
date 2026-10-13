@@ -258,6 +258,7 @@ void UAcGameFlowSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	{
 		// Straight into the MMORPG test (hidden test runs).
 		bMmoWhenReady = true;
+		bMmoNewWorldWhenReady = FParse::Param(Cmd, TEXT("AcMmoNewWorld"));
 	}
 	else if (FParse::Value(Cmd, TEXT("AcNewGameDialog="), Wanted, false) || FParse::Param(Cmd, TEXT("AcNewGameDialog")))
 	{
@@ -338,7 +339,7 @@ void UAcGameFlowSubsystem::Tick(const float DeltaTime)
 		if (Sim && Sim->IsRunning() && AAcHUD::Get(this))
 		{
 			bMmoWhenReady = false;
-			StartMmo();
+			StartMmo(bMmoNewWorldWhenReady);
 		}
 	}
 	TickMmo();
@@ -646,6 +647,13 @@ void UAcGameFlowSubsystem::OnMenuPick(const EAcMenuAction Action)
 	case EAcMenuAction::Mmo:
 		StartMmo();
 		break;
+	case EAcMenuAction::MmoNewWorld:
+		// Confirmed on the menu's own page.
+		StartMmo(true);
+		break;
+	case EAcMenuAction::Back:
+		// The widget's own page.
+		break;
 	case EAcMenuAction::QuitApp:
 		// The sim saves on the way out (Deinitialize).
 		FPlatformMisc::RequestExit(false, TEXT("AcMenu"));
@@ -680,7 +688,7 @@ void UAcGameFlowSubsystem::SetBlocked(const bool bBlocked)
 
 // MARK: - The MMORPG test mode
 
-void UAcGameFlowSubsystem::StartMmo()
+void UAcGameFlowSubsystem::StartMmo(const bool bNewWorld)
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim || !Sim->IsRunning()) return;
@@ -692,8 +700,8 @@ void UAcGameFlowSubsystem::StartMmo()
 		bPausedBefore = false;
 		CloseMenu();
 	}
-	UE_LOG(LogAutocraft, Log, TEXT("menu: MMORPG (TEST) on the first world"));
-	Sim->StartMmo();
+	UE_LOG(LogAutocraft, Log, TEXT("menu: %s on the first world"), bNewWorld ? TEXT("MMORPG NEW WORLD (TEST)") : TEXT("MMORPG (TEST)"));
+	Sim->StartMmo(bNewWorld);
 	TickMmo();
 }
 

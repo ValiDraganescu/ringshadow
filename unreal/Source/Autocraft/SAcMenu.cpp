@@ -90,6 +90,7 @@ void SAcMenu::SetMode(const EAcMenuMode InMode)
 {
 	MenuMode = InMode;
 	bSettings = false;
+	bConfirmNewWorld = false;
 	Dragging = INDEX_NONE;
 	Highlighted = 0;
 	Pressed = INDEX_NONE;
@@ -99,6 +100,10 @@ void SAcMenu::SetMode(const EAcMenuMode InMode)
 TArray<SAcMenu::FButton> SAcMenu::Buttons() const
 {
 	if (bSettings) return {};
+	if (bConfirmNewWorld)
+	{
+		return {{EAcMenuAction::MmoNewWorld, TEXT("DELETE AND START OVER")}, {EAcMenuAction::Back, TEXT("BACK")}};
+	}
 	if (MenuMode == EAcMenuMode::Pause)
 	{
 		return {{EAcMenuAction::Resume, TEXT("RESUME")}, {EAcMenuAction::Settings, TEXT("SETTINGS")},
@@ -109,6 +114,8 @@ TArray<SAcMenu::FButton> SAcMenu::Buttons() const
 	B.Add({EAcMenuAction::NewGame, TEXT("NEW GAME")});
 	// The MMORPG test mode (docs/mmorpg-m1.md): the local server's world.
 	B.Add({EAcMenuAction::Mmo, TEXT("MMORPG (TEST)")});
+	// The same, its saved world deleted first (docs/mmorpg-m3.md, S4).
+	B.Add({EAcMenuAction::MmoNewWorld, TEXT("MMORPG NEW WORLD (TEST)")});
 	B.Add({EAcMenuAction::Settings, TEXT("SETTINGS")});
 	B.Add({EAcMenuAction::QuitApp, TEXT("QUIT")});
 	return B;
@@ -172,8 +179,23 @@ void SAcMenu::OpenSettings()
 	if (I != INDEX_NONE) Pick(I);
 }
 
+bool SAcMenu::Highlight(const EAcMenuAction Action)
+{
+	const int32 I = Buttons().IndexOfByPredicate([Action](const FButton& B) { return B.Action == Action; });
+	if (I == INDEX_NONE) return false;
+	Highlighted = I;
+	Invalidate(EInvalidateWidgetReason::Paint);
+	return true;
+}
+
 bool SAcMenu::Back()
 {
+	if (bConfirmNewWorld)
+	{
+		bConfirmNewWorld = false;
+		Highlight(EAcMenuAction::MmoNewWorld);
+		return true;
+	}
 	if (!bSettings) return false;
 	if (UAcSettings::Remembers()) UAcSettings::Store();
 	bSettings = false;
@@ -214,6 +236,21 @@ void SAcMenu::Pick(const int32 Index)
 	}
 	const TArray<FButton> B = Buttons();
 	if (!B.IsValidIndex(Index)) return;
+	if (B[Index].Action == EAcMenuAction::Back)
+	{
+		Back();
+		return;
+	}
+	if (B[Index].Action == EAcMenuAction::MmoNewWorld && !bConfirmNewWorld)
+	{
+		// Ask first: it deletes the saved world. BACK is the safe default.
+		bConfirmNewWorld = true;
+		Highlighted = 1;
+		Pressed = INDEX_NONE;
+		Invalidate(EInvalidateWidgetReason::Paint);
+		return;
+	}
+	bConfirmNewWorld = false;
 	if (B[Index].Action == EAcMenuAction::Settings)
 	{
 		bSettings = true;
@@ -250,7 +287,8 @@ void SAcMenu::Layout(const FVector2f ViewSize) const
 	}
 	float Y = MenuMode == EAcMenuMode::Home ? 112 : 84;
 	CardBox = FBox2f(FVector2f::ZeroVector, FVector2f::ZeroVector);
-	if (!GameTitle.IsEmpty())
+	if (bConfirmNewWorld) Y = 84 + 3 * 22 + 18;
+	else if (!GameTitle.IsEmpty())
 	{
 		CardBox = FBox2f(FVector2f(Pad, Y), FVector2f(PanelW - Pad, Y + CardH));
 		Y += CardH + 22;
@@ -507,7 +545,18 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 		return L + 4;
 	}
 
-	if (bHome)
+	if (bConfirmNewWorld)
+	{
+		Label(TEXT("NEW WORLD"), 34, FAcHudStyle::Ice(), EAcHAlign::Center).Paint(Out, L, P, FVector2f(PanelW / 2, 26));
+		static const TCHAR* Lines[] = {TEXT("This deletes the saved MMORPG world:"), TEXT("your buildings, your wallet, where you stand."),
+			TEXT("Your pilot stays, new at the start pad.")};
+		for (int32 I = 0; I < 3; ++I)
+		{
+			Label(Lines[I], 15, I == 0 ? FAcHudStyle::Text() : FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+				.Paint(Out, L, P, FVector2f(Pad, 84 + I * 22));
+		}
+	}
+	else if (bHome)
 	{
 		Label(TEXT("RINGSHADOW"), 46, FAcHudStyle::Ice(), EAcHAlign::Center).Paint(Out, L, P, FVector2f(PanelW / 2, 26));
 		Label(TEXT("Stardust Ore · Metallic Hydrogen · a frontier world"), 14, FAcHudStyle::Soft(), EAcHAlign::Center, EAcVAlign::Top,
@@ -519,7 +568,7 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 		Label(TEXT("PAUSED"), 34, FAcHudStyle::Ice(), EAcHAlign::Center).Paint(Out, L, P, FVector2f(PanelW / 2, 26));
 	}
 
-	if (!GameTitle.IsEmpty())
+	if (!GameTitle.IsEmpty() && !bConfirmNewWorld)
 	{
 		Box(Out, L, P, CardBox, FAcHudStyle::Srgb(0.04, 0.07, 0.11, 1));
 		Frame(Out, L + 1, P, CardBox, FAcHudStyle::Srgb(0.3, 0.42, 0.52, 0.6));

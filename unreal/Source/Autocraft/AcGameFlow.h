@@ -24,7 +24,10 @@
 //   the local server is and why it failed, and the region the pilot is in
 //   or flies to). M opens the world map (`SAcWorldMap`, docs/mmorpg-m2.md
 //   R3) in place of the command map: a pad picked there and FLY ask the
-//   server for the flight.
+//   server for the flight. The world lasts (docs/mmorpg-m3.md S4): MMORPG
+//   (TEST) resumes the saved world with the game's own pilot; MMORPG NEW
+//   WORLD (TEST) asks first, then deletes the save and starts over with the
+//   same pilot.
 // - Import a Swift game: the dialog's button or `ac.Import [PATH]` (default
 //   the Swift game's `window.json`), `-AcImport=PATH` at launch.
 // - Toggles: `ac.AI [0|1]` (Swift's Game ▸ AI Commander), `ac.SessionFog
@@ -38,7 +41,9 @@
 //                               ok|FAILED`, then the run quits.
 //   -AcNewGameDialog[=MAP[,TEAMS]]  open the dialog at start (shots hold
 //                               until its preview is drawn).
-//   -AcMmo                      the MMORPG test mode at once (no home screen).
+//   -AcMmo                      the MMORPG test mode at once (no home screen),
+//                               resumed; with -AcMmoNewWorld a new world.
+//                               -AcMmoDir=PATH: its pilot key and save there.
 //   -AcHomePlay=S               open the home screen with the staged game as
 //                               the one to resume, and press RESUME GAME S
 //                               seconds after it shows (clips: home, then play).
@@ -103,8 +108,9 @@ public:
 	/// (no selection, command map shut, not driving, the console shut).
 	bool WantsPauseOnEscape() const;
 
-	/// The MMORPG test mode on the first world (the home screen's item).
-	void StartMmo();
+	/// The MMORPG test mode on the first world (the home screen's items):
+	/// resumed, or (`bNewWorld`) its save deleted and started over.
+	void StartMmo(bool bNewWorld = false);
 	/// The MMORPG world map (M in the mode). False outside the mode or
 	/// without a HUD.
 	bool OpenWorldMap();
@@ -133,6 +139,8 @@ private:
 	FDelegateHandle RefusedHandle;
 	/// -AcMmo: start the mode once the game is up.
 	bool bMmoWhenReady = false;
+	/// -AcMmoNewWorld: that start is a new world.
+	bool bMmoNewWorldWhenReady = false;
 
 	TSharedPtr<SAcNewGame> Dialog;
 	TSharedPtr<SAcMenu> Menu;
@@ -174,10 +182,24 @@ private:
 		std::optional<ac::Session> Expected;
 	};
 	TOptional<FFlowTest> Test;
-	/// The MMORPG steps (`mmocross`, `mmofly`; AcMmoFlowTest.cpp): the real
+	/// The MMORPG steps (`mmocross`, `mmofly`, `mmoresume`; AcMmoFlowTest.cpp): the real
 	/// pilot pawn and world map over the local server.
 	void TickMmoFlow(const FString& Step);
 	int64 MmoVisitWas = 0;
+	/// `mmoresume`: what was left (the Citadel, the wallet, the unit, the key).
+	struct FMmoLeft
+	{
+		int64 Citadel = -1;
+		FVector2D CitadelAt = FVector2D::ZeroVector;
+		int64 Ore = -1;
+		int64 Unit = -1;
+		FVector2D UnitAt = FVector2D::ZeroVector;
+		FString Region;
+		FString Key;
+	};
+	FMmoLeft MmoLeft;
+	/// Builds a Citadel next to the driven Prospector (once); its spot.
+	bool MmoBuildCitadel();
 	FVector2D RtsTargetWas = FVector2D::ZeroVector;
 	void Check(bool bOk, const FString& What);
 	void NextStep();

@@ -5,7 +5,9 @@
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
+#include "HAL/FileManager.h"
 #include "Misc/CommandLine.h"
+#include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 
@@ -51,6 +53,86 @@ FString FAcMmoClient::ServerLog()
 FString FAcMmoClient::DefaultWorld()
 {
 	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("server"), TEXT("worlds"), TEXT("first.json")));
+}
+
+FString FAcMmoClient::Directory()
+{
+	const TCHAR* Cmd = FCommandLine::Get();
+	if (FString Dir; FParse::Value(Cmd, TEXT("AcMmoDir="), Dir) && !Dir.IsEmpty())
+	{
+		return FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir);
+	}
+	if (FString Dir; FParse::Value(Cmd, TEXT("AcSaveDir="), Dir) && !Dir.IsEmpty())
+	{
+		return FPaths::Combine(FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir), TEXT("mmo"));
+	}
+	if (FString Steps; FParse::Value(Cmd, TEXT("AcFlowTest="), Steps))
+	{
+		// A test never touches the player's pilot or world.
+		return FPaths::Combine(FPlatformProcess::UserTempDir(), TEXT("autocraft-test-mmo"));
+	}
+	return FPaths::Combine(FPlatformProcess::UserHomeDir(), TEXT("Library/Application Support/Autocraft/Unreal/mmo"));
+}
+
+FString FAcMmoClient::PilotKeyFile()
+{
+	return FPaths::Combine(Directory(), TEXT("pilot.key"));
+}
+
+FString FAcMmoClient::SaveFile(const FString& World)
+{
+	// The world's id is its file's name (first.json: "first"); the server
+	// refuses another world's save.
+	return FPaths::Combine(Directory(), FPaths::GetBaseFilename(World) + TEXT(".sqlite"));
+}
+
+std::optional<ac::net::PilotKey> FAcMmoClient::LoadPilotKey(const FString& File, FString* Why)
+{
+	auto No = [&](const FString& Reason) -> std::optional<ac::net::PilotKey>
+	{
+		if (Why) *Why = Reason;
+		UE_LOG(LogAutocraft, Warning, TEXT("mmo: %s"), *Reason);
+		return std::nullopt;
+	};
+	IFileManager& Files = IFileManager::Get();
+	if (Files.FileExists(*File))
+	{
+		FString Hex;
+		if (!FFileHelper::LoadFileToString(Hex, *File)) return No(FString::Printf(TEXT("The pilot key at %s does not read."), *Tilde(File)));
+		const std::optional<ac::net::PilotKey> Key = ac::net::pilotKeyFromHex(Utf8(Hex.TrimStartAndEnd()));
+		if (!Key) return No(FString::Printf(TEXT("The pilot key at %s is not 32 hex digits."), *Tilde(File)));
+		UE_LOG(LogAutocraft, Log, TEXT("mmo: pilot %s (kept in %s)"), *Text(ac::net::pilotKeyShort(*Key)), *Tilde(File));
+		return Key;
+	}
+	uint8_t Bytes[16];
+	if (!ac::net::secureRandom(Bytes, sizeof Bytes)) return No(TEXT("No random source for a pilot key."));
+	ac::net::PilotKey Key{};
+	for (size_t I = 0; I < Key.size(); ++I) Key[I] = Bytes[I];
+	Files.MakeDirectory(*FPaths::GetPath(File), true);
+	if (!FFileHelper::SaveStringToFile(Text(ac::net::pilotKeyHex(Key)) + TEXT("\n"), *File))
+	{
+		return No(FString::Printf(TEXT("The pilot key could not be written to %s."), *Tilde(File)));
+	}
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: new pilot %s (kept in %s)"), *Text(ac::net::pilotKeyShort(Key)), *Tilde(File));
+	return Key;
+}
+
+bool FAcMmoClient::DeleteSave(const FString& File, FString* Why)
+{
+	IFileManager& Files = IFileManager::Get();
+	bool bAll = true;
+	for (const FString& Path : {File, File + TEXT("-wal"), File + TEXT("-shm")})
+	{
+		if (!Files.FileExists(*Path)) continue;
+		if (Files.Delete(*Path, false, true, true)) UE_LOG(LogAutocraft, Log, TEXT("mmo: deleted %s"), *Tilde(Path));
+		if (Files.FileExists(*Path))
+		{
+			bAll = false;
+			if (Why) *Why = FString::Printf(TEXT("Could not delete %s."), *Tilde(Path));
+			UE_LOG(LogAutocraft, Warning, TEXT("mmo: could not delete %s"), *Path);
+		}
+	}
+	return bAll;
 }
 
 void FAcMmoClient::Fail(const FString& Why)
@@ -131,13 +213,19 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Args.push_back("--dev-xp");
 		Args.push_back(std::to_string(DevXp));
 	}
+	if (!SavePath.IsEmpty())
+	{
+		Args.push_back("--save");
+		Args.push_back(Utf8(SavePath));
+	}
 	Args.insert(Args.end(), ExtraServerArgs.begin(), ExtraServerArgs.end());
 	if (!Server.start(Utf8(Program), Args, Token))
 	{
 		Fail(FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
 		return false;
 	}
-	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on world %s (pid %d), log %s"), *Program, *Tilde(WorldFile), Server.pid(), *ServerLog());
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on world %s (pid %d), save %s, log %s"), *Program, *Tilde(WorldFile), Server.pid(),
+		SavePath.IsEmpty() ? TEXT("none") : *Tilde(SavePath), *ServerLog());
 	CurrentPhase = EPhase::Starting;
 	StatusMessage = TEXT("Starting the local server…");
 	StartedAt = Now;
@@ -194,7 +282,9 @@ void FAcMmoClient::Connect(const double Now)
 	Net->connect(Now);
 	// Who the pilot is (the server seats it only after the Join): the key
 	// set, or a new one each start (a new pilot at the start pad).
-	Net->join(PilotKey ? *PilotKey : ac::net::newPilotKey());
+	const ac::net::PilotKey Key = PilotKey ? *PilotKey : ac::net::newPilotKey();
+	Net->join(Key);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: join as pilot %s%s"), *Text(ac::net::pilotKeyShort(Key)), PilotKey ? TEXT("") : TEXT(" (a new one)"));
 	ConnectAt = Now;
 	NextInputAt = 0;
 	CurrentPhase = EPhase::Connecting;
@@ -210,7 +300,10 @@ void FAcMmoClient::Tick(const double Now)
 	const ac::net::LocalServer::State State = Server.poll();
 	if (State == ac::net::LocalServer::State::exited)
 	{
-		Fail(FString::Printf(TEXT("The local server stopped (%s).\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
+		// Before its port: it did not start (a save that does not open says why).
+		const FString Why = Text(Server.error());
+		Fail(CurrentPhase == EPhase::Starting ? FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Why, *Tilde(ServerLog()))
+		                                      : FString::Printf(TEXT("The local server stopped (%s).\nIts log: %s"), *Why, *Tilde(ServerLog())));
 		return;
 	}
 	if (CurrentPhase == EPhase::Starting)

@@ -69,6 +69,18 @@ The MMORPG (TEST) mode (the home screen's item, or `-AcMmo`) starts
 longer starts it with `--map`. The pilot starts seated in the Prospector on
 Prospect Landing's pad.
 
+The world lasts (docs/mmorpg-m3.md, S4): the game passes `--save
+~/Library/Application Support/Autocraft/Unreal/mmo/first.sqlite` and joins
+with the pilot key it keeps in `pilot.key` beside it (made once, 128 random
+bits; the logs show only its first 8 hex digits). MMORPG (TEST) resumes:
+the same region and spot, the same Prospector, buildings and wallet.
+MMORPG NEW WORLD (TEST) asks first, then deletes that save (and its `-wal`
+and `-shm` files, each by name) and starts over with the same pilot, new at
+the start pad (`-AcMmoNewWorld` with `-AcMmo`). A save that does not open
+(not a database, held by another server) shows the server's reason and its
+log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
+`-AcSaveDir=DIR`'s `mmo` folder.
+
 - A RegionChange (over an edge, or a landing) gives the client a new mirror
   of the new region: the prediction and the blending start over, and the
   game rebuilds on it (terrain, doodads, minimap, fog: `OnGameStarted`). The
@@ -93,6 +105,6 @@ Prospect Landing's pad.
 - Automation tests (hidden): `Autocraft.Mmo.CrossEdgeEast` (drive east over
   the start region's edge into Tern Ridge) and `Autocraft.Mmo.FlyToPad`
   (fly to Cold Fork's pad), in `AcMmoTests.cpp`. Through the pilot pawn and
-  the world map, in a hidden game run: `-AcFlowTest=mmocross,mmofly,mmohandback`
+  the world map, in a hidden game run: `-AcFlowTest=mmoresume,mmocross,mmofly,mmohandback`
   (`AcMmoFlowTest.cpp`; the network read only every 0.2 s while travelling,
   so a RegionChange and its first snapshot land in the same frame).

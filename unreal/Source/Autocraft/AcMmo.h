@@ -27,6 +27,14 @@
 // snapshot shows it. `-AcMmoDevXp=XP` (dev, as -AcEarn): the server gives a
 // new pilot's Prospector that much XP when it seats it (`--dev-xp`).
 //
+// A world that lasts (docs/mmorpg-m3.md, S4): the server keeps the world in
+// `SavePath` (`--save`; the game's own `SaveFile()`,
+// `~/Library/Application Support/Autocraft/Unreal/mmo/first.sqlite`) and
+// seats the pilot by `PilotKey`, the one the game keeps in `PilotKeyFile()`
+// (`LoadPilotKey`; the log shows only its first 8 hex digits). A save that
+// does not open (not a database, held by another server) fails the start
+// with the server's own reason and its log's path.
+//
 // Lag to feel it (on 127.0.0.1 there is none): the console variable
 // `ac.MmoLag "delay_ms jitter_ms loss_pct"` (each way; 0 or empty: off) or
 // the flag `-AcMmoLag=150,20,5`, which sets it at the start. The lag
@@ -85,6 +93,24 @@ public:
 	/// The world the game plays: `unreal/server/worlds/first.json`.
 	static FString DefaultWorld();
 
+	/// The MMO mode's own folder: `~/Library/Application
+	/// Support/Autocraft/Unreal/mmo`. Tests never use it: `-AcMmoDir=PATH`
+	/// puts it there, `-AcSaveDir=DIR` in `DIR/mmo`, and any other
+	/// `-AcFlowTest` run in a scratch folder.
+	static FString Directory();
+	/// The pilot's key: `<Directory>/pilot.key` (32 hex digits).
+	static FString PilotKeyFile();
+	/// The world's save: `<Directory>/<world id>.sqlite` (`first.sqlite`).
+	static FString SaveFile(const FString& World = DefaultWorld());
+	/// The key kept in `File`; none there: a new random one, written there
+	/// (its folder made). Unset, with `Why`, when the file does not read or
+	/// cannot be written (the key is never replaced on its own).
+	static std::optional<ac::net::PilotKey> LoadPilotKey(const FString& File, FString* Why = nullptr);
+	/// Deletes the save `File`, and its `-wal` and `-shm` files when there,
+	/// each by its full name. False, with `Why`, when one is still there.
+	/// Only with no server on it (`Stop` first).
+	static bool DeleteSave(const FString& File, FString* Why = nullptr);
+
 	/// Starts the server on the world file and connects to it. `Now`:
 	/// seconds on any steady clock (the same one `Tick` gets). False
 	/// (`Failed`, with the message) when it does not start.
@@ -140,6 +166,8 @@ public:
 	/// The pilot's key sent in the Join (unset: a new random one at each
 	/// start, a new pilot).
 	std::optional<ac::net::PilotKey> PilotKey;
+	/// The world's save, passed as `--save` (empty: nothing kept).
+	FString SavePath;
 
 	/// The unit the pilot wants to drive: sends a take (or, with none, a
 	/// hand back) once. The pilot pawn dives in when the mirror says the
@@ -207,8 +235,11 @@ public:
 	/// The server's last refusal of a flight (empty: none since the last ask).
 	const FString& FlightRefusal() const { return LastFlightRefusal; }
 
-private:
+	/// Failed, with `Why` for the banner (the server stopped). Also before a
+	/// `Start` the game could not make (no pilot key).
 	void Fail(const FString& Why);
+
+private:
 	void Connect(double Now);
 	void SendInputs(double Now);
 	void Blend(double Now);

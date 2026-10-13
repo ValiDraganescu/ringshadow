@@ -40,7 +40,8 @@ autocraft-server --world <file>
 exit 2 and its problems on stderr. `--save` (a world only) keeps it in a SQLite file: loaded before
 the first tick, the changed rows written every 5 s and everything on stop (SIGTERM, SIGINT, the
 parent gone), so a `kill -9` loses at most 5 s. A file that is not a database, is held by another
-server, has a newer schema or is another world's stops the server with exit 1, the file untouched.
+server, has a newer schema or is another world's stops the server with exit 1, the file untouched,
+after printing `FAILED save <why>` on its standard output (the game shows it, `net::LocalServer::error`).
 Without `--save` nothing is kept.
 
 A connection is seated by its Join (the pilot's 128-bit key, `net::Client::join`): no Welcome

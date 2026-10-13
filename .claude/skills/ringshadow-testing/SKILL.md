@@ -81,7 +81,7 @@ grep -E "Test Completed|Error:|Fail" LOGPATH
 
 ## Flow tests
 
-`-AcFlowTest=STEPS` (`unreal/Source/Autocraft/AcGameFlow.cpp`) steps through the real menus and saves, then quits. Steps: `save`, `resume`, `import`, `autosave`, `fog`, `newgame`, `victory`, `menu`; the MMORPG test mode through the real pilot pawn and world map (`AcMmoFlowTest.cpp`, the server built first): `mmocross`, `mmofly`, `mmohandback`.
+`-AcFlowTest=STEPS` (`unreal/Source/Autocraft/AcGameFlow.cpp`) steps through the real menus and saves, then quits. Steps: `save`, `resume`, `import`, `autosave`, `fog`, `newgame`, `victory`, `menu`; the MMORPG test mode through the real pilot pawn and world map (`AcMmoFlowTest.cpp`, the server built first): `mmocross`, `mmofly`, `mmohandback`, `mmoresume` (the save and the pilot key: a Citadel kept across leaving the mode, then NEW WORLD; its files in `-AcSaveDir`'s `mmo` folder, never the player's).
 
 ```sh
 S=SCRATCHPAD/flow; mkdir -p $S

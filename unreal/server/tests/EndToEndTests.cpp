@@ -529,3 +529,23 @@ TEST(e2e_save_corrupt_or_held_file_stops_the_server_untouched) {
     auto store = WorldStore::open(held, "first", &why);
     EXPECT_TRUE(store != nullptr && store->load(&why).has_value());
 }
+
+TEST(e2e_local_server_says_why_a_save_did_not_open) {
+    // As the game starts it (net::LocalServer): the server's reason, read
+    // from its FAILED line, for the game's banner.
+    const std::string bad = freshSave("local-corrupt");
+    if (FILE* f = std::fopen(bad.c_str(), "wb")) {
+        std::fputs("not a database\n", f);
+        std::fclose(f);
+    }
+    net::LocalServer server;
+    ASSERT_TRUE(server.start(kProgram, {"--world", "worlds/first.json", "--save", bad, "--log", logPath("local-corrupt")}, kToken));
+    const double end = clockNow() + 10;
+    while (server.poll() == net::LocalServer::State::starting && clockNow() < end)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(server.state() == net::LocalServer::State::exited);
+    EXPECT_EQ(server.exitCode(), 1);
+    std::printf("  the reason: %s\n", server.error().c_str());
+    EXPECT_TRUE(server.error().rfind("save ", 0) == 0);
+    EXPECT_TRUE(server.error().find("exited with code") == std::string::npos);
+}

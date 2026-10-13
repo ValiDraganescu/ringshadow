@@ -14,6 +14,7 @@ bool LocalServer::start(const std::string&, const std::vector<std::string>&, con
 LocalServer::State LocalServer::poll() { return state_; }
 bool LocalServer::stop(double) { return true; }
 void LocalServer::exited(int) {}
+void LocalServer::readOut() {}
 void LocalServer::closePipes() {}
 
 } // namespace ac::net
@@ -139,10 +140,9 @@ void LocalServer::closePipes() {
     out_ = -1;
 }
 
-LocalServer::State LocalServer::poll() {
-    if (state_ != State::starting && state_ != State::running) return state_;
-    // What it printed: the port line, then nothing it needs read, but the
-    // pipe is kept empty so it never blocks on it.
+void LocalServer::readOut() {
+    // What it printed: the port line (or why it did not start), then nothing
+    // it needs read, but the pipe is kept empty so it never blocks on it.
     char buffer[256];
     for (;;) {
         if (out_ < 0) break;
@@ -157,13 +157,24 @@ LocalServer::State LocalServer::poll() {
             if (state_ == State::starting && std::sscanf(line_.c_str(), "PORT %u", &port) == 1 && port > 0 && port < 65536) {
                 port_ = uint16_t(port);
                 state_ = State::running;
+            } else if (line_.rfind("FAILED ", 0) == 0) {
+                error_ = line_.substr(7);
             }
             line_.clear();
         }
     }
+}
+
+LocalServer::State LocalServer::poll() {
+    if (state_ != State::starting && state_ != State::running) return state_;
+    readOut();
     int status = 0;
     const pid_t r = waitpid(pid_, &status, WNOHANG);
-    if (r == pid_) exited(status);
+    if (r == pid_) {
+        // What it printed before it ended (its reason) is in the pipe now.
+        readOut();
+        exited(status);
+    }
     else if (r < 0 && errno == ECHILD && kill(pid_, 0) != 0) {
         // Reaped elsewhere (SIGCHLD ignored): gone, how is not known.
         error_ = error_.empty() ? "the server is gone" : error_;

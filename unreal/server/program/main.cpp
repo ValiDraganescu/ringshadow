@@ -9,7 +9,8 @@
 //
 // Reads the one-time token as the first line of its standard input, binds,
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
-// SIGTERM or SIGINT, or until the parent process is gone. Logs to
+// SIGTERM or SIGINT, or until the parent process is gone. A save that will
+// not open prints `FAILED save <why>` there instead and exits 1. Logs to
 // ~/Library/Logs/Autocraft/server.log unless told otherwise.
 
 #include "Server.h"
@@ -150,6 +151,9 @@ int main(int argc, char** argv) {
         if (!store || !saved) {
             logLine("start failed: save " + why);
             std::fprintf(stderr, "autocraft-server: save %s\n", why.c_str());
+            // The game reads it (net::LocalServer::error) for its banner.
+            std::printf("FAILED save %s\n", why.c_str());
+            std::fflush(stdout);
             return 1;
         }
     }

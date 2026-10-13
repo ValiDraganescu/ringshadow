@@ -11,6 +11,15 @@
 //   mmofly    M's world map, Cold Fork's pad picked and FLY pressed, landing
 //   mmohandback  Esc (a hand back) then a take again: the pawn never dives
 //             back in on an old snapshot, nor drops a unit just taken
+//   mmoresume  a world that lasts (docs/mmorpg-m3.md S4): the home screen's
+//             MMORPG NEW WORLD (TEST), asked and confirmed; a Citadel built;
+//             the mode left and MMORPG (TEST) again: the Citadel, the wallet,
+//             the same pilot key, the same Prospector on the same spot; then
+//             a new world: no Citadel, 400 ore, at the start pad, same key
+//
+// Each step but mmoresume's resume starts a new world (the start pad). The
+// pilot key and the save are the test's own (`FAcMmoClient::Directory`:
+// -AcMmoDir, or -AcSaveDir's `mmo` folder), never the player's.
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
 //   ... -game -RenderOffscreen ... -AcFlowTest=mmocross,mmofly
@@ -27,6 +36,9 @@
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 
+#include "Rules.h"
+#include "Simulation.h"
+
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -41,6 +53,40 @@ namespace
 	constexpr double SeatSeconds = 20;
 	constexpr double TravelSeconds = 60;
 	constexpr double ArriveSeconds = 8;
+
+	const ac::Structure* CitadelIn(const ac::GameState& S)
+	{
+		for (const ac::Structure& B : S.structures)
+		{
+			if (B.kind == ac::StructureKind::citadel && B.owner == ac::Pilot::player) return &B;
+		}
+		return nullptr;
+	}
+
+	FString KeyOf(const FAcMmoClient* Mmo)
+	{
+		const ac::net::Client* Net = Mmo ? Mmo->Connection() : nullptr;
+		return Net && Net->pilotKey() ? Utf(ac::net::pilotKeyHex(*Net->pilotKey())) : FString();
+	}
+}
+
+bool UAcGameFlowSubsystem::MmoBuildCitadel()
+{
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
+	const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+	if (!U) return false;
+	// Where one fits round the Prospector, as the ghost finds it.
+	const ac::Simulation& S = M->simulation();
+	const double Reach = ac::Rules::radius(ac::StructureKind::citadel) + 2.2;
+	for (int32 K = 0; K < 16; ++K)
+	{
+		const double H = K * 2.0 * PI / 16;
+		const std::optional<ac::Vec2> P = S.snap(ac::StructureKind::citadel, U->position + ac::Vec2(std::cos(H), std::sin(H)) * Reach);
+		if (P && !S.placementRefusal(ac::StructureKind::citadel, *P)) return Mmo->Build(ac::StructureKind::citadel, *P);
+	}
+	return false;
 }
 
 void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
@@ -62,9 +108,10 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		NextStep();
 	};
 	const bool bHand = Step == TEXT("mmohandback");
-	if (Step != TEXT("mmocross") && Step != TEXT("mmofly") && !bHand)
+	const bool bResume = Step == TEXT("mmoresume");
+	if (Step != TEXT("mmocross") && Step != TEXT("mmofly") && !bHand && !bResume)
 	{
-		Check(false, FString::Printf(TEXT("no MMORPG step %s (mmocross, mmofly, mmohandback)"), *Step));
+		Check(false, FString::Printf(TEXT("no MMORPG step %s (mmocross, mmofly, mmohandback, mmoresume)"), *Step));
 		NextStep();
 		return;
 	}
@@ -80,6 +127,127 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		if (!U || !Pilot || !Pilot->Camera()) return 1e9;
 		return FVector::Dist2D(Pilot->Camera()->GetComponentLocation(), AcSpace::ToWorld(U->position)) / AcSpace::ToCm(1.0);
 	};
+
+	if (bResume)
+	{
+		const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
+		const ac::GameState* S = M ? &M->simulation().state : nullptr;
+		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+		// Seated, the region's first snapshots in (the wallet and the buildings).
+		auto Ready = [&] { return Seated() && Mmo->Here() && U && S->players.size() == 1 && Since() > 1.0; };
+		auto Waited = [&](const TCHAR* What) {
+			if (Since() <= SeatSeconds) return false;
+			Check(false, FString::Printf(TEXT("%s within %.0f s (%s)"), What, SeatSeconds, Mmo ? *Mmo->Message() : TEXT("no client")));
+			Finish();
+			return true;
+		};
+		auto PickOnHome = [&](const EAcMenuAction Action) {
+			return OpenMenu(EAcMenuMode::Home) && Menu && Menu->Highlight(Action);
+		};
+		switch (T.Phase)
+		{
+		case 0:
+		{
+			if (Sim && Sim->IsMmo()) StopMmo();
+			// The home screen's MMORPG NEW WORLD (TEST): asked first, BACK
+			// leaves it be; asked again and confirmed, the mode starts.
+			Check(PickOnHome(EAcMenuAction::MmoNewWorld), TEXT("the home screen has MMORPG NEW WORLD (TEST)"));
+			if (!Menu)
+			{
+				Finish();
+				return;
+			}
+			Menu->PickHighlighted();
+			Check(Menu->ConfirmingNewWorld() && !Sim->IsMmo(), TEXT("NEW WORLD asks first"));
+			Menu->PickHighlighted();
+			Check(Menu && !Menu->ConfirmingNewWorld() && !Sim->IsMmo(), TEXT("BACK (the default) starts nothing"));
+			Menu->PickHighlighted();
+			Check(Menu->Highlight(EAcMenuAction::MmoNewWorld), TEXT("DELETE AND START OVER on the page"));
+			// (The pick closes the menu: held while it runs.)
+			const TSharedPtr<SAcMenu> Held = Menu;
+			Held->PickHighlighted();
+			Check(Sim->IsMmo() && !Menu, TEXT("confirmed: the mode starts, the menu closed"));
+			Advance();
+			return;
+		}
+		case 1:
+			if (Ready())
+			{
+				Check(Utf(Mmo->Here()->id) == TEXT("start") && !CitadelIn(*S) && S->players[0].ore == 400,
+					FString::Printf(TEXT("a new world: in %s, %lld ore, no Citadel"), *Utf(Mmo->Here()->id), (long long)S->players[0].ore));
+				MmoLeft = FMmoLeft();
+				MmoLeft.Key = KeyOf(Mmo);
+				Check(MmoLeft.Key.Len() == 32, FString::Printf(TEXT("joined as pilot %s"), *MmoLeft.Key.Left(8)));
+				Check(MmoBuildCitadel(), TEXT("a Citadel asked for by the Prospector"));
+				Advance();
+			}
+			else Waited(TEXT("seated"));
+			return;
+		case 2:
+			// Its scaffold and the paid wallet; then a moment, and leave.
+			if (const ac::Structure* C = S ? CitadelIn(*S) : nullptr; C && S->players[0].ore == 0 && U)
+			{
+				if (MmoLeft.Citadel < 0) T.PhaseAt = Now;
+				MmoLeft.Citadel = C->id;
+				MmoLeft.CitadelAt = FVector2D(C->position.x, C->position.y);
+				MmoLeft.Ore = S->players[0].ore;
+				MmoLeft.Unit = U->id;
+				MmoLeft.UnitAt = FVector2D(U->position.x, U->position.y);
+				MmoLeft.Region = Utf(Mmo->Here()->id);
+				if (Since() < 1.0) return;
+				Check(true, FString::Printf(TEXT("Citadel #%lld at %.1f,%.1f, %lld ore, Prospector #%lld at %.2f,%.2f in %s"), (long long)MmoLeft.Citadel,
+					MmoLeft.CitadelAt.X, MmoLeft.CitadelAt.Y, (long long)MmoLeft.Ore, (long long)MmoLeft.Unit, MmoLeft.UnitAt.X, MmoLeft.UnitAt.Y,
+					*MmoLeft.Region));
+				for (const FString& Refused : Mmo->TakeBuildRefusals()) Check(false, FString::Printf(TEXT("built, not refused: %s"), *Refused));
+				// QUIT TO HOME: the mode left (the server saves on its stop),
+				// then MMORPG (TEST) again.
+				StopMmo();
+				Check(!Sim->IsMmo(), TEXT("left the mode"));
+				Check(PickOnHome(EAcMenuAction::Mmo), TEXT("the home screen has MMORPG (TEST)"));
+				if (const TSharedPtr<SAcMenu> Held = Menu) Held->PickHighlighted();
+				Check(Sim->IsMmo(), TEXT("MMORPG (TEST) resumes"));
+				Advance();
+			}
+			else Waited(TEXT("the Citadel shown"));
+			return;
+		case 3:
+			if (Ready() && CitadelIn(*S))
+			{
+				const ac::Structure* C = CitadelIn(*S);
+				Check(KeyOf(Mmo) == MmoLeft.Key, FString::Printf(TEXT("the same pilot %s"), *KeyOf(Mmo).Left(8)));
+				Check(Utf(Mmo->Here()->id) == MmoLeft.Region, FString::Printf(TEXT("back in %s"), *Utf(Mmo->Here()->id)));
+				Check(C->id == MmoLeft.Citadel && FVector2D::Distance(FVector2D(C->position.x, C->position.y), MmoLeft.CitadelAt) < 0.01,
+					FString::Printf(TEXT("the Citadel #%lld back at %.1f,%.1f"), (long long)C->id, C->position.x, C->position.y));
+				Check(S->players[0].ore == MmoLeft.Ore, FString::Printf(TEXT("the wallet back: %lld ore"), (long long)S->players[0].ore));
+				const double Off = FVector2D::Distance(FVector2D(U->position.x, U->position.y), MmoLeft.UnitAt);
+				Check(U->id == MmoLeft.Unit && Off < 0.05, FString::Printf(TEXT("driving the same Prospector #%lld on the same spot (%.3f cells off)"),
+					(long long)U->id, Off));
+				Check(Mmo->TakesSent() == 0, TEXT("seated by the server"));
+				// Started over: the same pilot, new.
+				StopMmo();
+				StartMmo(true);
+				Advance();
+			}
+			else Waited(TEXT("seated with the Citadel back"));
+			return;
+		case 4:
+			if (Ready())
+			{
+				const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
+				Check(!CitadelIn(*S), TEXT("NEW WORLD: no Citadel"));
+				Check(S->players[0].ore == 400, FString::Printf(TEXT("NEW WORLD: %lld ore"), (long long)S->players[0].ore));
+				Check(Utf(Mmo->Here()->id) == TEXT("start") && Near && Near->Distance <= FAcMmoClient::PadReach,
+					FString::Printf(TEXT("NEW WORLD: at the start pad (%s, %.1f cells)"), *Utf(Mmo->Here()->id), Near ? Near->Distance : -1.0));
+				Check(KeyOf(Mmo) == MmoLeft.Key, TEXT("NEW WORLD: the same pilot key"));
+				Finish();
+			}
+			else Waited(TEXT("seated in the new world"));
+			return;
+		default:
+			Finish();
+			return;
+		}
+	}
 
 	if (bHand && T.Phase >= 2)
 	{
@@ -142,7 +310,8 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 	{
 	case 0:
 		if (Sim && Sim->IsMmo()) StopMmo();
-		StartMmo();
+		// From the start pad: a new world.
+		StartMmo(true);
 		Advance();
 		return;
 	case 1:

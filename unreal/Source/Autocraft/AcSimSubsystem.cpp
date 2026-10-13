@@ -801,16 +801,34 @@ void UAcSimSubsystem::LogEvents(const std::vector<ac::GameEvent>& Events)
 
 // MARK: - The MMORPG test mode
 
-void UAcSimSubsystem::StartMmo()
+void UAcSimSubsystem::StartMmo(const bool bNewWorld)
 {
 	if (!Sim) return;
+	// (The server saves on its stop: the save is free before a new world.)
 	if (Mmo) StopMmo();
-	UE_LOG(LogAutocraft, Log, TEXT("mmo: the MMORPG test on the world %s (the window game waits)"), *FAcMmoClient::DefaultWorld());
+	const FString World = FAcMmoClient::DefaultWorld();
+	const FString Save = FAcMmoClient::SaveFile(World);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: the MMORPG test on the world %s, %s (the window game waits)"), *World,
+		bNewWorld ? TEXT("a new world") : TEXT("resumed"));
 	// The window game as it stands goes to disk first; it waits unstepped.
 	if (!bFixture && !bNoSave) SaveSession();
 	Mmo = std::make_unique<FAcMmoClient>();
 	MmoGeneration = 0;
-	Mmo->Start(FPlatformTime::Seconds());
+	FString Why;
+	const std::optional<ac::net::PilotKey> Key = FAcMmoClient::LoadPilotKey(FAcMmoClient::PilotKeyFile(), &Why);
+	if (!Key)
+	{
+		Mmo->Fail(Why);
+		return;
+	}
+	if (bNewWorld && !FAcMmoClient::DeleteSave(Save, &Why))
+	{
+		Mmo->Fail(Why);
+		return;
+	}
+	Mmo->PilotKey = Key;
+	Mmo->SavePath = Save;
+	Mmo->Start(FPlatformTime::Seconds(), World);
 }
 
 void UAcSimSubsystem::StopMmo()
