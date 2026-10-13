@@ -3,6 +3,7 @@
 #include "AcBeacons.h"
 #include "AcCommandCard.h"
 #include "AcCommands.h"
+#include "AcGameFlow.h"
 #include "AcHUD.h"
 #include "AcLog.h"
 #include "AcMinimap.h"
@@ -391,6 +392,13 @@ void UAcCommandMapSubsystem::PollKeys()
 	if (Mods.IsCommandDown() || Mods.IsControlDown()) return;
 	if (PC->WasInputKeyJustPressed(EKeys::M))
 	{
+		// The MMORPG test: M is the world map (no command map there).
+		const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+		if (UAcGameFlowSubsystem* Flow = UAcGameFlowSubsystem::Get(this); Sim && Sim->IsMmo() && Flow)
+		{
+			Flow->ToggleWorldMap();
+			return;
+		}
 		Toggle();
 		return;
 	}

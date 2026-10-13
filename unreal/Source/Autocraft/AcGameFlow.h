@@ -18,10 +18,13 @@
 //   `AcSaves::Directory()`. The last map played is remembered
 //   (`UAcSettings::LastMap`) and opened next time.
 // - The MMORPG test (the home screen's MMORPG (TEST), -AcMmo; docs/mmorpg-m1.md
-//   T5): `UAcSimSubsystem::StartMmo` on the remembered map; QUIT TO HOME
+//   T5): `UAcSimSubsystem::StartMmo` on the first world; QUIT TO HOME
 //   leaves it (the local server stops). New game, restart, import, the
 //   toggles and save say no there (`SAcMmoBanner`, which also shows where
-//   the local server is and why it failed).
+//   the local server is and why it failed, and the region the pilot is in
+//   or flies to). M opens the world map (`SAcWorldMap`, docs/mmorpg-m2.md
+//   R3) in place of the command map: a pad picked there and FLY ask the
+//   server for the flight.
 // - Import a Swift game: the dialog's button or `ac.Import [PATH]` (default
 //   the Swift game's `window.json`), `-AcImport=PATH` at launch.
 // - Toggles: `ac.AI [0|1]` (Swift's Game ▸ AI Commander), `ac.SessionFog
@@ -47,6 +50,7 @@
 #include "SAcMenu.h"
 #include "SAcMmoBanner.h"
 #include "SAcNewGame.h"
+#include "SAcWorldMap.h"
 #include "Session.h"
 
 #include <optional>
@@ -99,8 +103,17 @@ public:
 	/// (no selection, command map shut, not driving, the console shut).
 	bool WantsPauseOnEscape() const;
 
-	/// The MMORPG test mode on the remembered map (the home screen's item).
+	/// The MMORPG test mode on the first world (the home screen's item).
 	void StartMmo();
+	/// The MMORPG world map (M in the mode). False outside the mode or
+	/// without a HUD.
+	bool OpenWorldMap();
+	void CloseWorldMap();
+	void ToggleWorldMap();
+	TSharedPtr<SAcWorldMap> WorldMapWidget() const { return WorldMap; }
+	/// The world map's FLY: asks the server; the map closes when asked, or
+	/// says why not.
+	void FlyFromMap(const FString& Region, const FString& Pad);
 	/// Back to the window game: the local server stops.
 	void StopMmo();
 
@@ -114,6 +127,9 @@ private:
 	void TickMmo();
 	void OnRefused(const FString& Why);
 	TSharedPtr<SAcMmoBanner> MmoBanner;
+	TSharedPtr<SAcWorldMap> WorldMap;
+	/// The world map's state from the client, each frame.
+	void TickWorldMap();
 	FDelegateHandle RefusedHandle;
 	/// -AcMmo: start the mode once the game is up.
 	bool bMmoWhenReady = false;

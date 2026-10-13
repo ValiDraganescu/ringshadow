@@ -2,8 +2,9 @@
 // (AcGameFlow): where the local server is ("Starting the local server…"),
 // why it failed (red, with the server log's path; it stays), and the short
 // refusals of what is off in this mode ("Orders are off in the MMORPG
-// test"), each for a few seconds; under them, small, the round trip. Dark glass in the HUD's chrome, hit-test
-// invisible.
+// test"), each for a few seconds; under them, small, the round trip. On top,
+// small, where the pilot is: the region's name (in amber, "Flying to …" while
+// in flight). Dark glass in the HUD's chrome, hit-test invisible.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -28,6 +29,8 @@ public:
 	/// The connection's small line under the rest (the round trip, the lag
 	/// set); empty: none.
 	void SetStats(const FString& Text);
+	/// Where the pilot is (empty: none); `bFlying` draws it amber.
+	void SetPlace(const FString& Text, bool bFlying);
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(0, 0); }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -42,5 +45,7 @@ private:
 	FString Status;
 	bool bStatusError = false;
 	FString Stats;
+	FString Place;
+	bool bPlaceFlying = false;
 	TArray<FNote> Notes;
 };

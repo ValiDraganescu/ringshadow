@@ -1,0 +1,120 @@
+// `SAcWorldMap`: the MMORPG world map (M in the MMORPG test mode, in place
+// of the command map; docs/mmorpg-m2.md R3, docs/worlds.md). Drawn by hand
+// in the HUD's chrome, as `SAcNewGame`:
+//
+//   WORLD MAP                                  "You are in Prospect Landing."
+//   [the world's grid, rows north to south: each region a tile with its
+//    name, its style and size, its pads (a dot where the pad stands, its
+//    name a button); the pilot's region ringed cyan, YOU ARE HERE; in
+//    flight the destination ringed amber]
+//   the state: "At pad landing: pick a pad to fly to." / "Not at a pad:
+//   landing is 23 cells away. Drive onto a pad to fly." / "Flying to …" /
+//   the last refusal
+//   [CLOSE] [FLY]
+//
+// A click on a pad picks it, FLY asks for the flight (`OnFly`; the owner
+// says why not with `SetRefusal`). Esc, M and Return come from the flow's
+// key processor (AcGameFlow). The game goes on behind (the server does not
+// wait); the pilot's unit stands while it is open.
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Widgets/SLeafWidget.h"
+
+#include "NetProtocol.h"
+
+#include <optional>
+
+/// What the world map shows (from `FAcMmoClient`).
+struct FAcWorldMapInfo
+{
+	/// The world map (none yet: "Waiting for the world…").
+	std::optional<ac::net::WorldMessage> World;
+	/// The pad of the pilot's region nearest its unit, and how far (cells).
+	FString NearPad;
+	std::optional<double> NearDistance;
+	/// Within this of a pad's centre a flight can leave.
+	double PadReach = 4.0;
+	/// In flight to this region (empty: on the ground).
+	FString FlyingTo;
+};
+
+DECLARE_DELEGATE_TwoParams(FAcOnWorldFly, const FString& /*RegionId*/, const FString& /*Pad*/);
+
+class AUTOCRAFT_API SAcWorldMap : public SLeafWidget
+{
+public:
+	SLATE_BEGIN_ARGS(SAcWorldMap) {}
+		SLATE_EVENT(FAcOnWorldFly, OnFly)
+		SLATE_EVENT(FSimpleDelegate, OnClose)
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& InArgs);
+
+	/// What it shows now (each frame from the flow; repaints on a change).
+	void SetInfo(const FAcWorldMapInfo& Info);
+	/// Why the flight was not asked for, or the server's refusal (empty: none).
+	void SetRefusal(const FString& Why);
+
+	/// The pad picked (none: nothing picked yet).
+	struct FPick
+	{
+		int32 Region = INDEX_NONE;
+		int32 Pad = INDEX_NONE;
+	};
+	const FPick& Picked() const { return Pick; }
+	/// Pick a destination by region id and pad name (scripts, tests). False:
+	/// no such pad.
+	bool PickPad(const FString& RegionId, const FString& Pad);
+	/// Presses FLY and CLOSE as the buttons do.
+	void Fly();
+	void Close();
+
+	// SWidget
+	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
+		FSlateWindowElementList& Out, int32 Layer, const FWidgetStyle& Style, bool bParentEnabled) const override;
+	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(100, 100); }
+	virtual FReply OnMouseButtonDown(const FGeometry& Geometry, const FPointerEvent& Event) override;
+	virtual FReply OnMouseButtonUp(const FGeometry& Geometry, const FPointerEvent& Event) override;
+	virtual FReply OnMouseMove(const FGeometry& Geometry, const FPointerEvent& Event) override;
+	virtual FReply OnMouseWheel(const FGeometry& Geometry, const FPointerEvent& Event) override { return FReply::Handled(); }
+	virtual FReply OnMouseButtonDoubleClick(const FGeometry& Geometry, const FPointerEvent& Event) override { return FReply::Handled(); }
+	virtual void OnMouseLeave(const FPointerEvent& Event) override;
+	virtual bool SupportsKeyboardFocus() const override { return true; }
+	virtual FCursorReply OnCursorQuery(const FGeometry& Geometry, const FPointerEvent& Event) const override;
+
+private:
+	/// Something clickable: a pad or a button.
+	struct FTarget
+	{
+		FBox2f Box;
+		/// 1 a pad, 10 fly, 11 close.
+		int32 Row = 0;
+		int32 Region = INDEX_NONE;
+		int32 Pad = INDEX_NONE;
+		FString Label;
+	};
+
+	void Layout(FVector2f ViewSize) const;
+	int32 TargetAt(FVector2f LocalPoint) const;
+	/// The state line and its colour.
+	FString StateLine(FLinearColor& Color) const;
+	bool AtPad() const;
+
+	FAcWorldMapInfo Info;
+	FString Refusal;
+	FPick Pick;
+	FAcOnWorldFly OnFlyDelegate;
+	FSimpleDelegate OnCloseDelegate;
+
+	mutable TArray<FTarget> Targets;
+	/// Each region's tile (by index in the world's regions), panel points.
+	mutable TArray<FBox2f> Tiles;
+	mutable FBox2f GridBox;
+	mutable float PanelScale = 1.0f;
+	mutable FVector2f PanelOrigin = FVector2f::ZeroVector;
+	mutable FVector2f PanelSize = FVector2f::ZeroVector;
+
+	int32 Hovered = INDEX_NONE;
+	int32 Pressed = INDEX_NONE;
+};

@@ -40,6 +40,8 @@ namespace
 	constexpr int32 NewGameLayer = 80;
 	/// The home screen and pause menu: under the new-game dialog it opens.
 	constexpr int32 MenuLayer = 75;
+	/// The MMORPG world map: over the command map, under the menu.
+	constexpr int32 WorldMapLayer = 70;
 
 	FString Text(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 
@@ -62,6 +64,13 @@ namespace
 			UAcGameFlowSubsystem* F = Flow.Get();
 			if (!F || Event.IsRepeat()) return false;
 			const FKey K = Event.GetKey();
+			if (TSharedPtr<SAcWorldMap> W = F->WorldMapWidget())
+			{
+				if (K == EKeys::Escape || (K == EKeys::M && !Event.IsCommandDown())) { F->CloseWorldMap(); return true; }
+				if (K == EKeys::Enter) { W->Fly(); return true; }
+				// The game's own keys wait while the map is up (⌘Q still quits).
+				return !Event.IsCommandDown();
+			}
 			if (TSharedPtr<SAcNewGame> D = F->NewGameDialog())
 			{
 				if (K == EKeys::Enter) { D->Start(); return true; }
@@ -297,6 +306,7 @@ void UAcGameFlowSubsystem::Deinitialize()
 	Keys.Reset();
 	CloseNewGame();
 	CloseMenu();
+	CloseWorldMap();
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
 	{
 		Sim->OnGameStarted.Remove(StartedHandle);
@@ -682,9 +692,8 @@ void UAcGameFlowSubsystem::StartMmo()
 		bPausedBefore = false;
 		CloseMenu();
 	}
-	const FAcNewGameChoice Choice = CurrentChoice();
-	UE_LOG(LogAutocraft, Log, TEXT("menu: MMORPG (TEST) on %s"), *AcSaves::Title(Choice.Map));
-	Sim->StartMmo(Choice.Map);
+	UE_LOG(LogAutocraft, Log, TEXT("menu: MMORPG (TEST) on the first world"));
+	Sim->StartMmo();
 	TickMmo();
 }
 
@@ -692,6 +701,7 @@ void UAcGameFlowSubsystem::StopMmo()
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim || !Sim->IsMmo()) return;
+	CloseWorldMap();
 	LeaveDriving();
 	Sim->StopMmo();
 	TickMmo();
@@ -713,11 +723,23 @@ void UAcGameFlowSubsystem::TickMmo()
 	{
 		Root->AddLayer(MenuLayer + 1)[SAssignNew(MmoBanner, SAcMmoBanner)];
 	}
+	TickWorldMap();
 	if (!MmoBanner) return;
 	MmoBanner->Update(FPlatformTime::Seconds());
 	if (Mmo)
 	{
 		MmoBanner->SetStatus(Mmo->Message(), Mmo->Phase() == FAcMmoClient::EPhase::Failed);
+		// Where the pilot is: the region, or the flight.
+		FString Place;
+		if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo())
+		{
+			Place = FString::Printf(TEXT("Flying to %s…"), *Text(To->name));
+		}
+		else if (const ac::net::WorldMessage::Region* Here = Mmo->Here(); Here && Mmo->Phase() == FAcMmoClient::EPhase::Playing)
+		{
+			Place = FString::Printf(TEXT("%s  ·  %s"), *Text(Here->name), *Text(ac::title(Here->style)));
+		}
+		MmoBanner->SetPlace(Place, Mmo->FlyingTo() != nullptr);
 		// Small: the round trip, and the lag set on it (ac.MmoLag).
 		FString Stats;
 		if (Mmo->Phase() == FAcMmoClient::EPhase::Playing)
@@ -738,6 +760,91 @@ void UAcGameFlowSubsystem::TickMmo()
 		if (Root) Root->RemoveLayer(MmoBanner.ToSharedRef());
 		MmoBanner.Reset();
 	}
+}
+
+// MARK: - The MMORPG world map
+
+bool UAcGameFlowSubsystem::OpenWorldMap()
+{
+	if (WorldMap) return true;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsMmo() || Menu || Dialog) return false;
+	const AAcHUD* Hud = AAcHUD::Get(this);
+	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
+	if (!Root) return false;
+	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
+	Root->AddLayer(WorldMapLayer)
+	[
+		SAssignNew(WorldMap, SAcWorldMap)
+		.OnFly_Lambda([Weak](const FString& Region, const FString& Pad) { if (Weak.IsValid()) Weak->FlyFromMap(Region, Pad); })
+		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseWorldMap(); })
+	];
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(WorldMap, EFocusCause::SetDirectly);
+	// The server goes on (nothing pauses); the world takes no clicks, the
+	// pilot's unit stands and the pointer is the map's.
+	SetBlocked(true);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(true);
+	TickWorldMap();
+	UE_LOG(LogAutocraft, Log, TEXT("world map: open"));
+	return true;
+}
+
+void UAcGameFlowSubsystem::CloseWorldMap()
+{
+	if (!WorldMap) return;
+	if (const AAcHUD* Hud = AAcHUD::Get(this))
+	{
+		if (const TSharedPtr<SAcRoot> Root = Hud->Root()) Root->RemoveLayer(WorldMap.ToSharedRef());
+	}
+	WorldMap.Reset();
+	SetBlocked(false);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(false);
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetAllUserFocusToGameViewport();
+	UE_LOG(LogAutocraft, Log, TEXT("world map: closed"));
+}
+
+void UAcGameFlowSubsystem::ToggleWorldMap()
+{
+	if (WorldMap) CloseWorldMap();
+	else OpenWorldMap();
+}
+
+void UAcGameFlowSubsystem::FlyFromMap(const FString& Region, const FString& Pad)
+{
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo) return;
+	FString Why;
+	if (!Mmo->Fly(Region, Pad, &Why))
+	{
+		if (WorldMap) WorldMap->SetRefusal(Why);
+		return;
+	}
+	// Asked: the banner says "Flying to …" once the server lifts off.
+	CloseWorldMap();
+}
+
+void UAcGameFlowSubsystem::TickWorldMap()
+{
+	if (!WorldMap) return;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo)
+	{
+		CloseWorldMap();
+		return;
+	}
+	FAcWorldMapInfo Info;
+	if (const ac::net::WorldMessage* W = Mmo->World()) Info.World = *W;
+	if (const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad())
+	{
+		Info.NearPad = Near->Name;
+		Info.NearDistance = Near->Distance;
+	}
+	Info.PadReach = FAcMmoClient::PadReach;
+	if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo()) Info.FlyingTo = Text(To->name);
+	WorldMap->SetInfo(Info);
+	if (!Mmo->FlightRefusal().IsEmpty()) WorldMap->SetRefusal(Mmo->FlightRefusal());
 }
 
 // MARK: - -AcFlowTest

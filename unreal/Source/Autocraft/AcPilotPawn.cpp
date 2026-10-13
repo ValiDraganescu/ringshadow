@@ -233,9 +233,20 @@ void AAcPilotPawn::EndPlay(const EEndPlayReason::Type Reason)
 
 void AAcPilotPawn::OnGameStarted(UAcSimSubsystem& Sim)
 {
+	SkirtMap = nullptr;
+	// The MMORPG world: a new region (over an edge, or landed). The seat is
+	// kept: `SyncMmo` moves the view onto the unit once the new region's
+	// snapshot shows it.
+	if (const FAcMmoClient* Mmo = Sim.MmoClient(); Mmo && Driving() && Mmo->Travelling())
+	{
+		LastEye.Reset();
+		Chase.Reset();
+		Cross.Reset();
+		UE_LOG(LogAutocraft, Log, TEXT("pilot: into a new region, still seated"));
+		return;
+	}
 	// A new game (or the next one): whoever was driven is no more.
 	if (Driving()) Leave();
-	SkirtMap = nullptr;
 }
 
 void AAcPilotPawn::BindPointer()
@@ -335,7 +346,7 @@ void AAcPilotPawn::OnActStart(const FInputActionValue&)
 	if (!bCaptured && ScriptKind.IsEmpty() && PC && PC->IsInputKeyDown(EKeys::LeftMouseButton) &&
 		!PC->IsInputKeyDown(EKeys::E) && !PC->IsInputKeyDown(EKeys::SpaceBar))
 	{
-		if (!bPointing && Driving()) SetCapture(true);
+		if (!bPointing && !bScreenOpen && Driving()) SetCapture(true);
 		return;
 	}
 	Press(true);
@@ -377,7 +388,25 @@ void AAcPilotPawn::OnFreeEnd(const FInputActionValue&)
 {
 	if (!bPointing) return;
 	bPointing = false;
-	if (Driving()) SetCapture(true);
+	if (Driving() && !bScreenOpen) SetCapture(true);
+}
+
+void AAcPilotPawn::SetScreenOpen(const bool bOpen)
+{
+	if (bOpen == bScreenOpen) return;
+	bScreenOpen = bOpen;
+	if (bOpen)
+	{
+		// The unit stands while the screen is up; the pointer is the screen's.
+		MoveInput = FVector2D::ZeroVector;
+		bHold = false;
+		bAbilityHeld = false;
+		SetCapture(false);
+	}
+	else if (Driving() && !bPointing)
+	{
+		SetCapture(true);
+	}
 }
 
 // MARK: - Take over and leave
@@ -446,6 +475,8 @@ bool AAcPilotPawn::TakeOver(const int64 Id)
 		ShowSkirt(true);
 		Hooks(true);
 	}
+	// (Over to a unit in a new region: the skirt round its map.)
+	else ShowSkirt(true);
 	ApplyView();
 	// The eye on the unit now, not a frame late.
 	FAcFrame None;
@@ -930,7 +961,7 @@ void AAcPilotPawn::SyncMmo()
 		// The server gave the unit asked for: dive in (or over to it).
 		TakeOver(*Driven);
 	}
-	else if (Driving() && !Driven && Mmo->Wanted() == DrivenId)
+	else if (Driving() && !Driven && Mmo->Wanted() == DrivenId && !Mmo->Travelling())
 	{
 		// The server no longer has us driving it (it died, say).
 		UE_LOG(LogAutocraft, Log, TEXT("pilot: the server took #%lld back"), (long long)DrivenId);
@@ -947,6 +978,9 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	const std::optional<ac::Unit> Found = S.pilotUnit();
 	if (!Found || Found->id != DrivenId)
 	{
+		// The MMORPG world: in flight, or into a new region: the view holds
+		// where it was until the unit is driven again (`SyncMmo`).
+		if (const FAcMmoClient* Mmo = Sim->MmoClient(); Mmo && Mmo->Travelling()) return;
 		UE_LOG(LogAutocraft, Log, TEXT("pilot: the unit is gone"));
 		Leave();
 		return;

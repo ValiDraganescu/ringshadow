@@ -199,6 +199,10 @@ public:
 	void AbilityPress();
 	/// V: first or third person, kept for the next ride (needs E3).
 	void ToggleView();
+	/// A screen over the view (the MMORPG world map): the pointer is free and
+	/// the unit stands until it closes.
+	void SetScreenOpen(bool bOpen);
+	bool ScreenOpen() const { return bScreenOpen; }
 
 	/// The camera is still flying down into the unit (the dive): the unit
 	/// drawn, no cockpit.
@@ -344,6 +348,8 @@ private:
 	bool bLeaveWanted = false;
 	bool bCaptured = false;
 	bool bPointing = false;
+	/// `SetScreenOpen`.
+	bool bScreenOpen = false;
 	FVector2D MoveInput = FVector2D::ZeroVector;
 	TOptional<FCrosshair> Cross;
 	TOptional<FVector> LastEye;

@@ -793,16 +793,16 @@ void UAcSimSubsystem::LogEvents(const std::vector<ac::GameEvent>& Events)
 
 // MARK: - The MMORPG test mode
 
-void UAcSimSubsystem::StartMmo(const ac::MapChoice& Choice)
+void UAcSimSubsystem::StartMmo()
 {
 	if (!Sim) return;
 	if (Mmo) StopMmo();
-	UE_LOG(LogAutocraft, Log, TEXT("mmo: the MMORPG test on %s (the window game waits)"), *Text(Choice.name()));
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: the MMORPG test on the world %s (the window game waits)"), *FAcMmoClient::DefaultWorld());
 	// The window game as it stands goes to disk first; it waits unstepped.
 	if (!bFixture && !bNoSave) SaveSession();
 	Mmo = std::make_unique<FAcMmoClient>();
 	MmoGeneration = 0;
-	Mmo->Start(Choice, FPlatformTime::Seconds());
+	Mmo->Start(FPlatformTime::Seconds());
 }
 
 void UAcSimSubsystem::StopMmo()

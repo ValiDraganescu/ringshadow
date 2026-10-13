@@ -1,9 +1,13 @@
 // The MMORPG test mode's client (AcMmo.h) against the real local server, as
-// the game runs it: `autocraft-server` started as a child (build it first:
-// `make -C unreal/server`), the token, the port, the connection, the
-// Prospector taken on the Welcome, 2 s of forward input at 60 Hz, and the
-// mirror's Prospector where the server moved it. One isolated moment of a
-// few seconds, in real time; the server stops at the end. Run hidden:
+// the game runs it: `autocraft-server --world` on the first world started as
+// a child (build it first: `make -C unreal/server`), the token, the port, the
+// connection, the Prospector the server seats the pilot in at the start pad,
+// 2 s of forward input at 60 Hz, and the mirror's Prospector where the server
+// moved it. One isolated moment of a few seconds, in real time; the server
+// stops at the end. CrossEdgeEast drives the Prospector east over the start
+// region's edge and FlyToPad flies it from the start pad to Cold Fork's pad:
+// each checks the client's mirror is the new region's, driving it there
+// (about 30 s and 10 s). Run hidden:
 //   UnrealEditorBG.app/.../UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
 //     -ExecCmds="Automation RunTests Autocraft.Mmo; Quit" -TestExit="Automation Test Queue Empty" -abslog=PATH
 //     -AcMmoLag=150,20,5
@@ -74,8 +78,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcMmoDriveTest, "Autocraft.Mmo.DriveProspector
 bool FAcMmoDriveTest::RunTest(const FString&)
 {
 	FAcMmoClient Client;
-	const ac::MapChoice Map{ac::MapStyle::openField, ac::MapSize::small, 2};
-	if (!Client.Start(Map, FPlatformTime::Seconds()))
+	if (!Client.Start(FPlatformTime::Seconds()))
 	{
 		AddError(FString::Printf(TEXT("the local server did not start: %s"), *Client.Message()));
 		return false;
@@ -142,8 +145,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcMmoPredictTest, "Autocraft.Mmo.PredictUnderL
 bool FAcMmoPredictTest::RunTest(const FString&)
 {
 	FAcMmoClient Client;
-	const ac::MapChoice Map{ac::MapStyle::openField, ac::MapSize::small, 2};
-	if (!Client.Start(Map, FPlatformTime::Seconds()))
+	if (!Client.Start(FPlatformTime::Seconds()))
 	{
 		AddError(FString::Printf(TEXT("the local server did not start: %s"), *Client.Message()));
 		return false;
@@ -234,6 +236,153 @@ bool FAcMmoPredictTest::RunTest(const FString&)
 	TestTrue(TEXT("and so is the drawn unit"), DrawnGap < 0.02);
 	TestTrue(TEXT("still connected"), Client.Phase() == FAcMmoClient::EPhase::Playing);
 	Client.Stop();
+	return true;
+}
+
+namespace
+{
+	FString Utf(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
+
+	/// Started, and seated in the Prospector at the start pad.
+	bool StartSeated(FAutomationTestBase& Test, FAcMmoClient& Client)
+	{
+		if (!Client.Start(FPlatformTime::Seconds()))
+		{
+			Test.AddError(FString::Printf(TEXT("the local server did not start: %s"), *Client.Message()));
+			return false;
+		}
+		const bool bSeated = RunUntil(Client, [&] {
+			return Client.Phase() == FAcMmoClient::EPhase::Failed
+				|| (Client.Driven() && Client.Driven() == Client.Wanted() && Client.Here() && !Client.Travelling());
+		}, 15.0);
+		if (!bSeated || Client.Phase() == FAcMmoClient::EPhase::Failed)
+		{
+			Test.AddError(FString::Printf(TEXT("not seated: phase %d, %s"), (int32)Client.Phase(), *Client.Message()));
+			return false;
+		}
+		return true;
+	}
+
+	/// The client in `RegionId`, driving its Prospector there: the mirror,
+	/// the RegionChange and the world map all say so.
+	void CheckArrived(FAutomationTestBase& Test, FAcMmoClient& Client, const FString& RegionId, const FString& MapWas)
+	{
+		const ac::net::Mirror* M = Client.Mirror();
+		const ac::net::Client* Net = Client.Connection();
+		Test.TestTrue(TEXT("a mirror"), M != nullptr);
+		if (!M || !Net) return;
+		Test.TestTrue(TEXT("a RegionChange came"), Net->regionChange().has_value());
+		if (Net->regionChange()) Test.TestEqual(TEXT("into the region"), Utf(Net->regionChange()->regionId), RegionId);
+		Test.TestEqual(TEXT("the world map says so"), Client.Here() ? Utf(Client.Here()->id) : FString(), RegionId);
+		Test.TestNotEqual(TEXT("the mirror is the new region's map"), Utf(M->region().mapName), MapWas);
+		Test.TestFalse(TEXT("built from its region file"), M->region().regionFile.empty());
+		Test.TestTrue(TEXT("the mirror's map is the one described"), M->matches());
+		Test.TestEqual(TEXT("the snapshots are the new visit's"), (int64)ac::net::visitOf(M->game()), Client.Visit());
+		const std::optional<int64> Id = Client.Driven();
+		Test.TestTrue(TEXT("driving there"), Id.has_value() && Id == Client.Wanted());
+		const ac::Unit* U = Id ? M->unit(*Id) : nullptr;
+		Test.TestTrue(TEXT("its unit in the mirror"), U != nullptr);
+		if (!U) return;
+		Test.TestEqual(TEXT("a Prospector"), (int32)U->kind, (int32)ac::UnitKind::prospector);
+		Test.TestTrue(TEXT("the mirror's pilot drives it"), M->simulation().pilot && M->simulation().pilot->unit == *Id);
+		int32 Others = 0;
+		for (const ac::Unit& O : M->simulation().state.units) Others += O.id != *Id;
+		Test.TestEqual(TEXT("no other units (wild ground, none of the old region's)"), Others, 0);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcMmoCrossEdgeTest, "Autocraft.Mmo.CrossEdgeEast", Flags)
+bool FAcMmoCrossEdgeTest::RunTest(const FString&)
+{
+	FAcMmoClient Client;
+	ON_SCOPE_EXIT { Client.Stop(); };
+	if (!StartSeated(*this, Client)) return false;
+	TestEqual(TEXT("starts in the start region"), Utf(Client.Here()->id), FString(TEXT("start")));
+	const FString MapWas = Utf(Client.Mirror()->region().mapName);
+	const int64 VisitWas = Client.Visit();
+	const int64 GenerationWas = Client.Generation();
+	// East along the pad's row to the east edge's opening (z 39 to 57), the
+	// way the pilot pawn steers: into the mirror's pilot, each frame.
+	const bool bCrossed = RunUntil(Client, [&] {
+		if (Client.Phase() == FAcMmoClient::EPhase::Failed) return true;
+		if (Client.Visit() > VisitWas && !Client.Travelling()) return true;
+		ac::net::Mirror* M = Client.Mirror();
+		ac::Simulation* S = M ? &M->simulation() : nullptr;
+		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+		if (S && S->pilot && U)
+		{
+			const ac::GroundRect& B = S->map->bounds;
+			const ac::Vec2 To(B.maxX + 4, B.minZ + 48);
+			S->pilot->walk = ac::Vec2(1, 0);
+			S->pilot->heading = std::atan2(To.y - U->position.y, To.x - U->position.x);
+		}
+		return false;
+	}, 60.0);
+	if (!bCrossed || Client.Phase() == FAcMmoClient::EPhase::Failed)
+	{
+		const ac::net::Mirror* M = Client.Mirror();
+		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+		AddError(FString::Printf(TEXT("did not cross: phase %d, %s; visit %lld, unit at %.1f,%.1f"), (int32)Client.Phase(), *Client.Message(),
+			(long long)Client.Visit(), U ? U->position.x : 0.0, U ? U->position.y : 0.0));
+		return false;
+	}
+	// The World message may come a moment after the RegionChange.
+	RunUntil(Client, [&] { return Client.Here() && Utf(Client.Here()->id) == TEXT("tern-ridge"); }, 3.0);
+	CheckArrived(*this, Client, TEXT("tern-ridge"), MapWas);
+	TestEqual(TEXT("one region change"), Client.Visit(), VisitWas + 1);
+	TestTrue(TEXT("the game rebuilds on the new mirror"), Client.Generation() > GenerationWas);
+	if (const ac::net::Mirror* M = Client.Mirror(); M && Client.Driven())
+	{
+		if (const ac::Unit* U = M->unit(*Client.Driven()))
+		{
+			const double In = U->position.x - M->simulation().map->bounds.minX;
+			AddInfo(FString::Printf(TEXT("came in %.2f cells from the west edge"), In));
+			TestTrue(TEXT("came in at the neighbour's west edge"), In < 8.0);
+		}
+	}
+	// Away from a pad: the flight is refused here, with the reason.
+	FString Why;
+	TestFalse(TEXT("no flight away from a pad"), Client.Fly(TEXT("start"), TEXT("landing"), &Why));
+	TestTrue(TEXT("says why"), Why.Contains(TEXT("pad")));
+	AddInfo(FString::Printf(TEXT("refused: %s"), *Why));
+	TestTrue(TEXT("still connected"), Client.Phase() == FAcMmoClient::EPhase::Playing);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcMmoFlyTest, "Autocraft.Mmo.FlyToPad", Flags)
+bool FAcMmoFlyTest::RunTest(const FString&)
+{
+	FAcMmoClient Client;
+	ON_SCOPE_EXIT { Client.Stop(); };
+	if (!StartSeated(*this, Client)) return false;
+	const FString MapWas = Utf(Client.Mirror()->region().mapName);
+	const int64 VisitWas = Client.Visit();
+	const std::optional<FAcMmoClient::FPadNear> Near = Client.NearestPad();
+	TestTrue(TEXT("at the start pad"), Near && Near->Name == TEXT("landing") && Near->Distance <= FAcMmoClient::PadReach);
+	FString Why;
+	const bool bAsked = Client.Fly(TEXT("cold-fork"), TEXT("landing"), &Why);
+	TestTrue(FString::Printf(TEXT("the flight asked for (%s)"), *Why), bAsked);
+	if (!bAsked) return false;
+	const bool bLifted = RunUntil(Client, [&] { return Client.FlyingTo() != nullptr || !Client.FlightRefusal().IsEmpty(); }, 5.0);
+	TestTrue(FString::Printf(TEXT("lifted off (%s)"), *Client.FlightRefusal()), bLifted && Client.FlyingTo());
+	if (Client.FlyingTo()) TestEqual(TEXT("flying to Cold Fork"), Utf(Client.FlyingTo()->id), FString(TEXT("cold-fork")));
+	TestTrue(TEXT("travelling: no unit to drive"), Client.Travelling());
+	const double LiftedAt = FPlatformTime::Seconds();
+	const bool bLanded = RunUntil(Client, [&] {
+		return Client.Phase() == FAcMmoClient::EPhase::Failed || (Client.Visit() > VisitWas && !Client.Travelling() && Client.Driven());
+	}, 15.0);
+	if (!bLanded || Client.Phase() == FAcMmoClient::EPhase::Failed)
+	{
+		AddError(FString::Printf(TEXT("did not land: phase %d, %s, visit %lld"), (int32)Client.Phase(), *Client.Message(), (long long)Client.Visit()));
+		return false;
+	}
+	AddInfo(FString::Printf(TEXT("landed %.1f s after lift-off"), FPlatformTime::Seconds() - LiftedAt));
+	RunUntil(Client, [&] { return Client.Here() && Utf(Client.Here()->id) == TEXT("cold-fork") && !Client.FlyingTo(); }, 3.0);
+	CheckArrived(*this, Client, TEXT("cold-fork"), MapWas);
+	TestTrue(TEXT("no longer flying"), Client.FlyingTo() == nullptr);
+	const std::optional<FAcMmoClient::FPadNear> There = Client.NearestPad();
+	TestTrue(TEXT("on Cold Fork's pad"), There && There->Name == TEXT("landing") && There->Distance <= FAcMmoClient::PadReach);
+	TestTrue(TEXT("still connected"), Client.Phase() == FAcMmoClient::EPhase::Playing);
 	return true;
 }
 

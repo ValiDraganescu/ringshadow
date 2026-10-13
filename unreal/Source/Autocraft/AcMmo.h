@@ -1,7 +1,8 @@
 // `FAcMmoClient`: the game's end of the MMORPG test mode (docs/mmorpg-m1.md,
 // T5; docs/networking.md, "The local server", "The client"). It starts
 // `autocraft-server` (unreal/server, built by `make -C unreal/server`) as a
-// hidden child on the map asked for, hands it a one-time token on its
+// hidden child on the world file (docs/worlds.md; `--world`, the first
+// world by default), hands it a one-time token on its
 // standard input, reads its port, connects to it on 127.0.0.1 through
 // AutocraftNet (`net::Client` on a `UdpSocket`) and keeps the mirror of the
 // region (`net::Mirror`) that `UAcSimSubsystem` hands the game in place of
@@ -11,6 +12,13 @@
 // one 100 ms in the past (`net::Interpolator`). The driven one is drawn in
 // the present: each input moves it at once and each snapshot puts it right
 // (`net::Predictor`).
+//
+// The world (docs/mmorpg-m2.md): the server seats the pilot in a Prospector
+// at the start pad. Across an edge or after a flight a RegionChange brings a
+// new mirror: the prediction and the blending start over and `Generation`
+// moves at once, so the game rebuilds on the new region (the old mirror is
+// gone). `Travelling` holds from a flight's lift-off (or a RegionChange)
+// until the new region's first snapshot shows the unit driven there.
 //
 // Lag to feel it (on 127.0.0.1 there is none): the console variable
 // `ac.MmoLag "delay_ms jitter_ms loss_pct"` (each way; 0 or empty: off) or
@@ -67,11 +75,13 @@ public:
 	static FString ServerProgram();
 	/// The server's log: `~/Library/Logs/Autocraft/server.log`.
 	static FString ServerLog();
+	/// The world the game plays: `unreal/server/worlds/first.json`.
+	static FString DefaultWorld();
 
-	/// Starts the server on `Map` and connects to it. `Now`: seconds on any
-	/// steady clock (the same one `Tick` gets). False (`Failed`, with the
-	/// message) when it does not start.
-	bool Start(const ac::MapChoice& Map, double Now);
+	/// Starts the server on the world file and connects to it. `Now`:
+	/// seconds on any steady clock (the same one `Tick` gets). False
+	/// (`Failed`, with the message) when it does not start.
+	bool Start(double Now, const FString& World = DefaultWorld());
 	/// Hands the driven unit back, asks the server to stop (SIGTERM) and
 	/// waits for it.
 	void Stop();
@@ -126,6 +136,36 @@ public:
 	const ac::net::Predictor& Prediction() const { return Predictor; }
 	void ClearPredictionStats() { Predictor.clearStats(); }
 
+	// MARK: The world
+
+	/// A flight leaves from within this many cells of a pad's centre (the
+	/// server's `WorldParams::padReach`; it decides, this only says why not).
+	static constexpr double PadReach = 4.0;
+	/// The world map, the newest (null: not told yet).
+	const ac::net::WorldMessage* World() const;
+	/// The region the pilot is in (in flight: the one it lifted off from).
+	const ac::net::WorldMessage::Region* Here() const;
+	/// In flight: the region it flies to.
+	const ac::net::WorldMessage::Region* FlyingTo() const;
+	/// In flight, or come into a region whose first snapshot has not shown
+	/// the driven unit yet: the pilot keeps its seat, nothing to drive.
+	bool Travelling() const { return FlyingTo() != nullptr || bArriving; }
+	/// Region changes so far.
+	int64 Visit() const { return Net ? Net->visit() : 0; }
+	/// The pad of this region nearest the driven unit, and how far (cells).
+	struct FPadNear
+	{
+		FString Name;
+		double Distance = 0;
+	};
+	std::optional<FPadNear> NearestPad() const;
+	/// Asks to fly to `Pad` of region `Region` (the world map's pick). False,
+	/// with `Why`, when it is plainly refused here (not at a pad, in flight);
+	/// the server may still refuse it (a note, and `FlightRefusal`).
+	bool Fly(const FString& Region, const FString& Pad, FString* Why = nullptr);
+	/// The server's last refusal of a flight (empty: none since the last ask).
+	const FString& FlightRefusal() const { return LastFlightRefusal; }
+
 private:
 	void Fail(const FString& Why);
 	void Connect(double Now);
@@ -134,14 +174,21 @@ private:
 	void ReadReplies();
 	/// Reads `ac.MmoLag` and applies it when it changed.
 	void ReadLag();
+	/// A RegionChange built a new mirror.
+	void OnRegionChange(const ac::net::RegionChange& Change);
 
 	EPhase CurrentPhase = EPhase::Off;
 	FString StatusMessage;
 	ac::net::LocalServer Server;
 	std::string Token;
-	ac::MapChoice Map;
+	FString WorldFile;
 	double StartedAt = 0;
 	double ConnectAt = 0;
+	/// Came into a region (RegionChange), its unit not seen driven yet.
+	bool bArriving = false;
+	/// Flights asked for (request ids), and the last one refused.
+	TSet<uint32> FlightsAsked;
+	FString LastFlightRefusal;
 	ac::net::UdpSocket Socket;
 	/// Between the socket and the connection: the lag setting.
 	TUniquePtr<ac::net::LagSimulator> LagIo;

@@ -227,9 +227,11 @@ public:
 
 	// MARK: The MMORPG test mode (docs/mmorpg-m1.md, T5; AcMmo.h)
 
-	/// The local server on `Map`, and the game drawn from its snapshots:
-	/// the window game waits (not stepped, not saved) until `StopMmo`.
-	void StartMmo(const ac::MapChoice& Map);
+	/// The local server on the first world (docs/worlds.md), and the game
+	/// drawn from its snapshots: the window game waits (not stepped, not
+	/// saved) until `StopMmo`. A region change rebuilds the game on the new
+	/// region's mirror (`OnGameStarted`).
+	void StartMmo();
 	/// Stops the local server and goes back to the window game.
 	void StopMmo();
 	/// In the mode (starting, connected or failed).

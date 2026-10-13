@@ -48,6 +48,11 @@ FString FAcMmoClient::ServerLog()
 	return FPaths::Combine(FPlatformProcess::UserHomeDir(), TEXT("Library"), TEXT("Logs"), TEXT("Autocraft"), TEXT("server.log"));
 }
 
+FString FAcMmoClient::DefaultWorld()
+{
+	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("server"), TEXT("worlds"), TEXT("first.json")));
+}
+
 void FAcMmoClient::Fail(const FString& Why)
 {
 	CurrentPhase = EPhase::Failed;
@@ -56,10 +61,10 @@ void FAcMmoClient::Fail(const FString& Why)
 	Server.stop(3.0);
 }
 
-bool FAcMmoClient::Start(const ac::MapChoice& InMap, const double Now)
+bool FAcMmoClient::Start(const double Now, const FString& World)
 {
 	Stop();
-	Map = InMap;
+	WorldFile = World;
 	Interp.reset();
 	Predictor.reset();
 	LastBlend = 0;
@@ -77,6 +82,9 @@ bool FAcMmoClient::Start(const ac::MapChoice& InMap, const double Now)
 	WantedUnit.reset();
 	bAutoTaken = false;
 	Asked.Reset();
+	FlightsAsked.Reset();
+	LastFlightRefusal.Reset();
+	bArriving = false;
 	Notes.Reset();
 	Events.clear();
 	const FString Program = ServerProgram();
@@ -86,6 +94,11 @@ bool FAcMmoClient::Start(const ac::MapChoice& InMap, const double Now)
 		UE_LOG(LogAutocraft, Warning, TEXT("mmo: no server program at %s (build it: make -C unreal/server; packaged games do not carry it yet)"),
 			*Program);
 		Fail(FString::Printf(TEXT("The local server is not built. Build it with: make -C unreal/server\n(looked for %s)"), *Tilde(Program)));
+		return false;
+	}
+	if (!FPaths::FileExists(WorldFile))
+	{
+		Fail(FString::Printf(TEXT("No world file at %s."), *Tilde(WorldFile)));
 		return false;
 	}
 	// The one-time token: random, as text on the server's standard input.
@@ -102,14 +115,13 @@ bool FAcMmoClient::Start(const ac::MapChoice& InMap, const double Now)
 		Token.push_back(Hex[B >> 4]);
 		Token.push_back(Hex[B & 15]);
 	}
-	const std::vector<std::string> Args = {"--map", std::string(ac::rawValue(Map.style)), "--size", std::string(ac::rawValue(Map.size)),
-		"--starts", std::to_string(Map.players), "--bind", "127.0.0.1", "--port", "0", "--parent-pid", std::to_string(getpid())};
+	const std::vector<std::string> Args = {"--world", Utf8(WorldFile), "--bind", "127.0.0.1", "--port", "0", "--parent-pid", std::to_string(getpid())};
 	if (!Server.start(Utf8(Program), Args, Token))
 	{
 		Fail(FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
 		return false;
 	}
-	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on %s (pid %d), log %s"), *Program, *Text(Map.name()), Server.pid(), *ServerLog());
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on world %s (pid %d), log %s"), *Program, *Tilde(WorldFile), Server.pid(), *ServerLog());
 	CurrentPhase = EPhase::Starting;
 	StatusMessage = TEXT("Starting the local server…");
 	StartedAt = Now;
@@ -136,6 +148,8 @@ void FAcMmoClient::Stop()
 	SeenMirror = nullptr;
 	SeenGame = -1;
 	WantedUnit.reset();
+	bArriving = false;
+	FlightsAsked.Reset();
 	CurrentPhase = EPhase::Off;
 	StatusMessage.Reset();
 }
@@ -160,6 +174,7 @@ void FAcMmoClient::Connect(const double Now)
 		Interp.heard(Part.snapshot.serverTick, LastNow);
 		if (const ac::net::Mirror* M = Net->mirror()) Interp.record(M->serverTick(), M->simulation().state.units);
 	};
+	Net->onRegionChange = [this](const ac::net::RegionChange& Change) { OnRegionChange(Change); };
 	Net->connect(Now);
 	ConnectAt = Now;
 	NextInputAt = 0;
@@ -197,7 +212,8 @@ void FAcMmoClient::Tick(const double Now)
 	const ac::net::Mirror* M = Net->mirror();
 	if (!M || M->snapshotId() == 0)
 	{
-		if (Now - ConnectAt > StartSeconds)
+		// (A new region's mirror waits for its first snapshot: no deadline.)
+		if (CurrentPhase != EPhase::Playing && Now - ConnectAt > StartSeconds)
 		{
 			Fail(FString::Printf(TEXT("The local server did not welcome us in %.0f s.\nIts log: %s"), StartSeconds, *Tilde(ServerLog())));
 			return;
@@ -210,20 +226,34 @@ void FAcMmoClient::Tick(const double Now)
 			Fail(TEXT("The local server's map is not the one this game builds (another version?)."));
 			return;
 		}
-		if (M != SeenMirror || M->game() != SeenGame)
+		// (A RegionChange moved the generation already: its first snapshot
+		// does not again.)
+		if (M != SeenMirror || (SeenGame >= 0 && M->game() != SeenGame))
 		{
-			SeenMirror = M;
-			SeenGame = M->game();
 			MirrorGeneration += 1;
 			UE_LOG(LogAutocraft, Log, TEXT("mmo: welcomed on %s, game %lld, %d units in view"), *Text(M->region().mapName), (long long)M->game(),
 				(int32)M->simulation().state.units.size());
+		}
+		SeenMirror = M;
+		SeenGame = M->game();
+		if (bArriving && M->driven())
+		{
+			bArriving = false;
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: arrived, driving #%lld"), (long long)*M->driven());
+		}
+		// In a world the server seats the pilot (the start, an edge, a
+		// landing): the unit it drives is the one wanted.
+		if (Net->world() && Asked.IsEmpty() && M->driven() && M->driven() != WantedUnit)
+		{
+			WantedUnit = M->driven();
+			bAutoTaken = true;
 		}
 		if (CurrentPhase != EPhase::Playing)
 		{
 			CurrentPhase = EPhase::Playing;
 			StatusMessage.Reset();
 		}
-		if (bAutoTake && !bAutoTaken)
+		if (bAutoTake && !bAutoTaken && !M->driven())
 		{
 			// A Prospector of the pilot's side, the first the mirror holds.
 			for (const ac::Unit& U : M->simulation().state.units)
@@ -356,6 +386,17 @@ void FAcMmoClient::ReadReplies()
 	for (auto It = Net->replies.begin(); It != Net->replies.end();)
 	{
 		const ac::net::ReplyMessage& R = It->second;
+		if (FlightsAsked.Remove(R.request) > 0)
+		{
+			if (!R.done)
+			{
+				LastFlightRefusal = Text(R.reason);
+				Notes.Add(FString::Printf(TEXT("Not flown: %s"), *LastFlightRefusal));
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: flight %u refused: %s"), R.request, *LastFlightRefusal);
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		const std::optional<int64>* What = Asked.Find(R.request);
 		if (!R.done)
 		{
@@ -404,4 +445,85 @@ TArray<FString> FAcMmoClient::TakeNotes()
 	TArray<FString> Out = MoveTemp(Notes);
 	Notes.Reset();
 	return Out;
+}
+
+// MARK: - The world
+
+void FAcMmoClient::OnRegionChange(const ac::net::RegionChange& Change)
+{
+	// A new region: what was blended and predicted was the old one's.
+	Interp.reset();
+	Predictor.reset();
+	LastBlend = 0;
+	WantedUnit = Change.driven;
+	bAutoTaken = true;
+	bArriving = true;
+	// The old mirror is gone: the game rebuilds on this one now, before its
+	// first snapshot (its map is built; its units come with the snapshots).
+	SeenMirror = Net->mirror();
+	SeenGame = -1;
+	MirrorGeneration += 1;
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: region change %lld: into %s (%s), driving #%lld"), (long long)Change.visit, *Text(Change.regionId),
+		*Text(Change.region.mapName), (long long)Change.driven.value_or(-1));
+}
+
+const ac::net::WorldMessage* FAcMmoClient::World() const
+{
+	return Net && Net->world() ? &*Net->world() : nullptr;
+}
+
+const ac::net::WorldMessage::Region* FAcMmoClient::Here() const
+{
+	const ac::net::WorldMessage* W = World();
+	if (!W || W->here < 0 || W->here >= (int64)W->regions.size()) return nullptr;
+	return &W->regions[size_t(W->here)];
+}
+
+const ac::net::WorldMessage::Region* FAcMmoClient::FlyingTo() const
+{
+	const ac::net::WorldMessage* W = World();
+	if (!W || !W->flyingTo || *W->flyingTo < 0 || *W->flyingTo >= (int64)W->regions.size()) return nullptr;
+	return &W->regions[size_t(*W->flyingTo)];
+}
+
+std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
+{
+	const ac::net::WorldMessage::Region* R = Here();
+	const ac::net::Mirror* M = Mirror();
+	if (!R || !M || !M->driven() || Travelling()) return std::nullopt;
+	const ac::Unit* U = M->unit(*M->driven());
+	if (!U) return std::nullopt;
+	// Pads are in region cells from the north-west corner; the map is centred.
+	const ac::GroundRect& B = M->simulation().map->bounds;
+	std::optional<FPadNear> Best;
+	for (const ac::net::WorldMessage::Pad& P : R->pads)
+	{
+		const double D = ac::distance(ac::Vec2(P.at.x + B.minX, P.at.y + B.minZ), U->position);
+		if (!Best || D < Best->Distance) Best = FPadNear{Text(P.name), D};
+	}
+	return Best;
+}
+
+bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)
+{
+	auto No = [&](const FString& Reason) {
+		if (Why) *Why = Reason;
+		UE_LOG(LogAutocraft, Log, TEXT("mmo: no flight to %s %s: %s"), *Region, *Pad, *Reason);
+		return false;
+	};
+	if (!Net || !Net->welcome() || !World()) return No(TEXT("Not connected to the world yet"));
+	if (FlyingTo()) return No(FString::Printf(TEXT("Already flying to %s"), *Text(FlyingTo()->name)));
+	if (Travelling()) return No(TEXT("Still landing"));
+	if (!FlightsAsked.IsEmpty()) return No(TEXT("A flight is already asked for"));
+	const std::optional<FPadNear> Near = NearestPad();
+	if (!Near) return No(TEXT("Nothing driven to fly"));
+	if (Near->Distance > PadReach)
+	{
+		return No(FString::Printf(TEXT("Drive onto a pad to fly: pad %s is %.0f cells away"), *Near->Name, Near->Distance));
+	}
+	LastFlightRefusal.Reset();
+	const uint32 Id = Net->fly(Utf8(Region), Utf8(Pad));
+	FlightsAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: request %u: fly from pad %s to %s %s"), Id, *Near->Name, *Region, *Pad);
+	return true;
 }
