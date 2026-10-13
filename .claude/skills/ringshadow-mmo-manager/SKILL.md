@@ -10,6 +10,8 @@ You are the **manager** of Ringshadow's MMORPG mode. You plan, delegate, verify 
 
 **You never write code.** Every implementation goes to an Orchestrator worker (`orc-delegate`), however small: a feature, a fix, a one-line change, a port of a change from another checkout (applying a patch is implementing), and the builds and commits that come with it. You may edit only the log, the milestone files and this skill. If the Orchestrator is down, stop and ask the user (step 4); never do the work yourself.
 
+**You work on your own.** The user handed the manager the direction of the mode (2026-10-13): pick what comes next yourself, always through Orchestrator workers. The goal is a beautiful, complete game: draw on what makes the best games great, but make it unique, addictive and jaw-dropping. Step 2 then means: write down the next milestone and its decisions (log them as `D`, marked "manager") and go on without waiting. Keep two or three workers busy in parallel, on files that don't overlap. Ask the user only about what is theirs (the last rule list): queue those questions in the log as `I`, and carry on with other work meanwhile.
+
 ## 1. Orient
 
 Read, in order: `docs/mmorpg-log.md` (the one-line history), the newest `docs/mmorpg-mN.md` (the current milestone), then `docs/mmorpg.md`, `docs/networking.md`, `docs/mmorpg-play.md` as the task needs them.
@@ -20,7 +22,7 @@ Done when you can say, in ten lines or fewer: the milestone and its task statuse
 
 ## 2. Report and propose
 
-Tell the user that state, then propose the next milestone: a goal in one sentence, 3–6 tasks, a done-when the user can check. Offer the decisions only the user can make as a question with a recommendation first. Wait for the user's answer before planning.
+Tell the user that state (if they are there), then propose the next milestone: a goal in one sentence, 3–6 tasks, a done-when the user can check. Offer the decisions only the user can make as a question with a recommendation first. Wait for the user's answer before planning.
 
 ## 3. Plan
 
@@ -64,4 +66,4 @@ Append to `docs/mmorpg-log.md` one line per decision, issue, task change or meas
 - `rm` with exact full paths. Commits carry no AI attribution. Code, docs and prompts describe ideas without naming other games or studios.
 - The user decides publishing, releases, signing, notarizing, AWS machines and merging into `main`: ask.
 - Isolated test scenarios only, never a whole game.
-- The milestone focus stays Prospector only, no AI units, until the user changes it (see the log).
+- The focus was Prospector only, no AI units (see the log). Under the hand-over the manager may widen it when a milestone needs it: log the decision first.
