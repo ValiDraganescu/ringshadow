@@ -12,6 +12,8 @@ UDP. Engine-free: `AutocraftCore` and `AutocraftNet`.
 | `program/Server.h` | `Server`: the region behind `net::ServerEndpoint`. A connection is a pilot; each tick reads, steps, and every third tick sends each client its events and its snapshot. |
 | `program/main.cpp` | `autocraft-server`, the program the game starts. |
 | `client/HeadlessClient.h` | The tests' and the bench's client: the game's own `net::Client` (`AutocraftNet/Public/NetClient.h`), a mirror of the region, inputs and acks at 60 Hz, requests. |
+| `region/` | `autocraft-region` (build/autocraft-region): region files ([docs/regions.md](../../docs/regions.md)) made, validated, built and drawn from above (`Preview.h`, PNG by `ThirdParty/stb_image_write.h`, public domain). |
+| `regions/` | The region files. |
 | `tests/` | Isolated scenes, `make -C unreal/server test` (about 7 s: the end-to-end ones run in real time). |
 | `bench/` | `make -C unreal/server bench`: the region's step and snapshot times, and the protocol's bytes a second. |
 

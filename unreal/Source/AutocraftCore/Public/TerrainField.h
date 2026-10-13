@@ -32,6 +32,9 @@ struct AUTOCRAFTCORE_API TerrainField {
     /// How far past its polygon a plateau's edge reaches: the cliff's half
     /// width plus the most the wobble moves it (fbm is within ±1).
     double edgeReach() const { return cliffHalf + 1.3 + 0.25 + 0.01; }
+    /// Each height edit's reach (`MapDefinition::heightEdits`): past it the
+    /// edit changes nothing.
+    std::vector<Bounds> editBounds;
 
     explicit TerrainField(const MapDefinition& map_);
 
@@ -70,6 +73,15 @@ struct AUTOCRAFTCORE_API TerrainField {
 
     /// Terrain height at a ground point.
     double height(Vec2 p) const;
+
+    /// How much height edit `k` (`MapDefinition::heightEdits`) holds at `p`
+    /// in [0, 1]: 1 inside its outline (a ridge: within half its width),
+    /// falling to 0 over its slope past it (a cliff's: `2 * cliffHalf`).
+    /// A ramp's is its own blend.
+    double editCoverage(Vec2 p, size_t k) const;
+
+    /// `h`, the ground's height at `p` before the height edits, after them.
+    double edited(Vec2 p, double h) const;
 
     /// How far a ground point lies outside the map's bounds, cells (0 on it).
     double outside(Vec2 p) const;

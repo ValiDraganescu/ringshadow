@@ -101,11 +101,16 @@ MapDefinition WindowMaps::playground() {
 /// `decorated: false` leaves out the rocks and plants (the picker's
 /// preview needs only the ground and the bases).
 MapDefinition WindowMaps::build(const MapChoice& choice, bool decorated) {
+    return build(choice, decorated, std::nullopt);
+}
+
+MapDefinition WindowMaps::build(const MapChoice& choice, bool decorated, std::optional<uint64_t> regionSeed) {
     if (choice.players > 2) return buildSquare(choice, decorated);
     const MapCells size = cells(choice.size);
     const double W = size.width, D = size.depth;
     const double hw = W / 2, hd = D / 2, H = 2.4;
-    const uint64_t seed = fnv1a64("window|" + std::string(rawValue(choice.style)) + "|" + std::string(rawValue(choice.size)));
+    const std::string key = "window|" + std::string(rawValue(choice.style)) + "|" + std::string(rawValue(choice.size));
+    const uint64_t seed = fnv1a64(regionSeed ? key + "|seed " + std::to_string(*regionSeed) : key);
     SeededRandom rng(seed);
     const double axis = 0.0;
     auto mirror = [axis](Vec2 p) { return Vec2(2 * axis - p.x, p.y); };

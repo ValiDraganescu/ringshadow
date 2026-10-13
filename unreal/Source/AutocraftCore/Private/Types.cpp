@@ -251,6 +251,12 @@ GameState GameState::new_(const MapDefinition& map, const std::optional<std::vec
             id += 1;
         }
     }
+    // A crafted region's own deposits (C++ only), after the bases'.
+    for (const auto& m : map.deposits) {
+        patches.push_back(OreDeposit{.id = id, .position = m.position, .angle = m.angle,
+                                     .initial = m.amount, .remaining = m.amount});
+        id += 1;
+    }
     // Teams play on a map's starts, never in the playground.
     const bool teamed = teams_ && !teams_->empty() && teams_->size() <= map.starts.size() && map.playground != true;
     // The playground has no start bases but still two sides.
@@ -310,6 +316,7 @@ GameState GameState::new_(const MapDefinition& map, const std::optional<std::vec
     std::vector<Well> wells;
     for (const auto& base : map.bases)
         for (const Vec2& w : base.wells) wells.push_back(Well{.position = w, .remaining = Rules::wellHydrogen});
+    for (const WellSpec& w : map.wells) wells.push_back(Well{.position = w.position, .remaining = w.amount});
     state.wells = wells;
     return state;
 }

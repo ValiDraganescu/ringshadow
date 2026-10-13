@@ -82,6 +82,8 @@ template <class IO> void fields(IO& io, Ramp& v);
 template <class IO> void fields(IO& io, GroundPatch& v);
 template <class IO> void fields(IO& io, OreSpec& v);
 template <class IO> void fields(IO& io, BaseSite& v);
+template <class IO> void fields(IO& io, HeightEdit& v);
+template <class IO> void fields(IO& io, WellSpec& v);
 template <class IO> void fields(IO& io, MapView& v);
 template <class IO> void fields(IO& io, CanvasProjection& v);
 template <class IO> void fields(IO& io, CanvasRect& v);
@@ -785,6 +787,24 @@ template <class IO> void fields(IO& io, MapDefinition& v) {
     io("squareSymmetric", v.squareSymmetric);
     io("view", v.view);
     io("playground", v.playground);
+    // C++ only, a crafted region's: left out when empty.
+    io.orZero("heightEdits", v.heightEdits);
+    io.orZero("deposits", v.deposits);
+    io.orZero("wells", v.wells);
+}
+
+template <class IO> void fields(IO& io, HeightEdit& v) {
+    io("kind", v.kind);
+    io("points", v.points);
+    io("level", v.level);
+    io("fromLevel", v.fromLevel);
+    io("width", v.width);
+    io("slope", v.slope);
+}
+
+template <class IO> void fields(IO& io, WellSpec& v) {
+    io("position", v.position);
+    io("amount", v.amount);
 }
 
 template <class IO> void fields(IO& io, GroundRect& v) {

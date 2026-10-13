@@ -73,6 +73,7 @@ NavGrid::NavGrid(const MapDefinition& map, const TerrainField& field) {
     mapRocks = static_cast<int64_t>(rocks.size());
     mapWells = 0;
     for (const BaseSite& s : map.bases) mapWells += static_cast<int64_t>(s.wells.size());
+    mapWells += static_cast<int64_t>(map.wells.size());
     dynamic = std::vector<uint8_t>(static_cast<size_t>(width * height), 0);
     indexPassable();
     indexRocks();
@@ -257,6 +258,7 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
     }
     std::vector<Vec2> wells;
     for (const BaseSite& b : map.bases) wells.insert(wells.end(), b.wells.begin(), b.wells.end());
+    for (const WellSpec& w : map.wells) wells.push_back(w.position);
     uint8_t* ptr = out.data();
     uint8_t* cptr = cliff.data();
     const std::function<double(Vec2)> heightAt = [&field](Vec2 q) { return field.height(q); };

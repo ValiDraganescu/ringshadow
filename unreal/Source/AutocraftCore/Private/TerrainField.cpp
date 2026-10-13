@@ -15,6 +15,82 @@ TerrainField::TerrainField(const MapDefinition& map_) : map(map_), noise(map_.se
         for (Vec2 q : p.polygon) hi = max(hi, q);
         plateauBounds.push_back(Bounds{lo, hi});
     }
+    editBounds.reserve(map.heightEdits.size());
+    for (const HeightEdit& e : map.heightEdits) {
+        Vec2 lo = Vec2::repeating(inf), hi = Vec2::repeating(-inf);
+        for (Vec2 q : e.points) lo = min(lo, q);
+        for (Vec2 q : e.points) hi = max(hi, q);
+        // A ramp's blend reaches a third of its length past each end.
+        const double along = e.kind == HeightEdit::Kind::ramp && e.points.size() == 2
+                                 ? 0.4 * distance(e.points[0], e.points[1]) : 0.0;
+        const double reach = e.width / 2 * 1.25 + max(e.slope, 2 * cliffHalf) + along + 0.01;
+        editBounds.push_back(Bounds{lo - Vec2::repeating(reach), hi + Vec2::repeating(reach)});
+    }
+}
+
+namespace {
+
+/// Distance from `p` to a line through `points`.
+double lineDistance(Vec2 p, const std::vector<Vec2>& points) {
+    if (points.size() == 1) return distance(p, points[0]);
+    double d = std::numeric_limits<double>::infinity();
+    for (size_t i = 0; i + 1 < points.size(); i++) {
+        const Vec2 a = points[i], e = points[i + 1] - a;
+        const double len2 = dot(e, e);
+        const double t = len2 > 0 ? min(max(dot(p - a, e) / len2, 0.0), 1.0) : 0.0;
+        d = min(d, length(p - a - e * t));
+    }
+    return d;
+}
+
+} // namespace
+
+double TerrainField::editCoverage(Vec2 p, size_t k) const {
+    const HeightEdit& e = map.heightEdits[k];
+    const Bounds& b = editBounds[k];
+    if (p.x < b.lo.x || p.x > b.hi.x || p.y < b.lo.y || p.y > b.hi.y || e.points.empty()) return 0;
+    if (e.kind == HeightEdit::Kind::ramp) {
+        if (e.points.size() != 2) return 0;
+        // As `ramp`.
+        const Vec2 axis = e.points[1] - e.points[0];
+        const double len = length(axis);
+        if (!(len > 0)) return 0;
+        const Vec2 dir = axis / len, perp = Vec2(-dir.y, dir.x);
+        const double u = dot(p - e.points[0], dir) / len;
+        const double v = std::fabs(dot(p - e.points[0], perp)) / (e.width / 2);
+        return (1 - smoothstep(0.8, 1.2, v)) * smoothstep(-0.35, -0.02, u) * (1 - smoothstep(1.02, 1.35, u));
+    }
+    const double out = e.kind == HeightEdit::Kind::ridge ? lineDistance(p, e.points) - e.width / 2
+                                                          : signedDistance(p, e.points);
+    const double edge = e.slope > 0 ? e.slope : 2 * cliffHalf;
+    return smoothstep(edge, 0.0, out);
+}
+
+double TerrainField::edited(Vec2 p, double h) const {
+    for (size_t k = 0; k < map.heightEdits.size(); k++) {
+        const double t = editCoverage(p, k);
+        if (!(t > 0)) continue;
+        const HeightEdit& e = map.heightEdits[k];
+        const double target = static_cast<double>(e.level) * map.levelHeight;
+        switch (e.kind) {
+        case HeightEdit::Kind::raise:
+        case HeightEdit::Kind::ridge: h += max(target - h, 0.0) * t; break;
+        case HeightEdit::Kind::lower: h -= max(h - target, 0.0) * t; break;
+        case HeightEdit::Kind::flatten: h += (target - h) * t; break;
+        case HeightEdit::Kind::ramp: {
+            const Vec2 axis = e.points[1] - e.points[0];
+            const double s = min(max(dot(p - e.points[0], axis) / dot(axis, axis), 0.0), 1.0);
+            const double low = static_cast<double>(e.fromLevel) * map.levelHeight;
+            h += (low + (target - low) * (s * s * (3 - 2 * s)) - h) * t;
+            break;
+        }
+        }
+        // Craggy noise on a cliff's face, as on a plateau's.
+        if (e.slope > 0 || e.kind == HeightEdit::Kind::flatten || e.kind == HeightEdit::Kind::ramp) continue;
+        const Vec2 q = fold(p);
+        h += 4 * t * (1 - t) * noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 0.45;
+    }
+    return h;
 }
 
 /// How far the noise moves every plateau's edge at `p` (the same for
@@ -91,7 +167,8 @@ double TerrainField::height(Vec2 p) const {
             roll *= 1 - flat;
         }
     }
-    return h + roll;
+    if (map.heightEdits.empty()) return h + roll;
+    return edited(p, h + roll);
 }
 
 /// How far a ground point lies outside the map's bounds, cells (0 on it).
@@ -129,6 +206,23 @@ int64_t TerrainField::level(Vec2 p) const {
         if (!(signedDistance(p, plateau.polygon) < 0)) continue;
         l = std::max(l, plateau.level);
     }
+    // The height edits whose outline (a ridge's width) holds `p`.
+    for (size_t k = 0; k < map.heightEdits.size(); k++) {
+        const HeightEdit& e = map.heightEdits[k];
+        if (e.kind == HeightEdit::Kind::ramp || e.points.empty()) continue;
+        const Bounds& b = editBounds[k];
+        if (p.x < b.lo.x || p.x > b.hi.x || p.y < b.lo.y || p.y > b.hi.y) continue;
+        const bool inside = e.kind == HeightEdit::Kind::ridge ? lineDistance(p, e.points) <= e.width / 2
+                                                               : signedDistance(p, e.points) < 0;
+        if (!inside) continue;
+        switch (e.kind) {
+        case HeightEdit::Kind::raise:
+        case HeightEdit::Kind::ridge: l = std::max(l, e.level); break;
+        case HeightEdit::Kind::lower: l = std::min(l, e.level); break;
+        case HeightEdit::Kind::flatten: l = e.level; break;
+        case HeightEdit::Kind::ramp: break;
+        }
+    }
     return l;
 }
 
@@ -140,6 +234,16 @@ TerrainField::Materials TerrainField::materials(Vec2 p) const {
     for (size_t k = 0; k < map.plateaus.size(); k++) {
         if (!(map.plateaus[k].level > 0)) continue;
         highland = max(highland, plateauCoverage(p, k, wobble));
+    }
+    // Crafted high ground is highland; ground brought down to the low
+    // ground loses it.
+    for (size_t k = 0; k < map.heightEdits.size(); k++) {
+        const HeightEdit& e = map.heightEdits[k];
+        if (e.kind == HeightEdit::Kind::ramp) continue;
+        const double t = editCoverage(p, k);
+        if (!(t > 0)) continue;
+        if (e.level > 0 && (e.kind == HeightEdit::Kind::raise || e.kind == HeightEdit::Kind::ridge)) highland = max(highland, t);
+        else if (e.level == 0 && e.kind != HeightEdit::Kind::raise && e.kind != HeightEdit::Kind::ridge) highland *= 1 - t;
     }
     const Vec2 q = fold(p);
     highland *= 0.55 + 0.45 * smoothstep(-0.3, 0.3, noise.fbm(q.x * 0.11 + 40, q.y * 0.11));

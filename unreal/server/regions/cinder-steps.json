@@ -1,0 +1,6 @@
+{
+  "id": "cinder-steps",
+  "name": "Cinder Steps",
+  "size": "medium",
+  "base": {"style": "highlands", "seed": 1}
+}

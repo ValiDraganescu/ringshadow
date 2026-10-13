@@ -764,6 +764,34 @@ struct Doodad {
     bool operator==(const Doodad&) const = default;
 };
 
+/// C++ only: a crafted change to the ground, over what the map's plateaus,
+/// ramps and bases make (a region file's `height` layer, docs/regions.md).
+/// The edits apply in order, each on the ground the ones before it left.
+struct HeightEdit {
+    enum class Kind : uint8_t { raise, lower, flatten, ridge, ramp };
+    Kind kind = Kind::raise;
+    /// raise, lower, flatten: the area's outline; ridge: its line; ramp:
+    /// the low end, then the high end. Ground coordinates.
+    std::vector<Vec2> points;
+    /// The level reached (a ramp's high end).
+    int64_t level = 0;
+    /// A ramp's low end.
+    int64_t fromLevel = 0;
+    /// A ridge's or a ramp's width, cells.
+    double width = 0;
+    /// How far past the outline (a ridge: past its sides) the ground takes
+    /// to reach the level, cells; 0 is a cliff.
+    double slope = 0;
+    bool operator==(const HeightEdit&) const = default;
+};
+
+/// C++ only: an MH well of its own, outside any base (a crafted region's).
+struct WellSpec {
+    Vec2 position;
+    int64_t amount = 0;
+    bool operator==(const WellSpec&) const = default;
+};
+
 /// Everything static about a map. Ground coordinates are cells.
 struct AUTOCRAFTCORE_API MapDefinition {
     std::string name;
@@ -798,6 +826,13 @@ struct AUTOCRAFTCORE_API MapDefinition {
     /// The playground (`WindowMaps.playground`): flat ground with nothing
     /// on it, two sides with nothing, and no one ever wins (nil: a map).
     std::optional<bool> playground;
+    /// C++ only, a crafted region's (docs/regions.md; all empty on the
+    /// game's maps): the ground edits over the plateaus and ramps, and ore
+    /// deposits and wells outside the bases (after the bases' in
+    /// `GameState::new_`).
+    std::vector<HeightEdit> heightEdits;
+    std::vector<OreSpec> deposits;
+    std::vector<WellSpec> wells;
 
     /// Where the armies meet: halfway between the feet of the ramps (or
     /// between the start bases on a map with one ramp), so neither side's
@@ -1568,6 +1603,9 @@ template <> struct EnumInfo<GroundPatch::Kind> {
 template <> struct EnumInfo<Doodad::Kind> {
     static constexpr std::array<std::string_view, 10> names{
         "rock", "boulder", "rockSpire", "crate", "crateStack", "plant", "bush", "debris", "deadTree", "tower"};
+};
+template <> struct EnumInfo<HeightEdit::Kind> {
+    static constexpr std::array<std::string_view, 5> names{"raise", "lower", "flatten", "ridge", "ramp"};
 };
 template <> struct EnumInfo<TargetClass> {
     static constexpr std::array<std::string_view, 4> names{"armored", "light", "bio", "building"};

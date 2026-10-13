@@ -1,9 +1,10 @@
 # Builds AutocraftCore (../Source/AutocraftCore), AutocraftNet
 # (../Source/AutocraftNet), the server's world (world/), the server program
 # (program/, build/autocraft-server) and the headless client (client/) with
-# plain clang++, no Unreal.
+# plain clang++, no Unreal, and the region tool (region/, build/autocraft-region,
+# docs/regions.md).
 #
-#   make -C unreal/server              build/autocraft-server
+#   make -C unreal/server              build/autocraft-server, build/autocraft-region
 #   make -C unreal/server test         the tests (FILTER=snapshot: only names with "snapshot")
 #   make -C unreal/server bench        the region bench and the network bench, at -O3
 #
@@ -15,7 +16,7 @@ CORE := ../Source/AutocraftCore
 NET := ../Source/AutocraftNet
 CORE_TESTS := ../core-tests/tests
 CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Wshadow -Werror -ffp-contract=off -fno-exceptions -fno-rtti \
-	-I$(CORE)/Public -I$(CORE)/ThirdParty -I$(NET)/Public -I$(NET)/Private -Iworld -Iprogram -Iclient \
+	-I$(CORE)/Public -I$(CORE)/ThirdParty -I$(NET)/Public -I$(NET)/Private -Iworld -Iprogram -Iclient -Iregion \
 	-I$(CORE_TESTS) -I../net-tests/tests -MMD -MP
 # The core's tracking store speaks SQLite's C API (as in core-tests).
 LDLIBS := -lsqlite3
@@ -25,28 +26,38 @@ NET_SRC := $(wildcard $(NET)/Private/*.cpp)
 WORLD_SRC := $(wildcard world/*.cpp)
 CLIENT_SRC := $(wildcard client/*.cpp)
 TEST_SRC := $(wildcard tests/*.cpp)
+REGION_SRC := region/Preview.cpp region/StbImageWrite.cpp
 CORE_OBJ := $(patsubst $(CORE)/Private/%.cpp,build/core/%.o,$(CORE_SRC))
 NET_OBJ := $(patsubst $(NET)/Private/%.cpp,build/net/%.o,$(NET_SRC))
 WORLD_OBJ := $(patsubst world/%.cpp,build/world/%.o,$(WORLD_SRC))
 SERVER_OBJ := build/program/Server.o
 CLIENT_OBJ := $(patsubst client/%.cpp,build/client/%.o,$(CLIENT_SRC))
 TEST_OBJ := $(patsubst tests/%.cpp,build/tests/%.o,$(TEST_SRC)) build/tests/main.o
+REGION_OBJ := $(patsubst region/%.cpp,build/region/%.o,$(REGION_SRC))
+REGION_TOOL := build/autocraft-region
 LIB_OBJ := $(CORE_OBJ) $(NET_OBJ) $(WORLD_OBJ) $(SERVER_OBJ)
 PROGRAM := build/autocraft-server
 BIN := build/server-tests
 
 .PHONY: all test bench clean
-all: $(PROGRAM)
+all: $(PROGRAM) $(REGION_TOOL)
 
 # The end-to-end tests start build/autocraft-server.
-test: $(BIN) $(PROGRAM)
+test: $(BIN) $(PROGRAM) $(REGION_TOOL)
 	./$(BIN) $(FILTER)
 
 $(PROGRAM): $(LIB_OBJ) build/program/main.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
-$(BIN): $(LIB_OBJ) $(CLIENT_OBJ) $(TEST_OBJ)
+$(BIN): $(LIB_OBJ) $(CLIENT_OBJ) $(REGION_OBJ) $(TEST_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
+
+$(REGION_TOOL): $(CORE_OBJ) $(REGION_OBJ) build/region/main.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
+
+build/region/%.o: region/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 build/core/%.o: $(CORE)/Private/%.cpp
 	@mkdir -p $(dir $@)
@@ -123,4 +134,4 @@ clean:
 	rm -rf build
 
 -include $(CORE_OBJ:.o=.d) $(NET_OBJ:.o=.d) $(WORLD_OBJ:.o=.d) $(SERVER_OBJ:.o=.d) $(CLIENT_OBJ:.o=.d) \
-	$(TEST_OBJ:.o=.d) $(BENCH_OBJ:.o=.d) build/program/main.d
+	$(TEST_OBJ:.o=.d) $(BENCH_OBJ:.o=.d) build/program/main.d $(REGION_OBJ:.o=.d) build/region/main.d

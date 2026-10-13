@@ -9,6 +9,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -68,6 +69,10 @@ struct AUTOCRAFTCORE_API WindowMaps {
     /// `decorated: false` leaves out the rocks and plants (the picker's
     /// preview needs only the ground and the bases).
     static MapDefinition build(const MapChoice& choice, bool decorated = true);
+    /// The same style and size laid out from another seed (C++ only: a
+    /// world's generated regions, docs/regions.md); nil: the game's map.
+    /// Mirrored maps only (2 starts).
+    static MapDefinition build(const MapChoice& choice, bool decorated, std::optional<uint64_t> seed);
 
     /// A map for 4 or 8 players (C++ only, PORTING.md "Teams"): a square
     /// whose eighth 0 <= z <= x is laid out (mains, naturals, more bases,

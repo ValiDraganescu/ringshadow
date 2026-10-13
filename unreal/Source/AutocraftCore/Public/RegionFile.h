@@ -1,0 +1,175 @@
+// C++ only: a region of the MMORPG world as a file (docs/regions.md). A
+// generated base (today's map from a style, a size and a seed) and crafted
+// layers on top: height edits, deposits, wells, doodads, pads, spawn points
+// and the edges' openings. AI agents write these files; `autocraft-region`
+// (unreal/server/region) checks them and draws them.
+#pragma once
+
+#include "AutocraftCoreApi.h"
+
+#include "SimdMath.h"
+#include "Types.h"
+#include "WindowMaps.h"
+
+#include <array>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace ac::region {
+
+/// A region file's positions are cells from the region's north-west
+/// corner: x east, z south (down the preview), 0…width and 0…depth.
+
+/// An area of ground: an outline, a rectangle or a circle.
+struct Area {
+    enum class Shape : uint8_t { polygon, rect, circle };
+    Shape shape = Shape::polygon;
+    /// polygon: its corners; rect: two opposite corners; circle: the centre.
+    std::vector<Vec2> points;
+    double radius = 0;
+    /// The outline (a circle as 32 sides).
+    std::vector<Vec2> outline() const;
+    bool operator==(const Area&) const = default;
+};
+
+/// One edit of the `height` layer.
+struct Edit {
+    HeightEdit::Kind op = HeightEdit::Kind::raise;
+    /// raise, lower, flatten.
+    Area area;
+    /// ridge: its line; ramp: `from` then `to`.
+    std::vector<Vec2> line;
+    int64_t level = 0;
+    /// ramp: the `from` end's level (`level` is the `to` end's).
+    int64_t fromLevel = 0;
+    double width = 0;
+    double slope = 0;
+    bool operator==(const Edit&) const = default;
+};
+
+struct Deposit {
+    Vec2 at;
+    int64_t amount = 0;
+    /// Degrees, the patch's long axis from east toward south.
+    double angle = 0;
+    bool operator==(const Deposit&) const = default;
+};
+
+struct WellSite {
+    Vec2 at;
+    int64_t amount = 0;
+    bool operator==(const WellSite&) const = default;
+};
+
+struct Prop {
+    Doodad::Kind kind = Doodad::Kind::rock;
+    Vec2 at;
+    double rotation = 0;
+    double scale = 1;
+    bool operator==(const Prop&) const = default;
+};
+
+/// A named landing pad or spawn point.
+struct Place {
+    std::string name;
+    Vec2 at;
+    bool operator==(const Place&) const = default;
+};
+
+enum class Edge : uint8_t { north, east, south, west };
+
+/// A passable stretch of an edge: cells along it (x on north and south,
+/// z on east and west).
+struct Span {
+    double from = 0, to = 0;
+    bool operator==(const Span&) const = default;
+};
+
+struct RegionFile {
+    std::string id;
+    std::string name;
+    MapSize size = MapSize::medium;
+    MapStyle style = MapStyle::highlands;
+    /// nil: the game's own map of that style and size.
+    std::optional<uint64_t> seed;
+    /// The base without its ore and wells, without its rocks and plants.
+    bool dropResources = false;
+    bool dropDoodads = false;
+    std::vector<Edit> height;
+    std::vector<Deposit> deposits;
+    std::vector<WellSite> wells;
+    std::vector<Prop> doodads;
+    std::vector<Place> pads;
+    std::vector<Place> spawns;
+    /// By `Edge`.
+    std::array<std::vector<Span>, 4> openings;
+
+    /// Width and depth, cells.
+    Vec2 extent() const;
+    bool operator==(const RegionFile&) const = default;
+};
+
+/// Something wrong with a region file: where in it, what, and the region
+/// position it is about (if any).
+struct Problem {
+    std::string where;
+    std::string message;
+    std::optional<Vec2> at;
+    /// "deposits[2] at (40, 12.5): on a cliff face".
+    std::string text() const;
+};
+
+struct Parsed {
+    std::optional<RegionFile> file;
+    std::vector<Problem> problems;
+};
+
+/// Reads a region file. Any problem (bad JSON, a missing or unknown key, a
+/// wrong type or name, a value out of range) leaves `file` nil.
+AUTOCRAFTCORE_API Parsed parse(std::string_view json);
+
+/// The file as JSON, in the reference's key order.
+AUTOCRAFTCORE_API std::string write(const RegionFile& file);
+
+/// A file with only the base.
+AUTOCRAFTCORE_API RegionFile starter(std::string id, MapStyle style, uint64_t seed, MapSize size);
+
+constexpr double padRadius = 3.0;
+/// How deep into the region an opening's lane is checked, cells.
+constexpr double laneDepth = 2.0;
+
+/// The region built: its map (ground coordinates, centred) and its places.
+struct AUTOCRAFTCORE_API Built {
+    MapDefinition map;
+    /// Ground coordinates.
+    std::vector<Place> pads, spawns;
+    std::array<std::vector<Span>, 4> openings;
+    /// Base rocks and plants taken away because they stood on something
+    /// crafted (a deposit, a well, a pad, a spawn point, an opening's lane).
+    int64_t cleared = 0;
+
+    Vec2 extent() const;
+    /// Region position to ground, and back.
+    Vec2 ground(Vec2 r) const;
+    Vec2 regionAt(Vec2 g) const;
+    /// The point `depth` cells into the region at `along` on an edge,
+    /// region coordinates.
+    Vec2 edgePoint(Edge e, double along, double depth) const;
+};
+
+/// The map: the base generated, then the layers in order. `file` must have
+/// parsed.
+AUTOCRAFTCORE_API Built build(const RegionFile& file);
+
+/// What the built region gets wrong: deposits, wells, pads and spawn points
+/// on cliffs, in rock, on top of each other or cut off; ramps that do not
+/// meet their levels or are too steep; openings blocked or cut off from
+/// the region's open ground. Empty: fine.
+AUTOCRAFTCORE_API std::vector<Problem> validate(const RegionFile& file, const Built& built);
+
+AUTOCRAFTCORE_API std::string_view edgeName(Edge e);
+
+} // namespace ac::region

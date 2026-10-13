@@ -1,0 +1,135 @@
+# Region files
+
+A region of the MMORPG world ([mmorpg.md](mmorpg.md), "The world") is a JSON
+file in `unreal/server/regions/<id>.json`. A **base** (the game's map
+generator: a style, a size, a seed) and **crafted layers** on top. A
+generated region is the base alone. AI agents craft the rest with
+`autocraft-region` (skill: `.claude/skills/ringshadow-region-crafting/`).
+
+Code: `AutocraftCore` `RegionFile.h` (parse, write, build, validate; the
+server and the game share it), `unreal/server/region/` (the tool and its
+preview), tests in `unreal/server/tests/RegionFileTests.cpp`.
+
+## The tool
+
+```
+make -C unreal/server build/autocraft-region
+autocraft-region new --style S --seed N --size Z [--id ID] [-o FILE]
+autocraft-region validate FILE        problems one a line; exit 1 if any
+autocraft-region build FILE           summary (ore, wells, open ground) + problems
+autocraft-region preview FILE -o OUT.png [--scale PX]
+```
+
+The preview: north up, a labelled grid every 8 cells, height as colour bands
+(level 0 olive, 1 tan, 2 pale), cliffs red-brown, rocks dark grey, plants
+green dots, ore violet, MH wells silver, pads yellow rings, spawns green
+diamonds, openings cyan, each problem a red ring numbered as in the list
+below the map.
+
+## Coordinates
+
+Cells from the region's **north-west corner**: `[x, z]`, x east, z south
+(down the preview). Sizes: small 96×64, medium 144×96, large 200×128,
+huge 272×176. Every point must lie inside. In the game's ground coordinates
+the region is centred: ground = (x − width/2, z − depth/2).
+
+Levels: 0 low ground, 1 high ground, 2 higher. One level is 2.4 high.
+
+## The file
+
+```json
+{
+  "id": "cinder-steps",                 // slug: a-z 0-9 -
+  "name": "Cinder Steps",
+  "size": "medium",                     // small | medium | large | huge
+  "base": {"style": "highlands",        // highlands | openField | ridge | badlands
+           "seed": 1,                   // whole number; leave out for the game's own RTS map
+           "drop": ["resources", "doodads"]},  // optional: the base without its ore and wells / rocks and plants
+  "height": [ ... ],
+  "deposits": [{"at": [40, 30], "amount": 1800, "angle": 90}],
+  "wells": [{"at": [52, 30], "amount": 2250}],
+  "doodads": [{"kind": "boulder", "at": [60, 70], "rotation": 30, "scale": 1.5}],
+  "pads": [{"name": "Landing", "at": [72, 48]}],
+  "spawns": [{"name": "Gate", "at": [72, 56]}],
+  "openings": {"north": [[64, 80]], "west": [[40, 56]]}
+}
+```
+
+Only `id`, `name`, `size` and `base.style` are required. Unknown keys are
+errors (with the nearest known key). Comments are not JSON: leave them out.
+
+## height
+
+Edits apply in order, each on the ground the ones before left, over the
+base's plateaus and ramps.
+
+| op | keys | does |
+|---|---|---|
+| `raise` | `area`, `level`, `slope`? | ground in the area up to the level (never down) |
+| `lower` | `area`, `level`, `slope`? | ground in the area down to the level (never up) |
+| `flatten` | `area`, `level`, `slope`? | ground in the area exactly at the level, no roll |
+| `ridge` | `line` [[x, z], …] ≥ 2, `width`, `level`, `slope`? | a wall along the line, `width` across its top |
+| `ramp` | `from`, `to`, `width`, `fromLevel`, `level` | a drivable slope from `from` (on `fromLevel`) to `to` (on `level`) |
+
+- `area`: corners `[[x, z], …]` (≥ 3), `{"rect": [x0, z0, x1, z1]}` or
+  `{"circle": [x, z, r]}`. Everything inside the outline is at the level.
+- `slope`: cells past the outline (a ridge: past its sides) the ground takes
+  to reach the level. Left out or 0: a **cliff** (1.2 cells, not drivable).
+  Drivable from about 4 cells a level.
+- A ramp cuts through cliffs written before it. Its ends must stand on their
+  levels 1.5 cells past each end; it needs about 5 cells of length a level.
+  Write it after the cliffs it crosses.
+
+## Resources and props
+
+- `deposits`: an ore patch, 2×1 cells. `amount` 1…100000 (the bases use
+  1800 and 900). `angle` degrees, the long axis from east toward north.
+- `wells`: an MH well; a Derrick stands on it (needs flat ground 1.5 cells
+  round). `amount` 1…100000 (the bases' hold 2250).
+- `doodads`: `kind` rock | boulder | rockSpire | crate | crateStack | plant |
+  bush | debris | deadTree | tower; `rotation` degrees; `scale` 0.25…4.
+  Plants, bushes and debris are walkable; the rest is solid.
+- The base's rocks and plants give way to what the file puts down: deposits,
+  wells, pads, spawns and opening lanes clear them.
+
+## Places
+
+- `pads`: named landing pads, radius 3: flat (heights within 0.6), no
+  cliff, rock, ore or well on them, joined to the open ground.
+- `spawns`: named points where a pilot appears: open ground joined to the
+  rest.
+
+## openings
+
+Spans of each edge (`north` z = 0, `south` z = depth, `west` x = 0, `east`
+x = width) a machine drives across to the neighbour region: `[from, to]`
+cells along the edge (x on north and south, z on east and west), ≥ 4 long,
+not overlapping. The lane 2 cells in must be open the whole span and joined
+to the region's main open ground.
+
+## Problems
+
+`validate` (and `build`, `preview`) reports, each with its place in the file
+and the region position:
+
+- parse: bad JSON (line, column), missing or unknown key, wrong type, a
+  name not on the list, a number out of range, a point out of bounds, a
+  shape too small, a name used twice, a span off its edge, short or
+  overlapping;
+- a deposit or well on a cliff face, in rock, on top of another, cut off;
+- a pad on a cliff, on uneven ground, in rock, on ore or a well, cut off;
+- a spawn on a cliff, in rock, on ore or a well, cut off;
+- a ramp end on the wrong level, a ramp too steep;
+- an opening blocked (a cliff, a rock, ore, a well) or cut off.
+
+"Cut off" means not joined to the region's largest open area on the
+walking grid. A problem never stops `build` or `preview`.
+
+## What the build makes
+
+An `ac::MapDefinition`: the generated map renamed, its `version` a hash of
+the file (so a changed file never meets a cached walking grid), the height
+edits in `heightEdits`, deposits and wells in `deposits` and `wells` (after
+the bases' in the game state), crafted doodads after the base's. The game's
+own maps leave those three lists empty, so they stay as they were. Pads,
+spawns and openings come beside the map (`region::Built`).
