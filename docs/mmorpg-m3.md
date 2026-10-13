@@ -23,4 +23,6 @@ Log: [mmorpg-log.md](mmorpg-log.md). Design: [networking.md](networking.md) "Sav
 | S3 | Leveling online: XP on the server, levels in snapshots, Pick request, cards in the MMO HUD; saved with the pilot | S1 | done |
 | S4 | Game: pass `--save` and the pilot id; home screen "MMORPG (TEST)" resumes, "MMORPG NEW WORLD (TEST)" starts over | S2 | done |
 
+Status: built 2026-10-13; the manager re-runs the hand check in hidden runs (user away).
+
 Done when: in the game, build a Citadel, mine, level the Prospector and pick a card, cross into a neighbour; quit; start again → same region and spot, same Citadel, wallet, level and picks. Killing the server mid-play loses at most 5 s. All suites pass.

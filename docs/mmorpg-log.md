@@ -162,3 +162,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Tests use -AcMmoDir / temp dirs, never user's save.
 - D Server prints "FAILED save <why>"; banner shows it.
 - T M3 built; awaiting user hand check.
+- D User away: manager does all testing, hidden runs only.
+- D M4 = manager hand check in pictures + polish; mmorpg-m4.md.
+- T Q1 shot harness + review → background agent.
