@@ -150,3 +150,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N --dev-xp N / -AcMmoDevXp=N stage levels fast.
 - I Client sends random pilot key each start until S4.
 - I MMO picks not in the balance tracking database.
+- T S1+S2 done b83e66f 51ec1d1: WorldStore SQLite v1, Join(10), --save.
+- N Suites: server 65, net 56, core 391 pass (manager, twice).
+- N kill -9 test: Citadel and Prospector back within 5 s.
+- I One unexplained 4-failure server run seen once; watch flakiness.
+- I Restart: in-progress building loses builder; units come back idle.
+- I --save needs --world; duplicate key online is disconnected.
+- T S4 started (background agent).
