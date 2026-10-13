@@ -2,6 +2,7 @@
 
 #include "AcHologram.h"
 #include "AcLog.h"
+#include "AcMmo.h"
 #include "AcPilotOverlay.h"
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
@@ -129,12 +130,6 @@ bool UAcPilotBuildSubsystem::Key(const FString& K)
 	ac::Simulation& S = Sim->Simulation();
 	const std::optional<ac::Unit> U = S.pilotUnit();
 	if (!U || !ac::PilotBuild::builds(U->kind)) return false;
-	if (Sim->IsMmo() && K == TEXT("b"))
-	{
-		// The MMORPG test: building is a request to the server later.
-		Note(TEXT("Building is off in the MMORPG test"));
-		return true;
-	}
 	if (K == TEXT("place"))
 	{
 		// `pilotPress` with a building held out.
@@ -176,6 +171,20 @@ void UAcPilotBuildSubsystem::Place()
 	const ac::StructureKind Kind = *Held;
 	const TOptional<ac::Vec2> P = Spot(Kind);
 	if (!P) { Note(TEXT("No well here")); return; }
+	if (FAcMmoClient* Mmo = Sim->MmoClient())
+	{
+		// The MMORPG mode: the server builds it. Refused here first as the
+		// ghost says (the mirror's price and ground), else asked; the server's
+		// refusal comes back as a note (`OnFrame`).
+		const ac::Simulation& S = Sim->Simulation();
+		std::optional<std::string> Why = S.buildRefusal(Kind, ac::Pilot::player);
+		if (!Why) Why = S.placementRefusal(Kind, *P);
+		if (Why) { Note(Utf8(*Why)); return; }
+		if (!Mmo->Build(Kind, *P)) { Note(TEXT("Not connected to the local server")); return; }
+		UE_LOG(LogAutocraft, Log, TEXT("pilot: asked to build %s at %.2f,%.2f"), AcPose::ModelBase(Kind), P->x, P->y);
+		Close();
+		return;
+	}
 	if (const std::optional<std::string> Why = Sim->Simulation().pilotBuild(Kind, *P))
 	{
 		Note(Utf8(*Why));
@@ -191,6 +200,10 @@ void UAcPilotBuildSubsystem::OnFrame(const FAcFrame& Frame)
 	if (!Sim || !Sim->IsRunning()) return;
 	AAcPilotPawn* Pawn = AAcPilotPawn::Find(this);
 	Hook(Pawn);
+	if (FAcMmoClient* Mmo = Sim->MmoClient())
+	{
+		for (const FString& Why : Mmo->TakeBuildRefusals()) Note(Why);
+	}
 	ac::Simulation& S = Sim->Simulation();
 	const std::optional<ac::Unit> U = Pawn && Pawn->Driving() ? S.pilotUnit() : std::nullopt;
 	if (!U || U->id != Pawn->Driven() || !ac::PilotBuild::builds(U->kind))

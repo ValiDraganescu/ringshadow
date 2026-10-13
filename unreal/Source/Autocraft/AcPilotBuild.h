@@ -18,6 +18,10 @@
 // prompt and its tone) and the hologram (`AAcHologram`): green where it
 // fits, red with the reason. Leaving the drive closes it all.
 //
+// The MMORPG mode: the same keys and ghost on the mirror; "place" sends a
+// Build request (`FAcMmoClient::Build`) instead, and the server's refusals
+// come back as the same notes.
+//
 // Dev (headless; no desktop input):
 //   -AcPilotBuild=menu|build|blocked[,KIND]  with -AcPilot=prospector:
 //       staged as `windowshot --pilot build|menu`: the Prospector on its

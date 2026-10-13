@@ -82,6 +82,8 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	WantedUnit.reset();
 	bAutoTaken = false;
 	Asked.Reset();
+	BuildsAsked.Reset();
+	BuildRefusals.Reset();
 	FlightsAsked.Reset();
 	LastFlightRefusal.Reset();
 	bArriving = false;
@@ -386,6 +388,16 @@ void FAcMmoClient::ReadReplies()
 	for (auto It = Net->replies.begin(); It != Net->replies.end();)
 	{
 		const ac::net::ReplyMessage& R = It->second;
+		if (BuildsAsked.Remove(R.request) > 0)
+		{
+			if (!R.done)
+			{
+				BuildRefusals.Add(Text(R.reason));
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: build %u refused: %s"), R.request, *Text(R.reason));
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (FlightsAsked.Remove(R.request) > 0)
 		{
 			if (!R.done)
@@ -438,6 +450,20 @@ std::vector<ac::GameEvent> FAcMmoClient::TakeEvents()
 	std::vector<ac::GameEvent> Out = std::move(Events);
 	Events.clear();
 	return Out;
+}
+
+bool FAcMmoClient::Build(const ac::StructureKind Kind, const ac::Vec2 At)
+{
+	if (!Net || !Net->welcome()) return false;
+	const uint32 Id = Net->build(Kind, At);
+	BuildsAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: build %u asked: %s at %.2f,%.2f"), Id, *Text(std::string(ac::rawValue(Kind))), At.x, At.y);
+	return true;
+}
+
+TArray<FString> FAcMmoClient::TakeBuildRefusals()
+{
+	return MoveTemp(BuildRefusals);
 }
 
 TArray<FString> FAcMmoClient::TakeNotes()

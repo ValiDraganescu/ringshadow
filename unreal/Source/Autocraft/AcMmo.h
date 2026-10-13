@@ -108,6 +108,14 @@ public:
 	/// cannot be driven").
 	TArray<FString> TakeNotes();
 
+	/// Build a `Kind` at `At` with the driven Prospector (a Build request),
+	/// paid from the wallet; the scaffold comes with the snapshots. False:
+	/// not connected. The server's refusals: `TakeBuildRefusals`.
+	bool Build(ac::StructureKind Kind, ac::Vec2 At);
+	/// The server's reasons for builds refused since the last call ("Not
+	/// enough ore"), for the pilot's screen as the game's own refusals.
+	TArray<FString> TakeBuildRefusals();
+
 	/// The unit the pilot wants to drive: sends a take (or, with none, a
 	/// hand back) once. The pilot pawn dives in when the mirror says the
 	/// server gave it.
@@ -210,5 +218,8 @@ private:
 	/// The requests in flight: id → the unit asked for (none: a hand back).
 	TMap<uint32, std::optional<int64>> Asked;
 	TArray<FString> Notes;
+	/// Builds asked for (request ids), and the refusals not taken yet.
+	TSet<uint32> BuildsAsked;
+	TArray<FString> BuildRefusals;
 	std::vector<ac::GameEvent> Events;
 };
