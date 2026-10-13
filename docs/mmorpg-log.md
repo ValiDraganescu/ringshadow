@@ -74,3 +74,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Copied 9 untracked assets (cursors, splash) from main; don't commit.
 - T Orc run Ringshadow-MMO → `make mmo`: server, editor build, -AcMmo.
 - I Worktree's Ringshadow run points at main repo, not here.
+- N User hand check: MMO mode works via Ringshadow-MMO run.
