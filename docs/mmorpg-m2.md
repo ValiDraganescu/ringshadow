@@ -33,6 +33,7 @@ world". Log: [mmorpg-log.md](mmorpg-log.md).
 | R4 | Build anywhere: pilot build request in the MMO mode, wallet, server placement check, price | R2 | todo |
 | R5 | The start region crafted by an agent with R1's tool | R1 | todo |
 
-Done when: in the game the pilot starts at the pad, drives into a
-neighbour region, flies back, and builds a Citadel paid from the wallet;
-all test suites pass.
+Done when: in the game the pilot starts at the pad in a Prospector, builds a
+Citadel paid from the wallet, mines ore into the wallet, drives into a
+neighbour region and flies back; no other units anywhere; all test suites
+pass.
