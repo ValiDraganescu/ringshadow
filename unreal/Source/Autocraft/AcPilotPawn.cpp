@@ -723,7 +723,7 @@ void AAcPilotPawn::Hooks(const bool bOn)
 		if (UAcEffects* Fx = UAcEffects::Get(this)) Fx->SetPilot(FAcPilotFire());
 		if (UAcPointer* Pointer = UAcPointer::Get(this)) Pointer->SetThirdPerson(bThird);
 		if (UAcMinimapSubsystem* Minimap = UAcMinimapSubsystem::Get(this)) Minimap->SetSight({});
-		if (UAcLampPool* Lamps = UAcLampPool::Get(this)) Lamps->SetCockpitLamp(nullptr);
+		if (UAcLampPool* Lamps = UAcLampPool::Get(this)) Lamps->SetPilotLamp(nullptr);
 	}
 }
 
@@ -1157,12 +1157,27 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 		Audio->SetEars(Ears);
 	}
 	Sounds(U);
-	// The headlamp rides on the cockpit (`NightLamps.fit(cockpit:kind:)`);
-	// third person, the model carries its own.
+	// A Prospector's headlamp points at the crosshair, out to its day sight
+	// (the wedge the core lets it see at night): from the cockpit, or in
+	// third person from its model's lamp. In a dive the model's points
+	// ahead and down as every other's.
 	if (UAcLampPool* Lamps = UAcLampPool::Get(this))
 	{
-		const FTransform Eye(Rot, At);
-		Lamps->SetCockpitLamp(Cam.bThirdPerson || InDive() ? nullptr : &Eye, U.kind == ac::UnitKind::prospector);
+		if (U.kind == ac::UnitKind::prospector && !InDive())
+		{
+			UAcLampPool::FPilotLamp L;
+			L.Unit = DrivenId;
+			if (!Cam.bThirdPerson) L.Cockpit = FTransform(Rot, At);
+			L.Aim = Cross ? Cross->Point : At + Rot.Vector() * AcSpace::ToCm(AcPilotAim::ShotReach);
+			const ac::Boost B = S.boost(ac::Stat::Sight{}, U);
+			const double Reach = ac::Rules::vision(U.kind);
+			L.Reach = B != ac::Boost::none ? B.apply(Reach) : Reach;
+			Lamps->SetPilotLamp(&L);
+		}
+		else
+		{
+			Lamps->SetPilotLamp(nullptr);
+		}
 	}
 	// The sight wedge on the minimaps (`HUD.showPilot`: the way it looks).
 	if (UAcMinimapSubsystem* Minimap = UAcMinimapSubsystem::Get(this))

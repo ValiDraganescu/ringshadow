@@ -147,7 +147,7 @@ int8_t Vision::tierAt(Vec2 p) const {
 /// in the air, every level): `seen` (and `explored`) where it sees the
 /// ground, `near` wherever it is in reach (an air unit there is seen).
 void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<uint8_t>& seen, std::vector<uint8_t>& near,
-                   std::vector<uint64_t>& explored) const {
+                   std::vector<uint64_t>& explored, std::optional<std::pair<double, double>> cone) const {
     const int64_t x0 = max<int64_t>(0, static_cast<int64_t>(std::floor((c.x - r - origin.x) / cell)));
     const int64_t x1 = min<int64_t>(width - 1, static_cast<int64_t>(std::floor((c.x + r - origin.x) / cell)));
     const int64_t z0 = max<int64_t>(0, static_cast<int64_t>(std::floor((c.y - r - origin.y) / cell)));
@@ -159,6 +159,9 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
     uint8_t* s = seen.data();
     uint8_t* n = near.data();
     uint64_t* ex = explored.data();
+    // A wedge: the cells whose centre is within the half angle of the heading.
+    const Vec2 ahead = cone ? Vec2(std::cos(cone->first), std::sin(cone->first)) : Vec2::zero;
+    const double edge = cone ? std::cos(cone->second) : 0.0;
     for (int64_t z = z0; z <= z1; ++z) {
         const double dz = origin.y + (static_cast<double>(z) + 0.5) * cell - c.y;
         const double dz2 = dz * dz;
@@ -167,6 +170,7 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
         for (int64_t x = x0; x <= x1; ++x) {
             const double dx = origin.x + (static_cast<double>(x) + 0.5) * cell - c.x;
             if (!(dx * dx + dz2 <= r2)) continue;
+            if (cone && dx * ahead.x + dz * ahead.y < edge * std::sqrt(dx * dx + dz2)) continue;
             const int64_t i = row + x;
             n[i] = 1;
             if (t[i] <= top && !s[i]) {
@@ -181,7 +185,8 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
 /// `farther` holds the sight radius of units whose leveling picks
 /// change it (Spotter), by id.
 Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& explored,
-                    const std::map<int64_t, double>& farther, const std::map<int64_t, double>& reveal) const {
+                    const std::map<int64_t, double>& farther, const std::map<int64_t, double>& reveal,
+                    const std::map<int64_t, double>& beams) const {
     const int64_t cells = width * height;
     Sight s;
     s.seen.assign(static_cast<size_t>(cells), 0);
@@ -193,6 +198,9 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
     const double night = Rules::sightScale(Rules::hourAt(state.time, state.dayLength, state.heldHour));
     std::vector<Viewer> viewers;
     std::vector<bool> holds(towers.size(), false);
+    // A headlamp's beam: its day sight out, a wedge round its heading.
+    struct Beam { Viewer v; double heading; };
+    std::vector<Beam> lamps;
     // Its own and its allies' (C++: teams share their sight).
     for (const auto& b : state.structures) {
         if (!(state.allied(b.owner, p) && b.hp > 0)) continue;
@@ -203,8 +211,10 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
         if (hidden(u.task)) continue;
         const bool air = u.stats().air;
         auto f = farther.find(u.id);
-        viewers.push_back(Viewer{u.position, (f != farther.end() ? f->second : Rules::vision(u.kind)) * night,
-                                 air ? std::nullopt : std::optional<int8_t>(tierAt(u.position))});
+        const double day = f != farther.end() ? f->second : Rules::vision(u.kind);
+        const std::optional<int8_t> level = air ? std::nullopt : std::optional<int8_t>(tierAt(u.position));
+        viewers.push_back(Viewer{u.position, day * night, level});
+        if (auto b = beams.find(u.id); b != beams.end() && night < 1) lamps.push_back(Beam{Viewer{u.position, day, level}, b->second});
         if (!air) {
             for (size_t k = 0; k < towers.size(); ++k) {
                 if (distance(towers[k].at, u.position) <= Rules::towerReach) holds[k] = true;
@@ -231,6 +241,15 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
         if (inside) continue;
         drawn.push_back(v);
         stamp(v.c, v.r, v.level, s.seen, s.near, explored);
+    }
+    // The beams last: one inside a drawn circle adds nothing.
+    const double half = Rules::headlampCone * pi / 180;
+    for (const auto& b : lamps) {
+        bool inside = false;
+        for (const auto& d : drawn) {
+            if ((!d.level || d.level == b.v.level) && distance(d.c, b.v.c) + b.v.r <= d.r) { inside = true; break; }
+        }
+        if (!inside) stamp(b.v.c, b.v.r, b.v.level, s.seen, s.near, explored, std::make_pair(b.heading, half));
     }
     // What of the others' it sees.
     for (const auto& u : state.units) {
@@ -407,8 +426,11 @@ void Simulation::look() {
     }
     // Spotter: units whose picks let them see farther; Deep burrow: a
     // Scorpion that is seen from closer in only.
-    std::map<int64_t, double> farther, reveal;
+    std::map<int64_t, double> farther, reveal, beams;
     if (pilot) {
+        // A driven Prospector's headlamp points where the crosshair is.
+        if (const auto i = unitIndex(pilot->unit); i && state.units[*i].kind == Unit::Kind::prospector)
+            beams[pilot->unit] = pilot->heading;
         for (const auto& u : state.units) {
             const Boost b = boost(Stat::Sight{}, u);
             if (b != Boost::none) farther[u.id] = b.apply(Rules::vision(u.kind));
@@ -435,7 +457,7 @@ void Simulation::look() {
         const auto merging = std::chrono::steady_clock::now();
         Intel k = members.size() == 1 ? intel_[p] : teamIntel(intel_, members);
         stepTimes.merge += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - merging).count();
-        seen[p] = vision->sight(pl, state, k.explored, farther, reveal);
+        seen[p] = vision->sight(pl, state, k.explored, farther, reveal, beams);
         const Sight& s = seen[p];
         if (k.sites.size() != sites.size()) k.sites.assign(sites.size(), -std::numeric_limits<double>::infinity());
         for (size_t j = 0; j < sites.size(); ++j) {

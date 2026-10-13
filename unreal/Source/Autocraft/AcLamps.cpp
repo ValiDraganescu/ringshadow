@@ -11,6 +11,7 @@
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcWorldRenderer.h"
+#include "Rules.h"
 
 #include "Camera/PlayerCameraManager.h"
 #include "Components/PointLightComponent.h"
@@ -36,6 +37,10 @@ namespace
 		TEXT("Extra gain on the drill's weld light: on the near-black ore it needs far more than the lamps to glow gold as Swift's."));
 	TAutoConsoleVariable<float> CVarDrillReach(TEXT("ac.DrillLightReach"), 1.8f,
 		TEXT("The drill weld light's reach, cells (Swift 1.3; 1.8 with gain 30 gives Swift's top-down glow, day and night: `top`, `top-night`)."));
+	TAutoConsoleVariable<float> CVarHeadlampFalloff(TEXT("ac.HeadlampFalloff"), 2.0f,
+		TEXT("The driven Prospector's headlamp's falloff exponent over its reach (its day sight): lower carries the light farther along the beam."));
+	TAutoConsoleVariable<float> CVarHeadlampGain(TEXT("ac.HeadlampGain"), 1.5f,
+		TEXT("Extra gain on the driven Prospector's headlamp, on top of ac.LampGain."));
 	TAutoConsoleVariable<float> CVarStats(TEXT("ac.LampStats"), 0.0f,
 		TEXT("Log a `lamps:` line every N seconds (0: off)."));
 
@@ -219,10 +224,10 @@ void UAcLampPool::Explosion(const FVector& At, const double Size, const double T
 	Blasts.Add({At, Size, Time});
 }
 
-void UAcLampPool::SetCockpitLamp(const FTransform* InCockpit, const bool bHeadlamp)
+void UAcLampPool::SetPilotLamp(const FPilotLamp* Lamp)
 {
-	if (InCockpit && bHeadlamp) Cockpit = *InCockpit;
-	else Cockpit.Reset();
+	if (Lamp) PilotLamp = *Lamp;
+	else PilotLamp.Reset();
 }
 
 void UAcLampPool::OnCue(const int64 Id, const FAcPoseCue& Cue)
@@ -349,7 +354,14 @@ void UAcLampPool::Gather(const double Time, const double Dark, TArray<FWant>& Wa
 					W.Intensity = Pr.Intensity * Dark;
 					if (L.Kind == Beacon) W.Intensity *= CVarBeaconGain.GetValueOnGameThread();
 					W.Reach = Pr.Reach;
-					if (L.Kind == Headlamp)
+					if (L.Kind == Headlamp && PilotLamp && PilotLamp->Unit == Id)
+					{
+						// Third person: the driven one's on the crosshair
+						// (first person, its hidden model carries none).
+						if (PilotLamp->Cockpit) continue;
+						W = Beam(W.At, Dark);
+					}
+					else if (L.Kind == Headlamp)
 					{
 						W.Toward = World[L.Part].GetRotation().RotateVector(AcSpace::AxesFromSceneKit(1, -0.65, 0)).GetSafeNormal();
 						W.Inner = 16;
@@ -402,21 +414,8 @@ void UAcLampPool::Gather(const double Time, const double Dark, TArray<FWant>& Wa
 			}
 		});
 	}
-	// The driven Prospector's headlamp on its cockpit: ahead and down.
-	if (Cockpit && Dark > 0.001)
-	{
-		const FProto& Pr = Proto(Headlamp);
-		FWant W;
-		W.At = Cockpit->TransformPosition(FVector(0, 0, 12));
-		W.Toward = Cockpit->GetRotation().RotateVector(FVector(1, 0, -0.4)).GetSafeNormal();
-		W.Colour = Pr.Colour;
-		W.Intensity = Pr.Intensity * Dark;
-		W.Reach = Pr.Reach;
-		W.Inner = 16;
-		W.Outer = 40;
-		W.Score = 1e12;  // always lit
-		Want.Add(W);
-	}
+	// First person: the driven Prospector's headlamp on its cockpit.
+	if (PilotLamp && PilotLamp->Cockpit && Dark > 0.001) Want.Add(Beam(PilotLamp->Cockpit->TransformPosition(FVector(0, 0, 12)), Dark));
 	Want.Append(Drills);
 	Drills.Reset();
 	// Explosions: 70·size, gone in 3.2/6 s.
@@ -438,6 +437,25 @@ void UAcLampPool::Gather(const double Time, const double Dark, TArray<FWant>& Wa
 		W.Reach = 3 + 2.5 * B.Size;
 		Want.Add(W);
 	}
+}
+
+UAcLampPool::FWant UAcLampPool::Beam(const FVector& At, const double Dark) const
+{
+	// From `At` onto the crosshair's point, its day sight out, in the cone
+	// the core sees in (`Rules::headlampCone`, a half angle).
+	const FProto& Pr = Proto(Headlamp);
+	FWant W;
+	W.At = At;
+	W.Toward = (PilotLamp->Aim - At).GetSafeNormal();
+	if (W.Toward.IsNearlyZero() && PilotLamp->Cockpit) W.Toward = PilotLamp->Cockpit->GetRotation().GetForwardVector();
+	W.Colour = Pr.Colour;
+	W.Intensity = Pr.Intensity * Dark * CVarHeadlampGain.GetValueOnGameThread();
+	W.Reach = PilotLamp->Reach;
+	W.Outer = ac::Rules::headlampCone * 2;
+	W.Inner = W.Outer * 0.55;
+	W.Falloff = CVarHeadlampFalloff.GetValueOnGameThread();
+	W.Score = 1e12;  // always lit
+	return W;
 }
 
 void UAcLampPool::OnFrame(const FAcFrame& Frame)
@@ -567,9 +585,10 @@ void UAcLampPool::Light(TArray<FWant>& Want)
 		L->SetLightColor(W.Colour);
 		L->SetIntensity(float(W.Intensity) * Gain);
 		L->SetAttenuationRadius(float(W.Reach * 100.0));
-		if (UPointLightComponent* P = Cast<UPointLightComponent>(L); P && P->LightFalloffExponent != Falloff)
+		const float Exponent = W.Falloff > 0 ? FMath::Max(0.5f, float(W.Falloff)) : Falloff;
+		if (UPointLightComponent* P = Cast<UPointLightComponent>(L); P && P->LightFalloffExponent != Exponent)
 		{
-			P->LightFalloffExponent = Falloff;
+			P->LightFalloffExponent = Exponent;
 			P->MarkRenderStateDirty();
 		}
 		if (L->CastShadows != bShadows) L->SetCastShadows(bShadows);

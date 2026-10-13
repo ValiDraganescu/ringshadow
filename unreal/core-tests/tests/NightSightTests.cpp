@@ -80,3 +80,44 @@ TEST(night_aHeldHourHoldsTheSight) {
     s.heldHour = 0.0;
     EXPECT_NEAR(Rules::sightScale(Rules::hourAt(s.time, s.dayLength, s.heldHour)), Rules::nightSight, 1e-9);
 }
+
+namespace {
+
+/// A blue Prospector at midnight, driven (`drive`) and looking along
+/// `heading`; does it see a red Prospector `off` from it?
+bool lampSees(Vec2 off, double heading, bool drive = true) {
+    GameState s = GameState::new_(homeMap());
+    s.units.clear();
+    const Simulation probe(s, homeMap());
+    const Vec2 at = openGround(probe);
+    EXPECT_TRUE(at != Vec2::zero);
+    s.time = timeOf(0.0);
+    const int64_t blue = add(s, Unit::Kind::prospector, at, 0);
+    const int64_t red = add(s, Unit::Kind::prospector, at + off, 1);
+    Simulation sim(s, homeMap());
+    if (drive) {
+        EXPECT_TRUE(sim.take(blue));
+        sim.pilot->heading = heading;
+    }
+    for (int k = 0; k < 6; ++k) sim.step(1.0 / 30);
+    return sim.sees(0, red);
+}
+
+} // namespace
+
+/// At night a driven Prospector's headlamp sees along its beam as far as
+/// the Prospector sees by day; off the beam, night sight as everyone.
+TEST(night_theHeadlampSeesAlongItsBeam) {
+    const double day = Rules::vision(Unit::Kind::prospector);
+    const Vec2 ahead(day - 2, 0);
+    EXPECT_TRUE(day - 2 > day * Rules::nightSight);  // past night sight
+    EXPECT_TRUE(lampSees(ahead, 0));
+    EXPECT_TRUE(!lampSees(ahead, 0, false));  // not driven: no beam
+    EXPECT_TRUE(!lampSees(ahead, pi));       // the beam the other way
+    EXPECT_TRUE(!lampSees(Vec2(day + 1.5, 0), 0));  // past its day sight
+    // The edge of the cone, a little inside and a little outside.
+    const double cone = Rules::headlampCone * pi / 180;
+    const double r = day - 2;
+    EXPECT_TRUE(lampSees(Vec2(std::cos(cone - 0.08), std::sin(cone - 0.08)) * r, 0));
+    EXPECT_TRUE(!lampSees(Vec2(std::cos(cone + 0.15), std::sin(cone + 0.15)) * r, 0));
+}

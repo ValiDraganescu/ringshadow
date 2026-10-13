@@ -42,7 +42,7 @@
 // `UAcEffects::SetPilot`, `UAcAudioDirector::SetEars`/`Blocked` and the
 // in-ear sounds of `FAcAudioRules` (step, breath, lock-on, pull-away, heal),
 // `UAcPointer::SetThirdPerson`, `UAcMinimapSubsystem::SetSight` (the sight
-// wedge), `UAcLampPool::SetCockpitLamp` (the headlamp on the cockpit). The crosshair is cast from the eye with
+// wedge), `UAcLampPool::SetPilotLamp` (the headlamp on the crosshair). The crosshair is cast from the eye with
 // E1's rays (`UAcRaysSubsystem::SightHit`, 60 cells, the driven unit
 // skipped) before each step, as `steerPilot` does.
 //

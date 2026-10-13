@@ -44,9 +44,12 @@
 // The construction weld and the building's own door, bay and weld lights
 // stay in `UAcBuildingFx` (its own pool, `ac.BuildingLights`).
 //
-// Driving (E chunks): the driven Prospector's model is hidden, so its
-// headlamp goes; `SetCockpitLamp` hangs it on the cockpit as Swift's
-// `NightLamps.fit(cockpit:kind:)` does.
+// Driving (E chunks): the driven Prospector's headlamp points at the
+// crosshair (`SetPilotLamp`): from the cockpit in first person (its model is
+// hidden), from its model's `headlamp` part in third. It reaches the
+// Prospector's day sight with a softer falloff (`ac.HeadlampFalloff`), bright
+// close in and fading out along the beam, in the cone
+// `ac::Rules::headlampCone`: the wedge the core lets it see at night.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -80,10 +83,18 @@ public:
 	/// An explosion's flash (`Effects.explosion`): `At` cm, size 1 a unit.
 	void Explosion(const FVector& At, double Size, double Time);
 
-	/// The driven unit's cockpit (its camera's world transform, X ahead,
-	/// Z up) carries the headlamp of a `bHeadlamp` kind (the Prospector);
-	/// null: none.
-	void SetCockpitLamp(const FTransform* Cockpit, bool bHeadlamp = true);
+	/// The driven Prospector's headlamp, aimed at the crosshair.
+	struct FPilotLamp
+	{
+		int64 Unit = INDEX_NONE;
+		/// First person: it shines from the cockpit (the camera's world
+		/// transform, X ahead, Z up). Unset: from the unit's `headlamp` part.
+		TOptional<FTransform> Cockpit;
+		FVector Aim = FVector::ZeroVector;  // cm
+		double Reach = 12;                  // cells: its day sight
+	};
+	/// Null: no driven headlamp (every Prospector's points ahead and down).
+	void SetPilotLamp(const FPilotLamp* Lamp);
 
 	struct FStats
 	{
@@ -100,6 +111,7 @@ public:
 		double Intensity = 0;  // SceneKit units
 		double Reach = 1;      // cells
 		double Inner = 0, Outer = 0;  // a spot's cone, full angles (SceneKit), degrees
+		double Falloff = 0;           // 0: `ac.LampFalloff`
 		double Score = 0;
 	};
 
@@ -136,12 +148,14 @@ private:
 	const FSockets& SocketsOf(const FAcModelInfo& Model);
 	void Gather(double Time, double Dark, TArray<FWant>& Want);
 	void Light(TArray<FWant>& Want);
+	/// The driven headlamp from `At` onto the crosshair (`PilotLamp` set).
+	FWant Beam(const FVector& At, double Dark) const;
 	ULocalLightComponent* Take(bool bSpot, int32 Index);
 
 	TMap<const FAcModelInfo*, TUniquePtr<FSockets>> Sockets;
 	TArray<FBlast> Blasts;
 	TArray<FWant> Drills;
-	TOptional<FTransform> Cockpit;
+	TOptional<FPilotLamp> PilotLamp;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> Holder;

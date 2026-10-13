@@ -11,6 +11,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace ac {
@@ -78,17 +79,22 @@ struct Vision {
     /// Mark what a viewer at `c` sees, `r` round, from level `level` (nil:
     /// in the air, every level): `seen` (and `explored`) where it sees the
     /// ground, `near` wherever it is in reach (an air unit there is seen).
+    /// `cone` set (world radians, half angle): only the wedge of that circle
+    /// within `cone->second` of the heading `cone->first`.
     void stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<uint8_t>& seen, std::vector<uint8_t>& near,
-               std::vector<uint64_t>& explored) const;
+               std::vector<uint64_t>& explored, std::optional<std::pair<double, double>> cone = std::nullopt) const;
 
     /// What player `p` sees in `state` now; what it sees joins `explored`.
     /// `farther` holds the sight radius of units whose leveling picks
     /// change it (Spotter), by id; `reveal`, how close an enemy must come
     /// to see a buried Scorpion whose picks change it (Deep burrow), by id.
     /// A buried Scorpion that has not stung lately is seen only by enemies
-    /// that close and by enemy Sentinels (`spots`).
+    /// that close and by enemy Sentinels (`spots`). `beams`: a headlamp's
+    /// heading (world radians) by unit id; that unit also sees its day
+    /// sight out within `Rules::headlampCone` of it, night or not.
     Sight sight(int64_t p, const GameState& state, std::vector<uint64_t>& explored,
-                const std::map<int64_t, double>& farther = {}, const std::map<int64_t, double>& reveal = {}) const;
+                const std::map<int64_t, double>& farther = {}, const std::map<int64_t, double>& reveal = {},
+                const std::map<int64_t, double>& beams = {}) const;
 
     /// A buried Scorpion `u` is out of sight of player `p` (and its allies):
     /// down in the ground and done reloading, with no unit or building of

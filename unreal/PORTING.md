@@ -140,7 +140,13 @@ the game layer's sky (`AAcDaylight`) draws that clock. At night every sight
 radius (units, buildings, watchtowers, Spotter picks) shrinks to
 `Rules::nightSight` (half), eased through dusk and dawn by `dark`
 (`Rules::sightScale`, applied in `Vision::sight`). What a side does not see
-it cannot target, so night fights are close. The game layer copies
+it cannot target, so night fights are close. A driven Prospector's
+headlamp is the way out: it sees its whole day sight along its beam, a wedge
+`Rules::headlampCone` (22.5°) either side of `Pilot::heading` (where the
+crosshair is), stamped after the circles (`Vision::sight`'s `beams`; cliffs
+still hide what is up them). The game layer's spot light has the same cone
+and reach, aimed at the crosshair's point (`UAcLampPool::SetPilotLamp`;
+`ac.HeadlampFalloff`, `ac.HeadlampGain`). The game layer copies
 `ac.DayLength` and `ac.Hour` into `GameState::dayLength` and `heldHour`
 before each step (they are not saved). Tests: `NightSightTests`.
 
