@@ -132,3 +132,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D One pad rule: region::nearestPad, padReach 4 cells, both ends.
 - D MMO HUD: counts pilot's units, hides supply.
 - N Start seat fine; user's hand back was Esc/F.
+- N Hand check: flying works.
