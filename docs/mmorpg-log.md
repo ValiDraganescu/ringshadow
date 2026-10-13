@@ -273,3 +273,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Suites: server 81, net 64, core 416.
 - I Workers must not edit the log (C1 did; kept).
 - T P3 server progression → world-clock worker after compaction.
+- T P2 done af06f05: tree effects in the sim, 21 tests.
+- N Core 437 pass; full Deep Vein load 57 a trip.
+- T P4 split: P4a region sites now, P4b server after P3.
