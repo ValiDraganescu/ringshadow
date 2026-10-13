@@ -4,6 +4,7 @@
 //
 //   autocraft-server --world <file> | --map <style> --size <size> [--starts n]
 //                    [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
+//                    [--save file]  (a world's save: loaded at start, written every 5 s and on stop)
 //                    [--dev-xp xp]  (dev, tests: a new pilot's Prospector earns that much XP at once)
 //
 // Reads the one-time token as the first line of its standard input, binds,
@@ -73,7 +74,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--dev-xp xp]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp]\n",
                  why);
     return 2;
 }
@@ -93,6 +94,7 @@ int main(int argc, char** argv) {
     std::optional<MapSize> size;
     int64_t starts = 2;
     std::string worldPath;
+    std::string savePath;
     net::Address bind = net::Address::loopback(0);
     long port = 0;
     pid_t parent = 0;
@@ -111,6 +113,7 @@ int main(int argc, char** argv) {
         else if (a == "--port") port = std::atol(v.c_str());
         else if (a == "--parent-pid") parent = pid_t(std::atol(v.c_str()));
         else if (a == "--log") logPath = v;
+        else if (a == "--save") savePath = v;
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
         else return usage(("unknown " + a).c_str());
     }
@@ -126,12 +129,30 @@ int main(int argc, char** argv) {
         if (!style) return usage("--map: a map style (or --world)");
         if (!size) return usage("--size: a map size");
     }
+    if (!savePath.empty() && !world) return usage("--save: only with --world");
     if (starts != 2 && starts != 4 && starts != 8) return usage("--starts: 2, 4 or 8");
     if (port < 0 || port > 65535) return usage("--port: 0…65535");
     bind.port = uint16_t(port);
 
     makeFolders(logPath);
     logFile = std::fopen(logPath.c_str(), "a");
+
+    // The save: opened (and held) before anything else, loaded before the
+    // first tick. One that will not open (not a database, another server
+    // has it, a newer schema, another world's) stops the server untouched.
+    std::unique_ptr<WorldStore> store;
+    std::optional<WorldSave> saved;
+    if (!savePath.empty()) {
+        makeFolders(savePath);
+        std::string why;
+        store = WorldStore::open(savePath, world->file.id, &why);
+        if (store) saved = store->load(&why);
+        if (!store || !saved) {
+            logLine("start failed: save " + why);
+            std::fprintf(stderr, "autocraft-server: save %s\n", why.c_str());
+            return 1;
+        }
+    }
 
     // The one-time token: the first line of the standard input.
     std::string token;
@@ -148,6 +169,8 @@ int main(int argc, char** argv) {
         return 1;
     }
     options.log = logLine;
+    options.store = store.get();
+    options.saved = std::move(saved);
 
     net::UdpSocket socket;
     if (!socket.open(bind)) {

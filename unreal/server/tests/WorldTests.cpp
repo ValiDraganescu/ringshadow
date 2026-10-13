@@ -369,6 +369,7 @@ TEST(world_client_follows_a_region_change) {
         return false;
     };
     client.connect(now);
+    client.join(net::newPilotKey());
     ASSERT_TRUE(until([&] { return client.mirror() && client.mirror()->driven() && client.world(); }, 10));
     EXPECT_TRUE(client.mirror()->matches());
     EXPECT_TRUE(client.world()->regions[size_t(client.world()->here)].id == "start");

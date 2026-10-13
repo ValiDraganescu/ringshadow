@@ -188,7 +188,10 @@ WorldLoad loadWorld(std::string_view text, const std::string& folder) {
 
 // MARK: - The running world
 
-WorldMap::WorldMap(const RegionConfig& config) { regions_.push_back(std::make_unique<Region>(config)); }
+WorldMap::WorldMap(const RegionConfig& config) {
+    regions_.push_back(std::make_unique<Region>(config));
+    builtBy_.resize(1);
+}
 
 WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const RegionConfig& base)
     : world_(world), params_(params), start_(world.start) {
@@ -202,6 +205,7 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
         c.state = std::nullopt;
         regions_.push_back(std::make_unique<Region>(c));
     }
+    builtBy_.resize(regions_.size());
 }
 
 std::optional<size_t> WorldMap::regionNamed(std::string_view id) const {
@@ -274,6 +278,7 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
         }
     }
     const int64_t id = r.admit(v);
+    p.unit = id;
     p.last = places.regionAt(v.position);
     return free && r.take(pilot, id);
 }
@@ -331,6 +336,8 @@ void WorldMap::leave(PilotId pilot) {
     r.leave(pilot);
     // The side's bank was this pilot's: no one's now.
     if (world_ && r.pilots().empty()) bankIn(PilotState{}, it->second.region);
+    // A kept pilot waits for its key (WorldMapSave.cpp).
+    if (world_ && !it->second.key.empty()) park(it->second);
     pilots_.erase(it);
 }
 
@@ -372,7 +379,9 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     if (it == pilots_.end()) return "Not joined";
     PilotState& p = it->second;
     if (p.flight) return "In flight";
+    const int64_t id = regions_[p.region]->simulation().state.nextID;
     if (auto why = regions_[p.region]->build(pilot, kind, at)) return why;
+    builtBy_[p.region][id] = p.key;
     // Paid from the side's bank: the wallet follows at once.
     if (world_) bankOut(p, p.region);
     return std::nullopt;

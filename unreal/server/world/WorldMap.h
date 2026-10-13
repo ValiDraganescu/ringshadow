@@ -7,6 +7,7 @@
 #pragma once
 
 #include "World.h"
+#include "WorldStore.h"
 
 #include "RegionFile.h"
 
@@ -116,7 +117,29 @@ public:
     /// A new pilot: in a world, at the start pad driving a new Prospector
     /// with the starting wallet.
     bool join(PilotId pilot);
+    /// How `seat` seated a pilot.
+    enum class Seated { refused, fresh, restored };
+    /// A pilot by its key (net::pilotKeyHex; docs/mmorpg-m3.md "Pilot
+    /// identity"): one known from before (left, or from the save) comes back
+    /// where it left, in its region, driving its own Prospector where it
+    /// stands, with its wallet and levels; an unknown one is new, as `join`.
+    /// Refused: that key is on line already, or the pilot number is taken.
+    /// An empty key (and any key outside a world) is a pilot never kept.
+    Seated seat(PilotId pilot, const std::string& key);
+    /// Off line: a kept pilot's Prospector stays where it is (one in
+    /// flight lands at its pad), and the pilot waits for its key.
     void leave(PilotId pilot);
+    /// Pilots known by key that are off line.
+    size_t away() const { return away_.size(); }
+
+    /// The world as the save keeps it (WorldStore.h): every region's
+    /// buildings, the pilots' units, what is left in the deposits and wells,
+    /// and every kept pilot, on line or not.
+    WorldSave save() const;
+    /// Puts a save in place, before any pilot joins: the regions' state, and
+    /// the pilots off line until they come back. What could not be used,
+    /// one a line (a region the world has no more, levels that do not read).
+    std::vector<std::string> restore(const WorldSave& save);
     bool joined(PilotId pilot) const { return pilots_.count(pilot) > 0; }
     /// The region the pilot is in (in flight: the one it lifted off from).
     std::optional<size_t> where(PilotId pilot) const;
@@ -184,6 +207,10 @@ private:
         std::optional<Flight> flight;
         /// The driven unit's region position after the last step.
         std::optional<Vec2> last;
+        /// Its key (empty: not kept), and its own Prospector in `region`
+        /// (driven or not; in flight: the one it left).
+        std::string key;
+        std::optional<int64_t> unit;
     };
 
     std::optional<LoadedWorld> world_;
@@ -191,6 +218,10 @@ private:
     std::vector<std::unique_ptr<Region>> regions_;
     size_t start_ = 0;
     std::map<PilotId, PilotState> pilots_;
+    /// Kept pilots off line, by key.
+    std::map<std::string, PilotState> away_;
+    /// Who built each building, per region (building id → key).
+    std::vector<std::map<int64_t, std::string>> builtBy_;
     std::vector<Moved> moves_;
     int64_t tick_ = 0;
     double lastStepMs_ = 0;
@@ -205,6 +236,8 @@ private:
     void bankOut(PilotState& p, size_t r);
     void crossings();
     void landings();
+    /// Into `away_` (WorldMapSave.cpp).
+    void park(const PilotState& p);
 };
 
 } // namespace ac::server

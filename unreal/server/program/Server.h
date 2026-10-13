@@ -41,6 +41,12 @@ struct ServerOptions {
     double statsEvery = 10;
     /// One line of the log (no newline).
     std::function<void(const std::string&)> log;
+    /// The world's save (`--save`, WorldStore.h): what it held, put in
+    /// place before the first tick, and the store written every
+    /// `saveEvery` seconds (what changed) and on stop. Null: nothing saved.
+    std::optional<WorldSave> saved;
+    WorldStore* store = nullptr;
+    double saveEvery = 5;
 };
 
 class Server {
@@ -50,8 +56,13 @@ public:
     /// One server tick at `now` (seconds, never going back). `stepRegion`
     /// false holds the region still (the tests): the network goes on.
     void tick(double now, bool stepRegion = true);
-    /// Tells every client the server stops, and sends it.
+    /// Tells every client the server stops, and sends it; then saves.
     void stop(double now, const std::string& reason);
+    /// Writes what changed to the store now (false: no store, or it
+    /// failed, which the log says).
+    bool save();
+    /// Rows the last save wrote (changed, removed).
+    WorldStore::Written lastSave() const { return lastSave_; }
 
     /// The start region (M1: the one region).
     Region& region() { return world_.start(); }
@@ -76,6 +87,8 @@ public:
 private:
     struct Client {
         PilotId pilot = 0;
+        /// Its Join came: the pilot is in the world.
+        bool seated = false;
         net::SnapshotWriter writer;
         int64_t snapshots = 0;
         int64_t snapshotMessages = 0;
@@ -84,6 +97,7 @@ private:
     };
 
     void handle(const net::Event& e, double now);
+    void join(net::ConnectionId c, Client& client, const std::vector<uint8_t>& data, double now);
     /// Reliable, or on the bulk channel when too large for one message.
     void sendReliable(net::ConnectionId c, const std::vector<uint8_t>& bytes);
     void sendWorld(net::ConnectionId c, PilotId pilot);
@@ -106,6 +120,8 @@ private:
     // The regions' step time (all of them), for the stats line.
     double stepSum_ = 0;
     double stepMax_ = 0;
+    double savedAt_ = -1;
+    WorldStore::Written lastSave_;
 };
 
 } // namespace ac::server

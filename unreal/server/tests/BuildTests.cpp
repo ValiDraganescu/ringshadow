@@ -194,6 +194,7 @@ TEST(build_request_over_the_protocol) {
         return false;
     };
     client.connect(now);
+    client.join(net::newPilotKey());
     ASSERT_TRUE(until([&] { return client.mirror() && client.mirror()->driven(); }, 10));
     WorldMap& w = server.world();
     const PilotId pilot = w.start().pilots().front();

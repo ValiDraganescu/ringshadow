@@ -82,6 +82,7 @@ const Unit* unitIn(const Simulation& sim, int64_t id) {
 TEST(prediction_follows_the_server_under_lag) {
     Scene s;
     s.client.connect(s.now);
+    s.client.join(net::newPilotKey());
     ASSERT_TRUE(s.until([&] { return s.client.mirror() && !s.client.mirror()->simulation().state.units.empty(); }, 10));
     const Simulation& truth = s.server.region().simulation();
     int64_t id = -1;

@@ -9,6 +9,8 @@
 #include "HeadlessClient.h"
 #include "NetLagSimulator.h"
 #include "NetLocalServer.h"
+#include "World.h"
+#include "WorldStore.h"
 
 #include <cerrno>
 #include <chrono>
@@ -198,6 +200,7 @@ TEST(e2e_drive_two_seconds_under_lag) {
     ASSERT_TRUE(server.has_value());
     Client c(server->port, kToken, rough());
     c.client->connect(clockNow());
+    c.client->join(net::newPilotKey());
     HeadlessClient& hc = *c.client;
     ASSERT_TRUE(c.until([&] { return hc.mirror() && !hc.mirror()->simulation().state.units.empty(); }, 10));
     EXPECT_TRUE(hc.mirror()->matches());
@@ -242,6 +245,7 @@ TEST(e2e_drive_two_seconds_under_lag) {
     // region, so every item comes whole.
     Client o(server->port, kToken, {});
     o.client->connect(clockNow());
+    o.client->join(net::newPilotKey());
     ASSERT_TRUE(o.until([&] { return o.client->mirror() && o.client->mirror()->unit(unit) != nullptr; }, 5));
     // A few ticks for c too, so both read the same standing unit.
     const Unit truth = *o.client->mirror()->unit(unit);
@@ -265,6 +269,7 @@ TEST(e2e_bad_token_refused) {
     ASSERT_TRUE(server.has_value());
     Client c(server->port, "not-the-token", {});
     c.client->connect(clockNow());
+    c.client->join(net::newPilotKey());
     ASSERT_TRUE(c.until([&] { return !c.client->disconnectReason().empty(); }, 5));
     EXPECT_TRUE(c.client->disconnectReason() == "bad token");
     EXPECT_TRUE(!c.client->welcome().has_value());
@@ -312,6 +317,7 @@ TEST(e2e_local_server_as_the_game_starts_it) {
     ASSERT_TRUE(server.state() == net::LocalServer::State::running);
     Client c(server.port(), kToken, {});
     c.client->connect(clockNow());
+    c.client->join(net::newPilotKey());
     ASSERT_TRUE(c.until([&] { return c.client->mirror() && !c.client->mirror()->simulation().state.units.empty(); }, 5));
     EXPECT_TRUE(server.poll() == net::LocalServer::State::running);
     EXPECT_TRUE(server.stop(3));
@@ -338,6 +344,7 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     Client c(uint16_t(port), kToken, rough());
     HeadlessClient& hc = *c.client;
     hc.connect(clockNow());
+    hc.join(net::newPilotKey());
     ASSERT_TRUE(c.until([&] { return hc.mirror() && hc.mirror()->driven() && hc.world(); }, 10));
     EXPECT_TRUE(hc.mirror()->matches());
     EXPECT_TRUE(hc.mirror()->region().wild);
@@ -370,4 +377,155 @@ TEST(e2e_world_refuses_a_bad_world_file) {
     ASSERT_TRUE(code.has_value());
     EXPECT_EQ(*code, 2);
     p->stop();
+}
+
+// MARK: - The save (--save)
+
+namespace {
+
+/// The real program on the first world with a save file; its port, or nil.
+std::optional<Started> startSaving(const char* name, const std::string& save) {
+    auto p = Process::start({kProgram, "--world", "worlds/first.json", "--save", save, "--log", logPath(name)});
+    if (!p) return std::nullopt;
+    p->write(kToken + "\n");
+    unsigned port = 0;
+    const auto first = p->line(20);
+    if (!first || std::sscanf(first->c_str(), "PORT %u", &port) != 1 || port == 0) {
+        p->stop();
+        return std::nullopt;
+    }
+    return Started{*p, uint16_t(port)};
+}
+
+std::string freshSave(const std::string& name) {
+    const std::string path = "build/test-logs/" + name + ".sqlite";
+    std::remove(path.c_str());
+    std::remove((path + "-wal").c_str());
+    std::remove((path + "-shm").c_str());
+    return path;
+}
+
+const Structure* citadelIn(const net::Mirror& m) {
+    for (const Structure& s : m.simulation().state.structures)
+        if (s.kind == StructureKind::citadel) return &s;
+    return nullptr;
+}
+
+} // namespace
+
+TEST(e2e_save_kill_9_mid_play_loses_at_most_5_s) {
+    const std::string save = freshSave("kill9");
+    std::remove(logPath("kill9").c_str());
+    auto server = startSaving("kill9", save);
+    ASSERT_TRUE(server.has_value());
+    const net::PilotKey key = net::newPilotKey();
+    Client c(server->port, kToken, {});
+    HeadlessClient& hc = *c.client;
+    hc.connect(clockNow());
+    hc.join(key);
+    ASSERT_TRUE(c.until([&] { return hc.mirror() && hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()); }, 10));
+    // Off the pad east onto open ground, then a Citadel ahead, whichever way fits.
+    hc.steer.heading = 0;
+    hc.steer.walk = Vec2(1, 0);
+    c.until([] { return false; }, 1.5);
+    hc.steer.walk = Vec2(0, 0);
+    c.until([] { return false; }, 0.5);
+    bool built = false;
+    for (int k = 0; k < 8 && !built; k++) {
+        hc.steer.heading = k * 6.283185307179586 / 8;
+        c.until([] { return false; }, 0.4);
+        const Unit& u = *hc.mirror()->unit(*hc.mirror()->driven());
+        const Vec2 ahead(std::cos(u.heading), std::sin(u.heading));
+        const auto at = hc.mirror()->simulation().snap(StructureKind::citadel, u.position + ahead * Region::buildReach(StructureKind::citadel));
+        if (!at) continue;
+        const uint32_t req = hc.build(StructureKind::citadel, *at);
+        ASSERT_TRUE(c.until([&] { return hc.replies.count(req) > 0; }, 3));
+        built = hc.replies[req].done;
+    }
+    ASSERT_TRUE(built);
+    ASSERT_TRUE(c.until([&] { return citadelIn(*hc.mirror()) != nullptr; }, 3));
+    // It welds, standing; past one save at least. What the mirror saw, when.
+    std::vector<std::pair<double, double>> left;
+    c.until([&] {
+        if (const Structure* s = citadelIn(*hc.mirror()); s && s->buildLeft) left.push_back({clockNow(), *s->buildLeft});
+        return false;
+    }, 7);
+    ASSERT_TRUE(!left.empty());
+    const Unit stood = *hc.mirror()->unit(*hc.mirror()->driven());
+    const double killedAt = clockNow();
+    kill(server->process.pid, SIGKILL);
+    const auto code = server->process.wait(3);
+    ASSERT_TRUE(code.has_value());
+    EXPECT_EQ(*code, 128 + SIGKILL);
+    server->process.stop();
+
+    // Started again on the same file: the pilot comes back where it stood.
+    auto again = startSaving("kill9-again", save);
+    ASSERT_TRUE(again.has_value());
+    Client d(again->port, kToken, {});
+    HeadlessClient& hd = *d.client;
+    hd.connect(clockNow());
+    hd.join(key);
+    ASSERT_TRUE(d.until([&] {
+        return hd.mirror() && hd.mirror()->driven() && hd.mirror()->unit(*hd.mirror()->driven()) && citadelIn(*hd.mirror()) &&
+               hd.mirror()->simulation().state.players.size() == 1;
+    }, 10));
+    const Unit back = *hd.mirror()->unit(*hd.mirror()->driven());
+    EXPECT_TRUE(hd.world()->regions[size_t(hd.world()->here)].id == "start");
+    EXPECT_TRUE(distance(back.position, stood.position) < 0.02);
+    EXPECT_EQ(hd.mirror()->simulation().state.players[0].ore, int64_t(0));
+    // The Citadel as it was at most 5 s (and a save's tick) before the kill.
+    const Structure* s = citadelIn(*hd.mirror());
+    ASSERT_TRUE(s->buildLeft.has_value());
+    double oldest = left.back().second;
+    for (const auto& [t, v] : left)
+        if (t >= killedAt - 5.3) oldest = std::max(oldest, v);
+    std::printf("  build left at the kill %.2f s, 5 s before %.2f s, restored %.2f s\n", left.back().second, oldest, *s->buildLeft);
+    EXPECT_TRUE(*s->buildLeft >= left.back().second - 0.2);
+    EXPECT_TRUE(*s->buildLeft <= oldest + 0.01);
+    again->process.stop();
+    EXPECT_TRUE(readFile(logPath("kill9")).find(": new at the start pad in start") != std::string::npos);
+    const std::string log = readFile(logPath("kill9-again"));
+    EXPECT_TRUE(log.find("id " + net::pilotKeyShort(key) + ": restored in start") != std::string::npos);
+    EXPECT_TRUE(log.find("saved: ") != std::string::npos);
+}
+
+TEST(e2e_save_corrupt_or_held_file_stops_the_server_untouched) {
+    // Not a database.
+    const std::string bad = freshSave("corrupt");
+    const std::string junk = "this is not a database, and it stays as it is\n";
+    if (FILE* f = std::fopen(bad.c_str(), "wb")) {
+        std::fputs(junk.c_str(), f);
+        std::fclose(f);
+    }
+    auto p = Process::start({kProgram, "--world", "worlds/first.json", "--save", bad, "--log", logPath("corrupt")});
+    ASSERT_TRUE(p.has_value());
+    p->write(kToken + "\n");
+    auto code = p->wait(10);
+    ASSERT_TRUE(code.has_value());
+    EXPECT_TRUE(*code != 0);
+    p->stop();
+    EXPECT_TRUE(readFile(bad) == junk);
+    EXPECT_TRUE(readFile(logPath("corrupt")).find("start failed: save") != std::string::npos);
+    // Held by a running server: the second stops, the first carries on.
+    const std::string held = freshSave("held");
+    auto first = startSaving("held", held);
+    ASSERT_TRUE(first.has_value());
+    auto second = Process::start({kProgram, "--world", "worlds/first.json", "--save", held, "--log", logPath("held-second")});
+    ASSERT_TRUE(second.has_value());
+    second->write(kToken + "\n");
+    code = second->wait(10);
+    ASSERT_TRUE(code.has_value());
+    EXPECT_TRUE(*code != 0);
+    second->stop();
+    EXPECT_TRUE(readFile(logPath("held-second")).find("locked") != std::string::npos);
+    EXPECT_TRUE(!first->process.wait(0.5).has_value());
+    kill(first->process.pid, SIGTERM);
+    code = first->process.wait(5);
+    ASSERT_TRUE(code.has_value());
+    EXPECT_EQ(*code, 0);
+    first->process.stop();
+    std::string why;
+    auto store = WorldStore::open(held, "first", &why);
+    EXPECT_TRUE(store != nullptr && store->load(&why).has_value());
 }

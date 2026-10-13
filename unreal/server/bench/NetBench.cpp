@@ -49,6 +49,7 @@ void run(const std::string& name, const RegionConfig& region, bool drive, double
         client.tick(now);
     };
     client.connect(now);
+    client.join(net::newPilotKey());
     for (int i = 0; i < 600 && !client.mirror(); i++) step();
     if (!client.mirror()) {
         std::printf("%s: no connection\n", name.c_str());

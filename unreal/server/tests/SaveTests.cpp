@@ -1,0 +1,498 @@
+// The world's save (world/WorldStore.h, WorldMap::save/restore/seat): the
+// store's round trip, its migrations, writes of what changed only, a region
+// and a pilot put back from a save, and the Join over the protocol.
+// Isolated scenes; files in build/save-tests. Run from unreal/server (as
+// `make test` does).
+
+#include "test.h"
+
+#include "HeadlessClient.h"
+#include "Server.h"
+#include "Session.h"
+#include "WorldMap.h"
+#include "WorldStore.h"
+#include "rig.h"
+
+#include <cmath>
+#include <cstdio>
+#include <string>
+#include <sys/stat.h>
+
+namespace {
+
+using namespace ac;
+using namespace ac::server;
+
+const LoadedWorld& firstWorld() {
+    static const LoadedWorld w = [] {
+        WorldLoad l = loadWorld("worlds/first.json");
+        for (const std::string& p : l.problems) std::printf("  %s\n", p.c_str());
+        return *l.world;
+    }();
+    return w;
+}
+
+/// A fresh file in build/save-tests (the old one and its log removed).
+std::string fresh(const std::string& name) {
+    mkdir("build/save-tests", 0755);
+    const std::string path = "build/save-tests/" + name + ".sqlite";
+    std::remove(path.c_str());
+    std::remove((path + "-wal").c_str());
+    std::remove((path + "-shm").c_str());
+    return path;
+}
+
+const std::string keyA = "0123456789abcdef0123456789abcdef";
+const std::string keyB = "fedcba9876543210fedcba9876543210";
+
+WorldSave sample() {
+    WorldSave s;
+    SavedRegion r;
+    r.id = "start";
+    r.time = 123.25;
+    r.nextId = 40;
+    r.buildings.push_back(SavedBuilding{7, StructureKind::citadel, Vec2(10.5, -3.25), keyA, std::nullopt, 1500});
+    r.buildings.push_back(SavedBuilding{9, StructureKind::habDome, Vec2(14, 2), keyB, 12.5, 40.75});
+    r.units.push_back(SavedUnit{3, UnitKind::prospector, Vec2(1.5, 2.5), 0.75, 45.5, 5, true, keyA});
+    r.units.push_back(SavedUnit{12, UnitKind::prospector, Vec2(-4, 8), 3.0, 60, 0, false, keyB});
+    r.deposits.push_back(SavedDeposit{0, 1500, std::nullopt});
+    r.deposits.push_back(SavedDeposit{1, 0, 99.5});
+    r.wells.push_back(SavedWell{0, 2200});
+    s.regions.push_back(r);
+    SavedRegion o;
+    o.id = "cold-fork";
+    o.time = 5;
+    o.nextId = 1;
+    s.regions.push_back(o);
+    PilotRecord rec;
+    rec.kinds[UnitKind::prospector].xp = 1234.5;
+    rec.kinds[UnitKind::prospector].picks = {Perk::prospectorQuickDrill};
+    s.pilots.push_back(SavedPilot{keyA, 25, 7, "start", 3, SessionStore::encode(rec, false)});
+    s.pilots.push_back(SavedPilot{keyB, 400, 0, "cold-fork", std::nullopt, ""});
+    return s;
+}
+
+/// Sorted as `load` gives them back (regions and pilots by id).
+WorldSave sorted(WorldSave s) {
+    std::sort(s.regions.begin(), s.regions.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
+    std::sort(s.pilots.begin(), s.pilots.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
+    return s;
+}
+
+Unit* driven(WorldMap& w, PilotId p) {
+    Region* r = w.regionOf(p);
+    const auto id = r ? r->driving(p) : std::nullopt;
+    const auto i = id ? r->simulation().unitIndex(*id) : std::nullopt;
+    return i ? &r->simulation().state.units[size_t(*i)] : nullptr;
+}
+
+int64_t inputTick = 0;
+
+void stand(WorldMap& w, PilotId p, int ticks) {
+    for (int i = 0; i < ticks; i++) {
+        PilotInput in;
+        in.tick = ++inputTick;
+        in.heading = driven(w, p)->heading;
+        w.input(p, in);
+        w.step();
+    }
+}
+
+const Structure* citadelOf(const Simulation& sim) {
+    for (const Structure& s : sim.state.structures)
+        if (s.kind == StructureKind::citadel) return &s;
+    return nullptr;
+}
+
+/// A pilot with key A in the start region: a Citadel half built on the open
+/// ground east of the ore, some ore mined out of a deposit, one run dry.
+void played(WorldMap& w, PilotId me) {
+    ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
+    Unit* u = driven(w, me);
+    u->position = w.regionOf(me)->places()->ground(Vec2(72, 48));
+    u->heading = 3.141592653589793;
+    u->task = Unit::Task::idle;
+    const Vec2 ahead(std::cos(u->heading), std::sin(u->heading));
+    Simulation& sim = w.regionOf(me)->simulation();
+    const Vec2 at = *sim.snap(StructureKind::citadel, u->position + ahead * Region::buildReach(StructureKind::citadel));
+    ASSERT_TRUE(!w.build(me, StructureKind::citadel, at));
+    stand(w, me, 300);
+    sim.state.patches[0].remaining -= 37;
+    sim.state.patches[1].remaining = 0;
+    sim.state.patches[1].depletedAt = sim.state.time - 2;
+    if (sim.state.wells && !sim.state.wells->empty()) (*sim.state.wells)[0].remaining -= 11;
+}
+
+} // namespace
+
+// MARK: - The store
+
+TEST(save_store_round_trips_every_saved_thing) {
+    const std::string path = fresh("roundtrip");
+    std::string why;
+    {
+        auto store = WorldStore::open(path, "first", &why);
+        ASSERT_TRUE(store != nullptr);
+        const auto empty = store->load(&why);
+        ASSERT_TRUE(empty.has_value());
+        EXPECT_TRUE(empty->regions.empty() && empty->pilots.empty());
+        ASSERT_TRUE(store->write(sample(), &why).has_value());
+    }
+    auto store = WorldStore::open(path, "first", &why);
+    ASSERT_TRUE(store != nullptr);
+    const auto back = store->load(&why);
+    ASSERT_TRUE(back.has_value());
+    EXPECT_TRUE(*back == sorted(sample()));
+    // The levels read back as the core's record.
+    const auto rec = SessionStore::decode<PilotRecord>(back->pilots[0].levels);
+    ASSERT_TRUE(rec.has_value());
+    EXPECT_EQ(rec->xp(UnitKind::prospector), 1234.5);
+    EXPECT_TRUE(rec->picks(UnitKind::prospector) == std::vector<Perk>{Perk::prospectorQuickDrill});
+    // Another world's save is refused, untouched.
+    store.reset();
+    EXPECT_TRUE(WorldStore::open(path, "second", &why) == nullptr);
+    EXPECT_TRUE(why.find("a save of world first, not second") != std::string::npos);
+}
+
+TEST(save_migrations_v0_to_v1_and_a_future_step) {
+    const std::string path = fresh("migrate");
+    std::string why;
+    {
+        // v0 (a new file) to v1.
+        auto store = WorldStore::open(path, "first", &why);
+        ASSERT_TRUE(store != nullptr);
+        EXPECT_EQ(store->schemaVersion(), int64_t(1));
+        EXPECT_EQ(WorldStore::version(), int64_t(1));
+        EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
+                              "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots')")[0][0],
+                  std::string("7"));
+        ASSERT_TRUE(store->write(sample(), &why).has_value());
+    }
+    // A step that fails: the file stays at v1, its rows kept.
+    std::vector<WorldStore::Migration> broken = WorldStore::migrations();
+    broken.push_back({2, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
+    EXPECT_TRUE(WorldStore::open(path, "first", &why, broken) == nullptr);
+    EXPECT_TRUE(why.find("migration to version 2") != std::string::npos);
+    // A future step: v1 to v2, the rows kept, the column there.
+    std::vector<WorldStore::Migration> next = WorldStore::migrations();
+    next.push_back({2, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
+    {
+        auto store = WorldStore::open(path, "first", &why, next);
+        ASSERT_TRUE(store != nullptr);
+        EXPECT_EQ(store->schemaVersion(), int64_t(2));
+        const auto rows = store->rows("SELECT id, title FROM pilots ORDER BY id");
+        ASSERT_TRUE(rows.size() == 2);
+        EXPECT_TRUE(rows[0][1] == "prospector");
+        const auto back = store->load(&why);
+        ASSERT_TRUE(back.has_value());
+        EXPECT_TRUE(*back == sorted(sample()));
+    }
+    // This build (v1) refuses a v2 file.
+    EXPECT_TRUE(WorldStore::open(path, "first", &why) == nullptr);
+    EXPECT_TRUE(why.find("schema version 2, this server knows 1") != std::string::npos);
+}
+
+TEST(save_writes_only_the_rows_that_changed) {
+    const std::string path = fresh("changed");
+    std::string why;
+    auto store = WorldStore::open(path, "first", &why);
+    ASSERT_TRUE(store != nullptr);
+    WorldSave s = sample();
+    auto n = store->write(s, &why);
+    ASSERT_TRUE(n.has_value());
+    // 2 regions, 2 buildings, 2 units, 2 deposits, 1 well, 2 pilots.
+    EXPECT_EQ(n->changed, int64_t(11));
+    n = store->write(s, &why);
+    ASSERT_TRUE(n.has_value());
+    EXPECT_EQ(n->changed, int64_t(0));
+    EXPECT_EQ(n->removed, int64_t(0));
+    // A unit moved, a deposit mined: those two rows.
+    s.regions[0].units[0].at.x += 1;
+    s.regions[0].deposits[0].remaining -= 5;
+    n = store->write(s, &why);
+    EXPECT_EQ(n->changed, int64_t(2));
+    // A building gone: deleted.
+    s.regions[0].buildings.erase(s.regions[0].buildings.begin());
+    n = store->write(s, &why);
+    EXPECT_EQ(n->changed, int64_t(0));
+    EXPECT_EQ(n->removed, int64_t(1));
+    EXPECT_EQ(store->rows("SELECT count(*) FROM buildings")[0][0], std::string("1"));
+    // After a load the file's rows count as written.
+    store.reset();
+    store = WorldStore::open(path, "first", &why);
+    const auto back = store->load(&why);
+    ASSERT_TRUE(back.has_value());
+    n = store->write(*back, &why);
+    EXPECT_EQ(n->changed, int64_t(0));
+    EXPECT_EQ(n->removed, int64_t(0));
+}
+
+TEST(save_corrupt_or_held_file_refused_untouched) {
+    // Not a database: refused, the bytes as they were.
+    const std::string path = fresh("corrupt");
+    const std::string junk(5000, 'x');
+    if (FILE* f = std::fopen(path.c_str(), "wb")) {
+        std::fwrite(junk.data(), 1, junk.size(), f);
+        std::fclose(f);
+    }
+    std::string why;
+    EXPECT_TRUE(WorldStore::open(path, "first", &why) == nullptr);
+    EXPECT_TRUE(why.find("not a database") != std::string::npos);
+    std::string after;
+    if (FILE* f = std::fopen(path.c_str(), "rb")) {
+        char b[8192];
+        for (size_t k; (k = std::fread(b, 1, sizeof b, f)) > 0;) after.append(b, k);
+        std::fclose(f);
+    }
+    EXPECT_TRUE(after == junk);
+    // Held by another store: refused.
+    const std::string held = fresh("held");
+    auto first = WorldStore::open(held, "first", &why);
+    ASSERT_TRUE(first != nullptr);
+    ASSERT_TRUE(first->write(sample(), &why).has_value());
+    why.clear();
+    EXPECT_TRUE(WorldStore::open(held, "first", &why) == nullptr);
+    EXPECT_TRUE(why.find("locked") != std::string::npos);
+    std::printf("  %s\n", why.c_str());
+    // The first still writes.
+    EXPECT_TRUE(first->write(sample(), &why).has_value());
+}
+
+// MARK: - The world put back
+
+TEST(save_restart_restores_the_region_exactly) {
+    constexpr PilotId me = 7;
+    WorldMap w(firstWorld());
+    played(w, me);
+    const Simulation& sim = w.regionOf(me)->simulation();
+    const Structure c = *citadelOf(sim);
+    EXPECT_TRUE(!c.complete());
+    const std::string path = fresh("region");
+    std::string why;
+    {
+        auto store = WorldStore::open(path, "first", &why);
+        ASSERT_TRUE(store != nullptr);
+        ASSERT_TRUE(store->write(w.save(), &why).has_value());
+    }
+    auto store = WorldStore::open(path, "first", &why);
+    const auto loaded = store->load(&why);
+    ASSERT_TRUE(loaded.has_value());
+    WorldMap again(firstWorld());
+    EXPECT_TRUE(again.restore(*loaded).empty());
+    EXPECT_EQ(again.away(), size_t(1));
+    const GameState& was = sim.state;
+    const GameState& now = again.start().simulation().state;
+    EXPECT_EQ(now.time, was.time);
+    EXPECT_EQ(now.nextID, was.nextID);
+    const Structure* b = citadelOf(again.start().simulation());
+    ASSERT_TRUE(b != nullptr);
+    EXPECT_EQ(b->id, c.id);
+    EXPECT_TRUE(b->position == c.position);
+    EXPECT_TRUE(b->buildLeft == c.buildLeft);
+    EXPECT_EQ(b->hp, c.hp);
+    ASSERT_TRUE(now.patches.size() == was.patches.size());
+    for (size_t k = 0; k < was.patches.size(); k++) {
+        EXPECT_EQ(now.patches[k].remaining, was.patches[k].remaining);
+        EXPECT_TRUE(now.patches[k].depletedAt == was.patches[k].depletedAt);
+    }
+    if (was.wells)
+        for (size_t k = 0; k < was.wells->size(); k++) EXPECT_EQ((*now.wells)[k].remaining, (*was.wells)[k].remaining);
+    // Its unit stands where it stood, under its id.
+    ASSERT_TRUE(now.units.size() == 1);
+    EXPECT_EQ(now.units[0].id, was.units[0].id);
+    EXPECT_TRUE(now.units[0].position == was.units[0].position);
+    // The same save again, row for row.
+    EXPECT_TRUE(again.save() == w.save());
+}
+
+TEST(save_pilot_restored_by_id_where_it_left) {
+    constexpr PilotId me = 7;
+    WorldMap w(firstWorld());
+    ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
+    // Flies to Cold Fork, lands, steps off the pad.
+    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
+    for (int i = 0; i < 600 && w.flying(me); i++) w.step();
+    ASSERT_TRUE(!w.flying(me));
+    ASSERT_TRUE(*w.where(me) == *w.regionNamed("cold-fork"));
+    Unit* u = driven(w, me);
+    ASSERT_TRUE(u != nullptr);
+    u->position = u->position + Vec2(1.5, -0.5);
+    u->heading = 1.25;
+    u->carrying = 4;
+    Region& there = *w.regionOf(me);
+    there.simulation().state.players[0].ore = 123;
+    there.simulation().state.players[0].hydrogen = 17;
+    PilotRecord rec;
+    rec.kinds[UnitKind::prospector].xp = 640;
+    w.setLevels(me, rec);
+    stand(w, me, 1);
+    const Unit left = *driven(w, me);
+    const auto levels = w.levels(me);
+    w.leave(me);
+    EXPECT_EQ(w.away(), size_t(1));
+
+    const std::string path = fresh("pilot");
+    std::string why;
+    auto store = WorldStore::open(path, "first", &why);
+    ASSERT_TRUE(store != nullptr);
+    ASSERT_TRUE(store->write(w.save(), &why).has_value());
+    store.reset();
+    store = WorldStore::open(path, "first", &why);
+    const auto loaded = store->load(&why);
+    ASSERT_TRUE(loaded.has_value());
+
+    WorldMap again(firstWorld());
+    EXPECT_TRUE(again.restore(*loaded).empty());
+    // Another connection, the same key.
+    constexpr PilotId later = 21;
+    EXPECT_TRUE(again.seat(later, keyA) == WorldMap::Seated::restored);
+    EXPECT_TRUE(*again.where(later) == *again.regionNamed("cold-fork"));
+    const Unit* back = driven(again, later);
+    ASSERT_TRUE(back != nullptr);
+    EXPECT_EQ(back->id, left.id);
+    EXPECT_TRUE(back->position == left.position);
+    EXPECT_EQ(back->heading, left.heading);
+    EXPECT_EQ(back->hp, left.hp);
+    EXPECT_EQ(back->carrying, int64_t(4));
+    EXPECT_EQ(again.wallet(later)->ore, int64_t(123));
+    EXPECT_EQ(again.wallet(later)->hydrogen, int64_t(17));
+    ASSERT_TRUE(again.levels(later).has_value());
+    // The record as it left (taking the unit again counts one more takeover
+    // in its tally, as the core does).
+    PilotRecord expect = *levels;
+    expect.kinds[UnitKind::prospector].tally.takeovers += 1;
+    EXPECT_TRUE(*again.levels(later) == expect);
+    EXPECT_EQ(again.levels(later)->xp(UnitKind::prospector), 640.0);
+    // The bank of its region is its wallet.
+    EXPECT_EQ(again.regionOf(later)->simulation().state.players[0].ore, int64_t(123));
+    // The same key twice on line: refused.
+    EXPECT_TRUE(again.seat(22, keyA) == WorldMap::Seated::refused);
+}
+
+TEST(save_unknown_id_is_a_new_pilot_at_the_pad) {
+    WorldMap w(firstWorld());
+    played(w, 7);
+    w.leave(7);
+    WorldMap again(firstWorld());
+    again.restore(w.save());
+    const size_t before = again.start().simulation().state.units.size();
+    EXPECT_TRUE(again.seat(30, keyB) == WorldMap::Seated::fresh);
+    EXPECT_TRUE(*again.where(30) == *again.regionNamed("start"));
+    EXPECT_EQ(again.wallet(30)->ore, int64_t(400));
+    EXPECT_EQ(again.start().simulation().state.units.size(), before + 1);
+    const region::Place& pad = firstWorld().regions[firstWorld().start].built.pads[firstWorld().startPad];
+    EXPECT_TRUE(distance(driven(again, 30)->position, pad.at) < 3);
+    // The known one is still waiting, apart.
+    EXPECT_EQ(again.away(), size_t(1));
+    EXPECT_TRUE(again.save().pilots.size() == 2);
+}
+
+// MARK: - Over the protocol
+
+TEST(save_join_seats_the_pilot_and_restores_it_on_return) {
+    nettest::MemoryNet network;
+    nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
+    std::vector<std::string> lines;
+    ServerOptions o;
+    o.world = firstWorld();
+    o.token = nettest::kToken;
+    o.secret = nettest::serverConfig().secret;
+    o.log = [&](const std::string& l) { lines.push_back(l); };
+    Server server(serverPort, o);
+    double now = 100;
+    auto run = [&](HeadlessClient& c, auto&& done, double seconds) {
+        for (int i = 0; i < int(seconds * 60); i++) {
+            now += 1.0 / 60;
+            server.tick(now);
+            c.tick(now);
+            if (done()) return true;
+        }
+        return false;
+    };
+    const net::PilotKey key = *net::pilotKeyFromHex(keyA);
+    Vec2 where;
+    int64_t unit = -1;
+    {
+        HeadlessClient client(clientPort, nettest::clientConfig());
+        client.connect(now);
+        // Connected, but no Join: not seated, no Welcome.
+        ASSERT_TRUE(run(client, [&] { return client.connected(); }, 5));
+        run(client, [] { return false; }, 0.5);
+        EXPECT_TRUE(!client.welcome().has_value());
+        EXPECT_EQ(server.world().start().pilots().size(), size_t(0));
+        client.join(key);
+        ASSERT_TRUE(run(client, [&] { return client.mirror() && client.mirror()->driven() && client.world(); }, 10));
+        const PilotId pilot = server.world().start().pilots().front();
+        Unit* u = driven(server.world(), pilot);
+        u->position = u->position + Vec2(2, 1);
+        unit = u->id;
+        run(client, [] { return false; }, 0.2);
+        where = driven(server.world(), pilot)->position;
+    }
+    // The old connection times out: the pilot waits for its key.
+    for (int i = 0; i < 12 * 60 && server.clients() > 0; i++) {
+        now += 1.0 / 60;
+        server.tick(now);
+    }
+    EXPECT_EQ(server.clients(), size_t(0));
+    EXPECT_EQ(server.world().away(), size_t(1));
+    // A new connection, the same key.
+    nettest::MemoryPort clientPort2(network, net::Address::ipv4(10, 0, 0, 3, 5001));
+    HeadlessClient again(clientPort2, nettest::clientConfig());
+    again.connect(now);
+    again.join(key);
+    ASSERT_TRUE(run(again, [&] { return again.mirror() && again.mirror()->driven(); }, 10));
+    EXPECT_EQ(*again.mirror()->driven(), unit);
+    const PilotId pilot = server.world().start().pilots().front();
+    EXPECT_TRUE(distance(driven(server.world(), pilot)->position, where) < 1e-9);
+    bool fresh = false, restored = false;
+    for (const std::string& l : lines) {
+        if (l.find("id 01234567: new at the start pad in start, 400 ore") != std::string::npos) fresh = true;
+        if (l.find("id 01234567: restored in start") != std::string::npos) restored = true;
+    }
+    EXPECT_TRUE(fresh);
+    EXPECT_TRUE(restored);
+}
+
+TEST(save_server_writes_every_5_s_what_changed_and_on_stop) {
+    const std::string path = fresh("server");
+    std::string why;
+    auto store = WorldStore::open(path, "first", &why);
+    ASSERT_TRUE(store != nullptr);
+    nettest::MemoryNet network;
+    nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
+    ServerOptions o;
+    o.world = firstWorld();
+    o.token = nettest::kToken;
+    o.secret = nettest::serverConfig().secret;
+    o.store = store.get();
+    o.saved = store->load(&why);
+    Server server(serverPort, o);
+    HeadlessClient client(clientPort, nettest::clientConfig());
+    double now = 100;
+    auto run = [&](double seconds) {
+        for (int i = 0; i < int(seconds * 60); i++) {
+            now += 1.0 / 60;
+            server.tick(now);
+            client.tick(now);
+        }
+    };
+    client.connect(now);
+    client.join(*net::pilotKeyFromHex(keyA));
+    run(4.5);
+    // Nothing written before the first 5 s.
+    EXPECT_EQ(store->rows("SELECT count(*) FROM pilots")[0][0], std::string("0"));
+    run(1);
+    EXPECT_EQ(store->rows("SELECT count(*) FROM pilots")[0][0], std::string("1"));
+    const int64_t deposits = std::atoll(store->rows("SELECT count(*) FROM deposits")[0][0].c_str());
+    EXPECT_TRUE(deposits > 0);
+    EXPECT_TRUE(server.lastSave().changed > deposits);
+    // The next: the regions' clocks, and nothing of the ground that stood still.
+    run(5);
+    EXPECT_TRUE(server.lastSave().changed <= int64_t(server.world().regionCount()) + 2);
+    EXPECT_EQ(server.lastSave().removed, int64_t(0));
+    // On stop: written, the pilot kept off line.
+    server.stop(now, "the server stopped");
+    EXPECT_EQ(server.world().away(), size_t(1));
+    EXPECT_EQ(store->rows("SELECT region FROM pilots")[0][0], std::string("start"));
+}

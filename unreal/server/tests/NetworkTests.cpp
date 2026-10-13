@@ -57,6 +57,7 @@ struct Scene {
     }
     bool connect() {
         client.connect(now);
+        client.join(net::newPilotKey());
         return until([&] { return client.mirror() != nullptr; }, 10);
     }
 

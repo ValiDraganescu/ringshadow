@@ -10,6 +10,8 @@ UDP. Engine-free: `AutocraftCore` and `AutocraftNet`.
 | `world/World.h` | `Region`: one `ac::Simulation` on a generated map with its AIs, stepped at 60 Hz; pilots join, take a unit, send inputs; `snapshot()` gives each pilot what its side may know. |
 | `world/Region.cpp` | The tick, the pilots and their inputs, the fog gate on events (`mayKnow`). |
 | `world/WorldMap.h` | `WorldMap`: the world file loaded and checked, every region stepped every tick, the pilots (start pad, wallet, levels), edge crossings and pad flights, building anywhere it fits with the driven Prospector, paid from the wallet (`Region::build`: the core's own hand-build); the M1 server is a `WorldMap` of one region. |
+| `world/WorldStore.h` | The world's save: one SQLite file per world (system libsqlite3), schema v1 with a migration runner (`schema_version`; each step in its own transaction), writes of the changed rows only, the file held by one server. |
+| `world/WorldMapSave.cpp` | Pilots by key (`WorldMap::seat`: a known key back where it left, an unknown one new at the start pad), parked off line, and the world saved and restored. |
 | `world/Interest.cpp` | The snapshot: fog first, rank (driven, engaged, nearby), distance bands, the budget with aging. |
 | `program/Server.h` | `Server`: the world behind `net::ServerEndpoint`. A connection is a pilot; each tick reads, steps every region, tells the pilots that moved (RegionChange, World), and every third tick sends each client its events and its snapshot. |
 | `program/main.cpp` | `autocraft-server`, the program the game starts. |
@@ -31,11 +33,20 @@ this program).
 ```
 autocraft-server --world <file>
                  | --map <highlands|openField|ridge|badlands> --size <small|medium|large|huge> [--starts 2|4|8]
-                 [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
+                 [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path] [--save file]
 ```
 
 `--world` runs a world ([docs/worlds.md](../../docs/worlds.md)); a bad world file stops it with
-exit 2 and its problems on stderr. `--map` runs the M1 region: today's generated map with its AIs.
+exit 2 and its problems on stderr. `--save` (a world only) keeps it in a SQLite file: loaded before
+the first tick, the changed rows written every 5 s and everything on stop (SIGTERM, SIGINT, the
+parent gone), so a `kill -9` loses at most 5 s. A file that is not a database, is held by another
+server, has a newer schema or is another world's stops the server with exit 1, the file untouched.
+Without `--save` nothing is kept.
+
+A connection is seated by its Join (the pilot's 128-bit key, `net::Client::join`): no Welcome
+before it. A known key comes back where it left (region, spot, its own Prospector, wallet,
+levels); an unknown one is a new pilot at the start pad with 400 ore. The log names the key's
+first 8 hex digits (`join pilot 3 id 1a2b3c4d: restored in cold-fork`). `--map` runs the M1 region: today's generated map with its AIs.
 
 It reads the one-time token as the first line of its standard input, binds (port 0: the system
 picks), prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz, sleeping between

@@ -31,7 +31,27 @@ WorldMap makeWorld(const ServerOptions& o) {
 } // namespace
 
 Server::Server(net::PacketIo& io, const ServerOptions& options)
-    : options_(options), world_(makeWorld(options)), endpoint_(io, endpointConfig(options)) {}
+    : options_(options), world_(makeWorld(options)), endpoint_(io, endpointConfig(options)) {
+    // The save in place before the first tick.
+    if (options_.saved) {
+        for (const std::string& p : world_.restore(*options_.saved)) log("save: " + p);
+        log("save: " + std::to_string(options_.saved->regions.size()) + " regions, " +
+            std::to_string(options_.saved->pilots.size()) + " pilots loaded");
+        options_.saved = std::nullopt;
+    }
+}
+
+bool Server::save() {
+    if (!options_.store) return false;
+    std::string why;
+    const auto written = options_.store->write(world_.save(), &why);
+    if (!written) {
+        log("save failed: " + why);
+        return false;
+    }
+    lastSave_ = *written;
+    return true;
+}
 
 void Server::sendReliable(net::ConnectionId c, const std::vector<uint8_t>& bytes) {
     const net::Channel ch = bytes.size() <= net::kMaxReliableBytes ? net::Channel::reliable : net::Channel::bulk;
@@ -78,6 +98,12 @@ void Server::tick(double now, bool stepRegion) {
     ticks_ += 1;
     if (statsFrom_ < 0) statsFrom_ = now;
     if (options_.statsEvery > 0 && now - statsFrom_ >= options_.statsEvery) statsLine(now);
+    // What changed, every few seconds: a crash loses no more.
+    if (savedAt_ < 0) savedAt_ = now;
+    if (options_.store && now - savedAt_ >= options_.saveEvery) {
+        savedAt_ = now;
+        save();
+    }
 }
 
 void Server::stop(double now, const std::string& reason) {
@@ -89,22 +115,16 @@ void Server::stop(double now, const std::string& reason) {
         log("disconnect pilot " + std::to_string(clients_[c].pilot) + ": " + reason);
         clients_.erase(c);
     }
+    if (options_.store && save())
+        log("saved: " + std::to_string(lastSave_.changed) + " rows changed, " + std::to_string(lastSave_.removed) + " removed");
 }
 
 void Server::handle(const net::Event& e, double now) {
     switch (e.type) {
     case net::Event::Type::connected: {
+        // Seated once its Join comes (`join`).
         Client& client = clients_[e.connection];
         client.pilot = e.connection;
-        world_.join(client.pilot);
-        const Region& r = *world_.regionOf(client.pilot);
-        net::Welcome w;
-        w.pilot = client.pilot;
-        w.region = r.description();
-        w.serverTick = r.tick();
-        w.time = r.simulation().state.time;
-        sendReliable(e.connection, net::encode(w));
-        sendWorld(e.connection, client.pilot);
         log("connect pilot " + std::to_string(client.pilot) + " from " + e.remote.toString());
         return;
     }
@@ -130,6 +150,9 @@ void Server::handle(const net::Event& e, double now) {
 void Server::message(net::ConnectionId c, Client& client, const std::vector<uint8_t>& data, double now) {
     const auto type = net::messageType(data);
     if (!type) return;
+    // Nothing but the Join until the pilot is seated.
+    if (*type == net::MessageType::join) return join(c, client, data, now);
+    if (!client.seated) return;
     switch (*type) {
     case net::MessageType::input: {
         net::InputMessage m;
@@ -206,8 +229,41 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
     }
 }
 
+void Server::join(net::ConnectionId c, Client& client, const std::vector<uint8_t>& data, double now) {
+    net::JoinMessage m;
+    if (client.seated || !net::decode(data, m)) return;
+    const std::string key = net::pilotKeyHex(m.pilot);
+    const std::string who = "pilot " + std::to_string(client.pilot) + " id " + net::pilotKeyShort(m.pilot);
+    const WorldMap::Seated seated = world_.seat(client.pilot, key);
+    if (seated == WorldMap::Seated::refused) {
+        log("refuse join " + who + ": already in the world");
+        endpoint_.disconnect(c, now, "this pilot is in the world already");
+        clients_.erase(c);
+        return;
+    }
+    client.seated = true;
+    const Region& r = *world_.regionOf(client.pilot);
+    net::Welcome w;
+    w.pilot = client.pilot;
+    w.region = r.description();
+    w.serverTick = r.tick();
+    w.time = r.simulation().state.time;
+    sendReliable(c, net::encode(w));
+    sendWorld(c, client.pilot);
+    std::string where;
+    if (const auto& loaded = world_.loaded()) where = loaded->regions[*world_.where(client.pilot)].file.id;
+    if (seated == WorldMap::Seated::restored) {
+        log("join " + who + ": restored in " + where);
+    } else {
+        const auto wallet = world_.wallet(client.pilot);
+        log("join " + who + ": new" + (where.empty() ? "" : " at the start pad in " + where) +
+            (wallet ? ", " + std::to_string(wallet->ore) + " ore" : ""));
+    }
+}
+
 void Server::sendSnapshots(double now) {
     for (auto& [c, client] : clients_) {
+        if (!client.seated) continue;
         net::Snapshot s = world_.snapshot(client.pilot, options_.interest);
         if (!s.events.empty())
             for (const auto& bytes : net::encodeEvents(s.serverTick, s.events))
