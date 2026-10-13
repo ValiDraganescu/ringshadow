@@ -2,7 +2,11 @@
 
 #include "AcLog.h"
 
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformProcess.h"
+#include "HAL/PlatformTime.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Misc/Paths.h"
 
 #include <string>
@@ -10,6 +14,11 @@
 
 namespace
 {
+	TAutoConsoleVariable<FString> CVarMmoLag(TEXT("ac.MmoLag"), TEXT(""),
+		TEXT("Lag on the MMORPG test's connection, each way: \"delay_ms jitter_ms loss_pct\" (e.g. 150 20 5); empty or 0: none. ")
+		TEXT("-AcMmoLag=150,20,5 sets it at the start."),
+		ECVF_Default);
+
 	FString Text(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 
 	std::string Utf8(const FString& S) { return std::string(TCHAR_TO_UTF8(*S)); }
@@ -52,6 +61,16 @@ bool FAcMmoClient::Start(const ac::MapChoice& InMap, const double Now)
 	Stop();
 	Map = InMap;
 	Interp.reset();
+	Predictor.reset();
+	LastBlend = 0;
+	// -AcMmoLag=150,20,5: the setting at the start (the console changes it later).
+	static bool bLagFlagRead = false;
+	if (FString Flag; !bLagFlagRead && FParse::Value(FCommandLine::Get(), TEXT("AcMmoLag="), Flag, false))
+	{
+		CVarMmoLag->Set(*Flag, ECVF_SetByCommandline);
+	}
+	bLagFlagRead = true;
+	ReadLag();
 	Net.Reset();
 	SeenMirror = nullptr;
 	SeenGame = -1;
@@ -110,8 +129,10 @@ void FAcMmoClient::Stop()
 	const bool bClean = Server.stop(3.0);
 	if (bRunning) UE_LOG(LogAutocraft, Log, TEXT("mmo: local server stopped (%s)"), bClean ? TEXT("clean") : *Text(Server.error()));
 	Net.Reset();
+	LagIo.Reset();
 	Socket.close();
 	Interp.reset();
+	Predictor.reset();
 	SeenMirror = nullptr;
 	SeenGame = -1;
 	WantedUnit.reset();
@@ -129,7 +150,10 @@ void FAcMmoClient::Connect(const double Now)
 	ac::net::ClientConfig Config;
 	Config.server = ac::net::Address::loopback(Server.port());
 	Config.token.assign(Token.begin(), Token.end());
-	Net = MakeUnique<ac::net::Client>(Socket, Config);
+	// The lag setting's simulator between them (none set: it passes all on at once).
+	LagIo = MakeUnique<ac::net::LagSimulator>(Socket, uint64(FPlatformTime::Cycles64()));
+	LagIo->setDefault(LagNow);
+	Net = MakeUnique<ac::net::Client>(*LagIo, Config);
 	Net->onSnapshot = [this](const ac::net::SnapshotPart& Part)
 	{
 		// The server's clock, and where everyone stood in this snapshot.
@@ -148,6 +172,7 @@ void FAcMmoClient::Tick(const double Now)
 {
 	LastNow = Now;
 	if (CurrentPhase == EPhase::Off || CurrentPhase == EPhase::Failed) return;
+	ReadLag();
 	const ac::net::LocalServer::State State = Server.poll();
 	if (State == ac::net::LocalServer::State::exited)
 	{
@@ -212,6 +237,8 @@ void FAcMmoClient::Tick(const double Now)
 			}
 		}
 	}
+	// The driven unit put right by what the server said.
+	if (ac::net::Mirror* Mm = Net->mirror()) Predictor.reconcile(*Mm);
 	ReadReplies();
 	for (ac::GameEvent& E : Net->events) Events.push_back(std::move(E));
 	Net->events.clear();
@@ -252,7 +279,8 @@ void FAcMmoClient::SendInputs(const double Now)
 			In = ac::net::PilotInput();
 			In.heading = U ? U->heading : 0.0;
 		}
-		Net->sendInput();
+		// Applied to the driven unit at once (it is drawn in the present).
+		if (const std::optional<ac::net::PilotInput> Out = Net->sendInput(); Out && M) Predictor.input(*M, *Out);
 		NextInputAt += 1.0 / InputHz;
 		if (++Sent >= 6)
 		{
@@ -266,11 +294,61 @@ void FAcMmoClient::SendInputs(const double Now)
 void FAcMmoClient::Blend(const double Now)
 {
 	ac::net::Mirror* M = Mirror();
+	const double Dt = LastBlend > 0 ? FMath::Clamp(Now - LastBlend, 0.0, 0.25) : 0.0;
+	LastBlend = Now;
 	if (!M || M->snapshotId() == 0) return;
 	if (const std::optional<double> At = Interp.renderTick(Now))
 	{
 		Interp.apply(*At, M->simulation().state.units, M->driven());
 	}
+	// The driven one in the present, a correction eased over a few frames.
+	Predictor.ease(Dt);
+	Predictor.draw(*M);
+}
+
+bool FAcMmoClient::ParseLag(const FString& Text, ac::net::LagSettings& Out)
+{
+	Out = ac::net::LagSettings();
+	FString Clean = Text.TrimStartAndEnd().Replace(TEXT(","), TEXT(" "));
+	if (Clean.IsEmpty() || Clean.Equals(TEXT("off"), ESearchCase::IgnoreCase)) return true;
+	TArray<FString> Parts;
+	Clean.ParseIntoArrayWS(Parts);
+	if (Parts.Num() > 3) return false;
+	double Values[3] = {0, 0, 0};
+	for (int32 I = 0; I < Parts.Num(); ++I)
+	{
+		if (!Parts[I].IsNumeric()) return false;
+		Values[I] = FCString::Atod(*Parts[I]);
+		if (!(Values[I] >= 0)) return false;
+	}
+	Out.delay = Values[0] / 1000.0;
+	Out.jitter = Values[1] / 1000.0;
+	Out.loss = FMath::Min(Values[2], 100.0) / 100.0;
+	return true;
+}
+
+void FAcMmoClient::ReadLag()
+{
+	const FString Setting = CVarMmoLag.GetValueOnGameThread();
+	if (Setting == LagText) return;
+	LagText = Setting;
+	ac::net::LagSettings Next;
+	if (!ParseLag(Setting, Next))
+	{
+		Notes.Add(FString::Printf(TEXT("ac.MmoLag: \"%s\" does not read (delay_ms jitter_ms loss_pct)"), *Setting));
+		return;
+	}
+	LagNow = Next;
+	if (LagIo) LagIo->setDefault(LagNow);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: lag %.0f ms each way, up to %.0f ms more, %.0f%% lost"), LagNow.delay * 1000,
+		LagNow.jitter * 1000, LagNow.loss * 100);
+}
+
+std::optional<double> FAcMmoClient::RoundTrip() const
+{
+	const ac::net::ConnectionStats* Stats = Net ? Net->endpoint().stats() : nullptr;
+	if (!Stats || !(Stats->rtt > 0)) return std::nullopt;
+	return Stats->rtt;
 }
 
 void FAcMmoClient::ReadReplies()

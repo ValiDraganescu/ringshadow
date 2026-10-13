@@ -17,7 +17,8 @@ UDP. Engine-free: `AutocraftCore` and `AutocraftNet`.
 
 The protocol itself is in `AutocraftNet` (both ends need it): `NetProtocol.h` (the messages),
 `NetSnapshot.h` (snapshots as deltas), `NetMirror.h` (the client's mirror), `NetClient.h` (the
-client's end), `NetInterpolator.h` (others drawn in the past), `NetLocalServer.h` (the game starts
+client's end), `NetInterpolator.h` (others drawn in the past), `NetPredictor.h` (the driven machine
+predicted, put right by each snapshot), `NetLocalServer.h` (the game starts
 this program).
 
 ## The program

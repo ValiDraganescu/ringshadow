@@ -9,6 +9,7 @@ namespace
 {
 	constexpr float Pad = 10.0f;
 	constexpr float LineH = 22.0f;
+	constexpr float SmallH = 16.0f;
 	constexpr float Top = 64.0f;
 
 	void PaintRect(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f At, FVector2f Size, const FLinearColor& C)
@@ -42,6 +43,13 @@ void SAcMmoBanner::AddNote(const FString& Text, const double Now)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcMmoBanner::SetStats(const FString& Text)
+{
+	if (Text == Stats) return;
+	Stats = Text;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcMmoBanner::Update(const double Now)
 {
 	if (Notes.RemoveAll([&](const FNote& N) { return N.Until <= Now; }) > 0) Invalidate(EInvalidateWidgetReason::Paint);
@@ -64,10 +72,13 @@ int32 SAcMmoBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, c
 		}
 	}
 	for (const FNote& N : Notes) Lines.Add(FAcHudText(N.Text, FAcHudStyle::Font(16), Amber, EAcHAlign::Left, EAcVAlign::Top));
+	const int32 Big = Lines.Num();
+	if (!Stats.IsEmpty()) Lines.Add(FAcHudText(Stats, FAcHudStyle::Font(12), FAcHudStyle::Srgb(0.6, 0.7, 0.75), EAcHAlign::Left, EAcVAlign::Top));
 	if (Lines.Num() == 0) return Layer;
 	float W = 0;
 	for (const FAcHudText& L : Lines) W = FMath::Max(W, L.Measure().X);
-	const FVector2f Size(W + 2 * Pad + 4, Lines.Num() * LineH + 2 * Pad - 4);
+	const float H = Big * LineH + (Lines.Num() > Big ? SmallH : 0);
+	const FVector2f Size(W + 2 * Pad + 4, H + 2 * Pad - 4);
 	const FVector2f View(Geometry.GetLocalSize());
 	const FVector2f P((View.X - Size.X) * 0.5f, Top);
 	const FLinearColor Edge = (bStatusError && !Status.IsEmpty() ? Red : Cyan).CopyWithNewOpacity(0.8f);
@@ -77,7 +88,7 @@ int32 SAcMmoBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, c
 	PaintRect(Out, Layer + 1, Geometry, P + FVector2f(2, 3), FVector2f(2, Size.Y - 6), Edge);
 	for (int32 I = 0; I < Lines.Num(); ++I)
 	{
-		Lines[I].Paint(Out, Layer + 2, Geometry, P + FVector2f(Pad + 4, Pad + I * LineH));
+		Lines[I].Paint(Out, Layer + 2, Geometry, P + FVector2f(Pad + 4, Pad + FMath::Min(I, Big) * LineH));
 	}
 	return Layer + 2;
 }

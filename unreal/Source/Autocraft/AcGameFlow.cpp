@@ -718,6 +718,19 @@ void UAcGameFlowSubsystem::TickMmo()
 	if (Mmo)
 	{
 		MmoBanner->SetStatus(Mmo->Message(), Mmo->Phase() == FAcMmoClient::EPhase::Failed);
+		// Small: the round trip, and the lag set on it (ac.MmoLag).
+		FString Stats;
+		if (Mmo->Phase() == FAcMmoClient::EPhase::Playing)
+		{
+			const std::optional<double> Rtt = Mmo->RoundTrip();
+			Stats = Rtt ? FString::Printf(TEXT("RTT %.0f ms"), *Rtt * 1000) : FString(TEXT("RTT …"));
+			const ac::net::LagSettings& Lag = Mmo->Lag();
+			if (Lag.delay > 0 || Lag.jitter > 0 || Lag.loss > 0)
+			{
+				Stats += FString::Printf(TEXT("  ·  lag %.0f ms (+%.0f jitter) each way, %.0f%% lost"), Lag.delay * 1000, Lag.jitter * 1000, Lag.loss * 100);
+			}
+		}
+		MmoBanner->SetStats(Stats);
 	}
 	else
 	{

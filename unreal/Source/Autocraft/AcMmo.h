@@ -8,7 +8,14 @@
 // its own simulation. Each frame (`Tick`) it reads what came, sends the
 // pilot's input at 60 Hz (from the mirror's `pilot`, which the pilot pawn
 // writes as it does in the RTS game), and draws every unit but the driven
-// one 100 ms in the past (`net::Interpolator`).
+// one 100 ms in the past (`net::Interpolator`). The driven one is drawn in
+// the present: each input moves it at once and each snapshot puts it right
+// (`net::Predictor`).
+//
+// Lag to feel it (on 127.0.0.1 there is none): the console variable
+// `ac.MmoLag "delay_ms jitter_ms loss_pct"` (each way; 0 or empty: off) or
+// the flag `-AcMmoLag=150,20,5`, which sets it at the start. The lag
+// simulator sits on the client's end and delays both ways.
 //
 // No world and no engine objects: the automation test (AcMmoTests.cpp)
 // drives it as the subsystem does.
@@ -21,7 +28,9 @@
 
 #include "NetClient.h"
 #include "NetInterpolator.h"
+#include "NetLagSimulator.h"
 #include "NetLocalServer.h"
+#include "NetPredictor.h"
 #include "NetSocket.h"
 #include "Types.h"
 
@@ -106,12 +115,25 @@ public:
 	uint16 Port() const { return Server.port(); }
 	const ac::net::Client* Connection() const { return Net.Get(); }
 
+	/// The smoothed round trip, seconds (none before the first ack).
+	std::optional<double> RoundTrip() const;
+	/// The lag added on the client's end, each way (zero: none).
+	const ac::net::LagSettings& Lag() const { return LagNow; }
+	/// The lag setting as the console variable writes it ("150 20 5",
+	/// "150,20,5"; "", "0" or "off": none). False when it does not read.
+	static bool ParseLag(const FString& Text, ac::net::LagSettings& Out);
+	/// The driven unit's prediction.
+	const ac::net::Predictor& Prediction() const { return Predictor; }
+	void ClearPredictionStats() { Predictor.clearStats(); }
+
 private:
 	void Fail(const FString& Why);
 	void Connect(double Now);
 	void SendInputs(double Now);
 	void Blend(double Now);
 	void ReadReplies();
+	/// Reads `ac.MmoLag` and applies it when it changed.
+	void ReadLag();
 
 	EPhase CurrentPhase = EPhase::Off;
 	FString StatusMessage;
@@ -121,8 +143,14 @@ private:
 	double StartedAt = 0;
 	double ConnectAt = 0;
 	ac::net::UdpSocket Socket;
+	/// Between the socket and the connection: the lag setting.
+	TUniquePtr<ac::net::LagSimulator> LagIo;
+	ac::net::LagSettings LagNow;
+	FString LagText;
 	TUniquePtr<ac::net::Client> Net;
 	ac::net::Interpolator Interp;
+	ac::net::Predictor Predictor;
+	double LastBlend = 0;
 	/// The mirror last seen and its game (for `Generation`).
 	const ac::net::Mirror* SeenMirror = nullptr;
 	int64 SeenGame = -1;

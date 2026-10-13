@@ -36,7 +36,8 @@ public:
     void receive(double now);
     /// Sends this tick's input (`steer`, stamped with the next client tick,
     /// with the last few again) and the ack. Nothing before the Welcome.
-    void sendInput();
+    /// The input sent, with its tick (for the prediction, `Predictor`).
+    std::optional<PilotInput> sendInput();
     /// Puts what was sent on the wire.
     void flush(double now);
 

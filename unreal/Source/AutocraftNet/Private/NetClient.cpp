@@ -74,8 +74,8 @@ void Client::receive(double now) {
     }
 }
 
-void Client::sendInput() {
-    if (!connected() || !welcome_) return;
+std::optional<PilotInput> Client::sendInput() {
+    if (!connected() || !welcome_) return std::nullopt;
     tick_ += 1;
     PilotInput in = steer;
     in.tick = tick_;
@@ -93,6 +93,7 @@ void Client::sendInput() {
         const std::vector<uint8_t> bytes = encode(ack);
         endpoint_.send(Channel::unreliable, bytes.data(), bytes.size());
     }
+    return in;
 }
 
 void Client::flush(double now) { endpoint_.flush(now); }

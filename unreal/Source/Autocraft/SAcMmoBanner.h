@@ -2,7 +2,7 @@
 // (AcGameFlow): where the local server is ("Starting the local server…"),
 // why it failed (red, with the server log's path; it stays), and the short
 // refusals of what is off in this mode ("Orders are off in the MMORPG
-// test"), each for a few seconds. Dark glass in the HUD's chrome, hit-test
+// test"), each for a few seconds; under them, small, the round trip. Dark glass in the HUD's chrome, hit-test
 // invisible.
 #pragma once
 
@@ -25,6 +25,9 @@ public:
 	void AddNote(const FString& Text, double Now);
 	/// Drops the notes that are done.
 	void Update(double Now);
+	/// The connection's small line under the rest (the round trip, the lag
+	/// set); empty: none.
+	void SetStats(const FString& Text);
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(0, 0); }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -38,5 +41,6 @@ private:
 	};
 	FString Status;
 	bool bStatusError = false;
+	FString Stats;
 	TArray<FNote> Notes;
 };
