@@ -24,3 +24,13 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Client mirror = unstepped ac::Simulation filled from snapshots.
 - D Server sends pilot's fog bits; snapshots carry upgrades, levels, cargo.
 - N Client crosshair is measured client-side; server must validate (M2).
+- T T2 done, merged: unreal/server, `make -C unreal/server test` 13 pass.
+- N Region API: ac::server::Region in unreal/server/world/World.h.
+- D Snapshot entities are ac::Unit/ac::Structure; enemy plans scrubbed.
+- D Remembered enemy buildings sent, flagged `remembered`.
+- D Hostile players: only upgrades and team sent.
+- D Server event gate stricter: Missed, Landed fog-gated too.
+- I Core limit: one sim.pilot, Pilot::player=0 → one driver, side 0.
+- I Not yet: PathAhead threads (≥300 units), Intel.units memory.
+- N Bench Badlands Large 1480 things: step 1.68 ms mean, p95 5.1, max 46.
+- N Snapshot build 0.33 ms mean at 256 entities.
