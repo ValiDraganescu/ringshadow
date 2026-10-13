@@ -81,3 +81,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D No lots: build where it fits, pilot pays price.
 - D Cities form from nearby buildings: proposal only, later.
 - T M2 plan R1–R5 in mmorpg-m2.md; P1–P5 await user.
+- T R1 → new worker mmo-regions, same worktree.

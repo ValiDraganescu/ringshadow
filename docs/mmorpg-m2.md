@@ -24,7 +24,7 @@ world". Log: [mmorpg-log.md](mmorpg-log.md).
 
 | # | Task | Needs | Status |
 |---|---|---|---|
-| R1 | Region file + agent crafting tool (validate, generate, top-down preview PNG) + agent skill | | todo |
+| R1 | Region file + agent crafting tool (validate, generate, top-down preview PNG) + agent skill | | running |
 | R2 | Server world: world file, many regions, spawn at pad, edge hand-off, pad flights, region change in the protocol | T6, R1 | todo |
 | R3 | Client: region change (rebuild the mirror), world map screen, flight at a pad | R2 | todo |
 | R4 | Build anywhere: pilot build request in the MMO mode, wallet, server placement check, price | R2 | todo |
