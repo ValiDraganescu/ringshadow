@@ -1,0 +1,367 @@
+{
+  "id": "start",
+  "name": "Prospect Landing",
+  "size": "medium",
+  "base": {
+    "style": "openField",
+    "seed": 1,
+    "drop": [
+      "resources",
+      "doodads"
+    ]
+  },
+  "height": [
+    {
+      "op": "flatten",
+      "area": {
+        "circle": [
+          68,
+          48,
+          16
+        ]
+      },
+      "level": 0
+    },
+    {
+      "op": "raise",
+      "area": [
+        [
+          92,
+          10
+        ],
+        [
+          104,
+          6
+        ],
+        [
+          124,
+          7
+        ],
+        [
+          136,
+          13
+        ],
+        [
+          135,
+          27
+        ],
+        [
+          121,
+          32
+        ],
+        [
+          105,
+          33
+        ],
+        [
+          92,
+          30
+        ]
+      ],
+      "level": 1
+    },
+    {
+      "op": "raise",
+      "area": [
+        [
+          118,
+          11
+        ],
+        [
+          128,
+          12
+        ],
+        [
+          131,
+          21
+        ],
+        [
+          120,
+          24
+        ]
+      ],
+      "level": 2
+    },
+    {
+      "op": "ridge",
+      "line": [
+        [
+          96,
+          66
+        ],
+        [
+          110,
+          72
+        ],
+        [
+          128,
+          69
+        ]
+      ],
+      "width": 3,
+      "level": 1
+    },
+    {
+      "op": "ramp",
+      "from": [
+        84,
+        14
+      ],
+      "to": [
+        97,
+        14
+      ],
+      "width": 5,
+      "fromLevel": 0,
+      "level": 1
+    },
+    {
+      "op": "ramp",
+      "from": [
+        84,
+        26
+      ],
+      "to": [
+        97,
+        26
+      ],
+      "width": 5,
+      "fromLevel": 0,
+      "level": 1
+    },
+    {
+      "op": "ramp",
+      "from": [
+        107,
+        18
+      ],
+      "to": [
+        123,
+        18
+      ],
+      "width": 4,
+      "fromLevel": 1,
+      "level": 2
+    }
+  ],
+  "deposits": [
+    {
+      "at": [
+        55,
+        41
+      ],
+      "amount": 1800,
+      "angle": 90
+    },
+    {
+      "at": [
+        53,
+        46
+      ],
+      "amount": 1800,
+      "angle": 90
+    },
+    {
+      "at": [
+        53,
+        51
+      ],
+      "amount": 1800,
+      "angle": 90
+    },
+    {
+      "at": [
+        55,
+        56
+      ],
+      "amount": 1800,
+      "angle": 90
+    },
+    {
+      "at": [
+        20,
+        80
+      ],
+      "amount": 900,
+      "angle": 0
+    },
+    {
+      "at": [
+        26,
+        84
+      ],
+      "amount": 900,
+      "angle": 30
+    }
+  ],
+  "wells": [
+    {
+      "at": [
+        60,
+        36
+      ],
+      "amount": 2250
+    },
+    {
+      "at": [
+        60,
+        61
+      ],
+      "amount": 2250
+    }
+  ],
+  "doodads": [
+    {
+      "kind": "rockSpire",
+      "at": [
+        102,
+        37
+      ],
+      "rotation": 0,
+      "scale": 1.5
+    },
+    {
+      "kind": "boulder",
+      "at": [
+        112,
+        38
+      ],
+      "rotation": 40,
+      "scale": 1.6
+    },
+    {
+      "kind": "rock",
+      "at": [
+        124,
+        37
+      ],
+      "rotation": 10,
+      "scale": 1.2
+    },
+    {
+      "kind": "boulder",
+      "at": [
+        36,
+        22
+      ],
+      "rotation": 0,
+      "scale": 1.8
+    },
+    {
+      "kind": "rock",
+      "at": [
+        40,
+        18
+      ],
+      "rotation": 70,
+      "scale": 1.3
+    },
+    {
+      "kind": "deadTree",
+      "at": [
+        30,
+        70
+      ],
+      "rotation": 0,
+      "scale": 1.0
+    },
+    {
+      "kind": "bush",
+      "at": [
+        34,
+        74
+      ],
+      "rotation": 0,
+      "scale": 1.0
+    },
+    {
+      "kind": "plant",
+      "at": [
+        16,
+        86
+      ],
+      "rotation": 0,
+      "scale": 1.0
+    },
+    {
+      "kind": "debris",
+      "at": [
+        84,
+        56
+      ],
+      "rotation": 20,
+      "scale": 1.0
+    },
+    {
+      "kind": "crateStack",
+      "at": [
+        82,
+        40
+      ],
+      "rotation": 15,
+      "scale": 1.0
+    },
+    {
+      "kind": "boulder",
+      "at": [
+        106,
+        80
+      ],
+      "rotation": 0,
+      "scale": 2.0
+    },
+    {
+      "kind": "rock",
+      "at": [
+        118,
+        82
+      ],
+      "rotation": 50,
+      "scale": 1.4
+    }
+  ],
+  "pads": [
+    {
+      "name": "landing",
+      "at": [
+        76,
+        48
+      ]
+    }
+  ],
+  "spawns": [
+    {
+      "name": "start",
+      "at": [
+        80,
+        53
+      ]
+    }
+  ],
+  "openings": {
+    "north": [
+      [
+        58,
+        86
+      ]
+    ],
+    "south": [
+      [
+        58,
+        86
+      ]
+    ],
+    "west": [
+      [
+        39,
+        57
+      ]
+    ],
+    "east": [
+      [
+        39,
+        57
+      ]
+    ]
+  }
+}
