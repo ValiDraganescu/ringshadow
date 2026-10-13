@@ -216,3 +216,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Untracked UAT outputs in unreal/Build/Mac/: not committed.
 - T M5 done; suites (manager): server 71, net 63, core 391.
 - N Next needs user: Win/Linux server (AWS), cities, AI pilots, merge to main.
+- T F1 MH loop proof + F2 player guide docs/mmorpg-play.md: agent.
