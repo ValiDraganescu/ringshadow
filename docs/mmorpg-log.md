@@ -169,3 +169,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Manager reran mmoresume/cross/fly/handback hidden: done, 0 failed.
 - I Orchestrator MCP disconnected entirely ("Connection closed").
 - D User wants orc workers; switch back once orc reconnects.
+- T Q4 done 0c1de12: map arrows/WASD + Return; MMO HUD trimmed.
+- D MMO top-down card grid → key hints; building buttons off.
+- D Unit count "1 UNITS"; minimap marks pads.
+- I Edge openings unknown to client (server-only region data).
+- I Buildings may overlap the pad plate (seen in Q4 picture).
+- N Flow steps mmokeys, mmohud; -AcMmoHudShots=DIR.
