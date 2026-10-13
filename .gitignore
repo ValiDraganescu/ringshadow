@@ -18,6 +18,7 @@ unreal/Content-src/*
 !unreal/Content-src/launcher/
 # The Unreal remake: core-tests objects, and what Unreal makes.
 unreal/core-tests/build/
+unreal/server/build/
 unreal/Binaries/
 unreal/Intermediate/
 unreal/Saved/
