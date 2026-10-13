@@ -1,5 +1,6 @@
 # `make game` builds the game module and starts the game on the Battlefield map
-# (the Orchestrator's Ringshadow run).
+# (the Orchestrator's Ringshadow run). `make mmo` builds the server too and
+# starts the game straight in the MMORPG test mode (the Ringshadow-MMO run).
 # `make balance` prints the leveling tracking database (docs/leveling.md,
 # "Tracking") for the latest balance signature, with the sqlite3 that ships
 # with macOS (3.51: `sqrt` and `group_concat(... ORDER BY ...)`, which the views
@@ -17,6 +18,12 @@ UPROJECT := $(CURDIR)/unreal/Autocraft.uproject
 game:
 	"$(UE)/Build/BatchFiles/Mac/Build.sh" AutocraftEditor Mac Development -Project="$(UPROJECT)" -WaitMutex
 	"$(UE)/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor" "$(UPROJECT)" /Game/Maps/Battlefield -game
+
+.PHONY: mmo
+mmo:
+	$(MAKE) -C unreal/server
+	"$(UE)/Build/BatchFiles/Mac/Build.sh" AutocraftEditor Mac Development -Project="$(UPROJECT)" -WaitMutex
+	"$(UE)/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor" "$(UPROJECT)" /Game/Maps/Battlefield -game -AcMmo
 
 .PHONY: balance
 balance:
