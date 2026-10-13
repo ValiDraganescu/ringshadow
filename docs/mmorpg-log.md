@@ -202,3 +202,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D M5 = ready to ship: encryption, server in Mac package, leftovers.
 - D Encryption: Monocypher (CC0), X25519 + XChaCha20-Poly1305.
 - D Win/Linux server builds wait for user (AWS cost).
+- T E1 encryption, E2 Mac package (no sign/notarize), E3 leftovers: agents.

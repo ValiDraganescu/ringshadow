@@ -15,8 +15,8 @@ Log: [mmorpg-log.md](mmorpg-log.md).
 
 | # | Task | Needs | Status |
 |---|---|---|---|
-| E1 | Encryption: Monocypher in ThirdParty, keys in the handshake, every packet sealed; tests incl. tampered, replayed and wrong-key packets | | todo |
-| E2 | Server in the Mac package: the release script stages autocraft-server, the game finds it; a packaged hidden run of -AcMmo | | todo |
-| E3 | Leftovers: false wallet gain flash after an edge crossing; weld progress shown while building up close | | todo |
+| E1 | Encryption: Monocypher in ThirdParty, keys in the handshake, every packet sealed; tests incl. tampered, replayed and wrong-key packets | | running |
+| E2 | Server in the Mac package: the release script stages autocraft-server, the game finds it; a packaged hidden run of -AcMmo | | running |
+| E3 | Leftovers: false wallet gain flash after an edge crossing; weld progress shown while building up close | | running |
 
 Done when: a packaged Mac build plays the MMO mode in a hidden run; packets on the wire are unreadable and forged ones dropped; all suites and MMO tests pass.
