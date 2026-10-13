@@ -58,3 +58,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T T5 → worker mmo-server-world (reused, compacted).
 - D All workers work in MMORPG-variant worktree, no own worktrees.
 - D Shared tree: each commits only its own files, explicit paths.
+- T Removed mmo-net worktree+branch; mmo-server-world after T5 (worker cwd).
