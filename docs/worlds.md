@@ -81,6 +81,13 @@ Prospect Landing's pad.
   with their names, styles and pads, the pilot's region ringed. Standing at
   a pad, click a pad and FLY (or Return); away from a pad it says how far
   the nearest pad is. M or Esc closes it. The unit stands while it is open.
+- Only the player gives the unit back (Esc): a region change never does,
+  and the server's seat after a landing is taken only then, so an old
+  snapshot never takes the unit back again. A view held for travel gives
+  way to the top-down camera after 15 s.
 - Automation tests (hidden): `Autocraft.Mmo.CrossEdgeEast` (drive east over
   the start region's edge into Tern Ridge) and `Autocraft.Mmo.FlyToPad`
-  (fly to Cold Fork's pad), in `AcMmoTests.cpp`.
+  (fly to Cold Fork's pad), in `AcMmoTests.cpp`. Through the pilot pawn and
+  the world map, in a hidden game run: `-AcFlowTest=mmocross,mmofly,mmohandback`
+  (`AcMmoFlowTest.cpp`; the network read only every 0.2 s while travelling,
+  so a RegionChange and its first snapshot land in the same frame).

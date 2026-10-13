@@ -188,7 +188,10 @@ public:
 	/// The player's drivable unit nearest a ground point (`drive(near:)`).
 	bool DriveNear(ac::Vec2 Ground);
 	/// Back to the top-down camera over where the unit stands (`leavePilot`).
-	void Leave();
+	/// In the MMORPG test it hands the unit back to the server, unless
+	/// `bHandBack` is false (the server's doing: it took the unit, or it
+	/// is gone).
+	void Leave(bool bHandBack = true);
 	/// Tab: the nearest other unit of the same kind (`nextPilot`).
 	void Next();
 	/// The mouse turned the view by (DX right, DY down) points (`look`).
@@ -203,6 +206,14 @@ public:
 	/// the unit stands until it closes.
 	void SetScreenOpen(bool bOpen);
 	bool ScreenOpen() const { return bScreenOpen; }
+	/// Scripted tests (-AcFlowTest mmo steps): the move keys (x right, y
+	/// down the screen: (0, -1) is forward) and the mouse's yaw, as the input
+	/// actions set them.
+	void SetTestInput(FVector2D Move, double Yaw)
+	{
+		MoveInput = Move;
+		PilotYaw = Yaw;
+	}
 
 	/// The camera is still flying down into the unit (the dive): the unit
 	/// drawn, no cockpit.
@@ -350,6 +361,10 @@ private:
 	bool bPointing = false;
 	/// `SetScreenOpen`.
 	bool bScreenOpen = false;
+	/// The MMORPG world: the view held for a unit in travel since (`Clock`;
+	/// < 0: not held), at most this long.
+	double HoldSince = -1;
+	static constexpr double MaxHoldSeconds = 15.0;
 	FVector2D MoveInput = FVector2D::ZeroVector;
 	TOptional<FCrosshair> Cross;
 	TOptional<FVector> LastEye;

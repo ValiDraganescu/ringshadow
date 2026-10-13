@@ -123,6 +123,12 @@ public:
 	std::optional<int64> Wanted() const { return WantedUnit; }
 	/// The driven unit, as the server says.
 	std::optional<int64> Driven() const;
+	/// Hand backs sent since the start (tests: none on a region change).
+	int32 HandBacksSent() const { return HandBacks; }
+	/// Tests: read the network only this often (seconds; 0: every frame), as
+	/// slow frames do, so what came together is handled in one frame (a
+	/// RegionChange and its region's first snapshot).
+	double TestReadEvery = 0;
 
 	/// On the Welcome's first units, ask for a Prospector of the pilot's
 	/// side (on by default).
@@ -215,6 +221,12 @@ private:
 	double LastNow = 0;
 	std::optional<int64> WantedUnit;
 	bool bAutoTaken = false;
+	int32 HandBacks = 0;
+	/// Take the unit the server seats the pilot in (the start, a flight's
+	/// landing) as the one wanted, once, if it is not `AdoptOld`.
+	bool bAdopt = false;
+	std::optional<int64> AdoptOld;
+	double LastRead = 0;
 	/// The requests in flight: id → the unit asked for (none: a hand back).
 	TMap<uint32, std::optional<int64>> Asked;
 	TArray<FString> Notes;

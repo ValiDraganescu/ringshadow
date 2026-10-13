@@ -235,14 +235,21 @@ void AAcPilotPawn::OnGameStarted(UAcSimSubsystem& Sim)
 {
 	SkirtMap = nullptr;
 	// The MMORPG world: a new region (over an edge, or landed). The seat is
-	// kept: `SyncMmo` moves the view onto the unit once the new region's
-	// snapshot shows it.
-	if (const FAcMmoClient* Mmo = Sim.MmoClient(); Mmo && Driving() && Mmo->Travelling())
+	// kept while the client wants a unit (the RegionChange made the new
+	// region's unit the one wanted): `SyncMmo` moves the view onto it once a
+	// snapshot shows it driven, maybe in this very frame. Never a hand back:
+	// only the player gives the unit back.
+	if (const FAcMmoClient* Mmo = Sim.MmoClient(); Mmo && Driving())
 	{
-		LastEye.Reset();
-		Chase.Reset();
-		Cross.Reset();
-		UE_LOG(LogAutocraft, Log, TEXT("pilot: into a new region, still seated"));
+		if (Mmo->Wanted())
+		{
+			LastEye.Reset();
+			Chase.Reset();
+			Cross.Reset();
+			UE_LOG(LogAutocraft, Log, TEXT("pilot: into a new region, still seated (#%lld wanted)"), (long long)*Mmo->Wanted());
+			return;
+		}
+		Leave(false);
 		return;
 	}
 	// A new game (or the next one): whoever was driven is no more.
@@ -487,7 +494,7 @@ bool AAcPilotPawn::TakeOver(const int64 Id)
 	return true;
 }
 
-void AAcPilotPawn::Leave()
+void AAcPilotPawn::Leave(const bool bHandBack)
 {
 	bLeaveWanted = false;
 	if (!Driving()) return;
@@ -504,7 +511,7 @@ void AAcPilotPawn::Leave()
 				S.pilot->walk = ac::Vec2(0, 0);
 				S.pilot->act = S.pilot->ability = S.pilot->hold = S.pilot->mend = false;
 			}
-			if (Mmo->Wanted()) Mmo->Want(std::nullopt);
+			if (bHandBack && Mmo->Wanted()) Mmo->Want(std::nullopt);
 		}
 		else
 		{
@@ -965,7 +972,7 @@ void AAcPilotPawn::SyncMmo()
 	{
 		// The server no longer has us driving it (it died, say).
 		UE_LOG(LogAutocraft, Log, TEXT("pilot: the server took #%lld back"), (long long)DrivenId);
-		Leave();
+		Leave(false);
 	}
 }
 
@@ -979,12 +986,25 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	if (!Found || Found->id != DrivenId)
 	{
 		// The MMORPG world: in flight, or into a new region: the view holds
-		// where it was until the unit is driven again (`SyncMmo`).
-		if (const FAcMmoClient* Mmo = Sim->MmoClient(); Mmo && Mmo->Travelling()) return;
-		UE_LOG(LogAutocraft, Log, TEXT("pilot: the unit is gone"));
-		Leave();
+		// where it was until the unit is driven again (`SyncMmo`), never
+		// longer than `MaxHoldSeconds` (then the top-down camera).
+		const FAcMmoClient* Mmo = Sim->MmoClient();
+		if (Mmo && Mmo->Travelling())
+		{
+			if (HoldSince < 0) HoldSince = Clock;
+			if (Clock - HoldSince <= MaxHoldSeconds) return;
+			UE_LOG(LogAutocraft, Log, TEXT("pilot: no unit to drive after %.0f s of travel"), MaxHoldSeconds);
+		}
+		else
+		{
+			UE_LOG(LogAutocraft, Log, TEXT("pilot: the unit is gone"));
+		}
+		HoldSince = -1;
+		// (The server's doing, not the player's: nothing to hand back.)
+		Leave(!Mmo);
 		return;
 	}
+	HoldSince = -1;
 	ac::Unit U = *Found;
 	// Did this frame's steps turn the unit to the heading it was sent? (A
 	// Prospector at the drill, say, does not.) Kept over frames with none.

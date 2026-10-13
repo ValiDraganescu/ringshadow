@@ -881,6 +881,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 		return;
 	}
 	const FString Step = T.Steps[T.Step].TrimStartAndEnd();
+	if (Step.StartsWith(TEXT("mmo")))
+	{
+		TickMmoFlow(Step);
+		return;
+	}
 	const ac::GameState& S = Sim->State();
 	auto Since = [&] { return Now - T.PhaseAt; };
 	auto Advance = [&] { T.Phase += 1; T.PhaseAt = Now; T.GameAt = S.time; };

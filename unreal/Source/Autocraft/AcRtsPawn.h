@@ -94,6 +94,7 @@ public:
 	double GetViewInset() const { return ViewInset; }
 	/// Pan and zoom are ignored while the command map is open.
 	void SetInputBlocked(bool bBlocked) { bInputBlocked = bBlocked; }
+	bool IsInputBlocked() const { return bInputBlocked; }
 	/// True while the left button is down and has moved far enough to be a
 	/// drag (a click handler should then not take the release as a click).
 	bool IsDragging() const { return bDragged; }

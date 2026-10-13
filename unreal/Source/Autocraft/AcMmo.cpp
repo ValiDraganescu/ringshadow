@@ -81,6 +81,9 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	SeenGame = -1;
 	WantedUnit.reset();
 	bAutoTaken = false;
+	HandBacks = 0;
+	bAdopt = true;
+	AdoptOld.reset();
 	Asked.Reset();
 	BuildsAsked.Reset();
 	BuildRefusals.Reset();
@@ -205,6 +208,12 @@ void FAcMmoClient::Tick(const double Now)
 		}
 		if (CurrentPhase != EPhase::Connecting) return;
 	}
+	if (TestReadEvery > 0 && Now - LastRead < TestReadEvery)
+	{
+		Net->flush(Now);
+		return;
+	}
+	LastRead = Now;
 	Net->receive(Now);
 	if (!Net->disconnectReason().empty())
 	{
@@ -243,12 +252,16 @@ void FAcMmoClient::Tick(const double Now)
 			bArriving = false;
 			UE_LOG(LogAutocraft, Log, TEXT("mmo: arrived, driving #%lld"), (long long)*M->driven());
 		}
-		// In a world the server seats the pilot (the start, an edge, a
-		// landing): the unit it drives is the one wanted.
-		if (Net->world() && Asked.IsEmpty() && M->driven() && M->driven() != WantedUnit)
+		// In a world the server seats the pilot at the start and after a
+		// flight (a RegionChange says so itself): that unit is the one
+		// wanted. Only then: a snapshot sent before a hand back was read
+		// still shows the unit driven, and must not take it again.
+		if (bAdopt && Net->world() && M->driven() && M->driven() != AdoptOld)
 		{
+			bAdopt = false;
 			WantedUnit = M->driven();
 			bAutoTaken = true;
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: seated by the server in #%lld"), (long long)*M->driven());
 		}
 		if (CurrentPhase != EPhase::Playing)
 		{
@@ -402,6 +415,7 @@ void FAcMmoClient::ReadReplies()
 		{
 			if (!R.done)
 			{
+				bAdopt = false;
 				LastFlightRefusal = Text(R.reason);
 				Notes.Add(FString::Printf(TEXT("Not flown: %s"), *LastFlightRefusal));
 				UE_LOG(LogAutocraft, Log, TEXT("mmo: flight %u refused: %s"), R.request, *LastFlightRefusal);
@@ -432,9 +446,12 @@ void FAcMmoClient::Want(const std::optional<int64> Unit)
 	}
 	if (Unit == WantedUnit) return;
 	WantedUnit = Unit;
+	// The player's choice from now on.
+	bAdopt = false;
 	// Nothing to hand back: the server took it already (it died, say).
 	if (!Unit && !Driven()) return;
 	const uint32 Id = Unit ? Net->take(*Unit) : Net->handBack();
+	if (!Unit) HandBacks += 1;
 	Asked.Add(Id, Unit);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: request %u: %s"), Id, Unit ? *FString::Printf(TEXT("take #%lld"), (long long)*Unit) : TEXT("hand back"));
 }
@@ -483,6 +500,7 @@ void FAcMmoClient::OnRegionChange(const ac::net::RegionChange& Change)
 	LastBlend = 0;
 	WantedUnit = Change.driven;
 	bAutoTaken = true;
+	bAdopt = false;
 	bArriving = true;
 	// The old mirror is gone: the game rebuilds on this one now, before its
 	// first snapshot (its map is built; its units come with the snapshots).
@@ -550,6 +568,9 @@ bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)
 	LastFlightRefusal.Reset();
 	const uint32 Id = Net->fly(Utf8(Region), Utf8(Pad));
 	FlightsAsked.Add(Id);
+	// A landing in this region brings a new unit with no RegionChange.
+	bAdopt = true;
+	AdoptOld = Driven();
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: request %u: fly from pad %s to %s %s"), Id, *Near->Name, *Region, *Pad);
 	return true;
 }

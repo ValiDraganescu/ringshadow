@@ -174,6 +174,11 @@ private:
 		std::optional<ac::Session> Expected;
 	};
 	TOptional<FFlowTest> Test;
+	/// The MMORPG steps (`mmocross`, `mmofly`; AcMmoFlowTest.cpp): the real
+	/// pilot pawn and world map over the local server.
+	void TickMmoFlow(const FString& Step);
+	int64 MmoVisitWas = 0;
+	FVector2D RtsTargetWas = FVector2D::ZeroVector;
 	void Check(bool bOk, const FString& What);
 	void NextStep();
 };
