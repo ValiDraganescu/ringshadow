@@ -9,8 +9,8 @@ no AI units. Log: [mmorpg-log.md](mmorpg-log.md).
 
 | # | Task | Needs | Status |
 |---|---|---|---|
-| Q1 | Shot harness: `-AcMmoShots=DIR` stages the MMO moments and saves a PNG of each (HUD on); the agent reviews every picture as a player and lists the problems | | running |
-| Q2 | Fix what Q1 found, re-shoot, compare | Q1 | todo |
+| Q1 | Shot harness: `-AcMmoShots=DIR` stages the MMO moments and saves a PNG of each (HUD on); the agent reviews every picture as a player and lists the problems | | done |
+| Q2 | Fix what Q1 found, re-shoot, compare | Q1 | running |
 | Q3 | Flight: a lift-off and landing the player sees (the Prospector rises off the pad and comes down on the other), no frozen view | | running |
 | Q4 | World map by keyboard (arrows move the pad pick, Return flies); MMO HUD shows only what applies | | done |
 

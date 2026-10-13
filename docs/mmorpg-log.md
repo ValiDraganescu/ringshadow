@@ -175,3 +175,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Edge openings unknown to client (server-only region data).
 - I Buildings may overlap the pad plate (seen in Q4 picture).
 - N Flow steps mmokeys, mmohud; -AcMmoHudShots=DIR.
+- T Q1 done 8bc66cd: -AcMmoShots, 17 shots, review docs/mmorpg-shots.md, 18 problems.
+- D MMO start wallet 600 ore (Citadel 400 left 0).
+- D MMO XP rate ×0.1 of RTS; tune later.
+- D MMO build menu: Citadel + Derrick only, named, greyed with reason.
+- T Q2a server/gameplay fixes, Q2b client UI fixes: background agents.
