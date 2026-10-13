@@ -166,3 +166,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D M4 = manager hand check in pictures + polish; mmorpg-m4.md.
 - T Q1 shot harness + review → background agent.
 - T Q3 flight animation, Q4 map keys + MMO HUD: background agents.
+- N Manager reran mmoresume/cross/fly/handback hidden: done, 0 failed.
