@@ -97,3 +97,12 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Openings: middle 40–60% of each edge; neighbours overlap.
 - D Every region has ≥1 pad; first world = 9 region files.
 - T R2 → worker mmo-world; R5 → worker mmo-start-region.
+- T R5 done af296e3: Prospect Landing, pad mid, ore+wells west.
+- T R2 done e77381a: worlds/first.json 3×3, 8 generated regions, docs/worlds.md.
+- N 9 regions step 0.011 ms mean (empty wild regions).
+- D Wild state: GameState::new_ cleared, server-side; core untouched.
+- D Flight 4 s pad to pad; crossing band 2 cells, arrive 2.5 in.
+- D Protocol: RegionChange(8), World(9), Request Fly; wallet = players[0] ore/MH.
+- I Core: one driver per region; crossing into occupied region stops.
+- I Results reach inbox but don't wake manager; watch commits + poll.
+- T R3 + R4 started, workers mmo-world, mmo-start-region (reused).

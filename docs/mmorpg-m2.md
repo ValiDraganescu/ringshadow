@@ -33,10 +33,10 @@ world". Log: [mmorpg-log.md](mmorpg-log.md).
 | # | Task | Needs | Status |
 |---|---|---|---|
 | R1 | Region file + agent crafting tool (validate, generate, top-down preview PNG) + agent skill | | done |
-| R2 | Server world: world file, many regions, spawn at pad, edge hand-off, pad flights, region change in the protocol | T6, R1 | running |
-| R3 | Client: region change (rebuild the mirror), world map screen, flight at a pad | R2 | todo |
-| R4 | Build anywhere: pilot build request in the MMO mode, wallet, server placement check, price | R2 | todo |
-| R5 | The start region crafted by an agent with R1's tool | R1 | running |
+| R2 | Server world: world file, many regions, spawn at pad, edge hand-off, pad flights, region change in the protocol | T6, R1 | done |
+| R3 | Client: region change (rebuild the mirror), world map screen, flight at a pad | R2 | running |
+| R4 | Build anywhere: pilot build request in the MMO mode, wallet, server placement check, price | R2 | running |
+| R5 | The start region crafted by an agent with R1's tool | R1 | done |
 
 Done when: in the game the pilot starts at the pad in a Prospector, builds a
 Citadel paid from the wallet, mines ore into the wallet, drives into a
