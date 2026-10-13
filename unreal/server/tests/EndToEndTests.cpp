@@ -322,3 +322,52 @@ TEST(e2e_local_server_as_the_game_starts_it) {
     EXPECT_TRUE(!missing.start("./build/no-such-server", {}, kToken));
     EXPECT_TRUE(missing.error().find("no server program") != std::string::npos);
 }
+
+TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
+    // The real program on the first world: the pilot starts at the pad in a
+    // Prospector with 400 ore, flies to Cold Fork's pad, and the client
+    // follows it there.
+    std::vector<std::string> args = {kProgram, "--world", "worlds/first.json", "--log", logPath("world")};
+    std::remove(logPath("world").c_str());
+    auto p = Process::start(args);
+    ASSERT_TRUE(p.has_value());
+    p->write(kToken + "\n");
+    unsigned port = 0;
+    const auto first = p->line(20);
+    ASSERT_TRUE(first && std::sscanf(first->c_str(), "PORT %u", &port) == 1 && port > 0);
+    Client c(uint16_t(port), kToken, rough());
+    HeadlessClient& hc = *c.client;
+    hc.connect(clockNow());
+    ASSERT_TRUE(c.until([&] { return hc.mirror() && hc.mirror()->driven() && hc.world(); }, 10));
+    EXPECT_TRUE(hc.mirror()->matches());
+    EXPECT_TRUE(hc.mirror()->region().wild);
+    EXPECT_TRUE(!hc.mirror()->region().regionFile.empty());
+    EXPECT_EQ(hc.world()->regions.size(), size_t(9));
+    EXPECT_TRUE(hc.world()->regions[size_t(hc.world()->here)].id == "start");
+    ASSERT_TRUE(c.until([&] { return hc.mirror()->simulation().state.players.size() == 1; }, 3));
+    EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(400));
+    EXPECT_EQ(hc.mirror()->simulation().state.units.size(), size_t(1));
+    EXPECT_TRUE(hc.mirror()->unit(*hc.mirror()->driven())->kind == UnitKind::prospector);
+    const uint32_t req = hc.fly("cold-fork", "landing");
+    ASSERT_TRUE(c.until([&] { return hc.replies.count(req) > 0; }, 3));
+    EXPECT_TRUE(hc.replies[req].done);
+    ASSERT_TRUE(c.until([&] { return hc.visit() == 1 && hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()); }, 10));
+    EXPECT_TRUE(hc.regionChange()->regionId == "cold-fork");
+    EXPECT_TRUE(hc.mirror()->matches());
+    EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(400));
+    p->stop();
+    const std::string log = readFile(logPath("world"));
+    EXPECT_TRUE(log.find("start: world first (9 regions)") != std::string::npos);
+    EXPECT_TRUE(log.find("flies to cold-fork landing") != std::string::npos);
+    EXPECT_TRUE(log.find("to cold-fork") != std::string::npos);
+}
+
+TEST(e2e_world_refuses_a_bad_world_file) {
+    auto p = Process::start({kProgram, "--world", "worlds/no-such-world.json", "--log", logPath("badworld")});
+    ASSERT_TRUE(p.has_value());
+    p->write(kToken + "\n");
+    const auto code = p->wait(5);
+    ASSERT_TRUE(code.has_value());
+    EXPECT_EQ(*code, 2);
+    p->stop();
+}

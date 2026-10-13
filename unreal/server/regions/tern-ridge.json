@@ -1,0 +1,58 @@
+{
+  "id": "tern-ridge",
+  "name": "Tern Ridge",
+  "size": "medium",
+  "base": {
+    "style": "ridge",
+    "seed": 15
+  },
+  "height": [
+    {
+      "op": "flatten",
+      "area": {
+        "circle": [
+          72,
+          48,
+          6
+        ]
+      },
+      "level": 1,
+      "slope": 5
+    }
+  ],
+  "pads": [
+    {
+      "name": "landing",
+      "at": [
+        72,
+        48
+      ]
+    }
+  ],
+  "openings": {
+    "north": [
+      [
+        58,
+        86
+      ]
+    ],
+    "east": [
+      [
+        39,
+        57
+      ]
+    ],
+    "south": [
+      [
+        58,
+        86
+      ]
+    ],
+    "west": [
+      [
+        39,
+        57
+      ]
+    ]
+  }
+}

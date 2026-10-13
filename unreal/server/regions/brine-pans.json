@@ -1,0 +1,58 @@
+{
+  "id": "brine-pans",
+  "name": "Brine Pans",
+  "size": "medium",
+  "base": {
+    "style": "openField",
+    "seed": 17
+  },
+  "height": [
+    {
+      "op": "flatten",
+      "area": {
+        "circle": [
+          72,
+          48,
+          6
+        ]
+      },
+      "level": 0,
+      "slope": 5
+    }
+  ],
+  "pads": [
+    {
+      "name": "landing",
+      "at": [
+        72,
+        48
+      ]
+    }
+  ],
+  "openings": {
+    "north": [
+      [
+        58,
+        86
+      ]
+    ],
+    "east": [
+      [
+        39,
+        57
+      ]
+    ],
+    "south": [
+      [
+        58,
+        86
+      ]
+    ],
+    "west": [
+      [
+        39,
+        57
+      ]
+    ]
+  }
+}

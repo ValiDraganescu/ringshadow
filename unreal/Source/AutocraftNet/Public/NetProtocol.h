@@ -6,7 +6,10 @@
 // Every message starts with its type (u8). Client to server: Input
 // (unreliable), Ack (unreliable), Request (reliable). Server to client:
 // Welcome (reliable, the first message after connected), Snapshot
-// (unreliable, NetSnapshot.h), Event (reliable), Reply (reliable).
+// (unreliable, NetSnapshot.h), Event (reliable), Reply (reliable),
+// RegionChange and World (reliable). A Welcome or a RegionChange that
+// carries a region file too large for one reliable message goes on the bulk
+// channel.
 #pragma once
 
 #include "AutocraftNetApi.h"
@@ -33,6 +36,8 @@ enum class MessageType : uint8_t {
     reply = 5,
     event = 6,
     snapshot = 7,
+    regionChange = 8,
+    world = 9,
 };
 
 /// The type of a message, or nil when it is none of ours.
@@ -41,10 +46,17 @@ AUTOCRAFTNET_API std::optional<MessageType> messageType(const std::vector<uint8_
 // MARK: - What both ends share
 
 /// What a client needs to build the same ground: the map is generated from
-/// its choice (`WindowMaps::build`, or `buildSquare` past 2 starts); name,
+/// its choice (`WindowMaps::build`, or `buildSquare` past 2 starts), or
+/// built from a region file (docs/regions.md) when `regionFile` is set; name,
 /// version and seed let it check it built the same one.
 struct RegionDescription {
     MapChoice map;
+    /// A world's region: its region file, whole (`region::parse`,
+    /// `region::build`). Empty: the generated map of `map`.
+    std::string regionFile;
+    /// A world's region is wild ground: no starting bases, no AI; the state
+    /// starts with the map's ore and wells only.
+    bool wild = false;
     std::string mapName;
     int64_t mapVersion = 0;
     uint64_t seed = 0;
@@ -211,8 +223,9 @@ struct AckMessage {
     bool operator==(const AckMessage&) const = default;
 };
 
-/// Client → server, reliable: everything that is not steering. M1: take a
-/// unit, hand it back.
+/// Client → server, reliable: everything that is not steering. Take a
+/// unit, hand it back, fly from a pad to a pad (a world's region, by its id,
+/// and the pad's name in it).
 struct RequestMessage {
     struct Take {
         int64_t unit = 0;
@@ -221,9 +234,14 @@ struct RequestMessage {
     struct HandBack {
         bool operator==(const HandBack&) const = default;
     };
+    struct Fly {
+        std::string region;
+        std::string pad;
+        bool operator==(const Fly&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
-    std::variant<Take, HandBack> what;
+    std::variant<Take, HandBack, Fly> what;
     bool operator==(const RequestMessage&) const = default;
 };
 
@@ -244,7 +262,60 @@ struct EventMessage {
     bool operator==(const EventMessage&) const = default;
 };
 
+/// A snapshot's `game` in a world: the pilot's region changes (its visit)
+/// in the high 32 bits, the region's own game in the low. A client's mirror
+/// takes only the snapshots of its visit.
+inline int64_t visitGame(int64_t visit, int64_t game) { return (visit << 32) | (game & 0xffffffff); }
+inline int64_t visitOf(int64_t game) { return game >> 32; }
+
+/// Server → client, reliable: the pilot is in another region now (it drove
+/// across an edge, or landed at a pad). The client builds a new mirror from
+/// `region`; the snapshots of visit `visit` are this region's.
+struct RegionChange {
+    int64_t visit = 0;
+    RegionDescription region;
+    /// The world's region id.
+    std::string regionId;
+    /// The unit the pilot drives there.
+    std::optional<int64_t> driven;
+    int64_t serverTick = 0;
+    double time = 0;
+    bool operator==(const RegionChange&) const = default;
+};
+
+/// Server → client, reliable: the world map (after the Welcome, and again
+/// whenever the pilot's place in it changes).
+struct WorldMessage {
+    struct Pad {
+        std::string name;
+        /// Region cells from the north-west corner (docs/regions.md).
+        Vec2 at;
+        bool operator==(const Pad&) const = default;
+    };
+    struct Region {
+        std::string id;
+        std::string name;
+        MapStyle style = MapStyle::highlands;
+        MapSize size = MapSize::medium;
+        int64_t column = 0;
+        int64_t row = 0;
+        std::vector<Pad> pads;
+        bool operator==(const Region&) const = default;
+    };
+    int64_t columns = 0;
+    int64_t rows = 0;
+    std::vector<Region> regions;
+    /// Index in `regions` of where the pilot is (its region; in flight,
+    /// where it lifted off).
+    int64_t here = 0;
+    /// In flight to `regions[flyingTo]` (nil: on the ground).
+    std::optional<int64_t> flyingTo;
+    bool operator==(const WorldMessage&) const = default;
+};
+
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const Welcome& m);
+AUTOCRAFTNET_API std::vector<uint8_t> encode(const RegionChange& m);
+AUTOCRAFTNET_API std::vector<uint8_t> encode(const WorldMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const InputMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const AckMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const RequestMessage& m);
@@ -255,6 +326,8 @@ AUTOCRAFTNET_API std::vector<std::vector<uint8_t>> encodeEvents(int64_t serverTi
 
 /// False when the bytes are not that message, or are cut short.
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, Welcome& out);
+AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, RegionChange& out);
+AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, WorldMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, InputMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, AckMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, RequestMessage& out);

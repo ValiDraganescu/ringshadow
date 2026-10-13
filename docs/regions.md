@@ -5,6 +5,7 @@ file in `unreal/server/regions/<id>.json`. A **base** (the game's map
 generator: a style, a size, a seed) and **crafted layers** on top. A
 generated region is the base alone. AI agents craft the rest with
 `autocraft-region` (skill: `.claude/skills/ringshadow-region-crafting/`).
+A world puts region files side by side on a grid: [worlds.md](worlds.md).
 
 Code: `AutocraftCore` `RegionFile.h` (parse, write, build, validate; the
 server and the game share it), `unreal/server/region/` (the tool and its

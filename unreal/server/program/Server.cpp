@@ -24,10 +24,36 @@ std::string format(const char* f, double a) {
     return b;
 }
 
+WorldMap makeWorld(const ServerOptions& o) {
+    return o.world ? WorldMap(*o.world, o.worldParams, o.region) : WorldMap(o.region);
+}
+
 } // namespace
 
 Server::Server(net::PacketIo& io, const ServerOptions& options)
-    : options_(options), region_(options.region), endpoint_(io, endpointConfig(options)) {}
+    : options_(options), world_(makeWorld(options)), endpoint_(io, endpointConfig(options)) {}
+
+void Server::sendReliable(net::ConnectionId c, const std::vector<uint8_t>& bytes) {
+    const net::Channel ch = bytes.size() <= net::kMaxReliableBytes ? net::Channel::reliable : net::Channel::bulk;
+    endpoint_.send(c, ch, bytes.data(), bytes.size());
+}
+
+void Server::sendWorld(net::ConnectionId c, PilotId pilot) {
+    if (const auto m = world_.worldMessage(pilot)) sendReliable(c, net::encode(*m));
+}
+
+void Server::sendMoves() {
+    for (const Moved& m : world_.takeMoves()) {
+        for (const auto& [c, client] : clients_) {
+            if (client.pilot != m.pilot) continue;
+            if (m.change) {
+                sendReliable(c, net::encode(*m.change));
+                log("pilot " + std::to_string(m.pilot) + " to " + m.change->regionId);
+            }
+            sendWorld(c, m.pilot);
+        }
+    }
+}
 
 void Server::log(const std::string& line) const {
     if (options_.log) options_.log(line);
@@ -37,7 +63,12 @@ void Server::tick(double now, bool stepRegion) {
     const auto t0 = std::chrono::steady_clock::now();
     endpoint_.update(now);
     for (net::Event e; endpoint_.poll(e);) handle(e, now);
-    if (stepRegion) region_.step();
+    if (stepRegion) {
+        world_.step();
+        stepSum_ += world_.lastStepMs();
+        stepMax_ = std::max(stepMax_, world_.lastStepMs());
+    }
+    sendMoves();
     ticked_ += 1;
     if (options_.snapshotEvery > 0 && ticked_ % options_.snapshotEvery == 0) sendSnapshots(now);
     endpoint_.flush(now);
@@ -54,7 +85,7 @@ void Server::stop(double now, const std::string& reason) {
     for (const auto& [c, client] : clients_) ids.push_back(c);
     for (net::ConnectionId c : ids) {
         endpoint_.disconnect(c, now, reason);
-        region_.leave(clients_[c].pilot);
+        world_.leave(clients_[c].pilot);
         log("disconnect pilot " + std::to_string(clients_[c].pilot) + ": " + reason);
         clients_.erase(c);
     }
@@ -65,21 +96,22 @@ void Server::handle(const net::Event& e, double now) {
     case net::Event::Type::connected: {
         Client& client = clients_[e.connection];
         client.pilot = e.connection;
-        region_.join(client.pilot);
+        world_.join(client.pilot);
+        const Region& r = *world_.regionOf(client.pilot);
         net::Welcome w;
         w.pilot = client.pilot;
-        w.region = region_.description();
-        w.serverTick = region_.tick();
-        w.time = region_.simulation().state.time;
-        const std::vector<uint8_t> bytes = net::encode(w);
-        endpoint_.send(e.connection, net::Channel::reliable, bytes.data(), bytes.size());
+        w.region = r.description();
+        w.serverTick = r.tick();
+        w.time = r.simulation().state.time;
+        sendReliable(e.connection, net::encode(w));
+        sendWorld(e.connection, client.pilot);
         log("connect pilot " + std::to_string(client.pilot) + " from " + e.remote.toString());
         return;
     }
     case net::Event::Type::disconnected: {
         const auto it = clients_.find(e.connection);
         if (it == clients_.end()) return;
-        region_.leave(it->second.pilot);
+        world_.leave(it->second.pilot);
         log("disconnect pilot " + std::to_string(it->second.pilot) + ": " + e.reason);
         clients_.erase(it);
         return;
@@ -103,7 +135,7 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
         net::InputMessage m;
         if (!net::decode(data, m)) return;
         // Oldest first: the region keeps them in tick order and drops repeats.
-        for (auto it = m.inputs.rbegin(); it != m.inputs.rend(); ++it) region_.input(client.pilot, net::quantised(*it));
+        for (auto it = m.inputs.rbegin(); it != m.inputs.rend(); ++it) world_.input(client.pilot, net::quantised(*it));
         return;
     }
     case net::MessageType::ack: {
@@ -116,18 +148,30 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
         if (!net::decode(data, m)) return;
         net::ReplyMessage reply;
         reply.request = m.id;
+        Region* region = world_.regionOf(client.pilot);
+        if (!region) return;
         if (const auto* take = std::get_if<net::RequestMessage::Take>(&m.what)) {
             bool other = false;
             for (const auto& [id, o] : clients_)
-                if (id != c && region_.driving(o.pilot)) other = true;
-            if (other) reply.reason = "another pilot drives";
-            else if (!region_.take(client.pilot, take->unit)) reply.reason = "that unit cannot be driven";
+                if (id != c && region->driving(o.pilot)) other = true;
+            if (world_.flying(client.pilot)) reply.reason = "in flight";
+            else if (other) reply.reason = "another pilot drives";
+            else if (!region->take(client.pilot, take->unit)) reply.reason = "that unit cannot be driven";
             else reply.done = true;
             if (!reply.done)
                 log("refuse take " + std::to_string(take->unit) + " by pilot " + std::to_string(client.pilot) + ": " + reply.reason);
+        } else if (const auto* fly = std::get_if<net::RequestMessage::Fly>(&m.what)) {
+            if (const auto why = world_.fly(client.pilot, fly->region, fly->pad)) {
+                reply.reason = *why;
+                log("refuse flight to " + fly->region + " " + fly->pad + " by pilot " + std::to_string(client.pilot) + ": " + *why);
+            } else {
+                reply.done = true;
+                log("pilot " + std::to_string(client.pilot) + " flies to " + fly->region + " " + fly->pad);
+            }
+            sendMoves();
         } else {
-            if (region_.driving(client.pilot)) {
-                region_.handBack(client.pilot);
+            if (region->driving(client.pilot)) {
+                region->handBack(client.pilot);
                 reply.done = true;
             } else {
                 reply.reason = "nothing driven";
@@ -144,13 +188,13 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
 
 void Server::sendSnapshots(double now) {
     for (auto& [c, client] : clients_) {
-        net::Snapshot s = region_.snapshot(client.pilot, options_.interest);
+        net::Snapshot s = world_.snapshot(client.pilot, options_.interest);
         if (!s.events.empty())
             for (const auto& bytes : net::encodeEvents(s.serverTick, s.events))
                 endpoint_.send(c, net::Channel::reliable, bytes.data(), bytes.size());
         const net::SnapshotWriter::Output out = client.writer.write(s, now, endpoint_.budgetLeft(c, now));
         for (const auto& bytes : out.messages) endpoint_.send(c, net::Channel::unreliable, bytes.data(), bytes.size());
-        if (!out.deferred.empty()) region_.deferred(client.pilot, out.deferred);
+        if (!out.deferred.empty()) world_.deferred(client.pilot, out.deferred);
         client.snapshots += out.messages.empty() ? 0 : 1;
         client.snapshotMessages += int64_t(out.messages.size());
         client.deferred += int64_t(out.deferred.size());
@@ -176,7 +220,9 @@ std::vector<Server::ClientStats> Server::clientStats() const {
 void Server::statsLine(double now) {
     const double seconds = now - statsFrom_;
     std::string line = "stats: clients " + std::to_string(clients_.size()) + ", tick mean " +
-                       format("%.2f", ticks_ ? tickSum_ / double(ticks_) : 0) + " ms max " + format("%.2f", tickMax_) + " ms";
+                       format("%.2f", ticks_ ? tickSum_ / double(ticks_) : 0) + " ms max " + format("%.2f", tickMax_) + " ms, " +
+                       std::to_string(world_.regionCount()) + " regions step mean " +
+                       format("%.2f", ticks_ ? stepSum_ / double(ticks_) : 0) + " ms max " + format("%.2f", stepMax_) + " ms";
     for (auto& [c, client] : clients_) {
         const net::ConnectionStats* cs = endpoint_.stats(c);
         const uint64_t sent = cs ? cs->bytesSent : 0;
@@ -189,6 +235,8 @@ void Server::statsLine(double now) {
     tickSum_ = 0;
     tickMax_ = 0;
     ticks_ = 0;
+    stepSum_ = 0;
+    stepMax_ = 0;
 }
 
 } // namespace ac::server

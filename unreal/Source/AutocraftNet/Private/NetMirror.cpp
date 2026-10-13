@@ -1,5 +1,6 @@
 #include "NetMirror.h"
 
+#include "RegionFile.h"
 #include "WindowMaps.h"
 
 #include <algorithm>
@@ -9,14 +10,18 @@ namespace ac::net {
 
 namespace {
 
-MapDefinition buildMap(const MapChoice& choice) {
+MapDefinition buildMap(const RegionDescription& region) {
+    // A world's region: built from its region file, as the server built it.
+    if (!region.regionFile.empty())
+        if (const region::Parsed p = region::parse(region.regionFile); p.file) return region::build(*p.file).map;
+    const MapChoice& choice = region.map;
     return choice.players > 2 ? WindowMaps::buildSquare(choice) : WindowMaps::build(choice);
 }
 
 } // namespace
 
 Mirror::Mirror(const RegionDescription& region, int64_t side) : region_(region), side_(side) {
-    const MapDefinition map = buildMap(region.map);
+    const MapDefinition map = buildMap(region);
     matches_ = map.name == region.mapName && map.version == region.mapVersion && map.seed == region.seed;
     sim_ = std::make_unique<Simulation>(GameState::new_(map), map, region.fog);
     startOver();

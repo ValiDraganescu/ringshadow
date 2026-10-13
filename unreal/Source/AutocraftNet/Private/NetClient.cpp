@@ -6,21 +6,24 @@ Client::Client(PacketIo& io, const ClientConfig& config) : endpoint_(io, config)
 
 void Client::connect(double now) {
     disconnectReason_.clear();
+    reader_.reset();
+    waiting_.clear();
+    visit_ = 0;
     endpoint_.connect(now);
 }
 
-uint32_t Client::take(int64_t unit) {
-    const RequestMessage::Take t{unit};
-    return request(&t);
+uint32_t Client::take(int64_t unit) { return request(RequestMessage::Take{unit}); }
+
+uint32_t Client::handBack() { return request(RequestMessage::HandBack{}); }
+
+uint32_t Client::fly(const std::string& region, const std::string& pad) {
+    return request(RequestMessage::Fly{region, pad});
 }
 
-uint32_t Client::handBack() { return request(nullptr); }
-
-uint32_t Client::request(const RequestMessage::Take* take) {
+uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;
     m.id = nextRequest_++;
-    if (take) m.what = *take;
-    else m.what = RequestMessage::HandBack{};
+    m.what = what;
     const std::vector<uint8_t> bytes = encode(m);
     endpoint_.send(Channel::reliable, bytes.data(), bytes.size());
     return m.id;
@@ -35,7 +38,28 @@ void Client::message(const std::vector<uint8_t>& data) {
         if (!decode(data, w)) return;
         welcome_ = w;
         mirror_ = std::make_unique<Mirror>(w.region);
-        reader_.reset();
+        // Parts that came before it (the snapshots are unreliable, the
+        // Welcome may come in pieces).
+        std::deque<SnapshotPart> early;
+        early.swap(waiting_);
+        for (const SnapshotPart& p : early) applyPart(p);
+        return;
+    }
+    case MessageType::regionChange: {
+        RegionChange rc;
+        if (!decode(data, rc) || rc.visit <= visit_) return;
+        regionChange_ = rc;
+        visit_ = rc.visit;
+        mirror_ = std::make_unique<Mirror>(rc.region);
+        if (onRegionChange) onRegionChange(rc);
+        std::deque<SnapshotPart> early;
+        early.swap(waiting_);
+        for (const SnapshotPart& p : early) applyPart(p);
+        return;
+    }
+    case MessageType::world: {
+        WorldMessage m;
+        if (decode(data, m)) world_ = m;
         return;
     }
     case MessageType::snapshot: {
@@ -45,10 +69,7 @@ void Client::message(const std::vector<uint8_t>& data) {
             return;
         }
         partsRead += 1;
-        if (mirror_) {
-            mirror_->apply(*part);
-            if (onSnapshot) onSnapshot(*part);
-        }
+        applyPart(*part);
         return;
     }
     case MessageType::event: {
@@ -64,6 +85,20 @@ void Client::message(const std::vector<uint8_t>& data) {
     default:
         return;  // the client's own kinds
     }
+}
+
+void Client::applyPart(const SnapshotPart& part) {
+    const int64_t visit = visitOf(part.snapshot.game);
+    // An old region's: gone. A region not reached yet (its RegionChange is on
+    // its way), or no mirror yet: it waits.
+    if (visit < visit_) return;
+    if (!mirror_ || visit > visit_) {
+        waiting_.push_back(part);
+        while (waiting_.size() > kMaxWaiting) waiting_.pop_front();
+        return;
+    }
+    mirror_->apply(part);
+    if (onSnapshot) onSnapshot(part);
 }
 
 void Client::receive(double now) {

@@ -8,6 +8,7 @@
 #include "NetProtocol.h"
 
 #include "Pilot.h"
+#include "RegionFile.h"
 #include "Simulation.h"
 #include "Types.h"
 #include "WindowMaps.h"
@@ -48,6 +49,13 @@ struct RegionConfig {
     std::optional<std::vector<int64_t>> teams;
     /// Start from this state on the map (a fixture) instead of a new game.
     std::optional<GameState> state;
+    /// A world's region: its region file built (`region::build`) and its
+    /// text, for the clients. Set: the map is the file's, not `map`'s.
+    std::optional<region::Built> built;
+    std::string regionFile;
+    /// Wild ground (a world's region): the map's ore and wells, no bases,
+    /// no units, one player (the pilots' side), no AI. Only what pilots bring.
+    bool wild = false;
     /// The game's route finding (`ac.SimFastPaths`, `ac.SimPathBudget`).
     bool fastPaths = true;
     int64_t pathBudget = 32;
@@ -86,8 +94,15 @@ public:
     Simulation& simulation() { return sim_; }
     /// Ticks stepped.
     int64_t tick() const { return tick_; }
+    /// Games started after a victory (0: the first).
+    int64_t game() const { return game_; }
+    /// A world's region: its pads, spawns and openings (nil: a generated map).
+    const std::optional<region::Built>& places() const { return built_; }
 
-    bool join(PilotId pilot);
+    /// `lastInput`: the pilot's last input applied where it was before (a
+    /// region change), so its next inputs carry on.
+    bool join(PilotId pilot, int64_t lastInput = -1);
+    std::vector<PilotId> pilots() const;
     /// Hands back whatever it drove.
     void leave(PilotId pilot);
     bool joined(PilotId pilot) const { return pilots_.count(pilot) > 0; }
@@ -100,6 +115,15 @@ public:
     /// Give the driven unit back to its AI.
     void handBack(PilotId pilot);
     std::optional<int64_t> driving(PilotId pilot) const;
+    /// Some pilot drives here (the core drives one unit a region).
+    bool driven() const;
+
+    /// A unit brought in from another region (a world): a new id here, its
+    /// plans and its ties to this region's things left behind (`arrival`).
+    int64_t admit(const Unit& u);
+    /// Takes a unit out (it leaves for another region); whoever drove it
+    /// stops. Nil: no such unit.
+    std::optional<Unit> release(int64_t unit);
 
     /// Queue an input for the server tick. Inputs at or before the last
     /// one applied, and repeats, are dropped (false). At most `maxBuffered`
@@ -108,6 +132,8 @@ public:
     bool input(PilotId pilot, const PilotInput& in);
     static constexpr size_t maxBuffered = 30;
     int64_t lastInputTick(PilotId pilot) const;
+    /// The input in use now (the last one applied, its presses spent).
+    std::optional<PilotInput> held(PilotId pilot) const;
 
     /// One server tick: each pilot's next input, one 1/60 s step, the next
     /// game after a victory lap, and the events each pilot may know.
@@ -138,6 +164,7 @@ private:
         std::set<int64_t> known;
     };
 
+    std::optional<region::Built> built_;
     MapDefinition map_;
     RegionDescription description_;
     Simulation sim_;
@@ -155,5 +182,10 @@ bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& event);
 
 /// A unit of another side as that side may show it: its plans left out.
 Unit scrubbed(const Unit& u);
+
+/// A unit as it arrives in another region: its plans and its ties to the
+/// region it left (a patch, a building, a target) dropped, idle; its load,
+/// hit points and the rest kept.
+Unit arrival(const Unit& u);
 
 } // namespace ac::server

@@ -143,7 +143,7 @@ void appendBits(BitWriter& w, const uint8_t* src, size_t from, size_t bits) {
 std::optional<MessageType> messageType(const std::vector<uint8_t>& message) {
     if (message.empty()) return std::nullopt;
     const uint8_t t = message[0];
-    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::snapshot)) return std::nullopt;
+    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::world)) return std::nullopt;
     return static_cast<MessageType>(t);
 }
 
@@ -372,17 +372,37 @@ bool readEvent(BitReader& r, GameEvent& e) {
 
 // MARK: - Messages
 
+void writeRegion(BitWriter& w, const RegionDescription& d) {
+    w.writeBits(uint64_t(d.map.style), 4);
+    w.writeBits(uint64_t(d.map.size), 4);
+    writeVarint(w, static_cast<uint64_t>(d.map.players));
+    writeString(w, d.regionFile);
+    w.writeBool(d.wild);
+    writeString(w, d.mapName);
+    writeSigned(w, d.mapVersion);
+    w.writeU64(d.seed);
+    w.writeBool(d.fog);
+    writeDouble(w, d.step);
+}
+
+bool readRegion(BitReader& r, RegionDescription& d) {
+    d.map.style = static_cast<MapStyle>(r.readBits(4));
+    d.map.size = static_cast<MapSize>(r.readBits(4));
+    d.map.players = static_cast<int64_t>(readVarint(r));
+    if (!readString(r, d.regionFile)) return false;
+    d.wild = r.readBool();
+    if (!readString(r, d.mapName)) return false;
+    d.mapVersion = readSigned(r);
+    d.seed = r.readU64();
+    d.fog = r.readBool();
+    d.step = readDouble(r);
+    return r.ok() && size_t(d.map.style) < 4 && size_t(d.map.size) < 4;
+}
+
 std::vector<uint8_t> encode(const Welcome& m) {
     BitWriter w = start(MessageType::welcome);
     writeVarint(w, m.pilot);
-    w.writeBits(uint64_t(m.region.map.style), 4);
-    w.writeBits(uint64_t(m.region.map.size), 4);
-    writeVarint(w, static_cast<uint64_t>(m.region.map.players));
-    writeString(w, m.region.mapName);
-    writeSigned(w, m.region.mapVersion);
-    w.writeU64(m.region.seed);
-    w.writeBool(m.region.fog);
-    writeDouble(w, m.region.step);
+    writeRegion(w, m.region);
     writeSigned(w, m.serverTick);
     writeDouble(w, m.time);
     return w.bytes();
@@ -392,17 +412,89 @@ bool decode(const std::vector<uint8_t>& bytes, Welcome& m) {
     BitReader r(bytes.data(), bytes.size());
     if (!open(bytes, MessageType::welcome, r)) return false;
     m.pilot = readVarint(r);
-    m.region.map.style = static_cast<MapStyle>(r.readBits(4));
-    m.region.map.size = static_cast<MapSize>(r.readBits(4));
-    m.region.map.players = static_cast<int64_t>(readVarint(r));
-    if (!readString(r, m.region.mapName)) return false;
-    m.region.mapVersion = readSigned(r);
-    m.region.seed = r.readU64();
-    m.region.fog = r.readBool();
-    m.region.step = readDouble(r);
+    if (!readRegion(r, m.region)) return false;
     m.serverTick = readSigned(r);
     m.time = readDouble(r);
-    return r.ok() && size_t(m.region.map.style) < 4 && size_t(m.region.map.size) < 4;
+    return r.ok();
+}
+
+std::vector<uint8_t> encode(const RegionChange& m) {
+    BitWriter w = start(MessageType::regionChange);
+    writeSigned(w, m.visit);
+    writeRegion(w, m.region);
+    writeString(w, m.regionId);
+    w.writeBool(m.driven.has_value());
+    if (m.driven) writeSigned(w, *m.driven);
+    writeSigned(w, m.serverTick);
+    writeDouble(w, m.time);
+    return w.bytes();
+}
+
+bool decode(const std::vector<uint8_t>& bytes, RegionChange& m) {
+    BitReader r(bytes.data(), bytes.size());
+    if (!open(bytes, MessageType::regionChange, r)) return false;
+    m.visit = readSigned(r);
+    if (!readRegion(r, m.region) || !readString(r, m.regionId)) return false;
+    m.driven = std::nullopt;
+    if (r.readBool()) m.driven = readSigned(r);
+    m.serverTick = readSigned(r);
+    m.time = readDouble(r);
+    return r.ok();
+}
+
+std::vector<uint8_t> encode(const WorldMessage& m) {
+    BitWriter w = start(MessageType::world);
+    writeVarint(w, static_cast<uint64_t>(m.columns));
+    writeVarint(w, static_cast<uint64_t>(m.rows));
+    writeVarint(w, m.regions.size());
+    for (const WorldMessage::Region& g : m.regions) {
+        writeString(w, g.id);
+        writeString(w, g.name);
+        w.writeBits(uint64_t(g.style), 4);
+        w.writeBits(uint64_t(g.size), 4);
+        writeVarint(w, static_cast<uint64_t>(g.column));
+        writeVarint(w, static_cast<uint64_t>(g.row));
+        writeVarint(w, g.pads.size());
+        for (const WorldMessage::Pad& p : g.pads) {
+            writeString(w, p.name);
+            writeDouble(w, p.at.x);
+            writeDouble(w, p.at.y);
+        }
+    }
+    writeVarint(w, static_cast<uint64_t>(m.here));
+    w.writeBool(m.flyingTo.has_value());
+    if (m.flyingTo) writeVarint(w, static_cast<uint64_t>(*m.flyingTo));
+    return w.bytes();
+}
+
+bool decode(const std::vector<uint8_t>& bytes, WorldMessage& m) {
+    BitReader r(bytes.data(), bytes.size());
+    if (!open(bytes, MessageType::world, r)) return false;
+    m.columns = static_cast<int64_t>(readVarint(r));
+    m.rows = static_cast<int64_t>(readVarint(r));
+    const uint64_t n = readVarint(r);
+    if (n > 4096 || m.columns > 4096 || m.rows > 4096) return false;
+    m.regions.assign(size_t(n), {});
+    for (WorldMessage::Region& g : m.regions) {
+        if (!readString(r, g.id) || !readString(r, g.name)) return false;
+        g.style = static_cast<MapStyle>(r.readBits(4));
+        g.size = static_cast<MapSize>(r.readBits(4));
+        if (size_t(g.style) >= 4 || size_t(g.size) >= 4) return false;
+        g.column = static_cast<int64_t>(readVarint(r));
+        g.row = static_cast<int64_t>(readVarint(r));
+        const uint64_t pads = readVarint(r);
+        if (pads > 256 || !r.ok()) return false;
+        g.pads.assign(size_t(pads), {});
+        for (WorldMessage::Pad& p : g.pads) {
+            if (!readString(r, p.name)) return false;
+            p.at.x = readDouble(r);
+            p.at.y = readDouble(r);
+        }
+    }
+    m.here = static_cast<int64_t>(readVarint(r));
+    m.flyingTo = std::nullopt;
+    if (r.readBool()) m.flyingTo = static_cast<int64_t>(readVarint(r));
+    return r.ok();
 }
 
 std::vector<uint8_t> encode(const InputMessage& m) {
@@ -463,6 +555,10 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
     writeVarint(w, m.id);
     w.writeBits(m.what.index(), 4);
     if (const auto* t = std::get_if<RequestMessage::Take>(&m.what)) writeSigned(w, t->unit);
+    if (const auto* f = std::get_if<RequestMessage::Fly>(&m.what)) {
+        writeString(w, f->region);
+        writeString(w, f->pad);
+    }
     return w.bytes();
 }
 
@@ -473,6 +569,12 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
     switch (r.readBits(4)) {
     case 0: m.what = RequestMessage::Take{readSigned(r)}; break;
     case 1: m.what = RequestMessage::HandBack{}; break;
+    case 2: {
+        RequestMessage::Fly f;
+        if (!readString(r, f.region) || !readString(r, f.pad)) return false;
+        m.what = f;
+        break;
+    }
     default: return false;
     }
     return r.ok();

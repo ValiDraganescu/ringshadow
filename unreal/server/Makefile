@@ -1,5 +1,5 @@
 # Builds AutocraftCore (../Source/AutocraftCore), AutocraftNet
-# (../Source/AutocraftNet), the server's world (world/), the server program
+# (../Source/AutocraftNet), the server's world (world/: regions, the world map), the server program
 # (program/, build/autocraft-server) and the headless client (client/) with
 # plain clang++, no Unreal, and the region tool (region/, build/autocraft-region,
 # docs/regions.md).
@@ -87,18 +87,23 @@ build/tests/main.o: $(CORE_TESTS)/main.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# `make bench`: build/regionbench (bench/RegionBench.cpp) and build/netbench
-# (bench/NetBench.cpp), everything at -O3.
+# `make bench`: build/regionbench (bench/RegionBench.cpp), build/netbench
+# (bench/NetBench.cpp) and build/worldbench (bench/WorldBench.cpp), everything at -O3.
 BENCH_FLAGS := $(subst -O2,-O3,$(CXXFLAGS)) -I../core-tests/bench
 BENCH_LIB := $(patsubst $(CORE)/Private/%.cpp,build/bench/core/%.o,$(CORE_SRC)) \
 	$(patsubst $(NET)/Private/%.cpp,build/bench/net/%.o,$(NET_SRC)) \
 	$(patsubst world/%.cpp,build/bench/world/%.o,$(WORLD_SRC))
 BENCH_OBJ := $(BENCH_LIB) build/bench/program/Server.o \
-	$(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/RegionBench.o build/bench/NetBench.o
+	$(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/RegionBench.o build/bench/NetBench.o \
+	build/bench/WorldBench.o
 
-bench: build/regionbench build/netbench
+bench: build/regionbench build/netbench build/worldbench
 	./build/regionbench 30 ../core-tests/fixtures/rally-jam.json
 	./build/netbench 20
+	./build/worldbench 30
+
+build/worldbench: $(BENCH_LIB) build/bench/WorldBench.o
+	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
 
 build/regionbench: $(BENCH_LIB) build/bench/RegionBench.o
 	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)

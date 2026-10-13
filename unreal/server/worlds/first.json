@@ -1,0 +1,10 @@
+{
+  "id": "first",
+  "name": "The First Reach",
+  "grid": [
+    ["../regions/ashen-shelf.json", "../regions/cold-fork.json", "../regions/glass-flats.json"],
+    ["../regions/rust-hollow.json", "../regions/start.json", "../regions/tern-ridge.json"],
+    ["../regions/dust-terraces.json", "../regions/brine-pans.json", "../regions/slag-pockets.json"]
+  ],
+  "start": {"region": "start", "pad": "landing"}
+}

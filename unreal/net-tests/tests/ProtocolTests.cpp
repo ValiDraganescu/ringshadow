@@ -9,6 +9,7 @@
 #include "NetSnapshot.h"
 #include "NetTypes.h"
 
+#include "RegionFile.h"
 #include "WindowMaps.h"
 
 #include <cmath>
@@ -621,4 +622,87 @@ TEST(mirror_takes_snapshots_into_its_simulation) {
     for (const SnapshotPart& p : roundTrip(w, r, s, 0.05)) mirror.apply(p);
     EXPECT_EQ(mirror.simulation().state.units.size(), size_t(1));
     EXPECT_TRUE(!mirror.simulation().sees(0, 2));
+}
+
+TEST(protocol_world_messages_round_trip) {
+    // A world's region: its region file whole, wild ground.
+    Welcome w;
+    w.pilot = 3;
+    w.region.map = MapChoice{MapStyle::ridge, MapSize::medium, 2};
+    w.region.regionFile = std::string(3000, 'x');
+    w.region.wild = true;
+    w.region.mapName = "Tern Ridge";
+    Welcome wb;
+    ASSERT_TRUE(decode(encode(w), wb));
+    EXPECT_TRUE(wb == w);
+
+    RegionChange c;
+    c.visit = 4;
+    c.region = w.region;
+    c.regionId = "tern-ridge";
+    c.driven = 77;
+    c.serverTick = 1234;
+    c.time = 20.5;
+    RegionChange cb;
+    ASSERT_TRUE(decode(encode(c), cb));
+    EXPECT_TRUE(cb == c);
+    c.driven = std::nullopt;
+    ASSERT_TRUE(decode(encode(c), cb));
+    EXPECT_TRUE(cb == c);
+    EXPECT_TRUE(messageType(encode(c)) == MessageType::regionChange);
+
+    WorldMessage m;
+    m.columns = 3;
+    m.rows = 2;
+    for (int i = 0; i < 6; i++) {
+        WorldMessage::Region g;
+        g.id = "r" + std::to_string(i);
+        g.name = "Region " + std::to_string(i);
+        g.style = MapStyle(i % 4);
+        g.size = MapSize::medium;
+        g.column = i % 3;
+        g.row = i / 3;
+        g.pads = {{"landing", Vec2(72, 48)}, {"far", Vec2(10.5, 90)}};
+        m.regions.push_back(g);
+    }
+    m.here = 4;
+    m.flyingTo = 1;
+    WorldMessage mb;
+    ASSERT_TRUE(decode(encode(m), mb));
+    EXPECT_TRUE(mb == m);
+    m.flyingTo = std::nullopt;
+    ASSERT_TRUE(decode(encode(m), mb));
+    EXPECT_TRUE(mb == m);
+    EXPECT_TRUE(messageType(encode(m)) == MessageType::world);
+    EXPECT_TRUE(!decode(encode(c), mb));
+
+    RequestMessage f;
+    f.id = 11;
+    f.what = RequestMessage::Fly{"cold-fork", "landing"};
+    RequestMessage fb;
+    ASSERT_TRUE(decode(encode(f), fb));
+    EXPECT_TRUE(fb == f);
+
+    // A snapshot's game carries the visit.
+    EXPECT_EQ(visitOf(visitGame(5, 2)), int64_t(5));
+    EXPECT_EQ(visitGame(5, 2) & 0xffffffff, int64_t(2));
+    EXPECT_EQ(visitOf(visitGame(0, 3)), int64_t(0));
+}
+
+TEST(mirror_builds_a_region_file) {
+    const region::RegionFile file = region::starter("tern", MapStyle::ridge, 15, MapSize::medium);
+    const region::Built built = region::build(file);
+    RegionDescription region;
+    region.map = MapChoice{MapStyle::ridge, MapSize::medium, 2};
+    region.regionFile = region::write(file);
+    region.wild = true;
+    region.mapName = built.map.name;
+    region.mapVersion = built.map.version;
+    region.seed = built.map.seed;
+    Mirror mirror(region);
+    EXPECT_TRUE(mirror.matches());
+    EXPECT_EQ(mirror.simulation().map->bounds.maxX - mirror.simulation().map->bounds.minX, 144.0);
+    // The generated map of the same style is another map.
+    region.regionFile.clear();
+    EXPECT_TRUE(!Mirror(region).matches());
 }

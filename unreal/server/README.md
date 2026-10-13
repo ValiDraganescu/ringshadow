@@ -1,21 +1,24 @@
 # The server
 
 The MMORPG mode's server ([docs/networking.md](../../docs/networking.md),
-[docs/mmorpg-m1.md](../../docs/mmorpg-m1.md), tasks T2 and T4): one region behind our protocol on
+[docs/mmorpg-m1.md](../../docs/mmorpg-m1.md), [docs/mmorpg-m2.md](../../docs/mmorpg-m2.md)): a world
+of regions ([docs/worlds.md](../../docs/worlds.md)), or one generated region, behind our protocol on
 UDP. Engine-free: `AutocraftCore` and `AutocraftNet`.
 
 | Path | What |
 |---|---|
 | `world/World.h` | `Region`: one `ac::Simulation` on a generated map with its AIs, stepped at 60 Hz; pilots join, take a unit, send inputs; `snapshot()` gives each pilot what its side may know. |
 | `world/Region.cpp` | The tick, the pilots and their inputs, the fog gate on events (`mayKnow`). |
+| `world/WorldMap.h` | `WorldMap`: the world file loaded and checked, every region stepped every tick, the pilots (start pad, wallet, levels), edge crossings and pad flights; the M1 server is a `WorldMap` of one region. |
 | `world/Interest.cpp` | The snapshot: fog first, rank (driven, engaged, nearby), distance bands, the budget with aging. |
-| `program/Server.h` | `Server`: the region behind `net::ServerEndpoint`. A connection is a pilot; each tick reads, steps, and every third tick sends each client its events and its snapshot. |
+| `program/Server.h` | `Server`: the world behind `net::ServerEndpoint`. A connection is a pilot; each tick reads, steps every region, tells the pilots that moved (RegionChange, World), and every third tick sends each client its events and its snapshot. |
 | `program/main.cpp` | `autocraft-server`, the program the game starts. |
 | `client/HeadlessClient.h` | The tests' and the bench's client: the game's own `net::Client` (`AutocraftNet/Public/NetClient.h`), a mirror of the region, inputs and acks at 60 Hz, requests. |
 | `region/` | `autocraft-region` (build/autocraft-region): region files ([docs/regions.md](../../docs/regions.md)) made, validated, built and drawn from above (`Preview.h`, PNG by `ThirdParty/stb_image_write.h`, public domain). |
 | `regions/` | The region files. |
+| `worlds/` | The world files (`first.json`: 3×3, the start region in the middle). |
 | `tests/` | Isolated scenes, `make -C unreal/server test` (about 7 s: the end-to-end ones run in real time). |
-| `bench/` | `make -C unreal/server bench`: the region's step and snapshot times, and the protocol's bytes a second. |
+| `bench/` | `make -C unreal/server bench`: the region's step and snapshot times, the protocol's bytes a second, the world's step (all regions). |
 
 The protocol itself is in `AutocraftNet` (both ends need it): `NetProtocol.h` (the messages),
 `NetSnapshot.h` (snapshots as deltas), `NetMirror.h` (the client's mirror), `NetClient.h` (the
@@ -26,16 +29,21 @@ this program).
 ## The program
 
 ```
-autocraft-server --map <highlands|openField|ridge|badlands> --size <small|medium|large|huge>
-                 [--starts 2|4|8] [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
+autocraft-server --world <file>
+                 | --map <highlands|openField|ridge|badlands> --size <small|medium|large|huge> [--starts 2|4|8]
+                 [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
 ```
+
+`--world` runs a world ([docs/worlds.md](../../docs/worlds.md)); a bad world file stops it with
+exit 2 and its problems on stderr. `--map` runs the M1 region: today's generated map with its AIs.
 
 It reads the one-time token as the first line of its standard input, binds (port 0: the system
 picks), prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz, sleeping between
 ticks. It stops on SIGTERM or SIGINT, or once the parent pid is gone (checked twice a second), and
 tells its clients. The log (`~/Library/Logs/Autocraft/server.log` unless `--log`) has a line per
 start, stop, connect, disconnect and refusal (a bad token, a take refused), and every 10 s a stats
-line: clients, the tick's mean and max time, bytes a second out per client.
+line: clients, the tick's mean and max time, the regions' step (all of them) mean and max, bytes a
+second out per client. In a world, a line per flight, refusal and region change.
 
 ## Inputs
 
@@ -64,4 +72,5 @@ milliseconds. A snapshot fills what the byte budget has left after the reliable 
 driven unit and what it fights first; entities left out wait and gain priority (`Region::deferred`).
 
 Core limits for M1: `Simulation` has one `pilot`, and `Pilot::player` is a constant, so every
-pilot is on side 0 and one drives at a time.
+pilot is on side 0 and one drives at a time, a region. In a world, pilots in one region share the
+side's bank.

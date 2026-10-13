@@ -14,13 +14,28 @@ namespace ac::server {
 
 namespace {
 
-MapDefinition buildMap(const MapChoice& choice) {
+MapDefinition buildMap(const RegionConfig& c) {
+    if (c.built) return c.built->map;
+    const MapChoice& choice = c.map;
     return choice.players > 2 ? WindowMaps::buildSquare(choice) : WindowMaps::build(choice);
 }
 
+/// Wild ground: the map's ore and wells, one player with nothing.
+GameState wildState(const MapDefinition& map) {
+    GameState s = GameState::new_(map);
+    s.structures.clear();
+    s.units.clear();
+    s.players = {Player()};
+    s.players[0].ore = 0;
+    s.players[0].supplyUsed = 0;
+    s.score = {0};
+    return s;
+}
+
 Simulation startSimulation(const RegionConfig& c, const MapDefinition& map) {
-    const GameState state = c.state ? *c.state : GameState::new_(map, std::nullopt, 0, c.teams);
-    Simulation sim(state, map, c.ai ? Commander::all(map) : std::vector<Commander>{}, c.fog);
+    const GameState state = c.state ? *c.state : c.wild ? wildState(map) : GameState::new_(map, std::nullopt, 0, c.teams);
+    const bool ai = c.ai && !c.wild;
+    Simulation sim(state, map, ai ? Commander::all(map) : std::vector<Commander>{}, c.fog);
     if (c.fastPaths) sim.setFastPaths(true, c.pathBudget);
     return sim;
 }
@@ -30,16 +45,64 @@ double clampUnit(double v) { return std::isfinite(v) ? std::clamp(v, -1.0, 1.0) 
 } // namespace
 
 Region::Region(const RegionConfig& config)
-    : map_(buildMap(config.map)), sim_(startSimulation(config, map_)) {
+    : built_(config.built), map_(buildMap(config)), sim_(startSimulation(config, map_)) {
     description_.map = config.map;
+    description_.regionFile = config.regionFile;
+    description_.wild = config.wild;
     description_.mapName = map_.name;
     description_.mapVersion = map_.version;
     description_.seed = map_.seed;
     description_.fog = config.fog;
 }
 
-bool Region::join(PilotId pilot) {
-    return pilots_.emplace(pilot, Seat{}).second;
+bool Region::join(PilotId pilot, int64_t lastInput) {
+    Seat seat;
+    seat.lastApplied = lastInput;
+    return pilots_.emplace(pilot, seat).second;
+}
+
+std::vector<PilotId> Region::pilots() const {
+    std::vector<PilotId> out;
+    for (const auto& [id, seat] : pilots_) out.push_back(id);
+    return out;
+}
+
+bool Region::driven() const {
+    for (const auto& [id, seat] : pilots_)
+        if (seat.drives) return true;
+    return false;
+}
+
+int64_t Region::admit(const Unit& u) {
+    GameState& s = sim_.state;
+    Unit in = arrival(u);
+    in.id = s.nextID++;
+    s.units.push_back(in);
+    sim_.reindex();
+    sim_.refreshSupply();
+    return in.id;
+}
+
+std::optional<Unit> Region::release(int64_t unit) {
+    const auto i = sim_.unitIndex(unit);
+    if (!i) return std::nullopt;
+    const Unit out = sim_.state.units[static_cast<size_t>(*i)];
+    for (auto& [id, seat] : pilots_)
+        if (seat.drives == unit) seat.drives = std::nullopt;
+    // Taken off the ground as it is: no hand-back to an AI.
+    if (sim_.pilot && sim_.pilot->unit == unit) sim_.pilot = std::nullopt;
+    GameState& s = sim_.state;
+    for (auto& p : s.patches)
+        if (p.miner == unit) p.miner = std::nullopt;
+    if (s.wells)
+        for (auto& w : *s.wells)
+            if (w.harvester == unit) w.harvester = std::nullopt;
+    for (auto& b : s.structures)
+        if (b.builder == unit) b.builder = std::nullopt;
+    s.units.erase(s.units.begin() + static_cast<long>(*i));
+    sim_.reindex();
+    sim_.refreshSupply();
+    return out;
 }
 
 void Region::leave(PilotId pilot) {
@@ -109,6 +172,12 @@ bool Region::input(PilotId pilot, const PilotInput& in) {
 int64_t Region::lastInputTick(PilotId pilot) const {
     const auto it = pilots_.find(pilot);
     return it == pilots_.end() ? -1 : it->second.lastApplied;
+}
+
+std::optional<PilotInput> Region::held(PilotId pilot) const {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return std::nullopt;
+    return it->second.held;
 }
 
 void Region::nextInput(Seat& seat) {
@@ -194,6 +263,17 @@ bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& e) {
     if (const auto* b = e.as<GameEvent::Blast>()) return ourUnit(b->unit) || id(b->unit) || at(b->at);
     if (const auto* st = e.as<GameEvent::Stomp>()) return ourUnit(st->unit) || id(st->unit) || at(st->at);
     return false;
+}
+
+Unit arrival(const Unit& u) {
+    Unit out = scrubbed(u);
+    out.task = Unit::Task::idle;
+    out.patch = std::nullopt;
+    out.structure = std::nullopt;
+    out.target = std::nullopt;
+    out.lockTarget = std::nullopt;
+    out.timer = 0;
+    return out;
 }
 
 Unit scrubbed(const Unit& u) {

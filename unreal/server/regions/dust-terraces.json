@@ -1,0 +1,58 @@
+{
+  "id": "dust-terraces",
+  "name": "Dust Terraces",
+  "size": "medium",
+  "base": {
+    "style": "highlands",
+    "seed": 16
+  },
+  "height": [
+    {
+      "op": "flatten",
+      "area": {
+        "circle": [
+          72,
+          48,
+          6
+        ]
+      },
+      "level": 0,
+      "slope": 5
+    }
+  ],
+  "pads": [
+    {
+      "name": "landing",
+      "at": [
+        72,
+        48
+      ]
+    }
+  ],
+  "openings": {
+    "north": [
+      [
+        58,
+        86
+      ]
+    ],
+    "east": [
+      [
+        39,
+        57
+      ]
+    ],
+    "south": [
+      [
+        58,
+        86
+      ]
+    ],
+    "west": [
+      [
+        39,
+        57
+      ]
+    ]
+  }
+}

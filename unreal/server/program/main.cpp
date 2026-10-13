@@ -1,8 +1,9 @@
 // autocraft-server: the MMORPG mode's server (docs/networking.md, "The local
-// server"). One region, today's generated map, behind the protocol on UDP.
+// server"). A world of regions from a world file (docs/worlds.md), or one
+// region, today's generated map, behind the protocol on UDP.
 //
-//   autocraft-server --map <style> --size <size> [--starts n] [--bind 127.0.0.1]
-//                    [--port 0] [--parent-pid pid] [--log path]
+//   autocraft-server --world <file> | --map <style> --size <size> [--starts n]
+//                    [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
 //
 // Reads the one-time token as the first line of its standard input, binds,
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
@@ -69,8 +70,8 @@ bool parseIpv4(const std::string& s, net::Address& out) {
 
 int usage(const char* why) {
     std::fprintf(stderr,
-                 "autocraft-server: %s\nusage: autocraft-server --map <highlands|openField|ridge|badlands> "
-                 "--size <small|medium|large|huge> [--starts 2|4|8] [--bind 127.0.0.1] [--port 0] "
+                 "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
+                 "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
                  "[--parent-pid pid] [--log path]\n",
                  why);
     return 2;
@@ -90,6 +91,7 @@ int main(int argc, char** argv) {
     std::optional<MapStyle> style;
     std::optional<MapSize> size;
     int64_t starts = 2;
+    std::string worldPath;
     net::Address bind = net::Address::loopback(0);
     long port = 0;
     pid_t parent = 0;
@@ -99,7 +101,8 @@ int main(int argc, char** argv) {
         const std::string a = argv[i];
         if (i + 1 >= argc) return usage(("no value for " + a).c_str());
         const std::string v = argv[++i];
-        if (a == "--map") style = parse<MapStyle>(v);
+        if (a == "--world") worldPath = v;
+        else if (a == "--map") style = parse<MapStyle>(v);
         else if (a == "--size") size = parse<MapSize>(v);
         else if (a == "--starts") starts = std::atol(v.c_str());
         else if (a == "--bind") { if (!parseIpv4(v, bind)) return usage("bad --bind"); }
@@ -108,8 +111,18 @@ int main(int argc, char** argv) {
         else if (a == "--log") logPath = v;
         else return usage(("unknown " + a).c_str());
     }
-    if (!style) return usage("--map: a map style");
-    if (!size) return usage("--size: a map size");
+    std::optional<LoadedWorld> world;
+    if (!worldPath.empty()) {
+        WorldLoad load = loadWorld(worldPath);
+        if (!load.world) {
+            for (const std::string& p : load.problems) std::fprintf(stderr, "autocraft-server: %s\n", p.c_str());
+            return usage(("--world " + worldPath + ": not a valid world").c_str());
+        }
+        world = std::move(load.world);
+    } else {
+        if (!style) return usage("--map: a map style (or --world)");
+        if (!size) return usage("--size: a map size");
+    }
     if (starts != 2 && starts != 4 && starts != 8) return usage("--starts: 2, 4 or 8");
     if (port < 0 || port > 65535) return usage("--port: 0…65535");
     bind.port = uint16_t(port);
@@ -123,7 +136,8 @@ int main(int argc, char** argv) {
     if (!token.empty() && token.back() == '\r') token.pop_back();
 
     ServerOptions options;
-    options.region.map = MapChoice{*style, *size, starts};
+    if (world) options.world = std::move(world);
+    else options.region.map = MapChoice{*style, *size, starts};
     options.token.assign(token.begin(), token.end());
     if (!net::secureRandom(options.secret.data(), options.secret.size())) {
         logLine("start failed: no secure random source");
@@ -138,7 +152,10 @@ int main(int argc, char** argv) {
         return 1;
     }
     Server server(socket, options);
-    logLine("start: " + server.region().description().mapName + " on " + socket.localAddress().toString() +
+    const std::string what = server.world().isWorld()
+                                 ? "world " + server.world().loaded()->file.id + " (" + std::to_string(server.world().regionCount()) + " regions)"
+                                 : server.region().description().mapName;
+    logLine("start: " + what + " on " + socket.localAddress().toString() +
             (parent > 0 ? ", parent " + std::to_string(parent) : ""));
     std::printf("PORT %u\n", unsigned(socket.localAddress().port));
     std::fflush(stdout);
