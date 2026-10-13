@@ -180,3 +180,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D MMO XP rate ×0.1 of RTS; tune later.
 - D MMO build menu: Citadel + Derrick only, named, greyed with reason.
 - T Q2a server/gameplay fixes, Q2b client UI fixes: background agents.
+- T Q3 done 10aa90e: lift-off 1.5 s, transit view, landing 1.5 s.
+- D Flight drawn by a copy of the Prospector model; wall-clock timing.
+- I Flight HUD: "0 UNITS", click-to-drive hint → added to Q2b.
