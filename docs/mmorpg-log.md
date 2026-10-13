@@ -144,3 +144,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D M3 workers = Claude Code background agents in this worktree.
 - D Levels contract: core's per-kind record, JSON blob per pilot.
 - T S1+S2 and S3 started as background agents.
+- T S3 done a8b34ef 67fd055 70bfaf2: per-pilot levels, Pick request.
+- D Levels ride snapshot player data; cards computed both ends.
+- N Pick keys: Z first card, X second; Option+click too.
+- N --dev-xp N / -AcMmoDevXp=N stage levels fast.
+- I Client sends random pilot key each start until S4.
+- I MMO picks not in the balance tracking database.

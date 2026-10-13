@@ -20,7 +20,7 @@ Log: [mmorpg-log.md](mmorpg-log.md). Design: [networking.md](networking.md) "Sav
 |---|---|---|---|
 | S1 | Server save: SQLite store, schema v1 + migrations, save regions and pilots, every 5 s + on stop, load at start, `--save` | | running |
 | S2 | Pilot identity: the pilot id message, restore a known pilot where they left, new pilot at the start pad | S1 | running |
-| S3 | Leveling online: XP on the server, levels in snapshots, Pick request, cards in the MMO HUD; saved with the pilot | S1 | running |
+| S3 | Leveling online: XP on the server, levels in snapshots, Pick request, cards in the MMO HUD; saved with the pilot | S1 | done |
 | S4 | Game: pass `--save` and the pilot id; home screen "MMORPG (TEST)" resumes, "MMORPG NEW WORLD (TEST)" starts over | S2 | todo |
 
 Done when: in the game, build a Citadel, mine, level the Prospector and pick a card, cross into a neighbour; quit; start again → same region and spot, same Citadel, wallet, level and picks. Killing the server mid-play loses at most 5 s. All suites pass.
