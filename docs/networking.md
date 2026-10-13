@@ -41,7 +41,9 @@ build is also the one the public world runs.
 ## The local server
 
 1. The game starts the server program as a child process, hidden, with
-   the world's save file and a one-time secret on its command line.
+   the world's save file on its command line and a one-time secret on its
+   standard input (a command line is visible to every process on the
+   machine).
 2. The server binds a UDP port on `127.0.0.1` only (port 0: the system
    picks a free one), prints the port on its standard output and starts
    its tick.
@@ -60,7 +62,7 @@ outside the machine can reach it, and the system's firewall should not ask
 the player anything.
 
 A public server is the same program started by hand or by a service, bound
-to a public address, with no secret on its command line and the login in
+to a public address, with no one-time secret and the login in
 its place (accounts are a later step, mmorpg.md).
 
 ## The transport
