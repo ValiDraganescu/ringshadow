@@ -94,3 +94,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Agents run only in MMORPG-variant worktree; never other worktrees.
 - T Old worktrees removed; mmo-server-world worker closed.
 - N Scratch files go in ignored unreal/server/build, not /tmp.
+- D Openings: middle 40–60% of each edge; neighbours overlap.
+- D Every region has ≥1 pad; first world = 9 region files.
+- T R2 → worker mmo-world; R5 → worker mmo-start-region.

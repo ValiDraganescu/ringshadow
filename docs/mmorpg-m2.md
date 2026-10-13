@@ -23,15 +23,20 @@ world". Log: [mmorpg-log.md](mmorpg-log.md).
 - P4 First world: 3×3 grid, Medium regions; the center one crafted (the start region), the rest generated.
 - P5 The server steps every region every tick (the world goes on); measured, not assumed.
 
+## Conventions
+
+- Edge openings: every region opens the middle of each edge, from 40% to 60% of its length, unless the world file says otherwise; neighbours' openings must overlap.
+- Every region has at least one pad. The first world's 9 regions are region files in unreal/server/regions/; 8 are base + pad + openings, the start region is crafted.
+
 ## Tasks
 
 | # | Task | Needs | Status |
 |---|---|---|---|
 | R1 | Region file + agent crafting tool (validate, generate, top-down preview PNG) + agent skill | | done |
-| R2 | Server world: world file, many regions, spawn at pad, edge hand-off, pad flights, region change in the protocol | T6, R1 | todo |
+| R2 | Server world: world file, many regions, spawn at pad, edge hand-off, pad flights, region change in the protocol | T6, R1 | running |
 | R3 | Client: region change (rebuild the mirror), world map screen, flight at a pad | R2 | todo |
 | R4 | Build anywhere: pilot build request in the MMO mode, wallet, server placement check, price | R2 | todo |
-| R5 | The start region crafted by an agent with R1's tool | R1 | todo |
+| R5 | The start region crafted by an agent with R1's tool | R1 | running |
 
 Done when: in the game the pilot starts at the pad in a Prospector, builds a
 Citadel paid from the wallet, mines ore into the wallet, drives into a
