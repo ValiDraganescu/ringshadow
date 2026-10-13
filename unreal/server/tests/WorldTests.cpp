@@ -12,7 +12,9 @@
 #include "WorldMap.h"
 #include "rig.h"
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 #include <cstdio>
 #include <string>
 #include <sys/stat.h>
@@ -388,6 +390,16 @@ TEST(world_client_follows_a_region_change) {
     const Region& there = *w.regionOf(pilot);
     EXPECT_TRUE(client.mirror()->region() == there.description());
     EXPECT_TRUE(client.mirror()->matches());
+    // The wallet the client may show (docs/mmorpg-m5.md, E3): the new
+    // mirror's players only once a snapshot brought them, and then the
+    // pilot's 600, never the map's start values.
+    int64_t lowest = std::numeric_limits<int64_t>::max();
+    until([&] {
+        const net::Mirror& m = *client.mirror();
+        if (m.playersKnown()) lowest = std::min(lowest, m.simulation().state.players[0].ore);
+        return false;
+    }, 1);
+    EXPECT_EQ(lowest, int64_t(600));
     // The mirror becomes the new region's: its one unit, driven, where it is.
     const auto same = [&] {
         const net::Mirror& m = *client.mirror();

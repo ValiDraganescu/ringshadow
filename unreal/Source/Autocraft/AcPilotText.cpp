@@ -43,6 +43,47 @@ namespace
 	}
 
 	double Dist(ac::Vec2 A, ac::Vec2 B) { return std::hypot(A.x - B.x, A.y - B.y); }
+
+	/// A builder's scaffold close by: from its edge, cells.
+	constexpr double ScaffoldNear = 3.0;
+
+	/// The building going up that the unit welds, else its side's scaffold
+	/// it aims at or stands by (`ScaffoldNear`, the nearest).
+	const ac::Structure* Welded(const ac::GameState& S, const ac::Unit& U, const std::optional<ac::PilotTarget>& Target)
+	{
+		if (!ac::PilotBuild::builds(U.kind)) return nullptr;
+		auto Going = [&](const int64 Id) -> const ac::Structure* {
+			for (const ac::Structure& B : S.structures)
+			{
+				if (B.id == Id) return B.complete() ? nullptr : &B;
+			}
+			return nullptr;
+		};
+		if (U.task == ac::Unit::Task::building && U.structure)
+		{
+			if (const ac::Structure* B = Going(*U.structure)) return B;
+		}
+		if (Target)
+		{
+			if (const ac::PilotTarget::Scaffold* T = Target->as<ac::PilotTarget::Scaffold>())
+			{
+				if (const ac::Structure* B = Going(T->_0)) return B;
+			}
+		}
+		const ac::Structure* Near = nullptr;
+		double NearEdge = ScaffoldNear;
+		for (const ac::Structure& B : S.structures)
+		{
+			if (B.complete() || !S.allied(B.owner, U.owner)) continue;
+			const double Edge = Dist(B.position, U.position) - ac::Rules::radius(B.kind);
+			if (Edge <= NearEdge)
+			{
+				Near = &B;
+				NearEdge = Edge;
+			}
+		}
+		return Near;
+	}
 }
 
 FAcPilotText FAcPilotText::Of(const ac::UnitKind Kind)
@@ -358,6 +399,18 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 			&& Sim.pilotRepair(U) && Info.Prompt)
 		{
 			Info.Prompt = *Info.Prompt + TEXT("   ·   R + hold click  repair");
+		}
+	}
+	// The building being welded, or a scaffold close by: its progress on the
+	// work ring and the dashboard (up close its life bar is out of view;
+	// docs/mmorpg-m5.md, E3).
+	if (!Info.Progress)
+	{
+		if (const ac::Structure* B = Welded(S, U, F.Target))
+		{
+			Info.Progress = B->progress();
+			Info.ProgressLabel = Title(B->kind).ToUpper();
+			if (U.task == ETask::building) Info.Tone = EAcTone::Working;
 		}
 	}
 	Info.Sight = Sight(Sim, F.Sight);

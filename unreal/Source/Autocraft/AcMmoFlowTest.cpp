@@ -8,6 +8,8 @@
 //
 //   mmocross  drive east (the move keys and the mouse's yaw, as the input
 //             actions set them) over the start region's edge into Tern Ridge
+//             (here and in mmofly: the wallet shown never dips over the
+//             travel and no gain flashes)
 //   mmofly    M's world map, Cold Fork's pad picked and FLY pressed, landing;
 //             the flight shown (AcPilotFlight.h): lift-off, transit and
 //             landing in turn, the camera up with the lift-off, control back
@@ -86,6 +88,23 @@ namespace
 		bool bShotLift = false, bShotTransit = false, bShotLanding = false;
 	};
 	FFlightSeen FlightSeen;
+
+	/// mmocross, mmofly: the wallet the HUD showed over the travel
+	/// (docs/mmorpg-m5.md, E3): never below the stock it set out with, and
+	/// no gain flashed (no income on the way).
+	struct FWalletSeen
+	{
+		int64 From = -1;
+		int64 Lowest = -1;
+		int32 GainsFrom = 0;
+	};
+	FWalletSeen WalletSeen;
+
+	const SAcResourceBar* WalletBar(const UObject* Ctx)
+	{
+		const AAcHUD* Hud = AAcHUD::Get(Ctx);
+		return Hud && Hud->Root() ? Hud->Root()->ResourceBar().Get() : nullptr;
+	}
 
 	void FlightShot(bool& bTaken, const TCHAR* Name)
 	{
@@ -351,6 +370,15 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		}
 	}
 
+	// The wallet shown from setting out till seated in the new region.
+	if (T.Phase >= 2 && T.Phase <= 5 && WalletSeen.From >= 0)
+	{
+		if (const SAcResourceBar* Bar = WalletBar(this))
+		{
+			WalletSeen.Lowest = WalletSeen.Lowest < 0 ? Bar->GetShownOre() : FMath::Min(WalletSeen.Lowest, Bar->GetShownOre());
+		}
+	}
+
 	if (bFly && Pilot && (T.Phase == 3 || T.Phase == 4))
 	{
 		// The flight as shown: the stages, the camera's climb in the
@@ -391,6 +419,16 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 				*Utf(Mmo->Here()->id)));
 			MmoVisitWas = Mmo->Visit();
 			Check(Mmo->TakesSent() == 0, FString::Printf(TEXT("seated by the server, no take sent (%d)"), Mmo->TakesSent()));
+			WalletSeen = FWalletSeen();
+			if (const SAcResourceBar* Bar = WalletBar(this); Bar && Mmo->Mirror())
+			{
+				// The stock as the HUD shows it once it caught up.
+				if (Bar->GetShownOre() != Mmo->Mirror()->simulation().state.players[0].ore && Since() < SeatSeconds) return;
+				WalletSeen.From = Bar->GetShownOre();
+				WalletSeen.Lowest = WalletSeen.From;
+				WalletSeen.GainsFrom = Bar->GetGainsFlashed();
+			}
+			Check(WalletSeen.From > 0, FString::Printf(TEXT("the HUD shows the wallet, %lld ore"), (long long)WalletSeen.From));
 			Advance();
 		}
 		else if (Since() > SeatSeconds)
@@ -516,6 +554,13 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 			Check(Shown == 1, FString::Printf(TEXT("the HUD counts the pilot's 1 unit (shows %lld)"), (long long)Shown));
 			Check(Hud->Root()->ScoreboardWidget()->GetVisibility() != EVisibility::Collapsed, TEXT("the unit count shows while driving"));
 			Check(!Hud->Root()->ResourceBar()->ShowsSupply(), TEXT("no supply count"));
+			// The wallet over the travel: never shown lower, no gain flashed.
+			const SAcResourceBar& Bar = *Hud->Root()->ResourceBar();
+			Check(WalletSeen.Lowest >= WalletSeen.From && Bar.GetShownOre() == WalletSeen.From,
+				FString::Printf(TEXT("the wallet shown held %lld ore over the travel (lowest %lld, now %lld)"), (long long)WalletSeen.From,
+					(long long)WalletSeen.Lowest, (long long)Bar.GetShownOre()));
+			Check(Bar.GetGainsFlashed() == WalletSeen.GainsFrom,
+				FString::Printf(TEXT("no gain flashed over the travel (%d)"), Bar.GetGainsFlashed() - WalletSeen.GainsFrom));
 		}
 		else
 		{

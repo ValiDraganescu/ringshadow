@@ -609,6 +609,8 @@ TEST(mirror_takes_snapshots_into_its_simulation) {
     Mirror mirror(region);
     EXPECT_TRUE(mirror.matches());
     EXPECT_TRUE(mirror.simulation().state.units.empty());
+    // The players (the wallet) are the map's start values until a snapshot brings them.
+    EXPECT_TRUE(!mirror.playersKnown());
 
     Snapshot s;
     s.serverTick = 30;
@@ -630,6 +632,7 @@ TEST(mirror_takes_snapshots_into_its_simulation) {
     SnapshotWriter w;
     SnapshotReader r;
     for (const SnapshotPart& p : roundTrip(w, r, s, 0)) mirror.apply(p);
+    EXPECT_TRUE(mirror.playersKnown());
     const Simulation& sim = mirror.simulation();
     EXPECT_EQ(sim.state.units.size(), size_t(2));
     EXPECT_TRUE(sim.unitIndex(2).has_value());

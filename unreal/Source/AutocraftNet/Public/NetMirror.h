@@ -43,6 +43,9 @@ public:
     int64_t lastInputTick() const { return lastInputTick_; }
     int64_t game() const { return game_; }
     std::optional<int64_t> driven() const { return driven_; }
+    /// A snapshot brought the players (the wallet): before it, a new
+    /// mirror's players are the map's start values, not the pilot's.
+    bool playersKnown() const { return playersKnown_; }
 
     /// A unit or building in the mirror now.
     const Unit* unit(int64_t id) const;
@@ -66,6 +69,7 @@ private:
     int64_t lastInputTick_ = -1;
     int64_t game_ = -1;
     std::optional<int64_t> driven_;
+    bool playersKnown_ = false;
 };
 
 } // namespace ac::net

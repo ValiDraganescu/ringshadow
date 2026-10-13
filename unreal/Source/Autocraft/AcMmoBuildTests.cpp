@@ -2,12 +2,14 @@
 // real local server on the first world: the pilot starts at the start pad
 // in a Prospector with 600 ore; a spot where a Citadel fits ahead of it, as
 // the ghost finds it on the mirror (`snap`, `placementRefusal`); the Build
-// request; the scaffold and the Citadel's 400 of the wallet's 600 ore spent show in the mirror.
+// request; the scaffold and the Citadel's 400 of the wallet's 600 ore spent show in the mirror;
+// the welding Prospector's work ring and dashboard show the Citadel's progress, rising.
 // A spot on the nearest ore, out of the Prospector's reach from the pad, is
 // refused by the server with its reason. One isolated
 // moment of a few seconds, in real time. Run hidden as AcMmoTests.cpp says
 // (`Automation RunTests Autocraft.Mmo`).
 #include "AcMmo.h"
+#include "AcPilotText.h"
 
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
@@ -137,6 +139,27 @@ bool FAcMmoBuildTest::RunTest(const FString&)
 		TestTrue(TEXT("going up"), !C->complete());
 		AddInfo(FString::Printf(TEXT("Citadel #%lld at %.1f,%.1f, wallet %lld ore"), (long long)C->id, C->position.x, C->position.y,
 			(long long)S.state.players[0].ore));
+	}
+	// Welding up close: the pilot's work ring and dashboard show the
+	// building's progress (docs/mmorpg-m5.md, E3), rising.
+	auto Weld = [&]() -> TOptional<double> {
+		const TOptional<FAcPilotFrame> F = FAcPilotFrame::Of(S);
+		if (!F) return {};
+		const FAcPilotInfo Info = AcPilotText::Info(S, *F, FAcPilotInputs());
+		if (!Info.Progress || Info.ProgressLabel != TEXT("CITADEL")) return {};
+		TestTrue(TEXT("the dashboard shows it too"), Info.Console && Info.Console->Progress.IsSet()
+			&& Info.Console->ProgressLabel.Get(TEXT("")) == TEXT("CITADEL"));
+		return Info.Progress;
+	};
+	TOptional<double> WeldFrom;
+	RunUntil(Client, [&] { WeldFrom = Weld(); return WeldFrom.IsSet(); }, 3.0);
+	TestTrue(TEXT("the overlay shows CITADEL n% while welding"), WeldFrom.IsSet());
+	if (WeldFrom)
+	{
+		TOptional<double> WeldTo;
+		RunUntil(Client, [&] { WeldTo = Weld(); return WeldTo && *WeldTo > *WeldFrom + 0.01; }, 4.0);
+		TestTrue(FString::Printf(TEXT("its progress rises (%.0f%% -> %.0f%%)"), *WeldFrom * 100, WeldTo.Get(-1) * 100),
+			WeldTo && *WeldTo > *WeldFrom + 0.01);
 	}
 	TestTrue(TEXT("no refusal"), Client.TakeBuildRefusals().Num() == 0);
 	TestTrue(TEXT("still connected"), Client.Phase() == FAcMmoClient::EPhase::Playing);

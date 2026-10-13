@@ -62,9 +62,9 @@ void SAcRoot::Construct(const FArguments& InArgs)
 	];
 }
 
-void SAcRoot::Update(const ac::GameState& State, const int64 LocalPlayer, const double RealDelta, const double Now)
+void SAcRoot::Update(const ac::GameState& State, const int64 LocalPlayer, const double RealDelta, const double Now, const bool bWallet)
 {
-	if (LocalPlayer >= 0 && LocalPlayer < (int64)State.players.size())
+	if (bWallet && LocalPlayer >= 0 && LocalPlayer < (int64)State.players.size())
 	{
 		const ac::Player& P = State.players[(size_t)LocalPlayer];
 		Bar->Update(P.ore, P.hydrogen, P.supplyUsed, P.supplyCap, RealDelta);

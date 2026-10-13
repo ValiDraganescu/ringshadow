@@ -50,7 +50,9 @@ public:
 
 	/// One frame: the local player's stock, the scoreboard, the banner, the
 	/// pop-ups' clock. `Now`: real seconds.
-	void Update(const ac::GameState& State, int64 LocalPlayer, double RealDelta, double Now);
+	/// `bWallet` false: the state's stock is not the player's yet (a new
+	/// region's mirror before its players came): the shown stock stays.
+	void Update(const ac::GameState& State, int64 LocalPlayer, double RealDelta, double Now, bool bWallet = true);
 	/// A deposit pop-up at `At` (points, y down, in the root).
 	void Popup(int64 Amount, FVector2f At, double Now);
 	/// A new game: the counters show the new stock at once.

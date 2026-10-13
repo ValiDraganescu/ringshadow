@@ -39,6 +39,7 @@ void Mirror::startOver() {
     structures_.clear();
     remembered_.clear();
     driven_ = std::nullopt;
+    playersKnown_ = false;
     rebuild();
 }
 
@@ -89,7 +90,10 @@ void Mirror::apply(const SnapshotPart& part) {
         }
     }
     GameState& st = sim_->state;
-    if (!s.players.empty()) st.players = s.players;
+    if (!s.players.empty()) {
+        st.players = s.players;
+        playersKnown_ = true;
+    }
     for (const PatchView& p : s.patches) {
         if (p.index < 0) continue;
         if (size_t(p.index) >= st.patches.size()) st.patches.resize(size_t(p.index) + 1);

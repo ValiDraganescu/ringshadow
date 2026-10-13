@@ -14,28 +14,33 @@ void SAcResourceBar::Construct(const FArguments& InArgs)
 void SAcResourceBar::Update(const int64 Ore, const int64 InHydrogen, const int64 InSupplyUsed, const int64 InSupplyCap,
 	const double RealDelta)
 {
-	if (bFlashGains && ShownOre >= 0)
+	// A gain only within one game's stock: not the first stock, nor the
+	// next after a `Reset` (a new region's mirror is no income).
+	if (bFlashGains && ShownOre >= 0 && !bRebase)
 	{
 		const double Now = FPlatformTime::Seconds();
 		if (Ore > TargetOre)
 		{
 			GainOre = Ore - TargetOre;
 			GainOreAt = Now;
+			GainsFlashed += 1;
 		}
 		if (InHydrogen > Hydrogen)
 		{
 			GainHydrogen = InHydrogen - Hydrogen;
 			GainHydrogenAt = Now;
+			GainsFlashed += 1;
 		}
 	}
 	TargetOre = Ore;
 	Hydrogen = InHydrogen;
 	SupplyUsed = InSupplyUsed;
 	SupplyCap = InSupplyCap;
-	if (ShownOre < 0)
+	if (ShownOre < 0 || bRebase)
 	{
 		ShownOre = Ore;
 		Pending = 0.0;
+		bRebase = false;
 	}
 	else
 	{

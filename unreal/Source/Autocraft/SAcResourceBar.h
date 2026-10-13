@@ -21,10 +21,13 @@ public:
 
 	/// The local player's stock. `RealDelta` (seconds) paces the ore count-up.
 	void Update(int64 Ore, int64 Hydrogen, int64 SupplyUsed, int64 SupplyCap, double RealDelta);
-	/// Show the stock at once (a new game).
-	void Reset() { ShownOre = -1; }
+	/// Show the next stock at once, with no gain flashed (a new game, a new
+	/// region's mirror). Until that update the shown stock stays.
+	void Reset() { bRebase = true; }
 
 	int64 GetShownOre() const { return ShownOre; }
+	/// Gains flashed so far (the MMORPG test's checks).
+	int32 GetGainsFlashed() const { return GainsFlashed; }
 	/// The supply (housing) count: off in the MMORPG test, where it means
 	/// nothing.
 	void SetShowSupply(bool bShow);
@@ -45,6 +48,8 @@ private:
 	int64 SupplyCap = 0;
 	bool bShowSupply = true;
 	bool bFlashGains = false;
+	bool bRebase = false;
+	int32 GainsFlashed = 0;
 	/// The last gain of ore and MH, and when (real seconds).
 	int64 GainOre = 0, GainHydrogen = 0;
 	double GainOreAt = -10, GainHydrogenAt = -10;

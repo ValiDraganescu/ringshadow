@@ -154,9 +154,20 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 			PixelsPerPoint(), Viewport ? UWidgetLayoutLibrary::GetViewportScale(Viewport) : 0.0f);
 	}
 	const double Now = FPlatformTime::Seconds();
+	bool bWallet = true;
 	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
 	{
 		RootWidget->SetMmo(Sim->IsMmo());
+		// The MMORPG test: a new region's mirror (an edge crossing, a
+		// landing, a resume) holds the map's start stock until its first
+		// players come; the wallet shown stays the last one till then
+		// (docs/mmorpg-m5.md, E3).
+		if (Sim->IsMmo())
+		{
+			const FAcMmoClient* Mmo = Sim->MmoClient();
+			const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
+			bWallet = M && M->playersKnown() && Frame.State == &M->simulation().state;
+		}
 		// The MMORPG test: a Prospector in flight between pads is in no
 		// region's state, but still the pilot's.
 		int64 Away = 0;
@@ -170,7 +181,7 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 		}
 		if (RootWidget->ScoreboardWidget()) RootWidget->ScoreboardWidget()->SetAway(Away);
 	}
-	RootWidget->Update(*Frame.State, Frame.LocalPlayer, Frame.RealDelta, Now);
+	RootWidget->Update(*Frame.State, Frame.LocalPlayer, Frame.RealDelta, Now, bWallet);
 
 	// Deposits the team sees: "+N" 4 cells over the ground there. Driving,
 	// only those within the driven unit's own sight (its Spotter picks
