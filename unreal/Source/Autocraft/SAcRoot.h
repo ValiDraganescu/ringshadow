@@ -57,6 +57,11 @@ public:
 	void Reset();
 	/// While driving, only the resources stay up (`HUD.applyPilot`).
 	void SetDriving(bool bDriving);
+	/// The MMORPG test mode: the scoreboard counts the pilot's units and
+	/// stays up while driving; no supply count.
+	void SetMmo(bool bMmo);
+	const TSharedPtr<SAcResourceBar>& ResourceBar() const { return Bar; }
+	const TSharedPtr<SAcScoreboard>& ScoreboardWidget() const { return Scoreboard; }
 
 	/// Add a widget over the view at `ZOrder` (`AcHudLayer`), laid out in points.
 	SOverlay::FScopedWidgetSlotArguments AddLayer(int32 ZOrder);
@@ -68,6 +73,8 @@ public:
 
 	TSharedPtr<SAcResourceBar> Bar;
 	TSharedPtr<SAcScoreboard> Scoreboard;
+	bool bMmoMode = false;
+	bool bDrivingNow = false;
 	TSharedPtr<SAcVictoryBanner> Banner;
 	TSharedPtr<SAcPopups> Popups;
 

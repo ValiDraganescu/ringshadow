@@ -76,7 +76,7 @@ struct WorldParams {
     /// a blocked spot gives the nearest open one).
     double arriveDepth = 2.5;
     /// A flight leaves from within this many cells of a pad's centre.
-    double padReach = 4.0;
+    double padReach = region::padReach;
     /// Seconds a pad-to-pad flight takes.
     double flightTime = 4.0;
 };

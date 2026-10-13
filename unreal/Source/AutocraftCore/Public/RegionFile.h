@@ -138,6 +138,10 @@ AUTOCRAFTCORE_API std::string write(const RegionFile& file);
 AUTOCRAFTCORE_API RegionFile starter(std::string id, MapStyle style, uint64_t seed, MapSize size);
 
 constexpr double padRadius = 3.0;
+/// A flight leaves from within this many cells of a pad's centre: the
+/// foundation plate drawn on each pad is this wide a disc (the server's and
+/// the client's one rule, `nearestPad`).
+constexpr double padReach = 4.0;
 /// How deep into the region an opening's lane is checked, cells.
 constexpr double laneDepth = 2.0;
 
@@ -171,5 +175,13 @@ AUTOCRAFTCORE_API Built build(const RegionFile& file);
 AUTOCRAFTCORE_API std::vector<Problem> validate(const RegionFile& file, const Built& built);
 
 AUTOCRAFTCORE_API std::string_view edgeName(Edge e);
+
+/// The pad nearest `at` and how far its centre is (cells; `pads` and `at` in
+/// the same space). Nil: no pads. At a pad: `distance <= padReach`.
+struct PadNear {
+    std::string name;
+    double distance = 0;
+};
+AUTOCRAFTCORE_API std::optional<PadNear> nearestPad(const std::vector<Place>& pads, Vec2 at);
 
 } // namespace ac::region

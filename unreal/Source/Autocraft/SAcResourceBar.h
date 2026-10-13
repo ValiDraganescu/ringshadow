@@ -25,6 +25,10 @@ public:
 	void Reset() { ShownOre = -1; }
 
 	int64 GetShownOre() const { return ShownOre; }
+	/// The supply (housing) count: off in the MMORPG test, where it means
+	/// nothing.
+	void SetShowSupply(bool bShow);
+	bool ShowsSupply() const { return bShowSupply; }
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(Width, Height); }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -36,6 +40,7 @@ private:
 	int64 Hydrogen = 0;
 	int64 SupplyUsed = 0;
 	int64 SupplyCap = 0;
+	bool bShowSupply = true;
 	/// Real time not yet spent on count-up steps.
 	double Pending = 0.0;
 };

@@ -86,7 +86,17 @@ void SAcRoot::Reset()
 
 void SAcRoot::SetDriving(const bool bDriving)
 {
-	Scoreboard->SetVisibility(bDriving ? EVisibility::Collapsed : EVisibility::HitTestInvisible);
+	bDrivingNow = bDriving;
+	Scoreboard->SetVisibility(bDriving && !bMmoMode ? EVisibility::Collapsed : EVisibility::HitTestInvisible);
+}
+
+void SAcRoot::SetMmo(const bool bMmo)
+{
+	if (bMmo == bMmoMode) return;
+	bMmoMode = bMmo;
+	Bar->SetShowSupply(!bMmo);
+	Scoreboard->SetCountAllUnits(bMmo);
+	SetDriving(bDrivingNow);
 }
 
 SOverlay::FScopedWidgetSlotArguments SAcRoot::AddLayer(const int32 ZOrder)

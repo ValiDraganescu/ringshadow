@@ -1,6 +1,8 @@
 // Port of Sources/GameCore/TerrainField.swift.
 #include "TerrainField.h"
 
+#include "RegionFile.h"
+
 #include <cmath>
 #include <limits>
 
@@ -260,8 +262,16 @@ TerrainField::Materials TerrainField::materials(Vec2 p) const {
     // Grass thins out on cliff faces and ramps.
     const RampBlend r = ramp(p);
     grass *= 1 - r.weight * 0.7;
-    // Foundation plate under each player's first Citadel.
-    for (int64_t b : map.starts) {
+    // A crafted region's pads: a round plate as wide as a flight's reach.
+    for (const Vec2& c : map.plates) {
+        const Vec2 d = p - c;
+        const double sdf = length(d) - region::padReach;
+        if (!(sdf < 4)) continue;
+        plating = max(plating, smoothstep(0.12, -0.12, sdf));
+        scorch = max(scorch, smoothstep(region::padReach + 2.5, region::padReach, length(d)) * 0.35 * (1 - plating));
+    }
+    // Foundation plate under each player's first Citadel (not in a region).
+    for (int64_t b : map.plates.empty() ? map.starts : std::vector<int64_t>{}) {
         if (!(b >= 0 && b < static_cast<int64_t>(map.bases.size()))) continue;
         const Vec2 d = p - map.bases[static_cast<size_t>(b)].center;
         if (!(std::fabs(d.x) < 8) || !(std::fabs(d.y) < 8)) continue;

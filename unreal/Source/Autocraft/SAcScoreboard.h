@@ -27,6 +27,11 @@ public:
 
 	void Construct(const FArguments& InArgs);
 	void Update(const ac::GameState& State, int64 LocalPlayer);
+	/// Count every unit, not only the army (the MMORPG test: the pilot's
+	/// Prospectors are its units).
+	void SetCountAllUnits(bool bAll) { bAllUnits = bAll; }
+	/// The count shown for a player (-1: not shown).
+	int64 ShownCount(int64 Player) const;
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(Width, Height); }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -60,4 +65,5 @@ private:
 	float Width = MinWidth;
 	/// What the layout was made from, to skip it when nothing changed.
 	FString Key;
+	bool bAllUnits = false;
 };

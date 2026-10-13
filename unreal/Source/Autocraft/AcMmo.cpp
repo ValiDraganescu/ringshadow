@@ -82,6 +82,7 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	WantedUnit.reset();
 	bAutoTaken = false;
 	HandBacks = 0;
+	Takes = 0;
 	bAdopt = true;
 	AdoptOld.reset();
 	Asked.Reset();
@@ -452,6 +453,7 @@ void FAcMmoClient::Want(const std::optional<int64> Unit)
 	if (!Unit && !Driven()) return;
 	const uint32 Id = Unit ? Net->take(*Unit) : Net->handBack();
 	if (!Unit) HandBacks += 1;
+	else Takes += 1;
 	Asked.Add(Id, Unit);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: request %u: %s"), Id, Unit ? *FString::Printf(TEXT("take #%lld"), (long long)*Unit) : TEXT("hand back"));
 }
@@ -537,15 +539,11 @@ std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
 	if (!R || !M || !M->driven() || Travelling()) return std::nullopt;
 	const ac::Unit* U = M->unit(*M->driven());
 	if (!U) return std::nullopt;
-	// Pads are in region cells from the north-west corner; the map is centred.
-	const ac::GroundRect& B = M->simulation().map->bounds;
-	std::optional<FPadNear> Best;
-	for (const ac::net::WorldMessage::Pad& P : R->pads)
-	{
-		const double D = ac::distance(ac::Vec2(P.at.x + B.minX, P.at.y + B.minZ), U->position);
-		if (!Best || D < Best->Distance) Best = FPadNear{Text(P.name), D};
-	}
-	return Best;
+	// The server's rule: pads on this map's ground, the nearest centre.
+	const std::optional<ac::region::PadNear> Near =
+		ac::region::nearestPad(ac::net::padsOnGround(*R, M->simulation().map->bounds), U->position);
+	if (!Near) return std::nullopt;
+	return FPadNear{Text(Near->name), Near->distance};
 }
 
 bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)

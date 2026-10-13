@@ -430,6 +430,15 @@ std::string Problem::text() const {
     return where + (at ? " at " + pointText(*at) : "") + ": " + message;
 }
 
+std::optional<PadNear> nearestPad(const std::vector<Place>& pads, Vec2 at) {
+    std::optional<PadNear> best;
+    for (const Place& p : pads) {
+        const double d = distance(p.at, at);
+        if (!best || d < best->distance) best = PadNear{p.name, d};
+    }
+    return best;
+}
+
 std::string_view edgeName(Edge e) {
     static constexpr std::array<std::string_view, 4> names{"north", "east", "south", "west"};
     return names[static_cast<size_t>(e)];
@@ -723,6 +732,8 @@ Built build(const RegionFile& f) {
     for (const Deposit& d : f.deposits) m.deposits.push_back(OreSpec{g(d.at), d.amount, d.angle * pi / 180});
     for (const WellSite& w : f.wells) m.wells.push_back(WellSpec{g(w.at), w.amount});
     for (const Place& p : f.pads) b.pads.push_back(Place{p.name, g(p.at)});
+    // The foundation plates are the pads' (none under the base's starts).
+    for (const Place& p : b.pads) m.plates.push_back(p.at);
     for (const Place& p : f.spawns) b.spawns.push_back(Place{p.name, g(p.at)});
     b.openings = f.openings;
     // The base's rocks and plants give way to what the file puts down.

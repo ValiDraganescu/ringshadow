@@ -321,10 +321,9 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     if (!unit) return "nothing driven";
     const auto u = here.simulation().state.unit(*unit);
     if (!u || u->kind != UnitKind::prospector) return "only a Prospector flies";
-    const auto& mine = world_->regions[p.region].built.pads;
-    const bool atPad = std::any_of(mine.begin(), mine.end(),
-                                   [&](const region::Place& q) { return distance(q.at, u->position) <= params_.padReach; });
-    if (!atPad) return "not at a pad";
+    // The client's rule too (`net::padsOnGround`, `region::nearestPad`).
+    const auto near = region::nearestPad(world_->regions[p.region].built.pads, u->position);
+    if (!near || near->distance > params_.padReach) return "not at a pad";
     if (*to != p.region && regions_[*to]->driven()) return "another pilot drives there";
     bankOut(p, p.region);
     Flight f;

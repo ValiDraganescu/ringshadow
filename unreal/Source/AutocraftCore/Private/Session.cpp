@@ -791,6 +791,7 @@ template <class IO> void fields(IO& io, MapDefinition& v) {
     io.orZero("heightEdits", v.heightEdits);
     io.orZero("deposits", v.deposits);
     io.orZero("wells", v.wells);
+    io.orZero("plates", v.plates);
 }
 
 template <class IO> void fields(IO& io, HeightEdit& v) {

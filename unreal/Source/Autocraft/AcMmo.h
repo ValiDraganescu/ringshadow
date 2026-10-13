@@ -125,6 +125,8 @@ public:
 	std::optional<int64> Driven() const;
 	/// Hand backs sent since the start (tests: none on a region change).
 	int32 HandBacksSent() const { return HandBacks; }
+	/// Takes sent since the start (tests: none to be seated at the start).
+	int32 TakesSent() const { return Takes; }
 	/// Tests: read the network only this often (seconds; 0: every frame), as
 	/// slow frames do, so what came together is handled in one frame (a
 	/// RegionChange and its region's first snapshot).
@@ -154,7 +156,7 @@ public:
 
 	/// A flight leaves from within this many cells of a pad's centre (the
 	/// server's `WorldParams::padReach`; it decides, this only says why not).
-	static constexpr double PadReach = 4.0;
+	static constexpr double PadReach = ac::region::padReach;
 	/// The world map, the newest (null: not told yet).
 	const ac::net::WorldMessage* World() const;
 	/// The region the pilot is in (in flight: the one it lifted off from).
@@ -222,6 +224,7 @@ private:
 	std::optional<int64> WantedUnit;
 	bool bAutoTaken = false;
 	int32 HandBacks = 0;
+	int32 Takes = 0;
 	/// Take the unit the server seats the pilot in (the start, a flight's
 	/// landing) as the one wanted, once, if it is not `AdoptOld`.
 	bool bAdopt = false;

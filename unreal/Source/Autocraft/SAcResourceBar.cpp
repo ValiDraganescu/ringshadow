@@ -37,6 +37,13 @@ void SAcResourceBar::Update(const int64 Ore, const int64 InHydrogen, const int64
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcResourceBar::SetShowSupply(const bool bShow)
+{
+	if (bShow == bShowSupply) return;
+	bShowSupply = bShow;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 int32 SAcResourceBar::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
 	FSlateWindowElementList& Out, int32 Layer, const FWidgetStyle& Style, bool bParentEnabled) const
 {
@@ -52,7 +59,7 @@ int32 SAcResourceBar::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	};
 	Icon(FAcHudStyle::OreIcon(), 28);
 	Icon(FAcHudStyle::HydrogenIcon(), 136);
-	Icon(FAcHudStyle::SupplyIcon(), 238);
+	if (bShowSupply) Icon(FAcHudStyle::SupplyIcon(), 238);
 
 	const FSlateFontInfo Font = FAcHudStyle::Font(24);
 	auto Label = [&](const FString& Text, float X)
@@ -62,6 +69,6 @@ int32 SAcResourceBar::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	};
 	Label(FString::Printf(TEXT("%lld"), (long long)FMath::Max<int64>(ShownOre, 0)), 44);
 	Label(FString::Printf(TEXT("%lld"), (long long)Hydrogen), 152);
-	Label(FString::Printf(TEXT("%lld/%lld"), (long long)SupplyUsed, (long long)SupplyCap), 256);
+	if (bShowSupply) Label(FString::Printf(TEXT("%lld/%lld"), (long long)SupplyUsed, (long long)SupplyCap), 256);
 	return Layer + 3;
 }

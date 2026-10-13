@@ -833,6 +833,10 @@ struct AUTOCRAFTCORE_API MapDefinition {
     std::vector<HeightEdit> heightEdits;
     std::vector<OreSpec> deposits;
     std::vector<WellSpec> wells;
+    /// C++ only, a crafted region's: the centres of its pads, each drawn as a
+    /// foundation plate `region::padReach` cells round (empty: a plate under
+    /// each start base, as on the game's maps).
+    std::vector<Vec2> plates;
 
     /// Where the armies meet: halfway between the feet of the ramps (or
     /// between the start bases on a map with one ramp), so neither side's

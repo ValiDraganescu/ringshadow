@@ -642,4 +642,10 @@ bool decode(const std::vector<uint8_t>& bytes, EventMessage& m) {
     return r.ok();
 }
 
+std::vector<region::Place> padsOnGround(const WorldMessage::Region& r, const GroundRect& bounds) {
+    std::vector<region::Place> out;
+    for (const WorldMessage::Pad& p : r.pads) out.push_back(region::Place{p.name, Vec2(p.at.x + bounds.minX, p.at.y + bounds.minZ)});
+    return out;
+}
+
 } // namespace ac::net

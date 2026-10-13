@@ -152,6 +152,7 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 			PixelsPerPoint(), Viewport ? UWidgetLayoutLibrary::GetViewportScale(Viewport) : 0.0f);
 	}
 	const double Now = FPlatformTime::Seconds();
+	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this)) RootWidget->SetMmo(Sim->IsMmo());
 	RootWidget->Update(*Frame.State, Frame.LocalPlayer, Frame.RealDelta, Now);
 
 	// Deposits the team sees: "+N" 4 cells over the ground there. Driving,

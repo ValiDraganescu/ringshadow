@@ -76,7 +76,12 @@ Prospect Landing's pad.
   first snapshot shows the unit, then follows it. Nothing of the old region
   stays.
 - The banner at the top shows the region the pilot is in and its style, or
-  "Flying to …" while in flight.
+  "Flying to …" while in flight. The top bar counts the pilot's units (no
+  supply count in this mode).
+- Each pad is drawn as a round foundation plate 4 cells across its centre
+  (`region::padReach`), the reach a flight leaves from; the generated
+  base's start plates are not drawn in a region. Server and client measure
+  "at a pad" with one rule (`region::nearestPad`, `net::padsOnGround`).
 - M opens the world map (in place of the command map): the grid of regions
   with their names, styles and pads, the pilot's region ringed. Standing at
   a pad, click a pad and FLY (or Return); away from a pad it says how far

@@ -16,6 +16,11 @@
 //   ... -game -RenderOffscreen ... -AcFlowTest=mmocross,mmofly
 #include "AcGameFlow.h"
 
+#include "AcHUD.h"
+#include "SAcResourceBar.h"
+#include "SAcRoot.h"
+#include "SAcScoreboard.h"
+
 #include "AcLog.h"
 #include "AcPilotPawn.h"
 #include "AcRtsPawn.h"
@@ -146,6 +151,7 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 			Check(Utf(Mmo->Here()->id) == TEXT("start"), FString::Printf(TEXT("seated in Prospector #%lld in %s"), (long long)*Mmo->Driven(),
 				*Utf(Mmo->Here()->id)));
 			MmoVisitWas = Mmo->Visit();
+			Check(Mmo->TakesSent() == 0, FString::Printf(TEXT("seated by the server, no take sent (%d)"), Mmo->TakesSent()));
 			Advance();
 		}
 		else if (Since() > SeatSeconds)
@@ -259,6 +265,18 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		Check(Mmo->HandBacksSent() == 0, FString::Printf(TEXT("no hand back sent (%d)"), Mmo->HandBacksSent()));
 		Check(!Mmo->Travelling(), TEXT("not in the travel hold"));
 		Check(ViewOff() < 12.0, FString::Printf(TEXT("the view follows the unit (%.1f cells off)"), ViewOff()));
+		// The top bar: the pilot's units counted, no supply.
+		if (const AAcHUD* Hud = AAcHUD::Get(this); Hud && Hud->Root())
+		{
+			const int64 Shown = Hud->Root()->ScoreboardWidget()->ShownCount(Sim->LocalPlayer());
+			Check(Shown == 1, FString::Printf(TEXT("the HUD counts the pilot's 1 unit (shows %lld)"), (long long)Shown));
+			Check(Hud->Root()->ScoreboardWidget()->GetVisibility() != EVisibility::Collapsed, TEXT("the unit count shows while driving"));
+			Check(!Hud->Root()->ResourceBar()->ShowsSupply(), TEXT("no supply count"));
+		}
+		else
+		{
+			Check(false, TEXT("a HUD"));
+		}
 		if (bFly)
 		{
 			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();

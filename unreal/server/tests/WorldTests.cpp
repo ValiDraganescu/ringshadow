@@ -7,6 +7,7 @@
 
 #include "HeadlessClient.h"
 #include "Server.h"
+#include "TerrainField.h"
 #include "WorldMap.h"
 #include "rig.h"
 
@@ -395,4 +396,47 @@ TEST(world_client_follows_a_region_change) {
     EXPECT_TRUE(until(same, 5));
     EXPECT_TRUE(until([&] { return client.world()->regions[size_t(client.world()->here)].id == "tern-ridge"; }, 3));
     EXPECT_EQ(client.mirror()->simulation().state.players[0].ore, int64_t(400));
+}
+
+// The landing pads are what the ground shows: a plate under each pad of every
+// region, none under the generated base's start bases (a pilot drove onto
+// one of those 50 cells from the pad and could not fly).
+TEST(world_plates_are_the_pads) {
+    for (const WorldRegion& g : first().regions) {
+        const TerrainField field(g.built.map);
+        for (const region::Place& p : g.built.pads) {
+            EXPECT_TRUE(field.materials(p.at).z > 0.9);
+            EXPECT_TRUE(field.materials(p.at + Vec2(region::padReach - 0.3, 0)).z > 0.9);
+            EXPECT_TRUE(field.materials(p.at + Vec2(region::padReach + 0.5, 0)).z < 0.1);
+        }
+        for (const int64_t b : g.built.map.starts) {
+            const Vec2 c = g.built.map.bases[size_t(b)].center;
+            bool onPad = false;
+            for (const region::Place& p : g.built.pads) onPad = onPad || distance(p.at, c) < region::padReach + 1;
+            if (!onPad) EXPECT_TRUE(field.materials(c).z < 0.1);
+        }
+    }
+}
+
+// "At a pad" is one rule on both ends: the client's distance (the World
+// message's pads on its mirror's ground) is the server's, and a flight is
+// accepted on the pad's centre and 3.9 cells out, refused at 4.1.
+TEST(world_pad_distance_is_the_same_on_client_and_server) {
+    for (const double off : {0.0, 3.9, 4.1}) {
+        WorldMap w(first());
+        w.join(me);
+        const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
+        put(w, me, w.start().places()->regionAt(pad) + Vec2(off, 0), 0);
+        const auto msg = w.worldMessage(me);
+        ASSERT_TRUE(msg.has_value());
+        const auto client = region::nearestPad(net::padsOnGround(msg->regions[size_t(msg->here)], w.start().simulation().map->bounds),
+                                               drivenUnit(w, me)->position);
+        const auto server = region::nearestPad(first().regions[first().start].built.pads, drivenUnit(w, me)->position);
+        ASSERT_TRUE(client.has_value() && server.has_value());
+        EXPECT_NEAR(client->distance, off, 1e-9);
+        EXPECT_NEAR(server->distance, client->distance, 1e-12);
+        EXPECT_TRUE(client->name == server->name);
+        const auto refused = w.fly(me, "cold-fork", "landing");
+        EXPECT_TRUE(refused.has_value() == (off > region::padReach));
+    }
 }

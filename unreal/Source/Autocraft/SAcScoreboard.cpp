@@ -38,7 +38,7 @@ void SAcScoreboard::Update(const ac::GameState& State, const int64 LocalPlayer)
 	{
 		if (U.owner < 0 || U.owner >= N) continue;
 		++Things[U.owner];
-		if (U.soldier()) ++Army[U.owner];
+		if (U.soldier() || bAllUnits) ++Army[U.owner];
 	}
 	for (const ac::Structure& S : State.structures)
 	{
@@ -76,6 +76,18 @@ void SAcScoreboard::Update(const ac::GameState& State, const int64 LocalPlayer)
 	Sides = MoveTemp(NewSides);
 	Layout();
 	Invalidate(EInvalidateWidgetReason::Layout);
+}
+
+int64 SAcScoreboard::ShownCount(const int64 Player) const
+{
+	for (const FSide& S : Sides)
+	{
+		for (const FMember& M : S.Members)
+		{
+			if (M.Player == Player) return M.Army;
+		}
+	}
+	return -1;
 }
 
 void SAcScoreboard::Layout()

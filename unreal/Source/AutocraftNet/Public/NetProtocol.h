@@ -16,6 +16,7 @@
 #include "NetBitStream.h"
 
 #include "Pilot.h"
+#include "RegionFile.h"
 #include "Types.h"
 #include "WindowMaps.h"
 
@@ -319,6 +320,11 @@ struct WorldMessage {
     std::optional<int64_t> flyingTo;
     bool operator==(const WorldMessage&) const = default;
 };
+
+/// A World message region's pads on the ground of its map (`bounds`: the
+/// region's map; pads are region cells from its north-west corner), for
+/// `region::nearestPad` with a unit's position: the server's own rule.
+AUTOCRAFTNET_API std::vector<region::Place> padsOnGround(const WorldMessage::Region& r, const GroundRect& bounds);
 
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const Welcome& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const RegionChange& m);
