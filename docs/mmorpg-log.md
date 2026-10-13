@@ -231,3 +231,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Website not deployed; Cloudflare Pages project waits for user.
 - T H1 headlamp port from main (uncommitted there) → orc worker.
 - D Manager never writes code; skill updated 059837e.
+- T H1 done 7a73a51: headlamp on crosshair, beam sight at night.
+- N Suites: core 392, server 72, net 63; shots/headlamp checked.
+- I Server has no held hour: ac.Hour lights only client night.
