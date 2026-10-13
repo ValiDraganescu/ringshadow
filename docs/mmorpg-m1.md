@@ -30,8 +30,8 @@ Windows and Linux servers, accounts, AI pilots, lots, more regions.
 | T2 | Server world: headless region on `ac::Simulation`, one pilot's input, per-pilot snapshot data (fog, near first), no network | | done |
 | T3 | Map how the game layer reads `ac::Simulation` (what a client mirror must stand in for) | | done |
 | T4 | Protocol: messages, bit-packed snapshots with deltas; server program wiring T1+T2: port on stdout, parent watch, log | T1, T2 | done |
-| T5 | Game client mode: launch the server, connect, mirror, draw, send input | T3, T4 | running |
-| T6 | Prediction + reconciliation of the driven machine; lag setting in the game | T5 | todo |
+| T5 | Game client mode: launch the server, connect, mirror, draw, send input | T3, T4 | done |
+| T6 | Prediction + reconciliation of the driven machine; lag setting in the game | T5 | running |
 
 Done when: in the game, the MMORPG mode drives a unit on the local server
 at 150 ms lag and 5% loss with no visible jitter; net-tests, server tests

@@ -59,3 +59,13 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D All workers work in MMORPG-variant worktree, no own worktrees.
 - D Shared tree: each commits only its own files, explicit paths.
 - T Removed mmo-net worktree+branch; mmo-server-world after T5 (worker cwd).
+- T T5 done 27fe0f7: MMORPG (TEST) on home, -AcMmo flag.
+- N Start: make -C unreal/server; restart editor; Play; MMORPG (TEST).
+- N net::Client, net::LocalServer (posix_spawn), net::Interpolator in AutocraftNet.
+- N Mirror becomes game's simulation after first snapshot.
+- N Hidden test Autocraft.Mmo.DriveProspector: 5.6 cells in 2 s.
+- I Server not shipped in packaged builds; editor finds it in repo.
+- I Deferred units freeze then jump; no extrapolation.
+- I Window game paused behind mode, saved on enter.
+- I No restart-server button; pause card shows "AI on".
+- T T6 → same worker, after compaction.
