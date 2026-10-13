@@ -28,6 +28,11 @@ FString AcSaves::Directory()
 	{
 		return FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir);
 	}
+	// -AcMmoShots=DIR (AcMmoShots.cpp): its own folder, never the player's.
+	if (FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) && !Dir.IsEmpty())
+	{
+		return FPaths::Combine(FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir), TEXT("save"));
+	}
 	// A self-test (the playground's place/remove/Clear check) works in a
 	// scratch store, as `windowshot` does: never the player's playground.
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcPlaygroundTest")))
@@ -41,7 +46,8 @@ FString AcSaves::TrackingFile()
 {
 	const FString Sessions = Directory();
 	const bool bOwnFolder = FParse::Param(FCommandLine::Get(), TEXT("AcPlaygroundTest"))
-		|| [] { FString Dir; return FParse::Value(FCommandLine::Get(), TEXT("AcSaveDir="), Dir) && !Dir.IsEmpty(); }();
+		|| [] { FString Dir; return FParse::Value(FCommandLine::Get(), TEXT("AcSaveDir="), Dir) && !Dir.IsEmpty(); }()
+		|| [] { FString Dir; return FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) && !Dir.IsEmpty(); }();
 	return bOwnFolder ? FPaths::Combine(Sessions, TEXT("tracking.sqlite"))
 					  : FPaths::Combine(FPaths::GetPath(Sessions), TEXT("tracking.sqlite"));
 }

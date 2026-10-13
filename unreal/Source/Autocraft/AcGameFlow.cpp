@@ -240,6 +240,15 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 			Test->Expected = ReadSession(FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), ImportPath));
 		}
 	}
+	else if (FString ShotsDir; FParse::Value(Cmd, TEXT("AcMmoShots="), ShotsDir) && !ShotsDir.IsEmpty())
+	{
+		// The MMO moments in pictures (AcMmoShots.cpp): a flow step of its own.
+		Test.Emplace();
+		Test->Steps.Add(TEXT("mmoshots"));
+		Shots.Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), ShotsDir);
+		UE_LOG(LogAutocraft, Log, TEXT("mmoshots: pictures to %s, saves in %s, the pilot in %s"), *Shots.Dir, *AcSaves::Directory(),
+			*FAcMmoClient::Directory());
+	}
 	// The perf panel as last left (Swift `showPerf`); the command line wins.
 	static bool bAppliedPerf = false;
 	if (!bAppliedPerf && UAcSettings::Remembers())
@@ -900,6 +909,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 	if (Step == TEXT("mmokeys") || Step == TEXT("mmohud"))
 	{
 		TickMmoHudFlow(Step);
+		return;
+	}
+	if (Step == TEXT("mmoshots"))
+	{
+		TickMmoShots();
 		return;
 	}
 	if (Step.StartsWith(TEXT("mmo")))

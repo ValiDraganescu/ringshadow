@@ -66,6 +66,11 @@ FString FAcMmoClient::Directory()
 	{
 		return FPaths::Combine(FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir), TEXT("mmo"));
 	}
+	if (FString Dir; FParse::Value(Cmd, TEXT("AcMmoShots="), Dir) && !Dir.IsEmpty())
+	{
+		// The shot harness (AcMmoShots.cpp): its own pilot and world.
+		return FPaths::Combine(FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir), TEXT("mmo"));
+	}
 	if (FString Steps; FParse::Value(Cmd, TEXT("AcFlowTest="), Steps))
 	{
 		// A test never touches the player's pilot or world.

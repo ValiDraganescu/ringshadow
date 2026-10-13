@@ -95,7 +95,7 @@ public:
 
 	/// The MMO mode's own folder: `~/Library/Application
 	/// Support/Autocraft/Unreal/mmo`. Tests never use it: `-AcMmoDir=PATH`
-	/// puts it there, `-AcSaveDir=DIR` in `DIR/mmo`, and any other
+	/// puts it there, `-AcSaveDir=DIR` or `-AcMmoShots=DIR` in `DIR/mmo`, and any other
 	/// `-AcFlowTest` run in a scratch folder.
 	static FString Directory();
 	/// The pilot's key: `<Directory>/pilot.key` (32 hex digits).

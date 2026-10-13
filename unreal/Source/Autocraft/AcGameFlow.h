@@ -206,6 +206,33 @@ private:
 	/// A key through the flow's key processor, as the player presses it.
 	bool PressFlowKey(const struct FKey& Key);
 	FVector2D RtsTargetWas = FVector2D::ZeroVector;
+	/// -AcMmoShots=DIR (AcMmoShots.cpp): the MMO moments staged in a new
+	/// world, a PNG of each (HUD on) in DIR; run as the flow step `mmoshots`.
+	void TickMmoShots();
+	struct FMmoShots
+	{
+		FString Dir;
+		/// The picture asked for and not written yet, and its size last frame.
+		FString Pending;
+		int64 LastSize = -1;
+		int32 Waited = 0;
+		int32 Saved = 0;
+		/// The drive: waypoints (cells), the next one, and the stall check.
+		TArray<FVector2D> Route;
+		int32 RouteAt = 0;
+		FVector2D StallAt = FVector2D::ZeroVector;
+		double StallSince = 0;
+		int64 Unit = -1;
+		int64 Citadel = -1;
+		int64 Patch = -1;
+		int64 OreBefore = -1;
+		int64 VisitWas = 0;
+		bool bCardsShot = false;
+		bool bShotBefore = false;
+		FString Region;
+		FVector2D UnitAt = FVector2D::ZeroVector;
+	};
+	FMmoShots Shots;
 	void Check(bool bOk, const FString& What);
 	void NextStep();
 };
