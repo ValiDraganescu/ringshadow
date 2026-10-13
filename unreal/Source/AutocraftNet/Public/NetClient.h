@@ -59,6 +59,8 @@ public:
     /// Build a `kind` at `at` with the driven Prospector, paid from the
     /// wallet (the reply says why not).
     uint32_t build(StructureKind kind, Vec2 at);
+    /// Pick a level-up card: `perk` for `kind` (the reply says why not).
+    uint32_t pick(UnitKind kind, Perk perk);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

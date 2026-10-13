@@ -230,7 +230,13 @@ struct AckMessage {
 
 /// Client → server, reliable: everything that is not steering. Take a
 /// unit, hand it back, fly from a pad to a pad (a world's region, by its id,
-/// and the pad's name in it), build with the driven Prospector.
+/// and the pad's name in it), build with the driven Prospector, pick a
+/// level-up card.
+///
+/// The pilot's levels themselves (per kind: level, XP, picks) come in the
+/// snapshot's player data: its side's `Player::pilot` is the pilot's own
+/// record (the server's `Region::levels`), so the two cards on offer are
+/// `PilotRecord::pending`, the core's catalogue, on both ends.
 struct RequestMessage {
     struct Take {
         int64_t unit = 0;
@@ -251,9 +257,16 @@ struct RequestMessage {
         Vec2 at{0, 0};
         bool operator==(const Build&) const = default;
     };
+    /// Keep `perk` for `kind`: one of the two cards on offer at the kind's
+    /// lowest pending level (the server checks, `PilotRecord::refusal`).
+    struct Pick {
+        UnitKind kind = UnitKind::prospector;
+        Perk perk{};
+        bool operator==(const Pick&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
-    std::variant<Take, HandBack, Fly, Build> what;
+    std::variant<Take, HandBack, Fly, Build, Pick> what;
     bool operator==(const RequestMessage&) const = default;
 };
 

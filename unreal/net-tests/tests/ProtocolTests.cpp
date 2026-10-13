@@ -714,6 +714,19 @@ TEST(protocol_world_messages_round_trip) {
     ASSERT_TRUE(decode(encode(b), bb));
     EXPECT_TRUE(bb == b);
 
+    // A level-up card: the kind and the pick; one past the catalogue is refused.
+    RequestMessage k;
+    k.id = 13;
+    k.what = RequestMessage::Pick{UnitKind::prospector, Perk::prospectorBigHaul};
+    RequestMessage kb;
+    ASSERT_TRUE(decode(encode(k), kb));
+    EXPECT_TRUE(kb == k);
+    k.what = RequestMessage::Pick{UnitKind::scorpion, allCases<Perk>().back()};
+    ASSERT_TRUE(decode(encode(k), kb));
+    EXPECT_TRUE(kb == k);
+    k.what = RequestMessage::Pick{UnitKind::prospector, static_cast<Perk>(allCases<Perk>().size())};
+    EXPECT_TRUE(!decode(encode(k), kb));
+
     // A snapshot's game carries the visit.
     EXPECT_EQ(visitOf(visitGame(5, 2)), int64_t(5));
     EXPECT_EQ(visitGame(5, 2) & 0xffffffff, int64_t(2));

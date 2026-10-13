@@ -38,6 +38,8 @@ uint32_t Client::build(StructureKind kind, Vec2 at) {
     return request(RequestMessage::Build{kind, at});
 }
 
+uint32_t Client::pick(UnitKind kind, Perk perk) { return request(RequestMessage::Pick{kind, perk}); }
+
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;
     m.id = nextRequest_++;

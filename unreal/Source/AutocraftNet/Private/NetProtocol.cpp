@@ -564,6 +564,10 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         w.writeBits(uint64_t(b->kind), 4);
         codec::Pos{}.write(w, b->at);
     }
+    if (const auto* p = std::get_if<RequestMessage::Pick>(&m.what)) {
+        writeVarint(w, uint64_t(p->kind));
+        writeVarint(w, uint64_t(p->perk));
+    }
     return w.bytes();
 }
 
@@ -587,6 +591,13 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         b.kind = static_cast<StructureKind>(kind);
         codec::Pos{}.read(r, b.at);
         m.what = b;
+        break;
+    }
+    case 4: {
+        const uint64_t kind = readVarint(r);
+        const uint64_t perk = readVarint(r);
+        if (kind >= uint64_t(allCases<UnitKind>().size()) || perk >= uint64_t(allCases<Perk>().size())) return false;
+        m.what = RequestMessage::Pick{static_cast<UnitKind>(kind), static_cast<Perk>(perk)};
         break;
     }
     default: return false;
