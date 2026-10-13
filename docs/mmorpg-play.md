@@ -113,5 +113,7 @@ Add these to the game's command line.
 | `-AcMmo` | Starts straight in the mode (what `make mmo` passes). |
 | `-AcMmoNewWorld` | With `-AcMmo`: a new world, as NEW WORLD does. |
 | `-AcMmoLag=150,20,5` | Lag on the connection, each way: delay ms, jitter ms, loss %. The console's `ac.MmoLag 150 20 5` changes it while playing; `off` or empty: none. |
+| `-AcMmoHour=22` | Holds the world's hour on the server (its `--hour`, 0–24): every region's sight at night and the sky follow it. Without it the world's clock runs: a 40-minute day, about 30 minutes light and 10 night (`ac::WorldClock`), saved with the world. `ac.Hour` does not move the MMO sky. |
+| `-AcMmoWeather=storm` | Holds the world's weather on the server (its `--weather`: `clear`, `cloudy`, `rain`, `storm`, or 0–3). Without it the weather follows its schedule on the world's clock, seeded by the world's id, the same in every region. `ac.Weather` does not move the MMO weather. |
 | `-AcMmoDevXp=55` | A new pilot's Prospector gets this much XP at once (the server's `--dev-xp`). Level 2 is at 60 XP. |
 | `-AcMmoShots=DIR` | The picture harness: plays a new world through every moment and saves a PNG of each to `DIR`, with its own pilot and world in `DIR/mmo` ([mmorpg-shots.md](mmorpg-shots.md), `unreal/Source/Autocraft/AcMmoShots.cpp`). |

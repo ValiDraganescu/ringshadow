@@ -69,6 +69,11 @@ void Mirror::apply(const SnapshotPart& part) {
         st.winner = s.winner;
         st.endedAt = s.endedAt;
         st.score = s.score;
+        if (s.sky) {
+            sky_ = s.sky;
+            st.dayLength = s.sky->dayLength;
+            st.heldHour = s.sky->hour();
+        }
     }
     for (int64_t id : s.removed) {
         units_.erase(id);

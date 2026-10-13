@@ -206,6 +206,33 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
         regions_.push_back(std::make_unique<Region>(c));
     }
     builtBy_.resize(regions_.size());
+    weather_ = std::make_unique<Weather>(WorldClock::weatherSeed(world.file.id));
+    if (params_.weatherHold) weather_->hold(*params_.weatherHold);
+    updateSky();
+}
+
+void WorldMap::setClock(double time) {
+    clock_ = std::max(0.0, time);
+    updateSky();
+}
+
+void WorldMap::updateSky() {
+    if (!world_) return;
+    weatherNow_ = weather_->sample(clock_);
+    sky_.time = clock_;
+    sky_.dayLength = params_.dayLength;
+    sky_.heldHour = params_.heldHour;
+    sky_.weatherSeed = uint32_t(weather_->seed());
+    sky_.weatherHold = params_.weatherHold;
+    sky_.weather = weatherNow_.state;
+    // Every region at the world's hour: the core's sight at night
+    // (`Rules::sightScale`) and the headlamp's beam read it.
+    const double h = sky_.hour();
+    for (auto& r : regions_) {
+        GameState& st = r->simulation().state;
+        st.dayLength = params_.dayLength;
+        st.heldHour = h;
+    }
 }
 
 std::optional<size_t> WorldMap::regionNamed(std::string_view id) const {
@@ -431,6 +458,8 @@ void WorldMap::step() {
     lastStepMs_ = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     tick_ += 1;
     if (!world_) return;
+    clock_ += regions_[0]->description().step;
+    updateSky();
     for (auto& [id, p] : pilots_)
         if (!p.flight) {
             bankOut(p, p.region);
@@ -548,6 +577,7 @@ Snapshot WorldMap::snapshot(PilotId pilot, const InterestParams& params) {
     if (!r) return Snapshot{};
     Snapshot s = r->snapshot(pilot, params);
     s.game = net::visitGame(visit(pilot), s.game);
+    s.sky = sky();
     return s;
 }
 

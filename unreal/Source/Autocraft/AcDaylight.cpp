@@ -180,8 +180,23 @@ double AAcDaylight::DayLength() { return FMath::Max(1.0, double(CVarDayLength.Ge
 
 double AAcDaylight::HeldHour() { return CVarHour.GetValueOnGameThread(); }
 
+namespace
+{
+	TOptional<FAcWorldSky> GWorldSky;
+}
+
+void AAcDaylight::SetWorldSky(const TOptional<FAcWorldSky>& Sky) { GWorldSky = Sky; }
+
+const TOptional<FAcWorldSky>& AAcDaylight::WorldSky() { return GWorldSky; }
+
 double AAcDaylight::HourAt(const double Time)
 {
+	// The MMORPG world's clock, the server's: its regions' sight follows it.
+	if (GWorldSky)
+	{
+		return ac::WorldClock::hourAt(GWorldSky->Time, GWorldSky->DayLength,
+			GWorldSky->HeldHour >= 0 ? std::optional<double>(GWorldSky->HeldHour) : std::nullopt);
+	}
 	// The core's clock: the sim's sight closes in on the same night.
 	const double Held = HeldHour();
 	return ac::Rules::hourAt(Time, DayLength(), Held >= 0 ? std::optional<double>(Held) : std::nullopt);

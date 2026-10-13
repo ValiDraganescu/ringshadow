@@ -112,6 +112,7 @@ void UAcSimSubsystem::Deinitialize()
 		MirrorSim = nullptr;
 		Mmo->Stop();
 		Mmo.reset();
+		AAcDaylight::SetWorldSky(NullOpt);
 	}
 	if (Sim && !bFixture && !bNoSave)
 	{
@@ -836,6 +837,7 @@ void UAcSimSubsystem::StopMmo()
 	if (!Mmo) return;
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: leaving the MMORPG test"));
 	Mmo->Stop();
+	AAcDaylight::SetWorldSky(NullOpt);
 	// Out of the mode before the game rebuilds on the window game.
 	const std::unique_ptr<FAcMmoClient> Old = std::move(Mmo);
 	MmoChoice.reset();
@@ -866,6 +868,13 @@ void UAcSimSubsystem::TickMmo(const double RealDelta)
 {
 	FAcMmoClient& Client = *Mmo;
 	Client.Tick(FPlatformTime::Seconds());
+	// The world's clock and weather, the server's (none: the game's own).
+	if (const std::optional<ac::net::Sky>& Sky = Client.Sky())
+	{
+		AAcDaylight::SetWorldSky(FAcWorldSky{Sky->time, Sky->dayLength, Sky->heldHour.value_or(-1.0), Sky->weatherSeed,
+			Sky->weatherHold.value_or(-1.0)});
+	}
+	else AAcDaylight::SetWorldSky(NullOpt);
 	for (const FString& Note : Client.TakeNotes()) Refuse(Note);
 	// The first snapshot (or a new game on the server): draw the mirror.
 	if (ac::net::Mirror* M = Client.Mirror(); M && Client.Generation() != MmoGeneration)

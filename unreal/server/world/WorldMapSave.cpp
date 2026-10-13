@@ -140,6 +140,7 @@ WorldSave WorldMap::save() const {
         out.regions.push_back(std::move(r));
     }
     std::sort(out.regions.begin(), out.regions.end(), [](const SavedRegion& a, const SavedRegion& b) { return a.id < b.id; });
+    out.clock = clock_;
     return out;
 }
 
@@ -218,6 +219,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         }
         away_[sp.id] = p;
     }
+    // The world's hour goes on where it was.
+    setClock(save.clock);
     return problems;
 }
 

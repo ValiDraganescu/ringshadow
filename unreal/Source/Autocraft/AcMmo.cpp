@@ -241,6 +241,17 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Args.push_back("--dev-xp");
 		Args.push_back(std::to_string(DevXp));
 	}
+	// Dev and shots: the world's hour and weather held on the server.
+	if (double Hour = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoHour="), Hour) && Hour >= 0 && Hour <= 24)
+	{
+		Args.push_back("--hour");
+		Args.push_back(std::to_string(Hour));
+	}
+	if (FString Weather; FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), Weather) && !Weather.IsEmpty())
+	{
+		Args.push_back("--weather");
+		Args.push_back(Utf8(Weather.ToLower()));
+	}
 	if (!SavePath.IsEmpty())
 	{
 		Args.push_back("--save");
@@ -277,6 +288,9 @@ void FAcMmoClient::Stop()
 	Socket.close();
 	Interp.reset();
 	Predictor.reset();
+	SkyNow.reset();
+	SkyMirror = nullptr;
+	SkySnapshot = -1;
 	SeenMirror = nullptr;
 	SeenGame = -1;
 	WantedUnit.reset();
@@ -484,6 +498,43 @@ void FAcMmoClient::Blend(const double Now)
 	// The driven one in the present, a correction eased over a few frames.
 	Predictor.ease(Dt);
 	Predictor.draw(*M);
+	FollowSky(*M, Now, Dt);
+}
+
+void FAcMmoClient::FollowSky(ac::net::Mirror& M, const double Now, const double Dt)
+{
+	const std::optional<ac::net::Sky>& Told = M.sky();
+	if (!Told)
+	{
+		SkyNow.reset();
+		return;
+	}
+	if (&M != SkyMirror || M.snapshotId() != SkySnapshot)
+	{
+		SkyMirror = &M;
+		SkySnapshot = M.snapshotId();
+		SkyAnchor = Told->time;
+		SkyAnchorAt = Now;
+	}
+	// Where the server's clock is now, as far as the snapshots tell.
+	const double Target = SkyAnchor + (Now - SkyAnchorAt);
+	if (!SkyNow || FMath::Abs(Target - SkyNow->time) > 5.0)
+	{
+		if (!SkyNow) UE_LOG(LogAutocraft, Log, TEXT("mmo: the world's sky: hour %.2f%s, day %.0f s, weather seed %u%s"), Told->hour(),
+			Told->heldHour ? TEXT(" (held)") : TEXT(""), Told->dayLength, Told->weatherSeed, Told->weatherHold ? TEXT(" (held)") : TEXT(""));
+		SkyNow = *Told;
+		SkyNow->time = Target;
+	}
+	else
+	{
+		// On with the frame, and a share of the way to the server's.
+		const double T = SkyNow->time + Dt;
+		SkyNow = *Told;
+		SkyNow->time = T + (Target - T) * FMath::Min(1.0, 2.0 * Dt);
+	}
+	// The mirror's sight at night: the hour drawn.
+	M.simulation().state.dayLength = SkyNow->dayLength;
+	M.simulation().state.heldHour = SkyNow->hour();
 }
 
 bool FAcMmoClient::ParseLag(const FString& Text, ac::net::LagSettings& Out)

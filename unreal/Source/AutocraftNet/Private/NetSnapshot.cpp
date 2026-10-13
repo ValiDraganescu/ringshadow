@@ -240,6 +240,15 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
     Opt<Var>{}.write(w, s.winner);
     Opt<Fixed>{kMs}.write(w, s.endedAt);
     Vec<Var>{}.write(w, s.score);
+    w.writeBool(s.sky.has_value());
+    if (s.sky) {
+        kMs.write(w, s.sky->time);
+        kMs.write(w, s.sky->dayLength);
+        Opt<Fixed>{kFine}.write(w, s.sky->heldHour);
+        w.writeBits(s.sky->weatherSeed, 32);
+        Opt<Fixed>{kFine}.write(w, s.sky->weatherHold);
+        Enum<WeatherState, 2>{}.write(w, s.sky->weather);
+    }
     writeVarint(w, s.players.size());
     w.writeBool(s.fog.has_value());
     if (s.fog) {
@@ -655,6 +664,16 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
     Opt<Var>{}.read(r, s.winner);
     Opt<Fixed>{kMs}.read(r, s.endedAt);
     Vec<Var>{}.read(r, s.score);
+    if (r.readBool()) {
+        Sky sky;
+        kMs.read(r, sky.time);
+        kMs.read(r, sky.dayLength);
+        Opt<Fixed>{kFine}.read(r, sky.heldHour);
+        sky.weatherSeed = static_cast<uint32_t>(r.readBits(32));
+        Opt<Fixed>{kFine}.read(r, sky.weatherHold);
+        Enum<WeatherState, 2>{}.read(r, sky.weather);
+        s.sky = sky;
+    }
     const uint64_t playerCount = readVarint(r);
     const bool fog = r.readBool();
     uint64_t cells = 0, sites = 0;

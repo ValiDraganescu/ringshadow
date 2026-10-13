@@ -105,13 +105,20 @@ CREATE TABLE pilots (id TEXT PRIMARY KEY, ore INTEGER NOT NULL, hydrogen INTEGER
   unit INTEGER, levels TEXT NOT NULL);
 )sql";
 
+/// Schema v2: the world's clock, one row. A save from before starts it at
+/// the furthest region's clock.
+const char* const kV2 = R"sql(
+CREATE TABLE world_clock (id INTEGER PRIMARY KEY CHECK (id = 1), time REAL NOT NULL);
+INSERT INTO world_clock (id, time) SELECT 1, COALESCE(MAX(time), 0) FROM regions;
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
-    // A later version adds its step here: {2, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}};
+    // A later version adds its step here: {3, "ALTER TABLE ... ADD COLUMN ..."}.
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}};
     return steps;
 }
 
@@ -267,7 +274,13 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
             out.pilots.push_back(SavedPilot{s.colText(0), s.colInteger(1), s.colInteger(2), s.colText(3), s.optInteger(4), s.colText(5)});
         if (s.failed(error)) return std::nullopt;
     }
+    {
+        Stmt s(db_, "SELECT time FROM world_clock WHERE id = 1");
+        if (s.row()) out.clock = s.colReal(0);
+        if (s.failed(error)) return std::nullopt;
+    }
     regions_.clear();
+    clock_ = std::nullopt;
     buildings_.clear();
     units_.clear();
     deposits_.clear();
@@ -278,6 +291,7 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
 }
 
 void WorldStore::remember(const WorldSave& save) {
+    clock_ = save.clock;
     for (const SavedRegion& r : save.regions) {
         regions_[r.id] = {r.time, r.nextId};
         // A region written whole: its rows are these and no others.
@@ -382,6 +396,11 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                                      .integer(w.remaining)));
                },
                "wells", "idx");
+    }
+    if (clock_ != save.clock) {
+        run(std::move(Stmt(db_, "INSERT INTO world_clock (id, time) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET time = excluded.time")
+                          .real(save.clock)));
+        n.changed += 1;
     }
     for (const SavedPilot& p : save.pilots) {
         const auto before = pilots_.find(p.id);

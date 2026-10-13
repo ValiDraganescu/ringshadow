@@ -10,6 +10,8 @@
 #include "WorldStore.h"
 
 #include "RegionFile.h"
+#include "Weather.h"
+#include "WorldClock.h"
 
 #include <cstdint>
 #include <map>
@@ -84,6 +86,13 @@ struct WorldParams {
     /// Dev and tests (`--dev-xp`, as the game's -AcEarn): XP a new pilot's
     /// Prospector earns at once, when seated at the start pad. 0: none.
     double devXp = 0;
+    /// The world's day, seconds (`WorldClock::dayLength`, 40 minutes).
+    double dayLength = WorldClock::dayLength;
+    /// Dev and shots (`--hour 22`): hold the world's hour (0-24).
+    std::optional<double> heldHour;
+    /// Dev and shots (`--weather storm`): hold the weather, 0 clear .. 3
+    /// storm (fractions blend).
+    std::optional<double> weatherHold;
 };
 
 /// What the server tells a pilot after a step: its place in the world
@@ -195,6 +204,22 @@ public:
     /// The world map for the pilot's client (nil: not a world).
     std::optional<net::WorldMessage> worldMessage(PilotId pilot) const;
 
+    // MARK: The world's clock and weather (docs/mmorpg-m6.md, C1)
+
+    /// World seconds since the world began: one clock for every region,
+    /// advanced a server tick each step and saved with the world.
+    double clock() const { return clock_; }
+    /// Sets it (tests; a save sets it in `restore`).
+    void setClock(double time);
+    /// The world's hour now (`WorldClock::hourAt`; held by `heldHour`).
+    double hour() const { return sky_.hour(); }
+    /// The clock and the weather as the snapshots carry them (nil: not a
+    /// world). The weather is the same over the whole world: `Weather`
+    /// seeded by the world's id, sampled at the clock.
+    std::optional<net::Sky> sky() const { return world_ ? std::optional<net::Sky>(sky_) : std::nullopt; }
+    /// The weather sampled at the clock now.
+    const WeatherSample& weather() const { return weatherNow_; }
+
     /// Wall-clock ms the last `step` took over all the regions.
     double lastStepMs() const { return lastStepMs_; }
 
@@ -231,6 +256,10 @@ private:
     std::vector<Moved> moves_;
     int64_t tick_ = 0;
     double lastStepMs_ = 0;
+    double clock_ = 0;
+    std::unique_ptr<Weather> weather_;
+    WeatherSample weatherNow_;
+    net::Sky sky_;
 
     /// A new Prospector on the start pad, facing the start region's nearest
     /// ore deposit (one with ore left first), so the first thing in view is
@@ -246,6 +275,9 @@ private:
     void bankOut(PilotState& p, size_t r);
     void crossings();
     void landings();
+    /// The sky and the weather at the clock now, and every region's hour
+    /// held at it (their sight at night).
+    void updateSky();
     /// Into `away_` (WorldMapSave.cpp).
     void park(const PilotState& p);
 };

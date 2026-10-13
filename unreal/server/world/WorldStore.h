@@ -1,7 +1,7 @@
 // The world's save (docs/mmorpg-m3.md, docs/networking.md "Saves"): one
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
-// clock; per pilot its id, wallet, region, driven unit and levels. The
+// clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and levels. The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -97,6 +97,8 @@ struct SavedPilot {
 struct WorldSave {
     std::vector<SavedRegion> regions;
     std::vector<SavedPilot> pilots;
+    /// The world's clock, seconds (`WorldMap::clock`; schema 2).
+    double clock = 0;
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -107,7 +109,8 @@ public:
         int64_t version = 0;
         std::string sql;
     };
-    /// This build's steps; the last one's version is the schema's (1).
+    /// This build's steps; the last one's version is the schema's (2: the
+    /// world's clock).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 
@@ -162,6 +165,7 @@ private:
     std::map<std::pair<std::string, int64_t>, SavedDeposit> deposits_;
     std::map<std::pair<std::string, int64_t>, SavedWell> wells_;
     std::map<std::string, SavedPilot> pilots_;
+    std::optional<double> clock_;
 };
 
 } // namespace ac::server

@@ -148,6 +148,8 @@ AAcWeather* AAcWeather::SpawnFor(UWorld* World)
 
 double AAcWeather::WeatherTime(const double Time)
 {
+	// The MMORPG world's weather runs on the world's clock.
+	if (const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky()) return Sky->Time;
 	const TCHAR* Cmd = FCommandLine::Get();
 	double T = 0;
 	if (FParse::Value(Cmd, TEXT("AcWeatherT="), T)) return T;
@@ -189,7 +191,9 @@ void AAcWeather::BeginPlay()
 
 void AAcWeather::ApplyHold()
 {
-	const float Held = CVarWeather.GetValueOnGameThread();
+	// The MMORPG world's hold is the server's (`--weather`).
+	const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
+	const float Held = Sky ? float(Sky->WeatherHold) : CVarWeather.GetValueOnGameThread();
 	if (Model && Held != AppliedHold)
 	{
 		AppliedHold = Held;
@@ -275,7 +279,25 @@ void AAcWeather::Tick(const float DeltaSeconds)
 	// (`game`: the game's UUID, new with each game and kept in its save;
 	// `id` is the save slot, "window" for every window game.)
 	const std::string GameId = Sim ? Sim->Session().game.value_or(Sim->Session().id) : std::string();
-	if (Sim && Sim->IsRunning() && !FlagSeed().IsSet() && GameId != SeededFor)
+	// The MMORPG world: its weather, the server's seed.
+	if (const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky(); Sky && (!Model || Model->seed() != Sky->WeatherSeed || !bWorldSeeded))
+	{
+		bWorldSeeded = true;
+		SeededFor = std::string("world:") + std::to_string(Sky->WeatherSeed);
+		Model = MakeUnique<ac::Weather>(Sky->WeatherSeed);
+		AppliedHold = -2;
+		SampledAt = -1;
+		Bolts.Reset();
+		ApplyHold();
+		UE_LOG(LogAutocraft, Log, TEXT("weather: the world's, seed %u, held %.2f"), Sky->WeatherSeed, Sky->WeatherHold);
+	}
+	else if (!Sky && bWorldSeeded)
+	{
+		// Out of the world: the game's own again.
+		bWorldSeeded = false;
+		SeededFor.clear();
+	}
+	if (Sim && Sim->IsRunning() && !bWorldSeeded && !FlagSeed().IsSet() && GameId != SeededFor)
 	{
 		SeededFor = GameId;
 		Model = MakeUnique<ac::Weather>(SessionSeed(SeededFor));

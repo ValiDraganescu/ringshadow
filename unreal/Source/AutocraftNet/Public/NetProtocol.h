@@ -19,7 +19,9 @@
 #include "Pilot.h"
 #include "RegionFile.h"
 #include "Types.h"
+#include "Weather.h"
 #include "WindowMaps.h"
+#include "WorldClock.h"
 
 #include <array>
 #include <cstddef>
@@ -145,6 +147,25 @@ struct FogView {
     bool operator==(const FogView&) const = default;
 };
 
+/// The world's sky (docs/mmorpg-m6.md, C1): its clock and its weather, the
+/// same in every region of a world. The client's sky draws it: the hour from
+/// `WorldClock::hourAt`, the weather from `Weather(weatherSeed)` sampled at
+/// `time` and held at `weatherHold`, as the server decides it.
+struct Sky {
+    /// World seconds since the world began (saved with the world).
+    double time = 0;
+    double dayLength = WorldClock::dayLength;
+    /// The server's held hour (`--hour`), 0-24.
+    std::optional<double> heldHour;
+    uint32_t weatherSeed = 0;
+    /// The server's held weather (`--weather`): 0 clear .. 3 storm.
+    std::optional<double> weatherHold;
+    /// The weather's spell now, as the server sampled it.
+    WeatherState weather = WeatherState::clear;
+    double hour() const { return WorldClock::hourAt(time, dayLength, heldHour); }
+    bool operator==(const Sky&) const = default;
+};
+
 /// What a pilot is told after a tick: plain data. The server program sends
 /// it as Snapshot messages (NetSnapshot.h) and `events` as Event messages.
 struct Snapshot {
@@ -175,6 +196,9 @@ struct Snapshot {
     std::optional<FogView> fog;
     /// What happened since the pilot's last snapshot that its side may know.
     std::vector<GameEvent> events;
+    /// The world's clock and weather (nil: a region of no world, M1: the
+    /// client's own clock).
+    std::optional<Sky> sky;
 };
 
 // MARK: - Quantising

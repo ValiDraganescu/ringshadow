@@ -154,32 +154,32 @@ TEST(save_store_round_trips_every_saved_thing) {
     EXPECT_TRUE(why.find("a save of world first, not second") != std::string::npos);
 }
 
-TEST(save_migrations_v0_to_v1_and_a_future_step) {
+TEST(save_migrations_v0_to_v2_and_a_future_step) {
     const std::string path = fresh("migrate");
     std::string why;
     {
-        // v0 (a new file) to v1.
+        // v0 (a new file) to v2.
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(1));
-        EXPECT_EQ(WorldStore::version(), int64_t(1));
+        EXPECT_EQ(store->schemaVersion(), int64_t(2));
+        EXPECT_EQ(WorldStore::version(), int64_t(2));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
-                              "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots')")[0][0],
-                  std::string("7"));
+                              "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock')")[0][0],
+                  std::string("8"));
         ASSERT_TRUE(store->write(sample(), &why).has_value());
     }
-    // A step that fails: the file stays at v1, its rows kept.
+    // A step that fails: the file stays at v2, its rows kept.
     std::vector<WorldStore::Migration> broken = WorldStore::migrations();
-    broken.push_back({2, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
+    broken.push_back({3, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
     EXPECT_TRUE(WorldStore::open(path, "first", &why, broken) == nullptr);
-    EXPECT_TRUE(why.find("migration to version 2") != std::string::npos);
-    // A future step: v1 to v2, the rows kept, the column there.
+    EXPECT_TRUE(why.find("migration to version 3") != std::string::npos);
+    // A future step: v2 to v3, the rows kept, the column there.
     std::vector<WorldStore::Migration> next = WorldStore::migrations();
-    next.push_back({2, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
+    next.push_back({3, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
     {
         auto store = WorldStore::open(path, "first", &why, next);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(2));
+        EXPECT_EQ(store->schemaVersion(), int64_t(3));
         const auto rows = store->rows("SELECT id, title FROM pilots ORDER BY id");
         ASSERT_TRUE(rows.size() == 2);
         EXPECT_TRUE(rows[0][1] == "prospector");
@@ -187,9 +187,41 @@ TEST(save_migrations_v0_to_v1_and_a_future_step) {
         ASSERT_TRUE(back.has_value());
         EXPECT_TRUE(*back == sorted(sample()));
     }
-    // This build (v1) refuses a v2 file.
+    // This build (v2) refuses a v3 file.
     EXPECT_TRUE(WorldStore::open(path, "first", &why) == nullptr);
-    EXPECT_TRUE(why.find("schema version 2, this server knows 1") != std::string::npos);
+    EXPECT_TRUE(why.find("schema version 3, this server knows 2") != std::string::npos);
+}
+
+TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
+    // A save made before the world's clock (schema 1): opened by this
+    // build, it migrates to 2 and the world's clock starts at the furthest
+    // region's, so the hour goes on from about where it was.
+    const std::string path = fresh("v1clock");
+    std::string why;
+    const std::vector<WorldStore::Migration> v1(WorldStore::migrations().begin(), WorldStore::migrations().begin() + 1);
+    {
+        auto store = WorldStore::open(path, "first", &why, v1);
+        ASSERT_TRUE(store != nullptr);
+        EXPECT_EQ(store->schemaVersion(), int64_t(1));
+        // Its regions as that build wrote them.
+        ASSERT_TRUE(store->exec("INSERT INTO regions (region, time, next_id) VALUES ('start', 50, 1), ('tern-ridge', 321.5, 4)", &why));
+    }
+    auto store = WorldStore::open(path, "first", &why);
+    ASSERT_TRUE(store != nullptr);
+    EXPECT_EQ(store->schemaVersion(), int64_t(2));
+    const auto back = store->load(&why);
+    ASSERT_TRUE(back.has_value());
+    const double furthest = 321.5;
+    EXPECT_NEAR(back->clock, furthest, 1e-9);
+    // Written and read back.
+    WorldSave later = *back;
+    later.clock = furthest + 1234.5;
+    auto n = store->write(later, &why);
+    ASSERT_TRUE(n.has_value());
+    EXPECT_EQ(n->changed, int64_t(1));
+    store.reset();
+    store = WorldStore::open(path, "first", &why);
+    EXPECT_NEAR(store->load(&why)->clock, furthest + 1234.5, 1e-9);
 }
 
 TEST(save_writes_only_the_rows_that_changed) {
@@ -200,8 +232,8 @@ TEST(save_writes_only_the_rows_that_changed) {
     WorldSave s = sample();
     auto n = store->write(s, &why);
     ASSERT_TRUE(n.has_value());
-    // 2 regions, 2 buildings, 2 units, 2 deposits, 1 well, 2 pilots.
-    EXPECT_EQ(n->changed, int64_t(11));
+    // 2 regions, 2 buildings, 2 units, 2 deposits, 1 well, 2 pilots, the clock.
+    EXPECT_EQ(n->changed, int64_t(12));
     n = store->write(s, &why);
     ASSERT_TRUE(n.has_value());
     EXPECT_EQ(n->changed, int64_t(0));

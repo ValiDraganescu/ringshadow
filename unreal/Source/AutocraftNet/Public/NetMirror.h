@@ -43,6 +43,10 @@ public:
     int64_t lastInputTick() const { return lastInputTick_; }
     int64_t game() const { return game_; }
     std::optional<int64_t> driven() const { return driven_; }
+    /// The world's sky in the newest snapshot (nil: none came; M1). The
+    /// state's `heldHour` and `dayLength` follow it, so the mirror's sight
+    /// at night is the server's.
+    const std::optional<Sky>& sky() const { return sky_; }
     /// A snapshot brought the players (the wallet): before it, a new
     /// mirror's players are the map's start values, not the pilot's.
     bool playersKnown() const { return playersKnown_; }
@@ -69,6 +73,7 @@ private:
     int64_t lastInputTick_ = -1;
     int64_t game_ = -1;
     std::optional<int64_t> driven_;
+    std::optional<Sky> sky_;
     bool playersKnown_ = false;
 };
 

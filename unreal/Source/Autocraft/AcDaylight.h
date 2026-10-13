@@ -46,6 +46,12 @@
 // after sunset. `GetSkyTones()` gives the Swift first-person sky tones for
 // the pilot's fog veil (B10, E2).
 //
+// In the MMORPG mode the clock and the weather are the world's, the
+// server's (`SetWorldSky`, docs/mmorpg-m6.md C1): the hour is
+// `ac::WorldClock`'s at the world's time and the weather is sampled there;
+// `ac.Hour` and `ac.Weather` do not move them (`-AcMmoHour=`,
+// `-AcMmoWeather=` hold them on the server).
+//
 // Usage: `AAcDaylight::SpawnFor(World)` once per game world (AAcGameMode).
 #pragma once
 
@@ -55,6 +61,7 @@
 #include "Rules.h"
 
 #include "Weather.h"
+#include "WorldClock.h"
 
 #include "AcDaylight.generated.h"
 
@@ -81,6 +88,18 @@ struct FAcSkyTones
 	double Rise = 12, Reach = 110;
 };
 
+/// The world's sky as the MMORPG server keeps it (`net::Sky`): its clock
+/// (world seconds, its day's length, a held hour or negative) and its
+/// weather (the seed, a held state or negative).
+struct FAcWorldSky
+{
+	double Time = 0;
+	double DayLength = ac::WorldClock::dayLength;
+	double HeldHour = -1;
+	uint32 WeatherSeed = 0;
+	double WeatherHold = -1;
+};
+
 UCLASS()
 class AUTOCRAFT_API AAcDaylight : public AActor
 {
@@ -96,8 +115,13 @@ public:
 	static double DayLength();
 	/// The held hour (`ac.Hour`, `-AcHour=`), or a negative number.
 	static double HeldHour();
-	/// The hour (0-24) `Time` seconds into a game.
+	/// The hour (0-24) `Time` seconds into a game; in the MMORPG mode, the
+	/// world's hour (`Time` aside).
 	static double HourAt(double Time);
+	/// The MMORPG world's sky, set each frame while it plays (unset: the
+	/// game's own clock and weather).
+	static void SetWorldSky(const TOptional<FAcWorldSky>& Sky);
+	static const TOptional<FAcWorldSky>& WorldSky();
 	/// Toward the sun at `Hour`, a unit vector in SceneKit axes (Y up),
 	/// below the ground at night (`Daylight.sun(hour:)`).
 	static FVector SunSceneKit(double Hour);

@@ -263,3 +263,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Later: war key art on home; flight looks cheap; regions alike.
 - D Manager: ideas to M7: glowing ore at night, ring-shadow sweep, KSTR contracts, MH-fuelled flight.
 - T V1 screen fixes (first-hour worker), V2 world look → workers.
+- D C1: world day 40 min, 30 light, 10 night.
+- N C1: ac::WorldClock in core; constants in one place.
+- N C1: server clock per world, saved, schema v2.
+- N C1: snapshots carry the sky; protocol version 4.
+- N C1: client samples weather from seed, server's hold.
+- I C1: weather spells keep 600 s-day lengths: faster per day.

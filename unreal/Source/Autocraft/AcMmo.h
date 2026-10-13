@@ -35,6 +35,15 @@
 // does not open (not a database, held by another server) fails the start
 // with the server's own reason and its log's path.
 //
+// The world's sky (docs/mmorpg-m6.md, C1): the server keeps one clock and
+// one weather for the world, and each snapshot carries them (`net::Sky`).
+// `Sky()` is that sky at the moment drawn: its time runs on with the frames
+// and eases toward each snapshot's (a jump past 5 s is taken at once), so
+// the sun never steps. The daylight and the weather actors draw it in place
+// of the game's own clock (`AAcDaylight::SetWorldSky`), and the mirror's
+// sight at night follows its hour. `-AcMmoHour=H` and `-AcMmoWeather=storm`
+// (dev, shots) hold the server's hour and weather (`--hour`, `--weather`).
+//
 // Lag to feel it (on 127.0.0.1 there is none): the console variable
 // `ac.MmoLag "delay_ms jitter_ms loss_pct"` (each way; 0 or empty: off) or
 // the flag `-AcMmoLag=150,20,5`, which sets it at the start. The lag
@@ -207,6 +216,8 @@ public:
 	/// The lag setting as the console variable writes it ("150 20 5",
 	/// "150,20,5"; "", "0" or "off": none). False when it does not read.
 	static bool ParseLag(const FString& Text, ac::net::LagSettings& Out);
+	/// The world's sky at the moment drawn (unset: none came, or not a world).
+	const std::optional<ac::net::Sky>& Sky() const { return SkyNow; }
 	/// The driven unit's prediction.
 	const ac::net::Predictor& Prediction() const { return Predictor; }
 	void ClearPredictionStats() { Predictor.clearStats(); }
@@ -280,6 +291,14 @@ private:
 	ac::net::Interpolator Interp;
 	ac::net::Predictor Predictor;
 	double LastBlend = 0;
+	/// The sky drawn, and the newest snapshot's server time and when it came.
+	std::optional<ac::net::Sky> SkyNow;
+	double SkyAnchor = 0;
+	double SkyAnchorAt = 0;
+	int64 SkySnapshot = -1;
+	const ac::net::Mirror* SkyMirror = nullptr;
+	/// Moves the sky drawn on to `Now` (`Blend`).
+	void FollowSky(ac::net::Mirror& M, double Now, double Dt);
 	/// The mirror last seen and its game (for `Generation`).
 	const ac::net::Mirror* SeenMirror = nullptr;
 	int64 SeenGame = -1;

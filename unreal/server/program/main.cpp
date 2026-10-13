@@ -6,6 +6,8 @@
 //                    [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
 //                    [--save file]  (a world's save: loaded at start, written every 5 s and on stop)
 //                    [--dev-xp xp]  (dev, tests: a new pilot's Prospector earns that much XP at once)
+//                    [--hour h]  (dev, shots: hold the world's hour, 0-24)
+//                    [--weather clear|cloudy|rain|storm|0-3]  (dev, shots: hold the world's weather)
 //
 // Reads the one-time token as the first line of its standard input, binds,
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
@@ -23,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <optional>
 #include <string>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -71,11 +74,22 @@ bool parseIpv4(const std::string& s, net::Address& out) {
     return true;
 }
 
+/// `--weather`: a state's name, or a number 0 (clear) … 3 (storm).
+std::optional<double> weatherNamed(const std::string& v) {
+    const char* names[] = {"clear", "cloudy", "rain", "storm"};
+    for (int i = 0; i < 4; i++)
+        if (v == names[i]) return double(i);
+    char* end = nullptr;
+    const double x = std::strtod(v.c_str(), &end);
+    if (end == v.c_str() || *end || x < 0 || x > 3) return std::nullopt;
+    return x;
+}
+
 int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--hour h] [--weather clear|cloudy|rain|storm]\n",
                  why);
     return 2;
 }
@@ -100,6 +114,7 @@ int main(int argc, char** argv) {
     long port = 0;
     pid_t parent = 0;
     double devXp = 0;
+    std::optional<double> heldHour, weatherHold;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
     for (int i = 1; i < argc; i++) {
@@ -116,6 +131,13 @@ int main(int argc, char** argv) {
         else if (a == "--log") logPath = v;
         else if (a == "--save") savePath = v;
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
+        else if (a == "--hour") {
+            heldHour = std::atof(v.c_str());
+            if (*heldHour < 0 || *heldHour > 24) return usage("--hour: 0…24");
+        } else if (a == "--weather") {
+            weatherHold = weatherNamed(v);
+            if (!weatherHold) return usage("--weather: clear, cloudy, rain, storm or 0…3");
+        }
         else return usage(("unknown " + a).c_str());
     }
     std::optional<LoadedWorld> world;
@@ -167,6 +189,8 @@ int main(int argc, char** argv) {
     if (world) options.world = std::move(world);
     else options.region.map = MapChoice{*style, *size, starts};
     options.worldParams.devXp = devXp;
+    options.worldParams.heldHour = heldHour;
+    options.worldParams.weatherHold = weatherHold;
     options.token.assign(token.begin(), token.end());
     if (!net::secureRandom(options.secret.data(), options.secret.size())) {
         logLine("start failed: no secure random source");
@@ -188,6 +212,13 @@ int main(int argc, char** argv) {
                                  : server.region().description().mapName;
     logLine("start: " + what + " on " + socket.localAddress().toString() +
             (parent > 0 ? ", parent " + std::to_string(parent) : ""));
+    if (const auto sky = server.world().sky()) {
+        char line[200];
+        std::snprintf(line, sizeof line, "sky: clock %.1f s, hour %.2f%s, day %.0f s, weather seed %u%s", sky->time, sky->hour(),
+                      sky->heldHour ? " (held)" : "", sky->dayLength, unsigned(sky->weatherSeed),
+                      sky->weatherHold ? (" held at " + std::to_string(*sky->weatherHold)).c_str() : "");
+        logLine(line);
+    }
     std::printf("PORT %u\n", unsigned(socket.localAddress().port));
     std::fflush(stdout);
 

@@ -599,6 +599,50 @@ TEST(snapshot_reader_refuses_a_missing_baseline) {
     EXPECT_TRUE(!r.read(cut).has_value());
 }
 
+TEST(snapshot_carries_the_worlds_sky_in_every_part) {
+    // The world's clock and weather ride in the header: every part has it,
+    // so a lost part never leaves the sky behind.
+    Snapshot s;
+    for (int64_t i = 0; i < 400; i++) s.entities.push_back(EntityState{fullUnit(i + 1)});
+    Sky sky;
+    sky.time = 12345.678;
+    sky.dayLength = 2400;
+    sky.heldHour = 22.25;
+    sky.weatherSeed = 0xDEADBEEF;
+    sky.weatherHold = 3.0;
+    sky.weather = WeatherState::storm;
+    s.sky = sky;
+    SnapshotWriter w;
+    SnapshotReader r;
+    const auto o = w.write(s, 0, 1 << 20);
+    EXPECT_TRUE(o.messages.size() > 1);
+    for (const auto& m : o.messages) {
+        const auto p = r.read(m);
+        ASSERT_TRUE(p.has_value());
+        ASSERT_TRUE(p->snapshot.sky.has_value());
+        EXPECT_TRUE(*p->snapshot.sky == sky);
+        EXPECT_NEAR(p->snapshot.sky->hour(), 22.25, 1e-9);
+    }
+    // None: none comes (a region of no world).
+    Snapshot plain;
+    SnapshotReader r2;
+    SnapshotWriter w2;
+    const auto parts = roundTrip(w2, r2, plain, 0);
+    ASSERT_TRUE(!parts.empty());
+    EXPECT_TRUE(!parts[0].snapshot.sky.has_value());
+    // Running, not held: the hour is the world clock's at its time.
+    sky.heldHour = std::nullopt;
+    sky.weatherHold = std::nullopt;
+    sky.weather = WeatherState::cloudy;
+    s.sky = sky;
+    SnapshotReader r3;
+    SnapshotWriter w3;
+    const auto again = roundTrip(w3, r3, s, 0);
+    ASSERT_TRUE(!again.empty());
+    EXPECT_TRUE(*again[0].snapshot.sky == sky);
+    EXPECT_NEAR(again[0].snapshot.sky->hour(), WorldClock::hourAt(12345.678), 1e-9);
+}
+
 TEST(mirror_takes_snapshots_into_its_simulation) {
     RegionDescription region;
     region.map = MapChoice{MapStyle::openField, MapSize::small, 2};
@@ -631,8 +675,16 @@ TEST(mirror_takes_snapshots_into_its_simulation) {
     s.fog = fog;
     SnapshotWriter w;
     SnapshotReader r;
+    Sky sky;
+    sky.time = 100;
+    sky.heldHour = 23.0;
+    s.sky = sky;
     for (const SnapshotPart& p : roundTrip(w, r, s, 0)) mirror.apply(p);
     EXPECT_TRUE(mirror.playersKnown());
+    // The world's hour holds the mirror's: its sight at night is the server's.
+    ASSERT_TRUE(mirror.sky().has_value());
+    ASSERT_TRUE(mirror.simulation().state.heldHour.has_value());
+    EXPECT_NEAR(*mirror.simulation().state.heldHour, 23.0, 1e-9);
     const Simulation& sim = mirror.simulation();
     EXPECT_EQ(sim.state.units.size(), size_t(2));
     EXPECT_TRUE(sim.unitIndex(2).has_value());

@@ -118,6 +118,8 @@ private:
 	TUniquePtr<ac::Weather> Model;
 	/// The game the model is seeded from (its id; empty: not yet).
 	std::string SeededFor;
+	/// Seeded by the MMORPG world's sky (`AAcDaylight::WorldSky`).
+	bool bWorldSeeded = false;
 	ac::WeatherSample Current;
 	double SampledAt = -1;
 	float AppliedHold = -2;
