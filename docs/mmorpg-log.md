@@ -284,3 +284,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D User (via V2): pause all builds until tomorrow; all workers paused.
 - N Uncommitted at pause: V2 (ore, giant, night, clouds), V1, P5.
 - I start.json deposits in a near-straight line: region work.
+- T V1 code cb68a4b (+6e9ce2a); re-shoot pending after pause.
+- N All 4 workers confirmed paused; manager killed a stray UBT build.
