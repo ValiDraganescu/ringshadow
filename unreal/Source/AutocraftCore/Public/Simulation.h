@@ -11,6 +11,7 @@
 #include "SimdMath.h"
 #include "NavGrid.h"
 #include "Pilot.h"
+#include "Progression.h"
 #include "Router.h"
 #include "Rules.h"
 #include "TerrainField.h"
@@ -481,6 +482,7 @@ public:
 #include "Simulation+Kinds.members.h"
 #include "Simulation+Vision.members.h"
 #include "Simulation+Playground.members.h"
+#include "Simulation+Progression.members.h"
 };
 
 } // namespace ac

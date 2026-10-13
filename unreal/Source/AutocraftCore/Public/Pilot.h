@@ -55,6 +55,10 @@ struct Pilot {
     /// (`pilotRepair`): a damaged Derrick, ore ahead or a full load no
     /// longer take the action key from it.
     bool mend = false;
+    /// C++ only (MMO): the slot key that went down since the last step, 1–3
+    /// for Q, C and G (0: none). The skill tree's active in that slot fires
+    /// (`Simulation::useSlot`).
+    int64_t slot = 0;
     /// What the player's crosshair is on, as the view measures it each
     /// frame (the simulation has no camera): a unit's or a building's model,
     /// or nothing (the ground, a rock, the sky). A gun on foot (Ranger,
@@ -185,7 +189,14 @@ struct PilotTarget {
         bool operator==(const Heal&) const = default;
     };
 
-    AC_CASES(PilotTarget, Enemy, Patch, Derrick, Full, Scaffold, Repair, Heal)
+    /// Prospector (MMO, Field pump): pump this well (index into `wells`)
+    /// with no Derrick while the key is held.
+    struct Well {
+        int64_t _0;
+        bool operator==(const Well&) const = default;
+    };
+
+    AC_CASES(PilotTarget, Enemy, Patch, Derrick, Full, Scaffold, Repair, Heal, Well)
     bool operator==(const PilotTarget&) const = default;
 };
 

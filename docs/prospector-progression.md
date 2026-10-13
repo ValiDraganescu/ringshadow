@@ -185,7 +185,8 @@ Theme: ore. Faster drilling, bigger loads, richer strikes.
 | 4 | Dense pack | 3 | ore a trip +10% | +30% | `Stat::OreCarry` `.percent` |
 | Cap | **Stardust heart** | 1 | ore unloaded counts +20% in the wallet (and its XP) | | new: unload yield |
 
-Full Deep Vein: drill +54%, (25 + 9 + 15) × 1.3 = 63 ore a trip.
+Full Deep Vein: drill +54%, 25 × 1.3 + 9 + 15 = 56.5, 57 ore a trip (Dense pack on the
+hero's 25, then the plus ranks, rounded).
 
 ### Quicksilver (the well)
 

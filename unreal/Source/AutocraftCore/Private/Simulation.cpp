@@ -234,6 +234,7 @@ std::vector<GameEvent> Simulation::step(double dt) {
     if (pilot) {
         pilot->act = false;
         pilot->ability = false;
+        pilot->slot = 0;
     }
     std::vector<InFlight> due;
     std::vector<InFlight> later;
@@ -245,6 +246,7 @@ std::vector<GameEvent> Simulation::step(double dt) {
     for (const auto& l : landings) events.push_back(GameEvent::Landed{l.unit, l.target});
     landings.clear();
     if (pilot || hpBonusHeld || burnsLeft) stepLeveling(dt);
+    if (progress) stepSkills(dt);
     separate();
     unstick(events);
     trapped(events);
@@ -699,7 +701,8 @@ void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
                     tally(*builder, [&](Tally& t) { t.built += put; });
                 }
                 s.buildLeft = *left - dt * pace;
-                s.hp = ac::min(Rules::hp(s.kind), s.hp + 0.9 * Rules::hp(s.kind) * dt * pace / Rules::buildTime(s.kind));
+                const double full = fullHP(s);
+                s.hp = ac::min(full, s.hp + 0.9 * full * dt * pace / Rules::buildTime(s.kind));
                 if (*s.buildLeft <= 0) {
                     s.buildLeft = std::nullopt;
                     events.push_back(GameEvent::Constructed{s.id, s.kind, s.position});
@@ -1700,7 +1703,10 @@ void Simulation::land(const Unit& u, int64_t id, const Target& aim, double kept)
     const bool anchored = u.kind == Unit::Kind::longbow && u.anchor.value_or(0) >= 1;
     const auto now = target(id);
     // Every third attack of the driven unit may count double (a pick).
-    const bool twice = now && thirdTime(Action::attack, u);
+    // Torch rhythm: the skill tree's every Nth strike (both count theirs).
+    const bool third = now && thirdTime(Action::attack, u);
+    const bool nth = now && everyNth(Work::strike, u);
+    const bool twice = third || nth;
     auto dmg = [&](const Target& v) { return damage(u, v) * (twice ? 2 : 1) * kept; };
     const Target t = now ? *now : aim;
     // Burn: what the driven Firefly's flame hits catches fire.
@@ -2384,6 +2390,8 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
     for (size_t i = 0; i < state.structures.size(); i++) {
         if (state.structures[i].id != id) continue;
         const Structure st = state.structures[i];
+        // Hardened works: the pilot's own buildings take less.
+        if (ownBuilding(st)) damage_ *= skillBoost(SkillStat::ownBuildingDamageTaken).rate();
         if (pilot && shooter && state.hostile(shooter->owner, st.owner)) {
             const Unit s = *shooter;
             earnHit(s, Leveling::worth(st.kind), ac::min(damage_, ac::max(0.0, st.hp)), Rules::hp(st.kind), true);
@@ -2609,6 +2617,13 @@ void Simulation::bury(std::vector<GameEvent>& events) {
             }
             if (u.patch && state.patches[size_t(*u.patch)].miner == u.id) state.patches[size_t(*u.patch)].miner = std::nullopt;
             if (pilot) refund(u);
+            // Second wind: the server brings the pilot back sooner, with
+            // part of the cargo.
+            if (const auto w = skill<SkillEffect::SecondWind>(u)) {
+                const auto kept = static_cast<int64_t>(std::floor(static_cast<double>(u.carrying) * w->cargo));
+                fallen = Fallen{u.id, kept, u.hydrogen == true, w->sooner};
+            }
+            fieldPumps.erase(u.id);
             tally(u, [](Tally& t) { t.deaths += 1; });
             if (u.owner >= 0 && u.owner < static_cast<int64_t>(state.players.size())) {
                 state.players[size_t(u.owner)].unitsLost = state.players[size_t(u.owner)].unitsLost.value_or(0) + 1;
@@ -2679,7 +2694,11 @@ void Simulation::regrow(std::vector<GameEvent>& events) {
         auto& p = state.patches[i];
         if (!(p.remaining <= 0)) continue;
         if (!p.depletedAt) { p.depletedAt = state.time; continue; }
-        if (state.time - *p.depletedAt >= Rules::regrowDelay) {
+        // Quick regrowth: one the pilot emptied comes back sooner.
+        const auto share = regrowShare.find(static_cast<int64_t>(i));
+        const double delay = Rules::regrowDelay * (share != regrowShare.end() ? share->second : 1.0);
+        if (state.time - *p.depletedAt >= delay) {
+            if (share != regrowShare.end()) regrowShare.erase(share);
             p.remaining = p.initial;
             p.depletedAt = std::nullopt;
             p.miner = std::nullopt;

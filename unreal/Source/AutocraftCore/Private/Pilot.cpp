@@ -135,6 +135,8 @@ void Simulation::stepPiloted(Unit& u, double dt, std::vector<GameEvent>& events)
     upkeep(u, dt);
     levelUpkeep(u, dt);
     if (p.ability) pilotUse(u, events);
+    // The MMO skill tree's slot keys.
+    if (p.slot > 0) useSlot(u, p.slot - 1, events);
     pilotPace = 0;
     if (pilotBusy(u, p, dt, events)) return;
     pilotFace(u, p, dt);
@@ -422,6 +424,8 @@ void Simulation::pilotAct(Unit& u, const PilotTarget& target_, bool pressed, dou
         }
     } else if (const auto pa = target_.as<PilotTarget::Patch>()) {
         prospectorMine(u, pa->_0);
+    } else if (const auto we = target_.as<PilotTarget::Well>()) {
+        fieldPumpStart(u, we->_0);
     } else if (const auto de = target_.as<PilotTarget::Derrick>()) {
         if (pressed && !de->busy) prospectorEnter(u, de->_0);
     } else if (const auto sc = target_.as<PilotTarget::Scaffold>()) {
@@ -473,8 +477,11 @@ std::optional<PilotTarget> Simulation::prospectorTarget(const Unit& u) const {
             patch = i;
         }
     }
-    if (derrick || patch) {
+    // Field pump: a bare well, when no Derrick or deposit is in reach.
+    const auto bare = derrick || patch ? std::nullopt : fieldWell(u);
+    if (derrick || patch || bare) {
         if (u.carrying > 0) return PilotTarget(PilotTarget::Full{});
+        if (bare) return PilotTarget(PilotTarget::Well{*bare});
         if (derrick) {
             if (const auto gi = wellIndex(*derrick)) {
                 const auto inside = (*state.wells)[*gi].harvester;
@@ -488,7 +495,7 @@ std::optional<PilotTarget> Simulation::prospectorTarget(const Unit& u) const {
     // Its own buildings: pick up an abandoned one, or mend a hurt one.
     const Structure* own = nullptr;
     for (const Structure& s : state.structures) {
-        if (!(s.owner == u.owner && NavGrid::insideStructure(u.position, s, pilotHydrogenReach) && ahead(u, s.position))) {
+        if (!(s.owner == u.owner && NavGrid::insideStructure(u.position, s, workReach(u)) && ahead(u, s.position))) {
             continue;
         }
         if (!own || distance(s.position, u.position) < distance(own->position, u.position)) own = &s;
@@ -506,7 +513,7 @@ std::optional<PilotTarget> Simulation::prospectorTarget(const Unit& u) const {
         if (welded) return std::nullopt;
         return PilotTarget(PilotTarget::Scaffold{s.id});
     }
-    if (s.hp < Rules::hp(s.kind)) return PilotTarget(PilotTarget::Repair{s.id});
+    if (s.hp < fullHP(s)) return PilotTarget(PilotTarget::Repair{s.id});
     return std::nullopt;
 }
 
@@ -523,8 +530,8 @@ std::optional<PilotTarget> Simulation::pilotRepair(const Unit& u) const {
     if (const auto v = hurtMachine(u)) return PilotTarget(PilotTarget::Repair{*v});
     const Structure* best = nullptr;
     for (const Structure& s : state.structures) {
-        if (!(s.owner == u.owner && s.complete() && s.kind != Structure::Kind::lab && s.hp < Rules::hp(s.kind)
-              && NavGrid::insideStructure(u.position, s, pilotHydrogenReach) && ahead(u, s.position))) {
+        if (!(s.owner == u.owner && s.complete() && s.kind != Structure::Kind::lab && s.hp < fullHP(s)
+              && NavGrid::insideStructure(u.position, s, workReach(u)) && ahead(u, s.position))) {
             continue;
         }
         if (!best || distance(s.position, u.position) < distance(best->position, u.position)) best = &s;
@@ -564,6 +571,7 @@ std::optional<int64_t> Simulation::wellIndex(const Structure& s) const {
 /// Walking off a patch, or letting go of the key, loses the drilling.
 bool Simulation::prospectorBusy(Unit& u, const Pilot& p, double dt, std::vector<GameEvent>& events) {
     const bool walking = length(p.walk) > 0.1;
+    if (fieldPumpBusy(u, p, dt)) return true;
     switch (u.task) {
     case Unit::Task::inDerrick: {
         const auto r = u.structure ? state.structure(*u.structure) : std::nullopt;
@@ -573,14 +581,13 @@ bool Simulation::prospectorBusy(Unit& u, const Pilot& p, double dt, std::vector<
             u.structure = std::nullopt;
             return false;
         }
-        u.timer -= dt * rate(Stat::Hydrogen{}, u);
+        // Quickfill: this pump is instant.
+        if (takeQuickfill(u)) u.timer = 0;
+        else u.timer -= dt * rate(Stat::Hydrogen{}, u);
         if (u.timer <= 0) {
             Well& g = (*state.wells)[*gi];
-            const int64_t take_ = min(load(u, true), g.remaining);
-            g.remaining -= take_;
+            pumpLoad(u, g);
             g.harvester = std::nullopt;
-            u.carrying = take_;
-            u.hydrogen = true;
             u.task = Unit::Task::idle;
         }
         return true;
@@ -598,18 +605,9 @@ bool Simulation::prospectorBusy(Unit& u, const Pilot& p, double dt, std::vector<
         turn(u, state.patches[pi_].position, dt);
         u.timer -= dt * rate(Stat::Drill{}, u);
         if (u.timer <= 0) {
-            // Rich vein: every third trip carries double.
-            const int64_t base = load(u, false);
-            const int64_t times = thirdTime(Action::oreTrip, u) ? 2 : 1;
-            const int64_t take_ = min(base * times, state.patches[pi_].remaining);
-            state.patches[pi_].remaining -= take_;
+            // Rich vein: every third trip carries double (and the skills).
+            takeOre(u, pi_, events);
             state.patches[pi_].miner = std::nullopt;
-            u.carrying = take_;
-            u.hydrogen = std::nullopt;
-            if (state.patches[pi_].remaining <= 0) {
-                state.patches[pi_].depletedAt = state.time;
-                events.push_back(GameEvent::PatchDepleted{pi_});
-            }
             u.task = Unit::Task::idle;
         }
         return true;
@@ -650,7 +648,7 @@ bool Simulation::prospectorBusy(Unit& u, const Pilot& p, double dt, std::vector<
                 }
             }
         }
-        if (!(i && state.structures[*i].hp < Rules::hp(state.structures[*i].kind) && p.hold && !walking)) {
+        if (!(i && state.structures[*i].hp < fullHP(state.structures[*i]) && p.hold && !walking)) {
             u.task = Unit::Task::idle;
             u.structure = std::nullopt;
             return false;
@@ -659,7 +657,7 @@ bool Simulation::prospectorBusy(Unit& u, const Pilot& p, double dt, std::vector<
         turn(u, s.position, dt);
         // A full repair takes as long as building it; the driven
         // Prospector mends `Rules.heroWork` times as fast (or as its picks say).
-        const double full = Rules::hp(s.kind);
+        const double full = fullHP(s);
         state.structures[*i].hp = min(full, s.hp + full / Rules::buildTime(s.kind) * rate(Stat::Repair{}, u) * dt);
         const double mended = state.structures[*i].hp - s.hp;
         earn(Leveling::worth(s.kind) * mended / full * Leveling::mendXP, u);
@@ -711,9 +709,10 @@ void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
         }
     }
     if (!citadel) return;
-    earn(static_cast<double>(u.carrying) * (u.hydrogen == true ? Leveling::hydrogenXP : Leveling::oreXP), u);
-    const int64_t load_ = u.carrying;
     const bool hydrogen = u.hydrogen == true;
+    // Stardust heart, Silver tide: the load counts more, in the wallet and XP.
+    const int64_t load_ = unloaded(u, u.carrying, hydrogen);
+    earn(static_cast<double>(load_) * (hydrogen ? Leveling::hydrogenXP : Leveling::oreXP), u);
     tally(u, [&](Tally& t) {
         if (hydrogen) {
             t.hydrogen += load_;
@@ -721,13 +720,13 @@ void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
             t.ore += load_;
         }
     });
-    if (u.hydrogen == true) {
-        state.players[u.owner].hydrogen += u.carrying;
+    if (hydrogen) {
+        state.players[u.owner].hydrogen += load_;
     } else {
-        state.players[u.owner].ore += u.carrying;
-        state.players[u.owner].totalMined += u.carrying;
+        state.players[u.owner].ore += load_;
+        state.players[u.owner].totalMined += load_;
     }
-    events.push_back(GameEvent::Deposited{u.id, u.carrying, citadel->position});
+    events.push_back(GameEvent::Deposited{u.id, load_, citadel->position});
     u.carrying = 0;
     u.hydrogen = std::nullopt;
 }
@@ -757,6 +756,8 @@ void Simulation::prospectorEnter(Unit& u, int64_t rid) {
     u.patch = std::nullopt;
     u.task = Unit::Task::inDerrick;
     u.timer = Rules::hydrogenTime;
+    // Derrick tender: what the Derrick filled by itself goes to the wallet.
+    collectTank(u, rid);
 }
 
 void Simulation::prospectorResume(Unit& u, int64_t sid) {
@@ -906,8 +907,15 @@ std::optional<std::string> Simulation::pilotBuild(Structure::Kind kind, Vec2 p) 
     const Price price = buildCost(kind, u.owner);
     state.players[u.owner].ore -= price.ore;
     state.players[u.owner].hydrogen -= price.hydrogen;
-    const Structure s(state.nextID, kind, u.owner, p, Rules::buildTime(kind), u.id);
+    Structure s(state.nextID, kind, u.owner, p, Rules::buildTime(kind), u.id);
     state.nextID += 1;
+    if (skilled(u)) {
+        // The pilot's own; Head start: it starts part built.
+        pilotBuildings.insert(s.id);
+        const double share = min(0.95, max(0.0, skillBoost(SkillStat::builtOnPlacing).plus));
+        s.buildLeft = Rules::buildTime(kind) * (1 - share);
+        s.hp = fullHP(s) * (0.1 + 0.9 * share);
+    }
     state.structures.push_back(s);
     state.units[*i].task = Unit::Task::building;
     state.units[*i].structure = s.id;

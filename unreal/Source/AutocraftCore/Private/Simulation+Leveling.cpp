@@ -9,6 +9,7 @@
 
 #include "Commander.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <limits>
@@ -162,6 +163,8 @@ Boost Simulation::boost(const Stat& stat, const Unit& u) const {
     Boost b;
     if (driven) {
         if (auto c = Leveling::hero(stat)) b.add(*c);
+        // The MMO skill tree, while the region has the pilot's progress.
+        if (progress) addSkills(stat, d, b);
     }
     if (u.rush && u.rushUntil.value_or(-1) > state.time) {
         const Rush& r = *u.rush;
@@ -245,7 +248,10 @@ Price Simulation::buildCost(StructureKind kind, int64_t owner) const {
     const auto d = pilotUnit();
     if (!(d && d->owner == owner && d->kind == UnitKind::prospector)) return Price{Rules::cost(kind), Rules::hydrogenCost(kind)};
     const Boost b = boost(Stat::BuildingCost{}, *d);
-    return Price{b.apply(Rules::cost(kind)), b.apply(Rules::hydrogenCost(kind))};
+    // Efficient plans: the MH part, adding up with Prefab.
+    Boost h = b;
+    h.percent += skilled(*d) ? skillBoost(SkillStat::buildingHydrogenCost).percent : 0.0;
+    return Price{b.apply(Rules::cost(kind)), h.apply(Rules::hydrogenCost(kind))};
 }
 
 /// Supply a Hab Dome of player `owner` gives now (Supply chief).
@@ -370,6 +376,15 @@ void Simulation::throwGrenade(Unit& u, std::vector<GameEvent>& events) {
     const auto* grenade = key->second.as<Effect::Grenade>();
     if (!grenade) return;
     const Grenade g = grenade->grenade;
+    throwGrenade(u, g, events);
+    const double ready = state.time + g.cooldown;
+    const UnitKind k = u.kind;
+    updateLevels([&](PilotRecord& r) { r.kinds[k].burstReady = ready; });
+}
+
+/// The grenade `g` at the crosshair (Pulse mine, from the ability key or
+/// a skill slot).
+void Simulation::throwGrenade(Unit& u, const Grenade& g, std::vector<GameEvent>& events) {
     const double reach = weapon(u).range + Rules::radius(u.kind);
     Vec2 at = u.position + Vec2(std::cos(u.look()), std::sin(u.look())) * reach;
     int64_t hits = 0;
@@ -398,9 +413,6 @@ void Simulation::throwGrenade(Unit& u, std::vector<GameEvent>& events) {
     }
     tally(u, [&](Tally& t) { t.blastHits += hits; });
     events.push_back(GameEvent::Blast{u.id, at, g.radius});
-    const double ready = state.time + g.cooldown;
-    const UnitKind k = u.kind;
-    updateLevels([&](PilotRecord& r) { r.kinds[k].burstReady = ready; });
 }
 
 /// Start the driven unit's burst: it pays the hp, and the clock runs.
@@ -418,7 +430,15 @@ void Simulation::startBurst(Unit& u) {
 }
 
 /// The driven unit jumps cliffs (a Comet, or Cliff hop).
-bool Simulation::pilotJumps(const Unit& u) const { return Pilot::jumps(u.kind) || drives(u, Effect::CliffJump{}); }
+bool Simulation::pilotJumps(const Unit& u) const {
+    if (Pilot::jumps(u.kind) || drives(u, Effect::CliffJump{})) return true;
+    // Cliff hop, in the skill tree.
+    if (!skilled(u)) return false;
+    return std::any_of(skillEffects.begin(), skillEffects.end(), [](const SkillEffect& e) {
+        const auto* c = e.as<SkillEffect::Core>();
+        return c && c->effect.is<Effect::CliffJump>();
+    });
+}
 
 /// Field welder: the share of a machine's training time a full repair
 /// by the driven Prospector `u` takes; nil without it.
@@ -440,12 +460,21 @@ void Simulation::levelUpkeep(Unit& u, double dt) const {
         const auto& e = effects(perk);
         mine.insert(mine.end(), e.begin(), e.end());
     }
+    // The skill tree's Shield and Self mend, and Ironclad on the shield.
+    std::optional<SkillEffect::ShieldUp> up;
+    if (skilled(u)) {
+        for (const SkillEffect& e : skillEffects) {
+            if (const auto* c = e.as<SkillEffect::Core>()) mine.push_back(c->effect);
+            else if (const auto* x = e.as<SkillEffect::ShieldUp>()) up = *x;
+        }
+    }
     const double quiet = state.time - u.hitAt.value_or(-std::numeric_limits<double>::infinity());
     std::optional<double> shield;
     for (const Effect& e : mine) {
         if (auto s = e.as<Effect::Shield>()) {
-            double now = min(u.shield.value_or(0), s->shield.hp);
-            if (quiet >= s->shield.delay) now = min(s->shield.hp, now + s->shield.hp / s->shield.refill * dt);
+            const double hp = s->shield.hp + (up ? up->hp : 0), refill = up ? up->refill : s->shield.refill;
+            double now = min(u.shield.value_or(0), hp);
+            if (quiet >= s->shield.delay) now = min(hp, now + hp / refill * dt);
             shield = now;
         } else if (auto m = e.as<Effect::SelfMend>(); m && quiet >= m->delay) {
             u.hp = min(maxHP(u), u.hp + m->hpPerSecond * dt);
