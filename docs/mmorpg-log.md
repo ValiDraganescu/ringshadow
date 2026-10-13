@@ -205,3 +205,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T E1 encryption, E2 Mac package (no sign/notarize), E3 leftovers: agents.
 - T E3 done b4e3529: no false wallet flash; "CITADEL n%" while welding.
 - N Cause: new mirror's default 50 ore before first snapshot.
+- T E1 done b4372f4: Monocypher 4.0.3, checksums verified, protocol v3.
+- D Keys: X25519 + BLAKE2b-512 split per direction; token sealed only.
+- N +16 bytes/packet (tag); max payload 1165.
+- I No server authentication yet: waits for accounts.
+- I First server launch after rebuild stalled 40 s (once).
