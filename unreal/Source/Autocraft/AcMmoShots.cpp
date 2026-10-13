@@ -330,6 +330,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				T.Phase = 17;
 				return;
 			}
+			if (!Shots.bCardsShot && !bCards && Built(*C) >= 0.4)
+			{
+				// A world without picks (the skill tree replaces them): no cards to shoot.
+				UE_LOG(LogAutocraft, Display, TEXT("mmoshots: 07-level-up-cards skipped: no cards"));
+				Shots.bCardsShot = true;
+				Shots.Skipped += 1;
+			}
 			if (Shots.bCardsShot && Built(*C) >= 0.4)
 			{
 				Check(Ore == Shots.OreBefore - ac::Rules::cost(ac::StructureKind::citadel),
@@ -698,7 +705,15 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 47:
 		// A level-up pick (Z), then the HUD's plates must still draw with
 		// their frames (Q5: they once drew as flat glass; FAcHudStyle::PlateProblem).
-		Check(Leveling && Leveling->DrivenOffer().IsSet() && Leveling->PickKey(TEXT("z")), TEXT("Z picked a level-up card"));
+		if (!Leveling || !Leveling->DrivenOffer().IsSet())
+		{
+			UE_LOG(LogAutocraft, Display, TEXT("mmoshots: 18-after-pick skipped: no cards"));
+			Shots.Skipped += 1;
+			T.Phase = 49;
+			T.PhaseAt = Now;
+			return;
+		}
+		Check(Leveling->PickKey(TEXT("z")), TEXT("Z picked a level-up card"));
 		Advance();
 		return;
 	case 48:
@@ -710,7 +725,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		return;
 	default:
-		Check(Shots.Saved == 22, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Check(Shots.Saved + Shots.Skipped == 22, FString::Printf(TEXT("%d pictures (%d skipped) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	}

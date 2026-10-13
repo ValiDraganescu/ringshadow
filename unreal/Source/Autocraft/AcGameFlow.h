@@ -233,6 +233,9 @@ private:
 		int64 HydrogenBefore = -1;
 		int64 VisitWas = 0;
 		bool bCardsShot = false;
+		/// Moments a world without level-up cards skips (07, 18), counted
+		/// with the pictures.
+		int32 Skipped = 0;
 		/// When the cards were first up (the banner is shot once it is in).
 		double CardsSince = -1;
 		bool bShotBefore = false;
