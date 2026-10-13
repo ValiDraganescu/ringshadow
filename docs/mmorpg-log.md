@@ -157,3 +157,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Restart: in-progress building loses builder; units come back idle.
 - I --save needs --world; duplicate key online is disconnected.
 - T S4 started (background agent).
+- T S4 done 2a1b4e5: pilot.key, first.sqlite, resume / NEW WORLD.
+- N Save: ~/Library/Application Support/Autocraft/Unreal/mmo/first.sqlite.
+- N Tests use -AcMmoDir / temp dirs, never user's save.
+- D Server prints "FAILED save <why>"; banner shows it.
+- T M3 built; awaiting user hand check.
