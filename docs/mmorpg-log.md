@@ -69,3 +69,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Window game paused behind mode, saved on enter.
 - I No restart-server button; pause card shows "AI on".
 - T T6 → same worker, after compaction.
+- I User ran main repo editor; MMORPG work only in worktree.
+- N Open worktree's unreal/Autocraft.uproject to test MMORPG.
+- N Copied 9 untracked assets (cursors, splash) from main; don't commit.
