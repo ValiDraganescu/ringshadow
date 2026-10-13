@@ -1,0 +1,6 @@
+{
+  "command" : "echo \"Ringshadow website: http:\/\/localhost:8000\" && uv run --no-project python -m http.server 8000 --bind 127.0.0.1 -d website",
+  "cwd" : "\/Users\/valentindraganescu\/git\/dev\/autocraft-worktrees\/MMORPG-variant",
+  "id" : "5E4161F7-49CB-4C77-A9AC-EE250A6D3E33",
+  "name" : "Ringshadow-Website"
+}
