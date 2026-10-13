@@ -34,3 +34,14 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Not yet: PathAhead threads (≥300 units), Intel.units memory.
 - N Bench Badlands Large 1480 things: step 1.68 ms mean, p95 5.1, max 46.
 - N Snapshot build 0.33 ms mean at 256 entities.
+- T T1 done, merged: AutocraftNet, `make -C unreal/net-tests` 35 pass, UE build ok.
+- N Net API: ac::net ServerEndpoint/ClientEndpoint, polled, time passed in.
+- D Cookie = SipHash-2-4 of ip, port, 10 s window.
+- D Hello/answer padded 1200 B: no amplification.
+- D Channel priority: reliable, bulk, then unreliable fills budget.
+- I IPv4 only; no Windows socket yet.
+- N Lag simulator lags both directions; use on one end only.
+- D Protocol + snapshot structs move into AutocraftNet (shared by both ends).
+- D Per-entity delta baselines; snapshot may span several unreliable messages.
+- D Local server token via stdin, not command line (ps shows args).
+- T T4 → worker mmo-server-world (reused).

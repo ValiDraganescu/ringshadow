@@ -26,10 +26,10 @@ Windows and Linux servers, accounts, AI pilots, lots, more regions.
 
 | # | Task | Needs | Status |
 |---|---|---|---|
-| T1 | `AutocraftNet` transport + lag simulator + tests | | running |
+| T1 | `AutocraftNet` transport + lag simulator + tests | | done |
 | T2 | Server world: headless region on `ac::Simulation`, one pilot's input, per-pilot snapshot data (fog, near first), no network | | done |
 | T3 | Map how the game layer reads `ac::Simulation` (what a client mirror must stand in for) | | done |
-| T4 | Protocol: messages, bit-packed snapshots with deltas; server program wiring T1+T2: port on stdout, parent watch, log | T1, T2 | todo |
+| T4 | Protocol: messages, bit-packed snapshots with deltas; server program wiring T1+T2: port on stdout, parent watch, log | T1, T2 | running |
 | T5 | Game client mode: launch the server, connect, mirror, draw, send input | T3, T4 | todo |
 | T6 | Prediction + reconciliation of the driven machine; lag setting in the game | T5 | todo |
 
