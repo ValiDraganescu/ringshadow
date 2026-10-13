@@ -138,3 +138,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Save: server SQLite per world, every 5 s + on stop.
 - D Pilot id: random, kept by game, sent after connect.
 - D Leveling persists per pilot; pick is a request.
+- I Orchestrator restarted: manager now terminal 65E466C1; mmo-world gone.
+- N Spawn with parent_id 65E466C1 (parent_is_self fails now).
