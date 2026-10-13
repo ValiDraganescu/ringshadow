@@ -1,0 +1,212 @@
+/* The roadmap: the giant Ringshadow and a ring of milestone moons. By
+   default (phones, reduced motion) it reads as a plain list under a still
+   picture of the giant. On a wide screen with motion allowed, the giant
+   stays in view and the ring turns with the scroll ("orbit mode"). */
+
+:root {
+  --done: var(--gold);
+  --next: var(--cyan);
+  --later: var(--violet);
+}
+
+/* ---------- Intro and legend ---------- */
+
+.rm-intro { padding-top: 28px; padding-bottom: 12px; }
+.orbit-hint { display: none; }
+.rm-intro h1 {
+  font-family: var(--mark); font-weight: 800;
+  font-size: clamp(2.2rem, 6.4vw, 4rem);
+  letter-spacing: 0.04em; text-transform: uppercase;
+  background: linear-gradient(90deg, #fff 0%, var(--ice) 35%, var(--soft) 60%, #3b6f8c 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.rm-intro .lede { max-width: 58ch; }
+
+.legend {
+  list-style: none; padding: 0; margin: 24px 0 0;
+  display: flex; flex-wrap: wrap; gap: 10px 28px;
+  font-size: 1.05rem; color: var(--soft);
+}
+.legend li { display: flex; align-items: center; gap: 10px; }
+.legend b { letter-spacing: 0.16em; font-weight: 700; }
+.legend li:nth-child(1) b { color: var(--done); }
+.legend li:nth-child(2) b { color: var(--next); }
+.legend li:nth-child(3) b { color: var(--later); }
+
+.dot { width: 16px; height: 16px; border-radius: 50%; flex: none; display: inline-block; }
+.dot.done {
+  background: radial-gradient(circle at 32% 34%, #fff 0%, #ffe7b0 30%, var(--gold) 70%, #7a5a1c 100%);
+  box-shadow: 0 0 12px rgba(255, 204, 82, 0.7);
+}
+.dot.next {
+  background: linear-gradient(90deg, var(--ice) 50%, #06202e 50%);
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 10px rgba(89, 217, 255, 0.6);
+}
+.dot.later { background: #0a1626; border: 1.5px dashed var(--violet); }
+
+/* ---------- The stage: the giant ---------- */
+
+.stage {
+  position: relative;
+  height: min(78vw, 520px);
+  margin: 8px 0 0;
+  overflow: hidden;
+}
+.sun {
+  position: absolute; left: -20%; top: -30%; width: 80%; height: 90%;
+  background: radial-gradient(closest-side, rgba(255, 226, 168, 0.22), rgba(255, 204, 82, 0.06) 55%, transparent);
+  pointer-events: none;
+  opacity: var(--sun, 1);
+}
+.giant { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+.track { stroke: rgba(140, 217, 242, 0.28); stroke-width: 1.2; stroke-dasharray: 2 7; }
+
+.moon { cursor: pointer; }
+.moon .body { transition: r 0.3s; }
+.moon.done .body { fill: url(#moonDone); filter: url(#bloom); }
+.moon.next .body { fill: url(#moonNext); stroke: var(--cyan); stroke-width: 2.5; }
+.moon.later .body { fill: #0a1626; stroke: var(--violet); stroke-width: 1.4; stroke-dasharray: 3 3; opacity: 0.85; }
+.moon .halo { fill: none; stroke-width: 1.5; opacity: 0; }
+.moon.next .halo { stroke: var(--cyan); opacity: 0.6; animation: pulse 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.moon.active .halo { opacity: 1; stroke: var(--ice); animation: pulse 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulse {
+  from { transform: scale(1); opacity: 0.9; }
+  to { transform: scale(2.2); opacity: 0; }
+}
+.now-mark polygon { fill: var(--cyan); }
+.now-mark text, .tag-text {
+  font-family: var(--hud); font-weight: 700; letter-spacing: 0.18em;
+  font-size: 15px; fill: var(--cyan); text-transform: uppercase;
+}
+.now-mark text { font-size: 17px; paint-order: stroke; stroke: rgba(3, 9, 18, 0.9); stroke-width: 5px; }
+.tag-text { fill: var(--ice); font-size: 18px; paint-order: stroke; stroke: rgba(3, 9, 18, 0.85); stroke-width: 5px; }
+.tag-line { stroke: var(--ice); stroke-width: 1; opacity: 0.7; }
+
+.readout {
+  position: absolute; left: 16px; top: 14px;
+  display: flex; flex-direction: column; gap: 2px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.85rem;
+  color: var(--soft);
+}
+.ro-count { font-size: 1.5rem; color: var(--ice); letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+.ro-status[data-s="done"] { color: var(--done); }
+.ro-status[data-s="next"] { color: var(--next); }
+.ro-status[data-s="later"] { color: var(--later); }
+
+.stage-legend {
+  position: absolute; left: 16px; bottom: 14px;
+  list-style: none; margin: 0; padding: 8px 12px;
+  display: flex; gap: 14px;
+  font-size: 0.85rem; font-weight: 700; letter-spacing: 0.16em; color: var(--soft);
+  background: rgba(3, 9, 18, 0.6); border: 1px solid var(--panel-edge); border-radius: 3px;
+}
+.stage-legend li { display: flex; align-items: center; gap: 6px; }
+.stage-legend .dot { width: 11px; height: 11px; }
+
+/* ---------- The list (always there; the source of the moons) ---------- */
+
+.eras { padding: 0 var(--gutter); max-width: 920px; margin: 0 auto; }
+@media (max-width: 600px) {
+  .readout, .stage-legend { display: none; }
+  .stage { height: 64vw; }
+}
+.era { position: relative; }
+.era-head { padding: 48px 0 8px; }
+.era-head h2 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); }
+.era-head p:last-child { color: var(--soft); }
+
+.ms-list { list-style: none; margin: 0; padding: 0 0 0 30px; position: relative; }
+/* The ring, unrolled: a line down the list, golden in the sun, cyan at
+   the terminator and violet in the shadow. */
+.ms-list::before {
+  content: ""; position: absolute; left: 8px; top: 6px; bottom: 6px; width: 2px;
+  background: var(--line, var(--done)); opacity: 0.5;
+}
+.era:nth-of-type(4) .ms-list { --line: var(--next); }
+.era:nth-of-type(5) .ms-list { --line: repeating-linear-gradient(var(--later) 0 6px, transparent 6px 12px); }
+
+.ms {
+  position: relative;
+  margin: 0 0 18px; padding: 18px 20px 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge); border-radius: 4px;
+}
+.ms::before {
+  content: ""; position: absolute; left: -30px; top: 22px;
+  width: 18px; height: 18px; border-radius: 50%;
+}
+.ms[data-status="done"]::before {
+  background: radial-gradient(circle at 32% 34%, #fff 0%, #ffe7b0 30%, var(--gold) 70%, #7a5a1c 100%);
+  box-shadow: 0 0 12px rgba(255, 204, 82, 0.7);
+}
+.ms[data-status="next"]::before {
+  background: linear-gradient(90deg, var(--ice) 50%, #06202e 50%);
+  border: 2px solid var(--cyan); box-shadow: 0 0 10px rgba(89, 217, 255, 0.6);
+}
+.ms[data-status="later"]::before { background: #0a1626; border: 1.5px dashed var(--violet); }
+.ms[data-status="done"] { border-left: 3px solid var(--done); }
+.ms[data-status="next"] { border-left: 3px solid var(--next); }
+.ms[data-status="later"] { border-left: 3px dashed var(--later); }
+
+.ms h3 { font-size: 1.55rem; margin: 6px 0 6px; }
+.ms p { margin-bottom: 8px; }
+.ms ul { margin: 0 0 4px; padding-left: 20px; color: var(--soft); font-size: 1.08rem; }
+.ms ul li::marker { color: var(--cyan); }
+.ms-meta { display: flex; align-items: center; gap: 12px; font-size: 0.95rem; color: var(--muted); letter-spacing: 0.1em; }
+.ms-meta time, .ms-meta .tagline { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.chip {
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.82rem;
+  padding: 2px 9px 1px; border-radius: 2px;
+}
+.chip.done { background: var(--done); color: var(--glass); }
+.chip.next { background: transparent; color: var(--next); border: 1px solid var(--next); box-shadow: inset 0 0 10px rgba(89, 217, 255, 0.25); }
+.chip.later { background: transparent; color: var(--later); border: 1px dashed var(--later); }
+
+.rm-foot { padding: 30px 0 0; font-size: 1rem; }
+
+/* ---------- Orbit mode ---------- */
+
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  .orbit {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr);
+    align-items: start;
+  }
+  .stage {
+    position: sticky; top: var(--nav-h);
+    height: calc(100vh - var(--nav-h));
+    margin: 0;
+    overflow: visible;
+  }
+  .giant { inset: 4% 0 4% 2%; width: 98%; height: 92%; }
+  .readout { left: var(--gutter); top: 24px; }
+  .stage-legend { left: var(--gutter); bottom: 24px; }
+
+  .eras { padding: 0 var(--gutter) 30vh 12px; max-width: none; margin: 0; }
+  .orbit-hint { display: inline; }
+  .rm-intro { padding-top: 9vh; }
+  .rm-intro h1 { font-size: clamp(2.2rem, 3.4vw, 3.4rem); }
+  .legend { flex-direction: column; gap: 8px; }
+  .era-head { padding: 22vh 0 0; }
+  .ms {
+    min-height: 0;
+    margin: 0 0 30vh;
+    opacity: 0.42;
+    transform: translateX(14px);
+    transition: opacity 0.45s, transform 0.45s, border-color 0.45s, box-shadow 0.45s;
+  }
+  .ms:first-child { margin-top: 18vh; }
+  .ms.active {
+    opacity: 1; transform: none;
+    box-shadow: 0 0 0 1px rgba(89, 217, 255, 0.35), 0 20px 60px rgba(0, 0, 0, 0.55);
+  }
+  .ms-list::before { opacity: 0.25; }
+}
+
+/* Under reduced motion nothing moves or pulses. */
+@media (prefers-reduced-motion: reduce) {
+  .moon .halo, .moon.next .halo, .moon.active .halo { animation: none; }
+}

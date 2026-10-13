@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ringshadow</title>
+  <meta name="description" content="Ringshadow: a real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself. Built in public with AI agents, public domain (CC0).">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="Ringshadow">
+  <meta property="og:description" content="A real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself.">
+  <meta property="og:image" content="assets/media/key-art.jpg">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/BarlowCondensed-Medium.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/site.css">
+  <link rel="stylesheet" href="assets/css/home.css">
+  <script src="assets/js/stars.js" defer></script>
+  <script src="assets/js/home.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html" aria-current="page">Home</a></li>
+      <li><a href="roadmap.html">Roadmap</a></li>
+      <li><a class="gh" href="https://github.com/ValiDraganescu/ringshadow"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></li>
+    </ul>
+  </nav>
+
+  <header class="hero">
+    <img class="hero-art" src="assets/media/key-art.jpg" alt="" width="1408" height="704">
+    <div class="hero-shade" aria-hidden="true"></div>
+    <div class="wrap hero-copy">
+      <p class="kicker">A frontier world · Ashfall Reach</p>
+      <h1 class="wordmark">RINGSHADOW</h1>
+      <p class="lede">A real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself.</p>
+      <p class="hero-meta">Unreal Engine 5 · Mac, Windows and Linux builds · built in public with AI agents · public domain (CC0)</p>
+      <div class="hero-cta">
+        <a class="btn" href="#play">See how you play</a>
+        <a class="btn ghost" href="roadmap.html">The roadmap</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <section class="section intro wrap">
+      <div class="intro-text">
+        <p class="kicker">The pitch</p>
+        <h2>Live in the giant's shadow</h2>
+        <p class="lede">On a frontier world, Prospectors drill Stardust Ore and pump Metallic Hydrogen while armies of up to eight players clash over the deposits.</p>
+        <p>You don't micromanage. Your team's AI commander runs the army. You steer it from above, and when a fight matters, you take over a unit and play it like a shooter. Overhead hangs Ringshadow, the huge ringed gas giant the game is named for.</p>
+      </div>
+      <figure class="intro-media">
+        <div class="media panel"><video src="assets/media/dive.mp4" poster="assets/media/dive-poster.jpg" muted loop playsinline autoplay preload="metadata" aria-label="The camera dives from the top-down view into a Ranger, who walks out in first person"></video></div>
+        <figcaption>Click a unit and the camera dives in. Recorded in the game.</figcaption>
+      </figure>
+    </section>
+
+    <section class="section wrap" id="play">
+      <p class="kicker">How you play</p>
+      <h2>Three ways, switch any time</h2>
+      <div class="modes">
+        <article class="mode panel">
+          <span class="mode-n">01</span>
+          <img src="assets/media/top.jpg" alt="The top-down view: the Citadel, its Stardust Ore line and two Metallic Hydrogen wells" width="1280" height="720" loading="lazy">
+          <h3>Your buildings</h3>
+          <p>Click a building and press its buttons: train units, research, build. Anything the AI can do for you is queued for your team's commander instead of being refused.</p>
+        </article>
+        <article class="mode panel">
+          <span class="mode-n">02</span>
+          <img src="assets/media/command-map.jpg" alt="The command map: the bases of the map and the team's objectives" width="1280" height="720" loading="lazy">
+          <h3>The command map <kbd>M</kbd></h3>
+          <p>Give your AI orders: a stance, objectives (attack, defend, hold, man a Bastion), expansions and requests. It plans the rest.</p>
+        </article>
+        <article class="mode panel">
+          <span class="mode-n">03</span>
+          <video src="assets/media/fight.mp4" poster="assets/media/fight-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="Two armies of twelve meet in the desert, seen from above as the camera sweeps in"></video>
+          <h3>Drive a unit</h3>
+          <p>Click any of your units and dive in. <kbd>WASD</kbd> walks, the mouse aims, a click fires, <kbd>R</kbd> uses its ability, <kbd>V</kbd> switches first and third person, <kbd>Esc</kbd> hands it back to the AI.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section wrap" id="units">
+      <p class="kicker">The roster</p>
+      <h2>Every unit is playable</h2>
+      <p class="lede">Twelve kinds, each with its own cockpit, weapon and ability.</p>
+      <ul class="units">
+        <li><img src="assets/media/pilot-ore.jpg" alt="" width="1280" height="720" loading="lazy"><b>Prospector</b><span>Mines ore, pumps MH, builds, repairs</span></li>
+        <li><img src="assets/media/pilot-ranger-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Ranger</b><span>Rifle infantry</span></li>
+        <li><img src="assets/media/pilot-comet-jump.jpg" alt="" width="1280" height="720" loading="lazy"><b>Comet</b><span>Jump-pack raider, clears cliffs</span></li>
+        <li><img src="assets/media/pilot-juggernaut-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Juggernaut</b><span>Heavy grenadier</span></li>
+        <li><img src="assets/media/pilot-firefly-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Firefly</b><span>Fast flame buggy</span></li>
+        <li><img src="assets/media/pilot-dropship-heal.jpg" alt="" width="1280" height="720" loading="lazy"><b>Dropship</b><span>Healing transport</span></li>
+        <li><img src="assets/media/pilot-longbow-anchored.jpg" alt="" width="1280" height="720" loading="lazy"><b>Longbow</b><span>A tank that anchors into artillery</span></li>
+        <li><img src="assets/media/pilot-kestrel-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Kestrel</b><span>Rocket gunship</span></li>
+        <li><img src="assets/media/pilot-hailstorm-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Hailstorm</b><span>Flak half-track</span></li>
+        <li><img src="assets/media/pilot-peregrine.jpg" alt="" width="1280" height="720" loading="lazy"><b>Peregrine</b><span>Air-superiority fighter</span></li>
+        <li><img src="assets/media/pilot-atlas.jpg" alt="" width="1280" height="720" loading="lazy"><b>Atlas</b><span>Heavy assault walker</span></li>
+        <li class="unit-text"><b>Scorpion</b><span>The twelfth: a burrowing mine. And any unit can be driven over the shoulder too <kbd>V</kbd>.</span></li>
+      </ul>
+      <div class="pair">
+        <figure>
+          <div class="media panel"><video src="assets/media/comet.mp4" poster="assets/media/comet-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="Driving a Comet in first person"></video></div>
+          <figcaption>A Comet in first person.</figcaption>
+        </figure>
+        <figure>
+          <div class="media panel"><video src="assets/media/third.mp4" poster="assets/media/third-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="A Ranger walking in third person"></video></div>
+          <figcaption>A Ranger in third person.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section wrap split" id="leveling">
+      <div>
+        <p class="kicker">Pilot leveling</p>
+        <h2>Units level up while you drive them</h2>
+        <p>The longer you drive a kind of unit in a game, the better every unit of that kind gets, but only while you're the one driving. Units the AI runs never level.</p>
+        <p>Every level offers two upgrades and you keep one: 216 of them across the twelve kinds ("Every Prospector pumps MH 20% faster"). It gives you a reason to drive the units that are dull to play, the Prospector first.</p>
+      </div>
+      <figure>
+        <div class="media panel"><img src="assets/media/level-cards.jpg" alt="A level-up: two upgrade cards over the Prospector's cockpit" width="1280" height="720" loading="lazy"></div>
+        <div class="media panel inset"><video src="assets/media/mining.mp4" poster="assets/media/mining-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="A Prospector drilling Stardust Ore in first person"></video></div>
+      </figure>
+    </section>
+
+    <section class="section wrap split flip" id="world">
+      <div>
+        <p class="kicker">The world</p>
+        <h2>Day, night, weather and the radio</h2>
+        <p>The sun crosses the sky, and at night the beacons and lamps come on. The weather runs on the game clock: sun, broken cloud, rain and storms with lightning, wet ground and hulls.</p>
+        <p>The music plays as a radio station, <b>KSTR 88.7 Stardust</b>, with original songs and in-world ads between them: Quicksilver Cola (pumped from Metallic Hydrogen wells, "not a beverage"), Opal Glow face scrub (side effects: levitation, being mined) and Citadel Timeshares (ash view guaranteed).</p>
+      </div>
+      <figure>
+        <div class="media panel"><video src="assets/media/flyover.mp4" poster="assets/media/flyover-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="The camera pans across the base at dusk"></video></div>
+        <div class="media panel inset"><img src="assets/media/top-night.jpg" alt="The base at night, its beacons lit" width="1280" height="720" loading="lazy"></div>
+      </figure>
+    </section>
+
+    <section class="section mmo" id="mmorpg">
+      <div class="wrap">
+        <p class="kicker">Coming: the MMORPG mode</p>
+        <h2>One pilot. One world that lasts.</h2>
+        <p class="lede">A persistent online world is being built next to the strategy game: you are one pilot who lives in the ringshadow and drives the machines yourself.</p>
+        <div class="mmo-grid">
+          <div class="panel mmo-card"><h3>Your level is yours</h3><p>Pilot levels and picks stay with your character between sessions. Drive a Longbow for a month and you're a Longbow ace.</p></div>
+          <div class="panel mmo-card"><h3>Cities built together</h3><p>Pilots raise their cities with ore, MH and hours of labour. Cities are the safe places to log in, trade and meet.</p></div>
+          <div class="panel mmo-card"><h3>No-man's land</h3><p>Between the cities lie the deposits, the wells and dwellings, taken and held by force. That's where the fighting happens.</p></div>
+          <div class="panel mmo-card"><h3>AI pilots</h3><p>AI characters who are pilots themselves, with a city and a level, keep the world busy where players are few.</p></div>
+        </div>
+        <p>Built so far, in a test mode: our own authoritative server on UDP, a world map of regions you drive across or fly between, a world the server saves, pilot levels that last, encryption, and the server inside the Mac package. It is single player first, on a local server that is the same program a public world will run.</p>
+        <a class="btn" href="roadmap.html">Follow it on the roadmap</a>
+      </div>
+    </section>
+
+    <section class="section wrap" id="made">
+      <p class="kicker">Built in public with AI agents</p>
+      <h2>How it's made</h2>
+      <div class="made">
+        <div>
+          <h3>An engine-free core</h3>
+          <p>The whole simulation, from the economy and pathing to combat and the AI commanders, is plain C++20 with no Unreal in it. Its tests build with clang and run in about 7 seconds. The Unreal layer draws the frames, plays the sounds and takes the input.</p>
+          <h3>Made by AI coding agents</h3>
+          <p>Ringshadow is made with AI coding agents, and the skills they work from are in the repository: concept art to an Unreal model, the buildings' light language, which tests a change needs, and the recorder that makes every clip on this page from the real game.</p>
+        </div>
+        <div>
+          <h3>From concept to model</h3>
+          <p>Each unit starts as concept paintings. The one picked becomes a six-view turnaround, and the in-engine model is built part by part with Geometry Script and fitted against those views.</p>
+          <div class="pipeline">
+            <figure><img src="assets/media/atlas-concept.jpg" alt="The Atlas concept painting" width="624" height="832" loading="lazy"><figcaption>Concept</figcaption></figure>
+            <figure><img src="assets/media/atlas-turnaround.jpg" alt="The Atlas six-view turnaround" width="1248" height="832" loading="lazy"><figcaption>Turnaround</figcaption></figure>
+            <figure><img src="assets/media/atlas-model.jpg" alt="The Atlas model in the engine" width="624" height="624" loading="lazy"><figcaption>In the engine</figcaption></figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wrap cc0" id="cc0">
+      <div class="panel cc0-card">
+        <p class="kicker">Public domain</p>
+        <h2>CC0: take any of it</h2>
+        <p>Everything in the repository is dedicated to the public domain under CC0 1.0: the code, the art, the models, the sounds, the music and the docs. Use any of it for anything, with no credit needed.</p>
+        <p class="muted">A few third-party files keep their own licences, listed in the README. The fonts on this site, Barlow Condensed and Exo 2, are under the SIL Open Font License (<a href="assets/fonts/OFL-BarlowCondensed.txt">Barlow</a>, <a href="assets/fonts/OFL-Exo2.txt">Exo 2</a>). The game is built with Unreal Engine 5, which has its own licence from Epic Games.</p>
+        <a class="btn ghost" href="https://github.com/ValiDraganescu/ringshadow">The source on GitHub</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div>
+        <p class="mark">RINGSHADOW</p>
+        <p>An open-source real-time strategy game, built in public.</p>
+      </div>
+      <div>
+        <p><a href="index.html">Home</a> · <a href="roadmap.html">Roadmap</a> · <a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></p>
+        <p>Public domain (CC0). No trackers, no cookies.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ringshadow Roadmap</title>
+  <meta name="description" content="The Ringshadow roadmap: what is done, what comes next and what comes later, from the strategy game to the MMORPG mode.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="Ringshadow Roadmap">
+  <meta property="og:description" content="Every milestone is a moon on Ringshadow's ring: the past in sunlight, the future in the giant's shadow.">
+  <meta property="og:image" content="assets/media/key-art.jpg">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/BarlowCondensed-Medium.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/site.css">
+  <link rel="stylesheet" href="assets/css/roadmap.css">
+  <script src="assets/js/stars.js" defer></script>
+  <script src="assets/js/roadmap.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="roadmap.html" aria-current="page">Roadmap</a></li>
+      <li><a class="gh" href="https://github.com/ValiDraganescu/ringshadow"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></li>
+    </ul>
+  </nav>
+
+  <main id="main">
+
+    <div class="orbit">
+      <div class="stage" aria-hidden="true">
+        <div class="sun"></div>
+        <svg class="giant" viewBox="-500 -390 1000 780" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="bands" x1="0" y1="-1" x2="0" y2="1" gradientUnits="objectBoundingBox" gradientTransform="rotate(-16 0.5 0.5)">
+              <stop offset="0" stop-color="#bff6ee"/>
+              <stop offset="0.08" stop-color="#6fd3c8"/>
+              <stop offset="0.14" stop-color="#2f9aa0"/>
+              <stop offset="0.2" stop-color="#e9d6a4"/>
+              <stop offset="0.25" stop-color="#5cc4bd"/>
+              <stop offset="0.31" stop-color="#2a7d8a"/>
+              <stop offset="0.36" stop-color="#f0c27c"/>
+              <stop offset="0.4" stop-color="#e58a46"/>
+              <stop offset="0.44" stop-color="#f6dca6"/>
+              <stop offset="0.5" stop-color="#4fb9b6"/>
+              <stop offset="0.55" stop-color="#9ee6d9"/>
+              <stop offset="0.6" stop-color="#2c8790"/>
+              <stop offset="0.65" stop-color="#e7b979"/>
+              <stop offset="0.69" stop-color="#c46f3c"/>
+              <stop offset="0.74" stop-color="#5fc7bf"/>
+              <stop offset="0.82" stop-color="#2a6f7c"/>
+              <stop offset="0.9" stop-color="#8fd8cb"/>
+              <stop offset="1" stop-color="#1d5664"/>
+            </linearGradient>
+            <filter id="swirl" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.045" numOctaves="3" seed="11" result="n"/>
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+            <radialGradient id="limb" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0.6" stop-color="#030912" stop-opacity="0"/>
+              <stop offset="0.92" stop-color="#030912" stop-opacity="0.35"/>
+              <stop offset="1" stop-color="#030912" stop-opacity="0.75"/>
+            </radialGradient>
+            <linearGradient id="night" x1="0" y1="0" x2="1" y2="0" gradientTransform="rotate(18 0.5 0.5)">
+              <stop class="t0" offset="0.5" stop-color="#030912" stop-opacity="0"/>
+              <stop class="t1" offset="0.62" stop-color="#030912" stop-opacity="0.94"/>
+            </linearGradient>
+            <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0.82" stop-color="#59d9ff" stop-opacity="0"/>
+              <stop offset="0.9" stop-color="#59d9ff" stop-opacity="0.32"/>
+              <stop offset="1" stop-color="#59d9ff" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="ringfade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#ccf2ff" stop-opacity="0.95"/>
+              <stop offset="0.5" stop-color="#8cd9f2" stop-opacity="0.75"/>
+              <stop offset="0.78" stop-color="#2a5a73" stop-opacity="0.45"/>
+              <stop offset="1" stop-color="#16324a" stop-opacity="0.35"/>
+            </linearGradient>
+            <radialGradient id="moonDone" cx="0.38" cy="0.4" r="0.65" fx="0.28" fy="0.32">
+              <stop offset="0" stop-color="#ffffff"/>
+              <stop offset="0.35" stop-color="#ffe7b0"/>
+              <stop offset="0.75" stop-color="#ffcc52"/>
+              <stop offset="1" stop-color="#7a5a1c"/>
+            </radialGradient>
+            <linearGradient id="moonNext" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0.5" stop-color="#ccf2ff"/>
+              <stop offset="0.5" stop-color="#06202e"/>
+            </linearGradient>
+            <filter id="bloom" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur stdDeviation="6" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <clipPath id="disc"><circle r="210"/></clipPath>
+            <clipPath id="front"><rect x="-600" y="0" width="1200" height="400"/></clipPath>
+          </defs>
+
+          <g class="tilt" transform="rotate(-16)">
+            <!-- The back of the ring and the moons behind the giant. -->
+            <g class="ring back" stroke="url(#ringfade)" fill="none">
+              <ellipse rx="300" ry="72" stroke-width="10" opacity="0.35"/>
+              <ellipse rx="326" ry="78" stroke-width="22" opacity="0.5"/>
+              <ellipse rx="356" ry="85" stroke-width="12" opacity="0.32"/>
+              <ellipse rx="384" ry="92" stroke-width="26" opacity="0.55"/>
+              <ellipse rx="414" ry="99" stroke-width="5" opacity="0.4"/>
+            </g>
+            <ellipse class="track" rx="462" ry="111" fill="none"/>
+            <g class="moons-back"></g>
+          </g>
+
+          <!-- The giant. -->
+          <g class="planet">
+            <circle r="236" fill="url(#glow)"/>
+            <g clip-path="url(#disc)">
+              <rect x="-260" y="-260" width="520" height="520" fill="url(#bands)" filter="url(#swirl)"/>
+              <g transform="rotate(-16)">
+                <ellipse class="ring-shadow" cx="0" cy="-26" rx="330" ry="80" fill="none" stroke="#030912" stroke-width="16" opacity="0.45"/>
+              </g>
+              <circle r="210" fill="url(#limb)"/>
+              <circle class="nightside" r="212" fill="url(#night)"/>
+            </g>
+          </g>
+
+          <g class="tilt" transform="rotate(-16)">
+            <g class="ring front" stroke="url(#ringfade)" fill="none" clip-path="url(#front)">
+              <ellipse rx="300" ry="72" stroke-width="10" opacity="0.35"/>
+              <ellipse rx="326" ry="78" stroke-width="22" opacity="0.5"/>
+              <ellipse rx="356" ry="85" stroke-width="12" opacity="0.32"/>
+              <ellipse rx="384" ry="92" stroke-width="26" opacity="0.55"/>
+              <ellipse rx="414" ry="99" stroke-width="5" opacity="0.4"/>
+            </g>
+            <ellipse class="track front-track" rx="462" ry="111" fill="none" clip-path="url(#front)"/>
+            <g class="moons-front"></g>
+          </g>
+          <g class="tag" opacity="0">
+            <line class="tag-line" x1="0" y1="0" x2="0" y2="0"/>
+            <text class="tag-text" x="0" y="0"></text>
+          </g>
+        </svg>
+
+        <div class="readout">
+          <span class="ro-era"></span>
+          <span class="ro-count"></span>
+          <span class="ro-status"></span>
+        </div>
+        <ul class="stage-legend">
+          <li><span class="dot done"></span>DONE</li>
+          <li><span class="dot next"></span>NEXT</li>
+          <li><span class="dot later"></span>LATER</li>
+        </ul>
+      </div>
+
+      <div class="eras">
+
+        <header class="rm-intro">
+          <p class="kicker">The roadmap</p>
+          <h1>The ring of Ringshadow</h1>
+          <p class="lede">Every milestone is a moon on the giant's ring. What is done orbits in the sunlight. What comes next is turning into the shadow, and what comes later is still deep inside it.<span class="orbit-hint"> Scroll, and the ring turns.</span></p>
+          <ul class="legend" aria-label="Legend">
+            <li><span class="dot done" aria-hidden="true"></span><b>DONE</b> built, in the sunlight</li>
+            <li><span class="dot next" aria-hidden="true"></span><b>NEXT</b> the work in line, at the edge of the shadow</li>
+            <li><span class="dot later" aria-hidden="true"></span><b>LATER</b> planned, deep in the shadow</li>
+          </ul>
+        </header>
+
+        <section class="era" data-era="The strategy game">
+          <header class="era-head">
+            <p class="kicker">In the sunlight · done</p>
+            <h2>The strategy game</h2>
+            <p>The real-time strategy game, playable today.</p>
+          </header>
+          <ol class="ms-list">
+            <li class="ms" data-status="done" data-short="RTS">
+              <div class="ms-meta"><span class="chip done">Done</span></div>
+              <h3>A frontier RTS</h3>
+              <p>Prospectors drill Stardust Ore and pump Metallic Hydrogen on Ashfall Reach, while armies of up to eight players clash over the deposits.</p>
+              <ul><li>An engine-free core: the economy, pathing, combat and the AI in plain C++20</li><li>Its tests build with clang and run in about 7 seconds</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="UNITS">
+              <div class="ms-meta"><span class="chip done">Done</span></div>
+              <h3>Twelve playable units</h3>
+              <p>Prospector, Ranger, Comet, Juggernaut, Firefly, Dropship, Longbow, Kestrel, Hailstorm, Peregrine, Atlas and Scorpion, each with its own cockpit, weapon and ability.</p>
+              <ul><li>The last three joined the roster designed and built: an air-superiority fighter, a heavy assault walker, a burrowing mine</li><li>The Peregrine pilot and the Atlas crew speak with voices of their own</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="PILOT">
+              <div class="ms-meta"><span class="chip done">Done</span></div>
+              <h3>Dive into any unit</h3>
+              <p>Click any of your units and the camera dives in. Drive it like a shooter, in first or third person, and hand it back to the AI with Esc.</p>
+              <ul><li>Shooter feel and night sight</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="AI">
+              <div class="ms-meta"><span class="chip done">Done</span></div>
+              <h3>The AI commanders</h3>
+              <p>Your team's AI commander runs the army. The command map gives it a stance, objectives, expansions and requests, and it plans the rest.</p>
+              <ul><li>Building buttons the AI can handle are queued for it instead of refused</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="LEVELS">
+              <div class="ms-meta"><span class="chip done">Done</span></div>
+              <h3>Pilot leveling</h3>
+              <p>Drive a kind of unit and every unit of that kind gets better. Each level offers two upgrades and you keep one: 216 of them across the twelve kinds.</p>
+            </li>
+            <li class="ms" data-status="done" data-short="WEATHER">
+              <div class="ms-meta"><span class="chip done">Done</span><time datetime="2026-10-12">2026-10-12</time></div>
+              <h3>Day, night and weather</h3>
+              <p>The sun crosses the sky and the beacons come on at night. The weather runs on the game clock: clear, cloudy, rain and storms.</p>
+              <ul><li>Volumetric clouds, cloud shadows, wet ground and hulls, lightning and thunder</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="KSTR">
+              <div class="ms-meta"><span class="chip done">Done</span></div>
+              <h3>KSTR 88.7 Stardust</h3>
+              <p>The music plays as a radio station with original songs and in-world ads between them.</p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="era" data-era="The engine and the name">
+          <header class="era-head">
+            <p class="kicker">In the sunlight · done</p>
+            <h2>The engine and the name</h2>
+          </header>
+          <ol class="ms-list">
+            <li class="ms" data-status="done" data-short="UE5">
+              <div class="ms-meta"><span class="chip done">Done</span><time datetime="2026-10-05">2026-10-05</time></div>
+              <h3>The Unreal port</h3>
+              <p>The game began as a Swift and SceneKit live wallpaper. It now lives in Unreal Engine 5 only, and the Swift version is retired.</p>
+              <ul><li>Open source and public domain (CC0) from 2026-10-06</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="NAME">
+              <div class="ms-meta"><span class="chip done">Done</span><time datetime="2026-10-07">2026-10-07</time></div>
+              <h3>It's called Ringshadow</h3>
+              <p>The game was called Autocraft. It's named now for the huge ringed gas giant in its sky, the one the prospectors live in the shadow of.</p>
+              <ul><li>The GitHub repository took the name on 2026-10-09</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="v0.1.0">
+              <div class="ms-meta"><span class="chip done">Done</span><time datetime="2026-10-09">2026-10-09</time></div>
+              <h3>Three platforms, v0.1.0</h3>
+              <p>Release builds for Windows and Linux on a build machine in AWS, and the Mac build at home. The first pre-release, v0.1.0, is on GitHub.</p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="era" data-era="MMORPG: built">
+          <header class="era-head">
+            <p class="kicker">In the sunlight · done · 2026-10-13</p>
+            <h2>The MMORPG mode, built so far</h2>
+            <p>One pilot in a lasting world. Single player first, on a local server that is the same program a public world will run: only the host changes. Playable today as a test mode.</p>
+          </header>
+          <ol class="ms-list">
+            <li class="ms" data-status="done" data-short="M1">
+              <div class="ms-meta"><span class="chip done">Done</span><span class="tagline">M1</span></div>
+              <h3>Drive through a server</h3>
+              <p>The server is its own program, and the game is only its client. You drive a Prospector through it, over our own protocol on UDP.</p>
+              <ul><li>An authoritative server on the engine-free core</li><li>Snapshots of only what is near you, sent as differences</li><li>Prediction and correction, tested under made-up lag, jitter and loss</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="M2">
+              <div class="ms-meta"><span class="chip done">Done</span><span class="tagline">M2</span></div>
+              <h3>The world map and regions</h3>
+              <p>A world of regions side by side, generated or crafted by AI agents with a region tool. Drive across an edge into the next region, or fly from pad to pad.</p>
+              <ul><li>The first world: three by three regions</li><li>Build wherever it fits, paid from your wallet</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="M3">
+              <div class="ms-meta"><span class="chip done">Done</span><span class="tagline">M3</span></div>
+              <h3>A world that lasts</h3>
+              <p>The server saves the world, and your pilot comes back as you left it: levels and picks included.</p>
+              <ul><li>A save every 5 seconds and on stop</li><li>Resume your world, or start a new one</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="M4">
+              <div class="ms-meta"><span class="chip done">Done</span><span class="tagline">M4</span></div>
+              <h3>Flights and polish</h3>
+              <p>Flights lift off, cross and land. The world map takes the keyboard, and the HUD is cut down to one pilot.</p>
+              <ul><li>Every screen checked picture by picture with a shot harness</li></ul>
+            </li>
+            <li class="ms" data-status="done" data-short="M5">
+              <div class="ms-meta"><span class="chip done">Done</span><span class="tagline">M5</span></div>
+              <h3>Ready to ship</h3>
+              <p>The traffic is encrypted, and the server travels inside the Mac package. The Metallic Hydrogen loop is proven: pump at a Derrick, unload at your Citadel, fill the wallet.</p>
+              <ul><li>X25519 and XChaCha20-Poly1305 through Monocypher (CC0)</li></ul>
+            </li>
+          </ol>
+        </section>
+
+        <section class="era" data-era="Next: single player">
+          <header class="era-head">
+            <p class="kicker">The terminator · next</p>
+            <h2>Next, in single player</h2>
+            <p>Each step ships in the single-player game, on the local server.</p>
+          </header>
+          <ol class="ms-list">
+            <li class="ms" data-status="next" data-short="AI PILOTS">
+              <div class="ms-meta"><span class="chip next">Next</span></div>
+              <h3>AI pilots</h3>
+              <p>AI characters who are pilots themselves replace the AI commanders: a character, a city and a level, like a player. They mine, build, take contracts and fight, and keep the world busy where players are few.</p>
+            </li>
+            <li class="ms" data-status="next" data-short="CITIES">
+              <div class="ms-meta"><span class="chip next">Next</span></div>
+              <h3>Cities</h3>
+              <p>A city forms where pilots build close together. Its pilots raise it with ore, MH and hours of labour, and each level unlocks more. Cities are the safe places.</p>
+            </li>
+            <li class="ms" data-status="next" data-short="REGIONS">
+              <div class="ms-meta"><span class="chip next">Next</span></div>
+              <h3>More regions</h3>
+              <p>A bigger world map, and travel between its regions.</p>
+            </li>
+            <li class="ms" data-status="next" data-short="NO-MAN'S">
+              <div class="ms-meta"><span class="chip next">Next</span></div>
+              <h3>No-man's land</h3>
+              <p>The open ground between the cities: claims, dwellings and the fight over the deposits and wells.</p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="era" data-era="Later: online">
+          <header class="era-head">
+            <p class="kicker">Deep in the shadow · later</p>
+            <h2>Later, online</h2>
+            <p>The same server program, out in the world.</p>
+          </header>
+          <ol class="ms-list">
+            <li class="ms" data-status="later" data-short="PUBLIC">
+              <div class="ms-meta"><span class="chip later">Later</span></div>
+              <h3>The public server</h3>
+              <p>The server on a public host, accounts and login, and other players in your world.</p>
+            </li>
+            <li class="ms" data-status="later" data-short="MARKET">
+              <div class="ms-meta"><span class="chip later">Later</span></div>
+              <h3>The market, crews and chat</h3>
+              <p>Trade between pilots, crews that ride together, and a way to talk.</p>
+            </li>
+            <li class="ms" data-status="later" data-short="THOUSANDS">
+              <div class="ms-meta"><span class="chip later">Later</span></div>
+              <h3>Thousands of pilots</h3>
+              <p>Regions on separate servers, a pilot handed from one to the next at the border, and copies of the crowded places.</p>
+            </li>
+            <li class="ms" data-status="later" data-short="HOSTING">
+              <div class="ms-meta"><span class="chip later">Later</span></div>
+              <h3>Hosting</h3>
+              <p>The official world on the Ringshadow AWS account, and a server build anyone can run for a world of their own.</p>
+            </li>
+          </ol>
+        </section>
+
+        <p class="rm-foot muted">Taken from the design docs and the work log in the <a href="https://github.com/ValiDraganescu/ringshadow">repository</a>. Nothing after the sunlit moons has a date yet.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div>
+        <p class="mark">RINGSHADOW</p>
+        <p>An open-source real-time strategy game, built in public.</p>
+      </div>
+      <div>
+        <p><a href="index.html">Home</a> · <a href="roadmap.html">Roadmap</a> · <a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></p>
+        <p>Public domain (CC0). No trackers, no cookies.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
