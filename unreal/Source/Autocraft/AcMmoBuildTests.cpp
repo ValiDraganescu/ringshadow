@@ -13,6 +13,7 @@
 #include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
 
+#include "RegionFile.h"
 #include "Rules.h"
 #include "Simulation.h"
 
@@ -92,19 +93,40 @@ bool FAcMmoBuildTest::RunTest(const FString&)
 		TestTrue(TEXT("still no Citadel"), CitadelIn(S.state) == nullptr);
 	}
 
-	// Where a Citadel fits ahead of the Prospector, as the ghost finds it.
+	// Where a Citadel fits round the Prospector, as the ghost finds it: the
+	// ground clear and off the pad's plate (the client's rule, the server's
+	// too), within the server's slack past the reach. The first spot that
+	// fits but for the plate is refused by both with the same reason.
 	const double Reach = ac::Rules::radius(ac::StructureKind::citadel) + 2.2;
-	std::optional<ac::Vec2> At;
-	for (int32 K = 0; K < 16 && !At; ++K)
+	std::optional<ac::Vec2> At, OnPlate;
+	for (double D = Reach; D <= Reach + 3.0 && !At; D += 0.5)
 	{
-		const double H = K * 2.0 * PI / 16;
-		const std::optional<ac::Vec2> P = S.snap(ac::StructureKind::citadel, U.position + ac::Vec2(std::cos(H), std::sin(H)) * Reach);
-		if (P && !S.placementRefusal(ac::StructureKind::citadel, *P)) At = P;
+		for (int32 K = 0; K < 16 && !At; ++K)
+		{
+			const double H = K * 2.0 * PI / 16;
+			const std::optional<ac::Vec2> P = S.snap(ac::StructureKind::citadel, U.position + ac::Vec2(std::cos(H), std::sin(H)) * D);
+			if (!P || ac::distance(*P, U.position) > Reach + 3.0 || S.placementRefusal(ac::StructureKind::citadel, *P)) continue;
+			if (!Client.PadPlateRefusal(ac::StructureKind::citadel, *P)) At = P;
+			else if (!OnPlate) OnPlate = P;
+		}
 	}
-	if (!At)
+	if (!At || !OnPlate)
 	{
-		AddError(TEXT("no spot for a Citadel round the start pad"));
+		AddError(TEXT("no spot for a Citadel round the start pad, on and off its plate"));
 		return false;
+	}
+	{
+		const std::optional<std::string> Why = Client.PadPlateRefusal(ac::StructureKind::citadel, *OnPlate);
+		TestTrue(TEXT("the client says why on the plate"), Why && *Why == ac::region::padPlateRefusal);
+		TestTrue(TEXT("asked on the plate"), Client.Build(ac::StructureKind::citadel, *OnPlate));
+		TArray<FString> Refused;
+		RunUntil(Client, [&] {
+			Refused.Append(Client.TakeBuildRefusals());
+			return !Refused.IsEmpty();
+		}, 3.0);
+		TestTrue(FString::Printf(TEXT("the server refuses the plate the same (%s)"), Refused.IsEmpty() ? TEXT("-") : *Refused[0]),
+			Refused.Num() == 1 && Refused[0] == FString(UTF8_TO_TCHAR(ac::region::padPlateRefusal)));
+		TestTrue(TEXT("no Citadel on the plate"), CitadelIn(S.state) == nullptr);
 	}
 	TestTrue(TEXT("asked"), Client.Build(ac::StructureKind::citadel, *At));
 	const bool bShown = RunUntil(Client, [&] { return CitadelIn(S.state) && S.state.players[0].ore == 200; }, 3.0);

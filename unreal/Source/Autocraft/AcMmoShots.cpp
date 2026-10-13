@@ -17,6 +17,8 @@
 //   15 landed at Cold Fork's pad        16 the edge crossing into the start
 //                                          region, just after arrival
 //   17 after leaving the mode and resuming
+//   18 after a level-up pick (Z); before 01 and here the HUD's plates must
+//      draw with their frames (FAcHudStyle::PlateProblem)
 //
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
@@ -29,6 +31,7 @@
 // Done when the log's last line reads `flowtest: done, 0 failed`.
 #include "AcGameFlow.h"
 
+#include "AcHudStyle.h"
 #include "AcLeveling.h"
 #include "AcLog.h"
 #include "AcMmo.h"
@@ -225,7 +228,12 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		else TimedOut(TEXT("seated"));
 		return;
 	case 2:
-		if (Since() > 5.0) Shoot(TEXT("01-spawn-pad-third"), TEXT("on the start pad, third person"));
+		if (Since() > 5.0)
+		{
+			const FString Problem = FAcHudStyle::PlateProblem();
+			Check(Problem.IsEmpty(), FString::Printf(TEXT("the HUD plates draw with their frames (%s)"), *Problem));
+			Shoot(TEXT("01-spawn-pad-third"), TEXT("on the start pad, third person"));
+		}
 		return;
 	case 3:
 		Pilot->ToggleView();
@@ -554,8 +562,22 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		TimedOut(TEXT("seated after the resume"));
 		return;
+	case 47:
+		// A level-up pick (Z), then the HUD's plates must still draw with
+		// their frames (Q5: they once drew as flat glass; FAcHudStyle::PlateProblem).
+		Check(Leveling && Leveling->DrivenOffer().IsSet() && Leveling->PickKey(TEXT("z")), TEXT("Z picked a level-up card"));
+		Advance();
+		return;
+	case 48:
+		if (Since() > 1.5)
+		{
+			const FString Problem = FAcHudStyle::PlateProblem();
+			Check(Problem.IsEmpty(), FString::Printf(TEXT("the HUD plates draw with their frames after the pick (%s)"), *Problem));
+			Shoot(TEXT("18-after-pick"), TEXT("after a level-up pick (Z)"));
+		}
+		return;
 	default:
-		Check(Shots.Saved == 17, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Check(Shots.Saved == 18, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
 		Finish();
 		return;
 	}

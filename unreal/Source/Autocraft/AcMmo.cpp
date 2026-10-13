@@ -10,6 +10,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "Rules.h"
 
 #include <string>
 #include <unistd.h>
@@ -691,6 +692,18 @@ std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
 		ac::region::nearestPad(ac::net::padsOnGround(*R, M->simulation().map->bounds), U->position);
 	if (!Near) return std::nullopt;
 	return FPadNear{Text(Near->name), Near->distance};
+}
+
+std::optional<std::string> FAcMmoClient::PadPlateRefusal(const ac::StructureKind Kind, const ac::Vec2 At) const
+{
+	const ac::net::WorldMessage::Region* R = Here();
+	const ac::net::Mirror* M = Mirror();
+	if (!R || !M || !M->simulation().map) return std::nullopt;
+	if (!ac::region::touchesPadPlate(ac::net::padsOnGround(*R, M->simulation().map->bounds), At, ac::Rules::radius(Kind)))
+	{
+		return std::nullopt;
+	}
+	return std::string(ac::region::padPlateRefusal);
 }
 
 bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)

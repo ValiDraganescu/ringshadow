@@ -152,6 +152,9 @@ struct FAcPilotInputs
 	bool bBuildMenu = false;
 	TOptional<ac::StructureKind> Placing;
 	TOptional<ac::Vec2> PlacingSpot;
+	/// The mode's own refusal of that spot, after the core's (the MMORPG
+	/// test mode: on a pad's plate, `FAcMmoClient::PadPlateRefusal`).
+	TOptional<FString> PlacingRefusal;
 	/// The MMORPG test mode: tips for what is there, the build menu's list
 	/// (`AcPilotText::BuildKinds`).
 	bool bMmo = false;

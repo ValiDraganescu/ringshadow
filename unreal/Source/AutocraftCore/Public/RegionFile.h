@@ -184,4 +184,12 @@ struct PadNear {
 };
 AUTOCRAFTCORE_API std::optional<PadNear> nearestPad(const std::vector<Place>& pads, Vec2 at);
 
+/// Whether a building's square footprint (centre `at`, half side `halfSide`
+/// as `Rules::radius`) touches a pad's plate, the disc `padReach` round its
+/// centre (`pads` and `at` in the same space). A world's server refuses such
+/// a building with `padPlateRefusal`, and the client's ghost shows it red
+/// with that reason: the one rule on both ends, like `nearestPad`.
+AUTOCRAFTCORE_API bool touchesPadPlate(const std::vector<Place>& pads, Vec2 at, double halfSide);
+inline constexpr const char* padPlateRefusal = "Too close to a landing pad";
+
 } // namespace ac::region

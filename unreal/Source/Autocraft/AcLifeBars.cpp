@@ -198,10 +198,13 @@ void AAcLifeBars::OnFrame(const FAcFrame&)
 
 	// The eye: its up on screen (bars lift along it) and its turn (bars face it).
 	FRotator Eye(-56.0, 0.0, 0.0);
-	if (const APlayerController* PC = GetWorld()->GetFirstPlayerController(); PC && PC->PlayerCameraManager)
+	const APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (PC && PC->PlayerCameraManager)
 	{
 		Eye = PC->PlayerCameraManager->GetCameraRotation();
 	}
+	int32 ViewX = 0, ViewY = 0;
+	if (PC) PC->GetViewportSize(ViewX, ViewY);
 	const FRotationMatrix EyeAxes(Eye);
 	const FVector Forward = EyeAxes.GetUnitAxis(EAxis::X);
 	const FVector Right = EyeAxes.GetUnitAxis(EAxis::Y);
@@ -240,6 +243,23 @@ void AAcLifeBars::OnFrame(const FAcFrame&)
 			Near = FMath::Min(1.0, D / 4.0);
 		}
 		const double W = Width * Wide * Near, H = BarHeight * Tall * Near;
+		// Driving, a bar only partly in view (a tall building's, close by:
+		// a Citadel's while welding it sat cut off at the top edge) is
+		// left out: whole or not at all, clear of the HUD's frame.
+		if (bDriving && PC && ViewX > 0 && ViewY > 0)
+		{
+			const double Margin = 0.04 * ViewY;
+			for (const FVector2D Corner : {FVector2D(-1, -1), FVector2D(1, -1), FVector2D(-1, 1), FVector2D(1, 1)})
+			{
+				const FVector P = At + Right * AcSpace::ToCm(W / 2 * Corner.X) + Up * AcSpace::ToCm(H / 2 * Corner.Y);
+				FVector2D Screen;
+				if (!PC->ProjectWorldLocationToScreen(P, Screen, false) || Screen.X < Margin || Screen.X > ViewX - Margin
+					|| Screen.Y < Margin || Screen.Y > ViewY - Margin)
+				{
+					return;
+				}
+			}
+		}
 		// The plane is 1 m (one cell) square.
 		Xf.Add(FTransform(Facing, At, FVector(W, H, 1.0)));
 		Data.Add(float(FMath::Clamp(Frac, 0.0, 1.0)));

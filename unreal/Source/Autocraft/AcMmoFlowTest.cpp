@@ -113,14 +113,23 @@ bool UAcGameFlowSubsystem::MmoBuildCitadel()
 	const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
 	const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
 	if (!U) return false;
-	// Where one fits round the Prospector, as the ghost finds it.
+	// Where one fits round the Prospector, as the ghost finds it: off the
+	// pad's plate too, so up to the server's slack past the reach (the
+	// pilot starts on the pad).
 	const ac::Simulation& S = M->simulation();
 	const double Reach = ac::Rules::radius(ac::StructureKind::citadel) + 2.2;
-	for (int32 K = 0; K < 16; ++K)
+	for (double D = Reach; D <= Reach + 3.0; D += 0.5)
 	{
-		const double H = K * 2.0 * PI / 16;
-		const std::optional<ac::Vec2> P = S.snap(ac::StructureKind::citadel, U->position + ac::Vec2(std::cos(H), std::sin(H)) * Reach);
-		if (P && !S.placementRefusal(ac::StructureKind::citadel, *P)) return Mmo->Build(ac::StructureKind::citadel, *P);
+		for (int32 K = 0; K < 16; ++K)
+		{
+			const double H = K * 2.0 * PI / 16;
+			const std::optional<ac::Vec2> P = S.snap(ac::StructureKind::citadel, U->position + ac::Vec2(std::cos(H), std::sin(H)) * D);
+			if (P && ac::distance(*P, U->position) <= Reach + 3.0 && !S.placementRefusal(ac::StructureKind::citadel, *P)
+				&& !Mmo->PadPlateRefusal(ac::StructureKind::citadel, *P))
+			{
+				return Mmo->Build(ac::StructureKind::citadel, *P);
+			}
+		}
 	}
 	return false;
 }

@@ -1,5 +1,5 @@
 // Automation tests for the HUD's colour transfer and letter spacing
-// (`FAcHudStyle::Srgb`, `SlateTextureByte`, `FAcHudText::Kern`). Run headless:
+// (`FAcHudStyle::Srgb`, `SlateTextureByte`, `FAcHudText::Kern`) and the plates (`PlateProblem`). Run headless:
 //   UnrealEditor Autocraft.uproject -unattended -nosplash -nosound -RenderOffscreen
 //     -ExecCmds="Automation RunTests Autocraft.Hud.Style; Quit" -TestExit="Automation Test Queue Empty"
 #include "AcHudStyle.h"
@@ -61,6 +61,19 @@ bool FAcHudStyleKernTest::RunTest(const FString&)
 	T.Kern = 2;
 	// NSAttributedString.size counts the kern after every letter.
 	TestEqual(TEXT("kern 2"), (double)T.Measure().X, Plain + 2.0 * 8, 0.01);
+	return true;
+}
+
+// The plates' frames (Q5): a plate texture Slate first saw while it was
+// still compiling kept the placeholder's size in Slate, its corners shrank
+// to nothing and the plate drew as flat glass. The style finishes the
+// textures before Slate sees them; this checks they are whole and, with a
+// renderer, that Slate holds each at its real size.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcHudStylePlatesTest, "Autocraft.Hud.Style.Plates", Flags)
+bool FAcHudStylePlatesTest::RunTest(const FString&)
+{
+	const FString Problem = FAcHudStyle::PlateProblem();
+	TestTrue(FString::Printf(TEXT("the plates draw with their frames (%s)"), *Problem), Problem.IsEmpty());
 	return true;
 }
 

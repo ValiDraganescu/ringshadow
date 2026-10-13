@@ -228,6 +228,10 @@ public:
 		double Distance = 0;
 	};
 	std::optional<FPadNear> NearestPad() const;
+	/// Why a `Kind` may not stand at `At` (ground) in this region: its
+	/// footprint touches a pad's plate (the server's rule,
+	/// `region::touchesPadPlate`; nil: clear, or nothing known yet).
+	std::optional<std::string> PadPlateRefusal(ac::StructureKind Kind, ac::Vec2 At) const;
 	/// Asks to fly to `Pad` of region `Region` (the world map's pick). False,
 	/// with `Why`, when it is plainly refused here (not at a pad, in flight);
 	/// the server may still refuse it (a note, and `FlightRefusal`).

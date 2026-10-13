@@ -181,6 +181,7 @@ void UAcPilotBuildSubsystem::Place()
 		const ac::Simulation& S = Sim->Simulation();
 		std::optional<std::string> Why = S.buildRefusal(Kind, ac::Pilot::player);
 		if (!Why) Why = S.placementRefusal(Kind, *P);
+		if (!Why) Why = Mmo->PadPlateRefusal(Kind, *P);
 		if (Why) { Note(Utf8(*Why)); return; }
 		if (!Mmo->Build(Kind, *P)) { Note(TEXT("Not connected to the local server")); return; }
 		UE_LOG(LogAutocraft, Log, TEXT("pilot: asked to build %s at %.2f,%.2f"), AcPose::ModelBase(Kind), P->x, P->y);
@@ -234,7 +235,12 @@ void UAcPilotBuildSubsystem::OnFrame(const FAcFrame& Frame)
 	// `pilotBuildInfo`: the spot, the ghost; E6 makes the prompt and the card.
 	TOptional<ac::Vec2> At;
 	if (Held) At = Spot(*Held);
-	if (UAcPilotOverlaySubsystem* O = UAcPilotOverlaySubsystem::Get(this)) O->SetBuild(bMenu, Held, At);
+	// The MMORPG mode: not on a pad's plate (the server's rule too).
+	const FAcMmoClient* Mmo = Sim->MmoClient();
+	const std::optional<std::string> PadWhy = Mmo && Held && At ? Mmo->PadPlateRefusal(*Held, *At) : std::nullopt;
+	TOptional<FString> ModeWhy;
+	if (PadWhy) ModeWhy = Utf8(*PadWhy);
+	if (UAcPilotOverlaySubsystem* O = UAcPilotOverlaySubsystem::Get(this)) O->SetBuild(bMenu, Held, At, ModeWhy);
 	if (!Held || !At)
 	{
 		if (AAcHologram* H = AAcHologram::Find(GetWorld())) H->Hide();
@@ -242,6 +248,7 @@ void UAcPilotBuildSubsystem::OnFrame(const FAcFrame& Frame)
 	}
 	std::optional<std::string> Why = S.buildRefusal(*Held, ac::Pilot::player);
 	if (!Why) Why = S.placementRefusal(*Held, *At);
+	if (!Why) Why = PadWhy;
 	const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
 	const double Y = Terrain ? Terrain->FieldHeight(*At) : 0.0;
 	if (AAcHologram* H = AAcHologram::SpawnFor(GetWorld()))

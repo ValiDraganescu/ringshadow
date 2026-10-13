@@ -401,6 +401,12 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     if (p.flight) return "In flight";
     // A world builds only what its Prospectors need (`net::kWorldBuildKinds`).
     if (world_ && !net::worldBuilds(kind)) return std::string(net::kWorldBuildRefusal);
+    // Nothing on a pad's plate (the client's ghost says the same).
+    if (world_) {
+        const auto spot = regions_[p.region]->simulation().snap(kind, at);
+        if (spot && region::touchesPadPlate(world_->regions[p.region].built.pads, *spot, Rules::radius(kind)))
+            return std::string(region::padPlateRefusal);
+    }
     const int64_t id = regions_[p.region]->simulation().state.nextID;
     if (auto why = regions_[p.region]->build(pilot, kind, at)) return why;
     builtBy_[p.region][id] = p.key;

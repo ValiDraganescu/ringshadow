@@ -94,11 +94,13 @@ void UAcPilotOverlaySubsystem::Note(const FString& Text)
 	NoteUntil = FPlatformTime::Seconds() + NoteSeconds;
 }
 
-void UAcPilotOverlaySubsystem::SetBuild(const bool bMenu, const TOptional<ac::StructureKind> Placing, const TOptional<ac::Vec2> Spot)
+void UAcPilotOverlaySubsystem::SetBuild(const bool bMenu, const TOptional<ac::StructureKind> Placing, const TOptional<ac::Vec2> Spot,
+	const TOptional<FString> Refusal)
 {
 	Inputs.bBuildMenu = bMenu;
 	Inputs.Placing = Placing;
 	Inputs.PlacingSpot = Spot;
+	Inputs.PlacingRefusal = Refusal;
 }
 
 void UAcPilotOverlaySubsystem::Mark(const double Damage, const bool bKill)

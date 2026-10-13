@@ -202,6 +202,49 @@ TEST(build_world_only_a_citadel_or_a_derrick) {
     EXPECT_EQ(sim.state.structures.size(), size_t(2));
 }
 
+// Nothing stands on a pad's plate (`region::touchesPadPlate`, the disc
+// `padReach` round the pad): a Citadel whose footprint touches it is refused
+// with the reason the client's ghost shows; one just outside goes up.
+TEST(build_refused_touching_a_pad_plate) {
+    // The rule: a square footprint against the disc, corners included.
+    const std::vector<region::Place> pads{region::Place{"p", Vec2(0, 0)}};
+    EXPECT_TRUE(region::touchesPadPlate(pads, Vec2(6.4, 0), 2.5));
+    EXPECT_TRUE(!region::touchesPadPlate(pads, Vec2(6.5, 0), 2.5));
+    // Diagonally the footprint's corner counts: 2.7 cells off on both axes is
+    // 3.8 from the centre (touching), 3 on both 4.2 (clear).
+    EXPECT_TRUE(region::touchesPadPlate(pads, Vec2(5.2, 5.2), 2.5));
+    EXPECT_TRUE(!region::touchesPadPlate(pads, Vec2(5.5, 5.5), 2.5));
+
+    WorldMap w(firstWorld());
+    ASSERT_TRUE(w.join(me));
+    Simulation& sim = w.regionOf(me)->simulation();
+    const Vec2 pad = w.regionOf(me)->places()->ground(Vec2(76, 48));
+    ASSERT_TRUE(!firstWorld().regions.empty());
+    // On the start pad, facing east (away from the ore).
+    put(w, me, Vec2(76, 48), 0);
+    // The nearest snapped spot east that touches the plate, and the first clear one.
+    std::optional<Vec2> touching, clear;
+    for (double d = 4.0; d < 9.0; d += 0.25) {
+        const Vec2 at = *sim.snap(StructureKind::citadel, pad + Vec2(d, 0));
+        const double edge = std::abs(at.x - pad.x) - Rules::radius(StructureKind::citadel);
+        if (edge < region::padReach) touching = at;
+        else if (!clear) clear = at;
+    }
+    ASSERT_TRUE(touching.has_value() && clear.has_value());
+    EXPECT_TRUE(std::abs(clear->x - touching->x) <= 1.0 + 1e-9);
+    auto why = w.build(me, StructureKind::citadel, *touching);
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(*why == region::padPlateRefusal);
+    if (*why != region::padPlateRefusal) std::printf("  refused: %s\n", why->c_str());
+    EXPECT_TRUE(sim.state.structures.empty());
+    EXPECT_EQ(w.wallet(me)->ore, int64_t(600));
+    // Just outside the plate it goes up.
+    why = w.build(me, StructureKind::citadel, *clear);
+    if (why) std::printf("  refused: %s\n", why->c_str());
+    EXPECT_TRUE(!why.has_value());
+    EXPECT_EQ(sim.state.structures.size(), size_t(1));
+}
+
 TEST(build_mined_ore_unloaded_at_the_own_citadel_fills_the_wallet) {
     WorldMap w(firstWorld());
     ASSERT_TRUE(w.join(me));

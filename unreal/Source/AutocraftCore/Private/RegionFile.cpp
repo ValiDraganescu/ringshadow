@@ -439,6 +439,16 @@ std::optional<PadNear> nearestPad(const std::vector<Place>& pads, Vec2 at) {
     return best;
 }
 
+bool touchesPadPlate(const std::vector<Place>& pads, Vec2 at, double halfSide) {
+    for (const Place& p : pads) {
+        // The footprint's point nearest the pad's centre, inside the plate.
+        const double dx = std::max(std::abs(p.at.x - at.x) - halfSide, 0.0);
+        const double dy = std::max(std::abs(p.at.y - at.y) - halfSide, 0.0);
+        if (std::sqrt(dx * dx + dy * dy) < padReach) return true;
+    }
+    return false;
+}
+
 std::string_view edgeName(Edge e) {
     static constexpr std::array<std::string_view, 4> names{"north", "east", "south", "west"};
     return names[static_cast<size_t>(e)];

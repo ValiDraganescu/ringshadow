@@ -136,6 +136,10 @@ public:
 	/// texture pixels, so the plate is drawn in a space of texture pixels.
 	static void PaintPlate(FSlateWindowElementList& Out, int32 Layer, const FGeometry& Geometry, EAcPlate Which,
 		const FSlateRect& Rect, float Opacity = 1.0f);
+	/// Empty when every plate draws with its frame; else what is wrong
+	/// (no texture, still compiling, or Slate holding a size other than the
+	/// texture's, which flattens a plate into plain glass).
+	static FString PlateProblem();
 	/// Texture pixels per point in the baked plates (`Chrome.context`'s 2x).
 	static constexpr float PlateScale = 2.0f;
 	/// Points round a plate's rect that its texture adds (`Chrome.plateNode`'s pad).

@@ -172,8 +172,9 @@ public:
     std::optional<std::string> fly(PilotId pilot, std::string_view region, std::string_view pad);
 
     /// Build with the driven Prospector where the pilot is (`Region::build`),
-    /// paid from its wallet; in a world only `net::kWorldBuildKinds`. The
-    /// reason when refused.
+    /// paid from its wallet; in a world only `net::kWorldBuildKinds`, and
+    /// none touching a pad's plate (`region::touchesPadPlate`). The reason
+    /// when refused.
     std::optional<std::string> build(PilotId pilot, StructureKind kind, Vec2 at);
 
     /// Every region one tick; then edge crossings and landings.

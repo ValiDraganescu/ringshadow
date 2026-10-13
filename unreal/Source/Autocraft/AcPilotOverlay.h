@@ -62,7 +62,7 @@ public:
 	void Note(const FString& Text);
 	/// E8: the build menu is open, a building is held out (`placing`) and
 	/// where it would go (`ghostSpot`; unset: no spot, "Face an MH well").
-	void SetBuild(bool bMenu, TOptional<ac::StructureKind> Placing, TOptional<ac::Vec2> Spot);
+	void SetBuild(bool bMenu, TOptional<ac::StructureKind> Placing, TOptional<ac::Vec2> Spot, TOptional<FString> Refusal = {});
 	/// E4: the gun marker, off the view's centre in half the view's height
 	/// (+y up); unset: none.
 	TFunction<TOptional<FVector2D>()> GunMarker;

@@ -385,6 +385,7 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		{
 			std::optional<std::string> Why = Sim.buildRefusal(*In.Placing, ac::Pilot::player);
 			if (!Why) Why = Sim.placementRefusal(*In.Placing, *In.PlacingSpot);
+			if (!Why && In.PlacingRefusal) Why = std::string(TCHAR_TO_UTF8(**In.PlacingRefusal));
 			Info.Prompt = Why ? Utf8(*Why) : FString::Printf(TEXT("Click  build %s   ·   Esc  cancel"), *Title(*In.Placing));
 			Info.Tone = Why ? EAcTone::Blocked : EAcTone::Ready;
 		}

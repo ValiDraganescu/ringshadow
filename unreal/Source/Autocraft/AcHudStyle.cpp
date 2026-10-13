@@ -4,11 +4,19 @@
 
 #include "Engine/FontFace.h"
 #include "Engine/Texture2D.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Misc/App.h"
+#include "Rendering/SlateRenderer.h"
+#include "Rendering/SlateResourceHandle.h"
+#include "Textures/SlateShaderResource.h"
 #include "Fonts/CompositeFont.h"
 #include "ImageCore.h"
 #include "ImageUtils.h"
 #include "Styling/CoreStyle.h"
 #include "UObject/UObjectGlobals.h"
+#if WITH_EDITOR
+#include "TextureCompiler.h"
+#endif
 
 bool FAcHudStyle::bInitialized = false;
 
@@ -132,6 +140,26 @@ void FAcHudStyle::Initialize()
 	ImageBrush(GOre, TEXT("/Game/UI/Hud/T_IconOre.T_IconOre"), {24, 24});
 	ImageBrush(GHydrogen, TEXT("/Game/UI/Hud/T_IconHydrogen.T_IconHydrogen"), {24, 24});
 	ImageBrush(GSupply, TEXT("/Game/UI/Hud/T_IconSupply.T_IconSupply"), {24, 24});
+#if WITH_EDITOR
+	// In an editor build (the game runs as `UnrealEditor -game`) a texture
+	// can still be compiling here, standing in as a tiny default texture.
+	// Slate keeps the size it first sees for good (the proxy's ActualSize)
+	// and measures a box's margins in it: the plates' corners shrank to
+	// nothing and every plate drew as flat glass for the whole run. So the
+	// HUD's textures finish now, before Slate ever sees them.
+	{
+		TArray<UTexture*> Compiling;
+		for (FSlateBrush* B : {&GPlates[0], &GPlates[1], &GPlates[2], &GOre, &GHydrogen, &GSupply})
+		{
+			if (UTexture* T = Cast<UTexture>(B->GetResourceObject()); T && T->IsDefaultTexture()) Compiling.Add(T);
+		}
+		if (!Compiling.IsEmpty())
+		{
+			FTextureCompilingManager::Get().FinishCompilation(Compiling);
+			UE_LOG(LogAutocraft, Log, TEXT("hud: waited for %d textures to finish compiling"), Compiling.Num());
+		}
+	}
+#endif
 	GWhite = *FCoreStyle::Get().GetBrush("GenericWhiteBox");
 
 	GFont = MakeShared<FCompositeFont>();
@@ -282,6 +310,43 @@ void FAcHudStyle::PaintPlate(FSlateWindowElementList& Out, const int32 Layer, co
 	FSlateDrawElement::MakeBox(Out, Layer,
 		Geometry.ToPaintGeometry(FVector2D(Size * PlateScale), FSlateLayoutTransform(1.0f / PlateScale, FVector2D(TopLeft))),
 		Plate(Which), ESlateDrawEffect::None, FLinearColor(1, 1, 1, Opacity));
+}
+
+FString FAcHudStyle::PlateProblem()
+{
+	Initialize();
+	static const TCHAR* const Names[] = {TEXT("bar"), TEXT("score"), TEXT("level")};
+	TArray<FString> Bad;
+	FSlateRenderer* Renderer = FSlateApplication::IsInitialized() ? FSlateApplication::Get().GetRenderer() : nullptr;
+	for (int32 I = 0; I < (int32)EAcPlate::Count; ++I)
+	{
+		const FSlateBrush& B = GPlates[I];
+		const UTexture2D* T = Cast<UTexture2D>(B.GetResourceObject());
+		if (!T)
+		{
+			Bad.Add(FString::Printf(TEXT("%s: no texture"), Names[I]));
+			continue;
+		}
+#if WITH_EDITOR
+		if (T->IsDefaultTexture()) Bad.Add(FString::Printf(TEXT("%s: still compiling"), Names[I]));
+#endif
+		// Nothing is drawn without a renderer (-nullrhi): no sizes to check.
+		if (!FApp::CanEverRender()) continue;
+		const FIntPoint Size(T->GetSizeX(), T->GetSizeY());
+		const FIntPoint Baked(FMath::RoundToInt(B.ImageSize.X), FMath::RoundToInt(B.ImageSize.Y));
+		if (Size != Baked) Bad.Add(FString::Printf(TEXT("%s: texture %dx%d, baked %dx%d"), Names[I], Size.X, Size.Y, Baked.X, Baked.Y));
+		// What Slate measures the margins in.
+		if (Renderer)
+		{
+			const FSlateResourceHandle Handle = Renderer->GetResourceHandle(B);
+			if (const FSlateShaderResourceProxy* Proxy = Handle.GetResourceProxy(); Proxy && Proxy->ActualSize != Size)
+			{
+				Bad.Add(FString::Printf(TEXT("%s: Slate draws it as %dx%d, the texture is %dx%d"), Names[I], Proxy->ActualSize.X,
+					Proxy->ActualSize.Y, Size.X, Size.Y));
+			}
+		}
+	}
+	return FString::Join(Bad, TEXT("; "));
 }
 
 const FSlateBrush* FAcHudStyle::OreIcon()

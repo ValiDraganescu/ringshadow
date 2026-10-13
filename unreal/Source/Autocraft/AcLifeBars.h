@@ -22,7 +22,8 @@
 //     0.26. Top-down the bar is ×max(1, 0.7 k) wide and ×k tall, with
 //     k = barScale = (40 / pointsPerCell)^0.9, so it keeps its thickness
 //     on screen as the view zooms out. Driving: half as wide, 0.6 tall,
-//     shrinking with the eye's distance inside 4 cells, gone under 1.5.
+//     shrinking with the eye's distance inside 4 cells, gone under 1.5,
+//     and left out unless the whole bar is in view (4% in from the edges).
 //   - Placed over the model's top (a unit kind's model height, a building's
 //     body height), lifted along the camera's up by 0.5 r + 0.2 k (units)
 //     or 0.6 R + 0.3 k (buildings, R its model radius).

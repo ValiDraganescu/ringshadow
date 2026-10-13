@@ -94,10 +94,16 @@ TEST(levels_driving_work_earns_xp_and_a_level) {
     // finished by hand.
     std::optional<Vec2> at;
     const double reach = Region::buildReach(StructureKind::citadel);
-    for (int k = 0; k < 16 && !at; k++) {
-        const double h = k * 2 * pi / 16;
-        const auto p = sim.snap(StructureKind::citadel, u.position + Vec2(std::cos(h), std::sin(h)) * reach);
-        if (p && !sim.placementRefusal(StructureKind::citadel, *p)) at = p;
+    // Off the pad's plate (a world builds nothing on it): up to the server's
+    // slack past the reach, as the pilot spawns on the pad.
+    for (double d = reach; d <= reach + Region::buildSlack && !at; d += 0.5) {
+        for (int k = 0; k < 16 && !at; k++) {
+            const double h = k * 2 * pi / 16;
+            const auto p = sim.snap(StructureKind::citadel, u.position + Vec2(std::cos(h), std::sin(h)) * d);
+            if (p && distance(*p, u.position) <= reach + Region::buildSlack && !sim.placementRefusal(StructureKind::citadel, *p)
+                && !region::touchesPadPlate(first().regions[first().start].built.pads, *p, Rules::radius(StructureKind::citadel)))
+                at = p;
+        }
     }
     ASSERT_TRUE(at.has_value());
     ASSERT_TRUE(!w.build(me, StructureKind::citadel, *at).has_value());
@@ -305,10 +311,16 @@ TEST(levels_world_xp_is_a_tenth_a_citadel_weld_stays_level_1) {
     const Unit u = *drivenUnit(w, me);
     std::optional<Vec2> at;
     const double reach = Region::buildReach(StructureKind::citadel);
-    for (int k = 0; k < 16 && !at; k++) {
-        const double h = k * 2 * pi / 16;
-        const auto p = sim.snap(StructureKind::citadel, u.position + Vec2(std::cos(h), std::sin(h)) * reach);
-        if (p && !sim.placementRefusal(StructureKind::citadel, *p)) at = p;
+    // Off the pad's plate (a world builds nothing on it): up to the server's
+    // slack past the reach, as the pilot spawns on the pad.
+    for (double d = reach; d <= reach + Region::buildSlack && !at; d += 0.5) {
+        for (int k = 0; k < 16 && !at; k++) {
+            const double h = k * 2 * pi / 16;
+            const auto p = sim.snap(StructureKind::citadel, u.position + Vec2(std::cos(h), std::sin(h)) * d);
+            if (p && distance(*p, u.position) <= reach + Region::buildSlack && !sim.placementRefusal(StructureKind::citadel, *p)
+                && !region::touchesPadPlate(first().regions[first().start].built.pads, *p, Rules::radius(StructureKind::citadel)))
+                at = p;
+        }
     }
     ASSERT_TRUE(at.has_value());
     ASSERT_TRUE(!w.build(me, StructureKind::citadel, *at).has_value());
