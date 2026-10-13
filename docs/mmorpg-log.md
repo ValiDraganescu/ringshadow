@@ -56,3 +56,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Quiet scene 1.3 KB/s down; late 4v4 fills 64 KiB/s budget.
 - N Upload 3.7–3.9 KB/s (inputs + acks at 60 Hz).
 - T T5 → worker mmo-server-world (reused, compacted).
+- D All workers work in MMORPG-variant worktree, no own worktrees.
+- D Shared tree: each commits only its own files, explicit paths.
