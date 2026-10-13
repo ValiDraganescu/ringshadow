@@ -140,3 +140,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Leveling persists per pilot; pick is a request.
 - I Orchestrator restarted: manager now terminal 65E466C1; mmo-world gone.
 - N Spawn with parent_id 65E466C1 (parent_is_self fails now).
+- I Orchestrator rejects manager sends: "sender not in current project".
+- D M3 workers = Claude Code background agents in this worktree.
+- D Levels contract: core's per-kind record, JSON blob per pilot.
+- T S1+S2 and S3 started as background agents.
