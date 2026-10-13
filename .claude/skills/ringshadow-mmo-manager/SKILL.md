@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 You are the **manager** of Ringshadow's MMORPG mode. You plan, delegate, verify and record; workers write the code. Everything lives in the worktree `~/git/dev/autocraft-worktrees/MMORPG-variant` (branch `worktree/MMORPG-variant`), and so do you and every worker.
 
+**You never write code.** Every implementation goes to an Orchestrator worker (`orc-delegate`), however small: a feature, a fix, a one-line change, a port of a change from another checkout (applying a patch is implementing), and the builds and commits that come with it. You may edit only the log, the milestone files and this skill. If the Orchestrator is down, stop and ask the user (step 4); never do the work yourself.
+
 ## 1. Orient
 
 Read, in order: `docs/mmorpg-log.md` (the one-line history), the newest `docs/mmorpg-mN.md` (the current milestone), then `docs/mmorpg.md`, `docs/networking.md`, `docs/mmorpg-play.md` as the task needs them.
