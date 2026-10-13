@@ -256,3 +256,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: loads apply percent then plus (Boost); doc says 56.
 - D Manager: chip chance: Lucky strike % then Core sampler plus.
 - T P2 core effects → same worker after compaction.
+- T R1 done: review in build/first-hour/review.md, 25 problems, 9 ideas.
+- I Blocker: nothing to do after minute 5 (P1–P6 answer it).
+- I Blocker: pumping tints the whole screen teal.
+- I Big: placeholder ore, flat empty world, black night, hidden giant.
+- I Later: war key art on home; flight looks cheap; regions alike.
+- D Manager: ideas to M7: glowing ore at night, ring-shadow sweep, KSTR contracts, MH-fuelled flight.
+- T V1 screen fixes (first-hour worker), V2 world look → workers.

@@ -38,7 +38,9 @@ another, adjusted as results come in:
 |---|---|---|---|
 | P0 | Design: docs/prospector-progression.md (XP curve, five branches, actives, respec, blueprints, buildings' MMO jobs, migration, plan) | | done |
 | C1 | World clock and weather from the server: one clock per world, saved; snapshots carry the hour and weather; the client's sky, lamps, fog and rain follow; a dev flag to hold the hour (server side) | | in progress |
-| R1 | First-hour review: a new world from the home screen to a Derrick pumping, in pictures; a ranked list of what bores, confuses or looks wrong | | in progress |
+| R1 | First-hour review: a new world from the home screen to a Derrick pumping, in pictures; a ranked list of what bores, confuses or looks wrong | | done |
+| V1 | Screen fixes from R1: pumping tint, 3rd-person camera in walls, Prospector inside the Derrick, perf panel off by default, dead dashboard panels and minimap, landing glow | R1 | in progress |
+| V2 | The world's look from R1: Stardust Ore as the naming doc describes it, ore and wells glowing at night, the giant big and visible from spawn, no sun shafts at night, smoother clouds | R1 | in progress |
 | P1 | Core catalogue: Progression.h/.cpp, 65 nodes, curve, gates, respec price, ProspectorProgress | P0 | done |
 | P2 | Core effects: skills in boost, reused and new blocks | P1 | in progress |
 | P3 | Server progression: XP sources, Spend/Undo/Respec/Slot, Progress message, actives as inputs, schema migration | P1, C1 | |
