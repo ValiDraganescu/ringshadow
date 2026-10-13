@@ -94,6 +94,8 @@ private:
         int64_t snapshotMessages = 0;
         int64_t deferred = 0;
         uint64_t bytesAtStats = 0;
+        /// The progression it was last told (a world).
+        std::optional<net::ProgressMessage> told;
     };
 
     void handle(const net::Event& e, double now);
@@ -104,6 +106,10 @@ private:
     void sendMoves();
     void message(net::ConnectionId c, Client& client, const std::vector<uint8_t>& data, double now);
     void sendSnapshots(double now);
+    /// A skill tree request (nil: not one): done (nil inside), or why not.
+    std::optional<std::optional<std::string>> skillTree(const net::RequestMessage& m, PilotId pilot);
+    /// The pilot's progression when it changed (more than its XP), with its news.
+    void sendProgress(net::ConnectionId c, Client& client);
     void statsLine(double now);
     void log(const std::string& line) const;
 

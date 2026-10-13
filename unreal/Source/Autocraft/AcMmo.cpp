@@ -739,6 +739,25 @@ const ac::net::WorldMessage* FAcMmoClient::World() const
 	return Net && Net->world() ? &*Net->world() : nullptr;
 }
 
+const ac::net::ProgressMessage* FAcMmoClient::Progress() const
+{
+	return Net && Net->progress() ? &*Net->progress() : nullptr;
+}
+
+std::optional<double> FAcMmoClient::Xp() const
+{
+	if (Net && Net->mirror() && Net->mirror()->xp()) return Net->mirror()->xp();
+	if (const ac::net::ProgressMessage* P = Progress()) return P->xp;
+	return std::nullopt;
+}
+
+std::vector<ac::net::ProgressMessage::News> FAcMmoClient::TakeProgressNews()
+{
+	std::vector<ac::net::ProgressMessage::News> Out;
+	if (Net) Out.swap(Net->news);
+	return Out;
+}
+
 const ac::net::WorldMessage::Region* FAcMmoClient::Here() const
 {
 	const ac::net::WorldMessage* W = World();

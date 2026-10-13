@@ -191,6 +191,7 @@ WorldLoad loadWorld(std::string_view text, const std::string& folder) {
 WorldMap::WorldMap(const RegionConfig& config) {
     regions_.push_back(std::make_unique<Region>(config));
     builtBy_.resize(1);
+    owed_.resize(1);
 }
 
 WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const RegionConfig& base)
@@ -206,6 +207,16 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
         regions_.push_back(std::make_unique<Region>(c));
     }
     builtBy_.resize(regions_.size());
+    owed_.resize(regions_.size());
+    // What each well holds at the start is what it grows back to.
+    for (const auto& r : regions_) {
+        std::vector<int64_t> full;
+        if (const auto& wells = r->simulation().state.wells)
+            for (const Well& w : *wells) full.push_back(w.remaining);
+        wellIdle_.emplace_back(full.size(), 0.0);
+        wellLast_.push_back(full);
+        wellFull_.push_back(std::move(full));
+    }
     weather_ = std::make_unique<Weather>(WorldClock::weatherSeed(world.file.id));
     if (params_.weatherHold) weather_->hold(*params_.weatherHold);
     updateSky();
@@ -287,8 +298,9 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
     r.join(pilot, lastInput);
     p.region = to;
     bankIn(p, to);
-    // Its own levels: into the simulation as it takes the unit.
+    // Its own levels and progression: into the simulation as it takes the unit.
     r.setLevels(pilot, p.record);
+    r.setProgress(pilot, p.progress, ownBuildings(p, to));
     // On open ground at `at`, or the nearest open spot round it.
     Unit v = u;
     const region::Built& places = *r.places();
@@ -337,16 +349,8 @@ bool WorldMap::join(PilotId pilot) {
     const Unit u = startProspector();
     PilotState& in = pilots_[pilot] = p;
     arrive(pilot, in, start_, u, r.places()->regionAt(u.position), -1);
-    if (params_.devXp > 0)
-        if (const auto id = start().driving(pilot))
-            if (const auto seated = start().simulation().state.unit(*id)) {
-                // As much as asked for: not scaled as earned XP is.
-                Simulation& sim = start().simulation();
-                const double scale = sim.xpScale;
-                sim.xpScale = 1;
-                sim.earn(params_.devXp, *seated);
-                sim.xpScale = scale;
-            }
+    // Dev: its progression's XP at once.
+    if (params_.devXp > 0) earn(pilot, params_.devXp);
     return true;
 }
 
@@ -368,6 +372,8 @@ void WorldMap::setLevels(PilotId pilot, const std::optional<PilotRecord>& levels
 std::optional<std::string> WorldMap::pick(PilotId pilot, UnitKind kind, Perk perk) {
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end()) return "Not joined";
+    // A world's Prospector climbs the skill tree: no cards.
+    if (world_) return std::string(kWorldPickRefusal);
     Region& r = *regions_[it->second.region];
     if (!r.joined(pilot)) return "Not joined";
     if (auto why = r.pick(pilot, kind, perk)) return why;
@@ -410,6 +416,7 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     if (*to != p.region && regions_[*to]->driven()) return "another pilot drives there";
     bankOut(p, p.region);
     Flight f;
+    f.clocks = takeClocks(p.region, *unit);
     f.unit = *here.release(*unit);
     p.record = here.levels(pilot);
     f.to = *to;
@@ -418,6 +425,7 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     p.flight = f;
     p.last = std::nullopt;
     moves_.push_back(Moved{pilot, std::nullopt});
+    feat(pilot, WorldXp::flightFeat);
     return std::nullopt;
 }
 
@@ -437,8 +445,12 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     const int64_t id = regions_[p.region]->simulation().state.nextID;
     if (auto why = regions_[p.region]->build(pilot, kind, at)) return why;
     builtBy_[p.region][id] = p.key;
-    // Paid from the side's bank: the wallet follows at once.
-    if (world_) bankOut(p, p.region);
+    // Paid from the side's bank: the wallet follows at once. Its skills
+    // reach the new building.
+    if (world_) {
+        bankOut(p, p.region);
+        pushProgress(pilot);
+    }
     return std::nullopt;
 }
 
@@ -454,12 +466,16 @@ std::optional<size_t> WorldMap::neighbour(size_t r, Edge e) const {
 
 void WorldMap::step() {
     const auto t0 = std::chrono::steady_clock::now();
+    const std::vector<Work> work = world_ ? workBefore() : std::vector<Work>{};
     for (auto& r : regions_) r->step();
     lastStepMs_ = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     tick_ += 1;
     if (!world_) return;
-    clock_ += regions_[0]->description().step;
+    const double dt = regions_[0]->description().step;
+    clock_ += dt;
     updateSky();
+    workAfter(work);
+    regrowWells(dt);
     for (auto& [id, p] : pilots_)
         if (!p.flight) {
             bankOut(p, p.region);
@@ -509,6 +525,7 @@ void WorldMap::crossings() {
             if (!to) continue;
             const region::Built& there = *regions_[*to]->places();
             if (!inSpan(there.openings[size_t(opposite(e))], along) || regions_[*to]->driven()) continue;
+            const auto clocks = takeClocks(p.region, *unit);
             const Unit leaving = *here.release(*unit);
             const int64_t lastInput = here.lastInputTick(pilot);
             p.record = here.levels(pilot);
@@ -516,6 +533,8 @@ void WorldMap::crossings() {
             if (here.pilots().empty()) bankIn(PilotState{}, p.region);
             // Its inputs carry on from where they were.
             arrive(pilot, p, *to, leaving, there.edgePoint(opposite(e), along, params_.arriveDepth), lastInput);
+            giveClocks(*to, *p.unit, clocks);
+            firstVisit(pilot, world_->regions[*to].file.id);
             Region& now = *regions_[*to];
             p.visit += 1;
             net::RegionChange rc;
@@ -550,6 +569,9 @@ void WorldMap::landings() {
         const region::Built& there = world_->regions[f.to].built;
         Region& now = *regions_[f.to];
         arrive(pilot, p, f.to, f.unit, there.regionAt(there.pads[f.pad].at), lastInput);
+        giveClocks(f.to, *p.unit, f.clocks);
+        firstLanding(pilot, world_->regions[f.to].file.id + "/" + there.pads[f.pad].name);
+        if (f.to != from) firstVisit(pilot, world_->regions[f.to].file.id);
         if (f.to == from) {
             moves_.push_back(Moved{pilot, std::nullopt});
             continue;
@@ -578,6 +600,7 @@ Snapshot WorldMap::snapshot(PilotId pilot, const InterestParams& params) {
     Snapshot s = r->snapshot(pilot, params);
     s.game = net::visitGame(visit(pilot), s.game);
     s.sky = sky();
+    if (world_) s.xp = pilots_[pilot].progress.xp;
     return s;
 }
 

@@ -17,6 +17,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -65,6 +66,40 @@ WorldLoad loadWorld(const std::string& path);
 /// The same from text; region paths are read relative to `folder`.
 WorldLoad loadWorld(std::string_view json, const std::string& folder);
 
+/// A world's XP (docs/prospector-progression.md, "XP sources"), at ×1:
+/// counted by the server from the work its regions' simulations did, and
+/// the one-offs, paid once per pilot ever.
+struct WorldXp {
+    /// An ore and an MH unloaded.
+    static constexpr double ore = 1;
+    static constexpr double hydrogen = 2;
+    /// Welding a building of the pilot's own: this × its cost (ore + MH) ×
+    /// the share welded. Repairing one: this × its cost × the share of hp
+    /// mended, only hp lost to something else, at most its welding XP a day.
+    static constexpr double weld = 0.5;
+    static constexpr double repair = 0.25;
+    static constexpr double repairDay = 86400;
+    /// The one-offs. The start region and its start pad pay nothing.
+    static constexpr double region = 250;
+    static constexpr double pad = 50;
+    static constexpr double citadel = 150;
+    static constexpr double building = 100;
+    static constexpr double firstHydrogen = 50;
+    static constexpr double firstFlight = 50;
+    static constexpr double firstEmptied = 50;
+    /// A blueprint found: this × its level floor; a survey chip (P4).
+    static constexpr double blueprintPerFloor = 50;
+    static constexpr double chip = 25;
+    /// The feats' ids (`ProspectorProgress::feats`): "built-citadel" and
+    /// one a building kind, "first-hydrogen", "first-flight", "first-emptied".
+    static std::string built(StructureKind kind);
+    static constexpr const char* hydrogenFeat = "first-hydrogen";
+    static constexpr const char* flightFeat = "first-flight";
+    static constexpr const char* emptiedFeat = "first-emptied";
+    /// The XP a feat pays.
+    static double feat(const std::string& id);
+};
+
 /// What the world's rules are.
 struct WorldParams {
     /// A new pilot's wallet: a Citadel (400) and a Derrick (75) with some
@@ -93,6 +128,9 @@ struct WorldParams {
     /// Dev and shots (`--weather storm`): hold the weather, 0 clear .. 3
     /// storm (fractions blend).
     std::optional<double> weatherHold;
+    /// A well no one pumps grows back 1 MH every this many seconds, up to
+    /// what it held at the start (docs/mmorpg-m6.md, "Decided"). 0: never.
+    double wellRegrowEvery = 10;
 };
 
 /// What the server tells a pilot after a step: its place in the world
@@ -220,12 +258,50 @@ public:
     /// The weather sampled at the clock now.
     const WeatherSample& weather() const { return weatherNow_; }
 
+    // MARK: The Prospector's progression (docs/prospector-progression.md, P3)
+
+    /// The pilot's progression (nil: not joined, or not a world).
+    std::optional<ProspectorProgress> progress(PilotId pilot) const;
+    /// Sets it (tests, dev): its region's simulation has it at once.
+    void setProgress(PilotId pilot, const ProspectorProgress& progress);
+    /// XP for work: the level it reaches is news.
+    void earn(PilotId pilot, double xp);
+    /// The skill tree's requests, checked here (`ProspectorProgress`'s
+    /// refusals, and a respec only at the pilot's own Citadel, its MH from
+    /// the wallet). The reason when refused.
+    std::optional<std::string> spend(PilotId pilot, Skill skill);
+    std::optional<std::string> undo(PilotId pilot, Skill skill);
+    std::optional<std::string> respec(PilotId pilot);
+    std::optional<std::string> slot(PilotId pilot, int64_t index, std::optional<Skill> skill);
+    /// The one-offs: a first visit to a region, a first landing on a pad
+    /// (region/pad), a feat (`WorldXp`'s ids). Paid once per pilot ever:
+    /// false when it was paid before.
+    bool firstVisit(PilotId pilot, const std::string& region);
+    bool firstLanding(PilotId pilot, const std::string& pad);
+    bool feat(PilotId pilot, const std::string& id);
+    /// P4's finds: a blueprint (once each, 50 × its level floor) and a
+    /// survey chip (25 each; the server rolls them, at most one per 5 min).
+    bool findBlueprint(PilotId pilot, StructureKind kind, int64_t floor);
+    void findChip(PilotId pilot);
+    /// What the pilot's client is told of its progression now (no news).
+    std::optional<net::ProgressMessage> progressMessage(PilotId pilot) const;
+    /// What happened to the pilot's progression since the last call.
+    std::vector<net::ProgressMessage::News> takeNews(PilotId pilot);
+
     /// Wall-clock ms the last `step` took over all the regions.
     double lastStepMs() const { return lastStepMs_; }
 
 private:
+    /// A pilot unit's skill clocks on the way to another region: when its
+    /// actives are ready and its bursts end, as seconds from `at` (the
+    /// world's clock when it left), and its counts.
+    struct Carried {
+        Simulation::SkillClock clock;
+        double at = 0;
+    };
     struct Flight {
         Unit unit;
+        std::optional<Carried> clocks;
         size_t to = 0;
         size_t pad = 0;
         int64_t landsAt = 0;
@@ -242,6 +318,22 @@ private:
         /// (driven or not; in flight: the one it left).
         std::string key;
         std::optional<int64_t> unit;
+        /// Its progression in the world, and what happened to it since its
+        /// client was last told.
+        ProspectorProgress progress;
+        std::vector<net::ProgressMessage::News> news;
+    };
+    /// What the driven unit was doing before a step (the work XP).
+    struct Work {
+        PilotId pilot = 0;
+        size_t region = 0;
+        int64_t unit = 0;
+        bool hydrogen = false;
+        std::optional<int64_t> patch;
+        /// The buildings of its own it welds, and their build time left.
+        std::map<int64_t, double> welding;
+        /// Its own finished buildings' hp.
+        std::map<int64_t, double> hp;
     };
 
     std::optional<LoadedWorld> world_;
@@ -260,6 +352,15 @@ private:
     std::unique_ptr<Weather> weather_;
     WeatherSample weatherNow_;
     net::Sky sky_;
+    /// Each region's wells: what they held at the start, the seconds each
+    /// has stood unpumped since it last grew, and what it held then.
+    std::vector<std::vector<int64_t>> wellFull_;
+    std::vector<std::vector<double>> wellIdle_;
+    std::vector<std::vector<int64_t>> wellLast_;
+    /// Hp each region's buildings lost to something else, not mended yet,
+    /// and repair XP paid per building on the day (`WorldXp::repairDay`).
+    std::vector<std::map<int64_t, double>> owed_;
+    std::map<std::pair<size_t, int64_t>, std::pair<int64_t, double>> repaid_;
 
     /// A new Prospector on the start pad, facing the start region's nearest
     /// ore deposit (one with ore left first), so the first thing in view is
@@ -280,6 +381,25 @@ private:
     void updateSky();
     /// Into `away_` (WorldMapSave.cpp).
     void park(const PilotState& p);
+    // WorldProgress.cpp.
+    PilotState* pilotState(PilotId pilot);
+    /// `p`'s own buildings in region `r` (the ids it built).
+    std::set<int64_t> ownBuildings(const PilotState& p, size_t r) const;
+    bool owns(const PilotState& p, size_t r, int64_t building) const;
+    /// The progression into the pilot's region's simulation.
+    void pushProgress(PilotId pilot);
+    void earn(PilotState& p, double xp);
+    /// A one-off into `set` under `id`, paid `xp`, told as `kind`.
+    bool oneOff(PilotId pilot, std::set<std::string> ProspectorProgress::*set, const std::string& id, double xp,
+                net::ProgressMessage::NewsKind kind);
+    /// Before and after the regions step: the work XP and the feats.
+    std::vector<Work> workBefore() const;
+    void workAfter(const std::vector<Work>& before);
+    void regrowWells(double dt);
+    /// A unit's skill clocks out of region `r` (it leaves), and into `r` as
+    /// unit `unit` (it arrives), its cooldowns running on meanwhile.
+    std::optional<Carried> takeClocks(size_t r, int64_t unit);
+    void giveClocks(size_t r, int64_t unit, const std::optional<Carried>& c);
 };
 
 } // namespace ac::server

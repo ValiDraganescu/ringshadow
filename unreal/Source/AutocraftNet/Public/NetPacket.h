@@ -27,7 +27,7 @@
 namespace ac::net {
 
 inline constexpr uint32_t kProtocolId = 0x52534844;  // "RSHD"
-inline constexpr uint16_t kProtocolVersion = 4;  // 2: inputs carry the visit; 3: encrypted; 4: the sky
+inline constexpr uint16_t kProtocolVersion = 5;  // 2: inputs carry the visit; 3: encrypted; 4: the sky; 5: the skill tree
 inline constexpr size_t kMaxPacketBytes = 1200;
 inline constexpr size_t kHeaderBytes = 19;
 /// The tag after a sealed packet's payload.

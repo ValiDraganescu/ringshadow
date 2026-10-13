@@ -134,12 +134,15 @@ bool Region::take(PilotId pilot, int64_t unit) {
         return false;
     }
     it->second.drives = unit;
+    // Its skills on the unit it drives now.
+    loadProgress(it->second);
     // Until its first input the unit stands, facing where it faces.
     PilotInput& h = it->second.held;
     h.walk = Vec2(0, 0);
     h.heading = sim_.pilot->heading;
     h.act = h.ability = h.hold = h.mend = false;
     h.crosshair = std::nullopt;
+    h.slot = 0;
     return true;
 }
 
@@ -170,6 +173,17 @@ void Region::stashLevels(Seat& seat) {
         seat.levels = *side;
         *side = std::nullopt;
     }
+    clearProgress();
+}
+
+void Region::loadProgress(const Seat& seat) {
+    sim_.setProgress(seat.progress);
+    sim_.pilotBuildings = seat.buildings;
+}
+
+void Region::clearProgress() {
+    sim_.setProgress(std::nullopt);
+    sim_.pilotBuildings.clear();
 }
 
 std::optional<PilotRecord> Region::levels(PilotId pilot) const {
@@ -191,6 +205,14 @@ void Region::setLevels(PilotId pilot, const std::optional<PilotRecord>& levels) 
     } else {
         it->second.levels = levels;
     }
+}
+
+void Region::setProgress(PilotId pilot, const std::optional<ProspectorProgress>& progress, const std::set<int64_t>& buildings) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return;
+    it->second.progress = progress;
+    it->second.buildings = buildings;
+    if (drivesNow(it->second)) loadProgress(it->second);
 }
 
 std::optional<std::string> Region::pick(PilotId pilot, UnitKind kind, Perk perk) {
@@ -260,6 +282,7 @@ bool Region::input(PilotId pilot, const PilotInput& in) {
         seat.pending.pop_front();
         seat.pending.front().act = seat.pending.front().act || old.act;
         seat.pending.front().ability = seat.pending.front().ability || old.ability;
+        if (seat.pending.front().slot == 0) seat.pending.front().slot = old.slot;
         seat.lastApplied = old.tick;
     }
     return true;
@@ -281,6 +304,7 @@ void Region::nextInput(Seat& seat) {
     // until the next input comes.
     seat.held.act = false;
     seat.held.ability = false;
+    seat.held.slot = 0;
     if (seat.pending.empty()) return;
     seat.held = seat.pending.front();
     seat.pending.pop_front();
@@ -303,9 +327,11 @@ void Region::step() {
         p.ability = h.ability;
         p.hold = h.hold;
         p.mend = h.mend;
+        p.slot = h.slot;
         p.crosshair = h.crosshair;
     }
     std::vector<GameEvent> events = sim_.step(description_.step);
+    lastEvents_ = events;
     tick_ += 1;
     for (auto& [id, seat] : pilots_) {
         // The driven unit died, or got where it cannot be driven from.

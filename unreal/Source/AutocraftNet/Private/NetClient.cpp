@@ -40,6 +40,14 @@ uint32_t Client::build(StructureKind kind, Vec2 at) {
 
 uint32_t Client::pick(UnitKind kind, Perk perk) { return request(RequestMessage::Pick{kind, perk}); }
 
+uint32_t Client::spend(Skill skill) { return request(RequestMessage::Spend{skill}); }
+
+uint32_t Client::undo(Skill skill) { return request(RequestMessage::Undo{skill}); }
+
+uint32_t Client::respec() { return request(RequestMessage::Respec{}); }
+
+uint32_t Client::slot(int64_t index, std::optional<Skill> skill) { return request(RequestMessage::Slot{index, skill}); }
+
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;
     m.id = nextRequest_++;
@@ -80,6 +88,14 @@ void Client::message(const std::vector<uint8_t>& data) {
     case MessageType::world: {
         WorldMessage m;
         if (decode(data, m)) world_ = m;
+        return;
+    }
+    case MessageType::progress: {
+        ProgressMessage m;
+        if (!decode(data, m)) return;
+        news.insert(news.end(), m.news.begin(), m.news.end());
+        m.news.clear();
+        progress_ = m;
         return;
     }
     case MessageType::snapshot: {
@@ -145,6 +161,7 @@ std::optional<PilotInput> Client::sendInput() {
     // Presses go out once; the repeats carry them for loss.
     steer.act = false;
     steer.ability = false;
+    steer.slot = 0;
     const AckMessage ack = reader_.ack();
     if (!ack.received.empty()) {
         const std::vector<uint8_t> bytes = encode(ack);

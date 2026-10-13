@@ -229,6 +229,13 @@ public:
 	static constexpr double PadReach = ac::region::padReach;
 	/// The world map, the newest (null: not told yet).
 	const ac::net::WorldMessage* World() const;
+	/// The pilot's skill tree (docs/prospector-progression.md): the newest
+	/// Progress message (null: not a world, or not told yet), its XP as the
+	/// newest snapshot has it, and what happened to it since the last call
+	/// (a level, a region, a feat). Decoded only: the screens come in P5.
+	const ac::net::ProgressMessage* Progress() const;
+	std::optional<double> Xp() const;
+	std::vector<ac::net::ProgressMessage::News> TakeProgressNews();
 	/// The region the pilot is in (in flight: the one it lifted off from).
 	const ac::net::WorldMessage::Region* Here() const;
 	/// In flight: the region it flies to.

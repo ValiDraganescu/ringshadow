@@ -5,6 +5,7 @@
 #include "test.h"
 
 #include "NetMirror.h"
+#include "NetPacket.h"
 #include "NetProtocol.h"
 #include "NetSnapshot.h"
 #include "NetTypes.h"
@@ -201,6 +202,8 @@ TEST(protocol_input_round_trips_quantised) {
         in.mend = i == 3;
         if (i == 1) in.crosshair = Pilot::Crosshair(Pilot::Crosshair::On{42});
         if (i == 2) in.crosshair = Pilot::Crosshair(Pilot::Crosshair::Clear{});
+        // A slot key: 1-3 (Q, C, G), 0 none.
+        in.slot = i;
         m.inputs.push_back(in);
     }
     InputMessage back;
@@ -209,6 +212,7 @@ TEST(protocol_input_round_trips_quantised) {
     for (size_t i = 0; i < 4; i++) {
         EXPECT_TRUE(back.inputs[i] == quantised(m.inputs[i]));
         EXPECT_EQ(back.inputs[i].visit, m.inputs[i].visit);
+        EXPECT_EQ(back.inputs[i].slot, int64_t(i));
         EXPECT_NEAR(back.inputs[i].walk.x, m.inputs[i].walk.x, 0.5 / q::kWalkSteps);
         EXPECT_NEAR(std::remainder(back.inputs[i].heading - m.inputs[i].heading, kTurn), 0.0, kTurn / 65536 / 2 + 1e-12);
     }
@@ -643,6 +647,60 @@ TEST(snapshot_carries_the_worlds_sky_in_every_part) {
     EXPECT_NEAR(again[0].snapshot.sky->hour(), WorldClock::hourAt(12345.678), 1e-9);
 }
 
+TEST(snapshot_carries_the_pilots_xp) {
+    Snapshot s;
+    s.xp = 145775.5;
+    SnapshotWriter w;
+    SnapshotReader r;
+    const auto parts = roundTrip(w, r, s, 0);
+    ASSERT_TRUE(!parts.empty());
+    ASSERT_TRUE(parts[0].snapshot.xp.has_value());
+    EXPECT_NEAR(*parts[0].snapshot.xp, 145775.5, 1e-3);
+    Mirror m(RegionDescription{});
+    m.apply(parts[0]);
+    ASSERT_TRUE(m.xp().has_value());
+    EXPECT_NEAR(*m.xp(), 145775.5, 1e-3);
+    // None off a world.
+    Snapshot plain;
+    SnapshotWriter w2;
+    SnapshotReader r2;
+    EXPECT_TRUE(!roundTrip(w2, r2, plain, 0)[0].snapshot.xp.has_value());
+}
+
+TEST(protocol_progress_round_trips) {
+    ProgressMessage m;
+    m.xp = 6123.25;
+    m.level = 10;
+    m.points = 3;
+    m.ranks = {{Skill::quickDrill, 3}, {Skill::bigHaul, 2}, {Skill::overcharge, 1}, {allCases<Skill>().back(), 1}};
+    m.slots = {Skill::overcharge, std::nullopt, Skill::aegis};
+    m.ready = {{Skill::overcharge, 512.125}};
+    m.undo = {{Skill::bigHaul, 1234.5}};
+    m.respecPrice = 40;
+    m.respecFree = false;
+    m.blueprints = {StructureKind::citadel, StructureKind::derrick, StructureKind::sentinel};
+    m.sitesKnown = {"tern-ridge/wreck", "start/crate"};
+    m.sitesFound = {"start/crate"};
+    m.news = {{ProgressMessage::NewsKind::level, "", 0, 10},
+              {ProgressMessage::NewsKind::region, "tern-ridge", 250, 0},
+              {ProgressMessage::NewsKind::feat, "first-flight", 50, 0},
+              {ProgressMessage::NewsKind::reset, "", 0, 9}};
+    const std::vector<uint8_t> bytes = encode(m);
+    EXPECT_TRUE(messageType(bytes) == MessageType::progress);
+    ProgressMessage back;
+    ASSERT_TRUE(decode(bytes, back));
+    EXPECT_TRUE(back == m);
+    // A fresh one: nothing learned.
+    ProgressMessage fresh;
+    ASSERT_TRUE(decode(encode(fresh), back));
+    EXPECT_TRUE(back == fresh);
+    // Cut short: refused.
+    std::vector<uint8_t> cut = bytes;
+    cut.resize(cut.size() / 2);
+    EXPECT_TRUE(!decode(cut, back));
+    EXPECT_EQ(kProtocolVersion, uint16_t(5));
+}
+
 TEST(mirror_takes_snapshots_into_its_simulation) {
     RegionDescription region;
     region.map = MapChoice{MapStyle::openField, MapSize::small, 2};
@@ -783,6 +841,22 @@ TEST(protocol_world_messages_round_trip) {
     ASSERT_TRUE(decode(encode(k), kb));
     EXPECT_TRUE(kb == k);
     k.what = RequestMessage::Pick{UnitKind::prospector, static_cast<Perk>(allCases<Perk>().size())};
+    EXPECT_TRUE(!decode(encode(k), kb));
+
+    // The skill tree: Spend, Undo, Respec, Slot (and emptying one); a skill
+    // past the catalogue is refused.
+    for (const auto& what : std::vector<decltype(RequestMessage::what)>{
+             RequestMessage::Spend{Skill::quickDrill}, RequestMessage::Spend{allCases<Skill>().back()},
+             RequestMessage::Undo{Skill::overcharge}, RequestMessage::Respec{}, RequestMessage::Slot{2, Skill::aegis},
+             RequestMessage::Slot{0, std::nullopt}}) {
+        RequestMessage t;
+        t.id = 21;
+        t.what = what;
+        RequestMessage tb;
+        ASSERT_TRUE(decode(encode(t), tb));
+        EXPECT_TRUE(tb == t);
+    }
+    k.what = RequestMessage::Spend{static_cast<Skill>(allCases<Skill>().size())};
     EXPECT_TRUE(!decode(encode(k), kb));
 
     // A snapshot's game carries the visit.

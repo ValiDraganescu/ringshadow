@@ -8,7 +8,8 @@
 // first after connected: no Welcome before it). Server to client:
 // Welcome (reliable, the first message after connected), Snapshot
 // (unreliable, NetSnapshot.h), Event (reliable), Reply (reliable),
-// RegionChange and World (reliable). A Welcome or a RegionChange that
+// RegionChange and World (reliable), Progress (reliable, a world's pilot's
+// skill tree). A Welcome or a RegionChange that
 // carries a region file too large for one reliable message goes on the bulk
 // channel.
 #pragma once
@@ -17,6 +18,7 @@
 #include "NetBitStream.h"
 
 #include "Pilot.h"
+#include "Progression.h"
 #include "RegionFile.h"
 #include "Types.h"
 #include "Weather.h"
@@ -26,7 +28,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -45,6 +49,7 @@ enum class MessageType : uint8_t {
     regionChange = 8,
     world = 9,
     join = 10,
+    progress = 11,
 };
 
 /// The type of a message, or nil when it is none of ours.
@@ -92,6 +97,9 @@ struct PilotInput {
     bool hold = false;
     bool mend = false;
     std::optional<Pilot::Crosshair> crosshair;
+    /// An active's slot key went down (`Pilot::slot`: 1–3 for Q, C and G, 0
+    /// none; docs/prospector-progression.md, "Actives"): a press, like `act`.
+    int64_t slot = 0;
     bool operator==(const PilotInput&) const = default;
 };
 
@@ -199,6 +207,9 @@ struct Snapshot {
     /// The world's clock and weather (nil: a region of no world, M1: the
     /// client's own clock).
     std::optional<Sky> sky;
+    /// A world's pilot's XP in all (`ProspectorProgress::xp`; nil: not a
+    /// world). The rest of its progress comes in Progress messages.
+    std::optional<double> xp;
 };
 
 // MARK: - Quantising
@@ -260,12 +271,14 @@ struct AckMessage {
 /// Client → server, reliable: everything that is not steering. Take a
 /// unit, hand it back, fly from a pad to a pad (a world's region, by its id,
 /// and the pad's name in it), build with the driven Prospector, pick a
-/// level-up card.
+/// level-up card (not in a world), and a world's skill tree.
 ///
-/// The pilot's levels themselves (per kind: level, XP, picks) come in the
-/// snapshot's player data: its side's `Player::pilot` is the pilot's own
-/// record (the server's `Region::levels`), so the two cards on offer are
-/// `PilotRecord::pending`, the core's catalogue, on both ends.
+/// Off a world, the pilot's levels themselves (per kind: level, XP, picks)
+/// come in the snapshot's player data: its side's `Player::pilot` is the
+/// pilot's own record (the server's `Region::levels`), so the two cards on
+/// offer are `PilotRecord::pending`, the core's catalogue, on both ends. In
+/// a world the cards are off: the skill tree's state comes in Progress
+/// messages, the XP in the snapshots.
 struct RequestMessage {
     struct Take {
         int64_t unit = 0;
@@ -293,9 +306,29 @@ struct RequestMessage {
         Perk perk{};
         bool operator==(const Pick&) const = default;
     };
+    /// A world's skill tree (docs/prospector-progression.md): a point into
+    /// `skill`, the last point in it back (spent within the undo window),
+    /// every point back (at the pilot's Citadel, for MH unless free), an
+    /// active into slot `index` (0 Q, 1 C, 2 G; nil `skill`: empty it).
+    struct Spend {
+        Skill skill{};
+        bool operator==(const Spend&) const = default;
+    };
+    struct Undo {
+        Skill skill{};
+        bool operator==(const Undo&) const = default;
+    };
+    struct Respec {
+        bool operator==(const Respec&) const = default;
+    };
+    struct Slot {
+        int64_t index = 0;
+        std::optional<Skill> skill;
+        bool operator==(const Slot&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
-    std::variant<Take, HandBack, Fly, Build, Pick> what;
+    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot> what;
     bool operator==(const RequestMessage&) const = default;
 };
 
@@ -325,6 +358,52 @@ struct ReplyMessage {
     /// Why not, when refused.
     std::string reason;
     bool operator==(const ReplyMessage&) const = default;
+};
+
+/// Server → client, reliable: a world's pilot's progression
+/// (docs/prospector-progression.md), whole, on every change but its XP
+/// alone (the snapshots carry that): its level, points, ranks, slots, when
+/// its actives are ready, its respec price, blueprints and sites, and what
+/// just happened (`news`).
+struct ProgressMessage {
+    /// What happened: a level reached (`value`), a region discovered or a pad
+    /// landed on for the first time (`id`), a feat done (`id`), a blueprint
+    /// or a survey chip found (P4), the skills reset by an old save's
+    /// conversion (`value`: the points to spend). `xp`: what it paid.
+    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset };
+    struct News {
+        NewsKind kind = NewsKind::level;
+        std::string id;
+        double xp = 0;
+        int64_t value = 0;
+        bool operator==(const News&) const = default;
+    };
+    /// A point that can still be taken back free, until world time `until`
+    /// (`Sky::time`).
+    struct Undoable {
+        Skill skill{};
+        double until = 0;
+        bool operator==(const Undoable&) const = default;
+    };
+    double xp = 0;
+    int64_t level = 1;
+    /// Points waiting to be spent.
+    int64_t points = 0;
+    std::map<Skill, int64_t> ranks;
+    std::array<std::optional<Skill>, Progression::slotCount> slots{};
+    /// When each used active is ready again: the region's game time (the
+    /// mirror's `state.time`).
+    std::map<Skill, double> ready;
+    std::vector<Undoable> undo;
+    /// MH the next respec costs, and whether it is free.
+    int64_t respecPrice = 0;
+    bool respecFree = true;
+    std::set<StructureKind> blueprints;
+    /// Blueprint sites the pilot knows of, and has opened (ids; P4).
+    std::set<std::string> sitesKnown;
+    std::set<std::string> sitesFound;
+    std::vector<News> news;
+    bool operator==(const ProgressMessage&) const = default;
 };
 
 /// Server → client, reliable: the pilot's events since the last, in order
@@ -410,6 +489,7 @@ AUTOCRAFTNET_API std::vector<uint8_t> encode(const AckMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const RequestMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const ReplyMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const JoinMessage& m);
+AUTOCRAFTNET_API std::vector<uint8_t> encode(const ProgressMessage& m);
 /// As many Event messages as the events need, each within a reliable
 /// message's size.
 AUTOCRAFTNET_API std::vector<std::vector<uint8_t>> encodeEvents(int64_t serverTick, const std::vector<GameEvent>& events);
@@ -423,6 +503,7 @@ AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, AckMessage& out)
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, RequestMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, ReplyMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, JoinMessage& out);
+AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, EventMessage& out);
 
 // MARK: - Bits the messages share

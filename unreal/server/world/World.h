@@ -37,10 +37,14 @@ using net::WellView;
 /// A pilot: one connected player. Its own number, given by the server.
 using PilotId = uint64_t;
 
-/// XP in a world's regions (the MMORPG mode) is this share of the game's
-/// (`Simulation::xpScale`): a Prospector levels over many sessions there,
-/// not in one Citadel. The RTS game and the M1 region keep the game's rates.
-inline constexpr double kWorldXpScale = 0.1;
+/// The strategy game's leveling in a world's regions (`Simulation::xpScale`):
+/// off. A world's Prospector climbs the skill tree instead
+/// (docs/prospector-progression.md), its XP counted by the server at ×1
+/// (`WorldXp`, WorldMap.h); the strategy game's cards never come. The RTS
+/// game and the M1 region keep the game's rates.
+inline constexpr double kWorldXpScale = 0;
+/// A Pick request in a world: refused with this.
+inline constexpr const char* kWorldPickRefusal = "No level-up cards in a world: spend skill points (K)";
 
 /// How a region starts.
 struct RegionConfig {
@@ -133,6 +137,10 @@ public:
     /// the kind's lowest pending level), driving or not. The reason when
     /// refused.
     std::optional<std::string> pick(PilotId pilot, UnitKind kind, Perk perk);
+    /// A world's pilot's progression and its own buildings (ids here), for
+    /// its skills (`Simulation::setProgress`): in the simulation while it
+    /// drives, in its seat otherwise, as its levels.
+    void setProgress(PilotId pilot, const std::optional<ProspectorProgress>& progress, const std::set<int64_t>& buildings);
     std::optional<int64_t> driving(PilotId pilot) const;
     /// Some pilot drives here (the core drives one unit a region).
     bool driven() const;
@@ -177,6 +185,10 @@ public:
     /// byte budget ran out): due again at the next, having waited one more.
     void deferred(PilotId pilot, const std::vector<int64_t>& ids);
 
+    /// Every event of the last step, whoever may know it (the world's XP
+    /// reads them).
+    const std::vector<GameEvent>& lastEvents() const { return lastEvents_; }
+
     /// Events kept for a pilot that takes no snapshots.
     static constexpr size_t maxEvents = 4096;
 
@@ -196,6 +208,9 @@ private:
         std::set<int64_t> known;
         /// Its levels while it does not drive (`levels`).
         std::optional<PilotRecord> levels;
+        /// Its progression and own buildings (`setProgress`).
+        std::optional<ProspectorProgress> progress;
+        std::set<int64_t> buildings;
     };
 
     std::optional<region::Built> built_;
@@ -205,6 +220,7 @@ private:
     int64_t tick_ = 0;
     int64_t game_ = 0;
     std::map<PilotId, Seat> pilots_;
+    std::vector<GameEvent> lastEvents_;
 
     Vec2 focus(const Seat& seat, int64_t side) const;
     /// The seat drives the simulation's pilot now.
@@ -215,6 +231,9 @@ private:
     /// back out (it stops).
     void loadLevels(Seat& seat);
     void stashLevels(Seat& seat);
+    /// The seat's progression into the simulation (it drives), and out.
+    void loadProgress(const Seat& seat);
+    void clearProgress();
     void nextInput(Seat& seat);
 };
 

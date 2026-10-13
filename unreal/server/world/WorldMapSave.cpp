@@ -25,6 +25,21 @@ SavedUnit savedUnit(const Unit& u, const std::string& owner) {
     return s;
 }
 
+/// An old pilot's levels as a progression (docs/prospector-progression.md,
+/// "Old MMO saves"): its Prospector's XP × 10 (it was earned at a tenth),
+/// the picks dropped (their points come back unspent, the first respec
+/// still free), the Citadel and Derrick blueprints (it has built them), and
+/// the feats for the buildings it owns, without their XP.
+ProspectorProgress converted(const PilotRecord& old, const std::string& key, const WorldSave& save) {
+    ProspectorProgress g;
+    g.xp = old.xp(UnitKind::prospector) * 10;
+    g.blueprints = {StructureKind::citadel, StructureKind::derrick};
+    for (const SavedRegion& r : save.regions)
+        for (const SavedBuilding& b : r.buildings)
+            if (b.owner == key && !b.buildLeft) g.feats.insert(WorldXp::built(b.kind));
+    return g;
+}
+
 } // namespace
 
 WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
@@ -59,6 +74,7 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
     r.join(pilot);
     bankIn(in, in.region);
     r.setLevels(pilot, in.record);
+    r.setProgress(pilot, in.progress, ownBuildings(in, in.region));
     if (free) r.take(pilot, *in.unit);
     in.last = r.places()->regionAt(r.simulation().state.units[size_t(*i)].position);
     return Seated::restored;
@@ -88,7 +104,7 @@ WorldSave WorldMap::save() const {
     std::vector<std::map<int64_t, std::string>> owned(n);
     std::vector<std::vector<SavedUnit>> landing(n);
     std::vector<int64_t> extra(n, 0);
-    auto pilotRow = [&](const PilotState& p, const std::optional<PilotRecord>& levels) {
+    auto pilotRow = [&](const PilotState& p) {
         SavedPilot s;
         s.id = p.key;
         s.ore = p.wallet.ore;
@@ -107,12 +123,14 @@ WorldSave WorldMap::save() const {
         }
         s.region = world_->regions[r].file.id;
         s.unit = unit;
-        if (levels) s.levels = SessionStore::encode(*levels, false);
+        // Its progression; the strategy game's levels are not a world's
+        // any more (written empty).
+        s.progress = SessionStore::encode(p.progress, false);
         out.pilots.push_back(s);
     };
     for (const auto& [id, p] : pilots_)
-        if (!p.key.empty()) pilotRow(p, levels(id));
-    for (const auto& [key, p] : away_) pilotRow(p, p.record);
+        if (!p.key.empty()) pilotRow(p);
+    for (const auto& [key, p] : away_) pilotRow(p);
     std::sort(out.pilots.begin(), out.pilots.end(), [](const SavedPilot& a, const SavedPilot& b) { return a.id < b.id; });
 
     for (size_t i = 0; i < n; i++) {
@@ -212,10 +230,15 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             p.region = start_;
             p.unit = std::nullopt;
         }
-        if (!sp.levels.empty()) {
-            std::string why;
-            if (auto rec = SessionStore::decode<PilotRecord>(sp.levels, &why)) p.record = *rec;
+        std::string why;
+        if (!sp.progress.empty()) {
+            if (auto g = SessionStore::decode<ProspectorProgress>(sp.progress, &why)) p.progress = *g;
+            else problems.push_back("pilot " + sp.id.substr(0, 8) + ": progress does not read (" + why + "), left out");
+        } else if (!sp.levels.empty()) {
+            if (auto rec = SessionStore::decode<PilotRecord>(sp.levels, &why)) p.progress = converted(*rec, sp.id, save);
             else problems.push_back("pilot " + sp.id.substr(0, 8) + ": levels do not read (" + why + "), left out");
+            // Told on its next login.
+            p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::reset, "", 0, p.progress.unspent()});
         }
         away_[sp.id] = p;
     }

@@ -47,7 +47,7 @@ public:
     /// Puts what was sent on the wire.
     void flush(double now);
 
-    /// What the pilot does now. The presses (`act`, `ability`) go out once.
+    /// What the pilot does now. The presses (`act`, `ability`, `slot`) go out once.
     PilotInput steer;
 
     /// Sends a request; its reply lands in `replies` under the number returned.
@@ -61,6 +61,13 @@ public:
     uint32_t build(StructureKind kind, Vec2 at);
     /// Pick a level-up card: `perk` for `kind` (the reply says why not).
     uint32_t pick(UnitKind kind, Perk perk);
+    /// A world's skill tree (the reply says why not): a point into `skill`,
+    /// the last point in it back, every point back (at the Citadel), an
+    /// active into slot `index` (nil: empty it).
+    uint32_t spend(Skill skill);
+    uint32_t undo(Skill skill);
+    uint32_t respec();
+    uint32_t slot(int64_t index, std::optional<Skill> skill);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }
@@ -83,6 +90,12 @@ public:
     const std::optional<RegionChange>& regionChange() const { return regionChange_; }
     /// The world map, the newest (nil: not a world, or not told yet).
     const std::optional<WorldMessage>& world() const { return world_; }
+    /// A world's pilot's progression, the newest Progress message (nil: not
+    /// a world, or not told yet). Its XP is the Progress message's; the
+    /// mirror's `xp` is newer.
+    const std::optional<ProgressMessage>& progress() const { return progress_; }
+    /// The progress news received, in order (the caller takes them).
+    std::vector<ProgressMessage::News> news;
     /// Snapshot parts waiting for their region's mirror.
     static constexpr size_t kMaxWaiting = 64;
 
@@ -105,6 +118,7 @@ private:
     std::optional<Welcome> welcome_;
     std::optional<RegionChange> regionChange_;
     std::optional<WorldMessage> world_;
+    std::optional<ProgressMessage> progress_;
     int64_t visit_ = 0;
     std::deque<SnapshotPart> waiting_;
     std::deque<PilotInput> sent_;

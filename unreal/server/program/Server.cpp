@@ -212,6 +212,9 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
                 reply.done = true;
                 log("pick " + what);
             }
+        } else if (const auto why = skillTree(m, client.pilot)) {
+            reply.reason = why->value_or("");
+            reply.done = !why->has_value();
         } else {
             if (region->driving(client.pilot)) {
                 region->handBack(client.pilot);
@@ -227,6 +230,45 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
     default:
         return;  // the server's own kinds
     }
+}
+
+std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMessage& m, PilotId pilot) {
+    std::string what;
+    std::optional<std::string> why;
+    if (const auto* s = std::get_if<net::RequestMessage::Spend>(&m.what)) {
+        what = "spend " + std::string(rawValue(s->skill));
+        why = world_.spend(pilot, s->skill);
+    } else if (const auto* u = std::get_if<net::RequestMessage::Undo>(&m.what)) {
+        what = "undo " + std::string(rawValue(u->skill));
+        why = world_.undo(pilot, u->skill);
+    } else if (std::holds_alternative<net::RequestMessage::Respec>(m.what)) {
+        what = "respec";
+        why = world_.respec(pilot);
+    } else if (const auto* sl = std::get_if<net::RequestMessage::Slot>(&m.what)) {
+        what = "slot " + std::to_string(sl->index) + " " + (sl->skill ? std::string(rawValue(*sl->skill)) : "empty");
+        why = world_.slot(pilot, sl->index, sl->skill);
+    } else {
+        return std::nullopt;
+    }
+    log((why ? "refuse " + what : what) + " by pilot " + std::to_string(pilot) + (why ? ": " + *why : ""));
+    return why;
+}
+
+void Server::sendProgress(net::ConnectionId c, Client& client) {
+    auto m = world_.progressMessage(client.pilot);
+    if (!m) return;
+    m->news = world_.takeNews(client.pilot);
+    // XP alone rides in the snapshots.
+    net::ProgressMessage same = *m;
+    same.xp = client.told ? client.told->xp : same.xp;
+    same.news.clear();
+    if (client.told && *client.told == same && m->news.empty()) return;
+    for (const auto& n : m->news)
+        if (n.kind == net::ProgressMessage::NewsKind::level)
+            log("pilot " + std::to_string(client.pilot) + " reaches level " + std::to_string(n.value));
+    sendReliable(c, net::encode(*m));
+    m->news.clear();
+    client.told = *m;
 }
 
 void Server::join(net::ConnectionId c, Client& client, const std::vector<uint8_t>& data, double now) {
@@ -264,6 +306,7 @@ void Server::join(net::ConnectionId c, Client& client, const std::vector<uint8_t
 void Server::sendSnapshots(double now) {
     for (auto& [c, client] : clients_) {
         if (!client.seated) continue;
+        sendProgress(c, client);
         net::Snapshot s = world_.snapshot(client.pilot, options_.interest);
         if (!s.events.empty())
             for (const auto& bytes : net::encodeEvents(s.serverTick, s.events))

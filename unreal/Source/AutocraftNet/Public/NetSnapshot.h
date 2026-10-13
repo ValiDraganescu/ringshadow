@@ -14,7 +14,7 @@
 // nothing is acked for a second, every item goes whole again.
 //
 // A message: type, snapshot id, part, the snapshot's header (ticks, time,
-// driven, winner, score, the world's sky, player count, fog size), then items, each led by a
+// driven, winner, score, the world's sky, the pilot's XP, player count, fog size), then items, each led by a
 // 1 bit and its kind and key, then a 0 bit.
 #pragma once
 

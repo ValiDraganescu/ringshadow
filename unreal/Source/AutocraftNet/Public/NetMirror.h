@@ -47,6 +47,8 @@ public:
     /// state's `heldHour` and `dayLength` follow it, so the mirror's sight
     /// at night is the server's.
     const std::optional<Sky>& sky() const { return sky_; }
+    /// A world's pilot's XP in all in the newest snapshot (nil: none came).
+    const std::optional<double>& xp() const { return xp_; }
     /// A snapshot brought the players (the wallet): before it, a new
     /// mirror's players are the map's start values, not the pilot's.
     bool playersKnown() const { return playersKnown_; }
@@ -74,6 +76,7 @@ private:
     int64_t game_ = -1;
     std::optional<int64_t> driven_;
     std::optional<Sky> sky_;
+    std::optional<double> xp_;
     bool playersKnown_ = false;
 };
 

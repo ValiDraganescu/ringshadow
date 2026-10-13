@@ -249,6 +249,7 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
         Opt<Fixed>{kFine}.write(w, s.sky->weatherHold);
         Enum<WeatherState, 2>{}.write(w, s.sky->weather);
     }
+    Opt<Fixed>{kMs}.write(w, s.xp);
     writeVarint(w, s.players.size());
     w.writeBool(s.fog.has_value());
     if (s.fog) {
@@ -674,6 +675,7 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
         Enum<WeatherState, 2>{}.read(r, sky.weather);
         s.sky = sky;
     }
+    Opt<Fixed>{kMs}.read(r, s.xp);
     const uint64_t playerCount = readVarint(r);
     const bool fog = r.readBool();
     uint64_t cells = 0, sites = 0;

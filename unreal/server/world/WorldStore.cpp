@@ -112,13 +112,20 @@ CREATE TABLE world_clock (id INTEGER PRIMARY KEY CHECK (id = 1), time REAL NOT N
 INSERT INTO world_clock (id, time) SELECT 1, COALESCE(MAX(time), 0) FROM regions;
 )sql";
 
+/// Schema v3: each pilot's progression (docs/prospector-progression.md,
+/// "Old MMO saves"). An old pilot's `levels` turn into it when the world
+/// loads (WorldMapSave.cpp); `levels` is written empty from then on.
+const char* const kV3 = R"sql(
+ALTER TABLE pilots ADD COLUMN progress TEXT NOT NULL DEFAULT '';
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
-    // A later version adds its step here: {3, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}};
+    // A later version adds its step here: {4, "ALTER TABLE ... ADD COLUMN ..."}.
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}};
     return steps;
 }
 
@@ -269,9 +276,10 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.failed(error)) return std::nullopt;
     }
     {
-        Stmt s(db_, "SELECT id, ore, hydrogen, region, unit, levels FROM pilots ORDER BY id");
+        Stmt s(db_, "SELECT id, ore, hydrogen, region, unit, levels, progress FROM pilots ORDER BY id");
         while (s.row())
-            out.pilots.push_back(SavedPilot{s.colText(0), s.colInteger(1), s.colInteger(2), s.colText(3), s.optInteger(4), s.colText(5)});
+            out.pilots.push_back(
+                SavedPilot{s.colText(0), s.colInteger(1), s.colInteger(2), s.colText(3), s.optInteger(4), s.colText(5), s.colText(6)});
         if (s.failed(error)) return std::nullopt;
     }
     {
@@ -405,13 +413,15 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     for (const SavedPilot& p : save.pilots) {
         const auto before = pilots_.find(p.id);
         if (before != pilots_.end() && before->second == p) continue;
-        run(std::move(Stmt(db_, "INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels) VALUES (?, ?, ?, ?, ?, ?)")
+        run(std::move(Stmt(db_, "INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels, progress) "
+                                "VALUES (?, ?, ?, ?, ?, ?, ?)")
                           .text(p.id)
                           .integer(p.ore)
                           .integer(p.hydrogen)
                           .text(p.region)
                           .integer(p.unit)
-                          .text(p.levels)));
+                          .text(p.levels)
+                          .text(p.progress)));
         n.changed += 1;
     }
     if (!ok || !exec("COMMIT", &why)) {

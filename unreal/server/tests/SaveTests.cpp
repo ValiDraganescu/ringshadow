@@ -8,6 +8,7 @@
 
 #include "HeadlessClient.h"
 #include "Server.h"
+#include "Leveling.h"
 #include "Session.h"
 #include "WorldMap.h"
 #include "WorldStore.h"
@@ -67,8 +68,12 @@ WorldSave sample() {
     PilotRecord rec;
     rec.kinds[UnitKind::prospector].xp = 1234.5;
     rec.kinds[UnitKind::prospector].picks = {Perk::prospectorQuickDrill};
-    s.pilots.push_back(SavedPilot{keyA, 25, 7, "start", 3, SessionStore::encode(rec, false)});
-    s.pilots.push_back(SavedPilot{keyB, 400, 0, "cold-fork", std::nullopt, ""});
+    s.pilots.push_back(SavedPilot{keyA, 25, 7, "start", 3, SessionStore::encode(rec, false), ""});
+    ProspectorProgress g;
+    g.xp = 6543.5;
+    g.ranks[Skill::quickDrill] = 2;
+    g.feats = {"first-flight"};
+    s.pilots.push_back(SavedPilot{keyB, 400, 0, "cold-fork", std::nullopt, "", SessionStore::encode(g, false)});
     return s;
 }
 
@@ -154,32 +159,32 @@ TEST(save_store_round_trips_every_saved_thing) {
     EXPECT_TRUE(why.find("a save of world first, not second") != std::string::npos);
 }
 
-TEST(save_migrations_v0_to_v2_and_a_future_step) {
+TEST(save_migrations_v0_to_v3_and_a_future_step) {
     const std::string path = fresh("migrate");
     std::string why;
     {
-        // v0 (a new file) to v2.
+        // v0 (a new file) to v3.
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(2));
-        EXPECT_EQ(WorldStore::version(), int64_t(2));
+        EXPECT_EQ(store->schemaVersion(), int64_t(3));
+        EXPECT_EQ(WorldStore::version(), int64_t(3));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock')")[0][0],
                   std::string("8"));
         ASSERT_TRUE(store->write(sample(), &why).has_value());
     }
-    // A step that fails: the file stays at v2, its rows kept.
+    // A step that fails: the file stays at v3, its rows kept.
     std::vector<WorldStore::Migration> broken = WorldStore::migrations();
-    broken.push_back({3, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
+    broken.push_back({4, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
     EXPECT_TRUE(WorldStore::open(path, "first", &why, broken) == nullptr);
-    EXPECT_TRUE(why.find("migration to version 3") != std::string::npos);
-    // A future step: v2 to v3, the rows kept, the column there.
+    EXPECT_TRUE(why.find("migration to version 4") != std::string::npos);
+    // A future step: v3 to v4, the rows kept, the column there.
     std::vector<WorldStore::Migration> next = WorldStore::migrations();
-    next.push_back({3, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
+    next.push_back({4, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
     {
         auto store = WorldStore::open(path, "first", &why, next);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(3));
+        EXPECT_EQ(store->schemaVersion(), int64_t(4));
         const auto rows = store->rows("SELECT id, title FROM pilots ORDER BY id");
         ASSERT_TRUE(rows.size() == 2);
         EXPECT_TRUE(rows[0][1] == "prospector");
@@ -187,14 +192,14 @@ TEST(save_migrations_v0_to_v2_and_a_future_step) {
         ASSERT_TRUE(back.has_value());
         EXPECT_TRUE(*back == sorted(sample()));
     }
-    // This build (v2) refuses a v3 file.
+    // This build (v3) refuses a v4 file.
     EXPECT_TRUE(WorldStore::open(path, "first", &why) == nullptr);
-    EXPECT_TRUE(why.find("schema version 3, this server knows 2") != std::string::npos);
+    EXPECT_TRUE(why.find("schema version 4, this server knows 3") != std::string::npos);
 }
 
 TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     // A save made before the world's clock (schema 1): opened by this
-    // build, it migrates to 2 and the world's clock starts at the furthest
+    // build, it migrates to 3 and the world's clock starts at the furthest
     // region's, so the hour goes on from about where it was.
     const std::string path = fresh("v1clock");
     std::string why;
@@ -208,7 +213,7 @@ TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(2));
+    EXPECT_EQ(store->schemaVersion(), int64_t(3));
     const auto back = store->load(&why);
     ASSERT_TRUE(back.has_value());
     const double furthest = 321.5;
@@ -222,6 +227,67 @@ TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     store.reset();
     store = WorldStore::open(path, "first", &why);
     EXPECT_NEAR(store->load(&why)->clock, furthest + 1234.5, 1e-9);
+}
+
+TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
+    // A pilot saved before the skill tree (schema 2): a level-5 Prospector
+    // (600 XP earned at a tenth) with picks, a finished Citadel and a
+    // Derrick going up. Loaded, it is level 10 with 9 points to spend, the
+    // picks gone, the Citadel and Derrick blueprints, the Citadel's feat
+    // without its XP, and the reset told on its login; saved, it is v3.
+    const std::string path = fresh("v2levels");
+    std::string why;
+    const std::vector<WorldStore::Migration> v2(WorldStore::migrations().begin(), WorldStore::migrations().begin() + 2);
+    PilotRecord rec;
+    rec.kinds[UnitKind::prospector].xp = double(Leveling::xp(5));
+    rec.kinds[UnitKind::prospector].picks = {Perk::prospectorQuickDrill, Perk::prospectorRigMaster};
+    ASSERT_TRUE(rec.level(UnitKind::prospector) == 5);
+    {
+        auto store = WorldStore::open(path, "first", &why, v2);
+        ASSERT_TRUE(store != nullptr);
+        EXPECT_EQ(store->schemaVersion(), int64_t(2));
+        // Its rows as that build wrote them.
+        ASSERT_TRUE(store->exec("INSERT INTO regions (region, time, next_id) VALUES ('start', 50, 9)", &why));
+        ASSERT_TRUE(store->exec("INSERT INTO buildings (region, id, kind, x, y, owner, build_left, hp) VALUES "
+                                "('start', 4, 'citadel', 60, 40, '" + keyA + "', NULL, 1500), "
+                                "('start', 5, 'derrick', 70, 40, '" + keyA + "', 12.5, 100)", &why));
+        ASSERT_TRUE(store->exec("INSERT INTO pilots (id, ore, hydrogen, region, unit, levels) VALUES ('" + keyA +
+                                "', 10, 3, 'start', NULL, '" + SessionStore::encode(rec, false) + "')", &why));
+    }
+    auto store = WorldStore::open(path, "first", &why);
+    ASSERT_TRUE(store != nullptr);
+    EXPECT_EQ(store->schemaVersion(), int64_t(3));
+    const auto loaded = store->load(&why);
+    ASSERT_TRUE(loaded.has_value());
+    ASSERT_TRUE(loaded->pilots.size() == 1);
+    EXPECT_TRUE(loaded->pilots[0].progress.empty());
+    WorldMap w(firstWorld());
+    EXPECT_TRUE(w.restore(*loaded).empty());
+    constexpr PilotId me = 9;
+    ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::restored);
+    const ProspectorProgress g = *w.progress(me);
+    EXPECT_NEAR(g.xp, 6000, 1e-9);
+    EXPECT_EQ(g.level(), int64_t(10));
+    EXPECT_EQ(g.unspent(), int64_t(9));
+    EXPECT_TRUE(g.ranks.empty());
+    EXPECT_TRUE(g.respecIsFree());
+    EXPECT_TRUE((g.blueprints == std::set<StructureKind>{StructureKind::citadel, StructureKind::derrick}));
+    EXPECT_TRUE((g.feats == std::set<std::string>{WorldXp::built(StructureKind::citadel)}));
+    // The strategy game's record is not a world's any more.
+    EXPECT_TRUE(!w.levels(me) || w.levels(me)->picks(UnitKind::prospector).empty());
+    const auto news = w.takeNews(me);
+    ASSERT_TRUE(news.size() == 1);
+    EXPECT_TRUE(news[0].kind == net::ProgressMessage::NewsKind::reset);
+    EXPECT_EQ(news[0].value, int64_t(9));
+    // Saved as v3: the progression written, the levels empty.
+    ASSERT_TRUE(store->write(w.save(), &why).has_value());
+    const auto rows = store->rows("SELECT levels, progress FROM pilots");
+    ASSERT_TRUE(rows.size() == 1);
+    EXPECT_TRUE(rows[0][0].empty());
+    std::string bad;
+    const auto back = SessionStore::decode<ProspectorProgress>(rows[0][1], &bad);
+    ASSERT_TRUE(back.has_value());
+    EXPECT_TRUE(*back == g);
 }
 
 TEST(save_writes_only_the_rows_that_changed) {
@@ -354,12 +420,13 @@ TEST(save_pilot_restored_by_id_where_it_left) {
     Region& there = *w.regionOf(me);
     there.simulation().state.players[0].ore = 123;
     there.simulation().state.players[0].hydrogen = 17;
-    PilotRecord rec;
-    rec.kinds[UnitKind::prospector].xp = 640;
-    w.setLevels(me, rec);
+    ProspectorProgress g = *w.progress(me);
+    g.xp += Progression::xp(10);
+    w.setProgress(me, g);
+    ASSERT_TRUE(!w.spend(me, Skill::quickDrill));
     stand(w, me, 1);
     const Unit left = *driven(w, me);
-    const auto levels = w.levels(me);
+    const auto progress = w.progress(me);
     w.leave(me);
     EXPECT_EQ(w.away(), size_t(1));
 
@@ -388,13 +455,14 @@ TEST(save_pilot_restored_by_id_where_it_left) {
     EXPECT_EQ(back->carrying, int64_t(4));
     EXPECT_EQ(again.wallet(later)->ore, int64_t(123));
     EXPECT_EQ(again.wallet(later)->hydrogen, int64_t(17));
-    ASSERT_TRUE(again.levels(later).has_value());
-    // The record as it left (taking the unit again counts one more takeover
-    // in its tally, as the core does).
-    PilotRecord expect = *levels;
-    expect.kinds[UnitKind::prospector].tally.takeovers += 1;
-    EXPECT_TRUE(*again.levels(later) == expect);
-    EXPECT_EQ(again.levels(later)->xp(UnitKind::prospector), 640.0);
+    // Its progression as it left: the XP, the point spent, the one-offs of
+    // the flight (a first flight, Cold Fork, its pad).
+    ASSERT_TRUE(again.progress(later).has_value());
+    EXPECT_TRUE(*again.progress(later) == *progress);
+    EXPECT_EQ(again.progress(later)->rank(Skill::quickDrill), int64_t(1));
+    EXPECT_TRUE(again.progress(later)->regions.count("cold-fork") == 1);
+    EXPECT_TRUE(again.progress(later)->pads.count("cold-fork/landing") == 1);
+    EXPECT_TRUE(again.progress(later)->feats.count(WorldXp::flightFeat) == 1);
     // The bank of its region is its wallet.
     EXPECT_EQ(again.regionOf(later)->simulation().state.players[0].ore, int64_t(123));
     // The same key twice on line: refused.

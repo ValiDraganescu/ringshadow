@@ -1,7 +1,8 @@
 // The world's save (docs/mmorpg-m3.md, docs/networking.md "Saves"): one
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
-// clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and levels. The
+// clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
+// progression (schema 3; its old levels before). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -89,8 +90,13 @@ struct SavedPilot {
     /// The unit it drove there (an id in that region's `units`).
     std::optional<int64_t> unit;
     /// Its levels and picks per kind: the core's `PilotRecord` as the
-    /// core's JSON (`SessionStore::encode`, compact). Empty: none yet.
+    /// core's JSON (`SessionStore::encode`, compact). Empty: none, or
+    /// turned into `progress` (schema 3 writes it empty).
     std::string levels;
+    /// Its progression: the core's `ProspectorProgress` as the core's JSON
+    /// (schema 3). Empty: an old pilot (its `levels` turn into it on load)
+    /// or none yet.
+    std::string progress;
     bool operator==(const SavedPilot&) const = default;
 };
 
@@ -110,7 +116,7 @@ public:
         std::string sql;
     };
     /// This build's steps; the last one's version is the schema's (2: the
-    /// world's clock).
+    /// world's clock; 3: the pilots' progression).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 

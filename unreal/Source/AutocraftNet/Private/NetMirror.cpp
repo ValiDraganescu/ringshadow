@@ -74,6 +74,7 @@ void Mirror::apply(const SnapshotPart& part) {
             st.dayLength = s.sky->dayLength;
             st.heldHour = s.sky->hour();
         }
+        if (s.xp) xp_ = s.xp;
     }
     for (int64_t id : s.removed) {
         units_.erase(id);

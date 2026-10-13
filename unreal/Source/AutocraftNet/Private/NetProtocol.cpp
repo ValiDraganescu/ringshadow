@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <set>
 
 namespace ac::net {
 
@@ -76,6 +77,7 @@ void writeInput(BitWriter& w, const PilotInput& in) {
         w.writeBool(on != nullptr);
         if (on) writeSigned(w, on->_0);
     }
+    w.writeBits(uint64_t(std::clamp<int64_t>(in.slot, 0, Progression::slotCount)), 2);
 }
 
 void readInput(BitReader& r, PilotInput& in) {
@@ -95,6 +97,33 @@ void readInput(BitReader& r, PilotInput& in) {
     } else {
         in.crosshair = std::nullopt;
     }
+    in.slot = int64_t(r.readBits(2));
+}
+
+void writeSkill(BitWriter& w, Skill s) { writeVarint(w, uint64_t(s)); }
+
+bool readSkill(BitReader& r, Skill& s) {
+    const uint64_t v = readVarint(r);
+    if (v >= uint64_t(allCases<Skill>().size())) return false;
+    s = static_cast<Skill>(v);
+    return true;
+}
+
+void writeStrings(BitWriter& w, const std::set<std::string>& set) {
+    writeVarint(w, set.size());
+    for (const std::string& s : set) writeString(w, s);
+}
+
+bool readStrings(BitReader& r, std::set<std::string>& set) {
+    const uint64_t n = readVarint(r);
+    if (n > r.bitsLeft()) return false;
+    set.clear();
+    for (uint64_t i = 0; i < n; i++) {
+        std::string s;
+        if (!readString(r, s)) return false;
+        set.insert(s);
+    }
+    return true;
 }
 
 } // namespace
@@ -144,7 +173,7 @@ void appendBits(BitWriter& w, const uint8_t* src, size_t from, size_t bits) {
 std::optional<MessageType> messageType(const std::vector<uint8_t>& message) {
     if (message.empty()) return std::nullopt;
     const uint8_t t = message[0];
-    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::join)) return std::nullopt;
+    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::progress)) return std::nullopt;
     return static_cast<MessageType>(t);
 }
 
@@ -576,6 +605,13 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeVarint(w, uint64_t(p->kind));
         writeVarint(w, uint64_t(p->perk));
     }
+    if (const auto* p = std::get_if<RequestMessage::Spend>(&m.what)) writeSkill(w, p->skill);
+    if (const auto* p = std::get_if<RequestMessage::Undo>(&m.what)) writeSkill(w, p->skill);
+    if (const auto* p = std::get_if<RequestMessage::Slot>(&m.what)) {
+        writeVarint(w, uint64_t(std::clamp<int64_t>(p->index, 0, 255)));
+        w.writeBool(p->skill.has_value());
+        if (p->skill) writeSkill(w, *p->skill);
+    }
     return w.bytes();
 }
 
@@ -608,7 +644,131 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         m.what = RequestMessage::Pick{static_cast<UnitKind>(kind), static_cast<Perk>(perk)};
         break;
     }
+    case 5: {
+        RequestMessage::Spend p;
+        if (!readSkill(r, p.skill)) return false;
+        m.what = p;
+        break;
+    }
+    case 6: {
+        RequestMessage::Undo p;
+        if (!readSkill(r, p.skill)) return false;
+        m.what = p;
+        break;
+    }
+    case 7: m.what = RequestMessage::Respec{}; break;
+    case 8: {
+        RequestMessage::Slot p;
+        p.index = int64_t(readVarint(r));
+        if (r.readBool()) {
+            Skill s{};
+            if (!readSkill(r, s)) return false;
+            p.skill = s;
+        }
+        m.what = p;
+        break;
+    }
     default: return false;
+    }
+    return r.ok();
+}
+
+std::vector<uint8_t> encode(const ProgressMessage& m) {
+    BitWriter w = start(MessageType::progress);
+    codec::Fixed{1000}.write(w, m.xp);
+    writeVarint(w, uint64_t(std::max<int64_t>(0, m.level)));
+    writeSigned(w, m.points);
+    writeVarint(w, m.ranks.size());
+    for (const auto& [skill, rank] : m.ranks) {
+        writeSkill(w, skill);
+        writeSigned(w, rank);
+    }
+    for (const auto& slot : m.slots) {
+        w.writeBool(slot.has_value());
+        if (slot) writeSkill(w, *slot);
+    }
+    writeVarint(w, m.ready.size());
+    for (const auto& [skill, at] : m.ready) {
+        writeSkill(w, skill);
+        codec::kMs.write(w, at);
+    }
+    writeVarint(w, m.undo.size());
+    for (const auto& u : m.undo) {
+        writeSkill(w, u.skill);
+        codec::kMs.write(w, u.until);
+    }
+    writeSigned(w, m.respecPrice);
+    w.writeBool(m.respecFree);
+    writeVarint(w, m.blueprints.size());
+    for (StructureKind k : m.blueprints) w.writeBits(uint64_t(k), 4);
+    writeStrings(w, m.sitesKnown);
+    writeStrings(w, m.sitesFound);
+    writeVarint(w, m.news.size());
+    for (const auto& n : m.news) {
+        w.writeBits(uint64_t(n.kind), 3);
+        writeString(w, n.id);
+        codec::Fixed{1000}.write(w, n.xp);
+        writeSigned(w, n.value);
+    }
+    return w.bytes();
+}
+
+bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
+    BitReader r(bytes.data(), bytes.size());
+    if (!open(bytes, MessageType::progress, r)) return false;
+    m = ProgressMessage{};
+    codec::Fixed{1000}.read(r, m.xp);
+    m.level = int64_t(readVarint(r));
+    m.points = readSigned(r);
+    const uint64_t ranks = readVarint(r);
+    if (ranks > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < ranks; i++) {
+        Skill s{};
+        if (!readSkill(r, s)) return false;
+        m.ranks[s] = readSigned(r);
+    }
+    for (auto& slot : m.slots) {
+        if (!r.readBool()) continue;
+        Skill s{};
+        if (!readSkill(r, s)) return false;
+        slot = s;
+    }
+    const uint64_t ready = readVarint(r);
+    if (ready > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < ready; i++) {
+        Skill s{};
+        if (!readSkill(r, s)) return false;
+        codec::kMs.read(r, m.ready[s]);
+    }
+    const uint64_t undo = readVarint(r);
+    if (undo > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < undo; i++) {
+        ProgressMessage::Undoable u;
+        if (!readSkill(r, u.skill)) return false;
+        codec::kMs.read(r, u.until);
+        m.undo.push_back(u);
+    }
+    m.respecPrice = readSigned(r);
+    m.respecFree = r.readBool();
+    const uint64_t blueprints = readVarint(r);
+    if (blueprints > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < blueprints; i++) {
+        const uint64_t k = r.readBits(4);
+        if (k >= uint64_t(allCases<StructureKind>().size())) return false;
+        m.blueprints.insert(static_cast<StructureKind>(k));
+    }
+    if (!readStrings(r, m.sitesKnown) || !readStrings(r, m.sitesFound)) return false;
+    const uint64_t news = readVarint(r);
+    if (news > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < news; i++) {
+        ProgressMessage::News n;
+        const uint64_t kind = r.readBits(3);
+        if (kind > uint64_t(ProgressMessage::NewsKind::reset)) return false;
+        n.kind = static_cast<ProgressMessage::NewsKind>(kind);
+        if (!readString(r, n.id)) return false;
+        codec::Fixed{1000}.read(r, n.xp);
+        n.value = readSigned(r);
+        m.news.push_back(n);
     }
     return r.ok();
 }
