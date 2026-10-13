@@ -75,3 +75,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T Orc run Ringshadow-MMO → `make mmo`: server, editor build, -AcMmo.
 - I Worktree's Ringshadow run points at main repo, not here.
 - N User hand check: MMO mode works via Ringshadow-MMO run.
+- D M2 = world map, regions, travel, build anywhere.
+- D Regions generated or crafted by AI agents via agent tool.
+- D Travel: edge crossing and pad-to-pad flights.
+- D No lots: build where it fits, pilot pays price.
+- D Cities form from nearby buildings: proposal only, later.
+- T M2 plan R1–R5 in mmorpg-m2.md; P1–P5 await user.

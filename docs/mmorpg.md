@@ -152,18 +152,29 @@ A world of a few hundred players is a useful stop on the way: one large
 map, possibly one server, no hand-offs. The design can aim at thousands
 and get there in stages.
 
-## The world: a map of regions and lots
+## The world: a map of regions
 
-The world is one **world map** cut into **regions**. A region is the unit
-of the world: a piece of Ashfall Reach with its own ground, deposits and
-wells, and later the piece one server runs. Inside a region are
-**buildable lots**: fixed plots where a building, a dwelling or a city
-block can stand. Cities grow lot by lot, and the dwellings of no-man's
-land stand on lots too, so "who holds what" is always "who holds which
-lot".
+The world is one **world map** cut into **regions**, side by side on a
+grid. A region is a piece of Ashfall Reach with its own ground, deposits
+and wells, and later the piece one server runs.
 
-Open: how big a region is, how many lots it has, how a lot is claimed,
-and how the pilot travels between regions.
+- **Regions are generated or crafted.** Most are generated like today's
+  maps, from a style and a seed, so every player gets the same one. Some
+  are crafted: AI agents build them at the developer's instructions with a
+  tool made for agents (a region file plus a preview they can look at),
+  not a human editor.
+- **Two ways to travel.** Drive across a region's edge into the neighbour,
+  or fly from a pad to a far region.
+- **Build wherever it fits.** There are no fixed plots. A pilot builds
+  anywhere the building fits and pays its price to the game.
+
+### Cities (proposal, not built yet)
+
+A city is not placed: it forms where pilots build close together. A group
+of buildings counts as a city when enough of them stand within a distance
+of each other and the group includes a required set of kinds (for
+example a Citadel, a Hab Dome and a Spacedock). The distance, the count
+and the set are open; they get decided when cities are built.
 
 ## Single player first, on a local server
 
@@ -172,7 +183,7 @@ the persistent world. But the game is an online game from the first day,
 and it treats the local server exactly like the production server. There
 is no single-player path through the code: **only the host changes.**
 
-- **The server is its own program.** The world logic (regions, lots,
+- **The server is its own program.** The world logic (regions,
   cities, the AI pilots, the saves) lives in a server program, written
   for production. It is the same program the public world will run.
 - **In single player the game starts it on the player's machine.** The
@@ -182,7 +193,7 @@ is no single-player path through the code: **only the host changes.**
   stops it on quit. Joining a public world later only changes the
   address.
 - **The game is only a client.** It sends inputs and requests ("drive
-  this unit", "build on this lot") and draws what the server sends back.
+  this unit", "build here") and draws what the server sends back.
   It never runs the world rules itself and never reads the server's
   state.
 - **The world is saved by the server**, in its own database. Locally that
@@ -263,13 +274,13 @@ Each step ships in the single-player game:
 1. **The server and the network.** The server program, our UDP
    protocol, the game as a client of it, launched locally, and a save in
    the server's database ([networking.md](networking.md)).
-2. **The world map, regions and lots.** One region to start, with its
-   lots.
+2. **The world map and regions**: generated and crafted regions, travel
+   across edges and by pad, building wherever it fits.
 3. **A lasting pilot.** A character saved by the server, levels and picks
    that persist.
 4. **AI pilots.** The new AI that plays a pilot character instead of a
    whole army.
-5. **Building on lots**: cities raised lot by lot.
+5. **Cities** forming where buildings stand close (the proposal above).
 6. **More regions** and travel between them.
 7. **No-man's land**: claims, dwellings, fights over deposits and wells.
 
@@ -296,8 +307,13 @@ Then the online part:
   resources between the cities.
 - **Both official and self-hosted worlds** (2026-10-13): an official
   world on the Ringshadow AWS account, and a server build anyone can run.
-- **A world map with regions, and buildable lots in a region**
-  (2026-10-13).
+- **A world map with regions** (2026-10-13). Regions generated or
+  crafted by AI agents with an agent tool; travel across edges and by
+  pad.
+- **No lots: build wherever it fits**, paying the price to the game
+  (2026-10-13, replaces "buildable lots").
+- **Cities form from buildings close together** (2026-10-13): a distance
+  and a set of buildings, a proposal for later.
 - **Single player first, on a local server** (2026-10-13): one pilot and
   AI pilots, on the production server shipped with the game. The
   game keeps releasing in single player until the public server is ready.
@@ -317,7 +333,6 @@ Then the online part:
 | Dedicated server | A build of the game with no graphics that only runs the world. |
 | Local server | The server program, started by the game on the player's own machine. |
 | Instance | A private copy of a place for one group. |
-| Lot | A fixed plot in a region where a building or a dwelling can stand. |
 | Lag compensation | The server judges a shot by where the target was on the shooter's screen. |
 | Lockstep | Every machine runs the same deterministic simulation and only inputs are sent. |
 | Prediction | The client moves its own machine at once, before the server confirms. |
