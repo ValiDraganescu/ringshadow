@@ -82,3 +82,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Cities form from nearby buildings: proposal only, later.
 - T M2 plan R1–R5 in mmorpg-m2.md; P1–P5 await user.
 - T R1 → new worker mmo-regions, same worktree.
+- D M2 focus: playable with Prospector only; no other kinds.
+- D M2: no AI-controlled units at all.
+- D P1–P5 confirmed by user.

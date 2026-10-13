@@ -1,8 +1,10 @@
 # MMORPG milestone 2: the world map and regions
 
-Goal: a world of several regions on the local server. The pilot starts at
-a pad, drives across region edges, flies between pads, and builds wherever
-a building fits, paying its price. Design: [mmorpg.md](mmorpg.md) "The
+Goal: something playable with only the Prospector. A world of several
+regions on the local server; the pilot drives a Prospector from a pad,
+mines, drives across region edges, flies between pads, and builds wherever
+a building fits, paying its price. No other unit kinds, no AI-controlled
+units. Design: [mmorpg.md](mmorpg.md) "The
 world". Log: [mmorpg-log.md](mmorpg-log.md).
 
 ## Decided (2026-10-13)
@@ -12,9 +14,10 @@ world". Log: [mmorpg-log.md](mmorpg-log.md).
 - No lots: build wherever it fits; the pilot pays the price.
 - Cities: proposal only (mmorpg.md "Cities").
 
-## Proposed (confirm with the user)
+## Confirmed (2026-10-13)
 
-- P1 Regions run without today's RTS AI armies; wild ground only. AI pilots later.
+- P1 No AI-controlled units, no AI armies; wild ground only. AI pilots later.
+- P0 Prospector only: no other unit kinds; buildings train no other units.
 - P2 Pilot wallet: ore and MH; starts 400 ore; grows when the Prospector unloads at the pilot's own Citadel.
 - P3 A new pilot starts at the start region's pad with one Prospector.
 - P4 First world: 3×3 grid, Medium regions; the center one crafted (the start region), the rest generated.
