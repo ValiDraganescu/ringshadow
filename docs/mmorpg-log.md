@@ -106,3 +106,13 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Core: one driver per region; crossing into occupied region stops.
 - I Results reach inbox but don't wake manager; watch commits + poll.
 - T R3 + R4 started, workers mmo-world, mmo-start-region (reused).
+- T R3 done d66423a: --world start, RegionChange rebuild, M = world map.
+- T R4 done 924ff39+37adc5f: Build request, core pilotBuild, wallet pays.
+- D Server refuses build spot beyond ghost reach + 3 cells.
+- N Keys: B menu, 1–8 kind (5 Citadel), act places; M map, pick pad, FLY.
+- I Citadel costs 400: wallet 0 after first build.
+- I Flight: view frozen 4 s, no lift-off/landing animation.
+- I Buildings owner 0: pilots in a region share them.
+- I Worker-to-worker send_message fails ("not reachable").
+- N All suites pass (server 48, net 55, core 391); 5 hidden Mmo tests.
+- T M2 built; awaiting user hand check.
