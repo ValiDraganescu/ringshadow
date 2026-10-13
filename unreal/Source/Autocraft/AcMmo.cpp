@@ -4,6 +4,7 @@
 
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformProcess.h"
+#include "HAL/PlatformProperties.h"
 #include "HAL/PlatformTime.h"
 #include "HAL/FileManager.h"
 #include "Misc/CommandLine.h"
@@ -41,8 +42,23 @@ FAcMmoClient::~FAcMmoClient()
 	Stop();
 }
 
+FString FAcMmoClient::BundledServerDir()
+{
+#if PLATFORM_MAC
+	// A packaged Mac game: build_release.sh mac stages the server beside the
+	// app's resources (docs/builds.md, "The server in the Mac package").
+	if (FPlatformProperties::RequiresCookedData())
+	{
+		return FPaths::ConvertRelativePathToFull(
+			FPaths::Combine(FPaths::GetPath(FPlatformProcess::ExecutablePath()), TEXT(".."), TEXT("Resources"), TEXT("server")));
+	}
+#endif
+	return FString();
+}
+
 FString FAcMmoClient::ServerProgram()
 {
+	if (const FString Bundled = BundledServerDir(); !Bundled.IsEmpty()) return FPaths::Combine(Bundled, TEXT("autocraft-server"));
 	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("server"), TEXT("build"), TEXT("autocraft-server")));
 }
 
@@ -53,6 +69,7 @@ FString FAcMmoClient::ServerLog()
 
 FString FAcMmoClient::DefaultWorld()
 {
+	if (const FString Bundled = BundledServerDir(); !Bundled.IsEmpty()) return FPaths::Combine(Bundled, TEXT("worlds"), TEXT("first.json"));
 	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("server"), TEXT("worlds"), TEXT("first.json")));
 }
 
@@ -187,9 +204,14 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	const FString Program = ServerProgram();
 	if (!FPaths::FileExists(Program))
 	{
-		// The packaged game has no server yet (packaging is a later task).
-		UE_LOG(LogAutocraft, Warning, TEXT("mmo: no server program at %s (build it: make -C unreal/server; packaged games do not carry it yet)"),
-			*Program);
+		if (!BundledServerDir().IsEmpty())
+		{
+			// A packaged game: build_release.sh mac stages it; a Windows or Linux package has none yet.
+			UE_LOG(LogAutocraft, Warning, TEXT("mmo: no server program at %s (the package does not carry it)"), *Program);
+			Fail(FString::Printf(TEXT("The local server is missing from this package.\n(looked for %s)"), *Tilde(Program)));
+			return false;
+		}
+		UE_LOG(LogAutocraft, Warning, TEXT("mmo: no server program at %s (build it: make -C unreal/server)"), *Program);
 		Fail(FString::Printf(TEXT("The local server is not built. Build it with: make -C unreal/server\n(looked for %s)"), *Tilde(Program)));
 		return false;
 	}

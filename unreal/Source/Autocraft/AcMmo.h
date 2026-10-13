@@ -86,11 +86,17 @@ public:
 	FAcMmoClient();
 	~FAcMmoClient();
 
-	/// `autocraft-server` in the repo: `unreal/server/build/autocraft-server`.
+	/// Where a packaged Mac game carries the server, its worlds and regions:
+	/// `Ringshadow.app/Contents/Resources/server` (build_release.sh mac).
+	/// Empty in editor runs and on other platforms.
+	static FString BundledServerDir();
+	/// `autocraft-server`: `<BundledServerDir>/autocraft-server` in a packaged
+	/// Mac game, else the repo's `unreal/server/build/autocraft-server`.
 	static FString ServerProgram();
 	/// The server's log: `~/Library/Logs/Autocraft/server.log`.
 	static FString ServerLog();
-	/// The world the game plays: `unreal/server/worlds/first.json`.
+	/// The world the game plays: `unreal/server/worlds/first.json`, or
+	/// `<BundledServerDir>/worlds/first.json` in a packaged Mac game.
 	static FString DefaultWorld();
 
 	/// The MMO mode's own folder: `~/Library/Application

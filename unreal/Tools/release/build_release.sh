@@ -14,7 +14,8 @@
 #       --instance ID      build on a running machine (the setup one, to warm it) instead of a new one
 #       --on-demand        an on-demand machine instead of spot
 #       --keep             leave the machine running afterwards (stop it with `stop`)
-#   build_release.sh mac [--version V] [--config C]   package the Mac build on this Mac
+#   build_release.sh mac [--version V] [--config C] [--no-sign]   package the Mac build on this Mac
+#                                           (--no-sign: zip it as it is: no signing, no notarizing)
 #   build_release.sh sign APP ZIP           sign, notarize and zip a Mac .app (mac does it)
 #   build_release.sh release TAG --notes FILE [REF] [--on-demand]
 #                                           all of it: tag REF (default HEAD) as TAG (v0.1.2), build
@@ -444,11 +445,12 @@ fix_linux() {
 }
 
 cmd_mac() {
-	local version="" config=Shipping
+	local version="" config=Shipping sign=1
 	while [ $# -gt 0 ]; do
 		case $1 in
 			--version) version=$2; shift 2 ;;
 			--config) config=$2; shift 2 ;;
+			--no-sign) sign=0; shift ;;
 			*) die "unknown option $1" ;;
 		esac
 	done
@@ -481,7 +483,31 @@ cmd_mac() {
 			-c "Set :CFBundleVersion $short${n:+.$n}" "$plist"
 		say "version $short (build $short${n:+.$n})"
 	fi
-	cmd_sign "$app" "$dir/Ringshadow-$version-mac.zip"
+	stage_server "$app" "$dir/mac-server-build.log"
+	local zip="$dir/Ringshadow-$version-mac.zip"
+	if [ $sign = 0 ]; then
+		rm -f "$zip"
+		ditto -c -k --keepParent "$app" "$zip"
+		say "done: $zip, not signed (--no-sign)"
+		return
+	fi
+	cmd_sign "$app" "$zip"
+}
+
+# The MMO mode's server (unreal/server) in the app, where the game looks for it
+# (FAcMmoClient::BundledServerDir): Contents/Resources/server/autocraft-server,
+# worlds/ and regions/ beside it (a world names its regions as ../regions/…).
+stage_server() {  # stage_server APP LOG
+	local app=$1 log=$2 src="$repo/unreal/server" out="$1/Contents/Resources/server"
+	say "building the server (make -C unreal/server)"
+	make -C "$src" build/autocraft-server >"$log" 2>&1 || die "the server did not build: $log"
+	[[ $(file -b "$src/build/autocraft-server") == *arm64* ]] || die "the server is not arm64"
+	rm -rf "$out"
+	mkdir -p "$out/worlds" "$out/regions"
+	cp "$src/build/autocraft-server" "$out/autocraft-server"
+	cp "$src"/worlds/*.json "$out/worlds/"
+	cp "$src"/regions/*.json "$out/regions/"
+	say "server staged: $(du -sh "$out" | cut -f1) in Contents/Resources/server"
 }
 
 # sign APP ZIP: signs the .app with the Developer ID, notarizes it, staples
