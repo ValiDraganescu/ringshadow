@@ -123,3 +123,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Client adopts server seat only at start and after flight.
 - D Travel view hold gives way to top-down after 15 s.
 - I Frozen camera not reproduced hidden; pan clamped at full zoom-out?
+- I Hand check: not seated at start; "Nothing driven".
+- I World map pad distance wrong: 57 cells while on pad.
+- I HUD: units 0 while driving; housing 1/0 meaningless.
+- T R3-FIX2 → mmo-world.
