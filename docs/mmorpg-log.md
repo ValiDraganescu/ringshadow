@@ -224,3 +224,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T Skill ringshadow-mmo-manager (user-invoked) starts a manager session.
 - D User: static game website, Cloudflare later; home + roadmap.
 - T W1 website/ (home, roadmap) → orc worker "website".
+- T W1 done 90f2ec3: website/ home + roadmap, static only.
+- N Roadmap: 23 moons on the ring; 15 done, 4 next, 4 later.
+- N Orbit ≥901 px with motion; phones/reduced motion get a list.
+- D Website self-hosts fonts and media (4.9 MB); CSP self only.
+- I Website not deployed; Cloudflare Pages project waits for user.
