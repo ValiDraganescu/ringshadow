@@ -251,3 +251,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: P0 open questions settled on its recommendations.
 - D Manager: XP ×1 in worlds; wells regrow when idle.
 - T P1 core catalogue → orc worker.
+- T P1 done 172e311: Progression catalogue, 65 nodes, 19 tests.
+- N Core 416 pass (with C1's clock tests).
+- D Manager: loads apply percent then plus (Boost); doc says 56.
+- D Manager: chip chance: Lucky strike % then Core sampler plus.
+- T P2 core effects → same worker after compaction.
