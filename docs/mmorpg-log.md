@@ -133,3 +133,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D MMO HUD: counts pilot's units, hides supply.
 - N Start seat fine; user's hand back was Esc/F.
 - N Hand check: flying works.
+- T M2 done: hand check passed (build, mine, cross, fly).
+- D M3 = a world that lasts; plan in mmorpg-m3.md.
+- D Save: server SQLite per world, every 5 s + on stop.
+- D Pilot id: random, kept by game, sent after connect.
+- D Leveling persists per pilot; pick is a request.
