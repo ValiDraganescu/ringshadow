@@ -234,3 +234,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T H1 done 7a73a51: headlamp on crosshair, beam sight at night.
 - N Suites: core 392, server 72, net 63; shots/headlamp checked.
 - I Server has no held hour: ac.Hour lights only client night.
+- D User: Prospector progression redesign, 100 levels, skill tree.
+- D Tree: 1 point a level, five branches, ranks, level gates.
+- D Respec costs MH, rising with level; first free.
+- D Level 100 in about 100 hours; level 10 first hour.
+- D Buildings: blueprints found in the world, with level floors.
+- I Old picks are team buffs: useless for one MMO pilot.
+- T P0 design doc docs/prospector-progression.md → orc worker.
