@@ -57,18 +57,26 @@ struct FAcPilotPen
 	/// A convex polygon filled.
 	void Poly(const TArray<FVector2D>& Points, const FLinearColor& Color)
 	{
-		if (Points.Num() < 3 || Color.A <= 0 || !FSlateApplication::IsInitialized()) return;
+		if (Color.A <= 0) return;
+		Poly(Points, TArray<FLinearColor>{Color});
+	}
+
+	/// A convex polygon, each corner its own colour (blended across); one
+	/// colour fills it all.
+	void Poly(const TArray<FVector2D>& Points, const TArray<FLinearColor>& Colors)
+	{
+		if (Points.Num() < 3 || Colors.IsEmpty() || !FSlateApplication::IsInitialized()) return;
 		const FSlateRenderTransform& T = Geometry.GetAccumulatedRenderTransform();
-		const FColor C = Color.ToFColor(true);
 		// The white brush sits in Slate's atlas: sample the middle of its own region.
 		const FSlateResourceHandle Handle = FSlateApplication::Get().GetRenderer()->GetResourceHandle(*FAcHudStyle::White());
 		const FSlateShaderResourceProxy* Proxy = Handle.GetResourceProxy();
 		const FVector2f Uv = Proxy ? Proxy->StartUV + Proxy->SizeUV * 0.5f : FVector2f(0.5f, 0.5f);
 		TArray<FSlateVertex> V;
 		TArray<SlateIndex> I;
-		for (const FVector2D& Pt : Points)
+		for (int32 K = 0; K < Points.Num(); ++K)
 		{
-			V.Add(FSlateVertex::Make<ESlateVertexRounding::Disabled>(T, Slate(Pt), Uv, C));
+			const FColor C = Colors[FMath::Min(K, Colors.Num() - 1)].ToFColor(true);
+			V.Add(FSlateVertex::Make<ESlateVertexRounding::Disabled>(T, Slate(Points[K]), Uv, C));
 		}
 		for (int32 K = 1; K + 1 < V.Num(); ++K)
 		{
@@ -257,10 +265,21 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 	FAcPilotPen P{Out, Geometry, Layer, H};
 	const FVector2D C(W / 2, H / 2);
 
-	// Inside a building: the view is dimmed green, its name over it.
+	// Inside a building: a soft green vignette round the glass (the world
+	// still reads, the dashboard untouched), its name over it.
 	if (Info.Inside)
 	{
-		P.Fill(FAcRect(0, 0, W, H), Srgb(0.02, 0.12, 0.05, 0.78));
+		const FAcRect R = View.IsEmpty() ? FAcRect(0, 0, W, H) : View;
+		const double Band = FMath::Min(R.W, R.H) * 0.22;
+		const FLinearColor Edge = Srgb(0.02, 0.14, 0.08, 0.55), Clear = Srgb(0.02, 0.14, 0.08, 0);
+		const FAcRect In = R.Inset(Band, Band);
+		const FVector2D O[4] = {{R.MinX(), R.MinY()}, {R.MaxX(), R.MinY()}, {R.MaxX(), R.MaxY()}, {R.MinX(), R.MaxY()}};
+		const FVector2D I[4] = {{In.MinX(), In.MinY()}, {In.MaxX(), In.MinY()}, {In.MaxX(), In.MaxY()}, {In.MinX(), In.MaxY()}};
+		for (int32 K = 0; K < 4; ++K)
+		{
+			const int32 N = (K + 1) % 4;
+			P.Poly({O[K], O[N], I[N], I[K]}, TArray<FLinearColor>{Edge, Edge, Clear, Clear});
+		}
 		P.Label(*Info.Inside, 30, Srgb(0.5, 1, 0.55, 0.9), FVector2D(C.X, C.Y + 70), EAcHAlign::Center, EAcVAlign::Baseline, false);
 	}
 

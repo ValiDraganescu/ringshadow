@@ -26,9 +26,11 @@
 //
 // `UAcPerfSubsystem` drives it in game worlds: samples, logs, starts the
 // stall watchdog (`AcWatchdog.h`) and hangs `SAcPerfPanel` under the
-// resource bar once the HUD is up. Console: `ac.PerfPanel 0|1`,
-// `ac.TogglePerf` (also ⌘D), `ac.PerfTargetFps N`. Command line:
-// `-AcNoPerfPanel`, `-AcPerfFor=SECONDS` (log, then quit after that many
+// resource bar once the HUD is up. Console: `ac.PerfPanel 0|1` (the RTS),
+// `ac.PerfPanelMmo 0|1` (the MMORPG mode, off unless asked),
+// `ac.TogglePerf` (also ⌘D: the mode on screen), `ac.PerfTargetFps N`.
+// Command line: `-AcNoPerfPanel` (both off), `-AcMmoPerfPanel` (the MMORPG
+// mode's on), `-AcPerfFor=SECONDS` (log, then quit after that many
 // real seconds: the headless perf run).
 #pragma once
 
@@ -221,8 +223,11 @@ public:
 	virtual TStatId GetStatId() const override;
 	virtual bool IsTickableWhenPaused() const override { return true; }
 
-	/// Show or hide the panel (`ac.PerfPanel`).
+	/// Show or hide the panel of the mode on screen (`ac.PerfPanel`, or
+	/// `ac.PerfPanelMmo` in the MMORPG mode).
 	static void SetPanelShown(bool bShown);
+	/// Whether the mode on screen shows it.
+	static bool PanelShown();
 
 private:
 	void AttachPanel();

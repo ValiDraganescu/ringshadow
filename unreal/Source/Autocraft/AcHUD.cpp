@@ -187,10 +187,14 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 	// only those within the driven unit's own sight (its Spotter picks
 	// counted), not every one the team sees across the map.
 	TOptional<TPair<ac::Vec2, double>> PilotSight;
+	// The MMORPG test: the pilot's own load is the large gain over the
+	// reticle (SAcPilotOverlay), not a second "+N" at the Citadel.
+	int64 OwnGain = INDEX_NONE;
 	if (const AAcPilotPawn* Pawn = AAcPilotPawn::Find(this); Pawn && Pawn->Driving())
 	{
 		if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsRunning())
 		{
+			if (Sim->IsMmo()) OwnGain = Pawn->Driven();
 			const ac::Simulation& S = Sim->Simulation();
 			if (const std::optional<ac::Unit> U = S.pilotUnit())
 			{
@@ -205,7 +209,7 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 	for (const ac::GameEvent& E : Frame.Events)
 	{
 		const auto* D = E.as<ac::GameEvent::Deposited>();
-		if (!D) continue;
+		if (!D || D->unit == OwnGain) continue;
 		if (PilotSight && ac::length(D->at - PilotSight->Key) > PilotSight->Value) continue;
 		const double Ground = Terrain ? Terrain->FieldHeight(D->at) : 0.0;
 		FVector2f At;

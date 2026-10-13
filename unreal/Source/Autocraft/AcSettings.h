@@ -11,6 +11,8 @@
 //   bNewGameAI, bNewGameFog F1: the dialog's toggles for a new game.
 //   bShowPerf               F1 applies it to `ac.PerfPanel` at start and
 //                           saves the cvar back at quit (Swift `showPerf`).
+//   bShowPerfMmo            the same for `ac.PerfPanelMmo`: the MMORPG
+//                           mode's panel, off until a developer turns it on.
 //   bThirdPerson            for E3 (Swift's remembered 1st/3rd view).
 //   MasterVolume, bMusic, MusicVolume  for C7/C8 (Swift `--volume`, `--music`).
 //   SfxVolume, AmbientVolume  the menu's Settings page: the effects (shots,
@@ -52,6 +54,8 @@ public:
 	bool bNewGameFog = true;
 	UPROPERTY(config)
 	bool bShowPerf = true;
+	UPROPERTY(config)
+	bool bShowPerfMmo = false;
 	UPROPERTY(config)
 	bool bThirdPerson = false;
 	UPROPERTY(config)

@@ -266,7 +266,11 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 			Info.Cone = std::tan(S.cone(U, W, S.pilotPace)) / std::tan(Half);
 		}
 	}
-	if (Widget) Widget->Show(Info, Now);
+	if (Widget)
+	{
+		Widget->SetView(bConsole ? ConsoleSub->Console()->Layout().Window : FAcRect());
+		Widget->Show(Info, Now);
+	}
 
 	if (UAcConsoleSubsystem* Console = UAcConsoleSubsystem::Get(this))
 	{

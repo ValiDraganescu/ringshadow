@@ -26,13 +26,18 @@
 static TAutoConsoleVariable<int32> CVarAcPerfPanel(
 	TEXT("ac.PerfPanel"), 1,
 	TEXT("Show the perf panel under the resource bar (⌘D toggles; PerfPanel.swift)."));
+static TAutoConsoleVariable<int32> CVarAcPerfPanelMmo(
+	TEXT("ac.PerfPanelMmo"), 0,
+	TEXT("Show the perf panel in the MMORPG mode (⌘D toggles there): a developer's readout, off for players."));
+// The mode on screen, as the last game world's tick saw it.
+static bool GAcPerfMmo = false;
 static TAutoConsoleVariable<int32> CVarAcPerfTargetFps(
 	TEXT("ac.PerfTargetFps"), 0,
 	TEXT("The FPS the perf line and panel measure against. 0: t.MaxFPS, else the fixed frame rate, else the display's."));
 
 static FAutoConsoleCommand GAcTogglePerf(
 	TEXT("ac.TogglePerf"), TEXT("Show or hide the perf panel (⌘D)."),
-	FConsoleCommandDelegate::CreateLambda([] { UAcPerfSubsystem::SetPanelShown(CVarAcPerfPanel.GetValueOnGameThread() == 0); }));
+	FConsoleCommandDelegate::CreateLambda([] { UAcPerfSubsystem::SetPanelShown(!UAcPerfSubsystem::PanelShown()); }));
 
 // MARK: - FAcPerf
 
@@ -281,7 +286,7 @@ namespace
 		virtual bool HandleKeyDownEvent(FSlateApplication&, const FKeyEvent& Event) override
 		{
 			if (Event.GetKey() != EKeys::D || !Event.IsCommandDown() || Event.IsRepeat()) return false;
-			UAcPerfSubsystem::SetPanelShown(CVarAcPerfPanel.GetValueOnGameThread() == 0);
+			UAcPerfSubsystem::SetPanelShown(!UAcPerfSubsystem::PanelShown());
 			return true;
 		}
 		virtual const TCHAR* GetDebugName() const override { return TEXT("AcPerfKeys"); }
@@ -298,7 +303,12 @@ void UAcPerfSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		bLoggedMachine = true;
 		UE_LOG(LogAutocraft, Log, TEXT("machine: %s, RHI %s"), *FAcPerf::MachineSummary(), GDynamicRHI ? GDynamicRHI->GetName() : TEXT("none"));
 	}
-	if (FParse::Param(FCommandLine::Get(), TEXT("AcNoPerfPanel"))) CVarAcPerfPanel->Set(0, ECVF_SetByCommandline);
+	if (FParse::Param(FCommandLine::Get(), TEXT("AcNoPerfPanel")))
+	{
+		CVarAcPerfPanel->Set(0, ECVF_SetByCommandline);
+		CVarAcPerfPanelMmo->Set(0, ECVF_SetByCommandline);
+	}
+	else if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoPerfPanel"))) CVarAcPerfPanelMmo->Set(1, ECVF_SetByCommandline);
 	// -AcPerfFor counts from the first game world (a map load makes another).
 	static const double FirstStart = FPlatformTime::Seconds();
 	static bool bLoggedFor = false;
@@ -347,8 +357,13 @@ TStatId UAcPerfSubsystem::GetStatId() const
 
 void UAcPerfSubsystem::SetPanelShown(const bool bShown)
 {
-	CVarAcPerfPanel->Set(bShown ? 1 : 0, ECVF_SetByConsole);
-	UE_LOG(LogAutocraft, Log, TEXT("perf: panel %s"), bShown ? TEXT("on") : TEXT("off"));
+	(GAcPerfMmo ? CVarAcPerfPanelMmo : CVarAcPerfPanel)->Set(bShown ? 1 : 0, ECVF_SetByConsole);
+	UE_LOG(LogAutocraft, Log, TEXT("perf: panel %s%s"), bShown ? TEXT("on") : TEXT("off"), GAcPerfMmo ? TEXT(" (MMORPG mode)") : TEXT(""));
+}
+
+bool UAcPerfSubsystem::PanelShown()
+{
+	return (GAcPerfMmo ? CVarAcPerfPanelMmo : CVarAcPerfPanel).GetValueOnGameThread() != 0;
 }
 
 void UAcPerfSubsystem::Tick(const float DeltaTime)
@@ -357,6 +372,7 @@ void UAcPerfSubsystem::Tick(const float DeltaTime)
 	TRACE_CPUPROFILER_EVENT_SCOPE(Ac.Perf);
 	const double Now = FPlatformTime::Seconds();
 	FAcPerf::Get().Frame(Now);
+	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this)) GAcPerfMmo = Sim->IsMmo();
 	if (!Panel) AttachPanel();
 	if (Now >= NextSample)
 	{
@@ -406,7 +422,7 @@ void UAcPerfSubsystem::AttachPanel()
 		.Padding(0, 10 + SAcResourceBar::Height + 6, 14, 0)
 	[
 		SAssignNew(Panel, SAcPerfPanel)
-		.Visibility_Lambda([] { return CVarAcPerfPanel.GetValueOnGameThread() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+		.Visibility_Lambda([] { return UAcPerfSubsystem::PanelShown() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
 	];
 }
 

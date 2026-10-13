@@ -946,6 +946,9 @@ void SAcConsole::PaintCard(FPaint& P) const
 		const int32* I = BySlot.Find(Slot);
 		if (!I)
 		{
+			// The MMORPG test: a pilot has a handful of acts; no rows of
+			// dead slots round them.
+			if (bMmo) continue;
 			if (bRts)
 			{
 				P.Baked(ButtonOff, R, 0.55f);
@@ -963,7 +966,10 @@ void SAcConsole::PaintCard(FPaint& P) const
 		else P.FillRounded(R, 3, B.bEnabled ? Rgb(0.05, 0.12, 0.2) : Rgb(0.05, 0.05, 0.06));
 		if (const FSlateBrush* Icon = FAcIcons::Brush(B.Icon))
 		{
-			P.Image(Icon, R.Inset(2, 2), B.bEnabled ? FLinearColor::White : FPaint::BlendTint(Gray(0.3), 0.6, 0.85));
+			// The MMORPG test: the icon under the key's label, not behind it.
+			const double Side = FMath::Min(R.W - 8, R.H - 15);
+			const FAcRect IconBox = bMmo ? FAcRect(R.MidX() - Side / 2, R.MinY() + 2, Side, Side) : R.Inset(2, 2);
+			P.Image(Icon, IconBox, B.bEnabled ? FLinearColor::White : FPaint::BlendTint(Gray(0.3), 0.6, 0.85));
 		}
 		else
 		{

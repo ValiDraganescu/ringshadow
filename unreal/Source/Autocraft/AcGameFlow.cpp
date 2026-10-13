@@ -258,6 +258,10 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		{
 			V->Set(UAcSettings::Get().bShowPerf ? 1 : 0, ECVF_SetByGameSetting);
 		}
+		if (IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PerfPanelMmo")))
+		{
+			V->Set(UAcSettings::Get().bShowPerfMmo ? 1 : 0, ECVF_SetByGameSetting);
+		}
 	}
 	if (FSlateApplication::IsInitialized())
 	{
@@ -340,6 +344,10 @@ void UAcGameFlowSubsystem::Deinitialize()
 		if (const IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PerfPanel")))
 		{
 			UAcSettings::Get().bShowPerf = V->GetInt() != 0;
+		}
+		if (const IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PerfPanelMmo")))
+		{
+			UAcSettings::Get().bShowPerfMmo = V->GetInt() != 0;
 		}
 		UAcSettings::Store();
 	}

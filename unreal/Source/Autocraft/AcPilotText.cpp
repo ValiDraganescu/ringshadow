@@ -342,6 +342,7 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		Info.ProgressLabel = TEXT("PUMPING MH");
 		Info.Tone = EAcTone::Working;
 		Info.Inside = FString(TEXT("INSIDE THE DERRICK"));
+		Info.Prompt = FString(TEXT("Pumping MH: you step out with a full load"));
 	}
 	else if (const TOptional<FTransit> T = Transit(U))
 	{
@@ -410,7 +411,11 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		{
 			Info.Progress = B->progress();
 			Info.ProgressLabel = Title(B->kind).ToUpper();
-			if (U.task == ETask::building) Info.Tone = EAcTone::Working;
+			if (U.task == ETask::building)
+			{
+				Info.Tone = EAcTone::Working;
+				if (!Info.Prompt) Info.Prompt = FString::Printf(TEXT("Welding the %s"), *Title(B->kind));
+			}
 		}
 	}
 	Info.Sight = Sight(Sim, F.Sight);

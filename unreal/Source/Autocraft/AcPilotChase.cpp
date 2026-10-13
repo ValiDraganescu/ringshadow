@@ -152,7 +152,10 @@ void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit
 	// The MMORPG test (docs/mmorpg-shots.md #12): buildings and scaffolds
 	// are not in the rays. A camera that would stand inside one's footprint
 	// comes in along the boom to its edge; one close ahead of the unit (a
-	// wall, a scaffold being welded) lifts the camera to look over it.
+	// wall, a scaffold being welded) lifts the camera to look over it, and
+	// tilts it down by as much, so the unit keeps its place in the glass
+	// instead of sinking behind the dashboard.
+	FVector Aim = Look;
 	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(World); Sim && Sim->IsMmo() && Sim->IsRunning())
 	{
 		double Raise = 0;
@@ -185,7 +188,12 @@ void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit
 				Raise = FMath::Max(Raise, 0.8 * (1 - Inside));
 			}
 		}
-		At.Z += AcSpace::ToCm(Raise);
+		if (Raise > 0)
+		{
+			const FVector Boom = Pivot - At;
+			At.Z += AcSpace::ToCm(Raise);
+			if (Boom.Size() > AcSpace::ToCm(0.5)) Aim = (Boom - FVector(0, 0, AcSpace::ToCm(Raise))).GetSafeNormal();
+		}
 	}
 	if (const AAcTerrain* Terrain = AAcTerrain::Find(World))
 	{
@@ -193,5 +201,5 @@ void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit
 	}
 	ChaseEye = Eye;
 	OutLocation = At;
-	OutRotation = FRotationMatrix::MakeFromXZ(Look, FVector::UpVector).ToQuat();
+	OutRotation = FRotationMatrix::MakeFromXZ(Aim, FVector::UpVector).ToQuat();
 }

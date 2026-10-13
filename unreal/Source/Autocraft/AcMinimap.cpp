@@ -187,7 +187,9 @@ void UAcMinimapSubsystem::OnFrame(const FAcFrame& Frame)
 	const ac::FreeView* View = Pawn ? Pawn->View() : nullptr;
 	const std::vector<ac::Vec2> Footprint = View ? View->footprint() : std::vector<ac::Vec2>();
 	AAcFog* Fog = AAcFog::Find(GetWorld());
-	const bool bFog = Fog && Fog->IsOn() && Fog->MinimapTexture();
+	// The MMORPG test's regions are open land, not enemy ground: the whole
+	// region on the minimap, no fog over what the pilot has not seen.
+	const bool bFog = Fog && Fog->IsOn() && Fog->MinimapTexture() && !Sim->IsMmo();
 	// The MMORPG test: the region's flight pads.
 	TArray<ac::Vec2> Pads;
 	if (const FAcMmoClient* Mmo = Sim->MmoClient())

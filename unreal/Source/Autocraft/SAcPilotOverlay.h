@@ -44,6 +44,9 @@ public:
 		GainSince = Now;
 	}
 	void SetPanel(bool bInPanel) { bPanel = bInPanel; }
+	/// The glass the world shows through, in the overlay's points (y up);
+	/// empty: the whole view. Shades of the world stay inside it.
+	void SetView(const FAcRect& InView) { View = InView; }
 	/// Stills: marks drawn `MarkAge` seconds after they land, and the hurt
 	/// flash held, whatever the clock says.
 	void Hold(TOptional<double> MarkAge, bool bHurt, bool bNote)
@@ -81,6 +84,7 @@ private:
 
 	bool bPanel = true;
 	bool bHasInfo = false;
+	FAcRect View;
 	FAcPilotInfo Info;
 
 	// The reticle's scale, eased over 0.12 s (`reticle.run(.scale(to:))`).

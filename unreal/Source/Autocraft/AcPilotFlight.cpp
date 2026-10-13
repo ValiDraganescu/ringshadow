@@ -162,7 +162,7 @@ bool AAcPilotPawn::StartFlight(const int64 Visit)
 	PullOut.Reset();
 	// The cockpit off, the ship drawn.
 	ApplyView();
-	if (UAcEffects* Fx = UAcEffects::Get(this)) Fx->DustPuff(F.From.GetLocation(), 2.0, Fx->Now());
+	if (UAcEffects* Fx = UAcEffects::Get(this)) Fx->DustPuff(F.From.GetLocation(), 1.2, Fx->Now());
 	UE_LOG(LogAutocraft, Log, TEXT("flight: lift-off at %s (%s)"), *F.From.GetLocation().ToCompactString(), *F.Model.ToString());
 	return true;
 }
@@ -174,14 +174,16 @@ bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing
 	AAcFlightShip* Ship = AAcFlightShip::SpawnFor(GetWorld());
 	UAcEffects* Fx = UAcEffects::Get(this);
 	// Thrust: a glow under the ship, dust where it is low over the ground.
+	// The dust is additive: puffs stacked on one spot burn white, so they
+	// come sparse and small (the touch-down's ring is the big one).
 	auto Thrust = [&](const FVector& Ground, const double Height)
 	{
 		if (!Fx) return;
 		Fx->Flash(Ground + Up() * Cells(Height + 0.05), 1.0, Fx->Now(), 0.05);
-		if (Height < 3.0 && Wall() - Flight->LastPuff > 0.18)
+		if (Height < 2.0 && Wall() - Flight->LastPuff > 0.5)
 		{
 			Flight->LastPuff = Wall();
-			Fx->DustPuff(Ground, 1.5, Fx->Now());
+			Fx->DustPuff(Ground, 0.8, Fx->Now());
 		}
 	};
 
@@ -201,7 +203,7 @@ bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing
 		const double L = Wall() - Flight->LandStart;
 		if (L >= LandSeconds)
 		{
-			if (Fx) Fx->DustPuff(Landing->GetLocation(), 2.0, Fx->Now());
+			if (Fx) Fx->DustPuff(Landing->GetLocation(), 1.2, Fx->Now());
 			UE_LOG(LogAutocraft, Log, TEXT("flight: touched down, %.1f s after the lift-off"), Wall() - Flight->Start);
 			EndFlight();
 			return false;
