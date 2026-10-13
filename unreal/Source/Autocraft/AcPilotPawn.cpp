@@ -522,6 +522,7 @@ void AAcPilotPawn::Leave(const bool bHandBack)
 	DrivenId = INDEX_NONE;
 	Dive.Reset();
 	PullOut.Reset();
+	EndFlight();
 	bHold = false;
 	bAbilityHeld = false;
 	MoveInput = FVector2D::ZeroVector;
@@ -647,7 +648,8 @@ void AAcPilotPawn::ToggleView()
 
 void AAcPilotPawn::ApplyView()
 {
-	const int64 Hidden = Driving() && !Cam.bThirdPerson && !InDive() ? DrivenId : INDEX_NONE;
+	// (A flight's landing: the ship drawn in the unit's place.)
+	const int64 Hidden = Driving() && (InFlight() || (!Cam.bThirdPerson && !InDive())) ? DrivenId : INDEX_NONE;
 	if (UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
 	{
 		R->SetDrivenUnit(DrivenId);
@@ -771,6 +773,15 @@ void AAcPilotPawn::Steer()
 	if (!Driving() || !Sim || !Sim->IsRunning()) return;
 	ac::Simulation& S = Sim->Simulation();
 	if (!S.pilot) return;
+	if (InFlight())
+	{
+		// A pad flight shown (AcPilotFlight.h): the unit stands where the
+		// server put it until the landing touches down.
+		S.pilot->walk = ac::Vec2(0, 0);
+		S.pilot->act = S.pilot->ability = S.pilot->hold = S.pilot->mend = false;
+		S.pilot->crosshair = std::nullopt;
+		return;
+	}
 	// moveDirection: x right, y down the screen (back).
 	S.pilot->walk = ac::Vec2(-MoveInput.Y, MoveInput.X);
 	S.pilot->mend = bAbilityHeld;
@@ -992,7 +1003,16 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 		if (Mmo && Mmo->Travelling())
 		{
 			if (HoldSince < 0) HoldSince = Clock;
-			if (Clock - HoldSince <= MaxHoldSeconds) return;
+			// A pad flight: the ship lifts off and the view goes with it
+			// (AcPilotFlight.h), never a frozen frame.
+			if (!Flight && Mmo->FlyingTo()) StartFlight(Mmo->Visit());
+			if (Clock - HoldSince <= MaxHoldSeconds)
+			{
+				FVector At;
+				FQuat Rot;
+				if (Flight && FlightView(At, Rot, nullptr, Mmo->Visit())) SetActorLocationAndRotation(At, Rot);
+				return;
+			}
 			UE_LOG(LogAutocraft, Log, TEXT("pilot: no unit to drive after %.0f s of travel"), MaxHoldSeconds);
 		}
 		else
@@ -1055,6 +1075,21 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	FQuat ViewRot = Rot;
 	if (Dive) DiveView(View, ViewRot);
 	if (PullOut) PullOutView(View, ViewRot, Root.GetTranslation());
+	// Where the unit stands as the renderer places it (a flight lifts off
+	// from there), and its model.
+	LastPlacement = FTransform(AcSpace::QuatFromHeading(U.heading), AcSpace::ToWorld(U.position, GroundAt(GetWorld(), U.position)));
+	if (const UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
+	{
+		if (const FAcModelInfo* Model = R->ModelOf(U.id)) LastModel = Model->Name;
+	}
+	LastTeam = (int32)FMath::Clamp<int64>(U.owner, 0, 7);
+	// A pad flight's landing: the ship down onto this place, the view into
+	// the pilot's own.
+	if (Flight)
+	{
+		const FAcMmoClient* Mmo = Sim->MmoClient();
+		FlightView(View, ViewRot, &*LastPlacement, Mmo ? Mmo->Visit() : 0);
+	}
 	SetActorLocationAndRotation(View, ViewRot);
 	LastEye = At;
 	LastRotation = Rot;

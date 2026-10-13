@@ -8,7 +8,11 @@
 //
 //   mmocross  drive east (the move keys and the mouse's yaw, as the input
 //             actions set them) over the start region's edge into Tern Ridge
-//   mmofly    M's world map, Cold Fork's pad picked and FLY pressed, landing
+//   mmofly    M's world map, Cold Fork's pad picked and FLY pressed, landing;
+//             the flight shown (AcPilotFlight.h): lift-off, transit and
+//             landing in turn, the camera up with the lift-off, control back
+//             and the picture bright at the touch down
+//             (-AcMmoFlightShots=DIR: a PNG of each stage)
 //   mmohandback  Esc (a hand back) then a take again: the pawn never dives
 //             back in on an old snapshot, nor drops a unit just taken
 //   mmoresume  a world that lasts (docs/mmorpg-m3.md S4): the home screen's
@@ -40,6 +44,12 @@
 #include "Simulation.h"
 
 #include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
+#include "HAL/FileManager.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "UnrealClient.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/PlatformTime.h"
@@ -61,6 +71,32 @@ namespace
 			if (B.kind == ac::StructureKind::citadel && B.owner == ac::Pilot::player) return &B;
 		}
 		return nullptr;
+	}
+
+	/// mmofly: the flight as the pilot pawn showed it (AcPilotFlight.h).
+	struct FFlightSeen
+	{
+		/// The camera's height (cm) when FLY was pressed, and the most it
+		/// rose over that in the lift-off.
+		double ZAtFly = 0;
+		double LiftRise = 0;
+		/// When each stage was first seen (seconds; < 0: never).
+		double Lift = -1, Transit = -1, Landing = -1;
+		/// -AcMmoFlightShots=DIR: the pictures taken.
+		bool bShotLift = false, bShotTransit = false, bShotLanding = false;
+	};
+	FFlightSeen FlightSeen;
+
+	void FlightShot(bool& bTaken, const TCHAR* Name)
+	{
+		FString Dir;
+		if (bTaken || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoFlightShots="), Dir) || Dir.IsEmpty()) return;
+		bTaken = true;
+		Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir);
+		IFileManager::Get().MakeDirectory(*Dir, true);
+		const FString Path = FPaths::Combine(Dir, FString(Name) + TEXT(".png"));
+		FScreenshotRequest::RequestScreenshot(Path, /*bShowUI*/ true, /*bAddFilenameSuffix*/ false);
+		UE_LOG(LogAutocraft, Display, TEXT("flowtest: flight shot %s"), *Path);
 	}
 
 	FString KeyOf(const FAcMmoClient* Mmo)
@@ -306,6 +342,31 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		}
 	}
 
+	if (bFly && Pilot && (T.Phase == 3 || T.Phase == 4))
+	{
+		// The flight as shown: the stages, the camera's climb in the
+		// lift-off, a picture of each stage with -AcMmoFlightShots=DIR.
+		FFlightSeen& F = FlightSeen;
+		switch (Pilot->FlightStage())
+		{
+		case EAcFlightStage::LiftOff:
+			if (F.Lift < 0) F.Lift = Now;
+			if (Pilot->Camera()) F.LiftRise = FMath::Max(F.LiftRise, (Pilot->Camera()->GetComponentLocation().Z - F.ZAtFly) / AcSpace::ToCm(1.0));
+			if (Now - F.Lift > 1.0) FlightShot(F.bShotLift, TEXT("1-liftoff"));
+			break;
+		case EAcFlightStage::Transit:
+			if (F.Transit < 0) F.Transit = Now;
+			if (F.Lift >= 0 && Now - F.Lift > 2.6) FlightShot(F.bShotTransit, TEXT("2-transit"));
+			break;
+		case EAcFlightStage::Landing:
+			if (F.Landing < 0) F.Landing = Now;
+			if (Now - F.Landing > 0.7) FlightShot(F.bShotLanding, TEXT("3-landing"));
+			break;
+		default:
+			break;
+		}
+	}
+
 	switch (T.Phase)
 	{
 	case 0:
@@ -332,6 +393,8 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 	case 2:
 		if (bFly)
 		{
+			// The dive into the unit over first: the flight leaves the pilot's view.
+			if (Pilot && Pilot->InDive() && Since() < ArriveSeconds) return;
 			// M, a pad picked, FLY: as the player does it.
 			ToggleWorldMap();
 			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
@@ -345,6 +408,8 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 			// Slow frames from here: the RegionChange and the new region's
 			// first snapshot are read in the same frame (the hand check's case).
 			Mmo->TestReadEvery = 0.2;
+			FlightSeen = FFlightSeen();
+			FlightSeen.ZAtFly = Pilot && Pilot->Camera() ? Pilot->Camera()->GetComponentLocation().Z : 0;
 			Map->Fly();
 			Check(!WorldMapWidget().IsValid(), TEXT("FLY asked for the flight and closed the map"));
 			Advance();
@@ -390,7 +455,8 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		if (bFly && Mmo && Mmo->Visit() <= MmoVisitWas && Since() < TravelSeconds) return;
 		// Arrived: seated again, the view on the new unit (a moment to settle).
 		if (Mmo && !Mmo->Travelling()) Mmo->TestReadEvery = 0;
-		if (Seated() && Since() > 0.5 && ViewOff() < 12.0)
+		// (A flight: once it touched down, control back.)
+		if (Seated() && Since() > 0.5 && ViewOff() < 12.0 && !(bFly && Pilot->InFlight()))
 		{
 			Advance();
 			return;
@@ -450,6 +516,17 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		{
 			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
 			Check(Near && Near->Distance <= FAcMmoClient::PadReach, TEXT("on Cold Fork's pad"));
+			// The flight shown (AcPilotFlight.h): lift-off, transit, landing.
+			const FFlightSeen& F = FlightSeen;
+			Check(F.Lift >= 0 && F.Transit >= 0 && F.Landing >= 0,
+				FString::Printf(TEXT("the flight shown: lift-off %s, transit %s, landing %s"), F.Lift >= 0 ? TEXT("seen") : TEXT("missed"),
+					F.Transit >= 0 ? TEXT("seen") : TEXT("missed"), F.Landing >= 0 ? TEXT("seen") : TEXT("missed")));
+			Check(F.LiftRise > 3.0, FString::Printf(TEXT("the camera rose with the lift-off (%.1f cells)"), F.LiftRise));
+			Check(F.Landing > F.Transit && F.Transit > F.Lift, TEXT("in that order"));
+			Check(!Pilot->InFlight() && Pilot->FlightStage() == EAcFlightStage::None, TEXT("touched down: control back"));
+			const APlayerCameraManager* Manager = PC ? PC->PlayerCameraManager.Get() : nullptr;
+			Check(Manager && (!Manager->bEnableFading || Manager->FadeAmount <= 0.001f),
+				FString::Printf(TEXT("the picture bright again (fade %.2f)"), Manager ? Manager->FadeAmount : -1.f));
 		}
 		Finish();
 		return;

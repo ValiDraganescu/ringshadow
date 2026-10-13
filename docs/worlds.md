@@ -102,6 +102,15 @@ log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
   and the server's seat after a landing is taken only then, so an old
   snapshot never takes the unit back again. A view held for travel gives
   way to the top-down camera after 15 s.
+- A flight is shown (`AcPilotFlight.h`; only the picture, the server's
+  4 s stay the rule): the Prospector rises off the pad (1.5 s, dust and a
+  thrust glow), the camera goes up behind it and pulls back; in transit the
+  region falls away under it as the camera turns slowly round it, dimming
+  near the landing ("Flying to ..." on the banner). With the new region's
+  first snapshot it comes down onto the pad (1.5 s) and the camera settles
+  into the pilot's view; the input is held until it touches down. A late
+  landing keeps the transit view moving, up to the 15 s above.
+  `-AcMmoFlightShots=DIR` with `mmofly` saves a picture of each stage.
 - Automation tests (hidden): `Autocraft.Mmo.CrossEdgeEast` (drive east over
   the start region's edge into Tern Ridge) and `Autocraft.Mmo.FlyToPad`
   (fly to Cold Fork's pad), in `AcMmoTests.cpp`. Through the pilot pawn and

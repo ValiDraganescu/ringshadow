@@ -134,6 +134,7 @@
 
 #include "AcPilotCamera.h"
 #include "AcPilotChase.h"
+#include "AcPilotFlight.h"
 #include "Types.h"
 
 #include <optional>
@@ -217,7 +218,12 @@ public:
 
 	/// The camera is still flying down into the unit (the dive): the unit
 	/// drawn, no cockpit.
-	bool InDive() const { return (Dive.IsSet() && !Dive->bInside) || PulledOut(); }
+	bool InDive() const { return (Dive.IsSet() && !Dive->bInside) || PulledOut() || InFlight(); }
+	/// The MMORPG world: a pad flight shown (AcPilotFlight.h): from the
+	/// lift-off until the landing touches down. The unit drawn as the
+	/// flight's ship, no cockpit, the pilot's input held.
+	bool InFlight() const { return Flight.IsSet(); }
+	EAcFlightStage FlightStage() const;
 	/// -AcPilotPullOut: the camera is out of the unit, on its way to the gas giant.
 	bool PulledOut() const { return PullOut.IsSet() && PullOut->bOutside; }
 	/// The eye (pitch, lean, third person) and the camera.
@@ -365,6 +371,35 @@ private:
 	/// < 0: not held), at most this long.
 	double HoldSince = -1;
 	static constexpr double MaxHoldSeconds = 15.0;
+	/// The pad flight shown (AcPilotFlight.cpp): real seconds at the lift-off
+	/// and at the landing's start (< 0: not yet), where the unit stood and
+	/// the view was then, the model, the region changes so far.
+	struct FFlightShow
+	{
+		double Start = 0;
+		double LandStart = -1;
+		FTransform From;
+		FVector EyeFrom = FVector::ZeroVector;
+		FQuat RotFrom = FQuat::Identity;
+		FName Model;
+		int32 Team = 0;
+		int64 Visit = 0;
+		double LastPuff = -1;
+	};
+	TOptional<FFlightShow> Flight;
+	/// The last followed unit's placement and model (the lift-off's start).
+	TOptional<FTransform> LastPlacement;
+	FName LastModel;
+	int32 LastTeam = 0;
+	/// Starts the flight from the last followed unit; false: nothing to show.
+	bool StartFlight(int64 Visit);
+	/// The flight's view this frame. `Landing`: the unit driven again (its
+	/// placement, and `At`, `Rot` its pilot view to settle into); null: in
+	/// the air (`At`, `Rot` out only). False once it touched down.
+	bool FlightView(FVector& At, FQuat& Rot, const FTransform* Landing, int64 Visit);
+	/// The ship gone, the picture bright, the unit drawn.
+	void EndFlight();
+	void SetFade(double Amount);
 	FVector2D MoveInput = FVector2D::ZeroVector;
 	TOptional<FCrosshair> Cross;
 	TOptional<FVector> LastEye;
