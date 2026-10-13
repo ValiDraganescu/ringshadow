@@ -210,3 +210,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N +16 bytes/packet (tag); max payload 1165.
 - I No server authentication yet: waits for accounts.
 - I First server launch after rebuild stalled 40 s (once).
+- T E2 done 0df64ac eeb2a3f: server in .app Contents/Resources/server.
+- D build_release.sh mac --ad-hoc: local signing, no notarize.
+- N Packaged hidden -AcMmo run seated; 1.0 GB app, 617 MB zip.
+- I Untracked UAT outputs in unreal/Build/Mac/: not committed.
+- T M5 done; suites (manager): server 71, net 63, core 391.
+- N Next needs user: Win/Linux server (AWS), cities, AI pilots, merge to main.
