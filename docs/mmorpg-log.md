@@ -45,3 +45,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Per-entity delta baselines; snapshot may span several unreliable messages.
 - D Local server token via stdin, not command line (ps shows args).
 - T T4 → worker mmo-server-world (reused).
+- N User check at M1 end: walk around as a Prospector.
