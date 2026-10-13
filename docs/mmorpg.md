@@ -3,7 +3,7 @@
 Status, 2026-10-13: a first draft. The first decisions are in. This doc explains
 what an MMORPG is, checks what Ringshadow already has toward one, proposes a
 direction and lists the decisions to make, in order. "Decided" fills up as
-the answers come in.
+the answers come in. How to play the test mode today: [mmorpg-play.md](mmorpg-play.md).
 
 ## What an MMORPG is
 
