@@ -18,6 +18,54 @@
       },
       "level": 0,
       "slope": 5
+    },
+    {
+      "op": "raise",
+      "area": {
+        "circle": [
+          102,
+          58,
+          3
+        ]
+      },
+      "level": 1,
+      "slope": 5
+    },
+    {
+      "op": "ridge",
+      "line": [
+        [
+          26.1,
+          80.9
+        ],
+        [
+          28.0,
+          86.5
+        ],
+        [
+          25.5,
+          91.8
+        ],
+        [
+          20.0,
+          94.0
+        ],
+        [
+          14.5,
+          91.8
+        ],
+        [
+          12.0,
+          86.5
+        ],
+        [
+          13.9,
+          80.9
+        ]
+      ],
+      "width": 2,
+      "level": 1,
+      "slope": 2
     }
   ],
   "pads": [
@@ -27,6 +75,26 @@
         72,
         48
       ]
+    }
+  ],
+  "sites": [
+    {
+      "name": "Barge wreck",
+      "kind": "wreck",
+      "at": [
+        102,
+        58
+      ],
+      "blueprint": "derrick"
+    },
+    {
+      "name": "Salt cache",
+      "kind": "cache",
+      "at": [
+        20,
+        86
+      ],
+      "blueprint": "bastion"
     }
   ],
   "openings": {

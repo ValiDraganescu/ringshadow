@@ -131,6 +131,12 @@ int summary(const std::string& path) {
                 file->doodads.size(), static_cast<long long>(built.cleared));
     for (const Place& p : file->pads) std::printf("pad \"%s\" at %s\n", p.name.c_str(), point(p.at).c_str());
     for (const Place& p : file->spawns) std::printf("spawn \"%s\" at %s\n", p.name.c_str(), point(p.at).c_str());
+    const auto reach = siteReach(built);
+    for (size_t i = 0; i < file->sites.size(); i++) {
+        const Site& t = file->sites[i];
+        std::printf("site \"%s\": %s, %s, at %s, reached %s\n", t.name.c_str(), std::string(rawValue(t.kind)).c_str(),
+                    std::string(rawValue(t.blueprint)).c_str(), point(t.at).c_str(), std::string(siteReachName(reach[i])).c_str());
+    }
     for (size_t e = 0; e < 4; e++)
         for (const Span& s : file->openings[e])
             std::printf("opening: %s edge %g..%g\n", std::string(edgeName(static_cast<Edge>(e))).c_str(), s.from, s.to);
@@ -155,8 +161,15 @@ int summary(const std::string& path) {
 int check(const std::string& path) {
     const auto file = load(path);
     if (!file) return 1;
-    const auto problems = validate(*file, build(*file));
+    const Built built = build(*file);
+    const auto problems = validate(*file, built);
     printProblems(path, problems);
+    // How each vault is reached: by a ramp, or only by a cliff hop.
+    const auto reach = siteReach(built);
+    for (size_t i = 0; i < file->sites.size(); i++)
+        if (file->sites[i].kind == SiteKind::vault && reach[i] != SiteReach::none)
+            std::printf("%s: sites[%zu] \"%s\" (vault) is reached %s\n", path.c_str(), i, file->sites[i].name.c_str(),
+                        std::string(siteReachName(reach[i])).c_str());
     if (problems.empty()) std::printf("%s: ok\n", path.c_str());
     else std::printf("%zu problem%s\n", problems.size(), problems.size() == 1 ? "" : "s");
     return problems.empty() ? 0 : 1;

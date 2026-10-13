@@ -7,6 +7,7 @@
 
 #include "AutocraftCoreApi.h"
 
+#include "Progression.h"
 #include "SimdMath.h"
 #include "Types.h"
 #include "WindowMaps.h"
@@ -79,6 +80,17 @@ struct Place {
     bool operator==(const Place&) const = default;
 };
 
+/// A blueprint site (docs/prospector-progression.md, "Blueprint sites"):
+/// one blueprint, which each pilot finds for themselves.
+struct Site {
+    std::string name;
+    SiteKind kind = SiteKind::crate;
+    Vec2 at;
+    /// The building it teaches (never the Garrison: held back).
+    StructureKind blueprint = StructureKind::citadel;
+    bool operator==(const Site&) const = default;
+};
+
 enum class Edge : uint8_t { north, east, south, west };
 
 /// A passable stretch of an edge: cells along it (x on north and south,
@@ -104,6 +116,7 @@ struct RegionFile {
     std::vector<Prop> doodads;
     std::vector<Place> pads;
     std::vector<Place> spawns;
+    std::vector<Site> sites;
     /// By `Edge`.
     std::array<std::vector<Span>, 4> openings;
 
@@ -150,9 +163,11 @@ struct AUTOCRAFTCORE_API Built {
     MapDefinition map;
     /// Ground coordinates.
     std::vector<Place> pads, spawns;
+    std::vector<Site> sites;
     std::array<std::vector<Span>, 4> openings;
     /// Base rocks and plants taken away because they stood on something
-    /// crafted (a deposit, a well, a pad, a spawn point, an opening's lane).
+    /// crafted (a deposit, a well, a pad, a spawn point, a site, an
+    /// opening's lane).
     int64_t cleared = 0;
 
     Vec2 extent() const;
@@ -171,8 +186,17 @@ AUTOCRAFTCORE_API Built build(const RegionFile& file);
 /// What the built region gets wrong: deposits, wells, pads and spawn points
 /// on cliffs, in rock, on top of each other or cut off; ramps that do not
 /// meet their levels or are too steep; openings blocked or cut off from
-/// the region's open ground. Empty: fine.
+/// the region's open ground; sites on a cliff, in rock, on ore, a well or a
+/// pad's plate, or cut off (a vault: off high ground, or out of reach of
+/// both a ramp and a cliff hop). Empty: fine.
 AUTOCRAFTCORE_API std::vector<Problem> validate(const RegionFile& file, const Built& built);
+
+/// How a pilot reaches a site: across the open ground, up a ramp to high
+/// ground joined to it, only with Cliff hop (a vault), or not at all.
+enum class SiteReach : uint8_t { walk, ramp, cliffHop, none };
+AUTOCRAFTCORE_API std::string_view siteReachName(SiteReach r);
+/// By `built.sites`.
+AUTOCRAFTCORE_API std::vector<SiteReach> siteReach(const Built& built);
 
 AUTOCRAFTCORE_API std::string_view edgeName(Edge e);
 

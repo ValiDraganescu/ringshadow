@@ -399,6 +399,48 @@ ordered number(double v) {
 
 ordered pointNumbers(Vec2 p) { return ordered::array({number(p.x), number(p.y)}); }
 
+/// How far round a site's centre its crate, wreck or vault stands, cells:
+/// the base's rocks give way that far.
+constexpr double siteRadius = 2.0;
+
+/// The walking grid's view of a built region, for how a site is reached.
+struct Reach {
+    const TerrainField& field;
+    const NavGrid& nav;
+    int32_t main = -1;
+    /// The main open area's cross-cliff region (`jumpRegions`), and its
+    /// most common level.
+    int32_t mainJump = -1;
+    int64_t mainLevel = 0;
+
+    Reach(const TerrainField& f, const NavGrid& n) : field(f), nav(n), main(n.mainRegion) {
+        std::array<int64_t, maxLevel + 1> levels{};
+        for (int64_t i = 0; i < nav.width * nav.height; i++) {
+            if (nav.regions[static_cast<size_t>(i)] != main) continue;
+            if (mainJump < 0) mainJump = nav.jumpRegions[static_cast<size_t>(i)];
+            levels[static_cast<size_t>(std::clamp<int64_t>(field.level(nav.centre(i)), 0, maxLevel))] += 1;
+        }
+        mainLevel = std::max_element(levels.begin(), levels.end()) - levels.begin();
+    }
+
+    SiteReach of(Vec2 p) const {
+        // The cell under it, or one beside it (a cell is coarser than a site).
+        std::vector<int64_t> cells;
+        if (const auto k = nav.index(p)) cells.push_back(*k);
+        for (int i = 0; i < 8; i++) {
+            const double a = 2 * pi * i / 8;
+            if (const auto k = nav.index(p + Vec2(std::cos(a), std::sin(a)))) cells.push_back(*k);
+        }
+        bool hop = false;
+        for (int64_t k : cells) {
+            if (!nav.free(k) || nav.inRock(nav.centre(k))) continue;
+            if (nav.regions[static_cast<size_t>(k)] == main) return field.level(p) > mainLevel ? SiteReach::ramp : SiteReach::walk;
+            hop = hop || (mainJump >= 0 && nav.jumpRegions[static_cast<size_t>(k)] == mainJump);
+        }
+        return hop ? SiteReach::cliffHop : SiteReach::none;
+    }
+};
+
 } // namespace
 
 std::vector<Vec2> Area::outline() const {
@@ -449,6 +491,24 @@ bool touchesPadPlate(const std::vector<Place>& pads, Vec2 at, double halfSide) {
     return false;
 }
 
+std::string_view siteReachName(SiteReach r) {
+    static constexpr std::array<std::string_view, 4> names{"on foot", "by a ramp", "by a cliff hop", "not at all"};
+    return names[static_cast<size_t>(r)];
+}
+
+std::vector<SiteReach> siteReach(const Built& b) {
+    const TerrainField field(b.map);
+    NavGrid nav(b.map, field);
+    GameState state = GameState::new_(b.map);
+    state.structures.clear();
+    state.units.clear();
+    nav.setDynamic(state);
+    const Reach reach(field, nav);
+    std::vector<SiteReach> out;
+    for (const Site& t : b.sites) out.push_back(reach.of(t.at));
+    return out;
+}
+
 std::string_view edgeName(Edge e) {
     static constexpr std::array<std::string_view, 4> names{"north", "east", "south", "west"};
     return names[static_cast<size_t>(e)];
@@ -470,7 +530,7 @@ Parsed parse(std::string_view text) {
     const json root = json::parse(text.begin(), text.end(), nullptr, false);
     Reader r{out.problems};
     if (!r.object(root, "region", {"id", "name", "size", "base", "height", "deposits", "wells", "doodads", "pads",
-                                   "spawns", "openings"}))
+                                   "spawns", "sites", "openings"}))
         return out;
     RegionFile f;
     if (const auto id = r.text(root, "id", "", true)) {
@@ -540,6 +600,36 @@ Parsed parse(std::string_view text) {
     });
     r.list(root, "pads", f.pads, [&](const json& j, const std::string& w) { return r.place(j, w); });
     r.list(root, "spawns", f.spawns, [&](const json& j, const std::string& w) { return r.place(j, w); });
+    r.list(root, "sites", f.sites, [&](const json& j, const std::string& w) -> std::optional<Site> {
+        if (!r.object(j, w, {"name", "kind", "at", "blueprint"})) return std::nullopt;
+        const auto name = r.text(j, "name", w, true);
+        const auto kind = r.text(j, "kind", w, true);
+        const auto at = r.point(j, "at", w);
+        const auto blueprint = r.text(j, "blueprint", w, true);
+        if (name && name->empty()) { r.add(w + ".name", "must not be empty"); return std::nullopt; }
+        if (!name || !kind || !at || !blueprint) return std::nullopt;
+        const auto k = enumNamed<SiteKind>(*kind);
+        if (!k) { r.add(w + ".kind", "is \"" + *kind + "\"; one of " + choices<SiteKind>(), *at); return std::nullopt; }
+        const auto b = enumNamed<StructureKind>(*blueprint);
+        if (b == StructureKind::garrison) {
+            r.add(w + ".blueprint", "the Garrison is held back: no blueprint in the world", *at);
+            return std::nullopt;
+        }
+        if (!b) {
+            std::string all;
+            for (std::string_view n : EnumInfo<StructureKind>::names)
+                if (n != "garrison") all += (all.empty() ? "" : ", ") + std::string(n);
+            r.add(w + ".blueprint", "is \"" + *blueprint + "\"; one of " + all, *at);
+            return std::nullopt;
+        }
+        return Site{*name, *k, *at, *b};
+    });
+    {
+        std::set<std::string> seen;
+        for (size_t i = 0; i < f.sites.size(); i++)
+            if (!seen.insert(f.sites[i].name).second)
+                r.add("sites[" + std::to_string(i) + "].name", "\"" + f.sites[i].name + "\" is used twice", f.sites[i].at);
+    }
     for (const auto* places : {&f.pads, &f.spawns}) {
         std::set<std::string> seen;
         for (size_t i = 0; i < places->size(); i++) {
@@ -677,6 +767,13 @@ std::string write(const RegionFile& f) {
         for (const Place& p : *places) list.push_back(ordered{{"name", p.name}, {"at", pointNumbers(p.at)}});
         root[key] = list;
     }
+    if (!f.sites.empty()) {
+        ordered list = ordered::array();
+        for (const Site& t : f.sites)
+            list.push_back(ordered{{"name", t.name}, {"kind", std::string(rawValue(t.kind))}, {"at", pointNumbers(t.at)},
+                                   {"blueprint", std::string(rawValue(t.blueprint))}});
+        root["sites"] = list;
+    }
     ordered openings = ordered::object();
     for (size_t e = 0; e < 4; e++) {
         if (f.openings[e].empty()) continue;
@@ -745,13 +842,15 @@ Built build(const RegionFile& f) {
     // The foundation plates are the pads' (none under the base's starts).
     for (const Place& p : b.pads) m.plates.push_back(p.at);
     for (const Place& p : f.spawns) b.spawns.push_back(Place{p.name, g(p.at)});
+    for (const Site& t : f.sites) b.sites.push_back(Site{t.name, t.kind, g(t.at), t.blueprint});
     b.openings = f.openings;
     // The base's rocks and plants give way to what the file puts down.
-    std::vector<Vec2> deposits, wells, pads, spawns;
+    std::vector<Vec2> deposits, wells, pads, spawns, sites;
     for (const OreSpec& d : m.deposits) deposits.push_back(d.position);
     for (const WellSpec& w : m.wells) wells.push_back(w.position);
     for (const Place& p : b.pads) pads.push_back(p.at);
     for (const Place& p : b.spawns) spawns.push_back(p.at);
+    for (const Site& t : b.sites) sites.push_back(t.at);
     const auto inLane = [&](Vec2 groundPoint, double r) {
         const Vec2 q = b.regionAt(groundPoint), x = b.extent();
         for (size_t e = 0; e < 4; e++) {
@@ -769,7 +868,8 @@ Built build(const RegionFile& f) {
         for (const NavGrid::Circle& c : NavGrid::circles(d)) {
             const double r = c.second + NavGrid::clearance;
             clear = clear || near(c.first, deposits, r + 1.5) || near(c.first, wells, r + 2) ||
-                    near(c.first, pads, r + padRadius + 0.5) || near(c.first, spawns, r + 1) || inLane(c.first, r);
+                    near(c.first, pads, r + padRadius + 0.5) || near(c.first, spawns, r + 1) ||
+                    near(c.first, sites, r + siteRadius) || inLane(c.first, r);
         }
         if (clear) b.cleared += 1; else kept.push_back(d);
     }
@@ -947,6 +1047,35 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
         else if (const auto c = crowded(p, "", 1.0 + NavGrid::clearance, 1.5 + NavGrid::clearance)) add(where, *c, p);
         else if (!(cell && nav.free(*cell))) add(where, "blocked ground (the map's edge?)", p);
         else if (nav.regions[static_cast<size_t>(*cell)] != main) add(where, "cut off from the region's open ground", p);
+    }
+    // Sites: open ground clear of ore, wells and the pads' plates, joined to
+    // the rest; a vault on high ground, which a ramp or a cliff hop reaches.
+    const Reach reach(field, nav);
+    for (size_t i = 0; i < b.sites.size(); i++) {
+        const Site& t = b.sites[i];
+        const std::string where = "sites[" + std::to_string(i) + "] \"" + t.name + "\"";
+        const Vec2 p = t.at;
+        const bool vault = t.kind == SiteKind::vault;
+        std::optional<std::string> plate, onSite;
+        for (const Place& pad : b.pads)
+            if (!plate && distance(pad.at, p) < padReach + 1)
+                plate = "on pad \"" + pad.name + "\"'s plate: keep a site " + num(padReach + 1) + " cells from a pad's centre";
+        for (size_t j = 0; j < i && !onSite; j++)
+            if (distance(b.sites[j].at, p) < 2 * siteRadius)
+                onSite = "on top of sites[" + std::to_string(j) + "] \"" + b.sites[j].name + "\"";
+        const SiteReach how = reach.of(p);
+        if (steepNear(p)) add(where, "on a cliff face", p);
+        else if (const auto r = rock(p, 1.0)) add(where, rockText(*r), p);
+        else if (const auto c = crowded(p, "", 1.5 + NavGrid::clearance, 2.0 + NavGrid::clearance)) add(where, *c, p);
+        else if (plate) add(where, *plate, p);
+        else if (onSite) add(where, *onSite, p);
+        else if (vault && field.level(p) < 1)
+            add(where, "a vault stands on high ground (level 1 or 2); this is level " + std::to_string(field.level(p)), p);
+        else if (how == SiteReach::none)
+            add(where, vault ? "cut off: no ramp leads up to it and no cliff a Cliff hop jumps"
+                             : "cut off from the region's open ground", p);
+        else if (how == SiteReach::cliffHop && !vault)
+            add(where, "cut off from the region's open ground (only Cliff hop reaches it; only a vault may sit so)", p);
     }
     // Openings: a lane `laneDepth` in from the edge, open all along the span
     // and joined to the region's open ground.

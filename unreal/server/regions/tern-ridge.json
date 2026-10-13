@@ -18,6 +18,29 @@
       },
       "level": 1,
       "slope": 5
+    },
+    {
+      "op": "raise",
+      "area": {
+        "circle": [
+          108,
+          88,
+          3
+        ]
+      },
+      "level": 1,
+      "slope": 5
+    },
+    {
+      "op": "raise",
+      "area": {
+        "circle": [
+          72,
+          76,
+          4
+        ]
+      },
+      "level": 2
     }
   ],
   "pads": [
@@ -27,6 +50,26 @@
         72,
         48
       ]
+    }
+  ],
+  "sites": [
+    {
+      "name": "Tern wreck",
+      "kind": "wreck",
+      "at": [
+        108,
+        88
+      ],
+      "blueprint": "habDome"
+    },
+    {
+      "name": "Tern vault",
+      "kind": "vault",
+      "at": [
+        72,
+        76
+      ],
+      "blueprint": "sentinel"
     }
   ],
   "openings": {

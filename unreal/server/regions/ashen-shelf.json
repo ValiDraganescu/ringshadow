@@ -18,6 +18,42 @@
       },
       "level": 0,
       "slope": 5
+    },
+    {
+      "op": "raise",
+      "area": {
+        "circle": [
+          28,
+          52,
+          5
+        ]
+      },
+      "level": 2
+    },
+    {
+      "op": "ramp",
+      "from": [
+        28,
+        66
+      ],
+      "to": [
+        28,
+        57
+      ],
+      "width": 4,
+      "fromLevel": 1,
+      "level": 2
+    },
+    {
+      "op": "raise",
+      "area": {
+        "circle": [
+          108,
+          50,
+          4
+        ]
+      },
+      "level": 2
     }
   ],
   "pads": [
@@ -27,6 +63,26 @@
         72,
         48
       ]
+    }
+  ],
+  "sites": [
+    {
+      "name": "Shelf vault",
+      "kind": "vault",
+      "at": [
+        28,
+        52
+      ],
+      "blueprint": "lab"
+    },
+    {
+      "name": "Ash vault",
+      "kind": "vault",
+      "at": [
+        108,
+        50
+      ],
+      "blueprint": "bastion"
     }
   ],
   "openings": {

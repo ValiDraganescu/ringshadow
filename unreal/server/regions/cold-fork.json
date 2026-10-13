@@ -18,6 +18,18 @@
       },
       "level": 1,
       "slope": 5
+    },
+    {
+      "op": "raise",
+      "area": {
+        "circle": [
+          20,
+          84,
+          3
+        ]
+      },
+      "level": 1,
+      "slope": 5
     }
   ],
   "pads": [
@@ -27,6 +39,26 @@
         72,
         48
       ]
+    }
+  ],
+  "sites": [
+    {
+      "name": "Fork wreck",
+      "kind": "wreck",
+      "at": [
+        20,
+        84
+      ],
+      "blueprint": "foundry"
+    },
+    {
+      "name": "Ridge wreck",
+      "kind": "wreck",
+      "at": [
+        72,
+        18
+      ],
+      "blueprint": "spacedock"
     }
   ],
   "openings": {

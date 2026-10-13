@@ -29,6 +29,17 @@
       ]
     }
   ],
+  "sites": [
+    {
+      "name": "Slag vault",
+      "kind": "vault",
+      "at": [
+        30,
+        40
+      ],
+      "blueprint": "spacedock"
+    }
+  ],
   "openings": {
     "north": [
       [

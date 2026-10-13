@@ -142,6 +142,18 @@
       "width": 4,
       "fromLevel": 1,
       "level": 2
+    },
+    {
+      "op": "raise",
+      "area": {
+        "circle": [
+          50,
+          30,
+          3
+        ]
+      },
+      "level": 1,
+      "slope": 5
     }
   ],
   "deposits": [
@@ -336,6 +348,26 @@
         80,
         53
       ]
+    }
+  ],
+  "sites": [
+    {
+      "name": "Landing crate",
+      "kind": "crate",
+      "at": [
+        70,
+        42
+      ],
+      "blueprint": "citadel"
+    },
+    {
+      "name": "Lander wreck",
+      "kind": "wreck",
+      "at": [
+        50,
+        30
+      ],
+      "blueprint": "derrick"
     }
   ],
   "openings": {

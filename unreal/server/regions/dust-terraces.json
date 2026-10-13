@@ -18,6 +18,43 @@
       },
       "level": 0,
       "slope": 5
+    },
+    {
+      "op": "lower",
+      "area": {
+        "circle": [
+          108,
+          52,
+          3
+        ]
+      },
+      "level": 0,
+      "slope": 5
+    },
+    {
+      "op": "raise",
+      "area": {
+        "circle": [
+          24,
+          52,
+          5
+        ]
+      },
+      "level": 2
+    },
+    {
+      "op": "ramp",
+      "from": [
+        24,
+        66
+      ],
+      "to": [
+        24,
+        57
+      ],
+      "width": 4,
+      "fromLevel": 1,
+      "level": 2
     }
   ],
   "pads": [
@@ -27,6 +64,26 @@
         72,
         48
       ]
+    }
+  ],
+  "sites": [
+    {
+      "name": "Terrace cache",
+      "kind": "cache",
+      "at": [
+        108,
+        52
+      ],
+      "blueprint": "foundry"
+    },
+    {
+      "name": "Dust vault",
+      "kind": "vault",
+      "at": [
+        24,
+        52
+      ],
+      "blueprint": "sentinel"
     }
   ],
   "openings": {

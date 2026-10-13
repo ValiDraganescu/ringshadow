@@ -40,6 +40,7 @@ constexpr Rgb oreColour{176, 110, 236};
 constexpr Rgb wellColour{220, 232, 250};
 constexpr Rgb padColour{250, 206, 60};
 constexpr Rgb spawnColour{80, 235, 130};
+constexpr Rgb siteColour{232, 168, 36};
 constexpr Rgb openingColour{60, 220, 240};
 constexpr Rgb problemColour{255, 64, 64};
 
@@ -257,6 +258,17 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
                 if (std::abs(x) + std::abs(y) <= k) c.blend(cx + x, cy + y, std::abs(x) + std::abs(y) > k - 2 ? background : spawnColour);
         label(r + Vec2(1.2, 0), p.name, spawnColour);
     }
+    // Blueprint sites: a gold square, named with its kind and blueprint.
+    for (const region::Site& t : built.sites) {
+        const Vec2 r = built.regionAt(t.at);
+        const auto [cx, cy] = pixel(r);
+        const int k = std::max(5, static_cast<int>(1.1 * s));
+        for (int y = -k; y <= k; y++)
+            for (int x = -k; x <= k; x++)
+                c.blend(cx + x, cy + y, std::max(std::abs(x), std::abs(y)) > k - 2 ? background : siteColour);
+        label(r + Vec2(1.1, 0), t.name + " (" + std::string(rawValue(t.kind)) + ", " + std::string(rawValue(t.blueprint)) + ")",
+              siteColour);
+    }
 
     // The grid, labelled every 8 cells (16 when cells are small).
     const int step = s >= 6 ? 8 : 16;
@@ -310,6 +322,7 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     swatch(wellColour, "MH well");
     swatch(padColour, "pad");
     swatch(spawnColour, "spawn");
+    swatch(siteColour, "blueprint site");
     swatch(openingColour, "opening");
     swatch(problemColour, "problem");
     y += lineHeight + 12;

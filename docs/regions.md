@@ -24,7 +24,7 @@ autocraft-region preview FILE -o OUT.png [--scale PX]
 The preview: north up, a labelled grid every 8 cells, height as colour bands
 (level 0 olive, 1 tan, 2 pale), cliffs red-brown, rocks dark grey, plants
 green dots, ore violet, MH wells silver, pads yellow rings, spawns green
-diamonds, openings cyan, each problem a red ring numbered as in the list
+diamonds, blueprint sites gold squares (named, with kind and blueprint), openings cyan, each problem a red ring numbered as in the list
 below the map.
 
 ## Coordinates
@@ -52,6 +52,7 @@ Levels: 0 low ground, 1 high ground, 2 higher. One level is 2.4 high.
   "doodads": [{"kind": "boulder", "at": [60, 70], "rotation": 30, "scale": 1.5}],
   "pads": [{"name": "Landing", "at": [72, 48]}],
   "spawns": [{"name": "Gate", "at": [72, 56]}],
+  "sites": [{"name": "Lander wreck", "kind": "wreck", "at": [50, 30], "blueprint": "derrick"}],
   "openings": {"north": [[64, 80]], "west": [[40, 56]]}
 }
 ```
@@ -100,6 +101,31 @@ base's plateaus and ramps.
 - `spawns`: named points where a pilot appears: open ground joined to the
   rest.
 
+## sites
+
+Blueprint sites ([prospector-progression.md](prospector-progression.md),
+"Blueprint sites"): each holds one building's blueprint, and every pilot finds
+it for themselves.
+
+- `name`: unique in the region. `kind`: `crate` (walk into it), `wreck`
+  (weld it open), `cache` (buried; drill it out), `vault` (on high ground).
+  `at`: the point. `blueprint`: a building's code name ([naming.md](naming.md)):
+  `citadel`, `derrick`, `habDome`, `foundry`, `lab`, `spacedock`, `bastion`,
+  `sentinel`. The Garrison is held back, so it has no blueprint.
+- A site stands on open ground. It must not be on a cliff face, in rock, on
+  ore or a well, on a pad's plate (keep it 5 cells from a pad's centre) or on
+  another site. It must be joined to the region's open ground. Base rocks
+  within 2 cells give way to it.
+- A `vault` stands on high ground (level 1 or 2). It may be cut off from the
+  open ground when Cliff hop can reach it. `validate` prints how each vault is
+  reached ("by a ramp", "by a cliff hop"), and `build` prints how every site
+  is. A crate, wreck or cache that only Cliff hop reaches is a problem, and so
+  is a vault that neither a ramp nor a cliff hop reaches.
+- Settings that suit each kind: a wreck on a rise (`raise` a circle with a
+  `slope` of 5), a cache in a hollow (`lower` a circle on high ground, or
+  a horseshoe of `ridge` round it on low ground), a vault on a pocket a level
+  up (`raise` a circle with no slope), with a `ramp` or with none.
+
 ## openings
 
 Spans of each edge (`north` z = 0, `south` z = depth, `west` x = 0, `east`
@@ -120,6 +146,9 @@ and the region position:
 - a deposit or well on a cliff face, in rock, on top of another, cut off;
 - a pad on a cliff, on uneven ground, in rock, on ore or a well, cut off;
 - a spawn on a cliff, in rock, on ore or a well, cut off;
+- a site on a cliff, in rock, on ore, a well, a pad's plate or another
+  site, or cut off (a vault: off high ground, or with no ramp and no
+  cliff hop to it);
 - a ramp end on the wrong level, a ramp too steep;
 - an opening blocked (a cliff, a rock, ore, a well) or cut off.
 
@@ -133,4 +162,5 @@ the file (so a changed file never meets a cached walking grid), the height
 edits in `heightEdits`, deposits and wells in `deposits` and `wells` (after
 the bases' in the game state), crafted doodads after the base's. The game's
 own maps leave those three lists empty, so they stay as they were. Pads,
-spawns and openings come beside the map (`region::Built`).
+spawns, sites and openings come beside the map (`region::Built`), in ground
+coordinates.
