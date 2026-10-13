@@ -116,3 +116,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Worker-to-worker send_message fails ("not reachable").
 - N All suites pass (server 48, net 55, core 391); 5 hidden Mmo tests.
 - T M2 built; awaiting user hand check.
+- I Hand check: after flight, client sends hand back; camera frozen.
+- I Hand back → take race: server drops new take.
+- T R3-FIX → mmo-world; test must go through pilot pawn path.
