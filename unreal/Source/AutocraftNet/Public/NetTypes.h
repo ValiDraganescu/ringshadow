@@ -66,6 +66,12 @@ struct ConnectionStats {
     uint64_t resends = 0;
     /// Unreliable messages that did not fit the budget.
     uint64_t unreliableDropped = 0;
+    /// Packets dropped because they did not open: forged, changed on the
+    /// way, or sealed with another key.
+    uint64_t packetsRejected = 0;
+    /// Packets dropped because their counter was seen already: replays and
+    /// the network's duplicates.
+    uint64_t packetsReplayed = 0;
 };
 
 } // namespace ac::net

@@ -9,12 +9,16 @@
 //   endpoint.send(..unreliable..)      // the snapshot or the input
 //   endpoint.flush(now);               // write and send the packets
 //
-// The handshake (docs/networking.md, "The connection"): the client sends a
-// hello; the server answers with a cookie, a keyed hash of the client's
-// address and the time window, and keeps nothing; the client sends the
-// cookie back with its token; the server checks both and welcomes it with
-// a connection id. Hellos and answers fill a whole packet, so nothing the
-// server sends before the welcome is bigger than what it got.
+// The handshake (docs/networking.md, "The connection", "Encryption"): the
+// client sends a hello; the server answers with a cookie, a keyed hash of
+// the client's address and the time window, and keeps nothing; the client
+// sends the cookie back with its public key; the server checks the cookie,
+// makes its own key pair and welcomes it with a connection id and its
+// public key. Both ends now have the session keys (NetCrypto.h). The client
+// sends its token sealed until the server's first sealed packet comes; the
+// server checks the token and only then says connected. Hellos and answers
+// fill a whole packet, so nothing the server sends before the keys is
+// bigger than what it got.
 #pragma once
 
 #include "AutocraftNetApi.h"
@@ -65,12 +69,17 @@ public:
     /// Tells the client why and forgets it. No event for it here.
     void disconnect(ConnectionId connection, double now, const std::string& reason);
 
-    size_t connectionCount() const { return byId_.size(); }
+    /// The connections whose token came.
+    size_t connectionCount() const;
     /// Null if there is no such connection.
     const ConnectionStats* stats(ConnectionId connection) const;
+    /// The tests' look at a connection (its keys, its counter); null if none.
+    const Connection* connectionForTests(ConnectionId connection) const;
 
 private:
     void handle(double now, const Address& from, const uint8_t* data, size_t size);
+    /// Drops a connection, with a disconnected event if it was connected.
+    void forget(ConnectionId connection, const std::string& reason);
     uint64_t cookie(const Address& from, int64_t window) const;
     void sendHandshake(double now, const Address& to, PacketType type, uint32_t connection, const uint8_t* body,
                        size_t bodySize, size_t limit);
@@ -99,7 +108,9 @@ struct ClientConfig {
 
 class AUTOCRAFTNET_API ClientEndpoint {
 public:
-    enum class State { idle, hello, answer, connected, disconnected };
+    /// `token`: welcomed, the keys set, the token sent until the server's
+    /// first sealed packet comes.
+    enum class State { idle, hello, answer, token, connected, disconnected };
 
     ClientEndpoint(PacketIo& io, const ClientConfig& config);
     ~ClientEndpoint();
@@ -121,6 +132,8 @@ public:
     ConnectionId connectionId() const { return connectionId_; }
     /// Null unless connected.
     const ConnectionStats* stats() const;
+    /// The tests' look at the connection; null before the welcome.
+    const Connection* connectionForTests() const { return connection_.get(); }
 
 private:
     void handle(double now, const uint8_t* data, size_t size);
@@ -133,6 +146,9 @@ private:
     double started_ = 0;
     double lastHandshake_ = 0;
     uint64_t cookie_ = 0;
+    /// This connection's X25519 key pair, made at connect.
+    std::array<uint8_t, 32> secret_{};
+    std::array<uint8_t, 32> publicKey_{};
     ConnectionId connectionId_ = 0;
     std::unique_ptr<Connection> connection_;
     std::deque<Event> events_;

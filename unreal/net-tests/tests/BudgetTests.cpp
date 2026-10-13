@@ -33,8 +33,8 @@ TEST(budget_neverMoreThanTheRate) {
             rig.server.send(id, Channel::reliable, r.data(), r.size());
             const int64_t left = rig.server.budgetLeft(id, rig.now);
             leftSeen = std::max(leftSeen, left);
-            if (left > int64_t(kHeaderBytes + 3)) {
-                std::vector<uint8_t> u(std::min<size_t>(size_t(left) - kHeaderBytes - 3, kMaxUnreliableBytes), 2);
+            if (left > int64_t(kPacketOverheadBytes + 3)) {
+                std::vector<uint8_t> u(std::min<size_t>(size_t(left) - kPacketOverheadBytes - 3, kMaxUnreliableBytes), 2);
                 rig.server.send(id, Channel::unreliable, u.data(), u.size());
             }
         });
@@ -60,8 +60,8 @@ TEST(budget_reliableGoesFirstAndTheRestIsReported) {
     EXPECT_EQ(full, int64_t(kMaxPacketBytes));
     std::vector<uint8_t> r(500, 1);
     rig.server.send(id, Channel::reliable, r.data(), r.size());
-    // A packet header and the message's own five bytes come out of it too.
-    EXPECT_EQ(rig.server.budgetLeft(id, rig.now), full - int64_t(kHeaderBytes + 5 + 500));
+    // A packet header and tag and the message's own five bytes come out of it too.
+    EXPECT_EQ(rig.server.budgetLeft(id, rig.now), full - int64_t(kPacketOverheadBytes + 5 + 500));
 
     // An unreliable message bigger than what is left is dropped; the
     // reliable one goes.
@@ -76,7 +76,7 @@ TEST(budget_reliableGoesFirstAndTheRestIsReported) {
     // One that fits what is reported goes.
     for (int i = 0; i < 120; i++) rig.step();
     const int64_t left = rig.server.budgetLeft(id, rig.now);
-    std::vector<uint8_t> fits(size_t(left) - kHeaderBytes - 3, 3);
+    std::vector<uint8_t> fits(size_t(left) - kPacketOverheadBytes - 3, 3);
     rig.server.send(id, Channel::unreliable, fits.data(), fits.size());
     rig.server.flush(rig.now);
     EXPECT_EQ(rig.server.stats(id)->unreliableDropped, uint64_t(1));

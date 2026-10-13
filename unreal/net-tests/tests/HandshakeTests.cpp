@@ -1,7 +1,10 @@
-// The handshake: hello, cookie, answer, welcome; the refusals; time-outs,
-// keep-alive and disconnect. One server, one client, a few seconds each.
+// The handshake: hello, cookie, answer, welcome, token; the refusals;
+// time-outs, keep-alive and disconnect. One server, one client, a few
+// seconds each.
 #include "test.h"
 
+#include "NetConnection.h"
+#include "NetCrypto.h"
 #include "rig.h"
 
 #include <string>
@@ -12,7 +15,7 @@ namespace {
 
 /// A hand-made handshake packet, padded to a full packet like the client's.
 std::vector<uint8_t> handshakePacket(PacketType type, uint16_t version, uint64_t cookie,
-                                     const std::vector<uint8_t>& token) {
+                                     const crypto::Key& publicKey = {}) {
     PacketHeader h;
     h.version = version;
     h.type = type;
@@ -20,8 +23,7 @@ std::vector<uint8_t> handshakePacket(PacketType type, uint16_t version, uint64_t
     writeHeader(w, h);
     if (type == PacketType::answer) {
         w.writeU64(cookie);
-        w.writeU8(static_cast<uint8_t>(token.size()));
-        w.writeBytes(token.data(), token.size());
+        w.writeBytes(publicKey.data(), publicKey.size());
     }
     while (w.byteCount() < kMaxPacketBytes) w.writeU8(0);
     return w.bytes();
@@ -32,6 +34,8 @@ struct Reply {
     bool any = false;
     PacketType type = PacketType::data;
     uint64_t cookie = 0;
+    uint32_t connection = 0;
+    crypto::Key serverPublic{};
     std::string reason;
     size_t size = 0;
 };
@@ -48,7 +52,9 @@ Reply readReply(MemoryPort& port) {
     out.any = true;
     out.type = h.type;
     out.size = size;
+    out.connection = h.connection;
     if (h.type == PacketType::challenge) out.cookie = r.readU64();
+    if (h.type == PacketType::welcome) r.readBytes(out.serverPublic.data(), out.serverPublic.size());
     if (h.type == PacketType::refuse) {
         out.reason.resize(r.readU8());
         r.readBytes(reinterpret_cast<uint8_t*>(out.reason.data()), out.reason.size());
@@ -116,8 +122,10 @@ TEST(handshake_badCookieIsRefused) {
     ServerEndpoint server(serverPort, serverConfig());
     double now = 50;
 
+    crypto::KeyPair keys;
+    ASSERT_TRUE(crypto::makeKeyPair(keys));
     // A made-up cookie.
-    auto answer = handshakePacket(PacketType::answer, kProtocolVersion, 0x1234, kToken);
+    auto answer = handshakePacket(PacketType::answer, kProtocolVersion, 0x1234, keys.publicKey);
     a.send(now, kServerAddress, answer.data(), answer.size());
     server.update(now);
     Reply r = readReply(a);
@@ -126,14 +134,14 @@ TEST(handshake_badCookieIsRefused) {
     EXPECT_EQ(server.connectionCount(), size_t(0));
 
     // A's real cookie, sent from B: the cookie is bound to the address.
-    auto hello = handshakePacket(PacketType::hello, kProtocolVersion, 0, {});
+    auto hello = handshakePacket(PacketType::hello, kProtocolVersion, 0);
     a.send(now, kServerAddress, hello.data(), hello.size());
     server.update(now);
     r = readReply(a);
     ASSERT_TRUE(r.type == PacketType::challenge);
     EXPECT_TRUE(r.size <= kMaxPacketBytes);
     const uint64_t cookieA = r.cookie;
-    answer = handshakePacket(PacketType::answer, kProtocolVersion, cookieA, kToken);
+    answer = handshakePacket(PacketType::answer, kProtocolVersion, cookieA, keys.publicKey);
     b.send(now, kServerAddress, answer.data(), answer.size());
     server.update(now);
     r = readReply(b);
@@ -147,23 +155,47 @@ TEST(handshake_badCookieIsRefused) {
     EXPECT_EQ(r.reason, std::string("bad cookie"));
     EXPECT_EQ(server.connectionCount(), size_t(0));
 
-    // A fresh cookie from A works.
+    // A fresh cookie from A works: a welcome with the server's public key,
+    // but no connection until the token comes sealed.
     a.send(now, kServerAddress, hello.data(), hello.size());
     server.update(now);
     r = readReply(a);
-    answer = handshakePacket(PacketType::answer, kProtocolVersion, r.cookie, kToken);
+    const uint64_t cookie = r.cookie;
+    answer = handshakePacket(PacketType::answer, kProtocolVersion, cookie, keys.publicKey);
     a.send(now, kServerAddress, answer.data(), answer.size());
     server.update(now);
     r = readReply(a);
-    EXPECT_EQ(r.type, PacketType::welcome);
+    ASSERT_TRUE(r.type == PacketType::welcome);
+    EXPECT_TRUE(r.connection != 0);
+    EXPECT_EQ(server.connectionCount(), size_t(0));
+
+    // The token, sealed by hand with the keys both ends derive.
+    crypto::SessionKeys session;
+    ASSERT_TRUE(crypto::deriveKeys(keys.secret, r.serverPublic, keys.publicKey, r.serverPublic, cookie, session));
+    PacketHeader h;
+    h.type = PacketType::token;
+    h.connection = r.connection;
+    BitWriter w;
+    writeHeader(w, h);
+    w.writeU8(static_cast<uint8_t>(kToken.size()));
+    w.writeBytes(kToken.data(), kToken.size());
+    std::vector<uint8_t> sealed;
+    crypto::seal(session.clientToServer, crypto::Direction::clientToServer, 0, w.bytes().data(), kHeaderBytes,
+                 w.byteCount(), sealed);
+    a.send(now, kServerAddress, sealed.data(), sealed.size());
+    server.update(now);
     EXPECT_EQ(server.connectionCount(), size_t(1));
+    const Connection* c = server.connectionForTests(r.connection);
+    ASSERT_TRUE(c);
+    EXPECT_TRUE(c->keys().clientToServer == session.clientToServer);
+    EXPECT_TRUE(c->keys().serverToClient == session.serverToClient);
 }
 
 TEST(handshake_helloKeepsNoStateAndShortHellosGetNothing) {
     MemoryNet net;
     MemoryPort serverPort(net, kServerAddress);
     ServerEndpoint server(serverPort, serverConfig());
-    auto hello = handshakePacket(PacketType::hello, kProtocolVersion, 0, {});
+    auto hello = handshakePacket(PacketType::hello, kProtocolVersion, 0);
     for (int i = 0; i < 1000; i++) {
         MemoryPort p(net, Address::ipv4(10, 1, uint8_t(i >> 8), uint8_t(i), 9000));
         p.send(1, kServerAddress, hello.data(), hello.size());

@@ -96,55 +96,100 @@ void ServerEndpoint::handle(double now, const Address& from, const uint8_t* data
     case PacketType::answer: {
         if (size != kMaxPacketBytes) return;
         const uint64_t c = r.readU64();
-        std::vector<uint8_t> token(r.readU8());
-        if (!r.readBytes(token.data(), token.size())) return;
+        crypto::Key clientPublic;
+        if (!r.readBytes(clientPublic.data(), clientPublic.size())) return;
         if (c != cookie(from, window) && c != cookie(from, window - 1)) {
             refuse(now, from, "bad cookie", size);
             return;
         }
-        if (connection) {  // the welcome was lost: say it again
+        if (connection && connection->clientPublic == clientPublic) {  // the welcome was lost: say it again
             connection->heard(now);
-            sendHandshake(now, from, PacketType::welcome, connection->id(), nullptr, 0, size);
+            sendHandshake(now, from, PacketType::welcome, connection->id(), connection->serverPublic.data(),
+                          connection->serverPublic.size(), size);
             return;
         }
-        uint8_t diff = token.size() == config_.token.size() ? 0 : 1;
-        for (size_t i = 0; i < token.size() && i < config_.token.size(); i++) diff |= token[i] ^ config_.token[i];
-        if (diff != 0) {
-            refuse(now, from, "bad token", size);
-            return;
+        if (connection) {  // a new handshake from the same address: the old connection is gone
+            forget(connection->id(), "reconnected");
+            connection = nullptr;
         }
         if (byId_.size() >= config_.maxConnections) {
             refuse(now, from, "the server is full", size);
             return;
         }
+        crypto::KeyPair keys;
+        crypto::SessionKeys session;
+        if (!crypto::makeKeyPair(keys) ||
+            !crypto::deriveKeys(keys.secret, clientPublic, clientPublic, keys.publicKey, c, session)) {
+            return;
+        }
         const ConnectionId id = newConnectionId();
-        byId_[id] = std::make_unique<Connection>(id, from, config_.version, config_.connection, now);
+        auto made = std::make_unique<Connection>(id, from, config_.version, config_.connection, now, session, true);
+        crypto::wipe(&session, sizeof session);
+        made->clientPublic = clientPublic;
+        made->serverPublic = keys.publicKey;
+        byId_[id] = std::move(made);
         byAddress_[from.key()] = id;
+        sendHandshake(now, from, PacketType::welcome, id, keys.publicKey.data(), keys.publicKey.size(), size);
+        return;
+    }
+    case PacketType::token: {
+        if (!connection || h.connection != connection->id()) return;
+        std::vector<uint8_t> plain;
+        if (!connection->open(h, data, size, plain)) return;
+        connection->heard(now);
+        connection->answerSoon();  // the client waits for a sealed packet from here
+        if (connection->accepted) return;  // that packet was lost: another goes at the flush
+        BitReader t(plain.data(), plain.size());
+        std::vector<uint8_t> token(t.readU8());
+        const bool read = t.readBytes(token.data(), token.size());
+        uint8_t diff = read && token.size() == config_.token.size() ? 0 : 1;
+        for (size_t i = 0; i < token.size() && i < config_.token.size(); i++) diff |= token[i] ^ config_.token[i];
+        crypto::wipe(plain.data(), plain.size());
+        crypto::wipe(token.data(), token.size());
+        if (diff != 0) {
+            byId_.erase(connection->id());
+            byAddress_.erase(known);
+            refuse(now, from, "bad token", kMaxPacketBytes);
+            return;
+        }
+        connection->accepted = true;
         Event e;
         e.type = Event::Type::connected;
-        e.connection = id;
+        e.connection = connection->id();
         e.remote = from;
         events_.push_back(std::move(e));
-        sendHandshake(now, from, PacketType::welcome, id, nullptr, 0, size);
         return;
     }
     case PacketType::data:
-        if (connection && h.connection == connection->id()) connection->receive(now, h, r, size, events_);
+        if (connection && connection->accepted && h.connection == connection->id()) {
+            connection->receive(now, h, data, size, events_);
+        }
         return;
     case PacketType::disconnect: {
         if (!connection || h.connection != connection->id()) return;
-        Event e;
-        e.type = Event::Type::disconnected;
-        e.connection = connection->id();
-        e.reason = readReason(r);
-        events_.push_back(std::move(e));
-        byId_.erase(connection->id());
-        byAddress_.erase(known);
+        std::vector<uint8_t> plain;
+        if (!connection->open(h, data, size, plain)) return;
+        BitReader reason(plain.data(), plain.size());
+        forget(connection->id(), readReason(reason));
         return;
     }
     default:
         return;  // the server's own kinds
     }
+}
+
+void ServerEndpoint::forget(ConnectionId id, const std::string& reason) {
+    const auto it = byId_.find(id);
+    if (it == byId_.end()) return;
+    if (it->second->accepted) {
+        Event e;
+        e.type = Event::Type::disconnected;
+        e.connection = id;
+        e.reason = reason;
+        events_.push_back(std::move(e));
+    }
+    byAddress_.erase(it->second->remote().key());
+    byId_.erase(it);
 }
 
 void ServerEndpoint::update(double now) {
@@ -155,19 +200,22 @@ void ServerEndpoint::update(double now) {
         if (!io_.receive(now, from, buffer, sizeof buffer, size)) break;
         handle(now, from, buffer, size);
     }
-    for (auto it = byId_.begin(); it != byId_.end();) {
-        if (!it->second->timedOut(now)) {
-            ++it;
-            continue;
-        }
-        Event e;
-        e.type = Event::Type::disconnected;
-        e.connection = it->first;
-        e.reason = "timed out";
-        events_.push_back(std::move(e));
-        byAddress_.erase(it->second->remote().key());
-        it = byId_.erase(it);
+    std::vector<ConnectionId> silent;
+    for (const auto& [id, connection] : byId_) {
+        if (connection->timedOut(now)) silent.push_back(id);
     }
+    for (ConnectionId id : silent) forget(id, "timed out");
+}
+
+size_t ServerEndpoint::connectionCount() const {
+    size_t n = 0;
+    for (const auto& [id, connection] : byId_) n += connection->accepted ? 1 : 0;
+    return n;
+}
+
+const Connection* ServerEndpoint::connectionForTests(ConnectionId connection) const {
+    const auto it = byId_.find(connection);
+    return it == byId_.end() ? nullptr : it->second.get();
 }
 
 bool ServerEndpoint::poll(Event& out) {
@@ -179,16 +227,18 @@ bool ServerEndpoint::poll(Event& out) {
 
 bool ServerEndpoint::send(ConnectionId connection, Channel channel, const uint8_t* data, size_t size) {
     const auto it = byId_.find(connection);
-    return it != byId_.end() && it->second->queue(channel, data, size);
+    return it != byId_.end() && it->second->accepted && it->second->queue(channel, data, size);
 }
 
 int64_t ServerEndpoint::budgetLeft(ConnectionId connection, double now) const {
     const auto it = byId_.find(connection);
-    return it == byId_.end() ? 0 : it->second->budgetLeft(now);
+    return it == byId_.end() || !it->second->accepted ? 0 : it->second->budgetLeft(now);
 }
 
 void ServerEndpoint::flush(double now) {
-    for (auto& [id, connection] : byId_) connection->flush(now, io_);
+    for (auto& [id, connection] : byId_) {
+        if (connection->accepted) connection->flush(now, io_);
+    }
 }
 
 void ServerEndpoint::disconnect(ConnectionId connection, double now, const std::string& reason) {
@@ -201,7 +251,7 @@ void ServerEndpoint::disconnect(ConnectionId connection, double now, const std::
 
 const ConnectionStats* ServerEndpoint::stats(ConnectionId connection) const {
     const auto it = byId_.find(connection);
-    return it == byId_.end() ? nullptr : &it->second->stats();
+    return it == byId_.end() || !it->second->accepted ? nullptr : &it->second->stats();
 }
 
 } // namespace ac::net

@@ -28,7 +28,7 @@ CLIENT_SRC := $(wildcard client/*.cpp)
 TEST_SRC := $(wildcard tests/*.cpp)
 REGION_SRC := region/Preview.cpp region/StbImageWrite.cpp
 CORE_OBJ := $(patsubst $(CORE)/Private/%.cpp,build/core/%.o,$(CORE_SRC))
-NET_OBJ := $(patsubst $(NET)/Private/%.cpp,build/net/%.o,$(NET_SRC))
+NET_OBJ := $(patsubst $(NET)/Private/%.cpp,build/net/%.o,$(NET_SRC)) build/net/monocypher.o
 WORLD_OBJ := $(patsubst world/%.cpp,build/world/%.o,$(WORLD_SRC))
 SERVER_OBJ := build/program/Server.o
 CLIENT_OBJ := $(patsubst client/%.cpp,build/client/%.o,$(CLIENT_SRC))
@@ -71,6 +71,16 @@ build/world/%.o: world/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+# Monocypher (ThirdParty/monocypher), C as it comes.
+MONOCYPHER := $(NET)/ThirdParty/monocypher/monocypher.c
+build/net/monocypher.o: $(MONOCYPHER) $(NET)/ThirdParty/monocypher/monocypher.h
+	@mkdir -p $(dir $@)
+	clang -std=c99 -O2 -c $< -o $@
+
+build/bench/net/monocypher.o: $(MONOCYPHER) $(NET)/ThirdParty/monocypher/monocypher.h
+	@mkdir -p $(dir $@)
+	clang -std=c99 -O3 -c $< -o $@
+
 build/program/%.o: program/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -91,7 +101,7 @@ build/tests/main.o: $(CORE_TESTS)/main.cpp
 # (bench/NetBench.cpp) and build/worldbench (bench/WorldBench.cpp), everything at -O3.
 BENCH_FLAGS := $(subst -O2,-O3,$(CXXFLAGS)) -I../core-tests/bench
 BENCH_LIB := $(patsubst $(CORE)/Private/%.cpp,build/bench/core/%.o,$(CORE_SRC)) \
-	$(patsubst $(NET)/Private/%.cpp,build/bench/net/%.o,$(NET_SRC)) \
+	$(patsubst $(NET)/Private/%.cpp,build/bench/net/%.o,$(NET_SRC)) build/bench/net/monocypher.o \
 	$(patsubst world/%.cpp,build/bench/world/%.o,$(WORLD_SRC))
 BENCH_OBJ := $(BENCH_LIB) build/bench/program/Server.o \
 	$(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/RegionBench.o build/bench/NetBench.o \

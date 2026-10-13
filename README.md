@@ -169,5 +169,6 @@ These third-party files keep their own licences:
 | `unreal/Content-src/fonts/` (Barlow Condensed) | SIL Open Font License 1.1 ([OFL.txt](unreal/Content-src/fonts/OFL.txt)) |
 | `unreal/Source/AutocraftCore/ThirdParty/json.hpp` (nlohmann/json) | MIT, in the file |
 | `unreal/Source/Autocraft/ThirdParty/dr_mp3.h` | Public domain or MIT-0, in the file |
+| `unreal/Source/AutocraftNet/ThirdParty/monocypher/` (Monocypher 4.0.3) | CC0 or BSD-2-Clause, used under CC0 ([LICENCE.md](unreal/Source/AutocraftNet/ThirdParty/monocypher/LICENCE.md)) |
 
 The game is built with Unreal Engine 5, which has its own licence from Epic Games.

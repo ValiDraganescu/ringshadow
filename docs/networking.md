@@ -81,7 +81,8 @@ Winsock on Windows, behind one small wrapper.
   Every packet so acks the other side's last 33, so an ack is lost only if
   33 packets in a row are.
 - **A mismatched version is refused** at the handshake, with a message the
-  game can show ("the server runs version x").
+  game can show ("the server runs version x"). Version 3 is the encrypted
+  one.
 
 ### Channels
 
@@ -108,10 +109,32 @@ Each message goes on one of three channels:
 ### Encryption
 
 Every packet after the handshake is encrypted and signed, so it cannot be
-read or forged on the way. Locally too ("Decided"). Open: which
-algorithm and which library (a small, well-reviewed one kept in
-`ThirdParty/`; writing our own cryptography is the one thing we should not
-do).
+read or forged on the way. Locally too ("Decided"). Every primitive is
+[Monocypher](https://monocypher.org)'s (4.0.3, CC0, in
+`unreal/Source/AutocraftNet/ThirdParty/monocypher/`); writing our own
+cryptography is the one thing we do not do. `NetCrypto.h` puts it together:
+
+- **Keys.** Each end makes an X25519 key pair per connection. The client's
+  public key goes in its answer, the server's in its welcome. The session
+  keys are BLAKE2b of the shared secret, both public keys and the
+  connection's cookie: one key per direction.
+- **The token** goes only after the keys, sealed, in a token packet the
+  client repeats until the server's first sealed packet comes. The server
+  says connected only then.
+- **Every packet after the welcome** is XChaCha20-Poly1305: the header is
+  signed, the payload encrypted, a 16-byte tag appended (19 + 16 = 35
+  bytes of overhead a packet). The nonce is the direction and the sender's
+  64-bit packet counter, never reused; the wire keeps the 16-bit sequence
+  for the acks and the receiver widens it to the full counter.
+- **Dropped and counted** (`ConnectionStats`): a packet that does not open
+  (`packetsRejected`) and one whose counter was opened already or is older
+  than the 1,024 before the newest (`packetsReplayed`).
+- **What it gives:** nobody on the way reads the traffic or the token,
+  changes, forges or replays a packet. **What it does not:** the server is
+  not authenticated, so a man in the middle who answers the handshake
+  himself sees everything. Server keys the client checks come with the
+  accounts milestone. Hello, challenge, answer, welcome and refuse stay in
+  clear.
 
 ## The messages
 
@@ -122,7 +145,7 @@ only the bits a value needs. JSON stays for the saves and the tools.
 
 | Message | Channel | What |
 |---|---|---|
-| Hello, Answer | handshake | The version, the cookie, the secret or the login. |
+| Hello, Answer, Token | handshake | The version, the cookie, the client's public key; then, sealed, the secret or the login. |
 | Input | unreliable | The driven machine's controls for one tick: `ac::Pilot` today (walk, heading, act, hold, ability, mend, the crosshair's target), its tick number, the region visit it was made in (the server drops an earlier visit's, so a walk held into an edge stops at the crossing) and the last few inputs again, so a lost packet costs nothing. |
 | Ack | unreliable | The newest snapshot received: the baseline for the next delta. |
 | Request | reliable | Everything that is not steering: take a machine, hand it back, fly from a pad to a region's pad, build, pick a level-up card, take a contract. |
@@ -279,7 +302,7 @@ public world keeps SQLite or moves to another database is open.
 3. **The local server:** the game starts it, connects, stops it.
 4. **The client mirror:** snapshots, deltas, interest, drawing.
 5. **Prediction** of the driven machine, and shots with lag compensation.
-6. **Encryption.**
+6. **Encryption.** Done: Monocypher, "Encryption".
 7. **The server on Windows and Linux**, in the release builds
    ([builds.md](builds.md)).
 
@@ -290,7 +313,6 @@ local server, under the lag simulator, and have it feel like today's game.
 
 - **The server's build** on Windows: clang, MSVC, or an Unreal program
   target without the engine. The release machine builds Windows already.
-- **Encryption:** the algorithm and the library.
 - **The rates:** snapshot rate, the byte budget per client, the
   interpolation delay. To measure.
 - **How the game layer reads the simulation today:** what the mirror has

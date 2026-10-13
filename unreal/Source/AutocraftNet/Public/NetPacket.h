@@ -9,6 +9,10 @@
 //   ack          u16   the newest sequence received from the other end
 //   ack bits     u32   bit i: sequence ack-1-i received too
 //
+// After the handshake every packet is sealed (NetCrypto.h): the header stays
+// readable and is signed with the payload, the payload is encrypted, and a
+// 16-byte tag follows it (kMacBytes). The handshake's packets go in clear.
+//
 // The first 7 bytes, and the refuse packet that follows a full header, never
 // change between versions: that is how a client of another version reads
 // why it was refused.
@@ -23,19 +27,24 @@
 namespace ac::net {
 
 inline constexpr uint32_t kProtocolId = 0x52534844;  // "RSHD"
-inline constexpr uint16_t kProtocolVersion = 2;  // 2: inputs carry the visit
+inline constexpr uint16_t kProtocolVersion = 3;  // 2: inputs carry the visit; 3: encrypted
 inline constexpr size_t kMaxPacketBytes = 1200;
 inline constexpr size_t kHeaderBytes = 19;
-inline constexpr size_t kMaxPayloadBytes = kMaxPacketBytes - kHeaderBytes;
+/// The tag after a sealed packet's payload.
+inline constexpr size_t kMacBytes = 16;
+/// What a sealed packet costs on top of its payload.
+inline constexpr size_t kPacketOverheadBytes = kHeaderBytes + kMacBytes;
+inline constexpr size_t kMaxPayloadBytes = kMaxPacketBytes - kPacketOverheadBytes;
 
 enum class PacketType : uint8_t {
     hello = 1,       // client: padded to a full packet, so no reply is ever bigger
     challenge = 2,   // server: the cookie
-    answer = 3,      // client: the cookie back and the token, padded to a full packet
-    welcome = 4,     // server: the connection id
+    answer = 3,      // client: the cookie back and its public key, padded to a full packet
+    welcome = 4,     // server: the connection id and its public key
     refuse = 5,      // server: why not (u8 length, text)
-    data = 6,        // either: messages, or nothing (keep-alive, acks)
-    disconnect = 7,  // either: why (u8 length, text)
+    data = 6,        // either, sealed: messages, or nothing (keep-alive, acks)
+    disconnect = 7,  // either, sealed: why (u8 length, text)
+    token = 8,       // client, sealed: the token (u8 length, bytes), until the server's first packet
 };
 
 struct PacketHeader {

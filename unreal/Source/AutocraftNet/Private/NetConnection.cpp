@@ -39,16 +39,19 @@ struct Packer {
     size_t open = 0;  // bytes in the open packet; 0 when none is open
 
     bool fits(size_t item) const { return open > 0 && open + item <= kMaxPacketBytes; }
-    size_t cost(size_t item) const { return fits(item) ? item : kHeaderBytes + item; }
-    void add(size_t item) { open = fits(item) ? open + item : kHeaderBytes + item; }
+    size_t cost(size_t item) const { return fits(item) ? item : kPacketOverheadBytes + item; }
+    void add(size_t item) { open = fits(item) ? open + item : kPacketOverheadBytes + item; }
 };
 
 } // namespace
 
 Connection::Connection(ConnectionId id, const Address& remote, uint16_t version, const ConnectionSettings& settings,
-                       double now)
+                       double now, const crypto::SessionKeys& keys, bool server)
     : id_(id), remote_(remote), version_(version), settings_(settings), allowanceTime_(now), lastSent_(now),
-      lastReceived_(now), sent_(kSentRing), held_(kReliableRing) {
+      lastReceived_(now), keys_(keys),
+      sendDirection_(server ? crypto::Direction::serverToClient : crypto::Direction::clientToServer),
+      receiveDirection_(server ? crypto::Direction::clientToServer : crypto::Direction::serverToClient),
+      sent_(kSentRing), held_(kReliableRing) {
     allowance_ = std::max(settings_.bytesPerSecond * settings_.burstSeconds, double(kMaxPacketBytes));
 }
 
@@ -137,27 +140,43 @@ void Connection::writePacketStart(BitWriter& w, PacketType type) {
     h.version = version_;
     h.type = type;
     h.connection = id_;
-    h.sequence = nextSequence_++;
+    h.sequence = static_cast<uint16_t>(sendCounter_);
     h.hasAck = window_.any;
     h.ack = window_.newest;
     h.ackBits = window_.bits;
     writeHeader(w, h);
 }
 
+void Connection::transmit(double now, PacketIo& io, const BitWriter& w) {
+    crypto::seal(keys_.sending(sendDirection_), sendDirection_, sendCounter_, w.bytes().data(), kHeaderBytes,
+                 w.byteCount(), sealed_);
+    sendCounter_ += 1;
+    io.send(now, remote_, sealed_.data(), sealed_.size());
+    stats_.packetsSent += 1;
+    stats_.bytesSent += sealed_.size();
+}
+
 void Connection::sendPacket(double now, PacketIo& io, const BitWriter& w, std::vector<SentItem>&& items) {
-    const uint16_t sequence = static_cast<uint16_t>(nextSequence_ - 1);
+    const uint16_t sequence = static_cast<uint16_t>(sendCounter_);
     SentPacket& record = sent_[sequence % kSentRing];
     record.used = true;
     record.acked = false;
     record.sequence = sequence;
     record.time = now;
     record.items = std::move(items);
-    io.send(now, remote_, w.bytes().data(), w.byteCount());
-    stats_.packetsSent += 1;
-    stats_.bytesSent += w.byteCount();
-    allowance_ -= double(w.byteCount());
+    transmit(now, io, w);
+    allowance_ -= double(sealed_.size());
     lastSent_ = now;
     ackPending_ = false;
+}
+
+void Connection::sendToken(double now, PacketIo& io, const std::vector<uint8_t>& token) {
+    const size_t length = std::min<size_t>(token.size(), 255);
+    BitWriter w;
+    writePacketStart(w, PacketType::token);
+    w.writeU8(static_cast<uint8_t>(length));
+    w.writeBytes(token.data(), length);
+    transmit(now, io, w);
 }
 
 void Connection::flush(double now, PacketIo& io) {
@@ -176,7 +195,7 @@ void Connection::flush(double now, PacketIo& io) {
             w.clear();
             items.clear();
             writePacketStart(w, PacketType::data);
-            open = kHeaderBytes;
+            open = kPacketOverheadBytes;
         }
         open += p.bytes;
         if (p.kind == kReliable) {
@@ -228,9 +247,7 @@ void Connection::sendDisconnect(double now, PacketIo& io, const std::string& rea
         writePacketStart(w, PacketType::disconnect);
         w.writeU8(static_cast<uint8_t>(length));
         w.writeBytes(reinterpret_cast<const uint8_t*>(reason.data()), length);
-        io.send(now, remote_, w.bytes().data(), w.byteCount());
-        stats_.packetsSent += 1;
-        stats_.bytesSent += w.byteCount();
+        transmit(now, io, w);
     }
 }
 
@@ -268,11 +285,28 @@ void Connection::ackPacket(double now, uint16_t sequence) {
     while (!bulk_.empty() && bulk_.front().ackedCount == bulk_.front().pieces) bulk_.pop_front();
 }
 
-void Connection::receive(double now, const PacketHeader& header, BitReader& r, size_t packetBytes,
+bool Connection::open(const PacketHeader& header, const uint8_t* packet, size_t size, std::vector<uint8_t>& plain) {
+    const uint64_t counter = crypto::widenCounter(opened_.newest(), header.sequence);
+    if (!crypto::open(keys_.sending(receiveDirection_), receiveDirection_, counter, packet, kHeaderBytes, size, plain)) {
+        stats_.packetsRejected += 1;
+        return false;
+    }
+    if (!opened_.fresh(counter)) {
+        stats_.packetsReplayed += 1;
+        plain.clear();
+        return false;
+    }
+    opened_.record(counter);
+    return true;
+}
+
+bool Connection::receive(double now, const PacketHeader& header, const uint8_t* packet, size_t size,
                          std::deque<Event>& events) {
+    if (!open(header, packet, size, plain_)) return false;
+    BitReader r(plain_.data(), plain_.size());
     lastReceived_ = now;
     stats_.packetsReceived += 1;
-    stats_.bytesReceived += packetBytes;
+    stats_.bytesReceived += size;
     const ReceiveWindow::Arrival arrival = window_.record(header.sequence);
     if (header.hasAck) forEachAcked(header.ack, header.ackBits, [&](uint16_t s) { ackPacket(now, s); });
     // Unreliable messages only from the newest packet yet: anything older is stale.
@@ -355,6 +389,7 @@ void Connection::receive(double now, const PacketHeader& header, BitReader& r, s
             break;  // not ours: the rest cannot be read
         }
     }
+    return true;
 }
 
 } // namespace ac::net

@@ -30,7 +30,7 @@ bool readHeader(BitReader& r, PacketHeader& h) {
     h.ack = r.readU16();
     h.ackBits = r.readU32();
     if (!r.ok() || h.protocolId != kProtocolId) return false;
-    if (kind < uint8_t(PacketType::hello) || kind > uint8_t(PacketType::disconnect)) return false;
+    if (kind < uint8_t(PacketType::hello) || kind > uint8_t(PacketType::token)) return false;
     h.type = static_cast<PacketType>(kind);
     return true;
 }

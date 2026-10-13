@@ -19,7 +19,7 @@ NET_SRC := $(wildcard $(NET)/Private/*.cpp)
 CORE_SRC := $(wildcard $(CORE)/Private/*.cpp)
 CORE_OBJ := $(patsubst $(CORE)/Private/%.cpp,build/core/%.o,$(CORE_SRC))
 TEST_SRC := $(wildcard tests/*.cpp)
-NET_OBJ := $(patsubst $(NET)/Private/%.cpp,build/net/%.o,$(NET_SRC))
+NET_OBJ := $(patsubst $(NET)/Private/%.cpp,build/net/%.o,$(NET_SRC)) build/net/monocypher.o
 TEST_OBJ := $(patsubst tests/%.cpp,build/tests/%.o,$(TEST_SRC)) build/tests/main.o
 BIN := build/net-tests
 
@@ -39,6 +39,11 @@ build/core/%.o: $(CORE)/Private/%.cpp
 build/net/%.o: $(NET)/Private/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Monocypher (ThirdParty/monocypher), C as it comes.
+build/net/monocypher.o: $(NET)/ThirdParty/monocypher/monocypher.c $(NET)/ThirdParty/monocypher/monocypher.h
+	@mkdir -p $(dir $@)
+	clang -std=c99 -O2 -c $< -o $@
 
 build/tests/main.o: $(FRAMEWORK)/main.cpp
 	@mkdir -p $(dir $@)
