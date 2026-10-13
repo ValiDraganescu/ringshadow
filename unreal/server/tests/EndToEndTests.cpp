@@ -331,7 +331,7 @@ TEST(e2e_local_server_as_the_game_starts_it) {
 
 TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     // The real program on the first world: the pilot starts at the pad in a
-    // Prospector with 400 ore, flies to Cold Fork's pad, and the client
+    // Prospector with 600 ore, flies to Cold Fork's pad, and the client
     // follows it there.
     std::vector<std::string> args = {kProgram, "--world", "worlds/first.json", "--log", logPath("world")};
     std::remove(logPath("world").c_str());
@@ -352,7 +352,7 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     EXPECT_EQ(hc.world()->regions.size(), size_t(9));
     EXPECT_TRUE(hc.world()->regions[size_t(hc.world()->here)].id == "start");
     ASSERT_TRUE(c.until([&] { return hc.mirror()->simulation().state.players.size() == 1; }, 3));
-    EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(400));
+    EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(600));
     EXPECT_EQ(hc.mirror()->simulation().state.units.size(), size_t(1));
     EXPECT_TRUE(hc.mirror()->unit(*hc.mirror()->driven())->kind == UnitKind::prospector);
     const uint32_t req = hc.fly("cold-fork", "landing");
@@ -361,7 +361,7 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     ASSERT_TRUE(c.until([&] { return hc.visit() == 1 && hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()); }, 10));
     EXPECT_TRUE(hc.regionChange()->regionId == "cold-fork");
     EXPECT_TRUE(hc.mirror()->matches());
-    EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(400));
+    EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(600));
     p->stop();
     const std::string log = readFile(logPath("world"));
     EXPECT_TRUE(log.find("start: world first (9 regions)") != std::string::npos);
@@ -473,7 +473,7 @@ TEST(e2e_save_kill_9_mid_play_loses_at_most_5_s) {
     const Unit back = *hd.mirror()->unit(*hd.mirror()->driven());
     EXPECT_TRUE(hd.world()->regions[size_t(hd.world()->here)].id == "start");
     EXPECT_TRUE(distance(back.position, stood.position) < 0.02);
-    EXPECT_EQ(hd.mirror()->simulation().state.players[0].ore, int64_t(0));
+    EXPECT_EQ(hd.mirror()->simulation().state.players[0].ore, int64_t(200));
     // The Citadel as it was at most 5 s (and a save's tick) before the kill.
     const Structure* s = citadelIn(*hd.mirror());
     ASSERT_TRUE(s->buildLeft.has_value());

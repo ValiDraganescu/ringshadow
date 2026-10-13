@@ -65,8 +65,9 @@ WorldLoad loadWorld(std::string_view json, const std::string& folder);
 
 /// What the world's rules are.
 struct WorldParams {
-    /// A new pilot's wallet.
-    int64_t startOre = 400;
+    /// A new pilot's wallet: a Citadel (400) and a Derrick (75) with some
+    /// left over. A kept pilot keeps its own.
+    int64_t startOre = 600;
     int64_t startHydrogen = 0;
     /// The driven unit crosses an edge once its centre is this close to it
     /// (cells), in an opening, moving out. A Prospector driven at the edge
@@ -171,7 +172,8 @@ public:
     std::optional<std::string> fly(PilotId pilot, std::string_view region, std::string_view pad);
 
     /// Build with the driven Prospector where the pilot is (`Region::build`),
-    /// paid from its wallet. The reason when refused.
+    /// paid from its wallet; in a world only `net::kWorldBuildKinds`. The
+    /// reason when refused.
     std::optional<std::string> build(PilotId pilot, StructureKind kind, Vec2 at);
 
     /// Every region one tick; then edge crossings and landings.
@@ -183,6 +185,9 @@ public:
     /// with its visit).
     Snapshot snapshot(PilotId pilot, const InterestParams& params = {});
     void deferred(PilotId pilot, const std::vector<int64_t>& ids);
+    /// Queues the pilot's input in its region (`Region::input`); in a world,
+    /// one of an earlier visit than the pilot's (`PilotInput::visit`) is
+    /// dropped (false).
     bool input(PilotId pilot, const PilotInput& in);
     /// What the pilot's client builds its mirror from.
     RegionDescription description(PilotId pilot) const;
@@ -226,6 +231,10 @@ private:
     int64_t tick_ = 0;
     double lastStepMs_ = 0;
 
+    /// A new Prospector on the start pad, facing the start region's nearest
+    /// ore deposit (one with ore left first), so the first thing in view is
+    /// work.
+    Unit startProspector() const;
     /// The neighbour across an edge (nil: the world's border, or no region).
     std::optional<size_t> neighbour(size_t r, region::Edge e) const;
     /// Puts the pilot and its unit into region `to` at region position `at`

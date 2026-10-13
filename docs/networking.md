@@ -123,7 +123,7 @@ only the bits a value needs. JSON stays for the saves and the tools.
 | Message | Channel | What |
 |---|---|---|
 | Hello, Answer | handshake | The version, the cookie, the secret or the login. |
-| Input | unreliable | The driven machine's controls for one tick: `ac::Pilot` today (walk, heading, act, hold, ability, mend, the crosshair's target), its tick number and the last few inputs again, so a lost packet costs nothing. |
+| Input | unreliable | The driven machine's controls for one tick: `ac::Pilot` today (walk, heading, act, hold, ability, mend, the crosshair's target), its tick number, the region visit it was made in (the server drops an earlier visit's, so a walk held into an edge stops at the crossing) and the last few inputs again, so a lost packet costs nothing. |
 | Ack | unreliable | The newest snapshot received: the baseline for the next delta. |
 | Request | reliable | Everything that is not steering: take a machine, hand it back, fly from a pad to a region's pad, build, pick a level-up card, take a contract. |
 

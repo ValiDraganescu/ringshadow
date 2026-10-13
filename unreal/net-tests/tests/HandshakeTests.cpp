@@ -79,13 +79,13 @@ TEST(handshake_connectsThroughLoss) {
 
 TEST(handshake_versionMismatchIsRefusedWithTheServersVersion) {
     ClientConfig cc = clientConfig();
-    cc.version = 2;
+    cc.version = kProtocolVersion + 1;
     Rig rig({}, serverConfig(), cc);
     EXPECT_TRUE(!rig.connect());
     EXPECT_EQ(rig.client.state(), ClientEndpoint::State::disconnected);
     const Event* e = Rig::find(rig.clientEvents, Event::Type::disconnected);
     ASSERT_TRUE(e);
-    EXPECT_EQ(e->reason, std::string("the server runs version 1"));
+    EXPECT_EQ(e->reason, "the server runs version " + std::to_string(kProtocolVersion));
     EXPECT_EQ(rig.server.connectionCount(), size_t(0));
 }
 

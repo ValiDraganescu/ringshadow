@@ -502,10 +502,16 @@ std::vector<uint8_t> encode(const InputMessage& m) {
     BitWriter w = start(MessageType::input);
     const size_t n = std::min(m.inputs.size(), InputMessage::kMaxInputs);
     w.writeBits(n, 3);
-    // The newest tick whole, the older ones as steps back from the one before.
+    // The newest tick and visit whole, the older ones as steps back from
+    // the one before (a visit's step is nearly always 0).
     for (size_t i = 0; i < n; i++) {
-        if (i == 0) writeSigned(w, m.inputs[0].tick);
-        else writeSigned(w, m.inputs[i - 1].tick - m.inputs[i].tick);
+        if (i == 0) {
+            writeSigned(w, m.inputs[0].tick);
+            writeSigned(w, m.inputs[0].visit);
+        } else {
+            writeSigned(w, m.inputs[i - 1].tick - m.inputs[i].tick);
+            writeSigned(w, m.inputs[i - 1].visit - m.inputs[i].visit);
+        }
         writeInput(w, m.inputs[i]);
     }
     return w.bytes();
@@ -520,6 +526,8 @@ bool decode(const std::vector<uint8_t>& bytes, InputMessage& m) {
     for (size_t i = 0; i < n; i++) {
         const int64_t t = readSigned(r);
         m.inputs[i].tick = i == 0 ? t : m.inputs[i - 1].tick - t;
+        const int64_t v = readSigned(r);
+        m.inputs[i].visit = i == 0 ? v : m.inputs[i - 1].visit - v;
         readInput(r, m.inputs[i]);
     }
     return r.ok();

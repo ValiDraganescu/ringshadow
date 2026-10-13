@@ -1,8 +1,8 @@
 // Building in the MMORPG mode (AcMmo.h `Build`, AcPilotBuild.cpp) against the
 // real local server on the first world: the pilot starts at the start pad
-// in a Prospector with 400 ore; a spot where a Citadel fits ahead of it, as
+// in a Prospector with 600 ore; a spot where a Citadel fits ahead of it, as
 // the ghost finds it on the mirror (`snap`, `placementRefusal`); the Build
-// request; the scaffold and the wallet's 400 ore spent show in the mirror.
+// request; the scaffold and the Citadel's 400 of the wallet's 600 ore spent show in the mirror.
 // A spot on the nearest ore, out of the Prospector's reach from the pad, is
 // refused by the server with its reason. One isolated
 // moment of a few seconds, in real time. Run hidden as AcMmoTests.cpp says
@@ -67,7 +67,7 @@ bool FAcMmoBuildTest::RunTest(const FString&)
 	}
 	ac::net::Mirror& M = *Client.Mirror();
 	const ac::Simulation& S = M.simulation();
-	TestEqual(TEXT("the wallet starts at 400 ore"), (int64)S.state.players[0].ore, (int64)400);
+	TestEqual(TEXT("the wallet starts at 600 ore"), (int64)S.state.players[0].ore, (int64)600);
 	TestTrue(TEXT("no buildings yet"), CitadelIn(S.state) == nullptr);
 	const ac::Unit U = *M.unit(*Client.Driven());
 
@@ -107,7 +107,7 @@ bool FAcMmoBuildTest::RunTest(const FString&)
 		return false;
 	}
 	TestTrue(TEXT("asked"), Client.Build(ac::StructureKind::citadel, *At));
-	const bool bShown = RunUntil(Client, [&] { return CitadelIn(S.state) && S.state.players[0].ore == 0; }, 3.0);
+	const bool bShown = RunUntil(Client, [&] { return CitadelIn(S.state) && S.state.players[0].ore == 200; }, 3.0);
 	TestTrue(TEXT("the Citadel's scaffold and the paid wallet show in the mirror"), bShown);
 	if (const ac::Structure* C = CitadelIn(S.state))
 	{

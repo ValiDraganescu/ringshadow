@@ -75,6 +75,11 @@ struct RegionDescription {
 /// frame (the unit is the region's business), stamped with the client's tick.
 struct PilotInput {
     int64_t tick = 0;
+    /// The client's region changes when it made this input (`Client::visit`).
+    /// In a world the server drops an input of an earlier visit: one made
+    /// before the client heard of the change (the walk held into the edge)
+    /// does not move the unit on in the new region.
+    int64_t visit = 0;
     Vec2 walk{0, 0};
     double heading = 0;
     /// Key presses since the client's last tick: applied on this input's
@@ -305,6 +310,17 @@ struct EventMessage {
     std::vector<GameEvent> events;
     bool operator==(const EventMessage&) const = default;
 };
+
+/// What a pilot may build in a world (the MMORPG mode, Prospectors only):
+/// the server refuses the rest with `kWorldBuildRefusal`, and the game's
+/// build menu offers these alone.
+inline constexpr std::array<StructureKind, 2> kWorldBuildKinds{StructureKind::citadel, StructureKind::derrick};
+inline constexpr const char* kWorldBuildRefusal = "Only a Citadel or a Derrick can be built here";
+inline constexpr bool worldBuilds(StructureKind kind) {
+    for (const StructureKind k : kWorldBuildKinds)
+        if (k == kind) return true;
+    return false;
+}
 
 /// A snapshot's `game` in a world: the pilot's region changes (its visit)
 /// in the high 32 bits, the region's own game in the low. A client's mirror

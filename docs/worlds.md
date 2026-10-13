@@ -47,7 +47,7 @@ Any problem stops the server (exit 2, the problems on stderr):
 - Every region is wild ground: the map's ore and wells, no bases, no AI, one
   player (the pilots' side). Every region steps every tick.
 - A new pilot appears on the start pad driving a new Prospector, with a
-  wallet of 400 ore and 0 MH. The wallet is its side's bank in the region it
+  wallet of 600 ore and 0 MH. The wallet is its side's bank in the region it
   is in (the snapshot's `players[0]`), and goes with it, as do its levels.
 - Edges: the driven unit crosses once its centre is within 2 cells of an
   edge, inside an opening that meets the neighbour's, moving out (or steered

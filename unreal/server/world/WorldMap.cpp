@@ -283,6 +283,20 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
     return free && r.take(pilot, id);
 }
 
+Unit WorldMap::startProspector() const {
+    const Vec2 at = world_->regions[start_].built.pads[world_->startPad].at;
+    const GameState& s = start().simulation().state;
+    const OreDeposit* near = nullptr;
+    for (const OreDeposit& d : s.patches) {
+        const bool better = !near || (d.remaining > 0) > (near->remaining > 0) ||
+                            ((d.remaining > 0) == (near->remaining > 0) && distance(d.position, at) < distance(near->position, at));
+        if (better) near = &d;
+    }
+    const Vec2 to = near ? near->position - at : Vec2(1, 0);
+    const double heading = length(to) > 1e-9 ? std::atan2(to.y, to.x) : 0;
+    return start().simulation().freshUnit(UnitKind::prospector, 0, Pilot::player, at, heading);
+}
+
 bool WorldMap::join(PilotId pilot) {
     if (pilots_.count(pilot)) return false;
     PilotState p;
@@ -292,14 +306,20 @@ bool WorldMap::join(PilotId pilot) {
         return start().join(pilot);
     }
     p.wallet = Wallet{params_.startOre, params_.startHydrogen};
-    const region::Place& pad = world_->regions[start_].built.pads[world_->startPad];
     const Region& r = start();
-    const Unit u = r.simulation().freshUnit(UnitKind::prospector, 0, Pilot::player, pad.at, 0);
+    const Unit u = startProspector();
     PilotState& in = pilots_[pilot] = p;
-    arrive(pilot, in, start_, u, r.places()->regionAt(pad.at), -1);
+    arrive(pilot, in, start_, u, r.places()->regionAt(u.position), -1);
     if (params_.devXp > 0)
         if (const auto id = start().driving(pilot))
-            if (const auto seated = start().simulation().state.unit(*id)) start().simulation().earn(params_.devXp, *seated);
+            if (const auto seated = start().simulation().state.unit(*id)) {
+                // As much as asked for: not scaled as earned XP is.
+                Simulation& sim = start().simulation();
+                const double scale = sim.xpScale;
+                sim.xpScale = 1;
+                sim.earn(params_.devXp, *seated);
+                sim.xpScale = scale;
+            }
     return true;
 }
 
@@ -379,6 +399,8 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     if (it == pilots_.end()) return "Not joined";
     PilotState& p = it->second;
     if (p.flight) return "In flight";
+    // A world builds only what its Prospectors need (`net::kWorldBuildKinds`).
+    if (world_ && !net::worldBuilds(kind)) return std::string(net::kWorldBuildRefusal);
     const int64_t id = regions_[p.region]->simulation().state.nextID;
     if (auto why = regions_[p.region]->build(pilot, kind, at)) return why;
     builtBy_[p.region][id] = p.key;
@@ -528,6 +550,10 @@ void WorldMap::deferred(PilotId pilot, const std::vector<int64_t>& ids) {
 }
 
 bool WorldMap::input(PilotId pilot, const PilotInput& in) {
+    // Made before the client heard of its last region change: it steered
+    // the unit in the region it left (a walk held into the edge), so it
+    // does not move it on here.
+    if (world_ && in.visit < visit(pilot)) return false;
     Region* r = regionOf(pilot);
     return r && r->input(pilot, in);
 }

@@ -14,6 +14,8 @@ double clampUnit(double v) { return std::isfinite(v) ? std::clamp(v, -1.0, 1.0) 
 
 void Predictor::reset() {
     unit_ = std::nullopt;
+    unitVisit_ = 0;
+    visit_ = 0;
     pending_.clear();
     seenSnapshot_ = -1;
     offset_ = Vec2(0, 0);
@@ -33,6 +35,14 @@ void Predictor::advance(Mirror& mirror, Unit& u, const PilotInput& in) const {
 }
 
 void Predictor::input(Mirror& mirror, const PilotInput& in) {
+    // A new region: the old one's unit and inputs are done with.
+    if (in.visit != visit_) {
+        visit_ = in.visit;
+        unit_ = std::nullopt;
+        pending_.clear();
+        offset_ = Vec2(0, 0);
+        turn_ = 0;
+    }
     pending_.push_back(in);
     while (pending_.size() > settings_.keep) pending_.pop_front();
     if (unit_) advance(mirror, *unit_, in);
@@ -47,15 +57,19 @@ void Predictor::reconcile(Mirror& mirror) {
         turn_ = 0;
         return;
     }
-    const bool fresh = !unit_ || unit_->id != *driven;
+    // Another region's unit (ids start over in each) is a new one.
+    const int64_t visit = visitOf(mirror.game());
+    const bool fresh = !unit_ || unit_->id != *driven || unitVisit_ != visit;
     if (!fresh && mirror.snapshotId() == seenSnapshot_) return;
     seenSnapshot_ = mirror.snapshotId();
-    // What the server used is done with.
+    // What the server used is done with, and what it drops (an earlier
+    // region's) is never used.
     const int64_t used = mirror.lastInputTick();
-    while (!pending_.empty() && pending_.front().tick <= used) pending_.pop_front();
+    while (!pending_.empty() && (pending_.front().tick <= used || pending_.front().visit < visit)) pending_.pop_front();
     Unit next = *truth;
     for (const PilotInput& in : pending_) advance(mirror, next, in);
     if (fresh) {
+        unitVisit_ = visit;
         unit_ = next;
         offset_ = Vec2(0, 0);
         turn_ = 0;

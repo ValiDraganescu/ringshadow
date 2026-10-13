@@ -43,14 +43,15 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
     away_.erase(back);
     in.flight = std::nullopt;
     in.last = std::nullopt;
+    // A new connection: its client starts at visit 0.
+    in.visit = 0;
     Region& r = *regions_[in.region];
     const auto i = in.unit ? r.simulation().unitIndex(*in.unit) : std::nullopt;
     if (!i) {
         // Its Prospector is gone: a new one at the start pad, its wallet
         // and levels kept.
-        const region::Place& pad = world_->regions[start_].built.pads[world_->startPad];
-        const Unit u = start().simulation().freshUnit(UnitKind::prospector, 0, Pilot::player, pad.at, 0);
-        arrive(pilot, in, start_, u, start().places()->regionAt(pad.at), -1);
+        const Unit u = startProspector();
+        arrive(pilot, in, start_, u, start().places()->regionAt(u.position), -1);
         return Seated::restored;
     }
     // Where it left its Prospector, driving it again.

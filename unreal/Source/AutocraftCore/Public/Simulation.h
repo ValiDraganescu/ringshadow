@@ -108,6 +108,10 @@ public:
     std::optional<Pilot> pilot;
     /// Level-ups earned since the step began, for `.leveledUp` events.
     std::vector<GameEvent> levelUps;
+    /// C++ only: every XP the driven unit earns (`earn`) is multiplied by
+    /// this. 1 in the game; a world's server slows leveling with it
+    /// (`server::kWorldXpScale`). Kept by `newGame`.
+    double xpScale = 1.0;
     /// Some unit may hold hp from a leveling pick (see `syncBonusHP`);
     /// true at first, for a session saved mid-drive.
     bool hpBonusHeld = true;

@@ -378,7 +378,7 @@ TEST(save_unknown_id_is_a_new_pilot_at_the_pad) {
     const size_t before = again.start().simulation().state.units.size();
     EXPECT_TRUE(again.seat(30, keyB) == WorldMap::Seated::fresh);
     EXPECT_TRUE(*again.where(30) == *again.regionNamed("start"));
-    EXPECT_EQ(again.wallet(30)->ore, int64_t(400));
+    EXPECT_EQ(again.wallet(30)->ore, int64_t(600));
     EXPECT_EQ(again.start().simulation().state.units.size(), before + 1);
     const region::Place& pad = firstWorld().regions[firstWorld().start].built.pads[firstWorld().startPad];
     EXPECT_TRUE(distance(driven(again, 30)->position, pad.at) < 3);
@@ -447,7 +447,7 @@ TEST(save_join_seats_the_pilot_and_restores_it_on_return) {
     EXPECT_TRUE(distance(driven(server.world(), pilot)->position, where) < 1e-9);
     bool fresh = false, restored = false;
     for (const std::string& l : lines) {
-        if (l.find("id 01234567: new at the start pad in start, 400 ore") != std::string::npos) fresh = true;
+        if (l.find("id 01234567: new at the start pad in start, 600 ore") != std::string::npos) fresh = true;
         if (l.find("id 01234567: restored in start") != std::string::npos) restored = true;
     }
     EXPECT_TRUE(fresh);

@@ -23,7 +23,7 @@
 namespace ac::net {
 
 inline constexpr uint32_t kProtocolId = 0x52534844;  // "RSHD"
-inline constexpr uint16_t kProtocolVersion = 1;
+inline constexpr uint16_t kProtocolVersion = 2;  // 2: inputs carry the visit
 inline constexpr size_t kMaxPacketBytes = 1200;
 inline constexpr size_t kHeaderBytes = 19;
 inline constexpr size_t kMaxPayloadBytes = kMaxPacketBytes - kHeaderBytes;

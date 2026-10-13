@@ -37,6 +37,11 @@ using net::WellView;
 /// A pilot: one connected player. Its own number, given by the server.
 using PilotId = uint64_t;
 
+/// XP in a world's regions (the MMORPG mode) is this share of the game's
+/// (`Simulation::xpScale`): a Prospector levels over many sessions there,
+/// not in one Citadel. The RTS game and the M1 region keep the game's rates.
+inline constexpr double kWorldXpScale = 0.1;
+
 /// How a region starts.
 struct RegionConfig {
     /// Today's generated map: a style, a size and its starts (2: mirrored;

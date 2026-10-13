@@ -10,6 +10,10 @@
 //
 // Only walking and facing are predicted: busy work (drilling, a jump, a
 // Derrick), the keys and what they do come from the server's snapshots.
+//
+// In a world, a region change (a new visit: `PilotInput::visit`, the
+// mirror's `visitOf(game)`) starts it over: the server drops the inputs of
+// an earlier visit, so they are not run again on the new region's unit.
 #pragma once
 
 #include "AutocraftNetApi.h"
@@ -85,6 +89,9 @@ private:
 
     PredictorSettings settings_;
     std::optional<Unit> unit_;
+    /// The visit `unit_` is of, and of the newest input.
+    int64_t unitVisit_ = 0;
+    int64_t visit_ = 0;
     std::deque<PilotInput> pending_;
     int64_t seenSnapshot_ = -1;
     Vec2 offset_{0, 0};

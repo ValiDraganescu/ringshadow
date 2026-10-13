@@ -46,7 +46,7 @@ Without `--save` nothing is kept.
 
 A connection is seated by its Join (the pilot's 128-bit key, `net::Client::join`): no Welcome
 before it. A known key comes back where it left (region, spot, its own Prospector, wallet,
-levels); an unknown one is a new pilot at the start pad with 400 ore. The log names the key's
+levels); an unknown one is a new pilot at the start pad with 600 ore. The log names the key's
 first 8 hex digits (`join pilot 3 id 1a2b3c4d: restored in cold-fork`). `--map` runs the M1 region: today's generated map with its AIs.
 
 It reads the one-time token as the first line of its standard input, binds (port 0: the system

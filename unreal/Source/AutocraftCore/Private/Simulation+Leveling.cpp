@@ -97,6 +97,7 @@ bool Simulation::keepPick(int64_t player, Perk perk) {
 /// The driven unit `u` did `xp` worth of work. A level crossed raises
 /// `.leveledUp` at the end of the step. Nothing for any other unit.
 void Simulation::earn(double xp, const Unit& u) {
+    xp *= xpScale;
     if (!(xp > 0 && std::isfinite(xp) && piloted(u.id))) return;
     int64_t before = 1, after = 1;
     updateLevels([&](PilotRecord& r) {

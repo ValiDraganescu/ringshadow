@@ -37,6 +37,8 @@ Simulation startSimulation(const RegionConfig& c, const MapDefinition& map) {
     const bool ai = c.ai && !c.wild;
     Simulation sim(state, map, ai ? Commander::all(map) : std::vector<Commander>{}, c.fog);
     if (c.fastPaths) sim.setFastPaths(true, c.pathBudget);
+    // A world's region levels slower.
+    if (c.wild) sim.xpScale = kWorldXpScale;
     return sim;
 }
 

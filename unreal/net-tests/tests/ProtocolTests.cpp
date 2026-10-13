@@ -191,6 +191,8 @@ TEST(protocol_input_round_trips_quantised) {
     for (int i = 0; i < 4; i++) {
         PilotInput in;
         in.tick = 1000 - i;
+        // The newest two after a region change (visit 3), the older before.
+        in.visit = i < 2 ? 3 : 2;
         in.walk = Vec2(0.5 - 0.3 * i, i % 2 ? -1.0 : 1.0);
         in.heading = 1.234 + i;
         in.act = i == 0;
@@ -206,6 +208,7 @@ TEST(protocol_input_round_trips_quantised) {
     ASSERT_TRUE(back.inputs.size() == 4);
     for (size_t i = 0; i < 4; i++) {
         EXPECT_TRUE(back.inputs[i] == quantised(m.inputs[i]));
+        EXPECT_EQ(back.inputs[i].visit, m.inputs[i].visit);
         EXPECT_NEAR(back.inputs[i].walk.x, m.inputs[i].walk.x, 0.5 / q::kWalkSteps);
         EXPECT_NEAR(std::remainder(back.inputs[i].heading - m.inputs[i].heading, kTurn), 0.0, kTurn / 65536 / 2 + 1e-12);
     }

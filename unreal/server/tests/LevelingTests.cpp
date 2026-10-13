@@ -69,6 +69,7 @@ template <class F> bool drive(WorldMap& w, PilotId p, double heading, int ticks,
     for (int i = 0; i < ticks; i++) {
         PilotInput in;
         in.tick = ++inputTick;
+        in.visit = w.visit(p);
         in.walk = walk;
         in.heading = heading;
         w.input(p, in);
@@ -81,7 +82,7 @@ template <class F> bool drive(WorldMap& w, PilotId p, double heading, int ticks,
 } // namespace
 
 // Driving work: a load dropped off at the pilot's own Citadel earns its XP
-// (1 an ore), 60 is level 2, and the level-up and the first pair of cards
+// (a tenth of the game's 1 an ore), 60 is level 2, and the level-up and the first pair of cards
 // come in the pilot's snapshot.
 TEST(levels_driving_work_earns_xp_and_a_level) {
     WorldMap w(first());
@@ -106,10 +107,11 @@ TEST(levels_driving_work_earns_xp_and_a_level) {
     citadel.builder = std::nullopt;
     citadel.hp = Rules::hp(StructureKind::citadel);
     EXPECT_TRUE(!w.levels(me) || w.levels(me)->xp(UnitKind::prospector) == 0);
-    // At its edge with a load of 60 ore.
+    // At its edge with a load of 600 ore: 60 XP at a world's tenth of the
+    // game's rate (`kWorldXpScale`).
     Unit* v = drivenUnit(w, me);
     v->position = citadel.position + normalize(v->position - citadel.position) * (Rules::radius(StructureKind::citadel) + 0.4);
-    v->carrying = 60;
+    v->carrying = 600;
     v->hydrogen = false;
     std::vector<GameEvent> told;
     for (int i = 0; i < 10; i++) {
@@ -144,7 +146,7 @@ TEST(levels_are_each_pilots_own) {
     ASSERT_TRUE(w.start().driving(me).has_value());
     ASSERT_TRUE(!w.start().driving(other).has_value());
     const Unit u = *drivenUnit(w, me);
-    w.start().simulation().earn(70, u);
+    w.start().simulation().earn(70 / kWorldXpScale, u);
     w.step();
     EXPECT_EQ(w.levels(me)->level(UnitKind::prospector), int64_t(2));
     EXPECT_TRUE(!w.levels(other).has_value());
@@ -206,6 +208,9 @@ TEST(levels_pick_requests_apply_on_the_server) {
     const PilotId pilot = server.world().start().pilots().front();
     const auto offers = mirrored().pending(UnitKind::prospector);
     ASSERT_TRUE(offers.size() == 3);
+    // The card to pick now is level 2's, under a level 4 badge.
+    EXPECT_EQ(offers[0].level, int64_t(2));
+    EXPECT_EQ(offers[2].level, int64_t(4));
     EXPECT_TRUE((offers[0].perks() == std::vector<Perk>{Perk::prospectorQuickDrill, Perk::prospectorLightFrame}));
     EXPECT_TRUE((offers[2].perks() == std::vector<Perk>{Perk::prospectorBigHaul, Perk::prospectorFastWelder}));
 
@@ -286,4 +291,38 @@ TEST(levels_kept_through_an_edge_and_a_flight) {
     EXPECT_TRUE(w.start().simulation().levels() == *w.levels(me));
     EXPECT_EQ(w.start().simulation().load(*drivenUnit(w, me), false), int64_t(35));
     EXPECT_TRUE(!there.simulation().state.players[0].pilot.has_value());
+}
+
+// A world's XP is a tenth of the game's (`kWorldXpScale`): welding a whole
+// Citadel by hand, which in the game takes a Prospector from level 1 to 4,
+// earns a tenth of the Citadel's worth there and leaves it at level 1. The
+// RTS game's own simulation keeps the full rate.
+TEST(levels_world_xp_is_a_tenth_a_citadel_weld_stays_level_1) {
+    WorldMap w(first());
+    w.join(me);
+    Simulation& sim = w.start().simulation();
+    EXPECT_EQ(sim.xpScale, kWorldXpScale);
+    const Unit u = *drivenUnit(w, me);
+    std::optional<Vec2> at;
+    const double reach = Region::buildReach(StructureKind::citadel);
+    for (int k = 0; k < 16 && !at; k++) {
+        const double h = k * 2 * pi / 16;
+        const auto p = sim.snap(StructureKind::citadel, u.position + Vec2(std::cos(h), std::sin(h)) * reach);
+        if (p && !sim.placementRefusal(StructureKind::citadel, *p)) at = p;
+    }
+    ASSERT_TRUE(at.has_value());
+    ASSERT_TRUE(!w.build(me, StructureKind::citadel, *at).has_value());
+    const bool done = drive(w, me, u.heading, int((Rules::buildTime(StructureKind::citadel) + 5) * 60), [&] {
+        return !sim.state.structures.empty() && sim.state.structures[0].complete();
+    }, Vec2(0, 0));
+    ASSERT_TRUE(done);
+    const double xp = w.levels(me)->xp(UnitKind::prospector);
+    const double full = Leveling::worth(StructureKind::citadel);
+    std::printf("  a Citadel welded: %.1f XP (the game's %.0f), level %lld\n", xp, full,
+                (long long)w.levels(me)->level(UnitKind::prospector));
+    EXPECT_NEAR(xp, full * kWorldXpScale, full * kWorldXpScale * 0.02);
+    EXPECT_EQ(w.levels(me)->level(UnitKind::prospector), int64_t(1));
+    EXPECT_TRUE(leveledUps(w.snapshot(me).events).empty());
+    // In the game's rate, the same work is level 4 (the problem it fixes).
+    EXPECT_TRUE(Leveling::level(full) >= 4);
 }

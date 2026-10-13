@@ -135,6 +135,7 @@ std::optional<PilotInput> Client::sendInput() {
     tick_ += 1;
     PilotInput in = steer;
     in.tick = tick_;
+    in.visit = visit_;
     sent_.push_front(in);
     while (sent_.size() > InputMessage::kMaxInputs) sent_.pop_back();
     InputMessage m;

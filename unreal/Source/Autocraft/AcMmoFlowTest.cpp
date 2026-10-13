@@ -19,7 +19,7 @@
 //             MMORPG NEW WORLD (TEST), asked and confirmed; a Citadel built;
 //             the mode left and MMORPG (TEST) again: the Citadel, the wallet,
 //             the same pilot key, the same Prospector on the same spot; then
-//             a new world: no Citadel, 400 ore, at the start pad, same key
+//             a new world: no Citadel, 600 ore, at the start pad, same key
 //
 // Each step but mmoresume's resume starts a new world (the start pad). The
 // pilot key and the save are the test's own (`FAcMmoClient::Directory`:
@@ -209,7 +209,7 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		case 1:
 			if (Ready())
 			{
-				Check(Utf(Mmo->Here()->id) == TEXT("start") && !CitadelIn(*S) && S->players[0].ore == 400,
+				Check(Utf(Mmo->Here()->id) == TEXT("start") && !CitadelIn(*S) && S->players[0].ore == 600,
 					FString::Printf(TEXT("a new world: in %s, %lld ore, no Citadel"), *Utf(Mmo->Here()->id), (long long)S->players[0].ore));
 				MmoLeft = FMmoLeft();
 				MmoLeft.Key = KeyOf(Mmo);
@@ -221,7 +221,7 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 			return;
 		case 2:
 			// Its scaffold and the paid wallet; then a moment, and leave.
-			if (const ac::Structure* C = S ? CitadelIn(*S) : nullptr; C && S->players[0].ore == 0 && U)
+			if (const ac::Structure* C = S ? CitadelIn(*S) : nullptr; C && S->players[0].ore == 200 && U)
 			{
 				if (MmoLeft.Citadel < 0) T.PhaseAt = Now;
 				MmoLeft.Citadel = C->id;
@@ -271,7 +271,7 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 			{
 				const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
 				Check(!CitadelIn(*S), TEXT("NEW WORLD: no Citadel"));
-				Check(S->players[0].ore == 400, FString::Printf(TEXT("NEW WORLD: %lld ore"), (long long)S->players[0].ore));
+				Check(S->players[0].ore == 600, FString::Printf(TEXT("NEW WORLD: %lld ore"), (long long)S->players[0].ore));
 				Check(Utf(Mmo->Here()->id) == TEXT("start") && Near && Near->Distance <= FAcMmoClient::PadReach,
 					FString::Printf(TEXT("NEW WORLD: at the start pad (%s, %.1f cells)"), *Utf(Mmo->Here()->id), Near ? Near->Distance : -1.0));
 				Check(KeyOf(Mmo) == MmoLeft.Key, TEXT("NEW WORLD: the same pilot key"));

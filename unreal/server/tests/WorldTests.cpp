@@ -6,6 +6,7 @@
 #include "test.h"
 
 #include "HeadlessClient.h"
+#include "NetPredictor.h"
 #include "Server.h"
 #include "TerrainField.h"
 #include "WorldMap.h"
@@ -80,6 +81,7 @@ template <class F> bool drive(WorldMap& w, PilotId p, double heading, int ticks,
     for (int i = 0; i < ticks; i++) {
         PilotInput in;
         in.tick = ++inputTick;
+        in.visit = w.visit(p);
         in.walk = walk;
         in.heading = heading;
         w.input(p, in);
@@ -175,7 +177,7 @@ TEST(world_load_refuses_each_problem) {
 
 // MARK: - Pilots
 
-TEST(world_pilot_starts_at_the_pad_in_a_prospector_with_400_ore) {
+TEST(world_pilot_starts_at_the_pad_in_a_prospector_with_600_ore) {
     WorldMap w(first());
     ASSERT_TRUE(w.join(me));
     EXPECT_EQ(*w.where(me), first().start);
@@ -185,9 +187,9 @@ TEST(world_pilot_starts_at_the_pad_in_a_prospector_with_400_ore) {
     EXPECT_EQ(u->owner, Pilot::player);
     const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
     EXPECT_TRUE(distance(u->position, pad) < 1.0);
-    EXPECT_EQ(w.wallet(me)->ore, int64_t(400));
+    EXPECT_EQ(w.wallet(me)->ore, int64_t(600));
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(0));
-    EXPECT_EQ(w.start().simulation().state.players[0].ore, int64_t(400));
+    EXPECT_EQ(w.start().simulation().state.players[0].ore, int64_t(600));
 }
 
 TEST(world_no_units_but_the_pilots_anywhere) {
@@ -396,7 +398,108 @@ TEST(world_client_follows_a_region_change) {
     };
     EXPECT_TRUE(until(same, 5));
     EXPECT_TRUE(until([&] { return client.world()->regions[size_t(client.world()->here)].id == "tern-ridge"; }, 3));
-    EXPECT_EQ(client.mirror()->simulation().state.players[0].ore, int64_t(400));
+    EXPECT_EQ(client.mirror()->simulation().state.players[0].ore, int64_t(600));
+}
+
+// Problem 9 of docs/mmorpg-shots.md: crossing an edge with the walk held, on
+// a lagged link and a client reading only every 0.2 s (a busy machine's
+// frames). The inputs it sent before it heard of the RegionChange still
+// walk; the server drops them (an earlier visit), so the Prospector stands
+// where it came in. The client's prediction starts over on the new
+// region's unit (its visit), so it draws it there, as the server has it,
+// and nothing drifts after.
+TEST(world_crossing_with_the_walk_held_stops_at_the_arrival) {
+    nettest::MemoryNet network;
+    nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
+    net::LagSimulator lag(clientPort, 9);
+    net::LagSettings rough;
+    rough.delay = 0.15;
+    rough.jitter = 0.02;
+    lag.setDefault(rough);
+    ServerOptions o;
+    o.world = first();
+    o.token = nettest::kToken;
+    o.secret = nettest::serverConfig().secret;
+    Server server(serverPort, o);
+    HeadlessClient client(lag, nettest::clientConfig());
+    net::Predictor predictor;
+    double now = 100;
+    int64_t frame = 0;
+    int readEvery = 1;
+    WorldMap& w = server.world();
+    std::optional<Vec2> arrival;
+    PilotId pilot = 0;
+    // The game's client tick: what came (only on a frame it reads), the
+    // prediction put right, the input sent and predicted at once.
+    auto tick = [&] {
+        now += 1.0 / 60;
+        server.tick(now);
+        if (pilot && !arrival && w.visit(pilot) == 1) arrival = regionPos(w, pilot);
+        if (++frame % readEvery == 0) {
+            client.receive(now);
+            if (client.visit() >= 1) client.steer.walk = Vec2(0, 0);
+            if (client.mirror()) predictor.reconcile(*client.mirror());
+        }
+        if (const auto in = client.sendInput(); in && client.mirror()) predictor.input(*client.mirror(), *in);
+        client.flush(now);
+        predictor.ease(1.0 / 60);
+    };
+    auto until = [&](auto&& done, double seconds) {
+        for (int i = 0; i < int(seconds * 60); i++) {
+            tick();
+            if (done()) return true;
+        }
+        return false;
+    };
+    client.connect(now);
+    client.join(net::newPilotKey());
+    ASSERT_TRUE(until([&] { return client.mirror() && client.mirror()->driven() && client.world(); }, 10));
+    pilot = w.start().pilots().front();
+    // Out of the east opening, the walk held; slow frames from near the edge.
+    const Vec2 ext = w.start().places()->extent();
+    put(w, pilot, inFrom(ext, Edge::east, 48, 4), 0);
+    client.steer.walk = Vec2(1, 0);
+    client.steer.heading = 0;
+    readEvery = 12;
+    ASSERT_TRUE(until([&] { return client.visit() == 1; }, 10));
+    ASSERT_TRUE(arrival.has_value());
+    // Settled: the server's unit where it came in, the client's drawn there.
+    until([] { return false; }, 1.5);
+    const Vec2 there = regionPos(w, pilot);
+    const Unit* truth = drivenUnit(w, pilot);
+    ASSERT_TRUE(truth != nullptr && predictor.predicted() != nullptr);
+    const double drift = distance(there, *arrival);
+    const double drawn = distance(predictor.shown()->position, truth->position);
+    std::printf("  came in at %.2f,%.2f; %.3f cells later; drawn %.4f cells from the server's\n", arrival->x, arrival->y, drift, drawn);
+    EXPECT_TRUE(drift < 0.01);
+    EXPECT_TRUE(drawn < 0.01);
+    EXPECT_TRUE(distance(predictor.predicted()->position, truth->position) < 0.01);
+    // And no drift follows.
+    until([] { return false; }, 1);
+    EXPECT_TRUE(distance(regionPos(w, pilot), there) < 1e-9);
+    EXPECT_TRUE(distance(predictor.shown()->position, drivenUnit(w, pilot)->position) < 0.01);
+}
+
+// A new pilot's Prospector faces the start region's nearest ore (problem 14:
+// it faced away, nothing to do in view).
+TEST(world_new_pilot_faces_the_nearest_ore) {
+    WorldMap w(first());
+    ASSERT_TRUE(w.join(me));
+    const Unit* u = drivenUnit(w, me);
+    ASSERT_TRUE(u != nullptr);
+    const GameState& s = w.start().simulation().state;
+    ASSERT_TRUE(!s.patches.empty());
+    const OreDeposit* near = &s.patches.front();
+    for (const OreDeposit& d : s.patches)
+        if (distance(d.position, u->position) < distance(near->position, u->position)) near = &d;
+    const Vec2 to = near->position - u->position;
+    const double off = std::abs(std::remainder(u->heading - std::atan2(to.y, to.x), 2 * pi));
+    std::printf("  heading %.3f rad, the ore %.1f cells off at %.3f rad\n", u->heading, length(to), std::atan2(to.y, to.x));
+    EXPECT_TRUE(off < 0.2);
+    // The seat's held input faces there too: it stands facing the ore.
+    const double heading = u->heading;
+    for (int i = 0; i < 30; i++) w.step();
+    EXPECT_TRUE(std::abs(std::remainder(drivenUnit(w, me)->heading - heading, 2 * pi)) < 1e-9);
 }
 
 // The landing pads are what the ground shows: a plate under each pad of every

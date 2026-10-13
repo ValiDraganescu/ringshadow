@@ -122,8 +122,10 @@ void Simulation::newGame() {
     const bool fog = vision.has_value();
     const bool fast = fastPaths;
     const int64_t budget = pathBudget;
+    const double scale = xpScale;
     *this = Simulation(GameState::new_(m, state.score, 0, state.teams()), m, cs, fog);
     if (fast) setFastPaths(true, budget);
+    xpScale = scale;
 }
 
 /// Follow buildings going up and ore deposits running dry or growing
