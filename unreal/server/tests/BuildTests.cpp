@@ -1,0 +1,219 @@
+// Building anywhere in a world (WorldMap::build, Region::build): the driven
+// Prospector puts a building up where it fits, paid from the pilot's wallet;
+// refusals say why; ore mined and unloaded at the pilot's own Citadel goes
+// into the wallet; and a client's Build request over the protocol. Isolated
+// scenes on the start region; run from unreal/server (as `make test` does).
+
+#include "test.h"
+
+#include "HeadlessClient.h"
+#include "Server.h"
+#include "WorldMap.h"
+#include "rig.h"
+
+#include <cmath>
+#include <cstdio>
+#include <string>
+
+namespace {
+
+using namespace ac;
+using namespace ac::server;
+
+constexpr PilotId me = 7;
+constexpr double west = 3.141592653589793;
+
+const LoadedWorld& firstWorld() {
+    static const LoadedWorld w = [] {
+        WorldLoad l = loadWorld("worlds/first.json");
+        for (const std::string& p : l.problems) std::printf("  %s\n", p.c_str());
+        return *l.world;
+    }();
+    return w;
+}
+
+Unit* driven(WorldMap& w, PilotId p) {
+    Region* r = w.regionOf(p);
+    const auto id = r ? r->driving(p) : std::nullopt;
+    const auto i = id ? r->simulation().unitIndex(*id) : std::nullopt;
+    return i ? &r->simulation().state.units[size_t(*i)] : nullptr;
+}
+
+/// The driven unit at a region cell, facing `heading`, standing.
+void put(WorldMap& w, PilotId p, Vec2 cell, double heading) {
+    Unit* u = driven(w, p);
+    u->position = w.regionOf(p)->places()->ground(cell);
+    u->heading = heading;
+    u->task = Unit::Task::idle;
+}
+
+/// Where the game holds a `kind` out ahead of the driven unit (AcPilotBuild's `Spot`).
+Vec2 spot(WorldMap& w, PilotId p, StructureKind kind) {
+    const Unit* u = driven(w, p);
+    const Vec2 ahead(std::cos(u->heading), std::sin(u->heading));
+    return *w.regionOf(p)->simulation().snap(kind, u->position + ahead * Region::buildReach(kind));
+}
+
+int64_t inputTick = 0;
+
+/// Steps with the walk, the heading and the held key, until `done` or `ticks`.
+template <class F> bool run(WorldMap& w, PilotId p, int ticks, F&& done, Vec2 walk = Vec2(0, 0), bool hold = false) {
+    for (int i = 0; i < ticks; i++) {
+        PilotInput in;
+        in.tick = ++inputTick;
+        in.walk = walk;
+        in.heading = driven(w, p)->heading;
+        in.hold = hold;
+        in.act = hold && i == 0;
+        w.input(p, in);
+        w.step();
+        if (done()) return true;
+    }
+    return false;
+}
+
+const Structure* citadelOf(const Simulation& sim) {
+    for (const Structure& s : sim.state.structures)
+        if (s.kind == StructureKind::citadel) return &s;
+    return nullptr;
+}
+
+} // namespace
+
+TEST(build_a_citadel_paid_from_the_wallet) {
+    WorldMap w(firstWorld());
+    ASSERT_TRUE(w.join(me));
+    // On the open ground east of the ore, facing west.
+    put(w, me, Vec2(72, 48), west);
+    const Vec2 at = spot(w, me, StructureKind::citadel);
+    const Simulation& sim = w.regionOf(me)->simulation();
+    const int64_t price = sim.buildCost(StructureKind::citadel, Pilot::player).ore;
+    EXPECT_EQ(price, int64_t(400));
+    const auto why = w.build(me, StructureKind::citadel, at);
+    EXPECT_TRUE(!why);
+    if (why) std::printf("  refused: %s\n", why->c_str());
+    EXPECT_EQ(w.wallet(me)->ore, int64_t(400) - price);
+    const Structure* c = citadelOf(sim);
+    ASSERT_TRUE(c != nullptr);
+    EXPECT_TRUE(!c->complete());
+    EXPECT_EQ(c->owner, Pilot::player);
+    EXPECT_TRUE(distance(c->position, at) < 1e-9);
+    EXPECT_TRUE(driven(w, me)->task == Unit::Task::building);
+    // Standing still, it welds it to the end; the region carries on (no victory).
+    const int64_t game = w.regionOf(me)->game();
+    EXPECT_TRUE(run(w, me, int((Rules::buildTime(StructureKind::citadel) + 5) * 60), [&] {
+        const Structure* s = citadelOf(sim);
+        return s && s->complete();
+    }));
+    EXPECT_EQ(w.regionOf(me)->game(), game);
+    EXPECT_EQ(w.wallet(me)->ore, int64_t(0));
+}
+
+TEST(build_refused_when_too_poor) {
+    WorldMap w(firstWorld());
+    ASSERT_TRUE(w.join(me));
+    put(w, me, Vec2(72, 48), west);
+    w.regionOf(me)->simulation().state.players[0].ore = 399;
+    const auto why = w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel));
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(*why == "Not enough ore");
+    EXPECT_TRUE(w.regionOf(me)->simulation().state.structures.empty());
+    EXPECT_EQ(w.regionOf(me)->simulation().state.players[0].ore, int64_t(399));
+}
+
+TEST(build_refused_on_a_blocked_spot) {
+    WorldMap w(firstWorld());
+    ASSERT_TRUE(w.join(me));
+    const Simulation& sim = w.regionOf(me)->simulation();
+    // Facing the ore near the pad: on the deposits.
+    put(w, me, Vec2(57, 46), west);
+    auto why = w.build(me, StructureKind::habDome, spot(w, me, StructureKind::habDome));
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(*why == "Something is in the way");
+    // A Citadel by the ore: too close to it.
+    put(w, me, Vec2(62, 46), west);
+    why = w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel));
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(*why == "Too close to resources");
+    // Off the cliff of the north-east shelf.
+    put(w, me, Vec2(88, 20), 0);
+    why = w.build(me, StructureKind::habDome, spot(w, me, StructureKind::habDome));
+    ASSERT_TRUE(why.has_value());
+    // Far from the Prospector, though the ground is fine.
+    put(w, me, Vec2(72, 48), west);
+    why = w.build(me, StructureKind::habDome, w.regionOf(me)->places()->ground(Vec2(64, 70)));
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(*why == "Too far away");
+    // A kind a Prospector does not put up by hand.
+    why = w.build(me, StructureKind::lab, spot(w, me, StructureKind::habDome));
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(sim.state.structures.empty());
+    EXPECT_EQ(w.wallet(me)->ore, int64_t(400));
+    // Not driving: nothing to build with.
+    w.regionOf(me)->handBack(me);
+    why = w.build(me, StructureKind::habDome, spot(w, me, StructureKind::habDome));
+    EXPECT_TRUE(why.has_value());
+}
+
+TEST(build_mined_ore_unloaded_at_the_own_citadel_fills_the_wallet) {
+    WorldMap w(firstWorld());
+    ASSERT_TRUE(w.join(me));
+    Simulation& sim = w.regionOf(me)->simulation();
+    const Vec2 home = *sim.snap(StructureKind::citadel, w.regionOf(me)->places()->ground(Vec2(66, 48)));
+    ASSERT_TRUE(!sim.placementRefusal(StructureKind::citadel, home));
+    sim.placeStructure(StructureKind::citadel, Pilot::player, home);
+    w.regionOf(me)->simulation().state.players[0].ore = 100;
+    // Drill the deposit at (53, 46) with the key held until it carries a load.
+    put(w, me, Vec2(54.2, 46), west);
+    ASSERT_TRUE(run(w, me, 60 * 30, [&] { return driven(w, me)->carrying > 0; }, Vec2(0, 0), true));
+    const int64_t load = driven(w, me)->carrying;
+    EXPECT_EQ(w.wallet(me)->ore, int64_t(100));
+    // Drive east into the Citadel: the load goes into the wallet.
+    put(w, me, Vec2(66 - Rules::radius(StructureKind::citadel) - 2, 48), 0);
+    ASSERT_TRUE(run(w, me, 60 * 5, [&] { return driven(w, me)->carrying == 0; }, Vec2(1, 0)));
+    EXPECT_EQ(w.wallet(me)->ore, 100 + load);
+}
+
+TEST(build_request_over_the_protocol) {
+    nettest::MemoryNet network;
+    nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
+    ServerOptions o;
+    o.world = firstWorld();
+    o.token = nettest::kToken;
+    o.secret = nettest::serverConfig().secret;
+    Server server(serverPort, o);
+    HeadlessClient client(clientPort, nettest::clientConfig());
+    double now = 100;
+    auto until = [&](auto&& done, double seconds) {
+        for (int i = 0; i < int(seconds * 60); i++) {
+            now += 1.0 / 60;
+            server.tick(now);
+            client.tick(now);
+            if (done()) return true;
+        }
+        return false;
+    };
+    client.connect(now);
+    ASSERT_TRUE(until([&] { return client.mirror() && client.mirror()->driven(); }, 10));
+    WorldMap& w = server.world();
+    const PilotId pilot = w.start().pilots().front();
+    put(w, pilot, Vec2(72, 48), west);
+    client.steer.heading = west;
+    const Vec2 there = w.start().places()->ground(Vec2(72, 48));
+    ASSERT_TRUE(until([&] { return distance(client.mirror()->unit(*client.mirror()->driven())->position, there) < 0.1; }, 3));
+    EXPECT_EQ(client.mirror()->simulation().state.players[0].ore, int64_t(400));
+    // Refused first: something in the way (a deposit), the reason comes back.
+    const uint32_t refused = client.build(StructureKind::citadel, w.start().places()->ground(Vec2(53, 46)));
+    ASSERT_TRUE(until([&] { return client.replies.count(refused) > 0; }, 3));
+    EXPECT_TRUE(!client.replies[refused].done);
+    EXPECT_TRUE(!client.replies[refused].reason.empty());
+    // Then where it fits, ahead of the Prospector.
+    const uint32_t asked = client.build(StructureKind::citadel, spot(w, pilot, StructureKind::citadel));
+    ASSERT_TRUE(until([&] { return client.replies.count(asked) > 0; }, 3));
+    EXPECT_TRUE(client.replies[asked].done);
+    // The scaffold and the wallet reach the mirror.
+    EXPECT_TRUE(until([&] {
+        const GameState& s = client.mirror()->simulation().state;
+        return citadelOf(client.mirror()->simulation()) && s.players[0].ore == 0;
+    }, 3));
+}

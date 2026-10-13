@@ -139,6 +139,24 @@ void Region::handBack(PilotId pilot) {
     it->second.drives = std::nullopt;
 }
 
+double Region::buildReach(StructureKind kind) {
+    return kind == StructureKind::derrick ? 3.0 : Rules::radius(kind) + 2.2;
+}
+
+std::optional<std::string> Region::build(PilotId pilot, StructureKind kind, Vec2 at) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end() || !it->second.drives) return "Nothing driven";
+    if (std::find(PilotBuild::kinds.begin(), PilotBuild::kinds.end(), kind) == PilotBuild::kinds.end())
+        return "A Prospector can't build that";
+    const auto u = sim_.pilotUnit();
+    if (!u || u->id != *it->second.drives || !PilotBuild::builds(u->kind)) return "No Prospector";
+    if (!std::isfinite(at.x) || !std::isfinite(at.y)) return "Can't build there";
+    const auto p = sim_.snap(kind, at);
+    if (!p) return "No well here";
+    if (distance(u->position, *p) > buildReach(kind) + buildSlack) return "Too far away";
+    return sim_.pilotBuild(kind, *p);
+}
+
 std::optional<int64_t> Region::driving(PilotId pilot) const {
     const auto it = pilots_.find(pilot);
     return it == pilots_.end() ? std::nullopt : it->second.drives;

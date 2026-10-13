@@ -51,6 +51,9 @@ public:
     /// Fly from the pad the driven Prospector stands at to a world's region's
     /// pad (by the region's id and the pad's name).
     uint32_t fly(const std::string& region, const std::string& pad);
+    /// Build a `kind` at `at` with the driven Prospector, paid from the
+    /// wallet (the reply says why not).
+    uint32_t build(StructureKind kind, Vec2 at);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

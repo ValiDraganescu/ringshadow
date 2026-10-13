@@ -683,6 +683,16 @@ TEST(protocol_world_messages_round_trip) {
     ASSERT_TRUE(decode(encode(f), fb));
     EXPECT_TRUE(fb == f);
 
+    RequestMessage b;
+    b.id = 12;
+    b.what = RequestMessage::Build{StructureKind::citadel, Vec2(-7.5, 12.5)};
+    RequestMessage bb;
+    ASSERT_TRUE(decode(encode(b), bb));
+    EXPECT_TRUE(bb == b);
+    b.what = RequestMessage::Build{StructureKind::derrick, Vec2(-12.25, -0.75)};
+    ASSERT_TRUE(decode(encode(b), bb));
+    EXPECT_TRUE(bb == b);
+
     // A snapshot's game carries the visit.
     EXPECT_EQ(visitOf(visitGame(5, 2)), int64_t(5));
     EXPECT_EQ(visitGame(5, 2) & 0xffffffff, int64_t(2));

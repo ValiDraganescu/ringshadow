@@ -20,6 +20,10 @@ uint32_t Client::fly(const std::string& region, const std::string& pad) {
     return request(RequestMessage::Fly{region, pad});
 }
 
+uint32_t Client::build(StructureKind kind, Vec2 at) {
+    return request(RequestMessage::Build{kind, at});
+}
+
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;
     m.id = nextRequest_++;

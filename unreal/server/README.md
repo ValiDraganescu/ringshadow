@@ -9,7 +9,7 @@ UDP. Engine-free: `AutocraftCore` and `AutocraftNet`.
 |---|---|
 | `world/World.h` | `Region`: one `ac::Simulation` on a generated map with its AIs, stepped at 60 Hz; pilots join, take a unit, send inputs; `snapshot()` gives each pilot what its side may know. |
 | `world/Region.cpp` | The tick, the pilots and their inputs, the fog gate on events (`mayKnow`). |
-| `world/WorldMap.h` | `WorldMap`: the world file loaded and checked, every region stepped every tick, the pilots (start pad, wallet, levels), edge crossings and pad flights; the M1 server is a `WorldMap` of one region. |
+| `world/WorldMap.h` | `WorldMap`: the world file loaded and checked, every region stepped every tick, the pilots (start pad, wallet, levels), edge crossings and pad flights, building anywhere it fits with the driven Prospector, paid from the wallet (`Region::build`: the core's own hand-build); the M1 server is a `WorldMap` of one region. |
 | `world/Interest.cpp` | The snapshot: fog first, rank (driven, engaged, nearby), distance bands, the budget with aging. |
 | `program/Server.h` | `Server`: the world behind `net::ServerEndpoint`. A connection is a pilot; each tick reads, steps every region, tells the pilots that moved (RegionChange, World), and every third tick sends each client its events and its snapshot. |
 | `program/main.cpp` | `autocraft-server`, the program the game starts. |

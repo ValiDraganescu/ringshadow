@@ -134,6 +134,10 @@ public:
     /// The reason when refused.
     std::optional<std::string> fly(PilotId pilot, std::string_view region, std::string_view pad);
 
+    /// Build with the driven Prospector where the pilot is (`Region::build`),
+    /// paid from its wallet. The reason when refused.
+    std::optional<std::string> build(PilotId pilot, StructureKind kind, Vec2 at);
+
     /// Every region one tick; then edge crossings and landings.
     void step();
     /// Region changes since the last call.

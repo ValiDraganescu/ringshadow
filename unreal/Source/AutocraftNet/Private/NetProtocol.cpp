@@ -559,6 +559,10 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeString(w, f->region);
         writeString(w, f->pad);
     }
+    if (const auto* b = std::get_if<RequestMessage::Build>(&m.what)) {
+        w.writeBits(uint64_t(b->kind), 4);
+        codec::Pos{}.write(w, b->at);
+    }
     return w.bytes();
 }
 
@@ -573,6 +577,15 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         RequestMessage::Fly f;
         if (!readString(r, f.region) || !readString(r, f.pad)) return false;
         m.what = f;
+        break;
+    }
+    case 3: {
+        RequestMessage::Build b;
+        const uint64_t kind = r.readBits(4);
+        if (kind >= uint64_t(allCases<StructureKind>().size())) return false;
+        b.kind = static_cast<StructureKind>(kind);
+        codec::Pos{}.read(r, b.at);
+        m.what = b;
         break;
     }
     default: return false;

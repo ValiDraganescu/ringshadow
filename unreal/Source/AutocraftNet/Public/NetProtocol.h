@@ -225,7 +225,7 @@ struct AckMessage {
 
 /// Client → server, reliable: everything that is not steering. Take a
 /// unit, hand it back, fly from a pad to a pad (a world's region, by its id,
-/// and the pad's name in it).
+/// and the pad's name in it), build with the driven Prospector.
 struct RequestMessage {
     struct Take {
         int64_t unit = 0;
@@ -239,9 +239,16 @@ struct RequestMessage {
         std::string pad;
         bool operator==(const Fly&) const = default;
     };
+    /// The driven Prospector puts up a `kind` at `at` (the region's ground
+    /// position, snapped as `Simulation::snap` does), paid from the wallet.
+    struct Build {
+        StructureKind kind = StructureKind::citadel;
+        Vec2 at{0, 0};
+        bool operator==(const Build&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
-    std::variant<Take, HandBack, Fly> what;
+    std::variant<Take, HandBack, Fly, Build> what;
     bool operator==(const RequestMessage&) const = default;
 };
 

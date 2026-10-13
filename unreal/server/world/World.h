@@ -118,6 +118,19 @@ public:
     /// Some pilot drives here (the core drives one unit a region).
     bool driven() const;
 
+    /// The pilot's driven Prospector puts up a `kind` near `at` (snapped as
+    /// `Simulation::snap` does), paid from its side's bank: the core's own
+    /// hand-build (`Simulation::pilotBuild`). The reason when refused: not
+    /// driving, a kind a Prospector cannot build, too far from the spot, or
+    /// the core's (the price, the ground, something in the way).
+    std::optional<std::string> build(PilotId pilot, StructureKind kind, Vec2 at);
+    /// How far past where the game holds a building out (`buildReach`) the
+    /// spot may be, in cells: the unit moves on while the request travels.
+    static constexpr double buildSlack = 3.0;
+    /// Where the game holds a `kind` out ahead of the Prospector: its
+    /// radius and 2.2 cells, a Derrick 3 (AcPilotBuild's `Spot`).
+    static double buildReach(StructureKind kind);
+
     /// A unit brought in from another region (a world): a new id here, its
     /// plans and its ties to this region's things left behind (`arrival`).
     int64_t admit(const Unit& u);

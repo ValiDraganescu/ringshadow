@@ -169,6 +169,16 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
                 log("pilot " + std::to_string(client.pilot) + " flies to " + fly->region + " " + fly->pad);
             }
             sendMoves();
+        } else if (const auto* build = std::get_if<net::RequestMessage::Build>(&m.what)) {
+            const std::string what = std::string(rawValue(build->kind)) + " at " + std::to_string(build->at.x) + ","
+                                     + std::to_string(build->at.y) + " by pilot " + std::to_string(client.pilot);
+            if (const auto why = world_.build(client.pilot, build->kind, build->at)) {
+                reply.reason = *why;
+                log("refuse build " + what + ": " + *why);
+            } else {
+                reply.done = true;
+                log("build " + what);
+            }
         } else {
             if (region->driving(client.pilot)) {
                 region->handBack(client.pilot);

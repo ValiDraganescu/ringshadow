@@ -338,6 +338,17 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     return std::nullopt;
 }
 
+std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Vec2 at) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return "Not joined";
+    PilotState& p = it->second;
+    if (p.flight) return "In flight";
+    if (auto why = regions_[p.region]->build(pilot, kind, at)) return why;
+    // Paid from the side's bank: the wallet follows at once.
+    if (world_) bankOut(p, p.region);
+    return std::nullopt;
+}
+
 std::optional<size_t> WorldMap::neighbour(size_t r, Edge e) const {
     if (!world_) return std::nullopt;
     const WorldRegion& g = world_->regions[r];
