@@ -8,6 +8,7 @@
 
 #include "HeadlessClient.h"
 #include "NetLagSimulator.h"
+#include "NetLocalServer.h"
 
 #include <cerrno>
 #include <chrono>
@@ -297,4 +298,27 @@ TEST(e2e_server_exits_cleanly_on_sigint) {
     EXPECT_EQ(*code, 0);
     server->process.stop();
     EXPECT_TRUE(readFile(logPath("sigint")).find("stop: SIGINT") != std::string::npos);
+}
+
+TEST(e2e_local_server_as_the_game_starts_it) {
+    // net::LocalServer, as the game's MMORPG mode uses it: the port read,
+    // a client in on the token, a clean stop on SIGTERM.
+    std::remove(logPath("local").c_str());
+    net::LocalServer server;
+    ASSERT_TRUE(server.start(kProgram, {"--map", "openField", "--size", "small", "--log", logPath("local")}, kToken));
+    const double end = clockNow() + 10;
+    while (server.poll() == net::LocalServer::State::starting && clockNow() < end)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(server.state() == net::LocalServer::State::running);
+    Client c(server.port(), kToken, {});
+    c.client->connect(clockNow());
+    ASSERT_TRUE(c.until([&] { return c.client->mirror() && !c.client->mirror()->simulation().state.units.empty(); }, 5));
+    EXPECT_TRUE(server.poll() == net::LocalServer::State::running);
+    EXPECT_TRUE(server.stop(3));
+    EXPECT_EQ(server.exitCode(), 0);
+    EXPECT_TRUE(readFile(logPath("local")).find("stop: SIGTERM") != std::string::npos);
+    // No program there: it says so.
+    net::LocalServer missing;
+    EXPECT_TRUE(!missing.start("./build/no-such-server", {}, kToken));
+    EXPECT_TRUE(missing.error().find("no server program") != std::string::npos);
 }

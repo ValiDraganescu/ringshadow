@@ -256,6 +256,9 @@ private:
 	void Steer();
 	/// After the step: the eye on the unit, the hooks (`followPilot`).
 	void Follow(const FAcFrame& Frame);
+	/// The MMORPG test mode: dive in once the server gives the unit asked
+	/// for (`FAcMmoClient::Wanted`), out when it no longer drives it.
+	void SyncMmo();
 	/// The model root's world (UE cm): the renderer's placement × part 0.
 	FTransform RootOf(const ac::Unit& U) const;
 	/// What the middle of the view is on. `bPredict`: from the view as the

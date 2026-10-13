@@ -17,6 +17,11 @@
 //   thread (one write at a time) and on quit; sessions are in
 //   `AcSaves::Directory()`. The last map played is remembered
 //   (`UAcSettings::LastMap`) and opened next time.
+// - The MMORPG test (the home screen's MMORPG (TEST), -AcMmo; docs/mmorpg-m1.md
+//   T5): `UAcSimSubsystem::StartMmo` on the remembered map; QUIT TO HOME
+//   leaves it (the local server stops). New game, restart, import, the
+//   toggles and save say no there (`SAcMmoBanner`, which also shows where
+//   the local server is and why it failed).
 // - Import a Swift game: the dialog's button or `ac.Import [PATH]` (default
 //   the Swift game's `window.json`), `-AcImport=PATH` at launch.
 // - Toggles: `ac.AI [0|1]` (Swift's Game ▸ AI Commander), `ac.SessionFog
@@ -30,6 +35,7 @@
 //                               ok|FAILED`, then the run quits.
 //   -AcNewGameDialog[=MAP[,TEAMS]]  open the dialog at start (shots hold
 //                               until its preview is drawn).
+//   -AcMmo                      the MMORPG test mode at once (no home screen).
 //   -AcHomePlay=S               open the home screen with the staged game as
 //                               the one to resume, and press RESUME GAME S
 //                               seconds after it shows (clips: home, then play).
@@ -39,6 +45,7 @@
 #include "Subsystems/WorldSubsystem.h"
 
 #include "SAcMenu.h"
+#include "SAcMmoBanner.h"
 #include "SAcNewGame.h"
 #include "Session.h"
 
@@ -92,12 +99,24 @@ public:
 	/// (no selection, command map shut, not driving, the console shut).
 	bool WantsPauseOnEscape() const;
 
+	/// The MMORPG test mode on the remembered map (the home screen's item).
+	void StartMmo();
+	/// Back to the window game: the local server stops.
+	void StopMmo();
+
 private:
 	void OnGameStarted(UAcSimSubsystem& Sim);
 	void Remember(const UAcSimSubsystem& Sim);
 	void LeaveDriving();
 	void SetBlocked(bool bBlocked);
 	void TickFlowTest();
+	/// The MMORPG test mode's banner: the server's state, the refusals.
+	void TickMmo();
+	void OnRefused(const FString& Why);
+	TSharedPtr<SAcMmoBanner> MmoBanner;
+	FDelegateHandle RefusedHandle;
+	/// -AcMmo: start the mode once the game is up.
+	bool bMmoWhenReady = false;
 
 	TSharedPtr<SAcNewGame> Dialog;
 	TSharedPtr<SAcMenu> Menu;

@@ -11,12 +11,14 @@ UDP. Engine-free: `AutocraftCore` and `AutocraftNet`.
 | `world/Interest.cpp` | The snapshot: fog first, rank (driven, engaged, nearby), distance bands, the budget with aging. |
 | `program/Server.h` | `Server`: the region behind `net::ServerEndpoint`. A connection is a pilot; each tick reads, steps, and every third tick sends each client its events and its snapshot. |
 | `program/main.cpp` | `autocraft-server`, the program the game starts. |
-| `client/HeadlessClient.h` | A client with no engine: a mirror of the region, inputs and acks at 60 Hz, requests. For the tests and the bench. |
+| `client/HeadlessClient.h` | The tests' and the bench's client: the game's own `net::Client` (`AutocraftNet/Public/NetClient.h`), a mirror of the region, inputs and acks at 60 Hz, requests. |
 | `tests/` | Isolated scenes, `make -C unreal/server test` (about 7 s: the end-to-end ones run in real time). |
 | `bench/` | `make -C unreal/server bench`: the region's step and snapshot times, and the protocol's bytes a second. |
 
 The protocol itself is in `AutocraftNet` (both ends need it): `NetProtocol.h` (the messages),
-`NetSnapshot.h` (snapshots as deltas), `NetMirror.h` (the client's mirror).
+`NetSnapshot.h` (snapshots as deltas), `NetMirror.h` (the client's mirror), `NetClient.h` (the
+client's end), `NetInterpolator.h` (others drawn in the past), `NetLocalServer.h` (the game starts
+this program).
 
 ## The program
 

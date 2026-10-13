@@ -207,6 +207,7 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	// Listen before the sim loads its session (in its OnWorldBeginPlay).
 	UAcSimSubsystem* Sim = Collection.InitializeDependency<UAcSimSubsystem>();
 	if (Sim) StartedHandle = Sim->OnGameStarted.AddUObject(this, &UAcGameFlowSubsystem::OnGameStarted);
+	if (Sim) RefusedHandle = Sim->OnRefused.AddUObject(this, &UAcGameFlowSubsystem::OnRefused);
 
 	FString Steps;
 	if (FParse::Value(Cmd, TEXT("AcFlowTest="), Steps, false))
@@ -244,7 +245,12 @@ void UAcGameFlowSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	Super::OnWorldBeginPlay(InWorld);
 	const TCHAR* Cmd = FCommandLine::Get();
 	FString Wanted;
-	if (FParse::Value(Cmd, TEXT("AcNewGameDialog="), Wanted, false) || FParse::Param(Cmd, TEXT("AcNewGameDialog")))
+	if (FParse::Param(Cmd, TEXT("AcMmo")))
+	{
+		// Straight into the MMORPG test (hidden test runs).
+		bMmoWhenReady = true;
+	}
+	else if (FParse::Value(Cmd, TEXT("AcNewGameDialog="), Wanted, false) || FParse::Param(Cmd, TEXT("AcNewGameDialog")))
 	{
 		bOpenWhenReady = true;
 		OpenMessage = TEXT("Pick a map and how big it is.");
@@ -291,7 +297,16 @@ void UAcGameFlowSubsystem::Deinitialize()
 	Keys.Reset();
 	CloseNewGame();
 	CloseMenu();
-	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this)) Sim->OnGameStarted.Remove(StartedHandle);
+	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
+	{
+		Sim->OnGameStarted.Remove(StartedHandle);
+		Sim->OnRefused.Remove(RefusedHandle);
+	}
+	if (MmoBanner)
+	{
+		if (const AAcHUD* Hud = AAcHUD::Get(this); Hud && Hud->Root()) Hud->Root()->RemoveLayer(MmoBanner.ToSharedRef());
+		MmoBanner.Reset();
+	}
 	if (UAcSettings::Remembers())
 	{
 		if (const IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PerfPanel")))
@@ -307,6 +322,16 @@ void UAcGameFlowSubsystem::Tick(const float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	if (bOpenWhenReady && OpenNewGame(OpenMessage, OpenChoice)) bOpenWhenReady = false;
+	if (bMmoWhenReady)
+	{
+		const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+		if (Sim && Sim->IsRunning() && AAcHUD::Get(this))
+		{
+			bMmoWhenReady = false;
+			StartMmo();
+		}
+	}
+	TickMmo();
 	if (bHomeWhenReady)
 	{
 		const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
@@ -382,7 +407,7 @@ void UAcGameFlowSubsystem::OnGameStarted(UAcSimSubsystem& Sim)
 
 void UAcGameFlowSubsystem::Remember(const UAcSimSubsystem& Sim)
 {
-	if (!UAcSettings::Remembers() || Sim.IsFixture() || !Sim.Choice()) return;
+	if (!UAcSettings::Remembers() || Sim.IsFixture() || !Sim.Choice() || Sim.IsMmo()) return;
 	UAcSettings& S = UAcSettings::Get();
 	const FString Map = AcSaves::ShortName(*Sim.Choice());
 	const FString Teams = AcSaves::TeamsText(Sim.State().teams());
@@ -423,6 +448,11 @@ void UAcGameFlowSubsystem::Restart()
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim || !Sim->IsRunning()) return;
+	if (Sim->IsMmo())
+	{
+		Sim->Refuse(TEXT("Restart is off in the MMORPG test"));
+		return;
+	}
 	CloseNewGame();
 	LeaveDriving();
 	Sim->Restart();
@@ -432,6 +462,11 @@ bool UAcGameFlowSubsystem::Import(const FString& Path)
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim) return false;
+	if (Sim->IsMmo())
+	{
+		Sim->Refuse(TEXT("Import is off in the MMORPG test"));
+		return false;
+	}
 	LeaveDriving();
 	FString Error;
 	if (!Sim->ImportSession(Path, &Error))
@@ -457,6 +492,11 @@ bool UAcGameFlowSubsystem::OpenNewGame(const FString& Message, TOptional<FAcNewG
 	{
 		if (Initial) Dialog->SetChoice(*Initial);
 		return true;
+	}
+	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsMmo())
+	{
+		Sim->Refuse(TEXT("New game is off in the MMORPG test"));
+		return false;
 	}
 	const AAcHUD* Hud = AAcHUD::Get(this);
 	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
@@ -585,12 +625,16 @@ void UAcGameFlowSubsystem::OnMenuPick(const EAcMenuAction Action)
 		OpenNewGame();
 		break;
 	case EAcMenuAction::QuitToHome:
-		if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this)) Sim->Save();
+		if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsMmo()) StopMmo();
+		else if (Sim) Sim->Save();
 		bHasGame = true;
 		OpenMenu(EAcMenuMode::Home);
 		break;
 	case EAcMenuAction::Settings:
 		// The widget's own page.
+		break;
+	case EAcMenuAction::Mmo:
+		StartMmo();
 		break;
 	case EAcMenuAction::QuitApp:
 		// The sim saves on the way out (Deinitialize).
@@ -622,6 +666,65 @@ void UAcGameFlowSubsystem::SetBlocked(const bool bBlocked)
 	if (UAcPointer* Pointer = UAcPointer::Get(this)) Pointer->SetBlocked(bBlocked);
 	if (AAcRtsPawn* Pawn = AAcRtsPawn::Get(this)) Pawn->SetInputBlocked(bBlocked);
 	if (UAcCommandsSubsystem* Commands = UAcCommandsSubsystem::Get(this)) Commands->SetBlocked(bBlocked);
+}
+
+// MARK: - The MMORPG test mode
+
+void UAcGameFlowSubsystem::StartMmo()
+{
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsRunning()) return;
+	CloseNewGame();
+	LeaveDriving();
+	if (Menu)
+	{
+		// From the home screen: into the mode, running.
+		bPausedBefore = false;
+		CloseMenu();
+	}
+	const FAcNewGameChoice Choice = CurrentChoice();
+	UE_LOG(LogAutocraft, Log, TEXT("menu: MMORPG (TEST) on %s"), *AcSaves::Title(Choice.Map));
+	Sim->StartMmo(Choice.Map);
+	TickMmo();
+}
+
+void UAcGameFlowSubsystem::StopMmo()
+{
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsMmo()) return;
+	LeaveDriving();
+	Sim->StopMmo();
+	TickMmo();
+}
+
+void UAcGameFlowSubsystem::OnRefused(const FString& Why)
+{
+	TickMmo();
+	if (MmoBanner) MmoBanner->AddNote(Why, FPlatformTime::Seconds());
+}
+
+void UAcGameFlowSubsystem::TickMmo()
+{
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	const AAcHUD* Hud = AAcHUD::Get(this);
+	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
+	if (Mmo && !MmoBanner && Root)
+	{
+		Root->AddLayer(MenuLayer + 1)[SAssignNew(MmoBanner, SAcMmoBanner)];
+	}
+	if (!MmoBanner) return;
+	MmoBanner->Update(FPlatformTime::Seconds());
+	if (Mmo)
+	{
+		MmoBanner->SetStatus(Mmo->Message(), Mmo->Phase() == FAcMmoClient::EPhase::Failed);
+	}
+	else
+	{
+		// Out of the mode: the banner goes.
+		if (Root) Root->RemoveLayer(MmoBanner.ToSharedRef());
+		MmoBanner.Reset();
+	}
 }
 
 // MARK: - -AcFlowTest

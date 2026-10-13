@@ -24,6 +24,7 @@
 //   -AcImport=PATH    import a Swift session JSON as the window game (F1,
 //                     AcSaves.h): saved as the Unreal game's own from then on.
 //   -AcSaveDir=PATH   keep the sessions there instead (tests).
+//   -AcMmo            the MMORPG test mode at once (GameFlow starts it).
 // With no -AcMap the game opens on the last map played (`UAcSettings`
 // LastMap, F1); with none yet, highlands-medium and `NeedsMapChoice()`.
 #pragma once
@@ -31,6 +32,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 
+#include "AcMmo.h"
 #include "AcTracker.h"
 #include "PathAhead.h"
 #include "Session.h"
@@ -93,6 +95,9 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FAcFrameEvent, const FAcFrame& /*Frame*/);
 /// victory lap or a restart). Terrain, renderer and HUD rebuild from
 /// `Map()` and `State()` here.
 DECLARE_MULTICAST_DELEGATE_OneParam(FAcGameStarted, class UAcSimSubsystem& /*Sim*/);
+/// Something the player asked for is off (the MMORPG test mode's RTS
+/// controls) or was refused by the server: a short line to show.
+DECLARE_MULTICAST_DELEGATE_OneParam(FAcRefused, const FString& /*Why*/);
 
 UCLASS()
 class AUTOCRAFT_API UAcSimSubsystem : public UTickableWorldSubsystem
@@ -122,19 +127,22 @@ public:
 	/// True once a session is loaded (from OnWorldBeginPlay on).
 	bool IsRunning() const { return Sim.has_value(); }
 
-	/// The simulation. Valid while `IsRunning()`.
-	ac::Simulation& Simulation() { return *Sim; }
-	const ac::Simulation& Simulation() const { return *Sim; }
+	/// The simulation. Valid while `IsRunning()`. In the MMORPG test mode,
+	/// once the server's first snapshot is in: the mirror's (`net::Mirror`),
+	/// which is never stepped here.
+	ac::Simulation& Simulation() { return MirrorSim ? *MirrorSim : *Sim; }
+	const ac::Simulation& Simulation() const { return MirrorSim ? *MirrorSim : *Sim; }
 	/// `Simulation().state`.
-	const ac::GameState& State() const { return Sim->state; }
-	const ac::MapDefinition& Map() const { return *MapDef; }
+	const ac::GameState& State() const { return Simulation().state; }
+	const ac::MapDefinition& Map() const { return MirrorSim ? *MirrorSim->map : *MapDef; }
 	ac::Session& Session() { return *Sess; }
 	const ac::Session& Session() const { return *Sess; }
-	/// The map the session plays, when it is a window map.
-	const std::optional<ac::MapChoice>& Choice() const { return MapChoice; }
+	/// The map the session plays, when it is a window map (the region's in
+	/// the MMORPG test mode).
+	const std::optional<ac::MapChoice>& Choice() const { return MirrorSim ? MmoChoice : MapChoice; }
 	/// The human: always player 0.
 	int64 LocalPlayer() const { return 0; }
-	double GameTime() const { return Sim ? Sim->state.time : 0.0; }
+	double GameTime() const { return Sim ? State().time : 0.0; }
 	/// The render clock (`FAcFrame::Clock`).
 	double Clock() const { return GameTime() + PausedSeconds; }
 
@@ -168,13 +176,13 @@ public:
 
 	/// Turn the AI commanders on or off (`session.ai`), saved.
 	void SetAI(bool bOn);
-	bool IsAIOn() const { return Sim && !Sim->commanders.empty(); }
+	bool IsAIOn() const { return Sim && (MirrorSim || !Sim->commanders.empty()); }
 	/// The fog of war on or off (`session.fog`, saved): the sim is built
 	/// again at once on the same state, keeping the commanders (Swift waits
 	/// for the next build; the playground rebuilds at once). Fires
 	/// `OnGameStarted`.
 	void SetFog(bool bOn);
-	bool IsFogOn() const { return Sim && Sim->vision.has_value(); }
+	bool IsFogOn() const { return Sim && Simulation().vision.has_value(); }
 	/// The session came from -AcSession (a fixture, never saved).
 	bool IsFixture() const { return bFixture; }
 	/// No map was asked for and none remembered (F1 asks for one).
@@ -217,6 +225,21 @@ public:
 	/// The tracker, once a game has been written (nil: nothing tracked).
 	FAcTracker* GetTracker() const { return Tracker.get(); }
 
+	// MARK: The MMORPG test mode (docs/mmorpg-m1.md, T5; AcMmo.h)
+
+	/// The local server on `Map`, and the game drawn from its snapshots:
+	/// the window game waits (not stepped, not saved) until `StopMmo`.
+	void StartMmo(const ac::MapChoice& Map);
+	/// Stops the local server and goes back to the window game.
+	void StopMmo();
+	/// In the mode (starting, connected or failed).
+	bool IsMmo() const { return Mmo != nullptr; }
+	/// The mode's client (null outside it).
+	FAcMmoClient* MmoClient() const { return Mmo.get(); }
+	/// Say no to the player: a short line on the screen (`OnRefused`).
+	void Refuse(const FString& Why);
+	FAcRefused OnRefused;
+
 	/// Where the Unreal game keeps its sessions:
 	/// `~/Library/Application Support/Autocraft/Unreal/sessions` (its own,
 	/// apart from the Swift game's; `AcSaves::Directory`).
@@ -241,11 +264,20 @@ private:
 	void LogEvents(const std::vector<ac::GameEvent>& Events);
 	void Broadcast();
 	void TickRunFor();
+	/// A frame of the MMORPG test mode: the client pumps, nothing steps here.
+	void TickMmo(double RealDelta);
+	/// The game drawn becomes the mirror's (or the window game's again).
+	void ShowSimulation(ac::Simulation* Mirror);
 	/// One fixed step, its searches worked out ahead on other threads when
 	/// `ac.SimPathAhead` says so (ac::PathAhead: the same game, bit for bit).
 	std::vector<ac::GameEvent> StepOnce();
 
 	std::optional<ac::Simulation> Sim;
+	/// The MMORPG test mode's client, and its mirror's simulation once shown.
+	std::unique_ptr<FAcMmoClient> Mmo;
+	ac::Simulation* MirrorSim = nullptr;
+	std::optional<ac::MapChoice> MmoChoice;
+	int64 MmoGeneration = 0;
 	/// The worker threads of `StepOnce` (made on first use).
 	std::unique_ptr<ac::PathAhead> PathAhead;
 	std::optional<ac::Session> Sess;

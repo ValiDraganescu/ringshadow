@@ -129,6 +129,12 @@ bool UAcPilotBuildSubsystem::Key(const FString& K)
 	ac::Simulation& S = Sim->Simulation();
 	const std::optional<ac::Unit> U = S.pilotUnit();
 	if (!U || !ac::PilotBuild::builds(U->kind)) return false;
+	if (Sim->IsMmo() && K == TEXT("b"))
+	{
+		// The MMORPG test: building is a request to the server later.
+		Note(TEXT("Building is off in the MMORPG test"));
+		return true;
+	}
 	if (K == TEXT("place"))
 	{
 		// `pilotPress` with a building held out.

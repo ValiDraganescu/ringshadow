@@ -106,6 +106,13 @@ void UAcSimSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 
 void UAcSimSubsystem::Deinitialize()
 {
+	if (Mmo)
+	{
+		// Quit in the MMORPG test: the local server stops with the game.
+		MirrorSim = nullptr;
+		Mmo->Stop();
+		Mmo.reset();
+	}
 	if (Sim && !bFixture && !bNoSave)
 	{
 		// The last write, on this thread: the process may be going away.
@@ -313,6 +320,11 @@ void UAcSimSubsystem::OpenPlayground(const bool bClear)
 	// `GameController.init(playground: true)`: the session `playground`,
 	// signature `playground`; Clear is `SessionStore.restart` on it.
 	// Clear keeps the fog as it was (the bar's switch), whatever is on disk.
+	if (Mmo)
+	{
+		Refuse(TEXT("The playground is off in the MMORPG test"));
+		return;
+	}
 	const std::optional<bool> KeepFog = Sess && MapDef && MapDef->playground.value_or(false) ? Sess->fog : std::nullopt;
 	MapDef = ac::WindowMaps::playground();
 	MapChoice.reset();
@@ -373,6 +385,11 @@ void UAcSimSubsystem::StartSimulation(const std::vector<ac::Commander>* KeepComm
 void UAcSimSubsystem::SetAI(const bool bOn)
 {
 	if (!Sim) return;
+	if (Mmo)
+	{
+		Refuse(TEXT("The AI switch is off in the MMORPG test"));
+		return;
+	}
 	// Swift `setAI`: nil when on.
 	Sess->ai = bOn ? std::nullopt : std::optional<bool>(false);
 	Sim->commanders = bOn ? ac::Commander::all(*MapDef) : std::vector<ac::Commander>{};
@@ -383,6 +400,11 @@ void UAcSimSubsystem::SetAI(const bool bOn)
 void UAcSimSubsystem::SetFog(const bool bOn)
 {
 	if (!Sim) return;
+	if (Mmo)
+	{
+		Refuse(TEXT("The fog switch is off in the MMORPG test"));
+		return;
+	}
 	Sess->fog = bOn;
 	UE_LOG(LogAutocraft, Log, TEXT("fog: %s"), bOn ? TEXT("on") : TEXT("off"));
 	if (IsFogOn() != bOn)
@@ -397,6 +419,12 @@ void UAcSimSubsystem::SetFog(const bool bOn)
 
 bool UAcSimSubsystem::ImportSession(const FString& Path, FString* Error)
 {
+	if (Mmo)
+	{
+		Refuse(TEXT("Import is off in the MMORPG test"));
+		if (Error) *Error = TEXT("off in the MMORPG test");
+		return false;
+	}
 	FString Why;
 	std::optional<AcSaves::FImported> In = AcSaves::Import(Path, Why);
 	if (!In)
@@ -426,6 +454,11 @@ bool UAcSimSubsystem::ImportSession(const FString& Path, FString* Error)
 void UAcSimSubsystem::NewGame(const ac::MapChoice& Choice, const std::optional<std::vector<int64_t>>& Teams,
 	const std::optional<bool> AI, const std::optional<bool> Fog)
 {
+	if (Mmo)
+	{
+		Refuse(TEXT("New game is off in the MMORPG test"));
+		return;
+	}
 	if (Sim && !bFixture)
 	{
 		// The game running now ends here, unfinished (Swift `track(abandoned:)`).
@@ -439,6 +472,11 @@ void UAcSimSubsystem::NewGame(const ac::MapChoice& Choice, const std::optional<s
 void UAcSimSubsystem::Restart()
 {
 	if (!Sim) return;
+	if (Mmo)
+	{
+		Refuse(TEXT("Restart is off in the MMORPG test"));
+		return;
+	}
 	Sess->state = Sim->state;
 	UE_LOG(LogAutocraft, Log, TEXT("game %s abandoned at %.1f min"), *Text(Sess->game.value_or("")), Sim->state.time / 60);
 	Track(true);
@@ -467,6 +505,12 @@ void UAcSimSubsystem::NextGame()
 
 bool UAcSimSubsystem::Save()
 {
+	if (Mmo)
+	{
+		// The world is the server's (it saves nothing yet).
+		Refuse(TEXT("Saving is off in the MMORPG test"));
+		return false;
+	}
 	if (!Sim || bFixture || bNoSave) return false;
 	Track();
 	return SaveSession();
@@ -476,7 +520,7 @@ void UAcSimSubsystem::Track(const bool bAbandoned)
 {
 	// Real window games only: no fixture, no -AcNoSave (every hidden shot and
 	// test run; -AcRunFor sets it), no playground.
-	if (!Sim || !Sess || bFixture || bNoSave || RunFor || IsPlayground()) return;
+	if (!Sim || !Sess || bFixture || bNoSave || RunFor || IsPlayground() || Mmo) return;
 	if (!Tracker) Tracker = std::make_unique<FAcTracker>(AcSaves::TrackingFile());
 	// An old session gets its game id before its rows are keyed by it.
 	if (!Sess->game) Sess->fillGame();
@@ -504,6 +548,12 @@ bool UAcSimSubsystem::SaveSession()
 bool UAcSimSubsystem::Issue(const ac::Command& Command)
 {
 	if (!Sim) return false;
+	if (Mmo)
+	{
+		// Orders, cards and level picks become requests to the server later.
+		Refuse(Command.is<ac::Command::Pick>() ? TEXT("Level picks are off in the MMORPG test") : TEXT("Orders are off in the MMORPG test"));
+		return false;
+	}
 	const bool bDone = Sim->issue(Command, Pending);
 	// A pick that took stamps its level: the tracking database hears of it now.
 	if (bDone && Command.is<ac::Command::Pick>()) Track();
@@ -512,7 +562,7 @@ bool UAcSimSubsystem::Issue(const ac::Command& Command)
 
 const ac::GameState& UAcSimSubsystem::Shown()
 {
-	if (!ShownCache) ShownCache = Sim->shown(LocalPlayer());
+	if (!ShownCache) ShownCache = Simulation().shown(LocalPlayer());
 	return *ShownCache;
 }
 
@@ -531,6 +581,11 @@ void UAcSimSubsystem::Tick(const float DeltaTime)
 	Super::Tick(DeltaTime);
 	if (!Sim) return;
 	FAcPerfTick PerfTick;  // the tick and its parts (AcPerf.h)
+	if (Mmo)
+	{
+		TickMmo((double)DeltaTime);
+		return;
+	}
 	if (RunFor)
 	{
 		TickRunFor();
@@ -711,7 +766,7 @@ const TCHAR* UAcSimSubsystem::EventName(const ac::GameEvent& Event)
 
 void UAcSimSubsystem::LogEvents(const std::vector<ac::GameEvent>& Events)
 {
-	const ac::GameState& S = Sim->state;
+	const ac::GameState& S = State();
 	for (const ac::GameEvent& E : Events)
 	{
 		if (RunFor) RunFor->EventCounts.FindOrAdd(EventName(E)) += 1;
@@ -734,6 +789,90 @@ void UAcSimSubsystem::LogEvents(const std::vector<ac::GameEvent>& Events)
 				(long long)T->unit, (long long)T->owner, T->at.x, T->at.y);
 		}
 	}
+}
+
+// MARK: - The MMORPG test mode
+
+void UAcSimSubsystem::StartMmo(const ac::MapChoice& Choice)
+{
+	if (!Sim) return;
+	if (Mmo) StopMmo();
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: the MMORPG test on %s (the window game waits)"), *Text(Choice.name()));
+	// The window game as it stands goes to disk first; it waits unstepped.
+	if (!bFixture && !bNoSave) SaveSession();
+	Mmo = std::make_unique<FAcMmoClient>();
+	MmoGeneration = 0;
+	Mmo->Start(Choice, FPlatformTime::Seconds());
+}
+
+void UAcSimSubsystem::StopMmo()
+{
+	if (!Mmo) return;
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: leaving the MMORPG test"));
+	Mmo->Stop();
+	// Out of the mode before the game rebuilds on the window game.
+	const std::unique_ptr<FAcMmoClient> Old = std::move(Mmo);
+	MmoChoice.reset();
+	ShowSimulation(nullptr);
+}
+
+void UAcSimSubsystem::ShowSimulation(ac::Simulation* Mirror)
+{
+	MirrorSim = Mirror;
+	ShownCache.reset();
+	Pending.clear();
+	Frame = FAcFrame();
+	Frame.State = &State();
+	Frame.Time = State().time;
+	Frame.Clock = Frame.Time + PausedSeconds;
+	// Terrain, renderer, HUD, fog and the pawns build again from `Map()`
+	// and `State()`.
+	OnGameStarted.Broadcast(*this);
+}
+
+void UAcSimSubsystem::Refuse(const FString& Why)
+{
+	UE_LOG(LogAutocraft, Log, TEXT("refused: %s"), *Why);
+	OnRefused.Broadcast(Why);
+}
+
+void UAcSimSubsystem::TickMmo(const double RealDelta)
+{
+	FAcMmoClient& Client = *Mmo;
+	Client.Tick(FPlatformTime::Seconds());
+	for (const FString& Note : Client.TakeNotes()) Refuse(Note);
+	// The first snapshot (or a new game on the server): draw the mirror.
+	if (ac::net::Mirror* M = Client.Mirror(); M && Client.Generation() != MmoGeneration)
+	{
+		MmoGeneration = Client.Generation();
+		MmoChoice = M->region().map;
+		ShowSimulation(&M->simulation());
+	}
+	const double Dt = FMath::Clamp(RealDelta, 0.0, MaxFrameSeconds);
+	Frame.RealDelta = Dt;
+	// Nothing steps here: the server stepped, the snapshots moved the mirror.
+	Frame.Steps = 0;
+	Frame.Alpha = 0.0;
+	Frame.AllEvents = MoveTemp(Pending);
+	Pending.clear();
+	if (MirrorSim)
+	{
+		std::vector<ac::GameEvent> Heard = Client.TakeEvents();
+		Frame.AllEvents.insert(Frame.AllEvents.end(), std::make_move_iterator(Heard.begin()), std::make_move_iterator(Heard.end()));
+	}
+	else
+	{
+		// Starting: the window game shows, held still.
+		PausedSeconds += Dt;
+	}
+	Frame.State = &State();
+	Frame.Time = State().time;
+	Frame.Clock = Frame.Time + PausedSeconds;
+	// The server sends only what this side may know: no gate here.
+	Frame.Events = Frame.AllEvents;
+	LogEvents(Frame.AllEvents);
+	ShownCache.reset();
+	Broadcast();
 }
 
 // MARK: - -AcRunFor

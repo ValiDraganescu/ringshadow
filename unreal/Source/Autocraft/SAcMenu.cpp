@@ -107,6 +107,8 @@ TArray<SAcMenu::FButton> SAcMenu::Buttons() const
 	TArray<FButton> B;
 	if (!GameTitle.IsEmpty()) B.Add({EAcMenuAction::Resume, TEXT("RESUME GAME")});
 	B.Add({EAcMenuAction::NewGame, TEXT("NEW GAME")});
+	// The MMORPG test mode (docs/mmorpg-m1.md): the local server's world.
+	B.Add({EAcMenuAction::Mmo, TEXT("MMORPG (TEST)")});
 	B.Add({EAcMenuAction::Settings, TEXT("SETTINGS")});
 	B.Add({EAcMenuAction::QuitApp, TEXT("QUIT")});
 	return B;

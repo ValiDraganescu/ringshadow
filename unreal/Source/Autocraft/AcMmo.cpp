@@ -1,0 +1,329 @@
+#include "AcMmo.h"
+
+#include "AcLog.h"
+
+#include "HAL/PlatformProcess.h"
+#include "Misc/Paths.h"
+
+#include <string>
+#include <unistd.h>
+
+namespace
+{
+	FString Text(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
+
+	std::string Utf8(const FString& S) { return std::string(TCHAR_TO_UTF8(*S)); }
+
+	/// "~/Library/…" for the player's eyes.
+	FString Tilde(const FString& Path)
+	{
+		const FString Home = FPaths::Combine(FPlatformProcess::UserHomeDir(), TEXT(""));
+		return Path.StartsWith(Home) ? TEXT("~/") + Path.RightChop(Home.Len()) : Path;
+	}
+}
+
+FAcMmoClient::FAcMmoClient() = default;
+
+FAcMmoClient::~FAcMmoClient()
+{
+	Stop();
+}
+
+FString FAcMmoClient::ServerProgram()
+{
+	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("server"), TEXT("build"), TEXT("autocraft-server")));
+}
+
+FString FAcMmoClient::ServerLog()
+{
+	return FPaths::Combine(FPlatformProcess::UserHomeDir(), TEXT("Library"), TEXT("Logs"), TEXT("Autocraft"), TEXT("server.log"));
+}
+
+void FAcMmoClient::Fail(const FString& Why)
+{
+	CurrentPhase = EPhase::Failed;
+	StatusMessage = Why;
+	UE_LOG(LogAutocraft, Warning, TEXT("mmo: %s"), *Why);
+	Server.stop(3.0);
+}
+
+bool FAcMmoClient::Start(const ac::MapChoice& InMap, const double Now)
+{
+	Stop();
+	Map = InMap;
+	Interp.reset();
+	Net.Reset();
+	SeenMirror = nullptr;
+	SeenGame = -1;
+	WantedUnit.reset();
+	bAutoTaken = false;
+	Asked.Reset();
+	Notes.Reset();
+	Events.clear();
+	const FString Program = ServerProgram();
+	if (!FPaths::FileExists(Program))
+	{
+		// The packaged game has no server yet (packaging is a later task).
+		UE_LOG(LogAutocraft, Warning, TEXT("mmo: no server program at %s (build it: make -C unreal/server; packaged games do not carry it yet)"),
+			*Program);
+		Fail(FString::Printf(TEXT("The local server is not built. Build it with: make -C unreal/server\n(looked for %s)"), *Tilde(Program)));
+		return false;
+	}
+	// The one-time token: random, as text on the server's standard input.
+	uint8_t Bytes[16];
+	if (!ac::net::secureRandom(Bytes, sizeof Bytes))
+	{
+		Fail(TEXT("No random token for the local server."));
+		return false;
+	}
+	Token.clear();
+	static const char Hex[] = "0123456789abcdef";
+	for (const uint8_t B : Bytes)
+	{
+		Token.push_back(Hex[B >> 4]);
+		Token.push_back(Hex[B & 15]);
+	}
+	const std::vector<std::string> Args = {"--map", std::string(ac::rawValue(Map.style)), "--size", std::string(ac::rawValue(Map.size)),
+		"--starts", std::to_string(Map.players), "--bind", "127.0.0.1", "--port", "0", "--parent-pid", std::to_string(getpid())};
+	if (!Server.start(Utf8(Program), Args, Token))
+	{
+		Fail(FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
+		return false;
+	}
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on %s (pid %d), log %s"), *Program, *Text(Map.name()), Server.pid(), *ServerLog());
+	CurrentPhase = EPhase::Starting;
+	StatusMessage = TEXT("Starting the local server…");
+	StartedAt = Now;
+	return true;
+}
+
+void FAcMmoClient::Stop()
+{
+	if (CurrentPhase == EPhase::Off) return;
+	if (Net && Net->connected())
+	{
+		// The unit goes back to its AI; the server tells its other clients.
+		if (Driven()) Net->handBack();
+		Net->flush(LastNow);
+	}
+	const bool bRunning = Server.pid() > 0;
+	const bool bClean = Server.stop(3.0);
+	if (bRunning) UE_LOG(LogAutocraft, Log, TEXT("mmo: local server stopped (%s)"), bClean ? TEXT("clean") : *Text(Server.error()));
+	Net.Reset();
+	Socket.close();
+	Interp.reset();
+	SeenMirror = nullptr;
+	SeenGame = -1;
+	WantedUnit.reset();
+	CurrentPhase = EPhase::Off;
+	StatusMessage.Reset();
+}
+
+void FAcMmoClient::Connect(const double Now)
+{
+	if (!Socket.open(ac::net::Address::loopback(0)))
+	{
+		Fail(TEXT("No UDP socket for the connection."));
+		return;
+	}
+	ac::net::ClientConfig Config;
+	Config.server = ac::net::Address::loopback(Server.port());
+	Config.token.assign(Token.begin(), Token.end());
+	Net = MakeUnique<ac::net::Client>(Socket, Config);
+	Net->onSnapshot = [this](const ac::net::SnapshotPart& Part)
+	{
+		// The server's clock, and where everyone stood in this snapshot.
+		Interp.heard(Part.snapshot.serverTick, LastNow);
+		if (const ac::net::Mirror* M = Net->mirror()) Interp.record(M->serverTick(), M->simulation().state.units);
+	};
+	Net->connect(Now);
+	ConnectAt = Now;
+	NextInputAt = 0;
+	CurrentPhase = EPhase::Connecting;
+	StatusMessage = FString::Printf(TEXT("Connecting to the local server (port %d)…"), (int32)Server.port());
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: server on port %d, connecting"), (int32)Server.port());
+}
+
+void FAcMmoClient::Tick(const double Now)
+{
+	LastNow = Now;
+	if (CurrentPhase == EPhase::Off || CurrentPhase == EPhase::Failed) return;
+	const ac::net::LocalServer::State State = Server.poll();
+	if (State == ac::net::LocalServer::State::exited)
+	{
+		Fail(FString::Printf(TEXT("The local server stopped (%s).\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
+		return;
+	}
+	if (CurrentPhase == EPhase::Starting)
+	{
+		if (State == ac::net::LocalServer::State::running) Connect(Now);
+		else if (Now - StartedAt > StartSeconds)
+		{
+			Fail(FString::Printf(TEXT("The local server did not give its port in %.0f s.\nIts log: %s"), StartSeconds, *Tilde(ServerLog())));
+		}
+		if (CurrentPhase != EPhase::Connecting) return;
+	}
+	Net->receive(Now);
+	if (!Net->disconnectReason().empty())
+	{
+		Fail(FString::Printf(TEXT("Lost the local server: %s.\nIts log: %s"), *Text(Net->disconnectReason()), *Tilde(ServerLog())));
+		return;
+	}
+	const ac::net::Mirror* M = Net->mirror();
+	if (!M || M->snapshotId() == 0)
+	{
+		if (Now - ConnectAt > StartSeconds)
+		{
+			Fail(FString::Printf(TEXT("The local server did not welcome us in %.0f s.\nIts log: %s"), StartSeconds, *Tilde(ServerLog())));
+			return;
+		}
+	}
+	else
+	{
+		if (!M->matches())
+		{
+			Fail(TEXT("The local server's map is not the one this game builds (another version?)."));
+			return;
+		}
+		if (M != SeenMirror || M->game() != SeenGame)
+		{
+			SeenMirror = M;
+			SeenGame = M->game();
+			MirrorGeneration += 1;
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: welcomed on %s, game %lld, %d units in view"), *Text(M->region().mapName), (long long)M->game(),
+				(int32)M->simulation().state.units.size());
+		}
+		if (CurrentPhase != EPhase::Playing)
+		{
+			CurrentPhase = EPhase::Playing;
+			StatusMessage.Reset();
+		}
+		if (bAutoTake && !bAutoTaken)
+		{
+			// A Prospector of the pilot's side, the first the mirror holds.
+			for (const ac::Unit& U : M->simulation().state.units)
+			{
+				if (U.owner == ac::Pilot::player && U.kind == ac::UnitKind::prospector && M->simulation().canDrive(U))
+				{
+					bAutoTaken = true;
+					Want(U.id);
+					break;
+				}
+			}
+		}
+	}
+	ReadReplies();
+	for (ac::GameEvent& E : Net->events) Events.push_back(std::move(E));
+	Net->events.clear();
+	SendInputs(Now);
+	Net->flush(Now);
+	Blend(Now);
+}
+
+void FAcMmoClient::SendInputs(const double Now)
+{
+	if (!Net->welcome()) return;
+	if (NextInputAt <= 0) NextInputAt = Now;
+	int32 Sent = 0;
+	while (Now >= NextInputAt)
+	{
+		ac::net::PilotInput& In = Net->steer;
+		ac::net::Mirror* M = Net->mirror();
+		ac::Simulation* S = M ? &M->simulation() : nullptr;
+		if (S && S->pilot && WantedUnit && S->pilot->unit == *WantedUnit)
+		{
+			// What the pilot pawn wrote this frame, as it writes it in the RTS game.
+			ac::Pilot& P = *S->pilot;
+			In.walk = P.walk;
+			In.heading = P.heading;
+			In.act = P.act;
+			In.ability = P.ability;
+			In.hold = P.hold;
+			In.mend = P.mend;
+			In.crosshair = P.crosshair;
+			// Presses go once.
+			P.act = false;
+			P.ability = false;
+		}
+		else
+		{
+			// Not steering: stand, facing where it faces.
+			const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+			In = ac::net::PilotInput();
+			In.heading = U ? U->heading : 0.0;
+		}
+		Net->sendInput();
+		NextInputAt += 1.0 / InputHz;
+		if (++Sent >= 6)
+		{
+			// A long frame: the next tick from now, not a burst to catch up.
+			NextInputAt = Now + 1.0 / InputHz;
+			break;
+		}
+	}
+}
+
+void FAcMmoClient::Blend(const double Now)
+{
+	ac::net::Mirror* M = Mirror();
+	if (!M || M->snapshotId() == 0) return;
+	if (const std::optional<double> At = Interp.renderTick(Now))
+	{
+		Interp.apply(*At, M->simulation().state.units, M->driven());
+	}
+}
+
+void FAcMmoClient::ReadReplies()
+{
+	for (auto It = Net->replies.begin(); It != Net->replies.end();)
+	{
+		const ac::net::ReplyMessage& R = It->second;
+		const std::optional<int64>* What = Asked.Find(R.request);
+		if (!R.done)
+		{
+			const bool bTake = What && What->has_value();
+			Notes.Add(FString::Printf(TEXT("%s: %s"), bTake ? TEXT("Not taken") : TEXT("Not handed back"), *Text(R.reason)));
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: request %u refused: %s"), R.request, *Text(R.reason));
+			// The take was refused: no longer wanted.
+			if (bTake && WantedUnit == **What) WantedUnit.reset();
+		}
+		Asked.Remove(R.request);
+		It = Net->replies.erase(It);
+	}
+}
+
+void FAcMmoClient::Want(const std::optional<int64> Unit)
+{
+	if (!Net || !Net->welcome())
+	{
+		Notes.Add(TEXT("Not connected to the local server yet"));
+		return;
+	}
+	if (Unit == WantedUnit) return;
+	WantedUnit = Unit;
+	// Nothing to hand back: the server took it already (it died, say).
+	if (!Unit && !Driven()) return;
+	const uint32 Id = Unit ? Net->take(*Unit) : Net->handBack();
+	Asked.Add(Id, Unit);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: request %u: %s"), Id, Unit ? *FString::Printf(TEXT("take #%lld"), (long long)*Unit) : TEXT("hand back"));
+}
+
+std::optional<int64> FAcMmoClient::Driven() const
+{
+	const ac::net::Mirror* M = Mirror();
+	return M ? M->driven() : std::nullopt;
+}
+
+std::vector<ac::GameEvent> FAcMmoClient::TakeEvents()
+{
+	std::vector<ac::GameEvent> Out = std::move(Events);
+	Events.clear();
+	return Out;
+}
+
+TArray<FString> FAcMmoClient::TakeNotes()
+{
+	TArray<FString> Out = MoveTemp(Notes);
+	Notes.Reset();
+	return Out;
+}

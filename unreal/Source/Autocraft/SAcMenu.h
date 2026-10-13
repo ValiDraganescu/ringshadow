@@ -6,6 +6,7 @@
 //            time played]                      [RESUME]
 //           [RESUME GAME] (when there is one)  [QUIT TO HOME]
 //           [NEW GAME]                         [SETTINGS]
+//           [MMORPG (TEST)]
 //           [SETTINGS]
 //           [QUIT]
 //
@@ -24,7 +25,7 @@
 class FAcLauncherArt;
 
 enum class EAcMenuMode : uint8 { Home, Pause };
-enum class EAcMenuAction : uint8 { Resume, NewGame, QuitToHome, QuitApp, Settings };
+enum class EAcMenuAction : uint8 { Resume, NewGame, QuitToHome, QuitApp, Settings, Mmo };
 
 DECLARE_DELEGATE_OneParam(FAcOnMenuPick, EAcMenuAction);
 

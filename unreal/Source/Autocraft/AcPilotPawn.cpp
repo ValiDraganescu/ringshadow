@@ -401,7 +401,20 @@ bool AAcPilotPawn::TakeOver(const int64 Id)
 	UAcSimSubsystem* Sim = SimOf(this);
 	if (!Sim || !Sim->IsRunning()) return false;
 	ac::Simulation& S = Sim->Simulation();
-	if (!S.take(Id)) return false;
+	if (FAcMmoClient* Mmo = Sim->MmoClient())
+	{
+		// The MMORPG test: the server decides. Ask; `SyncMmo` dives in when
+		// the mirror says the unit is ours.
+		if (!S.pilot || S.pilot->unit != Id || Mmo->Wanted() != Id)
+		{
+			Mmo->Want(Id);
+			return false;
+		}
+	}
+	else if (!S.take(Id))
+	{
+		return false;
+	}
 	const std::optional<ac::Unit> U = S.pilotUnit();
 	if (!U) return false;
 	const bool bWas = Driving();
@@ -452,7 +465,20 @@ void AAcPilotPawn::Leave()
 	if (Sim && Sim->IsRunning())
 	{
 		if (const std::optional<ac::Unit> U = Sim->Simulation().pilotUnit()) At = U->position;
-		Sim->Simulation().take(std::nullopt);
+		if (FAcMmoClient* Mmo = Sim->MmoClient())
+		{
+			// The MMORPG test: hand it back to the server; stand still meanwhile.
+			if (ac::Simulation& S = Sim->Simulation(); S.pilot)
+			{
+				S.pilot->walk = ac::Vec2(0, 0);
+				S.pilot->act = S.pilot->ability = S.pilot->hold = S.pilot->mend = false;
+			}
+			if (Mmo->Wanted()) Mmo->Want(std::nullopt);
+		}
+		else
+		{
+			Sim->Simulation().take(std::nullopt);
+		}
 	}
 	const int64 Was = DrivenId;
 	DrivenId = INDEX_NONE;
@@ -504,6 +530,12 @@ void AAcPilotPawn::Next()
 	}
 	if (!Best) return;
 	const int64 NextId = Best->id;
+	if (FAcMmoClient* Mmo = Sim->MmoClient())
+	{
+		// Asked of the server; `SyncMmo` moves the view when it is given.
+		Mmo->Want(NextId);
+		return;
+	}
 	S.take(std::nullopt);
 	if (!TakeOver(NextId))
 	{
@@ -882,7 +914,28 @@ void AAcPilotPawn::OnFrame(const FAcFrame& Frame)
 		Leave();
 		return;
 	}
+	SyncMmo();
 	Follow(Frame);
+}
+
+void AAcPilotPawn::SyncMmo()
+{
+	UAcSimSubsystem* Sim = SimOf(this);
+	FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo || !Sim->IsRunning() || !Mmo->Mirror() || Mmo->Phase() == FAcMmoClient::EPhase::Failed) return;
+	const std::optional<int64> Driven = Mmo->Driven();
+	const ac::Simulation& S = Sim->Simulation();
+	if (Driven && Mmo->Wanted() == Driven && S.pilot && S.pilot->unit == *Driven && (!Driving() || DrivenId != *Driven))
+	{
+		// The server gave the unit asked for: dive in (or over to it).
+		TakeOver(*Driven);
+	}
+	else if (Driving() && !Driven && Mmo->Wanted() == DrivenId)
+	{
+		// The server no longer has us driving it (it died, say).
+		UE_LOG(LogAutocraft, Log, TEXT("pilot: the server took #%lld back"), (long long)DrivenId);
+		Leave();
+	}
 }
 
 void AAcPilotPawn::Follow(const FAcFrame& Frame)
