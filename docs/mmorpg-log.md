@@ -280,3 +280,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Manager: validate ok on all 10 regions; start preview checked.
 - I Region files with sites need a rebuilt client (NetMirror parses).
 - T P5 skill screen → progression-core; HUD bits after V1.
+- T P3 code 3602773: server 93, net 66, core 437; run pending.
+- D User (via V2): pause all builds until tomorrow; all workers paused.
+- N Uncommitted at pause: V2 (ore, giant, night, clouds), V1, P5.
+- I start.json deposits in a near-straight line: region work.
