@@ -187,3 +187,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Inputs carry visit (protocol v2); stale inputs dropped after crossing.
 - D Simulation::xpScale in core (default 1); world regions 0.1.
 - N New pilot faces nearest ore; region files have no heading.
+- T Q2b done 3a3a477: cards left, region box top-left, arrival title.
+- N Build menu rows: Citadel 400, Derrick 75, greyed "needs N".
+- N Re-shoot unreal/server/build/shots/q2b: manager checked 05, 08.
+- N Suites (manager): server 70, net 56, core 391.
+- I Open: HUD plate frames vanish after first level-up.
+- I Open: clipped bar top centre during weld; buildings overlap pad.
+- T Q5 leftovers → background agent.
