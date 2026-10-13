@@ -79,6 +79,14 @@ public:
 	EAcConsoleStyle Style() const { return Look; }
 	/// What the cab's lamps say (`Console.setLamps`; only the cab has them).
 	void SetLamps(EAcCabLamps InLamps);
+	/// The MMORPG test mode (docs/mmorpg-m4.md Q4): top-down, the card's
+	/// grid and the view switch give way to the mode's keys (nothing there
+	/// to order; the view switch is the driver's); driving, as always.
+	void SetMmo(bool bInMmo);
+	/// The 5 × 3 card grid is drawn (not in the MMORPG top-down).
+	bool ShowsCard() const { return !(bMmo && Look == EAcConsoleStyle::Rts); }
+	/// The view switch is drawn (not in the MMORPG top-down).
+	bool ShowsViewSwitch() const { return ShowsCard(); }
 	/// Who hears card presses after construction (D5, `UAcCommandsSubsystem`).
 	void SetOnCardButton(FAcOnCardButton In) { OnCardButton = MoveTemp(In); }
 
@@ -146,6 +154,8 @@ private:
 	void PaintBase(class FAcConsolePaint& P) const;
 	void PaintCenter(class FAcConsolePaint& P, const FAcCardInfo& Info) const;
 	void PaintCard(class FAcConsolePaint& P) const;
+	/// The MMORPG top-down: the mode's keys in the card's well.
+	void PaintMmoKeys(class FAcConsolePaint& P) const;
 	void PaintOver(class FAcConsolePaint& P) const;
 	void PaintKeyed(class FAcConsolePaint& P, const FString& Text, double Size, const FLinearColor& Key,
 		const FLinearColor& Rest, FVector2D At) const;
@@ -171,6 +181,7 @@ private:
 	/// The layout was made warped (`ac.ConsoleWarp`).
 	bool bLaidWarped = true;
 	EAcConsoleStyle Look = EAcConsoleStyle::Rts;
+	bool bMmo = false;
 	EAcCabLamps Lamps = EAcCabLamps::Idle;
 	double LampsSince = 0;
 

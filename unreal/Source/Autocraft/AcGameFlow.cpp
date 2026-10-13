@@ -68,6 +68,14 @@ namespace
 			{
 				if (K == EKeys::Escape || (K == EKeys::M && !Event.IsCommandDown())) { F->CloseWorldMap(); return true; }
 				if (K == EKeys::Enter) { W->Fly(); return true; }
+				// The arrows (and WASD) move the pad pick.
+				if (!Event.IsCommandDown())
+				{
+					if (K == EKeys::Left || K == EKeys::A) { W->MovePick(-1, 0); return true; }
+					if (K == EKeys::Right || K == EKeys::D) { W->MovePick(1, 0); return true; }
+					if (K == EKeys::Up || K == EKeys::W) { W->MovePick(0, -1); return true; }
+					if (K == EKeys::Down || K == EKeys::S) { W->MovePick(0, 1); return true; }
+				}
 				// The game's own keys wait while the map is up (⌘Q still quits).
 				return !Event.IsCommandDown();
 			}
@@ -889,6 +897,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 		return;
 	}
 	const FString Step = T.Steps[T.Step].TrimStartAndEnd();
+	if (Step == TEXT("mmokeys") || Step == TEXT("mmohud"))
+	{
+		TickMmoHudFlow(Step);
+		return;
+	}
 	if (Step.StartsWith(TEXT("mmo")))
 	{
 		TickMmoFlow(Step);

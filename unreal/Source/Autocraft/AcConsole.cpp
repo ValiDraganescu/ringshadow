@@ -245,6 +245,7 @@ void UAcConsoleSubsystem::OnFrame(const FAcFrame& Frame)
 	}
 	if (Info && !HeldNote.IsEmpty()) Info->Note = HeldNote;
 	if (Info && Info->Buttons.IsEmpty() && bDemo) Info->Buttons = DemoButtons();
+	ConsoleWidget->SetMmo(Sim->IsMmo());
 	ConsoleWidget->Show(Info, FPlatformTime::Seconds());
 
 	// The camera keeps the map's near edge above the console.

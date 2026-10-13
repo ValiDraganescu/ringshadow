@@ -200,6 +200,11 @@ private:
 	FMmoLeft MmoLeft;
 	/// Builds a Citadel next to the driven Prospector (once); its spot.
 	bool MmoBuildCitadel();
+	/// `mmokeys` (the world map by its keys) and `mmohud` (the HUD in the
+	/// mode, top-down and driving): AcMmoHudFlowTest.cpp.
+	void TickMmoHudFlow(const FString& Step);
+	/// A key through the flow's key processor, as the player presses it.
+	bool PressFlowKey(const struct FKey& Key);
 	FVector2D RtsTargetWas = FVector2D::ZeroVector;
 	void Check(bool bOk, const FString& What);
 	void NextStep();

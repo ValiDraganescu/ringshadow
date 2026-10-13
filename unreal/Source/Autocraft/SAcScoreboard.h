@@ -28,8 +28,22 @@ public:
 	void Construct(const FArguments& InArgs);
 	void Update(const ac::GameState& State, int64 LocalPlayer);
 	/// Count every unit, not only the army (the MMORPG test: the pilot's
-	/// Prospectors are its units).
-	void SetCountAllUnits(bool bAll) { bAllUnits = bAll; }
+	/// Prospectors are its units): "■ 1 UNITS", no games won.
+	void SetCountAllUnits(bool bAll)
+	{
+		if (bAll == bAllUnits) return;
+		bAllUnits = bAll;
+		Key.Reset();
+	}
+	/// The games won are shown (not in the MMORPG test).
+	bool ShowsGamesWon() const
+	{
+		for (const FSide& S : Sides)
+		{
+			if (S.ScoreX >= 0) return true;
+		}
+		return !Middle.IsEmpty();
+	}
 	/// The count shown for a player (-1: not shown).
 	int64 ShownCount(int64 Player) const;
 
@@ -63,6 +77,8 @@ private:
 	/// Two sides: the "a : b" in the middle.
 	FString Middle;
 	float Width = MinWidth;
+	/// The MMORPG test: where "UNITS" is drawn (< 0: not).
+	float UnitsX = -1;
 	/// What the layout was made from, to skip it when nothing changed.
 	FString Key;
 	bool bAllUnits = false;

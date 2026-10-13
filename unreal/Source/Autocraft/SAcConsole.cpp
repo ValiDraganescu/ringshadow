@@ -140,6 +140,14 @@ void SAcConsole::SetStyle(const EAcConsoleStyle InStyle)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcConsole::SetMmo(const bool bInMmo)
+{
+	if (bMmo == bInMmo) return;
+	bMmo = bInMmo;
+	Hovered.Reset();
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcConsole::SetLamps(const EAcCabLamps InLamps)
 {
 	if (Lamps == InLamps) return;
@@ -280,7 +288,7 @@ TOptional<FVector2D> SAcConsole::MinimapPoint(const FVector2D P, const double Pa
 
 TOptional<int32> SAcConsole::ButtonAt(const FVector2D P) const
 {
-	if (!bLaidOut || !Info) return {};
+	if (!bLaidOut || !Info || !ShowsCard()) return {};
 	// Back from the face as seen to where the card is laid out.
 	const FVector2D Q = Lay.Faces[2].Projection().Inverse()(Lay.FromSlate(P));
 	if (!Lay.Faces[2].Flat.Contains(Q)) return {};
@@ -294,7 +302,7 @@ TOptional<int32> SAcConsole::ButtonAt(const FVector2D P) const
 
 bool SAcConsole::ViewSwitchAt(const FVector2D P) const
 {
-	return bLaidOut && Lay.ViewSwitch.Contains(Lay.FromSlate(P));
+	return bLaidOut && ShowsViewSwitch() && Lay.ViewSwitch.Contains(Lay.FromSlate(P));
 }
 
 bool SAcConsole::Covers(const FVector2D P) const
@@ -833,8 +841,33 @@ void SAcConsole::PaintCenter(FPaint& P, const FAcCardInfo& In) const
 	}
 }
 
+void SAcConsole::PaintMmoKeys(FPaint& P) const
+{
+	// No grid of buttons that could only say "Orders are off": the keys
+	// this mode has, in the card's well.
+	const FAcRect& R = Lay.CardWell;
+	const double X = R.MinX() + 16;
+	double Y = R.MaxY() - 28;
+	P.Text(TEXT("PROSPECTOR CONTROLS"), 12, Alpha(FAcHudStyle::Cyan(), 0.75), FVector2D(X, Y));
+	static const TCHAR* Lines[] = {
+		TEXT("Click  your Prospector to drive it"),
+		TEXT("M  world map, fly to a pad"),
+		TEXT("B  build, while driving"),
+	};
+	for (const TCHAR* Line : Lines)
+	{
+		Y -= 28;
+		PaintKeyed(P, Line, 16, FAcHudStyle::KeyYellow(), Gray(0.8), FVector2D(X, Y));
+	}
+}
+
 void SAcConsole::PaintCard(FPaint& P) const
 {
+	if (!ShowsCard())
+	{
+		PaintMmoKeys(P);
+		return;
+	}
 	// Console.buildCard (the top-down look).
 	const TArray<FAcCardButton> None;
 	const TArray<FAcCardButton>& Buttons = Info ? Info->Buttons : None;
@@ -908,28 +941,32 @@ void SAcConsole::PaintOver(FPaint& P) const
 	}
 
 	// "VIEW  [1ST | 3RD]  V": the lit half is the view in use.
-	const FAcRect& R = Lay.ViewSwitch;
-	if (Look != EAcConsoleStyle::Rts)
+	// (Not in the MMORPG top-down: there it is only the driver's.)
+	if (ShowsViewSwitch())
 	{
-		P.FillRounded(R, 5, Rgb(0.02, 0.06, 0.1, 0.82));
-		P.Stroke(R, 5, Alpha(Acc, 0.55), 1);
+		const FAcRect& R = Lay.ViewSwitch;
+		if (Look != EAcConsoleStyle::Rts)
+		{
+			P.FillRounded(R, 5, Rgb(0.02, 0.06, 0.1, 0.82));
+			P.Stroke(R, 5, Alpha(Acc, 0.55), 1);
+		}
+		else
+		{
+			const double Pad = AcCabArt::PlatePad;
+			P.Baked(SwitchPlate, R.Inset(-4 - Pad, -3 - Pad));
+		}
+		P.Text(TEXT("VIEW"), 11, Alpha(Acc, 0.8), FVector2D(R.MinX() + 8, R.MidY() - 4));
+		static const TCHAR* Names[2] = {TEXT("1ST"), TEXT("3RD")};
+		for (int32 K = 0; K < 2; ++K)
+		{
+			const FAcRect Seg(R.MinX() + 46 + K * 50, R.MinY() + 3, 48, R.H - 6);
+			const bool bOn = (K == 1) == bThird;
+			if (bOn) P.Fill(Seg, Alpha(Acc, 0.35));
+			P.Stroke(Seg, 3, bOn ? Acc : Alpha(Acc, 0.3), bOn ? 1.4 : 1, bOn ? 1.5 : 0);
+			P.Text(Names[K], 12, bOn ? FLinearColor::White : Gray(0.6), FVector2D(Seg.MidX(), Seg.MidY() - 4.5), EAcHAlign::Center);
+		}
+		P.Text(TEXT("V"), 12, FAcHudStyle::KeyYellow(), FVector2D(R.MaxX() - 12, R.MidY() - 4.5), EAcHAlign::Center);
 	}
-	else
-	{
-		const double Pad = AcCabArt::PlatePad;
-		P.Baked(SwitchPlate, R.Inset(-4 - Pad, -3 - Pad));
-	}
-	P.Text(TEXT("VIEW"), 11, Alpha(Acc, 0.8), FVector2D(R.MinX() + 8, R.MidY() - 4));
-	static const TCHAR* Names[2] = {TEXT("1ST"), TEXT("3RD")};
-	for (int32 K = 0; K < 2; ++K)
-	{
-		const FAcRect Seg(R.MinX() + 46 + K * 50, R.MinY() + 3, 48, R.H - 6);
-		const bool bOn = (K == 1) == bThird;
-		if (bOn) P.Fill(Seg, Alpha(Acc, 0.35));
-		P.Stroke(Seg, 3, bOn ? Acc : Alpha(Acc, 0.3), bOn ? 1.4 : 1, bOn ? 1.5 : 0);
-		P.Text(Names[K], 12, bOn ? FLinearColor::White : Gray(0.6), FVector2D(Seg.MidX(), Seg.MidY() - 4.5), EAcHAlign::Center);
-	}
-	P.Text(TEXT("V"), 12, FAcHudStyle::KeyYellow(), FVector2D(R.MaxX() - 12, R.MidY() - 4.5), EAcHAlign::Center);
 
 	// The tooltip over the card: name, cost and time, and why not yet.
 	if (Hovered && Info && Info->Buttons.IsValidIndex(*Hovered))

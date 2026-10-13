@@ -107,7 +107,15 @@ TOptional<FAcCardInfo> UAcCommandsSubsystem::MakeInfo(const UAcSimSubsystem& Sim
 	const ac::Simulation& S = Sim.Simulation();
 	const std::optional<ac::Structure> St = S.state.structure(StructureId);
 	if (!St) return {};
-	return FAcCommandCard::Card(S, *St, FAcCommandCard::Commanded(S, Sim.LocalPlayer()), Card, Now());
+	FAcCardInfo Info = FAcCommandCard::Card(S, *St, FAcCommandCard::Commanded(S, Sim.LocalPlayer()), Card, Now());
+	if (Sim.IsMmo())
+	{
+		// The MMORPG test: a building takes no orders yet (the server has no
+		// such request), so no buttons and no hotkeys that would only be refused.
+		Info.Buttons.Reset();
+		Card.Actions.Reset();
+	}
+	return Info;
 }
 
 void UAcCommandsSubsystem::OnSelectionChanged()
@@ -121,7 +129,7 @@ void UAcCommandsSubsystem::Press(const int32 Index, TOptional<FAcCardMods> Mods)
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	const TOptional<int64> Id = SelectedId();
-	if (!Sim || !Sim->IsRunning() || !Id) return;
+	if (!Sim || !Sim->IsRunning() || !Id || Sim->IsMmo()) return;
 	const ac::Simulation& S = Sim->Simulation();
 	const std::optional<ac::Structure> St = S.state.structure(*Id);
 	if (!St || St->owner != Sim->LocalPlayer()) return;

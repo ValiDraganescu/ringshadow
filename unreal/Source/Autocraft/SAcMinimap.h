@@ -84,6 +84,10 @@ public:
 	/// Driving: the sight wedge from `At` toward `Heading` (world radians, as
 	/// on the compass); unset hides it.
 	void SetSight(TOptional<TPair<ac::Vec2, double>> Sight);
+	/// The MMORPG test: the region's flight pads (ground), each a pad
+	/// marker; empty hides them.
+	void SetPads(TArray<ac::Vec2> Pads);
+	const TArray<ac::Vec2>& PadsShown() const { return Pads; }
 
 	const ac::GroundRect& Bounds() const { return GroundBounds; }
 	FVector2D Size() const { return MapSize; }
@@ -141,6 +145,7 @@ private:
 	FImage DiscImage, DiamondImage;
 
 	TArray<FAcMinimapMark> Marks;
+	TArray<ac::Vec2> Pads;
 	TArray<FVector2f> Outline;
 
 	bool bPressed = false;

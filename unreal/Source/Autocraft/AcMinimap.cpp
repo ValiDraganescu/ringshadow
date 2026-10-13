@@ -1,5 +1,7 @@
 #include "AcMinimap.h"
 
+#include "AcMmo.h"
+
 #include "AcCab.h"
 #include "AcCabArt.h"
 #include "AcConsole.h"
@@ -186,8 +188,18 @@ void UAcMinimapSubsystem::OnFrame(const FAcFrame& Frame)
 	const std::vector<ac::Vec2> Footprint = View ? View->footprint() : std::vector<ac::Vec2>();
 	AAcFog* Fog = AAcFog::Find(GetWorld());
 	const bool bFog = Fog && Fog->IsOn() && Fog->MinimapTexture();
+	// The MMORPG test: the region's flight pads.
+	TArray<ac::Vec2> Pads;
+	if (const FAcMmoClient* Mmo = Sim->MmoClient())
+	{
+		if (const ac::net::WorldMessage::Region* Here = Mmo->Here(); Here && !Mmo->Travelling())
+		{
+			for (const ac::region::Place& P : ac::net::padsOnGround(*Here, Sim->Map().bounds)) Pads.Add(P.at);
+		}
+	}
 	for (const TSharedPtr<SAcMinimap>& M : All)
 	{
+		M->SetPads(Pads);
 		M->SetMarks(Shown, Sim->Map());
 		M->SetFootprint(Footprint);
 		if (bFog) M->SetFog(Fog->MinimapTexture(), Fog->GridOrigin(), Fog->GridSize());

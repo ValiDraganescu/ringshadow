@@ -13,8 +13,11 @@
 //   [CLOSE] [FLY]
 //
 // A click on a pad picks it, FLY asks for the flight (`OnFly`; the owner
-// says why not with `SetRefusal`). Esc, M and Return come from the flow's
-// key processor (AcGameFlow). The game goes on behind (the server does not
+// says why not with `SetRefusal`). The keys pick too: the arrows (and WASD)
+// move the pick to the nearest pad that way, starting on the pad of the
+// pilot's region; Return is FLY. One pick, ringed, whether clicked or keyed.
+// Esc, M, Return and the arrows come from the flow's key processor
+// (AcGameFlow). The game goes on behind (the server does not
 // wait); the pilot's unit stands while it is open.
 #pragma once
 
@@ -55,6 +58,8 @@ public:
 	void SetInfo(const FAcWorldMapInfo& Info);
 	/// Why the flight was not asked for, or the server's refusal (empty: none).
 	void SetRefusal(const FString& Why);
+	/// The refusal shown (empty: none).
+	const FString& RefusalText() const { return Refusal; }
 
 	/// The pad picked (none: nothing picked yet).
 	struct FPick
@@ -63,6 +68,14 @@ public:
 		int32 Pad = INDEX_NONE;
 	};
 	const FPick& Picked() const { return Pick; }
+	/// The picked pad's region id and name (empty: none), for tests and logs.
+	FString PickedRegion() const;
+	FString PickedPad() const;
+	/// The arrow keys: move the pick to the nearest pad in that direction
+	/// (`DX`, `DY`: -1, 0 or 1; y down = south) on the world's grid. With
+	/// nothing picked the first press picks the pilot's region's pad. False:
+	/// no pad that way (the pick stays).
+	bool MovePick(int32 DX, int32 DY);
 	/// Pick a destination by region id and pad name (scripts, tests). False:
 	/// no such pad.
 	bool PickPad(const FString& RegionId, const FString& Pad);
@@ -100,6 +113,12 @@ private:
 	/// The state line and its colour.
 	FString StateLine(FLinearColor& Color) const;
 	bool AtPad() const;
+	/// The pick is the pad the pilot stands on (no flight to make).
+	bool PickIsHere() const;
+	/// The pad of the pilot's region it stands nearest (else its first).
+	FPick HerePad() const;
+	/// A pad's place on the world's grid, in tiles (x east, y south).
+	FVector2f GridPoint(int32 Region, int32 Pad) const;
 
 	FAcWorldMapInfo Info;
 	FString Refusal;

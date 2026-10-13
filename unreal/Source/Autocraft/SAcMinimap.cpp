@@ -160,6 +160,18 @@ void SAcMinimap::SetFog(UTexture2D* Fog, const ac::Vec2 Origin, const ac::Vec2 I
 	FogSize = InFogSize;
 }
 
+void SAcMinimap::SetPads(TArray<ac::Vec2> InPads)
+{
+	if (InPads.Num() == Pads.Num())
+	{
+		bool bSame = true;
+		for (int32 I = 0; I < Pads.Num() && bSame; ++I) bSame = Pads[I].x == InPads[I].x && Pads[I].y == InPads[I].y;
+		if (bSame) return;
+	}
+	Pads = MoveTemp(InPads);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcMinimap::SetSight(TOptional<TPair<ac::Vec2, double>> InSight)
 {
 	Sight = MoveTemp(InSight);
@@ -341,6 +353,21 @@ int32 SAcMinimap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, con
 			Own.ToPaintGeometry(FVector2f(Size), FSlateLayoutTransform(FVector2f(TopLeft)), Turn,
 				FVector2f(0.5f, (float)(1 - PadS / Size.Y))),
 			SightImage.Brush.Get());
+	}
+	// The flight pads (the MMORPG test): an amber target, under the marks.
+	for (const ac::Vec2& G : Pads)
+	{
+		const FVector2f C(Point(G));
+		auto Square = [&](const float Half, const FLinearColor& Color) {
+			FSlateDrawElement::MakeBox(Out, ++Layer,
+				Own.ToPaintGeometry(FVector2f(2 * Half, 2 * Half), FSlateLayoutTransform(C - FVector2f(Half, Half))),
+				FAcHudStyle::White(), ESlateDrawEffect::None, Color);
+		};
+		const float H = (float)(6.5 * S);
+		Square(H + 1.0f * (float)S, Rgb(0.02, 0.03, 0.05, 0.85));
+		Square(H, FAcHudStyle::KeyYellow());
+		Square(H - 1.6f * (float)S, Rgb(0.02, 0.03, 0.05, 0.85));
+		Square(1.8f * (float)S, FAcHudStyle::KeyYellow());
 	}
 	// The camera's outline goes with the other z-0 nodes, before the units.
 	bool bOutlined = false;

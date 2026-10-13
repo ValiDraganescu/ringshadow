@@ -82,6 +82,12 @@ void SAcWorldMap::SetInfo(const FAcWorldMapInfo& In)
 	{
 		Pick = FPick();
 	}
+	// The keys start on the pilot's own pad: ringed from the first look.
+	if (Pick.Region == INDEX_NONE && Info.World && Info.FlyingTo.IsEmpty())
+	{
+		Pick = HerePad();
+		if (Pick.Region != INDEX_NONE) Invalidate(EInvalidateWidgetReason::Paint);
+	}
 	if (!bSame) Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -111,11 +117,105 @@ bool SAcWorldMap::PickPad(const FString& RegionId, const FString& PadName)
 	return false;
 }
 
+FString SAcWorldMap::PickedRegion() const
+{
+	return Info.World && Pick.Region != INDEX_NONE ? Text(Info.World->regions[Pick.Region].id) : FString();
+}
+
+FString SAcWorldMap::PickedPad() const
+{
+	return Info.World && Pick.Region != INDEX_NONE ? Text(Info.World->regions[Pick.Region].pads[Pick.Pad].name) : FString();
+}
+
+SAcWorldMap::FPick SAcWorldMap::HerePad() const
+{
+	if (!Info.World) return FPick();
+	const int32 Here = (int32)Info.World->here;
+	if (Here < 0 || Here >= (int32)Info.World->regions.size()) return FPick();
+	const ac::net::WorldMessage::Region& G = Info.World->regions[Here];
+	if (G.pads.empty()) return FPick();
+	for (int32 P = 0; P < (int32)G.pads.size(); ++P)
+	{
+		if (Text(G.pads[P].name) == Info.NearPad) return FPick{Here, P};
+	}
+	return FPick{Here, 0};
+}
+
+bool SAcWorldMap::PickIsHere() const
+{
+	if (!Info.World || Pick.Region == INDEX_NONE || !AtPad()) return false;
+	const FPick Mine = HerePad();
+	return Mine.Region == Pick.Region && Mine.Pad == Pick.Pad && Text(Info.World->regions[Pick.Region].pads[Pick.Pad].name) == Info.NearPad;
+}
+
+FVector2f SAcWorldMap::GridPoint(const int32 Region, const int32 PadIndex) const
+{
+	const ac::net::WorldMessage::Region& G = Info.World->regions[Region];
+	const ac::MapCells Cells = ac::cells(G.size);
+	const ac::net::WorldMessage::Pad& Q = G.pads[PadIndex];
+	// Tiles are 144 × 96 (wider than deep): x in those proportions.
+	const float X = float(G.column) + float(Q.at.x / FMath::Max(1.0, double(Cells.width)));
+	const float Y = float(G.row) + float(Q.at.y / FMath::Max(1.0, double(Cells.depth)));
+	return FVector2f(X * 1.5f, Y);
+}
+
+bool SAcWorldMap::MovePick(const int32 DX, const int32 DY)
+{
+	if (!Info.World || (DX == 0 && DY == 0)) return false;
+	if (Pick.Region == INDEX_NONE)
+	{
+		Pick = HerePad();
+		Refusal.Reset();
+		Invalidate(EInvalidateWidgetReason::Paint);
+		return Pick.Region != INDEX_NONE;
+	}
+	// The nearest pad that way: along the arrow counts once, across it
+	// twice; a pad more across than along only when none is nearer the line.
+	const FVector2f From = GridPoint(Pick.Region, Pick.Pad);
+	const FVector2f Dir = FVector2f((float)DX, (float)DY).GetSafeNormal();
+	FPick Best, Wide;
+	float BestScore = TNumericLimits<float>::Max();
+	float WideScore = TNumericLimits<float>::Max();
+	for (int32 R = 0; R < (int32)Info.World->regions.size(); ++R)
+	{
+		for (int32 P = 0; P < (int32)Info.World->regions[R].pads.size(); ++P)
+		{
+			if (R == Pick.Region && P == Pick.Pad) continue;
+			const FVector2f D = GridPoint(R, P) - From;
+			const float Along = FVector2f::DotProduct(D, Dir);
+			const float Across = FMath::Abs(D.X * Dir.Y - D.Y * Dir.X);
+			if (Along <= 0.01f) continue;
+			const float Score = Along + 2 * Across;
+			if (Across <= Along && Score < BestScore)
+			{
+				BestScore = Score;
+				Best = FPick{R, P};
+			}
+			if (Score < WideScore)
+			{
+				WideScore = Score;
+				Wide = FPick{R, P};
+			}
+		}
+	}
+	if (Best.Region == INDEX_NONE) Best = Wide;
+	if (Best.Region == INDEX_NONE) return false;
+	Pick = Best;
+	Refusal.Reset();
+	Invalidate(EInvalidateWidgetReason::Paint);
+	return true;
+}
+
 void SAcWorldMap::Fly()
 {
 	if (!Info.World || Pick.Region == INDEX_NONE)
 	{
 		SetRefusal(TEXT("Pick a pad to fly to first"));
+		return;
+	}
+	if (PickIsHere())
+	{
+		SetRefusal(FString::Printf(TEXT("You are at pad %s: pick another pad to fly to"), *Info.NearPad));
 		return;
 	}
 	const ac::net::WorldMessage::Region& G = Info.World->regions[Pick.Region];
@@ -151,7 +251,7 @@ FString SAcWorldMap::StateLine(FLinearColor& Color) const
 	{
 		return FString::Printf(TEXT("Not at a pad: pad %s is %.0f cells away. Drive onto a pad to fly."), *Info.NearPad, *Info.NearDistance);
 	}
-	if (Pick.Region == INDEX_NONE) return FString::Printf(TEXT("At pad %s: pick a pad to fly to."), *Info.NearPad);
+	if (Pick.Region == INDEX_NONE || PickIsHere()) return FString::Printf(TEXT("At pad %s: pick a pad to fly to."), *Info.NearPad);
 	const ac::net::WorldMessage::Region& G = Info.World->regions[Pick.Region];
 	return FString::Printf(TEXT("At pad %s: FLY to pad %s in %s."), *Info.NearPad, *Text(G.pads[Pick.Pad].name), *Text(G.name));
 }
@@ -321,7 +421,7 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 	FString Where = TEXT("M or Esc closes the map.");
 	if (W && Here >= 0 && Here < (int32)W->regions.size())
 	{
-		Where = FString::Printf(TEXT("You are in %s."), *Text(W->regions[Here].name));
+		Where = FString::Printf(TEXT("You are in %s. Arrows pick a pad, Return flies, M or Esc closes."), *Text(W->regions[Here].name));
 	}
 	Label(Where, 15, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L, P, FVector2f(Pad, 58));
 
@@ -373,7 +473,7 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 	Label(State, 15, StateColor, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L, P, FVector2f(Pad, GridBox.Max.Y + 16));
 
 	// The buttons: FLY lit when a flight can be asked for.
-	const bool bCanFly = W && Info.FlyingTo.IsEmpty() && AtPad() && Pick.Region != INDEX_NONE;
+	const bool bCanFly = W && Info.FlyingTo.IsEmpty() && AtPad() && Pick.Region != INDEX_NONE && !PickIsHere();
 	for (int32 I = 0; I < Targets.Num(); ++I)
 	{
 		const FTarget& T = Targets[I];

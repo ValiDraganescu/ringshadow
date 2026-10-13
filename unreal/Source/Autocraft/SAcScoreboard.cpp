@@ -93,6 +93,28 @@ int64 SAcScoreboard::ShownCount(const int64 Player) const
 void SAcScoreboard::Layout()
 {
 	Middle.Reset();
+	UnitsX = -1;
+	if (bAllUnits)
+	{
+		// The MMORPG test: the pilot's units, no games to win.
+		float X = 14;
+		for (FSide& S : Sides)
+		{
+			for (FMember& M : S.Members)
+			{
+				M.ChipX = X;
+				M.LabelX = X + 12;
+				M.bRightAligned = false;
+				X = M.LabelX + TextWidth(ArmyText(M.Army), ArmyPoints) + 8;
+			}
+			S.ScoreX = -1;
+			S.RuleX = 0;
+		}
+		UnitsX = X;
+		X += TextWidth(TEXT("UNITS"), 15) + 14;
+		Width = FMath::CeilToFloat(X);
+		return;
+	}
 	if (Sides.Num() == 2)
 	{
 		// HUD.buildScoreboard: chips 14 in from each end, labels 12 past
@@ -184,6 +206,12 @@ int32 SAcScoreboard::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, 
 				Geometry.ToPaintGeometry(FVector2D(1, Height - 18), FSlateLayoutTransform(FVector2D(S.RuleX, 9))),
 				White, ESlateDrawEffect::None, FAcHudStyle::Cyan().CopyWithNewOpacity(0.35f));
 		}
+	}
+	if (UnitsX >= 0)
+	{
+		FAcHudText T(TEXT("UNITS"), FAcHudStyle::Font(15), FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Center);
+		T.Accent = FLinearColor::Transparent;
+		T.Paint(Out, Layer + 2, Geometry, FVector2f(UnitsX, Cy + 1));
 	}
 	if (!Middle.IsEmpty())
 	{
