@@ -217,3 +217,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T M5 done; suites (manager): server 71, net 63, core 391.
 - N Next needs user: Win/Linux server (AWS), cities, AI pilots, merge to main.
 - T F1 MH loop proof + F2 player guide docs/mmorpg-play.md: agent.
+- T F1 done 7362a9f: MH loop test passes; "+20 MH" label fixed.
+- T F2 done f2f2784: player guide docs/mmorpg-play.md.
+- I Small: pumping dashboard says "drill, strike, repair"; late weld sparks.
+- I Nothing in a world costs MH yet.
