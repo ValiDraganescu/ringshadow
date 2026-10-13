@@ -2,11 +2,13 @@
 
 #include "AcHudStyle.h"
 #include "AcLog.h"
+#include "AcMmo.h"
 #include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
 #include "SAcRoot.h"
+#include "SAcScoreboard.h"
 
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Slate/SRetainerWidget.h"
@@ -152,7 +154,22 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 			PixelsPerPoint(), Viewport ? UWidgetLayoutLibrary::GetViewportScale(Viewport) : 0.0f);
 	}
 	const double Now = FPlatformTime::Seconds();
-	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this)) RootWidget->SetMmo(Sim->IsMmo());
+	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
+	{
+		RootWidget->SetMmo(Sim->IsMmo());
+		// The MMORPG test: a Prospector in flight between pads is in no
+		// region's state, but still the pilot's.
+		int64 Away = 0;
+		if (const FAcMmoClient* Mmo = Sim->MmoClient(); Mmo && Mmo->Travelling())
+		{
+			Away = 1;
+			for (const ac::Unit& U : Frame.State->units)
+			{
+				if (U.owner == Frame.LocalPlayer) Away = 0;
+			}
+		}
+		if (RootWidget->ScoreboardWidget()) RootWidget->ScoreboardWidget()->SetAway(Away);
+	}
 	RootWidget->Update(*Frame.State, Frame.LocalPlayer, Frame.RealDelta, Now);
 
 	// Deposits the team sees: "+N" 4 cells over the ground there. Driving,

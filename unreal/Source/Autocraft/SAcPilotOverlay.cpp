@@ -280,6 +280,13 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 		P.Label(*ShownNote, 18, BlockedColor(), FVector2D(C.X, C.Y + 84), EAcHAlign::Center, EAcVAlign::Baseline, true, true,
 			(float)Opacity);
 	}
+	// A gain: "+25 ORE" rising over the reticle, held 1.2 s, fading 0.6 s.
+	if (const double T = Now - GainSince; !GainText.IsEmpty() && T >= 0 && T < 1.8)
+	{
+		const double E = 1 - FMath::Pow(1 - FMath::Clamp(T / 0.6, 0.0, 1.0), 3.0);
+		const float A = (float)(T < 0.12 ? T / 0.12 : FadeAfter(T, 1.2, 0.6));
+		P.Label(GainText, 34, Srgb(0.78, 0.66, 1), FVector2D(C.X, C.Y + 110 + 26 * E), EAcHAlign::Center, EAcVAlign::Baseline, true, true, A);
+	}
 	PaintReticle(P, C, Now);
 	PaintSight(P, W, H);
 	PaintMarks(P, C, Now);

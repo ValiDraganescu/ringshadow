@@ -44,6 +44,11 @@ void SAcScoreboard::Update(const ac::GameState& State, const int64 LocalPlayer)
 	{
 		if (S.owner >= 0 && S.owner < N) ++Things[S.owner];
 	}
+	if (bAllUnits && LocalPlayer >= 0 && LocalPlayer < N)
+	{
+		Army[LocalPlayer] += Away;
+		Things[LocalPlayer] += Away;
+	}
 
 	// Sides by team, the local player's first, then in order of first member.
 	TArray<FSide> NewSides;
@@ -110,8 +115,11 @@ void SAcScoreboard::Layout()
 			S.ScoreX = -1;
 			S.RuleX = 0;
 		}
+		// One unit, one UNIT.
+		const int64 Mine = Sides.IsEmpty() || Sides[0].Members.IsEmpty() ? 0 : Sides[0].Members[0].Army;
+		Units = Mine == 1 ? TEXT("UNIT") : TEXT("UNITS");
 		UnitsX = X;
-		X += TextWidth(TEXT("UNITS"), 15) + 14;
+		X += TextWidth(Units, 15) + 14;
 		Width = FMath::CeilToFloat(X);
 		return;
 	}
@@ -209,7 +217,7 @@ int32 SAcScoreboard::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, 
 	}
 	if (UnitsX >= 0)
 	{
-		FAcHudText T(TEXT("UNITS"), FAcHudStyle::Font(15), FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Center);
+		FAcHudText T(Units, FAcHudStyle::Font(15), FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Center);
 		T.Accent = FLinearColor::Transparent;
 		T.Paint(Out, Layer + 2, Geometry, FVector2f(UnitsX, Cy + 1));
 	}

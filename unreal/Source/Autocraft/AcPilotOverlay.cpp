@@ -219,6 +219,20 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 		// in Swift's still (made at the shot, drawn the same frame).
 		if (bAtShot && Widget) Widget->Hold(TOptional<double>(HeldMarkAge), bHeldHurt, !HeldNote.IsEmpty());
 	}
+	// The MMORPG test: the load the pilot unloaded, large over the reticle
+	// (docs/mmorpg-shots.md #11).
+	if (Sim->IsMmo() && Widget)
+	{
+		for (const ac::GameEvent& E : Frame.Events)
+		{
+			const ac::GameEvent::Deposited* D = E.as<ac::GameEvent::Deposited>();
+			if (D && D->unit == U.id)
+			{
+				Widget->Gain(FString::Printf(TEXT("+%lld %s"), (long long)D->amount, U.hydrogen == true ? TEXT("MH") : TEXT("ORE")),
+					FPlatformTime::Seconds());
+			}
+		}
+	}
 	Aim.Reset();
 	if (S.pilotShoots(U) && F->Sight)
 	{
@@ -234,6 +248,7 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 		Inputs.Note.Reset();
 	}
 	Inputs.bThirdPerson = Pawn->Eye().bThirdPerson;
+	Inputs.bMmo = Sim->IsMmo();
 	FAcPilotInfo Info = AcPilotText::Info(S, *F, Inputs);
 	if (GunMarker) Info.Gun = GunMarker();
 	else Info.Gun = Pawn->GunMarker(); // E4's marker, computed by the pawn each frame

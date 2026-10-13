@@ -765,25 +765,39 @@ void UAcGameFlowSubsystem::TickMmo()
 			Place = FString::Printf(TEXT("%s  ·  %s"), *Text(Here->name), *Text(ac::title(Here->style)));
 		}
 		MmoBanner->SetPlace(Place, Mmo->FlyingTo() != nullptr);
-		// Small: the round trip, and the lag set on it (ac.MmoLag).
+		// Arrived in a region (the start, a landing once the ship is down,
+		// an edge crossing): its title over the view, once per arrival.
+		const AAcPilotPawn* Pawn = AAcPilotPawn::Find(this);
+		if (const ac::net::WorldMessage::Region* Here = Mmo->Here(); Here && Mmo->Phase() == FAcMmoClient::EPhase::Playing
+			&& !Mmo->Travelling() && !(Pawn && Pawn->InFlight()) && Mmo->Visit() != MmoTitledVisit)
+		{
+			MmoTitledVisit = Mmo->Visit();
+			MmoBanner->ShowTitle(Text(Here->name), Text(ac::title(Here->style)), FPlatformTime::Seconds());
+		}
+		// Small: the round trip only when it is high enough to feel (on this
+		// machine it is mostly frame time), and the lag set on it (ac.MmoLag).
 		FString Stats;
+		bool bSlow = false;
 		if (Mmo->Phase() == FAcMmoClient::EPhase::Playing)
 		{
 			const std::optional<double> Rtt = Mmo->RoundTrip();
-			Stats = Rtt ? FString::Printf(TEXT("RTT %.0f ms"), *Rtt * 1000) : FString(TEXT("RTT …"));
+			bSlow = Rtt && *Rtt > 0.12;
+			if (bSlow) Stats = FString::Printf(TEXT("RTT %.0f ms"), *Rtt * 1000);
 			const ac::net::LagSettings& Lag = Mmo->Lag();
 			if (Lag.delay > 0 || Lag.jitter > 0 || Lag.loss > 0)
 			{
-				Stats += FString::Printf(TEXT("  ·  lag %.0f ms (+%.0f jitter) each way, %.0f%% lost"), Lag.delay * 1000, Lag.jitter * 1000, Lag.loss * 100);
+				if (!Stats.IsEmpty()) Stats += TEXT("  ·  ");
+				Stats += FString::Printf(TEXT("lag %.0f ms (+%.0f jitter) each way, %.0f%% lost"), Lag.delay * 1000, Lag.jitter * 1000, Lag.loss * 100);
 			}
 		}
-		MmoBanner->SetStats(Stats);
+		MmoBanner->SetStats(Stats, bSlow);
 	}
 	else
 	{
 		// Out of the mode: the banner goes.
 		if (Root) Root->RemoveLayer(MmoBanner.ToSharedRef());
 		MmoBanner.Reset();
+		MmoTitledVisit = -1;
 	}
 }
 

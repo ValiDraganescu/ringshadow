@@ -185,6 +185,12 @@ FString AcLeveling::BannerSub(const int32 Level)
 	return Level >= ac::Leveling::cap ? TEXT("TOP LEVEL  ·  LAST PICK ON THE DASHBOARD") : TEXT("NEW PICK ON THE DASHBOARD");
 }
 
+FString AcLeveling::BannerKeysSub(const int32 Level)
+{
+	return FString::Printf(TEXT("%s  ·  PRESS %s OR %s"),
+		Level >= ac::Leveling::cap ? TEXT("TOP LEVEL, LAST PICK") : TEXT("NEW PICK"), FAcPickOffer::Key(0), FAcPickOffer::Key(1));
+}
+
 TArray<ac::UnitKind> AcLeveling::Stage(ac::Simulation& Sim, const FString& Spec, const int32 Picks)
 {
 	TArray<ac::UnitKind> Kinds;
@@ -390,7 +396,8 @@ void UAcLevelingSubsystem::LevelUp(const ac::UnitKind Kind, const int32 Level, c
 {
 	UE_LOG(LogAutocraft, Log, TEXT("pilot: %s level %d"), *Str(std::string(ac::rawValue(Kind))), Level);
 	if (!Mount()) return;
-	BannerWidget->Show(Kind, Level, Clock(), bHold);
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	BannerWidget->Show(Kind, Level, Clock(), bHold, Sim && Sim->IsMmo());
 }
 
 bool UAcLevelingSubsystem::Earn(const double Xp)
@@ -445,7 +452,8 @@ void UAcLevelingSubsystem::OnFrame(const FAcFrame& Frame)
 	if (Console)
 	{
 		const FLinearColor Accent = Console->Style() == EAcConsoleStyle::Rts ? FAcHudStyle::Srgb(0.45, 0.75, 1) : FAcHudStyle::Srgb(0.35, 0.95, 1);
-		CardsWidget->Show(Offer, Console->Layout(), Accent, true);
+		// The MMORPG test mode: at the view's side (docs/mmorpg-shots.md #1).
+		CardsWidget->Show(Offer, Console->Layout(), Accent, true, Sim->IsMmo());
 	}
 	else
 	{

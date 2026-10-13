@@ -140,6 +140,14 @@ void SAcConsole::SetStyle(const EAcConsoleStyle InStyle)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcConsole::SetMmoKeys(const FString& Header, const TArray<FString>& Lines)
+{
+	if (Header == MmoHeader && Lines == MmoLines) return;
+	MmoHeader = Header;
+	MmoLines = Lines;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcConsole::SetMmo(const bool bInMmo)
 {
 	if (bMmo == bInMmo) return;
@@ -848,16 +856,62 @@ void SAcConsole::PaintMmoKeys(FPaint& P) const
 	const FAcRect& R = Lay.CardWell;
 	const double X = R.MinX() + 16;
 	double Y = R.MaxY() - 28;
-	P.Text(TEXT("PROSPECTOR CONTROLS"), 12, Alpha(FAcHudStyle::Cyan(), 0.75), FVector2D(X, Y));
-	static const TCHAR* Lines[] = {
+	static const TArray<FString> Keys = {
 		TEXT("Click  your Prospector to drive it"),
 		TEXT("M  world map, fly to a pad"),
 		TEXT("B  build, while driving"),
 	};
-	for (const TCHAR* Line : Lines)
+	const bool bOwn = !MmoHeader.IsEmpty();
+	P.Text(bOwn ? MmoHeader : FString(TEXT("PROSPECTOR CONTROLS")), 12, Alpha(FAcHudStyle::Cyan(), 0.75), FVector2D(X, Y));
+	for (const FString& Line : bOwn ? MmoLines : Keys)
 	{
 		Y -= 28;
 		PaintKeyed(P, Line, 16, FAcHudStyle::KeyYellow(), Gray(0.8), FVector2D(X, Y));
+	}
+}
+
+void SAcConsole::PaintBuildList(FPaint& P) const
+{
+	const FAcRect& R = Lay.CardWell;
+	const FLinearColor Acc = Accent();
+	const double X = R.MinX() + 10, Right = R.MaxX() - 10;
+	double Y = R.MaxY() - 24;
+	P.Text(TEXT("BUILD"), 12, Alpha(FAcHudStyle::Cyan(), 0.75), FVector2D(X, Y));
+	P.Text(TEXT("number  pick   ·   click  place"), 11, Gray(0.55), FVector2D(Right, Y), EAcHAlign::Right);
+	const FAcCardButton* Back = nullptr;
+	for (const FAcCardButton& B : Info->Buttons)
+	{
+		if (B.Key == TEXT("Esc"))
+		{
+			Back = &B;
+			continue;
+		}
+		Y -= 50;
+		const FAcRect Row(X - 4, Y, Right - X + 8, 44);
+		const float A = B.bEnabled ? 1.f : 0.5f;
+		P.FillRounded(Row, 3, B.bEnabled ? Rgb(0.05, 0.12, 0.2) : Rgb(0.05, 0.05, 0.06));
+		P.Stroke(Row, 3, B.bLit ? Rgb(0.4, 1, 0.45) : B.bEnabled ? Alpha(Acc, 0.9) : Gray(0.3), B.bLit ? 2 : 1.2);
+		// The key, the icon, the name and the price; under them why not.
+		const FAcRect Key(Row.MinX() + 6, Row.MidY() - 10, 20, 20);
+		P.Stroke(Key, 2, Alpha(FAcHudStyle::KeyYellow(), 0.8 * A), 1);
+		P.Text(B.Key, 13, Alpha(FAcHudStyle::KeyYellow(), A), FVector2D(Key.MidX(), Key.MinY() + 4), EAcHAlign::Center);
+		if (const FSlateBrush* Icon = FAcIcons::Brush(B.Icon))
+		{
+			P.Image(Icon, FAcRect(Key.MaxX() + 6, Row.MinY() + 3, 38, 38), B.bEnabled ? FLinearColor::White : FPaint::BlendTint(Gray(0.3), 0.6, 0.85));
+		}
+		const double Tx = Key.MaxX() + 50;
+		TArray<FString> Cost;
+		if (B.Ore > 0) Cost.Add(FString::Printf(TEXT("%d ore"), B.Ore));
+		if (B.Hydrogen > 0) Cost.Add(FString::Printf(TEXT("%d MH"), B.Hydrogen));
+		P.Text(B.Title, 17, Gray(0.95, A), FVector2D(Tx, Row.MaxY() - 20));
+		P.Text(FString::Join(Cost, TEXT(" · ")), 13, Rgb(0.6, 0.9, 1, A), FVector2D(Row.MaxX() - 8, Row.MaxY() - 19), EAcHAlign::Right);
+		P.Text(B.Why ? *B.Why : (B.Time ? FString::Printf(TEXT("%d s to build"), (int32)FMath::RoundHalfFromZero(*B.Time)) : FString()), 12,
+			B.Why ? Rgb(1, 0.55, 0.35) : Gray(0.6), FVector2D(Tx, Row.MinY() + 6));
+	}
+	if (Back)
+	{
+		Y -= 24;
+		PaintKeyed(P, TEXT("Esc  back"), 14, FAcHudStyle::KeyYellow(), Gray(0.7), FVector2D(X, Y));
 	}
 }
 
@@ -866,6 +920,11 @@ void SAcConsole::PaintCard(FPaint& P) const
 	if (!ShowsCard())
 	{
 		PaintMmoKeys(P);
+		return;
+	}
+	if (bMmo && Info && Info->bBuildList)
+	{
+		PaintBuildList(P);
 		return;
 	}
 	// Console.buildCard (the top-down look).

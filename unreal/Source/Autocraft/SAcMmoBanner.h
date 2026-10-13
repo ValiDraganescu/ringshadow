@@ -5,6 +5,14 @@
 // test"), each for a few seconds; under them, small, the round trip. On top,
 // small, where the pilot is: the region's name (in amber, "Flying to …" while
 // in flight). Dark glass in the HUD's chrome, hit-test invisible.
+//
+// Placed clear of the pilot's compass (docs/mmorpg-shots.md #4): the place
+// and the connection's line in a small box at the view's top left; the
+// status and the refusals centred under the compass and its marks. On
+// arriving in a region (a landing, an edge crossing, the start) its title
+// fades in large over the upper middle: the name, under it the style
+// (`ShowTitle`; 0.5 s in, 2.5 s, 1 s out). The round trip shows only when it
+// is high (`SetStats` with `bWarn`: amber).
 #pragma once
 
 #include "CoreMinimal.h"
@@ -28,7 +36,14 @@ public:
 	void Update(double Now);
 	/// The connection's small line under the rest (the round trip, the lag
 	/// set); empty: none.
-	void SetStats(const FString& Text);
+	void SetStats(const FString& Text, bool bWarn = false);
+	/// The region's title over the view from `Now` (real seconds): `Name`
+	/// large, `Style` under it.
+	void ShowTitle(const FString& Name, const FString& Style, double Now);
+	/// The title is up at `Now`.
+	bool TitleShown(double Now) const { return !TitleName.IsEmpty() && Now - TitleSince < TitleSeconds; }
+	/// A title's whole run.
+	static constexpr double TitleSeconds = 4.0;
 	/// Where the pilot is (empty: none); `bFlying` draws it amber.
 	void SetPlace(const FString& Text, bool bFlying);
 
@@ -45,7 +60,15 @@ private:
 	FString Status;
 	bool bStatusError = false;
 	FString Stats;
+	bool bStatsWarn = false;
 	FString Place;
+	FString TitleName;
+	FString TitleStyle;
+	double TitleSince = -1e9;
+	TSharedPtr<FActiveTimerHandle> TitleTimer;
 	bool bPlaceFlying = false;
 	TArray<FNote> Notes;
+
+	EActiveTimerReturnType AnimateTitle(double CurrentTime, float DeltaTime);
+	void PaintTitle(FSlateWindowElementList& Out, int32 Layer, const FGeometry& Geometry, double Now) const;
 };

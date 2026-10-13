@@ -576,6 +576,14 @@ void AAcRtsPawn::CenterOn(ac::Vec2 Ground)
 	bDirty = true;
 }
 
+void AAcRtsPawn::ShowAround(const ac::Vec2 Ground, const double Cells)
+{
+	if (!FreeView || Cells <= 0) return;
+	FreeView->pointsPerCell = FMath::Clamp(FMath::Max(Size.X, 1.0) / Cells, FreeView->minPointsPerCell(), ac::FreeView::maxPointsPerCell);
+	FreeView->center(Ground);
+	bDirty = true;
+}
+
 void AAcRtsPawn::GoToBase(int32 Player)
 {
 	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);

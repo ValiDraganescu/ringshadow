@@ -84,6 +84,9 @@ public:
 	/// Drag the ground under `From` to `To` (view points).
 	void Drag(FVector2D From, FVector2D To);
 	void CenterOn(ac::Vec2 Ground);
+	/// Over `Ground`, zoomed to show about `Cells` cells across the view
+	/// (the MMORPG test's hand back: the area round the unit).
+	void ShowAround(ac::Vec2 Ground, double Cells);
 	void GoToBase(int32 Player);
 	/// The HUD's height along the bottom (the console chunk calls this).
 	void SetCover(double Points);

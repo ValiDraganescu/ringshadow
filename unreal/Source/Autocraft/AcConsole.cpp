@@ -2,6 +2,9 @@
 
 #include "AcHUD.h"
 #include "AcLog.h"
+#include "AcMmo.h"
+#include "AcPilotPawn.h"
+#include "AcPilotText.h"
 #include "AcRtsPawn.h"
 #include "AcSimSubsystem.h"
 #include "SAcConsole.h"
@@ -12,8 +15,10 @@
 #include "HAL/IConsoleManager.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Rules.h"
 #include "Simulation.h"
 #include "Types.h"
+#include "WindowMaps.h"
 
 namespace
 {
@@ -72,6 +77,64 @@ namespace
 			if (S.team(C.player) == S.team(Player)) return true;
 		}
 		return false;
+	}
+}
+
+namespace
+{
+	FString Utf(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
+
+	/// The MMORPG test mode's middle screen top-down with nothing selected
+	/// (docs/mmorpg-shots.md #6): the region, the pilot's Prospector (its
+	/// level, health and load) and what the region holds; in flight, where
+	/// to. The card well's lines go with it (`SetMmoKeys`).
+	TOptional<FAcCardInfo> MmoSummary(const UAcSimSubsystem& Sim, const AAcPilotPawn* Pawn, FString& OutHeader, TArray<FString>& OutLines)
+	{
+		const FAcMmoClient* Mmo = Sim.MmoClient();
+		const ac::net::WorldMessage::Region* Here = Mmo ? Mmo->Here() : nullptr;
+		if (!Mmo || Mmo->Phase() != FAcMmoClient::EPhase::Playing || !Here) return {};
+		const ac::Simulation& S = Sim.Simulation();
+		const int64 Me = Sim.LocalPlayer();
+		FAcCardInfo Info;
+		Info.Icon = FAcConsoleInfo::IconName((int32)ac::UnitKind::prospector);
+		Info.Level = AcPilotText::Level(S, ac::UnitKind::prospector);
+		const ac::net::WorldMessage::Region* To = Mmo->FlyingTo();
+		if (To || (Pawn && Pawn->InFlight()))
+		{
+			// In flight: nothing to click or drive until it is down.
+			const ac::net::WorldMessage::Region* Where = To ? To : Here;
+			Info.Title = FString::Printf(TEXT("In flight to %s"), *Utf(Where->name));
+			Info.Status = To ? Utf(ac::title(Where->style)) : FString(TEXT("Coming down on the pad"));
+			Info.Hp = Info.MaxHp = ac::Rules::hp(ac::UnitKind::prospector);
+			OutHeader = TEXT("IN FLIGHT");
+			OutLines = {FString::Printf(TEXT("To %s"), *Utf(Where->name)), TEXT("The Prospector flies itself"), TEXT("Its controls come back on landing")};
+			return Info;
+		}
+		const ac::Unit* Mine = nullptr;
+		for (const ac::Unit& U : S.state.units)
+		{
+			if (U.owner == Me && (!Mine || U.kind == ac::UnitKind::prospector)) Mine = &U;
+		}
+		int64 Ore = 0, Buildings = 0, Pads = (int64)Here->pads.size();
+		for (const ac::OreDeposit& P : S.state.patches) Ore += P.remaining > 0 ? 1 : 0;
+		for (const ac::Structure& B : S.state.structures) Buildings += B.owner == Me ? 1 : 0;
+		const int64 Wells = S.state.wells ? (int64)S.state.wells->size() : 0;
+		Info.Title = Utf(Here->name);
+		FString Status = Utf(ac::title(Here->style));
+		if (Mine)
+		{
+			Info.Hp = FMath::Max(Mine->hp, 0.0);
+			Info.MaxHp = S.maxHP(*Mine);
+			Status += Mine->carrying > 0 ? FString::Printf(TEXT("   ·   Prospector carrying %lld %s"), (long long)Mine->carrying,
+				Mine->hydrogen == true ? TEXT("MH") : TEXT("ore")) : FString(TEXT("   ·   Prospector ready"));
+		}
+		Info.Status = Status;
+		auto Count = [](int64 N, const TCHAR* One, const TCHAR* Many) { return FString::Printf(TEXT("%lld %s"), (long long)N, N == 1 ? One : Many); };
+		Info.Prompt = FString::Printf(TEXT("Region  %s   ·   %s   ·   %s"), *Count(Ore, TEXT("ore deposit"), TEXT("ore deposits")),
+			*Count(Wells, TEXT("well"), TEXT("wells")), *Count(Pads, TEXT("pad"), TEXT("pads")));
+		Info.Tips = {Buildings > 0 ? FString::Printf(TEXT("Yours  %s here"), *Count(Buildings, TEXT("building"), TEXT("buildings")))
+								   : FString(TEXT("B  build a Citadel while driving, to bring ore home"))};
+		return Info;
 	}
 }
 
@@ -243,9 +306,15 @@ void UAcConsoleSubsystem::OnFrame(const FAcFrame& Frame)
 			Info = FAcConsoleInfo::ForStructure(Sim->Simulation(), *St, Commanded(Sim->Simulation(), Frame.LocalPlayer));
 		}
 	}
+	// The MMORPG test mode top-down, nothing selected: the region and the
+	// pilot's Prospector; in flight, the flight.
+	FString MmoHeader;
+	TArray<FString> MmoLines;
+	if (!Info && Sim->IsMmo()) Info = MmoSummary(*Sim, AAcPilotPawn::Find(this), MmoHeader, MmoLines);
 	if (Info && !HeldNote.IsEmpty()) Info->Note = HeldNote;
 	if (Info && Info->Buttons.IsEmpty() && bDemo) Info->Buttons = DemoButtons();
 	ConsoleWidget->SetMmo(Sim->IsMmo());
+	ConsoleWidget->SetMmoKeys(MmoHeader, MmoLines);
 	ConsoleWidget->Show(Info, FPlatformTime::Seconds());
 
 	// The camera keeps the map's near edge above the console.

@@ -133,6 +133,8 @@ private:
 	void TickMmo();
 	void OnRefused(const FString& Why);
 	TSharedPtr<SAcMmoBanner> MmoBanner;
+	/// The arrival whose region title was shown (`FAcMmoClient::Visit`; -1: none yet).
+	int64 MmoTitledVisit = -1;
 	TSharedPtr<SAcWorldMap> WorldMap;
 	/// The world map's state from the client, each frame.
 	void TickWorldMap();
@@ -228,6 +230,8 @@ private:
 		int64 OreBefore = -1;
 		int64 VisitWas = 0;
 		bool bCardsShot = false;
+		/// When the cards were first up (the banner is shot once it is in).
+		double CardsSince = -1;
 		bool bShotBefore = false;
 		FString Region;
 		FVector2D UnitAt = FVector2D::ZeroVector;

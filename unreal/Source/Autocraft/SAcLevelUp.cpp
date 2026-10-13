@@ -181,10 +181,11 @@ void SAcLevelBanner::Construct(const FArguments& InArgs)
 	SetVisibility(EVisibility::HitTestInvisible);
 }
 
-void SAcLevelBanner::Show(const ac::UnitKind Kind, const int32 Level, const double Now, const bool bHold)
+void SAcLevelBanner::Show(const ac::UnitKind Kind, const int32 Level, const double Now, const bool bHold, const bool bKeys)
 {
 	Title = AcLeveling::BannerTitle(Kind, Level);
-	Sub = AcLeveling::BannerSub(Level);
+	Sub = bKeys ? AcLeveling::BannerKeysSub(Level) : AcLeveling::BannerSub(Level);
+	bKeyed = bKeys;
 	Since = Now;
 	bHeld = bHold;
 	bOn = true;
@@ -206,7 +207,7 @@ EActiveTimerReturnType SAcLevelBanner::Animate(double CurrentTime, float DeltaTi
 
 bool SAcLevelBanner::IsShowing(const double Now) const
 {
-	return bOn && (bHeld || Now - Since < 0.18 + 2.4 + 0.6);
+	return bOn && (bHeld || Now - Since < 0.18 + (bKeyed ? 3.6 : 2.4) + 0.6);
 }
 
 int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -218,6 +219,8 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	if (Size.X <= 0 || Size.Y <= 0) return Layer;
 
 	// The run: in (0.18 s: fade in, ×1.15 → 1), 2.4 s, out (0.6 s fade).
+	// The MMORPG test mode's holds 3.6 s.
+	const double Hold = bKeyed ? 3.6 : 2.4;
 	double A = 1, Scale = 1;
 	if (!bHeld)
 	{
@@ -228,9 +231,9 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 			A = K;
 			Scale = 1.15 + (1 - 1.15) * K;
 		}
-		else if (T > 0.18 + 2.4)
+		else if (T > 0.18 + Hold)
 		{
-			A = FMath::Max(0.0, 1 - (T - 0.18 - 2.4) / 0.6);
+			A = FMath::Max(0.0, 1 - (T - 0.18 - Hold) / 0.6);
 		}
 	}
 	// `n.position`: the middle, 74 % up the view (Swift points, y up).
@@ -246,6 +249,9 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	const FAcBakedArt& Art = Plate.Get(FVector2D(W, H), 14, 14, 4, 4, 23);
 	const double Pad = AcCabArt::PlatePad;
 	P.Baked(Art, FAcRect(O.X - W / 2 - Pad, O.Y - 32 - Pad, W + 2 * Pad, H + 2 * Pad), float(A));
+	// The MMORPG test mode: dark glass under the words, so they read over a
+	// bright sky.
+	if (bKeyed) P.Box(FAcRect(O.X - W / 2 + 4, O.Y - 28, W - 8, H - 8), 4, C(0.01, 0.03, 0.05, 0.82 * A), FLinearColor::Transparent);
 	// Gold rules either side of the title.
 	for (const double Side : {-1.0, 1.0})
 	{
@@ -254,7 +260,7 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	}
 	// One amber line: no name tint on the kind (Swift's banner has none).
 	P.Text(Title, 40, Gold(), FVector2D(O.X, O.Y + 2), EAcHAlign::Center, false, float(A));
-	P.Text(Sub, 14, FAcHudStyle::Soft(), FVector2D(O.X, O.Y - 20), EAcHAlign::Center, false, float(A));
+	P.Text(Sub, bKeyed ? 16 : 14, bKeyed ? White(0.95) : FAcHudStyle::Soft(), FVector2D(O.X, O.Y - 20), EAcHAlign::Center, false, float(A));
 	return L;
 }
 
@@ -281,15 +287,17 @@ void SAcPickCards::Construct(const FArguments& InArgs)
 		];
 }
 
-void SAcPickCards::Show(const TOptional<FAcPickOffer>& InOffer, const FAcCabLayout& Layout, const FLinearColor& InAccent, const bool bInKeys)
+void SAcPickCards::Show(const TOptional<FAcPickOffer>& InOffer, const FAcCabLayout& Layout, const FLinearColor& InAccent, const bool bInKeys,
+	const bool bInSide)
 {
 	const bool bSameLayout = Cab.Size == Layout.Size && Cab.CenterWell.X == Layout.CenterWell.X && Cab.CenterWell.W == Layout.CenterWell.W
 		&& Cab.ViewSwitch.X == Layout.ViewSwitch.X && Cab.Top() == Layout.Top();
-	if (InOffer == Shown && bSameLayout && Accent == InAccent && bKeys == bInKeys) return;
+	if (InOffer == Shown && bSameLayout && Accent == InAccent && bKeys == bInKeys && bSide == bInSide) return;
 	Shown = InOffer;
 	Cab = Layout;
 	Accent = InAccent;
 	bKeys = bInKeys;
+	bSide = bInSide;
 	Pressed.Reset();
 	Relayout();
 	SetVisibility(Shown ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed);
@@ -303,11 +311,14 @@ void SAcPickCards::Relayout()
 	PanelRect = FAcRect();
 	if (!Shown) return;
 	// `showPicks`: clear of the view switch on the right, over the screens.
+	// The MMORPG test mode: one column at the view's left edge.
 	const FAcRect& Center = Cab.CenterWell;
-	const double Width = FMath::Min3(640.0, FMath::Max(420.0, Center.W + 40), 2 * (Cab.ViewSwitch.MinX() - 12 - Center.MidX()));
+	const double Width = bSide ? 300.0
+		: FMath::Min3(640.0, FMath::Max(420.0, Center.W + 40), 2 * (Cab.ViewSwitch.MinX() - 12 - Center.MidX()));
 	// `PickCards.node`.
 	const double Gap = 10, Pad = 8, Mark = 30;
-	const double CardW = (Width - Gap - 2 * Pad) / 2;
+	const int32 Count = FMath::Max(1, Shown->Perks.Num());
+	const double CardW = bSide ? Width - 2 * Pad : (Width - Gap - 2 * Pad) / 2;
 	const double TextX = Pad + 6 + Mark + 10;
 	const double TextW = CardW - TextX - 8;
 	int32 Most = 1;
@@ -317,6 +328,21 @@ void SAcPickCards::Relayout()
 		Most = FMath::Max(Most, Lines.Last().Num());
 	}
 	CardH = FMath::Max(66.0, 38.0 + Most * 14);
+	if (bSide)
+	{
+		// Stacked, the first on top, under a two-line header; its foot a
+		// little over the dashboard's top at the side (the view frame's
+		// edge is 16 points in).
+		const double Header = 42;
+		const double H = Count * CardH + (Count - 1) * Gap + Header + Pad + 4;
+		const FVector2D Origin(28, FMath::RoundHalfFromZero(Cab.Top() + 40));
+		PanelRect = FAcRect(Origin.X, Origin.Y, Width, H);
+		for (int32 K = 0; K < Shown->Perks.Num(); ++K)
+		{
+			Frames.Emplace(FAcRect(Origin.X + Pad, Origin.Y + Pad + (Count - 1 - K) * (CardH + Gap), CardW, CardH), Shown->Perks[K]);
+		}
+		return;
+	}
 	const double Header = 24;
 	const FVector2D Origin(FMath::RoundHalfFromZero(Center.MidX() - Width / 2), FMath::RoundHalfFromZero(Cab.Top() + 12));
 	PanelRect = FAcRect(Origin.X, Origin.Y, Width, CardH + Header + Pad + 4);
@@ -385,10 +411,17 @@ int32 SAcPickCards::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, c
 		FAcRect(Plate_.X - PP, Plate_.Y - PP, Plate_.W + 2 * PP, Plate_.H + 2 * PP));
 
 	// The header: whose level, and on the right how many wait and the keys.
-	const FString Title = FString::Printf(TEXT("%s  ·  LEVEL %d  ·  PICK ONE"), *AcPilotText::Title(O.Kind).ToUpper(), O.Level);
+	// The MMORPG test mode: the level this pick is for, and the levels
+	// waiting up to the one on the dashboard's badge.
+	const FString Title = bSide ? FString::Printf(TEXT("%s  ·  PICK FOR LEVEL %d"), *AcPilotText::Title(O.Kind).ToUpper(), O.Level)
+		: FString::Printf(TEXT("%s  ·  LEVEL %d  ·  PICK ONE"), *AcPilotText::Title(O.Kind).ToUpper(), O.Level);
 	P.Text(Title, 14, Gold(), FVector2D(Plate_.X + Pad + 4, Plate_.MaxY() - 19));
 	TArray<FString> Right;
-	if (O.Waiting > 1) Right.Add(FString::Printf(TEXT("%d PICKS WAITING"), O.Waiting));
+	if (O.Waiting > 1)
+	{
+		Right.Add(bSide ? FString::Printf(TEXT("%d WAITING (LV %d-%d)"), O.Waiting, O.Level, O.Level + O.Waiting - 1)
+			: FString::Printf(TEXT("%d PICKS WAITING"), O.Waiting));
+	}
 	if (bKeys) Right.Add(FString::Printf(TEXT("⌥ CLICK OR %s / %s"), FAcPickOffer::Key(0), FAcPickOffer::Key(1)));
 	if (!Right.IsEmpty())
 	{
@@ -410,8 +443,9 @@ int32 SAcPickCards::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, c
 		};
 		double Total = 0;
 		for (const TPair<FString, FLinearColor>& Part : Parts) Total += Width(Part.Key);
-		double X = Plate_.MaxX() - Pad - 4 - Total;
-		const double Base = Plate_.MaxY() - 18;
+		// (The side panel: a second line under the title, from the left.)
+		double X = bSide ? Plate_.X + Pad + 4 : Plate_.MaxX() - Pad - 4 - Total;
+		const double Base = Plate_.MaxY() - (bSide ? 37 : 18);
 		for (const TPair<FString, FLinearColor>& Part : Parts)
 		{
 			FString L, R;

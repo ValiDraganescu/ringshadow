@@ -152,8 +152,10 @@ bool UAcPilotBuildSubsystem::Key(const FString& K)
 	}
 	if (!bMenu || !K.IsNumeric()) return false;
 	const int32 N = FCString::Atoi(*K);
-	if (N < 1 || N > (int32)ac::PilotBuild::kinds.size()) return false;
-	const ac::StructureKind Kind = ac::PilotBuild::kinds[N - 1];
+	// The menu's list (the MMORPG test mode's own there).
+	const TArray<ac::StructureKind> Kinds = AcPilotText::BuildKinds(Sim->IsMmo());
+	if (N < 1 || N > Kinds.Num()) return false;
+	const ac::StructureKind Kind = Kinds[N - 1];
 	if (const std::optional<std::string> Why = S.buildRefusal(Kind, ac::Pilot::player))
 	{
 		Note(Utf8(*Why));

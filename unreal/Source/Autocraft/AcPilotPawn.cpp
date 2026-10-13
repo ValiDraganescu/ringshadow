@@ -61,6 +61,11 @@ namespace
 		TEXT("The mouse turn's base gain over Swift's points (raw counts are slower than macOS's accelerated points)."));
 	TAutoConsoleVariable<float> CVarDive(TEXT("ac.PilotDive"), 1.2f,
 		TEXT("Seconds the take-over flies the camera from the top-down view into the unit (0: a cut)."));
+	/// The MMORPG test: the view's heading each unit was left with, for the
+	/// next ride of it (a resume of the world, or the top-down and back):
+	/// the pilot looks where it looked (docs/mmorpg-shots.md #13).
+	TMap<int64, double> GMmoYawLeft;
+
 	TAutoConsoleVariable<float> CVarEject(TEXT("ac.PilotEject"), 0.9f,
 		TEXT("Seconds leaving a unit flies the camera from its eye back up to the top-down view (0: a cut)."));
 	TAutoConsoleVariable<int32> CVarPickParts(TEXT("ac.PickParts"), 1,
@@ -457,6 +462,13 @@ bool AAcPilotPawn::TakeOver(const int64 Id)
 	DrivenId = Id;
 	// The mouse steers where it looks: a tank's turret, else its heading.
 	PilotYaw = U->look();
+	// The MMORPG test: where the pilot looked when it left this unit.
+	if (const double* Left = Sim->IsMmo() ? GMmoYawLeft.Find(Id) : nullptr)
+	{
+		UE_LOG(LogAutocraft, Log, TEXT("pilot: #%lld faces %.3f as left (the server's %.3f)"), (long long)Id, *Left, PilotYaw);
+		PilotYaw = *Left;
+		GMmoYawLeft.Remove(Id);
+	}
 	S.pilot->heading = PilotYaw;
 	bFollowsMouse = !ac::Pilot::steers(U->kind);
 	LastEye.Reset();
@@ -512,6 +524,7 @@ void AAcPilotPawn::Leave(const bool bHandBack)
 				S.pilot->act = S.pilot->ability = S.pilot->hold = S.pilot->mend = false;
 			}
 			if (bHandBack && Mmo->Wanted()) Mmo->Want(std::nullopt);
+			GMmoYawLeft.Add(DrivenId, PilotYaw);
 		}
 		else
 		{
@@ -537,7 +550,10 @@ void AAcPilotPawn::Leave(const bool bHandBack)
 		{
 			// The RTS pawn sets its own input mode and context on possession.
 			PC->Possess(*It);
-			if (At) It->CenterOn(*At);
+			// The MMORPG test: zoomed out on the area round the unit, the
+			// region's ore, wells and cliffs in view (docs/mmorpg-shots.md #6).
+			if (At && Sim && Sim->IsMmo()) It->ShowAround(*At, 80);
+			else if (At) It->CenterOn(*At);
 			// The eject: the dive in reverse, from the eye where it was up to
 			// the top-down view (this camera stays put while not driving).
 			if (const float Eject = CVarEject.GetValueOnGameThread(); Eject > 0 && (!UAcShotSubsystem::IsShotRun() || UAcShotSubsystem::IsRecordRun()))

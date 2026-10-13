@@ -38,8 +38,10 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
-	/// `levelUp(kind, level, hold)`: `Now` real seconds; `bHold` keeps it up, unanimated.
-	void Show(ac::UnitKind Kind, int32 Level, double Now, bool bHold);
+	/// `levelUp(kind, level, hold)`: `Now` real seconds; `bHold` keeps it up,
+	/// unanimated. `bKeys` (the MMORPG test mode): the line under it says
+	/// the keys that pick, on a darker plate, held a little longer.
+	void Show(ac::UnitKind Kind, int32 Level, double Now, bool bHold, bool bKeys = false);
 	bool IsShowing(double Now) const;
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D::ZeroVector; }
@@ -52,6 +54,7 @@ private:
 	double Since = -1e9;
 	bool bHeld = false;
 	bool bOn = false;
+	bool bKeyed = false;
 	mutable FAcLevelPlate Plate;
 	TSharedPtr<FActiveTimerHandle> Timer;
 
@@ -69,8 +72,13 @@ public:
 
 	void Construct(const FArguments& InArgs);
 	/// `showPicks`: the offer (unset: none) over the dashboard of `Layout`,
-	/// framed in `Accent`; `bKeys`: the keys that pick (driving).
-	void Show(const TOptional<FAcPickOffer>& Offer, const FAcCabLayout& Layout, const FLinearColor& Accent, bool bKeys);
+	/// framed in `Accent`; `bKeys`: the keys that pick (driving). `bSide`
+	/// (the MMORPG test mode): the cards stacked at the view's left edge over
+	/// the dashboard, the middle of the view (the unit, what it works on)
+	/// left clear; the header names the level picked for and the levels
+	/// waiting ("PICK FOR LEVEL 2", "3 WAITING · LV 2-4").
+	void Show(const TOptional<FAcPickOffer>& Offer, const FAcCabLayout& Layout, const FLinearColor& Accent, bool bKeys, bool bSide = false);
+	bool Side() const { return bSide; }
 	const TOptional<FAcPickOffer>& Offer() const { return Shown; }
 	/// The panel (Swift points, y up), zero with none.
 	FAcRect Panel() const { return PanelRect; }
@@ -98,6 +106,7 @@ private:
 	FAcCabLayout Cab;
 	FLinearColor Accent = FLinearColor::White;
 	bool bKeys = true;
+	bool bSide = false;
 	FAcRect PanelRect;
 	double CardH = 66;
 	TArray<TArray<FString>> Lines;

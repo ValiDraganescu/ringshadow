@@ -9,7 +9,8 @@
 //   01 spawn on the pad, third person   02 the same, first person
 //   03 top-down over the start region   04 the world map
 //   05 the build menu                   06 the Citadel's ghost near the ore
-//   07 the level-up cards (the weld's XP levels the Prospector)
+//   07 the level-up cards (the weld's XP levels the Prospector; the run
+//      gives the new pilot 55 XP, -AcMmoDevXp, so it does)
 //   08 a Citadel going up               09 the Citadel finished
 //   10 drilling ore                     11 unloading: before, 12 after
 //   13 the world map, Cold Fork picked  14 the flight, mid-flight
@@ -33,6 +34,7 @@
 #include "AcMmo.h"
 #include "AcPilotBuild.h"
 #include "AcPilotPawn.h"
+#include "AcPilotText.h"
 #include "AcSimSubsystem.h"
 #include "SAcLevelUp.h"
 
@@ -44,6 +46,8 @@
 #include "GameFramework/PlayerController.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformTime.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
 
@@ -201,6 +205,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 0:
 		if (Sim && Sim->IsMmo()) StopMmo();
 		IFileManager::Get().MakeDirectory(*Shots.Dir, true);
+		// A world's XP is a tenth of the game's: the new pilot starts with
+		// 55 (5 short of level 2), so the weld levels it (the banner and the
+		// cards) unless the run says otherwise.
+		if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp)) FCommandLine::Append(TEXT(" -AcMmoDevXp=55"));
 		StartMmo(true);
 		Advance();
 		return;
@@ -278,7 +286,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 14:
 	{
 		UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
-		Check(Build && Build->Key(TEXT("5")) && Build->Placing().IsSet() && *Build->Placing() == ac::StructureKind::citadel, TEXT("5 held out a Citadel"));
+		// The Citadel's number in the mode's menu.
+		const int32 Number = AcPilotText::BuildKinds(true).IndexOfByKey(ac::StructureKind::citadel) + 1;
+		Check(Number > 0 && Build && Build->Key(FString::FromInt(Number)) && Build->Placing().IsSet()
+			&& *Build->Placing() == ac::StructureKind::citadel, FString::Printf(TEXT("%d held out a Citadel"), Number));
 		Advance();
 		return;
 	}
@@ -296,7 +307,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (const ac::Structure* C = S ? CitadelOf(*S) : nullptr)
 		{
 			Shots.Citadel = C->id;
-			if (bCards && !Shots.bCardsShot)
+			if (bCards && Shots.CardsSince < 0) Shots.CardsSince = Now;
+			if (bCards && !Shots.bCardsShot && Now - Shots.CardsSince > 0.6)
 			{
 				// The banner is up for a moment: take it with the cards.
 				Shots.bCardsShot = true;

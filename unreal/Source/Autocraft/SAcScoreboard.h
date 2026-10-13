@@ -35,6 +35,16 @@ public:
 		bAllUnits = bAll;
 		Key.Reset();
 	}
+	/// The MMORPG test: the local player's units away from the region (a
+	/// Prospector in flight between pads), counted with the rest.
+	void SetAway(int64 N)
+	{
+		if (N == Away) return;
+		Away = N;
+		Key.Reset();
+	}
+	/// The units word as drawn ("UNIT" for one, else "UNITS").
+	const FString& UnitsWord() const { return Units; }
 	/// The games won are shown (not in the MMORPG test).
 	bool ShowsGamesWon() const
 	{
@@ -82,4 +92,6 @@ private:
 	/// What the layout was made from, to skip it when nothing changed.
 	FString Key;
 	bool bAllUnits = false;
+	int64 Away = 0;
+	FString Units = TEXT("UNITS");
 };

@@ -83,6 +83,10 @@ public:
 	/// grid and the view switch give way to the mode's keys (nothing there
 	/// to order; the view switch is the driver's); driving, as always.
 	void SetMmo(bool bInMmo);
+	/// The MMORPG top-down card well: a header and its lines ("KEY  what",
+	/// the key in yellow); an empty header: the mode's keys. In flight it
+	/// says the flight instead (docs/mmorpg-shots.md #5).
+	void SetMmoKeys(const FString& Header, const TArray<FString>& Lines);
 	/// The 5 × 3 card grid is drawn (not in the MMORPG top-down).
 	bool ShowsCard() const { return !(bMmo && Look == EAcConsoleStyle::Rts); }
 	/// The view switch is drawn (not in the MMORPG top-down).
@@ -156,6 +160,9 @@ private:
 	void PaintCard(class FAcConsolePaint& P) const;
 	/// The MMORPG top-down: the mode's keys in the card's well.
 	void PaintMmoKeys(class FAcConsolePaint& P) const;
+	/// The MMORPG test mode's build menu in the card's well: one row a
+	/// building (key, icon, name, price; greyed with why not), Esc under them.
+	void PaintBuildList(class FAcConsolePaint& P) const;
 	void PaintOver(class FAcConsolePaint& P) const;
 	void PaintKeyed(class FAcConsolePaint& P, const FString& Text, double Size, const FLinearColor& Key,
 		const FLinearColor& Rest, FVector2D At) const;
@@ -182,6 +189,8 @@ private:
 	bool bLaidWarped = true;
 	EAcConsoleStyle Look = EAcConsoleStyle::Rts;
 	bool bMmo = false;
+	FString MmoHeader;
+	TArray<FString> MmoLines;
 	EAcCabLamps Lamps = EAcCabLamps::Idle;
 	double LampsSince = 0;
 

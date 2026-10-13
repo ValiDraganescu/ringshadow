@@ -2,6 +2,7 @@
 
 #include "AcNewKinds.h"
 #include "Leveling.h"
+#include "NetProtocol.h"
 #include "Rules.h"
 
 #include <cmath>
@@ -195,6 +196,41 @@ TArray<FString> AcPilotText::Tips(const ac::Unit& U)
 		TEXT("Z or X  pick a level-up card   ·   hold Option  free the pointer to click one")};
 	Tips.RemoveAll([](const FString& L) { return L.IsEmpty(); });
 	return Tips;
+}
+
+TArray<FString> AcPilotText::MmoTips(const ac::Simulation& Sim, const ac::Unit& U)
+{
+	const FAcPilotText T = FAcPilotText::Of(U.kind);
+	if (!ac::PilotBuild::builds(U.kind)) return Tips(U);
+	bool bOre = false, bCitadel = false, bDerrick = false, bHurt = false;
+	for (const ac::OreDeposit& P : Sim.state.patches) bOre |= P.remaining > 0;
+	for (const ac::Structure& B : Sim.state.structures)
+	{
+		if (B.owner != U.owner) continue;
+		bCitadel |= B.kind == ac::StructureKind::citadel && B.complete();
+		bDerrick |= B.kind == ac::StructureKind::derrick && B.complete();
+		bHurt |= B.hp < ac::Rules::hp(B.kind) && B.complete();
+	}
+	TArray<FString> Tips = {MoveLine(U, T)};
+	if (bOre) Tips.Add(TEXT("Hold click  drill ore at a deposit"));
+	Tips.Add(bCitadel ? FString(TEXT("Walk into  your Citadel to unload the ore"))
+					  : FString(TEXT("B  build a Citadel, to bring ore home")));
+	if (bDerrick) Tips.Add(TEXT("click  enter your Derrick   ·   R + hold click  repair it"));
+	else if (bHurt) Tips.Add(TEXT("Hold click  repair a damaged building"));
+	Tips.Add(BuildLine());
+	Tips.Add(TEXT("M  world map: on a pad, fly to another region"));
+	Tips.Add(TEXT("V  first or third person   ·   Esc  the top-down view"));
+	if (!Sim.levels().pending(U.kind).empty()) Tips.Add(TEXT("Z or X  pick a level-up card   ·   hold Option  free the pointer to click one"));
+	return Tips;
+}
+
+TArray<ac::StructureKind> AcPilotText::BuildKinds(const bool bMmo)
+{
+	// The MMORPG test mode: what a world's server builds (the shared list).
+	TArray<ac::StructureKind> Out;
+	if (bMmo) for (const ac::StructureKind K : ac::net::kWorldBuildKinds) Out.Add(K);
+	else for (const ac::StructureKind K : ac::PilotBuild::kinds) Out.Add(K);
+	return Out;
 }
 
 TOptional<FAcSightInfo> AcPilotText::Sight(const ac::Simulation& Sim, const std::optional<ac::PilotSight>& S)
@@ -470,7 +506,7 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 	Info.Note = P.Note;
 	Info.Prompt = P.Prompt ? *P.Prompt : Hint(U);
 	if (P.Prompt) Info.Tone = P.Tone;
-	Info.Tips = Tips(U);
+	Info.Tips = In.bMmo ? MmoTips(Sim, U) : Tips(U);
 	Info.Level = Level(Sim, U.kind);
 
 	if (!ac::PilotBuild::builds(U.kind))
@@ -505,7 +541,7 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 	if (In.bBuildMenu || In.Placing)
 	{
 		int32 I = 0;
-		for (const ac::StructureKind K : ac::PilotBuild::kinds)
+		for (const ac::StructureKind K : BuildKinds(In.bMmo))
 		{
 			const std::optional<std::string> Why = Sim.buildRefusal(K, ac::Pilot::player);
 			FAcCardButton B;
@@ -518,6 +554,15 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 			B.Time = ac::Rules::buildTime(K);
 			B.bEnabled = !Why;
 			if (Why) B.Why = Utf8(*Why);
+			if (In.bMmo && Why)
+			{
+				// The MMORPG test mode: the price that is short, as "needs 100 MH".
+				const ac::Player& Me = Sim.state.players[ac::Pilot::player];
+				TArray<FString> Short;
+				if (Me.ore < B.Ore) Short.Add(FString::Printf(TEXT("%d ore"), B.Ore));
+				if (Me.hydrogen < B.Hydrogen) Short.Add(FString::Printf(TEXT("%d MH"), B.Hydrogen));
+				if (!Short.IsEmpty()) B.Why = TEXT("needs ") + FString::Join(Short, TEXT(" and "));
+			}
 			B.bLit = In.Placing == K;
 			Info.Buttons.Add(B);
 			++I;
@@ -528,6 +573,7 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 		Back.Title = TEXT("Back");
 		Back.Icon = TEXT("act.back");
 		Info.Buttons.Add(Back);
+		Info.bBuildList = In.bMmo;
 		return Info;
 	}
 	const std::optional<ac::PilotTarget>& T = F.Target;

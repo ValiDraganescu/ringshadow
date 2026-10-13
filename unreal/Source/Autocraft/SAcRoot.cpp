@@ -95,6 +95,7 @@ void SAcRoot::SetMmo(const bool bMmo)
 	if (bMmo == bMmoMode) return;
 	bMmoMode = bMmo;
 	Bar->SetShowSupply(!bMmo);
+	Bar->SetFlashGains(bMmo);
 	Scoreboard->SetCountAllUnits(bMmo);
 	SetDriving(bDrivingNow);
 }

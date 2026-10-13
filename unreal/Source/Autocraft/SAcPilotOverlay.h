@@ -36,6 +36,13 @@ public:
 	void Show(const FAcPilotInfo& Info, double Now);
 	/// A new ride: no hurt flash from the last unit's health, no marks.
 	void Reset();
+	/// A gain the pilot made ("+25 ORE" unloaded), large over the reticle,
+	/// rising and fading over 1.8 s from `Now` (real seconds).
+	void Gain(const FString& Text, double Now)
+	{
+		GainText = Text;
+		GainSince = Now;
+	}
 	void SetPanel(bool bInPanel) { bPanel = bInPanel; }
 	/// Stills: marks drawn `MarkAge` seconds after they land, and the hurt
 	/// flash held, whatever the clock says.
@@ -92,6 +99,8 @@ private:
 	// The note over the reticle: full for 1.4 s, then fades over 0.5 s.
 	TOptional<FString> ShownNote;
 	double NoteSince = -10;
+	FString GainText;
+	double GainSince = -10;
 	// The hurt flash: 0.9 down to nothing over 0.5 s.
 	TOptional<double> LastHp;
 	double HurtSince = -10;

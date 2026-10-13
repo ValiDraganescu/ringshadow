@@ -152,6 +152,9 @@ struct FAcPilotInputs
 	bool bBuildMenu = false;
 	TOptional<ac::StructureKind> Placing;
 	TOptional<ac::Vec2> PlacingSpot;
+	/// The MMORPG test mode: tips for what is there, the build menu's list
+	/// (`AcPilotText::BuildKinds`).
+	bool bMmo = false;
 };
 
 struct AUTOCRAFT_API AcPilotText
@@ -170,6 +173,13 @@ struct AUTOCRAFT_API AcPilotText
 	static FString Hint(const ac::Unit& U);
 	/// `pilotTips`: the dashboard's tips, taking turns.
 	static TArray<FString> Tips(const ac::Unit& U);
+	/// The MMORPG test mode's tips: only what can be done there and then
+	/// (a Derrick's line with a Derrick of the pilot's, the unload line with
+	/// a Citadel, the pick keys with a pick waiting; no music keys).
+	static TArray<FString> MmoTips(const ac::Simulation& Sim, const ac::Unit& U);
+	/// The build menu's buildings, in order (keys 1, 2, …): the MMORPG test
+	/// mode's list there, else `PilotBuild.kinds`.
+	static TArray<ac::StructureKind> BuildKinds(bool bMmo);
 
 	/// `sightInfo`: the sight's target for the readout.
 	static TOptional<FAcSightInfo> Sight(const ac::Simulation& Sim, const std::optional<ac::PilotSight>& S);

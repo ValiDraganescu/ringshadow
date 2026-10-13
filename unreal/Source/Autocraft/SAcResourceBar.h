@@ -29,6 +29,9 @@ public:
 	/// nothing.
 	void SetShowSupply(bool bShow);
 	bool ShowsSupply() const { return bShowSupply; }
+	/// The MMORPG test: a gain flashes the count and says "+N" beside it
+	/// (docs/mmorpg-shots.md #11).
+	void SetFlashGains(bool bFlash) { bFlashGains = bFlash; }
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(Width, Height); }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -41,6 +44,10 @@ private:
 	int64 SupplyUsed = 0;
 	int64 SupplyCap = 0;
 	bool bShowSupply = true;
+	bool bFlashGains = false;
+	/// The last gain of ore and MH, and when (real seconds).
+	int64 GainOre = 0, GainHydrogen = 0;
+	double GainOreAt = -10, GainHydrogenAt = -10;
 	/// Real time not yet spent on count-up steps.
 	double Pending = 0.0;
 };

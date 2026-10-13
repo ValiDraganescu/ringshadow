@@ -107,6 +107,9 @@ struct AUTOCRAFT_API AcLeveling
 	/// The banner's lines (`applyLevelUp`).
 	static FString BannerTitle(ac::UnitKind Kind, int32 Level);
 	static FString BannerSub(int32 Level);
+	/// The MMORPG test mode's line: the cards are at the view's side, picked
+	/// by their keys ("NEW PICK  ·  Z OR X").
+	static FString BannerKeysSub(int32 Level);
 	/// `-AcLevel` / `windowshot --level`: those kinds at those levels, a
 	/// third of the way on, then the first `Picks` of each made. The kinds,
 	/// in order.

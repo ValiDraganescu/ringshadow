@@ -90,6 +90,9 @@ struct FAcCardInfo
 	TArray<FString> Tips;
 	/// The driven kind's level and XP (cockpit).
 	TOptional<FAcLevelInfo> Level;
+	/// The MMORPG test mode's build menu: the buttons drawn as a list, each
+	/// with its name, price and why not (docs/mmorpg-shots.md #7).
+	bool bBuildList = false;
 	// Pick cards (`offer`) are chunk E9's, drawn over the dashboard by it.
 
 	/// What changes the layout (not the bars, numbers and quick info): `CardInfo.layout`.
