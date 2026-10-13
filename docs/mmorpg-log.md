@@ -119,3 +119,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Hand check: after flight, client sends hand back; camera frozen.
 - I Hand back → take race: server drops new take.
 - T R3-FIX → mmo-world; test must go through pilot pawn path.
+- T R3-FIX 19e2e35: arrival kept seat; flow tests failed before, pass now.
+- D Client adopts server seat only at start and after flight.
+- D Travel view hold gives way to top-down after 15 s.
+- I Frozen camera not reproduced hidden; pan clamped at full zoom-out?
