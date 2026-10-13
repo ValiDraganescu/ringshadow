@@ -16,3 +16,11 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N M1 = drive one unit through local server under lag sim.
 - D M1 excludes shots, encryption, saves, Win/Linux server.
 - T M1 split into T1–T6, see mmorpg-m1.md.
+- T T1 net → worker mmo-net, worktree mmo-net-b1457f45.
+- T T2 server world → worker mmo-server-world, worktree mmo-server-world-8432175b.
+- T T3 game-layer sim reads → one-shot research agent.
+- N Workers report log lines; only manager edits this log.
+- T T3 done; findings in mmorpg-m1.md.
+- D Client mirror = unstepped ac::Simulation filled from snapshots.
+- D Server sends pilot's fog bits; snapshots carry upgrades, levels, cargo.
+- N Client crosshair is measured client-side; server must validate (M2).
