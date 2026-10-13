@@ -88,6 +88,9 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	Asked.Reset();
 	BuildsAsked.Reset();
 	BuildRefusals.Reset();
+	PicksAsked.Reset();
+	LastPickRefusal.Reset();
+	PicksDone = 0;
 	FlightsAsked.Reset();
 	LastFlightRefusal.Reset();
 	bArriving = false;
@@ -121,7 +124,14 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Token.push_back(Hex[B >> 4]);
 		Token.push_back(Hex[B & 15]);
 	}
-	const std::vector<std::string> Args = {"--world", Utf8(WorldFile), "--bind", "127.0.0.1", "--port", "0", "--parent-pid", std::to_string(getpid())};
+	std::vector<std::string> Args = {"--world", Utf8(WorldFile), "--bind", "127.0.0.1", "--port", "0", "--parent-pid", std::to_string(getpid())};
+	// Dev: XP for a new pilot's Prospector, on the server (as -AcEarn).
+	if (double DevXp = 0; FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), DevXp) && DevXp > 0)
+	{
+		Args.push_back("--dev-xp");
+		Args.push_back(std::to_string(DevXp));
+	}
+	Args.insert(Args.end(), ExtraServerArgs.begin(), ExtraServerArgs.end());
 	if (!Server.start(Utf8(Program), Args, Token))
 	{
 		Fail(FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
@@ -182,6 +192,9 @@ void FAcMmoClient::Connect(const double Now)
 	};
 	Net->onRegionChange = [this](const ac::net::RegionChange& Change) { OnRegionChange(Change); };
 	Net->connect(Now);
+	// Who the pilot is (the server seats it only after the Join): the key
+	// set, or a new one each start (a new pilot at the start pad).
+	Net->join(PilotKey ? *PilotKey : ac::net::newPilotKey());
 	ConnectAt = Now;
 	NextInputAt = 0;
 	CurrentPhase = EPhase::Connecting;
@@ -412,6 +425,22 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (PicksAsked.Remove(R.request) > 0)
+		{
+			if (R.done)
+			{
+				PicksDone += 1;
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: pick %u kept"), R.request);
+			}
+			else
+			{
+				LastPickRefusal = Text(R.reason);
+				Notes.Add(FString::Printf(TEXT("Not picked: %s"), *LastPickRefusal));
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: pick %u refused: %s"), R.request, *LastPickRefusal);
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (FlightsAsked.Remove(R.request) > 0)
 		{
 			if (!R.done)
@@ -483,6 +512,26 @@ bool FAcMmoClient::Build(const ac::StructureKind Kind, const ac::Vec2 At)
 TArray<FString> FAcMmoClient::TakeBuildRefusals()
 {
 	return MoveTemp(BuildRefusals);
+}
+
+bool FAcMmoClient::Pick(const ac::UnitKind Kind, const ac::Perk Perk, FString* Why)
+{
+	auto No = [&](const FString& Reason)
+	{
+		if (Why) *Why = Reason;
+		return false;
+	};
+	const ac::net::Mirror* M = Mirror();
+	if (!Net || !Net->welcome() || !M) return No(TEXT("Not connected to the local server"));
+	if (PickInFlight()) return No(TEXT("A pick is on its way"));
+	if (ac::kind(Perk) != Kind) return No(TEXT("Not a card of that kind"));
+	if (const std::optional<std::string> Refused = M->simulation().levels().refusal(Perk)) return No(Text(*Refused));
+	LastPickRefusal.Reset();
+	const uint32 Id = Net->pick(Kind, Perk);
+	PicksAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: pick %u asked: %s for %s"), Id, *Text(std::string(ac::rawValue(Perk))),
+		*Text(std::string(ac::rawValue(Kind))));
+	return true;
 }
 
 TArray<FString> FAcMmoClient::TakeNotes()

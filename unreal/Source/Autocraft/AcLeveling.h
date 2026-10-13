@@ -15,7 +15,9 @@
 //   - the PILOTS rows on the command map (D8): `OnInfo` reserves
 //     `PilotsRoom`, `PilotsPainter` draws them, `OnPick` takes a pick.
 //   A pick is an order (`Command::Pick`); a kept one latches (`Picked`, C7),
-//   a refused one notes why on the cockpit (E6 `Note`).
+//   a refused one notes why on the cockpit (E6 `Note`). In the MMORPG mode
+//   the order is a Pick request to the server (`FAcMmoClient::Pick`); the
+//   cards and the bar read the pilot's own levels from the mirror.
 //   The XP bar and the LV badge beside the driven unit's name are E6's
 //   (`AcPilotText::Level` → the console card).
 //

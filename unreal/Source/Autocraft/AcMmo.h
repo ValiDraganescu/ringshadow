@@ -20,6 +20,13 @@
 // gone). `Travelling` holds from a flight's lift-off (or a RegionChange)
 // until the new region's first snapshot shows the unit driven there.
 //
+// Leveling (docs/mmorpg-m3.md, S3): the pilot's levels come with the
+// snapshots (its side's `Player::pilot` in the mirror is its own record), so
+// the HUD's level, XP bar and cards read the mirror as in the RTS game. A
+// card picked is a Pick request (`Pick`); the server applies it and the next
+// snapshot shows it. `-AcMmoDevXp=XP` (dev, as -AcEarn): the server gives a
+// new pilot's Prospector that much XP when it seats it (`--dev-xp`).
+//
 // Lag to feel it (on 127.0.0.1 there is none): the console variable
 // `ac.MmoLag "delay_ms jitter_ms loss_pct"` (each way; 0 or empty: off) or
 // the flag `-AcMmoLag=150,20,5`, which sets it at the start. The lag
@@ -115,6 +122,24 @@ public:
 	/// The server's reasons for builds refused since the last call ("Not
 	/// enough ore"), for the pilot's screen as the game's own refusals.
 	TArray<FString> TakeBuildRefusals();
+
+	/// Pick a level-up card: `Perk` for `Kind` (a Pick request); the server
+	/// keeps it and the snapshots show it. False, with `Why`: not connected,
+	/// a pick on its way already, or not on offer in the mirror. The
+	/// server's refusals come as notes ("Not picked: …") and `PickRefusal`.
+	bool Pick(ac::UnitKind Kind, ac::Perk Perk, FString* Why = nullptr);
+	/// A pick asked for and not answered yet.
+	bool PickInFlight() const { return PicksAsked.Num() > 0; }
+	/// The server's last refusal of a pick (empty: none since the last ask).
+	const FString& PickRefusal() const { return LastPickRefusal; }
+	/// Picks the server kept since the start.
+	int32 PicksKept() const { return PicksDone; }
+	/// Tests and dev: more arguments for the server program at `Start`
+	/// (`--dev-xp 360`).
+	std::vector<std::string> ExtraServerArgs;
+	/// The pilot's key sent in the Join (unset: a new random one at each
+	/// start, a new pilot).
+	std::optional<ac::net::PilotKey> PilotKey;
 
 	/// The unit the pilot wants to drive: sends a take (or, with none, a
 	/// hand back) once. The pilot pawn dives in when the mirror says the
@@ -236,5 +261,9 @@ private:
 	/// Builds asked for (request ids), and the refusals not taken yet.
 	TSet<uint32> BuildsAsked;
 	TArray<FString> BuildRefusals;
+	/// Picks asked for (request ids), the last refusal, the ones kept.
+	TSet<uint32> PicksAsked;
+	FString LastPickRefusal;
+	int32 PicksDone = 0;
 	std::vector<ac::GameEvent> Events;
 };

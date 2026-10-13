@@ -550,8 +550,16 @@ bool UAcSimSubsystem::Issue(const ac::Command& Command)
 	if (!Sim) return false;
 	if (Mmo)
 	{
-		// Orders, cards and level picks become requests to the server later.
-		Refuse(Command.is<ac::Command::Pick>() ? TEXT("Level picks are off in the MMORPG test") : TEXT("Orders are off in the MMORPG test"));
+		// A level pick is a Pick request: the server keeps it, the snapshots
+		// show it (AcMmo.h). Orders and cards become requests later.
+		if (const ac::Command::Pick* P = Command.as<ac::Command::Pick>())
+		{
+			FString Why;
+			if (Mmo->Pick(ac::kind(P->perk), P->perk, &Why)) return true;
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: pick not asked: %s"), *Why);
+			return false;
+		}
+		Refuse(TEXT("Orders are off in the MMORPG test"));
 		return false;
 	}
 	const bool bDone = Sim->issue(Command, Pending);
