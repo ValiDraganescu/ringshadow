@@ -3,6 +3,8 @@
 // fields once in `fields`, which both reads and writes).
 #include "Session.h"
 
+#include "Progression.h"
+
 #ifndef JSON_NOEXCEPTION
 #define JSON_NOEXCEPTION 1
 #endif
@@ -72,6 +74,7 @@ template <class IO> void fields(IO& io, Request& v);
 template <class IO> void fields(IO& io, Objective& v);
 template <class IO> void fields(IO& io, PilotRecord& v);
 template <class IO> void fields(IO& io, Tally& v);
+template <class IO> void fields(IO& io, SkillSpend& v);
 template <class IO> void fields(IO& io, Stamp& v);
 template <class IO> void fields(IO& io, Standing& v);
 template <class IO> void fields(IO& io, Doodad& v);
@@ -103,6 +106,7 @@ bool get(const json& j, Date& v);
 bool get(const json& j, Mission& v);
 bool get(const json& j, Request::What& v);
 bool get(const json& j, KindRecord& v);
+bool get(const json& j, ProspectorProgress& v);
 template <class E> requires std::is_enum_v<E> bool get(const json& j, E& v);
 template <class T> bool get(const json& j, std::vector<T>& v);
 template <class T> bool get(const json& j, std::set<T>& v);
@@ -375,6 +379,42 @@ bool get(const json& j, KindRecord& v) {
     return r.ok;
 }
 
+/// Tolerant, as `KindRecord`: a field missing reads as its default, and a
+/// skill no longer in the catalogue is dropped (from the ranks, the slots
+/// and the recent spends).
+bool get(const json& j, ProspectorProgress& v) {
+    if (!j.is_object()) return false;
+    std::string error;
+    Reader r{j, error};
+    r.orDefault("xp", v.xp);
+    v.ranks.clear();
+    if (auto it = j.find("ranks"); it != j.end() && it->is_object())
+        for (auto e = it->begin(); e != it->end(); ++e) {
+            int64_t rank = 0;
+            if (auto s = parse<Skill>(e.key()); s && get(e.value(), rank) && rank > 0) v.ranks[*s] = rank;
+        }
+    v.slots = {};
+    if (auto it = j.find("slots"); it != j.end() && it->is_array())
+        for (size_t i = 0; i < std::min(it->size(), v.slots.size()); i++)
+            if ((*it)[i].is_string()) v.slots[i] = parse<Skill>((*it)[i].get_ref<const std::string&>());
+    r.orDefault("respecs", v.respecs);
+    r.orDefault("freeRespec", v.freeRespec);
+    v.recent.clear();
+    if (auto it = j.find("recent"); it != j.end() && it->is_array())
+        for (const auto& e : *it) {
+            SkillSpend x;
+            if (get(e, x)) v.recent.push_back(x);
+        }
+    r.orDefault("blueprints", v.blueprints);
+    r.orDefault("sites", v.sites);
+    r.orDefault("regions", v.regions);
+    r.orDefault("pads", v.pads);
+    r.orDefault("feats", v.feats);
+    r.orDefault("chips", v.chips);
+    r.orDefault("signature", v.signature);
+    return r.ok;
+}
+
 template <class T> void Reader::operator()(const char* key, T& v) {
     if (!ok) return;
     auto it = obj.find(key);
@@ -411,6 +451,7 @@ json put(const Date& v);
 json put(const Mission& v);
 json put(const Request::What& v);
 json put(const KindRecord& v);
+json put(const ProspectorProgress& v);
 template <class E> requires std::is_enum_v<E> json put(E v);
 template <class T> json put(const std::vector<T>& v);
 template <class T> json put(const std::set<T>& v);
@@ -497,6 +538,26 @@ json put(const KindRecord& v) {
     w("healedAt", v.healedAt);
     w("tally", v.tally);
     w("stamps", v.stamps);
+    return w.out;
+}
+
+json put(const ProspectorProgress& v) {
+    Writer w;
+    w("xp", v.xp);
+    w("ranks", v.ranks);
+    json slots = json::array();
+    for (const auto& s : v.slots) slots.push_back(s ? put(*s) : json());
+    w.out["slots"] = slots;
+    w("respecs", v.respecs);
+    w("freeRespec", v.freeRespec);
+    w("recent", v.recent);
+    w("blueprints", v.blueprints);
+    w("sites", v.sites);
+    w("regions", v.regions);
+    w("pads", v.pads);
+    w("feats", v.feats);
+    w("chips", v.chips);
+    w("signature", v.signature);
     return w.out;
 }
 
@@ -717,6 +778,11 @@ template <class IO> void fields(IO& io, Objective& v) {
 template <class IO> void fields(IO& io, PilotRecord& v) { io("kinds", v.kinds); }
 
 /// Tolerant: a count missing reads as 0.
+template <class IO> void fields(IO& io, SkillSpend& v) {
+    io("skill", v.skill);
+    io("at", v.at);
+}
+
 template <class IO> void fields(IO& io, Tally& v) {
     io.orDefault("seconds", v.seconds);
     io.orDefault("takeovers", v.takeovers);
@@ -936,6 +1002,7 @@ AC_CODABLE(Intel)
 AC_CODABLE(Directives)
 AC_CODABLE(PilotRecord)
 AC_CODABLE(KindRecord)
+AC_CODABLE(ProspectorProgress)
 AC_CODABLE(Tally)
 AC_CODABLE(Listener)
 #undef AC_CODABLE
