@@ -59,3 +59,8 @@ Run from the repo root; `T=unreal/server/build/autocraft-region`.
   than working round them when the brief places its own.
 - A ring of cliffs makes the inside a separate area: anything inside is
   "cut off" unless a ramp leads in.
+- Preview labels are drawn east of their marker: a spawn within about 6
+  cells east of a pad on the same row prints over the pad's name. Put the
+  spawn south of the pad (or a row off) so both names read.
+- `build`'s "main open area" a point under "open ground" is usually a
+  ridge top with no ramp: a wall, not a cut-off place.
