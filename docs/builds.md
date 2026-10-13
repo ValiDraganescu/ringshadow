@@ -105,6 +105,41 @@ the Mac) and the Mac-only code (icon, watchdog, GPU timing), which is behind
 The cheapest way to find what else is missing is `build_release.sh mac`: a
 Mac package built here, played by hand, before any AWS time is spent.
 
+### The server in the Mac package
+
+The MMO mode starts `autocraft-server` (`unreal/server`) as a child process.
+It is not part of the cook: `build_release.sh mac` builds it with
+`make -C unreal/server` (arm64, the tests' flags, `-O2`, not stripped) and
+copies it into the app after UAT, before signing:
+
+```
+Ringshadow.app/Contents/Resources/server/
+  autocraft-server
+  worlds/first.json        names its regions as ../regions/<name>.json
+  regions/*.json
+```
+
+A packaged Mac game (`FAcMmoClient::BundledServerDir`, cooked data on the
+Mac) starts that program with `--world` at the absolute path of
+`worlds/first.json` beside it. Editor runs keep `unreal/server/build/autocraft-server`
+and `unreal/server/worlds/first.json` in the repo. Without the program the
+mode shows a banner: "missing from this package" in a package, "not built,
+make -C unreal/server" in the editor, each with the path it looked at. The
+pilot key, the world's save and the server log stay in the player's folders
+(`~/Library/Application Support/Autocraft/Unreal/mmo`,
+`~/Library/Logs/Autocraft/server.log`), never in the app. `sign` signs the
+server like every other Mach-O file in the app. Windows and Linux packages
+carry no server yet: they need the AWS build machine.
+
+`build_release.sh mac --ad-hoc` signs the app ad hoc, on this Mac only (no
+certificate, no timestamp, no notarizing), for a local try. A bundle with
+no fresh signature at all does not start: UAT's own carries the App Sandbox
+entitlement and the renamed `Info.plist` breaks it ("Signing the Mac build").
+2026-10-13, `mac --config Development --ad-hoc` with the cook already warm:
+3 minutes, the app 1.0 GB, the zip 617 MB, the server 2.6 MB of it. Its
+binary, run hidden with `-AcMmo` (a copy with `LSUIElement` set, so no Dock
+icon), started the bundled server and was seated in a Prospector.
+
 ## AWS
 
 - **Account** 569854554192, CLI profile `ringshadow` (`aws login --profile

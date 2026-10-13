@@ -14,8 +14,8 @@
 #       --instance ID      build on a running machine (the setup one, to warm it) instead of a new one
 #       --on-demand        an on-demand machine instead of spot
 #       --keep             leave the machine running afterwards (stop it with `stop`)
-#   build_release.sh mac [--version V] [--config C] [--no-sign]   package the Mac build on this Mac
-#                                           (--no-sign: zip it as it is: no signing, no notarizing)
+#   build_release.sh mac [--version V] [--config C] [--ad-hoc]   package the Mac build on this Mac
+#                                           (--ad-hoc: signed ad hoc, locally: no certificate, no notarizing)
 #   build_release.sh sign APP ZIP           sign, notarize and zip a Mac .app (mac does it)
 #   build_release.sh release TAG --notes FILE [REF] [--on-demand]
 #                                           all of it: tag REF (default HEAD) as TAG (v0.1.2), build
@@ -445,12 +445,12 @@ fix_linux() {
 }
 
 cmd_mac() {
-	local version="" config=Shipping sign=1
+	local version="" config=Shipping adhoc=0
 	while [ $# -gt 0 ]; do
 		case $1 in
 			--version) version=$2; shift 2 ;;
 			--config) config=$2; shift 2 ;;
-			--no-sign) sign=0; shift ;;
+			--ad-hoc) adhoc=1; shift ;;
 			*) die "unknown option $1" ;;
 		esac
 	done
@@ -485,12 +485,9 @@ cmd_mac() {
 	fi
 	stage_server "$app" "$dir/mac-server-build.log"
 	local zip="$dir/Ringshadow-$version-mac.zip"
-	if [ $sign = 0 ]; then
-		rm -f "$zip"
-		ditto -c -k --keepParent "$app" "$zip"
-		say "done: $zip, not signed (--no-sign)"
-		return
-	fi
+	# --ad-hoc: a local try. The app still needs a signature: UAT's carries the
+	# App Sandbox entitlement and breaks with the renamed Info.plist (cmd_sign).
+	if [ $adhoc = 1 ]; then AUTOCRAFT_SIGN_IDENTITY=- cmd_sign "$app" "$zip"; return; fi
 	cmd_sign "$app" "$zip"
 }
 
@@ -524,7 +521,7 @@ cmd_sign() {
 	# with a broken one at launch. Every path re-signs with no entitlements:
 	# ad hoc ("-") without the certificate.
 	local flags=(--force --timestamp --options runtime)
-	if [ -z "$identity" ]; then identity=-; flags=(--force); fi
+	if [ -z "$identity" ] || [ "$identity" = - ]; then identity=-; flags=(--force); fi
 	say "signing with $identity"
 	# Inside out: every Mach-O file first, then the bundle (--deep is
 	# deprecated and skips files outside the code folders).
