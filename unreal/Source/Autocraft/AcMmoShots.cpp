@@ -19,6 +19,10 @@
 //   17 after leaving the mode and resuming
 //   18 after a level-up pick (Z); before 01 and here the HUD's plates must
 //      draw with their frames (FAcHudStyle::PlateProblem)
+//   the MH loop, between 12 and 13 (docs/mmorpg-play.md "The loop"):
+//   19 the Derrick's ghost on the south well    20 the Derrick built
+//   21 pumping MH inside it                     22 the MH unloaded at the
+//                                                  Citadel, the wallet's MH up
 //
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
@@ -97,6 +101,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
 	const FString Here = Mmo && Mmo->Here() ? Utf(Mmo->Here()->id) : FString(TEXT("-"));
 	const int64 Ore = S && !S->players.empty() ? S->players[0].ore : -1;
+	const int64 Hydrogen = S && !S->players.empty() ? S->players[0].hydrogen : -1;
 
 	auto Stop = [&](const double Yaw) {
 		if (Pilot) Pilot->SetTestInput(FVector2D::ZeroVector, Yaw);
@@ -111,7 +116,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		NextStep();
 	};
 	auto Where = [&] {
-		return U ? FString::Printf(TEXT("at %.1f,%.1f in %s, %lld ore"), U->position.x, U->position.y, *Here, (long long)Ore)
+		return U ? FString::Printf(TEXT("at %.1f,%.1f in %s, %lld ore, %lld MH"), U->position.x, U->position.y, *Here, (long long)Ore,
+					   (long long)Hydrogen)
 				 : FString::Printf(TEXT("no unit, in %s"), *Here);
 	};
 	// A phase that never got there: say where it was, and stop.
@@ -448,7 +454,134 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		{
 			Check(Ore > Shots.OreBefore, FString::Printf(TEXT("the wallet grew: %lld -> %lld ore"), (long long)Shots.OreBefore, (long long)Ore));
 			Shoot(TEXT("12-unload-after"), FString::Printf(TEXT("unloaded, wallet %lld -> %lld"), (long long)Shots.OreBefore, (long long)Ore));
+			// Then the MH loop (50-58), and back to the pad (25).
+			T.Phase = 50;
 		}
+		return;
+	case 50:
+	{
+		// Round the Citadel's west side, south to stand east of the south
+		// well (60, 61), facing it: a Derrick's reach (3 cells) away.
+		const ac::Structure* C = CitadelOf(*S);
+		Route({FVector2D(C->position.x - 5, C->position.y + 5), Cell(63, 61)});
+		Advance();
+		return;
+	}
+	case 51:
+		if (const int32 D = Drive(); D == 1)
+		{
+			Stop(PI);
+			Advance();
+		}
+		else if (D < 0) Stalled(TEXT("to the south well"));
+		return;
+	case 52:
+		if (Since() > 1.5)
+		{
+			UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+			const int32 Number = AcPilotText::BuildKinds(true).IndexOfByKey(ac::StructureKind::derrick) + 1;
+			Check(Number > 0 && Build && Build->Key(TEXT("b")) && Build->Key(FString::FromInt(Number)) && Build->Placing().IsSet()
+				&& *Build->Placing() == ac::StructureKind::derrick, FString::Printf(TEXT("B, %d held out a Derrick"), Number));
+			const TOptional<ac::Vec2> At = Build ? Build->Spot(ac::StructureKind::derrick) : TOptional<ac::Vec2>();
+			Check(At.IsSet(), TEXT("the Derrick's ghost on a well"));
+			Advance();
+		}
+		return;
+	case 53:
+		if (Since() > 1.5) Shoot(TEXT("19-derrick-ghost"), TEXT("the Derrick's ghost on the south well"));
+		return;
+	case 54:
+		Shots.OreBefore = Ore;
+		Pilot->Press(true);
+		Pilot->Press(false);
+		Advance();
+		return;
+	case 55:
+		if (Mmo)
+		{
+			for (const FString& Why : Mmo->TakeBuildRefusals()) Check(false, FString::Printf(TEXT("Derrick built, not refused: %s"), *Why));
+		}
+		for (const ac::Structure& B : S->structures)
+		{
+			if (B.kind != ac::StructureKind::derrick || B.owner != ac::Pilot::player) continue;
+			Shots.Derrick = B.id;
+			if (B.complete() && Since() > 2.0)
+			{
+				Check(Ore == Shots.OreBefore - ac::Rules::cost(ac::StructureKind::derrick),
+					FString::Printf(TEXT("the Derrick paid: %lld -> %lld ore"), (long long)Shots.OreBefore, (long long)Ore));
+				Shoot(TEXT("20-derrick-built"), TEXT("the Derrick finished on the south well"));
+				return;
+			}
+		}
+		TimedOut(TEXT("the Derrick finished"), WeldLimit);
+		return;
+	case 56:
+	{
+		// Up to the Derrick until the act key would go in; then a click.
+		const std::optional<ac::Structure> D = S->structure(Shots.Derrick);
+		const std::optional<ac::PilotTarget> Target = U ? M->simulation().pilotTarget(*U) : std::nullopt;
+		if (D && Target && Target->is<ac::PilotTarget::Derrick>())
+		{
+			Stop(Face(D->position));
+			Pilot->Press(true);
+			Pilot->Press(false);
+			Advance();
+			return;
+		}
+		if (D && Pilot) Pilot->SetTestInput(FVector2D(0, -0.6), Face(D->position));
+		TimedOut(TEXT("at the Derrick"), 15);
+		return;
+	}
+	case 57:
+		// Inside, pumping: a picture a moment in.
+		if (U && U->task == ac::Unit::Task::inDerrick && Since() > 1.0)
+		{
+			Shoot(TEXT("21-pumping"), TEXT("pumping MH inside the Derrick"));
+			return;
+		}
+		TimedOut(TEXT("inside the Derrick"), 10);
+		return;
+	case 58:
+		if (U && U->carrying > 0 && U->hydrogen == true)
+		{
+			Shots.HydrogenBefore = Hydrogen;
+			const ac::Structure* C = CitadelOf(*S);
+			Route({FVector2D(C->position.x, C->position.y)});
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("a load of MH pumped"), 15);
+		return;
+	case 59:
+		if (U && U->carrying == 0)
+		{
+			Stop(Face(CitadelOf(*S)->position));
+			Advance();
+			return;
+		}
+		Drive();
+		TimedOut(TEXT("the MH unloaded at the Citadel"), 30);
+		return;
+	case 60:
+		if (Since() > 1.0)
+		{
+			Check(Hydrogen > Shots.HydrogenBefore && Hydrogen > 0,
+				FString::Printf(TEXT("the wallet's MH grew: %lld -> %lld"), (long long)Shots.HydrogenBefore, (long long)Hydrogen));
+			Shoot(TEXT("22-mh-unloaded"), FString::Printf(TEXT("MH unloaded, wallet %lld -> %lld MH"), (long long)Shots.HydrogenBefore,
+				(long long)Hydrogen));
+		}
+		return;
+	case 61:
+	{
+		// Back round to the Citadel's west side, where 25 sets off for the pad.
+		const ac::Structure* C = CitadelOf(*S);
+		Route({FVector2D(C->position.x - 5, C->position.y + 5), FVector2D(C->position.x - 5, C->position.y)});
+		Advance();
+		return;
+	}
+	case 62:
+		if (const int32 D = Drive(); D == 1) T.Phase = 25;
+		else if (D < 0) Stalled(TEXT("back round the Citadel"));
 		return;
 	case 25:
 	{
@@ -577,7 +710,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		return;
 	default:
-		Check(Shots.Saved == 18, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Check(Shots.Saved == 22, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
 		Finish();
 		return;
 	}

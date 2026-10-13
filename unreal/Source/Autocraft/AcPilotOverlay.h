@@ -90,6 +90,10 @@ private:
 	double NoteUntil = 0;
 	/// `pilotAim`: the sight's target and one attack's damage on it, before the step.
 	TOptional<TPair<int64, double>> Aim;
+	/// The MMORPG test: whether the driven unit's last load was MH. The
+	/// Deposited event does not say, and the unit has dropped its load (and
+	/// the MH mark) by the time it comes.
+	bool bLoadWasHydrogen = false;
 
 	// Dev holds.
 	TOptional<FAcHitMark> HeldMark;

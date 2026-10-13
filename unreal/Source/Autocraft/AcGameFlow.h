@@ -228,6 +228,9 @@ private:
 		int64 Citadel = -1;
 		int64 Patch = -1;
 		int64 OreBefore = -1;
+		/// The MH detour: the Derrick, and the wallet's MH before the unload.
+		int64 Derrick = -1;
+		int64 HydrogenBefore = -1;
 		int64 VisitWas = 0;
 		bool bCardsShot = false;
 		/// When the cards were first up (the banner is shot once it is in).

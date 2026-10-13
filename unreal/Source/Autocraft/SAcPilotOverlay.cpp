@@ -285,7 +285,9 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 	{
 		const double E = 1 - FMath::Pow(1 - FMath::Clamp(T / 0.6, 0.0, 1.0), 3.0);
 		const float A = (float)(T < 0.12 ? T / 0.12 : FadeAfter(T, 1.2, 0.6));
-		P.Label(GainText, 34, Srgb(0.78, 0.66, 1), FVector2D(C.X, C.Y + 110 + 26 * E), EAcHAlign::Center, EAcVAlign::Baseline, true, true, A);
+		// Ore lilac, MH mirror-silver (docs/naming.md).
+		const FLinearColor Tint = GainText.EndsWith(TEXT(" MH")) ? Srgb(0.84, 0.92, 0.98) : Srgb(0.78, 0.66, 1);
+		P.Label(GainText, 34, Tint, FVector2D(C.X, C.Y + 110 + 26 * E), EAcHAlign::Center, EAcVAlign::Baseline, true, true, A);
 	}
 	PaintReticle(P, C, Now);
 	PaintSight(P, W, H);

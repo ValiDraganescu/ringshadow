@@ -230,11 +230,12 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 			const ac::GameEvent::Deposited* D = E.as<ac::GameEvent::Deposited>();
 			if (D && D->unit == U.id)
 			{
-				Widget->Gain(FString::Printf(TEXT("+%lld %s"), (long long)D->amount, U.hydrogen == true ? TEXT("MH") : TEXT("ORE")),
+				Widget->Gain(FString::Printf(TEXT("+%lld %s"), (long long)D->amount, bLoadWasHydrogen ? TEXT("MH") : TEXT("ORE")),
 					FPlatformTime::Seconds());
 			}
 		}
 	}
+	if (U.carrying > 0) bLoadWasHydrogen = U.hydrogen == true;
 	Aim.Reset();
 	if (S.pilotShoots(U) && F->Sight)
 	{
