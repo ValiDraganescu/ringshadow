@@ -1,0 +1,83 @@
+// The packet: at most 1,200 bytes, a 19-byte header on every one
+// (docs/networking.md, "Packets"):
+//
+//   protocol id  u32   kProtocolId
+//   version      u16   the sender's protocol version
+//   type         u8    PacketType; the top bit says the ack fields are set
+//   connection   u32   0 until the server's welcome names it
+//   sequence     u16   this packet's number, wrapping
+//   ack          u16   the newest sequence received from the other end
+//   ack bits     u32   bit i: sequence ack-1-i received too
+//
+// The first 7 bytes, and the refuse packet that follows a full header, never
+// change between versions: that is how a client of another version reads
+// why it was refused.
+#pragma once
+
+#include "AutocraftNetApi.h"
+#include "NetBitStream.h"
+
+#include <cstddef>
+#include <cstdint>
+
+namespace ac::net {
+
+inline constexpr uint32_t kProtocolId = 0x52534844;  // "RSHD"
+inline constexpr uint16_t kProtocolVersion = 1;
+inline constexpr size_t kMaxPacketBytes = 1200;
+inline constexpr size_t kHeaderBytes = 19;
+inline constexpr size_t kMaxPayloadBytes = kMaxPacketBytes - kHeaderBytes;
+
+enum class PacketType : uint8_t {
+    hello = 1,       // client: padded to a full packet, so no reply is ever bigger
+    challenge = 2,   // server: the cookie
+    answer = 3,      // client: the cookie back and the token, padded to a full packet
+    welcome = 4,     // server: the connection id
+    refuse = 5,      // server: why not (u8 length, text)
+    data = 6,        // either: messages, or nothing (keep-alive, acks)
+    disconnect = 7,  // either: why (u8 length, text)
+};
+
+struct PacketHeader {
+    uint32_t protocolId = kProtocolId;
+    uint16_t version = kProtocolVersion;
+    PacketType type = PacketType::data;
+    bool hasAck = false;
+    uint32_t connection = 0;
+    uint16_t sequence = 0;
+    uint16_t ack = 0;
+    uint32_t ackBits = 0;
+};
+
+AUTOCRAFTNET_API void writeHeader(BitWriter& w, const PacketHeader& h);
+/// False if the bytes are too few or the protocol id or type is not ours.
+/// The version is not checked here.
+AUTOCRAFTNET_API bool readHeader(BitReader& r, PacketHeader& h);
+
+/// `a` came after `b`, across the wrap from 65535 to 0.
+constexpr bool sequenceNewer(uint16_t a, uint16_t b) { return static_cast<int16_t>(static_cast<uint16_t>(a - b)) > 0; }
+
+/// The receiving side of the acks: the newest sequence received and which
+/// of the 32 before it arrived.
+struct AUTOCRAFTNET_API ReceiveWindow {
+    enum class Arrival { newest, older, duplicate, tooOld };
+
+    bool any = false;
+    uint16_t newest = 0;
+    uint32_t bits = 0;
+
+    /// Records `sequence` and says how it arrived.
+    Arrival record(uint16_t sequence);
+    bool has(uint16_t sequence) const;
+};
+
+/// Calls `f(sequence)` for each sequence an ack field names: `ack` and the
+/// set bits after it, 33 at most.
+template <class F> void forEachAcked(uint16_t ack, uint32_t ackBits, F&& f) {
+    f(ack);
+    for (int i = 0; i < 32; i++) {
+        if (ackBits & (uint32_t(1) << i)) f(static_cast<uint16_t>(ack - 1 - i));
+    }
+}
+
+} // namespace ac::net

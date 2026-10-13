@@ -11,7 +11,7 @@ public class Autocraft : ModuleRules
 		bUseUnity = false;
 		CppStandard = CppStandardVersion.Cpp20;
 		PublicDependencyModuleNames.AddRange(new string[] {
-			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "Slate", "SlateCore", "AutocraftCore",
+			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "Slate", "SlateCore", "AutocraftCore", "AutocraftNet",
 			"AudioExtensions",  // UAcMp3Wave (a procedural sound wave) links IAudioProxyDataFactory
 			"MeshDescription", "StaticMeshDescription",  // AAcTerrain builds its static meshes at runtime
 			"Json",  // FAcModelCatalog reads Content/Models/ModelCatalog.json
