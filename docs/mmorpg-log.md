@@ -46,3 +46,13 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Local server token via stdin, not command line (ps shows args).
 - T T4 → worker mmo-server-world (reused).
 - N User check at M1 end: walk around as a Prospector.
+- T T4 done, merged: protocol, autocraft-server, headless client; server 22, net 49 pass.
+- I Worker result reached inbox but didn't wake manager; poll get_messages.
+- N Mirror = ac::net::Mirror (NetMirror.h), unstepped Simulation.
+- D Input carries current + last 3; walk 255ths, heading 16 bits.
+- D Snapshot ≤16 messages; each item own acked baseline.
+- D Fog chunks 2048 cells, 3 bits, RLE XOR vs baseline.
+- N Mirror equals server 4 snapshots after hold-still (150 ms, 5% loss).
+- N Quiet scene 1.3 KB/s down; late 4v4 fills 64 KiB/s budget.
+- N Upload 3.7–3.9 KB/s (inputs + acks at 60 Hz).
+- T T5 → worker mmo-server-world (reused, compacted).
