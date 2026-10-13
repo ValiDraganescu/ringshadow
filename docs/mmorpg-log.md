@@ -246,3 +246,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: arc M6 progression+sky, M7 world, M8 company, M9 feel.
 - D Manager: server owns world clock and weather.
 - T M6 started: P0 design, C1 world clock, R1 first-hour review.
+- T P0 done 0bbf19d: docs/prospector-progression.md, 65 nodes, plan P1–P7.
+- N Curve 500+3L²: L10 1.1 h, L50 19.7 h, L100 97 h.
+- D Manager: P0 open questions settled on its recommendations.
+- D Manager: XP ×1 in worlds; wells regrow when idle.
+- T P1 core catalogue → orc worker.
