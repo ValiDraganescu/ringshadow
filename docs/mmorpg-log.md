@@ -269,3 +269,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N C1: snapshots carry the sky; protocol version 4.
 - N C1: client samples weather from seed, server's hold.
 - I C1: weather spells keep 600 s-day lengths: faster per day.
+- T C1 done 6790133: manager checked suites and storm/dusk shots.
+- N Suites: server 81, net 64, core 416.
+- I Workers must not edit the log (C1 did; kept).
+- T P3 server progression → world-clock worker after compaction.
