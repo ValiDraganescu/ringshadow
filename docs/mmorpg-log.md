@@ -229,3 +229,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Orbit ≥901 px with motion; phones/reduced motion get a list.
 - D Website self-hosts fonts and media (4.9 MB); CSP self only.
 - I Website not deployed; Cloudflare Pages project waits for user.
+- T H1 headlamp port from main (uncommitted there) → orc worker.
+- D Manager never writes code; skill updated 059837e.
