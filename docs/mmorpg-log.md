@@ -85,3 +85,12 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D M2 focus: playable with Prospector only; no other kinds.
 - D M2: no AI-controlled units at all.
 - D P1–P5 confirmed by user.
+- T T6 done a419930: net::Predictor, reconcile, ease, snap >1.5 cells.
+- N Lag: ac.MmoLag "delay jitter loss" or -AcMmoLag=150,20,5.
+- T M1 done: all T1–T6 merged.
+- T R1 done 9b6d2f8: RegionFile.h, autocraft-region, skill, docs/regions.md.
+- N Region tool: autocraft-region new|validate|build|preview.
+- D MapDefinition gains heightEdits/deposits/wells; RTS goldens unchanged.
+- D Agents run only in MMORPG-variant worktree; never other worktrees.
+- T Old worktrees removed; mmo-server-world worker closed.
+- N Scratch files go in ignored unreal/server/build, not /tmp.
