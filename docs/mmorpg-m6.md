@@ -44,9 +44,9 @@ another, adjusted as results come in:
 | P1 | Core catalogue: Progression.h/.cpp, 65 nodes, curve, gates, respec price, ProspectorProgress | P0 | done |
 | P2 | Core effects: skills in boost, reused and new blocks | P1 | done |
 | P3 | Server progression: XP sources, Spend/Undo/Respec/Slot, Progress message, actives as inputs, schema migration (v3) | P1, C1 | in progress |
-| P4a | Blueprint sites in region files (parse, write, validate, preview) and The First Reach's sites placed | P1 | in progress |
+| P4a | Blueprint sites in region files (parse, write, validate, preview) and The First Reach's sites placed | P1 | done |
 | P4b | Blueprints on the server: opening sites, survey chips, building gated by blueprint, floor and limit | P3, P4a | |
-| P5 | The game: skill screen (K), banner, HUD, build menu from blueprints, sites on the map | P3, P4 | |
+| P5 | The game: skill screen (K), banner, HUD, build menu from blueprints, sites on the map | P3, P4a | in progress |
 | P6 | Building roles: Citadel respawn/respec, Hab Dome depot, Spacedock pad; travel and site nodes | P4 | |
 | P7 | Foundry modules and Lab research | P6 | |
 

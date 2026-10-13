@@ -276,3 +276,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T P2 done af06f05: tree effects in the sim, 21 tests.
 - N Core 437 pass; full Deep Vein load 57 a trip.
 - T P4 split: P4a region sites now, P4b server after P3.
+- T P4a done 8f5b9ab: sites layer, 15 First Reach sites.
+- N Manager: validate ok on all 10 regions; start preview checked.
+- I Region files with sites need a rebuilt client (NetMirror parses).
+- T P5 skill screen → progression-core; HUD bits after V1.
