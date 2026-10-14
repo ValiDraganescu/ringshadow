@@ -452,3 +452,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N R1 suites: core 454, server 158, net 67 pass.
 - I roles_spacedock_pad read a dangling temporary; rewritten.
 - T C1 (10% tax, realm wallet, donate panel) briefed to wt1.
+- D User: a second worker allowed in parallel.
+- T N1 (bug design, models, sounds) briefed to wt2 (wt-2-6a113cd0).
