@@ -286,3 +286,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I start.json deposits in a near-straight line: region work.
 - T V1 code cb68a4b (+6e9ce2a); re-shoot pending after pause.
 - N All 4 workers confirmed paused; manager killed a stray UBT build.
+- T 2026-10-14: pause over; P3, V1, V2, P5 resumed.
+- D manager: hidden runs take turns via build/hidden-run.lock.
