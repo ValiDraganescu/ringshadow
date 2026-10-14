@@ -361,3 +361,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I G1 5007b79 didn't compile alone (hunk offsets); fixed 1d382af.
 - D F1: flight costs 10 MH + 5 per grid step.
 - D Manager: material commandlets under the train's run lock, by hand.
+- T E1b done afaacec: edge reads from up high; low view hidden by berm.
+- N E1b task: 13 min against 50 estimated.
+- N Run queue: first real run OK (1014-134941-first-hour).
+- T J1 sound for the new moments → first-hour.
