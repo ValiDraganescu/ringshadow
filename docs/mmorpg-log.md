@@ -576,3 +576,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I K2 shots stall at "into the mission's ring" (hold-easy drive) → recheck.
 - N A1 suites: core 479, server 224, net 82 pass.
 - T N3 (the Matriarch) next for wt2.
+- D Manager: Matriarch kill shared by damage; she returns after world days.
+- T N3 briefed to wt2 (protocol 24); siege hook for Z2.
