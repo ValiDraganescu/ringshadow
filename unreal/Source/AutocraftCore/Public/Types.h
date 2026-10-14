@@ -749,8 +749,12 @@ struct BaseSite {
 };
 
 struct Doodad {
+    /// The last four are a region's landmarks (docs/regions.md, "Landmarks"):
+    /// a stone arch, a hauler half sunk in the ground, a ruined derrick tower,
+    /// a crashed relay dish.
     enum class Kind : uint8_t {
-        rock, boulder, rockSpire, crate, crateStack, plant, bush, debris, deadTree, tower
+        rock, boulder, rockSpire, crate, crateStack, plant, bush, debris, deadTree, tower,
+        arch, sunkHauler, derrickRuin, relayDish
     };
     Kind kind = Kind::rock;
     Vec2 position;
@@ -1605,8 +1609,9 @@ template <> struct EnumInfo<GroundPatch::Kind> {
     static constexpr std::array<std::string_view, 3> names{"grass", "gravel", "scorch"};
 };
 template <> struct EnumInfo<Doodad::Kind> {
-    static constexpr std::array<std::string_view, 10> names{
-        "rock", "boulder", "rockSpire", "crate", "crateStack", "plant", "bush", "debris", "deadTree", "tower"};
+    static constexpr std::array<std::string_view, 14> names{
+        "rock", "boulder", "rockSpire", "crate", "crateStack", "plant", "bush", "debris", "deadTree", "tower",
+        "arch", "sunkHauler", "derrickRuin", "relayDish"};
 };
 template <> struct EnumInfo<HeightEdit::Kind> {
     static constexpr std::array<std::string_view, 5> names{"raise", "lower", "flatten", "ridge", "ramp"};

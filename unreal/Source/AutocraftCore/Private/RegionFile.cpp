@@ -25,7 +25,6 @@ using json = nlohmann::json;
 using ordered = nlohmann::ordered_json;
 
 constexpr double pi = std::numbers::pi;
-constexpr int64_t maxLevel = 2;
 
 std::string num(double v) {
     char buf[32];
@@ -529,7 +528,7 @@ Parsed parse(std::string_view text) {
     }
     const json root = json::parse(text.begin(), text.end(), nullptr, false);
     Reader r{out.problems};
-    if (!r.object(root, "region", {"id", "name", "size", "base", "height", "deposits", "wells", "doodads", "pads",
+    if (!r.object(root, "region", {"id", "name", "size", "base", "ground", "height", "deposits", "wells", "doodads", "pads",
                                    "spawns", "sites", "openings"}))
         return out;
     RegionFile f;
@@ -570,6 +569,10 @@ Parsed parse(std::string_view text) {
                 }
             }
         }
+    }
+    if (const auto ground = r.text(root, "ground", "", false)) {
+        if (const auto g = enumNamed<Ground>(*ground)) f.ground = *g;
+        else r.add("ground", "is \"" + *ground + "\"; one of " + choices<Ground>());
     }
     r.list(root, "height", f.height, [&](const json& j, const std::string& w) { return r.edit(j, w); });
     r.list(root, "deposits", f.deposits, [&](const json& j, const std::string& w) -> std::optional<Deposit> {
@@ -689,6 +692,7 @@ std::string write(const RegionFile& f) {
         base["drop"] = drop;
     }
     root["base"] = base;
+    if (f.ground != Ground::plain) root["ground"] = std::string(rawValue(f.ground));
     if (!f.height.empty()) {
         ordered list = ordered::array();
         for (const Edit& e : f.height) {
@@ -1070,7 +1074,7 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
         else if (plate) add(where, *plate, p);
         else if (onSite) add(where, *onSite, p);
         else if (vault && field.level(p) < 1)
-            add(where, "a vault stands on high ground (level 1 or 2); this is level " + std::to_string(field.level(p)), p);
+            add(where, "a vault stands on high ground (level 1 or more); this is level " + std::to_string(field.level(p)), p);
         else if (how == SiteReach::none)
             add(where, vault ? "cut off: no ramp leads up to it and no cliff a Cliff hop jumps"
                              : "cut off from the region's open ground", p);

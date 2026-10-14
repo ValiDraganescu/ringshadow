@@ -103,7 +103,8 @@ TEST(RegionFile_parseProblems) {
     EXPECT_TRUE(has(parseProblems(flat(R"("deposits": [{"at": [15, 20]}])")), "deposits[0]", "missing \"amount\""));
     EXPECT_TRUE(has(parseProblems(flat(R"("height": [{"op": "raise", "area": [[1, 1], [5, 5]], "level": 1}])")), "height[0].area", "at least 3"));
     EXPECT_TRUE(has(parseProblems(flat(R"("height": [{"op": "raise", "area": [[1, 1], [5, 5], [9, 9]], "level": 1}])")), "height[0].area", "encloses no ground"));
-    EXPECT_TRUE(has(parseProblems(flat(R"("height": [{"op": "raise", "area": {"rect": [1, 1, 9, 9]}, "level": 3}])")), "height[0].level", "0…2"));
+    EXPECT_TRUE(has(parseProblems(flat(R"("height": [{"op": "raise", "area": {"rect": [1, 1, 9, 9]}, "level": 5}])")), "height[0].level", "0…4"));
+    EXPECT_TRUE(has(parseProblems(flat(R"("ground": "lava")")), "ground", "one of plain, rust"));
     EXPECT_TRUE(has(parseProblems(flat(R"("height": [{"op": "dig", "area": {"rect": [1, 1, 9, 9]}, "level": 0}])")), "height[0].op", "one of raise"));
     EXPECT_TRUE(has(parseProblems(flat(R"("doodads": [{"kind": "tree", "at": [9, 9]}])")), "doodads[0].kind", "one of rock"));
     EXPECT_TRUE(has(parseProblems(flat(R"("pads": [{"name": "A", "at": [9, 9]}, {"name": "A", "at": [29, 9]}])")), "pads[1].name", "used twice"));
@@ -228,6 +229,39 @@ TEST(RegionFile_layersLandWhereWritten) {
     bare.heightEdits.clear();
     const TerrainField plain(bare);
     EXPECT_EQ(plain.height(b.ground(Vec2(5, 5))), field.height(b.ground(Vec2(5, 5))));
+}
+
+TEST(RegionFile_groundAndLandmarks) {
+    // The ground palette reads and writes back; plain is left out.
+    const RegionFile f = parsed(flat(R"("ground": "slag",
+        "height": [{"op": "raise", "area": {"rect": [20, 14, 56, 50]}, "level": 2, "slope": 6},
+                   {"op": "raise", "area": {"circle": [35, 26, 6]}, "level": 4},
+                   {"op": "ramp", "from": [35, 45], "to": [35, 31], "width": 4, "fromLevel": 2, "level": 4}],
+        "doodads": [{"kind": "arch", "at": [80, 60], "rotation": 0},
+                    {"kind": "sunkHauler", "at": [100, 30], "rotation": 30},
+                    {"kind": "derrickRuin", "at": [110, 70]},
+                    {"kind": "relayDish", "at": [60, 80], "rotation": 200, "scale": 1.2}],
+        "spawns": [{"name": "Gate", "at": [72, 48]}])"));
+    EXPECT_TRUE(f.ground == Ground::slag);
+    EXPECT_TRUE(write(f).find("\"ground\": \"slag\"") != std::string::npos);
+    EXPECT_TRUE(write(parsed(flat())).find("ground") == std::string::npos);
+    EXPECT_TRUE(parsed(write(f)) == f);
+    const Built b = build(f);
+    for (const Problem& p : validate(f, b)) std::printf("    unexpected: %s\n", p.text().c_str());
+    EXPECT_TRUE(validate(f, b).empty());
+    // Ground above level 2: the mesa is level 4, 4 levels high.
+    const TerrainField field(b.map);
+    EXPECT_EQ(field.level(b.ground(Vec2(35, 24))), int64_t(4));
+    EXPECT_NEAR(field.height(b.ground(Vec2(35, 24))), 4 * b.map.levelHeight, 0.35);
+    // The arch blocks at its legs and leaves the lane under it open.
+    NavGrid nav(b.map, field);
+    EXPECT_TRUE(nav.walkable(b.ground(Vec2(80, 60))));
+    EXPECT_TRUE(!nav.walkable(b.ground(Vec2(82.6, 60))));
+    EXPECT_TRUE(!nav.walkable(b.ground(Vec2(77.4, 60))));
+    // The others are solid at their middles.
+    EXPECT_TRUE(!nav.walkable(b.ground(Vec2(100, 30))));
+    EXPECT_TRUE(!nav.walkable(b.ground(Vec2(110, 70))));
+    EXPECT_TRUE(!nav.walkable(b.ground(Vec2(60, 80))));
 }
 
 TEST(RegionFile_openingsAreDrivable) {

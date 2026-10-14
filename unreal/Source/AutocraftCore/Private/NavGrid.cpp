@@ -190,6 +190,14 @@ std::vector<NavGrid::Circle> NavGrid::footprint(Doodad::Kind k) {
     case Doodad::Kind::crateStack: return {{Vec2(0, 0), 0.42}, {Vec2(0.78, 0.1), 0.42}};
     case Doodad::Kind::deadTree: return {{Vec2(0, 0), 0.22}};
     case Doodad::Kind::tower: return {{Vec2(0, 0), 1.3}};
+    // Landmarks (the models' feet, docs/regions.md "Landmarks"). The arch's
+    // two legs leave a lane under it; the hauler is long along its own x.
+    case Doodad::Kind::arch: return {{Vec2(-2.6, 0), 0.75}, {Vec2(2.6, 0), 0.75}};
+    case Doodad::Kind::sunkHauler:
+        return {{Vec2(-1.7, 0), 1.0}, {Vec2(0, 0), 1.15}, {Vec2(1.6, 0), 0.95}};
+    case Doodad::Kind::derrickRuin:
+        return {{Vec2(0, 0), 1.25}, {Vec2(1.3, 0.9), 0.5}, {Vec2(2.4, -1.5), 0.45}, {Vec2(3.4, -1.9), 0.45}};
+    case Doodad::Kind::relayDish: return {{Vec2(0, 0), 1.5}, {Vec2(-1.6, 0.6), 0.6}, {Vec2(1.5, -0.4), 0.5}};
     case Doodad::Kind::plant: case Doodad::Kind::bush: case Doodad::Kind::debris: return {};
     }
     return {};

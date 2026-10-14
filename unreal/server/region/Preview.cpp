@@ -32,7 +32,9 @@ Rgb scaled(Rgb a, double k) { return {a.r * k, a.g * k, a.b * k}; }
 constexpr Rgb background{24, 26, 30};
 constexpr Rgb ink{225, 228, 232};
 constexpr Rgb dim{140, 146, 156};
-constexpr Rgb levelColour[3] = {{104, 112, 78}, {168, 150, 112}, {214, 204, 178}};
+constexpr Rgb levelColour[region::maxLevel + 1] = {
+    {104, 112, 78}, {168, 150, 112}, {214, 204, 178}, {236, 228, 214}, {250, 248, 244}};
+constexpr Rgb landmarkColour{120, 92, 150};
 constexpr Rgb cliffColour{122, 50, 38};
 constexpr Rgb rockColour{58, 58, 62};
 constexpr Rgb plantColour{70, 150, 70};
@@ -155,8 +157,8 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         for (int px = 0; px < mw; px++) {
             const double h = hAt(px, py);
             const double dx = (hAt(px + 1, py) - hAt(px - 1, py)) * s / 2, dz = (hAt(px, py + 1) - hAt(px, py - 1)) * s / 2;
-            const double band = std::clamp(h / H, 0.0, 2.0);
-            const int level = static_cast<int>(std::clamp(std::lround(band), 0L, 2L));
+            const double band = std::clamp(h / H, 0.0, double(region::maxLevel));
+            const int level = static_cast<int>(std::clamp(std::lround(band), 0L, long(region::maxLevel)));
             Rgb col = levelColour[level];
             // Within a level, a little lighter higher up.
             col = scaled(col, 1 + std::clamp(h / H - level, -0.5, 0.5) * 0.25);
@@ -215,7 +217,9 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     for (const Doodad& d : map.doodads) {
         const auto circles = NavGrid::circles(d);
         if (circles.empty()) { disc(built.regionAt(d.position), 0.25, plantColour, 1); continue; }
-        for (const auto& [centre, radius] : circles) disc(built.regionAt(centre), radius, rockColour, 0.92);
+        const bool landmark = d.kind >= Doodad::Kind::arch;
+        for (const auto& [centre, radius] : circles) disc(built.regionAt(centre), radius, landmark ? landmarkColour : rockColour, 0.92);
+        if (landmark) label(built.regionAt(d.position) + Vec2(1.5, 0), std::string(rawValue(d.kind)), ink);
     }
     // Ore deposits: 2 by 1, turned as `NavGrid::insidePatch` turns them.
     std::vector<OreSpec> ore = map.deposits;
@@ -303,7 +307,8 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     std::snprintf(size, sizeof size, "%dx%d", static_cast<int>(extent.x), static_cast<int>(extent.y));
     c.text(left, 8, file.id + " - " + file.name, ink);
     c.text(left, 8 + lineHeight, std::string(rawValue(file.size)) + " " + size + " cells, " + std::string(rawValue(file.style)) +
-                                     (file.seed ? " seed " + std::to_string(*file.seed) : " (the game's map)") +
+                                     (file.seed ? " seed " + std::to_string(*file.seed) : " (the game's map)") + ", ground " +
+                                     std::string(rawValue(file.ground)) +
                                      ". North up; x east, z south.", dim);
     int y = top + md + 30 + 7 * glyphScale;
     int x = left;
@@ -316,6 +321,8 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     swatch(levelColour[0], "level 0");
     swatch(levelColour[1], "level 1");
     swatch(levelColour[2], "level 2");
+    swatch(levelColour[4], "level 3-4");
+    swatch(landmarkColour, "landmark");
     swatch(cliffColour, "cliff");
     swatch(rockColour, "rock");
     swatch(oreColour, "ore");

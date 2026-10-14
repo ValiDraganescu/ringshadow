@@ -26,6 +26,10 @@ namespace
 		case Kind::debris: return TEXT("debris");
 		case Kind::deadTree: return TEXT("deadTree");
 		case Kind::tower: return TEXT("tower");
+		case Kind::arch: return TEXT("arch");
+		case Kind::sunkHauler: return TEXT("sunkHauler");
+		case Kind::derrickRuin: return TEXT("derrickRuin");
+		case Kind::relayDish: return TEXT("relayDish");
 		}
 		return TEXT("rock");
 	}
@@ -85,7 +89,9 @@ const FAcModelInfo* AAcDoodads::ModelFor(const ac::Doodad::Kind Kind, const uint
 {
 	const FAcModelCatalog& Catalog = FAcModelCatalog::Get();
 	if (const FAcModelInfo* M = Catalog.Find(FName(*FString::Printf(TEXT("doodad_%s_%u"), KindName(Kind), Variant % 4u)))) return M;
-	return Catalog.Find(FName(*FString::Printf(TEXT("doodad_%s"), KindName(Kind))));
+	if (const FAcModelInfo* M = Catalog.Find(FName(*FString::Printf(TEXT("doodad_%s"), KindName(Kind))))) return M;
+	// The landmarks (models/landmarks.py) are modelkit entries: `<base>_blue`.
+	return Catalog.Find(FName(*FString::Printf(TEXT("doodad_%s_blue"), KindName(Kind))));
 }
 
 FTransform AAcDoodads::Placement(const ac::Doodad& D, const double GroundHeight)

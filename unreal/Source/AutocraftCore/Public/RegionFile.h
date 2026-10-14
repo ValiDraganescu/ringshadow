@@ -93,6 +93,10 @@ struct Site {
 
 enum class Edge : uint8_t { north, east, south, west };
 
+/// The ground's look (docs/regions.md, "ground"): the palette the game
+/// paints the region's ground with. `plain` is the game's own brown dirt.
+enum class Ground : uint8_t { plain, rust, salt, ash, glass, slag, frost, ochre };
+
 /// A passable stretch of an edge: cells along it (x on north and south,
 /// z on east and west).
 struct Span {
@@ -105,6 +109,7 @@ struct RegionFile {
     std::string name;
     MapSize size = MapSize::medium;
     MapStyle style = MapStyle::highlands;
+    Ground ground = Ground::plain;
     /// nil: the game's own map of that style and size.
     std::optional<uint64_t> seed;
     /// The base without its ore and wells, without its rocks and plants.
@@ -149,6 +154,9 @@ AUTOCRAFTCORE_API std::string write(const RegionFile& file);
 
 /// A file with only the base.
 AUTOCRAFTCORE_API RegionFile starter(std::string id, MapStyle style, uint64_t seed, MapSize size);
+
+/// The highest level a height edit reaches (one level is 2.4 high).
+constexpr int64_t maxLevel = 4;
 
 constexpr double padRadius = 3.0;
 /// A flight leaves from within this many cells of a pad's centre: the
@@ -217,3 +225,9 @@ AUTOCRAFTCORE_API bool touchesPadPlate(const std::vector<Place>& pads, Vec2 at, 
 inline constexpr const char* padPlateRefusal = "Too close to a landing pad";
 
 } // namespace ac::region
+
+namespace ac {
+template <> struct EnumInfo<region::Ground> {
+    static constexpr std::array<std::string_view, 8> names{"plain", "rust", "salt", "ash", "glass", "slag", "frost", "ochre"};
+};
+} // namespace ac
