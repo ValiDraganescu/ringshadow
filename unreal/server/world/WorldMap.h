@@ -153,6 +153,17 @@ struct WorldContracts {
     static int64_t ore(int64_t level);
     static int64_t hydrogenNeed(int64_t level);
     static int64_t loads(int64_t level);
+    /// The first ten minutes (docs/contracts.md, "First ten minutes"): a new
+    /// pilot's chain of radio jobs, one at a time, before the daily three.
+    /// 1 the Landing crate, 2 the Citadel, 3 a load of ore home, 4 the
+    /// Derrick's wreck, 5 the Derrick built and pumped once, 6 a skill
+    /// point spent.
+    static constexpr int firstSteps = 6;
+    /// What step `step` pays: XP (the chain takes a new pilot past the
+    /// Derrick's floor, level 3, by step 4's end, and to level 4 by its
+    /// last) and a little MH.
+    static double firstXp(int step);
+    static int64_t firstHydrogen(int step);
 };
 
 /// What the world's rules are.
@@ -212,6 +223,10 @@ struct WorldParams {
     /// Seconds (the world's clock) a fallen Prospector waits before it comes
     /// back at its Citadel or nearest Hab Dome (P6); Second wind cuts it.
     double respawnDelay = 10;
+    /// The step of the first ten minutes a new pilot starts at (1; dev and
+    /// shots `--first-step N`: later; 0: none, as a kept pilot from an old
+    /// save).
+    int firstStep = 1;
 };
 
 /// The buildings' jobs for the pilot in a world (P6, docs/prospector-progression.md
@@ -545,6 +560,9 @@ private:
         std::vector<net::Contract> contracts;
         std::optional<int64_t> contractDay;
         uint32_t nextContract = 1;
+        /// The first ten minutes' step open now, 1…`WorldContracts::firstSteps`
+        /// (its only contract); 0: done with it, or never on it.
+        int firstStep = 0;
         /// Its Prospector fell (P6), not saved: a pilot that comes back
         /// with none gets a new one at home.
         std::optional<Down> down;
@@ -688,6 +706,16 @@ private:
     /// Work toward the pilot's open contracts of `kind` (and `target`, when
     /// set); pays the ones it finishes.
     void contractWork(PilotId pilot, PilotState& p, net::Contract::Kind kind, const std::string& target, int64_t amount);
+    /// Pays a contract its work just finished.
+    void payContract(PilotId pilot, PilotState& p, net::Contract& c);
+    /// The first ten minutes, each step: the open step's work counted, paid
+    /// when done, the next one opened; after the last, the daily draw.
+    void firstTen(PilotId pilot, PilotState& p);
+    net::Contract firstContract(const PilotState& p, int step) const;
+    /// The start region's first site holding `kind`'s blueprint.
+    std::optional<size_t> startSite(StructureKind kind) const;
+    /// A pilot's Prospector filled a tank at a Derrick (step 5).
+    void pumped(PilotId pilot, PilotState& p);
     static std::string encodeContracts(const PilotState& p);
     static bool decodeContracts(const std::string& json, PilotState& p);
     /// A unit's skill clocks out of region `r` (it leaves), and into `r` as

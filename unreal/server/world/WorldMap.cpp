@@ -351,6 +351,8 @@ bool WorldMap::join(PilotId pilot) {
         return start().join(pilot);
     }
     p.wallet = Wallet{params_.startOre, params_.startHydrogen};
+    // A new pilot: the first ten minutes (docs/contracts.md).
+    p.firstStep = std::clamp(params_.firstStep, 0, WorldContracts::firstSteps);
     // Dev: every blueprint.
     if (params_.devBlueprints)
         for (const StructureKind k : Progression::blueprintKinds()) p.progress.blueprints.insert(k);

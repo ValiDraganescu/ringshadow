@@ -266,6 +266,12 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevBlueprints"))) Args.insert(Args.end(), {"--dev-blueprints", "1"});
 	// Dev and shots: a new pilot owns a finished Citadel, Foundry and Lab, its rig stocked.
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) Args.insert(Args.end(), {"--dev-rig", "1"});
+	// Dev and shots: a new pilot starts the first ten minutes at this step
+	// (1-6; 0: none, the daily contracts at once).
+	if (int32 FirstStep = 0; FParse::Value(FCommandLine::Get(), TEXT("AcMmoFirstStep="), FirstStep))
+	{
+		Args.insert(Args.end(), {"--first-step", std::to_string(FMath::Clamp(FirstStep, 0, 6))});
+	}
 	// Dev, tests and shots: MH in a new pilot's wallet (flights cost MH, F1).
 	// The picture and flow runs fly before a Derrick pumps any: 200 there
 	// unless they say otherwise (-AcMmoDevHydrogen=0 for none).

@@ -332,6 +332,8 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
             if (underSweep(w.pilot)) contractWork(w.pilot, *p, net::Contract::Kind::sweep, "", 1);
             sweptLoad(regions_[w.region]->simulation(), w.unit, u->patch ? u->patch : w.patch, clock_, params_.dayLength);
         }
+        // A tank filled at a Derrick: the first ten minutes' pump.
+        if (const auto u = st.unit(w.unit); u && w.carrying <= 0 && u->carrying > 0 && u->hydrogen.value_or(false)) pumped(w.pilot, *p);
         if (p->progress.level() != level) pushProgress(w.pilot);
     }
 }

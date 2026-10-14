@@ -157,6 +157,11 @@ struct AUTOCRAFT_API AcProgressHud
 	/// Those of them in the pilot's region with a place (a reach), for the
 	/// compass: ground position and distance from `From`.
 	static TArray<FAcPilotGoal> ContractGoals(const FAcMmoClient& Mmo, ac::Vec2 From);
+	/// The first ten minutes' open step (nil: not on it), its hint for the
+	/// panel and the toast, and its tip for the line under the card.
+	static const ac::net::Contract* FirstStep(const FAcMmoClient& Mmo);
+	static FString FirstHint(const ac::net::Contract& C);
+	static FString FirstTip(const ac::net::Contract& C);
 	/// "23:41", "1:02:09": seconds as a countdown.
 	static FString Countdown(double Seconds);
 };
@@ -215,5 +220,10 @@ private:
 	/// changed: the panel opens for `ContractsShown` s after.
 	FString ContractsSeen;
 	double ContractsChangedAt = -1;
+	/// The first ten minutes' step last told ("KSTR: <title>" when another opens).
+	uint32 FirstSeen = 0;
+	/// Every contract's title as last seen, by id: a done one's toast when
+	/// the list no longer has it (the first ten minutes' last step).
+	TMap<uint32, FString> ContractTitles;
 	std::optional<ac::net::ProgressMessage::Respawn> RespawnPreview;
 };

@@ -118,6 +118,9 @@ struct FAcContractRow
 	FString Pay;
 	/// Done or abandoned: "NEW ONE AT DAWN, IN 23:41".
 	FString Dawn;
+	/// A step of the first ten minutes (docs/contracts.md): drawn in gold,
+	/// `Progress` its hint ("HOLD CLICK ON THE LANDER WRECK  ·  5 S").
+	bool bFirst = false;
 	bool operator==(const FAcContractRow&) const = default;
 };
 
@@ -131,6 +134,8 @@ struct FAcContractsInfo
 	/// one small line a contract (W2). T opens it; a contract that changed
 	/// opens it for a few seconds; an armed abandon keeps it open.
 	bool bExpanded = false;
+	/// On the first ten minutes: its step, 1…6 (0: the daily contracts).
+	int32 FirstStep = 0;
 	bool operator==(const FAcContractsInfo&) const = default;
 };
 

@@ -1000,13 +1000,17 @@ namespace
 void SAcConsole::PaintContractsCompact(FPaint& P) const
 {
 	const FAcContractsInfo& C = *Contracts;
-	const double RowH = 30, Wide = 400;
+	// A first-ten-minutes step open: a second line under it, its hint.
+	const double RowH = 30, HintH = 22, Wide = 400;
+	double RowsH = 0;
+	for (const FAcContractRow& Row : C.Rows) RowsH += RowH + (Row.bFirst && Row.State == FAcContractRow::EState::Open ? HintH : 0);
 	const FAcRect Whole = RightPanel(1, 0);
-	const FAcRect R(Whole.MaxX() - Wide, Whole.MinY(), Wide, 36 + FMath::Max(C.Rows.Num(), 1) * RowH + 8);
+	const FAcRect R(Whole.MaxX() - Wide, Whole.MinY(), Wide, 36 + FMath::Max(RowsH, RowH) + 8);
 	PaintPanelGlass(P, R);
 	const double X = R.MinX() + 14, Right = R.MaxX() - 14;
 	double Y = R.MaxY() - 26;
-	FAcHudText Name(TEXT("KSTR  ·  CONTRACTS"), FAcHudStyle::Font(14), FAcHudStyle::Cyan());
+	const FString Head = C.FirstStep > 0 ? FString::Printf(TEXT("KSTR  ·  FIRST STEPS  %d / 6"), C.FirstStep) : FString(TEXT("KSTR  ·  CONTRACTS"));
+	FAcHudText Name(Head, FAcHudStyle::Font(14), C.FirstStep > 0 ? FAcHudStyle::LevelGold() : FAcHudStyle::Cyan());
 	Name.Accent = FLinearColor::Transparent;
 	Name.Kern = 1.0f;
 	P.Text(Name, FVector2D(X, Y));
@@ -1015,24 +1019,32 @@ void SAcConsole::PaintContractsCompact(FPaint& P) const
 	for (int32 I = 0; I < C.Rows.Num(); ++I)
 	{
 		const FAcContractRow& Row = C.Rows[I];
-		Y -= RowH;
 		const bool bOpen = Row.State == FAcContractRow::EState::Open;
 		const bool bDone = Row.State == FAcContractRow::EState::Done;
+		const bool bStep = Row.bFirst && bOpen;
+		Y -= RowH + (bStep ? HintH : 0);
 		const float A = bOpen ? 1.f : 0.6f;
-		const double By = Y + 9;
+		const double By = Y + 9 + (bStep ? HintH : 0);
+		if (bStep)
+		{
+			// The step: a gold edge down its side, its hint under the title.
+			P.FillRounded(FAcRect(X - 8, Y + 4, 3, RowH + HintH - 6), 1, FAcHudStyle::LevelGold());
+			P.Text(Fit(Row.Progress, 13, Right - X - 20), 13, Alpha(FAcHudStyle::LevelGold(), 0.9), FVector2D(X + 20, Y + 8));
+		}
 		P.Text(FString::FromInt(I + 1), 13, Gray(0.5), FVector2D(X, By));
 		// Its bar (open) or its tag (paid, abandoned) on the right; the title fills the rest.
 		const double BarW = 92;
 		const FString Tag = bOpen ? FString() : bDone ? FString(TEXT("PAID")) : FString(TEXT("ABANDONED"));
 		const double TagW = bOpen ? BarW : FPaint::TextWidth(Tag, 13);
 		const double Tx = X + 20, Tw = Right - TagW - 12 - Tx;
-		P.Text(Fit(Row.Title, 15, Tw), 15, bDone ? Rgb(0.75, 1, 0.8) : Gray(0.95, A), FVector2D(Tx, By));
+		P.Text(Fit(Row.Title, 15, Tw), 15, bDone ? Rgb(0.75, 1, 0.8) : bStep ? FAcHudStyle::LevelGold() : Gray(0.95, A), FVector2D(Tx, By));
 		if (bOpen)
 		{
+			const FLinearColor Ink = bStep ? FAcHudStyle::LevelGold() : FAcHudStyle::Cyan();
 			const FAcRect Bar(Right - BarW, By + 3, BarW, 7);
 			P.FillRounded(Bar, 2, Gray(0, 0.55));
-			if (Row.Share > 0) P.FillRounded(FAcRect(Bar.MinX(), Bar.MinY(), FMath::Max(3.0, BarW * FMath::Clamp(Row.Share, 0.0, 1.0)), Bar.H), 2, FAcHudStyle::Cyan());
-			P.Stroke(Bar, 2, Alpha(FAcHudStyle::Cyan(), 0.45), 1);
+			if (Row.Share > 0) P.FillRounded(FAcRect(Bar.MinX(), Bar.MinY(), FMath::Max(3.0, BarW * FMath::Clamp(Row.Share, 0.0, 1.0)), Bar.H), 2, Ink);
+			P.Stroke(Bar, 2, Alpha(Ink, 0.45), 1);
 		}
 		else
 		{
@@ -1055,13 +1067,14 @@ void SAcConsole::PaintContracts(FPaint& P) const
 	const double X = R.MinX() + 16, Right = R.MaxX() - 16;
 	double Y = R.MaxY() - 30;
 	// The station's name as on the deck, then what the keys do.
-	FAcHudText Name(TEXT("KSTR 88.7  ·  CONTRACTS"), FAcHudStyle::Font(18), FAcHudStyle::Cyan());
+	FAcHudText Name(C.FirstStep > 0 ? FString::Printf(TEXT("KSTR 88.7  ·  FIRST STEPS  %d / 6"), C.FirstStep) : FString(TEXT("KSTR 88.7  ·  CONTRACTS")),
+		FAcHudStyle::Font(18), C.FirstStep > 0 ? FAcHudStyle::LevelGold() : FAcHudStyle::Cyan());
 	Name.Accent = FLinearColor::Transparent;
 	Name.Kern = 1.2f;
 	Name.ShadowColor = Alpha(FAcHudStyle::Cyan(), 0.35);
 	P.Text(Name, FVector2D(X, Y));
 	if (C.bArmed) P.Text(TEXT("ABANDON WHICH?  1 2 3   ·   X  keep them"), 15, Rgb(1, 0.5, 0.35), FVector2D(Right, Y), EAcHAlign::Right);
-	else P.Text(TEXT("T  less   ·   X  abandon one"), 15, Gray(0.65), FVector2D(Right, Y), EAcHAlign::Right);
+	else P.Text(C.FirstStep > 0 ? TEXT("T  less") : TEXT("T  less   ·   X  abandon one"), 15, Gray(0.65), FVector2D(Right, Y), EAcHAlign::Right);
 	Y -= 8;
 	if (C.Rows.IsEmpty())
 	{
@@ -1074,9 +1087,12 @@ void SAcConsole::PaintContracts(FPaint& P) const
 		const FAcRect Box(X - 6, Y + 3, Right - X + 12, RowH - 6);
 		const bool bOpen = Row.State == FAcContractRow::EState::Open;
 		const bool bDone = Row.State == FAcContractRow::EState::Done;
-		const FLinearColor Edge = bDone ? Rgb(0.4, 1, 0.5) : bOpen ? (C.bArmed ? Rgb(1, 0.5, 0.35) : Alpha(FAcHudStyle::Cyan(), 0.8)) : Gray(0.35);
-		P.FillRounded(Box, 4, bOpen ? Rgb(0.04, 0.1, 0.16, 0.92) : Rgb(0.04, 0.05, 0.06, 0.85));
-		P.Stroke(Box, 4, Edge, bOpen && C.bArmed ? 2 : 1.2);
+		const bool bStep = Row.bFirst && bOpen;
+		const FLinearColor Edge = bDone ? Rgb(0.4, 1, 0.5)
+			: bStep ? FAcHudStyle::LevelGold()
+			: bOpen ? (C.bArmed ? Rgb(1, 0.5, 0.35) : Alpha(FAcHudStyle::Cyan(), 0.8)) : Gray(0.35);
+		P.FillRounded(Box, 4, bStep ? Rgb(0.14, 0.1, 0.03, 0.92) : bOpen ? Rgb(0.04, 0.1, 0.16, 0.92) : Rgb(0.04, 0.05, 0.06, 0.85));
+		P.Stroke(Box, 4, Edge, (bOpen && C.bArmed) || bStep ? 2 : 1.2);
 		// Its slot's key: 1, 2, 3 (lit while an abandon is armed).
 		const FAcRect Key(Box.MinX() + 8, Box.MaxY() - 32, 24, 24);
 		const FLinearColor KeyInk = C.bArmed && bOpen ? FAcHudStyle::KeyYellow() : Gray(0.5);
@@ -1092,12 +1108,13 @@ void SAcConsole::PaintContracts(FPaint& P) const
 		const double By = Box.MinY() + 9;
 		if (bOpen)
 		{
-			const double BarW = Tw - FPaint::TextWidth(Row.Progress, 16) - 16;
+			const double BarW = FMath::Max(40.0, Tw - FPaint::TextWidth(Row.Progress, 16) - 16);
 			const FAcRect Bar(Tx, By + 1, BarW, 10);
 			P.FillRounded(Bar, 2, Gray(0, 0.55));
-			if (Row.Share > 0) P.FillRounded(FAcRect(Bar.MinX(), Bar.MinY(), FMath::Max(4.0, BarW * FMath::Clamp(Row.Share, 0.0, 1.0)), Bar.H), 2, FAcHudStyle::Cyan());
-			P.Stroke(Bar, 2, Alpha(FAcHudStyle::Cyan(), 0.45), 1);
-			P.Text(Row.Progress, 16, Rgb(0.6, 0.9, 1), FVector2D(Box.MaxX() - 10, By), EAcHAlign::Right);
+			const FLinearColor Ink = bStep ? FAcHudStyle::LevelGold() : FAcHudStyle::Cyan();
+			if (Row.Share > 0) P.FillRounded(FAcRect(Bar.MinX(), Bar.MinY(), FMath::Max(4.0, BarW * FMath::Clamp(Row.Share, 0.0, 1.0)), Bar.H), 2, Ink);
+			P.Stroke(Bar, 2, Alpha(Ink, 0.45), 1);
+			P.Text(Row.Progress, 16, bStep ? FAcHudStyle::LevelGold() : Rgb(0.6, 0.9, 1), FVector2D(Box.MaxX() - 10, By), EAcHAlign::Right);
 		}
 		else
 		{

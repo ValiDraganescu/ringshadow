@@ -819,6 +819,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeVarint(w, c.id);
         w.writeBits(uint64_t(c.kind), 3);
         w.writeBits(uint64_t(c.state), 2);
+        w.writeBits(uint64_t(c.step), 3);
         writeString(w, c.title);
         writeString(w, c.pitch);
         writeString(w, c.target);
@@ -912,7 +913,8 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         c.id = static_cast<uint32_t>(readVarint(r));
         const uint64_t kind = r.readBits(3);
         const uint64_t state = r.readBits(2);
-        if (kind > uint64_t(Contract::Kind::sweep) || state > uint64_t(Contract::State::abandoned)) return false;
+        c.step = static_cast<uint8_t>(r.readBits(3));
+        if (kind > uint64_t(Contract::Kind::skill) || state > uint64_t(Contract::State::abandoned)) return false;
         c.kind = static_cast<Contract::Kind>(kind);
         c.state = static_cast<Contract::State>(state);
         if (!readString(r, c.title) || !readString(r, c.pitch) || !readString(r, c.target) || !readString(r, c.region))

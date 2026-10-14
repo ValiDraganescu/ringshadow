@@ -412,14 +412,18 @@ struct Contract {
     /// reach: stand at `target` ("<region id>/<site name>" a blueprint site,
     /// "<region id>/pad/<pad name>" a pad). build: finish a building of
     /// kind `target` (its code name, "derrick"). sweep: drill under a
-    /// ringshadow sweep (drawn once the server has the sweep, E1).
-    enum class Kind : uint8_t { deliverOre, deliverHydrogen, drill, reach, build, sweep };
+    /// ringshadow sweep (drawn once the server has the sweep, E1). skill:
+    /// spend a skill point (the first ten minutes' last step).
+    enum class Kind : uint8_t { deliverOre, deliverHydrogen, drill, reach, build, sweep, skill };
     /// open; done (paid, waits for dawn); abandoned (waits for dawn).
     enum class State : uint8_t { open, done, abandoned };
     /// The pilot's own number for it (never reused).
     uint32_t id = 0;
     Kind kind = Kind::deliverOre;
     State state = State::open;
+    /// The first ten minutes' step it is (docs/contracts.md, "First ten
+    /// minutes"), 1…6; 0: a daily contract.
+    uint8_t step = 0;
     /// "STARDUST RUN"-style title and the radio's one-line pitch, ready to
     /// show.
     std::string title;

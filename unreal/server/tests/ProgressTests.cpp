@@ -42,6 +42,8 @@ const LoadedWorld& first() {
 WorldParams blueprinted() {
     WorldParams p;
     p.devBlueprints = true;
+    // No first-ten-minutes pay in the sums (FirstTenTests.cpp).
+    p.firstStep = 0;
     return p;
 }
 
@@ -455,6 +457,7 @@ TEST(progress_over_the_protocol) {
     o.world = first();
     o.worldParams.devBlueprints = true;
     o.worldParams.devXp = Progression::xp(10);
+    o.worldParams.firstStep = 0;
     o.token = nettest::kToken;
     o.secret = nettest::serverConfig().secret;
     Server server(serverPort, o);

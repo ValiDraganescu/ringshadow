@@ -57,6 +57,18 @@
 //   10 four shut sites known, 18-44 cells off, by day: their columns
 //   11 the same at dusk                12 the four shut, near, at dusk
 //
+// -AcMmoShotsO1 (a new pilot, no dev XP: the real levels): the first ten
+// minutes (docs/contracts.md "First ten minutes", docs/mmorpg-m7.md O1)
+// played through, a picture as each step opens (its "KSTR:" toast, the
+// gold step on the panel, the tip line), DIR/o1-NN-moment.png:
+//   01 Touchdown: the panel opened (T), the Landing crate's column
+//   02 A Roof over Your Head: the crate opened, the Citadel's blueprint
+//   03 First Haul: the Citadel finished   04 The Wreck on the Rise: a load
+//      home, the Lander wreck's column ahead
+//   05 Liquid Gold: the wreck opened, the Derrick's blueprint, level 3
+//   06 Make It Yours: the Derrick on the north well, pumped once
+//   07 a point spent on the skill screen  08 the daily three take over
+//
 // -AcMmoShotsRingshadow (with -AcMmoRingshadow=70: a sweep 70 s after the
 // server starts; docs/weather.md "Ringshadow sweep"): only the sweep, third
 // person on the start pad toward the giant, DIR/rs-NN-moment.png:
@@ -429,6 +441,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				UE_LOG(LogAutocraft, Display, TEXT("mmoshots: clip: the recorder held for the first moment wanted"));
 			}
 		}
+		// -AcMmoShotsO1: the new pilot earns its levels (no dev XP).
+		if (double Xp = 0; FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsO1")) && !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp))
+		{
+			FCommandLine::Append(TEXT(" -AcMmoDevXp=0"));
+		}
 		// The new pilot starts at level 3 (1100 XP): the Derrick's floor, so
 		// the MH loop (19-22) can build one, unless the run says otherwise.
 		if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp)) FCommandLine::Append(TEXT(" -AcMmoDevXp=1100"));
@@ -471,6 +488,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2"))) T.Phase = 600;
 			// -AcMmoShotsW2: the sites on the ground, the compact panel (700-724).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2"))) T.Phase = 700;
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsO1"))) T.Phase = 800;
 			// -AcMmoShotsRig: only the rig screen (500-513).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
 			// -AcMmoShotsFlight: only a pad flight (520-527).
@@ -1707,6 +1725,335 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Since() < 1.0) return;
 		if (AAcSites* Sites = AAcSites::Find(GetWorld())) Sites->Stage({});
 		Check(Shots.Saved + Shots.Skipped == 12, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsO1
+	case 800:
+		// Step 1 open, the panel whole (T) for the radio's line; toward the crate.
+		if (const ac::net::Contract* Step = AcProgressHud::FirstStep(*Mmo); Step && Step->step == 1 && Since() > 1.0)
+		{
+			if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this)) Hud->ToggleContracts();
+			const FVector2D Crate = Cell(70, 42);
+			Stop(Face(ac::Vec2(Crate.X, Crate.Y)));
+			Advance();
+		}
+		else TimedOut(TEXT("the first ten minutes' step 1"));
+		return;
+	case 801:
+		if (Since() > 1.2) Shoot(TEXT("o1-01-touchdown"), TEXT("step 1, Touchdown: the toast, the gold step (T), the crate's column"));
+		return;
+	case 802:
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this)) Hud->ToggleContracts();
+		Route({Cell(70, 42)});
+		Advance();
+		return;
+	case 803:
+	{
+		// Into the crate: it opens on touch, step 2 opens.
+		const ac::net::Contract* Step = AcProgressHud::FirstStep(*Mmo);
+		if (Step && Step->step == 2)
+		{
+			Stop(PI);
+			Advance();
+			return;
+		}
+		if (Drive() < 0) Stalled(TEXT("to the Landing crate"));
+		TimedOut(TEXT("the crate opened, step 2"), 40);
+		return;
+	}
+	case 804:
+		if (Since() > 1.5) Shoot(TEXT("o1-02-a-roof"), TEXT("step 2: the crate opened, the Citadel's blueprint; the toast and the panel"));
+		return;
+	case 805:
+		// The build spot east of the ore (as 10-16), the Citadel placed.
+		Route({Cell(69, 48)});
+		Advance();
+		return;
+	case 806:
+		if (const int32 D = Drive(); D == 1)
+		{
+			Stop(PI);
+			Shots.bShotBefore = false;
+			Advance();
+		}
+		else if (D < 0) Stalled(TEXT("to the build spot"));
+		return;
+	case 807:
+		// Held out (B, its number), placed a moment later, once its ghost has a spot.
+		if (!Shots.bShotBefore && Since() > 1.0)
+		{
+			UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+			const int32 Number = AcPilotText::BuildKinds(true).IndexOfByKey(ac::StructureKind::citadel) + 1;
+			Check(Number > 0 && Build && Build->Key(TEXT("b")) && Build->Key(FString::FromInt(Number)) && Build->Placing().IsSet()
+				&& *Build->Placing() == ac::StructureKind::citadel, FString::Printf(TEXT("B, %d held out a Citadel"), Number));
+			Shots.bShotBefore = true;
+		}
+		else if (Shots.bShotBefore && Since() > 2.5)
+		{
+			Pilot->Press(true);
+			Pilot->Press(false);
+			Advance();
+		}
+		return;
+	case 808:
+		if (Mmo)
+		{
+			for (const FString& Why : Mmo->TakeBuildRefusals()) Check(false, FString::Printf(TEXT("Citadel built, not refused: %s"), *Why));
+		}
+		if (const ac::net::Contract* Step = AcProgressHud::FirstStep(*Mmo); Step && Step->step == 3 && S && CitadelOf(*S))
+		{
+			Shots.Citadel = CitadelOf(*S)->id;
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the Citadel finished, step 3"), WeldLimit);
+		return;
+	case 809:
+		if (Since() > 1.5) Shoot(TEXT("o1-03-first-haul"), TEXT("step 3: the Citadel finished; the toast, the tip line"));
+		return;
+	case 810:
+	{
+		// To the nearest ore round the Citadel's north side (as 19).
+		const ac::Structure* C = CitadelOf(*S);
+		int64 Best = -1;
+		for (int64 I = 0; I < (int64)S->patches.size(); ++I)
+		{
+			const ac::OreDeposit& P = S->patches[I];
+			if (P.remaining <= 0) continue;
+			if (Best < 0 || ac::distance(P.position, C->position) < ac::distance(S->patches[Best].position, C->position)) Best = I;
+		}
+		Check(Best >= 0, TEXT("ore near the Citadel"));
+		if (Best < 0)
+		{
+			Finish();
+			return;
+		}
+		Shots.Patch = Best;
+		const ac::Vec2 P = S->patches[Best].position;
+		Route({FVector2D(C->position.x + 5, C->position.y - 6), FVector2D(C->position.x - 5, C->position.y - 6), FVector2D(P.x + 1, P.y)});
+		Advance();
+		return;
+	}
+	case 811:
+	{
+		const ac::Vec2 P = S->patches[Shots.Patch].position;
+		const std::optional<ac::PilotTarget> Target = U ? M->simulation().pilotTarget(*U) : std::nullopt;
+		if (Target && Target->is<ac::PilotTarget::Patch>())
+		{
+			Stop(Face(P));
+			Pilot->Press(true);
+			Advance();
+			return;
+		}
+		if (Drive() == 1) Shots.Route.Add(FVector2D(P.x, P.y));
+		if (Now - Shots.StallSince > 4.0) Stalled(TEXT("to the ore"));
+		return;
+	}
+	case 812:
+		if (U && U->carrying > 0)
+		{
+			Pilot->Press(false);
+			const ac::Structure* C = CitadelOf(*S);
+			Route({FVector2D(C->position.x, C->position.y)});
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("a load drilled"), 30);
+		return;
+	case 813:
+		// Home: unloaded, step 4 open; then toward the wreck on the rise.
+		if (const ac::net::Contract* Step = AcProgressHud::FirstStep(*Mmo); Step && Step->step == 4 && U && U->carrying == 0)
+		{
+			Advance();
+			return;
+		}
+		Drive();
+		TimedOut(TEXT("the load home, step 4"), 30);
+		return;
+	case 814:
+	{
+		// Off the Citadel's wall a few steps toward the wreck, then the picture.
+		const FVector2D Wreck = Cell(50, 30);
+		if (Since() < 1.6)
+		{
+			if (Pilot) Pilot->SetTestInput(FVector2D(0, -0.8), Face(ac::Vec2(Wreck.X, Wreck.Y)));
+			return;
+		}
+		Stop(Face(ac::Vec2(Wreck.X, Wreck.Y)));
+		if (Since() > 2.1) Shoot(TEXT("o1-04-the-wreck"), TEXT("step 4: a load home; the toast, the Lander wreck's column ahead"));
+		return;
+	}
+	case 815:
+	{
+		// Over to the wreck (as 707-710), then hold the act key on it.
+		const ac::Structure* C = CitadelOf(*S);
+		Route({FVector2D(C->position.x + 5, C->position.y - 6), Cell(66, 34), Cell(58, 33)});
+		Advance();
+		return;
+	}
+	case 816:
+		if (const int32 D = Drive(); D == 1) Advance();
+		else if (D < 0) Stalled(TEXT("to the Lander wreck"));
+		return;
+	case 817:
+	{
+		const FVector2D Wreck = Cell(50, 30);
+		const ac::Vec2 At(Wreck.X, Wreck.Y);
+		if (U && ac::distance(U->position, At) <= 1.9)
+		{
+			Stop(Face(At));
+			Pilot->Press(true);
+			Advance();
+			return;
+		}
+		if (Pilot) Pilot->SetTestInput(FVector2D(0, -0.5), Face(At));
+		TimedOut(TEXT("at the Lander wreck"), 40);
+		return;
+	}
+	case 818:
+		if (const ac::net::Contract* Step = AcProgressHud::FirstStep(*Mmo); Step && Step->step == 5)
+		{
+			Pilot->Press(false);
+			const int64 Level = ac::Progression::level(Mmo->Progress()->xp);
+			Check(Level >= ac::Progression::blueprintFloor(ac::StructureKind::derrick),
+				FString::Printf(TEXT("at the Derrick's floor by step 5: level %lld"), (long long)Level));
+			// Back a little, to see the opened wreck.
+			Pilot->SetTestInput(FVector2D(0, 0.6), Pilot->Yaw());
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the wreck opened, step 5"), 15);
+		return;
+	case 819:
+		if (Since() > 0.7) Stop(Pilot->Yaw());
+		if (Since() > 1.8) Shoot(TEXT("o1-05-liquid-gold"), TEXT("step 5: the wreck opened, the Derrick's blueprint; the toast, the panel"));
+		return;
+	case 820:
+		// East of the north well (60, 36), facing it: a Derrick's reach away.
+		Route({Cell(58, 33), Cell(63, 33), Cell(63, 36)});
+		Advance();
+		return;
+	case 821:
+		if (const int32 D = Drive(); D == 1)
+		{
+			Stop(PI);
+			Shots.bShotBefore = false;
+			Advance();
+		}
+		else if (D < 0) Stalled(TEXT("to the north well"));
+		return;
+	case 822:
+		if (!Shots.bShotBefore && Since() > 1.0)
+		{
+			UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+			const int32 Number = AcPilotText::BuildKinds(true).IndexOfByKey(ac::StructureKind::derrick) + 1;
+			Check(Number > 0 && Build && Build->Key(TEXT("b")) && Build->Key(FString::FromInt(Number)) && Build->Placing().IsSet()
+				&& *Build->Placing() == ac::StructureKind::derrick, FString::Printf(TEXT("B, %d held out a Derrick"), Number));
+			Shots.bShotBefore = true;
+		}
+		else if (Shots.bShotBefore && Since() > 2.5)
+		{
+			UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+			Check(Build && Build->Spot(ac::StructureKind::derrick).IsSet(), TEXT("the Derrick's ghost on the north well"));
+			Pilot->Press(true);
+			Pilot->Press(false);
+			Advance();
+		}
+		return;
+	case 823:
+		if (Mmo)
+		{
+			for (const FString& Why : Mmo->TakeBuildRefusals()) Check(false, FString::Printf(TEXT("Derrick built, not refused: %s"), *Why));
+		}
+		for (const ac::Structure& B : S->structures)
+		{
+			if (B.kind != ac::StructureKind::derrick || B.owner != ac::Pilot::player || !B.complete()) continue;
+			Shots.Derrick = B.id;
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the Derrick finished"), WeldLimit);
+		return;
+	case 824:
+	{
+		// Into it (a click), pumping until step 6 opens.
+		const std::optional<ac::Structure> D = S->structure(Shots.Derrick);
+		const std::optional<ac::PilotTarget> Target = U ? M->simulation().pilotTarget(*U) : std::nullopt;
+		if (D && Target && Target->is<ac::PilotTarget::Derrick>())
+		{
+			Stop(Face(D->position));
+			Pilot->Press(true);
+			Pilot->Press(false);
+			Advance();
+			return;
+		}
+		if (D && Pilot) Pilot->SetTestInput(FVector2D(0, -0.6), Face(D->position));
+		TimedOut(TEXT("at the Derrick"), 15);
+		return;
+	}
+	case 825:
+		if (const ac::net::Contract* Step = AcProgressHud::FirstStep(*Mmo); Step && Step->step == 6 && U && U->task != ac::Unit::Task::inDerrick)
+		{
+			if (const std::optional<ac::Structure> D = S->structure(Shots.Derrick)) Stop(Face(D->position));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("pumped once, step 6"), 25);
+		return;
+	case 826:
+		if (Since() > 1.5) Shoot(TEXT("o1-06-make-it-yours"), TEXT("step 6: the Derrick pumped once; the toast, the panel"));
+		return;
+	case 827:
+		Check(OpenSkillScreen() && SkillScreenWidget().IsValid(), TEXT("K opens the skill screen"));
+		P5AskedAt = 0;
+		Advance();
+		return;
+	case 828:
+	{
+		// A point in Quick drill, asked each second until the server has it.
+		const TSharedPtr<SAcSkillScreen> W = SkillScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->ranks.count(ac::Skill::quickDrill))
+		{
+			Advance();
+			return;
+		}
+		if (W && Now - P5AskedAt > 1.0)
+		{
+			W->PickSkill(ac::Skill::quickDrill);
+			W->Learn();
+			P5AskedAt = Now;
+		}
+		TimedOut(TEXT("a point spent"), 15);
+		return;
+	}
+	case 829:
+		if (Since() > 1.0) Shoot(TEXT("o1-07-point-spent"), TEXT("a point spent on the skill screen: the chain's last step"));
+		return;
+	case 830:
+		CloseSkillScreen();
+		Advance();
+		return;
+	case 831:
+	{
+		// The chain over: the daily three, the panel whole a while.
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->contracts.size() == 3 && !AcProgressHud::FirstStep(*Mmo) && Since() > 1.5)
+		{
+			bool bDaily = true;
+			for (const ac::net::Contract& C : P->contracts) bDaily &= C.step == 0;
+			Check(bDaily, TEXT("the daily three after the chain"));
+			const int64 Level = ac::Progression::level(P->xp);
+			Check(Level >= 3, FString::Printf(TEXT("level %lld after the first ten minutes (%.0f XP)"), (long long)Level, P->xp));
+			Shoot(TEXT("o1-08-dailies"), FString::Printf(TEXT("the daily three take over, level %lld"), (long long)Level));
+			return;
+		}
+		TimedOut(TEXT("the daily contracts"), 15);
+		return;
+	}
+	case 832:
+		if (Since() < 1.0) return;
+		Check(Shots.Saved + Shots.Skipped == 8, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsRingshadow

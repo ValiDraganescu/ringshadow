@@ -40,6 +40,9 @@ WorldParams params(uint64_t seed = 77) {
     WorldParams p;
     p.devBlueprints = true;
     p.contractSeed = seed;
+    // The daily three from the start (FirstTenTests.cpp has the first ten
+    // minutes).
+    p.firstStep = 0;
     return p;
 }
 

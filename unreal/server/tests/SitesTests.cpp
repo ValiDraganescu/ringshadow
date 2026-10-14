@@ -131,11 +131,18 @@ std::optional<Vec2> spot(WorldMap& w, PilotId p, StructureKind kind) {
 
 } // namespace
 
+/// No first-ten-minutes pay in the sums (FirstTenTests.cpp).
+WorldParams unchained() {
+    WorldParams p;
+    p.firstStep = 0;
+    return p;
+}
+
 // The Citadel's crate by Prospect Landing's pad: seen from the pad, opened
 // by walking into it: the blueprint (50 × floor 1) and its news. Stepping
 // off and back opens nothing again.
 TEST(sites_crate_opens_on_reaching_it_once) {
-    WorldMap w(first());
+    WorldMap w(first(), unchained());
     ASSERT_TRUE(w.join(me));
     const std::string crate = "start/Landing crate";
     wait(w, me, 1);
@@ -175,7 +182,7 @@ TEST(sites_crate_opens_on_reaching_it_once) {
 // A crate out of reach (2 cells) does not open; the second pilot opens its
 // own: the site stays in the world for the next pilot.
 TEST(sites_each_pilot_opens_its_own) {
-    WorldMap w(first());
+    WorldMap w(first(), unchained());
     ASSERT_TRUE(w.join(me));
     constexpr PilotId you = 42;
     standAt(w, me, "start", "Landing crate", WorldSites::reach + 0.3);

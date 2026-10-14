@@ -280,8 +280,9 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	}
 	// The MMORPG checks and pictures build at once: a new pilot has every
 	// blueprint there (the server's --dev-blueprints), not only the crate's.
+	// The first ten minutes' pictures (-AcMmoShotsO1) find theirs.
 	if (FString MmoShotsDir; (Steps.Contains(TEXT("mmo")) || FParse::Value(Cmd, TEXT("AcMmoShots="), MmoShotsDir))
-		&& !FParse::Param(Cmd, TEXT("AcMmoDevBlueprints")))
+		&& !FParse::Param(Cmd, TEXT("AcMmoDevBlueprints")) && !FParse::Param(Cmd, TEXT("AcMmoShotsO1")))
 	{
 		FCommandLine::Append(TEXT(" -AcMmoDevBlueprints"));
 	}

@@ -538,7 +538,108 @@ TArray<FAcWorldMapInfo::FMark> AcProgressHud::ContractMarks(const FAcMmoClient& 
 		}
 		Out.Add(M);
 	}
+	// The first ten minutes' steps with no place of their own: the pad to
+	// build by (2), the nearest ore (3), the nearest well, then the Derrick
+	// on it (5), in the pilot's region.
+	const ac::net::Contract* Step = FirstStep(Mmo);
+	const ac::net::WorldMessage::Region* Here = Mmo.Here();
+	const ac::net::Mirror* Mir = Mmo.Mirror();
+	if (Step && Here && Mir && Mir->simulation().map && Mir->driven() && Mir->unit(*Mir->driven()))
+	{
+		const ac::Unit& U = *Mir->unit(*Mir->driven());
+		const auto& St = Mir->simulation().state;
+		const ac::GroundRect& B = Mir->simulation().map->bounds;
+		const ac::MapCells Cells = ac::cells(Here->size);
+		TOptional<ac::Vec2> Best;
+		auto Nearer = [&](const ac::Vec2 At) {
+			if (!Best || ac::distance(At, U.position) < ac::distance(*Best, U.position)) Best = At;
+		};
+		if (Step->step == 3)
+		{
+			for (const ac::OreDeposit& D : St.patches)
+			{
+				if (D.remaining > 0) Nearer(D.position);
+			}
+		}
+		else if (Step->step == 5 && Step->have >= 1)
+		{
+			for (const ac::Structure& S : St.structures)
+			{
+				if (S.kind == ac::StructureKind::derrick && S.owner == U.owner) Nearer(S.position);
+			}
+		}
+		else if (Step->step == 5 && St.wells)
+		{
+			for (const ac::Well& W : *St.wells)
+			{
+				if (W.remaining > 0) Nearer(W.position);
+			}
+		}
+		FAcWorldMapInfo::FMark M;
+		M.Title = Text(Step->title);
+		M.Region = Text(Here->id);
+		if (Best)
+		{
+			M.At = FVector2f(float((Best->x - B.minX) / FMath::Max(1.0, Cells.width)), float((Best->y - B.minZ) / FMath::Max(1.0, Cells.depth)));
+		}
+		else if (Step->step == 2 && !Here->pads.empty())
+		{
+			const ac::net::WorldMessage::Pad& Q = Here->pads.front();
+			M.At = FVector2f(float(Q.at.x / FMath::Max(1.0, Cells.width)), float(Q.at.y / FMath::Max(1.0, Cells.depth)));
+		}
+		if (M.At) Out.Add(M);
+	}
 	return Out;
+}
+
+const ac::net::Contract* AcProgressHud::FirstStep(const FAcMmoClient& Mmo)
+{
+	const ac::net::ProgressMessage* P = Mmo.Progress();
+	if (!P) return nullptr;
+	for (const ac::net::Contract& C : P->contracts)
+	{
+		if (C.step > 0 && C.state == ac::net::Contract::State::open) return &C;
+	}
+	return nullptr;
+}
+
+namespace
+{
+/// "Lander wreck" from "start/Lander wreck".
+FString SiteName(const ac::net::Contract& C)
+{
+	const size_t Slash = C.target.rfind('/');
+	return Text(Slash == std::string::npos ? C.target : C.target.substr(Slash + 1));
+}
+} // namespace
+
+FString AcProgressHud::FirstHint(const ac::net::Contract& C)
+{
+	switch (C.step)
+	{
+	case 1: return FString::Printf(TEXT("WALK TO THE %s  ·  THE GOLD COLUMN"), *SiteName(C).ToUpper());
+	case 2: return TEXT("B  BUILD A CITADEL BY THE PAD");
+	case 3: return FString::Printf(TEXT("DRILL A LOAD, BRING IT HOME  %lld / %lld ORE"), (long long)C.have, (long long)C.need);
+	case 4: return FString::Printf(TEXT("HOLD CLICK ON THE %s  ·  5 S"), *SiteName(C).ToUpper());
+	case 5: return C.have >= 1 ? FString(TEXT("DERRICK UP  ·  CLICK IT TO PUMP ONCE")) : FString(TEXT("B  BUILD A DERRICK ON A WELL"));
+	case 6: return TEXT("K  SPEND A SKILL POINT");
+	default: return FString();
+	}
+}
+
+FString AcProgressHud::FirstTip(const ac::net::Contract& C)
+{
+	switch (C.step)
+	{
+	case 1: return FString::Printf(TEXT("WASD  walk to the gold column   ·   the %s opens at a touch"), *SiteName(C));
+	case 2: return TEXT("B  build menu   ·   pick the Citadel   ·   click  place it near the pad");
+	case 3: return TEXT("Hold click  drill ore at a deposit   ·   walk into your Citadel to unload");
+	case 4: return FString::Printf(TEXT("Walk up to the %s   ·   hold click on it for 5 s to open it"), *SiteName(C));
+	case 5: return C.have >= 1 ? FString(TEXT("click  enter your Derrick: it pumps a load of MH"))
+							   : FString(TEXT("B  build menu   ·   pick the Derrick   ·   click  place it on a well"));
+	case 6: return TEXT("K  skill tree   ·   click a skill to spend your point");
+	default: return FString();
+	}
 }
 
 TArray<FAcPilotGoal> AcProgressHud::ContractGoals(const FAcMmoClient& Mmo, const ac::Vec2 From)
@@ -612,8 +713,16 @@ FAcContractsInfo AcProgressHud::Contracts(const FAcMmoClient& Mmo, const bool bA
 			Row.Progress = FString::Printf(TEXT("BUILD %s  %lld / %lld"), Kind ? *Upper(ac::Simulation::title(*Kind)) : *Upper(C.target), Have, Need);
 			break;
 		}
+		case K::skill: Row.Progress = TEXT("SPEND A SKILL POINT"); break;
 		}
-		if (Row.State != FAcContractRow::EState::Open)
+		if (C.step > 0)
+		{
+			// The first ten minutes: its hint in gold; the next step follows at once.
+			Row.bFirst = true;
+			Row.Progress = FirstHint(C);
+			if (Row.State == FAcContractRow::EState::Open) Out.FirstStep = C.step;
+		}
+		else if (Row.State != FAcContractRow::EState::Open)
 		{
 			const FString In = P->contractsDawn > Sky ? FString::Printf(TEXT(", IN %s"), *Countdown(P->contractsDawn - Sky)) : FString();
 			Row.Dawn = (Row.State == FAcContractRow::EState::Done ? TEXT("NEW ONE AT DAWN") : TEXT("BACK AT DAWN")) + In;
@@ -768,7 +877,10 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 			// What changes a contract (not its countdown): opens the panel a while.
 			FString Seen;
 			for (const ac::net::Contract& K : Mmo->Progress()->contracts)
+			{
 				Seen += FString::Printf(TEXT("%u:%d:%lld;"), K.id, int32(K.state), (long long)K.have);
+				ContractTitles.Add(K.id, Upper(K.title));
+			}
 			if (Seen != ContractsSeen)
 			{
 				if (!ContractsSeen.IsEmpty()) ContractsChangedAt = FPlatformTime::Seconds();
@@ -777,6 +889,15 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 			Panel = AcProgressHud::Contracts(*Mmo, AbandonArmed());
 			Panel->bExpanded = ContractsExpanded();
 		}
+		// A step of the first ten minutes opens: the radio calls it.
+		const ac::net::Contract* Step = AcProgressHud::FirstStep(*Mmo);
+		if (Step && Step->id != FirstSeen)
+		{
+			Hud->Toast(FString::Printf(TEXT("KSTR: %s"), *Upper(Step->title)), AcProgressHud::FirstHint(*Step), FAcHudStyle::LevelGold(),
+				FPlatformTime::Seconds());
+			UE_LOG(LogAutocraft, Log, TEXT("contracts: first ten minutes step %d, %s"), int32(Step->step), *Text(Step->title));
+		}
+		FirstSeen = Step ? Step->id : 0;
 		C->Console()->SetContracts(Panel);
 	}
 
@@ -943,8 +1064,9 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		break;
 	case K::contract:
 	{
-		// A KSTR contract done: its title from the slots.
+		// A KSTR contract done: its title from the slots, or as last seen.
 		FString Title = TEXT("CONTRACT");
+		if (const FString* Was = ContractTitles.Find(uint32(FCString::Atoi64(*Text(N.id))))) Title = *Was;
 		if (P)
 		{
 			for (const ac::net::Contract& C : P->contracts)

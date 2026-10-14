@@ -88,7 +88,8 @@ const std::vector<Line>& lines(Kind kind, bool pad = false) {
     case Kind::drill: return drill;
     case Kind::reach: return pad ? padLines : site;
     case Kind::build: return build;
-    case Kind::sweep: return sweep;
+    case Kind::sweep:
+    case Kind::skill: return sweep;
     }
     return ore;
 }
@@ -103,6 +104,17 @@ std::string fill(std::string text, int64_t n, const std::string& where, const st
     put("{what}", what);
     return text;
 }
+
+/// The first ten minutes' radio lines, step 1…6 (docs/contracts.md, "First
+/// ten minutes"): `{what}` the site.
+const Line firstLines[WorldContracts::firstSteps] = {
+    {"Touchdown", "KSTR to the new pilot: welcome down. There's a crate by the pad with your name on it, more or less. Go and open it."},
+    {"A Roof over Your Head", "Those are Citadel plans. Put one up near the pad. Nights out here are long, and the dust gets into everything."},
+    {"First Haul", "Find the ore, drill a load, bring it home to your Citadel. That's the whole job. Some pilots do it for years."},
+    {"The Wreck on the Rise", "See the {what} up by the wells? A lander that didn't. Hold on its hatch; whatever's inside is yours now."},
+    {"Liquid Gold", "Derrick plans, nice. Build one on a well and pump it once. Metallic hydrogen flies you and pays you. Don't spill it."},
+    {"Make It Yours", "You've earned a skill point. Spend it on yourself: nobody out here stays the pilot they landed as. KSTR out, for now."},
+};
 
 std::string capitalised(std::string s) {
     if (!s.empty() && s[0] >= 'a' && s[0] <= 'z') s[0] = char(s[0] - 'a' + 'A');
@@ -123,6 +135,7 @@ double WorldContracts::minutes(Kind kind) {
     case Kind::reach: return 12;
     case Kind::build: return 10;
     case Kind::sweep: return 10;
+    case Kind::skill: return 2;
     }
     return 8;
 }
@@ -136,6 +149,20 @@ int64_t WorldContracts::ore(int64_t level) { return roundTo(300 * scale(level), 
 int64_t WorldContracts::hydrogenNeed(int64_t level) { return roundTo(60 * scale(level), 10); }
 
 int64_t WorldContracts::loads(int64_t level) { return 6 + std::max<int64_t>(1, level) / 20; }
+
+double WorldContracts::firstXp(int step) {
+    // With what the work pays by itself (the Citadel's blueprint 50, its
+    // welding 200 and feat 150, a load 5, the Derrick's blueprint 150): 150,
+    // 650 (level 2), 855, 1,155 (level 3, the Derrick's floor); the Derrick
+    // (welding 37, feat 100) and step 5: about 1,590 (level 4); 1,690.
+    static const double xp[firstSteps] = {100, 150, 200, 150, 300, 100};
+    return step >= 1 && step <= firstSteps ? xp[step - 1] : 0;
+}
+
+int64_t WorldContracts::firstHydrogen(int step) {
+    static const int64_t mh[firstSteps] = {5, 5, 10, 10, 15, 10};
+    return step >= 1 && step <= firstSteps ? mh[step - 1] : 0;
+}
 
 // MARK: - The world's days
 
@@ -291,6 +318,7 @@ Contract WorldMap::drawContract(PilotId, const PilotState& p, std::mt19937_64& d
         what = Simulation::title(k);
         break;
     }
+    case Kind::skill: c.need = 1; break;
     }
     const auto& choices = lines(kind, pad);
     const Line& line = choices[roll(choices.size())];
@@ -305,7 +333,8 @@ void WorldMap::contracts() {
     if (!params_.contracts) return;
     const int64_t day = contractDay(clock_);
     for (auto& [pilot, p] : pilots_) {
-        if (!p.contractDay || *p.contractDay != day) drawContracts(pilot, p, day);
+        if (p.firstStep > 0) firstTen(pilot, p);
+        else if (!p.contractDay || *p.contractDay != day) drawContracts(pilot, p, day);
         if (p.flight) continue;
         // A place reached: standing at the site, or on the pad's plate.
         Region& here = *regions_[p.region];
@@ -315,7 +344,8 @@ void WorldMap::contracts() {
         const WorldRegion& g = world_->regions[p.region];
         std::vector<std::string> reached;
         for (const Contract& c : p.contracts) {
-            if (c.state != State::open || c.kind != Kind::reach || c.region != g.file.id) continue;
+            // The first ten minutes' sites count when opened (`firstTen`).
+            if (c.state != State::open || c.kind != Kind::reach || c.step || c.region != g.file.id) continue;
             const std::string rest = c.target.substr(c.region.size() + 1);
             if (rest.rfind("pad/", 0) == 0) {
                 for (const region::Place& pad : g.built.pads)
@@ -335,16 +365,124 @@ void WorldMap::contractWork(PilotId pilot, PilotState& p, Kind kind, const std::
         if (c.state != State::open || c.kind != kind || c.target != target) continue;
         c.have = std::min(c.need, c.have + amount);
         if (c.have < c.need) continue;
-        // Done: paid now, replaced at dawn.
-        c.state = State::done;
-        p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::contract, std::to_string(c.id), c.xp, c.hydrogen});
-        const int64_t level = p.progress.level();
-        earn(p, c.xp);
-        if (!p.flight) bankOut(p, p.region);
-        p.wallet.hydrogen += c.hydrogen;
-        if (!p.flight) bankIn(p, p.region);
-        if (p.progress.level() != level) pushProgress(pilot);
+        payContract(pilot, p, c);
     }
+}
+
+void WorldMap::payContract(PilotId pilot, PilotState& p, Contract& c) {
+    // Done: paid now, replaced at dawn (a first-ten-minutes step: by the
+    // next step at once).
+    c.state = State::done;
+    p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::contract, std::to_string(c.id), c.xp, c.hydrogen});
+    const int64_t level = p.progress.level();
+    earn(p, c.xp);
+    if (!p.flight) bankOut(p, p.region);
+    p.wallet.hydrogen += c.hydrogen;
+    if (!p.flight) bankIn(p, p.region);
+    if (p.progress.level() != level) pushProgress(pilot);
+}
+
+// MARK: - The first ten minutes
+
+std::optional<size_t> WorldMap::startSite(StructureKind kind) const {
+    if (!world_) return std::nullopt;
+    const auto& sites = world_->regions[start_].built.sites;
+    for (size_t i = 0; i < sites.size(); i++)
+        if (sites[i].blueprint == kind) return i;
+    return std::nullopt;
+}
+
+Contract WorldMap::firstContract(const PilotState&, int step) const {
+    Contract c;
+    c.step = uint8_t(step);
+    c.xp = WorldContracts::firstXp(step);
+    c.hydrogen = WorldContracts::firstHydrogen(step);
+    std::string what;
+    auto site = [&](StructureKind kind) {
+        c.kind = Kind::reach;
+        if (const auto i = startSite(kind)) {
+            c.target = siteId(start_, *i);
+            c.region = world_->regions[start_].file.id;
+            what = world_->regions[start_].built.sites[*i].name;
+            if (!what.empty() && what[0] >= 'A' && what[0] <= 'Z') what[0] = char(what[0] - 'A' + 'a');
+        }
+    };
+    switch (step) {
+    case 1: site(StructureKind::citadel); break;
+    case 2:
+        c.kind = Kind::build;
+        c.target = std::string(rawValue(StructureKind::citadel));
+        break;
+    case 3:
+        c.kind = Kind::deliverOre;
+        c.need = Rules::carry;
+        break;
+    case 4: site(StructureKind::derrick); break;
+    case 5:
+        // Built (1), then pumped once (2).
+        c.kind = Kind::build;
+        c.target = std::string(rawValue(StructureKind::derrick));
+        c.need = 2;
+        break;
+    default: c.kind = Kind::skill; break;
+    }
+    const Line& line = firstLines[std::clamp(step, 1, WorldContracts::firstSteps) - 1];
+    c.title = fill(line.title, c.need, "", what);
+    c.pitch = fill(line.pitch, c.need, "", what);
+    return c;
+}
+
+void WorldMap::firstTen(PilotId pilot, PilotState& p) {
+    // A step whose work is done already passes at once, to the next.
+    for (int guard = 0; p.firstStep > 0 && guard <= WorldContracts::firstSteps; guard++) {
+        const auto it = std::find_if(p.contracts.begin(), p.contracts.end(), [&](const Contract& c) { return c.step == p.firstStep; });
+        if (it == p.contracts.end()) {
+            Contract c = firstContract(p, p.firstStep);
+            c.id = p.nextContract++;
+            // The radio says where: its site goes on the pilot's map (its
+            // column, W2).
+            if (c.kind == Kind::reach && !c.target.empty() && p.progress.known.insert(c.target).second) pushProgress(pilot);
+            // The step just paid stays under it (PAID), its title for the news.
+            std::vector<Contract> list{c};
+            for (const Contract& k : p.contracts)
+                if (k.step && k.step + 1 == p.firstStep && k.state == State::done) list.push_back(k);
+            p.contracts = std::move(list);
+            continue;
+        }
+        Contract& c = *it;
+        if (c.state == State::open) {
+            auto opened = [&](StructureKind kind) {
+                return p.progress.blueprints.count(kind) || (!c.target.empty() && p.progress.sites.count(c.target));
+            };
+            bool now = false;
+            switch (c.step) {
+            case 1: now = opened(StructureKind::citadel); break;
+            case 2: now = ownsFinished(p, StructureKind::citadel); break;
+            case 4: now = opened(StructureKind::derrick); break;
+            case 5:
+                if (ownsFinished(p, StructureKind::derrick)) c.have = std::max<int64_t>(c.have, 1);
+                break;
+            case 6: now = p.progress.spent() > 0; break;
+            default: break;
+            }
+            if (now) c.have = c.need;
+            if (c.have < c.need) return;
+            payContract(pilot, p, c);
+        }
+        // Done: the next step, or after the last the daily three at once.
+        if (++p.firstStep > WorldContracts::firstSteps) {
+            p.firstStep = 0;
+            p.contractDay = std::nullopt;
+            drawContracts(pilot, p, contractDay(clock_));
+            return;
+        }
+    }
+}
+
+void WorldMap::pumped(PilotId, PilotState& p) {
+    if (p.firstStep != 5) return;
+    for (Contract& c : p.contracts)
+        if (c.step == 5 && c.state == State::open && c.have >= 1) c.have = c.need;
 }
 
 // MARK: - Asked by the pilot, told to it
@@ -367,6 +505,7 @@ std::optional<std::string> WorldMap::abandon(PilotId pilot, uint32_t contract) {
     if (!p) return "Not in a world";
     for (Contract& c : p->contracts) {
         if (c.id != contract) continue;
+        if (c.step) return std::string("The radio's first jobs can't be dropped");
         if (c.state == State::done) return std::string("That contract is done already");
         if (c.state == State::abandoned) return std::string("That contract is dropped already");
         c.state = State::abandoned;
@@ -378,7 +517,7 @@ std::optional<std::string> WorldMap::abandon(PilotId pilot, uint32_t contract) {
 // MARK: - Saved
 
 std::string WorldMap::encodeContracts(const PilotState& p) {
-    if (!p.contractDay && p.contracts.empty()) return "";
+    if (!p.contractDay && p.contracts.empty() && !p.firstStep) return "";
     json list = json::array();
     for (const Contract& c : p.contracts)
         list.push_back(json{{"id", c.id},
@@ -391,8 +530,11 @@ std::string WorldMap::encodeContracts(const PilotState& p) {
                             {"need", c.need},
                             {"have", c.have},
                             {"xp", c.xp},
-                            {"hydrogen", c.hydrogen}});
+                            {"hydrogen", c.hydrogen},
+                            {"step", int(c.step)}});
     json root{{"next", p.nextContract}, {"list", list}};
+    // On the first ten minutes (absent: done with it, or an old save).
+    if (p.firstStep) root["first"] = p.firstStep;
     if (p.contractDay) root["day"] = *p.contractDay;
     return root.dump();
 }
@@ -407,7 +549,7 @@ bool WorldMap::decodeContracts(const std::string& text, PilotState& p) {
         Contract c;
         c.id = j.value("id", uint32_t(0));
         const int kind = j.value("kind", -1), state = j.value("state", -1);
-        if (kind < 0 || kind > int(Kind::sweep) || state < 0 || state > int(State::abandoned)) return false;
+        if (kind < 0 || kind > int(Kind::skill) || state < 0 || state > int(State::abandoned)) return false;
         c.kind = Kind(kind);
         c.state = State(state);
         c.title = j.value("title", std::string());
@@ -418,10 +560,12 @@ bool WorldMap::decodeContracts(const std::string& text, PilotState& p) {
         c.have = j.value("have", int64_t(0));
         c.xp = j.value("xp", 0.0);
         c.hydrogen = j.value("hydrogen", int64_t(0));
+        c.step = uint8_t(std::clamp(j.value("step", 0), 0, WorldContracts::firstSteps));
         out.push_back(std::move(c));
     }
     p.contracts = std::move(out);
     p.nextContract = root.value("next", uint32_t(1));
+    p.firstStep = std::clamp(root.value("first", 0), 0, WorldContracts::firstSteps);
     p.contractDay = root.contains("day") && root["day"].is_number_integer() ? std::optional<int64_t>(root["day"].get<int64_t>())
                                                                              : std::nullopt;
     return true;

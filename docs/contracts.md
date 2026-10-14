@@ -136,6 +136,77 @@ is a frontier station: dry, warm, a bit wry, with no real-world names.
 Code: `AcProgressHud::Contracts`, `ContractMarks`, `ContractGoals`;
 `SAcConsole::PaintContracts`, `PaintContractsCompact`; X and T in `AcCommandMap.cpp`.
 
+## First ten minutes
+
+A new pilot lands knowing nothing. Before the daily three, KSTR walks it
+through the game with a chain of six short jobs, one at a time (task O1).
+Each job is a contract in the panel, so it uses the same toast, marks and pay
+as any other. Each one opens the moment the last is paid:
+
+| Step | Title | The job | Done when | Pays |
+|---|---|---|---|---|
+| 1 | Touchdown | walk to the Landing crate by the pad | the Citadel's blueprint is found (the crate opens on touch) | 100 XP, 5 MH |
+| 2 | A Roof over Your Head | build the Citadel | the pilot owns a finished Citadel | 150 XP, 5 MH |
+| 3 | First Haul | drill a load of ore, bring it home | 5 ore unloaded at its buildings | 200 XP, 10 MH |
+| 4 | The Wreck on the Rise | hold the act key 5 s on the Lander wreck by the wells | the Derrick's blueprint is found (that wreck, or Brine Pans' Barge wreck) | 150 XP, 10 MH |
+| 5 | Liquid Gold | build a Derrick on a well, pump it once | a finished Derrick (1 of 2), then a tank filled in it (2 of 2) | 300 XP, 15 MH |
+| 6 | Make It Yours | spend a skill point (K) | any point spent | 100 XP, 10 MH |
+
+After step 6 the daily three are drawn at once. The design put the wreck
+last, but a new pilot's only Derrick blueprint is in that wreck, so it comes
+before the Derrick.
+
+- **Levels.** On top of the chain's pay, the work pays by itself: the
+  Citadel's blueprint 50, its welding 200 and feat 150, a load 5, the
+  Derrick's blueprint 150. That gives 150 XP after step 1, then 650 (level
+  2, a point to spend), 855, and 1,155 after step 4 (level 3, the Derrick's
+  floor). The Derrick's welding and feat with step 5's pay make about 1,590
+  (level 4), and the chain ends near 1,690. The server test plays the whole
+  chain: 1,693 XP, level 4, 55 MH.
+- **In order.** Only the open step counts. Work done early for a later step
+  (the wreck opened first, a point spent at level 2) makes that step pass as
+  soon as it opens, and it is paid then. Steps 1, 2, 4 and 6 are checked
+  against what the pilot has (a blueprint, a building, a point spent), so
+  they survive a restart. Step 3 counts ore unloaded, like a delivery. Step
+  5 counts the Derrick, then the first tank filled while the step is open.
+- **One at a time.** While the chain runs, the pilot's contracts are the
+  open step and, under it, the step just paid (PAID), so the client can
+  name it in the "CONTRACT DONE" toast. The chain's steps can't be abandoned
+  ("The radio's first jobs can't be dropped").
+- **Who gets it.** Every new pilot starts at step 1. A pilot kept from a
+  save made before the chain skips it: its contracts JSON has no `"first"`.
+  A dev-rig pilot (`--dev-rig`) skips it too. Dev and pictures:
+  `--first-step N` on the server, `-AcMmoFirstStep=N` in the game (1–6; 0
+  for none).
+- **On screen.**
+  - The panel's head reads "KSTR · FIRST STEPS 3 / 6" in gold.
+  - The open step is drawn in gold with its hint, for example "DRILL A LOAD,
+    BRING IT HOME 2 / 5 ORE" or "HOLD CLICK ON THE LANDER WRECK · 5 S". In
+    the compact panel the hint is a second line under the title.
+  - The cockpit's tip line under the card is the step's tip alone, for
+    example "Hold click drill ore at a deposit · walk into your Citadel to
+    unload".
+  - Each step that opens shows a toast "KSTR: FIRST HAUL" with its hint, and
+    the panel opens for 6 s.
+  - The compass and the world map mark the step's place: the crate and the
+    wreck (reach), the pad to build by (2), the nearest ore (3), and the
+    nearest well, then the pilot's Derrick (5).
+  - The radio says where: a step's site (the crate, the wreck) goes on the
+    pilot's map when the step opens, so its gold column stands over it.
+- **The radio's lines.** `{what}` is the site's name.
+  1. *Touchdown*: "KSTR to the new pilot: welcome down. There's a crate by the pad with your name on it, more or less. Go and open it."
+  2. *A Roof over Your Head*: "Those are Citadel plans. Put one up near the pad. Nights out here are long, and the dust gets into everything."
+  3. *First Haul*: "Find the ore, drill a load, bring it home to your Citadel. That's the whole job. Some pilots do it for years."
+  4. *The Wreck on the Rise*: "See the {what} up by the wells? A lander that didn't. Hold on its hatch; whatever's inside is yours now."
+  5. *Liquid Gold*: "Derrick plans, nice. Build one on a well and pump it once. Metallic hydrogen flies you and pays you. Don't spill it."
+  6. *Make It Yours*: "You've earned a skill point. Spend it on yourself: nobody out here stays the pilot they landed as. KSTR out, for now."
+
+Code: `WorldMap::firstTen`, `firstContract` and `pumped`, and
+`WorldContracts::firstXp` and `firstHydrogen` (WorldContracts.cpp); tests
+in `unreal/server/tests/FirstTenTests.cpp`. Client:
+`AcProgressHud::FirstStep`, `FirstHint` and `FirstTip`; pictures from
+`-AcMmoShotsO1`.
+
 ## On the wire (protocol 7)
 
 `ProgressMessage` (reliable, sent whenever it changes) carries:
@@ -148,7 +219,8 @@ Each `net::Contract` has:
 | Field | Type | What it holds |
 |---|---|---|
 | `id` | uint32 | the pilot's own number, never reused |
-| `kind` | Kind | deliverOre, deliverHydrogen, drill, reach, build or sweep |
+| `kind` | Kind | deliverOre, deliverHydrogen, drill, reach, build, sweep or skill (spend a point; the first ten minutes only) |
+| `step` | uint8 (3 bits) | the first ten minutes' step, 1–6; 0 for a daily contract (protocol 11) |
 | `state` | State | open, done or abandoned |
 | `title`, `pitch` | strings | ready to show |
 | `target` | string | drill: a region id. reach: `<region id>/<site name>` or `<region id>/pad/<pad name>`. build: a structure code name. Empty for the deliveries and sweep. |
@@ -168,5 +240,7 @@ Two more pieces:
 
 Schema v5 adds `pilots.contracts TEXT`, holding JSON:
 `{"day": n, "next": n, "list": [{id, kind, state, title, pitch, target,
-region, need, have, xp, hydrogen}]}`. A pilot saved before v5 has no
-contracts; its first step draws them.
+region, need, have, xp, hydrogen, step}], "first": n}`. A pilot saved before v5 has no
+contracts; its first step draws them. `"first"` is the open step of the
+first ten minutes. A pilot without it is not on the chain: an old save's
+pilot skips it.
