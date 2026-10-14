@@ -528,3 +528,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: mercs are visible AI Prospectors (orange), 1/24 pilot rate.
 - N Numbers: D1/D2 protocol 18/schema 13/request 17; H2 19/14/18.
 - T H2 briefed to wt1.
+- T Website blog f6cdf8a: 5 posts, albums, roadmap M6/M7 done (not deployed).
+- N Website 15 MB (was 4.9): 39 pictures, 4.0 MB showreel.
