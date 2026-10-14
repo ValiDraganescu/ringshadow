@@ -560,3 +560,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: W4 borders follow natural walls; neighbours drawn beyond.
 - D Manager: W4 folds W3 (8a1678e); protocol 23; crossing hitch measured.
 - T W4 briefed to wt1.
+- D User: radio music ducks very low under mission narration → A1.
