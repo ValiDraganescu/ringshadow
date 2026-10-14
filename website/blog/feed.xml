@@ -7,10 +7,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="feed.xml"/>
   <link rel="alternate" type="text/html" href="index.html"/>
-  <updated>2026-10-14T22:00:00Z</updated>
+  <updated>2026-10-14T23:00:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The world runs on after you quit</title>
+    <id>tag:ringshadow,2026-10-14:blog/world-runs-on</id>
+    <link rel="alternate" type="text/html" href="world-runs-on.html"/>
+    <published>2026-10-14T23:00:00Z</published>
+    <updated>2026-10-14T23:00:00Z</updated>
+    <summary>Quit the game and the world keeps going: the local server stays up, the clock turns, meteors fall and the Brood roams, at about 0.008% of a CPU core.</summary>
+  </entry>
   <entry>
     <title>Coming next: guns for the realm, and a canyon to hold</title>
     <id>tag:ringshadow,2026-10-14:blog/defences</id>
