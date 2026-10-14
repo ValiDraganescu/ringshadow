@@ -388,3 +388,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I W2: no columns across region edges; lamps white by day.
 - N W2 task: 105 min against 90.
 - T O1 first ten minutes → progression-core.
+- D O1 order: crate, Citadel, haul, Lander wreck, Derrick, skill point.
