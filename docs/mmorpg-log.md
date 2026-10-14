@@ -389,3 +389,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N W2 task: 105 min against 90.
 - T O1 first ten minutes → progression-core.
 - D O1 order: crate, Citadel, haul, Lander wreck, Derrick, skill point.
+- T H1 done 0ba07b8: key art, RINGSHADOW title, ENTER THE REACH first.
+- D H1: painted art, no living background (menu world is the RTS map).
+- N H1 variants: https://claude.ai/artifact/8gUrLVMuQ7ChH1NqVXhFiN
+- T V3 showreel → first-hour.
