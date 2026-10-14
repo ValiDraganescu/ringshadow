@@ -9,7 +9,7 @@ addEventListener("DOMContentLoaded", () => {
 
   // Entrances: each part arrives once, as its section comes into view.
   // A clipped element can't be seen by the observer, so a clip reveal watches its parent.
-  const targets = [...$$(".reveal, .units, .blocks, .diagram"), ...$$(".shutter").map((el) => el.parentElement)];
+  const targets = [...$$(".reveal, .track, .blocks, .diagram"), ...$$(".shutter").map((el) => el.parentElement)];
   if (!("IntersectionObserver" in window)) {
     for (const el of targets) el.classList.add("is-in");
   } else {
@@ -64,28 +64,36 @@ addEventListener("DOMContentLoaded", () => {
   }
   if (tabs.length) select(tabs[0]);
 
-  // A cockpit for each: one frame, its picture changes every few seconds
-  // while it's on screen. A click or a tap shows the next one at once.
-  const stack = document.querySelector(".frame-stack");
-  if (stack) {
-    const imgs = $$("img", stack);
-    const cap = document.querySelector(".frame-cap");
-    let i = 0, timer = 0;
-    const show = (n) => {
-      imgs[i].classList.remove("on");
-      i = (n + imgs.length) % imgs.length;
-      imgs[i].classList.add("on");
-      cap.textContent = imgs[i].dataset.cap;
+  // The roster: a carousel that scrolls by itself only when asked. Previous
+  // and Next step one card, the marks jump to one and show where you are;
+  // swiping and the arrow keys on the focused track are the browser's own.
+  const track = document.querySelector(".track");
+  if (track) {
+    const cards = $$(".unit", track);
+    const marks = $$(".marks a");
+    const [prev, next] = $$(".roster-nav button");
+    let at = 0;
+    const go = (n) => {
+      const c = cards[Math.max(0, Math.min(cards.length - 1, n))];
+      track.scrollTo({ left: c.offsetLeft - track.firstElementChild.offsetLeft, behavior: still ? "auto" : "smooth" });
     };
-    const run = (on) => {
-      clearInterval(timer);
-      if (on && !still) timer = setInterval(() => show(i + 1), 3000);
+    const mark = () => {
+      for (const [k, m] of marks.entries()) m.setAttribute("aria-current", k === at);
+      prev.disabled = at === 0;
+      next.disabled = at === cards.length - 1 || track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
     };
-    stack.addEventListener("click", () => { show(i + 1); run(true); });
-    stack.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(i + 1); run(true); }
-    });
-    new IntersectionObserver(([e]) => run(e.isIntersecting)).observe(stack);
+    const update = () => {
+      const x = track.scrollLeft + track.firstElementChild.offsetLeft;
+      let best = 0;
+      for (const [k, c] of cards.entries()) if (Math.abs(c.offsetLeft - x) < Math.abs(cards[best].offsetLeft - x)) best = k;
+      at = best; mark();
+    };
+    let tick = 0;
+    track.addEventListener("scroll", () => { cancelAnimationFrame(tick); tick = requestAnimationFrame(update); }, { passive: true });
+    prev.addEventListener("click", () => go(at - 1));
+    next.addEventListener("click", () => go(at + 1));
+    for (const [k, m] of marks.entries()) m.addEventListener("click", (e) => { e.preventDefault(); go(k); });
+    mark();
   }
 
   // The download: the build for the visitor's computer, picked from the

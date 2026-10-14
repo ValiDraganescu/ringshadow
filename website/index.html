@@ -90,49 +90,76 @@
       </section>
 
       <section class="roster" id="units" aria-labelledby="units-h">
-        <h2 id="units-h" class="reveal">Twelve you can drive</h2>
-        <p class="roster-say reveal s1">Each kind has its own cockpit, weapon and ability. Prospectors drill Stardust Ore and pump Metallic Hydrogen while armies of up to eight players fight over the deposits.</p>
-        <div class="roster-cat">
-          <div class="cat-head reveal"><h3>On the ground</h3><p>9 kinds</p></div>
-          <ul class="units">
-            <li><img src="assets/media/unit-prospector.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Prospector <i>Worker</i></b><p>Mines ore, pumps MH, builds and repairs. Dull to drive, and the reason leveling exists.</p></div></li>
-            <li><img src="assets/media/unit-ranger.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Ranger <i>Infantry</i></b><p>Rifle infantry. Its upgrades lean to firing and staying alive.</p></div></li>
-            <li><img src="assets/media/unit-comet.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Comet <i>Raider</i></b><p>A jump-pack raider with pistols that clears cliffs.</p></div></li>
-            <li><img src="assets/media/unit-juggernaut.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Juggernaut <i>Grenadier</i></b><p>A heavy grenadier that breaks armour and slows what it hits.</p></div></li>
-            <li><img src="assets/media/unit-firefly.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Firefly <i>Buggy</i></b><p>A fast flame buggy. Its upgrades lean to burning and the flame's reach.</p></div></li>
-            <li><img src="assets/media/unit-longbow.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Longbow <i>Tank</i></b><p>A tank that anchors into artillery. <kbd>R</kbd> anchors it.</p></div></li>
-            <li><img src="assets/media/unit-hailstorm.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Hailstorm <i>Flak</i></b><p>A flak half-track that hits only flyers.</p></div></li>
-            <li><img src="assets/media/unit-atlas.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Atlas <i>Walker</i></b><p>A heavy assault walker. <kbd>R</kbd> fires its Quake stomp; its crew speaks with voices of its own.</p></div></li>
-            <li><span class="unit-mark" aria-hidden="true"></span><div><b>Scorpion <i>Mine</i></b><p>A burrowing mine. <kbd>R</kbd> buries it and digs it out again.</p></div></li>
-          </ul>
-        </div>
-        <div class="roster-cat">
-          <div class="cat-head reveal"><h3>In the air</h3><p>3 kinds</p></div>
-          <ul class="units">
-            <li><img src="assets/media/unit-dropship.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Dropship <i>Transport</i></b><p>A healing transport. <kbd>R</kbd> loads and unloads.</p></div></li>
-            <li><img src="assets/media/unit-kestrel.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Kestrel <i>Gunship</i></b><p>A rocket gunship that strikes only the ground.</p></div></li>
-            <li><img src="assets/media/unit-peregrine.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Peregrine <i>Fighter</i></b><p>An air-superiority fighter. <kbd>R</kbd> is the afterburner; its pilot has a voice of its own.</p></div></li>
-          </ul>
-        </div>
-      </section>
-
-      <section class="cockpits" aria-labelledby="cockpits-h">
-        <div class="cockpits-text">
-          <h2 id="cockpits-h" class="reveal">A cockpit for each</h2>
-          <p class="reveal s1">Every kind is driven from its own seat, with its own weapon or tool in view. These are frames from the game, as you see them when you dive in.</p>
-        </div>
-        <figure class="frame" data-md="skip">
-          <div class="cut r1 frame-stack" tabindex="0" role="button" aria-label="Show the next cockpit">
-            <img class="on" src="assets/media/pilot-ore.jpg" alt="A Prospector's drill at an ore deposit" data-cap="Prospector, drilling ore" width="1280" height="720">
-            <img src="assets/media/pilot-longbow-anchored.jpg" alt="A Longbow anchored as artillery" data-cap="Longbow, anchored" width="1280" height="720" loading="lazy">
-            <img src="assets/media/pilot-peregrine.jpg" alt="A Peregrine's cockpit in flight" data-cap="Peregrine, in flight" width="1280" height="720" loading="lazy">
-            <img src="assets/media/pilot-firefly-fire.jpg" alt="A Firefly firing its flame" data-cap="Firefly, burning" width="1280" height="720" loading="lazy">
-            <img src="assets/media/pilot-comet-jump.jpg" alt="A Comet in mid-jump" data-cap="Comet, mid-jump" width="1280" height="720" loading="lazy">
-            <img src="assets/media/pilot-kestrel-fire.jpg" alt="A Kestrel firing rockets at the ground" data-cap="Kestrel, firing rockets" width="1280" height="720" loading="lazy">
-            <img src="assets/media/pilot-dropship-heal.jpg" alt="A Dropship healing the units below it" data-cap="Dropship, healing" width="1280" height="720" loading="lazy">
+        <div class="roster-head">
+          <div>
+            <h2 id="units-h" class="reveal">Twelve you can drive</h2>
+            <p class="roster-say reveal s1">Nine on the ground, three in the air, each with its own cockpit, weapon and ability. These are frames from the game, as you see them when you dive in.</p>
           </div>
-          <figcaption class="frame-cap" aria-live="polite">Prospector, drilling ore</figcaption>
-        </figure>
+          <p class="roster-nav reveal s2" data-md="skip"><button class="btn btn-dark" type="button" data-step="-1" aria-label="Previous unit">Previous</button> <button class="btn btn-dark" type="button" data-step="1" aria-label="Next unit">Next</button></p>
+        </div>
+        <ol class="track" tabindex="0" aria-label="The twelve units">
+            <li class="unit" id="u-prospector">
+              <div class="cut r16"><img src="assets/media/pilot-ore.jpg" alt="A Prospector's drill at an ore deposit" width="1280" height="720"></div>
+              <h3>Prospector</h3><p class="unit-role">Worker</p>
+              <p>Mines ore, pumps MH, builds and repairs. Dull to drive, and the reason leveling exists.</p>
+            </li>
+            <li class="unit" id="u-ranger">
+              <div class="cut r16"><img src="assets/media/pilot-ranger-fire.jpg" alt="A Ranger firing its rifle" width="1280" height="720"></div>
+              <h3>Ranger</h3><p class="unit-role">Infantry</p>
+              <p>Rifle infantry. Its upgrades lean to firing and staying alive.</p>
+            </li>
+            <li class="unit" id="u-comet">
+              <div class="cut r16"><img src="assets/media/pilot-comet-jump.jpg" alt="A Comet in mid-jump" width="1280" height="720" loading="lazy"></div>
+              <h3>Comet</h3><p class="unit-role">Raider</p>
+              <p>A jump-pack raider with pistols that clears cliffs.</p>
+            </li>
+            <li class="unit" id="u-juggernaut">
+              <div class="cut r16"><img src="assets/media/pilot-juggernaut-fire.jpg" alt="A Juggernaut firing a grenade" width="1280" height="720" loading="lazy"></div>
+              <h3>Juggernaut</h3><p class="unit-role">Grenadier</p>
+              <p>A heavy grenadier that breaks armour and slows what it hits.</p>
+            </li>
+            <li class="unit" id="u-firefly">
+              <div class="cut r16"><img src="assets/media/pilot-firefly-fire.jpg" alt="A Firefly firing its flame" width="1280" height="720" loading="lazy"></div>
+              <h3>Firefly</h3><p class="unit-role">Buggy</p>
+              <p>A fast flame buggy. Its upgrades lean to burning and the flame's reach.</p>
+            </li>
+            <li class="unit" id="u-longbow">
+              <div class="cut r16"><img src="assets/media/pilot-longbow-anchored.jpg" alt="A Longbow anchored as artillery" width="1280" height="720" loading="lazy"></div>
+              <h3>Longbow</h3><p class="unit-role">Tank</p>
+              <p>A tank that anchors into artillery. <kbd>R</kbd> anchors it.</p>
+            </li>
+            <li class="unit" id="u-hailstorm">
+              <div class="cut r16"><img src="assets/media/pilot-hailstorm-fire.jpg" alt="A Hailstorm firing flak" width="1280" height="720" loading="lazy"></div>
+              <h3>Hailstorm</h3><p class="unit-role">Flak</p>
+              <p>A flak half-track that hits only flyers.</p>
+            </li>
+            <li class="unit" id="u-atlas">
+              <div class="cut r16"><img src="assets/media/pilot-atlas.jpg" alt="An Atlas cockpit" width="1280" height="720" loading="lazy"></div>
+              <h3>Atlas</h3><p class="unit-role">Walker</p>
+              <p>A heavy assault walker. <kbd>R</kbd> fires its Quake stomp; its crew speaks with voices of its own.</p>
+            </li>
+            <li class="unit" id="u-scorpion">
+              <div class="cut r16"><img src="assets/media/scorpion-painted.jpg" alt="The Scorpion in its turnaround painting" width="1024" height="640" loading="lazy"></div>
+              <h3>Scorpion</h3><p class="unit-role">Mine</p>
+              <p>A burrowing mine. <kbd>R</kbd> buries it and digs it out again. No cockpit shot yet, so here it is from its turnaround painting.</p>
+            </li>
+            <li class="unit" id="u-dropship">
+              <div class="cut r16"><img src="assets/media/pilot-dropship-heal.jpg" alt="A Dropship healing the units below it" width="1280" height="720" loading="lazy"></div>
+              <h3>Dropship</h3><p class="unit-role">Transport · air</p>
+              <p>A healing transport. <kbd>R</kbd> loads and unloads.</p>
+            </li>
+            <li class="unit" id="u-kestrel">
+              <div class="cut r16"><img src="assets/media/pilot-kestrel-fire.jpg" alt="A Kestrel firing rockets at the ground" width="1280" height="720" loading="lazy"></div>
+              <h3>Kestrel</h3><p class="unit-role">Gunship · air</p>
+              <p>A rocket gunship that strikes only the ground.</p>
+            </li>
+            <li class="unit" id="u-peregrine">
+              <div class="cut r16"><img src="assets/media/pilot-peregrine.jpg" alt="A Peregrine's cockpit in flight" width="1280" height="720" loading="lazy"></div>
+              <h3>Peregrine</h3><p class="unit-role">Fighter · air</p>
+              <p>An air-superiority fighter. <kbd>R</kbd> is the afterburner; its pilot has a voice of its own.</p>
+            </li>
+        </ol>
+        <nav class="marks" aria-label="Jump to a unit" data-md="skip"><a href="#u-prospector" aria-label="Prospector"></a><a href="#u-ranger" aria-label="Ranger"></a><a href="#u-comet" aria-label="Comet"></a><a href="#u-juggernaut" aria-label="Juggernaut"></a><a href="#u-firefly" aria-label="Firefly"></a><a href="#u-longbow" aria-label="Longbow"></a><a href="#u-hailstorm" aria-label="Hailstorm"></a><a href="#u-atlas" aria-label="Atlas"></a><a href="#u-scorpion" aria-label="Scorpion"></a><a href="#u-dropship" aria-label="Dropship"></a><a href="#u-kestrel" aria-label="Kestrel"></a><a href="#u-peregrine" aria-label="Peregrine"></a></nav>
       </section>
 
       <section class="levels" id="levels" aria-labelledby="levels-h">
@@ -157,7 +184,7 @@
       <section class="world" aria-labelledby="world-h">
         <div class="board">
           <div class="tile t-head reveal"><h2 id="world-h">Life under the giant</h2></div>
-          <figure class="tile t-mine reveal s1"><video src="assets/media/mining.mp4" poster="assets/media/mining-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="A Prospector drilling Stardust Ore in first person"></video><figcaption><b>Ore and hydrogen</b> A Prospector drills Stardust Ore in first person.</figcaption></figure>
+          <figure class="tile t-mine reveal s1"><video src="assets/media/mining.mp4" poster="assets/media/mining-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="A Prospector drilling Stardust Ore in first person"></video><figcaption><b>Ore and hydrogen</b> Prospectors drill Stardust Ore and pump Metallic Hydrogen, and armies of up to eight players fight over the deposits.</figcaption></figure>
           <figure class="tile t-night reveal"><img src="assets/media/top-night.jpg" alt="The base at night, its beacons lit" width="1280" height="720" loading="lazy"><figcaption><b>Night</b> The sun crosses the sky; after dark the beacons and lamps come on.</figcaption></figure>
           <div class="tile t-radio reveal s1"><span class="big" aria-hidden="true" data-ui>88.7</span><p><b>KSTR 88.7 Stardust</b> The music plays as a radio station, with original songs.</p></div>
           <div class="tile t-weather reveal s2"><span class="big" aria-hidden="true" data-ui>Storm</span><p><b>Weather</b> Sun, cloud, rain and storms on the game clock, wet ground and hulls after.</p></div>

@@ -24,43 +24,103 @@ Click a building and press its buttons: train units, research, build. If it's a 
 
 ## Twelve you can drive
 
-Each kind has its own cockpit, weapon and ability. Prospectors drill Stardust Ore and pump Metallic Hydrogen while armies of up to eight players fight over the deposits.
+Nine on the ground, three in the air, each with its own cockpit, weapon and ability. These are frames from the game, as you see them when you dive in.
 
-### On the ground
+![A Prospector's drill at an ore deposit](https://ringshadow.com/assets/media/pilot-ore.jpg)
 
-9 kinds
+### Prospector
 
-Prospector Worker: Mines ore, pumps MH, builds and repairs. Dull to drive, and the reason leveling exists.
+Worker
 
-Ranger Infantry: Rifle infantry. Its upgrades lean to firing and staying alive.
+Mines ore, pumps MH, builds and repairs. Dull to drive, and the reason leveling exists.
 
-Comet Raider: A jump-pack raider with pistols that clears cliffs.
+![A Ranger firing its rifle](https://ringshadow.com/assets/media/pilot-ranger-fire.jpg)
 
-Juggernaut Grenadier: A heavy grenadier that breaks armour and slows what it hits.
+### Ranger
 
-Firefly Buggy: A fast flame buggy. Its upgrades lean to burning and the flame's reach.
+Infantry
 
-Longbow Tank: A tank that anchors into artillery. `R` anchors it.
+Rifle infantry. Its upgrades lean to firing and staying alive.
 
-Hailstorm Flak: A flak half-track that hits only flyers.
+![A Comet in mid-jump](https://ringshadow.com/assets/media/pilot-comet-jump.jpg)
 
-Atlas Walker: A heavy assault walker. `R` fires its Quake stomp; its crew speaks with voices of its own.
+### Comet
 
-Scorpion Mine: A burrowing mine. `R` buries it and digs it out again.
+Raider
 
-### In the air
+A jump-pack raider with pistols that clears cliffs.
 
-3 kinds
+![A Juggernaut firing a grenade](https://ringshadow.com/assets/media/pilot-juggernaut-fire.jpg)
 
-Dropship Transport: A healing transport. `R` loads and unloads.
+### Juggernaut
 
-Kestrel Gunship: A rocket gunship that strikes only the ground.
+Grenadier
 
-Peregrine Fighter: An air-superiority fighter. `R` is the afterburner; its pilot has a voice of its own.
+A heavy grenadier that breaks armour and slows what it hits.
 
-## A cockpit for each
+![A Firefly firing its flame](https://ringshadow.com/assets/media/pilot-firefly-fire.jpg)
 
-Every kind is driven from its own seat, with its own weapon or tool in view. These are frames from the game, as you see them when you dive in.
+### Firefly
+
+Buggy
+
+A fast flame buggy. Its upgrades lean to burning and the flame's reach.
+
+![A Longbow anchored as artillery](https://ringshadow.com/assets/media/pilot-longbow-anchored.jpg)
+
+### Longbow
+
+Tank
+
+A tank that anchors into artillery. `R` anchors it.
+
+![A Hailstorm firing flak](https://ringshadow.com/assets/media/pilot-hailstorm-fire.jpg)
+
+### Hailstorm
+
+Flak
+
+A flak half-track that hits only flyers.
+
+![An Atlas cockpit](https://ringshadow.com/assets/media/pilot-atlas.jpg)
+
+### Atlas
+
+Walker
+
+A heavy assault walker. `R` fires its Quake stomp; its crew speaks with voices of its own.
+
+![The Scorpion in its turnaround painting](https://ringshadow.com/assets/media/scorpion-painted.jpg)
+
+### Scorpion
+
+Mine
+
+A burrowing mine. `R` buries it and digs it out again. No cockpit shot yet, so here it is from its turnaround painting.
+
+![A Dropship healing the units below it](https://ringshadow.com/assets/media/pilot-dropship-heal.jpg)
+
+### Dropship
+
+Transport · air
+
+A healing transport. `R` loads and unloads.
+
+![A Kestrel firing rockets at the ground](https://ringshadow.com/assets/media/pilot-kestrel-fire.jpg)
+
+### Kestrel
+
+Gunship · air
+
+A rocket gunship that strikes only the ground.
+
+![A Peregrine's cockpit in flight](https://ringshadow.com/assets/media/pilot-peregrine.jpg)
+
+### Peregrine
+
+Fighter · air
+
+An air-superiority fighter. `R` is the afterburner; its pilot has a voice of its own.
 
 ## Drive it and it levels
 
@@ -76,7 +136,7 @@ The longer you drive a kind of unit in a game, the better every unit of that kin
 
 [Video: A Prospector drilling Stardust Ore in first person](https://ringshadow.com/assets/media/mining.mp4)
 
-*Ore and hydrogen A Prospector drills Stardust Ore in first person.*
+*Ore and hydrogen Prospectors drill Stardust Ore and pump Metallic Hydrogen, and armies of up to eight players fight over the deposits.*
 
 ![The base at night, its beacons lit](https://ringshadow.com/assets/media/top-night.jpg)
 

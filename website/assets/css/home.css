@@ -213,33 +213,48 @@ html:not(.js) .tabs { display: none; }
   .cell-tone:hover { background: var(--sun-3); }
 }
 
-/* The roster: a menu of the twelve, a picture for a bullet. */
-.roster { background: var(--sun-2); }
-.roster-say { font-size: var(--f-lead); max-width: 44ch; margin-top: 28px; }
-.cat-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 96px 0 40px; }
-.cat-head h3 { font-size: var(--f-head); }
-.units { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 36px 64px; }
-.units li { display: grid; grid-template-columns: 64px 1fr; gap: 20px; align-items: start; }
-.units img, .unit-mark {
-  width: 64px; height: 64px; object-fit: cover;
-  clip-path: polygon(13px 0, 100% 0, 51px 100%, 0 100%);
+/* The roster: a carousel of cockpits, each picture in the band's shape,
+   the pictures marching across like bands. */
+.roster { background: var(--sun-2); padding-inline: 0 !important; }
+.roster-head {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 28px 40px;
+  padding: 0 var(--m); margin-bottom: 56px;
 }
-.unit-mark { display: block; background: var(--sun-ink); }
-.units b { display: flex; justify-content: space-between; gap: 12px; font-size: var(--f-lead); line-height: 1.2; }
-.units i { font-style: normal; font-weight: 400; font-size: var(--f-body); }
-.units p { margin-top: 6px; max-width: 38ch; color: var(--sun-soft); }
-
-/* A cockpit for each: one frame, its picture changes. */
-.cockpits {
-  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px 64px; align-items: center;
-  padding-block: calc(var(--sec) + 4vh) !important;
+.roster-say { font-size: var(--f-lead); max-width: 44ch; margin-top: 28px !important; }
+.roster-nav { display: flex; gap: 16px; }
+.home .btn-dark {
+  color: var(--sun-3); background: var(--sun-ink);
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  transition: transform 140ms var(--ease-out), background-color 180ms ease, color 180ms ease;
 }
-.cockpits-text p { margin-top: 28px; font-size: var(--f-lead); max-width: 30ch; }
-.frame { margin: 0; width: min(100%, 600px); justify-self: center; }
-.frame-stack { cursor: pointer; }
-.frame-stack > img { opacity: 0; transition: opacity 600ms ease; }
-.frame-stack > img.on { opacity: 1; }
-.frame-cap { margin-top: 16px; font-size: var(--f-small); color: var(--sun-soft); text-align: center; letter-spacing: 0; }
+.home .btn-dark::before { content: none; }
+.home .btn-dark:focus-visible { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
+@media (hover: hover) and (pointer: fine) {
+  .home .btn-dark:not([disabled]):hover { color: var(--sun-ink); background: var(--sun-3); }
+}
+.home .btn-dark[disabled] { opacity: 0.45; cursor: default; }
+.track {
+  position: relative; list-style: none; margin: 0; padding: 0 var(--m) 8px;
+  display: grid; grid-auto-flow: column; grid-auto-columns: min(56vw, 840px); gap: 28px;
+  overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--m);
+  overscroll-behavior-x: contain; scrollbar-width: none;
+}
+.track::-webkit-scrollbar { display: none; }
+.track:focus-visible { outline-offset: -3px; }
+.unit { scroll-snap-align: start; }
+.unit .cut { margin-bottom: 24px; }
+.unit h3 { display: inline; font-size: var(--f-head); }
+.unit-role { display: inline; margin-left: 14px !important; font-weight: 700; color: var(--sun-soft); }
+.unit p:last-child { margin-top: 10px !important; max-width: 52ch; }
+.marks { display: flex; gap: 6px; padding: 32px var(--m) 0; }
+.marks a {
+  width: 30px; height: 14px; background: var(--sun-soft); opacity: 0.35;
+  clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
+  transition: opacity 180ms ease, background-color 180ms ease;
+}
+.marks a[aria-current="true"] { opacity: 1; background: var(--sun-ink); }
+@media (hover: hover) and (pointer: fine) { .marks a:hover { opacity: 1; } }
+html:not(.js) .roster-nav, html:not(.js) .marks { display: none; }
 
 /* Leveling: drive time, pressed into levels, set out as 216 upgrades. */
 .levels { background: var(--sun-3); }
@@ -451,17 +466,12 @@ html:not(.js) .dl-copy { display: none; }
   .js .is-in > .shutter { clip-path: inset(0); }
   .js .is-in > .shutter > * { transform: none; }
 
-  /* The roster arrives row by row. */
-  .js .units li { opacity: 0; transform: translateY(16px); transition: opacity 600ms var(--ease-out), transform 700ms var(--ease-out); }
-  .js .units.is-in li { opacity: 1; transform: none; }
-  .js .units.is-in li:nth-child(2) { transition-delay: 60ms; }
-  .js .units.is-in li:nth-child(3) { transition-delay: 120ms; }
-  .js .units.is-in li:nth-child(4) { transition-delay: 180ms; }
-  .js .units.is-in li:nth-child(5) { transition-delay: 240ms; }
-  .js .units.is-in li:nth-child(6) { transition-delay: 300ms; }
-  .js .units.is-in li:nth-child(7) { transition-delay: 360ms; }
-  .js .units.is-in li:nth-child(8) { transition-delay: 420ms; }
-  .js .units.is-in li:nth-child(9) { transition-delay: 480ms; }
+  /* The cards arrive one after another. */
+  .js .track .unit { opacity: 0; transform: translateX(40px); transition: opacity 700ms var(--ease-out), transform 900ms var(--ease-out); }
+  .js .track.is-in .unit { opacity: 1; transform: none; }
+  .js .track.is-in .unit:nth-child(2) { transition-delay: 90ms; }
+  .js .track.is-in .unit:nth-child(3) { transition-delay: 180ms; }
+  .js .track.is-in .unit:nth-child(n+4) { transition-delay: 270ms; }
 
   /* The diagram draws itself left to right. */
   .js .diagram .diag { clip-path: inset(0 100% 0 0); transition: clip-path 1600ms var(--ease-soft) 200ms; }
@@ -484,12 +494,11 @@ html:not(.js) .dl-copy { display: none; }
 
 @media (max-width: 860px) {
   .bar ul { display: none; }
-  .show, .cockpits, .levels-head, .mmo-panel { grid-template-columns: 1fr; }
+  .show, .levels-head, .mmo-panel { grid-template-columns: 1fr; }
+  .track { grid-auto-columns: 84vw; gap: 16px; }
+  .roster-nav { display: none; }
+  .marks a { flex: 1; width: auto; }
   .show-plate { padding-right: 0; }
-  .units { grid-template-columns: 1fr; }
-  .units img, .unit-mark { width: 52px; height: 52px; clip-path: polygon(11px 0, 100% 0, 41px 100%, 0 100%); }
-  .units li { grid-template-columns: 52px 1fr; gap: 16px; }
-  .roster-cat h3 { font-size: 8.5vw; margin-top: 72px; }
   .levels-steps { grid-template-columns: 1fr; gap: 28px; }
   .diag-h { display: none; }
   .diag-v { display: block; width: min(64vw, 260px); margin: 0 auto; }

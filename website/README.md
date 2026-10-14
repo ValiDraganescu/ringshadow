@@ -6,10 +6,10 @@ no framework and no server side, so this folder deploys as it is.
 
 | Path | What |
 |---|---|
-| `index.html` | The home page: how you play, the twelve units, the cockpits, leveling, the world, the MMORPG mode, how it's made, the download. |
+| `index.html` | The home page: how you play, the twelve units as a carousel of cockpits, leveling, the world, the MMORPG mode, how it's made, the download. |
 | `roadmap.html` | The roadmap: every milestone a moon on the giant's ring, DONE, NEXT and LATER. |
 | `assets/css/` | `site.css` (shared: palette, fonts, navigation), `home.css`, `roadmap.css`. |
-| `assets/js/` | `stars.js` (the starfield), `home.js` (entrances, tabs, the cockpit frame, the download picker; clips play only on screen), `hero.js` (the live sky, three.js in `vendor/`), `roadmap.js` (the ring). |
+| `assets/js/` | `stars.js` (the starfield), `home.js` (entrances, tabs, the roster carousel, the download picker; clips play only on screen), `hero.js` (the live sky, three.js in `vendor/`), `roadmap.js` (the ring). |
 | `assets/fonts/` | Barlow Condensed and Exo 2 as woff2, with their SIL Open Font License texts. |
 | `assets/media/` | Screenshots and clips from `docs/media/` (the GIFs re-encoded as MP4) and the key art from `art/splash/`. |
 | `_headers`, `wrangler.toml`, `.assetsignore`, `404.html`, `robots.txt`, `sitemap.xml` | Hosting on Cloudflare: see "Deploy to Cloudflare". |
