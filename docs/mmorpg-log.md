@@ -302,3 +302,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I V1 left: 1 UNIT chip, Prospector in Derrick footprint.
 - D Manager: E1 sweep derived from world clock, no protocol change.
 - T E1 → first-hour after compaction.
+- N 2026-10-14 ~09:30–11:22: crash; all 4 workers restarted fresh.
+- T P4b done a3425e2: sites, chips, gating; protocol 6, save v4.
+- N Manager: core 439, server 103, net 66 pass.
+- I Lab not buildable by Prospector (PilotBuild::kinds): P6 decides.
+- I Client build tests need --dev-blueprints 1: P5 adds the flag.
+- D Manager: workers also write results to build/<task>-result.md.
+- T Resumed P5, W1, E1 (restart); K1 server → world-clock.
