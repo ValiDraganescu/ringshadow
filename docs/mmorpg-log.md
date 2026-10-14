@@ -524,3 +524,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D S2: STOP on the home screen; autocraft-server --stop <save>.
 - N S2 suites: core 467, server 200, net 70; no protocol change.
 - T H2 (mercenaries) next for wt1.
+- D Manager: mercs: hire fee + daily MH wage; 1/2/3 at levels 5/15/30.
+- D Manager: mercs are visible AI Prospectors (orange), 1/24 pilot rate.
+- N Numbers: D1/D2 protocol 18/schema 13/request 17; H2 19/14/18.
+- T H2 briefed to wt1.
