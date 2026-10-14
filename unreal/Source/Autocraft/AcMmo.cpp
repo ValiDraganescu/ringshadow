@@ -200,6 +200,8 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	LastSkillRefusal.Reset();
 	SkillsDone = 0;
 	FlightsAsked.Reset();
+	RigAsked.Reset();
+	LastRigRefusal.Reset();
 	LastFlightRefusal.Reset();
 	bArriving = false;
 	Notes.Reset();
@@ -247,6 +249,8 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	// Dev, tests and shots: a new pilot has every blueprint (it builds at once).
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevBlueprints"))) Args.insert(Args.end(), {"--dev-blueprints", "1"});
 	// Dev and shots: the world's hour and weather held on the server.
+	// Dev and shots: a new pilot owns a finished Citadel, Foundry and Lab, its rig stocked.
+	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) Args.insert(Args.end(), {"--dev-rig", "1"});
 	if (double Hour = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoHour="), Hour) && Hour >= 0 && Hour <= 24)
 	{
 		Args.push_back("--hour");
@@ -655,6 +659,17 @@ void FAcMmoClient::ReadReplies()
 		}
 		const std::optional<int64>* What = Asked.Find(R.request);
 		if (!R.done)
+		if (RigAsked.Remove(R.request) > 0)
+		{
+			if (!R.done)
+			{
+				LastRigRefusal = Text(R.reason);
+				Notes.Add(LastRigRefusal);
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: rig ask %u refused: %s"), R.request, *LastRigRefusal);
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		{
 			const bool bTake = What && What->has_value();
 			Notes.Add(FString::Printf(TEXT("%s: %s"), bTake ? TEXT("Not taken") : TEXT("Not handed back"), *Text(R.reason)));
@@ -803,6 +818,23 @@ void FAcMmoClient::OnRegionChange(const ac::net::RegionChange& Change)
 	bArriving = true;
 	// The old mirror is gone: the game rebuilds on this one now, before its
 	// first snapshot (its map is built; its units come with the snapshots).
+bool FAcMmoClient::AskRig(const TCHAR* Verb, const ac::Module Module, const int64 Mark, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = FCString::Strcmp(Verb, TEXT("make")) == 0 ? Net->make(Module, Mark)
+		: FCString::Strcmp(Verb, TEXT("research")) == 0 ? Net->research(Module, Mark) : Net->fit(Module, Mark);
+	LastRigRefusal.Reset();
+	RigAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: rig ask %u: %s %s Mk %lld"), Id, Verb, *Text(std::string(ac::rawValue(Module))), (long long)Mark);
+	return true;
+}
+
+bool FAcMmoClient::Make(const ac::Module Module, const int64 Mark, FString* Why) { return AskRig(TEXT("make"), Module, Mark, Why); }
+
+bool FAcMmoClient::Research(const ac::Module Module, const int64 Mark, FString* Why) { return AskRig(TEXT("research"), Module, Mark, Why); }
+
+bool FAcMmoClient::Fit(const ac::Module Module, const int64 Mark, FString* Why) { return AskRig(TEXT("fit"), Module, Mark, Why); }
+
 	SeenMirror = Net->mirror();
 	SeenGame = -1;
 	MirrorGeneration += 1;

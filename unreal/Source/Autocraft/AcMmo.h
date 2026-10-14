@@ -253,6 +253,15 @@ public:
 	/// The region the pilot is in (in flight: the one it lifted off from).
 	const ac::net::WorldMessage::Region* Here() const;
 	/// In flight: the region it flies to.
+	/// The rig screen's asks (P7, docs/prospector-progression.md "Foundry and
+	/// Lab"): the Foundry makes `Mark` of `Module`, the Lab researches it,
+	/// it is fitted from the stores (0: taken off). False, with `Why`: not
+	/// connected, not a world. The server's refusals: `RigRefusal` (and a note).
+	bool Make(ac::Module Module, int64 Mark, FString* Why = nullptr);
+	bool Research(ac::Module Module, int64 Mark, FString* Why = nullptr);
+	bool Fit(ac::Module Module, int64 Mark, FString* Why = nullptr);
+	/// The server's last refusal of a rig ask (empty: none since the last ask).
+	const FString& RigRefusal() const { return LastRigRefusal; }
 	const ac::net::WorldMessage::Region* FlyingTo() const;
 	/// In flight, or come into a region whose first snapshot has not shown
 	/// the driven unit yet: the pilot keeps its seat, nothing to drive.
@@ -355,3 +364,7 @@ private:
 	void AskedSkill(uint32 Id, const FString& What);
 	std::vector<ac::GameEvent> Events;
 };
+	/// Rig asks (request ids) and the last refusal.
+	TSet<uint32> RigAsked;
+	FString LastRigRefusal;
+	bool AskRig(const TCHAR* Verb, ac::Module Module, int64 Mark, FString* Why);

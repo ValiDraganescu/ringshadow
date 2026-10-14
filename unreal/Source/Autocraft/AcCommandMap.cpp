@@ -393,7 +393,7 @@ void UAcCommandMapSubsystem::PollKeys()
 	if (Mods.IsCommandDown() || Mods.IsControlDown()) return;
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsMmo())
 	{
-		// The MMORPG test: K is the skill screen, Q/C/G the pilot's actives
+		// The MMORPG test: K is the skill screen, J the rig screen, Q/C/G the pilot's actives
 		// (the server uses the slot's skill; docs/prospector-progression.md).
 		UAcGameFlowSubsystem* Flow = UAcGameFlowSubsystem::Get(this);
 		if (Flow && PC->WasInputKeyJustPressed(EKeys::K))
@@ -402,6 +402,12 @@ void UAcCommandMapSubsystem::PollKeys()
 			return;
 		}
 		const FKey SlotKeys[] = {EKeys::Q, EKeys::C, EKeys::G};
+		// J: the rig screen (Foundry, Lab, fitting).
+		if (Flow && PC->WasInputKeyJustPressed(EKeys::J))
+		{
+			Flow->ToggleRigScreen();
+			return;
+		}
 		for (int32 I = 0; I < 3; ++I)
 		{
 			if (!PC->WasInputKeyJustPressed(SlotKeys[I])) continue;

@@ -55,6 +55,7 @@
 #include "SAcMenu.h"
 #include "SAcMmoBanner.h"
 #include "SAcNewGame.h"
+#include "SAcRigScreen.h"
 #include "SAcSkillScreen.h"
 #include "SAcWorldMap.h"
 #include "Session.h"
@@ -127,6 +128,13 @@ public:
 	void CloseSkillScreen();
 	void ToggleSkillScreen();
 	TSharedPtr<SAcSkillScreen> SkillScreenWidget() const { return SkillScreen; }
+	/// The Prospector's rig screen (J in the mode, or the skill screen's RIG
+	/// tab; docs/prospector-progression.md "Foundry and Lab"). False outside
+	/// the mode or without a HUD.
+	bool OpenRigScreen();
+	void CloseRigScreen();
+	void ToggleRigScreen();
+	TSharedPtr<SAcRigScreen> RigScreenWidget() const { return RigScreen; }
 	/// Back to the window game: the local server stops.
 	void StopMmo();
 
@@ -150,6 +158,11 @@ private:
 	void TickSkillScreen();
 	/// The server's last skill refusal already handed to the screen.
 	FString SkillRefusalShown;
+	TSharedPtr<SAcRigScreen> RigScreen;
+	/// The rig screen's state from the client's progress, each frame.
+	void TickRigScreen();
+	/// The server's last rig refusal already handed to the screen.
+	FString RigRefusalShown;
 	FDelegateHandle RefusedHandle;
 	/// -AcMmo: start the mode once the game is up.
 	bool bMmoWhenReady = false;

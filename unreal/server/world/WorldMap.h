@@ -188,6 +188,11 @@ struct WorldParams {
     double wellRegrowEvery = 10;
     /// Dev and shots (`--dev-blueprints`): a new pilot has every blueprint.
     bool devBlueprints = false;
+    /// Dev and shots (`--dev-rig`): a new pilot owns a finished Citadel,
+    /// Foundry and Lab round its Prospector (which stands where it unloads
+    /// at the Citadel), and its rig is stocked: marks researched, modules
+    /// in the stores and fitted, a job at each (WorldRig.cpp `devRig`).
+    bool devRig = false;
     /// The survey chips' dice (0: seeded by the world's id).
     uint64_t chipSeed = 0;
     /// KSTR contracts are drawn (tests that count the wallet exactly turn
@@ -668,6 +673,8 @@ private:
     // WorldContracts.cpp.
     /// Each step: the Foundries' and Labs' jobs done by now (P7).
     void rigs();
+    /// `WorldParams::devRig` for a pilot just come.
+    void devRig(PilotId pilot);
     bool ownsFinished(const PilotState& p, StructureKind kind) const;
     /// The driven Prospector stands where it unloads at one of its own
     /// finished buildings of these kinds.

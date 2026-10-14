@@ -52,6 +52,9 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
     if (back == away_.end()) {
         if (!join(pilot)) return Seated::refused;
         if (kept) pilots_[pilot].key = key;
+        // Dev: a home with a Foundry and a Lab, the rig stocked (its
+        // buildings are the key's).
+        if (params_.devRig) devRig(pilot);
         return Seated::fresh;
     }
     PilotState& in = pilots_[pilot] = back->second;

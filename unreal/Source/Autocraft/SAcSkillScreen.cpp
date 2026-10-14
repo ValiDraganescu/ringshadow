@@ -243,6 +243,7 @@ void SAcSkillScreen::Construct(const FArguments& InArgs)
 	OnUndoDelegate = InArgs._OnUndo;
 	OnSlotDelegate = InArgs._OnSlot;
 	OnRespecDelegate = InArgs._OnRespec;
+	OnRigDelegate = InArgs._OnRig;
 	OnCloseDelegate = InArgs._OnClose;
 	SetCanTick(false);
 	OpenedAt = Clock();
@@ -326,7 +327,12 @@ void SAcSkillScreen::SetTab(const ETab To)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
-void SAcSkillScreen::NextTab() { SetTab(CurrentTab == ETab::Skills ? ETab::Blueprints : ETab::Skills); }
+void SAcSkillScreen::NextTab()
+{
+	// Skills, blueprints, then the rig screen when there is one.
+	if (CurrentTab == ETab::Blueprints && OnRigDelegate.IsBound()) OnRigDelegate.Execute();
+	else SetTab(CurrentTab == ETab::Skills ? ETab::Blueprints : ETab::Skills);
+}
 
 void SAcSkillScreen::PickSkill(const ac::Skill To)
 {
@@ -495,6 +501,7 @@ void SAcSkillScreen::Layout(const FVector2f ViewSize) const
 	const float TabsX = 640;
 	Add(FBox2f(FVector2f(TabsX, 30), FVector2f(TabsX + 96, 66)), RowTab, 0);
 	Add(FBox2f(FVector2f(TabsX + 110, 30), FVector2f(TabsX + 250, 66)), RowTab, 1);
+	if (OnRigDelegate.IsBound()) Add(FBox2f(FVector2f(TabsX + 264, 30), FVector2f(TabsX + 330, 66)), RowTab, 2);
 	Add(FBox2f(FVector2f(PanelW - Pad - 40, 26), FVector2f(PanelW - Pad, 58)), RowClose, 0);
 	Add(FBox2f(FVector2f(PanelW - Pad - 40 - 12 - 200, 26), FVector2f(PanelW - Pad - 52, 58)), RowRespec, 0);
 
@@ -573,7 +580,10 @@ void SAcSkillScreen::Press(const FTarget& T)
 	case RowUndo: Undo(); break;
 	case RowRespec: Respec(); break;
 	case RowClose: Close(); break;
-	case RowTab: SetTab(T.Index == 0 ? ETab::Skills : ETab::Blueprints); break;
+	case RowTab:
+		if (T.Index == 2) OnRigDelegate.ExecuteIfBound();
+		else SetTab(T.Index == 0 ? ETab::Skills : ETab::Blueprints);
+		break;
 	case RowSlot:
 		if (Info.Progress && ac::Progression::node(Pick).active && Info.Progress->rank(Pick) > 0) SlotPicked(T.Index);
 		else if (Info.Progress && Info.Progress->slots[T.Index]) PickSkill(*Info.Progress->slots[T.Index]);
@@ -808,10 +818,10 @@ void SAcSkillScreen::PaintHeader(FSlateWindowElementList& Out, const int32 L, co
 	for (const FTarget& T : Targets)
 	{
 		if (T.Row != RowTab) continue;
-		const bool bOn = (T.Index == 0) == (CurrentTab == ETab::Skills);
+		const bool bOn = T.Index < 2 && (T.Index == 0) == (CurrentTab == ETab::Skills);
 		const bool bHover = Targets.IsValidIndex(Hovered) && &Targets[Hovered] == &T;
 		const FLinearColor C = bOn ? FAcHudStyle::Text() : bHover ? FAcHudStyle::Ice() : Dim();
-		Label(T.Index == 0 ? TEXT("SKILLS") : TEXT("BLUEPRINTS"), 21, C, EAcHAlign::Center, EAcVAlign::Center, EAcFontWeight::Bold, 1.6f)
+		Label(T.Index == 0 ? TEXT("SKILLS") : T.Index == 1 ? TEXT("BLUEPRINTS") : TEXT("RIG"), 21, C, EAcHAlign::Center, EAcVAlign::Center, EAcFontWeight::Bold, 1.6f)
 			.Paint(Out, L + 1, P, T.Box.GetCenter());
 		if (bOn)
 		{
@@ -1204,7 +1214,7 @@ void SAcSkillScreen::PaintSlots(FSlateWindowElementList& Out, const int32 L, con
 	const float KX = PanelW - Pad - 4;
 	Label(TEXT("CLICK OR RETURN LEARNS · ARROWS MOVE · BACKSPACE UNDOES"), 11, Dim(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.8f)
 		.Paint(Out, L, P, FVector2f(KX, SlotBox.Min.Y + 14));
-	Label(TEXT("TAB BLUEPRINTS · K OR ESC CLOSES · THE WORLD GOES ON"), 11, Faint(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.8f)
+	Label(TEXT("TAB BLUEPRINTS · J RIG · K OR ESC CLOSES · THE WORLD GOES ON"), 11, Faint(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.8f)
 		.Paint(Out, L, P, FVector2f(KX, SlotBox.Min.Y + 34));
 }
 
@@ -1288,6 +1298,6 @@ void SAcSkillScreen::PaintBlueprints(FSlateWindowElementList& Out, const int32 L
 		EAcFontWeight::Bold, 1.4f).Paint(Out, L, P, FVector2f(Pad + 4, SlotBox.Min.Y + 12));
 	Label(TEXT("Crates, wrecks, caches and vaults in the regions hold them. A blueprint found under its floor waits for the level."), 13, Dim(),
 		EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L, P, FVector2f(Pad + 4, SlotBox.Min.Y + 34));
-	Label(TEXT("TAB SKILLS · K OR ESC CLOSES"), 11, Faint(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.8f)
+	Label(TEXT("TAB RIG · K OR ESC CLOSES"), 11, Faint(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.8f)
 		.Paint(Out, L, P, FVector2f(PanelW - Pad - 4, SlotBox.Min.Y + 34));
 }

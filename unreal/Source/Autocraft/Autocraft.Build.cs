@@ -31,6 +31,7 @@ public class Autocraft : ModuleRules
 				"Resources/Sounds/music/*.mp3",  // UAcMusicPlayer::OwnMusicFolder
 				"Content-src/launcher/*.jpg",  // FAcLauncherArt::Folder
 				"Resources/Textures/Skills/skill_icons.png",  // SAcSkillScreen's node icons
+				"Resources/Textures/Skills/module_icons.png",  // SAcRigScreen's module icons
 				"Content/Audio/Sounds.json",  // UAcAudioDirector, UAcMusicDeck, UAcMusicPlayer
 				"Content/Models/ModelCatalog.json",  // FAcModelCatalog
 				"Content/UI/Cursors/*.tiff",  // UAcPointer::InstallCursors: the Mac's

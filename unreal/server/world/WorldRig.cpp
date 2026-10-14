@@ -7,8 +7,10 @@
 #include "WorldMap.h"
 
 #include "NavGrid.h"
+#include "Rules.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace ac::server {
 
@@ -100,6 +102,76 @@ void WorldMap::rigs() {
         if (researched)
             p.news.push_back(News{NewsKind::researched, std::string(rawValue(researched->module)), 0, researched->mark});
     }
+}
+
+void WorldMap::devRig(PilotId pilot) {
+    PilotState* p = pilotState(pilot);
+    if (!p || p->flight || !world_) return;
+    // The blueprints and the level the Lab's floor asks for.
+    for (const StructureKind k : {StructureKind::citadel, StructureKind::foundry, StructureKind::lab})
+        p->progress.blueprints.insert(k);
+    const int64_t floor = std::max(Progression::blueprintFloor(StructureKind::foundry), Progression::blueprintFloor(StructureKind::lab));
+    if (p->progress.level() < floor) earn(pilot, Progression::xp(floor) - p->progress.xp);
+    // Enough for the three and some to spend at the Foundry and the Lab.
+    bankOut(*p, p->region);
+    p->wallet.ore += 6000;
+    p->wallet.hydrogen += 4000;
+    bankIn(*p, p->region);
+    Region& r = *regions_[p->region];
+    Simulation& sim = r.simulation();
+    const auto& pads = world_->regions[p->region].built.pads;
+    auto driven = [&]() -> Unit* {
+        const auto id = r.driving(pilot);
+        const auto i = id ? sim.unitIndex(*id) : std::nullopt;
+        return i ? &sim.state.units[size_t(*i)] : nullptr;
+    };
+    // Each put up round the Prospector, off the pads' plates, and finished.
+    std::optional<int64_t> citadel;
+    for (const StructureKind kind : {StructureKind::citadel, StructureKind::foundry, StructureKind::lab}) {
+        const Unit* u = driven();
+        if (!u) return;
+        const Vec2 from = u->position;
+        const double reach = Region::buildReach(kind);
+        bool done = false;
+        for (double d = reach; d <= reach + Region::buildSlack && !done; d += 0.5)
+            for (int k = 0; k < 24 && !done; k++) {
+                const double h = k * 2 * pi / 24;
+                const auto spot = sim.snap(kind, from + Vec2(std::cos(h), std::sin(h)) * d);
+                if (!spot || distance(*spot, from) > reach + Region::buildSlack || sim.placementRefusal(kind, *spot) ||
+                    region::touchesPadPlate(pads, *spot, Rules::radius(kind)))
+                    continue;
+                const int64_t id = sim.state.nextID;
+                if (build(pilot, kind, *spot)) continue;
+                for (Structure& b : sim.state.structures)
+                    if (b.id == id) {
+                        b.buildLeft = std::nullopt;
+                        b.hp = sim.fullHP(b);
+                    }
+                if (kind == StructureKind::citadel) citadel = id;
+                done = true;
+            }
+    }
+    // The Prospector where it unloads at the Citadel.
+    if (citadel)
+        for (const Structure& b : sim.state.structures)
+            if (b.id == *citadel)
+                if (Unit* u = driven()) {
+                    Vec2 out = u->position - b.position;
+                    out = length(out) > 1e-6 ? normalize(out) : Vec2(1, 0);
+                    u->position = b.position + out * (Rules::radius(b.kind) + 0.5);
+                }
+    // The rig: marks researched, modules in the stores and fitted, a job at each.
+    Rig& rig = p->progress.rig;
+    rig.researched = {{Module::drillHead, 3}, {Module::cargoPod, 2}, {Module::plate, 2}, {Module::surveyLens, 2}};
+    rig.fitted = {{Module::drillHead, 2}, {Module::cargoPod, 1}, {Module::plate, 1}};
+    rig.store(Module::drillHead, 3);
+    rig.store(Module::cargoPod, 2, 2);
+    rig.store(Module::plate, 2);
+    rig.store(Module::torchTip, 1, 2);
+    rig.store(Module::surveyLens, 2);
+    rig.making = ModuleJob{Module::plate, 2, clock_ + 150};
+    rig.research = ModuleJob{Module::torchTip, 2, clock_ + 420};
+    pushProgress(pilot);
 }
 
 } // namespace ac::server

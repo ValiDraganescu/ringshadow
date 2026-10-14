@@ -428,3 +428,27 @@ TEST(rig_save_round_trip) {
         EXPECT_TRUE(last.progress(me)->rig == rig);
     }
 }
+
+// Dev and shots (`--dev-rig`): a new pilot owns a finished Citadel, Foundry
+// and Lab, stands where it unloads (it fits at once), and its rig is stocked
+// with a job at each.
+TEST(rig_dev_flag_gives_a_home_and_a_stocked_rig) {
+    WorldParams p = params();
+    p.devBlueprints = false;
+    p.devRig = true;
+    WorldMap w(first(), p);
+    w.seat(me, key);
+    w.step();
+    EXPECT_TRUE(w.ownsFinished(me, StructureKind::citadel));
+    EXPECT_TRUE(w.ownsFinished(me, StructureKind::foundry));
+    EXPECT_TRUE(w.ownsFinished(me, StructureKind::lab));
+    const auto m = w.progressMessage(me);
+    ASSERT_TRUE(m.has_value());
+    EXPECT_TRUE(m->foundry && m->lab);
+    EXPECT_TRUE(m->rig.making.has_value() && m->rig.research.has_value());
+    EXPECT_EQ(m->rig.fittedMark(Module::drillHead), int64_t(2));
+    EXPECT_EQ(m->rig.stock(Module::drillHead, 3), int64_t(1));
+    EXPECT_TRUE(!w.fit(me, Module::drillHead, 3));
+    EXPECT_EQ(w.progress(me)->rig.fittedMark(Module::drillHead), int64_t(3));
+    EXPECT_EQ(w.progress(me)->rig.stock(Module::drillHead, 2), int64_t(1));
+}

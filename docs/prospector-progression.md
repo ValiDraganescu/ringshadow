@@ -620,7 +620,8 @@ conversion from `levels` to `progress` runs on load in `WorldMapSave` when
 
 - K opens and closes it; Esc closes it. The world goes on (as with the map);
   the Prospector stands still while it is open, and the pointer is free.
-- Two tabs, **SKILLS** and **BLUEPRINTS**; Tab switches.
+- Two tabs, **SKILLS** and **BLUEPRINTS**; Tab switches. A third, **RIG**,
+  opens the rig screen in its place (Tab from BLUEPRINTS, or J).
 - The header: "LEVEL 34 · 3 POINTS", and "RESPEC 460 MH" (greyed away from
   the Citadel, with why).
 - SKILLS: five columns, left to right Deep Vein, Quicksilver, Torchwright,
@@ -638,6 +639,38 @@ conversion from `levels` to `progress` runs on load in `WorldMapSave` when
 - BLUEPRINTS: every building, found or not. Found: the floor, ready or
   "opens at level N", the site it came from. Not found: "?" and how many
   sites the pilot has marked.
+
+### The rig screen (J)
+
+The skill screen's sibling for the Foundry and Lab (`SAcRigScreen`, G1): the
+same chrome, header and tabs (SKILLS · BLUEPRINTS · **RIG**). J or Esc closes
+it, K swaps to the skill screen, Tab to SKILLS. The world goes on; the
+Prospector stands. The header shows the wallet (ore and MH), which pays the
+Foundry and the Lab.
+
+- A row for each module across three panels, so a module's slot, its marks
+  at the Foundry and its research line up. Its icon comes from
+  `Tools/hud/module_icons.py`, drawn in the skill icons' hand.
+- **FITTING**: the slot (its icon lit in the mark's colour, "MK II FITTED",
+  `Modules::text`), then a chip per mark with the stores' count. Clicking a
+  chip in stock fits that mark; clicking the lit chip takes it off. Away from
+  home the panel says the server's words ("Fit modules at your Citadel or a
+  Hab Dome: stand where you unload").
+- **FOUNDRY**: a cell per mark with its price (a part in red when the
+  wallet is short) and its time. The cell shows "LAB FIRST" until the mark is
+  researched, "FOUNDRY BUSY" while another job runs, and "MAKE" otherwise. The
+  running job has a bar and a countdown in its cell and in the panel's head.
+- **LAB**: Mk II and Mk III, the same way: "RESEARCHED", "AFTER MK II", or
+  "RESEARCH". A countdown runs while a job is on.
+- Without a Foundry or a Lab, that panel is greyed under "BUILD A FOUNDRY
+  FIRST" or "BUILD A LAB FIRST".
+- The foot names the picked cell and says what Return or a click asks, or
+  why it can't. The core's refusals use the server's words. A refusal the
+  server sends back shows in red.
+- Arrows move the pick; Return or a click asks. Marks are coloured Mk I
+  steel, Mk II cyan, Mk III gold.
+- Toasts: "MODULE MADE: PLATE MK II" and "RESEARCHED: TORCH TIP MK II"
+  (AcProgressHud).
 
 ### The HUD
 

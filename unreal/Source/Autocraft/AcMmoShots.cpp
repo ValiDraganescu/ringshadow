@@ -43,6 +43,17 @@
 //   07 after: the band gone east   08 looking east at it
 // The giant's comet impacts are off meanwhile (ac.GasGiant.Events 0).
 //
+// -AcMmoShotsRig (with -AcMmoDevRig: the server gives the new pilot a
+// finished Citadel, Foundry and Lab, the Prospector where it unloads, and a
+// stocked rig with a job at each; docs/prospector-progression.md "Foundry
+// and Lab"): the rig screen (J), DIR/rig-NN-moment.png:
+//   01 home: unloading at the Citadel     02 the rig screen: fitting at home,
+//      the Foundry making, the Lab researching
+//   03 Drill head Mk III fitted from the stores, the Mk II back in them,
+//      and the Foundry's refusal while busy   04 the skill screen's RIG tab
+//   05 the Foundry's job done: the stores up, the Foundry idle
+//   06 a Cargo pod Mk II asked for: the Foundry's new countdown
+//
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
 //
@@ -266,6 +277,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP5"))) T.Phase = 200;
 			// -AcMmoShotsRingshadow: only the ringshadow sweep (300-315).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRingshadow"))) T.Phase = 300;
+			// -AcMmoShotsRig: only the rig screen (500-513).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -1151,6 +1164,118 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 315:
 		Check(Shots.Saved == 8, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
 		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
+		Finish();
+		return;
+	// MARK: -AcMmoShotsRig
+	// The rig screen on --dev-rig's home: each ask through the screen.
+	case 500:
+		if (const ac::net::ProgressMessage* P = Mmo->Progress(); P && P->foundry && P->lab && P->rig.making && Since() > 4.0)
+		{
+			Check(P->rig.research.has_value(), TEXT("the dev rig: a Foundry, a Lab, a job at each"));
+			Advance();
+		}
+		else TimedOut(TEXT("the dev rig"));
+		return;
+	case 501:
+		if (Since() > 1.5) Shoot(TEXT("rig-01-home"), TEXT("home: where the Prospector unloads at the Citadel"));
+		return;
+	case 502:
+		Check(OpenRigScreen() && RigScreenWidget().IsValid(), TEXT("J opens the rig screen"));
+		Check(RigScreenWidget().IsValid() && RigScreenWidget()->GetInfo().FitWhyNot.IsEmpty(), TEXT("the screen has the pilot at home"));
+		Advance();
+		return;
+	case 503:
+		if (Since() > 1.5) Shoot(TEXT("rig-02-screen"), TEXT("the rig screen: fitting, the Foundry making, the Lab researching"));
+		return;
+	case 504:
+	{
+		// Drill head Mk III from the stores: the screen's own ask.
+		const TSharedPtr<SAcRigScreen> W = RigScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (W && P && P->rig.fittedMark(ac::Module::drillHead) == 3)
+		{
+			Check(P->rig.stock(ac::Module::drillHead, 2) == 1, TEXT("Drill head Mk III fitted, the Mk II back in the stores"));
+			// The Foundry is busy: its refusal, as the screen says it.
+			W->PickCell({ac::Module::cargoPod, SAcRigScreen::EPanel::Foundry, 2});
+			W->Act();
+			Check(W->RefusalText().StartsWith(TEXT("The Foundry is busy")), FString::Printf(TEXT("the busy Foundry refuses: %s"), *W->RefusalText()));
+			Advance();
+			return;
+		}
+		if (!Mmo->RigRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("fit: %s"), *Mmo->RigRefusal()));
+			Finish();
+			return;
+		}
+		if (W && Now - P5AskedAt > 1.0)
+		{
+			W->PickCell({ac::Module::drillHead, SAcRigScreen::EPanel::Fitting, 3});
+			W->Act();
+			P5AskedAt = Now;
+		}
+		TimedOut(TEXT("Drill head Mk III fitted"), 10);
+		return;
+	}
+	case 505:
+		if (Since() > 1.0) Shoot(TEXT("rig-03-fitted-busy"), TEXT("Drill head Mk III fitted; the busy Foundry's refusal"));
+		return;
+	case 506:
+		Check(OpenSkillScreen() && SkillScreenWidget().IsValid() && !RigScreenWidget().IsValid(), TEXT("K: the skill screen in the rig's place"));
+		if (const TSharedPtr<SAcSkillScreen> W = SkillScreenWidget()) W->SetTab(SAcSkillScreen::ETab::Blueprints);
+		Advance();
+		return;
+	case 507:
+		if (Since() > 1.0) Shoot(TEXT("rig-04-skill-tabs"), TEXT("the skill screen's tabs: SKILLS, BLUEPRINTS, RIG"));
+		return;
+	case 508:
+		// Tab from BLUEPRINTS: the rig screen again.
+		if (const TSharedPtr<SAcSkillScreen> W = SkillScreenWidget()) W->NextTab();
+		Check(RigScreenWidget().IsValid() && !SkillScreenWidget().IsValid(), TEXT("Tab on BLUEPRINTS opens the rig screen"));
+		Advance();
+		return;
+	case 509:
+		// The Foundry's Plate Mk II comes out (150 s after the pilot came).
+		if (const ac::net::ProgressMessage* P = Mmo->Progress(); P && !P->rig.making && Since() > 1.0)
+		{
+			Check(P->rig.stock(ac::Module::plate, 2) == 2, TEXT("Plate Mk II made, into the stores"));
+			Advance();
+		}
+		else TimedOut(TEXT("the Foundry's job done"), 200);
+		return;
+	case 510:
+		if (Since() > 2.0) Shoot(TEXT("rig-05-made"), TEXT("the Foundry's job done: the stores up, the Foundry idle"));
+		return;
+	case 511:
+	{
+		const TSharedPtr<SAcRigScreen> W = RigScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->rig.making && P->rig.making->module == ac::Module::cargoPod)
+		{
+			Advance();
+			return;
+		}
+		if (!Mmo->RigRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("make: %s"), *Mmo->RigRefusal()));
+			Finish();
+			return;
+		}
+		if (W && Now - P5AskedAt > 1.0)
+		{
+			W->PickCell({ac::Module::cargoPod, SAcRigScreen::EPanel::Foundry, 2});
+			W->Act();
+			P5AskedAt = Now;
+		}
+		TimedOut(TEXT("Cargo pod Mk II asked for"), 10);
+		return;
+	}
+	case 512:
+		if (Since() > 3.0) Shoot(TEXT("rig-06-making"), TEXT("Cargo pod Mk II at the Foundry: its countdown"));
+		return;
+	case 513:
+		CloseRigScreen();
+		Check(Shots.Saved == 6, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
 		Finish();
 		return;
 	default:

@@ -16,7 +16,8 @@
 // Click or Return learns a rank, the arrows move the pick, Backspace takes
 // back a point spent in the last 60 s, Q/C/G puts a learned active in that
 // slot (or drag it there), Tab switches to BLUEPRINTS: every building, found
-// or not, its floor and where it came from.
+// or not, its floor and where it came from; Tab again (or J) to the RIG, the
+// rig screen (SAcRigScreen).
 //
 // The screen only shows and asks: a learn, an undo, a slot or a respec goes
 // to its owner (`OnSpend`, …), which asks the server and hands the answer
@@ -67,6 +68,8 @@ public:
 		SLATE_EVENT(FAcOnSkill, OnUndo)
 		SLATE_EVENT(FAcOnSkillSlot, OnSlot)
 		SLATE_EVENT(FSimpleDelegate, OnRespec)
+		/// The RIG tab: the rig screen in its place (SAcRigScreen).
+		SLATE_EVENT(FSimpleDelegate, OnRig)
 		SLATE_EVENT(FSimpleDelegate, OnClose)
 	SLATE_END_ARGS()
 
@@ -169,6 +172,7 @@ private:
 	FAcOnSkill OnUndoDelegate;
 	FAcOnSkillSlot OnSlotDelegate;
 	FSimpleDelegate OnRespecDelegate;
+	FSimpleDelegate OnRigDelegate;
 	FSimpleDelegate OnCloseDelegate;
 
 	/// When each node last took a rank (the learn flash), and when the screen opened.

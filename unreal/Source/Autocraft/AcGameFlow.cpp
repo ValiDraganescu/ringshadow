@@ -34,6 +34,7 @@
 
 #include "Commander.h"
 #include "NavGrid.h"
+#include "Pilot.h"
 #include "Rules.h"
 
 namespace
@@ -46,6 +47,8 @@ namespace
 	constexpr int32 WorldMapLayer = 70;
 	/// The MMORPG skill screen: beside the world map (one at a time).
 	constexpr int32 SkillScreenLayer = 71;
+	/// The MMORPG rig screen: the skill screen's sibling (one at a time).
+	constexpr int32 RigScreenLayer = 72;
 
 	FString Text(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 
@@ -83,9 +86,18 @@ namespace
 				// The game's own keys wait while the map is up (⌘Q still quits).
 				return !Event.IsCommandDown();
 			}
+			if (TSharedPtr<SAcRigScreen> S = F->RigScreenWidget())
+			{
+				if (K == EKeys::Escape || (K == EKeys::J && !Event.IsCommandDown())) { F->CloseRigScreen(); return true; }
+				if (K == EKeys::K && !Event.IsCommandDown()) { F->OpenSkillScreen(); return true; }
+				if (!Event.IsCommandDown() && S->Key(K)) return true;
+				// The game's own keys wait while the screen is up (⌘Q still quits).
+				return !Event.IsCommandDown();
+			}
 			if (TSharedPtr<SAcSkillScreen> S = F->SkillScreenWidget())
 			{
 				if (K == EKeys::Escape || (K == EKeys::K && !Event.IsCommandDown())) { F->CloseSkillScreen(); return true; }
+				if (K == EKeys::J && !Event.IsCommandDown()) { F->OpenRigScreen(); return true; }
 				if (!Event.IsCommandDown() && S->Key(K)) return true;
 				// The game's own keys wait while the screen is up (⌘Q still quits).
 				return !Event.IsCommandDown();
@@ -353,6 +365,7 @@ void UAcGameFlowSubsystem::Deinitialize()
 		Sim->OnGameStarted.Remove(StartedHandle);
 		Sim->OnRefused.Remove(RefusedHandle);
 	}
+	CloseRigScreen();
 	if (MmoBanner)
 	{
 		if (const AAcHUD* Hud = AAcHUD::Get(this); Hud && Hud->Root()) Hud->Root()->RemoveLayer(MmoBanner.ToSharedRef());
@@ -760,6 +773,7 @@ void UAcGameFlowSubsystem::StopMmo()
 	TickMmo();
 }
 
+	CloseRigScreen();
 void UAcGameFlowSubsystem::OnRefused(const FString& Why)
 {
 	TickMmo();
@@ -783,6 +797,7 @@ void UAcGameFlowSubsystem::TickMmo()
 	if (Mmo)
 	{
 		MmoBanner->SetStatus(Mmo->Message(), Mmo->Phase() == FAcMmoClient::EPhase::Failed);
+	TickRigScreen();
 		// Where the pilot is: the region, or the flight.
 		FString Place;
 		if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo())
@@ -843,6 +858,7 @@ bool UAcGameFlowSubsystem::OpenWorldMap()
 	if (!Root) return false;
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	Root->AddLayer(WorldMapLayer)
+	CloseRigScreen();
 	[
 		SAssignNew(WorldMap, SAcWorldMap)
 		.OnFly_Lambda([Weak](const FString& Region, const FString& Pad) { if (Weak.IsValid()) Weak->FlyFromMap(Region, Pad); })
@@ -937,6 +953,7 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 		UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
 		FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
 		FString Why;
+	CloseRigScreen();
 		if (!Mmo) Why = TEXT("Not in a world");
 		else if (Do(*Mmo, &Why)) return;
 		if (Weak->SkillScreen) Weak->SkillScreen->SetRefusal(Why);
@@ -958,6 +975,7 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 	SkillRefusalShown = Sim->MmoClient() ? Sim->MmoClient()->SkillRefusal() : FString();
 	TickSkillScreen();
 	UE_LOG(LogAutocraft, Log, TEXT("skill screen: open"));
+		.OnRig_Lambda([Weak]() { if (Weak.IsValid()) Weak->OpenRigScreen(); })
 	return true;
 }
 
@@ -1009,6 +1027,7 @@ void UAcGameFlowSubsystem::TickSkillScreen()
 		}
 		AcProgressHud::BlueprintSites(*Mmo, Info.Sources, Info.SitesMarked);
 		Info.RespecPrice = P->respecPrice;
+		G.rig = P->rig;
 		Info.bRespecFree = P->respecFree;
 		// Blueprint savant: 2 levels a rank.
 		Info.FloorCut = 2 * G.rank(ac::Skill::blueprintSavant);
@@ -1048,6 +1067,124 @@ void UAcGameFlowSubsystem::Check(const bool bOk, const FString& What)
 	const FString Step = Test->Steps.IsValidIndex(Test->Step) ? Test->Steps[Test->Step] : TEXT("?");
 	UE_LOG(LogAutocraft, Display, TEXT("flowtest: %s: %s %s"), *Step, *What, bOk ? TEXT("ok") : TEXT("FAILED"));
 	if (!bOk) Test->Failures += 1;
+}
+
+// MARK: - The MMORPG rig screen
+
+bool UAcGameFlowSubsystem::OpenRigScreen()
+{
+	if (RigScreen) return true;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsMmo() || Menu || Dialog) return false;
+	const AAcHUD* Hud = AAcHUD::Get(this);
+	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
+	if (!Root) return false;
+	CloseWorldMap();
+	CloseSkillScreen();
+	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
+	// As the skill screen's: a refusal at once here, the server's own
+	// through `TickRigScreen`.
+	auto Ask = [Weak](TFunctionRef<bool(FAcMmoClient&, FString*)> Do)
+	{
+		if (!Weak.IsValid()) return;
+		UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+		FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+		FString Why;
+		if (!Mmo) Why = TEXT("Not in a world");
+		else if (Do(*Mmo, &Why)) return;
+		if (Weak->RigScreen) Weak->RigScreen->SetRefusal(Why);
+	};
+	Root->AddLayer(RigScreenLayer)
+	[
+		SAssignNew(RigScreen, SAcRigScreen)
+		.OnMake_Lambda([Ask](ac::Module M, int64 Mark) { Ask([M, Mark](FAcMmoClient& C, FString* Why) { return C.Make(M, Mark, Why); }); })
+		.OnResearch_Lambda([Ask](ac::Module M, int64 Mark) { Ask([M, Mark](FAcMmoClient& C, FString* Why) { return C.Research(M, Mark, Why); }); })
+		.OnFit_Lambda([Ask](ac::Module M, int64 Mark) { Ask([M, Mark](FAcMmoClient& C, FString* Why) { return C.Fit(M, Mark, Why); }); })
+		.OnTab_Lambda([Weak](int32 Tab)
+			{
+				if (!Weak.IsValid() || !Weak->OpenSkillScreen()) return;
+				if (Weak->SkillScreen) Weak->SkillScreen->SetTab(Tab == 1 ? SAcSkillScreen::ETab::Blueprints : SAcSkillScreen::ETab::Skills);
+			})
+		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseRigScreen(); })
+	];
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(RigScreen, EFocusCause::SetDirectly);
+	// As the skill screen: the world goes on, the pilot's unit stands, the pointer is free.
+	SetBlocked(true);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(true);
+	RigRefusalShown = Sim->MmoClient() ? Sim->MmoClient()->RigRefusal() : FString();
+	TickRigScreen();
+	UE_LOG(LogAutocraft, Log, TEXT("rig screen: open"));
+	return true;
+}
+
+void UAcGameFlowSubsystem::CloseRigScreen()
+{
+	if (!RigScreen) return;
+	if (const AAcHUD* Hud = AAcHUD::Get(this))
+	{
+		if (const TSharedPtr<SAcRoot> Root = Hud->Root()) Root->RemoveLayer(RigScreen.ToSharedRef());
+	}
+	RigScreen.Reset();
+	SetBlocked(false);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(false);
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetAllUserFocusToGameViewport();
+	UE_LOG(LogAutocraft, Log, TEXT("rig screen: closed"));
+}
+
+void UAcGameFlowSubsystem::ToggleRigScreen()
+{
+	if (RigScreen) CloseRigScreen();
+	else OpenRigScreen();
+}
+
+void UAcGameFlowSubsystem::TickRigScreen()
+{
+	if (!RigScreen) return;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo)
+	{
+		CloseRigScreen();
+		return;
+	}
+	FAcRigScreenInfo Info;
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	{
+		Info.Rig = P->rig;
+		Info.bFoundry = P->foundry;
+		Info.bLab = P->lab;
+		Info.Now = Mmo->Sky() ? Mmo->Sky()->time : 0.0;
+		// The wallet where the pilot is, and the place: the server checks
+		// it; the screen says so ahead (its own Citadel or Hab Dome, where it
+		// unloads).
+		bool bHome = false;
+		if (const ac::net::Mirror* M = Mmo->Mirror())
+		{
+			const ac::GameState& St = M->simulation().state;
+			if (size_t(ac::Pilot::player) < St.players.size())
+			{
+				Info.Ore = St.players[ac::Pilot::player].ore;
+				Info.Hydrogen = St.players[ac::Pilot::player].hydrogen;
+			}
+			const ac::Unit* U = M->driven() && !Mmo->Travelling() ? M->unit(*M->driven()) : nullptr;
+			for (const ac::Structure& B : St.structures)
+			{
+				if (U && (B.kind == ac::StructureKind::citadel || B.kind == ac::StructureKind::habDome) && B.complete() && B.owner == U->owner
+					&& ac::NavGrid::insideStructure(U->position, B, ac::Simulation::pilotDepositReach))
+				{
+					bHome = true;
+					break;
+				}
+			}
+		}
+		if (!bHome) Info.FitWhyNot = TEXT("Fit modules at your Citadel or a Hab Dome: stand where you unload");
+	}
+	RigScreen->SetInfo(Info);
+	if (Mmo->RigRefusal() != RigRefusalShown)
+	{
+		RigRefusalShown = Mmo->RigRefusal();
+		if (!RigRefusalShown.IsEmpty()) RigScreen->SetRefusal(RigRefusalShown);
+	}
 }
 
 void UAcGameFlowSubsystem::NextStep()
