@@ -75,6 +75,9 @@ template <class IO> void fields(IO& io, Objective& v);
 template <class IO> void fields(IO& io, PilotRecord& v);
 template <class IO> void fields(IO& io, Tally& v);
 template <class IO> void fields(IO& io, SkillSpend& v);
+template <class IO> void fields(IO& io, ModuleStock& v);
+template <class IO> void fields(IO& io, ModuleJob& v);
+template <class IO> void fields(IO& io, Rig& v);
 template <class IO> void fields(IO& io, Stamp& v);
 template <class IO> void fields(IO& io, Standing& v);
 template <class IO> void fields(IO& io, Doodad& v);
@@ -787,6 +790,28 @@ template <class IO> void fields(IO& io, SkillSpend& v) {
     io("at", v.at);
 }
 
+template <class IO> void fields(IO& io, ModuleStock& v) {
+    io("module", v.module);
+    io("mark", v.mark);
+    io("count", v.count);
+}
+
+template <class IO> void fields(IO& io, ModuleJob& v) {
+    io("module", v.module);
+    io("mark", v.mark);
+    io("done", v.done);
+}
+
+/// The pilot's rig (P7), saved in its own column: tolerant, a part
+/// missing reads as empty.
+template <class IO> void fields(IO& io, Rig& v) {
+    io.orDefault("fitted", v.fitted);
+    io.orDefault("stores", v.stores);
+    io.orDefault("researched", v.researched);
+    io("making", v.making);
+    io("research", v.research);
+}
+
 template <class IO> void fields(IO& io, Tally& v) {
     io.orDefault("seconds", v.seconds);
     io.orDefault("takeovers", v.takeovers);
@@ -1007,6 +1032,7 @@ AC_CODABLE(Directives)
 AC_CODABLE(PilotRecord)
 AC_CODABLE(KindRecord)
 AC_CODABLE(ProspectorProgress)
+AC_CODABLE(Rig)
 AC_CODABLE(Tally)
 AC_CODABLE(Listener)
 #undef AC_CODABLE

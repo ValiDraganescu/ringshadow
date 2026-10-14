@@ -737,7 +737,19 @@ TEST(protocol_progress_round_trips) {
     m.respawn = ProgressMessage::Respawn{12, "start", std::nullopt, 0, false};
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
-    EXPECT_TRUE(kProtocolVersion >= uint16_t(8));
+    // The rig (P7): two fitted, stores, a mark researched, both jobs running,
+    // the Foundry and the Lab owned, and a module made.
+    m.rig.fitted = {{Module::drillHead, 2}, {Module::surveyLens, 1}};
+    m.rig.stores = {{Module::drillHead, 1, 1}, {Module::plate, 3, 12}};
+    m.rig.researched = {{Module::drillHead, 2}, {Module::plate, 3}};
+    m.rig.making = ModuleJob{Module::torchTip, 1, 1060.5};
+    m.rig.research = ModuleJob{Module::cargoPod, 2, 1600};
+    m.foundry = m.lab = true;
+    m.news.push_back({ProgressMessage::NewsKind::made, "torchTip", 0, 1});
+    m.news.push_back({ProgressMessage::NewsKind::researched, "cargoPod", 0, 2});
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back == m);
+    EXPECT_TRUE(kProtocolVersion >= uint16_t(10));
 }
 
 TEST(mirror_takes_snapshots_into_its_simulation) {
@@ -890,7 +902,9 @@ TEST(protocol_world_messages_round_trip) {
     for (const auto& what : std::vector<decltype(RequestMessage::what)>{
              RequestMessage::Spend{Skill::quickDrill}, RequestMessage::Spend{allCases<Skill>().back()},
              RequestMessage::Undo{Skill::overcharge}, RequestMessage::Respec{}, RequestMessage::Slot{2, Skill::aegis},
-             RequestMessage::Slot{0, std::nullopt}, RequestMessage::Abandon{4000000000u}}) {
+             RequestMessage::Slot{0, std::nullopt}, RequestMessage::Abandon{4000000000u},
+             RequestMessage::Make{Module::drillHead, 1}, RequestMessage::Research{Module::surveyLens, 3},
+             RequestMessage::Fit{Module::plate, 2}, RequestMessage::Fit{Module::cargoPod, 0}}) {
         RequestMessage t;
         t.id = 21;
         t.what = what;

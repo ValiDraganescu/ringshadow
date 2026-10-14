@@ -513,6 +513,7 @@ void WorldMap::step() {
     contracts();
     starfall();
     respawns();
+    rigs();
     ownPadsChanged();
     regrowWells(dt);
     for (auto& [id, p] : pilots_)

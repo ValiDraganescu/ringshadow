@@ -351,9 +351,28 @@ struct RequestMessage {
         uint32_t contract = 0;
         bool operator==(const Abandon&) const = default;
     };
+    /// The rig (P7, docs/prospector-progression.md "Foundry and Lab"): the
+    /// pilot's Foundry starts making `module` at `mark` (paid from the
+    /// wallet), its Lab starts researching `mark` (2 or 3), or `mark` is
+    /// fitted from the stores at its Citadel or a Hab Dome (0: take it off).
+    struct Make {
+        Module module{};
+        int64_t mark = 1;
+        bool operator==(const Make&) const = default;
+    };
+    struct Research {
+        Module module{};
+        int64_t mark = 2;
+        bool operator==(const Research&) const = default;
+    };
+    struct Fit {
+        Module module{};
+        int64_t mark = 1;
+        bool operator==(const Fit&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
-    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon> what;
+    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit> what;
     bool operator==(const RequestMessage&) const = default;
 };
 
@@ -438,7 +457,11 @@ struct ProgressMessage {
     ///
     /// K1: `contract`: a contract done, `id` its number, `xp` what it paid,
     /// `value` the MH it paid.
-    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract };
+    ///
+    /// P7: `made`: the Foundry finished a module, `id` its code name
+    /// ("drillHead"), `value` its mark; it waits in the stores. `researched`:
+    /// the Lab opened a mark, `id` the module, `value` the mark.
+    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -504,6 +527,13 @@ struct ProgressMessage {
     /// Ringwalker: world time a flight from anywhere is ready again (0:
     /// ready, or not learned).
     double ringwalkerReady = 0;
+    /// The pilot's rig (P7): its fitted modules, its stores, the marks
+    /// researched, the Foundry's job and the Lab's (`done` in world time,
+    /// `Sky::time`).
+    Rig rig;
+    /// It owns a finished Foundry, and a finished Lab: a job can start.
+    bool foundry = false;
+    bool lab = false;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

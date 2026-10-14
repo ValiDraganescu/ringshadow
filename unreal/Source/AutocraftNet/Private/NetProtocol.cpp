@@ -109,6 +109,80 @@ bool readSkill(BitReader& r, Skill& s) {
     return true;
 }
 
+/// A rig module and a mark (P7): 3 bits, then the mark (0 to 3) in 2.
+void writeModule(BitWriter& w, Module m, int64_t mark) {
+    w.writeBits(uint64_t(m), 3);
+    w.writeBits(uint64_t(std::clamp<int64_t>(mark, 0, 3)), 2);
+}
+
+bool readModule(BitReader& r, Module& m, int64_t& mark) {
+    const uint64_t v = r.readBits(3);
+    if (v >= uint64_t(allCases<Module>().size())) return false;
+    m = static_cast<Module>(v);
+    mark = int64_t(r.readBits(2));
+    return true;
+}
+
+void writeJob(BitWriter& w, const std::optional<ModuleJob>& j) {
+    w.writeBool(j.has_value());
+    if (!j) return;
+    writeModule(w, j->module, j->mark);
+    codec::kMs.write(w, j->done);
+}
+
+bool readJob(BitReader& r, std::optional<ModuleJob>& j) {
+    j.reset();
+    if (!r.readBool()) return true;
+    ModuleJob x;
+    if (!readModule(r, x.module, x.mark)) return false;
+    codec::kMs.read(r, x.done);
+    j = x;
+    return true;
+}
+
+void writeRig(BitWriter& w, const Rig& rig) {
+    writeVarint(w, rig.fitted.size());
+    for (const auto& [m, mark] : rig.fitted) writeModule(w, m, mark);
+    writeVarint(w, rig.stores.size());
+    for (const ModuleStock& s : rig.stores) {
+        writeModule(w, s.module, s.mark);
+        writeVarint(w, uint64_t(std::max<int64_t>(0, s.count)));
+    }
+    writeVarint(w, rig.researched.size());
+    for (const auto& [m, mark] : rig.researched) writeModule(w, m, mark);
+    writeJob(w, rig.making);
+    writeJob(w, rig.research);
+}
+
+bool readRig(BitReader& r, Rig& rig) {
+    rig = Rig{};
+    const uint64_t fitted = readVarint(r);
+    if (fitted > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < fitted; i++) {
+        Module m{};
+        int64_t mark = 0;
+        if (!readModule(r, m, mark)) return false;
+        rig.fitted[m] = mark;
+    }
+    const uint64_t stores = readVarint(r);
+    if (stores > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < stores; i++) {
+        ModuleStock s;
+        if (!readModule(r, s.module, s.mark)) return false;
+        s.count = int64_t(readVarint(r));
+        rig.stores.push_back(s);
+    }
+    const uint64_t researched = readVarint(r);
+    if (researched > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < researched; i++) {
+        Module m{};
+        int64_t mark = 0;
+        if (!readModule(r, m, mark)) return false;
+        rig.researched[m] = mark;
+    }
+    return readJob(r, rig.making) && readJob(r, rig.research);
+}
+
 void writeStrings(BitWriter& w, const std::set<std::string>& set) {
     writeVarint(w, set.size());
     for (const std::string& s : set) writeString(w, s);
@@ -620,6 +694,9 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         if (p->skill) writeSkill(w, *p->skill);
     }
     if (const auto* p = std::get_if<RequestMessage::Abandon>(&m.what)) writeVarint(w, p->contract);
+    if (const auto* p = std::get_if<RequestMessage::Make>(&m.what)) writeModule(w, p->module, p->mark);
+    if (const auto* p = std::get_if<RequestMessage::Research>(&m.what)) writeModule(w, p->module, p->mark);
+    if (const auto* p = std::get_if<RequestMessage::Fit>(&m.what)) writeModule(w, p->module, p->mark);
     return w.bytes();
 }
 
@@ -677,6 +754,24 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         break;
     }
     case 9: m.what = RequestMessage::Abandon{static_cast<uint32_t>(readVarint(r))}; break;
+    case 10: {
+        RequestMessage::Make p;
+        if (!readModule(r, p.module, p.mark)) return false;
+        m.what = p;
+        break;
+    }
+    case 11: {
+        RequestMessage::Research p;
+        if (!readModule(r, p.module, p.mark)) return false;
+        m.what = p;
+        break;
+    }
+    case 12: {
+        RequestMessage::Fit p;
+        if (!readModule(r, p.module, p.mark)) return false;
+        m.what = p;
+        break;
+    }
     default: return false;
     }
     return r.ok();
@@ -744,6 +839,9 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         w.writeBool(m.respawn->hydrogen);
     }
     codec::kMs.write(w, m.ringwalkerReady);
+    writeRig(w, m.rig);
+    w.writeBool(m.foundry);
+    w.writeBool(m.lab);
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 4);
@@ -840,12 +938,15 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         m.respawn = s;
     }
     codec::kMs.read(r, m.ringwalkerReady);
+    if (!readRig(r, m.rig)) return false;
+    m.foundry = r.readBool();
+    m.lab = r.readBool();
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(4);
-        if (kind > uint64_t(ProgressMessage::NewsKind::contract)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::researched)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

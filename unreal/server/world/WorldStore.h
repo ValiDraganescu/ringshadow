@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5); the starfalls (schema 6). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -103,6 +103,9 @@ struct SavedPilot {
     /// Its KSTR contracts (docs/contracts.md) as JSON (schema 5). Empty:
     /// none drawn yet.
     std::string contracts{};
+    /// Its rig of modules (P7), the core's `Rig` as JSON (schema 7). Empty:
+    /// none yet.
+    std::string rig{};
     bool operator==(const SavedPilot&) const = default;
 };
 
@@ -140,7 +143,7 @@ public:
     };
     /// This build's steps; the last one's version is the schema's (2: the
     /// world's clock; 3: the pilots' progression; 4: gated by blueprints;
-    /// 5: contracts; 6: starfalls).
+    /// 5: contracts; 6: starfalls; 7: the rig).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 

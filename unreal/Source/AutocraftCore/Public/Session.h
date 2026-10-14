@@ -77,8 +77,8 @@ struct AUTOCRAFTCORE_API SessionStore {
     /// `decoder.decode(T.self, from:)`: nil when the JSON does not hold a
     /// `T` the way Swift's decoder reads it (`error`, if given, says why).
     /// Instantiated for Session, GameState, MapDefinition, Player, Unit,
-    /// Structure, Intel, Directives, PilotRecord, KindRecord, Tally, Listener and
-    /// ProspectorProgress.
+    /// Structure, Intel, Directives, PilotRecord, KindRecord, Tally, Listener,
+    /// ProspectorProgress and Rig.
     template <class T> static std::optional<T> decode(std::string_view json, std::string* error = nullptr);
     /// `encoder.encode(_:)`: sorted keys; pretty-printed unless `pretty` is false.
     template <class T> static std::string encode(const T& value, bool pretty = true);

@@ -353,8 +353,8 @@ needs its blueprint, found in the world, and the pilot at or above its
 | Citadel | Home: unload point, respawn point, where the respec is made | 1 | 1 | 400 | on the server (P6) |
 | Derrick | Pumps MH on a well (as today) | 3 | 4 | 75 | as today |
 | Hab Dome | A field depot: unload ore and MH into the wallet away from home, and a respawn point | 8 | 3 | 150 + 50 | on the server (P6) |
-| Foundry | Makes rig modules: drill head, cargo pod, plate, torch tip, survey lens (open question 3) | 15 | 1 | 300 + 150 | built (P6); modules in P7 |
-| Lab | Researches better module marks (Mk II, Mk III) for MH and time | 25 | 1 | 200 + 200 | built (P6), standing alone; research in P7 |
+| Foundry | Makes rig modules: drill head, cargo pod, plate, torch tip, survey lens ("Foundry and Lab") | 15 | 1 | 300 + 150 | on the server (P7) |
+| Lab | Researches better module marks (Mk II, Mk III) for MH and time | 25 | 1 | 200 + 200 | on the server (P7), standing alone |
 | Spacedock | A private pad: fly from it and land on it from any pad; later, routes to far worlds | 35 | 1 | 400 + 300 | on the server (P6) |
 | Bastion | A bunker: the Prospector climbs in, takes no damage, its torch fires from it at +2 range. For holding a claim in no-man's land | 45 | 2 | 250 + 100 | built (P6); its fight matters later |
 | Sentinel | A missile turret that guards your buildings, ground and air | 55 | 4 | 150 + 100 | built (P6); its fight matters later |
@@ -425,6 +425,84 @@ On the wire (protocol 8):
 - `WorldMessage::Pad::building`: the kind of a pad of the pilot's own. The
   message is sent again whenever these pads change.
 
+### Foundry and Lab
+
+The gear layer beside the tree (open question 3, answered yes): the rig gets
+better in steps a pilot works toward, and MH gets a steady sink.
+
+**Modules.** The Prospector has five slots, one module each. A module has
+three marks; each mark is a clear step, and it adds to the tree's nodes
+through the same blocks (`Modules::effects`):
+
+| Module | What it does | Mk I | Mk II | Mk III | Block |
+|---|---|---|---|---|---|
+| Drill head | drill speed | +8% | +16% | +25% | `Stat::Drill` `.percent` |
+| Cargo pod | ore and MH a trip | +8% | +16% | +25% | `Stat::OreCarry`, `Stat::HydrogenCarry` `.percent` |
+| Plate | hp, a share of the Prospector's own | +8% | +16% | +25% | `Stat::Hp` `.plus` |
+| Torch tip | torch damage, and range | +8%, +0.25 cells | +16%, +0.5 | +25%, +0.75 | `Stat::Damage` `.percent`, `Stat::Range` `.plus` |
+| Survey lens | sight, and survey chips | +8% each | +16% | +25% | `Stat::Sight` `.percent`, `SkillStat::chipChance` `.percent` |
+
+So a Mk III drill head with Quick drill at rank 3 drills at ×1.43 on top of
+the hero, and a Mk II cargo pod carries 29 ore a trip, not 25.
+
+**The Foundry makes them.** For ore and MH from the wallet, on the world's
+clock, one at a time (the limit is one Foundry). It goes on while the pilot
+is away, and the made module waits in the pilot's stores.
+
+| Mark | Cost (ore + MH) | Make time | Research first (Lab) |
+|---|---|---|---|
+| Mk I | 100 + 50 | 60 s | none |
+| Mk II | 300 + 200 | 180 s | 300 MH, 10 min |
+| Mk III | 800 + 600 | 480 s | 900 MH, 30 min, after Mk II |
+
+**The Lab researches marks.** Mk II and Mk III of each module are researched
+before the Foundry makes them, Mk III after Mk II. MH only, one research at a
+time, on the world's clock as well. A whole rig at Mk III is 5 × (300 + 900)
+= 6,000 MH of research and 5 × (800 + 600) of making: the long MH sink.
+
+**Fitting** is done at home: standing where the Prospector unloads at its own
+finished Citadel or Hab Dome (as the respec, which is Citadel only). The
+module comes out of the stores, and the one it replaces goes back to them.
+Mark 0 takes a module off. A fitted module takes effect at once.
+
+Refusals (the reply's text): "Build a Foundry first", "Build a Lab first",
+"The Foundry is busy: Drill head Mk I", "The Lab is busy: Plate Mk II",
+"Plate Mk II needs research at the Lab first", "Plate Mk III needs Mk II
+researched first", "Only Mk II and Mk III are researched", "Plate Mk II is
+researched already", "Not enough ore", "Not enough MH", "No Drill head Mk
+III in your stores", "Drill head Mk I is fitted already", "No Drill head
+fitted", "Fit modules at your Citadel or a Hab Dome: stand where you
+unload".
+
+A job in progress keeps going if its building is lost: the world has no
+fights yet. Revisit when it does.
+
+Later, not now: a KSTR contract kind "make a module" (docs/contracts.md).
+It would count `made` news like the build kind counts finished buildings.
+
+Code: the core's `Modules` and `Rig` (`Progression.h`), held in
+`ProspectorProgress::rig`, so `Simulation::setProgress` adds the fitted
+modules' blocks to the skills' and `ProspectorProgress::skillBoost` counts
+them (the chip chance). The server's side is `unreal/server/world/WorldRig.cpp`:
+the requests, the jobs finished each step (`WorldMap::rigs`, pilots off line
+too), the wallet. Tests: `server/tests/RigTests.cpp`,
+`core-tests/tests/RigTests.cpp`.
+
+On the wire (protocol 10):
+
+- `ProgressMessage::rig`: the core's `Rig`: `fitted` (module → mark),
+  `stores` (module, mark, count), `researched` (module → highest mark;
+  missing means Mk I), `making` and `research` (module, mark, `done` in world
+  time, `Sky::time`).
+- `ProgressMessage::foundry`, `lab`: the pilot owns a finished one.
+- News `made` (`id` the module's code name, `value` the mark) and
+  `researched` (the same).
+- Requests `Make{module, mark}`, `Research{module, mark}`, `Fit{module,
+  mark}` (variants 10 to 12); `net::Client::make`, `research`, `fit`.
+
+The save (schema 7): `pilots.rig`, the rig as JSON. A pilot saved before has
+none.
+
 ### Blueprint sites
 
 Regions get a new crafted layer, `sites` ([regions.md](regions.md)). A site
@@ -494,8 +572,9 @@ Nothing costs MH today. This adds:
 - **Building costs**: the Hab Dome, Foundry, Lab, Spacedock, Bastion and
   Sentinel have an MH part (50 to 300).
 - **Hydrogen boost** burns 10 MH a use.
-- **Foundry modules and Lab research**, if confirmed (open question 3):
-  modules at 100 ore + 50 MH (Mk I), 300 + 200 (Mk II), 800 + 600 (Mk III).
+- **Foundry modules and Lab research** (P7, "Foundry and Lab"): modules at
+  100 ore + 50 MH (Mk I), 300 + 200 (Mk II), 800 + 600 (Mk III); research
+  300 MH (Mk II) and 900 MH (Mk III) per module.
 
 Skill points never cost MH: the tree is points only.
 
@@ -678,7 +757,7 @@ Isolated scenarios only, never a played game:
 | P4 | Blueprints: `sites` in region files (tool, preview, validate), the sites of The First Reach placed with the region-crafting skill, opening sites, survey chips, building gated by blueprint, floor and limit | P3 | `autocraft-region validate` ok on every region; server tests for finds and refused builds pass; previews show the sites |
 | P5 | The game: the skill screen (K), the level-up banner, the HUD (points, slots, toasts), the build menu from blueprints, sites on the world map; the Z/X cards off in the MMO | P3, P4 | a hidden picture run (`-AcMmoShots`) shows each screen; the user checks by hand |
 | P6 | Building roles confirmed by the user: Citadel respawn and respec, Hab Dome depot, Spacedock pad, MH costs and limits; the travel and site nodes' blocks (Pad link, Homing beacon, Ringwalker, Surveyor, Scanner pulse) | P4, user's answers | server tests for each role pass |
-| P7 | Foundry modules and Lab research, if the user wants them | P6, open question 3 | a module made, fitted and its stat applied, in a server test |
+| P7 | Foundry modules and Lab research (done on the server: "Foundry and Lab") | P6, open question 3 | a module made, fitted and its stat applied, in a server test |
 
 P1 then P2 and P3 side by side, then P4, then P5 and P6 side by side.
 
@@ -692,7 +771,8 @@ P1 then P2 and P3 side by side, then P4, then P5 and P6 side by side.
    already help with future hazards.
 3. **A crafting layer: Foundry modules and Lab research.** It gives the
    Foundry and the Lab a job and MH a steady sink, but it is a second system
-   beside the tree. Recommendation: yes, after P1–P6, as P7.
+   beside the tree. Recommendation: yes, after P1–P6, as P7. Answered yes;
+   built in P7 ("Foundry and Lab").
 4. **Respec only at your Citadel?** Recommendation: yes. It gives home a
    purpose and stops a mid-fight rebuild.
 5. **MH runs out in a lasting world.** Wells don't grow back. Recommendation:

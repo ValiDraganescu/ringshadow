@@ -42,6 +42,9 @@ void Simulation::setProgress(const std::optional<ProspectorProgress>& p) {
         const auto e = Progression::effects(s, rank);
         skillEffects.insert(skillEffects.end(), e.begin(), e.end());
     }
+    // The fitted modules (P7): the same blocks.
+    const auto rig = p->rig.effects();
+    skillEffects.insert(skillEffects.end(), rig.begin(), rig.end());
 }
 
 bool Simulation::skilled(const Unit& u) const {

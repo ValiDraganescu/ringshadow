@@ -49,6 +49,12 @@ level allow. A place is always walkable, or a pad with a flight to it.
 is, `WorldMap::underSweep` should be true while the driven unit drills at
 cover ≥ `Ringshadow::bonusCover`, and `sweepContracts` turned on.
 
+**Later: make a module.** Since P7 the Foundry makes rig modules
+([prospector-progression.md](prospector-progression.md), "Foundry and Lab").
+A future kind could ask for one ("make a Mk II cargo pod"), counted on the
+`made` news as the build kind counts finished buildings, and drawn only for
+a pilot who owns a Foundry. Not drawn yet.
+
 ## Pay
 
 The reward is "8–12 minutes of normal play at that level". It uses the pace

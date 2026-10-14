@@ -48,6 +48,9 @@ uint32_t Client::respec() { return request(RequestMessage::Respec{}); }
 
 uint32_t Client::slot(int64_t index, std::optional<Skill> skill) { return request(RequestMessage::Slot{index, skill}); }
 uint32_t Client::abandon(uint32_t contract) { return request(RequestMessage::Abandon{contract}); }
+uint32_t Client::make(Module module, int64_t mark) { return request(RequestMessage::Make{module, mark}); }
+uint32_t Client::research(Module module, int64_t mark) { return request(RequestMessage::Research{module, mark}); }
+uint32_t Client::fit(Module module, int64_t mark) { return request(RequestMessage::Fit{module, mark}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;

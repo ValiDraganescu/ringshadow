@@ -272,6 +272,15 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* ab = std::get_if<net::RequestMessage::Abandon>(&m.what)) {
         what = "abandon contract " + std::to_string(ab->contract);
         why = world_.abandon(pilot, ab->contract);
+    } else if (const auto* mk = std::get_if<net::RequestMessage::Make>(&m.what)) {
+        what = "make " + std::string(rawValue(mk->module)) + " mk " + std::to_string(mk->mark);
+        why = world_.make(pilot, mk->module, mk->mark);
+    } else if (const auto* rs = std::get_if<net::RequestMessage::Research>(&m.what)) {
+        what = "research " + std::string(rawValue(rs->module)) + " mk " + std::to_string(rs->mark);
+        why = world_.research(pilot, rs->module, rs->mark);
+    } else if (const auto* ft = std::get_if<net::RequestMessage::Fit>(&m.what)) {
+        what = "fit " + std::string(rawValue(ft->module)) + " mk " + std::to_string(ft->mark);
+        why = world_.fit(pilot, ft->module, ft->mark);
     } else {
         return std::nullopt;
     }

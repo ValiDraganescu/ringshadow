@@ -134,6 +134,8 @@ WorldSave WorldMap::save() const {
         // any more (written empty).
         s.progress = SessionStore::encode(p.progress, false);
         s.contracts = encodeContracts(p);
+        // Its rig (P7), apart from the progress JSON.
+        if (p.progress.rig != Rig{}) s.rig = SessionStore::encode(p.progress.rig, false);
         out.pilots.push_back(s);
     };
     for (const auto& [id, p] : pilots_)
@@ -257,6 +259,12 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         }
         if (!decodeContracts(sp.contracts, p))
             problems.push_back("pilot " + sp.id.substr(0, 8) + ": contracts do not read, drawn again");
+        // Its rig (P7): none before schema 7.
+        p.progress.rig = Rig{};
+        if (!sp.rig.empty()) {
+            if (auto rig = SessionStore::decode<Rig>(sp.rig, &why)) p.progress.rig = *rig;
+            else problems.push_back("pilot " + sp.id.substr(0, 8) + ": rig does not read (" + why + "), left out");
+        }
         // Saved before buildings needed blueprints: the blueprints of what
         // it has built, so its buildings stay its own to build again.
         if (!sp.gated)

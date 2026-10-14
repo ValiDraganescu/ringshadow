@@ -212,6 +212,9 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.contractsDawn = nextDawn(clock_);
     m.respawn = respawning(pilot);
     m.ringwalkerReady = it->second.ringwalkerReady > clock_ ? it->second.ringwalkerReady : 0;
+    m.rig = g.rig;
+    m.foundry = ownsFinished(it->second, StructureKind::foundry);
+    m.lab = ownsFinished(it->second, StructureKind::lab);
     if (const auto& o = it->second.opening)
         m.opening = net::ProgressMessage::Opening{siteId(o->region, o->site), o->refusal.empty() ? o->since : 0.0,
                                                   WorldSites::needs(world_->regions[o->region].built.sites[o->site].kind),

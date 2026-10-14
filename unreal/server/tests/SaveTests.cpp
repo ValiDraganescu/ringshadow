@@ -82,6 +82,11 @@ WorldSave sample() {
     g.ranks[Skill::quickDrill] = 2;
     g.feats = {"first-flight"};
     s.pilots.push_back(SavedPilot{keyB, 400, 0, "cold-fork", std::nullopt, "", SessionStore::encode(g, false)});
+    // Its rig (schema 7).
+    Rig rig;
+    rig.fitted[Module::drillHead] = 2;
+    rig.making = ModuleJob{Module::plate, 1, 99.5};
+    s.pilots.back().rig = SessionStore::encode(rig, false);
     return s;
 }
 
@@ -167,32 +172,32 @@ TEST(save_store_round_trips_every_saved_thing) {
     EXPECT_TRUE(why.find("a save of world first, not second") != std::string::npos);
 }
 
-TEST(save_migrations_v0_to_v6_and_a_future_step) {
+TEST(save_migrations_v0_to_v7_and_a_future_step) {
     const std::string path = fresh("migrate");
     std::string why;
     {
-        // v0 (a new file) to v6.
+        // v0 (a new file) to v7.
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(6));
-        EXPECT_EQ(WorldStore::version(), int64_t(6));
+        EXPECT_EQ(store->schemaVersion(), int64_t(7));
+        EXPECT_EQ(WorldStore::version(), int64_t(7));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock', 'starfalls')")[0][0],
                   std::string("9"));
         ASSERT_TRUE(store->write(sample(), &why).has_value());
     }
-    // A step that fails: the file stays at v6, its rows kept.
+    // A step that fails: the file stays at v7, its rows kept.
     std::vector<WorldStore::Migration> broken = WorldStore::migrations();
-    broken.push_back({7, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
+    broken.push_back({8, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
     EXPECT_TRUE(WorldStore::open(path, "first", &why, broken) == nullptr);
-    EXPECT_TRUE(why.find("migration to version 7") != std::string::npos);
-    // A future step: v6 to v7, the rows kept, the column there.
+    EXPECT_TRUE(why.find("migration to version 8") != std::string::npos);
+    // A future step: v7 to v8, the rows kept, the column there.
     std::vector<WorldStore::Migration> next = WorldStore::migrations();
-    next.push_back({7, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
+    next.push_back({8, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
     {
         auto store = WorldStore::open(path, "first", &why, next);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(7));
+        EXPECT_EQ(store->schemaVersion(), int64_t(8));
         const auto rows = store->rows("SELECT id, title FROM pilots ORDER BY id");
         ASSERT_TRUE(rows.size() == 2);
         EXPECT_TRUE(rows[0][1] == "prospector");
@@ -200,14 +205,14 @@ TEST(save_migrations_v0_to_v6_and_a_future_step) {
         ASSERT_TRUE(back.has_value());
         EXPECT_TRUE(*back == sorted(sample()));
     }
-    // This build (v6) refuses a v7 file.
+    // This build (v7) refuses a v8 file.
     EXPECT_TRUE(WorldStore::open(path, "first", &why) == nullptr);
-    EXPECT_TRUE(why.find("schema version 7, this server knows 6") != std::string::npos);
+    EXPECT_TRUE(why.find("schema version 8, this server knows 7") != std::string::npos);
 }
 
 TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     // A save made before the world's clock (schema 1): opened by this
-    // build, it migrates to 6 and the world's clock starts at the furthest
+    // build, it migrates to 7 and the world's clock starts at the furthest
     // region's, so the hour goes on from about where it was.
     const std::string path = fresh("v1clock");
     std::string why;
@@ -221,7 +226,7 @@ TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(6));
+    EXPECT_EQ(store->schemaVersion(), int64_t(7));
     const auto back = store->load(&why);
     ASSERT_TRUE(back.has_value());
     const double furthest = 321.5;
@@ -242,7 +247,7 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     // (600 XP earned at a tenth) with picks, a finished Citadel and a
     // Derrick going up. Loaded, it is level 10 with 9 points to spend, the
     // picks gone, the Citadel and Derrick blueprints, the Citadel's feat
-    // without its XP, and the reset told on its login; saved, it is v6.
+    // without its XP, and the reset told on its login; saved, it is v7.
     const std::string path = fresh("v2levels");
     std::string why;
     const std::vector<WorldStore::Migration> v2(WorldStore::migrations().begin(), WorldStore::migrations().begin() + 2);
@@ -264,7 +269,7 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(6));
+    EXPECT_EQ(store->schemaVersion(), int64_t(7));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);

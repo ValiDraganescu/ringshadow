@@ -14,6 +14,7 @@
 #include "WorldClock.h"
 
 #include <cstdint>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -403,6 +404,18 @@ public:
     int64_t owned(PilotId pilot, StructureKind kind) const;
     /// A site's id, "<region id>/<site name>".
     std::string siteId(size_t region, size_t site) const;
+    // MARK: The rig (P7, docs/prospector-progression.md "Foundry and Lab"; WorldRig.cpp)
+
+    /// The pilot's Foundry starts making `module` at `mark`, paid from the
+    /// wallet; its Lab starts researching `mark`; `mark` is fitted from the
+    /// stores at its own Citadel or Hab Dome (0: taken off). The reason
+    /// when refused.
+    std::optional<std::string> make(PilotId pilot, Module module, int64_t mark);
+    std::optional<std::string> research(PilotId pilot, Module module, int64_t mark);
+    std::optional<std::string> fit(PilotId pilot, Module module, int64_t mark);
+    /// It owns a finished building of `kind` somewhere in the world.
+    bool ownsFinished(PilotId pilot, StructureKind kind) const;
+
     // MARK: KSTR contracts (docs/contracts.md, K1; WorldContracts.cpp)
 
     /// The pilot's contracts today (empty: not a world, or not drawn yet:
@@ -653,6 +666,12 @@ private:
     /// Where a flight lands, on the ground of its region.
     Vec2 landing(const Flight& f) const;
     // WorldContracts.cpp.
+    /// Each step: the Foundries' and Labs' jobs done by now (P7).
+    void rigs();
+    bool ownsFinished(const PilotState& p, StructureKind kind) const;
+    /// The driven Prospector stands where it unloads at one of its own
+    /// finished buildings of these kinds.
+    bool atOwn(PilotId pilot, const PilotState& p, std::initializer_list<StructureKind> kinds);
     /// Each step: a new day's draw, the reach contracts.
     void contracts();
     /// Fills the done and abandoned slots (all three on the first day).

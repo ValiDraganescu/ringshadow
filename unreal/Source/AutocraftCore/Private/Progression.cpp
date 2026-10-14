@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 namespace ac {
 
@@ -732,6 +733,8 @@ Boost ProspectorProgress::skillBoost(SkillStat stat) const {
     for (const auto& [s, rank] : ranks)
         for (const SkillEffect& e : Progression::effects(s, rank))
             if (const auto* x = e.as<SkillEffect::Stat>(); x && x->stat == stat) b.add(x->change);
+    for (const SkillEffect& e : rig.effects())
+        if (const auto* x = e.as<SkillEffect::Stat>(); x && x->stat == stat) b.add(x->change);
     return b;
 }
 
@@ -807,6 +810,196 @@ std::optional<int64_t> ProspectorProgress::respec(int64_t hydrogen) {
     freeRespec = false;
     signature = Progression::signature();
     return cost;
+}
+
+// MARK: - The rig (P7)
+
+const std::vector<Module>& Modules::all() {
+    static const std::vector<Module> list{Module::drillHead, Module::cargoPod, Module::plate, Module::torchTip,
+                                          Module::surveyLens};
+    return list;
+}
+
+std::string Modules::title(Module m) {
+    switch (m) {
+    case Module::drillHead: return "Drill head";
+    case Module::cargoPod: return "Cargo pod";
+    case Module::plate: return "Plate";
+    case Module::torchTip: return "Torch tip";
+    case Module::surveyLens: return "Survey lens";
+    }
+    return "";
+}
+
+std::string Modules::markName(int64_t mark) {
+    static const char* names[] = {"Mk I", "Mk II", "Mk III"};
+    return mark >= 1 && mark <= marks ? names[mark - 1] : "";
+}
+
+namespace {
+
+/// Row `mark` − 1 of a three-mark table (0 out of range).
+template <class T> T row(const std::array<T, 3>& table, int64_t mark) {
+    return mark >= 1 && mark <= Modules::marks ? table[size_t(mark - 1)] : T{};
+}
+
+} // namespace
+
+int64_t Modules::ore(int64_t mark) { return row<int64_t>({100, 300, 800}, mark); }
+int64_t Modules::hydrogen(int64_t mark) { return row<int64_t>({50, 200, 600}, mark); }
+double Modules::makeTime(int64_t mark) { return row<double>({60, 180, 480}, mark); }
+int64_t Modules::researchHydrogen(int64_t mark) { return row<int64_t>({0, 300, 900}, mark); }
+double Modules::researchTime(int64_t mark) { return row<double>({0, 600, 1800}, mark); }
+double Modules::share(int64_t mark) { return row<double>({0.08, 0.16, 0.25}, mark); }
+
+std::vector<SkillEffect> Modules::effects(Module m, int64_t mark) {
+    const double s = share(mark);
+    if (!(s > 0)) return {};
+    auto driven = [](Stat stat, Change change) { return SkillEffect{SkillEffect::Core{Effect::Stat{stat, Scope::Driven{}, change}}}; };
+    switch (m) {
+    case Module::drillHead: return {driven(Stat::Drill{}, Change::Percent{s})};
+    case Module::cargoPod: return {driven(Stat::OreCarry{}, Change::Percent{s}), driven(Stat::HydrogenCarry{}, Change::Percent{s})};
+    // The sim adds hp as `.plus`: the share of the Prospector's own.
+    case Module::plate: return {driven(Stat::Hp{}, Change::Plus{std::round(s * Rules::hp(UnitKind::prospector))})};
+    case Module::torchTip:
+        return {driven(Stat::Damage{}, Change::Percent{s}), driven(Stat::Range{}, Change::Plus{0.25 * double(mark)})};
+    case Module::surveyLens:
+        return {driven(Stat::Sight{}, Change::Percent{s}),
+                SkillEffect{SkillEffect::Stat{SkillStat::chipChance, Change::Percent{s}}}};
+    }
+    return {};
+}
+
+std::string Modules::text(Module m, int64_t mark) {
+    const double s = share(mark);
+    if (!(s > 0)) return "";
+    const std::string pct = "+" + std::to_string(int(std::lround(s * 100))) + "%";
+    switch (m) {
+    case Module::drillHead: return "Drill " + pct;
+    case Module::cargoPod: return "Ore and MH a trip " + pct;
+    case Module::plate: return "Hp +" + std::to_string(int(std::lround(s * Rules::hp(UnitKind::prospector))));
+    case Module::torchTip: {
+        char range[16];
+        std::snprintf(range, sizeof range, "%.2g", 0.25 * double(mark));
+        return "Torch damage " + pct + ", range +" + range + " cells";
+    }
+    case Module::surveyLens: return "Sight " + pct + ", survey chips " + pct;
+    }
+    return "";
+}
+
+int64_t Rig::fittedMark(Module m) const {
+    const auto it = fitted.find(m);
+    return it == fitted.end() ? 0 : it->second;
+}
+
+int64_t Rig::stock(Module m, int64_t mark) const {
+    for (const ModuleStock& s : stores)
+        if (s.module == m && s.mark == mark) return s.count;
+    return 0;
+}
+
+int64_t Rig::researchedMark(Module m) const {
+    const auto it = researched.find(m);
+    return std::max<int64_t>(1, it == researched.end() ? 1 : it->second);
+}
+
+void Rig::store(Module m, int64_t mark, int64_t n) {
+    if (n <= 0) return;
+    for (ModuleStock& s : stores)
+        if (s.module == m && s.mark == mark) {
+            s.count += n;
+            return;
+        }
+    stores.push_back({m, mark, n});
+    std::sort(stores.begin(), stores.end(), [](const ModuleStock& a, const ModuleStock& b) {
+        return std::pair(a.module, a.mark) < std::pair(b.module, b.mark);
+    });
+}
+
+bool Rig::take(Module m, int64_t mark) {
+    for (auto it = stores.begin(); it != stores.end(); ++it)
+        if (it->module == m && it->mark == mark && it->count > 0) {
+            if (--it->count == 0) stores.erase(it);
+            return true;
+        }
+    return false;
+}
+
+std::optional<std::string> Rig::makeRefusal(Module m, int64_t mark, int64_t ore, int64_t hydrogen) const {
+    if (mark < 1 || mark > Modules::marks) return std::string("No such mark");
+    const std::string name = Modules::title(m) + " " + Modules::markName(mark);
+    if (making) return "The Foundry is busy: " + Modules::title(making->module) + " " + Modules::markName(making->mark);
+    if (researchedMark(m) < mark) return name + " needs research at the Lab first";
+    if (ore < Modules::ore(mark)) return std::string("Not enough ore");
+    if (hydrogen < Modules::hydrogen(mark)) return std::string("Not enough MH");
+    return std::nullopt;
+}
+
+std::optional<std::string> Rig::researchRefusal(Module m, int64_t mark, int64_t hydrogen) const {
+    if (mark < 2 || mark > Modules::marks) return std::string("Only Mk II and Mk III are researched");
+    const std::string name = Modules::title(m) + " " + Modules::markName(mark);
+    if (researchedMark(m) >= mark) return name + " is researched already";
+    if (research) return "The Lab is busy: " + Modules::title(research->module) + " " + Modules::markName(research->mark);
+    if (researchedMark(m) < mark - 1) return name + " needs " + Modules::markName(mark - 1) + " researched first";
+    if (hydrogen < Modules::researchHydrogen(mark)) return std::string("Not enough MH");
+    return std::nullopt;
+}
+
+std::optional<std::string> Rig::fitRefusal(Module m, int64_t mark) const {
+    if (mark < 0 || mark > Modules::marks) return std::string("No such mark");
+    if (mark == 0) {
+        if (fittedMark(m) == 0) return "No " + Modules::title(m) + " fitted";
+        return std::nullopt;
+    }
+    if (fittedMark(m) == mark) return Modules::title(m) + " " + Modules::markName(mark) + " is fitted already";
+    if (stock(m, mark) <= 0) return "No " + Modules::title(m) + " " + Modules::markName(mark) + " in your stores";
+    return std::nullopt;
+}
+
+bool Rig::make(Module m, int64_t mark, int64_t ore, int64_t hydrogen, double now) {
+    if (makeRefusal(m, mark, ore, hydrogen)) return false;
+    making = ModuleJob{m, mark, now + Modules::makeTime(mark)};
+    return true;
+}
+
+bool Rig::startResearch(Module m, int64_t mark, int64_t hydrogen, double now) {
+    if (researchRefusal(m, mark, hydrogen)) return false;
+    research = ModuleJob{m, mark, now + Modules::researchTime(mark)};
+    return true;
+}
+
+bool Rig::fit(Module m, int64_t mark) {
+    if (fitRefusal(m, mark)) return false;
+    if (mark > 0) take(m, mark);
+    if (const int64_t old = fittedMark(m)) store(m, old);
+    if (mark > 0) fitted[m] = mark;
+    else fitted.erase(m);
+    return true;
+}
+
+std::pair<std::optional<ModuleJob>, std::optional<ModuleJob>> Rig::finish(double now) {
+    std::pair<std::optional<ModuleJob>, std::optional<ModuleJob>> out;
+    if (making && making->done <= now + 1e-9) {
+        store(making->module, making->mark);
+        out.first = making;
+        making.reset();
+    }
+    if (research && research->done <= now + 1e-9) {
+        researched[research->module] = std::max(researchedMark(research->module), research->mark);
+        out.second = research;
+        research.reset();
+    }
+    return out;
+}
+
+std::vector<SkillEffect> Rig::effects() const {
+    std::vector<SkillEffect> out;
+    for (const auto& [m, mark] : fitted) {
+        const auto e = Modules::effects(m, mark);
+        out.insert(out.end(), e.begin(), e.end());
+    }
+    return out;
 }
 
 } // namespace ac

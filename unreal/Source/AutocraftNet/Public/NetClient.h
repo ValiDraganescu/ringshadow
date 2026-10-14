@@ -70,6 +70,11 @@ public:
     uint32_t slot(int64_t index, std::optional<Skill> skill);
     /// Drop an open KSTR contract (docs/contracts.md).
     uint32_t abandon(uint32_t contract);
+    /// The rig (P7): the Foundry makes `module` at `mark`, the Lab researches
+    /// `mark`, `mark` is fitted at home (0: taken off).
+    uint32_t make(Module module, int64_t mark);
+    uint32_t research(Module module, int64_t mark);
+    uint32_t fit(Module module, int64_t mark);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

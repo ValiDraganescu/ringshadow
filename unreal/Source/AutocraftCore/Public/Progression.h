@@ -282,6 +282,97 @@ struct SkillSpend {
     bool operator==(const SkillSpend&) const = default;
 };
 
+/// A rig module (docs/prospector-progression.md, "Foundry and Lab"): the
+/// Prospector has one slot of each. Append only: saves store the name.
+enum class Module : uint8_t { drillHead, cargoPod, plate, torchTip, surveyLens };
+
+/// Modules of one kind and mark waiting in the pilot's stores.
+struct ModuleStock {
+    Module module{};
+    int64_t mark = 1;
+    int64_t count = 0;
+    bool operator==(const ModuleStock&) const = default;
+};
+
+/// A Foundry making, or a Lab researching, `module` at `mark`: done at
+/// `done` on the world's clock (seconds).
+struct ModuleJob {
+    Module module{};
+    int64_t mark = 1;
+    double done = 0;
+    bool operator==(const ModuleJob&) const = default;
+};
+
+/// The rig's numbers: marks, prices, times and what a module does.
+struct AUTOCRAFTCORE_API Modules {
+    /// Mk I to Mk III.
+    static constexpr int64_t marks = 3;
+    /// Every module, in the fitting screen's order.
+    static const std::vector<Module>& all();
+    /// "Drill head".
+    static std::string title(Module m);
+    /// "Mk II".
+    static std::string markName(int64_t mark);
+    /// What making one costs at the Foundry: 100 + 50, 300 + 200, 800 + 600.
+    static int64_t ore(int64_t mark);
+    static int64_t hydrogen(int64_t mark);
+    /// The Foundry's time for one (world seconds): 60, 180, 480.
+    static double makeTime(int64_t mark);
+    /// What the Lab's research of a mark costs and takes: Mk I none, Mk II
+    /// 300 MH and 10 minutes, Mk III 900 MH and 30.
+    static int64_t researchHydrogen(int64_t mark);
+    static double researchTime(int64_t mark);
+    /// A mark's step: +8%, +16%, +25%.
+    static double share(int64_t mark);
+    /// What a fitted module of `mark` does, as the tree's blocks (0: none).
+    static std::vector<SkillEffect> effects(Module m, int64_t mark);
+    /// In a few words for the fitting screen: "Drill +16%".
+    static std::string text(Module m, int64_t mark);
+};
+
+/// The pilot's rig (P7): its fitted modules, its stores, the marks the Lab
+/// has opened, the Foundry's job and the Lab's. Where the pilot stands and
+/// whether it owns a Foundry or a Lab are the server's to check.
+struct AUTOCRAFTCORE_API Rig {
+    /// The mark in each slot (none: empty).
+    std::map<Module, int64_t> fitted;
+    /// Made and not fitted, or taken off; by module, then mark.
+    std::vector<ModuleStock> stores;
+    /// The highest mark researched per module (Mk I needs none).
+    std::map<Module, int64_t> researched;
+    /// The Foundry's job and the Lab's (one at a time each).
+    std::optional<ModuleJob> making;
+    std::optional<ModuleJob> research;
+
+    /// The mark fitted (0: none), in stores, researched (at least 1).
+    int64_t fittedMark(Module m) const;
+    int64_t stock(Module m, int64_t mark) const;
+    int64_t researchedMark(Module m) const;
+    /// Puts `n` into the stores; takes one out (false: none there).
+    void store(Module m, int64_t mark, int64_t n = 1);
+    bool take(Module m, int64_t mark);
+
+    /// Why the Foundry can't start `m` at `mark` with this in the wallet, or nil.
+    std::optional<std::string> makeRefusal(Module m, int64_t mark, int64_t ore, int64_t hydrogen) const;
+    /// Why the Lab can't start researching `mark` of `m`, or nil.
+    std::optional<std::string> researchRefusal(Module m, int64_t mark, int64_t hydrogen) const;
+    /// Why `mark` of `m` can't be fitted from the stores (0: take it off), or nil.
+    std::optional<std::string> fitRefusal(Module m, int64_t mark) const;
+    /// Starts a job done at `now` plus its time (false, unchanged: refused).
+    /// The server takes the price.
+    bool make(Module m, int64_t mark, int64_t ore, int64_t hydrogen, double now);
+    bool startResearch(Module m, int64_t mark, int64_t hydrogen, double now);
+    /// Fits `mark` from the stores, the old one back into them (0: off).
+    bool fit(Module m, int64_t mark);
+    /// The jobs done by `now`: the module into the stores, the mark opened.
+    /// What finished (made, researched).
+    std::pair<std::optional<ModuleJob>, std::optional<ModuleJob>> finish(double now);
+    /// What the fitted modules do, as the tree's blocks.
+    std::vector<SkillEffect> effects() const;
+
+    bool operator==(const Rig&) const = default;
+};
+
 /// A pilot's progression in a world: kept by the server, saved with the
 /// pilot (`SessionStore::encode`).
 struct AUTOCRAFTCORE_API ProspectorProgress {
@@ -314,6 +405,9 @@ struct AUTOCRAFTCORE_API ProspectorProgress {
     std::optional<double> chipAt;
     /// `Progression::signature` when the pilot last spent or respecced.
     std::string signature;
+    /// Its rig of modules (P7). Saved apart from the rest (the world's save
+    /// has a column for it, schema 7): the progress JSON leaves it out.
+    Rig rig;
 
     int64_t level() const { return Progression::level(xp); }
     int64_t rank(Skill s) const;
@@ -352,7 +446,7 @@ struct AUTOCRAFTCORE_API ProspectorProgress {
     std::optional<int64_t> respec(int64_t hydrogen);
 
     /// What the skills add up to for a `SkillStat` (`.plus` and `.percent`
-    /// of every rank learned).
+    /// of every rank learned, and of the fitted modules).
     Boost skillBoost(SkillStat stat) const;
     /// The level a building opens at for this pilot: its floor less Blueprint
     /// savant, at least 1.
@@ -391,6 +485,9 @@ template <> struct EnumInfo<Work> {
 };
 template <> struct EnumInfo<SiteKind> {
     static constexpr std::array<std::string_view, 4> names{"crate", "wreck", "cache", "vault"};
+};
+template <> struct EnumInfo<Module> {
+    static constexpr std::array<std::string_view, 5> names{"drillHead", "cargoPod", "plate", "torchTip", "surveyLens"};
 };
 template <> struct EnumInfo<Beacon> {
     static constexpr std::array<std::string_view, 3> names{"citadel", "habDome", "derrick"};
