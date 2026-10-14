@@ -550,3 +550,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N D suites: core 473, server 216, net 72 pass.
 - I Turrets read tiny, tracers don't show, gatling unpainted → N1b art pass.
 - T D3 (turret upgrades) next for wt2.
+- D Manager: any pilot may upgrade any realm turret; marks die with it.
+- T D3 briefed to wt2 (protocol 21, request 19).
