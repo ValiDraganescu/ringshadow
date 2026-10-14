@@ -290,3 +290,11 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D manager: hidden runs take turns via build/hidden-run.lock.
 - D user: editor builds are heavy; build only before a hidden run.
 - D manager: one build at a time via build/editor-build.lock; skip if unchanged.
+- T P3 done 3602773: run shoots 01–06 on protocol 5.
+- T V2 done ad91949: opal ore, night glow, giant west, clouds.
+- N Manager: core 439, server 93, net 66 pass; shots checked.
+- I V2 cloud mode 1: +0.6 ms, edge popping in motion.
+- I HUD still shows old LV1 0/60 XP bar: P5.
+- D Manager: M7 opened beside M6 (W1, E1, E2, K1, F1).
+- D Manager: ringshadow sweep is the signature world event.
+- T P4b → world-clock; W1 → world-look.
