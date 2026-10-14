@@ -30,8 +30,9 @@ Runs alongside the end of M6 (P4b–P7): workers freed from M6 start here.
 | G1 | Rig screen (J / RIG tab): fitting, Foundry, Lab with prices, countdowns, refusals; module icons | P7 | done |
 | G2 | Client screens: KSTR contract panel, respawn countdown, Hab Dome depot, own pads and Ringwalker in the flight menu, worldKinds build menu; P5 follow-ups | K1, P6 | done |
 | J1 | Sound for the new moments: ringshadow approach and pass, starfall streak and impact, crater hum, level-up, blueprint found, contract done, module made; offline WAV checks only | E1, E2, P5 | done |
-| W2 | Blueprint sites you can see: a model per site kind (crate, wreck, cache, vault) at every site, opened state, beacon at distance; the contract panel compact by default | P4b, G2 | in progress |
+| W2 | Blueprint sites you can see: a model per site kind (crate, wreck, cache, vault) at every site, opened state, beacon at distance; the contract panel compact by default | P4b, G2 | done |
 | H1 | The home screen worth opening: key art of the Prospector under the giant and its rings (no war art), the RINGSHADOW title, the MMO entry first, a living background | R1 | in progress |
+| O1 | The first ten minutes: a guided opening through the KSTR radio (land, the crate, the Citadel, first ore home, the Derrick, first level and first skill point), each step a contract with a clear marker and a line of radio voice text; then the normal daily contracts | K1, G2, W2 | in progress |
 | S1 | Fast picture runs: a dev-only clock jump mid-run (no waiting for night), a starfall lead of ~8–10 s, `-AcMmoShotsOnly=` to shoot chosen moments; Starfall set under 1 min with the same 9 pictures (user-approved, via the build-train session) | E2 | done |
 
 Done when: in a hidden run a pilot starts at Prospect Landing, takes a

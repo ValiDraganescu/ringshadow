@@ -384,3 +384,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N F1: 12 shots (noon, dusk) checked; core 452, server 144, net 67.
 - I cf09855 (S1) may have misplaced lines like 5007b79: world-look checks.
 - T F1b jump-jet MH and flight sounds → world-clock.
+- T W2 done 5c39f0d: 4 site models, gold columns, compact panel; 12 shots.
+- I W2: no columns across region edges; lamps white by day.
+- N W2 task: 105 min against 90.
+- T O1 first ten minutes → progression-core.
