@@ -113,6 +113,16 @@
 //   04 the descent onto Cold Fork's pad on retro thrust
 //   05 the touch down: the dust thrown out     06 down, the pilot's view back
 //
+// -AcMmoShotsB1 (it adds -AcMmoDevRig: a Citadel to unload at): the drill's
+// sparks stopping and the AI's walk (docs/mmorpg-m8.md B1),
+// DIR/b1-NN-moment.png. Each stop logs how long sparks lived on after it
+// (`mmoshots: b1: ... sparks gone N s after`); the AI's walk logs the drawn
+// unit's speed jitter (`mmoshots: b1: AI walk ...`):
+//   01 drilling, third person    02 0.3 s after the key let go   03 1 s after
+//   04 drilling, first person    05 0.3 s after the key let go   06 1 s after
+//   07 0.3 s after walking off the vein, first person, the key still held
+//   then handed back: 15 s of the AI mining, top-down, measured, no picture.
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -141,6 +151,9 @@
 // Done when the log's last line reads `flowtest: done, 0 failed`.
 #include "AcGameFlow.h"
 #include "AcDaylight.h"
+#include "AcEffects.h"
+#include "AcEffectsBursts.h"
+#include "AcParticles.h"
 
 #include "AcGasGiant.h"
 #include "AcHudStyle.h"
@@ -219,6 +232,77 @@ namespace
 			if (B.kind == ac::StructureKind::habDome && B.owner == ac::Pilot::player) return &B;
 		}
 		return nullptr;
+	}
+
+	/// -AcMmoShotsB1: when the drill was last stopped, when sparks were
+	/// last alive after it, and the drawn unit's walk under its AI (wall
+	/// seconds; the drawn position and the newest snapshot's).
+	double B1StoppedAt = -1;
+	double B1SparksAt = -1;
+	/// Into first person before drilling again (after the third person's).
+	bool B1ToFirst = false;
+	struct FB1Sample
+	{
+		double At;
+		ac::Vec2 Drawn;
+		ac::Vec2 Told;
+	};
+	TArray<FB1Sample> B1Walk;
+
+	/// The AI's walk as drawn: over the frames where the server moved it
+	/// steadily (its newest snapshot 0.1 cell on in every 0.3 s, 0.3 s
+	/// either side), the speed each frame against the mean of the 0.5 s
+	/// around it. Returns the line to log; `Jitter` the rms, a fraction.
+	FString B1WalkStats(const TArray<FB1Sample>& W, double& Jitter, int32& Frames, int32& Stalls)
+	{
+		Jitter = 0;
+		Frames = 0;
+		Stalls = 0;
+		const int32 N = W.Num();
+		TArray<bool> Moving;
+		Moving.SetNum(N);
+		for (int32 I = 0, J = 0; I < N; ++I)
+		{
+			while (J < I && W[J + 1].At <= W[I].At - 0.3) ++J;
+			Moving[I] = W[I].At - W[J].At >= 0.25 && ac::distance(W[I].Told, W[J].Told) > 0.1;
+		}
+		TArray<double> Speed;
+		Speed.SetNum(N);
+		for (int32 I = 1; I < N; ++I)
+		{
+			const double Dt = W[I].At - W[I - 1].At;
+			Speed[I] = Dt > 1e-4 ? ac::distance(W[I].Drawn, W[I - 1].Drawn) / Dt : 0.0;
+		}
+		double Sum = 0, Sq = 0, Worst = 0, Mean = 0;
+		for (int32 I = 1; I < N; ++I)
+		{
+			bool bSteady = true;
+			double WSum = 0, WTime = 0;
+			for (int32 K = I; K >= 1 && W[K].At >= W[I].At - 0.3 && bSteady; --K) bSteady = Moving[K];
+			for (int32 K = I; K < N && W[K].At <= W[I].At + 0.3 && bSteady; ++K) bSteady = Moving[K];
+			if (!bSteady) continue;
+			for (int32 K = 1; K < N; ++K)
+			{
+				if (FMath::Abs(W[K].At - W[I].At) > 0.25) continue;
+				WSum += ac::distance(W[K].Drawn, W[K - 1].Drawn);
+				WTime += W[K].At - W[K - 1].At;
+			}
+			if (WTime <= 0 || WSum <= 0) continue;
+			const double Around = WSum / WTime;
+			const double Off = (Speed[I] - Around) / Around;
+			Frames += 1;
+			Sum += Speed[I];
+			Sq += Off * Off;
+			Worst = FMath::Max(Worst, FMath::Abs(Off));
+			if (Speed[I] < 0.2 * Around) Stalls += 1;
+		}
+		if (Frames > 0)
+		{
+			Jitter = FMath::Sqrt(Sq / Frames);
+			Mean = Sum / Frames;
+		}
+		return FString::Printf(TEXT("%d steady frames of %d, %.2f cells/s, speed jitter %.1f%% rms (worst %.0f%%), %d stalled frames"), Frames, N,
+			Mean, 100 * Jitter, 100 * Worst, Stalls);
 	}
 
 	/// -AcMmoShotsClip: whether the recorder is held for the first moment,
@@ -328,6 +412,14 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	};
 
 	if (ClipEnded) return;
+	// -AcMmoShotsB1: after a drill stop, when sparks were last alive (every
+	// frame, a picture being written or not).
+	if (B1StoppedAt >= 0 && Sim)
+	{
+		const UAcEffects* Fx = UAcEffects::Get(this);
+		const FAcParticles* P = Fx ? AcEffectsBursts::ParticlesOf(Fx) : nullptr;
+		if (P && P->Alive(EAcParticle::WeldSparks, Sim->LastFrame().Time) > 0) B1SparksAt = Now;
+	}
 	// A picture asked for: wait until it is written (the writer is async).
 	if (!Shots.Pending.IsEmpty())
 	{
@@ -451,7 +543,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp)) FCommandLine::Append(TEXT(" -AcMmoDevXp=1100"));
 		// -AcMmoShotsG2: the dev rig's home (a Citadel, level 25, a full wallet),
 		// for this step only (the flow steps before it in the run go without).
-		if ((FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2")))
+		if ((FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -493,6 +586,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
 			// -AcMmoShotsFlight: only a pad flight (520-527).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsFlight"))) T.Phase = 520;
+			// -AcMmoShotsB1: only the drill's sparks and the AI's walk (900-919).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1"))) T.Phase = 900;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -2563,6 +2658,171 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			return;
 		}
 	}
+	// MARK: -AcMmoShotsB1
+	case 900:
+	{
+		// The dev rig's home; the nearest ore with some left.
+		if (!(S && CitadelOf(*S) && Since() > 3.0))
+		{
+			TimedOut(TEXT("the dev rig's Citadel"));
+			return;
+		}
+		int64 Best = -1;
+		for (int64 I = 0; I < (int64)S->patches.size(); ++I)
+		{
+			if (S->patches[I].remaining <= 0) continue;
+			if (Best < 0 || ac::distance(S->patches[I].position, U->position) < ac::distance(S->patches[Best].position, U->position)) Best = I;
+		}
+		Check(Best >= 0, TEXT("ore in the start region"));
+		if (Best < 0)
+		{
+			Finish();
+			return;
+		}
+		Shots.Patch = Best;
+		Route({FVector2D(S->patches[Best].position.x, S->patches[Best].position.y)});
+		Advance();
+		return;
+	}
+	case 901:
+	case 906:
+	case 911:
+	{
+		// Up to the vein until the act key would drill it, then hold it.
+		if (B1ToFirst)
+		{
+			B1ToFirst = false;
+			Pilot->ToggleView();
+		}
+		const ac::Vec2 P = S->patches[Shots.Patch].position;
+		const std::optional<ac::PilotTarget> Target = U ? M->simulation().pilotTarget(*U) : std::nullopt;
+		if (Target && Target->is<ac::PilotTarget::Patch>())
+		{
+			Stop(Face(P));
+			Pilot->Press(true);
+			Advance();
+			return;
+		}
+		if (Drive() == 1) Route({FVector2D(P.x, P.y)});
+		if (Now - Shots.StallSince > 4.0) Stalled(TEXT("to the ore"));
+		return;
+	}
+	case 902:
+	case 907:
+	case 912:
+	{
+		auto Sparks = [&] {
+			const UAcEffects* Fx = UAcEffects::Get(this);
+			const FAcParticles* P = Fx ? AcEffectsBursts::ParticlesOf(Fx) : nullptr;
+			return P && Sim ? P->Alive(EAcParticle::WeldSparks, Sim->LastFrame().Time) : -1;
+		};
+		// Drilling a moment: the sparks fly.
+		if (!(U && U->task == ac::Unit::Task::mining && Since() > 1.5))
+		{
+			TimedOut(TEXT("drilling"), 15);
+			return;
+		}
+		const int32 Alive = Sparks();
+		Check(Alive > 0, FString::Printf(TEXT("b1: sparks fly while drilling (%d alive)"), Alive));
+		if (T.Phase == 912)
+		{
+			// Walked off the vein, the key still held: that stops the drill.
+			Stop(Face(S->patches[Shots.Patch].position));
+			Pilot->SetTestInput(FVector2D(0, 1), Pilot->Yaw());
+			B1StoppedAt = Now;
+			B1SparksAt = Now;
+			T.Phase = 915;
+			T.PhaseAt = Now;
+			return;
+		}
+		Shoot(T.Phase == 902 ? TEXT("b1-01-drilling-third") : TEXT("b1-04-drilling-first"),
+			FString::Printf(TEXT("drilling, %d sparks alive"), Alive));
+		return;
+	}
+	case 903:
+	case 908:
+		// The key let go.
+		Pilot->Press(false);
+		B1StoppedAt = Now;
+		B1SparksAt = Now;
+		Advance();
+		return;
+	case 904:
+	case 905:
+	case 909:
+	case 910:
+	case 915:
+	case 916:
+	{
+		const UAcEffects* Fx = UAcEffects::Get(this);
+		const FAcParticles* P = Fx ? AcEffectsBursts::ParticlesOf(Fx) : nullptr;
+		const int32 Alive = P && Sim ? P->Alive(EAcParticle::WeldSparks, Sim->LastFrame().Time) : -1;
+		const bool bFirst = T.Phase >= 909;
+		const bool bLate = T.Phase == 905 || T.Phase == 910 || T.Phase == 916;
+		const double At = bLate ? 1.0 : 0.3;
+		if (T.Phase == 915 && Now - B1StoppedAt > 0.4) Stop(Pilot->Yaw());
+		if (Now - B1StoppedAt < At) return;
+		const TCHAR* What = T.Phase == 904 ? TEXT("b1-02-stopped-third") : T.Phase == 905 ? TEXT("b1-03-stopped-third-1s")
+			: T.Phase == 909 ? TEXT("b1-05-stopped-first") : T.Phase == 910 ? TEXT("b1-06-stopped-first-1s")
+			: T.Phase == 915 ? TEXT("b1-07-walked-off-first") : nullptr;
+		const TCHAR* How = T.Phase >= 915 ? TEXT("walked off the vein") : TEXT("let go of the key");
+		if (bLate)
+		{
+			// Sparks die in 0.35-0.45 s (WeldSparks' life), after the server has the stop: gone by 0.7 s.
+			const double Gone = B1SparksAt - B1StoppedAt;
+			UE_LOG(LogAutocraft, Display, TEXT("mmoshots: b1: %s, %s: sparks gone %.2f s after (task %d, paused clock %.1f s)"),
+				bFirst ? TEXT("first person") : TEXT("third person"), How, Gone, U ? int32(U->task) : -1, Sim ? Sim->Clock() - Sim->GameTime() : -1.0);
+			Check(Gone < 0.7, FString::Printf(TEXT("b1: %s, %s: the sparks stopped within 0.7 s (%.2f s)"),
+				bFirst ? TEXT("first person") : TEXT("third person"), How, Gone));
+			if (T.Phase == 916)
+			{
+				Pilot->Press(false);
+				Stop(Pilot->Yaw());
+				Advance();
+				return;
+			}
+			// First person next (906), after the picture.
+			if (T.Phase == 905) B1ToFirst = true;
+		}
+		if (T.Phase == 915)
+		{
+			Shoot(What, FString::Printf(TEXT("%s, 0.3 s on: %d sparks alive"), How, Alive));
+			T.Phase = 916;
+			return;
+		}
+		Shoot(What, FString::Printf(TEXT("%s, %.1f s on: %d sparks alive"), How, At, Alive));
+		return;
+	}
+	case 917:
+		// Handed back: its AI drives it (top-down), measured, no picture.
+		if (Since() < 1.0) return;
+		Pilot->Leave();
+		B1StoppedAt = -1;
+		B1Walk.Reset();
+		Advance();
+		return;
+	case 918:
+	{
+		const ac::Unit* Told = M ? M->unit(Shots.Unit) : nullptr;
+		const ac::Unit* Drawn = nullptr;
+		if (Sim)
+			for (const ac::Unit& V : Sim->State().units)
+				if (V.id == Shots.Unit) Drawn = &V;
+		if (Drawn && Told && !Mmo->Driven()) B1Walk.Add({Now, Drawn->position, Told->position});
+		if (Since() < 16.0) return;
+		double Jitter = 0;
+		int32 Frames = 0, Stalls = 0;
+		const FString Line = B1WalkStats(B1Walk, Jitter, Frames, Stalls);
+		UE_LOG(LogAutocraft, Display, TEXT("mmoshots: b1: AI walk: %s"), *Line);
+		Check(Frames >= 60, FString::Printf(TEXT("b1: the AI walked it (%d steady frames)"), Frames));
+		Check(Stalls == 0 && Jitter < 0.15, FString::Printf(TEXT("b1: the AI's walk drawn smoothly (%s)"), *Line));
+		Advance();
+		return;
+	}
+	case 919:
+		Check(Shots.Saved + Shots.Skipped == 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
 	default:
 		Check(Shots.Saved + Shots.Skipped == 22, FString::Printf(TEXT("%d pictures (%d skipped) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();

@@ -136,6 +136,8 @@ public:
 	const FStats& Totals() const { return Stats; }
 	/// Particles alive now (by their stamped lives), every kind.
 	int32 Alive(double Time) const;
+	/// The same for one kind (a run's check that sparks stop).
+	int32 Alive(EAcParticle Kind, double Time) const;
 
 	/// The `Key` of emitter `Slot` of object `Id`.
 	static uint64 KeyOf(int64 Id, uint32 Slot) { return (uint64(Id) << 8) ^ uint64(Slot & 0xff); }

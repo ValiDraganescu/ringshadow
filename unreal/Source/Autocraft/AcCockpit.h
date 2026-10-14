@@ -185,6 +185,12 @@ private:
 	TArray<FVector> MuzzlesWorld;
 	double LastTime = -1.0;
 	double LastDt = 0.0;
+	/// The particles' clock (`FAcFrame::Time`, which their shader ages them
+	/// on), this frame's and the step since the last: the sparks are born
+	/// on it, not on the render clock, or they show the paused seconds late
+	/// and linger as long after the drill stops.
+	double ParticleTime = -1.0;
+	double ParticleDt = 0.0;
 	bool bLoggedMuzzles = false;
 	const FAcModelInfo* CockpitModel = nullptr;
 

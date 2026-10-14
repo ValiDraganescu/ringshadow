@@ -740,3 +740,11 @@ int32 FAcParticles::Alive(const double Time) const
 		for (const double D : P->DiesAt) N += D > Time ? 1 : 0;
 	return N;
 }
+
+int32 FAcParticles::Alive(const EAcParticle Kind, const double Time) const
+{
+	if (!Batches.IsValidIndex(int32(Kind))) return 0;
+	int32 N = 0;
+	for (const double D : Batches[int32(Kind)]->DiesAt) N += D > Time ? 1 : 0;
+	return N;
+}

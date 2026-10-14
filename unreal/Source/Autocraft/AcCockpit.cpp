@@ -238,6 +238,8 @@ FAcCockpitCues UAcCockpitSubsystem::Cues(const AAcPilotPawn& Pawn, const ac::Uni
 	C.Dt = LastTime >= 0 ? FMath::Clamp(F.Clock - LastTime, 0.0, 0.1) : 0.0;
 	LastDt = C.Dt;
 	LastTime = F.Clock;
+	ParticleDt = ParticleTime >= 0 ? FMath::Clamp(F.Time - ParticleTime, 0.0, 0.1) : 0.0;
+	ParticleTime = F.Time;
 	const FAcPilotCamera& Eye = const_cast<AAcPilotPawn&>(Pawn).Eye();
 	C.Turn = Eye.Turn();
 	C.Speed = Eye.Speed();
@@ -309,6 +311,7 @@ void UAcCockpitSubsystem::OnFrame(const FAcFrame& F)
 		Build(U.kind, U.owner);
 		UnitId = U.id;
 		LastTime = -1.0;
+		ParticleTime = -1.0;
 		if (!Kind) return;
 	}
 	if (FieldMap != &Sim->Map() || !Field)
@@ -489,7 +492,7 @@ void UAcCockpitSubsystem::Apply(AAcPilotPawn& Pawn)
 				if (E.Size > 0) Emit.Size = E.Size * Scale;
 				if (E.Speed > 0) Emit.Speed = E.Speed * Scale;
 				Particles->Stream(EAcParticle(E.Kind), FAcParticles::KeyOf(UnitId, 200 + K), At * FrameWorld, E.Rate,
-					LastTime, LastDt, Emit);
+					ParticleTime, ParticleDt, Emit);
 			}
 		}
 	}

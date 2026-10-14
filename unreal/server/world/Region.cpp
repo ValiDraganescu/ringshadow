@@ -135,6 +135,7 @@ bool Region::take(PilotId pilot, int64_t unit) {
         return false;
     }
     it->second.drives = unit;
+    it->second.drove = unit;
     // Its skills on the unit it drives now.
     loadProgress(it->second);
     // Until its first input the unit stands, facing where it faces.

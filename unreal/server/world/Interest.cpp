@@ -13,7 +13,10 @@ namespace ac::server {
 Vec2 Region::focus(const Seat& seat, int64_t side) const {
     if (seat.drives)
         if (const auto i = sim_.unitIndex(*seat.drives)) return sim_.state.units[static_cast<size_t>(*i)].position;
-    // Not driving: the side's start base.
+    // Not driving: the unit it drove last, as its AI works it; else the
+    // side's start base.
+    if (seat.drove)
+        if (const auto i = sim_.unitIndex(*seat.drove)) return sim_.state.units[static_cast<size_t>(*i)].position;
     const GameState& s = sim_.state;
     if (side >= 0 && side < static_cast<int64_t>(s.players.size())) {
         const std::optional<int64_t> start = s.players[static_cast<size_t>(side)].start;
@@ -53,6 +56,10 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
         }
         if (seat.held.crosshair)
             if (const auto* on = seat.held.crosshair->as<Pilot::Crosshair::On>()) engaged.insert(on->_0);
+    } else if (seat.drove) {
+        // Handed back, the unit it drove is still the one it watches: in
+        // every snapshot, or its walk is drawn in steps.
+        engaged.insert(*seat.drove);
     }
     const int64_t driven = seat.drives.value_or(-1);
     auto rankOf = [&](int64_t id, bool targetsDriven) {

@@ -202,6 +202,9 @@ private:
         PilotInput held;
         int64_t lastApplied = -1;
         std::optional<int64_t> drives;
+        /// The unit it drove last: while it drives none, its snapshots
+        /// follow that one (its AI at work), not the start base.
+        std::optional<int64_t> drove;
         std::vector<GameEvent> events;
         int64_t snapshots = 0;
         std::unordered_map<int64_t, Waiting> waiting;
