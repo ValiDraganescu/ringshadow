@@ -43,6 +43,7 @@ constexpr Rgb wellColour{220, 232, 250};
 constexpr Rgb padColour{250, 206, 60};
 constexpr Rgb spawnColour{80, 235, 130};
 constexpr Rgb siteColour{232, 168, 36};
+constexpr Rgb nestColour{214, 72, 220};
 constexpr Rgb openingColour{60, 220, 240};
 constexpr Rgb borderColour{255, 236, 200};
 constexpr Rgb problemColour{255, 64, 64};
@@ -300,6 +301,17 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         label(r + Vec2(1.1, 0), t.name + " (" + std::string(rawValue(t.kind)) + ", " + std::string(rawValue(t.blueprint)) + ")",
               siteColour);
     }
+    // The Matriarch's nest (N3): her mound, and her horde's ring dashed.
+    if (built.nest) {
+        const Vec2 r = built.regionAt(*built.nest);
+        disc(r, 2.5, nestColour, 0.85);
+        ring(r, region::nestMound, 0.35, nestColour);
+        for (int k = 0; k < 48; k += 2) {
+            const double a = k * 2 * 3.14159265358979 / 48;
+            disc(r + Vec2(std::cos(a), std::sin(a)) * region::nestClear, 0.45, nestColour, 0.8);
+        }
+        label(r + Vec2(-region::nestMound * 2, region::nestMound + 1.5), "NEST (the Matriarch)", nestColour);
+    }
 
     // The grid, labelled every 8 cells (16 when cells are small).
     const int step = s >= 6 ? 8 : 16;
@@ -357,6 +369,7 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     swatch(padColour, "pad");
     swatch(spawnColour, "spawn");
     swatch(siteColour, "blueprint site");
+    swatch(nestColour, "nest (its horde's ring dotted)");
     swatch(openingColour, "opening (L: its floor level)");
     if (file.border) swatch(borderColour, "border outline (walls outside)");
     swatch(problemColour, "problem");

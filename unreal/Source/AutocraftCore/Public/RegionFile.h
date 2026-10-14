@@ -137,6 +137,9 @@ struct RegionFile {
     std::vector<Place> pads;
     std::vector<Place> spawns;
     std::vector<Site> sites;
+    /// The Matriarch's nest (docs/creatures.md, "The Matriarch"; N3): her
+    /// home and her horde's, in a brood level 4 region. Nil: none.
+    std::optional<Vec2> nest;
     /// By `Edge`.
     std::array<std::vector<Span>, 4> openings;
 
@@ -174,6 +177,10 @@ AUTOCRAFTCORE_API RegionFile starter(std::string id, MapStyle style, uint64_t se
 constexpr int64_t maxLevel = 4;
 
 constexpr double padRadius = 3.0;
+/// The nest's mound (N3): rocks and plants within this many cells of it
+/// give way; no pad within `nestClear` of it (the horde's ring).
+constexpr double nestMound = 6.0;
+constexpr double nestClear = 30.0;
 /// A flight leaves from within this many cells of a pad's centre: the
 /// foundation plate drawn on each pad is this wide a disc (the server's and
 /// the client's one rule, `nearestPad`).
@@ -193,6 +200,8 @@ struct AUTOCRAFTCORE_API Built {
     /// Ground coordinates.
     std::vector<Place> pads, spawns;
     std::vector<Site> sites;
+    /// The Matriarch's nest, ground coordinates (nil: none).
+    std::optional<Vec2> nest;
     std::array<std::vector<Span>, 4> openings;
     /// Base rocks and plants taken away because they stood on something
     /// crafted (a deposit, a well, a pad, a spawn point, a site, an
@@ -217,7 +226,8 @@ AUTOCRAFTCORE_API Built build(const RegionFile& file);
 /// meet their levels or are too steep; openings blocked or cut off from
 /// the region's open ground; sites on a cliff, in rock, on ore, a well or a
 /// pad's plate, or cut off (a vault: off high ground, or out of reach of
-/// both a ramp and a cliff hop). Empty: fine.
+/// both a ramp and a cliff hop); a nest off open ground, outside a brood
+/// level 4 region, or with a pad in its ring. Empty: fine.
 AUTOCRAFTCORE_API std::vector<Problem> validate(const RegionFile& file, const Built& built);
 
 /// How a pilot reaches a site: across the open ground, up a ramp to high

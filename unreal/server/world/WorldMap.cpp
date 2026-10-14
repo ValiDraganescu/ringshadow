@@ -702,6 +702,37 @@ void WorldMap::crossings() {
     }
 }
 
+bool WorldMap::devTransfer(PilotId pilot, size_t to, Vec2 at) {
+    const auto it = pilots_.find(pilot);
+    if (!world_ || it == pilots_.end() || to >= regions_.size()) return false;
+    PilotState& p = it->second;
+    if (p.flight || !p.unit || p.region == to || regions_[to]->driven()) return false;
+    Region& here = *regions_[p.region];
+    if (!here.simulation().state.unit(*p.unit)) return false;
+    // As a crossing hands it over (`crossings`), to a point of its own.
+    const auto clocks = takeClocks(p.region, *p.unit);
+    const Unit leaving = *here.release(*p.unit);
+    const int64_t lastInput = here.lastInputTick(pilot);
+    p.record = here.levels(pilot);
+    here.leave(pilot);
+    if (here.pilots().empty()) bankIn(PilotState{}, p.region);
+    arrive(pilot, p, to, leaving, regions_[to]->places()->regionAt(at), lastInput);
+    p.walkedIn = false;
+    giveClocks(to, *p.unit, clocks);
+    firstVisit(pilot, world_->regions[to].file.id);
+    Region& now = *regions_[to];
+    p.visit += 1;
+    net::RegionChange rc;
+    rc.visit = p.visit;
+    rc.region = now.description();
+    rc.regionId = world_->regions[to].file.id;
+    rc.driven = now.driving(pilot);
+    rc.serverTick = now.tick();
+    rc.time = now.simulation().state.time;
+    moves_.push_back(Moved{pilot, rc});
+    return true;
+}
+
 void WorldMap::landings() {
     for (auto& [pilot, p] : pilots_) {
         if (!p.flight || tick_ < p.flight->landsAt) continue;
@@ -797,6 +828,7 @@ std::optional<net::WorldMessage> WorldMap::worldMessage(PilotId pilot) const {
         out.column = g.column;
         out.row = g.row;
         for (const region::Place& p : g.file.pads) out.pads.push_back({p.name, p.at});
+        out.nest = g.file.nest;
         m.regions.push_back(out);
     }
     const auto it = pilots_.find(pilot);

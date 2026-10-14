@@ -622,8 +622,12 @@ struct ProgressMessage {
     /// D3: `upgraded`: a placed turret took a mark, told to every pilot in
     /// its region: `id` its kind and the stat ("gatling/air"), `by` who paid
     /// (the pilot's own `callsign`: it did), `value` the mark.
+    /// N3: `matriarch`: "down" to every pilot when she falls (`value`: the
+    /// pilots who fought her, `by`: the one who hurt her most); her share to
+    /// each of them, "share/<MH>/<blueprint>" (`value`: the ore); "back"
+    /// when she returns to her nest.
     enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
-                                    merc, upgraded };
+                                    merc, upgraded, matriarch };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -860,6 +864,9 @@ struct WorldMessage {
         int64_t column = 0;
         int64_t row = 0;
         std::vector<Pad> pads;
+        /// The Matriarch's nest (N3), region cells from the north-west
+        /// corner (nil: none).
+        std::optional<Vec2> nest{};
         bool operator==(const Region&) const = default;
     };
     int64_t columns = 0;

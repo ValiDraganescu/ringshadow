@@ -262,5 +262,6 @@
   "sites": [
     {"name": "Slag vault", "kind": "vault", "at": [30, 40], "blueprint": "spacedock"}
   ],
+  "nest": {"at": [122, 44]},
   "openings": {"north": [{"span": [41, 57], "level": 0}], "west": [{"span": [55, 69], "level": 0}]}
 }

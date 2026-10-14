@@ -234,6 +234,7 @@ std::vector<GameEvent> Simulation::step(double dt) {
     }
     // PathAhead's probe ends with its units: the searches are all asked.
     if (probing) return events;
+    if (!puddles.empty()) stepPuddles(dt);
     if (pilot) {
         pilot->act = false;
         pilot->ability = false;
@@ -3437,7 +3438,7 @@ bool Simulation::move(Unit& u, Vec2 target_, double stopAt, double dt) const {
                                                  : u.kind == Unit::Kind::atlas ? Rules::atlasBodyRate : Rules::prospectorTurnRate);
     const bool slowed = u.slowUntil.value_or(-1) > state.time;
     const double speed = Rules::speed(u.kind) * rate(Stat::Speed{}, u) * (facing ? 1 : 0.3) * (slowed ? u.slowedTo.value_or(0.5) : 1)
-                         * (u.bug ? u.bug->pace : 1);
+                         * (u.bug ? u.bug->pace * (u.bug->rallyUntil > state.time ? Matriarch::rallySpeed : 1) : 1);
     const double stepLen = ac::min(speed * dt, dist - stopAt);
     // Facing (within 0.6 rad): along its heading. Still turning, or
     // when a step along its heading would land in something solid:

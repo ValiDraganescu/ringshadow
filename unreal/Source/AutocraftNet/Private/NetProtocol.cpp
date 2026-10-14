@@ -595,6 +595,11 @@ std::vector<uint8_t> encode(const WorldMessage& m) {
             w.writeBool(p.building.has_value());
             if (p.building) w.writeBits(uint64_t(*p.building), 4);
         }
+        w.writeBool(g.nest.has_value());
+        if (g.nest) {
+            writeDouble(w, g.nest->x);
+            writeDouble(w, g.nest->y);
+        }
     }
     writeVarint(w, static_cast<uint64_t>(m.here));
     w.writeBool(m.flyingTo.has_value());
@@ -630,6 +635,11 @@ bool decode(const std::vector<uint8_t>& bytes, WorldMessage& m) {
                 if (k >= uint64_t(allCases<StructureKind>().size())) return false;
                 p.building = static_cast<StructureKind>(k);
             }
+        }
+        g.nest = std::nullopt;
+        if (r.readBool()) {
+            const double x = readDouble(r);
+            g.nest = Vec2(x, readDouble(r));
         }
     }
     m.here = static_cast<int64_t>(readVarint(r));
@@ -1115,7 +1125,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     writeStrings(w, m.regionsSeen);
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
-        w.writeBits(uint64_t(n.kind), 4);
+        w.writeBits(uint64_t(n.kind), 5);  // 5 bits since N3: the sixteenth kind filled 4
         writeString(w, n.id);
         codec::Fixed{1000}.write(w, n.xp);
         writeSigned(w, n.value);
@@ -1330,8 +1340,8 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
-        const uint64_t kind = r.readBits(4);
-        if (kind > uint64_t(ProgressMessage::NewsKind::upgraded)) return false;
+        const uint64_t kind = r.readBits(5);
+        if (kind > uint64_t(ProgressMessage::NewsKind::matriarch)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

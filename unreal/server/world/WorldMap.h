@@ -315,6 +315,22 @@ struct WorldParams {
     double catchUpCap = 24 * 3600;
 };
 
+/// The Matriarch's nest in a world (N3; WorldNest.cpp): the groups' keys
+/// (`Poi::nest`) and their places round her (`Matriarch` has her numbers).
+struct WorldNest {
+    static constexpr int64_t queenKey = 0;
+    static constexpr int64_t packs = 4;
+    static constexpr int64_t flyersKey = 5;
+    static constexpr int64_t escortKey = 9;
+    /// The Shardling packs linger this far out from her, each in a site
+    /// `packSite` wide; her Gloamwings over her within `flyersSite`.
+    static constexpr double packOut = 11;
+    static constexpr double packSite = 6;
+    static constexpr double flyersSite = 10;
+    /// A roar is told on the wire this long.
+    static constexpr double roarTold = 4;
+};
+
 /// The Brood's director in a world (docs/creatures.md, "Where they come
 /// from"; WorldBrood.cpp): its numbers.
 struct WorldBrood {
@@ -745,7 +761,7 @@ public:
     // MARK: The Brood (docs/creatures.md; WorldBrood.cpp)
 
     /// What draws a group: a point of interest of its region.
-    enum class Poi : uint8_t { deposit, well, site, pad, building, crater };
+    enum class Poi : uint8_t { deposit, well, site, pad, building, crater, nest };
     /// A group of bugs and what it is doing: its site (ground point, radius,
     /// leash), how long it lingers, its raid, its prey.
     struct BroodGroup {
@@ -771,6 +787,11 @@ public:
         /// Dev and shots (`defence air|flyers`): it hovers where it is, never
         /// turning on a pilot or a defence, never leaving.
         bool still = false;
+        /// The Matriarch's nest (N3, `Poi::nest`): her horde (it lingers
+        /// always and chases within the nest's ring), or the queen herself
+        /// (her orders are the nest's, WorldNest.cpp).
+        bool nest = false;
+        bool queen = false;
     };
     /// The groups of region `r` now.
     const std::vector<BroodGroup>& broodGroups(size_t r) const;
@@ -795,6 +816,48 @@ public:
     /// (`citadel`), a finished gatling gun ahead of it with Shardlings on it
     /// (`gatling`, a raid on it), a finished AA tower with Gloamwings set on it (`aa`).
     std::string devDefence(const std::string& line);
+
+    /// Tests, dev and shots: the pilot's Prospector taken to region `to` at
+    /// its ground point `at` at once, handed over as an edge crossing hands
+    /// it. False: in flight, no unit, already there, or another pilot drives
+    /// there.
+    bool devTransfer(PilotId pilot, size_t to, Vec2 at);
+
+    // MARK: The Matriarch (N3, docs/creatures.md "The Matriarch"; WorldNest.cpp)
+
+    /// Region `r`'s nest, ground point (nil: none).
+    std::optional<Vec2> nestAt(size_t r) const;
+    /// The region with the Matriarch's nest (nil: none in the world).
+    std::optional<size_t> nestRegion() const;
+    /// Her unit and the region she is in now (nil: down, or her region
+    /// asleep with no pilot near).
+    std::optional<std::pair<size_t, int64_t>> matriarch() const;
+    /// The world clock she comes back at (nil: she is not down).
+    std::optional<double> matriarchBack() const;
+    /// Her nest's horde in its region now: Shardlings and Gloamwings alive.
+    std::pair<int64_t, int64_t> nestHorde() const;
+    /// Who has hurt her since she was last whole: pilot → hp.
+    const std::map<PilotId, double>& matriarchDamage() const;
+    /// The Z2 hook: she leaves her nest with `escort` Shardlings for region
+    /// `r`'s ground point `at`, fells every turret (a Sentinel, a Gatling
+    /// Gun) of the realm within `radius` of it, then goes home. False: no
+    /// nest, she is down, or out on a siege already.
+    bool matriarchSiege(size_t r, Vec2 at, double radius, int64_t escort = 8);
+    /// A siege under way (nil: none): where, and whether she is on her way home.
+    struct Siege {
+        size_t region = 0;
+        Vec2 at{0, 0};
+        double radius = 0;
+        bool home = false;
+        int64_t escort = 0;
+    };
+    std::optional<Siege> siege() const { return siege_; }
+    /// Tests: she comes back now (the return's rule done).
+    void matriarchReturnNow();
+    /// Dev and shots (`matriarch …` lines): the first pilot taken to the
+    /// nest (`here`), she roars at it (`roar`), slams (`slam`), is felled by
+    /// it (`down`), back (`back`), a siege at the pilot (`siege`).
+    std::string devMatriarch(const std::string& line);
 
     // MARK: Mercenaries (H2, `WorldMercs`; WorldMercs.cpp)
 
@@ -1214,6 +1277,45 @@ private:
     /// The way out of region `r` from `at`: the nearest edge point out of sight.
     Vec2 exitPoint(size_t r, Vec2 at) const;
     void tellRaids();
+    // WorldNest.cpp.
+    struct NestRegion {
+        /// Her unit (nil: none spawned) and her group.
+        std::optional<int64_t> queen;
+        /// The horde's counts (0: not drawn yet), and when the next bug
+        /// hatches to keep them up.
+        int64_t shardlings = 0;
+        int64_t gloamwings = 0;
+        double nextRefill = 0;
+        /// After her death the nest grows back from empty; after the region
+        /// slept it comes back full.
+        bool regrow = false;
+        double lastRoar = -1e9;
+        /// Pilots she roared at on first sight (cleared once they go).
+        std::set<PilotId> seen;
+        std::map<PilotId, double> damage;
+        std::optional<double> downAt, backAt;
+        /// The region's bugs stay away after her death until then.
+        double calmUntil = -1e9;
+    };
+    /// Each think in a region with a nest: her return, her spawn, the
+    /// horde's numbers, her foe, her roars.
+    void nestThink(size_t r);
+    /// A hit on her: who did it (a pilot's Prospector, or its defence);
+    /// her death.
+    void queenHit(size_t r, const Simulation::BugHit& h);
+    void queenDown(size_t r);
+    void roar(size_t r, Unit& queen, std::optional<int64_t> at);
+    void siegeThink();
+    /// The nest's bugs alive (not her): Shardlings, Gloamwings.
+    std::pair<int64_t, int64_t> hordeIn(size_t r) const;
+    /// One bug hatched at the nest for its group `key` (made if gone).
+    void hatch(size_t r, UnitKind kind, int64_t key, Vec2 from);
+    NestRegion nest_;
+    std::optional<Siege> siege_;
+    /// The siege's escort group, and her group out there.
+    int64_t siegeEscort_ = 0;
+    std::vector<net::Sky::Roar> roars_;
+    uint32_t nextRoar_ = 1;
     std::vector<BroodRegion> brood_;
     std::vector<net::Sky::Raid> raids_;
     uint32_t nextRaid_ = 1;

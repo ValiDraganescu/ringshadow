@@ -52,6 +52,7 @@ double weightOf(const Weights& w, WorldMap::Poi p) {
     case WorldMap::Poi::pad: return w.pad;
     case WorldMap::Poi::building: return w.building;
     case WorldMap::Poi::crater: return w.crater;
+    case WorldMap::Poi::nest: return 0;
     }
     return 0;
 }
@@ -240,6 +241,32 @@ std::optional<int64_t> WorldMap::spawnBroodGroup(size_t r, UnitKind kind, int64_
         g.radius = WorldBrood::craterSite;
         break;
     }
+    case Poi::nest: {
+        // The Matriarch's nest (N3): she at its centre (key 0), four packs of
+        // Shardlings round her (1 to 4), her Gloamwings over her (5); a
+        // siege's escort (9) is placed by `matriarchSiege`.
+        const auto at = nestAt(r);
+        if (!at && key != WorldNest::escortKey && key != WorldNest::queenKey) return std::nullopt;
+        g.site = at.value_or(Vec2(0, 0));
+        if (key == WorldNest::queenKey) {
+            g.queen = true;
+            g.radius = Matriarch::tether;
+            g.leash = 0;
+        } else if (key == WorldNest::flyersKey) {
+            g.nest = true;
+            g.radius = WorldNest::flyersSite;
+            g.leash = Matriarch::nestRing;
+        } else if (key != WorldNest::escortKey) {
+            g.nest = true;
+            const double a = pi / 4 + double(key - 1) * pi / 2;
+            Vec2 p = g.site + Vec2(std::cos(a), std::sin(a)) * WorldNest::packOut;
+            if (sim.nav) p = sim.nav->nearestFree(p).value_or(p);
+            g.site = p;
+            g.radius = WorldNest::packSite;
+            g.leash = Matriarch::nestRing;
+        }
+        break;
+    }
     }
     const bool night = Rules::dark(sky_.hour()) > 0.5;
     g.lingerUntil = clock_ + (WorldBrood::lingerMin + (WorldBrood::lingerMax - WorldBrood::lingerMin) * unit01(broodDice_)) *
@@ -255,6 +282,7 @@ std::optional<int64_t> WorldMap::spawnBroodGroup(size_t r, UnitKind kind, int64_
     if (poi == Poi::crater)
         for (const Fall& f : falls_)
             if (int64_t(f.id) == key) meal = f.patch;
+    if (g.nest || g.queen) g.lingerUntil = kInf;
     const Vec2 start = from ? *from : spawnPoint(r, g.site).value_or(Vec2(kInf, kInf));
     if (start.x >= kInf) return std::nullopt;
     g.exit = exitPoint(r, start);
@@ -275,6 +303,7 @@ std::optional<int64_t> WorldMap::spawnBroodGroup(size_t r, UnitKind kind, int64_
         b.exit = g.exit;
         if (k == UnitKind::gloamwing) b.height = Brood::hoverHeight;
         if (k == UnitKind::lodeback) b.deposit = meal;
+        if (k == UnitKind::matriarch) b.tether = g.radius;
         if (g.raid) b.raid = key;
         u.bug = b;
         st.units.push_back(u);
@@ -295,7 +324,10 @@ bool WorldMap::spawnGroup(size_t r) {
     const region::Built& places = *region.places();
     const GameState& st = region.simulation().state;
     BroodRegion& br = brood_[r];
-    const int64_t room = WorldBrood::cap(level) - broodAlive(r);
+    // The nest's horde and its queen are on top of the cap (N3).
+    const auto horde = hordeIn(r);
+    const int64_t room =
+        WorldBrood::cap(level) - broodAlive(r) + horde.first + horde.second + (nest_.queen && nestRegion() == r ? 1 : 0);
     if (room <= 0) return false;
 
     // The kind first, by the level; then its POI by its weights.
@@ -469,6 +501,8 @@ void WorldMap::brood() {
         // The hits on bugs: the hitter's XP (the damage's share of the
         // bug's hp × its worth), and the group turns on it.
         for (const Simulation::BugHit& h : sim.bugHits) {
+            // The Matriarch keeps her own tally: who hurt her, by how much.
+            if (h.kind == UnitKind::matriarch) queenHit(r, h);
             const double share = h.hp / std::max(1.0, Rules::hp(h.kind));
             for (auto& [pilot, p] : pilots_)
                 if (!p.flight && p.region == r && p.unit == h.shooter) {
@@ -489,7 +523,8 @@ void WorldMap::brood() {
             // (a building shot it) on the defence.
             const bool building = st.structure(h.shooter).has_value();
             for (BroodGroup& g : br.groups)
-                if (g.id == u->bug->group && !g.still && !g.prey && !(building && g.turret)) (building ? g.turret : g.prey) = h.shooter;
+                if (g.id == u->bug->group && !g.still && !g.queen && !g.prey && !(building && g.turret))
+                    (building ? g.turret : g.prey) = h.shooter;
         }
         sim.bugHits.clear();
         // A felled defence's kills go with it (D3).
@@ -563,6 +598,13 @@ void WorldMap::broodThink(size_t r) {
             sim.reindex();
             br.groups.clear();
             br.sacs.clear();
+            // The nest is kept as its counts: it comes back full, she whole.
+            if (nestRegion() == r) {
+                nest_.queen = std::nullopt;
+                nest_.damage.clear();
+                nest_.seen.clear();
+                nest_.regrow = false;
+            }
         }
         br.next = std::nullopt;
         return;
@@ -575,6 +617,12 @@ void WorldMap::broodThink(size_t r) {
     std::set<int64_t> gone;
     for (BroodGroup& g : br.groups) {
         std::erase_if(g.bugs, [&](int64_t id) { return !st.unit(id); });
+        // The nest's (N3): the horde never leaves; she takes the nest's orders.
+        if (g.nest || g.queen) {
+            g.leaving = false;
+            g.lingerUntil = kInf;
+        }
+        if (g.queen) continue;
         if (g.still) {
             g.prey = std::nullopt;
             g.turret = std::nullopt;
@@ -660,8 +708,17 @@ void WorldMap::broodThink(size_t r) {
         g.raidId = x.id;
     }
 
+    // The nest (N3) and a siege.
+    if (nestAt(r)) nestThink(r);
+    if (siege_ && siege_->region == r) siegeThink();
+
     // The next group.
     if (!params_.brood || level <= 0) return;
+    // After the Matriarch's death the region's bugs stay away a while.
+    if (nestRegion() == r && clock_ < nest_.calmUntil) {
+        br.next = std::nullopt;
+        return;
+    }
     // The opening's rule: Prospect Landing holds while a pilot there or
     // next door is on the first ten minutes' chain.
     if (level == 1 && opening) {
@@ -681,6 +738,9 @@ void WorldMap::tellRaids() {
     // snapshot still hears it).
     std::erase_if(raids_, [&](const net::Sky::Raid& x) { return clock_ > x.arrives + 2; });
     sky_.raids = raids_;
+    // A roar is told for a few seconds (heard far, in sight or not).
+    std::erase_if(roars_, [&](const net::Sky::Roar& x) { return clock_ > x.at + WorldNest::roarTold; });
+    sky_.roars = roars_;
 }
 
 // MARK: - Dev and shots

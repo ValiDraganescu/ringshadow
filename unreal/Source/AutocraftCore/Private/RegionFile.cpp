@@ -529,7 +529,7 @@ Parsed parse(std::string_view text) {
     const json root = json::parse(text.begin(), text.end(), nullptr, false);
     Reader r{out.problems};
     if (!r.object(root, "region", {"id", "name", "size", "base", "ground", "brood", "height", "border", "deposits", "wells",
-                                   "doodads", "pads", "spawns", "sites", "openings"}))
+                                   "doodads", "pads", "spawns", "sites", "nest", "openings"}))
         return out;
     RegionFile f;
     if (const auto id = r.text(root, "id", "", true)) {
@@ -660,6 +660,9 @@ Parsed parse(std::string_view text) {
         }
         return Site{*name, *k, *at, *b};
     });
+    if (const json* nest = r.field(root, "nest", "", false))
+        if (r.object(*nest, "nest", {"at"}))
+            if (const auto at = r.point(*nest, "at", "nest")) f.nest = *at;
     {
         std::set<std::string> seen;
         for (size_t i = 0; i < f.sites.size(); i++)
@@ -829,6 +832,7 @@ std::string write(const RegionFile& f) {
                                    {"blueprint", std::string(rawValue(t.blueprint))}});
         root["sites"] = list;
     }
+    if (f.nest) root["nest"] = ordered{{"at", pointNumbers(*f.nest)}};
     ordered openings = ordered::object();
     for (size_t e = 0; e < 4; e++) {
         if (f.openings[e].empty()) continue;
@@ -941,6 +945,7 @@ Built build(const RegionFile& f) {
     for (const Place& p : b.pads) m.plates.push_back(p.at);
     for (const Place& p : f.spawns) b.spawns.push_back(Place{p.name, g(p.at)});
     for (const Site& t : f.sites) b.sites.push_back(Site{t.name, t.kind, g(t.at), t.blueprint});
+    if (f.nest) b.nest = g(*f.nest);
     b.openings = f.openings;
     // The base's rocks and plants give way to what the file puts down.
     std::vector<Vec2> deposits, wells, pads, spawns, sites;
@@ -967,7 +972,8 @@ Built build(const RegionFile& f) {
             const double r = c.second + NavGrid::clearance;
             clear = clear || near(c.first, deposits, r + 1.5) || near(c.first, wells, r + 2) ||
                     near(c.first, pads, r + padRadius + 0.5) || near(c.first, spawns, r + 1) ||
-                    near(c.first, sites, r + siteRadius) || inLane(c.first, r);
+                    near(c.first, sites, r + siteRadius) || inLane(c.first, r) ||
+                    (b.nest && distance(c.first, *b.nest) < r + nestMound);
         }
         if (clear) b.cleared += 1; else kept.push_back(d);
     }
@@ -1197,6 +1203,19 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
         else if (how == SiteReach::cliffHop && !vault)
             add(where, "cut off from the region's open ground (only Cliff hop reaches it; only a vault may sit so)", p);
     }
+    // The nest (N3): on open ground joined to the rest, in a brood level 4
+    // region, no pad in its horde's ring.
+    if (b.nest) {
+        const Vec2 p = *b.nest;
+        const SiteReach how = reach.of(p);
+        if (f.brood != 4) add("nest", "a nest belongs in a brood level 4 region; this one is " + std::to_string(f.brood), p);
+        else if (steepNear(p)) add("nest", "on a cliff face", p);
+        else if (const auto r = rock(p, 2.0)) add("nest", rockText(*r), p);
+        else if (how != SiteReach::walk && how != SiteReach::ramp) add("nest", "cut off from the region's open ground", p);
+        for (const Place& pad : b.pads)
+            if (distance(pad.at, p) < nestClear)
+                add("nest", "pad \"" + pad.name + "\" is in the nest's ring: keep pads " + num(nestClear) + " cells from it", p);
+    }
     // Openings: a lane `laneDepth` in from the edge, open all along the span
     // and joined to the region's open ground.
     for (size_t e = 0; e < 4; e++) {
@@ -1259,6 +1278,7 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
             if (!inside(f.deposits[i].at)) add("deposits[" + std::to_string(i) + "]", "is outside the border's outline", b.ground(f.deposits[i].at));
         for (size_t i = 0; i < f.wells.size(); i++)
             if (!inside(f.wells[i].at)) add("wells[" + std::to_string(i) + "]", "is outside the border's outline", b.ground(f.wells[i].at));
+        if (f.nest && !inside(*f.nest)) add("nest", "is outside the border's outline", b.ground(*f.nest));
     }
     return out;
 }

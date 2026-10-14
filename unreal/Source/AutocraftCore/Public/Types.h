@@ -1119,6 +1119,15 @@ struct Bug {
     std::optional<int64_t> hitBy;
     /// Game time it died: its body lies `Brood::bodyStays` s.
     double diedAt = 0;
+    /// The Matriarch (N3): her slam crashes down at `slamAt`; her spit is
+    /// ready again at `spitReady`; she rears in a roar until `roarUntil`.
+    /// A bug she rallied runs faster until `rallyUntil`. `tether`: how far
+    /// from `site` she may go.
+    std::optional<double> slamAt;
+    double spitReady = 0;
+    double roarUntil = -1;
+    double rallyUntil = -1;
+    double tether = 6;
 
     bool operator==(const Bug&) const = default;
 };

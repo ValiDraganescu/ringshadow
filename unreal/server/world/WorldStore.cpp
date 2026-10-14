@@ -208,13 +208,19 @@ ALTER TABLE buildings ADD COLUMN mark_air INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE buildings ADD COLUMN kills INTEGER NOT NULL DEFAULT 0;
 )sql";
 
+/// Schema 17 (N3): the Matriarch's nests while she is down: when she fell
+/// and when she comes back (world clock). A save from before has her home.
+const char* const kV17 = R"sql(
+CREATE TABLE nests (region TEXT PRIMARY KEY, down_at REAL NOT NULL, back_at REAL NOT NULL);
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}};
     return steps;
 }
 
@@ -402,6 +408,11 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
                                                   s.colReal(5), s.optInteger(6), s.colInteger(7), s.colInteger(8)});
         if (s.failed(error)) return std::nullopt;
     }
+    {
+        Stmt s(db_, "SELECT region, down_at, back_at FROM nests ORDER BY region");
+        while (s.row()) out.nests.push_back(SavedNest{s.colText(0), s.colReal(1), s.colReal(2)});
+        if (s.failed(error)) return std::nullopt;
+    }
     regions_.clear();
     clock_ = std::nullopt;
     realm_ = std::nullopt;
@@ -421,6 +432,7 @@ void WorldStore::remember(const WorldSave& save) {
     realm_ = {save.realmOre, save.realmHydrogen};
     marks_ = save.citadelMarks;
     starfalls_ = save.starfalls;
+    nests_ = save.nests;
     for (const SavedRegion& r : save.regions) {
         regions_[r.id] = {r.time, r.nextId};
         // A region written whole: its rows are these and no others.
@@ -547,6 +559,16 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                               .integer(f.patch)
                               .integer(f.ore)
                               .integer(f.remaining)));
+        n.changed += 1;
+    }
+    // The nests: one row a fallen Matriarch, written whole when any changed.
+    if (nests_ != save.nests) {
+        run(Stmt(db_, "DELETE FROM nests"));
+        for (const SavedNest& x : save.nests)
+            run(std::move(Stmt(db_, "INSERT INTO nests (region, down_at, back_at) VALUES (?, ?, ?)")
+                              .text(x.region)
+                              .real(x.downAt)
+                              .real(x.backAt)));
         n.changed += 1;
     }
     if (clock_ != save.clock) {

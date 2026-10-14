@@ -946,6 +946,8 @@ TEST(protocol_world_messages_round_trip) {
         // The pilot's own pads (P6).
         if (i == 2) g.pads.push_back({"Spacedock", Vec2(30.5, 41), StructureKind::spacedock});
         if (i == 4) g.pads.push_back({"Hab Dome 2", Vec2(12, 60.5), StructureKind::habDome});
+        // The Matriarch's nest (N3), in one region.
+        if (i == 5) g.nest = Vec2(122, 44.5);
         m.regions.push_back(g);
     }
     m.here = 4;

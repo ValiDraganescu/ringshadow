@@ -139,8 +139,136 @@ bool Simulation::bugAttack(Unit& u, int64_t id, double dt) {
     return true;
 }
 
+// MARK: - The Matriarch (N3)
+
+std::vector<int64_t> Simulation::slamStrikes(const Unit& u) const {
+    std::vector<int64_t> out;
+    const double reach = Matriarch::slamReach + Rules::radius(u.kind);
+    auto inFront = [&](Vec2 at, double radius) {
+        const Vec2 d = at - u.position;
+        const double far = length(d);
+        if (far - radius > reach) return false;
+        // Within her edge's reach, and in front of her (one standing under
+        // her forelimbs counts whatever its bearing).
+        if (far <= radius + 0.5) return true;
+        return std::abs(std::remainder(std::atan2(d.y, d.x) - u.heading, 2 * pi)) <= Matriarch::slamArc;
+    };
+    for (const Unit& o : state.units) {
+        if (o.id == u.id || !(o.hp > 0) || o.airborne() || !state.hostile(o.owner, u.owner)) continue;
+        if (o.task == Unit::Task::aboard || o.task == Unit::Task::inBastion || o.task == Unit::Task::inDerrick) continue;
+        if (inFront(o.position, Rules::radius(o.kind))) out.push_back(o.id);
+    }
+    for (const Structure& s : state.structures)
+        if (s.hp > 0 && state.hostile(s.owner, u.owner) && inFront(s.position, Rules::radius(s.kind))) out.push_back(s.id);
+    return out;
+}
+
+void Simulation::stepPuddles(double dt) {
+    std::erase_if(puddles, [&](const Puddle& p) { return state.time >= p.until; });
+    for (const Puddle& p : puddles)
+        for (const Unit& o : state.units) {
+            if (!(o.hp > 0) || o.airborne() || o.bug || !state.hostile(o.owner, p.owner)) continue;
+            if (distance(o.position, p.at) <= Matriarch::puddleRadius + Rules::radius(o.kind)) hit(o.id, Matriarch::puddleDps * dt);
+        }
+}
+
+void Simulation::stepMatriarch(Unit& u, double dt) {
+    Bug& b = *u.bug;
+    const double now = state.time;
+    if (u.cooldown) {
+        *u.cooldown -= dt;
+        if (*u.cooldown <= 0) u.cooldown = std::nullopt;
+    }
+    u.target = std::nullopt;
+    b.diveFrom = std::nullopt;
+    // She mends once nothing has hit her for a while.
+    const double full = Rules::hp(u.kind);
+    if (u.hp < full && (!u.hitAt || now - *u.hitAt >= Matriarch::mendAfter)) u.hp = std::min(full, u.hp + Matriarch::mendRate * dt);
+    // The slam crashes down: every ground foe in front of her now.
+    if (b.slamAt && now >= *b.slamAt - 1e-9) {
+        b.slamAt = std::nullopt;
+        for (const int64_t id : slamStrikes(u))
+            if (const auto t = target(id))
+                hit(id, std::max(0.5, (t->structure ? Matriarch::slamBuilding : Matriarch::slamUnit) - t->armor), false, &u);
+    }
+    const std::optional<int64_t> foe = b.prey ? b.prey : b.raid;
+    std::optional<Target> t;
+    if (foe) {
+        t = target(*foe);
+        if (t && !state.hostile(t->owner, u.owner)) t = std::nullopt;
+    }
+    if (t) u.target = *foe;
+    // Her forelimbs are up, or she rears in a roar: she only turns.
+    if (b.slamAt || now < b.roarUntil) {
+        b.state = b.slamAt ? Bug::State::attack : Bug::State::roar;
+        if (t) turn(u, t->position, dt, 1.5);
+        u.goal = std::nullopt;
+        u.waypoints = std::nullopt;
+        return;
+    }
+    if (t) {
+        const bool facing = turn(u, t->position, dt, 1.5);
+        const double d = gap(u, *t);
+        // The slam, when a ground foe stands in front of her.
+        if (!u.cooldown && facing && !slamStrikes(u).empty()) {
+            b.slamAt = now + Matriarch::slamWindup;
+            b.strikes = (b.strikes + 1) % 16;
+            b.sac = Matriarch::struckSlam;
+            b.state = Bug::State::attack;
+            u.cooldown = Matriarch::slamEvery;
+            u.goal = std::nullopt;
+            u.waypoints = std::nullopt;
+            return;
+        }
+        // The spit, at ground or air within its range.
+        if (now >= b.spitReady && facing && d <= Matriarch::spitRange) {
+            hit(*foe, std::max(0.5, (t->structure ? Matriarch::spitBuilding : Matriarch::spitUnit) - t->armor), false, &u);
+            // The puddle where it splashed: under the foe, or at a building's edge.
+            Vec2 at = t->position;
+            if (t->structure) {
+                Vec2 off = u.position - t->position;
+                if (!(length(off) > 1e-6)) off = Vec2(1, 0);
+                at = t->position + normalize(off) * t->radius;
+            }
+            puddles.push_back({at, now + Matriarch::puddleFor, u.owner});
+            b.strikes = (b.strikes + 1) % 16;
+            b.sac = Matriarch::struckSpit;
+            b.spitReady = now + Matriarch::spitEvery;
+            b.state = Bug::State::attack;
+            return;
+        }
+        // Closer, but never past her tether.
+        Vec2 want = t->position;
+        if (distance(want, b.site) > b.tether) want = b.site + normalize(want - b.site) * b.tether;
+        if (d > Matriarch::slamReach * 0.6 && distance(u.position, want) > 0.4) {
+            b.state = Bug::State::move;
+            b.pace = 1;
+            travel(u, want, 0.3, dt);
+        } else {
+            b.state = Bug::State::attack;
+            u.goal = std::nullopt;
+            u.waypoints = std::nullopt;
+        }
+        return;
+    }
+    // Nothing to fight: home to her nest's centre (or the siege's place).
+    if (distance(u.position, b.site) > 1.0) {
+        b.state = Bug::State::move;
+        b.pace = 1;
+        travel(u, b.site, 0.6, dt);
+    } else {
+        b.state = Bug::State::idle;
+        u.goal = std::nullopt;
+        u.waypoints = std::nullopt;
+    }
+}
+
 void Simulation::stepBug(Unit& u, double dt, std::vector<GameEvent>&) {
     if (!u.bug) u.bug = Bug{};
+    if (u.kind == Unit::Kind::matriarch) {
+        stepMatriarch(u, dt);
+        return;
+    }
     Bug& b = *u.bug;
     const double now = state.time;
     if (u.cooldown) {

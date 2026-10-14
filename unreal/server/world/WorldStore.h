@@ -144,6 +144,15 @@ struct SavedStarfall {
     bool operator==(const SavedStarfall&) const = default;
 };
 
+/// The Matriarch's nest while she is down (N3, schema 17): its region, the
+/// world clock she fell at and the one she comes back at.
+struct SavedNest {
+    std::string region;
+    double downAt = 0;
+    double backAt = 0;
+    bool operator==(const SavedNest&) const = default;
+};
+
 struct WorldSave {
     std::vector<SavedRegion> regions;
     std::vector<SavedPilot> pilots;
@@ -160,6 +169,8 @@ struct WorldSave {
     double savedAt = 0;
     /// The marks the realm's Citadel turrets have (D1, schema 15).
     TurretMarks citadelMarks{};
+    /// The nests whose Matriarch is down (N3, schema 17).
+    std::vector<SavedNest> nests{};
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -174,7 +185,8 @@ public:
     /// world's clock; 3: the pilots' progression; 4: gated by blueprints;
     /// 5: contracts; 6: starfalls; 7: the rig; 8: the realm's buildings;
     /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions;
-    /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills).
+    /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills;
+    /// 17: the Matriarch's nests).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 
@@ -234,6 +246,7 @@ private:
     std::optional<std::pair<int64_t, int64_t>> realm_;
     std::optional<TurretMarks> marks_;
     std::vector<SavedStarfall> starfalls_;
+    std::vector<SavedNest> nests_;
 };
 
 } // namespace ac::server

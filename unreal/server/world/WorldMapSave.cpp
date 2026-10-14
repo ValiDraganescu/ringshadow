@@ -4,6 +4,8 @@
 
 #include "WorldMap.h"
 
+#include "Brood.h"
+
 #include "Defence.h"
 #include "Session.h"
 
@@ -202,6 +204,9 @@ WorldSave WorldMap::save() const {
         out.starfalls.push_back(SavedStarfall{int64_t(f.id), world_->regions[f.region].file.id, f.at, f.impact, f.from,
                                               d ? std::optional<int64_t>(d->id) : std::nullopt, f.ore, d ? d->remaining : f.ore});
     }
+    // The Matriarch down (N3): when she fell and when she comes back.
+    if (const auto nr = nestRegion(); nr && nest_.downAt && nest_.backAt)
+        out.nests.push_back(SavedNest{world_->regions[*nr].file.id, *nest_.downAt, *nest_.backAt});
     return out;
 }
 
@@ -337,6 +342,18 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     realm_ = Wallet{save.realmOre, save.realmHydrogen};
     // The Citadel's marks (D1; none before schema 13).
     citadelMarks_ = save.citadelMarks;
+    // The Matriarch down (N3; home before schema 17): she comes back on her
+    // clock, the region's bugs calm a world day after her fall.
+    nest_ = NestRegion{};
+    for (const SavedNest& sn : save.nests) {
+        if (regionNamed(sn.region) != nestRegion()) {
+            problems.push_back("nest of " + sn.region + ": no nest there now, left out");
+            continue;
+        }
+        nest_.downAt = sn.downAt;
+        nest_.backAt = sn.backAt;
+        nest_.calmUntil = sn.downAt + Matriarch::calmDays * params_.dayLength;
+    }
     // The world's hour goes on where it was.
     setClock(save.clock);
     return problems;

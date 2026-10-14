@@ -81,3 +81,18 @@ TEST(snapshot_sky_carries_the_raids_and_roars) {
     EXPECT_TRUE(*p->snapshot.sky == sky);
     EXPECT_TRUE(kProtocolVersion >= uint16_t(15));
 }
+
+/// The Matriarch's news (N3): her fall to every pilot, each fighter's share
+/// and her return; a news kind past hers is refused.
+TEST(progress_carries_the_matriarchs_news) {
+    ProgressMessage m;
+    using K = ProgressMessage::NewsKind;
+    m.news.push_back(ProgressMessage::News{K::matriarch, "down", 0, 3, "Pilot 1A2B"});
+    m.news.push_back(ProgressMessage::News{K::matriarch, "share/620/spacedock", 0, 1240, ""});
+    m.news.push_back(ProgressMessage::News{K::matriarch, "back", 0, 0, ""});
+    ProgressMessage back;
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back.news == m.news);
+    m.news.front().kind = K(uint8_t(K::matriarch) + 1);
+    EXPECT_TRUE(!decode(encode(m), back));
+}
