@@ -497,3 +497,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: server detaches, game reattaches via a run file; no launchd.
 - D Manager: idle server ticks slow; catch-up after downtime capped.
 - T S2 briefed to wt1.
+- D User: playground (menu entry, MMO sandbox) parked.
