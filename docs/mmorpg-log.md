@@ -321,3 +321,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T E2 starfall → world-look.
 - D User: pause and show when something impressive is ready.
 - D Manager: showcase after P5, E1, E2: tree, sweep, starfall.
+- T P6 done c16fcd5: respawn, depot, Lab, own pads, flight nodes.
+- N Manager: core 447, server 132, net 67 pass (live tree).
+- D P6: respawn delay 10 s (doc gave none).
+- I Client owes UI: respawn screen, depot, pad list, contracts.
+- T P7 Foundry modules + Lab research → world-clock.
