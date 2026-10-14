@@ -437,3 +437,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: W3 folds into W4; X1 waits; U1 moves to M8.
 - I User bugs: mining sparks linger; AI-driven Prospector moves laggily.
 - I User at level 10 asked "now what?" → L1 goal contracts.
+- T B1 (sparks, AI movement) briefed to wt1; wt3 closed, W3 parked 8a1678e.
