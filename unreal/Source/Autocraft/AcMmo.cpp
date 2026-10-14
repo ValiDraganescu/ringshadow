@@ -60,6 +60,9 @@ FString FAcMmoClient::BundledServerDir()
 
 FString FAcMmoClient::ServerProgram()
 {
+	// Dev: a server built elsewhere (the build train's, from the same tree
+	// as the module it runs).
+	if (FString Path; FParse::Value(FCommandLine::Get(), TEXT("AcMmoServer="), Path) && FPaths::FileExists(Path)) return Path;
 	if (const FString Bundled = BundledServerDir(); !Bundled.IsEmpty()) return FPaths::Combine(Bundled, TEXT("autocraft-server"));
 	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("server"), TEXT("build"), TEXT("autocraft-server")));
 }
