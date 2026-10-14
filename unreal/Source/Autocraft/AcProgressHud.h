@@ -18,6 +18,7 @@
 
 #include "AcCab.h"
 #include "AcConsoleInfo.h"
+#include "AcPilotText.h"
 #include "Progression.h"
 #include "SAcWorldMap.h"
 
@@ -68,6 +69,19 @@ public:
 		bool operator==(const FOpening&) const = default;
 	};
 	void SetOpening(const TOptional<FOpening>& In);
+	/// The Prospector fell (P6): the view dimmed, "BACK IN 7 s", where it
+	/// comes back, the cargo Second wind kept. Unset: on its feet.
+	struct FRespawn
+	{
+		/// Whole seconds left.
+		int32 Left = 0;
+		/// "AT YOUR CITADEL", "AT THE LANDING PAD, COLD FORK".
+		FString Where;
+		/// "Second wind kept 40 ore" (empty: nothing kept).
+		FString Kept;
+		bool operator==(const FRespawn&) const = default;
+	};
+	void SetRespawn(const TOptional<FRespawn>& In);
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D::ZeroVector; }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -83,6 +97,7 @@ private:
 	};
 	TOptional<std::array<FAcSlotView, 3>> Row;
 	TOptional<FOpening> Opening;
+	TOptional<FRespawn> Respawn;
 	FAcCabLayout Lay;
 	TArray<FNote> Notes;
 	TSharedPtr<FActiveTimerHandle> Timer;
@@ -90,6 +105,7 @@ private:
 	EActiveTimerReturnType Animate(double Now, float Dt);
 	void PaintSlots(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintOpening(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
+	void PaintRespawn(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintToasts(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size, double Now) const;
 };
 
@@ -118,6 +134,18 @@ struct AUTOCRAFT_API AcProgressHud
 	/// opened, of each blueprint not found.
 	static void BlueprintSites(const FAcMmoClient& Mmo, std::map<ac::StructureKind, FString>& Sources,
 		std::map<ac::StructureKind, int32>& Marked);
+	/// The KSTR contract panel's rows (docs/contracts.md): title, the
+	/// radio's line, "2 / 6 LOADS · COLD FORK", the pay, and for a done or
+	/// abandoned slot the countdown to dawn against the world's clock.
+	static FAcContractsInfo Contracts(const FAcMmoClient& Mmo, bool bArmed);
+	/// The open reach and drill contracts on the world map: their region, and
+	/// the site or pad a reach names.
+	static TArray<FAcWorldMapInfo::FMark> ContractMarks(const FAcMmoClient& Mmo);
+	/// Those of them in the pilot's region with a place (a reach), for the
+	/// compass: ground position and distance from `From`.
+	static TArray<FAcPilotGoal> ContractGoals(const FAcMmoClient& Mmo, ac::Vec2 From);
+	/// "23:41", "1:02:09": seconds as a countdown.
+	static FString Countdown(double Seconds);
 };
 
 UCLASS()
@@ -137,14 +165,33 @@ public:
 
 	TSharedPtr<SAcProgressHud> Widget() const { return Hud; }
 
+	/// X: arm an abandon of a KSTR contract (again: keep them); while armed
+	/// 1, 2, 3 drop that slot's open contract. Armed for 6 s.
+	void ToggleAbandon();
+	bool AbandonArmed() const;
+	/// Drops slot `Index`'s (0…2) contract if it is open; disarms. False: none
+	/// to drop there.
+	bool Abandon(int32 Index);
+
+	/// Pictures (-AcMmoShotsG2): a piece of news as if the server sent it
+	/// (the toast's words from the real path), and the respawn screen for
+	/// `R` while no real fall is under way (unset: off).
+	void PreviewNews(const ac::net::ProgressMessage::News& N);
+	void PreviewRespawn(const std::optional<ac::net::ProgressMessage::Respawn>& R);
+
 private:
 	void OnFrame(const FAcFrame& Frame);
 	bool Mount();
 	/// The server's news: the banner, the sound, the toasts.
 	void News(FAcMmoClient& Mmo);
+	/// One piece of news: its toast; a level reached goes into `Reached`.
+	void NewsItem(FAcMmoClient& Mmo, const ac::net::ProgressMessage::News& N, double Now, int64& Reached);
 
 	TSharedPtr<SAcProgressHud> Hud;
 	FDelegateHandle FrameHandle;
 	/// The level last shown (-1: not told yet: the first progress sets it, no banner).
 	int64 Shown = -1;
+	/// When X armed an abandon (-1: not armed).
+	double ArmedAt = -1;
+	std::optional<ac::net::ProgressMessage::Respawn> RespawnPreview;
 };

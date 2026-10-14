@@ -104,6 +104,9 @@ struct FAcPilotInfo
 	/// Facing, world radians (the compass).
 	double Heading = 0;
 	TOptional<FAcPilotGoal> Goal;
+	/// The MMORPG mode: places KSTR contracts send the pilot to in this
+	/// region (`AcProgressHud::ContractGoals`), green on the compass.
+	TArray<FAcPilotGoal> Marks;
 	ac::Vec2 Position{0, 0};
 	FString Help;
 	/// The build menu, when open (E8 fills it; the Swift controller never

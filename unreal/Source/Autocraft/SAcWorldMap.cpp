@@ -50,6 +50,24 @@ namespace
 		return T;
 	}
 
+	FLinearColor WithAlpha(FLinearColor C, float A)
+	{
+		C.A = A;
+		return C;
+	}
+
+	/// A closed circle's points, for MakeLines.
+	TArray<FVector2f> Circle(const FVector2f C, const float R)
+	{
+		TArray<FVector2f> P;
+		for (int32 I = 0; I <= 24; ++I)
+		{
+			const float A = UE_TWO_PI * I / 24;
+			P.Add(C + FVector2f(FMath::Cos(A), FMath::Sin(A)) * R);
+		}
+		return P;
+	}
+
 	/// The ground's colour of a style, dark (the tile's fill).
 	FLinearColor StyleTint(const ac::MapStyle S)
 	{
@@ -74,6 +92,8 @@ void SAcWorldMap::Construct(const FArguments& InArgs)
 void SAcWorldMap::SetInfo(const FAcWorldMapInfo& In)
 {
 	const bool bSame = In.World == Info.World && In.NearPad == Info.NearPad && In.FlyingTo == Info.FlyingTo && In.Sites == Info.Sites
+		&& In.PadReach == Info.PadReach && In.bOwnPad == Info.bOwnPad && In.Marks == Info.Marks
+		&& (In.RingwalkerIn ? std::ceil(*In.RingwalkerIn) : -1) == (Info.RingwalkerIn ? std::ceil(*Info.RingwalkerIn) : -1)
 		&& (In.NearDistance.has_value() == Info.NearDistance.has_value())
 		&& (!In.NearDistance || FMath::Abs(*In.NearDistance - *Info.NearDistance) < 0.5);
 	Info = In;
@@ -229,7 +249,7 @@ void SAcWorldMap::Close()
 
 bool SAcWorldMap::AtPad() const
 {
-	return Info.NearDistance && *Info.NearDistance <= Info.PadReach;
+	return (Info.NearDistance && *Info.NearDistance <= Info.PadReach) || (Info.RingwalkerIn && *Info.RingwalkerIn <= 0);
 }
 
 FString SAcWorldMap::StateLine(FLinearColor& Color) const
@@ -249,11 +269,16 @@ FString SAcWorldMap::StateLine(FLinearColor& Color) const
 	if (!Info.NearDistance) return TEXT("Nothing driven: no flight.");
 	if (!AtPad())
 	{
-		return FString::Printf(TEXT("Not at a pad: pad %s is %.0f cells away. Drive onto a pad to fly."), *Info.NearPad, *Info.NearDistance);
+		const FString Ring = Info.RingwalkerIn ? FString::Printf(TEXT(" Ringwalker is ready in %.0f s."), std::ceil(*Info.RingwalkerIn)) : FString();
+		return FString::Printf(TEXT("Not at a pad: pad %s is %.0f cells away. Drive onto a pad to fly.%s"), *Info.NearPad, *Info.NearDistance, *Ring);
 	}
-	if (Pick.Region == INDEX_NONE || PickIsHere()) return FString::Printf(TEXT("At pad %s: pick a pad to fly to."), *Info.NearPad);
+	// At a pad, its own, or anywhere with Ringwalker ready.
+	const bool bOnPad = *Info.NearDistance <= Info.PadReach;
+	const FString From = !bOnPad ? FString(TEXT("Ringwalker ready"))
+		: Info.bOwnPad ? FString::Printf(TEXT("At your %s"), *Info.NearPad) : FString::Printf(TEXT("At pad %s"), *Info.NearPad);
+	if (Pick.Region == INDEX_NONE || (bOnPad && PickIsHere())) return FString::Printf(TEXT("%s: pick a pad to fly to."), *From);
 	const ac::net::WorldMessage::Region& G = Info.World->regions[Pick.Region];
-	return FString::Printf(TEXT("At pad %s: FLY to pad %s in %s."), *Info.NearPad, *Text(G.pads[Pick.Pad].name), *Text(G.name));
+	return FString::Printf(TEXT("%s: FLY to %s in %s."), *From, *Text(G.pads[Pick.Pad].name), *Text(G.name));
 }
 
 // MARK: - Layout
@@ -283,8 +308,14 @@ void SAcWorldMap::Layout(const FVector2f ViewSize) const
 			for (int32 P = 0; P < (int32)G.pads.size(); ++P)
 			{
 				const ac::net::WorldMessage::Pad& Q = G.pads[P];
-				const FVector2f At = Ground.Min + FVector2f(float(Q.at.x / double(Cells.width)) * Ground.GetSize().X,
+				FVector2f At = Ground.Min + FVector2f(float(Q.at.x / double(Cells.width)) * Ground.GetSize().X,
 					float(Q.at.y / double(Cells.depth)) * Ground.GetSize().Y);
+				// A pad of the pilot's own close by another (a Citadel by the
+				// landing pad): a line lower, so both names read.
+				for (const FTarget& Other : Targets)
+				{
+					if (Q.building && Other.Region == R && FVector2f::Distance(Other.Box.Min + FVector2f(PadHit / 2, PadHit / 2), At) < PadHit) At.Y = Other.Box.Max.Y + PadHit / 2 + 2;
+				}
 				const FString Name = Text(Q.name);
 				const float W = Label(Name, 13, FLinearColor::White).Measure().X + 22;
 				FTarget T;
@@ -473,6 +504,28 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 				EAcHAlign::Left, EAcVAlign::Baseline, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(T.Min.X + 9, T.Max.Y - 7));
 		}
 	}
+	// KSTR contracts: the region ringed green, its title in the tile's top
+	// right; a reach's place a green target.
+	const FLinearColor Kstr = FAcHudStyle::Srgb(0.45, 1, 0.55);
+	for (int32 R = 0; W && R < Tiles.Num(); ++R)
+	{
+		const FString Id = Text(W->regions[R].id);
+		const FBox2f& T = Tiles[R];
+		float Line = 0;
+		for (const FAcWorldMapInfo::FMark& K : Info.Marks)
+		{
+			if (K.Region != Id) continue;
+			if (Line == 0) Frame(Out, L + 2, P, T.ExpandBy(-3), WithAlpha(Kstr, 0.85f), 1.5f);
+			Label(FString::Printf(TEXT("KSTR · %s"), *K.Title.ToUpper()), 11, Kstr, EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold)
+				.Paint(Out, L + 3, P, FVector2f(T.Max.X - 9, T.Min.Y + 8 + Line));
+			Line += 15;
+			if (!K.At) continue;
+			const FVector2f At = T.Min + *K.At * T.GetSize();
+			FSlateDrawElement::MakeLines(Out, L + 5, P.ToPaintGeometry(), Circle(At, 8.f), ESlateDrawEffect::None, FLinearColor(0, 0, 0, 0.8f), true, 4.f);
+			FSlateDrawElement::MakeLines(Out, L + 6, P.ToPaintGeometry(), Circle(At, 8.f), ESlateDrawEffect::None, Kstr, true, 2.f);
+			Box(Out, L + 6, P, FBox2f(At - FVector2f(2.5f, 2.5f), At + FVector2f(2.5f, 2.5f)), Kstr);
+		}
+	}
 	// The pads.
 	for (int32 I = 0; I < Targets.Num(); ++I)
 	{
@@ -486,9 +539,14 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 			Box(Out, L + 2, P, T.Box, bPicked ? FAcHudStyle::Srgb(0.08, 0.3, 0.42, 0.9) : FAcHudStyle::Srgb(0.05, 0.12, 0.18, 0.8));
 			Frame(Out, L + 3, P, T.Box, bPicked ? FAcHudStyle::Cyan() : FAcHudStyle::Ice(), 1);
 		}
-		const FLinearColor Dot = bPicked ? FAcHudStyle::Ice() : FAcHudStyle::KeyYellow();
-		Box(Out, L + 4, P, FBox2f(At - FVector2f(5, 5), At + FVector2f(5, 5)), FLinearColor(0, 0, 0, 0.85f));
-		Box(Out, L + 5, P, FBox2f(At - FVector2f(4, 4), At + FVector2f(4, 4)), Dot);
+		// The pilot's own pads (a Spacedock, a Homing beacon's building): a
+		// cyan ringed square, bigger than the region's yellow dots.
+		const bool bOwn = W && W->regions[T.Region].pads[T.Pad].building.has_value();
+		const FLinearColor Dot = bPicked ? FAcHudStyle::Ice() : bOwn ? FAcHudStyle::Cyan() : FAcHudStyle::KeyYellow();
+		const float D = bOwn ? 6.f : 4.f;
+		Box(Out, L + 4, P, FBox2f(At - FVector2f(D + 1, D + 1), At + FVector2f(D + 1, D + 1)), FLinearColor(0, 0, 0, 0.85f));
+		Box(Out, L + 5, P, FBox2f(At - FVector2f(D, D), At + FVector2f(D, D)), Dot);
+		if (bOwn) Frame(Out, L + 6, P, FBox2f(At - FVector2f(D + 3, D + 3), At + FVector2f(D + 3, D + 3)), FAcHudStyle::Ice(), 1);
 		Label(T.Label, 13, bPicked ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.9, 0.88, 0.7), EAcHAlign::Left, EAcVAlign::Center)
 			.Paint(Out, L + 5, P, FVector2f(At.X + 10, At.Y));
 	}

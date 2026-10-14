@@ -245,6 +245,9 @@ public:
 	bool Spend(ac::Skill Skill, FString* Why = nullptr);
 	bool Undo(ac::Skill Skill, FString* Why = nullptr);
 	bool Respec(FString* Why = nullptr);
+	/// Drops KSTR contract `Id` (docs/contracts.md); the server's refusal
+	/// comes back as `SkillRefusal` and a note. False, with `Why`: not connected.
+	bool Abandon(uint32 Id, FString* Why = nullptr);
 	bool Slot(int32 Index, std::optional<ac::Skill> Skill, FString* Why = nullptr);
 	/// The server's last refusal of a skill ask (empty: none since the last ask).
 	const FString& SkillRefusal() const { return LastSkillRefusal; }
@@ -273,8 +276,21 @@ public:
 	{
 		FString Name;
 		double Distance = 0;
+		/// A flight leaves from within this of it (P6): Pad link's reach; a
+		/// pad of the pilot's own (`building`) also its radius + 2.
+		double Reach = ac::region::padReach;
+		/// The pilot's own (its Spacedock, a Homing beacon's building).
+		std::optional<ac::StructureKind> Building;
+		bool Within() const { return Distance <= Reach; }
 	};
+	/// The pad the driven unit can fly from (the nearest within its reach),
+	/// else the nearest: the server's rule (`WorldMap::fly`).
 	std::optional<FPadNear> NearestPad() const;
+	/// Pad link's reach (the server's `padReach`), from the pilot's ranks.
+	double PadReachNow() const;
+	/// Ringwalker: learned (unset: not), and the seconds until it is ready
+	/// (0: a flight from anywhere now).
+	std::optional<double> RingwalkerIn() const;
 	/// Why a `Kind` may not stand at `At` (ground) in this region: its
 	/// footprint touches a pad's plate (the server's rule,
 	/// `region::touchesPadPlate`; nil: clear, or nothing known yet).

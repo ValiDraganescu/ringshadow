@@ -11,6 +11,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "Progression.h"
 #include "Rules.h"
 
 #include <string>
@@ -802,6 +803,13 @@ bool FAcMmoClient::Respec(FString* Why)
 	return true;
 }
 
+bool FAcMmoClient::Abandon(const uint32 Id, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	AskedSkill(Net->abandon(Id), FString::Printf(TEXT("abandon contract %u"), Id));
+	return true;
+}
+
 bool FAcMmoClient::Slot(const int32 Index, const std::optional<ac::Skill> Skill, FString* Why)
 {
 	if (!CanAskSkills(Why)) return false;
@@ -900,11 +908,44 @@ std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
 	if (!R || !M || !M->driven() || Travelling()) return std::nullopt;
 	const ac::Unit* U = M->unit(*M->driven());
 	if (!U) return std::nullopt;
-	// The server's rule: pads on this map's ground, the nearest centre.
-	const std::optional<ac::region::PadNear> Near =
-		ac::region::nearestPad(ac::net::padsOnGround(*R, M->simulation().map->bounds), U->position);
-	if (!Near) return std::nullopt;
-	return FPadNear{Text(Near->name), Near->distance};
+	// The server's rule: pads on this map's ground within Pad link's reach;
+	// the pilot's own within its building's radius + 2 too (P6).
+	const std::vector<ac::region::Place> Ground = ac::net::padsOnGround(*R, M->simulation().map->bounds);
+	const double Reach = PadReachNow();
+	std::optional<FPadNear> Best;
+	for (size_t I = 0; I < Ground.size() && I < R->pads.size(); ++I)
+	{
+		FPadNear P{Text(Ground[I].name), ac::distance(Ground[I].at, U->position), Reach, R->pads[I].building};
+		if (P.Building) P.Reach = FMath::Max(Reach, ac::Rules::radius(*P.Building) + 2.0);
+		// One it can fly from first, then the nearest.
+		if (!Best || (P.Within() && !Best->Within()) || (P.Within() == Best->Within() && P.Distance < Best->Distance)) Best = P;
+	}
+	return Best;
+}
+
+double FAcMmoClient::PadReachNow() const
+{
+	double Reach = PadReach;
+	if (const ac::net::ProgressMessage* P = Progress())
+	{
+		const auto It = P->ranks.find(ac::Skill::padLink);
+		for (const ac::SkillEffect& E : ac::Progression::effects(ac::Skill::padLink, It == P->ranks.end() ? 0 : It->second))
+		{
+			if (const auto* L = E.as<ac::SkillEffect::PadLink>()) Reach = FMath::Max(Reach, L->radius);
+		}
+	}
+	return Reach;
+}
+
+std::optional<double> FAcMmoClient::RingwalkerIn() const
+{
+	const ac::net::ProgressMessage* P = Progress();
+	if (!P) return std::nullopt;
+	const auto It = P->ranks.find(ac::Skill::ringwalker);
+	if (It == P->ranks.end() || It->second <= 0) return std::nullopt;
+	// World time; the message comes only on a change, so against the sky's clock.
+	const double Now = SkyNow ? SkyNow->time : 0;
+	return P->ringwalkerReady > Now ? P->ringwalkerReady - Now : 0.0;
 }
 
 std::optional<std::string> FAcMmoClient::PadPlateRefusal(const ac::StructureKind Kind, const ac::Vec2 At) const
@@ -932,8 +973,11 @@ bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)
 	if (!FlightsAsked.IsEmpty()) return No(TEXT("A flight is already asked for"));
 	const std::optional<FPadNear> Near = NearestPad();
 	if (!Near) return No(TEXT("Nothing driven to fly"));
-	if (Near->Distance > PadReach)
+	// Ringwalker: from anywhere once its cooldown is over (the server decides).
+	const std::optional<double> Ring = RingwalkerIn();
+	if (!Near->Within() && !(Ring && *Ring <= 0))
 	{
+		if (Ring) return No(FString::Printf(TEXT("Ringwalker is ready in %.0f s; or drive onto a pad: %s is %.0f cells away"), std::ceil(*Ring), *Near->Name, Near->Distance));
 		return No(FString::Printf(TEXT("Drive onto a pad to fly: pad %s is %.0f cells away"), *Near->Name, Near->Distance));
 	}
 	LastFlightRefusal.Reset();

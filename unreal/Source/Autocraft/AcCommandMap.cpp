@@ -9,6 +9,7 @@
 #include "AcMinimap.h"
 #include "AcMmo.h"
 #include "AcPointer.h"
+#include "AcProgressHud.h"
 #include "AcRtsPawn.h"
 #include "AcSimSubsystem.h"
 #include "SAcCommandMap.h"
@@ -401,13 +402,38 @@ void UAcCommandMapSubsystem::PollKeys()
 			Flow->ToggleSkillScreen();
 			return;
 		}
-		const FKey SlotKeys[] = {EKeys::Q, EKeys::C, EKeys::G};
 		// J: the rig screen (Foundry, Lab, fitting).
 		if (Flow && PC->WasInputKeyJustPressed(EKeys::J))
 		{
 			Flow->ToggleRigScreen();
 			return;
 		}
+		// X: arm an abandon of a KSTR contract; then 1, 2, 3 drop that one
+		// (Esc or X again keeps them; docs/contracts.md).
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this))
+		{
+			if (PC->WasInputKeyJustPressed(EKeys::X))
+			{
+				Hud->ToggleAbandon();
+				return;
+			}
+			if (Hud->AbandonArmed())
+			{
+				static const FKey Numbers[] = {EKeys::One, EKeys::Two, EKeys::Three};
+				for (int32 N = 0; N < 3; ++N)
+				{
+					if (!PC->WasInputKeyJustPressed(Numbers[N])) continue;
+					Hud->Abandon(N);
+					return;
+				}
+				if (PC->WasInputKeyJustPressed(EKeys::Escape))
+				{
+					Hud->ToggleAbandon();
+					return;
+				}
+			}
+		}
+		const FKey SlotKeys[] = {EKeys::Q, EKeys::C, EKeys::G};
 		for (int32 I = 0; I < 3; ++I)
 		{
 			if (!PC->WasInputKeyJustPressed(SlotKeys[I])) continue;

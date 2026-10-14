@@ -272,6 +272,11 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		UE_LOG(LogAutocraft, Log, TEXT("mmoshots: pictures to %s, saves in %s, the pilot in %s"), *Shots.Dir, *AcSaves::Directory(),
 			*FAcMmoClient::Directory());
 	}
+	// mmoshots as one of the listed steps (after flow tests, in one run).
+	if (FString ShotsDir; Test && Test->Steps.Contains(TEXT("mmoshots")) && Shots.Dir.IsEmpty() && FParse::Value(Cmd, TEXT("AcMmoShots="), ShotsDir))
+	{
+		Shots.Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), ShotsDir);
+	}
 	// The MMORPG checks and pictures build at once: a new pilot has every
 	// blueprint there (the server's --dev-blueprints), not only the crate's.
 	if (FString MmoShotsDir; (Steps.Contains(TEXT("mmo")) || FParse::Value(Cmd, TEXT("AcMmoShots="), MmoShotsDir))
@@ -925,10 +930,14 @@ void UAcGameFlowSubsystem::TickWorldMap()
 	{
 		Info.NearPad = Near->Name;
 		Info.NearDistance = Near->Distance;
+		Info.PadReach = Near->Reach;
+		Info.bOwnPad = Near->Building.has_value();
 	}
-	Info.PadReach = FAcMmoClient::PadReach;
+	else Info.PadReach = Mmo->PadReachNow();
+	Info.RingwalkerIn = Mmo->RingwalkerIn();
 	if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo()) Info.FlyingTo = Text(To->name);
 	Info.Sites = AcProgressHud::KnownSites(*Mmo);
+	Info.Marks = AcProgressHud::ContractMarks(*Mmo);
 	WorldMap->SetInfo(Info);
 	if (!Mmo->FlightRefusal().IsEmpty()) WorldMap->SetRefusal(Mmo->FlightRefusal());
 }

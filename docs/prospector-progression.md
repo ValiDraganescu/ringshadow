@@ -685,6 +685,20 @@ Foundry and the Lab.
 - The build menu (B) lists only the blueprints the pilot has, in a fixed
   order; one under its floor is greyed "level 15".
 - The world map marks the sites the pilot knows of, found or not.
+- The build menu's list stands on a panel over the dashboard's right well
+  while B is open (big enough to read), with the world's price and its MH
+  part. The client's mirror sim holds the pilot's progress as the server's
+  Region does, so prices, full hp (Plating) and the depots agree.
+- Fallen (P6): the view dims, "PROSPECTOR DOWN", "BACK IN 7 s", where it
+  comes back ("AT YOUR CITADEL", "AT THE LANDING PAD, COLD FORK") and what
+  Second wind kept.
+- With a load, the prompt and the compass name the pilot's own finished
+  Hab Domes as depots beside the Citadel ("Walk into your Citadel or a Hab
+  Dome to unload").
+- The world map draws the pilot's own pads (Spacedock, Homing beacon) as
+  cyan squares; a flight leaves within Pad link's reach of a pad, within
+  radius + 2 of an own pad, or from anywhere with Ringwalker ready ("At
+  your Citadel: pick a pad", "Ringwalker is ready in 40 s").
 
 ## How it fits the code
 

@@ -103,6 +103,33 @@ struct FAcCardInfo
 	FString LayoutKey() const;
 };
 
+/// One KSTR contract on the dashboard's contract panel (docs/contracts.md).
+struct FAcContractRow
+{
+	enum class EState : uint8 { Open, Done, Abandoned };
+	EState State = EState::Open;
+	/// "Prove the Vein", the radio's line, "2 / 6 LOADS · COLD FORK".
+	FString Title;
+	FString Pitch;
+	FString Progress;
+	/// 0…1 of the way (open ones).
+	double Share = 0;
+	/// "+600 XP  ·  +15 MH".
+	FString Pay;
+	/// Done or abandoned: "NEW ONE AT DAWN, IN 23:41".
+	FString Dawn;
+	bool operator==(const FAcContractRow&) const = default;
+};
+
+/// The contract panel: the pilot's three slots, and whether X armed an
+/// abandon (the number keys then drop one).
+struct FAcContractsInfo
+{
+	TArray<FAcContractRow> Rows;
+	bool bArmed = false;
+	bool operator==(const FAcContractsInfo&) const = default;
+};
+
 struct AUTOCRAFT_API FAcConsoleInfo
 {
 	/// The selection half of `GameController.card(_:)` for one of the local

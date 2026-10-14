@@ -37,8 +37,13 @@ struct FAcWorldMapInfo
 	/// The pad of the pilot's region nearest its unit, and how far (cells).
 	FString NearPad;
 	std::optional<double> NearDistance;
-	/// Within this of a pad's centre a flight can leave.
+	/// Within this of a pad's centre a flight can leave (the near pad's:
+	/// Pad link's reach, a pad of the pilot's own its building's radius + 2).
 	double PadReach = 4.0;
+	/// The near pad is the pilot's own (a Spacedock, a Homing beacon).
+	bool bOwnPad = false;
+	/// Ringwalker learned: seconds until a flight from anywhere (0: now).
+	std::optional<double> RingwalkerIn;
 	/// In flight to this region (empty: on the ground).
 	FString FlyingTo;
 	/// The blueprint sites the pilot knows of (`AcProgressHud::KnownSites`):
@@ -52,6 +57,17 @@ struct FAcWorldMapInfo
 		bool operator==(const FSite&) const = default;
 	};
 	TArray<FSite> Sites;
+	/// KSTR contracts that point somewhere (open reach and drill ones,
+	/// `AcProgressHud::ContractMarks`): the region's id, where in it (0…1;
+	/// unset: the region as a whole), the contract's title.
+	struct FMark
+	{
+		FString Region;
+		TOptional<FVector2f> At;
+		FString Title;
+		bool operator==(const FMark&) const = default;
+	};
+	TArray<FMark> Marks;
 };
 
 DECLARE_DELEGATE_TwoParams(FAcOnWorldFly, const FString& /*RegionId*/, const FString& /*Pad*/);

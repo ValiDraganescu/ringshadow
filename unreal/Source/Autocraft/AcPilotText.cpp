@@ -88,6 +88,27 @@ namespace
 	}
 }
 
+namespace
+{
+	/// Where a load is dropped off: the side's finished Citadel, and in a
+	/// world the pilot's own finished Hab Domes too (P6, the core's depot rule).
+	bool IsDepot(const ac::Simulation& Sim, const ac::Structure& B, const int64 Owner)
+	{
+		if (B.owner != Owner || !B.complete()) return false;
+		return B.kind == ac::StructureKind::citadel || (B.kind == ac::StructureKind::habDome && Sim.ownBuilding(B));
+	}
+
+	/// "the Citadel", "the Citadel or a Hab Dome": where it unloads now.
+	FString DepotWords(const ac::Simulation& Sim, const int64 Owner)
+	{
+		for (const ac::Structure& B : Sim.state.structures)
+		{
+			if (B.kind == ac::StructureKind::habDome && IsDepot(Sim, B, Owner)) return TEXT("your Citadel or a Hab Dome");
+		}
+		return TEXT("the Citadel");
+	}
+}
+
 FAcPilotText FAcPilotText::Of(const ac::UnitKind Kind)
 {
 	const FString Walk = TEXT("WASD  walk   ·   mouse  look"), Fire = TEXT("act.strike");
@@ -256,7 +277,8 @@ TArray<FString> AcPilotText::MmoTips(const ac::Simulation& Sim, const ac::Unit& 
 	}
 	TArray<FString> Tips = {MoveLine(U, T)};
 	if (bOre) Tips.Add(TEXT("Hold click  drill ore at a deposit"));
-	Tips.Add(bCitadel ? FString(TEXT("Walk into  your Citadel to unload the ore"))
+	const FString Depot = DepotWords(Sim, U.owner);
+	Tips.Add(bCitadel ? FString::Printf(TEXT("Walk into  %s to unload the ore"), Depot == TEXT("the Citadel") ? TEXT("your Citadel") : *Depot)
 					  : FString(TEXT("B  build a Citadel, to bring ore home")));
 	if (bDerrick) Tips.Add(TEXT("click  enter your Derrick   ·   R + hold click  repair it"));
 	else if (bHurt) Tips.Add(TEXT("Hold click  repair a damaged building"));
@@ -360,7 +382,7 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		if (!Target)
 		{
 			if (Sim.pilot && Sim.pilot->mend && U.kind == ac::UnitKind::prospector) Info.Prompt = FString(TEXT("Nothing to repair ahead"));
-			else if (U.carrying > 0) Info.Prompt = FString(TEXT("Walk into the Citadel to unload"));
+			else if (U.carrying > 0) Info.Prompt = FString::Printf(TEXT("Walk into %s to unload"), *DepotWords(Sim, U.owner));
 		}
 		else if (Target->is<ac::PilotTarget::Enemy>())
 		{
@@ -394,7 +416,7 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		}
 		else if (Target->is<ac::PilotTarget::Full>())
 		{
-			Info.Prompt = FString(TEXT("Hands full: unload at the Citadel"));
+			Info.Prompt = FString::Printf(TEXT("Hands full: unload at %s"), *DepotWords(Sim, U.owner));
 			Info.Tone = EAcTone::Blocked;
 		}
 		// A damaged building behind what the click goes to (its Derrick,
@@ -465,8 +487,7 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 	{
 		for (const ac::Structure& B : S.structures)
 		{
-			if (B.kind == ac::StructureKind::citadel && B.owner == U.owner && B.complete()
-				&& (!Home || Dist(B.position, U.position) < Dist(Home->position, U.position)))
+			if (IsDepot(Sim, B, U.owner) && (!Home || Dist(B.position, U.position) < Dist(Home->position, U.position)))
 			{
 				Home = &B;
 			}
@@ -474,7 +495,7 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 	}
 	if (Home)
 	{
-		Info.Goal = FAcPilotGoal{TEXT("CITADEL"), Home->position, Edge(Home->position, ac::Rules::radius(ac::StructureKind::citadel))};
+		Info.Goal = FAcPilotGoal{Title(Home->kind).ToUpper(), Home->position, Edge(Home->position, ac::Rules::radius(Home->kind))};
 	}
 	else if (U.kind == ac::UnitKind::prospector && U.task != ETask::mining && U.task != ETask::inDerrick)
 	{
@@ -611,8 +632,11 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 			B.Key = FString::FromInt(I + 1);
 			B.Title = Title(K);
 			B.Icon = FAcConsoleInfo::StructureIconName((int32)K);
-			B.Ore = (int32)ac::Rules::cost(K);
-			B.Hydrogen = (int32)ac::Rules::hydrogenCost(K);
+			// The price the pilot pays: a world's prices with an MH part (P6),
+			// Prefab and Efficient plans off it (the mirror has its progress).
+			const ac::Price Cost = Sim.buildCost(K, ac::Pilot::player);
+			B.Ore = (int32)Cost.ore;
+			B.Hydrogen = (int32)Cost.hydrogen;
 			B.Time = ac::Rules::buildTime(K);
 			B.bEnabled = !Why;
 			if (Why) B.Why = Utf8(*Why);

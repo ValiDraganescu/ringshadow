@@ -118,6 +118,13 @@ void SAcProgressHud::SetOpening(const TOptional<FOpening>& In)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcProgressHud::SetRespawn(const TOptional<FRespawn>& In)
+{
+	if (Respawn == In) return;
+	Respawn = In;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcProgressHud::Toast(const FString& Title, const FString& Sub, const FLinearColor& Accent, const double Now)
 {
 	Notes.Insert(FNote{Title, Sub, Accent, Now}, 0);
@@ -143,6 +150,7 @@ int32 SAcProgressHud::OnPaint(const FPaintArgs&, const FGeometry& Geometry, cons
 	if (Size.X <= 0 || Size.Y <= 0) return Layer;
 	if (Row) PaintSlots(Out, Layer, Geometry, Size);
 	if (Opening) PaintOpening(Out, Layer, Geometry, Size);
+	if (Respawn) PaintRespawn(Out, Layer, Geometry, Size);
 	PaintToasts(Out, Layer + 4, Geometry, Size, FPlatformTime::Seconds());
 	return Layer + 8;
 }
@@ -227,6 +235,31 @@ void SAcProgressHud::PaintOpening(FSlateWindowElementList& Out, int32 Layer, con
 	const FVector2f At(C.X, C.Y + R + 12);
 	Box(Out, Layer, G, FBox2f(At - FVector2f(M.X / 2 + 12, 4), At + FVector2f(M.X / 2 + 12, M.Y + 4)), WithAlpha(FAcHudStyle::Glass(), 0.78f));
 	T.Paint(Out, Layer + 3, G, At);
+}
+
+void SAcProgressHud::PaintRespawn(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, const FVector2f Size) const
+{
+	// The view dimmed; over its middle what fell, when and where it is back.
+	Box(Out, Layer, G, FBox2f(FVector2f::ZeroVector, Size), FLinearColor(0.f, 0.f, 0.02f, 0.62f));
+	const FVector2f C(Size.X / 2, Size.Y * 0.4f);
+	const float W = 620, H = Respawn->Kept.IsEmpty() ? 196 : 232;
+	const FBox2f B(C - FVector2f(W / 2, H / 2), C + FVector2f(W / 2, H / 2));
+	const FLinearColor Red = FAcHudStyle::Srgb(1, 0.36, 0.3);
+	Box(Out, Layer + 1, G, B, WithAlpha(FAcHudStyle::Glass(), 0.9f));
+	Box(Out, Layer + 2, G, FBox2f(B.Min, FVector2f(B.Max.X, B.Min.Y + 3)), Red);
+	CutFrame(Out, Layer + 2, G, B, WithAlpha(Red, 0.7f), 1.5f, 12);
+	Label(TEXT("PROSPECTOR DOWN"), 22, Red, EAcHAlign::Center, EAcVAlign::Top, EAcFontWeight::Bold, 3.f).Paint(Out, Layer + 3, G, FVector2f(C.X, B.Min.Y + 22));
+	Label(FString::Printf(TEXT("BACK IN %d s"), Respawn->Left), 46, FAcHudStyle::Text(), EAcHAlign::Center, EAcVAlign::Top, EAcFontWeight::Bold, 1.f)
+		.Paint(Out, Layer + 3, G, FVector2f(C.X, B.Min.Y + 58));
+	Label(Respawn->Where, 20, FAcHudStyle::Ice(), EAcHAlign::Center, EAcVAlign::Top, EAcFontWeight::SemiBold, 1.2f)
+		.Paint(Out, Layer + 3, G, FVector2f(C.X, B.Min.Y + 126));
+	if (!Respawn->Kept.IsEmpty())
+	{
+		Label(Respawn->Kept, 17, FAcHudStyle::LevelGold(), EAcHAlign::Center, EAcVAlign::Top, EAcFontWeight::Medium, 0.4f)
+			.Paint(Out, Layer + 3, G, FVector2f(C.X, B.Min.Y + 166));
+	}
+	Label(TEXT("A new Prospector comes for you"), 14, FAcHudStyle::Soft(), EAcHAlign::Center, EAcVAlign::Baseline, EAcFontWeight::Medium, 0.4f)
+		.Paint(Out, Layer + 3, G, FVector2f(C.X, B.Max.Y - 14));
 }
 
 void SAcProgressHud::PaintToasts(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, const FVector2f Size, const double Now) const
@@ -336,6 +369,7 @@ std::optional<ac::ProspectorProgress> AcProgressHud::Progress(const FAcMmoClient
 	G.slots = P->slots;
 	G.blueprints = P->blueprints;
 	G.sites = P->sitesFound;
+	G.rig = P->rig;
 	return G;
 }
 
@@ -437,6 +471,161 @@ void AcProgressHud::BlueprintSites(const FAcMmoClient& Mmo, std::map<ac::Structu
 	}
 }
 
+TArray<FAcWorldMapInfo::FMark> AcProgressHud::ContractMarks(const FAcMmoClient& Mmo)
+{
+	TArray<FAcWorldMapInfo::FMark> Out;
+	const ac::net::ProgressMessage* P = Mmo.Progress();
+	if (!P) return Out;
+	const TMap<FString, FPlace>& All = Places(Mmo);
+	for (const ac::net::Contract& C : P->contracts)
+	{
+		if (C.state != ac::net::Contract::State::open) continue;
+		if (C.kind != ac::net::Contract::Kind::reach && C.kind != ac::net::Contract::Kind::drill) continue;
+		FAcWorldMapInfo::FMark M;
+		M.Title = Text(C.title);
+		if (C.kind == ac::net::Contract::Kind::drill)
+		{
+			M.Region = Text(C.region.empty() ? C.target : C.region);
+			Out.Add(M);
+			continue;
+		}
+		// reach: "<region>/<site name>" or "<region>/pad/<pad name>".
+		const size_t Slash = C.target.find('/');
+		if (Slash == std::string::npos) continue;
+		M.Region = Text(C.target.substr(0, Slash));
+		const std::string Rest = C.target.substr(Slash + 1);
+		if (Rest.rfind("pad/", 0) == 0)
+		{
+			if (const ac::net::WorldMessage* W = Mmo.World())
+			{
+				for (const ac::net::WorldMessage::Region& R : W->regions)
+				{
+					if (R.id != C.target.substr(0, Slash)) continue;
+					const ac::MapCells Cells = ac::cells(R.size);
+					for (const ac::net::WorldMessage::Pad& Q : R.pads)
+					{
+						if (Q.name == Rest.substr(4))
+						{
+							M.At = FVector2f(float(Q.at.x / FMath::Max(1.0, Cells.width)), float(Q.at.y / FMath::Max(1.0, Cells.depth)));
+						}
+					}
+				}
+			}
+		}
+		else if (const FPlace* Place = All.Find(Text(C.target)))
+		{
+			M.At = Place->At;
+		}
+		Out.Add(M);
+	}
+	return Out;
+}
+
+TArray<FAcPilotGoal> AcProgressHud::ContractGoals(const FAcMmoClient& Mmo, const ac::Vec2 From)
+{
+	TArray<FAcPilotGoal> Out;
+	const ac::net::WorldMessage::Region* Here = Mmo.Here();
+	const ac::net::Mirror* M = Mmo.Mirror();
+	if (!Here || !M || !M->simulation().map) return Out;
+	const ac::GroundRect& B = M->simulation().map->bounds;
+	const ac::MapCells Cells = ac::cells(Here->size);
+	for (const FAcWorldMapInfo::FMark& K : ContractMarks(Mmo))
+	{
+		if (!K.At || K.Region != Text(Here->id)) continue;
+		const ac::Vec2 At(B.minX + K.At->X * Cells.width, B.minZ + K.At->Y * Cells.depth);
+		Out.Add(FAcPilotGoal{TEXT("KSTR"), At, ac::distance(At, From)});
+	}
+	return Out;
+}
+
+FString AcProgressHud::Countdown(const double Seconds)
+{
+	const int64 S = FMath::Max<int64>(0, (int64)std::ceil(Seconds));
+	if (S >= 3600) return FString::Printf(TEXT("%lld:%02lld:%02lld"), (long long)(S / 3600), (long long)(S / 60 % 60), (long long)(S % 60));
+	return FString::Printf(TEXT("%lld:%02lld"), (long long)(S / 60), (long long)(S % 60));
+}
+
+FAcContractsInfo AcProgressHud::Contracts(const FAcMmoClient& Mmo, const bool bArmed)
+{
+	FAcContractsInfo Out;
+	Out.bArmed = bArmed;
+	const ac::net::ProgressMessage* P = Mmo.Progress();
+	if (!P) return Out;
+	auto RegionName = [&](const std::string& Id) {
+		if (const ac::net::WorldMessage* W = Mmo.World())
+		{
+			for (const ac::net::WorldMessage::Region& R : W->regions)
+			{
+				if (R.id == Id) return Upper(R.name);
+			}
+		}
+		return Upper(Id);
+	};
+	const double Sky = Mmo.Sky() ? Mmo.Sky()->time : 0;
+	using K = ac::net::Contract::Kind;
+	for (const ac::net::Contract& C : P->contracts)
+	{
+		FAcContractRow Row;
+		Row.State = C.state == ac::net::Contract::State::done ? FAcContractRow::EState::Done
+			: C.state == ac::net::Contract::State::abandoned ? FAcContractRow::EState::Abandoned : FAcContractRow::EState::Open;
+		Row.Title = Text(C.title);
+		Row.Pitch = Text(C.pitch);
+		Row.Share = C.need > 0 ? double(C.have) / double(C.need) : 0;
+		Row.Pay = FString::Printf(TEXT("+%lld XP"), (long long)std::llround(C.xp));
+		if (C.hydrogen > 0) Row.Pay += FString::Printf(TEXT("  ·  +%lld MH"), (long long)C.hydrogen);
+		const long long Have = (long long)C.have, Need = (long long)C.need;
+		// What is left to do, in the panel's words.
+		const size_t Slash = C.target.find('/');
+		const std::string Place = Slash == std::string::npos ? C.target : C.target.substr(C.target.rfind('/') + 1);
+		switch (C.kind)
+		{
+		case K::deliverOre: Row.Progress = FString::Printf(TEXT("%lld / %lld ORE HOME"), Have, Need); break;
+		case K::deliverHydrogen: Row.Progress = FString::Printf(TEXT("%lld / %lld MH HOME"), Have, Need); break;
+		case K::drill: Row.Progress = FString::Printf(TEXT("%lld / %lld LOADS · %s"), Have, Need, *RegionName(C.target)); break;
+		case K::sweep: Row.Progress = FString::Printf(TEXT("%lld / %lld LOADS IN SHADOW"), Have, Need); break;
+		case K::reach:
+			Row.Progress = FString::Printf(TEXT("REACH %s · %s"), *Upper(Place), *RegionName(C.region.empty() ? C.target.substr(0, Slash) : C.region));
+			break;
+		case K::build:
+		{
+			const std::optional<ac::StructureKind> Kind = ac::parse<ac::StructureKind>(C.target);
+			Row.Progress = FString::Printf(TEXT("BUILD %s  %lld / %lld"), Kind ? *Upper(ac::Simulation::title(*Kind)) : *Upper(C.target), Have, Need);
+			break;
+		}
+		}
+		if (Row.State != FAcContractRow::EState::Open)
+		{
+			const FString In = P->contractsDawn > Sky ? FString::Printf(TEXT(", IN %s"), *Countdown(P->contractsDawn - Sky)) : FString();
+			Row.Dawn = (Row.State == FAcContractRow::EState::Done ? TEXT("NEW ONE AT DAWN") : TEXT("BACK AT DAWN")) + In;
+		}
+		Out.Rows.Add(Row);
+	}
+	return Out;
+}
+
+void UAcProgressHudSubsystem::ToggleAbandon()
+{
+	ArmedAt = AbandonArmed() ? -1 : FPlatformTime::Seconds();
+	UE_LOG(LogAutocraft, Log, TEXT("contracts: abandon %s"), ArmedAt < 0 ? TEXT("disarmed") : TEXT("armed"));
+}
+
+bool UAcProgressHudSubsystem::AbandonArmed() const { return ArmedAt >= 0 && FPlatformTime::Seconds() - ArmedAt < 6; }
+
+bool UAcProgressHudSubsystem::Abandon(const int32 Index)
+{
+	ArmedAt = -1;
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	FAcMmoClient* Mmo = Sim && Sim->IsMmo() ? Sim->MmoClient() : nullptr;
+	const ac::net::ProgressMessage* P = Mmo ? Mmo->Progress() : nullptr;
+	if (!P || Index < 0 || Index >= (int32)P->contracts.size()) return false;
+	const ac::net::Contract& C = P->contracts[size_t(Index)];
+	if (C.state != ac::net::Contract::State::open) return false;
+	FString Why;
+	const bool bAsked = Mmo->Abandon(C.id, &Why);
+	UE_LOG(LogAutocraft, Log, TEXT("contracts: abandon %u (%s)%s"), C.id, *Text(C.title), bAsked ? TEXT("") : *(TEXT(": ") + Why));
+	return bAsked;
+}
+
 // MARK: - The subsystem
 
 UAcProgressHudSubsystem* UAcProgressHudSubsystem::Get(const UObject* WorldContext)
@@ -490,10 +679,59 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 	if (!Mmo)
 	{
 		Hud->SetSlots({}, FAcCabLayout());
+		if (UAcConsoleSubsystem* C = UAcConsoleSubsystem::Get(this); C && C->Console()) C->Console()->SetContracts({});
 		Shown = -1;
+		ArmedAt = -1;
 		return;
 	}
 	News(*Mmo);
+	// The mirror runs the server's rules with the pilot's progress too (its
+	// full hp with Plating, world prices, its Hab Domes as depots): the
+	// server's Region sets the same on its sim. Its buildings: the side's
+	// in the region (the wire names no builder).
+	if (ac::net::Mirror* M = Mmo->Mirror())
+	{
+		ac::Simulation& S = M->simulation();
+		const std::optional<ac::ProspectorProgress> G = AcProgressHud::Progress(*Mmo);
+		if (S.progress != G) S.setProgress(G);
+		std::set<int64_t> Mine;
+		for (const ac::Structure& B : S.state.structures)
+		{
+			if (B.owner == ac::Pilot::player) Mine.insert(B.id);
+		}
+		if (S.pilotBuildings != Mine) S.pilotBuildings = std::move(Mine);
+	}
+	// Fallen: the respawn screen, counting down to the server's time.
+	TOptional<SAcProgressHud::FRespawn> Down;
+	const ac::net::ProgressMessage* Fell = Mmo->Progress();
+	if (const std::optional<ac::net::ProgressMessage::Respawn> Real = Fell ? Fell->respawn : std::nullopt; Real || RespawnPreview)
+	{
+		const ac::net::ProgressMessage::Respawn& R = Real ? *Real : *RespawnPreview;
+		SAcProgressHud::FRespawn V;
+		V.Left = (int32)FMath::Max(0.0, std::ceil(R.at - (Mmo->Sky() ? Mmo->Sky()->time : R.at)));
+		V.Where = !R.home ? FString(TEXT("AT THE LANDING PAD")) : FString::Printf(TEXT("AT YOUR %s"), *Upper(ac::Simulation::title(*R.home)));
+		const ac::net::WorldMessage::Region* Here = Mmo->Here();
+		if (!Here || Here->id != R.region)
+		{
+			if (const ac::net::WorldMessage* W = Mmo->World())
+			{
+				for (const ac::net::WorldMessage::Region& G : W->regions)
+				{
+					if (G.id == R.region) V.Where += TEXT(", ") + Upper(G.name);
+				}
+			}
+		}
+		if (R.cargo > 0) V.Kept = FString::Printf(TEXT("Second wind kept %lld %s"), (long long)R.cargo, R.hydrogen ? TEXT("MH") : TEXT("ore"));
+		Down = V;
+	}
+	Hud->SetRespawn(Down);
+	// The KSTR contracts on the dashboard's right panel.
+	if (UAcConsoleSubsystem* C = UAcConsoleSubsystem::Get(this); C && C->Console())
+	{
+		TOptional<FAcContractsInfo> Panel;
+		if (Mmo->Progress() && !Mmo->Progress()->contracts.empty()) Panel = AcProgressHud::Contracts(*Mmo, AbandonArmed());
+		C->Console()->SetContracts(Panel);
+	}
 
 	// The slot row while driving the pilot's Prospector (not in flight).
 	TOptional<std::array<FAcSlotView, 3>> Row;
@@ -545,69 +783,7 @@ void UAcProgressHudSubsystem::News(FAcMmoClient& Mmo)
 	const ac::net::ProgressMessage* P = Mmo.Progress();
 	const double Now = FPlatformTime::Seconds();
 	int64 Reached = -1;
-	for (const ac::net::ProgressMessage::News& N : Mmo.TakeProgressNews())
-	{
-		using K = ac::net::ProgressMessage::NewsKind;
-		const FString Xp = N.xp > 0 ? FString::Printf(TEXT("+%lld XP"), (long long)std::llround(N.xp)) : FString();
-		switch (N.kind)
-		{
-		case K::level:
-			Reached = FMath::Max<int64>(Reached, N.value);
-			break;
-		case K::blueprint:
-		{
-			const std::optional<ac::StructureKind> Kind = ac::parse<ac::StructureKind>(N.id);
-			const FString Name = Kind ? Upper(ac::Simulation::title(*Kind)) : Text(N.id).ToUpper();
-			const int64 Level = P ? ac::Progression::level(P->xp) : 1;
-			const FString Sub = N.value > Level ? FString::Printf(TEXT("Opens at level %lld"), (long long)N.value) : FString(TEXT("Ready: B builds it"));
-			Hud->Toast(FString::Printf(TEXT("BLUEPRINT FOUND: %s"), *Name), Xp.IsEmpty() ? Sub : Sub + TEXT("  ·  ") + Xp,
-				FAcHudStyle::LevelGold(), Now);
-			break;
-		}
-		case K::chip:
-		{
-			const ac::net::WorldMessage::Region* Here = Mmo.Here();
-			const FString Where = Here ? FString::Printf(TEXT("A site marked in %s"), *Text(Here->name)) : FString(TEXT("A site marked on the map"));
-			Hud->Toast(TEXT("SURVEY CHIP"), Xp.IsEmpty() ? Where : Where + TEXT("  ·  ") + Xp, FAcHudStyle::Cyan(), Now);
-			break;
-		}
-		case K::region:
-		{
-			if (Xp.IsEmpty()) break;
-			FString Name = Text(N.id);
-			if (const ac::net::WorldMessage* W = Mmo.World())
-			{
-				for (const ac::net::WorldMessage::Region& R : W->regions)
-				{
-					if (R.id == N.id) Name = Text(R.name);
-				}
-			}
-			Hud->Toast(TEXT("REGION DISCOVERED"), Name + TEXT("  ·  ") + Xp, FAcHudStyle::Ice(), Now);
-			break;
-		}
-		case K::pad:
-			if (!Xp.IsEmpty()) Hud->Toast(TEXT("FIRST LANDING"), Xp, FAcHudStyle::Ice(), Now);
-			break;
-		case K::feat:
-			if (!Xp.IsEmpty()) Hud->Toast(TEXT("FEAT"), Xp, FAcHudStyle::Amber(), Now);
-			break;
-		case K::reset:
-			Hud->Toast(TEXT("SKILLS RESET"), FString::Printf(TEXT("%lld points to spend  ·  K"), (long long)N.value), FAcHudStyle::Energy(), Now);
-			break;
-		case K::site:
-			// A site opened: its blueprint comes as its own news; one already
-			// known paid ore and MH instead.
-			if (N.value == 1)
-			{
-				Hud->Toast(TEXT("BLUEPRINT ALREADY KNOWN"), FString::Printf(TEXT("+%lld ore  ·  +%lld MH"), (long long)ac::net::kSiteOre,
-					(long long)ac::net::kSiteHydrogen), FAcHudStyle::Soft(), Now);
-			}
-			break;
-		default:
-			// Others' news (contracts) have their own HUD.
-			break;
-		}
-	}
+	for (const ac::net::ProgressMessage::News& N : Mmo.TakeProgressNews()) NewsItem(Mmo, N, Now, Reached);
 	const int64 Level = P ? ac::Progression::level(Mmo.Xp().value_or(P->xp)) : -1;
 	// The first progress sets where the pilot is: no banner for a resumed pilot.
 	if (Shown < 0)
@@ -630,5 +806,111 @@ void UAcProgressHudSubsystem::News(FAcMmoClient& Mmo)
 	{
 		// A new world, a respec of the save: start again from here.
 		Shown = Level;
+	}
+}
+
+void UAcProgressHudSubsystem::PreviewNews(const ac::net::ProgressMessage::News& N)
+{
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	FAcMmoClient* Mmo = Sim && Sim->IsMmo() ? Sim->MmoClient() : nullptr;
+	int64 Reached = -1;
+	if (Mmo && Mount()) NewsItem(*Mmo, N, FPlatformTime::Seconds(), Reached);
+}
+
+void UAcProgressHudSubsystem::PreviewRespawn(const std::optional<ac::net::ProgressMessage::Respawn>& R) { RespawnPreview = R; }
+
+void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::ProgressMessage::News& N, const double Now, int64& Reached)
+{
+	const ac::net::ProgressMessage* P = Mmo.Progress();
+	using K = ac::net::ProgressMessage::NewsKind;
+	const FString Xp = N.xp > 0 ? FString::Printf(TEXT("+%lld XP"), (long long)std::llround(N.xp)) : FString();
+	switch (N.kind)
+	{
+	case K::level:
+		Reached = FMath::Max<int64>(Reached, N.value);
+		break;
+	case K::blueprint:
+	{
+		const std::optional<ac::StructureKind> Kind = ac::parse<ac::StructureKind>(N.id);
+		const FString Name = Kind ? Upper(ac::Simulation::title(*Kind)) : Text(N.id).ToUpper();
+		const int64 Level = P ? ac::Progression::level(P->xp) : 1;
+		const FString Sub = N.value > Level ? FString::Printf(TEXT("Opens at level %lld"), (long long)N.value) : FString(TEXT("Ready: B builds it"));
+		Hud->Toast(FString::Printf(TEXT("BLUEPRINT FOUND: %s"), *Name), Xp.IsEmpty() ? Sub : Sub + TEXT("  ·  ") + Xp,
+			FAcHudStyle::LevelGold(), Now);
+		break;
+	}
+	case K::chip:
+	{
+		const ac::net::WorldMessage::Region* Here = Mmo.Here();
+		const FString Where = Here ? FString::Printf(TEXT("A site marked in %s"), *Text(Here->name)) : FString(TEXT("A site marked on the map"));
+		Hud->Toast(TEXT("SURVEY CHIP"), Xp.IsEmpty() ? Where : Where + TEXT("  ·  ") + Xp, FAcHudStyle::Cyan(), Now);
+		break;
+	}
+	case K::region:
+	{
+		if (Xp.IsEmpty()) break;
+		FString Name = Text(N.id);
+		if (const ac::net::WorldMessage* W = Mmo.World())
+		{
+			for (const ac::net::WorldMessage::Region& R : W->regions)
+			{
+				if (R.id == N.id) Name = Text(R.name);
+			}
+		}
+		Hud->Toast(TEXT("REGION DISCOVERED"), Name + TEXT("  ·  ") + Xp, FAcHudStyle::Ice(), Now);
+		break;
+	}
+	case K::pad:
+		if (!Xp.IsEmpty()) Hud->Toast(TEXT("FIRST LANDING"), Xp, FAcHudStyle::Ice(), Now);
+		break;
+	case K::feat:
+		if (!Xp.IsEmpty()) Hud->Toast(TEXT("FEAT"), Xp, FAcHudStyle::Amber(), Now);
+		break;
+	case K::reset:
+		Hud->Toast(TEXT("SKILLS RESET"), FString::Printf(TEXT("%lld points to spend  ·  K"), (long long)N.value), FAcHudStyle::Energy(), Now);
+		break;
+	case K::site:
+		// A site opened: its blueprint comes as its own news; one already
+		// known paid ore and MH instead.
+		if (N.value == 1)
+		{
+			Hud->Toast(TEXT("BLUEPRINT ALREADY KNOWN"), FString::Printf(TEXT("+%lld ore  ·  +%lld MH"), (long long)ac::net::kSiteOre,
+				(long long)ac::net::kSiteHydrogen), FAcHudStyle::Soft(), Now);
+		}
+		break;
+	case K::contract:
+	{
+		// A KSTR contract done: its title from the slots.
+		FString Title = TEXT("CONTRACT");
+		if (P)
+		{
+			for (const ac::net::Contract& C : P->contracts)
+			{
+				if (std::to_string(C.id) == N.id) Title = Upper(C.title);
+			}
+		}
+		FString Pay = Xp;
+		if (N.value > 0) Pay += FString::Printf(TEXT("%s+%lld MH"), Pay.IsEmpty() ? TEXT("") : TEXT("  ·  "), (long long)N.value);
+		Hud->Toast(FString::Printf(TEXT("CONTRACT DONE: %s"), *Title), Pay, FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
+		break;
+	}
+	case K::made:
+	case K::researched:
+	{
+		// P7: the Foundry made a module; the Lab opened a mark (the rig screen, J).
+		const std::optional<ac::Module> M = ac::parse<ac::Module>(N.id);
+		const FString Name = (M ? Upper(ac::Modules::title(*M)) : Text(N.id).ToUpper()) + TEXT(" ") + Upper(ac::Modules::markName(N.value));
+		if (N.kind == K::made)
+		{
+			Hud->Toast(FString::Printf(TEXT("MODULE MADE: %s"), *Name), TEXT("Waiting in your stores  ·  J fits it at home"), FAcHudStyle::Amber(), Now);
+		}
+		else
+		{
+			Hud->Toast(FString::Printf(TEXT("RESEARCHED: %s"), *Name), TEXT("The Foundry can make it now  ·  J"), FAcHudStyle::Srgb(0.74, 0.56, 1), Now);
+		}
+		break;
+	}
+	default:
+		break;
 	}
 }

@@ -87,6 +87,13 @@ public:
 	/// the key in yellow); an empty header: the mode's keys. In flight it
 	/// says the flight instead (docs/mmorpg-shots.md #5).
 	void SetMmoKeys(const FString& Header, const TArray<FString>& Lines);
+	/// The MMORPG mode's KSTR contracts, on a panel standing on the
+	/// dashboard over its right well and grille (unset: none). The build
+	/// menu (B) takes the panel's place while open.
+	void SetContracts(const TOptional<FAcContractsInfo>& In);
+	/// That panel's rectangle (Swift points, y up) for `Rows` rows of
+	/// `RowH`, and a header and a foot.
+	FAcRect RightPanel(int32 Rows, double RowH) const;
 	/// The 5 × 3 card grid is drawn (not in the MMORPG top-down).
 	bool ShowsCard() const { return !(bMmo && Look == EAcConsoleStyle::Rts); }
 	/// The view switch is drawn (not in the MMORPG top-down).
@@ -163,6 +170,9 @@ private:
 	/// The MMORPG test mode's build menu in the card's well: one row a
 	/// building (key, icon, name, price; greyed with why not), Esc under them.
 	void PaintBuildList(class FAcConsolePaint& P) const;
+	void PaintContracts(class FAcConsolePaint& P) const;
+	/// The panel's dark glass and its rims (`RightPanel`).
+	void PaintPanelGlass(class FAcConsolePaint& P, const FAcRect& R) const;
 	void PaintOver(class FAcConsolePaint& P) const;
 	void PaintKeyed(class FAcConsolePaint& P, const FString& Text, double Size, const FLinearColor& Key,
 		const FLinearColor& Rest, FVector2D At) const;
@@ -191,6 +201,7 @@ private:
 	bool bMmo = false;
 	FString MmoHeader;
 	TArray<FString> MmoLines;
+	TOptional<FAcContractsInfo> Contracts;
 	EAcCabLamps Lamps = EAcCabLamps::Idle;
 	double LampsSince = 0;
 

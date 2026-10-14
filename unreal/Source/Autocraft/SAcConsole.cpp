@@ -148,6 +148,22 @@ void SAcConsole::SetMmoKeys(const FString& Header, const TArray<FString>& Lines)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcConsole::SetContracts(const TOptional<FAcContractsInfo>& In)
+{
+	if (In == Contracts) return;
+	Contracts = In;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+FAcRect SAcConsole::RightPanel(const int32 Rows, const double RowH) const
+{
+	// Over the right well and the grille beside it, standing on the
+	// dashboard clear of the view switch.
+	const double Right = Lay.Window.MaxX() - 12, Left = FMath::Min(Lay.CardWell.MinX(), Right - 520);
+	const double Bottom = (ShowsViewSwitch() ? Lay.ViewSwitch.MaxY() : Lay.Top()) + 12;
+	return FAcRect(Left, Bottom, Right - Left, 44 + Rows * RowH + 34);
+}
+
 void SAcConsole::SetMmo(const bool bInMmo)
 {
 	if (bMmo == bInMmo) return;
@@ -879,16 +895,20 @@ void SAcConsole::PaintMmoKeys(FPaint& P) const
 
 void SAcConsole::PaintBuildList(FPaint& P) const
 {
-	const FAcRect& R = Lay.CardWell;
-	const FLinearColor Acc = Accent();
-	const double X = R.MinX() + 10, Right = R.MaxX() - 10;
-	double Y = R.MaxY() - 24;
-	P.Text(TEXT("BUILD"), 12, Alpha(FAcHudStyle::Cyan(), 0.75), FVector2D(X, Y));
-	P.Text(TEXT("number  pick   ·   click  place"), 11, Gray(0.55), FVector2D(Right, Y), EAcHAlign::Right);
 	const FAcCardButton* Back = nullptr;
 	int32 Rows = 0;
 	for (const FAcCardButton& B : Info->Buttons) Rows += B.Key == TEXT("Esc") ? 0 : 1;
 	const bool bHasBack = Rows < Info->Buttons.Num();
+	// On the right panel, big enough to read (the card well is too small for
+	// eight rows): the well itself says which keys.
+	const FAcRect R = RightPanel(Rows, 54).Inset(0, -4);
+	PaintPanelGlass(P, R);
+	const FLinearColor Acc = Accent();
+	const double X = R.MinX() + 16, Right = R.MaxX() - 16;
+	double Y = R.MaxY() - 30;
+	P.Text(TEXT("BUILD"), 17, Alpha(FAcHudStyle::Cyan(), 0.9), FVector2D(X, Y));
+	P.Text(TEXT("number  pick   ·   click  place"), 14, Gray(0.65), FVector2D(Right, Y), EAcHAlign::Right);
+	Y -= 6;
 	// More than fit (the blueprints' eight): one line each, a word for why not.
 	const double Pitch = FMath::Min(50.0, (Y - R.MinY() - (bHasBack ? 28 : 6)) / FMath::Max(Rows, 1));
 	const bool bTight = Pitch < 46;
@@ -922,32 +942,119 @@ void SAcConsole::PaintBuildList(FPaint& P) const
 			P.Text(Tag, 11, B.bEnabled ? Rgb(0.6, 0.9, 1) : Rgb(1, 0.55, 0.35), FVector2D(Row.MaxX() - 6, Mid - 4), EAcHAlign::Right);
 			continue;
 		}
-		Y -= 50;
-		const FAcRect Row(X - 4, Y, Right - X + 8, 44);
+		Y -= 54;
+		const FAcRect Row(X - 4, Y, Right - X + 8, 48);
 		const float A = B.bEnabled ? 1.f : 0.5f;
 		P.FillRounded(Row, 3, B.bEnabled ? Rgb(0.05, 0.12, 0.2) : Rgb(0.05, 0.05, 0.06));
 		P.Stroke(Row, 3, B.bLit ? Rgb(0.4, 1, 0.45) : B.bEnabled ? Alpha(Acc, 0.9) : Gray(0.3), B.bLit ? 2 : 1.2);
 		// The key, the icon, the name and the price; under them why not.
-		const FAcRect Key(Row.MinX() + 6, Row.MidY() - 10, 20, 20);
+		const FAcRect Key(Row.MinX() + 7, Row.MidY() - 12, 24, 24);
 		P.Stroke(Key, 2, Alpha(FAcHudStyle::KeyYellow(), 0.8 * A), 1);
-		P.Text(B.Key, 13, Alpha(FAcHudStyle::KeyYellow(), A), FVector2D(Key.MidX(), Key.MinY() + 4), EAcHAlign::Center);
+		P.Text(B.Key, 15, Alpha(FAcHudStyle::KeyYellow(), A), FVector2D(Key.MidX(), Key.MidY() - 5), EAcHAlign::Center);
 		if (const FSlateBrush* Icon = FAcIcons::Brush(B.Icon))
 		{
-			P.Image(Icon, FAcRect(Key.MaxX() + 6, Row.MinY() + 3, 38, 38), B.bEnabled ? FLinearColor::White : FPaint::BlendTint(Gray(0.3), 0.6, 0.85));
+			P.Image(Icon, FAcRect(Key.MaxX() + 6, Row.MinY() + 3, 42, 42), B.bEnabled ? FLinearColor::White : FPaint::BlendTint(Gray(0.3), 0.6, 0.85));
 		}
-		const double Tx = Key.MaxX() + 50;
+		const double Tx = Key.MaxX() + 56;
 		TArray<FString> Cost;
 		if (B.Ore > 0) Cost.Add(FString::Printf(TEXT("%d ore"), B.Ore));
 		if (B.Hydrogen > 0) Cost.Add(FString::Printf(TEXT("%d MH"), B.Hydrogen));
-		P.Text(B.Title, 17, Gray(0.95, A), FVector2D(Tx, Row.MaxY() - 20));
-		P.Text(FString::Join(Cost, TEXT(" · ")), 13, Rgb(0.6, 0.9, 1, A), FVector2D(Row.MaxX() - 8, Row.MaxY() - 19), EAcHAlign::Right);
-		P.Text(B.Why ? *B.Why : (B.Time ? FString::Printf(TEXT("%d s to build"), (int32)FMath::RoundHalfFromZero(*B.Time)) : FString()), 12,
-			B.Why ? Rgb(1, 0.55, 0.35) : Gray(0.6), FVector2D(Tx, Row.MinY() + 6));
+		P.Text(B.Title, 19, Gray(0.95, A), FVector2D(Tx, Row.MaxY() - 22));
+		P.Text(FString::Join(Cost, TEXT(" · ")), 15, Rgb(0.6, 0.9, 1, A), FVector2D(Row.MaxX() - 10, Row.MaxY() - 21), EAcHAlign::Right);
+		P.Text(B.Why ? *B.Why : (B.Time ? FString::Printf(TEXT("%d s to build"), (int32)FMath::RoundHalfFromZero(*B.Time)) : FString()), 14,
+			B.Why ? Rgb(1, 0.55, 0.35) : Gray(0.65), FVector2D(Tx, Row.MinY() + 7));
 	}
 	if (Back)
 	{
-		Y -= 24;
-		PaintKeyed(P, TEXT("Esc  back"), 14, FAcHudStyle::KeyYellow(), Gray(0.7), FVector2D(X, Y));
+		Y -= 26;
+		PaintKeyed(P, TEXT("Esc  back"), 15, FAcHudStyle::KeyYellow(), Gray(0.75), FVector2D(X, Y));
+	}
+}
+
+void SAcConsole::PaintPanelGlass(FPaint& P, const FAcRect& R) const
+{
+	// The HUD's dark glass: a steel rim and a cyan line inside it.
+	P.FillRounded(R, 6, Rgb(0.02, 0.04, 0.07, 0.9));
+	P.Stroke(R, 6, Rgb(0.42, 0.5, 0.58, 0.9), 1.5);
+	P.Stroke(R.Inset(4, 4), 4, Alpha(FAcHudStyle::Cyan(), 0.28), 1);
+}
+
+namespace
+{
+	/// `S` cut to `Width` points at `Size`, an ellipsis where it was cut.
+	FString Fit(const FString& S, const double Size, const double Width)
+	{
+		if (FPaint::TextWidth(S, Size) <= Width) return S;
+		FString Cut = S;
+		while (Cut.Len() > 1 && FPaint::TextWidth(Cut + TEXT("…"), Size) > Width)
+		{
+			int32 Space = INDEX_NONE;
+			Cut.FindLastChar(TEXT(' '), Space);
+			Cut = Space > Cut.Len() / 2 ? Cut.Left(Space) : Cut.LeftChop(1);
+			Cut.TrimEndInline();
+		}
+		return Cut + TEXT("…");
+	}
+}
+
+void SAcConsole::PaintContracts(FPaint& P) const
+{
+	const FAcContractsInfo& C = *Contracts;
+	const double RowH = 88;
+	const FAcRect R = RightPanel(FMath::Max(C.Rows.Num(), 1), RowH);
+	PaintPanelGlass(P, R);
+	const double X = R.MinX() + 16, Right = R.MaxX() - 16;
+	double Y = R.MaxY() - 30;
+	// The station's name as on the deck, then what the keys do.
+	FAcHudText Name(TEXT("KSTR 88.7  ·  CONTRACTS"), FAcHudStyle::Font(18), FAcHudStyle::Cyan());
+	Name.Accent = FLinearColor::Transparent;
+	Name.Kern = 1.2f;
+	Name.ShadowColor = Alpha(FAcHudStyle::Cyan(), 0.35);
+	P.Text(Name, FVector2D(X, Y));
+	if (C.bArmed) P.Text(TEXT("ABANDON WHICH?  1 2 3   ·   X  keep them"), 15, Rgb(1, 0.5, 0.35), FVector2D(Right, Y), EAcHAlign::Right);
+	else P.Text(TEXT("X  abandon one"), 15, Gray(0.65), FVector2D(Right, Y), EAcHAlign::Right);
+	Y -= 8;
+	if (C.Rows.IsEmpty())
+	{
+		P.Text(TEXT("The radio is quiet. Contracts come with the day."), 15, Gray(0.65), FVector2D(X, Y - RowH / 2 - 5));
+	}
+	for (int32 I = 0; I < C.Rows.Num(); ++I)
+	{
+		const FAcContractRow& Row = C.Rows[I];
+		Y -= RowH;
+		const FAcRect Box(X - 6, Y + 3, Right - X + 12, RowH - 6);
+		const bool bOpen = Row.State == FAcContractRow::EState::Open;
+		const bool bDone = Row.State == FAcContractRow::EState::Done;
+		const FLinearColor Edge = bDone ? Rgb(0.4, 1, 0.5) : bOpen ? (C.bArmed ? Rgb(1, 0.5, 0.35) : Alpha(FAcHudStyle::Cyan(), 0.8)) : Gray(0.35);
+		P.FillRounded(Box, 4, bOpen ? Rgb(0.04, 0.1, 0.16, 0.92) : Rgb(0.04, 0.05, 0.06, 0.85));
+		P.Stroke(Box, 4, Edge, bOpen && C.bArmed ? 2 : 1.2);
+		// Its slot's key: 1, 2, 3 (lit while an abandon is armed).
+		const FAcRect Key(Box.MinX() + 8, Box.MaxY() - 32, 24, 24);
+		const FLinearColor KeyInk = C.bArmed && bOpen ? FAcHudStyle::KeyYellow() : Gray(0.5);
+		P.Stroke(Key, 2, Alpha(KeyInk, 0.8), 1);
+		P.Text(FString::FromInt(I + 1), 15, KeyInk, FVector2D(Key.MidX(), Key.MidY() - 5), EAcHAlign::Center);
+		const double Tx = Key.MaxX() + 10, Tw = Box.MaxX() - 10 - Tx;
+		const float A = bOpen ? 1.f : 0.6f;
+		// The title and the pay; the radio's line; the progress.
+		const double PayW = FPaint::TextWidth(Row.Pay, 17);
+		P.Text(Fit(Row.Title, 22, Tw - PayW - 14), 22, bDone ? Rgb(0.75, 1, 0.8) : Gray(0.97, A), FVector2D(Tx, Box.MaxY() - 28));
+		P.Text(Row.Pay, 17, Alpha(FAcHudStyle::LevelGold(), A), FVector2D(Box.MaxX() - 10, Box.MaxY() - 27), EAcHAlign::Right);
+		P.Text(Fit(Row.Pitch, 15, Tw), 15, Gray(0.72, A), FVector2D(Tx, Box.MaxY() - 50));
+		const double By = Box.MinY() + 9;
+		if (bOpen)
+		{
+			const double BarW = Tw - FPaint::TextWidth(Row.Progress, 16) - 16;
+			const FAcRect Bar(Tx, By + 1, BarW, 10);
+			P.FillRounded(Bar, 2, Gray(0, 0.55));
+			if (Row.Share > 0) P.FillRounded(FAcRect(Bar.MinX(), Bar.MinY(), FMath::Max(4.0, BarW * FMath::Clamp(Row.Share, 0.0, 1.0)), Bar.H), 2, FAcHudStyle::Cyan());
+			P.Stroke(Bar, 2, Alpha(FAcHudStyle::Cyan(), 0.45), 1);
+			P.Text(Row.Progress, 16, Rgb(0.6, 0.9, 1), FVector2D(Box.MaxX() - 10, By), EAcHAlign::Right);
+		}
+		else
+		{
+			P.Text(bDone ? TEXT("PAID") : TEXT("ABANDONED"), 17, bDone ? Rgb(0.45, 1, 0.55) : Rgb(1, 0.62, 0.3), FVector2D(Tx, By));
+			P.Text(Row.Dawn, 16, Gray(0.75), FVector2D(Box.MaxX() - 10, By), EAcHAlign::Right);
+		}
 	}
 }
 
@@ -960,7 +1067,15 @@ void SAcConsole::PaintCard(FPaint& P) const
 	}
 	if (bMmo && Info && Info->bBuildList)
 	{
-		PaintBuildList(P);
+		// The list stands on the panel over this well (PaintOver).
+		const FAcRect& R = Lay.CardWell;
+		double Y = R.MaxY() - 28;
+		P.Text(TEXT("BUILD MENU"), 13, Alpha(FAcHudStyle::Cyan(), 0.8), FVector2D(R.MinX() + 16, Y));
+		for (const TCHAR* Line : {TEXT("number  pick a building"), TEXT("click  place it"), TEXT("Esc  back")})
+		{
+			Y -= 30;
+			PaintKeyed(P, Line, 17, FAcHudStyle::KeyYellow(), Gray(0.8), FVector2D(R.MinX() + 16, Y));
+		}
 		return;
 	}
 	// Console.buildCard (the top-down look).
@@ -1033,6 +1148,10 @@ void SAcConsole::PaintCard(FPaint& P) const
 void SAcConsole::PaintOver(FPaint& P) const
 {
 	const FLinearColor Acc = Accent();
+	// The MMORPG mode's right panel: the build menu while open, else the
+	// KSTR contracts.
+	if (bMmo && bLaidOut && Info && Info->bBuildList) PaintBuildList(P);
+	else if (bMmo && bLaidOut && Contracts) PaintContracts(P);
 	// The note over the card: 1.6 s, then a 0.5 s fade.
 	if (IsNoteShown())
 	{

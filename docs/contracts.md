@@ -109,6 +109,28 @@ is a frontier station: dry, warm, a bit wry, with no real-world names.
 - **sweep**
   - *Under the Shadow*: "When the ringshadow passes, keep drilling. {n} loads in the dark and the giant owes you."
 
+## On screen
+
+- **The panel.** The three slots on a panel that stands on the dashboard
+  over its right well and grille ("KSTR 88.7 · CONTRACTS"). Each row: its
+  key (1, 2, 3), the title, the pay ("+600 XP · +15 MH"), the radio's line,
+  and a bar with what is left ("120 / 300 ORE HOME", "2 / 6 LOADS · COLD
+  FORK", "REACH LANDER WRECK · COLD FORK"). A done one says PAID and "NEW
+  ONE AT DAWN, IN 23:41"; an abandoned one ABANDONED and "BACK AT DAWN, IN
+  23:41", against the world's clock. The build menu (B) takes the panel
+  while it is open.
+- **Abandon.** X arms it (the open rows ringed red, "ABANDON WHICH? 1 2 3");
+  1, 2 or 3 then drops that slot's contract (`Client.abandon`); X again or
+  Esc keeps them, and it disarms by itself after 6 s.
+- **Done.** A toast: "CONTRACT DONE: PROVE THE VEIN", "+710 XP · +30 MH".
+- **Where.** Open reach and drill contracts ring their region green on the
+  world map with "KSTR · <title>"; a reach's site or pad gets a green
+  target. In the pilot's region a reach's place shows on the compass
+  ("KSTR 23").
+
+Code: `AcProgressHud::Contracts`, `ContractMarks`, `ContractGoals`;
+`SAcConsole::PaintContracts`; X in `AcCommandMap.cpp`.
+
 ## On the wire (protocol 7)
 
 `ProgressMessage` (reliable, sent whenever it changes) carries:
