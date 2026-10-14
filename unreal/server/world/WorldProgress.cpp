@@ -247,6 +247,7 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     // C1: the realm wallet, the tax, and what this pilot has given.
     m.realmWallet = {realm_.ore, realm_.hydrogen};
     m.taxPercent = Progression::realmTaxPercent;
+    m.citadelMarks = citadelMarks_;
     m.taxed = {it->second.taxed.ore, it->second.taxed.hydrogen};
     m.donated = {it->second.donated.ore, it->second.donated.hydrogen};
     // C2: the shop's stacks, what is cooling down, a shield, a flare.

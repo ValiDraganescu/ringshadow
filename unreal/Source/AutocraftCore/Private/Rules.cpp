@@ -27,6 +27,7 @@ int64_t Rules::cost(StructureKind k) {
     case StructureKind::garrison: return 150; case StructureKind::bastion: return 100;
     case StructureKind::derrick: return 75; case StructureKind::foundry: case StructureKind::spacedock: return 150;
     case StructureKind::lab: return 50; case StructureKind::sentinel: return 100;
+    case StructureKind::gatling: return 100;
     }
     return 0;
 }
@@ -45,6 +46,7 @@ double Rules::buildTime(StructureKind k) {
     case StructureKind::garrison: return 46; case StructureKind::bastion: return 29;
     case StructureKind::derrick: return 21; case StructureKind::foundry: return 43;
     case StructureKind::spacedock: return 36; case StructureKind::lab: return 18; case StructureKind::sentinel: return 18;
+    case StructureKind::gatling: return 18;
     }
     return 0;
 }
@@ -62,7 +64,7 @@ int64_t Rules::supply(StructureKind k) {
 double Rules::radius(StructureKind k) {
     switch (k) {
     case StructureKind::citadel: return 2.5;
-    case StructureKind::habDome: case StructureKind::lab: case StructureKind::sentinel: return 1;
+    case StructureKind::habDome: case StructureKind::lab: case StructureKind::sentinel: case StructureKind::gatling: return 1;
     default: return 1.5;
     }
 }
@@ -101,6 +103,7 @@ double Rules::hp(StructureKind k) {
     case StructureKind::garrison: return 1000; case StructureKind::bastion: return 400;
     case StructureKind::derrick: return 500; case StructureKind::foundry: return 1250;
     case StructureKind::spacedock: return 1300; case StructureKind::lab: return 400; case StructureKind::sentinel: return 250;
+    case StructureKind::gatling: return 300;
     }
     return 0;
 }
@@ -108,6 +111,7 @@ double Rules::hp(StructureKind k) {
 /// The weapon of a building that shoots by itself (a Sentinel), if any.
 std::optional<UnitStats> Rules::turret(StructureKind k) {
     if (k == StructureKind::sentinel) return UnitStats::sentinel;
+    if (k == StructureKind::gatling) return UnitStats::gatling;
     return std::nullopt;
 }
 

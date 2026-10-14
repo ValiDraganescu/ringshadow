@@ -159,6 +159,24 @@ struct BugCodec {
     void write(BitWriter& w, const Bug& b) const;
     void read(BitReader& r, Bug& b) const;
 };
+/// A defence's marks (D1, D3): 0 to 3 each, 2 bits.
+struct MarksCodec {
+    void write(BitWriter& w, const TurretMarks& m) const;
+    void read(BitReader& r, TurretMarks& m) const;
+};
+/// An armed Citadel's corner turrets (D1): only where each points; their
+/// targets and reloads stay on the server.
+struct GunsCodec {
+    void write(BitWriter& w, const std::array<CornerGun, 4>& g) const {
+        for (const CornerGun& x : g) Angle{}.write(w, x.aim);
+    }
+    void read(BitReader& r, std::array<CornerGun, 4>& g) const {
+        for (CornerGun& x : g) {
+            x = CornerGun{};
+            Angle{}.read(r, x.aim);
+        }
+    }
+};
 
 /// Every field of a unit, in wire order. A new field of `Unit` goes here.
 template <class V, class X> void unitFields(V& v, X& u) {
@@ -233,6 +251,8 @@ template <class V, class X> void structureFields(V& v, X& b) {
     v(Opt<Var>{}, b.target);
     v(Opt<Fixed>{kMs}, b.cooldown);
     v(Opt<Angle>{}, b.aim);
+    v(Opt<MarksCodec>{}, b.marks);
+    v(Opt<GunsCodec>{}, b.guns);
 }
 template <class V> void fields(V& v, const Structure& x) { structureFields<V, const Structure>(v, x); }
 template <class V> void fields(V& v, Structure& x) { structureFields<V, Structure>(v, x); }

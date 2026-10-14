@@ -956,6 +956,7 @@ std::string Simulation::title(Structure::Kind k) {
     case Structure::Kind::spacedock: return "Spacedock";
     case Structure::Kind::lab: return "Lab";
     case Structure::Kind::sentinel: return "Sentinel";
+    case Structure::Kind::gatling: return "Gatling Gun";
     }
     return "";
 }

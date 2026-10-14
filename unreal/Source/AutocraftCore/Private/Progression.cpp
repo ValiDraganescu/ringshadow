@@ -499,9 +499,10 @@ std::string Progression::rankText(Skill s, int64_t rank) {
 }
 
 const std::vector<StructureKind>& Progression::blueprintKinds() {
-    static const std::vector<StructureKind> k{StructureKind::citadel, StructureKind::derrick, StructureKind::habDome,
-                                              StructureKind::foundry, StructureKind::lab,     StructureKind::spacedock,
-                                              StructureKind::bastion, StructureKind::sentinel};
+    // By floor (D2 brought the gatling gun in at 5 and the Sentinel down to 10).
+    static const std::vector<StructureKind> k{StructureKind::citadel,  StructureKind::derrick, StructureKind::gatling,
+                                              StructureKind::habDome,  StructureKind::sentinel, StructureKind::foundry,
+                                              StructureKind::lab,      StructureKind::spacedock, StructureKind::bastion};
     return k;
 }
 
@@ -509,12 +510,13 @@ int64_t Progression::blueprintFloor(StructureKind k) {
     switch (k) {
     case StructureKind::citadel: return 1;
     case StructureKind::derrick: return 3;
+    case StructureKind::gatling: return 5;
     case StructureKind::habDome: return 8;
     case StructureKind::foundry: return 15;
     case StructureKind::lab: return 25;
     case StructureKind::spacedock: return 35;
     case StructureKind::bastion: return 45;
-    case StructureKind::sentinel: return 55;
+    case StructureKind::sentinel: return 10;
     default: return 0;
     }
 }
@@ -529,6 +531,7 @@ int64_t Progression::buildingLimit(StructureKind k) {
     case StructureKind::spacedock: return 1;
     case StructureKind::bastion: return 2;
     case StructureKind::sentinel: return 4;
+    case StructureKind::gatling: return 6;
     default: return 0;
     }
 }
@@ -543,6 +546,7 @@ int64_t Progression::worldOre(StructureKind k) {
     case StructureKind::spacedock: return 400;
     case StructureKind::bastion: return 250;
     case StructureKind::sentinel: return 150;
+    case StructureKind::gatling: return 125;
     default: return Rules::cost(k);
     }
 }
@@ -556,6 +560,7 @@ int64_t Progression::worldHydrogen(StructureKind k) {
     case StructureKind::spacedock: return 300;
     case StructureKind::bastion: return 100;
     case StructureKind::sentinel: return 100;
+    case StructureKind::gatling: return 25;
     default: return Rules::hydrogenCost(k);
     }
 }

@@ -345,8 +345,8 @@ struct WorldBrood {
     static constexpr double sweepLeash = 4;
     /// Nothing lingers within this of a Citadel (raids aside); in Prospect
     /// Landing (level 1) nothing lingers within `startCalm` of its start pad,
-    /// raids only buildings at least `raidFromCitadel` from the Citadel,
-    /// and never the Citadel itself (until D1 arms it).
+    /// raids the Citadel itself (its corner turrets answer, D1) and other
+    /// buildings only at least `raidFromCitadel` from it.
     static constexpr double citadelCalm = 15;
     static constexpr double startCalm = 25;
     static constexpr double raidFromCitadel = 25;
@@ -622,6 +622,20 @@ public:
     /// Takes `cost` from the realm wallet (D1: the Citadel's upgrades).
     /// False, taking nothing, when the wallet is short or `cost` negative.
     bool spendRealm(const Wallet& cost);
+    // MARK: The defences (D1, D2; docs/mmorpg-m8.md; WorldDefence.cpp)
+
+    /// The marks the realm's Citadel turrets have (saved with the world).
+    TurretMarks citadelMarks() const { return citadelMarks_; }
+    void setCitadelMarks(const TurretMarks& m) { citadelMarks_ = m; }
+    /// The realm's Citadel turrets take their next mark of `stat`, paid
+    /// from the realm wallet (`Defence::citadelPrice`), by any pilot
+    /// standing where it unloads at the realm's Citadel. The reason when
+    /// refused (away from the Citadel, the last mark, the wallet short).
+    std::optional<std::string> upgradeCitadel(PilotId pilot, DefenceStat stat);
+    /// The share of a kill's XP a defence's builder earns when the defence
+    /// hits a bug (docs/creatures.md, "XP and rewards").
+    static constexpr double defenceXpShare = 0.5;
+
     /// What a pilot has given the realm in all: in tax, and donated. Nil:
     /// not joined.
     std::optional<Wallet> taxed(PilotId pilot) const;
@@ -735,6 +749,9 @@ public:
         bool raid = false;
         uint32_t raidId = 0;
         std::optional<int64_t> prey;
+        /// A defence of the realm that shot it (D1, D2): the group attacks it
+        /// while it stands within the leash, before its raid's building.
+        std::optional<int64_t> turret;
     };
     /// The groups of region `r` now.
     const std::vector<BroodGroup>& broodGroups(size_t r) const;
@@ -753,6 +770,12 @@ public:
     /// Dev and shots (`--dev-control`'s `brood …` lines): a scene near the
     /// first pilot on line. What it did, or why not.
     std::string devBrood(const std::string& line);
+    /// Dev and shots (`defence …` lines, WorldDefence.cpp): the realm wallet
+    /// filled (`wallet`), gatling and AA tower blueprint copies for the
+    /// first pilot (`blueprints`), a raid on the realm's Citadel nearest it
+    /// (`citadel`), a finished gatling gun ahead of it with Shardlings on it
+    /// (`gatling`, a raid on it), a finished AA tower with Gloamwings set on it (`aa`).
+    std::string devDefence(const std::string& line);
 
     // MARK: Mercenaries (H2, `WorldMercs`; WorldMercs.cpp)
 
@@ -940,6 +963,8 @@ private:
     std::vector<std::map<int64_t, std::string>> builtBy_;
     /// The realm wallet (C1).
     Wallet realm_;
+    /// The realm's Citadel turrets' marks (D1).
+    TurretMarks citadelMarks_;
     std::vector<Moved> moves_;
     int64_t tick_ = 0;
     double lastStepMs_ = 0;
@@ -1014,6 +1039,9 @@ private:
     /// After a step: the Citadel's tax on each unload into the realm wallet
     /// (C1), credited to the pilot that paid it.
     void realmTaxes();
+    /// Arms every Citadel of the realm with the realm's marks (D1): its
+    /// four corner turrets fire on their own (`Defence::weapon`).
+    void armCitadels();
     void regrowWells(double dt);
     // WorldSites.cpp.
     /// After a step: sites seen, reached, held open.

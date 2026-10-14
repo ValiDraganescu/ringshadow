@@ -185,9 +185,17 @@ ALTER TABLE pilots ADD COLUMN missions TEXT NOT NULL DEFAULT '';
 )sql";
 
 /// Schema 14 (H2): a pilot's mercenaries as JSON (WorldMercs.cpp). Empty:
-/// none ever hired. 13 is D1's.
+/// none ever hired. (13 was kept for D1, which came as 15.)
 const char* const kV14 = R"sql(
 ALTER TABLE pilots ADD COLUMN mercs TEXT NOT NULL DEFAULT '';
+)sql";
+
+/// Schema 15 (D1): the marks the realm's Citadel turrets have, on the realm
+/// wallet's row. A save from before has none.
+const char* const kV15 = R"sql(
+ALTER TABLE realm_wallet ADD COLUMN mark_rate INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE realm_wallet ADD COLUMN mark_damage INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE realm_wallet ADD COLUMN mark_range INTEGER NOT NULL DEFAULT 0;
 )sql";
 
 using Key = std::pair<std::string, int64_t>;
@@ -196,7 +204,7 @@ using Key = std::pair<std::string, int64_t>;
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}};
     return steps;
 }
 
@@ -367,10 +375,11 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.failed(error)) return std::nullopt;
     }
     {
-        Stmt s(db_, "SELECT ore, hydrogen FROM realm_wallet WHERE id = 1");
+        Stmt s(db_, "SELECT ore, hydrogen, mark_rate, mark_damage, mark_range FROM realm_wallet WHERE id = 1");
         if (s.row()) {
             out.realmOre = s.colInteger(0);
             out.realmHydrogen = s.colInteger(1);
+            out.citadelMarks = TurretMarks{s.colInteger(2), s.colInteger(3), s.colInteger(4)};
         }
         if (s.failed(error)) return std::nullopt;
     }
@@ -384,6 +393,7 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
     regions_.clear();
     clock_ = std::nullopt;
     realm_ = std::nullopt;
+    marks_ = std::nullopt;
     buildings_.clear();
     units_.clear();
     deposits_.clear();
@@ -397,6 +407,7 @@ void WorldStore::remember(const WorldSave& save) {
     clock_ = save.clock;
     savedAt_ = save.savedAt;
     realm_ = {save.realmOre, save.realmHydrogen};
+    marks_ = save.citadelMarks;
     starfalls_ = save.starfalls;
     for (const SavedRegion& r : save.regions) {
         regions_[r.id] = {r.time, r.nextId};
@@ -537,6 +548,14 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                                 "ore = excluded.ore, hydrogen = excluded.hydrogen")
                           .integer(save.realmOre)
                           .integer(save.realmHydrogen)));
+        n.changed += 1;
+    }
+    // A new file's row has none (the columns' default).
+    if (marks_.value_or(TurretMarks{}) != save.citadelMarks) {
+        run(std::move(Stmt(db_, "UPDATE realm_wallet SET mark_rate = ?, mark_damage = ?, mark_range = ? WHERE id = 1")
+                          .integer(save.citadelMarks.rate)
+                          .integer(save.citadelMarks.damage)
+                          .integer(save.citadelMarks.range)));
         n.changed += 1;
     }
     for (const SavedPilot& p : save.pilots) {

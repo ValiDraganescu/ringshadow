@@ -176,11 +176,11 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
     const std::string path = fresh("migrate");
     std::string why;
     {
-        // v0 (a new file) to v9.
+        // v0 (a new file) to v13.
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
         EXPECT_EQ(store->schemaVersion(), WorldStore::version());
-        EXPECT_EQ(WorldStore::version(), int64_t(14));
+        EXPECT_EQ(WorldStore::version(), int64_t(15));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock', 'starfalls', "
                               "'realm_wallet')")[0][0],

@@ -516,6 +516,7 @@ std::optional<size_t> WorldMap::neighbour(size_t r, Edge e) const {
 void WorldMap::step() {
     const auto t0 = std::chrono::steady_clock::now();
     const std::vector<Work> work = world_ ? workBefore() : std::vector<Work>{};
+    if (world_) armCitadels();
     for (auto& r : regions_) r->step();
     lastStepMs_ = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     tick_ += 1;

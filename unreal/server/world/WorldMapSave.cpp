@@ -190,6 +190,7 @@ WorldSave WorldMap::save() const {
     out.clock = clock_;
     out.realmOre = realm_.ore;
     out.realmHydrogen = realm_.hydrogen;
+    out.citadelMarks = citadelMarks_;
     for (const Fall& f : falls_) {
         const GameState& st = regions_[f.region]->simulation().state;
         const OreDeposit* d = f.patch && size_t(*f.patch) < st.patches.size() ? &st.patches[size_t(*f.patch)] : nullptr;
@@ -323,6 +324,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     fallsRead_ = std::nullopt;
     // The realm wallet (C1; empty before schema 9).
     realm_ = Wallet{save.realmOre, save.realmHydrogen};
+    // The Citadel's marks (D1; none before schema 13).
+    citadelMarks_ = save.citadelMarks;
     // The world's hour goes on where it was.
     setClock(save.clock);
     return problems;

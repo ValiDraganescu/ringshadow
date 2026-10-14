@@ -92,6 +92,9 @@ public:
     uint32_t abandonMission(uint32_t mission);
     /// H2: hire a mercenary, dismiss one, send one to a field.
     uint32_t merc(const RequestMessage::Merc& ask);
+    /// D1: the realm's Citadel turrets take their next mark of `stat`, from
+    /// the realm wallet (`RequestMessage::UpgradeCitadel`).
+    uint32_t upgradeCitadel(DefenceStat stat);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

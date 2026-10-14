@@ -368,6 +368,16 @@ void BugCodec::read(BitReader& r, Bug& b) const {
     b.sac = double(r.readBits(4)) / 15 * Brood::sacFull;
 }
 
+void MarksCodec::write(BitWriter& w, const TurretMarks& m) const {
+    for (int64_t x : {m.rate, m.damage, m.range}) w.writeBits(static_cast<uint64_t>(std::clamp<int64_t>(x, 0, 3)), 2);
+}
+
+void MarksCodec::read(BitReader& r, TurretMarks& m) const {
+    m.rate = int64_t(r.readBits(2));
+    m.damage = int64_t(r.readBits(2));
+    m.range = int64_t(r.readBits(2));
+}
+
 void MissionCodec::write(BitWriter& w, const Mission& m) const {
     w.writeBits(m.index(), 3);
     std::visit(
@@ -792,6 +802,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeVarint(w, p->mission);
         w.writeBool(p->take);
     }
+    if (const auto* p = std::get_if<RequestMessage::UpgradeCitadel>(&m.what)) w.writeBits(uint64_t(p->stat), 2);
     if (const auto* p = std::get_if<RequestMessage::Merc>(&m.what)) {
         w.writeBits(uint64_t(p->act), 2);
         writeVarint(w, p->merc);
@@ -912,6 +923,14 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         m.what = p;
         break;
     }
+    case 17: {
+        RequestMessage::UpgradeCitadel p;
+        const uint64_t stat = r.readBits(2);
+        if (stat >= uint64_t(allCases<DefenceStat>().size())) return false;
+        p.stat = static_cast<DefenceStat>(stat);
+        m.what = p;
+        break;
+    }
     case 18: {
         RequestMessage::Merc p;
         const uint64_t act = r.readBits(2);
@@ -1029,6 +1048,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         codec::kMs.write(w, at);
     }
     codec::kMs.write(w, m.shieldUntil);
+    codec::MarksCodec{}.write(w, m.citadelMarks);
     w.writeBool(m.flare.has_value());
     if (m.flare) {
         writeString(w, m.flare->region);
@@ -1221,6 +1241,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         codec::kMs.read(r, m.itemReady[item]);
     }
     codec::kMs.read(r, m.shieldUntil);
+    codec::MarksCodec{}.read(r, m.citadelMarks);
     if (r.readBool()) {
         ProgressMessage::Flare f;
         if (!readString(r, f.region)) return false;

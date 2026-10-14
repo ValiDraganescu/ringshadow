@@ -563,7 +563,7 @@ TEST(mercs_old_save_migrates) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(14));
+    EXPECT_EQ(store->schemaVersion(), WorldStore::version());
     EXPECT_TRUE(store->rows("SELECT mercs FROM pilots")[0][0].empty());
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());

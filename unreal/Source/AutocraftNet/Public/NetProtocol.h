@@ -427,10 +427,13 @@ struct RequestMessage {
         bool take = true;
         bool operator==(const MissionAsk&) const = default;
     };
-    /// Index 17 is D1's (the Citadel's upgrades, protocol 18), kept here
-    /// until it comes; the server refuses it.
-    struct Reserved17 {
-        bool operator==(const Reserved17&) const = default;
+    /// D1: the realm's Citadel takes its next mark of `stat` (its corner
+    /// turrets' fire rate, damage or range), paid from the realm wallet, at
+    /// the realm's Citadel (where it unloads). The price is the core's
+    /// (`Defence::citadelPrice`).
+    struct UpgradeCitadel {
+        DefenceStat stat = DefenceStat::rate;
+        bool operator==(const UpgradeCitadel&) const = default;
     };
     /// H2: the pilot's mercenaries (docs/prospector-progression.md
     /// "Mercenaries"): hire one at the realm's Citadel (where it unloads),
@@ -447,9 +450,10 @@ struct RequestMessage {
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
-    /// 14, Use 15, MissionAsk 16 (protocol 16), D1's 17, Merc 18 (protocol 19).
+    /// 14, Use 15, MissionAsk 16 (protocol 16), UpgradeCitadel 17 (protocol
+    /// 20; kept for it since 18), Merc 18 (protocol 19).
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk, Reserved17, Merc>
+                 MissionAsk, UpgradeCitadel, Merc>
         what;
     bool operator==(const RequestMessage&) const = default;
 };
@@ -708,6 +712,9 @@ struct ProgressMessage {
     std::map<Item, int64_t> items;
     std::map<Item, double> itemReady;
     double shieldUntil = 0;
+    /// D1: the marks the realm's Citadel turrets have (the DEFENCE tab; the
+    /// next mark's price is `Defence::citadelPrice`).
+    TurretMarks citadelMarks;
     /// A survey flare burning: in region `region` (a world region id),
     /// round region ground point `at`, `radius` cells, until world time
     /// `until`. The map shows the deposits within it.

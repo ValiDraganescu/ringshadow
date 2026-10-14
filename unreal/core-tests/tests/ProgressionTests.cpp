@@ -364,13 +364,15 @@ TEST(progression_rankText) {
         for (int64_t r = 1; r <= n.ranks; r++) EXPECT_TRUE(!Progression::rankText(n.skill, r).empty());
 }
 
-// The blueprints: eight buildings, the floors of the doc's table, rising.
+// The blueprints: nine buildings, the floors of the doc's table, rising
+// (D2: the gatling gun at 5, the Sentinel down to 10).
 TEST(progression_blueprintFloors) {
     const auto& k = Progression::blueprintKinds();
-    ASSERT_TRUE(k.size() == size_t(8));
+    ASSERT_TRUE(k.size() == size_t(9));
     EXPECT_TRUE(k.front() == StructureKind::citadel);
     EXPECT_EQ(Progression::blueprintFloor(StructureKind::derrick), int64_t(3));
-    EXPECT_EQ(Progression::blueprintFloor(StructureKind::sentinel), int64_t(55));
+    EXPECT_EQ(Progression::blueprintFloor(StructureKind::gatling), int64_t(5));
+    EXPECT_EQ(Progression::blueprintFloor(StructureKind::sentinel), int64_t(10));
     EXPECT_EQ(Progression::blueprintFloor(StructureKind::garrison), int64_t(0));
     for (size_t i = 1; i < k.size(); i++)
         EXPECT_TRUE(Progression::blueprintFloor(k[i]) > Progression::blueprintFloor(k[i - 1]));
@@ -384,7 +386,8 @@ TEST(progression_blueprintPriceRises) {
     EXPECT_TRUE(Shop::blueprintPrice(StructureKind::habDome, 0) == (ShopPrice{250, 40}));
     EXPECT_TRUE(Shop::blueprintPrice(StructureKind::habDome, 1) == (ShopPrice{380, 60}));
     EXPECT_TRUE(Shop::blueprintPrice(StructureKind::habDome, 4) == (ShopPrice{1270, 200}));
-    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::sentinel, 0) == (ShopPrice{1430, 280}));
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::sentinel, 0) == (ShopPrice{300, 50}));
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::gatling, 0) == (ShopPrice{180, 30}));
     EXPECT_TRUE(Shop::blueprintPrice(StructureKind::garrison, 0) == ShopPrice{});
     for (const StructureKind k : Progression::blueprintKinds())
         for (int64_t n = 0; n < 8; n++) {

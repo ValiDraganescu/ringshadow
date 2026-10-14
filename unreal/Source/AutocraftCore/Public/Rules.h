@@ -29,7 +29,10 @@ constexpr int64_t ordinal(UnitKind k) { return static_cast<int64_t>(k); }
 /// `Structure.Kind`, declared here so `Rules` can take it; `Types.h` nests it
 /// as `Structure::Kind`.
 enum class StructureKind : uint8_t {
-    citadel, habDome, garrison, bastion, derrick, foundry, spacedock, lab, sentinel
+    citadel, habDome, garrison, bastion, derrick, foundry, spacedock, lab, sentinel,
+    // D2 (docs/mmorpg-m8.md): the MMO's gatling gun. Appended: saves store
+    // the name, the wire the index (4 bits).
+    gatling
 };
 
 /// One unit type's numbers (in real seconds; ranges edge to edge).
@@ -80,6 +83,9 @@ struct UnitStats {
     /// between them, fired `cooldown / rounds` apart. The same damage a
     /// second, in smaller, faster rounds.
     int64_t rounds = 1;
+    /// How far it reaches an air target, when that is shorter than `range`
+    /// (a gatling gun's close air reach); 0: `range`.
+    double airRange = 0;
 
     /// `table` in `Unit.Kind.allCases` order, read by `Unit.Kind.ordinal`:
     /// a dictionary keyed by the kind hashes its name on every look-up, and
@@ -98,6 +104,15 @@ struct UnitStats {
     /// every 3.2 s, range 8. About 11 (+4) a second against the Hailstorm's 12
     /// (+8) and the Sentinel's 24 a second, but a Kestrel is one gun, not a battery.
     static const UnitStats railgun;
+    /// D2, a gatling gun's amalgam rounds: 4 every 0.25 s (16 a second) at
+    /// ground targets in range 6, and at the air within 4.5 cells (it
+    /// outreaches a Gloamwing's spit, 4).
+    static const UnitStats gatling;
+    /// D1, one of a Citadel's four corner turrets in a world (a Citadel
+    /// fires only when the server arms it, `Structure::marks`): rapid rotary
+    /// close-in guns, 2.5 every 0.25 s (10 a second each) at ground and air
+    /// in range 7.5 from the turret, before the marks.
+    static const UnitStats citadelGuns;
 
     bool operator==(const UnitStats&) const = default;
 };
@@ -245,7 +260,7 @@ struct AUTOCRAFTCORE_API Rules {
     static double buildTime(StructureKind k);
     static int64_t supply(StructureKind k);
     /// Half the footprint side: 5x5 Citadel; 3x3 Garrison, Bastion,
-    /// Derrick, Foundry and Spacedock; 2x2 Hab Dome, Lab and Sentinel.
+    /// Derrick, Foundry and Spacedock; 2x2 Hab Dome, Lab, Sentinel and gatling gun.
     static double radius(StructureKind k);
     /// A building needs one of these finished first (the tech tree).
     /// (`requires` is a C++ keyword.)
@@ -277,7 +292,8 @@ struct AUTOCRAFTCORE_API Rules {
     static int64_t supply(UnitKind k) { return stats(k).supply; }
     static double radius(UnitKind k) { return stats(k).radius; }
     static double hp(StructureKind k);
-    /// The weapon of a building that shoots by itself (a Sentinel), if any.
+    /// The weapon of a building that shoots by itself (a Sentinel, a gatling
+    /// gun), if any, before its marks (`Defence::weapon`).
     static std::optional<UnitStats> turret(StructureKind k);
     /// Damage a Ranger shot does after armour: buildings have 1 armour,
     /// and a hit always does at least 0.5.
@@ -416,5 +432,10 @@ inline constexpr UnitStats UnitStats::railgun{.hp = 140, .speed = 3.85, .radius 
                                               .hitsAir = true, .rail = true};
 inline constexpr UnitStats UnitStats::sentinel{.hp = 250, .armor = 1, .speed = 0, .radius = 1, .supply = 0, .ore = 100, .trainTime = 18,
                                                .damage = 12, .hits = 2, .cooldown = 1.0, .range = 7, .armored = true, .hitsAir = true};
+inline constexpr UnitStats UnitStats::gatling{.hp = 300, .armor = 1, .speed = 0, .radius = 1, .supply = 0, .ore = 100, .trainTime = 18,
+                                              .damage = 4, .cooldown = 0.25, .range = 6, .armored = true, .hitsGround = true,
+                                              .hitsAir = true, .airRange = 4.5};
+inline constexpr UnitStats UnitStats::citadelGuns{.hp = 1500, .armor = 1, .speed = 0, .radius = 0.5, .damage = 2.5, .cooldown = 0.25,
+                                                  .range = 7.5, .armored = true, .hitsGround = true, .hitsAir = true};
 
 } // namespace ac

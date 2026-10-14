@@ -59,6 +59,7 @@ uint32_t Client::use(Item item) { return request(RequestMessage::Use{item}); }
 uint32_t Client::takeMission(uint32_t mission) { return request(RequestMessage::MissionAsk{mission, true}); }
 uint32_t Client::abandonMission(uint32_t mission) { return request(RequestMessage::MissionAsk{mission, false}); }
 uint32_t Client::merc(const RequestMessage::Merc& ask) { return request(ask); }
+uint32_t Client::upgradeCitadel(DefenceStat stat) { return request(RequestMessage::UpgradeCitadel{stat}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;

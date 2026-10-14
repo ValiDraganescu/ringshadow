@@ -261,12 +261,13 @@ TEST(sites_vault_opens_only_at_its_floor_less_blueprint_savant) {
     EXPECT_TRUE(w.progress(me)->sites.empty());
     auto m = *w.progressMessage(me);
     ASSERT_TRUE(m.opening.has_value());
-    EXPECT_TRUE(m.opening->refusal == "The Sentinel vault opens at level 55");
-    // Level 49 with Blueprint savant at 3: the floor is 49.
-    ProspectorProgress g = at(49);
+    EXPECT_TRUE(m.opening->refusal == "The Sentinel vault opens at level 10");
+    // Level 4 with Blueprint savant at 3: the floor is 4 (the Sentinel's is
+    // 10 since D2).
+    ProspectorProgress g = at(4);
     g.ranks[Skill::blueprintSavant] = 3;
     g.blueprints = {{StructureKind::citadel, 1}};
-    EXPECT_EQ(g.floor(StructureKind::sentinel), int64_t(49));
+    EXPECT_EQ(g.floor(StructureKind::sentinel), int64_t(4));
     w.setProgress(me, g);
     w.takeNews(me);
     standAt(w, me, "tern-ridge", "Tern vault");
@@ -281,8 +282,8 @@ TEST(sites_vault_opens_only_at_its_floor_less_blueprint_savant) {
     const auto news = w.takeNews(me);
     const auto* b = find(news, NewsKind::blueprint);
     ASSERT_TRUE(b != nullptr);
-    EXPECT_NEAR(b->xp, WorldXp::blueprintPerFloor * 55, 1e-9);
-    EXPECT_EQ(b->value, int64_t(49));
+    EXPECT_NEAR(b->xp, WorldXp::blueprintPerFloor * 10, 1e-9);
+    EXPECT_EQ(b->value, int64_t(4));
 }
 
 // A buried cache is seen within 6 cells only; a wreck within sight; a

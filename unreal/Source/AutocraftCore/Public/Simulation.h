@@ -217,8 +217,14 @@ public:
     /// Supply used counts units in training and queued.
     void refreshSupply();
     void stepStructures(double dt, std::vector<GameEvent>& events);
-    /// A finished building with a weapon of its own (a Sentinel).
+    /// A finished building with a weapon of its own (a Sentinel, a gatling
+    /// gun), or an armed Citadel's four corner turrets.
     void stepTurret(Structure& s, const UnitStats& w, double dt, std::vector<GameEvent>& events);
+    /// One gun of building `s` at `at`, `edge` cells from its pivot to the
+    /// mount's edge (ranges count from it): it keeps or picks a target,
+    /// turns and fires.
+    void stepGun(const Structure& s, Vec2 at, double edge, const UnitStats& w, std::optional<int64_t>& target,
+                 double& cooldown, double& aim, double dt, std::vector<GameEvent>& events);
     /// How fast a Sentinel's launcher swings round, radians a second.
     static constexpr double turretTurnRate = 6.0;
     /// A new Prospector at the Citadel's edge facing its ore line.

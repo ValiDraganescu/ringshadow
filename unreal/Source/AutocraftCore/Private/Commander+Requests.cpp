@@ -88,6 +88,8 @@ Commander::Requests Commander::requests(const Simulation& sim, int64_t& money, i
         switch (k) {
         // A Sentinel (2x2, like a Hab Dome) goes where a Hab Dome would.
         case Structure::Kind::habDome:
+        // The MMO's gatling gun: the strategy game's AI never asks for one.
+        case Structure::Kind::gatling:
             for (const auto& c : done) { if ((spot = habDomeSpot(s, c, sim.navGrid()))) { break; } }
             break;
         case Structure::Kind::sentinel:

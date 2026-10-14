@@ -1,0 +1,168 @@
+// The realm's defences in the core (D1, D2; Defence.h): an armed Citadel's
+// corner turrets, the AA tower (the Sentinel) and the gatling gun against
+// bugs held still, from hand-built scenes of a few seconds.
+#include "Brood.h"
+#include "Defence.h"
+#include "SimHelpers.h"
+
+using namespace ac;
+using namespace simtest;
+
+namespace {
+
+/// Blue's open ground and nothing on it; player 1 is the Brood.
+struct Scene {
+    GameState s;
+    Vec2 at;
+};
+
+Scene scene() {
+    GameState s = GameState::new_(homeMap());
+    Vec2 at;
+    for (const auto& b : s.structures) if (b.owner == 0) { at = b.position + Vec2(0, 8); break; }
+    s.units.clear();
+    s.structures.clear();
+    return Scene{s, at};
+}
+
+Simulation sim(const GameState& s) {
+    Simulation out(s, homeMap());
+    out.broodSide = 1;
+    return out;
+}
+
+/// A bug of the Brood at `p` that stays where it is (it never picks a spot
+/// to wander to): only the defences act. A Gloamwing hovers (air).
+int64_t bug(GameState& s, Unit::Kind kind, Vec2 p) {
+    const int64_t id = addUnit(s, kind, p, 1);
+    Unit& u = s.units.back();
+    u.bug = Bug{};
+    u.bug->site = p;
+    u.bug->coming = false;
+    u.bug->wanderAt = 1e9;
+    if (kind == Unit::Kind::gloamwing) u.bug->height = Brood::hoverHeight;
+    return id;
+}
+
+bool hurt(const Simulation& m, int64_t id) {
+    const auto u = m.state.unit(id);
+    return !u || u->hp < Rules::hp(u->kind);
+}
+
+} // namespace
+
+/// An armed Citadel's four corner turrets fire on a Shardling and a
+/// Gloamwing in reach, each on its own target; an unarmed one (the strategy
+/// game's) never fires.
+TEST(Defence_citadelTurretsHitGroundAndAir) {
+    auto [s, at] = scene();
+    const int64_t c = addStructure(s, Structure::Kind::citadel, at, 0);
+    s.structures.back().marks = TurretMarks{};
+    const int64_t ground = bug(s, Unit::Kind::shardling, at + Vec2(9, 0));
+    const int64_t air = bug(s, Unit::Kind::gloamwing, at + Vec2(-9, 0));
+    Simulation m = sim(s);
+    run(m, 0.6);
+    EXPECT_TRUE(hurt(m, ground));
+    EXPECT_TRUE(hurt(m, air));
+    const auto& guns = m.state.structure(c)->guns;
+    ASSERT_TRUE(guns.has_value());
+    int64_t targets = 0;
+    for (const CornerGun& g : *guns) targets += g.target ? 1 : 0;
+    EXPECT_TRUE(targets >= 2);
+    // A Shardling dies to the turrets in a few seconds.
+    run(m, 4);
+    EXPECT_TRUE(!m.state.unit(ground) || m.state.unit(ground)->hp <= 0);
+    // Hits on bugs go to the director with the Citadel as the shooter.
+    bool told = false;
+    for (const auto& h : m.bugHits) told = told || (h.shooter == c && h.bug == ground);
+    EXPECT_TRUE(told);
+
+    auto [s2, at2] = scene();
+    addStructure(s2, Structure::Kind::citadel, at2, 0);
+    const int64_t calm = bug(s2, Unit::Kind::shardling, at2 + Vec2(6, 0));
+    Simulation m2 = sim(s2);
+    run(m2, 3);
+    EXPECT_TRUE(!hurt(m2, calm));
+}
+
+/// Out of reach the turrets hold; with range marks they reach farther.
+TEST(Defence_citadelRangeMarks) {
+    auto [s, at] = scene();
+    addStructure(s, Structure::Kind::citadel, at, 0);
+    s.structures.back().marks = TurretMarks{};
+    const int64_t far = bug(s, Unit::Kind::shardling, at + Vec2(10.5, 0));
+    Simulation m = sim(s);
+    run(m, 2);
+    EXPECT_TRUE(!hurt(m, far));
+    m.state.structures.back().marks = TurretMarks{.range = 3};
+    run(m, 2);
+    EXPECT_TRUE(hurt(m, far));
+}
+
+/// The AA tower (the Sentinel) hits only the air: a hovering Gloamwing, not
+/// a Shardling. (A Gloamwing low in its dive is a ground target, N2's
+/// `Unit::airborne`.)
+TEST(Defence_sentinelHitsOnlyAir) {
+    auto [s, at] = scene();
+    addStructure(s, Structure::Kind::sentinel, at, 0);
+    const int64_t air = bug(s, Unit::Kind::gloamwing, at + Vec2(6, 0));
+    const int64_t ground = bug(s, Unit::Kind::shardling, at + Vec2(-4, 0));
+    Simulation m = sim(s);
+    run(m, 3);
+    EXPECT_TRUE(hurt(m, air));
+    EXPECT_TRUE(!hurt(m, ground));
+    // Two volleys kill a Gloamwing.
+    EXPECT_TRUE(!m.state.unit(air) || m.state.unit(air)->hp <= 0);
+
+}
+
+/// The gatling gun hits the ground in range 6, and the air only within 4.5:
+/// a Gloamwing at 5.5 from its edge is safe, one at 3.5 is shot.
+TEST(Defence_gatlingGroundAndCloseAir) {
+    auto [s, at] = scene();
+    addStructure(s, Structure::Kind::gatling, at, 0);
+    const int64_t ground = bug(s, Unit::Kind::shardling, at + Vec2(7, 0));
+    const int64_t high = bug(s, Unit::Kind::gloamwing, at + Vec2(0, 7));
+    Simulation m = sim(s);
+    run(m, 3);
+    EXPECT_TRUE(!m.state.unit(ground) || m.state.unit(ground)->hp <= 0);
+    EXPECT_TRUE(!hurt(m, high));
+
+    auto [s2, at2] = scene();
+    addStructure(s2, Structure::Kind::gatling, at2, 0);
+    const int64_t close = bug(s2, Unit::Kind::gloamwing, at2 + Vec2(0, 5));
+    Simulation m2 = sim(s2);
+    run(m2, 1);
+    EXPECT_TRUE(hurt(m2, close));
+}
+
+/// Marks: each adds a fifth to the fire rate, a quarter to the damage and a
+/// cell to the range (and to a gatling gun's air reach).
+TEST(Defence_marksApply) {
+    const UnitStats w = Defence::apply(UnitStats::gatling, TurretMarks{.rate = 1, .damage = 2, .range = 3});
+    EXPECT_NEAR(w.cooldown, 0.25 / 1.2, 1e-9);
+    EXPECT_NEAR(w.damage, 4 * 1.5, 1e-9);
+    EXPECT_NEAR(w.range, 9, 1e-9);
+    EXPECT_NEAR(w.airRange, 7.5, 1e-9);
+    Structure c(1, StructureKind::citadel, 0, Vec2(0, 0));
+    EXPECT_TRUE(!Defence::weapon(c).has_value());
+    c.marks = TurretMarks{};
+    EXPECT_TRUE(Defence::weapon(c).has_value());
+    EXPECT_TRUE(Defence::weapon(Structure(2, StructureKind::habDome, 0, Vec2(0, 0))) == std::nullopt);
+}
+
+/// The Citadel's marks from the realm wallet: rising prices, a refusal when
+/// it is short and one at the last mark.
+TEST(Defence_citadelPricesAndRefusals) {
+    EXPECT_TRUE(Defence::citadelPrice(DefenceStat::rate, 1) == (ShopPrice{250, 0}));
+    EXPECT_TRUE(Defence::citadelPrice(DefenceStat::damage, 2) == (ShopPrice{500, 50}));
+    EXPECT_TRUE(Defence::citadelPrice(DefenceStat::range, 3) == (ShopPrice{1000, 150}));
+    EXPECT_TRUE(!Defence::citadelRefusal(DefenceStat::rate, TurretMarks{}, 250, 0));
+    const auto shortOre = Defence::citadelRefusal(DefenceStat::rate, TurretMarks{}, 249, 0);
+    ASSERT_TRUE(shortOre.has_value());
+    EXPECT_TRUE(shortOre->find("realm wallet is short") != std::string::npos);
+    EXPECT_TRUE(Defence::citadelRefusal(DefenceStat::damage, TurretMarks{.damage = 1}, 999, 10).has_value());
+    const auto last = Defence::citadelRefusal(DefenceStat::range, TurretMarks{.range = 3}, 99999, 9999);
+    ASSERT_TRUE(last.has_value());
+    EXPECT_TRUE(last->find("last mark") != std::string::npos);
+}

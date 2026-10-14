@@ -365,7 +365,11 @@ bool WorldMap::spawnGroup(size_t r) {
         if (raidReady && kind != UnitKind::lodeback)
             for (const Structure& b : st.structures) {
                 if (!realm(b) || !b.complete() || held(Poi::building, b.id)) continue;
-                if (level == 1 && (b.kind == StructureKind::citadel || (citadel && distance(b.position, *citadel) < WorldBrood::raidFromCitadel))) continue;
+                // Near the Citadel its corner turrets answer (D1): the Citadel
+                // itself may be raided, the rest only farther off.
+                if (level == 1 && b.kind != StructureKind::citadel && citadel &&
+                    distance(b.position, *citadel) < WorldBrood::raidFromCitadel)
+                    continue;
                 // Weighted by its cost too: a Derrick draws more than a Lab.
                 const double cost = double(Rules::cost(b.kind) + Rules::hydrogenCost(b.kind)) / 100;
                 cs.push_back({Poi::building, b.id, b.position, Rules::radius(b.kind) + WorldBrood::buildingSite, w.building * cost});
@@ -472,10 +476,18 @@ void WorldMap::brood() {
                     // A kill counts for its hunt missions (K2).
                     if (h.kill) broodKill(pilot, h.kind, r);
                 }
+            // A defence's hit (D1, D2): its builder earns a share, wherever
+            // it is (the Citadel's corner turrets included).
+            if (const auto by = builtBy_[r].find(h.shooter); by != builtBy_[r].end())
+                for (auto& [pilot, p] : pilots_)
+                    if (p.key == by->second) earn(p, Brood::xp(h.kind) * share * defenceXpShare);
             const auto u = st.unit(h.bug);
             if (!u || !u->bug || u->kind == UnitKind::lodeback) continue;
+            // A pilot's hit turns the group on its Prospector; a defence's
+            // (a building shot it) on the defence.
+            const bool building = st.structure(h.shooter).has_value();
             for (BroodGroup& g : br.groups)
-                if (g.id == u->bug->group && !g.prey) g.prey = h.shooter;
+                if (g.id == u->bug->group && !g.prey && !(building && g.turret)) (building ? g.turret : g.prey) = h.shooter;
         }
         sim.bugHits.clear();
         // A dead Lodeback's sac goes back into its deposit (else the
@@ -564,6 +576,11 @@ void WorldMap::broodThink(size_t r) {
             const auto t = st.unit(*g.prey);
             if (!t || t->hp <= 0 || distance(t->position, g.site) > g.radius + g.leash) g.prey = std::nullopt;
         }
+        // A defence fallen or out past the leash: the group lets it be.
+        if (g.turret) {
+            const auto t = st.structure(*g.turret);
+            if (!t || t->hp <= 0 || distance(t->position, g.site) > g.radius + g.leash + Rules::radius(t->kind)) g.turret = std::nullopt;
+        }
         // A pilot inside the site: the whole group turns on it (the nearest).
         if (!g.prey && !g.leaving) {
             double best = g.radius;
@@ -581,7 +598,7 @@ void WorldMap::broodThink(size_t r) {
             }
         // A raid's building fell: the raid is over.
         if (g.raid && !st.structure(g.key)) g.leaving = true;
-        if (!g.leaving && !g.raid && clock_ >= g.lingerUntil && !g.prey) g.leaving = true;
+        if (!g.leaving && !g.raid && clock_ >= g.lingerUntil && !g.prey && !g.turret) g.leaving = true;
         if (lodebacks && lodebacksLeaving && !g.prey) g.leaving = true;
         for (Unit& u : st.units) {
             if (!u.bug || u.bug->group != g.id) continue;
@@ -591,8 +608,10 @@ void WorldMap::broodThink(size_t r) {
             b.leash = g.leash;
             if (u.kind != UnitKind::lodeback) {
                 b.prey = g.prey;
-                b.raid = g.raid && !g.leaving ? std::optional<int64_t>(g.key) : std::nullopt;
-                b.leaving = g.leaving && !g.prey;
+                b.raid = g.turret                ? g.turret
+                         : g.raid && !g.leaving ? std::optional<int64_t>(g.key)
+                                                : std::nullopt;
+                b.leaving = g.leaving && !g.prey && !g.turret;
             }
             if (b.leaving) b.exit = g.exit;
             // Out of sight on its way out (out of its site, or the site

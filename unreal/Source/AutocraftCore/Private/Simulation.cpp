@@ -2,6 +2,7 @@
 #include "Simulation.h"
 
 #include "Brood.h"
+#include "Defence.h"
 
 #include "Commander.h"
 #include "PathAhead.h"
@@ -674,7 +675,7 @@ void Simulation::refreshSupply() {
 void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
     // A Sentinel looks its targets up by id: units may have died and
     // moved since the index was built.
-    if (any(state.structures, [](const Structure& s) { return Rules::turret(s.kind).has_value() && s.complete(); })) reindex();
+    if (any(state.structures, [](const Structure& s) { return Defence::weapon(s).has_value() && s.complete(); })) reindex();
     for (size_t i = 0; i < state.structures.size(); i++) {
         Structure s = state.structures[i];
         if (auto left = s.buildLeft) {
@@ -712,7 +713,7 @@ void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
                     events.push_back(GameEvent::Constructed{s.id, s.kind, s.position});
                 }
             }
-        } else if (auto w = Rules::turret(s.kind)) {
+        } else if (auto w = Defence::weapon(s)) {
             stepTurret(s, *w, dt, events);
         } else if (s.research && s.researchLeft) {
             const auto up = *s.research;
@@ -749,30 +750,56 @@ void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
     }
 }
 
-/// A finished building with a weapon of its own (a Sentinel): it keeps
-/// to the target it has while that stays in reach, else takes the best
-/// enemy in reach it can hit (`priority`, then closest); it turns its
-/// launcher there and fires when it points at it. Range is from its edge,
-/// longer from high ground. Its missiles hit at once.
+/// A finished building with a weapon of its own (a Sentinel, a gatling
+/// gun, an armed Citadel: `Defence::weapon`): it keeps to the target it
+/// has while that stays in reach, else takes the best enemy in reach it
+/// can hit (`priority`, then closest); it turns its launcher there and
+/// fires when it points at it. Range is from its edge, longer from high
+/// ground; an air target only within `airRange` when it has one. Its
+/// rounds hit at once. A hit on a bug is told to the server's director
+/// (`bugHits`, the building as the shooter).
 void Simulation::stepTurret(Structure& s, const UnitStats& w, double dt, std::vector<GameEvent>& events) {
-    s.cooldown = ac::max(0.0, s.cooldown.value_or(0) - dt);
+    if (s.kind == StructureKind::citadel) {
+        // Its four corner turrets, each on its own target.
+        if (!s.guns) {
+            s.guns = std::array<CornerGun, 4>{};
+            for (int i = 0; i < 4; i++) (*s.guns)[size_t(i)].aim = Defence::cornerAngle(i);
+        }
+        for (int i = 0; i < 4; i++) {
+            CornerGun& g = (*s.guns)[size_t(i)];
+            stepGun(s, Defence::cornerGun(s.position, i), Defence::cornerRadius, w, g.target, g.cooldown, g.aim, dt, events);
+        }
+        return;
+    }
+    std::optional<int64_t> target = s.target;
+    double cooldown = s.cooldown.value_or(0);
+    double aim = s.aim.value_or(pi / 2);
+    stepGun(s, s.position, Rules::radius(s.kind), w, target, cooldown, aim, dt, events);
+    s.target = target;
+    s.cooldown = cooldown;
+    s.aim = aim;
+}
+
+void Simulation::stepGun(const Structure& s, Vec2 at, double edge, const UnitStats& w, std::optional<int64_t>& target,
+                         double& cooldown, double& aim, double dt, std::vector<GameEvent>& events) {
+    cooldown = ac::max(0.0, cooldown - dt);
     auto reach = [&](const Target& t) -> std::optional<double> {
         if (!(state.hostile(t.owner, s.owner) && (t.air ? w.hitsAir : w.hitsGround))) return std::nullopt;
-        const double d = distance(s.position, t.position) - t.radius - Rules::radius(s.kind);
-        if (d <= range(w.range, s.position, t.position)) return d;
+        const double d = distance(at, t.position) - t.radius - edge;
+        if (d <= range(t.air && w.airRange > 0 ? w.airRange : w.range, at, t.position)) return d;
         return std::nullopt;
     };
     bool keep = false;
-    if (s.target) {
-        if (auto t = foe(*s.target, s.owner); t && reach(*t)) keep = true;
+    if (target) {
+        if (auto t = foe(*target, s.owner); t && reach(*t)) keep = true;
     }
     if (!keep) {
         struct Best { int64_t id; int64_t p; double d; };
         std::optional<Best> best;
-        const double box = w.range + Rules::radius(s.kind) + 3;
+        const double box = w.range + edge + 3;
         for (const auto& v : state.units) {
             if (!(state.hostile(v.owner, s.owner) && v.hp > 0)) continue;
-            if (!(std::abs(v.position.x - s.position.x) < box && std::abs(v.position.y - s.position.y) < box)) continue;
+            if (!(std::abs(v.position.x - at.x) < box && std::abs(v.position.y - at.y) < box)) continue;
             auto t = foe(v.id, s.owner);
             if (!t) continue;
             auto d = reach(*t);
@@ -791,20 +818,30 @@ void Simulation::stepTurret(Structure& s, const UnitStats& w, double dt, std::ve
                 if (!best || p > best->p || (p == best->p && *d < best->d)) best = Best{o.id, p, *d};
             }
         }
-        s.target = best ? std::optional<int64_t>(best->id) : std::nullopt;
+        target = best ? std::optional<int64_t>(best->id) : std::nullopt;
     }
-    if (!s.target) return;
-    const int64_t id = *s.target;
+    if (!target) return;
+    const int64_t id = *target;
     auto t = foe(id, s.owner);
     if (!t) return;
-    const double want = std::atan2(t->position.y - s.position.y, t->position.x - s.position.x);
-    const double now = s.aim.value_or(pi / 2);
-    const double diff = std::remainder(want - now, 2 * pi);
+    const double want = std::atan2(t->position.y - at.y, t->position.x - at.x);
+    const double diff = std::remainder(want - aim, 2 * pi);
     const double turn_ = turretTurnRate * dt;
-    s.aim = std::remainder(now + ac::max(-turn_, ac::min(turn_, diff)), 2 * pi);
-    if (!(std::abs(diff) < 0.25 && s.cooldown.value_or(0) <= 0)) return;
-    s.cooldown = w.cooldown;
+    aim = std::remainder(aim + ac::max(-turn_, ac::min(turn_, diff)), 2 * pi);
+    if (!(std::abs(diff) < 0.25 && cooldown <= 0)) return;
+    cooldown = w.cooldown;
+    const auto bug = state.unit(id);
+    const double had = bug && bug->bug ? bug->hp : 0;
     hit(id, Rules::damage(w, t->armored, t->light, t->armor));
+    if (bug && bug->bug) {
+        // The director pays the building's builder and turns the group on it.
+        if (const auto after = state.unit(id)) {
+            bugHits.push_back({s.id, id, bug->kind, ac::max(0.0, had - ac::max(0.0, after->hp)), had > 0 && after->hp <= 0});
+            if (auto it = unitIndexByID.find(id); it != unitIndexByID.end()) {
+                if (auto& b = state.units[size_t(it->second)].bug) b->hitBy = s.id;
+            }
+        }
+    }
     events.push_back(GameEvent::Shot{s.id, id, t->owner, t->position});
 }
 

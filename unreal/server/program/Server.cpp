@@ -132,6 +132,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devBrood(line));
             continue;
         }
+        // The defences' scenes (WorldMap::devDefence): `defence wallet|blueprints|citadel|gatling|aa`.
+        if (line.rfind("defence", 0) == 0) {
+            said.push_back(world_.devDefence(line));
+            continue;
+        }
         const double was = world_.clock();
         if (!world_.isWorld() || std::sscanf(line.c_str(), "%15s %lf", what, &v) != 2) {
             said.push_back("dev: control '" + line + "' not done (no world, or not `clock|hour|ahead N`)");
@@ -372,6 +377,9 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* mi = std::get_if<net::RequestMessage::MissionAsk>(&m.what)) {
         what = std::string(mi->take ? "take" : "abandon") + " mission " + std::to_string(mi->mission);
         why = mi->take ? world_.takeMission(pilot, mi->mission) : world_.abandonMission(pilot, mi->mission);
+    } else if (const auto* uc = std::get_if<net::RequestMessage::UpgradeCitadel>(&m.what)) {
+        what = "upgrade the Citadel's " + std::string(rawValue(uc->stat));
+        why = world_.upgradeCitadel(pilot, uc->stat);
     } else if (const auto* mc = std::get_if<net::RequestMessage::Merc>(&m.what)) {
         using Act = net::RequestMessage::Merc::Act;
         if (mc->act == Act::hire) {
@@ -384,9 +392,6 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
             what = "send mercenary " + std::to_string(mc->merc) + " to " + mc->region + " field " + std::to_string(mc->field);
             why = world_.assignMerc(pilot, mc->merc, mc->region, mc->field);
         }
-    } else if (std::holds_alternative<net::RequestMessage::Reserved17>(m.what)) {
-        what = "a Citadel upgrade";
-        why = "Not in this build";
     } else {
         return std::nullopt;
     }

@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 is D1's). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -154,6 +154,8 @@ struct WorldSave {
     /// world up on the time it was down); 0: not known. A `meta` row
     /// (`saved_at`), no schema step.
     double savedAt = 0;
+    /// The marks the realm's Citadel turrets have (D1, schema 15).
+    TurretMarks citadelMarks{};
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -168,7 +170,7 @@ public:
     /// world's clock; 3: the pilots' progression; 4: gated by blueprints;
     /// 5: contracts; 6: starfalls; 7: the rig; 8: the realm's buildings;
     /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions;
-    /// 14: mercenaries).
+    /// 14: mercenaries; 15: the Citadel's marks).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 
@@ -226,6 +228,7 @@ private:
     std::optional<double> clock_;
     double savedAt_ = 0;
     std::optional<std::pair<int64_t, int64_t>> realm_;
+    std::optional<TurretMarks> marks_;
     std::vector<SavedStarfall> starfalls_;
 };
 

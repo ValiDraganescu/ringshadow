@@ -875,6 +875,29 @@ struct AUTOCRAFTCORE_API OreDeposit {
     bool operator==(const OreDeposit&) const = default;
 };
 
+/// What a defence's weapon has been upgraded by (D1, D3: docs/mmorpg-m8.md):
+/// marks 0 to `Defence::marksMax` each in fire rate, damage and range.
+enum class DefenceStat : uint8_t { rate, damage, range };
+struct TurretMarks {
+    int64_t rate = 0;
+    int64_t damage = 0;
+    int64_t range = 0;
+    int64_t of(DefenceStat s) const { return s == DefenceStat::rate ? rate : s == DefenceStat::damage ? damage : range; }
+    int64_t& of(DefenceStat s) { return s == DefenceStat::rate ? rate : s == DefenceStat::damage ? damage : range; }
+    bool operator==(const TurretMarks&) const = default;
+};
+
+/// One of an armed Citadel's four point-defence turrets (D1), at a corner
+/// of its footprint (`Defence::cornerGun`): rapid rotary close-in guns,
+/// each tracking its own target.
+struct CornerGun {
+    std::optional<int64_t> target;
+    double cooldown = 0;
+    /// Where it points, world radians.
+    double aim = 0;
+    bool operator==(const CornerGun&) const = default;
+};
+
 struct AUTOCRAFTCORE_API Structure {
     using Kind = StructureKind;
     int64_t id = 0;
@@ -908,6 +931,12 @@ struct AUTOCRAFTCORE_API Structure {
     std::optional<int64_t> target;
     std::optional<double> cooldown;
     std::optional<double> aim;
+    /// Its weapon's marks (D1, D3). A Citadel fires only with them set: the
+    /// MMO's server arms the realm's Citadels with the realm's marks; the
+    /// strategy game's Citadels never shoot.
+    std::optional<TurretMarks> marks;
+    /// An armed Citadel's four corner turrets (set with `marks`).
+    std::optional<std::array<CornerGun, 4>> guns;
 
     /// For decoding; Swift has only the init below.
     Structure() = default;
@@ -1659,8 +1688,11 @@ template <> struct EnumInfo<UnitKind> {
         "peregrine", "atlas", "scorpion", "shardling", "gloamwing", "lodeback", "matriarch"};
 };
 template <> struct EnumInfo<StructureKind> {
-    static constexpr std::array<std::string_view, 9> names{
-        "citadel", "habDome", "garrison", "bastion", "derrick", "foundry", "spacedock", "lab", "sentinel"};
+    static constexpr std::array<std::string_view, 10> names{
+        "citadel", "habDome", "garrison", "bastion", "derrick", "foundry", "spacedock", "lab", "sentinel", "gatling"};
+};
+template <> struct EnumInfo<DefenceStat> {
+    static constexpr std::array<std::string_view, 3> names{"rate", "damage", "range"};
 };
 template <> struct EnumInfo<Unit::Task> {
     static constexpr std::array<std::string_view, 18> names{
