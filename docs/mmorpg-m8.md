@@ -32,7 +32,22 @@ Comes from the user's remarks after playing to level 10 (2026-10-14).
   turn, speed away, then a seamless approach and landing at the target.
   Only to regions already discovered, and only between landing pads the
   pilot has built: one in the region it leaves, one in the region it goes to.
-- One worker at a time.
+- One worker at a time (later: two are fine).
+
+## Decided (2026-10-14, the user, second round)
+
+- Missions at the Citadel: the pilot picks from a board, easier ones with
+  smaller rewards, harder ones with bigger. A picked mission goes into a
+  Journal: its text, instructions, its place on the map, and a narration to
+  replay. A voice narrates each mission, adventurous; grave and fearless, or
+  fearful, by the mission's kind.
+- The map (M) becomes a satellite view of the real ground, whatever the
+  regions' shapes; hovering a POI, building or deposit shows a tooltip with
+  its name and what is worth knowing (ore left, who built it).
+- Mercenary prospectors hired at the Citadel mine an area slowly: in 24
+  hours what the pilot mines in one.
+- The world goes on while the game is closed: the server keeps running as
+  long as the computer is on.
 
 ## Decided (2026-10-14, manager)
 
@@ -46,12 +61,17 @@ Comes from the user's remarks after playing to level 10 (2026-10-14).
   (decided in F2).
 - W3 (ground palettes, landmarks) folds into W4; X1 (shots split) waits:
   with one worker at a time the shots file no longer conflicts.
+- Citadel missions are the Citadel's board; KSTR's daily radio contracts
+  stay. Narration is generated offline per mission template (no key in the
+  game) and shipped as sound assets. Mercenaries are the pilot's: their ore
+  goes to its wallet, taxed like any unload. When the server was stopped
+  anyway, it catches up the mercenaries' work on the next start.
 - Added by the manager: after the opening chain, KSTR points at the next
   goal (L1), because a pilot at level 10 asked "now what?".
 
 ## Tasks
 
-Run in this order, one worker at a time.
+Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 
 | # | Task | Needs | Status |
 |---|---|---|---|
@@ -67,6 +87,10 @@ Run in this order, one worker at a time.
 | W4 | Seamless regions: region borders follow the land (not rectangles), visible passages between regions, crossing on foot without a seam; folds in W3's ground palettes and landmarks | | |
 | F2 | The transport ship: the pilot can't fly alone; build a landing pad, board the Dropship, lift, turn, speed away, seamless approach and landing at a pad in a discovered region; flight menu shows only reachable pads | R1, W4 | |
 | L1 | What next after the opening: KSTR goal contracts by level (Hab Dome, Foundry hunt, the shop, the first defences) | C2, D2 | |
+| K2 | Citadel missions and the Journal: a MISSIONS tab on the Citadel screen with tiers (easy, hard, perilous) and rewards to match; picked missions in a Journal screen (text, instructions, map marker, replayable narration); narrated lines per mission template, voices by mood, offline WAV checks only | C2 | |
+| M2 | The satellite map: M shows a top-down render of the real ground of every discovered region, stitched, any shape; hover tooltips on POIs, buildings, deposits (name, ore left, builder) | | |
+| S2 | The world runs on: the local server keeps running after the game quits (as long as the Mac is on), the game reattaches to it on start; offline catch-up when it was stopped; tests never leave a server behind | | |
+| H2 | Mercenary prospectors: hire at the Citadel (a MERCS tab) for ore and MH; each mines an area at 1/24 of the pilot's rate, delivers to the pilot's wallet (taxed), shown on the map; work goes on while the game is closed | S2, C2 | |
 | U1 | HUD declutter (from M7): one toast lane, Q/C/G clear of the pawn, compact contract panel, banners off the panels, no "CONTRACT DONE: CONTRACT" | | |
 
 Each task is done when the three suites pass, its hidden-run pictures

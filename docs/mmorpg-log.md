@@ -468,3 +468,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D User: Brood picks: Shardling quill, Gloamwing lantern, Lodeback hermit, Matriarch crowned.
 - T N1 step 1 c6644c4: docs/creatures.md, names, concepts merged.
 - D N1: the Matriarch nests in Slag Pockets.
+- D User: Citadel missions by tier, a Journal, narrated by mood.
+- D User: map M as a satellite view, hover tooltips.
+- D User: mercenary prospectors mine at 1/24 the pilot's rate.
+- D User: the server keeps running after the game quits.
+- D Manager: tasks K2, M2, S2, H2 added to M8; two workers.
