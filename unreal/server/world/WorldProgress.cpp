@@ -327,10 +327,10 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
             oreLoad(w.pilot);
             contractWork(w.pilot, *p, net::Contract::Kind::drill, world_->regions[w.region].file.id, 1);
             if (underSweep(w.pilot)) contractWork(w.pilot, *p, net::Contract::Kind::sweep, "", 1);
+            sweptLoad(regions_[w.region]->simulation(), w.unit, u->patch ? u->patch : w.patch, clock_, params_.dayLength);
         }
         if (p->progress.level() != level) pushProgress(w.pilot);
     }
-            sweptLoad(regions_[w.region]->simulation(), w.unit, u->patch ? u->patch : w.patch, clock_, params_.dayLength);
 }
 
 // MARK: - Skill clocks across regions
