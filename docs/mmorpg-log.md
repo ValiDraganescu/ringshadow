@@ -393,3 +393,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D H1: painted art, no living background (menu world is the RTS map).
 - N H1 variants: https://claude.ai/artifact/8gUrLVMuQ7ChH1NqVXhFiN
 - T V3 showreel → first-hour.
+- T E2 polish done 98da2e3: fireball streak, molten deposit, shimmer.
+- I cf09855 broke HEAD compile; fixed 3471100.
+- N E2 polish task: 107 min against 40.
+- T W3 regional looks → world-look.

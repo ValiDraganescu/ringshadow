@@ -24,7 +24,7 @@ Runs alongside the end of M6 (P4b–P7): workers freed from M6 start here.
 |---|---|---|---|
 | W1 | The First Reach with character: deposits in veins and clusters that follow the land (not lines), a landmark silhouette per region, places worth walking to; validate ok, previews and hidden-run pictures | P4a | done |
 | E1 | The ringshadow sweep: a band of shadow crosses the region on the world clock (server schedule in snapshots, client sky/light/fog); under it ore veins flare and drilling pays more; an announcement before it comes | C1 | done |
-| E2 | Starfall: the server drops meteors at times and places it picks; a streak in the sky, a crater with a rare rich deposit, first come first served, an announcement | C1 | done; polish with S1 |
+| E2 | Starfall: the server drops meteors at times and places it picks; a streak in the sky, a crater with a rare rich deposit, first come first served, an announcement | C1 | done (polish 98da2e3) |
 | K1 | KSTR contracts: the radio offers 3 contracts a day per pilot (deliver ore/MH, reach a site, build, survive an event); rewards XP and MH; a contract panel and a radio voice line | P3 | server done; panel with P5 |
 | F1 | Flight worth watching: the pad-to-pad flight and jump jets burn MH, with thrust, dust and a camera that sells it | P3 | done (pad flight); jump jets and sound in F1b |
 | G1 | Rig screen (J / RIG tab): fitting, Foundry, Lab with prices, countdowns, refusals; module icons | P7 | done |
@@ -34,6 +34,7 @@ Runs alongside the end of M6 (P4b–P7): workers freed from M6 start here.
 | H1 | The home screen worth opening: key art of the Prospector under the giant and its rings (no war art), the RINGSHADOW title, the MMO entry first, a living background | R1 | done (painted art) |
 | O1 | The first ten minutes: a guided opening through the KSTR radio (land, the crate, the Citadel, first ore home, the Derrick, first level and first skill point), each step a contract with a clear marker and a line of radio voice text; then the normal daily contracts | K1, G2, W2 | in progress |
 | V3 | A showreel: a 45–60 s hidden-recorded clip of the new moments (dusk lift-off, the ringshadow sweep, a starfall, the gold site columns, the skill screen, the home screen) for the user | E2, F1, W2, H1 | in progress |
+| W3 | Regions that look different: a ground palette per region (rust, salt, ash, glass), landmark props (an arch, a dead hauler, a derrick tower), ground above level 2 where a landmark needs it | W1 | in progress |
 | S1 | Fast picture runs: a dev-only clock jump mid-run (no waiting for night), a starfall lead of ~8–10 s, `-AcMmoShotsOnly=` to shoot chosen moments; Starfall set under 1 min with the same 9 pictures (user-approved, via the build-train session) | E2 | done |
 
 Done when: in a hidden run a pilot starts at Prospect Landing, takes a
