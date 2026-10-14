@@ -27,6 +27,7 @@
 #include "NetProtocol.h"
 #include "Progression.h"
 
+#include <map>
 #include <optional>
 
 /// What the world map shows (from `FAcMmoClient`).
@@ -46,6 +47,10 @@ struct FAcWorldMapInfo
 	std::optional<double> RingwalkerIn;
 	/// In flight to this region (empty: on the ground).
 	FString FlyingTo;
+	/// What a flight to each region costs in MH, by region id (F1,
+	/// `ac::Flight`), and the wallet's MH (unset: not known yet).
+	std::map<FString, int64> FlightPrice;
+	std::optional<int64> Hydrogen;
 	/// The blueprint sites the pilot knows of (`AcProgressHud::KnownSites`):
 	/// the region's id, where in it (0…1 across, 0…1 down), opened or not.
 	struct FSite
@@ -143,6 +148,10 @@ private:
 	bool AtPad() const;
 	/// The pick is the pad the pilot stands on (no flight to make).
 	bool PickIsHere() const;
+	/// A flight to region `Region`'s MH price ("15 MH"; empty: unknown), and
+	/// whether the wallet is short of it.
+	FString PriceText(int32 Region) const;
+	bool Short(int32 Region) const;
 	/// The pad of the pilot's region it stands nearest (else its first).
 	FPick HerePad() const;
 	/// A pad's place on the world's grid, in tiles (x east, y south).

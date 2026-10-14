@@ -935,6 +935,15 @@ void UAcGameFlowSubsystem::TickWorldMap()
 	}
 	else Info.PadReach = Mmo->PadReachNow();
 	Info.RingwalkerIn = Mmo->RingwalkerIn();
+	// What each flight costs (F1), and the wallet's MH.
+	if (const ac::net::WorldMessage* W = Mmo->World())
+	{
+		for (const ac::net::WorldMessage::Region& G : W->regions)
+		{
+			if (const std::optional<int64> Price = Mmo->FlightPrice(Text(G.id))) Info.FlightPrice[Text(G.id)] = *Price;
+		}
+	}
+	Info.Hydrogen = Mmo->HydrogenNow();
 	if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo()) Info.FlyingTo = Text(To->name);
 	Info.Sites = AcProgressHud::KnownSites(*Mmo);
 	Info.Marks = AcProgressHud::ContractMarks(*Mmo);

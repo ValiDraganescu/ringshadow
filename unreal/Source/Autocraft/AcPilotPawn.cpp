@@ -995,7 +995,7 @@ void AAcPilotPawn::SyncMmo()
 		// The server gave the unit asked for: dive in (or over to it).
 		TakeOver(*Driven);
 	}
-	else if (Driving() && !Driven && Mmo->Wanted() == DrivenId && !Mmo->Travelling())
+	else if (Driving() && !Driven && Mmo->Wanted() == DrivenId && !Mmo->Travelling() && !InFlight())
 	{
 		// The server no longer has us driving it (it died, say).
 		UE_LOG(LogAutocraft, Log, TEXT("pilot: the server took #%lld back"), (long long)DrivenId);
@@ -1016,7 +1016,9 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 		// where it was until the unit is driven again (`SyncMmo`), never
 		// longer than `MaxHoldSeconds` (then the top-down camera).
 		const FAcMmoClient* Mmo = Sim->MmoClient();
-		if (Mmo && Mmo->Travelling())
+		// (A flight shown holds too: the World message that ends it can be
+		// read a frame before its RegionChange, nothing driven between.)
+		if (Mmo && (Mmo->Travelling() || Flight))
 		{
 			if (HoldSince < 0) HoldSince = Clock;
 			// A pad flight: the ship lifts off and the view goes with it

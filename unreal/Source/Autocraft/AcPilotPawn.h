@@ -224,6 +224,10 @@ public:
 	/// flight's ship, no cockpit, the pilot's input held.
 	bool InFlight() const { return Flight.IsSet(); }
 	EAcFlightStage FlightStage() const;
+	/// Real seconds since the flight's lift-off, and since its landing began
+	/// (< 0: not in flight, not landing yet). Pictures time their moments by them.
+	double FlightSeconds() const;
+	double LandingSeconds() const;
 	/// -AcPilotPullOut: the camera is out of the unit, on its way to the gas giant.
 	bool PulledOut() const { return PullOut.IsSet() && PullOut->bOutside; }
 	/// The eye (pitch, lean, third person) and the camera.
@@ -384,7 +388,15 @@ private:
 		FName Model;
 		int32 Team = 0;
 		int64 Visit = 0;
-		double LastPuff = -1;
+		/// The effects' clock at the last frame drawn (the jets' streams).
+		double LastFx = -1;
+		/// The dust ring's last wave (real seconds), the pad scorched, the
+		/// shock ring of the lift-off and of the touch down sent.
+		double LastRing = -1;
+		bool bScorched = false;
+		bool bLiftRing = false;
+		/// The camera at the lift-off's end, where the transit's swing starts.
+		FVector LowEye = FVector::ZeroVector;
 	};
 	TOptional<FFlightShow> Flight;
 	/// The last followed unit's placement and model (the lift-off's start).

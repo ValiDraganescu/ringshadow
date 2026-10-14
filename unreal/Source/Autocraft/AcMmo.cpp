@@ -11,6 +11,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "Flight.h"
 #include "Progression.h"
 #include "Rules.h"
 
@@ -262,6 +263,19 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevBlueprints"))) Args.insert(Args.end(), {"--dev-blueprints", "1"});
 	// Dev and shots: a new pilot owns a finished Citadel, Foundry and Lab, its rig stocked.
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) Args.insert(Args.end(), {"--dev-rig", "1"});
+	// Dev, tests and shots: MH in a new pilot's wallet (flights cost MH, F1).
+	// The picture and flow runs fly before a Derrick pumps any: 200 there
+	// unless they say otherwise (-AcMmoDevHydrogen=0 for none).
+	{
+		int64 DevMh = 0;
+		FString Unused;
+		if (!FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevHydrogen="), DevMh)
+			&& (FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Unused) || FParse::Value(FCommandLine::Get(), TEXT("AcFlowTest="), Unused)))
+		{
+			DevMh = 200;
+		}
+		if (DevMh > 0) Args.insert(Args.end(), {"--dev-hydrogen", std::to_string(DevMh)});
+	}
 	// Dev and shots: the world's hour and weather held on the server.
 	if (double Hour = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoHour="), Hour) && Hour >= 0 && Hour <= 24)
 	{
@@ -977,6 +991,25 @@ std::optional<std::string> FAcMmoClient::PadPlateRefusal(const ac::StructureKind
 	return std::string(ac::region::padPlateRefusal);
 }
 
+std::optional<int64> FAcMmoClient::FlightPrice(const FString& RegionId) const
+{
+	const ac::net::WorldMessage::Region* From = Here();
+	const ac::net::WorldMessage* W = World();
+	if (!From || !W) return std::nullopt;
+	for (const ac::net::WorldMessage::Region& To : W->regions)
+	{
+		if (Text(To.id) == RegionId) return ac::Flight::hydrogen(ac::Flight::steps(From->column, From->row, To.column, To.row));
+	}
+	return std::nullopt;
+}
+
+std::optional<int64> FAcMmoClient::HydrogenNow() const
+{
+	const ac::net::Mirror* M = Mirror();
+	if (!M || M->simulation().state.players.size() <= size_t(ac::Pilot::player)) return std::nullopt;
+	return M->simulation().state.players[size_t(ac::Pilot::player)].hydrogen;
+}
+
 bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)
 {
 	auto No = [&](const FString& Reason) {
@@ -996,6 +1029,11 @@ bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)
 	{
 		if (Ring) return No(FString::Printf(TEXT("Ringwalker is ready in %.0f s; or drive onto a pad: %s is %.0f cells away"), std::ceil(*Ring), *Near->Name, Near->Distance));
 		return No(FString::Printf(TEXT("Drive onto a pad to fly: pad %s is %.0f cells away"), *Near->Name, Near->Distance));
+	}
+	// The flight's MH (F1): the server's price and words.
+	if (const std::optional<int64> Price = FlightPrice(Region); Price && HydrogenNow())
+	{
+		if (const std::optional<std::string> Short = ac::Flight::refusal(*Price, *HydrogenNow())) return No(Text(*Short));
 	}
 	LastFlightRefusal.Reset();
 	const uint32 Id = Net->fly(Utf8(Region), Utf8(Pad));

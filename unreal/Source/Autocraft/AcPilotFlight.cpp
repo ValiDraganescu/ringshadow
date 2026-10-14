@@ -3,8 +3,12 @@
 #include "AcPilotFlight.h"
 
 #include "AcEffects.h"
+#include "AcEffectsBursts.h"
+#include "AcEffectsExtension.h"
+#include "AcGasGiant.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
+#include "AcParticles.h"
 #include "AcPilotPawn.h"
 #include "AcSpace.h"
 #include "AcWorldRenderer.h"
@@ -38,6 +42,81 @@ namespace
 	{
 		const FVector D = To - From;
 		return D.SizeSquared() > 1.0 ? D.Rotation().Quaternion() : FQuat::Identity;
+	}
+
+	/// Toward the giant on the ground (the flight's way), and across it.
+	FVector GiantWay()
+	{
+		FVector G = FAcGasGiant::Direction();
+		G.Z = 0;
+		return G.SizeSquared() > 1e-6 ? G.GetSafeNormal() : FVector::ForwardVector;
+	}
+	FVector Across(const FVector& Way) { return FVector::CrossProduct(FVector::UpVector, Way); }
+
+	/// The jets under the ship (`Body`: its ground point lifted), `Thrust`
+	/// 0..1: two flames pushed down out of its belly, a hot core in each, a
+	/// glow, pale heat rising round them; `Dt` the effects' seconds since the
+	/// last frame. Particles stream on the effects' clock (game time).
+	void Jets(UAcEffects& Fx, const FVector& Body, const FQuat& Turn, const double Thrust, const double Dt)
+	{
+		if (Thrust <= 0.01) return;
+		const FVector Side = Turn.GetRightVector();
+		const FVector Nozzles[2] = {Body + Side * Cells(0.42) + FVector::UpVector * Cells(0.22),
+			Body - Side * Cells(0.42) + FVector::UpVector * Cells(0.22)};
+		FAcParticles* P = Dt > 0 ? AcEffectsBursts::ParticlesOf(&Fx) : nullptr;
+		for (int32 I = 0; I < 2; ++I)
+		{
+			Fx.Flash(Nozzles[I] - FVector::UpVector * Cells(0.1), 0.5 + 0.9 * Thrust, Fx.Now(), 0.05);
+			if (!P) continue;
+			// The plume flies along its frame's -X: pitched up a quarter
+			// turn, straight down. The jet's core flies down as it is.
+			FAcEmit Plume;
+			Plume.Speed = 3.0 + 5.0 * Thrust;
+			Plume.Size = 0.22 + 0.16 * Thrust;
+			P->Stream(EAcParticle::Plume, FAcParticles::KeyOf(-31, 1 + I), FTransform(FRotator(90, 0, 0), Nozzles[I]), 60 + 140 * Thrust, Fx.Now(), Dt,
+				Plume);
+			FAcEmit Core;
+			Core.Speed = 4.0 + 4.0 * Thrust;
+			Core.Size = 0.12 + 0.08 * Thrust;
+			P->Stream(EAcParticle::CometJet, FAcParticles::KeyOf(-31, 3 + I), FTransform(FQuat::Identity, Nozzles[I]), 50 + 110 * Thrust, Fx.Now(),
+				Dt, Core);
+			// The heat over the flame: a pale haze drifting up and away.
+			FAcEmit Heat;
+			Heat.Size = 0.16;
+			P->Stream(EAcParticle::FireflyExhaust, FAcParticles::KeyOf(-31, 5 + I), FTransform(FQuat::Identity, Nozzles[I]), 22 * Thrust, Fx.Now(),
+				Dt, Heat);
+		}
+	}
+
+	/// The dust the jets blow off the ground `Height` cells under them: a
+	/// ring of it racing out from `Ground` (`Radius` cells), thinner higher.
+	void DustRing(UAcEffects& Fx, const FVector& Ground, const double Radius, const double Height)
+	{
+		const int32 N = 12;
+		const double Size = FMath::Lerp(0.9, 0.35, FMath::Clamp(Height / 4.0, 0.0, 1.0));
+		const double Turn = FMath::FRand() * UE_TWO_PI;
+		for (int32 I = 0; I < N; ++I)
+		{
+			const double A = Turn + UE_TWO_PI * I / N;
+			FAcBurstRequest R;
+			R.Kind = EAcBurst::Dust;
+			R.At = Ground + FVector(FMath::Cos(A), FMath::Sin(A), 0) * Cells(Radius) + FVector::UpVector * Cells(0.1);
+			R.Size = Size;
+			R.Time = Fx.Now();
+			Fx.Burst(R);
+		}
+	}
+
+	/// The ring of a jet's blast over the ground, and the pad's scorch.
+	void Shock(UAcEffects& Fx, const FVector& Ground, const double Radius, const double Bright)
+	{
+		FAcShockRingRequest Ring;
+		Ring.At = Ground + FVector::UpVector * Cells(0.05);
+		Ring.Radius = Cells(Radius);
+		Ring.Life = 0.45;
+		Ring.Time = Fx.Now();
+		Ring.Bright = Bright;
+		Fx.ShockRing(Ring);
 	}
 }
 
@@ -126,6 +205,14 @@ bool AAcFlightShip::Show(const FName Model, const int32 Team, const FTransform& 
 	return true;
 }
 
+void AAcFlightShip::SetGlow(const double Glow)
+{
+	for (UStaticMeshComponent* C : Meshes)
+	{
+		if (C) C->SetCustomPrimitiveDataFloat(AcModelData::EmissionScale, float(Glow));
+	}
+}
+
 void AAcFlightShip::Hide()
 {
 	bShown = false;
@@ -139,6 +226,16 @@ EAcFlightStage AAcPilotPawn::FlightStage() const
 	if (!Flight) return EAcFlightStage::None;
 	if (Flight->LandStart >= 0) return EAcFlightStage::Landing;
 	return Wall() - Flight->Start < AcPilotFlight::LiftSeconds ? EAcFlightStage::LiftOff : EAcFlightStage::Transit;
+}
+
+double AAcPilotPawn::FlightSeconds() const
+{
+	return Flight ? Wall() - Flight->Start : -1.0;
+}
+
+double AAcPilotPawn::LandingSeconds() const
+{
+	return Flight && Flight->LandStart >= 0 ? Wall() - Flight->LandStart : -1.0;
 }
 
 bool AAcPilotPawn::StartFlight(const int64 Visit)
@@ -162,7 +259,6 @@ bool AAcPilotPawn::StartFlight(const int64 Visit)
 	PullOut.Reset();
 	// The cockpit off, the ship drawn.
 	ApplyView();
-	if (UAcEffects* Fx = UAcEffects::Get(this)) Fx->DustPuff(F.From.GetLocation(), 1.2, Fx->Now());
 	UE_LOG(LogAutocraft, Log, TEXT("flight: lift-off at %s (%s)"), *F.From.GetLocation().ToCompactString(), *F.Model.ToString());
 	return true;
 }
@@ -173,18 +269,20 @@ bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing
 	if (!Flight) return false;
 	AAcFlightShip* Ship = AAcFlightShip::SpawnFor(GetWorld());
 	UAcEffects* Fx = UAcEffects::Get(this);
-	// Thrust: a glow under the ship, dust where it is low over the ground.
-	// The dust is additive: puffs stacked on one spot burn white, so they
-	// come sparse and small (the touch-down's ring is the big one).
-	auto Thrust = [&](const FVector& Ground, const double Height)
+	// The effects' seconds since the last frame (the jets' streams).
+	double Dt = 0;
+	if (Fx)
 	{
-		if (!Fx) return;
-		Fx->Flash(Ground + Up() * Cells(Height + 0.05), 1.0, Fx->Now(), 0.05);
-		if (Height < 2.0 && Wall() - Flight->LastPuff > 0.5)
-		{
-			Flight->LastPuff = Wall();
-			Fx->DustPuff(Ground, 0.8, Fx->Now());
-		}
+		Dt = Flight->LastFx >= 0 ? FMath::Clamp(Fx->Now() - Flight->LastFx, 0.0, 0.1) : 0.0;
+		Flight->LastFx = Fx->Now();
+	}
+	const FVector Way = GiantWay();
+	const FVector Side = Across(Way);
+	// The ground under a point, cm (the camera kept over it).
+	auto Above = [&](FVector P, const double Cell)
+	{
+		if (Fx) P.Z = FMath::Max(P.Z, Fx->GroundZ(AcSpace::ToSim(P)) + Cells(Cell));
+		return P;
 	};
 
 	if (Landing)
@@ -192,6 +290,7 @@ bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing
 		if (Flight->LandStart < 0)
 		{
 			Flight->LandStart = Wall();
+			Flight->LastRing = -1;
 			if (const UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
 			{
 				if (const FAcModelInfo* Model = R->ModelOf(DrivenId)) Flight->Model = Model->Name;
@@ -201,54 +300,142 @@ bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing
 				Wall() - Flight->Start);
 		}
 		const double L = Wall() - Flight->LandStart;
+		const FVector Pad = Landing->GetLocation();
 		if (L >= LandSeconds)
 		{
-			if (Fx) Fx->DustPuff(Landing->GetLocation(), 1.2, Fx->Now());
+			if (Fx)
+			{
+				// Touch down: the ring of the blast, the dust thrown out.
+				Shock(*Fx, Pad, 3.5, 0.6);
+				DustRing(*Fx, Pad, 1.6, 0);
+				Fx->DustPuff(Pad, 1.2, Fx->Now());
+			}
 			UE_LOG(LogAutocraft, Log, TEXT("flight: touched down, %.1f s after the lift-off"), Wall() - Flight->Start);
 			EndFlight();
 			return false;
 		}
+		// Down on its jets along the way it came, slowing over the pad.
 		const double H = LandHeight(L);
-		const FVector Body = Landing->GetLocation() + Up() * Cells(H);
-		if (Ship) Ship->Show(Flight->Model, Flight->Team, *Landing, Cells(H));
-		Thrust(Landing->GetLocation(), H);
-		// From behind and over the ship (the pilot view's side) down into
-		// the pilot's own view.
+		const FVector Body = Pad + Up() * Cells(H) - Way * Cells(LandDrift(L));
+		FTransform Place = *Landing;
+		Place.SetLocation(Pad - Way * Cells(LandDrift(L)));
+		if (Ship)
+		{
+			Ship->Show(Flight->Model, Flight->Team, Place, Cells(H));
+			Ship->SetGlow(1.0 + 2.5 * (1.0 - FMath::SmoothStep(0.6, 1.0, L / LandSeconds)));
+		}
+		if (Fx)
+		{
+			// Retro thrust: full as it comes in, easing at the pad.
+			Jets(*Fx, Body, Place.GetRotation(), 1.0 - 0.6 * FMath::SmoothStep(0.5, 1.0, L / LandSeconds), Dt);
+			if (H < 4.0 && Wall() - Flight->LastRing > 0.18)
+			{
+				Flight->LastRing = Wall();
+				DustRing(*Fx, Pad, 1.0 + 0.8 * (4.0 - H), H);
+			}
+		}
+		// From behind and beside it (the way it came), down into the
+		// pilot's own view.
 		const double S = L / LandSeconds;
-		const FVector Orbit = Body - Flat(Rot) * Cells(10) + Up() * Cells(8);
+		const FVector Orbit = Above(Body - Way * Cells(11) + Side * Cells(5) + Up() * Cells(4), 1.5);
 		const FVector Pos = FMath::Lerp(Orbit, At, Ease(S));
-		Rot = FQuat::Slerp(LookAt(Pos, Body + Up() * Cells(0.6)), Rot, FMath::SmoothStep(0.45, 1.0, S));
+		// The ship left of the middle as it comes down: the arrival's toasts
+		// (a region discovered, a first landing) stand in the middle.
+		const FQuat On = LookAt(Pos, Body + Up() * Cells(0.6));
+		const FQuat Left = LookAt(Pos, Body + Up() * Cells(0.6) + On.GetRightVector() * Cells(0.22) * FVector::Dist(Pos, Body) / Cells(1));
+		Rot = FQuat::Slerp(Left, Rot, FMath::SmoothStep(0.5, 1.0, S));
 		At = Pos;
 		SetFade(LandFade(L));
 		return true;
 	}
 
-	// In the air: the ship climbs from where the unit stood; the camera
-	// leaves the pilot's view up behind it, pulls back, then turns slowly
-	// round it, tilting down to the region falling away.
+	// In the air: spooled up on the pad, then off it, up and away toward
+	// the giant.
 	const double T = Wall() - Flight->Start;
 	const double H = LiftHeight(T);
 	const FVector Ground = Flight->From.GetLocation();
-	const FVector Body = Ground + Up() * Cells(H);
+	const FVector Body = Ground + Up() * Cells(H) + Way * Cells(Drift(T));
 	// A RegionChange read, its first snapshot not yet: the old region is
 	// gone from under the ship; dark until the landing.
 	const bool bGone = Visit != Flight->Visit;
 	if (Ship)
 	{
 		if (bGone) Ship->Hide();
-		else Ship->Show(Flight->Model, Flight->Team, Flight->From, Cells(H));
+		else
+		{
+			FTransform Place = Flight->From;
+			Place.SetLocation(Ground + Way * Cells(Drift(T)));
+			Ship->Show(Flight->Model, Flight->Team, Place, Cells(H));
+			// The engines lit: the glow climbs through the spool-up.
+			Ship->SetGlow(1.0 + 3.0 * LiftThrust(T));
+			// A shudder on the pad while the jets spool up.
+			if (T < SpoolSeconds + 0.3)
+			{
+				const double Shake = Cells(0.025) * FMath::SmoothStep(0.0, SpoolSeconds, T) * (1.0 - FMath::SmoothStep(SpoolSeconds, SpoolSeconds + 0.3, T));
+				Ship->Show(Flight->Model, Flight->Team, Place, Cells(H) + Shake * FMath::Sin(T * 90.0));
+			}
+		}
 	}
-	if (!bGone && T < LiftSeconds + 1.0) Thrust(Ground, H);
-	const double Tr = FMath::Max(0.0, T - LiftSeconds);
-	const double Out = FMath::SmoothStep(0.0, 2.5, Tr);
-	const FVector Back = -Flat(Flight->RotFrom).RotateAngleAxis(5.0 * Tr, Up());
-	const FVector Orbit = Body + Back * Cells(7 + 5 * Out) + Up() * Cells(3 + 6 * Out);
-	const FVector Aim = Body + Up() * Cells(0.6 - 10 * Out);
-	const double Lift = T / LiftSeconds;
-	// Eased out: off the pad at once, slowing into place behind it.
-	const FVector Pos = FMath::Lerp(Flight->EyeFrom, Orbit, 1.0 - FMath::Pow(1.0 - FMath::Clamp(Lift, 0.0, 1.0), 3.0));
+	if (Fx && !bGone)
+	{
+		Jets(*Fx, Body, Flight->From.GetRotation(), LiftThrust(T), Dt);
+		// The pad scorched and a shock ring off it as the jets take hold.
+		if (!Flight->bLiftRing && T > 0.25)
+		{
+			Flight->bLiftRing = true;
+			Shock(*Fx, Ground, 3.0, 0.5);
+		}
+		if (!Flight->bScorched && T > SpoolSeconds)
+		{
+			Flight->bScorched = true;
+			FAcScorchRequest Burn;
+			Burn.At = Ground;
+			Burn.Radius = Cells(1.4);
+			Burn.Life = 30;
+			Burn.Time = Fx->Now();
+			Burn.Darkness = 0.6;
+			Fx->Scorch(Burn);
+		}
+		// The dust ring racing out while the jets are near the ground.
+		if (H < 5.0 && T > 0.15 && Wall() - Flight->LastRing > 0.16)
+		{
+			Flight->LastRing = Wall();
+			DustRing(*Fx, Ground, 1.2 + 5.0 * FMath::Min(T / LiftSeconds, 1.0), H);
+		}
+	}
+
+	// The camera: low on the ground behind the pad, the giant beyond, up at
+	// the ship; then swinging up behind it as it heads off, levelling out.
+	const FVector Low = Above(Ground - Way * Cells(11) + Side * Cells(4) + Up() * Cells(1.6 + 0.7 * FMath::Min(H, LiftTop)), 1.2);
+	FVector Pos;
+	FQuat Aim;
+	// The ship a little left of the middle: the HUD's contracts sit right.
+	auto OnShip = [&](const FVector& From)
+	{
+		const FQuat At0 = LookAt(From, Body + Up() * Cells(0.5));
+		return LookAt(From, Body + Up() * Cells(0.5) + At0.GetRightVector() * Cells(0.12) * FVector::Dist(From, Body) / Cells(1));
+	};
+	if (T < LiftSeconds)
+	{
+		// Off the pilot's view at once, easing into the low spot.
+		const double In = 1.0 - FMath::Pow(1.0 - FMath::Clamp(T / 0.5, 0.0, 1.0), 3.0);
+		Pos = FMath::Lerp(Flight->EyeFrom, Low, In);
+		Aim = FQuat::Slerp(Flight->RotFrom, OnShip(Pos), FMath::SmoothStep(0.0, 0.35, T));
+		Flight->LowEye = Pos;
+	}
+	else
+	{
+		const double Tc = T - LiftSeconds;
+		const double Swing = FMath::SmoothStep(0.0, 1.4, Tc);
+		const FVector Behind = Body - Way * Cells(16) + Up() * Cells(4);
+		Pos = FMath::Lerp(Flight->LowEye, Behind, Ease(Swing));
+		// Up at the ship, then level along the way: the giant over it, the
+		// region falling away below.
+		const FQuat Level = FRotator(2.0, Way.Rotation().Yaw, 0).Quaternion();
+		Aim = FQuat::Slerp(OnShip(Pos), Level, FMath::SmoothStep(0.2, 1.6, Tc));
+	}
 	At = Pos;
-	Rot = FQuat::Slerp(Flight->RotFrom, LookAt(Pos, Aim), FMath::SmoothStep(0.0, 0.6, Lift));
+	Rot = Aim;
 	SetFade(bGone ? 1.0 : TransitFade(T));
 	return true;
 }
@@ -259,7 +446,11 @@ void AAcPilotPawn::EndFlight()
 	Flight.Reset();
 	if (UWorld* World = GetWorld())
 	{
-		if (TActorIterator<AAcFlightShip> It(World); It) It->Hide();
+		if (TActorIterator<AAcFlightShip> It(World); It)
+		{
+			It->SetGlow(1.0);
+			It->Hide();
+		}
 	}
 	SetFade(0);
 	ApplyView();

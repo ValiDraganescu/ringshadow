@@ -93,6 +93,7 @@ void SAcWorldMap::SetInfo(const FAcWorldMapInfo& In)
 {
 	const bool bSame = In.World == Info.World && In.NearPad == Info.NearPad && In.FlyingTo == Info.FlyingTo && In.Sites == Info.Sites
 		&& In.PadReach == Info.PadReach && In.bOwnPad == Info.bOwnPad && In.Marks == Info.Marks
+		&& In.FlightPrice == Info.FlightPrice && In.Hydrogen == Info.Hydrogen
 		&& (In.RingwalkerIn ? std::ceil(*In.RingwalkerIn) : -1) == (Info.RingwalkerIn ? std::ceil(*Info.RingwalkerIn) : -1)
 		&& (In.NearDistance.has_value() == Info.NearDistance.has_value())
 		&& (!In.NearDistance || FMath::Abs(*In.NearDistance - *Info.NearDistance) < 0.5);
@@ -252,6 +253,20 @@ bool SAcWorldMap::AtPad() const
 	return (Info.NearDistance && *Info.NearDistance <= Info.PadReach) || (Info.RingwalkerIn && *Info.RingwalkerIn <= 0);
 }
 
+FString SAcWorldMap::PriceText(const int32 Region) const
+{
+	if (!Info.World || Region < 0 || Region >= (int32)Info.World->regions.size()) return FString();
+	const auto It = Info.FlightPrice.find(Text(Info.World->regions[Region].id));
+	return It == Info.FlightPrice.end() ? FString() : FString::Printf(TEXT("%lld MH"), (long long)It->second);
+}
+
+bool SAcWorldMap::Short(const int32 Region) const
+{
+	if (!Info.World || !Info.Hydrogen || Region < 0 || Region >= (int32)Info.World->regions.size()) return false;
+	const auto It = Info.FlightPrice.find(Text(Info.World->regions[Region].id));
+	return It != Info.FlightPrice.end() && *Info.Hydrogen < It->second;
+}
+
 FString SAcWorldMap::StateLine(FLinearColor& Color) const
 {
 	Color = FAcHudStyle::Srgb(0.78, 0.84, 0.9);
@@ -278,7 +293,14 @@ FString SAcWorldMap::StateLine(FLinearColor& Color) const
 		: Info.bOwnPad ? FString::Printf(TEXT("At your %s"), *Info.NearPad) : FString::Printf(TEXT("At pad %s"), *Info.NearPad);
 	if (Pick.Region == INDEX_NONE || (bOnPad && PickIsHere())) return FString::Printf(TEXT("%s: pick a pad to fly to."), *From);
 	const ac::net::WorldMessage::Region& G = Info.World->regions[Pick.Region];
-	return FString::Printf(TEXT("%s: FLY to %s in %s."), *From, *Text(G.pads[Pick.Pad].name), *Text(G.name));
+	const FString Price = PriceText(Pick.Region);
+	if (Short(Pick.Region))
+	{
+		Color = FAcHudStyle::Srgb(1.0, 0.45, 0.4);
+		return FString::Printf(TEXT("Not enough MH to fly to %s: %s, you have %lld."), *Text(G.name), *Price, (long long)*Info.Hydrogen);
+	}
+	if (Price.IsEmpty()) return FString::Printf(TEXT("%s: FLY to %s in %s."), *From, *Text(G.pads[Pick.Pad].name), *Text(G.name));
+	return FString::Printf(TEXT("%s: FLY to %s in %s for %s."), *From, *Text(G.pads[Pick.Pad].name), *Text(G.name), *Price);
 }
 
 // MARK: - Layout
@@ -317,7 +339,10 @@ void SAcWorldMap::Layout(const FVector2f ViewSize) const
 					if (Q.building && Other.Region == R && FVector2f::Distance(Other.Box.Min + FVector2f(PadHit / 2, PadHit / 2), At) < PadHit) At.Y = Other.Box.Max.Y + PadHit / 2 + 2;
 				}
 				const FString Name = Text(Q.name);
-				const float W = Label(Name, 13, FLinearColor::White).Measure().X + 22;
+				// The name, then the flight's MH (F1) a little apart.
+				const FString Price = PriceText(R);
+				const float W = Label(Name, 13, FLinearColor::White).Measure().X + 22
+					+ (Price.IsEmpty() ? 0.f : Label(Price, 11, FLinearColor::White).Measure().X + 8);
 				FTarget T;
 				T.Box = FBox2f(At - FVector2f(PadHit / 2, PadHit / 2), At + FVector2f(W, PadHit / 2));
 				T.Row = RowPad;
@@ -547,8 +572,14 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 		Box(Out, L + 4, P, FBox2f(At - FVector2f(D + 1, D + 1), At + FVector2f(D + 1, D + 1)), FLinearColor(0, 0, 0, 0.85f));
 		Box(Out, L + 5, P, FBox2f(At - FVector2f(D, D), At + FVector2f(D, D)), Dot);
 		if (bOwn) Frame(Out, L + 6, P, FBox2f(At - FVector2f(D + 3, D + 3), At + FVector2f(D + 3, D + 3)), FAcHudStyle::Ice(), 1);
-		Label(T.Label, 13, bPicked ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.9, 0.88, 0.7), EAcHAlign::Left, EAcVAlign::Center)
-			.Paint(Out, L + 5, P, FVector2f(At.X + 10, At.Y));
+		const FAcHudText Name = Label(T.Label, 13, bPicked ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.9, 0.88, 0.7), EAcHAlign::Left, EAcVAlign::Center);
+		Name.Paint(Out, L + 5, P, FVector2f(At.X + 10, At.Y));
+		// The flight's MH: muted, red when the wallet is short.
+		if (const FString Price = PriceText(T.Region); !Price.IsEmpty())
+		{
+			Label(Price, 11, Short(T.Region) ? FAcHudStyle::Srgb(1.0, 0.45, 0.4) : FAcHudStyle::Srgb(0.62, 0.7, 0.78), EAcHAlign::Left, EAcVAlign::Center,
+				EAcFontWeight::SemiBold).Paint(Out, L + 5, P, FVector2f(At.X + 10 + Name.Measure().X + 8, At.Y + 1));
+		}
 	}
 
 	// The state.
@@ -557,7 +588,7 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 	Label(State, 15, StateColor, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L, P, FVector2f(Pad, GridBox.Max.Y + 16));
 
 	// The buttons: FLY lit when a flight can be asked for.
-	const bool bCanFly = W && Info.FlyingTo.IsEmpty() && AtPad() && Pick.Region != INDEX_NONE && !PickIsHere();
+	const bool bCanFly = W && Info.FlyingTo.IsEmpty() && AtPad() && Pick.Region != INDEX_NONE && !PickIsHere() && !Short(Pick.Region);
 	for (int32 I = 0; I < Targets.Num(); ++I)
 	{
 		const FTarget& T = Targets[I];

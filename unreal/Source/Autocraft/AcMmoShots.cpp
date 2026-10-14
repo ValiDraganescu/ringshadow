@@ -80,6 +80,21 @@
 //   05 the Foundry's job done: the stores up, the Foundry idle
 //   06 a Cargo pod Mk II asked for: the Foundry's new countdown
 //
+// -AcMmoShotsFlight (F1, AcPilotFlight.h): a pad flight from the start pad
+// to Cold Fork's, each moment on the flight's own clock, DIR/fl-NN-moment.png
+// (-AcMmoHour=12 for noon, 19 for dusk):
+//   01 the spool-up on the pad: the jets lit, the dust ring
+//   02 the lift-off, from low behind the pad, the giant beyond
+//   03 high over the region, heading for the giant
+//   04 the descent onto Cold Fork's pad on retro thrust
+//   05 the touch down: the dust thrown out     06 down, the pilot's view back
+//
+// -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
+// comma-separated): only those moments are shot; the others are passed over
+// (logged, counted as skipped), and in the Starfall set their waits too.
+// A run that waits on the world's clock moves it at once instead
+// (FAcMmoClient::DevClock: the server's --dev-control file, shot runs only).
+//
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
 //
@@ -386,6 +401,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2"))) T.Phase = 600;
 			// -AcMmoShotsRig: only the rig screen (500-513).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
+			// -AcMmoShotsFlight: only a pad flight (520-527).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsFlight"))) T.Phase = 520;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -1596,6 +1613,59 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Shots.Saved + Shots.Skipped == 9, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		if (IConsoleVariable* Boom = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.Pilot.ShotBoom"))) Boom->Set(1.f);
 		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
+		Finish();
+		return;
+	// MARK: -AcMmoShotsFlight
+	// A pad flight to Cold Fork, its moments on the flight's clock.
+	case 520:
+		if (Since() > 2.0)
+		{
+			FString Why;
+			Check(Mmo->Fly(TEXT("cold-fork"), TEXT("landing"), &Why), FString::Printf(TEXT("the flight to Cold Fork asked for (%s, %s)"),
+				Why.IsEmpty() ? TEXT("ok") : *Why, *Where()));
+			if (!Why.IsEmpty()) Finish();
+			else Advance();
+		}
+		return;
+	case 521:
+		if (Pilot->FlightSeconds() >= 0.6) Shoot(TEXT("fl-01-spool"), TEXT("the spool-up: the jets lit on the pad, the dust ring"));
+		else if (!Mmo->FlightRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("flight refused: %s"), *Mmo->FlightRefusal()));
+			Finish();
+		}
+		else TimedOut(TEXT("the lift-off"), 10);
+		return;
+	case 522:
+		if (Pilot->FlightSeconds() >= 1.5) Shoot(TEXT("fl-02-liftoff"), TEXT("the lift-off from low behind the pad, the giant beyond"));
+		else TimedOut(TEXT("the lift-off's climb"), 10);
+		return;
+	case 523:
+		if (Pilot->FlightSeconds() >= 2.95 || Pilot->FlightStage() == EAcFlightStage::Landing)
+		{
+			Check(Pilot->FlightStage() == EAcFlightStage::Transit, TEXT("in transit for the high picture"));
+			Shoot(TEXT("fl-03-cruise"), TEXT("high over the region, heading for the giant"));
+		}
+		else TimedOut(TEXT("the transit"), 10);
+		return;
+	case 524:
+		if (Pilot->LandingSeconds() >= 0.55) Shoot(TEXT("fl-04-descent"), TEXT("the descent onto Cold Fork's pad, retro thrust"));
+		else TimedOut(TEXT("the landing"), 20);
+		return;
+	case 525:
+		if (Pilot->LandingSeconds() >= 1.3 || !Pilot->InFlight()) Shoot(TEXT("fl-05-touchdown"), TEXT("the touch down: dust thrown out"));
+		else TimedOut(TEXT("the touch down"), 10);
+		return;
+	case 526:
+		if (Seated() && !Pilot->InFlight() && Since() > 0.6)
+		{
+			Check(Here == TEXT("cold-fork"), FString::Printf(TEXT("landed %s"), *Where()));
+			Shoot(TEXT("fl-06-landed"), TEXT("down on Cold Fork's pad, the pilot's view back"));
+		}
+		else TimedOut(TEXT("down on Cold Fork's pad"), 15);
+		return;
+	case 527:
+		Check(Shots.Saved + Shots.Skipped == 6, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsRig

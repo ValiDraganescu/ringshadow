@@ -296,6 +296,12 @@ public:
 	/// Ringwalker: learned (unset: not), and the seconds until it is ready
 	/// (0: a flight from anywhere now).
 	std::optional<double> RingwalkerIn() const;
+	/// What a flight from here to region `RegionId` costs in MH (F1,
+	/// `ac::Flight`: a base and a share a grid step; the server's price).
+	/// Unset: no world yet, or no such region.
+	std::optional<int64> FlightPrice(const FString& RegionId) const;
+	/// The wallet's MH now (the mirror's side bank). Unset: nothing seen yet.
+	std::optional<int64> HydrogenNow() const;
 	/// Why a `Kind` may not stand at `At` (ground) in this region: its
 	/// footprint touches a pad's plate (the server's rule,
 	/// `region::touchesPadPlate`; nil: clear, or nothing known yet).
