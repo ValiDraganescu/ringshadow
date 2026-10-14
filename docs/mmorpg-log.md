@@ -309,3 +309,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Client build tests need --dev-blueprints 1: P5 adds the flag.
 - D Manager: workers also write results to build/<task>-result.md.
 - T Resumed P5, W1, E1 (restart); K1 server → world-clock.
+- T K1 server done 8b5a4f2: 3 contracts/day, protocol 7, save v5.
+- N Manager: core 444, server 114, net 66 pass.
+- N K1 pay: 600–900 XP at L1, 1,790–2,680 at L100.
+- T W1 regions crafted, validate ok; shots wait on a good build.
+- D Manager: Prospector builds the Lab in worlds (P6).
+- T P6 building roles → world-clock; contract panel → P5 after P5.

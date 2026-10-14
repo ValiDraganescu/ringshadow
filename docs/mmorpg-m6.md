@@ -47,7 +47,7 @@ another, adjusted as results come in:
 | P4a | Blueprint sites in region files (parse, write, validate, preview) and The First Reach's sites placed | P1 | done |
 | P4b | Blueprints on the server: opening sites, survey chips, building gated by blueprint, floor and limit | P3, P4a | done |
 | P5 | The game: skill screen (K), banner, HUD, build menu from blueprints, sites on the map | P3, P4a | in progress |
-| P6 | Building roles: Citadel respawn/respec, Hab Dome depot, Spacedock pad; travel and site nodes | P4 | |
+| P6 | Building roles: Citadel respawn/respec, Hab Dome depot, Spacedock pad; travel and site nodes | P4 | in progress |
 | P7 | Foundry modules and Lab research | P6 | |
 
 Done when: a new pilot levels through a tree that changes how they play,
