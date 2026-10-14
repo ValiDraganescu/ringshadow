@@ -512,6 +512,20 @@ int64_t Progression::blueprintFloor(StructureKind k) {
     }
 }
 
+int64_t Progression::buildingLimit(StructureKind k) {
+    switch (k) {
+    case StructureKind::citadel: return 1;
+    case StructureKind::derrick: return 4;
+    case StructureKind::habDome: return 3;
+    case StructureKind::foundry: return 1;
+    case StructureKind::lab: return 1;
+    case StructureKind::spacedock: return 1;
+    case StructureKind::bastion: return 2;
+    case StructureKind::sentinel: return 4;
+    default: return 0;
+    }
+}
+
 // MARK: - The balance
 
 namespace {
@@ -683,6 +697,45 @@ std::optional<std::string> ProspectorProgress::respecRefusal(int64_t hydrogen) c
     if (spent() == 0) return std::string("No points spent");
     const int64_t cost = respecCost();
     if (hydrogen < cost) return "Needs " + std::to_string(cost) + " MH";
+    return std::nullopt;
+}
+
+Boost ProspectorProgress::skillBoost(SkillStat stat) const {
+    Boost b;
+    for (const auto& [s, rank] : ranks)
+        for (const SkillEffect& e : Progression::effects(s, rank))
+            if (const auto* x = e.as<SkillEffect::Stat>(); x && x->stat == stat) b.add(x->change);
+    return b;
+}
+
+int64_t ProspectorProgress::floor(StructureKind k) const {
+    const int64_t cut = int64_t(std::lround(skillBoost(SkillStat::blueprintFloorCut).plus));
+    return std::max<int64_t>(1, Progression::blueprintFloor(k) - cut);
+}
+
+int64_t ProspectorProgress::limit(StructureKind k) const {
+    double plus = 0;
+    for (const auto& [s, rank] : ranks)
+        for (const SkillEffect& e : Progression::effects(s, rank))
+            if (const auto* l = e.as<SkillEffect::BuildingLimit>(); l && l->kind == k) plus += l->plus;
+    const int64_t base = Progression::buildingLimit(k);
+    return base > 0 ? base + int64_t(std::lround(plus)) : 0;
+}
+
+double ProspectorProgress::chipChance() const {
+    const Boost b = skillBoost(SkillStat::chipChance);
+    return (Progression::chipChance + b.plus) * (1 + b.percent);
+}
+
+std::optional<std::string> ProspectorProgress::buildRefusal(StructureKind k, int64_t owned) const {
+    const std::string name = Simulation::title(k);
+    if (Progression::blueprintFloor(k) <= 0) return "No " + name + " blueprint in this world";
+    if (!blueprints.count(k)) return "No " + name + " blueprint yet: find it at a site";
+    if (level() < floor(k)) return "The " + name + " opens at level " + std::to_string(floor(k));
+    if (owned >= limit(k)) {
+        const bool more = k == StructureKind::habDome || k == StructureKind::derrick || k == StructureKind::sentinel;
+        return name + " limit reached: " + std::to_string(limit(k)) + (more ? " (Overbuild allows more)" : "");
+    }
     return std::nullopt;
 }
 

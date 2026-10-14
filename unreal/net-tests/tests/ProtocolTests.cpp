@@ -684,7 +684,10 @@ TEST(protocol_progress_round_trips) {
     m.news = {{ProgressMessage::NewsKind::level, "", 0, 10},
               {ProgressMessage::NewsKind::region, "tern-ridge", 250, 0},
               {ProgressMessage::NewsKind::feat, "first-flight", 50, 0},
-              {ProgressMessage::NewsKind::reset, "", 0, 9}};
+              {ProgressMessage::NewsKind::reset, "", 0, 9},
+              {ProgressMessage::NewsKind::site, "start/crate", 0, 1},
+              {ProgressMessage::NewsKind::chip, "tern-ridge/wreck", 25, 2}};
+    m.opening = ProgressMessage::Opening{"tern-ridge/vault", 0, 10, "The Sentinel vault opens at level 55"};
     const std::vector<uint8_t> bytes = encode(m);
     EXPECT_TRUE(messageType(bytes) == MessageType::progress);
     ProgressMessage back;
@@ -698,7 +701,11 @@ TEST(protocol_progress_round_trips) {
     std::vector<uint8_t> cut = bytes;
     cut.resize(cut.size() / 2);
     EXPECT_TRUE(!decode(cut, back));
-    EXPECT_EQ(kProtocolVersion, uint16_t(5));
+    // A wreck held open since world time 812.5.
+    m.opening = ProgressMessage::Opening{"start/wreck", 812.5, 5, ""};
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back == m);
+    EXPECT_EQ(kProtocolVersion, uint16_t(6));
 }
 
 TEST(mirror_takes_snapshots_into_its_simulation) {

@@ -383,6 +383,14 @@ the world for the next pilot. Site kinds:
 A site whose blueprint the pilot already has gives 100 ore and 20 MH instead,
 once, and no XP.
 
+On the server (`WorldSites` in `unreal/server/world/WorldMap.h`): a site is
+reached when the Prospector's centre is within 2 cells of its point. The hold
+is the act key held (`PilotInput::hold`) within reach; stepping away or letting
+go starts it over. A site goes on the pilot's map when seen: a crate, a wreck
+or a vault within 12 cells (the Prospector's sight), a cache within 6, any
+kind within Surveyor's radius. Sites are kept per pilot as
+`<region id>/<site name>`.
+
 **Every blueprint but the Citadel's has two sites**, so a pilot has a second chance and a choice
 of route. Proposed for The First Reach (`unreal/server/worlds/first.json`):
 

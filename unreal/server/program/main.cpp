@@ -6,6 +6,7 @@
 //                    [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path]
 //                    [--save file]  (a world's save: loaded at start, written every 5 s and on stop)
 //                    [--dev-xp xp]  (dev, tests: a new pilot's Prospector earns that much XP at once)
+//                    [--dev-blueprints 1]  (dev, tests, shots: a new pilot has every blueprint)
 //                    [--hour h]  (dev, shots: hold the world's hour, 0-24)
 //                    [--weather clear|cloudy|rain|storm|0-3]  (dev, shots: hold the world's weather)
 //
@@ -89,7 +90,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--hour h] [--weather clear|cloudy|rain|storm]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--hour h] [--weather clear|cloudy|rain|storm]\n",
                  why);
     return 2;
 }
@@ -114,6 +115,7 @@ int main(int argc, char** argv) {
     long port = 0;
     pid_t parent = 0;
     double devXp = 0;
+    bool devBlueprints = false;
     std::optional<double> heldHour, weatherHold;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
@@ -131,6 +133,7 @@ int main(int argc, char** argv) {
         else if (a == "--log") logPath = v;
         else if (a == "--save") savePath = v;
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
+        else if (a == "--dev-blueprints") devBlueprints = v != "0";
         else if (a == "--hour") {
             heldHour = std::atof(v.c_str());
             if (*heldHour < 0 || *heldHour > 24) return usage("--hour: 0…24");
@@ -189,6 +192,7 @@ int main(int argc, char** argv) {
     if (world) options.world = std::move(world);
     else options.region.map = MapChoice{*style, *size, starts};
     options.worldParams.devXp = devXp;
+    options.worldParams.devBlueprints = devBlueprints;
     options.worldParams.heldHour = heldHour;
     options.worldParams.weatherHold = weatherHold;
     options.token.assign(token.begin(), token.end());

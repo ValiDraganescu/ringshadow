@@ -218,6 +218,8 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
         wellFull_.push_back(std::move(full));
     }
     weather_ = std::make_unique<Weather>(WorldClock::weatherSeed(world.file.id));
+    // The survey chips' dice: their own stream, off the world's id.
+    chips_.seed(params_.chipSeed ? params_.chipSeed : uint64_t(WorldClock::weatherSeed(world.file.id)) ^ 0x5eedc41b5ULL);
     if (params_.weatherHold) weather_->hold(*params_.weatherHold);
     updateSky();
 }
@@ -301,6 +303,7 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
     // Its own levels and progression: into the simulation as it takes the unit.
     r.setLevels(pilot, p.record);
     r.setProgress(pilot, p.progress, ownBuildings(p, to));
+    scan(p, to);
     // On open ground at `at`, or the nearest open spot round it.
     Unit v = u;
     const region::Built& places = *r.places();
@@ -345,6 +348,9 @@ bool WorldMap::join(PilotId pilot) {
         return start().join(pilot);
     }
     p.wallet = Wallet{params_.startOre, params_.startHydrogen};
+    // Dev: every blueprint.
+    if (params_.devBlueprints)
+        for (const StructureKind k : Progression::blueprintKinds()) p.progress.blueprints.insert(k);
     const Region& r = start();
     const Unit u = startProspector();
     PilotState& in = pilots_[pilot] = p;
@@ -434,8 +440,11 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     if (it == pilots_.end()) return "Not joined";
     PilotState& p = it->second;
     if (p.flight) return "In flight";
-    // A world builds only what its Prospectors need (`net::kWorldBuildKinds`).
-    if (world_ && !net::worldBuilds(kind)) return std::string(net::kWorldBuildRefusal);
+    // A world builds from the pilot's blueprints, at its level floor, within
+    // its building limits (docs/prospector-progression.md, "Buildings in the
+    // MMO").
+    if (world_)
+        if (auto why = p.progress.buildRefusal(kind, owned(p, kind))) return why;
     // Nothing on a pad's plate (the client's ghost says the same).
     if (world_) {
         const auto spot = regions_[p.region]->simulation().snap(kind, at);
@@ -475,6 +484,7 @@ void WorldMap::step() {
     clock_ += dt;
     updateSky();
     workAfter(work);
+    sites();
     regrowWells(dt);
     for (auto& [id, p] : pilots_)
         if (!p.flight) {

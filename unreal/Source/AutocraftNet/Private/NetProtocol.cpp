@@ -703,6 +703,13 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     for (StructureKind k : m.blueprints) w.writeBits(uint64_t(k), 4);
     writeStrings(w, m.sitesKnown);
     writeStrings(w, m.sitesFound);
+    w.writeBool(m.opening.has_value());
+    if (m.opening) {
+        writeString(w, m.opening->site);
+        codec::kMs.write(w, m.opening->since);
+        codec::kMs.write(w, m.opening->needs);
+        writeString(w, m.opening->refusal);
+    }
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 3);
@@ -758,12 +765,20 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         m.blueprints.insert(static_cast<StructureKind>(k));
     }
     if (!readStrings(r, m.sitesKnown) || !readStrings(r, m.sitesFound)) return false;
+    if (r.readBool()) {
+        ProgressMessage::Opening o;
+        if (!readString(r, o.site)) return false;
+        codec::kMs.read(r, o.since);
+        codec::kMs.read(r, o.needs);
+        if (!readString(r, o.refusal)) return false;
+        m.opening = o;
+    }
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(3);
-        if (kind > uint64_t(ProgressMessage::NewsKind::reset)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::site)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

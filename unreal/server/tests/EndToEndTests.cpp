@@ -385,7 +385,7 @@ namespace {
 
 /// The real program on the first world with a save file; its port, or nil.
 std::optional<Started> startSaving(const char* name, const std::string& save) {
-    auto p = Process::start({kProgram, "--world", "worlds/first.json", "--save", save, "--log", logPath(name)});
+    auto p = Process::start({kProgram, "--world", "worlds/first.json", "--save", save, "--dev-blueprints", "1", "--log", logPath(name)});
     if (!p) return std::nullopt;
     p->write(kToken + "\n");
     unsigned port = 0;

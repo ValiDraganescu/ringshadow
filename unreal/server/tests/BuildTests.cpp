@@ -32,6 +32,14 @@ const LoadedWorld& firstWorld() {
     return w;
 }
 
+/// Every blueprint for a new pilot (`--dev-blueprints`): these scenes are
+/// about building, not finding blueprints (SitesTests.cpp gates them).
+WorldParams blueprinted() {
+    WorldParams p;
+    p.devBlueprints = true;
+    return p;
+}
+
 Unit* driven(WorldMap& w, PilotId p) {
     Region* r = w.regionOf(p);
     const auto id = r ? r->driving(p) : std::nullopt;
@@ -81,7 +89,7 @@ const Structure* citadelOf(const Simulation& sim) {
 } // namespace
 
 TEST(build_a_citadel_paid_from_the_wallet) {
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.join(me));
     // On the open ground east of the ore, facing west.
     put(w, me, Vec2(72, 48), west);
@@ -110,7 +118,7 @@ TEST(build_a_citadel_paid_from_the_wallet) {
 }
 
 TEST(build_refused_when_too_poor) {
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.join(me));
     put(w, me, Vec2(72, 48), west);
     w.regionOf(me)->simulation().state.players[0].ore = 399;
@@ -122,7 +130,7 @@ TEST(build_refused_when_too_poor) {
 }
 
 TEST(build_refused_on_a_blocked_spot) {
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.join(me));
     const Simulation& sim = w.regionOf(me)->simulation();
     // Facing the ore near the pad: on the deposits.
@@ -151,28 +159,28 @@ TEST(build_refused_on_a_blocked_spot) {
     EXPECT_TRUE(why.has_value());
 }
 
-// A world builds only a Citadel and a Derrick (`net::kWorldBuildKinds`): every
-// other kind is refused with the reason, where it would fit and with the ore
-// to pay; the two are put up.
-TEST(build_world_only_a_citadel_or_a_derrick) {
-    EXPECT_TRUE(net::worldBuilds(StructureKind::citadel));
-    EXPECT_TRUE(net::worldBuilds(StructureKind::derrick));
+// A world builds from the pilot's blueprints (docs/prospector-progression.md,
+// "Buildings in the MMO"): a new pilot has none, so every kind is refused
+// with the reason, where it would fit and with the ore to pay; with the
+// Citadel and Derrick blueprints at level 3 the two are put up.
+TEST(build_world_from_blueprints_only) {
     WorldMap w(firstWorld());
     ASSERT_TRUE(w.join(me));
     Simulation& sim = w.regionOf(me)->simulation();
     sim.state.players[0].ore = 5000;
     sim.state.players[0].hydrogen = 5000;
     put(w, me, Vec2(72, 48), west);
-    const StructureKind others[] = {StructureKind::habDome, StructureKind::garrison, StructureKind::bastion, StructureKind::foundry,
-                                    StructureKind::spacedock, StructureKind::lab, StructureKind::sentinel};
-    for (const StructureKind k : others) {
-        EXPECT_TRUE(!net::worldBuilds(k));
+    for (const StructureKind k : PilotBuild::kinds) {
         const auto why = w.build(me, k, spot(w, me, StructureKind::citadel));
         ASSERT_TRUE(why.has_value());
-        EXPECT_TRUE(*why == net::kWorldBuildRefusal);
+        EXPECT_TRUE(why->find("blueprint") != std::string::npos);
     }
     EXPECT_TRUE(sim.state.structures.empty());
     EXPECT_EQ(sim.state.players[0].ore, int64_t(5000));
+    ProspectorProgress g;
+    g.xp = Progression::xp(3);
+    g.blueprints = {StructureKind::citadel, StructureKind::derrick};
+    w.setProgress(me, g);
     // A Citadel where it fits.
     EXPECT_TRUE(!w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel)).has_value());
     ASSERT_TRUE(sim.state.structures.size() == 1);
@@ -215,7 +223,7 @@ TEST(build_refused_touching_a_pad_plate) {
     EXPECT_TRUE(region::touchesPadPlate(pads, Vec2(5.2, 5.2), 2.5));
     EXPECT_TRUE(!region::touchesPadPlate(pads, Vec2(5.5, 5.5), 2.5));
 
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.join(me));
     Simulation& sim = w.regionOf(me)->simulation();
     const Vec2 pad = w.regionOf(me)->places()->ground(Vec2(76, 48));
@@ -246,7 +254,7 @@ TEST(build_refused_touching_a_pad_plate) {
 }
 
 TEST(build_mined_ore_unloaded_at_the_own_citadel_fills_the_wallet) {
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.join(me));
     Simulation& sim = w.regionOf(me)->simulation();
     const Vec2 home = *sim.snap(StructureKind::citadel, w.regionOf(me)->places()->ground(Vec2(66, 48)));
@@ -269,6 +277,7 @@ TEST(build_request_over_the_protocol) {
     nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
     ServerOptions o;
     o.world = firstWorld();
+    o.worldParams.devBlueprints = true;
     o.token = nettest::kToken;
     o.secret = nettest::serverConfig().secret;
     Server server(serverPort, o);

@@ -369,8 +369,17 @@ struct ProgressMessage {
     /// What happened: a level reached (`value`), a region discovered or a pad
     /// landed on for the first time (`id`), a feat done (`id`), a blueprint
     /// or a survey chip found (P4), the skills reset by an old save's
-    /// conversion (`value`: the points to spend). `xp`: what it paid.
-    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset };
+    /// conversion (`value`: the points to spend), a site opened. `xp`: what
+    /// it paid.
+    ///
+    /// P4b: `blueprint`: `id` the building's code name ("habDome"), `value`
+    /// the level it opens at for the pilot. `chip`: `id` the site it marked
+    /// ("cold-fork/Fork wreck"), "blueprint" when the chip was a blueprint
+    /// itself (its own `blueprint` news follows), or empty (nothing left to
+    /// mark); `value` the chips found in all. `site`: `id` the site opened;
+    /// `value` 0 when it gave a new blueprint, 1 when the blueprint was known
+    /// and it gave `kSiteOre` ore and `kSiteHydrogen` MH instead.
+    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -399,9 +408,22 @@ struct ProgressMessage {
     int64_t respecPrice = 0;
     bool respecFree = true;
     std::set<StructureKind> blueprints;
-    /// Blueprint sites the pilot knows of, and has opened (ids; P4).
+    /// Blueprint sites the pilot knows of, and has opened (ids; P4):
+    /// "<region id>/<site name>", the region file's `sites`.
     std::set<std::string> sitesKnown;
     std::set<std::string> sitesFound;
+    /// A site being opened now: the act key held at a wreck, a cache or a
+    /// vault since world time `since` (`Sky::time`), opening at `since +
+    /// needs`. `refusal`: why holding does nothing there ("The Lab vault
+    /// opens at level 25"); `since` is then 0.
+    struct Opening {
+        std::string site;
+        double since = 0;
+        double needs = 0;
+        std::string refusal;
+        bool operator==(const Opening&) const = default;
+    };
+    std::optional<Opening> opening;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };
@@ -414,11 +436,14 @@ struct EventMessage {
     bool operator==(const EventMessage&) const = default;
 };
 
-/// What a pilot may build in a world (the MMORPG mode, Prospectors only):
-/// the server refuses the rest with `kWorldBuildRefusal`, and the game's
-/// build menu offers these alone.
+/// What the game's build menu offers in a world until it lists the pilot's
+/// blueprints (P5). The server gates by blueprint, floor and limit
+/// (`ProspectorProgress::buildRefusal`) and no longer reads this list.
 inline constexpr std::array<StructureKind, 2> kWorldBuildKinds{StructureKind::citadel, StructureKind::derrick};
 inline constexpr const char* kWorldBuildRefusal = "Only a Citadel or a Derrick can be built here";
+/// What a site gives when its blueprint is known already (once, no XP).
+inline constexpr int64_t kSiteOre = 100;
+inline constexpr int64_t kSiteHydrogen = 20;
 inline constexpr bool worldBuilds(StructureKind kind) {
     for (const StructureKind k : kWorldBuildKinds)
         if (k == kind) return true;

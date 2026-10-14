@@ -68,6 +68,11 @@ const Structure* own(const Simulation& sim, StructureKind kind) {
 TEST(hydrogen_derrick_pumped_and_unloaded_fills_the_wallet) {
     WorldMap w(firstWorld());
     ASSERT_TRUE(w.join(me));
+    // The Citadel and Derrick blueprints, at the Derrick's level floor.
+    ProspectorProgress g;
+    g.xp = Progression::xp(Progression::blueprintFloor(StructureKind::derrick));
+    g.blueprints = {StructureKind::citadel, StructureKind::derrick};
+    w.setProgress(me, g);
     Simulation& sim = w.regionOf(me)->simulation();
     auto unit = [&] { return driven(w, me); };
     auto face = [&](Vec2 at) {

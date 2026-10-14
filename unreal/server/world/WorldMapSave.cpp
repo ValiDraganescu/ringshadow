@@ -240,6 +240,12 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             // Told on its next login.
             p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::reset, "", 0, p.progress.unspent()});
         }
+        // Saved before buildings needed blueprints: the blueprints of what
+        // it has built, so its buildings stay its own to build again.
+        if (!sp.gated)
+            for (const SavedRegion& r : save.regions)
+                for (const SavedBuilding& b : r.buildings)
+                    if (b.owner == sp.id && Progression::blueprintFloor(b.kind) > 0) p.progress.blueprints.insert(b.kind);
         away_[sp.id] = p;
     }
     // The world's hour goes on where it was.

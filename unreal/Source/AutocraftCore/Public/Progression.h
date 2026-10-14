@@ -254,6 +254,11 @@ struct AUTOCRAFTCORE_API Progression {
     /// The level a building's blueprint opens at (its floor); 0: no
     /// blueprint (the Garrison).
     static int64_t blueprintFloor(StructureKind k);
+    /// How many of a building a pilot may have across the world (0: none,
+    /// the Garrison). Overbuild raises the Hab Dome, Derrick and Sentinel.
+    static int64_t buildingLimit(StructureKind k);
+    /// An ore load's chance of turning up a survey chip, before the skills.
+    static constexpr double chipChance = 0.005;
 
     /// The tree as text: every node, the curve, the gates, the slots and
     /// the respec price. `balance()` is the catalogue's.
@@ -295,6 +300,12 @@ struct AUTOCRAFTCORE_API ProspectorProgress {
     std::set<std::string> pads;
     std::set<std::string> feats;
     int64_t chips = 0;
+    /// Sites the pilot knows of (seen, marked by a chip or a Scanner
+    /// pulse), found or not: "<region id>/<site name>", as `sites`.
+    std::set<std::string> known;
+    /// The world's clock when its last survey chip came (at most one every
+    /// 5 minutes).
+    std::optional<double> chipAt;
     /// `Progression::signature` when the pilot last spent or respecced.
     std::string signature;
 
@@ -333,6 +344,21 @@ struct AUTOCRAFTCORE_API ProspectorProgress {
     /// Take back every point and empty the slots; the MH it cost (0 when
     /// free), or nil when refused. The server takes the MH.
     std::optional<int64_t> respec(int64_t hydrogen);
+
+    /// What the skills add up to for a `SkillStat` (`.plus` and `.percent`
+    /// of every rank learned).
+    Boost skillBoost(SkillStat stat) const;
+    /// The level a building opens at for this pilot: its floor less Blueprint
+    /// savant, at least 1.
+    int64_t floor(StructureKind k) const;
+    /// How many of it the pilot may have (`Progression::buildingLimit` and
+    /// Overbuild).
+    int64_t limit(StructureKind k) const;
+    /// An ore load's chance of a survey chip (Core sampler, Lucky strike).
+    double chipChance() const;
+    /// Why the pilot can't put up a `k` now, owning `owned` of them in the
+    /// world: no blueprint, under its floor, or at its limit. Nil: it may.
+    std::optional<std::string> buildRefusal(StructureKind k, int64_t owned) const;
 
     bool operator==(const ProspectorProgress&) const = default;
 };

@@ -33,6 +33,14 @@ const LoadedWorld& firstWorld() {
     return w;
 }
 
+/// Every blueprint for a new pilot (`--dev-blueprints`): these scenes are
+/// about building, not finding blueprints (SitesTests.cpp gates them).
+WorldParams blueprinted() {
+    WorldParams p;
+    p.devBlueprints = true;
+    return p;
+}
+
 /// A fresh file in build/save-tests (the old one and its log removed).
 std::string fresh(const std::string& name) {
     mkdir("build/save-tests", 0755);
@@ -159,32 +167,32 @@ TEST(save_store_round_trips_every_saved_thing) {
     EXPECT_TRUE(why.find("a save of world first, not second") != std::string::npos);
 }
 
-TEST(save_migrations_v0_to_v3_and_a_future_step) {
+TEST(save_migrations_v0_to_v4_and_a_future_step) {
     const std::string path = fresh("migrate");
     std::string why;
     {
-        // v0 (a new file) to v3.
+        // v0 (a new file) to v4.
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(3));
-        EXPECT_EQ(WorldStore::version(), int64_t(3));
+        EXPECT_EQ(store->schemaVersion(), int64_t(4));
+        EXPECT_EQ(WorldStore::version(), int64_t(4));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock')")[0][0],
                   std::string("8"));
         ASSERT_TRUE(store->write(sample(), &why).has_value());
     }
-    // A step that fails: the file stays at v3, its rows kept.
+    // A step that fails: the file stays at v4, its rows kept.
     std::vector<WorldStore::Migration> broken = WorldStore::migrations();
-    broken.push_back({4, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
+    broken.push_back({5, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
     EXPECT_TRUE(WorldStore::open(path, "first", &why, broken) == nullptr);
-    EXPECT_TRUE(why.find("migration to version 4") != std::string::npos);
-    // A future step: v3 to v4, the rows kept, the column there.
+    EXPECT_TRUE(why.find("migration to version 5") != std::string::npos);
+    // A future step: v4 to v5, the rows kept, the column there.
     std::vector<WorldStore::Migration> next = WorldStore::migrations();
-    next.push_back({4, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
+    next.push_back({5, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
     {
         auto store = WorldStore::open(path, "first", &why, next);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(4));
+        EXPECT_EQ(store->schemaVersion(), int64_t(5));
         const auto rows = store->rows("SELECT id, title FROM pilots ORDER BY id");
         ASSERT_TRUE(rows.size() == 2);
         EXPECT_TRUE(rows[0][1] == "prospector");
@@ -192,14 +200,14 @@ TEST(save_migrations_v0_to_v3_and_a_future_step) {
         ASSERT_TRUE(back.has_value());
         EXPECT_TRUE(*back == sorted(sample()));
     }
-    // This build (v3) refuses a v4 file.
+    // This build (v4) refuses a v5 file.
     EXPECT_TRUE(WorldStore::open(path, "first", &why) == nullptr);
-    EXPECT_TRUE(why.find("schema version 4, this server knows 3") != std::string::npos);
+    EXPECT_TRUE(why.find("schema version 5, this server knows 4") != std::string::npos);
 }
 
 TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     // A save made before the world's clock (schema 1): opened by this
-    // build, it migrates to 3 and the world's clock starts at the furthest
+    // build, it migrates to 4 and the world's clock starts at the furthest
     // region's, so the hour goes on from about where it was.
     const std::string path = fresh("v1clock");
     std::string why;
@@ -213,7 +221,7 @@ TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(3));
+    EXPECT_EQ(store->schemaVersion(), int64_t(4));
     const auto back = store->load(&why);
     ASSERT_TRUE(back.has_value());
     const double furthest = 321.5;
@@ -234,7 +242,7 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     // (600 XP earned at a tenth) with picks, a finished Citadel and a
     // Derrick going up. Loaded, it is level 10 with 9 points to spend, the
     // picks gone, the Citadel and Derrick blueprints, the Citadel's feat
-    // without its XP, and the reset told on its login; saved, it is v3.
+    // without its XP, and the reset told on its login; saved, it is v4.
     const std::string path = fresh("v2levels");
     std::string why;
     const std::vector<WorldStore::Migration> v2(WorldStore::migrations().begin(), WorldStore::migrations().begin() + 2);
@@ -256,12 +264,12 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(3));
+    EXPECT_EQ(store->schemaVersion(), int64_t(4));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);
     EXPECT_TRUE(loaded->pilots[0].progress.empty());
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     EXPECT_TRUE(w.restore(*loaded).empty());
     constexpr PilotId me = 9;
     ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::restored);
@@ -279,7 +287,7 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     ASSERT_TRUE(news.size() == 1);
     EXPECT_TRUE(news[0].kind == net::ProgressMessage::NewsKind::reset);
     EXPECT_EQ(news[0].value, int64_t(9));
-    // Saved as v3: the progression written, the levels empty.
+    // Saved as v4: the progression written, the levels empty.
     ASSERT_TRUE(store->write(w.save(), &why).has_value());
     const auto rows = store->rows("SELECT levels, progress FROM pilots");
     ASSERT_TRUE(rows.size() == 1);
@@ -360,7 +368,7 @@ TEST(save_corrupt_or_held_file_refused_untouched) {
 
 TEST(save_restart_restores_the_region_exactly) {
     constexpr PilotId me = 7;
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     played(w, me);
     const Simulation& sim = w.regionOf(me)->simulation();
     const Structure c = *citadelOf(sim);
@@ -405,7 +413,7 @@ TEST(save_restart_restores_the_region_exactly) {
 
 TEST(save_pilot_restored_by_id_where_it_left) {
     constexpr PilotId me = 7;
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
     // Flies to Cold Fork, lands, steps off the pad.
     ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
@@ -470,7 +478,7 @@ TEST(save_pilot_restored_by_id_where_it_left) {
 }
 
 TEST(save_unknown_id_is_a_new_pilot_at_the_pad) {
-    WorldMap w(firstWorld());
+    WorldMap w(firstWorld(), blueprinted());
     played(w, 7);
     w.leave(7);
     WorldMap again(firstWorld());
@@ -495,6 +503,7 @@ TEST(save_join_seats_the_pilot_and_restores_it_on_return) {
     std::vector<std::string> lines;
     ServerOptions o;
     o.world = firstWorld();
+    o.worldParams.devBlueprints = true;
     o.token = nettest::kToken;
     o.secret = nettest::serverConfig().secret;
     o.log = [&](const std::string& l) { lines.push_back(l); };
@@ -563,6 +572,7 @@ TEST(save_server_writes_every_5_s_what_changed_and_on_stop) {
     nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
     ServerOptions o;
     o.world = firstWorld();
+    o.worldParams.devBlueprints = true;
     o.token = nettest::kToken;
     o.secret = nettest::serverConfig().secret;
     o.store = store.get();

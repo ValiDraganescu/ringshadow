@@ -37,6 +37,14 @@ const LoadedWorld& first() {
     return w;
 }
 
+/// Every blueprint for a new pilot (`--dev-blueprints`): these scenes are
+/// about building, not finding blueprints (SitesTests.cpp gates them).
+WorldParams blueprinted() {
+    WorldParams p;
+    p.devBlueprints = true;
+    return p;
+}
+
 Unit* drivenUnit(WorldMap& w, PilotId p) {
     Region* r = w.regionOf(p);
     if (!r) return nullptr;
@@ -111,10 +119,11 @@ bool hasNews(const std::vector<net::ProgressMessage::News>& news, NewsKind kind,
     return false;
 }
 
-/// A progression at `level`, nothing spent.
+/// A progression at `level`, nothing spent, every blueprint.
 ProspectorProgress at(int64_t level) {
     ProspectorProgress g;
     g.xp = Progression::xp(level);
+    g.blueprints.insert(Progression::blueprintKinds().begin(), Progression::blueprintKinds().end());
     return g;
 }
 
@@ -123,7 +132,7 @@ ProspectorProgress at(int64_t level) {
 // Unloading at the pilot's own Citadel: 1 XP an ore, 2 an MH, at ×1; the
 // first MH unloaded is a feat (50), paid once; level 2 at 500 is news.
 TEST(progress_unloading_earns_ore_1_and_mh_2) {
-    WorldMap w(first());
+    WorldMap w(first(), blueprinted());
     w.join(me);
     ASSERT_TRUE(atHome(w, me) != nullptr);
     EXPECT_EQ(w.progress(me)->xp, 0.0);
@@ -155,7 +164,7 @@ TEST(progress_unloading_earns_ore_1_and_mh_2) {
 // Welding a whole Citadel of its own: ½ its cost, and the Citadel's feat
 // (150) when it is finished.
 TEST(progress_welding_pays_half_the_cost_and_the_citadel_feat) {
-    WorldMap w(first());
+    WorldMap w(first(), blueprinted());
     w.join(me);
     const auto id = placeCitadel(w, me);
     ASSERT_TRUE(id.has_value());
@@ -173,7 +182,7 @@ TEST(progress_welding_pays_half_the_cost_and_the_citadel_feat) {
 // a first landing on a pad (50); the start region and its pad pay nothing,
 // and doing it all again pays nothing more. Another pilot is paid its own.
 TEST(progress_one_offs_paid_once) {
-    WorldMap w(first());
+    WorldMap w(first(), blueprinted());
     w.join(me);
     w.join(other);
     const std::string start = first().regions[first().start].file.id;
@@ -222,7 +231,7 @@ TEST(progress_one_offs_paid_once) {
 
 // Spend, Undo and Slot, accepted and refused with the catalogue's reasons.
 TEST(progress_spend_undo_and_slot) {
-    WorldMap w(first());
+    WorldMap w(first(), blueprinted());
     w.join(me);
     // Level 1: no point yet.
     EXPECT_TRUE(w.spend(me, Skill::quickDrill) == std::optional<std::string>("Tier 1 opens at level 2"));
@@ -263,7 +272,7 @@ TEST(progress_spend_undo_and_slot) {
 // A respec only at the pilot's own Citadel, where it unloads; the first is
 // free, the next costs MH from the wallet (40 at level 10).
 TEST(progress_respec_at_the_citadel_for_mh) {
-    WorldMap w(first());
+    WorldMap w(first(), blueprinted());
     w.join(me);
     w.setProgress(me, at(10));
     ASSERT_TRUE(!w.spend(me, Skill::quickDrill));
@@ -300,7 +309,7 @@ TEST(progress_respec_at_the_citadel_for_mh) {
 
 // The progression goes with the pilot across an edge and on a flight.
 TEST(progress_kept_through_an_edge_and_a_flight) {
-    WorldMap w(first());
+    WorldMap w(first(), blueprinted());
     w.join(me);
     w.setProgress(me, at(12));
     ASSERT_TRUE(!w.spend(me, Skill::quickDrill));
@@ -327,7 +336,7 @@ TEST(progress_kept_through_an_edge_and_a_flight) {
 // slot key in the input fires the slotted active, whose cooldown goes in the
 // Progress message and goes on across an edge.
 TEST(progress_in_the_regions_sim_and_actives_as_inputs) {
-    WorldMap w(first());
+    WorldMap w(first(), blueprinted());
     w.join(me);
     const Simulation& sim = w.start().simulation();
     EXPECT_TRUE(sim.progress == w.progress(me));
@@ -392,7 +401,7 @@ TEST(progress_in_the_regions_sim_and_actives_as_inputs) {
 // A well no one pumps grows back 1 MH every 10 s, up to what it held at
 // the start; one being pumped does not.
 TEST(progress_world_wells_regrow_while_idle) {
-    WorldMap w(first());
+    WorldMap w(first(), blueprinted());
     std::optional<size_t> r;
     for (size_t i = 0; i < w.regionCount() && !r; i++)
         if (w.region(i).simulation().state.wells && !w.region(i).simulation().state.wells->empty()) r = i;
@@ -440,6 +449,7 @@ TEST(progress_over_the_protocol) {
     nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
     ServerOptions o;
     o.world = first();
+    o.worldParams.devBlueprints = true;
     o.worldParams.devXp = Progression::xp(10);
     o.token = nettest::kToken;
     o.secret = nettest::serverConfig().secret;

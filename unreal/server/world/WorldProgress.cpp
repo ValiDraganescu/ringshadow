@@ -116,19 +116,11 @@ bool WorldMap::findBlueprint(PilotId pilot, StructureKind kind, int64_t floor) {
     PilotState* p = pilotState(pilot);
     if (!p || !p->progress.blueprints.insert(kind).second) return false;
     const double xp = WorldXp::blueprintPerFloor * double(std::max<int64_t>(1, floor));
-    p->news.push_back(News{NewsKind::blueprint, std::string(rawValue(kind)), xp, floor});
+    // The level it opens at for this pilot (Blueprint savant).
+    p->news.push_back(News{NewsKind::blueprint, std::string(rawValue(kind)), xp, p->progress.floor(kind)});
     earn(*p, xp);
     pushProgress(pilot);
     return true;
-}
-
-void WorldMap::findChip(PilotId pilot) {
-    PilotState* p = pilotState(pilot);
-    if (!p) return;
-    p->progress.chips += 1;
-    p->news.push_back(News{NewsKind::chip, "", WorldXp::chip, p->progress.chips});
-    earn(*p, WorldXp::chip);
-    pushProgress(pilot);
 }
 
 // MARK: - The skill tree's requests
@@ -204,6 +196,11 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.respecPrice = g.respecCost();
     m.blueprints = g.blueprints;
     m.sitesFound = g.sites;
+    m.sitesKnown = g.known;
+    if (const auto& o = it->second.opening)
+        m.opening = net::ProgressMessage::Opening{siteId(o->region, o->site), o->refusal.empty() ? o->since : 0.0,
+                                                  WorldSites::needs(world_->regions[o->region].built.sites[o->site].kind),
+                                                  o->refusal};
     // When its actives are ready again, on its region's clock.
     if (!it->second.flight) {
         const Region& r = *regions_[it->second.region];
@@ -238,6 +235,7 @@ std::vector<WorldMap::Work> WorldMap::workBefore() const {
         w.region = p.region;
         w.unit = u->id;
         w.hydrogen = u->hydrogen.value_or(false);
+        w.carrying = u->carrying;
         w.patch = u->patch;
         for (const Structure& b : r.simulation().state.structures) {
             if (!owns(p, p.region, b.id)) continue;
@@ -305,6 +303,9 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
         const int64_t level = p->progress.level();
         earn(*p, xp);
         for (const std::string& f : feats) feat(w.pilot, f);
+        // An ore load drilled (the cargo fills at once): a survey chip's roll.
+        if (const auto u = st.unit(w.unit); u && w.carrying <= 0 && u->carrying > 0 && !u->hydrogen.value_or(false))
+            oreLoad(w.pilot);
         if (p->progress.level() != level) pushProgress(w.pilot);
     }
 }

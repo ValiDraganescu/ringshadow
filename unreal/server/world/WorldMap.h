@@ -17,6 +17,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <random>
 #include <set>
 #include <string>
 #include <string_view>
@@ -100,6 +101,37 @@ struct WorldXp {
     static double feat(const std::string& id);
 };
 
+/// Blueprint sites and survey chips in a world (docs/prospector-progression.md,
+/// "Blueprint sites"; the region files' `sites`). Each pilot opens each site
+/// for itself, once, keyed "<region id>/<site name>".
+struct WorldSites {
+    /// A site is reached when the driven Prospector's centre is this close
+    /// to its point (cells): the Prospector touching a crate or a wreck's
+    /// hull.
+    static constexpr double reach = 2.0;
+    /// Seconds of the act key held (`PilotInput::hold`) within reach to open
+    /// one: a crate opens on reaching it. Stepping out of reach or letting go
+    /// starts over. A vault counts only at its blueprint's level floor (less
+    /// Blueprint savant).
+    static constexpr double wreck = 5;
+    static constexpr double cache = 8;
+    static constexpr double vault = 10;
+    static double needs(SiteKind kind);
+    /// A site goes on the pilot's map (`ProspectorProgress::known`) when its
+    /// Prospector comes this close: a crate, a wreck or a vault within its
+    /// sight, a buried cache within 6 cells; within Surveyor's radius
+    /// whatever its kind. A Scanner pulse marks a region's sites of its kinds
+    /// on arriving there; a survey chip marks the nearest one not known.
+    static constexpr double seen = 12;
+    static constexpr double cacheSeen = 6;
+    /// At most one survey chip every this many seconds (the world's clock);
+    /// one chip in this many is a blueprint, among those the pilot lacks
+    /// whose floor is at most its level + `chipBlueprintReach`.
+    static constexpr double chipEvery = 300;
+    static constexpr int64_t chipBlueprintOneIn = 20;
+    static constexpr int64_t chipBlueprintReach = 10;
+};
+
 /// What the world's rules are.
 struct WorldParams {
     /// A new pilot's wallet: a Citadel (400) and a Derrick (75) with some
@@ -131,6 +163,10 @@ struct WorldParams {
     /// A well no one pumps grows back 1 MH every this many seconds, up to
     /// what it held at the start (docs/mmorpg-m6.md, "Decided"). 0: never.
     double wellRegrowEvery = 10;
+    /// Dev and shots (`--dev-blueprints`): a new pilot has every blueprint.
+    bool devBlueprints = false;
+    /// The survey chips' dice (0: seeded by the world's id).
+    uint64_t chipSeed = 0;
 };
 
 /// What the server tells a pilot after a step: its place in the world
@@ -279,10 +315,20 @@ public:
     bool firstVisit(PilotId pilot, const std::string& region);
     bool firstLanding(PilotId pilot, const std::string& pad);
     bool feat(PilotId pilot, const std::string& id);
-    /// P4's finds: a blueprint (once each, 50 × its level floor) and a
-    /// survey chip (25 each; the server rolls them, at most one per 5 min).
+    /// P4's finds: a blueprint (once each, 50 × its level floor; false when
+    /// it was known) and a survey chip (25 each): it marks the nearest site
+    /// the pilot doesn't know of, here or in a neighbour region, or one in
+    /// `WorldSites::chipBlueprintOneIn` is a blueprint itself.
     bool findBlueprint(PilotId pilot, StructureKind kind, int64_t floor);
     void findChip(PilotId pilot);
+    /// An ore load drilled by the pilot's Prospector (`step` calls it): it
+    /// rolls for a survey chip (`ProspectorProgress::chipChance`, at most one
+    /// every `WorldSites::chipEvery`). True when a chip came.
+    bool oreLoad(PilotId pilot);
+    /// The pilot's buildings of a kind across the world, finished or not.
+    int64_t owned(PilotId pilot, StructureKind kind) const;
+    /// A site's id, "<region id>/<site name>".
+    std::string siteId(size_t region, size_t site) const;
     /// What the pilot's client is told of its progression now (no news).
     std::optional<net::ProgressMessage> progressMessage(PilotId pilot) const;
     /// What happened to the pilot's progression since the last call.
@@ -322,6 +368,14 @@ private:
         /// client was last told.
         ProspectorProgress progress;
         std::vector<net::ProgressMessage::News> news;
+        /// The site it holds the act key at (`WorldSites`), not saved.
+        struct Opening {
+            size_t region = 0;
+            size_t site = 0;
+            double since = 0;
+            std::string refusal;
+        };
+        std::optional<Opening> opening;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {
@@ -329,6 +383,7 @@ private:
         size_t region = 0;
         int64_t unit = 0;
         bool hydrogen = false;
+        int64_t carrying = 0;
         std::optional<int64_t> patch;
         /// The buildings of its own it welds, and their build time left.
         std::map<int64_t, double> welding;
@@ -361,6 +416,7 @@ private:
     /// and repair XP paid per building on the day (`WorldXp::repairDay`).
     std::vector<std::map<int64_t, double>> owed_;
     std::map<std::pair<size_t, int64_t>, std::pair<int64_t, double>> repaid_;
+    std::mt19937_64 chips_;
 
     /// A new Prospector on the start pad, facing the start region's nearest
     /// ore deposit (one with ore left first), so the first thing in view is
@@ -396,6 +452,16 @@ private:
     std::vector<Work> workBefore() const;
     void workAfter(const std::vector<Work>& before);
     void regrowWells(double dt);
+    // WorldSites.cpp.
+    int64_t owned(const PilotState& p, StructureKind kind) const;
+    /// After a step: sites seen, reached, held open.
+    void sites();
+    void openSite(PilotId pilot, PilotState& p, size_t r, size_t i);
+    /// A Scanner pulse on arriving in region `r`.
+    void scan(PilotState& p, size_t r);
+    /// The site nearest the pilot that it doesn't know of, here or in a
+    /// neighbour region (nil: none left).
+    std::optional<std::pair<size_t, size_t>> nearestUnknown(const PilotState& p) const;
     /// A unit's skill clocks out of region `r` (it leaves), and into `r` as
     /// unit `unit` (it arrives), its cooldowns running on meanwhile.
     std::optional<Carried> takeClocks(size_t r, int64_t unit);

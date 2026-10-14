@@ -411,6 +411,8 @@ bool get(const json& j, ProspectorProgress& v) {
     r.orDefault("pads", v.pads);
     r.orDefault("feats", v.feats);
     r.orDefault("chips", v.chips);
+    r.orDefault("known", v.known);
+    r("chipAt", v.chipAt);
     r.orDefault("signature", v.signature);
     return r.ok;
 }
@@ -557,6 +559,8 @@ json put(const ProspectorProgress& v) {
     w("pads", v.pads);
     w("feats", v.feats);
     w("chips", v.chips);
+    w("known", v.known);
+    w("chipAt", v.chipAt);
     w("signature", v.signature);
     return w.out;
 }
