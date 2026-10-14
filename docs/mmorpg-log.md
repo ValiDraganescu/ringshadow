@@ -346,3 +346,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Shot runs ~85% waiting on the game clock (~50 min today).
 - D User-approved S1: clock jump, short starfall lead, ShotsOnly filter.
 - T S1 → world-look after E2 (owns the Starfall set).
+- T E1 look b2bb724: banded arc, sun beside the giant, clouds clean.
+- N E1 circle was a comet shock ring; shots turn giant events off.
+- I E1 band edge on far terrain not visible yet: follow-up.
+- N E1 task: 66 min against 90 estimated.
