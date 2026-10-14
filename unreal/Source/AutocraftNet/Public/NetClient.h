@@ -83,6 +83,10 @@ public:
     uint32_t buyBlueprint(StructureKind kind);
     uint32_t buyItem(Item item);
     uint32_t use(Item item);
+    /// K2: sign up for a Citadel mission on the board, or drop one from the
+    /// Journal (`RequestMessage::MissionAsk`).
+    uint32_t takeMission(uint32_t mission);
+    uint32_t abandonMission(uint32_t mission);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

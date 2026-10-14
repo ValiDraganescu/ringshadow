@@ -137,6 +137,7 @@ WorldSave WorldMap::save() const {
         // any more (written empty).
         s.progress = SessionStore::encode(p.progress, false);
         s.contracts = encodeContracts(p);
+        s.missions = encodeMissions(p);
         // Its rig (P7), apart from the progress JSON.
         if (p.progress.rig != Rig{}) s.rig = SessionStore::encode(p.progress.rig, false);
         // What it has given the realm (C1).
@@ -271,6 +272,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         }
         if (!decodeContracts(sp.contracts, p))
             problems.push_back("pilot " + sp.id.substr(0, 8) + ": contracts do not read, drawn again");
+        if (!decodeMissions(sp.missions, p))
+            problems.push_back("pilot " + sp.id.substr(0, 8) + ": missions do not read, drawn again");
         // Its rig (P7): none before schema 7.
         p.progress.rig = Rig{};
         if (!sp.rig.empty()) {

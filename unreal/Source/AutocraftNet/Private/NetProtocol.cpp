@@ -669,6 +669,70 @@ bool decode(const std::vector<uint8_t>& bytes, AckMessage& m) {
     return r.ok();
 }
 
+namespace {
+
+/// A Citadel mission (K2).
+void writeMission(BitWriter& w, const CitadelMission& x) {
+    writeVarint(w, x.id);
+    w.writeBits(uint64_t(x.kind), 3);
+    w.writeBits(uint64_t(x.tier), 2);
+    w.writeBits(uint64_t(x.state), 2);
+    writeString(w, x.key);
+    writeString(w, x.title);
+    writeString(w, x.briefing);
+    writeString(w, x.instructions);
+    writeString(w, x.target);
+    writeString(w, x.region);
+    codec::Fixed{1000}.write(w, x.at.x);
+    codec::Fixed{1000}.write(w, x.at.y);
+    codec::Fixed{1000}.write(w, x.radius);
+    writeSigned(w, x.need);
+    writeSigned(w, x.have);
+    codec::Fixed{1000}.write(w, x.xp);
+    writeSigned(w, x.ore);
+    writeSigned(w, x.hydrogen);
+    w.writeBool(x.blueprint.has_value());
+    if (x.blueprint) w.writeBits(uint64_t(*x.blueprint), 4);
+    w.writeBool(x.item.has_value());
+    if (x.item) w.writeBits(uint64_t(*x.item), 3);
+    writeSigned(w, x.count);
+}
+
+bool readMission(BitReader& r, CitadelMission& x) {
+    x.id = static_cast<uint32_t>(readVarint(r));
+    const uint64_t kind = r.readBits(3), tier = r.readBits(2), state = r.readBits(2);
+    if (kind > uint64_t(CitadelMission::Kind::hunt) || tier > uint64_t(CitadelMission::Tier::perilous) || state > uint64_t(CitadelMission::State::done))
+        return false;
+    x.kind = static_cast<CitadelMission::Kind>(kind);
+    x.tier = static_cast<CitadelMission::Tier>(tier);
+    x.state = static_cast<CitadelMission::State>(state);
+    if (!readString(r, x.key) || !readString(r, x.title) || !readString(r, x.briefing) || !readString(r, x.instructions) ||
+        !readString(r, x.target) || !readString(r, x.region))
+        return false;
+    codec::Fixed{1000}.read(r, x.at.x);
+    codec::Fixed{1000}.read(r, x.at.y);
+    codec::Fixed{1000}.read(r, x.radius);
+    x.need = readSigned(r);
+    x.have = readSigned(r);
+    codec::Fixed{1000}.read(r, x.xp);
+    x.ore = readSigned(r);
+    x.hydrogen = readSigned(r);
+    if (r.readBool()) {
+        const uint64_t k = r.readBits(4);
+        if (k >= uint64_t(allCases<StructureKind>().size())) return false;
+        x.blueprint = static_cast<StructureKind>(k);
+    }
+    if (r.readBool()) {
+        const uint64_t i = r.readBits(3);
+        if (i >= uint64_t(allCases<Item>().size())) return false;
+        x.item = static_cast<Item>(i);
+    }
+    x.count = readSigned(r);
+    return true;
+}
+
+} // namespace
+
 std::vector<uint8_t> encode(const RequestMessage& m) {
     BitWriter w = start(MessageType::request);
     writeVarint(w, m.id);
@@ -707,6 +771,10 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         else w.writeBits(uint64_t(p->item), 3);
     }
     if (const auto* p = std::get_if<RequestMessage::Use>(&m.what)) w.writeBits(uint64_t(p->item), 3);
+    if (const auto* p = std::get_if<RequestMessage::MissionAsk>(&m.what)) {
+        writeVarint(w, p->mission);
+        w.writeBool(p->take);
+    }
     return w.bytes();
 }
 
@@ -811,6 +879,13 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
     case 15: {
         RequestMessage::Use p;
         if (!readItem(p.item)) return false;
+        m.what = p;
+        break;
+    }
+    case 16: {
+        RequestMessage::MissionAsk p;
+        p.mission = static_cast<uint32_t>(readVarint(r));
+        p.take = r.readBool();
         m.what = p;
         break;
     }
@@ -927,6 +1002,10 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         codec::Fixed{1000}.write(w, m.flare->at.y);
         codec::Fixed{1000}.write(w, m.flare->radius);
         codec::kMs.write(w, m.flare->until);
+    }
+    for (const auto* list : {&m.board, &m.journal}) {
+        writeVarint(w, list->size());
+        for (const CitadelMission& x : *list) writeMission(w, x);
     }
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
@@ -1085,12 +1164,21 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         codec::kMs.read(r, f.until);
         m.flare = f;
     }
+    for (auto* list : {&m.board, &m.journal}) {
+        const uint64_t n = readVarint(r);
+        if (n > r.bitsLeft()) return false;
+        for (uint64_t i = 0; i < n; i++) {
+            CitadelMission x;
+            if (!readMission(r, x)) return false;
+            list->push_back(std::move(x));
+        }
+    }
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(4);
-        if (kind > uint64_t(ProgressMessage::NewsKind::built)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::mission)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

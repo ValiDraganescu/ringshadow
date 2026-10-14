@@ -6,6 +6,10 @@ ore home, drill out past the fence, fly somewhere new, put a building up.
 Task K1 in [mmorpg-m7.md](mmorpg-m7.md). The server owns contracts and the
 client only shows them.
 
+The realm's Citadel posts missions of its own on a board (K2,
+[missions.md](missions.md)): a separate system that counts the same kind
+of work. These daily radio contracts are unchanged.
+
 Code: `unreal/server/world/WorldContracts.cpp`, with `WorldContracts` and the
 contract members in `WorldMap.h`. Wire: `net::Contract` in
 `unreal/Source/AutocraftNet/Public/NetProtocol.h`.

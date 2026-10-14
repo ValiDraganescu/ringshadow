@@ -21,6 +21,15 @@
 //          │ Hab Dome  ×0  LV 8  250 ore · 40 MH … │ │ 2/5 · 120 ore · 10 MH│
 //          └───────────────────────────────────────┘ └─────────────────────┘
 //
+// MISSIONS (K2, docs/missions.md): the Citadel's board, two offers a tier,
+// signed up for here (keys 1-6) and followed in the Journal (L).
+//
+//   MISSIONS ┌ EASY ─────────────┐ ┌ HARD ──────────────┐ ┌ PERILOUS ─────────┐
+//            │ 1 SURVEY · Home    │ │ 3 HOLD · Tern Ridge │ │ 5 HUNT · Slag …    │
+//            │ Mark the Ground    │ │ Hold the Line       │ │ Into the Nest      │
+//            │ what to do …  TAKE │ │ …              TAKE │ │ …             TAKE │
+//            └────────────────────┘ └─────────────────────┘ └────────────────────┘
+//
 // The screen only shows and asks: a donation goes to its owner (`OnDonate`),
 // which asks the server and hands the answer back through `SetInfo` (a
 // refusal through `SetRefusal`, a kept one through `SetKept`). The game goes
@@ -51,6 +60,23 @@ struct FAcShopLine
 	bool operator==(const FAcShopLine&) const = default;
 };
 
+/// An offer on the Citadel's board (K2).
+struct FAcMissionLine
+{
+	uint32 Id = 0;
+	/// "EASY", "HARD", "PERILOUS" (0, 1, 2).
+	int32 Tier = 0;
+	/// "SURVEY", and the region's name ("Rust Hollow"; empty: home).
+	FString Kind;
+	FString Where;
+	FString Title;
+	FString Instructions;
+	/// "1,500 XP · 450 ore · 40 MH · Hab Dome blueprint ×1".
+	FString Reward;
+
+	bool operator==(const FAcMissionLine&) const = default;
+};
+
 /// What the Citadel screen shows.
 struct FAcCitadelScreenInfo
 {
@@ -77,12 +103,19 @@ struct FAcCitadelScreenInfo
 	TArray<FAcShopLine> Blueprints;
 	TArray<FAcShopLine> Items;
 	FString ShopWhyNot;
+	/// K2, the board: the offers (by tier), the missions in the Journal
+	/// and the most it holds, why none can be signed up for from here.
+	TArray<FAcMissionLine> Offers;
+	int32 Taken = 0;
+	int32 Most = 3;
+	FString MissionsWhyNot;
 
 	bool operator==(const FAcCitadelScreenInfo&) const = default;
 };
 
 DECLARE_DELEGATE_TwoParams(FAcOnDonate, int64 /*Ore*/, int64 /*Hydrogen*/);
 DECLARE_DELEGATE_TwoParams(FAcOnShopBuy, bool /*bItem*/, int32 /*Index*/);
+DECLARE_DELEGATE_OneParam(FAcOnMissionTake, int32 /*Index*/);
 
 class AUTOCRAFT_API SAcCitadelScreen : public SLeafWidget
 {
@@ -90,12 +123,14 @@ public:
 	SLATE_BEGIN_ARGS(SAcCitadelScreen) {}
 		SLATE_EVENT(FAcOnDonate, OnDonate)
 		SLATE_EVENT(FAcOnShopBuy, OnBuy)
+		SLATE_EVENT(FAcOnMissionTake, OnTake)
 		SLATE_EVENT(FSimpleDelegate, OnClose)
 	SLATE_END_ARGS()
 
-	/// The screen's tabs: the realm's wallet, the shop (C2); the upgrades
-	/// (D1) come after them.
-	enum class ETab : uint8 { Realm, Shop };
+	/// The screen's tabs: the realm's wallet, the shop (C2), the missions
+	/// board (K2); the upgrades (D1) come after them.
+	enum class ETab : uint8 { Realm, Shop, Missions };
+	static constexpr int32 TabCount = 3;
 
 	/// The donate buttons: 100, 1,000 and all, of ore (0-2) and of MH (3-5).
 	static constexpr int32 DonateButtons = 6;
@@ -121,6 +156,10 @@ public:
 	/// ask (a click; keys 1-8 on the SHOP tab buy blueprints).
 	FString BuyWhyNot(bool bItem, int32 Index) const;
 	void Buy(bool bItem, int32 Index);
+	/// The board (K2): why offer `Index` can't be signed up for now (empty:
+	/// it can), and its ask (a click; keys 1-6 on the MISSIONS tab).
+	FString TakeWhyNot(int32 Index) const;
+	void Take(int32 Index);
 
 	/// What button `Index` gives now (ore, MH): "all" is the wallet's.
 	TPair<int64, int64> Amount(int32 Index) const;
@@ -165,6 +204,7 @@ private:
 	void PaintHeader(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintRealm(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintShop(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
+	void PaintMissions(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintFoot(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintButton(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P, const FTarget& T, const FString& Label,
 		bool bLit, const FLinearColor& Accent) const;
@@ -178,9 +218,12 @@ private:
 	/// What the last shop ask bought ("Hab Dome blueprint"; empty: the last
 	/// ask was a donation).
 	FString Bought;
+	/// What the last board ask signed up for (its title; empty: none).
+	FString Signed;
 
 	FAcOnDonate OnDonateDelegate;
 	FAcOnShopBuy OnBuyDelegate;
+	FAcOnMissionTake OnTakeDelegate;
 	FSimpleDelegate OnCloseDelegate;
 	double OpenedAt = 0;
 	/// When the realm wallet last grew (its flash).
@@ -192,6 +235,7 @@ private:
 	mutable FBox2f DonateBox;
 	mutable FBox2f BlueprintBox;
 	mutable FBox2f ItemBox;
+	mutable FBox2f TierBox[3];
 	mutable FBox2f FootBox;
 	mutable float PanelScale = 1.0f;
 	mutable FVector2f PanelOrigin = FVector2f::ZeroVector;

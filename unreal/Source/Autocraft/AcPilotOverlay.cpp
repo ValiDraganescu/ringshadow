@@ -1,5 +1,7 @@
 #include "AcPilotOverlay.h"
 
+#include "AcMissions.h"
+
 #include "AcConsole.h"
 #include "AcHUD.h"
 #include "AcLog.h"
@@ -259,7 +261,11 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	Inputs.bMmo = Sim->IsMmo();
 	Inputs.Mmo = Sim->MmoClient();
 	FAcPilotInfo Info = AcPilotText::Info(S, *F, Inputs);
-	if (Inputs.Mmo) Info.Marks = AcProgressHud::ContractGoals(*Inputs.Mmo, U.position);
+	if (Inputs.Mmo)
+	{
+		Info.Marks = AcProgressHud::ContractGoals(*Inputs.Mmo, U.position);
+		Info.Marks.Append(AcMissions::Goals(*Inputs.Mmo, U.position));
+	}
 	if (GunMarker) Info.Gun = GunMarker();
 	else Info.Gun = Pawn->GunMarker(); // E4's marker, computed by the pawn each frame
 	// A soldier's gun: the brackets open with its cone, moving and firing

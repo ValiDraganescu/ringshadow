@@ -283,6 +283,15 @@ public:
 	/// comes back as a note; `ItemsUsed` counts the kept ones.
 	bool UseItem(ac::Item Item, FString* Why = nullptr);
 	int32 ItemsUsed() const { return ItemDone; }
+	/// K2, Citadel missions (docs/missions.md): sign up for an offer on the
+	/// board (at the realm's Citadel), drop one from the Journal. A refused
+	/// sign-up is answered as the Citadel's asks (`CitadelRefusal`); a
+	/// refused drop comes back as a note. `TakeAccepted` hands over the
+	/// missions the server has just signed the pilot up for (the flow plays
+	/// the sting and the narration once each).
+	bool TakeMission(uint32 Mission, FString* Why = nullptr);
+	bool AbandonMission(uint32 Mission, FString* Why = nullptr);
+	TArray<uint32> TakeAccepted();
 	/// The region the pilot is in (in flight: the one it lifted off from).
 	const ac::net::WorldMessage::Region* Here() const;
 	/// In flight: the region it flies to.
@@ -415,6 +424,10 @@ private:
 	/// Consumable uses asked (request ids), and the ones kept.
 	TSet<uint32> ItemAsked;
 	int32 ItemDone = 0;
+	/// Mission asks (request id → mission, and whether a sign-up), and the
+	/// sign-ups kept, not handed over yet.
+	TMap<uint32, TPair<uint32, bool>> MissionAsked;
+	TArray<uint32> MissionsAccepted;
 	bool AskRig(const TCHAR* Verb, ac::Module Module, int64 Mark, FString* Why);
 	std::vector<ac::GameEvent> Events;
 };

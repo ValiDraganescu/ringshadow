@@ -474,8 +474,9 @@ void SAcPilotOverlay::PaintCompass(FAcPilotPen& P, const double W, const double 
 		Ring.Add(Diamond[0]);
 		P.Lines(Ring, FLinearColor::White, 1, 2);
 	}
-	// KSTR contracts here: green hollow diamonds, the distance over each.
-	TArray<TPair<double, double>> MarkX;
+	// KSTR contracts here: green hollow diamonds, the distance over each;
+	// Citadel missions (K2): a filled diamond in the tier's colour, "MISSION".
+	TArray<TTuple<double, double, const FAcPilotGoal*>> MarkX;
 	for (const FAcPilotGoal& M : Info.Marks)
 	{
 		const ac::Vec2 D(M.At.x - Info.Position.x, M.At.y - Info.Position.y);
@@ -483,14 +484,22 @@ void SAcPilotOverlay::PaintCompass(FAcPilotPen& P, const double W, const double 
 		const double X = FMath::Clamp(R * 180 / PI * PerDeg, -Half + 8, Half - 8);
 		const FVector2D G(O.X + X, O.Y);
 		const TArray<FVector2D> Diamond = {G + FVector2D(0, -11), G + FVector2D(6, -3), G + FVector2D(0, 5), G + FVector2D(-6, -3), G + FVector2D(0, -11)};
-		P.Lines(Diamond, Srgb(0.45, 1, 0.55), 2.2, 1.5);
-		MarkX.Add({X, M.Distance});
+		if (M.bMission)
+		{
+			P.Poly(TArray<FVector2D>{Diamond[0], Diamond[1], Diamond[2], Diamond[3]}, M.Color);
+			P.Lines(Diamond, FLinearColor::White, 1, 1.5);
+		}
+		else
+		{
+			P.Lines(Diamond, Srgb(0.45, 1, 0.55), 2.2, 1.5);
+		}
+		MarkX.Add({X, M.Distance, &M});
 	}
 	P.PopClip();
-	for (const TPair<double, double>& M : MarkX)
+	for (const auto& [X, Distance, M] : MarkX)
 	{
-		P.Label(FString::Printf(TEXT("KSTR  %lld"), (long long)FMath::RoundToDouble(M.Value)), 13, Srgb(0.45, 1, 0.55),
-			FVector2D(O.X + M.Key, O.Y + 30));
+		P.Label(FString::Printf(TEXT("%s  %lld"), M->bMission ? TEXT("MISSION") : TEXT("KSTR"), (long long)FMath::RoundToDouble(Distance)), 13,
+			M->bMission ? M->Color : Srgb(0.45, 1, 0.55), FVector2D(O.X + X, O.Y + 30));
 	}
 	if (GoalX)
 	{

@@ -1015,6 +1015,20 @@ void UAcAudioDirector::LoadBank()
 			W->NumChannels, (int32)W->GetSampleRateForCurrentPlatform(), W->Volume, W->SoundClassObject ? *W->SoundClassObject->GetName() : TEXT("none"),
 			W->IsStreaming() ? 1 : 0, (int32)W->GetLoadingBehavior());
 	}
+	// K2: the Citadel missions' narrations, loaded when played.
+	Narrations.Reset();
+	const TSharedPtr<FJsonObject>* Missions = nullptr;
+	if (Root->TryGetObjectField(TEXT("missions"), Missions))
+	{
+		for (const auto& Pair : (*Missions)->Values)
+		{
+			const TSharedPtr<FJsonObject> M = Pair.Value->AsObject();
+			if (!M) continue;
+			double Seconds = 0;
+			M->TryGetNumberField(TEXT("seconds"), Seconds);
+			Narrations.Add(FString(Pair.Key), {M->GetStringField(TEXT("asset")), Seconds});
+		}
+	}
 	BankLoadedAt = FPlatformTime::Seconds();
 	if (Missing > 0) UE_LOG(LogAutocraft, Warning, TEXT("audio: %d sound waves missing (run Tools/Editor/import_sounds.py)"), Missing);
 }
@@ -1229,6 +1243,46 @@ void UAcAudioDirector::PlayMenu(const FName Name, const float Gain)
 	Cue.Volume = Gain;
 	Cue.Pool = EAcSoundPool::InEar;
 	Play(Cue);
+}
+
+bool UAcAudioDirector::PlayNarration(const FString& Key)
+{
+	const TPair<FString, double>* N = Narrations.Find(Key);
+	if (!N)
+	{
+		UE_LOG(LogAutocraft, Warning, TEXT("audio: no narration %s (run Tools/Editor/import_sounds.py)"), *Key);
+		return false;
+	}
+	StopNarration();
+	if (!HasDevice() || bMuted)
+	{
+		UE_LOG(LogAutocraft, Log, TEXT("audio: narration %s, %.1f s (%s)"), *Key, N->Value, bMuted ? TEXT("muted") : TEXT("no device"));
+		return true;
+	}
+	USoundWave* Wave = LoadObject<USoundWave>(nullptr, *N->Key);
+	if (!Wave)
+	{
+		UE_LOG(LogAutocraft, Warning, TEXT("audio: narration %s: no wave %s"), *Key, *N->Key);
+		return false;
+	}
+	NarrationVoice = UGameplayStatics::CreateSound2D(GetWorld(), Wave, 1.0f, 1.0f, 0.0f, nullptr, true, false);
+	if (NarrationVoice) NarrationVoice->Play();
+	UE_LOG(LogAutocraft, Log, TEXT("audio: narration %s, %.1f s"), *Key, N->Value);
+	return true;
+}
+
+void UAcAudioDirector::StopNarration()
+{
+	if (NarrationVoice) NarrationVoice->Stop();
+	NarrationVoice = nullptr;
+}
+
+bool UAcAudioDirector::IsNarrating() const { return NarrationVoice && NarrationVoice->IsPlaying(); }
+
+double UAcAudioDirector::NarrationSeconds(const FString& Key) const
+{
+	const TPair<FString, double>* N = Narrations.Find(Key);
+	return N ? N->Value : 0;
 }
 
 bool UAcAudioDirector::HasDevice() const

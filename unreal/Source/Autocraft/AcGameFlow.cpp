@@ -7,6 +7,7 @@
 #include "AcGameMode.h"
 #include "AcHUD.h"
 #include "AcLog.h"
+#include "AcMissions.h"
 #include "AcPilotPawn.h"
 #include "AcPointer.h"
 #include "AcProgressHud.h"
@@ -52,6 +53,7 @@ namespace
 	constexpr int32 RigScreenLayer = 72;
 	/// The MMORPG Citadel screen (C1): the rig screen's sibling (one at a time).
 	constexpr int32 CitadelScreenLayer = 73;
+	constexpr int32 JournalScreenLayer = 73;
 
 	FString Text(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 
@@ -100,6 +102,13 @@ namespace
 			if (TSharedPtr<SAcCitadelScreen> S = F->CitadelScreenWidget())
 			{
 				if (K == EKeys::Escape || (K == EKeys::H && !Event.IsCommandDown())) { F->CloseCitadelScreen(); return true; }
+				if (!Event.IsCommandDown() && S->Key(K)) return true;
+				// The game's own keys wait while the screen is up (⌘Q still quits).
+				return !Event.IsCommandDown();
+			}
+			if (TSharedPtr<SAcJournalScreen> S = F->JournalScreenWidget())
+			{
+				if (K == EKeys::Escape || (K == EKeys::L && !Event.IsCommandDown())) { F->CloseJournalScreen(); return true; }
 				if (!Event.IsCommandDown() && S->Key(K)) return true;
 				// The game's own keys wait while the screen is up (⌘Q still quits).
 				return !Event.IsCommandDown();
@@ -378,6 +387,7 @@ void UAcGameFlowSubsystem::Deinitialize()
 	CloseSkillScreen();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseJournalScreen();
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
 	{
 		Sim->OnGameStarted.Remove(StartedHandle);
@@ -799,6 +809,7 @@ void UAcGameFlowSubsystem::StopMmo()
 	CloseSkillScreen();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseJournalScreen();
 	LeaveDriving();
 	Sim->StopMmo();
 	TickMmo();
@@ -824,6 +835,8 @@ void UAcGameFlowSubsystem::TickMmo()
 	TickSkillScreen();
 	TickRigScreen();
 	TickCitadelScreen();
+	TickJournalScreen();
+	TickMissions();
 	if (!MmoBanner) return;
 	MmoBanner->Update(FPlatformTime::Seconds());
 	if (Mmo)
@@ -886,6 +899,7 @@ bool UAcGameFlowSubsystem::OpenWorldMap()
 	CloseSkillScreen();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseJournalScreen();
 	const AAcHUD* Hud = AAcHUD::Get(this);
 	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
 	if (!Root) return false;
@@ -991,6 +1005,7 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 	CloseWorldMap();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseJournalScreen();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	// Each ask goes to the server; a refusal at once (not connected) shows here,
 	// the server's own through `TickSkillScreen`.
@@ -1119,6 +1134,7 @@ bool UAcGameFlowSubsystem::OpenRigScreen()
 	CloseWorldMap();
 	CloseSkillScreen();
 	CloseCitadelScreen();
+	CloseJournalScreen();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	// As the skill screen's: a refusal at once here, the server's own
 	// through `TickRigScreen`.
@@ -1264,6 +1280,7 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 	CloseWorldMap();
 	CloseSkillScreen();
 	CloseRigScreen();
+	CloseJournalScreen();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	Root->AddLayer(CitadelScreenLayer)
 	[
@@ -1292,6 +1309,18 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 				else if (bItem && Index >= 0 && size_t(Index) < Items.size() && Mmo->BuyItem(Items[size_t(Index)].item, &Why)) return;
 				else if (!bItem && Index >= 0 && size_t(Index) < Kinds.size() && Mmo->BuyBlueprint(Kinds[size_t(Index)], &Why)) return;
 				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("Nothing there")) : Why);
+			})
+		.OnTake_Lambda([Weak](int32 Index)
+			{
+				// K2, the board: the screen's offers are the board's order.
+				if (!Weak.IsValid()) return;
+				UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+				FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+				const ac::net::ProgressMessage* P = Mmo ? Mmo->Progress() : nullptr;
+				FString Why;
+				if (!Mmo || !P) Why = TEXT("Not in a world");
+				else if (Index >= 0 && size_t(Index) < P->board.size() && Mmo->TakeMission(P->board[size_t(Index)].id, &Why)) return;
+				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("No offer there")) : Why);
 			})
 		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseCitadelScreen(); })
 	];
@@ -1392,11 +1421,29 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 			Info.Items.Add(X);
 		}
 	}
+	// K2, the board: the offers by tier, the missions taken.
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	{
+		for (const ac::net::CitadelMission& M : P->board)
+		{
+			FAcMissionLine X;
+			X.Id = M.id;
+			X.Tier = int32(M.tier);
+			X.Kind = AcMissions::KindName(M.kind);
+			X.Where = AcMissions::RegionName(*Mmo, M.region);
+			X.Title = UTF8_TO_TCHAR(M.title.c_str());
+			X.Instructions = UTF8_TO_TCHAR(M.instructions.c_str());
+			X.Reward = AcMissions::Reward(M);
+			Info.Offers.Add(X);
+		}
+		for (const ac::net::CitadelMission& M : P->journal) Info.Taken += M.state == ac::net::CitadelMission::State::taken ? 1 : 0;
+	}
 	// The server checks the place; the screen says so ahead.
 	if (!AtRealmCitadel(&Info.Builder))
 	{
 		Info.DonateWhyNot = TEXT("Donate at the realm's Citadel: stand where you unload");
 		Info.ShopWhyNot = TEXT("Buy at the realm's Citadel: stand where you unload");
+		Info.MissionsWhyNot = TEXT("Sign up at the realm's Citadel: stand where you unload");
 	}
 	CitadelScreen->SetInfo(Info);
 	if (Mmo->CitadelRefusal() != CitadelRefusalShown)
@@ -1409,6 +1456,219 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 		CitadelKeptShown = Mmo->CitadelKept();
 		CitadelScreen->SetKept();
 	}
+}
+
+// MARK: - The Journal (K2)
+
+bool UAcGameFlowSubsystem::OpenJournalScreen()
+{
+	if (JournalScreen) return true;
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsMmo() || Menu || Dialog) return false;
+	const AAcHUD* Hud = AAcHUD::Get(this);
+	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
+	if (!Root) return false;
+	CloseWorldMap();
+	CloseSkillScreen();
+	CloseRigScreen();
+	CloseCitadelScreen();
+	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
+	Root->AddLayer(JournalScreenLayer)
+	[
+		SAssignNew(JournalScreen, SAcJournalScreen)
+		.OnPlay_Lambda([Weak](int32 Index)
+			{
+				if (!Weak.IsValid() || !Weak->JournalScreen) return;
+				const TArray<FAcJournalEntry>& E = Weak->JournalScreen->GetInfo().Entries;
+				if (!E.IsValidIndex(Index)) return;
+				Weak->PlayMissionNarration(E[Index].Narration, false);
+				Weak->JournalScreen->SetNote(FString::Printf(TEXT("Playing the briefing: %s."), *E[Index].Title));
+			})
+		.OnAbandon_Lambda([Weak](int32 Index)
+			{
+				if (!Weak.IsValid() || !Weak->JournalScreen) return;
+				UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+				FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+				const TArray<FAcJournalEntry>& E = Weak->JournalScreen->GetInfo().Entries;
+				FString Why;
+				if (!Mmo) Why = TEXT("Not in a world");
+				else if (E.IsValidIndex(Index) && Mmo->AbandonMission(E[Index].Id, &Why)) return;
+				Weak->JournalScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("No mission there")) : Why);
+			})
+		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseJournalScreen(); })
+	];
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(JournalScreen, EFocusCause::SetDirectly);
+	SetBlocked(true);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(true);
+	TickJournalScreen();
+	UE_LOG(LogAutocraft, Log, TEXT("journal: open"));
+	return true;
+}
+
+void UAcGameFlowSubsystem::CloseJournalScreen()
+{
+	if (!JournalScreen) return;
+	if (const AAcHUD* Hud = AAcHUD::Get(this))
+	{
+		if (const TSharedPtr<SAcRoot> Root = Hud->Root()) Root->RemoveLayer(JournalScreen.ToSharedRef());
+	}
+	JournalScreen.Reset();
+	SetBlocked(false);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(false);
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetAllUserFocusToGameViewport();
+	UE_LOG(LogAutocraft, Log, TEXT("journal: closed"));
+}
+
+void UAcGameFlowSubsystem::ToggleJournalScreen()
+{
+	if (JournalScreen) CloseJournalScreen();
+	else OpenJournalScreen();
+}
+
+void UAcGameFlowSubsystem::PlayMissionNarration(const FString& Key, const bool bAccepted)
+{
+	UAcAudioDirector* Audio = UAcAudioDirector::Get(this);
+	if (!Audio || Key.IsEmpty()) return;
+	if (bAccepted) Audio->PlayMenu(TEXT("missionaccept"), 0.8f);
+	if (Audio->PlayNarration(Key))
+	{
+		NarrationKey = Key;
+		NarrationUntil = FPlatformTime::Seconds() + FMath::Max(1.0, Audio->NarrationSeconds(Key));
+	}
+}
+
+void UAcGameFlowSubsystem::TickMissions()
+{
+	if (!NarrationKey.IsEmpty() && FPlatformTime::Seconds() > NarrationUntil) NarrationKey.Reset();
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo) return;
+	// Just signed up: the sting, and the narration once, as soon as the
+	// Journal has it (the reply can come before the progress message).
+	const double Now = FPlatformTime::Seconds();
+	for (const uint32 Id : Mmo->TakeAccepted()) MissionsHeard.Add({Id, Now});
+	const ac::net::ProgressMessage* P = Mmo->Progress();
+	for (int32 I = MissionsHeard.Num() - 1; I >= 0; --I)
+	{
+		const ac::net::CitadelMission* Found = nullptr;
+		if (P)
+			for (const ac::net::CitadelMission& M : P->journal)
+				if (M.id == MissionsHeard[I].Key) Found = &M;
+		if (Found)
+		{
+			UE_LOG(LogAutocraft, Log, TEXT("mission: signed up for %s (%s)"), UTF8_TO_TCHAR(Found->title.c_str()), UTF8_TO_TCHAR(Found->key.c_str()));
+			PlayMissionNarration(UTF8_TO_TCHAR(Found->key.c_str()), true);
+			MissionsHeard.RemoveAt(I);
+		}
+		else if (Now - MissionsHeard[I].Value > 10) MissionsHeard.RemoveAt(I);
+	}
+}
+
+void UAcGameFlowSubsystem::TickJournalScreen()
+{
+	if (!JournalScreen) return;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo)
+	{
+		CloseJournalScreen();
+		return;
+	}
+	FAcJournalInfo Info;
+	Info.Most = 3;
+	Info.Playing = NarrationKey;
+	const ac::net::WorldMessage* W = Mmo->World();
+	if (W)
+	{
+		Info.Columns = int32(W->columns);
+		Info.Rows = int32(W->rows);
+		Info.Names.SetNum(Info.Columns * Info.Rows);
+		for (const ac::net::WorldMessage::Region& R : W->regions)
+		{
+			const int32 I = int32(R.row) * Info.Columns + int32(R.column);
+			if (Info.Names.IsValidIndex(I)) Info.Names[I] = UTF8_TO_TCHAR(R.name.c_str());
+		}
+	}
+	// A region's cell, and a ground point's place in it (0…1).
+	auto Cell = [&](const std::string& Id, ac::Vec2 At, int32& Col, int32& Row, FVector2f& Share, double& Width) {
+		if (!W) return false;
+		for (const ac::net::WorldMessage::Region& R : W->regions)
+		{
+			if (R.id != Id) continue;
+			const ac::MapCells C = ac::cells(R.size);
+			Col = int32(R.column);
+			Row = int32(R.row);
+			Width = double(C.width);
+			Share = FVector2f(float(FMath::Clamp((At.x + C.width / 2.0) / C.width, 0.0, 1.0)),
+				float(FMath::Clamp((At.y + C.depth / 2.0) / C.depth, 0.0, 1.0)));
+			return true;
+		}
+		return false;
+	};
+	const ac::net::WorldMessage::Region* Here = Mmo->Here();
+	std::optional<ac::Vec2> Me;
+	if (const ac::net::Mirror* M = Mmo->Mirror())
+	{
+		if (const ac::Pilot* Pilot = M->simulation().pilot ? &*M->simulation().pilot : nullptr)
+		{
+			if (const auto U = M->simulation().state.unit(Pilot->unit)) Me = U->position;
+		}
+	}
+	if (Here && Me)
+	{
+		double Width = 0;
+		Info.bHere = Cell(Here->id, *Me, Info.HereColumn, Info.HereRow, Info.HereAt, Width);
+	}
+	if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this); Audio && Audio->IsNarrating() == false && FPlatformTime::Seconds() > NarrationUntil)
+	{
+		Info.Playing.Reset();
+	}
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	{
+		Info.bKnown = true;
+		const UAcAudioDirector* Audio = UAcAudioDirector::Get(this);
+		for (const ac::net::CitadelMission& M : P->journal)
+		{
+			FAcJournalEntry E;
+			E.Id = M.id;
+			E.Title = UTF8_TO_TCHAR(M.title.c_str());
+			E.Kind = AcMissions::KindName(M.kind);
+			E.Tier = int32(M.tier);
+			E.Where = AcMissions::RegionName(*Mmo, M.region);
+			E.Briefing = UTF8_TO_TCHAR(M.briefing.c_str());
+			E.Instructions = UTF8_TO_TCHAR(M.instructions.c_str());
+			E.Progress = AcMissions::Progress(M);
+			E.Share = AcMissions::Share(M);
+			E.bDone = M.state == ac::net::CitadelMission::State::done;
+			E.Reward = AcMissions::Reward(M);
+			E.Narration = UTF8_TO_TCHAR(M.key.c_str());
+			E.Seconds = Audio ? Audio->NarrationSeconds(E.Narration) : 0;
+			double Width = 0;
+			E.bMarked = Cell(M.region, M.at, E.Column, E.Row, E.At, Width);
+			E.bWholeRegion = M.kind == ac::net::CitadelMission::Kind::hunt;
+			E.Ring = Width > 0 ? float(M.radius / Width) : 0.f;
+			// Where it is from here.
+			if (Here && Me && Here->id == M.region && !E.bWholeRegion)
+			{
+				const ac::Vec2 D = M.at - *Me;
+				// A cell is a metre (as the starfall's warning).
+				const double Metres = std::sqrt(D.x * D.x + D.y * D.y);
+				E.Bearing = FString::Printf(TEXT("Here, %s: %d m %s."), *E.Where, int32(FMath::RoundToDouble(Metres)),
+					*AcMissions::Heading(D));
+			}
+			else if (Here && Here->id == M.region)
+			{
+				E.Bearing = FString::Printf(TEXT("Here, anywhere in %s."), *E.Where);
+			}
+			else if (E.bMarked)
+			{
+				E.Bearing = FString::Printf(TEXT("In %s: leave %s to get there."), *E.Where,
+					Here ? *FString(UTF8_TO_TCHAR(Here->name.c_str())) : TEXT("here"));
+			}
+			Info.Entries.Add(E);
+		}
+	}
+	JournalScreen->SetInfo(Info);
 }
 
 // MARK: - -AcFlowTest

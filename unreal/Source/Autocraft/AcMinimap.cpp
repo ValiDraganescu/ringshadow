@@ -1,5 +1,7 @@
 #include "AcMinimap.h"
 
+#include "AcMissions.h"
+
 #include "AcMmo.h"
 
 #include "AcCab.h"
@@ -210,10 +212,25 @@ void UAcMinimapSubsystem::OnFrame(const FAcFrame& Frame)
 			Flare = TPair<ac::Vec2, double>(P->flare->at, P->flare->radius);
 		}
 	}
+	// K2: the Citadel missions taken with a place in this region.
+	TArray<SAcMinimap::FMission> Missions;
+	if (const FAcMmoClient* Mmo = Sim->MmoClient())
+	{
+		const ac::net::WorldMessage::Region* Here = Mmo->Here();
+		if (Here && !Mmo->Travelling())
+		{
+			for (const ac::net::CitadelMission* X : AcMissions::Marked(*Mmo))
+			{
+				if (X->region != Here->id || X->kind == ac::net::CitadelMission::Kind::hunt) continue;
+				Missions.Add({X->at, X->radius, AcMissions::TierColor(X->tier)});
+			}
+		}
+	}
 	for (const TSharedPtr<SAcMinimap>& M : All)
 	{
 		M->SetPads(Pads);
 		M->SetFlare(Flare);
+		M->SetMissions(Missions);
 		M->SetMarks(Shown, Sim->Map());
 		M->SetFootprint(Footprint);
 		if (bFog) M->SetFog(Fog->MinimapTexture(), Fog->GridOrigin(), Fog->GridSize());

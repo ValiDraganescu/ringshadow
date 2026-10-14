@@ -309,7 +309,7 @@ TEST(realm_old_save_buildings_become_the_realms) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(10));
+    EXPECT_EQ(store->schemaVersion(), int64_t(12));
     EXPECT_TRUE(store->rows("SELECT count(*) FROM pragma_table_info('buildings') WHERE name = 'built_by'")[0][0] == "1");
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());

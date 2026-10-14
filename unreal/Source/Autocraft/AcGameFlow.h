@@ -56,6 +56,7 @@
 #include "SAcMmoBanner.h"
 #include "SAcNewGame.h"
 #include "SAcCitadelScreen.h"
+#include "SAcJournalScreen.h"
 #include "SAcRigScreen.h"
 #include "SAcSkillScreen.h"
 #include "SAcWorldMap.h"
@@ -144,6 +145,16 @@ public:
 	void CloseCitadelScreen();
 	void ToggleCitadelScreen();
 	TSharedPtr<SAcCitadelScreen> CitadelScreenWidget() const { return CitadelScreen; }
+	/// The pilot's Journal (L in the mode; K2, docs/missions.md): the Citadel
+	/// missions it signed up for, their briefings, places and narrations.
+	/// False outside the mode or without a HUD.
+	bool OpenJournalScreen();
+	void CloseJournalScreen();
+	void ToggleJournalScreen();
+	TSharedPtr<SAcJournalScreen> JournalScreenWidget() const { return JournalScreen; }
+	/// Plays a mission's narration (its template key), the sting first when
+	/// `bAccepted` (just signed up). Logged in a silent run.
+	void PlayMissionNarration(const FString& Key, bool bAccepted);
 	/// The driven Prospector stands where it unloads at the realm's finished
 	/// Citadel (the client's mirror); `Builder`: who built it.
 	bool AtRealmCitadel(FString* Builder = nullptr) const;
@@ -181,6 +192,17 @@ private:
 	/// The server's last Citadel refusal, and the kept asks, already handed to the screen.
 	FString CitadelRefusalShown;
 	int32 CitadelKeptShown = 0;
+	TSharedPtr<SAcJournalScreen> JournalScreen;
+	/// The Journal's state from the client's progress, each frame; and the
+	/// missions just signed up for (their sting and narration).
+	void TickJournalScreen();
+	void TickMissions();
+	/// The narration playing (its key; empty: none) and until when (engine time).
+	FString NarrationKey;
+	double NarrationUntil = 0;
+	/// Sign-ups the server kept whose Journal entry has not come yet (the
+	/// reply can beat the progress message), and since when.
+	TArray<TPair<uint32, double>> MissionsHeard;
 	FDelegateHandle RefusedHandle;
 	/// -AcMmo: start the mode once the game is up.
 	bool bMmoWhenReady = false;

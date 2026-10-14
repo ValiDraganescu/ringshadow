@@ -1,5 +1,7 @@
 #include "AcProgressHud.h"
 
+#include "AcMissions.h"
+
 #include "AcAudioDirector.h"
 #include "AcConsole.h"
 #include "AcHUD.h"
@@ -1182,6 +1184,25 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		const FString Where = N.value == 1 ? FString(TEXT("here")) : FString(TEXT("in the realm"));
 		Hud->Toast(FString::Printf(TEXT("%s BUILT"), *Name), FString::Printf(TEXT("Built by %s  ·  %s  ·  every pilot's"), *By, *Where),
 			FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
+		break;
+	}
+	case K::mission:
+	{
+		// K2: a Citadel mission done: its title from the Journal, the pay.
+		FString Title = TEXT("MISSION");
+		FString Pay = Xp;
+		if (P)
+		{
+			for (const ac::net::CitadelMission& M : P->journal)
+			{
+				if (std::to_string(M.id) != N.id) continue;
+				Title = Upper(M.title);
+				Pay = AcMissions::Reward(M);
+			}
+		}
+		Hud->Toast(FString::Printf(TEXT("MISSION DONE: %s"), *Title), Pay + TEXT("  ·  L"), FAcHudStyle::LevelGold(), Now);
+		UE_LOG(LogAutocraft, Log, TEXT("progress: mission %s done: %s"), *Text(N.id), *Title);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
 		break;
 	}
 	default:

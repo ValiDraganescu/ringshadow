@@ -56,6 +56,8 @@ uint32_t Client::donate(int64_t ore, int64_t hydrogen) { return request(RequestM
 uint32_t Client::buyBlueprint(StructureKind kind) { return request(RequestMessage::Buy{kind, Item::repairKit}); }
 uint32_t Client::buyItem(Item item) { return request(RequestMessage::Buy{std::nullopt, item}); }
 uint32_t Client::use(Item item) { return request(RequestMessage::Use{item}); }
+uint32_t Client::takeMission(uint32_t mission) { return request(RequestMessage::MissionAsk{mission, true}); }
+uint32_t Client::abandonMission(uint32_t mission) { return request(RequestMessage::MissionAsk{mission, false}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;

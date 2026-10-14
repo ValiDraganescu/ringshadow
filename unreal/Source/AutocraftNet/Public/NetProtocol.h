@@ -390,11 +390,20 @@ struct RequestMessage {
         Item item = Item::repairKit;
         bool operator==(const Use&) const = default;
     };
+    /// K2: sign up for mission `mission` on the Citadel's board (`take`),
+    /// at the realm's Citadel (where it unloads), or drop one from the
+    /// Journal, anywhere.
+    struct MissionAsk {
+        uint32_t mission = 0;
+        bool take = true;
+        bool operator==(const MissionAsk&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
-    /// 14, Use 15, and D1's request comes next.
-    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use>
+    /// 14, Use 15, MissionAsk 16 (protocol 16), and D1's request comes next.
+    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
+                 MissionAsk>
         what;
     bool operator==(const RequestMessage&) const = default;
 };
@@ -462,6 +471,53 @@ struct Contract {
     bool operator==(const Contract&) const = default;
 };
 
+/// K2: a Citadel mission (docs/missions.md): a job on the realm's Citadel's
+/// board, in three tiers, that the pilot signs up for and follows in its
+/// Journal, paid in XP, ore and MH (hard and perilous: a blueprint copy or
+/// supplies) when `have` reaches `need`.
+struct CitadelMission {
+    /// haul: unload `need` of `target` ("ore", "hydrogen") at the realm's
+    /// buildings. survey: stand within `radius` of `at` in region `target`
+    /// for `need` seconds (the scan). salvage: open blueprint site `target`
+    /// ("<region id>/<site name>"). hold: stand within `radius` of `at` in
+    /// region `target` for `need` seconds under the ringshadow band. hunt:
+    /// kill `need` of the Brood in region `target` (N2).
+    enum class Kind : uint8_t { haul, survey, salvage, hold, hunt };
+    enum class Tier : uint8_t { easy, hard, perilous };
+    /// offered (on the board), taken (in the Journal), done (paid; it leaves
+    /// the Journal when the board is next drawn).
+    enum class State : uint8_t { offered, taken, done };
+    /// The pilot's own number for it (never reused).
+    uint32_t id = 0;
+    Kind kind = Kind::haul;
+    Tier tier = Tier::easy;
+    State state = State::offered;
+    /// Its template ("survey-hard-2"): the narration the game plays
+    /// (`Sounds/missions/<key>.wav`).
+    std::string key;
+    /// Ready to show: the title, the officer's briefing, what to do.
+    std::string title;
+    std::string briefing;
+    std::string instructions;
+    std::string target;
+    /// Its place on the map: region `region` (a world region id; empty:
+    /// none), ground point `at`, `radius` cells (0: a point).
+    std::string region;
+    Vec2 at{0, 0};
+    double radius = 0;
+    int64_t need = 1;
+    int64_t have = 0;
+    /// What it pays: XP, ore and MH into the wallet, and `count` copies of
+    /// `blueprint`'s blueprint or `count` of `item`.
+    double xp = 0;
+    int64_t ore = 0;
+    int64_t hydrogen = 0;
+    std::optional<StructureKind> blueprint;
+    std::optional<Item> item;
+    int64_t count = 0;
+    bool operator==(const CitadelMission&) const = default;
+};
+
 /// Server → client, reliable: a world's pilot's progression
 /// (docs/prospector-progression.md), whole, on every change but its XP
 /// alone (the snapshots carry that): its level, points, ranks, slots, when
@@ -493,7 +549,10 @@ struct ProgressMessage {
     /// the world: `id` its kind ("habDome"), `by` its builder's callsign
     /// (the pilot's own `callsign`: it built it), `value` 1 when it stands
     /// in the pilot's region.
-    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built };
+    ///
+    /// K2: `mission`: a Citadel mission done, `id` its number, `xp` what it
+    /// paid, `value` its ore.
+    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -607,6 +666,10 @@ struct ProgressMessage {
         bool operator==(const Flare&) const = default;
     };
     std::optional<Flare> flare;
+    /// K2: the Citadel's board today (offers; drawn again at the next dawn,
+    /// `contractsDawn`), and the pilot's Journal (taken and done missions).
+    std::vector<CitadelMission> board;
+    std::vector<CitadelMission> journal;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

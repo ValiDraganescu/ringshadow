@@ -256,6 +256,9 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
         if (at > clock_) m.itemReady[item] = at;
     if (const auto& f = it->second.flare; f && f->until > clock_)
         m.flare = net::ProgressMessage::Flare{world_->regions[f->region].file.id, f->at, Shop::flareRadius, f->until};
+    // K2: the Citadel's board and the Journal.
+    m.board = it->second.board;
+    m.journal = it->second.journal;
     if (!it->second.flight) {
         const Region& r = *regions_[it->second.region];
         const Simulation& sim = r.simulation();
@@ -347,6 +350,7 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
                 if (w.hydrogen) feats.push_back(WorldXp::hydrogenFeat);
                 contractWork(w.pilot, *p, w.hydrogen ? net::Contract::Kind::deliverHydrogen : net::Contract::Kind::deliverOre, "",
                              d->amount);
+                missionWork(w.pilot, *p, net::CitadelMission::Kind::haul, w.hydrogen ? "hydrogen" : "ore", d->amount);
             }
             if (const auto* c = e.as<GameEvent::Constructed>(); c && built(*p, w.region, c->structure)) {
                 feats.push_back(WorldXp::built(c->kind));

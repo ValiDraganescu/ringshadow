@@ -776,6 +776,46 @@ TEST(protocol_progress_round_trips) {
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
     EXPECT_TRUE(kProtocolVersion >= uint16_t(14));
+    // Citadel missions (K2, v16): the board and the Journal, every kind,
+    // tier and state, a reward with a blueprint and one with supplies; the
+    // mission news.
+    CitadelMission survey;
+    survey.id = 7;
+    survey.kind = CitadelMission::Kind::survey;
+    survey.tier = CitadelMission::Tier::perilous;
+    survey.key = "survey-perilous";
+    survey.title = "Readings from the Dark Country";
+    survey.briefing = "KSTR dispatch to pilot, do you copy?";
+    survey.instructions = "Drive to the marker in Slag Pockets and stay inside its ring for 20 s.";
+    survey.target = survey.region = "slag-pockets";
+    survey.at = Vec2(-40.5, 12.25);
+    survey.radius = 6;
+    survey.need = 20;
+    survey.xp = 3000;
+    survey.ore = 1000;
+    survey.hydrogen = 70;
+    survey.blueprint = StructureKind::foundry;
+    survey.count = 2;
+    CitadelMission haul;
+    haul.id = 8;
+    haul.state = CitadelMission::State::taken;
+    haul.target = "ore";
+    haul.need = 200;
+    haul.have = 150;
+    haul.item = Item::shieldCharge;
+    haul.count = 3;
+    CitadelMission hunt = haul;
+    hunt.id = 9;
+    hunt.kind = CitadelMission::Kind::hunt;
+    hunt.tier = CitadelMission::Tier::hard;
+    hunt.state = CitadelMission::State::done;
+    hunt.item.reset();
+    m.board = {survey};
+    m.journal = {haul, hunt};
+    m.news = {ProgressMessage::News{ProgressMessage::NewsKind::mission, "9", 1500, 450, ""}};
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back == m);
+    EXPECT_TRUE(kProtocolVersion >= uint16_t(16));
 }
 
 TEST(mirror_takes_snapshots_into_its_simulation) {
@@ -933,7 +973,8 @@ TEST(protocol_world_messages_round_trip) {
              RequestMessage::Fit{Module::plate, 2}, RequestMessage::Fit{Module::cargoPod, 0},
              RequestMessage::Donate{1000, 0}, RequestMessage::Donate{0, 250},
              RequestMessage::Buy{StructureKind::sentinel, Item::repairKit}, RequestMessage::Buy{std::nullopt, Item::surveyFlare},
-             RequestMessage::Use{Item::hydrogenCanister}, RequestMessage::Use{Item::shieldCharge}}) {
+             RequestMessage::Use{Item::hydrogenCanister}, RequestMessage::Use{Item::shieldCharge},
+             RequestMessage::MissionAsk{3, true}, RequestMessage::MissionAsk{4000000000u, false}}) {
         RequestMessage t;
         t.id = 21;
         t.what = what;
@@ -953,6 +994,9 @@ TEST(protocol_world_messages_round_trip) {
         EXPECT_EQ(shop.what.index(), size_t(15));
         shop.what = RequestMessage::Use{static_cast<Item>(allCases<Item>().size())};
         EXPECT_TRUE(!decode(encode(shop), kb));
+        // K2: MissionAsk at 16 (D1's request comes after it).
+        shop.what = RequestMessage::MissionAsk{1, true};
+        EXPECT_EQ(shop.what.index(), size_t(16));
     }
 
     // A snapshot's game carries the visit.

@@ -323,6 +323,9 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* us = std::get_if<net::RequestMessage::Use>(&m.what)) {
         what = "use " + std::string(rawValue(us->item));
         why = world_.use(pilot, us->item);
+    } else if (const auto* mi = std::get_if<net::RequestMessage::MissionAsk>(&m.what)) {
+        what = std::string(mi->take ? "take" : "abandon") + " mission " + std::to_string(mi->mission);
+        why = mi->take ? world_.takeMission(pilot, mi->mission) : world_.abandonMission(pilot, mi->mission);
     } else {
         return std::nullopt;
     }

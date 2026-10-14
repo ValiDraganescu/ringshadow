@@ -74,6 +74,9 @@ struct FAcPilotGoal
 	FString Label;
 	ac::Vec2 At{0, 0};
 	double Distance = 0;
+	/// K2: a Citadel mission's place (its tier's colour), not KSTR's.
+	FLinearColor Color = FLinearColor::White;
+	bool bMission = false;
 };
 
 /// One line of the build menu (`PilotInfo.menu`).
@@ -105,7 +108,8 @@ struct FAcPilotInfo
 	double Heading = 0;
 	TOptional<FAcPilotGoal> Goal;
 	/// The MMORPG mode: places KSTR contracts send the pilot to in this
-	/// region (`AcProgressHud::ContractGoals`), green on the compass.
+	/// region (`AcProgressHud::ContractGoals`), green on the compass; and
+	/// its Citadel missions' (`AcMissions::Goals`), in their tier's colour.
 	TArray<FAcPilotGoal> Marks;
 	ac::Vec2 Position{0, 0};
 	FString Help;

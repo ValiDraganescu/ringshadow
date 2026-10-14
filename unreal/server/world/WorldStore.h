@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -116,6 +116,9 @@ struct SavedPilot {
     /// Saved since blueprints stack (C2, schema 10). False: an older pilot,
     /// its blueprints counted again as copies on load.
     bool stacked = true;
+    /// Its Citadel missions (K2, schema 12): the board and the Journal as
+    /// JSON. Empty: none drawn yet.
+    std::string missions{};
     bool operator==(const SavedPilot&) const = default;
 };
 
@@ -157,7 +160,7 @@ public:
     /// This build's steps; the last one's version is the schema's (2: the
     /// world's clock; 3: the pilots' progression; 4: gated by blueprints;
     /// 5: contracts; 6: starfalls; 7: the rig; 8: the realm's buildings;
-    /// 9: the realm wallet; 10: blueprints stack).
+    /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 

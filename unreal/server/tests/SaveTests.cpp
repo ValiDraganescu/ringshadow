@@ -179,26 +179,26 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
         // v0 (a new file) to v9.
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(10));
-        EXPECT_EQ(WorldStore::version(), int64_t(10));
+        EXPECT_EQ(store->schemaVersion(), int64_t(12));
+        EXPECT_EQ(WorldStore::version(), int64_t(12));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock', 'starfalls', "
                               "'realm_wallet')")[0][0],
                   std::string("10"));
         ASSERT_TRUE(store->write(sample(), &why).has_value());
     }
-    // A step that fails: the file stays at v10, its rows kept.
+    // A step that fails: the file stays at v12, its rows kept.
     std::vector<WorldStore::Migration> broken = WorldStore::migrations();
-    broken.push_back({11, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
+    broken.push_back({13, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
     EXPECT_TRUE(WorldStore::open(path, "first", &why, broken) == nullptr);
-    EXPECT_TRUE(why.find("migration to version 11") != std::string::npos);
-    // A future step: v10 to v11, the rows kept, the column there.
+    EXPECT_TRUE(why.find("migration to version 13") != std::string::npos);
+    // A future step: v12 to v13, the rows kept, the column there.
     std::vector<WorldStore::Migration> next = WorldStore::migrations();
-    next.push_back({11, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
+    next.push_back({13, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
     {
         auto store = WorldStore::open(path, "first", &why, next);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(11));
+        EXPECT_EQ(store->schemaVersion(), int64_t(13));
         const auto rows = store->rows("SELECT id, title FROM pilots ORDER BY id");
         ASSERT_TRUE(rows.size() == 2);
         EXPECT_TRUE(rows[0][1] == "prospector");
@@ -206,9 +206,9 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
         ASSERT_TRUE(back.has_value());
         EXPECT_TRUE(*back == sorted(sample()));
     }
-    // This build (v10) refuses a v11 file.
+    // This build (v12) refuses a v13 file.
     EXPECT_TRUE(WorldStore::open(path, "first", &why) == nullptr);
-    EXPECT_TRUE(why.find("schema version 11, this server knows 10") != std::string::npos);
+    EXPECT_TRUE(why.find("schema version 13, this server knows 12") != std::string::npos);
 }
 
 TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
@@ -227,7 +227,7 @@ TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(10));
+    EXPECT_EQ(store->schemaVersion(), int64_t(12));
     const auto back = store->load(&why);
     ASSERT_TRUE(back.has_value());
     const double furthest = 321.5;
@@ -270,7 +270,7 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(10));
+    EXPECT_EQ(store->schemaVersion(), int64_t(12));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);

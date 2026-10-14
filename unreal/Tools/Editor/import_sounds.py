@@ -7,15 +7,16 @@
 Two stages, both rerunnable:
 
 1. prepare (plain Python, no Unreal): every WAV under
-   unreal/Resources/Sounds/{sfx,ads} becomes a mono 16-bit WAV in
-   unreal/Content-src/sounds/{sfx,ads}/, downmixed and peak-normalised to 0.8
+   unreal/Resources/Sounds/{sfx,ads,missions} becomes a mono 16-bit WAV in
+   unreal/Content-src/sounds/{sfx,ads,missions}/, downmixed and peak-normalised to 0.8
    as the Swift game does at load (AudioDirector.loadMono + Synth.normalize).
    The sample rate is kept (24/44.1/48 kHz; Unreal resamples). A format the
    `wave` module cannot read is converted with afconvert first. Files whose
    source has not changed are skipped (stamps in .prepared.json).
 2. import (inside the editor): each prepared file becomes a SoundWave at
    /Game/Audio/Sfx/<name>/SW_<name>_<n> (variants grouped per folder) or
-   /Game/Audio/Ads/SW_<id>, and the table Sounds.json is written to
+   /Game/Audio/Ads/SW_<id> or /Game/Audio/Missions/SW_<key> (a Citadel
+   mission's narration, K2: <key>.wav), and the table Sounds.json is written to
    unreal/Content-src/sounds/ and unreal/Content/Audio/ (read at runtime).
 
 Run:
@@ -141,8 +142,11 @@ def prepare():
         with open(STAMPS) as f:
             stamps = json.load(f)
     done, made = {}, 0
-    for group in ("sfx", "ads"):
+    for group in ("sfx", "ads", "missions"):
         src_dir = os.path.join(SOUNDS, group)
+        if not os.path.isdir(src_dir):
+            done[group] = []
+            continue
         entries = []
         for name in sorted(os.listdir(src_dir)):
             if not name.lower().endswith(".wav"):
@@ -216,6 +220,10 @@ def ad_asset(ad_id):
     return "/Game/Audio/Ads/SW_%s" % ad_id
 
 
+def mission_asset(key):
+    return "/Game/Audio/Missions/SW_%s" % key.replace("-", "_")
+
+
 def build_table(prepared):
     sounds = {}
     for e in prepared["sfx"]:
@@ -243,6 +251,13 @@ def build_table(prepared):
         ads[ad_id] = {"asset": path + "." + path.rsplit("/", 1)[1], "title": titles.get(ad_id, ad_id),
                       "source": "ads/" + e["file"], "prepared": e["prepared"], "seconds": e["seconds"],
                       "plays": rotation["plays"].get(ad_id, rotation["default"])}
+    # The Citadel missions' narrations (K2), by template key.
+    missions = {}
+    for e in prepared.get("missions", []):
+        key = e["file"][:-4]
+        path = mission_asset(key)
+        missions[key] = {"asset": path + "." + path.rsplit("/", 1)[1], "source": "missions/" + e["file"],
+                         "prepared": e["prepared"], "seconds": e["seconds"]}
     unused = sorted(n for n, s in sounds.items() if not s["board"] and not s["audioSwiftLines"])
     return {
         "madeBy": SCRIPT,
@@ -252,6 +267,7 @@ def build_table(prepared):
         "peak": PEAK,
         "sounds": dict(sorted(sounds.items())),
         "ads": dict(sorted(ads.items())),
+        "missions": dict(sorted(missions.items())),
         "unusedInSwift": unused,
     }
 
@@ -262,9 +278,9 @@ def write_table(table):
         with open(path, "w") as f:
             json.dump(table, f, indent=1)
             f.write("\n")
-    log("table: %d sounds, %d variants, %d ads -> %s" % (
+    log("table: %d sounds, %d variants, %d ads, %d narrations -> %s" % (
         len(table["sounds"]), sum(len(s["variants"]) for s in table["sounds"].values()),
-        len(table["ads"]), RUNTIME_TABLE))
+        len(table["ads"]), len(table["missions"]), RUNTIME_TABLE))
 
 
 # ------------------------------------------------------------------ import
@@ -276,7 +292,7 @@ def import_all(table):
         for v in s["variants"]:
             pkg = v["asset"].split(".")[0]
             jobs.append((v["prepared"], pkg.rsplit("/", 1)[0], pkg.rsplit("/", 1)[1], v["source"]))
-    for ad_id, a in table["ads"].items():
+    for ad_id, a in list(table["ads"].items()) + list(table["missions"].items()):
         pkg = a["asset"].split(".")[0]
         jobs.append((a["prepared"], pkg.rsplit("/", 1)[0], pkg.rsplit("/", 1)[1], a["source"]))
 

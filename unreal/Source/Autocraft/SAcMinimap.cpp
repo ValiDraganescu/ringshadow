@@ -181,6 +181,13 @@ void SAcMinimap::SetFlare(TOptional<TPair<ac::Vec2, double>> InFlare)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcMinimap::SetMissions(TArray<FMission> InMissions)
+{
+	if (Missions == InMissions) return;
+	Missions = MoveTemp(InMissions);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcMinimap::SetSight(TOptional<TPair<ac::Vec2, double>> InSight)
 {
 	Sight = MoveTemp(InSight);
@@ -392,6 +399,28 @@ int32 SAcMinimap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, con
 		Square(H, FAcHudStyle::KeyYellow());
 		Square(H - 1.6f * (float)S, Rgb(0.02, 0.03, 0.05, 0.85));
 		Square(1.8f * (float)S, FAcHudStyle::KeyYellow());
+	}
+	// K2: the Citadel missions' places: the ring, and a diamond in the tier's colour.
+	for (const FMission& M : Missions)
+	{
+		const double CellW = MapSize.X / FMath::Max(GroundBounds.width(), 1e-6);
+		const FVector2f C(Point(M.At));
+		if (M.Radius > 0)
+		{
+			const float R = float(M.Radius * CellW);
+			TArray<FVector2f> Ring;
+			for (int32 I = 0; I <= 40; ++I)
+			{
+				const float A = float(I) / 40 * UE_TWO_PI;
+				Ring.Add(C + FVector2f(FMath::Cos(A), FMath::Sin(A)) * R);
+			}
+			FSlateDrawElement::MakeLines(Out, ++Layer, Own.ToPaintGeometry(), Ring, ESlateDrawEffect::None, M.Color, true, (float)(1.2 * S));
+		}
+		const float H = (float)(6 * S);
+		const TArray<FVector2f> Diamond{C + FVector2f(0, -H), C + FVector2f(H, 0), C + FVector2f(0, H), C + FVector2f(-H, 0), C + FVector2f(0, -H)};
+		FSlateDrawElement::MakeLines(Out, ++Layer, Own.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, Rgb(0.02, 0.03, 0.05, 0.9), true,
+			(float)(4.2 * S));
+		FSlateDrawElement::MakeLines(Out, ++Layer, Own.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, M.Color, true, (float)(2.2 * S));
 	}
 	// The camera's outline goes with the other z-0 nodes, before the units.
 	bool bOutlined = false;

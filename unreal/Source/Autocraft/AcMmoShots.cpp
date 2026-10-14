@@ -140,6 +140,18 @@
 //   03 the shield charge used in the field (key 3): its stack lit and
 //      counting down by the Q/C/G slots
 //
+// -AcMmoShotsK2 (it adds -AcMmoDevRig: the realm's Citadel to sign up at):
+// the Citadel missions and the Journal (docs/mmorpg-m8.md K2,
+// docs/missions.md), DIR/k2-NN-moment.png:
+//   01 the MISSIONS tab: the board, two offers a tier
+//   02 signed up for an easy survey (or hold) mission: the foot's "Signed
+//      up", the sting and the narration logged (silent run)
+//   03 the Journal (L): the mission's briefing, what to do, its place on the
+//      world's grid, PLAY THE BRIEFING (pressed: the narration logged again)
+//   04 in the field near its place: the marker on the compass and the minimap
+//   05 the mission done in its ring (a hold: the clock moved under the
+//      ringshadow band): the MISSION DONE toast
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -176,6 +188,7 @@
 #include "AcHudStyle.h"
 #include "AcLeveling.h"
 #include "AcLog.h"
+#include "AcMissions.h"
 #include "AcMmo.h"
 #include "AcPilotBuild.h"
 #include "AcPilotPawn.h"
@@ -270,6 +283,16 @@ namespace
 	ac::ShopPrice C2Price;
 	int64 C2Copies = 0;
 	int32 C2Used = 0;
+	/// -AcMmoShotsK2: the offer taken (its index on the board, its number and
+	/// template), and the Citadel's kept asks before it.
+	int32 K2Index = -1;
+	uint32 K2Id = 0;
+	FString K2Key;
+	int32 K2Kept = 0;
+	/// Its place on the ground.
+	ac::Vec2 K2Target{0, 0};
+	/// When it was first seen done (the toast fades in).
+	double K2DoneAt = -1;
 	struct FB1Sample
 	{
 		double At;
@@ -574,7 +597,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// for this step only (the flow steps before it in the run go without).
 		if ((FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -622,6 +645,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))) T.Phase = 1000;
 			// -AcMmoShotsC2: only the Citadel shop (1100-1108).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2"))) T.Phase = 1100;
+			// -AcMmoShotsK2: only the Citadel missions and the Journal (1200-1212).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2"))) T.Phase = 1200;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -3100,6 +3125,203 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 1107:
 		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsK2
+	case 1200:
+		// The dev rig's home: the Prospector where it unloads at the realm's Citadel.
+		if (S && CitadelOf(*S) && Mmo->Progress() && Mmo->Progress()->board.size() == 6 && Since() > 3.0)
+		{
+			Check(AtRealmCitadel(), TEXT("k2: the pilot stands at the realm's Citadel"));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("k2: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
+			{
+				W->Key(EKeys::Tab);
+				W->Key(EKeys::Tab);
+				Check(W->Tab() == SAcCitadelScreen::ETab::Missions, TEXT("k2: Tab twice shows the MISSIONS"));
+			}
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel and the board"));
+		return;
+	case 1201:
+	{
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (!W || !P || Since() < 1.0) return;
+		const FAcCitadelScreenInfo& I = W->GetInfo();
+		int32 Tiers[3] = {0, 0, 0};
+		for (const FAcMissionLine& X : I.Offers) Tiers[FMath::Clamp(X.Tier, 0, 2)] += 1;
+		Check(I.Offers.Num() == 6 && Tiers[0] == 2 && Tiers[1] == 2 && Tiers[2] == 2,
+			FString::Printf(TEXT("k2: the board offers %d: %d easy, %d hard, %d perilous"), I.Offers.Num(), Tiers[0], Tiers[1], Tiers[2]));
+		Check(I.MissionsWhyNot.IsEmpty(), TEXT("k2: the board signs up here"));
+		// The offer to take: an easy survey or hold here, the nearest first.
+		K2Index = -1;
+		double Best = 1e9;
+		for (int32 Pass = 0; Pass < 2 && K2Index < 0; ++Pass)
+			for (int32 X = 0; X < int32(P->board.size()); ++X)
+			{
+				const ac::net::CitadelMission& O = P->board[size_t(X)];
+				const bool bPoint = O.kind == ac::net::CitadelMission::Kind::survey || O.kind == ac::net::CitadelMission::Kind::hold;
+				if (!bPoint || (Pass == 0 && O.tier != ac::net::CitadelMission::Tier::easy) || Utf(O.region) != Here) continue;
+				const double D = ac::distance(O.at, U->position);
+				if (D < Best)
+				{
+					Best = D;
+					K2Index = X;
+				}
+			}
+		Check(K2Index >= 0, TEXT("k2: a survey or hold offer here to take"));
+		if (K2Index < 0)
+		{
+			Finish();
+			return;
+		}
+		K2Id = P->board[size_t(K2Index)].id;
+		K2Key = Utf(P->board[size_t(K2Index)].key);
+		K2Kept = Mmo->CitadelKept();
+		Shoot(TEXT("k2-01-missions"), TEXT("the MISSIONS tab: the board, two offers a tier"));
+		return;
+	}
+	case 1202:
+	{
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		static const FKey Digits[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six};
+		Check(W && W->Key(Digits[K2Index]), FString::Printf(TEXT("k2: key %d signs up for %s"), K2Index + 1, *K2Key));
+		Advance();
+		return;
+	}
+	case 1203:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		const ac::net::CitadelMission* Taken = nullptr;
+		if (P)
+			for (const ac::net::CitadelMission& X : P->journal)
+				if (X.id == K2Id) Taken = &X;
+		if (P && Taken && Mmo->CitadelKept() > K2Kept && NarrationKey == K2Key && Since() > 1.0)
+		{
+			Check(Taken->state == ac::net::CitadelMission::State::taken, TEXT("k2: in the Journal, taken"));
+			Check(CitadelScreenWidget() && CitadelScreenWidget()->KeptText().StartsWith(TEXT("Signed up")), TEXT("k2: the foot says signed up"));
+			Check(NarrationKey == K2Key, FString::Printf(TEXT("k2: the narration %s played on signing up"), *K2Key));
+			Shoot(TEXT("k2-02-signed-up"), TEXT("signed up: the foot, the board one offer short"));
+			return;
+		}
+		if (!Mmo->CitadelRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("k2: sign up: %s"), *Mmo->CitadelRefusal()));
+			Finish();
+			return;
+		}
+		TimedOut(TEXT("the sign-up kept and narrated"), 10);
+		return;
+	}
+	case 1204:
+		CloseCitadelScreen();
+		NarrationKey.Reset();
+		K2DoneAt = -1;
+		Check(OpenJournalScreen() && JournalScreenWidget().IsValid(), TEXT("k2: L opens the Journal"));
+		Advance();
+		return;
+	case 1205:
+	{
+		const TSharedPtr<SAcJournalScreen> J = JournalScreenWidget();
+		if (!J || Since() < 1.0) return;
+		const FAcJournalInfo& I = J->GetInfo();
+		Check(I.Entries.Num() == 1 && I.Entries[0].Id == K2Id, FString::Printf(TEXT("k2: the Journal holds the mission (%d)"), I.Entries.Num()));
+		if (I.Entries.Num() == 1)
+		{
+			const FAcJournalEntry& E = I.Entries[0];
+			Check(E.bMarked && !E.Briefing.IsEmpty() && !E.Instructions.IsEmpty() && !E.Reward.IsEmpty(),
+				TEXT("k2: the entry has its briefing, instructions, reward and place"));
+			Check(E.Narration == K2Key && E.Seconds > 5, FString::Printf(TEXT("k2: its narration %s, %.1f s"), *E.Narration, E.Seconds));
+		}
+		Check(J->Key(EKeys::P) && NarrationKey == K2Key, TEXT("k2: P plays the briefing again"));
+		Shoot(TEXT("k2-03-journal"), TEXT("the Journal: briefing, what to do, the map, PLAY"));
+		return;
+	}
+	case 1206:
+	{
+		CloseJournalScreen();
+		const ac::net::CitadelMission* Taken = nullptr;
+		for (const ac::net::CitadelMission& X : Mmo->Progress()->journal)
+			if (X.id == K2Id) Taken = &X;
+		if (!Taken)
+		{
+			Check(false, TEXT("k2: the mission in the Journal"));
+			Finish();
+			return;
+		}
+		K2Target = Taken->at;
+		Route({FVector2D(Taken->at.x, Taken->at.y)});
+		Advance();
+		return;
+	}
+	case 1207:
+	{
+		// Toward its place until it is in view, then a look at the markers.
+		if (U && ac::distance(U->position, K2Target) < 16)
+		{
+			Stop(Face(K2Target));
+			Advance();
+			return;
+		}
+		if (Drive() == 1) Route({FVector2D(K2Target.x, K2Target.y)});
+		if (Now - Shots.StallSince > 4.0) Stalled(TEXT("to the mission's place"));
+		return;
+	}
+	case 1208:
+		if (Since() > 1.5)
+		{
+			Check(AcMissions::Goals(*Mmo, U->position).Num() == 1, TEXT("k2: the mission's marker on the compass"));
+			Shoot(TEXT("k2-04-marker-field"), TEXT("near the mission's place: its marker on the compass and the minimap"));
+		}
+		return;
+	case 1209:
+	{
+		// Into the ring; a hold: the world's clock under the ringshadow band.
+		const ac::net::CitadelMission* Taken = nullptr;
+		for (const ac::net::CitadelMission& X : Mmo->Progress()->journal)
+			if (X.id == K2Id) Taken = &X;
+		if (!Taken) return;
+		if (U && ac::distance(U->position, K2Target) < FMath::Max(1.0, Taken->radius * 0.4))
+		{
+			Stop(Face(K2Target));
+			if (Taken->kind == ac::net::CitadelMission::Kind::hold && Mmo->Sky() && M->simulation().map)
+			{
+				const ac::GroundRect& B = M->simulation().map->bounds;
+				const ac::Ringshadow::Sweep Sw = ac::Ringshadow::next(Mmo->Sky()->time);
+				double Under = -1;
+				for (double At = Sw.start; At + 30 < Sw.end && Under < 0; At += 0.5)
+					if (ac::Ringshadow::cover(At, K2Target, B) >= 1 && ac::Ringshadow::cover(At + 30, K2Target, B) >= 1) Under = At;
+				Check(Under > 0 && Mmo->DevClock(FString::Printf(TEXT("clock %.1f"), Under)), TEXT("k2: the clock moved under the band"));
+			}
+			Advance();
+			return;
+		}
+		if (Drive() == 1) Route({FVector2D(K2Target.x, K2Target.y)});
+		if (Now - Shots.StallSince > 4.0) Stalled(TEXT("into the mission's ring"));
+		return;
+	}
+	case 1210:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		const ac::net::CitadelMission* Taken = nullptr;
+		if (P)
+			for (const ac::net::CitadelMission& X : P->journal)
+				if (X.id == K2Id) Taken = &X;
+		if (Taken && Taken->state == ac::net::CitadelMission::State::done && K2DoneAt < 0) K2DoneAt = Now;
+		if (Taken && Taken->state == ac::net::CitadelMission::State::done && Now - K2DoneAt > 1.2)
+		{
+			Check(true, FString::Printf(TEXT("k2: the mission done: %lld / %lld"), (long long)Taken->have, (long long)Taken->need));
+			Shoot(TEXT("k2-05-mission-done"), TEXT("the mission done in its ring: the MISSION DONE toast"));
+			return;
+		}
+		TimedOut(TEXT("the mission done"), 45);
+		return;
+	}
+	case 1211:
+		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	default:

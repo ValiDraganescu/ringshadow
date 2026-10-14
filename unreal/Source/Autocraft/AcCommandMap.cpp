@@ -395,7 +395,7 @@ void UAcCommandMapSubsystem::PollKeys()
 	if (Mods.IsCommandDown() || Mods.IsControlDown()) return;
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsMmo())
 	{
-		// The MMORPG test: K is the skill screen, J the rig screen, H the Citadel, Q/C/G the pilot's actives
+		// The MMORPG test: K is the skill screen, J the rig screen, H the Citadel, L the Journal, Q/C/G the pilot's actives
 		// (the server uses the slot's skill; docs/prospector-progression.md).
 		UAcGameFlowSubsystem* Flow = UAcGameFlowSubsystem::Get(this);
 		if (Flow && PC->WasInputKeyJustPressed(EKeys::K))
@@ -407,6 +407,12 @@ void UAcCommandMapSubsystem::PollKeys()
 		if (Flow && PC->WasInputKeyJustPressed(EKeys::J))
 		{
 			Flow->ToggleRigScreen();
+			return;
+		}
+		// L: the Journal (K2: the Citadel missions signed up for).
+		if (Flow && PC->WasInputKeyJustPressed(EKeys::L))
+		{
+			Flow->ToggleJournalScreen();
 			return;
 		}
 		// H: the realm's Citadel (C1: the realm wallet, the tax, donations), at it.

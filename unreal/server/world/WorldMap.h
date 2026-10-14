@@ -166,6 +166,37 @@ struct WorldContracts {
     static int64_t firstHydrogen(int step);
 };
 
+/// Citadel missions (K2, docs/missions.md; WorldMissions.cpp): a board of
+/// offers per pilot at the realm's Citadel, drawn by the server's dice per
+/// pilot and world day, in three tiers; the pilot signs up for up to three
+/// at once and follows them in its Journal.
+struct WorldMissions {
+    /// Offers a tier on the board, and missions taken at once.
+    static constexpr size_t offers = 2;
+    static constexpr size_t journal = 3;
+    /// Minutes of play a tier's XP is worth (`WorldContracts::perMinute`).
+    static double minutes(net::CitadelMission::Tier tier);
+    /// What a mission of `tier` pays at `level`: XP rounded to 5; ore
+    /// (150, 450, 1,000 at level 1, +2% a level, to 50); MH (10, 30, 60 and
+    /// 2, 4, 8 a level, to 5).
+    static double xp(net::CitadelMission::Tier tier, int64_t level);
+    static int64_t ore(net::CitadelMission::Tier tier, int64_t level);
+    static int64_t hydrogen(net::CitadelMission::Tier tier, int64_t level);
+    /// What it asks at `level`: ore or MH hauled home (easy and hard),
+    /// seconds of scanning, seconds held under the band, bugs killed.
+    static int64_t haulOre(net::CitadelMission::Tier tier, int64_t level);
+    static int64_t haulHydrogen(net::CitadelMission::Tier tier, int64_t level);
+    static int64_t scan(net::CitadelMission::Tier tier);
+    static int64_t hold(net::CitadelMission::Tier tier);
+    static int64_t kills(net::CitadelMission::Tier tier);
+    /// A survey's and a hold's ring round its point, cells.
+    static constexpr double surveyRadius = 6;
+    static constexpr double holdRadius = 10;
+    /// The tier of a region at `cells` grid steps from the start region
+    /// (easy 0, hard 1, perilous 2 and more: the far corners, bug country).
+    static net::CitadelMission::Tier tierAt(int64_t steps);
+};
+
 /// What the world's rules are.
 struct WorldParams {
     /// A new pilot's wallet: a Citadel (400) and a Derrick (75) with some
@@ -215,6 +246,12 @@ struct WorldParams {
     /// Contracts to drill under a ringshadow sweep are drawn (off until the
     /// server pays the sweep, E1: `WorldMap::underSweep`).
     bool sweepContracts = false;
+    /// Citadel missions (K2) are drawn, and their dice (0: seeded by the
+    /// world's id). Hunts are drawn once the Brood is in the world (N2
+    /// turns `huntMissions` on).
+    bool missions = true;
+    uint64_t missionSeed = 0;
+    bool huntMissions = false;
     /// Starfalls (Starfall.h, WorldStarfall.cpp) fall, and their dice (0:
     /// seeded by the world's id).
     bool starfalls = true;
@@ -482,6 +519,25 @@ public:
     std::optional<double> itemReady(PilotId pilot, Item item) const;
 
 
+    // MARK: Citadel missions (K2, docs/missions.md; WorldMissions.cpp)
+
+    /// The pilot's board today (offers), and its Journal (taken and done
+    /// missions). Empty: not a world, or not drawn yet.
+    std::vector<net::CitadelMission> board(PilotId pilot) const;
+    std::vector<net::CitadelMission> journal(PilotId pilot) const;
+    /// Puts a board or a Journal in place for today (tests, dev).
+    void setBoard(PilotId pilot, const std::vector<net::CitadelMission>& offers);
+    void setJournal(PilotId pilot, const std::vector<net::CitadelMission>& missions);
+    /// Signs up for an offer (`net::RequestMessage::MissionAsk`): at the
+    /// realm's Citadel, standing where it unloads, at most
+    /// `WorldMissions::journal` at once. Drops a taken one, anywhere. The
+    /// reason when refused.
+    std::optional<std::string> takeMission(PilotId pilot, uint32_t mission);
+    std::optional<std::string> abandonMission(PilotId pilot, uint32_t mission);
+    /// A bug of `kind` killed by the pilot (its Prospector, or a defence it
+    /// built) in region `region`: the hunts count it. N2's Brood calls it.
+    void broodKill(PilotId pilot, UnitKind kind, size_t region);
+
     /// The pilot's contracts today (empty: not a world, or not drawn yet:
     /// the next step draws them).
     std::vector<net::Contract> contracts(PilotId pilot) const;
@@ -629,6 +685,14 @@ private:
             double until = 0;
         };
         std::optional<Flare> flare;
+        /// K2: its Citadel board, the world day it was drawn for, its
+        /// Journal, its next mission number (saved); the seconds a survey
+        /// or a hold has counted toward its next whole second (not saved).
+        std::vector<net::CitadelMission> board;
+        std::optional<int64_t> boardDay;
+        std::vector<net::CitadelMission> journal;
+        uint32_t nextMission = 1;
+        std::map<uint32_t, double> missionSeconds;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {
@@ -789,6 +853,20 @@ private:
     std::optional<size_t> startSite(StructureKind kind) const;
     /// A pilot's Prospector filled a tank at a Derrick (step 5).
     void pumped(PilotId pilot, PilotState& p);
+    // WorldMissions.cpp.
+    /// Each step: a new day's board, the surveys, holds and salvages.
+    void missions();
+    void drawBoard(PilotId pilot, PilotState& p, int64_t day);
+    std::optional<net::CitadelMission> drawMission(const PilotState& p, std::mt19937_64& dice, net::CitadelMission::Tier tier,
+                                            const std::vector<net::CitadelMission::Kind>& taken);
+    /// Work toward the pilot's taken missions of `kind` and `target`; pays
+    /// the ones it finishes.
+    void missionWork(PilotId pilot, PilotState& p, net::CitadelMission::Kind kind, const std::string& target, int64_t amount);
+    void payMission(PilotId pilot, PilotState& p, net::CitadelMission& m);
+    /// Ringshadow cover at ground point `at` of region `r` now.
+    double sweepCover(size_t r, Vec2 at) const;
+    static std::string encodeMissions(const PilotState& p);
+    static bool decodeMissions(const std::string& json, PilotState& p);
     static std::string encodeContracts(const PilotState& p);
     static bool decodeContracts(const std::string& json, PilotState& p);
     /// A unit's skill clocks out of region `r` (it leaves), and into `r` as

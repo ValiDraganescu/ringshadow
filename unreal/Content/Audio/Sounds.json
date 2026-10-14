@@ -488,6 +488,26 @@
     758
    ]
   },
+  "broodswarm": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/broodswarm/SW_broodswarm_1.SW_broodswarm_1",
+     "source": "sfx/broodswarm_1.wav",
+     "prepared": "Content-src/sounds/sfx/broodswarm_1.wav",
+     "seconds": 8.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/broodswarm/SW_broodswarm_2.SW_broodswarm_2",
+     "source": "sfx/broodswarm_2.wav",
+     "prepared": "Content-src/sounds/sfx/broodswarm_2.wav",
+     "seconds": 8.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "cannon": {
    "variants": [
     {
@@ -1106,6 +1126,100 @@
      "source": "sfx/fltouch_1.wav",
      "prepared": "Content-src/sounds/sfx/fltouch_1.wav",
      "seconds": 3.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "gloamwingdeath": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/gloamwingdeath/SW_gloamwingdeath_1.SW_gloamwingdeath_1",
+     "source": "sfx/gloamwingdeath_1.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwingdeath_1.wav",
+     "seconds": 2.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/gloamwingdeath/SW_gloamwingdeath_2.SW_gloamwingdeath_2",
+     "source": "sfx/gloamwingdeath_2.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwingdeath_2.wav",
+     "seconds": 2.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/gloamwingdeath/SW_gloamwingdeath_3.SW_gloamwingdeath_3",
+     "source": "sfx/gloamwingdeath_3.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwingdeath_3.wav",
+     "seconds": 2.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "gloamwinghurt": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/gloamwinghurt/SW_gloamwinghurt_1.SW_gloamwinghurt_1",
+     "source": "sfx/gloamwinghurt_1.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwinghurt_1.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/gloamwinghurt/SW_gloamwinghurt_2.SW_gloamwinghurt_2",
+     "source": "sfx/gloamwinghurt_2.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwinghurt_2.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/gloamwinghurt/SW_gloamwinghurt_3.SW_gloamwinghurt_3",
+     "source": "sfx/gloamwinghurt_3.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwinghurt_3.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "gloamwingidle": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/gloamwingidle/SW_gloamwingidle_1.SW_gloamwingidle_1",
+     "source": "sfx/gloamwingidle_1.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwingidle_1.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/gloamwingidle/SW_gloamwingidle_2.SW_gloamwingidle_2",
+     "source": "sfx/gloamwingidle_2.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwingidle_2.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "gloamwingspit": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/gloamwingspit/SW_gloamwingspit_1.SW_gloamwingspit_1",
+     "source": "sfx/gloamwingspit_1.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwingspit_1.wav",
+     "seconds": 1.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/gloamwingspit/SW_gloamwingspit_2.SW_gloamwingspit_2",
+     "source": "sfx/gloamwingspit_2.wav",
+     "prepared": "Content-src/sounds/sfx/gloamwingspit_2.wav",
+     "seconds": 1.0,
      "rate": 44100
     }
    ],
@@ -1734,6 +1848,120 @@
     758
    ]
   },
+  "lodebackbite": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/lodebackbite/SW_lodebackbite_1.SW_lodebackbite_1",
+     "source": "sfx/lodebackbite_1.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackbite_1.wav",
+     "seconds": 1.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/lodebackbite/SW_lodebackbite_2.SW_lodebackbite_2",
+     "source": "sfx/lodebackbite_2.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackbite_2.wav",
+     "seconds": 1.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/lodebackbite/SW_lodebackbite_3.SW_lodebackbite_3",
+     "source": "sfx/lodebackbite_3.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackbite_3.wav",
+     "seconds": 1.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "lodebackchew": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/lodebackchew/SW_lodebackchew_1.SW_lodebackchew_1",
+     "source": "sfx/lodebackchew_1.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackchew_1.wav",
+     "seconds": 4.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/lodebackchew/SW_lodebackchew_2.SW_lodebackchew_2",
+     "source": "sfx/lodebackchew_2.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackchew_2.wav",
+     "seconds": 4.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "lodebackdeath": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/lodebackdeath/SW_lodebackdeath_1.SW_lodebackdeath_1",
+     "source": "sfx/lodebackdeath_1.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackdeath_1.wav",
+     "seconds": 2.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/lodebackdeath/SW_lodebackdeath_2.SW_lodebackdeath_2",
+     "source": "sfx/lodebackdeath_2.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackdeath_2.wav",
+     "seconds": 2.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/lodebackdeath/SW_lodebackdeath_3.SW_lodebackdeath_3",
+     "source": "sfx/lodebackdeath_3.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackdeath_3.wav",
+     "seconds": 2.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "lodebackhurt": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/lodebackhurt/SW_lodebackhurt_1.SW_lodebackhurt_1",
+     "source": "sfx/lodebackhurt_1.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackhurt_1.wav",
+     "seconds": 1.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "lodebackidle": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/lodebackidle/SW_lodebackidle_1.SW_lodebackidle_1",
+     "source": "sfx/lodebackidle_1.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackidle_1.wav",
+     "seconds": 3.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/lodebackidle/SW_lodebackidle_2.SW_lodebackidle_2",
+     "source": "sfx/lodebackidle_2.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackidle_2.wav",
+     "seconds": 3.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/lodebackidle/SW_lodebackidle_3.SW_lodebackidle_3",
+     "source": "sfx/lodebackidle_3.wav",
+     "prepared": "Content-src/sounds/sfx/lodebackidle_3.wav",
+     "seconds": 3.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "longbowdeath": {
    "variants": [
     {
@@ -1787,6 +2015,140 @@
      "source": "sfx/made_1.wav",
      "prepared": "Content-src/sounds/sfx/made_1.wav",
      "seconds": 2.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "matriarchdeath": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/matriarchdeath/SW_matriarchdeath_1.SW_matriarchdeath_1",
+     "source": "sfx/matriarchdeath_1.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchdeath_1.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/matriarchdeath/SW_matriarchdeath_2.SW_matriarchdeath_2",
+     "source": "sfx/matriarchdeath_2.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchdeath_2.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "matriarchhurt": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/matriarchhurt/SW_matriarchhurt_1.SW_matriarchhurt_1",
+     "source": "sfx/matriarchhurt_1.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchhurt_1.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/matriarchhurt/SW_matriarchhurt_2.SW_matriarchhurt_2",
+     "source": "sfx/matriarchhurt_2.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchhurt_2.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/matriarchhurt/SW_matriarchhurt_3.SW_matriarchhurt_3",
+     "source": "sfx/matriarchhurt_3.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchhurt_3.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "matriarchidle": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/matriarchidle/SW_matriarchidle_1.SW_matriarchidle_1",
+     "source": "sfx/matriarchidle_1.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchidle_1.wav",
+     "seconds": 8.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "matriarchroar": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/matriarchroar/SW_matriarchroar_1.SW_matriarchroar_1",
+     "source": "sfx/matriarchroar_1.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchroar_1.wav",
+     "seconds": 4.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/matriarchroar/SW_matriarchroar_2.SW_matriarchroar_2",
+     "source": "sfx/matriarchroar_2.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchroar_2.wav",
+     "seconds": 4.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/matriarchroar/SW_matriarchroar_3.SW_matriarchroar_3",
+     "source": "sfx/matriarchroar_3.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchroar_3.wav",
+     "seconds": 4.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "matriarchslam": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/matriarchslam/SW_matriarchslam_1.SW_matriarchslam_1",
+     "source": "sfx/matriarchslam_1.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchslam_1.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/matriarchslam/SW_matriarchslam_2.SW_matriarchslam_2",
+     "source": "sfx/matriarchslam_2.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchslam_2.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/matriarchslam/SW_matriarchslam_3.SW_matriarchslam_3",
+     "source": "sfx/matriarchslam_3.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchslam_3.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "matriarchspit": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/matriarchspit/SW_matriarchspit_1.SW_matriarchspit_1",
+     "source": "sfx/matriarchspit_1.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchspit_1.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/matriarchspit/SW_matriarchspit_2.SW_matriarchspit_2",
+     "source": "sfx/matriarchspit_2.wav",
+     "prepared": "Content-src/sounds/sfx/matriarchspit_2.wav",
+     "seconds": 1.48,
      "rate": 44100
     }
    ],
@@ -1870,6 +2232,19 @@
     520,
     766
    ]
+  },
+  "missionaccept": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/missionaccept/SW_missionaccept_1.SW_missionaccept_1",
+     "source": "sfx/missionaccept_1.wav",
+     "prepared": "Content-src/sounds/sfx/missionaccept_1.wav",
+     "seconds": 1.308,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
   },
   "paid": {
    "variants": [
@@ -2465,6 +2840,107 @@
      "source": "sfx/sfstreak_1.wav",
      "prepared": "Content-src/sounds/sfx/sfstreak_1.wav",
      "seconds": 6.858,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "shardlingbite": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/shardlingbite/SW_shardlingbite_1.SW_shardlingbite_1",
+     "source": "sfx/shardlingbite_1.wav",
+     "prepared": "Content-src/sounds/sfx/shardlingbite_1.wav",
+     "seconds": 0.8,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/shardlingbite/SW_shardlingbite_2.SW_shardlingbite_2",
+     "source": "sfx/shardlingbite_2.wav",
+     "prepared": "Content-src/sounds/sfx/shardlingbite_2.wav",
+     "seconds": 0.8,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/shardlingbite/SW_shardlingbite_3.SW_shardlingbite_3",
+     "source": "sfx/shardlingbite_3.wav",
+     "prepared": "Content-src/sounds/sfx/shardlingbite_3.wav",
+     "seconds": 0.8,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "shardlingdeath": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/shardlingdeath/SW_shardlingdeath_1.SW_shardlingdeath_1",
+     "source": "sfx/shardlingdeath_1.wav",
+     "prepared": "Content-src/sounds/sfx/shardlingdeath_1.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/shardlingdeath/SW_shardlingdeath_2.SW_shardlingdeath_2",
+     "source": "sfx/shardlingdeath_2.wav",
+     "prepared": "Content-src/sounds/sfx/shardlingdeath_2.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/shardlingdeath/SW_shardlingdeath_3.SW_shardlingdeath_3",
+     "source": "sfx/shardlingdeath_3.wav",
+     "prepared": "Content-src/sounds/sfx/shardlingdeath_3.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "shardlinghurt": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/shardlinghurt/SW_shardlinghurt_1.SW_shardlinghurt_1",
+     "source": "sfx/shardlinghurt_1.wav",
+     "prepared": "Content-src/sounds/sfx/shardlinghurt_1.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/shardlinghurt/SW_shardlinghurt_2.SW_shardlinghurt_2",
+     "source": "sfx/shardlinghurt_2.wav",
+     "prepared": "Content-src/sounds/sfx/shardlinghurt_2.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/shardlinghurt/SW_shardlinghurt_3.SW_shardlinghurt_3",
+     "source": "sfx/shardlinghurt_3.wav",
+     "prepared": "Content-src/sounds/sfx/shardlinghurt_3.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "shardlingidle": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/shardlingidle/SW_shardlingidle_1.SW_shardlingidle_1",
+     "source": "sfx/shardlingidle_1.wav",
+     "prepared": "Content-src/sounds/sfx/shardlingidle_1.wav",
+     "seconds": 2.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/shardlingidle/SW_shardlingidle_2.SW_shardlingidle_2",
+     "source": "sfx/shardlingidle_2.wav",
+     "prepared": "Content-src/sounds/sfx/shardlingidle_2.wav",
+     "seconds": 2.48,
      "rate": 44100
     }
    ],
@@ -3278,12 +3754,111 @@
    "plays": 1
   }
  },
+ "missions": {
+  "haul-mh-easy": {
+   "asset": "/Game/Audio/Missions/SW_haul_mh_easy.SW_haul_mh_easy",
+   "source": "missions/haul-mh-easy.wav",
+   "prepared": "Content-src/sounds/missions/haul-mh-easy.wav",
+   "seconds": 13.204
+  },
+  "haul-mh-hard": {
+   "asset": "/Game/Audio/Missions/SW_haul_mh_hard.SW_haul_mh_hard",
+   "source": "missions/haul-mh-hard.wav",
+   "prepared": "Content-src/sounds/missions/haul-mh-hard.wav",
+   "seconds": 12.778
+  },
+  "haul-ore-easy": {
+   "asset": "/Game/Audio/Missions/SW_haul_ore_easy.SW_haul_ore_easy",
+   "source": "missions/haul-ore-easy.wav",
+   "prepared": "Content-src/sounds/missions/haul-ore-easy.wav",
+   "seconds": 15.355
+  },
+  "haul-ore-hard": {
+   "asset": "/Game/Audio/Missions/SW_haul_ore_hard.SW_haul_ore_hard",
+   "source": "missions/haul-ore-hard.wav",
+   "prepared": "Content-src/sounds/missions/haul-ore-hard.wav",
+   "seconds": 16.908
+  },
+  "hold-easy": {
+   "asset": "/Game/Audio/Missions/SW_hold_easy.SW_hold_easy",
+   "source": "missions/hold-easy.wav",
+   "prepared": "Content-src/sounds/missions/hold-easy.wav",
+   "seconds": 20.527
+  },
+  "hold-hard": {
+   "asset": "/Game/Audio/Missions/SW_hold_hard.SW_hold_hard",
+   "source": "missions/hold-hard.wav",
+   "prepared": "Content-src/sounds/missions/hold-hard.wav",
+   "seconds": 19.566
+  },
+  "hold-perilous": {
+   "asset": "/Game/Audio/Missions/SW_hold_perilous.SW_hold_perilous",
+   "source": "missions/hold-perilous.wav",
+   "prepared": "Content-src/sounds/missions/hold-perilous.wav",
+   "seconds": 21.248
+  },
+  "hunt-easy": {
+   "asset": "/Game/Audio/Missions/SW_hunt_easy.SW_hunt_easy",
+   "source": "missions/hunt-easy.wav",
+   "prepared": "Content-src/sounds/missions/hunt-easy.wav",
+   "seconds": 18.129
+  },
+  "hunt-hard": {
+   "asset": "/Game/Audio/Missions/SW_hunt_hard.SW_hunt_hard",
+   "source": "missions/hunt-hard.wav",
+   "prepared": "Content-src/sounds/missions/hunt-hard.wav",
+   "seconds": 17.398
+  },
+  "hunt-perilous": {
+   "asset": "/Game/Audio/Missions/SW_hunt_perilous.SW_hunt_perilous",
+   "source": "missions/hunt-perilous.wav",
+   "prepared": "Content-src/sounds/missions/hunt-perilous.wav",
+   "seconds": 18.183
+  },
+  "salvage-easy": {
+   "asset": "/Game/Audio/Missions/SW_salvage_easy.SW_salvage_easy",
+   "source": "missions/salvage-easy.wav",
+   "prepared": "Content-src/sounds/missions/salvage-easy.wav",
+   "seconds": 12.545
+  },
+  "salvage-hard": {
+   "asset": "/Game/Audio/Missions/SW_salvage_hard.SW_salvage_hard",
+   "source": "missions/salvage-hard.wav",
+   "prepared": "Content-src/sounds/missions/salvage-hard.wav",
+   "seconds": 14.524
+  },
+  "salvage-perilous": {
+   "asset": "/Game/Audio/Missions/SW_salvage_perilous.SW_salvage_perilous",
+   "source": "missions/salvage-perilous.wav",
+   "prepared": "Content-src/sounds/missions/salvage-perilous.wav",
+   "seconds": 16.145
+  },
+  "survey-easy": {
+   "asset": "/Game/Audio/Missions/SW_survey_easy.SW_survey_easy",
+   "source": "missions/survey-easy.wav",
+   "prepared": "Content-src/sounds/missions/survey-easy.wav",
+   "seconds": 14.196
+  },
+  "survey-hard": {
+   "asset": "/Game/Audio/Missions/SW_survey_hard.SW_survey_hard",
+   "source": "missions/survey-hard.wav",
+   "prepared": "Content-src/sounds/missions/survey-hard.wav",
+   "seconds": 14.994
+  },
+  "survey-perilous": {
+   "asset": "/Game/Audio/Missions/SW_survey_perilous.SW_survey_perilous",
+   "source": "missions/survey-perilous.wav",
+   "prepared": "Content-src/sounds/missions/survey-perilous.wav",
+   "seconds": 20.546
+  }
+ },
  "unusedInSwift": [
   "atlasdeath",
   "atlasmove",
   "atlasshot",
   "atlasstep",
   "blueprint",
+  "broodswarm",
   "crack",
   "downpour",
   "flcruise",
@@ -3291,9 +3866,25 @@
   "flroar",
   "flspool",
   "fltouch",
+  "gloamwingdeath",
+  "gloamwinghurt",
+  "gloamwingidle",
+  "gloamwingspit",
   "jetdry",
   "jetpuff",
+  "lodebackbite",
+  "lodebackchew",
+  "lodebackdeath",
+  "lodebackhurt",
+  "lodebackidle",
   "made",
+  "matriarchdeath",
+  "matriarchhurt",
+  "matriarchidle",
+  "matriarchroar",
+  "matriarchslam",
+  "matriarchspit",
+  "missionaccept",
   "paid",
   "peregrinedeath",
   "peregrinepass",
@@ -3315,6 +3906,10 @@
   "sfcrater",
   "sfecho",
   "sfstreak",
+  "shardlingbite",
+  "shardlingdeath",
+  "shardlinghurt",
+  "shardlingidle",
   "shimmer",
   "stomp",
   "thunder",

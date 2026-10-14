@@ -528,6 +528,7 @@ void WorldMap::step() {
     realmNews();
     sites();
     contracts();
+    missions();
     starfall();
     respawns();
     rigs();

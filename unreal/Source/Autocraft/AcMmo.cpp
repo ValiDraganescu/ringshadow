@@ -222,6 +222,8 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	CitadelDone = 0;
 	ItemAsked.Reset();
 	ItemDone = 0;
+	MissionAsked.Reset();
+	MissionsAccepted.Reset();
 	FlightsAsked.Reset();
 	LastFlightRefusal.Reset();
 	bArriving = false;
@@ -730,6 +732,25 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (const TPair<uint32, bool>* Ask = MissionAsked.Find(R.request))
+		{
+			const TPair<uint32, bool> A = *Ask;
+			MissionAsked.Remove(R.request);
+			if (R.done && A.Value)
+			{
+				CitadelDone += 1;
+				MissionsAccepted.Add(A.Key);
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: mission %u taken"), A.Key);
+			}
+			else if (!R.done)
+			{
+				if (A.Value) LastCitadelRefusal = Text(R.reason);
+				Notes.Add(Text(R.reason));
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: mission ask %u refused: %s"), R.request, *Text(R.reason));
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (ItemAsked.Remove(R.request) > 0)
 		{
 			if (R.done) ItemDone += 1;
@@ -943,6 +964,32 @@ bool FAcMmoClient::UseItem(const ac::Item Item, FString* Why)
 	ItemAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: item use %u: %s"), Id, *Text(std::string(ac::rawValue(Item))));
 	return true;
+}
+
+bool FAcMmoClient::TakeMission(const uint32 Mission, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->takeMission(Mission);
+	LastCitadelRefusal.Reset();
+	MissionAsked.Add(Id, {Mission, true});
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: mission ask %u: take %u"), Id, Mission);
+	return true;
+}
+
+bool FAcMmoClient::AbandonMission(const uint32 Mission, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->abandonMission(Mission);
+	MissionAsked.Add(Id, {Mission, false});
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: mission ask %u: abandon %u"), Id, Mission);
+	return true;
+}
+
+TArray<uint32> FAcMmoClient::TakeAccepted()
+{
+	TArray<uint32> Out = MoveTemp(MissionsAccepted);
+	MissionsAccepted.Reset();
+	return Out;
 }
 
 TArray<FString> FAcMmoClient::TakeNotes()

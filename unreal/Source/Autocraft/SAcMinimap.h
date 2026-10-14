@@ -87,6 +87,17 @@ public:
 	/// A survey flare burning (C2): its centre on the ground and its radius
 	/// in cells. A gold ring; the ore inside it drawn larger. Unset: none.
 	void SetFlare(TOptional<TPair<ac::Vec2, double>> InFlare);
+	/// K2: the pilot's Citadel missions in this region: a diamond in the
+	/// tier's colour at each place, its ring round it. Empty hides them.
+	struct FMission
+	{
+		ac::Vec2 At{0, 0};
+		double Radius = 0;
+		FLinearColor Color = FLinearColor::White;
+		bool operator==(const FMission&) const = default;
+	};
+	void SetMissions(TArray<FMission> InMissions);
+	const TArray<FMission>& MissionsShown() const { return Missions; }
 	/// The MMORPG test: the region's flight pads (ground), each a pad
 	/// marker; empty hides them.
 	void SetPads(TArray<ac::Vec2> Pads);
@@ -144,6 +155,7 @@ private:
 	ac::Vec2 FogOrigin, FogSize;
 	TOptional<TPair<ac::Vec2, double>> Sight;
 	TOptional<TPair<ac::Vec2, double>> Flare;
+	TArray<FMission> Missions;
 	FImage SightImage;
 
 	FImage DiscImage, DiamondImage;

@@ -559,7 +559,8 @@ is down", "Drive your Prospector first".
 
 On the wire (protocol 14, C2): the request's variant index takes **5 bits**
 (4 before); `RequestMessage::Buy{blueprint | item}` is 14 and
-`RequestMessage::Use{item}` 15; D1's request comes next, at 16.
+`RequestMessage::Use{item}` 15; K2's `MissionAsk` took 16 (protocol 16),
+so D1's request comes next, at 17.
 `ProgressMessage::blueprints` carries copies (kind → count), and `bought`,
 `items`, `itemReady` (world time), `shieldUntil` (world time) and `flare`
 (region, centre, radius, until) are new. `net::Client::buyBlueprint`,
@@ -588,6 +589,18 @@ saved), `server/tests/SitesTests.cpp` (a site gives a copy),
 `server/tests/FirstTenTests.cpp` (the opening chain), the old-save tests
 (the migration below), `net-tests/tests/ProtocolTests.cpp`. Pictures:
 `-AcMmoShotsC2`.
+
+### Citadel missions (K2)
+
+The Citadel screen's third tab, **MISSIONS**, is a board of six offers,
+two each at easy, hard and perilous, with rewards to match: XP, ore and MH,
+and at hard and perilous a blueprint copy or supplies. The pilot signs up
+for up to three at once and follows them in its **Journal (L)**: the
+briefing, what to do, the place on the map (also a marker on the minimap
+and the compass), the reward, and the narration to play again. The kinds
+are haul, survey, salvage, hold under the ringshadow band, and hunt; hunts
+are gated off until the Brood (N2). The whole design, the numbers, the
+voices and the wire are in [missions.md](missions.md).
 
 ### On the server (P6)
 
@@ -931,6 +944,16 @@ every price starts at the first copy's. Saved again, the pilot is
 (`sites_v3_pilot_keeps_the_blueprints_of_its_buildings`),
 `OldSaveTests.cpp`, `SaveTests.cpp`.
 
+### The Citadel missions migration (schema v12, K2)
+
+Schema **v12** adds a pilot's Citadel missions (its board, Journal, day
+and next number, as JSON):
+
+    ALTER TABLE pilots ADD COLUMN missions TEXT NOT NULL DEFAULT ''
+
+A pilot saved before has none; its first step draws its board. (v11 is the
+Brood's, N2.) Tests: `server/tests/MissionsTests.cpp`.
+
 ## On screen
 
 ### The level-up
@@ -1028,6 +1051,10 @@ Foundry and the Lab.
   menu's names carry the copies held ("Hab Dome ×2"); the Citadel screen's
   SHOP tab; a survey flare rings its reach on the minimap ("The Citadel
   shop (C2)").
+- K2: the Citadel screen's MISSIONS tab; the Journal (L); a taken
+  mission's place as a diamond in its tier's colour on the minimap and
+  the compass ("MISSION 15"); "MISSION DONE: MARK THE GROUND" with its pay
+  ([missions.md](missions.md)).
 - R1: a building in sight names its builder ("Hab Dome  ·  built by Pilot
   045B"); a realm building finished anywhere is a toast to every pilot; the
   build menu's limit tag reads "REALM LIMIT".

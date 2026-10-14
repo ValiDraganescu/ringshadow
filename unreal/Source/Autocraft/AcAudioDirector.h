@@ -489,6 +489,16 @@ public:
 	/// A menu sound, in the ear, at once: the home screen and the pause menu
 	/// hold the game, and so the cues (H1). Counted in the -AcAudioLog lines.
 	void PlayMenu(FName Name, float Gain);
+	/// K2: a Citadel mission's narration (Sounds.json `missions`, by its
+	/// template key: "survey-perilous"), in the ear, a new one cutting the
+	/// last off. With no audio device (-nosound) it is only logged. False:
+	/// no such narration.
+	bool PlayNarration(const FString& Key);
+	void StopNarration();
+	/// A narration is playing (with no device: never).
+	bool IsNarrating() const;
+	/// How long a narration lasts, seconds (0: not known).
+	double NarrationSeconds(const FString& Key) const;
 	/// -AcAudioRecord: asked for, started, written (AcShot's -AcShotRecord
 	/// waits on these to record frames and sound together).
 	bool IsRecordingRequested() const { return Recording.IsSet(); }
@@ -558,6 +568,11 @@ private:
 	/// The bank: name → variants (Sounds.json).
 	UPROPERTY(Transient)
 	TMap<FName, FAcSoundVariants> Bank;
+	/// K2: the narrations' assets and lengths by key (Sounds.json), and the
+	/// one playing.
+	TMap<FString, TPair<FString, double>> Narrations;
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> NarrationVoice;
 
 	UPROPERTY(Transient)
 	TObjectPtr<USoundAttenuation> Panned;
