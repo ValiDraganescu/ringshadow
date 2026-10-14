@@ -7,6 +7,7 @@
 
 #include "Flight.h"
 #include "HeadlessClient.h"
+#include "Progression.h"
 #include "NetPredictor.h"
 #include "Server.h"
 #include "TerrainField.h"
@@ -318,6 +319,49 @@ TEST(world_flight_costs_mh) {
     put(w, me, w.regionOf(me)->places()->regionAt(first().regions[*w.regionNamed("cold-fork")].built.pads[0].at), 0);
     ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(15));
+}
+
+/// F1b: with Cliff hop the pilot's jet pack burns 2 MH a jump from the
+/// region's wallet; short, it stays at the cliff.
+TEST(world_cliff_hop_burns_mh) {
+    WorldMap w(first());
+    w.join(me);
+    ProspectorProgress pr;
+    pr.xp = Progression::xp(Progression::cap);
+    pr.ranks = {{Skill::cliffHop, 1}};
+    w.setProgress(me, pr);
+    Simulation& sim = w.regionOf(me)->simulation();
+    Unit* u = drivenUnit(w, me);
+    ASSERT_TRUE(u && sim.nav);
+    // A spot on walkable ground just short of a cliff face it can jump.
+    std::optional<std::pair<Vec2, double>> edge;
+    const GroundRect b = sim.map->bounds;
+    for (double x = b.minX + 2; x < b.maxX - 2 && !edge; x += 1)
+        for (double y = b.minZ + 2; y < b.maxZ - 2 && !edge; y += 1) {
+            const Vec2 p(x, y);
+            if (!sim.pilotCanStand(*u, p)) continue;
+            for (int j = 0; j < 16 && !edge; ++j) {
+                const double a = j / 16.0 * 2 * pi;
+                const Vec2 dir(std::cos(a), std::sin(a));
+                Vec2 q = p;
+                while (sim.pilotCanStand(*u, q) && distance(q, p) < 1) q += dir * 0.05;
+                if (!(sim.nav->cliff(q) && distance(q, p) > 0.4)) continue;
+                const auto land = sim.landing(q, q + dir * Simulation::pilotJumpReach);
+                if (land && sim.pilotCanStand(*u, *land)) edge = std::make_pair(q - dir * 0.3, a);
+            }
+        }
+    ASSERT_TRUE(edge.has_value());  // no cliff in the start region
+    u->position = edge->first;
+    u->heading = edge->second;
+    sim.state.players[0].hydrogen = 1;
+    const auto jumped = [&] { return drivenUnit(w, me)->jumpFrom.has_value(); };
+    EXPECT_TRUE(!drive(w, me, edge->second, 20, jumped));
+    EXPECT_EQ(sim.state.players[0].hydrogen, int64_t(1));
+    EXPECT_TRUE(sim.pilotJumpDry.has_value());
+    drivenUnit(w, me)->position = edge->first;
+    sim.state.players[0].hydrogen = 5;
+    EXPECT_TRUE(drive(w, me, edge->second, 20, jumped));
+    EXPECT_EQ(sim.state.players[0].hydrogen, int64_t(3));
 }
 
 TEST(world_flight_from_pad_to_pad) {

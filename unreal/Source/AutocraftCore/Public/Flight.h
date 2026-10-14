@@ -34,4 +34,19 @@ struct Flight {
     }
 };
 
+/// A jet-pack jump's price in MH (docs/prospector-progression.md, "MH
+/// sinks"; F1b): the skill tree's Cliff hop burns it on each take-off, the
+/// carried MH first, then the wallet. Jump jets' third rank halves it. Only
+/// the MMORPG's Prospector pays: the strategy game's jumpers jump free.
+struct JetJump {
+    static constexpr int64_t hydrogen = 2;
+    /// What a jump costs with Jump jets at `jumpJetsRank`.
+    static int64_t price(int64_t jumpJetsRank) { return jumpJetsRank >= 3 ? 1 : hydrogen; }
+    /// Why `have` MH can't pay `price` (none: it can).
+    static std::optional<std::string> refusal(int64_t price, int64_t have) {
+        if (have >= price) return std::nullopt;
+        return "Not enough MH to jet: " + std::to_string(price) + " MH, you have " + std::to_string(have > 0 ? have : 0);
+    }
+};
+
 } // namespace ac

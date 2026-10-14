@@ -5,9 +5,11 @@
 #include "test.h"
 
 #include "Commander.h"
+#include "Flight.h"
 #include "Hearing.h"
 #include "MapLibrary.h"
 #include "Pilot.h"
+#include "Progression.h"
 #include "Simulation.h"
 #include "WindowMaps.h"
 
@@ -731,12 +733,12 @@ struct CometScene {
 /// A Comet alone on the home-screens map, at a spot on the high level
 /// half a cell short of a cliff face, facing it, with low ground to land
 /// on within `pilotJumpReach` past it.
-std::optional<CometScene> cometAtACliff() {
+std::optional<CometScene> cometAtACliff(Unit::Kind kind = Unit::Kind::comet) {
     const MapDefinition m = homeMap();
     GameState state;
     state.players = {Player()};
     state.time = 0;
-    state.units = {Unit(1, Unit::Kind::comet, 0, Vec2(0, 0), 0, Unit::Task::idle)};
+    state.units = {Unit(1, kind, 0, Vec2(0, 0), 0, Unit::Task::idle)};
     state.nextID = 2;
     state.score = {0};
     Simulation sim(state, m);
@@ -821,6 +823,58 @@ TEST(PilotTests_cometHandedBackMidJumpLands) {
     EXPECT_TRUE(!unit(sim, 1).jumpFrom);
     EXPECT_TRUE(!unit(sim, 1).jumpTo);
     EXPECT_TRUE(unit(sim, 1).position == *to);
+}
+
+/// The MMORPG's Prospector with Cliff hop (F1b): each jump burns 2 MH, the
+/// carried MH first, then the wallet; short, it stays at the cliff and
+/// `pilotJumpDry` says so. Jump jets' third rank halves the price.
+TEST(PilotTests_cliffHopJetsBurnMH) {
+    auto scene = cometAtACliff(Unit::Kind::prospector);
+    ASSERT_TRUE(scene.has_value());  // no cliff face found
+    Simulation& sim = scene->sim;
+    ProspectorProgress p;
+    p.xp = Progression::xp(Progression::cap);
+    p.ranks = {{Skill::cliffHop, 1}};
+    sim.setProgress(p);
+    EXPECT_EQ(sim.pilotJumpHydrogen(unit(sim, 1)), int64_t(2));
+    sim.state.players[0].hydrogen = 1;
+    for (int k = 0; k < 30; ++k) run(sim, 1.0 / 30, Vec2(1, 0));
+    EXPECT_TRUE(!unit(sim, 1).jumpFrom);
+    EXPECT_TRUE(sim.pilotJumpDry.has_value());
+    EXPECT_EQ(sim.state.players[0].hydrogen, int64_t(1));
+    EXPECT_TRUE(JetJump::refusal(2, 1) == std::optional<std::string>("Not enough MH to jet: 2 MH, you have 1"));
+    // One carried MH and the wallet's other one, back at the edge (it
+    // slid along the cliff while it pushed).
+    unitRef(sim, 1).position = scene->start;
+    unitRef(sim, 1).carrying = 1;
+    unitRef(sim, 1).hydrogen = true;
+    for (int k = 0; k < 30 && !unit(sim, 1).jumpFrom; ++k) run(sim, 1.0 / 30, Vec2(1, 0));
+    EXPECT_TRUE(unit(sim, 1).jumpFrom.has_value());
+    EXPECT_EQ(unit(sim, 1).carrying, int64_t(0));
+    EXPECT_EQ(sim.state.players[0].hydrogen, int64_t(0));
+    p.ranks = {{Skill::cliffHop, 1}, {Skill::jumpJets, 3}};
+    sim.setProgress(p);
+    EXPECT_EQ(sim.pilotJumpHydrogen(unit(sim, 1)), int64_t(1));
+    // A copy (the client's prediction) checks the price, the server pays.
+    sim.state.players[0].hydrogen = 5;
+    Unit copy = unit(sim, 1);
+    copy.position = scene->start;
+    copy.jumpFrom = std::nullopt;
+    copy.jumpTo = std::nullopt;
+    EXPECT_TRUE(sim.pilotJump(copy, scene->dir * 0.6));
+    EXPECT_EQ(sim.state.players[0].hydrogen, int64_t(5));
+}
+
+/// The strategy game's jumpers jump free.
+TEST(PilotTests_cometJumpsFree) {
+    auto scene = cometAtACliff();
+    ASSERT_TRUE(scene.has_value());  // no cliff face found
+    Simulation& sim = scene->sim;
+    sim.state.players[0].hydrogen = 0;
+    EXPECT_EQ(sim.pilotJumpHydrogen(unit(sim, 1)), int64_t(0));
+    for (int k = 0; k < 30 && !unit(sim, 1).jumpFrom; ++k) run(sim, 1.0 / 30, Vec2(1, 0));
+    EXPECT_TRUE(unit(sim, 1).jumpFrom.has_value());
+    EXPECT_TRUE(!sim.pilotJumpDry.has_value());
 }
 
 /// Driven, a Comet out of combat heals at its regen rate.

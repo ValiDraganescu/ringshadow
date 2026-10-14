@@ -243,8 +243,8 @@ Theme: moving, surveying, finding the sites.
 | 1 | Long sight | 3 | sight +10% | +30% | `Stat::Sight` |
 | 2 | Dust runner | 3 | walk +5% while carrying nothing | +15% | new: speed while carrying |
 | 2 | Scanner pulse | 3 | arriving in a region shows its sites on the world map: wrecks; then caches; then vaults | all three | new |
-| 2 | **Cliff hop** | 1 | jump up and down cliffs (passive) | | `CliffJump` |
-| 3 | Jump jets | 3 | jump reach +1 cell | +3 | `Stat::JumpReach` |
+| 2 | **Cliff hop** | 1 | jump up and down cliffs (passive), 2 MH a jump | | `CliffJump` |
+| 3 | Jump jets | 3 | jump reach +1 cell; at rank 3 a jump burns 1 MH | +3 | `Stat::JumpReach` |
 | 3 | Pad link | 3 | fly from within 8 / 12 / 16 cells of a pad's centre, up from 4 | 16 | new |
 | 3 | Homing beacon | 3 | your Citadel counts as a pad; then your Hab Domes too; then your Derricks too | all three | new |
 | 4 | Lucky strike | 5 | survey chips come 10% more often | +50% | new: chip chance |
@@ -607,6 +607,16 @@ Nothing costs MH today. This adds:
   its first flight waits for its first Derrick; `--dev-hydrogen N`
   (`-AcMmoDevHydrogen=N`) starts it with N MH, and the picture and flow
   runs (`-AcMmoShots`, `-AcFlowTest`) start with 200 unless told otherwise.
+- **Jet pack jumps** (F1b): each jump over a cliff with Cliff hop burns 2
+  MH, 1 MH with Jump jets at rank 3 (`ac::JetJump` in `Flight.h`,
+  `Simulation::pilotJump`). The MH the Prospector carries goes first, then
+  the wallet. Short, it stays at the cliff face: the HUD says "Not enough MH
+  to jet: 2 MH, you have 1" for a moment and the jet pack clicks dry
+  (`jetdry`); a jump puffs (`jetpuff`). The keys line says what a jump costs
+  ("walk into a cliff  jet pack over it, 2 MH"). Only the server's step
+  pays (`Simulation::pilotPays`): the client's prediction checks the price
+  and leaves the paying to it. The strategy game's jumpers (the Comet, the
+  Cliff hop pick) jump free.
 
 Skill points never cost MH: the tree is points only.
 

@@ -40,7 +40,13 @@ public:
     /// A jumper whose next step is into a cliff face takes off over it, for
     /// the first walkable ground ahead (the 0.2-cell scan of `leap`, out to
     /// `pilotJumpReach`, farther with Long jump). True when it took off.
-    bool pilotJump(Unit& u, Vec2 step) const;
+    /// The skill tree's Cliff hop pays `pilotJumpHydrogen` for it; short,
+    /// it stays put and `pilotJumpDry` says when.
+    bool pilotJump(Unit& u, Vec2 step);
+    /// MH a jump of `u` burns (`JetJump`): 0 but for the skill tree's jumper.
+    int64_t pilotJumpHydrogen(const Unit& u) const;
+    /// MH `u` can burn: what it carries, then its side's wallet.
+    int64_t pilotHydrogenOnHand(const Unit& u) const;
 
     /// Mid-jump: on toward `jumpTo` at its speed; there, the jump ends (and
     /// Booster's rush starts).

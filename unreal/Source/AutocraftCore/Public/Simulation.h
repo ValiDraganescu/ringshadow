@@ -312,6 +312,12 @@ public:
     /// The driven unit's speed in its last step, as a share of its full pace
     /// (`pilotWalk`), for its cone.
     double pilotPace = 0;
+    /// When the driven unit last walked into a cliff it could jump but not
+    /// pay for (`pilotJump`), sim seconds: the HUD's refusal and dry click.
+    std::optional<double> pilotJumpDry;
+    /// Set while `stepPiloted` walks the driven unit: a jump burns its MH
+    /// then, not when the client's prediction walks a copy (`pilotWalk`).
+    bool pilotPays = false;
     /// A player has finished this upgrade.
     bool has(int64_t player, Upgrade up) const;
     /// A unit's full hit points, its side's upgrades and leveling picks

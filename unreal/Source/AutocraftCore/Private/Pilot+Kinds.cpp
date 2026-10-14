@@ -9,6 +9,9 @@
 
 #include "Simulation.h"
 
+#include "Flight.h"
+#include "Progression.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -114,16 +117,46 @@ void Simulation::pilotUse(Unit& u, std::vector<GameEvent>& events) {
 /// A jumper whose next step is into a cliff face takes off over it, for
 /// the first walkable ground ahead (the 0.2-cell scan of `leap`, out to
 /// `pilotJumpReach`, farther with Long jump). True when it took off.
-bool Simulation::pilotJump(Unit& u, Vec2 step) const {
+bool Simulation::pilotJump(Unit& u, Vec2 step) {
     if (!nav || !(length(step) > 1e-9)) return false;
     const Vec2 next = u.position + step;
     if (pilotCanStand(u, next) || !nav->cliff(next)) return false;
     const double reach = boost(Stat::JumpReach{}, u).apply(pilotJumpReach);
     const auto land = landing(next, next + normalize(step) * reach);
     if (!land || !pilotCanStand(u, *land)) return false;
+    // The jet pack's MH (F1b): the cargo first, then the wallet.
+    if (int64_t cost = pilotJumpHydrogen(u); cost > 0) {
+        if (pilotHydrogenOnHand(u) < cost) {
+            pilotJumpDry = state.time;
+            return false;
+        }
+        // Only the sim's own step pays: the client's prediction of its
+        // driven unit leaves that to the server.
+        if (!pilotPays) cost = 0;
+        if (cost > 0 && u.carrying > 0 && u.hydrogen == true) {
+            const int64_t from = min(cost, u.carrying);
+            u.carrying -= from;
+            cost -= from;
+            if (u.carrying <= 0) u.hydrogen = std::nullopt;
+        }
+        if (cost > 0) state.players[static_cast<size_t>(u.owner)].hydrogen -= cost;
+    }
     u.jumpFrom = u.position;
     u.jumpTo = *land;
     return true;
+}
+
+int64_t Simulation::pilotJumpHydrogen(const Unit& u) const {
+    if (!skilled(u)) return 0;
+    return JetJump::price(progress->rank(Skill::jumpJets));
+}
+
+int64_t Simulation::pilotHydrogenOnHand(const Unit& u) const {
+    const int64_t carried = u.carrying > 0 && u.hydrogen == true ? u.carrying : 0;
+    const int64_t wallet = u.owner >= 0 && u.owner < static_cast<int64_t>(state.players.size())
+        ? state.players[static_cast<size_t>(u.owner)].hydrogen
+        : 0;
+    return carried + wallet;
 }
 
 /// Mid-jump: on toward `jumpTo` at its speed; there, the jump ends (and

@@ -2,6 +2,7 @@
 
 #include "AcNewKinds.h"
 #include "AcProgressHud.h"
+#include "Flight.h"
 #include "Leveling.h"
 #include "NetProtocol.h"
 #include "Progression.h"
@@ -353,6 +354,11 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 	Info.Heading = U.look();
 	Info.Position = U.position;
 	Info.Help = Help(U);
+	// The jet pack's MH (F1b): what a jump burns, where the keys are told.
+	if (const int64 Jet = Sim.pilotJumpHydrogen(U); Jet > 0 && Sim.pilotJumps(U))
+	{
+		Info.Help += FString::Printf(TEXT("   ·   walk into a cliff  jet pack over it, %lld MH"), static_cast<long long>(Jet));
+	}
 	using ETask = ac::Unit::Task;
 	if (U.task == ETask::mining)
 	{
@@ -425,6 +431,16 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 			&& Sim.pilotRepair(U) && Info.Prompt)
 		{
 			Info.Prompt = *Info.Prompt + TEXT("   ·   R + hold click  repair");
+		}
+	}
+	// Walked into a cliff with too little MH for the jet pack (F1b): why,
+	// for a moment after each try.
+	if (Sim.pilotJumpDry && S.time - *Sim.pilotJumpDry < 1.5)
+	{
+		if (const std::optional<std::string> Why = ac::JetJump::refusal(Sim.pilotJumpHydrogen(U), Sim.pilotHydrogenOnHand(U)))
+		{
+			Info.Prompt = FString(UTF8_TO_TCHAR(Why->c_str()));
+			Info.Tone = EAcTone::Blocked;
 		}
 	}
 	// The building being welded, or a scaffold close by: its progress on the
@@ -590,6 +606,11 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 	Info.Prompt = P.Prompt ? *P.Prompt : Hint(U);
 	if (P.Prompt) Info.Tone = P.Tone;
 	Info.Tips = In.bMmo ? MmoTips(Sim, U) : Tips(U);
+	// The first ten minutes: the line under the card is the step's (O1).
+	if (const ac::net::Contract* Step = In.Mmo && ac::PilotBuild::builds(U.kind) ? AcProgressHud::FirstStep(*In.Mmo) : nullptr)
+	{
+		Info.Tips = {AcProgressHud::FirstTip(*Step)};
+	}
 	Info.Level = Level(Sim, U.kind);
 
 	if (!ac::PilotBuild::builds(U.kind))

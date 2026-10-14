@@ -221,9 +221,9 @@ std::vector<SkillNode> table() {
                             {SkillEffect::ScannerPulse{{SiteKind::wreck, SiteKind::cache, SiteKind::vault}}}},
                            "Scanner pulse", "Arriving in a region marks its wrecks on the map; then caches, then vaults."));
         t.push_back(node(S::cliffHop, b, 2, 1, {SkillEffect::Core{Effect::CliffJump{}}}, "Cliff hop",
-                         "Jump up and down cliffs."));
+                         "Jump up and down cliffs, for 2 MH a jump."));
         t.push_back(node(S::jumpJets, b, 3, 3, {driven(Stat::JumpReach{}, plus(1))}, "Jump jets",
-                         "Jump a cell farther, a rank."));
+                         "Jump a cell farther, a rank. At rank 3 a jump burns 1 MH."));
         t.push_back(ranked(S::padLink, b, 3,
                            {{SkillEffect::PadLink{8}}, {SkillEffect::PadLink{12}}, {SkillEffect::PadLink{16}}},
                            "Pad link", "Fly from within 8 cells of a pad, up from 4; then 12, then 16."));

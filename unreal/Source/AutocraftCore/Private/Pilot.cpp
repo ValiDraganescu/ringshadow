@@ -140,7 +140,9 @@ void Simulation::stepPiloted(Unit& u, double dt, std::vector<GameEvent>& events)
     pilotPace = 0;
     if (pilotBusy(u, p, dt, events)) return;
     pilotFace(u, p, dt);
+    pilotPays = true;
     pilotWalk(u, p.walk, dt);
+    pilotPays = false;
     // Taking off: no shot on the way up either.
     if (u.jumpFrom) return;
     pilotArrive(u, events);
