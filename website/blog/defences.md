@@ -4,9 +4,7 @@
 
 Source: https://ringshadow.com/blog/defences
 
-M8 · The realm under siege COMING
-
-14 October 2026
+14 October 2026 · M8 · The realm under siege Coming
 
 Nothing on this page is in the game yet. It's what the agents started on tonight, and what I've asked for after it. The posts about each piece will come when it lands.
 
@@ -26,7 +24,7 @@ The gatling gun is new: it fires red-hot rounds of amalgam, ore fused with Metal
 
 After them, turret upgrades: marks for fire rate, damage and range on each AA tower and gatling, paid at the turret from your own wallet and shown on the turret.
 
-## Album · The gatling concepts, and the Sentinel
+## The gatling concepts, and the Sentinel
 
 - ![Gatling concept forge: finned base, ribbed barrel jacket, glowing furnace hopper](https://ringshadow.com/blog/media/defences/01-gatling-forge.webp) Forge: finned base, ribbed barrel jacket, a glowing furnace hopper. The worker's pick.
 - ![Gatling concept cradle: the gun in an open cradle between two arms, a glowing ammo drum](https://ringshadow.com/blog/media/defences/02-gatling-cradle.webp) Cradle: the gun between two arms, a glowing ammo drum.
@@ -51,6 +49,6 @@ The first canyon will be cut into a region one step out from the start. The Matr
 - The map as a satellite view of the real ground, with tooltips on every site, building and deposit.
 - The world keeps running after you quit, as long as the Mac is on, and [mercenary prospectors](https://ringshadow.com/blog/mercenaries) keep mining while you're away (both have landed since).
 
-How M8 ends
+### How M8 ends
 
 The milestone is done when, in a recorded run, a pilot at Prospect Landing pays the Citadel's tax, buys a blueprint and a supply, builds a gatling gun that kills bugs drawn to a deposit, walks through a passage into the next region, and rides the Dropship from one built pad to another, with every test suite passing.

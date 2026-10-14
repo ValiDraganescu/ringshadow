@@ -1,23 +1,8 @@
-// The home page. Loaded in <head> without defer so the "js" class is set
-// before the first paint: the hidden starting states of the entrances apply
-// only under html.js, so with no script everything is simply there.
-document.documentElement.classList.add("js");
-
+// The home page: tabs, the roster carousel, the download picker, and clips
+// that play only on screen. ring.js sets the "js" class and runs the entrances.
 addEventListener("DOMContentLoaded", () => {
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-
-  // Entrances: each part arrives once, as its section comes into view.
-  // A clipped element can't be seen by the observer, so a clip reveal watches its parent.
-  const targets = [...$$(".reveal, .track, .blocks, .diagram"), ...$$(".shutter").map((el) => el.parentElement)];
-  if (!("IntersectionObserver" in window)) {
-    for (const el of targets) el.classList.add("is-in");
-  } else {
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); }
-    }, { rootMargin: "0px 0px -10% 0px", threshold: 0.08 });
-    for (const el of targets) io.observe(el);
-  }
 
   // Clips play only while on screen, and only the tab that is showing.
   // Under reduced motion they stay paused on their first frame, with controls.

@@ -4,9 +4,7 @@
 
 Source: https://ringshadow.com/blog/the-brood
 
-M8 · The realm under siege
-
-14 October 2026
+14 October 2026 · M8 · The realm under siege
 
 Until this evening nothing on the frontier fought back. You mined and built in peace. Then I asked the agents for something that would come for you.
 
@@ -24,7 +22,7 @@ I added that they should attack buildings, eat the ore out of unguarded veins, a
 
 An agent designed the family, named it the Brood, and painted three directions for each kind with Grok Imagine, a rest pose and an attack pose side by side. They belong to this world: dark chitin the colour of the ore rock, opal flecks crusted into the shell, and light coming from inside, so at night they are moving lights before they are shapes. Each kind glows in its own colour so you can tell them apart from the high camera. I picked one of the three for each.
 
-## Album · The concepts I picked
+## The concepts I picked
 
 - ![Concept painting of the Shardling: a six-legged bug with opal crystal quills glowing teal at the roots](https://ringshadow.com/blog/media/the-brood/01-shardling-concept.webp) Shardling, "quill": the swarmer, opal quills glowing teal.
 - ![Concept painting of the Gloamwing: violet wings and a glowing lantern abdomen, spitting acid](https://ringshadow.com/blog/media/the-brood/02-gloamwing-concept.webp) Gloamwing, "lantern": the flyer, a violet light from above.
@@ -40,7 +38,7 @@ The numbers are built against the Prospector, which has 45 hp, walks at 3.94 cel
 | Shardling | 20 | Packs at deposits, wells, sites and pads. Chases at 4.4, faster than you walk, so you can leave its site but you can't outrun it in the open. Bites for 2 every 1.2 s. |
 | Gloamwing | 30 | Flies at rooftop height and spits acid from 4 cells, out of the torch's reach. To spit at you it dives low, and for that moment the torch can hit it, if you time the swing. |
 | Lodeback | 120 | Never hunts. It finds a vein with no building within 10 cells and no pilot within 8, eats 1.5 ore a second into its sac, up to 60, and walks off out of sight. Hit it and it flees. Kill it and the sac bursts: the ore goes back into the vein. |
-| The Matriarch | 6,000 | 9.5 cells tall, she never leaves her nest in Slag Pockets, two regions from the start. COMING |
+| The Matriarch | 6,000 | 9.5 cells tall, she never leaves her nest in Slag Pockets, two regions from the start. Coming |
 
 The numbers are tuned so you count the group before you walk in. One Shardling is no threat, two cost a fresh pilot about half its hp, and five kill it in about five seconds. A pack of six on a Hab Dome takes it down in about 40 seconds: a raid has to be answered, and there's time to get there.
 
@@ -48,7 +46,7 @@ The numbers are tuned so you count the group before you walk in. One Shardling i
 
 The agent built a blockout model of each from the paintings, sized against the Prospector, and 49 sounds for them: idle chitter, bites, wingbeats, the swarm coming. The models are rough on purpose for now. A pass that takes them closer to the paintings (the Matriarch's crown and sac, the opal quills, the Lodeback's glass sac) is queued.
 
-## Album · The blockout models
+## The blockout models
 
 - ![The four bug models in a row beside the Prospector, the Matriarch towering over the rest](https://ringshadow.com/blog/media/the-brood/05-lineup.webp) The family for scale: Matriarch, Lodeback, Gloamwing, Shardling, and the Prospector.
 - ![The Shardling blockout model with white quills and teal eyes](https://ringshadow.com/blog/media/the-brood/06-shardling.webp) Shardling.
@@ -66,7 +64,7 @@ The start stays quiet. Prospect Landing has the fewest bugs of any region, none 
 
 After the merge the suites stood at 467 core tests, 191 server tests and 69 network tests, all passing.
 
-## Album · The Brood arrives
+## The Brood arrives
 
 - ![Shardlings lingering around an ore deposit while the Prospector watches](https://ringshadow.com/blog/media/the-brood/10-linger.webp) Shardlings lingering at a deposit. Count them before you walk in.
 - ![A Shardling biting the Prospector with the screen edged red](https://ringshadow.com/blog/media/the-brood/11-attack.webp) A Shardling on the Prospector: red outline, hp falling.

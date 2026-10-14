@@ -17,37 +17,39 @@
   <link rel="alternate" type="text/markdown" title="This page as Markdown" href="the-brood.md">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
-  <link rel="preload" href="../assets/fonts/BarlowCondensed-Medium.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
   <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
   <script src="../assets/js/stars.js" defer></script>
   <script src="../assets/js/album.js" defer></script>
 </head>
-<body>
+<body class="ring blog" id="top">
   <a class="skip" href="#main">Skip to the content</a>
   <canvas class="stars" aria-hidden="true"></canvas>
 
-  <nav class="nav" aria-label="Main">
-    <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
-    <ul class="nav-links">
-      <li><a href="../index.html">Home</a></li>
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
       <li><a href="../roadmap.html">Roadmap</a></li>
       <li><a href="index.html">Blog</a></li>
-      <li><a class="gh" href="https://github.com/ValiDraganescu/ringshadow"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
     </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
   </nav>
 
   <main id="main">
-    <article class="post wrap">
+    <article class="post">
       <header class="post-head">
-        <p class="kicker">M8 · The realm under siege</p>
         <h1>The Brood: from a painting to the world in a day</h1>
-        <p class="meta"><time datetime="2026-10-14">14 October 2026</time></p>
+        <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · The realm under siege</p>
         <p class="lede">Until this evening nothing on the frontier fought back. You mined and built in peace. Then I asked the agents for something that would come for you.</p>
       </header>
 
-      <figure class="post-cover">
-        <div class="media panel"><img src="media/the-brood/11-attack.webp" alt="A Shardling biting the Prospector, the screen edged red, the bug outlined in red" width="1600" height="1000"></div>
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/the-brood/11-attack.webp" alt="A Shardling biting the Prospector, the screen edged red, the bug outlined in red" width="1600" height="1000"></div>
         <figcaption>A Shardling on the Prospector. The red edge means you're being bitten.</figcaption>
       </figure>
 
@@ -61,12 +63,12 @@
       </div>
 
       <section class="album" aria-labelledby="a1">
-        <h2 class="album-title" id="a1">Album · The concepts I picked</h2>
+        <h2 class="album-title" id="a1">The concepts I picked</h2>
         <ul class="album-grid">
-          <li><a href="media/the-brood/01-shardling-concept.webp"><img src="media/the-brood/01-shardling-concept-t.webp" alt="Concept painting of the Shardling: a six-legged bug with opal crystal quills glowing teal at the roots" width="640" height="427" loading="lazy"></a><span class="cap">Shardling, "quill": the swarmer, opal quills glowing teal.</span></li>
-          <li><a href="media/the-brood/02-gloamwing-concept.webp"><img src="media/the-brood/02-gloamwing-concept-t.webp" alt="Concept painting of the Gloamwing: violet wings and a glowing lantern abdomen, spitting acid" width="640" height="427" loading="lazy"></a><span class="cap">Gloamwing, "lantern": the flyer, a violet light from above.</span></li>
-          <li><a href="media/the-brood/03-lodeback-concept.webp"><img src="media/the-brood/03-lodeback-concept-t.webp" alt="Concept painting of the Lodeback: a crab-like bug carrying a glassy sac full of opal ore" width="640" height="427" loading="lazy"></a><span class="cap">Lodeback, "hermit": the ore eater, its sac filling with opal.</span></li>
-          <li><a href="media/the-brood/04-matriarch-concept.webp"><img src="media/the-brood/04-matriarch-concept-t.webp" alt="Concept painting of the Matriarch: a towering armoured queen with a violet spine crown and a glowing egg sac" width="640" height="427" loading="lazy"></a><span class="cap">The Matriarch, "crowned": the queen, with her egg sac.</span></li>
+          <li class="reveal"><a href="media/the-brood/01-shardling-concept.webp"><img src="media/the-brood/01-shardling-concept-t.webp" alt="Concept painting of the Shardling: a six-legged bug with opal crystal quills glowing teal at the roots" width="640" height="427" loading="lazy"></a><span class="cap">Shardling, "quill": the swarmer, opal quills glowing teal.</span></li>
+          <li class="reveal"><a href="media/the-brood/02-gloamwing-concept.webp"><img src="media/the-brood/02-gloamwing-concept-t.webp" alt="Concept painting of the Gloamwing: violet wings and a glowing lantern abdomen, spitting acid" width="640" height="427" loading="lazy"></a><span class="cap">Gloamwing, "lantern": the flyer, a violet light from above.</span></li>
+          <li class="reveal"><a href="media/the-brood/03-lodeback-concept.webp"><img src="media/the-brood/03-lodeback-concept-t.webp" alt="Concept painting of the Lodeback: a crab-like bug carrying a glassy sac full of opal ore" width="640" height="427" loading="lazy"></a><span class="cap">Lodeback, "hermit": the ore eater, its sac filling with opal.</span></li>
+          <li class="reveal"><a href="media/the-brood/04-matriarch-concept.webp"><img src="media/the-brood/04-matriarch-concept-t.webp" alt="Concept painting of the Matriarch: a towering armoured queen with a violet spine crown and a glowing egg sac" width="640" height="427" loading="lazy"></a><span class="cap">The Matriarch, "crowned": the queen, with her egg sac.</span></li>
         </ul>
       </section>
 
@@ -80,7 +82,7 @@
               <tr><td><b>Shardling</b></td><td>20</td><td>Packs at deposits, wells, sites and pads. Chases at 4.4, faster than you walk, so you can leave its site but you can't outrun it in the open. Bites for 2 every 1.2 s.</td></tr>
               <tr><td><b>Gloamwing</b></td><td>30</td><td>Flies at rooftop height and spits acid from 4 cells, out of the torch's reach. To spit at you it dives low, and for that moment the torch can hit it, if you time the swing.</td></tr>
               <tr><td><b>Lodeback</b></td><td>120</td><td>Never hunts. It finds a vein with no building within 10 cells and no pilot within 8, eats 1.5 ore a second into its sac, up to 60, and walks off out of sight. Hit it and it flees. Kill it and the sac bursts: the ore goes back into the vein.</td></tr>
-              <tr><td><b>The Matriarch</b></td><td>6,000</td><td>9.5 cells tall, she never leaves her nest in Slag Pockets, two regions from the start. <span class="chip-coming">COMING</span></td></tr>
+              <tr><td><b>The Matriarch</b></td><td>6,000</td><td>9.5 cells tall, she never leaves her nest in Slag Pockets, two regions from the start. <span class="chip-coming">Coming</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -91,13 +93,13 @@
       </div>
 
       <section class="album" aria-labelledby="a2">
-        <h2 class="album-title" id="a2">Album · The blockout models</h2>
+        <h2 class="album-title" id="a2">The blockout models</h2>
         <ul class="album-grid">
-          <li><a href="media/the-brood/05-lineup.webp"><img src="media/the-brood/05-lineup-t.webp" alt="The four bug models in a row beside the Prospector, the Matriarch towering over the rest" width="640" height="360" loading="lazy"></a><span class="cap">The family for scale: Matriarch, Lodeback, Gloamwing, Shardling, and the Prospector.</span></li>
-          <li><a href="media/the-brood/06-shardling.webp"><img src="media/the-brood/06-shardling-t.webp" alt="The Shardling blockout model with white quills and teal eyes" width="640" height="360" loading="lazy"></a><span class="cap">Shardling.</span></li>
-          <li><a href="media/the-brood/07-gloamwing.webp"><img src="media/the-brood/07-gloamwing-t.webp" alt="The Gloamwing blockout model with violet wings and a striped glowing abdomen" width="640" height="360" loading="lazy"></a><span class="cap">Gloamwing.</span></li>
-          <li><a href="media/the-brood/08-lodeback.webp"><img src="media/the-brood/08-lodeback-t.webp" alt="The Lodeback blockout model with a gold sac on its back" width="640" height="360" loading="lazy"></a><span class="cap">Lodeback, its sac full.</span></li>
-          <li><a href="media/the-brood/09-matriarch.webp"><img src="media/the-brood/09-matriarch-t.webp" alt="The Matriarch blockout model with a spine crown and a violet egg sac" width="640" height="360" loading="lazy"></a><span class="cap">The Matriarch.</span></li>
+          <li class="reveal"><a href="media/the-brood/05-lineup.webp"><img src="media/the-brood/05-lineup-t.webp" alt="The four bug models in a row beside the Prospector, the Matriarch towering over the rest" width="640" height="360" loading="lazy"></a><span class="cap">The family for scale: Matriarch, Lodeback, Gloamwing, Shardling, and the Prospector.</span></li>
+          <li class="reveal"><a href="media/the-brood/06-shardling.webp"><img src="media/the-brood/06-shardling-t.webp" alt="The Shardling blockout model with white quills and teal eyes" width="640" height="360" loading="lazy"></a><span class="cap">Shardling.</span></li>
+          <li class="reveal"><a href="media/the-brood/07-gloamwing.webp"><img src="media/the-brood/07-gloamwing-t.webp" alt="The Gloamwing blockout model with violet wings and a striped glowing abdomen" width="640" height="360" loading="lazy"></a><span class="cap">Gloamwing.</span></li>
+          <li class="reveal"><a href="media/the-brood/08-lodeback.webp"><img src="media/the-brood/08-lodeback-t.webp" alt="The Lodeback blockout model with a gold sac on its back" width="640" height="360" loading="lazy"></a><span class="cap">Lodeback, its sac full.</span></li>
+          <li class="reveal"><a href="media/the-brood/09-matriarch.webp"><img src="media/the-brood/09-matriarch-t.webp" alt="The Matriarch blockout model with a spine crown and a violet egg sac" width="640" height="360" loading="lazy"></a><span class="cap">The Matriarch.</span></li>
         </ul>
       </section>
 
@@ -110,13 +112,13 @@
       </div>
 
       <section class="album" aria-labelledby="a3">
-        <h2 class="album-title" id="a3">Album · The Brood arrives</h2>
+        <h2 class="album-title" id="a3">The Brood arrives</h2>
         <ul class="album-grid">
-          <li><a href="media/the-brood/10-linger.webp"><img src="media/the-brood/10-linger-t.webp" alt="Shardlings lingering around an ore deposit while the Prospector watches" width="640" height="400" loading="lazy"></a><span class="cap">Shardlings lingering at a deposit. Count them before you walk in.</span></li>
-          <li><a href="media/the-brood/11-attack.webp"><img src="media/the-brood/11-attack-t.webp" alt="A Shardling biting the Prospector with the screen edged red" width="640" height="400" loading="lazy"></a><span class="cap">A Shardling on the Prospector: red outline, hp falling.</span></li>
-          <li><a href="media/the-brood/12-dive.webp"><img src="media/the-brood/12-dive-t.webp" alt="A violet Gloamwing diving low at the Prospector" width="640" height="400" loading="lazy"></a><span class="cap">A Gloamwing diving to spit. This is the moment to swing.</span></li>
-          <li><a href="media/the-brood/13-lodeback-leaves.webp"><img src="media/the-brood/13-lodeback-leaves-t.webp" alt="A Lodeback with a full gold sac walking away from the deposit" width="640" height="400" loading="lazy"></a><span class="cap">A Lodeback leaving with a full sac, out of the torch's reach.</span></li>
-          <li><a href="media/the-brood/14-raid.webp"><img src="media/the-brood/14-raid-t.webp" alt="A toast reading KSTR: BROOD SWARM, heading for the Hab Dome, as bugs close in" width="640" height="400" loading="lazy"></a><span class="cap">KSTR: BROOD SWARM, a raid on the Hab Dome.</span></li>
+          <li class="reveal"><a href="media/the-brood/10-linger.webp"><img src="media/the-brood/10-linger-t.webp" alt="Shardlings lingering around an ore deposit while the Prospector watches" width="640" height="400" loading="lazy"></a><span class="cap">Shardlings lingering at a deposit. Count them before you walk in.</span></li>
+          <li class="reveal"><a href="media/the-brood/11-attack.webp"><img src="media/the-brood/11-attack-t.webp" alt="A Shardling biting the Prospector with the screen edged red" width="640" height="400" loading="lazy"></a><span class="cap">A Shardling on the Prospector: red outline, hp falling.</span></li>
+          <li class="reveal"><a href="media/the-brood/12-dive.webp"><img src="media/the-brood/12-dive-t.webp" alt="A violet Gloamwing diving low at the Prospector" width="640" height="400" loading="lazy"></a><span class="cap">A Gloamwing diving to spit. This is the moment to swing.</span></li>
+          <li class="reveal"><a href="media/the-brood/13-lodeback-leaves.webp"><img src="media/the-brood/13-lodeback-leaves-t.webp" alt="A Lodeback with a full gold sac walking away from the deposit" width="640" height="400" loading="lazy"></a><span class="cap">A Lodeback leaving with a full sac, out of the torch's reach.</span></li>
+          <li class="reveal"><a href="media/the-brood/14-raid.webp"><img src="media/the-brood/14-raid-t.webp" alt="A toast reading KSTR: BROOD SWARM, heading for the Hab Dome, as bugs close in" width="640" height="400" loading="lazy"></a><span class="cap">KSTR: BROOD SWARM, a raid on the Hab Dome.</span></li>
         </ul>
       </section>
 
@@ -125,24 +127,23 @@
       </div>
 
       <nav class="post-foot" aria-label="Posts">
-        <a class="btn ghost" href="missions.html">Before: missions</a>
+        <a class="tlink" href="missions.html">Before: missions</a>
         <a class="btn" href="defences.html">Next: what's coming</a>
       </nav>
     </article>
   </main>
 
-  <footer class="footer">
-    <div class="wrap">
-      <div>
-        <p class="mark">RINGSHADOW</p>
-        <p>An open-source real-time strategy game, built in public.</p>
-      </div>
-      <div>
-        <p><a href="../index.html">Home</a> · <a href="../roadmap.html">Roadmap</a> · <a href="index.html">Blog</a> · <a href="feed.xml">Feed</a> · <a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></p>
-        <p>Public domain (CC0). No trackers, no cookies.</p>
-        <p>For language models: <a href="../llms.txt">llms.txt</a> · <a href="the-brood.md">this page as Markdown</a></p>
-      </div>
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="the-brood.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
     </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
   </footer>
 </body>
 </html>

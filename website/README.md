@@ -8,8 +8,8 @@ no framework and no server side, so this folder deploys as it is.
 |---|---|
 | `index.html` | The home page: how you play, the twelve units as a carousel of cockpits, leveling, the world, the MMORPG mode, how it's made, the download. |
 | `roadmap.html` | The roadmap: every milestone a moon on the giant's ring, DONE, NEXT and LATER. |
-| `assets/css/` | `site.css` (shared: palette, fonts, navigation), `home.css`, `roadmap.css`. |
-| `assets/js/` | `stars.js` (the starfield), `home.js` (entrances, tabs, the roster carousel, the download picker; clips play only on screen), `hero.js` (the live sky, three.js in `vendor/`), `roadmap.js` (the ring). |
+| `assets/css/` | `site.css` (the fonts, and the roadmap's look), `ring.css` (the look the home page and the blog share: palette, type, the band shape, buttons, the bar, the footer, entrances), `home.css`, `blog.css`, `roadmap.css`. |
+| `assets/js/` | `ring.js` (the `js` class and the entrances, home and blog), `stars.js` (the starfield), `home.js` (entrances, tabs, the roster carousel, the download picker; clips play only on screen), `hero.js` (the live sky, three.js in `vendor/`), `roadmap.js` (the ring). |
 | `assets/fonts/` | Barlow Condensed and Exo 2 as woff2, with their SIL Open Font License texts. |
 | `assets/media/` | Screenshots and clips from `docs/media/` (the GIFs re-encoded as MP4) and the key art from `art/splash/`. |
 | `_headers`, `wrangler.toml`, `.assetsignore`, `404.html`, `robots.txt`, `sitemap.xml` | Hosting on Cloudflare: see "Deploy to Cloudflare". |
@@ -25,7 +25,7 @@ no CDN, no web fonts from elsewhere, no trackers, no analytics.
 ## The home page's design
 
 One shape runs the home page: the dark band the giant's ring throws across
-Ashfall Reach, a parallelogram slanted 12 degrees (`home.css`, `.cut` and the
+Ashfall Reach, a parallelogram slanted 12 degrees (`ring.css`, `.cut` and the
 buttons). It masks every picture, shapes the buttons and tabs and splits the
 page: the sunlit half, in the sand of the game's desert, is the strategy game
 you can play today; the half under the ring, in night and stars, is the
@@ -96,7 +96,11 @@ own pictures. Only what is merged goes in as fact; anything else is marked
 COMING. The roadmap's moons follow the same milestones.
 
 A post is a plain HTML page in `blog/`: copy the newest one and keep its
-shell (navigation, footer, scripts). Then add a card to `blog/index.html`
+shell (navigation, footer, scripts). The head is the title, then one line
+`date · milestone`, then the lede; there is no label above the title. Pictures
+sit in `<div class="cut r16">` frames, voices in `.voice`, coming work in
+`.coming`, and nothing gets an outline or a panel. Then add an entry (`<li
+class="reveal"><a class="card entry">`: picture, title, date line, summary) to `blog/index.html`
 and an entry to `blog/feed.xml`, both newest first. Every text on the site
 goes through the humanizer skill (`/humanizer`, github.com/blader/humanizer)
 before it ships: no staged contrasts, one-line closers, run-ups, bold
@@ -106,7 +110,7 @@ After any page changes, run `uv run website/tools/llms.py`. It writes the
 files for language models (llmstxt.org): a Markdown copy of every page at
 its address plus `.md` (`/blog/the-brood.md`), `llms.txt` (what Ringshadow
 is, and a link to each page's Markdown) and `llms-full.txt` (all of it in
-one file). New posts are picked up from the blog index's cards. The feed's links are
+one file). New posts are picked up from the blog index's entries. The feed's links are
 relative, so it works at whatever address the site gets.
 
 An album is a `<section class="album">` holding a list of links to the full

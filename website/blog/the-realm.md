@@ -4,9 +4,7 @@
 
 Source: https://ringshadow.com/blog/the-realm
 
-M8 · The realm under siege
-
-14 October 2026
+14 October 2026 · M8 · The realm under siege
 
 I played the new mode to level 10 and came away with a list. First on it were the buildings: a world with many pilots can't give each of them a Citadel, so the buildings had to belong to everyone.
 
@@ -26,7 +24,7 @@ Every unload pays the realm 10%. It rounds to the nearest whole unit, takes at l
 
 Press `H` at the Citadel and its screen opens on the REALM tab: the realm wallet, the tax, what you have paid, and buttons to donate 100, 1,000 or everything you carry. The realm wallet will pay for the Citadel's own guns, which are being built now ([coming next](https://ringshadow.com/blog/defences)).
 
-## Album · The realm's tax
+## The realm's tax
 
 - ![The Prospector at the Citadel with the label +24 ORE, 3 TO THE REALM](https://ringshadow.com/blog/media/the-realm/01-tax.webp) An unload at the Citadel: +24 ORE, 3 TO THE REALM.
 - ![The Citadel screen on its REALM tab: the realm wallet at 3 ore, the 10% tax, donate buttons](https://ringshadow.com/blog/media/the-realm/02-citadel.webp) The Citadel screen (`H`): the realm wallet holds the 3 ore of tax.
@@ -45,7 +43,7 @@ The Citadel's second tab is a shop, paid from your own wallet. It sells every bl
 
 The shield charge exists because of what came next that same day: [the Brood](https://ringshadow.com/blog/the-brood). Sites in the world still give a free blueprint when you open one, so exploring keeps paying.
 
-## Album · The shop
+## The shop
 
 - ![The SHOP tab: eight blueprints with stacks and prices, four supplies](https://ringshadow.com/blog/media/the-realm/04-shop.webp) The SHOP tab: blueprints on the left, supplies on the right.
 - ![The build menu listing each building with the number of blueprint copies held](https://ringshadow.com/blog/media/the-realm/05-build-menu.webp) The build menu counts your copies: Hab Dome ×10.

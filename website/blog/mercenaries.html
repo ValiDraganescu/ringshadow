@@ -17,37 +17,39 @@
   <link rel="alternate" type="text/markdown" title="This page as Markdown" href="mercenaries.md">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
-  <link rel="preload" href="../assets/fonts/BarlowCondensed-Medium.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
   <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
   <script src="../assets/js/stars.js" defer></script>
   <script src="../assets/js/album.js" defer></script>
 </head>
-<body>
+<body class="ring blog" id="top">
   <a class="skip" href="#main">Skip to the content</a>
   <canvas class="stars" aria-hidden="true"></canvas>
 
-  <nav class="nav" aria-label="Main">
-    <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
-    <ul class="nav-links">
-      <li><a href="../index.html">Home</a></li>
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
       <li><a href="../roadmap.html">Roadmap</a></li>
       <li><a href="index.html">Blog</a></li>
-      <li><a class="gh" href="https://github.com/ValiDraganescu/ringshadow"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
     </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
   </nav>
 
   <main id="main">
-    <article class="post wrap">
+    <article class="post">
       <header class="post-head">
-        <p class="kicker">M8 · The realm under siege</p>
         <h1>Mercenaries: they mine while you sleep</h1>
-        <p class="meta"><time datetime="2026-10-14">14 October 2026</time></p>
+        <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · The realm under siege</p>
         <p class="lede">The world now runs while the game is closed. So I asked for someone to work it: mercenary prospectors, hired at the Citadel, who dig your ore while you're away.</p>
       </header>
 
-      <figure class="post-cover">
-        <div class="media panel"><img src="media/mercenaries/03-mining.webp" alt="A hired Prospector labelled MERC · NETTLE drilling a deposit beside the pilot's own Prospector" width="1600" height="1000"></div>
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/mercenaries/03-mining.webp" alt="A hired Prospector labelled MERC · NETTLE drilling a deposit beside the pilot's own Prospector" width="1600" height="1000"></div>
         <figcaption>MERC · NETTLE at work on a deposit field at Prospect Landing.</figcaption>
       </figure>
 
@@ -55,21 +57,21 @@
         <p>The Citadel's fourth tab is MERCS. On the left are your mercenaries; on the right, the region's deposit fields with the ore left in each. Pick a field, press HIRE, and a Prospector with a name over its head walks out to dig there, then hauls the ore home to the Citadel.</p>
         <p>My one rule: in a whole world day, a mercenary mines what you mine in an hour. At level 5 that is 4,860 ore a day. The ore is yours, and like any unload it pays the realm its 10%. It earns you no XP: leveling stays something you do yourself.</p>
         <ul class="facts">
-          <li class="panel"><b>500</b><span>ore and 50 MH for the first hire, doubling for each one after</span></li>
-          <li class="panel"><b>5 + L/5</b><span>MH a day in wages, paid at dawn</span></li>
-          <li class="panel"><b>1 · 2 · 3</b><span>mercenaries at levels 5, 15 and 30</span></li>
+          <li><b>500</b><span>ore and 50 MH for the first hire, doubling for each one after</span></li>
+          <li><b>5 + L/5</b><span>MH a day in wages, paid at dawn</span></li>
+          <li><b>1 · 2 · 3</b><span>mercenaries at levels 5, 15 and 30</span></li>
         </ul>
         <p>Wages come out of your MH at every dawn. A mercenary who isn't paid leaves. You can send one to another field or dismiss it from the same tab.</p>
         <p>They work with the game closed, because <a href="world-runs-on.html">the world server keeps running</a>, and if the Mac was off the server catches up the hours when it starts again. When you come back the game tells you what happened: WHILE YOU WERE AWAY, mercs delivered 747 ore.</p>
       </div>
 
       <section class="album" aria-labelledby="a1">
-        <h2 class="album-title" id="a1">Album · Hire, mine, come back</h2>
+        <h2 class="album-title" id="a1">Hire, mine, come back</h2>
         <ul class="album-grid">
-          <li><a href="media/mercenaries/01-mercs-tab.webp"><img src="media/mercenaries/01-mercs-tab-t.webp" alt="The Citadel's MERCS tab: two open places, a third opening at level 30, and seven deposit fields" width="640" height="400" loading="lazy"></a><span class="cap">The MERCS tab: places for your mercenaries, and the fields they can work.</span></li>
-          <li><a href="media/mercenaries/02-hired.webp"><img src="media/mercenaries/02-hired-t.webp" alt="The MERCS tab after hiring Nettle, with SEND and DISMISS buttons, the next hire at 1,000 ore and 100 MH" width="640" height="400" loading="lazy"></a><span class="cap">Nettle hired for 500 ore and 50 MH. The next one costs double.</span></li>
-          <li><a href="media/mercenaries/03-mining.webp"><img src="media/mercenaries/03-mining-t.webp" alt="MERC · NETTLE drilling at a deposit" width="640" height="400" loading="lazy"></a><span class="cap">MERC · NETTLE on the field.</span></li>
-          <li><a href="media/mercenaries/04-while-away.webp"><img src="media/mercenaries/04-while-away-t.webp" alt="Arriving at Prospect Landing with banners: WHILE YOU WERE AWAY, mercs delivered 747 ore; a research and a module finished" width="640" height="400" loading="lazy"></a><span class="cap">Back in the game: the mercs delivered 747 ore, and the Lab and the Foundry finished their jobs too.</span></li>
+          <li class="reveal"><a href="media/mercenaries/01-mercs-tab.webp"><img src="media/mercenaries/01-mercs-tab-t.webp" alt="The Citadel's MERCS tab: two open places, a third opening at level 30, and seven deposit fields" width="640" height="400" loading="lazy"></a><span class="cap">The MERCS tab: places for your mercenaries, and the fields they can work.</span></li>
+          <li class="reveal"><a href="media/mercenaries/02-hired.webp"><img src="media/mercenaries/02-hired-t.webp" alt="The MERCS tab after hiring Nettle, with SEND and DISMISS buttons, the next hire at 1,000 ore and 100 MH" width="640" height="400" loading="lazy"></a><span class="cap">Nettle hired for 500 ore and 50 MH. The next one costs double.</span></li>
+          <li class="reveal"><a href="media/mercenaries/03-mining.webp"><img src="media/mercenaries/03-mining-t.webp" alt="MERC · NETTLE drilling at a deposit" width="640" height="400" loading="lazy"></a><span class="cap">MERC · NETTLE on the field.</span></li>
+          <li class="reveal"><a href="media/mercenaries/04-while-away.webp"><img src="media/mercenaries/04-while-away-t.webp" alt="Arriving at Prospect Landing with banners: WHILE YOU WERE AWAY, mercs delivered 747 ore; a research and a module finished" width="640" height="400" loading="lazy"></a><span class="cap">Back in the game: the mercs delivered 747 ore, and the Lab and the Foundry finished their jobs too.</span></li>
         </ul>
       </section>
 
@@ -78,24 +80,23 @@
       </div>
 
       <nav class="post-foot" aria-label="Posts">
-        <a class="btn ghost" href="world-runs-on.html">Before: the world runs on</a>
+        <a class="tlink" href="world-runs-on.html">Before: the world runs on</a>
         <a class="btn" href="index.html">All posts</a>
       </nav>
     </article>
   </main>
 
-  <footer class="footer">
-    <div class="wrap">
-      <div>
-        <p class="mark">RINGSHADOW</p>
-        <p>An open-source real-time strategy game, built in public.</p>
-      </div>
-      <div>
-        <p><a href="../index.html">Home</a> · <a href="../roadmap.html">Roadmap</a> · <a href="index.html">Blog</a> · <a href="feed.xml">Feed</a> · <a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></p>
-        <p>Public domain (CC0). No trackers, no cookies.</p>
-        <p>For language models: <a href="../llms.txt">llms.txt</a> · <a href="mercenaries.md">this page as Markdown</a></p>
-      </div>
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="mercenaries.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
     </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
   </footer>
 </body>
 </html>

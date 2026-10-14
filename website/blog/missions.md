@@ -4,9 +4,7 @@
 
 Source: https://ringshadow.com/blog/missions
 
-M8 · The realm under siege
-
-14 October 2026
+14 October 2026 · M8 · The realm under siege
 
 A pilot at level 10 asked the obvious question: now what? The Citadel answers it with a board of missions, and every briefing is read aloud by someone who sounds like they mean it.
 
@@ -24,7 +22,7 @@ There are five kinds of mission: survey (drive to a marker and hold still while 
 
 Press `L` and the Journal opens. Each mission you took has its briefing, what to do, your progress, the reward, and where it is on the map. The marker also shows on the compass and the minimap. And there's a button: PLAY THE BRIEFING.
 
-## Album · A mission from the board to done
+## A mission from the board to done
 
 - ![The MISSIONS tab with six offers](https://ringshadow.com/blog/media/missions/01-board.webp) The board at the Citadel, Journal 0/3.
 - ![The board after taking Mark the Ground: Signed up, it's in your Journal](https://ringshadow.com/blog/media/missions/02-signed-up.webp) Signed up for Mark the Ground. It's in the Journal.

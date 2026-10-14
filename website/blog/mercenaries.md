@@ -4,9 +4,7 @@
 
 Source: https://ringshadow.com/blog/mercenaries
 
-M8 · The realm under siege
-
-14 October 2026
+14 October 2026 · M8 · The realm under siege
 
 The world now runs while the game is closed. So I asked for someone to work it: mercenary prospectors, hired at the Citadel, who dig your ore while you're away.
 
@@ -26,7 +24,7 @@ Wages come out of your MH at every dawn. A mercenary who isn't paid leaves. You 
 
 They work with the game closed, because [the world server keeps running](https://ringshadow.com/blog/world-runs-on), and if the Mac was off the server catches up the hours when it starts again. When you come back the game tells you what happened: WHILE YOU WERE AWAY, mercs delivered 747 ore.
 
-## Album · Hire, mine, come back
+## Hire, mine, come back
 
 - ![The Citadel's MERCS tab: two open places, a third opening at level 30, and seven deposit fields](https://ringshadow.com/blog/media/mercenaries/01-mercs-tab.webp) The MERCS tab: places for your mercenaries, and the fields they can work.
 - ![The MERCS tab after hiring Nettle, with SEND and DISMISS buttons, the next hire at 1,000 ore and 100 MH](https://ringshadow.com/blog/media/mercenaries/02-hired.webp) Nettle hired for 500 ore and 50 MH. The next one costs double.

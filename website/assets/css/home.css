@@ -1,133 +1,12 @@
-/* The home page.
+/* The home page, on top of ring.css.
 
-   One shape runs it: the dark band the giant's ring throws across Ashfall
-   Reach, a parallelogram slanted 12 degrees. It masks every picture (.cut),
-   shapes the buttons and tabs, marks the list and splits the page: the
-   sunlit half is the strategy game you can play today, the half under the
-   ring is the online world still being built. */
+   The sunlit half is the strategy game you can play today, the half under
+   the ring the online world still being built; the band between them is
+   the ring's dark band itself. */
 
-.home {
-  --night: #030912;
-  --night-2: #0a1728;
-  --night-3: #13263b;
-  --deep: #01040a;
-  --ink: #ebf7ff;
-  --soft: #a9c3d4;
-  --cyan: #59d9ff;
-  --ice: #ccf2ff;
-  --amber: #ffb333;
-  /* Ashfall Reach in the sun: the desert of the game's ground. */
-  --sun: #d3a062;
-  --sun-2: #c48d4f;
-  --sun-3: #e2b97f;
-  --sun-ink: #170e05;
-  --sun-soft: #3e2a13;
-
-  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
-  --text: "Exo 2", system-ui, sans-serif;
-  --f-display: clamp(52px, 7vw, 124px);
-  --f-head: clamp(34px, 3.4vw, 52px);
-  --f-lead: clamp(19px, 1.5vw, 22px);
-  --f-body: clamp(16px, 1.25vw, 18px);
-  --f-small: 15px;
-
-  --m: clamp(16px, 3vw, 40px);
-  --sec: clamp(96px, 11vw, 180px);
-  --tilt: 0.21; /* tan 12deg */
-  --rise: 7vw;  /* how far the band's edges climb across the page */
-
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
-  --ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
-
-  font-family: var(--text);
-  font-size: var(--f-body);
-  font-weight: 400;
-  line-height: 1.55;
-  color: var(--ink);
-  background: var(--night);
-}
-:where(.home) :is(h1, h2, h3) {
-  font-family: var(--display); font-weight: 600; text-transform: none;
-  letter-spacing: -0.01em; line-height: 0.95; color: inherit; margin: 0;
-}
-:where(.home) h2 { font-size: var(--f-head); max-width: 14ch; text-wrap: balance; }
-:where(.home) p { max-width: 62ch; margin: 0; }
-:where(.home) a { color: inherit; text-decoration-thickness: 2px; text-underline-offset: 4px; }
-.home .skip { color: var(--night); }
-.home :focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; border-radius: 0; }
-.home .sun :focus-visible, .home .get :focus-visible { outline-color: var(--night); }
-.home kbd {
-  font-family: var(--text); font-weight: 700; font-size: 0.85em;
-  padding: 0.05em 0.4em; margin: 0 0.1em; border: 0; border-radius: 0;
-  background: var(--night-3); color: var(--ink);
-}
-.home .sun kbd { background: var(--sun-ink); color: var(--sun-3); }
-
-/* ---------- The shape ---------- */
-
-/* A picture in the band's shape. The slant is the same 12 degrees at any
-   size: the cut is the frame's height times tan 12deg, from its width. */
-.cut { container-type: inline-size; position: relative; aspect-ratio: var(--ar); }
-.cut.r1 { --ar: 1 / 1; --arn: 1; }
-.cut.r16 { --ar: 16 / 10; --arn: 1.6; }
-.cut > img, .cut > video {
-  --d: calc(100cqw / var(--arn) * var(--tilt));
-  position: absolute; inset: 0; width: 100%; height: 100%; max-width: none;
-  object-fit: cover; background: var(--night);
-  clip-path: polygon(var(--d) 0, 100% 0, calc(100% - var(--d)) 100%, 0 100%);
-}
-
-/* Buttons: a flat band of colour behind the words. */
-.home .btn {
-  position: relative; isolation: isolate;
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 16px 32px; border: 0; border-radius: 0; box-shadow: none; background: none; /* taste-skill-ignore: resets the shared button */
-  font-family: var(--text); font-weight: 700; font-size: var(--f-body);
-  letter-spacing: 0; text-transform: none; text-decoration: none;
-  color: var(--night);
-  transition: transform 140ms var(--ease-out);
-}
-.home .btn::before {
-  content: ""; position: absolute; inset: 0; z-index: -1;
-  background: var(--cyan); transform: skewX(-12deg);
-  transition: background-color 180ms ease;
-}
-.home .btn:active { transform: scale(0.97); }
-.home .btn:focus-visible { outline: none; }
-.home .btn:focus-visible::before { outline: 3px solid var(--ice); outline-offset: 3px; }
-@media (hover: hover) and (pointer: fine) {
-  .home .btn:hover { color: var(--night); }
-  .home .btn:hover::before { background: var(--ice); }
-}
-.home .btn-sm { padding: 10px 22px; font-size: var(--f-small); }
-
-.tlink {
-  font-weight: 700; text-decoration: underline;
-  text-decoration-color: currentColor; text-decoration-thickness: 2px; text-underline-offset: 5px;
-  transition: text-decoration-color 180ms ease, text-underline-offset 180ms var(--ease-out);
-}
-@media (hover: hover) and (pointer: fine) {
-  .tlink:hover { text-underline-offset: 8px; }
-}
-
-/* ---------- Navigation: a plain row over the sky ---------- */
-
-.bar {
-  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
-  display: flex; align-items: center; gap: 12px 32px;
-  padding: 24px var(--m);
-}
-.bar-mark {
-  display: flex; align-items: center; gap: 10px; margin-right: auto;
-  font-family: var(--text); font-weight: 700; font-size: var(--f-lead);
-  text-decoration: none;
-}
-.bar ul { display: flex; gap: 28px; list-style: none; margin: 0; padding: 0; }
-.bar ul a { font-size: var(--f-body); text-decoration: none; }
-@media (hover: hover) and (pointer: fine) {
-  .bar ul a:hover { text-decoration: underline; }
-}
+.home .bar { position: absolute; top: 0; left: 0; right: 0; }
+.ring .sun :focus-visible, .ring .get :focus-visible { outline-color: var(--night); }
+.ring .sun kbd { background: var(--sun-ink); color: var(--sun-3); }
 
 /* ---------- Hero: the giant itself ---------- */
 
@@ -204,12 +83,12 @@ html:not(.js) .tabs { display: none; }
   clip-path: polygon(15px 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
   transition: transform 140ms var(--ease-out), background-color 180ms ease;
 }
-.home .cell-ink { color: var(--sun-3); background: var(--sun-ink); }
+.ring .cell-ink { color: var(--sun-3); background: var(--sun-ink); }
 .cell-tone { background: var(--sun-2); }
 .cell:active { transform: scale(0.97); }
 .cell:focus-visible { outline: none; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
 @media (hover: hover) and (pointer: fine) {
-  .home .cell-ink:hover { background: var(--night-3); }
+  .ring .cell-ink:hover { background: var(--night-3); }
   .cell-tone:hover { background: var(--sun-3); }
 }
 
@@ -222,17 +101,16 @@ html:not(.js) .tabs { display: none; }
 }
 .roster-say { font-size: var(--f-lead); max-width: 44ch; margin-top: 28px !important; }
 .roster-nav { display: flex; gap: 16px; }
-.home .btn-dark {
+.ring .btn-dark {
   color: var(--sun-3); background: var(--sun-ink);
   clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
   transition: transform 140ms var(--ease-out), background-color 180ms ease, color 180ms ease;
 }
-.home .btn-dark::before { content: none; }
-.home .btn-dark:focus-visible { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
+.ring .btn-dark:focus-visible { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
 @media (hover: hover) and (pointer: fine) {
-  .home .btn-dark:not([disabled]):hover { color: var(--sun-ink); background: var(--sun-3); }
+  .ring .btn-dark:not([disabled]):hover { color: var(--sun-ink); background: var(--sun-3); }
 }
-.home .btn-dark[disabled] { opacity: 0.45; cursor: default; }
+.ring .btn-dark[disabled] { opacity: 0.45; cursor: default; }
 .track {
   position: relative; list-style: none; margin: 0; padding: 0 var(--m) 8px;
   display: grid; grid-auto-flow: column; grid-auto-columns: min(56vw, 840px); gap: 28px;
@@ -407,43 +285,6 @@ html:not(.js) .seg, html:not(.js) .dl-need { display: none; }
 html:not(.js) .dl-copy { display: none; }
 .get-plain { grid-column: 1 / -1; align-self: end; font-size: var(--f-small); }
 
-/* ---------- Footer: the name, built from blocks like the mesas ---------- */
-
-.foot { padding: 64px var(--m) 40px; background: var(--night); color: var(--soft); }
-.blocks { display: flex; gap: 4px; align-items: flex-end; height: 34svh; min-height: 180px; text-decoration: none; }
-.blocks span {
-  flex: 1; display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 0.08em; background: var(--sun); color: var(--night);
-  font-family: var(--display); font-weight: 700; font-size: clamp(36px, 7vw, 120px); line-height: 0.8;
-  transition: transform 240ms var(--ease-out);
-}
-.blocks span:nth-child(1) { height: 74%; }
-.blocks span:nth-child(2) { height: 100%; background: var(--sun-2); }
-.blocks span:nth-child(3) { height: 62%; background: var(--sun-3); }
-.blocks span:nth-child(4) { height: 88%; }
-.blocks span:nth-child(5) { height: 80%; background: var(--sun-2); }
-.blocks span:nth-child(6) { height: 96%; background: var(--sun-3); }
-.blocks span:nth-child(7) { height: 60%; }
-.blocks span:nth-child(8) { height: 84%; background: var(--sun-2); }
-.blocks span:nth-child(9) { height: 70%; background: var(--cyan); }
-.blocks span:nth-child(10) { height: 92%; background: var(--sun-3); }
-@media (hover: hover) and (pointer: fine) {
-  .blocks:hover span { transform: translateY(-6px); }
-  .blocks:hover span:nth-child(even) { transform: translateY(-12px); }
-}
-.foot-cols {
-  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 32px 16px;
-  margin-top: 56px; font-size: var(--f-small);
-}
-.foot-cols ul { grid-column: span 2; list-style: none; margin: 0; padding: 0; }
-.foot-cols li { margin-bottom: 8px; }
-.foot-cols a { color: var(--ink); }
-.foot-note { grid-column: 8 / span 5; font-size: var(--f-small); }
-.foot-last {
-  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px;
-  max-width: none !important; margin-top: 56px !important; font-size: var(--f-small);
-}
-
 /* ---------- Motion ---------- */
 
 @media (prefers-reduced-motion: no-preference) {
@@ -454,16 +295,10 @@ html:not(.js) .dl-copy { display: none; }
   .js .rise.r1 { animation-delay: 480ms; }
   .js .rise.r2 { animation-delay: 580ms; }
 
-  .js .reveal { opacity: 0; transform: translateY(24px); transition: opacity 700ms var(--ease-out), transform 900ms var(--ease-out); }
-  .js .reveal.is-in { opacity: 1; transform: none; }
-  .js .reveal.s1 { transition-delay: 80ms; }
-  .js .reveal.s2 { transition-delay: 160ms; }
-  .js .reveal.s3 { transition-delay: 240ms; }
-
   /* The one loud move: the plate opens like a shutter. */
-  .js .shutter { overflow: hidden; clip-path: inset(0 0 100% 0); transition: clip-path 1100ms var(--ease-in-out); }
+  .js .shutter { clip-path: polygon(var(--dp) 0, 100% 0, calc(100% - var(--dp)) 0, 0 0); transition: clip-path 1100ms var(--ease-in-out); }
   .js .shutter > * { transform: scale(1.12); transition: transform 1500ms var(--ease-soft), opacity 500ms ease; }
-  .js .is-in > .shutter { clip-path: inset(0); }
+  .js .is-in > .shutter { clip-path: polygon(var(--dp) 0, 100% 0, calc(100% - var(--dp)) 100%, 0 100%); }
   .js .is-in > .shutter > * { transform: none; }
 
   /* The cards arrive one after another. */
@@ -476,12 +311,6 @@ html:not(.js) .dl-copy { display: none; }
   /* The diagram draws itself left to right. */
   .js .diagram .diag { clip-path: inset(0 100% 0 0); transition: clip-path 1600ms var(--ease-soft) 200ms; }
   .js .diagram.is-in .diag { clip-path: inset(0); }
-
-  /* The footer's blocks rise like mesas out of the ground. */
-  .js .blocks span { transform: scaleY(0); transform-origin: bottom; transition: transform 900ms var(--ease-out); }
-  .js .blocks.is-in span { transform: none; }
-  .js .blocks.is-in span:nth-child(2n) { transition-delay: 80ms; }
-  .js .blocks.is-in span:nth-child(3n) { transition-delay: 160ms; }
 }
 @keyframes line-up { to { transform: none; } }
 @keyframes rise { to { opacity: 1; transform: none; } }
@@ -493,7 +322,6 @@ html:not(.js) .dl-copy { display: none; }
 }
 
 @media (max-width: 860px) {
-  .bar ul { display: none; }
   .show, .levels-head, .mmo-panel { grid-template-columns: 1fr; }
   .track { grid-auto-columns: 84vw; gap: 16px; }
   .roster-nav { display: none; }
@@ -528,8 +356,6 @@ html:not(.js) .dl-copy { display: none; }
   .get h2 { font-size: 13vw; }
   .dl { width: 100%; min-width: 0; padding: 20px; }
   .seg button { padding: 12px 2px; }
-  .foot-cols ul { grid-column: span 6; }
-  .foot-note { grid-column: 1 / -1; }
 }
 
 @media (max-width: 860px) and (max-aspect-ratio: 11/10) {
@@ -537,11 +363,7 @@ html:not(.js) .dl-copy { display: none; }
 }
 
 @media (max-width: 520px) {
-  .bar { gap: 12px; }
-  .bar-mark { font-size: 18px; }
   .hero h1 { font-size: 13vw; }
   .show-cells { grid-template-columns: 1fr; }
   .cell { min-height: 60px; }
-  .blocks { height: 22svh; min-height: 120px; gap: 3px; }
-  .blocks span { font-size: 8.6vw; }
 }

@@ -17,115 +17,107 @@
   <link rel="alternate" type="text/markdown" title="This page as Markdown" href="index.md">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
-  <link rel="preload" href="../assets/fonts/BarlowCondensed-Medium.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
   <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
   <script src="../assets/js/stars.js" defer></script>
   <script src="../assets/js/album.js" defer></script>
 </head>
-<body>
+<body class="ring blog" id="top">
   <a class="skip" href="#main">Skip to the content</a>
   <canvas class="stars" aria-hidden="true"></canvas>
 
-  <nav class="nav" aria-label="Main">
-    <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
-    <ul class="nav-links">
-      <li><a href="../index.html">Home</a></li>
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
       <li><a href="../roadmap.html">Roadmap</a></li>
       <li><a href="index.html" aria-current="page">Blog</a></li>
-      <li><a class="gh" href="https://github.com/ValiDraganescu/ringshadow"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
     </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
   </nav>
 
   <main id="main">
-    <div class="wrap">
-      <header class="blog-head">
-        <p class="kicker">Built in public</p>
+    <header class="blog-head">
         <h1>The Ringshadow blog</h1>
         <p class="lede">How the game is being made, as it happens: what landed, what it looks like, and what's next. Every picture comes from the game, recorded by the agents that build it.</p>
-        <p class="feed muted">Follow it with the <a href="feed.xml">Atom feed</a>.</p>
+        <p class="feed">Follow it with the <a href="feed.xml">Atom feed</a>.</p>
       </header>
 
       <ol class="posts" reversed>
-        <li><a class="card panel" href="mercenaries.html">
-          <img src="media/mercenaries/cover.jpg" alt="" width="1200" height="750" loading="lazy">
-          <div class="card-body">
-            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 4 pictures</p>
+        <li class="reveal"><a class="card entry" href="mercenaries.html">
+          <div class="cut r16"><img src="media/mercenaries/cover.jpg" alt="" width="1200" height="750" loading="lazy"></div>
+          <div>
             <h2>Mercenaries: they mine while you sleep</h2>
-            <p>Hire prospectors at the Citadel. In a world day each mines what you mine in an hour, even with the game closed.</p>
-            <span class="more">Read</span>
-          </div>
-        </a></li>
-        <li><a class="card panel" href="world-runs-on.html">
-          <img src="media/world-runs-on/cover.jpg" alt="" width="1200" height="750" loading="lazy">
-          <div class="card-body">
             <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 4 pictures</p>
+            <p class="entry-sum">Hire prospectors at the Citadel. In a world day each mines what you mine in an hour, even with the game closed.</p>
+          </div>
+        </a></li>
+        <li class="reveal"><a class="card entry" href="world-runs-on.html">
+          <div class="cut r16"><img src="media/world-runs-on/cover.jpg" alt="" width="1200" height="750" loading="lazy"></div>
+          <div>
             <h2>The world runs on after you quit</h2>
-            <p>The local server keeps the world going on your Mac: the clock, starfalls, the Brood. The game reattaches when you're back.</p>
-            <span class="more">Read</span>
+            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 4 pictures</p>
+            <p class="entry-sum">The local server keeps the world going on your Mac: the clock, starfalls, the Brood. The game reattaches when you're back.</p>
           </div>
         </a></li>
-        <li><a class="card panel" href="defences.html">
-          <img src="media/defences/cover.jpg" alt="" width="733" height="458" loading="lazy">
-          <div class="card-body">
-            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 <span class="chip-coming">COMING</span></p>
+        <li class="reveal"><a class="card entry" href="defences.html">
+          <div class="cut r16"><img src="media/defences/cover.jpg" alt="" width="733" height="458" loading="lazy"></div>
+          <div>
             <h2>Coming next: guns for the realm, and a canyon to hold</h2>
-            <p>Four point-defence turrets on the Citadel, an AA tower, a gatling gun firing red-hot ore-and-MH rounds, and a canyon the pilots defend wave by wave.</p>
-            <span class="more">Read</span>
+            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 <span class="chip-coming">Coming</span></p>
+            <p class="entry-sum">Four point-defence turrets on the Citadel, an AA tower, a gatling gun firing red-hot ore-and-MH rounds, and a canyon the pilots defend wave by wave.</p>
           </div>
         </a></li>
-        <li><a class="card panel" href="the-brood.html">
-          <img src="media/the-brood/cover.jpg" alt="" width="1200" height="750" loading="lazy">
-          <div class="card-body">
-            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 14 pictures</p>
+        <li class="reveal"><a class="card entry" href="the-brood.html">
+          <div class="cut r16"><img src="media/the-brood/cover.jpg" alt="" width="1200" height="750" loading="lazy"></div>
+          <div>
             <h2>The Brood: from a painting to the world in a day</h2>
-            <p>The first enemies: four alien bugs that linger at deposits, bite, dive, eat ore and raid buildings.</p>
-            <span class="more">Read</span>
+            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 14 pictures</p>
+            <p class="entry-sum">The first enemies: four alien bugs that linger at deposits, bite, dive, eat ore and raid buildings.</p>
           </div>
         </a></li>
-        <li><a class="card panel" href="missions.html">
-          <img src="media/missions/cover.jpg" alt="" width="1200" height="750" loading="lazy">
-          <div class="card-body">
-            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 5 pictures, 3 voices</p>
+        <li class="reveal"><a class="card entry" href="missions.html">
+          <div class="cut r16"><img src="media/missions/cover.jpg" alt="" width="1200" height="750" loading="lazy"></div>
+          <div>
             <h2>Missions, the Journal and three voices</h2>
-            <p>A board of missions at the Citadel, a Journal to keep them, and every briefing read aloud.</p>
-            <span class="more">Read</span>
+            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 5 pictures, 3 voices</p>
+            <p class="entry-sum">A board of missions at the Citadel, a Journal to keep them, and every briefing read aloud.</p>
           </div>
         </a></li>
-        <li><a class="card panel" href="the-realm.html">
-          <img src="media/the-realm/cover.jpg" alt="" width="1200" height="750" loading="lazy">
-          <div class="card-body">
-            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 6 pictures</p>
+        <li class="reveal"><a class="card entry" href="the-realm.html">
+          <div class="cut r16"><img src="media/the-realm/cover.jpg" alt="" width="1200" height="750" loading="lazy"></div>
+          <div>
             <h2>The realm: shared buildings, a tax and a shop</h2>
-            <p>Every building now belongs to every pilot. The Citadel takes 10% of each unload and sells blueprints and supplies.</p>
-            <span class="more">Read</span>
+            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M8 · 6 pictures</p>
+            <p class="entry-sum">Every building now belongs to every pilot. The Citadel takes 10% of each unload and sells blueprints and supplies.</p>
           </div>
         </a></li>
-        <li><a class="card panel" href="how-we-got-here.html">
-          <img src="media/how-we-got-here/cover.jpg" alt="" width="1200" height="675" loading="lazy">
-          <div class="card-body">
-            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M1 to M7 · showreel, 9 pictures</p>
+        <li class="reveal"><a class="card entry" href="how-we-got-here.html">
+          <div class="cut r16"><img src="media/how-we-got-here/cover.jpg" alt="" width="1200" height="675" loading="lazy"></div>
+          <div>
             <h2>How we got here</h2>
-            <p>Two days, seven milestones: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.</p>
-            <span class="more">Read</span>
+            <p class="meta"><time datetime="2026-10-14">14 October 2026</time> · M1 to M7 · showreel, 9 pictures</p>
+            <p class="entry-sum">Two days, seven milestones: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.</p>
           </div>
         </a></li>
       </ol>
-    </div>
   </main>
 
-  <footer class="footer">
-    <div class="wrap">
-      <div>
-        <p class="mark">RINGSHADOW</p>
-        <p>An open-source real-time strategy game, built in public.</p>
-      </div>
-      <div>
-        <p><a href="../index.html">Home</a> · <a href="../roadmap.html">Roadmap</a> · <a href="index.html">Blog</a> · <a href="feed.xml">Feed</a> · <a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></p>
-        <p>Public domain (CC0). No trackers, no cookies.</p>
-        <p>For language models: <a href="../llms.txt">llms.txt</a> · <a href="index.md">this page as Markdown</a></p>
-      </div>
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="index.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
     </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
   </footer>
 </body>
 </html>

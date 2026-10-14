@@ -256,7 +256,7 @@ def convert(rel: str) -> tuple[str, str, str]:
 
 
 def main() -> None:
-    posts = re.findall(r'<a class="card panel" href="([a-z0-9-]+\.html)"', (ROOT / "blog/index.html").read_text())
+    posts = re.findall(r'<a class="card entry" href="([a-z0-9-]+\.html)"', (ROOT / "blog/index.html").read_text())
     pages = PAGES + [f"blog/{p}" for p in posts]
     entries = []
     full = []

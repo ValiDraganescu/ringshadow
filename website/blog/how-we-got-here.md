@@ -4,9 +4,7 @@
 
 Source: https://ringshadow.com/blog/how-we-got-here
 
-The MMORPG mode · M1 to M7
-
-14 October 2026
+14 October 2026 · The MMORPG mode · M1 to M7
 
 Two days ago Ringshadow's online mode was a list of decisions in a log file. Tonight a pilot lands on a frontier world, drills opal ore under a ringed giant, and watches a meteor come down where the radio said it would. Here is how it got built.
 
@@ -49,7 +47,7 @@ Work crashed twice on the 14th, once mid-morning and once mid-afternoon, and eve
 
 At the end of M7 the test suites stood at 454 core tests, 153 server tests and 67 network tests, all passing.
 
-## Album · Under the giant
+## Under the giant
 
 - ![Painted key art: a Prospector on a cliff at dusk, its headlamp on, the ringed giant filling the sky](https://ringshadow.com/blog/media/how-we-got-here/01-key-art.webp) The key art for the home screen, painted with Grok Imagine: a lone Prospector under the giant.
 - ![The home screen with the RINGSHADOW title and ENTER THE REACH](https://ringshadow.com/blog/media/how-we-got-here/02-home.webp) The home screen. ENTER THE REACH comes first.

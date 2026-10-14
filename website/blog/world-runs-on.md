@@ -4,9 +4,7 @@
 
 Source: https://ringshadow.com/blog/world-runs-on
 
-M8 · The realm under siege
-
-14 October 2026
+14 October 2026 · M8 · The realm under siege
 
 A world that lasts shouldn't stop when you close the game, and now it keeps going. The local server runs on your Mac, and the game picks it back up when you return.
 
@@ -22,7 +20,7 @@ If the Mac was off, there's nothing to run on, so the world catches up instead: 
 
 The home screen shows "World server running" with the time it started, and a STOP button for when you want it off.
 
-## Album · Quit, come back
+## Quit, come back
 
 - ![The Prospector on its landing pad at Prospect Landing, before the game quits](https://ringshadow.com/blog/media/world-runs-on/01-first-run.webp) Before quitting: the Prospector on the pad.
 - ![The same spot after the game restarts and reattaches, the clouds moved on](https://ringshadow.com/blog/media/world-runs-on/02-reattached.webp) After a restart: same world, same pilot. The clouds moved on while the game was closed.
