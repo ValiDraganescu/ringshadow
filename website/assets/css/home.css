@@ -17,6 +17,25 @@
 @keyframes drift {
   to { transform: scale(1.1) translate(-1.2%, 0.8%); }
 }
+/* The live sky (assets/js/hero.js): the giant, its rings, meteors and a
+   comet. It fades in on its first frame; until then, a dark sky. */
+.hero {
+  background:
+    radial-gradient(60% 70% at 70% 42%, rgba(40, 110, 120, 0.18), transparent 70%),
+    linear-gradient(180deg, #02060d 0%, #061220 70%, #0a1a28 100%);
+}
+.hero-gl {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  z-index: -2; opacity: 0; transition: opacity 1.6s ease;
+}
+.hero-live .hero-gl { opacity: 1; }
+.hero-still .hero-gl { display: none; }
+.hero-ground {
+  position: absolute; left: 0; right: 0; bottom: 0; width: 100%;
+  height: clamp(70px, 16vh, 190px); z-index: -1;
+  fill: #040a12;
+}
+.hero-ground circle { fill: var(--amber); filter: drop-shadow(0 0 4px var(--amber)); }
 .hero-shade {
   position: absolute; inset: 0; z-index: -1;
   background:

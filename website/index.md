@@ -139,6 +139,6 @@ Public domain
 
 Everything in the repository is dedicated to the public domain under CC0 1.0: the code, the art, the models, the sounds, the music and the docs. Use any of it for anything, with no credit needed.
 
-A few third-party files keep their own licences, listed in the README. The fonts on this site, Barlow Condensed and Exo 2, are under the SIL Open Font License ([Barlow](https://ringshadow.com/assets/fonts/OFL-BarlowCondensed.txt), [Exo 2](https://ringshadow.com/assets/fonts/OFL-Exo2.txt)). The game is built with Unreal Engine 5, which has its own licence from Epic Games.
+A few third-party files keep their own licences, listed in the README. The fonts on this site, Barlow Condensed and Exo 2, are under the SIL Open Font License ([Barlow](https://ringshadow.com/assets/fonts/OFL-BarlowCondensed.txt), [Exo 2](https://ringshadow.com/assets/fonts/OFL-Exo2.txt)). The sky at the top is drawn with three.js, under the [MIT License](https://ringshadow.com/assets/js/vendor/three.LICENSE.txt). The game is built with Unreal Engine 5, which has its own licence from Epic Games.
 
 [The source on GitHub](https://github.com/ValiDraganescu/ringshadow)

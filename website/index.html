@@ -23,6 +23,8 @@
   <link rel="stylesheet" href="assets/css/home.css">
   <script src="assets/js/stars.js" defer></script>
   <script src="assets/js/home.js" defer></script>
+  <link rel="modulepreload" href="assets/js/vendor/three-hero.min.js">
+  <script type="module" src="assets/js/hero.js"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to the content</a>
@@ -39,7 +41,12 @@
   </nav>
 
   <header class="hero">
-    <img class="hero-art" src="assets/media/key-art.jpg" alt="" width="1408" height="704">
+    <canvas class="hero-gl" aria-hidden="true"></canvas>
+    <noscript><img class="hero-art" src="assets/media/key-art.jpg" alt="" width="1408" height="704"></noscript>
+    <svg class="hero-ground" viewBox="0 0 1600 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <path d="M0 220V150l60-4 18-22h96l14 18 120 6 40-10 70 2 16-30h150l14 26 90 8 60-6 28 4 20-48h170l16 44 74 10 90-8 50 6 30-24h112l22 26 70 6 70-4V220Z"/>
+      <circle cx="356" cy="152" r="2.2"/><circle cx="1012" cy="160" r="1.8"/><circle cx="1298" cy="128" r="2"/>
+    </svg>
     <div class="hero-shade" aria-hidden="true"></div>
     <div class="wrap hero-copy">
       <p class="kicker">A frontier world · Ashfall Reach</p>
@@ -193,7 +200,7 @@
         <p class="kicker">Public domain</p>
         <h2>CC0: take any of it</h2>
         <p>Everything in the repository is dedicated to the public domain under CC0 1.0: the code, the art, the models, the sounds, the music and the docs. Use any of it for anything, with no credit needed.</p>
-        <p class="muted">A few third-party files keep their own licences, listed in the README. The fonts on this site, Barlow Condensed and Exo 2, are under the SIL Open Font License (<a href="assets/fonts/OFL-BarlowCondensed.txt">Barlow</a>, <a href="assets/fonts/OFL-Exo2.txt">Exo 2</a>). The game is built with Unreal Engine 5, which has its own licence from Epic Games.</p>
+        <p class="muted">A few third-party files keep their own licences, listed in the README. The fonts on this site, Barlow Condensed and Exo 2, are under the SIL Open Font License (<a href="assets/fonts/OFL-BarlowCondensed.txt">Barlow</a>, <a href="assets/fonts/OFL-Exo2.txt">Exo 2</a>). The sky at the top is drawn with three.js, under the <a href="assets/js/vendor/three.LICENSE.txt">MIT License</a>. The game is built with Unreal Engine 5, which has its own licence from Epic Games.</p>
         <a class="btn ghost" href="https://github.com/ValiDraganescu/ringshadow">The source on GitHub</a>
       </div>
     </section>

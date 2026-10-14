@@ -9,7 +9,7 @@ no framework and no server side, so this folder deploys as it is.
 | `index.html` | The home page: the pitch, how you play, the units, the MMORPG mode, how it's made, CC0. |
 | `roadmap.html` | The roadmap: every milestone a moon on the giant's ring, DONE, NEXT and LATER. |
 | `assets/css/` | `site.css` (shared: palette, fonts, navigation), `home.css`, `roadmap.css`. |
-| `assets/js/` | `stars.js` (the starfield), `home.js` (clips play only on screen), `roadmap.js` (the ring). |
+| `assets/js/` | `stars.js` (the starfield), `home.js` (clips play only on screen), `hero.js` (the live sky, three.js in `vendor/`), `roadmap.js` (the ring). |
 | `assets/fonts/` | Barlow Condensed and Exo 2 as woff2, with their SIL Open Font License texts. |
 | `assets/media/` | Screenshots and clips from `docs/media/` (the GIFs re-encoded as MP4) and the key art from `art/splash/`. |
 | `_headers`, `wrangler.toml`, `.assetsignore`, `404.html`, `robots.txt`, `sitemap.xml` | Hosting on Cloudflare: see "Deploy to Cloudflare". |
@@ -21,6 +21,36 @@ no framework and no server side, so this folder deploys as it is.
 The palette is the game's HUD (`unreal/Source/Autocraft/AcHudStyle.h`):
 glass `#030912`, cyan `#59d9ff`, ice `#ccf2ff`. Everything is self-hosted:
 no CDN, no web fonts from elsewhere, no trackers, no analytics.
+
+## The hero
+
+The home page's hero is drawn live with three.js (`assets/js/hero.js`). It
+draws the giant with its storm, bands that turn faster at the equator,
+meteorite strikes that ripple across the clouds, rings that orbit (inner
+faster) and nod slightly, Perseid showers and lone meteors, and a comet now
+and then. Everything is a shader, nothing is a texture. Five draw calls.
+
+It is built to cost little. The script loads as a module after the page
+paints. Frames stop while the hero is off screen or the tab is hidden, and
+never run faster than 60 a second. The pixel ratio starts at 1.5 at most and
+drops when frames run long. Nothing allocates per frame. Under
+`prefers-reduced-motion` it draws one still frame. Without WebGL it shows
+`assets/media/key-art.jpg`, and without JavaScript the `<noscript>` image.
+
+three.js r186.1 (MIT, `assets/js/vendor/three.LICENSE.txt`) is vendored as
+one tree-shaken file, `assets/js/vendor/three-hero.min.js` (520 KB, about
+133 KB gzipped), so the CSP stays `self` only. To rebuild it after changing
+the imports, list them in `tools/three-entry.js` and run, in an empty
+scratch folder with that file copied in as `entry.js`:
+
+```sh
+pnpm add three@0.186.1 esbuild@0.25.10
+pnpm exec esbuild entry.js --bundle --format=esm --minify --legal-comments=eof --target=es2020 --outfile=three-hero.min.js
+```
+
+Glows (meteors, the comet, the halo) blend additively into a transparent
+canvas and write their brightness to alpha as well, so they show over the
+page's own starfield.
 
 ## The roadmap
 
