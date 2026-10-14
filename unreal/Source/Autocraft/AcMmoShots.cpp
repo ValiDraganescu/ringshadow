@@ -35,6 +35,7 @@
 // Done when the log's last line reads `flowtest: done, 0 failed`.
 #include "AcGameFlow.h"
 
+#include "AcGasGiant.h"
 #include "AcHudStyle.h"
 #include "AcLeveling.h"
 #include "AcLog.h"
@@ -230,6 +231,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(Here == TEXT("start"), FString::Printf(TEXT("seated in Prospector #%lld %s"), (long long)U->id, *Where()));
 			if (!Pilot->ChaseEye()) Pilot->ToggleView();
 			Advance();
+			// -AcMmoShotsLook: only the world's look (100-111).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsLook"))) T.Phase = 100;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -723,6 +726,121 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(Problem.IsEmpty(), FString::Printf(TEXT("the HUD plates draw with their frames after the pick (%s)"), *Problem));
 			Shoot(TEXT("18-after-pick"), TEXT("after a level-up pick (Z)"));
 		}
+		return;
+	// The look (-AcMmoShotsLook, docs/mmorpg-m6.md V2): the spawn, the giant
+	// from the cockpit, the ore up close and drilled, a well; the hour and
+	// the weather from -AcMmoHour and -AcMmoWeather.
+	case 100:
+		if (Since() > 5.0) Shoot(TEXT("look-01-spawn-third"), TEXT("on the start pad, third person"));
+		return;
+	case 101:
+	{
+		Pilot->ToggleView();
+		const FVector G = FAcGasGiant::Direction();
+		Stop(std::atan2(G.Y, G.X));
+		Pilot->Eye().Pitch = 0.12;
+		Advance();
+		return;
+	}
+	case 102:
+		if (Since() > 2.5) Shoot(TEXT("look-02-first-giant"), TEXT("first person, facing the giant"));
+		return;
+	case 103:
+	{
+		Pilot->ToggleView();
+		Pilot->Eye().Pitch = 0;
+		int64 Best = -1;
+		for (int64 I = 0; I < (int64)S->patches.size(); ++I)
+		{
+			if (S->patches[I].remaining <= 0) continue;
+			if (Best < 0 || ac::distance(S->patches[I].position, U->position) < ac::distance(S->patches[Best].position, U->position)) Best = I;
+		}
+		Check(Best >= 0, TEXT("ore in the start region"));
+		if (Best < 0)
+		{
+			Finish();
+			return;
+		}
+		Shots.Patch = Best;
+		const ac::Vec2 P = S->patches[Best].position;
+		const ac::Vec2 Off = P - U->position;
+		const double L = std::max(ac::length(Off), 1e-6);
+		Route({FVector2D(P.x - Off.x / L * 4.0, P.y - Off.y / L * 4.0)});
+		Advance();
+		return;
+	}
+	case 104:
+		if (const int32 D = Drive(); D != 0)
+		{
+			Stop(Face(S->patches[Shots.Patch].position));
+			Advance();
+		}
+		return;
+	case 105:
+		if (Since() > 2.0) Shoot(TEXT("look-03-ore-near"), TEXT("a Stardust deposit, a few cells off"));
+		return;
+	case 106:
+	{
+		// Up to it until the act key would drill it.
+		const ac::Vec2 P = S->patches[Shots.Patch].position;
+		const std::optional<ac::PilotTarget> Target = U ? M->simulation().pilotTarget(*U) : std::nullopt;
+		if (Target && Target->is<ac::PilotTarget::Patch>())
+		{
+			Stop(Face(P));
+			Pilot->Press(true);
+			Advance();
+			return;
+		}
+		if (Pilot) Pilot->SetTestInput(FVector2D(0, -0.6), Face(P));
+		TimedOut(TEXT("at the ore"), 15);
+		return;
+	}
+	case 107:
+		if (U && U->task == ac::Unit::Task::mining && Since() > 1.5)
+		{
+			Shoot(TEXT("look-04-drilling"), TEXT("drilling ore up close"));
+			return;
+		}
+		TimedOut(TEXT("drilling"), 15);
+		return;
+	case 108:
+	{
+		Pilot->Press(false);
+		static const std::vector<ac::Well> None;
+		const std::vector<ac::Well>& Wells = S->wells ? *S->wells : None;
+		int32 Best = -1;
+		for (int32 I = 0; I < (int32)Wells.size(); ++I)
+		{
+			if (Best < 0 || ac::distance(Wells[I].position, U->position) < ac::distance(Wells[Best].position, U->position)) Best = I;
+		}
+		Check(Best >= 0, TEXT("a well in the start region"));
+		if (Best < 0)
+		{
+			Finish();
+			return;
+		}
+		Shots.Derrick = Best;
+		const ac::Vec2 W = Wells[Best].position;
+		const ac::Vec2 Off = W - U->position;
+		const double L = std::max(ac::length(Off), 1e-6);
+		Route({FVector2D(W.x - Off.x / L * 7.0, W.y - Off.y / L * 7.0)});
+		Advance();
+		return;
+	}
+	case 109:
+		if (const int32 D = Drive(); D != 0)
+		{
+			// A little to its side, so the Prospector does not hide the pool.
+			Stop(Face((*S->wells)[size_t(Shots.Derrick)].position) - 0.3);
+			Advance();
+		}
+		return;
+	case 110:
+		if (Since() > 2.0) Shoot(TEXT("look-05-well"), TEXT("a Metallic Hydrogen well"));
+		return;
+	case 111:
+		Check(Shots.Saved == 5, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Finish();
 		return;
 	default:
 		Check(Shots.Saved + Shots.Skipped == 22, FString::Printf(TEXT("%d pictures (%d skipped) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));

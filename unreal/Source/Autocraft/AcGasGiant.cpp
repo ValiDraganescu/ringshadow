@@ -43,12 +43,13 @@ namespace
 	constexpr double AngularRadius = 27.0;
 	constexpr double SpinRate = 0.0021;
 	constexpr double TiltScreen = 24.0, TiltEye = 14.0;
+	// Where it hangs: compass bearing and elevation of its middle, degrees.
+	constexpr double BearingDeg = 280.0, ElevationDeg = 12.0;
 		// The storm rides this latitude (radians); the winds are the material's
 	// `zonal` (keep the two the same).
 	constexpr double StormLat = 0.34;
 	constexpr double TwoPi = 2 * UE_DOUBLE_PI;
 
-	constexpr double Sunrise = AAcDaylight::Sunrise;
 	constexpr double CometPeriod = 240, CometJitter = 100, CometFlight = 3.6;
 	constexpr double MeteorLife = 0.8;
 	constexpr double MeteorPeriods[3] = {37, 53, 71};
@@ -101,29 +102,25 @@ double FAcGasGiant::Eclipse(const FVector& SunDir)
 	return Smooth(AngularRadius * 0.95, AngularRadius * 0.45, Ang);
 }
 
-// Near the moon's rising point, a little out of the sun's plane: the sun and
-// the moon (and so the day) sweep one great circle, and the moon is the
-// antipode of the sun, so a planet there is full by night, a crescent at
-// dawn and a gibbous disc at noon, and never in the sun's way.
+// Where the first view of the game looks (docs/mmorpg-m6.md V2): a new
+// pilot stands on the start pad facing the ore field, bearing ~296° (the
+// compass: 0° north = -Y, 90° east = +X), so the planet hangs a little left
+// of that, its middle 12° up: the lower limb sinks behind the land, the
+// upper fills the sky over the ore. It stays clear of the sun's path (33°
+// at the closest, past 9 h): crescent at noon, gibbous at dusk, near full
+// through the night, when it lights the land (AAcDaylight's ringlight).
 FVector FAcGasGiant::Direction()
 {
 	static const FVector Dir = [] {
-		// The moon at 9° up on the rising side: the sun's antipode when it is 9° down, in the evening.
-		double Best = 0, BestErr = 1e9;
-		for (double H = 18.5; H < 24.0; H += 0.01)
-		{
-			const double El = FMath::RadiansToDegrees(FMath::Asin(AAcDaylight::SunToward(H).Z));
-			if (FMath::Abs(El + 9.0) < BestErr) { BestErr = FMath::Abs(El + 9.0); Best = H; }
-		}
-		const FVector Moon = -AAcDaylight::SunToward(Best);
-		const FVector Plane = FVector::CrossProduct(AAcDaylight::SunToward(12.0), AAcDaylight::SunToward(Sunrise)).GetSafeNormal();
-		const double B = FMath::DegreesToRadians(9.0);
-		FVector Out = Moon * FMath::Cos(B) + Plane * FMath::Sin(B);
-		FVector Out2 = Moon * FMath::Cos(B) - Plane * FMath::Sin(B);
-		if (FMath::Abs(Out2.Z - 0.25) < FMath::Abs(Out.Z - 0.25)) Out = Out2;
-		return Out.GetSafeNormal();
+		const double B = FMath::DegreesToRadians(BearingDeg), E = FMath::DegreesToRadians(ElevationDeg);
+		return FVector(FMath::Sin(B) * FMath::Cos(E), -FMath::Cos(B) * FMath::Cos(E), FMath::Sin(E)).GetSafeNormal();
 	}();
 	return Dir;
+}
+
+double FAcGasGiant::Lit(const FVector& SunDir)
+{
+	return 0.5 * (1.0 - FVector::DotProduct(SunDir, Direction()));
 }
 
 bool FAcGasGiant::Surface(const FFrame& F, const double X, const double Y, const double Spin, double& Lat, double& Lon) const

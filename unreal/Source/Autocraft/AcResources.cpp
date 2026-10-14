@@ -197,9 +197,14 @@ void AAcResources::AddPatches(const ac::GameState& State, const int32 From)
 			continue;
 		}
 		// GameScene.addPatch: at the field height, eulerAngles.y = angle
-		// (Unreal yaw -angle, AcSpace.h).
-		const FTransform Placement(FRotator(0.0, -FMath::RadiansToDegrees(P.angle), 0.0),
-			AcSpace::ToWorld(P.position, Terrain ? Terrain->FieldHeight(P.position) : 0.0));
+		// (Unreal yaw -angle, AcSpace.h). Each deposit turned and sized a
+		// little its own way (from its id), so a field of them reads as
+		// rock that grew there, not copies in a row (docs/mmorpg-m6.md V2).
+		const uint32 H = uint32(P.id) * 2654435761u + 97u;
+		const double Turn = (double((H >> 8) & 1023) / 1023.0 - 0.5) * 70.0;
+		const double Size = 0.92 + 0.2 * double((H >> 20) & 1023) / 1023.0;
+		const FTransform Placement(FRotator(0.0, -FMath::RadiansToDegrees(P.angle) + Turn, 0.0),
+			AcSpace::ToWorld(P.position, Terrain ? Terrain->FieldHeight(P.position) : 0.0), FVector(Size));
 		FPatch& Patch = Patches.AddDefaulted_GetRef();
 		Patch.Id = P.id;
 		Patch.Seed = uint32(P.id) * 7919u + 17u;

@@ -259,12 +259,15 @@ if (front && rr0 < 1.03) {
         sh = tt > 0.0 ? Texture2DSampleLevel(RingTex, RingTexSampler, float2(saturate((length(Y) - 1.2) / 1.3), 0.5), 1.0).b * 0.5 : 0.0;
     }
     float rim = pow(1.0 - saturate(n.z), 3.5);
-    float3 pl = alb * (0.07 * float3(0.6, 0.72, 1.0) + diff * warm * limb * (1.0 - sh)) * G;
+    // By day the face away from the sun still shows its bands, softly, in
+    // the sky's blue (the day's air between: docs/mmorpg-m6.md V2); by night
+    // a faint ringshine.
+    float3 pl = alb * (0.07 * float3(0.6, 0.72, 1.0) + 0.2 * air * float3(0.95, 0.93, 1.0) * (1.0 - diff) * limb + diff * warm * limb * (1.0 - sh)) * G;
     pl += float3(0.45, 0.62, 1.0) * rim * (0.08 + 0.5 * diff) * G;
     pl += emit * Ev * 0.35;
     // By night the planet hides the stars; by day it only adds its lit side to
     // the sky (its dark side is the sky), like the moon at noon.
-    col = col * (1.0 - edge * (1.0 - air * 0.3)) + pl * edge * PM.y;
+    col = col * (1.0 - edge * (1.0 - air * 0.18)) + pl * edge * PM.y;
 }
 // The ring, in front of the planet where it is nearer than the surface. The
 // eye is near its plane, so it sweeps a wide arc of the sky. Its radial

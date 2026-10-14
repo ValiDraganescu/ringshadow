@@ -14,24 +14,26 @@ What it makes:
   `Dark` (0 by day, 1 at night: AAcDaylight::GetDark, written by AAcResources);
   `HullEnv` (0.6), how much of the Swift studio sky M_Hull's metals mirror
   on top of Lumen (`hull_env`, the chrome fix; 0 turns it off).
-- /Game/Materials/M_Opal: Stardust Ore (`MaterialLibrary.opalOre`,
-  Sources/Autocraft/Materials.swift). Near-black basalt with broad opal
-  patches whose thin-film hue (teal, violet, gold) follows the view angle,
-  brightest at grazing angles, and twinkling dust glints, as in Swift. Richer
-  than SceneKit: the opal patches get a clear coat (a glossy film over the
-  rock, so they catch the real sky and sun in Lumen reflections). The film's
-  hue reads the normal-mapped pixel normal and the reflection in the
-  camera's basis, as Swift's view-space `_surface.normal`; `NightGlow` (0,
-  as Swift) can lift it at night. Patterns are in the instance's
-  own space (`PatternScale` maps cm to the Swift node space), so a carried
-  chunk keeps its opal.
+- /Game/Materials/M_Opal: Stardust Ore (docs/naming.md, "How they look").
+  Near-black basalt run through with thin opal veins (bold veins and
+  hairlines, isolines of a warped noise) whose thin-film hue (teal, violet,
+  gold) follows the view angle, brightest at grazing angles, a faint sheen
+  beside them, and twinkling dust glints. The veins get a clear coat (a
+  glossy film, so they catch the real sky and sun in Lumen reflections).
+  At night they glow softly (`NightGlow` x MPC_AcWorld.Dark), breathing
+  slowly; far off a deposit keeps a faint glow, so dusk turns the plain into
+  a map of veins. The veins are filtered by the pixel's footprint (from the
+  depth), so far off they fade to their average instead of shimmering.
+  Patterns are in the instance's own space (`PatternScale` maps cm to
+  pattern units), so a carried chunk keeps its veins.
 - /Game/Materials/M_Mercury: Metallic Hydrogen (`MaterialLibrary.mercury`,
   `mercuryLook`, `ModelLibrary.wellPool`). Mirror silver with the Swift
   studio sky faked in emission (`EnvGain`, dimmed at night) and a cold sheen
   at grazing angles. `Pool` = 1 adds the well pool's motion: the surface
   heaves and rings run out (world position offset, upper half only), and the
   normals ripple with three wave trains; each well's phase comes from where
-  it stands.
+  it stands. At night (`NightGlow` x MPC_AcWorld.Dark) the pool keeps a
+  cold blue-white rim and a dim glow, so a well reads across the dark.
 - /Game/Materials/M_AcPuff and its instances MI_AcVapour, MI_AcGlint: an
   additive sprite (a soft puff, or a star-shaped glint) for the CPU
   particles of AAcResources (the well's vapour, the ore's glitter); colour
@@ -200,9 +202,16 @@ def hull_env(g, base_color, metallic, roughness):
 # --- M_Opal ------------------------------------------------------------------
 
 OPAL_HLSL = """
-// MaterialLibrary.opalShader (Sources/Autocraft/Materials.swift), in the
-// instance's own space. Swift's `op` is a nodule's node space; here it is
-// the deposit's, scaled to the same pattern size by PatternScale.
+// Stardust Ore (docs/naming.md, "How they look"; docs/mmorpg-m6.md V2):
+// near-black rock run through with thin opal veins whose thin-film hue
+// (teal, violet, gold) follows the view angle, brightest at grazing angles,
+// a faint iridescent sheen beside them, and twinkling dust glints. At night
+// the veins glow softly (NightGlow, by MPC_AcWorld.Dark), so dusk turns the
+// plain into a map of veins. Patterns are in the instance's own space
+// (PatternScale maps cm to pattern units), so a carried chunk keeps its
+// veins. The veins are isolines of a domain-warped noise, filtered by the
+// pixel's footprint (from the depth: no derivatives), so far off they fade
+// to their average instead of shimmering.
 struct AcOre
 {
     float Hash(float3 p)
@@ -227,46 +236,76 @@ struct AcOre
         float k = smoothstep(0.0, 1.0, frac(t));
         return t < 1.0 ? lerp(teal, violet, k) : t < 2.0 ? lerp(violet, gold, k) : lerp(gold, teal, k);
     }
+    // How far p is from the isoline Noise = 0.5, in p's units: the value
+    // over the gradient's length, so a vein keeps its width where the
+    // noise is flat (a plain band there smeared into broad patches).
+    float Dist(float3 p, out float nv)
+    {
+        nv = Noise(p);
+        const float e = 0.03;
+        float3 gr = float3(Noise(p + float3(e, 0, 0)), Noise(p + float3(0, e, 0)), Noise(p + float3(0, 0, e))) - nv;
+        return abs(nv - 0.5) / max(length(gr) / e, 0.15);
+    }
+    // A vein `w` wide (half width) at distance `d`, filtered by the pixel's
+    // footprint `fp` (same units); .x the line, .y a wider halo.
+    float2 Vein(float d, float w, float fp)
+    {
+        float ln = smoothstep(w + fp, max(w - fp, 0.0), d) * saturate(w * 2.5 / (w + fp));
+        float halo = smoothstep(w * 8.0 + fp, w, d);
+        return float2(ln, halo);
+    }
 };
 AcOre o;
 float3 n = normalize(N);
 float3 v = normalize(V);
 float ndv = saturate(dot(n, v));
 float3 op = LP * PatternScale;
-// Opal: broad patches over the dark rock, flecked inside with brighter play
-// of colour.
-float big = o.Noise(op * 2.2 + 3.0);
-float opal = smoothstep(0.44, 0.58, big);
-float fleck = o.Noise(op * 7.0 + 17.0);
+// The pixel's footprint in pattern units (a pixel spans ~1.6 mrad).
+float fpx = Depth * PatternScale * 0.0016;
+// Two vein sets through a warped field: bold veins and hairlines.
+float3 wv = float3(o.Noise(op * 0.55 + 11.0), o.Noise(op * 0.55 + 23.0), o.Noise(op * 0.55 + 37.0)) - 0.5;
+float3 q = op * 0.75 + wv * 1.8;
+float n1, n2;
+float d1 = o.Dist(q, n1);
+float d2 = o.Dist(q * 2.6 + 5.0, n2);
+float2 v1 = o.Vein(d1, 0.045, fpx * 0.75);
+float2 v2 = o.Vein(d2, 0.05, fpx * 0.75 * 2.6);
+float vein = saturate(v1.x + 0.55 * v2.x);
+float halo = saturate(v1.y * 0.75 + v2.y * 0.25);
+// How far the veins have faded into their average (0 near, 1 far).
+float far = smoothstep(0.1, 0.4, fpx * 0.75);
 // Thin film: the hue follows the view angle and the surface's turn.
 float3 r = reflect(-v, n);
-// Swift's r is in view space (x right, y up): the camera's basis from the
-// view direction (left-handed, Z up: right = up x forward).
+// The camera's basis from the view direction (left-handed, Z up).
 float3 fwd = -v;
 float3 right = cross(float3(0, 0, 1), fwd);
 right = dot(right, right) > 1e-4 ? normalize(right) : float3(0, 1, 0);
 float3 up = cross(fwd, right);
-float hue = big * 1.2 + fleck * 0.3 + (1.0 - ndv) * 1.1 + dot(r, up) * 0.35 + dot(r, right) * 0.25 + T * 0.02;
+float hue = n1 * 1.6 + n2 * 0.4 + (1.0 - ndv) * 1.1 + dot(r, up) * 0.35 + dot(r, right) * 0.25 + T * 0.015;
 float3 film = o.Opal(hue);
 float grazing = pow(1.0 - ndv, 2.0);
-float flash = 0.6 + 0.8 * smoothstep(0.4, 0.85, fleck);
-float3 e = film * film * opal * flash * (1.0 + 1.4 * grazing);
-// A faint iridescent sheen over the bare rock at grazing angles.
-e += o.Opal(hue + 0.4) * pow(1.0 - ndv, 3.0) * 0.4 * (1.0 - opal);
-// Swift's emission is the same day and night (NightGlow 0, as Swift).
-e *= OpalGain * (1.0 + NightGlow * Dark);
-// Dust glints: sparse points that twinkle on and off.
+float3 e = film * film * vein * (0.45 + 1.6 * grazing);
+// A faint iridescent sheen beside the veins and over the rock at grazing angles.
+e += o.Opal(hue + 0.4) * (halo * 0.12 + pow(1.0 - ndv, 3.0) * 0.08) * (1.0 - vein);
+e *= OpalGain;
+// Night: the veins breathe a soft light of their own (less view-bound, so
+// they read from every side), and far off the deposit keeps a faint glow.
+float3 nightCol = lerp(film, o.Opal(n1 * 1.6 + T * 0.02), 0.6);
+float breathe = 0.82 + 0.18 * sin(T * 0.7 + n1 * 9.0);
+float glow = (vein + halo * 0.07) * (1.0 - far) + far * 0.12;
+e += nightCol * glow * breathe * NightGlow * Dark;
+// Dust glints: sparse points that twinkle on and off (gone where too small to see).
 float3 g = op * 5.0;
 float3 cell = floor(g);
 float h = o.Hash(cell + 0.37);
 float3 at = cell + 0.5 + (float3(o.Hash(cell + 1.7), o.Hash(cell + 3.1), o.Hash(cell + 5.3)) - 0.5) * 0.5;
 float twinkle = pow(saturate(sin(T * (1.4 + 2.6 * h) + h * 40.0)), 10.0);
-float glint = step(0.6, h) * (1.0 - smoothstep(0.08, 0.26, length(g - at))) * twinkle;
-e += lerp(float3(1.0, 0.95, 0.85), o.Opal(h * 5.0), 0.35) * glint * GlintGain;
-Rough = lerp(R, 0.15, opal);
+float glint = step(0.62, h) * (1.0 - smoothstep(0.05, 0.18, length(g - at))) * twinkle * (1.0 - far);
+e += lerp(float3(1.0, 0.95, 0.85), o.Opal(h * 5.0), 0.35) * glint * GlintGain * (1.0 + Dark);
+Rough = lerp(R, 0.12, vein);
 // Bare basalt takes little of the sky, so it stays near black.
-AO = lerp(0.35, 1.0, opal);
-Coat = opal * CoatAmount;
+AO = lerp(0.35, 1.0, saturate(vein + halo * 0.3));
+Coat = saturate(vein + halo * 0.25) * CoatAmount;
 return e * Scale;
 """
 
@@ -337,7 +376,8 @@ def build_opal(mpc_world):
         ("PatternScale", g.scalar("PatternScale", 0.04), ""),
         ("OpalGain", g.scalar("OpalGain", 1.0), ""),
         ("GlintGain", g.scalar("GlintGain", 7.0), ""),
-        ("NightGlow", g.scalar("NightGlow", 0.0), ""),
+        ("NightGlow", g.scalar("NightGlow", 2.2), ""),
+        ("Depth", g.node(unreal.MaterialExpressionPixelDepth), ""),
         ("CoatAmount", g.scalar("CoatAmount", 1.0), ""),
         ("Scale", scale, ""),
     ], outputs=[("Rough", F1), ("AO", F1), ("Coat", F1)])
@@ -392,7 +432,15 @@ float band = smoothstep(0.93, 0.99, sin(R.x * 5.0 + R.y * 2.0 + 1.0)) * smoothst
 float3 env = lerp(float3(0.05, 0.06, 0.08), float3(0.72, 0.78, 0.86), up) + band * float3(0.9, 0.95, 1.0);
 float sheen = pow(1.0 - saturate(dot(n, v)), 3.0);
 float day = 1.0 - 0.85 * Dark;
-return (env * 0.7 * EnvGain * day + float3(0.55, 0.75, 1.0) * sheen * 0.8 * lerp(1.0, 0.5, Dark)) * Scale;
+float3 e = env * 0.7 * EnvGain * day + float3(0.55, 0.75, 1.0) * sheen * 0.8 * lerp(1.0, 0.5, Dark);
+// Night (docs/mmorpg-m6.md V2): the pool keeps a cold blue-white light, a
+// bright rim and a dim, slowly shifting glow over the surface, so a well
+// reads across the dark plain. The wave rings catch it.
+float rim = smoothstep(0.30, 0.45, r) * smoothstep(0.53, 0.46, r);
+float waves = 0.75 + 0.25 * sin(r * 24.0 - T * 1.6 + ph);
+float3 cold = float3(0.62, 0.8, 1.0);
+e += cold * (rim * 1.4 + 0.3 * fadeOut * waves) * NightGlow * Dark * Pool * step(0.0, n.z);
+return e * Scale;
 """
 
 
@@ -417,6 +465,7 @@ def build_mercury(mpc_world):
         ("V", g.node(unreal.MaterialExpressionCameraVectorWS), ""),
         ("Dark", g.mpc(mpc_world, "Dark"), ""),
         ("EnvGain", g.scalar("EnvGain", 0.6), ""),
+        ("NightGlow", g.scalar("NightGlow", 1.6), ""),
         ("Scale", g.custom_data(1, "EmissionScale", 1.0), ""),
     ], outputs=[("Nrm", F3)])
     g.out(c, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
@@ -521,11 +570,16 @@ def tint_well_halo(info):
 
 
 def main(info=None):
-    info = info or A.analyse(A.load_manifest())
     MM.ensure_dir(A.MASTER_DIR)
     mpc = make_world_mpc()
     masters = {M_OPAL: build_opal(mpc), M_MERCURY: build_mercury(mpc)}
     build_puff()
+    # The instances keep their parents once set: without the model export's
+    # manifest (a worktree has none) only the masters are rebuilt.
+    if info is None and not os.path.exists(A.MANIFEST):
+        log("no %s: masters rebuilt, instances left as they are" % A.MANIFEST)
+        return
+    info = info or A.analyse(A.load_manifest())
     log("%d model instances re-parented" % reparent(info, masters))
     tint_well_halo(info)
 

@@ -19,7 +19,7 @@ namespace
 {
 	TAutoConsoleVariable<int32> CVarPilotVeil(TEXT("ac.PilotVeil"), 1,
 		TEXT("The fog veil round a driven unit (the far ground lost in the sky): 1 on (on a map with fog), 0 off."));
-	TAutoConsoleVariable<float> CVarNightVeil(TEXT("ac.PilotNightVeil"), 0.08f,
+	TAutoConsoleVariable<float> CVarNightVeil(TEXT("ac.PilotNightVeil"), 0.45f,
 		TEXT("How bright the haze the ground is lost in stays at full night, round a driven unit (1: the sky's haze; 0: black)."));
 	TAutoConsoleVariable<float> CVarRingGain(TEXT("ac.RangeRingGain"), 1.0f,
 		TEXT("Brightness of the driven unit's range ring (1: the Swift colours)."));
@@ -157,7 +157,8 @@ void AAcPilotAids::Veil(const bool bOn, const FVector& Body)
 	VeilMaterial->SetVectorParameterValue(TEXT("Center"),
 		FLinearColor(float(Body.X), float(Body.Y), float(Body.Z), float(AcSpace::ToCm(Reach))));
 	// The haze rising from the horizon, as on the sky dome (B9); at night the
-	// ground is lost in near black (`ac.PilotNightVeil`), so the dark walls in.
+	// ground is lost in a dim blue (`ac.PilotNightVeil`), so the dark walls
+	// in without a void.
 	if (Day)
 	{
 		FLinearColor Haze = Day->GetHazeRise();

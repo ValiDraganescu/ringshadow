@@ -34,6 +34,9 @@ storm: the sky light left at a cloud's base falls from CloudD.z to 0.33),
 `Albedo`, `Glow` (a lightning strike's light at full density, linear) and
 `Bolt` (where it is: world km xyz, radius km): the cloud lights up from inside
 round the strike, a bright core in a soft halo, not the whole sky at once.
+`Giant` (toward the gas giant xyz, the cosine of its angular radius): the
+clouds beyond 1.5-4.5 km thin out in front of it, so the planet stays in sight
+(docs/mmorpg-m6.md V2).
 
 The shadow (a LightFunction-domain material) is cast by those clouds: from
 the lit pixel toward the light, four samples up through the lower layer
@@ -119,7 +122,11 @@ if (Shadow <= 0.0 && lod < 1.0) {
 d = saturate(d / lerp(D.x, 1.0, F.deck(B.x)));
 // Swift's sky has no clouds at the horizon (CameraVector points to the eye).
 float fade = smoothstep(0.05, 0.3, -V.z);
-return d * B.y * fade;
+// Over the gas giant the far clouds thin out, so it stays in sight
+// (`Giant`: toward it, the cosine of its angular radius; AAcDaylight).
+float over = smoothstep(Giant.w - 0.05, Giant.w + 0.07, dot(normalize(P - Cam), Giant.xyz))
+    * smoothstep(1.5, 4.5, length(P - Cam) * 1.0e-5);
+return d * B.y * fade * (1.0 - 0.8 * over);
 """
 
 # CloudD: the edge's depth to full density 0.3, erosion gone by a third of
@@ -298,13 +305,15 @@ def build_cloud(weather, shape, detail):
     # y how fast erosion fades into the core, z the sky light left at a
     # cloud's base (its top keeps all of it).
     d = g.vec("CloudD", CLOUD_LOOK, -1600, 1500)
+    # Off by default (a cosine past 1 is never reached).
+    giant = g.vec("Giant", (0, 0, 1, 2), -1600, 1950)
     wt = g.tex("WeatherTex", weather, -1600, 900)
     st = g.tex("ShapeTex", shape, -1600, 1100, param=False)
     dt = g.tex("DetailTex", detail, -1600, 1300, param=False)
     eye = g.node(unreal.MaterialExpressionCameraPositionWS, -1600, 1800)
     dens = g.custom(CLOUD_HLSL, "Cloud density", unreal.CustomMaterialOutputType.CMOT_FLOAT1,
                     [("P", pos, ""), ("Cam", eye, ""), ("H", attr, "NormAltitudeInLayer"), ("Shadow", attr, "ShadowSampleDistance"),
-                     ("V", cam, ""), ("A", a, ""), ("B", b, ""), ("C", c, ""), ("D", d, ""),
+                     ("V", cam, ""), ("A", a, ""), ("B", b, ""), ("C", c, ""), ("D", d, ""), ("Giant", giant, ""),
                      ("WeatherTex", wt, ""), ("ShapeTex", st, ""), ("DetailTex", dt, "")], -900, 300)
     cons = g.custom(CONSERVATIVE_HLSL, "Cloud conservative density", unreal.CustomMaterialOutputType.CMOT_FLOAT3,
                     [("P", pos, ""), ("H", attr, "NormAltitudeInLayer"), ("A", a, ""), ("B", b, ""),

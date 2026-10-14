@@ -14,8 +14,8 @@
 // - The pilot's fog veil (`FogOfWar.veil`): the fog of war's top-down pass is
 //   off while driving (`AAcFog::SetSuppressed`); instead the ground round the
 //   unit is clear to a quarter of how far the eye sees (`FAcSkyTones::Reach`,
-//   10 cells at night, `ac.NightReach`, to 110 by day) and lost in the sky
-//   from there on (at night in near black, `ac.PilotNightVeil`), so
+//   26 cells at night, `ac.NightReach`, to 110 by day) and lost in the sky
+//   from there on (at night in a dim blue, `ac.PilotNightVeil`), so
 //   the map's edge never shows; with the Swift pilot camera's vignette
 //   (0.55 in the corners). `M_AcPilotVeil`, a post-process material on an
 //   unbound component, the sky being the atmosphere toward the pixel

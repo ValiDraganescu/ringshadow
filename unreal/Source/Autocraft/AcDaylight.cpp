@@ -40,7 +40,7 @@ namespace
 		TEXT("ac.DayLength"), 600.0f,
 		TEXT("Seconds of game time in one day and night (Daylight.length)."));
 	TAutoConsoleVariable<float> CVarNightReach(
-		TEXT("ac.NightReach"), 10.0f,
+		TEXT("ac.NightReach"), 26.0f,
 		TEXT("How far a driven unit's eye sees at night, cells (110 by day): the ground is clear to a quarter of it and lost by it."));
 	TAutoConsoleVariable<int32> CVarClouds(
 		TEXT("ac.Daylight.Clouds"), 1,
@@ -270,6 +270,8 @@ AAcDaylight::AAcDaylight()
 	SkyMoon = MakeSkyLight(TEXT("SkyMoon"), 1);
 	SkyMoon->LightSourceAngle = 0.52f;
 	SkyMoon->AtmosphereSunDiskColorScale = FLinearColor(0.9f, 0.92f, 1.0f);
+	// No shafts of moonlight through the clouds' shadow in the night's fog.
+	SkyMoon->VolumetricScatteringIntensity = 0.0f;
 	// The fill: from the side opposite the noon sun, no shadows, lights
 	// neither the sky nor the fog.
 	Fill = MakeLight(TEXT("Fill"));
@@ -546,7 +548,13 @@ void AAcDaylight::Update(const double Time)
 	// light nears the horizon (they grow very long and sweep fast there).
 	const double Fade = Smoothstep(0, 12, Abs);
 	Sun->SetWorldRotation((-SunDir).Rotation());
-	Moon->SetWorldRotation(SunDir.Rotation());
+	// The ringlight (docs/mmorpg-m6.md V2): the night's key comes from
+	// between the sun's antipode and the gas giant, whose lit face throws
+	// it, stronger the fuller the giant.
+	const FVector Giant = FAcGasGiant::Direction();
+	const FVector RingFrom = (-SunDir + Giant).GetSafeNormal();
+	const double GiantLit = FAcGasGiant::Lit(SunDir);
+	Moon->SetWorldRotation((-RingFrom).Rotation());
 	SkySun->SetWorldRotation((-SunDir).Rotation());
 	SkyMoon->SetWorldRotation(SunDir.Rotation());
 	const int32 Isolate = CVarIsolate.GetValueOnGameThread();
@@ -557,7 +565,7 @@ void AAcDaylight::Update(const double Time)
 	// The gas giant between us and the sun (it sits where the sun rises): dim, not dark.
 	const double Eclipsed = 1.0 - 0.55 * FAcGasGiant::Eclipse(SunDir);
 	const double SunFull = Deg > 0 ? Eclipsed * 1900 * FMath::Pow(Smoothstep(0, 9, Abs), 0.6) : 0.0;
-	const double MoonFull = Deg < 0 ? 650 * FMath::Pow(Smoothstep(0, 10, Abs), 0.6) : 0.0;
+	const double MoonFull = Deg < 0 ? 650 * FMath::Pow(Smoothstep(0, 10, Abs), 0.6) * (0.6 + 0.8 * GiantLit) : 0.0;
 	Sun->SetIntensity(float(SunFull * SunLux * KeyGain * FMath::Lerp(1.0, 0.3, Gloom)));
 	Sun->SetLightColor(Lin(Mix(Rgb(1, 0.5, 0.28), Rgb(1, 0.93, 0.82), Smoothstep(0, 32, Deg > 0 ? Abs : 0))));
 	Moon->SetIntensity(float(MoonFull * MoonLux * KeyGain * FMath::Lerp(1.0, 0.35, Gloom)));
@@ -565,7 +573,8 @@ void AAcDaylight::Update(const double Time)
 	// the puddles flared white with the full highlight.
 	Sun->SetSpecularScale(float(FMath::Lerp(1.0, 0.1, Gloom)));
 	Moon->SetSpecularScale(float(FMath::Lerp(1.0, 0.1, Gloom)));
-	Moon->SetLightColor(Lin(Rgb(0.5, 0.64, 1)));
+	// Cold blue, warmed a little by the giant's amber bands.
+	Moon->SetLightColor(Lin(Mix(Rgb(0.5, 0.64, 1), Rgb(1.0, 0.8, 0.58), 0.22)));
 	// In the sky: the atmosphere dims a low sun or moon a great deal, and the
 	// sky the sky light captures with it; lift it near the horizon so the
 	// ambient follows Swift's tone instead. The sun still lights the sky a
@@ -626,7 +635,8 @@ void AAcDaylight::Update(const double Time)
 
 	// The haze: the background, the fog, the terrain's border. Top down as in
 	// Swift; the first-person haze is in the tones.
-	Haze = Tone(Rgb(0.27, 0.22, 0.19), Rgb(0.035, 0.045, 0.085), Rgb(0.3, 0.16, 0.12));
+	// Night: a deep blue the land stands against in silhouette, not black.
+	Haze = Tone(Rgb(0.27, 0.22, 0.19), Rgb(0.05, 0.068, 0.13), Rgb(0.3, 0.16, 0.12));
 	// Rain greys the haze and darkens it a little.
 	Haze = Grey(Haze, Gloom * 0.7) * float(FMath::Lerp(1.0, 0.8, Gloom));
 	const FLinearColor HazeLinear = FLinearColor::FromSRGBColor(Haze.ToFColor(false));
@@ -666,7 +676,7 @@ void AAcDaylight::Update(const double Time)
 	Tones.Top = Tone(Rgb(0.07, 0.15, 0.34), Rgb(0.008, 0.012, 0.035), Rgb(0.08, 0.1, 0.26));
 	Tones.High = Tone(Rgb(0.2, 0.34, 0.6), Rgb(0.015, 0.025, 0.06), Rgb(0.3, 0.28, 0.45));
 	Tones.Horizon = Tone(Rgb(0.52, 0.6, 0.72), Rgb(0.05, 0.06, 0.11), Rgb(0.95, 0.5, 0.28));
-	Tones.Haze = Grey(Tone(Rgb(0.62, 0.6, 0.58), Rgb(0.06, 0.07, 0.12), Rgb(0.62, 0.4, 0.3)), Gloom * 0.7) * float(FMath::Lerp(1.0, 0.75, Gloom));
+	Tones.Haze = Grey(Tone(Rgb(0.62, 0.6, 0.58), Rgb(0.07, 0.09, 0.16), Rgb(0.62, 0.4, 0.3)), Gloom * 0.7) * float(FMath::Lerp(1.0, 0.75, Gloom));
 	// Full cover hides the sunset.
 	Tones.Glow = Rgb(0.9, 0.38, 0.16) * float(Glow * (1.0 - 0.85 * Smoothstep(0.6, 0.97, Weather.cover)));
 	Tones.Cloud = Tone(Rgb(0.96, 0.95, 0.93), Rgb(0.07, 0.08, 0.12), Rgb(1, 0.66, 0.5));
@@ -675,8 +685,9 @@ void AAcDaylight::Update(const double Time)
 	Tones.Stars = 1 - Smoothstep(-14, -3, Deg);
 	Tones.Rise = 24 + (12 - 24) * Light;
 	// Night closes in round the driven unit: the ground clear to a quarter
-	// of it (2.5 cells) and lost by 10 (`ac.NightReach`), about twice how
-	// far a unit sees at night.
+	// of it (6.5 cells) and lost by 26 (`ac.NightReach`) in the night's blue
+	// haze, so the land near the pilot reads in the ringlight (V2: at 10
+	// cells into near black the night was a void).
 	const double NightReach = FMath::Max(1.0, double(CVarNightReach.GetValueOnGameThread()));
 	Tones.Reach = (NightReach + (110 - NightReach) * Light) * FMath::Lerp(1.0, 0.45, Weather.rain);
 
@@ -748,6 +759,10 @@ void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
 		CloudMaterial->SetVectorParameterValue(TEXT("CloudA"), A);
 		CloudMaterial->SetVectorParameterValue(TEXT("CloudB"), B);
 		CloudMaterial->SetVectorParameterValue(TEXT("CloudC"), C);
+		// The far clouds thin out in front of the gas giant (M_AcCloud's `Giant`).
+		const FVector G = FAcGasGiant::Direction();
+		CloudMaterial->SetVectorParameterValue(TEXT("Giant"), FLinearColor(float(G.X), float(G.Y), float(G.Z),
+			float(FMath::Cos(FMath::DegreesToRadians(FAcGasGiant::AngularRadiusDeg())))));
 		// Swift's cloud tone (`Daylight.Sky.cloud`) for its hue only: the
 		// atmosphere already dims and reddens the light reaching them, so
 		// half the dusk warmth and none of the night's darkness.

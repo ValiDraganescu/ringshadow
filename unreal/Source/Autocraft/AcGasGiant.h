@@ -45,6 +45,8 @@ public:
 	static double AngularRadiusDeg();
 	/// The sun behind the disc: 0 clear, 1 deep in it (for dimming the day's light).
 	static double Eclipse(const FVector& SunDir);
+	/// How much of the face toward us the sun lights, 0 (new) to 1 (full).
+	static double Lit(const FVector& SunDir);
 
 private:
 	struct FFrame
