@@ -409,3 +409,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Correction: the 16:47 protocol save was W3's (ground), not O1's.
 - D User: build train retired; pool worktrees MMORPG-wt-N, merge via manager.
 - T All 4 workers parking: commits + handover patches, then successors.
+- T Q1 done 23abd2b, 8dd1e8e, 70dc938: flows pass, 9/10 shot sets.
+- N Q1: automation 89/92; old v2/v3 saves load as v7.
+- I Main shots stop at the Derrick ghost (south-well overshoot): O1.
+- I Mmo.FlyToPad +5 MH (O1), LevelPick stale, CrossEdgeEast (W3 NavGrid?).
+- D Manager: U1 HUD declutter and X1 shots split queued.

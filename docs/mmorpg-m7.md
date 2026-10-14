@@ -35,7 +35,9 @@ Runs alongside the end of M6 (P4b–P7): workers freed from M6 start here.
 | O1 | The first ten minutes: a guided opening through the KSTR radio (land, the crate, the Citadel, first ore home, the Derrick, first level and first skill point), each step a contract with a clear marker and a line of radio voice text; then the normal daily contracts | K1, G2, W2 | in progress |
 | V3 | A showreel: a 45–60 s hidden-recorded clip of the new moments (dusk lift-off, the ringshadow sweep, a starfall, the gold site columns, the skill screen, the home screen) for the user | E2, F1, W2, H1 | in progress |
 | W3 | Regions that look different: a ground palette per region (rust, salt, ash, glass), landmark props (an arch, a dead hauler, a derrick tower), ground above level 2 where a landmark needs it | W1 | in progress |
-| Q1 | Regression pass before the showcase: every flow test and automation test on the current build, the suites, a list of what is uncommitted and whose, HUD clutter noted (toasts stacking in mid-frame) | all | in progress |
+| Q1 | Regression pass before the showcase: every flow test and automation test on the current build, the suites, a list of what is uncommitted and whose, HUD clutter noted (toasts stacking in mid-frame) | all | done |
+| U1 | HUD declutter (Q1's list): one toast lane off the subject, Q/C/G slots clear of the pawn, a smaller contract panel, banners that don't cover panels, no "CONTRACT DONE: CONTRACT" | Q1 | |
+| X1 | Split AcMmoShots.cpp into one file per picture set (the merge hot spot) | | |
 | S1 | Fast picture runs: a dev-only clock jump mid-run (no waiting for night), a starfall lead of ~8–10 s, `-AcMmoShotsOnly=` to shoot chosen moments; Starfall set under 1 min with the same 9 pictures (user-approved, via the build-train session) | E2 | done |
 
 Done when: in a hidden run a pilot starts at Prospect Landing, takes a
