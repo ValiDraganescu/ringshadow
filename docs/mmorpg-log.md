@@ -461,3 +461,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D C1: H opens the Citadel screen; donate 100/1,000/all at the Citadel.
 - N Protocol 13, save v9 (empty realm wallet on old saves).
 - N C1 suites: core 456, server 162, net 67 pass.
+- D Manager: shop blueprints priced by floor and copies bought.
+- D Manager: building still needs the level floor; sites give a copy.
+- D Manager: 4 consumables: repair kit, MH canister, shield, flare.
+- T C2 (shop, protocol 14, save v10) briefed to wt1.
