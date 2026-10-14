@@ -55,6 +55,8 @@ public:
 	void Update(const ac::GameState& State, int64 LocalPlayer, double RealDelta, double Now, bool bWallet = true);
 	/// A deposit pop-up at `At` (points, y down, in the root).
 	void Popup(int64 Amount, FVector2f At, double Now);
+	/// H2: the mercenaries' tags this frame (`SAcPopups::SetTags`).
+	void SetTags(TArray<TPair<FString, FVector2f>> Tags);
 	/// A new game: the counters show the new stock at once.
 	void Reset();
 	/// While driving, only the resources stay up (`HUD.applyPilot`).

@@ -318,6 +318,10 @@ public:
 	/// missions the server has just signed the pilot up for (the flow plays
 	/// the sting and the narration once each).
 	bool TakeMission(uint32 Mission, FString* Why = nullptr);
+	/// H2, mercenaries (the Citadel's MERCS tab): hire one, dismiss one, send
+	/// one to a field (`ProgressMessage::mercFields`); answered as the
+	/// Citadel's asks (`CitadelRefusal`, `CitadelKept`).
+	bool Merc(const ac::net::RequestMessage::Merc& Ask, FString* Why = nullptr);
 	bool AbandonMission(uint32 Mission, FString* Why = nullptr);
 	TArray<uint32> TakeAccepted();
 	/// The region the pilot is in (in flight: the one it lifted off from).

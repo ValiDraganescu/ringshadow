@@ -1350,6 +1350,33 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 				else if (Index >= 0 && size_t(Index) < P->board.size() && Mmo->TakeMission(P->board[size_t(Index)].id, &Why)) return;
 				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("No offer there")) : Why);
 			})
+		.OnMerc_Lambda([Weak](int32 Act, int32 Merc, int32 Field)
+			{
+				// H2, the mercenaries: the screen's lines are the progress
+				// message's order (`mercs`, `mercFields`).
+				if (!Weak.IsValid()) return;
+				UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+				FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+				const ac::net::ProgressMessage* P = Mmo ? Mmo->Progress() : nullptr;
+				using Ask = ac::net::RequestMessage::Merc;
+				FString Why;
+				Ask A;
+				A.act = Act == 0 ? Ask::Act::hire : Act == 1 ? Ask::Act::dismiss : Ask::Act::assign;
+				if (!Mmo || !P) Why = TEXT("Not in a world");
+				else if (Act != 0 && (Merc < 0 || size_t(Merc) >= P->mercs.size())) Why = TEXT("No mercenary there");
+				else if (Act == 2 && (Field < 0 || size_t(Field) >= P->mercFields.size())) Why = TEXT("No field there");
+				else
+				{
+					if (Act != 0) A.merc = P->mercs[size_t(Merc)].id;
+					if (Act == 2)
+					{
+						A.region = P->mercFields[size_t(Field)].region;
+						A.field = P->mercFields[size_t(Field)].field;
+					}
+					if (Mmo->Merc(A, &Why)) return;
+				}
+				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why);
+			})
 		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseCitadelScreen(); })
 	];
 	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(CitadelScreen, EFocusCause::SetDirectly);
@@ -1466,12 +1493,60 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 		}
 		for (const ac::net::CitadelMission& M : P->journal) Info.Taken += M.state == ac::net::CitadelMission::State::taken ? 1 : 0;
 	}
+	// H2, the mercenaries: what each does, the fields, the terms.
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	{
+		using State = ac::net::ProgressMessage::Merc::State;
+		auto FieldName = [&](const std::string& Region, int64 Field) {
+			return FString::Printf(TEXT("%s · Field %lld"), *AcMissions::RegionName(*Mmo, Region), (long long)(Field + 1));
+		};
+		const double Now = Mmo->Sky() ? Mmo->Sky()->time : 0.0;
+		for (const ac::net::ProgressMessage::Merc& M : P->mercs)
+		{
+			FAcMercLine X;
+			X.Id = M.id;
+			X.Name = UTF8_TO_TCHAR(M.name.c_str());
+			X.State = int32(M.state);
+			X.Region = UTF8_TO_TCHAR(M.region.c_str());
+			X.Field = M.field;
+			X.Delivered = M.delivered;
+			switch (M.state)
+			{
+			case State::working: X.Doing = TEXT("Mining ") + FieldName(M.region, M.field); break;
+			case State::down:
+				X.Doing = FString::Printf(TEXT("Down: back at the Citadel, at work in %lld min"),
+					(long long)FMath::Max(1.0, FMath::CeilToDouble((M.downUntil - Now) / 60.0)));
+				break;
+			case State::empty: X.Doing = FieldName(M.region, M.field) + TEXT(" is mined out: send it to another"); break;
+			case State::noDepot: X.Doing = TEXT("No realm Citadel to haul to in ") + AcMissions::RegionName(*Mmo, M.region); break;
+			}
+			Info.Mercs.Add(X);
+		}
+		for (const ac::net::ProgressMessage::MercField& F : P->mercFields)
+		{
+			FAcMercField X;
+			X.Region = UTF8_TO_TCHAR(F.region.c_str());
+			X.Name = FieldName(F.region, F.field);
+			X.Field = F.field;
+			X.Deposits = F.deposits;
+			X.Ore = F.ore;
+			Info.MercFields.Add(X);
+		}
+		Info.MercLimit = P->mercLimit;
+		Info.MercFeeOre = P->mercFee.ore;
+		Info.MercFeeHydrogen = P->mercFee.hydrogen;
+		Info.MercWage = P->mercWage;
+		Info.MercRate = P->mercRate;
+		Info.MercNextLevel = P->mercNextLevel;
+		Info.Level = P->level;
+	}
 	// The server checks the place; the screen says so ahead.
 	if (!AtRealmCitadel(&Info.Builder))
 	{
 		Info.DonateWhyNot = TEXT("Donate at the realm's Citadel: stand where you unload");
 		Info.ShopWhyNot = TEXT("Buy at the realm's Citadel: stand where you unload");
 		Info.MissionsWhyNot = TEXT("Sign up at the realm's Citadel: stand where you unload");
+		Info.MercsWhyNot = TEXT("Hire at the realm's Citadel: stand where you unload");
 	}
 	CitadelScreen->SetInfo(Info);
 	if (Mmo->CitadelRefusal() != CitadelRefusalShown)

@@ -3,6 +3,9 @@
 // light blue with a dark shadow, it rises 34 points over 1.3 s and fades out
 // over the last 0.7 s. At most 8 new ones a frame. Only deposits the local
 // team sees reach it (the frame's events are fog-gated).
+//
+// Also the mercenaries' callsign tags (H2): "MERC · FLINT" in the
+// mercenary orange over each one in view, set every frame (`SetTags`).
 #pragma once
 
 #include "CoreMinimal.h"
@@ -25,6 +28,14 @@ public:
 	/// Drop the finished ones and start a new frame's count.
 	void Update(double Now);
 	int32 Num() const { return Live.Num(); }
+	/// This frame's tags: text over a point (points, y down).
+	struct FTag
+	{
+		FString Text;
+		FVector2f At;
+	};
+	void SetTags(TArray<FTag> InTags);
+	const TArray<FTag>& Tags() const { return TagList; }
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(0, 0); }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -38,6 +49,7 @@ private:
 		double Born;
 	};
 	TArray<FPopup> Live;
+	TArray<FTag> TagList;
 	double Clock = 0.0;
 	int32 AddedThisFrame = 0;
 };

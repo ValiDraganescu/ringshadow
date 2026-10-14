@@ -602,6 +602,83 @@ are haul, survey, salvage, hold under the ringshadow band, and hunt; hunts
 are gated off until the Brood (N2). The whole design, the numbers, the
 voices and the wire are in [missions.md](missions.md).
 
+### Mercenaries (H2)
+
+The user, 2026-10-14: "With enough resources I can hire mercenary
+prospectors from the citadel, they mine the resources in the area but a
+very slow rate (they mine in 24 hours what I mine in 1h). The game should
+progress in background even if I quit the game." Built in H2
+(docs/mmorpg-m8.md; `WorldMercs`, server/world/WorldMercs.cpp).
+
+- **Hiring.** The Citadel screen's **MERCS** tab, at the realm's Citadel
+  where the Prospector unloads. A pilot holds **1 mercenary from level 5, 2
+  from 15, 3 from 30** (`WorldMercs::limit`). The fee comes from the pilot's
+  wallet and doubles with each one held: **500 ore and 50 MH**, then 1,000
+  and 100, then 2,000 and 200. Refused below level 5 ("Mercenaries sign on
+  with pilots of level 5 and up"), at the limit ("You hold 1 mercenary, the
+  most at level 12: 2 at level 15"), short of the fee, away from the
+  Citadel, and with no field. **DISMISS** lets one go at any time, with no
+  refund.
+- **The wage.** At each world dawn (every world day, 40 minutes) each
+  mercenary takes **5 + level / 5 MH** (`WorldMercs::wage`; 6 at level 5,
+  11 at 30) from the pilot's wallet, in the order hired. One the wallet
+  can't pay **leaves** (its unit with it), and the pilot is told
+  ("MERCENARY LEFT: FLINT"). The first wage is due at the dawn after the
+  hire.
+- **The unit.** A Prospector of the realm, painted in the mercenaries'
+  orange (palette slot 6) with a tag over it, "MERC · FLINT" (a name from
+  `WorldMercs::names`, none twice for one pilot). It starts beside the
+  realm's Citadel, walks to its field, drills, and hauls each load to the
+  realm's Citadel in that region, as the strategy game's Prospector hauls
+  (the core's `bases`: a Citadel; a Hab Dome is a depot for the pilot's own
+  Prospector only). Bugs treat it as any Prospector: prey, and a guard
+  against a Lodeback within 8 cells of it. Other pilots see it too.
+- **Its field.** A region file's deposits within 8 cells of each other are
+  one field (`WorldMap::fields`; starfall deposits are not). It starts at
+  the field with ore nearest the realm's Citadel. On the tab the pilot picks
+  another field (keys 1-8: every field with ore in a region with a realm
+  Citadel) and **SEND**s it: in its own region it walks over; in another it
+  is there at once, at that region's Citadel. Its field mined out, it hauls
+  what it carries home and stands; the tab says so.
+- **The rate.** In 24 hours of world time it delivers what its pilot mines
+  in 1 hour at the pilot's level by the pace model: `rate(L)` ore a day,
+  `WorldMercs::rate` = `WorldContracts::perMinute(L)` × 60 / 86,400 ore a
+  second (202.5 ore an hour at level 5, 258.75 at 20, 558.75 at 100). The server keeps the ore it has worked
+  (`owed`): the rate × the seconds it works (walking included, a fall's ten
+  minutes and a mined-out field not). It drills until it has worked a load
+  (**10 ore**, `WorldMercs::load`, at least `Rules::miningTime`), so the
+  rate holds whatever the walk, and the deposit really loses that ore.
+  Measured: 6 minutes at level 100, 50 ore delivered and 5.88 owed (55.875
+  worked); a day at level 5, 4,374 delivered and 486 tax: 4,860, the
+  pilot's hour.
+- **Its ore** goes to the pilot's wallet, wherever the pilot is, on line or
+  not, **taxed** like any unload (C1: 1 of each load of 10 to the realm
+  wallet, counted in the pilot's tax tally). No XP, no contracts, no
+  missions.
+- **Off line and closed.** With the regions held (S2's idle, no pilot on
+  line) its work is bookkeeping: the same rate, in loads of 10, from its
+  field straight to the wallet, the wages at each dawn. A start after the
+  server was down catches the time up (`WorldMap::offlineWork`, at most a
+  day, S2's cap), dawn by dawn. Back on line the pilot is told: "WHILE YOU
+  WERE AWAY: Mercs delivered 1,240 ore" (`NewsKind::merc` "away", the ore
+  after the tax delivered while it was off line).
+- **Downed.** Bugs can kill it while pilots are near (with no pilot near
+  there are no bugs). It is back beside its Citadel at once, with its load,
+  told ("MERCENARY DOWN"), and at work again after **10 world minutes**
+  (`WorldMercs::downFor`). Nothing is lost.
+
+On the wire (protocol 19, H2): `RequestMessage::Merc` (hire, dismiss,
+assign; index 18, 17 being D1's); `ProgressMessage::mercs`, `mercFields`,
+`mercLimit`, `mercFee`, `mercWage`, `mercRate`, `mercNextLevel`, and
+`mercTags` (every mercenary's unit in the pilot's region, any pilot's, by
+name); `NewsKind::merc` ("away", "left", "down").
+
+Tests: `server/tests/MercsTests.cpp` (the rules; hire, limits, fees and
+refusals; live work paced and taxed; a day the pilot's hour; wages and
+leaving; downed and back; sent to a field; saved, loaded and caught up off
+line; the v12 migration), `net-tests/tests/ProtocolTests.cpp`. Pictures:
+`-AcMmoShotsH2`, then `-AcMmoShotsH2Away`.
+
 ### On the server (P6)
 
 Code: `unreal/server/world/WorldRoles.cpp`, and the core where the rule is
@@ -953,6 +1030,18 @@ and next number, as JSON):
 
 A pilot saved before has none; its first step draws its board. (v11 is the
 Brood's, N2.) Tests: `server/tests/MissionsTests.cpp`.
+
+### The mercenaries migration (schema v14, H2)
+
+Schema **v14** adds a pilot's mercenaries (each one's name, field, unit,
+the ore worked, a fall's end, its load, what it delivered; the wage day,
+the next number, the ore delivered while away; as JSON):
+
+    ALTER TABLE pilots ADD COLUMN mercs TEXT NOT NULL DEFAULT ''
+
+A pilot saved before has none. Their units are saved with the pilot's own
+(the `units` table, under its key). (v13 is D1's.) Tests:
+`server/tests/MercsTests.cpp`.
 
 ## On screen
 

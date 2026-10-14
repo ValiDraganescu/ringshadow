@@ -346,6 +346,12 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevBlueprints"))) Args.insert(Args.end(), {"--dev-blueprints", "1"});
 	// Dev and shots: a new pilot owns a finished Citadel, Foundry and Lab, its rig stocked.
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) Args.insert(Args.end(), {"--dev-rig", "1"});
+	// Dev and shots (H2): the save counts as written this many seconds
+	// earlier, so the start catches up that much more.
+	if (double Down = 0; FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevDown="), Down) && Down > 0)
+	{
+		Args.insert(Args.end(), {"--dev-down", std::to_string(Down)});
+	}
 	// Dev and shots: a new pilot starts the first ten minutes at this step
 	// (1-6; 0: none, the daily contracts at once).
 	if (int32 FirstStep = 0; FParse::Value(FCommandLine::Get(), TEXT("AcMmoFirstStep="), FirstStep))
@@ -1057,6 +1063,17 @@ bool FAcMmoClient::TakeMission(const uint32 Mission, FString* Why)
 	LastCitadelRefusal.Reset();
 	MissionAsked.Add(Id, {Mission, true});
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: mission ask %u: take %u"), Id, Mission);
+	return true;
+}
+
+bool FAcMmoClient::Merc(const ac::net::RequestMessage::Merc& Ask, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->merc(Ask);
+	LastCitadelRefusal.Reset();
+	CitadelAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: merc %d %u %s %lld"), Id, int32(Ask.act), Ask.merc, *Text(Ask.region),
+		(long long)Ask.field);
 	return true;
 }
 

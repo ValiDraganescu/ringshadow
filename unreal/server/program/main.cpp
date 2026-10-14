@@ -20,6 +20,8 @@
 //                                           world's clock at once: `clock T`, `hour H`, `ahead S`, or stages a Brood
 //                                           scene: `brood linger|attack|dive|lodeback|raid|clear`; Server::devControl)
 //                    [--brood 0|1]  (the Brood's director spawns bugs; on unless 0)
+//                    [--dev-down s]  (dev, shots: the save counts as written s seconds earlier: the start catches
+//                                     the world up on that much more, H2's mercenaries' work with it)
 //                    [--detached | --attached]  (S2; attached, the default: it ends with --parent-pid's process;
 //                                                detached, with --save: it outlives the game, writes the run file
 //                                                beside the save (first.sqlite: first.run, net::RunFile) and removes
@@ -113,7 +115,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--brood 0|1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--detached | --attached]\n"
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--brood 0|1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--dev-down s] [--detached | --attached]\n"
                  "       autocraft-server --stop <save | folder>\n",
                  why);
     return 2;
@@ -193,6 +195,7 @@ int main(int argc, char** argv) {
     std::optional<int> firstStep;
     std::optional<double> heldHour, weatherHold, ringshadowIn, starfallIn, clockHour;
     bool detached = false;
+    double devDown = 0;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
     for (int i = 1; i < argc; i++) {
@@ -214,6 +217,7 @@ int main(int argc, char** argv) {
         else if (a == "--log") logPath = v;
         else if (a == "--save") savePath = v;
         else if (a == "--dev-control") devControlPath = v;
+        else if (a == "--dev-down") devDown = std::strtod(v.c_str(), nullptr);
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
         else if (a == "--dev-blueprints") devBlueprints = v != "0";
         else if (a == "--dev-rig") devRig = v != "0";
@@ -294,6 +298,7 @@ int main(int argc, char** argv) {
     options.worldParams.devXp = devXp;
     options.worldParams.devBlueprints = devBlueprints;
     options.worldParams.devRig = devRig;
+    options.devDown = devDown;
     // A dev rig's pilot is past the first ten minutes unless told a step.
     options.worldParams.firstStep = firstStep.value_or(devRig ? 0 : 1);
     if (devHydrogen > 0) options.worldParams.startHydrogen = devHydrogen;

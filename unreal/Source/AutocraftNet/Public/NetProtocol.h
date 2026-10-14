@@ -427,12 +427,29 @@ struct RequestMessage {
         bool take = true;
         bool operator==(const MissionAsk&) const = default;
     };
+    /// Index 17 is D1's (the Citadel's upgrades, protocol 18), kept here
+    /// until it comes; the server refuses it.
+    struct Reserved17 {
+        bool operator==(const Reserved17&) const = default;
+    };
+    /// H2: the pilot's mercenaries (docs/prospector-progression.md
+    /// "Mercenaries"): hire one at the realm's Citadel (where it unloads),
+    /// dismiss mercenary `merc`, or send it to deposit field `field` of
+    /// region `region` (a world region id; `ProgressMessage::MercField`).
+    struct Merc {
+        enum class Act : uint8_t { hire, dismiss, assign };
+        Act act = Act::hire;
+        uint32_t merc = 0;
+        std::string region;
+        int64_t field = 0;
+        bool operator==(const Merc&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
-    /// 14, Use 15, MissionAsk 16 (protocol 16), and D1's request comes next.
+    /// 14, Use 15, MissionAsk 16 (protocol 16), D1's 17, Merc 18 (protocol 19).
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk>
+                 MissionAsk, Reserved17, Merc>
         what;
     bool operator==(const RequestMessage&) const = default;
 };
@@ -581,7 +598,14 @@ struct ProgressMessage {
     ///
     /// K2: `mission`: a Citadel mission done, `id` its number, `xp` what it
     /// paid, `value` its ore.
-    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission };
+    ///
+    /// H2: `merc`: `id` "away" (while the pilot was off line its mercenaries
+    /// delivered `value` ore to its wallet, after the tax), "left" (`by`
+    /// left at dawn: the wallet could not pay its wage, `value` MH), "down"
+    /// (`by` fell to the bugs; it walks back and resumes, `value` world
+    /// seconds later).
+    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
+                                    merc };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -699,6 +723,49 @@ struct ProgressMessage {
     /// `contractsDawn`), and the pilot's Journal (taken and done missions).
     std::vector<CitadelMission> board;
     std::vector<CitadelMission> journal;
+    /// H2, mercenary prospectors: a deposit field one can be sent to (in a
+    /// region with a realm depot to haul to): its region (id and name), its
+    /// index there, its centre (region cells), its deposits and the ore
+    /// left in them (rounded down to 100).
+    struct MercField {
+        std::string region;
+        std::string regionName;
+        int64_t field = 0;
+        Vec2 at{0, 0};
+        int64_t deposits = 0;
+        int64_t ore = 0;
+        bool operator==(const MercField&) const = default;
+    };
+    /// A mercenary of the pilot's: what it does now (working its field,
+    /// down until world time `downUntil`, its field mined out, no realm
+    /// depot in its region), its field, the ore it has delivered in all
+    /// (after the tax), and its unit in its region (0: none now).
+    struct Merc {
+        enum class State : uint8_t { working, down, empty, noDepot };
+        uint32_t id = 0;
+        std::string name;
+        State state = State::working;
+        std::string region;
+        int64_t field = 0;
+        double downUntil = 0;
+        int64_t delivered = 0;
+        int64_t unit = 0;
+        bool operator==(const Merc&) const = default;
+    };
+    std::vector<Merc> mercs;
+    std::vector<MercField> mercFields;
+    /// How many it may hold at its level, the fee for the next one (ore and
+    /// MH), the wage each takes at dawn (MH), the ore one delivers an hour
+    /// (the pilot's hour of mining over a day), and the level the next
+    /// place opens at (0: none more).
+    int64_t mercLimit = 0;
+    Purse mercFee;
+    int64_t mercWage = 0;
+    double mercRate = 0;
+    int64_t mercNextLevel = 0;
+    /// Every mercenary's unit in the pilot's region, any pilot's: id → its
+    /// name (the tag reads "MERC · <name>").
+    std::map<int64_t, std::string> mercTags;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

@@ -792,6 +792,12 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeVarint(w, p->mission);
         w.writeBool(p->take);
     }
+    if (const auto* p = std::get_if<RequestMessage::Merc>(&m.what)) {
+        w.writeBits(uint64_t(p->act), 2);
+        writeVarint(w, p->merc);
+        writeString(w, p->region);
+        writeSigned(w, p->field);
+    }
     return w.bytes();
 }
 
@@ -903,6 +909,17 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         RequestMessage::MissionAsk p;
         p.mission = static_cast<uint32_t>(readVarint(r));
         p.take = r.readBool();
+        m.what = p;
+        break;
+    }
+    case 18: {
+        RequestMessage::Merc p;
+        const uint64_t act = r.readBits(2);
+        if (act > uint64_t(RequestMessage::Merc::Act::assign)) return false;
+        p.act = static_cast<RequestMessage::Merc::Act>(act);
+        p.merc = static_cast<uint32_t>(readVarint(r));
+        if (!readString(r, p.region)) return false;
+        p.field = readSigned(r);
         m.what = p;
         break;
     }
@@ -1023,6 +1040,38 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     for (const auto* list : {&m.board, &m.journal}) {
         writeVarint(w, list->size());
         for (const CitadelMission& x : *list) writeMission(w, x);
+    }
+    writeVarint(w, m.mercs.size());
+    for (const auto& x : m.mercs) {
+        writeVarint(w, x.id);
+        writeString(w, x.name);
+        w.writeBits(uint64_t(x.state), 2);
+        writeString(w, x.region);
+        writeSigned(w, x.field);
+        codec::kMs.write(w, x.downUntil);
+        writeSigned(w, x.delivered);
+        writeSigned(w, x.unit);
+    }
+    writeVarint(w, m.mercFields.size());
+    for (const auto& f : m.mercFields) {
+        writeString(w, f.region);
+        writeString(w, f.regionName);
+        writeSigned(w, f.field);
+        codec::Fixed{1000}.write(w, f.at.x);
+        codec::Fixed{1000}.write(w, f.at.y);
+        writeSigned(w, f.deposits);
+        writeSigned(w, f.ore);
+    }
+    writeSigned(w, m.mercLimit);
+    writeSigned(w, m.mercFee.ore);
+    writeSigned(w, m.mercFee.hydrogen);
+    writeSigned(w, m.mercWage);
+    codec::Fixed{1000}.write(w, m.mercRate);
+    writeSigned(w, m.mercNextLevel);
+    writeVarint(w, m.mercTags.size());
+    for (const auto& [id, name] : m.mercTags) {
+        writeSigned(w, id);
+        writeString(w, name);
     }
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
@@ -1190,12 +1239,51 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
             list->push_back(std::move(x));
         }
     }
+    const uint64_t mercs = readVarint(r);
+    if (mercs > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < mercs; i++) {
+        ProgressMessage::Merc x;
+        x.id = static_cast<uint32_t>(readVarint(r));
+        if (!readString(r, x.name)) return false;
+        const uint64_t state = r.readBits(2);
+        x.state = static_cast<ProgressMessage::Merc::State>(state);
+        if (!readString(r, x.region)) return false;
+        x.field = readSigned(r);
+        codec::kMs.read(r, x.downUntil);
+        x.delivered = readSigned(r);
+        x.unit = readSigned(r);
+        m.mercs.push_back(std::move(x));
+    }
+    const uint64_t fields = readVarint(r);
+    if (fields > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < fields; i++) {
+        ProgressMessage::MercField f;
+        if (!readString(r, f.region) || !readString(r, f.regionName)) return false;
+        f.field = readSigned(r);
+        codec::Fixed{1000}.read(r, f.at.x);
+        codec::Fixed{1000}.read(r, f.at.y);
+        f.deposits = readSigned(r);
+        f.ore = readSigned(r);
+        m.mercFields.push_back(std::move(f));
+    }
+    m.mercLimit = readSigned(r);
+    m.mercFee.ore = readSigned(r);
+    m.mercFee.hydrogen = readSigned(r);
+    m.mercWage = readSigned(r);
+    codec::Fixed{1000}.read(r, m.mercRate);
+    m.mercNextLevel = readSigned(r);
+    const uint64_t tags = readVarint(r);
+    if (tags > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < tags; i++) {
+        const int64_t id = readSigned(r);
+        if (!readString(r, m.mercTags[id])) return false;
+    }
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(4);
-        if (kind > uint64_t(ProgressMessage::NewsKind::mission)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::merc)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

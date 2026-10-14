@@ -54,6 +54,10 @@ struct ServerOptions {
     /// S2: seconds between `idle` calls with no client on line (the
     /// program's loop; 0: it steps at 60 Hz all the same).
     double idleEvery = 0.5;
+    /// Dev and shots (`--dev-down s`): the save counts as written this many
+    /// seconds earlier, so the start catches up that much more (H2's
+    /// "while you were away" on a run a minute after the last).
+    double devDown = 0;
 };
 
 class Server {

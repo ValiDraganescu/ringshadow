@@ -1205,6 +1205,33 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
 		break;
 	}
+	case K::merc:
+	{
+		// H2: the mercenaries: what they delivered while the pilot was away,
+		// one gone for its wage, one down.
+		const FLinearColor Orange = FAcHudStyle::Srgb(1.0, 0.6, 0.22);
+		const FString Name = Text(N.by).ToUpper();
+		if (N.id == "away")
+		{
+			AwayOre = N.value;
+			AwayAt = Now;
+			Hud->Toast(TEXT("WHILE YOU WERE AWAY"), FString::Printf(TEXT("Mercs delivered %s ore"), *FText::AsNumber(N.value).ToString()), Orange,
+				Now);
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
+		}
+		else if (N.id == "left")
+		{
+			Hud->Toast(FString::Printf(TEXT("MERCENARY LEFT: %s"), *Name),
+				FString::Printf(TEXT("Unpaid at dawn: the wage is %lld MH  ·  H hires at the Citadel"), (long long)N.value), FAcHudStyle::Amber(), Now);
+		}
+		else if (N.id == "down")
+		{
+			Hud->Toast(FString::Printf(TEXT("MERCENARY DOWN: %s"), *Name),
+				FString::Printf(TEXT("Back at the Citadel, at work again in %lld minutes"), (long long)(N.value / 60)), Orange, Now);
+		}
+		UE_LOG(LogAutocraft, Log, TEXT("progress: merc %s %s %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
+		break;
+	}
 	default:
 		break;
 	}

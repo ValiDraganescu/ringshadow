@@ -79,6 +79,13 @@ void SAcRoot::Popup(const int64 Amount, const FVector2f At, const double Now)
 	Popups->Add(Amount, At, Now);
 }
 
+void SAcRoot::SetTags(TArray<TPair<FString, FVector2f>> Tags)
+{
+	TArray<SAcPopups::FTag> Out;
+	for (TPair<FString, FVector2f>& T : Tags) Out.Add({MoveTemp(T.Key), T.Value});
+	Popups->SetTags(MoveTemp(Out));
+}
+
 void SAcRoot::Reset()
 {
 	Bar->Reset();

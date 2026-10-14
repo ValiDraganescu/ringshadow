@@ -59,6 +59,11 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
     }
     PilotState& in = pilots_[pilot] = back->second;
     away_.erase(back);
+    // H2: what its mercenaries delivered while it was away.
+    if (in.mercAway > 0) {
+        in.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::merc, "away", 0, in.mercAway, ""});
+        in.mercAway = 0;
+    }
     in.flight = std::nullopt;
     in.last = std::nullopt;
     // A new connection: its client starts at visit 0.
@@ -131,6 +136,9 @@ WorldSave WorldMap::save() const {
         } else if (unit) {
             owned[r][*unit] = p.key;
         }
+        // Its mercenaries' units (H2), as its own.
+        for (const PilotState::Merc& m : p.mercs)
+            if (m.unit) owned[m.region][*m.unit] = p.key;
         s.region = world_->regions[r].file.id;
         s.unit = unit;
         // Its progression; the strategy game's levels are not a world's
@@ -138,6 +146,7 @@ WorldSave WorldMap::save() const {
         s.progress = SessionStore::encode(p.progress, false);
         s.contracts = encodeContracts(p);
         s.missions = encodeMissions(p);
+        s.mercs = encodeMercs(p);
         // Its rig (P7), apart from the progress JSON.
         if (p.progress.rig != Rig{}) s.rig = SessionStore::encode(p.progress.rig, false);
         // What it has given the realm (C1).
@@ -274,6 +283,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             problems.push_back("pilot " + sp.id.substr(0, 8) + ": contracts do not read, drawn again");
         if (!decodeMissions(sp.missions, p))
             problems.push_back("pilot " + sp.id.substr(0, 8) + ": missions do not read, drawn again");
+        if (!decodeMercs(sp.mercs, p))
+            problems.push_back("pilot " + sp.id.substr(0, 8) + ": mercenaries do not read, left out");
         // Its rig (P7): none before schema 7.
         p.progress.rig = Rig{};
         if (!sp.rig.empty()) {

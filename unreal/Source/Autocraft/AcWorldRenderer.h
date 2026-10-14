@@ -111,6 +111,10 @@ public:
 	/// Driving: the others' buildings out of sight (`AAcFog::Unseen`) are not
 	/// drawn at all, not even as last seen (`GameScene.veiled`; E4).
 	void SetVeiled(bool bInVeiled) { bVeiled = bInVeiled; }
+	/// Units painted in another palette colour than their owner's, by id
+	/// (H2: the mercenaries' orange, `MercenaryTeam`). Set each frame.
+	static constexpr int32 MercenaryTeam = 6;
+	void SetTeamPaint(TMap<int64, int32> Paint) { TeamPaint = MoveTemp(Paint); }
 
 	/// An id's model and its parts' world transforms this frame (cm), for
 	/// the rays, the muzzles of the effects, life bars. Null if not drawn.
@@ -143,6 +147,7 @@ public:
 	const FStats& LastStats() const { return Stats; }
 
 private:
+	TMap<int64, int32> TeamPaint;
 	struct FBatch
 	{
 		UInstancedStaticMeshComponent* Component = nullptr;

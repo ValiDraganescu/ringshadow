@@ -667,6 +667,28 @@ TEST(snapshot_carries_the_pilots_xp) {
     EXPECT_TRUE(!roundTrip(w2, r2, plain, 0)[0].snapshot.xp.has_value());
 }
 
+// H2: the mercenaries, the fields, the terms, the tags, the news.
+TEST(protocol_progress_carries_the_mercenaries) {
+    using Merc = ProgressMessage::Merc;
+    ProgressMessage m;
+    m.mercs = {Merc{1, "Flint", Merc::State::working, "start", 2, 0, 1240, 88},
+               Merc{4, "Wren", Merc::State::down, "rust-hollow", 0, 1834.5, 0, 0},
+               Merc{5, "Slate", Merc::State::noDepot, "tern-ridge", 3, 0, 9, 0}};
+    m.mercFields = {ProgressMessage::MercField{"start", "Prospect Landing", 2, Vec2(40.5, 61.25), 6, 4200},
+                    ProgressMessage::MercField{"rust-hollow", "Rust Hollow", 0, Vec2(12, 80), 4, 900}};
+    m.mercLimit = 2;
+    m.mercFee = {1000, 100};
+    m.mercWage = 8;
+    m.mercRate = 230.625;
+    m.mercNextLevel = 30;
+    m.mercTags = {{88, "Flint"}, {91, "Kiln"}};
+    m.news = {ProgressMessage::News{ProgressMessage::NewsKind::merc, "away", 0, 1240, ""},
+              ProgressMessage::News{ProgressMessage::NewsKind::merc, "left", 0, 8, "Wren"}};
+    ProgressMessage back;
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back == m);
+}
+
 TEST(protocol_progress_round_trips) {
     ProgressMessage m;
     m.xp = 6123.25;
@@ -997,6 +1019,22 @@ TEST(protocol_world_messages_round_trip) {
         // K2: MissionAsk at 16 (D1's request comes after it).
         shop.what = RequestMessage::MissionAsk{1, true};
         EXPECT_EQ(shop.what.index(), size_t(16));
+        // H2: Merc at 18; 17 is D1's and does not decode here.
+        shop.what = RequestMessage::Merc{};
+        EXPECT_EQ(shop.what.index(), size_t(18));
+        shop.what = RequestMessage::Reserved17{};
+        EXPECT_TRUE(!decode(encode(shop), kb));
+    }
+    // H2: hire, dismiss, send to a field.
+    for (const auto& ask : {RequestMessage::Merc{RequestMessage::Merc::Act::hire, 0, "", 0},
+                            RequestMessage::Merc{RequestMessage::Merc::Act::dismiss, 3, "", 0},
+                            RequestMessage::Merc{RequestMessage::Merc::Act::assign, 4000000000u, "rust-hollow", 7}}) {
+        RequestMessage t;
+        t.id = 22;
+        t.what = ask;
+        RequestMessage tb;
+        ASSERT_TRUE(decode(encode(t), tb));
+        EXPECT_TRUE(tb == t);
     }
 
     // A snapshot's game carries the visit.

@@ -197,6 +197,38 @@ struct WorldMissions {
     static net::CitadelMission::Tier tierAt(int64_t steps);
 };
 
+/// Mercenary prospectors (H2, docs/prospector-progression.md
+/// "Mercenaries"; WorldMercs.cpp): hired at the realm's Citadel, each
+/// mines a deposit field and hauls the ore to the nearest realm depot, for
+/// the pilot's wallet (taxed), at a slow rate: in a day what the pilot
+/// mines in an hour.
+struct WorldMercs {
+    /// Held at once at `level`: 1 from level 5, 2 from 15, 3 from 30.
+    static int64_t limit(int64_t level);
+    /// The level the place after `held` opens at (0: none more).
+    static int64_t nextLevel(int64_t held);
+    /// The fee for one more while holding `held`: 500 ore and 50 MH,
+    /// doubling with each one held.
+    static int64_t feeOre(int64_t held);
+    static int64_t feeHydrogen(int64_t held);
+    /// The wage each takes at the world's dawn, MH: 5 + level / 5.
+    static int64_t wage(int64_t level);
+    /// Ore a second at the pilot's `level`: the pace model's hour of work
+    /// (`WorldContracts::perMinute` × 60, 1 XP an ore) over `hours` hours.
+    static constexpr double hours = 24;
+    static double rate(int64_t level);
+    /// A trip's load: it drills until it has worked this much (at least
+    /// `Rules::miningTime` s), so the realm's tax is 10% of it.
+    static constexpr int64_t load = 10;
+    /// A downed mercenary is back at its depot at once and resumes after
+    /// this many world seconds.
+    static constexpr double downFor = 600;
+    /// Deposits this close (cells) are one field.
+    static constexpr double fieldLink = 8;
+    /// Their names (a mercenary's tag: "MERC · <name>").
+    static const std::vector<std::string>& names();
+};
+
 /// What the world's rules are.
 struct WorldParams {
     /// A new pilot's wallet: a Citadel (400) and a Derrick (75) with some
@@ -722,6 +754,38 @@ public:
     /// first pilot on line. What it did, or why not.
     std::string devBrood(const std::string& line);
 
+    // MARK: Mercenaries (H2, `WorldMercs`; WorldMercs.cpp)
+
+    /// Hires one at the realm's Citadel, standing where it unloads, for the
+    /// fee from the wallet; it starts at the nearest field to the Citadel
+    /// with ore. Refused below level 5, at the limit, short of the fee, and
+    /// with no field. The reason when refused.
+    std::optional<std::string> hireMerc(PilotId pilot);
+    /// Lets one go (no refund), anywhere.
+    std::optional<std::string> dismissMerc(PilotId pilot, uint32_t merc);
+    /// Sends one to field `field` of region `region` (a world region id;
+    /// `mercFields`): a field with ore, in a region with a realm depot. In
+    /// another region it is there at once, at that depot.
+    std::optional<std::string> assignMerc(PilotId pilot, uint32_t merc, std::string_view region, int64_t field);
+    /// The deposit fields of region `r`: the region file's own deposits
+    /// within `WorldMercs::fieldLink` of each other, each a list of patch
+    /// indices; a field's index is its place in the list.
+    const std::vector<std::vector<size_t>>& fields(size_t r) const;
+    /// A mercenary of a pilot as the tests see it.
+    struct MercView {
+        uint32_t id = 0;
+        std::string name;
+        size_t region = 0;
+        int64_t field = 0;
+        std::optional<int64_t> unit;
+        double owed = 0;
+        double downUntil = 0;
+        int64_t delivered = 0;
+    };
+    /// The pilot's mercenaries, on line or off (by key).
+    std::vector<MercView> mercs(PilotId pilot) const;
+    std::vector<MercView> mercsOf(const std::string& key) const;
+
     /// What the pilot's client is told of its progression now (no news).
     std::optional<net::ProgressMessage> progressMessage(PilotId pilot) const;
     /// What happened to the pilot's progression since the last call.
@@ -827,6 +891,29 @@ private:
         std::vector<net::CitadelMission> journal;
         uint32_t nextMission = 1;
         std::map<uint32_t, double> missionSeconds;
+        /// H2: its mercenaries (saved): each one's field (region, index),
+        /// its unit there, the ore it has worked and not delivered yet, when
+        /// it is back from a fall, its load (for a fall), what it delivered
+        /// in all; the world day their wages were last paid for, the next
+        /// mercenary's number, the ore they delivered while it was off line
+        /// (told on its return).
+        struct Merc {
+            uint32_t id = 0;
+            std::string name;
+            size_t region = 0;
+            int64_t field = 0;
+            std::optional<int64_t> unit;
+            double owed = 0;
+            double downUntil = 0;
+            int64_t cargo = 0;
+            int64_t delivered = 0;
+            /// Not saved: the world's clock it started drilling.
+            std::optional<double> drilling;
+        };
+        std::vector<Merc> mercs;
+        int64_t mercDay = 0;
+        uint32_t nextMerc = 1;
+        int64_t mercAway = 0;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {
@@ -1007,6 +1094,32 @@ private:
     /// unit `unit` (it arrives), its cooldowns running on meanwhile.
     std::optional<Carried> takeClocks(size_t r, int64_t unit);
     void giveClocks(size_t r, int64_t unit, const std::optional<Carried>& c);
+    // WorldMercs.cpp.
+    /// Each step: the mercenaries' units steered, their drilling paced,
+    /// their unloads moved from the region's bank to their pilots' wallets
+    /// (taxed), a fallen one back at its depot; the wages at dawn.
+    void mercsStep(double dt);
+    /// World time `from` to `to` with the regions held (S2's idle, a catch-up):
+    /// their work as bookkeeping, ore from their fields to the wallets, the
+    /// wages at each dawn on the way.
+    void mercsBook(double from, double to);
+    void mercWages(double at);
+    /// Adds `w` to a pilot's wallet: on line through its region's bank.
+    void credit(PilotState& p, bool online, const Wallet& w);
+    /// A mercenary's unit beside the realm depot nearest its field (with
+    /// its load); false: no depot there.
+    bool mercUnit(PilotState::Merc& m);
+    /// A region's realm depot nearest `at` (its centre), and the field's
+    /// centre and the ore left in it.
+    std::optional<Vec2> depot(size_t r, Vec2 at) const;
+    Vec2 fieldAt(size_t r, int64_t field) const;
+    int64_t fieldOre(size_t r, int64_t field) const;
+    /// The ore `m` worked, its unload: taxed into the realm wallet.
+    void mercDelivered(PilotState& p, bool online, PilotState::Merc& m, int64_t ore);
+    std::string encodeMercs(const PilotState& p) const;
+    void mercsTold(const PilotState& p, net::ProgressMessage& m) const;
+    bool decodeMercs(const std::string& json, PilotState& p) const;
+    mutable std::vector<std::optional<std::vector<std::vector<size_t>>>> fields_;
     // WorldStarfall.cpp.
     /// Each step: the schedule's falls told, the landings, the deposits'
     /// XP and emptying, the faded ones dropped, the sky's list.

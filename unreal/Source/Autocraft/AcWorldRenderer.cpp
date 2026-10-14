@@ -679,6 +679,17 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 		if (!M) M = ModelNamed(FString::Printf(TEXT("%s_blue"), AcPose::ModelBase(U.kind)));
 		FObject* O = Touch(U.id, true, M, nullptr, U.owner);
 		if (!O) continue;
+		// Another paint (a mercenary's): its instances again with that team.
+		const int32* Paint = TeamPaint.Find(U.id);
+		const int32 Team = Paint ? *Paint : (int32)FMath::Clamp<int64>(U.owner, 0, 7);
+		if (O->Team != Team)
+		{
+			Free(*O);
+			O->Team = Team;
+			Allocate(*O);
+			O->bFresh = true;
+			O->bDrawnHidden = false;
+		}
 		O->Unit = &U;
 		O->Structure = nullptr;
 		O->SeenFrame = FrameNumber;

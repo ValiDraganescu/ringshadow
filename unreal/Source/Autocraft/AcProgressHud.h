@@ -214,6 +214,10 @@ public:
 	/// Drops slot `Index`'s (0…2) contract if it is open; disarms. False: none
 	/// to drop there.
 	bool Abandon(int32 Index);
+	/// H2: the ore the last "WHILE YOU WERE AWAY" toast told (0: none yet).
+	int64 AwayToasted() const { return AwayOre; }
+	/// When it was shown (real seconds, `FPlatformTime::Seconds`).
+	double AwayToastedAt() const { return AwayAt; }
 	/// T: the contract panel whole, or back to one line a contract.
 	void ToggleContracts();
 	bool ContractsExpanded() const;
@@ -225,6 +229,8 @@ public:
 	void PreviewRespawn(const std::optional<ac::net::ProgressMessage::Respawn>& R);
 
 private:
+	int64 AwayOre = 0;
+	double AwayAt = 0;
 	void OnFrame(const FAcFrame& Frame);
 	bool Mount();
 	/// The server's news: the banner, the sound, the toasts.

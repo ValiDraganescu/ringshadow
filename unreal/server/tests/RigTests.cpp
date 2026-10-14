@@ -410,7 +410,7 @@ TEST(rig_save_round_trip) {
     {
         auto store = WorldStore::open(path, first().file.id, &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(12));
+        EXPECT_EQ(store->schemaVersion(), WorldStore::version());
         const auto old = store->load(&why);
         ASSERT_TRUE(old.has_value() && old->pilots.size() == 1);
         EXPECT_TRUE(old->pilots[0].rig.empty());

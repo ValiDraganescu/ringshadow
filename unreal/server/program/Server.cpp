@@ -39,7 +39,7 @@ Server::Server(net::PacketIo& io, const ServerOptions& options)
             std::to_string(options_.saved->pilots.size()) + " pilots loaded");
         // S2: the time it was down, caught up (capped).
         if (const double savedAt = options_.saved->savedAt; savedAt > 0 && world_.isWorld()) {
-            const double down = wallNow() - savedAt;
+            const double down = wallNow() - savedAt + std::max(0.0, options_.devDown);
             caughtUp_ = world_.catchUp(down);
             if (caughtUp_ > 0)
                 log("catch-up: down " + format("%.0f", down) + " s, the world moved on " + format("%.0f", caughtUp_) + " s (cap " +
@@ -372,6 +372,21 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* mi = std::get_if<net::RequestMessage::MissionAsk>(&m.what)) {
         what = std::string(mi->take ? "take" : "abandon") + " mission " + std::to_string(mi->mission);
         why = mi->take ? world_.takeMission(pilot, mi->mission) : world_.abandonMission(pilot, mi->mission);
+    } else if (const auto* mc = std::get_if<net::RequestMessage::Merc>(&m.what)) {
+        using Act = net::RequestMessage::Merc::Act;
+        if (mc->act == Act::hire) {
+            what = "hire a mercenary";
+            why = world_.hireMerc(pilot);
+        } else if (mc->act == Act::dismiss) {
+            what = "dismiss mercenary " + std::to_string(mc->merc);
+            why = world_.dismissMerc(pilot, mc->merc);
+        } else {
+            what = "send mercenary " + std::to_string(mc->merc) + " to " + mc->region + " field " + std::to_string(mc->field);
+            why = world_.assignMerc(pilot, mc->merc, mc->region, mc->field);
+        }
+    } else if (std::holds_alternative<net::RequestMessage::Reserved17>(m.what)) {
+        what = "a Citadel upgrade";
+        why = "Not in this build";
     } else {
         return std::nullopt;
     }

@@ -30,6 +30,16 @@
 //            │ what to do …  TAKE │ │ …              TAKE │ │ …             TAKE │
 //            └────────────────────┘ └─────────────────────┘ └────────────────────┘
 //
+// MERCS (H2, docs/prospector-progression.md "Mercenaries"): the pilot's
+// mercenaries (what each does, what it delivered), HIRE with the fee, and
+// the deposit fields one can be sent to (keys 1-8 pick one; SEND sends).
+//
+//   MERCS  ┌ YOUR MERCENARIES 1/2 ───────────────┐ ┌ DEPOSIT FIELDS ─────────┐
+//          │ MERC · FLINT  mining Field 2 …       │ │ 1 Prospect Landing · F1 │
+//          │   delivered 1,240 ore   [SEND][DISMISS]│ │ 2 …                     │
+//          │ [HIRE] 1,000 ore · 100 MH · wage 8 MH │ │                         │
+//          └──────────────────────────────────────┘ └─────────────────────────┘
+//
 // The screen only shows and asks: a donation goes to its owner (`OnDonate`),
 // which asks the server and hands the answer back through `SetInfo` (a
 // refusal through `SetRefusal`, a kept one through `SetKept`). The game goes
@@ -77,6 +87,36 @@ struct FAcMissionLine
 	bool operator==(const FAcMissionLine&) const = default;
 };
 
+/// A mercenary of the pilot's (H2).
+struct FAcMercLine
+{
+	uint32 Id = 0;
+	FString Name;
+	/// "Mining Field 2 · Prospect Landing", "Down: back to work in 7 min".
+	FString Doing;
+	/// 0 working, 1 down, 2 its field mined out, 3 no Citadel to haul to.
+	int32 State = 0;
+	/// Its field's region id and index (`FAcMercField`).
+	FString Region;
+	int64 Field = 0;
+	int64 Delivered = 0;
+
+	bool operator==(const FAcMercLine&) const = default;
+};
+
+/// A deposit field a mercenary can be sent to (H2).
+struct FAcMercField
+{
+	FString Region;
+	/// "Prospect Landing · Field 2".
+	FString Name;
+	int64 Field = 0;
+	int64 Deposits = 0;
+	int64 Ore = 0;
+
+	bool operator==(const FAcMercField&) const = default;
+};
+
 /// What the Citadel screen shows.
 struct FAcCitadelScreenInfo
 {
@@ -109,6 +149,20 @@ struct FAcCitadelScreenInfo
 	int32 Taken = 0;
 	int32 Most = 3;
 	FString MissionsWhyNot;
+	/// H2, the mercenaries: the pilot's, the fields, the terms (how many at
+	/// its level, the next one's fee, the wage at dawn, ore an hour, the
+	/// level the next place opens at: 0 none), its level; why none can be
+	/// hired from here.
+	TArray<FAcMercLine> Mercs;
+	TArray<FAcMercField> MercFields;
+	int64 MercLimit = 0;
+	int64 MercFeeOre = 0;
+	int64 MercFeeHydrogen = 0;
+	int64 MercWage = 0;
+	double MercRate = 0;
+	int64 MercNextLevel = 0;
+	int64 Level = 1;
+	FString MercsWhyNot;
 
 	bool operator==(const FAcCitadelScreenInfo&) const = default;
 };
@@ -116,6 +170,9 @@ struct FAcCitadelScreenInfo
 DECLARE_DELEGATE_TwoParams(FAcOnDonate, int64 /*Ore*/, int64 /*Hydrogen*/);
 DECLARE_DELEGATE_TwoParams(FAcOnShopBuy, bool /*bItem*/, int32 /*Index*/);
 DECLARE_DELEGATE_OneParam(FAcOnMissionTake, int32 /*Index*/);
+/// H2: hire (0), dismiss (1) or send (2) mercenary `Merc` (an index in
+/// `Mercs`) to field `Field` (an index in `MercFields`).
+DECLARE_DELEGATE_ThreeParams(FAcOnMerc, int32 /*Act*/, int32 /*Merc*/, int32 /*Field*/);
 
 class AUTOCRAFT_API SAcCitadelScreen : public SLeafWidget
 {
@@ -124,13 +181,14 @@ public:
 		SLATE_EVENT(FAcOnDonate, OnDonate)
 		SLATE_EVENT(FAcOnShopBuy, OnBuy)
 		SLATE_EVENT(FAcOnMissionTake, OnTake)
+		SLATE_EVENT(FAcOnMerc, OnMerc)
 		SLATE_EVENT(FSimpleDelegate, OnClose)
 	SLATE_END_ARGS()
 
 	/// The screen's tabs: the realm's wallet, the shop (C2), the missions
-	/// board (K2); the upgrades (D1) come after them.
-	enum class ETab : uint8 { Realm, Shop, Missions };
-	static constexpr int32 TabCount = 3;
+	/// board (K2), the mercenaries (H2).
+	enum class ETab : uint8 { Realm, Shop, Missions, Mercs };
+	static constexpr int32 TabCount = 4;
 
 	/// The donate buttons: 100, 1,000 and all, of ore (0-2) and of MH (3-5).
 	static constexpr int32 DonateButtons = 6;
@@ -160,6 +218,16 @@ public:
 	/// it can), and its ask (a click; keys 1-6 on the MISSIONS tab).
 	FString TakeWhyNot(int32 Index) const;
 	void Take(int32 Index);
+	/// The mercenaries (H2): why one can't be hired, mercenary `Index`
+	/// can't be sent to the picked field, or let go (empty: it can); the
+	/// asks (clicks); the field picked (keys 1-8 on the MERCS tab).
+	FString HireWhyNot() const;
+	FString SendWhyNot(int32 Index) const;
+	void Hire();
+	void Send(int32 Index);
+	void Dismiss(int32 Index);
+	int32 PickedField() const { return Picked; }
+	void PickField(int32 Index);
 
 	/// What button `Index` gives now (ore, MH): "all" is the wallet's.
 	TPair<int64, int64> Amount(int32 Index) const;
@@ -205,6 +273,7 @@ private:
 	void PaintRealm(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintShop(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMissions(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
+	void PaintMercs(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintFoot(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintButton(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P, const FTarget& T, const FString& Label,
 		bool bLit, const FLinearColor& Accent) const;
@@ -220,10 +289,15 @@ private:
 	FString Bought;
 	/// What the last board ask signed up for (its title; empty: none).
 	FString Signed;
+	/// What the last mercenary ask was ("Hired a mercenary."; empty: none),
+	/// and the field picked on the MERCS tab.
+	FString MercAsked;
+	int32 Picked = 0;
 
 	FAcOnDonate OnDonateDelegate;
 	FAcOnShopBuy OnBuyDelegate;
 	FAcOnMissionTake OnTakeDelegate;
+	FAcOnMerc OnMercDelegate;
 	FSimpleDelegate OnCloseDelegate;
 	double OpenedAt = 0;
 	/// When the realm wallet last grew (its flash).
@@ -236,6 +310,8 @@ private:
 	mutable FBox2f BlueprintBox;
 	mutable FBox2f ItemBox;
 	mutable FBox2f TierBox[3];
+	mutable FBox2f MercBox;
+	mutable FBox2f FieldBox;
 	mutable FBox2f FootBox;
 	mutable float PanelScale = 1.0f;
 	mutable FVector2f PanelOrigin = FVector2f::ZeroVector;

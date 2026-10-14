@@ -27,7 +27,23 @@ namespace
 		RowBuyBlueprint = 4,
 		RowBuyItem = 5,
 		RowTake = 6,
+		RowHire = 7,
+		RowSend = 8,
+		RowDismiss = 9,
+		RowField = 10,
 	};
+
+	// The mercenaries' rows (H2).
+	constexpr float MercsW = 600;
+	constexpr float MercRowH = 64;
+	constexpr float FieldRowH = 30;
+	constexpr int32 FieldRows = 8;
+
+	/// The mercenaries' orange (their paint, `UAcWorldRenderer::MercenaryTeam`).
+	FLinearColor MercOrange() { return FAcHudStyle::Srgb(1.0, 0.6, 0.22); }
+
+	/// The tabs' names, in `ETab`'s order.
+	const TCHAR* const TabNames[] = {TEXT("REALM"), TEXT("SHOP"), TEXT("MISSIONS"), TEXT("MERCS")};
 
 	// The shop's rows (C2).
 	constexpr float BlueprintsW = 620;
@@ -128,6 +144,7 @@ void SAcCitadelScreen::Construct(const FArguments& InArgs)
 	OnDonateDelegate = InArgs._OnDonate;
 	OnBuyDelegate = InArgs._OnBuy;
 	OnTakeDelegate = InArgs._OnTake;
+	OnMercDelegate = InArgs._OnMerc;
 	OnCloseDelegate = InArgs._OnClose;
 	SetCanTick(false);
 	OpenedAt = Clock();
@@ -163,7 +180,8 @@ void SAcCitadelScreen::SetRefusal(const FString& Why)
 void SAcCitadelScreen::SetKept()
 {
 	Refusal.Reset();
-	Kept = !Signed.IsEmpty() ? FString::Printf(TEXT("Signed up: %s. It's in your Journal (L)."), *Signed)
+	Kept = !MercAsked.IsEmpty() ? MercAsked
+		: !Signed.IsEmpty() ? FString::Printf(TEXT("Signed up: %s. It's in your Journal (L)."), *Signed)
 		: !Bought.IsEmpty()
 		? FString::Printf(TEXT("Bought: %s. Paid from your wallet."), *Bought)
 		: FString::Printf(TEXT("Given to the realm: %s. Every pilot's Citadel thanks you."), *Purse(Asked.Key, Asked.Value));
@@ -205,6 +223,7 @@ void SAcCitadelScreen::Buy(const bool bItem, const int32 Index)
 	Asked = {0, 0};
 	Signed.Reset();
 	Bought = bItem ? X.Name : X.Name + TEXT(" blueprint");
+	MercAsked.Reset();
 	OnBuyDelegate.ExecuteIfBound(bItem, Index);
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
@@ -241,6 +260,7 @@ void SAcCitadelScreen::Donate(const int32 Index)
 	Asked = Amount(Index);
 	Bought.Reset();
 	Signed.Reset();
+	MercAsked.Reset();
 	OnDonateDelegate.ExecuteIfBound(Asked.Key, Asked.Value);
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
@@ -267,7 +287,94 @@ void SAcCitadelScreen::Take(const int32 Index)
 	Asked = {0, 0};
 	Bought.Reset();
 	Signed = Info.Offers[Index].Title;
+	MercAsked.Reset();
 	OnTakeDelegate.ExecuteIfBound(Index);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+FString SAcCitadelScreen::HireWhyNot() const
+{
+	if (!Info.bKnown) return TEXT("Waiting for the server…");
+	if (!Info.MercsWhyNot.IsEmpty()) return Info.MercsWhyNot;
+	if (Info.MercLimit <= 0) return TEXT("Mercenaries sign on with pilots of level 5 and up");
+	if (Info.Mercs.Num() >= Info.MercLimit)
+	{
+		FString Why = FString::Printf(TEXT("You hold %d, the most at level %lld"), Info.Mercs.Num(), (long long)Info.Level);
+		if (Info.MercNextLevel > 0) Why += FString::Printf(TEXT(": %lld at level %lld"), (long long)(Info.MercLimit + 1), (long long)Info.MercNextLevel);
+		return Why;
+	}
+	if (Info.MercFeeOre > Info.Ore) return FString::Printf(TEXT("Not enough ore: %s, you have %s"), *Grouped(Info.MercFeeOre), *Grouped(Info.Ore));
+	if (Info.MercFeeHydrogen > Info.Hydrogen)
+		return FString::Printf(TEXT("Not enough MH: %s, you have %s"), *Grouped(Info.MercFeeHydrogen), *Grouped(Info.Hydrogen));
+	return FString();
+}
+
+FString SAcCitadelScreen::SendWhyNot(const int32 Index) const
+{
+	if (!Info.bKnown) return TEXT("Waiting for the server…");
+	if (!Info.Mercs.IsValidIndex(Index)) return TEXT("No mercenary there");
+	if (!Info.MercFields.IsValidIndex(Picked)) return TEXT("No field to send it to: 1-8 picks one");
+	const FAcMercLine& M = Info.Mercs[Index];
+	const FAcMercField& F = Info.MercFields[Picked];
+	if (M.Region == F.Region && M.Field == F.Field) return FString::Printf(TEXT("%s works %s already"), *M.Name, *F.Name);
+	return FString();
+}
+
+void SAcCitadelScreen::Hire()
+{
+	if (const FString Why = HireWhyNot(); !Why.IsEmpty())
+	{
+		SetRefusal(Why);
+		return;
+	}
+	Refusal.Reset();
+	Kept.Reset();
+	Asked = {0, 0};
+	Bought.Reset();
+	Signed.Reset();
+	MercAsked = FString::Printf(TEXT("Hired: on its way to the field nearest the Citadel. Paid %s."), *Purse(Info.MercFeeOre, Info.MercFeeHydrogen));
+	OnMercDelegate.ExecuteIfBound(0, INDEX_NONE, INDEX_NONE);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcCitadelScreen::Send(const int32 Index)
+{
+	if (const FString Why = SendWhyNot(Index); !Why.IsEmpty())
+	{
+		SetRefusal(Why);
+		return;
+	}
+	Refusal.Reset();
+	Kept.Reset();
+	Asked = {0, 0};
+	Bought.Reset();
+	Signed.Reset();
+	MercAsked = FString::Printf(TEXT("%s is off to %s."), *Info.Mercs[Index].Name, *Info.MercFields[Picked].Name);
+	OnMercDelegate.ExecuteIfBound(2, Index, Picked);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcCitadelScreen::Dismiss(const int32 Index)
+{
+	if (!Info.Mercs.IsValidIndex(Index))
+	{
+		SetRefusal(TEXT("No mercenary there"));
+		return;
+	}
+	Refusal.Reset();
+	Kept.Reset();
+	Asked = {0, 0};
+	Bought.Reset();
+	Signed.Reset();
+	MercAsked = FString::Printf(TEXT("%s was let go. No refund."), *Info.Mercs[Index].Name);
+	OnMercDelegate.ExecuteIfBound(1, Index, INDEX_NONE);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcCitadelScreen::PickField(const int32 Index)
+{
+	if (!Info.MercFields.IsValidIndex(Index)) return;
+	Picked = Index;
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -283,14 +390,19 @@ bool SAcCitadelScreen::Key(const FKey& InKey)
 	static const FKey Digits[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight};
 	static const FKey Numpad[] = {EKeys::NumPadOne, EKeys::NumPadTwo, EKeys::NumPadThree, EKeys::NumPadFour, EKeys::NumPadFive,
 		EKeys::NumPadSix, EKeys::NumPadSeven, EKeys::NumPadEight};
-	// REALM: 1-6 give; SHOP: 1-8 buy a blueprint; MISSIONS: 1-6 sign up.
-	const int32 Count = CurrentTab == ETab::Realm ? DonateButtons : CurrentTab == ETab::Shop ? Info.Blueprints.Num() : Info.Offers.Num();
+	// REALM: 1-6 give; SHOP: 1-8 buy a blueprint; MISSIONS: 1-6 sign up;
+	// MERCS: 1-8 pick a field.
+	const int32 Count = CurrentTab == ETab::Realm ? DonateButtons
+		: CurrentTab == ETab::Shop ? Info.Blueprints.Num()
+		: CurrentTab == ETab::Mercs ? FMath::Min(Info.MercFields.Num(), FieldRows)
+		: Info.Offers.Num();
 	for (int32 I = 0; I < FMath::Min(Count, 8); ++I)
 	{
 		if (InKey == Digits[I] || InKey == Numpad[I])
 		{
 			if (CurrentTab == ETab::Realm) Donate(I);
 			else if (CurrentTab == ETab::Shop) Buy(false, I);
+			else if (CurrentTab == ETab::Mercs) PickField(I);
 			else Take(I);
 			return true;
 		}
@@ -310,11 +422,14 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 		T.Index = Index;
 		Targets.Add(T);
 	};
-	// The header: the tabs (REALM, SHOP, MISSIONS; the upgrades later), the close on the right.
-	const float TabsX = 500;
-	Add(FBox2f(FVector2f(TabsX, 30), FVector2f(TabsX + 110, 66)), RowTab, int32(ETab::Realm));
-	Add(FBox2f(FVector2f(TabsX + 120, 30), FVector2f(TabsX + 230, 66)), RowTab, int32(ETab::Shop));
-	Add(FBox2f(FVector2f(TabsX + 240, 30), FVector2f(TabsX + 400, 66)), RowTab, int32(ETab::Missions));
+	// The header: the tabs, each as wide as its name, the close on the right.
+	float TabX = 450;
+	for (int32 T = 0; T < TabCount; ++T)
+	{
+		const float W = Label(TabNames[T], 18, FLinearColor::White, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.4f).Measure().X + 22;
+		Add(FBox2f(FVector2f(TabX, 30), FVector2f(TabX + W, 66)), RowTab, T);
+		TabX += W + 6;
+	}
 	Add(FBox2f(FVector2f(PanelW - Pad - 40, 26), FVector2f(PanelW - Pad, 58)), RowClose, 0);
 
 	const float Top = HeaderH + 16;
@@ -328,7 +443,25 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 		const float X = Pad + T * (TierW + Gap);
 		TierBox[T] = FBox2f(FVector2f(X, Top), FVector2f(X + TierW, Top + BodyH));
 	}
-	if (CurrentTab == ETab::Missions)
+	MercBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + MercsW, Top + BodyH));
+	FieldBox = FBox2f(FVector2f(Pad + MercsW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
+	if (CurrentTab == ETab::Mercs)
+	{
+		// Each mercenary: SEND and DISMISS; HIRE at the foot; the fields.
+		for (int32 I = 0; I < FMath::Min(Info.Mercs.Num(), 3); ++I)
+		{
+			const float Y = MercBox.Min.Y + 44 + I * MercRowH + MercRowH - 10 - BuyH;
+			Add(FBox2f(FVector2f(MercBox.Max.X - 14 - 2 * BuyW - 26, Y), FVector2f(MercBox.Max.X - 14 - BuyW - 26, Y + BuyH)), RowSend, I);
+			Add(FBox2f(FVector2f(MercBox.Max.X - 14 - BuyW - 16, Y), FVector2f(MercBox.Max.X - 14, Y + BuyH)), RowDismiss, I);
+		}
+		Add(FBox2f(FVector2f(MercBox.Min.X + 18, MercBox.Max.Y - 44), FVector2f(MercBox.Min.X + 18 + 96, MercBox.Max.Y - 14)), RowHire, 0);
+		for (int32 I = 0; I < FMath::Min(Info.MercFields.Num(), FieldRows); ++I)
+		{
+			const float Y = FieldBox.Min.Y + 40 + I * FieldRowH;
+			Add(FBox2f(FVector2f(FieldBox.Min.X + 10, Y), FVector2f(FieldBox.Max.X - 10, Y + FieldRowH)), RowField, I);
+		}
+	}
+	else if (CurrentTab == ETab::Missions)
 	{
 		// A TAKE on each offer's card: two cards a tier.
 		int32 Seen[3] = {0, 0, 0};
@@ -392,6 +525,11 @@ void SAcCitadelScreen::Press(const FTarget& T)
 	case RowTab: SetTab(ETab(T.Index)); break;
 	case RowBuyBlueprint: Buy(false, T.Index); break;
 	case RowBuyItem: Buy(true, T.Index); break;
+	case RowTake: Take(T.Index); break;
+	case RowHire: Hire(); break;
+	case RowSend: Send(T.Index); break;
+	case RowDismiss: Dismiss(T.Index); break;
+	case RowField: PickField(T.Index); break;
 	case RowClose: Close(); break;
 	default: break;
 	}
@@ -482,6 +620,7 @@ int32 SAcCitadelScreen::OnPaint(const FPaintArgs& Args, const FGeometry& Geometr
 	case ETab::Realm: PaintRealm(Out, L, P); break;
 	case ETab::Shop: PaintShop(Out, L, P); break;
 	case ETab::Missions: PaintMissions(Out, L, P); break;
+	case ETab::Mercs: PaintMercs(Out, L, P); break;
 	}
 	PaintFoot(Out, L, P);
 	return L + 24;
@@ -529,8 +668,7 @@ void SAcCitadelScreen::PaintHeader(FSlateWindowElementList& Out, const int32 L, 
 		const bool bOn = T.Index == int32(CurrentTab);
 		const bool bHover = Targets.IsValidIndex(Hovered) && &Targets[Hovered] == &T;
 		const FLinearColor C = bOn ? FAcHudStyle::Text() : bHover ? FAcHudStyle::Ice() : Dim();
-		static const TCHAR* const Names[] = {TEXT("REALM"), TEXT("SHOP"), TEXT("MISSIONS")};
-		Label(Names[T.Index], 21, C, EAcHAlign::Center, EAcVAlign::Center, EAcFontWeight::Bold, 1.6f).Paint(Out, L + 1, P, T.Box.GetCenter());
+		Label(TabNames[T.Index], 18, C, EAcHAlign::Center, EAcVAlign::Center, EAcFontWeight::Bold, 1.4f).Paint(Out, L + 1, P, T.Box.GetCenter());
 		if (bOn)
 		{
 			const FBox2f U(FVector2f(T.Box.Min.X + 8, T.Box.Max.Y + 2), FVector2f(T.Box.Max.X - 8, T.Box.Max.Y + 5));
@@ -728,6 +866,89 @@ void SAcCitadelScreen::PaintMissions(FSlateWindowElementList& Out, const int32 L
 	}
 }
 
+void SAcCitadelScreen::PaintMercs(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const
+{
+	auto Plate = [&](const FBox2f& B, const FString& Title, const FLinearColor& C) {
+		Box(Out, L, P, B, FAcHudStyle::Srgb(0.03, 0.055, 0.09, 0.9));
+		CutFrame(Out, L + 1, P, B, Steel(), 1, 10);
+		Label(Title, 13, C, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f).Paint(Out, L + 2, P, B.Min + FVector2f(18, 14));
+	};
+	auto Find = [&](int32 Row, int32 Index) -> const FTarget* {
+		return Targets.FindByPredicate([&](const FTarget& T) { return T.Row == Row && T.Index == Index; });
+	};
+
+	// The pilot's mercenaries: one row each, then the open and locked places.
+	const FBox2f M = MercBox;
+	Plate(M, FString::Printf(TEXT("YOUR MERCENARIES  %d/%lld"), Info.Mercs.Num(), (long long)Info.MercLimit), MercOrange());
+	Label(FString::Printf(TEXT("YOUR WALLET   ORE %s  ·  MH %s"), *Grouped(Info.Ore), *Grouped(Info.Hydrogen)), 12, FAcHudStyle::Soft(),
+		EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.6f).Paint(Out, L + 2, P, FVector2f(M.Max.X - 18, M.Min.Y + 15));
+	for (int32 I = 0; I < 3; ++I)
+	{
+		const float Y = M.Min.Y + 44 + I * MercRowH;
+		const FBox2f Row(FVector2f(M.Min.X + 10, Y), FVector2f(M.Max.X - 10, Y + MercRowH - 4));
+		if (I < Info.Mercs.Num())
+		{
+			const FAcMercLine& X = Info.Mercs[I];
+			const FLinearColor C = X.State == 0 ? Ready() : X.State == 1 ? MercOrange() : FAcHudStyle::Amber();
+			Box(Out, L + 1, P, Row, WithAlpha(MercOrange(), 0.05f));
+			Box(Out, L + 1, P, FBox2f(Row.Min, FVector2f(Row.Min.X + 4, Row.Max.Y)), MercOrange());
+			Label(FString::Printf(TEXT("MERC · %s"), *X.Name.ToUpper()), 16, MercOrange(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.0f)
+				.Paint(Out, L + 2, P, Row.Min + FVector2f(14, 7));
+			Label(X.Doing, 13, C, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, Row.Min + FVector2f(14, 31));
+			Label(FString::Printf(TEXT("delivered %s ore"), *Grouped(X.Delivered)), 12, FAcHudStyle::Soft(), EAcHAlign::Right, EAcVAlign::Top,
+				EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(Row.Max.X - 8, Row.Min.Y + 9));
+			if (const FTarget* T = Find(RowSend, I)) PaintButton(Out, L, P, *T, TEXT("SEND"), SendWhyNot(I).IsEmpty(), MercOrange());
+			if (const FTarget* T = Find(RowDismiss, I)) PaintButton(Out, L, P, *T, TEXT("DISMISS"), true, Refused());
+		}
+		else
+		{
+			CutFrame(Out, L + 1, P, Row, WithAlpha(Steel(), 0.4f), 1, 6);
+			const int64 Opens = I < Info.MercLimit ? 0 : (I == 0 ? 5 : I == 1 ? 15 : 30);
+			const FString Text = Opens > 0 ? FString::Printf(TEXT("A place opens at level %lld"), (long long)Opens) : FString(TEXT("A place open: hire below"));
+			Label(Text, 13, Opens > 0 ? Faint() : Dim(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::SemiBold)
+				.Paint(Out, L + 2, P, FVector2f(Row.Min.X + 14, Row.GetCenter().Y));
+		}
+	}
+	if (const FTarget* T = Find(RowHire, 0))
+	{
+		PaintButton(Out, L, P, *T, TEXT("HIRE"), HireWhyNot().IsEmpty(), MercOrange());
+		Label(FString::Printf(TEXT("%s  ·  then %lld MH a day at dawn"), *Purse(Info.MercFeeOre, Info.MercFeeHydrogen), (long long)Info.MercWage), 14,
+			FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold)
+			.Paint(Out, L + 2, P, FVector2f(T->Box.Max.X + 14, T->Box.Min.Y - 1));
+		Label(FString::Printf(TEXT("each mines %s ore an hour: your hour, over a day"), *Grouped(int64(FMath::RoundToDouble(Info.MercRate)))), 12, Dim(),
+			EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L + 2, P, FVector2f(T->Box.Max.X + 14, T->Box.Min.Y + 17));
+	}
+
+	// The fields with ore by a realm Citadel, the picked one lit.
+	const FBox2f F = FieldBox;
+	Plate(F, TEXT("DEPOSIT FIELDS"), RealmGold());
+	for (int32 I = 0; I < FMath::Min(Info.MercFields.Num(), FieldRows); ++I)
+	{
+		const FAcMercField& X = Info.MercFields[I];
+		const FTarget* T = Find(RowField, I);
+		if (!T) continue;
+		const bool bOn = I == Picked;
+		const bool bHover = Targets.IsValidIndex(Hovered) && &Targets[Hovered] == T;
+		if (bOn) Box(Out, L + 1, P, T->Box, WithAlpha(MercOrange(), 0.14f));
+		else if (bHover) Box(Out, L + 1, P, T->Box, WithAlpha(Steel(), 0.2f));
+		else if (I % 2 == 0) Box(Out, L + 1, P, T->Box, WithAlpha(Steel(), 0.08f));
+		if (bOn) Box(Out, L + 1, P, FBox2f(T->Box.Min, FVector2f(T->Box.Min.X + 3, T->Box.Max.Y)), MercOrange());
+		const float Mid = T->Box.GetCenter().Y;
+		Label(FString::Printf(TEXT("%d"), I + 1), 10, bOn ? MercOrange() : Faint(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::SemiBold)
+			.Paint(Out, L + 2, P, FVector2f(T->Box.Min.X + 10, Mid));
+		Label(X.Name, 14, bOn ? FAcHudStyle::Text() : FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::Bold)
+			.Paint(Out, L + 2, P, FVector2f(T->Box.Min.X + 26, Mid));
+		Label(FString::Printf(TEXT("%lld · %s ore"), (long long)X.Deposits, *Grouped(X.Ore)), 12, Dim(), EAcHAlign::Right, EAcVAlign::Center,
+			EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(T->Box.Max.X - 10, Mid));
+	}
+	if (Info.MercFields.IsEmpty())
+	{
+		Label(Info.bKnown ? TEXT("No field with ore by a realm Citadel.") : TEXT("Waiting for the server…"), 14, Dim(), EAcHAlign::Center,
+			EAcVAlign::Center, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, F.GetCenter());
+	}
+}
+
 void SAcCitadelScreen::PaintFoot(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const
 {
 	const FBox2f F = FootBox;
@@ -765,6 +986,19 @@ void SAcCitadelScreen::PaintFoot(FSlateWindowElementList& Out, const int32 L, co
 	{
 		State = TEXT("Paid from your own wallet, no tax. A blueprint builds once; each copy costs more.");
 	}
+	else if (!MercAsked.IsEmpty())
+	{
+		State = TEXT("Asking the Citadel…");
+	}
+	else if (CurrentTab == ETab::Mercs && !Info.MercsWhyNot.IsEmpty())
+	{
+		State = Info.MercsWhyNot;
+		StateColor = FAcHudStyle::Amber();
+	}
+	else if (CurrentTab == ETab::Mercs)
+	{
+		State = TEXT("In a day a mercenary mines what you mine in an hour, even with the game closed. Its ore is yours, taxed; no XP.");
+	}
 	else if (CurrentTab == ETab::Missions && !Info.MissionsWhyNot.IsEmpty())
 	{
 		State = Info.MissionsWhyNot;
@@ -774,9 +1008,8 @@ void SAcCitadelScreen::PaintFoot(FSlateWindowElementList& Out, const int32 L, co
 	{
 		State = FString::Printf(TEXT("Up to %d at once. Your Journal (L) keeps their briefings, places and narrations. New offers at dawn."), Info.Most);
 	}
-	static const TCHAR* const TabNames[] = {TEXT("REALM"), TEXT("SHOP"), TEXT("MISSIONS")};
 	static const TCHAR* const TabKeys[] = {TEXT("1 2 3 ORE · 4 5 6 MH · CLICK GIVES · TAB SHOP"), TEXT("1-8 BUY A BLUEPRINT · CLICK BUYS · TAB MISSIONS"),
-		TEXT("1-6 SIGN UP · CLICK TAKES · TAB REALM")};
+		TEXT("1-6 SIGN UP · CLICK TAKES · TAB MERCS"), TEXT("1-8 PICK A FIELD · CLICK HIRES, SENDS, DISMISSES · TAB REALM")};
 	Label(TabNames[int32(CurrentTab)], 12, RealmGold(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.2f)
 		.Paint(Out, L, P, FVector2f(Pad + 4, F.Min.Y + 6));
 	Label(State, 15, StateColor, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold).Paint(Out, L, P, FVector2f(Pad + 4, F.Min.Y + 26));

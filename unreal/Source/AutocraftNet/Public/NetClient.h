@@ -90,6 +90,8 @@ public:
     /// Journal (`RequestMessage::MissionAsk`).
     uint32_t takeMission(uint32_t mission);
     uint32_t abandonMission(uint32_t mission);
+    /// H2: hire a mercenary, dismiss one, send one to a field.
+    uint32_t merc(const RequestMessage::Merc& ask);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

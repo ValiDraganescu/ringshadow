@@ -173,6 +173,18 @@
 //   03 home: "World server running · since …" with STOP
 //   04 STOP picked: the server saved and stopped, the line gone
 //
+// -AcMmoShotsH2, then -AcMmoShotsH2Away (two runs on the same -AcMmoShots=DIR
+// and -AcSaveDir, attached; both add -AcMmoDevRig, the second also
+// -AcMmoDevDown=10800 unless told): mercenary prospectors (docs/mmorpg-m8.md
+// H2), DIR/h2-NN-moment.png:
+//   01 (H2) the Citadel's MERCS tab: no mercenary yet, the fee, the fields
+//   02 (H2) HIRE: the mercenary listed, the foot's "Hired"
+//   03 (H2) the mercenary drilling at its field: its orange, "MERC · NAME"
+//      (what it delivered noted in DIR/h2-first.txt); the run ends, the
+//      server saves and stops with it
+//   04 (H2Away) the next start, three hours later by the save's clock: the
+//      "WHILE YOU WERE AWAY" toast, the ore its mercenary delivered
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -316,6 +328,10 @@ namespace
 	ac::Vec2 K2Target{0, 0};
 	/// When it was first seen done (the toast fades in).
 	double K2DoneAt = -1;
+	/// -AcMmoShotsH2: the Citadel's kept asks before the hire, the
+	/// mercenary's unit.
+	int32 H2Kept = 0;
+	int64 H2Unit = 0;
 	/// -AcMmoShotsN2: the lingering group staged, the pilot's hp when a
 	/// scene was staged, the raided dome.
 	bool N2Staged = false;
@@ -635,7 +651,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if ((FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -648,8 +665,14 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (double In = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoStarfall="), In)) FCommandLine::Append(TEXT(" -AcMmoStarfall=10"));
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=17"));
 		}
+		// -AcMmoShotsH2Away: three hours down by the save's clock.
+		if (double Down = 0; FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) && !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevDown="), Down))
+		{
+			FCommandLine::Append(TEXT(" -AcMmoDevDown=10800"));
+		}
 		// -AcMmoShotsS2B: the world the first run left running, resumed.
-		StartMmo(!FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS2B")));
+		// -AcMmoShotsH2Away: the first H2 run's world, its mercenary in it.
+		StartMmo(!FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS2B")) && !FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")));
 		Advance();
 		return;
 	case 1:
@@ -691,6 +714,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			// -AcMmoShotsS2A / S2B: the world server that runs on (1400-1415).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS2A"))) T.Phase = 1400;
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS2B"))) T.Phase = 1410;
+			// -AcMmoShotsH2 / H2Away: mercenaries (1500-1511).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2"))) T.Phase = 1500;
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away"))) T.Phase = 1510;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -3237,6 +3263,138 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 1415:
 		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsH2, -AcMmoShotsH2Away
+	case 1500:
+		// The dev rig's home: the Prospector where it unloads at the realm's Citadel.
+		if (S && CitadelOf(*S) && Mmo->Progress() && !Mmo->Progress()->mercFields.empty() && Since() > 3.0)
+		{
+			Check(AtRealmCitadel(), TEXT("h2: the pilot stands at the realm's Citadel"));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("h2: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
+			{
+				for (int32 K = 0; K < SAcCitadelScreen::TabCount && W->Tab() != SAcCitadelScreen::ETab::Mercs; ++K) W->Key(EKeys::Tab);
+				Check(W->Tab() == SAcCitadelScreen::ETab::Mercs, TEXT("h2: Tab reaches the MERCS"));
+			}
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel and the mercenaries' fields"));
+		return;
+	case 1501:
+	{
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		if (!W || Since() < 1.0) return;
+		const FAcCitadelScreenInfo& I = W->GetInfo();
+		Check(I.Mercs.IsEmpty() && I.MercLimit >= 1 && !I.MercFields.IsEmpty(),
+			FString::Printf(TEXT("h2: MERCS: none hired, %lld at level %lld, %d fields"), (long long)I.MercLimit, (long long)I.Level, I.MercFields.Num()));
+		Check(W->HireWhyNot().IsEmpty(), FString::Printf(TEXT("h2: HIRE lit (%s)"), *W->HireWhyNot()));
+		H2Kept = Mmo->CitadelKept();
+		Shoot(TEXT("h2-01-mercs-tab"), TEXT("the MERCS tab: the fee, the wage, the fields"));
+		return;
+	}
+	case 1502:
+		if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->Hire();
+		Advance();
+		return;
+	case 1503:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->mercs.size() == 1 && P->mercs[0].unit > 0 && Mmo->CitadelKept() > H2Kept && Since() > 1.0)
+		{
+			H2Unit = P->mercs[0].unit;
+			Check(CitadelScreenWidget() && CitadelScreenWidget()->KeptText().StartsWith(TEXT("Hired")), TEXT("h2: the foot says hired"));
+			Check(P->mercTags.count(H2Unit) == 1, FString::Printf(TEXT("h2: %s tagged here"), *Utf(P->mercs[0].name)));
+			Shoot(TEXT("h2-02-hired"), TEXT("hired: the mercenary listed, its field"));
+			return;
+		}
+		if (!Mmo->CitadelRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("h2: hire: %s"), *Mmo->CitadelRefusal()));
+			Finish();
+			return;
+		}
+		TimedOut(TEXT("the hire kept"), 10);
+		return;
+	}
+	case 1504:
+		CloseCitadelScreen();
+		Shots.Route.Reset();
+		Shots.RouteAt = 0;
+		Advance();
+		return;
+	case 1505:
+	{
+		// It walks to its field and drills: round the Citadel to the field's
+		// side (the Citadel stands between them), past it, and a look back.
+		const ac::Unit* Merc = M ? M->unit(H2Unit) : nullptr;
+		if (Merc && Merc->task == ac::Unit::Task::mining && U && S && CitadelOf(*S))
+		{
+			if (Shots.Route.IsEmpty())
+			{
+				const ac::Vec2 C = CitadelOf(*S)->position;
+				const ac::Vec2 D = ac::normalize(Merc->position - C);
+				const ac::Vec2 Side(-D.y, D.x);
+				const double R = ac::Rules::radius(ac::StructureKind::citadel) + 4.5;
+				const double Turn = ac::dot(U->position - C, Side) >= 0 ? 1.0 : -1.0;
+				const ac::Vec2 A = C + Side * (R * Turn);
+				const ac::Vec2 B = Merc->position + Side * (6.0 * Turn) + D * 2.0;
+				Route({FVector2D(A.x, A.y), FVector2D(B.x, B.y)});
+			}
+			const int32 Got = Drive();
+			if (Got == 1 || ac::distance(U->position, Merc->position) < 7)
+			{
+				Stop(Face(Merc->position));
+				Advance();
+				return;
+			}
+			if (Got < 0) Stalled(TEXT("round the Citadel to the mercenary"));
+			return;
+		}
+		TimedOut(TEXT("the mercenary drilling"), 90);
+		return;
+	}
+	case 1506:
+	{
+		const ac::Unit* Merc = M ? M->unit(H2Unit) : nullptr;
+		if (!Merc || Since() < 2.0) return;
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		Check(P && P->mercTags.count(H2Unit) == 1 && Merc->task == ac::Unit::Task::mining, TEXT("h2: the mercenary drills at its field, tagged"));
+		Check(FFileHelper::SaveStringToFile(FString::Printf(TEXT("%lld\n"), (long long)(P && !P->mercs.empty() ? P->mercs[0].delivered : 0)),
+				  *FPaths::Combine(Shots.Dir, TEXT("h2-first.txt"))),
+			TEXT("h2: what it delivered noted"));
+		Shoot(TEXT("h2-03-merc-mining"), TEXT("the mercenary drilling at its field: its orange, its tag"));
+		return;
+	}
+	case 1507:
+		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		UE_LOG(LogAutocraft, Display, TEXT("mmoshots: h2: the first run ends; the server saves and stops with it"));
+		Finish();
+		return;
+	case 1510:
+	{
+		// Seated again: the news came with the first progress.
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		const UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this);
+		const int64 Told = Hud ? Hud->AwayToasted() : 0;
+		// While its toast is up (4.5 s), past its fade-in.
+		const double Age = Hud && Told > 0 ? FPlatformTime::Seconds() - Hud->AwayToastedAt() : -1;
+		if (!P || (Told <= 0 && Since() < 6.0) || (Told > 0 && Age < 0.6)) return;
+		Check(Age < 3.8, FString::Printf(TEXT("h2: the toast still up (%.1f s old)"), Age));
+		FString First;
+		FFileHelper::LoadFileToString(First, *FPaths::Combine(Shots.Dir, TEXT("h2-first.txt")));
+		const int64 Before = FCString::Atoi64(*First.TrimStartAndEnd());
+		const int64 After = P->mercs.empty() ? 0 : P->mercs[0].delivered;
+		Check(P->mercs.size() == 1 && After > Before,
+			FString::Printf(TEXT("h2: its mercenary delivered %lld ore while away (%lld before, %lld now)"), (long long)(After - Before),
+				(long long)Before, (long long)After));
+		Check(Told > 0, FString::Printf(TEXT("h2: \"while you were away\" told (%lld ore)"), (long long)Told));
+		Shoot(TEXT("h2-04-while-away"), TEXT("the next start: WHILE YOU WERE AWAY, the ore its mercenary delivered"));
+		return;
+	}
+	case 1511:
+		Check(Shots.Saved + Shots.Skipped == 1, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsK2

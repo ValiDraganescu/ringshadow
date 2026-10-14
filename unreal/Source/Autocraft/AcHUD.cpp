@@ -7,6 +7,7 @@
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
+#include "AcWorldRenderer.h"
 #include "SAcResourceBar.h"
 #include "SAcRoot.h"
 #include "SAcScoreboard.h"
@@ -226,4 +227,29 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 			RootWidget->Popup(D->amount, At, Now);
 		}
 	}
+
+	// H2: the mercenaries here, any pilot's: their orange paint and a tag
+	// over each one drawn ("MERC · FLINT").
+	TArray<TPair<FString, FVector2f>> Tags;
+	TMap<int64, int32> Paint;
+	UAcWorldRenderer* Renderer = UAcWorldRenderer::Get(this);
+	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsMmo() && Renderer)
+	{
+		const FAcMmoClient* Mmo = Sim->MmoClient();
+		if (const ac::net::ProgressMessage* P = Mmo ? Mmo->Progress() : nullptr)
+		{
+			for (const auto& [Id, Name] : P->mercTags)
+			{
+				Paint.Add(Id, UAcWorldRenderer::MercenaryTeam);
+				const TConstArrayView<FTransform> World = Renderer->PartWorld(Id);
+				FVector2f At;
+				if (World.Num() > 0 && ProjectToPoints(World[0].GetLocation() + FVector(0, 0, AcSpace::ToCm(2.4)), At))
+				{
+					Tags.Add({FString::Printf(TEXT("MERC · %s"), *FString(UTF8_TO_TCHAR(Name.c_str())).ToUpper()), At});
+				}
+			}
+		}
+	}
+	if (Renderer) Renderer->SetTeamPaint(MoveTemp(Paint));
+	RootWidget->SetTags(MoveTemp(Tags));
 }

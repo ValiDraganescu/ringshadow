@@ -3,6 +3,8 @@
 #include "AcHudStyle.h"
 #include "AcHudText.h"
 
+#include "Rendering/DrawElements.h"
+
 void SAcPopups::Construct(const FArguments& InArgs)
 {
 	SetCanTick(false);
@@ -17,6 +19,13 @@ void SAcPopups::Add(const int64 Amount, const FVector2f At, const double Now)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcPopups::SetTags(TArray<FTag> InTags)
+{
+	if (InTags.IsEmpty() && TagList.IsEmpty()) return;
+	TagList = MoveTemp(InTags);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcPopups::Update(const double Now)
 {
 	Clock = Now;
@@ -28,6 +37,21 @@ void SAcPopups::Update(const double Now)
 int32 SAcPopups::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
 	FSlateWindowElementList& Out, int32 Layer, const FWidgetStyle& Style, bool bParentEnabled) const
 {
+	// The mercenaries' tags: a dark chip, the name in their orange.
+	for (const FTag& Tag : TagList)
+	{
+		FAcHudText T(Tag.Text, FAcHudStyle::Font(12, EAcFontWeight::Bold), FAcHudStyle::Srgb(1.0, 0.6, 0.22), EAcHAlign::Center,
+			EAcVAlign::Center);
+		T.Accent = FLinearColor::Transparent;
+		T.Kern = 1.2f;
+		const FVector2f Size = T.Measure() + FVector2f(14, 6);
+		const FVector2f Min = Tag.At - Size * 0.5f;
+		FSlateDrawElement::MakeBox(Out, Layer, Geometry.ToPaintGeometry(FVector2D(Size), FSlateLayoutTransform(FVector2D(Min))),
+			FAcHudStyle::White(), ESlateDrawEffect::None, FLinearColor(0.02f, 0.02f, 0.03f, 0.62f));
+		FSlateDrawElement::MakeBox(Out, Layer, Geometry.ToPaintGeometry(FVector2D(Size.X, 1.5f), FSlateLayoutTransform(FVector2D(Min.X, Min.Y + Size.Y - 1.5f))),
+			FAcHudStyle::White(), ESlateDrawEffect::None, FAcHudStyle::Srgb(0.92, 0.4, 0.06));
+		T.Paint(Out, Layer + 1, Geometry, Tag.At);
+	}
 	const FSlateFontInfo Font = FAcHudStyle::Font(20);
 	for (const FPopup& P : Live)
 	{

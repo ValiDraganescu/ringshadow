@@ -222,8 +222,9 @@ my computer is on)." Built in S2 (docs/mmorpg-m8.md).
   (`WorldParams::catchUpCap`, 24 h); the jobs and timers on the clock are
   due at once; starfalls skipped in the gap are not told (as on any jump of
   the clock); the regions resume as saved. Then `WorldMap::offlineWork`
-  (the seconds, capped), the hook H2 fills to pay the mercenaries for the
-  gap.
+  (the seconds, capped): H2's mercenaries work the gap, their fields
+  emptied, the ore to their pilots' wallets, the wages at each dawn
+  (docs/prospector-progression.md "Mercenaries").
 - **Stopping it.** The home screen shows "World server running · since
   21:40" with STOP while one runs on the save; STOP saves and ends it.
   From a terminal: `autocraft-server --stop <save>` (or a folder: every

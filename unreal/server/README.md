@@ -45,7 +45,8 @@ default, ends with `--parent-pid`'s process. `--stop` asks the server on that sa
 a run file in the folder) to save and stop: exit 0 stopped, 1 none running, 3 still running after 15 s.
 With no client on line a world idles: its clock and timers move on every 0.5 s, the regions wait, a
 datagram wakes it. A save loaded catches the world up on the time since it was written (its
-`saved_at`), at most 24 h.
+`saved_at`), at most 24 h; `--dev-down s` (dev, shots) counts s seconds more. Mercenaries (H2) work
+through both: their ore reaches their pilots' wallets with no one on line.
 
 `--world` runs a world ([docs/worlds.md](../../docs/worlds.md)); a bad world file stops it with
 exit 2 and its problems on stderr. `--save` (a world only) keeps it in a SQLite file: loaded before

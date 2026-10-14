@@ -259,6 +259,8 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     // K2: the Citadel's board and the Journal.
     m.board = it->second.board;
     m.journal = it->second.journal;
+    // H2: its mercenaries, the fields, the terms; the tags here.
+    mercsTold(it->second, m);
     if (!it->second.flight) {
         const Region& r = *regions_[it->second.region];
         const Simulation& sim = r.simulation();

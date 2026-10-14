@@ -461,7 +461,7 @@ TEST(missions_saved_and_loaded) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(12));
+    EXPECT_EQ(store->schemaVersion(), WorldStore::version());
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     WorldMap w(first(), params());
@@ -491,7 +491,7 @@ TEST(missions_v10_save_migrates_and_draws) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(12));
+    EXPECT_EQ(store->schemaVersion(), WorldStore::version());
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);

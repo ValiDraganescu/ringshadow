@@ -525,6 +525,7 @@ void WorldMap::step() {
     updateSky();
     workAfter(work);
     realmTaxes();
+    mercsStep(dt);
     realmNews();
     sites();
     contracts();
@@ -556,6 +557,8 @@ void WorldMap::idle(double seconds) {
     rigs();
     ownPadsChanged();
     regrowWells(seconds);
+    // The mercenaries' work as bookkeeping, the regions held (H2).
+    mercsBook(clock_ - seconds, clock_);
     // The Brood's director on the world's clock: with no pilot near it
     // spawns and raids nothing, and a region's bugs go `idleDespawn` s
     // after the last pilot left (WorldBrood.cpp).
@@ -579,8 +582,10 @@ double WorldMap::catchUp(double seconds) {
     return moved;
 }
 
-void WorldMap::offlineWork(double) {
-    // H2: the mercenaries' ore for the gap, to their pilots' wallets (taxed).
+void WorldMap::offlineWork(double seconds) {
+    // H2: the mercenaries' ore for the gap, to their pilots' wallets (taxed),
+    // their fields emptied by as much, the wages at each dawn on the way.
+    mercsBook(clock_ - seconds, clock_);
 }
 
 void WorldMap::crossings() {
