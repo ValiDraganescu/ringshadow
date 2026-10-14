@@ -561,3 +561,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: W4 folds W3 (8a1678e); protocol 23; crossing hitch measured.
 - T W4 briefed to wt1.
 - D User: radio music ducks very low under mission narration → A1.
+- T D3 done ece5e3f: turret card (U), 4 marks incl. gatling air reach, chevrons.
+- D D3: gatling marks 100+50 / 300+200 / 800+500; Sentinel ×1.5.
+- I The gatling was never posed: pose table held 9 kinds; fixed in D3.
+- N Protocol 22, schema 16, request 19 = UpgradeTurret.
+- N D3 suites: core 475, server 219, net 82 pass.
+- I Card shows HP 301/300 (hp quantization) → fixed in A1.
