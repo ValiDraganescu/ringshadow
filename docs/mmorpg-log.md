@@ -334,3 +334,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Manager: core 450, server 141, net 67 pass.
 - D Manager: client screens for P6/P7 in new files (SAcRigScreen).
 - T Rig + Foundry/Lab screens → world-clock (client), hook via P5.
+- T P5 done 58ae6d7, fdb7f44, 42016f7: skill screen, HUD, build menu.
+- N Manager: 7 P5 shots checked; core 450, server 141, net 67.
+- I Build list in the right grille too small to read.
+- I mmocross flow fails: W1 well at (128,50) on the drive.
+- I Card max HP ignores Plating (51/45).
+- T G2 client: contracts, respawn, depot, own pads → progression-core.
