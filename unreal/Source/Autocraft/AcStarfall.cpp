@@ -36,15 +36,23 @@ namespace
 	const TCHAR* const SmokePath = TEXT("/Game/Materials/M_StarfallSmoke.M_StarfallSmoke");
 	const TCHAR* const CraterPath = TEXT("/Game/Materials/M_StarfallCrater.M_StarfallCrater");
 	const TCHAR* const HotPath = TEXT("/Game/Materials/M_OpalHot.M_OpalHot");
+	const TCHAR* const ShimmerPath = TEXT("/Game/Materials/M_StarfallShimmer.M_StarfallShimmer");
 
 	TAutoConsoleVariable<float> CVarLightGain(TEXT("ac.StarfallLightGain"), 1.f,
 		TEXT("Scale on the starfall's lights (the streak's head, the flash, the crater's glow)."));
 
-	/// The trail: a puff every this many seconds of the streak, each lasting
-	/// `PuffLife` s, from `PuffFrom` to `PuffTo` cells across.
+	/// The smoke trail: a puff every this many seconds of the streak, each
+	/// lasting `PuffLife` s, from `PuffFrom` to `PuffTo` cells across,
+	/// drifting on a wind of `Wind` cells a second.
 	constexpr double PuffEvery = 0.05;
-	constexpr double PuffLife = 9.0;
-	constexpr double PuffFrom = 6.0, PuffTo = 30.0;
+	constexpr double PuffLife = 30.0;
+	constexpr double PuffFrom = 5.0, PuffTo = 44.0;
+	constexpr double Wind = 1.6;
+	/// The glowing trail behind the head: a piece of the path every this
+	/// many seconds, glowing `TrainLife` s after the head passed, cooling
+	/// from orange to a faint train.
+	constexpr double TrainEvery = 0.06;
+	constexpr double TrainLife = 4.5;
 	/// The impact: the flash's seconds, the dust ring's seconds and puffs.
 	constexpr double FlashLife = 1.4;
 	constexpr double DustLife = 9.0;
@@ -53,8 +61,11 @@ namespace
 	constexpr double CoolTime = 600.0;
 	/// The deposit drawn this much bigger than a plain one: rich.
 	constexpr double HotSize = 1.3;
-	/// Embers over a hot deposit.
+	/// Embers over a hot deposit at night (`DayEmbers` by day, small and
+	/// dim, the heat shimmer over it instead).
 	constexpr int32 Embers = 28;
+	constexpr int32 DayEmbers = 7;
+	constexpr int32 ShimmerColumns = 9;
 
 	FName OreModel(const int64 Id) { return FName(*FString::Printf(TEXT("ore_%d"), int32(((Id % 4) + 4) % 4))); }
 
@@ -122,6 +133,7 @@ void AAcStarfall::Load()
 	};
 	Glows = Batch(TEXT("StarfallGlows"), GlowPath, 4);
 	Smokes = Batch(TEXT("StarfallSmoke"), SmokePath, 3);
+	Shimmers = Batch(TEXT("StarfallShimmer"), ShimmerPath, 1);
 	auto Light = [&](const TCHAR* Name) {
 		UPointLightComponent* L = NewObject<UPointLightComponent>(this, Name);
 		L->SetMobility(EComponentMobility::Movable);
@@ -153,6 +165,9 @@ void AAcStarfall::Off()
 {
 	if (Glows) Glows->ClearInstances();
 	if (Smokes) Smokes->ClearInstances();
+	if (Shimmers) Shimmers->ClearInstances();
+	for (UInstancedStaticMeshComponent* C : {Glows.Get(), Smokes.Get(), Shimmers.Get()})
+		if (C) C->SetVisibility(false);
 	if (HeadLight) HeadLight->SetVisibility(false);
 	if (FlashLight) FlashLight->SetVisibility(false);
 	for (UPointLightComponent* L : CraterLights) L->SetVisibility(false);
@@ -180,6 +195,13 @@ void AAcStarfall::Smoke(const FVector& At, const double Size, const double Opaci
 	if (Opacity <= 0.003 || Size <= 0.0) return;
 	SmokeAt.Add(FTransform(FQuat::Identity, At, FVector(Size / 100.0)));
 	SmokeData.Append({float(FMath::Clamp(Opacity, 0.0, 1.0)), 1.f, float(FMath::Clamp(Warm, 0.0, 1.0))});
+}
+
+void AAcStarfall::Shimmer(const FVector& At, const double Size, const double Strength, const double Tall)
+{
+	if (Strength <= 0.003 || Size <= 0.0) return;
+	ShimmerAt.Add(FTransform(FQuat::Identity, At, FVector(Size / 100.0, Size / 100.0, Size * Tall / 100.0)));
+	ShimmerData.Add(float(FMath::Clamp(Strength, 0.0, 1.0)));
 }
 
 void AAcStarfall::Announce(const FDrawn& F, const FString& Region, const double Time)
@@ -216,44 +238,82 @@ void AAcStarfall::DrawStreak(const FDrawn& F, const double Time)
 		const ac::Vec3 H = ac::Starfall::head(B, F.From);
 		return Ground + Cells(FVector(H.x, H.z, H.y));
 	};
-	// The trail: puffs left along the path, spreading and thinning; they
-	// linger after the impact.
 	const double First = F.ImpactTime - ac::Starfall::streak;
 	const double Last = FMath::Min(Time, F.ImpactTime);
+	// The smoke trail: puffs left along the path, spreading, thinning and
+	// drifting on the wind (one way a fall, a little up); they linger half
+	// a minute after the impact.
 	if (Time - First > 0 && Time < F.ImpactTime + PuffLife)
 	{
 		const uint32 Seed = F.Id * 7919u + 3u;
+		const double WindAt = Rand(Seed, 0, 9) * UE_DOUBLE_TWO_PI;
+		const FVector Blow(FMath::Cos(WindAt), FMath::Sin(WindAt), 0.12);
 		int32 K = 0;
 		for (double E = First; E <= Last; E += PuffEvery, ++K)
 		{
 			const double Age = Time - E;
 			if (Age > PuffLife) continue;
 			const double A = Age / PuffLife;
-			const FVector Drift = FVector(Rand(Seed, K, 1) - 0.5, Rand(Seed, K, 2) - 0.5, Rand(Seed, K, 3) * 0.6) *
-								  AcSpace::ToCm(1.0 + 4.0 * A);
+			const FVector Drift = (Blow * Wind * Age + FVector(Rand(Seed, K, 1) - 0.5, Rand(Seed, K, 2) - 0.5, Rand(Seed, K, 3) * 0.6) *
+								  (1.0 + 6.0 * FMath::Sqrt(A))) * AcSpace::CmPerCell;
 			// Young puffs near the head glow with its fire.
-			const double Warm = FMath::Exp(-Age * 1.2);
+			const double Warm = FMath::Exp(-Age * 1.5);
 			Smoke(HeadAt(F.ImpactTime - E) + Drift, AcSpace::ToCm(FMath::Lerp(PuffFrom, PuffTo, FMath::Sqrt(A))) * (0.7 + 0.6 * Rand(Seed, K, 4)),
-				0.75 * (1.0 - A) * (1.0 - A), Warm);
+				0.7 * FMath::Pow(1.0 - A, 1.6) * FMath::Min(1.0, Age * 4.0 + 0.3), Warm);
+		}
+	}
+	// The glowing trail: the air it tore through, a piece of the path at a
+	// time, orange and wide where the head just passed, cooling to a thin
+	// pale train that fades a few seconds on (after the impact too).
+	if (Time - First > 0 && Time < F.ImpactTime + TrainLife)
+	{
+		for (double E = FMath::Max(First, Time - TrainLife); E + TrainEvery <= Last + 1e-6; E += TrainEvery)
+		{
+			const double Age = Time - (E + TrainEvery);
+			if (Age < 0) continue;
+			const FVector A = HeadAt(F.ImpactTime - E), B = HeadAt(F.ImpactTime - E - TrainEvery);
+			const FVector Along = B - A;
+			const double Len = Along.Size();
+			if (Len <= 1.0) continue;
+			const double Fresh = FMath::Exp(-Age * 2.4);
+			const double Cool = FMath::Exp(-Age * 0.55) * (1.0 - Age / TrainLife);
+			const double Thick = 1.4 + 2.2 * FMath::Sqrt(Age / TrainLife);
+			const FQuat Turn = FRotationMatrix::MakeFromX(Along / Len).ToQuat();
+			const FVector Mid = (A + B) * 0.5;
+			const double Stretch = Len / AcSpace::ToCm(Thick) * 1.35;
+			const FLinearColor Colour = FLinearColor::LerpUsingHSV(FLinearColor(0.75f, 0.85f, 1.0f), FLinearColor(1.0f, 0.45f, 0.12f), float(Fresh));
+			Glow(Mid, AcSpace::ToCm(Thick), Colour, 4.5 * Fresh + 0.9 * Cool, Turn, FVector(Stretch, 1.0, 1.0));
 		}
 	}
 	if (Before <= 0 || Before > ac::Starfall::streak)
 	{
 		return;
 	}
-	// The head: white hot, a halo, a hot tail along the way it came.
+	// The head: white hot, flickering as it burns away, a halo, sparks shed
+	// behind it.
 	const FVector Head = HeadAt(Before);
 	const FVector Back = (HeadAt(Before + 0.5) - Head).GetSafeNormal();
 	const double In = FMath::Clamp((ac::Starfall::streak - Before) / 1.5, 0.0, 1.0);
-	const double Flicker = 0.85 + 0.15 * FMath::Sin(Time * 37.0 + F.Id);
-	Glow(Head, AcSpace::ToCm(4.0), FLinearColor(1.0f, 0.95f, 0.85f), 60.0 * In * Flicker);
-	Glow(Head, AcSpace::ToCm(10.0), FLinearColor(1.0f, 0.55f, 0.2f), 3.0 * In * Flicker);
+	const double Seed = double(F.Id % 977);
+	const double Flare = FMath::Pow(FMath::Max(0.0, FMath::Sin(Time * 5.3 + Seed) * FMath::Sin(Time * 2.9 + 2.0 * Seed)), 6.0);
+	const double Flicker = 0.72 + 0.12 * FMath::Sin(Time * 37.0 + Seed) + 0.1 * FMath::Sin(Time * 61.0 + 3.0 * Seed) + 0.6 * Flare;
+	Glow(Head, AcSpace::ToCm(6.0), FLinearColor(1.0f, 0.97f, 0.9f), 60.0 * In * Flicker);
+	Glow(Head, AcSpace::ToCm(18.0), FLinearColor(1.0f, 0.6f, 0.25f), 2.6 * In * Flicker);
 	const FQuat Along = FRotationMatrix::MakeFromX(Back).ToQuat();
-	Glow(Head + Back * AcSpace::ToCm(30.0), AcSpace::ToCm(1.0), FLinearColor(1.0f, 0.5f, 0.15f), 20.0 * In, Along, FVector(64.0, 4.5, 4.5));
-	Glow(Head + Back * AcSpace::ToCm(90.0), AcSpace::ToCm(1.0), FLinearColor(0.9f, 0.3f, 0.1f), 4.0 * In, Along, FVector(180.0, 9.0, 9.0));
+	Glow(Head + Back * AcSpace::ToCm(24.0), AcSpace::ToCm(2.0), FLinearColor(1.0f, 0.62f, 0.25f), 16.0 * In, Along, FVector(26.0, 1.0, 1.0));
+	const uint32 Sparks = F.Id * 31337u + 5u;
+	for (int32 K = 0; K < 10; ++K)
+	{
+		// A spark shed every so often, falling behind and dying in a second.
+		const double Period = 0.7 + 0.5 * Rand(Sparks, K, 1);
+		const double Phase = FMath::Fmod(Time / Period + Rand(Sparks, K, 2), 1.0);
+		const FVector Jitter = FVector(Rand(Sparks, K, 3) - 0.5, Rand(Sparks, K, 4) - 0.5, Rand(Sparks, K, 5) - 0.5) * AcSpace::ToCm(6.0 * Phase);
+		Glow(Head + Back * AcSpace::ToCm(70.0 * Phase * (0.6 + 0.8 * Rand(Sparks, K, 6))) + Jitter, AcSpace::ToCm(1.6),
+			FLinearColor(1.0f, 0.55f, 0.18f), 14.0 * In * (1.0 - Phase) * (1.0 - Phase));
+	}
 	HeadLight->SetWorldLocation(Head);
 	HeadLight->SetLightColor(FLinearColor(1.0f, 0.7f, 0.4f));
-	HeadLight->SetIntensity(float(1200.0 * In * CVarLightGain.GetValueOnGameThread()));
+	HeadLight->SetIntensity(float(1200.0 * In * Flicker * CVarLightGain.GetValueOnGameThread()));
 	HeadLight->SetAttenuationRadius(float(AcSpace::ToCm(100.0)));
 	HeadLight->SetVisibility(true);
 }
@@ -269,11 +329,11 @@ void AAcStarfall::DrawImpact(const FDrawn& F, const double Time)
 	{
 		const double A = Age / FlashLife;
 		const double Fade = FMath::Exp(-Age * 4.0);
-		Glow(Ground + FVector(0, 0, AcSpace::ToCm(2.0)), AcSpace::ToCm(4.0 + 18.0 * FMath::Sqrt(A)), FLinearColor(1.0f, 0.75f, 0.45f), 3.0 * Fade);
-		Glow(Ground + FVector(0, 0, AcSpace::ToCm(2.0)), AcSpace::ToCm(3.0 + 5.0 * A), FLinearColor(1.0f, 1.0f, 0.95f), 12.0 * Fade);
+		Glow(Ground + FVector(0, 0, AcSpace::ToCm(2.0)), AcSpace::ToCm(4.0 + 16.0 * FMath::Sqrt(A)), FLinearColor(1.0f, 0.72f, 0.42f), 1.5 * Fade);
+		Glow(Ground + FVector(0, 0, AcSpace::ToCm(2.0)), AcSpace::ToCm(3.0 + 4.5 * A), FLinearColor(1.0f, 0.97f, 0.9f), 6.0 * Fade);
 		FlashLight->SetWorldLocation(Ground + FVector(0, 0, AcSpace::ToCm(6.0)));
 		FlashLight->SetLightColor(FLinearColor(1.0f, 0.8f, 0.55f));
-		FlashLight->SetIntensity(float(2000.0 * Fade * CVarLightGain.GetValueOnGameThread()));
+		FlashLight->SetIntensity(float(600.0 * Fade * CVarLightGain.GetValueOnGameThread()));
 		FlashLight->SetAttenuationRadius(float(AcSpace::ToCm(50.0)));
 		FlashLight->SetVisibility(true);
 	}
@@ -351,8 +411,10 @@ void AAcStarfall::DrawCraters(const TArray<FDrawn>& Here, const double Time, con
 		UPointLightComponent* L = CraterLights[N];
 		L->SetWorldLocation(Cells(F.Impact) + FVector(0, 0, AcSpace::ToCm(6.0)));
 		L->SetLightColor(FLinearColor(1.0f, 0.5f, 0.18f));
+		// By day a touch against the sun (stronger, it lit the dark crust
+		// gold); at night the pool of warm light.
 		const double Glowing = (bOre ? 0.3 + 0.9 * Dark : 0.0) + 1.5 * Heat;
-		L->SetIntensity(float(25.0 * Glowing * Fade * CVarLightGain.GetValueOnGameThread()));
+		L->SetIntensity(float((4.0 + 21.0 * Dark) * Glowing * Fade * CVarLightGain.GetValueOnGameThread()));
 		L->SetAttenuationRadius(float(AcSpace::ToCm(12.0)));
 		L->SetVisibility(Glowing * Fade > 0.01);
 		++N;
@@ -362,13 +424,16 @@ void AAcStarfall::DrawCraters(const TArray<FDrawn>& Here, const double Time, con
 		Decals[I]->SetVisibility(false);
 		CraterLights[I]->SetVisibility(false);
 	}
-	// Embers off the hot deposits: sparks that rise, flicker and die, more
-	// and brighter at night.
+	// Embers off the hot deposits: sparks that rise, flicker and die, at
+	// night; by day a few small dim ones, and the air shimmering over it
+	// while it is hot.
 	for (const FHot& H : Hot)
 	{
 		if (H.Stage <= 0) continue;
 		const uint32 Seed = uint32(H.Id) * 2246822519u + 7u;
-		for (int32 K = 0; K < Embers; ++K)
+		const int32 Count = FMath::RoundToInt32(FMath::Lerp(double(DayEmbers), double(Embers), Dark));
+		const double Small = FMath::Lerp(0.6, 1.0, Dark);
+		for (int32 K = 0; K < Count; ++K)
 		{
 			const double Period = 1.8 + 1.6 * Rand(Seed, K, 1);
 			const double Phase = FMath::Fmod(Time / Period + Rand(Seed, K, 2), 1.0);
@@ -377,8 +442,21 @@ void AAcStarfall::DrawCraters(const TArray<FDrawn>& Here, const double Time, con
 			const FVector P = H.At + FVector(FMath::Cos(Ang + Phase) * AcSpace::ToCm(R), FMath::Sin(Ang + Phase) * AcSpace::ToCm(R),
 											 AcSpace::ToCm(0.3 + 3.2 * Phase));
 			const double Life = FMath::Sin(Phase * UE_DOUBLE_PI) * (0.6 + 0.4 * FMath::Sin(Time * 23.0 + K * 3.1));
-			Glow(P, AcSpace::ToCm(0.09 + 0.06 * Rand(Seed, K, 5)), FLinearColor(1.0f, 0.42f + 0.3f * float(Rand(Seed, K, 6)), 0.1f),
-				(14.0 + 22.0 * Dark) * Life);
+			Glow(P, AcSpace::ToCm((0.09 + 0.06 * Rand(Seed, K, 5)) * Small), FLinearColor(1.0f, 0.42f + 0.3f * float(Rand(Seed, K, 6)), 0.1f),
+				(3.0 + 33.0 * Dark) * Life);
+		}
+		// The shimmer: tall soft columns of bent air rising off it, slow.
+		const double Age = Time - H.Born;
+		const double Heat = FMath::Exp(-FMath::Max(0.0, Age) / (CoolTime / 3.0));
+		const double ByDay = (1.0 - Dark) * (0.35 + 0.65 * Heat);
+		for (int32 K = 0; K < ShimmerColumns; ++K)
+		{
+			const double Period = 3.0 + 2.0 * Rand(Seed, K, 11);
+			const double Phase = FMath::Fmod(Time / Period + Rand(Seed, K, 12), 1.0);
+			const double Ang = Rand(Seed, K, 13) * UE_DOUBLE_TWO_PI;
+			const double R = 0.8 * Rand(Seed, K, 14);
+			const FVector P = H.At + FVector(FMath::Cos(Ang) * AcSpace::ToCm(R), FMath::Sin(Ang) * AcSpace::ToCm(R), AcSpace::ToCm(1.6 + 3.5 * Phase));
+			Shimmer(P, AcSpace::ToCm(2.2 + 1.2 * Phase), ByDay * FMath::Sin(Phase * UE_DOUBLE_PI), 1.8);
 		}
 	}
 }
@@ -390,8 +468,13 @@ void AAcStarfall::SyncHotOre(const TArray<FDrawn>& Here)
 	const ac::GameState& St = Sim->Simulation().state;
 	// The deposits wanted: landed here, in the mirror.
 	TArray<int64> Want;
+	TMap<int64, double> BornOf;
 	for (const FDrawn& F : Here)
-		if (F.Patch >= 0 && F.Patch < int64(St.patches.size())) Want.Add(St.patches[size_t(F.Patch)].id);
+		if (F.Patch >= 0 && F.Patch < int64(St.patches.size()))
+		{
+			Want.Add(St.patches[size_t(F.Patch)].id);
+			BornOf.Add(Want.Last(), F.ImpactTime);
+		}
 	TSet<int64> Ids(Want);
 	const int64 Gen = Mmo ? Mmo->Generation() : 0;
 	bool bSame = Gen == HotGeneration && Want.Num() == Hot.Num();
@@ -431,8 +514,15 @@ void AAcStarfall::SyncHotOre(const TArray<FDrawn>& Here)
 		for (FHot& H : Hot) Models.Add(&H.Model);
 		HotOre.Flush(Models);
 		if (!Hot.IsEmpty()) UE_LOG(LogAutocraft, Log, TEXT("starfall: %d hot deposits drawn here"), Hot.Num());
+		// The crater's decal would paint its floor and its hot core on the
+		// deposit (it read gold, its own crust unseen): the deposit takes none.
+		TArray<UInstancedStaticMeshComponent*> Batches;
+		GetComponents(Batches);
+		for (UInstancedStaticMeshComponent* C : Batches)
+			if (C != Glows && C != Smokes && C != Shimmers) C->SetReceivesDecals(false);
 	}
 	AAcResources::Hot = Ids;
+	for (FHot& H : Hot) H.Born = BornOf.FindRef(H.Id);
 	// Their stages, as the plain ore's (AAcResources::ApplyStage).
 	for (FHot& H : Hot)
 	{
@@ -473,6 +563,8 @@ void AAcStarfall::Tick(const float DeltaSeconds)
 	GlowData.Reset();
 	SmokeAt.Reset();
 	SmokeData.Reset();
+	ShimmerAt.Reset();
+	ShimmerData.Reset();
 	HeadLight->SetVisibility(false);
 	FlashLight->SetVisibility(false);
 
@@ -522,6 +614,9 @@ void AAcStarfall::Tick(const float DeltaSeconds)
 
 	auto Push = [](UInstancedStaticMeshComponent* C, const TArray<FTransform>& At, const TArray<float>& Data, const int32 Floats) {
 		C->ClearInstances();
+		// Hidden when empty: a cleared batch could still draw its last
+		// instances (the streak's head showed again after a view change).
+		C->SetVisibility(!At.IsEmpty());
 		if (At.IsEmpty()) return;
 		C->AddInstances(At, false, true);
 		for (int32 I = 0; I < At.Num(); ++I) C->SetCustomData(I, TArrayView<const float>(Data.GetData() + I * Floats, Floats), false);
@@ -529,4 +624,5 @@ void AAcStarfall::Tick(const float DeltaSeconds)
 	};
 	Push(Glows, GlowAt, GlowData, 4);
 	Push(Smokes, SmokeAt, SmokeData, 3);
+	Push(Shimmers, ShimmerAt, ShimmerData, 1);
 }

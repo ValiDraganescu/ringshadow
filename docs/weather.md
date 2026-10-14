@@ -222,20 +222,28 @@ materials from `Tools/Editor/make_starfall_materials.py`):
 
 - **The streak.** For its last 10 s the head comes in at 70 cells a second,
   16° under level, out of the giant's side of the sky (bearing 280° ± 40°).
-  It has a white-hot head with an orange halo, a hot tail and a light that
-  sweeps the land below. It leaves a smoke trail that glows near the head,
-  then lingers and spreads for 9 s. It is drawn from the regions next door
-  too, placed by the world grid.
+  It has a white-hot head with an orange halo that flickers and flares as it
+  burns away, sheds sparks, and carries a light that sweeps the land below.
+  Behind it a glowing trail stretches along the way it came: orange where
+  the head just passed, cooling to a faint pale train that fades over
+  4.5 s, long enough to cross a good part of the sky. It leaves a smoke
+  trail that glows near the head, then lingers for 30 s, spreading and
+  drifting on the wind. It is drawn from the regions next door too, placed
+  by the world grid.
 - **The impact.** A flash of light that swells and fades in 1.4 s, a ring of
   dust thrown 30 cells out, and a column of smoke lit from below. All of it
   settles in 9 s.
 - **The crater.** A decal (`M_StarfallCrater`) 21 cells across: a scorched
   pit with glowing seams while it cools (10 minutes), a pale rim of thrown
   rock and rays of dust. It fades out over the last fifth of its day.
-- **The deposit.** Drawn 1.3 × a plain one's size in `M_OpalHot`: black rock
-  with hot veins (white-gold, orange, deep red, a touch of violet) that
-  breathe, sparks in the cracks, embers rising off it. A warm light glows
-  with it, stronger at night, when the veins burn 2.5 × brighter.
+- **The deposit.** Drawn 1.3 × a plain one's size in `M_OpalHot`: a dark,
+  matte cooling crust cracked by molten veins, gold at their hearts and
+  orange to deep red at their edges, that breathe, with sparks in the
+  cracks. Their glow is kept low: bright orange past the tonemapper's
+  shoulder reads white. A warm light glows with it, stronger at night, when
+  the veins burn 3.5 × brighter and embers rise off it. By day only a few
+  small embers rise; the air over it shimmers instead (`M_StarfallShimmer`,
+  a 2D-offset refraction on soft columns), most while it is hot.
   `AAcResources` leaves it out of the plain ore (`AAcResources::Hot`).
 - `ac.StarfallLightGain` scales the lights.
 - **Sound** (`Tools/AudioGen/moments.manifest.json`; `FAcAudioRules::Starfalls`,

@@ -6,15 +6,18 @@
 // - the radio's toast a minute before ("STARFALL IN 60", the region and the
 //   bearing from the camera), and at the impact;
 // - the streak, `ac::Starfall::head` over its last `streak` seconds: a white
-//   head with a halo and a hot tail, a light that sweeps the land, a smoke
-//   trail that lingers and spreads; seen from the neighbouring regions too
-//   (placed by the world grid);
+//   head that flickers and sheds sparks, a halo, a long glowing trail along
+//   the path it came that cools from orange to a faint train, a light that
+//   sweeps the land, and a smoke trail that lingers half a minute and
+//   drifts on the wind; seen from the neighbouring regions too (placed by
+//   the world grid);
 // - the impact: a flash and its light, a dust ring thrown out and a column
 //   of smoke;
 // - in the pilot's region, the crater (a decal, M_StarfallCrater) hot at
 //   first, fading over a world day, and its deposit drawn with M_OpalHot
-//   (hot veins, its own glow at night, embers rising off it and a warm
-//   light), hidden from AAcResources' plain ore (`AAcResources::Hot`).
+//   (molten veins in a dark crust, its own glow at night, embers rising off
+//   it at night and heat shimmer over it by day, M_StarfallShimmer, and a
+//   warm light), hidden from AAcResources' plain ore (`AAcResources::Hot`).
 //
 // The materials: Tools/Editor/make_starfall_materials.py.
 //
@@ -74,6 +77,7 @@ private:
 	void Glow(const FVector& At, double Cells, const FLinearColor& Colour, double Intensity, const FQuat& Turn = FQuat::Identity,
 		const FVector& Stretch = FVector::OneVector);
 	void Smoke(const FVector& At, double Cells, double Opacity, double Warm);
+	void Shimmer(const FVector& At, double Cells, double Strength, double Tall);
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> Root;
@@ -81,6 +85,8 @@ private:
 	TObjectPtr<UInstancedStaticMeshComponent> Glows;
 	UPROPERTY(Transient)
 	TObjectPtr<UInstancedStaticMeshComponent> Smokes;
+	UPROPERTY(Transient)
+	TObjectPtr<UInstancedStaticMeshComponent> Shimmers;
 	UPROPERTY(Transient)
 	TObjectPtr<UPointLightComponent> HeadLight;
 	UPROPERTY(Transient)
@@ -108,6 +114,8 @@ private:
 		int32 StagePart[3] = {INDEX_NONE, INDEX_NONE, INDEX_NONE};
 		int64 Stage = -1;
 		FVector At = FVector::ZeroVector;
+		/// Its fall's impact (the world's clock): how hot it still is.
+		double Born = 0;
 	};
 	TArray<FHot> Hot;
 	int64 HotRegion = -1;
@@ -115,6 +123,6 @@ private:
 	/// The falls announced and told down (their ids).
 	TSet<uint32> Announced, Landed;
 	/// Instance data built each frame.
-	TArray<FTransform> GlowAt, SmokeAt;
-	TArray<float> GlowData, SmokeData;
+	TArray<FTransform> GlowAt, SmokeAt, ShimmerAt;
+	TArray<float> GlowData, SmokeData, ShimmerData;
 };
