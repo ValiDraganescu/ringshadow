@@ -365,3 +365,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N E1b task: 13 min against 50 estimated.
 - N Run queue: first real run OK (1014-134941-first-hour).
 - T J1 sound for the new moments → first-hour.
+- N S1: Starfall run 3 min 50 s → 44 s.
+- D Manager: editor Python scripts via queue --python; lock exception ended.
