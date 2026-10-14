@@ -2,114 +2,140 @@
   "id": "dust-terraces",
   "name": "Dust Terraces",
   "size": "medium",
-  "base": {
-    "style": "highlands",
-    "seed": 16
-  },
+  "base": {"style": "highlands", "seed": 16, "drop": ["resources", "doodads"]},
   "height": [
     {
       "op": "flatten",
-      "area": {
-        "circle": [
-          72,
-          48,
-          6
-        ]
-      },
+      "area": {"circle": [72, 48, 6]},
       "level": 0,
       "slope": 5
     },
     {
       "op": "lower",
-      "area": {
-        "circle": [
-          108,
-          52,
-          3
-        ]
-      },
+      "area": {"circle": [108, 52, 3]},
       "level": 0,
       "slope": 5
     },
     {
       "op": "raise",
-      "area": {
-        "circle": [
-          24,
-          52,
-          5
-        ]
-      },
+      "area": {"circle": [24, 52, 5]},
       "level": 2
     },
-    {
-      "op": "ramp",
-      "from": [
-        24,
-        66
-      ],
-      "to": [
-        24,
-        57
-      ],
-      "width": 4,
-      "fromLevel": 1,
-      "level": 2
-    }
+    {"op": "ramp", "from": [24, 66], "to": [24, 57], "width": 4, "fromLevel": 1, "level": 2},
+    {"op": "raise", "area": [[108, 6], [138, 6], [138, 26], [116, 26], [108, 18]], "level": 2},
+    {"op": "ramp", "from": [102, 30], "to": [112, 22], "width": 4, "fromLevel": 1, "level": 2},
+    {"op": "raise", "area": [[8, 70], [30, 70], [34, 80], [30, 90], [8, 90]], "level": 2},
+    {"op": "ramp", "from": [20, 62], "to": [20, 72.5], "width": 4, "fromLevel": 1, "level": 2}
+  ],
+  "deposits": [
+    {"at": [53.8, 12.0], "amount": 1800, "angle": 111},
+    {"at": [53.9, 14.4], "amount": 1800, "angle": 110},
+    {"at": [53.9, 16.8], "amount": 1800, "angle": 86},
+    {"at": [54.1, 19.2], "amount": 1800, "angle": 104},
+    {"at": [54.3, 21.6], "amount": 1800, "angle": 91},
+    {"at": [54.9, 24.0], "amount": 1800, "angle": 106},
+    {"at": [54.4, 26.5], "amount": 1800, "angle": 112},
+    {"at": [55.1, 29.1], "amount": 1800, "angle": 102},
+    {"at": [53.9, 31.5], "amount": 1800, "angle": 108},
+    {"at": [54.2, 34.0], "amount": 1800, "angle": 63},
+    {"at": [90.4, 58.0], "amount": 1800, "angle": 107},
+    {"at": [90.5, 60.5], "amount": 1800, "angle": 98},
+    {"at": [89.6, 62.8], "amount": 1800, "angle": 86},
+    {"at": [89.6, 65.2], "amount": 1800, "angle": 103},
+    {"at": [89.3, 67.6], "amount": 1800, "angle": 111},
+    {"at": [89.6, 69.9], "amount": 1800, "angle": 106},
+    {"at": [89.1, 72.4], "amount": 1800, "angle": 83},
+    {"at": [88.9, 74.8], "amount": 1800, "angle": 73},
+    {"at": [90.0, 77.2], "amount": 1800, "angle": 115},
+    {"at": [89.9, 79.6], "amount": 1800, "angle": 68},
+    {"at": [89.4, 82.1], "amount": 1800, "angle": 115},
+    {"at": [108.1, 29.7], "amount": 1800, "angle": 166},
+    {"at": [111.4, 30.2], "amount": 1800, "angle": 177},
+    {"at": [114.7, 31.1], "amount": 1800, "angle": 161},
+    {"at": [118.1, 32.3], "amount": 1800, "angle": 177},
+    {"at": [121.4, 31.5], "amount": 1800, "angle": 168},
+    {"at": [124.6, 30.1], "amount": 1800, "angle": 11},
+    {"at": [127.9, 29.5], "amount": 1800, "angle": 2},
+    {"at": [116.0, 50.5], "amount": 3600, "angle": 159},
+    {"at": [115.1, 47.9], "amount": 3600, "angle": 96},
+    {"at": [117.5, 48.6], "amount": 3600, "angle": 130},
+    {"at": [23.4, 32.2], "amount": 1800, "angle": 132},
+    {"at": [19.9, 26.0], "amount": 1800, "angle": 14},
+    {"at": [15.8, 34.0], "amount": 1800, "angle": 160},
+    {"at": [17.3, 27.7], "amount": 1800, "angle": 108},
+    {"at": [22.7, 26.4], "amount": 1800, "angle": 17},
+    {"at": [19.4, 77.0], "amount": 3600, "angle": 18},
+    {"at": [14.1, 81.1], "amount": 3600, "angle": 117},
+    {"at": [14.7, 84.7], "amount": 3600, "angle": 51},
+    {"at": [18.2, 82.4], "amount": 3600, "angle": 92},
+    {"at": [23.0, 81.6], "amount": 3600, "angle": 37},
+    {"at": [123.8, 82.7], "amount": 900, "angle": 164},
+    {"at": [127.1, 84.0], "amount": 900, "angle": 0},
+    {"at": [127.5, 80.1], "amount": 900, "angle": 145},
+    {"at": [125.4, 76.1], "amount": 900, "angle": 86},
+    {"at": [123.0, 80.5], "amount": 900, "angle": 78}
+  ],
+  "wells": [
+    {"at": [64, 24], "amount": 2250},
+    {"at": [82, 70], "amount": 2250},
+    {"at": [36, 30], "amount": 2250},
+    {"at": [124, 40], "amount": 2250},
+    {"at": [40, 80], "amount": 2250}
+  ],
+  "doodads": [
+    {"kind": "rockSpire", "at": [131.4, 13.7], "rotation": 211, "scale": 3.07},
+    {"kind": "rockSpire", "at": [131.6, 17.5], "rotation": 169, "scale": 2.62},
+    {"kind": "rockSpire", "at": [127.3, 15.4], "rotation": 161, "scale": 3.96},
+    {"kind": "rockSpire", "at": [125.7, 14.4], "rotation": 196, "scale": 2.87},
+    {"kind": "rockSpire", "at": [126.9, 9.3], "rotation": 255, "scale": 2.92},
+    {"kind": "rockSpire", "at": [130.2, 10.6], "rotation": 16, "scale": 2.82},
+    {"kind": "rock", "at": [106.4, 13.0], "rotation": 15, "scale": 0.85},
+    {"kind": "rock", "at": [104.7, 17.0], "rotation": 164, "scale": 1.56},
+    {"kind": "rock", "at": [136.0, 27.7], "rotation": 226, "scale": 1.1},
+    {"kind": "boulder", "at": [106.2, 13.0], "rotation": 65, "scale": 1.58},
+    {"kind": "boulder", "at": [47.2, 30.0], "rotation": 288, "scale": 1.44},
+    {"kind": "boulder", "at": [46.8, 90.0], "rotation": 30, "scale": 1.59},
+    {"kind": "boulder", "at": [47.0, 66.0], "rotation": 163, "scale": 0.95},
+    {"kind": "boulder", "at": [45.5, 4.0], "rotation": 344, "scale": 1.15},
+    {"kind": "boulder", "at": [47.1, 24.0], "rotation": 352, "scale": 1.37},
+    {"kind": "rock", "at": [45.5, 14.0], "rotation": 71, "scale": 0.97},
+    {"kind": "rock", "at": [45.1, 6.0], "rotation": 332, "scale": 1.66},
+    {"kind": "rock", "at": [45.4, 59.0], "rotation": 359, "scale": 0.97},
+    {"kind": "boulder", "at": [46.5, 77.0], "rotation": 2, "scale": 1.05},
+    {"kind": "boulder", "at": [46.4, 73.0], "rotation": 279, "scale": 1.43},
+    {"kind": "rock", "at": [46.3, 7.0], "rotation": 304, "scale": 0.88},
+    {"kind": "rock", "at": [46.6, 71.0], "rotation": 302, "scale": 1.16},
+    {"kind": "boulder", "at": [45.2, 23.0], "rotation": 248, "scale": 1.07},
+    {"kind": "rock", "at": [46.3, 77.0], "rotation": 83, "scale": 0.95},
+    {"kind": "boulder", "at": [47.0, 82.0], "rotation": 23, "scale": 1.68},
+    {"kind": "rock", "at": [46.7, 68.0], "rotation": 61, "scale": 1.23},
+    {"kind": "rock", "at": [45.3, 30.0], "rotation": 149, "scale": 1.56},
+    {"kind": "boulder", "at": [97.1, 38.0], "rotation": 132, "scale": 0.98},
+    {"kind": "rock", "at": [97.8, 5.0], "rotation": 181, "scale": 1.2},
+    {"kind": "rock", "at": [98.0, 72.0], "rotation": 298, "scale": 0.82},
+    {"kind": "rock", "at": [96.8, 19.0], "rotation": 245, "scale": 1.61},
+    {"kind": "boulder", "at": [98.6, 38.0], "rotation": 193, "scale": 0.88},
+    {"kind": "boulder", "at": [98.3, 78.0], "rotation": 79, "scale": 1.38},
+    {"kind": "rock", "at": [97.5, 10.0], "rotation": 280, "scale": 0.99},
+    {"kind": "rock", "at": [98.5, 60.0], "rotation": 215, "scale": 1.16},
+    {"kind": "boulder", "at": [97.6, 14.0], "rotation": 150, "scale": 1.54},
+    {"kind": "boulder", "at": [98.9, 6.0], "rotation": 67, "scale": 1.15},
+    {"kind": "rock", "at": [98.2, 81.0], "rotation": 194, "scale": 1.63},
+    {"kind": "rock", "at": [97.4, 74.0], "rotation": 294, "scale": 0.98},
+    {"kind": "boulder", "at": [98.6, 41.0], "rotation": 126, "scale": 1.01},
+    {"kind": "plant", "at": [35.7, 12.4], "rotation": 350, "scale": 0.57},
+    {"kind": "rock", "at": [31.7, 62.6], "rotation": 344, "scale": 0.78},
+    {"kind": "rock", "at": [36.8, 19.4], "rotation": 157, "scale": 0.99},
+    {"kind": "rock", "at": [15.8, 55.9], "rotation": 341, "scale": 0.63},
+    {"kind": "plant", "at": [23.7, 27.1], "rotation": 1, "scale": 0.67},
+    {"kind": "rock", "at": [10.1, 53.9], "rotation": 68, "scale": 0.75}
   ],
   "pads": [
-    {
-      "name": "landing",
-      "at": [
-        72,
-        48
-      ]
-    }
+    {"name": "landing", "at": [72, 48]}
   ],
   "sites": [
-    {
-      "name": "Terrace cache",
-      "kind": "cache",
-      "at": [
-        108,
-        52
-      ],
-      "blueprint": "foundry"
-    },
-    {
-      "name": "Dust vault",
-      "kind": "vault",
-      "at": [
-        24,
-        52
-      ],
-      "blueprint": "sentinel"
-    }
+    {"name": "Terrace cache", "kind": "cache", "at": [108, 52], "blueprint": "foundry"},
+    {"name": "Dust vault", "kind": "vault", "at": [24, 52], "blueprint": "sentinel"}
   ],
-  "openings": {
-    "north": [
-      [
-        58,
-        86
-      ]
-    ],
-    "east": [
-      [
-        39,
-        57
-      ]
-    ],
-    "south": [
-      [
-        58,
-        86
-      ]
-    ],
-    "west": [
-      [
-        39,
-        57
-      ]
-    ]
-  }
+  "openings": {"north": [[58, 86]], "east": [[39, 57]], "south": [[58, 86]], "west": [[39, 57]]}
 }

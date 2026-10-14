@@ -807,7 +807,13 @@ void UAcSimSubsystem::StartMmo(const bool bNewWorld)
 	if (!Sim) return;
 	// (The server saves on its stop: the save is free before a new world.)
 	if (Mmo) StopMmo();
-	const FString World = FAcMmoClient::DefaultWorld();
+	// -AcMmoWorld=<file>: another world file, for test and picture runs
+	// (a scratch world whose start pad is a viewpoint in some region).
+	FString World = FAcMmoClient::DefaultWorld();
+	if (FString Other; FParse::Value(FCommandLine::Get(), TEXT("AcMmoWorld="), Other) && !Other.IsEmpty())
+	{
+		World = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Other);
+	}
 	const FString Save = FAcMmoClient::SaveFile(World);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: the MMORPG test on the world %s, %s (the window game waits)"), *World,
 		bNewWorld ? TEXT("a new world") : TEXT("resumed"));

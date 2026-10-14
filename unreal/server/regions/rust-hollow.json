@@ -2,104 +2,178 @@
   "id": "rust-hollow",
   "name": "Rust Hollow",
   "size": "medium",
-  "base": {
-    "style": "badlands",
-    "seed": 14
-  },
+  "base": {"style": "badlands", "seed": 14, "drop": ["resources", "doodads"]},
   "height": [
     {
       "op": "flatten",
-      "area": {
-        "circle": [
-          72,
-          48,
-          6
-        ]
-      },
+      "area": {"circle": [72, 48, 6]},
       "level": 0,
       "slope": 5
     },
     {
       "op": "ridge",
+      "line": [[89.9, 17.1], [88.0, 11.5], [90.5, 6.2], [96.0, 4.0], [101.5, 6.2], [104.0, 11.5], [102.1, 17.1]],
+      "width": 2,
+      "level": 1,
+      "slope": 2
+    },
+    {
+      "op": "ridge",
       "line": [
-        [
-          89.9,
-          17.1
-        ],
-        [
-          88.0,
-          11.5
-        ],
-        [
-          90.5,
-          6.2
-        ],
-        [
-          96.0,
-          4.0
-        ],
-        [
-          101.5,
-          6.2
-        ],
-        [
-          104.0,
-          11.5
-        ],
-        [
-          102.1,
-          17.1
-        ]
+        [30.0, 29.1],
+        [26.0, 28.0],
+        [22.0, 29.1],
+        [19.1, 32.0],
+        [18.0, 36.0],
+        [19.1, 40.0],
+        [22.0, 42.9],
+        [26.0, 44.0],
+        [30.0, 42.9]
       ],
+      "width": 2,
+      "level": 2
+    },
+    {
+      "op": "ridge",
+      "line": [[54, 70], [44, 64], [30, 64], [18, 72], [18, 84], [28, 92], [46, 92], [56, 84]],
       "width": 2,
       "level": 1,
       "slope": 2
     }
   ],
+  "deposits": [
+    {"at": [50.6, 21.9], "amount": 1800, "angle": 72},
+    {"at": [50.8, 24.3], "amount": 1800, "angle": 75},
+    {"at": [51.2, 26.7], "amount": 1800, "angle": 82},
+    {"at": [51.0, 29.2], "amount": 1800, "angle": 97},
+    {"at": [51.9, 31.6], "amount": 1800, "angle": 113},
+    {"at": [52.0, 34.0], "amount": 1800, "angle": 60},
+    {"at": [51.6, 36.4], "amount": 1800, "angle": 57},
+    {"at": [51.6, 38.9], "amount": 1800, "angle": 63},
+    {"at": [50.2, 41.1], "amount": 1800, "angle": 94},
+    {"at": [50.3, 46.1], "amount": 1800, "angle": 77},
+    {"at": [94.2, 24.0], "amount": 1800, "angle": 80},
+    {"at": [93.1, 26.3], "amount": 1800, "angle": 61},
+    {"at": [92.8, 28.7], "amount": 1800, "angle": 71},
+    {"at": [92.4, 31.1], "amount": 1800, "angle": 60},
+    {"at": [91.9, 33.5], "amount": 1800, "angle": 99},
+    {"at": [92.4, 35.9], "amount": 1800, "angle": 125},
+    {"at": [92.3, 38.4], "amount": 1800, "angle": 93},
+    {"at": [92.4, 40.9], "amount": 1800, "angle": 101},
+    {"at": [93.4, 43.2], "amount": 1800, "angle": 120},
+    {"at": [93.1, 45.7], "amount": 1800, "angle": 105},
+    {"at": [94.1, 48.0], "amount": 1800, "angle": 75},
+    {"at": [26.0, 72.0], "amount": 3600, "angle": 158},
+    {"at": [28.2, 73.1], "amount": 3600, "angle": 149},
+    {"at": [29.8, 75.0], "amount": 3600, "angle": 165},
+    {"at": [31.6, 76.4], "amount": 3600, "angle": 120},
+    {"at": [34.3, 77.7], "amount": 3600, "angle": 143},
+    {"at": [36.2, 79.8], "amount": 3600, "angle": 124},
+    {"at": [37.9, 82.3], "amount": 3600, "angle": 139},
+    {"at": [41.0, 83.1], "amount": 3600, "angle": 158},
+    {"at": [43.8, 84.5], "amount": 3600, "angle": 149},
+    {"at": [34.9, 84.8], "amount": 3600, "angle": 88},
+    {"at": [31.7, 85.2], "amount": 3600, "angle": 109},
+    {"at": [30.9, 82.1], "amount": 3600, "angle": 127},
+    {"at": [27.0, 34.6], "amount": 1800, "angle": 137},
+    {"at": [23.4, 35.4], "amount": 1800, "angle": 6},
+    {"at": [26.8, 38.1], "amount": 1800, "angle": 100},
+    {"at": [109.0, 71.5], "amount": 1800, "angle": 9},
+    {"at": [110.9, 76.4], "amount": 1800, "angle": 120},
+    {"at": [112.5, 79.2], "amount": 1800, "angle": 96},
+    {"at": [108.4, 77.0], "amount": 1800, "angle": 160},
+    {"at": [114.1, 71.5], "amount": 1800, "angle": 161},
+    {"at": [114.8, 36.5], "amount": 900, "angle": 152},
+    {"at": [121.5, 39.1], "amount": 900, "angle": 50},
+    {"at": [118.8, 31.2], "amount": 900, "angle": 151},
+    {"at": [115.4, 40.2], "amount": 900, "angle": 95},
+    {"at": [79.3, 18.3], "amount": 900, "angle": 15},
+    {"at": [78.2, 14.1], "amount": 900, "angle": 101},
+    {"at": [82.0, 14.2], "amount": 900, "angle": 5},
+    {"at": [76.9, 17.0], "amount": 900, "angle": 16}
+  ],
+  "wells": [
+    {"at": [62, 30], "amount": 2250},
+    {"at": [84, 64], "amount": 2250},
+    {"at": [46, 74], "amount": 2250},
+    {"at": [124, 50], "amount": 2250},
+    {"at": [12, 46], "amount": 2250},
+    {"at": [100, 86], "amount": 2250}
+  ],
+  "doodads": [
+    {"kind": "rock", "at": [12.7, 24.2], "rotation": 322, "scale": 1.61},
+    {"kind": "rock", "at": [31.0, 54.2], "rotation": 24, "scale": 1.45},
+    {"kind": "boulder", "at": [35.0, 20.5], "rotation": 329, "scale": 1.06},
+    {"kind": "boulder", "at": [40.2, 54.0], "rotation": 342, "scale": 1.62},
+    {"kind": "rock", "at": [40.3, 20.0], "rotation": 305, "scale": 1.22},
+    {"kind": "rock", "at": [20.8, 56.5], "rotation": 119, "scale": 1.32},
+    {"kind": "rock", "at": [18.3, 21.6], "rotation": 35, "scale": 0.85},
+    {"kind": "boulder", "at": [35.9, 53.4], "rotation": 168, "scale": 1.62},
+    {"kind": "rock", "at": [34.1, 20.0], "rotation": 295, "scale": 1.12},
+    {"kind": "boulder", "at": [38.9, 52.4], "rotation": 36, "scale": 0.91},
+    {"kind": "rock", "at": [22.7, 59.0], "rotation": 290, "scale": 0.96},
+    {"kind": "boulder", "at": [26.2, 58.5], "rotation": 247, "scale": 1.17},
+    {"kind": "boulder", "at": [32.0, 15.3], "rotation": 145, "scale": 0.97},
+    {"kind": "rock", "at": [23.3, 54.4], "rotation": 289, "scale": 1.2},
+    {"kind": "rock", "at": [26.4, 18.5], "rotation": 0, "scale": 0.99},
+    {"kind": "rock", "at": [36.9, 21.0], "rotation": 341, "scale": 0.83},
+    {"kind": "boulder", "at": [34.2, 19.6], "rotation": 354, "scale": 1.04},
+    {"kind": "rock", "at": [35.9, 18.0], "rotation": 199, "scale": 1.0},
+    {"kind": "boulder", "at": [24.9, 15.2], "rotation": 55, "scale": 1.43},
+    {"kind": "rock", "at": [5.3, 35.4], "rotation": 180, "scale": 1.57},
+    {"kind": "boulder", "at": [34.4, 19.1], "rotation": 255, "scale": 1.3},
+    {"kind": "rock", "at": [112.8, 58.4], "rotation": 126, "scale": 1.43},
+    {"kind": "rock", "at": [106.0, 52.0], "rotation": 288, "scale": 1.55},
+    {"kind": "rock", "at": [118.3, 17.7], "rotation": 260, "scale": 1.15},
+    {"kind": "rock", "at": [118.4, 15.4], "rotation": 134, "scale": 1.6},
+    {"kind": "rock", "at": [122.5, 18.4], "rotation": 233, "scale": 1.04},
+    {"kind": "boulder", "at": [100.0, 31.9], "rotation": 23, "scale": 1.35},
+    {"kind": "rock", "at": [133.2, 52.0], "rotation": 116, "scale": 1.27},
+    {"kind": "boulder", "at": [114.9, 15.1], "rotation": 148, "scale": 1.07},
+    {"kind": "boulder", "at": [134.3, 29.1], "rotation": 305, "scale": 1.62},
+    {"kind": "rock", "at": [112.5, 15.5], "rotation": 80, "scale": 0.92},
+    {"kind": "boulder", "at": [126.0, 55.8], "rotation": 29, "scale": 1.62},
+    {"kind": "rock", "at": [119.5, 15.0], "rotation": 154, "scale": 1.16},
+    {"kind": "boulder", "at": [134.9, 40.0], "rotation": 253, "scale": 1.26},
+    {"kind": "rockSpire", "at": [28.1, 28.2], "rotation": 226, "scale": 2.7},
+    {"kind": "rockSpire", "at": [23.9, 28.1], "rotation": 140, "scale": 2.9},
+    {"kind": "rockSpire", "at": [20.3, 30.3], "rotation": 228, "scale": 3.22},
+    {"kind": "rockSpire", "at": [18.2, 33.9], "rotation": 29, "scale": 2.42},
+    {"kind": "rockSpire", "at": [18.2, 38.1], "rotation": 151, "scale": 2.41},
+    {"kind": "rockSpire", "at": [20.2, 41.8], "rotation": 213, "scale": 2.65},
+    {"kind": "rockSpire", "at": [23.9, 44.0], "rotation": 257, "scale": 3.54},
+    {"kind": "rockSpire", "at": [28.1, 43.9], "rotation": 231, "scale": 2.48},
+    {"kind": "boulder", "at": [22.5, 92.0], "rotation": 103, "scale": 1.31},
+    {"kind": "rock", "at": [39.0, 93.9], "rotation": 304, "scale": 1.41},
+    {"kind": "rock", "at": [52.2, 66.8], "rotation": 182, "scale": 1.33},
+    {"kind": "rock", "at": [50.0, 64.4], "rotation": 317, "scale": 1.42},
+    {"kind": "rock", "at": [27.0, 63.2], "rotation": 159, "scale": 1.7},
+    {"kind": "boulder", "at": [50.9, 91.3], "rotation": 350, "scale": 1.51},
+    {"kind": "rock", "at": [31.0, 60.9], "rotation": 70, "scale": 1.64},
+    {"kind": "rock", "at": [48.6, 93.6], "rotation": 357, "scale": 1.63},
+    {"kind": "boulder", "at": [27.0, 61.4], "rotation": 171, "scale": 1.62},
+    {"kind": "deadTree", "at": [120.7, 69.4], "rotation": 47, "scale": 0.7},
+    {"kind": "debris", "at": [129.9, 74.4], "rotation": 229, "scale": 0.85},
+    {"kind": "deadTree", "at": [133.2, 81.5], "rotation": 172, "scale": 0.61},
+    {"kind": "rock", "at": [93.5, 75.5], "rotation": 223, "scale": 0.87},
+    {"kind": "rock", "at": [131.6, 88.3], "rotation": 19, "scale": 0.58},
+    {"kind": "rock", "at": [72.8, 72.5], "rotation": 278, "scale": 0.52},
+    {"kind": "debris", "at": [67.6, 83.8], "rotation": 36, "scale": 0.89},
+    {"kind": "debris", "at": [69.5, 88.0], "rotation": 299, "scale": 1.04},
+    {"kind": "debris", "at": [105.7, 69.7], "rotation": 120, "scale": 1.04},
+    {"kind": "deadTree", "at": [130.4, 64.3], "rotation": 224, "scale": 0.57},
+    {"kind": "rock", "at": [94.5, 61.7], "rotation": 117, "scale": 0.66},
+    {"kind": "debris", "at": [79.9, 14.7], "rotation": 64, "scale": 0.72},
+    {"kind": "rock", "at": [74.5, 20.9], "rotation": 65, "scale": 0.64},
+    {"kind": "rock", "at": [88.7, 17.5], "rotation": 275, "scale": 0.64},
+    {"kind": "debris", "at": [81.8, 20.8], "rotation": 186, "scale": 0.84},
+    {"kind": "rock", "at": [75.9, 29.1], "rotation": 267, "scale": 0.76}
+  ],
   "pads": [
-    {
-      "name": "landing",
-      "at": [
-        72,
-        48
-      ]
-    }
+    {"name": "landing", "at": [72, 48]}
   ],
   "sites": [
-    {
-      "name": "Rust cache",
-      "kind": "cache",
-      "at": [
-        96,
-        12
-      ],
-      "blueprint": "habDome"
-    }
+    {"name": "Rust cache", "kind": "cache", "at": [96, 12], "blueprint": "habDome"}
   ],
-  "openings": {
-    "north": [
-      [
-        58,
-        86
-      ]
-    ],
-    "east": [
-      [
-        39,
-        57
-      ]
-    ],
-    "south": [
-      [
-        58,
-        86
-      ]
-    ],
-    "west": [
-      [
-        39,
-        57
-      ]
-    ]
-  }
+  "openings": {"north": [[58, 86]], "east": [[39, 57]], "south": [[58, 86]], "west": [[39, 57]]}
 }

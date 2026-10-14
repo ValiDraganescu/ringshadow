@@ -2,89 +2,147 @@
   "id": "cold-fork",
   "name": "Cold Fork",
   "size": "medium",
-  "base": {
-    "style": "ridge",
-    "seed": 12
-  },
+  "base": {"style": "ridge", "seed": 12, "drop": ["resources", "doodads"]},
   "height": [
     {
       "op": "flatten",
-      "area": {
-        "circle": [
-          72,
-          48,
-          6
-        ]
-      },
+      "area": {"circle": [72, 48, 6]},
       "level": 1,
       "slope": 5
     },
     {
       "op": "raise",
-      "area": {
-        "circle": [
-          20,
-          84,
-          3
-        ]
-      },
+      "area": {"circle": [20, 84, 3]},
       "level": 1,
       "slope": 5
-    }
+    },
+    {"op": "ridge", "line": [[66, 24], [61, 15], [52, 5]], "width": 3, "level": 2},
+    {"op": "ridge", "line": [[78, 24], [83, 15], [92, 5]], "width": 3, "level": 2},
+    {"op": "ridge", "line": [[36, 58], [40, 70], [38, 82], [30, 88]], "width": 3, "level": 1, "slope": 2}
+  ],
+  "deposits": [
+    {"at": [52.2, 22.0], "amount": 1800, "angle": 64},
+    {"at": [51.8, 24.7], "amount": 1800, "angle": 76},
+    {"at": [51.4, 27.3], "amount": 1800, "angle": 57},
+    {"at": [51.2, 30.0], "amount": 1800, "angle": 98},
+    {"at": [51.7, 32.6], "amount": 1800, "angle": 90},
+    {"at": [51.1, 35.4], "amount": 1800, "angle": 114},
+    {"at": [52.2, 38.0], "amount": 1800, "angle": 94},
+    {"at": [51.6, 59.9], "amount": 1800, "angle": 78},
+    {"at": [50.8, 65.4], "amount": 1800, "angle": 86},
+    {"at": [49.5, 67.7], "amount": 1800, "angle": 54},
+    {"at": [48.7, 70.7], "amount": 1800, "angle": 77},
+    {"at": [47.2, 73.3], "amount": 1800, "angle": 86},
+    {"at": [92.1, 26.0], "amount": 1800, "angle": 103},
+    {"at": [92.3, 28.5], "amount": 1800, "angle": 92},
+    {"at": [93.0, 30.9], "amount": 1800, "angle": 114},
+    {"at": [92.7, 33.5], "amount": 1800, "angle": 121},
+    {"at": [93.2, 36.0], "amount": 1800, "angle": 104},
+    {"at": [92.5, 38.6], "amount": 1800, "angle": 96},
+    {"at": [92.9, 41.4], "amount": 1800, "angle": 90},
+    {"at": [92.7, 44.1], "amount": 1800, "angle": 84},
+    {"at": [92.6, 63.9], "amount": 900, "angle": 129},
+    {"at": [92.1, 66.8], "amount": 900, "angle": 124},
+    {"at": [93.2, 69.4], "amount": 900, "angle": 90},
+    {"at": [94.6, 71.7], "amount": 900, "angle": 100},
+    {"at": [95.5, 74.6], "amount": 900, "angle": 101},
+    {"at": [96.2, 77.6], "amount": 900, "angle": 115},
+    {"at": [97.5, 80.3], "amount": 900, "angle": 110},
+    {"at": [24.9, 77.3], "amount": 3600, "angle": 27},
+    {"at": [21.8, 77.3], "amount": 3600, "angle": 131},
+    {"at": [23.9, 74.0], "amount": 3600, "angle": 84},
+    {"at": [25.4, 72.2], "amount": 3600, "angle": 83},
+    {"at": [25.9, 79.5], "amount": 3600, "angle": 70},
+    {"at": [26.7, 74.5], "amount": 3600, "angle": 1},
+    {"at": [117.5, 30.8], "amount": 1800, "angle": 117},
+    {"at": [116.3, 22.5], "amount": 1800, "angle": 127},
+    {"at": [122.6, 26.8], "amount": 1800, "angle": 85},
+    {"at": [119.6, 25.3], "amount": 1800, "angle": 140},
+    {"at": [120.4, 29.0], "amount": 1800, "angle": 171},
+    {"at": [128.5, 71.1], "amount": 900, "angle": 108},
+    {"at": [120.4, 68.6], "amount": 900, "angle": 172},
+    {"at": [124.8, 69.8], "amount": 900, "angle": 165},
+    {"at": [123.2, 66.4], "amount": 900, "angle": 100},
+    {"at": [129.7, 66.1], "amount": 900, "angle": 172},
+    {"at": [26.0, 27.8], "amount": 1800, "angle": 136},
+    {"at": [22.9, 25.8], "amount": 1800, "angle": 91},
+    {"at": [18.4, 24.7], "amount": 1800, "angle": 85},
+    {"at": [21.3, 30.7], "amount": 1800, "angle": 158},
+    {"at": [46.5, 8.6], "amount": 3600, "angle": 132},
+    {"at": [48.2, 11.3], "amount": 3600, "angle": 107},
+    {"at": [50.2, 13.9], "amount": 3600, "angle": 105},
+    {"at": [51.0, 16.8], "amount": 3600, "angle": 103},
+    {"at": [52.7, 19.2], "amount": 3600, "angle": 142}
+  ],
+  "wells": [
+    {"at": [66, 34], "amount": 2250},
+    {"at": [80, 64], "amount": 2250},
+    {"at": [30, 66], "amount": 2250},
+    {"at": [112, 46], "amount": 2250},
+    {"at": [120, 82], "amount": 2250}
+  ],
+  "doodads": [
+    {"kind": "rockSpire", "at": [53.4, 5.7], "rotation": 129, "scale": 3.07},
+    {"kind": "rockSpire", "at": [51.2, 6.8], "rotation": 73, "scale": 3.08},
+    {"kind": "rockSpire", "at": [50.4, 4.4], "rotation": 175, "scale": 2.94},
+    {"kind": "rockSpire", "at": [92.8, 6.1], "rotation": 247, "scale": 2.65},
+    {"kind": "rockSpire", "at": [91.5, 6.4], "rotation": 358, "scale": 3.05},
+    {"kind": "rockSpire", "at": [91.1, 3.2], "rotation": 349, "scale": 3.13},
+    {"kind": "rockSpire", "at": [63, 17], "rotation": 20, "scale": 2.4},
+    {"kind": "rockSpire", "at": [81, 17], "rotation": 169, "scale": 2.4},
+    {"kind": "boulder", "at": [53.2, 42.9], "rotation": 143, "scale": 0.95},
+    {"kind": "boulder", "at": [55.3, 77.0], "rotation": 322, "scale": 0.82},
+    {"kind": "boulder", "at": [55.1, 76.0], "rotation": 151, "scale": 1.01},
+    {"kind": "rock", "at": [54.1, 75.1], "rotation": 5, "scale": 1.66},
+    {"kind": "boulder", "at": [54.6, 79.1], "rotation": 333, "scale": 1.44},
+    {"kind": "rock", "at": [89.7, 75.1], "rotation": 303, "scale": 1.62},
+    {"kind": "rock", "at": [90.4, 14.9], "rotation": 354, "scale": 1.49},
+    {"kind": "boulder", "at": [89.9, 59.1], "rotation": 322, "scale": 1.38},
+    {"kind": "rock", "at": [90.6, 59.1], "rotation": 304, "scale": 1.22},
+    {"kind": "rock", "at": [90.8, 77.1], "rotation": 330, "scale": 1.51},
+    {"kind": "rock", "at": [89.7, 59.1], "rotation": 269, "scale": 1.61},
+    {"kind": "boulder", "at": [89.5, 59.1], "rotation": 46, "scale": 1.1},
+    {"kind": "boulder", "at": [88.7, 82.0], "rotation": 38, "scale": 1.66},
+    {"kind": "boulder", "at": [41.8, 78.5], "rotation": 36, "scale": 1.15},
+    {"kind": "boulder", "at": [42.0, 79.6], "rotation": 277, "scale": 0.96},
+    {"kind": "rock", "at": [41.6, 79.5], "rotation": 176, "scale": 1.01},
+    {"kind": "rock", "at": [40.6, 65.4], "rotation": 33, "scale": 1.36},
+    {"kind": "boulder", "at": [38.6, 84.5], "rotation": 104, "scale": 1.38},
+    {"kind": "rock", "at": [42.8, 75.6], "rotation": 330, "scale": 1.63},
+    {"kind": "rock", "at": [37.5, 86.4], "rotation": 9, "scale": 1.49},
+    {"kind": "rock", "at": [38.8, 86.4], "rotation": 272, "scale": 1.29},
+    {"kind": "rock", "at": [38.0, 58.4], "rotation": 352, "scale": 1.65},
+    {"kind": "rock", "at": [31.8, 90.3], "rotation": 305, "scale": 1.33},
+    {"kind": "rock", "at": [104.6, 18.1], "rotation": 149, "scale": 1.15},
+    {"kind": "rock", "at": [102.7, 48.5], "rotation": 277, "scale": 1.02},
+    {"kind": "boulder", "at": [132.2, 48.6], "rotation": 88, "scale": 1.13},
+    {"kind": "boulder", "at": [118.7, 11.1], "rotation": 202, "scale": 1.06},
+    {"kind": "rock", "at": [109.0, 29.4], "rotation": 272, "scale": 0.69},
+    {"kind": "rock", "at": [103.0, 62.7], "rotation": 8, "scale": 0.6},
+    {"kind": "boulder", "at": [137.2, 25.2], "rotation": 359, "scale": 0.91},
+    {"kind": "rock", "at": [106.7, 43.9], "rotation": 311, "scale": 0.91},
+    {"kind": "boulder", "at": [137.4, 67.9], "rotation": 30, "scale": 0.7},
+    {"kind": "rock", "at": [108.8, 50.3], "rotation": 186, "scale": 0.78},
+    {"kind": "boulder", "at": [101.1, 18.7], "rotation": 177, "scale": 0.78},
+    {"kind": "boulder", "at": [108.8, 73.4], "rotation": 264, "scale": 0.54},
+    {"kind": "rock", "at": [126.7, 61.7], "rotation": 357, "scale": 0.52},
+    {"kind": "rock", "at": [128.2, 23.6], "rotation": 308, "scale": 1.07},
+    {"kind": "rock", "at": [38.9, 11.9], "rotation": 261, "scale": 0.64},
+    {"kind": "rock", "at": [14.8, 16.2], "rotation": 344, "scale": 0.71},
+    {"kind": "rock", "at": [33.6, 49.5], "rotation": 123, "scale": 0.76},
+    {"kind": "deadTree", "at": [13.5, 27.8], "rotation": 264, "scale": 1.2},
+    {"kind": "deadTree", "at": [17.4, 42.2], "rotation": 10, "scale": 1.07},
+    {"kind": "rock", "at": [16.5, 15.0], "rotation": 155, "scale": 0.89},
+    {"kind": "rock", "at": [27.4, 19.3], "rotation": 268, "scale": 0.94},
+    {"kind": "deadTree", "at": [24.2, 19.8], "rotation": 159, "scale": 0.73},
+    {"kind": "deadTree", "at": [33.9, 13.0], "rotation": 188, "scale": 1.06}
   ],
   "pads": [
-    {
-      "name": "landing",
-      "at": [
-        72,
-        48
-      ]
-    }
+    {"name": "landing", "at": [72, 48]}
   ],
   "sites": [
-    {
-      "name": "Fork wreck",
-      "kind": "wreck",
-      "at": [
-        20,
-        84
-      ],
-      "blueprint": "foundry"
-    },
-    {
-      "name": "Ridge wreck",
-      "kind": "wreck",
-      "at": [
-        72,
-        18
-      ],
-      "blueprint": "spacedock"
-    }
+    {"name": "Fork wreck", "kind": "wreck", "at": [20, 84], "blueprint": "foundry"},
+    {"name": "Ridge wreck", "kind": "wreck", "at": [72, 18], "blueprint": "spacedock"}
   ],
-  "openings": {
-    "north": [
-      [
-        58,
-        86
-      ]
-    ],
-    "east": [
-      [
-        39,
-        57
-      ]
-    ],
-    "south": [
-      [
-        58,
-        86
-      ]
-    ],
-    "west": [
-      [
-        39,
-        57
-      ]
-    ]
-  }
+  "openings": {"north": [[58, 86]], "east": [[39, 57]], "south": [[58, 86]], "west": [[39, 57]]}
 }

@@ -2,104 +2,131 @@
   "id": "glass-flats",
   "name": "Glass Flats",
   "size": "medium",
-  "base": {
-    "style": "openField",
-    "seed": 13
-  },
+  "base": {"style": "openField", "seed": 13, "drop": ["resources", "doodads"]},
   "height": [
     {
       "op": "flatten",
-      "area": {
-        "circle": [
-          72,
-          48,
-          6
-        ]
-      },
+      "area": {"circle": [72, 48, 6]},
       "level": 0,
       "slope": 5
     },
     {
       "op": "ridge",
-      "line": [
-        [
-          65.9,
-          71.1
-        ],
-        [
-          64.0,
-          65.5
-        ],
-        [
-          66.5,
-          60.2
-        ],
-        [
-          72.0,
-          58.0
-        ],
-        [
-          77.5,
-          60.2
-        ],
-        [
-          80.0,
-          65.5
-        ],
-        [
-          78.1,
-          71.1
-        ]
-      ],
+      "line": [[65.9, 71.1], [64.0, 65.5], [66.5, 60.2], [72.0, 58.0], [77.5, 60.2], [80.0, 65.5], [78.1, 71.1]],
       "width": 2,
       "level": 1,
       "slope": 2
+    },
+    {
+      "op": "raise",
+      "area": {"circle": [104, 24, 9]},
+      "level": 1,
+      "slope": 5
+    },
+    {
+      "op": "raise",
+      "area": {"circle": [104, 24, 4.5]},
+      "level": 2
+    },
+    {
+      "op": "raise",
+      "area": {"circle": [30, 70, 3]},
+      "level": 1,
+      "slope": 4
     }
+  ],
+  "deposits": [
+    {"at": [94, 34], "amount": 3600, "angle": 40},
+    {"at": [96.6, 35.6], "amount": 3600, "angle": 15},
+    {"at": [112.5, 34.5], "amount": 3600, "angle": 140},
+    {"at": [114.8, 32], "amount": 3600, "angle": 110},
+    {"at": [99.4, 36.6], "amount": 3600, "angle": 170},
+    {"at": [42.3, 26.6], "amount": 1800, "angle": 158},
+    {"at": [35.2, 24.4], "amount": 1800, "angle": 35},
+    {"at": [40.8, 23.6], "amount": 1800, "angle": 36},
+    {"at": [39.9, 19.6], "amount": 1800, "angle": 34},
+    {"at": [44.0, 19.1], "amount": 1800, "angle": 18},
+    {"at": [18.9, 56.2], "amount": 900, "angle": 70},
+    {"at": [18.0, 45.8], "amount": 900, "angle": 116},
+    {"at": [27.6, 52.0], "amount": 900, "angle": 146},
+    {"at": [18.1, 51.3], "amount": 900, "angle": 130},
+    {"at": [28.8, 49.5], "amount": 900, "angle": 36},
+    {"at": [118.3, 61.1], "amount": 1800, "angle": 178},
+    {"at": [122.8, 65.1], "amount": 1800, "angle": 162},
+    {"at": [119.8, 64.5], "amount": 1800, "angle": 73},
+    {"at": [112.9, 68.1], "amount": 1800, "angle": 63},
+    {"at": [113.7, 63.0], "amount": 1800, "angle": 5},
+    {"at": [115.3, 65.5], "amount": 1800, "angle": 132},
+    {"at": [39.7, 72.3], "amount": 1800, "angle": 25},
+    {"at": [44.0, 77.6], "amount": 1800, "angle": 167},
+    {"at": [42.6, 74.2], "amount": 1800, "angle": 133},
+    {"at": [40.4, 77.3], "amount": 1800, "angle": 141},
+    {"at": [95.5, 79.9], "amount": 900, "angle": 53},
+    {"at": [93.2, 86.4], "amount": 900, "angle": 33},
+    {"at": [98.1, 88.0], "amount": 900, "angle": 175},
+    {"at": [92.7, 82.1], "amount": 900, "angle": 5},
+    {"at": [85.8, 60.2], "amount": 900, "angle": 124},
+    {"at": [88.4, 61.6], "amount": 900, "angle": 113},
+    {"at": [89.7, 64.3], "amount": 900, "angle": 163},
+    {"at": [91.5, 66.2], "amount": 900, "angle": 125},
+    {"at": [92.8, 68.9], "amount": 900, "angle": 92},
+    {"at": [95.3, 71.0], "amount": 900, "angle": 112},
+    {"at": [95.8, 74.1], "amount": 900, "angle": 107}
+  ],
+  "wells": [
+    {"at": [56, 30], "amount": 2250},
+    {"at": [90, 52], "amount": 2250},
+    {"at": [28, 38], "amount": 2250},
+    {"at": [126, 40], "amount": 2250},
+    {"at": [54, 82], "amount": 2250}
+  ],
+  "doodads": [
+    {"kind": "rockSpire", "at": [106.0, 23.5], "rotation": 341, "scale": 2.83},
+    {"kind": "rockSpire", "at": [104.2, 24.6], "rotation": 170, "scale": 3.47},
+    {"kind": "rockSpire", "at": [102.2, 25.0], "rotation": 172, "scale": 2.76},
+    {"kind": "rockSpire", "at": [103.4, 23.5], "rotation": 256, "scale": 3.83},
+    {"kind": "rockSpire", "at": [104.1, 23.2], "rotation": 226, "scale": 3.16},
+    {"kind": "rockSpire", "at": [92, 14], "rotation": 42, "scale": 1.5},
+    {"kind": "rockSpire", "at": [118, 18], "rotation": 198, "scale": 1.48},
+    {"kind": "rockSpire", "at": [122, 28], "rotation": 26, "scale": 1.09},
+    {"kind": "plant", "at": [13.9, 12.2], "rotation": 265, "scale": 0.5},
+    {"kind": "bush", "at": [10.9, 64.3], "rotation": 255, "scale": 0.98},
+    {"kind": "bush", "at": [32.1, 73.9], "rotation": 295, "scale": 1.0},
+    {"kind": "plant", "at": [58.7, 78.8], "rotation": 224, "scale": 0.89},
+    {"kind": "plant", "at": [40.5, 9.3], "rotation": 214, "scale": 0.89},
+    {"kind": "plant", "at": [52.2, 67.6], "rotation": 342, "scale": 0.96},
+    {"kind": "boulder", "at": [28.2, 79.8], "rotation": 308, "scale": 0.72},
+    {"kind": "bush", "at": [73.1, 20.4], "rotation": 119, "scale": 0.66},
+    {"kind": "rock", "at": [23.0, 84.2], "rotation": 43, "scale": 0.98},
+    {"kind": "boulder", "at": [53.4, 74.4], "rotation": 275, "scale": 0.78},
+    {"kind": "plant", "at": [122.0, 74.0], "rotation": 232, "scale": 0.71},
+    {"kind": "rock", "at": [48.8, 69.4], "rotation": 325, "scale": 0.72},
+    {"kind": "plant", "at": [12.7, 22.2], "rotation": 148, "scale": 0.87},
+    {"kind": "boulder", "at": [88.5, 84.9], "rotation": 43, "scale": 0.9},
+    {"kind": "bush", "at": [43.2, 29.6], "rotation": 147, "scale": 0.9},
+    {"kind": "plant", "at": [88.2, 47.7], "rotation": 263, "scale": 0.56},
+    {"kind": "rock", "at": [81.6, 49.5], "rotation": 81, "scale": 0.78},
+    {"kind": "rock", "at": [79.9, 70.6], "rotation": 347, "scale": 0.91},
+    {"kind": "bush", "at": [36.7, 15.5], "rotation": 144, "scale": 0.85},
+    {"kind": "plant", "at": [90.5, 12.8], "rotation": 189, "scale": 0.53},
+    {"kind": "plant", "at": [40.8, 27.8], "rotation": 106, "scale": 0.63},
+    {"kind": "plant", "at": [35.9, 35.9], "rotation": 347, "scale": 0.85},
+    {"kind": "bush", "at": [114.5, 22.1], "rotation": 150, "scale": 0.53},
+    {"kind": "rock", "at": [8.9, 87.9], "rotation": 334, "scale": 0.64},
+    {"kind": "rock", "at": [90.7, 45.5], "rotation": 211, "scale": 0.61},
+    {"kind": "boulder", "at": [61.9, 86.4], "rotation": 236, "scale": 0.71},
+    {"kind": "plant", "at": [36.7, 76.3], "rotation": 166, "scale": 0.55},
+    {"kind": "rock", "at": [49.2, 51.3], "rotation": 113, "scale": 0.58},
+    {"kind": "plant", "at": [75.2, 84.2], "rotation": 14, "scale": 0.58},
+    {"kind": "plant", "at": [95.0, 73.8], "rotation": 220, "scale": 0.93},
+    {"kind": "plant", "at": [56.7, 79.3], "rotation": 289, "scale": 0.62},
+    {"kind": "boulder", "at": [102.1, 27.0], "rotation": 145, "scale": 0.64}
   ],
   "pads": [
-    {
-      "name": "landing",
-      "at": [
-        72,
-        48
-      ]
-    }
+    {"name": "landing", "at": [72, 48]}
   ],
   "sites": [
-    {
-      "name": "Glass cache",
-      "kind": "cache",
-      "at": [
-        72,
-        66
-      ],
-      "blueprint": "lab"
-    }
+    {"name": "Glass cache", "kind": "cache", "at": [72, 66], "blueprint": "lab"}
   ],
-  "openings": {
-    "north": [
-      [
-        58,
-        86
-      ]
-    ],
-    "east": [
-      [
-        39,
-        57
-      ]
-    ],
-    "south": [
-      [
-        58,
-        86
-      ]
-    ],
-    "west": [
-      [
-        39,
-        57
-      ]
-    ]
-  }
+  "openings": {"north": [[58, 86]], "east": [[39, 57]], "south": [[58, 86]], "west": [[39, 57]]}
 }
