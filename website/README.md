@@ -27,13 +27,16 @@ no CDN, no web fonts from elsewhere, no trackers, no analytics.
 The home page's hero is drawn live with three.js (`assets/js/hero.js`). It
 draws the giant with its storm, bands that turn faster at the equator,
 meteorite strikes that ripple across the clouds, rings that orbit (inner
-faster) and nod slightly, Perseid showers and lone meteors, and a comet now
-and then. Everything is a shader, nothing is a texture. Five draw calls.
+faster) and nod slightly, Perseid showers and lone meteors, and now and then
+a comet that takes about two and a half minutes to cross, far behind the
+giant (the giant hides it, the rings pass in front of it). Everything is a shader, nothing is a texture. Five draw calls.
 
 It is built to cost little. The script loads as a module after the page
 paints. Frames stop while the hero is off screen or the tab is hidden, and
-never run faster than 60 a second. The pixel ratio starts at 1.5 at most and
-drops when frames run long. Nothing allocates per frame. Under
+never run faster than 60 a second. The pixel ratio starts at the screen's (2
+at most) and drops when frames run long, but never below 1: lower makes
+stair-stepped edges. Ring detail finer than a pixel fades out (`fwidth`) so
+it can't shimmer. Nothing allocates per frame. Under
 `prefers-reduced-motion` it draws one still frame. Without WebGL it shows
 `assets/media/key-art.jpg`, and without JavaScript the `<noscript>` image.
 

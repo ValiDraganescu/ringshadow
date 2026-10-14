@@ -64,13 +64,19 @@ function start() {
     }
     float fbm(vec3 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * noise(p); p = p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; } return s; }
     vec3 sph(float lon, float lat) { float c = cos(lat); return vec3(c * cos(lon), sin(lat), c * sin(lon)); }
+    // How much of a ripple of frequency f (radians per unit) survives when one
+    // pixel spans fw units: fine bands fade out before they can alias.
+    float aa(float f, float fw) { return 1.0 - smoothstep(0.5, 1.5, f * fw); }
     // The rings' opacity by radius: bands, a faint inner ring, the dark gap.
-    float ringDensity(float r) {
+    // fw is the radius one pixel spans (0 where there are no pixels to fit).
+    float ringDensity(float r, float fw) {
       if (r < ${RIN.toFixed(2)} || r > ${ROUT.toFixed(2)}) return 0.0;
       float x = (r - ${RIN.toFixed(2)}) / ${(ROUT - RIN).toFixed(2)};
-      float d = 0.55 + 0.22 * sin(r * 41.0) + 0.14 * sin(r * 97.0 + 1.3) + 0.09 * sin(r * 173.0);
+      float d = 0.55 + 0.22 * aa(41.0, fw) * sin(r * 41.0) + 0.14 * aa(97.0, fw) * sin(r * 97.0 + 1.3) + 0.09 * aa(173.0, fw) * sin(r * 173.0);
       d *= smoothstep(0.0, 0.05, x) * (1.0 - smoothstep(0.9, 1.0, x));
-      d *= 1.0 - 0.9 * (1.0 - smoothstep(0.0, 0.018, abs(r - 1.94)));
+      // The gap: when it is thinner than a pixel, wider and fainter by the same amount.
+      float gw = max(0.018, fw * 1.5);
+      d *= 1.0 - 0.9 * (0.018 / gw) * (1.0 - smoothstep(0.0, gw, abs(r - 1.94)));
       d *= mix(0.3, 1.0, smoothstep(1.42, 1.56, r));
       return clamp(d, 0.0, 1.0);
     }
@@ -162,7 +168,7 @@ function start() {
         float den = dot(uSun, uRingN);
         if (abs(den) > 1e-3) {
           float t = -dot(vW, uRingN) / den;
-          if (t > 0.0) sh = 1.0 - 0.78 * ringDensity(length(vW + uSun * t));
+          if (t > 0.0) sh = 1.0 - 0.78 * ringDensity(length(vW + uSun * t), 0.0);
         }
         float nv = max(dot(N, V), 0.0);
         vec3 c = col * (0.025 + lit * sh * 1.08) * pow(nv, 0.4);
@@ -194,7 +200,7 @@ function start() {
         // Strongest at the planet's edge (|N.V| ~ 0.28 there), gone at the halo's own edge.
         float g = pow(smoothstep(0.0, 0.28, abs(dot(normalize(vN), V))), 2.5);
         float lit = smoothstep(-0.3, 0.7, dot(normalize(vN), uSun));
-        gl_FragColor = glowOut(vec3(0.4, 0.82, 0.95) * g * 0.55 * lit);
+        gl_FragColor = glowOut(vec3(0.4, 0.82, 0.95) * g * 0.35 * lit);
       }`,
     side: BackSide, ...glow,
   }));
@@ -217,9 +223,10 @@ function start() {
         float r = length(vL.xy);
         float a = atan(vL.y, vL.x) - 0.25 * pow(r, -1.5) * uTime;   // inner rings orbit faster
         vec2 cs = vec2(cos(a), sin(a));
-        float clump = noise(vec3(r * 38.0, cs * 7.0));
-        float fine = noise(vec3(r * 240.0, cs * 2.5));
-        float dens = ringDensity(r) * (0.8 + 0.34 * clump) * (0.88 + 0.24 * fine);
+        float fw = fwidth(r);
+        float clump = mix(0.5, noise(vec3(r * 38.0, cs * 7.0)), aa(38.0 * 6.28, fw));
+        float fine = mix(0.5, noise(vec3(r * 240.0, cs * 2.5)), aa(240.0 * 6.28, fw));
+        float dens = ringDensity(r, fw) * (0.8 + 0.34 * clump) * (0.88 + 0.24 * fine);
         // The giant's shadow on the rings.
         float b = dot(vW, uSun), c = dot(vW, vW) - 1.0, disc = b * b - c;
         float shadow = b < 0.0 ? 1.0 - 0.92 * smoothstep(0.0, 0.06, disc) : 1.0;
@@ -296,57 +303,68 @@ function start() {
     for (const a of [aStart, aVel, aTime, aColor]) { a.clearUpdateRanges(); a.needsUpdate = true; }
   }
 
-  // ---- The comet (screen space, one quad) -----------------------------------
+  // ---- The comet (in the world, far behind the giant) -----------------------
+  // One quad from the head along the anti-sun direction, widened on screen.
+  // It is depth-tested, so the giant hides it, and drawn before the rings, so
+  // they pass in front of it.
 
   const comet = {
-    // The tail points away from the sun, which is off to the left.
-    head: { value: [0, 0] }, dir: { value: [0.924, -0.382] }, len: { value: 320 }, wid: { value: 70 }, alpha: { value: 0 },
+    head: { value: new Vector3(0, 0, -1000) },
+    tail: { value: planetUniforms.uSun.value.clone().negate() },
+    len: { value: 2.8 }, wid: { value: 40 }, alpha: { value: 0 },
   };
-  const cGeo = quad(new BufferGeometry());
-  const cometMesh = new Mesh(cGeo, new ShaderMaterial({
-    uniforms: { uRes: res, uHead: comet.head, uDir: comet.dir, uLen: comet.len, uWid: comet.wid, uAlpha: comet.alpha },
+  const cometMesh = new Mesh(quad(new BufferGeometry()), new ShaderMaterial({
+    uniforms: { uRes: res, uHead: comet.head, uTail: comet.tail, uLen: comet.len, uWid: comet.wid, uAlpha: comet.alpha },
     vertexShader: /* glsl */ `
-      attribute vec2 corner; uniform vec2 uRes, uHead, uDir; uniform float uLen, uWid;
+      attribute vec2 corner; uniform vec2 uRes; uniform vec3 uHead, uTail; uniform float uLen, uWid;
       varying vec2 vUV;
       void main() {
-        float u = corner.x * 1.08 - 0.08;
-        vec2 nrm = vec2(-uDir.y, uDir.x);
-        vec2 p = uHead + uDir * u * uLen + nrm * corner.y * uWid * (0.22 + 0.78 * max(u, 0.0));
-        vec2 ndc = p / uRes * 2.0 - 1.0;
-        gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
+        float u = corner.x * 1.1 - 0.1;   // a little room ahead of the head for the coma
+        mat4 vp = projectionMatrix * viewMatrix;
+        vec4 h = vp * vec4(uHead, 1.0), e = vp * vec4(uHead + uTail * uLen, 1.0);
+        vec2 dir = normalize((e.xy / e.w - h.xy / h.w) * uRes + 1e-6), nrm = vec2(-dir.y, dir.x);
+        vec4 c = vp * vec4(uHead + uTail * uLen * u, 1.0);
+        vec2 px = nrm * corner.y * uWid * (0.35 + 0.65 * max(u, 0.0));
+        gl_Position = vec4(c.xy + px / uRes * 2.0 * c.w, c.z, c.w);
         vUV = vec2(u, corner.y);
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uAlpha, uLen, uWid; varying vec2 vUV;
+      uniform float uAlpha; varying vec2 vUV;
       ${glowOut}
       void main() {
         float u = vUV.x, v = vUV.y, uc = clamp(u, 0.0, 1.0);
-        float w = 0.2 + 0.8 * uc;
-        float dust = exp(-(v * v) / (w * w * 0.16)) * pow(1.0 - uc, 1.7) * smoothstep(-0.03, 0.05, u);
-        float ion = exp(-(v * v) / 0.004) * pow(1.0 - uc, 0.7) * smoothstep(0.0, 0.06, u);
-        float halfw = uWid * (0.22 + 0.78 * max(u, 0.0));
-        vec2 px = vec2(u * uLen, v * halfw);
-        float coma = exp(-dot(px, px) / 90.0);
-        vec3 col = vec3(1.0, 0.93, 0.8) * dust * 0.8 + vec3(0.55, 0.82, 1.0) * ion * 0.55 + vec3(0.9, 1.0, 1.0) * coma * 1.6;
-        gl_FragColor = glowOut(col * uAlpha);
+        float edge = 1.0 - smoothstep(0.7, 1.0, abs(v));
+        // Dust: a soft fan, widening and fading along the tail.
+        float s = 0.16 + 0.5 * uc;
+        float dust = exp(-v * v / (s * s)) * pow(1.0 - uc, 2.2) * smoothstep(-0.02, 0.08, u);
+        // Ion tail: narrower and bluish.
+        float ion = exp(-v * v / 0.01) * pow(1.0 - uc, 1.3) * smoothstep(0.0, 0.12, u);
+        // Coma and nucleus round the head (u = 0).
+        float r = length(vec2(u * 12.0, v * 0.9));
+        float coma = exp(-r * r * 5.0), nucleus = exp(-r * r * 50.0);
+        vec3 col = vec3(1.0, 0.92, 0.78) * dust * 0.5 + vec3(0.5, 0.78, 1.0) * ion * 0.3
+                 + vec3(0.75, 0.95, 1.0) * coma * 0.6 + vec3(1.0) * nucleus;
+        gl_FragColor = glowOut(col * edge * uAlpha);
       }`,
-    ...glow, depthTest: false,
-    side: DoubleSide, // screen-space quads: y is flipped, so their winding is too
+    ...glow, side: DoubleSide,
   }));
   cometMesh.frustumCulled = false;
-  cometMesh.renderOrder = 9;
+  cometMesh.renderOrder = -1;
   scene.add(cometMesh);
 
   // ---- Layout ---------------------------------------------------------------
 
-  let W = 1, H = 1, pr = Math.min(devicePixelRatio || 1, 1.5);
-  const maxPr = Math.min(devicePixelRatio || 1, 2);
+  // Crisp from the start; when frames run long the ratio drops, but never
+  // below one pixel per CSS pixel (lower makes stair-stepped edges).
+  const maxPr = Math.min(devicePixelRatio || 1, 2), minPr = Math.min(devicePixelRatio || 1, 1);
+  let W = 1, H = 1, pr = maxPr;
   function layout() {
     const r = hero.getBoundingClientRect();
     W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
     renderer.setPixelRatio(pr);
     renderer.setSize(W, H, false);
     res.value[0] = W; res.value[1] = H;
+    comet.wid.value = Math.max(24, 0.05 * H);
     const aspect = W / H;
     camera.aspect = aspect;
     // Wide screens: the giant to the right of the title. Tall ones: above it.
@@ -363,7 +381,7 @@ function start() {
 
   const rnd = (a, b) => a + Math.random() * (b - a);
   let t = 0;
-  let nextSporadic = 1.5, nextShower = rnd(6, 14), nextComet = 4, nextImpact = 8;
+  let nextSporadic = 1.5, nextShower = rnd(6, 14), nextComet = 3, nextImpact = 8;
   let cometOn = null;
   const pending = [];
 
@@ -414,17 +432,16 @@ function start() {
       }
     }
     if (!cometOn && t >= nextComet) {
-      const ltr = Math.random() < 0.5, y0 = rnd(0.08, 0.3) * H, y1 = y0 + rnd(-0.08, 0.12) * H;
-      cometOn = { t0: t, dur: rnd(22, 30), x0: ltr ? -0.1 * W : 1.1 * W, x1: ltr ? 1.1 * W : -0.1 * W, y0, y1 };
-      comet.len.value = rnd(0.16, 0.24) * W; comet.wid.value = comet.len.value * 0.22;
+      // Far behind the giant (z -7), right to left or back, about 2.5 minutes.
+      const rtl = Math.random() < 0.6, y0 = rnd(0.6, 1.9), y1 = y0 - rnd(0.6, 1.8);
+      cometOn = { t0: t, dur: rnd(140, 180), x0: rtl ? 7.5 : -9, x1: rtl ? -9 : 7.5, y0, y1 };
     }
     if (cometOn) {
       const u = (t - cometOn.t0) / cometOn.dur;
-      if (u >= 1) { cometOn = null; comet.alpha.value = 0; nextComet = t + rnd(70, 140); }
+      if (u >= 1) { cometOn = null; comet.alpha.value = 0; nextComet = t + rnd(90, 180); }
       else {
-        comet.head.value[0] = cometOn.x0 + (cometOn.x1 - cometOn.x0) * u;
-        comet.head.value[1] = cometOn.y0 + (cometOn.y1 - cometOn.y0) * u;
-        comet.alpha.value = Math.min(1, u * 6, (1 - u) * 6) * 0.85;
+        comet.head.value.set(cometOn.x0 + (cometOn.x1 - cometOn.x0) * u, cometOn.y0 + (cometOn.y1 - cometOn.y0) * u, -7);
+        comet.alpha.value = Math.min(1, u * 8, (1 - u) * 8) * 0.9;
       }
     }
   }
@@ -458,8 +475,8 @@ function start() {
     acc += ms; frames++;
     if (frames === 90) {
       const avg = acc / frames;
-      if (avg > 21 && pr > 0.75) { pr = Math.max(0.75, pr * 0.8); layout(); }
-      else if (avg < 17.5 && pr < maxPr) { pr = Math.min(maxPr, pr * 1.15); layout(); }
+      if (avg > 26 && pr > minPr) { pr = Math.max(minPr, pr * 0.85); layout(); }
+      else if (avg < 18 && pr < maxPr) { pr = Math.min(maxPr, pr * 1.15); layout(); }
       acc = 0; frames = 0;
     }
   }
