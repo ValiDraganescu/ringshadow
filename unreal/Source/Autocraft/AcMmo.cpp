@@ -75,6 +75,17 @@ FString FAcMmoClient::DefaultWorld()
 }
 
 FString FAcMmoClient::Directory()
+bool FAcMmoClient::DevClock(const FString& Line)
+{
+	if (FString Dir; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty()) return false;
+	// Written aside, then moved in: the server never reads half a line.
+	const FString File = FPaths::Combine(Directory(), TEXT("dev-control.txt"));
+	const FString Aside = File + TEXT(".new");
+	if (!FFileHelper::SaveStringToFile(Line + TEXT("\n"), *Aside) || !IFileManager::Get().Move(*File, *Aside, true, true)) return false;
+	UE_LOG(LogAutocraft, Display, TEXT("mmo: dev clock: %s"), *Line);
+	return true;
+}
+
 {
 	const TCHAR* Cmd = FCommandLine::Get();
 	if (FString Dir; FParse::Value(Cmd, TEXT("AcMmoDir="), Dir) && !Dir.IsEmpty())
@@ -290,6 +301,12 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	if (!Server.start(Utf8(Program), Args, Token))
 	{
 		Fail(FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
+	// Shots only: the harness moves the world's clock mid-run (DevClock).
+	if (FString Dir; FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) && !Dir.IsEmpty())
+	{
+		Args.push_back("--dev-control");
+		Args.push_back(Utf8(FPaths::Combine(Directory(), TEXT("dev-control.txt"))));
+	}
 		return false;
 	}
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on world %s (pid %d), save %s, log %s"), *Program, *Tilde(WorldFile), Server.pid(),

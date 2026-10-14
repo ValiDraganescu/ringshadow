@@ -55,12 +55,14 @@
 //   04 under the band    05 under it, looking up: the sun through the ring
 //   06 under it, first person at the nearest ore (the veins flaring)
 //   07 after: the band gone east   08 looking east at it
-// The giant's comet impacts are off meanwhile (ac.GasGiant.Events 0).
+// The giant's comet impacts are off meanwhile (ac.GasGiant.Events 0). The clock
+// jumps to just before each moment (S1), about 40 s in all.
 //
-// -AcMmoShotsStarfall (with -AcMmoStarfall=40 -AcMmoClockHour=17: a
-// starfall near the pilot 40 s after it comes, late in the afternoon;
-// docs/weather.md "Starfall"): third person on the start pad toward the
-// crater's spot, DIR/sf-NN-moment.png:
+// -AcMmoShotsStarfall (it adds -AcMmoStarfall=10 -AcMmoClockHour=17 unless
+// the run gives them: a starfall near the pilot 10 s after it comes, late in
+// the afternoon; docs/weather.md "Starfall"): third person on the start pad
+// toward the crater's spot, then at the crater; for the night the clock jumps
+// on to 19:00 (FAcMmoClient::DevClock), about 40 s in all, DIR/sf-NN-moment.png:
 //   01 told: the radio's toast         02 the streak high in the sky
 //   03 the streak low, over the land   04 the impact's flash
 //   05 the dust ring                   06 the crater and its hot deposit by day
@@ -90,6 +92,12 @@
 #include "AcGameFlow.h"
 #include "AcDaylight.h"
 
+// -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
+// comma-separated): only those moments are shot; the others are passed over
+// (logged, counted as skipped), and in the Starfall set their waits too.
+// A run that waits on the world's clock moves it at once instead
+// (FAcMmoClient::DevClock: the server's --dev-control file, shot runs only).
+//
 #include "AcGasGiant.h"
 #include "AcHudStyle.h"
 #include "AcLeveling.h"
@@ -304,6 +312,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Shots.Route = TArray<FVector2D>(Points);
 		Shots.RouteAt = 0;
 		Shots.StallAt = U ? FVector2D(U->position.x, U->position.y) : FVector2D::ZeroVector;
+		if (!Wanted(Name))
+		{
+			UE_LOG(LogAutocraft, Display, TEXT("mmoshots: %s: passed over (-AcMmoShotsOnly)"), Name);
+			Shots.Skipped += 1;
+			Advance();
+			return;
+		}
 		Shots.StallSince = Now;
 	};
 	auto Stalled = [&](const TCHAR* What) {
@@ -977,7 +992,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Since() > 2.0) Shoot(TEXT("look-05-well"), TEXT("a Metallic Hydrogen well"));
 		return;
 	case 111:
-		Check(Shots.Saved == 5, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsP5
@@ -1115,7 +1130,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Since() > 1.0) Shoot(TEXT("p5-07-build-menu"), TEXT("the build menu from the blueprints"));
 		return;
 	case 215:
-		Check(Shots.Saved == 7, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Check(Shots.Saved + Shots.Skipped == 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsG2
@@ -1494,7 +1509,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				// rs-02 from the usual boom 20-30 cells off, then rs-02b from a
 				// boom 4 times as long (about 13 cells up) 6-19 cells off.
 				IConsoleVariable* Boom = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.Pilot.ShotBoom"));
-				const bool bHigh = Shots.Saved >= 2;
+				const bool bHigh = Shots.Saved + Shots.Skipped >= 2;
 				if (bHigh && Boom && Boom->GetFloat() < 2.f)
 				{
 					Boom->Set(4.f);
@@ -1578,7 +1593,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Since() > 1.5) Shoot(TEXT("rs-08-after-east"), TEXT("after, looking east: the band going away"));
 		return;
 	case 315:
-		Check(Shots.Saved == 9, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Check(Shots.Saved + Shots.Skipped == 9, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		if (IConsoleVariable* Boom = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.Pilot.ShotBoom"))) Boom->Set(1.f);
 		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
 		Finish();
@@ -1682,6 +1697,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		{
 			W->PickCell({ac::Module::cargoPod, SAcRigScreen::EPanel::Foundry, 2});
 			W->Act();
+			// S1: the clock on to the radio's minute, not a wait for it.
+			static bool bAhead = false;
+			if (!bAhead && In > ac::Ringshadow::warning - 2.0 && Since() > 0.5 && Mmo)
+			{
+				bAhead = Mmo->DevClock(FString::Printf(TEXT("ahead %.2f"), In - (ac::Ringshadow::warning - 3.0)));
+				T.PhaseAt = Now;
+			}
 			P5AskedAt = Now;
 		}
 		TimedOut(TEXT("Cargo pod Mk II asked for"), 10);
@@ -1692,7 +1714,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 513:
 		CloseRigScreen();
-		Check(Shots.Saved == 6, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Check(Shots.Saved + Shots.Skipped == 6, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsStarfall
@@ -1701,6 +1723,28 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 400:
 	case 401:
 	case 402:
+		// S1: the clock on to 1.2 s before the phase's moment (the band
+		// where it wants it), once a phase, instead of waiting for it.
+		static int32 JumpedFor = -1;
+		auto JumpTo = [&](TFunctionRef<bool(const ac::Ringshadow::Band&, double At)> Moment) {
+			if (JumpedFor == T.Phase || !Sky || !M || !U || !Mmo) return;
+			JumpedFor = T.Phase;
+			for (double Tm = Sky->Time; Tm < Sky->Time + 600.0; Tm += 0.1)
+			{
+				const std::optional<ac::Ringshadow::Band> Bt = ac::Ringshadow::band(Tm, M->simulation().map->bounds, Sky->DayLength);
+				if (!Bt || !Moment(*Bt, ac::dot(U->position, Bt->dir))) continue;
+				if (Tm - 1.2 > Sky->Time + 2.0 && Mmo->DevClock(FString::Printf(TEXT("clock %.2f"), Tm - 1.2))) T.PhaseAt = Now;
+				return;
+			}
+		};
+		if (T.Phase == 302 && Shots.Saved + Shots.Skipped < 2)
+			JumpTo([](const ac::Ringshadow::Band& Bt, const double At) { return At - Bt.lead > 20 && At - Bt.lead < 30; });
+		if (T.Phase == 304)
+			JumpTo([](const ac::Ringshadow::Band& Bt, const double At) { return At - Bt.lead < 1.5 && At - Bt.lead > -8; });
+		if (T.Phase == 306)
+			JumpTo([&](const ac::Ringshadow::Band& Bt, double) { return ac::Ringshadow::cover(Bt, U->position) > 0.99; });
+		if (T.Phase == 312)
+			JumpTo([](const ac::Ringshadow::Band& Bt, const double At) { return Bt.trail - At > 6 && Bt.trail - At < 20; });
 	case 403:
 	case 404:
 	case 405:
@@ -1740,7 +1784,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			return;
 		}
 		case 401:
-			if (Since() > 1.5) Shoot(TEXT("sf-01-told"), FString::Printf(TEXT("told: the radio's toast, impact in %.0f s"), In));
+			AimAtStreak();
+			if (Since() > 1.5 || !Wanted(TEXT("sf-01-told")))
+				Shoot(TEXT("sf-01-told"), FString::Printf(TEXT("told: the radio's toast, impact in %.0f s"), In));
 			return;
 		case 402:
 			if (In <= 5.0) Shoot(TEXT("sf-02-streak-high"), FString::Printf(TEXT("the streak in the sky, %.1f s to go"), In));
@@ -1774,7 +1820,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (Halted < 0.0) Halted = Now;
 			Stop(Face(F->at));
 			Pilot->Eye().Pitch = -0.12;
-			if (-In >= 14.0 && Now - Halted > 1.5)
+			if ((-In >= 14.0 && Now - Halted > 1.5) || !Wanted(TEXT("sf-06-crater-day")))
 				Shoot(TEXT("sf-06-crater-day"), FString::Printf(TEXT("the crater and its hot deposit by day (%.0f cells off, deposit %s)"),
 					ac::distance(F->at, U->position), F->patch ? TEXT("landed") : TEXT("missing")));
 			return;
@@ -1785,17 +1831,25 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		case 409:
-			if (Since() > 1.5) Shoot(TEXT("sf-07-crater-day-first"), TEXT("the crater by day, first person"));
+			if (Since() > 1.5 || !Wanted(TEXT("sf-07-crater-day-first"))) Shoot(TEXT("sf-07-crater-day-first"), TEXT("the crater by day, first person"));
 			return;
 		case 410:
-			// Night: back to third person, waiting for the dark.
+			// Night: back to third person, the clock on to 19:00 at once (S1:
+			// it used to wait three minutes for the dark), or to the end when
+			// no night moment is wanted.
+			if (!Wanted(TEXT("sf-08-crater-night")) && !Wanted(TEXT("sf-09-crater-night-first")))
+			{
+				Shots.Skipped += 2;
+				T.Phase = 414;
+				return;
+			}
 			Pilot->ToggleView();
 			Advance();
 			return;
 		case 411:
 			Pilot->Eye().Pitch = -0.06;
-			if (Dark > 0.97 && Since() > 1.5) Shoot(TEXT("sf-08-crater-night"), FString::Printf(TEXT("the crater at night (hour %.1f)"), Sky->hour()));
-			else TimedOut(TEXT("night (the world's clock runs on)"), 600);
+			if ((Dark > 0.97 && Since() > 3.0) || !Wanted(TEXT("sf-08-crater-night"))) Shoot(TEXT("sf-08-crater-night"), FString::Printf(TEXT("the crater at night (hour %.1f)"), Sky->hour()));
+			else TimedOut(TEXT("night (the clock moved on to 19:00)"), 30);
 			return;
 		case 412:
 			Pilot->ToggleView();
@@ -1803,10 +1857,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		case 413:
-			if (Since() > 1.5) Shoot(TEXT("sf-09-crater-night-first"), TEXT("the crater at night, first person"));
+			if (Since() > 1.5 || !Wanted(TEXT("sf-09-crater-night-first"))) Shoot(TEXT("sf-09-crater-night-first"), TEXT("the crater at night, first person"));
 			return;
 		default:
-			Check(Shots.Saved == 9, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+			Check(Shots.Saved + Shots.Skipped == 9, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 			Finish();
 			return;
 		}
@@ -1817,3 +1871,30 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	}
 }
+		// The streak in frame wherever it comes from: its head in the left
+		// third (the contracts panel covers the right), looking up half its
+		// height.
+		auto AimAtStreak = [&] {
+			const ac::Vec3 H = ac::Starfall::head(FMath::Clamp(In, 0.3, ac::Starfall::streak), F->from);
+			const ac::Vec2 Head = F->at + ac::Vec2(H.x, H.z);
+			Stop(Face(Head) + 0.3);
+			Pilot->Eye().Pitch = FMath::Clamp(0.5 * std::atan2(H.y, FMath::Max(ac::distance(Head, U->position), 1.0)), 0.04, 0.35);
+		};
+			// None of the fall's own moments wanted: the clock on past the
+			// impact and the dust (S1), straight to the crater.
+			if (!Wanted(TEXT("sf-02-streak-high")) && !Wanted(TEXT("sf-03-streak-low")) && !Wanted(TEXT("sf-04-impact-flash"))
+				&& !Wanted(TEXT("sf-05-dust-ring")))
+			{
+				if (In > 0 && Mmo->DevClock(FString::Printf(TEXT("ahead %.2f"), In + 12.0)))
+				{
+					Shots.Skipped += 4;
+					T.Phase = 407;
+					T.PhaseAt = Now;
+				}
+				else TimedOut(TEXT("the clock moved past the impact"), 10);
+				return;
+			}
+			AimAtStreak();
+			AimAtStreak();
+			if (Dark < 0.97) Mmo->DevClock(TEXT("hour 19"));
+			// A few seconds for the sky to take the jump and the eye to adapt.

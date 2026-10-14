@@ -79,6 +79,39 @@ void Server::log(const std::string& line) const {
     if (options_.log) options_.log(line);
 }
 
+std::vector<std::string> Server::devControl(const std::string& text) {
+    std::vector<std::string> said;
+    size_t at = 0;
+    while (at < text.size()) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        const std::string line = text.substr(at, end - at);
+        at = end + 1;
+        char what[16] = {};
+        double v = 0;
+        if (line.find_first_not_of(" \t\r") == std::string::npos) continue;
+        const double was = world_.clock();
+        if (!world_.isWorld() || std::sscanf(line.c_str(), "%15s %lf", what, &v) != 2) {
+            said.push_back("dev: control '" + line + "' not done (no world, or not `clock|hour|ahead N`)");
+            continue;
+        }
+        const std::string w = what;
+        if (w == "clock" && v >= 0) world_.setClock(v);
+        else if (w == "hour" && v >= 0 && v <= 24) world_.setClock(WorldClock::timeOf(v, was, world_.params().dayLength));
+        else if (w == "ahead" && v >= 0) world_.setClock(was + v);
+        else {
+            said.push_back("dev: control '" + line + "' not done (not `clock|hour|ahead N`)");
+            continue;
+        }
+        char out[160];
+        std::snprintf(out, sizeof out, "dev: clock %.1f s -> %.1f s (hour %.2f)", was, world_.clock(),
+                      world_.sky() ? world_.sky()->hour() : 0.0);
+        said.push_back(out);
+    }
+    for (const std::string& s : said) log(s);
+    return said;
+}
+
 void Server::logStarfalls() {
     if (!world_.isWorld()) return;
     std::map<uint32_t, bool> now;

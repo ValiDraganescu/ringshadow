@@ -180,6 +180,11 @@ public:
 	/// Tests and dev: more arguments for the server program at `Start`
 	/// (`--dev-xp 360`).
 	std::vector<std::string> ExtraServerArgs;
+	/// Shots only (-AcMmoShots=DIR): moves the world's clock on the server
+	/// at once, `clock T`, `hour H` (on to the next H) or `ahead S`, through
+	/// its `--dev-control` file (DIR/mmo/dev-control.txt). False when the run
+	/// is not a shot run (the game never has it) or the file was not written.
+	bool DevClock(const FString& Line);
 	/// The pilot's key sent in the Join (unset: a new random one at each
 	/// start, a new pilot).
 	std::optional<ac::net::PilotKey> PilotKey;

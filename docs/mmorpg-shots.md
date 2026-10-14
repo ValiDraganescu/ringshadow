@@ -25,6 +25,20 @@ D="$PWD/unreal/server/build/shots/run3"; mkdir -p "$D"
 grep -E "mmoshots|flowtest" "$D/run.log"     # done when: flowtest: done, 0 failed
 ```
 
+Since 2026-10-14 (S1) the sets wait on the game, not on the world's clock.
+A shot run passes the server a `--dev-control` file (`DIR/mmo/dev-control.txt`),
+and `FAcMmoClient::DevClock` moves the world's clock with it at once:
+`clock T`, `hour H` (on to the next H) or `ahead S` (`Server::devControl`).
+The game never passes the file, so a normal game cannot reach it. The
+Starfall set jumps to 19:00 for its night pictures and takes about 40 s,
+not 4 minutes. `-AcMmoShotsOnly=sf-02,sf-08` (names, numbers, or a set's
+prefix and a number) shoots only those moments. The others are logged as
+passed over and count as skipped in the set's total. The Starfall set
+also skips their waits: with no fall moment asked for, the clock jumps
+past the impact; with no night moment asked for, the run ends after the
+day. Hidden runs go through the build train's queue
+([build-train.md](build-train.md)).
+
 The pictures were taken on 2026-10-13 in run 3: 17 pictures, 0 failed, about
 3 minutes, machine load about 13. Git ignores the folder
 (`unreal/server/build/`), so the links below only work on this machine. The

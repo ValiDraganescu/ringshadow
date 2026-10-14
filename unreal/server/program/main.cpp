@@ -14,6 +14,8 @@
 //                    [--ringshadow s]  (dev, shots: move the world's clock so a ringshadow sweep starts in s seconds)
 //                    [--starfall s]  (dev, tests, shots: a starfall lands near the first pilot s seconds after it comes)
 //                    [--clock-hour h]  (dev, shots: move the world's clock on to hour h, 0-24; it runs on from there)
+//                    [--dev-control file]  (dev, shots: read 4 times a second, then removed; each line moves the
+//                                           world's clock at once: `clock T`, `hour H`, `ahead S`; Server::devControl)
 //
 // Reads the one-time token as the first line of its standard input, binds,
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
@@ -96,7 +98,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--dev-hydrogen mh] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--dev-hydrogen mh] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file]\n",
                  why);
     return 2;
 }
@@ -117,6 +119,7 @@ int main(int argc, char** argv) {
     int64_t starts = 2;
     std::string worldPath;
     std::string savePath;
+    std::string devControlPath;
     net::Address bind = net::Address::loopback(0);
     long port = 0;
     pid_t parent = 0;
@@ -140,6 +143,7 @@ int main(int argc, char** argv) {
         else if (a == "--parent-pid") parent = pid_t(std::atol(v.c_str()));
         else if (a == "--log") logPath = v;
         else if (a == "--save") savePath = v;
+        else if (a == "--dev-control") devControlPath = v;
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
         else if (a == "--dev-blueprints") devBlueprints = v != "0";
         else if (a == "--dev-rig") devRig = v != "0";
@@ -289,6 +293,16 @@ int main(int argc, char** argv) {
                 why = "parent " + std::to_string(parent) + " is gone";
                 break;
             }
+            // Dev and shots: the control file's clock moves, once each.
+            if (!devControlPath.empty())
+                if (FILE* f = std::fopen(devControlPath.c_str(), "rb")) {
+                    std::string text;
+                    char buf[512];
+                    for (size_t got; (got = std::fread(buf, 1, sizeof buf, f)) > 0;) text.append(buf, got);
+                    std::fclose(f);
+                    std::remove(devControlPath.c_str());
+                    server.devControl(text);
+                }
         }
         const double due = start + double(n) * step;
         if (now < due) {

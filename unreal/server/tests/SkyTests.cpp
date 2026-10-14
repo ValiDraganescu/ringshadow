@@ -221,3 +221,33 @@ TEST(sky_snapshots_bring_the_hour_and_the_weather_to_the_client) {
     // The mirror's sight at night is the server's hour.
     EXPECT_NEAR(*client.mirror()->simulation().state.heldHour, sky.hour(), 1e-9);
 }
+
+TEST(sky_dev_control_moves_the_clock_at_once) {
+    nettest::MemoryNet network;
+    nettest::MemoryPort serverPort(network, nettest::kServerAddress);
+    ServerOptions o;
+    o.world = firstWorld();
+    o.token = nettest::kToken;
+    o.secret = nettest::serverConfig().secret;
+    Server server(serverPort, o);
+    server.world().setClock(WorldClock::timeOf(17.0));
+    const double day = server.world().params().dayLength;
+    // `hour H`: on to the next H, never back.
+    auto said = server.devControl("hour 19\n");
+    ASSERT_TRUE(said.size() == 1);
+    EXPECT_NEAR(server.world().sky()->hour(), 19.0, 1e-6);
+    const double at19 = server.world().clock();
+    server.devControl("hour 18");
+    EXPECT_NEAR(server.world().sky()->hour(), 18.0, 1e-6);
+    EXPECT_TRUE(server.world().clock() > at19 + day / 2);
+    // `ahead S`, `clock T`, several lines in one file, blank lines skipped.
+    server.devControl("clock 1000\n\nahead 25.5\n");
+    EXPECT_NEAR(server.world().clock(), 1025.5, 1e-9);
+    EXPECT_NEAR(server.world().sky()->time, 1025.5, 1e-9);
+    // Anything else is said and not done.
+    said = server.devControl("hour 30\nwarp 5\n");
+    ASSERT_TRUE(said.size() == 2);
+    EXPECT_TRUE(said[0].find("not done") != std::string::npos);
+    EXPECT_TRUE(said[1].find("not done") != std::string::npos);
+    EXPECT_NEAR(server.world().clock(), 1025.5, 1e-9);
+}

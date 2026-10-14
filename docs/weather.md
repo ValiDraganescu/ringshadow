@@ -255,8 +255,13 @@ first pilot that drives gets a fall 40–58 cells away (ahead of its
 Prospector first, coming in from the side), S seconds after it comes, told at once. `--clock-hour H`
 moves the world's clock on to hour H and lets it run. On the game,
 `-AcMmoStarfall=S` and `-AcMmoClockHour=H` pass them on. The picture run is
-`-AcMmoShots=DIR -AcMmoShotsStarfall -AcMmoStarfall=40 -AcMmoClockHour=17`
-(AcMmoShots.cpp, `sf-01` to `sf-09`).
+`-AcMmoShots=DIR -AcMmoShotsStarfall` (AcMmoShots.cpp, `sf-01` to `sf-09`):
+it adds `-AcMmoStarfall=10 -AcMmoClockHour=17` unless given others, so the
+fall comes 10 s after the pilot drives and the streak is up at once. For
+the night it moves the world's clock on to 19:00 at once (the server's
+`--dev-control` file, shot runs only), so the run takes under a minute,
+not four. `-AcMmoShotsOnly=sf-02,sf-08` shoots only those moments; with
+none of `sf-02` to `sf-05` asked for, the clock jumps past the impact.
 
 ## Cost
 
