@@ -477,3 +477,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Brood models are blockouts: flat sac, plain cones → N1b.
 - T N2 (bugs in the world) next for wt2.
 - I Correction: N1 merge 6222e8d had aborted (a stray local edit); merged as 0fb7047.
+- T C2 done f26ab88: Citadel SHOP tab; blueprints stack, building uses a copy.
+- D C2: price (50+25F)·1.5^n ore, 5F·1.5^n MH; first Hab Dome 250+40.
+- D C2: repair kit, MH canister, shield charge, survey flare; keys 1–4.
+- N Protocol 14: request index 5 bits, Buy 14, Use 15, D1 16.
+- N Save schema 10: old blueprints → max(1, limit − realm count) copies.
+- N C2 suites: core 458, server 167, net 67; O1 hidden run OK.
+- T K2 (Citadel missions, Journal, narration) next for wt1.
