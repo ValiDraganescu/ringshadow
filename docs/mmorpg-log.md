@@ -340,3 +340,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I mmocross flow fails: W1 well at (128,50) on the drive.
 - I Card max HP ignores Plating (51/45).
 - T G2 client: contracts, respawn, depot, own pads → progression-core.
+- D Manager: build train started (pid 38384); workers moved to train.py.
