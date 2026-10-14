@@ -51,7 +51,7 @@ AUTOCRAFT_MAP_TESTS=1 make -C unreal/core-tests   # adds the slow map tests
 
 ## UE automation tests
 
-Build first, with the command sessions use (the module's own build, not the editor app):
+Build first with `unreal/Tools/build.sh` (low priority; it prints the errors and `Result:`), and start every editor run below through `uv run unreal/Tools/hidden_run.py`, which holds the Mac's one run slot and adds the hidden flags. The build it wraps, the module's own build, not the editor app:
 
 ```sh
 cd "$(git rev-parse --show-toplevel)"

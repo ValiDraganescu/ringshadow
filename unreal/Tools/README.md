@@ -197,6 +197,10 @@ UE 5.8's USD importer reads all of this.
   tail fins are rigid and baked in). If a future part does, its `pivot` is in
   the manifest; compose transform × pivot⁻¹ when you rotate it.
 
+## Building and running beside other agents
+
+`build.sh` builds this worktree's editor module at low priority; UE's build tool lets one build run at a time on the Mac, so builds from every worktree queue behind each other. `hidden_run.py` starts every hidden editor or game run: it waits for the Mac's one run slot (an `flock` on `~/Library/Caches/Autocraft/hidden-run.lock`, freed when its holder dies), adds the flags below, kills a run past its timeout and prints the flow steps, pictures and tests from the log. Its `--help` lists the modes.
+
 ## Hidden test runs
 
 Agents' game runs must never show in the Dock, take focus or move the mouse:

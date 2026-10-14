@@ -17,8 +17,9 @@ The original Swift and SceneKit game left this repo on 2026-10-05. It is archive
 ## How to work here
 
 - Core tests (engine-free C++, about 7 s): `make -C unreal/core-tests`.
-- Build the game module: `"/Users/Shared/Epic Games/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh" AutocraftEditor Mac Development -Project="$PWD/unreal/Autocraft.uproject" -WaitMutex`. Builds can fail on a busy machine, so retry a few times before treating it as broken. The open editor needs a restart to load new C++.
-- Never relaunch the game or the editor: the user restarts them. Every game run an agent starts is hidden and silent: the Dock-less `UnrealEditorBG.app`, `-nosound`, no `-log` ([unreal/Tools/README.md](unreal/Tools/README.md), "Hidden test runs").
+- Build the game module: `unreal/Tools/build.sh` (the editor build at low priority; builds from every worktree on this Mac queue behind each other). Builds can fail on a busy machine, so retry a few times before treating it as broken. The open editor needs a restart to load new C++.
+- Never relaunch the game or the editor: the user restarts them. Every game or editor run an agent starts goes through `uv run unreal/Tools/hidden_run.py`: hidden, silent, one at a time on the whole Mac ([unreal/Tools/README.md](unreal/Tools/README.md), "Hidden test runs").
+- Agents working beside each other each work in a worktree of their own (the `ringshadow-dev-agent` skill).
 - Tests are isolated scenarios. Never write or run a test where the AIs play a whole game, nor pieces that add up to one. Run game batches only when the user asks.
 - Several sessions edit this repo at once. Make small in-place edits. Merge agent work with a three-way merge. Never copy whole files over live ones.
 - Delete with `rm` and the exact full path only, never a wildcard.
@@ -34,6 +35,8 @@ The original Swift and SceneKit game left this repo on 2026-10-05. It is archive
 - `.claude/skills/ringshadow-region-crafting/`: crafting a region of the MMORPG world (a region file, `autocraft-region` validate and preview) ([docs/regions.md](docs/regions.md)).
 - `.claude/skills/ringshadow-testing/`: which tests a change needs and how to run them, the slow map test included.
 - `.claude/skills/ringshadow-video/`: gameplay clips and narrated explainer videos for X. It records micro simulations of the game, hidden, at a fixed 30 fps.
+- `.claude/skills/ringshadow-dev-agent/`: how a worker agent works beside others: its own worktree, the build script, the one hidden-run slot, merging back.
+- `.claude/skills/ringshadow-agent-manager/`: running a team of agents: the worktree pool, which worker roles to spawn, merging their branches, the load on the Mac.
 - `.claude/skills/ringshadow-mmo-manager/`: type `/ringshadow-mmo-manager` to start a manager session for the MMORPG mode (state, next milestone, Orchestrator workers, the log). Only the user invokes it.
 - `.claude/skills/ringshadow-x-posts/`: X posts in the developer's voice, and the whole path of a post (WORKFLOW.md): the review page, the calendar in `docs/x-posts/`, the videos, posting.
 - `.claude/skills/orc-elevenlabs/`: speech, sound effects and music. This copy has the Ringshadow sound notes, which the Orchestrator's stock copy lacks. Keep it. Like every `orc-*` skill and agent it is local only: git ignores them and they are never published.
