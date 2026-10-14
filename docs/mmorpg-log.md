@@ -330,3 +330,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Manager: core 450, server 141, net 67 pass.
 - I E1 sky: ring strip reads as an opaque black bar; clouds darken.
 - T E1 look rework (ring strip, sun, clouds) → first-hour.
+- T P7 done b194570: 5 modules Mk I–III, Lab research; protocol 10, save 7.
+- N Manager: core 450, server 141, net 67 pass.
+- D Manager: client screens for P6/P7 in new files (SAcRigScreen).
+- T Rig + Foundry/Lab screens → world-clock (client), hook via P5.
