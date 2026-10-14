@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Realm · Ringshadow</title>
+  <meta name="description" content="Ringshadow's buildings now belong to the realm: every pilot uses them, the Citadel takes 10% of every unload, and its shop sells blueprints and supplies.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="The realm: shared buildings, a tax and a shop">
+  <meta property="og:description" content="Ringshadow's buildings now belong to the realm: every pilot uses them, the Citadel takes 10% of every unload, and its shop sells blueprints and supplies.">
+  <meta property="og:image" content="media/the-realm/cover.jpg">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-Medium.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a class="gh" href="https://github.com/ValiDraganescu/ringshadow"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></li>
+    </ul>
+  </nav>
+
+  <main id="main">
+    <article class="post wrap">
+      <header class="post-head">
+        <p class="kicker">M8 · The realm under siege</p>
+        <h1>The realm: shared buildings, a tax and a shop</h1>
+        <p class="meta"><time datetime="2026-10-14">14 October 2026</time></p>
+        <p class="lede">I played the new mode to level 10, then sat down with a list. The first thing on it: a world with many pilots can't have a Citadel each. The buildings had to belong to everyone.</p>
+      </header>
+
+      <figure class="post-cover">
+        <div class="media panel"><img src="media/the-realm/01-tax.webp" alt="A Prospector unloading at the Citadel, the label reading +24 ORE, 3 TO THE REALM" width="1600" height="1000"></div>
+        <figcaption>27 ore unloaded: 24 to the pilot, 3 to the realm.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>Buildings belong to the realm</h2>
+        <p>Every building in a world is now the realm's. Any pilot unloads at any Citadel or Hab Dome, respawns at it, lands at its pads and, soon, is defended by its guns. The builder still gets the credit: the game keeps who built what, under a callsign of the form "Pilot XXXX", made from a hash of the pilot's key (the key itself never goes over the wire). A realm gets one Citadel; a later pilot's "build the Citadel" step points at the one already standing.</p>
+        <p>Old saves move over on their own: the save format went to version 8 and every old building became the realm's, with its builder kept.</p>
+
+        <h2>The Citadel's tax</h2>
+        <p>Every unload pays the realm 10%. It rounds to the nearest whole unit, takes at least 1, and never the whole load, so a tiny unload still leaves you something. The money goes into a realm wallet, shown at the Citadel and in the HUD.</p>
+        <p>Press <kbd>H</kbd> at the Citadel and its screen opens on the REALM tab: the realm wallet, the tax, what you have paid, and buttons to donate 100, 1,000 or everything you carry. The realm wallet is what will pay for the Citadel's own guns, which are being built now (<a href="defences.html">coming next</a>).</p>
+      </div>
+
+      <section class="album" aria-labelledby="a1">
+        <h2 class="album-title" id="a1">Album · The realm's tax</h2>
+        <ul class="album-grid">
+          <li><a href="media/the-realm/01-tax.webp"><img src="media/the-realm/01-tax-t.webp" alt="The Prospector at the Citadel with the label +24 ORE, 3 TO THE REALM" width="640" height="400" loading="lazy"></a><span class="cap">An unload at the Citadel: +24 ORE, 3 TO THE REALM.</span></li>
+          <li><a href="media/the-realm/02-citadel.webp"><img src="media/the-realm/02-citadel-t.webp" alt="The Citadel screen on its REALM tab: the realm wallet at 3 ore, the 10% tax, donate buttons" width="640" height="400" loading="lazy"></a><span class="cap">The Citadel screen (<kbd>H</kbd>): the realm wallet holds the 3 ore of tax.</span></li>
+          <li><a href="media/the-realm/03-donated.webp"><img src="media/the-realm/03-donated-t.webp" alt="The REALM tab after a donation: 1,003 ore in the realm wallet" width="640" height="400" loading="lazy"></a><span class="cap">After a donation of 1,000: "Every pilot's Citadel thanks you."</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <h2>The shop</h2>
+        <p>The Citadel's second tab is a shop, paid from your own wallet. It sells every blueprint and four supplies. A blueprint is used up by one building, and copies stack, so you can buy three Hab Domes' worth before a trip. Prices rise with the blueprint's level floor and with every copy you buy: a blueprint costs (50 + 25F) × 1.5ⁿ ore and 5F × 1.5ⁿ MH, where F is its level floor and n the copies you already bought. The big ones open late: the Spacedock at level 35, the Bastion at 45, the Sentinel at 55.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Supply</th><th>Key</th><th>What it does</th><th>Price</th></tr></thead>
+            <tbody>
+              <tr><td>Repair kit</td><td><kbd>1</kbd></td><td>Mends half the Prospector's hp at once</td><td>120 ore, 10 MH</td></tr>
+              <tr><td>MH canister</td><td><kbd>2</kbd></td><td>25 MH into the wallet, for jets and flights</td><td>150 ore</td></tr>
+              <tr><td>Shield charge</td><td><kbd>3</kbd></td><td>No damage taken for 8 s</td><td>100 ore, 30 MH</td></tr>
+              <tr><td>Survey flare</td><td><kbd>4</kbd></td><td>Sites and deposits nearby show on the map for 60 s</td><td>80 ore, 15 MH</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The shield charge exists because of what came next that same day: <a href="the-brood.html">the Brood</a>. Sites in the world still give a free blueprint when you open one, so exploring keeps paying.</p>
+      </div>
+
+      <section class="album" aria-labelledby="a2">
+        <h2 class="album-title" id="a2">Album · The shop</h2>
+        <ul class="album-grid">
+          <li><a href="media/the-realm/04-shop.webp"><img src="media/the-realm/04-shop-t.webp" alt="The SHOP tab: eight blueprints with stacks and prices, four supplies" width="640" height="400" loading="lazy"></a><span class="cap">The SHOP tab: blueprints on the left, supplies on the right.</span></li>
+          <li><a href="media/the-realm/05-build-menu.webp"><img src="media/the-realm/05-build-menu-t.webp" alt="The build menu listing each building with the number of blueprint copies held" width="640" height="400" loading="lazy"></a><span class="cap">The build menu counts your copies: Hab Dome ×10.</span></li>
+          <li><a href="media/the-realm/06-shield.webp"><img src="media/the-realm/06-shield-t.webp" alt="The Prospector in the open with a shield charge running" width="640" height="400" loading="lazy"></a><span class="cap">A shield charge running: 8 seconds of no damage.</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <p>Under the hood this was three tasks by the agents (R1, C1 and C2), three network protocol versions and three save versions, each with a migration so yesterday's worlds still load. After the shop landed the suites stood at 458 core tests, 167 server tests and 67 network tests, all passing.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="btn ghost" href="how-we-got-here.html">Before: how we got here</a>
+        <a class="btn" href="missions.html">Next: missions</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div>
+        <p class="mark">RINGSHADOW</p>
+        <p>An open-source real-time strategy game, built in public.</p>
+      </div>
+      <div>
+        <p><a href="../index.html">Home</a> · <a href="../roadmap.html">Roadmap</a> · <a href="index.html">Blog</a> · <a href="feed.xml">Feed</a> · <a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></p>
+        <p>Public domain (CC0). No trackers, no cookies.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
