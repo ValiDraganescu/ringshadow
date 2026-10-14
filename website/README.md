@@ -128,9 +128,14 @@ pnpm dlx wrangler@4.151.0 deploy --message "what changed"
 `pnpm dlx wrangler@4.151.0 dev` serves the folder locally the way Cloudflare
 does (port 8787): the 404 page, the redirects, the headers.
 
-**The domain** (zone settings, not in this folder): HTTPS only, and `www`
-sent to the apex with a redirect rule. HSTS can follow once the site has run
-on HTTPS for a while.
+**The domain** (zone settings, not in this folder; set 2026-10-14 with the
+`cf` CLI, run as `pnpm dlx cf`): Always Use HTTPS on (http answers 301 to
+https), minimum TLS 1.2, Automatic HTTPS Rewrites on; Brotli, HTTP/3 and
+TLS 1.3 were on already. `www.ringshadow.com` is a proxied placeholder
+record (AAAA `100::`) and a redirect rule (phase
+`http_request_dynamic_redirect`) answers it with a 301 to
+`https://ringshadow.com` plus the path and query. HSTS can follow once the
+site has run on HTTPS for a while.
 
 Limits that matter: 25 MiB a file, 20,000 files (the site is 15 MB in about
 155 files), 100 `_headers` rules.
