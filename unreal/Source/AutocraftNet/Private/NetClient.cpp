@@ -60,6 +60,7 @@ uint32_t Client::takeMission(uint32_t mission) { return request(RequestMessage::
 uint32_t Client::abandonMission(uint32_t mission) { return request(RequestMessage::MissionAsk{mission, false}); }
 uint32_t Client::merc(const RequestMessage::Merc& ask) { return request(ask); }
 uint32_t Client::upgradeCitadel(DefenceStat stat) { return request(RequestMessage::UpgradeCitadel{stat}); }
+uint32_t Client::upgradeTurret(int64_t turret, DefenceStat stat) { return request(RequestMessage::UpgradeTurret{turret, stat}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;

@@ -369,13 +369,14 @@ void BugCodec::read(BitReader& r, Bug& b) const {
 }
 
 void MarksCodec::write(BitWriter& w, const TurretMarks& m) const {
-    for (int64_t x : {m.rate, m.damage, m.range}) w.writeBits(static_cast<uint64_t>(std::clamp<int64_t>(x, 0, 3)), 2);
+    for (int64_t x : {m.rate, m.damage, m.range, m.air}) w.writeBits(static_cast<uint64_t>(std::clamp<int64_t>(x, 0, 3)), 2);
 }
 
 void MarksCodec::read(BitReader& r, TurretMarks& m) const {
     m.rate = int64_t(r.readBits(2));
     m.damage = int64_t(r.readBits(2));
     m.range = int64_t(r.readBits(2));
+    m.air = int64_t(r.readBits(2));
 }
 
 void MissionCodec::write(BitWriter& w, const Mission& m) const {
@@ -809,6 +810,10 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeString(w, p->region);
         writeSigned(w, p->field);
     }
+    if (const auto* p = std::get_if<RequestMessage::UpgradeTurret>(&m.what)) {
+        writeSigned(w, p->turret);
+        w.writeBits(uint64_t(p->stat), 2);
+    }
     return w.bytes();
 }
 
@@ -942,6 +947,13 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         m.what = p;
         break;
     }
+    case 19: {
+        RequestMessage::UpgradeTurret p;
+        p.turret = readSigned(r);
+        p.stat = static_cast<DefenceStat>(r.readBits(2));
+        m.what = p;
+        break;
+    }
     default: return false;
     }
     return r.ok();
@@ -1027,6 +1039,11 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeString(w, by);
     }
     writeString(w, m.callsign);
+    writeVarint(w, m.turretKills.size());
+    for (const auto& [id, n] : m.turretKills) {
+        writeSigned(w, id);
+        writeSigned(w, n);
+    }
     for (const auto* p : {&m.realmWallet, &m.taxed, &m.donated}) {
         writeSigned(w, p->ore);
         writeSigned(w, p->hydrogen);
@@ -1209,6 +1226,12 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         if (!readString(r, m.builders[id])) return false;
     }
     if (!readString(r, m.callsign)) return false;
+    const uint64_t kills = readVarint(r);
+    if (kills > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < kills; i++) {
+        const int64_t id = readSigned(r);
+        m.turretKills[id] = readSigned(r);
+    }
     for (auto* p : {&m.realmWallet, &m.taxed, &m.donated}) {
         p->ore = readSigned(r);
         p->hydrogen = readSigned(r);
@@ -1306,7 +1329,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(4);
-        if (kind > uint64_t(ProgressMessage::NewsKind::merc)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::upgraded)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

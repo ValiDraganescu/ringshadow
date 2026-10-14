@@ -1,9 +1,11 @@
-// The realm's defences in a world (D1, D2; WorldDefence.cpp,
+// The realm's defences in a world (D1, D2, D3; WorldDefence.cpp,
 // docs/mmorpg-m8.md): the Citadel's corner turrets armed with the realm's
 // marks and upgraded from the realm wallet (refused when it is short, away
 // from the Citadel, at the last mark), the marks saved; the AA tower and the
 // gatling gun from blueprints, their floors and limits; a defence's builder
-// paid for its hits; a raid on a defended Hab Dome beaten. Isolated scenes
+// paid for its hits; a raid on a defended Hab Dome beaten; a placed turret
+// upgraded by any pilot from its own wallet, its marks and kills saved,
+// lost when it is felled. Isolated scenes
 // of a few seconds to a minute, never a game; run from unreal/server.
 
 #include "test.h"
@@ -27,6 +29,8 @@ using namespace ac::server;
 
 constexpr PilotId a = 91;
 const std::string keyA = "e0e1e2e3e4e5e6e7e8e9eaebecedeeef";
+constexpr PilotId b = 92;
+const std::string keyB = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
 
 const LoadedWorld& first() {
     static const LoadedWorld w = [] {
@@ -223,7 +227,10 @@ TEST(defence_citadel_marks_saved_and_loaded) {
         EXPECT_EQ(n->changed, int64_t(0));
     }
     const std::string old = freshFile("citadel-marks-v14");
-    const std::vector<WorldStore::Migration> v14(WorldStore::migrations().begin(), WorldStore::migrations().end() - 1);
+    // The steps up to 14 (15 is the Citadel's marks, 16 D3's turrets).
+    std::vector<WorldStore::Migration> v14;
+    for (const auto& m : WorldStore::migrations())
+        if (m.version <= 14) v14.push_back(m);
     {
         auto store = WorldStore::open(old, "first", &why, v14);
         ASSERT_TRUE(store != nullptr);
@@ -231,7 +238,7 @@ TEST(defence_citadel_marks_saved_and_loaded) {
     }
     auto store = WorldStore::open(old, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(15));
+    EXPECT_EQ(store->schemaVersion(), WorldStore::version());
     const auto save = store->load(&why);
     ASSERT_TRUE(save.has_value());
     EXPECT_TRUE(save->citadelMarks == TurretMarks{});
@@ -368,4 +375,121 @@ TEST(defence_dev_scenes_stage_a_fight) {
         std::printf("  %s: %lld hit, %lld alive\n", what.c_str(), (long long)hit, (long long)alive);
         EXPECT_TRUE(hit >= 2);
     }
+}
+
+// D3: any pilot upgrades any turret of the realm from its own wallet (no
+// tax), standing near it; refused too far, when the wallet is short, at the
+// last mark, and for a building that takes no marks. Every pilot in the
+// region is told who paid.
+TEST(defence_any_pilot_upgrades_a_turret) {
+    Home s;
+    ASSERT_TRUE(s.citadel.has_value());
+    WorldMap& w = s.w;
+    const auto gun = weld(w, a, StructureKind::gatling, s.east + Vec2(0, 14));
+    ASSERT_TRUE(gun.has_value());
+    w.leave(a);
+    ASSERT_TRUE(w.seat(b, keyB) == WorldMap::Seated::fresh);
+    w.setProgress(b, at(10));
+    ASSERT_TRUE(w.where(b) == w.where(a) || w.where(b).has_value());
+    Unit* u = drivenUnit(w, b);
+    ASSERT_TRUE(u != nullptr);
+    const Vec2 g = structure(simOf(w, b), *gun)->position;
+    u->position = g + Vec2(0, 12);
+    u->task = Unit::Task::idle;
+    fill(w, b, 1000, 100);
+    EXPECT_TRUE(w.upgradeTurret(b, *gun, DefenceStat::air).value_or("") == "Too far: stand within 4 cells of the Gatling Gun");
+    besides(w, b, *gun);
+    const double realm = double(w.realmWallet().ore);
+    w.takeNews(b);
+    ASSERT_TRUE(!w.upgradeTurret(b, *gun, DefenceStat::air).has_value());
+    EXPECT_TRUE(*w.wallet(b) == (WorldMap::Wallet{900, 50}));
+    EXPECT_NEAR(double(w.realmWallet().ore), realm, 1e-9);
+    EXPECT_TRUE(structure(simOf(w, b), *gun)->marks == (TurretMarks{.air = 1}));
+    // Its toast: who paid, the stat, the mark.
+    bool told = false;
+    for (const auto& n : w.takeNews(b))
+        told = told || (n.kind == net::ProgressMessage::NewsKind::upgraded && n.id == "gatling/air" && n.value == 1 &&
+                        n.by == WorldMap::callsign(keyB));
+    EXPECT_TRUE(told);
+    ASSERT_TRUE(!w.upgradeTurret(b, *gun, DefenceStat::rate).has_value());
+    EXPECT_TRUE(*w.wallet(b) == (WorldMap::Wallet{800, 0}));
+    EXPECT_TRUE(w.upgradeTurret(b, *gun, DefenceStat::damage).value_or("") == "Your wallet is short: 50 MH needed, you have 0");
+    fill(w, b, 5000, 2000);
+    ASSERT_TRUE(!w.upgradeTurret(b, *gun, DefenceStat::air).has_value());
+    ASSERT_TRUE(!w.upgradeTurret(b, *gun, DefenceStat::air).has_value());
+    EXPECT_TRUE(w.upgradeTurret(b, *gun, DefenceStat::air).value_or("") == "Air reach is at its last mark");
+    EXPECT_TRUE(*w.wallet(b) == (WorldMap::Wallet{5000 - 300 - 800, 2000 - 200 - 500}));
+    // Its weapon: air reach 6 now.
+    EXPECT_NEAR(Defence::weapon(*structure(simOf(w, b), *gun))->airRange, 6, 1e-9);
+    // Not a turret: the Citadel's marks are the realm's.
+    besides(w, b, *s.citadel);
+    EXPECT_TRUE(w.upgradeTurret(b, *s.citadel, DefenceStat::rate).value_or("") == "Only a Sentinel or a Gatling Gun takes marks");
+    w.step();
+    EXPECT_TRUE(simOf(w, b).state.structure(*gun)->marks == (TurretMarks{.rate = 1, .air = 3}));
+}
+
+// D3: a turret's kills count on its card; its marks and kills are saved
+// with it and loaded again; felled, it loses both (a new one in its place
+// starts bare).
+TEST(defence_turret_marks_and_kills_saved_and_lost) {
+    const std::string path = freshFile("turret-marks");
+    std::string why;
+    int64_t gunId = 0;
+    Vec2 g;
+    {
+        Home s;
+        ASSERT_TRUE(s.citadel.has_value());
+        WorldMap& w = s.w;
+        const auto gun = weld(w, a, StructureKind::gatling, s.east + Vec2(0, 14));
+        ASSERT_TRUE(gun.has_value());
+        gunId = *gun;
+        g = structure(simOf(w, a), *gun)->position;
+        besides(w, a, *gun);
+        fill(w, a, 5000, 2000);
+        ASSERT_TRUE(!w.upgradeTurret(a, *gun, DefenceStat::damage).has_value());
+        ASSERT_TRUE(!w.upgradeTurret(a, *gun, DefenceStat::range).has_value());
+        drivenUnit(w, a)->position = s.east + Vec2(-20, -20);
+        w.step();
+        const size_t r = *w.where(a);
+        const auto group = w.spawnBroodGroup(r, UnitKind::shardling, 3, WorldMap::Poi::building, *gun, g + Vec2(5, 0), true);
+        ASSERT_TRUE(group.has_value());
+        for (int i = 0; i < 20 * 60 && aliveIn(w, a, *group) > 0; i++) w.step();
+        EXPECT_EQ(aliveIn(w, a, *group), int64_t(0));
+        EXPECT_EQ(w.turretKills(r, *gun), int64_t(3));
+        EXPECT_EQ(w.progressMessage(a)->turretKills[*gun], int64_t(3));
+        auto store = WorldStore::open(path, "first", &why);
+        ASSERT_TRUE(store != nullptr);
+        ASSERT_TRUE(store->write(w.save(), &why).has_value());
+        const auto rows = store->rows("SELECT mark_damage, mark_range, mark_air, kills FROM buildings WHERE id = " + std::to_string(*gun));
+        ASSERT_TRUE(rows.size() == 1);
+        EXPECT_TRUE(rows[0] == (std::vector<std::string>{"1", "1", "0", "3"}));
+    }
+    auto store = WorldStore::open(path, "first", &why);
+    ASSERT_TRUE(store != nullptr);
+    const auto save = store->load(&why);
+    ASSERT_TRUE(save.has_value());
+    WorldMap w(first(), params());
+    EXPECT_TRUE(w.restore(*save).empty());
+    // Written again unchanged: nothing.
+    EXPECT_EQ(store->write(w.save(), &why)->changed, int64_t(0));
+    ASSERT_TRUE(w.seat(a, keyA) == WorldMap::Seated::restored);
+    w.step();
+    const size_t r = *w.where(a);
+    const auto loaded = simOf(w, a).state.structure(gunId);
+    ASSERT_TRUE(loaded.has_value());
+    EXPECT_TRUE(loaded->marks == (TurretMarks{.damage = 1, .range = 1}));
+    EXPECT_EQ(w.turretKills(r, gunId), int64_t(3));
+
+    // Felled: its marks and kills go with it.
+    for (Structure& x : simOf(w, a).state.structures)
+        if (x.id == gunId) x.hp = 0;
+    for (int i = 0; i < 30; i++) w.step();
+    EXPECT_TRUE(!simOf(w, a).state.structure(gunId).has_value());
+    EXPECT_EQ(w.turretKills(r, gunId), int64_t(0));
+    fill(w, a, 5000, 2000);
+    w.setProgress(a, at(10));
+    const auto again = weld(w, a, StructureKind::gatling, g + Vec2(Region::buildReach(StructureKind::gatling), 0));
+    ASSERT_TRUE(again.has_value());
+    EXPECT_TRUE(!simOf(w, a).state.structure(*again)->marks.has_value());
+    EXPECT_TRUE(Defence::weapon(*simOf(w, a).state.structure(*again))->damage == UnitStats::gatling.damage);
 }

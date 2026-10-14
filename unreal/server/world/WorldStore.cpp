@@ -198,13 +198,23 @@ ALTER TABLE realm_wallet ADD COLUMN mark_damage INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE realm_wallet ADD COLUMN mark_range INTEGER NOT NULL DEFAULT 0;
 )sql";
 
+/// Schema 16 (D3): a placed turret's marks and the bugs it has killed, on
+/// its building's row. A save from before has none.
+const char* const kV16 = R"sql(
+ALTER TABLE buildings ADD COLUMN mark_rate INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE buildings ADD COLUMN mark_damage INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE buildings ADD COLUMN mark_range INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE buildings ADD COLUMN mark_air INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE buildings ADD COLUMN kills INTEGER NOT NULL DEFAULT 0;
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}};
     return steps;
 }
 
@@ -319,7 +329,8 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.failed(error)) return std::nullopt;
     }
     {
-        Stmt s(db_, "SELECT region, id, kind, x, y, built_by, build_left, hp FROM buildings ORDER BY region, id");
+        Stmt s(db_, "SELECT region, id, kind, x, y, built_by, build_left, hp, mark_rate, mark_damage, mark_range, mark_air, kills "
+                    "FROM buildings ORDER BY region, id");
         while (s.row()) {
             const auto kind = parse<StructureKind>(s.colText(2));
             if (!kind) {
@@ -327,7 +338,8 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
                 return std::nullopt;
             }
             region(s.colText(0)).buildings.push_back(
-                SavedBuilding{s.colInteger(1), *kind, Vec2(s.colReal(3), s.colReal(4)), s.colText(5), s.optReal(6), s.colReal(7)});
+                SavedBuilding{s.colInteger(1), *kind, Vec2(s.colReal(3), s.colReal(4)), s.colText(5), s.optReal(6), s.colReal(7),
+                              TurretMarks{s.colInteger(8), s.colInteger(9), s.colInteger(10), s.colInteger(11)}, s.colInteger(12)});
         }
         if (s.failed(error)) return std::nullopt;
     }
@@ -468,8 +480,9 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
         }
         rowsOf(r.id, r.buildings, buildings_, [](const SavedBuilding& b) { return b.id; },
                [&](const SavedBuilding& b) {
-                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO buildings (region, id, kind, x, y, built_by, build_left, hp) "
-                                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO buildings (region, id, kind, x, y, built_by, build_left, hp, "
+                                           "mark_rate, mark_damage, mark_range, mark_air, kills) "
+                                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                                      .text(r.id)
                                      .integer(b.id)
                                      .text(std::string(rawValue(b.kind)))
@@ -477,7 +490,12 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                                      .real(b.at.y)
                                      .text(b.builtBy)
                                      .real(b.buildLeft)
-                                     .real(b.hp)));
+                                     .real(b.hp)
+                                     .integer(b.marks.rate)
+                                     .integer(b.marks.damage)
+                                     .integer(b.marks.range)
+                                     .integer(b.marks.air)
+                                     .integer(b.kills)));
                },
                "buildings", "id");
         rowsOf(r.id, r.units, units_, [](const SavedUnit& u) { return u.id; },

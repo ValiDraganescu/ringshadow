@@ -193,6 +193,7 @@ WorldLoad loadWorld(std::string_view text, const std::string& folder) {
 WorldMap::WorldMap(const RegionConfig& config) {
     regions_.push_back(std::make_unique<Region>(config));
     builtBy_.resize(1);
+    kills_.resize(1);
     owed_.resize(1);
 }
 
@@ -209,6 +210,7 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
         regions_.push_back(std::make_unique<Region>(c));
     }
     builtBy_.resize(regions_.size());
+    kills_.resize(regions_.size());
     owed_.resize(regions_.size());
     // What each well holds at the start is what it grows back to.
     for (const auto& r : regions_) {

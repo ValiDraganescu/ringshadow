@@ -1020,17 +1020,20 @@ TEST(protocol_world_messages_round_trip) {
         EXPECT_EQ(shop.what.index(), size_t(15));
         shop.what = RequestMessage::Use{static_cast<Item>(allCases<Item>().size())};
         EXPECT_TRUE(!decode(encode(shop), kb));
-        // K2: MissionAsk at 16; D1: UpgradeCitadel at 17, a stat past the
-        // three refused.
+        // K2: MissionAsk at 16; D1: UpgradeCitadel at 17 (D3: the four
+        // stats fill its 2 bits).
         shop.what = RequestMessage::MissionAsk{1, true};
         EXPECT_EQ(shop.what.index(), size_t(16));
         shop.what = RequestMessage::UpgradeCitadel{DefenceStat::damage};
         EXPECT_EQ(shop.what.index(), size_t(17));
-        shop.what = RequestMessage::UpgradeCitadel{static_cast<DefenceStat>(3)};
-        EXPECT_TRUE(!decode(encode(shop), kb));
-        // H2: Merc at 18.
+        shop.what = RequestMessage::UpgradeCitadel{DefenceStat::air};
+        EXPECT_TRUE(decode(encode(shop), kb) && kb == shop);
+        // H2: Merc at 18; D3: UpgradeTurret at 19.
         shop.what = RequestMessage::Merc{};
         EXPECT_EQ(shop.what.index(), size_t(18));
+        shop.what = RequestMessage::UpgradeTurret{4711, DefenceStat::air};
+        EXPECT_EQ(shop.what.index(), size_t(19));
+        EXPECT_TRUE(decode(encode(shop), kb) && kb == shop);
     }
     // H2: hire, dismiss, send to a field.
     for (const auto& ask : {RequestMessage::Merc{RequestMessage::Merc::Act::hire, 0, "", 0},

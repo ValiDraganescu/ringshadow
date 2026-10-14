@@ -476,6 +476,8 @@ void WorldMap::brood() {
                     // A kill counts for its hunt missions (K2).
                     if (h.kill) broodKill(pilot, h.kind, r);
                 }
+            // A defence's kill counts on its card (D3).
+            if (h.kill && st.structure(h.shooter)) kills_[r][h.shooter] += 1;
             // A defence's hit (D1, D2): its builder earns a share, wherever
             // it is (the Citadel's corner turrets included).
             if (const auto by = builtBy_[r].find(h.shooter); by != builtBy_[r].end())
@@ -490,6 +492,8 @@ void WorldMap::brood() {
                 if (g.id == u->bug->group && !g.prey && !(building && g.turret)) (building ? g.turret : g.prey) = h.shooter;
         }
         sim.bugHits.clear();
+        // A felled defence's kills go with it (D3).
+        if (!kills_[r].empty()) std::erase_if(kills_[r], [&](const auto& k) { return !st.structure(k.first); });
         // A dead Lodeback's sac goes back into its deposit (else the
         // nearest within reach, else it is lost).
         for (const GameEvent& e : regions_[r]->lastEvents()) {

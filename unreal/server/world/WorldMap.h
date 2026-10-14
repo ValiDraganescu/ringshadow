@@ -635,6 +635,15 @@ public:
     /// standing where it unloads at the realm's Citadel. The reason when
     /// refused (away from the Citadel, the last mark, the wallet short).
     std::optional<std::string> upgradeCitadel(PilotId pilot, DefenceStat stat);
+    /// D3: placed turret `turret` (a Sentinel or a Gatling Gun of the
+    /// realm in the pilot's region) takes its next mark of `stat`, paid
+    /// from the pilot's own wallet (`Defence::turretPrice`, no tax), by any
+    /// pilot within `Defence::turretReach` of it. Every pilot in the region
+    /// is told who paid. The reason when refused (no such turret, not
+    /// finished, too far, the wallet short, the last mark).
+    std::optional<std::string> upgradeTurret(PilotId pilot, int64_t turret, DefenceStat stat);
+    /// The bugs building `id` of region `r` has killed (D3: the turret card).
+    int64_t turretKills(size_t r, int64_t id) const;
     /// The share of a kill's XP a defence's builder earns when the defence
     /// hits a bug (docs/creatures.md, "XP and rewards").
     static constexpr double defenceXpShare = 0.5;
@@ -968,6 +977,9 @@ private:
     Wallet realm_;
     /// The realm's Citadel turrets' marks (D1).
     TurretMarks citadelMarks_;
+    /// The bugs each defence has killed, per region (building id → kills;
+    /// D3). Saved with the building, gone with it.
+    std::vector<std::map<int64_t, int64_t>> kills_;
     std::vector<Moved> moves_;
     int64_t tick_ = 0;
     double lastStepMs_ = 0;

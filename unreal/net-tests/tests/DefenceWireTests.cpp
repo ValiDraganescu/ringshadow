@@ -55,3 +55,30 @@ TEST(snapshot_carries_the_citadel_turrets_and_the_gatling) {
     EXPECT_NEAR(gb->aim.value_or(0), 1.25, 1e-3);
     EXPECT_TRUE(!gb->marks.has_value());
 }
+
+/// D3: a placed turret carries its marks, air reach included; the progress
+/// message the turrets' kills and who upgraded one.
+TEST(turret_marks_kills_and_upgrades_on_the_wire) {
+    Snapshot s;
+    Structure g(4, StructureKind::gatling, 0, Vec2(20, 10));
+    g.hp = 300;
+    g.marks = TurretMarks{.rate = 1, .damage = 0, .range = 2, .air = 3};
+    s.entities.push_back(EntityState{g});
+    SnapshotWriter w;
+    SnapshotReader r;
+    const auto o = w.write(s, 0, 1 << 20);
+    ASSERT_TRUE(o.messages.size() == 1);
+    const auto p = r.read(o.messages[0]);
+    ASSERT_TRUE(p.has_value());
+    const Structure* gb = p->snapshot.entities[0].structure();
+    ASSERT_TRUE(gb && gb->marks);
+    EXPECT_TRUE(*gb->marks == *g.marks);
+
+    ProgressMessage m;
+    m.turretKills = {{4, 17}, {9, 1}};
+    m.news.push_back(ProgressMessage::News{ProgressMessage::NewsKind::upgraded, "gatling/air", 0, 3, "Pilot 1A2B"});
+    ProgressMessage back;
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back.turretKills == m.turretKills);
+    EXPECT_TRUE(back.news == m.news);
+}

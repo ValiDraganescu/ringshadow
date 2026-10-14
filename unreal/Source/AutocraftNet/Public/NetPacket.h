@@ -27,7 +27,7 @@
 namespace ac::net {
 
 inline constexpr uint32_t kProtocolId = 0x52534844;  // "RSHD"
-inline constexpr uint16_t kProtocolVersion = 21;  // 2: inputs carry the visit; 3: encrypted; 4: the sky; 5: the skill tree; 6: sites; 7: contracts; 8: respawn, own pads; 9: starfall; 10: the rig; 11: the first ten minutes; 12: realm buildings; 13: the realm wallet; 14: the Citadel shop (a request index of 5 bits); 15: kept for the Brood, which came as 17; 16: Citadel missions; 17: the Brood (N2); 18: kept for the Citadel's upgrades, which came as 20; 19: mercenaries (H2); 20: the defences (D1, D2: the Citadel's marks and corner turrets, the gatling gun); 21: the regions seen (M2)
+inline constexpr uint16_t kProtocolVersion = 22;  // 2: inputs carry the visit; 3: encrypted; 4: the sky; 5: the skill tree; 6: sites; 7: contracts; 8: respawn, own pads; 9: starfall; 10: the rig; 11: the first ten minutes; 12: realm buildings; 13: the realm wallet; 14: the Citadel shop (a request index of 5 bits); 15: kept for the Brood, which came as 17; 16: Citadel missions; 17: the Brood (N2); 18: kept for the Citadel's upgrades, which came as 20; 19: mercenaries (H2); 20: the defences (D1, D2: the Citadel's marks and corner turrets, the gatling gun); 21: the regions seen (M2); 22: turret upgrades (D3: a placed turret's marks, air reach, kills)
 inline constexpr size_t kMaxPacketBytes = 1200;
 inline constexpr size_t kHeaderBytes = 19;
 /// The tag after a sealed packet's payload.

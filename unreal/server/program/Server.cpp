@@ -380,6 +380,9 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* uc = std::get_if<net::RequestMessage::UpgradeCitadel>(&m.what)) {
         what = "upgrade the Citadel's " + std::string(rawValue(uc->stat));
         why = world_.upgradeCitadel(pilot, uc->stat);
+    } else if (const auto* ut = std::get_if<net::RequestMessage::UpgradeTurret>(&m.what)) {
+        what = "upgrade turret " + std::to_string(ut->turret) + "'s " + std::string(rawValue(ut->stat));
+        why = world_.upgradeTurret(pilot, ut->turret, ut->stat);
     } else if (const auto* mc = std::get_if<net::RequestMessage::Merc>(&m.what)) {
         using Act = net::RequestMessage::Merc::Act;
         if (mc->act == Act::hire) {

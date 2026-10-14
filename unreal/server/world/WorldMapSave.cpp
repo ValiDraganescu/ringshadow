@@ -4,6 +4,7 @@
 
 #include "WorldMap.h"
 
+#include "Defence.h"
 #include "Session.h"
 
 #include <algorithm>
@@ -169,8 +170,12 @@ WorldSave WorldMap::save() const {
         r.nextId = st.nextID + extra[i];
         for (const Structure& b : st.structures) {
             const auto by = builtBy_[i].find(b.id);
-            r.buildings.push_back(
-                SavedBuilding{b.id, b.kind, b.position, by == builtBy_[i].end() ? std::string() : by->second, b.buildLeft, b.hp});
+            SavedBuilding sb{b.id, b.kind, b.position, by == builtBy_[i].end() ? std::string() : by->second, b.buildLeft, b.hp, {}, 0};
+            // D3: a placed turret's marks (a Citadel's are the realm's) and
+            // what it has killed.
+            if (Defence::upgradable(b.kind)) sb.marks = b.marks.value_or(TurretMarks{});
+            if (const auto k = kills_[i].find(b.id); k != kills_[i].end()) sb.kills = k->second;
+            r.buildings.push_back(sb);
         }
         for (const Unit& u : st.units) {
             const auto by = owned[i].find(u.id);
@@ -218,12 +223,15 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         st.structures.clear();
         st.units.clear();
         builtBy_[*i].clear();
+        kills_[*i].clear();
         int64_t next = sr.nextId;
         for (const SavedBuilding& b : sr.buildings) {
             Structure s(b.id, b.kind, Pilot::player, b.at, b.buildLeft);
             s.hp = b.hp;
+            if (Defence::upgradable(b.kind) && b.marks != TurretMarks{}) s.marks = b.marks;
             st.structures.push_back(s);
             if (!b.builtBy.empty()) builtBy_[*i][b.id] = b.builtBy;
+            if (b.kills > 0) kills_[*i][b.id] = b.kills;
             next = std::max(next, b.id + 1);
         }
         for (const SavedUnit& u : sr.units) {

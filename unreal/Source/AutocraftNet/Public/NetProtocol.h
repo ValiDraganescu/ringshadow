@@ -447,13 +447,23 @@ struct RequestMessage {
         int64_t field = 0;
         bool operator==(const Merc&) const = default;
     };
+    /// D3: placed turret `turret` (an AA tower or a gatling gun of the
+    /// realm, in the pilot's region) takes its next mark of `stat`, paid
+    /// from the pilot's own wallet, the pilot within `Defence::turretReach`
+    /// of it. The price is the core's (`Defence::turretPrice`).
+    struct UpgradeTurret {
+        int64_t turret = 0;
+        DefenceStat stat = DefenceStat::rate;
+        bool operator==(const UpgradeTurret&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
     /// 14, Use 15, MissionAsk 16 (protocol 16), UpgradeCitadel 17 (protocol
-    /// 20; kept for it since 18), Merc 18 (protocol 19).
+    /// 20; kept for it since 18), Merc 18 (protocol 19), UpgradeTurret 19
+    /// (protocol 21).
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk, UpgradeCitadel, Merc>
+                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret>
         what;
     bool operator==(const RequestMessage&) const = default;
 };
@@ -608,8 +618,12 @@ struct ProgressMessage {
     /// left at dawn: the wallet could not pay its wage, `value` MH), "down"
     /// (`by` fell to the bugs; it walks back and resumes, `value` world
     /// seconds later).
+    ///
+    /// D3: `upgraded`: a placed turret took a mark, told to every pilot in
+    /// its region: `id` its kind and the stat ("gatling/air"), `by` who paid
+    /// (the pilot's own `callsign`: it did), `value` the mark.
     enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
-                                    merc };
+                                    merc, upgraded };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -691,6 +705,9 @@ struct ProgressMessage {
     std::map<StructureKind, int64_t> realm;
     std::map<int64_t, std::string> builders;
     std::string callsign;
+    /// D3: the bugs each placed turret and Citadel in the pilot's region
+    /// has killed (id → kills; none: 0), for the turret card.
+    std::map<int64_t, int64_t> turretKills;
     /// C1: ore and MH.
     struct Purse {
         int64_t ore = 0;

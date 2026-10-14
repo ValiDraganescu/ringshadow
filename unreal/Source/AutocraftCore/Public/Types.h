@@ -876,14 +876,25 @@ struct AUTOCRAFTCORE_API OreDeposit {
 };
 
 /// What a defence's weapon has been upgraded by (D1, D3: docs/mmorpg-m8.md):
-/// marks 0 to `Defence::marksMax` each in fire rate, damage and range.
-enum class DefenceStat : uint8_t { rate, damage, range };
+/// marks 0 to `Defence::marksMax` each in fire rate, damage and range, and
+/// a gatling gun's in its air reach (D3; `Defence::takes`).
+enum class DefenceStat : uint8_t { rate, damage, range, air };
 struct TurretMarks {
     int64_t rate = 0;
     int64_t damage = 0;
     int64_t range = 0;
-    int64_t of(DefenceStat s) const { return s == DefenceStat::rate ? rate : s == DefenceStat::damage ? damage : range; }
-    int64_t& of(DefenceStat s) { return s == DefenceStat::rate ? rate : s == DefenceStat::damage ? damage : range; }
+    int64_t air = 0;
+    int64_t of(DefenceStat s) const { return const_cast<TurretMarks*>(this)->of(s); }
+    int64_t& of(DefenceStat s) {
+        switch (s) {
+        case DefenceStat::rate: return rate;
+        case DefenceStat::damage: return damage;
+        case DefenceStat::range: return range;
+        case DefenceStat::air: return air;
+        }
+        return rate;
+    }
+    int64_t total() const { return rate + damage + range + air; }
     bool operator==(const TurretMarks&) const = default;
 };
 
@@ -1692,7 +1703,7 @@ template <> struct EnumInfo<StructureKind> {
         "citadel", "habDome", "garrison", "bastion", "derrick", "foundry", "spacedock", "lab", "sentinel", "gatling"};
 };
 template <> struct EnumInfo<DefenceStat> {
-    static constexpr std::array<std::string_view, 3> names{"rate", "damage", "range"};
+    static constexpr std::array<std::string_view, 4> names{"rate", "damage", "range", "air"};
 };
 template <> struct EnumInfo<Unit::Task> {
     static constexpr std::array<std::string_view, 18> names{

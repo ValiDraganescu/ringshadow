@@ -1,13 +1,15 @@
-// The realm's defences (WorldMap.h, D1 and D2; docs/mmorpg-m8.md): the
+// The realm's defences (WorldMap.h, D1, D2 and D3; docs/mmorpg-m8.md): the
 // Citadel's four corner turrets, armed with the realm's marks and upgraded
-// from the realm wallet. The guns themselves are the core's
-// (`Defence::weapon`, `Simulation::stepTurret`); a placed AA tower or
-// gatling gun is a building like any other, from a blueprint.
+// from the realm wallet; a placed AA tower (the Sentinel) or gatling gun is
+// a building like any other, from a blueprint, upgraded by any pilot from
+// its own wallet. The guns themselves are the core's (`Defence::weapon`,
+// `Simulation::stepTurret`).
 
 #include "WorldMap.h"
 
 #include "Defence.h"
 #include "NavGrid.h"
+#include "NetProtocol.h"
 
 #include <cmath>
 #include <sstream>
@@ -33,6 +35,50 @@ std::optional<std::string> WorldMap::upgradeCitadel(PilotId pilot, DefenceStat s
     return std::nullopt;
 }
 
+std::optional<std::string> WorldMap::upgradeTurret(PilotId pilot, int64_t turret, DefenceStat stat) {
+    PilotState* p = pilotState(pilot);
+    if (!p || p->flight) return "Not in a world";
+    const size_t r = p->region;
+    GameState& st = regions_[r]->simulation().state;
+    Structure* s = nullptr;
+    for (Structure& b : st.structures)
+        if (b.id == turret) s = &b;
+    if (!s || !realm(*s) || !Defence::upgradable(s->kind)) return std::string("Only a Sentinel or a Gatling Gun takes marks");
+    const std::string title = Simulation::title(s->kind);
+    if (!s->complete()) return "The " + title + " is not finished";
+    const auto me = p->unit ? st.unit(*p->unit) : std::nullopt;
+    if (!me || distance(me->position, s->position) - Rules::radius(s->kind) - Rules::radius(me->kind) > Defence::turretReach)
+        return "Too far: stand within " + std::to_string(int(Defence::turretReach)) + " cells of the " + title;
+    bankOut(*p, r);
+    const TurretMarks had = s->marks.value_or(TurretMarks{});
+    if (const auto no = Defence::turretRefusal(s->kind, stat, had, p->wallet.ore, p->wallet.hydrogen)) {
+        bankIn(*p, r);
+        return no;
+    }
+    const int64_t mark = had.of(stat) + 1;
+    const ShopPrice price = Defence::turretPrice(s->kind, stat, mark);
+    p->wallet.ore -= price.ore;
+    p->wallet.hydrogen -= price.hydrogen;
+    bankIn(*p, r);
+    TurretMarks now = had;
+    now.of(stat) = mark;
+    s->marks = now;
+    // Every pilot here is told who paid (the toast "upgraded by").
+    const std::string by = callsign(p->key);
+    const std::string id = std::string(rawValue(s->kind)) + "/" + std::string(rawValue(stat));
+    for (auto& [other, q] : pilots_)
+        if (!q.flight && q.region == r)
+            q.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::upgraded, id, 0, mark, by});
+    pushProgress(pilot);
+    return std::nullopt;
+}
+
+int64_t WorldMap::turretKills(size_t r, int64_t id) const {
+    if (r >= kills_.size()) return 0;
+    const auto it = kills_[r].find(id);
+    return it == kills_[r].end() ? 0 : it->second;
+}
+
 std::string WorldMap::devDefence(const std::string& line) {
     std::istringstream in(line);
     std::string word, what;
@@ -43,6 +89,14 @@ std::string WorldMap::devDefence(const std::string& line) {
         realm_.ore += 3000;
         realm_.hydrogen += 400;
         return "dev: defence: the realm wallet holds " + std::to_string(realm_.ore) + " ore, " + std::to_string(realm_.hydrogen) + " MH";
+    }
+    if (what == "purse") {
+        bankOut(p, p.region);
+        p.wallet.ore += 5000;
+        p.wallet.hydrogen += 3000;
+        bankIn(p, p.region);
+        pushProgress(pilot);
+        return "dev: defence: the pilot's wallet holds " + std::to_string(p.wallet.ore) + " ore, " + std::to_string(p.wallet.hydrogen) + " MH";
     }
     if (what == "blueprints") {
         p.progress.giveBlueprint(StructureKind::gatling, 2);
@@ -98,9 +152,18 @@ std::string WorldMap::devDefence(const std::string& line) {
                     if (u.id == b && u.bug) u.bug->group = pack.id;
             }
         }
-    } else if (what == "gatling" || what == "aa") {
-        const StructureKind kind = what == "gatling" ? StructureKind::gatling : StructureKind::sentinel;
-        const auto gun = placeAhead(kind, 5);
+    } else if (what == "gatling" || what == "aa" || what == "air" || what == "flyers") {
+        const StructureKind kind = what == "aa" ? StructureKind::sentinel : StructureKind::gatling;
+        // "flyers": fresh Gloamwings for the gatling gun nearest the pilot.
+        const bool air = what == "air" || what == "flyers";
+        std::optional<Structure> gun;
+        if (what == "flyers") {
+            for (const Structure& b : st.structures)
+                if (b.kind == kind && realm(b) && (!gun || distance(b.position, at) < distance(gun->position, at))) gun = b;
+            if (!gun) return "dev: defence flyers: no gatling gun here";
+        } else {
+            gun = placeAhead(kind, 5);
+        }
         if (!gun) return "dev: defence " + what + ": no room ahead";
         // Its bugs beyond it, inside its reach and across the pilot's view,
         // set on it (no raid: no warning over the picture).
@@ -110,21 +173,30 @@ std::string WorldMap::devDefence(const std::string& line) {
         for (size_t i = 0; i < st.patches.size(); i++)
             if (st.patches[i].remaining > 0 && (!dep || distance(st.patches[i].position, at) < distance(st.patches[*dep].position, at))) dep = i;
         if (!dep) return "dev: defence " + what + ": no deposit";
-        // On open ground 4 to 5 cells from it: beyond it first, then round it.
+        // On open ground 4 to 5 cells from it: beyond it first, then round
+        // it ("air": 5 to 5.8 cells from its edge, beyond a bare gatling
+        // gun's air reach of 4.5 and inside a fully marked one's 6, D3).
         Vec2 site = gun->position + dir * 4 + side * 3;
         bool found = false;
+        const double airAt = Rules::radius(kind) + Rules::radius(UnitKind::gloamwing) + 5.4;
+        const std::vector<double> ks = air ? std::vector<double>{airAt} : std::vector<double>{4.5, 4.0, 5.0};
         for (const double turn : {0.6, -0.6, 0.0, 1.2, -1.2, 1.8, -1.8, 2.4, -2.4, 3.1})
-            for (const double k : {4.5, 4.0, 5.0}) {
-                if (found) break;
-                const double h = std::atan2(dir.y, dir.x) + turn;
-                const Vec2 q = gun->position + Vec2(std::cos(h), std::sin(h)) * k;
-                if (sim.nav && sim.nav->walkable(q) && !sim.nav->inRock(q)) {
-                    site = q;
-                    found = true;
+            for (const double k : ks)
+                for (const double extra : {0.0, Rules::highGroundRangeBonus}) {
+                    if (found || (!air && extra > 0)) break;
+                    const double h = std::atan2(dir.y, dir.x) + turn;
+                    const Vec2 q = gun->position + Vec2(std::cos(h), std::sin(h)) * (k + extra);
+                    // "air": below the gun its high-ground bonus reaches farther,
+                    // so the flyers hover that much farther out.
+                    const bool lower = sim.field && sim.field->level(gun->position) > sim.field->level(q);
+                    if (air && lower != (extra > 0)) continue;
+                    if (sim.nav && sim.nav->walkable(q) && !sim.nav->inRock(q)) {
+                        site = q;
+                        found = true;
+                    }
                 }
-            }
         if (!found) return "dev: defence " + what + ": no open ground round it";
-        if (kind == StructureKind::gatling) {
+        if (what == "gatling") {
             // Shardlings march on it: a raid (it ignores the opening's calm
             // round the start pad), from 9 cells beyond.
             g = spawnBroodGroup(r, UnitKind::shardling, 6, Poi::building, gun->id, gun->position + dir * 9 + side * 3, false);
@@ -135,11 +207,12 @@ std::string WorldMap::devDefence(const std::string& line) {
         if (g) {
             BroodGroup& grp = brood_[r].groups.back();
             grp.site = site;
-            grp.radius = 2.5;
-            grp.turret = gun->id;
+            grp.radius = air ? 0.4 : 2.5;
+            // "air": they hover until the gun reaches them (then turn on it).
+            if (!air) grp.turret = gun->id;
         }
     } else {
-        return "dev: defence: '" + what + "' is not wallet|blueprints|citadel|gatling|aa";
+        return "dev: defence: '" + what + "' is not wallet|purse|blueprints|citadel|gatling|aa|air|flyers";
     }
     if (!g) return "dev: defence " + what + ": not placed";
     return "dev: defence " + what + ": group " + std::to_string(*g) + " in " + world_->regions[r].file.id;

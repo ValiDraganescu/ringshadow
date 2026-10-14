@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -36,6 +36,10 @@ struct SavedBuilding {
     /// Construction seconds left; nil once built.
     std::optional<double> buildLeft;
     double hp = 0;
+    /// D3: a placed turret's marks, and the bugs it has killed (schema 16;
+    /// none before).
+    TurretMarks marks{};
+    int64_t kills = 0;
     bool operator==(const SavedBuilding&) const = default;
 };
 
@@ -170,7 +174,7 @@ public:
     /// world's clock; 3: the pilots' progression; 4: gated by blueprints;
     /// 5: contracts; 6: starfalls; 7: the rig; 8: the realm's buildings;
     /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions;
-    /// 14: mercenaries; 15: the Citadel's marks).
+    /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 

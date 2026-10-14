@@ -244,6 +244,10 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
         for (const Structure& b : regions_[it->second.region]->simulation().state.structures)
             if (realm(b))
                 if (std::string by = builder(it->second.region, b.id); !by.empty()) m.builders[b.id] = std::move(by);
+    // D3: what the defences here have killed (the turret card).
+    if (!it->second.flight)
+        for (const auto& [id, n] : kills_[it->second.region])
+            if (regions_[it->second.region]->simulation().state.structure(id)) m.turretKills[id] = n;
     m.callsign = callsign(it->second.key);
     // C1: the realm wallet, the tax, and what this pilot has given.
     m.realmWallet = {realm_.ore, realm_.hydrogen};

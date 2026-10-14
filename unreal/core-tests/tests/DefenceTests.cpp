@@ -137,13 +137,27 @@ TEST(Defence_gatlingGroundAndCloseAir) {
 }
 
 /// Marks: each adds a fifth to the fire rate, a quarter to the damage and a
-/// cell to the range (and to a gatling gun's air reach).
+/// cell to the range; a gatling gun's air marks half a cell each to its air
+/// reach (4.5 to 6, short of the AA tower's 7), which range marks leave be.
 TEST(Defence_marksApply) {
     const UnitStats w = Defence::apply(UnitStats::gatling, TurretMarks{.rate = 1, .damage = 2, .range = 3});
     EXPECT_NEAR(w.cooldown, 0.25 / 1.2, 1e-9);
     EXPECT_NEAR(w.damage, 4 * 1.5, 1e-9);
     EXPECT_NEAR(w.range, 9, 1e-9);
-    EXPECT_NEAR(w.airRange, 7.5, 1e-9);
+    EXPECT_NEAR(w.airRange, 4.5, 1e-9);
+    const UnitStats air = Defence::apply(UnitStats::gatling, TurretMarks{.air = 3});
+    EXPECT_NEAR(air.airRange, 6, 1e-9);
+    EXPECT_TRUE(air.airRange < UnitStats::sentinel.range);
+    EXPECT_NEAR(air.range, 6, 1e-9);
+    // The AA tower's range marks are its air reach.
+    const UnitStats aa = Defence::apply(UnitStats::sentinel, TurretMarks{.rate = 3, .range = 2});
+    EXPECT_NEAR(aa.range, 9, 1e-9);
+    EXPECT_NEAR(aa.cooldown, UnitStats::sentinel.cooldown / 1.6, 1e-9);
+    // A placed turret's weapon carries its marks.
+    Structure g(3, StructureKind::gatling, 0, Vec2(0, 0));
+    EXPECT_NEAR(Defence::weapon(g)->damage, 4, 1e-9);
+    g.marks = TurretMarks{.damage = 3};
+    EXPECT_NEAR(Defence::weapon(g)->damage, 4 * 1.75, 1e-9);
     Structure c(1, StructureKind::citadel, 0, Vec2(0, 0));
     EXPECT_TRUE(!Defence::weapon(c).has_value());
     c.marks = TurretMarks{};
@@ -165,4 +179,52 @@ TEST(Defence_citadelPricesAndRefusals) {
     const auto last = Defence::citadelRefusal(DefenceStat::range, TurretMarks{.range = 3}, 99999, 9999);
     ASSERT_TRUE(last.has_value());
     EXPECT_TRUE(last->find("last mark") != std::string::npos);
+}
+
+/// A placed turret's marks from the pilot's wallet (D3): the gatling gun's
+/// table, half as much again for the AA tower, air reach the gatling gun's
+/// alone; refusals when the wallet is short and at the last mark.
+TEST(Defence_turretPricesAndRefusals) {
+    using K = StructureKind;
+    EXPECT_TRUE(Defence::turretPrice(K::gatling, DefenceStat::rate, 1) == (ShopPrice{100, 50}));
+    EXPECT_TRUE(Defence::turretPrice(K::gatling, DefenceStat::air, 2) == (ShopPrice{300, 200}));
+    EXPECT_TRUE(Defence::turretPrice(K::gatling, DefenceStat::damage, 3) == (ShopPrice{800, 500}));
+    EXPECT_TRUE(Defence::turretPrice(K::sentinel, DefenceStat::range, 1) == (ShopPrice{150, 75}));
+    EXPECT_TRUE(Defence::turretPrice(K::sentinel, DefenceStat::range, 3) == (ShopPrice{1200, 750}));
+    EXPECT_TRUE(Defence::turretPrice(K::sentinel, DefenceStat::air, 1) == ShopPrice{});
+    EXPECT_TRUE(Defence::turretPrice(K::habDome, DefenceStat::rate, 1) == ShopPrice{});
+    // A whole gatling gun: four stats of three marks, 3,000 MH.
+    int64_t mh = 0;
+    for (const DefenceStat st : allCases<DefenceStat>())
+        for (int64_t k = 1; k <= Defence::marksMax; k++) mh += Defence::turretPrice(K::gatling, st, k).hydrogen;
+    EXPECT_EQ(mh, 3000);
+
+    EXPECT_TRUE(!Defence::turretRefusal(K::gatling, DefenceStat::air, TurretMarks{}, 100, 50));
+    const auto ore = Defence::turretRefusal(K::gatling, DefenceStat::rate, TurretMarks{}, 99, 50);
+    ASSERT_TRUE(ore.has_value());
+    EXPECT_TRUE(*ore == "Your wallet is short: 100 ore needed, you have 99");
+    const auto h = Defence::turretRefusal(K::sentinel, DefenceStat::damage, TurretMarks{.damage = 1}, 9999, 299);
+    ASSERT_TRUE(h.has_value());
+    EXPECT_TRUE(*h == "Your wallet is short: 300 MH needed, you have 299");
+    const auto last = Defence::turretRefusal(K::gatling, DefenceStat::air, TurretMarks{.air = 3}, 99999, 9999);
+    ASSERT_TRUE(last.has_value());
+    EXPECT_TRUE(*last == "Air reach is at its last mark");
+    EXPECT_TRUE(Defence::turretRefusal(K::sentinel, DefenceStat::air, TurretMarks{}, 99999, 9999).has_value());
+    EXPECT_TRUE(Defence::turretRefusal(K::habDome, DefenceStat::rate, TurretMarks{}, 99999, 9999).has_value());
+    EXPECT_TRUE(Defence::citadelRefusal(DefenceStat::air, TurretMarks{}, 99999, 9999).has_value());
+}
+
+/// A gatling gun with its air marks reaches a Gloamwing it couldn't before:
+/// one 5.5 cells from its edge.
+TEST(Defence_gatlingAirMarksReach) {
+    auto [s, at] = scene();
+    addStructure(s, Structure::Kind::gatling, at, 0);
+    const double edge = Rules::radius(StructureKind::gatling);
+    const int64_t fly = bug(s, Unit::Kind::gloamwing, at + Vec2(0, edge + 5.5 + Rules::radius(UnitKind::gloamwing)));
+    Simulation m = sim(s);
+    run(m, 2);
+    EXPECT_TRUE(!hurt(m, fly));
+    m.state.structures.back().marks = TurretMarks{.air = 3};
+    run(m, 2);
+    EXPECT_TRUE(hurt(m, fly));
 }

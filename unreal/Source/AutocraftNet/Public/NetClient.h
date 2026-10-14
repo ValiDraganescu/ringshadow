@@ -95,6 +95,9 @@ public:
     /// D1: the realm's Citadel turrets take their next mark of `stat`, from
     /// the realm wallet (`RequestMessage::UpgradeCitadel`).
     uint32_t upgradeCitadel(DefenceStat stat);
+    /// D3: placed turret `turret` takes its next mark of `stat`, from the
+    /// pilot's wallet (`RequestMessage::UpgradeTurret`).
+    uint32_t upgradeTurret(int64_t turret, DefenceStat stat);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }
