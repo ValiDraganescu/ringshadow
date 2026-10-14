@@ -75,7 +75,6 @@ FString FAcMmoClient::DefaultWorld()
 	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("server"), TEXT("worlds"), TEXT("first.json")));
 }
 
-FString FAcMmoClient::Directory()
 bool FAcMmoClient::DevClock(const FString& Line)
 {
 	if (FString Dir; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty()) return false;
@@ -87,6 +86,7 @@ bool FAcMmoClient::DevClock(const FString& Line)
 	return true;
 }
 
+FString FAcMmoClient::Directory()
 {
 	const TCHAR* Cmd = FCommandLine::Get();
 	if (FString Dir; FParse::Value(Cmd, TEXT("AcMmoDir="), Dir) && !Dir.IsEmpty())
@@ -301,6 +301,12 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Args.push_back("--clock-hour");
 		Args.push_back(std::to_string(Hour));
 	}
+	// Shots only: the harness moves the world's clock mid-run (DevClock).
+	if (FString Dir; FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) && !Dir.IsEmpty())
+	{
+		Args.push_back("--dev-control");
+		Args.push_back(Utf8(FPaths::Combine(Directory(), TEXT("dev-control.txt"))));
+	}
 	if (FString Weather; FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), Weather) && !Weather.IsEmpty())
 	{
 		Args.push_back("--weather");
@@ -315,12 +321,6 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	if (!Server.start(Utf8(Program), Args, Token))
 	{
 		Fail(FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
-	// Shots only: the harness moves the world's clock mid-run (DevClock).
-	if (FString Dir; FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) && !Dir.IsEmpty())
-	{
-		Args.push_back("--dev-control");
-		Args.push_back(Utf8(FPaths::Combine(Directory(), TEXT("dev-control.txt"))));
-	}
 		return false;
 	}
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on world %s (pid %d), save %s, log %s"), *Program, *Tilde(WorldFile), Server.pid(),
