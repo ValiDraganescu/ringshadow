@@ -49,6 +49,17 @@ Comes from the user's remarks after playing to level 10 (2026-10-14).
 - The world goes on while the game is closed: the server keeps running as
   long as the computer is on.
 
+## Decided (2026-10-14, the user, third round: canyon defence)
+
+- Some zones are canyons: the bugs come in waves along defined paths to
+  reach a field of ore or MH, to mine it for themselves. Pilots build AA
+  towers and gatling guns along the paths (tower defence), and turrets
+  have upgrades.
+- The first wave replays until the pilots beat it, with turrets or units;
+  beating it starts the zone's game, waves growing harder. If the pilots
+  fail to defend, the brood queen comes, destroys every turret in the zone,
+  and it starts over from the first wave.
+
 ## Decided (2026-10-14, manager)
 
 - The "Prospector only, no AI units" focus ends here: bugs are the first
@@ -66,6 +77,16 @@ Comes from the user's remarks after playing to level 10 (2026-10-14).
   game) and shipped as sound assets. Mercenaries are the pilot's: their ore
   goes to its wallet, taxed like any unload. When the server was stopped
   anyway, it catches up the mercenaries' work on the next start.
+- Canyon defence: a canyon zone is part of a region file (entrances, the
+  bugs' paths, the prize field, build spots along the rims). First zone:
+  one canyon in a level-2 region; more follow when it plays well. A wave
+  fails when its bugs carry off a set share of the prize; the queen who
+  comes is the Matriarch (N3's model and attacks), and she leaves when the
+  turrets are down. Each cleared wave pays every pilot who fought in it;
+  clearing the last wave holds the canyon for a world day (the prize field
+  is the pilots' to mine, no waves). Turret upgrades are paid from the
+  pilot's wallet at the turret; the Citadel's own guns from the realm
+  wallet (D1).
 - Added by the manager: after the opening chain, KSTR points at the next
   goal (L1), because a pilot at level 10 asked "now what?".
 
@@ -85,6 +106,9 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | D1 | Citadel weapons: the Citadel fires at bugs in range; realm-wallet upgrades for fire rate, damage and range | N2, C1 | |
 | D2 | Defence buildings: AA tower (Sentinel model, air only) and the gatling gun (new model, amalgam rounds, ground and close air), blueprints, prices, build menu | N2, C2 | |
 | N3 | The brood queen: a giant in a region other than Prospect Landing, a nest with many bugs, her own attack and sound, a reward for killing her | N2 | |
+| D3 | Turret upgrades: per AA tower and gatling, marks for fire rate, damage and range (and the gatling's air reach), paid at the turret from the pilot's wallet; shown on the turret | D2 | |
+| Z1 | The first canyon zone: a canyon cut into a level-2 region (walls, rims to build on, 2–3 entrances, paths that meet at a prize field of rich ore and MH); region file support for zones, paths and build spots; validate and preview | N2 | |
+| Z2 | The canyon game: waves along the paths to the prize, wave 1 replays until beaten, then escalating waves; a failed wave brings the Matriarch, who fells every turret in the zone and resets it to wave 1; rewards per wave, the held canyon after the last wave; wave HUD, warnings, narration lines | Z1, D2, N3 | |
 | W4 | Seamless regions: region borders follow the land (not rectangles), visible passages between regions, crossing on foot without a seam; folds in W3's ground palettes and landmarks | | |
 | F2 | The transport ship: the pilot can't fly alone; build a landing pad, board the Dropship, lift, turn, speed away, seamless approach and landing at a pad in a discovered region; flight menu shows only reachable pads | R1, W4 | |
 | L1 | What next after the opening: KSTR goal contracts by level (Hab Dome, Foundry hunt, the shop, the first defences) | C2, D2 | |

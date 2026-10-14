@@ -506,3 +506,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I mmofly "camera rose with lift-off" fails on the variant too (pre-N2).
 - I Full Lodeback sac reads cream → N1b.
 - T D1 + D2 (defences) next for wt2.
+- D User: canyon zones play as tower defence: waves on paths to a prize.
+- D User: wave 1 replays until beaten; failure brings the queen, reset.
+- D Manager: zones in region files; Matriarch is the queen; held for a day.
+- D Manager: tasks D3 (turret upgrades), Z1 (canyon), Z2 (waves) added.
