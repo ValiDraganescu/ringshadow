@@ -510,3 +510,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D User: wave 1 replays until beaten; failure brings the queen, reset.
 - D Manager: zones in region files; Matriarch is the queen; held for a day.
 - D Manager: tasks D3 (turret upgrades), Z1 (canyon), Z2 (waves) added.
+- D Manager: gatling floor ~5, AA tower ~10; Citadel upgrades on a DEFENCE tab.
+- T D1 + D2 briefed to wt2.
