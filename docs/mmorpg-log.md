@@ -473,3 +473,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D User: mercenary prospectors mine at 1/24 the pilot's rate.
 - D User: the server keeps running after the game quits.
 - D Manager: tasks K2, M2, S2, H2 added to M8; two workers.
+- T N1 done 6222e8d: models (blockout), 49 sounds, lineup pictures.
+- I Brood models are blockouts: flat sac, plain cones → N1b.
+- T N2 (bugs in the world) next for wt2.
