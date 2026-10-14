@@ -423,3 +423,17 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: work paused 2026-10-14 17:45 for the user's showcase.
 - N Showcase page: https://claude.ai/artifact/RdipgqqQkk2VXBPwSpzs6K
 - I User: resume, and whether to post the reel.
+- D User remarks at level 10 → M8 "the realm under siege".
+- D User: buildings belong to the realm, shared by all pilots.
+- D User: Citadel taxes unloads into a realm wallet; donations allowed.
+- D User: Citadel shop sells consumables and stackable one-use blueprints.
+- D User: alien bugs at POIs; attack pilots, buildings; mine veins.
+- D User: brood queen nest outside Prospect Landing.
+- D User: Citadel guns, AA tower, amalgam gatling; weak Prospector weapon.
+- D User: seamless region passages; no rectangles.
+- D User: no solo flight; Dropship between built landing pads.
+- D User: one worker at a time.
+- D Manager: bugs end "Prospector only"; sites give a free blueprint.
+- D Manager: W3 folds into W4; X1 waits; U1 moves to M8.
+- I User bugs: mining sparks linger; AI-driven Prospector moves laggily.
+- I User at level 10 asked "now what?" → L1 goal contracts.
