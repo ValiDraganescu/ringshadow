@@ -319,3 +319,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N W1: start ore 9k→89k; MH per region 36k→11–13k.
 - I W1 proposals: ground above level 2, landmark props, ground tint.
 - T E2 starfall → world-look.
+- D User: pause and show when something impressive is ready.
+- D Manager: showcase after P5, E1, E2: tree, sweep, starfall.
