@@ -571,3 +571,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N W4: step 0.0788 cells/tick across all edges; protocol 23.
 - N W4 suites: core 475, server 224, net 82 pass.
 - I W4 merge first aborted on stray doc edits; those (train → hidden_run) committed.
+- T A1 done dfdf8fd: radio ducks −24 dB in 0.3 s under narration, back over 1 s.
+- I Turret card HP 301/300 fixed (Rules::hpShown).
+- I K2 shots stall at "into the mission's ring" (hold-easy drive) → recheck.
+- N A1 suites: core 479, server 224, net 82 pass.
+- T N3 (the Matriarch) next for wt2.
