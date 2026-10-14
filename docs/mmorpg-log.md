@@ -343,3 +343,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: build train started (pid 38384); workers moved to train.py.
 - I Train: workers declared edits after writing; estimates void.
 - D Train: edit needs --files, before the first save; task-done at end.
+- N Shot runs ~85% waiting on the game clock (~50 min today).
+- D User-approved S1: clock jump, short starfall lead, ShotsOnly filter.
+- T S1 → world-look after E2 (owns the Starfall set).

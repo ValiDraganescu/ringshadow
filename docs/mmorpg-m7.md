@@ -27,6 +27,7 @@ Runs alongside the end of M6 (P4b–P7): workers freed from M6 start here.
 | E2 | Starfall: the server drops meteors at times and places it picks; a streak in the sky, a crater with a rare rich deposit, first come first served, an announcement | C1 | in progress |
 | K1 | KSTR contracts: the radio offers 3 contracts a day per pilot (deliver ore/MH, reach a site, build, survive an event); rewards XP and MH; a contract panel and a radio voice line | P3 | server done; panel with P5 |
 | F1 | Flight worth watching: the pad-to-pad flight and jump jets burn MH, with thrust, dust and a camera that sells it | P3 | |
+| S1 | Fast picture runs: a dev-only clock jump mid-run (no waiting for night), a starfall lead of ~8–10 s, `-AcMmoShotsOnly=` to shoot chosen moments; Starfall set under 1 min with the same 9 pictures (user-approved, via the build-train session) | E2 | |
 
 Done when: in a hidden run a pilot starts at Prospect Landing, takes a
 contract, sees a ringshadow sweep and a starfall, and the pictures make a
