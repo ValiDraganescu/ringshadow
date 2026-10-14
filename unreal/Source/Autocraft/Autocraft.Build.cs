@@ -30,6 +30,7 @@ public class Autocraft : ModuleRules
 			foreach (string Path in new string[] {
 				"Resources/Sounds/music/*.mp3",  // UAcMusicPlayer::OwnMusicFolder
 				"Content-src/launcher/*.jpg",  // FAcLauncherArt::Folder
+				"Resources/Textures/Skills/skill_icons.png",  // SAcSkillScreen's node icons
 				"Content/Audio/Sounds.json",  // UAcAudioDirector, UAcMusicDeck, UAcMusicPlayer
 				"Content/Models/ModelCatalog.json",  // FAcModelCatalog
 				"Content/UI/Cursors/*.tiff",  // UAcPointer::InstallCursors: the Mac's

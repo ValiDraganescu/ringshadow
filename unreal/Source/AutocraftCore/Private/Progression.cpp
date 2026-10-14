@@ -4,6 +4,7 @@
 #include "Progression.h"
 
 #include "Leveling.h"
+#include "Simulation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -327,6 +328,188 @@ int64_t Progression::treePoints() {
     int64_t sum = 0;
     for (const auto& n : nodes()) sum += n.ranks;
     return sum;
+}
+
+// MARK: - The skill screen's words
+
+namespace {
+
+/// "6%" from 0.06; "0.5" from 0.5; "12" from 12.
+std::string percent(double x) {
+    const double v = std::round(std::abs(x) * 1000) / 10;
+    std::string s = swiftDescription(v);
+    if (s.size() > 2 && s.compare(s.size() - 2, 2, ".0") == 0) s.resize(s.size() - 2);
+    return s + "%";
+}
+std::string number(double x) {
+    std::string s = swiftDescription(std::round(std::abs(x) * 100) / 100);
+    if (s.size() > 2 && s.compare(s.size() - 2, 2, ".0") == 0) s.resize(s.size() - 2);
+    return s;
+}
+std::string signedPercent(double x) { return (x < 0 ? "−" : "+") + percent(x); }
+std::string ordinal(int64_t n) {
+    const int64_t t = n % 100;
+    const char* suffix = (t >= 11 && t <= 13) ? "th" : n % 10 == 1 ? "st" : n % 10 == 2 ? "nd" : n % 10 == 3 ? "rd" : "th";
+    return std::to_string(n) + suffix;
+}
+std::string list(const std::vector<std::string>& words) {
+    std::string out;
+    for (size_t i = 0; i < words.size(); i++) {
+        if (i > 0) out += i + 1 == words.size() ? " and " : ", ";
+        out += words[i];
+    }
+    return out;
+}
+std::string plural(SiteKind k) {
+    switch (k) {
+    case SiteKind::crate: return "crates";
+    case SiteKind::wreck: return "wrecks";
+    case SiteKind::cache: return "caches";
+    case SiteKind::vault: return "vaults";
+    }
+    return "sites";
+}
+std::string plural(Beacon b) {
+    switch (b) {
+    case Beacon::citadel: return "Citadel";
+    case Beacon::habDome: return "Hab Domes";
+    case Beacon::derrick: return "Derricks";
+    }
+    return "";
+}
+
+/// A stat of the strategy game's, changed by `c` in all.
+std::string coreWords(const Stat& stat, const Change& c) {
+    const auto* p = c.as<Change::Percent>();
+    const auto* q = c.as<Change::Plus>();
+    const double x = p ? p->x : q ? q->x : 0;
+    if (stat.is<Stat::Drill>()) return "Drill " + signedPercent(x);
+    if (stat.is<Stat::OreCarry>()) return p ? "Ore loads " + signedPercent(x) : "+" + number(x) + " ore a trip";
+    if (stat.is<Stat::Hydrogen>()) return "Pump " + signedPercent(x);
+    if (stat.is<Stat::HydrogenCarry>()) return "+" + number(x) + " MH a trip";
+    if (stat.is<Stat::Build>()) return "Build " + signedPercent(x);
+    if (stat.is<Stat::Repair>()) return "Repair " + signedPercent(x);
+    if (stat.is<Stat::BuildingCost>()) return "Buildings cost " + percent(x) + " less";
+    if (stat.is<Stat::Speed>()) return "Walk " + signedPercent(x);
+    if (stat.is<Stat::Sight>()) return "Sight " + signedPercent(x);
+    if (stat.is<Stat::JumpReach>()) return "Jump " + number(x) + (x == 1 ? " cell" : " cells") + " farther";
+    if (stat.is<Stat::Hp>()) return "+" + number(x) + " hp";
+    if (stat.is<Stat::Armor>()) return "+" + number(x) + " armor";
+    if (stat.is<Stat::Damage>()) return "Torch damage " + signedPercent(x);
+    if (stat.is<Stat::Range>()) return "Torch reach +" + number(x) + (x == 1 ? " cell" : " cells");
+    if (stat.is<Stat::DamageTaken>()) return "Damage taken " + signedPercent(x);
+    return p ? signedPercent(x) : "+" + number(x);
+}
+
+std::string skillWords(SkillStat stat, double x) {
+    switch (stat) {
+    case SkillStat::depositYield: return "A load takes " + percent(x) + " less from the deposit";
+    case SkillStat::wellYield: return "A pump takes " + percent(x) + " less from the well";
+    case SkillStat::regrowTime: return "Deposits you empty grow back " + percent(x) + " sooner";
+    case SkillStat::unloadOre: return "Ore unloaded counts " + signedPercent(x);
+    case SkillStat::unloadHydrogen: return "MH unloaded counts " + signedPercent(x);
+    case SkillStat::loadTriple: return percent(x) + " chance a load carries triple";
+    case SkillStat::chipChance: return "+" + percent(x) + " chance of a survey chip";
+    case SkillStat::speedCarryingHydrogen: return "Walk " + signedPercent(x) + " carrying MH";
+    case SkillStat::speedCarryingNothing: return "Walk " + signedPercent(x) + " carrying nothing";
+    case SkillStat::workReach: return "Weld and repair from " + number(x) + (x == 1 ? " cell" : " cells") + " farther";
+    case SkillStat::flightTime: return "Flights take " + percent(x) + " less time";
+    case SkillStat::buildingHydrogenCost: return "Buildings cost " + percent(x) + " less MH";
+    case SkillStat::ownBuildingHp: return "Your buildings " + signedPercent(x) + " hp";
+    case SkillStat::ownBuildingDamageTaken: return "Your buildings take " + percent(x) + " less damage";
+    case SkillStat::blueprintFloorCut: return "Blueprints open " + number(x) + " levels below their floor";
+    case SkillStat::builtOnPlacing: return "Buildings start " + percent(x) + " built";
+    }
+    return "";
+}
+
+std::string effectWords(const SkillEffect& e) {
+    if (auto n = e.as<SkillEffect::EveryNth>()) {
+        const std::string what = n->work == Work::oreTrip ? "ore trip carries double"
+                                 : n->work == Work::pump  ? "pump carries double"
+                                                          : "strike does double damage";
+        return "Every " + ordinal(n->n) + " " + what;
+    }
+    if (auto t = e.as<SkillEffect::DerrickTender>())
+        return "Derricks fill a " + number(t->tank) + " MH tank, " + number(t->perMinute) + " MH a minute";
+    if (auto w = e.as<SkillEffect::Wellspring>()) return "Wells under your Derricks grow back " + number(w->perMinute) + " MH a minute";
+    if (auto f = e.as<SkillEffect::FieldPump>()) return "Pump straight from a well at " + percent(f->share) + " of a Derrick's rate";
+    if (auto p = e.as<SkillEffect::PadLink>()) return "Fly from within " + number(p->radius) + " cells of a pad";
+    if (auto h = e.as<SkillEffect::HomingBeacon>()) {
+        std::vector<std::string> w;
+        for (Beacon b : h->from) w.push_back(plural(b));
+        return "Your " + list(w) + (h->from.size() == 1 ? " counts" : " count") + " as a pad";
+    }
+    if (auto s = e.as<SkillEffect::Surveyor>()) return "Sites show on the compass within " + number(s->radius) + " cells";
+    if (auto p = e.as<SkillEffect::ScannerPulse>()) {
+        std::vector<std::string> w;
+        for (SiteKind k : p->kinds) w.push_back(plural(k));
+        return "Arriving marks a region's " + list(w);
+    }
+    if (auto w = e.as<SkillEffect::SecondWind>())
+        return "Back " + percent(w->sooner) + " sooner, keep " + percent(w->cargo) + " of the cargo";
+    if (auto c = e.as<SkillEffect::Core>()) {
+        if (auto s = c->effect.as<Effect::Shield>()) return "A " + number(s->shield.hp) + " hp shield";
+        if (auto m = c->effect.as<Effect::SelfMend>()) return "Mend " + number(m->hpPerSecond) + " hp a second";
+    }
+    return "";
+}
+
+} // namespace
+
+std::string Progression::rankText(Skill s, int64_t rank) {
+    const SkillNode& n = node(s);
+    rank = std::clamp(rank, int64_t(0), n.ranks);
+    if (rank == 0) return {};
+    if (n.ranks == 1) return n.text;
+    if (!n.byRank.empty()) {
+        std::vector<std::string> w;
+        for (const SkillEffect& e : n.byRank[static_cast<size_t>(rank - 1)]) w.push_back(effectWords(e));
+        return list(w);
+    }
+    // Ranks that add up: one rank's effects, times `rank`.
+    const double r = static_cast<double>(rank);
+    std::vector<std::string> w;
+    std::vector<std::string> limits;
+    for (const SkillEffect& e : n.effects) {
+        if (auto c = e.as<SkillEffect::Core>()) {
+            if (auto st = c->effect.as<Effect::Stat>()) {
+                Change total = st->change;
+                if (auto p = total.as<Change::Percent>()) total = Change::Percent{p->x * r};
+                else if (auto q = total.as<Change::Plus>()) total = Change::Plus{q->x * r};
+                w.push_back(coreWords(st->stat, total));
+            }
+        } else if (auto st = e.as<SkillEffect::Stat>()) {
+            const auto* p = st->change.as<Change::Percent>();
+            const auto* q = st->change.as<Change::Plus>();
+            w.push_back(skillWords(st->stat, (p ? p->x : q ? q->x : 0) * r));
+        } else if (auto l = e.as<SkillEffect::BuildingLimit>()) {
+            limits.push_back(Simulation::title(l->kind));
+        }
+    }
+    if (!limits.empty()) w.push_back("+" + number(r) + " " + list(limits) + " allowed");
+    return list(w);
+}
+
+const std::vector<StructureKind>& Progression::blueprintKinds() {
+    static const std::vector<StructureKind> k{StructureKind::citadel, StructureKind::derrick, StructureKind::habDome,
+                                              StructureKind::foundry, StructureKind::lab,     StructureKind::spacedock,
+                                              StructureKind::bastion, StructureKind::sentinel};
+    return k;
+}
+
+int64_t Progression::blueprintFloor(StructureKind k) {
+    switch (k) {
+    case StructureKind::citadel: return 1;
+    case StructureKind::derrick: return 3;
+    case StructureKind::habDome: return 8;
+    case StructureKind::foundry: return 15;
+    case StructureKind::lab: return 25;
+    case StructureKind::spacedock: return 35;
+    case StructureKind::bastion: return 45;
+    case StructureKind::sentinel: return 55;
+    default: return 0;
+    }
 }
 
 // MARK: - The balance

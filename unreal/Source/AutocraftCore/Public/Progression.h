@@ -242,6 +242,18 @@ struct AUTOCRAFTCORE_API Progression {
     /// Points to fill a branch, and the whole tree.
     static int64_t branchPoints(Branch b);
     static int64_t treePoints();
+    /// What a node gives in all at `rank`, in a few words for the skill
+    /// screen ("Drill +18%", "Every 4th ore trip carries double"). A
+    /// one-rank node: its `text`. Empty at rank 0.
+    static std::string rankText(Skill s, int64_t rank);
+
+    /// The buildings a pilot builds from blueprints, in the build menu's
+    /// order (docs/prospector-progression.md, "Buildings in the MMO"; the
+    /// Garrison is held back).
+    static const std::vector<StructureKind>& blueprintKinds();
+    /// The level a building's blueprint opens at (its floor); 0: no
+    /// blueprint (the Garrison).
+    static int64_t blueprintFloor(StructureKind k);
 
     /// The tree as text: every node, the curve, the gates, the slots and
     /// the respec price. `balance()` is the catalogue's.

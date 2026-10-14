@@ -7,6 +7,7 @@
 #include "AcHUD.h"
 #include "AcLog.h"
 #include "AcMinimap.h"
+#include "AcMmo.h"
 #include "AcPointer.h"
 #include "AcRtsPawn.h"
 #include "AcSimSubsystem.h"
@@ -390,6 +391,25 @@ void UAcCommandMapSubsystem::PollKeys()
 	if (!PC) return;
 	const FModifierKeysState Mods = FSlateApplication::IsInitialized() ? FSlateApplication::Get().GetModifierKeys() : FModifierKeysState();
 	if (Mods.IsCommandDown() || Mods.IsControlDown()) return;
+	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsMmo())
+	{
+		// The MMORPG test: K is the skill screen, Q/C/G the pilot's actives
+		// (the server uses the slot's skill; docs/prospector-progression.md).
+		UAcGameFlowSubsystem* Flow = UAcGameFlowSubsystem::Get(this);
+		if (Flow && PC->WasInputKeyJustPressed(EKeys::K))
+		{
+			Flow->ToggleSkillScreen();
+			return;
+		}
+		const FKey SlotKeys[] = {EKeys::Q, EKeys::C, EKeys::G};
+		for (int32 I = 0; I < 3; ++I)
+		{
+			if (!PC->WasInputKeyJustPressed(SlotKeys[I])) continue;
+			FAcMmoClient* Mmo = Sim->MmoClient();
+			ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
+			if (M && M->simulation().pilot) M->simulation().pilot->slot = I + 1;
+		}
+	}
 	if (PC->WasInputKeyJustPressed(EKeys::M))
 	{
 		// The MMORPG test: M is the world map (no command map there).

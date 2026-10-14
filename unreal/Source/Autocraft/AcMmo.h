@@ -236,6 +236,18 @@ public:
 	const ac::net::ProgressMessage* Progress() const;
 	std::optional<double> Xp() const;
 	std::vector<ac::net::ProgressMessage::News> TakeProgressNews();
+	/// The skill screen's asks (P5): a point into `Skill`, the last point in
+	/// it back, every point back (at the pilot's Citadel), an active into
+	/// slot `Index` (0 Q, 1 C, 2 G; unset: empty it). False, with `Why`: not
+	/// connected, not a world. The server's refusals: `SkillRefusal` (and a note).
+	bool Spend(ac::Skill Skill, FString* Why = nullptr);
+	bool Undo(ac::Skill Skill, FString* Why = nullptr);
+	bool Respec(FString* Why = nullptr);
+	bool Slot(int32 Index, std::optional<ac::Skill> Skill, FString* Why = nullptr);
+	/// The server's last refusal of a skill ask (empty: none since the last ask).
+	const FString& SkillRefusal() const { return LastSkillRefusal; }
+	/// Skill asks the server kept since the start.
+	int32 SkillsKept() const { return SkillsDone; }
 	/// The region the pilot is in (in flight: the one it lifted off from).
 	const ac::net::WorldMessage::Region* Here() const;
 	/// In flight: the region it flies to.
@@ -332,5 +344,12 @@ private:
 	TSet<uint32> PicksAsked;
 	FString LastPickRefusal;
 	int32 PicksDone = 0;
+	/// Skill asks (request ids), the last refusal, the ones kept.
+	TSet<uint32> SkillsAsked;
+	FString LastSkillRefusal;
+	int32 SkillsDone = 0;
+	/// Checks a skill ask can go (connected, a world).
+	bool CanAskSkills(FString* Why) const;
+	void AskedSkill(uint32 Id, const FString& What);
 	std::vector<ac::GameEvent> Events;
 };

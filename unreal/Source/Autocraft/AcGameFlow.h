@@ -55,6 +55,7 @@
 #include "SAcMenu.h"
 #include "SAcMmoBanner.h"
 #include "SAcNewGame.h"
+#include "SAcSkillScreen.h"
 #include "SAcWorldMap.h"
 #include "Session.h"
 
@@ -120,6 +121,12 @@ public:
 	/// The world map's FLY: asks the server; the map closes when asked, or
 	/// says why not.
 	void FlyFromMap(const FString& Region, const FString& Pad);
+	/// The Prospector's skill screen (K in the mode; docs/prospector-progression.md).
+	/// False outside the mode or without a HUD.
+	bool OpenSkillScreen();
+	void CloseSkillScreen();
+	void ToggleSkillScreen();
+	TSharedPtr<SAcSkillScreen> SkillScreenWidget() const { return SkillScreen; }
 	/// Back to the window game: the local server stops.
 	void StopMmo();
 
@@ -138,6 +145,11 @@ private:
 	TSharedPtr<SAcWorldMap> WorldMap;
 	/// The world map's state from the client, each frame.
 	void TickWorldMap();
+	TSharedPtr<SAcSkillScreen> SkillScreen;
+	/// The skill screen's state from the client's progress, each frame.
+	void TickSkillScreen();
+	/// The server's last skill refusal already handed to the screen.
+	FString SkillRefusalShown;
 	FDelegateHandle RefusedHandle;
 	/// -AcMmo: start the mode once the game is up.
 	bool bMmoWhenReady = false;

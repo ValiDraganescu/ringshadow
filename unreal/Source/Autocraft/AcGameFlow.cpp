@@ -32,6 +32,7 @@
 #include "Misc/Paths.h"
 
 #include "Commander.h"
+#include "NavGrid.h"
 #include "Rules.h"
 
 namespace
@@ -42,6 +43,8 @@ namespace
 	constexpr int32 MenuLayer = 75;
 	/// The MMORPG world map: over the command map, under the menu.
 	constexpr int32 WorldMapLayer = 70;
+	/// The MMORPG skill screen: beside the world map (one at a time).
+	constexpr int32 SkillScreenLayer = 71;
 
 	FString Text(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 
@@ -77,6 +80,13 @@ namespace
 					if (K == EKeys::Down || K == EKeys::S) { W->MovePick(0, 1); return true; }
 				}
 				// The game's own keys wait while the map is up (⌘Q still quits).
+				return !Event.IsCommandDown();
+			}
+			if (TSharedPtr<SAcSkillScreen> S = F->SkillScreenWidget())
+			{
+				if (K == EKeys::Escape || (K == EKeys::K && !Event.IsCommandDown())) { F->CloseSkillScreen(); return true; }
+				if (!Event.IsCommandDown() && S->Key(K)) return true;
+				// The game's own keys wait while the screen is up (⌘Q still quits).
 				return !Event.IsCommandDown();
 			}
 			if (TSharedPtr<SAcNewGame> D = F->NewGameDialog())
@@ -329,6 +339,7 @@ void UAcGameFlowSubsystem::Deinitialize()
 	CloseNewGame();
 	CloseMenu();
 	CloseWorldMap();
+	CloseSkillScreen();
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
 	{
 		Sim->OnGameStarted.Remove(StartedHandle);
@@ -735,6 +746,7 @@ void UAcGameFlowSubsystem::StopMmo()
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim || !Sim->IsMmo()) return;
 	CloseWorldMap();
+	CloseSkillScreen();
 	LeaveDriving();
 	Sim->StopMmo();
 	TickMmo();
@@ -757,6 +769,7 @@ void UAcGameFlowSubsystem::TickMmo()
 		Root->AddLayer(MenuLayer + 1)[SAssignNew(MmoBanner, SAcMmoBanner)];
 	}
 	TickWorldMap();
+	TickSkillScreen();
 	if (!MmoBanner) return;
 	MmoBanner->Update(FPlatformTime::Seconds());
 	if (Mmo)
@@ -816,6 +829,7 @@ bool UAcGameFlowSubsystem::OpenWorldMap()
 	if (WorldMap) return true;
 	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim || !Sim->IsMmo() || Menu || Dialog) return false;
+	CloseSkillScreen();
 	const AAcHUD* Hud = AAcHUD::Get(this);
 	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
 	if (!Root) return false;
@@ -892,6 +906,129 @@ void UAcGameFlowSubsystem::TickWorldMap()
 	if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo()) Info.FlyingTo = Text(To->name);
 	WorldMap->SetInfo(Info);
 	if (!Mmo->FlightRefusal().IsEmpty()) WorldMap->SetRefusal(Mmo->FlightRefusal());
+}
+
+// MARK: - The MMORPG skill screen
+
+bool UAcGameFlowSubsystem::OpenSkillScreen()
+{
+	if (SkillScreen) return true;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsMmo() || Menu || Dialog) return false;
+	const AAcHUD* Hud = AAcHUD::Get(this);
+	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
+	if (!Root) return false;
+	CloseWorldMap();
+	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
+	// Each ask goes to the server; a refusal at once (not connected) shows here,
+	// the server's own through `TickSkillScreen`.
+	auto Ask = [Weak](TFunctionRef<bool(FAcMmoClient&, FString*)> Do)
+	{
+		if (!Weak.IsValid()) return;
+		UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+		FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+		FString Why;
+		if (!Mmo) Why = TEXT("Not in a world");
+		else if (Do(*Mmo, &Why)) return;
+		if (Weak->SkillScreen) Weak->SkillScreen->SetRefusal(Why);
+	};
+	Root->AddLayer(SkillScreenLayer)
+	[
+		SAssignNew(SkillScreen, SAcSkillScreen)
+		.OnSpend_Lambda([Ask](ac::Skill Skill) { Ask([Skill](FAcMmoClient& M, FString* Why) { return M.Spend(Skill, Why); }); })
+		.OnUndo_Lambda([Ask](ac::Skill Skill) { Ask([Skill](FAcMmoClient& M, FString* Why) { return M.Undo(Skill, Why); }); })
+		.OnSlot_Lambda([Ask](int32 Slot, std::optional<ac::Skill> Skill)
+			{ Ask([Slot, Skill](FAcMmoClient& M, FString* Why) { return M.Slot(Slot, Skill, Why); }); })
+		.OnRespec_Lambda([Ask]() { Ask([](FAcMmoClient& M, FString* Why) { return M.Respec(Why); }); })
+		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseSkillScreen(); })
+	];
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(SkillScreen, EFocusCause::SetDirectly);
+	// As the world map: the world goes on, the pilot's unit stands, the pointer is free.
+	SetBlocked(true);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(true);
+	SkillRefusalShown = Sim->MmoClient() ? Sim->MmoClient()->SkillRefusal() : FString();
+	TickSkillScreen();
+	UE_LOG(LogAutocraft, Log, TEXT("skill screen: open"));
+	return true;
+}
+
+void UAcGameFlowSubsystem::CloseSkillScreen()
+{
+	if (!SkillScreen) return;
+	if (const AAcHUD* Hud = AAcHUD::Get(this))
+	{
+		if (const TSharedPtr<SAcRoot> Root = Hud->Root()) Root->RemoveLayer(SkillScreen.ToSharedRef());
+	}
+	SkillScreen.Reset();
+	SetBlocked(false);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(false);
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetAllUserFocusToGameViewport();
+	UE_LOG(LogAutocraft, Log, TEXT("skill screen: closed"));
+}
+
+void UAcGameFlowSubsystem::ToggleSkillScreen()
+{
+	if (SkillScreen) CloseSkillScreen();
+	else OpenSkillScreen();
+}
+
+void UAcGameFlowSubsystem::TickSkillScreen()
+{
+	if (!SkillScreen) return;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo)
+	{
+		CloseSkillScreen();
+		return;
+	}
+	FAcSkillScreenInfo Info;
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	{
+		ac::ProspectorProgress G;
+		G.xp = Mmo->Xp().value_or(P->xp);
+		G.ranks = P->ranks;
+		G.slots = P->slots;
+		G.blueprints = P->blueprints;
+		G.sites = P->sitesFound;
+		// The points that can still be taken back, and for how long (world time).
+		const double Now = Mmo->Sky() ? Mmo->Sky()->time : 0.0;
+		for (const ac::net::ProgressMessage::Undoable& U : P->undo)
+		{
+			G.recent.push_back({U.skill, U.until - ac::Progression::undoWindow});
+			if (U.until > Now) Info.UndoLeft[U.skill] = FMath::Max(Info.UndoLeft[U.skill], U.until - Now);
+		}
+		Info.RespecPrice = P->respecPrice;
+		Info.bRespecFree = P->respecFree;
+		// Blueprint savant: 2 levels a rank.
+		Info.FloorCut = 2 * G.rank(ac::Skill::blueprintSavant);
+		Info.Progress = MoveTemp(G);
+		// The server checks the place; the screen says so ahead: the pilot's
+		// own finished Citadel, where it unloads.
+		bool bHome = false;
+		if (const ac::net::Mirror* M = Mmo->Mirror(); M && M->driven() && !Mmo->Travelling())
+		{
+			if (const ac::Unit* U = M->unit(*M->driven()))
+			{
+				for (const ac::Structure& B : M->simulation().state.structures)
+				{
+					if (B.kind == ac::StructureKind::citadel && B.complete() && B.owner == U->owner
+						&& ac::NavGrid::insideStructure(U->position, B, ac::Simulation::pilotDepositReach))
+					{
+						bHome = true;
+						break;
+					}
+				}
+			}
+		}
+		if (!bHome) Info.RespecWhyNot = TEXT("Respec at your Citadel: stand where you unload");
+	}
+	SkillScreen->SetInfo(Info);
+	if (Mmo->SkillRefusal() != SkillRefusalShown)
+	{
+		SkillRefusalShown = Mmo->SkillRefusal();
+		if (!SkillRefusalShown.IsEmpty()) SkillScreen->SetRefusal(SkillRefusalShown);
+	}
 }
 
 // MARK: - -AcFlowTest

@@ -196,6 +196,9 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	PicksAsked.Reset();
 	LastPickRefusal.Reset();
 	PicksDone = 0;
+	SkillsAsked.Reset();
+	LastSkillRefusal.Reset();
+	SkillsDone = 0;
 	FlightsAsked.Reset();
 	LastFlightRefusal.Reset();
 	bArriving = false;
@@ -462,9 +465,11 @@ void FAcMmoClient::SendInputs(const double Now)
 			In.hold = P.hold;
 			In.mend = P.mend;
 			In.crosshair = P.crosshair;
+			In.slot = P.slot;
 			// Presses go once.
 			P.act = false;
 			P.ability = false;
+			P.slot = 0;
 		}
 		else
 		{
@@ -613,6 +618,21 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (SkillsAsked.Remove(R.request) > 0)
+		{
+			if (R.done)
+			{
+				SkillsDone += 1;
+			}
+			else
+			{
+				LastSkillRefusal = Text(R.reason);
+				Notes.Add(LastSkillRefusal);
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: skill ask %u refused: %s"), R.request, *LastSkillRefusal);
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (FlightsAsked.Remove(R.request) > 0)
 		{
 			if (!R.done)
@@ -703,6 +723,54 @@ bool FAcMmoClient::Pick(const ac::UnitKind Kind, const ac::Perk Perk, FString* W
 	PicksAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: pick %u asked: %s for %s"), Id, *Text(std::string(ac::rawValue(Perk))),
 		*Text(std::string(ac::rawValue(Kind))));
+	return true;
+}
+
+bool FAcMmoClient::CanAskSkills(FString* Why) const
+{
+	auto No = [&](const TCHAR* Reason)
+	{
+		if (Why) *Why = Reason;
+		return false;
+	};
+	if (!Net || !Net->welcome()) return No(TEXT("Not connected to the local server"));
+	if (!Progress()) return No(TEXT("No skill tree here: not a world"));
+	return true;
+}
+
+void FAcMmoClient::AskedSkill(const uint32 Id, const FString& What)
+{
+	LastSkillRefusal.Reset();
+	SkillsAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: skill ask %u: %s"), Id, *What);
+}
+
+bool FAcMmoClient::Spend(const ac::Skill Skill, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	AskedSkill(Net->spend(Skill), FString::Printf(TEXT("spend %s"), *Text(std::string(ac::rawValue(Skill)))));
+	return true;
+}
+
+bool FAcMmoClient::Undo(const ac::Skill Skill, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	AskedSkill(Net->undo(Skill), FString::Printf(TEXT("undo %s"), *Text(std::string(ac::rawValue(Skill)))));
+	return true;
+}
+
+bool FAcMmoClient::Respec(FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	AskedSkill(Net->respec(), TEXT("respec"));
+	return true;
+}
+
+bool FAcMmoClient::Slot(const int32 Index, const std::optional<ac::Skill> Skill, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	AskedSkill(Net->slot(Index, Skill), FString::Printf(TEXT("slot %d: %s"), Index,
+		Skill ? *Text(std::string(ac::rawValue(*Skill))) : TEXT("empty")));
 	return true;
 }
 

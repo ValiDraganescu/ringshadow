@@ -77,6 +77,8 @@ files from the project folder itself; `Autocraft.Build.cs` stages them loose,
 at the same paths, for the game targets (`RuntimeDependencies`, `NonUFS`):
 - the music, `Resources/Sounds/music/*.mp3` (`AcMusicPlayer.cpp`);
 - the launcher art, `Content-src/launcher/*.jpg` (`AcLauncherArt.cpp`);
+- the skill icons, `Resources/Textures/Skills/skill_icons.png`
+  (`SAcSkillScreen.cpp`, drawn by `Tools/hud/skill_icons.py`);
 - `Content/Audio/Sounds.json` and `Content/Models/ModelCatalog.json`;
 - the cursors, `Content/UI/Cursors`. macOS loads the TIFFs. Windows and
   Linux load `Cursor_<kind>.png` and `@2x.png` instead

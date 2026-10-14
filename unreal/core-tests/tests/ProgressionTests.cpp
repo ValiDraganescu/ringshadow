@@ -336,3 +336,33 @@ TEST(progression_progressJsonRoundTrip) {
     EXPECT_TRUE(old->slots[2] == Skill::overcharge);
     EXPECT_EQ(old->respecs, int64_t(0));
 }
+
+// The skill screen's words: what a node gives in all at a rank, and every
+// rank of every node says something.
+TEST(progression_rankText) {
+    EXPECT_TRUE(Progression::rankText(Skill::quickDrill, 0).empty());
+    EXPECT_TRUE(Progression::rankText(Skill::quickDrill, 3) == "Drill +18%");
+    EXPECT_TRUE(Progression::rankText(Skill::bigHaul, 2) == "+6 ore a trip");
+    EXPECT_TRUE(Progression::rankText(Skill::densePack, 3) == "Ore loads +30%");
+    EXPECT_TRUE(Progression::rankText(Skill::richVein, 2) == "Every 4th ore trip carries double");
+    EXPECT_TRUE(Progression::rankText(Skill::longArm, 3) == "Weld and repair from 1.5 cells farther");
+    EXPECT_TRUE(Progression::rankText(Skill::bulwark, 2) == "Damage taken −10%");
+    EXPECT_TRUE(Progression::rankText(Skill::overbuild, 2) == "+2 Hab Dome, Derrick and Sentinel allowed");
+    EXPECT_TRUE(Progression::rankText(Skill::homingBeacon, 2) == "Your Citadel and Hab Domes count as a pad");
+    EXPECT_TRUE(Progression::rankText(Skill::scannerPulse, 3) == "Arriving marks a region's wrecks, caches and vaults");
+    EXPECT_TRUE(Progression::rankText(Skill::overcharge, 1) == Progression::node(Skill::overcharge).text);
+    for (const SkillNode& n : Progression::nodes())
+        for (int64_t r = 1; r <= n.ranks; r++) EXPECT_TRUE(!Progression::rankText(n.skill, r).empty());
+}
+
+// The blueprints: eight buildings, the floors of the doc's table, rising.
+TEST(progression_blueprintFloors) {
+    const auto& k = Progression::blueprintKinds();
+    ASSERT_TRUE(k.size() == size_t(8));
+    EXPECT_TRUE(k.front() == StructureKind::citadel);
+    EXPECT_EQ(Progression::blueprintFloor(StructureKind::derrick), int64_t(3));
+    EXPECT_EQ(Progression::blueprintFloor(StructureKind::sentinel), int64_t(55));
+    EXPECT_EQ(Progression::blueprintFloor(StructureKind::garrison), int64_t(0));
+    for (size_t i = 1; i < k.size(); i++)
+        EXPECT_TRUE(Progression::blueprintFloor(k[i]) > Progression::blueprintFloor(k[i - 1]));
+}
