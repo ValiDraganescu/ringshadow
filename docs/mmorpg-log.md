@@ -443,3 +443,11 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N B1 suites: core 454, server 154, net 67 pass.
 - I Far units still skip snapshots; particles step at 20 Hz in MMO.
 - T R1 (realm buildings, protocol 12, save v8) briefed to wt1.
+- T R1 done 1b6611c: buildings are the realm's, built_by kept for credit.
+- D R1: limits per realm; Overbuild raises the builder's own check.
+- D R1: one Citadel a realm; a later pilot's step 2 reaches it.
+- D R1: callsign "Pilot XXXX" from a key hash; key stays off the wire.
+- N Protocol 12 taken by R1; W3's parked v12 needs renumbering.
+- N Save schema 8: buildings.owner renamed built_by; old saves migrate.
+- N R1 suites: core 454, server 158, net 67 pass.
+- I roles_spacedock_pad read a dangling temporary; rewritten.
