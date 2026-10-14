@@ -156,6 +156,8 @@ struct AUTOCRAFT_API AcProgressHud
 	/// The sites the pilot knows of, for the world map: looked up by
 	/// "<region id>/<site name>" in the world's region files (read once).
 	static TArray<FAcWorldMapInfo::FSite> KnownSites(const FAcMmoClient& Mmo);
+	/// The same for the satellite map (M2): name, kind, blueprint, region cells.
+	static std::vector<ac::net::atlas::KnownSite> AtlasSites(const FAcMmoClient& Mmo);
 	/// Every blueprint site of region `Region` (known or not), for the
 	/// models on the ground (AAcSites): its id "<region id>/<site name>",
 	/// kind and point in region cells from the north-west corner.

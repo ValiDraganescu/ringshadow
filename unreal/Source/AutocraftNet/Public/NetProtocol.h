@@ -773,6 +773,9 @@ struct ProgressMessage {
     /// Every mercenary's unit in the pilot's region, any pilot's: id → its
     /// name (the tag reads "MERC · <name>").
     std::map<int64_t, std::string> mercTags;
+    /// M2: the world's regions the pilot has been to (ids; the map shows
+    /// the rest dark).
+    std::set<std::string> regionsSeen;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

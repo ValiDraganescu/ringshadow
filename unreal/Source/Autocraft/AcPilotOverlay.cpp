@@ -265,6 +265,16 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	{
 		Info.Marks = AcProgressHud::ContractGoals(*Inputs.Mmo, U.position);
 		Info.Marks.Append(AcMissions::Goals(*Inputs.Mmo, U.position));
+		// The target picked on the world map (M2), in its region: the needle's.
+		const TOptional<FAcMmoClient::FMapTarget>& T = Inputs.Mmo->GetMapTarget();
+		const ac::net::WorldMessage::Region* Here = Inputs.Mmo->Here();
+		if (T && Here && FString(UTF8_TO_TCHAR(Here->id.c_str())) == T->Region)
+		{
+			FAcPilotGoal Goal{T->Label, T->At, ac::distance(T->At, U.position)};
+			Goal.Color = T->Color;
+			Goal.bMission = T->Key.StartsWith(TEXT("mission:"));
+			Info.Goal = Goal;
+		}
 	}
 	if (GunMarker) Info.Gun = GunMarker();
 	else Info.Gun = Pawn->GunMarker(); // E4's marker, computed by the pawn each frame

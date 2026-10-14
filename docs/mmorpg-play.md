@@ -42,14 +42,32 @@ Driving the Prospector (mouse captured):
 In the top-down view, click your Prospector to drive it again. Esc there opens
 the pause menu (RESUME, SETTINGS, QUIT TO HOME).
 
-On the world map:
+The world map is the world seen from above: every region you have been to
+as a satellite picture of its real ground, side by side as they lie, the
+others dark with only their outline and name (UNCHARTED). It opens centred on
+you. Over the pictures, live: you (a cyan arrow), other pilots, mercenaries
+(orange), the Brood in groups (red, with their count), the realm's buildings,
+deposits (violet, smaller as they empty), MH wells, the blueprint sites you
+know of (gold), pads (yellow rings; yours cyan), starfalls and their craters,
+your Journal's missions (a ring in their tier's colour), KSTR's places, and
+the ringshadow band while it sweeps. Live units, buildings and deposits show
+in the region you are in; elsewhere the map shows what you know (sites, pads,
+missions, your mercenaries at their fields).
+
+Point at anything for a tooltip: its name and kind, and what is worth knowing:
+a deposit's ore left (and "Being eaten by a Lodeback"), a building's builder
+and HP, a site's kind, blueprint and whether it is opened, a mission's title,
+tier and instructions, a mercenary's name, field and the ore it delivered.
 
 | Key | Does |
 |---|---|
+| Wheel | Zoom about the pointer |
+| Drag | Pan |
+| Click a pad, then FLY | Pick a pad and fly to it |
+| Click a mission or a site | The compass points at it (click again: no longer) |
 | Arrows or W A S D | Move the pad pick |
 | Return | Fly to the picked pad |
 | Esc or M | Close |
-| Click a pad, then FLY | The same with the mouse |
 
 The world goes on while the map is open. Nothing pauses.
 

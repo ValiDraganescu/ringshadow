@@ -864,6 +864,13 @@ void UAcSimSubsystem::ShowSimulation(ac::Simulation* Mirror)
 	OnGameStarted.Broadcast(*this);
 }
 
+void UAcSimSubsystem::ShowStill(ac::Simulation* Still, const std::optional<ac::MapChoice>& Choice)
+{
+	SetPaused(Still != nullptr);
+	MmoChoice = Choice;
+	ShowSimulation(Still);
+}
+
 void UAcSimSubsystem::Refuse(const FString& Why)
 {
 	UE_LOG(LogAutocraft, Log, TEXT("refused: %s"), *Why);

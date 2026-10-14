@@ -112,7 +112,8 @@ public:
 	/// drawn at all, not even as last seen (`GameScene.veiled`; E4).
 	void SetVeiled(bool bInVeiled) { bVeiled = bInVeiled; }
 	/// Units painted in another palette colour than their owner's, by id
-	/// (H2: the mercenaries' orange, `MercenaryTeam`). Set each frame.
+	/// (H2: the mercenaries' orange, `MercenaryTeam`), and outlined in it
+	/// (M2: the paint alone is a few panels). Set each frame.
 	static constexpr int32 MercenaryTeam = 6;
 	void SetTeamPaint(TMap<int64, int32> Paint) { TeamPaint = MoveTemp(Paint); }
 

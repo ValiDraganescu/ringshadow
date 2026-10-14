@@ -7,6 +7,7 @@
 #include "AcGameMode.h"
 #include "AcHUD.h"
 #include "AcLog.h"
+#include "AcHudStyle.h"
 #include "AcMissions.h"
 #include "AcPilotPawn.h"
 #include "AcPointer.h"
@@ -38,6 +39,7 @@
 #include "NavGrid.h"
 #include "Pilot.h"
 #include "Defence.h"
+#include "Ringshadow.h"
 #include "Rules.h"
 
 namespace
@@ -881,6 +883,8 @@ void UAcGameFlowSubsystem::TickMmo()
 		{
 			Place = FString::Printf(TEXT("%s  ·  %s"), *Text(Here->name), *Text(ac::title(Here->style)));
 		}
+		// The world map says where the pilot is in its own header.
+		if (WorldMap) Place.Reset();
 		MmoBanner->SetPlace(Place, Mmo->FlyingTo() != nullptr);
 		// Arrived in a region (the start, a landing once the ship is down,
 		// an edge crossing): its title over the view, once per arrival.
@@ -937,6 +941,7 @@ bool UAcGameFlowSubsystem::OpenWorldMap()
 	[
 		SAssignNew(WorldMap, SAcWorldMap)
 		.OnFly_Lambda([Weak](const FString& Region, const FString& Pad) { if (Weak.IsValid()) Weak->FlyFromMap(Region, Pad); })
+		.OnTarget_Lambda([Weak](const ac::net::atlas::Item& It) { if (Weak.IsValid()) Weak->TargetFromMap(It); })
 		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseWorldMap(); })
 	];
 	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(WorldMap, EFocusCause::SetDirectly);
@@ -984,6 +989,34 @@ void UAcGameFlowSubsystem::FlyFromMap(const FString& Region, const FString& Pad)
 	CloseWorldMap();
 }
 
+void UAcGameFlowSubsystem::TargetFromMap(const ac::net::atlas::Item& It)
+{
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	const ac::net::WorldMessage* W = Mmo ? Mmo->World() : nullptr;
+	if (!W || It.region < 0 || It.region >= (int64)W->regions.size()) return;
+	const ac::net::atlas::Place* P = nullptr;
+	const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, {});
+	P = ac::net::atlas::placeOf(Places, It.region);
+	if (!P) return;
+	FAcMmoClient::FMapTarget T;
+	T.Region = UTF8_TO_TCHAR(P->id.c_str());
+	T.At = P->toGround(It.at);
+	const bool bMission = It.kind == ac::net::atlas::Kind::mission;
+	T.Key = bMission ? FString::Printf(TEXT("mission:%lld"), (long long)It.ref) : FString(UTF8_TO_TCHAR(It.key.c_str()));
+	// Clicked again: no target.
+	if (const TOptional<FAcMmoClient::FMapTarget>& Was = Mmo->GetMapTarget(); Was && Was->Key == T.Key)
+	{
+		Mmo->SetMapTarget(NullOpt);
+		UE_LOG(LogAutocraft, Log, TEXT("world map: no compass target"));
+		return;
+	}
+	T.Label = FString(UTF8_TO_TCHAR(It.title.c_str())).ToUpper();
+	T.Color = bMission ? AcMissions::TierColor(It.tier) : FAcHudStyle::LevelGold();
+	Mmo->SetMapTarget(T);
+	UE_LOG(LogAutocraft, Log, TEXT("world map: the compass points at %s in %s"), *T.Key, *T.Region);
+}
+
 void UAcGameFlowSubsystem::TickWorldMap()
 {
 	if (!WorldMap) return;
@@ -1015,8 +1048,43 @@ void UAcGameFlowSubsystem::TickWorldMap()
 	}
 	Info.Hydrogen = Mmo->HydrogenNow();
 	if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo()) Info.FlyingTo = Text(To->name);
-	Info.Sites = AcProgressHud::KnownSites(*Mmo);
-	Info.Marks = AcProgressHud::ContractMarks(*Mmo);
+	// M2: the satellite map's overlays, from the mirror and the progression.
+	const ac::net::ProgressMessage* Progress = Mmo->Progress();
+	if (Progress) Info.Seen = Progress->regionsSeen;
+	if (const ac::net::WorldMessage* W = Mmo->World())
+	{
+		const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, Info.Seen);
+		ac::net::atlas::Input In;
+		In.world = W;
+		In.progress = Progress;
+		const ac::net::Mirror* M = Mmo->Mirror();
+		In.here = M && !Mmo->Travelling() ? &M->simulation() : nullptr;
+		In.driven = Mmo->Driven();
+		In.sky = Mmo->Sky();
+		In.sites = AcProgressHud::AtlasSites(*Mmo);
+		for (const FAcWorldMapInfo::FMark& K : AcProgressHud::ContractMarks(*Mmo))
+		{
+			const ac::net::atlas::Place* P = ac::net::atlas::placeOf(Places, std::string(TCHAR_TO_UTF8(*K.Region)));
+			if (!P) continue;
+			ac::net::atlas::ContractMark C{P->id, std::nullopt, TCHAR_TO_UTF8(*K.Title)};
+			if (K.At) C.at = ac::Vec2(K.At->X * P->width, K.At->Y * P->depth);
+			In.contracts.push_back(C);
+		}
+		Info.Items = ac::net::atlas::items(In, Places);
+		// The ringshadow band over every region it crosses now.
+		if (In.sky)
+		{
+			for (const ac::net::atlas::Place& P : Places)
+			{
+				const ac::GroundRect Ground{-P.width / 2, -P.depth / 2, P.width / 2, P.depth / 2};
+				if (const std::optional<ac::Ringshadow::Band> B = ac::Ringshadow::band(In.sky->time, Ground, In.sky->dayLength))
+				{
+					if (std::vector<ac::Vec2> Poly = ac::net::atlas::band(P, *B); !Poly.empty()) Info.Bands.push_back(std::move(Poly));
+				}
+			}
+		}
+	}
+	if (const TOptional<FAcMmoClient::FMapTarget>& T = Mmo->GetMapTarget()) Info.Target = T->Key;
 	WorldMap->SetInfo(Info);
 	if (!Mmo->FlightRefusal().IsEmpty()) WorldMap->SetRefusal(Mmo->FlightRefusal());
 }

@@ -1093,6 +1093,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeSigned(w, id);
         writeString(w, name);
     }
+    writeStrings(w, m.regionsSeen);
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 4);
@@ -1299,6 +1300,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         const int64_t id = readSigned(r);
         if (!readString(r, m.mercTags[id])) return false;
     }
+    if (!readStrings(r, m.regionsSeen)) return false;
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {

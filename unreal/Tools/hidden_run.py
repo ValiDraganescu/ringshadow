@@ -147,6 +147,11 @@ def read_log(path: Path, python: bool) -> tuple[bool, list[str]]:
         failed |= int(m[-1]) > 0
         show += ["  " + l.split("flowtest:", 1)[1].strip()[:200] for l in lines
                  if "flowtest:" in l and re.search(r"\bFAIL", l)][:8]
+    m = re.findall(r"mapbake: done, (\d+) regions, (\d+) failed", text)
+    if m:
+        show.append(f"map bake done, {m[-1][0]} regions, {m[-1][1]} failed")
+        failed |= int(m[-1][1]) > 0
+        show += ["  " + l.split("mapbake:", 1)[1].strip()[:200] for l in lines if "mapbake:" in l and "Error" in l][:8]
     pics = len(re.findall(r"mmoshots: saved ", text))
     if pics:
         show.append(f"{pics} pictures")

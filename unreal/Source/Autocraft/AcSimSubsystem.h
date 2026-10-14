@@ -239,6 +239,11 @@ public:
 	void StartMmo(bool bNewWorld = false);
 	/// Stops the local server and goes back to the window game.
 	void StopMmo();
+	/// Shows `Still` (a simulation of another map, never stepped; the
+	/// caller keeps it) in place of the game's own, paused: the map bake
+	/// (AcMapBake.h), `Choice` its map's style and size. Null: the game's
+	/// own again.
+	void ShowStill(ac::Simulation* Still, const std::optional<ac::MapChoice>& Choice = std::nullopt);
 	/// In the mode (starting, connected or failed).
 	bool IsMmo() const { return Mmo != nullptr; }
 	/// The mode's client (null outside it).

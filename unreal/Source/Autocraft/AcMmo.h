@@ -334,6 +334,20 @@ public:
 	/// In flight, or come into a region whose first snapshot has not shown
 	/// the driven unit yet: the pilot keeps its seat, nothing to drive.
 	bool Travelling() const { return FlyingTo() != nullptr || bArriving; }
+	/// M2: the compass's target picked on the world map (a mission or a
+	/// blueprint site): its region id, its ground point there, its label and
+	/// colour, and what it is ("mission:7", a site's id; the map rings it).
+	/// Unset: none (the compass points home or at ore).
+	struct FMapTarget
+	{
+		FString Region;
+		ac::Vec2 At{0, 0};
+		FString Label;
+		FLinearColor Color = FLinearColor::White;
+		FString Key;
+	};
+	void SetMapTarget(const TOptional<FMapTarget>& Target) { MapTarget = Target; }
+	const TOptional<FMapTarget>& GetMapTarget() const { return MapTarget; }
 	/// Region changes so far.
 	int64 Visit() const { return Net ? Net->visit() : 0; }
 	/// The pad of this region nearest the driven unit, and how far (cells).
@@ -378,6 +392,7 @@ public:
 	void Fail(const FString& Why);
 
 private:
+	TOptional<FMapTarget> MapTarget;
 	void Connect(double Now);
 	void SendInputs(double Now);
 	void Blend(double Now);

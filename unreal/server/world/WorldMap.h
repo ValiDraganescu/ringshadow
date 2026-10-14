@@ -264,6 +264,9 @@ struct WorldParams {
     /// `devCopies` copies of each (C2).
     bool devBlueprints = false;
     static constexpr int64_t devCopies = 9;
+    /// Dev and shots (`--dev-seen a,b`): a new pilot has been to these
+    /// regions (the world map shows them; M2).
+    std::vector<std::string> devSeen;
     /// Dev and shots (`--dev-rig`): a new pilot owns a finished Citadel,
     /// Foundry and Lab round its Prospector (which stands where it unloads
     /// at the Citadel), and its rig is stocked: marks researched, modules

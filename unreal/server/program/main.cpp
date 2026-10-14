@@ -7,6 +7,7 @@
 //                    [--save file]  (a world's save: loaded at start, written every 5 s and on stop)
 //                    [--dev-xp xp]  (dev, tests: a new pilot's Prospector earns that much XP at once)
 //                    [--dev-blueprints 1]  (dev, tests, shots: a new pilot has every blueprint)
+//                    [--dev-seen a,b]  (dev, shots: a new pilot has been to these regions)
 //                    [--dev-rig 1]  (dev, shots: a new pilot owns a finished Citadel, Foundry and Lab, its rig stocked)
 //                    [--dev-hydrogen mh]  (dev, tests, shots: a new pilot's wallet gets that much MH at once)
 //                    [--first-step n]  (dev, shots: a new pilot starts the first ten minutes at step n, 1-6; 0 none;
@@ -115,7 +116,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--brood 0|1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--dev-down s] [--detached | --attached]\n"
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-seen a,b] [--dev-rig 1] [--brood 0|1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--dev-down s] [--detached | --attached]\n"
                  "       autocraft-server --stop <save | folder>\n",
                  why);
     return 2;
@@ -189,6 +190,7 @@ int main(int argc, char** argv) {
     pid_t parent = 0;
     double devXp = 0;
     bool devBlueprints = false;
+    std::vector<std::string> devSeen;
     bool devRig = false;
     bool brood = true;
     long long devHydrogen = 0;
@@ -221,6 +223,13 @@ int main(int argc, char** argv) {
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
         else if (a == "--dev-blueprints") devBlueprints = v != "0";
         else if (a == "--dev-rig") devRig = v != "0";
+        else if (a == "--dev-seen") {
+            for (size_t from = 0; from <= v.size();) {
+                const size_t comma = std::min(v.find(',', from), v.size());
+                if (comma > from) devSeen.push_back(v.substr(from, comma - from));
+                from = comma + 1;
+            }
+        }
         else if (a == "--brood") brood = v != "0";
         else if (a == "--dev-hydrogen") devHydrogen = std::atoll(v.c_str());
         else if (a == "--first-step") {
@@ -297,6 +306,7 @@ int main(int argc, char** argv) {
     else options.region.map = MapChoice{*style, *size, starts};
     options.worldParams.devXp = devXp;
     options.worldParams.devBlueprints = devBlueprints;
+    options.worldParams.devSeen = devSeen;
     options.worldParams.devRig = devRig;
     options.devDown = devDown;
     // A dev rig's pilot is past the first ten minutes unless told a step.

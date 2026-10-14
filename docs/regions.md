@@ -155,6 +155,33 @@ and the region position:
 "Cut off" means not joined to the region's largest open area on the
 walking grid. A problem never stops `build` or `preview`.
 
+## The satellite map
+
+The world map (M; docs/mmorpg-play.md) shows each region as a picture of its
+real ground from above: the game's terrain, its materials, cliffs, rocks and
+plants, ore and wells, lit by the world's day at a held hour (10:30) in clear
+weather, with no units and no fog. The pictures are baked, one a region, 8
+pixels a cell (1152 × 768 for a medium region), north up; ground out of play
+(`MapDefinition::inPlay`, so any outline a region gets) is transparent.
+
+**Rebake after a region file changes** (or a new region joins the world):
+
+```
+unreal/Tools/build.sh                 # the module first
+uv run unreal/Tools/bake_map.py       # every region of worlds/first.json
+uv run unreal/Tools/bake_map.py --only start,cold-fork   # some of them
+```
+
+It runs two hidden runs through `hidden_run.py`: the game photographs each
+region (`AcMapBake.h`: the region built as a client builds it, an
+orthographic scene capture straight down) into
+`unreal/Content-src/map/<id>.png` (not committed), then an editor script
+(`Tools/Editor/import_map.py`) imports them as
+`/Game/UI/Map/T_AcMap_<id>` (dashes as underscores; committed). Options:
+`--px` pixels a cell, `--hour` the light, `--world` another world file,
+`--no-import`. A region with no picture is drawn in its style's colour, and
+the log says to bake it.
+
 ## What the build makes
 
 An `ac::MapDefinition`: the generated map renamed, its `version` a hash of

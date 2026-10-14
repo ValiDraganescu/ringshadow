@@ -346,6 +346,11 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevBlueprints"))) Args.insert(Args.end(), {"--dev-blueprints", "1"});
 	// Dev and shots: a new pilot owns a finished Citadel, Foundry and Lab, its rig stocked.
 	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) Args.insert(Args.end(), {"--dev-rig", "1"});
+	// Dev and shots: regions a new pilot has been to (the world map, M2).
+	if (FString Seen; FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen, /*bShouldStopOnSeparator*/ false) && !Seen.IsEmpty())
+	{
+		Args.insert(Args.end(), {"--dev-seen", std::string(TCHAR_TO_UTF8(*Seen))});
+	}
 	// Dev and shots (H2): the save counts as written this many seconds
 	// earlier, so the start catches up that much more.
 	if (double Down = 0; FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevDown="), Down) && Down > 0)

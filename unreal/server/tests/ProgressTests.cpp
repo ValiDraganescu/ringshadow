@@ -211,6 +211,8 @@ TEST(progress_one_offs_paid_once) {
     const std::string there = first().regions[*w.where(me)].file.id;
     EXPECT_NEAR(w.progress(me)->xp, WorldXp::region, 1e-9);
     EXPECT_TRUE(hasNews(w.takeNews(me), NewsKind::region, there));
+    // M2: the regions been to go to the client (the world map's pictures).
+    EXPECT_TRUE(w.progressMessage(me)->regionsSeen.count(there) == 1);
     // Back to the start pad: a first flight; the start's pad and region pay nothing.
     ASSERT_TRUE(flyTo(start, startPad));
     EXPECT_NEAR(w.progress(me)->xp, WorldXp::region + WorldXp::firstFlight, 1e-9);

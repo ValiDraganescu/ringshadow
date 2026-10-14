@@ -718,8 +718,12 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 		FObject& O = *OPtr;
 		// A bug of the Brood on the driven unit: outlined red (docs/creatures.md, "On the client").
 		const bool bOnPilot = O.bUnit && O.Unit && O.Unit->bug && O.Unit->hp > 0 && DrivenUnit >= 0 && O.Unit->target == DrivenUnit;
+		// Another paint (a mercenary's, M2): outlined in it too, so it reads
+		// from afar (the Prospector's paint is a few panels).
+		const int32* Painted = O.bUnit ? TeamPaint.Find(O.Id) : nullptr;
 		const uint8 Want = (bOutlines && O.bUnit && O.Unit)
 			? (bOnPilot ? AcOutline::StencilFoe
+				: Painted ? AcOutline::TeamStencil(*Painted)
 						: AcOutline::StencilFor(O.Unit->kind, O.Unit->anchor, O.Unit->owner, Shown.allied(O.Unit->owner, LocalPlayer)))
 			: AcOutline::StencilNone;
 		if (Want == O.Stencil) continue;

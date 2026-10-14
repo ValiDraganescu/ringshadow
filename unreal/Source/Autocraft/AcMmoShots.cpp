@@ -194,6 +194,20 @@
 //   04 a gatling gun firing amalgam rounds at Shardlings, its tracers
 //   05 the build menu with the gatling gun and the AA tower
 //
+// -AcMmoShotsM2 (adds -AcMmoDevRig and -AcMmoDevSeen=start,cold-fork,
+// rust-hollow,ashen-shelf,tern-ridge unless told): the satellite world map
+// (docs/mmorpg-m8.md M2), DIR/m2-NN-moment.png:
+//   01 the M screen at world zoom: the regions been to as their pictures,
+//      the rest dark, uncharted
+//   02 zoomed into Prospect Landing: the pilot, its mercenary, the Citadel,
+//      the deposits, the pad, the mission taken
+//   03 a deposit's tooltip: its ore left
+//   04 the Citadel's tooltip: built by, hp
+//   05 the mission's tooltip: its title, tier and kind (it is then the
+//      compass's target)
+//   06 the mercenary's tooltip: its name, field, what it delivered
+//   07 the map closed: the mercenary drilling in the world, orange
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -342,6 +356,12 @@ namespace
 	/// mercenary's unit.
 	int32 H2Kept = 0;
 	int64 H2Unit = 0;
+	/// -AcMmoShotsM2: the mercenary's unit, the mission taken.
+	int64 M2Unit = 0;
+	uint32 M2Mission = 0;
+	/// Zoomed into Prospect Landing; the phase whose item is hovered.
+	bool M2Zoomed = false;
+	int32 M2Hovered = -1;
 	/// -AcMmoShotsN2: the lingering group staged, the pilot's hp when a
 	/// scene was staged, the raided dome.
 	bool N2Staged = false;
@@ -667,7 +687,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -679,6 +700,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		{
 			if (double In = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoStarfall="), In)) FCommandLine::Append(TEXT(" -AcMmoStarfall=10"));
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=17"));
+		}
+		// -AcMmoShotsM2: some regions been to, the rest uncharted.
+		if (FString Seen; FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2")) && !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
+		{
+			FCommandLine::Append(TEXT(" -AcMmoDevSeen=start,cold-fork,rust-hollow,ashen-shelf,tern-ridge"));
 		}
 		// -AcMmoShotsH2Away: three hours down by the save's clock.
 		if (double Down = 0; FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) && !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevDown="), Down))
@@ -734,6 +760,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away"))) T.Phase = 1510;
 			// -AcMmoShotsD: only the defences (1600-1611).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))) T.Phase = 1600;
+			// -AcMmoShotsM2: the satellite world map (1700-1712).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))) T.Phase = 1700;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -3413,6 +3441,233 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 1511:
 		Check(Shots.Saved + Shots.Skipped == 1, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsM2
+	case 1700:
+	{
+		// The dev rig's home: hire a mercenary, take a mission here.
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (!(S && CitadelOf(*S) && P && !P->mercFields.empty() && !P->board.empty() && U && Since() > 3.0))
+		{
+			TimedOut(TEXT("the dev rig's Citadel, the fields and the board"));
+			return;
+		}
+		Check(P->regionsSeen.count("cold-fork") == 1 && P->regionsSeen.count("start") == 1,
+			FString::Printf(TEXT("m2: %d regions been to"), int32(P->regionsSeen.size())));
+		ac::net::RequestMessage::Merc Hire;
+		FString Why;
+		Check(Mmo->Merc(Hire, &Why), FString::Printf(TEXT("m2: hire asked (%s)"), *Why));
+		int32 Best = -1;
+		double Near = 1e18;
+		for (int32 X = 0; X < int32(P->board.size()); ++X)
+		{
+			const ac::net::CitadelMission& O = P->board[size_t(X)];
+			// With a place on the map, in a region been to; a point here first.
+			const bool bPoint = O.kind == ac::net::CitadelMission::Kind::survey || O.kind == ac::net::CitadelMission::Kind::hold;
+			if (O.region.empty() || !P->regionsSeen.count(O.region)) continue;
+			const double D = ac::distance(O.at, U->position) + (Utf(O.region) == Here ? 0 : 1e9) + (bPoint ? 0 : 1e12);
+			if (D < Near)
+			{
+				Near = D;
+				Best = X;
+			}
+		}
+		FString Board;
+		for (const ac::net::CitadelMission& O : P->board)
+		{
+			Board += FString::Printf(TEXT(" %s/%d@%s"), *AcMissions::KindName(O.kind), int32(O.tier), *Utf(O.region));
+		}
+		Check(Best >= 0, FString::Printf(TEXT("m2: a survey or hold offer to take (board:%s)"), *Board));
+		if (Best >= 0)
+		{
+			M2Mission = P->board[size_t(Best)].id;
+			Check(Mmo->TakeMission(M2Mission, &Why), FString::Printf(TEXT("m2: mission asked (%s)"), *Why));
+		}
+		Advance();
+		return;
+	}
+	case 1701:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		bool bTaken = false;
+		if (P)
+			for (const ac::net::CitadelMission& X : P->journal) bTaken |= X.id == M2Mission && X.state == ac::net::CitadelMission::State::taken;
+		if (P && P->mercs.size() == 1 && P->mercs[0].unit > 0 && bTaken)
+		{
+			M2Unit = P->mercs[0].unit;
+			Advance();
+			return;
+		}
+		if (!Mmo->CitadelRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("m2: %s"), *Mmo->CitadelRefusal()));
+			Finish();
+			return;
+		}
+		TimedOut(TEXT("the mercenary hired and the mission taken"), 10);
+		return;
+	}
+	case 1702:
+	{
+		// It walks to its field and drills; then M.
+		const ac::Unit* Merc = M ? M->unit(M2Unit) : nullptr;
+		if (Merc && Merc->task == ac::Unit::Task::mining)
+		{
+			Check(OpenWorldMap() && WorldMapWidget().IsValid(), TEXT("m2: M opened the world map"));
+			if (const TSharedPtr<SAcWorldMap> Map = WorldMapWidget()) Map->ShowWorld();
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the mercenary drilling"), 90);
+		return;
+	}
+	case 1703:
+	{
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map || Since() < 1.5) return;
+		Check(Map->PicturesShown() == 5, FString::Printf(TEXT("m2: %d regions drawn from their pictures (5 been to)"), Map->PicturesShown()));
+		Shoot(TEXT("m2-01-world"), TEXT("the world map at world zoom: the regions been to, the rest uncharted"));
+		return;
+	}
+	case 1704:
+	{
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map) return;
+		if (!M2Zoomed)
+		{
+			M2Zoomed = true;
+			Check(Map->ShowRegion(TEXT("start")), TEXT("m2: zoomed into Prospect Landing"));
+			return;
+		}
+		if (Since() < 1.0) return;
+		Shoot(TEXT("m2-02-prospect-landing"), TEXT("Prospect Landing: the pilot, the mercenary, the Citadel, the deposits, the pad, the mission"));
+		return;
+	}
+	case 1705:
+	case 1706:
+	case 1707:
+	case 1708:
+	{
+		// A tooltip each: a deposit with ore, the Citadel, the mission, the mercenary.
+		namespace atlas = ac::net::atlas;
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map) return;
+		const int32 Which = T.Phase - 1705;
+		if (M2Hovered != T.Phase)
+		{
+			M2Hovered = T.Phase;
+			bool bHover = false;
+			if (Which == 0)
+			{
+				// A deposit with most of its ore, near the mercenary (not its own).
+				const ac::Unit* Merc = M ? M->unit(M2Unit) : nullptr;
+				const std::vector<atlas::Place> Places = Mmo->World() ? atlas::layout(*Mmo->World(), {}) : std::vector<atlas::Place>{};
+				const atlas::Place* Mine = Mmo->World() ? atlas::placeOf(Places, Mmo->World()->here) : nullptr;
+				const ac::Vec2 By = Merc && Mine ? Mine->fromGround(Merc->position) : ac::Vec2(0, 0);
+				double Best = 1e9;
+				int64 Ref = -1;
+				for (const atlas::Item& It : Map->GetInfo().Items)
+				{
+					const double D = ac::distance(It.at, By);
+					if (It.kind == atlas::Kind::deposit && It.size > 0.5 && !It.flag && D > 3 && D < Best)
+					{
+						Best = D;
+						Ref = It.ref;
+					}
+				}
+				bHover = Map->HoverWhere([Ref](const atlas::Item& It) { return It.kind == atlas::Kind::deposit && It.ref == Ref; });
+			}
+			else if (Which == 1)
+			{
+				bHover = Map->HoverWhere([](const atlas::Item& It) { return It.kind == atlas::Kind::building && It.building == ac::StructureKind::citadel; });
+			}
+			else if (Which == 2)
+			{
+				const int64 Id = int64(M2Mission);
+				bHover = Map->HoverWhere([Id](const atlas::Item& It) { return It.kind == atlas::Kind::mission && It.ref == Id; });
+			}
+			else
+			{
+				const int64 Unit = M2Unit;
+				bHover = Map->HoverWhere([Unit](const atlas::Item& It) { return It.kind == atlas::Kind::merc && It.ref == Unit; });
+			}
+			Check(bHover, FString::Printf(TEXT("m2: hovering %s"), Which == 0 ? TEXT("a deposit") : Which == 1 ? TEXT("the Citadel") : Which == 2 ? TEXT("the mission") : TEXT("the mercenary")));
+			// Closer in: the item a little left of the middle, its tooltip beside it.
+			if (const atlas::Item* It = Map->Hovered()) Map->SetView(It->at + ac::Vec2(8, 3), 13);
+			return;
+		}
+		if (Since() < 1.0) return;
+		const FString Tip = Map->TooltipText();
+		const FString Flat = Tip.Replace(TEXT("\n"), TEXT(" / "));
+		if (Which == 0)
+		{
+			Check(Tip.StartsWith(TEXT("Ore deposit")) && Tip.Contains(TEXT("ore left")), FString::Printf(TEXT("m2: the deposit's tooltip: %s"), *Flat));
+			Shoot(TEXT("m2-03-tooltip-deposit"), TEXT("hovering a deposit: its ore left"));
+		}
+		else if (Which == 1)
+		{
+			Check(Tip.StartsWith(TEXT("Citadel")) && Tip.Contains(TEXT("Built by")) && Tip.Contains(TEXT("HP ")), FString::Printf(TEXT("m2: the Citadel's tooltip: %s"), *Flat));
+			Shoot(TEXT("m2-04-tooltip-building"), TEXT("hovering the Citadel: built by, hp"));
+		}
+		else if (Which == 2)
+		{
+			Check(Tip.Contains(TEXT("mission ·")), FString::Printf(TEXT("m2: the mission's tooltip: %s"), *Flat));
+			// A click on it: the compass's target.
+			if (const atlas::Item* It = Map->Hovered()) TargetFromMap(*It);
+			Check(Mmo->GetMapTarget() && Mmo->GetMapTarget()->Key == FString::Printf(TEXT("mission:%u"), M2Mission),
+				TEXT("m2: the mission is the compass's target"));
+			Shoot(TEXT("m2-05-tooltip-mission"), TEXT("hovering the mission: title, tier, kind"));
+		}
+		else
+		{
+			Check(Tip.StartsWith(TEXT("MERC · ")) && Tip.Contains(TEXT("ore delivered")), FString::Printf(TEXT("m2: the mercenary's tooltip: %s"), *Flat));
+			Shoot(TEXT("m2-06-tooltip-merc"), TEXT("hovering the mercenary: name, field, delivered"));
+		}
+		return;
+	}
+	case 1709:
+		CloseWorldMap();
+		Shots.Route.Reset();
+		Shots.RouteAt = 0;
+		Advance();
+		return;
+	case 1710:
+	{
+		// To the mercenary: round the Citadel to the field's side, and a look.
+		const ac::Unit* Merc = M ? M->unit(M2Unit) : nullptr;
+		if (Merc && U && S && CitadelOf(*S))
+		{
+			if (Shots.Route.IsEmpty())
+			{
+				const ac::Vec2 C = CitadelOf(*S)->position;
+				const ac::Vec2 D = ac::normalize(Merc->position - C);
+				const ac::Vec2 Side(-D.y, D.x);
+				const double R = ac::Rules::radius(ac::StructureKind::citadel) + 4.5;
+				const double Turn = ac::dot(U->position - C, Side) >= 0 ? 1.0 : -1.0;
+				const ac::Vec2 A = C + Side * (R * Turn);
+				const ac::Vec2 B = Merc->position + Side * (6.0 * Turn) + D * 2.0;
+				Route({FVector2D(A.x, A.y), FVector2D(B.x, B.y)});
+			}
+			const int32 Got = Drive();
+			if (Got == 1 || ac::distance(U->position, Merc->position) < 7)
+			{
+				Stop(Face(Merc->position));
+				Advance();
+				return;
+			}
+			if (Got < 0) Stalled(TEXT("round the Citadel to the mercenary"));
+			return;
+		}
+		TimedOut(TEXT("the mercenary in view"), 60);
+		return;
+	}
+	case 1711:
+		if (Since() < 2.0) return;
+		Shoot(TEXT("m2-07-merc-orange"), TEXT("the mercenary drilling in the world: orange, outlined"));
+		return;
+	case 1712:
+		Check(Shots.Saved + Shots.Skipped == 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsK2

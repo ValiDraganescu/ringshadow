@@ -356,6 +356,8 @@ bool WorldMap::join(PilotId pilot) {
     // Dev: every blueprint, a stack of each.
     if (params_.devBlueprints)
         for (const StructureKind k : Progression::blueprintKinds()) p.progress.giveBlueprint(k, WorldParams::devCopies);
+    // Dev: regions been to.
+    for (const std::string& id : params_.devSeen) p.progress.regions.insert(id);
     const Region& r = start();
     const Unit u = startProspector();
     PilotState& in = pilots_[pilot] = p;

@@ -682,6 +682,7 @@ TEST(protocol_progress_carries_the_mercenaries) {
     m.mercRate = 230.625;
     m.mercNextLevel = 30;
     m.mercTags = {{88, "Flint"}, {91, "Kiln"}};
+    m.regionsSeen = {"start", "rust-hollow"};
     m.news = {ProgressMessage::News{ProgressMessage::NewsKind::merc, "away", 0, 1240, ""},
               ProgressMessage::News{ProgressMessage::NewsKind::merc, "left", 0, 8, "Wren"}};
     ProgressMessage back;

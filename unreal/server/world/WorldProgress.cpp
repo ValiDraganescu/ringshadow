@@ -228,6 +228,7 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.blueprints = g.blueprints;
     m.sitesFound = g.sites;
     m.sitesKnown = g.known;
+    m.regionsSeen = g.regions;
     m.contracts = it->second.contracts;
     m.contractsDawn = nextDawn(clock_);
     m.respawn = respawning(pilot);

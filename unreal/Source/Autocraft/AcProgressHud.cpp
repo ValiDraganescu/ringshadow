@@ -518,6 +518,22 @@ TArray<FAcWorldMapInfo::FSite> AcProgressHud::KnownSites(const FAcMmoClient& Mmo
 	return Out;
 }
 
+std::vector<ac::net::atlas::KnownSite> AcProgressHud::AtlasSites(const FAcMmoClient& Mmo)
+{
+	std::vector<ac::net::atlas::KnownSite> Out;
+	const ac::net::ProgressMessage* P = Mmo.Progress();
+	if (!P) return Out;
+	const TMap<FString, FPlace>& All = Places(Mmo);
+	for (const std::string& Id : P->sitesKnown)
+	{
+		const FPlace* Place = All.Find(Text(Id));
+		if (!Place) continue;
+		Out.push_back(ac::net::atlas::KnownSite{TCHAR_TO_UTF8(*Place->Region), TCHAR_TO_UTF8(*Place->Name), Place->Kind, Place->Blueprint, Place->Cell,
+			P->sitesFound.count(Id) > 0});
+	}
+	return Out;
+}
+
 TArray<AcProgressHud::FSitePlace> AcProgressHud::SitesIn(const FAcMmoClient& Mmo, const FString& Region)
 {
 	TArray<FSitePlace> Out;

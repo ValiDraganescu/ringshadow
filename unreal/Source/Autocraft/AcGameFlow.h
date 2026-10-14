@@ -123,6 +123,9 @@ public:
 	TSharedPtr<SAcWorldMap> WorldMapWidget() const { return WorldMap; }
 	/// The world map's FLY: asks the server; the map closes when asked, or
 	/// says why not.
+	/// A mission or a site clicked on the world map: the compass's target
+	/// (clicked again: none).
+	void TargetFromMap(const ac::net::atlas::Item& It);
 	void FlyFromMap(const FString& Region, const FString& Pad);
 	/// The Prospector's skill screen (K in the mode; docs/prospector-progression.md).
 	/// False outside the mode or without a HUD.
