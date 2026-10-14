@@ -32,6 +32,19 @@
 //      words from AcProgressHud for 9 to 10, shown directly) and a find toast
 //   07 the build menu from the blueprints
 //
+// -AcMmoShotsG2 (it adds -AcMmoDevRig: a finished Citadel, level 25, a
+// full wallet): contracts, respawn, depot and own pads (docs/contracts.md,
+// docs/prospector-progression.md "On the server (P6)"), DIR/g2-NN-moment.png:
+//   01 the KSTR contract panel      02 a contract done: its toast (the news
+//      shown directly, its words from AcProgressHud)
+//   03 X: an abandon armed          04 slot 3 abandoned: back at dawn
+//   05 the respawn screen (shown directly for a Citadel, 40 ore kept)
+//   06 Homing beacon learned: the world map at the pilot's own Citadel pad,
+//      the contracts' marks           07 the opening ring at the Lander wreck
+//   08 the wreck opened: its news toast   09 the world map, the site opened
+//   10 a Hab Dome built, a load drilled: the depot prompt
+//   11 the load unloaded at the Hab Dome
+//
 // -AcMmoShotsRingshadow (with -AcMmoRingshadow=70: a sweep 70 s after the
 // server starts; docs/weather.md "Ringshadow sweep"): only the sweep, third
 // person on the start pad toward the giant, DIR/rs-NN-moment.png:
@@ -131,6 +144,55 @@ namespace
 		ac::Skill::quickDrill, ac::Skill::overcharge, ac::Skill::lightFrame, ac::Skill::lightFrame, ac::Skill::plating};
 	int32 P5Spent = 0;
 	double P5AskedAt = 0;
+
+	/// -AcMmoShotsG2: the Hab Dome it builds.
+	int64 G2Dome = -1;
+
+	const ac::Structure* HabDomeOf(const ac::GameState& S)
+	{
+		for (const ac::Structure& B : S.structures)
+		{
+			if (B.kind == ac::StructureKind::habDome && B.owner == ac::Pilot::player) return &B;
+		}
+		return nullptr;
+	}
+
+	/// -AcMmoShotsOnly=sf-02,sf-08 (names or numbers, comma-separated): the
+	/// moments to shoot; the others are passed over (counted as skipped),
+	/// their waits too where the set can. Unset: every moment.
+	bool Wanted(const TCHAR* Name)
+	{
+		FString Only;
+		if (!FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsOnly="), Only, false) || Only.IsEmpty()) return true;
+		const FString N(Name);
+		// The moment's number: the first piece that starts with a digit
+		// ("02" in sf-02-streak-high, "02b" in rs-02b-edge-high).
+		FString Number;
+		TArray<FString> Pieces;
+		N.ParseIntoArray(Pieces, TEXT("-"));
+		for (const FString& P : Pieces)
+			if (!P.IsEmpty() && FChar::IsDigit(P[0]))
+			{
+				Number = P;
+				break;
+			}
+		TArray<FString> Asked;
+		Only.ParseIntoArray(Asked, TEXT(","));
+		for (FString A : Asked)
+		{
+			A.TrimStartAndEndInline();
+			if (A.IsEmpty()) continue;
+			if (N.Equals(A, ESearchCase::IgnoreCase) || N.StartsWith(A + TEXT("-"), ESearchCase::IgnoreCase)) return true;
+			// A number alone ("8", "08", "02b"), or a set's prefix and number ("sf-8").
+			FString Tail = A;
+			if (int32 Dash; A.FindLastChar(TEXT('-'), Dash)) Tail = A.Mid(Dash + 1);
+			if (Tail.IsEmpty() || Number.IsEmpty() || !FChar::IsDigit(Tail[0])) continue;
+			if (A != Tail && !N.StartsWith(A.Left(A.Len() - Tail.Len()), ESearchCase::IgnoreCase)) continue;
+			if (Tail.Equals(Number, ESearchCase::IgnoreCase) || (Tail.IsNumeric() && Number.IsNumeric() && FCString::Atoi(*Tail) == FCString::Atoi(*Number)))
+				return true;
+		}
+		return false;
+	}
 
 	/// How far up a building is, 0 to 1.
 	double Built(const ac::Structure& B)
@@ -271,6 +333,20 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// The new pilot starts at level 3 (1100 XP): the Derrick's floor, so
 		// the MH loop (19-22) can build one, unless the run says otherwise.
 		if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp)) FCommandLine::Append(TEXT(" -AcMmoDevXp=1100"));
+		// -AcMmoShotsG2: the dev rig's home (a Citadel, level 25, a full wallet),
+		// for this step only (the flow steps before it in the run go without).
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) && !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
+		{
+			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
+		}
+		// -AcMmoShotsStarfall: the fall 10 s after the pilot drives (the
+		// streak shows its last 10 s), late in the afternoon, unless the run
+		// says otherwise.
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsStarfall")))
+		{
+			if (double In = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoStarfall="), In)) FCommandLine::Append(TEXT(" -AcMmoStarfall=10"));
+			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=17"));
+		}
 		StartMmo(true);
 		Advance();
 		return;
@@ -291,6 +367,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRingshadow"))) T.Phase = 300;
 			// -AcMmoShotsStarfall: only a starfall (400-414).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsStarfall"))) T.Phase = 400;
+			// -AcMmoShotsG2: contracts, respawn, depot, own pads (600-629).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2"))) T.Phase = 600;
 			// -AcMmoShotsRig: only the rig screen (500-513).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
 		}
@@ -1038,6 +1116,292 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 215:
 		Check(Shots.Saved == 7, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsG2
+	case 600:
+		// The dev rig's Citadel, the contracts drawn; first person.
+		if (Mmo->Progress() && Mmo->Progress()->contracts.size() == 3 && S && CitadelOf(*S) && Since() > 4.0)
+		{
+			// Away from the Citadel's wall (the dev rig stands it there).
+			Pilot->ToggleView();
+			Stop(Face(U->position * 2.0 - CitadelOf(*S)->position));
+			P5AskedAt = 0;
+			G2Dome = -1;
+			Advance();
+		}
+		else TimedOut(TEXT("the contracts and the dev rig's Citadel"));
+		return;
+	case 601:
+		if (Since() > 2.0) Shoot(TEXT("g2-01-contracts"), TEXT("the KSTR contract panel"));
+		return;
+	case 602:
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this))
+		{
+			const ac::net::Contract& C = Mmo->Progress()->contracts[0];
+			ac::net::ProgressMessage::News N;
+			N.kind = ac::net::ProgressMessage::NewsKind::contract;
+			N.id = std::to_string(C.id);
+			N.xp = C.xp;
+			N.value = C.hydrogen;
+			Hud->PreviewNews(N);
+		}
+		Advance();
+		return;
+	case 603:
+		if (Since() > 0.8) Shoot(TEXT("g2-02-contract-done"), TEXT("a contract done: its toast"));
+		return;
+	case 604:
+		if (Since() > 5.0)
+		{
+			UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this);
+			if (Hud) Hud->ToggleAbandon();
+			Check(Hud && Hud->AbandonArmed(), TEXT("X armed an abandon"));
+			Advance();
+		}
+		return;
+	case 605:
+		if (Since() > 0.6) Shoot(TEXT("g2-03-abandon-armed"), TEXT("X: which contract to drop"));
+		return;
+	case 606:
+	{
+		UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this);
+		Check(Hud && Hud->Abandon(2), TEXT("3 asked to abandon slot 3"));
+		Advance();
+		return;
+	}
+	case 607:
+		if (Mmo->Progress()->contracts.size() == 3 && Mmo->Progress()->contracts[2].state == ac::net::Contract::State::abandoned)
+		{
+			if (Since() > 1.0) Shoot(TEXT("g2-04-abandoned"), TEXT("slot 3 abandoned: back at dawn"));
+			return;
+		}
+		TimedOut(TEXT("slot 3 abandoned"), 10);
+		return;
+	case 608:
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this))
+		{
+			ac::net::ProgressMessage::Respawn R;
+			R.at = (Mmo->Sky() ? Mmo->Sky()->time : 0) + 8;
+			R.region = Mmo->Here() ? Mmo->Here()->id : std::string();
+			R.home = ac::StructureKind::citadel;
+			R.cargo = 40;
+			Hud->PreviewRespawn(R);
+		}
+		Advance();
+		return;
+	case 609:
+		if (Since() > 1.2) Shoot(TEXT("g2-05-respawn"), TEXT("the respawn screen"));
+		return;
+	case 610:
+	{
+		// Homing beacon (the Citadel a pad): its tier's points first.
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this)) Hud->PreviewRespawn(std::nullopt);
+		const std::optional<ac::ProspectorProgress> G = AcProgressHud::Progress(*Mmo);
+		if (!G)
+		{
+			TimedOut(TEXT("the progress"), 10);
+			return;
+		}
+		if (G->rank(ac::Skill::homingBeacon) >= 1)
+		{
+			Advance();
+			return;
+		}
+		if (Now - P5AskedAt > 0.7)
+		{
+			std::optional<ac::Skill> Want;
+			if (!G->spendRefusal(ac::Skill::homingBeacon)) Want = ac::Skill::homingBeacon;
+			const ac::Branch Branch = ac::Progression::node(ac::Skill::homingBeacon).branch;
+			for (const ac::SkillNode& N : ac::Progression::nodes())
+			{
+				if (!Want && N.branch == Branch && N.tier <= 2 && !N.active && !G->spendRefusal(N.skill)) Want = N.skill;
+			}
+			if (Want) Mmo->Spend(*Want);
+			P5AskedAt = Now;
+		}
+		TimedOut(TEXT("Homing beacon learned"), 40);
+		return;
+	}
+	case 611:
+	{
+		// The Citadel in the World message as the pilot's own pad.
+		bool bOwn = false;
+		if (const ac::net::WorldMessage::Region* R = Mmo->Here())
+		{
+			for (const ac::net::WorldMessage::Pad& Q : R->pads) bOwn |= Q.building == ac::StructureKind::citadel;
+		}
+		if (bOwn && Since() > 1.0)
+		{
+			ToggleWorldMap();
+			Check(WorldMapWidget().IsValid(), TEXT("M opened the world map"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the Citadel a pad of the pilot's own"), 15);
+		return;
+	}
+	case 612:
+		if (Since() > 1.5)
+		{
+			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
+			Check(Near && Near->Building && Near->Within(), FString::Printf(TEXT("at the own pad: %s %.1f of %.1f"),
+				Near ? *Near->Name : TEXT("-"), Near ? Near->Distance : -1.0, Near ? Near->Reach : -1.0));
+			Shoot(TEXT("g2-06-map-own-pad"), TEXT("the world map at the pilot's own Citadel pad, the contracts' marks"));
+		}
+		return;
+	case 613:
+		// To the Lander wreck (a 5 s hold opens it; a crate opens on touch).
+		CloseWorldMap();
+		Route({Cell(66, 34), Cell(54, 29.5)});
+		Advance();
+		return;
+	case 614:
+		if (const int32 D = Drive(); D == 1)
+		{
+			// Up to its hull, then hold the act key.
+			const FVector2D Wreck = Cell(50, 30);
+			const ac::Vec2 At(Wreck.X, Wreck.Y);
+			if (U && ac::distance(U->position, At) <= 1.9)
+			{
+				Stop(Face(At));
+				Pilot->Press(true);
+				Advance();
+				return;
+			}
+			if (Pilot) Pilot->SetTestInput(FVector2D(0, -0.5), Face(At));
+			TimedOut(TEXT("at the Lander wreck"), 40);
+		}
+		else if (D < 0) Stalled(TEXT("to the Lander wreck"));
+		return;
+	case 615:
+		if (const ac::net::ProgressMessage* P = Mmo->Progress(); P && P->opening && P->opening->since > 0 && P->opening->needs > 0)
+		{
+			const double Share = ((Mmo->Sky() ? Mmo->Sky()->time : 0) - P->opening->since) / P->opening->needs;
+			if (Share > 0.35 && Share < 0.85)
+			{
+				Shoot(TEXT("g2-07-opening-ring"), FString::Printf(TEXT("the opening ring at the Lander wreck, %.0f%%"), Share * 100));
+				return;
+			}
+		}
+		else if (P && P->opening && !P->opening->refusal.empty())
+		{
+			Check(false, FString::Printf(TEXT("the wreck opens: %s"), *Utf(P->opening->refusal)));
+			Finish();
+			return;
+		}
+		TimedOut(TEXT("the wreck opening"), 20);
+		return;
+	case 616:
+		if (Mmo->Progress()->sitesFound.count("start/Lander wreck"))
+		{
+			Pilot->Press(false);
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the wreck opened"), 20);
+		return;
+	case 617:
+		// The toast faded in.
+		if (Since() > 0.8) Shoot(TEXT("g2-08-site-toast"), TEXT("the wreck opened: the news toast"));
+		return;
+	case 618:
+		ToggleWorldMap();
+		Advance();
+		return;
+	case 619:
+		if (Since() > 1.5) Shoot(TEXT("g2-09-map-sites"), TEXT("the world map: the site opened, the contracts' marks"));
+		return;
+	case 620:
+		// To the main run's build spot by the pad (its Citadel's ghost fits there).
+		CloseWorldMap();
+		Route({Cell(62, 34), Cell(69, 48)});
+		Advance();
+		return;
+	case 621:
+		if (const int32 D = Drive(); D == 1)
+		{
+			Stop(PI);
+			if (Since() > 1.0) Advance();
+		}
+		else if (D < 0) Stalled(TEXT("to the build spot"));
+		return;
+	case 622:
+	{
+		// A Hab Dome there (B, its number, the act key).
+		UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+		const int32 Number = AcPilotText::BuildKinds(true).IndexOfByKey(ac::StructureKind::habDome) + 1;
+		Check(Build && Build->Key(TEXT("b")) && Build->Key(FString::FromInt(Number)) && Build->Placing().IsSet(),
+			FString::Printf(TEXT("%d held out a Hab Dome"), Number));
+		Advance();
+		return;
+	}
+	case 623:
+		if (Since() > 1.0)
+		{
+			Pilot->Press(true);
+			Pilot->Press(false);
+			Advance();
+		}
+		return;
+	case 624:
+		if (const ac::Structure* D = S ? HabDomeOf(*S) : nullptr; D && D->complete())
+		{
+			G2Dome = D->id;
+			Route({Cell(66, 42), Cell(59, 43.5), Cell(58, 46)});
+			Advance();
+			return;
+		}
+		for (const FString& Why : Mmo->TakeBuildRefusals()) Check(false, FString::Printf(TEXT("the Hab Dome built, not refused: %s"), *Why));
+		TimedOut(TEXT("the Hab Dome finished"), WeldLimit);
+		return;
+	case 625:
+		if (const int32 D = Drive(); D == 1)
+		{
+			// Up to the deposit until the act key would drill it.
+			const FVector2D Deposit = Cell(53, 46);
+			const ac::Vec2 At(Deposit.X, Deposit.Y);
+			const std::optional<ac::PilotTarget> Target = U ? M->simulation().pilotTarget(*U) : std::nullopt;
+			if (Target && Target->is<ac::PilotTarget::Patch>())
+			{
+				Stop(Face(At));
+				Pilot->Press(true);
+				Advance();
+				return;
+			}
+			if (Pilot) Pilot->SetTestInput(FVector2D(0, -0.6), Face(At));
+			TimedOut(TEXT("at the ore"), 50);
+		}
+		else if (D < 0) Stalled(TEXT("to the ore"));
+		return;
+	case 626:
+		if (U && U->carrying > 0 && U->task != ac::Unit::Task::mining)
+		{
+			Pilot->Press(false);
+			if (const std::optional<ac::Structure> D = S->structure(G2Dome)) Stop(Face(D->position));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("a load drilled"), 45);
+		return;
+	case 627:
+		if (Since() > 1.5) Shoot(TEXT("g2-10-depot-prompt"), TEXT("a load, the Hab Dome as a depot: the prompt and the compass"));
+		return;
+	case 628:
+		if (const std::optional<ac::Structure> D = S->structure(G2Dome))
+		{
+			if (U && U->carrying == 0)
+			{
+				Stop(Face(D->position));
+				if (Since() > 0.4) Shoot(TEXT("g2-11-depot-unloaded"), TEXT("the load unloaded at the Hab Dome"));
+				return;
+			}
+			if (Pilot) Pilot->SetTestInput(FVector2D(0, -0.8), Face(D->position));
+		}
+		TimedOut(TEXT("unloaded at the Hab Dome"), 45);
+		return;
+	case 629:
+		Check(Shots.Saved + Shots.Skipped == 11, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsRingshadow

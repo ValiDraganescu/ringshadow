@@ -462,13 +462,16 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 			Advance();
 			return;
 		}
-		// East along the pad's row to the east edge's opening.
+		// East along the pad's row, round the well at (128, 50) on its north
+		// side, to the east edge's opening (39–57): region cells.
 		if (const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr; M && M->driven() && Pilot)
 		{
 			if (const ac::Unit* U = M->unit(*M->driven()))
 			{
 				const ac::GroundRect& B = M->simulation().map->bounds;
-				Pilot->SetTestInput(FVector2D(0, -1), std::atan2(B.minZ + 48 - U->position.y, B.maxX + 4 - U->position.x));
+				const double X = U->position.x - B.minX;
+				const ac::Vec2 To = X < 117 ? ac::Vec2(118, 48) : X < 123 ? ac::Vec2(124, 41) : ac::Vec2(B.maxX - B.minX + 4, 41);
+				Pilot->SetTestInput(FVector2D(0, -1), std::atan2(B.minZ + To.y - U->position.y, B.minX + To.x - U->position.x));
 				// Slow frames near the edge (see mmofly).
 				if (U->position.x > B.maxX - 8) Mmo->TestReadEvery = 0.2;
 			}
