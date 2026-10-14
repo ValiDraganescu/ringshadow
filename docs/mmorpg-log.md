@@ -421,3 +421,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N HEAD suites: core 454, server 153, net 67 pass; HEAD builds.
 - T V3 first cut eee224c: 59.8 s reel, 1080p; web copy 12.6 MB.
 - D Manager: work paused 2026-10-14 17:45 for the user's showcase.
+- N Showcase page: https://claude.ai/artifact/RdipgqqQkk2VXBPwSpzs6K
+- I User: resume, and whether to post the reel.
