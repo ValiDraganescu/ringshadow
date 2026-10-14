@@ -13,7 +13,11 @@ post-process component:
   `ac::Ringshadow::band`) goes to the sky's cold light: `Shade` (0.14) of
   its colour in linear light, bluer (about 0.4 of its brightness on screen), with soft edges, divided by `SunDim` (what the sun at the
   camera was dimmed to, AAcDaylight::RingshadowSun), so the band reads the
-  same seen from inside it as from outside;
+  same seen from inside it as from outside. The edges sharpen with
+  distance (`EdgeSharp`), the front is darker (`EdgeDark`), the land ahead
+  warmer (`Warm`), and dust along the edge line catches the sun (`Glow`),
+  so the wall reads coming over the far land; the half-cover lines are the
+  core's;
 - god rays: the sky's pixels brighter than `RayFloor` (of l/(1+l): the
   sun's disc counts as about 1, not its full HDR) smeared toward the
   sun (`SunUV`, viewport UV) by `Rays` (0: none), strongest as the ring's
@@ -46,9 +50,25 @@ float dist = length(W - Cam);
 if (dist < SkyDepth) {
     // The ground: in the band it keeps only the sky's cold light.
     float s = dot(W.xy / 100.0, float2(SweepDirX, SweepDirY));
-    float cov = smoothstep(SweepTrail, SweepTrail + SweepSoft, s) * (1.0 - smoothstep(SweepLead - SweepSoft, SweepLead, s));
+    float dc = dist / 100.0;
+    // The edges drawn sharper with distance (half the band's soft edge near,
+    // EdgeSharp of it 120 cells off) about the same half-cover lines, so the
+    // wall reads as a line across the far land.
+    float soft = SweepSoft * lerp(0.5, EdgeSharp, saturate(dc / 120.0));
+    float lead = SweepLead - 0.5 * SweepSoft;
+    float trail = SweepTrail + 0.5 * SweepSoft;
+    float cov = smoothstep(trail - 0.5 * soft, trail + 0.5 * soft, s) * (1.0 - smoothstep(lead - 0.5 * soft, lead + 0.5 * soft, s));
     float3 shade = Shade * float3(0.72, 0.9, 1.35);
-    c *= lerp(float3(1, 1, 1), shade, cov) / max(SunDim, 0.05);
+    // The front darker still (the shade's first cells), from 10 cells off.
+    float front = cov * smoothstep(lead - 6.0, lead - 0.5 * soft, s) * EdgeDark * saturate((dc - 10.0) / 30.0);
+    // Ahead of it the sun's warm light; dust in the air along the edge line catching it.
+    float ahead = step(lead - 0.5 * soft, s);
+    float warm = (1.0 - cov) * ahead * exp(-max(s - lead, 0.0) / 14.0) * Warm;
+    float dust = (1.0 - cov) * exp(-pow((s - lead - 0.4 * soft - 0.6) / 1.6, 2.0)) * Glow * saturate((dc - 8.0) / 25.0);
+    float g0 = dot(c, float3(0.3, 0.59, 0.11));
+    c *= lerp(float3(1, 1, 1), shade, cov) * (1.0 - front) * lerp(float3(1, 1, 1), float3(1.14, 1.0, 0.8), warm);
+    c += dust * float3(1.0, 0.8, 0.55) * (0.04 + g0);
+    c /= max(SunDim, 0.05);
     if (Debug > 0.5) return float3(cov, frac(s / 20.0), saturate(dist / 10000.0));
 }
 // God rays: the bright sky toward the sun (its disc and the ring's gaps
@@ -142,6 +162,13 @@ def build():
         # the cover (red), the band coordinate's 20-cell stripes (green) and
         # the distance (blue, 100 m full).
         ("Debug", scalar("Debug", 1.0 if os.environ.get("RINGSHADOW_DEBUG") else 0.0), ""),
+        # The edge's look on far land (docs/mmorpg-m7.md E1b): its soft edge
+        # 120 cells off (of the band's), the front's extra dark, the warm
+        # light ahead, the dust along the edge line.
+        ("EdgeSharp", scalar("EdgeSharp", 0.12), ""),
+        ("EdgeDark", scalar("EdgeDark", 0.45), ""),
+        ("Warm", scalar("Warm", 0.8), ""),
+        ("Glow", scalar("Glow", 0.6), ""),
         ("SunDim", scalar("SunDim", 1.0), ""),
         ("CamCover", scalar("CamCover", 0.0), ""),
         ("SunUV", vector("SunUV", (0.5, -1.0, 0)), ""),

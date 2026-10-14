@@ -142,9 +142,12 @@ On screen (`AAcRingshadow`, `unreal/Source/Autocraft/AcRingshadow.cpp`):
 - **The band on the land.** `M_Ringshadow`
   (`Tools/Editor/make_ringshadow_material.py`), a post-process pass, darkens
   the ground in the band to 0.14 of its light (about 0.4 of its brightness
-  on screen) and cools it to the sky's blue,
-  with the soft edges, so the band's edge shows on far terrain long before
-  it arrives. The band goes to `MPC_AcWorld` (`SweepDirX`, `SweepDirY`,
+  on screen) and cools it to the sky's blue. Its edges sharpen with
+  distance (half the 16-cell soft edge close by, 2 cells 120 cells off,
+  about the same half-cover lines as the gameplay's), its first cells are
+  darker still, the land just ahead of it is warmer, and a line of dust
+  along the edge catches the sun: the wall reads coming over the far land
+  long before it arrives. The band goes to `MPC_AcWorld` (`SweepDirX`, `SweepDirY`,
   `SweepLead`, `SweepTrail`, `SweepSoft`) every frame.
 - **The sun.** With the camera in the band the sun dims to 0.3
   (`AAcDaylight::RingshadowSun`, which also dims the sky's sun). The pass

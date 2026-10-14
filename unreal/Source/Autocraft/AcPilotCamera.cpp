@@ -7,6 +7,8 @@
 
 #include "Rules.h"
 
+#include "HAL/IConsoleManager.h"
+
 #include <cmath>
 
 namespace
@@ -16,6 +18,12 @@ namespace
 	/// SceneKit axes ↔ Unreal axes for directions (a swap of Y and Z: its
 	/// own inverse).
 	FVector Swap(const FVector& V) { return FVector(V.X, V.Z, V.Y); }
+
+	/// The picture harness's boom (AcMmoShots, -AcMmoShotsRingshadow's
+	/// rs-02b): the third-person boom's length times this, its lift raised
+	/// by as much. 1 in play.
+	TAutoConsoleVariable<float> CVarShotBoom(TEXT("ac.Pilot.ShotBoom"), 1.f,
+		TEXT("Third-person boom length multiplier for picture runs (1: normal)"));
 }
 
 double FAcPilotCamera::HorizontalFov(const double Aspect)
@@ -110,6 +118,9 @@ void FAcPilotCamera::Boom(const ac::UnitKind Kind, float& OutLift, float& OutLen
 {
 	OutLift = Kind == ac::UnitKind::hailstorm ? 0.1f : 0.f;
 	OutLength = Kind == ac::UnitKind::hailstorm ? 1.5f : 1.f;
+	const float Shot = FMath::Max(1.f, CVarShotBoom.GetValueOnGameThread());
+	OutLength *= Shot;
+	OutLift += 2.f * (Shot - 1.f);
 }
 
 void FAcPilotCamera::Reset()

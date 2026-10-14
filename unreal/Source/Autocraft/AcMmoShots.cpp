@@ -36,7 +36,8 @@
 // server starts; docs/weather.md "Ringshadow sweep"): only the sweep, third
 // person on the start pad toward the giant, DIR/rs-NN-moment.png:
 //   01 before: the radio's toast, the land in the sun
-//   02 along the band's edge 7-16 cells off, running away over the far ground
+//   02 toward the giant: the band's edge 20-30 cells ahead over the berms
+//   02b the same from a boom 4 times as long (ac.Pilot.ShotBoom), 6-19 off
 //   03 its edge at the pilot, looking up: the ring's edge on the sun, god rays
 //   04 under the band    05 under it, looking up: the sun through the ring
 //   06 under it, first person at the nearest ore (the veins flaring)
@@ -1067,6 +1068,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	{
 		// Third person looking up at the sun, the giant's upper limb low in the
 		// left of the picture.
+		// The usual boom again after rs-02b.
+		if (IConsoleVariable* Boom = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.Pilot.ShotBoom"))) Boom->Set(1.f);
 		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
 		const FVector Sun = AAcDaylight::SunToward(AAcDaylight::HourAt(Sky ? Sky->Time : 0.0));
 		Stop(std::atan2(Sun.Y, Sun.X) - 0.15);
@@ -1092,8 +1095,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 306:
 	case 312:
 	{
-		// The band where the pilot stands: 302 its leading edge 7-16 cells
-		// off, looking along it over the far ground; 304 the edge at the pilot (the arc's
+		// The band where the pilot stands: 302 its leading edge coming
+		// toward the pilot over the far ground (rs-02, rs-02b); 304 the edge at the pilot (the arc's
 		// edge on the sun); 306 deep in it; 312 its trailing edge 6-20 cells past.
 		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
 		const std::optional<ac::Ringshadow::Band> B =
@@ -1104,12 +1107,29 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			const double Cover = ac::Ringshadow::cover(*B, U->position);
 			if (T.Phase == 302)
 			{
-				// Along the edge (the band on the left), so it runs off over the far ground.
-				Stop(std::atan2(B->dir.y, B->dir.x) - 0.5 * UE_DOUBLE_PI);
-				Pilot->Eye().Pitch = -0.12;
-				if (At - B->lead > 7 && At - B->lead < 16 && Since() > 1.0)
+				// Toward the giant, the band's leading edge coming over the berms:
+				// rs-02 from the usual boom 20-30 cells off, then rs-02b from a
+				// boom 4 times as long (about 13 cells up) 6-19 cells off.
+				IConsoleVariable* Boom = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.Pilot.ShotBoom"));
+				const bool bHigh = Shots.Saved >= 2;
+				if (bHigh && Boom && Boom->GetFloat() < 2.f)
 				{
-					Shoot(TEXT("rs-02-edge-along"), FString::Printf(TEXT("along the band's edge, %.0f cells to the left"), At - B->lead));
+					Boom->Set(4.f);
+					T.PhaseAt = Now;
+				}
+				const FVector G = FAcGasGiant::Direction();
+				Stop(std::atan2(G.Y, G.X));
+				Pilot->Eye().Pitch = bHigh ? -0.3 : -0.14;
+				const double Off = At - B->lead;
+				if (!bHigh && Off > 20 && Off < 30 && Since() > 1.0)
+				{
+					Shoot(TEXT("rs-02-edge-ahead"), FString::Printf(TEXT("toward the giant, the band's edge %.0f cells ahead"), Off));
+					T.Phase -= 1;
+					return;
+				}
+				if (bHigh && Off > 6 && Off < 19 && Since() > 1.0)
+				{
+					Shoot(TEXT("rs-02b-edge-high"), FString::Printf(TEXT("from up high, the band's edge %.0f cells ahead"), Off));
 					return;
 				}
 			}
@@ -1175,7 +1195,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Since() > 1.5) Shoot(TEXT("rs-08-after-east"), TEXT("after, looking east: the band going away"));
 		return;
 	case 315:
-		Check(Shots.Saved == 8, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Check(Shots.Saved == 9, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		if (IConsoleVariable* Boom = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.Pilot.ShotBoom"))) Boom->Set(1.f);
 		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
 		Finish();
 		return;
