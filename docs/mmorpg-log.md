@@ -358,3 +358,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I E2 polish: white-hot deposit, big day embers, thin streak.
 - N E2 task: 68 min against 45 estimated.
 - T S1 then E2 polish → world-look.
+- I G1 5007b79 didn't compile alone (hunk offsets); fixed 1d382af.
+- D F1: flight costs 10 MH + 5 per grid step.
+- D Manager: material commandlets under the train's run lock, by hand.
