@@ -20,9 +20,3 @@
 /assets/js/*
   Cache-Control: public, max-age=3600
 
-# Only ringshadow.com is indexed: the pages.dev addresses and previews say noindex.
-https://ringshadow.pages.dev/*
-  X-Robots-Tag: noindex
-
-https://:version.ringshadow.pages.dev/*
-  X-Robots-Tag: noindex

@@ -12,7 +12,7 @@ no framework and no server side, so this folder deploys as it is.
 | `assets/js/` | `stars.js` (the starfield), `home.js` (clips play only on screen), `roadmap.js` (the ring). |
 | `assets/fonts/` | Barlow Condensed and Exo 2 as woff2, with their SIL Open Font License texts. |
 | `assets/media/` | Screenshots and clips from `docs/media/` (the GIFs re-encoded as MP4) and the key art from `art/splash/`. |
-| `_headers`, `_redirects`, `wrangler.toml`, `404.html`, `robots.txt`, `sitemap.xml` | Cloudflare Pages: see "Deploy to Cloudflare Pages". |
+| `_headers`, `wrangler.toml`, `.assetsignore`, `404.html`, `robots.txt`, `sitemap.xml` | Hosting on Cloudflare: see "Deploy to Cloudflare". |
 | `blog/` | The blog: `index.html` (newest first), one page per post, `feed.xml` (Atom), `media/<post>/` (its album). |
 | `assets/css/blog.css`, `assets/js/album.js` | The blog's look, and the albums' lightbox (keys, swipes, captions). |
 | `tools/album.py` | Copies pictures into an album, resized and recompressed (`uv run`). |
@@ -73,7 +73,7 @@ about 2.5 MB of full pictures (the 14-picture Brood album is 2.3 MB); a
 reader only loads thumbnails until they open one. One video per post at
 most, about 4 MB. The whole site should stay under 50 MB; on 2026-10-14
 it is 15 MB, 9.7 MB of it blog media (the showreel is 4 MB of that).
-Cloudflare Pages allows 25 MB a file and 20,000 files.
+Cloudflare allows 25 MB a file and 20,000 files.
 
 ## Preview locally
 
@@ -86,57 +86,51 @@ pnpm dlx serve website
 
 Then open http://localhost:8765/ (or the address `serve` prints).
 
-## Deploy to Cloudflare Pages
+## Deploy to Cloudflare
 
 The site's address is **https://ringshadow.com** (on the user's Cloudflare
 account). Every page carries it: `<link rel="canonical">`, `og:url` and an
 absolute `og:image` (link previews on X need the full URL), and so do
-`sitemap.xml`, `robots.txt` and the blog's feed. Pages serves `/blog/the-brood`
+`sitemap.xml`, `robots.txt` and the blog's feed. Cloudflare serves `/blog/the-brood`
 for `blog/the-brood.html` and redirects the `.html` address there, so the
 canonical addresses have no `.html`; links inside the site stay relative and
 work either way. A new post adds its own address in the same places, and a
 line in `sitemap.xml`.
 
-The deploy files, all in this folder:
+The site is **live at https://ringshadow.com** since 2026-10-14. Cloudflare
+runs it as a Worker that only serves this folder's files ("static assets";
+new Pages projects are Workers now). There is no code and no build step.
 
 | File | What |
 |---|---|
-| `wrangler.toml` | The Pages project: name `ringshadow`, output `.` (this folder). |
-| `_headers` | Security headers (CSP self only), caching, and `noindex` on the `pages.dev` addresses so only ringshadow.com is indexed. |
-| `_redirects` | Sends `/tools/`, `/README.md` and `/wrangler.toml` to the home page: Pages uploads the whole folder and can't leave files out. |
-| `404.html` | The not-found page. Without it Pages would answer every unknown address with the home page. |
+| `wrangler.toml` | The Worker `ringshadow`: serves this folder, `404.html` for unknown paths, `.html` dropped from addresses, on the custom domain ringshadow.com only (no workers.dev, no preview URLs). |
+| `.assetsignore` | Leaves the README, `tools/` and the config out of the upload. |
+| `_headers` | Security headers (CSP self only) and browser caching. |
+| `404.html` | The not-found page. |
 | `robots.txt`, `sitemap.xml` | For search engines. |
 
-Nothing deploys on its own; the user decides when. Two ways, either works:
+**Caching.** Cloudflare's edge caches every file (`cf-cache-status: HIT`)
+and a deploy replaces them all at once, so there is nothing to purge. In
+the browser, per `_headers`: fonts a year (immutable), pictures, video and
+sound a week, CSS and JS an hour. HTML is always revalidated
+(`max-age=0, must-revalidate` with an ETag), so a new post shows at once.
+File names carry no hashes, so a changed picture or stylesheet gets a new
+name rather than relying on the cache to expire.
 
-**Direct upload** (from a Mac with the folder checked out; logs in once in
-the browser):
+**Deploy** (only when the user says so; logs in once in the browser):
 
 ```sh
 cd website
 pnpm dlx wrangler@4.151.0 login
-pnpm dlx wrangler@4.151.0 pages project create ringshadow --production-branch main
-pnpm dlx wrangler@4.151.0 pages deploy . --project-name ringshadow --branch main
+pnpm dlx wrangler@4.151.0 deploy --message "what changed"
 ```
 
-A `--branch` other than `main` makes a preview at
-`<branch>.ringshadow.pages.dev` instead of going live.
+`pnpm dlx wrangler@4.151.0 dev` serves the folder locally the way Cloudflare
+does (port 8787): the 404 page, the redirects, the headers.
 
-**From GitHub** (every push deploys): Workers & Pages → Create → Pages →
-connect `ValiDraganescu/ringshadow`. Production branch: the branch the site
-is merged to. Root directory: `website`. Build command: `exit 0`. Output
-directory: `.` (from `wrangler.toml`). Under Settings → Builds, set the build
-watch paths to `website/*` so game commits don't redeploy the site.
-
-**The domain**, once ringshadow.com is in the Cloudflare account:
-
-1. The Pages project → Custom domains → add `ringshadow.com`, then
-   `www.ringshadow.com`. Cloudflare adds the DNS records and the certificate.
-2. Send `www` to the apex: the zone's Rules → Redirect Rules → a rule for
-   hostname `www.ringshadow.com` to `https://ringshadow.com${uri}` (path
-   kept), 301.
-3. SSL/TLS → Edge Certificates: Always Use HTTPS on. HSTS can be turned on
-   there later, once the site has run on HTTPS for a while.
+**The domain** (zone settings, not in this folder): HTTPS only, and `www`
+sent to the apex with a redirect rule. HSTS can follow once the site has run
+on HTTPS for a while.
 
 Limits that matter: 25 MiB a file, 20,000 files (the site is 15 MB in about
-160 files), 100 `_headers` rules, 2,100 `_redirects` lines.
+155 files), 100 `_headers` rules.

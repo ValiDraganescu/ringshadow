@@ -1,4 +1,7 @@
 # Files in this folder that are for the repository, not for readers.
-/tools/* / 301
-/README.md / 301
-/wrangler.toml / 301
+README.md
+tools
+wrangler.toml
+.assetsignore
+.gitignore
+.wrangler

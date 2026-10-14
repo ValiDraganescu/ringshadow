@@ -1,5 +1,17 @@
-# Cloudflare Pages: the Ringshadow website. Deploy from this folder (see
-# README.md, "Deploy to Cloudflare Pages"). No build step: the folder is the site.
+# Cloudflare: the Ringshadow website, served as static assets by a Worker
+# (Cloudflare now runs new Pages projects as Workers). No build step and no
+# code: this folder is the site. Deploy: see README.md.
 name = "ringshadow"
-pages_build_output_dir = "."
 compatibility_date = "2026-10-14"
+# Only ringshadow.com serves the site: no workers.dev address, no preview URLs.
+workers_dev = false
+preview_urls = false
+
+[assets]
+directory = "."
+not_found_handling = "404-page"
+html_handling = "auto-trailing-slash"
+
+[[routes]]
+pattern = "ringshadow.com"
+custom_domain = true
