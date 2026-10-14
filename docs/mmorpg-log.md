@@ -451,3 +451,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Save schema 8: buildings.owner renamed built_by; old saves migrate.
 - N R1 suites: core 454, server 158, net 67 pass.
 - I roles_spacedock_pad read a dangling temporary; rewritten.
+- T C1 (10% tax, realm wallet, donate panel) briefed to wt1.
