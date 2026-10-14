@@ -107,6 +107,17 @@
 // A run that waits on the world's clock moves it at once instead
 // (FAcMmoClient::DevClock: the server's --dev-control file, shot runs only).
 //
+// -AcMmoShotsClip (with -AcShot=PATH -AcShotRecord=S -AcShotRaw=FILE
+// -AcShotUI, AcShot.h; the ringshadow-video skill): motion instead of
+// pictures. The recorder is held until the first moment -AcMmoShotsOnly
+// names; from there it records S seconds of the run as it goes on, every
+// later moment played (and its waits), none of them shot, and the recorder
+// ends the run. Each moment logs its world time
+// (`mmoshots: clip: NAME at world T s`) against the recorder's
+// `shot: recording starts at world T s`, to find it in the clip. Leave out
+// -UseFixedTimeStep: the server runs on the wall clock, so the client must
+// too; the clip's rate is the frames over the recording's wall seconds.
+//
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
 //
@@ -128,6 +139,7 @@
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
 #include "AcProgressHud.h"
+#include "AcShot.h"
 #include "AcSimSubsystem.h"
 #include "AcSites.h"
 #include "SAcLevelUp.h"
@@ -197,12 +209,20 @@ namespace
 		return nullptr;
 	}
 
+	/// -AcMmoShotsClip: whether the recorder is held for the first moment,
+	/// and whether it records (every moment wanted from then on).
+	bool ClipHeld = false;
+	bool Clipping = false;
+	/// The set ended while recording: the recorder ends the run.
+	bool ClipEnded = false;
+
 	/// -AcMmoShotsOnly=sf-02,sf-08 (names or numbers, comma-separated): the
 	/// moments to shoot; the others are passed over (counted as skipped),
 	/// their waits too where the set can. Unset: every moment.
 	bool Wanted(const TCHAR* Name)
 	{
 		FString Only;
+		if (Clipping) return true;
 		if (!FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsOnly="), Only, false) || Only.IsEmpty()) return true;
 		const FString N(Name);
 		// The moment's number: the first piece that starts with a digit
@@ -263,6 +283,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Pilot) Pilot->SetTestInput(FVector2D::ZeroVector, Yaw);
 	};
 	auto Finish = [&] {
+		// -AcMmoShotsClip: the world goes on until the recorder ends the run.
+		if (Clipping)
+		{
+			ClipEnded = true;
+			UE_LOG(LogAutocraft, Display, TEXT("mmoshots: clip: the set is over; the recorder ends the run"));
+			return;
+		}
 		if (Pilot)
 		{
 			Pilot->Press(false);
@@ -288,6 +315,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			&& PC && PC->GetPawn() == Pilot && U;
 	};
 
+	if (ClipEnded) return;
 	// A picture asked for: wait until it is written (the writer is async).
 	if (!Shots.Pending.IsEmpty())
 	{
@@ -317,6 +345,17 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		{
 			UE_LOG(LogAutocraft, Display, TEXT("mmoshots: %s: passed over (-AcMmoShotsOnly)"), Name);
 			Shots.Skipped += 1;
+			Advance();
+			return;
+		}
+		if (ClipHeld || Clipping)
+		{
+			UAcShotSubsystem* Shot = UAcShotSubsystem::Get(this);
+			if (!Clipping && Shot) Shot->Release();
+			Clipping = true;
+			ClipHeld = false;
+			Shots.Saved += 1;
+			UE_LOG(LogAutocraft, Display, TEXT("mmoshots: clip: %s at world %.3f s: %s"), Name, GetWorld()->GetTimeSeconds(), *What);
 			Advance();
 			return;
 		}
@@ -377,6 +416,19 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 0:
 		if (Sim && Sim->IsMmo()) StopMmo();
 		IFileManager::Get().MakeDirectory(*Shots.Dir, true);
+		// -AcMmoShotsClip: the recorder waits for the first moment wanted.
+		Clipping = false;
+		ClipHeld = false;
+		ClipEnded = false;
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsClip")) && UAcShotSubsystem::IsRecordRun())
+		{
+			if (UAcShotSubsystem* Shot = UAcShotSubsystem::Get(this))
+			{
+				Shot->Hold();
+				ClipHeld = true;
+				UE_LOG(LogAutocraft, Display, TEXT("mmoshots: clip: the recorder held for the first moment wanted"));
+			}
+		}
 		// The new pilot starts at level 3 (1100 XP): the Derrick's floor, so
 		// the MH loop (19-22) can build one, unless the run says otherwise.
 		if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp)) FCommandLine::Append(TEXT(" -AcMmoDevXp=1100"));
