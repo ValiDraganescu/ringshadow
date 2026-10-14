@@ -117,7 +117,9 @@ sound a week, CSS and JS an hour. HTML is always revalidated
 File names carry no hashes, so a changed picture or stylesheet gets a new
 name rather than relying on the cache to expire.
 
-**Deploy** (only when the user says so; logs in once in the browser):
+**Deploy** every website change that is ready for production, right after
+its commit (the user, 2026-10-14), then check the live page. Drafts stay
+undeployed. The login is once, in the browser:
 
 ```sh
 cd website
