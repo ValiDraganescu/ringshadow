@@ -265,20 +265,24 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 	FAcPilotPen P{Out, Geometry, Layer, H};
 	const FVector2D C(W / 2, H / 2);
 
-	// Inside a building: a soft green vignette round the glass (the world
-	// still reads, the dashboard untouched), its name over it.
+	// Inside a building: a soft green vignette round the world (it still
+	// reads, the dashboard untouched), its name over it. Over a dashboard
+	// the sides fade out down to it and there is no bottom band.
 	if (Info.Inside)
 	{
-		const FAcRect R = View.IsEmpty() ? FAcRect(0, 0, W, H) : View;
+		const bool bDash = !View.IsEmpty();
+		const FAcRect R = bDash ? View : FAcRect(0, 0, W, H);
 		const double Band = FMath::Min(R.W, R.H) * 0.22;
 		const FLinearColor Edge = Srgb(0.02, 0.14, 0.08, 0.55), Clear = Srgb(0.02, 0.14, 0.08, 0);
 		const FAcRect In = R.Inset(Band, Band);
 		const FVector2D O[4] = {{R.MinX(), R.MinY()}, {R.MaxX(), R.MinY()}, {R.MaxX(), R.MaxY()}, {R.MinX(), R.MaxY()}};
 		const FVector2D I[4] = {{In.MinX(), In.MinY()}, {In.MaxX(), In.MinY()}, {In.MaxX(), In.MaxY()}, {In.MinX(), In.MaxY()}};
-		for (int32 K = 0; K < 4; ++K)
+		// The corners' colours: the bottom ones clear over a dashboard.
+		const FLinearColor At[4] = {bDash ? Clear : Edge, bDash ? Clear : Edge, Edge, Edge};
+		for (int32 K = bDash ? 1 : 0; K < 4; ++K)
 		{
 			const int32 N = (K + 1) % 4;
-			P.Poly({O[K], O[N], I[N], I[K]}, TArray<FLinearColor>{Edge, Edge, Clear, Clear});
+			P.Poly({O[K], O[N], I[N], I[K]}, TArray<FLinearColor>{At[K], At[N], Clear, Clear});
 		}
 		P.Label(*Info.Inside, 30, Srgb(0.5, 1, 0.55, 0.9), FVector2D(C.X, C.Y + 70), EAcHAlign::Center, EAcVAlign::Baseline, false);
 	}

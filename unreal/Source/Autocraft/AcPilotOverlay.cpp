@@ -268,7 +268,15 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	}
 	if (Widget)
 	{
-		Widget->SetView(bConsole ? ConsoleSub->Console()->Layout().Window : FAcRect());
+		// The world over the dashboard: the full width, down to its highest brow.
+		FAcRect View;
+		if (bConsole)
+		{
+			const FAcCabLayout& L = ConsoleSub->Console()->Layout();
+			const double Low = FMath::Max(L.Brow[0].Y, L.Brow[3].Y);
+			View = FAcRect(0, Low, L.Size.X, L.Size.Y - Low);
+		}
+		Widget->SetView(View);
 		Widget->Show(Info, Now);
 	}
 
