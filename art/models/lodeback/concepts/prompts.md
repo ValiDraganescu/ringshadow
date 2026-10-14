@@ -1,0 +1,13 @@
+# Lodeback concept prompts (round 1, 2026-10-14)
+
+Each prompt goes to Grok with no reference image (the bugs are not the army's machines). The result is saved as `c1-<slug>.jpg` in this folder.
+
+## Shared text
+
+Paint concept art of a Lodeback: a slow, heavy alien forager bug for a sci-fi real-time strategy game, about the size of a small car, that eats Stardust Ore. It grinds the ore rock with a broad, flat jaw and stores the ore in a big swollen, glowing translucent sac on its back, where the swallowed opal nodules show through. It comes alone or in pairs and bites only when cornered. Design direction: {DIRECTION} It is native to Ashfall Reach, a dusty frontier world of dark rock veined with opal-shimmering Stardust Ore and pools of mirror-silver liquid metal, under a huge ringed gas giant. It is chitinous: a hard, matte carapace of big overlapping plates, charcoal with a violet-black sheen, crusted with flecks of opal ore dust. It is bioluminescent: a warm gold and opal light glows from inside along the plate seams, in its eyes and through its soft parts. Painted as gritty sci-fi concept art with crisp dark outlines, worn, scratched chitin and grime. The game shows it from high above, so it reads clearly when small: a bold, chunky silhouette built from big, simple shapes. Show the whole creature twice side by side from a three-quarter front view, a little from above: on the left with its back sac empty and shrunk, walking, on the right with its sac swollen full of glowing ore, biting the ground with its jaw. Plain light grey background, soft, even light, no text, no people. Answer with one image.
+
+## Directions
+
+1. **beetle**: a heavy dung-beetle build: six thick legs, a wide shovel-shaped head, the sac rising behind the head like a great hump.
+2. **isopod**: a long, armoured, segmented body like a giant pill bug on many short legs, with the glowing sac swelling up between its back plates.
+3. **hermit**: a crab-like build: four thick, jointed walking legs and two short digging claws by its jaw, the sac carried high on its back like a glassy shell.

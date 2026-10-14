@@ -64,6 +64,22 @@ The Longbow **anchors** into artillery mode: `anchor`, `anchored`,
 `unanchor`, `anchorTime`, and so on. [new-units.md](new-units.md) designs
 the Peregrine, the Atlas and the Scorpion.
 
+## Creatures
+
+The **Brood**: the alien bugs of Ashfall Reach, the MMORPG mode's enemies
+([creatures.md](creatures.md)). Code `brood` for the family and its side.
+
+| Name          | Role                                          | Code        |
+|---------------|-----------------------------------------------|-------------|
+| Shardling     | Ground swarmer with opal crystal quills       | `shardling` |
+| Gloamwing     | Flyer that spits acid from above              | `gloamwing` |
+| Lodeback      | Ore eater: fills its back sac, then leaves    | `lodeback`  |
+| the Matriarch | The giant brood queen in her nest             | `matriarch` |
+
+A Lodeback **eats** ore (not "mines"), and its sac is its **sac**. The
+Matriarch is "the Matriarch" in running text; her home is the **nest**. A
+group of bugs drawn to a building is a **raid**; "a swarm" in the toasts.
+
 ## Buildings
 
 | Name      | Short form | Code        |
@@ -130,7 +146,8 @@ Unit names are capitalised everywhere, in running text too: "two
 Rangers", "the Comet jumps". Comet, Ranger, Firefly, Longbow, Kestrel,
 Hailstorm, Sentinel, Peregrine, Atlas and Scorpion are ordinary words, so
 lower case would read as the word, not the unit.
-Building names are already capitalised.
+Building names are already capitalised. Creature names too: "three
+Shardlings", "a Lodeback", "the Matriarch".
 
 In the game's own text (cards, prompts, the help line, the console and
 the messages on screen) unit and building names are also highlighted:

@@ -1,0 +1,429 @@
+# The Brood: Ringshadow's creatures
+
+The first enemies of the MMORPG mode (docs/mmorpg-m8.md, N1 to N3): alien
+bugs native to Ashfall Reach. They are drawn to the places worth being, linger
+there, bite a Prospector that walks into their site, chew on the realm's
+buildings and eat unguarded ore. One may come, or a swarm. A giant queen, the
+Matriarch, nests in Slag Pockets with a horde around her.
+
+This doc is the design N2 (bugs in the world), D1 and D2 (the defences) and N3
+(the Matriarch) build from. N1 made the names, the concept art, the models
+and the sounds; no gameplay code yet.
+
+## The user's words (2026-10-14)
+
+"I need some enemies while I go around to mine ore and MH. Some alien bugs of
+some sort, they are always attracted to the POIs in the game. They come,
+linger around and live, if I am in their site they attack. It could be one,
+it could be more." "The creatures can attack the buildings so I have to
+defend them." "The creatures mine the ore for themselves depleting
+unprotected veins (for now after mining the creatures go out of sight and
+then they disappear)." "The creatures should have a brood queen, giant, in
+one of the regions, not the initial one, lots of creatures there."
+
+## The family
+
+The **Brood** (code `brood`; "brood" is also the side in the core). Four
+kinds, each with its own glow so they read apart from the high camera:
+
+| Name | Role | Glow | Size (cells) | Code |
+|---|---|---|---|---|
+| **Shardling** | Ground swarmer, comes in packs | cold teal | 1.2 long, 0.7 tall | `shardling` |
+| **Gloamwing** | Flyer, spits acid from above | violet and magenta | 1.8 wingspan, flies 2.5 up | `gloamwing` |
+| **Lodeback** | Ore eater: fills its back sac at a deposit and leaves | warm gold, opal sac | 2.2 long, 1.3 tall (sac to 1.8) | `lodeback` |
+| **the Matriarch** | The giant brood queen, never leaves her nest | deep violet, teal veins | 10 long, 9 tall | `matriarch` |
+
+For scale: the Prospector is 45 hp, walks 3.94 cells a second and its
+cutting torch does 5 a strike every 1.07 s in melee reach (about 4.7 a
+second), at the ground only (`UnitStats::byKind`, `prospector`). A full
+Hardshell pilot has 125 hp and a 70 hp shield (docs/prospector-progression.md).
+Buildings have 1 armour; a Hab Dome or a Lab has 400 hp, a Derrick 500, a
+Citadel 1,500.
+
+### Look and feel
+
+They belong to this world: dark chitin the colour of the ore rock, with the
+ore's opal flecks crusted into the shell, and light from inside. Each is a
+hard, matte carapace of big overlapping plates, charcoal with a violet-black
+sheen, the glow coming through the plate seams, the eyes and the soft parts.
+At night and under the ringshadow band they are lights moving in the dark
+before they are shapes. Concept art: `art/models/<kind>/concepts/` (three
+directions each, rest pose and attack pose side by side), contact sheets in
+`art/models/<kind>/previews/concepts-c1.jpg`.
+
+- **Shardling**: a low, six-legged bug the size of a big dog, two heavy
+  mandibles, a ridge of opal crystal quills on its back glowing teal at
+  their roots (c1-quill).
+- **Gloamwing**: a small armoured thorax, four long translucent violet wings,
+  long trailing barbed legs, and a swollen glassy abdomen that hangs under it
+  like a lantern lit from inside (c1-lantern). From above it reads as a
+  moving violet light.
+- **Lodeback**: a crab-like body on four thick legs with two short digging
+  claws by the jaw, carrying a glassy sac on its back where the swallowed
+  ore shows through, gold-lit; the sac swells and brightens as it fills
+  (c1-hermit).
+- **The Matriarch**: a towering segmented body raised high, a great fan
+  crown of glowing violet spines behind her head (seen from across a
+  region), egg pods clustered on her flanks and a huge glowing egg sac
+  behind her (c1-crowned).
+
+The picks above are the worker's leanings; the user picks from the variant
+page and this list follows the pick.
+
+## The kinds
+
+### Shardling, the swarmer
+
+The common bug. It is what a pilot meets at a deposit, a site or a pad.
+
+| | |
+|---|---|
+| hp | 20, no armour (four torch strikes; two with the Cutting torch perk) |
+| Speed | 1.6 wandering, 4.4 chasing (faster than a Prospector: running out of its site works, outrunning it on open ground doesn't) |
+| Bite | 2 to a unit, 3 to a building (2 after armour), every 1.2 s, reach 0.3 cells past its radius; ground only |
+| Groups | 1 to 3 at a deposit or well in Prospect Landing, 3 to 6 elsewhere, 6 to 12 on a raid, up to 24 round the Matriarch |
+| Drawn by | deposits, wells, blueprint sites, pads, buildings (raids), craters |
+
+The arithmetic: one Shardling is no threat (1.7 a second against 4.7), two
+cost a fresh pilot about half its hp, five kill it in about five seconds.
+That is the point: a pilot reads the group before it walks in. A pack of six
+on a Hab Dome takes it down in about 40 s, a Derrick in about 50 s, the
+Citadel in about two and a half minutes, so a raid must be answered, but
+there is time to get there.
+
+### Gloamwing, the flyer
+
+Flocks hang over sites and buildings at rooftop height. The torch can't reach
+them in the air: the AA tower and the gatling gun are the answer.
+
+| | |
+|---|---|
+| hp | 30, no armour; `air` |
+| Speed | 2.0 hovering about its site, 5.0 on the move; flies over cliffs |
+| Acid spit | 3 to a unit, 6 to a building (5 after armour), every 1.6 s, range 4 |
+| The dive | to spit at a unit it swoops low: from the windup to 0.6 s after the spit it is at torch height and counts as a ground target (`low`), so the pilot can strike it by timing the swing |
+| Groups | 2 to 4; never in Prospect Landing's first raid tier (below); with Shardlings on mixed raids |
+| Drawn by | buildings first (they are raiders), then pads and sites |
+
+A flock of three costs a pilot about 5.6 hp a second, so a pilot alone
+backs away or fights the dives. Against buildings a flock of four does
+about 12.5 a second: a Hab Dome in half a minute. That is why the AA tower
+(D2: the Sentinel model, air only) exists: at range 7 it outranges the spit
+(4), and its missiles (12 × 2 a second) kill a Gloamwing in two volleys.
+The gatling gun (D2) hits ground and air at close range: it should reach
+air at 4 or more, the spit's range, so a flock attacking it gets shot.
+
+### Lodeback, the ore eater
+
+A slow, heavy forager. It does not hunt: it eats ore, and the ore is gone.
+
+| | |
+|---|---|
+| hp | 120, armour 1 (the torch does 4 a strike: about 32 s alone) |
+| Speed | 1.8, 3.0 fleeing |
+| Bite | 8 to a unit, every 2.0 s, reach 0.4 past its radius; only when cornered (below). It never attacks buildings |
+| Eats | 1.5 ore a second from a deposit, up to 60 in its sac; the ore leaves the deposit as it eats |
+| Groups | 1, or 2 together; with 2 to 4 Shardlings as escort outside Prospect Landing |
+| Drawn by | unprotected deposits (below), most of all a starfall crater's |
+
+**Unprotected** means no finished building of the realm within 10 cells of
+the deposit, and no Prospector within 8. A Lodeback picks only unprotected
+deposits, so building near your ore (a Hab Dome, a Sentinel, a gatling gun)
+protects it. Once it is eating, a Prospector walking up doesn't stop it:
+the pilot must drive it off.
+
+How it mines and leaves: it walks to the deposit, eats for up to 40 s (its
+sac fills, swells and glows brighter, 0 to 60 ore), then walks away along
+the shortest way out of every pilot's sight and out of every building's
+sight, and vanishes there (despawns, the ore with it). A Lodeback that is
+hit stops eating and flees at once with what it has. It is **cornered**
+when a unit hits it and it has no way out (its flee path is blocked or it
+has fled 10 s and is still being hit): then it turns and bites until it
+can run again.
+
+Killing it pays: its sac bursts and the ore inside goes back into the
+deposit it came from, if that deposit is still there (else to the nearest
+deposit within 10 cells, else it is lost). So a pilot who catches a full
+Lodeback gets the vein back.
+
+### The Matriarch, the brood queen
+
+One giant in the world, in her nest in **Slag Pockets** (the world's
+south-east corner, two regions from Prospect Landing). She never leaves the
+nest; her horde does. N3 builds her.
+
+| | |
+|---|---|
+| hp | 6,000, armour 3 (the torch does 2 a strike: a lone pilot can't kill her; the realm's defences built at the nest can) |
+| Speed | 0.8, never more than 6 cells from her nest's centre; she turns to face her target |
+| Footprint | radius 3.5 cells; she blocks pathing like a building |
+| Slam | 40 to every ground unit within 3 cells in front of her, every 4 s; buildings within reach take 60 |
+| Acid spit | 18 to a unit, 30 to a building, range 12, every 3 s, ground and air; it leaves a puddle 2 cells wide that does 4 a second for 4 s |
+| Roar | every 30 s in a fight (and once when a pilot first comes within 25 cells): every bug of the nest within 40 cells turns on the roared-at target, and 4 Shardlings hatch from her egg pods (at most 24 Shardlings, 8 Gloamwings in the nest) |
+| Mends | 20 hp a second after 20 s without a hit |
+| The nest | a ring of 30 cells round her: 16 to 24 Shardlings and 4 to 8 Gloamwings linger there always; the nest refills one bug every 20 s while it is below its count |
+| Reward | for N3: a rare blueprint, a burst of 3,000 ore spilled as a crater-style deposit where she falls, and the region's bugs scatter for a world day |
+
+Readable from far: she is 9 cells tall, her crown spines glow violet and
+pulse with her breath, and her roar is heard across the region.
+
+## Where they come from and what draws them
+
+Bugs are spawned by the server's **brood director**, region by region, and
+only where pilots can meet them.
+
+### Points of interest
+
+Each kind weighs the region's POIs; a group picks one by weight (a dice roll
+over the region's POIs, not the nearest):
+
+| POI | Shardling | Gloamwing | Lodeback |
+|---|---|---|---|
+| Ore deposit | 2 | 0.5 | 3, only unprotected |
+| MH well (with or without a Derrick) | 1 | 0.5 | 0 |
+| Blueprint site, unopened | 3 | 1 | 0 |
+| Landing pad | 1 | 1 | 0 |
+| A realm building (a raid, below) | 2 | 3 | 0 |
+| Starfall crater, cooled | 5 | 2 | 8 |
+
+A POI already held by a group is skipped. A POI within 15 cells of the
+Citadel never draws a lingering group (raids aside), so the pilot's home
+stays quiet.
+
+### Brood level
+
+Each region has a brood level that sets how many bugs, how often and which
+kinds. It goes in the region file (`"brood": 0..4`, N2), with these
+defaults:
+
+| Level | Regions | Alive at most | A new group every | Kinds |
+|---|---|---|---|---|
+| 1 | Prospect Landing | 6 | 90 s | Shardlings in ones to threes, a lone Lodeback |
+| 2 | the four next to it | 14 | 60 s | Shardlings, Gloamwings, Lodebacks with escort |
+| 3 | the three other corners | 22 | 45 s | as 2, bigger groups |
+| 4 | Slag Pockets | 22 outside the nest, plus the nest | 45 s | as 3, plus the Matriarch's nest |
+
+The director runs only in a region with a pilot in it or next to it. When
+no pilot has been in or next to a region for 2 minutes, its bugs despawn
+(the nest is kept as a count and comes back full).
+
+### Spawn
+
+A new group appears out of sight: at a point on walkable ground (or in the
+air for Gloamwings) at least 18 cells from every Prospector (the Prospector
+sees 13) and 12 from every building, preferably at the region's edge or a
+cliff foot, as if it came from elsewhere. It then walks (or flies) to its
+POI. A group never spawns within 25 cells of a pilot that respawned in the
+last 30 s.
+
+### Linger, aggro and leash
+
+- **Site.** A group's site is its POI's centre and a radius: 6 cells for a
+  deposit, well, pad or site; the building's footprint plus 5 for a
+  building; 8 for a crater.
+- **Linger.** Inside the site the bugs wander slowly, stop, groom, chitter
+  (the idle sounds and poses). A group lingers 3 to 6 minutes, longer at
+  night (× 1.5), then leaves: it walks out of every pilot's sight and
+  vanishes.
+- **Aggro.** A Prospector inside the site is attacked by the whole group
+  (Lodebacks excepted). A Prospector that hits any bug of a group, anywhere,
+  turns the whole group on it.
+- **Leash.** A bug chases at most 8 cells past its site's edge. Past that
+  it drops the chase and walks back; it mends to full after 8 s back in its
+  site without a hit. A pilot that runs out of the site gets away, bitten.
+- **Buildings in the site.** A lingering group ignores a building next to
+  it; only a raid attacks buildings.
+
+### Raids on buildings
+
+A raid is a group whose POI is a building: it comes straight in and
+attacks it until it falls or the group dies, the bugs turning on any
+Prospector that hits them.
+
+- How often: at most one raid per region every 4 minutes (level 1: every
+  10 minutes, and only 3 or 4 Shardlings).
+- Which building: weighted by its cost, never the Citadel in Prospect
+  Landing while the realm has no Citadel guns (D1), and in Prospect Landing
+  only buildings at least 25 cells from the Citadel.
+- Warning: 20 s before a raid reaches its building, every pilot in the
+  region and the ones next to it hears the swarm coming (`broodswarm`) and
+  gets a toast: "BROOD SWARM · heading for the Hab Dome · 140 m NE".
+- A building that falls is destroyed (N2 decides what remains: a wreck the
+  pilot can rebuild at a discount is the suggestion). Bugs never eat
+  buildings or carry anything off.
+
+### The ringshadow sweep
+
+The bugs love the dark. While a point is under the band:
+
+- groups there are bolder: their site radius grows by half and their
+  leash by 4 cells;
+- the director's next group in the region spawns under the band if it can,
+  and its POI is chosen among deposits under the band (so the × 1.5 ore
+  under the sweep comes with company);
+- their glow brightens (× 1.6), which the client draws from the same
+  `ac::Ringshadow` band it already computes; nothing new on the wire.
+
+### Starfall
+
+- **The impact** kills every bug within 4 cells and scares every bug within
+  20: they flee out of the crater's way for 10 s.
+- **The hot crater** (its first 3 minutes) draws nothing: bugs gather at
+  its rim and wait.
+- **The cooled crater** is the richest POI in the region (the weights
+  above): a Lodeback pair with escort heads for it as soon as it cools.
+  First come, first served: a pilot who wants the crater's ore races the
+  Lodebacks to it, or guards it.
+
+### Day and night
+
+At night groups linger half again as long and the director's interval
+shrinks by a quarter. By day nothing changes. The weather does nothing to
+them.
+
+### Despawn
+
+A bug vanishes when its group leaves (linger over, a Lodeback with its sac
+full or fleeing) and it is out of every pilot's sight; when its region has
+had no pilot in or next to it for 2 minutes; never in sight of a pilot. A
+dead bug's body stays 6 s (the death pose), then fades.
+
+## XP and rewards
+
+A kill pays XP like damage dealt (docs/prospector-progression.md, "XP
+sources"), with these values standing in for a unit's cost: Shardling 20,
+Gloamwing 30, Lodeback 50, the Matriarch 2,500. Defences built by the pilot
+(D1, D2) share the XP with their builder. A killed Lodeback's sac goes back
+into its deposit (above).
+
+## What the defences are tuned against
+
+D1 and D2 set their own numbers; these are the bugs' side of it.
+
+- The **Citadel's guns** (D1) should kill a Shardling in one or two hits
+  and reach farther than a raid's Gloamwings spit (4): range 8 or more, on
+  ground and air.
+- The **AA tower** (D2, the Sentinel model, air only): the Sentinel's 12 × 2
+  a second at range 7 kills a Gloamwing in two volleys.
+- The **gatling gun** (D2): ground and close air (4 cells or more), about
+  15 a second, so it shreds a Shardling pack of six in about 8 s and a
+  Lodeback in about 9 s.
+- The **Prospector** stays weak: it holds off one to three Shardlings,
+  chases a Lodeback off its ore, swats Gloamwings in their dive, and builds
+  the guns for the rest.
+
+## Server and client (N2)
+
+The server owns every bug; the client only draws, animates and plays
+sounds.
+
+### On the server
+
+- The brood is a side in the core simulation: four new unit kinds
+  (`shardling`, `gloamwing`, `lodeback`, `matriarch`) with their
+  `UnitStats` (hp, armour, speed, damage, cooldown, range, air) owned by
+  the brood side, so damage, death, targeting by the Sentinel and the
+  defences, and the snapshots reuse what units already have.
+- The brood director (`unreal/server/world/WorldBrood.cpp` is the
+  suggestion): brood levels, the POI weights, spawn points, groups, linger
+  timers, raids and their warnings, the leash, the Lodeback's eating and
+  fleeing, despawn, the sweep and starfall rules, the nest. All of that
+  stays on the server; none of it goes on the wire.
+- Deposits lose ore to a Lodeback on the server, like a Prospector's drill;
+  the deposit's amount already goes on the wire.
+- Tests: isolated scenarios (one group at one POI, one raid, one Lodeback
+  eating and fleeing, the leash), never whole games.
+
+### On the wire
+
+A bug is a unit in the snapshot, like any other, with these fields (most
+exist already for units):
+
+| Field | Bits | Why |
+|---|---|---|
+| id, kind | as units | the model to draw |
+| position, heading | as units | |
+| height (Gloamwing) | 6 | its hover and its dive |
+| hp | as units | the health bar and the hurt flash |
+| state | 3 | idle, move, attack, eat, flee, dive, roar, dead: picks the pose loop and the sound |
+| target id | as units | where the attack pose and the spit's bolt aim |
+| attack counter | 4 | goes up by one each strike, spit or slam, so the client plays every one even when a snapshot is lost |
+| sac fill (Lodeback) | 4 | 0 to 15: the sac's size and glow |
+
+And two events in the world's message stream (reliable, like the starfall's
+warnings): **raid incoming** (region, building id, bearing, seconds to
+arrival) for the toast and the swarm sound, and **Matriarch roar** (region,
+position) so every pilot in earshot hears it, in sight or not.
+
+About 12 bytes per bug when it moves; a busy region of 24 bugs at 20 Hz is
+under 6 KB/s before deltas, less with them.
+
+### On the client
+
+- Draw each kind from its model (`/Game/Models/<kind>/`, one instanced set
+  per kind and part, as units are); no team colour: the brood's glow
+  colour is fixed per kind (its glow material).
+- Animate with a pose function per kind (`AcPoseBrood.cpp` is the
+  suggestion), from the state, speed, heading, target and attack counter
+  (below).
+- Play the sounds below on the state's edges and the attack counter.
+- The health bar, a red outline when a bug targets the pilot, and the
+  toasts.
+
+## Models and how to drive them
+
+`unreal/Tools/Editor/models/<kind>.py`, meshes in `/Game/Models/<kind>/`,
+catalog entries in `ModelCatalog.json`. Units face +X. Each moving part is a
+rigid part that pivots at its root; the pose code finds it by name.
+
+What N2's pose functions drive (the part names are the models'):
+
+- **Shardling** (`body`, `head`, `mandible_0`/`_1`, `leg_0`…`leg_5`, the
+  quills on the body): idle: the body bobs, the mandibles twitch apart;
+  move: a tripod gait (legs 0, 3, 4 swing against 1, 2, 5, a yaw swing of
+  about 25° and a lift), its speed with the ground speed; attack: on each
+  counter tick the body lunges 0.3 cells forward and back over 0.25 s, the
+  head dips, the mandibles open wide and snap shut; hurt: a flinch back;
+  death: it rolls on its side, legs curl in, the glow fades over 2 s.
+- **Gloamwing** (`thorax`, `head`, `abdomen` (the lantern), `wing_0`…`_3`,
+  `leg_0`…`_3`): wings flap fast (a sine on their roll, about 18 Hz, with
+  the two pairs out of phase); the body bobs at its height; the abdomen
+  sways behind; move: it pitches 15° nose-down; dive: pitches 35° down and
+  drops to its dive height, the abdomen flares bright on the spit; death:
+  wings stop and it falls, tumbling.
+- **Lodeback** (`body`, `head`, `jaw`, `claw_0`/`_1`, `leg_0`…`_3`, `sac`):
+  a slow four-leg walk; eat: the head and claws dig in a loop and the jaw
+  grinds; the sac's scale goes from 0.55 to 1.0 with the sac fill and its
+  glow with it; bite: the head thrusts and the jaw snaps; flee: a faster
+  walk; death: the sac bursts (it scales to 0 with a flash of gold) and the
+  body sinks.
+- **The Matriarch** (`abdomen` (the egg sac), `body`, `head`, `jaw`,
+  `crown`, `forelimb_0`/`_1`, `leg_0`…`_5`, `pods`): idle: a slow breath
+  (the body and the egg sac swell by 3% at about 0.2 Hz, the crown's glow
+  with them); slam: both forelimbs rise over 0.8 s and crash down; spit:
+  the head draws back and lunges; roar: the body rears up 1 cell, the crown
+  fans open (scale out) and the jaw gapes for 2 s; death: she sinks, the
+  crown folds, the glow dies over 4 s.
+
+## Sounds
+
+Made with ElevenLabs (`Tools/AudioGen/brood.manifest.json`), every take kept
+in `art/models/<kind>/sounds/`, the picks in `unreal/Resources/Sounds/sfx/`
+under the game's names (`sfx/<name>_<n>`). Checked offline with
+`Tools/Audio/check_sounds.py`, never played aloud.
+
+| Name | When |
+|---|---|
+| `shardlingidle` | a lingering Shardling now and then (a few times a minute a group, not each bug) |
+| `shardlingbite`, `shardlinghurt`, `shardlingdeath` | on its bite, when hit, when it dies |
+| `gloamwingidle` | the wing buzz, a loop at each flock |
+| `gloamwingspit`, `gloamwinghurt`, `gloamwingdeath` | its spit, hit, death |
+| `lodebackidle` | a lingering or walking Lodeback now and then |
+| `lodebackchew` | a loop while it eats |
+| `lodebackbite`, `lodebackhurt`, `lodebackdeath` | |
+| `matriarchidle` | her breath, a loop at the nest |
+| `matriarchroar`, `matriarchslam`, `matriarchspit`, `matriarchhurt`, `matriarchdeath` | |
+| `broodswarm` | a raid coming: the 20 s warning, from the raid's bearing |
+
+Importing them into `unreal/Content/Audio/Sfx/` and `Sounds.json` comes
+with N2, when the game plays them.
