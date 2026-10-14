@@ -454,3 +454,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T C1 (10% tax, realm wallet, donate panel) briefed to wt1.
 - D User: a second worker allowed in parallel.
 - T N1 (bug design, models, sounds) briefed to wt2 (wt-2-6a113cd0).
+- N N1 concepts: Shardling, Gloamwing, Lodeback, Matriarch (the Brood).
+- I User: pick bug concepts https://claude.ai/artifact/W3nB3834MntTuhA5xprEAR
