@@ -465,12 +465,18 @@ struct ProgressMessage {
     /// P7: `made`: the Foundry finished a module, `id` its code name
     /// ("drillHead"), `value` its mark; it waits in the stores. `researched`:
     /// the Lab opened a mark, `id` the module, `value` the mark.
-    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched };
+    ///
+    /// R1: `built`: a building of the realm finished, told to every pilot in
+    /// the world: `id` its kind ("habDome"), `by` its builder's callsign
+    /// (the pilot's own `callsign`: it built it), `value` 1 when it stands
+    /// in the pilot's region.
+    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
         double xp = 0;
         int64_t value = 0;
+        std::string by;
         bool operator==(const News&) const = default;
     };
     /// A point that can still be taken back free, until world time `until`
@@ -535,9 +541,16 @@ struct ProgressMessage {
     /// researched, the Foundry's job and the Lab's (`done` in world time,
     /// `Sky::time`).
     Rig rig;
-    /// It owns a finished Foundry, and a finished Lab: a job can start.
+    /// The realm has a finished Foundry, and a finished Lab: a job can start.
     bool foundry = false;
     bool lab = false;
+    /// R1: the realm's buildings across the world by kind, finished or not
+    /// (the limits are the realm's: the build menu counts these); who built
+    /// each building in the pilot's region (id → callsign, none when not
+    /// known); and the pilot's own callsign.
+    std::map<StructureKind, int64_t> realm;
+    std::map<int64_t, std::string> builders;
+    std::string callsign;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

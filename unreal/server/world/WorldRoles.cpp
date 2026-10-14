@@ -1,8 +1,9 @@
 // The buildings' jobs for the pilot in a world (WorldMap.h, P6;
 // docs/prospector-progression.md "Buildings in the MMO"): a fallen
-// Prospector comes back at its Citadel or nearest Hab Dome, and the pilot's
-// own pads (its Spacedock; with Homing beacon its Citadel, Hab Domes and
-// Derricks), with the Wayfinder's flight nodes (Pad link, Short hop).
+// Prospector comes back at the realm's Citadel or nearest Hab Dome, and the
+// pilot's own pads (the realm's Spacedock; with Homing beacon the realm's
+// Citadel, Hab Domes and Derricks; R1: whoever built them), with the
+// Wayfinder's flight nodes (Pad link, Short hop).
 
 #include "WorldMap.h"
 
@@ -33,7 +34,7 @@ std::vector<OwnPad> WorldMap::ownPads(const PilotState& p) const {
     std::map<StructureKind, std::vector<OwnPad>> kinds;
     for (size_t r = 0; r < regions_.size(); r++)
         for (const Structure& b : regions_[r]->simulation().state.structures) {
-            if (!b.complete() || !owns(p, r, b.id)) continue;
+            if (!b.complete() || !realm(b)) continue;
             if (b.kind != StructureKind::spacedock && !beacon(b.kind)) continue;
             kinds[b.kind].push_back(OwnPad{r, b.id, b.kind, "", b.position});
         }
@@ -92,7 +93,7 @@ void WorldMap::ownPadsChanged() {
 
 // MARK: - Respawn
 
-std::optional<WorldMap::Home> WorldMap::home(const PilotState& p, size_t region, Vec2 from) const {
+std::optional<WorldMap::Home> WorldMap::home(const PilotState&, size_t region, Vec2 from) const {
     std::optional<Home> best;
     double bestScore = std::numeric_limits<double>::infinity();
     const WorldRegion& fell = world_->regions[region];
@@ -102,7 +103,7 @@ std::optional<WorldMap::Home> WorldMap::home(const PilotState& p, size_t region,
         const WorldRegion& g = world_->regions[r];
         const double steps = double(std::llabs(g.column - fell.column) + std::llabs(g.row - fell.row));
         for (const Structure& b : regions_[r]->simulation().state.structures) {
-            if (!(b.kind == StructureKind::citadel || b.kind == StructureKind::habDome) || !b.complete() || !owns(p, r, b.id))
+            if (!(b.kind == StructureKind::citadel || b.kind == StructureKind::habDome) || !b.complete() || !realm(b))
                 continue;
             // Its own region by distance; then a region a step away beats
             // any spot two steps away.

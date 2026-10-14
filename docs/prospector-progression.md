@@ -360,9 +360,56 @@ needs its blueprint, found in the world, and the pilot at or above its
 | Sentinel | A missile turret that guards your buildings, ground and air | 55 | 4 | 150 + 100 | built (P6); its fight matters later |
 | Garrison | Trains other kinds in the strategy game. Held back: no blueprint in the world while the MMO is Prospector only | | | | held back |
 
-Limits are per pilot, across the world. Overbuild raises the Hab Dome,
+Limits are the realm's, across the world (R1, below): the table's numbers
+count every pilot's buildings together. Overbuild raises the Hab Dome,
 Derrick and Sentinel limits. The Citadel and the Derrick stay ore only, so the
 first loop costs no MH.
+
+### The realm's buildings (R1)
+
+Decided by the user (2026-10-14, docs/mmorpg-m8.md): the buildings a pilot
+builds are not the pilot's, they are the realm's (the world's). Every pilot
+in the world uses every building.
+
+- **Owned by the world.** No pilot owns a building. Each keeps who built it
+  (`WorldMap::builtBy_`, saved as `built_by`): the builder gets the
+  building's feat and its build contract's credit, its skills that reach
+  buildings (Reinforced, Head start, the Derrick and repair nodes) reach it,
+  and the toasts name it. The welder earns the welding XP, as before.
+- **Used by every pilot.** Any pilot unloads at any finished Citadel or Hab
+  Dome, comes back at the nearest of them when it falls, respecs at the
+  Citadel, fits modules at the Citadel or a Hab Dome, and starts Foundry and
+  Lab jobs once the realm has one. Until F2's landing pads, a Spacedock is
+  every pilot's pad, and a pilot's Homing beacon makes the realm's Citadel,
+  Hab Domes and Derricks its pads. Later tasks build on this: the Citadel's
+  tax into a realm wallet (C1), defences that guard the realm (D1, D2), pads
+  any pilot lands on (F2).
+- **Limits per realm.** A build is refused once the realm has the table's
+  number of that kind, whoever built them: one Citadel, four Derricks,
+  three Hab Domes, one Foundry, one Lab, one Spacedock, two Bastions, four
+  Sentinels (`WorldMap::realmCount`, `ProspectorProgress::buildRefusal`).
+  **Overbuild still works**, for the pilot that has it: its ranks raise the
+  limit its own builds are checked against (+1 Hab Dome, Derrick and
+  Sentinel a rank), so a pilot with Overbuild 2 puts up a fifth and sixth
+  Derrick where one without is refused at four. The extra buildings are the
+  realm's like any other.
+- **One Citadel a realm.** A new pilot in an empty world builds it (the
+  opening chain's step 2, as O1 made it). A pilot new to a world that has
+  its Citadel already gets step 2 as "The Realm's Citadel": a reach
+  contract to it (`<region id>/Citadel`), naming who built it, done when its
+  Prospector stands where it unloads there. If another pilot finishes the
+  Citadel while a pilot's step 2 still says "build one", the step turns into
+  the reach. A save from before with two pilots' Citadels keeps both
+  standing; no third can be built.
+- **Who sees what.** Every pilot sees the realm's buildings as friendly (one
+  side, as before). Building limits in the build menu count the realm's
+  ("REALM LIMIT"). A building finished anywhere in the world is told to every
+  pilot ("HAB DOME BUILT", "Built by Pilot 045B · in the realm · every
+  pilot's"). A building in sight names its builder ("Hab Dome · built by
+  Pilot 045B", "built by you").
+- **Callsigns.** A pilot has no name yet. Others see a callsign: "Pilot " and
+  four hex digits of a hash of its key (`WorldMap::callsign`). The key
+  never goes on the wire.
 
 Hours to each floor at the model's pace: Derrick 13 min, Hab Dome 49 min,
 Foundry 1.95 h, Lab 4.6 h, Spacedock 9.1 h, Bastion 15.6 h, Sentinel 24.4 h.
@@ -380,22 +427,22 @@ in `core-tests/tests/ProgressionEffectsTests.cpp`.
   apply in a world (a Bastion needs no Garrison): blueprints, floors and
   limits are the gates.
 - **Respawn.** A fallen Prospector comes back after 10 s
-  (`WorldParams::respawnDelay`) beside its home: its own finished Citadel
-  or Hab Dome nearest where it fell. One in the same region wins by
+  (`WorldParams::respawnDelay`) beside its home: the realm's finished
+  Citadel or Hab Dome nearest where it fell (R1: any pilot's). One in the same region wins by
   distance; otherwise the one fewest grid steps away. A region another
   pilot drives is skipped. With no home it comes back at the world's start
   pad. Second wind cuts the wait (25%, 50%, 75%) and keeps that share of
   the cargo. A pilot who leaves while fallen comes back at home when it
   joins again.
-- **Respec** only at the pilot's own Citadel, in its unload range (since
+- **Respec** only at the realm's Citadel, in its unload range (since
   P3). A Hab Dome is not enough.
-- **Hab Dome depot.** Ore and MH walked up to one of the pilot's own
-  finished Hab Domes go into the wallet, with their XP and contract credit,
-  as at the Citadel.
-- **Spacedock.** A pad of the pilot's own. The Prospector flies from within
-  2 cells of its edge, and lands on it from any pad. It shows in the
-  pilot's World message as a pad named "Spacedock" with `building` set. No
-  other pilot sees it, and landing on it pays no first-landing XP.
+- **Hab Dome depot.** Ore and MH walked up to any finished Hab Dome of the
+  realm go into the wallet, with their XP and contract credit, as at the
+  Citadel.
+- **Spacedock.** A pad of the realm's (R1; F2 replaces it). The Prospector
+  flies from within 2 cells of its edge, and lands on it from any pad. It
+  shows in every pilot's World message as a pad named "Spacedock" with
+  `building` set. Landing on it pays no first-landing XP.
 - **Lab.** A world's Prospector builds one, standing alone and welded like
   any other building. The strategy game's Lab stays an add-on, and its
   build list is unchanged.
@@ -407,9 +454,10 @@ The Wayfinder's travel nodes:
 
 - **Pad link:** flights leave from within 8, 12 or 16 cells of a pad's
   centre.
-- **Homing beacon:** the pilot's Citadel becomes a pad of its own; at rank
-  2 its Hab Domes too, at rank 3 its Derricks. They are named "Citadel",
-  "Hab Dome 1", "Derrick 2", numbered by building id.
+- **Homing beacon:** the realm's Citadel becomes a pad of the pilot's own;
+  at rank 2 the Hab Domes too, at rank 3 the Derricks (R1: whoever built
+  them). They are named "Citadel", "Hab Dome 1", "Derrick 2", numbered by
+  building id.
 - **Short hop:** a flight takes 4 s less 20% a rank, down to 1.6 s.
 - **Ringwalker:** a flight from anywhere, once every 120 s of the world's
   clock. A pad still works while it waits.
@@ -424,6 +472,17 @@ On the wire (protocol 8):
   ready).
 - `WorldMessage::Pad::building`: the kind of a pad of the pilot's own. The
   message is sent again whenever these pads change.
+
+On the wire (protocol 12, R1):
+
+- `ProgressMessage::realm`: the realm's buildings across the world by kind,
+  finished or not (the build menu's limits).
+- `ProgressMessage::builders`: who built each building of the pilot's region
+  (id → callsign), and `callsign`, the pilot's own.
+- `NewsKind::built`: a realm building finished, told to every pilot: `id`
+  its kind, `by` its builder's callsign, `value` 1 when in the pilot's
+  region.
+- `ProgressMessage::foundry` and `lab`: the realm has a finished one.
 
 ### Foundry and Lab
 
@@ -648,6 +707,18 @@ conversion from `levels` to `progress` runs on load in `WorldMapSave` when
 `progress` is empty and `levels` isn't; the next save writes `progress`, and
 `levels` is written empty from then on.
 
+### The realm migration (schema v8, R1)
+
+Before R1 a building's row named its `owner`, the pilot that built it, and
+only that pilot used it. Schema **v8** renames the column:
+
+    {8, "ALTER TABLE buildings RENAME COLUMN owner TO built_by"}
+
+No row changes. An old save loads with every building the realm's: any
+pilot unloads, respawns, respecs and flies at them, and the builder kept in
+`built_by` still gets its credit (the v4 blueprint gift and the feats read
+it). Tests: `server/tests/RealmTests.cpp` (`realm_old_save_buildings_become_the_realms`).
+
 ## On screen
 
 ### The level-up
@@ -734,9 +805,12 @@ Foundry and the Lab.
 - Fallen (P6): the view dims, "PROSPECTOR DOWN", "BACK IN 7 s", where it
   comes back ("AT YOUR CITADEL", "AT THE LANDING PAD, COLD FORK") and what
   Second wind kept.
-- With a load, the prompt and the compass name the pilot's own finished
+- With a load, the prompt and the compass name the realm's finished
   Hab Domes as depots beside the Citadel ("Walk into your Citadel or a Hab
   Dome to unload").
+- R1: a building in sight names its builder ("Hab Dome  ·  built by Pilot
+  045B"); a realm building finished anywhere is a toast to every pilot; the
+  build menu's limit tag reads "REALM LIMIT".
 - The world map draws the pilot's own pads (Spacedock, Homing beacon) as
   cyan squares; a flight leaves within Pad link's reach of a pad, within
   radius + 2 of an own pad, or from anywhere with Ringwalker ready ("At

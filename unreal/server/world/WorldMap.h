@@ -239,10 +239,11 @@ struct WorldRoles {
     static constexpr double buildingPadReach = 2.0;
 };
 
-/// A pad of the pilot's own: a finished building of its own in region
-/// `region`, where it flies from and lands. `name` is what the Fly request
-/// names: "Spacedock", "Citadel", or "Hab Dome 2" and "Derrick 3" (by the
-/// building's id among the pilot's own of that kind, from 1).
+/// A pad of the pilot's own: a finished building of the realm's in region
+/// `region` (R1: a Spacedock, or one its Homing beacon makes a pad), where
+/// it flies from and lands. `name` is what the Fly request names:
+/// "Spacedock", "Citadel", or "Hab Dome 2" and "Derrick 3" (by the
+/// building's id among the realm's of that kind, from 1).
 struct OwnPad {
     size_t region = 0;
     int64_t building = 0;
@@ -343,7 +344,8 @@ public:
     /// The pilot's pad reach (Pad link) and flight time (Short hop).
     double padReach(PilotId pilot) const;
     double flightTime(PilotId pilot) const;
-    /// The pilot's own pads across the world (P6).
+    /// The pilot's own pads across the world (P6; R1: the realm's
+    /// buildings its skills make pads, until F2's landing pads).
     std::vector<OwnPad> ownPads(PilotId pilot) const;
     /// The pilot's Prospector fell and waits to come back (P6): when, where
     /// and with what (nil: on its feet, or not a world).
@@ -420,8 +422,9 @@ public:
     /// rolls for a survey chip (`ProspectorProgress::chipChance`, at most one
     /// every `WorldSites::chipEvery`). True when a chip came.
     bool oreLoad(PilotId pilot);
-    /// The pilot's buildings of a kind across the world, finished or not.
-    int64_t owned(PilotId pilot, StructureKind kind) const;
+    /// The realm's buildings of a kind across the world, finished or not
+    /// (R1: the limits are the realm's).
+    int64_t realmCount(StructureKind kind) const;
     /// A site's id, "<region id>/<site name>".
     std::string siteId(size_t region, size_t site) const;
     // MARK: The rig (P7, docs/prospector-progression.md "Foundry and Lab"; WorldRig.cpp)
@@ -433,8 +436,15 @@ public:
     std::optional<std::string> make(PilotId pilot, Module module, int64_t mark);
     std::optional<std::string> research(PilotId pilot, Module module, int64_t mark);
     std::optional<std::string> fit(PilotId pilot, Module module, int64_t mark);
-    /// It owns a finished building of `kind` somewhere in the world.
-    bool ownsFinished(PilotId pilot, StructureKind kind) const;
+    /// The realm has a finished building of `kind` somewhere in the world
+    /// (R1: every pilot uses it).
+    bool realmFinished(StructureKind kind) const;
+    /// Who built a building of region `r`: the pilot's callsign (`callsign`),
+    /// empty when not known.
+    std::string builder(size_t r, int64_t building) const;
+    /// A pilot's name to other pilots: "Pilot " and four hex digits of a
+    /// hash of its key (the key itself never goes on the wire).
+    static std::string callsign(const std::string& key);
 
     // MARK: KSTR contracts (docs/contracts.md, K1; WorldContracts.cpp)
 
@@ -646,9 +656,15 @@ private:
     void park(const PilotState& p);
     // WorldProgress.cpp.
     PilotState* pilotState(PilotId pilot);
-    /// `p`'s own buildings in region `r` (the ids it built).
+    /// `p`'s own buildings in region `r` (the ids it built): its skills
+    /// that reach buildings (Reinforced, Head start) reach these.
     std::set<int64_t> ownBuildings(const PilotState& p, size_t r) const;
-    bool owns(const PilotState& p, size_t r, int64_t building) const;
+    /// A building of the realm (R1, docs/prospector-progression.md
+    /// "Buildings in the MMO"): in a world every building on the pilots'
+    /// side is the world's, and every pilot uses it.
+    bool realm(const Structure& b) const;
+    /// `p` built it: its credit (feats, build contracts), not its use.
+    bool built(const PilotState& p, size_t r, int64_t building) const;
     /// The progression into the pilot's region's simulation.
     void pushProgress(PilotId pilot);
     void earn(PilotState& p, double xp);
@@ -658,9 +674,10 @@ private:
     /// Before and after the regions step: the work XP and the feats.
     std::vector<Work> workBefore() const;
     void workAfter(const std::vector<Work>& before);
+    /// After a step: the realm's buildings finished, told to every pilot.
+    void realmNews();
     void regrowWells(double dt);
     // WorldSites.cpp.
-    int64_t owned(const PilotState& p, StructureKind kind) const;
     /// After a step: sites seen, reached, held open.
     void sites();
     void openSite(PilotId pilot, PilotState& p, size_t r, size_t i);
@@ -693,10 +710,13 @@ private:
     void rigs();
     /// `WorldParams::devRig` for a pilot just come.
     void devRig(PilotId pilot);
-    bool ownsFinished(const PilotState& p, StructureKind kind) const;
-    /// The driven Prospector stands where it unloads at one of its own
+    /// `p` built a finished building of `kind` (its credit).
+    bool builtFinished(const PilotState& p, StructureKind kind) const;
+    /// The realm's finished Citadel (region, id), the first by region.
+    std::optional<std::pair<size_t, int64_t>> realmCitadel() const;
+    /// The driven Prospector stands where it unloads at one of the realm's
     /// finished buildings of these kinds.
-    bool atOwn(PilotId pilot, const PilotState& p, std::initializer_list<StructureKind> kinds);
+    bool atRealm(PilotId pilot, const PilotState& p, std::initializer_list<StructureKind> kinds);
     /// Each step: a new day's draw, the reach contracts.
     void contracts();
     /// Fills the done and abandoned slots (all three on the first day).

@@ -36,7 +36,7 @@ ProspectorProgress converted(const PilotRecord& old, const std::string& key, con
     g.blueprints = {StructureKind::citadel, StructureKind::derrick};
     for (const SavedRegion& r : save.regions)
         for (const SavedBuilding& b : r.buildings)
-            if (b.owner == key && !b.buildLeft) g.feats.insert(WorldXp::built(b.kind));
+            if (b.builtBy == key && !b.buildLeft) g.feats.insert(WorldXp::built(b.kind));
     return g;
 }
 
@@ -205,7 +205,7 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             Structure s(b.id, b.kind, Pilot::player, b.at, b.buildLeft);
             s.hp = b.hp;
             st.structures.push_back(s);
-            if (!b.owner.empty()) builtBy_[*i][b.id] = b.owner;
+            if (!b.builtBy.empty()) builtBy_[*i][b.id] = b.builtBy;
             next = std::max(next, b.id + 1);
         }
         for (const SavedUnit& u : sr.units) {
@@ -258,7 +258,7 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             if (auto rec = SessionStore::decode<PilotRecord>(sp.levels, &why)) p.progress = converted(*rec, sp.id, save);
             else problems.push_back("pilot " + sp.id.substr(0, 8) + ": levels do not read (" + why + "), left out");
             // Told on its next login.
-            p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::reset, "", 0, p.progress.unspent()});
+            p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::reset, "", 0, p.progress.unspent(), ""});
         }
         if (!decodeContracts(sp.contracts, p))
             problems.push_back("pilot " + sp.id.substr(0, 8) + ": contracts do not read, drawn again");
@@ -273,7 +273,7 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         if (!sp.gated)
             for (const SavedRegion& r : save.regions)
                 for (const SavedBuilding& b : r.buildings)
-                    if (b.owner == sp.id && Progression::blueprintFloor(b.kind) > 0) p.progress.blueprints.insert(b.kind);
+                    if (b.builtBy == sp.id && Progression::blueprintFloor(b.kind) > 0) p.progress.blueprints.insert(b.kind);
         away_[sp.id] = p;
     }
     // Starfalls coming and craters with their deposits: the deposits back

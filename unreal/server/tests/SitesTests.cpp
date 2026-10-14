@@ -330,7 +330,7 @@ TEST(sites_builds_refused_without_blueprint_under_floor_past_limit) {
     EXPECT_TRUE(*why == "The Hab Dome opens at level 8");
     // One Citadel, then its limit.
     EXPECT_TRUE(!w.build(me, StructureKind::citadel, *spot(w, me, StructureKind::citadel)).has_value());
-    EXPECT_EQ(w.owned(me, StructureKind::citadel), int64_t(1));
+    EXPECT_EQ(w.realmCount(StructureKind::citadel), int64_t(1));
     why = w.build(me, StructureKind::citadel, *spot(w, me, StructureKind::citadel));
     ASSERT_TRUE(why.has_value());
     EXPECT_TRUE(*why == "Citadel limit reached: 1");
@@ -504,7 +504,7 @@ TEST(sites_v3_pilot_keeps_the_blueprints_of_its_buildings) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(7));
+    EXPECT_EQ(store->schemaVersion(), int64_t(8));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);
@@ -513,7 +513,7 @@ TEST(sites_v3_pilot_keeps_the_blueprints_of_its_buildings) {
     EXPECT_TRUE(w.restore(*loaded).empty());
     ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::restored);
     EXPECT_TRUE((w.progress(me)->blueprints == std::set<StructureKind>{StructureKind::derrick, StructureKind::habDome}));
-    EXPECT_EQ(w.owned(me, StructureKind::habDome), int64_t(1));
+    EXPECT_EQ(w.realmCount(StructureKind::habDome), int64_t(1));
     ASSERT_TRUE(store->write(w.save(), &why).has_value());
     EXPECT_TRUE(store->rows("SELECT gated FROM pilots")[0][0] == "1");
 }

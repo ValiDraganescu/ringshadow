@@ -701,7 +701,8 @@ bool Simulation::prospectorMend(Unit& u, int64_t id, const Pilot& p, double dt) 
 }
 
 /// A load is dropped off by walking up to one's own Citadel; in a world
-/// also at one of the pilot's own finished Hab Domes, its field depots.
+/// also at any finished Hab Dome of its side, the realm's field depots (R1:
+/// every pilot uses every building, whoever built it).
 void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
     if (!(u.carrying > 0)) return;
     std::optional<Structure> citadel;
@@ -713,7 +714,7 @@ void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
     }
     if (!citadel && skilled(u)) {
         for (const Structure& b : state.structures) {
-            if (b.kind == Structure::Kind::habDome && b.complete() && b.owner == u.owner && ownBuilding(b)
+            if (b.kind == Structure::Kind::habDome && b.complete() && b.owner == u.owner
                 && NavGrid::insideStructure(u.position, b, pilotDepositReach)) {
                 citadel = b;
                 break;

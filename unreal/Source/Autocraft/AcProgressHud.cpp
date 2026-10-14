@@ -343,11 +343,12 @@ FString AcProgressHud::BlueprintRefusal(const FAcMmoClient* Mmo, const ac::Struc
 	const std::optional<ac::ProspectorProgress> G = Mmo ? Progress(*Mmo) : std::nullopt;
 	if (!G) return FString();
 	// The server's own rule and words (`ProspectorProgress::buildRefusal`),
-	// counting the pilot's buildings of that kind in this region.
+	// counting the realm's buildings of that kind across the world (R1: the
+	// limits are the realm's).
 	int64 Owned = 0;
-	if (const ac::net::Mirror* M = Mmo->Mirror())
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
 	{
-		for (const ac::Structure& B : M->simulation().state.structures) Owned += B.kind == Kind && B.owner == ac::Pilot::player ? 1 : 0;
+		if (const auto It = P->realm.find(Kind); It != P->realm.end()) Owned = It->second;
 	}
 	const std::optional<std::string> Why = G->buildRefusal(Kind, Owned);
 	return Why ? Text(*Why) : FString();
@@ -359,7 +360,16 @@ FString AcProgressHud::BlueprintTag(const FAcMmoClient* Mmo, const ac::Structure
 	if (!G || BlueprintRefusal(Mmo, Kind).IsEmpty()) return FString();
 	if (!G->blueprints.count(Kind)) return TEXT("NO BLUEPRINT");
 	if (G->level() < G->floor(Kind)) return FString::Printf(TEXT("LV %lld"), (long long)G->floor(Kind));
-	return TEXT("LIMIT");
+	return TEXT("REALM LIMIT");
+}
+
+FString AcProgressHud::BuiltBy(const FAcMmoClient* Mmo, const int64 Id)
+{
+	const ac::net::ProgressMessage* P = Mmo ? Mmo->Progress() : nullptr;
+	if (!P) return FString();
+	const auto It = P->builders.find(Id);
+	if (It == P->builders.end()) return FString();
+	return It->second == P->callsign ? FString(TEXT("you")) : Text(It->second);
 }
 
 std::optional<ac::ProspectorProgress> AcProgressHud::Progress(const FAcMmoClient& Mmo)
@@ -1096,6 +1106,17 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 			Hud->Toast(FString::Printf(TEXT("RESEARCHED: %s"), *Name), TEXT("The Foundry can make it now  ·  J"), FAcHudStyle::Srgb(0.74, 0.56, 1), Now);
 			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Researched);
 		}
+		break;
+	}
+	case K::built:
+	{
+		// R1: a building of the realm finished, by this pilot or another.
+		const std::optional<ac::StructureKind> Kind = ac::parse<ac::StructureKind>(N.id);
+		const FString Name = Kind ? Upper(ac::Simulation::title(*Kind)) : Text(N.id).ToUpper();
+		const FString By = N.by.empty() ? FString(TEXT("a pilot")) : (P && N.by == P->callsign ? FString(TEXT("you")) : Text(N.by));
+		const FString Where = N.value == 1 ? FString(TEXT("here")) : FString(TEXT("in the realm"));
+		Hud->Toast(FString::Printf(TEXT("%s BUILT"), *Name), FString::Printf(TEXT("Built by %s  ·  %s  ·  every pilot's"), *By, *Where),
+			FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
 		break;
 	}
 	default:

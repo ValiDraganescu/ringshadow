@@ -59,13 +59,31 @@ void WorldMap::setProgress(PilotId pilot, const ProspectorProgress& progress) {
     if (!p) return;
     const int64_t level = p->progress.level();
     p->progress = progress;
-    if (progress.level() != level) p->news.push_back(News{NewsKind::level, "", 0, progress.level()});
+    if (progress.level() != level) p->news.push_back(News{NewsKind::level, "", 0, progress.level(), ""});
     pushProgress(pilot);
 }
 
-bool WorldMap::owns(const PilotState& p, size_t r, int64_t building) const {
+bool WorldMap::realm(const Structure& b) const { return world_ && b.owner == Pilot::player; }
+
+bool WorldMap::built(const PilotState& p, size_t r, int64_t building) const {
     const auto by = builtBy_[r].find(building);
     return by != builtBy_[r].end() && by->second == p.key;
+}
+
+std::string WorldMap::builder(size_t r, int64_t building) const {
+    if (r >= builtBy_.size()) return "";
+    const auto by = builtBy_[r].find(building);
+    return by == builtBy_[r].end() || by->second.empty() ? std::string() : callsign(by->second);
+}
+
+std::string WorldMap::callsign(const std::string& key) {
+    // FNV-1a: the same callsign on every server, nothing of the key told.
+    uint64_t h = 0xcbf29ce484222325ULL;
+    for (const unsigned char c : key) h = (h ^ c) * 0x100000001b3ULL;
+    static const char* const hex = "0123456789ABCDEF";
+    std::string out = "Pilot ";
+    for (int i = 3; i >= 0; i--) out += hex[(h >> (4 * i)) & 0xf];
+    return out;
 }
 
 std::set<int64_t> WorldMap::ownBuildings(const PilotState& p, size_t r) const {
@@ -87,7 +105,7 @@ void WorldMap::earn(PilotState& p, double xp) {
     const int64_t level = p.progress.level();
     p.progress.xp += xp;
     // A level reached: its points wait to be spent (the client is told).
-    if (p.progress.level() != level) p.news.push_back(News{NewsKind::level, "", 0, p.progress.level()});
+    if (p.progress.level() != level) p.news.push_back(News{NewsKind::level, "", 0, p.progress.level(), ""});
 }
 
 void WorldMap::earn(PilotId pilot, double xp) {
@@ -102,7 +120,7 @@ bool WorldMap::oneOff(PilotId pilot, std::set<std::string> ProspectorProgress::*
                       NewsKind kind) {
     PilotState* p = pilotState(pilot);
     if (!p || !((p->progress.*set).insert(id).second)) return false;
-    p->news.push_back(News{kind, id, xp, 0});
+    p->news.push_back(News{kind, id, xp, 0, ""});
     earn(*p, xp);
     pushProgress(pilot);
     return true;
@@ -128,7 +146,7 @@ bool WorldMap::findBlueprint(PilotId pilot, StructureKind kind, int64_t floor) {
     if (!p || !p->progress.blueprints.insert(kind).second) return false;
     const double xp = WorldXp::blueprintPerFloor * double(std::max<int64_t>(1, floor));
     // The level it opens at for this pilot (Blueprint savant).
-    p->news.push_back(News{NewsKind::blueprint, std::string(rawValue(kind)), xp, p->progress.floor(kind)});
+    p->news.push_back(News{NewsKind::blueprint, std::string(rawValue(kind)), xp, p->progress.floor(kind), ""});
     earn(*p, xp);
     pushProgress(pilot);
     return true;
@@ -168,14 +186,14 @@ std::optional<std::string> WorldMap::respec(PilotId pilot) {
     if (!p) return "Not in a world";
     static const std::string where = "Respec at your Citadel: stand where you unload";
     if (p->flight) return where;
-    // At its own finished Citadel, in its unload range.
+    // At the realm's finished Citadel, in its unload range.
     Region& r = *regions_[p->region];
     const auto unit = r.driving(pilot);
     const auto u = unit ? r.simulation().state.unit(*unit) : std::nullopt;
     if (!u) return where;
     const bool home = std::any_of(r.simulation().state.structures.begin(), r.simulation().state.structures.end(),
                                   [&](const Structure& b) {
-                                      return b.kind == StructureKind::citadel && b.complete() && owns(*p, p->region, b.id) &&
+                                      return b.kind == StructureKind::citadel && b.complete() && realm(b) &&
                                              NavGrid::insideStructure(u->position, b, Simulation::pilotDepositReach);
                                   });
     if (!home) return where;
@@ -213,8 +231,17 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.respawn = respawning(pilot);
     m.ringwalkerReady = it->second.ringwalkerReady > clock_ ? it->second.ringwalkerReady : 0;
     m.rig = g.rig;
-    m.foundry = ownsFinished(it->second, StructureKind::foundry);
-    m.lab = ownsFinished(it->second, StructureKind::lab);
+    m.foundry = realmFinished(StructureKind::foundry);
+    m.lab = realmFinished(StructureKind::lab);
+    // R1: the realm's buildings (its limits), who built those here.
+    for (const auto& r : regions_)
+        for (const Structure& b : r->simulation().state.structures)
+            if (realm(b)) m.realm[b.kind] += 1;
+    if (!it->second.flight)
+        for (const Structure& b : regions_[it->second.region]->simulation().state.structures)
+            if (realm(b))
+                if (std::string by = builder(it->second.region, b.id); !by.empty()) m.builders[b.id] = std::move(by);
+    m.callsign = callsign(it->second.key);
     if (const auto& o = it->second.opening)
         m.opening = net::ProgressMessage::Opening{siteId(o->region, o->site), o->refusal.empty() ? o->since : 0.0,
                                                   WorldSites::needs(world_->regions[o->region].built.sites[o->site].kind),
@@ -256,7 +283,7 @@ std::vector<WorldMap::Work> WorldMap::workBefore() const {
         w.carrying = u->carrying;
         w.patch = u->patch;
         for (const Structure& b : r.simulation().state.structures) {
-            if (!owns(p, p.region, b.id)) continue;
+            if (!realm(b)) continue;
             if (b.buildLeft) {
                 if (b.builder == u->id) w.welding[b.id] = *b.buildLeft;
             } else {
@@ -266,6 +293,20 @@ std::vector<WorldMap::Work> WorldMap::workBefore() const {
         out.push_back(std::move(w));
     }
     return out;
+}
+
+void WorldMap::realmNews() {
+    // A building of the realm finished: every pilot in the world is told,
+    // with who built it (R1).
+    for (size_t r = 0; r < regions_.size(); r++)
+        for (const GameEvent& e : regions_[r]->lastEvents())
+            if (const auto* c = e.as<GameEvent::Constructed>()) {
+                const auto b = regions_[r]->simulation().state.structure(c->structure);
+                if (!b || !realm(*b)) continue;
+                const std::string by = builder(r, c->structure);
+                for (auto& [id, p] : pilots_)
+                    p.news.push_back(News{NewsKind::built, std::string(rawValue(c->kind)), 0, p.region == r && !p.flight ? 1 : 0, by});
+            }
 }
 
 void WorldMap::workAfter(const std::vector<Work>& before) {
@@ -285,7 +326,7 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
                 contractWork(w.pilot, *p, w.hydrogen ? net::Contract::Kind::deliverHydrogen : net::Contract::Kind::deliverOre, "",
                              d->amount);
             }
-            if (const auto* c = e.as<GameEvent::Constructed>(); c && owns(*p, w.region, c->structure)) {
+            if (const auto* c = e.as<GameEvent::Constructed>(); c && built(*p, w.region, c->structure)) {
                 feats.push_back(WorldXp::built(c->kind));
                 contractWork(w.pilot, *p, net::Contract::Kind::build, std::string(rawValue(c->kind)), 1);
             }

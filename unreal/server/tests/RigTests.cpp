@@ -170,7 +170,7 @@ TEST(rig_make_costs_time_and_one_at_a_time) {
     fill(w, me, 1000, 500);
     EXPECT_EQ(w.make(me, Module::drillHead, 1).value_or(""), std::string("Build a Foundry first"));
     ASSERT_TRUE(put(w, me, StructureKind::foundry).has_value());
-    EXPECT_TRUE(w.ownsFinished(me, StructureKind::foundry));
+    EXPECT_TRUE(w.realmFinished(StructureKind::foundry));
     EXPECT_TRUE(w.progressMessage(me)->foundry);
     EXPECT_TRUE(!w.progressMessage(me)->lab);
     fill(w, me, 50, 500);
@@ -360,7 +360,7 @@ TEST(rig_survey_lens_in_the_sim) {
 }
 
 // The rig is saved: the world's save and back (fitted, stores, marks, both
-// jobs), and a v6 file opens as v7 with no rig.
+// jobs), and a v6 file opens as v8 with no rig.
 TEST(rig_save_round_trip) {
     WorldMap w(first(), params());
     home(w);
@@ -391,7 +391,7 @@ TEST(rig_save_round_trip) {
     // In the sim again on its return: the cargo pod.
     EXPECT_EQ(simOf(back, me).load(*drivenUnit(back, me), false), int64_t(std::llround(Rules::heroCarry * 1.16)));
 
-    // Through the file: written as v7, and a v6 pilot row reads with no rig.
+    // Through the file: written as v8, and a v6 pilot row reads with no rig.
     mkdir("build/save-tests", 0755);
     const std::string path = "build/save-tests/rig.sqlite";
     std::remove(path.c_str());
@@ -410,7 +410,7 @@ TEST(rig_save_round_trip) {
     {
         auto store = WorldStore::open(path, first().file.id, &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(7));
+        EXPECT_EQ(store->schemaVersion(), int64_t(8));
         const auto old = store->load(&why);
         ASSERT_TRUE(old.has_value() && old->pilots.size() == 1);
         EXPECT_TRUE(old->pilots[0].rig.empty());
@@ -439,9 +439,9 @@ TEST(rig_dev_flag_gives_a_home_and_a_stocked_rig) {
     WorldMap w(first(), p);
     w.seat(me, key);
     w.step();
-    EXPECT_TRUE(w.ownsFinished(me, StructureKind::citadel));
-    EXPECT_TRUE(w.ownsFinished(me, StructureKind::foundry));
-    EXPECT_TRUE(w.ownsFinished(me, StructureKind::lab));
+    EXPECT_TRUE(w.realmFinished(StructureKind::citadel));
+    EXPECT_TRUE(w.realmFinished(StructureKind::foundry));
+    EXPECT_TRUE(w.realmFinished(StructureKind::lab));
     const auto m = w.progressMessage(me);
     ASSERT_TRUE(m.has_value());
     EXPECT_TRUE(m->foundry && m->lab);

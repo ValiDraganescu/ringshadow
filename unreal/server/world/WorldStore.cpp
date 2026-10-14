@@ -147,13 +147,21 @@ const char* const kV7 = R"sql(
 ALTER TABLE pilots ADD COLUMN rig TEXT NOT NULL DEFAULT '';
 )sql";
 
+/// Schema v8: buildings are the realm's (R1, docs/prospector-progression.md
+/// "Buildings in the MMO"): no pilot owns one, every pilot uses it. `owner`
+/// becomes `built_by`, who put it up (its credit); an old save's buildings
+/// load as the realm's, their builder kept.
+const char* const kV8 = R"sql(
+ALTER TABLE buildings RENAME COLUMN owner TO built_by;
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}};
     return steps;
 }
 
@@ -268,7 +276,7 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.failed(error)) return std::nullopt;
     }
     {
-        Stmt s(db_, "SELECT region, id, kind, x, y, owner, build_left, hp FROM buildings ORDER BY region, id");
+        Stmt s(db_, "SELECT region, id, kind, x, y, built_by, build_left, hp FROM buildings ORDER BY region, id");
         while (s.row()) {
             const auto kind = parse<StructureKind>(s.colText(2));
             if (!kind) {
@@ -395,14 +403,14 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
         }
         rowsOf(r.id, r.buildings, buildings_, [](const SavedBuilding& b) { return b.id; },
                [&](const SavedBuilding& b) {
-                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO buildings (region, id, kind, x, y, owner, build_left, hp) "
+                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO buildings (region, id, kind, x, y, built_by, build_left, hp) "
                                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                                      .text(r.id)
                                      .integer(b.id)
                                      .text(std::string(rawValue(b.kind)))
                                      .real(b.at.x)
                                      .real(b.at.y)
-                                     .text(b.owner)
+                                     .text(b.builtBy)
                                      .real(b.buildLeft)
                                      .real(b.hp)));
                },

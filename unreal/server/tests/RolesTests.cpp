@@ -2,7 +2,7 @@
 // "Buildings in the MMO"): a fallen Prospector back at its Citadel or nearest
 // Hab Dome (Second wind sooner, with cargo), the Hab Dome a depot, the
 // respec only at the Citadel, the world's MH prices, the Lab, the Spacedock
-// a pad of the pilot's own, and the Wayfinder's flight nodes (Pad link,
+// a pad of the realm's (R1), and the Wayfinder's flight nodes (Pad link,
 // Homing beacon, Short hop, Ringwalker). Isolated scenes of a few seconds on
 // The First Reach; run from unreal/server.
 
@@ -323,14 +323,14 @@ TEST(roles_lab_in_a_world) {
     const auto lab = put(w, me, StructureKind::lab, &why);
     ASSERT_TRUE(lab.has_value());
     EXPECT_TRUE(!building(w, me, *lab)->parent.has_value());
-    EXPECT_EQ(w.owned(me, StructureKind::lab), int64_t(1));
+    EXPECT_EQ(w.realmCount(StructureKind::lab), int64_t(1));
     EXPECT_TRUE(!put(w, me, StructureKind::lab, &why).has_value());
     EXPECT_TRUE(why.rfind("Lab limit reached", 0) == 0);
 }
 
-// The Spacedock: a pad of the pilot's own. It shows in its World message
-// (not another pilot's); it flies from it, and lands on it from any pad,
-// with no first-landing XP.
+// The Spacedock: a pad of the realm's (R1). It shows in every pilot's World
+// message; it flies from it, and lands on it from any pad, with no
+// first-landing XP.
 TEST(roles_spacedock_pad) {
     WorldParams fuel = params();
     fuel.startHydrogen = 100;  // a flight costs MH (F1)
@@ -349,9 +349,13 @@ TEST(roles_spacedock_pad) {
     const auto& start = m.regions[first().start].pads;
     ASSERT_TRUE(!start.empty());
     EXPECT_TRUE(start.back().name == "Spacedock" && start.back().building == std::optional<StructureKind>(StructureKind::spacedock));
+    // The realm's (R1): another pilot's World message has it too.
     w.join(other);
-    for (const auto& r : w.worldMessage(other)->regions)
-        for (const auto& p : r.pads) EXPECT_TRUE(!p.building.has_value());
+    const auto theirs = *w.worldMessage(other);
+    const auto& theirStart = theirs.regions[first().start].pads;
+    ASSERT_TRUE(!theirStart.empty());
+    EXPECT_TRUE(theirStart.back().name == "Spacedock" &&
+                theirStart.back().building == std::optional<StructureKind>(StructureKind::spacedock));
     // From its far side, out of the start pad's reach.
     const Vec2 away = normalize(dockAt - startPad());
     moveTo(w, me, dockAt + away * (Rules::radius(StructureKind::spacedock) + 1));
@@ -367,8 +371,6 @@ TEST(roles_spacedock_pad) {
     ASSERT_TRUE(drivenUnit(w, me) != nullptr);
     EXPECT_TRUE(distance(drivenUnit(w, me)->position, dockAt) < Rules::radius(StructureKind::spacedock) + 3);
     EXPECT_TRUE(w.progress(me)->pads.count("start/Spacedock") == 0);
-    // The other pilot can't land on it.
-    EXPECT_TRUE(w.fly(other, "start", "Spacedock").has_value());
 }
 
 // Homing beacon: rank 1 the Citadel is a pad, rank 2 the Hab Domes too

@@ -25,13 +25,14 @@ struct sqlite3;
 
 namespace ac::server {
 
-/// A pilot's building as saved: the core's `Structure` rebuilt from it.
+/// A building of the realm as saved (R1: the world's, used by every
+/// pilot): the core's `Structure` rebuilt from it.
 struct SavedBuilding {
     int64_t id = 0;
     StructureKind kind = StructureKind::citadel;
     Vec2 at{0, 0};
-    /// The pilot's id (hex) that built it.
-    std::string owner;
+    /// The pilot's id (hex) that built it: its credit, not its owner.
+    std::string builtBy;
     /// Construction seconds left; nil once built.
     std::optional<double> buildLeft;
     double hp = 0;

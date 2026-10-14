@@ -843,12 +843,24 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     writeRig(w, m.rig);
     w.writeBool(m.foundry);
     w.writeBool(m.lab);
+    writeVarint(w, m.realm.size());
+    for (const auto& [kind, n] : m.realm) {
+        w.writeBits(uint64_t(kind), 4);
+        writeSigned(w, n);
+    }
+    writeVarint(w, m.builders.size());
+    for (const auto& [id, by] : m.builders) {
+        writeSigned(w, id);
+        writeString(w, by);
+    }
+    writeString(w, m.callsign);
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 4);
         writeString(w, n.id);
         codec::Fixed{1000}.write(w, n.xp);
         writeSigned(w, n.value);
+        writeString(w, n.by);
     }
     return w.bytes();
 }
@@ -943,16 +955,31 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     if (!readRig(r, m.rig)) return false;
     m.foundry = r.readBool();
     m.lab = r.readBool();
+    const uint64_t realm = readVarint(r);
+    if (realm > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < realm; i++) {
+        const uint64_t k = r.readBits(4);
+        if (k >= uint64_t(allCases<StructureKind>().size())) return false;
+        m.realm[static_cast<StructureKind>(k)] = readSigned(r);
+    }
+    const uint64_t builders = readVarint(r);
+    if (builders > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < builders; i++) {
+        const int64_t id = readSigned(r);
+        if (!readString(r, m.builders[id])) return false;
+    }
+    if (!readString(r, m.callsign)) return false;
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(4);
-        if (kind > uint64_t(ProgressMessage::NewsKind::researched)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::built)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);
         n.value = readSigned(r);
+        if (!readString(r, n.by)) return false;
         m.news.push_back(n);
     }
     return r.ok();

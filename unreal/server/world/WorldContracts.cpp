@@ -116,6 +116,11 @@ const Line firstLines[WorldContracts::firstSteps] = {
     {"Make It Yours", "You've earned a skill point. Spend it on yourself: nobody out here stays the pilot they landed as. KSTR out, for now."},
 };
 
+/// Step 2 in a realm that has its Citadel already (R1): reach it instead.
+const Line realmCitadelLine = {
+    "The Realm's Citadel",
+    "Those are Citadel plans, but this world has one: {what} put it up, and it serves every pilot here. Walk up to it and say hello."};
+
 std::string capitalised(std::string s) {
     if (!s.empty() && s[0] >= 'a' && s[0] <= 'z') s[0] = char(s[0] - 'a' + 'A');
     return s;
@@ -206,12 +211,6 @@ void WorldMap::drawContracts(PilotId pilot, PilotState& p, int64_t day) {
 Contract WorldMap::drawContract(PilotId, const PilotState& p, std::mt19937_64& dice, const std::vector<Kind>& taken) {
     const int64_t level = p.progress.level();
     auto roll = [&](size_t n) { return n ? size_t(std::uniform_int_distribution<size_t>(0, n - 1)(dice)) : size_t(0); };
-    auto ownsFinished = [&](StructureKind kind) {
-        for (size_t r = 0; r < regions_.size(); r++)
-            for (const Structure& b : regions_[r]->simulation().state.structures)
-                if (b.kind == kind && !b.buildLeft && owns(p, r, b.id)) return true;
-        return false;
-    };
     // Where it can drill: regions with ore left, another one than its own
     // if there is one.
     std::vector<size_t> drill, drillAway;
@@ -242,7 +241,7 @@ Contract WorldMap::drawContract(PilotId, const PilotState& p, std::mt19937_64& d
     std::vector<StructureKind> builds;
     for (const StructureKind k : Progression::blueprintKinds()) {
         const bool byHand = std::find(PilotBuild::worldKinds.begin(), PilotBuild::worldKinds.end(), k) != PilotBuild::worldKinds.end();
-        if (byHand && !p.progress.buildRefusal(k, owned(p, k))) builds.push_back(k);
+        if (byHand && !p.progress.buildRefusal(k, realmCount(k))) builds.push_back(k);
     }
 
     struct Option {
@@ -250,9 +249,9 @@ Contract WorldMap::drawContract(PilotId, const PilotState& p, std::mt19937_64& d
         int weight;
     };
     std::vector<Option> options;
-    if (ownsFinished(StructureKind::citadel) || ownsFinished(StructureKind::habDome)) {
+    if (realmFinished(StructureKind::citadel) || realmFinished(StructureKind::habDome)) {
         options.push_back({Kind::deliverOre, 3});
-        if (ownsFinished(StructureKind::derrick)) options.push_back({Kind::deliverHydrogen, 2});
+        if (realmFinished(StructureKind::derrick)) options.push_back({Kind::deliverHydrogen, 2});
     }
     if (!drill.empty()) options.push_back({Kind::drill, 3});
     if (!sites.empty() || !pads.empty()) options.push_back({Kind::reach, 3});
@@ -373,7 +372,7 @@ void WorldMap::payContract(PilotId pilot, PilotState& p, Contract& c) {
     // Done: paid now, replaced at dawn (a first-ten-minutes step: by the
     // next step at once).
     c.state = State::done;
-    p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::contract, std::to_string(c.id), c.xp, c.hydrogen});
+    p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::contract, std::to_string(c.id), c.xp, c.hydrogen, ""});
     const int64_t level = p.progress.level();
     earn(p, c.xp);
     if (!p.flight) bankOut(p, p.region);
@@ -410,8 +409,18 @@ Contract WorldMap::firstContract(const PilotState&, int step) const {
     switch (step) {
     case 1: site(StructureKind::citadel); break;
     case 2:
-        c.kind = Kind::build;
-        c.target = std::string(rawValue(StructureKind::citadel));
+        // One Citadel a realm (R1): a pilot landing where one stands
+        // reaches it; else it builds the realm's.
+        if (const auto at = realmCitadel()) {
+            c.kind = Kind::reach;
+            c.region = world_->regions[at->first].file.id;
+            c.target = c.region + "/Citadel";
+            what = builder(at->first, at->second);
+            if (what.empty()) what = "another pilot";
+        } else {
+            c.kind = Kind::build;
+            c.target = std::string(rawValue(StructureKind::citadel));
+        }
         break;
     case 3:
         c.kind = Kind::deliverOre;
@@ -426,7 +435,8 @@ Contract WorldMap::firstContract(const PilotState&, int step) const {
         break;
     default: c.kind = Kind::skill; break;
     }
-    const Line& line = firstLines[std::clamp(step, 1, WorldContracts::firstSteps) - 1];
+    const Line& line = step == 2 && c.kind == Kind::reach ? realmCitadelLine
+                                                          : firstLines[std::clamp(step, 1, WorldContracts::firstSteps) - 1];
     c.title = fill(line.title, c.need, "", what);
     c.pitch = fill(line.pitch, c.need, "", what);
     return c;
@@ -450,6 +460,15 @@ void WorldMap::firstTen(PilotId pilot, PilotState& p) {
             continue;
         }
         Contract& c = *it;
+        // Step 2 as the realm stands now: a Citadel another pilot put up
+        // since it was told turns "build one" into "reach it".
+        if (c.state == State::open && c.step == 2 && !builtFinished(p, StructureKind::citadel)) {
+            Contract now = firstContract(p, 2);
+            if (now.kind != c.kind || now.target != c.target) {
+                now.id = c.id;
+                c = now;
+            }
+        }
         if (c.state == State::open) {
             auto opened = [&](StructureKind kind) {
                 return p.progress.blueprints.count(kind) || (!c.target.empty() && p.progress.sites.count(c.target));
@@ -457,10 +476,13 @@ void WorldMap::firstTen(PilotId pilot, PilotState& p) {
             bool now = false;
             switch (c.step) {
             case 1: now = opened(StructureKind::citadel); break;
-            case 2: now = ownsFinished(p, StructureKind::citadel); break;
+            case 2:
+                now = builtFinished(p, StructureKind::citadel) ||
+                      (c.kind == Kind::reach && atRealm(pilot, p, {StructureKind::citadel}));
+                break;
             case 4: now = opened(StructureKind::derrick); break;
             case 5:
-                if (ownsFinished(p, StructureKind::derrick)) c.have = std::max<int64_t>(c.have, 1);
+                if (realmFinished(StructureKind::derrick)) c.have = std::max<int64_t>(c.have, 1);
                 break;
             case 6: now = p.progress.spent() > 0; break;
             default: break;

@@ -30,17 +30,12 @@ std::string WorldMap::siteId(size_t region, size_t site) const {
     return site < g.built.sites.size() ? g.file.id + "/" + g.built.sites[site].name : "";
 }
 
-int64_t WorldMap::owned(const PilotState& p, StructureKind kind) const {
+int64_t WorldMap::realmCount(StructureKind kind) const {
     int64_t n = 0;
     for (size_t r = 0; r < regions_.size(); r++)
         for (const Structure& b : regions_[r]->simulation().state.structures)
-            if (b.kind == kind && owns(p, r, b.id)) n += 1;
+            if (b.kind == kind && realm(b)) n += 1;
     return n;
-}
-
-int64_t WorldMap::owned(PilotId pilot, StructureKind kind) const {
-    const auto it = pilots_.find(pilot);
-    return it == pilots_.end() ? 0 : owned(it->second, kind);
 }
 
 // MARK: - Seeing and opening
@@ -115,7 +110,7 @@ void WorldMap::openSite(PilotId pilot, PilotState& p, size_t r, size_t i) {
     p.progress.known.insert(id);
     const StructureKind kind = world_->regions[r].built.sites[i].blueprint;
     const bool fresh = !p.progress.blueprints.count(kind);
-    p.news.push_back(News{NewsKind::site, id, 0, fresh ? 0 : 1});
+    p.news.push_back(News{NewsKind::site, id, 0, fresh ? 0 : 1, ""});
     if (fresh) {
         findBlueprint(pilot, kind, Progression::blueprintFloor(kind));
         return;
@@ -186,7 +181,7 @@ void WorldMap::findChip(PilotId pilot) {
         marked = siteId(site->first, site->second);
         p->progress.known.insert(marked);
     }
-    p->news.push_back(News{NewsKind::chip, marked, WorldXp::chip, p->progress.chips});
+    p->news.push_back(News{NewsKind::chip, marked, WorldXp::chip, p->progress.chips, ""});
     earn(*p, WorldXp::chip);
     if (blueprint) {
         const StructureKind k = lacking[size_t(std::uniform_int_distribution<size_t>(0, lacking.size() - 1)(chips_))];

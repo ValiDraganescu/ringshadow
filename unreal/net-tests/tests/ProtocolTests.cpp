@@ -681,12 +681,12 @@ TEST(protocol_progress_round_trips) {
     m.blueprints = {StructureKind::citadel, StructureKind::derrick, StructureKind::sentinel};
     m.sitesKnown = {"tern-ridge/wreck", "start/crate"};
     m.sitesFound = {"start/crate"};
-    m.news = {{ProgressMessage::NewsKind::level, "", 0, 10},
-              {ProgressMessage::NewsKind::region, "tern-ridge", 250, 0},
-              {ProgressMessage::NewsKind::feat, "first-flight", 50, 0},
-              {ProgressMessage::NewsKind::reset, "", 0, 9},
-              {ProgressMessage::NewsKind::site, "start/crate", 0, 1},
-              {ProgressMessage::NewsKind::chip, "tern-ridge/wreck", 25, 2}};
+    m.news = {{ProgressMessage::NewsKind::level, "", 0, 10, ""},
+              {ProgressMessage::NewsKind::region, "tern-ridge", 250, 0, ""},
+              {ProgressMessage::NewsKind::feat, "first-flight", 50, 0, ""},
+              {ProgressMessage::NewsKind::reset, "", 0, 9, ""},
+              {ProgressMessage::NewsKind::site, "start/crate", 0, 1, ""},
+              {ProgressMessage::NewsKind::chip, "tern-ridge/wreck", 25, 2, ""}};
     m.opening = ProgressMessage::Opening{"tern-ridge/vault", 0, 10, "The Sentinel vault opens at level 55"};
     Contract ore;
     ore.id = 7;
@@ -710,7 +710,7 @@ TEST(protocol_progress_round_trips) {
     sweep.state = Contract::State::abandoned;
     m.contracts = {ore, pad, sweep};
     m.contractsDawn = 4855.5;
-    m.news.push_back({ProgressMessage::NewsKind::contract, "8", 600, 10});
+    m.news.push_back({ProgressMessage::NewsKind::contract, "8", 600, 10, ""});
     const std::vector<uint8_t> bytes = encode(m);
     EXPECT_TRUE(messageType(bytes) == MessageType::progress);
     ProgressMessage back;
@@ -745,11 +745,19 @@ TEST(protocol_progress_round_trips) {
     m.rig.making = ModuleJob{Module::torchTip, 1, 1060.5};
     m.rig.research = ModuleJob{Module::cargoPod, 2, 1600};
     m.foundry = m.lab = true;
-    m.news.push_back({ProgressMessage::NewsKind::made, "torchTip", 0, 1});
-    m.news.push_back({ProgressMessage::NewsKind::researched, "cargoPod", 0, 2});
+    m.news.push_back({ProgressMessage::NewsKind::made, "torchTip", 0, 1, ""});
+    m.news.push_back({ProgressMessage::NewsKind::researched, "cargoPod", 0, 2, ""});
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
-    EXPECT_TRUE(kProtocolVersion >= uint16_t(10));
+    // The realm's buildings (R1, v12): counts, who built them here, the
+    // pilot's callsign, and a Hab Dome finished by another pilot.
+    m.realm = {{StructureKind::citadel, 1}, {StructureKind::habDome, 3}};
+    m.builders = {{4, "Pilot 045B"}, {9, "Pilot C0DE"}};
+    m.callsign = "Pilot C0DE";
+    m.news.push_back({ProgressMessage::NewsKind::built, "habDome", 0, 1, "Pilot 045B"});
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back == m);
+    EXPECT_TRUE(kProtocolVersion >= uint16_t(12));
 }
 
 TEST(mirror_takes_snapshots_into_its_simulation) {

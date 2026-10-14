@@ -1,5 +1,5 @@
 // A world saved before today's schema steps (v3: progression, no blueprint
-// gate, contracts, starfalls or rig) loads in this build: migrated to v7,
+// gate, contracts, starfalls or rig) loads in this build: migrated to v8,
 // the pilot keeps its buildings and is given their blueprints, and its
 // contracts are drawn. Isolated scene; files in build/save-tests. Run from unreal/server (as `make test` does).
 
@@ -66,7 +66,7 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(7));
+    EXPECT_EQ(store->schemaVersion(), int64_t(8));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     WorldMap w(firstWorld());
@@ -80,8 +80,8 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     ASSERT_TRUE(citadel != nullptr && derrick != nullptr);
     EXPECT_TRUE(citadel->kind == StructureKind::citadel && citadel->complete());
     EXPECT_TRUE(derrick->kind == StructureKind::derrick && derrick->complete());
-    EXPECT_TRUE(w.ownsFinished(me, StructureKind::citadel));
-    EXPECT_TRUE(w.ownsFinished(me, StructureKind::derrick));
+    EXPECT_TRUE(w.realmFinished(StructureKind::citadel));
+    EXPECT_TRUE(w.realmFinished(StructureKind::derrick));
     // Its progression kept, the blueprints of what it built given.
     const ProspectorProgress g = *w.progress(me);
     EXPECT_NEAR(g.xp, 900, 1e-9);
@@ -89,7 +89,7 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     // Its contracts are drawn on the next step.
     w.step();
     EXPECT_TRUE(!w.contracts(me).empty());
-    // Saved again, it is a v7 pilot: gated, its blueprints written.
+    // Saved again, it is a v8 pilot: gated, its blueprints written.
     ASSERT_TRUE(store->write(w.save(), &why).has_value());
     const auto rows = store->rows("SELECT gated, progress FROM pilots");
     ASSERT_TRUE(rows.size() == 1);

@@ -544,9 +544,10 @@ TEST(ProgressionEffects_worldBuildingPrices) {
     EXPECT_TRUE(!sim.buildRefusal(StructureKind::derrick, 0).has_value());
 }
 
-/// A Hab Dome of the pilot's own is a field depot in a world: a load
-/// walked up to it goes into the wallet, with its XP. Someone else's, an
-/// unfinished one, or with no progress (the strategy game): nothing.
+/// A finished Hab Dome of its side is a field depot in a world, whoever
+/// built it (R1: the realm's): a load walked up to it goes into the wallet,
+/// with its XP. An unfinished one, or with no progress (the strategy game):
+/// nothing.
 TEST(ProgressionEffects_habDomeDepot) {
     auto [sim, prospector, citadel] = driven();
     const auto [me, out] = outside(sim, prospector, citadel);
@@ -557,16 +558,12 @@ TEST(ProgressionEffects_habDomeDepot) {
     unitRef(sim, prospector).carrying = 25;
     run(sim, 1.0 / 30);
     EXPECT_EQ(sim.state.players[0].ore, ore);
-    // A world, but not its own.
+    // A world: being built, not yet.
     learn(sim, {});
-    run(sim, 1.0 / 30);
-    EXPECT_EQ(sim.state.players[0].ore, ore);
-    // Its own, being built.
-    sim.pilotBuildings.insert(801);
     sim.state.structures.back().buildLeft = 5;
     run(sim, 1.0 / 30);
     EXPECT_EQ(sim.state.players[0].ore, ore);
-    // Its own, finished: the depot.
+    // Finished, built by another pilot (not in `pilotBuildings`): the depot.
     sim.state.structures.back().buildLeft = std::nullopt;
     run(sim, 1.0 / 30);
     EXPECT_EQ(sim.state.players[0].ore, ore + 25);

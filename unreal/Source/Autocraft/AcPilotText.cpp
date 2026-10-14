@@ -92,11 +92,11 @@ namespace
 namespace
 {
 	/// Where a load is dropped off: the side's finished Citadel, and in a
-	/// world the pilot's own finished Hab Domes too (P6, the core's depot rule).
+	/// world every finished Hab Dome too, the realm's (R1, the core's depot rule).
 	bool IsDepot(const ac::Simulation& Sim, const ac::Structure& B, const int64 Owner)
 	{
 		if (B.owner != Owner || !B.complete()) return false;
-		return B.kind == ac::StructureKind::citadel || (B.kind == ac::StructureKind::habDome && Sim.ownBuilding(B));
+		return B.kind == ac::StructureKind::citadel || (B.kind == ac::StructureKind::habDome && Sim.progress);
 	}
 
 	/// "the Citadel", "the Citadel or a Hab Dome": where it unloads now.
@@ -460,6 +460,14 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		}
 	}
 	Info.Sight = Sight(Sim, F.Sight);
+	// A building of the realm in sight (R1): who built it.
+	if (Info.Sight && Info.Sight->bFriend && F.Sight && In.Mmo && Sim.state.structure(F.Sight->target))
+	{
+		if (const FString By = AcProgressHud::BuiltBy(In.Mmo, F.Sight->target); !By.IsEmpty())
+		{
+			Info.Sight->Title += FString::Printf(TEXT("  ·  built by %s"), *By);
+		}
+	}
 	if (!Info.Prompt && Info.Sight)
 	{
 		if (const TOptional<FString> Why = Refusal(U, *Info.Sight))

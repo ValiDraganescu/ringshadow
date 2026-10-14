@@ -482,7 +482,7 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     // its building limits (docs/prospector-progression.md, "Buildings in the
     // MMO").
     if (world_)
-        if (auto why = p.progress.buildRefusal(kind, owned(p, kind))) return why;
+        if (auto why = p.progress.buildRefusal(kind, realmCount(kind))) return why;
     // Nothing on a pad's plate (the client's ghost says the same).
     if (world_) {
         const auto spot = regions_[p.region]->simulation().snap(kind, at);
@@ -522,6 +522,7 @@ void WorldMap::step() {
     clock_ += dt;
     updateSky();
     workAfter(work);
+    realmNews();
     sites();
     contracts();
     starfall();
