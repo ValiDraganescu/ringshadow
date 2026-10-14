@@ -530,3 +530,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T H2 briefed to wt1.
 - T Website blog f6cdf8a: 5 posts, albums, roadmap M6/M7 done (not deployed).
 - N Website 15 MB (was 4.9): 39 pictures, 4.0 MB showreel.
+- D User: website domain ringshadow.com (Cloudflare); journalist prepares Pages config.
