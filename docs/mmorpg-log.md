@@ -487,3 +487,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: missions in 3 tiers, 5 kinds, max 3 taken; narration per template.
 - N Numbers: N2 protocol 15/schema 11; K2 protocol 16/schema 12, requests from 17.
 - T K2 briefed to wt1.
+- T K2 done 6683b5d: MISSIONS tab, Journal on L, compass/minimap markers.
+- D K2: 2 offers per tier; easy home, hard next door, perilous corners.
+- D K2: hunt gated until N2 calls WorldMap::broodKill.
+- N K2: 16 narrations, 3 voices, -18 LUFS, checked offline only.
+- N Protocol 16 (MissionAsk = request 16, D1 → 17), schema 12.
+- N K2 suites: core 458, server 177, net 67 pass.
+- I K2 imported N1's Brood WAVs too; N2 must resolve on rebase.
