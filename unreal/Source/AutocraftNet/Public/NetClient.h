@@ -75,6 +75,9 @@ public:
     uint32_t make(Module module, int64_t mark);
     uint32_t research(Module module, int64_t mark);
     uint32_t fit(Module module, int64_t mark);
+    /// C1: give ore and MH from the wallet to the realm wallet, at the
+    /// realm's Citadel.
+    uint32_t donate(int64_t ore, int64_t hydrogen);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

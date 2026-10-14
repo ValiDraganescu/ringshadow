@@ -314,6 +314,9 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* ft = std::get_if<net::RequestMessage::Fit>(&m.what)) {
         what = "fit " + std::string(rawValue(ft->module)) + " mk " + std::to_string(ft->mark);
         why = world_.fit(pilot, ft->module, ft->mark);
+    } else if (const auto* dn = std::get_if<net::RequestMessage::Donate>(&m.what)) {
+        what = "donate " + std::to_string(dn->ore) + " ore " + std::to_string(dn->hydrogen) + " MH";
+        why = world_.donate(pilot, dn->ore, dn->hydrogen);
     } else {
         return std::nullopt;
     }

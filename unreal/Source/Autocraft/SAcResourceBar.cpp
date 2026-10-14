@@ -58,6 +58,13 @@ void SAcResourceBar::Update(const int64 Ore, const int64 InHydrogen, const int64
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcResourceBar::SetRealm(const TOptional<TPair<int64, int64>> OreHydrogen)
+{
+	if (OreHydrogen == Realm) return;
+	Realm = OreHydrogen;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcResourceBar::SetShowSupply(const bool bShow)
 {
 	if (bShow == bShowSupply) return;
@@ -109,5 +116,15 @@ int32 SAcResourceBar::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	Label(OreCount, 44);
 	Label(HydrogenCount, 152);
 	if (bShowSupply) Label(FString::Printf(TEXT("%lld/%lld"), (long long)SupplyUsed, (long long)SupplyCap), 256);
+	// The realm wallet (C1), where the supply would be: small, the realm's
+	// gold over its ore and MH.
+	if (!bShowSupply && Realm)
+	{
+		FAcHudText(TEXT("REALM"), FAcHudStyle::Font(10), FAcHudStyle::Srgb(1.0, 0.82, 0.42, 0.85), EAcHAlign::Left, EAcVAlign::Center)
+			.Paint(Out, Layer + 1, Geometry, FVector2f(232, Cy - 8));
+		FAcHudText(FString::Printf(TEXT("%s · %s MH"), *FText::AsNumber(Realm->Key).ToString(), *FText::AsNumber(Realm->Value).ToString()),
+			FAcHudStyle::Font(13), FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Center)
+			.Paint(Out, Layer + 1, Geometry, FVector2f(232, Cy + 8));
+	}
 	return Layer + 3;
 }

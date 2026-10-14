@@ -522,6 +522,7 @@ void WorldMap::step() {
     clock_ += dt;
     updateSky();
     workAfter(work);
+    realmTaxes();
     realmNews();
     sites();
     contracts();

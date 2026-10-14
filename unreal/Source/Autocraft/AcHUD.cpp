@@ -7,6 +7,7 @@
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
+#include "SAcResourceBar.h"
 #include "SAcRoot.h"
 #include "SAcScoreboard.h"
 
@@ -168,6 +169,13 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 			const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
 			bWallet = M && M->playersKnown() && Frame.State == &M->simulation().state;
 		}
+		// The realm wallet (C1), beside the pilot's.
+		TOptional<TPair<int64, int64>> Realm;
+		if (const FAcMmoClient* Mmo = Sim->IsMmo() ? Sim->MmoClient() : nullptr)
+		{
+			if (const ac::net::ProgressMessage* P = Mmo->Progress()) Realm = TPair<int64, int64>(P->realmWallet.ore, P->realmWallet.hydrogen);
+		}
+		if (RootWidget->ResourceBar()) RootWidget->ResourceBar()->SetRealm(Realm);
 		// The MMORPG test: a Prospector in flight between pads is in no
 		// region's state, but still the pilot's.
 		int64 Away = 0;

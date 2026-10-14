@@ -231,8 +231,12 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 			const ac::GameEvent::Deposited* D = E.as<ac::GameEvent::Deposited>();
 			if (D && D->unit == U.id)
 			{
-				Widget->Gain(FString::Printf(TEXT("+%lld %s"), (long long)D->amount, bLoadWasHydrogen ? TEXT("MH") : TEXT("ORE")),
-					FPlatformTime::Seconds());
+				// What reached the wallet, and the realm's tax (C1): "+22 ORE",
+				// "3 TO THE REALM".
+				const bool bMh = D->hydrogen || bLoadWasHydrogen;
+				Widget->Gain(FString::Printf(TEXT("+%lld %s"), (long long)(D->amount - D->tax), bMh ? TEXT("MH") : TEXT("ORE")),
+					FPlatformTime::Seconds(),
+					D->tax > 0 ? FString::Printf(TEXT("%lld TO THE REALM"), (long long)D->tax) : FString());
 			}
 		}
 	}

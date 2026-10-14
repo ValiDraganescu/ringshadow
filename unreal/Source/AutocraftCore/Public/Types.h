@@ -1454,7 +1454,17 @@ struct AUTOCRAFTCORE_API GameState {
 
 /// Something the renderer shows or plays once.
 struct GameEvent {
-    struct Deposited { int64_t unit; int64_t amount; Vec2 at; bool operator==(const Deposited&) const = default; };
+    /// A load unloaded: `amount` the whole load (XP and contracts count it),
+    /// `tax` the realm's cut of it (C1: a pilot's in a world; the wallet got
+    /// `amount - tax`), `hydrogen` whether it was MH.
+    struct Deposited {
+        int64_t unit;
+        int64_t amount;
+        Vec2 at;
+        int64_t tax;
+        bool hydrogen;
+        bool operator==(const Deposited&) const = default;
+    };
     struct PatchDepleted { int64_t patch; bool operator==(const PatchDepleted&) const = default; };
     struct PatchRegrown { int64_t patch; bool operator==(const PatchRegrown&) const = default; };
     struct Trained { int64_t unit; UnitKind kind; Vec2 at; bool operator==(const Trained&) const = default; };

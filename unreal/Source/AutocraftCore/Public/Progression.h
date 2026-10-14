@@ -266,6 +266,16 @@ struct AUTOCRAFTCORE_API Progression {
     /// An ore load's chance of turning up a survey chip, before the skills.
     static constexpr double chipChance = 0.005;
 
+    /// The Citadel's tax (C1, docs/prospector-progression.md "The realm's
+    /// tax"): the share of every load unloaded into a pilot's wallet, at the
+    /// realm's Citadel or a Hab Dome, that goes to the realm wallet instead.
+    static constexpr int64_t realmTaxPercent = 10;
+    /// The realm's cut of a load of `load`: `realmTaxPercent` of it to the
+    /// nearest whole unit (halves up), at least 1 and never all of it. A
+    /// load of 1 pays nothing; 2 to 14 pay 1; 25 ore pays 3, 20 MH pays 2,
+    /// 100 pays 10.
+    static int64_t realmTax(int64_t load);
+
     /// The tree as text: every node, the curve, the gates, the slots and
     /// the respec price. `balance()` is the catalogue's.
     static std::string balance(const std::vector<SkillNode>& nodes);

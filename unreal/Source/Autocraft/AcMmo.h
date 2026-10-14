@@ -267,6 +267,13 @@ public:
 	bool Fit(ac::Module Module, int64 Mark, FString* Why = nullptr);
 	/// The server's last refusal of a rig ask (empty: none since the last ask).
 	const FString& RigRefusal() const { return LastRigRefusal; }
+	/// The Citadel panel's asks (C1, docs/prospector-progression.md "The
+	/// realm's tax"): give ore and MH to the realm wallet. False, with
+	/// `Why`: not connected, not a world. The server's refusals:
+	/// `CitadelRefusal` (and a note); `CitadelKept` counts the kept asks.
+	bool Donate(int64 Ore, int64 Hydrogen, FString* Why = nullptr);
+	const FString& CitadelRefusal() const { return LastCitadelRefusal; }
+	int32 CitadelKept() const { return CitadelDone; }
 	/// The region the pilot is in (in flight: the one it lifted off from).
 	const ac::net::WorldMessage::Region* Here() const;
 	/// In flight: the region it flies to.
@@ -392,6 +399,10 @@ private:
 	/// Rig asks (request ids) and the last refusal.
 	TSet<uint32> RigAsked;
 	FString LastRigRefusal;
+	/// Citadel asks (request ids), the last refusal, the ones kept.
+	TSet<uint32> CitadelAsked;
+	FString LastCitadelRefusal;
+	int32 CitadelDone = 0;
 	bool AskRig(const TCHAR* Verb, ac::Module Module, int64 Mark, FString* Why);
 	std::vector<ac::GameEvent> Events;
 };

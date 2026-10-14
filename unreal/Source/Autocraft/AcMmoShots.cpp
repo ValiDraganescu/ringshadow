@@ -123,6 +123,15 @@
 //   07 0.3 s after walking off the vein, first person, the key still held
 //   then handed back: 15 s of the AI mining, top-down, measured, no picture.
 //
+// -AcMmoShotsC1 (it adds -AcMmoDevRig: the realm's Citadel to unload at
+// and a full wallet): the Citadel's tax and the realm wallet
+// (docs/mmorpg-m8.md C1), DIR/c1-NN-moment.png:
+//   01 a load unloaded at the Citadel: the toast with the realm's cut
+//      ("+22 ORE", "3 TO THE REALM"), the realm wallet by the wallet
+//   02 the Citadel screen (H): the realm wallet, the tax, what the pilot
+//      gave, the donate buttons
+//   03 after a donation of 1,000 ore: the realm wallet up, the foot's thanks
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -241,6 +250,12 @@ namespace
 	double B1SparksAt = -1;
 	/// Into first person before drilling again (after the third person's).
 	bool B1ToFirst = false;
+	/// -AcMmoShotsC1: the realm wallet's ore before the unload, and the
+	/// pilot's donations before the gift.
+	int64 C1RealmBefore = 0;
+	int64 C1DonatedBefore = 0;
+	/// The load it brought home.
+	int64 C1Load = 0;
 	struct FB1Sample
 	{
 		double At;
@@ -544,7 +559,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// -AcMmoShotsG2: the dev rig's home (a Citadel, level 25, a full wallet),
 		// for this step only (the flow steps before it in the run go without).
 		if ((FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -588,6 +603,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsFlight"))) T.Phase = 520;
 			// -AcMmoShotsB1: only the drill's sparks and the AI's walk (900-919).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1"))) T.Phase = 900;
+			// -AcMmoShotsC1: only the Citadel's tax and the realm wallet (1000-1012).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))) T.Phase = 1000;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -2821,6 +2838,147 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 919:
 		Check(Shots.Saved + Shots.Skipped == 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsC1
+	case 1000:
+	{
+		// The dev rig's home (the realm's Citadel); the nearest ore with some left.
+		if (!(S && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0))
+		{
+			TimedOut(TEXT("the dev rig's Citadel"));
+			return;
+		}
+		int64 Best = -1;
+		for (int64 I = 0; I < (int64)S->patches.size(); ++I)
+		{
+			if (S->patches[I].remaining <= 0) continue;
+			if (Best < 0 || ac::distance(S->patches[I].position, U->position) < ac::distance(S->patches[Best].position, U->position)) Best = I;
+		}
+		Check(Best >= 0, TEXT("ore in the start region"));
+		if (Best < 0)
+		{
+			Finish();
+			return;
+		}
+		Check(Mmo->Progress()->taxPercent == ac::Progression::realmTaxPercent,
+			FString::Printf(TEXT("c1: the tax told: %lld%%"), (long long)Mmo->Progress()->taxPercent));
+		Shots.Patch = Best;
+		Route({FVector2D(S->patches[Best].position.x, S->patches[Best].position.y)});
+		Advance();
+		return;
+	}
+	case 1001:
+	{
+		// Up to the vein until the act key would drill it, then hold it.
+		const ac::Vec2 P = S->patches[Shots.Patch].position;
+		const std::optional<ac::PilotTarget> Target = U ? M->simulation().pilotTarget(*U) : std::nullopt;
+		if (Target && Target->is<ac::PilotTarget::Patch>())
+		{
+			Stop(Face(P));
+			Pilot->Press(true);
+			Advance();
+			return;
+		}
+		if (Drive() == 1) Route({FVector2D(P.x, P.y)});
+		if (Now - Shots.StallSince > 4.0) Stalled(TEXT("to the ore"));
+		return;
+	}
+	case 1002:
+		// A load: home to the Citadel with it.
+		if (U && U->carrying > 0 && U->task != ac::Unit::Task::mining)
+		{
+			Pilot->Press(false);
+			Shots.OreBefore = Ore;
+			C1Load = U->carrying;
+			C1RealmBefore = Mmo->Progress()->realmWallet.ore;
+			const ac::Structure* C = CitadelOf(*S);
+			Route({FVector2D(C->position.x, C->position.y)});
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("a load drilled"), 45);
+		return;
+	case 1003:
+	{
+		const ac::Structure* C = CitadelOf(*S);
+		if (U && U->carrying == 0)
+		{
+			Stop(Face(C->position));
+			// The toast: up at once, held 1.2 s.
+			if (Since() > 0.35)
+			{
+				const int64 Tax = ac::Progression::realmTax(C1Load);
+				Check(Ore == Shots.OreBefore + C1Load - Tax, FString::Printf(TEXT("c1: the wallet got the load less the tax: %lld -> %lld (load %lld, tax %lld)"),
+					(long long)Shots.OreBefore, (long long)Ore, (long long)C1Load, (long long)Tax));
+				Shoot(TEXT("c1-01-unload-tax"), FString::Printf(TEXT("unloaded %lld ore: +%lld, %lld to the realm"), (long long)C1Load,
+					(long long)(C1Load - Tax), (long long)Tax));
+			}
+			return;
+		}
+		Drive();
+		TimedOut(TEXT("unloaded at the Citadel"), 40);
+		return;
+	}
+	case 1004:
+		// The server's realm wallet has the cut.
+		if (const ac::net::ProgressMessage* P = Mmo->Progress(); P && P->realmWallet.ore > C1RealmBefore)
+		{
+			Check(P->realmWallet.ore - C1RealmBefore == ac::Progression::realmTax(C1Load),
+				FString::Printf(TEXT("c1: the realm wallet got the cut: %lld -> %lld ore"), (long long)C1RealmBefore, (long long)P->realmWallet.ore));
+			Check(P->taxed.ore >= ac::Progression::realmTax(C1Load), FString::Printf(TEXT("c1: the pilot's tax counted: %lld ore"), (long long)P->taxed.ore));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the realm wallet's cut"), 10);
+		return;
+	case 1005:
+		Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("c1: H opens the Citadel screen at the Citadel"));
+		Check(CitadelScreenWidget().IsValid() && CitadelScreenWidget()->GetInfo().DonateWhyNot.IsEmpty(), TEXT("c1: the screen has the pilot at the Citadel"));
+		Advance();
+		return;
+	case 1006:
+		if (Since() > 1.5) Shoot(TEXT("c1-02-citadel-screen"), TEXT("the Citadel screen: the realm wallet, the tax, the donate buttons"));
+		return;
+	case 1007:
+	{
+		// 1,000 ore given: the screen's own ask (key 2).
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (!W || !P)
+		{
+			Check(false, TEXT("c1: the Citadel screen stays open"));
+			Finish();
+			return;
+		}
+		C1RealmBefore = P->realmWallet.ore;
+		C1DonatedBefore = P->donated.ore;
+		Shots.OreBefore = Ore;
+		Check(W->Key(EKeys::Two), TEXT("c1: key 2 gives 1,000 ore"));
+		Advance();
+		return;
+	}
+	case 1008:
+		if (const ac::net::ProgressMessage* P = Mmo->Progress(); P && P->donated.ore >= C1DonatedBefore + 1000 && Since() > 1.0)
+		{
+			Check(P->realmWallet.ore == C1RealmBefore + 1000, FString::Printf(TEXT("c1: the realm wallet took the gift: %lld -> %lld ore"),
+				(long long)C1RealmBefore, (long long)P->realmWallet.ore));
+			Check(Ore == Shots.OreBefore - 1000, FString::Printf(TEXT("c1: the wallet gave it: %lld -> %lld ore"), (long long)Shots.OreBefore, (long long)Ore));
+			Check(CitadelScreenWidget() && !CitadelScreenWidget()->KeptText().IsEmpty(), TEXT("c1: the foot thanks the pilot"));
+			Shoot(TEXT("c1-03-donated"), TEXT("after a donation of 1,000 ore: the realm wallet up"));
+			return;
+		}
+		if (!Mmo->CitadelRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("c1: donate: %s"), *Mmo->CitadelRefusal()));
+			Finish();
+			return;
+		}
+		TimedOut(TEXT("the donation kept"), 10);
+		return;
+	case 1009:
+		CloseCitadelScreen();
+		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	default:

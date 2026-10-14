@@ -446,6 +446,24 @@ public:
     /// hash of its key (the key itself never goes on the wire).
     static std::string callsign(const std::string& key);
 
+    // MARK: The realm wallet (C1, docs/prospector-progression.md "The
+    // realm's tax"; WorldRealm.cpp)
+
+    /// Every pilot's tax and donations, the world's (saved with it).
+    Wallet realmWallet() const { return realm_; }
+    void setRealmWallet(const Wallet& w) { realm_ = w; }
+    /// Gives `ore` and `hydrogen` from the pilot's wallet to the realm's, at
+    /// the realm's Citadel, standing where it unloads. The reason when
+    /// refused (away from the Citadel, nothing given, more than it has).
+    std::optional<std::string> donate(PilotId pilot, int64_t ore, int64_t hydrogen);
+    /// Takes `cost` from the realm wallet (D1: the Citadel's upgrades).
+    /// False, taking nothing, when the wallet is short or `cost` negative.
+    bool spendRealm(const Wallet& cost);
+    /// What a pilot has given the realm in all: in tax, and donated. Nil:
+    /// not joined.
+    std::optional<Wallet> taxed(PilotId pilot) const;
+    std::optional<Wallet> donated(PilotId pilot) const;
+
     // MARK: KSTR contracts (docs/contracts.md, K1; WorldContracts.cpp)
 
     /// The pilot's contracts today (empty: not a world, or not drawn yet:
@@ -581,6 +599,10 @@ private:
         double ringwalkerReady = 0;
         /// Its own pads as its client was last told (the World message).
         std::vector<OwnPad> padsTold;
+        /// C1: what it has given the realm wallet in all, in tax and
+        /// donated (saved).
+        Wallet taxed;
+        Wallet donated;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {
@@ -605,6 +627,8 @@ private:
     std::map<std::string, PilotState> away_;
     /// Who built each building, per region (building id → key).
     std::vector<std::map<int64_t, std::string>> builtBy_;
+    /// The realm wallet (C1).
+    Wallet realm_;
     std::vector<Moved> moves_;
     int64_t tick_ = 0;
     double lastStepMs_ = 0;
@@ -676,6 +700,9 @@ private:
     void workAfter(const std::vector<Work>& before);
     /// After a step: the realm's buildings finished, told to every pilot.
     void realmNews();
+    /// After a step: the Citadel's tax on each unload into the realm wallet
+    /// (C1), credited to the pilot that paid it.
+    void realmTaxes();
     void regrowWells(double dt);
     // WorldSites.cpp.
     /// After a step: sites seen, reached, held open.

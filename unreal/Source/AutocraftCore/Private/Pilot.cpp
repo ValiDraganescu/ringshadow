@@ -733,13 +733,17 @@ void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
             t.ore += load_;
         }
     });
+    // The Citadel's tax (C1): in a world the realm takes its cut of the load
+    // into the realm wallet (the server banks it from the event); XP and
+    // contracts count the whole load.
+    const int64_t tax = skilled(u) ? Progression::realmTax(load_) : 0;
     if (hydrogen) {
-        state.players[u.owner].hydrogen += load_;
+        state.players[u.owner].hydrogen += load_ - tax;
     } else {
-        state.players[u.owner].ore += load_;
+        state.players[u.owner].ore += load_ - tax;
         state.players[u.owner].totalMined += load_;
     }
-    events.push_back(GameEvent::Deposited{u.id, load_, citadel->position});
+    events.push_back(GameEvent::Deposited{u.id, load_, citadel->position, tax, hydrogen});
     u.carrying = 0;
     u.hydrogen = std::nullopt;
 }

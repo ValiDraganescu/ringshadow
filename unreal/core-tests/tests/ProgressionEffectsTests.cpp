@@ -299,19 +299,72 @@ TEST(ProgressionEffects_quickRegrowth) {
 }
 
 /// Stardust heart and Silver tide: a load dropped off counts 20% more in
-/// the wallet (and the XP).
+/// the wallet (and the XP); the realm's tax (C1) is a cut of the bigger load.
 TEST(ProgressionEffects_unloadYield) {
     auto [sim, prospector, citadel] = driven();
     learn(sim, {{Skill::stardustHeart, 1}, {Skill::silverTide, 1}});
     const int64_t ore = sim.state.players[0].ore, mh = sim.state.players[0].hydrogen;
     unitRef(sim, prospector).carrying = 25;
     run(sim, 1.0 / 30);
-    EXPECT_EQ(sim.state.players[0].ore, ore + 30);
+    EXPECT_EQ(sim.state.players[0].ore, ore + 30 - 3);
     EXPECT_EQ(sim.levels().xp(UnitKind::prospector), 30.0);
     unitRef(sim, prospector).carrying = 20;
     unitRef(sim, prospector).hydrogen = true;
     run(sim, 1.0 / 30);
-    EXPECT_EQ(sim.state.players[0].hydrogen, mh + 24);
+    EXPECT_EQ(sim.state.players[0].hydrogen, mh + 24 - 2);
+}
+
+/// The realm's cut of a load (C1): 10% to the nearest unit, halves up, at
+/// least 1, never all of it.
+TEST(ProgressionEffects_realmTaxRounding) {
+    EXPECT_EQ(Progression::realmTaxPercent, int64_t(10));
+    EXPECT_EQ(Progression::realmTax(0), int64_t(0));
+    EXPECT_EQ(Progression::realmTax(1), int64_t(0));
+    EXPECT_EQ(Progression::realmTax(2), int64_t(1));
+    EXPECT_EQ(Progression::realmTax(4), int64_t(1));
+    EXPECT_EQ(Progression::realmTax(14), int64_t(1));
+    EXPECT_EQ(Progression::realmTax(15), int64_t(2));
+    EXPECT_EQ(Progression::realmTax(20), int64_t(2));
+    EXPECT_EQ(Progression::realmTax(25), int64_t(3));
+    EXPECT_EQ(Progression::realmTax(100), int64_t(10));
+    EXPECT_EQ(Progression::realmTax(1004), int64_t(100));
+    EXPECT_EQ(Progression::realmTax(1005), int64_t(101));
+}
+
+/// The tax on an unload at the Citadel (C1): the wallet gets the load less
+/// the cut, the event tells both, XP counts the whole load; with no world
+/// (no progress) nothing is taken.
+TEST(ProgressionEffects_realmTaxOnUnload) {
+    auto [sim, prospector, citadel] = driven();
+    const int64_t ore = sim.state.players[0].ore;
+    unitRef(sim, prospector).carrying = 25;
+    run(sim, 1.0 / 30);
+    EXPECT_EQ(sim.state.players[0].ore, ore + 25);
+    learn(sim, {});
+    const double xp = sim.levels().xp(UnitKind::prospector);
+    unitRef(sim, prospector).carrying = 25;
+    const auto events = run(sim, 1.0 / 30);
+    EXPECT_EQ(sim.state.players[0].ore, ore + 25 + 22);
+    EXPECT_EQ(sim.levels().xp(UnitKind::prospector) - xp, 25.0 * Leveling::oreXP);
+    int64_t seen = 0;
+    for (const GameEvent& e : events)
+        if (const auto* d = e.as<GameEvent::Deposited>(); d && d->unit == prospector) {
+            seen += 1;
+            EXPECT_EQ(d->amount, int64_t(25));
+            EXPECT_EQ(d->tax, int64_t(3));
+            EXPECT_TRUE(!d->hydrogen);
+        }
+    EXPECT_EQ(seen, int64_t(1));
+    const int64_t mh = sim.state.players[0].hydrogen;
+    unitRef(sim, prospector).carrying = 4;
+    unitRef(sim, prospector).hydrogen = true;
+    const auto small = run(sim, 1.0 / 30);
+    EXPECT_EQ(sim.state.players[0].hydrogen, mh + 3);
+    for (const GameEvent& e : small)
+        if (const auto* d = e.as<GameEvent::Deposited>(); d && d->unit == prospector) {
+            EXPECT_EQ(d->tax, int64_t(1));
+            EXPECT_TRUE(d->hydrogen);
+        }
 }
 
 /// Dust runner and Quicksilver stride: walking faster empty, and with MH.
@@ -566,13 +619,14 @@ TEST(ProgressionEffects_habDomeDepot) {
     // Finished, built by another pilot (not in `pilotBuildings`): the depot.
     sim.state.structures.back().buildLeft = std::nullopt;
     run(sim, 1.0 / 30);
-    EXPECT_EQ(sim.state.players[0].ore, ore + 25);
+    // The realm's tax (C1) at a Hab Dome too: 3 of 25, 2 of 20.
+    EXPECT_EQ(sim.state.players[0].ore, ore + 25 - 3);
     EXPECT_EQ(unit(sim, prospector).carrying, int64_t(0));
     unitRef(sim, prospector).carrying = 20;
     unitRef(sim, prospector).hydrogen = true;
     const int64_t mh = sim.state.players[0].hydrogen;
     run(sim, 1.0 / 30);
-    EXPECT_EQ(sim.state.players[0].hydrogen, mh + 20);
+    EXPECT_EQ(sim.state.players[0].hydrogen, mh + 20 - 2);
 }
 
 /// A world's Lab stands on its own: the Prospector places it and welds it

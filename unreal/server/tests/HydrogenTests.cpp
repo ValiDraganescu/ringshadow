@@ -157,10 +157,11 @@ TEST(hydrogen_derrick_pumped_and_unloaded_fills_the_wallet) {
     EXPECT_EQ(sim.state.wells->at(size_t(well - sim.state.wells->data())).remaining, wellBefore - load);
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(0));
 
-    // Driven to the Citadel: the load goes into the wallet's MH, not its ore.
+    // Driven to the Citadel: the load goes into the wallet's MH, not its
+    // ore, less the realm's tax (C1).
     const Vec2 citadelAt = own(sim, StructureKind::citadel)->position;
     ASSERT_TRUE(run(w, me, 60 * 20, face(citadelAt), [&] { return unit()->carrying == 0; }, 1.0));
-    EXPECT_EQ(w.wallet(me)->hydrogen, load);
+    EXPECT_EQ(w.wallet(me)->hydrogen, load - Progression::realmTax(load));
     EXPECT_EQ(w.wallet(me)->ore, int64_t(125));
     std::printf("  pumped %lld MH, wallet %lld ore %lld MH\n", (long long)load, (long long)w.wallet(me)->ore,
                 (long long)w.wallet(me)->hydrogen);

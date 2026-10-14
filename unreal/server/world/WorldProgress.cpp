@@ -242,6 +242,11 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
             if (realm(b))
                 if (std::string by = builder(it->second.region, b.id); !by.empty()) m.builders[b.id] = std::move(by);
     m.callsign = callsign(it->second.key);
+    // C1: the realm wallet, the tax, and what this pilot has given.
+    m.realmWallet = {realm_.ore, realm_.hydrogen};
+    m.taxPercent = Progression::realmTaxPercent;
+    m.taxed = {it->second.taxed.ore, it->second.taxed.hydrogen};
+    m.donated = {it->second.donated.ore, it->second.donated.hydrogen};
     if (const auto& o = it->second.opening)
         m.opening = net::ProgressMessage::Opening{siteId(o->region, o->site), o->refusal.empty() ? o->since : 0.0,
                                                   WorldSites::needs(world_->regions[o->region].built.sites[o->site].kind),

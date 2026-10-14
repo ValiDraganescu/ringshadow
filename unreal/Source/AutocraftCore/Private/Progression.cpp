@@ -43,6 +43,12 @@ int64_t Progression::respecPrice(int64_t level) {
     return std::llround(0.4 * l * l / 10) * 10;
 }
 
+int64_t Progression::realmTax(int64_t load) {
+    if (load < 2) return 0;
+    const int64_t cut = (load * realmTaxPercent + 50) / 100;
+    return std::clamp(cut, int64_t(1), load - 1);
+}
+
 int64_t Progression::slotLevel(int64_t slot) {
     static constexpr std::array<int64_t, slotCount> levels{10, 25, 45};
     return slot >= 0 && slot < slotCount ? levels[static_cast<size_t>(slot)] : cap + 1;

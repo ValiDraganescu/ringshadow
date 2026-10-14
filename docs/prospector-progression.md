@@ -411,6 +411,76 @@ in the world uses every building.
   four hex digits of a hash of its key (`WorldMap::callsign`). The key
   never goes on the wire.
 
+### The realm's tax (C1)
+
+Decided by the user (2026-10-14, docs/mmorpg-m8.md): the Citadel takes a cut
+of every unload into a realm wallet; pilots may donate too; the realm wallet
+pays for the Citadel's upgrades (D1).
+
+- **The tax.** Every load a pilot unloads into its wallet, ore or MH, at the
+  realm's Citadel or at a Hab Dome (a depot is the realm's too), pays the
+  realm `Progression::realmTaxPercent`, **10%**, one tunable constant. The
+  wallet gets the rest; the realm wallet gets the cut.
+- **The rounding rule.** The cut is 10% of the load to the nearest whole
+  unit, halves rounding up, but **at least 1** and **never the whole load**
+  (`Progression::realmTax`): a load of 1 pays nothing, 2 to 14 pay 1, 15 to
+  24 pay 2, 25 ore pays 3, 20 MH pays 2, 100 pays 10. So the small loads a
+  nearly empty deposit gives still pay something, and no load is taken whole.
+  The cut is taken from the load after Stardust heart and Silver tide (they
+  grow the load, the realm takes its share of the bigger one).
+- **XP and contracts count the whole load.** The tax never slows levelling:
+  the unload's XP, the "Stardust run" deliver contracts and the mined-ore
+  tally all count the full load; only the wallet gets less. The tax is taken
+  in the core (`Simulation::prospectorDeposit`, only for the driven
+  Prospector in a world: the strategy game pays none), so the client's
+  prediction agrees; the unload's event carries it
+  (`GameEvent::Deposited::tax`, `hydrogen`), and the server banks it into
+  the realm wallet from that event (`WorldMap::realmTaxes`), crediting the
+  pilot that paid.
+- **The realm wallet** is the world's: ore and MH, saved with the world
+  (schema 9), told to every pilot. **Donations**: at the realm's Citadel,
+  standing where it unloads, a pilot gives ore and MH from its own wallet
+  (`WorldMap::donate`, `RequestMessage::Donate`). Refused away from the
+  Citadel ("Donate at the realm's Citadel: stand where you unload"; a Hab
+  Dome is a depot, not where one donates), for more than the pilot has ("Not
+  enough ore: you have 40"), and for nothing.
+- **Spending** is D1's: `WorldMap::spendRealm(cost)` takes ore and MH from
+  the realm wallet, refusing (and taking nothing) when it is short.
+- **Each pilot's tally**: what it has given in all, in tax and donated,
+  saved with the pilot, shown on its Citadel screen.
+
+On the wire (protocol 13, C1): `ProgressMessage::realmWallet`, `taxPercent`,
+`taxed` and `donated` (ore and MH each); `RequestMessage::Donate`;
+`GameEvent::Deposited` carries `tax` and `hydrogen`.
+
+On screen:
+
+- The unload toast says what reached the wallet and the realm's cut under
+  it, in the realm's gold: "+22 ORE", "3 TO THE REALM".
+- The resource bar, top right, shows the realm wallet small where the
+  strategy game's supply count is: "REALM" over "1,240 · 56 MH".
+- **The Citadel screen (H)**, at the realm's Citadel (`SAcCitadelScreen`): H
+  is free in the MMO HUD (K the skills, J the rig, M the map, T the
+  contracts, X abandon, B build, V the view, R the ability, Q C G the
+  actives). Away from the Citadel H says "H opens the realm's Citadel: walk
+  up to it, where you unload". The screen has the rig screen's chrome in the
+  realm's gold: the title names the Citadel's builder; a **REALM** tab with
+  the realm wallet (ore and MH, large), the tax ("TAX 10% of every unload,
+  here and at the Hab Domes"), what this pilot gave (in tax, donated), and
+  **DONATE**: the pilot's wallet and buttons for 100, 1,000 and all, of ore
+  (keys 1 2 3) and of MH (4 5 6), dark when the wallet is short. The foot
+  says what was given ("Given to the realm: 1,000 ore.") or why not. H or
+  Esc closes it. The tabs are built to grow: C2's shop and D1's upgrades
+  add theirs beside REALM. The keys line, at the Citadel, says "H  at the
+  Citadel: the realm's wallet and tax, donate".
+
+Tests: `core-tests/tests/ProgressionEffectsTests.cpp`
+(`realmTaxRounding`, `realmTaxOnUnload`, the Hab Dome depot),
+`server/tests/RealmWalletTests.cpp` (the tax at the Citadel and a Hab
+Dome, small loads, XP and contracts on the whole load; donations in and out
+of range and over the wallet; two pilots' taxes adding up; the wallet saved,
+loaded and migrated). Pictures: `-AcMmoShotsC1`.
+
 Hours to each floor at the model's pace: Derrick 13 min, Hab Dome 49 min,
 Foundry 1.95 h, Lab 4.6 h, Spacedock 9.1 h, Bastion 15.6 h, Sentinel 24.4 h.
 
@@ -719,6 +789,18 @@ pilot unloads, respawns, respecs and flies at them, and the builder kept in
 `built_by` still gets its credit (the v4 blueprint gift and the feats read
 it). Tests: `server/tests/RealmTests.cpp` (`realm_old_save_buildings_become_the_realms`).
 
+### The realm wallet migration (schema v9, C1)
+
+Schema **v9** adds the realm wallet, one row, and each pilot's tally:
+
+    CREATE TABLE realm_wallet (id INTEGER PRIMARY KEY CHECK (id = 1), ore INTEGER NOT NULL, hydrogen INTEGER NOT NULL);
+    INSERT INTO realm_wallet (id, ore, hydrogen) VALUES (1, 0, 0);
+    ALTER TABLE pilots ADD COLUMN taxed_ore …, taxed_hydrogen …, donated_ore …, donated_hydrogen … DEFAULT 0
+
+An old save starts with an empty realm wallet and every pilot's tally at
+nothing. Tests: `server/tests/RealmWalletTests.cpp`
+(`realm_wallet_saved_and_loaded`).
+
 ## On screen
 
 ### The level-up
@@ -808,6 +890,9 @@ Foundry and the Lab.
 - With a load, the prompt and the compass name the realm's finished
   Hab Domes as depots beside the Citadel ("Walk into your Citadel or a Hab
   Dome to unload").
+- C1: the realm wallet small in the resource bar ("REALM", "1,240 · 56
+  MH"); the unload toast's second line, "3 TO THE REALM"; H at the Citadel
+  opens the Citadel screen ("The realm's tax (C1)").
 - R1: a building in sight names its builder ("Hab Dome  ·  built by Pilot
   045B"); a realm building finished anywhere is a toast to every pilot; the
   build menu's limit tag reads "REALM LIMIT".

@@ -284,7 +284,7 @@ TEST(protocol_events_round_trip_every_kind) {
     using G = GameEvent;
     const Vec2 at(10.25, -20.5);
     std::vector<GameEvent> all = {
-        G(G::Deposited{1, 5, at}),
+        G(G::Deposited{1, 25, at, 3, true}),
         G(G::PatchDepleted{2}),
         G(G::PatchRegrown{3}),
         G(G::Trained{4, UnitKind::kestrel, at}),
@@ -758,6 +758,14 @@ TEST(protocol_progress_round_trips) {
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
     EXPECT_TRUE(kProtocolVersion >= uint16_t(12));
+    // The realm wallet (C1, v13): the realm's, the tax, what the pilot gave.
+    m.realmWallet = {123456, 789};
+    m.taxPercent = 10;
+    m.taxed = {3000, 40};
+    m.donated = {1000, 0};
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back == m);
+    EXPECT_TRUE(kProtocolVersion >= uint16_t(13));
 }
 
 TEST(mirror_takes_snapshots_into_its_simulation) {
@@ -912,7 +920,8 @@ TEST(protocol_world_messages_round_trip) {
              RequestMessage::Undo{Skill::overcharge}, RequestMessage::Respec{}, RequestMessage::Slot{2, Skill::aegis},
              RequestMessage::Slot{0, std::nullopt}, RequestMessage::Abandon{4000000000u},
              RequestMessage::Make{Module::drillHead, 1}, RequestMessage::Research{Module::surveyLens, 3},
-             RequestMessage::Fit{Module::plate, 2}, RequestMessage::Fit{Module::cargoPod, 0}}) {
+             RequestMessage::Fit{Module::plate, 2}, RequestMessage::Fit{Module::cargoPod, 0},
+             RequestMessage::Donate{1000, 0}, RequestMessage::Donate{0, 250}}) {
         RequestMessage t;
         t.id = 21;
         t.what = what;

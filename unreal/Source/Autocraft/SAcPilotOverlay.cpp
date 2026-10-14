@@ -311,6 +311,12 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 		// Ore lilac, MH mirror-silver (docs/naming.md).
 		const FLinearColor Tint = GainText.EndsWith(TEXT(" MH")) ? Srgb(0.84, 0.92, 0.98) : Srgb(0.78, 0.66, 1);
 		P.Label(GainText, 34, Tint, FVector2D(C.X, C.Y + 110 + 26 * E), EAcHAlign::Center, EAcVAlign::Baseline, true, true, A);
+		// The realm's cut of it (C1), in the realm's gold.
+		if (!GainNote.IsEmpty())
+		{
+			P.Label(GainNote, 17, Srgb(1.0, 0.82, 0.42), FVector2D(C.X, C.Y + 86 + 26 * E), EAcHAlign::Center, EAcVAlign::Baseline, true,
+				true, A);
+		}
 	}
 	PaintReticle(P, C, Now);
 	PaintSight(P, W, H);

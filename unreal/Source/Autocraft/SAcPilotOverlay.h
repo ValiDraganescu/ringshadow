@@ -36,13 +36,17 @@ public:
 	void Show(const FAcPilotInfo& Info, double Now);
 	/// A new ride: no hurt flash from the last unit's health, no marks.
 	void Reset();
-	/// A gain the pilot made ("+25 ORE" unloaded), large over the reticle,
-	/// rising and fading over 1.8 s from `Now` (real seconds).
-	void Gain(const FString& Text, double Now)
+	/// A gain the pilot made ("+22 ORE" unloaded), large over the reticle,
+	/// rising and fading over 1.8 s from `Now` (real seconds); `Note`
+	/// smaller under it (C1: "3 TO THE REALM", the Citadel's tax).
+	void Gain(const FString& Text, double Now, const FString& Note = FString())
 	{
 		GainText = Text;
+		GainNote = Note;
 		GainSince = Now;
 	}
+	const FString& GainShown() const { return GainText; }
+	const FString& GainNoteShown() const { return GainNote; }
 	void SetPanel(bool bInPanel) { bPanel = bInPanel; }
 	/// The glass the world shows through, in the overlay's points (y up);
 	/// empty: the whole view. Shades of the world stay inside it.
@@ -104,6 +108,7 @@ private:
 	TOptional<FString> ShownNote;
 	double NoteSince = -10;
 	FString GainText;
+	FString GainNote;
 	double GainSince = -10;
 	// The hurt flash: 0.9 down to nothing over 0.5 s.
 	TOptional<double> LastHp;

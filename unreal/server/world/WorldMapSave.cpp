@@ -139,6 +139,11 @@ WorldSave WorldMap::save() const {
         s.contracts = encodeContracts(p);
         // Its rig (P7), apart from the progress JSON.
         if (p.progress.rig != Rig{}) s.rig = SessionStore::encode(p.progress.rig, false);
+        // What it has given the realm (C1).
+        s.taxedOre = p.taxed.ore;
+        s.taxedHydrogen = p.taxed.hydrogen;
+        s.donatedOre = p.donated.ore;
+        s.donatedHydrogen = p.donated.hydrogen;
         out.pilots.push_back(s);
     };
     for (const auto& [id, p] : pilots_)
@@ -173,6 +178,8 @@ WorldSave WorldMap::save() const {
     }
     std::sort(out.regions.begin(), out.regions.end(), [](const SavedRegion& a, const SavedRegion& b) { return a.id < b.id; });
     out.clock = clock_;
+    out.realmOre = realm_.ore;
+    out.realmHydrogen = realm_.hydrogen;
     for (const Fall& f : falls_) {
         const GameState& st = regions_[f.region]->simulation().state;
         const OreDeposit* d = f.patch && size_t(*f.patch) < st.patches.size() ? &st.patches[size_t(*f.patch)] : nullptr;
@@ -242,6 +249,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         PilotState p;
         p.key = sp.id;
         p.wallet = Wallet{sp.ore, sp.hydrogen};
+        p.taxed = Wallet{sp.taxedOre, sp.taxedHydrogen};
+        p.donated = Wallet{sp.donatedOre, sp.donatedHydrogen};
         p.unit = sp.unit;
         if (const auto i = regionNamed(sp.region)) {
             p.region = *i;
@@ -291,6 +300,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         nextFall_ = std::max(nextFall_, uint32_t(sf.id) + 1);
     }
     fallsRead_ = std::nullopt;
+    // The realm wallet (C1; empty before schema 9).
+    realm_ = Wallet{save.realmOre, save.realmHydrogen};
     // The world's hour goes on where it was.
     setClock(save.clock);
     return problems;

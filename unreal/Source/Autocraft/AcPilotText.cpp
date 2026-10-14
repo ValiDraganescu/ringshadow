@@ -287,6 +287,7 @@ TArray<FString> AcPilotText::MmoTips(const ac::Simulation& Sim, const ac::Unit& 
 	Tips.Add(TEXT("M  world map: on a pad, fly to another region"));
 	Tips.Add(TEXT("V  first or third person   ·   Esc  the top-down view"));
 	Tips.Add(TEXT("K  skill tree   ·   Q C G  your actives"));
+	if (bCitadel) Tips.Add(TEXT("H  at the Citadel: the realm's wallet and tax, donate"));
 	return Tips;
 }
 

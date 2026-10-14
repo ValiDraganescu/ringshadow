@@ -504,7 +504,7 @@ TEST(sites_v3_pilot_keeps_the_blueprints_of_its_buildings) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(8));
+    EXPECT_EQ(store->schemaVersion(), int64_t(9));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);

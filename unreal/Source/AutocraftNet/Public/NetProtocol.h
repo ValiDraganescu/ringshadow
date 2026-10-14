@@ -370,9 +370,16 @@ struct RequestMessage {
         int64_t mark = 1;
         bool operator==(const Fit&) const = default;
     };
+    /// C1: give `ore` and `hydrogen` from the wallet to the realm wallet, at
+    /// the realm's Citadel (where it unloads).
+    struct Donate {
+        int64_t ore = 0;
+        int64_t hydrogen = 0;
+        bool operator==(const Donate&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
-    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit> what;
+    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate> what;
     bool operator==(const RequestMessage&) const = default;
 };
 
@@ -551,6 +558,19 @@ struct ProgressMessage {
     std::map<StructureKind, int64_t> realm;
     std::map<int64_t, std::string> builders;
     std::string callsign;
+    /// C1: ore and MH.
+    struct Purse {
+        int64_t ore = 0;
+        int64_t hydrogen = 0;
+        bool operator==(const Purse&) const = default;
+    };
+    /// The realm wallet (every pilot's tax and donations; D1 spends it on
+    /// the Citadel), the tax in percent, and what this pilot has given it
+    /// in all: in tax, and donated.
+    Purse realmWallet;
+    int64_t taxPercent = 0;
+    Purse taxed;
+    Purse donated;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

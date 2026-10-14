@@ -52,6 +52,8 @@ uint32_t Client::make(Module module, int64_t mark) { return request(RequestMessa
 uint32_t Client::research(Module module, int64_t mark) { return request(RequestMessage::Research{module, mark}); }
 uint32_t Client::fit(Module module, int64_t mark) { return request(RequestMessage::Fit{module, mark}); }
 
+uint32_t Client::donate(int64_t ore, int64_t hydrogen) { return request(RequestMessage::Donate{ore, hydrogen}); }
+
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;
     m.id = nextRequest_++;

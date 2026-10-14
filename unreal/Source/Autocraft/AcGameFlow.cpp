@@ -50,6 +50,8 @@ namespace
 	constexpr int32 SkillScreenLayer = 71;
 	/// The MMORPG rig screen: the skill screen's sibling (one at a time).
 	constexpr int32 RigScreenLayer = 72;
+	/// The MMORPG Citadel screen (C1): the rig screen's sibling (one at a time).
+	constexpr int32 CitadelScreenLayer = 73;
 
 	FString Text(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 
@@ -91,6 +93,13 @@ namespace
 			{
 				if (K == EKeys::Escape || (K == EKeys::J && !Event.IsCommandDown())) { F->CloseRigScreen(); return true; }
 				if (K == EKeys::K && !Event.IsCommandDown()) { F->OpenSkillScreen(); return true; }
+				if (!Event.IsCommandDown() && S->Key(K)) return true;
+				// The game's own keys wait while the screen is up (⌘Q still quits).
+				return !Event.IsCommandDown();
+			}
+			if (TSharedPtr<SAcCitadelScreen> S = F->CitadelScreenWidget())
+			{
+				if (K == EKeys::Escape || (K == EKeys::H && !Event.IsCommandDown())) { F->CloseCitadelScreen(); return true; }
 				if (!Event.IsCommandDown() && S->Key(K)) return true;
 				// The game's own keys wait while the screen is up (⌘Q still quits).
 				return !Event.IsCommandDown();
@@ -368,6 +377,7 @@ void UAcGameFlowSubsystem::Deinitialize()
 	CloseWorldMap();
 	CloseSkillScreen();
 	CloseRigScreen();
+	CloseCitadelScreen();
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
 	{
 		Sim->OnGameStarted.Remove(StartedHandle);
@@ -788,6 +798,7 @@ void UAcGameFlowSubsystem::StopMmo()
 	CloseWorldMap();
 	CloseSkillScreen();
 	CloseRigScreen();
+	CloseCitadelScreen();
 	LeaveDriving();
 	Sim->StopMmo();
 	TickMmo();
@@ -812,6 +823,7 @@ void UAcGameFlowSubsystem::TickMmo()
 	TickWorldMap();
 	TickSkillScreen();
 	TickRigScreen();
+	TickCitadelScreen();
 	if (!MmoBanner) return;
 	MmoBanner->Update(FPlatformTime::Seconds());
 	if (Mmo)
@@ -873,6 +885,7 @@ bool UAcGameFlowSubsystem::OpenWorldMap()
 	if (!Sim || !Sim->IsMmo() || Menu || Dialog) return false;
 	CloseSkillScreen();
 	CloseRigScreen();
+	CloseCitadelScreen();
 	const AAcHUD* Hud = AAcHUD::Get(this);
 	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
 	if (!Root) return false;
@@ -977,6 +990,7 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 	if (!Root) return false;
 	CloseWorldMap();
 	CloseRigScreen();
+	CloseCitadelScreen();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	// Each ask goes to the server; a refusal at once (not connected) shows here,
 	// the server's own through `TickSkillScreen`.
@@ -1104,6 +1118,7 @@ bool UAcGameFlowSubsystem::OpenRigScreen()
 	if (!Root) return false;
 	CloseWorldMap();
 	CloseSkillScreen();
+	CloseCitadelScreen();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	// As the skill screen's: a refusal at once here, the server's own
 	// through `TickRigScreen`.
@@ -1207,6 +1222,139 @@ void UAcGameFlowSubsystem::TickRigScreen()
 	{
 		RigRefusalShown = Mmo->RigRefusal();
 		if (!RigRefusalShown.IsEmpty()) RigScreen->SetRefusal(RigRefusalShown);
+	}
+}
+
+// MARK: - The MMORPG Citadel screen
+
+bool UAcGameFlowSubsystem::AtRealmCitadel(FString* Builder) const
+{
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
+	if (!M || Mmo->Travelling()) return false;
+	const ac::GameState& St = M->simulation().state;
+	const ac::Unit* U = M->driven() ? M->unit(*M->driven()) : nullptr;
+	if (!U) return false;
+	// The realm's finished Citadel (R1: every pilot's), where the Prospector unloads.
+	for (const ac::Structure& B : St.structures)
+	{
+		if (B.kind != ac::StructureKind::citadel || !B.complete() || B.owner != U->owner) continue;
+		if (!ac::NavGrid::insideStructure(U->position, B, ac::Simulation::pilotDepositReach)) continue;
+		if (Builder) *Builder = AcProgressHud::BuiltBy(Mmo, B.id);
+		return true;
+	}
+	return false;
+}
+
+bool UAcGameFlowSubsystem::OpenCitadelScreen()
+{
+	if (CitadelScreen) return true;
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsMmo() || Menu || Dialog) return false;
+	const AAcHUD* Hud = AAcHUD::Get(this);
+	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
+	if (!Root) return false;
+	// Only at the realm's Citadel, where the Prospector unloads (C1).
+	if (!AtRealmCitadel())
+	{
+		Sim->Refuse(TEXT("H opens the realm's Citadel: walk up to it, where you unload"));
+		return false;
+	}
+	CloseWorldMap();
+	CloseSkillScreen();
+	CloseRigScreen();
+	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
+	Root->AddLayer(CitadelScreenLayer)
+	[
+		SAssignNew(CitadelScreen, SAcCitadelScreen)
+		.OnDonate_Lambda([Weak](int64 Ore, int64 Hydrogen)
+			{
+				if (!Weak.IsValid()) return;
+				UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+				FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+				FString Why;
+				if (!Mmo) Why = TEXT("Not in a world");
+				else if (Mmo->Donate(Ore, Hydrogen, &Why)) return;
+				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why);
+			})
+		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseCitadelScreen(); })
+	];
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(CitadelScreen, EFocusCause::SetDirectly);
+	// As the rig screen: the world goes on, the pilot's unit stands, the pointer is free.
+	SetBlocked(true);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(true);
+	const FAcMmoClient* Mmo = Sim->MmoClient();
+	CitadelRefusalShown = Mmo ? Mmo->CitadelRefusal() : FString();
+	CitadelKeptShown = Mmo ? Mmo->CitadelKept() : 0;
+	TickCitadelScreen();
+	UE_LOG(LogAutocraft, Log, TEXT("citadel screen: open"));
+	return true;
+}
+
+void UAcGameFlowSubsystem::CloseCitadelScreen()
+{
+	if (!CitadelScreen) return;
+	if (const AAcHUD* Hud = AAcHUD::Get(this))
+	{
+		if (const TSharedPtr<SAcRoot> Root = Hud->Root()) Root->RemoveLayer(CitadelScreen.ToSharedRef());
+	}
+	CitadelScreen.Reset();
+	SetBlocked(false);
+	if (AAcPilotPawn* Pilot = AAcPilotPawn::Find(this)) Pilot->SetScreenOpen(false);
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetAllUserFocusToGameViewport();
+	UE_LOG(LogAutocraft, Log, TEXT("citadel screen: closed"));
+}
+
+void UAcGameFlowSubsystem::ToggleCitadelScreen()
+{
+	if (CitadelScreen) CloseCitadelScreen();
+	else OpenCitadelScreen();
+}
+
+void UAcGameFlowSubsystem::TickCitadelScreen()
+{
+	if (!CitadelScreen) return;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo)
+	{
+		CloseCitadelScreen();
+		return;
+	}
+	FAcCitadelScreenInfo Info;
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	{
+		Info.bKnown = true;
+		Info.RealmOre = P->realmWallet.ore;
+		Info.RealmHydrogen = P->realmWallet.hydrogen;
+		Info.TaxPercent = P->taxPercent;
+		Info.TaxedOre = P->taxed.ore;
+		Info.TaxedHydrogen = P->taxed.hydrogen;
+		Info.DonatedOre = P->donated.ore;
+		Info.DonatedHydrogen = P->donated.hydrogen;
+	}
+	if (const ac::net::Mirror* M = Mmo->Mirror())
+	{
+		const ac::GameState& St = M->simulation().state;
+		if (size_t(ac::Pilot::player) < St.players.size())
+		{
+			Info.Ore = St.players[ac::Pilot::player].ore;
+			Info.Hydrogen = St.players[ac::Pilot::player].hydrogen;
+		}
+	}
+	// The server checks the place; the screen says so ahead.
+	if (!AtRealmCitadel(&Info.Builder)) Info.DonateWhyNot = TEXT("Donate at the realm's Citadel: stand where you unload");
+	CitadelScreen->SetInfo(Info);
+	if (Mmo->CitadelRefusal() != CitadelRefusalShown)
+	{
+		CitadelRefusalShown = Mmo->CitadelRefusal();
+		if (!CitadelRefusalShown.IsEmpty()) CitadelScreen->SetRefusal(CitadelRefusalShown);
+	}
+	if (Mmo->CitadelKept() != CitadelKeptShown)
+	{
+		CitadelKeptShown = Mmo->CitadelKept();
+		CitadelScreen->SetKept();
 	}
 }
 

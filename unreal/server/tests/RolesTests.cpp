@@ -193,10 +193,12 @@ TEST(roles_respawn_with_second_wind) {
     EXPECT_TRUE(!r->hydrogen);
     // The sim's note is taken.
     EXPECT_TRUE(!w.start().simulation().fallen.has_value());
-    // Back beside its Citadel: the kept 30 go straight into the wallet.
+    // Back beside its Citadel: the kept 30 go straight into the wallet,
+    // less the realm's tax (C1).
     wait(w, me, 2.6);
     ASSERT_TRUE(drivenUnit(w, me) != nullptr);
-    EXPECT_EQ(drivenUnit(w, me)->carrying + w.wallet(me)->ore - ore, int64_t(30));
+    const int64_t kept = drivenUnit(w, me)->carrying;
+    EXPECT_EQ(kept + w.wallet(me)->ore - ore, kept > 0 ? int64_t(30) : 30 - Progression::realmTax(30));
 }
 
 // The nearest home: a Hab Dome in the region where it fell beats the
@@ -274,12 +276,13 @@ TEST(roles_hab_dome_depot) {
     const double xp = w.progress(me)->xp;
     drivenUnit(w, me)->carrying = 25;
     w.step();
-    EXPECT_EQ(w.wallet(me)->ore, int64_t(875));
+    // 25 less the realm's tax of 3 (C1); the XP on all 25.
+    EXPECT_EQ(w.wallet(me)->ore, int64_t(872));
     EXPECT_NEAR(w.progress(me)->xp - xp, 25 * WorldXp::ore, 1e-9);
     drivenUnit(w, me)->carrying = 20;
     drivenUnit(w, me)->hydrogen = true;
     w.step();
-    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(70));
+    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(68));
 }
 
 // The world's prices: the MH part refused when the wallet can't pay it;

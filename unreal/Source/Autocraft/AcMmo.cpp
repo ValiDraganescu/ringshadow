@@ -217,6 +217,9 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	SkillsDone = 0;
 	RigAsked.Reset();
 	LastRigRefusal.Reset();
+	CitadelAsked.Reset();
+	LastCitadelRefusal.Reset();
+	CitadelDone = 0;
 	FlightsAsked.Reset();
 	LastFlightRefusal.Reset();
 	bArriving = false;
@@ -710,6 +713,21 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (CitadelAsked.Remove(R.request) > 0)
+		{
+			if (R.done)
+			{
+				CitadelDone += 1;
+			}
+			else
+			{
+				LastCitadelRefusal = Text(R.reason);
+				Notes.Add(LastCitadelRefusal);
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u refused: %s"), R.request, *LastCitadelRefusal);
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (FlightsAsked.Remove(R.request) > 0)
 		{
 			if (!R.done)
@@ -874,6 +892,16 @@ bool FAcMmoClient::Make(const ac::Module Module, const int64 Mark, FString* Why)
 bool FAcMmoClient::Research(const ac::Module Module, const int64 Mark, FString* Why) { return AskRig(TEXT("research"), Module, Mark, Why); }
 
 bool FAcMmoClient::Fit(const ac::Module Module, const int64 Mark, FString* Why) { return AskRig(TEXT("fit"), Module, Mark, Why); }
+
+bool FAcMmoClient::Donate(const int64 Ore, const int64 Hydrogen, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->donate(Ore, Hydrogen);
+	LastCitadelRefusal.Reset();
+	CitadelAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: donate %lld ore %lld MH"), Id, (long long)Ore, (long long)Hydrogen);
+	return true;
+}
 
 TArray<FString> FAcMmoClient::TakeNotes()
 {

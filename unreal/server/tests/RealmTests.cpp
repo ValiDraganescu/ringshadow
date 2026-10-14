@@ -183,13 +183,14 @@ TEST(realm_second_pilot_uses_the_first_pilots_hab_dome_and_citadel) {
     drivenUnit(w, b)->carrying = 25;
     drivenUnit(w, b)->hydrogen = false;
     wait(w, b, 10);
-    EXPECT_EQ(w.wallet(b)->ore, ore + 25);
+    // Less the realm's tax (C1): 3 of 25, 3 of 30.
+    EXPECT_EQ(w.wallet(b)->ore, ore + 22);
     // And A's Citadel: its depot, and where it respecs.
     besides(w, b, citadel);
     drivenUnit(w, b)->carrying = 30;
     drivenUnit(w, b)->hydrogen = false;
     wait(w, b, 10);
-    EXPECT_EQ(w.wallet(b)->ore, ore + 55);
+    EXPECT_EQ(w.wallet(b)->ore, ore + 22 + 27);
     EXPECT_TRUE(!w.respec(b).has_value());
 
     // B falls far west: it comes back at the realm's nearest home.
@@ -308,7 +309,7 @@ TEST(realm_old_save_buildings_become_the_realms) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(8));
+    EXPECT_EQ(store->schemaVersion(), int64_t(9));
     EXPECT_TRUE(store->rows("SELECT count(*) FROM pragma_table_info('buildings') WHERE name = 'built_by'")[0][0] == "1");
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
@@ -327,7 +328,7 @@ TEST(realm_old_save_buildings_become_the_realms) {
     drivenUnit(w, b)->carrying = 25;
     drivenUnit(w, b)->hydrogen = false;
     wait(w, b, 10);
-    EXPECT_EQ(w.wallet(b)->ore, ore + 25);
+    EXPECT_EQ(w.wallet(b)->ore, ore + 22);
     EXPECT_EQ(w.progressMessage(b)->builders.at(4), WorldMap::callsign(keyA));
     // Saved again: the builder in `built_by`.
     ASSERT_TRUE(store->write(w.save(), &why).has_value());

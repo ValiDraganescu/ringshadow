@@ -35,6 +35,10 @@ public:
 	/// The MMORPG test: a gain flashes the count and says "+N" beside it
 	/// (docs/mmorpg-shots.md #11).
 	void SetFlashGains(bool bFlash) { bFlashGains = bFlash; }
+	/// The MMORPG mode (C1): the realm wallet, small in the supply's cell
+	/// ("REALM" over "1,240 · 56 MH"). Unset: not shown.
+	void SetRealm(TOptional<TPair<int64, int64>> OreHydrogen);
+	TOptional<TPair<int64, int64>> GetRealm() const { return Realm; }
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(Width, Height); }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -49,6 +53,7 @@ private:
 	bool bShowSupply = true;
 	bool bFlashGains = false;
 	bool bRebase = false;
+	TOptional<TPair<int64, int64>> Realm;
 	int32 GainsFlashed = 0;
 	/// The last gain of ore and MH, and when (real seconds).
 	int64 GainOre = 0, GainHydrogen = 0;

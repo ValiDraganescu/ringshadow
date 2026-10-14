@@ -55,6 +55,7 @@
 #include "SAcMenu.h"
 #include "SAcMmoBanner.h"
 #include "SAcNewGame.h"
+#include "SAcCitadelScreen.h"
 #include "SAcRigScreen.h"
 #include "SAcSkillScreen.h"
 #include "SAcWorldMap.h"
@@ -135,6 +136,17 @@ public:
 	void CloseRigScreen();
 	void ToggleRigScreen();
 	TSharedPtr<SAcRigScreen> RigScreenWidget() const { return RigScreen; }
+	/// The realm's Citadel screen (H in the mode, at the realm's Citadel; C1,
+	/// docs/prospector-progression.md "The realm's tax"): the realm wallet,
+	/// the tax, donations. False outside the mode, without a HUD, or away
+	/// from the Citadel (the HUD says so).
+	bool OpenCitadelScreen();
+	void CloseCitadelScreen();
+	void ToggleCitadelScreen();
+	TSharedPtr<SAcCitadelScreen> CitadelScreenWidget() const { return CitadelScreen; }
+	/// The driven Prospector stands where it unloads at the realm's finished
+	/// Citadel (the client's mirror); `Builder`: who built it.
+	bool AtRealmCitadel(FString* Builder = nullptr) const;
 	/// Back to the window game: the local server stops.
 	void StopMmo();
 
@@ -163,6 +175,12 @@ private:
 	void TickRigScreen();
 	/// The server's last rig refusal already handed to the screen.
 	FString RigRefusalShown;
+	TSharedPtr<SAcCitadelScreen> CitadelScreen;
+	/// The Citadel screen's state from the client's progress, each frame.
+	void TickCitadelScreen();
+	/// The server's last Citadel refusal, and the kept asks, already handed to the screen.
+	FString CitadelRefusalShown;
+	int32 CitadelKeptShown = 0;
 	FDelegateHandle RefusedHandle;
 	/// -AcMmo: start the mode once the game is up.
 	bool bMmoWhenReady = false;

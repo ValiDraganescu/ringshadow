@@ -417,7 +417,7 @@ void writeEvent(BitWriter& w, const GameEvent& e) {
             using G = GameEvent;
             auto unitKind = [&](UnitKind k) { w.writeBits(uint64_t(k), 4); };
             auto structureKind = [&](StructureKind k) { w.writeBits(uint64_t(k), 4); };
-            if constexpr (std::is_same_v<E, G::Deposited>) { id(x.unit); id(x.amount); pos.write(w, x.at); }
+            if constexpr (std::is_same_v<E, G::Deposited>) { id(x.unit); id(x.amount); pos.write(w, x.at); id(x.tax); w.writeBool(x.hydrogen); }
             else if constexpr (std::is_same_v<E, G::PatchDepleted> || std::is_same_v<E, G::PatchRegrown>) { id(x.patch); }
             else if constexpr (std::is_same_v<E, G::Trained>) { id(x.unit); unitKind(x.kind); pos.write(w, x.at); }
             else if constexpr (std::is_same_v<E, G::ConstructionStarted> || std::is_same_v<E, G::Constructed>) { id(x.structure); structureKind(x.kind); pos.write(w, x.at); }
@@ -444,7 +444,7 @@ bool readEvent(BitReader& r, GameEvent& e) {
     auto structureKind = [&] { return static_cast<StructureKind>(r.readBits(4)); };
     auto radius = [&] { double v = 0; codec::kCm.read(r, v); return v; };
     switch (r.readBits(5)) {
-    case 0: { auto u = id(); auto a = id(); e = GameEvent(GameEvent::Deposited{u, a, at()}); break; }
+    case 0: { auto u = id(); auto a = id(); auto p = at(); auto t = id(); e = GameEvent(GameEvent::Deposited{u, a, p, t, r.readBool()}); break; }
     case 1: e = GameEvent(GameEvent::PatchDepleted{id()}); break;
     case 2: e = GameEvent(GameEvent::PatchRegrown{id()}); break;
     case 3: { auto u = id(); auto k = unitKind(); e = GameEvent(GameEvent::Trained{u, k, at()}); break; }
@@ -697,6 +697,10 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
     if (const auto* p = std::get_if<RequestMessage::Make>(&m.what)) writeModule(w, p->module, p->mark);
     if (const auto* p = std::get_if<RequestMessage::Research>(&m.what)) writeModule(w, p->module, p->mark);
     if (const auto* p = std::get_if<RequestMessage::Fit>(&m.what)) writeModule(w, p->module, p->mark);
+    if (const auto* p = std::get_if<RequestMessage::Donate>(&m.what)) {
+        writeSigned(w, p->ore);
+        writeSigned(w, p->hydrogen);
+    }
     return w.bytes();
 }
 
@@ -769,6 +773,13 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
     case 12: {
         RequestMessage::Fit p;
         if (!readModule(r, p.module, p.mark)) return false;
+        m.what = p;
+        break;
+    }
+    case 13: {
+        RequestMessage::Donate p;
+        p.ore = readSigned(r);
+        p.hydrogen = readSigned(r);
         m.what = p;
         break;
     }
@@ -854,6 +865,11 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeString(w, by);
     }
     writeString(w, m.callsign);
+    for (const auto* p : {&m.realmWallet, &m.taxed, &m.donated}) {
+        writeSigned(w, p->ore);
+        writeSigned(w, p->hydrogen);
+    }
+    writeSigned(w, m.taxPercent);
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 4);
@@ -969,6 +985,11 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         if (!readString(r, m.builders[id])) return false;
     }
     if (!readString(r, m.callsign)) return false;
+    for (auto* p : {&m.realmWallet, &m.taxed, &m.donated}) {
+        p->ore = readSigned(r);
+        p->hydrogen = readSigned(r);
+    }
+    m.taxPercent = readSigned(r);
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {

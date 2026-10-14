@@ -2914,14 +2914,15 @@ void Simulation::stepUnit(Unit& u, double dt, std::vector<GameEvent>& events) {
         if (!citadel) { u.task = Task::idle; return; }
         if (travel(u, citadel->position, Rules::depositRange, dt)) {
             auto& pl = state.players[size_t(u.owner)];
-            if (u.hydrogen == true) {
+            const bool hydrogen = u.hydrogen == true;
+            if (hydrogen) {
                 pl.hydrogen += u.carrying;
             } else {
                 pl.ore += u.carrying;
                 pl.totalMined += u.carrying;
             }
             u.hydrogen = std::nullopt;
-            events.push_back(GameEvent::Deposited{u.id, u.carrying, citadel->position});
+            events.push_back(GameEvent::Deposited{u.id, u.carrying, citadel->position, 0, hydrogen});
             u.carrying = 0;
             u.task = Task::depositing;
             u.timer = 0.12;

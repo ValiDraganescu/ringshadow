@@ -266,10 +266,11 @@ TEST(build_mined_ore_unloaded_at_the_own_citadel_fills_the_wallet) {
     ASSERT_TRUE(run(w, me, 60 * 30, [&] { return driven(w, me)->carrying > 0; }, Vec2(0, 0), true));
     const int64_t load = driven(w, me)->carrying;
     EXPECT_EQ(w.wallet(me)->ore, int64_t(100));
-    // Drive east into the Citadel: the load goes into the wallet.
+    // Drive east into the Citadel: the load goes into the wallet, less the
+    // realm's tax (C1).
     put(w, me, Vec2(66 - Rules::radius(StructureKind::citadel) - 2, 48), 0);
     ASSERT_TRUE(run(w, me, 60 * 5, [&] { return driven(w, me)->carrying == 0; }, Vec2(1, 0)));
-    EXPECT_EQ(w.wallet(me)->ore, 100 + load);
+    EXPECT_EQ(w.wallet(me)->ore, 100 + load - Progression::realmTax(load));
 }
 
 TEST(build_request_over_the_protocol) {

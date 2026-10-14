@@ -66,7 +66,7 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(8));
+    EXPECT_EQ(store->schemaVersion(), int64_t(9));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     WorldMap w(firstWorld());
