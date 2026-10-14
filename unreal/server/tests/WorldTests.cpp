@@ -5,6 +5,7 @@
 
 #include "test.h"
 
+#include "Flight.h"
 #include "HeadlessClient.h"
 #include "NetPredictor.h"
 #include "Server.h"
@@ -288,8 +289,41 @@ TEST(world_closed_edges_stop_it) {
     }
 }
 
+// A flight's MH (F1, docs/prospector-progression.md "MH sinks"): a base and
+// a share a grid step, taken at lift-off; refused with the price and the
+// wallet when it is short, nothing taken and nothing flown.
+TEST(world_flight_costs_mh) {
+    WorldParams fuel;
+    fuel.startHydrogen = 14;
+    WorldMap w(first(), fuel);
+    w.join(me);
+    const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
+    put(w, me, w.start().places()->regionAt(pad), 0);
+    const WorldRegion& from = first().regions[first().start];
+    const WorldRegion& to = first().regions[*w.regionNamed("cold-fork")];
+    const int64_t steps = Flight::steps(from.column, from.row, to.column, to.row);
+    EXPECT_EQ(steps, int64_t(1));
+    EXPECT_EQ(Flight::hydrogen(steps), int64_t(15));
+    EXPECT_TRUE(w.fly(me, "cold-fork", "landing") == std::optional<std::string>("Not enough MH to fly: 15 MH, you have 14"));
+    EXPECT_TRUE(!w.flying(me));
+    EXPECT_EQ(w.start().simulation().state.players[0].hydrogen, int64_t(14));
+    // Paid at lift-off, the rest lands with it.
+    w.start().simulation().state.players[0].hydrogen = 40;
+    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
+    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(25));
+    for (int i = 0; i < 400 && w.flying(me); i++) w.step();
+    ASSERT_TRUE(!w.flying(me));
+    EXPECT_EQ(w.regionOf(me)->simulation().state.players[0].hydrogen, int64_t(25));
+    // A hop back onto the same region's pad: the base alone.
+    put(w, me, w.regionOf(me)->places()->regionAt(first().regions[*w.regionNamed("cold-fork")].built.pads[0].at), 0);
+    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
+    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(15));
+}
+
 TEST(world_flight_from_pad_to_pad) {
-    WorldMap w(first());
+    WorldParams fuel;
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     w.join(me);
     const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
     // Away from the pad: refused.
@@ -539,7 +573,9 @@ TEST(world_plates_are_the_pads) {
 // accepted on the pad's centre and 3.9 cells out, refused at 4.1.
 TEST(world_pad_distance_is_the_same_on_client_and_server) {
     for (const double off : {0.0, 3.9, 4.1}) {
-        WorldMap w(first());
+        WorldParams fuel;
+        fuel.startHydrogen = 100;  // a flight costs MH (F1)
+        WorldMap w(first(), fuel);
         w.join(me);
         const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
         put(w, me, w.start().places()->regionAt(pad) + Vec2(off, 0), 0);

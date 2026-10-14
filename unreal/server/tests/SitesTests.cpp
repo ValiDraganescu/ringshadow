@@ -242,7 +242,9 @@ TEST(sites_wreck_held_5_s_and_a_known_blueprint_pays_ore_and_mh) {
 // A vault under its blueprint's floor: holding does nothing and the
 // Opening says why; at the floor less Blueprint savant it opens in 10 s.
 TEST(sites_vault_opens_only_at_its_floor_less_blueprint_savant) {
-    WorldMap w(first());
+    WorldParams fuel;
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     ASSERT_TRUE(w.join(me));
     ASSERT_TRUE(flyTo(w, me, "tern-ridge"));
     standAt(w, me, "tern-ridge", "Tern vault");
@@ -278,7 +280,9 @@ TEST(sites_vault_opens_only_at_its_floor_less_blueprint_savant) {
 // Scanner pulse at rank 1 marks a region's wrecks on arriving, not its
 // caches.
 TEST(sites_seen_near_and_marked_by_a_scanner_pulse) {
-    WorldMap w(first());
+    WorldParams fuel;
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     ASSERT_TRUE(w.join(me));
     ProspectorProgress g = at(20);
     g.ranks[Skill::scannerPulse] = 1;

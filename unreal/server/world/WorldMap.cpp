@@ -3,6 +3,8 @@
 
 #include "WorldMap.h"
 
+#include "Flight.h"
+
 #ifndef JSON_NOEXCEPTION
 #define JSON_NOEXCEPTION 1
 #endif
@@ -444,7 +446,16 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
         if (ringwalk) p.ringwalkerReady = 0;
         return "another pilot drives there";
     }
+    // The flight's MH (F1): a base and a share a step across the grid.
+    const WorldRegion& from = world_->regions[p.region];
+    const WorldRegion& dest = world_->regions[*to];
+    const int64_t price = ac::Flight::hydrogen(ac::Flight::steps(from.column, from.row, dest.column, dest.row));
+    if (auto why = ac::Flight::refusal(price, here.simulation().state.players[0].hydrogen)) {
+        if (ringwalk) p.ringwalkerReady = 0;
+        return why;
+    }
     bankOut(p, p.region);
+    p.wallet.hydrogen -= price;
     Flight f;
     f.clocks = takeClocks(p.region, *unit);
     f.unit = *here.release(*unit);

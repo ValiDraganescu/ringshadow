@@ -287,7 +287,9 @@ TEST(contracts_drill_in_a_named_region) {
 // Reaching: a site of the region (standing at it) and a pad in another
 // region (landing there).
 TEST(contracts_reach_a_site_and_a_pad) {
-    WorldMap w(first(), params());
+    WorldParams fuel = params();
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     ASSERT_TRUE(w.join(me));
     wait(w, me, 1);
     w.setContracts(me, {job(1, Kind::reach, 1, "start/Lander wreck", "start"),

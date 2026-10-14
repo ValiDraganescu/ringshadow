@@ -26,6 +26,7 @@
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
+#include <utility>
 #include <vector>
 
 extern char** environ;
@@ -53,11 +54,28 @@ std::string readFile(const std::string& path) {
     return out;
 }
 
-/// A child process with its standard input and output on pipes.
+/// A child process with its standard input and output on pipes. Stopped
+/// when it goes out of scope: a test that fails an ASSERT leaves no server
+/// running (it would hold `make test`'s pipe open).
 struct Process {
     pid_t pid = -1;
     int in = -1;
     int out = -1;
+
+    Process() = default;
+    Process(const Process&) = delete;
+    Process& operator=(const Process&) = delete;
+    Process(Process&& o) noexcept : pid(std::exchange(o.pid, -1)), in(std::exchange(o.in, -1)), out(std::exchange(o.out, -1)) {}
+    Process& operator=(Process&& o) noexcept {
+        if (this != &o) {
+            stop();
+            pid = std::exchange(o.pid, -1);
+            in = std::exchange(o.in, -1);
+            out = std::exchange(o.out, -1);
+        }
+        return *this;
+    }
+    ~Process() { stop(); }
 
     static std::optional<Process> start(const std::vector<std::string>& args) {
         int toChild[2], fromChild[2];
@@ -151,7 +169,7 @@ std::optional<Started> startServer(const char* name, std::vector<std::string> ex
         p->stop();
         return std::nullopt;
     }
-    return Started{*p, uint16_t(port)};
+    return Started{std::move(*p), uint16_t(port)};
 }
 
 /// A client on its own UDP socket, behind the lag simulator.
@@ -333,7 +351,7 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     // The real program on the first world: the pilot starts at the pad in a
     // Prospector with 600 ore, flies to Cold Fork's pad, and the client
     // follows it there.
-    std::vector<std::string> args = {kProgram, "--world", "worlds/first.json", "--log", logPath("world")};
+    std::vector<std::string> args = {kProgram, "--world", "worlds/first.json", "--dev-hydrogen", "100", "--log", logPath("world")};
     std::remove(logPath("world").c_str());
     auto p = Process::start(args);
     ASSERT_TRUE(p.has_value());
@@ -394,7 +412,7 @@ std::optional<Started> startSaving(const char* name, const std::string& save) {
         p->stop();
         return std::nullopt;
     }
-    return Started{*p, uint16_t(port)};
+    return Started{std::move(*p), uint16_t(port)};
 }
 
 std::string freshSave(const std::string& name) {

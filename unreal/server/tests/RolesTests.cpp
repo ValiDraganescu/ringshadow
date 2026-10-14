@@ -332,7 +332,9 @@ TEST(roles_lab_in_a_world) {
 // (not another pilot's); it flies from it, and lands on it from any pad,
 // with no first-landing XP.
 TEST(roles_spacedock_pad) {
-    WorldMap w(first(), params());
+    WorldParams fuel = params();
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     w.seat(me, key);
     w.setProgress(me, at(35));
     fill(w, me, 1000, 1000);
@@ -403,7 +405,9 @@ TEST(roles_homing_beacon) {
 // Pad link: rank 3 flies from 16 cells of a pad's centre, not 17.
 // Short hop: rank 3 lands in 1.6 s, not 4.
 TEST(roles_pad_link_and_short_hop) {
-    WorldMap w(first(), params());
+    WorldParams fuel = params();
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     w.seat(me, key);
     w.setProgress(me, at(40, {{Skill::padLink, 3}, {Skill::shortHop, 3}}));
     EXPECT_NEAR(w.padReach(me), 16, 1e-9);
@@ -422,7 +426,9 @@ TEST(roles_pad_link_and_short_hop) {
 // Ringwalker: a flight from anywhere, then not again for 120 s (the
 // Progress message says when); a pad still works meanwhile.
 TEST(roles_ringwalker) {
-    WorldMap w(first(), params());
+    WorldParams fuel = params();
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     w.seat(me, key);
     w.setProgress(me, at(80, {{Skill::ringwalker, 1}}));
     moveTo(w, me, startPad() + Vec2(0, 30));

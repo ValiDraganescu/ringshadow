@@ -418,7 +418,9 @@ TEST(save_restart_restores_the_region_exactly) {
 
 TEST(save_pilot_restored_by_id_where_it_left) {
     constexpr PilotId me = 7;
-    WorldMap w(firstWorld(), blueprinted());
+    WorldParams fuel = blueprinted();
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(firstWorld(), fuel);
     ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
     // Flies to Cold Fork, lands, steps off the pad.
     ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));

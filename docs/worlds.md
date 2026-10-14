@@ -56,8 +56,9 @@ Any problem stops the server (exit 2, the problems on stderr):
   edge, with its load, hit points and levels. Elsewhere the edge is a wall.
 - Flights: a Prospector within 4 cells of a pad's centre may fly to any
   region's pad (by region id and pad name). It lifts off, 4 s pass, it lands
-  on that pad. Refused away from a pad, in flight, or where another pilot
-  drives.
+  on that pad. Refused away from a pad, in flight, where another pilot
+  drives, or when the wallet can't pay the flight's MH (10 + 5 a grid step;
+  docs/prospector-progression.md, "MH sinks").
 - One pilot drives in a region at a time (the core drives one unit a
   region); a crossing into a region where another pilot drives stops at the edge, a
   landing there circles until the ground is free.

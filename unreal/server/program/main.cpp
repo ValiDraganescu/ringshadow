@@ -8,6 +8,7 @@
 //                    [--dev-xp xp]  (dev, tests: a new pilot's Prospector earns that much XP at once)
 //                    [--dev-blueprints 1]  (dev, tests, shots: a new pilot has every blueprint)
 //                    [--dev-rig 1]  (dev, shots: a new pilot owns a finished Citadel, Foundry and Lab, its rig stocked)
+//                    [--dev-hydrogen mh]  (dev, tests, shots: a new pilot's wallet gets that much MH at once)
 //                    [--hour h]  (dev, shots: hold the world's hour, 0-24)
 //                    [--weather clear|cloudy|rain|storm|0-3]  (dev, shots: hold the world's weather)
 //                    [--ringshadow s]  (dev, shots: move the world's clock so a ringshadow sweep starts in s seconds)
@@ -95,7 +96,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--dev-hydrogen mh] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h]\n",
                  why);
     return 2;
 }
@@ -122,6 +123,7 @@ int main(int argc, char** argv) {
     double devXp = 0;
     bool devBlueprints = false;
     bool devRig = false;
+    long long devHydrogen = 0;
     std::optional<double> heldHour, weatherHold, ringshadowIn, starfallIn, clockHour;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
@@ -141,6 +143,7 @@ int main(int argc, char** argv) {
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
         else if (a == "--dev-blueprints") devBlueprints = v != "0";
         else if (a == "--dev-rig") devRig = v != "0";
+        else if (a == "--dev-hydrogen") devHydrogen = std::atoll(v.c_str());
         else if (a == "--hour") {
             heldHour = std::atof(v.c_str());
             if (*heldHour < 0 || *heldHour > 24) return usage("--hour: 0…24");
@@ -210,6 +213,7 @@ int main(int argc, char** argv) {
     options.worldParams.devXp = devXp;
     options.worldParams.devBlueprints = devBlueprints;
     options.worldParams.devRig = devRig;
+    if (devHydrogen > 0) options.worldParams.startHydrogen = devHydrogen;
     options.worldParams.heldHour = heldHour;
     options.worldParams.weatherHold = weatherHold;
     options.worldParams.devStarfall = starfallIn;

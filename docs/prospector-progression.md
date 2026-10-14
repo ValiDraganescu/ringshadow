@@ -575,6 +575,18 @@ Nothing costs MH today. This adds:
 - **Foundry modules and Lab research** (P7, "Foundry and Lab"): modules at
   100 ore + 50 MH (Mk I), 300 + 200 (Mk II), 800 + 600 (Mk III); research
   300 MH (Mk II) and 900 MH (Mk III) per module.
+- **Pad flights** (F1): 10 MH for the lift-off and 5 MH more for each step
+  across the world's grid (columns plus rows apart): a hop to another pad
+  in the same region 10, a neighbour 15, the far corner of a 3 × 3 world
+  30. Ringwalker flights and flights to the pilot's own pads cost the same;
+  Pad link and Short hop change where and how fast, not the price. The
+  server takes it at lift-off (`WorldMap::fly`, `ac::Flight` in
+  `Flight.h`) and refuses a short wallet: "Not enough MH to fly: 15 MH, you
+  have 4". The world map shows each flight's price beside its pads, red
+  when the wallet is short, and greys FLY. A new pilot starts with 0 MH, so
+  its first flight waits for its first Derrick; `--dev-hydrogen N`
+  (`-AcMmoDevHydrogen=N`) starts it with N MH, and the picture and flow
+  runs (`-AcMmoShots`, `-AcFlowTest`) start with 200 unless told otherwise.
 
 Skill points never cost MH: the tree is points only.
 

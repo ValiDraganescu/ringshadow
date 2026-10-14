@@ -182,7 +182,9 @@ TEST(progress_welding_pays_half_the_cost_and_the_citadel_feat) {
 // a first landing on a pad (50); the start region and its pad pay nothing,
 // and doing it all again pays nothing more. Another pilot is paid its own.
 TEST(progress_one_offs_paid_once) {
-    WorldMap w(first(), blueprinted());
+    WorldParams fuel = blueprinted();
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     w.join(me);
     w.join(other);
     const std::string start = first().regions[first().start].file.id;
@@ -309,7 +311,9 @@ TEST(progress_respec_at_the_citadel_for_mh) {
 
 // The progression goes with the pilot across an edge and on a flight.
 TEST(progress_kept_through_an_edge_and_a_flight) {
-    WorldMap w(first(), blueprinted());
+    WorldParams fuel = blueprinted();
+    fuel.startHydrogen = 100;  // a flight costs MH (F1)
+    WorldMap w(first(), fuel);
     w.join(me);
     w.setProgress(me, at(12));
     ASSERT_TRUE(!w.spend(me, Skill::quickDrill));
