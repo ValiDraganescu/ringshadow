@@ -573,6 +573,13 @@ void UAcMusicPlayer::Tick(float DeltaTime)
 			if (!bMuted && AcSound::MusicGain() > 0.f) Play->Heard += DeltaTime;
 		}
 	}
+	// A1: the ducking's gain, logged every 0.1 s while it moves (and once at rest).
+	if (const double D = Duck.gain(Clock); (D != DuckLogged && Clock - DuckLoggedAt >= 0.1) || (D == 1.0 && DuckLogged != 1.0))
+	{
+		DuckLogged = D;
+		DuckLoggedAt = Clock;
+		UE_LOG(LogAutocraft, Log, TEXT("music: duck %.1f dB (gain %.3f) at %.2f s"), 20.0 * std::log10(FMath::Max(D, 1e-6)), D, Clock);
+	}
 	// The player's volumes (`UAcSettings`: MasterVolume, bMusic, MusicVolume), live.
 	if (Voice && Loaded)
 	{
@@ -817,7 +824,20 @@ float UAcMusicPlayer::VoiceGain(const bool bAd) const
 	// An ad plays +6 dB over the songs (`AdGain`), never past full.
 	const float Music = AcSound::MusicGain();
 	const float Gain = bAd ? FMath::Min(Music * AdGain, 1.f) : Music;
-	return (bMuted ? 0.f : Gain) * AcSound::MasterGain();
+	return (bMuted ? 0.f : Gain) * AcSound::MasterGain() * float(Duck.gain(Clock));
+}
+
+void UAcMusicPlayer::DuckFor(const double Seconds)
+{
+	Duck.start(Clock, Seconds);
+	UE_LOG(LogAutocraft, Log, TEXT("music: duck under a narration of %.1f s"), Seconds);
+}
+
+void UAcMusicPlayer::Unduck()
+{
+	if (!Duck.active(Clock)) return;
+	Duck.end(Clock);
+	UE_LOG(LogAutocraft, Log, TEXT("music: narration stopped, the radio comes back"));
 }
 
 void UAcMusicPlayer::SetMuted(bool bInMuted)

@@ -245,6 +245,7 @@
 #include "AcGameFlow.h"
 #include "AcDaylight.h"
 #include "AcEffects.h"
+#include "AcMusicPlayer.h"
 #include "AcEffectsBursts.h"
 #include "AcParticles.h"
 
@@ -3771,6 +3772,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(Taken->state == ac::net::CitadelMission::State::taken, TEXT("k2: in the Journal, taken"));
 			Check(CitadelScreenWidget() && CitadelScreenWidget()->KeptText().StartsWith(TEXT("Signed up")), TEXT("k2: the foot says signed up"));
 			Check(NarrationKey == K2Key, FString::Printf(TEXT("k2: the narration %s played on signing up"), *K2Key));
+			// A1: the radio under it, at about -24 dB.
+			if (const UAcMusicPlayer* Music = UAcMusicPlayer::Get(this))
+				Check(Music->DuckGain() < 0.07, FString::Printf(TEXT("a1: the radio ducks under the narration (gain %.3f)"), Music->DuckGain()));
 			Shoot(TEXT("k2-02-signed-up"), TEXT("signed up: the foot, the board one offer short"));
 			return;
 		}
@@ -3804,12 +3808,25 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(E.Narration == K2Key && E.Seconds > 5, FString::Printf(TEXT("k2: its narration %s, %.1f s"), *E.Narration, E.Seconds));
 		}
 		Check(J->Key(EKeys::P) && NarrationKey == K2Key, TEXT("k2: P plays the briefing again"));
+		// A1: a second narration keeps it down (no bump between them).
+		if (const UAcMusicPlayer* Music = UAcMusicPlayer::Get(this))
+			Check(Music->DuckGain() < 0.07, FString::Printf(TEXT("a1: the radio stays down for the replay (gain %.3f)"), Music->DuckGain()));
 		Shoot(TEXT("k2-03-journal"), TEXT("the Journal: briefing, what to do, the map, PLAY"));
 		return;
 	}
 	case 1206:
 	{
 		CloseJournalScreen();
+		// A1: the replay plays out, then the radio comes back to full within a second.
+		if (const UAcMusicPlayer* Music = UAcMusicPlayer::Get(this))
+		{
+			if (!NarrationKey.IsEmpty() || Music->DuckGain() < 0.999)
+			{
+				TimedOut(TEXT("a1: the narration over and the radio back"), 30);
+				return;
+			}
+			Check(true, FString::Printf(TEXT("a1: the narration over, the radio back at full (gain %.3f)"), Music->DuckGain()));
+		}
 		const ac::net::CitadelMission* Taken = nullptr;
 		for (const ac::net::CitadelMission& X : Mmo->Progress()->journal)
 			if (X.id == K2Id) Taken = &X;
@@ -3888,6 +3905,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	}
 	case 1211:
+		// A1: the narration over, the radio back at full.
+		if (const UAcMusicPlayer* Music = UAcMusicPlayer::Get(this); Music && NarrationKey.IsEmpty())
+			Check(Music->DuckGain() > 0.999, FString::Printf(TEXT("a1: the radio back at full after the narration (gain %.3f)"), Music->DuckGain()));
 		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;

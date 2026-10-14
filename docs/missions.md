@@ -171,6 +171,15 @@ Three narrators, one per mood, all in the game's fiction:
   `missions` in `Content/Audio/Sounds.json`.
 - **Playback:** `UAcAudioDirector::PlayNarration(key)` plays one in the ear;
   a new narration cuts the last one off.
+- **The radio ducks** under a narration (A1, the user: "while the mission
+  audio is playing the radio audio level should be very low"): KSTR 88.7
+  falls to −24 dB in 0.3 s, stays down for the narration's length (a second
+  narration keeps it down), and comes back over 1 s once it ends or is
+  stopped (`ac::MusicDuck`, `UAcMusicPlayer::DuckFor`, `Unduck`). Effects
+  and voice lines are not ducked: only the music player's gain takes it.
+  Every run logs the gain while it moves (`music: duck -24.0 dB (gain
+  0.063) at 31.20 s`), a `-nosound` run included; `-AcMmoShotsK2` checks it
+  down on signing up and on the replay, and back at full at the end.
 - **Silent runs:** with no audio device (`-nosound`) a narration is only
   logged: `audio: narration survey-easy, 14.2 s (no device)`.
 

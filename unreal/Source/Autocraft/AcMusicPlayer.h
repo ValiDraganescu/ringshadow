@@ -27,6 +27,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Tickable.h"
 
+#include "MusicDuck.h"
 #include "MusicQueue.h"
 #include "Noise.h"
 
@@ -112,6 +113,14 @@ public:
 	virtual bool IsTickableWhenPaused() const override { return true; }
 
 	void Press(EAcMusicCommand Command);
+	/// A1: a mission narration lasting `Seconds` started: the music ducks
+	/// under it (`ac::MusicDuck`: −24 dB in 0.3 s), and comes back over 1 s
+	/// once it ends or `Unduck` stops it early. Logged as `music: duck`
+	/// lines while the gain moves (a -nosound run included).
+	void DuckFor(double Seconds);
+	void Unduck();
+	/// The ducking factor now (1: none).
+	double DuckGain() const { return Duck.gain(Clock); }
 
 	/// The track shown (the one loaded, else the next up); unset with none.
 	TOptional<FAcNowPlaying> NowPlaying() const;
@@ -211,6 +220,10 @@ private:
 	/// The voice's volume: the song's or ad's gain × the settings (E7).
 	float VoiceGain(bool bAd) const;
 	float AppliedGain = -1.f;
+	/// A1: the ducking under a narration, and the last gain logged.
+	ac::MusicDuck Duck;
+	double DuckLogged = 1.0;
+	double DuckLoggedAt = -1.0;
 	TOptional<double> GapUntil;
 	TOptional<FPlay> Play;
 	TMap<FString, FString> Titles;

@@ -1,6 +1,7 @@
 // Port of `Rules` of Sources/GameCore/State.swift and Vision.swift.
 #include "Rules.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace ac {
@@ -95,6 +96,12 @@ std::optional<UnitKind> Rules::produces(StructureKind k) {
     auto t = trains(k);
     if (t.empty()) return std::nullopt;
     return t.front();
+}
+
+int64_t Rules::hpShown(double hp, double max) {
+    if (!(hp > 0)) return 0;
+    const double top = std::max(1.0, std::floor(max));
+    return int64_t(std::clamp(std::round(hp), 1.0, top));
 }
 
 double Rules::hp(StructureKind k) {

@@ -228,3 +228,15 @@ TEST(Defence_gatlingAirMarksReach) {
     run(m, 2);
     EXPECT_TRUE(hurt(m, fly));
 }
+
+/// The hp a card writes (Rules::hpShown): the snapshot's quantised hp can
+/// come a hair over the whole (300.07 of 300): never shown past it, never 0
+/// while any is left.
+TEST(Defence_hpShown) {
+    EXPECT_EQ(Rules::hpShown(300.07, 300), int64_t(300));
+    EXPECT_EQ(Rules::hpShown(300.6, 300), int64_t(300));
+    EXPECT_EQ(Rules::hpShown(255.4, 300), int64_t(255));
+    EXPECT_EQ(Rules::hpShown(0.2, 300), int64_t(1));
+    EXPECT_EQ(Rules::hpShown(0, 300), int64_t(0));
+    EXPECT_EQ(Rules::hpShown(-3, 300), int64_t(0));
+}

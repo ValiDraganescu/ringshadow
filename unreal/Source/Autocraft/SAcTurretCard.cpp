@@ -6,6 +6,8 @@
 #include "HAL/PlatformTime.h"
 #include "Rendering/DrawElements.h"
 
+#include "Rules.h"
+
 namespace
 {
 	// The panel, in the HUD root's points (as SAcCitadelScreen).
@@ -341,7 +343,7 @@ int32 SAcTurretCard::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, 
 		Frac > 0.5f ? Ready() : Frac > 0.25f ? FAcHudStyle::Amber() : Refused());
 	Label(TEXT("HP"), 11, Dim(), EAcHAlign::Right, EAcVAlign::Center, EAcFontWeight::SemiBold, 1.0f)
 		.Paint(Out, L, P, FVector2f(Bar.Min.X - 8, Bar.GetCenter().Y));
-	Label(FString::Printf(TEXT("%s / %s"), *Grouped(int64(FMath::CeilToDouble(Info.Hp))), *Grouped(int64(Info.MaxHp))), 13, FAcHudStyle::Text(),
+	Label(FString::Printf(TEXT("%s / %s"), *Grouped(ac::Rules::hpShown(Info.Hp, Info.MaxHp)), *Grouped(int64(Info.MaxHp))), 13, FAcHudStyle::Text(),
 		EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold).Paint(Out, L, P, FVector2f(RX, 50));
 	Label(TEXT("KILLS"), 11, Dim(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 1.0f).Paint(Out, L, P, FVector2f(RX - 70, 74));
 	Label(Grouped(Info.Kills), 20, FAcHudStyle::Text(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::Bold).Paint(Out, L, P, FVector2f(RX, 68));

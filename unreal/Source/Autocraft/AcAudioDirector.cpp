@@ -7,6 +7,7 @@
 #include "AcDaylight.h"
 #include "AcLog.h"
 #include "AcMmo.h"
+#include "AcMusicPlayer.h"
 #include "AcShot.h"
 #include "AcNewKinds.h"
 #include "AcPilotAudio.h"
@@ -1360,6 +1361,8 @@ bool UAcAudioDirector::PlayNarration(const FString& Key)
 		return false;
 	}
 	StopNarration();
+	// A1: the radio ducks under it, a -nosound run too (its gain is logged).
+	if (UAcMusicPlayer* Music = UAcMusicPlayer::Get(this)) Music->DuckFor(N->Value);
 	if (!HasDevice() || bMuted)
 	{
 		UE_LOG(LogAutocraft, Log, TEXT("audio: narration %s, %.1f s (%s)"), *Key, N->Value, bMuted ? TEXT("muted") : TEXT("no device"));
@@ -1381,6 +1384,7 @@ void UAcAudioDirector::StopNarration()
 {
 	if (NarrationVoice) NarrationVoice->Stop();
 	NarrationVoice = nullptr;
+	if (UAcMusicPlayer* Music = UAcMusicPlayer::Get(this)) Music->Unduck();
 }
 
 bool UAcAudioDirector::IsNarrating() const { return NarrationVoice && NarrationVoice->IsPlaying(); }

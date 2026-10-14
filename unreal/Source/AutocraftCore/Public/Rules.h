@@ -292,6 +292,10 @@ struct AUTOCRAFTCORE_API Rules {
     static int64_t supply(UnitKind k) { return stats(k).supply; }
     static double radius(UnitKind k) { return stats(k).radius; }
     static double hp(StructureKind k);
+    /// Hp as a card or a bar's label writes it: whole, never past `max`
+    /// (the snapshot's quantised hp can come a hair over), and never 0 while
+    /// any is left.
+    static int64_t hpShown(double hp, double max);
     /// The weapon of a building that shoots by itself (a Sentinel, a gatling
     /// gun), if any, before its marks (`Defence::weapon`).
     static std::optional<UnitStats> turret(StructureKind k);
