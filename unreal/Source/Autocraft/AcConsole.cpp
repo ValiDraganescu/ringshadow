@@ -5,6 +5,7 @@
 #include "AcMmo.h"
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
+#include "AcProgressHud.h"
 #include "AcRtsPawn.h"
 #include "AcSimSubsystem.h"
 #include "SAcConsole.h"
@@ -311,6 +312,11 @@ void UAcConsoleSubsystem::OnFrame(const FAcFrame& Frame)
 	FString MmoHeader;
 	TArray<FString> MmoLines;
 	if (!Info && Sim->IsMmo()) Info = MmoSummary(*Sim, AAcPilotPawn::Find(this), MmoHeader, MmoLines);
+	// The MMORPG mode: the level is the Prospector's progression (the server's).
+	if (Info && Info->Level && Sim->IsMmo() && Sim->MmoClient())
+	{
+		if (const TOptional<FAcLevelInfo> L = AcProgressHud::Level(*Sim->MmoClient())) Info->Level = *L;
+	}
 	if (Info && !HeldNote.IsEmpty()) Info->Note = HeldNote;
 	if (Info && Info->Buttons.IsEmpty() && bDemo) Info->Buttons = DemoButtons();
 	ConsoleWidget->SetMmo(Sim->IsMmo());

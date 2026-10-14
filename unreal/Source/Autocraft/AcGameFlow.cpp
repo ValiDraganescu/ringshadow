@@ -8,6 +8,7 @@
 #include "AcLog.h"
 #include "AcPilotPawn.h"
 #include "AcPointer.h"
+#include "AcProgressHud.h"
 #include "AcRtsPawn.h"
 #include "AcSaves.h"
 #include "AcSettings.h"
@@ -258,6 +259,13 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		Shots.Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), ShotsDir);
 		UE_LOG(LogAutocraft, Log, TEXT("mmoshots: pictures to %s, saves in %s, the pilot in %s"), *Shots.Dir, *AcSaves::Directory(),
 			*FAcMmoClient::Directory());
+	}
+	// The MMORPG checks and pictures build at once: a new pilot has every
+	// blueprint there (the server's --dev-blueprints), not only the crate's.
+	if (FString MmoShotsDir; (Steps.Contains(TEXT("mmo")) || FParse::Value(Cmd, TEXT("AcMmoShots="), MmoShotsDir))
+		&& !FParse::Param(Cmd, TEXT("AcMmoDevBlueprints")))
+	{
+		FCommandLine::Append(TEXT(" -AcMmoDevBlueprints"));
 	}
 	// The perf panel as last left (Swift `showPerf`); the command line wins.
 	static bool bAppliedPerf = false;
@@ -904,6 +912,7 @@ void UAcGameFlowSubsystem::TickWorldMap()
 	}
 	Info.PadReach = FAcMmoClient::PadReach;
 	if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo()) Info.FlyingTo = Text(To->name);
+	Info.Sites = AcProgressHud::KnownSites(*Mmo);
 	WorldMap->SetInfo(Info);
 	if (!Mmo->FlightRefusal().IsEmpty()) WorldMap->SetRefusal(Mmo->FlightRefusal());
 }
@@ -998,6 +1007,7 @@ void UAcGameFlowSubsystem::TickSkillScreen()
 			G.recent.push_back({U.skill, U.until - ac::Progression::undoWindow});
 			if (U.until > Now) Info.UndoLeft[U.skill] = FMath::Max(Info.UndoLeft[U.skill], U.until - Now);
 		}
+		AcProgressHud::BlueprintSites(*Mmo, Info.Sources, Info.SitesMarked);
 		Info.RespecPrice = P->respecPrice;
 		Info.bRespecFree = P->respecFree;
 		// Blueprint savant: 2 levels a rank.

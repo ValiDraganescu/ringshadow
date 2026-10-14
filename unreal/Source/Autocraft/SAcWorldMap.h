@@ -25,6 +25,7 @@
 #include "Widgets/SLeafWidget.h"
 
 #include "NetProtocol.h"
+#include "Progression.h"
 
 #include <optional>
 
@@ -40,6 +41,17 @@ struct FAcWorldMapInfo
 	double PadReach = 4.0;
 	/// In flight to this region (empty: on the ground).
 	FString FlyingTo;
+	/// The blueprint sites the pilot knows of (`AcProgressHud::KnownSites`):
+	/// the region's id, where in it (0…1 across, 0…1 down), opened or not.
+	struct FSite
+	{
+		FString Region;
+		FVector2f At = FVector2f::ZeroVector;
+		ac::SiteKind Kind = ac::SiteKind::crate;
+		bool bFound = false;
+		bool operator==(const FSite&) const = default;
+	};
+	TArray<FSite> Sites;
 };
 
 DECLARE_DELEGATE_TwoParams(FAcOnWorldFly, const FString& /*RegionId*/, const FString& /*Pad*/);

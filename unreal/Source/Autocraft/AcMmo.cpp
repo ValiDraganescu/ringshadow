@@ -244,11 +244,19 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Args.push_back("--dev-xp");
 		Args.push_back(std::to_string(DevXp));
 	}
+	// Dev, tests and shots: a new pilot has every blueprint (it builds at once).
+	if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevBlueprints"))) Args.insert(Args.end(), {"--dev-blueprints", "1"});
 	// Dev and shots: the world's hour and weather held on the server.
 	if (double Hour = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoHour="), Hour) && Hour >= 0 && Hour <= 24)
 	{
 		Args.push_back("--hour");
 		Args.push_back(std::to_string(Hour));
+	}
+	// Dev and shots: a ringshadow sweep this many seconds after the server starts.
+	if (double In = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoRingshadow="), In) && In >= 0)
+	{
+		Args.push_back("--ringshadow");
+		Args.push_back(std::to_string(In));
 	}
 	if (FString Weather; FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), Weather) && !Weather.IsEmpty())
 	{

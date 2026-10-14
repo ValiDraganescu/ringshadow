@@ -252,6 +252,7 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	}
 	Inputs.bThirdPerson = Pawn->Eye().bThirdPerson;
 	Inputs.bMmo = Sim->IsMmo();
+	Inputs.Mmo = Sim->MmoClient();
 	FAcPilotInfo Info = AcPilotText::Info(S, *F, Inputs);
 	if (GunMarker) Info.Gun = GunMarker();
 	else Info.Gun = Pawn->GunMarker(); // E4's marker, computed by the pawn each frame

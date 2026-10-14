@@ -130,6 +130,8 @@ public:
 	/// seconds on any steady clock (the same one `Tick` gets). False
 	/// (`Failed`, with the message) when it does not start.
 	bool Start(double Now, const FString& World = DefaultWorld());
+	/// The world file the local server runs.
+	const FString& WorldPath() const { return WorldFile; }
 	/// Hands the driven unit back, asks the server to stop (SIGTERM) and
 	/// waits for it.
 	void Stop();

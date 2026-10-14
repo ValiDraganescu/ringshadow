@@ -42,6 +42,10 @@ public:
 	/// unanimated. `bKeys` (the MMORPG test mode): the line under it says
 	/// the keys that pick, on a darker plate, held a little longer.
 	void Show(ac::UnitKind Kind, int32 Level, double Now, bool bHold, bool bKeys = false);
+	/// The MMORPG mode's Prospector level (docs/prospector-progression.md,
+	/// "The level-up"): `InTitle`, `InSub` ("+1 SKILL POINT · K") and, at a
+	/// gate level, `InGate` ("TIER 2 OPEN") under it in cyan.
+	void ShowLines(const FString& InTitle, const FString& InSub, const FString& InGate, double Now, bool bHold = false);
 	bool IsShowing(double Now) const;
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D::ZeroVector; }
@@ -51,6 +55,7 @@ public:
 private:
 	FString Title;
 	FString Sub;
+	FString Gate;
 	double Since = -1e9;
 	bool bHeld = false;
 	bool bOn = false;

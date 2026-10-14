@@ -183,9 +183,17 @@ void SAcLevelBanner::Construct(const FArguments& InArgs)
 
 void SAcLevelBanner::Show(const ac::UnitKind Kind, const int32 Level, const double Now, const bool bHold, const bool bKeys)
 {
-	Title = AcLeveling::BannerTitle(Kind, Level);
-	Sub = bKeys ? AcLeveling::BannerKeysSub(Level) : AcLeveling::BannerSub(Level);
+	ShowLines(AcLeveling::BannerTitle(Kind, Level), bKeys ? AcLeveling::BannerKeysSub(Level) : AcLeveling::BannerSub(Level),
+		FString(), Now, bHold);
 	bKeyed = bKeys;
+}
+
+void SAcLevelBanner::ShowLines(const FString& InTitle, const FString& InSub, const FString& InGate, const double Now, const bool bHold)
+{
+	Title = InTitle;
+	Sub = InSub;
+	Gate = InGate;
+	bKeyed = true;
 	Since = Now;
 	bHeld = bHold;
 	bOn = true;
@@ -241,17 +249,19 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	const FGeometry G = Scale == 1 ? Geometry
 		: Geometry.MakeChild(FSlateRenderTransform(float(Scale)), FVector2f(float(O.X / Size.X), float((Size.Y - O.Y) / Size.Y)));
 
-	const double TitleW = FAcConsolePaint::TextWidth(Title, 40), SubW = FAcConsolePaint::TextWidth(Sub, 14);
-	const double W = FMath::Max(TitleW, SubW) + 80, H = 82;
+	const double TitleW = FAcConsolePaint::TextWidth(Title, 40), SubW = FAcConsolePaint::TextWidth(Sub, bKeyed ? 16 : 14);
+	// A gate level's line under the rest (the MMORPG mode).
+	const double Extra = Gate.IsEmpty() ? 0 : 24;
+	const double W = FMath::Max(FMath::Max(TitleW, SubW), FAcConsolePaint::TextWidth(Gate, 15)) + 80, H = 82 + Extra;
 	int32 L = Layer;
 	FPaint P{&Out, &G, L, Size.Y};
 	// `Chrome.plateNode(..., cuts: (14, 14, 4, 4), leds: false, seed: 23)`.
 	const FAcBakedArt& Art = Plate.Get(FVector2D(W, H), 14, 14, 4, 4, 23);
 	const double Pad = AcCabArt::PlatePad;
-	P.Baked(Art, FAcRect(O.X - W / 2 - Pad, O.Y - 32 - Pad, W + 2 * Pad, H + 2 * Pad), float(A));
+	P.Baked(Art, FAcRect(O.X - W / 2 - Pad, O.Y - 32 - Extra - Pad, W + 2 * Pad, H + 2 * Pad), float(A));
 	// The MMORPG test mode: dark glass under the words, so they read over a
 	// bright sky.
-	if (bKeyed) P.Box(FAcRect(O.X - W / 2 + 4, O.Y - 28, W - 8, H - 8), 4, C(0.01, 0.03, 0.05, 0.82 * A), FLinearColor::Transparent);
+	if (bKeyed) P.Box(FAcRect(O.X - W / 2 + 4, O.Y - 28 - Extra, W - 8, H - 8), 4, C(0.01, 0.03, 0.05, 0.82 * A), FLinearColor::Transparent);
 	// Gold rules either side of the title.
 	for (const double Side : {-1.0, 1.0})
 	{
@@ -261,6 +271,7 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	// One amber line: no name tint on the kind (Swift's banner has none).
 	P.Text(Title, 40, Gold(), FVector2D(O.X, O.Y + 2), EAcHAlign::Center, false, float(A));
 	P.Text(Sub, bKeyed ? 16 : 14, bKeyed ? White(0.95) : FAcHudStyle::Soft(), FVector2D(O.X, O.Y - 20), EAcHAlign::Center, false, float(A));
+	if (!Gate.IsEmpty()) P.Text(Gate, 15, FAcHudStyle::Cyan(), FVector2D(O.X, O.Y - 44), EAcHAlign::Center, false, float(A));
 	return L;
 }
 

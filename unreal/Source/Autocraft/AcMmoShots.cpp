@@ -9,8 +9,8 @@
 //   01 spawn on the pad, third person   02 the same, first person
 //   03 top-down over the start region   04 the world map
 //   05 the build menu                   06 the Citadel's ghost near the ore
-//   07 the level-up cards (the weld's XP levels the Prospector; the run
-//      gives the new pilot 55 XP, -AcMmoDevXp, so it does)
+//   07 the level-up cards (none in the mode since P5: skipped; the run
+//      gives the new pilot 1100 XP, -AcMmoDevXp, level 3 for the Derrick)
 //   08 a Citadel going up               09 the Citadel finished
 //   10 drilling ore                     11 unloading: before, 12 after
 //   13 the world map, Cold Fork picked  14 the flight, mid-flight
@@ -23,6 +23,14 @@
 //   19 the Derrick's ghost on the south well    20 the Derrick built
 //   21 pumping MH inside it                     22 the MH unloaded at the
 //                                                  Citadel, the wallet's MH up
+//
+// -AcMmoShotsP5 (with -AcMmoDevXp=7100, level 12): only the progression
+// (docs/prospector-progression.md "On screen"), DIR/p5-NN-moment.png:
+//   01 the HUD: the points badge, the slot row   02 the skill screen (K), empty
+//   03 points spent, Overcharge in Q              04 the BLUEPRINTS tab
+//   05 Q used: the slot's cooldown ring           06 the level-up banner (its
+//      words from AcProgressHud for 9 to 10, shown directly) and a find toast
+//   07 the build menu from the blueprints
 //
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
@@ -43,6 +51,7 @@
 #include "AcPilotBuild.h"
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
+#include "AcProgressHud.h"
 #include "AcSimSubsystem.h"
 #include "SAcLevelUp.h"
 
@@ -78,6 +87,13 @@ namespace
 		}
 		return nullptr;
 	}
+
+	/// -AcMmoShotsP5: the points it spends, in order (9 of level 12's 11),
+	/// how many are in, and when it last asked.
+	constexpr ac::Skill P5Spends[] = {ac::Skill::quickDrill, ac::Skill::quickDrill, ac::Skill::quickDrill, ac::Skill::quickDrill,
+		ac::Skill::quickDrill, ac::Skill::overcharge, ac::Skill::lightFrame, ac::Skill::lightFrame, ac::Skill::plating};
+	int32 P5Spent = 0;
+	double P5AskedAt = 0;
 
 	/// How far up a building is, 0 to 1.
 	double Built(const ac::Structure& B)
@@ -215,10 +231,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 0:
 		if (Sim && Sim->IsMmo()) StopMmo();
 		IFileManager::Get().MakeDirectory(*Shots.Dir, true);
-		// A world's XP is a tenth of the game's: the new pilot starts with
-		// 55 (5 short of level 2), so the weld levels it (the banner and the
-		// cards) unless the run says otherwise.
-		if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp)) FCommandLine::Append(TEXT(" -AcMmoDevXp=55"));
+		// The new pilot starts at level 3 (1100 XP): the Derrick's floor, so
+		// the MH loop (19-22) can build one, unless the run says otherwise.
+		if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp)) FCommandLine::Append(TEXT(" -AcMmoDevXp=1100"));
 		StartMmo(true);
 		Advance();
 		return;
@@ -233,6 +248,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			// -AcMmoShotsLook: only the world's look (100-111).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsLook"))) T.Phase = 100;
+			// -AcMmoShotsP5: only the progression (200-215).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP5"))) T.Phase = 200;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -840,6 +857,144 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 111:
 		Check(Shots.Saved == 5, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsP5
+	case 200:
+		// The dev XP's progress in, first person.
+		if (Mmo->Progress() && Since() > 4.0)
+		{
+			const ac::net::ProgressMessage& P = *Mmo->Progress();
+			Check(P.level >= 10 && P.points >= (int64)UE_ARRAY_COUNT(P5Spends),
+				FString::Printf(TEXT("the dev XP's progress: level %lld, %lld points"), (long long)P.level, (long long)P.points));
+			Pilot->ToggleView();
+			P5Spent = 0;
+			P5AskedAt = 0;
+			Advance();
+		}
+		else TimedOut(TEXT("the progress"));
+		return;
+	case 201:
+		if (Since() > 2.0) Shoot(TEXT("p5-01-hud-points"), TEXT("the HUD: the points badge and the slot row"));
+		return;
+	case 202:
+		Check(OpenSkillScreen() && SkillScreenWidget().IsValid(), TEXT("K opens the skill screen"));
+		Advance();
+		return;
+	case 203:
+		if (Since() > 1.5) Shoot(TEXT("p5-02-skill-screen-empty"), TEXT("the skill screen, nothing spent"));
+		return;
+	case 204:
+	{
+		// One point at a time through the screen, each once the last is in.
+		const TSharedPtr<SAcSkillScreen> W = SkillScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (!W || !P)
+		{
+			Check(false, TEXT("the skill screen stays open"));
+			Finish();
+			return;
+		}
+		if (P5Spent >= (int32)UE_ARRAY_COUNT(P5Spends))
+		{
+			Advance();
+			return;
+		}
+		const ac::Skill Want = P5Spends[P5Spent];
+		int64 Ranks = 0;
+		for (int32 I = 0; I <= P5Spent; ++I) Ranks += P5Spends[I] == Want ? 1 : 0;
+		const auto Has = P->ranks.find(Want);
+		if (Has != P->ranks.end() && Has->second >= Ranks)
+		{
+			P5Spent += 1;
+			P5AskedAt = 0;
+			T.PhaseAt = Now;
+			return;
+		}
+		if (!Mmo->SkillRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("spend %s: %s"), *Utf(std::string(ac::rawValue(Want))), *Mmo->SkillRefusal()));
+			Finish();
+			return;
+		}
+		// Asked, and again each second until the server has it.
+		if (Now - P5AskedAt > 1.0)
+		{
+			W->PickSkill(Want);
+			W->Learn();
+			P5AskedAt = Now;
+		}
+		TimedOut(TEXT("the points spent"), 20);
+		return;
+	}
+	case 205:
+	{
+		const TSharedPtr<SAcSkillScreen> W = SkillScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (W && P && P->slots[0] == ac::Skill::overcharge)
+		{
+			W->PickSkill(ac::Skill::overcharge);
+			Advance();
+			return;
+		}
+		if (W && Now - P5AskedAt > 1.0)
+		{
+			W->PickSkill(ac::Skill::overcharge);
+			W->SlotPicked(0);
+			P5AskedAt = Now;
+		}
+		TimedOut(TEXT("Overcharge in Q"), 10);
+		return;
+	}
+	case 206:
+		if (Since() > 1.5) Shoot(TEXT("p5-03-skill-screen-spent"), TEXT("points spent, Overcharge picked and in Q"));
+		return;
+	case 207:
+		if (const TSharedPtr<SAcSkillScreen> W = SkillScreenWidget()) W->SetTab(SAcSkillScreen::ETab::Blueprints);
+		Advance();
+		return;
+	case 208:
+		if (Since() > 1.0) Shoot(TEXT("p5-04-skill-screen-blueprints"), TEXT("the BLUEPRINTS tab"));
+		return;
+	case 209:
+		// Out, and Q: Overcharge's cooldown on the slot row.
+		CloseSkillScreen();
+		if (ac::net::Mirror* Mine = Mmo->Mirror(); Mine && Mine->simulation().pilot) Mine->simulation().pilot->slot = 1;
+		Advance();
+		return;
+	case 210:
+		if (Since() > 1.5) Shoot(TEXT("p5-05-hud-slot-cooldown"), TEXT("Q used: the cooldown ring on the slot row"));
+		return;
+	case 211:
+		// The banner as level 10 shows it (the real path's words), and a find.
+		if (Leveling)
+		{
+			Leveling->ShowBanner(AcLeveling::BannerTitle(ac::UnitKind::prospector, 10), AcProgressHud::BannerSub(9, 10),
+				AcProgressHud::BannerGate(9, 10));
+		}
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && Hud->Widget())
+		{
+			Hud->Widget()->Toast(TEXT("BLUEPRINT FOUND: FOUNDRY"), TEXT("Opens at level 15  ·  +750 XP"), FAcHudStyle::LevelGold(), Now);
+		}
+		Advance();
+		return;
+	case 212:
+		if (Since() > 0.8) Shoot(TEXT("p5-06-level-banner"), TEXT("the level-up banner and a find toast"));
+		return;
+	case 213:
+		// The banner and the toast gone, then B.
+		if (Since() > 5.0)
+		{
+			UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+			Check(Build && Build->Key(TEXT("b")) && Build->MenuOpen(), TEXT("B opened the build menu"));
+			Advance();
+		}
+		return;
+	case 214:
+		if (Since() > 1.0) Shoot(TEXT("p5-07-build-menu"), TEXT("the build menu from the blueprints"));
+		return;
+	case 215:
+		Check(Shots.Saved == 7, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
 		Finish();
 		return;
 	default:

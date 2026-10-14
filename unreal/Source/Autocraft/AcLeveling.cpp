@@ -353,7 +353,8 @@ void UAcLevelingSubsystem::HookPawn()
 TOptional<FAcPickOffer> UAcLevelingSubsystem::DrivenOffer() const
 {
 	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
-	if (!Sim || !Sim->IsRunning()) return {};
+	// The MMORPG mode has the skill tree (K) in place of the picks.
+	if (!Sim || !Sim->IsRunning() || Sim->IsMmo()) return {};
 	const std::optional<ac::Unit> U = Sim->Simulation().pilotUnit();
 	if (!U) return {};
 	return FAcPickOffer::Of(Sim->Simulation().levels(), U->kind);
@@ -400,6 +401,12 @@ void UAcLevelingSubsystem::LevelUp(const ac::UnitKind Kind, const int32 Level, c
 	BannerWidget->Show(Kind, Level, Clock(), bHold, Sim && Sim->IsMmo());
 }
 
+void UAcLevelingSubsystem::ShowBanner(const FString& Title, const FString& Sub, const FString& Gate, const bool bHold)
+{
+	if (!Mount()) return;
+	BannerWidget->ShowLines(Title, Sub, Gate, Clock(), bHold);
+}
+
 bool UAcLevelingSubsystem::Earn(const double Xp)
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
@@ -440,7 +447,9 @@ void UAcLevelingSubsystem::OnFrame(const FAcFrame& Frame)
 	// `leveledUp`, once for each level crossed.
 	for (const ac::GameEvent& E : Frame.Events)
 	{
-		if (const ac::GameEvent::LeveledUp* L = E.as<ac::GameEvent::LeveledUp>()) LevelUp(L->kind, (int32)L->level);
+		// (The MMORPG mode's banner is the Prospector's: UAcProgressHudSubsystem.)
+		const ac::GameEvent::LeveledUp* L = E.as<ac::GameEvent::LeveledUp>();
+		if (L && !Sim->IsMmo()) LevelUp(L->kind, (int32)L->level);
 	}
 
 	// The cards over the dashboard while driving (`showPicks`: none top-down).

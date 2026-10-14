@@ -14,6 +14,8 @@
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 #include "RegionFile.h"
 #include "Rules.h"
@@ -54,6 +56,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcMmoBuildTest, "Autocraft.Mmo.BuildCitadel", 
 bool FAcMmoBuildTest::RunTest(const FString&)
 {
 	FAcMmoClient Client;
+	// It builds at once: every blueprint (the server's --dev-blueprints).
+	if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevBlueprints"))) FCommandLine::Append(TEXT(" -AcMmoDevBlueprints"));
 	if (!Client.Start(FPlatformTime::Seconds()))
 	{
 		AddError(FString::Printf(TEXT("the local server did not start: %s"), *Client.Message()));

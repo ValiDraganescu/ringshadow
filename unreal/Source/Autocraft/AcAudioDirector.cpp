@@ -480,7 +480,7 @@ void FAcAudioRules::Consume(const std::vector<ac::GameEvent>& Events, const ac::
 		}
 		else if (E.is<ac::GameEvent::LeveledUp>())
 		{
-			LevelUp();
+			if (!bServerLevels) LevelUp();
 		}
 		else if (const auto* B = E.as<ac::GameEvent::Blast>())
 		{

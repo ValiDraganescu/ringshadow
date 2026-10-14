@@ -34,6 +34,8 @@ struct FAcCardButton
 	bool bEnabled = true;
 	/// Why it is greyed out (the tooltip says it).
 	TOptional<FString> Why;
+	/// The same, in a word or two for a tight list ("NO BLUEPRINT", "LV 15").
+	FString WhyShort;
 	/// Lit up: in the cockpit, the action that applies to what is ahead.
 	bool bLit = false;
 	/// A line for the tooltip ("Hold click", "Needs a Lab").
@@ -55,6 +57,8 @@ struct FAcLevelInfo
 	double Fraction = 0;
 	/// "120 / 300 XP" or "MAX LEVEL".
 	FString Text;
+	/// The MMORPG mode's points waiting, by the bar: "3 POINTS · K" (empty: none).
+	FString Badge;
 
 	bool operator==(const FAcLevelInfo&) const = default;
 };

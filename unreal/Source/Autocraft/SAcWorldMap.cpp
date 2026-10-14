@@ -73,7 +73,7 @@ void SAcWorldMap::Construct(const FArguments& InArgs)
 
 void SAcWorldMap::SetInfo(const FAcWorldMapInfo& In)
 {
-	const bool bSame = In.World == Info.World && In.NearPad == Info.NearPad && In.FlyingTo == Info.FlyingTo
+	const bool bSame = In.World == Info.World && In.NearPad == Info.NearPad && In.FlyingTo == Info.FlyingTo && In.Sites == Info.Sites
 		&& (In.NearDistance.has_value() == Info.NearDistance.has_value())
 		&& (!In.NearDistance || FMath::Abs(*In.NearDistance - *Info.NearDistance) < 0.5);
 	Info = In;
@@ -445,6 +445,32 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 		{
 			Label(bTo ? TEXT("FLYING HERE") : TEXT("YOU ARE HERE"), 11, bTo ? FAcHudStyle::Amber() : FAcHudStyle::Cyan(), EAcHAlign::Right,
 				EAcVAlign::Baseline).Paint(Out, L + 2, P, T.Max - FVector2f(8, 7));
+		}
+	}
+	// The blueprint sites the pilot knows of: a gold diamond where it is,
+	// hollow once opened; how many on the tile's foot.
+	for (int32 R = 0; W && R < Tiles.Num(); ++R)
+	{
+		const FString Id = Text(W->regions[R].id);
+		const FBox2f& T = Tiles[R];
+		int32 Known = 0, Opened = 0;
+		for (const FAcWorldMapInfo::FSite& S : Info.Sites)
+		{
+			if (S.Region != Id) continue;
+			Known += 1;
+			Opened += S.bFound ? 1 : 0;
+			const FVector2f At = T.Min + S.At * T.GetSize();
+			const float D = S.Kind == ac::SiteKind::vault ? 7.f : 5.5f;
+			const TArray<FVector2f> Diamond{At + FVector2f(0, -D), At + FVector2f(D, 0), At + FVector2f(0, D), At + FVector2f(-D, 0), At + FVector2f(0, -D)};
+			FSlateDrawElement::MakeLines(Out, L + 3, P.ToPaintGeometry(), Diamond, ESlateDrawEffect::None, FLinearColor(0, 0, 0, 0.8f), true, 4.f);
+			FSlateDrawElement::MakeLines(Out, L + 4, P.ToPaintGeometry(), Diamond, ESlateDrawEffect::None,
+				S.bFound ? FAcHudStyle::Srgb(0.7, 0.62, 0.4, 0.8) : FAcHudStyle::LevelGold(), true, S.bFound ? 1.5f : 2.f);
+			if (!S.bFound) Box(Out, L + 4, P, FBox2f(At - FVector2f(2, 2), At + FVector2f(2, 2)), FAcHudStyle::LevelGold());
+		}
+		if (Known > 0)
+		{
+			Label(FString::Printf(TEXT("%d SITE%s · %d OPENED"), Known, Known == 1 ? TEXT("") : TEXT("S"), Opened), 11, FAcHudStyle::LevelGold(),
+				EAcHAlign::Left, EAcVAlign::Baseline, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(T.Min.X + 9, T.Max.Y - 7));
 		}
 	}
 	// The pads.

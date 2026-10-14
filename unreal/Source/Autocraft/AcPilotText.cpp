@@ -1,8 +1,10 @@
 #include "AcPilotText.h"
 
 #include "AcNewKinds.h"
+#include "AcProgressHud.h"
 #include "Leveling.h"
 #include "NetProtocol.h"
+#include "Progression.h"
 #include "Rules.h"
 
 #include <cmath>
@@ -261,15 +263,16 @@ TArray<FString> AcPilotText::MmoTips(const ac::Simulation& Sim, const ac::Unit& 
 	Tips.Add(BuildLine());
 	Tips.Add(TEXT("M  world map: on a pad, fly to another region"));
 	Tips.Add(TEXT("V  first or third person   ·   Esc  the top-down view"));
-	if (!Sim.levels().pending(U.kind).empty()) Tips.Add(TEXT("Z or X  pick a level-up card   ·   hold Option  free the pointer to click one"));
+	Tips.Add(TEXT("K  skill tree   ·   Q C G  your actives"));
 	return Tips;
 }
 
 TArray<ac::StructureKind> AcPilotText::BuildKinds(const bool bMmo)
 {
-	// The MMORPG test mode: what a world's server builds (the shared list).
+	// The MMORPG mode: every blueprint's building, in a fixed order; those the
+	// pilot lacks or is under the floor of greyed (`AcProgressHud::BlueprintRefusal`).
 	TArray<ac::StructureKind> Out;
-	if (bMmo) for (const ac::StructureKind K : ac::net::kWorldBuildKinds) Out.Add(K);
+	if (bMmo) for (const ac::StructureKind K : ac::Progression::blueprintKinds()) Out.Add(K);
 	else for (const ac::StructureKind K : ac::PilotBuild::kinds) Out.Add(K);
 	return Out;
 }
@@ -621,6 +624,16 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 				if (Me.ore < B.Ore) Short.Add(FString::Printf(TEXT("%d ore"), B.Ore));
 				if (Me.hydrogen < B.Hydrogen) Short.Add(FString::Printf(TEXT("%d MH"), B.Hydrogen));
 				if (!Short.IsEmpty()) B.Why = TEXT("needs ") + FString::Join(Short, TEXT(" and "));
+			}
+			if (In.bMmo)
+			{
+				// No blueprint, or under its floor: that first.
+				if (const FString Lock = AcProgressHud::BlueprintRefusal(In.Mmo, K); !Lock.IsEmpty())
+				{
+					B.bEnabled = false;
+					B.Why = Lock;
+					B.WhyShort = AcProgressHud::BlueprintTag(In.Mmo, K);
+				}
 			}
 			B.bLit = In.Placing == K;
 			Info.Buttons.Add(B);

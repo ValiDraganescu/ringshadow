@@ -302,6 +302,9 @@ public:
 	/// Where the driven gun's misses land (`sightPoint(reach:)`, E7): the
 	/// dust's sound plays there, not where the sim spent the round.
 	std::optional<ac::Vec2> PilotSpent;
+	/// The MMORPG mode: a level is the Prospector's, from the server's news
+	/// (`UAcLevelingSubsystem` plays `LevelUp`), not a kind's `LeveledUp`.
+	bool bServerLevels = false;
 
 private:
 	/// True if fewer than `PerSecond` of this sound started in the last second.

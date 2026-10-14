@@ -142,6 +142,9 @@ public:
 	TOptional<FAcPickOffer> DrivenOffer() const;
 	/// `leveledUp`: the banner (and the log).
 	void LevelUp(ac::UnitKind Kind, int32 Level, bool bHold = false);
+	/// The MMORPG mode's Prospector level (`UAcProgressHudSubsystem`): the
+	/// banner with its lines (`SAcLevelBanner::ShowLines`).
+	void ShowBanner(const FString& Title, const FString& Sub, const FString& Gate, bool bHold = false);
 	/// Dev: XP for the driven unit (`sim.earn`); false when not driving.
 	bool Earn(double Xp);
 	/// The command map's pick buttons as last drawn (Swift points, y up), for scripted clicks.

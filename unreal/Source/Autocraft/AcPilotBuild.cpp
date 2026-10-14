@@ -7,6 +7,7 @@
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
 #include "AcPose.h"
+#include "AcProgressHud.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
@@ -156,6 +157,11 @@ bool UAcPilotBuildSubsystem::Key(const FString& K)
 	const TArray<ac::StructureKind> Kinds = AcPilotText::BuildKinds(Sim->IsMmo());
 	if (N < 1 || N > Kinds.Num()) return false;
 	const ac::StructureKind Kind = Kinds[N - 1];
+	if (const FString Lock = Sim->IsMmo() ? AcProgressHud::BlueprintRefusal(Sim->MmoClient(), Kind) : FString(); !Lock.IsEmpty())
+	{
+		Note(Lock);
+		return true;
+	}
 	if (const std::optional<std::string> Why = S.buildRefusal(Kind, ac::Pilot::player))
 	{
 		Note(Utf8(*Why));

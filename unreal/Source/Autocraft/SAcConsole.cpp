@@ -723,6 +723,13 @@ void SAcConsole::PaintCenter(FPaint& P, const FAcCardInfo& In) const
 		P.Stroke(Xp.Inset(-1, -1), 1, Alpha(Gold, 0.45));
 		P.Fill(FAcRect(Xp.X, Xp.Y, Xp.W * In.Level->Fraction, Xp.H), Gold);
 		P.Text(In.Level->Text, 12, Gold, FVector2D(Xp.MaxX(), Xp.MinY() - 15), EAcHAlign::Right);
+		// The points waiting (the MMORPG mode): a lit pill over the bar's start.
+		if (!In.Level->Badge.IsEmpty())
+		{
+			const FAcRect Pill(Xp.X, Xp.MinY() - 22, FPaint::TextWidth(In.Level->Badge, 12) + 14, 16);
+			P.Fill(Pill, Gold);
+			P.Text(In.Level->Badge, 12, Gray(0.05), FVector2D(Pill.MidX(), Pill.MinY() + 2), EAcHAlign::Center);
+		}
 	}
 	P.Text(In.Status, Fit(In.Status, 17, Right - X0), bRts ? FAcHudStyle::Soft() : Gray(0.72), FVector2D(X0, R.MaxY() - 50));
 
@@ -879,11 +886,39 @@ void SAcConsole::PaintBuildList(FPaint& P) const
 	P.Text(TEXT("BUILD"), 12, Alpha(FAcHudStyle::Cyan(), 0.75), FVector2D(X, Y));
 	P.Text(TEXT("number  pick   ·   click  place"), 11, Gray(0.55), FVector2D(Right, Y), EAcHAlign::Right);
 	const FAcCardButton* Back = nullptr;
+	int32 Rows = 0;
+	for (const FAcCardButton& B : Info->Buttons) Rows += B.Key == TEXT("Esc") ? 0 : 1;
+	const bool bHasBack = Rows < Info->Buttons.Num();
+	// More than fit (the blueprints' eight): one line each, a word for why not.
+	const double Pitch = FMath::Min(50.0, (Y - R.MinY() - (bHasBack ? 28 : 6)) / FMath::Max(Rows, 1));
+	const bool bTight = Pitch < 46;
 	for (const FAcCardButton& B : Info->Buttons)
 	{
 		if (B.Key == TEXT("Esc"))
 		{
 			Back = &B;
+			continue;
+		}
+		if (bTight)
+		{
+			Y -= Pitch;
+			const FAcRect Row(X - 4, Y, Right - X + 8, Pitch - 3);
+			const float A = B.bEnabled ? 1.f : 0.5f;
+			P.FillRounded(Row, 2, B.bEnabled ? Rgb(0.05, 0.12, 0.2) : Rgb(0.05, 0.05, 0.06));
+			P.Stroke(Row, 2, B.bLit ? Rgb(0.4, 1, 0.45) : B.bEnabled ? Alpha(Acc, 0.9) : Gray(0.3), B.bLit ? 2 : 1);
+			const double S = FMath::Max(10.0, Row.H - 4);
+			const double Mid = Row.MidY();
+			P.Text(B.Key, 12, Alpha(FAcHudStyle::KeyYellow(), A), FVector2D(Row.MinX() + 10, Mid - 7), EAcHAlign::Center);
+			if (const FSlateBrush* Icon = FAcIcons::Brush(B.Icon))
+			{
+				P.Image(Icon, FAcRect(Row.MinX() + 20, Mid - S / 2, S, S), B.bEnabled ? FLinearColor::White : FPaint::BlendTint(Gray(0.3), 0.6, 0.85));
+			}
+			P.Text(B.Title, 14, Gray(0.95, A), FVector2D(Row.MinX() + 24 + S, Mid - 8));
+			TArray<FString> Cost;
+			if (B.Ore > 0) Cost.Add(FString::Printf(TEXT("%d ore"), B.Ore));
+			if (B.Hydrogen > 0) Cost.Add(FString::Printf(TEXT("%d MH"), B.Hydrogen));
+			const FString Tag = B.bEnabled ? FString::Join(Cost, TEXT(" · ")) : !B.WhyShort.IsEmpty() ? B.WhyShort : B.Why ? *B.Why : FString(TEXT("NOT NOW"));
+			P.Text(Tag, 12, B.bEnabled ? Rgb(0.6, 0.9, 1) : Rgb(1, 0.55, 0.35), FVector2D(Row.MaxX() - 6, Mid - 7), EAcHAlign::Right);
 			continue;
 		}
 		Y -= 50;

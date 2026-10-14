@@ -158,6 +158,9 @@ struct FAcPilotInputs
 	/// The MMORPG test mode: tips for what is there, the build menu's list
 	/// (`AcPilotText::BuildKinds`).
 	bool bMmo = false;
+	/// The MMORPG mode's client: the blueprints the pilot has, its level
+	/// (`AcProgressHud::BlueprintRefusal`).
+	const class FAcMmoClient* Mmo = nullptr;
 };
 
 struct AUTOCRAFT_API AcPilotText
