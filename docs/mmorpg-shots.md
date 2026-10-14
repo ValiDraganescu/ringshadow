@@ -36,8 +36,8 @@ prefix and a number) shoots only those moments. The others are logged as
 passed over and count as skipped in the set's total. The Starfall set
 also skips their waits: with no fall moment asked for, the clock jumps
 past the impact; with no night moment asked for, the run ends after the
-day. Hidden runs go through the build train's queue
-([build-train.md](build-train.md)).
+day. Hidden runs go through `unreal/Tools/hidden_run.py`, which holds the
+Mac's one run slot.
 
 The pictures were taken on 2026-10-13 in run 3: 17 pictures, 0 failed, about
 3 minutes, machine load about 13. Git ignores the folder

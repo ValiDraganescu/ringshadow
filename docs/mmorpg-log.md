@@ -567,3 +567,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Protocol 22, schema 16, request 19 = UpgradeTurret.
 - N D3 suites: core 475, server 219, net 82 pass.
 - I Card shows HP 301/300 (hp quantization) → fixed in A1.
+- T W4 part 1 3ea6610: outlines, walls, passages, seamless server hand-off; W3 folded.
+- N W4: step 0.0788 cells/tick across all edges; protocol 23.
+- N W4 suites: core 475, server 224, net 82 pass.
+- I W4 merge first aborted on stray doc edits; those (train → hidden_run) committed.
