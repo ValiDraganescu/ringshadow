@@ -380,3 +380,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T Resumed F1, E2 polish, W2, H1 from uncommitted work.
 - T S1 done cf09855: Starfall 44 s, Ringshadow 37 s (were ~4, ~3 min).
 - N S1: --dev-control file jumps the clock; shot runs only.
+- T F1 done 79d70c2, 0ec7691: flight costs 10 + 5/step MH; launch look.
+- N F1: 12 shots (noon, dusk) checked; core 452, server 144, net 67.
+- I cf09855 (S1) may have misplaced lines like 5007b79: world-look checks.
+- T F1b jump-jet MH and flight sounds → world-clock.
