@@ -37,7 +37,8 @@ def md_url(rel: str) -> str:
 
 class ToMarkdown(HTMLParser):
     """Turns the <main> of one of our pages into Markdown. It knows only the
-    tags the site uses; anything inside aria-hidden or svg is skipped."""
+    tags the site uses; anything inside aria-hidden, svg or data-md="skip"
+    (controls that only make sense on the page) is skipped."""
 
     BLOCK = {"p", "h1", "h2", "h3", "li", "blockquote", "figcaption", "tr", "summary"}
 
@@ -110,7 +111,8 @@ class ToMarkdown(HTMLParser):
             self.stack.append(tag)
         if self.skip_at is not None:
             return
-        if tag == "svg" or a.get("aria-hidden") == "true" or tag == "nav" or "more" in (a.get("class") or "").split():
+        if (tag == "svg" or a.get("aria-hidden") == "true" or tag == "nav" or a.get("data-md") == "skip"
+                or "more" in (a.get("class") or "").split()):
             if tag not in self.VOID:
                 self.skip_at = len(self.stack)
             return

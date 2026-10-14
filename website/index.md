@@ -1,144 +1,153 @@
 # Ringshadow
 
-> Ringshadow: a real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself. Built in public with AI agents, public domain (CC0).
+> Ringshadow: a free real-time strategy game for Mac, Windows and Linux. Your AI commander runs the army, and you can dive into any unit and play it like a shooter. Built in public with AI agents, public domain (CC0).
 
 Source: https://ringshadow.com/
 
-The pitch
+[Video: The camera dives from the top-down view into a Ranger, who walks out in first person](https://ringshadow.com/assets/media/dive.mp4) ![The command map: the bases of the map and the team's objectives](https://ringshadow.com/assets/media/command-map.jpg) ![The top-down view: the Citadel, its Stardust Ore line and two Metallic Hydrogen wells](https://ringshadow.com/assets/media/top.jpg)
 
-## Live in the giant's shadow
+## Play it three ways
 
-On a frontier world, Prospectors drill Stardust Ore and pump Metallic Hydrogen while armies of up to eight players clash over the deposits.
+### Drive any unit
 
-Your team's AI commander runs the army while you steer it from above. When a fight matters, you take over a unit and play it like a shooter. Overhead hangs Ringshadow, the huge ringed gas giant the game is named for.
+Click one of your units and the camera dives in. `W``A``S``D` walks, the mouse aims, a click fires, `R` uses its ability, `V` switches first and third person, and `Esc` hands it back to the AI.
 
-[Video: The camera dives from the top-down view into a Ranger, who walks out in first person](https://ringshadow.com/assets/media/dive.mp4)
+### Command the AI
 
-*Click a unit and the camera dives in. Recorded in the game.*
+Press `M` for the command map and give your team's AI its orders: a stance, objectives (attack, defend, hold, man a Bastion), expansions and requests. It plans the rest.
 
-How you play
-
-## Three ways, switch any time
-
-01 ![The top-down view: the Citadel, its Stardust Ore line and two Metallic Hydrogen wells](https://ringshadow.com/assets/media/top.jpg)
-
-### Your buildings
+### Press the buttons
 
 Click a building and press its buttons: train units, research, build. If it's a job the AI can do for you, the button queues it for your team's commander.
 
-02 ![The command map: the bases of the map and the team's objectives](https://ringshadow.com/assets/media/command-map.jpg)
+[Meet the twelve](#units)[How units level](#levels)
 
-### The command map `M`
+## Twelve you can drive
 
-Give your AI orders: a stance, objectives (attack, defend, hold, man a Bastion), expansions and requests. It plans the rest.
+Each kind has its own cockpit, weapon and ability. Prospectors drill Stardust Ore and pump Metallic Hydrogen while armies of up to eight players fight over the deposits.
 
-03 [Video: Two armies of twelve meet in the desert, seen from above as the camera sweeps in](https://ringshadow.com/assets/media/fight.mp4)
+### On the ground
 
-### Drive a unit
+9 kinds
 
-Click any of your units and dive in. `WASD` walks, the mouse aims, a click fires, `R` uses its ability, `V` switches first and third person, `Esc` hands it back to the AI.
+Prospector Worker: Mines ore, pumps MH, builds and repairs. Dull to drive, and the reason leveling exists.
 
-The roster
+Ranger Infantry: Rifle infantry. Its upgrades lean to firing and staying alive.
 
-## Every unit is playable
+Comet Raider: A jump-pack raider with pistols that clears cliffs.
 
-Twelve kinds, each with its own cockpit, weapon and ability.
+Juggernaut Grenadier: A heavy grenadier that breaks armour and slows what it hits.
 
-- Prospector: Mines ore, pumps MH, builds, repairs
-- Ranger: Rifle infantry
-- Comet: Jump-pack raider, clears cliffs
-- Juggernaut: Heavy grenadier
-- Firefly: Fast flame buggy
-- Dropship: Healing transport
-- Longbow: A tank that anchors into artillery
-- Kestrel: Rocket gunship
-- Hailstorm: Flak half-track
-- Peregrine: Air-superiority fighter
-- Atlas: Heavy assault walker
-- Scorpion: The twelfth: a burrowing mine. And any unit can be driven over the shoulder too `V`.
+Firefly Buggy: A fast flame buggy. Its upgrades lean to burning and the flame's reach.
 
-[Video: Driving a Comet in first person](https://ringshadow.com/assets/media/comet.mp4)
+Longbow Tank: A tank that anchors into artillery. `R` anchors it.
 
-*A Comet in first person.*
+Hailstorm Flak: A flak half-track that hits only flyers.
 
-[Video: A Ranger walking in third person](https://ringshadow.com/assets/media/third.mp4)
+Atlas Walker: A heavy assault walker. `R` fires its Quake stomp; its crew speaks with voices of its own.
 
-*A Ranger in third person.*
+Scorpion Mine: A burrowing mine. `R` buries it and digs it out again.
 
-Pilot leveling
+### In the air
 
-## Units level up while you drive them
+3 kinds
 
-The longer you drive a kind of unit in a game, the better every unit of that kind gets, but only while you're the one driving: units the AI runs never level.
+Dropship Transport: A healing transport. `R` loads and unloads.
 
-Every level offers two upgrades and you keep one: 216 of them across the twelve kinds ("Every Prospector pumps MH 20% faster"). It gives you a reason to drive the units that are dull to play, the Prospector first.
+Kestrel Gunship: A rocket gunship that strikes only the ground.
 
-![A level-up: two upgrade cards over the Prospector's cockpit](https://ringshadow.com/assets/media/level-cards.jpg) [Video: A Prospector drilling Stardust Ore in first person](https://ringshadow.com/assets/media/mining.mp4) The world
+Peregrine Fighter: An air-superiority fighter. `R` is the afterburner; its pilot has a voice of its own.
 
-## Day, night, weather and the radio
+## A cockpit for each
 
-The sun crosses the sky, and at night the beacons and lamps come on. The weather runs on the game clock: sun, broken cloud, rain and storms with lightning, wet ground and hulls.
+Every kind is driven from its own seat, with its own weapon or tool in view. These are frames from the game, as you see them when you dive in.
 
-The music plays as a radio station, KSTR 88.7 Stardust, with original songs and in-world ads between them: Quicksilver Cola (pumped from Metallic Hydrogen wells, "not a beverage"), Opal Glow face scrub (side effects: levitation, being mined) and Citadel Timeshares (ash view guaranteed).
+## Drive it and it levels
 
-[Video: The camera pans across the base at dusk](https://ringshadow.com/assets/media/flyover.mp4) ![The base at night, its beacons lit](https://ringshadow.com/assets/media/top-night.jpg) In the works: the MMORPG mode
+The longer you drive a kind of unit in a game, the better every unit of that kind gets. Units the AI runs never level, which gives you a reason to drive the dull ones.
 
-## One pilot in a world that lasts
+![A level-up: two upgrade cards over the Prospector's cockpit](https://ringshadow.com/assets/media/level-cards.jpg)
 
-A persistent online world is being built next to the strategy game: you are one pilot who lives in the ringshadow and drives the machines yourself.
+- Drive: Only the units you drive yourself earn levels. Hand one back with `Esc` and it stops.
+- Level: Each level lifts every unit of that kind on your side, for the rest of the game.
+- Keep one: Every level offers two upgrades and you keep one: 216 across the twelve kinds, like "every Prospector pumps MH 20% faster".
 
-### Your level is yours
+## Life under the giant
 
-Your Prospector climbs to level 100 over about a hundred hours, with a skill tree of 65 nodes, and keeps every level between sessions.
+[Video: A Prospector drilling Stardust Ore in first person](https://ringshadow.com/assets/media/mining.mp4)
 
-### Cities built together
+*Ore and hydrogen A Prospector drills Stardust Ore in first person.*
 
-Pilots raise their cities with ore, MH and hours of labour. Cities are the safe places to log in, trade and meet.
+![The base at night, its beacons lit](https://ringshadow.com/assets/media/top-night.jpg)
 
-### No-man's land
+*Night The sun crosses the sky; after dark the beacons and lamps come on.*
 
-Between the cities lie the deposits, the wells and dwellings, taken and held by force. That's where the fighting happens.
+KSTR 88.7 Stardust The music plays as a radio station, with original songs.
 
-### AI pilots
+Weather Sun, cloud, rain and storms on the game clock, wet ground and hulls after.
 
-AI characters who are pilots themselves, with a city and a level, keep the world busy where players are few.
+[Video: The camera pans across the base at dusk](https://ringshadow.com/assets/media/flyover.mp4)
 
-You can play it today in a test mode, single player, on a local server that is the same program a public world will run. So far it has our own encrypted server on UDP, a world of regions that the server saves, the ringshadow sweep and starfall, a realm whose Citadel taxes, sells and hands out missions, mercenaries who mine while the game is closed, and the Brood: alien bugs that raid your buildings and eat your ore.
+*Dusk The camera pans over a base as the light goes.*
 
-[Read how it's being built](https://ringshadow.com/blog/) [The roadmap](https://ringshadow.com/roadmap) Built in public with AI agents
+Ads between the songs Pumped from Metallic Hydrogen wells. "Not a beverage."
+
+Face scrub Side effects: levitation, being mined.
+
+Real estate Ash view guaranteed.
+
+Everything above is the strategy game, playable today. Down here in the ring's shadow, the online world is being built.
+
+## One pilot. A world that lasts.
+
+![The giant's rings casting a dark band across the sky and land of the MMORPG world](https://ringshadow.com/blog/media/how-we-got-here/06-ringshadow.webp)
+
+### Playable now, as a test mode
+
+Single player, on a local server that is the same program a public world will run. Your Prospector climbs to level 100 over about a hundred hours. A Citadel taxes, sells and hands out missions, mercenaries mine while the game is closed, and the Brood raids your buildings and eats your ore.
+
+### Coming
+
+Cities that pilots raise together with ore, MH and hours of labour. AI pilots with a city and a level of their own. And the no-man's land between the cities, where deposits and wells are taken and held by force.
+
+[Read how it's being built](https://ringshadow.com/blog/)
 
 ## How it's made
 
+### Concept to model
+
+The model pipeline
+
+![The Atlas six-view turnaround](https://ringshadow.com/assets/media/atlas-turnaround.jpg) Each unit starts as concept paintings. The one picked becomes a six-view turnaround, and the in-engine model is built part by part with Geometry Script and fitted against those views. The Atlas came to the game this way, and every snag along the road is written into the skill the agents follow.
+
+[The model pipeline skill](https://github.com/ValiDraganescu/ringshadow/tree/main/.claude/skills/ringshadow-model-pipeline)
+
 ### An engine-free core
 
-The whole simulation, from the economy and pathing to combat and the AI commanders, is plain C++20 with no Unreal in it. Its tests build with clang and run in about 7 seconds. The Unreal layer draws the frames, plays the sounds and takes the input.
+C++20, tests in 7 seconds
 
-### Made by AI coding agents
+[Video: Two armies of twelve meet in the desert, seen from above](https://ringshadow.com/assets/media/fight.mp4) The whole simulation, from the economy and pathing to combat and the AI commanders, is plain C++20 with no Unreal in it. Its tests build with clang and run in about 7 seconds. The Unreal layer draws the frames, plays the sounds and takes the input.
 
-Ringshadow is made with AI coding agents, and the skills they work from are in the repository: concept art to an Unreal model, the buildings' light language, which tests a change needs, and the recorder that makes every clip on this page from the real game.
+[How the core is split](https://github.com/ValiDraganescu/ringshadow/blob/main/unreal/PORTING.md)
 
-### From concept to model
+### Made by AI agents
 
-Each unit starts as concept paintings. The one picked becomes a six-view turnaround, and the in-engine model is built part by part with Geometry Script and fitted against those views.
+The skills are in the repo
 
-![The Atlas concept painting](https://ringshadow.com/assets/media/atlas-concept.jpg)
+[Video: A Ranger walking in third person, recorded by the game's own recorder](https://ringshadow.com/assets/media/third.mp4) Ringshadow is made with AI coding agents, and the skills they work from are published with the code: the buildings' light language, which tests a change needs, and the recorder that makes every clip on this page from the real game.
 
-*Concept*
+[The skills](https://github.com/ValiDraganescu/ringshadow/tree/main/.claude/skills)
 
-![The Atlas six-view turnaround](https://ringshadow.com/assets/media/atlas-turnaround.jpg)
+### Built in public
 
-*Turnaround*
+The blog and the roadmap
 
-![The Atlas model in the engine](https://ringshadow.com/assets/media/atlas-model.jpg)
+![A Prospector on its landing pad in the MMORPG mode, the ringed giant behind the clouds](https://ringshadow.com/blog/media/how-we-got-here/cover.jpg) The blog follows the work as it lands, with the real numbers and the pictures from the day. The roadmap shows what is done and what comes next, and nothing past the done work has a date.
 
-*In the engine*
+[The blog](https://ringshadow.com/blog/) [The roadmap](https://ringshadow.com/roadmap)
 
-Public domain
+## Take any of it.
 
-## CC0: take any of it
+The game is free, and everything in the repository is public domain under CC0 1.0: the code, the art, the models, the sounds, the music and the docs. Use any of it for anything, with no credit needed.
 
-Everything in the repository is dedicated to the public domain under CC0 1.0: the code, the art, the models, the sounds, the music and the docs. Use any of it for anything, with no credit needed.
-
-A few third-party files keep their own licences, listed in the README. The fonts on this site, Barlow Condensed and Exo 2, are under the SIL Open Font License ([Barlow](https://ringshadow.com/assets/fonts/OFL-BarlowCondensed.txt), [Exo 2](https://ringshadow.com/assets/fonts/OFL-Exo2.txt)). The sky at the top is drawn with three.js, under the [MIT License](https://ringshadow.com/assets/js/vendor/three.LICENSE.txt). The game is built with Unreal Engine 5, which has its own licence from Epic Games.
-
-[The source on GitHub](https://github.com/ValiDraganescu/ringshadow)
+All three builds and their checksums are on the [0.1.1 release page](https://github.com/ValiDraganescu/ringshadow/releases/tag/v0.1.1).

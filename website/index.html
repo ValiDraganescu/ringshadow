@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ringshadow</title>
-  <meta name="description" content="Ringshadow: a real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself. Built in public with AI agents, public domain (CC0).">
+  <meta name="description" content="Ringshadow: a free real-time strategy game for Mac, Windows and Linux. Your AI commander runs the army, and you can dive into any unit and play it like a shooter. Built in public with AI agents, public domain (CC0).">
   <meta name="theme-color" content="#030912">
   <meta property="og:title" content="Ringshadow">
-  <meta property="og:description" content="A real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself.">
+  <meta property="og:description" content="A real-time strategy game where the AI commands your army and you drive any unit yourself.">
   <meta property="og:image" content="https://ringshadow.com/assets/media/key-art.jpg">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Ringshadow">
@@ -17,207 +17,248 @@
   <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="blog/feed.xml">
   <link rel="alternate" type="text/markdown" title="This page as Markdown" href="index.md">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="assets/fonts/BarlowCondensed-Medium.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/css/site.css">
   <link rel="stylesheet" href="assets/css/home.css">
+  <script src="assets/js/home.js"></script>
   <script src="assets/js/stars.js" defer></script>
-  <script src="assets/js/home.js" defer></script>
   <link rel="modulepreload" href="assets/js/vendor/three-hero.min.js">
   <script type="module" src="assets/js/hero.js"></script>
 </head>
-<body>
+<body class="home" id="top">
   <a class="skip" href="#main">Skip to the content</a>
   <canvas class="stars" aria-hidden="true"></canvas>
 
-  <nav class="nav" aria-label="Main">
-    <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
-    <ul class="nav-links">
-      <li><a href="index.html" aria-current="page">Home</a></li>
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="index.html" aria-current="page"><img src="assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
       <li><a href="roadmap.html">Roadmap</a></li>
       <li><a href="blog/index.html">Blog</a></li>
-      <li><a class="gh" href="https://github.com/ValiDraganescu/ringshadow"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
     </ul>
+    <a class="btn btn-sm" href="#get">Download</a>
   </nav>
 
   <header class="hero">
     <canvas class="hero-gl" aria-hidden="true"></canvas>
     <noscript><img class="hero-art" src="assets/media/key-art.jpg" alt="" width="1408" height="704"></noscript>
-    <svg class="hero-ground" viewBox="0 0 1600 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <path d="M0 220V150l60-4 18-22h96l14 18 120 6 40-10 70 2 16-30h150l14 26 90 8 60-6 28 4 20-48h170l16 44 74 10 90-8 50 6 30-24h112l22 26 70 6 70-4V220Z"/>
-      <circle cx="356" cy="152" r="2.2"/><circle cx="1012" cy="160" r="1.8"/><circle cx="1298" cy="128" r="2"/>
-    </svg>
-    <div class="hero-shade" aria-hidden="true"></div>
-    <div class="wrap hero-copy">
-      <p class="kicker">A frontier world · Ashfall Reach</p>
-      <h1 class="wordmark">RINGSHADOW</h1>
-      <p class="lede">A real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself.</p>
-      <p class="hero-meta">Unreal Engine 5 · Mac, Windows and Linux builds · built in public with AI agents · public domain (CC0)</p>
-      <div class="hero-cta">
-        <a class="btn" href="#play">See how you play</a>
-        <a class="btn ghost" href="roadmap.html">The roadmap</a>
-      </div>
+    <div class="hero-copy">
+      <h1 class="lines">
+        <span class="line"><span class="l1">The AI commands.</span></span>
+        <span class="line"><span class="l2">You drive.</span></span>
+      </h1>
+      <p class="hero-say rise r1">A free real-time strategy game for Mac, Windows and Linux. Your AI commander runs the army; click any unit and play it like a shooter.</p>
+      <p class="hero-act rise r2"><a class="btn" href="#get">Get version 0.1.1</a> <a class="tlink" href="#play">See how you play</a></p>
     </div>
   </header>
 
   <main id="main">
+    <div class="sun">
 
-    <section class="section intro wrap">
-      <div class="intro-text">
-        <p class="kicker">The pitch</p>
-        <h2>Live in the giant's shadow</h2>
-        <p class="lede">On a frontier world, Prospectors drill Stardust Ore and pump Metallic Hydrogen while armies of up to eight players clash over the deposits.</p>
-        <p>Your team's AI commander runs the army while you steer it from above. When a fight matters, you take over a unit and play it like a shooter. Overhead hangs Ringshadow, the huge ringed gas giant the game is named for.</p>
-      </div>
-      <figure class="intro-media">
-        <div class="media panel"><video src="assets/media/dive.mp4" poster="assets/media/dive-poster.jpg" muted loop playsinline autoplay preload="metadata" aria-label="The camera dives from the top-down view into a Ranger, who walks out in first person"></video></div>
-        <figcaption>Click a unit and the camera dives in. Recorded in the game.</figcaption>
-      </figure>
-    </section>
-
-    <section class="section wrap" id="play">
-      <p class="kicker">How you play</p>
-      <h2>Three ways, switch any time</h2>
-      <div class="modes">
-        <article class="mode panel">
-          <span class="mode-n">01</span>
-          <img src="assets/media/top.jpg" alt="The top-down view: the Citadel, its Stardust Ore line and two Metallic Hydrogen wells" width="1280" height="720" loading="lazy">
-          <h3>Your buildings</h3>
-          <p>Click a building and press its buttons: train units, research, build. If it's a job the AI can do for you, the button queues it for your team's commander.</p>
-        </article>
-        <article class="mode panel">
-          <span class="mode-n">02</span>
-          <img src="assets/media/command-map.jpg" alt="The command map: the bases of the map and the team's objectives" width="1280" height="720" loading="lazy">
-          <h3>The command map <kbd>M</kbd></h3>
-          <p>Give your AI orders: a stance, objectives (attack, defend, hold, man a Bastion), expansions and requests. It plans the rest.</p>
-        </article>
-        <article class="mode panel">
-          <span class="mode-n">03</span>
-          <video src="assets/media/fight.mp4" poster="assets/media/fight-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="Two armies of twelve meet in the desert, seen from above as the camera sweeps in"></video>
-          <h3>Drive a unit</h3>
-          <p>Click any of your units and dive in. <kbd>WASD</kbd> walks, the mouse aims, a click fires, <kbd>R</kbd> uses its ability, <kbd>V</kbd> switches first and third person, <kbd>Esc</kbd> hands it back to the AI.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="section wrap" id="units">
-      <p class="kicker">The roster</p>
-      <h2>Every unit is playable</h2>
-      <p class="lede">Twelve kinds, each with its own cockpit, weapon and ability.</p>
-      <ul class="units">
-        <li><img src="assets/media/pilot-ore.jpg" alt="" width="1280" height="720" loading="lazy"><b>Prospector</b><span>Mines ore, pumps MH, builds, repairs</span></li>
-        <li><img src="assets/media/pilot-ranger-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Ranger</b><span>Rifle infantry</span></li>
-        <li><img src="assets/media/pilot-comet-jump.jpg" alt="" width="1280" height="720" loading="lazy"><b>Comet</b><span>Jump-pack raider, clears cliffs</span></li>
-        <li><img src="assets/media/pilot-juggernaut-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Juggernaut</b><span>Heavy grenadier</span></li>
-        <li><img src="assets/media/pilot-firefly-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Firefly</b><span>Fast flame buggy</span></li>
-        <li><img src="assets/media/pilot-dropship-heal.jpg" alt="" width="1280" height="720" loading="lazy"><b>Dropship</b><span>Healing transport</span></li>
-        <li><img src="assets/media/pilot-longbow-anchored.jpg" alt="" width="1280" height="720" loading="lazy"><b>Longbow</b><span>A tank that anchors into artillery</span></li>
-        <li><img src="assets/media/pilot-kestrel-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Kestrel</b><span>Rocket gunship</span></li>
-        <li><img src="assets/media/pilot-hailstorm-fire.jpg" alt="" width="1280" height="720" loading="lazy"><b>Hailstorm</b><span>Flak half-track</span></li>
-        <li><img src="assets/media/pilot-peregrine.jpg" alt="" width="1280" height="720" loading="lazy"><b>Peregrine</b><span>Air-superiority fighter</span></li>
-        <li><img src="assets/media/pilot-atlas.jpg" alt="" width="1280" height="720" loading="lazy"><b>Atlas</b><span>Heavy assault walker</span></li>
-        <li class="unit-text"><b>Scorpion</b><span>The twelfth: a burrowing mine. And any unit can be driven over the shoulder too <kbd>V</kbd>.</span></li>
-      </ul>
-      <div class="pair">
-        <figure>
-          <div class="media panel"><video src="assets/media/comet.mp4" poster="assets/media/comet-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="Driving a Comet in first person"></video></div>
-          <figcaption>A Comet in first person.</figcaption>
-        </figure>
-        <figure>
-          <div class="media panel"><video src="assets/media/third.mp4" poster="assets/media/third-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="A Ranger walking in third person"></video></div>
-          <figcaption>A Ranger in third person.</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <section class="section wrap split" id="leveling">
-      <div>
-        <p class="kicker">Pilot leveling</p>
-        <h2>Units level up while you drive them</h2>
-        <p>The longer you drive a kind of unit in a game, the better every unit of that kind gets, but only while you're the one driving: units the AI runs never level.</p>
-        <p>Every level offers two upgrades and you keep one: 216 of them across the twelve kinds ("Every Prospector pumps MH 20% faster"). It gives you a reason to drive the units that are dull to play, the Prospector first.</p>
-      </div>
-      <figure>
-        <div class="media panel"><img src="assets/media/level-cards.jpg" alt="A level-up: two upgrade cards over the Prospector's cockpit" width="1280" height="720" loading="lazy"></div>
-        <div class="media panel inset"><video src="assets/media/mining.mp4" poster="assets/media/mining-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="A Prospector drilling Stardust Ore in first person"></video></div>
-      </figure>
-    </section>
-
-    <section class="section wrap split flip" id="world">
-      <div>
-        <p class="kicker">The world</p>
-        <h2>Day, night, weather and the radio</h2>
-        <p>The sun crosses the sky, and at night the beacons and lamps come on. The weather runs on the game clock: sun, broken cloud, rain and storms with lightning, wet ground and hulls.</p>
-        <p>The music plays as a radio station, <b>KSTR 88.7 Stardust</b>, with original songs and in-world ads between them: Quicksilver Cola (pumped from Metallic Hydrogen wells, "not a beverage"), Opal Glow face scrub (side effects: levitation, being mined) and Citadel Timeshares (ash view guaranteed).</p>
-      </div>
-      <figure>
-        <div class="media panel"><video src="assets/media/flyover.mp4" poster="assets/media/flyover-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="The camera pans across the base at dusk"></video></div>
-        <div class="media panel inset"><img src="assets/media/top-night.jpg" alt="The base at night, its beacons lit" width="1280" height="720" loading="lazy"></div>
-      </figure>
-    </section>
-
-    <section class="section mmo" id="mmorpg">
-      <div class="wrap">
-        <p class="kicker">In the works: the MMORPG mode</p>
-        <h2>One pilot in a world that lasts</h2>
-        <p class="lede">A persistent online world is being built next to the strategy game: you are one pilot who lives in the ringshadow and drives the machines yourself.</p>
-        <div class="mmo-grid">
-          <div class="panel mmo-card"><h3>Your level is yours</h3><p>Your Prospector climbs to level 100 over about a hundred hours, with a skill tree of 65 nodes, and keeps every level between sessions.</p></div>
-          <div class="panel mmo-card"><h3>Cities built together</h3><p>Pilots raise their cities with ore, MH and hours of labour. Cities are the safe places to log in, trade and meet.</p></div>
-          <div class="panel mmo-card"><h3>No-man's land</h3><p>Between the cities lie the deposits, the wells and dwellings, taken and held by force. That's where the fighting happens.</p></div>
-          <div class="panel mmo-card"><h3>AI pilots</h3><p>AI characters who are pilots themselves, with a city and a level, keep the world busy where players are few.</p></div>
-        </div>
-        <p>You can play it today in a test mode, single player, on a local server that is the same program a public world will run. So far it has our own encrypted server on UDP, a world of regions that the server saves, the ringshadow sweep and starfall, a realm whose Citadel taxes, sells and hands out missions, mercenaries who mine while the game is closed, and the Brood: alien bugs that raid your buildings and eat your ore.</p>
-        <a class="btn" href="blog/index.html">Read how it's being built</a>
-        <a class="btn ghost" href="roadmap.html">The roadmap</a>
-      </div>
-    </section>
-
-    <section class="section wrap" id="made">
-      <p class="kicker">Built in public with AI agents</p>
-      <h2>How it's made</h2>
-      <div class="made">
-        <div>
-          <h3>An engine-free core</h3>
-          <p>The whole simulation, from the economy and pathing to combat and the AI commanders, is plain C++20 with no Unreal in it. Its tests build with clang and run in about 7 seconds. The Unreal layer draws the frames, plays the sounds and takes the input.</p>
-          <h3>Made by AI coding agents</h3>
-          <p>Ringshadow is made with AI coding agents, and the skills they work from are in the repository: concept art to an Unreal model, the buildings' light language, which tests a change needs, and the recorder that makes every clip on this page from the real game.</p>
-        </div>
-        <div>
-          <h3>From concept to model</h3>
-          <p>Each unit starts as concept paintings. The one picked becomes a six-view turnaround, and the in-engine model is built part by part with Geometry Script and fitted against those views.</p>
-          <div class="pipeline">
-            <figure><img src="assets/media/atlas-concept.jpg" alt="The Atlas concept painting" width="624" height="832" loading="lazy"><figcaption>Concept</figcaption></figure>
-            <figure><img src="assets/media/atlas-turnaround.jpg" alt="The Atlas six-view turnaround" width="1248" height="832" loading="lazy"><figcaption>Turnaround</figcaption></figure>
-            <figure><img src="assets/media/atlas-model.jpg" alt="The Atlas model in the engine" width="624" height="624" loading="lazy"><figcaption>In the engine</figcaption></figure>
+      <section class="show" id="play" aria-labelledby="play-h">
+        <div class="show-plate">
+          <div class="cut r1 shutter">
+            <video class="panel-media on" data-panel="drive" src="assets/media/dive.mp4" poster="assets/media/dive-poster.jpg" muted loop playsinline autoplay preload="metadata" aria-label="The camera dives from the top-down view into a Ranger, who walks out in first person"></video>
+            <img class="panel-media" data-panel="map" src="assets/media/command-map.jpg" alt="The command map: the bases of the map and the team's objectives" width="1280" height="720" loading="lazy">
+            <img class="panel-media" data-panel="build" src="assets/media/top.jpg" alt="The top-down view: the Citadel, its Stardust Ore line and two Metallic Hydrogen wells" width="1280" height="720" loading="lazy">
           </div>
         </div>
+        <div class="show-text">
+          <h2 id="play-h" class="reveal">Play it three ways</h2>
+          <div class="tabs reveal s1" role="tablist" aria-label="Ways to play" data-md="skip">
+            <button role="tab" id="t-drive" aria-controls="p-drive" aria-selected="true" data-tab="drive">Drive</button>
+            <button role="tab" id="t-map" aria-controls="p-map" aria-selected="false" tabindex="-1" data-tab="map">Command map</button>
+            <button role="tab" id="t-build" aria-controls="p-build" aria-selected="false" tabindex="-1" data-tab="build">Buildings</button>
+          </div>
+          <div class="show-panels reveal s2">
+            <div class="show-panel" role="tabpanel" id="p-drive" aria-labelledby="t-drive">
+              <h3>Drive any unit</h3>
+              <p>Click one of your units and the camera dives in. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walks, the mouse aims, a click fires, <kbd>R</kbd> uses its ability, <kbd>V</kbd> switches first and third person, and <kbd>Esc</kbd> hands it back to the AI.</p>
+            </div>
+            <div class="show-panel" role="tabpanel" id="p-map" aria-labelledby="t-map">
+              <h3>Command the AI</h3>
+              <p>Press <kbd>M</kbd> for the command map and give your team's AI its orders: a stance, objectives (attack, defend, hold, man a Bastion), expansions and requests. It plans the rest.</p>
+            </div>
+            <div class="show-panel" role="tabpanel" id="p-build" aria-labelledby="t-build">
+              <h3>Press the buttons</h3>
+              <p>Click a building and press its buttons: train units, research, build. If it's a job the AI can do for you, the button queues it for your team's commander.</p>
+            </div>
+          </div>
+          <p class="show-cells reveal s3"><a class="cell cell-ink" href="#units">Meet the twelve</a><a class="cell cell-tone" href="#levels">How units level</a></p>
+        </div>
+      </section>
+
+      <section class="roster" id="units" aria-labelledby="units-h">
+        <h2 id="units-h" class="reveal">Twelve you can drive</h2>
+        <p class="roster-say reveal s1">Each kind has its own cockpit, weapon and ability. Prospectors drill Stardust Ore and pump Metallic Hydrogen while armies of up to eight players fight over the deposits.</p>
+        <div class="roster-cat">
+          <div class="cat-head reveal"><h3>On the ground</h3><p>9 kinds</p></div>
+          <ul class="units">
+            <li><img src="assets/media/unit-prospector.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Prospector <i>Worker</i></b><p>Mines ore, pumps MH, builds and repairs. Dull to drive, and the reason leveling exists.</p></div></li>
+            <li><img src="assets/media/unit-ranger.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Ranger <i>Infantry</i></b><p>Rifle infantry. Its upgrades lean to firing and staying alive.</p></div></li>
+            <li><img src="assets/media/unit-comet.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Comet <i>Raider</i></b><p>A jump-pack raider with pistols that clears cliffs.</p></div></li>
+            <li><img src="assets/media/unit-juggernaut.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Juggernaut <i>Grenadier</i></b><p>A heavy grenadier that breaks armour and slows what it hits.</p></div></li>
+            <li><img src="assets/media/unit-firefly.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Firefly <i>Buggy</i></b><p>A fast flame buggy. Its upgrades lean to burning and the flame's reach.</p></div></li>
+            <li><img src="assets/media/unit-longbow.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Longbow <i>Tank</i></b><p>A tank that anchors into artillery. <kbd>R</kbd> anchors it.</p></div></li>
+            <li><img src="assets/media/unit-hailstorm.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Hailstorm <i>Flak</i></b><p>A flak half-track that hits only flyers.</p></div></li>
+            <li><img src="assets/media/unit-atlas.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Atlas <i>Walker</i></b><p>A heavy assault walker. <kbd>R</kbd> fires its Quake stomp; its crew speaks with voices of its own.</p></div></li>
+            <li><span class="unit-mark" aria-hidden="true"></span><div><b>Scorpion <i>Mine</i></b><p>A burrowing mine. <kbd>R</kbd> buries it and digs it out again.</p></div></li>
+          </ul>
+        </div>
+        <div class="roster-cat">
+          <div class="cat-head reveal"><h3>In the air</h3><p>3 kinds</p></div>
+          <ul class="units">
+            <li><img src="assets/media/unit-dropship.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Dropship <i>Transport</i></b><p>A healing transport. <kbd>R</kbd> loads and unloads.</p></div></li>
+            <li><img src="assets/media/unit-kestrel.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Kestrel <i>Gunship</i></b><p>A rocket gunship that strikes only the ground.</p></div></li>
+            <li><img src="assets/media/unit-peregrine.jpg" alt="" width="192" height="192" loading="lazy"><div><b>Peregrine <i>Fighter</i></b><p>An air-superiority fighter. <kbd>R</kbd> is the afterburner; its pilot has a voice of its own.</p></div></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="cockpits" aria-labelledby="cockpits-h">
+        <div class="cockpits-text">
+          <h2 id="cockpits-h" class="reveal">A cockpit for each</h2>
+          <p class="reveal s1">Every kind is driven from its own seat, with its own weapon or tool in view. These are frames from the game, as you see them when you dive in.</p>
+        </div>
+        <figure class="frame" data-md="skip">
+          <div class="cut r1 frame-stack" tabindex="0" role="button" aria-label="Show the next cockpit">
+            <img class="on" src="assets/media/pilot-ore.jpg" alt="A Prospector's drill at an ore deposit" data-cap="Prospector, drilling ore" width="1280" height="720">
+            <img src="assets/media/pilot-longbow-anchored.jpg" alt="A Longbow anchored as artillery" data-cap="Longbow, anchored" width="1280" height="720" loading="lazy">
+            <img src="assets/media/pilot-peregrine.jpg" alt="A Peregrine's cockpit in flight" data-cap="Peregrine, in flight" width="1280" height="720" loading="lazy">
+            <img src="assets/media/pilot-firefly-fire.jpg" alt="A Firefly firing its flame" data-cap="Firefly, burning" width="1280" height="720" loading="lazy">
+            <img src="assets/media/pilot-comet-jump.jpg" alt="A Comet in mid-jump" data-cap="Comet, mid-jump" width="1280" height="720" loading="lazy">
+            <img src="assets/media/pilot-kestrel-fire.jpg" alt="A Kestrel firing rockets at the ground" data-cap="Kestrel, firing rockets" width="1280" height="720" loading="lazy">
+            <img src="assets/media/pilot-dropship-heal.jpg" alt="A Dropship healing the units below it" data-cap="Dropship, healing" width="1280" height="720" loading="lazy">
+          </div>
+          <figcaption class="frame-cap" aria-live="polite">Prospector, drilling ore</figcaption>
+        </figure>
+      </section>
+
+      <section class="levels" id="levels" aria-labelledby="levels-h">
+        <div class="levels-head">
+          <div>
+            <h2 id="levels-h" class="reveal">Drive it and it levels</h2>
+            <p class="reveal s1">The longer you drive a kind of unit in a game, the better every unit of that kind gets. Units the AI runs never level, which gives you a reason to drive the dull ones.</p>
+          </div>
+          <div class="cut r16 reveal s2"><img src="assets/media/level-cards.jpg" alt="A level-up: two upgrade cards over the Prospector's cockpit" width="1280" height="720" loading="lazy"></div>
+        </div>
+        <div class="diagram">
+          <svg class="diag diag-h" viewBox="0 0 1200 268" role="img" aria-label="Scattered marks of drive time are pressed into a ribbon of levels, then set out in rows: 216 upgrades, 18 for each of the twelve kinds"><path class="m-pale" d="M336 121h10l-3 14h-10zM73 132h10l-3 14h-10zM41 81h10l-3 14h-10zM254 18h10l-3 14h-10zM240 157h10l-3 14h-10zM195 22h10l-3 14h-10zM18 120h10l-3 14h-10zM192 163h10l-3 14h-10zM170 75h10l-3 14h-10zM306 179h10l-3 14h-10zM110 25h10l-3 14h-10zM308 102h10l-3 14h-10zM7 59h10l-3 14h-10zM356 104h10l-3 14h-10zM284 73h10l-3 14h-10zM350 191h10l-3 14h-10zM43 22h10l-3 14h-10zM206 116h10l-3 14h-10zM54 164h10l-3 14h-10zM83 73h10l-3 14h-10zM115 222h10l-3 14h-10zM311 163h10l-3 14h-10zM83 71h10l-3 14h-10zM112 26h10l-3 14h-10zM94 154h10l-3 14h-10zM348 125h10l-3 14h-10zM72 45h10l-3 14h-10zM96 54h10l-3 14h-10zM77 238h10l-3 14h-10zM157 33h10l-3 14h-10zM92 179h10l-3 14h-10zM219 79h10l-3 14h-10z"/><path class="m-mid" d="M168 143h10l-3 14h-10zM188 150h10l-3 14h-10zM231 200h10l-3 14h-10zM39 204h10l-3 14h-10zM357 241h10l-3 14h-10zM63 12h10l-3 14h-10zM75 67h10l-3 14h-10zM164 212h10l-3 14h-10zM185 168h10l-3 14h-10zM362 249h10l-3 14h-10zM119 64h10l-3 14h-10zM280 105h10l-3 14h-10zM348 213h10l-3 14h-10zM331 122h10l-3 14h-10zM33 160h10l-3 14h-10zM38 88h10l-3 14h-10zM49 68h10l-3 14h-10zM291 51h10l-3 14h-10zM75 185h10l-3 14h-10zM48 110h10l-3 14h-10zM353 202h10l-3 14h-10zM82 103h10l-3 14h-10zM43 247h10l-3 14h-10zM282 88h10l-3 14h-10zM39 149h10l-3 14h-10zM139 118h10l-3 14h-10zM212 218h10l-3 14h-10zM330 206h10l-3 14h-10zM270 236h10l-3 14h-10zM321 154h10l-3 14h-10zM21 241h10l-3 14h-10zM98 207h10l-3 14h-10z"/><path class="m-rib" d="M423 112h10l-3 14h-10zM423 129h10l-3 14h-10zM423 146h10l-3 14h-10zM438 112h10l-3 14h-10zM438 129h10l-3 14h-10zM438 146h10l-3 14h-10zM453 112h10l-3 14h-10zM453 129h10l-3 14h-10zM453 146h10l-3 14h-10zM468 112h10l-3 14h-10zM468 129h10l-3 14h-10zM468 146h10l-3 14h-10zM483 112h10l-3 14h-10zM483 129h10l-3 14h-10zM483 146h10l-3 14h-10zM498 112h10l-3 14h-10zM498 129h10l-3 14h-10zM498 146h10l-3 14h-10zM513 112h10l-3 14h-10zM513 129h10l-3 14h-10zM513 146h10l-3 14h-10zM528 112h10l-3 14h-10zM528 129h10l-3 14h-10zM528 146h10l-3 14h-10zM543 112h10l-3 14h-10zM543 129h10l-3 14h-10zM543 146h10l-3 14h-10zM558 112h10l-3 14h-10zM558 129h10l-3 14h-10zM558 146h10l-3 14h-10zM573 112h10l-3 14h-10zM573 129h10l-3 14h-10zM573 146h10l-3 14h-10zM588 112h10l-3 14h-10zM588 129h10l-3 14h-10zM588 146h10l-3 14h-10zM603 112h10l-3 14h-10zM603 129h10l-3 14h-10zM603 146h10l-3 14h-10zM618 112h10l-3 14h-10zM618 129h10l-3 14h-10zM618 146h10l-3 14h-10zM633 112h10l-3 14h-10zM633 129h10l-3 14h-10zM633 146h10l-3 14h-10zM648 112h10l-3 14h-10zM648 129h10l-3 14h-10zM648 146h10l-3 14h-10zM663 112h10l-3 14h-10zM663 129h10l-3 14h-10zM663 146h10l-3 14h-10zM678 112h10l-3 14h-10zM678 129h10l-3 14h-10zM678 146h10l-3 14h-10zM693 112h10l-3 14h-10zM693 129h10l-3 14h-10zM693 146h10l-3 14h-10zM708 112h10l-3 14h-10zM708 129h10l-3 14h-10zM708 146h10l-3 14h-10zM723 112h10l-3 14h-10zM723 129h10l-3 14h-10zM723 146h10l-3 14h-10zM738 112h10l-3 14h-10zM738 129h10l-3 14h-10zM738 146h10l-3 14h-10zM753 112h10l-3 14h-10zM753 129h10l-3 14h-10zM753 146h10l-3 14h-10zM768 112h10l-3 14h-10zM768 129h10l-3 14h-10zM768 146h10l-3 14h-10z"/><path class="m-up" d="M821 6h10l-3 14h-10zM842 6h10l-3 14h-10zM863 6h10l-3 14h-10zM884 6h10l-3 14h-10zM905 6h10l-3 14h-10zM926 6h10l-3 14h-10zM947 6h10l-3 14h-10zM968 6h10l-3 14h-10zM989 6h10l-3 14h-10zM1010 6h10l-3 14h-10zM1031 6h10l-3 14h-10zM1052 6h10l-3 14h-10zM1073 6h10l-3 14h-10zM1094 6h10l-3 14h-10zM1115 6h10l-3 14h-10zM1136 6h10l-3 14h-10zM1157 6h10l-3 14h-10zM1178 6h10l-3 14h-10zM821 28h10l-3 14h-10zM842 28h10l-3 14h-10zM863 28h10l-3 14h-10zM884 28h10l-3 14h-10zM905 28h10l-3 14h-10zM926 28h10l-3 14h-10zM947 28h10l-3 14h-10zM968 28h10l-3 14h-10zM989 28h10l-3 14h-10zM1010 28h10l-3 14h-10zM1031 28h10l-3 14h-10zM1052 28h10l-3 14h-10zM1073 28h10l-3 14h-10zM1094 28h10l-3 14h-10zM1115 28h10l-3 14h-10zM1136 28h10l-3 14h-10zM1157 28h10l-3 14h-10zM1178 28h10l-3 14h-10zM821 49h10l-3 14h-10zM842 49h10l-3 14h-10zM863 49h10l-3 14h-10zM884 49h10l-3 14h-10zM905 49h10l-3 14h-10zM926 49h10l-3 14h-10zM947 49h10l-3 14h-10zM968 49h10l-3 14h-10zM989 49h10l-3 14h-10zM1010 49h10l-3 14h-10zM1031 49h10l-3 14h-10zM1052 49h10l-3 14h-10zM1073 49h10l-3 14h-10zM1094 49h10l-3 14h-10zM1115 49h10l-3 14h-10zM1136 49h10l-3 14h-10zM1157 49h10l-3 14h-10zM1178 49h10l-3 14h-10zM821 70h10l-3 14h-10zM842 70h10l-3 14h-10zM863 70h10l-3 14h-10zM884 70h10l-3 14h-10zM905 70h10l-3 14h-10zM926 70h10l-3 14h-10zM947 70h10l-3 14h-10zM968 70h10l-3 14h-10zM989 70h10l-3 14h-10zM1010 70h10l-3 14h-10zM1031 70h10l-3 14h-10zM1052 70h10l-3 14h-10zM1073 70h10l-3 14h-10zM1094 70h10l-3 14h-10zM1115 70h10l-3 14h-10zM1136 70h10l-3 14h-10zM1157 70h10l-3 14h-10zM1178 70h10l-3 14h-10zM821 92h10l-3 14h-10zM842 92h10l-3 14h-10zM863 92h10l-3 14h-10zM884 92h10l-3 14h-10zM905 92h10l-3 14h-10zM926 92h10l-3 14h-10zM947 92h10l-3 14h-10zM968 92h10l-3 14h-10zM989 92h10l-3 14h-10zM1010 92h10l-3 14h-10zM1031 92h10l-3 14h-10zM1052 92h10l-3 14h-10zM1073 92h10l-3 14h-10zM1094 92h10l-3 14h-10zM1115 92h10l-3 14h-10zM1136 92h10l-3 14h-10zM1157 92h10l-3 14h-10zM1178 92h10l-3 14h-10zM821 114h10l-3 14h-10zM842 114h10l-3 14h-10zM863 114h10l-3 14h-10zM884 114h10l-3 14h-10zM905 114h10l-3 14h-10zM926 114h10l-3 14h-10zM947 114h10l-3 14h-10zM968 114h10l-3 14h-10zM989 114h10l-3 14h-10zM1010 114h10l-3 14h-10zM1031 114h10l-3 14h-10zM1052 114h10l-3 14h-10zM1073 114h10l-3 14h-10zM1094 114h10l-3 14h-10zM1115 114h10l-3 14h-10zM1136 114h10l-3 14h-10zM1157 114h10l-3 14h-10zM1178 114h10l-3 14h-10zM821 135h10l-3 14h-10zM842 135h10l-3 14h-10zM863 135h10l-3 14h-10zM884 135h10l-3 14h-10zM905 135h10l-3 14h-10zM926 135h10l-3 14h-10zM947 135h10l-3 14h-10zM968 135h10l-3 14h-10zM989 135h10l-3 14h-10zM1010 135h10l-3 14h-10zM1031 135h10l-3 14h-10zM1052 135h10l-3 14h-10zM1073 135h10l-3 14h-10zM1094 135h10l-3 14h-10zM1115 135h10l-3 14h-10zM1136 135h10l-3 14h-10zM1157 135h10l-3 14h-10zM1178 135h10l-3 14h-10zM821 156h10l-3 14h-10zM842 156h10l-3 14h-10zM863 156h10l-3 14h-10zM884 156h10l-3 14h-10zM905 156h10l-3 14h-10zM926 156h10l-3 14h-10zM947 156h10l-3 14h-10zM968 156h10l-3 14h-10zM989 156h10l-3 14h-10zM1010 156h10l-3 14h-10zM1031 156h10l-3 14h-10zM1052 156h10l-3 14h-10zM1073 156h10l-3 14h-10zM1094 156h10l-3 14h-10zM1115 156h10l-3 14h-10zM1136 156h10l-3 14h-10zM1157 156h10l-3 14h-10zM1178 156h10l-3 14h-10zM821 178h10l-3 14h-10zM842 178h10l-3 14h-10zM863 178h10l-3 14h-10zM884 178h10l-3 14h-10zM905 178h10l-3 14h-10zM926 178h10l-3 14h-10zM947 178h10l-3 14h-10zM968 178h10l-3 14h-10zM989 178h10l-3 14h-10zM1010 178h10l-3 14h-10zM1031 178h10l-3 14h-10zM1052 178h10l-3 14h-10zM1073 178h10l-3 14h-10zM1094 178h10l-3 14h-10zM1115 178h10l-3 14h-10zM1136 178h10l-3 14h-10zM1157 178h10l-3 14h-10zM1178 178h10l-3 14h-10zM821 200h10l-3 14h-10zM842 200h10l-3 14h-10zM863 200h10l-3 14h-10zM884 200h10l-3 14h-10zM905 200h10l-3 14h-10zM926 200h10l-3 14h-10zM947 200h10l-3 14h-10zM968 200h10l-3 14h-10zM989 200h10l-3 14h-10zM1010 200h10l-3 14h-10zM1031 200h10l-3 14h-10zM1052 200h10l-3 14h-10zM1073 200h10l-3 14h-10zM1094 200h10l-3 14h-10zM1115 200h10l-3 14h-10zM1136 200h10l-3 14h-10zM1157 200h10l-3 14h-10zM1178 200h10l-3 14h-10zM821 221h10l-3 14h-10zM842 221h10l-3 14h-10zM863 221h10l-3 14h-10zM884 221h10l-3 14h-10zM905 221h10l-3 14h-10zM926 221h10l-3 14h-10zM947 221h10l-3 14h-10zM968 221h10l-3 14h-10zM989 221h10l-3 14h-10zM1010 221h10l-3 14h-10zM1031 221h10l-3 14h-10zM1052 221h10l-3 14h-10zM1073 221h10l-3 14h-10zM1094 221h10l-3 14h-10zM1115 221h10l-3 14h-10zM1136 221h10l-3 14h-10zM1157 221h10l-3 14h-10zM1178 221h10l-3 14h-10zM821 242h10l-3 14h-10zM842 242h10l-3 14h-10zM863 242h10l-3 14h-10zM884 242h10l-3 14h-10zM905 242h10l-3 14h-10zM926 242h10l-3 14h-10zM947 242h10l-3 14h-10zM968 242h10l-3 14h-10zM989 242h10l-3 14h-10zM1010 242h10l-3 14h-10zM1031 242h10l-3 14h-10zM1052 242h10l-3 14h-10zM1073 242h10l-3 14h-10zM1094 242h10l-3 14h-10zM1115 242h10l-3 14h-10zM1136 242h10l-3 14h-10zM1157 242h10l-3 14h-10zM1178 242h10l-3 14h-10z"/></svg>
+          <svg class="diag diag-v" viewBox="0 0 300 632" role="img" aria-label="Scattered marks of drive time are pressed into a ribbon of levels, then set out in rows: 216 upgrades, 18 for each of the twelve kinds"><path class="m-pale" d="M230 113h10l-3 14h-10zM15 58h10l-3 14h-10zM259 17h10l-3 14h-10zM159 71h10l-3 14h-10zM85 110h10l-3 14h-10zM230 20h10l-3 14h-10zM7 105h10l-3 14h-10zM282 105h10l-3 14h-10zM158 83h10l-3 14h-10zM200 116h10l-3 14h-10zM108 23h10l-3 14h-10zM91 74h10l-3 14h-10zM102 40h10l-3 14h-10zM95 60h10l-3 14h-10zM280 7h10l-3 14h-10zM12 95h10l-3 14h-10zM10 9h10l-3 14h-10zM62 92h10l-3 14h-10zM103 45h10l-3 14h-10zM37 91h10l-3 14h-10zM17 114h10l-3 14h-10zM178 110h10l-3 14h-10z"/><path class="m-mid" d="M181 90h10l-3 14h-10zM214 111h10l-3 14h-10zM271 79h10l-3 14h-10zM138 33h10l-3 14h-10zM11 29h10l-3 14h-10zM221 23h10l-3 14h-10zM180 19h10l-3 14h-10zM66 29h10l-3 14h-10zM88 116h10l-3 14h-10zM64 113h10l-3 14h-10zM257 39h10l-3 14h-10zM48 12h10l-3 14h-10zM8 83h10l-3 14h-10zM236 60h10l-3 14h-10zM204 11h10l-3 14h-10zM217 102h10l-3 14h-10zM110 71h10l-3 14h-10zM58 115h10l-3 14h-10zM267 113h10l-3 14h-10zM154 94h10l-3 14h-10zM230 104h10l-3 14h-10zM33 44h10l-3 14h-10z"/><path class="m-rib" d="M13 160h10l-3 14h-10zM13 177h10l-3 14h-10zM13 194h10l-3 14h-10zM28 160h10l-3 14h-10zM28 177h10l-3 14h-10zM28 194h10l-3 14h-10zM44 160h10l-3 14h-10zM44 177h10l-3 14h-10zM44 194h10l-3 14h-10zM60 160h10l-3 14h-10zM60 177h10l-3 14h-10zM60 194h10l-3 14h-10zM75 160h10l-3 14h-10zM75 177h10l-3 14h-10zM75 194h10l-3 14h-10zM90 160h10l-3 14h-10zM90 177h10l-3 14h-10zM90 194h10l-3 14h-10zM106 160h10l-3 14h-10zM106 177h10l-3 14h-10zM106 194h10l-3 14h-10zM122 160h10l-3 14h-10zM122 177h10l-3 14h-10zM122 194h10l-3 14h-10zM137 160h10l-3 14h-10zM137 177h10l-3 14h-10zM137 194h10l-3 14h-10zM152 160h10l-3 14h-10zM152 177h10l-3 14h-10zM152 194h10l-3 14h-10zM168 160h10l-3 14h-10zM168 177h10l-3 14h-10zM168 194h10l-3 14h-10zM184 160h10l-3 14h-10zM184 177h10l-3 14h-10zM184 194h10l-3 14h-10zM199 160h10l-3 14h-10zM199 177h10l-3 14h-10zM199 194h10l-3 14h-10zM214 160h10l-3 14h-10zM214 177h10l-3 14h-10zM214 194h10l-3 14h-10zM230 160h10l-3 14h-10zM230 177h10l-3 14h-10zM230 194h10l-3 14h-10zM246 160h10l-3 14h-10zM246 177h10l-3 14h-10zM246 194h10l-3 14h-10zM261 160h10l-3 14h-10zM261 177h10l-3 14h-10zM261 194h10l-3 14h-10zM276 160h10l-3 14h-10zM276 177h10l-3 14h-10zM276 194h10l-3 14h-10z"/><path class="m-up" d="M29 250h10l-3 14h-10zM50 250h10l-3 14h-10zM71 250h10l-3 14h-10zM92 250h10l-3 14h-10zM113 250h10l-3 14h-10zM134 250h10l-3 14h-10zM155 250h10l-3 14h-10zM176 250h10l-3 14h-10zM197 250h10l-3 14h-10zM218 250h10l-3 14h-10zM239 250h10l-3 14h-10zM260 250h10l-3 14h-10zM29 271h10l-3 14h-10zM50 271h10l-3 14h-10zM71 271h10l-3 14h-10zM92 271h10l-3 14h-10zM113 271h10l-3 14h-10zM134 271h10l-3 14h-10zM155 271h10l-3 14h-10zM176 271h10l-3 14h-10zM197 271h10l-3 14h-10zM218 271h10l-3 14h-10zM239 271h10l-3 14h-10zM260 271h10l-3 14h-10zM29 292h10l-3 14h-10zM50 292h10l-3 14h-10zM71 292h10l-3 14h-10zM92 292h10l-3 14h-10zM113 292h10l-3 14h-10zM134 292h10l-3 14h-10zM155 292h10l-3 14h-10zM176 292h10l-3 14h-10zM197 292h10l-3 14h-10zM218 292h10l-3 14h-10zM239 292h10l-3 14h-10zM260 292h10l-3 14h-10zM29 313h10l-3 14h-10zM50 313h10l-3 14h-10zM71 313h10l-3 14h-10zM92 313h10l-3 14h-10zM113 313h10l-3 14h-10zM134 313h10l-3 14h-10zM155 313h10l-3 14h-10zM176 313h10l-3 14h-10zM197 313h10l-3 14h-10zM218 313h10l-3 14h-10zM239 313h10l-3 14h-10zM260 313h10l-3 14h-10zM29 334h10l-3 14h-10zM50 334h10l-3 14h-10zM71 334h10l-3 14h-10zM92 334h10l-3 14h-10zM113 334h10l-3 14h-10zM134 334h10l-3 14h-10zM155 334h10l-3 14h-10zM176 334h10l-3 14h-10zM197 334h10l-3 14h-10zM218 334h10l-3 14h-10zM239 334h10l-3 14h-10zM260 334h10l-3 14h-10zM29 355h10l-3 14h-10zM50 355h10l-3 14h-10zM71 355h10l-3 14h-10zM92 355h10l-3 14h-10zM113 355h10l-3 14h-10zM134 355h10l-3 14h-10zM155 355h10l-3 14h-10zM176 355h10l-3 14h-10zM197 355h10l-3 14h-10zM218 355h10l-3 14h-10zM239 355h10l-3 14h-10zM260 355h10l-3 14h-10zM29 376h10l-3 14h-10zM50 376h10l-3 14h-10zM71 376h10l-3 14h-10zM92 376h10l-3 14h-10zM113 376h10l-3 14h-10zM134 376h10l-3 14h-10zM155 376h10l-3 14h-10zM176 376h10l-3 14h-10zM197 376h10l-3 14h-10zM218 376h10l-3 14h-10zM239 376h10l-3 14h-10zM260 376h10l-3 14h-10zM29 397h10l-3 14h-10zM50 397h10l-3 14h-10zM71 397h10l-3 14h-10zM92 397h10l-3 14h-10zM113 397h10l-3 14h-10zM134 397h10l-3 14h-10zM155 397h10l-3 14h-10zM176 397h10l-3 14h-10zM197 397h10l-3 14h-10zM218 397h10l-3 14h-10zM239 397h10l-3 14h-10zM260 397h10l-3 14h-10zM29 418h10l-3 14h-10zM50 418h10l-3 14h-10zM71 418h10l-3 14h-10zM92 418h10l-3 14h-10zM113 418h10l-3 14h-10zM134 418h10l-3 14h-10zM155 418h10l-3 14h-10zM176 418h10l-3 14h-10zM197 418h10l-3 14h-10zM218 418h10l-3 14h-10zM239 418h10l-3 14h-10zM260 418h10l-3 14h-10zM29 439h10l-3 14h-10zM50 439h10l-3 14h-10zM71 439h10l-3 14h-10zM92 439h10l-3 14h-10zM113 439h10l-3 14h-10zM134 439h10l-3 14h-10zM155 439h10l-3 14h-10zM176 439h10l-3 14h-10zM197 439h10l-3 14h-10zM218 439h10l-3 14h-10zM239 439h10l-3 14h-10zM260 439h10l-3 14h-10zM29 460h10l-3 14h-10zM50 460h10l-3 14h-10zM71 460h10l-3 14h-10zM92 460h10l-3 14h-10zM113 460h10l-3 14h-10zM134 460h10l-3 14h-10zM155 460h10l-3 14h-10zM176 460h10l-3 14h-10zM197 460h10l-3 14h-10zM218 460h10l-3 14h-10zM239 460h10l-3 14h-10zM260 460h10l-3 14h-10zM29 481h10l-3 14h-10zM50 481h10l-3 14h-10zM71 481h10l-3 14h-10zM92 481h10l-3 14h-10zM113 481h10l-3 14h-10zM134 481h10l-3 14h-10zM155 481h10l-3 14h-10zM176 481h10l-3 14h-10zM197 481h10l-3 14h-10zM218 481h10l-3 14h-10zM239 481h10l-3 14h-10zM260 481h10l-3 14h-10zM29 502h10l-3 14h-10zM50 502h10l-3 14h-10zM71 502h10l-3 14h-10zM92 502h10l-3 14h-10zM113 502h10l-3 14h-10zM134 502h10l-3 14h-10zM155 502h10l-3 14h-10zM176 502h10l-3 14h-10zM197 502h10l-3 14h-10zM218 502h10l-3 14h-10zM239 502h10l-3 14h-10zM260 502h10l-3 14h-10zM29 523h10l-3 14h-10zM50 523h10l-3 14h-10zM71 523h10l-3 14h-10zM92 523h10l-3 14h-10zM113 523h10l-3 14h-10zM134 523h10l-3 14h-10zM155 523h10l-3 14h-10zM176 523h10l-3 14h-10zM197 523h10l-3 14h-10zM218 523h10l-3 14h-10zM239 523h10l-3 14h-10zM260 523h10l-3 14h-10zM29 544h10l-3 14h-10zM50 544h10l-3 14h-10zM71 544h10l-3 14h-10zM92 544h10l-3 14h-10zM113 544h10l-3 14h-10zM134 544h10l-3 14h-10zM155 544h10l-3 14h-10zM176 544h10l-3 14h-10zM197 544h10l-3 14h-10zM218 544h10l-3 14h-10zM239 544h10l-3 14h-10zM260 544h10l-3 14h-10zM29 565h10l-3 14h-10zM50 565h10l-3 14h-10zM71 565h10l-3 14h-10zM92 565h10l-3 14h-10zM113 565h10l-3 14h-10zM134 565h10l-3 14h-10zM155 565h10l-3 14h-10zM176 565h10l-3 14h-10zM197 565h10l-3 14h-10zM218 565h10l-3 14h-10zM239 565h10l-3 14h-10zM260 565h10l-3 14h-10zM29 586h10l-3 14h-10zM50 586h10l-3 14h-10zM71 586h10l-3 14h-10zM92 586h10l-3 14h-10zM113 586h10l-3 14h-10zM134 586h10l-3 14h-10zM155 586h10l-3 14h-10zM176 586h10l-3 14h-10zM197 586h10l-3 14h-10zM218 586h10l-3 14h-10zM239 586h10l-3 14h-10zM260 586h10l-3 14h-10zM29 607h10l-3 14h-10zM50 607h10l-3 14h-10zM71 607h10l-3 14h-10zM92 607h10l-3 14h-10zM113 607h10l-3 14h-10zM134 607h10l-3 14h-10zM155 607h10l-3 14h-10zM176 607h10l-3 14h-10zM197 607h10l-3 14h-10zM218 607h10l-3 14h-10zM239 607h10l-3 14h-10zM260 607h10l-3 14h-10z"/></svg>
+        </div>
+        <ol class="levels-steps">
+          <li class="reveal"><b>Drive</b> Only the units you drive yourself earn levels. Hand one back with <kbd>Esc</kbd> and it stops.</li>
+          <li class="reveal s1"><b>Level</b> Each level lifts every unit of that kind on your side, for the rest of the game.</li>
+          <li class="reveal s2"><b>Keep one</b> Every level offers two upgrades and you keep one: 216 across the twelve kinds, like "every Prospector pumps MH 20% faster".</li>
+        </ol>
+      </section>
+
+      <section class="world" aria-labelledby="world-h">
+        <div class="board">
+          <div class="tile t-head reveal"><h2 id="world-h">Life under the giant</h2></div>
+          <figure class="tile t-mine reveal s1"><video src="assets/media/mining.mp4" poster="assets/media/mining-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="A Prospector drilling Stardust Ore in first person"></video><figcaption><b>Ore and hydrogen</b> A Prospector drills Stardust Ore in first person.</figcaption></figure>
+          <figure class="tile t-night reveal"><img src="assets/media/top-night.jpg" alt="The base at night, its beacons lit" width="1280" height="720" loading="lazy"><figcaption><b>Night</b> The sun crosses the sky; after dark the beacons and lamps come on.</figcaption></figure>
+          <div class="tile t-radio reveal s1"><span class="big" aria-hidden="true" data-ui>88.7</span><p><b>KSTR 88.7 Stardust</b> The music plays as a radio station, with original songs.</p></div>
+          <div class="tile t-weather reveal s2"><span class="big" aria-hidden="true" data-ui>Storm</span><p><b>Weather</b> Sun, cloud, rain and storms on the game clock, wet ground and hulls after.</p></div>
+          <figure class="tile t-dusk reveal"><video src="assets/media/flyover.mp4" poster="assets/media/flyover-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="The camera pans across the base at dusk"></video><figcaption><b>Dusk</b> The camera pans over a base as the light goes.</figcaption></figure>
+          <div class="tile t-cola reveal s1"><span class="big word" aria-hidden="true" data-ui>Quicksilver Cola</span><p><b>Ads between the songs</b> Pumped from Metallic Hydrogen wells. "Not a beverage."</p></div>
+          <div class="tile t-opal reveal s2"><span class="big word" aria-hidden="true" data-ui>Opal Glow</span><p><b>Face scrub</b> Side effects: levitation, being mined.</p></div>
+          <div class="tile t-time reveal s3"><span class="big word" aria-hidden="true" data-ui>Citadel Timeshares</span><p><b>Real estate</b> Ash view guaranteed.</p></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="ringband">
+      <p class="reveal">Everything above is the strategy game, playable today. Down here in the ring's shadow, the online world is being built.</p>
+    </div>
+
+    <section class="mmo" id="mmorpg" aria-labelledby="mmo-h">
+      <div class="mmo-panel">
+        <div class="mmo-left">
+          <h2 id="mmo-h" class="reveal">One pilot.<br> A world that lasts.</h2>
+          <div class="cut r16 mmo-pic"><img src="blog/media/how-we-got-here/06-ringshadow.webp" alt="The giant's rings casting a dark band across the sky and land of the MMORPG world" width="1600" height="900" loading="lazy"></div>
+        </div>
+        <div class="mmo-right">
+          <div class="reveal s1">
+            <h3>Playable now, as a test mode</h3>
+            <p>Single player, on a local server that is the same program a public world will run. Your Prospector climbs to level 100 over about a hundred hours. A Citadel taxes, sells and hands out missions, mercenaries mine while the game is closed, and the Brood raids your buildings and eats your ore.</p>
+          </div>
+          <div class="reveal s2">
+            <h3>Coming</h3>
+            <p>Cities that pilots raise together with ore, MH and hours of labour. AI pilots with a city and a level of their own. And the no-man's land between the cities, where deposits and wells are taken and held by force.</p>
+          </div>
+          <p class="reveal s3"><a class="btn" href="blog/index.html">Read how it's being built</a></p>
+        </div>
       </div>
     </section>
 
-    <section class="section wrap cc0" id="cc0">
-      <div class="panel cc0-card">
-        <p class="kicker">Public domain</p>
-        <h2>CC0: take any of it</h2>
-        <p>Everything in the repository is dedicated to the public domain under CC0 1.0: the code, the art, the models, the sounds, the music and the docs. Use any of it for anything, with no credit needed.</p>
-        <p class="muted">A few third-party files keep their own licences, listed in the README. The fonts on this site, Barlow Condensed and Exo 2, are under the SIL Open Font License (<a href="assets/fonts/OFL-BarlowCondensed.txt">Barlow</a>, <a href="assets/fonts/OFL-Exo2.txt">Exo 2</a>). The sky at the top is drawn with three.js, under the <a href="assets/js/vendor/three.LICENSE.txt">MIT License</a>. The game is built with Unreal Engine 5, which has its own licence from Epic Games.</p>
-        <a class="btn ghost" href="https://github.com/ValiDraganescu/ringshadow">The source on GitHub</a>
+    <section class="made" id="made" aria-labelledby="made-h">
+      <h2 id="made-h" class="reveal">How it's made</h2>
+      <div class="folders">
+        <article class="folder f1">
+          <h3 class="tab">Concept to model</h3><p class="folder-kind">The model pipeline</p>
+          <div class="folder-body">
+            <div class="cut r16"><img src="assets/media/atlas-turnaround.jpg" alt="The Atlas six-view turnaround" width="1248" height="832" loading="lazy"></div>
+            <div><p>Each unit starts as concept paintings. The one picked becomes a six-view turnaround, and the in-engine model is built part by part with Geometry Script and fitted against those views. The Atlas came to the game this way, and every snag along the road is written into the skill the agents follow.</p><a class="tlink" href="https://github.com/ValiDraganescu/ringshadow/tree/main/.claude/skills/ringshadow-model-pipeline">The model pipeline skill</a></div>
+          </div>
+        </article>
+        <article class="folder f2">
+          <h3 class="tab">An engine-free core</h3><p class="folder-kind">C++20, tests in 7 seconds</p>
+          <div class="folder-body">
+            <div class="cut r16"><video src="assets/media/fight.mp4" poster="assets/media/fight-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="Two armies of twelve meet in the desert, seen from above"></video></div>
+            <div><p>The whole simulation, from the economy and pathing to combat and the AI commanders, is plain C++20 with no Unreal in it. Its tests build with clang and run in about 7 seconds. The Unreal layer draws the frames, plays the sounds and takes the input.</p><a class="tlink" href="https://github.com/ValiDraganescu/ringshadow/blob/main/unreal/PORTING.md">How the core is split</a></div>
+          </div>
+        </article>
+        <article class="folder f3">
+          <h3 class="tab">Made by AI agents</h3><p class="folder-kind">The skills are in the repo</p>
+          <div class="folder-body">
+            <div class="cut r16"><video src="assets/media/third.mp4" poster="assets/media/third-poster.jpg" muted loop playsinline autoplay preload="none" aria-label="A Ranger walking in third person, recorded by the game's own recorder"></video></div>
+            <div><p>Ringshadow is made with AI coding agents, and the skills they work from are published with the code: the buildings' light language, which tests a change needs, and the recorder that makes every clip on this page from the real game.</p><a class="tlink" href="https://github.com/ValiDraganescu/ringshadow/tree/main/.claude/skills">The skills</a></div>
+          </div>
+        </article>
+        <article class="folder f4">
+          <h3 class="tab">Built in public</h3><p class="folder-kind">The blog and the roadmap</p>
+          <div class="folder-body">
+            <div class="cut r16"><img src="blog/media/how-we-got-here/cover.jpg" alt="A Prospector on its landing pad in the MMORPG mode, the ringed giant behind the clouds" width="1200" height="675" loading="lazy"></div>
+            <div><p>The blog follows the work as it lands, with the real numbers and the pictures from the day. The roadmap shows what is done and what comes next, and nothing past the done work has a date.</p><a class="tlink" href="blog/index.html">The blog</a> <a class="tlink" href="roadmap.html">The roadmap</a></div>
+          </div>
+        </article>
       </div>
+    </section>
+
+    <section class="get" id="get" aria-labelledby="get-h">
+      <div class="get-close">
+        <h2 id="get-h" class="reveal">Take any of it.</h2>
+        <p class="reveal s1">The game is free, and everything in the repository is public domain under CC0 1.0: the code, the art, the models, the sounds, the music and the docs. Use any of it for anything, with no credit needed.</p>
+      </div>
+      <div class="dl reveal s2" data-ui data-md="skip">
+        <p class="dl-title">Ringshadow 0.1.1 <span>pre-release</span></p>
+        <div class="seg" role="radiogroup" aria-label="Your computer">
+          <button role="radio" aria-checked="true" data-os="mac">Mac</button>
+          <button role="radio" aria-checked="false" data-os="win">Windows</button>
+          <button role="radio" aria-checked="false" data-os="linux">Linux</button>
+        </div>
+        <p class="dl-need">Needs macOS 14 or newer and an M1 or later.</p>
+        <a class="dl-go" href="https://github.com/ValiDraganescu/ringshadow/releases/download/v0.1.1/Ringshadow-0.1.1-mac.zip">Download for Mac</a>
+        <p class="dl-src">Or build it yourself:</p>
+        <p class="dl-code"><code>git clone https://github.com/ValiDraganescu/ringshadow.git</code><button class="dl-copy" type="button">Copy</button></p>
+      </div>
+      <p class="get-plain">All three builds and their checksums are on the <a href="https://github.com/ValiDraganescu/ringshadow/releases/tag/v0.1.1">0.1.1 release page</a>.</p>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="wrap">
-      <div>
-        <p class="mark">RINGSHADOW</p>
-        <p>An open-source real-time strategy game, built in public.</p>
-      </div>
-      <div>
-        <p><a href="index.html">Home</a> · <a href="roadmap.html">Roadmap</a> · <a href="blog/index.html">Blog</a> · <a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></p>
-        <p>Public domain (CC0). No trackers, no cookies.</p>
-        <p>For language models: <a href="llms.txt">llms.txt</a> · <a href="index.md">this page as Markdown</a></p>
-      </div>
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="index.html">Home</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="blog/index.html">Blog</a></li><li><a href="blog/feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="llms.txt">llms.txt</a></li><li><a href="index.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">A few third-party files keep their own licences, listed in the README. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License (<a href="assets/fonts/OFL-BarlowCondensed.txt">Barlow</a>, <a href="assets/fonts/OFL-Exo2.txt">Exo 2</a>). The sky at the top is drawn with three.js, under the <a href="assets/js/vendor/three.LICENSE.txt">MIT License</a>. The game is built with Unreal Engine 5, which has its own licence from Epic Games.</p>
     </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the giant</a></p>
   </footer>
 </body>
 </html>

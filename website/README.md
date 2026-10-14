@@ -6,10 +6,10 @@ no framework and no server side, so this folder deploys as it is.
 
 | Path | What |
 |---|---|
-| `index.html` | The home page: the pitch, how you play, the units, the MMORPG mode, how it's made, CC0. |
+| `index.html` | The home page: how you play, the twelve units, the cockpits, leveling, the world, the MMORPG mode, how it's made, the download. |
 | `roadmap.html` | The roadmap: every milestone a moon on the giant's ring, DONE, NEXT and LATER. |
 | `assets/css/` | `site.css` (shared: palette, fonts, navigation), `home.css`, `roadmap.css`. |
-| `assets/js/` | `stars.js` (the starfield), `home.js` (clips play only on screen), `hero.js` (the live sky, three.js in `vendor/`), `roadmap.js` (the ring). |
+| `assets/js/` | `stars.js` (the starfield), `home.js` (entrances, tabs, the cockpit frame, the download picker; clips play only on screen), `hero.js` (the live sky, three.js in `vendor/`), `roadmap.js` (the ring). |
 | `assets/fonts/` | Barlow Condensed and Exo 2 as woff2, with their SIL Open Font License texts. |
 | `assets/media/` | Screenshots and clips from `docs/media/` (the GIFs re-encoded as MP4) and the key art from `art/splash/`. |
 | `_headers`, `wrangler.toml`, `.assetsignore`, `404.html`, `robots.txt`, `sitemap.xml` | Hosting on Cloudflare: see "Deploy to Cloudflare". |
@@ -21,6 +21,26 @@ no framework and no server side, so this folder deploys as it is.
 The palette is the game's HUD (`unreal/Source/Autocraft/AcHudStyle.h`):
 glass `#030912`, cyan `#59d9ff`, ice `#ccf2ff`. Everything is self-hosted:
 no CDN, no web fonts from elsewhere, no trackers, no analytics.
+
+## The home page's design
+
+One shape runs the home page: the dark band the giant's ring throws across
+Ashfall Reach, a parallelogram slanted 12 degrees (`home.css`, `.cut` and the
+buttons). It masks every picture, shapes the buttons and tabs and splits the
+page: the sunlit half, in the sand of the game's desert, is the strategy game
+you can play today; the half under the ring, in night and stars, is the
+MMORPG still being built. The leveling diagram's 216 marks are the real
+upgrade count; `tools/` has no generator for it, the SVG paths live in
+`index.html`.
+
+House rules, from the taste skill the page was rebuilt with: headlines on two
+lines or fewer at every width, no small labels above headings, no gradients,
+glows or thin outlines, two typefaces (Barlow Condensed for display, Exo 2 for
+text), five type sizes. Its checks are `lint.mjs` and `inspect.mjs` in the
+`design-taste-frontend` skill; run both after a change to the home page.
+The CSP allows no inline script or `style=""`, so staggered entrances are
+classes (`.s1`–`.s3`) and the `js` class comes from `home.js`, loaded in
+`<head>` without `defer`.
 
 ## The hero
 

@@ -6,7 +6,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Pages
 
-- [Ringshadow](https://ringshadow.com/index.md): Ringshadow: a real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself. Built in public with AI agents, public domain (CC0).
+- [Ringshadow](https://ringshadow.com/index.md): Ringshadow: a free real-time strategy game for Mac, Windows and Linux. Your AI commander runs the army, and you can dive into any unit and play it like a shooter. Built in public with AI agents, public domain (CC0).
 - [The ring of Ringshadow](https://ringshadow.com/roadmap.md): The Ringshadow roadmap: what is done, what comes next and what comes later, from the strategy game to the MMORPG mode.
 - [The Ringshadow blog](https://ringshadow.com/blog/index.md): The Ringshadow blog: how the game is being built, as it happens, with albums of pictures from the agents' runs.
 
