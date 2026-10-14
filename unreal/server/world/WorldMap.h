@@ -462,7 +462,7 @@ public:
     const std::vector<Fall>& starfalls() const { return falls_; }
     /// Picks a place now and tells every pilot of a fall `in` seconds from
     /// now: in region `region` (nil: weighted toward the regions with
-    /// pilots, as the schedule does), or near `near` (a pilot: 12-22 cells
+    /// pilots, as the schedule does), or near `near` (a pilot: 40-58 cells
     /// from its Prospector, ahead of it if it can). Nil: no open ground.
     std::optional<Fall> forceStarfall(double in, std::optional<size_t> region = std::nullopt,
                                       std::optional<PilotId> near = std::nullopt);
@@ -702,7 +702,7 @@ private:
     /// and from a save.
     void landFall(Fall& fall, int64_t remaining, std::optional<int64_t> id = std::nullopt);
     /// A spot for a crater in region `r` by the dice (nil: none found);
-    /// `near`: 12-22 cells from it, ahead along `heading` first.
+    /// `near`: 40-58 cells from it, ahead along `heading` first.
     std::optional<Vec2> craterSpot(size_t r, std::mt19937_64& dice, std::optional<Vec2> near = std::nullopt,
                                    double heading = 0) const;
     /// A region for a fall by the dice: each counts 1, a pilot in it 8, a

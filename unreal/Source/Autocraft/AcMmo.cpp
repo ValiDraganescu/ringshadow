@@ -262,6 +262,19 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Args.push_back("--ringshadow");
 		Args.push_back(std::to_string(In));
 	}
+	// Dev, tests and shots: a starfall near the pilot this many seconds after
+	// it comes (docs/weather.md "Starfall"), and the world's clock moved on to
+	// an hour (it runs on from there).
+	if (double In = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoStarfall="), In) && In >= 0)
+	{
+		Args.push_back("--starfall");
+		Args.push_back(std::to_string(In));
+	}
+	if (double Hour = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour) && Hour >= 0 && Hour <= 24)
+	{
+		Args.push_back("--clock-hour");
+		Args.push_back(std::to_string(Hour));
+	}
 	if (FString Weather; FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), Weather) && !Weather.IsEmpty())
 	{
 		Args.push_back("--weather");

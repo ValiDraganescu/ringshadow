@@ -16,6 +16,7 @@
 
 struct FAcModelInfo;
 class UHierarchicalInstancedStaticMeshComponent;
+class UMaterialInterface;
 
 /// One instance of one (part, material) mesh.
 struct FAcSceneryInstance
@@ -43,6 +44,9 @@ struct FAcSceneryOptions
 	/// Kept apart from other components when instances are culled by
 	/// distance (cm, 0: never).
 	int32 CullDistance = 0;
+	/// Every part drawn with this material instead of its own (nil: its
+	/// own). The caller keeps it alive (AAcStarfall's hot deposit).
+	UMaterialInterface* Material = nullptr;
 };
 
 class AUTOCRAFT_API FAcSceneryBatches

@@ -43,6 +43,16 @@
 //   07 after: the band gone east   08 looking east at it
 // The giant's comet impacts are off meanwhile (ac.GasGiant.Events 0).
 //
+// -AcMmoShotsStarfall (with -AcMmoStarfall=40 -AcMmoClockHour=17: a
+// starfall near the pilot 40 s after it comes, late in the afternoon;
+// docs/weather.md "Starfall"): third person on the start pad toward the
+// crater's spot, DIR/sf-NN-moment.png:
+//   01 told: the radio's toast         02 the streak high in the sky
+//   03 the streak low, over the land   04 the impact's flash
+//   05 the dust ring                   06 the crater and its hot deposit by day
+//   07 the same, first person          08 at night, third person
+//   09 at night, first person
+//
 // -AcMmoShotsRig (with -AcMmoDevRig: the server gives the new pilot a
 // finished Citadel, Foundry and Lab, the Prospector where it unloads, and a
 // stocked rig with a job at each; docs/prospector-progression.md "Foundry
@@ -81,6 +91,7 @@
 #include "Pilot.h"
 #include "Ringshadow.h"
 #include "Rules.h"
+#include "Starfall.h"
 #include "Simulation.h"
 
 #include "Engine/World.h"
@@ -277,6 +288,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP5"))) T.Phase = 200;
 			// -AcMmoShotsRingshadow: only the ringshadow sweep (300-315).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRingshadow"))) T.Phase = 300;
+			// -AcMmoShotsStarfall: only a starfall (400-414).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsStarfall"))) T.Phase = 400;
 			// -AcMmoShotsRig: only the rig screen (500-513).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
 		}
@@ -1278,7 +1291,117 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Shots.Saved == 6, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
 		Finish();
 		return;
-	default:
+	// MARK: -AcMmoShotsStarfall
+	// A starfall near the pilot (the server's --starfall): from the start
+	// pad toward the crater's spot, the streak coming in over it.
+	case 400:
+	case 401:
+	case 402:
+	case 403:
+	case 404:
+	case 405:
+	case 406:
+	case 407:
+	case 408:
+	case 409:
+	case 410:
+	case 411:
+	case 412:
+	case 413:
+	case 414:
+	{
+		const std::optional<ac::net::Sky>& Sky = Mmo ? Mmo->Sky() : std::optional<ac::net::Sky>();
+		const ac::net::WorldMessage* Wm = Mmo ? Mmo->World() : nullptr;
+		const ac::net::Sky::Starfall* F = nullptr;
+		if (Sky && Wm)
+			for (const ac::net::Sky::Starfall& X : Sky->starfalls)
+				if (X.region == Wm->here) F = &X;
+		if (!F || !U)
+		{
+			TimedOut(TEXT("a starfall told in the pilot's region (-AcMmoStarfall=40)"), 120);
+			return;
+		}
+		const double In = F->impact - Sky->time;
+		const double Dark = ac::Rules::dark(Sky->hour());
+		switch (T.Phase)
+		{
+		case 400:
+		{
+			// Between the crater and the way the streak comes from: both in view.
+			const double ToCrater = Face(F->at);
+			const double ToSky = Face(F->at + ac::Starfall::toward(F->from) * 400.0);
+			Stop(ToCrater + 0.5 * FMath::UnwindRadians(ToSky - ToCrater));
+			Pilot->Eye().Pitch = 0.16;
+			Advance();
+			return;
+		}
+		case 401:
+			if (Since() > 1.5) Shoot(TEXT("sf-01-told"), FString::Printf(TEXT("told: the radio's toast, impact in %.0f s"), In));
+			return;
+		case 402:
+			if (In <= 5.0) Shoot(TEXT("sf-02-streak-high"), FString::Printf(TEXT("the streak in the sky, %.1f s to go"), In));
+			else TimedOut(TEXT("the streak"), 90);
+			return;
+		case 403:
+			if (In <= 1.6) Shoot(TEXT("sf-03-streak-low"), FString::Printf(TEXT("the streak low over the land, %.1f s to go"), In));
+			return;
+		case 404:
+			Stop(Face(F->at));
+			Pilot->Eye().Pitch = 0.02;
+			Advance();
+			return;
+		case 405:
+			if (-In >= 0.12) Shoot(TEXT("sf-04-impact-flash"), FString::Printf(TEXT("the impact's flash, %.2f s after"), -In));
+			return;
+		case 406:
+			if (-In >= 2.5) Shoot(TEXT("sf-05-dust-ring"), TEXT("the dust ring thrown out"));
+			return;
+		case 407:
+		{
+			// Up to the crater's edge on foot (25 s at most: rocks may stand
+			// in the way), then a look at it.
+			static double Halted = -1.0;
+			if (ac::distance(F->at, U->position) > 9.0 && Since() < 25.0)
+			{
+				Pilot->SetTestInput(FVector2D(0.0, -1.0), Face(F->at));
+				Halted = -1.0;
+				return;
+			}
+			if (Halted < 0.0) Halted = Now;
+			Stop(Face(F->at));
+			Pilot->Eye().Pitch = -0.12;
+			if (-In >= 14.0 && Now - Halted > 1.5)
+				Shoot(TEXT("sf-06-crater-day"), FString::Printf(TEXT("the crater and its hot deposit by day (%.0f cells off, deposit %s)"),
+					ac::distance(F->at, U->position), F->patch ? TEXT("landed") : TEXT("missing")));
+			return;
+		}
+		case 408:
+			Pilot->ToggleView();
+			Pilot->Eye().Pitch = -0.1;
+			Advance();
+			return;
+		case 409:
+			if (Since() > 1.5) Shoot(TEXT("sf-07-crater-day-first"), TEXT("the crater by day, first person"));
+			return;
+		case 410:
+			// Night: back to third person, waiting for the dark.
+			Pilot->ToggleView();
+			Advance();
+			return;
+		case 411:
+			Pilot->Eye().Pitch = -0.06;
+			if (Dark > 0.97 && Since() > 1.5) Shoot(TEXT("sf-08-crater-night"), FString::Printf(TEXT("the crater at night (hour %.1f)"), Sky->hour()));
+			else TimedOut(TEXT("night (the world's clock runs on)"), 600);
+			return;
+		case 412:
+			Pilot->ToggleView();
+			Pilot->Eye().Pitch = -0.1;
+			Advance();
+			return;
+		case 413:
+			if (Since() > 1.5) Shoot(TEXT("sf-09-crater-night-first"), TEXT("the crater at night, first person"));
+			return;
+		default:
 			Check(Shots.Saved == 9, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
 			Finish();
 			return;

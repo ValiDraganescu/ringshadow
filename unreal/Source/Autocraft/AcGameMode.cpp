@@ -14,6 +14,7 @@
 #include "AcPlayerController.h"
 #include "AcRtsPawn.h"
 #include "AcSimSubsystem.h"
+#include "AcStarfall.h"
 #include "AcTerrain.h"
 #include "AcWorldRenderer.h"
 
@@ -68,6 +69,8 @@ void AAcGameMode::StartPlay()
 	AAcWeather::SpawnFor(GetWorld());
 	// The ringshadow sweep in the MMORPG mode (docs/weather.md): the band, the dimmed sun, the radio.
 	AAcRingshadow::SpawnFor(GetWorld());
+	// Starfalls in the MMORPG mode (docs/weather.md): the streak, the impact, the crater and its hot deposit.
+	AAcStarfall::SpawnFor(GetWorld());
 	// Units and buildings as instances (B1).
 	AAcWorld::SpawnFor(GetWorld());
 	// Tracers, flashes, rounds, slugs (C1), after the renderer: muzzles come from its poses.

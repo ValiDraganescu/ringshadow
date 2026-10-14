@@ -55,6 +55,10 @@ public:
 
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
+	/// Deposits another actor draws, by patch id (AAcStarfall: a starfall's
+	/// hot deposit): left out here, as if emptied.
+	static TSet<int64> Hot;
+
 	int32 NumPatches() const { return Patches.Num(); }
 	int32 NumWells() const { return Wells.Num(); }
 

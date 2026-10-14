@@ -41,7 +41,7 @@ int32 FAcSceneryBatches::BatchFor(const FString& MeshPath, const FString& Materi
 	// the other way.
 	C->bReverseCulling = bMirrored;
 	C->SetStaticMesh(StaticMesh);
-	if (UMaterialInterface* Material = Mesh.LoadMaterial()) C->SetMaterial(0, Material);
+	if (UMaterialInterface* Material = Options.Material ? Options.Material : Mesh.LoadMaterial()) C->SetMaterial(0, Material);
 	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	C->SetCanEverAffectNavigation(false);
 	C->SetCastShadow(Options.bCastShadow);

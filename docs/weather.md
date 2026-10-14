@@ -177,6 +177,63 @@ starts S seconds from now (the hour moves with it unless `--hour` holds it).
 On the game, `-AcMmoRingshadow=S` passes it on. The picture run is
 `-AcMmoShots=DIR -AcMmoShotsRingshadow -AcMmoRingshadow=70`.
 
+## Starfall
+
+Two or three times a world day a meteor streaks across the sky under the
+gas giant and lands somewhere in the world. It leaves a crater with a rich
+deposit, first come, first served (docs/mmorpg-m7.md E2). It runs in the
+MMORPG mode only. The server owns it, the same for every pilot; the client
+only draws it and tells the pilot.
+
+The schedule, the numbers and the streak's path are `ac::Starfall`
+(`unreal/Source/AutocraftCore/Public/Starfall.h`). The server's part is
+`WorldStarfall.cpp` (`unreal/server/world/`), tested in
+`server/tests/StarfallTests.cpp`.
+
+| What | Value |
+|---|---|
+| When | 2 or 3 a world day, by dice seeded with the world's id: one in each equal share of the day, in its middle 70%. The same world falls at the same times on every server and after every restart |
+| Where | picked when it is told, a minute before the impact. Any region, weighted toward the pilots: each region counts 1, each pilot in it 8, each pilot next door 3. Then a spot on open ground: flat (no cliff, no rock under the crater's 4 cells), joined to the region's pads, at least 12 cells from the map's edge, clear of pads (by 11 cells past the crater), sites (8), ore (6.5), wells (7.5), buildings, units and other craters |
+| The warning | 60 s before, to every pilot: the KSTR radio's toast, "STARFALL IN 60", with the region, the bearing and the distance from the pilot. Again at the impact ("STARFALL DOWN") in the pilot's region and the ones around it |
+| The deposit | at the impact a deposit appears in the crater with 3 × the region's median deposit's ore (at least 3,000). Ore drilled from it pays ×1.5 XP: the extra half when the load is drilled (to the pilot whose Prospector stands at the deposit), the plain XP when it is unloaded. It never grows back: emptied, it is gone |
+| The crater | marks the ground for a world day (40 minutes), hot for the first few minutes. The fall is dropped once its crater has faded and its deposit is empty; a deposit with ore left outlives its crater |
+| Saved | told and landed falls (`starfalls`, schema 6): the place, the impact time and bearing, the deposit's id and the ore left. A restart puts the deposits back after the region file's own |
+
+On the wire, the world's sky (`net::Sky::starfalls`, protocol 9) carries
+every fall told: its id, region (an index in the World message's regions),
+impact point on that region's ground, impact time and bearing, and its
+deposit's index once landed.
+
+On screen (`AAcStarfall`, `unreal/Source/Autocraft/AcStarfall.cpp`; the
+materials from `Tools/Editor/make_starfall_materials.py`):
+
+- **The streak.** For its last 10 s the head comes in at 70 cells a second,
+  16° under level, out of the giant's side of the sky (bearing 280° ± 40°).
+  It has a white-hot head with an orange halo, a hot tail and a light that
+  sweeps the land below. It leaves a smoke trail that glows near the head,
+  then lingers and spreads for 9 s. It is drawn from the regions next door
+  too, placed by the world grid.
+- **The impact.** A flash of light that swells and fades in 1.4 s, a ring of
+  dust thrown 30 cells out, and a column of smoke lit from below. All of it
+  settles in 9 s.
+- **The crater.** A decal (`M_StarfallCrater`) 21 cells across: a scorched
+  pit with glowing seams while it cools (10 minutes), a pale rim of thrown
+  rock and rays of dust. It fades out over the last fifth of its day.
+- **The deposit.** Drawn 1.3 × a plain one's size in `M_OpalHot`: black rock
+  with hot veins (white-gold, orange, deep red, a touch of violet) that
+  breathe, sparks in the cracks, embers rising off it. A warm light glows
+  with it, stronger at night, when the veins burn 2.5 × brighter.
+  `AAcResources` leaves it out of the plain ore (`AAcResources::Hot`).
+- `ac.StarfallLightGain` scales the lights.
+
+To drop one now near the pilot, use `--starfall S` on the server: the
+first pilot that drives gets a fall 40–58 cells away (ahead of its
+Prospector first, coming in from the side), S seconds after it comes, told at once. `--clock-hour H`
+moves the world's clock on to hour H and lets it run. On the game,
+`-AcMmoStarfall=S` and `-AcMmoClockHour=H` pass them on. The picture run is
+`-AcMmoShots=DIR -AcMmoShotsStarfall -AcMmoStarfall=40 -AcMmoClockHour=17`
+(AcMmoShots.cpp, `sf-01` to `sf-09`).
+
 ## Cost
 
 The budget is under 1 ms a frame at 5120×1378 on the M4 Max for

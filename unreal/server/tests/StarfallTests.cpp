@@ -230,7 +230,7 @@ TEST(starfall_deposit_pays_half_again_in_xp_and_is_gone_when_emptied) {
     ASSERT_TRUE(f.has_value());
     const Unit* u = drivenUnit(w, me);
     const double from = length(f->at - u->position);
-    EXPECT_TRUE(from >= 12 - 1e-9 && from <= 22 + 1e-9);
+    EXPECT_TRUE(from >= 40 - 1e-9 && from <= 58 + 1e-9);
     w.step();
     ASSERT_TRUE(w.starfalls()[0].patch.has_value());
     const size_t index = size_t(*w.starfalls()[0].patch);
@@ -293,7 +293,7 @@ TEST(starfall_dev_flag_drops_one_near_the_first_pilot) {
     EXPECT_EQ(f.region, *w.regionNamed("start"));
     EXPECT_NEAR(f.impact - w.clock(), 20, 1e-6);
     const double from = length(f.at - drivenUnit(w, me)->position);
-    EXPECT_TRUE(from >= 11 && from <= 23);
+    EXPECT_TRUE(from >= 39 && from <= 59);
     // Once.
     stepFor(w, 1);
     EXPECT_EQ(w.starfalls().size(), size_t(1));

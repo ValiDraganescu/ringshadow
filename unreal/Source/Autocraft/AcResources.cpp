@@ -285,8 +285,12 @@ void AAcResources::SyncWells(const ac::GameState& State)
 	}
 }
 
-void AAcResources::ApplyStage(FPatch& Patch, const int64 Stage)
+TSet<int64> AAcResources::Hot;
+
+void AAcResources::ApplyStage(FPatch& Patch, const int64 Told)
 {
+	// A deposit another actor draws (a starfall's) is hidden here.
+	const int64 Stage = Hot.Contains(Patch.Id) ? 0 : Told;
 	if (Patch.Stage == Stage) return;
 	Patch.Stage = Stage;
 	// GameScene.applyStage: the deposit hides at 0; nodule K while stage < K.

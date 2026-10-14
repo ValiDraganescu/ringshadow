@@ -34,7 +34,7 @@ constexpr double kUnitGap = 1;
 /// Another fall's crater in the same region.
 constexpr double kFallGap = 2 * Starfall::craterRadius + 6;
 /// A forced fall near a pilot: this far from its Prospector, cells.
-constexpr double kNearFrom = 12, kNearTo = 22;
+constexpr double kNearFrom = 40, kNearTo = 58;
 /// Tries at a spot before giving up on a region.
 constexpr int kTries = 300;
 
@@ -107,12 +107,14 @@ std::optional<Vec2> WorldMap::craterSpot(size_t r, std::mt19937_64& dice, std::o
     const Simulation& sim = regions_[r]->simulation();
     if (!sim.map) return std::nullopt;
     if (near) {
-        // Ahead of the Prospector first, then anywhere round it.
+        // Ahead of the Prospector first, then anywhere round it; in a
+        // straight walk from it.
+        const NavGrid* nav = sim.navGrid();
         for (int k = 0; k < kTries; k++) {
             const double spread = k < kTries / 2 ? 50 * kPi / 180 : kPi;
             const double a = heading + uniform(dice, -spread, spread);
             const Vec2 p = *near + Vec2(std::cos(a), std::sin(a)) * uniform(dice, kNearFrom, kNearTo);
-            if (craterFits(r, p)) return p;
+            if (craterFits(r, p) && (!nav || nav->clear(*near, p))) return p;
         }
         return std::nullopt;
     }
@@ -156,8 +158,8 @@ std::optional<WorldMap::Fall> WorldMap::forceStarfall(double in, std::optional<s
         const auto u = unit ? regions_[r]->simulation().state.unit(*unit) : std::nullopt;
         if (!u) return std::nullopt;
         at = craterSpot(r, dice, u->position, u->heading);
-        // Seen coming: from beyond the crater as the pilot looks at it.
-        if (at) from = Starfall::bearing(*at, u->position) + 180 + uniform(dice, -25, 25);
+        // Seen coming from one side, so the streak crosses the pilot's sky.
+        if (at) from = Starfall::bearing(*at, u->position) + 180 + (dice() % 2 ? 1 : -1) * uniform(dice, 70, 90);
     } else {
         r = region ? *region : fallRegion(dice);
         if (r >= regions_.size()) return std::nullopt;
