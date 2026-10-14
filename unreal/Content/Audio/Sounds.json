@@ -343,6 +343,19 @@
     746
    ]
   },
+  "blueprint": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/blueprint/SW_blueprint_1.SW_blueprint_1",
+     "source": "sfx/blueprint_1.wav",
+     "prepared": "Content-src/sounds/sfx/blueprint_1.wav",
+     "seconds": 2.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "boom": {
    "variants": [
     {
@@ -1676,6 +1689,19 @@
     763
    ]
   },
+  "made": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/made/SW_made_1.SW_made_1",
+     "source": "sfx/made_1.wav",
+     "prepared": "Content-src/sounds/sfx/made_1.wav",
+     "seconds": 2.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "minigun": {
    "variants": [
     {
@@ -1753,6 +1779,19 @@
     520,
     766
    ]
+  },
+  "paid": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/paid/SW_paid_1.SW_paid_1",
+     "source": "sfx/paid_1.wav",
+     "prepared": "Content-src/sounds/sfx/paid_1.wav",
+     "seconds": 1.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
   },
   "peregrinedeath": {
    "variants": [
@@ -1999,6 +2038,32 @@
     747
    ]
   },
+  "rankup": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rankup/SW_rankup_1.SW_rankup_1",
+     "source": "sfx/rankup_1.wav",
+     "prepared": "Content-src/sounds/sfx/rankup_1.wav",
+     "seconds": 3.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "research": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/research/SW_research_1.SW_research_1",
+     "source": "sfx/research_1.wav",
+     "prepared": "Content-src/sounds/sfx/research_1.wav",
+     "seconds": 2.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "rockets": {
    "variants": [
     {
@@ -2037,6 +2102,58 @@
     522,
     764
    ]
+  },
+  "rsbed": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rsbed/SW_rsbed_1.SW_rsbed_1",
+     "source": "sfx/rsbed_1.wav",
+     "prepared": "Content-src/sounds/sfx/rsbed_1.wav",
+     "seconds": 20.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "rsdrone": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rsdrone/SW_rsdrone_1.SW_rsdrone_1",
+     "source": "sfx/rsdrone_1.wav",
+     "prepared": "Content-src/sounds/sfx/rsdrone_1.wav",
+     "seconds": 20.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "rspass": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rspass/SW_rspass_1.SW_rspass_1",
+     "source": "sfx/rspass_1.wav",
+     "prepared": "Content-src/sounds/sfx/rspass_1.wav",
+     "seconds": 4.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "rsrelease": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rsrelease/SW_rsrelease_1.SW_rsrelease_1",
+     "source": "sfx/rsrelease_1.wav",
+     "prepared": "Content-src/sounds/sfx/rsrelease_1.wav",
+     "seconds": 5.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
   },
   "scorpionbury": {
    "variants": [
@@ -2203,6 +2320,78 @@
     534,
     767
    ]
+  },
+  "sfboom": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/sfboom/SW_sfboom_1.SW_sfboom_1",
+     "source": "sfx/sfboom_1.wav",
+     "prepared": "Content-src/sounds/sfx/sfboom_1.wav",
+     "seconds": 5.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/sfboom/SW_sfboom_2.SW_sfboom_2",
+     "source": "sfx/sfboom_2.wav",
+     "prepared": "Content-src/sounds/sfx/sfboom_2.wav",
+     "seconds": 5.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "sfcrater": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/sfcrater/SW_sfcrater_1.SW_sfcrater_1",
+     "source": "sfx/sfcrater_1.wav",
+     "prepared": "Content-src/sounds/sfx/sfcrater_1.wav",
+     "seconds": 15.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "sfecho": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/sfecho/SW_sfecho_1.SW_sfecho_1",
+     "source": "sfx/sfecho_1.wav",
+     "prepared": "Content-src/sounds/sfx/sfecho_1.wav",
+     "seconds": 7.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "sfstreak": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/sfstreak/SW_sfstreak_1.SW_sfstreak_1",
+     "source": "sfx/sfstreak_1.wav",
+     "prepared": "Content-src/sounds/sfx/sfstreak_1.wav",
+     "seconds": 6.858,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "shimmer": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/shimmer/SW_shimmer_1.SW_shimmer_1",
+     "source": "sfx/shimmer_1.wav",
+     "prepared": "Content-src/sounds/sfx/shimmer_1.wav",
+     "seconds": 10.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
   },
   "step": {
    "variants": [
@@ -3003,11 +3192,20 @@
   "atlasmove",
   "atlasshot",
   "atlasstep",
+  "blueprint",
   "crack",
   "downpour",
+  "made",
+  "paid",
   "peregrinedeath",
   "peregrinepass",
   "rain",
+  "rankup",
+  "research",
+  "rsbed",
+  "rsdrone",
+  "rspass",
+  "rsrelease",
   "scorpionbury",
   "scorpiondeath",
   "scorpionlock",
@@ -3015,6 +3213,11 @@
   "scorpionsting",
   "scorpionunbury",
   "seekers",
+  "sfboom",
+  "sfcrater",
+  "sfecho",
+  "sfstreak",
+  "shimmer",
   "stomp",
   "thunder",
   "vatlas",

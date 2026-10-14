@@ -173,6 +173,16 @@ On screen (`AAcRingshadow`, `unreal/Source/Autocraft/AcRingshadow.cpp`):
 - **The ore.** Stardust Ore veins under the band flare brighter than at
   night (M_Opal's night glow, ×1.8, and more glints).
 - **The air.** A cold, slightly grey tint while the camera is in the band.
+- **Sound** (`Tools/AudioGen/moments.manifest.json`, ElevenLabs sound
+  effects, in `unreal/Resources/Sounds/sfx/`; `FAcAudioRules::Ringshadow`,
+  tested in `Autocraft.Audio.Rules.Moments`). From the 60 s warning a low
+  drone (`rsdrone`) comes in, quiet at first, and swells as the band's edge
+  comes over the last 90 cells (about 30 s). As the cover at the ears passes
+  a half, a pressure-drop whoosh plays (`rspass`), and under the band the
+  drone gives way to a cold, airy bed (`rsbed`) that follows the cover. As
+  the cover drops under a half again, a warm release plays (`rsrelease`).
+  Within 14 cells of a deposit that flares (cover at least 0.5), a faint
+  crystalline shimmer (`shimmer`) plays there.
 
 A voice line for the radio can come later. To start a sweep now, use
 `--ringshadow S` on the server, which moves the world's clock so a sweep
@@ -228,6 +238,17 @@ materials from `Tools/Editor/make_starfall_materials.py`):
   with it, stronger at night, when the veins burn 2.5 × brighter.
   `AAcResources` leaves it out of the plain ore (`AAcResources::Hot`).
 - `ac.StarfallLightGain` scales the lights.
+- **Sound** (`Tools/AudioGen/moments.manifest.json`; `FAcAudioRules::Starfalls`,
+  tested in `Autocraft.Audio.Rules.Moments`). The streak (`sfstreak`) is a
+  whistle that rises to a roar over its last 6.8 s and stops dead at the
+  impact. The take is a hit that dies away, played backwards
+  (`Tools/AudioGen/rise.py`, the raw take in `Tools/AudioGen/raw/`). The
+  boom (`sfboom`, two takes) arrives at the speed of sound (a cell is a
+  metre), and its roll off the hills (`sfecho`) 1.6 s after it. They are
+  heard across the region and the next: from 500 cells off at 0.3 of their
+  gain, from the impact's side whatever the distance. A hot crater in the
+  pilot's region hums and crackles (`sfcrater`), placed at the crater,
+  cooling over its day.
 
 To drop one now near the pilot, use `--starfall S` on the server: the
 first pilot that drives gets a fall 40–58 cells away (ahead of its

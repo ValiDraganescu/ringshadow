@@ -1,0 +1,116 @@
+{
+  "about": "The MMORPG's new moments (docs/mmorpg-m7.md J1; docs/weather.md): the ringshadow sweep (rsdrone = the low drone swelling from the 60 s warning as the band comes, a loop; rspass = the pressure-drop whoosh as its edge passes over the pilot; rsbed = the cold airy bed under the band, a loop; rsrelease = the sun coming back; shimmer = the faint crystalline shimmer of ore flaring under the band, a loop), the starfall (sfstreak = the rising whistle-roar of the streak's 10 s, placed toward the impact; sfboom = the impact's deep boom; sfecho = its rolling echo off the hills, a few seconds later; sfcrater = the hot crater's hum and ember crackle, a loop at the deposit) and the progression's news (rankup = the Prospector's level-up sting; blueprint = a blueprint found; paid = a KSTR contract done; made = a module made in the Foundry; research = a mark researched in the Lab). Dusty frontier under a gas giant, the weight of a 1970s alien-invasion score, space: no voices, no music beds; short, mixed to sit under the music. Ids match the game's sound names (sfx/<name>_<n>).",
+  "voices": {},
+  "entries": [
+    {
+      "id": "rsdrone_1",
+      "kind": "sfx",
+      "prompt": "deep ominous sub-bass drone, a vast shadow approaching over a desert, slow low pulsing hum with a faint metallic resonance, dark and weighty like a giant machine in the sky, steady, no beat, no melody, no voices",
+      "seconds": 20,
+      "loop": true,
+      "influence": 0.6
+    },
+    {
+      "id": "rspass_1",
+      "kind": "sfx",
+      "prompt": "huge low pressure-drop whoosh, air suddenly sucked away as a giant shadow sweeps overhead, deep rushing wind swell that falls into a cold hush, cinematic, no impact, no voices",
+      "seconds": 4,
+      "influence": 0.6
+    },
+    {
+      "id": "rsbed_1",
+      "kind": "sfx",
+      "prompt": "breathy cold air texture, soft continuous hiss of thin wind and airy whooshing, like standing in the shade on a high cold plateau, wide stereo, gentle and constant, no hum, no tone, no beat, no voices",
+      "seconds": 20,
+      "loop": true,
+      "influence": 0.55
+    },
+    {
+      "id": "rsrelease_1",
+      "kind": "sfx",
+      "prompt": "warm release as sunlight returns, a soft rising airy swell that opens up and settles, gentle warm wind exhale, relief, cinematic, no voices",
+      "seconds": 5,
+      "influence": 0.55
+    },
+    {
+      "id": "shimmer_1",
+      "kind": "sfx",
+      "prompt": "soft continuous crystalline shimmer, gentle glassy sparkle like wind chimes made of tiny crystals, smooth and even throughout, quiet, steady texture, no sudden changes, no melody, no voices",
+      "seconds": 10,
+      "loop": true,
+      "influence": 0.6
+    },
+    {
+      "id": "sfstreak_1",
+      "kind": "sfx",
+      "prompt": "incoming meteor crescendo: starts as a faint distant high whistle and grows steadily louder and deeper for the whole ten seconds into a huge fiery tearing roar at its loudest at the very end, cut off sharply, no explosion",
+      "seconds": 10,
+      "influence": 0.6,
+      "fx": "rise"
+    },
+    {
+      "id": "sfboom_1",
+      "kind": "sfx",
+      "prompt": "meteor impact, a massive deep earth-shaking boom with a heavy low thud and debris crumbling down after, huge sub bass, cinematic, outdoor desert",
+      "seconds": 5,
+      "influence": 0.6
+    },
+    {
+      "id": "sfboom_2",
+      "kind": "sfx",
+      "prompt": "huge meteorite slamming into rocky ground, deep explosive boom, the ground cracking, rocks and dust raining down, powerful low end, outdoor",
+      "seconds": 5,
+      "influence": 0.6
+    },
+    {
+      "id": "sfecho_1",
+      "kind": "sfx",
+      "prompt": "distant explosion echo rolling across wide canyons and hills, a long low rumbling roll that fades slowly into silence, outdoor desert, no initial bang",
+      "seconds": 7,
+      "influence": 0.55
+    },
+    {
+      "id": "sfcrater_1",
+      "kind": "sfx",
+      "prompt": "hot smouldering meteor crater, a low warm electric hum with soft crackling embers and occasional small pops and hisses of cooling rock, steady, close, no wind, no voices",
+      "seconds": 15,
+      "loop": true,
+      "influence": 0.6
+    },
+    {
+      "id": "rankup_1",
+      "kind": "sfx",
+      "prompt": "short triumphant level up sting, a warm brass and twangy electric guitar chord swelling up with a shimmering synth sparkle, space western, bright and proud, ends cleanly, no voices",
+      "seconds": 3,
+      "influence": 0.65
+    },
+    {
+      "id": "blueprint_1",
+      "kind": "sfx",
+      "prompt": "mechanical unlock, a heavy metal latch clicking open and a small gear whirr, followed by a clear bright bell chime, discovery, short, no voices",
+      "seconds": 2.5,
+      "influence": 0.65
+    },
+    {
+      "id": "paid_1",
+      "kind": "sfx",
+      "prompt": "short radio confirmation blip, two quick rising electronic beeps through a crackly old radio with a brief squelch, payment received, no voices",
+      "seconds": 1.5,
+      "influence": 0.65
+    },
+    {
+      "id": "made_1",
+      "kind": "sfx",
+      "prompt": "a heavy metal part clanks down on a steel workbench, then a clear sustained warm electronic tone rings out and fades, machine part finished, short, no voices",
+      "seconds": 2.5,
+      "influence": 0.65
+    },
+    {
+      "id": "research_1",
+      "kind": "sfx",
+      "prompt": "laboratory discovery, a soft electronic scanner sweep and a light metallic click, then a clear rising two-note synth tone, research complete, short, no voices",
+      "seconds": 2.5,
+      "influence": 0.65
+    }
+  ]
+}

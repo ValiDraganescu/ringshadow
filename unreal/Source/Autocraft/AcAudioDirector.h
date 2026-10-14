@@ -146,6 +146,40 @@ namespace AcSound
 	inline constexpr float ScorpionLockGain = 0.5f;
 	inline constexpr float ScorpionEngineGain = 1.0f;
 	inline constexpr float JetGain = 0.4f;
+	/// The MMORPG's moments (docs/mmorpg-m7.md J1; Tools/AudioGen/
+	/// moments.manifest.json). Set from each take's loudness after the
+	/// import's peak normalising (unreal/Tools/Audio/check_sounds.py): the
+	/// beds about as loud as the wind, the stings as the old level-up, the
+	/// starfall's boom a few dB under a close blast.
+	/// The ringshadow: the drone swelling as the band comes, the whoosh of
+	/// its edge, the cold bed under it, the sun's return, the flaring ore.
+	inline constexpr float ShadowDroneGain = 0.15f;
+	inline constexpr float ShadowBedGain = 0.15f;
+	inline constexpr float ShadowPassGain = 0.3f;
+	inline constexpr float ShadowReleaseGain = 0.23f;
+	inline constexpr float ShimmerGain = 0.07f;
+	/// How far the drone reaches out to the band's edge (cells; about 30 s
+	/// of its sweep) and the flaring ore heard (cells).
+	inline constexpr double ShadowDroneCells = 90.0;
+	inline constexpr double ShimmerCells = 14.0;
+	/// The starfall: the streak (its take rises for this many seconds to
+	/// the impact), the boom, its echo off the hills (this long after), the
+	/// hot crater. Heard across the region and the next: from `FarCells`
+	/// off at `FarGain` of their gain; the boom and echo arrive at the
+	/// speed of sound (a cell is a metre).
+	inline constexpr float StreakGain = 0.5f;
+	inline constexpr double StreakSeconds = 6.8;
+	inline constexpr float StarBoomGain = 1.0f;
+	inline constexpr float StarEchoGain = 0.6f;
+	inline constexpr double StarEchoAfter = 1.6;
+	inline constexpr float CraterGain = 0.2f;
+	inline constexpr double FarCells = 500.0;
+	inline constexpr float FarGain = 0.3f;
+	inline constexpr double SoundCellsPerSecond = 343.0;
+	/// The progression's news: the Prospector's level-up sting, a blueprint
+	/// found, a contract paid, a module made, a mark researched.
+	inline constexpr float RankUpGain = 0.25f;
+	inline constexpr float NewsGain = 0.45f;
 
 	/// Seconds between report-in lines, between the Oracle's warnings,
 	/// between a driven vehicle's engine sounds; a Sentinel opening fire
@@ -194,6 +228,9 @@ struct FAcSoundCue
 	/// Where it is heard (ground, sim cells); unused in your ear.
 	ac::Vec2 At;
 	EAcSoundPool Pool = EAcSoundPool::Deposit;
+	/// Heard from this side whatever the distance (-1 left … 1 right): a
+	/// starfall far past the driven unit's hearing.
+	TOptional<float> Pan;
 };
 
 /// A loop the state wants playing this frame.
@@ -284,6 +321,43 @@ public:
 	/// 2 km, a roll further out, quieter with distance.
 	void Thunder(double DistanceKm, double Power);
 
+	// The MMORPG's moments (docs/mmorpg-m7.md J1).
+	/// The ringshadow sweep at the ears (docs/weather.md), each frame:
+	/// `ToStart` seconds until the next sweep begins; `EdgeAhead` how far
+	/// its leading edge still is (cells along the band; unset: no band now,
+	/// negative: past); the ears' `Cover` (0-1); `Flare` the nearest
+	/// deposit in hearing that flares (cover at least the bonus's). The
+	/// drone swells from the warning as the edge comes, its whoosh plays as
+	/// the cover passes a half, the cold bed follows the cover, the release
+	/// plays as it drops under a half again.
+	struct FShadowHear
+	{
+		double ToStart = 1e9;
+		std::optional<double> EdgeAhead;
+		double Cover = 0;
+		std::optional<ac::Vec2> Flare;
+	};
+	void Ringshadow(const FShadowHear& H);
+	/// The starfalls told, each frame: seconds to the impact (negative
+	/// after), the impact on the ears' region's ground, its distance from
+	/// the ears (cells) and the side it is on (`Pan`); `bCrater`: it landed
+	/// here and its crater is hot, `Age` seconds old. The streak starts as
+	/// it comes in, the boom and its echo arrive after the impact.
+	struct FStarHear
+	{
+		uint32 Id = 0;
+		double ToImpact = 0;
+		ac::Vec2 At;
+		double Distance = 0;
+		float Pan = 0;
+		bool bCrater = false;
+		double Age = 0;
+	};
+	void Starfalls(const std::vector<FStarHear>& Falls);
+	/// The progression's news (`UAcProgressHudSubsystem::NewsItem`).
+	enum class ENews : uint8 { Blueprint, Paid, Made, Researched };
+	void News(ENews N);
+
 	/// The cues decided since the last `TakeCues`.
 	std::vector<FAcSoundCue> TakeCues();
 	/// A new game: drop the loops' memory and the jumps and anchors seen.
@@ -310,7 +384,8 @@ private:
 	/// True if fewer than `PerSecond` of this sound started in the last second.
 	bool Allow(FName Sound, int32 PerSecond);
 	bool OneShot(FName Sound, ac::Vec2 At, float Gain, EAcSoundPool Pool);
-	void Later(double Seconds, FName Sound, ac::Vec2 At, float Gain);
+	void Later(double Seconds, FName Sound, ac::Vec2 At, float Gain, EAcSoundPool Pool = EAcSoundPool::Combat,
+		TOptional<float> Pan = {});
 
 	double Now = 0.0;
 	std::vector<FAcSoundCue> Cues;
@@ -320,7 +395,7 @@ private:
 	double LastEngine = -10.0;
 	/// When each tower (by where it stands) last fired.
 	std::map<std::pair<double, double>, double> TowerShots;
-	struct FDelayed { double At; FName Sound; ac::Vec2 Where; float Gain; };
+	struct FDelayed { double At; FName Sound; ac::Vec2 Where; float Gain; EAcSoundPool Pool; TOptional<float> Pan; };
 	std::vector<FDelayed> Delayed;
 
 	struct FTool { FName Sound; int32 Variant = 0; float Gain = 0.f; };
@@ -330,6 +405,14 @@ private:
 	float HealFade = 0.f;
 	bool bHealing = false;
 	double RainRate = 0.0, Storminess = 0.0;
+	/// The moments: the ringshadow at the ears and its fades, the falls
+	/// heard (streaks started, booms due) and their hot craters.
+	FShadowHear Shadow;
+	bool bUnderBand = false;
+	float DroneFade = 0.f, BedFade = 0.f, ShimmerFade = 0.f;
+	ac::Vec2 ShimmerAt;
+	TSet<uint32> Streaked, Boomed;
+	std::vector<FStarHear> Craters;
 	TSet<int64> Jumping;
 	TSet<int64> Anchoring;
 	TSet<int64> Burrowing, Locking;
@@ -413,6 +496,9 @@ public:
 private:
 	void OnFrame(const FAcFrame& Frame);
 	void OnGameStarted(class UAcSimSubsystem& Sim);
+	/// The MMORPG's moments at the ears (J1): the ringshadow from the world's
+	/// clock, the starfalls from the client's sky.
+	void HearMoments(const class UAcSimSubsystem& Sim);
 	void LoadBank();
 	void MakeSettings();
 	USoundWave* Pick(FName Name, int32 Variant = -1);

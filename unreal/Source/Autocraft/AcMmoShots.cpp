@@ -1401,6 +1401,25 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		TimedOut(TEXT("unloaded at the Hab Dome"), 45);
 		return;
 	case 629:
+		// After the last picture: the news no run brings, for their sounds
+		// (J1; -AcAudioLog shows blueprint, made and research).
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this))
+		{
+			using K = ac::net::ProgressMessage::NewsKind;
+			for (const auto& [NewsKind, NewsId] : {std::pair{K::blueprint, std::string("habDome")}, std::pair{K::made, std::string("drillHead")},
+					 std::pair{K::researched, std::string("drillHead")}})
+			{
+				ac::net::ProgressMessage::News N;
+				N.kind = NewsKind;
+				N.id = NewsId;
+				N.value = 2;
+				Hud->PreviewNews(N);
+			}
+		}
+		Advance();
+		return;
+	case 630:
+		if (Since() < 1.5) return;
 		Check(Shots.Saved + Shots.Skipped == 11, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;

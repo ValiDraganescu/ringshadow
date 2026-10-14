@@ -485,4 +485,111 @@ bool FAcAudioWeatherTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcAudioMomentsTest, "Autocraft.Audio.Rules.Moments", Flags)
+bool FAcAudioMomentsTest::RunTest(const FString&)
+{
+	// The MMORPG's moments (docs/mmorpg-m7.md J1).
+	FAcAudioRules R;
+	const ac::GameState Empty;
+	auto Volume = [&](FName Name, double Seconds = 0.1)
+	{
+		std::vector<FAcLoopWant> Ls;
+		for (double T = 0; T < Seconds; T += 0.1)
+		{
+			Ls.clear();
+			R.Loops(Empty, 0.1, Ls);
+		}
+		const FAcLoopWant* L = Loop(Ls, Name);
+		return L ? L->Volume : 0.f;
+	};
+	using FShadow = FAcAudioRules::FShadowHear;
+
+	// The ringshadow: nothing before the warning, the drone from it, louder
+	// as the band's edge comes, the whoosh as it passes, the bed under it,
+	// the release as the sun comes back.
+	R.Ringshadow(FShadow{120.0});
+	TestEqual(TEXT("no drone before the warning"), Volume("rsdrone", 5.0), 0.f);
+	R.Ringshadow(FShadow{30.0});
+	const float Warned = Volume("rsdrone", 5.0);
+	TestTrue(TEXT("the drone from the warning"), Warned > 0.f && Warned < AcSound::ShadowDroneGain * 0.4f);
+	R.Ringshadow(FShadow{-1.0, 10.0, 0.0});
+	const float Close = Volume("rsdrone", 5.0);
+	TestTrue(TEXT("louder as the edge comes"), Close > Warned);
+	R.TakeCues();
+	R.Ringshadow(FShadow{-1.0, -8.0, 0.6});
+	R.Ringshadow(FShadow{-1.0, -10.0, 0.9});
+	std::vector<FAcSoundCue> Cues = R.TakeCues();
+	TestEqual(TEXT("one whoosh as the edge passes"), Count(Cues, "rspass"), 1);
+	TestTrue(TEXT("the whoosh in your ear"), First(Cues, "rspass") && First(Cues, "rspass")->Pool == EAcSoundPool::InEar);
+	R.Ringshadow(FShadow{-1.0, -60.0, 1.0});
+	TestTrue(TEXT("the cold bed under the band"), FMath::IsNearlyEqual(Volume("rsbed", 5.0), AcSound::ShadowBedGain, 1e-3f));
+	TestTrue(TEXT("the drone gone under it"), Volume("rsdrone") < Close * 0.1f);
+	R.Ringshadow(FShadow{-1.0, -60.0, 1.0, ac::Vec2{3, 4}});
+	TestTrue(TEXT("the flaring ore shimmers, placed"), Volume("shimmer", 2.0) > 0.f);
+	R.Ringshadow(FShadow{-1.0, -150.0, 0.2});
+	R.Ringshadow(FShadow{-1.0, -160.0, 0.0});
+	Cues = R.TakeCues();
+	TestEqual(TEXT("one release as the sun comes back"), Count(Cues, "rsrelease"), 1);
+	TestEqual(TEXT("no second whoosh"), Count(Cues, "rspass"), 0);
+	TestEqual(TEXT("the bed gone"), Volume("rsbed", 5.0), 0.f);
+
+	// The starfall: the streak once as it comes in, toward the impact; the
+	// boom when the sound arrives, its echo after; quieter far off; the
+	// crater's loop once it has landed here.
+	using FStar = FAcAudioRules::FStarHear;
+	FStar Near{7, 9.0, ac::Vec2{100, 0}, 100.0, 0.8f};
+	R.Starfalls({Near});
+	TestEqual(TEXT("no streak 9 s out"), Count(R.TakeCues(), "sfstreak"), 0);
+	Near.ToImpact = AcSound::StreakSeconds - 0.1;
+	R.Starfalls({Near});
+	R.Starfalls({Near});
+	Cues = R.TakeCues();
+	TestEqual(TEXT("one streak"), Count(Cues, "sfstreak"), 1);
+	const FAcSoundCue* Streak = First(Cues, "sfstreak");
+	TestTrue(TEXT("the streak from the impact's side"), Streak && Streak->Pan.IsSet() && FMath::IsNearlyEqual(*Streak->Pan, 0.8f));
+	FStar Far{8, AcSound::StreakSeconds - 0.1, ac::Vec2{600, 0}, 600.0, -0.5f};
+	R.Starfalls({Far});
+	const std::vector<FAcSoundCue> FarCues = R.TakeCues();
+	const FAcSoundCue* FarStreak = First(FarCues, "sfstreak");
+	TestTrue(TEXT("a far streak quieter"), FarStreak && Streak && FarStreak->Volume < Streak->Volume);
+	Near.ToImpact = -0.01;
+	R.Starfalls({Near});
+	R.Due();
+	TestEqual(TEXT("the boom not yet: 100 cells of sound"), Count(R.TakeCues(), "sfboom"), 0);
+	R.Advance(0.35);
+	R.Due();
+	Cues = R.TakeCues();
+	TestEqual(TEXT("the boom once its sound arrives"), Count(Cues, "sfboom"), 1);
+	TestTrue(TEXT("the boom from the impact's side"), First(Cues, "sfboom") && First(Cues, "sfboom")->Pan.IsSet());
+	R.Advance(AcSound::StarEchoAfter);
+	R.Due();
+	TestEqual(TEXT("its echo after"), Count(R.TakeCues(), "sfecho"), 1);
+	Near.bCrater = true;
+	Near.Age = 30;
+	R.Starfalls({Near});
+	TestTrue(TEXT("the hot crater hums"), Volume("sfcrater") > 0.f);
+	R.Starfalls({});
+	TestEqual(TEXT("no crater when none is told"), Volume("sfcrater"), 0.f);
+
+	// The progression's news, in your ear; the Prospector's level its own sting.
+	R.TakeCues();
+	R.News(FAcAudioRules::ENews::Blueprint);
+	R.News(FAcAudioRules::ENews::Paid);
+	R.News(FAcAudioRules::ENews::Made);
+	R.News(FAcAudioRules::ENews::Researched);
+	R.bServerLevels = true;
+	R.LevelUp();
+	Cues = R.TakeCues();
+	for (const char* N : {"blueprint", "paid", "made", "research", "rankup"})
+	{
+		TestEqual(FString::Printf(TEXT("news: %s"), UTF8_TO_TCHAR(N)), Count(Cues, N), 1);
+	}
+	TestEqual(TEXT("not the window game's level-up"), Count(Cues, "levelup"), 0);
+	R.bServerLevels = false;
+	R.Advance(1.5);
+	R.LevelUp();
+	TestEqual(TEXT("the window game keeps its level-up"), Count(R.TakeCues(), "levelup"), 1);
+	return true;
+}
+
 #endif

@@ -837,6 +837,7 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		const FString Sub = N.value > Level ? FString::Printf(TEXT("Opens at level %lld"), (long long)N.value) : FString(TEXT("Ready: B builds it"));
 		Hud->Toast(FString::Printf(TEXT("BLUEPRINT FOUND: %s"), *Name), Xp.IsEmpty() ? Sub : Sub + TEXT("  ·  ") + Xp,
 			FAcHudStyle::LevelGold(), Now);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Blueprint);
 		break;
 	}
 	case K::chip:
@@ -892,6 +893,7 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		FString Pay = Xp;
 		if (N.value > 0) Pay += FString::Printf(TEXT("%s+%lld MH"), Pay.IsEmpty() ? TEXT("") : TEXT("  ·  "), (long long)N.value);
 		Hud->Toast(FString::Printf(TEXT("CONTRACT DONE: %s"), *Title), Pay, FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
 		break;
 	}
 	case K::made:
@@ -903,10 +905,12 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		if (N.kind == K::made)
 		{
 			Hud->Toast(FString::Printf(TEXT("MODULE MADE: %s"), *Name), TEXT("Waiting in your stores  ·  J fits it at home"), FAcHudStyle::Amber(), Now);
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Made);
 		}
 		else
 		{
 			Hud->Toast(FString::Printf(TEXT("RESEARCHED: %s"), *Name), TEXT("The Foundry can make it now  ·  J"), FAcHudStyle::Srgb(0.74, 0.56, 1), Now);
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Researched);
 		}
 		break;
 	}

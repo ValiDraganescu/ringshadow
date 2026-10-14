@@ -4,7 +4,9 @@
 
 #include "AcWeather.h"
 
+#include "AcDaylight.h"
 #include "AcLog.h"
+#include "AcMmo.h"
 #include "AcShot.h"
 #include "AcNewKinds.h"
 #include "AcPilotAudio.h"
@@ -38,8 +40,12 @@
 #include "Sound/SoundWave.h"
 #include "Sound/SoundClass.h"
 
+#include "Ringshadow.h"
 #include "Rules.h"
+#include "NetProtocol.h"
 #include "Simulation.h"
+#include "Starfall.h"
+#include "WindowMaps.h"
 
 #include <algorithm>
 #include "Misc/App.h"
@@ -65,7 +71,8 @@ float AcSound::Carry(const FName Sound)
 	static const TSet<FName> Far = {"boom", "blast", "cannon", "anchorshot", "anchorhit", "rockets", "missile", "seekers", "flak",
 		"flakhit", "atlasshot", "stomp", "atlasdeath", "cometdeath", "dropshipdeath", "fireflydeath", "hailstormdeath",
 		"juggernautdeath", "kestreldeath", "longbowdeath", "peregrinedeath", "prospectordeath", "rangerdeath", "scorpiondeath"};
-	static const TSet<FName> Near = {"drill", "weld", "step", "atlasstep", "hum", "deposit", "heal", "scorpionbury", "scorpionunbury"};
+	static const TSet<FName> Near = {"drill", "weld", "step", "atlasstep", "hum", "deposit", "heal", "scorpionbury", "scorpionunbury",
+		"shimmer", "sfcrater"};
 	if (Far.Contains(Sound)) return 4.f / 3.f;
 	if (Near.Contains(Sound)) return 2.f / 3.f;
 	return 1.f;
@@ -125,11 +132,22 @@ namespace
 	constexpr int64 WindKeys[2] = {-2, -3};
 	constexpr int64 RainKeys[2] = {-4, -5};
 	constexpr int64 DownpourKeys[2] = {-6, -7};
+	/// The moments' loops: the ringshadow's drone, bed and flaring ore, and
+	/// the hot craters (one key each, down from `CraterKeys`).
+	constexpr int64 DroneKey = -8, ShadowBedKey = -9, ShimmerKey = -10, CraterKeys = -100;
+
+	/// A starfall's gain at `Distance` cells: all of it close, `FarGain` of
+	/// it from `FarCells` off.
+	float StarNear(double Distance)
+	{
+		return FMath::Lerp(1.f, AcSound::FarGain, FMath::Clamp(static_cast<float>(Distance / AcSound::FarCells), 0.f, 1.f));
+	}
 
 	/// The names of the waves that loop.
 	bool IsLoop(FName Name)
 	{
-		static const FName Loops[] = {"wind", "drill", "weld", "hum", "minigun", "heal", "rain", "downpour"};
+		static const FName Loops[] = {"wind", "drill", "weld", "hum", "minigun", "heal", "rain", "downpour", "rsdrone", "rsbed", "shimmer",
+			"sfcrater"};
 		for (const FName& L : Loops)
 		{
 			if (L == Name) return true;
@@ -220,9 +238,9 @@ bool FAcAudioRules::OneShot(FName Sound, ac::Vec2 At, float Gain, EAcSoundPool P
 	return true;
 }
 
-void FAcAudioRules::Later(double Seconds, FName Sound, ac::Vec2 At, float Gain)
+void FAcAudioRules::Later(double Seconds, FName Sound, ac::Vec2 At, float Gain, EAcSoundPool Pool, TOptional<float> Pan)
 {
-	Delayed.push_back({Now + Seconds, Sound, At, Gain});
+	Delayed.push_back({Now + Seconds, Sound, At, Gain, Pool, Pan});
 }
 
 void FAcAudioRules::Due()
@@ -233,7 +251,7 @@ void FAcAudioRules::Due()
 		{
 			const FDelayed D = Delayed[I];
 			Delayed.erase(Delayed.begin() + I);
-			OneShot(D.Sound, D.Where, D.Gain, EAcSoundPool::Combat);
+			if (OneShot(D.Sound, D.Where, D.Gain, D.Pool) && D.Pan) Cues.back().Pan = D.Pan;
 		}
 		else
 		{
@@ -263,6 +281,12 @@ void FAcAudioRules::Reset()
 	bWatched = false;
 	Delayed.clear();
 	TowerShots.clear();
+	Shadow = {};
+	bUnderBand = false;
+	DroneFade = BedFade = ShimmerFade = 0.f;
+	Streaked.Reset();
+	Boomed.Reset();
+	Craters.clear();
 }
 
 void FAcAudioRules::Deposited(ac::Vec2 At) { OneShot("deposit", At, AcSound::DepositGain, EAcSoundPool::Deposit); }
@@ -394,7 +418,10 @@ void FAcAudioRules::LockOn()
 
 void FAcAudioRules::LevelUp()
 {
-	if (Allow("levelup", 1)) OneShot("levelup", {}, AcSound::LevelUpGain, EAcSoundPool::InEar);
+	// The MMORPG's Prospector levels have their own sting (J1); a kind's
+	// level in the window game keeps the old one.
+	const FName Sound = bServerLevels ? FName("rankup") : FName("levelup");
+	if (Allow(Sound, 1)) OneShot(Sound, {}, bServerLevels ? AcSound::RankUpGain : AcSound::LevelUpGain, EAcSoundPool::InEar);
 }
 
 void FAcAudioRules::Picked()
@@ -541,6 +568,62 @@ void FAcAudioRules::Thunder(const double DistanceKm, const double Power)
 	OneShot(bClose ? FName("crack") : FName("thunder"), ac::Vec2(), AcSound::ThunderGain * static_cast<float>(Power) * Near, EAcSoundPool::InEar);
 }
 
+void FAcAudioRules::Ringshadow(const FShadowHear& H)
+{
+	Shadow = H;
+	// The edge over the ears: the pressure drops as it comes in, the sun
+	// comes back as it goes (the band's half-cover lines, as the ore's bonus).
+	if (!bUnderBand && H.Cover >= 0.5)
+	{
+		bUnderBand = true;
+		OneShot("rspass", {}, AcSound::ShadowPassGain, EAcSoundPool::InEar);
+	}
+	else if (bUnderBand && H.Cover < 0.5)
+	{
+		bUnderBand = false;
+		OneShot("rsrelease", {}, AcSound::ShadowReleaseGain, EAcSoundPool::InEar);
+	}
+}
+
+void FAcAudioRules::Starfalls(const std::vector<FStarHear>& Falls)
+{
+	Craters.clear();
+	for (const FStarHear& F : Falls)
+	{
+		const float Near = StarNear(F.Distance);
+		// The streak, from where it comes in, if it is not half gone already.
+		if (F.ToImpact > 0 && F.ToImpact <= AcSound::StreakSeconds && F.ToImpact > AcSound::StreakSeconds - 2.0 && !Streaked.Contains(F.Id))
+		{
+			Streaked.Add(F.Id);
+			if (OneShot("sfstreak", F.At, AcSound::StreakGain * Near, EAcSoundPool::InEar)) Cues.back().Pan = F.Pan;
+		}
+		// The boom when it reaches the ears, its roll off the hills after.
+		if (F.ToImpact <= 0 && F.ToImpact > -5.0 && !Boomed.Contains(F.Id))
+		{
+			Boomed.Add(F.Id);
+			const double Travel = F.Distance / AcSound::SoundCellsPerSecond + F.ToImpact;
+			Later(FMath::Max(0.0, Travel), "sfboom", F.At, AcSound::StarBoomGain * Near, EAcSoundPool::InEar, F.Pan);
+			// The echo carries: far off it is most of what is heard.
+			Later(FMath::Max(0.0, Travel) + AcSound::StarEchoAfter, "sfecho", F.At, AcSound::StarEchoGain * FMath::Max(Near, 0.6f),
+				EAcSoundPool::InEar, F.Pan);
+		}
+		if (F.bCrater) Craters.push_back(F);
+	}
+}
+
+void FAcAudioRules::News(const ENews N)
+{
+	FName Sound;
+	switch (N)
+	{
+	case ENews::Blueprint: Sound = "blueprint"; break;
+	case ENews::Paid: Sound = "paid"; break;
+	case ENews::Made: Sound = "made"; break;
+	case ENews::Researched: Sound = "research"; break;
+	}
+	if (Allow(Sound, 2)) OneShot(Sound, {}, AcSound::NewsGain, EAcSoundPool::InEar);
+}
+
 void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAcLoopWant>& Out)
 {
 	const float D = static_cast<float>(Dt);
@@ -572,6 +655,64 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 	Bed(WindKeys, "wind", AcSound::WindGain * (1.f + AcSound::StormWindLift * static_cast<float>(Storminess)));
 	Bed(RainKeys, "rain", AcSound::RainGain * FMath::Clamp(Rain * 2.5f, 0.f, 1.f) * (1.f - 0.6f * FMath::SmoothStep(0.5f, 1.f, Rain)));
 	Bed(DownpourKeys, "downpour", AcSound::DownpourGain * FMath::SmoothStep(0.35f, 1.f, Rain));
+	// The ringshadow (J1): the drone from the warning, a little at first,
+	// swelling as the band's edge comes the last `ShadowDroneCells`, giving
+	// way under the band to the cold bed; the ore flaring near the ears.
+	{
+		float Approach = 0.f;
+		if (Shadow.EdgeAhead)
+		{
+			if (*Shadow.EdgeAhead > 0)
+			{
+				Approach = 0.4f + 0.6f * FMath::Clamp(1.f - static_cast<float>(*Shadow.EdgeAhead / AcSound::ShadowDroneCells), 0.f, 1.f);
+			}
+		}
+		else if (Shadow.ToStart > 0 && Shadow.ToStart <= ac::Ringshadow::warning)
+		{
+			Approach = 0.4f * (1.f - static_cast<float>(Shadow.ToStart / ac::Ringshadow::warning));
+		}
+		const float Cover = FMath::Clamp(static_cast<float>(Shadow.Cover), 0.f, 1.f);
+		Fade(DroneFade, Approach * (1.f - Cover), 2.f, 3.f);
+		Fade(BedFade, Cover, 1.5f, 2.5f);
+		Fade(ShimmerFade, Shadow.Flare ? 1.f : 0.f, 1.f, 1.5f);
+		auto Ambient = [&](int64 Key, FName Name, float Volume)
+		{
+			if (Volume <= 0.f || Variants(Name) <= 0) return;
+			FAcLoopWant W;
+			W.Key = Key;
+			W.Name = Name;
+			W.Volume = Volume;
+			W.bInEar = true;
+			W.bAmbient = true;
+			Out.push_back(W);
+		};
+		Ambient(DroneKey, "rsdrone", AcSound::ShadowDroneGain * DroneFade);
+		Ambient(ShadowBedKey, "rsbed", AcSound::ShadowBedGain * BedFade);
+		if (Shadow.Flare) ShimmerAt = *Shadow.Flare;
+		if (ShimmerFade > 0.f && Variants("shimmer") > 0)
+		{
+			FAcLoopWant W;
+			W.Key = ShimmerKey;
+			W.Name = "shimmer";
+			W.Volume = AcSound::ShimmerGain * ShimmerFade * Reach(ShimmerAt, AcSound::Carry("shimmer"));
+			W.At = ShimmerAt;
+			W.Lift = 0.3f;
+			Out.push_back(W);
+		}
+		// The hot craters here: their hum and embers, cooling over a world day.
+		for (int32 I = 0; I < static_cast<int32>(Craters.size()) && Variants("sfcrater") > 0; ++I)
+		{
+			const FStarHear& C = Craters[size_t(I)];
+			FAcLoopWant W;
+			W.Key = CraterKeys - I;
+			W.Name = "sfcrater";
+			W.Volume = AcSound::CraterGain * (1.f - 0.7f * FMath::Clamp(static_cast<float>(C.Age / ac::Starfall::craterLife), 0.f, 1.f))
+				* Reach(C.At, AcSound::Carry("sfcrater"));
+			W.At = C.At;
+			W.Lift = 0.3f;
+			Out.push_back(W);
+		}
+	}
 	// Each Prospector's tool: the drill while it mines, the welder while it builds.
 	TSet<int64> Prospectors;
 	for (const ac::Unit& U : Shown.units)
@@ -991,7 +1132,16 @@ void UAcAudioDirector::Play(const FAcSoundCue& Cue)
 	UWorld* World = GetWorld();
 	if (!Wave || !World || bMuted) return;
 	UAudioComponent* C = nullptr;
-	if (Cue.Pool == EAcSoundPool::InEar || PlaceFlat())
+	if (Cue.Pan && !PlaceFlat())
+	{
+		// From a side, at any distance (a starfall): on the unit circle round
+		// the listener at that pan, as the wind's layers.
+		TOptional<FAcVoice3D> Unused;
+		const FVector At = Place(Cue.At, 0.7f, Cue.Pan, Unused);
+		C = UGameplayStatics::SpawnSoundAtLocation(World, Wave, At, FRotator::ZeroRotator, Cue.Volume * AcSound::SfxGain(), 1.f, 0.f,
+			Panned.Get(), InEarPool.Get());
+	}
+	else if (Cue.Pool == EAcSoundPool::InEar || PlaceFlat())
 	{
 		// Offline (flat) a pilot's world sound keeps its 3D gain, filter and
 		// hall send, without the pan.
@@ -1204,6 +1354,8 @@ void UAcAudioDirector::OnFrame(const FAcFrame& Frame)
 		ThunderHeardTo = T;
 		for (const FAcSoundCue& Cue : Brain.TakeCues()) Play(Cue);
 	}
+	HearMoments(*Sim);
+	for (const FAcSoundCue& Cue : Brain.TakeCues()) Play(Cue);
 	std::vector<FAcLoopWant> Wants;
 	Brain.Loops(Shown, Frame.RealDelta, Wants);
 	SyncLoops(Wants);
@@ -1220,6 +1372,78 @@ void UAcAudioDirector::OnFrame(const FAcFrame& Frame)
 		QuitAt.Reset();
 		FPlatformMisc::RequestExit(false, TEXT("AcAudioQuitAt"));
 	}
+}
+
+void UAcAudioDirector::HearMoments(const UAcSimSubsystem& Sim)
+{
+	const FAcMmoClient* Mmo = Sim.IsMmo() ? Sim.MmoClient() : nullptr;
+	const TOptional<FAcWorldSky>& WorldSky = AAcDaylight::WorldSky();
+	if (!Mmo || !WorldSky || !Sim.Simulation().map)
+	{
+		Brain.Ringshadow({});
+		Brain.Starfalls({});
+		return;
+	}
+	// The ears: the listener (the pilot's camera, or the view's).
+	FVector Loc = FVector::ZeroVector, Front = FVector::ForwardVector, Right = FVector::RightVector;
+	if (const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+	{
+		PC->GetAudioListenerPosition(Loc, Front, Right);
+	}
+	const ac::Vec2 Ear = AcSpace::ToSim(Loc);
+
+	// The ringshadow: the band the server pays from (`AAcRingshadow` draws the same).
+	FAcAudioRules::FShadowHear H;
+	const double Time = WorldSky->Time, Day = WorldSky->DayLength;
+	H.ToStart = ac::Ringshadow::next(Time, Day).start - Time;
+	if (const std::optional<ac::Ringshadow::Band> Band = ac::Ringshadow::band(Time, Sim.Simulation().map->bounds, Day))
+	{
+		H.EdgeAhead = ac::dot(Ear, Band->dir) - Band->lead;
+		H.Cover = ac::Ringshadow::cover(*Band, Ear);
+		double Best = AcSound::ShimmerCells;
+		for (const ac::OreDeposit& D : Sim.State().patches)
+		{
+			const double Dist = ac::length(D.position - Ear);
+			if (D.remaining <= 0 || Dist >= Best || ac::Ringshadow::cover(*Band, D.position) < ac::Ringshadow::bonusCover) continue;
+			Best = Dist;
+			H.Flare = D.position;
+		}
+	}
+	Brain.Ringshadow(H);
+
+	// The starfalls: told by the server, placed as `AAcStarfall` draws them
+	// (another region's by the world grid, side by side).
+	std::vector<FAcAudioRules::FStarHear> Falls;
+	const std::optional<ac::net::Sky>& Sky = Mmo->Sky();
+	const ac::net::WorldMessage* World = Mmo->World();
+	if (Sky && World && World->here >= 0 && World->here < int64(World->regions.size()))
+	{
+		const ac::net::WorldMessage::Region& HereR = World->regions[size_t(World->here)];
+		const ac::MapCells HereCells = ac::cells(HereR.size);
+		const FVector Side = FVector(Right.X, Right.Y, 0).GetSafeNormal();
+		for (const ac::net::Sky::Starfall& S : Sky->starfalls)
+		{
+			if (S.region < 0 || S.region >= int64(World->regions.size())) continue;
+			const ac::net::WorldMessage::Region& R = World->regions[size_t(S.region)];
+			FAcAudioRules::FStarHear F;
+			F.Id = S.id;
+			F.ToImpact = S.impact - Sky->time;
+			F.At = S.at;
+			if (S.region != World->here)
+			{
+				const ac::MapCells C = ac::cells(R.size);
+				F.At.x += double(R.column - HereR.column) * (HereCells.width + C.width) / 2.0;
+				F.At.y += double(R.row - HereR.row) * (HereCells.depth + C.depth) / 2.0;
+			}
+			F.Distance = ac::length(F.At - Ear);
+			const FVector To = (AcSpace::ToWorld(F.At) - Loc) * FVector(1, 1, 0);
+			F.Pan = static_cast<float>(FVector::DotProduct(To.GetSafeNormal(), Side));
+			F.Age = -F.ToImpact;
+			F.bCrater = S.region == World->here && S.patch && F.Age >= 0 && F.Age < ac::Starfall::craterLife;
+			Falls.push_back(F);
+		}
+	}
+	Brain.Starfalls(Falls);
 }
 
 void UAcAudioDirector::LogSecond(const double GameTime)
