@@ -552,3 +552,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T D3 (turret upgrades) next for wt2.
 - D Manager: any pilot may upgrade any realm turret; marks die with it.
 - T D3 briefed to wt2 (protocol 21, request 19).
+- T M2 done f966479: satellite world map, live overlays, tooltips, click-to-target.
+- D M2: 9 baked region textures (bake_map.py); live items only in your region.
+- N Protocol 21 (regionsSeen); D3 takes 22.
+- N M2 suites: core 473, server 216, net 81 pass.
+- I Merc orange now via outline pass (H2 follow-up closed).
