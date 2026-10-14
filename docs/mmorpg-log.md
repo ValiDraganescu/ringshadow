@@ -371,3 +371,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Sites have no 3D model: opening ring over bare ground.
 - I Contract panel covers a third of the view.
 - T W2 site models + compact panel → progression-core.
+- T J1 done 26cf2f2: 15 sounds wired; offline checks, -nosound logs.
+- N J1: 1,755 ElevenLabs credits; task 38 of 90 min.
+- I J1: shimmer and rankup not heard in a run (tests only).
+- I Queue: runs out of order; engine Python errors fail runs.
