@@ -407,3 +407,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N HEAD in a clean worktree: core 454, server 146, net 67 pass.
 - I O1 protocol saved after train 13 undeclared; runs never seated.
 - N Correction: the 16:47 protocol save was W3's (ground), not O1's.
+- D User: build train retired; pool worktrees MMORPG-wt-N, merge via manager.
+- T All 4 workers parking: commits + handover patches, then successors.
