@@ -119,7 +119,7 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | K2 | Citadel missions and the Journal: a MISSIONS tab on the Citadel screen with tiers (easy, hard, perilous) and rewards to match; picked missions in a Journal screen (text, instructions, map marker, replayable narration); narrated lines per mission template, voices by mood, offline WAV checks only | C2 | done 6683b5d |
 | M2 | The satellite map: M shows a top-down render of the real ground of every discovered region, stitched, any shape; hover tooltips on POIs, buildings, deposits (name, ore left, builder) | | |
 | S2 | The world runs on: the local server keeps running after the game quits (as long as the Mac is on), the game reattaches to it on start; offline catch-up when it was stopped; tests never leave a server behind | | done d5600c1 |
-| H2 | Mercenary prospectors: hire at the Citadel (a MERCS tab) for ore and MH; each mines an area at 1/24 of the pilot's rate, delivers to the pilot's wallet (taxed), shown on the map; work goes on while the game is closed | S2, C2 | |
+| H2 | Mercenary prospectors: hire at the Citadel (a MERCS tab) for ore and MH; each mines an area at 1/24 of the pilot's rate, delivers to the pilot's wallet (taxed), shown on the map; work goes on while the game is closed | S2, C2 | done 7ad7951 |
 | U1 | HUD declutter (from M7): one toast lane, Q/C/G clear of the pawn, compact contract panel, banners off the panels, no "CONTRACT DONE: CONTRACT" | | |
 
 Each task is done when the three suites pass, its hidden-run pictures

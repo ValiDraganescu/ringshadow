@@ -533,3 +533,11 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D User: website domain ringshadow.com (Cloudflare); journalist prepares Pages config.
 - N Website live at https://ringshadow.com (user deployed via journalist).
 - D User: blog posts go public only when the user says deploy.
+- T H2 done 7ad7951: mercenaries: MERCS tab, fields, wage at dawn, offline pay.
+- D H2: fee 500 ore + 50 MH doubling; wage 5 + level/5 MH; depot = realm Citadel.
+- N H2: a day at level 5 = 4,860 ore (the pilot's hour), field 18,000 → 13,140.
+- N Protocol 19, schema 14; request 17 is Reserved17 until D1 lands.
+- N H2 suites: core 467, server 209, net 71 pass.
+- I Merc paint doesn't read orange in h2-03 (looks like the stock Prospector).
+- I MISSIONS TAKE click did nothing; fixed in H2.
+- D User (relayed by the journalist): deploy each finished website change.
