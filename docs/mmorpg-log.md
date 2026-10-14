@@ -315,3 +315,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T W1 regions crafted, validate ok; shots wait on a good build.
 - D Manager: Prospector builds the Lab in worlds (P6).
 - T P6 building roles → world-clock; contract panel → P5 after P5.
+- T W1 done 0ce4fcf: 9 regions, a landmark each; shots checked.
+- N W1: start ore 9k→89k; MH per region 36k→11–13k.
+- I W1 proposals: ground above level 2, landmark props, ground tint.
+- T E2 starfall → world-look.

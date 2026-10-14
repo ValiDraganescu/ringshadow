@@ -22,9 +22,9 @@ Runs alongside the end of M6 (P4b–P7): workers freed from M6 start here.
 
 | # | Task | Needs | Status |
 |---|---|---|---|
-| W1 | The First Reach with character: deposits in veins and clusters that follow the land (not lines), a landmark silhouette per region, places worth walking to; validate ok, previews and hidden-run pictures | P4a | in progress |
+| W1 | The First Reach with character: deposits in veins and clusters that follow the land (not lines), a landmark silhouette per region, places worth walking to; validate ok, previews and hidden-run pictures | P4a | done |
 | E1 | The ringshadow sweep: a band of shadow crosses the region on the world clock (server schedule in snapshots, client sky/light/fog); under it ore veins flare and drilling pays more; an announcement before it comes | C1 | in progress |
-| E2 | Starfall: the server drops meteors at times and places it picks; a streak in the sky, a crater with a rare rich deposit, first come first served, an announcement | C1 | |
+| E2 | Starfall: the server drops meteors at times and places it picks; a streak in the sky, a crater with a rare rich deposit, first come first served, an announcement | C1 | in progress |
 | K1 | KSTR contracts: the radio offers 3 contracts a day per pilot (deliver ore/MH, reach a site, build, survive an event); rewards XP and MH; a contract panel and a radio voice line | P3 | server done; panel with P5 |
 | F1 | Flight worth watching: the pad-to-pad flight and jump jets burn MH, with thrust, dust and a camera that sells it | P3 | |
 
