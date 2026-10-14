@@ -256787,6 +256787,10054 @@
      ]
     }
    ]
+  },
+  {
+   "name": "shardling_blue",
+   "file": "",
+   "category": "unit",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -0.58,
+    -0.005608,
+    -0.649309
+   ],
+   "boundsMax": [
+    0.865969,
+    0.841744,
+    0.649309
+   ],
+   "triangles": 2224,
+   "team": "blue",
+   "base": "shardling",
+   "canonical": "shardling_blue",
+   "notes": [
+    "The Brood's ground swarmer, dog-sized (docs/creatures.md). Pose: PoseShardling (N2): tripod gait, body bob, lunge and mandible snap on each attack, flinch, death roll. No team colour: teal glow fixed.",
+    "Parts: body, head, mandible_0/1, leg_0..5."
+   ],
+   "parts": [
+    {
+     "name": "shardling_blue_root",
+     "path": "/shardling_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/shardling_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.36,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.36,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "shardling_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "body: bob of the gait, lunge forward on a bite, roll on death",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.4,
+        0.157292,
+        0.22
+       ],
+       "lo": [
+        0.24,
+        -0.117292,
+        -0.22
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.24,
+        0.176905,
+        0.25
+       ],
+       "lo": [
+        0.06,
+        -0.136905,
+        -0.25
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.06,
+        0.176905,
+        0.25
+       ],
+       "lo": [
+        -0.14,
+        -0.136905,
+        -0.25
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.14,
+        0.167099,
+        0.24
+       ],
+       "lo": [
+        -0.32,
+        -0.127099,
+        -0.24
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.32,
+        0.147485,
+        0.2
+       ],
+       "lo": [
+        -0.48,
+        -0.107485,
+        -0.2
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.48,
+        0.108259,
+        0.13
+       ],
+       "lo": [
+        -0.58,
+        -0.068259,
+        -0.13
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.330203,
+        0.361269,
+        0.04
+       ],
+       "lo": [
+        0.219376,
+        0.129429,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.214056,
+        0.402469,
+        -0.043567
+       ],
+       "lo": [
+        0.084913,
+        0.119422,
+        -0.149572
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.194069,
+        0.382547,
+        0.149575
+       ],
+       "lo": [
+        0.071912,
+        0.118773,
+        0.043544
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.08153,
+        0.481744,
+        0.055
+       ],
+       "lo": [
+        -0.083984,
+        0.125465,
+        -0.055
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.025923,
+        0.422595,
+        -0.063537
+       ],
+       "lo": [
+        -0.162089,
+        0.118377,
+        -0.181576
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.04215,
+        0.442805,
+        0.182193
+       ],
+       "lo": [
+        -0.189542,
+        0.116621,
+        0.058388
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.142246,
+        0.441586,
+        0.05
+       ],
+       "lo": [
+        -0.289531,
+        0.126786,
+        -0.05
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.249702,
+        0.362344,
+        -0.048698
+       ],
+       "lo": [
+        -0.360636,
+        0.120463,
+        -0.148956
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.269733,
+        0.382164,
+        0.132951
+       ],
+       "lo": [
+        -0.387632,
+        0.121969,
+        0.03874
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.393572,
+        0.32111,
+        0.035
+       ],
+       "lo": [
+        -0.486171,
+        0.13075,
+        -0.035
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.481062,
+        0.261476,
+        -0.024187
+       ],
+       "lo": [
+        -0.544273,
+        0.127698,
+        -0.083098
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.481037,
+        0.261593,
+        0.099093
+       ],
+       "lo": [
+        -0.544276,
+        0.126727,
+        0.034228
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "body__chitin",
+       "mesh": "/Game/Models/shardling/SM_body__chitin.SM_body__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 196
+      },
+      {
+       "material": "chitinUnder",
+       "prim": "body__chitinUnder",
+       "mesh": "/Game/Models/shardling/SM_body__chitinUnder.SM_body__chitinUnder",
+       "materialInstance": "/Game/Models/Materials/MI_chitinUnder_0b6c6a8c312e.MI_chitinUnder_0b6c6a8c312e",
+       "materialKey": "0b6c6a8c312e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 144
+      },
+      {
+       "material": "chitinMid",
+       "prim": "body__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_body__chitinMid.SM_body__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 60
+      },
+      {
+       "material": "glowDim_teal",
+       "prim": "body__glowDim_teal",
+       "mesh": "/Game/Models/shardling/SM_body__glowDim_teal.SM_body__glowDim_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_teal_adc74bb7cdfd.MI_glowDim_teal_adc74bb7cdfd",
+       "materialKey": "adc74bb7cdfd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      },
+      {
+       "material": "glow_teal",
+       "prim": "body__glow_teal",
+       "mesh": "/Game/Models/shardling/SM_body__glow_teal.SM_body__glow_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glow_teal_e961a3a9f155.MI_glow_teal_e961a3a9f155",
+       "materialKey": "e961a3a9f155",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 312
+      },
+      {
+       "material": "crystal",
+       "prim": "body__crystal",
+       "mesh": "/Game/Models/shardling/SM_body__crystal.SM_body__crystal",
+       "materialInstance": "/Game/Models/Materials/MI_crystal_7aacda7c4dcf.MI_crystal_7aacda7c4dcf",
+       "materialKey": "7aacda7c4dcf",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      },
+      {
+       "material": "oreFleck",
+       "prim": "body__oreFleck",
+       "mesh": "/Game/Models/shardling/SM_body__oreFleck.SM_body__oreFleck",
+       "materialInstance": "/Game/Models/Materials/MI_oreFleck_a21ed8be07a6.MI_oreFleck_a21ed8be07a6",
+       "materialKey": "a21ed8be07a6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 360
+      }
+     ]
+    },
+    {
+     "name": "head",
+     "path": "/shardling_blue/body/head",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.4,
+      0.02,
+      0.0,
+      1
+     ],
+     "position": [
+      0.4,
+      0.02,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "head"
+     ],
+     "driver": {
+      "what": "head: dips and thrusts on a bite, turns to its target",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.1,
+        -0.01,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.17,
+        0.119,
+        0.1955
+       ],
+       "lo": [
+        -0.17,
+        -0.119,
+        -0.1955
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.2,
+        0.03,
+        -0.1,
+        1
+       ],
+       "hi": [
+        0.042,
+        0.042,
+        0.042
+       ],
+       "lo": [
+        -0.042,
+        -0.042,
+        -0.042
+       ],
+       "radius": 0.042,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.2,
+        0.03,
+        0.1,
+        1
+       ],
+       "hi": [
+        0.042,
+        0.042,
+        0.042
+       ],
+       "lo": [
+        -0.042,
+        -0.042,
+        -0.042
+       ],
+       "radius": 0.042,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.23,
+        0.06,
+        -0.045,
+        1
+       ],
+       "hi": [
+        0.026,
+        0.026,
+        0.026
+       ],
+       "lo": [
+        -0.026,
+        -0.026,
+        -0.026
+       ],
+       "radius": 0.026,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.23,
+        0.06,
+        0.045,
+        1
+       ],
+       "hi": [
+        0.026,
+        0.026,
+        0.026
+       ],
+       "lo": [
+        -0.026,
+        -0.026,
+        -0.026
+       ],
+       "radius": 0.026,
+       "round": "sphere"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "head__chitin",
+       "mesh": "/Game/Models/shardling/SM_head__chitin.SM_head__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      },
+      {
+       "material": "chitinMid",
+       "prim": "head__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_head__chitinMid.SM_head__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "glow_teal",
+       "prim": "head__glow_teal",
+       "mesh": "/Game/Models/shardling/SM_head__glow_teal.SM_head__glow_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glow_teal_e961a3a9f155.MI_glow_teal_e961a3a9f155",
+       "materialKey": "e961a3a9f155",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      },
+      {
+       "material": "glowDim_teal",
+       "prim": "head__glowDim_teal",
+       "mesh": "/Game/Models/shardling/SM_head__glowDim_teal.SM_head__glowDim_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_teal_adc74bb7cdfd.MI_glowDim_teal_adc74bb7cdfd",
+       "materialKey": "adc74bb7cdfd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "mandible_0",
+     "path": "/shardling_blue/body/head/mandible_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.2,
+      -0.06,
+      -0.09,
+      1
+     ],
+     "position": [
+      0.2,
+      -0.06,
+      -0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "mandible_0"
+     ],
+     "driver": {
+      "what": "mandible: twitches at rest, opens wide and snaps shut on a bite",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.161002,
+        0.042942,
+        0.02379
+       ],
+       "lo": [
+        -0.026252,
+        -0.064353,
+        -0.129032
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.265969,
+        0.004667,
+        0.0341
+       ],
+       "lo": [
+        0.116125,
+        -0.064667,
+        -0.126398
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitinMid",
+       "prim": "mandible_0__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_mandible_0__chitinMid.SM_mandible_0__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "crystal",
+       "prim": "mandible_0__crystal",
+       "mesh": "/Game/Models/shardling/SM_mandible_0__crystal.SM_mandible_0__crystal",
+       "materialInstance": "/Game/Models/Materials/MI_crystal_7aacda7c4dcf.MI_crystal_7aacda7c4dcf",
+       "materialKey": "7aacda7c4dcf",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "mandible_1",
+     "path": "/shardling_blue/body/head/mandible_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.2,
+      -0.06,
+      0.09,
+      1
+     ],
+     "position": [
+      0.2,
+      -0.06,
+      0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "mandible_1"
+     ],
+     "driver": {
+      "what": "mandible: twitches at rest, opens wide and snaps shut on a bite",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.161002,
+        0.042942,
+        0.129032
+       ],
+       "lo": [
+        -0.026252,
+        -0.064353,
+        -0.02379
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.265969,
+        0.004667,
+        0.126398
+       ],
+       "lo": [
+        0.116125,
+        -0.064667,
+        -0.0341
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitinMid",
+       "prim": "mandible_1__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_mandible_1__chitinMid.SM_mandible_1__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "crystal",
+       "prim": "mandible_1__crystal",
+       "mesh": "/Game/Models/shardling/SM_mandible_1__crystal.SM_mandible_1__crystal",
+       "materialInstance": "/Game/Models/Materials/MI_crystal_7aacda7c4dcf.MI_crystal_7aacda7c4dcf",
+       "materialKey": "7aacda7c4dcf",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "leg_0",
+     "path": "/shardling_blue/body/leg_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.24,
+      -0.02,
+      -0.18,
+      1
+     ],
+     "position": [
+      0.24,
+      -0.02,
+      -0.18
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_0"
+     ],
+     "driver": {
+      "what": "leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.045,
+        0.184402,
+        0.04
+       ],
+       "lo": [
+        -0.045,
+        -0.184402,
+        -0.04
+       ],
+       "transform": [
+        0.916539,
+        -0.399944,
+        0.0,
+        0.0,
+        0.260301,
+        0.596524,
+        -0.759212,
+        0.0,
+        0.303643,
+        0.695848,
+        0.650843,
+        0.0,
+        0.048,
+        0.11,
+        -0.14,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.096,
+        0.22,
+        -0.28,
+        1
+       ],
+       "hi": [
+        0.055,
+        0.055,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.055,
+        -0.055
+       ],
+       "radius": 0.055,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.251617,
+        0.238695,
+        -0.248969
+       ],
+       "lo": [
+        0.057276,
+        -0.345608,
+        -0.469309
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_0__chitin",
+       "mesh": "/Game/Models/shardling/SM_leg_0__chitin.SM_leg_0__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_0__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_leg_0__chitinMid.SM_leg_0__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_teal",
+       "prim": "leg_0__glowDim_teal",
+       "mesh": "/Game/Models/shardling/SM_leg_0__glowDim_teal.SM_leg_0__glowDim_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_teal_adc74bb7cdfd.MI_glowDim_teal_adc74bb7cdfd",
+       "materialKey": "adc74bb7cdfd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 20
+      }
+     ]
+    },
+    {
+     "name": "leg_1",
+     "path": "/shardling_blue/body/leg_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.02,
+      -0.02,
+      -0.18,
+      1
+     ],
+     "position": [
+      0.02,
+      -0.02,
+      -0.18
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_1"
+     ],
+     "driver": {
+      "what": "leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.045,
+        0.178225,
+        0.04
+       ],
+       "lo": [
+        -0.045,
+        -0.178225,
+        -0.04
+       ],
+       "transform": [
+        0.997366,
+        -0.072536,
+        0.0,
+        0.0,
+        0.044887,
+        0.617199,
+        -0.785526,
+        0.0,
+        0.056979,
+        0.783457,
+        0.618829,
+        0.0,
+        0.008,
+        0.11,
+        -0.14,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.016,
+        0.22,
+        -0.28,
+        1
+       ],
+       "hi": [
+        0.055,
+        0.055,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.055,
+        -0.055
+       ],
+       "radius": 0.055,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.053891,
+        0.231534,
+        -0.249056
+       ],
+       "lo": [
+        -0.021891,
+        -0.34346,
+        -0.469283
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_1__chitin",
+       "mesh": "/Game/Models/shardling/SM_leg_1__chitin.SM_leg_1__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_1__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_leg_1__chitinMid.SM_leg_1__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_teal",
+       "prim": "leg_1__glowDim_teal",
+       "mesh": "/Game/Models/shardling/SM_leg_1__glowDim_teal.SM_leg_1__glowDim_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_teal_adc74bb7cdfd.MI_glowDim_teal_adc74bb7cdfd",
+       "materialKey": "adc74bb7cdfd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 20
+      }
+     ]
+    },
+    {
+     "name": "leg_2",
+     "path": "/shardling_blue/body/leg_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.24,
+      -0.02,
+      -0.18,
+      1
+     ],
+     "position": [
+      -0.24,
+      -0.02,
+      -0.18
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_2"
+     ],
+     "driver": {
+      "what": "leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.045,
+        0.183401,
+        0.04
+       ],
+       "lo": [
+        -0.045,
+        -0.183401,
+        -0.04
+       ],
+       "transform": [
+        0.928477,
+        0.371391,
+        0.0,
+        0.0,
+        -0.239911,
+        0.599778,
+        -0.763354,
+        0.0,
+        -0.283502,
+        0.708756,
+        0.645981,
+        0.0,
+        -0.044,
+        0.11,
+        -0.14,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.088,
+        0.22,
+        -0.28,
+        1
+       ],
+       "hi": [
+        0.055,
+        0.055,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.055,
+        -0.055
+       ],
+       "radius": 0.055,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        -0.049274,
+        0.238049,
+        -0.248983
+       ],
+       "lo": [
+        -0.231618,
+        -0.345415,
+        -0.469305
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_2__chitin",
+       "mesh": "/Game/Models/shardling/SM_leg_2__chitin.SM_leg_2__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_2__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_leg_2__chitinMid.SM_leg_2__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_teal",
+       "prim": "leg_2__glowDim_teal",
+       "mesh": "/Game/Models/shardling/SM_leg_2__glowDim_teal.SM_leg_2__glowDim_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_teal_adc74bb7cdfd.MI_glowDim_teal_adc74bb7cdfd",
+       "materialKey": "adc74bb7cdfd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 20
+      }
+     ]
+    },
+    {
+     "name": "leg_3",
+     "path": "/shardling_blue/body/leg_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.24,
+      -0.02,
+      0.18,
+      1
+     ],
+     "position": [
+      0.24,
+      -0.02,
+      0.18
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_3"
+     ],
+     "driver": {
+      "what": "leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.045,
+        0.184402,
+        0.04
+       ],
+       "lo": [
+        -0.045,
+        -0.184402,
+        -0.04
+       ],
+       "transform": [
+        0.916539,
+        -0.399944,
+        0.0,
+        0.0,
+        0.260301,
+        0.596524,
+        0.759212,
+        0.0,
+        -0.303643,
+        -0.695848,
+        0.650843,
+        0.0,
+        0.048,
+        0.11,
+        0.14,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.096,
+        0.22,
+        0.28,
+        1
+       ],
+       "hi": [
+        0.055,
+        0.055,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.055,
+        -0.055
+       ],
+       "radius": 0.055,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.251617,
+        0.238695,
+        0.469309
+       ],
+       "lo": [
+        0.057276,
+        -0.345608,
+        0.248969
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_3__chitin",
+       "mesh": "/Game/Models/shardling/SM_leg_3__chitin.SM_leg_3__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_3__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_leg_3__chitinMid.SM_leg_3__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_teal",
+       "prim": "leg_3__glowDim_teal",
+       "mesh": "/Game/Models/shardling/SM_leg_3__glowDim_teal.SM_leg_3__glowDim_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_teal_adc74bb7cdfd.MI_glowDim_teal_adc74bb7cdfd",
+       "materialKey": "adc74bb7cdfd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 20
+      }
+     ]
+    },
+    {
+     "name": "leg_4",
+     "path": "/shardling_blue/body/leg_4",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.02,
+      -0.02,
+      0.18,
+      1
+     ],
+     "position": [
+      0.02,
+      -0.02,
+      0.18
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_4"
+     ],
+     "driver": {
+      "what": "leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.045,
+        0.178225,
+        0.04
+       ],
+       "lo": [
+        -0.045,
+        -0.178225,
+        -0.04
+       ],
+       "transform": [
+        0.997366,
+        -0.072536,
+        0.0,
+        0.0,
+        0.044887,
+        0.617199,
+        0.785526,
+        0.0,
+        -0.056979,
+        -0.783457,
+        0.618829,
+        0.0,
+        0.008,
+        0.11,
+        0.14,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.016,
+        0.22,
+        0.28,
+        1
+       ],
+       "hi": [
+        0.055,
+        0.055,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.055,
+        -0.055
+       ],
+       "radius": 0.055,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.053891,
+        0.231534,
+        0.469283
+       ],
+       "lo": [
+        -0.021891,
+        -0.34346,
+        0.249056
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_4__chitin",
+       "mesh": "/Game/Models/shardling/SM_leg_4__chitin.SM_leg_4__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_4__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_leg_4__chitinMid.SM_leg_4__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_teal",
+       "prim": "leg_4__glowDim_teal",
+       "mesh": "/Game/Models/shardling/SM_leg_4__glowDim_teal.SM_leg_4__glowDim_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_teal_adc74bb7cdfd.MI_glowDim_teal_adc74bb7cdfd",
+       "materialKey": "adc74bb7cdfd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 20
+      }
+     ]
+    },
+    {
+     "name": "leg_5",
+     "path": "/shardling_blue/body/leg_5",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.24,
+      -0.02,
+      0.18,
+      1
+     ],
+     "position": [
+      -0.24,
+      -0.02,
+      0.18
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_5"
+     ],
+     "driver": {
+      "what": "leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseShardling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.045,
+        0.183401,
+        0.04
+       ],
+       "lo": [
+        -0.045,
+        -0.183401,
+        -0.04
+       ],
+       "transform": [
+        0.928477,
+        0.371391,
+        0.0,
+        0.0,
+        -0.239911,
+        0.599778,
+        0.763354,
+        0.0,
+        0.283502,
+        -0.708756,
+        0.645981,
+        0.0,
+        -0.044,
+        0.11,
+        0.14,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.088,
+        0.22,
+        0.28,
+        1
+       ],
+       "hi": [
+        0.055,
+        0.055,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.055,
+        -0.055
+       ],
+       "radius": 0.055,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        -0.049274,
+        0.238049,
+        0.469305
+       ],
+       "lo": [
+        -0.231618,
+        -0.345415,
+        0.248983
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_5__chitin",
+       "mesh": "/Game/Models/shardling/SM_leg_5__chitin.SM_leg_5__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_5__chitinMid",
+       "mesh": "/Game/Models/shardling/SM_leg_5__chitinMid.SM_leg_5__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_teal",
+       "prim": "leg_5__glowDim_teal",
+       "mesh": "/Game/Models/shardling/SM_leg_5__glowDim_teal.SM_leg_5__glowDim_teal",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_teal_adc74bb7cdfd.MI_glowDim_teal_adc74bb7cdfd",
+       "materialKey": "adc74bb7cdfd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 20
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "gloamwing_blue",
+   "file": "",
+   "category": "unit",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -0.634658,
+    0.037244,
+    -0.966826
+   ],
+   "boundsMax": [
+    0.462491,
+    1.250002,
+    0.966826
+   ],
+   "triangles": 1832,
+   "team": "blue",
+   "base": "gloamwing",
+   "canonical": "gloamwing_blue",
+   "notes": [
+    "The Brood's flyer, person-sized (docs/creatures.md). Pose: PoseGloamwing (N2): thorax lifted to its hover height and bobbing, wings flapping (two pairs out of phase), abdomen swaying, nose-down on the move, the dive and spit, falling on death. No team colour: violet glow fixed.",
+    "Parts: thorax, head, abdomen, wing_0..3, leg_0..3."
+   ],
+   "parts": [
+    {
+     "name": "gloamwing_blue_root",
+     "path": "/gloamwing_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "thorax",
+     "path": "/gloamwing_blue/thorax",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.8,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.8,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "gloamwing_blue_root",
+     "handles": [
+      "thorax"
+     ],
+     "driver": {
+      "what": "thorax: lifted to the hover height, bobs, pitches nose-down on the move and in the dive",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.02,
+        0.0,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.25,
+        0.17,
+        0.18
+       ],
+       "lo": [
+        -0.25,
+        -0.17,
+        -0.18
+       ]
+      },
+      {
+       "hi": [
+        0.13,
+        0.03,
+        0.11
+       ],
+       "lo": [
+        -0.13,
+        -0.03,
+        -0.11
+       ],
+       "transform": [
+        0.994522,
+        0.0,
+        0.104528,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.104528,
+        0.0,
+        0.994522,
+        0.0,
+        0.04,
+        0.15,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.025,
+        0.13
+       ],
+       "lo": [
+        -0.07,
+        -0.025,
+        -0.13
+       ],
+       "transform": [
+        0.984808,
+        0.0,
+        -0.173648,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.173648,
+        0.0,
+        0.984808,
+        0.0,
+        -0.12,
+        0.12,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "thorax__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_thorax__chitin.SM_thorax__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 128
+      },
+      {
+       "material": "chitinMid",
+       "prim": "thorax__chitinMid",
+       "mesh": "/Game/Models/gloamwing/SM_thorax__chitinMid.SM_thorax__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "oreFleck",
+       "prim": "thorax__oreFleck",
+       "mesh": "/Game/Models/gloamwing/SM_thorax__oreFleck.SM_thorax__oreFleck",
+       "materialInstance": "/Game/Models/Materials/MI_oreFleck_a21ed8be07a6.MI_oreFleck_a21ed8be07a6",
+       "materialKey": "a21ed8be07a6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 200
+      }
+     ]
+    },
+    {
+     "name": "head",
+     "path": "/gloamwing_blue/thorax/head",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.22,
+      0.02,
+      0.0,
+      1
+     ],
+     "position": [
+      0.22,
+      0.02,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "head"
+     ],
+     "driver": {
+      "what": "head: turns to its target, jerks back on the spit",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.08,
+        -0.01,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.12,
+        0.108,
+        0.126
+       ],
+       "lo": [
+        -0.12,
+        -0.108,
+        -0.126
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.11,
+        0.03,
+        -0.085,
+        1
+       ],
+       "hi": [
+        0.054,
+        0.06,
+        0.042
+       ],
+       "lo": [
+        -0.054,
+        -0.06,
+        -0.042
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.11,
+        0.03,
+        0.085,
+        1
+       ],
+       "hi": [
+        0.054,
+        0.06,
+        0.042
+       ],
+       "lo": [
+        -0.054,
+        -0.06,
+        -0.042
+       ]
+      },
+      {
+       "hi": [
+        0.242491,
+        -0.047547,
+        -0.017046
+       ],
+       "lo": [
+        0.147547,
+        -0.142491,
+        -0.054771
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.242491,
+        -0.047547,
+        0.054771
+       ],
+       "lo": [
+        0.147547,
+        -0.142491,
+        0.017046
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "head__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_head__chitin.SM_head__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 264
+      },
+      {
+       "material": "glow_violet",
+       "prim": "head__glow_violet",
+       "mesh": "/Game/Models/gloamwing/SM_head__glow_violet.SM_head__glow_violet",
+       "materialInstance": "/Game/Models/Materials/MI_glow_violet_0863b9e96c51.MI_glow_violet_0863b9e96c51",
+       "materialKey": "0863b9e96c51",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      },
+      {
+       "material": "chitinMid",
+       "prim": "head__chitinMid",
+       "mesh": "/Game/Models/gloamwing/SM_head__chitinMid.SM_head__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_violet",
+       "prim": "head__glowDim_violet",
+       "mesh": "/Game/Models/gloamwing/SM_head__glowDim_violet.SM_head__glowDim_violet",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_violet_df071e0c897d.MI_glowDim_violet_df071e0c897d",
+       "materialKey": "df071e0c897d",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "abdomen",
+     "path": "/gloamwing_blue/thorax/abdomen",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.14,
+      -0.08,
+      0.0,
+      1
+     ],
+     "position": [
+      -0.14,
+      -0.08,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "abdomen"
+     ],
+     "driver": {
+      "what": "abdomen: sways behind the flight, flares bright on the spit",
+      "channels": [
+       "rotation",
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        0.819152,
+        0.0,
+        0.573576,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.573576,
+        0.0,
+        0.819152,
+        0.0,
+        -0.2,
+        -0.26,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.204,
+        0.3,
+        0.204
+       ],
+       "lo": [
+        -0.204,
+        -0.3,
+        -0.204
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.36,
+        -0.5,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.07,
+        0.07,
+        0.07
+       ],
+       "lo": [
+        -0.07,
+        -0.07,
+        -0.07
+       ],
+       "radius": 0.07,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.04,
+        -0.02,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.108,
+        0.09,
+        0.09
+       ],
+       "lo": [
+        -0.108,
+        -0.09,
+        -0.09
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "glowBody_violet",
+       "prim": "abdomen__glowBody_violet",
+       "mesh": "/Game/Models/gloamwing/SM_abdomen__glowBody_violet.SM_abdomen__glowBody_violet",
+       "materialInstance": "/Game/Models/Materials/MI_glowBody_violet_0df542d5a2b2.MI_glowBody_violet_0df542d5a2b2",
+       "materialKey": "0df542d5a2b2",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      },
+      {
+       "material": "chitin",
+       "prim": "abdomen__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_abdomen__chitin.SM_abdomen__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 352
+      },
+      {
+       "material": "chitinMid",
+       "prim": "abdomen__chitinMid",
+       "mesh": "/Game/Models/gloamwing/SM_abdomen__chitinMid.SM_abdomen__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      }
+     ]
+    },
+    {
+     "name": "wing_0",
+     "path": "/gloamwing_blue/thorax/wing_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.06,
+      0.16,
+      -0.09,
+      1
+     ],
+     "position": [
+      0.06,
+      0.16,
+      -0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "wing_0"
+     ],
+     "driver": {
+      "what": "wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gloamWing",
+       "prim": "wing_0__gloamWing",
+       "mesh": "/Game/Models/gloamwing/SM_wing_0__gloamWing.SM_wing_0__gloamWing",
+       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2ed5ee444f37.MI_gloamWing_2ed5ee444f37",
+       "materialKey": "2ed5ee444f37",
+       "blend": "translucent",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_violet",
+       "prim": "wing_0__glowDim_violet",
+       "mesh": "/Game/Models/gloamwing/SM_wing_0__glowDim_violet.SM_wing_0__glowDim_violet",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_violet_df071e0c897d.MI_glowDim_violet_df071e0c897d",
+       "materialKey": "df071e0c897d",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chitin",
+       "prim": "wing_0__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_wing_0__chitin.SM_wing_0__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "wing_1",
+     "path": "/gloamwing_blue/thorax/wing_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.08,
+      0.16,
+      -0.09,
+      1
+     ],
+     "position": [
+      -0.08,
+      0.16,
+      -0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "wing_1"
+     ],
+     "driver": {
+      "what": "wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gloamWing",
+       "prim": "wing_1__gloamWing",
+       "mesh": "/Game/Models/gloamwing/SM_wing_1__gloamWing.SM_wing_1__gloamWing",
+       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2ed5ee444f37.MI_gloamWing_2ed5ee444f37",
+       "materialKey": "2ed5ee444f37",
+       "blend": "translucent",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_violet",
+       "prim": "wing_1__glowDim_violet",
+       "mesh": "/Game/Models/gloamwing/SM_wing_1__glowDim_violet.SM_wing_1__glowDim_violet",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_violet_df071e0c897d.MI_glowDim_violet_df071e0c897d",
+       "materialKey": "df071e0c897d",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chitin",
+       "prim": "wing_1__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_wing_1__chitin.SM_wing_1__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "wing_2",
+     "path": "/gloamwing_blue/thorax/wing_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.06,
+      0.16,
+      0.09,
+      1
+     ],
+     "position": [
+      0.06,
+      0.16,
+      0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "wing_2"
+     ],
+     "driver": {
+      "what": "wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gloamWing",
+       "prim": "wing_2__gloamWing",
+       "mesh": "/Game/Models/gloamwing/SM_wing_2__gloamWing.SM_wing_2__gloamWing",
+       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2ed5ee444f37.MI_gloamWing_2ed5ee444f37",
+       "materialKey": "2ed5ee444f37",
+       "blend": "translucent",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_violet",
+       "prim": "wing_2__glowDim_violet",
+       "mesh": "/Game/Models/gloamwing/SM_wing_2__glowDim_violet.SM_wing_2__glowDim_violet",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_violet_df071e0c897d.MI_glowDim_violet_df071e0c897d",
+       "materialKey": "df071e0c897d",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chitin",
+       "prim": "wing_2__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_wing_2__chitin.SM_wing_2__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "wing_3",
+     "path": "/gloamwing_blue/thorax/wing_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.08,
+      0.16,
+      0.09,
+      1
+     ],
+     "position": [
+      -0.08,
+      0.16,
+      0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "wing_3"
+     ],
+     "driver": {
+      "what": "wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gloamWing",
+       "prim": "wing_3__gloamWing",
+       "mesh": "/Game/Models/gloamwing/SM_wing_3__gloamWing.SM_wing_3__gloamWing",
+       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2ed5ee444f37.MI_gloamWing_2ed5ee444f37",
+       "materialKey": "2ed5ee444f37",
+       "blend": "translucent",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_violet",
+       "prim": "wing_3__glowDim_violet",
+       "mesh": "/Game/Models/gloamwing/SM_wing_3__glowDim_violet.SM_wing_3__glowDim_violet",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_violet_df071e0c897d.MI_glowDim_violet_df071e0c897d",
+       "materialKey": "df071e0c897d",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chitin",
+       "prim": "wing_3__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_wing_3__chitin.SM_wing_3__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_0",
+     "path": "/gloamwing_blue/thorax/leg_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.1,
+      -0.12,
+      -0.09,
+      1
+     ],
+     "position": [
+      0.1,
+      -0.12,
+      -0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "leg_0"
+     ],
+     "driver": {
+      "what": "leg: dangles and trails behind in flight, reaches forward in the dive",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.021,
+        0.143353,
+        0.018
+       ],
+       "lo": [
+        -0.021,
+        -0.143353,
+        -0.018
+       ],
+       "transform": [
+        -0.860927,
+        -0.508729,
+        0.0,
+        0.0,
+        0.453427,
+        -0.767338,
+        -0.453427,
+        0.0,
+        0.230672,
+        -0.390367,
+        0.891293,
+        0.0,
+        0.065,
+        -0.11,
+        -0.065,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.13,
+        -0.22,
+        -0.13,
+        1
+       ],
+       "hi": [
+        0.03,
+        0.03,
+        0.03
+       ],
+       "lo": [
+        -0.03,
+        -0.03,
+        -0.03
+       ],
+       "radius": 0.03,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.14547,
+        -0.210812,
+        -0.085815
+       ],
+       "lo": [
+        -0.104641,
+        -0.642756,
+        -0.143951
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_0__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_leg_0__chitin.SM_leg_0__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 52
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_0__chitinMid",
+       "mesh": "/Game/Models/gloamwing/SM_leg_0__chitinMid.SM_leg_0__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      }
+     ]
+    },
+    {
+     "name": "leg_1",
+     "path": "/gloamwing_blue/thorax/leg_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.06,
+      -0.12,
+      -0.09,
+      1
+     ],
+     "position": [
+      -0.06,
+      -0.12,
+      -0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "leg_1"
+     ],
+     "driver": {
+      "what": "leg: dangles and trails behind in flight, reaches forward in the dive",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.021,
+        0.133884,
+        0.018
+       ],
+       "lo": [
+        -0.021,
+        -0.133884,
+        -0.018
+       ],
+       "transform": [
+        -0.939793,
+        -0.341743,
+        0.0,
+        0.0,
+        0.298765,
+        -0.821605,
+        -0.485494,
+        0.0,
+        0.165914,
+        -0.456264,
+        0.87424,
+        0.0,
+        0.04,
+        -0.11,
+        -0.065,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.08,
+        -0.22,
+        -0.13,
+        1
+       ],
+       "hi": [
+        0.03,
+        0.03,
+        0.03
+       ],
+       "lo": [
+        -0.03,
+        -0.03,
+        -0.03
+       ],
+       "radius": 0.03,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.096106,
+        -0.212181,
+        -0.085816
+       ],
+       "lo": [
+        -0.104832,
+        -0.642346,
+        -0.143947
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_1__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_leg_1__chitin.SM_leg_1__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 52
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_1__chitinMid",
+       "mesh": "/Game/Models/gloamwing/SM_leg_1__chitinMid.SM_leg_1__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      }
+     ]
+    },
+    {
+     "name": "leg_2",
+     "path": "/gloamwing_blue/thorax/leg_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.1,
+      -0.12,
+      0.09,
+      1
+     ],
+     "position": [
+      0.1,
+      -0.12,
+      0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "leg_2"
+     ],
+     "driver": {
+      "what": "leg: dangles and trails behind in flight, reaches forward in the dive",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.021,
+        0.143353,
+        0.018
+       ],
+       "lo": [
+        -0.021,
+        -0.143353,
+        -0.018
+       ],
+       "transform": [
+        -0.860927,
+        -0.508729,
+        0.0,
+        0.0,
+        0.453427,
+        -0.767338,
+        0.453427,
+        0.0,
+        -0.230672,
+        0.390367,
+        0.891293,
+        0.0,
+        0.065,
+        -0.11,
+        0.065,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.13,
+        -0.22,
+        0.13,
+        1
+       ],
+       "hi": [
+        0.03,
+        0.03,
+        0.03
+       ],
+       "lo": [
+        -0.03,
+        -0.03,
+        -0.03
+       ],
+       "radius": 0.03,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.14547,
+        -0.210812,
+        0.143951
+       ],
+       "lo": [
+        -0.104641,
+        -0.642756,
+        0.085815
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_2__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_leg_2__chitin.SM_leg_2__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 52
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_2__chitinMid",
+       "mesh": "/Game/Models/gloamwing/SM_leg_2__chitinMid.SM_leg_2__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      }
+     ]
+    },
+    {
+     "name": "leg_3",
+     "path": "/gloamwing_blue/thorax/leg_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.06,
+      -0.12,
+      0.09,
+      1
+     ],
+     "position": [
+      -0.06,
+      -0.12,
+      0.09
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "thorax",
+     "handles": [
+      "leg_3"
+     ],
+     "driver": {
+      "what": "leg: dangles and trails behind in flight, reaches forward in the dive",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseGloamwing"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.021,
+        0.133884,
+        0.018
+       ],
+       "lo": [
+        -0.021,
+        -0.133884,
+        -0.018
+       ],
+       "transform": [
+        -0.939793,
+        -0.341743,
+        0.0,
+        0.0,
+        0.298765,
+        -0.821605,
+        0.485494,
+        0.0,
+        -0.165914,
+        0.456264,
+        0.87424,
+        0.0,
+        0.04,
+        -0.11,
+        0.065,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.08,
+        -0.22,
+        0.13,
+        1
+       ],
+       "hi": [
+        0.03,
+        0.03,
+        0.03
+       ],
+       "lo": [
+        -0.03,
+        -0.03,
+        -0.03
+       ],
+       "radius": 0.03,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.096106,
+        -0.212181,
+        0.143947
+       ],
+       "lo": [
+        -0.104832,
+        -0.642346,
+        0.085816
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_3__chitin",
+       "mesh": "/Game/Models/gloamwing/SM_leg_3__chitin.SM_leg_3__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 52
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_3__chitinMid",
+       "mesh": "/Game/Models/gloamwing/SM_leg_3__chitinMid.SM_leg_3__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "lodeback_blue",
+   "file": "",
+   "category": "unit",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -1.02511,
+    -0.006041,
+    -1.186017
+   ],
+   "boundsMax": [
+    1.410337,
+    1.904,
+    1.186017
+   ],
+   "triangles": 3464,
+   "team": "blue",
+   "base": "lodeback",
+   "canonical": "lodeback_blue",
+   "notes": [
+    "The Brood's ore eater, car-sized (docs/creatures.md). Pose: PoseLodeback (N2): slow four-leg walk, the claws and jaw digging while it eats, the sac scaled 0.55..1.0 and lit by its fill, a bite when cornered, the sac bursting on death. No team colour: gold glow fixed.",
+    "Parts: body, head, jaw, claw_0/1, leg_0..3, sac."
+   ],
+   "parts": [
+    {
+     "name": "lodeback_blue_root",
+     "path": "/lodeback_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/lodeback_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.72,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.72,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "lodeback_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "body: heavy sway of the walk, sinks on death",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.7,
+        0.28,
+        0.66
+       ],
+       "lo": [
+        0.52,
+        -0.28,
+        -0.66
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.52,
+        0.32,
+        0.8
+       ],
+       "lo": [
+        0.24,
+        -0.32,
+        -0.8
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.24,
+        0.32,
+        0.82
+       ],
+       "lo": [
+        -0.1,
+        -0.32,
+        -0.82
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.1,
+        0.32,
+        0.82
+       ],
+       "lo": [
+        -0.44,
+        -0.32,
+        -0.82
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.44,
+        0.27,
+        0.7
+       ],
+       "lo": [
+        -0.66,
+        -0.27,
+        -0.7
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.66,
+        0.18,
+        0.44
+       ],
+       "lo": [
+        -0.74,
+        -0.18,
+        -0.44
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "body__chitin",
+       "mesh": "/Game/Models/lodeback/SM_body__chitin.SM_body__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 224
+      },
+      {
+       "material": "chitinUnder",
+       "prim": "body__chitinUnder",
+       "mesh": "/Game/Models/lodeback/SM_body__chitinUnder.SM_body__chitinUnder",
+       "materialInstance": "/Game/Models/Materials/MI_chitinUnder_0b6c6a8c312e.MI_chitinUnder_0b6c6a8c312e",
+       "materialKey": "0b6c6a8c312e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 144
+      },
+      {
+       "material": "chitinMid",
+       "prim": "body__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_body__chitinMid.SM_body__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 576
+      },
+      {
+       "material": "glowDim_gold",
+       "prim": "body__glowDim_gold",
+       "mesh": "/Game/Models/lodeback/SM_body__glowDim_gold.SM_body__glowDim_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_gold_a25ff8448fc3.MI_glowDim_gold_a25ff8448fc3",
+       "materialKey": "a25ff8448fc3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 36
+      },
+      {
+       "material": "oreFleck",
+       "prim": "body__oreFleck",
+       "mesh": "/Game/Models/lodeback/SM_body__oreFleck.SM_body__oreFleck",
+       "materialInstance": "/Game/Models/Materials/MI_oreFleck_a21ed8be07a6.MI_oreFleck_a21ed8be07a6",
+       "materialKey": "a21ed8be07a6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 600
+      }
+     ]
+    },
+    {
+     "name": "head",
+     "path": "/lodeback_blue/body/head",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      -0.08,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      -0.08,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "head"
+     ],
+     "driver": {
+      "what": "head: digs into the deposit while it eats, thrusts on a bite",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.14,
+        -0.02,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.225,
+        0.18,
+        0.345
+       ],
+       "lo": [
+        -0.225,
+        -0.18,
+        -0.345
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.32,
+        0.06,
+        -0.14,
+        1
+       ],
+       "hi": [
+        0.055,
+        0.055,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.055,
+        -0.055
+       ],
+       "radius": 0.055,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.32,
+        0.06,
+        0.14,
+        1
+       ],
+       "hi": [
+        0.055,
+        0.055,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.055,
+        -0.055
+       ],
+       "radius": 0.055,
+       "round": "sphere"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "head__chitin",
+       "mesh": "/Game/Models/lodeback/SM_head__chitin.SM_head__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      },
+      {
+       "material": "glow_gold",
+       "prim": "head__glow_gold",
+       "mesh": "/Game/Models/lodeback/SM_head__glow_gold.SM_head__glow_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glow_gold_a4450052dc56.MI_glow_gold_a4450052dc56",
+       "materialKey": "a4450052dc56",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chitinMid",
+       "prim": "head__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_head__chitinMid.SM_head__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      },
+      {
+       "material": "glowDim_gold",
+       "prim": "head__glowDim_gold",
+       "mesh": "/Game/Models/lodeback/SM_head__glowDim_gold.SM_head__glowDim_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_gold_a25ff8448fc3.MI_glowDim_gold_a25ff8448fc3",
+       "materialKey": "a25ff8448fc3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "jaw",
+     "path": "/lodeback_blue/body/head/jaw",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.26,
+      -0.14,
+      0.0,
+      1
+     ],
+     "position": [
+      0.26,
+      -0.14,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "jaw"
+     ],
+     "driver": {
+      "what": "jaw: grinds while it eats, snaps on a bite",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.13,
+        0.045,
+        0.23
+       ],
+       "lo": [
+        -0.13,
+        -0.045,
+        -0.23
+       ],
+       "transform": [
+        0.984808,
+        0.0,
+        0.173648,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.173648,
+        0.0,
+        0.984808,
+        0.0,
+        0.1,
+        -0.03,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitinMid",
+       "prim": "jaw__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_jaw__chitinMid.SM_jaw__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "oreNodule",
+       "prim": "jaw__oreNodule",
+       "mesh": "/Game/Models/lodeback/SM_jaw__oreNodule.SM_jaw__oreNodule",
+       "materialInstance": "/Game/Models/Materials/MI_oreNodule_edfc7e4a9ea8.MI_oreNodule_edfc7e4a9ea8",
+       "materialKey": "edfc7e4a9ea8",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 60
+      }
+     ]
+    },
+    {
+     "name": "claw_0",
+     "path": "/lodeback_blue/body/claw_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.7,
+      -0.12,
+      -0.34,
+      1
+     ],
+     "position": [
+      0.7,
+      -0.12,
+      -0.34
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "claw_0"
+     ],
+     "driver": {
+      "what": "claw: scrapes ore into the jaw while it eats; pinches on a bite",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.08,
+        0.196723,
+        0.07
+       ],
+       "lo": [
+        -0.08,
+        -0.196723,
+        -0.07
+       ],
+       "transform": [
+        -0.514496,
+        -0.857493,
+        0.0,
+        0.0,
+        0.762493,
+        -0.457496,
+        -0.457496,
+        0.0,
+        0.392299,
+        -0.23538,
+        0.889212,
+        0.0,
+        0.15,
+        -0.09,
+        -0.09,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3,
+        -0.18,
+        -0.18,
+        1
+       ],
+       "hi": [
+        0.1,
+        0.1,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.1,
+        -0.1
+       ],
+       "radius": 0.1,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.548056,
+        -0.108246,
+        0.047376
+       ],
+       "lo": [
+        0.219935,
+        -0.480991,
+        -0.235737
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.710337,
+        -0.357362,
+        0.072156
+       ],
+       "lo": [
+        0.438654,
+        -0.55566,
+        -0.048626
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.628915,
+        -0.37823,
+        -0.010329
+       ],
+       "lo": [
+        0.404338,
+        -0.570442,
+        -0.118683
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "claw_0__chitin",
+       "mesh": "/Game/Models/lodeback/SM_claw_0__chitin.SM_claw_0__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 60
+      },
+      {
+       "material": "chitinMid",
+       "prim": "claw_0__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_claw_0__chitinMid.SM_claw_0__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_gold",
+       "prim": "claw_0__glowDim_gold",
+       "mesh": "/Game/Models/lodeback/SM_claw_0__glowDim_gold.SM_claw_0__glowDim_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_gold_a25ff8448fc3.MI_glowDim_gold_a25ff8448fc3",
+       "materialKey": "a25ff8448fc3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 20
+      }
+     ]
+    },
+    {
+     "name": "claw_1",
+     "path": "/lodeback_blue/body/claw_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.7,
+      -0.12,
+      0.34,
+      1
+     ],
+     "position": [
+      0.7,
+      -0.12,
+      0.34
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "claw_1"
+     ],
+     "driver": {
+      "what": "claw: scrapes ore into the jaw while it eats; pinches on a bite",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.08,
+        0.196723,
+        0.07
+       ],
+       "lo": [
+        -0.08,
+        -0.196723,
+        -0.07
+       ],
+       "transform": [
+        -0.514496,
+        -0.857493,
+        0.0,
+        0.0,
+        0.762493,
+        -0.457496,
+        0.457496,
+        0.0,
+        -0.392299,
+        0.23538,
+        0.889212,
+        0.0,
+        0.15,
+        -0.09,
+        0.09,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3,
+        -0.18,
+        0.18,
+        1
+       ],
+       "hi": [
+        0.1,
+        0.1,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.1,
+        -0.1
+       ],
+       "radius": 0.1,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.548056,
+        -0.108246,
+        0.235737
+       ],
+       "lo": [
+        0.219935,
+        -0.480991,
+        -0.047376
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.710337,
+        -0.357362,
+        0.048626
+       ],
+       "lo": [
+        0.438654,
+        -0.55566,
+        -0.072156
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.628915,
+        -0.37823,
+        0.118683
+       ],
+       "lo": [
+        0.404338,
+        -0.570442,
+        0.010329
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "claw_1__chitin",
+       "mesh": "/Game/Models/lodeback/SM_claw_1__chitin.SM_claw_1__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 60
+      },
+      {
+       "material": "chitinMid",
+       "prim": "claw_1__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_claw_1__chitinMid.SM_claw_1__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_gold",
+       "prim": "claw_1__glowDim_gold",
+       "mesh": "/Game/Models/lodeback/SM_claw_1__glowDim_gold.SM_claw_1__glowDim_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_gold_a25ff8448fc3.MI_glowDim_gold_a25ff8448fc3",
+       "materialKey": "a25ff8448fc3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 20
+      }
+     ]
+    },
+    {
+     "name": "leg_0",
+     "path": "/lodeback_blue/body/leg_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.24,
+      -0.06,
+      -0.64,
+      1
+     ],
+     "position": [
+      0.24,
+      -0.06,
+      -0.64
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_0"
+     ],
+     "driver": {
+      "what": "leg: slow walk, two legs at a time (0, 3 against 1, 2)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.27097,
+        0.085
+       ],
+       "lo": [
+        -0.1,
+        -0.27097,
+        -0.085
+       ],
+       "transform": [
+        0.983453,
+        -0.181162,
+        0.0,
+        0.0,
+        0.129165,
+        0.701183,
+        -0.701183,
+        0.0,
+        0.127028,
+        0.689581,
+        0.712981,
+        0.0,
+        0.035,
+        0.19,
+        -0.19,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.07,
+        0.38,
+        -0.38,
+        1
+       ],
+       "hi": [
+        0.12,
+        0.12,
+        0.12
+       ],
+       "lo": [
+        -0.12,
+        -0.12,
+        -0.12
+       ],
+       "radius": 0.12,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.169918,
+        0.395669,
+        -0.305667
+       ],
+       "lo": [
+        -0.015479,
+        -0.665484,
+        -0.546016
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_0__chitin",
+       "mesh": "/Game/Models/lodeback/SM_leg_0__chitin.SM_leg_0__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_0__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_leg_0__chitinMid.SM_leg_0__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_gold",
+       "prim": "leg_0__glowDim_gold",
+       "mesh": "/Game/Models/lodeback/SM_leg_0__glowDim_gold.SM_leg_0__glowDim_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_gold_a25ff8448fc3.MI_glowDim_gold_a25ff8448fc3",
+       "materialKey": "a25ff8448fc3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_1",
+     "path": "/lodeback_blue/body/leg_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.36,
+      -0.06,
+      -0.64,
+      1
+     ],
+     "position": [
+      -0.36,
+      -0.06,
+      -0.64
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_1"
+     ],
+     "driver": {
+      "what": "leg: slow walk, two legs at a time (0, 3 against 1, 2)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.272443,
+        0.085
+       ],
+       "lo": [
+        -0.1,
+        -0.272443,
+        -0.085
+       ],
+       "transform": [
+        0.97308,
+        0.230466,
+        0.0,
+        0.0,
+        -0.165172,
+        0.697394,
+        -0.697394,
+        0.0,
+        -0.160726,
+        0.678621,
+        0.716687,
+        0.0,
+        -0.045,
+        0.19,
+        -0.19,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.09,
+        0.38,
+        -0.38,
+        1
+       ],
+       "hi": [
+        0.12,
+        0.12,
+        0.12
+       ],
+       "lo": [
+        -0.12,
+        -0.12,
+        -0.12
+       ],
+       "radius": 0.12,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        -0.004457,
+        0.397261,
+        -0.305666
+       ],
+       "lo": [
+        -0.20994,
+        -0.666041,
+        -0.546017
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_1__chitin",
+       "mesh": "/Game/Models/lodeback/SM_leg_1__chitin.SM_leg_1__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_1__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_leg_1__chitinMid.SM_leg_1__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_gold",
+       "prim": "leg_1__glowDim_gold",
+       "mesh": "/Game/Models/lodeback/SM_leg_1__glowDim_gold.SM_leg_1__glowDim_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_gold_a25ff8448fc3.MI_glowDim_gold_a25ff8448fc3",
+       "materialKey": "a25ff8448fc3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_2",
+     "path": "/lodeback_blue/body/leg_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.24,
+      -0.06,
+      0.64,
+      1
+     ],
+     "position": [
+      0.24,
+      -0.06,
+      0.64
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_2"
+     ],
+     "driver": {
+      "what": "leg: slow walk, two legs at a time (0, 3 against 1, 2)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.27097,
+        0.085
+       ],
+       "lo": [
+        -0.1,
+        -0.27097,
+        -0.085
+       ],
+       "transform": [
+        0.983453,
+        -0.181162,
+        0.0,
+        0.0,
+        0.129165,
+        0.701183,
+        0.701183,
+        0.0,
+        -0.127028,
+        -0.689581,
+        0.712981,
+        0.0,
+        0.035,
+        0.19,
+        0.19,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.07,
+        0.38,
+        0.38,
+        1
+       ],
+       "hi": [
+        0.12,
+        0.12,
+        0.12
+       ],
+       "lo": [
+        -0.12,
+        -0.12,
+        -0.12
+       ],
+       "radius": 0.12,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.169918,
+        0.395669,
+        0.546016
+       ],
+       "lo": [
+        -0.015479,
+        -0.665484,
+        0.305667
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_2__chitin",
+       "mesh": "/Game/Models/lodeback/SM_leg_2__chitin.SM_leg_2__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_2__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_leg_2__chitinMid.SM_leg_2__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_gold",
+       "prim": "leg_2__glowDim_gold",
+       "mesh": "/Game/Models/lodeback/SM_leg_2__glowDim_gold.SM_leg_2__glowDim_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_gold_a25ff8448fc3.MI_glowDim_gold_a25ff8448fc3",
+       "materialKey": "a25ff8448fc3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_3",
+     "path": "/lodeback_blue/body/leg_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.36,
+      -0.06,
+      0.64,
+      1
+     ],
+     "position": [
+      -0.36,
+      -0.06,
+      0.64
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_3"
+     ],
+     "driver": {
+      "what": "leg: slow walk, two legs at a time (0, 3 against 1, 2)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.272443,
+        0.085
+       ],
+       "lo": [
+        -0.1,
+        -0.272443,
+        -0.085
+       ],
+       "transform": [
+        0.97308,
+        0.230466,
+        0.0,
+        0.0,
+        -0.165172,
+        0.697394,
+        0.697394,
+        0.0,
+        0.160726,
+        -0.678621,
+        0.716687,
+        0.0,
+        -0.045,
+        0.19,
+        0.19,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.09,
+        0.38,
+        0.38,
+        1
+       ],
+       "hi": [
+        0.12,
+        0.12,
+        0.12
+       ],
+       "lo": [
+        -0.12,
+        -0.12,
+        -0.12
+       ],
+       "radius": 0.12,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        -0.004457,
+        0.397261,
+        0.546017
+       ],
+       "lo": [
+        -0.20994,
+        -0.666041,
+        0.305666
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_3__chitin",
+       "mesh": "/Game/Models/lodeback/SM_leg_3__chitin.SM_leg_3__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 44
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_3__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_leg_3__chitinMid.SM_leg_3__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_gold",
+       "prim": "leg_3__glowDim_gold",
+       "mesh": "/Game/Models/lodeback/SM_leg_3__glowDim_gold.SM_leg_3__glowDim_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_gold_a25ff8448fc3.MI_glowDim_gold_a25ff8448fc3",
+       "materialKey": "a25ff8448fc3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "sac",
+     "path": "/lodeback_blue/body/sac",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.22,
+      0.26,
+      0.0,
+      1
+     ],
+     "position": [
+      -0.22,
+      0.26,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "sac"
+     ],
+     "driver": {
+      "what": "sac: scale 0.55 empty to 1.0 full with the sac fill, its glow with it; bursts (scale to 0) on death",
+      "channels": [
+       "scale",
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseLodeback"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.04,
+        0.46,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.667,
+        0.464,
+        0.58
+       ],
+       "lo": [
+        -0.667,
+        -0.464,
+        -0.58
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "glowBody_gold",
+       "prim": "sac__glowBody_gold",
+       "mesh": "/Game/Models/lodeback/SM_sac__glowBody_gold.SM_sac__glowBody_gold",
+       "materialInstance": "/Game/Models/Materials/MI_glowBody_gold_9d5f4c86fd67.MI_glowBody_gold_9d5f4c86fd67",
+       "materialKey": "9d5f4c86fd67",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      },
+      {
+       "material": "oreNodule",
+       "prim": "sac__oreNodule",
+       "mesh": "/Game/Models/lodeback/SM_sac__oreNodule.SM_sac__oreNodule",
+       "materialInstance": "/Game/Models/Materials/MI_oreNodule_edfc7e4a9ea8.MI_oreNodule_edfc7e4a9ea8",
+       "materialKey": "edfc7e4a9ea8",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 448
+      },
+      {
+       "material": "opalTeal",
+       "prim": "sac__opalTeal",
+       "mesh": "/Game/Models/lodeback/SM_sac__opalTeal.SM_sac__opalTeal",
+       "materialInstance": "/Game/Models/Materials/MI_opalTeal_ab5e0a422524.MI_opalTeal_ab5e0a422524",
+       "materialKey": "ab5e0a422524",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "opalViolet",
+       "prim": "sac__opalViolet",
+       "mesh": "/Game/Models/lodeback/SM_sac__opalViolet.SM_sac__opalViolet",
+       "materialInstance": "/Game/Models/Materials/MI_opalViolet_61176cde396f.MI_opalViolet_61176cde396f",
+       "materialKey": "61176cde396f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "chitinMid",
+       "prim": "sac__chitinMid",
+       "mesh": "/Game/Models/lodeback/SM_sac__chitinMid.SM_sac__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "matriarch_blue",
+   "file": "",
+   "category": "unit",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -6.1,
+    -0.022443,
+    -4.054701
+   ],
+   "boundsMax": [
+    5.340174,
+    9.551872,
+    4.054701
+   ],
+   "triangles": 6132,
+   "team": "blue",
+   "base": "matriarch",
+   "canonical": "matriarch_blue",
+   "notes": [
+    "The Brood's giant queen (docs/creatures.md), never leaves her nest. Pose: PoseMatriarch (N3): slow breath (body and egg sac swell 3%), turning to her target, forelimb slam, spit lunge, the roar (rears 1 cell, crown fans open, jaw gapes), death (sinks, crown folds, glow dies). No team colour: violet glow fixed.",
+    "Parts: body, abdomen, head, jaw, crown, forelimb_0/1, leg_0..5, pods."
+   ],
+   "parts": [
+    {
+     "name": "matriarch_blue_root",
+     "path": "/matriarch_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/matriarch_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      2.2,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      2.2,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "matriarch_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "body: slow breath, turns to its target, rears up 1 cell on the roar, sinks on death",
+      "channels": [
+       "position",
+       "rotation",
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        1.9,
+        0.95,
+        1.4
+       ],
+       "lo": [
+        1.2,
+        -0.95,
+        -1.4
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.2,
+        1.05,
+        1.6
+       ],
+       "lo": [
+        0.3,
+        -1.05,
+        -1.6
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.3,
+        1.05,
+        1.6
+       ],
+       "lo": [
+        -0.6,
+        -1.05,
+        -1.6
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.6,
+        1,
+        1.5
+       ],
+       "lo": [
+        -1.4,
+        -1,
+        -1.5
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -1.4,
+        0.85,
+        1.2
+       ],
+       "lo": [
+        -1.9,
+        -0.85,
+        -1.2
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "transform": [
+        0.939693,
+        0.0,
+        -0.34202,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.34202,
+        0.0,
+        0.939693,
+        0.0,
+        2,
+        0.8,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.95,
+        0.88,
+        1.2
+       ],
+       "lo": [
+        -0.95,
+        -0.88,
+        -1.2
+       ]
+      },
+      {
+       "transform": [
+        0.939693,
+        0.0,
+        -0.34202,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.34202,
+        0.0,
+        0.939693,
+        0.0,
+        2.35,
+        1.7,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.88,
+        0.88,
+        1.12
+       ],
+       "lo": [
+        -0.88,
+        -0.88,
+        -1.12
+       ]
+      },
+      {
+       "transform": [
+        0.939693,
+        0.0,
+        -0.34202,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.34202,
+        0.0,
+        0.939693,
+        0.0,
+        2.62,
+        2.5,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.8,
+        0.88,
+        1.02
+       ],
+       "lo": [
+        -0.8,
+        -0.88,
+        -1.02
+       ]
+      },
+      {
+       "transform": [
+        0.939693,
+        0.0,
+        -0.34202,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.34202,
+        0.0,
+        0.939693,
+        0.0,
+        2.8,
+        3.25,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.72,
+        0.88,
+        0.9
+       ],
+       "lo": [
+        -0.72,
+        -0.88,
+        -0.9
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "body__chitin",
+       "mesh": "/Game/Models/matriarch/SM_body__chitin.SM_body__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 640
+      },
+      {
+       "material": "chitinUnder",
+       "prim": "body__chitinUnder",
+       "mesh": "/Game/Models/matriarch/SM_body__chitinUnder.SM_body__chitinUnder",
+       "materialInstance": "/Game/Models/Materials/MI_chitinUnder_0b6c6a8c312e.MI_chitinUnder_0b6c6a8c312e",
+       "materialKey": "0b6c6a8c312e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 144
+      },
+      {
+       "material": "chitinMid",
+       "prim": "body__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_body__chitinMid.SM_body__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 432
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "body__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_body__glowDim_queen.SM_body__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      },
+      {
+       "material": "oreFleck",
+       "prim": "body__oreFleck",
+       "mesh": "/Game/Models/matriarch/SM_body__oreFleck.SM_body__oreFleck",
+       "materialInstance": "/Game/Models/Materials/MI_oreFleck_a21ed8be07a6.MI_oreFleck_a21ed8be07a6",
+       "materialKey": "a21ed8be07a6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 800
+      }
+     ]
+    },
+    {
+     "name": "abdomen",
+     "path": "/matriarch_blue/body/abdomen",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.9,
+      0.2,
+      0.0,
+      1
+     ],
+     "position": [
+      -1.9,
+      0.2,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "abdomen"
+     ],
+     "driver": {
+      "what": "egg sac: swells with her breath, pulses brighter on the roar",
+      "channels": [
+       "scale",
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.8,
+        0.1,
+        0.0,
+        1
+       ],
+       "hi": [
+        2.4,
+        1.9,
+        1.9
+       ],
+       "lo": [
+        -2.4,
+        -1.9,
+        -1.9
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "glowBody_queen",
+       "prim": "abdomen__glowBody_queen",
+       "mesh": "/Game/Models/matriarch/SM_abdomen__glowBody_queen.SM_abdomen__glowBody_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowBody_queen_14c8c9eaebda.MI_glowBody_queen_14c8c9eaebda",
+       "materialKey": "14c8c9eaebda",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 320
+      },
+      {
+       "material": "chitin",
+       "prim": "abdomen__chitin",
+       "mesh": "/Game/Models/matriarch/SM_abdomen__chitin.SM_abdomen__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 256
+      },
+      {
+       "material": "glowTip",
+       "prim": "abdomen__glowTip",
+       "mesh": "/Game/Models/matriarch/SM_abdomen__glowTip.SM_abdomen__glowTip",
+       "materialInstance": "/Game/Models/Materials/MI_glowTip_3196462cdd7e.MI_glowTip_3196462cdd7e",
+       "materialKey": "3196462cdd7e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 288
+      }
+     ]
+    },
+    {
+     "name": "head",
+     "path": "/matriarch_blue/body/head",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      3,
+      3.8,
+      0.0,
+      1
+     ],
+     "position": [
+      3,
+      3.8,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "head"
+     ],
+     "driver": {
+      "what": "head: turns to its target, lunges on the spit, lifts on the roar",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.45,
+        0.15,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.85,
+        0.62,
+        0.78
+       ],
+       "lo": [
+        -0.85,
+        -0.62,
+        -0.78
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.18,
+        0.4,
+        -0.26,
+        1
+       ],
+       "hi": [
+        0.13,
+        0.13,
+        0.13
+       ],
+       "lo": [
+        -0.13,
+        -0.13,
+        -0.13
+       ],
+       "radius": 0.13,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.18,
+        0.4,
+        0.26,
+        1
+       ],
+       "hi": [
+        0.13,
+        0.13,
+        0.13
+       ],
+       "lo": [
+        -0.13,
+        -0.13,
+        -0.13
+       ],
+       "radius": 0.13,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.18,
+        0.22,
+        -0.5,
+        1
+       ],
+       "hi": [
+        0.09,
+        0.09,
+        0.09
+       ],
+       "lo": [
+        -0.09,
+        -0.09,
+        -0.09
+       ],
+       "radius": 0.09,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.18,
+        0.22,
+        0.5,
+        1
+       ],
+       "hi": [
+        0.09,
+        0.09,
+        0.09
+       ],
+       "lo": [
+        -0.09,
+        -0.09,
+        -0.09
+       ],
+       "radius": 0.09,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.18,
+        0.66,
+        -0.14,
+        1
+       ],
+       "hi": [
+        0.08,
+        0.08,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.08,
+        -0.08
+       ],
+       "radius": 0.08,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.18,
+        0.66,
+        0.14,
+        1
+       ],
+       "hi": [
+        0.08,
+        0.08,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.08,
+        -0.08
+       ],
+       "radius": 0.08,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.18,
+        0.18,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.07,
+        0.07,
+        0.07
+       ],
+       "lo": [
+        -0.07,
+        -0.07,
+        -0.07
+       ],
+       "radius": 0.07,
+       "round": "sphere"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "head__chitin",
+       "mesh": "/Game/Models/matriarch/SM_head__chitin.SM_head__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      },
+      {
+       "material": "chitinMid",
+       "prim": "head__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_head__chitinMid.SM_head__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "glow_queen",
+       "prim": "head__glow_queen",
+       "mesh": "/Game/Models/matriarch/SM_head__glow_queen.SM_head__glow_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glow_queen_4a0f4a8dd2b3.MI_glow_queen_4a0f4a8dd2b3",
+       "materialKey": "4a0f4a8dd2b3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 224
+      }
+     ]
+    },
+    {
+     "name": "jaw",
+     "path": "/matriarch_blue/body/head/jaw",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.8,
+      -0.25,
+      0.0,
+      1
+     ],
+     "position": [
+      0.8,
+      -0.25,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "jaw"
+     ],
+     "driver": {
+      "what": "jaw: gapes on the roar and the spit",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.4,
+        0.14,
+        0.55
+       ],
+       "lo": [
+        -0.4,
+        -0.14,
+        -0.55
+       ],
+       "transform": [
+        0.978148,
+        0.0,
+        0.207912,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.207912,
+        0.0,
+        0.978148,
+        0.0,
+        0.3,
+        -0.15,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.964092,
+        -0.028,
+        -0.355003
+       ],
+       "lo": [
+        0.293181,
+        -0.6232,
+        -0.722998
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.216498,
+        -0.45002,
+        -0.25063
+       ],
+       "lo": [
+        0.790015,
+        -0.964997,
+        -0.72247
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.964092,
+        -0.028,
+        0.722998
+       ],
+       "lo": [
+        0.293181,
+        -0.6232,
+        0.355003
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.216498,
+        -0.45002,
+        0.72247
+       ],
+       "lo": [
+        0.790015,
+        -0.964997,
+        0.25063
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitinMid",
+       "prim": "jaw__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_jaw__chitinMid.SM_jaw__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chitin",
+       "prim": "jaw__chitin",
+       "mesh": "/Game/Models/matriarch/SM_jaw__chitin.SM_jaw__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "jaw__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_jaw__glowDim_queen.SM_jaw__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "crown",
+     "path": "/matriarch_blue/body/head/crown",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.6,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.6,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "crown"
+     ],
+     "driver": {
+      "what": "crown: breathes with the body's glow; fans open (spreads and scales out) on the roar, folds on death",
+      "channels": [
+       "rotation",
+       "scale",
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.5,
+        0.6,
+        1.1
+       ],
+       "lo": [
+        -0.5,
+        -0.6,
+        -1.1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        0.448657,
+        -0.523247
+       ],
+       "lo": [
+        -0.766922,
+        -0.051777,
+        -1.963668
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        0.856921,
+        -0.45492
+       ],
+       "lo": [
+        -0.803672,
+        0.035408,
+        -1.900298
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        1.249563,
+        -0.363274
+       ],
+       "lo": [
+        -0.840422,
+        0.120778,
+        -1.726321
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        1.602764,
+        -0.253007
+       ],
+       "lo": [
+        -0.877172,
+        0.199957,
+        -1.444624
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        1.893461,
+        -0.129771
+       ],
+       "lo": [
+        -0.913922,
+        0.268887,
+        -1.064606
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        2.10079,
+        0.000118
+       ],
+       "lo": [
+        -0.950672,
+        0.324033,
+        -0.601946
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        2.207459,
+        0.13
+       ],
+       "lo": [
+        -0.987422,
+        0.362569,
+        -0.13
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        2.10079,
+        0.601946
+       ],
+       "lo": [
+        -0.950672,
+        0.324033,
+        -0.000118
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        1.893461,
+        1.064606
+       ],
+       "lo": [
+        -0.913922,
+        0.268887,
+        0.129771
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        1.602764,
+        1.444624
+       ],
+       "lo": [
+        -0.877172,
+        0.199957,
+        0.253007
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        1.249563,
+        1.726321
+       ],
+       "lo": [
+        -0.840422,
+        0.120778,
+        0.363274
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        0.856921,
+        1.900298
+       ],
+       "lo": [
+        -0.803672,
+        0.035408,
+        0.45492
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.070703,
+        0.448657,
+        1.963668
+       ],
+       "lo": [
+        -0.766922,
+        -0.051777,
+        0.523247
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.689148,
+        0.49589,
+        -1.894702
+       ],
+       "lo": [
+        -1.038535,
+        0.305112,
+        -2.502245
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.725898,
+        1.043404,
+        -1.804661
+       ],
+       "lo": [
+        -1.091035,
+        0.714449,
+        -2.409724
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.762648,
+        1.577869,
+        -1.608914
+       ],
+       "lo": [
+        -1.143535,
+        1.115469,
+        -2.174825
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.799398,
+        2.06661,
+        -1.311466
+       ],
+       "lo": [
+        -1.196035,
+        1.483919,
+        -1.800977
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.836148,
+        2.477494,
+        -0.922523
+       ],
+       "lo": [
+        -1.248535,
+        1.795959,
+        -1.300139
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.872898,
+        2.78094,
+        -0.458221
+       ],
+       "lo": [
+        -1.301035,
+        2.029628,
+        -0.692555
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.909648,
+        2.951872,
+        0.06
+       ],
+       "lo": [
+        -1.353535,
+        2.166284,
+        -0.06
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.872898,
+        2.78094,
+        0.692555
+       ],
+       "lo": [
+        -1.301035,
+        2.029628,
+        0.458221
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.836148,
+        2.477494,
+        1.300139
+       ],
+       "lo": [
+        -1.248535,
+        1.795959,
+        0.922523
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.799398,
+        2.06661,
+        1.800977
+       ],
+       "lo": [
+        -1.196035,
+        1.483919,
+        1.311466
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.762648,
+        1.577869,
+        2.174825
+       ],
+       "lo": [
+        -1.143535,
+        1.115469,
+        1.608914
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.725898,
+        1.043404,
+        2.409724
+       ],
+       "lo": [
+        -1.091035,
+        0.714449,
+        1.804661
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.689148,
+        0.49589,
+        2.502245
+       ],
+       "lo": [
+        -1.038535,
+        0.305112,
+        1.894702
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "crown__chitin",
+       "mesh": "/Game/Models/matriarch/SM_crown__chitin.SM_crown__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 304
+      },
+      {
+       "material": "glow_queen",
+       "prim": "crown__glow_queen",
+       "mesh": "/Game/Models/matriarch/SM_crown__glow_queen.SM_crown__glow_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glow_queen_4a0f4a8dd2b3.MI_glow_queen_4a0f4a8dd2b3",
+       "materialKey": "4a0f4a8dd2b3",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 208
+      },
+      {
+       "material": "glowTip",
+       "prim": "crown__glowTip",
+       "mesh": "/Game/Models/matriarch/SM_crown__glowTip.SM_crown__glowTip",
+       "materialInstance": "/Game/Models/Materials/MI_glowTip_3196462cdd7e.MI_glowTip_3196462cdd7e",
+       "materialKey": "3196462cdd7e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 208
+      }
+     ]
+    },
+    {
+     "name": "forelimb_0",
+     "path": "/matriarch_blue/body/forelimb_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      2.5,
+      2.5,
+      -1.05,
+      1
+     ],
+     "position": [
+      2.5,
+      2.5,
+      -1.05
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "forelimb_0"
+     ],
+     "driver": {
+      "what": "forelimb: rise over 0.8 s and crash down on the slam; braced on the roar",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.31,
+        0.967277,
+        0.27
+       ],
+       "lo": [
+        -0.31,
+        -0.967277,
+        -0.27
+       ],
+       "transform": [
+        -0.4741,
+        -0.880471,
+        0.0,
+        0.0,
+        0.671989,
+        -0.36184,
+        -0.646144,
+        0.0,
+        0.568911,
+        -0.306337,
+        0.763216,
+        0.0,
+        0.65,
+        -0.35,
+        -0.625,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.3,
+        -0.7,
+        -1.25,
+        1
+       ],
+       "hi": [
+        0.42,
+        0.42,
+        0.42
+       ],
+       "lo": [
+        -0.42,
+        -0.42,
+        -0.42
+       ],
+       "radius": 0.42,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        2.402697,
+        -0.587654,
+        -0.767162
+       ],
+       "lo": [
+        1.046629,
+        -3.289877,
+        -1.478548
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        2.840174,
+        -3.087787,
+        -0.516997
+       ],
+       "lo": [
+        1.999131,
+        -4.722443,
+        -1.115017
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        2.214798,
+        -2.944173,
+        -0.437676
+       ],
+       "lo": [
+        1.88278,
+        -4.108374,
+        -1.032158
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "forelimb_0__chitin",
+       "mesh": "/Game/Models/matriarch/SM_forelimb_0__chitin.SM_forelimb_0__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 88
+      },
+      {
+       "material": "chitinMid",
+       "prim": "forelimb_0__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_forelimb_0__chitinMid.SM_forelimb_0__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "forelimb_0__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_forelimb_0__glowDim_queen.SM_forelimb_0__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "forelimb_1",
+     "path": "/matriarch_blue/body/forelimb_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      2.5,
+      2.5,
+      1.05,
+      1
+     ],
+     "position": [
+      2.5,
+      2.5,
+      1.05
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "forelimb_1"
+     ],
+     "driver": {
+      "what": "forelimb: rise over 0.8 s and crash down on the slam; braced on the roar",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.31,
+        0.967277,
+        0.27
+       ],
+       "lo": [
+        -0.31,
+        -0.967277,
+        -0.27
+       ],
+       "transform": [
+        -0.4741,
+        -0.880471,
+        0.0,
+        0.0,
+        0.671989,
+        -0.36184,
+        0.646144,
+        0.0,
+        -0.568911,
+        0.306337,
+        0.763216,
+        0.0,
+        0.65,
+        -0.35,
+        0.625,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.3,
+        -0.7,
+        1.25,
+        1
+       ],
+       "hi": [
+        0.42,
+        0.42,
+        0.42
+       ],
+       "lo": [
+        -0.42,
+        -0.42,
+        -0.42
+       ],
+       "radius": 0.42,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        2.402697,
+        -0.587654,
+        1.478548
+       ],
+       "lo": [
+        1.046629,
+        -3.289877,
+        0.767162
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        2.840174,
+        -3.087787,
+        1.115017
+       ],
+       "lo": [
+        1.999131,
+        -4.722443,
+        0.516997
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        2.214798,
+        -2.944173,
+        1.032158
+       ],
+       "lo": [
+        1.88278,
+        -4.108374,
+        0.437676
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "forelimb_1__chitin",
+       "mesh": "/Game/Models/matriarch/SM_forelimb_1__chitin.SM_forelimb_1__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 88
+      },
+      {
+       "material": "chitinMid",
+       "prim": "forelimb_1__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_forelimb_1__chitinMid.SM_forelimb_1__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "forelimb_1__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_forelimb_1__glowDim_queen.SM_forelimb_1__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "leg_0",
+     "path": "/matriarch_blue/body/leg_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.1,
+      -0.2,
+      -1.3,
+      1
+     ],
+     "position": [
+      1.1,
+      -0.2,
+      -1.3
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_0"
+     ],
+     "driver": {
+      "what": "leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        1.111306,
+        0.23
+       ],
+       "lo": [
+        -0.26,
+        -1.111306,
+        -0.23
+       ],
+       "transform": [
+        0.977802,
+        -0.209529,
+        0.0,
+        0.0,
+        0.134976,
+        0.62989,
+        -0.764866,
+        0.0,
+        0.160262,
+        0.747888,
+        0.644189,
+        0.0,
+        0.15,
+        0.7,
+        -0.85,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3,
+        1.4,
+        -1.7,
+        1
+       ],
+       "hi": [
+        0.34,
+        0.34,
+        0.34
+       ],
+       "lo": [
+        -0.34,
+        -0.34,
+        -0.34
+       ],
+       "radius": 0.34,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.667153,
+        1.47255,
+        -1.517664
+       ],
+       "lo": [
+        0.076156,
+        -2.021765,
+        -2.754701
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_0__chitin",
+       "mesh": "/Game/Models/matriarch/SM_leg_0__chitin.SM_leg_0__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 72
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_0__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_leg_0__chitinMid.SM_leg_0__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "leg_0__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_leg_0__glowDim_queen.SM_leg_0__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_1",
+     "path": "/matriarch_blue/body/leg_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.1,
+      -0.2,
+      -1.3,
+      1
+     ],
+     "position": [
+      -0.1,
+      -0.2,
+      -1.3
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_1"
+     ],
+     "driver": {
+      "what": "leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        1.101136,
+        0.23
+       ],
+       "lo": [
+        -0.26,
+        -1.101136,
+        -0.23
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.635707,
+        -0.77193,
+        0.0,
+        0.0,
+        0.77193,
+        0.635707,
+        0.0,
+        0.0,
+        0.7,
+        -0.85,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        1.4,
+        -1.7,
+        1
+       ],
+       "hi": [
+        0.34,
+        0.34,
+        0.34
+       ],
+       "lo": [
+        -0.34,
+        -0.34,
+        -0.34
+       ],
+       "radius": 0.34,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.22,
+        1.453612,
+        -1.517721
+       ],
+       "lo": [
+        -0.22,
+        -2.016083,
+        -2.754684
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_1__chitin",
+       "mesh": "/Game/Models/matriarch/SM_leg_1__chitin.SM_leg_1__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 72
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_1__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_leg_1__chitinMid.SM_leg_1__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "leg_1__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_leg_1__glowDim_queen.SM_leg_1__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_2",
+     "path": "/matriarch_blue/body/leg_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.3,
+      -0.2,
+      -1.3,
+      1
+     ],
+     "position": [
+      -1.3,
+      -0.2,
+      -1.3
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_2"
+     ],
+     "driver": {
+      "what": "leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        1.111306,
+        0.23
+       ],
+       "lo": [
+        -0.26,
+        -1.111306,
+        -0.23
+       ],
+       "transform": [
+        0.977802,
+        0.209529,
+        0.0,
+        0.0,
+        -0.134976,
+        0.62989,
+        -0.764866,
+        0.0,
+        -0.160262,
+        0.747888,
+        0.644189,
+        0.0,
+        -0.15,
+        0.7,
+        -0.85,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.3,
+        1.4,
+        -1.7,
+        1
+       ],
+       "hi": [
+        0.34,
+        0.34,
+        0.34
+       ],
+       "lo": [
+        -0.34,
+        -0.34,
+        -0.34
+       ],
+       "radius": 0.34,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        -0.076156,
+        1.47255,
+        -1.517664
+       ],
+       "lo": [
+        -0.667153,
+        -2.021765,
+        -2.754701
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_2__chitin",
+       "mesh": "/Game/Models/matriarch/SM_leg_2__chitin.SM_leg_2__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 72
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_2__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_leg_2__chitinMid.SM_leg_2__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "leg_2__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_leg_2__glowDim_queen.SM_leg_2__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_3",
+     "path": "/matriarch_blue/body/leg_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.1,
+      -0.2,
+      1.3,
+      1
+     ],
+     "position": [
+      1.1,
+      -0.2,
+      1.3
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_3"
+     ],
+     "driver": {
+      "what": "leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        1.111306,
+        0.23
+       ],
+       "lo": [
+        -0.26,
+        -1.111306,
+        -0.23
+       ],
+       "transform": [
+        0.977802,
+        -0.209529,
+        0.0,
+        0.0,
+        0.134976,
+        0.62989,
+        0.764866,
+        0.0,
+        -0.160262,
+        -0.747888,
+        0.644189,
+        0.0,
+        0.15,
+        0.7,
+        0.85,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3,
+        1.4,
+        1.7,
+        1
+       ],
+       "hi": [
+        0.34,
+        0.34,
+        0.34
+       ],
+       "lo": [
+        -0.34,
+        -0.34,
+        -0.34
+       ],
+       "radius": 0.34,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.667153,
+        1.47255,
+        2.754701
+       ],
+       "lo": [
+        0.076156,
+        -2.021765,
+        1.517664
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_3__chitin",
+       "mesh": "/Game/Models/matriarch/SM_leg_3__chitin.SM_leg_3__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 72
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_3__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_leg_3__chitinMid.SM_leg_3__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "leg_3__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_leg_3__glowDim_queen.SM_leg_3__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_4",
+     "path": "/matriarch_blue/body/leg_4",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.1,
+      -0.2,
+      1.3,
+      1
+     ],
+     "position": [
+      -0.1,
+      -0.2,
+      1.3
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_4"
+     ],
+     "driver": {
+      "what": "leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        1.101136,
+        0.23
+       ],
+       "lo": [
+        -0.26,
+        -1.101136,
+        -0.23
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.635707,
+        0.77193,
+        0.0,
+        0.0,
+        -0.77193,
+        0.635707,
+        0.0,
+        0.0,
+        0.7,
+        0.85,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        1.4,
+        1.7,
+        1
+       ],
+       "hi": [
+        0.34,
+        0.34,
+        0.34
+       ],
+       "lo": [
+        -0.34,
+        -0.34,
+        -0.34
+       ],
+       "radius": 0.34,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.22,
+        1.453612,
+        2.754684
+       ],
+       "lo": [
+        -0.22,
+        -2.016083,
+        1.517721
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_4__chitin",
+       "mesh": "/Game/Models/matriarch/SM_leg_4__chitin.SM_leg_4__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 72
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_4__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_leg_4__chitinMid.SM_leg_4__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "leg_4__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_leg_4__glowDim_queen.SM_leg_4__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "leg_5",
+     "path": "/matriarch_blue/body/leg_5",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.3,
+      -0.2,
+      1.3,
+      1
+     ],
+     "position": [
+      -1.3,
+      -0.2,
+      1.3
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "leg_5"
+     ],
+     "driver": {
+      "what": "leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        1.111306,
+        0.23
+       ],
+       "lo": [
+        -0.26,
+        -1.111306,
+        -0.23
+       ],
+       "transform": [
+        0.977802,
+        0.209529,
+        0.0,
+        0.0,
+        -0.134976,
+        0.62989,
+        0.764866,
+        0.0,
+        0.160262,
+        -0.747888,
+        0.644189,
+        0.0,
+        -0.15,
+        0.7,
+        0.85,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.3,
+        1.4,
+        1.7,
+        1
+       ],
+       "hi": [
+        0.34,
+        0.34,
+        0.34
+       ],
+       "lo": [
+        -0.34,
+        -0.34,
+        -0.34
+       ],
+       "radius": 0.34,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        -0.076156,
+        1.47255,
+        2.754701
+       ],
+       "lo": [
+        -0.667153,
+        -2.021765,
+        1.517664
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chitin",
+       "prim": "leg_5__chitin",
+       "mesh": "/Game/Models/matriarch/SM_leg_5__chitin.SM_leg_5__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 72
+      },
+      {
+       "material": "chitinMid",
+       "prim": "leg_5__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_leg_5__chitinMid.SM_leg_5__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 16
+      },
+      {
+       "material": "glowDim_queen",
+       "prim": "leg_5__glowDim_queen",
+       "mesh": "/Game/Models/matriarch/SM_leg_5__glowDim_queen.SM_leg_5__glowDim_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_queen_c88dc181fd19.MI_glowDim_queen_c88dc181fd19",
+       "materialKey": "c88dc181fd19",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "pods",
+     "path": "/matriarch_blue/body/pods",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      2,
+      1.6,
+      0.0,
+      1
+     ],
+     "position": [
+      2,
+      1.6,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "body",
+     "handles": [
+      "pods"
+     ],
+     "driver": {
+      "what": "egg pods: pulse with the breath; flare when Shardlings hatch on the roar",
+      "channels": [
+       "emission",
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBrood.cpp:PoseMatriarch"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.3,
+        -0.2,
+        -1.3,
+        1
+       ],
+       "hi": [
+        0.24,
+        0.345,
+        0.24
+       ],
+       "lo": [
+        -0.24,
+        -0.345,
+        -0.24
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.1,
+        0.4,
+        -1.48,
+        1
+       ],
+       "hi": [
+        0.288,
+        0.414,
+        0.288
+       ],
+       "lo": [
+        -0.288,
+        -0.414,
+        -0.288
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.5,
+        0.5,
+        -1.3,
+        1
+       ],
+       "hi": [
+        0.336,
+        0.483,
+        0.336
+       ],
+       "lo": [
+        -0.336,
+        -0.483,
+        -0.336
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3,
+        -0.3,
+        -1.48,
+        1
+       ],
+       "hi": [
+        0.24,
+        0.345,
+        0.24
+       ],
+       "lo": [
+        -0.24,
+        -0.345,
+        -0.24
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.1,
+        1,
+        -1.3,
+        1
+       ],
+       "hi": [
+        0.288,
+        0.414,
+        0.288
+       ],
+       "lo": [
+        -0.288,
+        -0.414,
+        -0.288
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.7,
+        0.0,
+        -1.48,
+        1
+       ],
+       "hi": [
+        0.336,
+        0.483,
+        0.336
+       ],
+       "lo": [
+        -0.336,
+        -0.483,
+        -0.336
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.5,
+        0.7,
+        -1.3,
+        1
+       ],
+       "hi": [
+        0.24,
+        0.345,
+        0.24
+       ],
+       "lo": [
+        -0.24,
+        -0.345,
+        -0.24
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.3,
+        -0.2,
+        1.3,
+        1
+       ],
+       "hi": [
+        0.24,
+        0.345,
+        0.24
+       ],
+       "lo": [
+        -0.24,
+        -0.345,
+        -0.24
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.1,
+        0.4,
+        1.48,
+        1
+       ],
+       "hi": [
+        0.288,
+        0.414,
+        0.288
+       ],
+       "lo": [
+        -0.288,
+        -0.414,
+        -0.288
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.5,
+        0.5,
+        1.3,
+        1
+       ],
+       "hi": [
+        0.336,
+        0.483,
+        0.336
+       ],
+       "lo": [
+        -0.336,
+        -0.483,
+        -0.336
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3,
+        -0.3,
+        1.48,
+        1
+       ],
+       "hi": [
+        0.24,
+        0.345,
+        0.24
+       ],
+       "lo": [
+        -0.24,
+        -0.345,
+        -0.24
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.1,
+        1,
+        1.3,
+        1
+       ],
+       "hi": [
+        0.288,
+        0.414,
+        0.288
+       ],
+       "lo": [
+        -0.288,
+        -0.414,
+        -0.288
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.7,
+        0.0,
+        1.48,
+        1
+       ],
+       "hi": [
+        0.336,
+        0.483,
+        0.336
+       ],
+       "lo": [
+        -0.336,
+        -0.483,
+        -0.336
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.5,
+        0.7,
+        1.3,
+        1
+       ],
+       "hi": [
+        0.24,
+        0.345,
+        0.24
+       ],
+       "lo": [
+        -0.24,
+        -0.345,
+        -0.24
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "glowBody_queen",
+       "prim": "pods__glowBody_queen",
+       "mesh": "/Game/Models/matriarch/SM_pods__glowBody_queen.SM_pods__glowBody_queen",
+       "materialInstance": "/Game/Models/Materials/MI_glowBody_queen_14c8c9eaebda.MI_glowBody_queen_14c8c9eaebda",
+       "materialKey": "14c8c9eaebda",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 840
+      },
+      {
+       "material": "chitinMid",
+       "prim": "pods__chitinMid",
+       "mesh": "/Game/Models/matriarch/SM_pods__chitinMid.SM_pods__chitinMid",
+       "materialInstance": "/Game/Models/Materials/MI_chitinMid_096389503e5e.MI_chitinMid_096389503e5e",
+       "materialKey": "096389503e5e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    }
+   ]
   }
  ]
 }

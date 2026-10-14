@@ -1,0 +1,14 @@
+# Parts of lodeback, written by unreal/Tools/Editor/ac_modelkit.py from models/lodeback.py (do not edit).
+# name, parent, pivot in the model frame (UE cm: x forward, y right, z up), what moves it, materials.
+# `_0` is the unit's left (UE -Y), `_1` its right.
+lodeback_blue_root -              pivot (   0.0,    0.0,    0.0)  the unit or building transform: position on the ground, heading (yaw = -heading for units) | no mesh
+body           lodeback_blue_root pivot (   0.0,    0.0,   72.0)  body: heavy sway of the walk, sinks on death | chitin(1),chitinUnder(1),chitinMid(6),glowDim_gold(3),oreFleck(30)
+head           body           pivot (  66.0,    0.0,   64.0)  head: digs into the deposit while it eats, thrusts on a bite | chitin(1),glow_gold(2),chitinMid(2),glowDim_gold(1)
+jaw            head           pivot (  92.0,    0.0,   50.0)  jaw: grinds while it eats, snaps on a bite | chitinMid(1),oreNodule(5)
+claw_0         body           pivot (  70.0,  -34.0,   60.0)  claw: scrapes ore into the jaw while it eats; pinches on a bite | chitin(3),chitinMid(2),glowDim_gold(1)
+claw_1         body           pivot (  70.0,   34.0,   60.0)  claw: scrapes ore into the jaw while it eats; pinches on a bite | chitin(3),chitinMid(2),glowDim_gold(1)
+leg_0          body           pivot (  24.0,  -64.0,   66.0)  leg: slow walk, two legs at a time (0, 3 against 1, 2) | chitin(2),chitinMid(1),glowDim_gold(1)
+leg_1          body           pivot ( -36.0,  -64.0,   66.0)  leg: slow walk, two legs at a time (0, 3 against 1, 2) | chitin(2),chitinMid(1),glowDim_gold(1)
+leg_2          body           pivot (  24.0,   64.0,   66.0)  leg: slow walk, two legs at a time (0, 3 against 1, 2) | chitin(2),chitinMid(1),glowDim_gold(1)
+leg_3          body           pivot ( -36.0,   64.0,   66.0)  leg: slow walk, two legs at a time (0, 3 against 1, 2) | chitin(2),chitinMid(1),glowDim_gold(1)
+sac            body           pivot ( -22.0,    0.0,   98.0)  sac: scale 0.55 empty to 1.0 full with the sac fill, its glow with it; bursts (scale to 0) on death | glowBody_gold(1),oreNodule(14),opalTeal(7),opalViolet(7),chitinMid(1)

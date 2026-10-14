@@ -1,0 +1,15 @@
+# Parts of gloamwing, written by unreal/Tools/Editor/ac_modelkit.py from models/gloamwing.py (do not edit).
+# name, parent, pivot in the model frame (UE cm: x forward, y right, z up), what moves it, materials.
+# `_0` is the unit's left (UE -Y), `_1` its right.
+gloamwing_blue_root -              pivot (   0.0,    0.0,    0.0)  the unit or building transform: position on the ground, heading (yaw = -heading for units) | no mesh
+thorax         gloamwing_blue_root pivot (   0.0,    0.0,   80.0)  thorax: lifted to the hover height, bobs, pitches nose-down on the move and in the dive | chitin(3),chitinMid(2),oreFleck(10)
+head           thorax         pivot (  22.0,    0.0,   82.0)  head: turns to its target, jerks back on the spit | chitin(3),glow_violet(2),chitinMid(2),glowDim_violet(1)
+abdomen        thorax         pivot ( -14.0,    0.0,   72.0)  abdomen: sways behind the flight, flares bright on the spit | glowBody_violet(1),chitin(6),chitinMid(1)
+wing_0         thorax         pivot (   6.0,   -9.0,   96.0)  wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive | gloamWing(1),glowDim_violet(1),chitin(1)
+wing_1         thorax         pivot (  -8.0,   -9.0,   96.0)  wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive | gloamWing(1),glowDim_violet(1),chitin(1)
+wing_2         thorax         pivot (   6.0,    9.0,   96.0)  wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive | gloamWing(1),glowDim_violet(1),chitin(1)
+wing_3         thorax         pivot (  -8.0,    9.0,   96.0)  wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive | gloamWing(1),glowDim_violet(1),chitin(1)
+leg_0          thorax         pivot (  10.0,   -9.0,   68.0)  leg: dangles and trails behind in flight, reaches forward in the dive | chitin(3),chitinMid(1)
+leg_1          thorax         pivot (  -6.0,   -9.0,   68.0)  leg: dangles and trails behind in flight, reaches forward in the dive | chitin(3),chitinMid(1)
+leg_2          thorax         pivot (  10.0,    9.0,   68.0)  leg: dangles and trails behind in flight, reaches forward in the dive | chitin(3),chitinMid(1)
+leg_3          thorax         pivot (  -6.0,    9.0,   68.0)  leg: dangles and trails behind in flight, reaches forward in the dive | chitin(3),chitinMid(1)

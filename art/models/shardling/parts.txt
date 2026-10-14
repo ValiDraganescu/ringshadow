@@ -1,0 +1,14 @@
+# Parts of shardling, written by unreal/Tools/Editor/ac_modelkit.py from models/shardling.py (do not edit).
+# name, parent, pivot in the model frame (UE cm: x forward, y right, z up), what moves it, materials.
+# `_0` is the unit's left (UE -Y), `_1` its right.
+shardling_blue_root -              pivot (   0.0,    0.0,    0.0)  the unit or building transform: position on the ground, heading (yaw = -heading for units) | no mesh
+body           shardling_blue_root pivot (   0.0,    0.0,   36.0)  body: bob of the gait, lunge forward on a bite, roll on death | chitin(1),chitinUnder(1),chitinMid(5),glowDim_teal(10),glow_teal(14),crystal(12),oreFleck(18)
+head           body           pivot (  40.0,    0.0,   38.0)  head: dips and thrusts on a bite, turns to its target | chitin(1),chitinMid(1),glow_teal(4),glowDim_teal(1)
+mandible_0     head           pivot (  60.0,   -9.0,   32.0)  mandible: twitches at rest, opens wide and snaps shut on a bite | chitinMid(2),crystal(2)
+mandible_1     head           pivot (  60.0,    9.0,   32.0)  mandible: twitches at rest, opens wide and snaps shut on a bite | chitinMid(2),crystal(2)
+leg_0          body           pivot (  24.0,  -18.0,   34.0)  leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_teal(1)
+leg_1          body           pivot (   2.0,  -18.0,   34.0)  leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_teal(1)
+leg_2          body           pivot ( -24.0,  -18.0,   34.0)  leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_teal(1)
+leg_3          body           pivot (  24.0,   18.0,   34.0)  leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_teal(1)
+leg_4          body           pivot (   2.0,   18.0,   34.0)  leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_teal(1)
+leg_5          body           pivot ( -24.0,   18.0,   34.0)  leg: swing and lift of the tripod gait (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_teal(1)

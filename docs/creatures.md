@@ -28,10 +28,10 @@ kinds, each with its own glow so they read apart from the high camera:
 
 | Name | Role | Glow | Size (cells) | Code |
 |---|---|---|---|---|
-| **Shardling** | Ground swarmer, comes in packs | cold teal | 1.2 long, 0.7 tall | `shardling` |
-| **Gloamwing** | Flyer, spits acid from above | violet and magenta | 1.8 wingspan, flies 2.5 up | `gloamwing` |
-| **Lodeback** | Ore eater: fills its back sac at a deposit and leaves | warm gold, opal sac | 2.2 long, 1.3 tall (sac to 1.8) | `lodeback` |
-| **the Matriarch** | The giant brood queen, never leaves her nest | deep violet, teal veins | 10 long, 9 tall | `matriarch` |
+| **Shardling** | Ground swarmer, comes in packs | cold teal | 1.45 long, 0.85 tall | `shardling` |
+| **Gloamwing** | Flyer, spits acid from above | violet and magenta | 1.9 wingspan, 1.1 long, flies 2.5 up | `gloamwing` |
+| **Lodeback** | Ore eater: fills its back sac at a deposit and leaves | warm gold, opal sac | 2.4 long, 2.4 wide, 1.05 tall (a full sac to 1.9) | `lodeback` |
+| **the Matriarch** | The giant brood queen, never leaves her nest | deep violet, teal veins | 12 long with her egg sac, 8 wide, 9.5 tall | `matriarch` |
 
 For scale: the Prospector is 45 hp, walks 3.94 cells a second and its
 cutting torch does 5 a strike every 1.07 s in melee reach (about 4.7 a
@@ -163,7 +163,7 @@ nest; her horde does. N3 builds her.
 | The nest | a ring of 30 cells round her: 16 to 24 Shardlings and 4 to 8 Gloamwings linger there always; the nest refills one bug every 20 s while it is below its count |
 | Reward | for N3: a rare blueprint, a burst of 3,000 ore spilled as a crater-style deposit where she falls, and the region's bugs scatter for a world day |
 
-Readable from far: she is 9 cells tall, her crown spines glow violet and
+Readable from far: she is 9.5 cells tall, her crown spines glow violet and
 pulse with her breath, and her roar is heard across the region.
 
 ## Where they come from and what draws them
@@ -379,7 +379,8 @@ What N2's pose functions drive (the part names are the models'):
 
 - **Shardling** (`body`, `head`, `mandible_0`/`_1`, `leg_0`…`leg_5`, the
   quills on the body): idle: the body bobs, the mandibles twitch apart;
-  move: a tripod gait (legs 0, 3, 4 swing against 1, 2, 5, a yaw swing of
+  move: a tripod gait (legs 0, 2, 4 swing against 1, 3, 5; 0 to 2 are
+  the left side front to back, 3 to 5 the right; a yaw swing of
   about 25° and a lift), its speed with the ground speed; attack: on each
   counter tick the body lunges 0.3 cells forward and back over 0.25 s, the
   head dips, the mandibles open wide and snap shut; hurt: a flinch back;
@@ -403,6 +404,23 @@ What N2's pose functions drive (the part names are the models'):
   the head draws back and lunges; roar: the body rears up 1 cell, the crown
   fans open (scale out) and the jaw gapes for 2 s; death: she sinks, the
   crown folds, the glow dies over 4 s.
+
+## Pictures
+
+Hidden runs of the model row (`unreal/Tools/Editor/make_brood_lineup.py` makes
+the two lineup levels; the commands are in its docstring). Each bug at rest
+on the row's floor under its sun, and the lineups beside the Prospector for
+scale (the Prospector is the right-hand model in both):
+
+- [shardling.jpg](creatures/shardling.jpg), [gloamwing.jpg](creatures/gloamwing.jpg)
+  (perched: the pose lifts it to its hover), [lodeback.jpg](creatures/lodeback.jpg)
+  (its sac full), [matriarch.jpg](creatures/matriarch.jpg)
+- [lineup.jpg](creatures/lineup.jpg): all four and the Prospector
+- [lineup-small.jpg](creatures/lineup-small.jpg): without the Matriarch
+
+They are blockout-grade models from the concepts (pipeline steps 0, 1, 6, 7);
+the turnaround painting and refinement (steps 2 to 5) can follow when N2 shows
+them in the game's own camera.
 
 ## Sounds
 
