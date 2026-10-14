@@ -494,3 +494,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Protocol 16 (MissionAsk = request 16, D1 → 17), schema 12.
 - N K2 suites: core 458, server 177, net 67 pass.
 - I K2 imported N1's Brood WAVs too; N2 must resolve on rebase.
+- D Manager: server detaches, game reattaches via a run file; no launchd.
+- D Manager: idle server ticks slow; catch-up after downtime capped.
+- T S2 briefed to wt1.
