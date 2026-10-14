@@ -360,12 +360,12 @@ void UAcGameFlowSubsystem::Deinitialize()
 	CloseMenu();
 	CloseWorldMap();
 	CloseSkillScreen();
+	CloseRigScreen();
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
 	{
 		Sim->OnGameStarted.Remove(StartedHandle);
 		Sim->OnRefused.Remove(RefusedHandle);
 	}
-	CloseRigScreen();
 	if (MmoBanner)
 	{
 		if (const AAcHUD* Hud = AAcHUD::Get(this); Hud && Hud->Root()) Hud->Root()->RemoveLayer(MmoBanner.ToSharedRef());
@@ -768,12 +768,12 @@ void UAcGameFlowSubsystem::StopMmo()
 	if (!Sim || !Sim->IsMmo()) return;
 	CloseWorldMap();
 	CloseSkillScreen();
+	CloseRigScreen();
 	LeaveDriving();
 	Sim->StopMmo();
 	TickMmo();
 }
 
-	CloseRigScreen();
 void UAcGameFlowSubsystem::OnRefused(const FString& Why)
 {
 	TickMmo();
@@ -792,12 +792,12 @@ void UAcGameFlowSubsystem::TickMmo()
 	}
 	TickWorldMap();
 	TickSkillScreen();
+	TickRigScreen();
 	if (!MmoBanner) return;
 	MmoBanner->Update(FPlatformTime::Seconds());
 	if (Mmo)
 	{
 		MmoBanner->SetStatus(Mmo->Message(), Mmo->Phase() == FAcMmoClient::EPhase::Failed);
-	TickRigScreen();
 		// Where the pilot is: the region, or the flight.
 		FString Place;
 		if (const ac::net::WorldMessage::Region* To = Mmo->FlyingTo())
@@ -853,12 +853,12 @@ bool UAcGameFlowSubsystem::OpenWorldMap()
 	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim || !Sim->IsMmo() || Menu || Dialog) return false;
 	CloseSkillScreen();
+	CloseRigScreen();
 	const AAcHUD* Hud = AAcHUD::Get(this);
 	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
 	if (!Root) return false;
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	Root->AddLayer(WorldMapLayer)
-	CloseRigScreen();
 	[
 		SAssignNew(WorldMap, SAcWorldMap)
 		.OnFly_Lambda([Weak](const FString& Region, const FString& Pad) { if (Weak.IsValid()) Weak->FlyFromMap(Region, Pad); })
@@ -944,6 +944,7 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
 	if (!Root) return false;
 	CloseWorldMap();
+	CloseRigScreen();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	// Each ask goes to the server; a refusal at once (not connected) shows here,
 	// the server's own through `TickSkillScreen`.
@@ -953,7 +954,6 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 		UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
 		FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
 		FString Why;
-	CloseRigScreen();
 		if (!Mmo) Why = TEXT("Not in a world");
 		else if (Do(*Mmo, &Why)) return;
 		if (Weak->SkillScreen) Weak->SkillScreen->SetRefusal(Why);
@@ -966,6 +966,7 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 		.OnSlot_Lambda([Ask](int32 Slot, std::optional<ac::Skill> Skill)
 			{ Ask([Slot, Skill](FAcMmoClient& M, FString* Why) { return M.Slot(Slot, Skill, Why); }); })
 		.OnRespec_Lambda([Ask]() { Ask([](FAcMmoClient& M, FString* Why) { return M.Respec(Why); }); })
+		.OnRig_Lambda([Weak]() { if (Weak.IsValid()) Weak->OpenRigScreen(); })
 		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseSkillScreen(); })
 	];
 	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(SkillScreen, EFocusCause::SetDirectly);
@@ -975,7 +976,6 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 	SkillRefusalShown = Sim->MmoClient() ? Sim->MmoClient()->SkillRefusal() : FString();
 	TickSkillScreen();
 	UE_LOG(LogAutocraft, Log, TEXT("skill screen: open"));
-		.OnRig_Lambda([Weak]() { if (Weak.IsValid()) Weak->OpenRigScreen(); })
 	return true;
 }
 
@@ -1018,6 +1018,7 @@ void UAcGameFlowSubsystem::TickSkillScreen()
 		G.slots = P->slots;
 		G.blueprints = P->blueprints;
 		G.sites = P->sitesFound;
+		G.rig = P->rig;
 		// The points that can still be taken back, and for how long (world time).
 		const double Now = Mmo->Sky() ? Mmo->Sky()->time : 0.0;
 		for (const ac::net::ProgressMessage::Undoable& U : P->undo)
@@ -1027,7 +1028,6 @@ void UAcGameFlowSubsystem::TickSkillScreen()
 		}
 		AcProgressHud::BlueprintSites(*Mmo, Info.Sources, Info.SitesMarked);
 		Info.RespecPrice = P->respecPrice;
-		G.rig = P->rig;
 		Info.bRespecFree = P->respecFree;
 		// Blueprint savant: 2 levels a rank.
 		Info.FloorCut = 2 * G.rank(ac::Skill::blueprintSavant);
@@ -1058,15 +1058,6 @@ void UAcGameFlowSubsystem::TickSkillScreen()
 		SkillRefusalShown = Mmo->SkillRefusal();
 		if (!SkillRefusalShown.IsEmpty()) SkillScreen->SetRefusal(SkillRefusalShown);
 	}
-}
-
-// MARK: - -AcFlowTest
-
-void UAcGameFlowSubsystem::Check(const bool bOk, const FString& What)
-{
-	const FString Step = Test->Steps.IsValidIndex(Test->Step) ? Test->Steps[Test->Step] : TEXT("?");
-	UE_LOG(LogAutocraft, Display, TEXT("flowtest: %s: %s %s"), *Step, *What, bOk ? TEXT("ok") : TEXT("FAILED"));
-	if (!bOk) Test->Failures += 1;
 }
 
 // MARK: - The MMORPG rig screen
@@ -1185,6 +1176,15 @@ void UAcGameFlowSubsystem::TickRigScreen()
 		RigRefusalShown = Mmo->RigRefusal();
 		if (!RigRefusalShown.IsEmpty()) RigScreen->SetRefusal(RigRefusalShown);
 	}
+}
+
+// MARK: - -AcFlowTest
+
+void UAcGameFlowSubsystem::Check(const bool bOk, const FString& What)
+{
+	const FString Step = Test->Steps.IsValidIndex(Test->Step) ? Test->Steps[Test->Step] : TEXT("?");
+	UE_LOG(LogAutocraft, Display, TEXT("flowtest: %s: %s %s"), *Step, *What, bOk ? TEXT("ok") : TEXT("FAILED"));
+	if (!bOk) Test->Failures += 1;
 }
 
 void UAcGameFlowSubsystem::NextStep()
