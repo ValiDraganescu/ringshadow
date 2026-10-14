@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-14T23:00:00Z</updated>
+  <updated>2026-10-14T23:30:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>Mercenaries: they mine while you sleep</title>
+    <id>tag:ringshadow,2026-10-14:blog/mercenaries</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/mercenaries"/>
+    <published>2026-10-14T23:30:00Z</published>
+    <updated>2026-10-14T23:30:00Z</updated>
+    <summary>Hire mercenary prospectors at the Citadel: in a world day each one mines what you mine in an hour, and they keep working while the game is closed.</summary>
+  </entry>
   <entry>
     <title>The world runs on after you quit</title>
     <id>tag:ringshadow,2026-10-14:blog/world-runs-on</id>
