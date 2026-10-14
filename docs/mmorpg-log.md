@@ -456,3 +456,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T N1 (bug design, models, sounds) briefed to wt2 (wt-2-6a113cd0).
 - N N1 concepts: Shardling, Gloamwing, Lodeback, Matriarch (the Brood).
 - I User: pick bug concepts https://claude.ai/artifact/W3nB3834MntTuhA5xprEAR
+- T C1 done e4611e7: 10% tax on every unload into the realm wallet.
+- D C1: tax rounds to nearest, ≥1, never the whole load.
+- D C1: H opens the Citadel screen; donate 100/1,000/all at the Citadel.
+- N Protocol 13, save v9 (empty realm wallet on old saves).
+- N C1 suites: core 456, server 162, net 67 pass.

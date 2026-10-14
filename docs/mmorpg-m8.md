@@ -57,7 +57,7 @@ Run in this order, one worker at a time.
 |---|---|---|---|
 | B1 | Bugs: mining sparks stop when drilling stops; the Prospector moves smoothly (no lag) when its AI drives it and the pilot isn't | | done 0a42c5a |
 | R1 | Realm buildings: every building belongs to the world; any pilot unloads, respawns, lands and is defended by any building; limits per realm; protocol and save migrate; old saves load | | done 1b6611c |
-| C1 | Citadel tax and realm wallet: a share of every unload (start 10%) goes to the realm wallet, a donate action, the realm wallet shown at the Citadel and in the HUD | R1 | |
+| C1 | Citadel tax and realm wallet: a share of every unload (start 10%) goes to the realm wallet, a donate action, the realm wallet shown at the Citadel and in the HUD | R1 | done e4611e7 |
 | C2 | Citadel shop: consumables (repair kit, MH canister, shield charge, scanner pulse; first set decided in the task) and every blueprint, from the pilot's wallet, prices rising per blueprint level and per copy bought; blueprints stack and are used up by building; a shop screen | C1 | |
 | N1 | Bug design and models: docs/creatures.md (kinds: a ground swarmer, a flyer, the brood queen; hp, speed, damage, attraction to POIs, linger, aggro, mining, leaving), models through the model pipeline, sounds offline | | |
 | N2 | Bugs in the world: server spawns at POIs, linger, attack pilots in their site and buildings, mine unprotected veins and leave; snapshots; client draws, animates, sounds; buildings take damage and can fall | N1, R1 | |
