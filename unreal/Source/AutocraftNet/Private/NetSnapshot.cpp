@@ -248,6 +248,15 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
         w.writeBits(s.sky->weatherSeed, 32);
         Opt<Fixed>{kFine}.write(w, s.sky->weatherHold);
         Enum<WeatherState, 2>{}.write(w, s.sky->weather);
+        writeVarint(w, s.sky->starfalls.size());
+        for (const Sky::Starfall& f : s.sky->starfalls) {
+            writeVarint(w, f.id);
+            writeVarint(w, uint64_t(f.region));
+            Pos{}.write(w, f.at);
+            kMs.write(w, f.impact);
+            kFine.write(w, f.from);
+            Opt<Var>{}.write(w, f.patch);
+        }
     }
     Opt<Fixed>{kMs}.write(w, s.xp);
     writeVarint(w, s.players.size());
@@ -673,6 +682,17 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
         sky.weatherSeed = static_cast<uint32_t>(r.readBits(32));
         Opt<Fixed>{kFine}.read(r, sky.weatherHold);
         Enum<WeatherState, 2>{}.read(r, sky.weather);
+        const uint64_t falls = readVarint(r);
+        if (falls > 64 || !r.ok()) return std::nullopt;
+        sky.starfalls.assign(size_t(falls), {});
+        for (Sky::Starfall& f : sky.starfalls) {
+            f.id = uint32_t(readVarint(r));
+            f.region = int64_t(readVarint(r));
+            Pos{}.read(r, f.at);
+            kMs.read(r, f.impact);
+            kFine.read(r, f.from);
+            Opt<Var>{}.read(r, f.patch);
+        }
         s.sky = sky;
     }
     Opt<Fixed>{kMs}.read(r, s.xp);

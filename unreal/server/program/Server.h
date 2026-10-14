@@ -112,6 +112,8 @@ private:
     void sendProgress(net::ConnectionId c, Client& client);
     void statsLine(double now);
     void log(const std::string& line) const;
+    /// A log line for each starfall told and landed.
+    void logStarfalls();
 
     ServerOptions options_;
     WorldMap world_;
@@ -128,6 +130,8 @@ private:
     double stepMax_ = 0;
     double savedAt_ = -1;
     WorldStore::Written lastSave_;
+    /// The starfalls last logged, and whether each had landed.
+    std::map<uint32_t, bool> starfalls_;
 };
 
 } // namespace ac::server

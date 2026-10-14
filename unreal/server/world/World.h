@@ -221,6 +221,9 @@ private:
     int64_t game_ = 0;
     std::map<PilotId, Seat> pilots_;
     std::vector<GameEvent> lastEvents_;
+    /// The map's own deposits; those after them (a starfall's, told to
+    /// every pilot) go to every pilot here, seen or not.
+    size_t ownPatches_ = 0;
 
     Vec2 focus(const Seat& seat, int64_t side) const;
     /// The seat drives the simulation's pilot now.

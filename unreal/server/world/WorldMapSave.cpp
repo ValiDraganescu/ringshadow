@@ -159,7 +159,8 @@ WorldSave WorldMap::save() const {
         r.units.insert(r.units.end(), landing[i].begin(), landing[i].end());
         std::sort(r.buildings.begin(), r.buildings.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
         std::sort(r.units.begin(), r.units.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
-        for (size_t k = 0; k < st.patches.size(); k++)
+        // The region file's own deposits; starfall deposits go with their falls.
+        for (size_t k = 0; k < std::min(st.patches.size(), ownPatches_[i]); k++)
             r.deposits.push_back(SavedDeposit{int64_t(k), st.patches[k].remaining, st.patches[k].depletedAt});
         if (st.wells)
             for (size_t k = 0; k < st.wells->size(); k++) r.wells.push_back(SavedWell{int64_t(k), (*st.wells)[k].remaining});
@@ -167,6 +168,12 @@ WorldSave WorldMap::save() const {
     }
     std::sort(out.regions.begin(), out.regions.end(), [](const SavedRegion& a, const SavedRegion& b) { return a.id < b.id; });
     out.clock = clock_;
+    for (const Fall& f : falls_) {
+        const GameState& st = regions_[f.region]->simulation().state;
+        const OreDeposit* d = f.patch && size_t(*f.patch) < st.patches.size() ? &st.patches[size_t(*f.patch)] : nullptr;
+        out.starfalls.push_back(SavedStarfall{int64_t(f.id), world_->regions[f.region].file.id, f.at, f.impact, f.from,
+                                              d ? std::optional<int64_t>(d->id) : std::nullopt, f.ore, d ? d->remaining : f.ore});
+    }
     return out;
 }
 
@@ -258,6 +265,21 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
                     if (b.owner == sp.id && Progression::blueprintFloor(b.kind) > 0) p.progress.blueprints.insert(b.kind);
         away_[sp.id] = p;
     }
+    // Starfalls coming and craters with their deposits: the deposits back
+    // after the region file's own, with their ids and the ore left.
+    falls_.clear();
+    for (const SavedStarfall& sf : save.starfalls) {
+        const auto i = regionNamed(sf.region);
+        if (!i) {
+            problems.push_back("starfall " + std::to_string(sf.id) + ": region " + sf.region + " is gone, left out");
+            continue;
+        }
+        Fall f{uint32_t(sf.id), *i, sf.at, sf.impact, sf.from, std::nullopt, sf.ore, sf.ore};
+        if (sf.patch) landFall(f, sf.remaining, sf.patch);
+        falls_.push_back(f);
+        nextFall_ = std::max(nextFall_, uint32_t(sf.id) + 1);
+    }
+    fallsRead_ = std::nullopt;
     // The world's hour goes on where it was.
     setClock(save.clock);
     return problems;

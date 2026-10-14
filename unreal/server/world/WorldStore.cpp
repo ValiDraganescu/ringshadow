@@ -133,13 +133,21 @@ const char* const kV5 = R"sql(
 ALTER TABLE pilots ADD COLUMN contracts TEXT NOT NULL DEFAULT '';
 )sql";
 
+/// Schema v6: starfalls told and landed (docs/weather.md "Starfall"): the
+/// crater's place and time, its deposit's patch id and ore. A save from
+/// before has none.
+const char* const kV6 = R"sql(
+CREATE TABLE starfalls (id INTEGER PRIMARY KEY, region TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, impact REAL NOT NULL,
+  bearing REAL NOT NULL, patch INTEGER, ore INTEGER NOT NULL, remaining INTEGER NOT NULL);
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}};
     return steps;
 }
 
@@ -301,6 +309,13 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.row()) out.clock = s.colReal(0);
         if (s.failed(error)) return std::nullopt;
     }
+    {
+        Stmt s(db_, "SELECT id, region, x, y, impact, bearing, patch, ore, remaining FROM starfalls ORDER BY id");
+        while (s.row())
+            out.starfalls.push_back(SavedStarfall{s.colInteger(0), s.colText(1), Vec2(s.colReal(2), s.colReal(3)), s.colReal(4),
+                                                  s.colReal(5), s.optInteger(6), s.colInteger(7), s.colInteger(8)});
+        if (s.failed(error)) return std::nullopt;
+    }
     regions_.clear();
     clock_ = std::nullopt;
     buildings_.clear();
@@ -314,6 +329,7 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
 
 void WorldStore::remember(const WorldSave& save) {
     clock_ = save.clock;
+    starfalls_ = save.starfalls;
     for (const SavedRegion& r : save.regions) {
         regions_[r.id] = {r.time, r.nextId};
         // A region written whole: its rows are these and no others.
@@ -418,6 +434,23 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                                      .integer(w.remaining)));
                },
                "wells", "idx");
+    }
+    // The starfalls: a handful, written whole when any changed.
+    if (starfalls_ != save.starfalls) {
+        run(Stmt(db_, "DELETE FROM starfalls"));
+        for (const SavedStarfall& f : save.starfalls)
+            run(std::move(Stmt(db_, "INSERT INTO starfalls (id, region, x, y, impact, bearing, patch, ore, remaining) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                              .integer(f.id)
+                              .text(f.region)
+                              .real(f.at.x)
+                              .real(f.at.y)
+                              .real(f.impact)
+                              .real(f.from)
+                              .integer(f.patch)
+                              .integer(f.ore)
+                              .integer(f.remaining)));
+        n.changed += 1;
     }
     if (clock_ != save.clock) {
         run(std::move(Stmt(db_, "INSERT INTO world_clock (id, time) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET time = excluded.time")

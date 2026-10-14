@@ -170,6 +170,25 @@ struct Sky {
     std::optional<double> weatherHold;
     /// The weather's spell now, as the server sampled it.
     WeatherState weather = WeatherState::clear;
+    /// A starfall (docs/weather.md "Starfall", E2; Starfall.h), the same for
+    /// every pilot: told from `Starfall::warning` before its impact until
+    /// its crater has faded and its deposit is empty.
+    struct Starfall {
+        uint32_t id = 0;
+        /// Index in the World message's `regions`, and the impact point on
+        /// that region's ground (its map's coordinates).
+        int64_t region = 0;
+        Vec2 at;
+        /// World time it lands (`time`), and the bearing it comes from
+        /// (compass degrees, `Starfall::head`).
+        double impact = 0;
+        double from = 0;
+        /// Its deposit, once landed: an index in that region's
+        /// `GameState::patches`.
+        std::optional<int64_t> patch;
+        bool operator==(const Starfall&) const = default;
+    };
+    std::vector<Starfall> starfalls;
     double hour() const { return WorldClock::hourAt(time, dayLength, heldHour); }
     bool operator==(const Sky&) const = default;
 };

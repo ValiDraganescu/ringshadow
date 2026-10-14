@@ -216,6 +216,7 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
         wellIdle_.emplace_back(full.size(), 0.0);
         wellLast_.push_back(full);
         wellFull_.push_back(std::move(full));
+        ownPatches_.push_back(r->simulation().state.patches.size());
     }
     weather_ = std::make_unique<Weather>(WorldClock::weatherSeed(world.file.id));
     // The survey chips' dice: their own stream, off the world's id.
@@ -510,6 +511,7 @@ void WorldMap::step() {
     workAfter(work);
     sites();
     contracts();
+    starfall();
     respawns();
     ownPadsChanged();
     regrowWells(dt);

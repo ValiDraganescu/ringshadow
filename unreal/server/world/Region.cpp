@@ -55,6 +55,7 @@ Region::Region(const RegionConfig& config)
     description_.mapVersion = map_.version;
     description_.seed = map_.seed;
     description_.fog = config.fog;
+    ownPatches_ = sim_.state.patches.size();
 }
 
 bool Region::join(PilotId pilot, int64_t lastInput) {

@@ -374,7 +374,7 @@ TEST(contracts_kept_through_the_save) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(5));
+    EXPECT_EQ(store->schemaVersion(), int64_t(6));
     const auto back = store->load(&why);
     ASSERT_TRUE(back.has_value());
     ASSERT_TRUE(back->pilots.size() == 1);
@@ -406,7 +406,7 @@ TEST(contracts_v4_save_migrates_and_draws) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(5));
+    EXPECT_EQ(store->schemaVersion(), int64_t(6));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);

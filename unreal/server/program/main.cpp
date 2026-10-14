@@ -9,6 +9,8 @@
 //                    [--dev-blueprints 1]  (dev, tests, shots: a new pilot has every blueprint)
 //                    [--hour h]  (dev, shots: hold the world's hour, 0-24)
 //                    [--weather clear|cloudy|rain|storm|0-3]  (dev, shots: hold the world's weather)
+//                    [--starfall s]  (dev, tests, shots: a starfall lands near the first pilot s seconds after it comes)
+//                    [--clock-hour h]  (dev, shots: move the world's clock on to hour h, 0-24; it runs on from there)
 //
 // Reads the one-time token as the first line of its standard input, binds,
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
@@ -90,7 +92,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--hour h] [--weather clear|cloudy|rain|storm]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--hour h] [--weather clear|cloudy|rain|storm] [--starfall s] [--clock-hour h]\n",
                  why);
     return 2;
 }
@@ -116,7 +118,7 @@ int main(int argc, char** argv) {
     pid_t parent = 0;
     double devXp = 0;
     bool devBlueprints = false;
-    std::optional<double> heldHour, weatherHold;
+    std::optional<double> heldHour, weatherHold, starfallIn, clockHour;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
     for (int i = 1; i < argc; i++) {
@@ -137,6 +139,12 @@ int main(int argc, char** argv) {
         else if (a == "--hour") {
             heldHour = std::atof(v.c_str());
             if (*heldHour < 0 || *heldHour > 24) return usage("--hour: 0…24");
+        } else if (a == "--starfall") {
+            starfallIn = std::atof(v.c_str());
+            if (*starfallIn < 0) return usage("--starfall: seconds, 0 or more");
+        } else if (a == "--clock-hour") {
+            clockHour = std::atof(v.c_str());
+            if (*clockHour < 0 || *clockHour > 24) return usage("--clock-hour: 0…24");
         } else if (a == "--weather") {
             weatherHold = weatherNamed(v);
             if (!weatherHold) return usage("--weather: clear, cloudy, rain, storm or 0…3");
@@ -195,6 +203,7 @@ int main(int argc, char** argv) {
     options.worldParams.devBlueprints = devBlueprints;
     options.worldParams.heldHour = heldHour;
     options.worldParams.weatherHold = weatherHold;
+    options.worldParams.devStarfall = starfallIn;
     options.token.assign(token.begin(), token.end());
     if (!net::secureRandom(options.secret.data(), options.secret.size())) {
         logLine("start failed: no secure random source");
@@ -211,6 +220,9 @@ int main(int argc, char** argv) {
         return 1;
     }
     Server server(socket, options);
+    // Dev and shots (`--clock-hour H`): the world's clock on to hour H.
+    if (clockHour && server.world().isWorld())
+        server.world().setClock(WorldClock::timeOf(*clockHour, server.world().clock(), server.world().params().dayLength));
     const std::string what = server.world().isWorld()
                                  ? "world " + server.world().loaded()->file.id + " (" + std::to_string(server.world().regionCount()) + " regions)"
                                  : server.region().description().mapName;

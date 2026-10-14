@@ -79,6 +79,27 @@ void Server::log(const std::string& line) const {
     if (options_.log) options_.log(line);
 }
 
+void Server::logStarfalls() {
+    if (!world_.isWorld()) return;
+    std::map<uint32_t, bool> now;
+    for (const WorldMap::Fall& f : world_.starfalls()) {
+        now[f.id] = f.patch.has_value();
+        const auto was = starfalls_.find(f.id);
+        if (was != starfalls_.end() && was->second == now[f.id]) continue;
+        const std::string region = world_.loaded()->regions[f.region].file.id;
+        const Vec2 at = world_.loaded()->regions[f.region].built.regionAt(f.at);
+        char line[200];
+        if (!f.patch)
+            std::snprintf(line, sizeof line, "starfall %u: told, %s at (%.1f, %.1f), impact in %.0f s from bearing %.0f", f.id,
+                          region.c_str(), at.x, at.y, f.impact - world_.clock(), f.from);
+        else
+            std::snprintf(line, sizeof line, "starfall %u: landed in %s at (%.1f, %.1f), deposit %lld with %lld ore", f.id, region.c_str(),
+                          at.x, at.y, (long long)*f.patch, (long long)f.ore);
+        log(line);
+    }
+    starfalls_ = std::move(now);
+}
+
 void Server::tick(double now, bool stepRegion) {
     const auto t0 = std::chrono::steady_clock::now();
     endpoint_.update(now);
@@ -87,6 +108,7 @@ void Server::tick(double now, bool stepRegion) {
         world_.step();
         stepSum_ += world_.lastStepMs();
         stepMax_ = std::max(stepMax_, world_.lastStepMs());
+        logStarfalls();
     }
     sendMoves();
     ticked_ += 1;

@@ -196,6 +196,13 @@ struct WorldParams {
     /// Contracts to drill under a ringshadow sweep are drawn (off until the
     /// server pays the sweep, E1: `WorldMap::underSweep`).
     bool sweepContracts = false;
+    /// Starfalls (Starfall.h, WorldStarfall.cpp) fall, and their dice (0:
+    /// seeded by the world's id).
+    bool starfalls = true;
+    uint64_t starfallSeed = 0;
+    /// Dev, tests and shots (`--starfall S`): a starfall lands near the
+    /// first pilot on line, S seconds after it comes (told at once).
+    std::optional<double> devStarfall;
     /// Seconds (the world's clock) a fallen Prospector waits before it comes
     /// back at its Citadel or nearest Hab Dome (P6); Second wind cuts it.
     double respawnDelay = 10;
@@ -415,6 +422,39 @@ public:
     /// the unit's ground point); the sweep contracts count on it.
     bool underSweep(PilotId pilot) const;
 
+    // MARK: Starfall (docs/weather.md "Starfall", E2; WorldStarfall.cpp)
+
+    /// A fall told or landed: where, when, from which way, and its deposit
+    /// (an index in its region's patches once landed, and the ore it had).
+    struct Fall {
+        uint32_t id = 0;
+        size_t region = 0;
+        Vec2 at{0, 0};
+        double impact = 0;
+        double from = 0;
+        std::optional<int64_t> patch;
+        int64_t ore = 0;
+        /// Its deposit's ore after the last step (the XP bonus counts what
+        /// is drilled).
+        int64_t left = 0;
+        bool operator==(const Fall&) const = default;
+    };
+    /// The falls the pilots are told now: coming, and landed until the
+    /// crater has faded and the deposit is empty.
+    const std::vector<Fall>& starfalls() const { return falls_; }
+    /// Picks a place now and tells every pilot of a fall `in` seconds from
+    /// now: in region `region` (nil: weighted toward the regions with
+    /// pilots, as the schedule does), or near `near` (a pilot: 12-22 cells
+    /// from its Prospector, ahead of it if it can). Nil: no open ground.
+    std::optional<Fall> forceStarfall(double in, std::optional<size_t> region = std::nullopt,
+                                      std::optional<PilotId> near = std::nullopt);
+    /// Whether ground point `at` of region `r` takes a crater: open, flat
+    /// ground joined to the region's pads, clear of its sites, pads, ore,
+    /// wells and buildings, and of the map's edge.
+    bool craterFits(size_t r, Vec2 at) const;
+    /// The starfall dice's seed (`params().starfallSeed`, or the world's id).
+    uint64_t starfallSeed() const;
+
     /// What the pilot's client is told of its progression now (no news).
     std::optional<net::ProgressMessage> progressMessage(PilotId pilot) const;
     /// What happened to the pilot's progression since the last call.
@@ -539,6 +579,15 @@ private:
     /// How a pilot reaches each region's sites (`region::siteReach`),
     /// worked out the first time a contract needs it.
     std::vector<std::optional<std::vector<region::SiteReach>>> siteReach_;
+    /// Starfall (WorldStarfall.cpp): the falls told, the clock the schedule
+    /// was last read at, the next fall's id, each region's own deposits
+    /// (the region file's: starfall deposits come after them), and the dev
+    /// fall still to come.
+    std::vector<Fall> falls_;
+    std::optional<double> fallsRead_;
+    uint32_t nextFall_ = 1;
+    std::vector<size_t> ownPatches_;
+    bool devFallDone_ = false;
 
     /// A new Prospector on the start pad, facing the start region's nearest
     /// ore deposit (one with ore left first), so the first thing in view is
@@ -619,6 +668,21 @@ private:
     /// unit `unit` (it arrives), its cooldowns running on meanwhile.
     std::optional<Carried> takeClocks(size_t r, int64_t unit);
     void giveClocks(size_t r, int64_t unit, const std::optional<Carried>& c);
+    // WorldStarfall.cpp.
+    /// Each step: the schedule's falls told, the landings, the deposits'
+    /// XP and emptying, the faded ones dropped, the sky's list.
+    void starfall();
+    /// A fall's deposit into its region (`fall.patch` set): at the impact,
+    /// and from a save.
+    void landFall(Fall& fall, int64_t remaining, std::optional<int64_t> id = std::nullopt);
+    /// A spot for a crater in region `r` by the dice (nil: none found);
+    /// `near`: 12-22 cells from it, ahead along `heading` first.
+    std::optional<Vec2> craterSpot(size_t r, std::mt19937_64& dice, std::optional<Vec2> near = std::nullopt,
+                                   double heading = 0) const;
+    /// A region for a fall by the dice: each counts 1, a pilot in it 8, a
+    /// pilot next door 3.
+    size_t fallRegion(std::mt19937_64& dice) const;
+    std::vector<net::Sky::Starfall> skyFalls() const;
 };
 
 } // namespace ac::server

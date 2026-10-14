@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5); the starfalls (schema 6). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -106,11 +106,28 @@ struct SavedPilot {
     bool operator==(const SavedPilot&) const = default;
 };
 
+/// A starfall told or landed (docs/weather.md "Starfall"; schema 6): its
+/// region and impact point (ground), its impact time and bearing, and its
+/// deposit once landed (the patch's id, the ore it came with and has left).
+struct SavedStarfall {
+    int64_t id = 0;
+    std::string region;
+    Vec2 at{0, 0};
+    double impact = 0;
+    double from = 0;
+    std::optional<int64_t> patch;
+    int64_t ore = 0;
+    int64_t remaining = 0;
+    bool operator==(const SavedStarfall&) const = default;
+};
+
 struct WorldSave {
     std::vector<SavedRegion> regions;
     std::vector<SavedPilot> pilots;
     /// The world's clock, seconds (`WorldMap::clock`; schema 2).
     double clock = 0;
+    /// Starfalls coming and craters with their deposits (schema 6).
+    std::vector<SavedStarfall> starfalls{};
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -123,7 +140,7 @@ public:
     };
     /// This build's steps; the last one's version is the schema's (2: the
     /// world's clock; 3: the pilots' progression; 4: gated by blueprints;
-    /// 5: contracts).
+    /// 5: contracts; 6: starfalls).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 
@@ -179,6 +196,7 @@ private:
     std::map<std::pair<std::string, int64_t>, SavedWell> wells_;
     std::map<std::string, SavedPilot> pilots_;
     std::optional<double> clock_;
+    std::vector<SavedStarfall> starfalls_;
 };
 
 } // namespace ac::server
