@@ -484,3 +484,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Save schema 10: old blueprints → max(1, limit − realm count) copies.
 - N C2 suites: core 458, server 167, net 67; O1 hidden run OK.
 - T K2 (Citadel missions, Journal, narration) next for wt1.
+- D Manager: missions in 3 tiers, 5 kinds, max 3 taken; narration per template.
+- N Numbers: N2 protocol 15/schema 11; K2 protocol 16/schema 12, requests from 17.
+- T K2 briefed to wt1.
