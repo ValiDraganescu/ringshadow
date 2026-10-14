@@ -66,6 +66,9 @@ public:
 		FString Title;
 		double Share = 0;
 		FString Refusal;
+		/// Where the site's model is, a share of the view (unset: off
+		/// screen or not drawn; the ring sits round the reticle).
+		TOptional<FVector2f> At;
 		bool operator==(const FOpening&) const = default;
 	};
 	void SetOpening(const TOptional<FOpening>& In);
@@ -129,6 +132,16 @@ struct AUTOCRAFT_API AcProgressHud
 	/// The sites the pilot knows of, for the world map: looked up by
 	/// "<region id>/<site name>" in the world's region files (read once).
 	static TArray<FAcWorldMapInfo::FSite> KnownSites(const FAcMmoClient& Mmo);
+	/// Every blueprint site of region `Region` (known or not), for the
+	/// models on the ground (AAcSites): its id "<region id>/<site name>",
+	/// kind and point in region cells from the north-west corner.
+	struct FSitePlace
+	{
+		FString Id;
+		ac::SiteKind Kind = ac::SiteKind::crate;
+		ac::Vec2 Cell;
+	};
+	static TArray<FSitePlace> SitesIn(const FAcMmoClient& Mmo, const FString& Region);
 	/// For the skill screen's BLUEPRINTS: where each found blueprint came
 	/// from ("Landing crate, Prospect Landing"), and the sites known, not
 	/// opened, of each blueprint not found.
@@ -172,6 +185,9 @@ public:
 	/// Drops slot `Index`'s (0…2) contract if it is open; disarms. False: none
 	/// to drop there.
 	bool Abandon(int32 Index);
+	/// T: the contract panel whole, or back to one line a contract.
+	void ToggleContracts();
+	bool ContractsExpanded() const;
 
 	/// Pictures (-AcMmoShotsG2): a piece of news as if the server sent it
 	/// (the toast's words from the real path), and the respawn screen for
@@ -193,5 +209,11 @@ private:
 	int64 Shown = -1;
 	/// When X armed an abandon (-1: not armed).
 	double ArmedAt = -1;
+	/// T opened the whole contract panel.
+	bool bContractsOpen = false;
+	/// The contracts as last seen (ids, states, progress) and when that
+	/// changed: the panel opens for `ContractsShown` s after.
+	FString ContractsSeen;
+	double ContractsChangedAt = -1;
 	std::optional<ac::net::ProgressMessage::Respawn> RespawnPreview;
 };

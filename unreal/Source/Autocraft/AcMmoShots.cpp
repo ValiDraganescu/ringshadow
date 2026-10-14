@@ -45,6 +45,18 @@
 //   10 a Hab Dome built, a load drilled: the depot prompt
 //   11 the load unloaded at the Hab Dome
 //
+// -AcMmoShotsW2 (it adds -AcMmoDevRig as G2 does): the blueprint sites on
+// the ground and the compact contract panel (docs/mmorpg-m7.md W2),
+// DIR/w2-NN-moment.png. 03-06 and 10-12 stand staged sites beside the
+// region's own (AAcSites::Stage): the start region has a crate and a wreck
+// only. 07-09 are the start region's own Lander wreck.
+//   01 the contract panel, compact     02 T: the whole panel
+//   03-06 crate, wreck, cache, vault near: shut (left), opened (right)
+//   07 the Lander wreck, shut, known: its lamp and column
+//   08 the opening ring on the wreck   09 the wreck opened: its lights out
+//   10 four shut sites known, 18-44 cells off, by day: their columns
+//   11 the same at dusk                12 the four shut, near, at dusk
+//
 // -AcMmoShotsRingshadow (with -AcMmoRingshadow=70: a sweep 70 s after the
 // server starts; docs/weather.md "Ringshadow sweep"): only the sweep, third
 // person on the start pad toward the giant, DIR/rs-NN-moment.png:
@@ -117,6 +129,7 @@
 #include "AcPilotText.h"
 #include "AcProgressHud.h"
 #include "AcSimSubsystem.h"
+#include "AcSites.h"
 #include "SAcLevelUp.h"
 
 #include "Pilot.h"
@@ -164,6 +177,16 @@ namespace
 
 	/// -AcMmoShotsG2: the Hab Dome it builds.
 	int64 G2Dome = -1;
+	/// -AcMmoShotsW2: where the staged sites are stood from (ground, the
+	/// heading), and the kind shown near.
+	ac::Vec2 W2From;
+	double W2Yaw = 0;
+	int32 W2Kind = 0;
+	/// Ground `Ahead` cells along `Yaw` from `From` and `Right` to its right.
+	ac::Vec2 W2At(const ac::Vec2 From, const double Yaw, const double Ahead, const double Right)
+	{
+		return ac::Vec2(From.x + Ahead * std::cos(Yaw) - Right * std::sin(Yaw), From.y + Ahead * std::sin(Yaw) + Right * std::cos(Yaw));
+	}
 
 	const ac::Structure* HabDomeOf(const ac::GameState& S)
 	{
@@ -359,7 +382,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp)) FCommandLine::Append(TEXT(" -AcMmoDevXp=1100"));
 		// -AcMmoShotsG2: the dev rig's home (a Citadel, level 25, a full wallet),
 		// for this step only (the flow steps before it in the run go without).
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) && !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
+		if ((FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2")))
+			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
 		}
@@ -393,6 +417,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsStarfall"))) T.Phase = 400;
 			// -AcMmoShotsG2: contracts, respawn, depot, own pads (600-629).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2"))) T.Phase = 600;
+			// -AcMmoShotsW2: the sites on the ground, the compact panel (700-724).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2"))) T.Phase = 700;
 			// -AcMmoShotsRig: only the rig screen (500-513).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
 			// -AcMmoShotsFlight: only a pad flight (520-527).
@@ -1447,6 +1473,188 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 630:
 		if (Since() < 1.5) return;
 		Check(Shots.Saved + Shots.Skipped == 11, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsW2
+	case 700:
+		// The dev rig's home, the contracts drawn, noon; first person away from the Citadel.
+		if (Mmo->Progress() && Mmo->Progress()->contracts.size() == 3 && S && CitadelOf(*S) && Since() > 4.0)
+		{
+			Mmo->DevClock(TEXT("hour 11"));
+			Pilot->ToggleView();
+			Stop(Face(U->position * 2.0 - CitadelOf(*S)->position));
+			Advance();
+		}
+		else TimedOut(TEXT("the contracts and the dev rig's Citadel"));
+		return;
+	case 701:
+		if (Since() > 2.5) Shoot(TEXT("w2-01-panel-compact"), TEXT("the contract panel, compact: one line a contract"));
+		return;
+	case 702:
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this)) Hud->ToggleContracts();
+		Advance();
+		return;
+	case 703:
+		if (Since() > 0.6) Shoot(TEXT("w2-02-panel-expanded"), TEXT("T: the whole contract panel"));
+		return;
+	case 704:
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this)) Hud->ToggleContracts();
+		// Third person, a little down, for the sites.
+		Pilot->ToggleView();
+		Pilot->Eye().Pitch = -0.12;
+		W2From = U->position;
+		W2Yaw = Pilot->Yaw();
+		W2Kind = 0;
+		Advance();
+		return;
+	case 705:
+		// Kind W2Kind near: shut on the left, opened on the right, facing the pilot.
+		if (AAcSites* Sites = AAcSites::Find(GetWorld()))
+		{
+			const ac::SiteKind Kind = ac::SiteKind(W2Kind);
+			const bool bBig = Kind == ac::SiteKind::vault || Kind == ac::SiteKind::wreck;
+			const double Ahead = bBig ? 9.5 : 6.0, Side = bBig ? 4.2 : 2.4;
+			Sites->Stage({{Kind, W2At(W2From, W2Yaw, Ahead, -Side), W2From, false, false},
+				{Kind, W2At(W2From, W2Yaw, Ahead, Side), W2From, true, false}});
+		}
+		Stop(W2Yaw);
+		Advance();
+		return;
+	case 706:
+		if (Since() > 1.5)
+		{
+			static const TCHAR* const Names[] = {TEXT("w2-03-crate-near"), TEXT("w2-04-wreck-near"), TEXT("w2-05-cache-near"), TEXT("w2-06-vault-near")};
+			Shoot(Names[W2Kind], FString::Printf(TEXT("staged %s: shut (left), opened (right)"), Names[W2Kind] + 6));
+			if (++W2Kind < 4) T.Phase = 705;
+		}
+		return;
+	case 707:
+		// The start region's own Lander wreck: up to 8 cells off.
+		if (AAcSites* Sites = AAcSites::Find(GetWorld())) Sites->Stage({});
+		Route({Cell(66, 34), Cell(58, 33)});
+		Advance();
+		return;
+	case 708:
+		if (const int32 D = Drive(); D == 1)
+		{
+			const FVector2D Wreck = Cell(50, 30);
+			Stop(Face(ac::Vec2(Wreck.X, Wreck.Y)));
+			if (Since() > 2.0)
+			{
+				const AAcSites* Sites = AAcSites::Find(GetWorld());
+				Check(Sites && Sites->Where(TEXT("start/Lander wreck")).IsSet(), TEXT("the Lander wreck stands in the start region"));
+				Check(Mmo->Progress()->sitesKnown.count("start/Lander wreck") > 0, TEXT("the Lander wreck is known"));
+				Advance();
+			}
+		}
+		else if (D < 0) Stalled(TEXT("to the Lander wreck's view"));
+		return;
+	case 709:
+		Shoot(TEXT("w2-07-wreck-shut"), TEXT("the Lander wreck, shut and known: its lamp and column"));
+		return;
+	case 710:
+	{
+		// Up to its hull, then hold the act key (a 5 s hold opens it).
+		const FVector2D Wreck = Cell(50, 30);
+		const ac::Vec2 At(Wreck.X, Wreck.Y);
+		if (U && ac::distance(U->position, At) <= 1.9)
+		{
+			Stop(Face(At));
+			Pilot->Press(true);
+			Advance();
+			return;
+		}
+		if (Pilot) Pilot->SetTestInput(FVector2D(0, -0.5), Face(At));
+		TimedOut(TEXT("at the Lander wreck"), 40);
+		return;
+	}
+	case 711:
+		if (const ac::net::ProgressMessage* P = Mmo->Progress(); P && P->opening && P->opening->since > 0 && P->opening->needs > 0)
+		{
+			const double Share = ((Mmo->Sky() ? Mmo->Sky()->time : 0) - P->opening->since) / P->opening->needs;
+			if (Share > 0.4 && Share < 0.85)
+			{
+				Shoot(TEXT("w2-08-opening-ring"), FString::Printf(TEXT("the opening ring on the wreck, %.0f%%"), Share * 100));
+				return;
+			}
+		}
+		TimedOut(TEXT("the wreck opening"), 20);
+		return;
+	case 712:
+		if (Mmo->Progress()->sitesFound.count("start/Lander wreck"))
+		{
+			Pilot->Press(false);
+			Route({Cell(58, 33)});
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the wreck opened"), 20);
+		return;
+	case 713:
+		if (const int32 D = Drive(); D == 1)
+		{
+			const FVector2D Wreck = Cell(50, 30);
+			Stop(Face(ac::Vec2(Wreck.X, Wreck.Y)));
+			if (Since() > 1.5)
+			{
+				Shoot(TEXT("w2-09-wreck-opened"), TEXT("the Lander wreck opened: the hatch open, its lights out"));
+			}
+		}
+		else if (D < 0) Stalled(TEXT("back to the wreck's view"));
+		return;
+	case 714:
+	{
+		// Four shut, known sites far off toward the east, a fan 18-44 cells away.
+		const FVector2D East = Cell(118, 40);
+		W2From = U->position;
+		W2Yaw = Face(ac::Vec2(East.X, East.Y));
+		if (AAcSites* Sites = AAcSites::Find(GetWorld()))
+		{
+			TArray<AAcSites::FStaged> Far;
+			const double Ahead[] = {18, 26, 34, 44}, Across[] = {-9, 6, -3, 10};
+			for (int32 K = 0; K < 4; ++K) Far.Add({ac::SiteKind(K), W2At(W2From, W2Yaw, Ahead[K], Across[K]), W2From, false, true});
+			Sites->Stage(Far);
+		}
+		Stop(W2Yaw);
+		Pilot->Eye().Pitch = 0.0;
+		Advance();
+		return;
+	}
+	case 715:
+		if (Since() > 2.0)
+		{
+			const AAcSites* Sites = AAcSites::Find(GetWorld());
+			Check(Sites && Sites->Columns() >= 4, FString::Printf(TEXT("the four columns (%d)"), Sites ? Sites->Columns() : -1));
+			Shoot(TEXT("w2-10-far-day"), TEXT("four shut sites known, 18-44 cells off, by day: their columns"));
+		}
+		return;
+	case 716:
+		Mmo->DevClock(TEXT("hour 18"));
+		Advance();
+		return;
+	case 717:
+		if (Since() > 3.0) Shoot(TEXT("w2-11-far-dusk"), TEXT("the same at dusk"));
+		return;
+	case 718:
+		// The four shut, near, in a row.
+		if (AAcSites* Sites = AAcSites::Find(GetWorld()))
+		{
+			TArray<AAcSites::FStaged> Row;
+			// Left of the line (the dev rig's base stands to the right), the cache nearest.
+			const double Across[] = {-4.5, -10.5, 2.0, -17.0}, Ahead[] = {8, 11, 7, 14};
+			for (int32 K = 0; K < 4; ++K) Row.Add({ac::SiteKind(K), W2At(W2From, W2Yaw, Ahead[K], Across[K]), W2From, false, true});
+			Sites->Stage(Row);
+		}
+		Pilot->Eye().Pitch = -0.1;
+		Advance();
+		return;
+	case 719:
+		if (Since() > 1.6) Shoot(TEXT("w2-12-near-dusk"), TEXT("the four shut, near, at dusk: lamps, the vault's seam"));
+		return;
+	case 720:
+		if (Since() < 1.0) return;
+		if (AAcSites* Sites = AAcSites::Find(GetWorld())) Sites->Stage({});
+		Check(Shots.Saved + Shots.Skipped == 12, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsRingshadow

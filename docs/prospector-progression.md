@@ -527,6 +527,26 @@ or a vault within 12 cells (the Prospector's sight), a cache within 6, any
 kind within Surveyor's radius. Sites are kept per pilot as
 `<region id>/<site name>`.
 
+On the ground (W2, `AAcSites`): every site of the pilot's region stands as
+its kind's model (`Tools/Editor/models/sites.py`), the same for everyone,
+its front toward the lowest ground round it:
+
+- **crate**: a supply crate on skids, hazard bands, a beacon mast;
+- **wreck**: a small lander nose-down in a berm, torn panels, a snapped leg,
+  a cold engine bell, a side hatch;
+- **cache**: a low mound under a dark tarp, strapped and weighted with rocks,
+  a whip antenna;
+- **vault**: an armoured double door in a bevelled frame set into a rock
+  outcrop, two lamp pylons.
+
+Not opened, its gold lamp blinks (the vault's seam glows round and down
+its door) and lights the ground at night; known and not opened, a gold column
+of light stands over it, widened with distance so it reads across the
+region. Opened by this pilot, the lid lies beside the crate, the wreck's
+hatch hangs open, the tarp is thrown back, the vault's leaves stand slid
+apart, and every light is out. The opening ring sits on the model while
+the hold runs.
+
 **Every blueprint but the Citadel's has two sites**, so a pilot has a second chance and a choice
 of route. Proposed for The First Reach (`unreal/server/worlds/first.json`):
 

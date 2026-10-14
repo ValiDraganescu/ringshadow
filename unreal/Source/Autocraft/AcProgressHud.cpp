@@ -10,11 +10,13 @@
 #include "AcMmo.h"
 #include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
+#include "AcSites.h"
 #include "SAcConsole.h"
 #include "SAcRoot.h"
 #include "SAcSkillScreen.h"
 
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
 #include "HAL/PlatformTime.h"
 #include "Rendering/DrawElements.h"
 
@@ -217,8 +219,9 @@ void SAcProgressHud::PaintSlots(FSlateWindowElementList& Out, int32 Layer, const
 
 void SAcProgressHud::PaintOpening(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, const FVector2f Size) const
 {
-	// Round the reticle (the view's middle): a ring that closes as the site opens.
-	const FVector2f C(FMath::RoundHalfFromZero(Size.X / 2), FMath::RoundHalfFromZero(Size.Y / 2));
+	// On the site's model (else round the reticle): a ring that closes as the site opens.
+	const FVector2f Share = Opening->At.Get(FVector2f(0.5f, 0.5f));
+	const FVector2f C(FMath::RoundHalfFromZero(Size.X * Share.X), FMath::RoundHalfFromZero(Size.Y * Share.Y));
 	const float R = 44;
 	if (Opening->Refusal.IsEmpty())
 	{
@@ -382,6 +385,8 @@ namespace
 		FString RegionName;
 		FString Name;
 		FVector2f At;
+		/// Region cells from the north-west corner.
+		ac::Vec2 Cell;
 		ac::SiteKind Kind = ac::SiteKind::crate;
 		ac::StructureKind Blueprint = ac::StructureKind::citadel;
 	};
@@ -421,6 +426,7 @@ namespace
 					P.RegionName = Text(F.name);
 					P.Name = Text(S.name);
 					P.At = FVector2f(float(S.at.x / FMath::Max(1.0, Cells.width)), float(S.at.y / FMath::Max(1.0, Cells.depth)));
+					P.Cell = S.at;
 					P.Kind = S.kind;
 					P.Blueprint = S.blueprint;
 					Cache.Add(P.Region + TEXT("/") + P.Name, P);
@@ -447,6 +453,20 @@ TArray<FAcWorldMapInfo::FSite> AcProgressHud::KnownSites(const FAcMmoClient& Mmo
 		S.Kind = Place->Kind;
 		S.bFound = P->sitesFound.count(Id) > 0;
 		Out.Add(S);
+	}
+	return Out;
+}
+
+TArray<AcProgressHud::FSitePlace> AcProgressHud::SitesIn(const FAcMmoClient& Mmo, const FString& Region)
+{
+	TArray<FSitePlace> Out;
+	for (const TPair<FString, FPlace>& It : Places(Mmo))
+	{
+		if (It.Value.Region != Region) continue;
+		FSitePlace& S = Out.AddDefaulted_GetRef();
+		S.Id = It.Key;
+		S.Kind = It.Value.Kind;
+		S.Cell = It.Value.Cell;
 	}
 	return Out;
 }
@@ -611,6 +631,20 @@ void UAcProgressHudSubsystem::ToggleAbandon()
 
 bool UAcProgressHudSubsystem::AbandonArmed() const { return ArmedAt >= 0 && FPlatformTime::Seconds() - ArmedAt < 6; }
 
+void UAcProgressHudSubsystem::ToggleContracts()
+{
+	bContractsOpen = !bContractsOpen;
+	ContractsChangedAt = -1;
+	UE_LOG(LogAutocraft, Log, TEXT("contracts: panel %s"), bContractsOpen ? TEXT("whole") : TEXT("compact"));
+}
+
+bool UAcProgressHudSubsystem::ContractsExpanded() const
+{
+	// A contract that changed shows whole for this long.
+	constexpr double ContractsShown = 6.0;
+	return bContractsOpen || AbandonArmed() || (ContractsChangedAt >= 0 && FPlatformTime::Seconds() - ContractsChangedAt < ContractsShown);
+}
+
 bool UAcProgressHudSubsystem::Abandon(const int32 Index)
 {
 	ArmedAt = -1;
@@ -729,7 +763,20 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 	if (UAcConsoleSubsystem* C = UAcConsoleSubsystem::Get(this); C && C->Console())
 	{
 		TOptional<FAcContractsInfo> Panel;
-		if (Mmo->Progress() && !Mmo->Progress()->contracts.empty()) Panel = AcProgressHud::Contracts(*Mmo, AbandonArmed());
+		if (Mmo->Progress() && !Mmo->Progress()->contracts.empty())
+		{
+			// What changes a contract (not its countdown): opens the panel a while.
+			FString Seen;
+			for (const ac::net::Contract& K : Mmo->Progress()->contracts)
+				Seen += FString::Printf(TEXT("%u:%d:%lld;"), K.id, int32(K.state), (long long)K.have);
+			if (Seen != ContractsSeen)
+			{
+				if (!ContractsSeen.IsEmpty()) ContractsChangedAt = FPlatformTime::Seconds();
+				ContractsSeen = Seen;
+			}
+			Panel = AcProgressHud::Contracts(*Mmo, AbandonArmed());
+			Panel->bExpanded = ContractsExpanded();
+		}
 		C->Console()->SetContracts(Panel);
 	}
 
@@ -773,6 +820,21 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 		V.Refusal = Text(O.refusal);
 		const double Sky = Mmo->Sky() ? Mmo->Sky()->time : O.since;
 		V.Share = O.needs > 0 ? std::floor(FMath::Clamp((Sky - O.since) / O.needs, 0.0, 1.0) * 100) / 100 : 0;
+		// On the site's model when it is in view (W2), in whole hundredths.
+		const AAcSites* Sites = AAcSites::Find(GetWorld());
+		const TOptional<FVector> Where = Sites ? Sites->Where(UTF8_TO_TCHAR(O.site.c_str())) : TOptional<FVector>();
+		const APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		FVector2D Screen;
+		int32 ViewW = 0, ViewH = 0;
+		if (PC) PC->GetViewportSize(ViewW, ViewH);
+		if (Where && PC && ViewW > 0 && ViewH > 0 && PC->ProjectWorldLocationToScreen(*Where, Screen))
+		{
+			const FVector2f OnView(float(Screen.X / ViewW), float(Screen.Y / ViewH));
+			if (OnView.X > 0.08f && OnView.X < 0.92f && OnView.Y > 0.08f && OnView.Y < 0.85f)
+			{
+				V.At = FVector2f(FMath::RoundToFloat(OnView.X * 100) / 100, FMath::RoundToFloat(OnView.Y * 100) / 100);
+			}
+		}
 		Opening = V;
 	}
 	Hud->SetOpening(Opening);

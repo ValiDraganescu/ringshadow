@@ -997,9 +997,58 @@ namespace
 	}
 }
 
+void SAcConsole::PaintContractsCompact(FPaint& P) const
+{
+	const FAcContractsInfo& C = *Contracts;
+	const double RowH = 30, Wide = 400;
+	const FAcRect Whole = RightPanel(1, 0);
+	const FAcRect R(Whole.MaxX() - Wide, Whole.MinY(), Wide, 36 + FMath::Max(C.Rows.Num(), 1) * RowH + 8);
+	PaintPanelGlass(P, R);
+	const double X = R.MinX() + 14, Right = R.MaxX() - 14;
+	double Y = R.MaxY() - 26;
+	FAcHudText Name(TEXT("KSTR  ·  CONTRACTS"), FAcHudStyle::Font(14), FAcHudStyle::Cyan());
+	Name.Accent = FLinearColor::Transparent;
+	Name.Kern = 1.0f;
+	P.Text(Name, FVector2D(X, Y));
+	P.Text(TEXT("T  more"), 13, Gray(0.6), FVector2D(Right, Y), EAcHAlign::Right);
+	Y -= 4;
+	for (int32 I = 0; I < C.Rows.Num(); ++I)
+	{
+		const FAcContractRow& Row = C.Rows[I];
+		Y -= RowH;
+		const bool bOpen = Row.State == FAcContractRow::EState::Open;
+		const bool bDone = Row.State == FAcContractRow::EState::Done;
+		const float A = bOpen ? 1.f : 0.6f;
+		const double By = Y + 9;
+		P.Text(FString::FromInt(I + 1), 13, Gray(0.5), FVector2D(X, By));
+		// Its bar (open) or its tag (paid, abandoned) on the right; the title fills the rest.
+		const double BarW = 92;
+		const FString Tag = bOpen ? FString() : bDone ? FString(TEXT("PAID")) : FString(TEXT("ABANDONED"));
+		const double TagW = bOpen ? BarW : FPaint::TextWidth(Tag, 13);
+		const double Tx = X + 20, Tw = Right - TagW - 12 - Tx;
+		P.Text(Fit(Row.Title, 15, Tw), 15, bDone ? Rgb(0.75, 1, 0.8) : Gray(0.95, A), FVector2D(Tx, By));
+		if (bOpen)
+		{
+			const FAcRect Bar(Right - BarW, By + 3, BarW, 7);
+			P.FillRounded(Bar, 2, Gray(0, 0.55));
+			if (Row.Share > 0) P.FillRounded(FAcRect(Bar.MinX(), Bar.MinY(), FMath::Max(3.0, BarW * FMath::Clamp(Row.Share, 0.0, 1.0)), Bar.H), 2, FAcHudStyle::Cyan());
+			P.Stroke(Bar, 2, Alpha(FAcHudStyle::Cyan(), 0.45), 1);
+		}
+		else
+		{
+			P.Text(Tag, 13, bDone ? Rgb(0.45, 1, 0.55) : Rgb(1, 0.62, 0.3), FVector2D(Right, By), EAcHAlign::Right);
+		}
+	}
+}
+
 void SAcConsole::PaintContracts(FPaint& P) const
 {
 	const FAcContractsInfo& C = *Contracts;
+	if (!C.bExpanded)
+	{
+		PaintContractsCompact(P);
+		return;
+	}
 	const double RowH = 88;
 	const FAcRect R = RightPanel(FMath::Max(C.Rows.Num(), 1), RowH);
 	PaintPanelGlass(P, R);
@@ -1012,7 +1061,7 @@ void SAcConsole::PaintContracts(FPaint& P) const
 	Name.ShadowColor = Alpha(FAcHudStyle::Cyan(), 0.35);
 	P.Text(Name, FVector2D(X, Y));
 	if (C.bArmed) P.Text(TEXT("ABANDON WHICH?  1 2 3   ·   X  keep them"), 15, Rgb(1, 0.5, 0.35), FVector2D(Right, Y), EAcHAlign::Right);
-	else P.Text(TEXT("X  abandon one"), 15, Gray(0.65), FVector2D(Right, Y), EAcHAlign::Right);
+	else P.Text(TEXT("T  less   ·   X  abandon one"), 15, Gray(0.65), FVector2D(Right, Y), EAcHAlign::Right);
 	Y -= 8;
 	if (C.Rows.IsEmpty())
 	{

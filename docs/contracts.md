@@ -111,8 +111,13 @@ is a frontier station: dry, warm, a bit wry, with no real-world names.
 
 ## On screen
 
+- **Compact.** By default the panel is one small line a contract over the
+  dashboard's right edge ("KSTR · CONTRACTS", "T more"): its key, the title
+  and a thin bar, or PAID / ABANDONED. **T** opens the whole panel and
+  closes it again; a contract that changes (more ore home, done, a new one)
+  opens it for 6 s by itself, and an armed abandon keeps it open.
 - **The panel.** The three slots on a panel that stands on the dashboard
-  over its right well and grille ("KSTR 88.7 · CONTRACTS"). Each row: its
+  over its right well and grille ("KSTR 88.7 · CONTRACTS", "T less"). Each row: its
   key (1, 2, 3), the title, the pay ("+600 XP · +15 MH"), the radio's line,
   and a bar with what is left ("120 / 300 ORE HOME", "2 / 6 LOADS · COLD
   FORK", "REACH LANDER WRECK · COLD FORK"). A done one says PAID and "NEW
@@ -129,7 +134,7 @@ is a frontier station: dry, warm, a bit wry, with no real-world names.
   ("KSTR 23").
 
 Code: `AcProgressHud::Contracts`, `ContractMarks`, `ContractGoals`;
-`SAcConsole::PaintContracts`; X in `AcCommandMap.cpp`.
+`SAcConsole::PaintContracts`, `PaintContractsCompact`; X and T in `AcCommandMap.cpp`.
 
 ## On the wire (protocol 7)
 

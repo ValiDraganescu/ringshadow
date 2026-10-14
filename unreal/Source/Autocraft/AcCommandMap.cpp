@@ -417,6 +417,12 @@ void UAcCommandMapSubsystem::PollKeys()
 				Hud->ToggleAbandon();
 				return;
 			}
+			// T: the contract panel whole, or one line a contract (W2).
+			if (PC->WasInputKeyJustPressed(EKeys::T))
+			{
+				Hud->ToggleContracts();
+				return;
+			}
 			if (Hud->AbandonArmed())
 			{
 				static const FKey Numbers[] = {EKeys::One, EKeys::Two, EKeys::Three};

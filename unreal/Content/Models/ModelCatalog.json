@@ -252865,6 +252865,3928 @@
      "meshes": []
     }
    ]
+  },
+  {
+   "name": "site_crate_blue",
+   "file": "",
+   "category": "doodad",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -2.063804,
+    -0.022871,
+    -0.685
+   ],
+   "boundsMax": [
+    0.69,
+    1.94,
+    1.726521
+   ],
+   "triangles": 484,
+   "team": "blue",
+   "base": "site_crate",
+   "canonical": "site_crate_blue",
+   "notes": [
+    "A supply crate dropped on open ground: skids, hazard bands, a beacon mast. Lid on while shut; opened, the lid leans on its side and the dark hold shows."
+   ],
+   "parts": [
+    {
+     "name": "site_crate_blue_root",
+     "path": "/site_crate_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/site_crate_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_crate_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "the site itself, always shown",
+      "channels": [],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.69,
+        0.06,
+        0.08
+       ],
+       "lo": [
+        -0.69,
+        -0.06,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.06,
+        -0.46,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.69,
+        0.06,
+        0.08
+       ],
+       "lo": [
+        -0.69,
+        -0.06,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.06,
+        0.46,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.5,
+        0.07
+       ],
+       "lo": [
+        -0.07,
+        -0.5,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.6,
+        0.6,
+        -0.6,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.5,
+        0.07
+       ],
+       "lo": [
+        -0.07,
+        -0.5,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.6,
+        0.6,
+        0.6,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.5,
+        0.07
+       ],
+       "lo": [
+        -0.07,
+        -0.5,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6,
+        0.6,
+        -0.6,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.5,
+        0.07
+       ],
+       "lo": [
+        -0.07,
+        -0.5,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6,
+        0.6,
+        0.6,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.03,
+        0.35,
+        0.03
+       ],
+       "lo": [
+        -0.03,
+        -0.35,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.6,
+        1.43,
+        -0.6,
+        1
+       ],
+       "radius": 0.03,
+       "half": 0.35,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.07,
+        0.03,
+        0.07
+       ],
+       "lo": [
+        -0.07,
+        -0.03,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.6,
+        1.75,
+        -0.6,
+        1
+       ],
+       "radius": 0.07,
+       "half": 0.03,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.64,
+        0.48,
+        0.64
+       ],
+       "lo": [
+        -0.64,
+        -0.48,
+        -0.64
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.6,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "body__hullDark",
+       "mesh": "/Game/Models/site_crate/SM_body__hullDark.SM_body__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "hullMid",
+       "prim": "body__hullMid",
+       "mesh": "/Game/Models/site_crate/SM_body__hullMid.SM_body__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "body__hazard",
+       "mesh": "/Game/Models/site_crate/SM_body__hazard.SM_body__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 36
+      },
+      {
+       "material": "hullLight",
+       "prim": "body__hullLight",
+       "mesh": "/Game/Models/site_crate/SM_body__hullLight.SM_body__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "soot",
+       "prim": "body__soot",
+       "mesh": "/Game/Models/site_crate/SM_body__soot.SM_body__soot",
+       "materialInstance": "/Game/Models/Materials/MI_soot_14766a5cb3de.MI_soot_14766a5cb3de",
+       "materialKey": "14766a5cb3de",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 36
+      }
+     ]
+    },
+    {
+     "name": "lamp",
+     "path": "/site_crate_blue/lamp",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.6,
+      1.86,
+      -0.6,
+      1
+     ],
+     "position": [
+      -0.6,
+      1.86,
+      -0.6
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_crate_blue_root",
+     "handles": [
+      "lamp"
+     ],
+     "driver": {
+      "what": "the blueprint's signal light: blinks while shut, out once opened",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "siteLamp",
+       "prim": "lamp__siteLamp",
+       "mesh": "/Game/Models/site_crate/SM_lamp__siteLamp.SM_lamp__siteLamp",
+       "materialInstance": "/Game/Models/Materials/MI_siteLamp_8339ea529603.MI_siteLamp_8339ea529603",
+       "materialKey": "8339ea529603",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "lid_shut",
+     "path": "/site_crate_blue/lid_shut",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.08,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      1.08,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_crate_blue_root",
+     "handles": [
+      "lid_shut"
+     ],
+     "driver": {
+      "what": "shown while the pilot has not opened the site",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.68,
+        0.06,
+        0.68
+       ],
+       "lo": [
+        -0.68,
+        -0.06,
+        -0.68
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.06,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "lid_shut__hullLight",
+       "mesh": "/Game/Models/site_crate/SM_lid_shut__hullLight.SM_lid_shut__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullDark",
+       "prim": "lid_shut__hullDark",
+       "mesh": "/Game/Models/site_crate/SM_lid_shut__hullDark.SM_lid_shut__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hazard",
+       "prim": "lid_shut__hazard",
+       "mesh": "/Game/Models/site_crate/SM_lid_shut__hazard.SM_lid_shut__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "lid_open",
+     "path": "/site_crate_blue/lid_open",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.08,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      1.08,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_crate_blue_root",
+     "handles": [
+      "lid_open"
+     ],
+     "driver": {
+      "what": "shown once the pilot has opened the site",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.68,
+        0.06,
+        0.68
+       ],
+       "lo": [
+        -0.68,
+        -0.06,
+        -0.68
+       ],
+       "transform": [
+        0.913545,
+        0.0,
+        0.406737,
+        0.0,
+        -0.049569,
+        0.992546,
+        0.111333,
+        0.0,
+        -0.403705,
+        -0.121869,
+        0.906736,
+        0.0,
+        -1.162974,
+        -0.960447,
+        0.82668,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "soot",
+       "prim": "lid_open__soot",
+       "mesh": "/Game/Models/site_crate/SM_lid_open__soot.SM_lid_open__soot",
+       "materialInstance": "/Game/Models/Materials/MI_soot_14766a5cb3de.MI_soot_14766a5cb3de",
+       "materialKey": "14766a5cb3de",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "lid_open__hullLight",
+       "mesh": "/Game/Models/site_crate/SM_lid_open__hullLight.SM_lid_open__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "lid_open__hazard",
+       "mesh": "/Game/Models/site_crate/SM_lid_open__hazard.SM_lid_open__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullDark",
+       "prim": "lid_open__hullDark",
+       "mesh": "/Game/Models/site_crate/SM_lid_open__hullDark.SM_lid_open__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "site_wreck_blue",
+   "file": "",
+   "category": "doodad",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -2.28,
+    -0.625,
+    -1.92
+   ],
+   "boundsMax": [
+    2.39,
+    1.74,
+    1.52
+   ],
+   "triangles": 1186,
+   "team": "blue",
+   "base": "site_wreck",
+   "canonical": "site_wreck_blue",
+   "notes": [
+    "A small lander crashed nose first: hull half in the ground, torn panels, a snapped leg, a cold engine bell, a dirt berm at the nose. The side hatch is shut, or hanging open with the dark inside showing."
+   ],
+   "parts": [
+    {
+     "name": "site_wreck_blue_root",
+     "path": "/site_wreck_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/site_wreck_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_wreck_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "the site itself, always shown",
+      "channels": [],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        1.5,
+        0.571498,
+        0.62
+       ],
+       "lo": [
+        1.1,
+        -0.491498,
+        -0.62
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.1,
+        1.008664,
+        0.86
+       ],
+       "lo": [
+        0.4,
+        -0.491498,
+        -0.86
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.4,
+        1.248034,
+        0.9
+       ],
+       "lo": [
+        -0.6,
+        -0.408664,
+        -0.9
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -0.6,
+        1.269923,
+        0.9
+       ],
+       "lo": [
+        -1.4,
+        -0.248034,
+        -0.9
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        -1.4,
+        1.269923,
+        0.76
+       ],
+       "lo": [
+        -1.7,
+        0.010077,
+        -0.76
+       ],
+       "transform": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.6,
+        0.04,
+        0.54
+       ],
+       "lo": [
+        0.0,
+        -0.04,
+        0.0
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1.6,
+        1.2,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.22,
+        0.03,
+        0.22
+       ],
+       "lo": [
+        -0.22,
+        -0.03,
+        -0.22
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.5,
+        -0.06,
+        1.3,
+        1
+       ],
+       "radius": 0.22,
+       "half": 0.03,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.22,
+        0.03,
+        0.22
+       ],
+       "lo": [
+        -0.22,
+        -0.03,
+        -0.22
+       ],
+       "transform": [
+        0.866025,
+        0.5,
+        0.0,
+        0.0,
+        -0.5,
+        0.866025,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.8,
+        0.0,
+        -1.7,
+        1
+       ],
+       "radius": 0.22,
+       "half": 0.03,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.46,
+        0.13,
+        0.46
+       ],
+       "lo": [
+        -0.46,
+        -0.13,
+        -0.46
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.72,
+        0.72,
+        0.0,
+        1
+       ],
+       "radius": 0.46,
+       "half": 0.13,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.49,
+        0.23,
+        0.49
+       ],
+       "lo": [
+        -0.49,
+        -0.23,
+        -0.49
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        -2.05,
+        0.74,
+        0.0,
+        1
+       ],
+       "radius": 0.49,
+       "half": 0.23,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.06,
+        0.422374,
+        0.06
+       ],
+       "lo": [
+        -0.06,
+        -0.422374,
+        -0.06
+       ],
+       "transform": [
+        -0.73994,
+        0.672673,
+        0.0,
+        0.0,
+        -0.473514,
+        -0.520865,
+        0.710271,
+        0.0,
+        0.47778,
+        0.525558,
+        0.703929,
+        0.0,
+        -1.3,
+        0.18,
+        1,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.06,
+        0.226716,
+        0.06
+       ],
+       "lo": [
+        -0.06,
+        -0.226716,
+        -0.06
+       ],
+       "transform": [
+        -0.8,
+        0.6,
+        0.0,
+        0.0,
+        -0.396973,
+        -0.529297,
+        -0.749838,
+        0.0,
+        -0.449903,
+        -0.59987,
+        0.661622,
+        0.0,
+        -1.09,
+        0.22,
+        -0.93,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.3,
+        0.06,
+        0.07
+       ],
+       "lo": [
+        -0.3,
+        -0.06,
+        -0.07
+       ],
+       "transform": [
+        0.882948,
+        0.0,
+        0.469472,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.469472,
+        0.0,
+        0.882948,
+        0.0,
+        -0.6,
+        0.06,
+        -1.5,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.17,
+        0.04
+       ],
+       "lo": [
+        -0.04,
+        -0.17,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.9,
+        1.37,
+        0.0,
+        1
+       ],
+       "radius": 0.04,
+       "half": 0.17,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.7,
+        0.015,
+        0.46
+       ],
+       "lo": [
+        0.0,
+        -0.015,
+        0.0
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.309017,
+        -0.951057,
+        0.0,
+        0.0,
+        0.951057,
+        0.309017,
+        0.0,
+        -0.3,
+        0.92,
+        0.78,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.52,
+        0.015,
+        0.3
+       ],
+       "lo": [
+        0.0,
+        -0.015,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.5,
+        -0.866025,
+        0.0,
+        0.0,
+        0.866025,
+        -0.5,
+        0.0,
+        -1.2,
+        1.1,
+        -0.7,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.46,
+        0.015,
+        0.28
+       ],
+       "lo": [
+        0.0,
+        -0.015,
+        0.0
+       ],
+       "transform": [
+        0.970296,
+        0.241922,
+        0.0,
+        0.0,
+        -0.241922,
+        0.970296,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.1,
+        1.24,
+        -0.2,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.76,
+        -0.24,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.63,
+        0.385,
+        1.05
+       ],
+       "lo": [
+        -0.63,
+        -0.385,
+        -1.05
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.3,
+        -0.1,
+        0.8,
+        1
+       ],
+       "hi": [
+        0.528,
+        0.22,
+        0.396
+       ],
+       "lo": [
+        -0.528,
+        -0.22,
+        -0.396
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.26,
+        -0.12,
+        -0.84,
+        1
+       ],
+       "hi": [
+        0.44,
+        0.2,
+        0.4
+       ],
+       "lo": [
+        -0.44,
+        -0.2,
+        -0.4
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        2.1,
+        0.0,
+        0.6,
+        1
+       ],
+       "hi": [
+        0.18,
+        0.18,
+        0.18
+       ],
+       "lo": [
+        -0.18,
+        -0.18,
+        -0.18
+       ],
+       "radius": 0.18,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6,
+        0.0,
+        -1.1,
+        1
+       ],
+       "hi": [
+        0.14,
+        0.14,
+        0.14
+       ],
+       "lo": [
+        -0.14,
+        -0.14,
+        -0.14
+       ],
+       "radius": 0.14,
+       "round": "sphere"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullMid",
+       "prim": "body__hullMid",
+       "mesh": "/Game/Models/site_wreck/SM_body__hullMid.SM_body__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 316
+      },
+      {
+       "material": "hullDark",
+       "prim": "body__hullDark",
+       "mesh": "/Game/Models/site_wreck/SM_body__hullDark.SM_body__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 384
+      },
+      {
+       "material": "hullLight",
+       "prim": "body__hullLight",
+       "mesh": "/Game/Models/site_wreck/SM_body__hullLight.SM_body__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 54
+      },
+      {
+       "material": "soot",
+       "prim": "body__soot",
+       "mesh": "/Game/Models/site_wreck/SM_body__soot.SM_body__soot",
+       "materialInstance": "/Game/Models/Materials/MI_soot_14766a5cb3de.MI_soot_14766a5cb3de",
+       "materialKey": "14766a5cb3de",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 132
+      },
+      {
+       "material": "hazard",
+       "prim": "body__hazard",
+       "mesh": "/Game/Models/site_wreck/SM_body__hazard.SM_body__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "rock_2",
+       "prim": "body__rock_2",
+       "mesh": "/Game/Models/site_wreck/SM_body__rock_2.SM_body__rock_2",
+       "materialInstance": "/Game/Models/Materials/MI_rock_2_32e08c38f6c6.MI_rock_2_32e08c38f6c6",
+       "materialKey": "32e08c38f6c6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 172
+      }
+     ]
+    },
+    {
+     "name": "lamp",
+     "path": "/site_wreck_blue/lamp",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.9,
+      1.6,
+      0.0,
+      1
+     ],
+     "position": [
+      -0.9,
+      1.6,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_wreck_blue_root",
+     "handles": [
+      "lamp"
+     ],
+     "driver": {
+      "what": "the blueprint's signal light: blinks while shut, out once opened",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "siteLamp",
+       "prim": "lamp__siteLamp",
+       "mesh": "/Game/Models/site_wreck/SM_lamp__siteLamp.SM_lamp__siteLamp",
+       "materialInstance": "/Game/Models/Materials/MI_siteLamp_8339ea529603.MI_siteLamp_8339ea529603",
+       "materialKey": "8339ea529603",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "hatch_shut",
+     "path": "/site_wreck_blue/hatch_shut",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.4,
+      0.5,
+      0.9,
+      1
+     ],
+     "position": [
+      -0.4,
+      0.5,
+      0.9
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_wreck_blue_root",
+     "handles": [
+      "hatch_shut"
+     ],
+     "driver": {
+      "what": "shown while the pilot has not opened the site",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.3,
+        0.27,
+        0.03
+       ],
+       "lo": [
+        -0.3,
+        -0.27,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "hatch_shut__hullLight",
+       "mesh": "/Game/Models/site_wreck/SM_hatch_shut__hullLight.SM_hatch_shut__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "hatch_shut__hazard",
+       "mesh": "/Game/Models/site_wreck/SM_hatch_shut__hazard.SM_hatch_shut__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chrome",
+       "prim": "hatch_shut__chrome",
+       "mesh": "/Game/Models/site_wreck/SM_hatch_shut__chrome.SM_hatch_shut__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "hatch_open",
+     "path": "/site_wreck_blue/hatch_open",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.4,
+      0.5,
+      0.9,
+      1
+     ],
+     "position": [
+      -0.4,
+      0.5,
+      0.9
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_wreck_blue_root",
+     "handles": [
+      "hatch_open"
+     ],
+     "driver": {
+      "what": "shown once the pilot has opened the site",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.3,
+        0.03,
+        0.27
+       ],
+       "lo": [
+        -0.3,
+        -0.03,
+        -0.27
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.24,
+        0.28,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "soot",
+       "prim": "hatch_open__soot",
+       "mesh": "/Game/Models/site_wreck/SM_hatch_open__soot.SM_hatch_open__soot",
+       "materialInstance": "/Game/Models/Materials/MI_soot_14766a5cb3de.MI_soot_14766a5cb3de",
+       "materialKey": "14766a5cb3de",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "hatch_open__hullLight",
+       "mesh": "/Game/Models/site_wreck/SM_hatch_open__hullLight.SM_hatch_open__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "hatch_open__hazard",
+       "mesh": "/Game/Models/site_wreck/SM_hatch_open__hazard.SM_hatch_open__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "site_cache_blue",
+   "file": "",
+   "category": "doodad",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -1.46,
+    -0.5166,
+    -0.955331
+   ],
+   "boundsMax": [
+    1.32,
+    1.13,
+    0.938775
+   ],
+   "triangles": 860,
+   "team": "blue",
+   "base": "site_cache",
+   "canonical": "site_cache_blue",
+   "notes": [
+    "A prospector's stash: a low mound under a weighted tarp, a ring of rocks, a whip antenna with a faint light. Opened, the tarp is thrown back and the dug-out stash box shows, its lid off."
+   ],
+   "parts": [
+    {
+     "name": "site_cache_blue_root",
+     "path": "/site_cache_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/site_cache_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_cache_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "the site itself, always shown",
+      "channels": [],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.87891,
+        0.065,
+        0.218685,
+        1
+       ],
+       "hi": [
+        0.312,
+        0.169,
+        0.26
+       ],
+       "lo": [
+        -0.312,
+        -0.169,
+        -0.26
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.333369,
+        0.05,
+        0.689709,
+        1
+       ],
+       "hi": [
+        0.24,
+        0.13,
+        0.2
+       ],
+       "lo": [
+        -0.24,
+        -0.13,
+        -0.2
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.464458,
+        0.075,
+        0.638775,
+        1
+       ],
+       "hi": [
+        0.36,
+        0.195,
+        0.3
+       ],
+       "lo": [
+        -0.36,
+        -0.195,
+        -0.3
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.893282,
+        0.045,
+        0.177045,
+        1
+       ],
+       "hi": [
+        0.216,
+        0.117,
+        0.18
+       ],
+       "lo": [
+        -0.216,
+        -0.117,
+        -0.18
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.72769,
+        0.06,
+        -0.452775,
+        1
+       ],
+       "hi": [
+        0.288,
+        0.156,
+        0.24
+       ],
+       "lo": [
+        -0.288,
+        -0.156,
+        -0.24
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.10318,
+        0.055,
+        -0.735331,
+        1
+       ],
+       "hi": [
+        0.264,
+        0.143,
+        0.22
+       ],
+       "lo": [
+        -0.264,
+        -0.143,
+        -0.22
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.651976,
+        0.07,
+        -0.5221,
+        1
+       ],
+       "hi": [
+        0.336,
+        0.182,
+        0.28
+       ],
+       "lo": [
+        -0.336,
+        -0.182,
+        -0.28
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.3,
+        0.06,
+        0.3,
+        1
+       ],
+       "hi": [
+        0.16,
+        0.16,
+        0.16
+       ],
+       "lo": [
+        -0.16,
+        -0.16,
+        -0.16
+       ],
+       "radius": 0.16,
+       "round": "sphere"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.2,
+        0.04,
+        -0.6,
+        1
+       ],
+       "hi": [
+        0.12,
+        0.12,
+        0.12
+       ],
+       "lo": [
+        -0.12,
+        -0.12,
+        -0.12
+       ],
+       "radius": 0.12,
+       "round": "sphere"
+      },
+      {
+       "hi": [
+        0.42,
+        0.2,
+        0.28
+       ],
+       "lo": [
+        -0.42,
+        -0.2,
+        -0.28
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.14,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.05,
+        0.05,
+        0.05
+       ],
+       "lo": [
+        -0.05,
+        -0.05,
+        -0.05
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.7,
+        0.05,
+        -0.48,
+        1
+       ],
+       "radius": 0.05,
+       "half": 0.05,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.016,
+        0.48,
+        0.016
+       ],
+       "lo": [
+        -0.016,
+        -0.48,
+        -0.016
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.7,
+        0.58,
+        -0.48,
+        1
+       ],
+       "radius": 0.016,
+       "half": 0.48,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "rock_2",
+       "prim": "body__rock_2",
+       "mesh": "/Game/Models/site_cache/SM_body__rock_2.SM_body__rock_2",
+       "materialInstance": "/Game/Models/Materials/MI_rock_2_32e08c38f6c6.MI_rock_2_32e08c38f6c6",
+       "materialKey": "32e08c38f6c6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 224
+      },
+      {
+       "material": "rock_3",
+       "prim": "body__rock_3",
+       "mesh": "/Game/Models/site_cache/SM_body__rock_3.SM_body__rock_3",
+       "materialInstance": "/Game/Models/Materials/MI_rock_3_6d1e532a114a.MI_rock_3_6d1e532a114a",
+       "materialKey": "6d1e532a114a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      },
+      {
+       "material": "hullMid",
+       "prim": "body__hullMid",
+       "mesh": "/Game/Models/site_cache/SM_body__hullMid.SM_body__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "body__hazard",
+       "mesh": "/Game/Models/site_cache/SM_body__hazard.SM_body__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullDark",
+       "prim": "body__hullDark",
+       "mesh": "/Game/Models/site_cache/SM_body__hullDark.SM_body__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 128
+      }
+     ]
+    },
+    {
+     "name": "lamp",
+     "path": "/site_cache_blue/lamp",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.7,
+      1.08,
+      -0.48,
+      1
+     ],
+     "position": [
+      0.7,
+      1.08,
+      -0.48
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_cache_blue_root",
+     "handles": [
+      "lamp"
+     ],
+     "driver": {
+      "what": "the blueprint's signal light: blinks while shut, out once opened",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "siteLamp",
+       "prim": "lamp__siteLamp",
+       "mesh": "/Game/Models/site_cache/SM_lamp__siteLamp.SM_lamp__siteLamp",
+       "materialInstance": "/Game/Models/Materials/MI_siteLamp_8339ea529603.MI_siteLamp_8339ea529603",
+       "materialKey": "8339ea529603",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "tarp_shut",
+     "path": "/site_cache_blue/tarp_shut",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_cache_blue_root",
+     "handles": [
+      "tarp_shut"
+     ],
+     "driver": {
+      "what": "shown while the pilot has not opened the site",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.92,
+        0.496,
+        0.736
+       ],
+       "lo": [
+        -0.92,
+        -0.496,
+        -0.736
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "tarp",
+       "prim": "tarp_shut__tarp",
+       "mesh": "/Game/Models/site_cache/SM_tarp_shut__tarp.SM_tarp_shut__tarp",
+       "materialInstance": "/Game/Models/Materials/MI_tarp_11127652f598.MI_tarp_11127652f598",
+       "materialKey": "11127652f598",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      },
+      {
+       "material": "hullDark",
+       "prim": "tarp_shut__hullDark",
+       "mesh": "/Game/Models/site_cache/SM_tarp_shut__hullDark.SM_tarp_shut__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "tarp_open",
+     "path": "/site_cache_blue/tarp_open",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_cache_blue_root",
+     "handles": [
+      "tarp_open"
+     ],
+     "driver": {
+      "what": "shown once the pilot has opened the site",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.04,
+        0.06,
+        -0.14,
+        1
+       ],
+       "hi": [
+        0.322,
+        0.184,
+        0.598
+       ],
+       "lo": [
+        -0.322,
+        -0.184,
+        -0.598
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.9,
+        0.04,
+        0.4,
+        1
+       ],
+       "hi": [
+        0.27,
+        0.105,
+        0.24
+       ],
+       "lo": [
+        -0.27,
+        -0.105,
+        -0.24
+       ]
+      },
+      {
+       "hi": [
+        0.42,
+        0.03,
+        0.28
+       ],
+       "lo": [
+        -0.42,
+        -0.03,
+        -0.28
+       ],
+       "transform": [
+        0.913545,
+        0.0,
+        0.406737,
+        0.0,
+        -0.056607,
+        0.990268,
+        0.127141,
+        0.0,
+        -0.402778,
+        -0.139173,
+        0.904655,
+        0.0,
+        0.558302,
+        0.069708,
+        0.503814,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "tarp",
+       "prim": "tarp_open__tarp",
+       "mesh": "/Game/Models/site_cache/SM_tarp_open__tarp.SM_tarp_open__tarp",
+       "materialInstance": "/Game/Models/Materials/MI_tarp_11127652f598.MI_tarp_11127652f598",
+       "materialKey": "11127652f598",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 92
+      },
+      {
+       "material": "soot",
+       "prim": "tarp_open__soot",
+       "mesh": "/Game/Models/site_cache/SM_tarp_open__soot.SM_tarp_open__soot",
+       "materialInstance": "/Game/Models/Materials/MI_soot_14766a5cb3de.MI_soot_14766a5cb3de",
+       "materialKey": "14766a5cb3de",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullMid",
+       "prim": "tarp_open__hullMid",
+       "mesh": "/Game/Models/site_cache/SM_tarp_open__hullMid.SM_tarp_open__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "site_vault_blue",
+   "file": "",
+   "category": "doodad",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -3.1,
+    -0.975,
+    -2.45
+   ],
+   "boundsMax": [
+    3.002,
+    2.95,
+    1.12
+   ],
+   "triangles": 1440,
+   "team": "blue",
+   "base": "site_vault",
+   "canonical": "site_vault_blue",
+   "notes": [
+    "An ancient vault: a heavy armoured door in a bevelled frame set into a rock outcrop, a lit gold seam round it and down its middle, two pylons with lamps. Opened, the two leaves stand slid apart into the frame and the dark passage shows; the seam and the lamps are out."
+   ],
+   "parts": [
+    {
+     "name": "site_vault_blue_root",
+     "path": "/site_vault_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/site_vault_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_vault_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "the site itself, always shown",
+      "channels": [],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.9,
+        -1.1,
+        1
+       ],
+       "hi": [
+        2.55,
+        1.875,
+        1.35
+       ],
+       "lo": [
+        -2.55,
+        -1.875,
+        -1.35
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.9,
+        0.4,
+        -0.4,
+        1
+       ],
+       "hi": [
+        0.99,
+        1.1,
+        1.1
+       ],
+       "lo": [
+        -0.99,
+        -1.1,
+        -1.1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.9,
+        0.46,
+        -0.5,
+        1
+       ],
+       "hi": [
+        1.102,
+        1.218,
+        1.16
+       ],
+       "lo": [
+        -1.102,
+        -1.218,
+        -1.16
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -2.5,
+        0.0,
+        0.5,
+        1
+       ],
+       "hi": [
+        0.6,
+        0.48,
+        0.6
+       ],
+       "lo": [
+        -0.6,
+        -0.48,
+        -0.6
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        2.4,
+        0.0,
+        0.6,
+        1
+       ],
+       "hi": [
+        0.52,
+        0.39,
+        0.52
+       ],
+       "lo": [
+        -0.52,
+        -0.39,
+        -0.52
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        2.5,
+        -0.6,
+        1
+       ],
+       "hi": [
+        1.62,
+        0.45,
+        0.99
+       ],
+       "lo": [
+        -1.62,
+        -0.45,
+        -0.99
+       ]
+      },
+      {
+       "hi": [
+        1.5,
+        0.17,
+        0.2
+       ],
+       "lo": [
+        -1.5,
+        -0.17,
+        -0.2
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        2.52,
+        0.2,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.5,
+        0.1,
+        0.2
+       ],
+       "lo": [
+        -1.5,
+        -0.1,
+        -0.2
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.1,
+        0.2,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.22,
+        1.3,
+        0.2
+       ],
+       "lo": [
+        -0.22,
+        -1.3,
+        -0.2
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.28,
+        1.3,
+        0.2,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.22,
+        1.3,
+        0.2
+       ],
+       "lo": [
+        -0.22,
+        -1.3,
+        -0.2
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.28,
+        1.3,
+        0.2,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.13,
+        0.75,
+        0.13
+       ],
+       "lo": [
+        -0.13,
+        -0.75,
+        -0.13
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.96,
+        0.75,
+        0.4,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.17,
+        0.05,
+        0.17
+       ],
+       "lo": [
+        -0.17,
+        -0.05,
+        -0.17
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.96,
+        1.55,
+        0.4,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.13,
+        0.75,
+        0.13
+       ],
+       "lo": [
+        -0.13,
+        -0.75,
+        -0.13
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.96,
+        0.75,
+        0.4,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.17,
+        0.05,
+        0.17
+       ],
+       "lo": [
+        -0.17,
+        -0.05,
+        -0.17
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.96,
+        1.55,
+        0.4,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.12,
+        1.37,
+        0.23
+       ],
+       "lo": [
+        -0.12,
+        -1.37,
+        -0.23
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.6,
+        1.37,
+        0.2,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.12,
+        1.37,
+        0.23
+       ],
+       "lo": [
+        -0.12,
+        -1.37,
+        -0.23
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.6,
+        1.37,
+        0.2,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.7,
+        0.09,
+        0.23
+       ],
+       "lo": [
+        -1.7,
+        -0.09,
+        -0.23
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        2.7,
+        0.2,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "rock_3",
+       "prim": "body__rock_3",
+       "mesh": "/Game/Models/site_vault/SM_body__rock_3.SM_body__rock_3",
+       "materialInstance": "/Game/Models/Materials/MI_rock_3_6d1e532a114a.MI_rock_3_6d1e532a114a",
+       "materialKey": "6d1e532a114a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 280
+      },
+      {
+       "material": "rock_2",
+       "prim": "body__rock_2",
+       "mesh": "/Game/Models/site_vault/SM_body__rock_2.SM_body__rock_2",
+       "materialInstance": "/Game/Models/Materials/MI_rock_2_32e08c38f6c6.MI_rock_2_32e08c38f6c6",
+       "materialKey": "32e08c38f6c6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 60
+      },
+      {
+       "material": "vaultMetal",
+       "prim": "body__vaultMetal",
+       "mesh": "/Game/Models/site_vault/SM_body__vaultMetal.SM_body__vaultMetal",
+       "materialInstance": "/Game/Models/Materials/MI_vaultMetal_fd1f35040302.MI_vaultMetal_fd1f35040302",
+       "materialKey": "fd1f35040302",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      },
+      {
+       "material": "hullDark",
+       "prim": "body__hullDark",
+       "mesh": "/Game/Models/site_vault/SM_body__hullDark.SM_body__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 36
+      },
+      {
+       "material": "chrome",
+       "prim": "body__chrome",
+       "mesh": "/Game/Models/site_vault/SM_body__chrome.SM_body__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 220
+      },
+      {
+       "material": "hazard",
+       "prim": "body__hazard",
+       "mesh": "/Game/Models/site_vault/SM_body__hazard.SM_body__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "soot",
+       "prim": "body__soot",
+       "mesh": "/Game/Models/site_vault/SM_body__soot.SM_body__soot",
+       "materialInstance": "/Game/Models/Materials/MI_soot_14766a5cb3de.MI_soot_14766a5cb3de",
+       "materialKey": "14766a5cb3de",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 36
+      }
+     ]
+    },
+    {
+     "name": "lamp",
+     "path": "/site_vault_blue/lamp",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.7,
+      0.4,
+      1
+     ],
+     "position": [
+      0.0,
+      1.7,
+      0.4
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_vault_blue_root",
+     "handles": [
+      "lamp"
+     ],
+     "driver": {
+      "what": "the pylons' gold lamps: blink while shut, out once opened",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "siteLamp",
+       "prim": "lamp__siteLamp",
+       "mesh": "/Game/Models/site_vault/SM_lamp__siteLamp.SM_lamp__siteLamp",
+       "materialInstance": "/Game/Models/Materials/MI_siteLamp_8339ea529603.MI_siteLamp_8339ea529603",
+       "materialKey": "8339ea529603",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      }
+     ]
+    },
+    {
+     "name": "door_shut",
+     "path": "/site_vault_blue/door_shut",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.36,
+      0.2,
+      1
+     ],
+     "position": [
+      0.0,
+      1.36,
+      0.2
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_vault_blue_root",
+     "handles": [
+      "door_shut"
+     ],
+     "driver": {
+      "what": "shown while the pilot has not opened the site",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.525,
+        1.16,
+        0.11
+       ],
+       "lo": [
+        -0.525,
+        -1.16,
+        -0.11
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.535,
+        0.0,
+        -0.06,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.525,
+        1.16,
+        0.11
+       ],
+       "lo": [
+        -0.525,
+        -1.16,
+        -0.11
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.535,
+        0.0,
+        -0.06,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "vaultMetal",
+       "prim": "door_shut__vaultMetal",
+       "mesh": "/Game/Models/site_vault/SM_door_shut__vaultMetal.SM_door_shut__vaultMetal",
+       "materialInstance": "/Game/Models/Materials/MI_vaultMetal_fd1f35040302.MI_vaultMetal_fd1f35040302",
+       "materialKey": "fd1f35040302",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hullDark",
+       "prim": "door_shut__hullDark",
+       "mesh": "/Game/Models/site_vault/SM_door_shut__hullDark.SM_door_shut__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 72
+      },
+      {
+       "material": "chrome",
+       "prim": "door_shut__chrome",
+       "mesh": "/Game/Models/site_vault/SM_door_shut__chrome.SM_door_shut__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 384
+      }
+     ]
+    },
+    {
+     "name": "seam",
+     "path": "/site_vault_blue/seam",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.36,
+      0.26,
+      1
+     ],
+     "position": [
+      0.0,
+      1.36,
+      0.26
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_vault_blue_root",
+     "handles": [
+      "seam"
+     ],
+     "driver": {
+      "what": "the vault's lit seam: steady while shut, out once opened",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "siteSeam",
+       "prim": "seam__siteSeam",
+       "mesh": "/Game/Models/site_vault/SM_seam__siteSeam.SM_seam__siteSeam",
+       "materialInstance": "/Game/Models/Materials/MI_siteSeam_bf4c5909791a.MI_siteSeam_bf4c5909791a",
+       "materialKey": "bf4c5909791a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 60
+      }
+     ]
+    },
+    {
+     "name": "door_open",
+     "path": "/site_vault_blue/door_open",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.36,
+      0.2,
+      1
+     ],
+     "position": [
+      0.0,
+      1.36,
+      0.2
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "site_vault_blue_root",
+     "handles": [
+      "door_open"
+     ],
+     "driver": {
+      "what": "shown once the pilot has opened the site",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcSites.cpp:AAcSites::Tick"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.3,
+        1.16,
+        0.11
+       ],
+       "lo": [
+        -0.3,
+        -1.16,
+        -0.11
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.22,
+        0.0,
+        0.12,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.3,
+        1.16,
+        0.11
+       ],
+       "lo": [
+        -0.3,
+        -1.16,
+        -0.11
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.22,
+        0.0,
+        0.12,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "vaultMetal",
+       "prim": "door_open__vaultMetal",
+       "mesh": "/Game/Models/site_vault/SM_door_open__vaultMetal.SM_door_open__vaultMetal",
+       "materialInstance": "/Game/Models/Materials/MI_vaultMetal_fd1f35040302.MI_vaultMetal_fd1f35040302",
+       "materialKey": "fd1f35040302",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hullDark",
+       "prim": "door_open__hullDark",
+       "mesh": "/Game/Models/site_vault/SM_door_open__hullDark.SM_door_open__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 72
+      }
+     ]
+    }
+   ]
   }
  ]
 }

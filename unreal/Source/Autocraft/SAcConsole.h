@@ -171,6 +171,8 @@ private:
 	/// building (key, icon, name, price; greyed with why not), Esc under them.
 	void PaintBuildList(class FAcConsolePaint& P) const;
 	void PaintContracts(class FAcConsolePaint& P) const;
+	/// The compact panel: one small line a contract (title, bar or tag).
+	void PaintContractsCompact(class FAcConsolePaint& P) const;
 	/// The panel's dark glass and its rims (`RightPanel`).
 	void PaintPanelGlass(class FAcConsolePaint& P, const FAcRect& R) const;
 	void PaintOver(class FAcConsolePaint& P) const;

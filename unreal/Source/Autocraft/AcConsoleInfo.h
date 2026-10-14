@@ -127,6 +127,10 @@ struct FAcContractsInfo
 {
 	TArray<FAcContractRow> Rows;
 	bool bArmed = false;
+	/// The whole panel (the radio's lines, the pay, the countdowns); else
+	/// one small line a contract (W2). T opens it; a contract that changed
+	/// opens it for a few seconds; an armed abandon keeps it open.
+	bool bExpanded = false;
 	bool operator==(const FAcContractsInfo&) const = default;
 };
 
