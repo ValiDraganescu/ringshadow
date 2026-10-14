@@ -376,3 +376,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I J1: shimmer and rankup not heard in a run (tests only).
 - I Queue: runs out of order; engine Python errors fail runs.
 - T H1 home screen → first-hour.
+- N 2026-10-14 ~14:50–15:59: second crash; train and 4 workers restarted.
+- T Resumed F1, E2 polish, W2, H1 from uncommitted work.
