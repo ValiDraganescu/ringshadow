@@ -442,3 +442,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N B1: spark tail 1.0 s → 0.5–0.6 s; AI walk jitter 142% → 8.7%.
 - N B1 suites: core 454, server 154, net 67 pass.
 - I Far units still skip snapshots; particles step at 20 Hz in MMO.
+- T R1 (realm buildings, protocol 12, save v8) briefed to wt1.
