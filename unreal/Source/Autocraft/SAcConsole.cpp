@@ -908,17 +908,18 @@ void SAcConsole::PaintBuildList(FPaint& P) const
 			P.Stroke(Row, 2, B.bLit ? Rgb(0.4, 1, 0.45) : B.bEnabled ? Alpha(Acc, 0.9) : Gray(0.3), B.bLit ? 2 : 1);
 			const double S = FMath::Max(10.0, Row.H - 4);
 			const double Mid = Row.MidY();
-			P.Text(B.Key, 12, Alpha(FAcHudStyle::KeyYellow(), A), FVector2D(Row.MinX() + 10, Mid - 7), EAcHAlign::Center);
+			// Text stands on its baseline (y up): a third of its size under the middle.
+			P.Text(B.Key, 11, Alpha(FAcHudStyle::KeyYellow(), A), FVector2D(Row.MinX() + 10, Mid - 4), EAcHAlign::Center);
 			if (const FSlateBrush* Icon = FAcIcons::Brush(B.Icon))
 			{
 				P.Image(Icon, FAcRect(Row.MinX() + 20, Mid - S / 2, S, S), B.bEnabled ? FLinearColor::White : FPaint::BlendTint(Gray(0.3), 0.6, 0.85));
 			}
-			P.Text(B.Title, 14, Gray(0.95, A), FVector2D(Row.MinX() + 24 + S, Mid - 8));
+			P.Text(B.Title, 12, Gray(0.95, A), FVector2D(Row.MinX() + 24 + S, Mid - 4));
 			TArray<FString> Cost;
 			if (B.Ore > 0) Cost.Add(FString::Printf(TEXT("%d ore"), B.Ore));
 			if (B.Hydrogen > 0) Cost.Add(FString::Printf(TEXT("%d MH"), B.Hydrogen));
 			const FString Tag = B.bEnabled ? FString::Join(Cost, TEXT(" · ")) : !B.WhyShort.IsEmpty() ? B.WhyShort : B.Why ? *B.Why : FString(TEXT("NOT NOW"));
-			P.Text(Tag, 12, B.bEnabled ? Rgb(0.6, 0.9, 1) : Rgb(1, 0.55, 0.35), FVector2D(Row.MaxX() - 6, Mid - 7), EAcHAlign::Right);
+			P.Text(Tag, 11, B.bEnabled ? Rgb(0.6, 0.9, 1) : Rgb(1, 0.55, 0.35), FVector2D(Row.MaxX() - 6, Mid - 4), EAcHAlign::Right);
 			continue;
 		}
 		Y -= 50;
