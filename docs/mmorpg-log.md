@@ -414,3 +414,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Main shots stop at the Derrick ghost (south-well overshoot): O1.
 - I Mmo.FlyToPad +5 MH (O1), LevelPick stale, CrossEdgeEast (W3 NavGrid?).
 - D Manager: U1 HUD declutter and X1 shots split queued.
+- T Build train stopped; 0eec581 commits build.sh, hidden_run.py, skills.
+- T wt-1 (X1 split) and wt-3 (W3) workers started in their worktrees.
+- I HEAD doesn't build: AcPilotText calls O1's uncommitted FirstStep.
