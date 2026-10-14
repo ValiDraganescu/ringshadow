@@ -341,3 +341,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Card max HP ignores Plating (51/45).
 - T G2 client: contracts, respawn, depot, own pads → progression-core.
 - D Manager: build train started (pid 38384); workers moved to train.py.
+- I Train: workers declared edits after writing; estimates void.
+- D Train: edit needs --files, before the first save; task-done at end.
