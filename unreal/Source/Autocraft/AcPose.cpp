@@ -11,7 +11,7 @@
 namespace
 {
 	const int32 UnitKinds = (int32)ac::allCases<ac::UnitKind>().size();
-	constexpr int32 StructureKinds = 9;
+	constexpr int32 StructureKinds = int32(ac::allCases<ac::StructureKind>().size());
 
 	FAcPoseFn* UnitTable()
 	{

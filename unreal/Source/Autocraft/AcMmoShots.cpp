@@ -383,6 +383,7 @@ namespace
 	/// -AcMmoShotsD3: the turret card's kept asks, the keys pressed so far.
 	int32 D3Kept = 0;
 	int32 D3Step = 0;
+	int32 D3Logged = -1;
 	struct FB1Sample
 	{
 		double At;
@@ -4275,7 +4276,12 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Gun && G && Since() > 3.0)
 		{
 			Check(!Gun->marks.has_value(), TEXT("d3: the gun starts bare"));
-			Check(Hit == 0, FString::Printf(TEXT("d3: the bare gun can't reach the Gloamwings (%d hit)"), Hit));
+			FString Gaps;
+			for (const ac::Unit& X : S->units)
+				if (X.kind == ac::UnitKind::gloamwing && X.bug)
+					Gaps += FString::Printf(TEXT(" %.2f/%d/%.0f"), ac::distance(X.position, Gun->position) - ac::Rules::radius(X.kind) - ac::Rules::radius(Gun->kind),
+						int32(X.bug->state), X.hp);
+			Check(Hit == 0, FString::Printf(TEXT("d3: the bare gun can't reach the Gloamwings (%d hit; gap/state/hp:%s)"), Hit, *Gaps));
 			Shoot(TEXT("d3-01-before"), TEXT("a bare gatling gun: its chevrons dark, Gloamwings beyond its air reach"));
 			return;
 		}
@@ -4332,46 +4338,23 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 1804:
 	{
-		// Up to the gun, its base filling the view: the chevrons readable.
+		// From where the bare gun was shot, the toasts gone: its chevrons lit.
 		CloseTurretCard();
 		const ac::Structure* Gun = NearestGatling(*S, U->position);
-		if (!Gun)
-		{
-			Check(false, TEXT("d3: the gun stands"));
-			Advance();
-			return;
-		}
-		const ac::Vec2 To = Gun->position + ac::normalize(U->position - Gun->position + ac::Vec2(0.01, 0)) * (ac::Rules::radius(Gun->kind) + 1.7);
-		Route({FVector2D(To.x, To.y)});
-		DStaged = false;
-		Advance();
-		return;
-	}
-	case 1805:
-	{
-		const ac::Structure* Gun = NearestGatling(*S, U->position);
-		if (!DStaged)
-		{
-			const int32 D = Drive();
-			if (D == 0) return;
-			if (Pilot->ChaseEye()) Pilot->ToggleView();
-			DStaged = true;
-			T.PhaseAt = Now;
-			return;
-		}
-		if (Gun) Stop(Face(Gun->position));
-		// The upgrade toasts gone first.
+		if (Gun) Stop(Face(Gun->position) + 0.2);
 		if (Gun && Since() > 7.0)
 		{
 			Check(Gun->marks && Gun->marks->total() == 7, TEXT("d3: the gun's seven marks lit on its base"));
 			Shoot(TEXT("d3-03-after"), TEXT("the gatling gun with its marks: the chevrons lit on its base"));
 			return;
 		}
-		TimedOut(TEXT("the marked gun up close"), 30);
+		TimedOut(TEXT("the marked gun"), 15);
 		return;
 	}
+	case 1805:
+		Advance();
+		return;
 	case 1806:
-		if (!Pilot->ChaseEye()) Pilot->ToggleView();
 		// Fresh Gloamwings at 5 to 5.8 cells: the first ones were shot down
 		// while the card was open.
 		Check(Mmo->DevClock(TEXT("brood clear\ndefence flyers")), TEXT("d3: the server sends Gloamwings at the gun's new air reach"));
@@ -4389,6 +4372,16 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (!Gun || X.kind != ac::UnitKind::gloamwing || !X.bug || X.hp <= 0 || X.hp >= ac::Rules::hp(X.kind)) continue;
 			const double Gap = ac::distance(X.position, Gun->position) - ac::Rules::radius(X.kind) - ac::Rules::radius(Gun->kind);
 			if (Gap > ac::UnitStats::gatling.airRange) Far = &X;
+		}
+		if (Since() > 1.0 && int32(Since()) != D3Logged)
+		{
+			D3Logged = int32(Since());
+			FString Gaps;
+			for (const ac::Unit& X : S->units)
+				if (Gun && X.kind == ac::UnitKind::gloamwing && X.bug)
+					Gaps += FString::Printf(TEXT(" %.2f/%d/%.0f"), ac::distance(X.position, Gun->position) - ac::Rules::radius(X.kind) - ac::Rules::radius(Gun->kind),
+						int32(X.bug->state), X.hp);
+			UE_LOG(LogAutocraft, Log, TEXT("mmoshots: d3: gloamwings gap/state/hp:%s"), *Gaps);
 		}
 		if (Gun && Far && Gun->target && Since() > 0.3)
 		{

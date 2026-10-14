@@ -391,8 +391,19 @@ A whole Gatling Gun is about an hour and a half of pumping MH at a Derrick
   `mark_range`, `mark_air`, `kills` on `buildings`). A felled turret loses
   its marks and kills, no refund: a new one in its place starts bare (Z2's
   Matriarch fells a canyon's turrets this way).
-- **Wire** (protocol 21): request 19 `UpgradeTurret{turret, stat}`; the
+- **Wire** (protocol 22): request 19 `UpgradeTurret{turret, stat}`; the
   marks travel with the structure (four 2-bit stats).
+- **Fixed with D3**: the client's pose table held nine building kinds, so
+  the Gatling Gun (the tenth) was never posed: its head never turned, its
+  barrels never spun, no muzzle flash (and the table was written one past
+  its end). It is sized from `StructureKind` now (`AcPose.cpp`).
+- **Shots**: `-AcMmoShotsD3` (phases 1800-1809): the bare gun beside
+  Gloamwings it can't reach, the turret card after seven marks, the lit
+  chevrons, the marked gun hitting a Gloamwing past its bare air reach. The
+  dev lines `defence air` and `defence flyers` set Gloamwings hovering 5 to
+  5.8 cells from a gatling gun's edge (farther on lower ground, past its
+  high-ground bonus), a group that never turns on anyone
+  (`BroodGroup::still`).
 
 ## Server and client (N2)
 

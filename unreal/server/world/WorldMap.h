@@ -764,6 +764,9 @@ public:
         /// A defence of the realm that shot it (D1, D2): the group attacks it
         /// while it stands within the leash, before its raid's building.
         std::optional<int64_t> turret;
+        /// Dev and shots (`defence air|flyers`): it hovers where it is, never
+        /// turning on a pilot or a defence, never leaving.
+        bool still = false;
     };
     /// The groups of region `r` now.
     const std::vector<BroodGroup>& broodGroups(size_t r) const;

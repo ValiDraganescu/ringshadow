@@ -493,3 +493,45 @@ TEST(defence_turret_marks_and_kills_saved_and_lost) {
     EXPECT_TRUE(!simOf(w, a).state.structure(*again)->marks.has_value());
     EXPECT_TRUE(Defence::weapon(*simOf(w, a).state.structure(*again))->damage == UnitStats::gatling.damage);
 }
+
+// D3's shot scene (`defence air`): Gloamwings hovering past a bare gatling
+// gun's air reach stay unhit; its air marks reach them.
+TEST(defence_dev_air_scene_needs_the_air_marks) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.join(a));
+    w.step();
+    // Out from the start, as the shots stand.
+    Unit* me = drivenUnit(w, a);
+    me->position = me->position + Vec2(0, 30);
+    me->heading = pi / 2;
+    w.step();
+    const std::string said = w.devDefence("defence air");
+    std::printf("  %s\n", said.c_str());
+    ASSERT_TRUE(said.find("group") != std::string::npos);
+    Simulation& sim = simOf(w, a);
+    Structure* gun = nullptr;
+    for (Structure& s : sim.state.structures)
+        if (s.kind == StructureKind::gatling) gun = &s;
+    ASSERT_TRUE(gun != nullptr);
+    const int64_t gunId = gun->id;
+    auto report = [&](const char* when) {
+        int64_t hit = 0;
+        const Structure* g = sim.state.structure(gunId) ? &*std::find_if(sim.state.structures.begin(), sim.state.structures.end(),
+                                                                       [&](const Structure& s) { return s.id == gunId; })
+                                                        : nullptr;
+        for (const Unit& u : sim.state.units)
+            if (u.kind == UnitKind::gloamwing && u.bug) {
+                hit += u.hp < Rules::hp(u.kind) ? 1 : 0;
+                if (g)
+                    std::printf("  %s: gap %.2f state %d hp %.0f\n", when,
+                                distance(u.position, g->position) - Rules::radius(u.kind) - Rules::radius(g->kind), int(u.bug->state), u.hp);
+            }
+        return hit;
+    };
+    for (int i = 0; i < 4 * 60; i++) w.step();
+    EXPECT_EQ(report("bare"), int64_t(0));
+    for (Structure& s : sim.state.structures)
+        if (s.id == gunId) s.marks = TurretMarks{.air = 3};
+    for (int i = 0; i < 3 * 60; i++) w.step();
+    EXPECT_TRUE(report("marked") >= 1);
+}

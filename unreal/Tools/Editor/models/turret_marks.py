@@ -26,10 +26,10 @@ POSES = ["AcPoseBuildings2.cpp:PoseSentinel", "AcPoseBuildings2.cpp:PoseGatling"
 PREFIXES = ("markPlate", "marks_")
 # The stats' colours, as the turret card's (SAcTurretCard.cpp StatColor): amber, ember red, ice, sky blue.
 COLOURS = {
-    "markRate": (2.4, 1.4, 0.25),
-    "markDamage": (2.4, 0.6, 0.25),
-    "markRange": (0.7, 1.9, 2.4),
-    "markAir": (0.6, 1.1, 2.6),
+    "markRate": (1.3, 0.62, 0.06),
+    "markDamage": (1.3, 0.22, 0.08),
+    "markRange": (0.3, 0.95, 1.3),
+    "markAir": (0.25, 0.5, 1.4),
 }
 STATS = list(COLOURS)
 FACE = 98.0      # the plates' outer face, just inside the footprint's edge

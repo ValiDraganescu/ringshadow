@@ -208,8 +208,22 @@ std::string WorldMap::devDefence(const std::string& line) {
             BroodGroup& grp = brood_[r].groups.back();
             grp.site = site;
             grp.radius = air ? 0.4 : 2.5;
-            // "air": they hover until the gun reaches them (then turn on it).
-            if (!air) grp.turret = gun->id;
+            // "air": they hover where they are, shot or not (an arrived
+            // group starts at its POI: they are moved to their site).
+            if (air) {
+                grp.still = true;
+                int64_t i = 0;
+                for (Unit& u : st.units)
+                    if (u.bug && u.bug->group == grp.id) {
+                        const double ang = double(i++) * 2.399963;
+                        u.position = site + Vec2(std::cos(ang), std::sin(ang)) * 0.3;
+                        u.bug->site = site;
+                        u.bug->siteRadius = grp.radius;
+                    }
+                sim.reindex();
+            } else {
+                grp.turret = gun->id;
+            }
         }
     } else {
         return "dev: defence: '" + what + "' is not wallet|purse|blueprints|citadel|gatling|aa|air|flyers";

@@ -489,7 +489,7 @@ void WorldMap::brood() {
             // (a building shot it) on the defence.
             const bool building = st.structure(h.shooter).has_value();
             for (BroodGroup& g : br.groups)
-                if (g.id == u->bug->group && !g.prey && !(building && g.turret)) (building ? g.turret : g.prey) = h.shooter;
+                if (g.id == u->bug->group && !g.still && !g.prey && !(building && g.turret)) (building ? g.turret : g.prey) = h.shooter;
         }
         sim.bugHits.clear();
         // A felled defence's kills go with it (D3).
@@ -575,6 +575,12 @@ void WorldMap::broodThink(size_t r) {
     std::set<int64_t> gone;
     for (BroodGroup& g : br.groups) {
         std::erase_if(g.bugs, [&](int64_t id) { return !st.unit(id); });
+        if (g.still) {
+            g.prey = std::nullopt;
+            g.turret = std::nullopt;
+            g.leaving = false;
+            g.lingerUntil = std::max(g.lingerUntil, clock_ + 60);
+        }
         if (g.prey) {
             // Gone, or run past the leash: the group lets it go.
             const auto t = st.unit(*g.prey);
@@ -586,7 +592,7 @@ void WorldMap::broodThink(size_t r) {
             if (!t || t->hp <= 0 || distance(t->position, g.site) > g.radius + g.leash + Rules::radius(t->kind)) g.turret = std::nullopt;
         }
         // A pilot inside the site: the whole group turns on it (the nearest).
-        if (!g.prey && !g.leaving) {
+        if (!g.prey && !g.leaving && !g.still) {
             double best = g.radius;
             for (const Unit* u : prospectors)
                 if (distance(u->position, g.site) <= best) {

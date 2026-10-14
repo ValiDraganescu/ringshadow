@@ -83592,6 +83592,66 @@
       },
       {
        "hi": [
+        0.02,
+        0.18,
+        0.42
+       ],
+       "lo": [
+        -0.02,
+        -0.18,
+        -0.42
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.96,
+        0.3,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.02,
+        0.18,
+        0.42
+       ],
+       "lo": [
+        -0.02,
+        -0.18,
+        -0.42
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.96,
+        0.3,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.44,
         0.015,
         0.025
@@ -83649,6 +83709,66 @@
         -0.96,
         1
        ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.015,
+        0.44
+       ],
+       "lo": [
+        -0.025,
+        -0.015,
+        -0.44
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.96,
+        0.495,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.015,
+        0.44
+       ],
+       "lo": [
+        -0.025,
+        -0.015,
+        -0.44
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.96,
+        0.495,
+        0.0,
+        1
+       ]
       }
      ],
      "meshes": [
@@ -83660,7 +83780,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 24
+       "triangles": 48
       },
       {
        "material": "hullMid",
@@ -83670,7 +83790,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 600
+       "triangles": 1200
       }
      ]
     },
@@ -83730,11 +83850,11 @@
        "material": "markRate",
        "prim": "marks_0__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_0__markRate.SM_marks_0__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -83794,11 +83914,11 @@
        "material": "markRate",
        "prim": "marks_1__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_1__markRate.SM_marks_1__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -83858,11 +83978,11 @@
        "material": "markRate",
        "prim": "marks_2__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_2__markRate.SM_marks_2__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -83922,11 +84042,11 @@
        "material": "markDamage",
        "prim": "marks_3__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_3__markDamage.SM_marks_3__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -83986,11 +84106,11 @@
        "material": "markDamage",
        "prim": "marks_4__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_4__markDamage.SM_marks_4__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -84050,11 +84170,11 @@
        "material": "markDamage",
        "prim": "marks_5__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_5__markDamage.SM_marks_5__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -84114,11 +84234,11 @@
        "material": "markRange",
        "prim": "marks_6__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_6__markRange.SM_marks_6__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -84178,11 +84298,11 @@
        "material": "markRange",
        "prim": "marks_7__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_7__markRange.SM_marks_7__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -84242,11 +84362,11 @@
        "material": "markRange",
        "prim": "marks_8__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_8__markRange.SM_marks_8__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -84306,11 +84426,11 @@
        "material": "markAir",
        "prim": "marks_9__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_9__markAir.SM_marks_9__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -84370,11 +84490,11 @@
        "material": "markAir",
        "prim": "marks_10__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_10__markAir.SM_marks_10__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -84434,11 +84554,11 @@
        "material": "markAir",
        "prim": "marks_11__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_11__markAir.SM_marks_11__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     }
@@ -200150,6 +200270,66 @@
       },
       {
        "hi": [
+        0.02,
+        0.18,
+        0.42
+       ],
+       "lo": [
+        -0.02,
+        -0.18,
+        -0.42
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.96,
+        0.3,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.02,
+        0.18,
+        0.42
+       ],
+       "lo": [
+        -0.02,
+        -0.18,
+        -0.42
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.96,
+        0.3,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.44,
         0.015,
         0.025
@@ -200207,6 +200387,66 @@
         -0.96,
         1
        ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.015,
+        0.44
+       ],
+       "lo": [
+        -0.025,
+        -0.015,
+        -0.44
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.96,
+        0.495,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.015,
+        0.44
+       ],
+       "lo": [
+        -0.025,
+        -0.015,
+        -0.44
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.96,
+        0.495,
+        0.0,
+        1
+       ]
       }
      ],
      "meshes": [
@@ -200218,7 +200458,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 24
+       "triangles": 48
       },
       {
        "material": "hullMid",
@@ -200228,7 +200468,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 600
+       "triangles": 1200
       }
      ]
     },
@@ -200288,11 +200528,11 @@
        "material": "markRate",
        "prim": "marks_0__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_0__markRate.SM_marks_0__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200352,11 +200592,11 @@
        "material": "markRate",
        "prim": "marks_1__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_1__markRate.SM_marks_1__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200416,11 +200656,11 @@
        "material": "markRate",
        "prim": "marks_2__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_2__markRate.SM_marks_2__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200480,11 +200720,11 @@
        "material": "markDamage",
        "prim": "marks_3__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_3__markDamage.SM_marks_3__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200544,11 +200784,11 @@
        "material": "markDamage",
        "prim": "marks_4__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_4__markDamage.SM_marks_4__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200608,11 +200848,11 @@
        "material": "markDamage",
        "prim": "marks_5__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_5__markDamage.SM_marks_5__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200672,11 +200912,11 @@
        "material": "markRange",
        "prim": "marks_6__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_6__markRange.SM_marks_6__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200736,11 +200976,11 @@
        "material": "markRange",
        "prim": "marks_7__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_7__markRange.SM_marks_7__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200800,11 +201040,11 @@
        "material": "markRange",
        "prim": "marks_8__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_8__markRange.SM_marks_8__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200864,11 +201104,11 @@
        "material": "markAir",
        "prim": "marks_9__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_9__markAir.SM_marks_9__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200928,11 +201168,11 @@
        "material": "markAir",
        "prim": "marks_10__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_10__markAir.SM_marks_10__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -200992,11 +201232,11 @@
        "material": "markAir",
        "prim": "marks_11__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_11__markAir.SM_marks_11__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     }
@@ -276557,6 +276797,66 @@
       },
       {
        "hi": [
+        0.02,
+        0.18,
+        0.42
+       ],
+       "lo": [
+        -0.02,
+        -0.18,
+        -0.42
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.96,
+        0.3,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.02,
+        0.18,
+        0.42
+       ],
+       "lo": [
+        -0.02,
+        -0.18,
+        -0.42
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.96,
+        0.3,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.44,
         0.015,
         0.025
@@ -276614,6 +276914,66 @@
         -0.96,
         1
        ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.015,
+        0.44
+       ],
+       "lo": [
+        -0.025,
+        -0.015,
+        -0.44
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.96,
+        0.495,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.015,
+        0.44
+       ],
+       "lo": [
+        -0.025,
+        -0.015,
+        -0.44
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.96,
+        0.495,
+        0.0,
+        1
+       ]
       }
      ],
      "meshes": [
@@ -276625,7 +276985,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 24
+       "triangles": 48
       },
       {
        "material": "hullMid",
@@ -276635,7 +276995,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 600
+       "triangles": 1200
       }
      ]
     },
@@ -276695,11 +277055,11 @@
        "material": "markRate",
        "prim": "marks_0__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_0__markRate.SM_marks_0__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -276759,11 +277119,11 @@
        "material": "markRate",
        "prim": "marks_1__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_1__markRate.SM_marks_1__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -276823,11 +277183,11 @@
        "material": "markRate",
        "prim": "marks_2__markRate",
        "mesh": "/Game/Models/turretmarks/SM_marks_2__markRate.SM_marks_2__markRate",
-       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
-       "materialKey": "4f7fee89a303",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_a6caedd7ac02.MI_markRate_a6caedd7ac02",
+       "materialKey": "a6caedd7ac02",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -276887,11 +277247,11 @@
        "material": "markDamage",
        "prim": "marks_3__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_3__markDamage.SM_marks_3__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -276951,11 +277311,11 @@
        "material": "markDamage",
        "prim": "marks_4__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_4__markDamage.SM_marks_4__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -277015,11 +277375,11 @@
        "material": "markDamage",
        "prim": "marks_5__markDamage",
        "mesh": "/Game/Models/turretmarks/SM_marks_5__markDamage.SM_marks_5__markDamage",
-       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
-       "materialKey": "e199f8461a10",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_ce29a32c3ad5.MI_markDamage_ce29a32c3ad5",
+       "materialKey": "ce29a32c3ad5",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -277079,11 +277439,11 @@
        "material": "markRange",
        "prim": "marks_6__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_6__markRange.SM_marks_6__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -277143,11 +277503,11 @@
        "material": "markRange",
        "prim": "marks_7__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_7__markRange.SM_marks_7__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -277207,11 +277567,11 @@
        "material": "markRange",
        "prim": "marks_8__markRange",
        "mesh": "/Game/Models/turretmarks/SM_marks_8__markRange.SM_marks_8__markRange",
-       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
-       "materialKey": "ed263252bd99",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_7a26add8f54b.MI_markRange_7a26add8f54b",
+       "materialKey": "7a26add8f54b",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -277271,11 +277631,11 @@
        "material": "markAir",
        "prim": "marks_9__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_9__markAir.SM_marks_9__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -277335,11 +277695,11 @@
        "material": "markAir",
        "prim": "marks_10__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_10__markAir.SM_marks_10__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     },
@@ -277399,11 +277759,11 @@
        "material": "markAir",
        "prim": "marks_11__markAir",
        "mesh": "/Game/Models/turretmarks/SM_marks_11__markAir.SM_marks_11__markAir",
-       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
-       "materialKey": "184daf010afb",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_38872bc9679f.MI_markAir_38872bc9679f",
+       "materialKey": "38872bc9679f",
        "blend": "opaque",
        "team": [],
-       "triangles": 48
+       "triangles": 96
       }
      ]
     }
