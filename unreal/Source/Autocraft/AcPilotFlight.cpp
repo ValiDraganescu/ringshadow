@@ -2,6 +2,7 @@
 // (`AAcFlightShip`) and the pilot pawn's flight view (AcPilotFlight.h).
 #include "AcPilotFlight.h"
 
+#include "AcAudioDirector.h"
 #include "AcEffects.h"
 #include "AcEffectsBursts.h"
 #include "AcEffectsExtension.h"
@@ -86,6 +87,16 @@ namespace
 			P->Stream(EAcParticle::FireflyExhaust, FAcParticles::KeyOf(-31, 5 + I), FTransform(FQuat::Identity, Nozzles[I]), 22 * Thrust, Fx.Now(),
 				Dt, Heat);
 		}
+	}
+
+	/// A flight's moment heard (F1b), and the cruise's loop on or off.
+	void Hear(const UObject* Ctx, const FAcAudioRules::EFlight Moment)
+	{
+		if (UAcAudioDirector* A = UAcAudioDirector::Get(Ctx)) A->Rules().Flight(Moment);
+	}
+	void Cruise(const UObject* Ctx, const bool bOn)
+	{
+		if (UAcAudioDirector* A = UAcAudioDirector::Get(Ctx)) A->Rules().Cruise(bOn);
 	}
 
 	/// The dust the jets blow off the ground `Height` cells under them: a
@@ -257,6 +268,7 @@ bool AAcPilotPawn::StartFlight(const int64 Visit)
 	Flight = F;
 	Dive.Reset();
 	PullOut.Reset();
+	Hear(this, FAcAudioRules::EFlight::Spool);
 	// The cockpit off, the ship drawn.
 	ApplyView();
 	UE_LOG(LogAutocraft, Log, TEXT("flight: lift-off at %s (%s)"), *F.From.GetLocation().ToCompactString(), *F.Model.ToString());
@@ -296,11 +308,14 @@ bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing
 				if (const FAcModelInfo* Model = R->ModelOf(DrivenId)) Flight->Model = Model->Name;
 			}
 			ApplyView();
+			Hear(this, FAcAudioRules::EFlight::Retro);
 			UE_LOG(LogAutocraft, Log, TEXT("flight: landing at %s, %.1f s after the lift-off"), *Landing->GetLocation().ToCompactString(),
 				Wall() - Flight->Start);
 		}
 		const double L = Wall() - Flight->LandStart;
 		const FVector Pad = Landing->GetLocation();
+		// The cruise's wind gives way to the retro thrust.
+		Cruise(this, L < 0.4 * LandSeconds);
 		if (L >= LandSeconds)
 		{
 			if (Fx)
@@ -310,6 +325,7 @@ bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing
 				DustRing(*Fx, Pad, 1.6, 0);
 				Fx->DustPuff(Pad, 1.2, Fx->Now());
 			}
+			Hear(this, FAcAudioRules::EFlight::Touchdown);
 			UE_LOG(LogAutocraft, Log, TEXT("flight: touched down, %.1f s after the lift-off"), Wall() - Flight->Start);
 			EndFlight();
 			return false;
@@ -358,6 +374,13 @@ bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing
 	// A RegionChange read, its first snapshot not yet: the old region is
 	// gone from under the ship; dark until the landing.
 	const bool bGone = Visit != Flight->Visit;
+	// The roar as the jets take hold; the cruise's wind once it climbs away.
+	if (!Flight->bRoared && T > SpoolSeconds)
+	{
+		Flight->bRoared = true;
+		Hear(this, FAcAudioRules::EFlight::LiftOff);
+	}
+	Cruise(this, T > 0.6 * LiftSeconds);
 	if (Ship)
 	{
 		if (bGone) Ship->Hide();
@@ -444,6 +467,7 @@ void AAcPilotPawn::EndFlight()
 {
 	if (!Flight) return;
 	Flight.Reset();
+	Cruise(this, false);
 	if (UWorld* World = GetWorld())
 	{
 		if (TActorIterator<AAcFlightShip> It(World); It)

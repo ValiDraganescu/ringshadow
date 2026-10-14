@@ -1047,6 +1047,71 @@
     753
    ]
   },
+  "flcruise": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/flcruise/SW_flcruise_1.SW_flcruise_1",
+     "source": "sfx/flcruise_1.wav",
+     "prepared": "Content-src/sounds/sfx/flcruise_1.wav",
+     "seconds": 10.7,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "flretro": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/flretro/SW_flretro_1.SW_flretro_1",
+     "source": "sfx/flretro_1.wav",
+     "prepared": "Content-src/sounds/sfx/flretro_1.wav",
+     "seconds": 3.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "flroar": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/flroar/SW_flroar_1.SW_flroar_1",
+     "source": "sfx/flroar_1.wav",
+     "prepared": "Content-src/sounds/sfx/flroar_1.wav",
+     "seconds": 5.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "flspool": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/flspool/SW_flspool_1.SW_flspool_1",
+     "source": "sfx/flspool_1.wav",
+     "prepared": "Content-src/sounds/sfx/flspool_1.wav",
+     "seconds": 2.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "fltouch": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/fltouch/SW_fltouch_1.SW_fltouch_1",
+     "source": "sfx/fltouch_1.wav",
+     "prepared": "Content-src/sounds/sfx/fltouch_1.wav",
+     "seconds": 3.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "gun": {
    "variants": [
     {
@@ -1315,6 +1380,19 @@
     738
    ]
   },
+  "jetdry": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/jetdry/SW_jetdry_1.SW_jetdry_1",
+     "source": "sfx/jetdry_1.wav",
+     "prepared": "Content-src/sounds/sfx/jetdry_1.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "jetland": {
    "variants": [
     {
@@ -1353,6 +1431,19 @@
     615,
     761
    ]
+  },
+  "jetpuff": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/jetpuff/SW_jetpuff_1.SW_jetpuff_1",
+     "source": "sfx/jetpuff_1.wav",
+     "prepared": "Content-src/sounds/sfx/jetpuff_1.wav",
+     "seconds": 1.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
   },
   "jetup": {
    "variants": [
@@ -3195,6 +3286,13 @@
   "blueprint",
   "crack",
   "downpour",
+  "flcruise",
+  "flretro",
+  "flroar",
+  "flspool",
+  "fltouch",
+  "jetdry",
+  "jetpuff",
   "made",
   "paid",
   "peregrinedeath",

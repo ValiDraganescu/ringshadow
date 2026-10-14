@@ -1,0 +1,57 @@
+{
+  "about": "A pad flight and the jet pack (docs/mmorpg-m7.md F1b; docs/prospector-progression.md \"MH sinks\"): flspool = the ship's engines spooling up on the pad (0.7 s of glow before lift-off); flroar = the lift-off roar as it climbs on two flame jets; flcruise = the cruise's wind over the hull with the engines' low drone, a loop; flretro = the retro-thrust burst as it comes down onto the pad; fltouch = the touchdown, a heavy thud with dust hissing out; jetpuff = the Prospector's jet pack hopping a cliff; jetdry = the jet pack's dry click when it has no MH to burn. Dusty frontier under a gas giant, used industrial machines, space: no voices, no music; short, mixed to sit under the music. Ids match the game's sound names (sfx/<name>_<n>).",
+  "voices": {},
+  "entries": [
+    {
+      "id": "flspool_1",
+      "kind": "sfx",
+      "prompt": "small spaceship engines spooling up on a landing pad, a rising turbine whine with a low rumble building underneath, ignition crackle at the end, sci-fi, dry desert air, no voices, no music",
+      "seconds": 2.5,
+      "influence": 0.6
+    },
+    {
+      "id": "flroar_1",
+      "kind": "sfx",
+      "prompt": "small spaceship lifting off, a powerful rocket thruster roar that swells and climbs away overhead, deep rumble and hot jet hiss, dust blowing, cinematic, no voices, no music",
+      "seconds": 5,
+      "influence": 0.6
+    },
+    {
+      "id": "flcruise_1",
+      "kind": "sfx",
+      "prompt": "steady wind rushing over the hull of a small spaceship in flight, with a low constant engine drone underneath, high altitude, smooth, continuous, no beat, no voices, no music",
+      "seconds": 12,
+      "loop": true,
+      "influence": 0.55,
+      "fx": "loop 0.35 0.6"
+    },
+    {
+      "id": "flretro_1",
+      "kind": "sfx",
+      "prompt": "retro thrusters firing on a descending spaceship, a hard burst of rocket thrust that holds and then throttles down, hot gas roar, sci-fi, no voices, no music",
+      "seconds": 3,
+      "influence": 0.6
+    },
+    {
+      "id": "fltouch_1",
+      "kind": "sfx",
+      "prompt": "heavy spaceship landing gear touching down on a metal pad, a deep solid thud with a metallic creak, then a hiss of dust and sand blowing out and settling, engines winding down, no voices, no music",
+      "seconds": 3,
+      "influence": 0.6
+    },
+    {
+      "id": "jetpuff_1",
+      "kind": "sfx",
+      "prompt": "short jet pack burst, a quick puff of compressed gas thrust with a soft whoosh, a person hopping up a cliff, sci-fi, dry, close, no voices, no music",
+      "seconds": 1,
+      "influence": 0.65
+    },
+    {
+      "id": "jetdry_1",
+      "kind": "sfx",
+      "prompt": "jet pack misfire with empty fuel, a dry mechanical click and a tiny sputter of air, nothing ignites, close, dry, no voices, no music",
+      "seconds": 0.7,
+      "influence": 0.65
+    }
+  ]
+}

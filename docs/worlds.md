@@ -112,6 +112,14 @@ log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
   into the pilot's view; the input is held until it touches down. A late
   landing keeps the transit view moving, up to the 15 s above.
   `-AcMmoFlightShots=DIR` with `mmofly` saves a picture of each stage.
+- A flight's sound (F1b; `Tools/AudioGen/flight.manifest.json`, ElevenLabs
+  sound effects in `unreal/Resources/Sounds/sfx/`; `FAcAudioRules::Flight`
+  and `Cruise`, tested in `Autocraft.Audio.Rules.Flight`), all in the ear:
+  the engines' whine spooling up on the pad (`flspool`), the roar as the
+  jets take hold (`flroar`, after the 0.7 s spool), the wind and engine
+  drone of the cruise (`flcruise`, a loop that fades in as the ship climbs
+  and out as it comes down), the retro thrust of the landing (`flretro`)
+  and the touchdown's thud with dust hissing out (`fltouch`).
 - Automation tests (hidden): `Autocraft.Mmo.CrossEdgeEast` (drive east over
   the start region's edge into Tern Ridge) and `Autocraft.Mmo.FlyToPad`
   (fly to Cold Fork's pad), in `AcMmoTests.cpp`. Through the pilot pawn and

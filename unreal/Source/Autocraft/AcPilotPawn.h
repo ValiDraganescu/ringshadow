@@ -395,6 +395,8 @@ private:
 		double LastRing = -1;
 		bool bScorched = false;
 		bool bLiftRing = false;
+		/// The lift-off's roar sent (F1b).
+		bool bRoared = false;
 		/// The camera at the lift-off's end, where the transit's swing starts.
 		FVector LowEye = FVector::ZeroVector;
 	};

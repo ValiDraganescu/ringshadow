@@ -135,6 +135,8 @@ namespace
 	/// The moments' loops: the ringshadow's drone, bed and flaring ore, and
 	/// the hot craters (one key each, down from `CraterKeys`).
 	constexpr int64 DroneKey = -8, ShadowBedKey = -9, ShimmerKey = -10, CraterKeys = -100;
+	/// A pad flight's cruise (F1b).
+	constexpr int64 CruiseKey = -11;
 
 	/// A starfall's gain at `Distance` cells: all of it close, `FarGain` of
 	/// it from `FarCells` off.
@@ -287,6 +289,9 @@ void FAcAudioRules::Reset()
 	Streaked.Reset();
 	Boomed.Reset();
 	Craters.clear();
+	bCruising = false;
+	CruiseFade = 0.f;
+	DryHeard = -1e9;
 }
 
 void FAcAudioRules::Deposited(ac::Vec2 At) { OneShot("deposit", At, AcSound::DepositGain, EAcSoundPool::Deposit); }
@@ -533,7 +538,13 @@ void FAcAudioRules::Watch(const ac::GameState& State, const ac::Sight* Sight)
 		if (U.jumpFrom)
 		{
 			Air.Add(U.id);
-			if (bHeard && !Jumping.Contains(U.id)) Jump(false, U.position);
+			// The MMORPG's Prospector hops on a jet pack's puff (F1b).
+			const bool bPuff = bServerLevels && U.kind == ac::UnitKind::prospector && Variants("jetpuff") > 0;
+			if (bHeard && !Jumping.Contains(U.id) && bPuff)
+			{
+				if (Allow("jetpuff", 4)) OneShot("jetpuff", U.position, AcSound::JetPuffGain, EAcSoundPool::Combat);
+			}
+			else if (bHeard && !Jumping.Contains(U.id)) Jump(false, U.position);
 		}
 		else if (bHeard && Jumping.Contains(U.id))
 		{
@@ -622,6 +633,27 @@ void FAcAudioRules::News(const ENews N)
 	case ENews::Researched: Sound = "research"; break;
 	}
 	if (Allow(Sound, 2)) OneShot(Sound, {}, AcSound::NewsGain, EAcSoundPool::InEar);
+}
+
+void FAcAudioRules::Flight(const EFlight Moment)
+{
+	FName Sound;
+	float Gain = 0.f;
+	switch (Moment)
+	{
+	case EFlight::Spool: Sound = "flspool"; Gain = AcSound::FlightSpoolGain; break;
+	case EFlight::LiftOff: Sound = "flroar"; Gain = AcSound::FlightRoarGain; break;
+	case EFlight::Retro: Sound = "flretro"; Gain = AcSound::FlightRetroGain; break;
+	case EFlight::Touchdown: Sound = "fltouch"; Gain = AcSound::FlightTouchGain; break;
+	}
+	if (Allow(Sound, 1)) OneShot(Sound, {}, Gain, EAcSoundPool::InEar);
+}
+
+void FAcAudioRules::JetDry(const double When)
+{
+	if (When < DryHeard + 0.8 && When >= DryHeard) return;
+	DryHeard = When;
+	OneShot("jetdry", {}, AcSound::JetDryGain, EAcSoundPool::InEar);
 }
 
 void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAcLoopWant>& Out)
@@ -812,6 +844,18 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 	for (auto It = Hums.CreateIterator(); It; ++It)
 	{
 		if (!Citadels.Contains(*It)) It.RemoveCurrent();
+	}
+	// A pad flight's cruise, in your ear: in over a second as the ship
+	// climbs away, out as it comes down.
+	Fade(CruiseFade, bCruising ? 1.f : 0.f, 1.0f, 0.8f);
+	if (CruiseFade > 0.f && Variants("flcruise") > 0)
+	{
+		FAcLoopWant W;
+		W.Key = CruiseKey;
+		W.Name = "flcruise";
+		W.Volume = CruiseFade * AcSound::FlightCruiseGain;
+		W.bInEar = true;
+		Out.push_back(W);
 	}
 	// The driven Dropship's heal beam, in your ear.
 	Fade(HealFade, bHealing ? 1.f : 0.f, 0.15f, 0.4f);
@@ -1387,6 +1431,8 @@ void UAcAudioDirector::OnFrame(const FAcFrame& Frame)
 
 void UAcAudioDirector::HearMoments(const UAcSimSubsystem& Sim)
 {
+	// The jet pack with no MH to burn (F1b): only the MMORPG's Prospector pays.
+	if (const std::optional<double> Dry = Sim.Simulation().pilotJumpDry) Brain.JetDry(*Dry);
 	const FAcMmoClient* Mmo = Sim.IsMmo() ? Sim.MmoClient() : nullptr;
 	const TOptional<FAcWorldSky>& WorldSky = AAcDaylight::WorldSky();
 	if (!Mmo || !WorldSky || !Sim.Simulation().map)

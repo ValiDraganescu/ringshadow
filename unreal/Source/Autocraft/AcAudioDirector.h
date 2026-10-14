@@ -146,6 +146,17 @@ namespace AcSound
 	inline constexpr float ScorpionLockGain = 0.5f;
 	inline constexpr float ScorpionEngineGain = 1.0f;
 	inline constexpr float JetGain = 0.4f;
+	/// A pad flight and the Prospector's jet pack (F1b; Tools/AudioGen/
+	/// flight.manifest.json), in the ear: set from each take's loudness
+	/// after the import's 0.8 peak, for about -18 LUFS (the cruise a bed
+	/// under it, the dry click a short tick that the meter reads low).
+	inline constexpr float FlightSpoolGain = 0.45f;
+	inline constexpr float FlightRoarGain = 0.5f;
+	inline constexpr float FlightCruiseGain = 0.6f;
+	inline constexpr float FlightRetroGain = 0.25f;
+	inline constexpr float FlightTouchGain = 0.35f;
+	inline constexpr float JetPuffGain = 0.3f;
+	inline constexpr float JetDryGain = 0.6f;
 	/// The MMORPG's moments (docs/mmorpg-m7.md J1; Tools/AudioGen/
 	/// moments.manifest.json). Set from each take's loudness after the
 	/// import's peak normalising (unreal/Tools/Audio/check_sounds.py): the
@@ -361,6 +372,16 @@ public:
 	/// The progression's news (`UAcProgressHudSubsystem::NewsItem`).
 	enum class ENews : uint8 { Blueprint, Paid, Made, Researched };
 	void News(ENews N);
+	/// A pad flight's moments (F1b; `AAcPilotPawn::FlightView`): the
+	/// engines spooling up on the pad, the lift-off's roar, the retro
+	/// thrust coming down, the touchdown's thud and dust.
+	enum class EFlight : uint8 { Spool, LiftOff, Retro, Touchdown };
+	void Flight(EFlight Moment);
+	/// The cruise's wind and engine loop, while the ship is up.
+	void Cruise(bool bOn) { bCruising = bOn; }
+	/// The jet pack walked into a cliff with no MH to burn, at sim second
+	/// `When` (`Simulation::pilotJumpDry`): a dry click, at most every 0.8 s.
+	void JetDry(double When);
 
 	/// The cues decided since the last `TakeCues`.
 	std::vector<FAcSoundCue> TakeCues();
@@ -418,6 +439,10 @@ private:
 	TSet<uint32> Streaked, Boomed;
 	std::vector<FStarHear> Craters;
 	TSet<int64> Jumping;
+	/// The flight's cruise loop and its fade; the last dry click's sim time.
+	bool bCruising = false;
+	float CruiseFade = 0.f;
+	double DryHeard = -1e9;
 	TSet<int64> Anchoring;
 	TSet<int64> Burrowing, Locking;
 	bool bWatched = false;
