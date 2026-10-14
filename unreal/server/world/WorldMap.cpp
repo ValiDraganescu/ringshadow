@@ -544,6 +544,45 @@ void WorldMap::step() {
     landings();
 }
 
+void WorldMap::idle(double seconds) {
+    if (!world_ || !(seconds > 0)) return;
+    clock_ += seconds;
+    updateSky();
+    sites();
+    contracts();
+    missions();
+    starfall();
+    respawns();
+    rigs();
+    ownPadsChanged();
+    regrowWells(seconds);
+    // The Brood's director on the world's clock: with no pilot near it
+    // spawns and raids nothing, and a region's bugs go `idleDespawn` s
+    // after the last pilot left (WorldBrood.cpp).
+    brood();
+}
+
+double WorldMap::catchUp(double seconds) {
+    if (!world_ || !(seconds > 0)) return 0;
+    const double moved = std::min(seconds, params_.catchUpCap);
+    setClock(clock_ + moved);
+    sites();
+    contracts();
+    missions();
+    starfall();
+    respawns();
+    rigs();
+    ownPadsChanged();
+    // No pilot on line: no group spawns, no raid is told, none piles up.
+    brood();
+    offlineWork(moved);
+    return moved;
+}
+
+void WorldMap::offlineWork(double) {
+    // H2: the mercenaries' ore for the gap, to their pilots' wallets (taxed).
+}
+
 void WorldMap::crossings() {
     for (auto& [pilot, p] : pilots_) {
         if (p.flight) continue;

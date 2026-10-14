@@ -121,6 +121,14 @@ void SAcMenu::SetReach(const FString& Line)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcMenu::SetServer(const FString& Line)
+{
+	if (Line == ServerLine) return;
+	ServerLine = Line;
+	if (!bSettings) Highlighted = FMath::Clamp(Highlighted, 0, Buttons().Num() - 1);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcMenu::SetMode(const EAcMenuMode InMode)
 {
 	MenuMode = InMode;
@@ -150,6 +158,14 @@ TArray<SAcMenu::FButton> SAcMenu::Buttons() const
 	B.Add({EAcMenuAction::Mmo, TEXT("ENTER THE REACH"), true});
 	// The same, its saved world deleted first (docs/mmorpg-m3.md, S4).
 	B.Add({EAcMenuAction::MmoNewWorld, TEXT("NEW WORLD")});
+	// S2: the world's server, running on with the game away; STOP saves it
+	// and ends it (the next ENTER starts it again).
+	if (!ServerLine.IsEmpty())
+	{
+		FButton Stop{EAcMenuAction::StopServer, TEXT("STOP")};
+		Stop.bServer = true;
+		B.Add(Stop);
+	}
 	// The strategy game below.
 	if (!GameTitle.IsEmpty()) B.Add({EAcMenuAction::Resume, TEXT("RESUME SKIRMISH"), false, false, true});
 	B.Add({EAcMenuAction::NewGame, TEXT("NEW SKIRMISH"), false, false, GameTitle.IsEmpty()});
@@ -754,6 +770,18 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 				Sub.Kern = 1.2f;
 				Sub.Paint(Out, L + 2, P, FVector2f(R.GetCenter().X, R.Max.Y - 17));
 			}
+			continue;
+		}
+		if (bHome && B[I].bServer)
+		{
+			// A green light, the line, STOP at the right.
+			const float Mid = R.GetCenter().Y;
+			Box(Out, L + 2, P, FBox2f(FVector2f(R.Min.X + 14, Mid - 4), FVector2f(R.Min.X + 22, Mid + 4)), FAcHudStyle::Srgb(0.45, 0.95, 0.62));
+			Label(ServerLine, 13, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::SemiBold)
+				.Paint(Out, L + 2, P, FVector2f(R.Min.X + 32, Mid + 0.5f));
+			FAcHudText Stop = Label(B[I].Label, 15, Ink, EAcHAlign::Right, EAcVAlign::Center);
+			Stop.Kern = 1.5f;
+			Stop.Paint(Out, L + 2, P, FVector2f(R.Max.X - 16, Mid + 0.5f));
 			continue;
 		}
 		Label(B[I].Label, bHome && B[I].bHalf ? 16 : 18, Ink, EAcHAlign::Center, EAcVAlign::Center)

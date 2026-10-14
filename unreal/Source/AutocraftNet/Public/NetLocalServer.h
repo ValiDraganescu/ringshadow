@@ -27,8 +27,9 @@ public:
     /// Starts `program` with `args` (not counting the program) and writes
     /// `token` and a newline to its standard input. Its standard error goes
     /// nowhere (it has its own log). False, with `error()`, when it does not
-    /// start.
-    bool start(const std::string& program, const std::vector<std::string>& args, const std::string& token);
+    /// start. `detached` (S2: a server that outlives the game): in a session
+    /// of its own, so the game quitting or crashing never takes it along.
+    bool start(const std::string& program, const std::vector<std::string>& args, const std::string& token, bool detached = false);
     /// Reads what it printed (never waits) and whether it is still alive.
     /// `starting` until the `PORT <n>` line, then `running`; `exited` once
     /// it is gone (`error()` says how).
@@ -46,6 +47,9 @@ public:
     /// SIGTERM, then up to `waitSeconds` for it to end, then SIGKILL. True
     /// when it ended on SIGTERM.
     bool stop(double waitSeconds = 3.0);
+    /// Lets it go without stopping it (a detached server the game leaves
+    /// running): forgotten here, `idle` again.
+    void release();
 
 private:
     void exited(int status);

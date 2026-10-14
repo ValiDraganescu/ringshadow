@@ -23,8 +23,11 @@ Modes: pictures (the default: -game -RenderOffscreen at --res), --headless
 as the pythonscript commandlet), --raw (the flags are a whole command, for a
 tool that starts the editor itself: it runs as given, under the slot, at low
 priority, and only its exit code counts). `{out}` in the flags becomes --out. The run
-gets its own -AcSaveDir in --out unless the flags name one. Its log is
-OUT/run.log.
+gets its own -AcSaveDir in --out unless the flags name one, and keeps the MMO
+world server attached (-AcMmoServerAttached: it ends with the run) unless the
+flags say -AcMmoServerDetached (the one scenario that checks the reattach; it
+stops its server itself). A world server left running on the run's folder
+is named at the end. Its log is OUT/run.log.
 
 Exit codes: 0 ok, 1 failed (a flow step, a test, a crash, a script error),
 2 timeout, 3 the module is missing (build first: unreal/Tools/build.sh).
@@ -93,6 +96,9 @@ def command(a, out: Path, flags: list[str]) -> list[str]:
     if a.python:
         return [str(EDITOR_CMD), str(UPROJECT), "-run=pythonscript",
                 f"-script={Path(a.python).resolve()}", "-nullrhi", *HIDDEN, log, *flags]
+    # The MMO world server ends with the run unless the run asks otherwise.
+    if not any(f.startswith("-AcMmoServerDetached") for f in flags):
+        flags = ["-AcMmoServerAttached", *flags]
     if a.tests:
         return [str(EDITOR_BG), str(UPROJECT), "-nullrhi", *HIDDEN, log,
                 f"-ExecCmds=Automation RunTests {a.tests}; Quit",
@@ -160,6 +166,14 @@ def read_log(path: Path, python: bool) -> tuple[bool, list[str]]:
         show.append("CRASHED: read the log")
         failed = True
     return failed, show
+
+
+def servers_left(out: Path) -> list[str]:
+    """World servers still running on the run's folder (a detached one the
+    run did not stop)."""
+    ps = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True, text=True).stdout
+    return [l.strip()[:200] for l in ps.splitlines()
+            if "autocraft-server" in l.split(" --", 1)[0] and str(out) in l]
 
 
 def take_slot(out: Path):
@@ -243,6 +257,8 @@ def main() -> None:
     say(f"{status}, {secs:.0f} s; log {out / ('run.out' if a.raw else 'run.log')}")
     for line in show:
         print(line)
+    for left in servers_left(out):
+        print(f"WARNING: a world server still runs on this run's folder: {left}")
     module_missing = any("module could not be found" in l for l in show)
     sys.exit(2 if timed_out else 3 if module_missing else 1 if failed else 0)
 

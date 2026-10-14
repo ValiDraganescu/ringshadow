@@ -37,14 +37,51 @@ Server::Server(net::PacketIo& io, const ServerOptions& options)
         for (const std::string& p : world_.restore(*options_.saved)) log("save: " + p);
         log("save: " + std::to_string(options_.saved->regions.size()) + " regions, " +
             std::to_string(options_.saved->pilots.size()) + " pilots loaded");
+        // S2: the time it was down, caught up (capped).
+        if (const double savedAt = options_.saved->savedAt; savedAt > 0 && world_.isWorld()) {
+            const double down = wallNow() - savedAt;
+            caughtUp_ = world_.catchUp(down);
+            if (caughtUp_ > 0)
+                log("catch-up: down " + format("%.0f", down) + " s, the world moved on " + format("%.0f", caughtUp_) + " s (cap " +
+                    format("%.0f", world_.params().catchUpCap) + " s), clock " + format("%.1f", world_.clock()) + " s");
+        }
         options_.saved = std::nullopt;
+    }
+}
+
+double Server::wallNow() const {
+    if (options_.wallClock) return options_.wallClock();
+    return std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+void Server::idle(double now) {
+    if (!idling_) {
+        idling_ = true;
+        idleFrom_ = now;
+        log("idle: no pilot on line, the world's clock runs on at " + format("%.0f", options_.idleEvery > 0 ? 1 / options_.idleEvery : 0) +
+            " Hz, the regions wait");
+    }
+    endpoint_.update(now);
+    for (net::Event e; endpoint_.poll(e);) handle(e, now);
+    if (now > idleFrom_) {
+        world_.idle(now - idleFrom_);
+        idleFrom_ = now;
+        logStarfalls();
+    }
+    endpoint_.flush(now);
+    if (savedAt_ < 0) savedAt_ = now;
+    if (options_.store && now - savedAt_ >= options_.saveEvery) {
+        savedAt_ = now;
+        save();
     }
 }
 
 bool Server::save() {
     if (!options_.store) return false;
     std::string why;
-    const auto written = options_.store->write(world_.save(), &why);
+    WorldSave s = world_.save();
+    s.savedAt = wallNow();
+    const auto written = options_.store->write(s, &why);
     if (!written) {
         log("save failed: " + why);
         return false;
@@ -140,6 +177,10 @@ void Server::logStarfalls() {
 
 void Server::tick(double now, bool stepRegion) {
     const auto t0 = std::chrono::steady_clock::now();
+    if (idling_) {
+        idling_ = false;
+        log("awake: a pilot on line, 60 Hz");
+    }
     endpoint_.update(now);
     for (net::Event e; endpoint_.poll(e);) handle(e, now);
     if (stepRegion) {

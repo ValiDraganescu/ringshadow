@@ -9,6 +9,7 @@
 #include "HeadlessClient.h"
 #include "NetLagSimulator.h"
 #include "NetLocalServer.h"
+#include "NetRunFile.h"
 #include "World.h"
 #include "WorldStore.h"
 
@@ -567,4 +568,141 @@ TEST(e2e_local_server_says_why_a_save_did_not_open) {
     std::printf("  the reason: %s\n", server.error().c_str());
     EXPECT_TRUE(server.error().rfind("save ", 0) == 0);
     EXPECT_TRUE(server.error().find("exited with code") == std::string::npos);
+}
+
+// MARK: - The world runs on (S2)
+
+namespace {
+
+/// A detached server a test started: stopped at the end whatever happens
+/// (a test never leaves a server behind).
+struct DetachedGuard {
+    int pid = -1;
+    DetachedGuard() = default;
+    DetachedGuard(const DetachedGuard&) = delete;
+    DetachedGuard& operator=(const DetachedGuard&) = delete;
+    ~DetachedGuard() {
+        if (pid <= 0) return;
+        kill(pid, SIGTERM);
+        for (int i = 0; i < 300 && waitpid(pid, nullptr, WNOHANG) == 0; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        kill(pid, SIGKILL);
+        waitpid(pid, nullptr, WNOHANG);
+    }
+};
+
+/// A server as the game starts one that outlives it: detached, on `save`,
+/// let go once it gave its port; what its run file says.
+std::optional<net::RunFile> startDetached(const std::string& save, const char* log, DetachedGuard& guard, std::string* why = nullptr) {
+    std::remove(logPath(log).c_str());
+    net::LocalServer server;
+    if (!server.start(kProgram, {"--world", "worlds/first.json", "--save", save, "--log", logPath(log), "--detached"}, kToken, true))
+        return std::nullopt;
+    guard.pid = server.pid();
+    const double end = clockNow() + 20;
+    while (server.poll() == net::LocalServer::State::starting && clockNow() < end)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    if (server.state() != net::LocalServer::State::running) {
+        if (why) *why = server.error();
+        guard.pid = -1;
+        return std::nullopt;
+    }
+    server.release();
+    return net::readRunFile(net::runFilePath(save));
+}
+
+/// `autocraft-server --stop <target>`: its exit code and what it printed.
+std::pair<int, std::string> stopCommand(const std::string& target) {
+    auto p = Process::start({kProgram, "--stop", target});
+    if (!p) return {-1, ""};
+    const auto line = p->line(20);
+    const auto code = p->wait(20);
+    p->stop();
+    return {code.value_or(-1), line.value_or("")};
+}
+
+/// The world server's own clock as a client sees it (its sky).
+std::optional<double> skyClock(uint16_t port, const std::string& token) {
+    Client c(port, token, {});
+    c.client->connect(clockNow());
+    c.client->join(net::newPilotKey());
+    if (!c.until([&] { return c.client->mirror() && c.client->mirror()->sky(); }, 10)) return std::nullopt;
+    return c.client->mirror()->sky()->time;
+}
+
+} // namespace
+
+// Detached: the run file says who serves the save; a second start finds it
+// live and of its own build and reattaches with its token; it idles with no
+// one on line and its clock runs on; `--stop <save>` saves and stops it and
+// its run file goes; a second `--stop` finds none.
+TEST(e2e_detached_server_reattached_and_stopped) {
+    const std::string save = freshSave("runon-detached");
+    DetachedGuard guard;
+    const auto run = startDetached(save, "runon-detached", guard);
+    ASSERT_TRUE(run.has_value());
+    EXPECT_EQ(run->pid, guard.pid);
+    EXPECT_EQ(run->token, kToken);
+    EXPECT_EQ(run->protocol, net::kProtocolVersion);
+    EXPECT_EQ(run->build, net::programBuild(kProgram));
+    EXPECT_TRUE(net::serverRunning(run->pid));
+    const net::Reattach again = net::reattachOrReplace(save, kProgram);
+    ASSERT_TRUE(again.what == net::Reattach::Do::reattach);
+    EXPECT_EQ(again.server->pid, run->pid);
+    const auto first = skyClock(again.server->port, again.server->token);
+    ASSERT_TRUE(first.has_value());
+    // No one on line: idle, its clock on by the time that passed.
+    const double from = clockNow();
+    std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+    const auto second = skyClock(again.server->port, again.server->token);
+    ASSERT_TRUE(second.has_value());
+    const double passed = clockNow() - from;
+    std::printf("  world clock %.2f s, then %.2f s, %.2f s later\n", *first, *second, passed);
+    EXPECT_TRUE(*second - *first > passed - 0.8 && *second - *first < passed + 0.8);
+    const auto [code, said] = stopCommand(save);
+    EXPECT_EQ(code, 0);
+    EXPECT_TRUE(said.find("stopped the world server pid " + std::to_string(run->pid)) == 0);
+    waitpid(run->pid, nullptr, 0);
+    guard.pid = -1;
+    EXPECT_TRUE(!net::serverRunning(run->pid));
+    EXPECT_TRUE(!net::readRunFile(net::runFilePath(save)).has_value());
+    const std::string log = readFile(logPath("runon-detached"));
+    EXPECT_TRUE(log.find("idle: no pilot on line") != std::string::npos);
+    EXPECT_TRUE(log.find("awake: a pilot on line") != std::string::npos);
+    EXPECT_TRUE(log.find("stop: SIGTERM") != std::string::npos);
+    const auto [none, noneSaid] = stopCommand(save);
+    EXPECT_EQ(none, 1);
+    EXPECT_TRUE(noneSaid.find("no world server running") == 0);
+}
+
+// An older server on the save (another protocol or build): asked to save
+// and stop, then a new one starts on the same file; never two on one save.
+TEST(e2e_older_server_replaced_never_two_on_a_save) {
+    const std::string save = freshSave("runon-older");
+    DetachedGuard oldGuard;
+    auto old = startDetached(save, "runon-older", oldGuard);
+    ASSERT_TRUE(old.has_value());
+    // As a server of the protocol before would have written it.
+    net::RunFile older = *old;
+    older.protocol = uint16_t(net::kProtocolVersion - 1);
+    ASSERT_TRUE(net::writeRunFile(net::runFilePath(save), older));
+    std::thread reap([pid = old->pid] { waitpid(pid, nullptr, 0); });
+    const net::Reattach r = net::reattachOrReplace(save, kProgram);
+    reap.join();
+    oldGuard.pid = -1;
+    EXPECT_TRUE(r.what == net::Reattach::Do::start);
+    ASSERT_TRUE(r.replaced.has_value());
+    EXPECT_EQ(r.replaced->pid, old->pid);
+    EXPECT_TRUE(!net::serverRunning(old->pid));
+    EXPECT_TRUE(readFile(logPath("runon-older")).find("stop: SIGTERM") != std::string::npos);
+    DetachedGuard newGuard;
+    const auto now = startDetached(save, "runon-newer", newGuard);
+    ASSERT_TRUE(now.has_value());
+    EXPECT_TRUE(now->pid != old->pid);
+    // A second on the same save stops at once: the save is held.
+    DetachedGuard twoGuard;
+    std::string why;
+    EXPECT_TRUE(!startDetached(save, "runon-second", twoGuard, &why).has_value());
+    EXPECT_TRUE(why.find("locked") != std::string::npos);
+    EXPECT_EQ(net::readRunFile(net::runFilePath(save))->pid, now->pid);
+    EXPECT_TRUE(net::stopServer(*now, 10));
 }

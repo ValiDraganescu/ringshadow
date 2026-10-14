@@ -183,6 +183,8 @@ std::optional<PilotInput> Client::sendInput() {
 
 void Client::flush(double now) { endpoint_.flush(now); }
 
+void Client::disconnect(double now, const std::string& reason) { endpoint_.disconnect(now, reason); }
+
 void Client::tick(double now) {
     receive(now);
     sendInput();

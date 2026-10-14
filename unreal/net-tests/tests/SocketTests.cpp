@@ -102,3 +102,25 @@ TEST(socket_bindingATakenPortFails) {
     EXPECT_TRUE(!b.error().empty());
     EXPECT_TRUE(!b.isOpen());
 }
+
+// S2: the idle world server sleeps on its socket: `wait` returns at once
+// when a datagram is there, and after its time when none comes.
+TEST(socket_waitWakesOnADatagram) {
+    UdpSocket a, b;
+    ASSERT_TRUE(a.open(Address::loopback(0)));
+    ASSERT_TRUE(b.open(Address::loopback(0)));
+    const auto t0 = std::chrono::steady_clock::now();
+    EXPECT_TRUE(!a.wait(0.1));
+    const double waited = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    EXPECT_TRUE(waited > 0.08 && waited < 0.5);
+    const uint8_t hello[3] = {1, 2, 3};
+    ASSERT_TRUE(b.send(0, a.localAddress(), hello, sizeof hello));
+    const auto t1 = std::chrono::steady_clock::now();
+    EXPECT_TRUE(a.wait(2.0));
+    EXPECT_TRUE(std::chrono::duration<double>(std::chrono::steady_clock::now() - t1).count() < 0.5);
+    Address from;
+    uint8_t buf[16];
+    size_t size = 0;
+    EXPECT_TRUE(a.receive(0, from, buf, sizeof buf, size));
+    EXPECT_EQ(size, size_t(3));
+}

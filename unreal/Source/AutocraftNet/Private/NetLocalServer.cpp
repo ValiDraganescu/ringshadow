@@ -6,13 +6,14 @@ namespace ac::net {
 
 LocalServer::~LocalServer() = default;
 
-bool LocalServer::start(const std::string&, const std::vector<std::string>&, const std::string&) {
+bool LocalServer::start(const std::string&, const std::vector<std::string>&, const std::string&, bool) {
     error_ = "the local server is not started on this platform yet";
     return false;
 }
 
 LocalServer::State LocalServer::poll() { return state_; }
 bool LocalServer::stop(double) { return true; }
+void LocalServer::release() {}
 void LocalServer::exited(int) {}
 void LocalServer::readOut() {}
 void LocalServer::closePipes() {}
@@ -46,7 +47,7 @@ void pause10ms() {
 
 LocalServer::~LocalServer() { stop(3.0); }
 
-bool LocalServer::start(const std::string& program, const std::vector<std::string>& args, const std::string& token) {
+bool LocalServer::start(const std::string& program, const std::vector<std::string>& args, const std::string& token, bool detached) {
     stop(0.5);
     state_ = State::idle;
     error_.clear();
@@ -83,9 +84,18 @@ bool LocalServer::start(const std::string& program, const std::vector<std::strin
     posix_spawn_file_actions_addclose(&actions, toChild[1]);
     posix_spawn_file_actions_addclose(&actions, fromChild[0]);
 #endif
-    // Its own process group: a Ctrl-C meant for the game's terminal is not its.
-    flags |= POSIX_SPAWN_SETPGROUP;
-    posix_spawnattr_setpgroup(&attr, 0);
+    // Its own process group: a Ctrl-C meant for the game's terminal is not
+    // its. Detached, a session of its own: nothing that ends the game's
+    // (a quit, a crash, a closed terminal) reaches it.
+#ifdef POSIX_SPAWN_SETSID
+    if (detached) flags |= POSIX_SPAWN_SETSID;
+    else
+#endif
+    {
+        (void)detached;
+        flags |= POSIX_SPAWN_SETPGROUP;
+        posix_spawnattr_setpgroup(&attr, 0);
+    }
     posix_spawnattr_setflags(&attr, flags);
     std::vector<char*> argv;
     argv.push_back(const_cast<char*>(program.c_str()));
@@ -183,6 +193,12 @@ LocalServer::State LocalServer::poll() {
         closePipes();
     }
     return state_;
+}
+
+void LocalServer::release() {
+    closePipes();
+    pid_ = -1;
+    state_ = State::idle;
 }
 
 bool LocalServer::stop(double waitSeconds) {

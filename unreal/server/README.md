@@ -34,7 +34,18 @@ this program).
 autocraft-server --world <file>
                  | --map <highlands|openField|ridge|badlands> --size <small|medium|large|huge> [--starts 2|4|8]
                  [--bind 127.0.0.1] [--port 0] [--parent-pid pid] [--log path] [--save file]
+                 [--detached | --attached]
+autocraft-server --stop <save | folder>
 ```
+
+`--detached` (with `--save`; S2, [docs/mmorpg.md](../../docs/mmorpg.md) "The world runs on") writes
+the run file beside the save (`first.sqlite`: `first.run`, `net::RunFile`) and removes it on stop;
+the game starts it so, in a session of its own, and reattaches by the file. `--attached`, the
+default, ends with `--parent-pid`'s process. `--stop` asks the server on that save (or every one with
+a run file in the folder) to save and stop: exit 0 stopped, 1 none running, 3 still running after 15 s.
+With no client on line a world idles: its clock and timers move on every 0.5 s, the regions wait, a
+datagram wakes it. A save loaded catches the world up on the time since it was written (its
+`saved_at`), at most 24 h.
 
 `--world` runs a world ([docs/worlds.md](../../docs/worlds.md)); a bad world file stops it with
 exit 2 and its problems on stderr. `--save` (a world only) keeps it in a SQLite file: loaded before

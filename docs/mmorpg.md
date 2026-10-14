@@ -176,6 +176,66 @@ of each other and the group includes a required set of kinds (for
 example a Citadel, a Hab Dome and a Spacedock). The distance, the count
 and the set are open; they get decided when cities are built.
 
+## The world runs on
+
+The user, 2026-10-14: "The game should progress in background even if I
+quit the game (the server should keep running and do its thing as long as
+my computer is on)." Built in S2 (docs/mmorpg-m8.md).
+
+- **The server outlives the game.** With a save, the game starts
+  `autocraft-server --detached`: a session of its own, so a quit, a crash
+  or a closed terminal never takes it along. It keeps the world clock, the
+  sky, starfalls, the Foundry and Lab jobs, contracts and missions going,
+  and saves every 5 s as before. Leaving the mode (QUIT TO HOME, quitting
+  the app) hands the unit back, says goodbye and leaves it running.
+- **The run file.** Beside the save, `first.sqlite` gets `first.run`
+  (`net::RunFile`, mode 600): the server's pid, port, protocol, build (the
+  program's size and modification time), the one-time secret, and when it
+  started. The server removes it when it stops. A file whose pid is gone or
+  is no world server (a crash, a restart of the Mac) is stale and removed
+  when read.
+- **Reattach, or replace; never two.** On start the game reads the run file
+  (`net::reattachOrReplace`): a live server of its own protocol and build is
+  reattached to (its port and secret from the file; the dev flags of the
+  new start do not apply). An older one (a rebuild, an updated app) is
+  asked to save and stop (SIGTERM, up to 10 s), then the game starts its
+  own. The save's lock refuses a second server on the same file anyway.
+  NEW WORLD stops the server on the save before it deletes it.
+- **Idle.** With no client connected the server stops stepping at 60 Hz:
+  every 0.5 s it moves the world's clock on by the real time that passed
+  and runs what lives on it (`WorldMap::idle`: the sky, the sites,
+  contracts and missions, starfalls, respawns, the rig's jobs, the wells
+  growing back, the Brood's director). With no pilot near, the director
+  spawns and raids nothing and a region's bugs go two minutes after the last
+  pilot left, as at 60 Hz; bugs are not saved, and a catch-up tells no raid.
+  The regions' simulations wait, as while the server is
+  down: units stand where they were. A datagram wakes it at once (the
+  socket's `wait`), and the first pilot on line puts it back to 60 Hz.
+  Measured on first.json (9 regions), no one on line: 0.01 s of CPU
+  in 120 s idle (about 0.008% of a core, the resolution of `ps`), against
+  0.3-0.5% stepping at 60 Hz as before (0.04-0.08 ms a tick).
+- **Asleep, then caught up.** No launchd agent, nothing installed: after the
+  Mac restarts, or after STOP, the world sleeps until the game starts it.
+  Every save stamps the Mac's clock (`saved_at` in the save's `meta` table;
+  no schema step). On start the server catches up the time it was down
+  (`WorldMap::catchUp`): the world's clock jumps on that far, at most a day
+  (`WorldParams::catchUpCap`, 24 h); the jobs and timers on the clock are
+  due at once; starfalls skipped in the gap are not told (as on any jump of
+  the clock); the regions resume as saved. Then `WorldMap::offlineWork`
+  (the seconds, capped), the hook H2 fills to pay the mercenaries for the
+  gap.
+- **Stopping it.** The home screen shows "World server running · since
+  21:40" with STOP while one runs on the save; STOP saves and ends it.
+  From a terminal: `autocraft-server --stop <save>` (or a folder: every
+  server with a run file in it); exit 0 stopped, 1 none running, 3 still
+  running after 15 s.
+- **Tests never leave one behind.** Tests, shot and automation runs start
+  it attached (`-AcMmoServerAttached`, which `hidden_run.py` adds to every
+  run, and the game's own rule for `-AcFlowTest`, `-AcMmoShots` and
+  automation); only `-AcMmoServerDetached` (the S2 shot set) runs it
+  detached, and that set stops it at its end. `hidden_run.py` names a
+  world server still running on the run's folder.
+
 ## Single player first, on a local server
 
 The mode starts as a single-player game: one pilot and the AI pilots, in

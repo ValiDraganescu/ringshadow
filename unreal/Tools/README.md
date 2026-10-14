@@ -209,4 +209,5 @@ Agents' game runs must never show in the Dock, take focus or move the mouse:
   `ditto UnrealEditor.app UnrealEditorBG.app`, PlistBuddy `Add :LSUIElement bool true`, then `codesign --force --deep -s - UnrealEditorBG.app`.
 - Pass `-RenderOffscreen` (or `-nullrhi`), `-unattended -nosplash -nosound`, and `"-ini:Input:[/Script/Engine.InputSettings]:bCaptureMouseOnLaunch=False"`.
 - Never pass `-log`, which opens a console window; use `-abslog=PATH`.
+- The MMO world server outlives a normal game (S2): `hidden_run.py` adds `-AcMmoServerAttached` so it ends with the run, unless the flags say `-AcMmoServerDetached` (the S2 shot set, which stops its server itself). The run names any world server left on its folder.
 - With `-RenderOffscreen`, `-nullrhi` or `-AcHeadless`, the pawns never capture or lock the mouse (`AcHeadless.h`).

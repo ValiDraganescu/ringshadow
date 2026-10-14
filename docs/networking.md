@@ -50,9 +50,13 @@ build is also the one the public world runs.
 3. The game reads the port and connects to it through the same handshake
    a public server gets. The secret proves it is the game that started the
    server.
-4. On quit, the game asks the server to stop. The server saves and exits.
-   If the game dies, the server notices its parent is gone, saves and exits
-   too.
+4. The server outlives the game (S2, [mmorpg.md](mmorpg.md) "The world
+   runs on"): started detached, in a session of its own, it writes a run
+   file beside the save (`first.run`: pid, port, protocol, build, the
+   secret) and keeps the world going after a quit or a crash. The next
+   start reattaches to it by that file, or asks an older one to save and
+   stop and starts its own. Tests and hidden runs start it attached
+   (`--parent-pid`): it notices the game is gone, saves and exits.
 5. If the server dies, the game says so and offers to restart it. The
    server's log goes to `~/Library/Logs/Autocraft/server.log` on the Mac
    (and the matching place on Windows and Linux), beside the game's.

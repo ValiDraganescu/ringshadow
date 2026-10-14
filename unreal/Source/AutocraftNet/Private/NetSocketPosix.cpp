@@ -9,6 +9,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -108,6 +109,12 @@ bool UdpSocket::receive(double, Address& from, uint8_t* buffer, size_t capacity,
     from = fromSockaddr(addr);
     size = static_cast<size_t>(got);
     return true;
+}
+
+bool UdpSocket::wait(double seconds) const {
+    if (handle_ < 0) return false;
+    pollfd fd{static_cast<int>(handle_), POLLIN, 0};
+    return ::poll(&fd, 1, seconds > 0 ? static_cast<int>(seconds * 1000) : 0) > 0;
 }
 
 bool secureRandom(uint8_t* out, size_t size) {

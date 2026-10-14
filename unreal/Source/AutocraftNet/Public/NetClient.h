@@ -46,6 +46,9 @@ public:
     std::optional<PilotInput> sendInput();
     /// Puts what was sent on the wire.
     void flush(double now);
+    /// Says goodbye: the server lets the pilot go at once, not after the
+    /// connection's timeout (S2: the game leaves a world server running).
+    void disconnect(double now, const std::string& reason);
 
     /// What the pilot does now. The presses (`act`, `ability`, `slot`) go out once.
     PilotInput steer;

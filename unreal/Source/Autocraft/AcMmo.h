@@ -52,8 +52,16 @@
 // No world and no engine objects: the automation test (AcMmoTests.cpp)
 // drives it as the subsystem does.
 //
-// Packaged games: the server is not packaged yet (only the editor's run
-// finds it, under the repo); the start says so in the log.
+// The world runs on (S2, docs/mmorpg.md "The world runs on"): with a save,
+// the server is started detached (`--detached`, a session of its own) and
+// outlives the game, its quit or its crash; it writes a run file beside the
+// save (`first.run`, net::RunFile). `Start` reads it first: a live server
+// of this game's build is reattached to (its port and token from the file),
+// an older one (another protocol or build) is asked to save and stop and a
+// new one started. `Stop` hands the unit back, says goodbye and leaves it
+// running. Tests and hidden runs keep it attached (`AttachedServer`): it
+// ends with the game. `RunningServer` and `StopWorldServer` are the home
+// screen's "World server running" line and its STOP.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -63,6 +71,7 @@
 #include "NetLagSimulator.h"
 #include "NetLocalServer.h"
 #include "NetPredictor.h"
+#include "NetRunFile.h"
 #include "NetSocket.h"
 #include "Types.h"
 
@@ -123,8 +132,22 @@ public:
 	static std::optional<ac::net::PilotKey> LoadPilotKey(const FString& File, FString* Why = nullptr);
 	/// Deletes the save `File`, and its `-wal` and `-shm` files when there,
 	/// each by its full name. False, with `Why`, when one is still there.
-	/// Only with no server on it (`Stop` first).
+	/// A world server still running on it (S2) is asked to save and stop
+	/// first (`StopWorldServer`).
 	static bool DeleteSave(const FString& File, FString* Why = nullptr);
+
+	/// The server is started attached (it ends with the game, as before S2):
+	/// `-AcMmoServerAttached`, or any test, shot or automation run unless it
+	/// says `-AcMmoServerDetached` (the one scenario that checks the
+	/// reattach). Detached otherwise, when there is a save.
+	static bool AttachedServer();
+	/// The world server running detached on the save `File` (its run file,
+	/// checked live; a stale one removed). Unset: none.
+	static std::optional<ac::net::RunFile> RunningServer(const FString& File = SaveFile());
+	/// Asks the world server on `File` to save and stop, and waits for it.
+	/// True when none runs now (or none ran); false, with `Why`, when it
+	/// did not stop in time.
+	static bool StopWorldServer(const FString& File = SaveFile(), FString* Why = nullptr);
 
 	/// Starts the server on the world file and connects to it. `Now`:
 	/// seconds on any steady clock (the same one `Tick` gets). False
@@ -132,9 +155,14 @@ public:
 	bool Start(double Now, const FString& World = DefaultWorld());
 	/// The world file the local server runs.
 	const FString& WorldPath() const { return WorldFile; }
-	/// Hands the driven unit back, asks the server to stop (SIGTERM) and
-	/// waits for it.
+	/// Hands the driven unit back; an attached server is asked to stop
+	/// (SIGTERM) and waited for, a detached one is told goodbye and left
+	/// running.
 	void Stop();
+	/// This start reattached to a server already running (S2).
+	bool Reattached() const { return bReattached; }
+	/// The server runs detached (it outlives the game).
+	bool Detached() const { return bDetached; }
 
 	/// One frame: reads, sends the inputs due at 60 Hz, puts it on the wire,
 	/// and blends the others into the mirror's state for the moment drawn.
@@ -356,6 +384,10 @@ private:
 	FString StatusMessage;
 	ac::net::LocalServer Server;
 	std::string Token;
+	/// The server's port: from its `PORT` line, or its run file.
+	uint16 ServerPort = 0;
+	bool bDetached = false;
+	bool bReattached = false;
 	FString WorldFile;
 	double StartedAt = 0;
 	double ConnectAt = 0;

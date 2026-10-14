@@ -156,8 +156,39 @@ std::optional<ac::net::PilotKey> FAcMmoClient::LoadPilotKey(const FString& File,
 	return Key;
 }
 
+bool FAcMmoClient::AttachedServer()
+{
+	const TCHAR* Cmd = FCommandLine::Get();
+	if (FParse::Param(Cmd, TEXT("AcMmoServerAttached"))) return true;
+	if (FParse::Param(Cmd, TEXT("AcMmoServerDetached"))) return false;
+	FString Unused;
+	return GIsAutomationTesting || FParse::Value(Cmd, TEXT("AcFlowTest="), Unused) || FParse::Value(Cmd, TEXT("AcMmoShots="), Unused);
+}
+
+std::optional<ac::net::RunFile> FAcMmoClient::RunningServer(const FString& File)
+{
+	const ac::net::RunCheck Check = ac::net::checkRunFile(ac::net::runFilePath(Utf8(File)));
+	if (Check.state == ac::net::RunState::stale) UE_LOG(LogAutocraft, Log, TEXT("mmo: a stale world server run file beside %s removed"), *Tilde(File));
+	return Check.state == ac::net::RunState::live ? Check.file : std::nullopt;
+}
+
+bool FAcMmoClient::StopWorldServer(const FString& File, FString* Why)
+{
+	const std::optional<ac::net::RunFile> Running = RunningServer(File);
+	if (!Running) return true;
+	if (!ac::net::stopServer(*Running, 15.0))
+	{
+		if (Why) *Why = FString::Printf(TEXT("The world server (pid %d) did not stop."), Running->pid);
+		UE_LOG(LogAutocraft, Warning, TEXT("mmo: the world server pid %d on %s did not stop in 15 s"), Running->pid, *Tilde(File));
+		return false;
+	}
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: the world server pid %d on %s saved and stopped"), Running->pid, *Tilde(File));
+	return true;
+}
+
 bool FAcMmoClient::DeleteSave(const FString& File, FString* Why)
 {
+	if (!StopWorldServer(File, Why)) return false;
 	IFileManager& Files = IFileManager::Get();
 	bool bAll = true;
 	for (const FString& Path : {File, File + TEXT("-wal"), File + TEXT("-shm")})
@@ -179,7 +210,10 @@ void FAcMmoClient::Fail(const FString& Why)
 	CurrentPhase = EPhase::Failed;
 	StatusMessage = Why;
 	UE_LOG(LogAutocraft, Warning, TEXT("mmo: %s"), *Why);
-	Server.stop(3.0);
+	// A detached server that came up is the world's, not this run's: it
+	// stays (one that never gave its port is stopped).
+	if (bDetached && Server.state() == ac::net::LocalServer::State::running) Server.release();
+	else Server.stop(3.0);
 }
 
 bool FAcMmoClient::Start(const double Now, const FString& World)
@@ -248,6 +282,41 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Fail(FString::Printf(TEXT("No world file at %s."), *Tilde(WorldFile)));
 		return false;
 	}
+	// S2: a world server already on this save, of this build: reattached
+	// to; an older one saves and stops first. Never two on one save.
+	bDetached = !SavePath.IsEmpty() && !AttachedServer();
+	bReattached = false;
+	ServerPort = 0;
+	if (bDetached)
+	{
+		const ac::net::Reattach Found = ac::net::reattachOrReplace(Utf8(SavePath), Utf8(Program));
+		if (Found.stale) UE_LOG(LogAutocraft, Log, TEXT("mmo: a stale world server run file beside %s removed"), *Tilde(SavePath));
+		if (Found.replaced)
+		{
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: an older world server (pid %d, protocol %d, build %s) asked to save and stop%s"), Found.replaced->pid,
+				(int32)Found.replaced->protocol, *Text(Found.replaced->build), Found.what == ac::net::Reattach::Do::failed ? TEXT(": it did not") : TEXT(""));
+		}
+		if (Found.what == ac::net::Reattach::Do::failed)
+		{
+			Fail(FString::Printf(TEXT("An older world server is still running on this save: %s.\nStop it with: autocraft-server --stop %s"),
+				*Text(Found.why), *Tilde(SavePath)));
+			return false;
+		}
+		if (Found.what == ac::net::Reattach::Do::reattach)
+		{
+			Token = Found.server->token;
+			ServerPort = Found.server->port;
+			bReattached = true;
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: reattached to the world server pid %d on port %d (running since %s), save %s"), Found.server->pid,
+				(int32)ServerPort, *FDateTime::FromUnixTimestamp(Found.server->since).ToString(), *Tilde(SavePath));
+			// Connected on the first Tick: a game still loading reads nothing
+			// for a while, and the handshake would time out.
+			CurrentPhase = EPhase::Starting;
+			StatusMessage = TEXT("Reattaching to the world server…");
+			StartedAt = Now;
+			return true;
+		}
+	}
 	// The one-time token: random, as text on the server's standard input.
 	uint8_t Bytes[16];
 	if (!ac::net::secureRandom(Bytes, sizeof Bytes))
@@ -262,7 +331,11 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Token.push_back(Hex[B >> 4]);
 		Token.push_back(Hex[B & 15]);
 	}
-	std::vector<std::string> Args = {"--world", Utf8(WorldFile), "--bind", "127.0.0.1", "--port", "0", "--parent-pid", std::to_string(getpid())};
+	std::vector<std::string> Args = {"--world", Utf8(WorldFile), "--bind", "127.0.0.1", "--port", "0"};
+	// S2: detached, it outlives the game (its run file beside the save);
+	// attached, it ends with this process.
+	if (bDetached) Args.push_back("--detached");
+	else Args.insert(Args.end(), {"--parent-pid", std::to_string(getpid())});
 	// Dev: XP for a new pilot's Prospector, on the server (as -AcEarn).
 	if (double DevXp = 0; FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), DevXp) && DevXp > 0)
 	{
@@ -334,13 +407,13 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Args.push_back(Utf8(SavePath));
 	}
 	Args.insert(Args.end(), ExtraServerArgs.begin(), ExtraServerArgs.end());
-	if (!Server.start(Utf8(Program), Args, Token))
+	if (!Server.start(Utf8(Program), Args, Token, bDetached))
 	{
 		Fail(FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Text(Server.error()), *Tilde(ServerLog())));
 		return false;
 	}
-	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on world %s (pid %d), save %s, log %s"), *Program, *Tilde(WorldFile), Server.pid(),
-		SavePath.IsEmpty() ? TEXT("none") : *Tilde(SavePath), *ServerLog());
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: started %s on world %s (pid %d, %s), save %s, log %s"), *Program, *Tilde(WorldFile), Server.pid(),
+		bDetached ? TEXT("detached") : TEXT("attached"), SavePath.IsEmpty() ? TEXT("none") : *Tilde(SavePath), *ServerLog());
 	CurrentPhase = EPhase::Starting;
 	StatusMessage = TEXT("Starting the local server…");
 	StartedAt = Now;
@@ -355,10 +428,20 @@ void FAcMmoClient::Stop()
 		// The unit goes back to its AI; the server tells its other clients.
 		if (Driven()) Net->handBack();
 		Net->flush(LastNow);
+		// Detached, it runs on: the pilot leaves now, not at the timeout.
+		if (bDetached) Net->disconnect(LastNow, "the game left");
 	}
-	const bool bRunning = Server.pid() > 0;
-	const bool bClean = Server.stop(3.0);
-	if (bRunning) UE_LOG(LogAutocraft, Log, TEXT("mmo: local server stopped (%s)"), bClean ? TEXT("clean") : *Text(Server.error()));
+	if (bDetached)
+	{
+		UE_LOG(LogAutocraft, Log, TEXT("mmo: left the world server running on port %d (save %s)"), (int32)ServerPort, *Tilde(SavePath));
+		Server.release();
+	}
+	else
+	{
+		const bool bRunning = Server.pid() > 0;
+		const bool bClean = Server.stop(3.0);
+		if (bRunning) UE_LOG(LogAutocraft, Log, TEXT("mmo: local server stopped (%s)"), bClean ? TEXT("clean") : *Text(Server.error()));
+	}
 	Net.Reset();
 	LagIo.Reset();
 	Socket.close();
@@ -384,7 +467,8 @@ void FAcMmoClient::Connect(const double Now)
 		return;
 	}
 	ac::net::ClientConfig Config;
-	Config.server = ac::net::Address::loopback(Server.port());
+	if (Server.state() == ac::net::LocalServer::State::running) ServerPort = Server.port();
+	Config.server = ac::net::Address::loopback(ServerPort);
 	Config.token.assign(Token.begin(), Token.end());
 	// The lag setting's simulator between them (none set: it passes all on at once).
 	LagIo = MakeUnique<ac::net::LagSimulator>(Socket, uint64(FPlatformTime::Cycles64()));
@@ -406,8 +490,8 @@ void FAcMmoClient::Connect(const double Now)
 	ConnectAt = Now;
 	NextInputAt = 0;
 	CurrentPhase = EPhase::Connecting;
-	StatusMessage = FString::Printf(TEXT("Connecting to the local server (port %d)…"), (int32)Server.port());
-	UE_LOG(LogAutocraft, Log, TEXT("mmo: server on port %d, connecting"), (int32)Server.port());
+	StatusMessage = FString::Printf(TEXT("Connecting to the local server (port %d)…"), (int32)ServerPort);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: server on port %d, connecting"), (int32)ServerPort);
 }
 
 void FAcMmoClient::Tick(const double Now)
@@ -426,7 +510,7 @@ void FAcMmoClient::Tick(const double Now)
 	}
 	if (CurrentPhase == EPhase::Starting)
 	{
-		if (State == ac::net::LocalServer::State::running) Connect(Now);
+		if (State == ac::net::LocalServer::State::running || bReattached) Connect(Now);
 		else if (Now - StartedAt > StartSeconds)
 		{
 			Fail(FString::Printf(TEXT("The local server did not give its port in %.0f s.\nIts log: %s"), StartSeconds, *Tilde(ServerLog())));

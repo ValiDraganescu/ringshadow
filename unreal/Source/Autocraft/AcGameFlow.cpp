@@ -706,6 +706,19 @@ void UAcGameFlowSubsystem::RefreshMenuGame()
 	// Under ENTER THE REACH: whether a saved world waits (H1).
 	Menu->SetReach(IFileManager::Get().FileExists(*FAcMmoClient::SaveFile()) ? TEXT("ASHFALL REACH  ·  YOUR CLAIM WAITS")
 	                                                                       : TEXT("ASHFALL REACH  ·  A FRONTIER WORLD ONLINE"));
+	// S2: the world's server running on with the game away (home only).
+	FString ServerLine;
+	if (Menu->Mode() == EAcMenuMode::Home)
+	{
+		if (const std::optional<ac::net::RunFile> Running = FAcMmoClient::RunningServer())
+		{
+			const FDateTime Since = FDateTime::FromUnixTimestamp(Running->since) + (FDateTime::Now() - FDateTime::UtcNow());
+			const bool bToday = Since.GetDate() == FDateTime::Now().GetDate();
+			ServerLine = FString::Printf(TEXT("World server running  ·  since %s"),
+				*Since.ToString(bToday ? TEXT("%H:%M") : TEXT("%d %b %H:%M")));
+		}
+	}
+	Menu->SetServer(ServerLine);
 	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!bHasGame || !Sim || !Sim->IsRunning() || !Sim->Choice())
 	{
@@ -747,6 +760,21 @@ void UAcGameFlowSubsystem::OnMenuPick(const EAcMenuAction Action)
 		// Confirmed on the menu's own page.
 		StartMmo(true);
 		break;
+	case EAcMenuAction::StopServer:
+	{
+		// S2: it saves and ends; the next ENTER THE REACH starts it again.
+		FString Why;
+		if (!FAcMmoClient::StopWorldServer(FAcMmoClient::SaveFile(), &Why))
+		{
+			UE_LOG(LogAutocraft, Warning, TEXT("menu: STOP: %s"), *Why);
+		}
+		else
+		{
+			UE_LOG(LogAutocraft, Log, TEXT("menu: STOP the world server"));
+		}
+		RefreshMenuGame();
+		break;
+	}
 	case EAcMenuAction::Back:
 		// The widget's own page.
 		break;

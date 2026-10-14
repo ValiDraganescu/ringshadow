@@ -162,6 +162,17 @@
 //   04 a Lodeback with a full sac, leaving
 //   05 a raid on a Hab Dome: the KSTR toast told, the dome's life bar falling
 //
+// -AcMmoShotsS2A, then -AcMmoShotsS2B (two runs on the same -AcMmoShots=DIR,
+// each with -AcMmoServerDetached): the world runs on (docs/mmorpg-m8.md S2,
+// docs/mmorpg.md "The world runs on"), DIR/s2-NN-moment.png:
+//   01 (S2A) the first run in the world: its server detached (its run file),
+//      the world's clock noted (DIR/s2-first.txt); the run ends, the server
+//      runs on
+//   02 (S2B) the second run reattached to that server (no new one): the
+//      world's clock on by the time between the runs
+//   03 home: "World server running · since …" with STOP
+//   04 STOP picked: the server saved and stopped, the line gone
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -222,6 +233,7 @@
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/CommandLine.h"
+#include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
@@ -636,7 +648,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (double In = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoStarfall="), In)) FCommandLine::Append(TEXT(" -AcMmoStarfall=10"));
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=17"));
 		}
-		StartMmo(true);
+		// -AcMmoShotsS2B: the world the first run left running, resumed.
+		StartMmo(!FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS2B")));
 		Advance();
 		return;
 	case 1:
@@ -675,6 +688,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2"))) T.Phase = 1200;
 			// -AcMmoShotsN2: only the Brood (1300-1311).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2"))) T.Phase = 1300;
+			// -AcMmoShotsS2A / S2B: the world server that runs on (1400-1415).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS2A"))) T.Phase = 1400;
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS2B"))) T.Phase = 1410;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -3152,6 +3168,74 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		TimedOut(TEXT("the shield charge used"), 10);
 		return;
 	case 1107:
+		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsS2A, -AcMmoShotsS2B
+	case 1400:
+	{
+		if (Since() < 3.0 || !Mmo->Sky()) return;
+		const std::optional<ac::net::RunFile> Run = FAcMmoClient::RunningServer(Mmo->SavePath);
+		Check(Mmo->Detached() && !Mmo->Reattached() && Run.has_value(),
+			FString::Printf(TEXT("s2: the first run started a detached world server (pid %d, port %d)"), Run ? Run->pid : 0, Run ? (int32)Run->port : 0));
+		const double Clock = Mmo->Sky()->time;
+		const int64 Wall = FDateTime::UtcNow().ToUnixTimestamp();
+		Check(FFileHelper::SaveStringToFile(FString::Printf(TEXT("%.3f %lld %d\n"), Clock, (long long)Wall, Run ? Run->pid : 0),
+				  *FPaths::Combine(Shots.Dir, TEXT("s2-first.txt"))),
+			FString::Printf(TEXT("s2: the world's clock %.1f s at %lld noted"), Clock, (long long)Wall));
+		Shoot(TEXT("s2-01-first-run"), TEXT("the first run in the world, its server detached"));
+		return;
+	}
+	case 1401:
+		Check(Shots.Saved + Shots.Skipped == 1, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		UE_LOG(LogAutocraft, Display, TEXT("mmoshots: s2: the first run ends; its world server runs on"));
+		Finish();
+		return;
+	case 1410:
+	{
+		if (Since() < 3.0 || !Mmo->Sky()) return;
+		const std::optional<ac::net::RunFile> Run = FAcMmoClient::RunningServer(Mmo->SavePath);
+		FString First;
+		TArray<FString> Parts;
+		if (FFileHelper::LoadFileToString(First, *FPaths::Combine(Shots.Dir, TEXT("s2-first.txt")))) First.TrimStartAndEnd().ParseIntoArray(Parts, TEXT(" "));
+		Check(Parts.Num() == 3, TEXT("s2: the first run's note read"));
+		const double Clock = Mmo->Sky()->time;
+		const double Then = Parts.Num() == 3 ? FCString::Atod(*Parts[0]) : 0;
+		const int64 Wall = FDateTime::UtcNow().ToUnixTimestamp();
+		const double Between = Parts.Num() == 3 ? double(Wall - FCString::Atoi64(*Parts[1])) : 0;
+		const int32 FirstPid = Parts.Num() == 3 ? FCString::Atoi(*Parts[2]) : -1;
+		Check(Mmo->Reattached() && Run && Run->pid == FirstPid,
+			FString::Printf(TEXT("s2: the second run reattached to the first run's server (pid %d, the first's %d)"), Run ? Run->pid : 0, FirstPid));
+		Check(Clock - Then > Between - 6 && Clock - Then < Between + 6,
+			FString::Printf(TEXT("s2: the world's clock ran on between the runs: %.1f s to %.1f s (%.1f s on, %.0f s between)"), Then, Clock,
+				Clock - Then, Between));
+		Shoot(TEXT("s2-02-reattached"), TEXT("the second run, reattached: the world went on"));
+		return;
+	}
+	case 1411:
+		// QUIT TO HOME: the server runs on; the home screen says so.
+		StopMmo();
+		OpenMenu(EAcMenuMode::Home);
+		Advance();
+		return;
+	case 1412:
+		if (Since() < 2.0) return;
+		Check(MenuWidget() && MenuWidget()->ServerText().StartsWith(TEXT("World server running")),
+			FString::Printf(TEXT("s2: home shows \"%s\""), MenuWidget() ? *MenuWidget()->ServerText() : TEXT("no menu")));
+		Shoot(TEXT("s2-03-home-server-running"), TEXT("home: the world server running, STOP"));
+		return;
+	case 1413:
+		Check(MenuWidget() && MenuWidget()->Highlight(EAcMenuAction::StopServer), TEXT("s2: STOP is on the home screen"));
+		OnMenuPick(EAcMenuAction::StopServer);
+		Check(!FAcMmoClient::RunningServer().has_value(), TEXT("s2: STOP saved and stopped the world server"));
+		Advance();
+		return;
+	case 1414:
+		if (Since() < 1.5) return;
+		Check(MenuWidget() && MenuWidget()->ServerText().IsEmpty(), TEXT("s2: the line is gone"));
+		Shoot(TEXT("s2-04-home-stopped"), TEXT("home after STOP"));
+		return;
+	case 1415:
 		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;

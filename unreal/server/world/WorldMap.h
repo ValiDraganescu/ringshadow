@@ -271,6 +271,9 @@ struct WorldParams {
     /// and its dice (0: seeded by the world's id).
     bool brood = true;
     uint64_t broodSeed = 0;
+    /// S2: the longest time the server was down that a start catches the
+    /// world up on (`WorldMap::catchUp`): a day of the Mac's clock.
+    double catchUpCap = 24 * 3600;
 };
 
 /// The Brood's director in a world (docs/creatures.md, "Where they come
@@ -467,6 +470,28 @@ public:
     void step();
     /// Region changes since the last call.
     std::vector<Moved> takeMoves();
+
+    // MARK: The world runs on (S2, docs/mmorpg.md "The world runs on")
+
+    /// No pilot on line: the world's clock moves `seconds` on (the server's
+    /// real time since the last), and what runs on it with it: the sky, the
+    /// sites, contracts and missions, starfalls, respawns, the Foundry and
+    /// Lab jobs, the wells growing back, the Brood's director (no pilot near:
+    /// no spawn, no raid; the bugs left go after `WorldBrood::idleDespawn`).
+    /// The regions are held still (their units wait, as while the server is
+    /// down); the server calls it at a
+    /// few Hz instead of stepping at 60. Under a second each: a starfall's
+    /// schedule reads each step's span.
+    void idle(double seconds);
+    /// The server was down `seconds` (the Mac's clock, from the save's
+    /// `savedAt`): the world's clock jumps on that far, at most
+    /// `WorldParams::catchUpCap`, as a restart's did; the jobs and timers
+    /// on it are due at once, starfalls skipped in the gap are not told,
+    /// the regions resume as saved. Then `offlineWork`. The seconds moved.
+    double catchUp(double seconds);
+    /// What happened while the server was down, `seconds` of it (capped):
+    /// called once by `catchUp`. H2 pays the mercenaries for the gap here.
+    void offlineWork(double seconds);
 
     /// What the pilot is told now (its region's snapshot, the game stamped
     /// with its visit).

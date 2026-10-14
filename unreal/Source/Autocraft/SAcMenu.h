@@ -6,6 +6,8 @@
 //               [ENTER THE REACH      ]  (the MMORPG: resumes the saved
 //               [ ashfall reach · ... ]   world, or starts one; highlighted)
 //               [NEW WORLD]              (asks first: it deletes the save)
+//               [World server running · since 21:40   STOP]  (S2: when the
+//                                        world server runs on with the game away)
 //               THE STRATEGY GAME
 //               [your game: map, teams, time played]
 //               [RESUME SKIRMISH] (when there is one)
@@ -36,7 +38,7 @@
 class FAcLauncherArt;
 
 enum class EAcMenuMode : uint8 { Home, Pause };
-enum class EAcMenuAction : uint8 { Resume, NewGame, QuitToHome, QuitApp, Settings, Mmo, MmoNewWorld, Back };
+enum class EAcMenuAction : uint8 { Resume, NewGame, QuitToHome, QuitApp, Settings, Mmo, MmoNewWorld, Back, StopServer };
 
 DECLARE_DELEGATE_OneParam(FAcOnMenuPick, EAcMenuAction);
 
@@ -58,6 +60,10 @@ public:
 	void SetMode(EAcMenuMode InMode);
 	/// The line under ENTER THE REACH ("ASHFALL REACH · YOUR CLAIM WAITS").
 	void SetReach(const FString& Line);
+	/// S2: "World server running · since 21:40" when the world's server runs
+	/// on its own (a STOP row on the home screen); empty: none.
+	void SetServer(const FString& Line);
+	const FString& ServerText() const { return ServerLine; }
 	/// The song title for the home screen's bottom-left line (empty: none).
 	void SetNowPlaying(const FString& Title);
 	/// Home with key art: the art fills the window and the panel sits left.
@@ -102,6 +108,8 @@ private:
 		bool bHalf = false;
 		/// The strategy game's group starts here (its heading and card above).
 		bool bGroup = false;
+		/// The world server's row: its line, STOP at the right.
+		bool bServer = false;
 	};
 	TArray<FButton> Buttons() const;
 	void Layout(FVector2f ViewSize) const;
@@ -123,6 +131,7 @@ private:
 	FAcOnMenuPick OnPickDelegate;
 	FAcOnMenuPick OnSoundDelegate;
 	FString ReachLine;
+	FString ServerLine;
 	FString GameTitle;
 	FString GameDetail;
 	int32 Highlighted = 0;

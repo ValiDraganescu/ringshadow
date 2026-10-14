@@ -58,6 +58,9 @@ public:
 
     bool send(double now, const Address& to, const uint8_t* data, size_t size) override;
     bool receive(double now, Address& from, uint8_t* buffer, size_t capacity, size_t& size) override;
+    /// Waits up to `seconds` for a datagram to arrive (true: one is there to
+    /// read). The idle world server sleeps on it (S2).
+    bool wait(double seconds) const;
 
 private:
     intptr_t handle_ = -1;

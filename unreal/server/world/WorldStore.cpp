@@ -6,6 +6,7 @@
 #include <sqlite3.h>
 
 #include <climits>
+#include <cstdio>
 #include <cstdlib>
 #include <set>
 
@@ -355,6 +356,11 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.failed(error)) return std::nullopt;
     }
     {
+        Stmt s(db_, "SELECT value FROM meta WHERE key = 'saved_at'");
+        if (s.row()) out.savedAt = std::strtod(s.colText(0).c_str(), nullptr);
+        if (s.failed(error)) return std::nullopt;
+    }
+    {
         Stmt s(db_, "SELECT ore, hydrogen FROM realm_wallet WHERE id = 1");
         if (s.row()) {
             out.realmOre = s.colInteger(0);
@@ -383,6 +389,7 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
 
 void WorldStore::remember(const WorldSave& save) {
     clock_ = save.clock;
+    savedAt_ = save.savedAt;
     realm_ = {save.realmOre, save.realmHydrogen};
     starfalls_ = save.starfalls;
     for (const SavedRegion& r : save.regions) {
@@ -510,6 +517,13 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     if (clock_ != save.clock) {
         run(std::move(Stmt(db_, "INSERT INTO world_clock (id, time) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET time = excluded.time")
                           .real(save.clock)));
+        n.changed += 1;
+    }
+    if (savedAt_ != save.savedAt) {
+        char at[40];
+        std::snprintf(at, sizeof at, "%.6f", save.savedAt);
+        run(std::move(Stmt(db_, "INSERT INTO meta (key, value) VALUES ('saved_at', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+                          .text(at)));
         n.changed += 1;
     }
     if (realm_ != std::pair{save.realmOre, save.realmHydrogen}) {

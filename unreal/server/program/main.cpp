@@ -20,13 +20,23 @@
 //                                           world's clock at once: `clock T`, `hour H`, `ahead S`, or stages a Brood
 //                                           scene: `brood linger|attack|dive|lodeback|raid|clear`; Server::devControl)
 //                    [--brood 0|1]  (the Brood's director spawns bugs; on unless 0)
+//                    [--detached | --attached]  (S2; attached, the default: it ends with --parent-pid's process;
+//                                                detached, with --save: it outlives the game, writes the run file
+//                                                beside the save (first.sqlite: first.run, net::RunFile) and removes
+//                                                it when it stops)
+//   autocraft-server --stop <save | folder>  (S2: stops the server serving that save, or every one in the folder:
+//                                              SIGTERM, it saves; exit 0 stopped, 1 none running, 3 still running)
 //
 // Reads the one-time token as the first line of its standard input, binds,
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
 // SIGTERM or SIGINT, or until the parent process is gone. A save that will
 // not open prints `FAILED save <why>` there instead and exits 1. Logs to
-// ~/Library/Logs/Autocraft/server.log unless told otherwise.
+// ~/Library/Logs/Autocraft/server.log unless told otherwise. With no client
+// on line a world idles (S2): the clock and its timers move on at 2 Hz, the
+// regions wait, and a datagram wakes it at once (Server::idle).
 
+#include "NetPacket.h"
+#include "NetRunFile.h"
 #include "Ringshadow.h"
 #include "Server.h"
 
@@ -38,6 +48,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <dirent.h>
 #include <optional>
 #include <string>
 #include <sys/stat.h>
@@ -102,7 +113,8 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--brood 0|1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--brood 0|1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--detached | --attached]\n"
+                 "       autocraft-server --stop <save | folder>\n",
                  why);
     return 2;
 }
@@ -115,9 +127,55 @@ bool parentGone(pid_t parent, pid_t startParent) {
     return kill(parent, 0) != 0 && errno == ESRCH;
 }
 
+/// `--stop <save | folder>`: the server serving that save (its run file), or
+/// every one with a run file in the folder, asked to save and stop.
+int stopCommand(const std::string& target) {
+    std::vector<std::string> runs;
+    struct stat st {};
+    if (stat(target.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+        if (DIR* d = opendir(target.c_str())) {
+            while (const dirent* e = readdir(d)) {
+                const std::string name = e->d_name;
+                if (name.size() > 4 && name.compare(name.size() - 4, 4, ".run") == 0) runs.push_back(target + "/" + name);
+            }
+            closedir(d);
+        }
+    } else {
+        runs.push_back(net::runFilePath(target));
+    }
+    int stopped = 0, stuck = 0;
+    for (const std::string& path : runs) {
+        const net::RunCheck check = net::checkRunFile(path);
+        if (check.state == net::RunState::stale) std::printf("stale run file %s removed (its server is gone)\n", path.c_str());
+        if (check.state != net::RunState::live) continue;
+        const net::RunFile& f = *check.file;
+        if (net::stopServer(f, 15)) {
+            std::printf("stopped the world server pid %d on port %u (save %s)\n", f.pid, unsigned(f.port), f.save.c_str());
+            stopped += 1;
+        } else {
+            std::printf("the world server pid %d (save %s) did not stop in 15 s\n", f.pid, f.save.c_str());
+            stuck += 1;
+        }
+    }
+    if (stuck) return 3;
+    if (!stopped) {
+        std::printf("no world server running for %s\n", target.c_str());
+        return 1;
+    }
+    return 0;
+}
+
+std::string absolutePath(const std::string& path) {
+    if (!path.empty() && path[0] == '/') return path;
+    char here[4096];
+    if (!getcwd(here, sizeof here)) return path;
+    return std::string(here) + "/" + path;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
+    if (argc == 3 && std::string(argv[1]) == "--stop") return stopCommand(argv[2]);
     std::optional<MapStyle> style;
     std::optional<MapSize> size;
     int64_t starts = 2;
@@ -134,10 +192,16 @@ int main(int argc, char** argv) {
     long long devHydrogen = 0;
     std::optional<int> firstStep;
     std::optional<double> heldHour, weatherHold, ringshadowIn, starfallIn, clockHour;
+    bool detached = false;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
     for (int i = 1; i < argc; i++) {
         const std::string a = argv[i];
+        if (a == "--detached" || a == "--attached") {
+            detached = a == "--detached";
+            continue;
+        }
+        if (a == "--stop") return usage("--stop <save>: on its own");
         if (i + 1 >= argc) return usage(("no value for " + a).c_str());
         const std::string v = argv[++i];
         if (a == "--world") worldPath = v;
@@ -190,6 +254,8 @@ int main(int argc, char** argv) {
         if (!size) return usage("--size: a map size");
     }
     if (!savePath.empty() && !world) return usage("--save: only with --world");
+    if (detached && savePath.empty()) return usage("--detached: only with --save (its run file goes beside it)");
+    if (detached && parent > 0) return usage("--detached: not with --parent-pid");
     if (starts != 2 && starts != 4 && starts != 8) return usage("--starts: 2, 4 or 8");
     if (port < 0 || port > 65535) return usage("--port: 0…65535");
     bind.port = uint16_t(port);
@@ -281,15 +347,38 @@ int main(int argc, char** argv) {
                       sky->weatherHold ? (" held at " + std::to_string(*sky->weatherHold)).c_str() : "");
         logLine(line);
     }
-    std::printf("PORT %u\n", unsigned(socket.localAddress().port));
-    std::fflush(stdout);
-
     struct sigaction sa {};
     sa.sa_handler = onSignal;
     sigemptyset(&sa.sa_mask);
     sigaction(SIGTERM, &sa, nullptr);
     sigaction(SIGINT, &sa, nullptr);
     std::signal(SIGPIPE, SIG_IGN);
+
+    // S2: detached, the run file beside the save says who serves it (the
+    // game reattaches by it), and it outlives what started it.
+    std::string runPath;
+    if (detached) {
+        std::signal(SIGHUP, SIG_IGN);
+        runPath = net::runFilePath(absolutePath(savePath));
+        net::RunFile run;
+        run.pid = int(getpid());
+        run.port = socket.localAddress().port;
+        run.protocol = net::kProtocolVersion;
+        run.build = net::programBuild(net::ownProgram());
+        run.token = token;
+        run.since = int64_t(std::time(nullptr));
+        run.save = absolutePath(savePath);
+        std::string runWhy;
+        if (!net::writeRunFile(runPath, run, &runWhy)) {
+            logLine("start failed: run file " + runWhy);
+            std::printf("FAILED run file %s\n", runWhy.c_str());
+            std::fflush(stdout);
+            return 1;
+        }
+        logLine("detached: run file " + runPath + ", build " + run.build);
+    }
+    std::printf("PORT %u\n", unsigned(socket.localAddress().port));
+    std::fflush(stdout);
 
     // 60 Hz on the steady clock: a tick when its time comes, sleeping
     // between; far behind (a stall), it starts counting again from now.
@@ -318,6 +407,15 @@ int main(int argc, char** argv) {
                     server.devControl(text);
                 }
         }
+        // S2: no one on line, a world idles: its clock and timers at 2 Hz,
+        // woken at once by a datagram (a pilot connecting).
+        if (server.world().isWorld() && options.idleEvery > 0 && server.clients() == 0) {
+            server.idle(now);
+            socket.wait(std::min(options.idleEvery, std::max(0.0, nextParentCheck - now)));
+            start = clockNow();
+            n = 0;
+            continue;
+        }
         const double due = start + double(n) * step;
         if (now < due) {
             const double wait = std::min(due - now, 0.25);
@@ -337,6 +435,7 @@ int main(int argc, char** argv) {
     }
     if (why.empty()) why = stopSignal == SIGINT ? "SIGINT" : "SIGTERM";
     server.stop(clockNow(), "the server stopped");
+    if (!runPath.empty()) net::removeRunFile(runPath, int(getpid()));
     logLine("stop: " + why);
     if (logFile) std::fclose(logFile);
     return 0;

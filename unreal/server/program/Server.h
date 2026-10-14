@@ -47,6 +47,13 @@ struct ServerOptions {
     std::optional<WorldSave> saved;
     WorldStore* store = nullptr;
     double saveEvery = 5;
+    /// The Mac's clock, Unix seconds (null: the system's): each save is
+    /// stamped with it (`WorldSave::savedAt`), and a save loaded catches
+    /// the world up on the time since (`WorldMap::catchUp`, S2).
+    std::function<double()> wallClock;
+    /// S2: seconds between `idle` calls with no client on line (the
+    /// program's loop; 0: it steps at 60 Hz all the same).
+    double idleEvery = 0.5;
 };
 
 class Server {
@@ -56,6 +63,13 @@ public:
     /// One server tick at `now` (seconds, never going back). `stepRegion`
     /// false holds the region still (the tests): the network goes on.
     void tick(double now, bool stepRegion = true);
+    /// No client on line (S2): what came in is read, the world's clock and
+    /// timers move on by the time since the last call (`WorldMap::idle`; the
+    /// regions held still), and it saves as `tick` does. The first call
+    /// after ticks counts from `now`.
+    void idle(double now);
+    /// The seconds the start caught the world up on (`WorldMap::catchUp`).
+    double caughtUp() const { return caughtUp_; }
     /// Tells every client the server stops, and sends it; then saves.
     void stop(double now, const std::string& reason);
     /// Writes what changed to the store now (false: no store, or it
@@ -137,6 +151,11 @@ private:
     double stepMax_ = 0;
     double savedAt_ = -1;
     WorldStore::Written lastSave_;
+    double wallNow() const;
+    double caughtUp_ = 0;
+    /// Idle since `idleFrom_` (the world's clock is that far on).
+    bool idling_ = false;
+    double idleFrom_ = 0;
     /// The starfalls last logged, and whether each had landed.
     std::map<uint32_t, bool> starfalls_;
 };

@@ -109,7 +109,13 @@ Mac package built here, played by hand, before any AWS time is spent.
 
 ### The server in the Mac package
 
-The MMO mode starts `autocraft-server` (`unreal/server`) as a child process.
+The MMO mode starts `autocraft-server` (`unreal/server`) as a detached
+process that outlives the app (S2, [mmorpg.md](mmorpg.md) "The world runs
+on"): quitting Ringshadow leaves the world running until the Mac shuts down
+or the home screen's STOP. Its run file sits beside the save
+(`~/Library/Application Support/Autocraft/Unreal/mmo/first.run`). An updated
+app (another build of the server) asks the running one to save and stop and
+starts its own.
 It is not part of the cook: `build_release.sh mac` builds it with
 `make -C unreal/server` (arm64, the tests' flags, `-O2`, not stripped) and
 copies it into the app after UAT, before signing:

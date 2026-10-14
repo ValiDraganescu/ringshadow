@@ -147,6 +147,10 @@ struct WorldSave {
     /// The realm wallet (C1, schema 9): every pilot's tax and donations.
     int64_t realmOre = 0;
     int64_t realmHydrogen = 0;
+    /// When it was written, Unix seconds (S2: the next start catches the
+    /// world up on the time it was down); 0: not known. A `meta` row
+    /// (`saved_at`), no schema step.
+    double savedAt = 0;
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -216,6 +220,7 @@ private:
     std::map<std::pair<std::string, int64_t>, SavedWell> wells_;
     std::map<std::string, SavedPilot> pilots_;
     std::optional<double> clock_;
+    double savedAt_ = 0;
     std::optional<std::pair<int64_t, int64_t>> realm_;
     std::vector<SavedStarfall> starfalls_;
 };
