@@ -4,6 +4,7 @@
 #include "WorldMap.h"
 
 #include "Flight.h"
+#include "TerrainField.h"
 
 #ifndef JSON_NOEXCEPTION
 #define JSON_NOEXCEPTION 1
@@ -53,6 +54,25 @@ constexpr Edge kEdges[] = {Edge::north, Edge::east, Edge::south, Edge::west};
 
 bool inSpan(const std::vector<region::Span>& spans, double along) {
     return std::any_of(spans.begin(), spans.end(), [&](const region::Span& s) { return along >= s.from && along <= s.to; });
+}
+
+/// Where the ground of `a`'s edge `e` and its neighbour `b`'s facing edge
+/// differ by more than a centimetre: both heights there (nil: they meet).
+std::optional<std::string> edgeMismatch(const WorldRegion& a, const WorldRegion& b, Edge e) {
+    const TerrainField fa(a.built.map), fb(b.built.map);
+    const Vec2 ea = a.built.extent();
+    const double length = e == Edge::north || e == Edge::south ? ea.x : ea.y;
+    for (double t = 0; t <= length + 1e-9; t += 0.25) {
+        const Vec2 pa = a.built.ground(a.built.edgePoint(e, t, 0));
+        const Vec2 pb = b.built.ground(b.built.edgePoint(opposite(e), t, 0));
+        const double ha = fa.height(pa), hb = fb.height(pb);
+        if (std::fabs(ha - hb) > 0.01) {
+            char buf[160];
+            std::snprintf(buf, sizeof buf, "at %g along it, %.2f against %.2f cells high", t, ha, hb);
+            return std::string(buf);
+        }
+    }
+    return std::nullopt;
 }
 
 std::string spanText(const region::Span& s) {
@@ -168,6 +188,18 @@ WorldLoad loadWorld(std::string_view text, const std::string& folder) {
                 if (!meets)
                     problem(g.file.id + " " + std::string(region::edgeName(e)) + " opening " + spanText(s) + " meets no opening of " +
                             n->file.id + "'s " + std::string(region::edgeName(opposite(e))) + " edge");
+                // W4: with walls, a passage lines up exactly on both sides.
+                else if ((g.file.border || n->file.border) &&
+                         std::none_of(theirs.begin(), theirs.end(), [&](const region::Span& t) { return t == s; }))
+                    problem(g.file.id + " " + std::string(region::edgeName(e)) + " opening " + spanText(s) + " does not line up with " +
+                            n->file.id + "'s " + std::string(region::edgeName(opposite(e))) + " openings: the same span and level on both sides");
+            }
+            // W4: the ground meets along the shared edge (the walls and the
+            // passages' floors), so the world is one piece. Once a pair.
+            if ((g.file.border || n->file.border) && (e == Edge::east || e == Edge::south)) {
+                if (const auto gap = edgeMismatch(g, *n, e))
+                    problem(g.file.id + " " + std::string(region::edgeName(e)) + " edge and " + n->file.id + "'s " +
+                            std::string(region::edgeName(opposite(e))) + " edge do not meet: " + *gap);
             }
         }
     }
@@ -299,6 +331,19 @@ void WorldMap::bankOut(PilotState& p, size_t r) {
     p.wallet.hydrogen = side.hydrogen;
 }
 
+Vec2 openGround(const Simulation& sim, const Unit& u, Vec2 at, double reach) {
+    if (sim.pilotCanStand(u, at)) return at;
+    for (double rad = 0.5; rad <= reach; rad += 0.5) {
+        const int around = std::max(16, int(rad * 6));
+        for (int k = 0; k < around; k++) {
+            const double a = k * 6.283185307179586 / around;
+            const Vec2 q = at + Vec2(std::cos(a), std::sin(a)) * rad;
+            if (sim.pilotCanStand(u, q)) return q;
+        }
+    }
+    return at;
+}
+
 bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Vec2 at, int64_t lastInput) {
     Region& r = *regions_[to];
     const bool free = !r.driven();
@@ -313,17 +358,7 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
     Unit v = u;
     const region::Built& places = *r.places();
     const Simulation& sim = r.simulation();
-    v.position = places.ground(at);
-    for (double rad = 0.5; rad <= 6 && !sim.pilotCanStand(v, v.position); rad += 0.5) {
-        for (int k = 0; k < 16; k++) {
-            const double a = k * 6.283185307179586 / 16;
-            const Vec2 q = places.ground(at) + Vec2(std::cos(a), std::sin(a)) * rad;
-            if (sim.pilotCanStand(v, q)) {
-                v.position = q;
-                break;
-            }
-        }
-    }
+    v.position = openGround(sim, v, places.ground(at), 6);
     const int64_t id = r.admit(v);
     p.unit = id;
     p.last = places.regionAt(v.position);
@@ -617,6 +652,10 @@ void WorldMap::crossings() {
             wish = Vec2(std::cos(h), std::sin(h)) * in->walk.x + Vec2(-std::sin(h), std::cos(h)) * in->walk.y;
         }
         const Vec2 ext = places.extent();
+        // W4: a region with open edges (`MapDefinition::edges`) lets the unit
+        // walk past its edge in a gap: it crosses once its centre is past,
+        // and comes in at that same point of the world, so it walks on.
+        const bool seamless = here.simulation().map && here.simulation().map->edges;
         for (const Edge e : kEdges) {
             double gap = 0, along = 0;
             Vec2 out(0, 0);
@@ -626,8 +665,8 @@ void WorldMap::crossings() {
             case Edge::west: gap = at.x; along = at.y; out = Vec2(-1, 0); break;
             case Edge::east: gap = ext.x - at.x; along = at.y; out = Vec2(1, 0); break;
             }
-            if (gap > params_.crossBand) continue;
-            if (!(dot(moved, out) > 1e-6 || dot(wish, out) > 0.1)) continue;
+            if (seamless ? !(gap < 0) : gap > params_.crossBand) continue;
+            if (!seamless && !(dot(moved, out) > 1e-6 || dot(wish, out) > 0.1)) continue;
             if (!inSpan(places.openings[size_t(e)], along)) continue;
             const auto to = neighbour(p.region, e);
             if (!to) continue;
@@ -636,11 +675,16 @@ void WorldMap::crossings() {
             const auto clocks = takeClocks(p.region, *unit);
             const Unit leaving = *here.release(*unit);
             const int64_t lastInput = here.lastInputTick(pilot);
+            const std::optional<Region::Inputs> inputs = here.inputs(pilot);
             p.record = here.levels(pilot);
             here.leave(pilot);
             if (here.pilots().empty()) bankIn(PilotState{}, p.region);
-            // Its inputs carry on from where they were.
-            arrive(pilot, p, *to, leaving, there.edgePoint(opposite(e), along, params_.arriveDepth), lastInput);
+            // Its inputs carry on from where they were: seamless, the ones
+            // waiting and the one in use too, at the same point of the world.
+            const Vec2 in = seamless ? there.edgePoint(opposite(e), along, -gap) : there.edgePoint(opposite(e), along, params_.arriveDepth);
+            arrive(pilot, p, *to, leaving, in, lastInput);
+            p.walkedIn = seamless;
+            if (seamless && inputs) regions_[*to]->carryOn(pilot, *inputs);
             giveClocks(*to, *p.unit, clocks);
             firstVisit(pilot, world_->regions[*to].file.id);
             Region& now = *regions_[*to];
@@ -665,6 +709,7 @@ void WorldMap::landings() {
         // Another pilot drives there now: it circles until the ground is free.
         if (f.to != p.region && regions_[f.to]->driven()) continue;
         p.flight = std::nullopt;
+        p.walkedIn = false;
         const size_t from = p.region;
         Region& before = *regions_[from];
         const int64_t lastInput = before.lastInputTick(pilot);
@@ -721,7 +766,13 @@ bool WorldMap::input(PilotId pilot, const PilotInput& in) {
     // Made before the client heard of its last region change: it steered
     // the unit in the region it left (a walk held into the edge), so it
     // does not move it on here.
-    if (world_ && in.visit < visit(pilot)) return false;
+    // (After an edge crossing, the visit before still steers: the same unit
+    // walking on through, W4.)
+    if (world_) {
+        const auto it = pilots_.find(pilot);
+        const bool walked = it != pilots_.end() && it->second.walkedIn && in.visit == it->second.visit - 1;
+        if (in.visit < visit(pilot) && !walked) return false;
+    }
     Region* r = regionOf(pilot);
     return r && r->input(pilot, in);
 }
@@ -742,6 +793,7 @@ std::optional<net::WorldMessage> WorldMap::worldMessage(PilotId pilot) const {
         out.name = g.file.name;
         out.style = g.file.style;
         out.size = g.file.size;
+        out.ground = g.file.ground;
         out.column = g.column;
         out.row = g.row;
         for (const region::Place& p : g.file.pads) out.pads.push_back({p.name, p.at});

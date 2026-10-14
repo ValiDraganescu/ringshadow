@@ -938,6 +938,8 @@ TEST(protocol_world_messages_round_trip) {
         g.name = "Region " + std::to_string(i);
         g.style = MapStyle(i % 4);
         g.size = MapSize::medium;
+        // Every ground palette goes across (W3).
+        g.ground = region::Ground(i + 2);
         g.column = i % 3;
         g.row = i / 3;
         g.pads = {{"landing", Vec2(72, 48)}, {"far", Vec2(10.5, 90)}};

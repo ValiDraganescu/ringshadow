@@ -528,8 +528,8 @@ Parsed parse(std::string_view text) {
     }
     const json root = json::parse(text.begin(), text.end(), nullptr, false);
     Reader r{out.problems};
-    if (!r.object(root, "region", {"id", "name", "size", "base", "ground", "brood", "height", "deposits", "wells", "doodads",
-                                   "pads", "spawns", "sites", "openings"}))
+    if (!r.object(root, "region", {"id", "name", "size", "base", "ground", "brood", "height", "border", "deposits", "wells",
+                                   "doodads", "pads", "spawns", "sites", "openings"}))
         return out;
     RegionFile f;
     if (const auto id = r.text(root, "id", "", true)) {
@@ -576,6 +576,38 @@ Parsed parse(std::string_view text) {
     }
     if (const auto brood = r.integer(root, "brood", "", false, 0, 4)) f.brood = *brood;
     r.list(root, "height", f.height, [&](const json& j, const std::string& w) { return r.edit(j, w); });
+    if (const json* border = r.field(root, "border", "", false)) {
+        if (r.object(*border, "border", {"outline", "level"})) {
+            Border b;
+            bool ok = true;
+            const json* o = r.field(*border, "outline", "border", true);
+            const auto ps = o ? r.points(*o, "border.outline", 3) : std::nullopt;
+            if (ps) b.outline = *ps; else ok = false;
+            if (const json* l = r.field(*border, "level", "border", false)) {
+                (void)l;
+                if (const auto level = r.integer(*border, "level", "border", false, 1, maxLevel)) b.level = *level; else ok = false;
+            }
+            if (ps) {
+                // A plain outline: no side crosses another.
+                for (size_t i = 0; ok && i < ps->size(); i++) {
+                    const Vec2 a = (*ps)[i], a1 = (*ps)[(i + 1) % ps->size()];
+                    for (size_t j = i + 2; j < ps->size(); j++) {
+                        if (i == 0 && j + 1 == ps->size()) continue;
+                        const Vec2 c = (*ps)[j], c1 = (*ps)[(j + 1) % ps->size()];
+                        const auto side = [](Vec2 p, Vec2 q, Vec2 x) { return (q.x - p.x) * (x.y - p.y) - (q.y - p.y) * (x.x - p.x); };
+                        const double d1 = side(a, a1, c), d2 = side(a, a1, c1), d3 = side(c, c1, a), d4 = side(c, c1, a1);
+                        if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+                            r.add("border.outline[" + std::to_string(i) + "]",
+                                  "its side crosses side " + std::to_string(j) + " of the outline", a);
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (ok) f.border = b;
+        }
+    }
     r.list(root, "deposits", f.deposits, [&](const json& j, const std::string& w) -> std::optional<Deposit> {
         if (!r.object(j, w, {"at", "amount", "angle"})) return std::nullopt;
         const auto at = r.point(j, "at", w);
@@ -653,13 +685,25 @@ Parsed parse(std::string_view text) {
                 const double length = e % 2 == 0 ? r.extent.x : r.extent.y;
                 if (!spans->is_array()) { r.add(where, "must be a list of spans [[from, to], ...]"); continue; }
                 for (size_t i = 0; i < spans->size(); i++) {
-                    const json& s = (*spans)[i];
+                    const json* s = &(*spans)[i];
                     const std::string w = where + "[" + std::to_string(i) + "]";
-                    if (!(s.is_array() && s.size() == 2 && s[0].is_number() && s[1].is_number())) {
-                        r.add(w, "must be a span [from, to]");
+                    // [from, to], or {"span": [from, to], "level": n}.
+                    std::optional<int64_t> level;
+                    if (s->is_object()) {
+                        if (!r.object(*s, w, {"span", "level"})) continue;
+                        if (const json* l = r.field(*s, "level", w, false)) {
+                            (void)l;
+                            level = r.integer(*s, "level", w, false, 0, maxLevel);
+                            if (!level) continue;
+                        }
+                        s = r.field(*s, "span", w, true);
+                        if (!s) continue;
+                    }
+                    if (!(s->is_array() && s->size() == 2 && (*s)[0].is_number() && (*s)[1].is_number())) {
+                        r.add(w, "must be a span [from, to] or {\"span\": [from, to], \"level\": n}");
                         continue;
                     }
-                    const Span span{s[0].get<double>(), s[1].get<double>()};
+                    const Span span{(*s)[0].get<double>(), (*s)[1].get<double>(), level};
                     if (!(span.from >= 0 && span.to <= length && span.from < span.to)) {
                         r.add(w, "is " + num(span.from) + "…" + num(span.to) + "; must lie in 0…" + num(length) +
                                      " along the " + name + " edge, from before to");
@@ -743,6 +787,11 @@ std::string write(const RegionFile& f) {
         }
         root["height"] = list;
     }
+    if (f.border) {
+        ordered ps = ordered::array();
+        for (Vec2 p : f.border->outline) ps.push_back(pointNumbers(p));
+        root["border"] = ordered{{"outline", ps}, {"level", f.border->level}};
+    }
     if (!f.deposits.empty()) {
         ordered list = ordered::array();
         for (const Deposit& d : f.deposits) {
@@ -784,7 +833,11 @@ std::string write(const RegionFile& f) {
     for (size_t e = 0; e < 4; e++) {
         if (f.openings[e].empty()) continue;
         ordered spans = ordered::array();
-        for (const Span& s : f.openings[e]) spans.push_back(ordered::array({number(s.from), number(s.to)}));
+        for (const Span& s : f.openings[e]) {
+            const ordered span = ordered::array({number(s.from), number(s.to)});
+            if (s.level) spans.push_back(ordered{{"span", span}, {"level", *s.level}});
+            else spans.push_back(span);
+        }
         openings[std::string(edgeName(static_cast<Edge>(e)))] = spans;
     }
     if (!openings.empty()) root["openings"] = openings;
@@ -842,6 +895,45 @@ Built build(const RegionFile& f) {
         h.slope = e.slope;
         m.heightEdits.push_back(h);
     }
+    // W4: each opening with a level gets a flat mouth at that level, from a
+    // little past the edge to `mouthDepth` in (both sides of a shared edge
+    // meet exactly there), and the walls and open stretches of the edges.
+    const Vec2 ext = f.extent();
+    for (size_t e = 0; e < 4; e++) {
+        for (const Span& s : f.openings[e]) {
+            if (!s.level) continue;
+            const double a0 = s.from - 2, a1 = s.to + 2, d0 = -2, d1 = mouthDepth;
+            std::vector<Vec2> rect;
+            switch (static_cast<Edge>(e)) {
+            case Edge::north: rect = {Vec2(a0, d0), Vec2(a1, d0), Vec2(a1, d1), Vec2(a0, d1)}; break;
+            case Edge::south: rect = {Vec2(a0, ext.y - d1), Vec2(a1, ext.y - d1), Vec2(a1, ext.y - d0), Vec2(a0, ext.y - d0)}; break;
+            case Edge::west: rect = {Vec2(d0, a0), Vec2(d1, a0), Vec2(d1, a1), Vec2(d0, a1)}; break;
+            case Edge::east: rect = {Vec2(ext.x - d1, a0), Vec2(ext.x - d0, a0), Vec2(ext.x - d0, a1), Vec2(ext.x - d1, a1)}; break;
+            }
+            HeightEdit h;
+            h.kind = HeightEdit::Kind::flatten;
+            for (Vec2 p : rect) h.points.push_back(g(p));
+            h.level = *s.level;
+            h.slope = mouthSlope;
+            m.heightEdits.push_back(h);
+        }
+    }
+    bool anyOpening = false;
+    for (const auto& spans : f.openings) anyOpening = anyOpening || !spans.empty();
+    if (f.border || anyOpening) {
+        RegionEdges edges;
+        if (f.border) {
+            for (Vec2 p : f.border->outline) edges.outline.push_back(g(p));
+            edges.level = f.border->level;
+        }
+        for (size_t e = 0; e < 4; e++) {
+            for (const Span& s : f.openings[e]) {
+                const double o = e % 2 == 0 ? m.bounds.minX : m.bounds.minZ;
+                edges.gaps.push_back(RegionEdges::Gap{static_cast<int64_t>(e), o + s.from, o + s.to});
+            }
+        }
+        m.edges = edges;
+    }
     for (const Deposit& d : f.deposits) m.deposits.push_back(OreSpec{g(d.at), d.amount, d.angle * pi / 180});
     for (const WellSite& w : f.wells) m.wells.push_back(WellSpec{g(w.at), w.amount});
     for (const Place& p : f.pads) b.pads.push_back(Place{p.name, g(p.at)});
@@ -889,6 +981,28 @@ Built build(const RegionFile& f) {
         d.scale = p.scale;
         d.variant = static_cast<uint32_t>(fnv1a64(f.id + "|" + std::to_string(i)));
         m.doodads.push_back(d);
+    }
+    // The walls' rocks: boulders, rocks and spires strewn over them, on a
+    // jittered grid, past the outline by more than a cliff's width.
+    if (f.border) {
+        const std::vector<Vec2>& outline = f.border->outline;
+        int64_t k = 0;
+        for (double z = wallRockSpacing / 2; z < ext.y; z += wallRockSpacing) {
+            for (double x = wallRockSpacing / 2; x < ext.x; x += wallRockSpacing) {
+                const uint64_t hash = fnv1a64(f.id + "|wall|" + std::to_string(k++));
+                const auto unit = [hash](int shift) { return static_cast<double>((hash >> shift) & 0xffff) / 65535.0; };
+                const Vec2 p(x + (unit(0) - 0.5) * wallRockSpacing * 1.3, z + (unit(16) - 0.5) * wallRockSpacing * 1.3);
+                if (!(signedDistance(p, outline) > 2.5) || unit(32) < 0.4) continue;
+                const double pick = unit(48);
+                Doodad d;
+                d.kind = pick < 0.45 ? Doodad::Kind::boulder : pick < 0.85 ? Doodad::Kind::rock : Doodad::Kind::rockSpire;
+                d.position = g(p);
+                d.rotation = unit(8) * 2 * pi;
+                d.scale = d.kind == Doodad::Kind::rockSpire ? 0.8 + unit(24) * 0.8 : 1.0 + unit(24) * 1.4;
+                d.variant = static_cast<uint32_t>(hash >> 7);
+                m.doodads.push_back(d);
+            }
+        }
     }
     return b;
 }
@@ -1117,7 +1231,34 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
             if (first)
                 add(where, "blocked at " + std::to_string(blocked) + " of " + std::to_string(total) + " points " +
                                num(laneDepth) + " cells in; first here: " + first->second, first->first);
+            // W4: the border's outline lets the passage through, from the
+            // edge to well inside.
+            if (f.border) {
+                std::optional<Vec2> shut;
+                for (double a = s.from + 0.5; a <= s.to - 0.5 + 1e-9 && !shut; a += 1) {
+                    for (double d = RegionEdges::edgeBand; d <= mouthDepth + 4 && !shut; d += 1) {
+                        const Vec2 q = b.edgePoint(edge, a, d);
+                        if (signedDistance(q, f.border->outline) > 0) shut = q;
+                    }
+                }
+                if (shut) add(where, "the border's outline closes the passage here: draw it out to the edge round the span", b.ground(*shut));
+            }
         }
+    }
+    // W4: the border's outline lies inside the region, and every pad, spawn
+    // point and site inside it.
+    if (f.border) {
+        const auto inside = [&](Vec2 r) { return signedDistance(r, f.border->outline) < -1; };
+        for (size_t i = 0; i < f.pads.size(); i++)
+            if (!inside(f.pads[i].at)) add("pads[" + std::to_string(i) + "]", "is outside the border's outline", b.ground(f.pads[i].at));
+        for (size_t i = 0; i < f.spawns.size(); i++)
+            if (!inside(f.spawns[i].at)) add("spawns[" + std::to_string(i) + "]", "is outside the border's outline", b.ground(f.spawns[i].at));
+        for (size_t i = 0; i < f.sites.size(); i++)
+            if (!inside(f.sites[i].at)) add("sites[" + std::to_string(i) + "]", "is outside the border's outline", b.ground(f.sites[i].at));
+        for (size_t i = 0; i < f.deposits.size(); i++)
+            if (!inside(f.deposits[i].at)) add("deposits[" + std::to_string(i) + "]", "is outside the border's outline", b.ground(f.deposits[i].at));
+        for (size_t i = 0; i < f.wells.size(); i++)
+            if (!inside(f.wells[i].at)) add("wells[" + std::to_string(i) + "]", "is outside the border's outline", b.ground(f.wells[i].at));
     }
     return out;
 }

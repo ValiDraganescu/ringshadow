@@ -169,8 +169,52 @@ double TerrainField::height(Vec2 p) const {
             roll *= 1 - flat;
         }
     }
-    if (map.heightEdits.empty()) return h + roll;
-    return edited(p, h + roll);
+    const double out = map.heightEdits.empty() ? h + roll : edited(p, h + roll);
+    return map.edges && !map.edges->outline.empty() ? walled(p, out) : out;
+}
+
+TerrainField::Wall TerrainField::wall(Vec2 p) const {
+    if (!map.edges || map.edges->outline.empty()) return Wall{};
+    const RegionEdges& e = *map.edges;
+    // A cliff's width past the outline the wall stands full.
+    const double outside = signedDistance(p, e.outline);
+    double cover = smoothstep(0.0, 2 * cliffHalf, outside);
+    // Near an edge the gaps alone say: the same on both sides of it.
+    double nearEdge = 0;
+    for (int64_t k = 0; k < 4; k++) {
+        const double d = max(RegionEdges::depth(map.bounds, k, p), 0.0);
+        const double w = 1 - smoothstep(0.0, RegionEdges::edgeBand, d);
+        if (!(w > 0)) continue;
+        const double at = RegionEdges::along(map.bounds, k, p);
+        double walled = 1;
+        for (const RegionEdges::Gap& g : e.gaps) {
+            if (g.edge != k) continue;
+            // Open over the whole gap and `gapMargin` past each end, where
+            // its cliff faces stand.
+            const double a = g.from - RegionEdges::gapMargin, b = g.to + RegionEdges::gapMargin;
+            const double open = smoothstep(a - 2 * cliffHalf, a, at) * (1 - smoothstep(b, b + 2 * cliffHalf, at));
+            walled = min(walled, 1 - open);
+        }
+        cover += (walled - cover) * w;
+        nearEdge = max(nearEdge, w);
+    }
+    return Wall{cover, nearEdge, outside};
+}
+
+double TerrainField::walled(Vec2 p, double h) const {
+    const Wall w = wall(p);
+    if (!(w.coverage > 0)) return h;
+    const RegionEdges& e = *map.edges;
+    // The wall's top: its level at the outline, rising a level or so further
+    // out (not near an edge, where both sides must meet).
+    const Vec2 q = fold(p);
+    const double away = smoothstep(2 * cliffHalf, 2 * cliffHalf + 8, w.outside);
+    const double rise = away * (1 - w.edge) * map.levelHeight * max(0.55 + 0.6 * noise.fbm(q.x * 0.08 - 7, q.y * 0.08 + 11), 0.0);
+    const double top = static_cast<double>(e.level) * map.levelHeight + rise;
+    h += max(top - h, 0.0) * w.coverage;
+    // Craggy noise on its face, as on a cliff's.
+    h += 4 * w.coverage * (1 - w.coverage) * (1 - w.edge) * noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 0.45;
+    return h;
 }
 
 /// How far a ground point lies outside the map's bounds, cells (0 on it).

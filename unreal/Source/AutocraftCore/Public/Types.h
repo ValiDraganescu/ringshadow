@@ -789,6 +789,47 @@ struct HeightEdit {
     bool operator==(const HeightEdit&) const = default;
 };
 
+/// C++ only: a crafted region's edges (docs/regions.md, "border"; W4): the
+/// walls round its playable land, and the stretches of each edge open to the
+/// neighbour, where a unit walks up to the edge and `overhang` past it (the
+/// server hands it over there, at the same point of the world).
+struct AUTOCRAFTCORE_API RegionEdges {
+    /// A stretch of an edge open to the neighbour: the edge (0 north, 1 east,
+    /// 2 south, 3 west) and where along it, ground coordinates (x on north
+    /// and south, z on east and west).
+    struct Gap {
+        int64_t edge = 0;
+        double from = 0, to = 0;
+        bool operator==(const Gap&) const = default;
+    };
+    /// The playable land's outline, ground coordinates (empty: no walls).
+    /// Outside it the ground rises into a wall `level` levels high.
+    std::vector<Vec2> outline;
+    int64_t level = 0;
+    std::vector<Gap> gaps;
+
+    /// How far past an open edge a unit may stand, cells.
+    static constexpr double overhang = 1.0;
+    /// How far in from the edges the walls follow the gaps alone, cells, so
+    /// both sides of a shared edge meet exactly.
+    static constexpr double edgeBand = 4.0;
+    /// How far past each end of a gap the walls' faces stand, cells (the
+    /// gap is the clear width).
+    static constexpr double gapMargin = 1.5;
+
+    /// How far `p` lies inside edge `edge` of `b` (negative: past it), and
+    /// where along it.
+    static double depth(const GroundRect& b, int64_t edge, Vec2 p);
+    static double along(const GroundRect& b, int64_t edge, Vec2 p);
+    /// The gap of edge `edge` at `along` (none: walled).
+    const Gap* gapAt(int64_t edge, double along) const;
+    /// Where a unit at `p` stands: `p` on the map; past an open edge by no
+    /// more than `overhang`, its foot just inside that edge; anywhere else
+    /// nil (out of the map).
+    std::optional<Vec2> standIn(const GroundRect& b, Vec2 p) const;
+    bool operator==(const RegionEdges&) const = default;
+};
+
 /// C++ only: an MH well of its own, outside any base (a crafted region's).
 struct WellSpec {
     Vec2 position;
@@ -841,6 +882,9 @@ struct AUTOCRAFTCORE_API MapDefinition {
     /// foundation plate `region::padReach` cells round (empty: a plate under
     /// each start base, as on the game's maps).
     std::vector<Vec2> plates;
+    /// C++ only, a crafted region's: its walls and open edges (nil: the
+    /// rectangle, every edge a wall to units).
+    std::optional<RegionEdges> edges;
 
     /// Where the armies meet: halfway between the feet of the ramps (or
     /// between the start bases on a map with one ramp), so neither side's

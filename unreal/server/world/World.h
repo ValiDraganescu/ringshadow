@@ -174,6 +174,15 @@ public:
     int64_t lastInputTick(PilotId pilot) const;
     /// The input in use now (the last one applied, its presses spent).
     std::optional<PilotInput> held(PilotId pilot) const;
+    /// What it has sent that is not used yet, and the input in use: an edge
+    /// crossing (W4) takes them from the region it leaves to the next, so the
+    /// unit walks on through it.
+    struct Inputs {
+        std::deque<PilotInput> pending;
+        PilotInput held;
+    };
+    std::optional<Inputs> inputs(PilotId pilot) const;
+    void carryOn(PilotId pilot, const Inputs& in);
 
     /// One server tick: each pilot's next input, one 1/60 s step, the next
     /// game after a victory lap, and the events each pilot may know.

@@ -89,6 +89,8 @@ template <class IO> void fields(IO& io, GroundPatch& v);
 template <class IO> void fields(IO& io, OreSpec& v);
 template <class IO> void fields(IO& io, BaseSite& v);
 template <class IO> void fields(IO& io, HeightEdit& v);
+template <class IO> void fields(IO& io, RegionEdges& v);
+template <class IO> void fields(IO& io, RegionEdges::Gap& v);
 template <class IO> void fields(IO& io, WellSpec& v);
 template <class IO> void fields(IO& io, MapView& v);
 template <class IO> void fields(IO& io, CanvasProjection& v);
@@ -902,6 +904,19 @@ template <class IO> void fields(IO& io, MapDefinition& v) {
     io.orZero("deposits", v.deposits);
     io.orZero("wells", v.wells);
     io.orZero("plates", v.plates);
+    io("edges", v.edges);
+}
+
+template <class IO> void fields(IO& io, RegionEdges& v) {
+    io("outline", v.outline);
+    io("level", v.level);
+    io("gaps", v.gaps);
+}
+
+template <class IO> void fields(IO& io, RegionEdges::Gap& v) {
+    io("edge", v.edge);
+    io("from", v.from);
+    io("to", v.to);
 }
 
 template <class IO> void fields(IO& io, HeightEdit& v) {

@@ -83,6 +83,18 @@ struct AUTOCRAFTCORE_API TerrainField {
     /// `h`, the ground's height at `p` before the height edits, after them.
     double edited(Vec2 p, double h) const;
 
+    /// How much a region's walls hold at `p` in [0, 1] (`MapDefinition::edges`:
+    /// 1 past the outline by a cliff's width; within `RegionEdges::edgeBand`
+    /// of an edge, 1 where the edge is walled and 0 in its gaps, so the two
+    /// sides of a shared edge meet exactly), how near an edge it is (1 on an
+    /// edge, 0 past the band) and how far past the outline (negative: inside
+    /// it). 0 with no walls.
+    struct Wall { double coverage = 0, edge = 0, outside = 0; };
+    Wall wall(Vec2 p) const;
+    /// `h` after the region's walls: raised to their level (higher further
+    /// from the outline) where they stand.
+    double walled(Vec2 p, double h) const;
+
     /// How far a ground point lies outside the map's bounds, cells (0 on it).
     double outside(Vec2 p) const;
 

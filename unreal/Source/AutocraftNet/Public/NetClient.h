@@ -109,6 +109,15 @@ public:
     Mirror* mirror() { return mirror_.get(); }
     int64_t clientTick() const { return tick_; }
 
+    /// A mirror built ahead of time for a region the pilot may walk into
+    /// next (W4: built off the game's thread, so the RegionChange that
+    /// brings it swaps it in at once instead of building the region then).
+    /// Taken when its description is the RegionChange's; a few kept.
+    void prepare(std::unique_ptr<Mirror> mirror);
+    static constexpr size_t kMaxPrepared = 8;
+    /// Whether the last RegionChange took a prepared mirror.
+    bool tookPrepared() const { return tookPrepared_; }
+
     /// Called after each snapshot part is applied to the mirror.
     std::function<void(const SnapshotPart&)> onSnapshot;
     /// Called after a RegionChange built the new mirror (the old one is gone).
@@ -145,6 +154,8 @@ private:
     ClientEndpoint endpoint_;
     SnapshotReader reader_;
     std::unique_ptr<Mirror> mirror_;
+    std::vector<std::unique_ptr<Mirror>> prepared_;
+    bool tookPrepared_ = false;
     std::optional<Welcome> welcome_;
     std::optional<RegionChange> regionChange_;
     std::optional<WorldMessage> world_;

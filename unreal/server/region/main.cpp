@@ -5,6 +5,8 @@
 //   autocraft-region validate FILE
 //   autocraft-region build FILE
 //   autocraft-region preview FILE -o OUT.png [--scale PX]
+//   autocraft-region edges FILE [--depth D]
+//   autocraft-region format FILE
 
 #include "Preview.h"
 
@@ -12,6 +14,8 @@
 #include "RegionFile.h"
 #include "TerrainField.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -34,6 +38,9 @@ int usage() {
                  "  autocraft-region build FILE                   build the map, print a summary and the problems\n"
                  "  autocraft-region preview FILE -o OUT.png [--scale PX]\n"
                  "                                                draw it from above, problems marked\n"
+                 "  autocraft-region edges FILE [--depth D]       the ground's level along each edge, D cells in\n"
+                 "                                                (default 6): where a passage's floor can meet\n"
+                 "  autocraft-region format FILE                  rewrite it in the tool's own layout\n"
                  "Format: docs/regions.md\n");
     return 2;
 }
@@ -191,6 +198,47 @@ int draw(const std::string& path, const std::vector<std::string>& args) {
     return 0;
 }
 
+/// Each edge's ground, `depth` cells in: a level digit every 2 cells (`#`:
+/// a cliff), the openings under it, so a passage's floor level can be
+/// chosen to meet the neighbour's (W4).
+int edges(const std::string& path, const std::vector<std::string>& args) {
+    const auto file = load(path);
+    if (!file) return 1;
+    const double depth = option(args, "--depth") ? std::atof(option(args, "--depth")->c_str()) : 6.0;
+    const Built built = build(*file);
+    const TerrainField field(built.map);
+    const double H = built.map.levelHeight;
+    for (size_t e = 0; e < 4; e++) {
+        const Edge edge = static_cast<Edge>(e);
+        const double length = e % 2 == 0 ? built.extent().x : built.extent().y;
+        std::string levels, opens;
+        for (double a = 1; a < length; a += 2) {
+            const Vec2 p = built.ground(built.edgePoint(edge, a, depth));
+            const double h = field.height(p);
+            const double dx = field.height(p + Vec2(0.5, 0)) - field.height(p - Vec2(0.5, 0));
+            const double dz = field.height(p + Vec2(0, 0.5)) - field.height(p - Vec2(0, 0.5));
+            const bool cliff = std::sqrt(dx * dx + dz * dz) > NavGrid::maxSlope;
+            levels += cliff ? '#' : static_cast<char>('0' + std::clamp<long>(std::lround(h / H), 0, 9));
+            bool open = false;
+            for (const Span& s : file->openings[e]) open = open || (a >= s.from && a <= s.to);
+            opens += open ? '^' : ' ';
+        }
+        std::printf("%-5s %s\n      %s\n", std::string(edgeName(edge)).c_str(), levels.c_str(), opens.c_str());
+    }
+    std::printf("a digit every 2 cells from the west (north, south) or the north (east, west) end, %g cells in; ^ an opening\n", depth);
+    return 0;
+}
+
+int format(const std::string& path) {
+    const auto file = load(path);
+    if (!file) return 1;
+    std::ofstream f(path, std::ios::binary);
+    f << write(*file);
+    if (!f) { std::fprintf(stderr, "cannot write %s\n", path.c_str()); return 1; }
+    std::printf("wrote %s\n", path.c_str());
+    return 0;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -202,5 +250,7 @@ int main(int argc, char** argv) {
     if (command == "validate") return check(args[1]);
     if (command == "build") return summary(args[1]);
     if (command == "preview") return draw(args[1], args);
+    if (command == "edges") return edges(args[1], args);
+    if (command == "format") return format(args[1]);
     return usage();
 }

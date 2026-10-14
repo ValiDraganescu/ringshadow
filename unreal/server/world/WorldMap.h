@@ -229,6 +229,10 @@ struct WorldMercs {
     static const std::vector<std::string>& names();
 };
 
+/// Where unit `u` stands at `at`, or the nearest open ground within `reach`
+/// cells round it (still `at` if none).
+Vec2 openGround(const Simulation& sim, const Unit& u, Vec2 at, double reach);
+
 /// What the world's rules are.
 struct WorldParams {
     /// A new pilot's wallet: a Citadel (400) and a Derrick (75) with some
@@ -875,6 +879,9 @@ private:
         std::optional<Flight> flight;
         /// The driven unit's region position after the last step.
         std::optional<Vec2> last;
+        /// Its last region change was an edge crossing (W4): inputs its
+        /// client made before it heard of it still steer the unit.
+        bool walkedIn = false;
         /// Its key (empty: not kept), and its own Prospector in `region`
         /// (driven or not; in flight: the one it left).
         std::string key;

@@ -92,7 +92,19 @@ void Client::message(const std::vector<uint8_t>& data) {
         if (!decode(data, rc) || rc.visit <= visit_) return;
         regionChange_ = rc;
         visit_ = rc.visit;
-        mirror_ = std::make_unique<Mirror>(rc.region);
+        // One built ahead for this region (W4), else built now; the pilot's
+        // side from the one it replaces until its first snapshot.
+        const std::unique_ptr<Mirror> old = std::move(mirror_);
+        tookPrepared_ = false;
+        for (auto it = prepared_.begin(); it != prepared_.end(); ++it) {
+            if ((*it)->region() != rc.region) continue;
+            mirror_ = std::move(*it);
+            prepared_.erase(it);
+            tookPrepared_ = true;
+            break;
+        }
+        if (!tookPrepared_) mirror_ = std::make_unique<Mirror>(rc.region);
+        if (old) mirror_->inherit(*old);
         if (onRegionChange) onRegionChange(rc);
         std::deque<SnapshotPart> early;
         early.swap(waiting_);
@@ -135,6 +147,18 @@ void Client::message(const std::vector<uint8_t>& data) {
     default:
         return;  // the client's own kinds
     }
+}
+
+void Client::prepare(std::unique_ptr<Mirror> mirror) {
+    if (!mirror) return;
+    // The same region again: the newer one.
+    for (auto& m : prepared_) {
+        if (m->region() != mirror->region()) continue;
+        m = std::move(mirror);
+        return;
+    }
+    prepared_.push_back(std::move(mirror));
+    while (prepared_.size() > kMaxPrepared) prepared_.erase(prepared_.begin());
 }
 
 void Client::applyPart(const SnapshotPart& part) {

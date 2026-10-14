@@ -584,6 +584,7 @@ std::vector<uint8_t> encode(const WorldMessage& m) {
         writeString(w, g.name);
         w.writeBits(uint64_t(g.style), 4);
         w.writeBits(uint64_t(g.size), 4);
+        w.writeBits(uint64_t(g.ground), 4);
         writeVarint(w, static_cast<uint64_t>(g.column));
         writeVarint(w, static_cast<uint64_t>(g.row));
         writeVarint(w, g.pads.size());
@@ -613,7 +614,8 @@ bool decode(const std::vector<uint8_t>& bytes, WorldMessage& m) {
         if (!readString(r, g.id) || !readString(r, g.name)) return false;
         g.style = static_cast<MapStyle>(r.readBits(4));
         g.size = static_cast<MapSize>(r.readBits(4));
-        if (size_t(g.style) >= 4 || size_t(g.size) >= 4) return false;
+        g.ground = static_cast<region::Ground>(r.readBits(4));
+        if (size_t(g.style) >= 4 || size_t(g.size) >= 4 || size_t(g.ground) >= allCases<region::Ground>().size()) return false;
         g.column = static_cast<int64_t>(readVarint(r));
         g.row = static_cast<int64_t>(readVarint(r));
         const uint64_t pads = readVarint(r);

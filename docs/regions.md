@@ -19,12 +19,15 @@ autocraft-region new --style S --seed N --size Z [--id ID] [-o FILE]
 autocraft-region validate FILE        problems one a line; exit 1 if any
 autocraft-region build FILE           summary (ore, wells, open ground) + problems
 autocraft-region preview FILE -o OUT.png [--scale PX]
+autocraft-region edges FILE [--depth D]   the ground's level along each edge
+autocraft-region format FILE              rewrite it in the tool's layout
 ```
 
 The preview: north up, a labelled grid every 8 cells, height as colour bands
 (level 0 olive, 1 tan, 2 pale), cliffs red-brown, rocks dark grey, plants
 green dots, ore violet, MH wells silver, pads yellow rings, spawns green
-diamonds, blueprint sites gold squares (named, with kind and blueprint), openings cyan, each problem a red ring numbered as in the list
+diamonds, blueprint sites gold squares (named, with kind and blueprint), openings cyan
+(their floor level as L0…L4), the border's outline dotted, each problem a red ring numbered as in the list
 below the map.
 
 ## Coordinates
@@ -34,7 +37,8 @@ Cells from the region's **north-west corner**: `[x, z]`, x east, z south
 huge 272×176. Every point must lie inside. In the game's ground coordinates
 the region is centred: ground = (x − width/2, z − depth/2).
 
-Levels: 0 low ground, 1 high ground, 2 higher. One level is 2.4 high.
+Levels: 0 low ground, 1 high ground, 2 higher, up to 4 for a landmark's
+mesa or spire. One level is 2.4 high.
 
 ## The file
 
@@ -46,6 +50,7 @@ Levels: 0 low ground, 1 high ground, 2 higher. One level is 2.4 high.
   "base": {"style": "highlands",        // highlands | openField | ridge | badlands
            "seed": 1,                   // whole number; leave out for the game's own RTS map
            "drop": ["resources", "doodads"]},  // optional: the base without its ore and wells / rocks and plants
+  "ground": "rust",                     // optional: the ground's palette (below)
   "height": [ ... ],
   "deposits": [{"at": [40, 30], "amount": 1800, "angle": 90}],
   "wells": [{"at": [52, 30], "amount": 2250}],
@@ -89,10 +94,55 @@ base's plateaus and ramps.
 - `wells`: an MH well; a Derrick stands on it (needs flat ground 1.5 cells
   round). `amount` 1…100000 (the bases' hold 2250).
 - `doodads`: `kind` rock | boulder | rockSpire | crate | crateStack | plant |
-  bush | debris | deadTree | tower; `rotation` degrees; `scale` 0.25…4.
-  Plants, bushes and debris are walkable; the rest is solid.
+  bush | debris | deadTree | tower, or a landmark (below); `rotation`
+  degrees; `scale` 0.25…4. Plants, bushes and debris are walkable; the
+  rest is solid.
 - The base's rocks and plants give way to what the file puts down: deposits,
   wells, pads, spawns and opening lanes clear them.
+
+## ground
+
+The palette the game paints the region's ground with (W3), so crossing an
+edge feels like arriving somewhere new. Left out: `plain`, the game's own
+brown dirt.
+
+| ground | looks like | regions |
+|---|---|---|
+| `plain` | the brown dirt | Prospect Landing, Tern Ridge, Cinder Steps |
+| `rust` | rust-red earth, darker iron stains | Rust Hollow |
+| `salt` | pale salt crust in plates, grey brine in the cracks | Brine Pans |
+| `ash` | soft grey ash, paler flecks | Ashen Shelf |
+| `glass` | dark glassy ground in facets that catch the sun | Glass Flats |
+| `slag` | black slag, cracks that glow like embers (more at night) | Slag Pockets |
+| `frost` | cool blue-grey stone, frost on it from night to mid-morning | Cold Fork |
+| `ochre` | ochre in bands by height, the cliffs banded like strata | Dust Terraces |
+
+The game blends the last 16 cells to each edge halfway toward the
+neighbour's palette (from the World message), so both sides of an edge meet
+in the same colour, and the scenery past the edge is the neighbour's.
+
+## Landmarks
+
+Four doodad kinds that make a place: put a few where they add to the
+region's landmark, not as clutter. Their feet are solid (`NavGrid::footprint`).
+
+| kind | is | size at scale 1 | feet |
+|---|---|---|---|
+| `arch` | a natural stone arch | 7 across, 5 high | two legs 5.2 apart: drive under it along its own z (rotation 0: north–south) |
+| `sunkHauler` | a dead ore hauler half sunk in the ground, nose down | 5 long | its length along x |
+| `derrickRuin` | the steel lattice of a derrick tower, bent, a fallen piece beside it | 9 high | 2.5 across |
+| `relayDish` | a crashed relay dish on its side, its mast snapped | 4 across | the dish and its mast |
+
+The First Reach has two in each region (the region files' `doodads`). Glass Flats' Glass Needle rises to level 4
+and Brine Pans' Brine Stack to level 3 (sheer, under their rock crowns).
+
+The models: `unreal/Tools/Editor/models/landmarks.py` (concepts in
+`art/models/landmarks/concepts/`).
+
+Pictures: `-AcMmoShots=DIR -AcMmoShotsW3` (AcMmoShots.cpp) visits each region
+of `-AcMmoW3Regions=a,b,c` (default start, rust-hollow, glass-flats,
+slag-pockets) by pad flights and shoots it toward its nearest landmark at
+noon and at dusk, and the start region's south edge looking into Brine Pans.
 
 ## Places
 
@@ -134,6 +184,47 @@ cells along the edge (x on north and south, z on east and west), ≥ 4 long,
 not overlapping. The lane 2 cells in must be open the whole span and joined
 to the region's main open ground.
 
+A span can carry its passage's floor level (W4):
+`{"span": [41, 55], "level": 0}`. The build then lays a flat mouth at that
+level from 2 cells past the edge to 5 cells in (2 cells past each end of the
+span), joining the ground over 5 more cells, so both sides of a shared edge
+meet at exactly the same height. Write the level on both sides.
+
+## border
+
+The region's natural border (W4, docs/mmorpg-m8.md): the outline of its
+playable land, and the walls outside it, so a region is never a rectangle
+and its edges never show as a line or a fence.
+
+```json
+"border": {"outline": [[0, 41], [6, 30], [14, 22], ...], "level": 4}
+```
+
+- `outline`: the playable land's corners (≥ 3, no side crossing another),
+  region cells. Outside it the ground rises into a wall `level` levels
+  high (1…4, default 4), its cliff face at the outline, its top rising a
+  level or so further out, rocks, boulders and spires strewn over it (the
+  build adds them, about one every 4.5 cells). Walls are no ground: nothing
+  walks on them, a cliff hop does not land on them.
+- Round each opening the outline goes out to the edge: the passage is a gap
+  in the walls, its faces 1.5 cells past each end of the span.
+- Within 4 cells of an edge the walls follow the edge's openings alone (a
+  wall everywhere but in the gaps, exactly the wall's level at the edge), so
+  two regions' walls meet without a seam and the world reads as one piece.
+- A unit walks up to an open edge and up to 1 cell past it
+  (`RegionEdges::overhang`); the server hands it to the neighbour there
+  (docs/worlds.md, "Edges").
+- Everything placed (pads, spawns, sites, deposits, wells) lies inside the
+  outline by at least a cell.
+
+`autocraft-region edges FILE [--depth D]` prints the ground's level along
+each edge, D cells in, so a passage goes where both neighbours' ground is
+at one level; `autocraft-region format FILE` rewrites a file in the tool's
+own layout. The First Reach's borders and passages were drawn by a script
+(an outline inset 6–20 cells from the rectangle by a smooth noise, out to
+the edge round each passage, clear of what the region holds), then checked
+by eye on the previews; edit the outline by hand from there.
+
 ## Problems
 
 `validate` (and `build`, `preview`) reports, each with its place in the file
@@ -150,7 +241,9 @@ and the region position:
   site, or cut off (a vault: off high ground, or with no ramp and no
   cliff hop to it);
 - a ramp end on the wrong level, a ramp too steep;
-- an opening blocked (a cliff, a rock, ore, a well) or cut off.
+- an opening blocked (a cliff, a rock, ore, a well) or cut off;
+- a border whose outline crosses itself or closes a passage, and a pad,
+  spawn, site, deposit or well outside it.
 
 "Cut off" means not joined to the region's largest open area on the
 walking grid. A problem never stops `build` or `preview`.

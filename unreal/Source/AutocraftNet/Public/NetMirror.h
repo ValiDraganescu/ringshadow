@@ -23,6 +23,22 @@ public:
     /// pilot plays (the fog and the memory are its).
     explicit Mirror(const RegionDescription& region, int64_t side = Pilot::player);
     ~Mirror();
+    /// A world's region's description as its server gives it (W4): `like`
+    /// (another region of the same world: its fog, its step) with
+    /// `regionFile`, its map built here for the name, version and seed. For
+    /// a mirror made ahead of time (`Client::prepare`).
+    static RegionDescription describe(const RegionDescription& like, const std::string& regionFile);
+
+    /// The pilot's side from the mirror this one replaces (its wallet and
+    /// levels, the sky, the XP), until its own first snapshot says (W4: the
+    /// unit carried over a seamless edge walks on at its own pace).
+    void inherit(const Mirror& from);
+
+    /// Before its first snapshot: `unit` is the one the pilot drives (W4,
+    /// carried over a seamless edge), so the game and the prediction drive
+    /// it at once. The first snapshot says for itself.
+    void expect(int64_t unit, double heading);
+
     Mirror(const Mirror&) = delete;
     Mirror& operator=(const Mirror&) = delete;
 

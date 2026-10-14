@@ -101,3 +101,33 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     ASSERT_TRUE(back.has_value());
     EXPECT_TRUE(back->blueprints == g.blueprints);
 }
+
+// W4: a world saved before the regions had walls. A pilot's Prospector saved
+// where Prospect Landing's west wall now stands is put on the nearest open
+// ground on load, and walks from there.
+TEST(save_from_before_the_walls_puts_the_prospector_on_open_ground) {
+    WorldSave s;
+    SavedRegion r;
+    r.id = "start";
+    r.time = 10;
+    r.nextId = 20;
+    // Region (4, 20): a wall now, 4 cells in from the west edge.
+    r.units.push_back(SavedUnit{7, UnitKind::prospector, Vec2(4 - 72, 20 - 48), 0, 60, 0, false, key});
+    s.regions.push_back(r);
+    s.pilots.push_back(SavedPilot{key, 100, 0, "start", 7, "", ""});
+    WorldMap w(firstWorld());
+    EXPECT_TRUE(w.restore(s).empty());
+    constexpr PilotId me = 3;
+    ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::restored);
+    const Simulation& sim = w.start().simulation();
+    const Unit* u = nullptr;
+    for (const Unit& v : sim.state.units)
+        if (v.id == 7) u = &v;
+    ASSERT_TRUE(u != nullptr);
+    const Vec2 was(4 - 72, 20 - 48);
+    std::printf("  saved at %.1f,%.1f (a wall now); stands at %.1f,%.1f, %.1f cells off\n", was.x, was.y, u->position.x,
+                u->position.y, distance(u->position, was));
+    EXPECT_TRUE(!sim.pilotCanStand(*u, was));
+    EXPECT_TRUE(sim.pilotCanStand(*u, u->position));
+    EXPECT_TRUE(distance(u->position, was) < 24);
+}

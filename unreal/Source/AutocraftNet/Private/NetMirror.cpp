@@ -29,6 +29,33 @@ Mirror::Mirror(const RegionDescription& region, int64_t side) : region_(region),
 
 Mirror::~Mirror() = default;
 
+void Mirror::inherit(const Mirror& from) {
+    if (snapshotId_ != 0 || !from.playersKnown_) return;
+    sim_->state.players = from.sim_->state.players;
+    playersKnown_ = true;
+    if (!sky_) sky_ = from.sky_;
+    if (!xp_) xp_ = from.xp_;
+}
+
+void Mirror::expect(int64_t unit, double heading) {
+    if (snapshotId_ != 0) return;
+    driven_ = unit;
+    sim_->pilot = Pilot(unit, heading);
+}
+
+RegionDescription Mirror::describe(const RegionDescription& like, const std::string& regionFile) {
+    RegionDescription d = like;
+    d.regionFile = regionFile;
+    if (const region::Parsed p = region::parse(regionFile); p.file) {
+        d.map = MapChoice{p.file->style, p.file->size, 2};
+        const MapDefinition map = region::build(*p.file).map;
+        d.mapName = map.name;
+        d.mapVersion = map.version;
+        d.seed = map.seed;
+    }
+    return d;
+}
+
 void Mirror::startOver() {
     // The map's patches and wells as they start; the rest comes in snapshots.
     sim_->state = GameState::new_(*sim_->map);

@@ -1,6 +1,7 @@
 #include "AcDaylight.h"
 
 #include "AcGasGiant.h"
+#include "AcGroundLook.h"
 #include "AcSkyFx.h"
 #include "AcLog.h"
 #include "AcSimSubsystem.h"
@@ -672,6 +673,8 @@ void AAcDaylight::Update(const double Time)
 				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("Ripples"), CVarRipples.GetValueOnGameThread());
 				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("Gloss"), CVarGloss.GetValueOnGameThread());
 			}
+			// The region's ground palette, blended toward the neighbours' at the edges.
+			AcGroundLook::Apply(Terrain->GetMaterial(), Sim, Hour, Dark);
 		}
 	}
 

@@ -20,6 +20,22 @@ void Predictor::reset() {
     seenSnapshot_ = -1;
     offset_ = Vec2(0, 0);
     turn_ = 0;
+    carried_ = false;
+}
+
+void Predictor::carryOver(Mirror& next, int64_t unit, Vec2 shift, int64_t visit) {
+    // Its inputs are the next region's now (the server takes them there).
+    for (PilotInput& in : pending_) in.visit = visit;
+    visit_ = visit;
+    unitVisit_ = visit;
+    seenSnapshot_ = -1;
+    if (!unit_) return;
+    unit_->id = unit;
+    unit_->position += shift;
+    carried_ = true;
+    next.expect(unit, unit_->heading);
+    // In the new mirror at once: its first step there is the driven unit's.
+    draw(next);
 }
 
 void Predictor::advance(Mirror& mirror, Unit& u, const PilotInput& in) const {
@@ -49,6 +65,10 @@ void Predictor::input(Mirror& mirror, const PilotInput& in) {
 }
 
 void Predictor::reconcile(Mirror& mirror) {
+    // Carried over a seamless edge: on from the inputs until the new
+    // region's first snapshot.
+    if (carried_ && mirror.snapshotId() == 0) return;
+    carried_ = false;
     const std::optional<int64_t> driven = mirror.driven();
     const Unit* truth = driven ? mirror.unit(*driven) : nullptr;
     if (!truth) {
@@ -118,6 +138,9 @@ void Predictor::draw(Mirror& mirror) const {
     if (!u) return;
     Simulation& sim = mirror.simulation();
     if (const std::optional<int64_t> i = sim.unitIndex(u->id)) sim.state.units[size_t(*i)] = *u;
+    // Carried over: the new region's mirror has no units yet; the game
+    // draws this one until its first snapshot brings the server's.
+    else if (carried_) sim.state.units.push_back(*u);
 }
 
 } // namespace ac::net

@@ -227,6 +227,12 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
         const GroundRect b = map->bounds;
         return p.x > b.minX && p.x < b.maxX && p.y > b.minZ && p.y < b.maxZ;
     }
+    // Past a region's open edge (W4): it stands on the ground just inside.
+    if (map && map->edges) {
+        const std::optional<Vec2> in = map->edges->standIn(map->bounds, p);
+        if (!in) return false;
+        p = *in;
+    }
     if (nav && (!nav->standable(p) || nav->inRock(p))) return false;
     const double r = Rules::radius(u.kind) * 0.8;
     if (std::any_of(state.structures.begin(), state.structures.end(),

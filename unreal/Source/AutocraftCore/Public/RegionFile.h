@@ -98,10 +98,20 @@ enum class Edge : uint8_t { north, east, south, west };
 enum class Ground : uint8_t { plain, rust, salt, ash, glass, slag, frost, ochre };
 
 /// A passable stretch of an edge: cells along it (x on north and south,
-/// z on east and west).
+/// z on east and west), and the level its passage's floor meets the edge at
+/// (nil: the ground as it is there).
 struct Span {
     double from = 0, to = 0;
+    std::optional<int64_t> level;
     bool operator==(const Span&) const = default;
+};
+
+/// The region's natural border (docs/regions.md, "border"; W4): the outline
+/// of its playable land, and the walls' level outside it.
+struct Border {
+    std::vector<Vec2> outline;
+    int64_t level = 4;
+    bool operator==(const Border&) const = default;
 };
 
 struct RegionFile {
@@ -119,6 +129,8 @@ struct RegionFile {
     bool dropResources = false;
     bool dropDoodads = false;
     std::vector<Edit> height;
+    /// nil: no walls (the rectangle's edges stop units).
+    std::optional<Border> border;
     std::vector<Deposit> deposits;
     std::vector<WellSite> wells;
     std::vector<Prop> doodads;
@@ -168,6 +180,12 @@ constexpr double padRadius = 3.0;
 constexpr double padReach = 4.0;
 /// How deep into the region an opening's lane is checked, cells.
 constexpr double laneDepth = 2.0;
+/// An opening with a level: its passage's floor is flat at that level this
+/// deep in from the edge, then joins the ground over `mouthSlope` (W4).
+constexpr double mouthDepth = 5.0;
+constexpr double mouthSlope = 5.0;
+/// The walls' rocks: about one every this many cells each way (W4).
+constexpr double wallRockSpacing = 4.5;
 
 /// The region built: its map (ground coordinates, centred) and its places.
 struct AUTOCRAFTCORE_API Built {

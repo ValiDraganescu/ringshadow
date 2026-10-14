@@ -236,6 +236,9 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         }
         for (const SavedUnit& u : sr.units) {
             Unit v = sim.freshUnit(u.kind, u.id, Pilot::player, u.at, u.heading);
+            // Saved where the region's ground has changed since (W4: a wall
+            // now stands there): on the nearest open ground.
+            v.position = openGround(sim, v, u.at, 24);
             v.hp = u.hp;
             v.carrying = u.cargo;
             v.hydrogen = u.hydrogen ? std::optional<bool>(true) : std::nullopt;

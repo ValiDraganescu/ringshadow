@@ -37,9 +37,10 @@ Any problem stops the server (exit 2, the problems on stderr):
   used once;
 - every region has at least one pad;
 - every opening on an edge shared with a neighbour overlaps one of the
-  neighbour's on the facing edge (the convention: the middle 40–60% of
-  every edge, `[58, 86]` on north and south, `[39, 57]` on east and west
-  for a medium region);
+  neighbour's on the facing edge; beside a region with a border (W4,
+  docs/regions.md, "border") it is the same span with the same floor level
+  on both sides, and the ground of the two regions meets along the whole
+  shared edge (within a centimetre: the walls and the passages' floors);
 - the start region and its pad exist.
 
 ## The rules
@@ -49,11 +50,16 @@ Any problem stops the server (exit 2, the problems on stderr):
 - A new pilot appears on the start pad driving a new Prospector, with a
   wallet of 600 ore and 0 MH. The wallet is its side's bank in the region it
   is in (the snapshot's `players[0]`), and goes with it, as do its levels.
-- Edges: the driven unit crosses once its centre is within 2 cells of an
-  edge, inside an opening that meets the neighbour's, moving out (or steered
-  out while pressed against it; a Prospector stops 1.56 cells from an edge).
-  It comes in 2.5 cells inside the neighbour at the same point along the
-  edge, with its load, hit points and levels. Elsewhere the edge is a wall.
+- Edges (W4, seamless): in a region with open edges a unit walks up to an
+  opening's edge and up to a cell past it. The driven unit crosses once its
+  centre is past the edge, inside an opening that meets the neighbour's,
+  and comes in at that same point of the world, just inside the
+  neighbour, with its load, hit points and levels, its input in use and
+  the ones not used yet: it walks on at the same pace, no stop, no jump
+  (`world_crossing_keeps_position_and_speed`). Inputs its client made
+  before it heard of the change still steer it there. Elsewhere the walls
+  stop it. (A region with no openings at all keeps the old rule: within 2
+  cells of the edge, in 2.5 cells inside the neighbour.)
 - Flights: a Prospector within 4 cells of a pad's centre may fly to any
   region's pad (by region id and pad name). It lifts off, 4 s pass, it lands
   on that pad. Refused away from a pad, in flight, where another pilot

@@ -270,11 +270,23 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
     uint8_t* ptr = out.data();
     uint8_t* cptr = cliff.data();
     const std::function<double(Vec2)> heightAt = [&field](Vec2 q) { return field.height(q); };
+    const bool walls = map.edges && !map.edges->outline.empty();
     auto row = [&](int64_t z) {
         for (int64_t x = 0; x < width_; x++) {
             const Vec2 p = origin_ + Vec2(static_cast<double>(x) + 0.5, static_cast<double>(z) + 0.5) * cell;
-            // Keep off the map edge.
-            if (!(x > 2 && z > 2 && x < width_ - 3 && z < height_ - 3)) continue;
+            // Keep off the map edge, but where a region's edge is open to
+            // its neighbour: there a unit walks up to it and past.
+            if (!(x > 2 && z > 2 && x < width_ - 3 && z < height_ - 3)) {
+                const bool open = map.edges && [&] {
+                    for (int64_t e = 0; e < 4; e++) {
+                        if (RegionEdges::depth(map.bounds, e, p) < 2 &&
+                            map.edges->gapAt(e, RegionEdges::along(map.bounds, e, p)))
+                            return true;
+                    }
+                    return false;
+                }();
+                if (!open) continue;
+            }
             // Cliff: steep somewhere within the unit's reach.
             bool steep = false;
             for (Vec2 q : {p, p + Vec2(c, 0), p - Vec2(c, 0), p + Vec2(0, c), p - Vec2(0, c)}) {
@@ -294,6 +306,9 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
             if (blocked) continue;
             // Out of sight is out of play.
             if (!map.inPlay(p, heightAt)) continue;
+            // A region's walls (W4) are no ground: nothing walks on them,
+            // nothing jumps onto them.
+            if (walls && field.wall(p).coverage > 0.5) continue;
             if (steep) cptr[z * width_ + x] = 1; else ptr[z * width_ + x] = 1;
         }
     };

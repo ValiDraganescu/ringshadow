@@ -854,6 +854,9 @@ struct WorldMessage {
         std::string name;
         MapStyle style = MapStyle::highlands;
         MapSize size = MapSize::medium;
+        /// The ground's palette (docs/regions.md, "ground"): the client
+        /// paints its region and blends toward the neighbours' at the edges.
+        region::Ground ground = region::Ground::plain;
         int64_t column = 0;
         int64_t row = 0;
         std::vector<Pad> pads;

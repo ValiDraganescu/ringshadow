@@ -113,6 +113,44 @@ bool MapDefinition::inPlay(Vec2 p, double inset, const std::function<double(Vec2
     return view->shows(q, height(q), inset);
 }
 
+double RegionEdges::depth(const GroundRect& b, int64_t edge, Vec2 p) {
+    switch (edge) {
+    case 0: return p.y - b.minZ;
+    case 1: return b.maxX - p.x;
+    case 2: return b.maxZ - p.y;
+    default: return p.x - b.minX;
+    }
+}
+
+double RegionEdges::along(const GroundRect&, int64_t edge, Vec2 p) { return edge % 2 == 0 ? p.x : p.y; }
+
+const RegionEdges::Gap* RegionEdges::gapAt(int64_t edge, double at) const {
+    for (const Gap& g : gaps) {
+        if (g.edge == edge && at >= g.from && at <= g.to) return &g;
+    }
+    return nullptr;
+}
+
+std::optional<Vec2> RegionEdges::standIn(const GroundRect& b, Vec2 p) const {
+    if (p.x > b.minX && p.x < b.maxX && p.y > b.minZ && p.y < b.maxZ) return p;
+    // Past one edge only (not round a corner), within the overhang, in a gap.
+    std::optional<int64_t> past;
+    for (int64_t e = 0; e < 4; e++) {
+        const double d = depth(b, e, p);
+        if (d > 0) continue;
+        if (past || d < -overhang) return std::nullopt;
+        past = e;
+    }
+    if (!past || !gapAt(*past, along(b, *past, p))) return std::nullopt;
+    constexpr double in = 0.01;
+    switch (*past) {
+    case 0: return Vec2(p.x, b.minZ + in);
+    case 1: return Vec2(b.maxX - in, p.y);
+    case 2: return Vec2(p.x, b.maxZ - in);
+    default: return Vec2(b.minX + in, p.y);
+    }
+}
+
 // MARK: - State.swift
 
 /// A deposit shows four sizes as it is mined out: 3 full … 0 gone.

@@ -18,6 +18,7 @@
 #include <cmath>
 #include <limits>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <sys/stat.h>
 
@@ -174,9 +175,17 @@ TEST(world_load_refuses_each_problem) {
     scratch("missing.json", R"({"id": "missing", "name": "M", "size": "medium", "base": {"style": "openField", "seed": 3},
         "pads": [{"name": "landing", "at": [72, 48]}], "openings": {"west": [[70, 90]]}})");
     const WorldLoad miss = gridOf(R"([["start.json", "../build/world-tests/missing.json"]])");
-    EXPECT_TRUE(mentions(miss, "start east opening [39, 57] meets no opening of missing's west edge"));
+    EXPECT_TRUE(mentions(miss, "start east opening [41, 55] meets no opening of missing's west edge"));
     EXPECT_TRUE(mentions(miss, "missing west opening [70, 90] meets no opening of start's east edge"));
     EXPECT_TRUE(!miss.world.has_value());
+    // W4: beside a region with walls, a passage lines up exactly (span and
+    // floor level), and the ground meets along the whole shared edge.
+    scratch("askew.json", R"({"id": "askew", "name": "A", "size": "medium", "base": {"style": "openField", "seed": 3},
+        "pads": [{"name": "landing", "at": [72, 48]}], "openings": {"west": [[44, 58]]}})");
+    const WorldLoad askew = gridOf(R"([["start.json", "../build/world-tests/askew.json"]])");
+    EXPECT_TRUE(mentions(askew, "start east opening [41, 55] does not line up with askew's west openings"));
+    EXPECT_TRUE(mentions(askew, "start east edge and askew's west edge do not meet"));
+    EXPECT_TRUE(!askew.world.has_value());
 }
 
 // MARK: - Pilots
@@ -236,7 +245,8 @@ TEST(world_edges_hand_the_prospector_to_the_neighbour) {
         ASSERT_TRUE(v != nullptr);
         const Vec2 there = regionPos(w, me);
         const auto [gap, at] = edgeGap(there, w.regionOf(me)->places()->extent(), opposite(edge));
-        EXPECT_NEAR(gap, w.params().arriveDepth, 0.3);
+        // W4: at the same point of the world, just past the edge it crossed.
+        EXPECT_TRUE(gap >= 0 && gap < 0.2);
         EXPECT_NEAR(at, along, 0.3);
         EXPECT_EQ(v->carrying, int64_t(6));
         EXPECT_NEAR(v->hp, 31.0, 1e-9);
@@ -265,29 +275,83 @@ TEST(world_edges_hand_the_prospector_to_the_neighbour) {
     }
 }
 
+// W4: a seamless crossing. Driven out of each edge's passage with the walk
+// held, its inputs still stamped with the visit before (the client has not
+// heard yet), the unit crosses at the same point of the world and walks on at
+// the same pace: every tick's step on the world's grid within 2% of the
+// steps before, no jump, no stop, its heading kept.
+TEST(world_crossing_keeps_position_and_speed) {
+    for (const Edge edge : {Edge::east, Edge::west, Edge::north, Edge::south}) {
+        WorldMap w(first());
+        w.join(me);
+        const Vec2 ext = w.start().places()->extent();
+        const auto& span = w.start().places()->openings[size_t(edge)][0];
+        put(w, me, inFrom(ext, edge, (span.from + span.to) / 2, 6), headingOut(edge));
+        // A point of the world: the region's place on the grid plus its cells.
+        const auto world = [&] {
+            const WorldRegion& g = first().regions[*w.where(me)];
+            return Vec2(double(g.column) * ext.x, double(g.row) * ext.y) + regionPos(w, me);
+        };
+        std::vector<double> steps;
+        Vec2 last = world();
+        int64_t crossedAt = -1;
+        for (int i = 0; i < 150 && (crossedAt < 0 || i < crossedAt + 40); i++) {
+            PilotInput in;
+            in.tick = ++inputTick;
+            in.visit = 0;
+            in.walk = Vec2(1, 0);
+            in.heading = headingOut(edge);
+            w.input(me, in);
+            w.step();
+            if (crossedAt < 0 && w.visit(me) == 1) crossedAt = int64_t(steps.size());
+            const Vec2 now = world();
+            steps.push_back(distance(now, last));
+            last = now;
+        }
+        ASSERT_TRUE(crossedAt > 10);
+        // The pace before the crossing, and every step round it and after.
+        double pace = 0;
+        for (int64_t i = crossedAt - 10; i < crossedAt; i++) pace += steps[size_t(i)] / 10;
+        double lo = 1e9, hi = 0;
+        for (int64_t i = crossedAt - 5; i < int64_t(steps.size()); i++) {
+            lo = std::min(lo, steps[size_t(i)]);
+            hi = std::max(hi, steps[size_t(i)]);
+        }
+        std::printf("  %s: crossed at tick %lld, pace %.4f cells a tick, steps %.4f…%.4f round and after it\n",
+                    std::string(region::edgeName(edge)).c_str(), (long long)crossedAt, pace, lo, hi);
+        EXPECT_TRUE(pace > 0.01);
+        EXPECT_TRUE(lo > pace * 0.98 && hi < pace * 1.02);
+        EXPECT_NEAR(drivenUnit(w, me)->heading, headingOut(edge), 1e-6);
+    }
+}
+
 TEST(world_closed_edges_stop_it) {
     // Start and Glass Flats side by side: Start's north edge is the world's
-    // border, and its east edge is closed outside its opening.
+    // border (its passage there leads nowhere: the unit stands in it, past the
+    // edge by the overhang at most), and its east edge is walled outside its
+    // passage (W4: the wall stops it well before the edge).
     WorldLoad l = gridOf(R"([["start.json", "glass-flats.json"]])");
     ASSERT_TRUE(l.world.has_value());
     struct Case {
         Edge edge;
         double along;
     };
-    for (const Case c : {Case{Edge::north, 72}, Case{Edge::east, 20}}) {
+    for (const Case c : {Case{Edge::north, 72}, Case{Edge::east, 22}}) {
         WorldMap w(*l.world);
         w.join(me);
         const Vec2 ext = w.start().places()->extent();
-        put(w, me, inFrom(ext, c.edge, c.along, 4), headingOut(c.edge));
+        put(w, me, inFrom(ext, c.edge, c.along, 24), headingOut(c.edge));
         double closest = 99;
-        drive(w, me, headingOut(c.edge), 180, [&] {
+        drive(w, me, headingOut(c.edge), 420, [&] {
             closest = std::min(closest, edgeGap(regionPos(w, me), ext, c.edge).first);
             return w.visit(me) > 0;
         });
         std::printf("  %s at %.0f: came within %.2f cells of the edge\n", std::string(region::edgeName(c.edge)).c_str(), c.along, closest);
         EXPECT_EQ(w.visit(me), int64_t(0));
         EXPECT_EQ(*w.where(me), l.world->start);
-        EXPECT_TRUE(closest <= w.params().crossBand);
+        EXPECT_TRUE(closest >= -RegionEdges::overhang - 1e-9);
+        if (c.edge == Edge::east) EXPECT_TRUE(closest > 2);
+        else EXPECT_TRUE(closest < 0);
     }
 }
 
@@ -494,12 +558,12 @@ TEST(world_client_follows_a_region_change) {
 
 // Problem 9 of docs/mmorpg-shots.md: crossing an edge with the walk held, on
 // a lagged link and a client reading only every 0.2 s (a busy machine's
-// frames). The inputs it sent before it heard of the RegionChange still
-// walk; the server drops them (an earlier visit), so the Prospector stands
-// where it came in. The client's prediction starts over on the new
-// region's unit (its visit), so it draws it there, as the server has it,
-// and nothing drifts after.
-TEST(world_crossing_with_the_walk_held_stops_at_the_arrival) {
+// frames). W4: the inputs it sent before it heard of the RegionChange still
+// walk the unit on (no input lost at a seamless edge); once the client hears
+// of it, it lets go and the Prospector stops. The client's prediction starts
+// over on the new region's unit (its visit), so it draws it where the server
+// has it, and nothing drifts after.
+TEST(world_crossing_with_the_walk_held_walks_on_then_stops) {
     nettest::MemoryNet network;
     nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
     net::LagSimulator lag(clientPort, 9);
@@ -562,13 +626,95 @@ TEST(world_crossing_with_the_walk_held_stops_at_the_arrival) {
     const double drift = distance(there, *arrival);
     const double drawn = distance(predictor.shown()->position, truth->position);
     std::printf("  came in at %.2f,%.2f; %.3f cells later; drawn %.4f cells from the server's\n", arrival->x, arrival->y, drift, drawn);
-    EXPECT_TRUE(drift < 0.01);
+    EXPECT_TRUE(drift > 0.05);
     EXPECT_TRUE(drawn < 0.01);
     EXPECT_TRUE(distance(predictor.predicted()->position, truth->position) < 0.01);
     // And no drift follows.
     until([] { return false; }, 1);
     EXPECT_TRUE(distance(regionPos(w, pilot), there) < 1e-9);
     EXPECT_TRUE(distance(predictor.shown()->position, drivenUnit(w, pilot)->position) < 0.01);
+}
+
+// W4: the client's side of a seamless crossing. The walk held east out of
+// Prospect Landing into Tern Ridge on a lagged link: the neighbour's mirror
+// made ahead (`Client::prepare`) is the one the RegionChange swaps in, the
+// prediction carries over (`Predictor::carryOver`), and the unit as drawn,
+// on the world's grid, moves on every frame at the same pace: no jump, no
+// stop, through the change and the new region's first snapshot.
+TEST(world_client_draws_the_crossing_without_a_seam) {
+    nettest::MemoryNet network;
+    nettest::MemoryPort serverPort(network, nettest::kServerAddress), clientPort(network, nettest::kClientAddress);
+    net::LagSimulator lag(clientPort, 9);
+    net::LagSettings link;
+    link.delay = 0.03;
+    link.jitter = 0.005;
+    lag.setDefault(link);
+    ServerOptions o;
+    o.world = first();
+    o.token = nettest::kToken;
+    o.secret = nettest::serverConfig().secret;
+    Server server(serverPort, o);
+    HeadlessClient client(lag, nettest::clientConfig());
+    net::Predictor predictor;
+    double now = 100;
+    const auto tern = std::find_if(first().regions.begin(), first().regions.end(), [](const WorldRegion& g) { return g.file.id == "tern-ridge"; });
+    const Vec2 ext = first().regions[first().start].built.extent();
+    int64_t visitSeen = 0;
+    std::vector<Vec2> drawn;
+    size_t changedAt = 0;
+    auto tick = [&] {
+        now += 1.0 / 60;
+        server.tick(now);
+        client.receive(now);
+        if (client.visit() != visitSeen && client.mirror()) {
+            // East into the next column: its ground is this one's less a width.
+            visitSeen = client.visit();
+            predictor.carryOver(*client.mirror(), *client.regionChange()->driven, Vec2(-ext.x, 0), client.visit());
+            changedAt = drawn.size();
+        }
+        if (client.mirror()) predictor.reconcile(*client.mirror());
+        if (const auto in = client.sendInput(); in && client.mirror()) predictor.input(*client.mirror(), *in);
+        client.flush(now);
+        predictor.ease(1.0 / 60);
+        if (client.mirror()) predictor.draw(*client.mirror());
+        if (const auto u = predictor.shown()) drawn.push_back(u->position + Vec2(visitSeen > 0 ? ext.x : 0, 0));
+    };
+    client.connect(now);
+    client.join(net::newPilotKey());
+    for (int i = 0; i < 600 && !(client.mirror() && client.mirror()->driven() && client.world()); i++) tick();
+    ASSERT_TRUE(client.mirror() && client.mirror()->driven());
+    // Tern Ridge's mirror made ahead, as the game does on the worker thread.
+    client.prepare(std::make_unique<net::Mirror>(net::Mirror::describe(client.mirror()->region(), tern->text)));
+    WorldMap& w = server.world();
+    const PilotId pilot = w.start().pilots().front();
+    const auto& span = w.start().places()->openings[size_t(Edge::east)][0];
+    put(w, pilot, inFrom(ext, Edge::east, (span.from + span.to) / 2, 5), 0);
+    // Settle there, then walk east through the passage.
+    for (int i = 0; i < 30; i++) tick();
+    client.steer.walk = Vec2(1, 0);
+    client.steer.heading = 0;
+    drawn.clear();
+    for (int i = 0; i < 360 && (changedAt == 0 || drawn.size() < changedAt + 90); i++) tick();
+    ASSERT_TRUE(client.visit() == 1);
+    EXPECT_TRUE(client.tookPrepared());
+    ASSERT_TRUE(changedAt > 40 && drawn.size() > changedAt + 60);
+    // The pace walking up to it, then every frame from 20 before the change
+    // to 60 after.
+    std::vector<double> steps;
+    for (size_t i = 1; i < drawn.size(); i++) steps.push_back(distance(drawn[i], drawn[i - 1]));
+    double pace = 0;
+    for (size_t i = changedAt - 40; i < changedAt - 20; i++) pace += steps[i] / 20;
+    double lo = 1e9, hi = 0;
+    for (size_t i = changedAt - 20; i < changedAt + 60; i++) {
+        lo = std::min(lo, steps[i]);
+        hi = std::max(hi, steps[i]);
+    }
+    if (std::getenv("W4_STEPS"))
+        for (size_t i = changedAt - 20; i < changedAt + 60; i++) std::printf("    %+lld %.4f\n", (long long)(int64_t(i) - int64_t(changedAt)), steps[i]);
+    std::printf("  changed at frame %zu (prepared mirror: %s); pace %.4f cells a frame, %.4f…%.4f round the change\n", changedAt,
+                client.tookPrepared() ? "yes" : "no", pace, lo, hi);
+    EXPECT_TRUE(pace > 0.05);
+    EXPECT_TRUE(lo > pace * 0.95 && hi < pace * 1.05);
 }
 
 // A new pilot's Prospector faces the start region's nearest ore (problem 14:

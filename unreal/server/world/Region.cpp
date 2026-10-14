@@ -303,6 +303,19 @@ std::optional<PilotInput> Region::held(PilotId pilot) const {
     return it->second.held;
 }
 
+std::optional<Region::Inputs> Region::inputs(PilotId pilot) const {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return std::nullopt;
+    return Inputs{it->second.pending, it->second.held};
+}
+
+void Region::carryOn(PilotId pilot, const Inputs& in) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return;
+    it->second.pending = in.pending;
+    it->second.held = in.held;
+}
+
 void Region::nextInput(Seat& seat) {
     // Presses count once; held keys, the walk and the heading carry on
     // until the next input comes.

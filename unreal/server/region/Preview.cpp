@@ -44,6 +44,7 @@ constexpr Rgb padColour{250, 206, 60};
 constexpr Rgb spawnColour{80, 235, 130};
 constexpr Rgb siteColour{232, 168, 36};
 constexpr Rgb openingColour{60, 220, 240};
+constexpr Rgb borderColour{255, 236, 200};
 constexpr Rgb problemColour{255, 64, 64};
 
 constexpr int glyphScale = 2, advance = 6 * glyphScale, lineHeight = 9 * glyphScale;
@@ -171,6 +172,21 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         }
     }
 
+    // The border's outline (W4): a dotted line round the playable land.
+    if (file.border) {
+        const std::vector<Vec2>& o = file.border->outline;
+        for (size_t i = 0; i < o.size(); i++) {
+            const Vec2 a = o[i], b = o[(i + 1) % o.size()];
+            const double len = distance(a, b);
+            const int steps = std::max(1, static_cast<int>(len * s));
+            for (int k = 0; k <= steps; k++) {
+                if ((k / 3) % 2 == 1) continue;
+                const auto [px, py] = pixel(a + (b - a) * (static_cast<double>(k) / steps));
+                c.rect(px - 1, py - 1, px + 1, py + 1, borderColour, 0.9);
+            }
+        }
+    }
+
     // Openings: the lane inside and a bar outside the edge.
     for (size_t e = 0; e < 4; e++) {
         const Edge edge = static_cast<Edge>(e);
@@ -185,6 +201,17 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
             case Edge::south: c.rect(o.first, top + md + 1, p.first, top + md + bar + 1, openingColour); break;
             case Edge::west: c.rect(left - bar - 1, o.second, left - 1, p.second, openingColour); break;
             case Edge::east: c.rect(left + mw + 1, o.second, left + mw + bar + 1, p.second, openingColour); break;
+            }
+            // Its passage's floor level (W4).
+            if (span.level) {
+                const std::string t = "L" + std::to_string(*span.level);
+                const auto m = pixel(built.edgePoint(edge, (span.from + span.to) / 2, 0));
+                switch (edge) {
+                case Edge::north: c.text(m.first + 6, top - bar - 7 * glyphScale - 30, t, openingColour); break;
+                case Edge::south: c.text(m.first + 6, top + md + bar + 26, t, openingColour); break;
+                case Edge::west: c.text(4, m.second + 10, t, openingColour); break;
+                case Edge::east: c.text(left + mw + 14, m.second + 10, t, openingColour); break;
+                }
             }
         }
     }
@@ -330,7 +357,8 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     swatch(padColour, "pad");
     swatch(spawnColour, "spawn");
     swatch(siteColour, "blueprint site");
-    swatch(openingColour, "opening");
+    swatch(openingColour, "opening (L: its floor level)");
+    if (file.border) swatch(borderColour, "border outline (walls outside)");
     swatch(problemColour, "problem");
     y += lineHeight + 12;
     for (const auto& [t, col] : notes) {

@@ -54,6 +54,13 @@ public:
     /// had it after its last input used, the inputs after it run again. A
     /// new driven unit starts from the server's; none stops the prediction.
     void reconcile(Mirror& mirror);
+    /// A seamless edge crossing (W4): the same unit walks on in the next
+    /// region. Its prediction moves by `shift` (the old region's ground into
+    /// the new one's), takes the new region's id and visit, and keeps the
+    /// inputs the server has not used (it uses them there too); until the
+    /// new region's first snapshot it goes on from them, and `draw` puts it
+    /// into the new mirror, so it never stops being drawn.
+    void carryOver(Mirror& next, int64_t unit, Vec2 shift, int64_t visit);
     /// One frame of `dt` seconds: the offset eases away.
     void ease(double dt);
     /// Writes the drawn unit (the prediction and the offset) over the
@@ -94,6 +101,8 @@ private:
     int64_t visit_ = 0;
     std::deque<PilotInput> pending_;
     int64_t seenSnapshot_ = -1;
+    /// Carried over (`carryOver`): no snapshot of the new region yet.
+    bool carried_ = false;
     Vec2 offset_{0, 0};
     double turn_ = 0;
     Stats stats_;
