@@ -518,3 +518,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T Journalist started in web-4bb0eb5c (website/ only).
 - D User: Citadel gets 4 free point-defence turrets, one per corner.
 - D User: placed turrets and their upgrades cost like any building.
+- T S2 done d5600c1: detached world server, run file, reattach or replace.
+- N S2 idle: 2 Hz clock and timers, ~0.008% CPU (60 Hz: 0.3–0.5%).
+- D S2: catch-up capped at 24 h; offlineWork hook for H2; regions wait idle.
+- D S2: STOP on the home screen; autocraft-server --stop <save>.
+- N S2 suites: core 467, server 200, net 70; no protocol change.
+- T H2 (mercenaries) next for wt1.
