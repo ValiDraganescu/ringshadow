@@ -61,6 +61,7 @@ Append to `docs/mmorpg-log.md` one line per decision, issue, task change or meas
 ## Rules for you and every brief
 
 - Hidden runs only: `UnrealEditorBG.app`, `-RenderOffscreen` or `-nullrhi`, `-unattended -nosplash -nosound`, the `bCaptureMouseOnLaunch=False` override, `-abslog`, an own `-AcSaveDir`. The user restarts the visible game and editor.
+- Editor builds are heavy (the user, 2026-10-14). Run `Build.sh` only right before a hidden run, and only if C++ in `unreal/Source` changed since the last build; check code steps with the make suites. Workers share one tree, so one build serves all: take `mkdir unreal/server/build/editor-build.lock` first, `rmdir` it after. Hidden runs take turns the same way with `hidden-run.lock`. You verify with the suites and the workers' pictures, not your own editor build.
 - Tests and pictures use their own save and pilot key; the user's save in `~/Library/Application Support/Autocraft/Unreal/mmo/` stays theirs.
 - Scratch files go in the worktree's ignored `unreal/server/build/`.
 - `rm` with exact full paths. Commits carry no AI attribution. Code, docs and prompts describe ideas without naming other games or studios.
