@@ -498,3 +498,11 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: idle server ticks slow; catch-up after downtime capped.
 - T S2 briefed to wt1.
 - D User: playground (menu entry, MMO sandbox) parked.
+- T N2 done e3a5f89, 591206b: the Brood in core, server director, client.
+- D N2: bugs are core units on a Brood side; WorldBrood.cpp directs them.
+- D N2: opening calm: level 1 holds during the first-ten chain.
+- N Protocol 17 (15 skipped); no save change; hunts on.
+- N N2 suites: core 467, server 191, net 69 pass.
+- I mmofly "camera rose with lift-off" fails on the variant too (pre-N2).
+- I Full Lodeback sac reads cream → N1b.
+- T D1 + D2 (defences) next for wt2.
