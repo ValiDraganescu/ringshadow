@@ -353,3 +353,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T G1 done 5007b79: rig screen, 6 shots checked; core 450, server 142, net 67.
 - D Manager: hidden-run queue on; train restarted (pid 9701).
 - T F1 flight → world-clock.
+- T E2 done 177330f, 7c8355d: schedule, crater, deposit; 9 shots.
+- N E2: 2–3 falls a day, deposit 3× median ore, ×1.5 XP.
+- I E2 polish: white-hot deposit, big day embers, thin streak.
+- N E2 task: 68 min against 45 estimated.
+- T S1 then E2 polish → world-look.
