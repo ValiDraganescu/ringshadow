@@ -41,6 +41,7 @@
 #include "CoreMinimal.h"
 #include "Templates/UniquePtr.h"
 
+#include "Ringshadow.h"
 #include "Rules.h"
 #include "SimdMath.h"
 #include "Types.h"
@@ -138,6 +139,9 @@ struct FAcPoseContext
 	/// respects a held `ac.Hour`): read by the renderer on the game thread and
 	/// given to every pose, for lamps that burn at night. 0 where nothing sets it.
 	double Dark = 0.0;
+	/// The ringshadow band over the region now (MMORPG mode; null: none): the
+	/// Brood's glow brightens under it (AcPoseBrood.cpp). Set like `Dark`.
+	const ac::Ringshadow::Band* Sweep = nullptr;
 
 	/// Ground height under `P`, cells.
 	double Ground(ac::Vec2 P) const;

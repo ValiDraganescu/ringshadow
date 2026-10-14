@@ -1033,6 +1033,8 @@ struct Bug {
     std::optional<int64_t> ate;
     /// The unit that last hit it (the director turns the group on it).
     std::optional<int64_t> hitBy;
+    /// Game time it died: its body lies `Brood::bodyStays` s.
+    double diedAt = 0;
 
     bool operator==(const Bug&) const = default;
 };

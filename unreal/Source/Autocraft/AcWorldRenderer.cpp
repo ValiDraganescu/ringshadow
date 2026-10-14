@@ -1,6 +1,7 @@
 #include "AcWorldRenderer.h"
 
 #include "AcDaylight.h"
+#include "AcRingshadow.h"
 #include "AcFog.h"
 #include "AcInstancedMesh.h"
 #include "AcLog.h"
@@ -704,8 +705,11 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 	for (TUniquePtr<FObject>& OPtr : Objects)
 	{
 		FObject& O = *OPtr;
+		// A bug of the Brood on the driven unit: outlined red (docs/creatures.md, "On the client").
+		const bool bOnPilot = O.bUnit && O.Unit && O.Unit->bug && O.Unit->hp > 0 && DrivenUnit >= 0 && O.Unit->target == DrivenUnit;
 		const uint8 Want = (bOutlines && O.bUnit && O.Unit)
-			? AcOutline::StencilFor(O.Unit->kind, O.Unit->anchor, O.Unit->owner, Shown.allied(O.Unit->owner, LocalPlayer))
+			? (bOnPilot ? AcOutline::StencilFoe
+						: AcOutline::StencilFor(O.Unit->kind, O.Unit->anchor, O.Unit->owner, Shown.allied(O.Unit->owner, LocalPlayer)))
 			: AcOutline::StencilNone;
 		if (Want == O.Stencil) continue;
 		Free(O);
@@ -731,6 +735,8 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 	}
 	const AAcDaylight* Daylight = AAcDaylight::Find(GetWorld());
 	const double Dark = Daylight ? Daylight->GetDark() : 0.0;
+	const AAcRingshadow* Ringshadow = AAcRingshadow::Find(GetWorld());
+	const ac::Ringshadow::Band* Sweep = Ringshadow ? Ringshadow->SweepBand() : nullptr;
 	const bool bForceAnimated = CVarForceAnimated.GetValueOnGameThread() != 0;
 	std::atomic<int32> Posed{0};
 	auto PoseOne = [&](const int32 I)
@@ -752,6 +758,7 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 			C.Unit = &*Turned;
 		}
 		C.Dark = Dark;
+		C.Sweep = Sweep;
 		FAcPoseFn Fn;
 		if (O.bUnit)
 		{

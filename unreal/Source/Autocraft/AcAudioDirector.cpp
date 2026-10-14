@@ -149,7 +149,7 @@ namespace
 	bool IsLoop(FName Name)
 	{
 		static const FName Loops[] = {"wind", "drill", "weld", "hum", "minigun", "heal", "rain", "downpour", "rsdrone", "rsbed", "shimmer",
-			"sfcrater"};
+			"sfcrater", "gloamwingidle", "lodebackchew", "matriarchidle"};
 		for (const FName& L : Loops)
 		{
 			if (L == Name) return true;
@@ -183,10 +183,46 @@ FAcAudioRules::FWeapon FAcAudioRules::WeaponOf(std::optional<ac::UnitKind> Kind,
 	}
 }
 
+const char* FAcAudioRules::BroodStrikeOf(ac::UnitKind Kind)
+{
+	switch (Kind)
+	{
+	case ac::UnitKind::gloamwing: return "gloamwingspit";
+	case ac::UnitKind::lodeback: return "lodebackbite";
+	case ac::UnitKind::matriarch: return "matriarchslam";
+	default: return "shardlingbite";
+	}
+}
+
+const char* FAcAudioRules::BroodHurtOf(ac::UnitKind Kind)
+{
+	switch (Kind)
+	{
+	case ac::UnitKind::gloamwing: return "gloamwinghurt";
+	case ac::UnitKind::lodeback: return "lodebackhurt";
+	case ac::UnitKind::matriarch: return "matriarchhurt";
+	default: return "shardlinghurt";
+	}
+}
+
+const char* FAcAudioRules::BroodIdleOf(ac::UnitKind Kind)
+{
+	switch (Kind)
+	{
+	case ac::UnitKind::shardling: return "shardlingidle";
+	case ac::UnitKind::lodeback: return "lodebackidle";
+	default: return nullptr;  // the Gloamwing's wings and the Matriarch's breath loop
+	}
+}
+
 const char* FAcAudioRules::DeathOf(ac::UnitKind Kind)
 {
 	switch (Kind)
 	{
+	case ac::UnitKind::shardling: return "shardlingdeath";
+	case ac::UnitKind::gloamwing: return "gloamwingdeath";
+	case ac::UnitKind::lodeback: return "lodebackdeath";
+	case ac::UnitKind::matriarch: return "matriarchdeath";
 	case ac::UnitKind::scorpion: return "scorpiondeath";
 	case ac::UnitKind::ranger: return "rangerdeath";
 	case ac::UnitKind::comet: return "cometdeath";
@@ -280,6 +316,7 @@ void FAcAudioRules::Reset()
 	Anchoring.Reset();
 	Burrowing.Reset();
 	Locking.Reset();
+	Bugs.Reset();
 	bWatched = false;
 	Delayed.clear();
 	TowerShots.clear();
@@ -566,6 +603,40 @@ void FAcAudioRules::Watch(const ac::GameState& State, const ac::Sight* Sight)
 			if (bHeard && bUp != Anchoring.Contains(U.id)) Anchor(bUp, U.position);
 		}
 	}
+	// The Brood: a sound on each strike (the counter on the wire: every one,
+	// even across a lost snapshot), a cry when hurt, a chitter now and then.
+	TSet<int64> BugsSeen;
+	for (const ac::Unit& U : State.units)
+	{
+		if (!U.bug) continue;
+		BugsSeen.Add(U.id);
+		FBugHeard& B = Bugs.FindOrAdd(U.id);
+		const bool bHeard = bSpeak && (!Sight || Sight->ids.count(U.id) > 0);
+		const bool bAlive = U.hp > 0 && U.bug->state != ac::Bug::State::dead;
+		if (bHeard && bAlive)
+		{
+			if (B.Strikes >= 0 && U.bug->strikes != B.Strikes)
+			{
+				const FName Sound = BroodStrikeOf(U.kind);
+				if (Allow(Sound, 6)) OneShot(Sound, U.position, AcSound::BroodStrikeGain, EAcSoundPool::Combat);
+			}
+			if (B.Hp >= 0 && U.hp < B.Hp - 0.01)
+			{
+				const FName Sound = BroodHurtOf(U.kind);
+				if (Allow(Sound, 3)) OneShot(Sound, U.position, AcSound::BroodHurtGain, EAcSoundPool::Combat);
+			}
+			const bool bCalm = U.bug->state == ac::Bug::State::idle || U.bug->state == ac::Bug::State::move;
+			if (const char* Idle = BroodIdleOf(U.kind); Idle && bCalm && Now >= B.NextIdle)
+			{
+				if (B.NextIdle > 0 && Allow(Idle, 2)) OneShot(Idle, U.position, AcSound::BroodIdleGain, EAcSoundPool::Combat);
+				B.NextIdle = Now + 4.0 + 8.0 * std::uniform_real_distribution<double>(0.0, 1.0)(Random);
+			}
+		}
+		B.Strikes = U.bug->strikes;
+		B.Hp = U.hp;
+	}
+	for (auto It = Bugs.CreateIterator(); It; ++It)
+		if (!BugsSeen.Contains(It.Key())) It.RemoveCurrent();
 	Jumping = MoveTemp(Air);
 	Anchoring = MoveTemp(Set);
 	Burrowing = MoveTemp(Buried);
@@ -742,6 +813,37 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 				* Reach(C.At, AcSound::Carry("sfcrater"));
 			W.At = C.At;
 			W.Lift = 0.3f;
+			Out.push_back(W);
+		}
+	}
+	// The Brood's loops: a Gloamwing's wings, a Lodeback chewing, the
+	// Matriarch's breath; the nearest few in hearing.
+	{
+		struct FNear { float Volume; const ac::Unit* U; FName Name; };
+		TArray<FNear, TInlineAllocator<8>> Near;
+		for (const ac::Unit& U : Shown.units)
+		{
+			if (!U.bug || U.hp <= 0) continue;
+			FName Name;
+			float Gain = 0.f;
+			if (U.kind == ac::UnitKind::gloamwing) { Name = "gloamwingidle"; Gain = AcSound::BroodWingsGain; }
+			else if (U.kind == ac::UnitKind::lodeback && U.bug->state == ac::Bug::State::eat) { Name = "lodebackchew"; Gain = AcSound::BroodChewGain; }
+			else if (U.kind == ac::UnitKind::matriarch) { Name = "matriarchidle"; Gain = AcSound::BroodChewGain; }
+			else continue;
+			const float V = Gain * Reach(U.position, AcSound::Carry(Name));
+			if (V > 0.01f && Variants(Name) > 0) Near.Add({V, &U, Name});
+		}
+		Near.Sort([](const FNear& A, const FNear& B) { return A.Volume > B.Volume; });
+		for (int32 I = 0; I < FMath::Min(Near.Num(), AcSound::BroodLoops); ++I)
+		{
+			FAcLoopWant W;
+			W.Key = Near[I].U->id * 8 + 3;
+			W.Name = Near[I].Name;
+			W.Variant = int32(Near[I].U->id % Variants(Near[I].Name));
+			W.Volume = Near[I].Volume;
+			W.At = Near[I].U->position;
+			W.Lift = Near[I].U->kind == ac::UnitKind::gloamwing ? float(Near[I].U->bug->height) : 0.5f;
+			W.StartFraction = float((Near[I].U->id * 37) % 100) / 100.f;
 			Out.push_back(W);
 		}
 	}

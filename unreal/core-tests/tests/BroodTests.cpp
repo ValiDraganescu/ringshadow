@@ -185,3 +185,24 @@ TEST(Brood_mendsInItsSite) {
     run(m, 2);
     EXPECT_NEAR(hp(m, b), Rules::hp(Unit::Kind::shardling), 1e-9);
 }
+
+/// A dead bug's body lies 6 s in its death state (told once, as a death),
+/// out of every fight, then goes.
+TEST(Brood_aBodyLiesSixSeconds) {
+    auto [s, at] = scene();
+    const int64_t b = bug(s, Unit::Kind::shardling, at);
+    const int64_t pro = addUnit(s, Unit::Kind::prospector, at + Vec2(1.2, 0), 0);
+    Simulation m = sim(s);
+    const Unit shooter = *m.state.unit(pro);
+    m.hit(b, 50, false, &shooter);
+    int died = 0;
+    for (int k = 0; k < 30; k++)
+        for (const auto& e : m.step(1.0 / 30))
+            if (const auto* d = e.as<GameEvent::Died>(); d && d->unit == b) died++;
+    EXPECT_EQ(died, 1);
+    ASSERT_TRUE(m.state.unit(b).has_value());
+    EXPECT_TRUE(m.state.unit(b)->bug->state == Bug::State::dead);
+    EXPECT_TRUE(!m.target(b).has_value());
+    run(m, Brood::bodyStays);
+    EXPECT_TRUE(!m.state.unit(b).has_value());
+}

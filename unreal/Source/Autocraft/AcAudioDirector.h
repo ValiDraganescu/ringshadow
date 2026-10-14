@@ -142,6 +142,16 @@ namespace AcSound
 	inline constexpr float AtlasFootGain = 0.5f;
 	inline constexpr float AtlasEngineGain = 0.3f;
 	inline constexpr float ScorpionStingGain = 0.3f;
+	/// The Brood (docs/creatures.md, "Sounds"; Tools/AudioGen/brood.manifest.json):
+	/// a bite, a spit or a slam on each strike, a hurt cry, the idle chitter
+	/// now and then, a Gloamwing's wings and a Lodeback's chewing as loops
+	/// (the nearest few only).
+	inline constexpr float BroodStrikeGain = 0.5f;
+	inline constexpr float BroodHurtGain = 0.4f;
+	inline constexpr float BroodIdleGain = 0.3f;
+	inline constexpr float BroodWingsGain = 0.3f;
+	inline constexpr float BroodChewGain = 0.45f;
+	inline constexpr int32 BroodLoops = 3;
 	inline constexpr float ScorpionDigGain = 0.6f;
 	inline constexpr float ScorpionLockGain = 0.5f;
 	inline constexpr float ScorpionEngineGain = 1.0f;
@@ -394,6 +404,11 @@ public:
 	static FWeapon WeaponOf(std::optional<ac::UnitKind> Kind, bool bAnchored, bool bTower);
 	/// `<kind>death`, and the report-in line `v<kind>`.
 	static const char* DeathOf(ac::UnitKind Kind);
+	/// A bug's strike (`<kind>bite`, `gloamwingspit`, `matriarchslam`), its
+	/// hurt cry, its idle chitter (none for a kind whose idle is a loop).
+	static const char* BroodStrikeOf(ac::UnitKind Kind);
+	static const char* BroodHurtOf(ac::UnitKind Kind);
+	static const char* BroodIdleOf(ac::UnitKind Kind);
 	static const char* VoiceOf(ac::UnitKind Kind);
 
 	/// The driven unit (its misses and hits play in your ear), if any.
@@ -445,6 +460,10 @@ private:
 	double DryHeard = -1e9;
 	TSet<int64> Anchoring;
 	TSet<int64> Burrowing, Locking;
+	/// The Brood's bugs heard: their strikes and hp at the last look, and
+	/// when each may chitter next.
+	struct FBugHeard { int64 Strikes = -1; double Hp = -1.0; double NextIdle = 0.0; };
+	TMap<int64, FBugHeard> Bugs;
 	bool bWatched = false;
 	std::mt19937 Random{0x5eed};
 };

@@ -44,6 +44,8 @@ WorldParams params(uint64_t seed = 0) {
     WorldParams p;
     p.contracts = false;
     p.missionSeed = seed;
+    // Hunts only where a test asks for them.
+    p.huntMissions = false;
     return p;
 }
 

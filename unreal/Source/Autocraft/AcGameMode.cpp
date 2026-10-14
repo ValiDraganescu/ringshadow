@@ -16,6 +16,7 @@
 #include "AcSimSubsystem.h"
 #include "AcSites.h"
 #include "AcStarfall.h"
+#include "AcBrood.h"
 #include "AcTerrain.h"
 #include "AcWorldRenderer.h"
 
@@ -72,6 +73,8 @@ void AAcGameMode::StartPlay()
 	AAcRingshadow::SpawnFor(GetWorld());
 	// Starfalls in the MMORPG mode (docs/weather.md): the streak, the impact, the crater and its hot deposit.
 	AAcStarfall::SpawnFor(GetWorld());
+	// The Brood's raids told in the MMORPG mode (docs/creatures.md): the KSTR toast and the swarm's sound.
+	AAcBrood::SpawnFor(GetWorld());
 	// Blueprint sites in the MMORPG mode (docs/mmorpg-m7.md W2): a model per site, opened or shut, a column when known.
 	AAcSites::SpawnFor(GetWorld());
 	// Units and buildings as instances (B1).

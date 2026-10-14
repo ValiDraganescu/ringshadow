@@ -247,11 +247,11 @@ struct WorldParams {
     /// server pays the sweep, E1: `WorldMap::underSweep`).
     bool sweepContracts = false;
     /// Citadel missions (K2) are drawn, and their dice (0: seeded by the
-    /// world's id). Hunts are drawn once the Brood is in the world (N2
-    /// turns `huntMissions` on).
+    /// world's id). Hunts are drawn now the Brood is in the world (N2; its
+    /// kills count through `broodKill`).
     bool missions = true;
     uint64_t missionSeed = 0;
-    bool huntMissions = false;
+    bool huntMissions = true;
     /// Starfalls (Starfall.h, WorldStarfall.cpp) fall, and their dice (0:
     /// seeded by the world's id).
     bool starfalls = true;
@@ -1022,8 +1022,6 @@ private:
     bool inSight(size_t r, Vec2 at) const;
     /// The way out of region `r` from `at`: the nearest edge point out of sight.
     Vec2 exitPoint(size_t r, Vec2 at) const;
-    /// How deep ground point `at` of region `r` is in a ringshadow sweep now.
-    double sweepCover(size_t r, Vec2 at) const;
     void tellRaids();
     std::vector<BroodRegion> brood_;
     std::vector<net::Sky::Raid> raids_;

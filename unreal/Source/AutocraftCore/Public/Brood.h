@@ -49,6 +49,8 @@ struct AUTOCRAFTCORE_API Brood {
     static constexpr double mendAfter = 8;
     /// A scared bug (a starfall's impact) runs at full speed this long.
     static constexpr double scareFor = 10;
+    /// A dead bug's body lies this long (its death pose), then goes.
+    static constexpr double bodyStays = 6;
     /// A wandering bug picks a new spot in its site every 3 to 8 s.
     static constexpr double wanderMin = 3;
     static constexpr double wanderMax = 8;

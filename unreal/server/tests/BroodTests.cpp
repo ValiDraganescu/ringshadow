@@ -91,6 +91,12 @@ std::vector<Unit> bugsOf(WorldMap& w, int64_t group) {
     return out;
 }
 
+/// A bug alive (not gone, not a body).
+bool alive(WorldMap& w, int64_t id) {
+    const auto u = simOf(w).state.unit(id);
+    return u && u->hp > 0;
+}
+
 const WorldMap::BroodGroup* groupOf(WorldMap& w, int64_t id) {
     for (const auto& g : w.broodGroups(*w.where(me)))
         if (g.id == id) return &g;
@@ -262,6 +268,11 @@ TEST(brood_killing_a_lodeback_returns_its_ore) {
     const Unit shooter = *drivenUnit(w, me);
     simOf(w).hit(bug, 500, false, &shooter);
     stepFor(w, 0.5);
+    // Dead: its body lies a while (the death pose), its sac burst.
+    ASSERT_TRUE(simOf(w).state.unit(bug).has_value());
+    EXPECT_TRUE(simOf(w).state.unit(bug)->bug->state == Bug::State::dead);
+    EXPECT_TRUE(!alive(w, bug));
+    stepFor(w, Brood::bodyStays);
     EXPECT_TRUE(!simOf(w).state.unit(bug).has_value());
     EXPECT_EQ(simOf(w).state.patches[dep].remaining, before);
 }
@@ -406,7 +417,7 @@ TEST(brood_a_starfall_kills_and_scares) {
         if (u.bug) u.bug->site = u.position, u.bug->coming = false;
     w.setClock(f->impact - 0.2);
     stepFor(w, 0.5);
-    for (const int64_t b : killed) EXPECT_TRUE(!simOf(w).state.unit(b).has_value());
+    for (const int64_t b : killed) EXPECT_TRUE(!alive(w, b));
     for (const int64_t b : scared) {
         const auto u = simOf(w).state.unit(b);
         ASSERT_TRUE(u.has_value());

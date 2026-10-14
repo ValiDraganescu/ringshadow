@@ -66,6 +66,7 @@ void AAcRingshadow::Off()
 {
 	AAcDaylight::RingshadowSun = 1.0;
 	CamCover = 0;
+	SweepNow.Reset();
 	if (!bOn) return;
 	bOn = false;
 	Post->bEnabled = false;
@@ -121,6 +122,8 @@ void AAcRingshadow::Tick(const float DeltaSeconds)
 
 	const ac::GroundRect& Bounds = Sim->Simulation().map->bounds;
 	const std::optional<ac::Ringshadow::Band> Band = ac::Ringshadow::band(Time, Bounds, Day);
+	if (Band) SweepNow = *Band;
+	else SweepNow.Reset();
 	if (!Band)
 	{
 		if (Begun >= 0 && FMath::Abs(Ended - Begun) > 1.0)

@@ -26,6 +26,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
+#include "Ringshadow.h"
+
 #include "AcRingshadow.generated.h"
 
 class UMaterialInstanceDynamic;
@@ -47,6 +49,9 @@ public:
 
 	/// How deep the camera is in the band now (0-1).
 	double CameraCover() const { return CamCover; }
+	/// The band over the pilot's region now (null: no sweep): the Brood's
+	/// glow brightens under it (the renderer hands it to the poses).
+	const ac::Ringshadow::Band* SweepBand() const { return SweepNow ? &*SweepNow : nullptr; }
 
 private:
 	void Off();
@@ -60,6 +65,7 @@ private:
 	bool bLoaded = false;
 	bool bOn = false;
 	double CamCover = 0;
+	TOptional<ac::Ringshadow::Band> SweepNow;
 	/// The sweep (its start, world seconds) already announced, begun, ended.
 	double Announced = -1, Begun = -1, Ended = -1;
 };

@@ -369,6 +369,77 @@ under 6 KB/s before deltas, less with them.
 - The health bar, a red outline when a bug targets the pilot, and the
   toasts.
 
+### As built (N2, 2026-10-14)
+
+What N2 built, and the choices the design left open.
+
+- **Core.** `UnitKind` gets the four kinds appended (16 kinds: the wire's 4
+  bits are full; a fifth Brood kind widens them). `UnitStats::byKind` holds
+  their hp, armour, top speed, bite and range; `Brood` (Brood.h) the rest:
+  wander and march speeds, building damage, XP, the dive, the Lodeback's
+  meal. `Unit::bug` carries the wire's fields and the director's orders;
+  `Simulation::stepBug` carries the orders out each step: the scare, the
+  chase within the leash, the raid, the Lodeback's meal, flight and
+  cornered bite, the way in, the way out, the wander and the mending. A
+  bite goes through `Simulation::hit`, so the pilot's shield charge and
+  Hardened works stop it as any hit. A hovering Gloamwing is in the air
+  (`Unit::airborne`): the torch reaches it only in its dive. A world with a
+  Brood side never declares a winner.
+- **Bodies.** A dead bug lies 6 s as a body (`Bug::State::dead`, hp 0, out
+  of every fight), told once as a death, so the client plays the death pose
+  from the snapshots.
+- **The director** (`server/world/WorldBrood.cpp`). Every step: the hits
+  on bugs (the hitter's XP: the damage's share of the bug's hp × its XP
+  value; the group turns on it), a dead Lodeback's ore back, a starfall's
+  impact; a pilot's kill counts for its hunt missions (K2's
+  `WorldMap::broodKill`; `WorldParams::huntMissions` is on now). Every
+  0.25 s: each group's prey (a Prospector in its site),
+  orders, leaving and taking away out of sight, the raids' warnings, the
+  next group. `WorldParams::brood` (`--brood 0`) turns it off.
+- **Choices.**
+  - Group kinds by level: level 1, a Shardling group (1–3) 4 times in 5,
+    else a lone Lodeback; levels 2–4, Shardlings half the time, Gloamwings
+    and Lodebacks a quarter each. Groups at levels 3–4 are 4–8 Shardlings
+    or 3–4 Gloamwings. A raid off level 1 brings 2–4 Gloamwings with its
+    6–12 Shardlings, in one group.
+  - A raid is the director's group whose POI came out a building: buildings
+    are POIs only while the region's raid clock allows one; their weight is
+    the kind's weight × the building's cost / 100.
+  - A group on its way marches: a Shardling 2.8 cells a second (between its
+    1.6 wander and its 4.4 chase), a Gloamwing at 5, a Lodeback at 1.8.
+  - A hit from outside the leash turns the group, but the leash still
+    holds: a bug chases at most 8 cells past its site's edge.
+  - "Out of sight" for taking a bug away: 16 cells from every Prospector and
+    14 from every realm building's edge.
+  - A hot crater draws nothing (no waiting at the rim).
+  - A raid is told from its swarm's distance at the march speed: at once if
+    it is under 20 s away. The toast and the swarm's sound go to the pilots
+    in the raid's region and the four next to it.
+  - A fallen building is gone (no wreck yet); the realm loses it.
+- **The opening's rule.** In a level-1 region (Prospect Landing) the
+  director holds while any pilot in it or next to it is on the first ten
+  minutes' chain, and its groups never linger within 25 cells of the start
+  pad nor 15 of a Citadel. The chain's places stay calm until it is done.
+- **Wire** (protocol 17, after K2's 16). `Unit::bug` last in the unit's fields: the state
+  (3 bits), the height (6 bits, 0.1 cells), the strikes (4 bits) and the
+  sac (4 bits); the orders never leave the server, and a bug's reload is
+  left out of its snapshot. A bug on the driven unit is ranked with what
+  fights it (every snapshot). The raids and the Matriarch's roars ride the
+  sky (`net::Sky::raids`, `roars`), in every snapshot while they last, like
+  the starfalls; the roars stay empty until N3.
+- **Client.** `AcPoseBrood.cpp` (the four poses), the renderer's red
+  outline for a bug on the pilot, the life bar (a Gloamwing's at its
+  height), the glow × 1.6 under the band (`FAcPoseContext::Sweep`), the
+  sounds (`FAcAudioRules`: a strike sound on each strike, a hurt cry, the
+  chitter, the deaths; a Gloamwing's wings and a Lodeback's chewing as
+  loops, the nearest three), and `AAcBrood` (AcBrood.h): the raid's KSTR
+  toast, "KSTR: BROOD SWARM" over "heading for the Hab Dome  ·  140 m NE",
+  and the swarm in the ear.
+- **Dev and shots.** The server's dev control takes `brood linger`,
+  `brood attack`, `brood dive`, `brood lodeback`, `brood raid` and
+  `brood clear` (`WorldMap::devBrood`); `-AcMmoShotsN2` stages its five
+  pictures with them.
+
 ## Models and how to drive them
 
 `unreal/Tools/Editor/models/<kind>.py`, meshes in `/Game/Models/<kind>/`,

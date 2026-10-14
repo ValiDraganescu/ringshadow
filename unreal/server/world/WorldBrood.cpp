@@ -110,12 +110,6 @@ int64_t WorldMap::broodAlive(size_t r) const {
     return n;
 }
 
-double WorldMap::sweepCover(size_t r, Vec2 at) const {
-    const Simulation& sim = regions_[r]->simulation();
-    if (!sim.map) return 0;
-    return Ringshadow::cover(clock_, at, sim.map->bounds, params_.dayLength);
-}
-
 bool WorldMap::inSight(size_t r, Vec2 at) const {
     const GameState& st = regions_[r]->simulation().state;
     for (const Unit& u : st.units)
@@ -473,7 +467,11 @@ void WorldMap::brood() {
         for (const Simulation::BugHit& h : sim.bugHits) {
             const double share = h.hp / std::max(1.0, Rules::hp(h.kind));
             for (auto& [pilot, p] : pilots_)
-                if (!p.flight && p.region == r && p.unit == h.shooter) earn(p, Brood::xp(h.kind) * share);
+                if (!p.flight && p.region == r && p.unit == h.shooter) {
+                    earn(p, Brood::xp(h.kind) * share);
+                    // A kill counts for its hunt missions (K2).
+                    if (h.kill) broodKill(pilot, h.kind, r);
+                }
             const auto u = st.unit(h.bug);
             if (!u || !u->bug || u->kind == UnitKind::lodeback) continue;
             for (BroodGroup& g : br.groups)
@@ -503,7 +501,7 @@ void WorldMap::brood() {
             br.sacs.erase(it);
         }
         for (const Unit& u : st.units)
-            if (u.kind == UnitKind::lodeback && u.bug) br.sacs[u.id] = {u.bug->sac, u.bug->ate};
+            if (u.kind == UnitKind::lodeback && u.bug && u.hp > 0) br.sacs[u.id] = {u.bug->sac, u.bug->ate};
         // A starfall's impact: it kills every bug near and scares the rest.
         for (const Fall& f : falls_) {
             if (f.region != r || !f.patch || fallsFelt_.count(f.id)) continue;
@@ -685,8 +683,17 @@ std::string WorldMap::devBrood(const std::string& line) {
     };
     std::optional<int64_t> g;
     if (what == "linger") {
-        // Shardlings lingering at the deposit nearest the pilot.
-        const auto dep = nearestDeposit();
+        // Shardlings lingering at the deposit nearest the pilot outside their
+        // site (they leave it alone), in its sight.
+        std::optional<size_t> dep;
+        double best = kInf;
+        for (size_t i = 0; i < st.patches.size(); i++) {
+            const double d = distance(st.patches[i].position, at);
+            if (st.patches[i].remaining > 0 && d >= WorldBrood::siteRadius + 3 && d < best) {
+                best = d;
+                dep = i;
+            }
+        }
         if (!dep) return "dev: brood linger: no deposit";
         g = spawnBroodGroup(r, UnitKind::shardling, 4, Poi::deposit, int64_t(*dep), st.patches[*dep].position, true);
     } else if (what == "attack") {
@@ -726,13 +733,31 @@ std::string WorldMap::devBrood(const std::string& line) {
             grp.leaving = true;
         }
     } else if (what == "raid") {
-        // A raid on the realm's building nearest the pilot (a Hab Dome first).
+        // A raid on the realm's Hab Dome nearest the pilot; with none, one
+        // put up finished 12 cells ahead of it (dev and shots only).
         std::optional<Structure> target;
         for (const Structure& b : st.structures)
-            if (realm(b) && b.complete() && (!target || (b.kind == StructureKind::habDome && target->kind != StructureKind::habDome) ||
-                                             (b.kind == target->kind && distance(b.position, at) < distance(target->position, at))))
+            if (realm(b) && b.complete() && b.kind == StructureKind::habDome &&
+                (!target || distance(b.position, at) < distance(target->position, at)))
                 target = b;
-        if (!target) return "dev: brood raid: no building";
+        if (!target) {
+            for (double k = 12; k <= 24 && !target; k += 2)
+                for (const double turn : {0.0, 0.5, -0.5, 1.0, -1.0}) {
+                    const Vec2 dir(std::cos(heading + turn), std::sin(heading + turn));
+                    const Vec2 spot = at + dir * k;
+                    if (!sim.nav || !sim.nav->walkable(spot) || sim.nav->inRock(spot)) continue;
+                    bool clear = true;
+                    for (const Structure& b : st.structures)
+                        if (distance(b.position, spot) < Rules::radius(b.kind) + Rules::radius(StructureKind::habDome) + 1.5) clear = false;
+                    if (!clear) continue;
+                    st.structures.push_back(Structure(st.nextID++, StructureKind::habDome, Pilot::player, spot));
+                    target = st.structures.back();
+                    sim.reindex();
+                    sim.refreshNav();
+                    break;
+                }
+        }
+        if (!target) return "dev: brood raid: no Hab Dome, and no room for one";
         const Vec2 off = normalize(target->position - at + Vec2(0.01, 0));
         g = spawnBroodGroup(r, UnitKind::shardling, 6, Poi::building, target->id, target->position + off * 9, false);
         if (g) {

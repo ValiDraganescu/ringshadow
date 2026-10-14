@@ -1,6 +1,8 @@
 // Port of Sources/GameCore/Simulation.swift.
 #include "Simulation.h"
 
+#include "Brood.h"
+
 #include "Commander.h"
 #include "PathAhead.h"
 
@@ -2602,7 +2604,9 @@ void Simulation::trapped(std::vector<GameEvent>& events) {
 /// Remove the dead and the destroyed, and end the game when one player
 /// is left with buildings.
 void Simulation::bury(std::vector<GameEvent>& events) {
-    if (any(state.units, [](const Unit& u) { return u.hp <= 0; })) {
+    // A dead bug's body (`Bug::State::dead`) lies `Brood::bodyStays` s, then goes.
+    auto body = [&](const Unit& u) { return u.bug && u.bug->state == Bug::State::dead; };
+    if (any(state.units, [&](const Unit& u) { return u.hp <= 0 && !body(u); })) {
         // Everyone aboard a downed Dropship goes down with it.
         {
             const std::vector<Unit> units = state.units;
@@ -2615,7 +2619,7 @@ void Simulation::bury(std::vector<GameEvent>& events) {
         }
         const std::vector<Unit> units = state.units;
         for (const auto& u : units) {
-            if (!(u.hp <= 0)) continue;
+            if (!(u.hp <= 0) || body(u)) continue;
             if (u.structure && u.task == Unit::Task::inDerrick && state.wells) {
                 const auto r = state.structure(*u.structure);
                 std::optional<size_t> gi;
@@ -2639,8 +2643,19 @@ void Simulation::bury(std::vector<GameEvent>& events) {
             }
             events.push_back(GameEvent::Died{u.id, u.kind, u.owner, u.position});
         }
-        std::erase_if(state.units, [](const Unit& u) { return u.hp <= 0; });
+        for (Unit& u : state.units)
+            if (u.hp <= 0 && u.bug && u.bug->state != Bug::State::dead) {
+                u.hp = 0;
+                u.bug->state = Bug::State::dead;
+                u.bug->diedAt = state.time;
+                u.target = std::nullopt;
+                u.goal = std::nullopt;
+                u.waypoints = std::nullopt;
+            }
     }
+    std::erase_if(state.units, [&](const Unit& u) {
+        return u.hp <= 0 && !(body(u) && state.time - u.bug->diedAt < Brood::bodyStays);
+    });
     if (!any(state.structures, [](const Structure& s) { return s.hp <= 0; })) return;
     const std::vector<Structure> structures = state.structures;
     for (const auto& s : structures) {

@@ -297,7 +297,9 @@ void AAcLifeBars::OnFrame(const FAcFrame&)
 		const TConstArrayView<FTransform> World = Renderer->PartWorld(U.id);
 		if (!Model || World.Num() == 0) continue;
 		const double R = ac::Rules::radius(U.kind);
-		Show(U.id, World[0].GetLocation(), UnitTop(*Model), R * 0.5 + 0.2 * K, AcLifeBars::Width(U.kind), 0.2, U.hp / Full, Full);
+		// A Gloamwing flies above its perched model (AcPoseBrood.cpp).
+		const double Top = UnitTop(*Model) + (U.bug && U.kind == ac::UnitKind::gloamwing ? FMath::Max(0.0, U.bug->height - 0.8) : 0.0);
+		Show(U.id, World[0].GetLocation(), Top, R * 0.5 + 0.2 * K, AcLifeBars::Width(U.kind), 0.2, U.hp / Full, Full);
 	}
 	Used = Xf.Num();
 	Upload(Used);

@@ -96,6 +96,10 @@ namespace AcPose
 		case ac::UnitKind::peregrine: return TEXT("peregrine");
 		case ac::UnitKind::atlas: return TEXT("atlas");
 		case ac::UnitKind::scorpion: return TEXT("scorpion");
+		case ac::UnitKind::shardling: return TEXT("shardling");
+		case ac::UnitKind::gloamwing: return TEXT("gloamwing");
+		case ac::UnitKind::lodeback: return TEXT("lodeback");
+		case ac::UnitKind::matriarch: return TEXT("matriarch");
 		}
 		return TEXT("ranger");
 	}

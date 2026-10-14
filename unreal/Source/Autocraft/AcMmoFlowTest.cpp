@@ -197,8 +197,9 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
 		const ac::GameState* S = M ? &M->simulation().state : nullptr;
 		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
-		// Seated, the region's first snapshots in (the wallet and the buildings).
-		auto Ready = [&] { return Seated() && Mmo->Here() && U && S->players.size() == 1 && Since() > 1.0; };
+		// Seated, the region's first snapshots in (the wallet and the buildings;
+		// the pilots' side, and the Brood's where the region has a brood level).
+		auto Ready = [&] { return Seated() && Mmo->Here() && U && !S->players.empty() && Since() > 1.0; };
 		auto Waited = [&](const TCHAR* What) {
 			if (Since() <= SeatSeconds) return false;
 			Check(false, FString::Printf(TEXT("%s within %.0f s (%s)"), What, SeatSeconds, Mmo ? *Mmo->Message() : TEXT("no client")));

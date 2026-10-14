@@ -152,6 +152,16 @@
 //   05 the mission done in its ring (a hold: the clock moved under the
 //      ringshadow band): the MISSION DONE toast
 //
+// -AcMmoShotsN2 (it adds -AcMmoDevRig: the realm's Citadel, a full wallet):
+// the Brood in the world (docs/creatures.md; docs/mmorpg-m8.md N2), each
+// scene staged by the server's dev control (`brood …` lines,
+// WorldMap::devBrood), DIR/n2-NN-moment.png:
+//   01 Shardlings lingering at the deposit nearest the pilot
+//   02 Shardlings on the Prospector: its hp falling, the bugs outlined red
+//   03 a Gloamwing in its dive, at torch height
+//   04 a Lodeback with a full sac, leaving
+//   05 a raid on a Hab Dome: the KSTR toast told, the dome's life bar falling
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -199,6 +209,7 @@
 #include "AcSites.h"
 #include "SAcLevelUp.h"
 
+#include "Brood.h"
 #include "Pilot.h"
 #include "Ringshadow.h"
 #include "Rules.h"
@@ -293,6 +304,11 @@ namespace
 	ac::Vec2 K2Target{0, 0};
 	/// When it was first seen done (the toast fades in).
 	double K2DoneAt = -1;
+	/// -AcMmoShotsN2: the lingering group staged, the pilot's hp when a
+	/// scene was staged, the raided dome.
+	bool N2Staged = false;
+	double N2Hp = 0;
+	int64 N2Dome = -1;
 	struct FB1Sample
 	{
 		double At;
@@ -400,6 +416,15 @@ namespace
 				return true;
 		}
 		return false;
+	}
+
+	/// The live bug of `Kind` nearest `At` in the mirror (null: none).
+	const ac::Unit* NearestBug(const ac::GameState& S, const ac::Vec2 At, const ac::UnitKind Kind)
+	{
+		const ac::Unit* Best = nullptr;
+		for (const ac::Unit& X : S.units)
+			if (X.kind == Kind && X.bug && X.hp > 0 && (!Best || ac::distance(X.position, At) < ac::distance(Best->position, At))) Best = &X;
+		return Best;
 	}
 
 	/// How far up a building is, 0 to 1.
@@ -597,7 +622,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// for this step only (the flow steps before it in the run go without).
 		if ((FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -647,6 +673,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2"))) T.Phase = 1100;
 			// -AcMmoShotsK2: only the Citadel missions and the Journal (1200-1212).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2"))) T.Phase = 1200;
+			// -AcMmoShotsN2: only the Brood (1300-1311).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2"))) T.Phase = 1300;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -3321,6 +3349,155 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	}
 	case 1211:
+		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsN2
+	case 1300:
+		// The dev rig's home; out from the Citadel's walls onto open ground.
+		if (S && U && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
+		{
+			// Out from the Citadel, then 10 cells short of the deposit nearest
+			// there: the lingering group's site in view, the pilot outside it.
+			const ac::Vec2 C = CitadelOf(*S)->position;
+			const ac::Vec2 Out = ac::normalize(U->position - C + ac::Vec2(0.01, 0));
+			const ac::Vec2 To = C + Out * 13.0;
+			const ac::OreDeposit* D = nullptr;
+			for (const ac::OreDeposit& X : S->patches)
+				if (X.remaining > 0 && ac::distance(X.position, C) > 16 && (!D || ac::distance(X.position, To) < ac::distance(D->position, To))) D = &X;
+			const ac::Vec2 Near = D ? D->position + ac::normalize(To - D->position + ac::Vec2(0.01, 0)) * 10.0 : To;
+			Route({FVector2D(To.x, To.y), FVector2D(Near.x, Near.y)});
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's home"));
+		return;
+	case 1301:
+	{
+		// Walk out, then stage the Shardlings lingering at a deposit in view.
+		if (!N2Staged)
+		{
+			const int32 D = Drive();
+			if (D < 0) { Stalled(TEXT("n2: out from the Citadel")); return; }
+			if (D == 0) return;
+			Check(Mmo->DevClock(TEXT("brood linger")), TEXT("n2: the server stages Shardlings at a deposit in view"));
+			N2Staged = true;
+			T.PhaseAt = Now;
+			return;
+		}
+		const ac::Unit* B = NearestBug(*S, U->position, ac::UnitKind::shardling);
+		if (B) Stop(Face(B->position));
+		if (B && Since() > 5.0)
+		{
+			int32 Calm = 0;
+			for (const ac::Unit& X : S->units)
+				if (X.kind == ac::UnitKind::shardling && X.bug && (X.bug->state == ac::Bug::State::idle || X.bug->state == ac::Bug::State::move)) Calm++;
+			Check(Calm >= 3, FString::Printf(TEXT("n2: %d Shardlings lingering, %.1f cells off"), Calm, ac::distance(B->position, U->position)));
+			Shoot(TEXT("n2-01-linger"), TEXT("Shardlings lingering at a deposit"));
+			return;
+		}
+		TimedOut(TEXT("the Shardlings in sight"), 20);
+		return;
+	}
+	case 1302:
+		// One control file a tick: the clear and the next scene together.
+		Check(Mmo->DevClock(TEXT("brood clear\nbrood attack")), TEXT("n2: the server stages Shardlings on the pilot"));
+		N2Hp = U->hp;
+		Advance();
+		return;
+	case 1303:
+	{
+		// Turned half away: biting at its side, they show beside it from the chase eye.
+		const ac::Unit* B = NearestBug(*S, U->position, ac::UnitKind::shardling);
+		if (B && Since() < 0.5) Stop(Face(B->position) + 1.0);
+		int32 On = 0;
+		for (const ac::Unit& X : S->units)
+			if (X.bug && X.hp > 0 && X.target == U->id) On++;
+		if (B && On >= 2 && U->hp < N2Hp - 1 && Since() > 1.5)
+		{
+			Check(true, FString::Printf(TEXT("n2: %d Shardlings bite the Prospector: %.0f -> %.0f hp"), On, N2Hp, U->hp));
+			Shoot(TEXT("n2-02-attack"), TEXT("Shardlings attacking the Prospector"));
+			return;
+		}
+		TimedOut(TEXT("the Shardlings biting"), 20);
+		return;
+	}
+	case 1304:
+		// One control file a tick: the clear and the next scene together.
+		Check(Mmo->DevClock(TEXT("brood clear\nbrood dive")), TEXT("n2: the server stages Gloamwings on the pilot"));
+		Advance();
+		return;
+	case 1305:
+	{
+		const ac::Unit* G = nullptr;
+		for (const ac::Unit& X : S->units)
+			if (X.kind == ac::UnitKind::gloamwing && X.bug && X.bug->state == ac::Bug::State::dive) G = &X;
+		if (const ac::Unit* B = G ? G : NearestBug(*S, U->position, ac::UnitKind::gloamwing)) Stop(Face(B->position));
+		if (G && G->bug->height <= 1.0 && Since() > 1.0)
+		{
+			Check(G->bug->height < 1.5, FString::Printf(TEXT("n2: a Gloamwing dives to %.1f cells"), G->bug->height));
+			Shoot(TEXT("n2-03-dive"), TEXT("a Gloamwing diving at the Prospector"));
+			return;
+		}
+		TimedOut(TEXT("a Gloamwing's dive"), 25);
+		return;
+	}
+	case 1306:
+		// One control file a tick: the clear and the next scene together.
+		Check(Mmo->DevClock(TEXT("brood clear\nbrood lodeback")), TEXT("n2: the server stages a full Lodeback leaving"));
+		Advance();
+		return;
+	case 1307:
+	{
+		const ac::Unit* L = NearestBug(*S, U->position, ac::UnitKind::lodeback);
+		if (L) Stop(Face(L->position));
+		if (L && Since() > 2.0)
+		{
+			Check(L->bug->sac > ac::Brood::sacFull * 0.9 && L->bug->state == ac::Bug::State::move,
+				FString::Printf(TEXT("n2: a Lodeback leaving with %.0f ore in its sac"), L->bug->sac));
+			Shoot(TEXT("n2-04-lodeback"), TEXT("a Lodeback with a full sac, leaving"));
+			return;
+		}
+		TimedOut(TEXT("the Lodeback in sight"), 20);
+		return;
+	}
+	case 1308:
+		// One control file a tick: the clear and the next scene together.
+		Check(Mmo->DevClock(TEXT("brood clear\nbrood raid")), TEXT("n2: the server stages a raid on a Hab Dome"));
+		N2Dome = -1;
+		Advance();
+		return;
+	case 1309:
+	{
+		const std::optional<ac::net::Sky>& Sky = Mmo->Sky();
+		if (Sky && !Sky->raids.empty() && Since() > 0.5)
+		{
+			N2Dome = Sky->raids.front().building;
+			Check(Sky->raids.front().kind == ac::StructureKind::habDome, TEXT("n2: the raid is told: a Hab Dome"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the raid told"), 15);
+		return;
+	}
+	case 1310:
+	{
+		const ac::Structure* D = nullptr;
+		for (const ac::Structure& X : S->structures)
+			if (X.id == N2Dome) D = &X;
+		// The dome left of the middle: the KSTR toast, still up, is in the middle.
+		if (D) Stop(Face(D->position) - 0.45);
+		if (D && D->hp < ac::Rules::hp(ac::StructureKind::habDome) - 8 && Since() > 0.8)
+		{
+			Check(true, FString::Printf(TEXT("n2: the raided Hab Dome at %.0f of %.0f hp"), D->hp, ac::Rules::hp(ac::StructureKind::habDome)));
+			Shoot(TEXT("n2-05-raid"), TEXT("a raid on a Hab Dome, its health falling"));
+			return;
+		}
+		TimedOut(TEXT("the Hab Dome bitten"), 40);
+		return;
+	}
+	case 1311:
+		Mmo->DevClock(TEXT("brood clear"));
 		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;

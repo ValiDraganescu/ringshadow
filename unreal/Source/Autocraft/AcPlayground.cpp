@@ -143,7 +143,9 @@ const TArray<TPair<FString, TArray<FAcPaletteItem>>>& FAcPaletteItem::Groups()
 		TArray<TPair<FString, TArray<FAcPaletteItem>>> Out;
 		TArray<FAcPaletteItem> Buildings, Units, Doodads;
 		for (const ac::StructureKind K : ac::allCases<ac::StructureKind>()) Buildings.Add(OfStructure(K));
-		for (const ac::UnitKind K : ac::allCases<ac::UnitKind>()) Units.Add(OfUnit(K));
+		// The Brood's bugs are the MMO director's, not the palette's.
+		for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
+			if (K < ac::UnitKind::shardling) Units.Add(OfUnit(K));
 		for (const ac::Doodad::Kind K : ac::allCases<ac::Doodad::Kind>()) Doodads.Add(OfDoodad(K));
 		Out.Emplace(TEXT("Buildings"), Buildings);
 		Out.Emplace(TEXT("Units"), Units);
@@ -931,14 +933,16 @@ void UAcPlaygroundSubsystem::RunTest()
 	Check(!Sim->IsAIOn(), TEXT("no AI"));
 	// Every kind goes down from the palette, for side 5.
 	const int32 Units0 = (int32)Sim->State().units.size();
-	int32 Placed = 0;
+	int32 Placed = 0, Kinds = 0;
 	double X = -30;
 	for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
 	{
+		if (K >= ac::UnitKind::shardling) continue;  // the Brood: not in the palette
+		Kinds += 1;
 		Placed += Put(Text(ac::rawValue(K)), ac::Vec2(X, -18), 5, Pi / 2) ? 1 : 0;
 		X += 3;
 	}
-	Check(Placed == (int32)ac::allCases<ac::UnitKind>().size() && (int32)Sim->State().units.size() == Units0 + Placed,
+	Check(Placed == Kinds && (int32)Sim->State().units.size() == Units0 + Placed,
 		FString::Printf(TEXT("every unit kind put down (%d)"), Placed));
 	Check(Count([](const ac::Unit& U) { return U.owner == 5; }) == Placed, TEXT("for Teal (side 5)"));
 	// A building over another is refused, with the reason.
