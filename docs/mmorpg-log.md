@@ -298,3 +298,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: M7 opened beside M6 (W1, E1, E2, K1, F1).
 - D Manager: ringshadow sweep is the signature world event.
 - T P4b → world-clock; W1 → world-look.
+- T V1 done cb68a4b, 6e9ce2a, cb87929: 20 shots, fixes checked.
+- I V1 left: 1 UNIT chip, Prospector in Derrick footprint.
+- D Manager: E1 sweep derived from world clock, no protocol change.
+- T E1 → first-hour after compaction.
