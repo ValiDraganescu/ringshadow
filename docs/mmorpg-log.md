@@ -557,3 +557,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Protocol 21 (regionsSeen); D3 takes 22.
 - N M2 suites: core 473, server 216, net 81 pass.
 - I Merc orange now via outline pass (H2 follow-up closed).
+- D Manager: W4 borders follow natural walls; neighbours drawn beyond.
+- D Manager: W4 folds W3 (8a1678e); protocol 23; crossing hitch measured.
+- T W4 briefed to wt1.
