@@ -543,3 +543,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D User (relayed by the journalist): deploy each finished website change.
 - D Manager: M2 bakes per-region ortho captures; overlays and tooltips live.
 - T M2 (+ merc paint fix) briefed to wt1.
+- T D1+D2 done 8cac42d, 5f7c9aa: Citadel corner turrets, DEFENCE tab, AA, gatling.
+- D D2: AA tower = Sentinel at level 10; gatling level 5, ground 6, air 4.5.
+- D D1: marks +20% rate, +25% damage, +1 range ×3; 250 ore → 1,000 + 150 MH.
+- N Protocol 20, schema 15, request 17 = UpgradeCitadel.
+- N D suites: core 473, server 216, net 72 pass.
+- I Turrets read tiny, tracers don't show, gatling unpainted → N1b art pass.
+- T D3 (turret upgrades) next for wt2.

@@ -105,10 +105,10 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | C1 | Citadel tax and realm wallet: a share of every unload (start 10%) goes to the realm wallet, a donate action, the realm wallet shown at the Citadel and in the HUD | R1 | done e4611e7 |
 | C2 | Citadel shop: consumables (repair kit, MH canister, shield charge, scanner pulse; first set decided in the task) and every blueprint, from the pilot's wallet, prices rising per blueprint level and per copy bought; blueprints stack and are used up by building; a shop screen | C1 | done f26ab88 |
 | N1 | Bug design and models: docs/creatures.md (kinds: a ground swarmer, a flyer, the brood queen; hp, speed, damage, attraction to POIs, linger, aggro, mining, leaving), models through the model pipeline, sounds offline | | done 0fb7047 (blockout models) |
-| N1b | The Brood's models refined toward the concept art (the Matriarch's sac and crown, opal quills, the Lodeback's glass sac), painted materials | N2 | |
+| N1b | Art pass: the Brood's models toward the concept art (the Matriarch's sac and crown, opal quills, the Lodeback's glass sac), the gatling painted, the Citadel's corner turrets readable, amalgam tracer streams visible | N2, D2 | |
 | N2 | Bugs in the world: server spawns at POIs, linger, attack pilots in their site and buildings, mine unprotected veins and leave; snapshots; client draws, animates, sounds; buildings take damage and can fall | N1, R1 | done 591206b |
-| D1 | Citadel weapons: four free point-defence turrets, one per corner, fire at bugs in range; realm-wallet upgrades for fire rate, damage and range | N2, C1 | |
-| D2 | Defence buildings: AA tower (Sentinel model, air only) and the gatling gun (new model, amalgam rounds, ground and close air), blueprints, prices, build menu | N2, C2 | |
+| D1 | Citadel weapons: four free point-defence turrets, one per corner, fire at bugs in range; realm-wallet upgrades for fire rate, damage and range | N2, C1 | done 5f7c9aa |
+| D2 | Defence buildings: AA tower (Sentinel model, air only) and the gatling gun (new model, amalgam rounds, ground and close air), blueprints, prices, build menu | N2, C2 | done 5f7c9aa |
 | N3 | The brood queen: a giant in a region other than Prospect Landing, a nest with many bugs, her own attack and sound, a reward for killing her | N2 | |
 | D3 | Turret upgrades: per AA tower and gatling, marks for fire rate, damage and range (and the gatling's air reach), paid at the turret from the pilot's wallet; shown on the turret | D2 | |
 | Z1 | The first canyon zone: a canyon cut into a level-2 region (walls, rims to build on, 2–3 entrances, paths that meet at a prize field of rich ore and MH); region file support for zones, paths and build spots; validate and preview | N2 | |
