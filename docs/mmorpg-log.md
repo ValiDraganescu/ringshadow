@@ -476,3 +476,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T N1 done 6222e8d: models (blockout), 49 sounds, lineup pictures.
 - I Brood models are blockouts: flat sac, plain cones → N1b.
 - T N2 (bugs in the world) next for wt2.
+- I Correction: N1 merge 6222e8d had aborted (a stray local edit); merged as 0fb7047.
