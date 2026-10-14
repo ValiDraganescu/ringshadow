@@ -417,3 +417,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T Build train stopped; 0eec581 commits build.sh, hidden_run.py, skills.
 - T wt-1 (X1 split) and wt-3 (W3) workers started in their worktrees.
 - I HEAD doesn't build: AcPilotText calls O1's uncommitted FirstStep.
+- T O1 done 31e121c: 6-step KSTR chain, level 4 at 1,712 XP.
+- N HEAD suites: core 454, server 153, net 67 pass; HEAD builds.
+- T V3 first cut eee224c: 59.8 s reel, 1080p; web copy 12.6 MB.
+- D Manager: work paused 2026-10-14 17:45 for the user's showcase.
