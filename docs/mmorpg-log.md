@@ -375,3 +375,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N J1: 1,755 ElevenLabs credits; task 38 of 90 min.
 - I J1: shimmer and rankup not heard in a run (tests only).
 - I Queue: runs out of order; engine Python errors fail runs.
+- T H1 home screen → first-hour.
