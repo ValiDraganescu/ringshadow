@@ -326,3 +326,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D P6: respawn delay 10 s (doc gave none).
 - I Client owes UI: respawn screen, depot, pad list, contracts.
 - T P7 Foundry modules + Lab research → world-clock.
+- T E1 mechanics in 4591e2a, 8292dcf: 11:30 and 16:00, 120 s, ×1.5.
+- N Manager: core 450, server 141, net 67 pass.
+- I E1 sky: ring strip reads as an opaque black bar; clouds darken.
+- T E1 look rework (ring strip, sun, clouds) → first-hour.
