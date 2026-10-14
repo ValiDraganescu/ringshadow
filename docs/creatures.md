@@ -67,8 +67,7 @@ directions each, rest pose and attack pose side by side), contact sheets in
   region), egg pods clustered on her flanks and a huge glowing egg sac
   behind her (c1-crowned).
 
-The picks above are the worker's leanings; the user picks from the variant
-page and this list follows the pick.
+The user picked these four from the variant page (2026-10-14).
 
 ## The kinds
 
