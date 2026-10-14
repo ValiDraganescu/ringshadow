@@ -397,3 +397,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I cf09855 broke HEAD compile; fixed 3471100.
 - N E2 polish task: 107 min against 40.
 - T W3 regional looks → world-look.
+- T F1b done 5fdbd87, e7b1f15: jet jump 2 MH; 7 flight sounds.
+- N F1b: suites core 454, server 151, net 67; ~420 credits.
+- I HUD: toasts stack mid-frame, covering more of the view.
+- T Q1 regression pass → world-clock.
