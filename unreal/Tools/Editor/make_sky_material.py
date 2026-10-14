@@ -24,6 +24,9 @@ Output: /Game/Sky/M_AcSky, an unlit "Is Sky" material that AAcDaylight
   paints the far ground with the same haze, so ground and sky meet without
   a seam.
 
+- the ringshadow's ring arc while a sweep runs (RING_HLSL; MPC_AcWorld's
+  `RingOn`, `RingOff`, `RingHalf`: run make_resource_materials.py first).
+
 The real-time sky light capture sees the dome too, so the stars and the
 moonlit sky tint the night's ambient a little.
 
@@ -467,6 +470,58 @@ return C + ev * 3.0;
 """
 
 
+# The ringshadow's ring (docs/weather.md, "Ringshadow sweep"; AAcRingshadow
+# feeds MPC_AcWorld's `RingOn`, `RingOff`, `RingHalf`): while a sweep runs,
+# the arc of the giant's ring that throws the band, along the great circle
+# through the giant (PD) and the sun (PS), `RingOff` degrees off the sun and
+# `RingHalf` wide each side. Drawn on the dome before the clouds, so they pass
+# in front of it. It is the ring's own radial profile (RingTex: density in r,
+# the ringlets in g) across the arc, translucent: dust and ice that block the
+# light where dense and scatter it forward where thin, so the sky and the sun
+# show through dimmed and banded, the gaps and the thin edges glow round the
+# sun and the arc's edges are fine bright lines near it. `Mode` 0 returns the
+# sky, 1 the sun's disc (`Sun`) seen through the ring.
+RING_HLSL = r"""
+float3 d = normalize(D);
+if (RingOn < 0.5) return Mode > 0.5 ? Sun : C;
+float3 S = normalize(PS.xyz);
+float3 G = normalize(PD.xyz);
+float3 nrm = cross(G, S);
+nrm = dot(nrm, nrm) > 1e-6 ? normalize(nrm) : float3(0, 0, 1);
+float a = degrees(asin(clamp(dot(d, nrm), -1.0, 1.0))) - RingOff;
+// Across the arc: 0 at its inner edge, 1 at its outer (the ring's 1.2-2.5 radii).
+float u = (a + RingHalf) / (2.0 * RingHalf);
+float fu = max(fwidth(u), 1e-5);
+// Only the arc on the sun's and the giant's side of the sky, fading out along it.
+float side = smoothstep(-0.25, 0.35, dot(d, normalize(S + G + float3(0, 0, 1e-3))));
+float inArc = step(0.0, u) * step(u, 1.0) * side;
+float3 rt = Texture2DSampleLevel(RingTex, RingTexSampler, float2(saturate(u), 0.5), log2(max(fu * 1024.0, 1.0))).rgb;
+// Density: the profile, its ringlets (fading where a pixel is coarser than them).
+float lets = 0.5 + 0.5 * sin(u * 420.0 + 3.0 * sin(u * 57.0));
+float fine = saturate(0.004 / fu);
+float dn = saturate(rt.r * lerp(1.0, lerp(0.7, 1.15, lets) * lerp(0.85, 1.1, rt.g), fine)) * inArc;
+// Light through it: exp(-optical depth); the densest bands let a fifth through.
+float T = exp(-dn * 1.5);
+// The sun's disc is HDR: a fifth of it still burns white. Where ring
+// material covers it, it drops to a glow a few times the sky's, so the
+// bands and gaps show across it (the gaps keep the full disc).
+if (Mode > 0.5) return Sun * T * lerp(1.0, 2e-4, saturate(dn * 2.5));
+float cs = clamp(dot(d, S), -1.0, 1.0);
+float ang = degrees(acos(cs));
+// Forward scattering: a tight bloom on the sun, a wide one round it.
+float fwd = 0.03 + 2.2 * exp(-ang / 1.6) + 0.5 * exp(-ang / 9.0);
+// Thin dust scatters; dense ice only blocks.
+float dust = dn * (1.0 - 0.65 * dn);
+// The arc's edges: fine bright lines, backlit near the sun.
+float px = max(fu * 2.0 * RingHalf, 0.02);
+float rimW = max(0.07, px * 0.8);
+float rimL = exp(-pow((abs(a) - RingHalf) / rimW, 2.0)) * side;
+float3 lum = max(dot(C, float3(0.3, 0.59, 0.11)), 0.03) * float3(1.0, 0.9, 0.76);
+float3 shine = float3(0.55, 0.5, 0.45) * dn * 0.06 * max(dot(C, float3(0.3, 0.59, 0.11)), 0.03);
+return C * T + lum * (dust * fwd * 0.9 + rimL * (0.05 + 1.4 * fwd)) + shine;
+"""
+
+
 def import_textures():
     """The baked gas giant maps (Tools/Editor/bake_gas_giant.py makes the PNGs)."""
     src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Content-src", "sky")
@@ -600,11 +655,15 @@ def build():
         elif inp in ("BandTex", "RingTex"):
             src = tex_obj(inp, BAND_TEX if inp == "BandTex" else RING_TEX, -1700, y)
             y += 90
+            if inp == "RingTex":
+                ring_tex = src
         else:
             src = vec4(pname, default, -1400, y)
             y += 90
             if pname == "PlanetDir":
                 planet_dir = src
+            if pname == "PlanetSun":
+                planet_sun = src
         if not mel.connect_material_expressions(src, "", planet, inp):
             raise RuntimeError(f"could not connect {inp}")
 
@@ -635,6 +694,34 @@ def build():
         if not mel.connect_material_expressions(src, "", skyfx, inp):
             raise RuntimeError(f"could not connect {inp}")
 
+    # The ringshadow's ring, between the sky's life and the haze: one node for
+    # the sky, one for the sun's disc through it.
+    mpc = unreal.load_asset("/Game/Materials/MPC_AcWorld")
+    rings = []
+    for mode, ry in ((0.0, 400), (1.0, 700)):
+        ring = node(unreal.MaterialExpressionCustom, 500, ry)
+        ring.set_editor_property("code", RING_HLSL)
+        ring.set_editor_property("description", "Ringshadow ring" if mode == 0 else "Ringshadow ring: the sun through it")
+        ring.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+        rin = []
+        for name in ("C", "Sun", "D", "PD", "PS", "RingTex", "RingOn", "RingOff", "RingHalf", "Mode"):
+            ci = unreal.CustomInput()
+            ci.set_editor_property("input_name", name)
+            rin.append(ci)
+        ring.set_editor_property("inputs", rin)
+        mode_c = node(unreal.MaterialExpressionConstant, 300, ry + 300)
+        mode_c.set_editor_property("r", mode)
+        wires = [(skyfx, "C"), (sun, "Sun"), (neg, "D"), (planet_dir, "PD"), (planet_sun, "PS"), (ring_tex, "RingTex"), (mode_c, "Mode")]
+        for k, pname in enumerate(("RingOn", "RingOff", "RingHalf")):
+            cp = node(unreal.MaterialExpressionCollectionParameter, 300, ry + 60 * k)
+            cp.set_editor_property("collection", mpc)
+            cp.set_editor_property("parameter_name", pname)
+            wires.append((cp, pname))
+        for src, pin in wires:
+            if not mel.connect_material_expressions(src, "", ring, pin):
+                raise RuntimeError(f"could not connect ring {pin}")
+        rings.append(ring)
+
     # The haze rising from the horizon over all but the sun's disc.
     haze_p = node(unreal.MaterialExpressionVectorParameter, -400, 300)
     haze_p.set_editor_property("parameter_name", "Haze")
@@ -652,7 +739,7 @@ def build():
         ci.set_editor_property("input_name", name)
         hin.append(ci)
     haze.set_editor_property("inputs", hin)
-    for src, pin in ((skyfx, "C"), (sun, "Sun"), (neg, "D"), (haze4, "Haze"), (planet_dir, "PD")):
+    for src, pin in ((rings[0], "C"), (rings[1], "Sun"), (neg, "D"), (haze4, "Haze"), (planet_dir, "PD")):
         if not mel.connect_material_expressions(src, "", haze, pin):
             raise RuntimeError(f"could not connect {pin}")
     if not mel.connect_material_property(haze, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR):

@@ -150,10 +150,23 @@ On screen (`AAcRingshadow`, `unreal/Source/Autocraft/AcRingshadow.cpp`):
   (`AAcDaylight::RingshadowSun`, which also dims the sky's sun). The pass
   makes up for that outside the band, so the band reads the same from
   inside as from outside.
-- **The sky.** The ring is a dark strip 8° wide along the great circle
-  through the giant and the sun, with lit rims. Its offset from the sun
-  follows the camera's place in the band, so the strip's edge crosses the
-  sun as the band's edge crosses the camera.
+- **The sky.** The ring's arc, 12° wide, runs along the great circle
+  through the giant and the sun. At 11:30 the sun stands 17° above the
+  giant's limb, so the arc climbs from the giant across it; the giant never
+  passes in front of the sun during a sweep. The arc is drawn on the sky
+  dome (`M_AcSky`, `Tools/Editor/make_sky_material.py`; `MPC_AcWorld`'s
+  `RingOn`, `RingOff`, `RingHalf`), so clouds pass in front of it. It uses
+  the giant's own ring profile, with its gaps and ringlets, and it is
+  translucent: dense bands let a fifth of the light through, thin ones
+  scatter it forward. The sun shows through dimmed and banded, with a
+  bloom, and the arc's edges are fine bright lines near the sun. Its offset
+  from the sun follows the camera's place in the band, so the arc's edge
+  crosses the sun as the band's edge crosses the camera.
+- **God rays.** As the arc's edge crosses the sun, the post-process pass
+  smears the bright sky toward the sun: the sun's disc, the glowing gaps
+  and the lit cloud edges. Only sky pixels feed the rays, so the ring's
+  bands, the clouds and the land cut them into shafts. They are weaker
+  deeper in the band.
 - **The ore.** Stardust Ore veins under the band flare brighter than at
   night (M_Opal's night glow, ×1.8, and more glints).
 - **The air.** A cold, slightly grey tint while the camera is in the band.

@@ -2,7 +2,6 @@
 #include "AcRingshadow.h"
 
 #include "AcDaylight.h"
-#include "AcGasGiant.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
 #include "AcProgressHud.h"
@@ -27,8 +26,10 @@ namespace
 	const TCHAR* const WorldParametersPath = TEXT("/Game/Materials/MPC_AcWorld.MPC_AcWorld");
 	/// The band's edges when none runs: far off every region.
 	constexpr double FarOff = -1.0e6;
-	/// The ring's strip in the sky, half its width (degrees).
-	constexpr double RingHalf = 4.0;
+	/// The ring's arc in the sky, half its width (degrees).
+	constexpr double RingHalf = 6.0;
+	/// God rays at their strongest, as the arc's edge crosses the sun.
+	constexpr double RaysPeak = 0.9;
 	/// What the sun is dimmed to with the camera deep in the band.
 	constexpr double SunInBand = 0.3;
 }
@@ -72,6 +73,7 @@ void AAcRingshadow::Off()
 	{
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepLead"), float(FarOff));
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepTrail"), float(FarOff));
+		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("RingOn"), 0.0f);
 	}
 }
 
@@ -143,7 +145,7 @@ void AAcRingshadow::Tick(const float DeltaSeconds)
 	const ac::Vec2 At = AcSpace::ToSim(Eye);
 	CamCover = ac::Ringshadow::cover(*Band, At);
 	// Where the camera is across the band: 1 at its leading edge, 0 at its
-	// trailing one; the ring's strip covers the sun in between.
+	// trailing one; the ring's arc covers the sun in between.
 	const double Across = (ac::dot(At, Band->dir) - Band->trail) / FMath::Max(1.0, Band->lead - Band->trail);
 	const double RingOff = FMath::Clamp((0.5 - Across) * 2.0 * RingHalf, -60.0, 60.0);
 	const double SunDim = FMath::Lerp(1.0, SunInBand, CamCover);
@@ -156,17 +158,30 @@ void AAcRingshadow::Tick(const float DeltaSeconds)
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepLead"), float(Band->lead));
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepTrail"), float(Band->trail));
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepSoft"), float(Band->soft));
+		// The ring's arc on the sky dome (M_AcSky), behind the clouds.
+		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("RingOn"), 1.0f);
+		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("RingOff"), float(RingOff));
+		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("RingHalf"), float(RingHalf));
 	}
 	if (Material)
 	{
 		const AAcDaylight* Daylight = AAcDaylight::Find(GetWorld());
 		const FVector Sun = AAcDaylight::SunToward(Daylight ? Daylight->GetHour() : AAcDaylight::HourAt(Time));
+		// God rays: the sun on the screen (viewport UV), strongest as the
+		// arc's edges cross it (the camera at the band's edges), weaker in
+		// the band, none with the sun down, behind the camera or far off screen.
+		FVector2D SunPx(0, 0);
+		int32 VX = 0, VY = 0;
+		if (PC) PC->GetViewportSize(VX, VY);
+		const bool bSunOn = PC && Sun.Z > 0 && VX > 0 && VY > 0 && PC->ProjectWorldLocationToScreen(Eye + Sun * 1.0e6, SunPx, true);
+		const FVector2D SunUV = bSunOn ? FVector2D(SunPx.X / VX, SunPx.Y / VY) : FVector2D(0.5, -1.0);
+		const double OnScreen = bSunOn ? (1.0 - FMath::SmoothStep(0.25, 0.6, FMath::Max(FMath::Abs(SunUV.X - 0.5), FMath::Abs(SunUV.Y - 0.5)))) : 0.0;
+		const double Edges = FMath::Exp(-FMath::Square((Across - 1.0) / 0.12)) + FMath::Exp(-FMath::Square(Across / 0.12));
+		const double Inside = FMath::SmoothStep(-0.1, 0.05, Across) * (1.0 - FMath::SmoothStep(0.95, 1.1, Across));
+		const double Rays = RaysPeak * FMath::Min(1.0, 0.35 * Inside + Edges) * OnScreen;
 		Material->SetScalarParameterValue(TEXT("SunDim"), float(SunDim));
 		Material->SetScalarParameterValue(TEXT("CamCover"), float(CamCover));
-		Material->SetScalarParameterValue(TEXT("RingOn"), 1.0f);
-		Material->SetScalarParameterValue(TEXT("RingOff"), float(RingOff));
-		Material->SetScalarParameterValue(TEXT("RingHalf"), float(RingHalf));
-		Material->SetVectorParameterValue(TEXT("SunDir"), FLinearColor(FVector3f(Sun)));
-		Material->SetVectorParameterValue(TEXT("Giant"), FLinearColor(FVector3f(FAcGasGiant::Direction())));
+		Material->SetVectorParameterValue(TEXT("SunUV"), FLinearColor(float(SunUV.X), float(SunUV.Y), 0, 0));
+		Material->SetScalarParameterValue(TEXT("Rays"), float(Rays));
 	}
 }

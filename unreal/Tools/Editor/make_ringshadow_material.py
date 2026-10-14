@@ -14,11 +14,12 @@ post-process component:
   its colour in linear light, bluer (about 0.4 of its brightness on screen), with soft edges, divided by `SunDim` (what the sun at the
   camera was dimmed to, AAcDaylight::RingshadowSun), so the band reads the
   same seen from inside it as from outside;
-- the sky (farther than `SkyDepth` from the camera): the ring, a dark strip `RingHalf` degrees
-  wide along the great circle through the giant (`Giant`) and the sun
-  (`SunDir`), offset `RingOff` degrees from the sun, with lit rims; the
-  offset follows the camera's place in the band, so the strip's edge crosses
-  the sun as the band's edge crosses the camera (`RingOn` 0: none);
+- god rays: the sky's pixels brighter than `RayFloor` (of l/(1+l): the
+  sun's disc counts as about 1, not its full HDR) smeared toward the
+  sun (`SunUV`, viewport UV) by `Rays` (0: none), strongest as the ring's
+  edge crosses the sun; the ring's bands, the clouds and the land cut them
+  into shafts. The ring's arc itself is on the sky dome (M_AcSky,
+  make_sky_material.py), behind the clouds;
 - the air: a cold tint, `CamCover` (how deep the camera is in the band).
 
 Run it in the editor (`py <path>`), or headless while the live editor does
@@ -40,7 +41,6 @@ assets = unreal.EditorAssetLibrary
 
 HLSL = r"""
 float3 c = C.rgb;
-float3 v = -normalize(V);
 // How far the pixel is (cm): the sky dome and the clouds lie beyond SkyDepth.
 float dist = length(W - Cam);
 if (dist < SkyDepth) {
@@ -50,23 +50,36 @@ if (dist < SkyDepth) {
     float3 shade = Shade * float3(0.72, 0.9, 1.35);
     c *= lerp(float3(1, 1, 1), shade, cov) / max(SunDim, 0.05);
     if (Debug > 0.5) return float3(cov, frac(s / 20.0), saturate(dist / 10000.0));
-} else if (RingOn > 0.5) {
-    // The sky: the ring's strip along the great circle through the giant
-    // and the sun, `RingOff` degrees off the sun; dark dust with lit rims.
-    float3 nrm = cross(Giant, SunDir);
-    nrm = dot(nrm, nrm) > 1e-6 ? normalize(nrm) : float3(0, 0, 1);
-    float a = degrees(asin(clamp(dot(v, nrm), -1.0, 1.0))) - RingOff;
-    float e = 0.35;
-    float strip = smoothstep(-RingHalf - e, -RingHalf + e, a) * (1.0 - smoothstep(RingHalf - e, RingHalf + e, a));
-    // Only the arc on the sun's and the giant's side of the sky.
-    float side = smoothstep(-0.2, 0.3, dot(v, normalize(SunDir + Giant + float3(0, 0, 1e-3))));
-    float rim = exp(-pow((abs(a) - RingHalf) / 0.3, 2.0));
-    float nearSun = pow(saturate(dot(v, SunDir)), 8.0);
-    c = c * lerp(1.0, 0.28, strip * side) + float3(1.0, 0.9, 0.75) * rim * side * (0.04 + 0.6 * nearSun) * max(dot(c, float3(0.33, 0.33, 0.33)), 0.2);
+}
+// God rays: the bright sky toward the sun (its disc and the ring's gaps
+// glowing round it, the clouds' lit edges) smeared along the line to the
+// sun, only from the sky's pixels, so the ring's bands, the clouds and the
+// land cut them into shafts.
+if (Rays > 0.001) {
+    float2 aspect = float2(View.ViewSizeAndInvSize.x * View.ViewSizeAndInvSize.w, 1.0);
+    float2 toSun = SunUV - UV;
+    float far = length(toSun * aspect);
+    float3 acc = 0;
+    float decay = 1.0;
+    const int N = 48;
+    [loop] for (int i = 1; i <= N; i++) {
+        float2 q = UV + toSun * (float(i) / float(N));
+        if (any(q < 0.0) || any(q > 1.0)) { decay *= 0.97; continue; }
+        float2 bq = ViewportUVToBufferUV(q);
+        float3 sc = SceneTextureLookup(Parameters, bq, 14, true).rgb;
+        float dep = SceneTextureLookup(Parameters, bq, 1, false).r;
+        // Compressed (the sun's disc counts as about 1, not its full HDR),
+        // and only what stands out of the sky: the ring's dense bands cut it.
+        float l = dot(sc, float3(0.3, 0.59, 0.11));
+        float k = l / (1.0 + l);
+        acc += sc / (1.0 + l) * saturate((k - RayFloor) / (1.0 - RayFloor)) * step(SkyDepth, dep) * decay;
+        decay *= 0.97;
+    }
+    c += acc / float(N) * Rays * 1.2 * float3(1.0, 0.93, 0.8) * exp(-far * 1.4);
 }
 // The air in the band: colder and a little greyer.
 float g = dot(c, float3(0.3, 0.59, 0.11));
-c = lerp(c, g * float3(0.72, 0.86, 1.18), 0.4 * CamCover);
+c = lerp(c, g * float3(0.72, 0.86, 1.18), 0.35 * CamCover);
 return max(c, 0.0);
 """
 
@@ -110,8 +123,12 @@ def build():
                     default_value=unreal.LinearColor(rgb[0], rgb[1], rgb[2], 0), group="Ac")
 
     scene = node(unreal.MaterialExpressionSceneTexture, scene_texture_id=unreal.SceneTextureId.PPI_POST_PROCESS_INPUT0)
+    # The depth, read in the rays' loop: this node only tells the material it is used.
+    depth = node(unreal.MaterialExpressionSceneTexture, scene_texture_id=unreal.SceneTextureId.PPI_SCENE_DEPTH)
     inputs = [
         ("C", scene, "Color"),
+        ("Dep", depth, "Color"),
+        ("UV", node(unreal.MaterialExpressionScreenPosition), "ViewportUV"),
         ("W", node(unreal.MaterialExpressionWorldPosition), ""),
         ("V", node(unreal.MaterialExpressionCameraVectorWS), ""),
         ("Cam", node(unreal.MaterialExpressionCameraPositionWS), ""),
@@ -127,11 +144,9 @@ def build():
         ("Debug", scalar("Debug", 1.0 if os.environ.get("RINGSHADOW_DEBUG") else 0.0), ""),
         ("SunDim", scalar("SunDim", 1.0), ""),
         ("CamCover", scalar("CamCover", 0.0), ""),
-        ("RingOn", scalar("RingOn", 0.0), ""),
-        ("RingOff", scalar("RingOff", 30.0), ""),
-        ("RingHalf", scalar("RingHalf", 4.0), ""),
-        ("SunDir", vector("SunDir", (0, 0, 1)), ""),
-        ("Giant", vector("Giant", (-0.97, -0.17, 0.2)), ""),
+        ("SunUV", vector("SunUV", (0.5, -1.0, 0)), ""),
+        ("Rays", scalar("Rays", 0.0), ""),
+        ("RayFloor", scalar("RayFloor", 0.6), ""),
     ]
 
     custom = node(unreal.MaterialExpressionCustom, x=-300, code=HLSL, description="Ringshadow sweep",

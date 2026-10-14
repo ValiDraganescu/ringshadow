@@ -36,10 +36,12 @@
 // server starts; docs/weather.md "Ringshadow sweep"): only the sweep, third
 // person on the start pad toward the giant, DIR/rs-NN-moment.png:
 //   01 before: the radio's toast, the land in the sun
-//   02 the band's edge on the ground ahead, coming
-//   03 top-down: the band's edge crossing the start region
-//   04 under the band    05 under it, first person at the nearest ore (the
-//      veins flaring)    06 after: the band gone east   07 looking east at it
+//   02 along the band's edge 7-16 cells off, running away over the far ground
+//   03 its edge at the pilot, looking up: the ring's edge on the sun, god rays
+//   04 under the band    05 under it, looking up: the sun through the ring
+//   06 under it, first person at the nearest ore (the veins flaring)
+//   07 after: the band gone east   08 looking east at it
+// The giant's comet impacts are off meanwhile (ac.GasGiant.Events 0).
 //
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
@@ -73,6 +75,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -261,7 +264,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsLook"))) T.Phase = 100;
 			// -AcMmoShotsP5: only the progression (200-215).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP5"))) T.Phase = 200;
-			// -AcMmoShotsRingshadow: only the ringshadow sweep (300-314).
+			// -AcMmoShotsRingshadow: only the ringshadow sweep (300-315).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRingshadow"))) T.Phase = 300;
 		}
 		else TimedOut(TEXT("seated"));
@@ -1011,23 +1014,37 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Finish();
 		return;
 	// MARK: -AcMmoShotsRingshadow
-	// The sweep from the start pad, toward the giant: the band comes out of
-	// its side of the sky (bearing 280°) and runs east over the pilot.
+	// The sweep from the start pad: the band comes out of the giant's side
+	// of the sky (bearing 280°) and runs east over the pilot; the ring's arc
+	// crosses the sun (late morning: 17° above the giant's limb).
 	case 300:
-	case 306:
-	case 310:
+	case 305:
+	case 311:
 	{
-		// Third person toward the giant (306: back in the Prospector after
-		// the top-down look, once seated; 310: back from first person).
-		if (T.Phase == 306 && !(Seated() && Since() > 1.5))
+		// Third person toward the giant (300: low, the land ahead; 305: under
+		// the band; 311: back from first person).
+		if (T.Phase == 300)
 		{
-			TimedOut(TEXT("seated again after the top-down look"));
-			return;
+			// The giant's comet impacts are chance (one in 140-340 s, their shock
+			// ring over the disc for ~20 s): none over these pictures.
+			if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(0);
 		}
-		if (T.Phase == 310 || (T.Phase == 306 && !Pilot->ChaseEye())) Pilot->ToggleView();
+		if (T.Phase == 311) Pilot->ToggleView();
 		const FVector G = FAcGasGiant::Direction();
 		Stop(std::atan2(G.Y, G.X));
-		Pilot->Eye().Pitch = T.Phase == 300 ? -0.1 : 0.05;
+		Pilot->Eye().Pitch = T.Phase == 305 ? 0.05 : -0.1;
+		Advance();
+		return;
+	}
+	case 303:
+	case 307:
+	{
+		// Third person looking up at the sun, the giant's upper limb low in the
+		// left of the picture.
+		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
+		const FVector Sun = AAcDaylight::SunToward(AAcDaylight::HourAt(Sky ? Sky->Time : 0.0));
+		Stop(std::atan2(Sun.Y, Sun.X) - 0.15);
+		Pilot->Eye().Pitch = FMath::Clamp(std::asin(Sun.Z) - 0.42, 0.05, 0.75);
 		Advance();
 		return;
 	}
@@ -1045,11 +1062,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		TimedOut(TEXT("a ringshadow sweep coming (-AcMmoRingshadow=70)"), 240);
 		return;
 	case 302:
-	case 307:
-	case 311:
+	case 304:
+	case 306:
+	case 312:
 	{
-		// The band where the pilot stands: 302 its leading edge 3-15 cells
-		// ahead on the plain, 307 deep in it, 311 its trailing edge 6-20 cells past.
+		// The band where the pilot stands: 302 its leading edge 7-16 cells
+		// off, looking along it over the far ground; 304 the edge at the pilot (the arc's
+		// edge on the sun); 306 deep in it; 312 its trailing edge 6-20 cells past.
 		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
 		const std::optional<ac::Ringshadow::Band> B =
 			Sky && M ? ac::Ringshadow::band(Sky->Time, M->simulation().map->bounds, Sky->DayLength) : std::nullopt;
@@ -1057,44 +1076,50 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		{
 			const double At = ac::dot(U->position, B->dir);
 			const double Cover = ac::Ringshadow::cover(*B, U->position);
-			if (T.Phase == 302 && At - B->lead > 3 && At - B->lead < 15)
+			if (T.Phase == 302)
 			{
-				Shoot(TEXT("rs-02-edge-arriving"), FString::Printf(TEXT("the band's edge %.0f cells ahead"), At - B->lead));
+				// Along the edge (the band on the left), so it runs off over the far ground.
+				Stop(std::atan2(B->dir.y, B->dir.x) - 0.5 * UE_DOUBLE_PI);
+				Pilot->Eye().Pitch = -0.12;
+				if (At - B->lead > 7 && At - B->lead < 16 && Since() > 1.0)
+				{
+					Shoot(TEXT("rs-02-edge-along"), FString::Printf(TEXT("along the band's edge, %.0f cells to the left"), At - B->lead));
+					return;
+				}
+			}
+			if (T.Phase == 304 && At - B->lead < 1.5 && At - B->lead > -8 && Since() > 1.0)
+			{
+				Shoot(TEXT("rs-03-ring-edge-on-sun"), FString::Printf(TEXT("the band's edge at the pilot (%.1f cells), the ring's edge on the sun"), At - B->lead));
 				return;
 			}
-			if (T.Phase == 307 && Cover > 0.99 && Since() > 1.0)
+			if (T.Phase == 306 && Cover > 0.99 && Since() > 1.0)
 			{
 				Shoot(TEXT("rs-04-under-band"), TEXT("under the band, toward the giant"));
 				return;
 			}
-			if (T.Phase == 311 && B->trail - At > 6 && B->trail - At < 20 && Since() > 1.0)
+			if (T.Phase == 312 && B->trail - At > 6 && B->trail - At < 20 && Since() > 1.0)
 			{
-				Shoot(TEXT("rs-06-after"), FString::Printf(TEXT("after: the band %.0f cells past, east"), B->trail - At));
+				Shoot(TEXT("rs-07-after"), FString::Printf(TEXT("after: the band %.0f cells past, east"), B->trail - At));
 				return;
 			}
 		}
-		else if (T.Phase == 311 && Sky && Since() > 2.0)
+		else if (T.Phase == 312 && Sky && Since() > 2.0)
 		{
 			// The sweep over first: the land in the sun again.
-			Shoot(TEXT("rs-06-after"), TEXT("after: the sweep over"));
+			Shoot(TEXT("rs-07-after"), TEXT("after: the sweep over"));
 			return;
 		}
-		TimedOut(T.Phase == 302 ? TEXT("the band's edge ahead") : T.Phase == 307 ? TEXT("the band over the pilot") : TEXT("the band past"), 150);
+		TimedOut(T.Phase == 302 ? TEXT("the band's edge close")
+			: T.Phase == 304   ? TEXT("the band's edge at the pilot")
+			: T.Phase == 306   ? TEXT("the band over the pilot")
+							   : TEXT("the band past"),
+			150);
 		return;
 	}
-	case 303:
-		// From above: the band over the west of the region, its edge at the pad.
-		Pilot->Leave();
-		Advance();
-		return;
-	case 304:
-		if (Since() > 2.5) Shoot(TEXT("rs-03-topdown"), TEXT("top-down: the band's edge crossing the start region"));
-		return;
-	case 305:
-		Pilot->TakeOver(Shots.Unit);
-		Advance();
-		return;
 	case 308:
+		if (Since() > 1.5) Shoot(TEXT("rs-05-sun-through-ring"), TEXT("under the band, the sun through the ring"));
+		return;
+	case 309:
 	{
 		// First person at the nearest ore, its veins flaring in the shade.
 		int64 Best = -1;
@@ -1109,10 +1134,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Advance();
 		return;
 	}
-	case 309:
-		if (Since() > 1.5) Shoot(TEXT("rs-05-under-ore-first"), TEXT("under the band, first person at the nearest ore"));
+	case 310:
+		if (Since() > 1.5) Shoot(TEXT("rs-06-under-ore-first"), TEXT("under the band, first person at the nearest ore"));
 		return;
-	case 312:
+	case 313:
 	{
 		const FVector G = FAcGasGiant::Direction();
 		Stop(std::atan2(G.Y, G.X) + UE_DOUBLE_PI);
@@ -1120,11 +1145,12 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Advance();
 		return;
 	}
-	case 313:
-		if (Since() > 1.5) Shoot(TEXT("rs-07-after-east"), TEXT("after, looking east: the band going away"));
-		return;
 	case 314:
-		Check(Shots.Saved == 7, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		if (Since() > 1.5) Shoot(TEXT("rs-08-after-east"), TEXT("after, looking east: the band going away"));
+		return;
+	case 315:
+		Check(Shots.Saved == 8, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
 		Finish();
 		return;
 	default:

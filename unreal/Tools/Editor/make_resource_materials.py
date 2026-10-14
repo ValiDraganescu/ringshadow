@@ -94,9 +94,11 @@ def make_world_mpc():
     # The ringshadow's band (AAcRingshadow, Ringshadow.h; docs/weather.md):
     # the way it moves (x, y), its leading and trailing edges along it and
     # its soft edge, cells; far off (lead = trail = -1e6) when none runs.
+    # Then the ring's arc in the sky (M_AcSky, Tools/Editor/make_sky_material.py):
+    # on or off, its offset from the sun and its half width, degrees.
     wanted = (("Dark", 0.0), ("HullEnv", 0.6), ("Wetness", 0.0),
               ("SweepDirX", 1.0), ("SweepDirY", 0.0), ("SweepLead", -1.0e6), ("SweepTrail", -1.0e6),
-              ("SweepSoft", 16.0))
+              ("SweepSoft", 16.0), ("RingOn", 0.0), ("RingOff", 30.0), ("RingHalf", 6.0))
     kept = list(mpc.get_editor_property("scalar_parameters"))
     have = [str(x.get_editor_property("parameter_name")) for x in kept]
     if have == [n for n, _ in wanted]:

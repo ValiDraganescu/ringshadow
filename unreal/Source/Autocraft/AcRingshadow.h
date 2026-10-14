@@ -9,8 +9,11 @@
 //   `SweepSoft`: the band, for M_Opal (the veins flare under it) and for
 //   M_Ringshadow (Tools/Editor/make_ringshadow_material.py), a post-process
 //   pass on this actor's unbound component: the ground in the band goes to
-//   the sky's cold light with soft edges, the ring's strip crosses the sun
-//   in the sky, the air turns cold while the camera is in it;
+//   the sky's cold light with soft edges, god rays fan from the sun as the
+//   ring's edge crosses it, the air turns cold while the camera is in it;
+// - MPC_AcWorld's `RingOn`, `RingOff`, `RingHalf`: the ring's arc on the
+//   sky dome (M_AcSky, behind the clouds), translucent and banded, its edge
+//   crossing the sun as the band's edge crosses the camera;
 // - the sun dims while the camera is in the band (`AAcDaylight::RingshadowSun`);
 // - 60 s before a sweep the KSTR radio's toast, "RINGSHADOW IN 60" (the
 //   progression HUD's toast path; a voice line can come later).
