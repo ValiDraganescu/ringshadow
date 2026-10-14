@@ -3,6 +3,7 @@
   "name": "Cold Fork",
   "size": "medium",
   "base": {"style": "ridge", "seed": 12, "drop": ["resources", "doodads"]},
+  "brood": 2,
   "height": [
     {
       "op": "flatten",

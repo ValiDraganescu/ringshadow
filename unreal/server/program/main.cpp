@@ -17,7 +17,9 @@
 //                    [--starfall s]  (dev, tests, shots: a starfall lands near the first pilot s seconds after it comes)
 //                    [--clock-hour h]  (dev, shots: move the world's clock on to hour h, 0-24; it runs on from there)
 //                    [--dev-control file]  (dev, shots: read 4 times a second, then removed; each line moves the
-//                                           world's clock at once: `clock T`, `hour H`, `ahead S`; Server::devControl)
+//                                           world's clock at once: `clock T`, `hour H`, `ahead S`, or stages a Brood
+//                                           scene: `brood linger|attack|dive|lodeback|raid|clear`; Server::devControl)
+//                    [--brood 0|1]  (the Brood's director spawns bugs; on unless 0)
 //
 // Reads the one-time token as the first line of its standard input, binds,
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
@@ -100,7 +102,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-rig 1] [--brood 0|1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file]\n",
                  why);
     return 2;
 }
@@ -128,6 +130,7 @@ int main(int argc, char** argv) {
     double devXp = 0;
     bool devBlueprints = false;
     bool devRig = false;
+    bool brood = true;
     long long devHydrogen = 0;
     std::optional<int> firstStep;
     std::optional<double> heldHour, weatherHold, ringshadowIn, starfallIn, clockHour;
@@ -150,6 +153,7 @@ int main(int argc, char** argv) {
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
         else if (a == "--dev-blueprints") devBlueprints = v != "0";
         else if (a == "--dev-rig") devRig = v != "0";
+        else if (a == "--brood") brood = v != "0";
         else if (a == "--dev-hydrogen") devHydrogen = std::atoll(v.c_str());
         else if (a == "--first-step") {
             firstStep = std::atoi(v.c_str());
@@ -230,6 +234,7 @@ int main(int argc, char** argv) {
     options.worldParams.heldHour = heldHour;
     options.worldParams.weatherHold = weatherHold;
     options.worldParams.devStarfall = starfallIn;
+    options.worldParams.brood = brood;
     options.token.assign(token.begin(), token.end());
     if (!net::secureRandom(options.secret.data(), options.secret.size())) {
         logLine("start failed: no secure random source");

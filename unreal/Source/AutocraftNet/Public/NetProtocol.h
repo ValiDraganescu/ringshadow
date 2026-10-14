@@ -189,6 +189,35 @@ struct Sky {
         bool operator==(const Starfall&) const = default;
     };
     std::vector<Starfall> starfalls;
+    /// A raid of the Brood on a realm building (docs/creatures.md, "Raids on
+    /// buildings"), told from its warning (`Brood` director: 20 s before it
+    /// arrives) until it arrives: the client's toast and the swarm's sound
+    /// for the pilots in its region and next to it.
+    struct Raid {
+        uint32_t id = 0;
+        /// Index in the World message's `regions`; the building (its id and
+        /// kind) and where it stands, and where the swarm was when told
+        /// (both that region's ground).
+        int64_t region = 0;
+        int64_t building = 0;
+        StructureKind kind = StructureKind::habDome;
+        Vec2 at;
+        Vec2 from;
+        /// World time it reaches the building (`time`).
+        double arrives = 0;
+        bool operator==(const Raid&) const = default;
+    };
+    std::vector<Raid> raids;
+    /// The Matriarch's roar (N3): heard by every pilot in earshot, in sight
+    /// or not; told for a few seconds after `at`.
+    struct Roar {
+        uint32_t id = 0;
+        int64_t region = 0;
+        Vec2 position;
+        double at = 0;
+        bool operator==(const Roar&) const = default;
+    };
+    std::vector<Roar> roars;
     double hour() const { return WorldClock::hourAt(time, dayLength, heldHour); }
     bool operator==(const Sky&) const = default;
 };

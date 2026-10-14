@@ -3,6 +3,7 @@
   "name": "Rust Hollow",
   "size": "medium",
   "base": {"style": "badlands", "seed": 14, "drop": ["resources", "doodads"]},
+  "brood": 2,
   "height": [
     {
       "op": "flatten",

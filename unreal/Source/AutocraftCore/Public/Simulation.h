@@ -489,6 +489,7 @@ public:
 #include "Simulation+Vision.members.h"
 #include "Simulation+Playground.members.h"
 #include "Simulation+Progression.members.h"
+#include "Simulation+Brood.members.h"
 };
 
 } // namespace ac

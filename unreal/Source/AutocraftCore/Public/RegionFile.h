@@ -110,6 +110,9 @@ struct RegionFile {
     MapSize size = MapSize::medium;
     MapStyle style = MapStyle::highlands;
     Ground ground = Ground::plain;
+    /// How many bugs of the Brood the region draws (docs/creatures.md,
+    /// "Brood level"): 0 none, 1 Prospect Landing's few … 4 the Matriarch's.
+    int64_t brood = 0;
     /// nil: the game's own map of that style and size.
     std::optional<uint64_t> seed;
     /// The base without its ore and wells, without its rocks and plants.

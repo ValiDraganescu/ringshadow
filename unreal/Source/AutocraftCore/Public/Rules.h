@@ -18,7 +18,9 @@ namespace ac {
 enum class UnitKind : uint8_t {
     prospector, ranger, comet, firefly, juggernaut, dropship, longbow, kestrel, hailstorm,
     // docs/new-units.md: appended, since a saved game stores the index.
-    peregrine, atlas, scorpion
+    peregrine, atlas, scorpion,
+    // The Brood (docs/creatures.md): the MMO's bugs, on their own side.
+    shardling, gloamwing, lodeback, matriarch
 };
 /// Its place in `allCases`: a case without a payload is stored as
 /// its index in declaration order (`UnitTableTests` checks).
@@ -83,7 +85,7 @@ struct UnitStats {
     /// a dictionary keyed by the kind hashes its name on every look-up, and
     /// the simulation looks up stats hundreds of thousands of times a step.
     /// (Swift's `table` dictionary is this array here.)
-    static const std::array<UnitStats, 12> byKind;
+    static const std::array<UnitStats, 16> byKind;
     /// A Ranger's mini gun (the Mini gun upgrade): 4 a round, five rounds a
     /// second for 3 s, then a 1 s pause to reload. About 15 damage a second
     /// against the rifle's 10.
@@ -333,7 +335,7 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr double escortGap = 1.6;
 };
 
-inline constexpr std::array<UnitStats, 12> UnitStats::byKind{{
+inline constexpr std::array<UnitStats, 16> UnitStats::byKind{{
     // Fusion cutter: 5 a hit, in melee reach. It fights only when it
     // has to (hit, or driven by the player).
     /* prospector */ {.hp = 45, .speed = Rules::prospectorSpeed, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 12,
@@ -384,6 +386,22 @@ inline constexpr std::array<UnitStats, 12> UnitStats::byKind{{
     /* scorpion */ {.hp = 90, .speed = 3.9, .radius = 0.5, .supply = 2, .ore = 75, .hydrogen = 25, .trainTime = 21,
                     .damage = 60, .bonusVsArmored = 30, .cooldown = 25, .range = 5, .light = true, .hitsGround = true,
                     .hitsAir = true, .falloff = 0},
+    // The Brood (docs/creatures.md; `Brood` has the rest of their numbers).
+    // No cost: a bug is never trained. `speed` is the top speed (a
+    // Shardling's chase); `Bug::pace` slows it to a wander.
+    // A Shardling's bite: 2 to a unit, every 1.2 s, 0.3 past its radius.
+    /* shardling */ {.hp = 20, .speed = 4.4, .radius = 0.45, .damage = 2, .cooldown = 1.2, .range = 0.3, .light = true,
+                     .bio = true, .hitsGround = true, .falloff = 0},
+    // A Gloamwing's acid spit: 3 to a unit, every 1.6 s, range 4; in the
+    // air but for its dive (`Unit::airborne`).
+    /* gloamwing */ {.hp = 30, .speed = 5.0, .radius = 0.5, .damage = 3, .cooldown = 1.6, .range = 4, .light = true,
+                     .bio = true, .air = true, .hitsGround = true, .falloff = 0},
+    // A Lodeback's bite, only when cornered: 8 every 2 s.
+    /* lodeback */ {.hp = 120, .armor = 1, .speed = 3.0, .radius = 1.0, .damage = 8, .cooldown = 2.0, .range = 0.4,
+                    .bio = true, .hitsGround = true, .falloff = 0},
+    // The Matriarch's slam: 40 to the ground in front of her, every 4 s (N3).
+    /* matriarch */ {.hp = 6000, .armor = 3, .speed = 0.8, .radius = 3.5, .damage = 40, .cooldown = 4.0, .range = 3,
+                     .armored = true, .bio = true, .hitsGround = true, .hitsAir = true, .falloff = 0},
 }};
 
 inline constexpr UnitStats UnitStats::minigun{.hp = 45, .speed = 3.15, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 18,

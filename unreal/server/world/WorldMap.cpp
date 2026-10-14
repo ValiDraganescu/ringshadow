@@ -530,6 +530,7 @@ void WorldMap::step() {
     contracts();
     missions();
     starfall();
+    brood();
     respawns();
     rigs();
     ownPadsChanged();

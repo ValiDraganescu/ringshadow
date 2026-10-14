@@ -979,6 +979,64 @@ struct Mission {
     bool operator==(const Mission&) const = default;
 };
 
+/// A bug of the Brood (docs/creatures.md, "Server and client"): what it is
+/// doing, told to every client (`state`, `height`, `strikes`, `sac`), and
+/// the server's orders for it (the brood director's, `ac::server`'s
+/// WorldBrood.cpp), which never leave the server. `Simulation::stepBug`
+/// carries the orders out each step.
+struct Bug {
+    /// What it does now: picks the client's pose loop and sound.
+    enum class State : uint8_t { idle, move, attack, eat, flee, dive, roar, dead };
+    State state = State::idle;
+    /// Cells above the ground: a Gloamwing's hover, lower in its dive.
+    double height = 0;
+    /// Strikes, spits and slams so far, mod 16: the client plays each one.
+    int64_t strikes = 0;
+    /// Ore in a Lodeback's sac (0 to `Brood::sacFull`).
+    double sac = 0;
+
+    // The orders (server only).
+    /// Its group, and the group's site: the centre, its radius and how far
+    /// past its edge it chases (docs/creatures.md, "Linger, aggro and leash").
+    int64_t group = 0;
+    Vec2 site;
+    double siteRadius = 6;
+    double leash = 8;
+    /// The unit it hunts (aggro), the building it raids, the deposit a
+    /// Lodeback eats from.
+    std::optional<int64_t> prey;
+    std::optional<int64_t> raid;
+    std::optional<int64_t> deposit;
+    /// On its way to the site (not lingering yet).
+    bool coming = true;
+    /// Leaving: it walks to `exit`, and the director takes it away out of
+    /// every pilot's sight.
+    bool leaving = false;
+    Vec2 exit;
+    /// Its speed now, a share of its top speed (`UnitStats::speed`): a
+    /// wander, a march, a chase.
+    double pace = 1;
+    /// Where it wanders to in its site, and when it picks the next spot.
+    std::optional<Vec2> wander;
+    double wanderAt = 0;
+    /// Game time it last stood in its site unhit (mends after
+    /// `Brood::mendAfter`); a scare (a starfall) and where from.
+    double settledAt = -1;
+    double scaredUntil = -1;
+    Vec2 scaredFrom;
+    /// A Gloamwing's dive: when it began (nil: hovering).
+    std::optional<double> diveFrom;
+    /// A Lodeback: when it began to eat, when it began to flee, the deposit
+    /// it ate from last (its ore goes back there when it dies).
+    double ateFrom = -1;
+    double fleeFrom = -1;
+    std::optional<int64_t> ate;
+    /// The unit that last hit it (the director turns the group on it).
+    std::optional<int64_t> hitBy;
+
+    bool operator==(const Bug&) const = default;
+};
+
 struct AUTOCRAFTCORE_API Unit {
     using Kind = UnitKind;
     enum class Task : uint8_t {
@@ -1096,6 +1154,8 @@ struct AUTOCRAFTCORE_API Unit {
     /// A Scorpion last stung at this game time: it is seen by all for
     /// `Rules::strikeReveal` s after (its own clock, apart from the reload).
     std::optional<double> struckAt;
+    /// A bug of the Brood: its state and its orders.
+    std::optional<Bug> bug;
 
     /// For decoding; Swift has only the init below.
     Unit() = default;
@@ -1111,8 +1171,13 @@ struct AUTOCRAFTCORE_API Unit {
     /// buried or digging out.
     bool planted() const { return (kind == Kind::longbow || kind == Kind::scorpion) && anchor.value_or(0) > 0; }
     const UnitStats& stats() const { return Rules::stats(kind); }
-    /// Soldiers: everything that is not a Prospector.
-    bool soldier() const { return kind != Kind::prospector; }
+    /// Soldiers: everything that is not a Prospector or a bug.
+    bool soldier() const { return kind != Kind::prospector && !brood(); }
+    /// A bug of the Brood (docs/creatures.md).
+    bool brood() const { return kind >= Kind::shardling; }
+    /// In the air now: a flyer, but a Gloamwing in its dive is at torch
+    /// height and counts as ground (`Brood::low`).
+    bool airborne() const;
     /// Where it looks, world radians: a tank's turret or a Firefly's tail,
     /// else its heading.
     double look() const { return aim ? *aim : heading; }
@@ -1587,9 +1652,9 @@ struct Command {
 // MARK: - Raw strings
 
 template <> struct EnumInfo<UnitKind> {
-    static constexpr std::array<std::string_view, 12> names{
+    static constexpr std::array<std::string_view, 16> names{
         "prospector", "ranger", "comet", "firefly", "juggernaut", "dropship", "longbow", "kestrel", "hailstorm",
-        "peregrine", "atlas", "scorpion"};
+        "peregrine", "atlas", "scorpion", "shardling", "gloamwing", "lodeback", "matriarch"};
 };
 template <> struct EnumInfo<StructureKind> {
     static constexpr std::array<std::string_view, 9> names{

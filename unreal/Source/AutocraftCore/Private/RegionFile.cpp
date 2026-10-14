@@ -528,8 +528,8 @@ Parsed parse(std::string_view text) {
     }
     const json root = json::parse(text.begin(), text.end(), nullptr, false);
     Reader r{out.problems};
-    if (!r.object(root, "region", {"id", "name", "size", "base", "ground", "height", "deposits", "wells", "doodads", "pads",
-                                   "spawns", "sites", "openings"}))
+    if (!r.object(root, "region", {"id", "name", "size", "base", "ground", "brood", "height", "deposits", "wells", "doodads",
+                                   "pads", "spawns", "sites", "openings"}))
         return out;
     RegionFile f;
     if (const auto id = r.text(root, "id", "", true)) {
@@ -574,6 +574,7 @@ Parsed parse(std::string_view text) {
         if (const auto g = enumNamed<Ground>(*ground)) f.ground = *g;
         else r.add("ground", "is \"" + *ground + "\"; one of " + choices<Ground>());
     }
+    if (const auto brood = r.integer(root, "brood", "", false, 0, 4)) f.brood = *brood;
     r.list(root, "height", f.height, [&](const json& j, const std::string& w) { return r.edit(j, w); });
     r.list(root, "deposits", f.deposits, [&](const json& j, const std::string& w) -> std::optional<Deposit> {
         if (!r.object(j, w, {"at", "amount", "angle"})) return std::nullopt;
@@ -693,6 +694,7 @@ std::string write(const RegionFile& f) {
     }
     root["base"] = base;
     if (f.ground != Ground::plain) root["ground"] = std::string(rawValue(f.ground));
+    if (f.brood != 0) root["brood"] = f.brood;
     if (!f.height.empty()) {
         ordered list = ordered::array();
         for (const Edit& e : f.height) {

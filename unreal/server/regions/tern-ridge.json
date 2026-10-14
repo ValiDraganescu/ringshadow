@@ -3,6 +3,7 @@
   "name": "Tern Ridge",
   "size": "medium",
   "base": {"style": "ridge", "seed": 15, "drop": ["resources", "doodads"]},
+  "brood": 2,
   "height": [
     {
       "op": "flatten",

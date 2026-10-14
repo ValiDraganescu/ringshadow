@@ -3,6 +3,7 @@
   "name": "Brine Pans",
   "size": "medium",
   "base": {"style": "openField", "seed": 17, "drop": ["resources", "doodads"]},
+  "brood": 2,
   "height": [
     {
       "op": "flatten",

@@ -3,6 +3,7 @@
   "name": "Dust Terraces",
   "size": "medium",
   "base": {"style": "highlands", "seed": 16, "drop": ["resources", "doodads"]},
+  "brood": 3,
   "height": [
     {
       "op": "flatten",

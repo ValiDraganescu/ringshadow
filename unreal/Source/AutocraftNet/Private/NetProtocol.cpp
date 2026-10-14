@@ -1,6 +1,8 @@
 #include "NetProtocol.h"
 
 #include "NetCodec.h"
+
+#include "Brood.h"
 #include "NetSocket.h"
 #include "NetTypes.h"
 
@@ -349,6 +351,21 @@ void Upgrades::read(BitReader& r, std::set<Upgrade>& v) const {
     v.clear();
     for (unsigned i = 0; i < 4; i++)
         if (bits & (uint64_t(1) << i)) v.insert(static_cast<Upgrade>(i));
+}
+
+void BugCodec::write(BitWriter& w, const Bug& b) const {
+    w.writeBits(static_cast<uint64_t>(b.state), 3);
+    w.writeBits(static_cast<uint64_t>(std::clamp<int64_t>(std::llround(b.height * 10), 0, 63)), 6);
+    w.writeBits(static_cast<uint64_t>(b.strikes & 15), 4);
+    w.writeBits(static_cast<uint64_t>(std::clamp<int64_t>(std::llround(b.sac / Brood::sacFull * 15), 0, 15)), 4);
+}
+
+void BugCodec::read(BitReader& r, Bug& b) const {
+    b = Bug{};
+    b.state = static_cast<Bug::State>(r.readBits(3));
+    b.height = double(r.readBits(6)) / 10;
+    b.strikes = int64_t(r.readBits(4));
+    b.sac = double(r.readBits(4)) / 15 * Brood::sacFull;
 }
 
 void MissionCodec::write(BitWriter& w, const Mission& m) const {

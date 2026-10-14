@@ -257,6 +257,23 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
             kFine.write(w, f.from);
             Opt<Var>{}.write(w, f.patch);
         }
+        writeVarint(w, s.sky->raids.size());
+        for (const Sky::Raid& x : s.sky->raids) {
+            writeVarint(w, x.id);
+            writeVarint(w, uint64_t(x.region));
+            writeVarint(w, uint64_t(x.building));
+            Enum<StructureKind, 4>{}.write(w, x.kind);
+            Pos{}.write(w, x.at);
+            Pos{}.write(w, x.from);
+            kMs.write(w, x.arrives);
+        }
+        writeVarint(w, s.sky->roars.size());
+        for (const Sky::Roar& x : s.sky->roars) {
+            writeVarint(w, x.id);
+            writeVarint(w, uint64_t(x.region));
+            Pos{}.write(w, x.position);
+            kMs.write(w, x.at);
+        }
     }
     Opt<Fixed>{kMs}.write(w, s.xp);
     writeVarint(w, s.players.size());
@@ -692,6 +709,27 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
             kMs.read(r, f.impact);
             kFine.read(r, f.from);
             Opt<Var>{}.read(r, f.patch);
+        }
+        const uint64_t raids = readVarint(r);
+        if (raids > 64 || !r.ok()) return std::nullopt;
+        sky.raids.assign(size_t(raids), {});
+        for (Sky::Raid& x : sky.raids) {
+            x.id = uint32_t(readVarint(r));
+            x.region = int64_t(readVarint(r));
+            x.building = int64_t(readVarint(r));
+            Enum<StructureKind, 4>{}.read(r, x.kind);
+            Pos{}.read(r, x.at);
+            Pos{}.read(r, x.from);
+            kMs.read(r, x.arrives);
+        }
+        const uint64_t roars = readVarint(r);
+        if (roars > 64 || !r.ok()) return std::nullopt;
+        sky.roars.assign(size_t(roars), {});
+        for (Sky::Roar& x : sky.roars) {
+            x.id = uint32_t(readVarint(r));
+            x.region = int64_t(readVarint(r));
+            Pos{}.read(r, x.position);
+            kMs.read(r, x.at);
         }
         s.sky = sky;
     }

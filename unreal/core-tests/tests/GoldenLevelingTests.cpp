@@ -94,10 +94,14 @@ TEST(Leveling_theLevelCurveAndItsCap) {
 }
 
 /// Every kind offers one of two at each level from 2 to 10, the doc's
-/// tables in order; every pick does something.
+/// tables in order; every pick does something. The Brood's bugs never level.
 TEST(Leveling_theCatalogueHasTwoPicksAtEveryLevelOfEveryKind) {
-    EXPECT_EQ(allCases<Perk>().size(), allCases<UnitKind>().size() * 18);
+    EXPECT_EQ(allCases<Perk>().size(), size_t(12 * 18));
     for (UnitKind k : allCases<UnitKind>()) {
+        if (k >= UnitKind::shardling) {
+            EXPECT_TRUE(!perkOffer(k, 2).has_value());
+            continue;
+        }
         for (int64_t l = 2; l <= 10; l++) {
             const auto o = perkOffer(k, l);
             ASSERT_TRUE(o.has_value());

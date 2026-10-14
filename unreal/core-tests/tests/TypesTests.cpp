@@ -7,7 +7,7 @@
 
 TEST(types_enums_and_raw_values) {
     EXPECT_EQ(ac::allCases<ac::Perk>().size(), size_t(216));
-    EXPECT_EQ(ac::allCases<ac::UnitKind>().size(), size_t(12));
+    EXPECT_EQ(ac::allCases<ac::UnitKind>().size(), size_t(16));  // 12 and the Brood's 4
     EXPECT_TRUE(ac::rawValue(ac::Unit::Kind::hailstorm) == "hailstorm");
     EXPECT_TRUE(ac::rawValue(ac::Stance::auto_) == "auto");
     EXPECT_TRUE(ac::parse<ac::Structure::Kind>("habDome") == ac::StructureKind::habDome);

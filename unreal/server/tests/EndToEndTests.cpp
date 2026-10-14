@@ -369,7 +369,8 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     EXPECT_TRUE(!hc.mirror()->region().regionFile.empty());
     EXPECT_EQ(hc.world()->regions.size(), size_t(9));
     EXPECT_TRUE(hc.world()->regions[size_t(hc.world()->here)].id == "start");
-    ASSERT_TRUE(c.until([&] { return hc.mirror()->simulation().state.players.size() == 1; }, 3));
+    // The pilots' side and the Brood's (Prospect Landing has a brood level).
+    ASSERT_TRUE(c.until([&] { return hc.mirror()->simulation().state.players.size() == 2; }, 3));
     EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(600));
     EXPECT_EQ(hc.mirror()->simulation().state.units.size(), size_t(1));
     EXPECT_TRUE(hc.mirror()->unit(*hc.mirror()->driven())->kind == UnitKind::prospector);
@@ -486,7 +487,7 @@ TEST(e2e_save_kill_9_mid_play_loses_at_most_5_s) {
     hd.join(key);
     ASSERT_TRUE(d.until([&] {
         return hd.mirror() && hd.mirror()->driven() && hd.mirror()->unit(*hd.mirror()->driven()) && citadelIn(*hd.mirror()) &&
-               hd.mirror()->simulation().state.players.size() == 1;
+               hd.mirror()->simulation().state.players.size() == 2;
     }, 10));
     const Unit back = *hd.mirror()->unit(*hd.mirror()->driven());
     EXPECT_TRUE(hd.world()->regions[size_t(hd.world()->here)].id == "start");

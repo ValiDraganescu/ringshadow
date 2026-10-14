@@ -3,6 +3,7 @@
   "name": "Glass Flats",
   "size": "medium",
   "base": {"style": "openField", "seed": 13, "drop": ["resources", "doodads"]},
+  "brood": 3,
   "height": [
     {
       "op": "flatten",

@@ -73,7 +73,9 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
     for (const Unit& u : s.units) {
         const bool own = s.allied(u.owner, me);
         if (!own && !sim_.sees(me, u.id)) continue;
-        const bool at = driven >= 0 && (u.target == driven || u.lockTarget == driven);
+        // A bug on the driven unit is in every snapshot from the moment it
+        // turns on it, closing in or not.
+        const bool at = driven >= 0 && (u.target == driven || u.lockTarget == driven || (u.bug && u.bug->prey == driven));
         all.push_back(EntityState{own ? u : scrubbed(u), false, rankOf(u.id, at), distance(u.position, from)});
     }
     for (const Structure& b : s.structures) {

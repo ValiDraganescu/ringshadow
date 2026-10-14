@@ -204,7 +204,8 @@ TEST(world_no_units_but_the_pilots_anywhere) {
     for (size_t i = 0; i < w.regionCount(); i++) {
         const GameState& s = w.region(i).simulation().state;
         EXPECT_TRUE(s.structures.empty());
-        EXPECT_EQ(s.players.size(), size_t(1));
+        // The pilots' side, and the Brood's where the region has a brood level.
+        EXPECT_EQ(s.players.size(), size_t(first().regions[i].file.brood > 0 ? 2 : 1));
         EXPECT_TRUE(!s.endedAt.has_value());
         for (const Unit& u : s.units) EXPECT_TRUE(u.kind == UnitKind::prospector);
     }

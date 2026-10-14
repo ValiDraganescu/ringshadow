@@ -975,6 +975,10 @@ std::string Simulation::title(Unit::Kind k) {
     case Unit::Kind::peregrine: return "Peregrine";
     case Unit::Kind::atlas: return "Atlas";
     case Unit::Kind::scorpion: return "Scorpion";
+    case Unit::Kind::shardling: return "Shardling";
+    case Unit::Kind::gloamwing: return "Gloamwing";
+    case Unit::Kind::lodeback: return "Lodeback";
+    case Unit::Kind::matriarch: return "the Matriarch";
     }
     return "";
 }

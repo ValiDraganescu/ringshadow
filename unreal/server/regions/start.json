@@ -3,6 +3,7 @@
   "name": "Prospect Landing",
   "size": "medium",
   "base": {"style": "openField", "seed": 1, "drop": ["resources", "doodads"]},
+  "brood": 1,
   "height": [
     {
       "op": "flatten",

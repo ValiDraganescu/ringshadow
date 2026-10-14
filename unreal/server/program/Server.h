@@ -87,7 +87,8 @@ public:
     /// Dev and shots (`--dev-control FILE`, main.cpp): the lines of the
     /// control file, each one a move of the world's clock, done at once:
     /// `clock T` to T seconds, `hour H` on to the next hour H, `ahead S`
-    /// S seconds on. A line a log line each (what it did, or why not).
+    /// S seconds on; `brood …` a Brood scene near the first pilot
+    /// (WorldMap::devBrood). A line a log line each (what it did, or why not).
     std::vector<std::string> devControl(const std::string& text);
 
 private:

@@ -1121,7 +1121,7 @@ std::optional<Simulation::Target> Simulation::target(int64_t id) const {
         t.owner = u.owner;
         t.kind = u.kind;
         t.armed = (st.hitsGround || st.hitsAir) && u.kind != Unit::Kind::prospector;
-        t.air = st.air;
+        t.air = u.airborne();
         t.armored = st.armored;
         t.light = st.light;
         t.armor = armor;
@@ -2381,6 +2381,11 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
                 if (v.hp > 0 && amount >= v.hp) bounty(s, Rules::cost(v.kind), Rules::hydrogenCost(v.kind));
             }
         }
+        if (state.units[i].bug && shooter && state.hostile(shooter->owner, state.units[i].owner)) {
+            const double had = state.units[i].hp;
+            bugHits.push_back({shooter->id, id, state.units[i].kind, ac::min(amount, ac::max(0.0, had)), had > 0 && amount >= had});
+            state.units[i].bug->hitBy = shooter->id;
+        }
         state.units[i].hp -= amount;
         state.units[i].hitAt = state.time;
         if (slow) {
@@ -2672,7 +2677,8 @@ void Simulation::bury(std::vector<GameEvent>& events) {
     }
     std::erase_if(state.structures, [](const Structure& s) { return s.hp <= 0; });
     // No one wins in the playground: its sides come and go by hand.
-    if (state.winner || state.endedAt || !(state.players.size() > 1) || (map && map->playground == true)) return;
+    // Nor in a world with the Brood: the bugs hold no ground to lose.
+    if (state.winner || state.endedAt || !(state.players.size() > 1) || (map && map->playground == true) || broodSide) return;
     // The teams with buildings left (C++: with no teams set, each player is
     // its own team and this is Swift's set of owners). Over when one is left.
     std::set<int64_t> standing;
@@ -2843,6 +2849,7 @@ double Simulation::cost(int64_t p, const Unit& unit, const std::map<int64_t, int
 void Simulation::stepUnit(Unit& u, double dt, std::vector<GameEvent>& events) {
     using Task = Unit::Task;
     if (pilot && pilot->unit == u.id) { stepPiloted(u, dt, events); return; }
+    if (u.brood()) { stepBug(u, dt, events); return; }
     if (u.soldier()) { stepSoldier(u, dt, events); return; }
     if (u.task == Task::errand) { stepErrand(u, dt, events); return; }
     if (prospectorDefends(u, dt, events)) return;
@@ -3377,7 +3384,8 @@ bool Simulation::move(Unit& u, Vec2 target_, double stopAt, double dt) const {
                                                  : u.kind == Unit::Kind::firefly ? 9
                                                  : u.kind == Unit::Kind::atlas ? Rules::atlasBodyRate : Rules::prospectorTurnRate);
     const bool slowed = u.slowUntil.value_or(-1) > state.time;
-    const double speed = Rules::speed(u.kind) * rate(Stat::Speed{}, u) * (facing ? 1 : 0.3) * (slowed ? u.slowedTo.value_or(0.5) : 1);
+    const double speed = Rules::speed(u.kind) * rate(Stat::Speed{}, u) * (facing ? 1 : 0.3) * (slowed ? u.slowedTo.value_or(0.5) : 1)
+                         * (u.bug ? u.bug->pace : 1);
     const double stepLen = ac::min(speed * dt, dist - stopAt);
     // Facing (within 0.6 rad): along its heading. Still turning, or
     // when a step along its heading would land in something solid:

@@ -151,6 +151,15 @@ struct MissionCodec {
     void read(BitReader& r, Mission& m) const;
 };
 
+/// A bug of the Brood (docs/creatures.md, "On the wire"): only what the
+/// client draws and plays, never its orders. The state (3 bits), its height
+/// (6 bits, 0.1 cells), its strikes (4 bits) and its sac (4 bits, 0..15 of
+/// `Brood::sacFull`).
+struct BugCodec {
+    void write(BitWriter& w, const Bug& b) const;
+    void read(BitReader& r, Bug& b) const;
+};
+
 /// Every field of a unit, in wire order. A new field of `Unit` goes here.
 template <class V, class X> void unitFields(V& v, X& u) {
     v(Var{}, u.id);
@@ -201,6 +210,7 @@ template <class V, class X> void unitFields(V& v, X& u) {
     v(Opt<Fixed>{kMs}, u.stompReady);
     v(Opt<Fixed>{kMs}, u.stompedAt);
     v(Opt<Fixed>{kMs}, u.struckAt);
+    v(Opt<BugCodec>{}, u.bug);
 }
 template <class V> void fields(V& v, const Unit& x) { unitFields<V, const Unit>(v, x); }
 template <class V> void fields(V& v, Unit& x) { unitFields<V, Unit>(v, x); }

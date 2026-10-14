@@ -3,6 +3,7 @@
   "name": "Slag Pockets",
   "size": "medium",
   "base": {"style": "badlands", "seed": 18, "drop": ["resources", "doodads"]},
+  "brood": 4,
   "height": [
     {
       "op": "flatten",

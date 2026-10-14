@@ -424,6 +424,8 @@ Unit scrubbed(const Unit& u) {
     out.autoFollow = std::nullopt;
     out.shotFrom = std::nullopt;
     out.boardedAt = std::nullopt;
+    // A bug's reload ticks every step: its strikes counter tells the client.
+    if (out.bug) out.cooldown = std::nullopt;
     return out;
 }
 

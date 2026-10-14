@@ -3,6 +3,7 @@
   "name": "Ashen Shelf",
   "size": "medium",
   "base": {"style": "highlands", "seed": 11, "drop": ["resources", "doodads"]},
+  "brood": 3,
   "height": [
     {
       "op": "flatten",

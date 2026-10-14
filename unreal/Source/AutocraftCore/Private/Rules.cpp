@@ -137,6 +137,9 @@ double Rules::vision(UnitKind k) {
     case UnitKind::ranger: case UnitKind::comet: return 13;
     case UnitKind::juggernaut: case UnitKind::firefly: case UnitKind::kestrel: return 14;
     case UnitKind::longbow: case UnitKind::dropship: case UnitKind::hailstorm: case UnitKind::peregrine: case UnitKind::atlas: return 15;
+    // The Brood hunt by their site, not by sight (the director, Brood.h).
+    case UnitKind::shardling: case UnitKind::gloamwing: case UnitKind::lodeback: return 8;
+    case UnitKind::matriarch: return 25;
     }
     return 0;
 }

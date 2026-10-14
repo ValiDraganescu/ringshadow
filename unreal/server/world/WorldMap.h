@@ -266,6 +266,73 @@ struct WorldParams {
     /// shots `--first-step N`: later; 0: none, as a kept pilot from an old
     /// save).
     int firstStep = 1;
+    /// The Brood (docs/creatures.md; WorldBrood.cpp): its director spawns
+    /// bugs in the regions with a brood level (`--brood 0` turns it off),
+    /// and its dice (0: seeded by the world's id).
+    bool brood = true;
+    uint64_t broodSeed = 0;
+};
+
+/// The Brood's director in a world (docs/creatures.md, "Where they come
+/// from"; WorldBrood.cpp): its numbers.
+struct WorldBrood {
+    /// By brood level (1 Prospect Landing … 4 Slag Pockets): bugs alive at
+    /// most outside a nest, and a new group every so many seconds.
+    static int64_t cap(int64_t level);
+    static double every(int64_t level);
+    /// A group lingers 3 to 6 minutes (× `nightLinger` at night); by night
+    /// the director's interval is × `nightEvery`.
+    static constexpr double lingerMin = 180;
+    static constexpr double lingerMax = 360;
+    static constexpr double nightLinger = 1.5;
+    static constexpr double nightEvery = 0.75;
+    /// The director runs only while a pilot is in the region or next to it;
+    /// `idleDespawn` s after the last one left, the region's bugs go.
+    static constexpr double idleDespawn = 120;
+    /// Spawns: this far from every Prospector and every building, and from
+    /// a pilot that came back from a fall in the last `respawnCalm` s.
+    static constexpr double spawnFromProspector = 18;
+    static constexpr double spawnFromBuilding = 12;
+    static constexpr double spawnFromRespawn = 25;
+    static constexpr double respawnCalm = 30;
+    /// Out of sight, for a bug that leaves: this far from every Prospector
+    /// and every building.
+    static constexpr double sightProspector = 16;
+    static constexpr double sightBuilding = 14;
+    /// Sites: a deposit's, a well's, a pad's, a blueprint site's radius; a
+    /// building's footprint plus this; a crater's. A ringshadow sweep
+    /// makes a site × `sweepSite` wide and its leash `sweepLeash` longer.
+    static constexpr double siteRadius = 6;
+    static constexpr double buildingSite = 5;
+    static constexpr double craterSite = 8;
+    static constexpr double leash = 8;
+    static constexpr double sweepSite = 1.5;
+    static constexpr double sweepLeash = 4;
+    /// Nothing lingers within this of a Citadel (raids aside); in Prospect
+    /// Landing (level 1) nothing lingers within `startCalm` of its start pad,
+    /// raids only buildings at least `raidFromCitadel` from the Citadel,
+    /// and never the Citadel itself (until D1 arms it).
+    static constexpr double citadelCalm = 15;
+    static constexpr double startCalm = 25;
+    static constexpr double raidFromCitadel = 25;
+    /// Raids: at most one a region every `raidEvery` s (level 1:
+    /// `raidEveryGentle`), warned `raidWarning` s before they arrive.
+    static constexpr double raidEvery = 240;
+    static constexpr double raidEveryGentle = 600;
+    static constexpr double raidWarning = 20;
+    /// A Lodeback eats only an unprotected deposit: no realm building within
+    /// `guardBuilding`, no Prospector within `guardProspector`. Its ore goes
+    /// back to the nearest deposit within `returnReach` if its own is gone.
+    static constexpr double guardBuilding = 10;
+    static constexpr double guardProspector = 8;
+    static constexpr double returnReach = 10;
+    /// A starfall's impact kills every bug within `impactKill` and scares
+    /// those within `impactScare`; its crater draws nothing for `craterHot` s.
+    static constexpr double impactKill = 4;
+    static constexpr double impactScare = 20;
+    static constexpr double craterHot = 180;
+    /// The director's think: every this many seconds.
+    static constexpr double think = 0.25;
 };
 
 /// The buildings' jobs for the pilot in a world (P6, docs/prospector-progression.md
@@ -588,6 +655,48 @@ public:
     /// The starfall dice's seed (`params().starfallSeed`, or the world's id).
     uint64_t starfallSeed() const;
 
+    // MARK: The Brood (docs/creatures.md; WorldBrood.cpp)
+
+    /// What draws a group: a point of interest of its region.
+    enum class Poi : uint8_t { deposit, well, site, pad, building, crater };
+    /// A group of bugs and what it is doing: its site (ground point, radius,
+    /// leash), how long it lingers, its raid, its prey.
+    struct BroodGroup {
+        int64_t id = 0;
+        Poi poi = Poi::deposit;
+        /// The POI: a deposit's or well's index, a site's or pad's index, a
+        /// building's id, a fall's id.
+        int64_t key = 0;
+        Vec2 site{0, 0};
+        double radius = WorldBrood::siteRadius;
+        double leash = WorldBrood::leash;
+        std::vector<int64_t> bugs;
+        double lingerUntil = 0;
+        bool leaving = false;
+        Vec2 exit{0, 0};
+        /// A raid on building `key`: told (`Sky::Raid`) once.
+        bool raid = false;
+        uint32_t raidId = 0;
+        std::optional<int64_t> prey;
+    };
+    /// The groups of region `r` now.
+    const std::vector<BroodGroup>& broodGroups(size_t r) const;
+    /// The bugs alive in region `r`.
+    int64_t broodAlive(size_t r) const;
+    /// The Brood's side in region `r`'s simulation (nil: no brood level).
+    std::optional<int64_t> broodSide(size_t r) const;
+    /// Tests, dev and shots: a group of `count` bugs of `kind` at a POI of
+    /// region `r` (with a Lodeback's escort when `escort`), spawned at
+    /// `from` (nil: out of sight, as the director spawns), lingering
+    /// already when `arrived`. A raid's POI is a building. Nil: no brood side.
+    std::optional<int64_t> spawnBroodGroup(size_t r, UnitKind kind, int64_t count, Poi poi, int64_t key,
+                                           std::optional<Vec2> from = std::nullopt, bool arrived = false, int64_t escort = 0);
+    /// Tests: the director's next group in region `r` comes now.
+    void broodNow(size_t r);
+    /// Dev and shots (`--dev-control`'s `brood …` lines): a scene near the
+    /// first pilot on line. What it did, or why not.
+    std::string devBrood(const std::string& line);
+
     /// What the pilot's client is told of its progression now (no news).
     std::optional<net::ProgressMessage> progressMessage(PilotId pilot) const;
     /// What happened to the pilot's progression since the last call.
@@ -888,6 +997,45 @@ private:
     /// pilot next door 3.
     size_t fallRegion(std::mt19937_64& dice) const;
     std::vector<net::Sky::Starfall> skyFalls() const;
+    // WorldBrood.cpp.
+    struct BroodRegion {
+        /// When the next group comes (world clock; nil: not running).
+        std::optional<double> next;
+        double lastRaid = -1e9;
+        /// The clock a pilot was last in the region or next to it.
+        double lastNear = -1e9;
+        std::vector<BroodGroup> groups;
+        /// Each Lodeback's sac and the deposit it ate from, after the last
+        /// step: its ore goes back when it dies.
+        std::map<int64_t, std::pair<double, std::optional<int64_t>>> sacs;
+    };
+    /// Each step: the hits on bugs (XP, aggro), a dead Lodeback's ore back,
+    /// a starfall's impact; every `WorldBrood::think` s the groups' orders,
+    /// leaving and spawning.
+    void brood();
+    void broodThink(size_t r);
+    /// A group's POI picked by its kind's weights; spawned out of sight.
+    bool spawnGroup(size_t r);
+    std::optional<Vec2> spawnPoint(size_t r, std::optional<Vec2> toward) const;
+    /// Ground point `at` of region `r` is in sight of a Prospector or a
+    /// building of the realm.
+    bool inSight(size_t r, Vec2 at) const;
+    /// The way out of region `r` from `at`: the nearest edge point out of sight.
+    Vec2 exitPoint(size_t r, Vec2 at) const;
+    /// How deep ground point `at` of region `r` is in a ringshadow sweep now.
+    double sweepCover(size_t r, Vec2 at) const;
+    void tellRaids();
+    std::vector<BroodRegion> brood_;
+    std::vector<net::Sky::Raid> raids_;
+    uint32_t nextRaid_ = 1;
+    int64_t nextGroup_ = 1;
+    std::mt19937_64 broodDice_;
+    double broodThought_ = -1e9;
+    /// Falls whose impact the bugs felt; pilots' Prospectors last seen (a
+    /// new one is a respawn: when, where).
+    std::set<uint32_t> fallsFelt_;
+    std::map<PilotId, int64_t> broodUnits_;
+    std::map<PilotId, std::pair<double, Vec2>> respawned_;
 };
 
 } // namespace ac::server
