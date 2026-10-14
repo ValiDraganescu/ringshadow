@@ -516,3 +516,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D User: workers never delete the pictures and videos they make.
 - N Today's pictures: https://claude.ai/artifact/XzfbE5JigQ91iY63C3Q428
 - T Journalist started in web-4bb0eb5c (website/ only).
+- D User: Citadel gets 4 free point-defence turrets, one per corner.
+- D User: placed turrets and their upgrades cost like any building.

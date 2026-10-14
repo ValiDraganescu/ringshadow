@@ -59,6 +59,10 @@ Comes from the user's remarks after playing to level 10 (2026-10-14).
   beating it starts the zone's game, waves growing harder. If the pilots
   fail to defend, the brood queen comes, destroys every turret in the zone,
   and it starts over from the first wave.
+- The Citadel comes with four point-defence turrets, one at each corner,
+  at no cost: rapid rotary close-in guns that shred bugs on the ground and
+  in the air. Turrets pilots place, in a canyon or anywhere, cost what any
+  building costs, and the pilot pays their upgrades.
 
 ## Decided (2026-10-14, manager)
 
@@ -103,7 +107,7 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | N1 | Bug design and models: docs/creatures.md (kinds: a ground swarmer, a flyer, the brood queen; hp, speed, damage, attraction to POIs, linger, aggro, mining, leaving), models through the model pipeline, sounds offline | | done 0fb7047 (blockout models) |
 | N1b | The Brood's models refined toward the concept art (the Matriarch's sac and crown, opal quills, the Lodeback's glass sac), painted materials | N2 | |
 | N2 | Bugs in the world: server spawns at POIs, linger, attack pilots in their site and buildings, mine unprotected veins and leave; snapshots; client draws, animates, sounds; buildings take damage and can fall | N1, R1 | done 591206b |
-| D1 | Citadel weapons: the Citadel fires at bugs in range; realm-wallet upgrades for fire rate, damage and range | N2, C1 | |
+| D1 | Citadel weapons: four free point-defence turrets, one per corner, fire at bugs in range; realm-wallet upgrades for fire rate, damage and range | N2, C1 | |
 | D2 | Defence buildings: AA tower (Sentinel model, air only) and the gatling gun (new model, amalgam rounds, ground and close air), blueprints, prices, build menu | N2, C2 | |
 | N3 | The brood queen: a giant in a region other than Prospect Landing, a nest with many bugs, her own attack and sound, a reward for killing her | N2 | |
 | D3 | Turret upgrades: per AA tower and gatling, marks for fire rate, damage and range (and the gatling's air reach), paid at the turret from the pilot's wallet; shown on the turret | D2 | |
