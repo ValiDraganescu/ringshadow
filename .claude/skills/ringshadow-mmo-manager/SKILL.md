@@ -63,7 +63,7 @@ Append to `docs/mmorpg-log.md` one line per decision, issue, task change or meas
 - Every editor or game run goes through `uv run unreal/Tools/hidden_run.py` (hidden, silent, one at a time on the Mac). The user restarts the visible game and editor.
 - Builds go through `unreal/Tools/build.sh`, only when the next step needs the editor; the make suites check code steps first. Every brief tells the worker to load `ringshadow-dev-agent` and names its worktree and branch. You verify with the suites and the workers' pictures, not your own build.
 - Tests and pictures use their own save and pilot key; the user's save in `~/Library/Application Support/Autocraft/Unreal/mmo/` stays theirs.
-- Scratch files go in the worktree's ignored `unreal/server/build/`.
+- Scratch files go in the worktree's ignored `unreal/server/build/`. Pictures and videos a worker makes are never deleted: the journalist (an always-on worker in its own worktree, `website/` only) builds the blog's albums from them. Tell the journalist after each merge what landed and where its pictures are.
 - `rm` with exact full paths. Commits carry no AI attribution. Code, docs and prompts describe ideas without naming other games or studios.
 - The user decides publishing, releases, signing, notarizing, AWS machines and merging into `main`: ask.
 - Isolated test scenarios only, never a whole game.

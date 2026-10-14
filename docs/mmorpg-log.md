@@ -512,3 +512,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: tasks D3 (turret upgrades), Z1 (canyon), Z2 (waves) added.
 - D Manager: gatling floor ~5, AA tower ~10; Citadel upgrades on a DEFENCE tab.
 - T D1 + D2 briefed to wt2.
+- D User: an always-on journalist agent keeps a blog with feature albums.
+- D User: workers never delete the pictures and videos they make.
+- N Today's pictures: https://claude.ai/artifact/XzfbE5JigQ91iY63C3Q428
+- T Journalist started in web-4bb0eb5c (website/ only).
