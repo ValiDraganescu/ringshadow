@@ -541,3 +541,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Merc paint doesn't read orange in h2-03 (looks like the stock Prospector).
 - I MISSIONS TAKE click did nothing; fixed in H2.
 - D User (relayed by the journalist): deploy each finished website change.
+- D Manager: M2 bakes per-region ortho captures; overlays and tooltips live.
+- T M2 (+ merc paint fix) briefed to wt1.
