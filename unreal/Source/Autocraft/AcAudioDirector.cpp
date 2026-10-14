@@ -1176,6 +1176,17 @@ void UAcAudioDirector::Play(const FAcSoundCue& Cue)
 	if (C && Wave->bLooping) StopAt.Add({C, Brain.Clock() + Wave->Duration});
 }
 
+void UAcAudioDirector::PlayMenu(const FName Name, const float Gain)
+{
+	// The per-second line is not written while the game is held: its own line.
+	if (bLog || CVarAcAudioLog.GetValueOnGameThread()) UE_LOG(LogAutocraft, Log, TEXT("audio: menu %s"), *Name.ToString());
+	FAcSoundCue Cue;
+	Cue.Name = Name;
+	Cue.Volume = Gain;
+	Cue.Pool = EAcSoundPool::InEar;
+	Play(Cue);
+}
+
 bool UAcAudioDirector::HasDevice() const
 {
 	// -nosound (every headless run): no device, so no voice could start; each

@@ -6,6 +6,8 @@
 #include "AcLauncherArt.h"
 
 #include "Misc/App.h"
+#include "Misc/Paths.h"
+#include "HAL/FileManager.h"
 #include "Rendering/DrawElements.h"
 #include "Engine/Texture2D.h"
 #include "ImageCore.h"
@@ -23,6 +25,31 @@ namespace
 	constexpr float LabelW = 130;
 	constexpr float ValueW = 56;
 	constexpr float LookMin = 0.25f, LookMax = 3.f;
+	// The home screen (H1): a wider panel for the wordmark, ENTER THE REACH
+	// tall, the rest shorter.
+	constexpr float HomeW = 460;
+	constexpr float PrimaryH = 76;
+	constexpr float HomeButtonH = 40;
+	constexpr float GroupGap = 26;
+	constexpr float GroupHeadH = 22;
+
+	/// Full size up to a 1000-point-high window; past it the panel grows
+	/// with the window (a 2560x1600 window at 1x: 1.6), so it never shrinks
+	/// to a corner of a big screen.
+	float MaxScale(const FVector2f View) { return FMath::Max(1.f, View.Y / 1000.f); }
+
+	float PanelWidth(const EAcMenuMode Mode, const bool bPage) { return Mode == EAcMenuMode::Home && !bPage ? HomeW : PanelW; }
+
+	/// The brand's wordmark face (the website's: Exo 2 ExtraBold, cut from
+	/// the variable font in Content-src/fonts), read from the file as the
+	/// launcher art is; Barlow Condensed Bold when it is missing.
+	FSlateFontInfo Wordmark(const float SwiftPoints)
+	{
+		static const FString File =
+			FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("Content-src/fonts/Exo2-ExtraBold.ttf")));
+		static const bool bHave = IFileManager::Get().FileExists(*File);
+		return bHave ? FSlateFontInfo(File, SwiftPoints * 72.0f / 96.0f) : FAcHudStyle::Font(SwiftPoints);
+	}
 
 	void Box(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, const FBox2f& B, const FLinearColor& C)
 	{
@@ -54,6 +81,7 @@ void SAcMenu::Construct(const FArguments& InArgs)
 {
 	MenuMode = InArgs._Mode;
 	OnPickDelegate = InArgs._OnPick;
+	OnSoundDelegate = InArgs._OnSound;
 	Art = MakeShared<FAcLauncherArt>();
 	// Drift and crossfade repaint every frame, only while the home art shows.
 	RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateSP(this, &SAcMenu::OnArtTimer));
@@ -86,6 +114,13 @@ void SAcMenu::SetGame(const FString& Title, const FString& Detail)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcMenu::SetReach(const FString& Line)
+{
+	if (Line == ReachLine) return;
+	ReachLine = Line;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcMenu::SetMode(const EAcMenuMode InMode)
 {
 	MenuMode = InMode;
@@ -110,14 +145,16 @@ TArray<SAcMenu::FButton> SAcMenu::Buttons() const
 			{EAcMenuAction::QuitToHome, TEXT("QUIT TO HOME")}};
 	}
 	TArray<FButton> B;
-	if (!GameTitle.IsEmpty()) B.Add({EAcMenuAction::Resume, TEXT("RESUME GAME")});
-	B.Add({EAcMenuAction::NewGame, TEXT("NEW GAME")});
-	// The MMORPG test mode (docs/mmorpg-m1.md): the local server's world.
-	B.Add({EAcMenuAction::Mmo, TEXT("MMORPG (TEST)")});
+	// The MMORPG (docs/mmorpg-m1.md, the local server's world) first (H1):
+	// it resumes the saved world, or starts one.
+	B.Add({EAcMenuAction::Mmo, TEXT("ENTER THE REACH"), true});
 	// The same, its saved world deleted first (docs/mmorpg-m3.md, S4).
-	B.Add({EAcMenuAction::MmoNewWorld, TEXT("MMORPG NEW WORLD (TEST)")});
-	B.Add({EAcMenuAction::Settings, TEXT("SETTINGS")});
-	B.Add({EAcMenuAction::QuitApp, TEXT("QUIT")});
+	B.Add({EAcMenuAction::MmoNewWorld, TEXT("NEW WORLD")});
+	// The strategy game below.
+	if (!GameTitle.IsEmpty()) B.Add({EAcMenuAction::Resume, TEXT("RESUME SKIRMISH"), false, false, true});
+	B.Add({EAcMenuAction::NewGame, TEXT("NEW SKIRMISH"), false, false, GameTitle.IsEmpty()});
+	B.Add({EAcMenuAction::Settings, TEXT("SETTINGS"), false, true});
+	B.Add({EAcMenuAction::QuitApp, TEXT("QUIT"), false, true});
 	return B;
 }
 
@@ -231,11 +268,17 @@ void SAcMenu::Pick(const int32 Index)
 {
 	if (bSettings)
 	{
-		if (Index == SliderCount()) Back();
+		if (Index == SliderCount())
+		{
+			OnSoundDelegate.ExecuteIfBound(EAcMenuAction::Back);
+			Back();
+		}
 		return;
 	}
 	const TArray<FButton> B = Buttons();
 	if (!B.IsValidIndex(Index)) return;
+	// A sound for every pick (the flow picks which by the action).
+	OnSoundDelegate.ExecuteIfBound(B[Index].Action);
 	if (B[Index].Action == EAcMenuAction::Back)
 	{
 		Back();
@@ -280,26 +323,53 @@ void SAcMenu::Layout(const FVector2f ViewSize) const
 		Y += 18;
 		Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(PanelW - Pad, Y + ButtonH)));
 		PanelSize = FVector2f(PanelW, Y + ButtonH + Pad);
-		PanelScale = FMath::Clamp(FMath::Min((ViewSize.X - 40) / PanelSize.X, (ViewSize.Y - 40) / PanelSize.Y), 0.3f, 1.0f);
+		PanelScale = FMath::Clamp(FMath::Min((ViewSize.X - 40) / PanelSize.X, (ViewSize.Y - 40) / PanelSize.Y), 0.3f, MaxScale(ViewSize));
 		PanelOrigin = (ViewSize - PanelSize * PanelScale) * 0.5f;
 		if (ArtShowing()) PanelOrigin.X = FMath::Min(ViewSize.X * 0.08f, ViewSize.X - PanelSize.X * PanelScale - 20.f);
 		return;
 	}
-	float Y = MenuMode == EAcMenuMode::Home ? 112 : 84;
+	const bool bHome = MenuMode == EAcMenuMode::Home && !bConfirmNewWorld;
+	const float W = PanelWidth(MenuMode, bConfirmNewWorld);
+	float Y = bHome ? 132 : 84;
 	CardBox = FBox2f(FVector2f::ZeroVector, FVector2f::ZeroVector);
+	GroupAt = FVector2f::ZeroVector;
 	if (bConfirmNewWorld) Y = 84 + 3 * 22 + 18;
-	else if (!GameTitle.IsEmpty())
+	else if (!bHome && !GameTitle.IsEmpty())
 	{
-		CardBox = FBox2f(FVector2f(Pad, Y), FVector2f(PanelW - Pad, Y + CardH));
+		CardBox = FBox2f(FVector2f(Pad, Y), FVector2f(W - Pad, Y + CardH));
 		Y += CardH + 22;
 	}
-	for (int32 I = 0; I < Buttons().Num(); ++I)
+	const TArray<FButton> B = Buttons();
+	for (int32 I = 0; I < B.Num(); ++I)
 	{
-		Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(PanelW - Pad, Y + ButtonH)));
-		Y += ButtonH + ButtonGap;
+		if (bHome && B[I].bGroup)
+		{
+			// The strategy game: its heading, then its card when there is a game.
+			Y += GroupGap - ButtonGap;
+			GroupAt = FVector2f(Pad, Y);
+			Y += GroupHeadH;
+			if (!GameTitle.IsEmpty())
+			{
+				CardBox = FBox2f(FVector2f(Pad, Y), FVector2f(W - Pad, Y + CardH));
+				Y += CardH + ButtonGap;
+			}
+		}
+		const float H = !bHome ? ButtonH : B[I].bPrimary ? PrimaryH : HomeButtonH;
+		if (B[I].bHalf && I > 0 && B[I - 1].bHalf)
+		{
+			// The second half of the row above.
+			FBox2f& Left = Boxes.Last();
+			const float Mid = (Pad + W - Pad) * 0.5f;
+			Left.Max.X = Mid - ButtonGap * 0.5f;
+			Boxes.Add(FBox2f(FVector2f(Mid + ButtonGap * 0.5f, Left.Min.Y), FVector2f(W - Pad, Left.Max.Y)));
+			continue;
+		}
+		if (bHome && B[I].bHalf) Y += GroupGap - ButtonGap;
+		Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(W - Pad, Y + H)));
+		Y += H + ButtonGap;
 	}
-	PanelSize = FVector2f(PanelW, Y - ButtonGap + Pad);
-	PanelScale = FMath::Clamp(FMath::Min((ViewSize.X - 40) / PanelSize.X, (ViewSize.Y - 40) / PanelSize.Y), 0.3f, 1.0f);
+	PanelSize = FVector2f(W, Y - ButtonGap + Pad);
+	PanelScale = FMath::Clamp(FMath::Min((ViewSize.X - 40) / PanelSize.X, (ViewSize.Y - 40) / PanelSize.Y), 0.3f, MaxScale(ViewSize));
 	PanelOrigin = (ViewSize - PanelSize * PanelScale) * 0.5f;
 	if (ArtShowing()) PanelOrigin.X = FMath::Min(ViewSize.X * 0.08f, ViewSize.X - PanelSize.X * PanelScale - 20.f);
 }
@@ -389,6 +459,7 @@ namespace
 	constexpr double ArtFade = 1.5;    // ... fading in over 1.5 s, so each is on screen 14 s
 	constexpr float ArtZoom = 0.06f;
 	constexpr float ArtPan = 0.025f;
+	constexpr double ArtSwing = 60.0;  // a lone image: in and back out in a minute
 }
 
 /// The key art, aspect-fill with a slow zoom and pan, crossfading to the next; then the
@@ -401,8 +472,10 @@ void SAcMenu::PaintArt(FSlateWindowElementList& Out, const int32 Layer, const FG
 	const bool bPinned = Art->Pinned() != INDEX_NONE;
 	const double E = bPinned ? 0.0 : Now - ArtStart;
 	const int32 N = Art->Num();
-	const int32 Idx = Art->Start() + (int32)FMath::FloorToDouble(E / ArtSlot);
-	const double Local = E - FMath::FloorToDouble(E / ArtSlot) * ArtSlot;
+	// One image (H1's key art) drifts in and out over ArtSwing and never cuts.
+	const bool bOne = N == 1;
+	const int32 Idx = bOne ? Art->Start() : Art->Start() + (int32)FMath::FloorToDouble(E / ArtSlot);
+	const double Local = bOne ? E : E - FMath::FloorToDouble(E / ArtSlot) * ArtSlot;
 
 	Out.PushClip(FSlateClippingZone(G.GetLayoutBoundingRect()));
 	// `Seen`: seconds this image has been up; 14 s are drifted through.
@@ -411,7 +484,9 @@ void SAcMenu::PaintArt(FSlateWindowElementList& Out, const int32 Layer, const FG
 		const FSlateBrush* B = Art->Brush(I);
 		if (!B) return;
 		const FVector2f Px = B->ImageSize;
-		const float Prog = bPinned ? 0.3f : (float)FMath::Clamp(Seen / (ArtSlot + ArtFade), 0.0, 1.0);
+		const float Prog = bPinned ? 0.3f
+			: bOne                 ? (float)(0.5 - 0.5 * FMath::Cos(2 * PI * Seen / ArtSwing))
+			                       : (float)FMath::Clamp(Seen / (ArtSlot + ArtFade), 0.0, 1.0);
 		const float Cover = FMath::Max(View.X / Px.X, View.Y / Px.Y) * (1.f + ArtZoom * Prog);
 		const FVector2f Size = Px * Cover;
 		// Alternate the pan direction by image; it never exceeds the crop the zoom leaves.
@@ -493,6 +568,53 @@ void SAcMenu::PaintArt(FSlateWindowElementList& Out, const int32 Layer, const FG
 	}
 }
 
+/// RINGSHADOW as the website draws it: Exo 2 ExtraBold, wide tracking, white
+/// at the top shading to ice and soft blue, in a cyan glow. Shrunk to `Width`.
+void SAcMenu::PaintWordmark(FSlateWindowElementList& Out, const int32 Layer, const FGeometry& G, const FVector2f Centre, const float Width) const
+{
+	float Size = 58;
+	FAcHudText T(TEXT("RINGSHADOW"), Wordmark(Size), FAcHudStyle::Soft(), EAcHAlign::Center, EAcVAlign::Top);
+	T.Accent = FLinearColor::Transparent;
+	T.Kern = Size * 0.1f;
+	const float Wide = T.Measure().X;
+	if (Wide > Width && Wide > 0)
+	{
+		Size *= Width / Wide;
+		T.Font = Wordmark(Size);
+		T.Kern = Size * 0.1f;
+	}
+	// The glow: the word a few times round itself, faint.
+	FAcHudText Glow = T;
+	Glow.Color = FAcHudStyle::Srgb(0.35, 0.85, 1, 0.07);
+	for (int32 I = 0; I < 12; ++I)
+	{
+		const float A = I * 2 * PI / 12;
+		const float R = I % 2 ? 5.f : 2.5f;
+		Glow.Paint(Out, Layer, G, Centre + FVector2f(FMath::Cos(A), FMath::Sin(A)) * R);
+	}
+	// The shading, top to bottom white, ice, soft blue: the word in thin
+	// horizontal strips, each clipped to its own rows in its own colour.
+	const float Cap = Size * 0.7f;
+	constexpr int32 Strips = 14;
+	const FLinearColor Soft = FAcHudStyle::Soft(), Ice = FAcHudStyle::Ice(), White = FLinearColor::White;
+	for (int32 I = 0; I < Strips; ++I)
+	{
+		// Strip I covers [Y0, Y1] of the capitals; the first and last reach past them (the glyphs' overshoot).
+		const float A = (float)I / Strips, B = (float)(I + 1) / Strips;
+		const float Y0 = I == 0 ? Centre.Y - Size : Centre.Y + Cap * A;
+		const float Y1 = I == Strips - 1 ? Centre.Y + Size : Centre.Y + Cap * B;
+		const float Mid = (A + B) * 0.5f;
+		const FLinearColor C = Mid < 0.45f ? FMath::Lerp(White, Ice, Mid / 0.45f) : FMath::Lerp(Ice, Soft, (Mid - 0.45f) / 0.55f);
+		const FVector2f Min(G.LocalToAbsolute(FVector2D(0, Y0)));
+		const FVector2f Max(G.LocalToAbsolute(FVector2D(G.GetLocalSize().X, Y1)));
+		Out.PushClip(FSlateClippingZone(FSlateRect(Min.X, Min.Y, Max.X, Max.Y)));
+		FAcHudText Over = T;
+		Over.Color = C;
+		Over.Paint(Out, Layer + 1, G, Centre);
+		Out.PopClip();
+	}
+}
+
 int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
 	FSlateWindowElementList& Out, int32 Layer, const FWidgetStyle& Style, bool bParentEnabled) const
 {
@@ -510,7 +632,8 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 	}
 	const FGeometry P = Geometry.MakeChild(FVector2D(PanelSize), FSlateLayoutTransform(PanelScale, FVector2D(PanelOrigin)));
 	const FBox2f Panel(FVector2f::ZeroVector, PanelSize);
-	Box(Out, Layer + 1, P, Panel, FAcHudStyle::Srgb(0.025, 0.045, 0.075, 0.96));
+	// Over the key art the panel is glass, so the art shows through.
+	Box(Out, Layer + 1, P, Panel, FAcHudStyle::Srgb(0.025, 0.045, 0.075, ArtShowing() ? 0.82 : 0.96));
 	Frame(Out, Layer + 2, P, Panel, FAcHudStyle::Srgb(0.42, 0.5, 0.58, 0.9), 2);
 	Frame(Out, Layer + 2, P, Panel.ExpandBy(-4), FAcHudStyle::Srgb(0.35, 0.85, 1, 0.28), 1);
 	const int32 L = Layer + 3;
@@ -558,10 +681,10 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 	}
 	else if (bHome)
 	{
-		Label(TEXT("RINGSHADOW"), 46, FAcHudStyle::Ice(), EAcHAlign::Center).Paint(Out, L, P, FVector2f(PanelW / 2, 26));
-		Label(TEXT("Stardust Ore · Metallic Hydrogen · a frontier world"), 14, FAcHudStyle::Soft(), EAcHAlign::Center, EAcVAlign::Top,
+		PaintWordmark(Out, L, P, FVector2f(PanelSize.X / 2, 30), PanelSize.X - 2 * Pad);
+		Label(TEXT("A lone prospector under a ringed giant"), 16, FAcHudStyle::Soft(), EAcHAlign::Center, EAcVAlign::Top,
 			EAcFontWeight::Medium)
-			.Paint(Out, L, P, FVector2f(PanelW / 2, 80));
+			.Paint(Out, L, P, FVector2f(PanelSize.X / 2, 96));
 	}
 	else
 	{
@@ -572,7 +695,7 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 	{
 		Box(Out, L, P, CardBox, FAcHudStyle::Srgb(0.04, 0.07, 0.11, 1));
 		Frame(Out, L + 1, P, CardBox, FAcHudStyle::Srgb(0.3, 0.42, 0.52, 0.6));
-		Label(bHome ? TEXT("YOUR GAME") : TEXT("THIS GAME"), 11, FAcHudStyle::Srgb(0.55, 0.7, 0.8), EAcHAlign::Left, EAcVAlign::Top,
+		Label(bHome ? TEXT("YOUR SKIRMISH") : TEXT("THIS GAME"), 11, FAcHudStyle::Srgb(0.55, 0.7, 0.8), EAcHAlign::Left, EAcVAlign::Top,
 			EAcFontWeight::SemiBold)
 			.Paint(Out, L + 2, P, CardBox.Min + FVector2f(14, 10));
 		Label(GameTitle, 18, FAcHudStyle::Text()).Paint(Out, L + 2, P, CardBox.Min + FVector2f(14, 25));
@@ -580,24 +703,61 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 			.Paint(Out, L + 2, P, CardBox.Min + FVector2f(14, 47));
 	}
 
+	if (bHome && !bConfirmNewWorld && GroupAt != FVector2f::ZeroVector)
+	{
+		// The strategy game's heading: small caps over a hairline.
+		FAcHudText Head = Label(TEXT("THE STRATEGY GAME"), 12, FAcHudStyle::Srgb(0.55, 0.7, 0.8), EAcHAlign::Left, EAcVAlign::Top,
+			EAcFontWeight::SemiBold);
+		Head.Kern = 1.5f;
+		Head.Paint(Out, L, P, GroupAt);
+		const float X = GroupAt.X + Head.Measure().X + 10;
+		Box(Out, L, P, FBox2f(FVector2f(X, GroupAt.Y + 5), FVector2f(PanelSize.X - Pad, GroupAt.Y + 6)), FAcHudStyle::Srgb(0.3, 0.42, 0.52, 0.6));
+	}
+
 	const TArray<FButton> B = Buttons();
 	for (int32 I = 0; I < Boxes.Num() && I < B.Num(); ++I)
 	{
 		const bool bHot = I == Highlighted;
 		const bool bDown = I == Pressed;
+		const bool bPrimary = bHome && B[I].bPrimary;
 		FLinearColor Fill = FAcHudStyle::Srgb(0.05, 0.09, 0.14, 1);
 		FLinearColor Rim = FAcHudStyle::Srgb(0.3, 0.42, 0.52, 0.8);
 		FLinearColor Ink = FAcHudStyle::Srgb(0.75, 0.85, 0.92);
+		if (bPrimary)
+		{
+			// The way in stands out even when not highlighted: a cyan rim.
+			Fill = FAcHudStyle::Srgb(0.05, 0.16, 0.24, 1);
+			Rim = FAcHudStyle::Srgb(0.35, 0.85, 1, 0.75);
+			Ink = FAcHudStyle::Text();
+		}
 		if (bHot)
 		{
-			Fill = FAcHudStyle::Srgb(0.08, 0.3, 0.42, 1);
+			Fill = bPrimary ? FAcHudStyle::Srgb(0.09, 0.36, 0.5, 1) : FAcHudStyle::Srgb(0.08, 0.3, 0.42, 1);
 			Rim = FAcHudStyle::Cyan();
 			Ink = FAcHudStyle::Text();
 		}
 		if (bDown) Fill = FAcHudStyle::Srgb(0.12, 0.4, 0.55, 1);
-		Box(Out, L, P, Boxes[I], Fill);
-		Frame(Out, L + 1, P, Boxes[I], Rim, bHot ? 1.5f : 1.0f);
-		Label(B[I].Label, 18, Ink, EAcHAlign::Center, EAcVAlign::Center).Paint(Out, L + 2, P, Boxes[I].GetCenter() + FVector2f(0, 0.5f));
+		const FBox2f& R = Boxes[I];
+		Box(Out, L, P, R, Fill);
+		Frame(Out, L + 1, P, R, Rim, bHot || bPrimary ? 1.5f : 1.0f);
+		if (bPrimary)
+		{
+			// A bright edge down the left, as the HUD's selected cards.
+			Box(Out, L + 2, P, FBox2f(R.Min, FVector2f(R.Min.X + 4, R.Max.Y)), FAcHudStyle::Cyan());
+			FAcHudText Title = Label(B[I].Label, 28, Ink, EAcHAlign::Center, EAcVAlign::Center);
+			Title.Kern = 2.f;
+			const bool bLine = !ReachLine.IsEmpty();
+			Title.Paint(Out, L + 2, P, FVector2f(R.GetCenter().X, R.Min.Y + (bLine ? 30 : R.GetSize().Y / 2)));
+			if (bLine)
+			{
+				FAcHudText Sub = Label(ReachLine, 12, FAcHudStyle::Soft(), EAcHAlign::Center, EAcVAlign::Center, EAcFontWeight::SemiBold);
+				Sub.Kern = 1.2f;
+				Sub.Paint(Out, L + 2, P, FVector2f(R.GetCenter().X, R.Max.Y - 17));
+			}
+			continue;
+		}
+		Label(B[I].Label, bHome && B[I].bHalf ? 16 : 18, Ink, EAcHAlign::Center, EAcVAlign::Center)
+			.Paint(Out, L + 2, P, R.GetCenter() + FVector2f(0, 0.5f));
 	}
 	return L + 4;
 }

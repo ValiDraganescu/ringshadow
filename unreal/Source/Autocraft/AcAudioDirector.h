@@ -180,6 +180,10 @@ namespace AcSound
 	/// found, a contract paid, a module made, a mark researched.
 	inline constexpr float RankUpGain = 0.25f;
 	inline constexpr float NewsGain = 0.45f;
+	/// The home screen (H1): ENTER THE REACH swells in with the ringshadow's
+	/// release; the other buttons tick with the level-up card's pick.
+	inline constexpr float MenuEnterGain = 0.35f;
+	inline constexpr float MenuPickGain = 0.3f;
 
 	/// Seconds between report-in lines, between the Oracle's warnings,
 	/// between a driven vehicle's engine sounds; a Sentinel opening fire
@@ -457,6 +461,9 @@ public:
 	/// Silence everything (the menu's Sound toggle); everything keeps running.
 	void SetMuted(bool bInMuted);
 	bool IsMuted() const { return bMuted; }
+	/// A menu sound, in the ear, at once: the home screen and the pause menu
+	/// hold the game, and so the cues (H1). Counted in the -AcAudioLog lines.
+	void PlayMenu(FName Name, float Gain);
 	/// -AcAudioRecord: asked for, started, written (AcShot's -AcShotRecord
 	/// waits on these to record frames and sound together).
 	bool IsRecordingRequested() const { return Recording.IsSet(); }

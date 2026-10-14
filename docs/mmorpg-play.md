@@ -10,8 +10,8 @@ AI units and no other players yet. The design is in [mmorpg.md](mmorpg.md).
 |---|---|
 | The Orchestrator's **Ringshadow-MMO** run | Runs `make mmo`. |
 | `make mmo` (repo root) | Builds the server (`make -C unreal/server`) and the game module, then starts the game straight in the mode (`-AcMmo`). |
-| Home screen, **MMORPG (TEST)** | Starts the local server and resumes your saved world. On the first run you get a new pilot at the start pad. |
-| Home screen, **MMORPG NEW WORLD (TEST)** | Asks first (**DELETE AND START OVER** or **BACK**). It deletes the saved world: your buildings, your wallet and where you stand. Your pilot key stays, so you start again at the start pad. |
+| Home screen, **ENTER THE REACH** | The first button, highlighted, so Return picks it. Starts the local server and resumes your saved world. On the first run you get a new pilot at the start pad. The line under it says whether a saved world waits. |
+| Home screen, **NEW WORLD** | Asks first (**DELETE AND START OVER** or **BACK**). It deletes the saved world: your buildings, your wallet and where you stand. Your pilot key stays, so you start again at the start pad. |
 
 A packaged Mac build has the server inside the app. An editor run uses
 `unreal/server/build/autocraft-server`, so build it first.
@@ -100,7 +100,7 @@ buildings. Leave the mode with Esc (top-down), Esc again, QUIT TO HOME.
 | The game's log | `~/Library/Logs/Autocraft/autocraft.log` |
 | The server's log | `~/Library/Logs/Autocraft/server.log` |
 
-Deleting the save is what MMORPG NEW WORLD (TEST) does. Deleting the key makes
+Deleting the save is what the home screen's NEW WORLD does. Deleting the key makes
 you a new pilot. `-AcSaveDir=DIR` moves both to `DIR/mmo`, and `-AcMmoDir=DIR`
 moves them to `DIR`.
 

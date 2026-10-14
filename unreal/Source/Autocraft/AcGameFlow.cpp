@@ -1,6 +1,7 @@
 #include "AcGameFlow.h"
 #include "AcMusicPlayer.h"
 
+#include "AcAudioDirector.h"
 #include "AcCommandMap.h"
 #include "AcCommands.h"
 #include "AcGameMode.h"
@@ -650,6 +651,15 @@ bool UAcGameFlowSubsystem::OpenMenu(const EAcMenuMode Mode)
 		SAssignNew(Menu, SAcMenu)
 		.Mode(Mode)
 		.OnPick_Lambda([Weak](EAcMenuAction A) { if (Weak.IsValid()) Weak->OnMenuPick(A); })
+		.OnSound_Lambda([Weak](EAcMenuAction A)
+		{
+			// H1: the way into the Reach swells in with the ringshadow's
+			// release (J1); every other pick ticks.
+			UAcAudioDirector* Audio = Weak.IsValid() ? UAcAudioDirector::Get(Weak.Get()) : nullptr;
+			if (!Audio) return;
+			if (A == EAcMenuAction::Mmo) Audio->PlayMenu("rsrelease", AcSound::MenuEnterGain);
+			else Audio->PlayMenu("pick", AcSound::MenuPickGain);
+		})
 	];
 	RefreshMenuGame();
 	BeginModal();
@@ -672,6 +682,9 @@ void UAcGameFlowSubsystem::CloseMenu()
 void UAcGameFlowSubsystem::RefreshMenuGame()
 {
 	if (!Menu) return;
+	// Under ENTER THE REACH: whether a saved world waits (H1).
+	Menu->SetReach(IFileManager::Get().FileExists(*FAcMmoClient::SaveFile()) ? TEXT("ASHFALL REACH  ·  YOUR CLAIM WAITS")
+	                                                                       : TEXT("ASHFALL REACH  ·  A FRONTIER WORLD ONLINE"));
 	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!bHasGame || !Sim || !Sim->IsRunning() || !Sim->Choice())
 	{
@@ -762,7 +775,7 @@ void UAcGameFlowSubsystem::StartMmo(const bool bNewWorld)
 		bPausedBefore = false;
 		CloseMenu();
 	}
-	UE_LOG(LogAutocraft, Log, TEXT("menu: %s on the first world"), bNewWorld ? TEXT("MMORPG NEW WORLD (TEST)") : TEXT("MMORPG (TEST)"));
+	UE_LOG(LogAutocraft, Log, TEXT("menu: %s on the first world"), bNewWorld ? TEXT("NEW WORLD") : TEXT("ENTER THE REACH"));
 	Sim->StartMmo(bNewWorld);
 	TickMmo();
 }
@@ -1442,13 +1455,13 @@ void UAcGameFlowSubsystem::TickFlowTest()
 			const double At = S.time;
 			Check(Sim->IsPaused() && FMath::IsNearlyEqual(At, T.GameAt), TEXT("the game waits behind the home screen"));
 			Check(!Press(EKeys::Escape) || Menu, TEXT("Escape keeps the home screen"));
-			Menu->Move(1);  // Resume, New Game
+			Menu->Highlight(EAcMenuAction::NewGame);  // NEW SKIRMISH
 			Menu->PickHighlighted();
 			Check(Dialog.IsValid() && Menu.IsValid(), TEXT("New Game opens the dialog over home"));
 			Press(EKeys::Escape);
 			Check(!Dialog && Menu && Sim->IsPaused(), TEXT("Cancel goes back to home"));
 			Menu->SetMode(EAcMenuMode::Home);
-			Menu->Move(1);
+			Menu->Highlight(EAcMenuAction::NewGame);
 			Menu->PickHighlighted();
 			T.GameId = Text(Sim->Session().game.value_or(""));
 			Press(EKeys::Enter);

@@ -1,18 +1,25 @@
 // `SAcMenu` (the launcher, AcGameFlow): the home screen and the pause menu,
 // drawn in HUD chrome like `SAcNewGame` over the dimmed (paused) game.
 //
-//   Home:   RINGSHADOW                  Pause:  PAUSED
-//           [your game: map, teams,            [the game: map, teams, time]
-//            time played]                      [RESUME]
-//           [RESUME GAME] (when there is one)  [QUIT TO HOME]
-//           [NEW GAME]                         [SETTINGS]
-//           [MMORPG (TEST)]             (resumes the saved world)
-//           [MMORPG NEW WORLD (TEST)]   (asks first: it deletes the save)
-//           [SETTINGS]
-//           [QUIT]
+//   Home (H1):  RINGSHADOW (Exo 2, the brand's wordmark)
+//               A lone prospector under a ringed giant
+//               [ENTER THE REACH      ]  (the MMORPG: resumes the saved
+//               [ ashfall reach · ... ]   world, or starts one; highlighted)
+//               [NEW WORLD]              (asks first: it deletes the save)
+//               THE STRATEGY GAME
+//               [your game: map, teams, time played]
+//               [RESUME SKIRMISH] (when there is one)
+//               [NEW SKIRMISH]
+//               [SETTINGS] [QUIT]
 //
-// MMORPG NEW WORLD (TEST) opens a page that says what it deletes, with
-// DELETE AND START OVER and BACK (highlighted): only the first picks it.
+//   Pause:  PAUSED
+//           [the game: map, teams, time]
+//           [RESUME]
+//           [SETTINGS]
+//           [QUIT TO HOME]
+//
+// NEW WORLD opens a page that says what it deletes, with DELETE AND START
+// OVER and BACK (highlighted): only the first picks it.
 //
 // Settings (from either): sliders for the master, music, effects and
 // environment volumes and the mouse turn while driving, then BACK. They
@@ -39,6 +46,8 @@ public:
 	SLATE_BEGIN_ARGS(SAcMenu) {}
 		SLATE_ARGUMENT(EAcMenuMode, Mode)
 		SLATE_EVENT(FAcOnMenuPick, OnPick)
+		/// Every pick, the widget's own pages too (Settings, Back): its sound.
+		SLATE_EVENT(FAcOnMenuPick, OnSound)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
@@ -47,6 +56,8 @@ public:
 	/// Empty title: no game to resume (home shows no card and no Resume).
 	void SetGame(const FString& Title, const FString& Detail);
 	void SetMode(EAcMenuMode InMode);
+	/// The line under ENTER THE REACH ("ASHFALL REACH · YOUR CLAIM WAITS").
+	void SetReach(const FString& Line);
 	/// The song title for the home screen's bottom-left line (empty: none).
 	void SetNowPlaying(const FString& Title);
 	/// Home with key art: the art fills the window and the panel sits left.
@@ -85,10 +96,17 @@ private:
 	{
 		EAcMenuAction Action;
 		FString Label;
+		/// The home screen's first entry: taller, larger, with the Reach line.
+		bool bPrimary = false;
+		/// Half the row: SETTINGS and QUIT share one.
+		bool bHalf = false;
+		/// The strategy game's group starts here (its heading and card above).
+		bool bGroup = false;
 	};
 	TArray<FButton> Buttons() const;
 	void Layout(FVector2f ViewSize) const;
 	void PaintArt(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f View) const;
+	void PaintWordmark(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Centre, float Width) const;
 	EActiveTimerReturnType OnArtTimer(double Now, float Delta);
 	bool ArtShowing() const { return MenuMode == EAcMenuMode::Home && HasArt(); }
 	int32 ButtonAt(FVector2f LocalPoint) const;
@@ -103,6 +121,8 @@ private:
 
 	EAcMenuMode MenuMode = EAcMenuMode::Home;
 	FAcOnMenuPick OnPickDelegate;
+	FAcOnMenuPick OnSoundDelegate;
+	FString ReachLine;
 	FString GameTitle;
 	FString GameDetail;
 	int32 Highlighted = 0;
@@ -118,6 +138,8 @@ private:
 	/// Laid out at paint (panel points).
 	mutable TArray<FBox2f> Boxes;
 	mutable FBox2f CardBox;
+	/// The home screen's group heading (its top left; zero: none).
+	mutable FVector2f GroupAt = FVector2f::ZeroVector;
 	/// The sliders' tracks (Settings page; `Boxes` has their rows, then BACK).
 	mutable TArray<FBox2f> Tracks;
 	mutable float PanelScale = 1.0f;

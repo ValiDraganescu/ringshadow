@@ -65,7 +65,7 @@ Any problem stops the server (exit 2, the problems on stderr):
 
 ## In the game
 
-The MMORPG (TEST) mode (the home screen's item, or `-AcMmo`) starts
+The MMORPG mode (the home screen's ENTER THE REACH, or `-AcMmo`) starts
 `autocraft-server --world unreal/server/worlds/first.json`; the game no
 longer starts it with `--map`. The pilot starts seated in the Prospector on
 Prospect Landing's pad.
@@ -73,9 +73,9 @@ Prospect Landing's pad.
 The world lasts (docs/mmorpg-m3.md, S4): the game passes `--save
 ~/Library/Application Support/Autocraft/Unreal/mmo/first.sqlite` and joins
 with the pilot key it keeps in `pilot.key` beside it (made once, 128 random
-bits; the logs show only its first 8 hex digits). MMORPG (TEST) resumes:
+bits; the logs show only its first 8 hex digits). ENTER THE REACH resumes:
 the same region and spot, the same Prospector, buildings and wallet.
-MMORPG NEW WORLD (TEST) asks first, then deletes that save (and its `-wal`
+NEW WORLD asks first, then deletes that save (and its `-wal`
 and `-shm` files, each by name) and starts over with the same pilot, new at
 the start pad (`-AcMmoNewWorld` with `-AcMmo`). A save that does not open
 (not a database, held by another server) shows the server's reason and its
