@@ -378,3 +378,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T H1 home screen → first-hour.
 - N 2026-10-14 ~14:50–15:59: second crash; train and 4 workers restarted.
 - T Resumed F1, E2 polish, W2, H1 from uncommitted work.
+- T S1 done cf09855: Starfall 44 s, Ringshadow 37 s (were ~4, ~3 min).
+- N S1: --dev-control file jumps the clock; shot runs only.
