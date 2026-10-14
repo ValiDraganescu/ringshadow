@@ -401,3 +401,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N F1b: suites core 454, server 151, net 67; ~420 credits.
 - I HUD: toasts stack mid-frame, covering more of the view.
 - T Q1 regression pass → world-clock.
+- N Q1 interim: suites core 454, server 151, net 67; mmo flows pass.
+- I Runs pair train module with a server built mid-edit; sent to train author.
