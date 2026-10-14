@@ -1,0 +1,5 @@
+# Cloudflare Pages: the Ringshadow website. Deploy from this folder (see
+# README.md, "Deploy to Cloudflare Pages"). No build step: the folder is the site.
+name = "ringshadow"
+pages_build_output_dir = "."
+compatibility_date = "2026-10-14"

@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The blog's Atom feed. Links are relative to this file; readers resolve
-     them against the address they fetched it from. Newest entry first. -->
+<!-- The blog's Atom feed, newest entry first. -->
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>The Ringshadow blog</title>
   <subtitle>How Ringshadow is being built, as it happens.</subtitle>
   <id>tag:ringshadow,2026-10-14:blog</id>
-  <link rel="self" href="feed.xml"/>
-  <link rel="alternate" type="text/html" href="index.html"/>
+  <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
+  <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
   <updated>2026-10-14T23:00:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
@@ -14,7 +13,7 @@
   <entry>
     <title>The world runs on after you quit</title>
     <id>tag:ringshadow,2026-10-14:blog/world-runs-on</id>
-    <link rel="alternate" type="text/html" href="world-runs-on.html"/>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/world-runs-on"/>
     <published>2026-10-14T23:00:00Z</published>
     <updated>2026-10-14T23:00:00Z</updated>
     <summary>Quit the game and the world keeps going: the local server stays up, the clock turns, meteors fall and the Brood roams, at about 0.008% of a CPU core.</summary>
@@ -22,7 +21,7 @@
   <entry>
     <title>Coming next: guns for the realm, and a canyon to hold</title>
     <id>tag:ringshadow,2026-10-14:blog/defences</id>
-    <link rel="alternate" type="text/html" href="defences.html"/>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/defences"/>
     <published>2026-10-14T22:00:00Z</published>
     <updated>2026-10-14T22:00:00Z</updated>
     <summary>Coming, not in the game yet: the Citadel's guns, an AA tower, a gatling gun firing red-hot ore-and-MH rounds, and a canyon the pilots defend wave by wave.</summary>
@@ -30,7 +29,7 @@
   <entry>
     <title>The Brood: from a painting to the world in a day</title>
     <id>tag:ringshadow,2026-10-14:blog/the-brood</id>
-    <link rel="alternate" type="text/html" href="the-brood.html"/>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/the-brood"/>
     <published>2026-10-14T21:00:00Z</published>
     <updated>2026-10-14T21:00:00Z</updated>
     <summary>The first enemies: four alien bugs, from concept paintings to blockout models to the world, where they linger at deposits, bite, dive, eat ore and raid buildings.</summary>
@@ -38,7 +37,7 @@
   <entry>
     <title>Missions, the Journal and three voices</title>
     <id>tag:ringshadow,2026-10-14:blog/missions</id>
-    <link rel="alternate" type="text/html" href="missions.html"/>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/missions"/>
     <published>2026-10-14T20:00:00Z</published>
     <updated>2026-10-14T20:00:00Z</updated>
     <summary>The Citadel offers missions in three tiers, a Journal keeps them, and three narrators read every briefing.</summary>
@@ -46,7 +45,7 @@
   <entry>
     <title>The realm: shared buildings, a tax and a shop</title>
     <id>tag:ringshadow,2026-10-14:blog/the-realm</id>
-    <link rel="alternate" type="text/html" href="the-realm.html"/>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/the-realm"/>
     <published>2026-10-14T19:00:00Z</published>
     <updated>2026-10-14T19:00:00Z</updated>
     <summary>Every building now belongs to every pilot. The Citadel takes 10% of each unload into a realm wallet and sells blueprints and supplies.</summary>
@@ -54,7 +53,7 @@
   <entry>
     <title>How we got here</title>
     <id>tag:ringshadow,2026-10-14:blog/how-we-got-here</id>
-    <link rel="alternate" type="text/html" href="how-we-got-here.html"/>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/how-we-got-here"/>
     <published>2026-10-14T18:00:00Z</published>
     <updated>2026-10-14T18:00:00Z</updated>
     <summary>Two days, seven milestones of the MMORPG mode: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.</summary>

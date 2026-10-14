@@ -12,7 +12,7 @@ no framework and no server side, so this folder deploys as it is.
 | `assets/js/` | `stars.js` (the starfield), `home.js` (clips play only on screen), `roadmap.js` (the ring). |
 | `assets/fonts/` | Barlow Condensed and Exo 2 as woff2, with their SIL Open Font License texts. |
 | `assets/media/` | Screenshots and clips from `docs/media/` (the GIFs re-encoded as MP4) and the key art from `art/splash/`. |
-| `_headers` | Caching and security headers for Cloudflare Pages. |
+| `_headers`, `_redirects`, `wrangler.toml`, `404.html`, `robots.txt`, `sitemap.xml` | Cloudflare Pages: see "Deploy to Cloudflare Pages". |
 | `blog/` | The blog: `index.html` (newest first), one page per post, `feed.xml` (Atom), `media/<post>/` (its album). |
 | `assets/css/blog.css`, `assets/js/album.js` | The blog's look, and the albums' lightbox (keys, swipes, captions). |
 | `tools/album.py` | Copies pictures into an album, resized and recompressed (`uv run`). |
@@ -86,12 +86,57 @@ pnpm dlx serve website
 
 Then open http://localhost:8765/ (or the address `serve` prints).
 
-## Deploy to Cloudflare Pages (later)
+## Deploy to Cloudflare Pages
 
-Create a Pages project from the GitHub repo with:
+The site's address is **https://ringshadow.com** (on the user's Cloudflare
+account). Every page carries it: `<link rel="canonical">`, `og:url` and an
+absolute `og:image` (link previews on X need the full URL), and so do
+`sitemap.xml`, `robots.txt` and the blog's feed. Pages serves `/blog/the-brood`
+for `blog/the-brood.html` and redirects the `.html` address there, so the
+canonical addresses have no `.html`; links inside the site stay relative and
+work either way. A new post adds its own address in the same places, and a
+line in `sitemap.xml`.
 
-- Build command: none
-- Build output directory: `website`
+The deploy files, all in this folder:
 
-Or upload the folder directly: `pnpm dlx wrangler pages deploy website`.
-`_headers` is read by Pages on deploy.
+| File | What |
+|---|---|
+| `wrangler.toml` | The Pages project: name `ringshadow`, output `.` (this folder). |
+| `_headers` | Security headers (CSP self only), caching, and `noindex` on the `pages.dev` addresses so only ringshadow.com is indexed. |
+| `_redirects` | Sends `/tools/`, `/README.md` and `/wrangler.toml` to the home page: Pages uploads the whole folder and can't leave files out. |
+| `404.html` | The not-found page. Without it Pages would answer every unknown address with the home page. |
+| `robots.txt`, `sitemap.xml` | For search engines. |
+
+Nothing deploys on its own; the user decides when. Two ways, either works:
+
+**Direct upload** (from a Mac with the folder checked out; logs in once in
+the browser):
+
+```sh
+cd website
+pnpm dlx wrangler@4.151.0 login
+pnpm dlx wrangler@4.151.0 pages project create ringshadow --production-branch main
+pnpm dlx wrangler@4.151.0 pages deploy . --project-name ringshadow --branch main
+```
+
+A `--branch` other than `main` makes a preview at
+`<branch>.ringshadow.pages.dev` instead of going live.
+
+**From GitHub** (every push deploys): Workers & Pages → Create → Pages →
+connect `ValiDraganescu/ringshadow`. Production branch: the branch the site
+is merged to. Root directory: `website`. Build command: `exit 0`. Output
+directory: `.` (from `wrangler.toml`). Under Settings → Builds, set the build
+watch paths to `website/*` so game commits don't redeploy the site.
+
+**The domain**, once ringshadow.com is in the Cloudflare account:
+
+1. The Pages project → Custom domains → add `ringshadow.com`, then
+   `www.ringshadow.com`. Cloudflare adds the DNS records and the certificate.
+2. Send `www` to the apex: the zone's Rules → Redirect Rules → a rule for
+   hostname `www.ringshadow.com` to `https://ringshadow.com${uri}` (path
+   kept), 301.
+3. SSL/TLS → Edge Certificates: Always Use HTTPS on. HSTS can be turned on
+   there later, once the site has run on HTTPS for a while.
+
+Limits that matter: 25 MiB a file, 20,000 files (the site is 15 MB in about
+160 files), 100 `_headers` rules, 2,100 `_redirects` lines.
