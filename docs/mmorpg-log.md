@@ -406,3 +406,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I 23abd2b (Q1 test) needed O1's protocol; fixed 8dd1e8e.
 - N HEAD in a clean worktree: core 454, server 146, net 67 pass.
 - I O1 protocol saved after train 13 undeclared; runs never seated.
+- N Correction: the 16:47 protocol save was W3's (ground), not O1's.
