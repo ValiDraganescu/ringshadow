@@ -132,6 +132,28 @@ struct WorldSites {
     static constexpr int64_t chipBlueprintReach = 10;
 };
 
+/// KSTR contracts (docs/contracts.md): three short jobs per pilot from the
+/// radio, drawn by the server's dice per pilot and world day, paid in XP and
+/// MH, replaced at the world's dawn when done or abandoned.
+struct WorldContracts {
+    static constexpr size_t slots = 3;
+    /// XP a minute of play at `level` (the pace model,
+    /// docs/prospector-progression.md: 4,500 an hour at level 1, +2% a
+    /// level).
+    static double perMinute(int64_t level);
+    /// Minutes of play a kind's reward is worth.
+    static double minutes(net::Contract::Kind kind);
+    /// What a contract of `kind` pays at `level`: XP rounded to 5, MH
+    /// `10 + 2 × level` rounded to 5.
+    static double xp(net::Contract::Kind kind, int64_t level);
+    static int64_t hydrogen(int64_t level);
+    /// What it asks at `level`: ore (300 at level 1, +2% a level, to 50),
+    /// MH (60, +2% a level, to 10), ore loads drilled (6 + level / 20).
+    static int64_t ore(int64_t level);
+    static int64_t hydrogenNeed(int64_t level);
+    static int64_t loads(int64_t level);
+};
+
 /// What the world's rules are.
 struct WorldParams {
     /// A new pilot's wallet: a Citadel (400) and a Derrick (75) with some
@@ -167,6 +189,13 @@ struct WorldParams {
     bool devBlueprints = false;
     /// The survey chips' dice (0: seeded by the world's id).
     uint64_t chipSeed = 0;
+    /// KSTR contracts are drawn (tests that count the wallet exactly turn
+    /// them off), and their dice (0: seeded by the world's id).
+    bool contracts = true;
+    uint64_t contractSeed = 0;
+    /// Contracts to drill under a ringshadow sweep are drawn (off until the
+    /// server pays the sweep, E1: `WorldMap::underSweep`).
+    bool sweepContracts = false;
 };
 
 /// What the server tells a pilot after a step: its place in the world
@@ -329,6 +358,25 @@ public:
     int64_t owned(PilotId pilot, StructureKind kind) const;
     /// A site's id, "<region id>/<site name>".
     std::string siteId(size_t region, size_t site) const;
+    // MARK: KSTR contracts (docs/contracts.md, K1; WorldContracts.cpp)
+
+    /// The pilot's contracts today (empty: not a world, or not drawn yet:
+    /// the next step draws them).
+    std::vector<net::Contract> contracts(PilotId pilot) const;
+    /// Puts contracts in place for today (tests, dev).
+    void setContracts(PilotId pilot, const std::vector<net::Contract>& list);
+    /// Drops an open contract (`net::RequestMessage::Abandon`). The reason
+    /// when refused.
+    std::optional<std::string> abandon(PilotId pilot, uint32_t contract);
+    /// The world day at `time` (they start at dawn, `Rules::sunrise`), and
+    /// when the next one starts.
+    int64_t contractDay(double time) const;
+    double nextDawn(double time) const;
+    /// The pilot's Prospector drills under a ringshadow sweep now. A stub
+    /// (false) until E1 hands the server the sweep (`Ringshadow::cover` at
+    /// the unit's ground point); the sweep contracts count on it.
+    bool underSweep(PilotId pilot) const;
+
     /// What the pilot's client is told of its progression now (no news).
     std::optional<net::ProgressMessage> progressMessage(PilotId pilot) const;
     /// What happened to the pilot's progression since the last call.
@@ -376,6 +424,11 @@ private:
             std::string refusal;
         };
         std::optional<Opening> opening;
+        /// Its KSTR contracts, the world day they were last refreshed for,
+        /// and its next contract number.
+        std::vector<net::Contract> contracts;
+        std::optional<int64_t> contractDay;
+        uint32_t nextContract = 1;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {
@@ -417,6 +470,9 @@ private:
     std::vector<std::map<int64_t, double>> owed_;
     std::map<std::pair<size_t, int64_t>, std::pair<int64_t, double>> repaid_;
     std::mt19937_64 chips_;
+    /// How a pilot reaches each region's sites (`region::siteReach`),
+    /// worked out the first time a contract needs it.
+    std::vector<std::optional<std::vector<region::SiteReach>>> siteReach_;
 
     /// A new Prospector on the start pad, facing the start region's nearest
     /// ore deposit (one with ore left first), so the first thing in view is
@@ -462,6 +518,18 @@ private:
     /// The site nearest the pilot that it doesn't know of, here or in a
     /// neighbour region (nil: none left).
     std::optional<std::pair<size_t, size_t>> nearestUnknown(const PilotState& p) const;
+    // WorldContracts.cpp.
+    /// Each step: a new day's draw, the reach contracts.
+    void contracts();
+    /// Fills the done and abandoned slots (all three on the first day).
+    void drawContracts(PilotId pilot, PilotState& p, int64_t day);
+    net::Contract drawContract(PilotId pilot, const PilotState& p, std::mt19937_64& dice,
+                               const std::vector<net::Contract::Kind>& taken);
+    /// Work toward the pilot's open contracts of `kind` (and `target`, when
+    /// set); pays the ones it finishes.
+    void contractWork(PilotId pilot, PilotState& p, net::Contract::Kind kind, const std::string& target, int64_t amount);
+    static std::string encodeContracts(const PilotState& p);
+    static bool decodeContracts(const std::string& json, PilotState& p);
     /// A unit's skill clocks out of region `r` (it leaves), and into `r` as
     /// unit `unit` (it arrives), its cooldowns running on meanwhile.
     std::optional<Carried> takeClocks(size_t r, int64_t unit);

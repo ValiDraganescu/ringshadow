@@ -247,6 +247,9 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* sl = std::get_if<net::RequestMessage::Slot>(&m.what)) {
         what = "slot " + std::to_string(sl->index) + " " + (sl->skill ? std::string(rawValue(*sl->skill)) : "empty");
         why = world_.slot(pilot, sl->index, sl->skill);
+    } else if (const auto* ab = std::get_if<net::RequestMessage::Abandon>(&m.what)) {
+        what = "abandon contract " + std::to_string(ab->contract);
+        why = world_.abandon(pilot, ab->contract);
     } else {
         return std::nullopt;
     }

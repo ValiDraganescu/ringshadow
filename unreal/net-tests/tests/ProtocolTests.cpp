@@ -688,6 +688,29 @@ TEST(protocol_progress_round_trips) {
               {ProgressMessage::NewsKind::site, "start/crate", 0, 1},
               {ProgressMessage::NewsKind::chip, "tern-ridge/wreck", 25, 2}};
     m.opening = ProgressMessage::Opening{"tern-ridge/vault", 0, 10, "The Sentinel vault opens at level 55"};
+    Contract ore;
+    ore.id = 7;
+    ore.kind = Contract::Kind::deliverOre;
+    ore.title = "Ore Run";
+    ore.pitch = "Plain work, honest pay. Haul 300 ore to your Citadel and the station sends something back.";
+    ore.need = 300;
+    ore.have = 120;
+    ore.xp = 600;
+    ore.hydrogen = 10;
+    Contract pad = ore;
+    pad.id = 8;
+    pad.kind = Contract::Kind::reach;
+    pad.state = Contract::State::done;
+    pad.target = "cold-fork/pad/landing";
+    pad.region = "cold-fork";
+    pad.need = pad.have = 1;
+    Contract sweep = ore;
+    sweep.id = 9;
+    sweep.kind = Contract::Kind::sweep;
+    sweep.state = Contract::State::abandoned;
+    m.contracts = {ore, pad, sweep};
+    m.contractsDawn = 4855.5;
+    m.news.push_back({ProgressMessage::NewsKind::contract, "8", 600, 10});
     const std::vector<uint8_t> bytes = encode(m);
     EXPECT_TRUE(messageType(bytes) == MessageType::progress);
     ProgressMessage back;
@@ -705,7 +728,7 @@ TEST(protocol_progress_round_trips) {
     m.opening = ProgressMessage::Opening{"start/wreck", 812.5, 5, ""};
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
-    EXPECT_EQ(kProtocolVersion, uint16_t(6));
+    EXPECT_EQ(kProtocolVersion, uint16_t(7));
 }
 
 TEST(mirror_takes_snapshots_into_its_simulation) {
@@ -855,7 +878,7 @@ TEST(protocol_world_messages_round_trip) {
     for (const auto& what : std::vector<decltype(RequestMessage::what)>{
              RequestMessage::Spend{Skill::quickDrill}, RequestMessage::Spend{allCases<Skill>().back()},
              RequestMessage::Undo{Skill::overcharge}, RequestMessage::Respec{}, RequestMessage::Slot{2, Skill::aegis},
-             RequestMessage::Slot{0, std::nullopt}}) {
+             RequestMessage::Slot{0, std::nullopt}, RequestMessage::Abandon{4000000000u}}) {
         RequestMessage t;
         t.id = 21;
         t.what = what;

@@ -47,6 +47,7 @@ uint32_t Client::undo(Skill skill) { return request(RequestMessage::Undo{skill})
 uint32_t Client::respec() { return request(RequestMessage::Respec{}); }
 
 uint32_t Client::slot(int64_t index, std::optional<Skill> skill) { return request(RequestMessage::Slot{index, skill}); }
+uint32_t Client::abandon(uint32_t contract) { return request(RequestMessage::Abandon{contract}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;

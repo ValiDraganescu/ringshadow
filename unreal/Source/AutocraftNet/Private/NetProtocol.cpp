@@ -612,6 +612,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         w.writeBool(p->skill.has_value());
         if (p->skill) writeSkill(w, *p->skill);
     }
+    if (const auto* p = std::get_if<RequestMessage::Abandon>(&m.what)) writeVarint(w, p->contract);
     return w.bytes();
 }
 
@@ -668,6 +669,7 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         m.what = p;
         break;
     }
+    case 9: m.what = RequestMessage::Abandon{static_cast<uint32_t>(readVarint(r))}; break;
     default: return false;
     }
     return r.ok();
@@ -710,9 +712,24 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         codec::kMs.write(w, m.opening->needs);
         writeString(w, m.opening->refusal);
     }
+    writeVarint(w, m.contracts.size());
+    for (const Contract& c : m.contracts) {
+        writeVarint(w, c.id);
+        w.writeBits(uint64_t(c.kind), 3);
+        w.writeBits(uint64_t(c.state), 2);
+        writeString(w, c.title);
+        writeString(w, c.pitch);
+        writeString(w, c.target);
+        writeString(w, c.region);
+        writeSigned(w, c.need);
+        writeSigned(w, c.have);
+        codec::Fixed{1000}.write(w, c.xp);
+        writeSigned(w, c.hydrogen);
+    }
+    codec::kMs.write(w, m.contractsDawn);
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
-        w.writeBits(uint64_t(n.kind), 3);
+        w.writeBits(uint64_t(n.kind), 4);
         writeString(w, n.id);
         codec::Fixed{1000}.write(w, n.xp);
         writeSigned(w, n.value);
@@ -773,12 +790,31 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         if (!readString(r, o.refusal)) return false;
         m.opening = o;
     }
+    const uint64_t contracts = readVarint(r);
+    if (contracts > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < contracts; i++) {
+        Contract c;
+        c.id = static_cast<uint32_t>(readVarint(r));
+        const uint64_t kind = r.readBits(3);
+        const uint64_t state = r.readBits(2);
+        if (kind > uint64_t(Contract::Kind::sweep) || state > uint64_t(Contract::State::abandoned)) return false;
+        c.kind = static_cast<Contract::Kind>(kind);
+        c.state = static_cast<Contract::State>(state);
+        if (!readString(r, c.title) || !readString(r, c.pitch) || !readString(r, c.target) || !readString(r, c.region))
+            return false;
+        c.need = readSigned(r);
+        c.have = readSigned(r);
+        codec::Fixed{1000}.read(r, c.xp);
+        c.hydrogen = readSigned(r);
+        m.contracts.push_back(std::move(c));
+    }
+    codec::kMs.read(r, m.contractsDawn);
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
-        const uint64_t kind = r.readBits(3);
-        if (kind > uint64_t(ProgressMessage::NewsKind::site)) return false;
+        const uint64_t kind = r.readBits(4);
+        if (kind > uint64_t(ProgressMessage::NewsKind::contract)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

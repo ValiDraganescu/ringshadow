@@ -326,9 +326,15 @@ struct RequestMessage {
         std::optional<Skill> skill;
         bool operator==(const Slot&) const = default;
     };
+    /// Drop an open KSTR contract (docs/contracts.md): it costs nothing, and
+    /// its slot gets a new contract at the next world dawn.
+    struct Abandon {
+        uint32_t contract = 0;
+        bool operator==(const Abandon&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
-    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot> what;
+    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon> what;
     bool operator==(const RequestMessage&) const = default;
 };
 
@@ -360,6 +366,37 @@ struct ReplyMessage {
     bool operator==(const ReplyMessage&) const = default;
 };
 
+/// A KSTR contract (docs/contracts.md): a short job the radio offers a
+/// pilot, paid in XP and MH when `have` reaches `need`.
+struct Contract {
+    /// deliverOre, deliverHydrogen: unload that much (ore, MH) at the
+    /// pilot's own buildings. drill: ore loads drilled in region `target`.
+    /// reach: stand at `target` ("<region id>/<site name>" a blueprint site,
+    /// "<region id>/pad/<pad name>" a pad). build: finish a building of
+    /// kind `target` (its code name, "derrick"). sweep: drill under a
+    /// ringshadow sweep (drawn once the server has the sweep, E1).
+    enum class Kind : uint8_t { deliverOre, deliverHydrogen, drill, reach, build, sweep };
+    /// open; done (paid, waits for dawn); abandoned (waits for dawn).
+    enum class State : uint8_t { open, done, abandoned };
+    /// The pilot's own number for it (never reused).
+    uint32_t id = 0;
+    Kind kind = Kind::deliverOre;
+    State state = State::open;
+    /// "STARDUST RUN"-style title and the radio's one-line pitch, ready to
+    /// show.
+    std::string title;
+    std::string pitch;
+    std::string target;
+    /// The region it points at (empty: anywhere), for the world map.
+    std::string region;
+    int64_t need = 1;
+    int64_t have = 0;
+    /// What it pays when done.
+    double xp = 0;
+    int64_t hydrogen = 0;
+    bool operator==(const Contract&) const = default;
+};
+
 /// Server → client, reliable: a world's pilot's progression
 /// (docs/prospector-progression.md), whole, on every change but its XP
 /// alone (the snapshots carry that): its level, points, ranks, slots, when
@@ -379,7 +416,10 @@ struct ProgressMessage {
     /// mark); `value` the chips found in all. `site`: `id` the site opened;
     /// `value` 0 when it gave a new blueprint, 1 when the blueprint was known
     /// and it gave `kSiteOre` ore and `kSiteHydrogen` MH instead.
-    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site };
+    ///
+    /// K1: `contract`: a contract done, `id` its number, `xp` what it paid,
+    /// `value` the MH it paid.
+    enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -424,6 +464,11 @@ struct ProgressMessage {
         bool operator==(const Opening&) const = default;
     };
     std::optional<Opening> opening;
+    /// The pilot's KSTR contracts today (three slots: open, done or
+    /// abandoned), and the world time of the next dawn, when the done and
+    /// abandoned ones are replaced (docs/contracts.md).
+    std::vector<Contract> contracts;
+    double contractsDawn = 0;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

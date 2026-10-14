@@ -66,7 +66,10 @@ const Structure* own(const Simulation& sim, StructureKind kind) {
 } // namespace
 
 TEST(hydrogen_derrick_pumped_and_unloaded_fills_the_wallet) {
-    WorldMap w(firstWorld());
+    // No KSTR contracts: their MH would land in the wallet this counts.
+    WorldParams params;
+    params.contracts = false;
+    WorldMap w(firstWorld(), params);
     ASSERT_TRUE(w.join(me));
     // The Citadel and Derrick blueprints, at the Derrick's level floor.
     ProspectorProgress g;

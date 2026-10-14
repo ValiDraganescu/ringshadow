@@ -197,6 +197,8 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.blueprints = g.blueprints;
     m.sitesFound = g.sites;
     m.sitesKnown = g.known;
+    m.contracts = it->second.contracts;
+    m.contractsDawn = nextDawn(clock_);
     if (const auto& o = it->second.opening)
         m.opening = net::ProgressMessage::Opening{siteId(o->region, o->site), o->refusal.empty() ? o->since : 0.0,
                                                   WorldSites::needs(world_->regions[o->region].built.sites[o->site].kind),
@@ -264,9 +266,13 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
             if (const auto* d = e.as<GameEvent::Deposited>(); d && d->unit == w.unit) {
                 xp += double(d->amount) * (w.hydrogen ? WorldXp::hydrogen : WorldXp::ore);
                 if (w.hydrogen) feats.push_back(WorldXp::hydrogenFeat);
+                contractWork(w.pilot, *p, w.hydrogen ? net::Contract::Kind::deliverHydrogen : net::Contract::Kind::deliverOre, "",
+                             d->amount);
             }
-            if (const auto* c = e.as<GameEvent::Constructed>(); c && owns(*p, w.region, c->structure))
+            if (const auto* c = e.as<GameEvent::Constructed>(); c && owns(*p, w.region, c->structure)) {
                 feats.push_back(WorldXp::built(c->kind));
+                contractWork(w.pilot, *p, net::Contract::Kind::build, std::string(rawValue(c->kind)), 1);
+            }
             if (const auto* d = e.as<GameEvent::PatchDepleted>(); d && w.patch == d->patch) feats.push_back(WorldXp::emptiedFeat);
         }
         for (const Structure& b : st.structures) {
@@ -304,8 +310,11 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
         earn(*p, xp);
         for (const std::string& f : feats) feat(w.pilot, f);
         // An ore load drilled (the cargo fills at once): a survey chip's roll.
-        if (const auto u = st.unit(w.unit); u && w.carrying <= 0 && u->carrying > 0 && !u->hydrogen.value_or(false))
+        if (const auto u = st.unit(w.unit); u && w.carrying <= 0 && u->carrying > 0 && !u->hydrogen.value_or(false)) {
             oreLoad(w.pilot);
+            contractWork(w.pilot, *p, net::Contract::Kind::drill, world_->regions[w.region].file.id, 1);
+            if (underSweep(w.pilot)) contractWork(w.pilot, *p, net::Contract::Kind::sweep, "", 1);
+        }
         if (p->progress.level() != level) pushProgress(w.pilot);
     }
 }

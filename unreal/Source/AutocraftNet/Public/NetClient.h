@@ -68,6 +68,8 @@ public:
     uint32_t undo(Skill skill);
     uint32_t respec();
     uint32_t slot(int64_t index, std::optional<Skill> skill);
+    /// Drop an open KSTR contract (docs/contracts.md).
+    uint32_t abandon(uint32_t contract);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

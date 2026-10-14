@@ -485,6 +485,7 @@ void WorldMap::step() {
     updateSky();
     workAfter(work);
     sites();
+    contracts();
     regrowWells(dt);
     for (auto& [id, p] : pilots_)
         if (!p.flight) {

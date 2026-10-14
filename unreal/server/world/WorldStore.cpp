@@ -127,13 +127,19 @@ const char* const kV4 = R"sql(
 ALTER TABLE pilots ADD COLUMN gated INTEGER NOT NULL DEFAULT 0;
 )sql";
 
+/// Schema v5: each pilot's KSTR contracts (docs/contracts.md), JSON. A pilot
+/// saved before has none: the next step draws them.
+const char* const kV5 = R"sql(
+ALTER TABLE pilots ADD COLUMN contracts TEXT NOT NULL DEFAULT '';
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
-    // A later version adds its step here: {5, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}};
+    // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}};
     return steps;
 }
 
@@ -284,10 +290,10 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.failed(error)) return std::nullopt;
     }
     {
-        Stmt s(db_, "SELECT id, ore, hydrogen, region, unit, levels, progress, gated FROM pilots ORDER BY id");
+        Stmt s(db_, "SELECT id, ore, hydrogen, region, unit, levels, progress, gated, contracts FROM pilots ORDER BY id");
         while (s.row())
             out.pilots.push_back(SavedPilot{s.colText(0), s.colInteger(1), s.colInteger(2), s.colText(3), s.optInteger(4),
-                                            s.colText(5), s.colText(6), s.colInteger(7) != 0});
+                                            s.colText(5), s.colText(6), s.colInteger(7) != 0, s.colText(8)});
         if (s.failed(error)) return std::nullopt;
     }
     {
@@ -421,8 +427,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     for (const SavedPilot& p : save.pilots) {
         const auto before = pilots_.find(p.id);
         if (before != pilots_.end() && before->second == p) continue;
-        run(std::move(Stmt(db_, "INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels, progress, gated) "
-                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        run(std::move(Stmt(db_, "INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels, progress, gated, contracts) "
+                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
                           .text(p.id)
                           .integer(p.ore)
                           .integer(p.hydrogen)
@@ -430,7 +436,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                           .integer(p.unit)
                           .text(p.levels)
                           .text(p.progress)
-                          .integer(p.gated ? 1 : 0)));
+                          .integer(p.gated ? 1 : 0)
+                          .text(p.contracts)));
         n.changed += 1;
     }
     if (!ok || !exec("COMMIT", &why)) {

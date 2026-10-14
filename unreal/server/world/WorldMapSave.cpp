@@ -126,6 +126,7 @@ WorldSave WorldMap::save() const {
         // Its progression; the strategy game's levels are not a world's
         // any more (written empty).
         s.progress = SessionStore::encode(p.progress, false);
+        s.contracts = encodeContracts(p);
         out.pilots.push_back(s);
     };
     for (const auto& [id, p] : pilots_)
@@ -240,6 +241,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             // Told on its next login.
             p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::reset, "", 0, p.progress.unspent()});
         }
+        if (!decodeContracts(sp.contracts, p))
+            problems.push_back("pilot " + sp.id.substr(0, 8) + ": contracts do not read, drawn again");
         // Saved before buildings needed blueprints: the blueprints of what
         // it has built, so its buildings stay its own to build again.
         if (!sp.gated)
