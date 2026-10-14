@@ -5,6 +5,7 @@
 #include "WorldMap.h"
 
 #include "NavGrid.h"
+#include "Ringshadow.h"
 #include "Rules.h"
 
 #include <algorithm>
@@ -19,6 +20,15 @@ namespace {
 
 /// A building's price in a world, ore and MH (the welding and repair XP).
 double price(StructureKind kind) { return double(Progression::worldOre(kind) + Progression::worldHydrogen(kind)); }
+
+/// An ore load just drilled from `patch` under the ringshadow (Ringshadow.h)
+/// carries half again, so its unload pays that ore and its XP.
+void sweptLoad(Simulation& sim, int64_t unit, std::optional<int64_t> patch, double clock, double day) {
+    if (!sim.map || !patch || size_t(*patch) >= sim.state.patches.size()) return;
+    for (Unit& u : sim.state.units)
+        if (u.id == unit)
+            u.carrying = Ringshadow::load(u.carrying, clock, sim.state.patches[size_t(*patch)].position, sim.map->bounds, day);
+}
 
 } // namespace
 
@@ -320,6 +330,7 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
         }
         if (p->progress.level() != level) pushProgress(w.pilot);
     }
+            sweptLoad(regions_[w.region]->simulation(), w.unit, u->patch ? u->patch : w.patch, clock_, params_.dayLength);
 }
 
 // MARK: - Skill clocks across regions

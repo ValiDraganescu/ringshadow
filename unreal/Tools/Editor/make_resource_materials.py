@@ -12,6 +12,8 @@ What it makes:
 
 - /Game/Materials/MPC_AcWorld: world-wide values the C++ sets every frame.
   `Dark` (0 by day, 1 at night: AAcDaylight::GetDark, written by AAcResources);
+  the ringshadow's band (`SweepDirX`, `SweepDirY`, `SweepLead`, `SweepTrail`,
+  `SweepSoft`: AAcRingshadow), under which ore veins and well rims flare;
   `HullEnv` (0.6), how much of the Swift studio sky M_Hull's metals mirror
   on top of Lumen (`hull_env`, the chrome fix; 0 turns it off).
 - /Game/Materials/M_Opal: Stardust Ore (docs/naming.md, "How they look").
@@ -89,7 +91,12 @@ def make_world_mpc():
     # Wetness: how wet the hulls are (AAcWeather, docs/weather.md). It lives
     # here because a material may read only two collections, and M_Hull
     # already reads this one and MPC_AcTeams.
-    wanted = (("Dark", 0.0), ("HullEnv", 0.6), ("Wetness", 0.0))
+    # The ringshadow's band (AAcRingshadow, Ringshadow.h; docs/weather.md):
+    # the way it moves (x, y), its leading and trailing edges along it and
+    # its soft edge, cells; far off (lead = trail = -1e6) when none runs.
+    wanted = (("Dark", 0.0), ("HullEnv", 0.6), ("Wetness", 0.0),
+              ("SweepDirX", 1.0), ("SweepDirY", 0.0), ("SweepLead", -1.0e6), ("SweepTrail", -1.0e6),
+              ("SweepSoft", 16.0))
     kept = list(mpc.get_editor_property("scalar_parameters"))
     have = [str(x.get_editor_property("parameter_name")) for x in kept]
     if have == [n for n, _ in wanted]:
@@ -293,7 +300,11 @@ e *= OpalGain;
 float3 nightCol = lerp(film, o.Opal(n1 * 1.6 + T * 0.02), 0.6);
 float breathe = 0.82 + 0.18 * sin(T * 0.7 + n1 * 9.0);
 float glow = (vein + halo * 0.07) * (1.0 - far) + far * 0.12;
-e += nightCol * glow * breathe * NightGlow * Dark;
+// Under the ringshadow's band (docs/weather.md) the veins flare brighter
+// than at night, the deposit a beacon in the shade.
+float sws = dot(WP.xy / 100.0, float2(SweepDirX, SweepDirY));
+float sweep = smoothstep(SweepTrail, SweepTrail + SweepSoft, sws) * (1.0 - smoothstep(SweepLead - SweepSoft, SweepLead, sws));
+e += nightCol * glow * breathe * NightGlow * max(Dark, sweep * 1.8);
 // Dust glints: sparse points that twinkle on and off (gone where too small to see).
 float3 g = op * 5.0;
 float3 cell = floor(g);
@@ -301,7 +312,7 @@ float h = o.Hash(cell + 0.37);
 float3 at = cell + 0.5 + (float3(o.Hash(cell + 1.7), o.Hash(cell + 3.1), o.Hash(cell + 5.3)) - 0.5) * 0.5;
 float twinkle = pow(saturate(sin(T * (1.4 + 2.6 * h) + h * 40.0)), 10.0);
 float glint = step(0.62, h) * (1.0 - smoothstep(0.05, 0.18, length(g - at))) * twinkle * (1.0 - far);
-e += lerp(float3(1.0, 0.95, 0.85), o.Opal(h * 5.0), 0.35) * glint * GlintGain * (1.0 + Dark);
+e += lerp(float3(1.0, 0.95, 0.85), o.Opal(h * 5.0), 0.35) * glint * GlintGain * (1.0 + Dark + 2.0 * sweep);
 Rough = lerp(R, 0.12, vein);
 // Bare basalt takes little of the sky, so it stays near black.
 AO = lerp(0.35, 1.0, saturate(vein + halo * 0.3));
@@ -373,6 +384,12 @@ def build_opal(mpc_world):
         ("T", time, ""),
         ("R", g.scalar("Roughness", 0.8), ""),
         ("Dark", g.mpc(mpc_world, "Dark"), ""),
+        ("WP", g.node(unreal.MaterialExpressionWorldPosition), ""),
+        ("SweepDirX", g.mpc(mpc_world, "SweepDirX"), ""),
+        ("SweepDirY", g.mpc(mpc_world, "SweepDirY"), ""),
+        ("SweepLead", g.mpc(mpc_world, "SweepLead"), ""),
+        ("SweepTrail", g.mpc(mpc_world, "SweepTrail"), ""),
+        ("SweepSoft", g.mpc(mpc_world, "SweepSoft"), ""),
         ("PatternScale", g.scalar("PatternScale", 0.04), ""),
         ("OpalGain", g.scalar("OpalGain", 1.0), ""),
         ("GlintGain", g.scalar("GlintGain", 7.0), ""),

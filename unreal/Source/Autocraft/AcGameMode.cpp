@@ -10,6 +10,7 @@
 #include "AcLifeBars.h"
 #include "AcLog.h"
 #include "AcPilotPawn.h"
+#include "AcRingshadow.h"
 #include "AcPlayerController.h"
 #include "AcRtsPawn.h"
 #include "AcSimSubsystem.h"
@@ -65,6 +66,8 @@ void AAcGameMode::StartPlay()
 	AAcDaylight::SpawnFor(GetWorld());
 	// The weather (docs/weather.md): rain, lightning; the daylight reads it.
 	AAcWeather::SpawnFor(GetWorld());
+	// The ringshadow sweep in the MMORPG mode (docs/weather.md): the band, the dimmed sun, the radio.
+	AAcRingshadow::SpawnFor(GetWorld());
 	// Units and buildings as instances (B1).
 	AAcWorld::SpawnFor(GetWorld());
 	// Tracers, flashes, rounds, slugs (C1), after the renderer: muzzles come from its poses.

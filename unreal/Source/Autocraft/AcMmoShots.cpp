@@ -32,6 +32,15 @@
 //      words from AcProgressHud for 9 to 10, shown directly) and a find toast
 //   07 the build menu from the blueprints
 //
+// -AcMmoShotsRingshadow (with -AcMmoRingshadow=70: a sweep 70 s after the
+// server starts; docs/weather.md "Ringshadow sweep"): only the sweep, third
+// person on the start pad toward the giant, DIR/rs-NN-moment.png:
+//   01 before: the radio's toast, the land in the sun
+//   02 the band's edge on the ground ahead, coming
+//   03 top-down: the band's edge crossing the start region
+//   04 under the band    05 under it, first person at the nearest ore (the
+//      veins flaring)    06 after: the band gone east   07 looking east at it
+//
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
 //
@@ -42,6 +51,7 @@
 //     -abslog=DIR/run.log -AcMap=highlands-small -AcMmoShots=DIR
 // Done when the log's last line reads `flowtest: done, 0 failed`.
 #include "AcGameFlow.h"
+#include "AcDaylight.h"
 
 #include "AcGasGiant.h"
 #include "AcHudStyle.h"
@@ -56,6 +66,7 @@
 #include "SAcLevelUp.h"
 
 #include "Pilot.h"
+#include "Ringshadow.h"
 #include "Rules.h"
 #include "Simulation.h"
 
@@ -250,6 +261,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsLook"))) T.Phase = 100;
 			// -AcMmoShotsP5: only the progression (200-215).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP5"))) T.Phase = 200;
+			// -AcMmoShotsRingshadow: only the ringshadow sweep (300-314).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRingshadow"))) T.Phase = 300;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -997,6 +1010,129 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Shots.Saved == 7, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
 		Finish();
 		return;
+	// MARK: -AcMmoShotsRingshadow
+	// The sweep from the start pad, toward the giant: the band comes out of
+	// its side of the sky (bearing 280°) and runs east over the pilot.
+	case 300:
+	case 306:
+	case 310:
+	{
+		// Third person toward the giant (306: back in the Prospector after
+		// the top-down look, once seated; 310: back from first person).
+		if (T.Phase == 306 && !(Seated() && Since() > 1.5))
+		{
+			TimedOut(TEXT("seated again after the top-down look"));
+			return;
+		}
+		if (T.Phase == 310 || (T.Phase == 306 && !Pilot->ChaseEye())) Pilot->ToggleView();
+		const FVector G = FAcGasGiant::Direction();
+		Stop(std::atan2(G.Y, G.X));
+		Pilot->Eye().Pitch = T.Phase == 300 ? -0.1 : 0.05;
+		Advance();
+		return;
+	}
+	case 301:
+		// The radio's toast, a minute before.
+		if (const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky())
+		{
+			const double In = ac::Ringshadow::next(Sky->Time, Sky->DayLength).start - Sky->Time;
+			if (In > 0 && In < ac::Ringshadow::warning - 2.0 && Since() > 1.0)
+			{
+				Shoot(TEXT("rs-01-before"), FString::Printf(TEXT("before the sweep (in %.0f s), the radio's toast"), In));
+				return;
+			}
+		}
+		TimedOut(TEXT("a ringshadow sweep coming (-AcMmoRingshadow=70)"), 240);
+		return;
+	case 302:
+	case 307:
+	case 311:
+	{
+		// The band where the pilot stands: 302 its leading edge 3-15 cells
+		// ahead on the plain, 307 deep in it, 311 its trailing edge 6-20 cells past.
+		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
+		const std::optional<ac::Ringshadow::Band> B =
+			Sky && M ? ac::Ringshadow::band(Sky->Time, M->simulation().map->bounds, Sky->DayLength) : std::nullopt;
+		if (B && U)
+		{
+			const double At = ac::dot(U->position, B->dir);
+			const double Cover = ac::Ringshadow::cover(*B, U->position);
+			if (T.Phase == 302 && At - B->lead > 3 && At - B->lead < 15)
+			{
+				Shoot(TEXT("rs-02-edge-arriving"), FString::Printf(TEXT("the band's edge %.0f cells ahead"), At - B->lead));
+				return;
+			}
+			if (T.Phase == 307 && Cover > 0.99 && Since() > 1.0)
+			{
+				Shoot(TEXT("rs-04-under-band"), TEXT("under the band, toward the giant"));
+				return;
+			}
+			if (T.Phase == 311 && B->trail - At > 6 && B->trail - At < 20 && Since() > 1.0)
+			{
+				Shoot(TEXT("rs-06-after"), FString::Printf(TEXT("after: the band %.0f cells past, east"), B->trail - At));
+				return;
+			}
+		}
+		else if (T.Phase == 311 && Sky && Since() > 2.0)
+		{
+			// The sweep over first: the land in the sun again.
+			Shoot(TEXT("rs-06-after"), TEXT("after: the sweep over"));
+			return;
+		}
+		TimedOut(T.Phase == 302 ? TEXT("the band's edge ahead") : T.Phase == 307 ? TEXT("the band over the pilot") : TEXT("the band past"), 150);
+		return;
+	}
+	case 303:
+		// From above: the band over the west of the region, its edge at the pad.
+		Pilot->Leave();
+		Advance();
+		return;
+	case 304:
+		if (Since() > 2.5) Shoot(TEXT("rs-03-topdown"), TEXT("top-down: the band's edge crossing the start region"));
+		return;
+	case 305:
+		Pilot->TakeOver(Shots.Unit);
+		Advance();
+		return;
+	case 308:
+	{
+		// First person at the nearest ore, its veins flaring in the shade.
+		int64 Best = -1;
+		for (int64 I = 0; I < (int64)S->patches.size(); ++I)
+		{
+			if (S->patches[I].remaining <= 0) continue;
+			if (Best < 0 || ac::distance(S->patches[I].position, U->position) < ac::distance(S->patches[Best].position, U->position)) Best = I;
+		}
+		if (Best >= 0) Stop(Face(S->patches[Best].position));
+		Pilot->ToggleView();
+		Pilot->Eye().Pitch = -0.08;
+		Advance();
+		return;
+	}
+	case 309:
+		if (Since() > 1.5) Shoot(TEXT("rs-05-under-ore-first"), TEXT("under the band, first person at the nearest ore"));
+		return;
+	case 312:
+	{
+		const FVector G = FAcGasGiant::Direction();
+		Stop(std::atan2(G.Y, G.X) + UE_DOUBLE_PI);
+		Pilot->Eye().Pitch = -0.1;
+		Advance();
+		return;
+	}
+	case 313:
+		if (Since() > 1.5) Shoot(TEXT("rs-07-after-east"), TEXT("after, looking east: the band going away"));
+		return;
+	case 314:
+		Check(Shots.Saved == 7, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+		Finish();
+		return;
+	default:
+			Check(Shots.Saved == 9, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+			Finish();
+			return;
+		}
+	}
 	default:
 		Check(Shots.Saved + Shots.Skipped == 22, FString::Printf(TEXT("%d pictures (%d skipped) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();

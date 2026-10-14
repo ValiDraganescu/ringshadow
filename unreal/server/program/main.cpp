@@ -9,6 +9,7 @@
 //                    [--dev-blueprints 1]  (dev, tests, shots: a new pilot has every blueprint)
 //                    [--hour h]  (dev, shots: hold the world's hour, 0-24)
 //                    [--weather clear|cloudy|rain|storm|0-3]  (dev, shots: hold the world's weather)
+//                    [--ringshadow s]  (dev, shots: move the world's clock so a ringshadow sweep starts in s seconds)
 //                    [--starfall s]  (dev, tests, shots: a starfall lands near the first pilot s seconds after it comes)
 //                    [--clock-hour h]  (dev, shots: move the world's clock on to hour h, 0-24; it runs on from there)
 //
@@ -18,6 +19,7 @@
 // not open prints `FAILED save <why>` there instead and exits 1. Logs to
 // ~/Library/Logs/Autocraft/server.log unless told otherwise.
 
+#include "Ringshadow.h"
 #include "Server.h"
 
 #include <cerrno>
@@ -92,7 +94,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--hour h] [--weather clear|cloudy|rain|storm] [--starfall s] [--clock-hour h]\n",
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h]\n",
                  why);
     return 2;
 }
@@ -118,7 +120,7 @@ int main(int argc, char** argv) {
     pid_t parent = 0;
     double devXp = 0;
     bool devBlueprints = false;
-    std::optional<double> heldHour, weatherHold, starfallIn, clockHour;
+    std::optional<double> heldHour, weatherHold, ringshadowIn, starfallIn, clockHour;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
     for (int i = 1; i < argc; i++) {
@@ -139,6 +141,9 @@ int main(int argc, char** argv) {
         else if (a == "--hour") {
             heldHour = std::atof(v.c_str());
             if (*heldHour < 0 || *heldHour > 24) return usage("--hour: 0…24");
+        } else if (a == "--ringshadow") {
+            ringshadowIn = std::atof(v.c_str());
+            if (*ringshadowIn < 0) return usage("--ringshadow: seconds, 0 or more");
         } else if (a == "--starfall") {
             starfallIn = std::atof(v.c_str());
             if (*starfallIn < 0) return usage("--starfall: seconds, 0 or more");
@@ -220,9 +225,24 @@ int main(int argc, char** argv) {
         return 1;
     }
     Server server(socket, options);
+    // Dev and shots (`--ringshadow S`): the world's clock moved on so a
+    // ringshadow sweep starts S seconds from now (Ringshadow.h).
+    if (ringshadowIn && server.world().isWorld()) {
+        const double now = server.world().clock();
+        double start = Ringshadow::next(now + *ringshadowIn).start;
+        if (start < now + *ringshadowIn) start = Ringshadow::next(start + Ringshadow::duration).start;
+        server.world().setClock(start - *ringshadowIn);
+    }
     // Dev and shots (`--clock-hour H`): the world's clock on to hour H.
     if (clockHour && server.world().isWorld())
         server.world().setClock(WorldClock::timeOf(*clockHour, server.world().clock(), server.world().params().dayLength));
+    if (server.world().isWorld()) {
+        const auto sweep = Ringshadow::next(server.world().clock());
+        char line[160];
+        std::snprintf(line, sizeof line, "ringshadow: next sweep at clock %.1f s (in %.0f s), %.0f s long", sweep.start,
+                      sweep.start - server.world().clock(), Ringshadow::duration);
+        logLine(line);
+    }
     const std::string what = server.world().isWorld()
                                  ? "world " + server.world().loaded()->file.id + " (" + std::to_string(server.world().regionCount()) + " regions)"
                                  : server.region().description().mapName;

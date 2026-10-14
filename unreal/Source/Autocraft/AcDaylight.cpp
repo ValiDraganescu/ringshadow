@@ -189,6 +189,8 @@ void AAcDaylight::SetWorldSky(const TOptional<FAcWorldSky>& Sky) { GWorldSky = S
 
 const TOptional<FAcWorldSky>& AAcDaylight::WorldSky() { return GWorldSky; }
 
+double AAcDaylight::RingshadowSun = 1.0;
+
 double AAcDaylight::HourAt(const double Time)
 {
 	// The MMORPG world's clock, the server's: its regions' sight follows it.
@@ -563,7 +565,8 @@ void AAcDaylight::Update(const double Time)
 	const double SkyGain = (Isolate == 0 || Isolate == 3) ? 1.0 : 0.0;
 	// On the ground: the Swift lights, colours and strengths as they are.
 	// The gas giant between us and the sun (it sits where the sun rises): dim, not dark.
-	const double Eclipsed = 1.0 - 0.55 * FAcGasGiant::Eclipse(SunDir);
+	// And the ringshadow's band over the camera (AAcRingshadow) dims it more.
+	const double Eclipsed = (1.0 - 0.55 * FAcGasGiant::Eclipse(SunDir)) * FMath::Clamp(RingshadowSun, 0.0, 1.0);
 	const double SunFull = Deg > 0 ? Eclipsed * 1900 * FMath::Pow(Smoothstep(0, 9, Abs), 0.6) : 0.0;
 	const double MoonFull = Deg < 0 ? 650 * FMath::Pow(Smoothstep(0, 10, Abs), 0.6) * (0.6 + 0.8 * GiantLit) : 0.0;
 	Sun->SetIntensity(float(SunFull * SunLux * KeyGain * FMath::Lerp(1.0, 0.3, Gloom)));

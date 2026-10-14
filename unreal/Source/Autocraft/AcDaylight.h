@@ -122,6 +122,9 @@ public:
 	/// game's own clock and weather).
 	static void SetWorldSky(const TOptional<FAcWorldSky>& Sky);
 	static const TOptional<FAcWorldSky>& WorldSky();
+	/// The ringshadow's dimming of the sun at the camera (AAcRingshadow): 1
+	/// none, down to 0.3 deep in the band.
+	static double RingshadowSun;
 	/// Toward the sun at `Hour`, a unit vector in SceneKit axes (Y up),
 	/// below the ground at night (`Daylight.sun(hour:)`).
 	static FVector SunSceneKit(double Hour);

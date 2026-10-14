@@ -110,6 +110,60 @@ set each frame by `AAcDaylight::Update` from the same `ac::WeatherSample`:
   the takes are `Tools/AudioGen/raw/rain_1.mp3`, `downpour_1.mp3`): light
   rain about 2 dB under the wind, the downpour about 4 dB over it.
 
+## Ringshadow sweep
+
+Twice a world day the gas giant's rings throw a band of shadow across the
+land: the ringshadow, the game's signature event (docs/mmorpg-m7.md E1). It
+runs in the MMORPG mode only, on the world's clock (`ac::WorldClock`), the
+same in every region at once.
+
+The schedule and the band are `ac::Ringshadow`
+(`unreal/Source/AutocraftCore/Public/Ringshadow.h`, tested in
+`core-tests/tests/RingshadowTests.cpp`), a pure function of the world time
+and a ground point. The server pays the bonus from it and the client draws
+the band from it, so the two agree with nothing new on the wire.
+
+| What | Value |
+|---|---|
+| When | at 11:30 and 16:00 world time, both in daylight. A new world (it starts at 8:00) sees the first one about 8 minutes in (485 s), the second at 1,108 s; then every 40-minute day |
+| How long | 120 s, from the band's leading edge 25 cells short of the region to its trailing edge 25 cells past it |
+| Which way | toward bearing 100° (east, a little south), out of the giant's side of the sky (it hangs at 280°) |
+| Width | 110 cells across, each edge fading over 16 cells. On a medium region (144 × 96) it moves about 2.7 cells a second, slower than a walking Prospector (3.9), and a point is in the shadow about 35 s, 29 of them at full dark |
+| Reward | an ore load drilled at a deposit at least half in the shadow carries ×1.5 ore (25 → 38), so its unload pays ×1.5 ore and ×1.5 XP. MH is not affected |
+| Warning | 60 s before, the KSTR radio's toast: "KSTR: RINGSHADOW IN 60 · Hold your ground · ore drilled under the band pays half again" |
+
+The server (`WorldProgress.cpp`, the moment a load is drilled) raises the
+unit's cargo when the deposit is under the band, tested in
+`server/tests/RingshadowTests.cpp`. Ore drilled in the sun before or after
+the sweep is the plain amount.
+
+On screen (`AAcRingshadow`, `unreal/Source/Autocraft/AcRingshadow.cpp`):
+
+- **The band on the land.** `M_Ringshadow`
+  (`Tools/Editor/make_ringshadow_material.py`), a post-process pass, darkens
+  the ground in the band to 0.14 of its light (about 0.4 of its brightness
+  on screen) and cools it to the sky's blue,
+  with the soft edges, so the band's edge shows on far terrain long before
+  it arrives. The band goes to `MPC_AcWorld` (`SweepDirX`, `SweepDirY`,
+  `SweepLead`, `SweepTrail`, `SweepSoft`) every frame.
+- **The sun.** With the camera in the band the sun dims to 0.3
+  (`AAcDaylight::RingshadowSun`, which also dims the sky's sun). The pass
+  makes up for that outside the band, so the band reads the same from
+  inside as from outside.
+- **The sky.** The ring is a dark strip 8° wide along the great circle
+  through the giant and the sun, with lit rims. Its offset from the sun
+  follows the camera's place in the band, so the strip's edge crosses the
+  sun as the band's edge crosses the camera.
+- **The ore.** Stardust Ore veins under the band flare brighter than at
+  night (M_Opal's night glow, ×1.8, and more glints).
+- **The air.** A cold, slightly grey tint while the camera is in the band.
+
+A voice line for the radio can come later. To start a sweep now, use
+`--ringshadow S` on the server, which moves the world's clock so a sweep
+starts S seconds from now (the hour moves with it unless `--hour` holds it).
+On the game, `-AcMmoRingshadow=S` passes it on. The picture run is
+`-AcMmoShots=DIR -AcMmoShotsRingshadow -AcMmoRingshadow=70`.
+
 ## Cost
 
 The budget is under 1 ms a frame at 5120×1378 on the M4 Max for
