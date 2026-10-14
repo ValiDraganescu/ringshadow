@@ -1,0 +1,26 @@
+# Ringshadow
+
+> Ringshadow is an open-source real-time strategy game for the Mac, built in Unreal Engine 5 by one developer and AI coding agents, and dedicated to the public domain (CC0). An AI commander runs your army and you can take over any unit and play it like a shooter. Alongside it an MMORPG mode is being built: you are one Prospector in a lasting world under a ringed gas giant.
+
+Every page below has a Markdown copy at its own address with `.md` added. The source code, art and docs are at https://github.com/ValiDraganescu/ringshadow. The blog's Atom feed is https://ringshadow.com/blog/feed.xml, and everything on this site in one file is https://ringshadow.com/llms-full.txt.
+
+## Pages
+
+- [Ringshadow](https://ringshadow.com/index.md): Ringshadow: a real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself. Built in public with AI agents, public domain (CC0).
+- [The ring of Ringshadow](https://ringshadow.com/roadmap.md): The Ringshadow roadmap: what is done, what comes next and what comes later, from the strategy game to the MMORPG mode.
+- [The Ringshadow blog](https://ringshadow.com/blog/index.md): The Ringshadow blog: how the game is being built, as it happens, with albums of pictures from the agents' runs.
+
+## Blog posts (newest first)
+
+- [Mercenaries: they mine while you sleep](https://ringshadow.com/blog/mercenaries.md): Hire mercenary prospectors at Ringshadow's Citadel: in a world day each one mines what you mine in an hour, and they keep working while the game is closed.
+- [The world runs on after you quit](https://ringshadow.com/blog/world-runs-on.md): Quit Ringshadow and its world keeps going: the local server stays up on the Mac, the clock turns, meteors fall and the Brood roams, at about 0.008% of a CPU core.
+- [Coming next: guns for the realm, and a canyon to hold](https://ringshadow.com/blog/defences.md): What is being built now in Ringshadow: the Citadel's guns, an AA tower, a gatling gun firing red-hot ore-and-MH rounds, and a canyon the pilots defend wave by wave.
+- [The Brood: from a painting to the world in a day](https://ringshadow.com/blog/the-brood.md): Ringshadow's first enemies: four alien bugs, from concept paintings to blockout models to the world, where they linger at deposits, bite, dive, eat ore and raid buildings.
+- [Missions, the Journal and three voices](https://ringshadow.com/blog/missions.md): Ringshadow's Citadel now offers missions in three tiers, a Journal keeps them, and three narrators read every briefing: the mission officer, the Warden and a frightened radio dispatcher.
+- [The realm: shared buildings, a tax and a shop](https://ringshadow.com/blog/the-realm.md): Ringshadow's buildings now belong to the realm: every pilot uses them, the Citadel takes 10% of every unload, and its shop sells blueprints and supplies.
+- [How we got here](https://ringshadow.com/blog/how-we-got-here.md): Two days of building Ringshadow's MMORPG mode: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.
+
+## Optional
+
+- [Everything in one file](https://ringshadow.com/llms-full.txt)
+- [The repository](https://github.com/ValiDraganescu/ringshadow)

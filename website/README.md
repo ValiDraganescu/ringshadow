@@ -16,6 +16,7 @@ no framework and no server side, so this folder deploys as it is.
 | `blog/` | The blog: `index.html` (newest first), one page per post, `feed.xml` (Atom), `media/<post>/` (its album). |
 | `assets/css/blog.css`, `assets/js/album.js` | The blog's look, and the albums' lightbox (keys, swipes, captions). |
 | `tools/album.py` | Copies pictures into an album, resized and recompressed (`uv run`). |
+| `llms.txt`, `llms-full.txt`, `*.md` | For language models; written by `tools/llms.py`, never by hand. |
 
 The palette is the game's HUD (`unreal/Source/Autocraft/AcHudStyle.h`):
 glass `#030912`, cyan `#59d9ff`, ice `#ccf2ff`. Everything is self-hosted:
@@ -43,7 +44,16 @@ COMING. The roadmap's moons follow the same milestones.
 
 A post is a plain HTML page in `blog/`: copy the newest one and keep its
 shell (navigation, footer, scripts). Then add a card to `blog/index.html`
-and an entry to `blog/feed.xml`, both newest first. The feed's links are
+and an entry to `blog/feed.xml`, both newest first. Every text on the site
+goes through the humanizer skill (`/humanizer`, github.com/blader/humanizer)
+before it ships: no staged contrasts, one-line closers, run-ups, bold
+labels or dashes, and nothing added that the log doesn't say.
+
+After any page changes, run `uv run website/tools/llms.py`. It writes the
+files for language models (llmstxt.org): a Markdown copy of every page at
+its address plus `.md` (`/blog/the-brood.md`), `llms.txt` (what Ringshadow
+is, and a link to each page's Markdown) and `llms-full.txt` (all of it in
+one file). New posts are picked up from the blog index's cards. The feed's links are
 relative, so it works at whatever address the site gets.
 
 An album is a `<section class="album">` holding a list of links to the full

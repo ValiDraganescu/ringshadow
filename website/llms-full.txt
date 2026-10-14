@@ -1,0 +1,819 @@
+# Ringshadow
+
+> Ringshadow: a real-time strategy game where the AI runs your army, and you can dive into any unit and fight it yourself. Built in public with AI agents, public domain (CC0).
+
+Source: https://ringshadow.com/
+
+The pitch
+
+## Live in the giant's shadow
+
+On a frontier world, Prospectors drill Stardust Ore and pump Metallic Hydrogen while armies of up to eight players clash over the deposits.
+
+Your team's AI commander runs the army while you steer it from above. When a fight matters, you take over a unit and play it like a shooter. Overhead hangs Ringshadow, the huge ringed gas giant the game is named for.
+
+[Video: The camera dives from the top-down view into a Ranger, who walks out in first person](https://ringshadow.com/assets/media/dive.mp4)
+
+*Click a unit and the camera dives in. Recorded in the game.*
+
+How you play
+
+## Three ways, switch any time
+
+01 ![The top-down view: the Citadel, its Stardust Ore line and two Metallic Hydrogen wells](https://ringshadow.com/assets/media/top.jpg)
+
+### Your buildings
+
+Click a building and press its buttons: train units, research, build. If it's a job the AI can do for you, the button queues it for your team's commander.
+
+02 ![The command map: the bases of the map and the team's objectives](https://ringshadow.com/assets/media/command-map.jpg)
+
+### The command map `M`
+
+Give your AI orders: a stance, objectives (attack, defend, hold, man a Bastion), expansions and requests. It plans the rest.
+
+03 [Video: Two armies of twelve meet in the desert, seen from above as the camera sweeps in](https://ringshadow.com/assets/media/fight.mp4)
+
+### Drive a unit
+
+Click any of your units and dive in. `WASD` walks, the mouse aims, a click fires, `R` uses its ability, `V` switches first and third person, `Esc` hands it back to the AI.
+
+The roster
+
+## Every unit is playable
+
+Twelve kinds, each with its own cockpit, weapon and ability.
+
+- Prospector: Mines ore, pumps MH, builds, repairs
+- Ranger: Rifle infantry
+- Comet: Jump-pack raider, clears cliffs
+- Juggernaut: Heavy grenadier
+- Firefly: Fast flame buggy
+- Dropship: Healing transport
+- Longbow: A tank that anchors into artillery
+- Kestrel: Rocket gunship
+- Hailstorm: Flak half-track
+- Peregrine: Air-superiority fighter
+- Atlas: Heavy assault walker
+- Scorpion: The twelfth: a burrowing mine. And any unit can be driven over the shoulder too `V`.
+
+[Video: Driving a Comet in first person](https://ringshadow.com/assets/media/comet.mp4)
+
+*A Comet in first person.*
+
+[Video: A Ranger walking in third person](https://ringshadow.com/assets/media/third.mp4)
+
+*A Ranger in third person.*
+
+Pilot leveling
+
+## Units level up while you drive them
+
+The longer you drive a kind of unit in a game, the better every unit of that kind gets, but only while you're the one driving: units the AI runs never level.
+
+Every level offers two upgrades and you keep one: 216 of them across the twelve kinds ("Every Prospector pumps MH 20% faster"). It gives you a reason to drive the units that are dull to play, the Prospector first.
+
+![A level-up: two upgrade cards over the Prospector's cockpit](https://ringshadow.com/assets/media/level-cards.jpg) [Video: A Prospector drilling Stardust Ore in first person](https://ringshadow.com/assets/media/mining.mp4) The world
+
+## Day, night, weather and the radio
+
+The sun crosses the sky, and at night the beacons and lamps come on. The weather runs on the game clock: sun, broken cloud, rain and storms with lightning, wet ground and hulls.
+
+The music plays as a radio station, KSTR 88.7 Stardust, with original songs and in-world ads between them: Quicksilver Cola (pumped from Metallic Hydrogen wells, "not a beverage"), Opal Glow face scrub (side effects: levitation, being mined) and Citadel Timeshares (ash view guaranteed).
+
+[Video: The camera pans across the base at dusk](https://ringshadow.com/assets/media/flyover.mp4) ![The base at night, its beacons lit](https://ringshadow.com/assets/media/top-night.jpg) In the works: the MMORPG mode
+
+## One pilot in a world that lasts
+
+A persistent online world is being built next to the strategy game: you are one pilot who lives in the ringshadow and drives the machines yourself.
+
+### Your level is yours
+
+Your Prospector climbs to level 100 over about a hundred hours, with a skill tree of 65 nodes, and keeps every level between sessions.
+
+### Cities built together
+
+Pilots raise their cities with ore, MH and hours of labour. Cities are the safe places to log in, trade and meet.
+
+### No-man's land
+
+Between the cities lie the deposits, the wells and dwellings, taken and held by force. That's where the fighting happens.
+
+### AI pilots
+
+AI characters who are pilots themselves, with a city and a level, keep the world busy where players are few.
+
+You can play it today in a test mode, single player, on a local server that is the same program a public world will run. So far it has our own encrypted server on UDP, a world of regions that the server saves, the ringshadow sweep and starfall, a realm whose Citadel taxes, sells and hands out missions, mercenaries who mine while the game is closed, and the Brood: alien bugs that raid your buildings and eat your ore.
+
+[Read how it's being built](https://ringshadow.com/blog/) [The roadmap](https://ringshadow.com/roadmap) Built in public with AI agents
+
+## How it's made
+
+### An engine-free core
+
+The whole simulation, from the economy and pathing to combat and the AI commanders, is plain C++20 with no Unreal in it. Its tests build with clang and run in about 7 seconds. The Unreal layer draws the frames, plays the sounds and takes the input.
+
+### Made by AI coding agents
+
+Ringshadow is made with AI coding agents, and the skills they work from are in the repository: concept art to an Unreal model, the buildings' light language, which tests a change needs, and the recorder that makes every clip on this page from the real game.
+
+### From concept to model
+
+Each unit starts as concept paintings. The one picked becomes a six-view turnaround, and the in-engine model is built part by part with Geometry Script and fitted against those views.
+
+![The Atlas concept painting](https://ringshadow.com/assets/media/atlas-concept.jpg)
+
+*Concept*
+
+![The Atlas six-view turnaround](https://ringshadow.com/assets/media/atlas-turnaround.jpg)
+
+*Turnaround*
+
+![The Atlas model in the engine](https://ringshadow.com/assets/media/atlas-model.jpg)
+
+*In the engine*
+
+Public domain
+
+## CC0: take any of it
+
+Everything in the repository is dedicated to the public domain under CC0 1.0: the code, the art, the models, the sounds, the music and the docs. Use any of it for anything, with no credit needed.
+
+A few third-party files keep their own licences, listed in the README. The fonts on this site, Barlow Condensed and Exo 2, are under the SIL Open Font License ([Barlow](https://ringshadow.com/assets/fonts/OFL-BarlowCondensed.txt), [Exo 2](https://ringshadow.com/assets/fonts/OFL-Exo2.txt)). The game is built with Unreal Engine 5, which has its own licence from Epic Games.
+
+[The source on GitHub](https://github.com/ValiDraganescu/ringshadow)
+
+
+---
+
+# The ring of Ringshadow
+
+> The Ringshadow roadmap: what is done, what comes next and what comes later, from the strategy game to the MMORPG mode.
+
+Source: https://ringshadow.com/roadmap
+
+The roadmap
+
+Every milestone is a moon on the giant's ring. What is done orbits in the sunlight. What comes next is turning into the shadow, and what comes later is still deep inside it. Scroll, and the ring turns.
+
+- DONE: built, in the sunlight
+- NEXT: the work in line, at the edge of the shadow
+- LATER: planned, deep in the shadow
+
+In the sunlight · done
+
+## The strategy game
+
+The real-time strategy game, playable today.
+
+### A frontier RTS (Done)
+
+Prospectors drill Stardust Ore and pump Metallic Hydrogen on Ashfall Reach, while armies of up to eight players clash over the deposits.
+
+- An engine-free core: the economy, pathing, combat and the AI in plain C++20
+- Its tests build with clang and run in about 7 seconds
+
+### Twelve playable units (Done)
+
+Prospector, Ranger, Comet, Juggernaut, Firefly, Dropship, Longbow, Kestrel, Hailstorm, Peregrine, Atlas and Scorpion, each with its own cockpit, weapon and ability.
+
+- The last three joined the roster designed and built: an air-superiority fighter, a heavy assault walker, a burrowing mine
+- The Peregrine pilot and the Atlas crew speak with voices of their own
+
+### Dive into any unit (Done)
+
+Click any of your units and the camera dives in. Drive it like a shooter, in first or third person, and hand it back to the AI with Esc.
+
+- Shooter feel and night sight
+
+### The AI commanders (Done)
+
+Your team's AI commander runs the army. The command map gives it a stance, objectives, expansions and requests, and it plans the rest.
+
+- Building buttons the AI can handle queue a request for it
+
+### Pilot leveling (Done)
+
+Drive a kind of unit and every unit of that kind gets better. Each level offers two upgrades and you keep one: 216 of them across the twelve kinds.
+
+### Day, night and weather (Done · 2026-10-12)
+
+The sun crosses the sky and the beacons come on at night. The weather runs on the game clock: clear, cloudy, rain and storms.
+
+- Volumetric clouds, cloud shadows, wet ground and hulls, lightning and thunder
+
+### KSTR 88.7 Stardust (Done)
+
+The music plays as a radio station with original songs and in-world ads between them.
+
+In the sunlight · done
+
+## The engine and the name
+
+### The Unreal port (Done · 2026-10-05)
+
+The game began as a Swift and SceneKit live wallpaper. It now lives in Unreal Engine 5 only, and the Swift version is retired.
+
+- Open source and public domain (CC0) from 2026-10-06
+
+### It's called Ringshadow (Done · 2026-10-07)
+
+The game was called Autocraft. It's named now for the huge ringed gas giant in its sky, the one the prospectors live in the shadow of.
+
+- The GitHub repository took the name on 2026-10-09
+
+### Three platforms, v0.1.0 (Done · 2026-10-09)
+
+Release builds for Windows and Linux on a build machine in AWS, and the Mac build at home. The first pre-release, v0.1.0, is on GitHub.
+
+In the sunlight · done · 2026-10-13
+
+## The MMORPG mode, built so far
+
+One pilot in a lasting world. Single player first, on a local server that is the same program a public world will run: only the host changes. Playable today as a test mode.
+
+### Drive through a server (Done · M1)
+
+The server is its own program, and the game is only its client. You drive a Prospector through it, over our own protocol on UDP.
+
+- An authoritative server on the engine-free core
+- Snapshots of only what is near you, sent as differences
+- Prediction and correction, tested under made-up lag, jitter and loss
+
+### The world map and regions (Done · M2)
+
+A world of regions side by side, generated or crafted by AI agents with a region tool. Drive across an edge into the next region, or fly from pad to pad.
+
+- The first world: three by three regions
+- Build wherever it fits, paid from your wallet
+
+### A world that lasts (Done · M3)
+
+The server saves the world, and your pilot comes back as you left it: levels and picks included.
+
+- A save every 5 seconds and on stop
+- Resume your world, or start a new one
+
+### Flights and polish (Done · M4)
+
+Flights lift off, cross and land. The world map takes the keyboard, and the HUD is cut down to one pilot.
+
+- Every screen checked picture by picture with a shot harness
+
+### Ready to ship (Done · M5)
+
+The traffic is encrypted, and the server travels inside the Mac package. The Metallic Hydrogen loop is proven: pump at a Derrick, unload at your Citadel, fill the wallet.
+
+- X25519 and XChaCha20-Poly1305 through Monocypher (CC0)
+
+In the sunlight · done · 2026-10-14
+
+## A pilot's long road, under a living sky
+
+A hundred hours of progression and a world with its own day, weather and events. The story is on the [blog](https://ringshadow.com/blog/how-we-got-here).
+
+### A hundred levels and a living sky (Done · M6 · 2026-10-14)
+
+The Prospector levels to 100, with a skill tree of 65 nodes in five branches. Buildings come from blueprints found in the world. The server owns the clock and the weather.
+
+- Level 10 in about an hour, level 100 in about a hundred
+- A 40-minute world day: 30 of light, 10 of night
+- Foundry modules and Lab research
+
+### A world worth crossing (Done · M7 · 2026-10-14)
+
+The ringshadow sweep, starfall, KSTR contracts, blueprint sites you can see from afar, flights that burn MH, a guided first ten minutes and a new home screen.
+
+- Starfall: two or three a world day, a crater with a rich deposit
+- Three radio contracts a day
+
+The terminator · next
+
+## M8: the realm under siege
+
+Buildings become the realm's, and the Prospector gets enemies. Parts have landed; the rest is being built.
+
+### The realm, the Brood and the defences (Next · M8)
+
+Buildings belong to the realm, the Citadel taxes, sells and sends you on missions, and alien bugs swarm the places worth being. Next come the guns to hold them off.
+
+- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors
+- Being built: the Citadel's turrets, the AA tower and the gatling gun
+- Then: turret upgrades, canyon defence in waves, the Matriarch's nest, regions that follow the land, the Dropship between landing pads
+
+The terminator · next
+
+## Next, in single player
+
+Each step ships in the single-player game, on the local server.
+
+### AI pilots (Next)
+
+AI characters who are pilots themselves replace the AI commanders: a character, a city and a level, like a player. They mine, build, take contracts and fight, and keep the world busy where players are few.
+
+### Cities (Next)
+
+A city forms where pilots build close together. Its pilots raise it with ore, MH and hours of labour, and each level opens more. Cities are the safe places.
+
+### More regions (Next)
+
+A bigger world map, and travel between its regions.
+
+### No-man's land (Next)
+
+The open ground between the cities: claims, dwellings and the fight over the deposits and wells.
+
+Deep in the shadow · later
+
+## Later, online
+
+The same server program, out in the world.
+
+### The public server (Later)
+
+The server on a public host, accounts and login, and other players in your world.
+
+### The market, crews and chat (Later)
+
+Trade between pilots, crews that ride together, and a way to talk.
+
+### Thousands of pilots (Later)
+
+Regions on separate servers, a pilot handed from one to the next at the border, and copies of the crowded places.
+
+### Hosting (Later)
+
+The official world on the Ringshadow AWS account, and a server build anyone can run for a world of their own.
+
+Taken from the design docs and the work log in the [repository](https://github.com/ValiDraganescu/ringshadow). Nothing after the sunlit moons has a date yet.
+
+
+---
+
+# The Ringshadow blog
+
+> The Ringshadow blog: how the game is being built, as it happens, with albums of pictures from the agents' runs.
+
+Source: https://ringshadow.com/blog/
+
+Built in public
+
+How the game is being made, as it happens: what landed, what it looks like, and what's next. Every picture comes from the game, recorded by the agents that build it.
+
+Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
+
+14 October 2026 · M8 · 4 pictures
+
+## Mercenaries: they mine while you sleep
+
+Hire prospectors at the Citadel. In a world day each mines what you mine in an hour, even with the game closed.
+
+Read it: https://ringshadow.com/blog/mercenaries
+
+14 October 2026 · M8 · 4 pictures
+
+## The world runs on after you quit
+
+The local server keeps the world going on your Mac: the clock, starfalls, the Brood. The game reattaches when you're back.
+
+Read it: https://ringshadow.com/blog/world-runs-on
+
+14 October 2026 · M8 COMING
+
+## Coming next: guns for the realm, and a canyon to hold
+
+Four point-defence turrets on the Citadel, an AA tower, a gatling gun firing red-hot ore-and-MH rounds, and a canyon the pilots defend wave by wave.
+
+Read it: https://ringshadow.com/blog/defences
+
+14 October 2026 · M8 · 14 pictures
+
+## The Brood: from a painting to the world in a day
+
+The first enemies: four alien bugs that linger at deposits, bite, dive, eat ore and raid buildings.
+
+Read it: https://ringshadow.com/blog/the-brood
+
+14 October 2026 · M8 · 5 pictures, 3 voices
+
+## Missions, the Journal and three voices
+
+A board of missions at the Citadel, a Journal to keep them, and every briefing read aloud.
+
+Read it: https://ringshadow.com/blog/missions
+
+14 October 2026 · M8 · 6 pictures
+
+## The realm: shared buildings, a tax and a shop
+
+Every building now belongs to every pilot. The Citadel takes 10% of each unload and sells blueprints and supplies.
+
+Read it: https://ringshadow.com/blog/the-realm
+
+14 October 2026 · M1 to M7 · showreel, 9 pictures
+
+## How we got here
+
+Two days, seven milestones: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.
+
+Read it: https://ringshadow.com/blog/how-we-got-here
+
+
+---
+
+# Mercenaries: they mine while you sleep
+
+> Hire mercenary prospectors at Ringshadow's Citadel: in a world day each one mines what you mine in an hour, and they keep working while the game is closed.
+
+Source: https://ringshadow.com/blog/mercenaries
+
+M8 · The realm under siege
+
+14 October 2026
+
+The world now runs while the game is closed. So I asked for someone to work it: mercenary prospectors, hired at the Citadel, who dig your ore while you're away.
+
+![A hired Prospector labelled MERC · NETTLE drilling a deposit beside the pilot's own Prospector](https://ringshadow.com/blog/media/mercenaries/03-mining.webp)
+
+*MERC · NETTLE at work on a deposit field at Prospect Landing.*
+
+The Citadel's fourth tab is MERCS. On the left are your mercenaries; on the right, the region's deposit fields with the ore left in each. Pick a field, press HIRE, and a Prospector with a name over its head walks out to dig there, then hauls the ore home to the Citadel.
+
+My one rule: in a whole world day, a mercenary mines what you mine in an hour. At level 5 that is 4,860 ore a day. The ore is yours, and like any unload it pays the realm its 10%. It earns you no XP: leveling stays something you do yourself.
+
+- 500: ore and 50 MH for the first hire, doubling for each one after
+- 5 + L/5: MH a day in wages, paid at dawn
+- 1 · 2 · 3: mercenaries at levels 5, 15 and 30
+
+Wages come out of your MH at every dawn. A mercenary who isn't paid leaves. You can send one to another field or dismiss it from the same tab.
+
+They work with the game closed, because [the world server keeps running](https://ringshadow.com/blog/world-runs-on), and if the Mac was off the server catches up the hours when it starts again. When you come back the game tells you what happened: WHILE YOU WERE AWAY, mercs delivered 747 ore.
+
+## Album · Hire, mine, come back
+
+- ![The Citadel's MERCS tab: two open places, a third opening at level 30, and seven deposit fields](https://ringshadow.com/blog/media/mercenaries/01-mercs-tab.webp) The MERCS tab: places for your mercenaries, and the fields they can work.
+- ![The MERCS tab after hiring Nettle, with SEND and DISMISS buttons, the next hire at 1,000 ore and 100 MH](https://ringshadow.com/blog/media/mercenaries/02-hired.webp) Nettle hired for 500 ore and 50 MH. The next one costs double.
+- ![MERC · NETTLE drilling at a deposit](https://ringshadow.com/blog/media/mercenaries/03-mining.webp) MERC · NETTLE on the field.
+- ![Arriving at Prospect Landing with banners: WHILE YOU WERE AWAY, mercs delivered 747 ore; a research and a module finished](https://ringshadow.com/blog/media/mercenaries/04-while-away.webp) Back in the game: the mercs delivered 747 ore, and the Lab and the Foundry finished their jobs too.
+
+The mercenaries have a paint of their own, but it doesn't read well from a distance yet; that's a follow-up. The same task fixed a bug: the TAKE button on the missions board did nothing when clicked. The suites now stand at 467 core tests, 209 server tests and 71 network tests, all passing.
+
+
+---
+
+# The world runs on after you quit
+
+> Quit Ringshadow and its world keeps going: the local server stays up on the Mac, the clock turns, meteors fall and the Brood roams, at about 0.008% of a CPU core.
+
+Source: https://ringshadow.com/blog/world-runs-on
+
+M8 · The realm under siege
+
+14 October 2026
+
+A world that lasts shouldn't stop when you close the game, and now it keeps going. The local server runs on your Mac, and the game picks it back up when you return.
+
+![The home screen with a line reading World server running, since 23:03, and a STOP button](https://ringshadow.com/blog/media/world-runs-on/03-home-running.webp)
+
+*The home screen tells you the world is still running, and since when.*
+
+In Ringshadow's online mode the game is only a client. The world lives in a separate server program, the same one a public world will run, and until today it quit with the game. Now it detaches. Quit, and the world's clock keeps turning, starfalls keep coming, the Foundry and the Lab finish their jobs, and the Brood's director keeps sending bugs to the places worth being. Start the game again and it finds the running server and reattaches.
+
+A server that runs all the time had better be cheap. With nobody connected it slows down: the clock and timers tick twice a second, the regions wait, and it costs about 0.008% of one CPU core. With a pilot in the world it runs at the full 60 steps a second, about 0.3 to 0.5%.
+
+If the Mac was off, there's nothing to run on, so the world catches up instead: on the next start the server works through the downtime, up to 24 hours of it. The same catch-up pays the [mercenary prospectors](https://ringshadow.com/blog/mercenaries) you can hire at the Citadel.
+
+The home screen shows "World server running" with the time it started, and a STOP button for when you want it off.
+
+## Album · Quit, come back
+
+- ![The Prospector on its landing pad at Prospect Landing, before the game quits](https://ringshadow.com/blog/media/world-runs-on/01-first-run.webp) Before quitting: the Prospector on the pad.
+- ![The same spot after the game restarts and reattaches, the clouds moved on](https://ringshadow.com/blog/media/world-runs-on/02-reattached.webp) After a restart: same world, same pilot. The clouds moved on while the game was closed.
+- ![The home screen showing World server running with a STOP button](https://ringshadow.com/blog/media/world-runs-on/03-home-running.webp) World server running, with STOP.
+- ![The home screen after STOP, without the server line](https://ringshadow.com/blog/media/world-runs-on/04-home-stopped.webp) After STOP: the line is gone.
+
+The network protocol didn't change. The tests stand at 467 core, 200 server and 70 network, all passing, and they never leave a server running behind them.
+
+
+---
+
+# Coming next: guns for the realm, and a canyon to hold
+
+> What is being built now in Ringshadow: the Citadel's guns, an AA tower, a gatling gun firing red-hot ore-and-MH rounds, and a canyon the pilots defend wave by wave.
+
+Source: https://ringshadow.com/blog/defences
+
+M8 · The realm under siege COMING
+
+14 October 2026
+
+Nothing on this page is in the game yet. It's what the agents started on tonight, and what I've asked for after it. The posts about each piece will come when it lands.
+
+![Concept painting of a gatling turret with a glowing furnace hopper on top, firing](https://ringshadow.com/blog/media/defences/01-gatling-forge.webp)
+
+*The gatling gun, "forge" concept: a furnace hopper feeding red-hot rounds.*
+
+## The Citadel fires back
+
+The Citadel gets four point-defence turrets, one on each corner, free with the building. They shoot at bugs on their own, and their upgrades for fire rate, damage and range sit on a new DEFENCE tab. They're paid from the realm wallet, the one the [10% tax](https://ringshadow.com/blog/the-realm) fills. So every pilot who unloads helps pay for guns that protect everyone.
+
+## Two turrets you build
+
+The AA tower is the Sentinel, the strategy game's anti-air building, brought into the world. It shoots only at things in the air, from 7 cells, which is further than a Gloamwing can spit (4). It's planned to open at about level 10.
+
+The gatling gun is new: it fires red-hot rounds of amalgam, ore fused with Metallic Hydrogen, at the ground and at close air, so a flock diving on it gets shot. It's planned for about level 5. Three concepts were painted; the worker's pick is the forge, with its glowing furnace hopper, and I still have the last word on it.
+
+After them, turret upgrades: marks for fire rate, damage and range on each AA tower and gatling, paid at the turret from your own wallet and shown on the turret.
+
+## Album · The gatling concepts, and the Sentinel
+
+- ![Gatling concept forge: finned base, ribbed barrel jacket, glowing furnace hopper](https://ringshadow.com/blog/media/defences/01-gatling-forge.webp) Forge: finned base, ribbed barrel jacket, a glowing furnace hopper. The worker's pick.
+- ![Gatling concept cradle: the gun in an open cradle between two arms, a glowing ammo drum](https://ringshadow.com/blog/media/defences/02-gatling-cradle.webp) Cradle: the gun between two arms, a glowing ammo drum.
+- ![Gatling concept bunker: an octagonal base, a sloped shield and a side belt box](https://ringshadow.com/blog/media/defences/03-gatling-bunker.webp) Bunker: octagonal base, sloped shield, side belt box.
+- ![The Sentinel concept: a square bunker with two raised missile pods on a yoke](https://ringshadow.com/blog/media/defences/04-sentinel.webp) The Sentinel's concept from 4 October: two missile pods on a yoke. It becomes the AA tower.
+
+## The canyon
+
+The part I'm most curious about is the canyon. Some zones of the world become canyons, and they play as tower defence. The bugs come in waves along set paths through the canyon toward a field of rich ore and MH, to mine it for themselves. Pilots build AA towers and gatling guns along the rims.
+
+- The first wave replays until the pilots beat it, with turrets or with their own torches.
+- Beating it starts the zone's game: waves that grow harder, each one paying every pilot who fought in it.
+- If a wave carries off too much of the prize, the queen comes. The Matriarch fells every turret in the zone, and it starts over from wave one.
+- Clear the last wave and the canyon is held for a world day: the prize field is the pilots' to mine, with no waves.
+
+The first canyon will be cut into a region one step out from the start. The Matriarch herself is on the list too: her nest in Slag Pockets, her slam, her acid and her roar, and a reward for the pilots who bring her down.
+
+## Also on the list
+
+- Regions whose borders follow the land, with passages you can see and drive through without a cut.
+- No more solo flights: you build landing pads and ride a Dropship between them.
+- The map as a satellite view of the real ground, with tooltips on every site, building and deposit.
+- The world keeps running after you quit, as long as the Mac is on, and [mercenary prospectors](https://ringshadow.com/blog/mercenaries) keep mining while you're away (both have landed since).
+
+How M8 ends
+
+The milestone is done when, in a recorded run, a pilot at Prospect Landing pays the Citadel's tax, buys a blueprint and a supply, builds a gatling gun that kills bugs drawn to a deposit, walks through a passage into the next region, and rides the Dropship from one built pad to another, with every test suite passing.
+
+
+---
+
+# The Brood: from a painting to the world in a day
+
+> Ringshadow's first enemies: four alien bugs, from concept paintings to blockout models to the world, where they linger at deposits, bite, dive, eat ore and raid buildings.
+
+Source: https://ringshadow.com/blog/the-brood
+
+M8 · The realm under siege
+
+14 October 2026
+
+Until this evening nothing on the frontier fought back. You mined and built in peace. Then I asked the agents for something that would come for you.
+
+![A Shardling biting the Prospector, the screen edged red, the bug outlined in red](https://ringshadow.com/blog/media/the-brood/11-attack.webp)
+
+*A Shardling on the Prospector. The red edge means you're being bitten.*
+
+These were my words to the agents:
+
+"I need some enemies while I go around to mine ore and MH. Some alien bugs of some sort, they are always attracted to the POIs in the game. They come, linger around and live, if I am in their site they attack. It could be one, it could be more."
+
+I added that they should attack buildings, eat the ore out of unguarded veins, and that a giant brood queen should live in one of the far regions with a horde around her.
+
+## Four kinds, painted first
+
+An agent designed the family, named it the Brood, and painted three directions for each kind with Grok Imagine, a rest pose and an attack pose side by side. They belong to this world: dark chitin the colour of the ore rock, opal flecks crusted into the shell, and light coming from inside, so at night they are moving lights before they are shapes. Each kind glows in its own colour so you can tell them apart from the high camera. I picked one of the three for each.
+
+## Album · The concepts I picked
+
+- ![Concept painting of the Shardling: a six-legged bug with opal crystal quills glowing teal at the roots](https://ringshadow.com/blog/media/the-brood/01-shardling-concept.webp) Shardling, "quill": the swarmer, opal quills glowing teal.
+- ![Concept painting of the Gloamwing: violet wings and a glowing lantern abdomen, spitting acid](https://ringshadow.com/blog/media/the-brood/02-gloamwing-concept.webp) Gloamwing, "lantern": the flyer, a violet light from above.
+- ![Concept painting of the Lodeback: a crab-like bug carrying a glassy sac full of opal ore](https://ringshadow.com/blog/media/the-brood/03-lodeback-concept.webp) Lodeback, "hermit": the ore eater, its sac filling with opal.
+- ![Concept painting of the Matriarch: a towering armoured queen with a violet spine crown and a glowing egg sac](https://ringshadow.com/blog/media/the-brood/04-matriarch-concept.webp) The Matriarch, "crowned": the queen, with her egg sac.
+
+## What each one does
+
+The numbers are built against the Prospector, which has 45 hp, walks at 3.94 cells a second and fights with a cutting torch: about 4.7 damage a second, at the ground only. The Prospector builds; it fights badly, on purpose.
+
+| Kind | hp | What it does |
+|---|---|---|
+| Shardling | 20 | Packs at deposits, wells, sites and pads. Chases at 4.4, faster than you walk, so you can leave its site but you can't outrun it in the open. Bites for 2 every 1.2 s. |
+| Gloamwing | 30 | Flies at rooftop height and spits acid from 4 cells, out of the torch's reach. To spit at you it dives low, and for that moment the torch can hit it, if you time the swing. |
+| Lodeback | 120 | Never hunts. It finds a vein with no building within 10 cells and no pilot within 8, eats 1.5 ore a second into its sac, up to 60, and walks off out of sight. Hit it and it flees. Kill it and the sac bursts: the ore goes back into the vein. |
+| The Matriarch | 6,000 | 9.5 cells tall, she never leaves her nest in Slag Pockets, two regions from the start. COMING |
+
+The numbers are tuned so you count the group before you walk in. One Shardling is no threat, two cost a fresh pilot about half its hp, and five kill it in about five seconds. A pack of six on a Hab Dome takes it down in about 40 seconds: a raid has to be answered, and there's time to get there.
+
+## The models
+
+The agent built a blockout model of each from the paintings, sized against the Prospector, and 49 sounds for them: idle chitter, bites, wingbeats, the swarm coming. The models are rough on purpose for now. A pass that takes them closer to the paintings (the Matriarch's crown and sac, the opal quills, the Lodeback's glass sac) is queued.
+
+## Album · The blockout models
+
+- ![The four bug models in a row beside the Prospector, the Matriarch towering over the rest](https://ringshadow.com/blog/media/the-brood/05-lineup.webp) The family for scale: Matriarch, Lodeback, Gloamwing, Shardling, and the Prospector.
+- ![The Shardling blockout model with white quills and teal eyes](https://ringshadow.com/blog/media/the-brood/06-shardling.webp) Shardling.
+- ![The Gloamwing blockout model with violet wings and a striped glowing abdomen](https://ringshadow.com/blog/media/the-brood/07-gloamwing.webp) Gloamwing.
+- ![The Lodeback blockout model with a gold sac on its back](https://ringshadow.com/blog/media/the-brood/08-lodeback.webp) Lodeback, its sac full.
+- ![The Matriarch blockout model with a spine crown and a violet egg sac](https://ringshadow.com/blog/media/the-brood/09-matriarch.webp) The Matriarch.
+
+## In the world
+
+A few hours later the bugs were in the game. They are units of the simulation like any other, on a side of their own, the Brood. A brood director on the server spawns groups out of sight, at the edge of a region or the foot of a cliff, and sends them to a point of interest picked by weight: deposits, wells, unopened blueprint sites, pads, buildings and, most of all, fresh starfall craters. They linger there for a few minutes, longer at night, and then walk off and vanish.
+
+Walk into their site and the whole group turns on you. A bug that's attacking you gets a red outline and a life bar. Raids come straight for a building, and KSTR warns every pilot nearby before they arrive: BROOD SWARM, heading for the Hab Dome.
+
+The start stays quiet. Prospect Landing has the fewest bugs of any region, none linger within 15 cells of the Citadel, and while a new pilot works through the six-step opening the brood holds back. The far corners have more, bigger groups, more often.
+
+After the merge the suites stood at 467 core tests, 191 server tests and 69 network tests, all passing.
+
+## Album · The Brood arrives
+
+- ![Shardlings lingering around an ore deposit while the Prospector watches](https://ringshadow.com/blog/media/the-brood/10-linger.webp) Shardlings lingering at a deposit. Count them before you walk in.
+- ![A Shardling biting the Prospector with the screen edged red](https://ringshadow.com/blog/media/the-brood/11-attack.webp) A Shardling on the Prospector: red outline, hp falling.
+- ![A violet Gloamwing diving low at the Prospector](https://ringshadow.com/blog/media/the-brood/12-dive.webp) A Gloamwing diving to spit. This is the moment to swing.
+- ![A Lodeback with a full gold sac walking away from the deposit](https://ringshadow.com/blog/media/the-brood/13-lodeback-leaves.webp) A Lodeback leaving with a full sac, out of the torch's reach.
+- ![A toast reading KSTR: BROOD SWARM, heading for the Hab Dome, as bugs close in](https://ringshadow.com/blog/media/the-brood/14-raid.webp) KSTR: BROOD SWARM, a raid on the Hab Dome.
+
+The torch can't hold off a raid alone, and it can't reach a Gloamwing in the air. The next work answers that: [guns for the realm](https://ringshadow.com/blog/defences).
+
+
+---
+
+# Missions, the Journal and three voices
+
+> Ringshadow's Citadel now offers missions in three tiers, a Journal keeps them, and three narrators read every briefing: the mission officer, the Warden and a frightened radio dispatcher.
+
+Source: https://ringshadow.com/blog/missions
+
+M8 · The realm under siege
+
+14 October 2026
+
+A pilot at level 10 asked the obvious question: now what? The Citadel answers it with a board of missions, and every briefing is read aloud by someone who sounds like they mean it.
+
+![The Citadel's MISSIONS tab: three columns, easy, hard and perilous, two missions each](https://ringshadow.com/blog/media/missions/01-board.webp)
+
+*The MISSIONS board: easy close to home, hard past the borders, perilous in bug country.*
+
+## The board
+
+The Citadel's third tab is MISSIONS. It offers two missions in each of three tiers, and you can carry up to three at once. The tier says where you'll go: easy missions stay in your home region, hard ones send you into the next region over, perilous ones go to the far corners, where the bugs nest. The reward scales with the tier: an easy one pays about 8 minutes of your level's XP, a hard one 20, a perilous one 40, plus ore and MH.
+
+There are five kinds of mission: survey (drive to a marker and hold still while the scanner runs), haul (bring ore or MH home to the realm's buildings), hold (stand in a ring while the ringshadow band passes over), salvage (open a sealed site) and hunt (kill bugs). The hunts stayed switched off until the bugs existed; they went live with [the Brood](https://ringshadow.com/blog/the-brood) later the same day.
+
+## The Journal
+
+Press `L` and the Journal opens. Each mission you took has its briefing, what to do, your progress, the reward, and where it is on the map. The marker also shows on the compass and the minimap. And there's a button: PLAY THE BRIEFING.
+
+## Album · A mission from the board to done
+
+- ![The MISSIONS tab with six offers](https://ringshadow.com/blog/media/missions/01-board.webp) The board at the Citadel, Journal 0/3.
+- ![The board after taking Mark the Ground: Signed up, it's in your Journal](https://ringshadow.com/blog/media/missions/02-signed-up.webp) Signed up for Mark the Ground. It's in the Journal.
+- ![The Journal: Mark the Ground with its briefing, instructions, progress, reward and a map of the regions](https://ringshadow.com/blog/media/missions/03-journal.webp) The Journal (`L`): briefing, what to do, 890 XP, 200 ore, 60 MH, and where.
+- ![The Prospector driving across open ground toward the mission marker](https://ringshadow.com/blog/media/missions/04-marker.webp) Out to the marker. Open ground, clear sky.
+- ![The banner MISSION DONE: MARK THE GROUND over the Prospector](https://ringshadow.com/blog/media/missions/05-done.webp) MISSION DONE: the reward lands in the wallet.
+
+## Three voices
+
+Every mission template has a narration, 16 in all, read by one of three voices picked by the mission's mood. The Citadel's mission officer gives the everyday jobs and sounds like someone who enjoys them. The Warden gives the holds and the hunts, grave and fearless. The perilous missions come over the radio from KSTR's night dispatcher, on a bad line, and the dispatcher is scared.
+
+The lines were recorded with ElevenLabs once, ahead of time, levelled to the same loudness (-18 LUFS) and shipped with the game as sound files, so the game carries no API key. The text in the Journal is what the narrator reads, word for word. Listen:
+
+### The mission officer · Mark the Ground (easy)
+
+[Audio](https://ringshadow.com/blog/media/missions/survey-easy.m4a) "Mission officer here. Geology wants fresh readings, and you have the best seat in the realm. Drive out to the marker, sit tight, and let the scanner sing. Open ground, clear sky. Enjoy the view on the way."
+
+### The Warden · Thin the Swarm (hard)
+
+[Audio](https://ringshadow.com/blog/media/missions/hunt-hard.m4a) "This is the Warden. The Brood is gathering beyond our borders, more of them every night. Cross over and break them before they break us. There is no glory in it. Only the work. Do it well."
+
+### KSTR dispatch · Into the Nest (perilous)
+
+[Audio](https://ringshadow.com/blog/media/missions/hunt-perilous.m4a) "Dispatch to pilot. Oh, no. They want a cull. In the far country, where the big ones are, where the Matriarch sings. Pilot, if it goes bad, you turn around. You hear me? Nobody's ore is worth your hide out there."
+
+The missions sit beside KSTR's daily radio contracts, which stay. The suites after this task: 458 core tests, 177 server tests, 67 network tests, all passing. The narration was checked offline, as WAV files, since agents run the game silently.
+
+
+---
+
+# The realm: shared buildings, a tax and a shop
+
+> Ringshadow's buildings now belong to the realm: every pilot uses them, the Citadel takes 10% of every unload, and its shop sells blueprints and supplies.
+
+Source: https://ringshadow.com/blog/the-realm
+
+M8 · The realm under siege
+
+14 October 2026
+
+I played the new mode to level 10 and came away with a list. First on it were the buildings: a world with many pilots can't give each of them a Citadel, so the buildings had to belong to everyone.
+
+![A Prospector unloading at the Citadel, the label reading +24 ORE, 3 TO THE REALM](https://ringshadow.com/blog/media/the-realm/01-tax.webp)
+
+*27 ore unloaded: 24 to the pilot, 3 to the realm.*
+
+## Buildings belong to the realm
+
+Every building in a world is now the realm's. Any pilot unloads at any Citadel or Hab Dome, respawns at it, lands at its pads and, soon, is defended by its guns. The builder still gets the credit: the game keeps who built what, under a callsign of the form "Pilot XXXX", made from a hash of the pilot's key (the key itself never goes over the wire). A realm gets one Citadel; a later pilot's "build the Citadel" step points at the one already standing.
+
+Old saves move over on their own: the save format went to version 8 and every old building became the realm's, with its builder kept.
+
+## The Citadel's tax
+
+Every unload pays the realm 10%. It rounds to the nearest whole unit, takes at least 1, and never the whole load, so a tiny unload still leaves you something. The money goes into a realm wallet, shown at the Citadel and in the HUD.
+
+Press `H` at the Citadel and its screen opens on the REALM tab: the realm wallet, the tax, what you have paid, and buttons to donate 100, 1,000 or everything you carry. The realm wallet will pay for the Citadel's own guns, which are being built now ([coming next](https://ringshadow.com/blog/defences)).
+
+## Album · The realm's tax
+
+- ![The Prospector at the Citadel with the label +24 ORE, 3 TO THE REALM](https://ringshadow.com/blog/media/the-realm/01-tax.webp) An unload at the Citadel: +24 ORE, 3 TO THE REALM.
+- ![The Citadel screen on its REALM tab: the realm wallet at 3 ore, the 10% tax, donate buttons](https://ringshadow.com/blog/media/the-realm/02-citadel.webp) The Citadel screen (`H`): the realm wallet holds the 3 ore of tax.
+- ![The REALM tab after a donation: 1,003 ore in the realm wallet](https://ringshadow.com/blog/media/the-realm/03-donated.webp) After a donation of 1,000: "Every pilot's Citadel thanks you."
+
+## The shop
+
+The Citadel's second tab is a shop, paid from your own wallet. It sells every blueprint and four supplies. A blueprint is used up by one building, and copies stack, so you can buy three Hab Domes' worth before a trip. Prices rise with the blueprint's level floor and with every copy you buy: a blueprint costs (50 + 25F) × 1.5ⁿ ore and 5F × 1.5ⁿ MH, where F is its level floor and n the copies you already bought. The big ones open late: the Spacedock at level 35, the Bastion at 45, the Sentinel at 55.
+
+| Supply | Key | What it does | Price |
+|---|---|---|---|
+| Repair kit | `1` | Mends half the Prospector's hp at once | 120 ore, 10 MH |
+| MH canister | `2` | 25 MH into the wallet, for jets and flights | 150 ore |
+| Shield charge | `3` | No damage taken for 8 s | 100 ore, 30 MH |
+| Survey flare | `4` | Sites and deposits nearby show on the map for 60 s | 80 ore, 15 MH |
+
+The shield charge exists because of what came next that same day: [the Brood](https://ringshadow.com/blog/the-brood). Sites in the world still give a free blueprint when you open one, so exploring keeps paying.
+
+## Album · The shop
+
+- ![The SHOP tab: eight blueprints with stacks and prices, four supplies](https://ringshadow.com/blog/media/the-realm/04-shop.webp) The SHOP tab: blueprints on the left, supplies on the right.
+- ![The build menu listing each building with the number of blueprint copies held](https://ringshadow.com/blog/media/the-realm/05-build-menu.webp) The build menu counts your copies: Hab Dome ×10.
+- ![The Prospector in the open with a shield charge running](https://ringshadow.com/blog/media/the-realm/06-shield.webp) A shield charge running: 8 seconds of no damage.
+
+Under the hood this was three tasks by the agents (R1, C1 and C2), three network protocol versions and three save versions, each with a migration so yesterday's worlds still load. After the shop landed the suites stood at 458 core tests, 167 server tests and 67 network tests, all passing.
+
+
+---
+
+# How we got here
+
+> Two days of building Ringshadow's MMORPG mode: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.
+
+Source: https://ringshadow.com/blog/how-we-got-here
+
+The MMORPG mode · M1 to M7
+
+14 October 2026
+
+Two days ago Ringshadow's online mode was a list of decisions in a log file. Tonight a pilot lands on a frontier world, drills opal ore under a ringed giant, and watches a meteor come down where the radio said it would. Here is how it got built.
+
+[Video: A one-minute showreel of the MMORPG mode: the home screen, a touchdown, drilling, the ringshadow band, a starfall and a dusk lift-off](https://ringshadow.com/blog/media/how-we-got-here/showreel.mp4)
+
+*The showreel: one minute, recorded from the game by an agent in a hidden run. It has the game's own sound.*
+
+Ringshadow started as a real-time strategy game, and that game is still here. On 13 October I decided to build a second way to play next to it: you are one pilot in a world that lasts. You drive the machine yourself, you build with other pilots, and the open ground between the cities is fought over.
+
+The first rule was that single player comes first, on a local server, and that this local server is the very program a public world will run. Only the host changes. So everything below runs through a real server, even when you play alone.
+
+## The plumbing: M1 to M5
+
+The agents wrote our own networking on UDP. The server is authoritative and steps the world 60 times a second; it sends each pilot only what is near them, 20 times a second, as differences. The game predicts your Prospector and corrects it, and that was tested under made-up lag, jitter and loss before anything else was built on it.
+
+Then came a world map of three by three regions you drive across or fly between. The server saves the world to SQLite every 5 seconds; the test kills the server with kill -9 and checks that the Citadel and the Prospector are back. The traffic is encrypted (X25519 and XChaCha20-Poly1305, through the public-domain Monocypher library), and the server travels inside the Mac app.
+
+Every screen got checked picture by picture: a shot harness drives the game in hidden runs and saves stills. The first pass took 17 pictures and found 18 problems.
+
+## The long road: M6
+
+On the 13th I handed the mode to a manager agent for a week, with one goal: a complete, beautiful game by 20 October. It runs workers in their own copies of the repository and merges what they finish.
+
+M6 gave the Prospector a road worth a hundred hours.
+
+- 100: levels
+- 65: skill nodes in five branches
+- 1.1 h: to level 10
+- 97 h: to level 100
+
+The XP curve is 500 + 3L² per level. Buildings come from blueprints you find in the world, each with a level floor. The server owns the world's clock: a day is 40 minutes, 30 of light and 10 of night, and the weather comes from the server too, so every pilot in a world sees the same storm.
+
+## A world worth crossing: M7
+
+The game is named after the giant in its sky, so the signature event had to be its shadow. Its rings throw a band of shadow that sweeps across the land on the world clock. Under it the ore veins flare and drilling pays more.
+
+Then starfall: two or three times a world day a meteor streaks in, and its crater holds a deposit about three times richer than the usual one. First come, first served. KSTR 88.7, the frontier's only radio station, now hands out three contracts a day, and a guided opening of six steps walks a new pilot from the landing pad to the first skill point (level 4 at 1,712 XP). Flights burn Metallic Hydrogen: 10 plus 5 for every step across the map.
+
+Work crashed twice on the 14th, once mid-morning and once mid-afternoon, and every worker was restarted from scratch. Picture runs spent about 85% of their time waiting for the game clock to reach dusk, so an agent added a clock jump for test runs: the starfall run went from 3 minutes 50 seconds to 44 seconds.
+
+At the end of M7 the test suites stood at 454 core tests, 153 server tests and 67 network tests, all passing.
+
+## Album · Under the giant
+
+- ![Painted key art: a Prospector on a cliff at dusk, its headlamp on, the ringed giant filling the sky](https://ringshadow.com/blog/media/how-we-got-here/01-key-art.webp) The key art for the home screen, painted with Grok Imagine: a lone Prospector under the giant.
+- ![The home screen with the RINGSHADOW title and ENTER THE REACH](https://ringshadow.com/blog/media/how-we-got-here/02-home.webp) The home screen. ENTER THE REACH comes first.
+- ![A Prospector landing in dust at Cold Fork, banners for a new region and a first landing](https://ringshadow.com/blog/media/how-we-got-here/03-touchdown.webp) Touchdown at Cold Fork: region discovered, first landing.
+- ![The Prospector drilling an opal-flecked Stardust Ore rock, sparks flying](https://ringshadow.com/blog/media/how-we-got-here/04-drilling.webp) Drilling Stardust Ore at Prospect Landing.
+- ![Gold light columns rising from blueprint sites at dusk](https://ringshadow.com/blog/media/how-we-got-here/05-site-columns.webp) Blueprint sites mark themselves with gold columns at dusk.
+- ![The giant's rings casting a dark band across the sky and land](https://ringshadow.com/blog/media/how-we-got-here/06-ringshadow.webp) The ringshadow: the rings' shadow crossing the land.
+- ![A meteor's blinding impact behind the Prospector, with a KSTR STARFALL DOWN banner](https://ringshadow.com/blog/media/how-we-got-here/07-starfall.webp) KSTR: STARFALL DOWN. A rich deposit in the crater.
+- ![A glowing crater at night, embers floating above a molten deposit](https://ringshadow.com/blog/media/how-we-got-here/08-crater.webp) The crater at night, the deposit still molten.
+- ![The Prospector lifting off on jets in front of the giant at dusk](https://ringshadow.com/blog/media/how-we-got-here/09-liftoff.webp) A dusk lift-off, burning Metallic Hydrogen.
+
+The next post is about what I asked for after playing it myself, up to level 10: [the realm](https://ringshadow.com/blog/the-realm).
