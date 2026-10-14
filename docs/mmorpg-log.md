@@ -350,3 +350,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N E1 circle was a comet shock ring; shots turn giant events off.
 - I E1 band edge on far terrain not visible yet: follow-up.
 - N E1 task: 66 min against 90 estimated.
+- T G1 done 5007b79: rig screen, 6 shots checked; core 450, server 142, net 67.
+- D Manager: hidden-run queue on; train restarted (pid 9701).
+- T F1 flight → world-clock.
