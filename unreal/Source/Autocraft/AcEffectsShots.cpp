@@ -46,7 +46,8 @@ namespace
 		case ac::StructureKind::spacedock: return 1.5;
 		case ac::StructureKind::lab:
 		case ac::StructureKind::habDome:
-		case ac::StructureKind::sentinel: return 1.0;
+		case ac::StructureKind::sentinel:
+		case ac::StructureKind::gatling: return 1.0;
 		}
 		return 1.0;
 	}
@@ -201,6 +202,39 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 					if (UAcEffects* E = Weak.Get()) E->Slug(From, To, Time + K * 0.06);
 				});
 			}
+		}
+		else if (St && (St->kind == ac::StructureKind::gatling || (St->kind == ac::StructureKind::citadel && St->guns)))
+		{
+			// D1, D2: red-hot amalgam rounds, a gatling gun's from its
+			// muzzle, a Citadel's from the corner turret pointing nearest
+			// its target (long streams).
+			const bool bAir = State->unit(Target) && State->unit(Target)->airborne();
+			const FVector To = AirBody(Target).Get(AcSpace::ToWorld(At, GroundZ(At) / Cm + (bAir ? 2.0 : 0.35)));
+			FVector From;
+			bool bFrom = false;
+			double Length = 1.2;
+			if (St->kind == ac::StructureKind::gatling)
+			{
+				bFrom = PartLocation(Unit, FName(TEXT("muzzles_0")), From);
+			}
+			else
+			{
+				int32 Best = 0;
+				double BestOff = 1e9;
+				for (int32 K = 0; K < 4; ++K)
+				{
+					const ac::Vec2 C(St->position.x + ((K == 0 || K == 3) ? 2.0 : -2.0), St->position.y + (K < 2 ? 2.0 : -2.0));
+					const double Off = std::abs(std::remainder(std::atan2(At.y - C.y, At.x - C.x) - (*St->guns)[K].aim, 2 * UE_DOUBLE_PI));
+					if (Off < BestOff)
+					{
+						BestOff = Off;
+						Best = K;
+					}
+				}
+				bFrom = PartLocation(Unit, FName(*FString::Printf(TEXT("turretMuzzles_%d"), Best)), From);
+				Length = 2.2;
+			}
+			if (bFrom) AmalgamRound(From, To, Time, Length);
 		}
 		return;
 	}

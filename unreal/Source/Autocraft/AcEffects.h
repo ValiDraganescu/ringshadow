@@ -128,6 +128,10 @@ public:
 	/// A packed-rail plasma blob at 28 cells/s, then a spark and a small
 	/// blast (`Effects.slug`, :338).
 	void Slug(const FVector& From, const FVector& To, double Time);
+	/// D1, D2: a red-hot round of stardust ore and MH amalgam (a gatling
+	/// gun's, a Citadel corner turret's): a long orange-white streak at 45
+	/// cells/s, `Length` cells, then a hot spark where it hits.
+	void AmalgamRound(const FVector& From, const FVector& To, double Time, double Length = 1.2);
 	/// A Kestrel's rail gun: a thin bright beam the whole way from the muzzle
 	/// for 0.22 s (hitscan), a flare at the muzzle and a burst where it hits.
 	void RailShot(const FVector& From, const FVector& To, double Time);
@@ -263,6 +267,7 @@ private:
 	void MakePools();
 	void FlyRounds(double Time);
 	void FlySlugs(double Time);
+	void FlyAmalgams(double Time);
 	void PlaceRound(int32 I, double Time);
 	void GrenadeLanded(double Time, const FVector& At, double GroundZ);
 	void ShellLanded(double Time, const FVector& At, double GroundZ);
@@ -283,8 +288,10 @@ private:
 	FAcEffectPool* RoundPool = nullptr;
 	FAcEffectPool* SlugCorePool = nullptr;
 	FAcEffectPool* SlugHaloPool = nullptr;
+	FAcEffectPool* AmalgamPool = nullptr;
 	TArray<double> TracerUntil, FlashUntil;
-	TArray<FFlight> Rounds, Slugs;
+	TArray<FFlight> Rounds, Slugs, Amalgams;
+	TArray<double> AmalgamLength;
 
 	TArray<FTimed> Timed;
 	TArray<FPending> Pending;  // a min-heap on (At, Seq)

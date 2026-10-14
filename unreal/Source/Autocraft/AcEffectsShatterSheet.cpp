@@ -76,7 +76,7 @@ void AAcShatterSheet::Build(const FString& KindName, const FString& SpecFile)
 	TOptional<ac::StructureKind> Building;
 	for (int32 K = 0; K <= int32(ac::UnitKind::scorpion); ++K)
 		if (KindName == AcPose::ModelBase(ac::UnitKind(K)) && AcEffectsShatter::SpecOf(ac::UnitKind(K), Spec)) Unit = ac::UnitKind(K);
-	for (int32 K = 0; K <= int32(ac::StructureKind::sentinel); ++K)
+	for (int32 K = 0; K <= int32(ac::StructureKind::gatling); ++K)
 		if (KindName == AcPose::ModelBase(ac::StructureKind(K)) && AcEffectsShatter::SpecOf(ac::StructureKind(K), Spec))
 			Building = ac::StructureKind(K);
 	const FAcModelInfo* Model = Spec.Model ? FAcModelCatalog::Get().Find(FName(Spec.Model)) : nullptr;

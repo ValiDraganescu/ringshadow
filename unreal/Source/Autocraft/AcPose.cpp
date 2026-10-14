@@ -117,6 +117,7 @@ namespace AcPose
 		case ac::StructureKind::spacedock: return TEXT("spacedock");
 		case ac::StructureKind::lab: return TEXT("lab");
 		case ac::StructureKind::sentinel: return TEXT("sentinel");
+		case ac::StructureKind::gatling: return TEXT("gatling");
 		}
 		return TEXT("citadel");
 	}
@@ -135,6 +136,7 @@ namespace AcPose
 		case ac::StructureKind::spacedock: return 3.2;
 		case ac::StructureKind::lab: return 1.9;
 		case ac::StructureKind::sentinel: return 1.7;
+		case ac::StructureKind::gatling: return 1.3;
 		}
 		return 2.0;
 	}

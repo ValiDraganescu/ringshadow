@@ -1,11 +1,12 @@
 // Buildings 2 (chunk B7): the Foundry, Spacedock, Lab, Derrick and
-// Sentinel. See AcPoseBuildings.h.
+// Sentinel; the gatling gun (D2). See AcPoseBuildings.h.
 #include "AcPoseBuildings.h"
 
 #include "Rules.h"
 #include "Types.h"
 
 #include <algorithm>
+#include <cmath>
 
 using namespace AcBuildingPose;
 
@@ -314,6 +315,44 @@ namespace
 		}
 	}
 
+	// MARK: Gatling gun (D2, docs/mmorpg-m8.md; Tools/Editor/models/gatling.py)
+
+	struct FGatlingState : FAcPoseState
+	{
+		double Spin = 0, Angle = 0, Heat = 0;
+	};
+
+	void PoseGatling(const FAcPoseContext& C, FAcPose& P)
+	{
+		const ac::Structure& S = *C.Structure;
+		const FAcModelInfo& M = C.Model;
+		const bool bLive = CommonPose(C, P, Welding(C));
+		const double Ph = Phase(C);
+		static const FPart Head(TEXT("head")), Barrels(TEXT("barrels")), Tips(TEXT("tips")), Hopper(TEXT("hopper"));
+		static const FParts Flashes(TEXT("flashes"), 1);
+		const double Last = C.Memory.LastShot.Get(-10.0);
+		const double Since = C.Time - Last;
+		const bool bFiring = bLive && Since < 0.4;
+		FGatlingState& Mem = C.Memory.State<FGatlingState>();
+		// The barrels spin up while it fires and run down after; the
+		// amalgam's heat builds in the tips and the hopper and cools slowly.
+		Mem.Spin = Ease(Mem.Spin, bFiring ? 28.0 : 0.0, bFiring ? 1.5 : 0.35, C.Dt);
+		Mem.Angle = std::fmod(Mem.Angle + Mem.Spin * C.Dt, 2 * UE_DOUBLE_PI);
+		Mem.Heat = Ease(Mem.Heat, bFiring ? 1.0 : 0.0, bFiring ? 0.05 : 0.006, C.Dt);
+		GlowGroup(M, P, WorkGlow, !bLive ? 0.05 : bFiring || S.target ? Glow(Ph, 0) : 1.2, 2.0);
+		if (bLive)
+		{
+			// The head follows its target (`aim`, world radians), sweeping slowly with none.
+			const double Aim = S.target ? S.aim.value_or(UE_DOUBLE_HALF_PI) : UE_DOUBLE_HALF_PI + 0.7 * std::sin(Ph * 0.3);
+			SetEuler(M, P, Head.Get(M), 0, -Aim, 0);
+		}
+		SetEuler(M, P, Barrels.Get(M), Mem.Angle, 0, 0);
+		if (const int32 T = Tips.Get(M); T != INDEX_NONE) P.Emission[T] = float(bLive ? 0.15 + 1.6 * Mem.Heat : 0.05);
+		if (const int32 H = Hopper.Get(M); H != INDEX_NONE) P.Emission[H] = float(bLive ? 0.55 + 0.9 * Mem.Heat : 0.08);
+		if (const int32 F = Flashes(M, 0); F != INDEX_NONE) P.Visible[F] = bLive && Since >= 0.0 && Since < 0.05;
+	}
+
+	FAcPoseRegistration RegGatling(ac::StructureKind::gatling, &PoseGatling);
 	FAcPoseRegistration RegFoundry(ac::StructureKind::foundry, &PoseFoundry);
 	FAcPoseRegistration RegSpacedock(ac::StructureKind::spacedock, &PoseSpacedock);
 	FAcPoseRegistration RegLab(ac::StructureKind::lab, &PoseLab);

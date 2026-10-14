@@ -95,6 +95,9 @@ namespace AcSound
 	inline constexpr float FlakGain = 0.85f;
 	inline constexpr float FlakHitGain = 0.7f;
 	inline constexpr float MissileGain = 0.35f;
+	/// D1, D2: a gatling gun's burst and a Citadel corner turret's.
+	inline constexpr float GatlingGain = 0.45f;
+	inline constexpr float TurretGain = 0.35f;
 	inline constexpr float SentinelTrackGain = 0.3f;
 	inline constexpr float HealGain = 0.35f;
 	inline constexpr float TankCannonGain = 0.7f;
@@ -316,7 +319,7 @@ public:
 	void Deposited(ac::Vec2 At);
 	void Trained(ac::UnitKind Kind, ac::Vec2 At);
 	void Shot(std::optional<ac::UnitKind> Kind, bool bAnchored, std::optional<ac::Vec2> From, ac::Vec2 At, int64 Victim,
-		bool bStructure, bool bMinigun = false, bool bTower = false);
+		bool bStructure, bool bMinigun = false, bool bTower = false, std::optional<ac::StructureKind> TowerKind = std::nullopt);
 	void Died(ac::UnitKind Kind, ac::Vec2 At);
 	void Destroyed(ac::StructureKind Kind, ac::Vec2 At);
 	void Grenade(ac::Vec2 At);
@@ -401,7 +404,8 @@ public:
 	/// The sound a shooter fires, its gain and how many may start a
 	/// second (the `switch` in `AudioDirector.shot`).
 	struct FWeapon { const char* Name; float Gain; int32 PerSecond; };
-	static FWeapon WeaponOf(std::optional<ac::UnitKind> Kind, bool bAnchored, bool bTower);
+	static FWeapon WeaponOf(std::optional<ac::UnitKind> Kind, bool bAnchored, bool bTower,
+		std::optional<ac::StructureKind> TowerKind = std::nullopt);
 	/// `<kind>death`, and the report-in line `v<kind>`.
 	static const char* DeathOf(ac::UnitKind Kind);
 	/// A bug's strike (`<kind>bite`, `gloamwingspit`, `matriarchslam`), its

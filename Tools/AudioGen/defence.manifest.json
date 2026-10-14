@@ -1,0 +1,12 @@
+{
+ "about": "The realm's defences (docs/mmorpg-m8.md D1, D2, 2026-10-14): gatlingburst, a gatling gun's burst of red-hot amalgam rounds; turretburst, a Citadel corner turret's lighter, faster rotary burst. Takes are made into unreal/server/build/d/takes and kept in art/models/gatling/sounds/; the picks are copied to unreal/Resources/Sounds/sfx/<stem>_<n>.wav (Tools/AudioGen/defence_pick.py). Mechanical weapon sounds, no voices, no music; checked offline (Tools/Audio/check_sounds.py), never played aloud.",
+ "voices": {},
+ "entries": [
+  {"id": "gatlingburst_1", "kind": "sfx", "prompt": "heavy rotary cannon firing a short fast burst, six spinning barrels, a deep rapid mechanical thudding roar with a hot metallic hiss and a brief spin-down whir, sci-fi defence turret, no voices, no music", "seconds": 0.9, "influence": 0.6},
+  {"id": "gatlingburst_2", "kind": "sfx", "prompt": "heavy rotary cannon firing a short fast burst, six spinning barrels, a deep rapid mechanical thudding roar with a hot metallic hiss and a brief spin-down whir, sci-fi defence turret, no voices, no music", "seconds": 0.9, "influence": 0.6},
+  {"id": "gatlingburst_3", "kind": "sfx", "prompt": "heavy rotary cannon firing a short fast burst, six spinning barrels, a deep rapid mechanical thudding roar with a hot metallic hiss and a brief spin-down whir, sci-fi defence turret, no voices, no music", "seconds": 0.9, "influence": 0.6},
+  {"id": "turretburst_1", "kind": "sfx", "prompt": "small rapid rotary close-in defence gun firing a very fast short buzzing burst, a tight high mechanical rattle like tearing cloth, quick servo whine, sci-fi point-defence turret, no voices, no music", "seconds": 0.7, "influence": 0.6},
+  {"id": "turretburst_2", "kind": "sfx", "prompt": "small rapid rotary close-in defence gun firing a very fast short buzzing burst, a tight high mechanical rattle like tearing cloth, quick servo whine, sci-fi point-defence turret, no voices, no music", "seconds": 0.7, "influence": 0.6},
+  {"id": "turretburst_3", "kind": "sfx", "prompt": "small rapid rotary close-in defence gun firing a very fast short buzzing burst, a tight high mechanical rattle like tearing cloth, quick servo whine, sci-fi point-defence turret, no voices, no music", "seconds": 0.7, "influence": 0.6}
+ ]
+}

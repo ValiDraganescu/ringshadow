@@ -307,6 +307,9 @@ public:
 	/// donations (`CitadelRefusal`, `CitadelKept`).
 	bool BuyBlueprint(ac::StructureKind Kind, FString* Why = nullptr);
 	bool BuyItem(ac::Item Item, FString* Why = nullptr);
+	/// D1: the realm's Citadel turrets take their next mark of `Stat`, paid
+	/// from the realm wallet; answered as the donations.
+	bool UpgradeCitadel(ac::DefenceStat Stat, FString* Why = nullptr);
 	/// C2: use a consumable in the field (keys 1-4). The server's refusal
 	/// comes back as a note; `ItemsUsed` counts the kept ones.
 	bool UseItem(ac::Item Item, FString* Why = nullptr);

@@ -185,6 +185,15 @@
 //   04 (H2Away) the next start, three hours later by the save's clock: the
 //      "WHILE YOU WERE AWAY" toast, the ore its mercenary delivered
 //
+// -AcMmoShotsD (it adds -AcMmoDevRig: the realm's Citadel, a full wallet):
+// the defences (docs/mmorpg-m8.md D1, D2), each scene staged by the server's
+// dev control (`defence …` lines, WorldMap::devDefence), DIR/d-NN-moment.png:
+//   01 the Citadel's four corner turrets firing at a raid on it
+//   02 the DEFENCE tab after a fire-rate mark bought from the realm wallet
+//   03 an AA tower (the Sentinel) shooting down Gloamwings
+//   04 a gatling gun firing amalgam rounds at Shardlings, its tracers
+//   05 the build menu with the gatling gun and the AA tower
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -233,6 +242,7 @@
 #include "SAcLevelUp.h"
 
 #include "Brood.h"
+#include "Defence.h"
 #include "Pilot.h"
 #include "Ringshadow.h"
 #include "Rules.h"
@@ -337,6 +347,11 @@ namespace
 	bool N2Staged = false;
 	double N2Hp = 0;
 	int64 N2Dome = -1;
+	/// -AcMmoShotsD: the Citadel's kept asks and the realm wallet's ore before
+	/// the upgrade; the walk out staged.
+	int32 DKept = 0;
+	int64 DRealmOre = 0;
+	bool DStaged = false;
 	struct FB1Sample
 	{
 		double At;
@@ -652,7 +667,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -717,6 +732,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			// -AcMmoShotsH2 / H2Away: mercenaries (1500-1511).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2"))) T.Phase = 1500;
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away"))) T.Phase = 1510;
+			// -AcMmoShotsD: only the defences (1600-1611).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))) T.Phase = 1600;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -3123,8 +3140,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		C2Price = ac::Shop::blueprintPrice(ac::StructureKind::habDome, P->bought.count(ac::StructureKind::habDome) ? P->bought.at(ac::StructureKind::habDome) : 0);
 		const auto Copies = P->blueprints.find(ac::StructureKind::habDome);
 		C2Copies = Copies == P->blueprints.end() ? 0 : Copies->second;
-		// The Hab Dome's blueprint (key 3 on the SHOP tab), a repair kit, a shield charge.
-		Check(W->Key(EKeys::Three), TEXT("c2: key 3 buys a Hab Dome blueprint"));
+		// The Hab Dome's blueprint (key 4 on the SHOP tab since D2's gatling gun),
+		// a repair kit, a shield charge.
+		Check(W->Key(EKeys::Four), TEXT("c2: key 4 buys a Hab Dome blueprint"));
 		Mmo->BuyItem(ac::Item::repairKit);
 		W->Buy(true, int32(ac::Item::shieldCharge));
 		Advance();
@@ -3740,6 +3758,204 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 1311:
 		Mmo->DevClock(TEXT("brood clear"));
+		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsD
+	case 1600:
+		// The dev rig's home: the realm wallet filled, turret blueprints given,
+		// the Citadel screen's DEFENCE tab open.
+		if (S && U && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("defence wallet\ndefence blueprints")), TEXT("d: the server fills the realm wallet and gives turret blueprints"));
+			Check(AtRealmCitadel(), TEXT("d: the pilot stands at the realm's Citadel"));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("d: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
+			{
+				for (int32 K = 0; K < SAcCitadelScreen::TabCount && W->Tab() != SAcCitadelScreen::ETab::Defence; ++K) W->Key(EKeys::Tab);
+				Check(W->Tab() == SAcCitadelScreen::ETab::Defence, TEXT("d: Tab reaches the DEFENCE"));
+			}
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel"));
+		return;
+	case 1601:
+	{
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (W && P && P->realmWallet.ore >= 3000 && W->GetInfo().Defence.Num() == 3 && Since() > 1.0)
+		{
+			Check(W->GetInfo().DefenceWhyNot.IsEmpty(), TEXT("d: the turrets can be upgraded here"));
+			DKept = Mmo->CitadelKept();
+			DRealmOre = P->realmWallet.ore;
+			Check(W->Key(EKeys::One), TEXT("d: key 1 upgrades the turrets' fire rate"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the DEFENCE tab filled"), 15);
+		return;
+	}
+	case 1602:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && Mmo->CitadelKept() > DKept && P->citadelMarks.rate == 1 && Since() > 1.0)
+		{
+			const ac::ShopPrice Price = ac::Defence::citadelPrice(ac::DefenceStat::rate, 1);
+			Check(P->realmWallet.ore == DRealmOre - Price.ore,
+				FString::Printf(TEXT("d: the realm wallet paid: %lld -> %lld ore"), (long long)DRealmOre, (long long)P->realmWallet.ore));
+			Check(CitadelScreenWidget() && !CitadelScreenWidget()->KeptText().IsEmpty(), TEXT("d: the foot says what was upgraded"));
+			Shoot(TEXT("d-02-defence"), TEXT("the DEFENCE tab after a fire-rate mark from the realm wallet"));
+			return;
+		}
+		if (!Mmo->CitadelRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("d: upgrade: %s"), *Mmo->CitadelRefusal()));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the fire-rate mark kept"), 10);
+		return;
+	}
+	case 1603:
+	{
+		CloseCitadelScreen();
+		// Out 13 cells from the Citadel: it fills the view, the raid comes past.
+		const ac::Vec2 C = CitadelOf(*S)->position;
+		const ac::Vec2 Out = ac::normalize(U->position - C + ac::Vec2(0.01, 0));
+		const ac::Vec2 To = C + Out * 13.0;
+		Route({FVector2D(To.x, To.y)});
+		DStaged = false;
+		Advance();
+		return;
+	}
+	case 1604:
+	{
+		if (!DStaged)
+		{
+			const int32 D = Drive();
+			if (D < 0) { Stalled(TEXT("d: out from the Citadel")); return; }
+			if (D == 0) return;
+			Check(Mmo->DevClock(TEXT("defence citadel")), TEXT("d: the server stages a raid on the Citadel"));
+			DStaged = true;
+			T.PhaseAt = Now;
+			return;
+		}
+		// The Citadel right of the middle: the raid's KSTR toast is in the middle.
+		const ac::Structure* C = CitadelOf(*S);
+		if (C) Stop(Face(C->position) - 0.35);
+		int32 Hurt = 0, Near = 0;
+		for (const ac::Unit& X : S->units)
+			if (X.bug)
+			{
+				Hurt += X.hp < ac::Rules::hp(X.kind) ? 1 : 0;
+				Near += C && X.hp > 0 && ac::distance(X.position, C->position) < 12 ? 1 : 0;
+			}
+		if (C && C->marks && Hurt >= 2 && Near >= 3 && Since() > 2.0)
+		{
+			Check(true, FString::Printf(TEXT("d: the corner turrets fire: %d bugs hit, %d close"), Hurt, Near));
+			Shoot(TEXT("d-01-citadel"), TEXT("the Citadel's corner turrets firing at a raid"));
+			return;
+		}
+		TimedOut(TEXT("the Citadel firing at the raid"), 30);
+		return;
+	}
+	case 1605:
+	{
+		// Out past the corner turrets' reach (34 cells), facing away: the
+		// turrets placed ahead fight alone.
+		Mmo->DevClock(TEXT("brood clear"));
+		const ac::Vec2 C = CitadelOf(*S)->position;
+		const ac::Vec2 Out = ac::normalize(U->position - C + ac::Vec2(0.01, 0));
+		const ac::Vec2 To = C + Out * 34.0;
+		Route({FVector2D(To.x, To.y)});
+		DStaged = false;
+		Advance();
+		return;
+	}
+	case 1606:
+	{
+		if (!DStaged)
+		{
+			// A stall short of the spot is far enough out: the scene goes on there.
+			const int32 D = Drive();
+			if (D == 0) return;
+			if (D < 0) Stop(U->heading);
+			Check(Mmo->DevClock(TEXT("defence aa")), TEXT("d: the server stages an AA tower and Gloamwings"));
+			DStaged = true;
+			T.PhaseAt = Now;
+			return;
+		}
+		const ac::Structure* A = nullptr;
+		for (const ac::Structure& X : S->structures)
+			if (X.kind == ac::StructureKind::sentinel && (!A || ac::distance(X.position, U->position) < ac::distance(A->position, U->position))) A = &X;
+		const ac::Unit* G = NearestBug(*S, A ? A->position : U->position, ac::UnitKind::gloamwing);
+		// The tower and its flyers both in view: a little toward the flyers.
+		if (A) Stop(Face(G ? A->position * 0.7 + G->position * 0.3 : A->position));
+		int32 Hit = 0;
+		for (const ac::Unit& X : S->units)
+			if (X.kind == ac::UnitKind::gloamwing && X.bug && X.hp < ac::Rules::hp(X.kind)) Hit++;
+		if (A && Hit >= 1 && Since() > 1.5)
+		{
+			Check(true, FString::Printf(TEXT("d: the AA tower hits %d Gloamwings"), Hit));
+			Shoot(TEXT("d-03-aa"), TEXT("an AA tower downing a Gloamwing"));
+			return;
+		}
+		TimedOut(TEXT("the AA tower firing"), 30);
+		return;
+	}
+	case 1607:
+		Check(Mmo->DevClock(TEXT("brood clear\ndefence gatling")), TEXT("d: the server stages a gatling gun and Shardlings"));
+		Advance();
+		return;
+	case 1608:
+	{
+		const ac::Structure* Gun = nullptr;
+		for (const ac::Structure& X : S->structures)
+			if (X.kind == ac::StructureKind::gatling && (!Gun || ac::distance(X.position, U->position) < ac::distance(Gun->position, U->position))) Gun = &X;
+		const ac::Unit* B = NearestBug(*S, Gun ? Gun->position : U->position, ac::UnitKind::shardling);
+		// The gun left of the middle: the raid's KSTR toast is in the middle.
+		if (Gun) Stop(Face(B ? (Gun->position * 2.0 + B->position) / 3.0 : Gun->position) + 0.4);
+		int32 Hit = 0;
+		for (const ac::Unit& X : S->units)
+			if (X.kind == ac::UnitKind::shardling && X.bug && X.hp < ac::Rules::hp(X.kind)) Hit++;
+		int32 Close = 0, Alive = 0;
+		for (const ac::Unit& X : S->units)
+			if (X.kind == ac::UnitKind::shardling && X.bug && X.hp > 0)
+			{
+				Alive++;
+				Close += Gun && ac::distance(X.position, Gun->position) < 7 ? 1 : 0;
+			}
+		// The dead leave the mirror at once: firing is a target and the pack
+		// in reach, some of it hurt or already gone (six were set on it).
+		if (Gun && Gun->target && Close >= 2 && (Hit >= 1 || Alive < 6) && Since() > 0.8)
+		{
+			Check(true, FString::Printf(TEXT("d: the gatling gun fires: %d Shardlings in reach, %d hurt, %d left"), Close, Hit, Alive));
+			Shoot(TEXT("d-04-gatling"), TEXT("a gatling gun firing amalgam rounds at Shardlings"));
+			return;
+		}
+		TimedOut(TEXT("the gatling gun firing"), 30);
+		return;
+	}
+	case 1609:
+	{
+		Mmo->DevClock(TEXT("brood clear"));
+		UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+		Check(Build && Build->Key(TEXT("b")) && Build->MenuOpen(), TEXT("d: B opens the build menu"));
+		Advance();
+		return;
+	}
+	case 1610:
+		if (Since() > 1.0)
+		{
+			Check(AcProgressHud::Copies(Mmo, ac::StructureKind::gatling) > 0 && AcProgressHud::Copies(Mmo, ac::StructureKind::sentinel) > 0,
+				TEXT("d: the build menu holds gatling gun and AA tower copies"));
+			Check(AcPilotText::BuildKinds(true).Contains(ac::StructureKind::gatling), TEXT("d: the gatling gun is in the build menu"));
+			Shoot(TEXT("d-05-build-menu"), TEXT("the build menu with the gatling gun and the AA tower"));
+		}
+		return;
+	case 1611:
+		if (UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this)) Build->Key(TEXT("esc"));
 		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;

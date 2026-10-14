@@ -91,7 +91,8 @@ namespace AcEffectsShatter
 		case ac::StructureKind::citadel: S.Radius = 2.5; break;
 		case ac::StructureKind::lab:
 		case ac::StructureKind::habDome:
-		case ac::StructureKind::sentinel: S.Radius = 1; break;
+		case ac::StructureKind::sentinel:
+		case ac::StructureKind::gatling: S.Radius = 1; break;
 		default: S.Radius = 1.5; break;
 		}
 		S.Chunks = int32(10 + S.Radius * 7);
@@ -126,7 +127,7 @@ namespace AcEffectsShatterPrivate
 				FSpec S;
 				if (SpecOf(ac::UnitKind(K), S)) MakeRig(S);
 			}
-			for (int32 K = 0; K <= int32(ac::StructureKind::sentinel); ++K)
+			for (int32 K = 0; K <= int32(ac::StructureKind::gatling); ++K)
 			{
 				FSpec S;
 				if (SpecOf(ac::StructureKind(K), S)) MakeRig(S);
@@ -745,7 +746,7 @@ namespace AcEffectsShatterPrivate
 				Start(*Rig, Id, 1, P, Y, Pose, Time);
 			}
 			Col = 0;
-			for (int32 K = 0; K <= int32(ac::StructureKind::sentinel); ++K)
+			for (int32 K = 0; K <= int32(ac::StructureKind::gatling); ++K)
 			{
 				FSpec Spec;
 				SpecOf(ac::StructureKind(K), Spec);

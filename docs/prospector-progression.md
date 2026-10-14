@@ -103,7 +103,7 @@ walking, flying, sitting in a building, the skill screen.
 | Damage dealt | the target's cost × the share of hp taken, buildings × ½ | For no-man's land later; there is nothing to fight today. |
 | First visit to a region | 250 | Once per region per pilot. The start region doesn't count. |
 | First landing on a pad | 50 | Once per pad per pilot. The start pad doesn't count. |
-| Finding a blueprint | 50 × its level floor | Derrick 150, Foundry 750, Sentinel 2,750. Once per blueprint. |
+| Finding a blueprint | 50 × its level floor | Derrick 150, Sentinel 500, Foundry 750. Once per blueprint. |
 | A survey chip | 25 | The rare find while mining (see "Blueprint sites"). |
 | Feats, once each | Citadel finished 150; first of each other building kind finished 100; first MH unloaded 50; first flight 50; first deposit emptied 50 | |
 
@@ -352,12 +352,13 @@ floor**. A copy held below the floor is kept and shows "opens at level N".
 |---|---|---|---|---|---|
 | Citadel | Home: unload point, respawn point, where the respec is made | 1 | 1 | 400 | on the server (P6) |
 | Derrick | Pumps MH on a well (as today) | 3 | 4 | 75 | as today |
+| Gatling gun | A rotary cannon firing red-hot ore and MH amalgam rounds: ground targets in range 6, air within 4.5 (D2) | 5 | 6 | 125 + 25 | on the server (D2) |
 | Hab Dome | A field depot: unload ore and MH into the wallet away from home, and a respawn point | 8 | 3 | 150 + 50 | on the server (P6) |
 | Foundry | Makes rig modules: drill head, cargo pod, plate, torch tip, survey lens ("Foundry and Lab") | 15 | 1 | 300 + 150 | on the server (P7) |
 | Lab | Researches better module marks (Mk II, Mk III) for MH and time | 25 | 1 | 200 + 200 | on the server (P7), standing alone |
 | Spacedock | A private pad: fly from it and land on it from any pad; later, routes to far worlds | 35 | 1 | 400 + 300 | on the server (P6) |
 | Bastion | A bunker: the Prospector climbs in, takes no damage, its torch fires from it at +2 range. For holding a claim in no-man's land | 45 | 2 | 250 + 100 | built (P6); its fight matters later |
-| Sentinel | A missile turret that guards your buildings, ground and air | 55 | 4 | 150 + 100 | built (P6); its fight matters later |
+| Sentinel | The AA tower: missile pods at the air only, range 7, outranging a Gloamwing's spit (D2) | 10 | 4 | 150 + 100 | on the server (D2) |
 | Garrison | Trains other kinds in the strategy game. Held back: no blueprint in the world while the MMO is Prospector only | | | | held back |
 
 Limits are the realm's, across the world (R1, below): the table's numbers
@@ -520,12 +521,13 @@ loop still costs no MH. Copies found at sites don't count as bought.
 |---|---|---|---|---|---|---|
 | Citadel | 1 | 80 | 110 | 170 | 380 | 1,280 |
 | Derrick | 3 | 130 | 190 | 280 | 630 | 2,140 |
+| Gatling gun | 5 | 180 + 30 | 260 + 40 | 390 + 60 | 890 + 130 | 2,990 + 430 |
 | Hab Dome | 8 | 250 + 40 | 380 + 60 | 560 + 90 | 1,270 + 200 | 4,270 + 680 |
+| Sentinel | 10 | 300 + 50 | 450 + 80 | 680 + 110 | 1,520 + 250 | 5,130 + 850 |
 | Foundry | 15 | 430 + 80 | 640 + 110 | 960 + 170 | 2,150 + 380 | 7,260 + 1,280 |
 | Lab | 25 | 680 + 130 | 1,010 + 190 | 1,520 + 280 | 3,420 + 630 | 11,530 + 2,140 |
 | Spacedock | 35 | 930 + 180 | 1,390 + 260 | 2,080 + 390 | 4,680 + 890 | 15,800 + 2,990 |
 | Bastion | 45 | 1,180 + 230 | 1,760 + 340 | 2,640 + 510 | 5,950 + 1,140 | 20,080 + 3,840 |
-| Sentinel | 55 | 1,430 + 280 | 2,140 + 410 | 3,210 + 620 | 7,210 + 1,390 | 24,350 + 4,700 |
 
 (ore + MH.) The first Hab Dome copy, 250 ore and 40 MH, with the dome's own
 150 + 50, is a few minutes of mining at level 8, where it opens. Copies stay
@@ -884,7 +886,8 @@ of route. Proposed for The First Reach (`unreal/server/worlds/first.json`):
 | Lab | 25 | cache in Glass Flats | vault in Ashen Shelf |
 | Spacedock | 35 | vault in Slag Pockets | wreck on Cold Fork's ridge top |
 | Bastion | 45 | vault in Ashen Shelf | cache in Brine Pans |
-| Sentinel | 55 | vault in Tern Ridge | vault in Dust Terraces |
+| Sentinel | 10 | vault in Tern Ridge | vault in Dust Terraces |
+| Gatling gun | 5 | (none: the shop only) | |
 
 **The first-blueprint path.** A new pilot lands at Prospect Landing with 600
 ore. The Citadel's crate is beside the pad: walk into it in the first minute.

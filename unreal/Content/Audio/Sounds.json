@@ -1132,6 +1132,33 @@
    "board": [],
    "audioSwiftLines": []
   },
+  "gatlingburst": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/gatlingburst/SW_gatlingburst_1.SW_gatlingburst_1",
+     "source": "sfx/gatlingburst_1.wav",
+     "prepared": "Content-src/sounds/sfx/gatlingburst_1.wav",
+     "seconds": 0.88,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/gatlingburst/SW_gatlingburst_2.SW_gatlingburst_2",
+     "source": "sfx/gatlingburst_2.wav",
+     "prepared": "Content-src/sounds/sfx/gatlingburst_2.wav",
+     "seconds": 0.88,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/gatlingburst/SW_gatlingburst_3.SW_gatlingburst_3",
+     "source": "sfx/gatlingburst_3.wav",
+     "prepared": "Content-src/sounds/sfx/gatlingburst_3.wav",
+     "seconds": 0.88,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "gloamwingdeath": {
    "variants": [
     {
@@ -3054,6 +3081,26 @@
    "board": [],
    "audioSwiftLines": []
   },
+  "turretburst": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/turretburst/SW_turretburst_1.SW_turretburst_1",
+     "source": "sfx/turretburst_1.wav",
+     "prepared": "Content-src/sounds/sfx/turretburst_1.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/turretburst/SW_turretburst_2.SW_turretburst_2",
+     "source": "sfx/turretburst_2.wav",
+     "prepared": "Content-src/sounds/sfx/turretburst_2.wav",
+     "seconds": 0.68,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "vatlas": {
    "variants": [
     {
@@ -3866,6 +3913,7 @@
   "flroar",
   "flspool",
   "fltouch",
+  "gatlingburst",
   "gloamwingdeath",
   "gloamwinghurt",
   "gloamwingidle",
@@ -3913,6 +3961,7 @@
   "shimmer",
   "stomp",
   "thunder",
+  "turretburst",
   "vatlas",
   "vperegrine",
   "vscorpion"

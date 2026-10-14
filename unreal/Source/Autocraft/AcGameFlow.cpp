@@ -37,6 +37,7 @@
 #include "Commander.h"
 #include "NavGrid.h"
 #include "Pilot.h"
+#include "Defence.h"
 #include "Rules.h"
 
 namespace
@@ -1377,6 +1378,17 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 				}
 				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why);
 			})
+		.OnUpgrade_Lambda([Weak](int32 Index)
+			{
+				// D1, the DEFENCE tab: the cards are the stats' order.
+				if (!Weak.IsValid()) return;
+				UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+				FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+				FString Why;
+				if (!Mmo) Why = TEXT("Not in a world");
+				else if (Index >= 0 && Index < 3 && Mmo->UpgradeCitadel(ac::DefenceStat(Index), &Why)) return;
+				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("Nothing there")) : Why);
+			})
 		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseCitadelScreen(); })
 	];
 	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(CitadelScreen, EFocusCause::SetDirectly);
@@ -1540,9 +1552,38 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 		Info.MercNextLevel = P->mercNextLevel;
 		Info.Level = P->level;
 	}
+	// D1, the DEFENCE tab: the corner turrets' stats now and with the next
+	// mark (the core's `Defence`), the next mark's price.
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	{
+		const ac::TurretMarks Marks = P->citadelMarks;
+		const ac::UnitStats Now = ac::Defence::apply(ac::UnitStats::citadelGuns, Marks);
+		for (int32 I = 0; I < 3; ++I)
+		{
+			const ac::DefenceStat Stat = ac::DefenceStat(I);
+			ac::TurretMarks Up = Marks;
+			Up.of(Stat) = FMath::Min<int64>(Up.of(Stat) + 1, ac::Defence::marksMax);
+			const ac::UnitStats Next = ac::Defence::apply(ac::UnitStats::citadelGuns, Up);
+			auto Value = [&](const ac::UnitStats& W) {
+				const double V = Stat == ac::DefenceStat::rate ? 1.0 / W.cooldown : Stat == ac::DefenceStat::damage ? W.damage : W.range;
+				return FString::Printf(TEXT("%.1f"), V);
+			};
+			FAcDefenceLine X;
+			X.Name = FString(UTF8_TO_TCHAR(ac::Defence::title(Stat))).ToUpper();
+			X.Mark = Marks.of(Stat);
+			X.Most = ac::Defence::marksMax;
+			X.Now = Value(Now);
+			X.Next = Value(Next);
+			const ac::ShopPrice Price = ac::Defence::citadelPrice(Stat, X.Mark + 1);
+			X.Ore = Price.ore;
+			X.Hydrogen = Price.hydrogen;
+			Info.Defence.Add(X);
+		}
+	}
 	// The server checks the place; the screen says so ahead.
 	if (!AtRealmCitadel(&Info.Builder))
 	{
+		Info.DefenceWhyNot = TEXT("Upgrade at the realm's Citadel: stand where you unload");
 		Info.DonateWhyNot = TEXT("Donate at the realm's Citadel: stand where you unload");
 		Info.ShopWhyNot = TEXT("Buy at the realm's Citadel: stand where you unload");
 		Info.MissionsWhyNot = TEXT("Sign up at the realm's Citadel: stand where you unload");

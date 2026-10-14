@@ -93,10 +93,14 @@ group of bugs drawn to a building is a **raid**; "a swarm" in the toasts.
 | Spacedock |            | `spacedock` |
 | Lab       |            | `lab`       |
 | Sentinel  |            | `sentinel`  |
+| Gatling Gun | Gatling  | `gatling`   |
 
 The Kestrel, the Hailstorm and the Sentinel bring air attack and
 anti-air. Their weapons are the Kestrel's **twin rockets**, the
-Hailstorm's **flak** and the Sentinel's **missile pods**.
+Hailstorm's **flak** and the Sentinel's **missile pods**. In the MMO the
+Sentinel is the realm's **AA tower**; the **Gatling Gun** (D2) fires red-hot
+**amalgam rounds** of Stardust Ore and Metallic Hydrogen, and the Citadel
+carries four **corner turrets** (D1), rapid rotary close-in guns.
 
 "Supply" and "rally" are ordinary RTS words and stay.
 

@@ -38,6 +38,7 @@ namespace
 	constexpr double RoundLength = 0.6;
 	/// Cells a second a plasma blob flies (`Effects.plasmaSpeed`).
 	constexpr double PlasmaSpeed = 28.0;
+	constexpr double AmalgamSpeed = 45.0;
 
 	const TCHAR* const MEmissive = TEXT("/Game/Materials/M_Emissive.M_Emissive");
 	const TCHAR* const MAdditive = TEXT("/Game/Materials/M_Additive.M_Additive");
@@ -196,6 +197,10 @@ void UAcEffects::MakePools()
 	RoundPool = &MakePool(Cylinder, RoundM, 64, TEXT("AcRounds"));
 	SlugCorePool = &MakePool(Sphere, CoreM, 16, TEXT("AcSlugs"));
 	SlugHaloPool = &MakePool(Sphere, HaloM, 16, TEXT("AcSlugHalos"));
+	// The amalgam's heat: white-hot orange, brighter than a mini gun round.
+	AmalgamPool = &MakePool(Cylinder, EmissiveMaterial(FLinearColor(1, 0.58, 0.2), 6.0), 128, TEXT("AcAmalgam"));
+	Amalgams.SetNum(AmalgamPool->Num());
+	AmalgamLength.Init(1.2, AmalgamPool->Num());
 	TracerUntil.Init(0.0, TracerPool->Num());
 	FlashUntil.Init(0.0, FlashPool->Num());
 	Rounds.SetNum(RoundPool->Num());
@@ -342,6 +347,7 @@ void UAcEffects::Update(const double Time)
 	}
 	FlyRounds(Time);
 	FlySlugs(Time);
+	FlyAmalgams(Time);
 	// Delayed actions that came due, in the order they were asked for.
 	if (Pending.Num() > 0 && Pending.HeapTop().At <= Time)
 	{
@@ -529,6 +535,49 @@ void UAcEffects::FlyRounds(const double Time)
 		{
 			PlaceRound(I, Time);
 		}
+	}
+}
+
+void UAcEffects::AmalgamRound(const FVector& From, const FVector& To, const double Time, const double Length)
+{
+	if (!AmalgamPool) return;
+	const double Len = FVector::Dist(From, To);
+	if (Len <= 0.05 * Cm) return;
+	const int32 I = AmalgamPool->Next();
+	Amalgams[I] = {From, To, Time, (Len / Cm) / AmalgamSpeed, true};
+	AmalgamLength[I] = Length;
+	AmalgamPool->Hide(I);
+	++Count.Rounds;
+}
+
+void UAcEffects::FlyAmalgams(const double Time)
+{
+	for (int32 I = 0; I < Amalgams.Num(); ++I)
+	{
+		FFlight& R = Amalgams[I];
+		if (!R.bLive) continue;
+		if (Time >= R.Start + R.Flight)
+		{
+			R.bLive = false;
+			AmalgamPool->Hide(I);
+			Flash(R.To, 0.9, Time, 0.07);
+			FAcBurstRequest B;
+			B.Kind = EAcBurst::Ricochet;
+			B.At = R.To;
+			B.Size = 1.2;
+			B.Time = Time;
+			B.Duration = 0.08;
+			B.Along = (R.To - R.From).GetSafeNormal();
+			Burst(B);
+			continue;
+		}
+		const FVector D = R.To - R.From;
+		const double Len = D.Size() / Cm;
+		const double Head = FMath::Min(Len, FMath::Max(0.0, Time - R.Start) * AmalgamSpeed + 0.3);
+		const double Tail = FMath::Max(0.0, Head - AmalgamLength[I]);
+		const FVector Dir = D / (Len * Cm);
+		AmalgamPool->Set(I, AmalgamPool->Shape(R.From + Dir * ((Head + Tail) / 2 * Cm), FAcEffectPool::Along(Dir),
+			FVector(0.07 * Cm, 0.07 * Cm, FMath::Max(Head - Tail, 0.05) * Cm)));
 	}
 }
 

@@ -14,6 +14,7 @@ Output:
 `FAcIcons` (Source/Autocraft/AcIcons.cpp) loads them by the Swift `Icons`
 name. Run in the editor: py "<repo>/unreal/Tools/Editor/import_icons.py"
 (or the MCP editor), or headless with -run=pythonscript (no fonts here).
+AC_ICONS=<name>,<name> in the environment imports only those.
 """
 import glob
 import os
@@ -33,6 +34,10 @@ def asset_name(file):
 
 def main():
     files = sorted(glob.glob(os.path.join(SRC, "*.png")))
+    # AC_ICONS=gatling,well imports only those (a new icon, the others untouched).
+    only = [n for n in os.environ.get("AC_ICONS", "").split(",") if n]
+    if only:
+        files = [f for f in files if os.path.splitext(os.path.basename(f))[0] in only]
     if not files:
         raise RuntimeError(f"no icons in {SRC}: run unreal/Tools/hud/bake_icons.sh first")
     tasks = []

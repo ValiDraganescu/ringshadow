@@ -1047,6 +1047,16 @@ bool FAcMmoClient::BuyItem(const ac::Item Item, FString* Why)
 	return true;
 }
 
+bool FAcMmoClient::UpgradeCitadel(const ac::DefenceStat Stat, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->upgradeCitadel(Stat);
+	LastCitadelRefusal.Reset();
+	CitadelAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: upgrade %s"), Id, *Text(std::string(ac::rawValue(Stat))));
+	return true;
+}
+
 bool FAcMmoClient::UseItem(const ac::Item Item, FString* Why)
 {
 	if (!CanAskSkills(Why)) return false;

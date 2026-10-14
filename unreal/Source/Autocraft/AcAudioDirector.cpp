@@ -68,7 +68,7 @@ float AcSound::MasterGain()
 
 float AcSound::Carry(const FName Sound)
 {
-	static const TSet<FName> Far = {"boom", "blast", "cannon", "anchorshot", "anchorhit", "rockets", "missile", "seekers", "flak",
+	static const TSet<FName> Far = {"boom", "blast", "cannon", "anchorshot", "anchorhit", "rockets", "missile", "gatlingburst", "turretburst", "seekers", "flak",
 		"flakhit", "atlasshot", "stomp", "atlasdeath", "cometdeath", "dropshipdeath", "fireflydeath", "hailstormdeath",
 		"juggernautdeath", "kestreldeath", "longbowdeath", "peregrinedeath", "prospectordeath", "rangerdeath", "scorpiondeath"};
 	static const TSet<FName> Near = {"drill", "weld", "step", "atlasstep", "hum", "deposit", "heal", "scorpionbury", "scorpionunbury",
@@ -162,8 +162,11 @@ namespace
 
 // MARK: - The rules
 
-FAcAudioRules::FWeapon FAcAudioRules::WeaponOf(std::optional<ac::UnitKind> Kind, bool bAnchored, bool bTower)
+FAcAudioRules::FWeapon FAcAudioRules::WeaponOf(std::optional<ac::UnitKind> Kind, bool bAnchored, bool bTower,
+	std::optional<ac::StructureKind> TowerKind)
 {
+	if (bTower && TowerKind == ac::StructureKind::gatling) return {"gatlingburst", AcSound::GatlingGain, 2};
+	if (bTower && TowerKind == ac::StructureKind::citadel) return {"turretburst", AcSound::TurretGain, 3};
 	if (bTower) return {"missile", AcSound::MissileGain, 5};
 	if (!Kind) return {"gun", 0.32f, 9};
 	switch (*Kind)
@@ -340,7 +343,7 @@ void FAcAudioRules::Trained(ac::UnitKind Kind, ac::Vec2 At)
 }
 
 void FAcAudioRules::Shot(std::optional<ac::UnitKind> Kind, bool bAnchored, std::optional<ac::Vec2> From, ac::Vec2 At, int64 Victim,
-	bool bStructure, bool bMinigun, bool bTower)
+	bool bStructure, bool bMinigun, bool bTower, std::optional<ac::StructureKind> TowerKind)
 {
 	if (Victim == LocalPlayer && bStructure && Now - LastAlert > AcSound::AlertEvery
 		&& OneShot("alert", At, AcSound::AlertGain, EAcSoundPool::InEar))
@@ -348,8 +351,8 @@ void FAcAudioRules::Shot(std::optional<ac::UnitKind> Kind, bool bAnchored, std::
 		LastAlert = Now;
 	}
 	if (bMinigun && Kind == ac::UnitKind::ranger) return;
-	const FWeapon W = WeaponOf(Kind, bAnchored, bTower);
-	if (bTower && From)
+	const FWeapon W = WeaponOf(Kind, bAnchored, bTower, TowerKind);
+	if (bTower && From && (!TowerKind || TowerKind == ac::StructureKind::sentinel))
 	{
 		const std::pair<double, double> Key{From->x, From->y};
 		const auto It = TowerShots.find(Key);
@@ -514,7 +517,8 @@ void FAcAudioRules::Consume(const std::vector<ac::GameEvent>& Events, const ac::
 			const ac::Unit* Target = FindUnit(Sim, S->target);
 			const bool bRail = Shooter && Shooter->kind == ac::UnitKind::kestrel && Target && ac::Rules::stats(Target->kind).air;
 			Shot(Shooter ? std::optional<ac::UnitKind>(Shooter->kind) : std::nullopt, bRail || (Shooter && Shooter->anchor.value_or(0) >= 1), From,
-				S->at, S->victim, FindStructure(State, S->target) != nullptr, Shooter && Minigun(Sim, *Shooter), Tower != nullptr);
+				S->at, S->victim, FindStructure(State, S->target) != nullptr, Shooter && Minigun(Sim, *Shooter), Tower != nullptr,
+				Tower ? std::optional<ac::StructureKind>(Tower->kind) : std::nullopt);
 		}
 		else if (const auto* M = E.as<ac::GameEvent::Missed>())
 		{

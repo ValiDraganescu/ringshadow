@@ -241,9 +241,9 @@ Prospector that hits them.
 
 - How often: at most one raid per region every 4 minutes (level 1: every
   10 minutes, and only 3 or 4 Shardlings).
-- Which building: weighted by its cost, never the Citadel in Prospect
-  Landing while the realm has no Citadel guns (D1), and in Prospect Landing
-  only buildings at least 25 cells from the Citadel.
+- Which building: weighted by its cost; in Prospect Landing the Citadel
+  itself (its corner turrets answer, D1) or buildings at least 25 cells
+  from it.
 - Warning: 20 s before a raid reaches its building, every pilot in the
   region and the ones next to it hears the swarm coming (`broodswarm`) and
   gets a toast: "BROOD SWARM · heading for the Hab Dome · 140 m NE".
@@ -299,9 +299,9 @@ into its deposit (above).
 
 D1 and D2 set their own numbers; these are the bugs' side of it.
 
-- The **Citadel's guns** (D1) should kill a Shardling in one or two hits
-  and reach farther than a raid's Gloamwings spit (4): range 8 or more, on
-  ground and air.
+- The **Citadel's guns** (D1) should reach farther than a raid's
+  Gloamwings spit (4), on ground and air. As built they are four corner
+  turrets, rapid rotary close-in guns (below, "As built (D1, D2)").
 - The **AA tower** (D2, the Sentinel model, air only): the Sentinel's 12 × 2
   a second at range 7 kills a Gloamwing in two volleys.
 - The **gatling gun** (D2): ground and close air (4 cells or more), about
@@ -310,6 +310,37 @@ D1 and D2 set their own numbers; these are the bugs' side of it.
 - The **Prospector** stays weak: it holds off one to three Shardlings,
   chases a Lodeback off its ore, swats Gloamwings in their dive, and builds
   the guns for the rest.
+
+### As built (D1, D2, 2026-10-14)
+
+The defences are the core's buildings with a weapon (`Defence.h`,
+`Simulation::stepTurret`); every number below is in `Rules.h` and `Defence.h`.
+
+| Defence | Weapon | Reach | What it kills |
+|---|---|---|---|
+| The Citadel's four corner turrets (D1) | rapid rotary close-in guns, 2.5 every 0.25 s each (10 a second), ground and air | 7.5 cells from each turret, on the Citadel's corner pylons | a Shardling in 2 s a turret; with four, a raid of 8 Shardlings and 3 Gloamwings in about 10 s |
+| The AA tower (the Sentinel, D2) | missile pods, 12 × 2 a second, air only (unchanged) | 7 from its edge | a Gloamwing in two volleys; it never sees a Shardling, nor a Gloamwing low in its dive |
+| The gatling gun (D2) | amalgam rounds, 4 every 0.25 s (16 a second) | ground 6, air 4.5 (past the spit's 4) | a Shardling in 1.25 s, a pack of six in about 8 s, a Lodeback in about 10 s |
+
+- **The Citadel's turrets** are part of every Citadel of a world: built with
+  it, no blueprint, no limit. The server arms the realm's Citadels with the
+  realm's marks each step (`Structure::marks`, `WorldMap::armCitadels`); a
+  Citadel without marks (the strategy game's) never fires. Each turret keeps
+  its own target, cooldown and aim (`Structure::guns`, `CornerGun`); only the
+  aims go on the wire.
+- **Marks** (the DEFENCE tab, H): fire rate +20%, damage +25%, range +1 cell
+  each, three of each, from the realm wallet: 250 ore, then 500 + 50 MH, then
+  1,000 + 150 MH (`Defence::citadelPrice`). Any pilot buys them at the
+  Citadel; refused away from it, when the realm wallet is short, and at the
+  last mark. The same marks will fit placed turrets (D3, paid by the pilot).
+- **Bugs turn on the defence that shoots them**: a hit from a building sets
+  its group on that building while it stands within the leash
+  (`BroodGroup::turret`), before its raid's building. A defence's builder
+  earns half the XP of the damage it does (`WorldMap::defenceXpShare`).
+- **Prospect Landing's Citadel can be raided now** that it defends itself;
+  its other buildings still only beyond 25 cells of it.
+- **Dev and shots**: `defence wallet|blueprints|citadel|gatling|aa`
+  (`WorldMap::devDefence`); `-AcMmoShotsD` makes the five pictures.
 
 ## Server and client (N2)
 

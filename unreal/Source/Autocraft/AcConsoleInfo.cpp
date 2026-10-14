@@ -44,7 +44,7 @@ FString FAcConsoleInfo::IconName(const int32 UnitKind)
 FString FAcConsoleInfo::StructureIconName(const int32 StructureKind)
 {
 	static const TCHAR* Names[] = {TEXT("citadel"), TEXT("habdome"), TEXT("garrison"), TEXT("bastion"), TEXT("derrick"),
-		TEXT("foundry"), TEXT("spacedock"), TEXT("lab"), TEXT("sentinel")};
+		TEXT("foundry"), TEXT("spacedock"), TEXT("lab"), TEXT("sentinel"), TEXT("gatling")};
 	return StructureKind >= 0 && StructureKind < (int32)UE_ARRAY_COUNT(Names) ? Names[StructureKind] : TEXT("");
 }
 
@@ -123,6 +123,16 @@ FAcCardInfo FAcConsoleInfo::ForStructure(const ac::Simulation& Sim, const ac::St
 	else if (St.kind == Kind::sentinel)
 	{
 		Info.Status = St.target ? TEXT("Tracking a flyer") : TEXT("Watching the sky");
+	}
+	else if (St.kind == Kind::gatling)
+	{
+		Info.Status = St.target ? TEXT("Firing") : TEXT("Watching the ground");
+	}
+	else if (St.kind == Kind::citadel && St.marks)
+	{
+		// D1: its corner turrets and their marks (the DEFENCE tab, H).
+		Info.Status = FString::Printf(TEXT("4 corner turrets  ·  rate %lld  damage %lld  range %lld"), (long long)St.marks->rate,
+			(long long)St.marks->damage, (long long)St.marks->range);
 	}
 	else
 	{

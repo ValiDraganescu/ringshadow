@@ -1,9 +1,12 @@
 // Buildings 1 (chunk B6): construction, the light language, and the
-// Citadel, Hab Dome, Garrison and Bastion. See AcPoseBuildings.h.
+// Citadel (with D1's corner turrets), Hab Dome, Garrison and Bastion. See
+// AcPoseBuildings.h.
 #include "AcPoseBuildings.h"
 
 #include "Rules.h"
 #include "Types.h"
+
+#include <cmath>
 
 namespace AcBuildingPose
 {
@@ -150,7 +153,8 @@ namespace
 		case ac::StructureKind::citadel: return 2.5;
 		case ac::StructureKind::habDome:
 		case ac::StructureKind::lab:
-		case ac::StructureKind::sentinel: return 1.0;
+		case ac::StructureKind::sentinel:
+		case ac::StructureKind::gatling: return 1.0;
 		default: return 1.5;
 		}
 	}
@@ -176,6 +180,64 @@ namespace
 	}
 
 	// MARK: Citadel
+
+	/// D1: an armed Citadel's four corner turrets (Tools/Editor/models/
+	/// citadel_turrets.py): shown only when the server armed it; each
+	/// follows its gun's aim, spins its barrels and heats its tips while it
+	/// fires. The renderer remembers only the last shot of the building, so
+	/// each shot is put down to the turret pointing nearest its target.
+	struct FCitadelState : FAcPoseState
+	{
+		double Last = -10;
+		double FiredAt[4] = {-10, -10, -10, -10};
+		double Spin[4] = {0, 0, 0, 0}, Angle[4] = {0, 0, 0, 0}, Heat[4] = {0, 0, 0, 0};
+	};
+
+	void CitadelTurrets(const FAcPoseContext& C, FAcPose& P, const bool bLive)
+	{
+		const ac::Structure& S = *C.Structure;
+		const FAcModelInfo& M = C.Model;
+		static const FParts Turrets(TEXT("turrets"), 4), Barrels(TEXT("turretBarrels"), 4), Tips(TEXT("turretTips"), 4),
+			Flashes(TEXT("turretFlashes"), 4);
+		const bool bArmed = S.marks.has_value() && S.complete();
+		for (const FParts* Set : {&Turrets, &Barrels, &Tips})
+			for (int32 K = 0; K < 4; ++K)
+				if (const int32 I = (*Set)(M, K); I != INDEX_NONE) P.Visible[I] = bArmed;
+		if (!bArmed) return;
+		FCitadelState& Mem = C.Memory.State<FCitadelState>();
+		const double Last = C.Memory.LastShot.Get(-10.0);
+		if (Last > Mem.Last && C.Memory.LastShotAt.IsSet() && S.guns)
+		{
+			Mem.Last = Last;
+			const ac::Vec2 To = C.Memory.LastShotAt.GetValue();
+			int32 Best = 0;
+			double BestOff = 1e9;
+			for (int32 K = 0; K < 4; ++K)
+			{
+				const ac::Vec2 From(S.position.x + ((K == 0 || K == 3) ? 2.0 : -2.0), S.position.y + (K < 2 ? 2.0 : -2.0));
+				const double Off = std::abs(std::remainder(std::atan2(To.y - From.y, To.x - From.x) - (*S.guns)[K].aim, 2 * UE_DOUBLE_PI));
+				if (Off < BestOff)
+				{
+					BestOff = Off;
+					Best = K;
+				}
+			}
+			Mem.FiredAt[Best] = Last;
+		}
+		for (int32 K = 0; K < 4; ++K)
+		{
+			const double Since = C.Time - Mem.FiredAt[K];
+			const bool bFiring = bLive && Since < 0.4;
+			Mem.Spin[K] = AcBuildingPose::Ease(Mem.Spin[K], bFiring ? 30.0 : 0.0, bFiring ? 1.5 : 0.35, C.Dt);
+			Mem.Angle[K] = std::fmod(Mem.Angle[K] + Mem.Spin[K] * C.Dt, 2 * UE_DOUBLE_PI);
+			Mem.Heat[K] = AcBuildingPose::Ease(Mem.Heat[K], bFiring ? 1.0 : 0.0, bFiring ? 0.05 : 0.006, C.Dt);
+			const double Aim = S.guns ? (*S.guns)[K].aim : 0.0;
+			SetEuler(M, P, Turrets(M, K), 0, -Aim, 0);
+			SetEuler(M, P, Barrels(M, K), Mem.Angle[K], 0, 0);
+			if (const int32 T = Tips(M, K); T != INDEX_NONE) P.Emission[T] = float(0.15 + 1.6 * Mem.Heat[K]);
+			if (const int32 F = Flashes(M, K); F != INDEX_NONE) P.Visible[F] = bLive && Since >= 0.0 && Since < 0.05;
+		}
+	}
 
 	void PoseCitadel(const FAcPoseContext& C, FAcPose& P)
 	{
@@ -208,6 +270,7 @@ namespace
 		GlowGroup(M, P, FloodGlow, !bLive ? 0.1 : bTraining ? Glow(Ph, 0.65) : 1.2, 2.0);
 		Emit(C, P, Steam, SteamAt.Get(M), !bLive ? 0.0 : bTraining ? 7.0 : 1.2);
 		Light(C, P, DoorLight.Get(M), bTraining ? 32.0 + 18.0 * std::sin(Ph * 5.0) : 0.0);
+		CitadelTurrets(C, P, bLive);
 	}
 
 	// MARK: Hab Dome

@@ -359,7 +359,8 @@ namespace AcPoseInfantry
 		case ac::StructureKind::spacedock: return 1.5;
 		case ac::StructureKind::lab:
 		case ac::StructureKind::habDome:
-		case ac::StructureKind::sentinel: return 1.0;
+		case ac::StructureKind::sentinel:
+		case ac::StructureKind::gatling: return 1.0;
 		}
 		return 1.5;
 	}

@@ -53639,6 +53639,2838 @@
       "type": "omni"
      },
      "meshes": []
+    },
+    {
+     "name": "turrets_0",
+     "path": "/citadel_blue/turrets_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.95,
+      1.53,
+      1.95,
+      1
+     ],
+     "position": [
+      1.95,
+      1.53,
+      1.95
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "citadel_blue_root",
+     "handles": [
+      "turrets_0"
+     ],
+     "driver": {
+      "what": "corner turret 0: yaw toward its target (-aim); shown only on an armed Citadel",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        0.04,
+        0.26
+       ],
+       "lo": [
+        -0.26,
+        -0.04,
+        -0.26
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.26,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.17,
+        0.1,
+        0.15
+       ],
+       "lo": [
+        -0.17,
+        -0.1,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.02,
+        0.18,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        -0.17,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        0.17,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turrets_0__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__hullDark.SM_turrets_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "chrome",
+       "prim": "turrets_0__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__chrome.SM_turrets_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullMid",
+       "prim": "turrets_0__hullMid",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__hullMid.SM_turrets_0__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "turrets_0__hullLight",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__hullLight.SM_turrets_0__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "team",
+       "prim": "turrets_0__team",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__team.SM_turrets_0__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "turretBarrels_0",
+     "path": "/citadel_blue/turrets_0/turretBarrels_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.12,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_0",
+     "handles": [
+      "turretBarrels_0"
+     ],
+     "driver": {
+      "what": "corner turret 0's barrels: spin about their axis while it fires",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.09,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.09,
+        -0.1
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.09,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1,
+       "half": 0.09,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        -0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turretBarrels_0__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_0__hullDark.SM_turretBarrels_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "chrome",
+       "prim": "turretBarrels_0__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_0__chrome.SM_turretBarrels_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      }
+     ]
+    },
+    {
+     "name": "turretTips_0",
+     "path": "/citadel_blue/turrets_0/turretBarrels_0/turretTips_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.46,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.46,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turretBarrels_0",
+     "handles": [
+      "turretTips_0"
+     ],
+     "driver": {
+      "what": "corner turret 0's hot barrel ends: brighter while it fires",
+      "channels": [
+       "emission",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "turretTips_0__gatlingHeat",
+       "mesh": "/Game/Models/citadelguns/SM_turretTips_0__gatlingHeat.SM_turretTips_0__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "turretMuzzles_0",
+     "path": "/citadel_blue/turrets_0/turretMuzzles_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.62,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.62,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "turrets_0",
+     "handles": [
+      "turretMuzzles_0"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "turretFlashes_0",
+     "path": "/citadel_blue/turrets_0/turretFlashes_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_0",
+     "handles": [
+      "turretFlashes_0"
+     ],
+     "driver": {
+      "what": "corner turret 0's muzzle flash: a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "turretFlashes_0__glowYellow",
+       "mesh": "/Game/Models/citadelguns/SM_turretFlashes_0__glowYellow.SM_turretFlashes_0__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "turrets_1",
+     "path": "/citadel_blue/turrets_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.95,
+      1.53,
+      1.95,
+      1
+     ],
+     "position": [
+      -1.95,
+      1.53,
+      1.95
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "citadel_blue_root",
+     "handles": [
+      "turrets_1"
+     ],
+     "driver": {
+      "what": "corner turret 1: yaw toward its target (-aim); shown only on an armed Citadel",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        0.04,
+        0.26
+       ],
+       "lo": [
+        -0.26,
+        -0.04,
+        -0.26
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.26,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.17,
+        0.1,
+        0.15
+       ],
+       "lo": [
+        -0.17,
+        -0.1,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.02,
+        0.18,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        -0.17,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        0.17,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turrets_1__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__hullDark.SM_turrets_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "chrome",
+       "prim": "turrets_1__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__chrome.SM_turrets_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullMid",
+       "prim": "turrets_1__hullMid",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__hullMid.SM_turrets_1__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "turrets_1__hullLight",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__hullLight.SM_turrets_1__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "team",
+       "prim": "turrets_1__team",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__team.SM_turrets_1__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "turretBarrels_1",
+     "path": "/citadel_blue/turrets_1/turretBarrels_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.12,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_1",
+     "handles": [
+      "turretBarrels_1"
+     ],
+     "driver": {
+      "what": "corner turret 1's barrels: spin about their axis while it fires",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.09,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.09,
+        -0.1
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.09,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1,
+       "half": 0.09,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        -0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turretBarrels_1__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_1__hullDark.SM_turretBarrels_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "chrome",
+       "prim": "turretBarrels_1__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_1__chrome.SM_turretBarrels_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      }
+     ]
+    },
+    {
+     "name": "turretTips_1",
+     "path": "/citadel_blue/turrets_1/turretBarrels_1/turretTips_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.46,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.46,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turretBarrels_1",
+     "handles": [
+      "turretTips_1"
+     ],
+     "driver": {
+      "what": "corner turret 1's hot barrel ends: brighter while it fires",
+      "channels": [
+       "emission",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "turretTips_1__gatlingHeat",
+       "mesh": "/Game/Models/citadelguns/SM_turretTips_1__gatlingHeat.SM_turretTips_1__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "turretMuzzles_1",
+     "path": "/citadel_blue/turrets_1/turretMuzzles_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.62,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.62,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "turrets_1",
+     "handles": [
+      "turretMuzzles_1"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "turretFlashes_1",
+     "path": "/citadel_blue/turrets_1/turretFlashes_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_1",
+     "handles": [
+      "turretFlashes_1"
+     ],
+     "driver": {
+      "what": "corner turret 1's muzzle flash: a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "turretFlashes_1__glowYellow",
+       "mesh": "/Game/Models/citadelguns/SM_turretFlashes_1__glowYellow.SM_turretFlashes_1__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "turrets_2",
+     "path": "/citadel_blue/turrets_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.95,
+      1.53,
+      -1.95,
+      1
+     ],
+     "position": [
+      -1.95,
+      1.53,
+      -1.95
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "citadel_blue_root",
+     "handles": [
+      "turrets_2"
+     ],
+     "driver": {
+      "what": "corner turret 2: yaw toward its target (-aim); shown only on an armed Citadel",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        0.04,
+        0.26
+       ],
+       "lo": [
+        -0.26,
+        -0.04,
+        -0.26
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.26,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.17,
+        0.1,
+        0.15
+       ],
+       "lo": [
+        -0.17,
+        -0.1,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.02,
+        0.18,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        -0.17,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        0.17,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turrets_2__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__hullDark.SM_turrets_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "chrome",
+       "prim": "turrets_2__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__chrome.SM_turrets_2__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullMid",
+       "prim": "turrets_2__hullMid",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__hullMid.SM_turrets_2__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "turrets_2__hullLight",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__hullLight.SM_turrets_2__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "team",
+       "prim": "turrets_2__team",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__team.SM_turrets_2__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "turretBarrels_2",
+     "path": "/citadel_blue/turrets_2/turretBarrels_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.12,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_2",
+     "handles": [
+      "turretBarrels_2"
+     ],
+     "driver": {
+      "what": "corner turret 2's barrels: spin about their axis while it fires",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.09,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.09,
+        -0.1
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.09,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1,
+       "half": 0.09,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        -0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turretBarrels_2__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_2__hullDark.SM_turretBarrels_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "chrome",
+       "prim": "turretBarrels_2__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_2__chrome.SM_turretBarrels_2__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      }
+     ]
+    },
+    {
+     "name": "turretTips_2",
+     "path": "/citadel_blue/turrets_2/turretBarrels_2/turretTips_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.46,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.46,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turretBarrels_2",
+     "handles": [
+      "turretTips_2"
+     ],
+     "driver": {
+      "what": "corner turret 2's hot barrel ends: brighter while it fires",
+      "channels": [
+       "emission",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "turretTips_2__gatlingHeat",
+       "mesh": "/Game/Models/citadelguns/SM_turretTips_2__gatlingHeat.SM_turretTips_2__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "turretMuzzles_2",
+     "path": "/citadel_blue/turrets_2/turretMuzzles_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.62,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.62,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "turrets_2",
+     "handles": [
+      "turretMuzzles_2"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "turretFlashes_2",
+     "path": "/citadel_blue/turrets_2/turretFlashes_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_2",
+     "handles": [
+      "turretFlashes_2"
+     ],
+     "driver": {
+      "what": "corner turret 2's muzzle flash: a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "turretFlashes_2__glowYellow",
+       "mesh": "/Game/Models/citadelguns/SM_turretFlashes_2__glowYellow.SM_turretFlashes_2__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "turrets_3",
+     "path": "/citadel_blue/turrets_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.95,
+      1.53,
+      -1.95,
+      1
+     ],
+     "position": [
+      1.95,
+      1.53,
+      -1.95
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "citadel_blue_root",
+     "handles": [
+      "turrets_3"
+     ],
+     "driver": {
+      "what": "corner turret 3: yaw toward its target (-aim); shown only on an armed Citadel",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        0.04,
+        0.26
+       ],
+       "lo": [
+        -0.26,
+        -0.04,
+        -0.26
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.26,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.17,
+        0.1,
+        0.15
+       ],
+       "lo": [
+        -0.17,
+        -0.1,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.02,
+        0.18,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        -0.17,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        0.17,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turrets_3__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__hullDark.SM_turrets_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "chrome",
+       "prim": "turrets_3__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__chrome.SM_turrets_3__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullMid",
+       "prim": "turrets_3__hullMid",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__hullMid.SM_turrets_3__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "turrets_3__hullLight",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__hullLight.SM_turrets_3__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "team",
+       "prim": "turrets_3__team",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__team.SM_turrets_3__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "turretBarrels_3",
+     "path": "/citadel_blue/turrets_3/turretBarrels_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.12,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_3",
+     "handles": [
+      "turretBarrels_3"
+     ],
+     "driver": {
+      "what": "corner turret 3's barrels: spin about their axis while it fires",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.09,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.09,
+        -0.1
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.09,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1,
+       "half": 0.09,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        -0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turretBarrels_3__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_3__hullDark.SM_turretBarrels_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "chrome",
+       "prim": "turretBarrels_3__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_3__chrome.SM_turretBarrels_3__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      }
+     ]
+    },
+    {
+     "name": "turretTips_3",
+     "path": "/citadel_blue/turrets_3/turretBarrels_3/turretTips_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.46,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.46,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turretBarrels_3",
+     "handles": [
+      "turretTips_3"
+     ],
+     "driver": {
+      "what": "corner turret 3's hot barrel ends: brighter while it fires",
+      "channels": [
+       "emission",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "turretTips_3__gatlingHeat",
+       "mesh": "/Game/Models/citadelguns/SM_turretTips_3__gatlingHeat.SM_turretTips_3__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "turretMuzzles_3",
+     "path": "/citadel_blue/turrets_3/turretMuzzles_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.62,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.62,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "turrets_3",
+     "handles": [
+      "turretMuzzles_3"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "turretFlashes_3",
+     "path": "/citadel_blue/turrets_3/turretFlashes_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_3",
+     "handles": [
+      "turretFlashes_3"
+     ],
+     "driver": {
+      "what": "corner turret 3's muzzle flash: a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "turretFlashes_3__glowYellow",
+       "mesh": "/Game/Models/citadelguns/SM_turretFlashes_3__glowYellow.SM_turretFlashes_3__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
     }
    ]
   },
@@ -166411,6 +169243,2838 @@
       "type": "omni"
      },
      "meshes": []
+    },
+    {
+     "name": "turrets_0",
+     "path": "/citadel_red/turrets_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.95,
+      1.53,
+      1.95,
+      1
+     ],
+     "position": [
+      1.95,
+      1.53,
+      1.95
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "citadel_red_root",
+     "handles": [
+      "turrets_0"
+     ],
+     "driver": {
+      "what": "corner turret 0: yaw toward its target (-aim); shown only on an armed Citadel",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        0.04,
+        0.26
+       ],
+       "lo": [
+        -0.26,
+        -0.04,
+        -0.26
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.26,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.17,
+        0.1,
+        0.15
+       ],
+       "lo": [
+        -0.17,
+        -0.1,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.02,
+        0.18,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        -0.17,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        0.17,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turrets_0__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__hullDark.SM_turrets_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "chrome",
+       "prim": "turrets_0__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__chrome.SM_turrets_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullMid",
+       "prim": "turrets_0__hullMid",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__hullMid.SM_turrets_0__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "turrets_0__hullLight",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__hullLight.SM_turrets_0__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "team",
+       "prim": "turrets_0__team",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__team.SM_turrets_0__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "turretBarrels_0",
+     "path": "/citadel_red/turrets_0/turretBarrels_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.12,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_0",
+     "handles": [
+      "turretBarrels_0"
+     ],
+     "driver": {
+      "what": "corner turret 0's barrels: spin about their axis while it fires",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.09,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.09,
+        -0.1
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.09,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1,
+       "half": 0.09,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        -0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turretBarrels_0__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_0__hullDark.SM_turretBarrels_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "chrome",
+       "prim": "turretBarrels_0__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_0__chrome.SM_turretBarrels_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      }
+     ]
+    },
+    {
+     "name": "turretTips_0",
+     "path": "/citadel_red/turrets_0/turretBarrels_0/turretTips_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.46,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.46,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turretBarrels_0",
+     "handles": [
+      "turretTips_0"
+     ],
+     "driver": {
+      "what": "corner turret 0's hot barrel ends: brighter while it fires",
+      "channels": [
+       "emission",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "turretTips_0__gatlingHeat",
+       "mesh": "/Game/Models/citadelguns/SM_turretTips_0__gatlingHeat.SM_turretTips_0__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "turretMuzzles_0",
+     "path": "/citadel_red/turrets_0/turretMuzzles_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.62,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.62,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "turrets_0",
+     "handles": [
+      "turretMuzzles_0"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "turretFlashes_0",
+     "path": "/citadel_red/turrets_0/turretFlashes_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_0",
+     "handles": [
+      "turretFlashes_0"
+     ],
+     "driver": {
+      "what": "corner turret 0's muzzle flash: a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "turretFlashes_0__glowYellow",
+       "mesh": "/Game/Models/citadelguns/SM_turretFlashes_0__glowYellow.SM_turretFlashes_0__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "turrets_1",
+     "path": "/citadel_red/turrets_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.95,
+      1.53,
+      1.95,
+      1
+     ],
+     "position": [
+      -1.95,
+      1.53,
+      1.95
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "citadel_red_root",
+     "handles": [
+      "turrets_1"
+     ],
+     "driver": {
+      "what": "corner turret 1: yaw toward its target (-aim); shown only on an armed Citadel",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        0.04,
+        0.26
+       ],
+       "lo": [
+        -0.26,
+        -0.04,
+        -0.26
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.26,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.17,
+        0.1,
+        0.15
+       ],
+       "lo": [
+        -0.17,
+        -0.1,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.02,
+        0.18,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        -0.17,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        0.17,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turrets_1__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__hullDark.SM_turrets_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "chrome",
+       "prim": "turrets_1__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__chrome.SM_turrets_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullMid",
+       "prim": "turrets_1__hullMid",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__hullMid.SM_turrets_1__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "turrets_1__hullLight",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__hullLight.SM_turrets_1__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "team",
+       "prim": "turrets_1__team",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__team.SM_turrets_1__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "turretBarrels_1",
+     "path": "/citadel_red/turrets_1/turretBarrels_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.12,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_1",
+     "handles": [
+      "turretBarrels_1"
+     ],
+     "driver": {
+      "what": "corner turret 1's barrels: spin about their axis while it fires",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.09,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.09,
+        -0.1
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.09,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1,
+       "half": 0.09,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        -0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turretBarrels_1__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_1__hullDark.SM_turretBarrels_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "chrome",
+       "prim": "turretBarrels_1__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_1__chrome.SM_turretBarrels_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      }
+     ]
+    },
+    {
+     "name": "turretTips_1",
+     "path": "/citadel_red/turrets_1/turretBarrels_1/turretTips_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.46,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.46,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turretBarrels_1",
+     "handles": [
+      "turretTips_1"
+     ],
+     "driver": {
+      "what": "corner turret 1's hot barrel ends: brighter while it fires",
+      "channels": [
+       "emission",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "turretTips_1__gatlingHeat",
+       "mesh": "/Game/Models/citadelguns/SM_turretTips_1__gatlingHeat.SM_turretTips_1__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "turretMuzzles_1",
+     "path": "/citadel_red/turrets_1/turretMuzzles_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.62,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.62,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "turrets_1",
+     "handles": [
+      "turretMuzzles_1"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "turretFlashes_1",
+     "path": "/citadel_red/turrets_1/turretFlashes_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_1",
+     "handles": [
+      "turretFlashes_1"
+     ],
+     "driver": {
+      "what": "corner turret 1's muzzle flash: a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "turretFlashes_1__glowYellow",
+       "mesh": "/Game/Models/citadelguns/SM_turretFlashes_1__glowYellow.SM_turretFlashes_1__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "turrets_2",
+     "path": "/citadel_red/turrets_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.95,
+      1.53,
+      -1.95,
+      1
+     ],
+     "position": [
+      -1.95,
+      1.53,
+      -1.95
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "citadel_red_root",
+     "handles": [
+      "turrets_2"
+     ],
+     "driver": {
+      "what": "corner turret 2: yaw toward its target (-aim); shown only on an armed Citadel",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        0.04,
+        0.26
+       ],
+       "lo": [
+        -0.26,
+        -0.04,
+        -0.26
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.26,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.17,
+        0.1,
+        0.15
+       ],
+       "lo": [
+        -0.17,
+        -0.1,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.02,
+        0.18,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        -0.17,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        0.17,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turrets_2__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__hullDark.SM_turrets_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "chrome",
+       "prim": "turrets_2__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__chrome.SM_turrets_2__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullMid",
+       "prim": "turrets_2__hullMid",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__hullMid.SM_turrets_2__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "turrets_2__hullLight",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__hullLight.SM_turrets_2__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "team",
+       "prim": "turrets_2__team",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__team.SM_turrets_2__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "turretBarrels_2",
+     "path": "/citadel_red/turrets_2/turretBarrels_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.12,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_2",
+     "handles": [
+      "turretBarrels_2"
+     ],
+     "driver": {
+      "what": "corner turret 2's barrels: spin about their axis while it fires",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.09,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.09,
+        -0.1
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.09,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1,
+       "half": 0.09,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        -0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turretBarrels_2__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_2__hullDark.SM_turretBarrels_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "chrome",
+       "prim": "turretBarrels_2__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_2__chrome.SM_turretBarrels_2__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      }
+     ]
+    },
+    {
+     "name": "turretTips_2",
+     "path": "/citadel_red/turrets_2/turretBarrels_2/turretTips_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.46,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.46,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turretBarrels_2",
+     "handles": [
+      "turretTips_2"
+     ],
+     "driver": {
+      "what": "corner turret 2's hot barrel ends: brighter while it fires",
+      "channels": [
+       "emission",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "turretTips_2__gatlingHeat",
+       "mesh": "/Game/Models/citadelguns/SM_turretTips_2__gatlingHeat.SM_turretTips_2__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "turretMuzzles_2",
+     "path": "/citadel_red/turrets_2/turretMuzzles_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.62,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.62,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "turrets_2",
+     "handles": [
+      "turretMuzzles_2"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "turretFlashes_2",
+     "path": "/citadel_red/turrets_2/turretFlashes_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_2",
+     "handles": [
+      "turretFlashes_2"
+     ],
+     "driver": {
+      "what": "corner turret 2's muzzle flash: a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "turretFlashes_2__glowYellow",
+       "mesh": "/Game/Models/citadelguns/SM_turretFlashes_2__glowYellow.SM_turretFlashes_2__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "turrets_3",
+     "path": "/citadel_red/turrets_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.95,
+      1.53,
+      -1.95,
+      1
+     ],
+     "position": [
+      1.95,
+      1.53,
+      -1.95
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "citadel_red_root",
+     "handles": [
+      "turrets_3"
+     ],
+     "driver": {
+      "what": "corner turret 3: yaw toward its target (-aim); shown only on an armed Citadel",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.26,
+        0.04,
+        0.26
+       ],
+       "lo": [
+        -0.26,
+        -0.04,
+        -0.26
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.26,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.17,
+        0.1,
+        0.15
+       ],
+       "lo": [
+        -0.17,
+        -0.1,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.02,
+        0.18,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        -0.17,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.13,
+        0.03
+       ],
+       "lo": [
+        -0.14,
+        -0.13,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.06,
+        0.21,
+        0.17,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turrets_3__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__hullDark.SM_turrets_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "chrome",
+       "prim": "turrets_3__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__chrome.SM_turrets_3__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullMid",
+       "prim": "turrets_3__hullMid",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__hullMid.SM_turrets_3__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "turrets_3__hullLight",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__hullLight.SM_turrets_3__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "team",
+       "prim": "turrets_3__team",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__team.SM_turrets_3__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "turretBarrels_3",
+     "path": "/citadel_red/turrets_3/turretBarrels_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.12,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_3",
+     "handles": [
+      "turretBarrels_3"
+     ],
+     "driver": {
+      "what": "corner turret 3's barrels: spin about their axis while it fires",
+      "channels": [
+       "rotation",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.1,
+        0.09,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.09,
+        -0.1
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.09,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1,
+       "half": 0.09,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        0.0,
+        -0.055,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        -0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.024,
+        0.15,
+        0.024
+       ],
+       "lo": [
+        -0.024,
+        -0.15,
+        -0.024
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.31,
+        -0.047631,
+        0.0275,
+        1
+       ],
+       "radius": 0.024,
+       "half": 0.15,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "turretBarrels_3__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_3__hullDark.SM_turretBarrels_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 248
+      },
+      {
+       "material": "chrome",
+       "prim": "turretBarrels_3__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_3__chrome.SM_turretBarrels_3__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 112
+      }
+     ]
+    },
+    {
+     "name": "turretTips_3",
+     "path": "/citadel_red/turrets_3/turretBarrels_3/turretTips_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.46,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.46,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turretBarrels_3",
+     "handles": [
+      "turretTips_3"
+     ],
+     "driver": {
+      "what": "corner turret 3's hot barrel ends: brighter while it fires",
+      "channels": [
+       "emission",
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "turretTips_3__gatlingHeat",
+       "mesh": "/Game/Models/citadelguns/SM_turretTips_3__gatlingHeat.SM_turretTips_3__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      }
+     ]
+    },
+    {
+     "name": "turretMuzzles_3",
+     "path": "/citadel_red/turrets_3/turretMuzzles_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.62,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.62,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "turrets_3",
+     "handles": [
+      "turretMuzzles_3"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "turretFlashes_3",
+     "path": "/citadel_red/turrets_3/turretFlashes_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.66,
+      0.22,
+      0.0,
+      1
+     ],
+     "position": [
+      0.66,
+      0.22,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "turrets_3",
+     "handles": [
+      "turretFlashes_3"
+     ],
+     "driver": {
+      "what": "corner turret 3's muzzle flash: a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:PoseCitadel"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "turretFlashes_3__glowYellow",
+       "mesh": "/Game/Models/citadelguns/SM_turretFlashes_3__glowYellow.SM_turretFlashes_3__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
     }
    ]
   },
@@ -266831,6 +272495,2053 @@
        "blend": "opaque",
        "team": [],
        "triangles": 192
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "gatling_blue",
+   "file": "",
+   "category": "building",
+   "facing": "+Z forward, +Y up",
+   "boundsMin": [
+    -0.99,
+    0.0,
+    -0.99
+   ],
+   "boundsMax": [
+    1.36,
+    1.77,
+    0.99
+   ],
+   "triangles": 2220,
+   "team": "blue",
+   "base": "gatling",
+   "canonical": "gatling_blue",
+   "notes": [
+    "D2's gatling gun (docs/mmorpg-m8.md). Pose: PoseGatling: head yaw to the target, barrels spin while firing, tips and hopper glow with the heat, workGlow slits the working light, flashes_0 per round, beacon.",
+    "Under construction the body rises out of the ground like every building. height 1.3"
+   ],
+   "parts": [
+    {
+     "name": "gatling_blue_root",
+     "path": "/gatling_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "rays": [
+      {
+       "hi": [
+        0.98,
+        0.06,
+        0.98
+       ],
+       "lo": [
+        -0.98,
+        -0.06,
+        -0.98
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.06,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.13,
+        0.29,
+        0.13
+       ],
+       "lo": [
+        -0.13,
+        -0.29,
+        -0.13
+       ],
+       "transform": [
+        0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        -0.76,
+        0.41,
+        -0.76,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.13,
+        0.29,
+        0.13
+       ],
+       "lo": [
+        -0.13,
+        -0.29,
+        -0.13
+       ],
+       "transform": [
+        0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        -0.76,
+        0.41,
+        0.76,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.13,
+        0.29,
+        0.13
+       ],
+       "lo": [
+        -0.13,
+        -0.29,
+        -0.13
+       ],
+       "transform": [
+        0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        0.76,
+        0.41,
+        -0.76,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.13,
+        0.29,
+        0.13
+       ],
+       "lo": [
+        -0.13,
+        -0.29,
+        -0.13
+       ],
+       "transform": [
+        0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        0.76,
+        0.41,
+        0.76,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.8,
+        0.03,
+        0.8
+       ],
+       "lo": [
+        -0.8,
+        -0.03,
+        -0.8
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.73,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.05,
+        0.17,
+        0.35
+       ],
+       "lo": [
+        -0.05,
+        -0.17,
+        -0.35
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.86,
+        0.39,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.82,
+        0.29,
+        0.82
+       ],
+       "lo": [
+        -0.82,
+        -0.29,
+        -0.82
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.41,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.48,
+        0.39,
+        -0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.48,
+        0.39,
+        0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.23,
+        0.04
+       ],
+       "lo": [
+        -0.07,
+        -0.23,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.85,
+        0.39,
+        -0.48,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.24,
+        0.39,
+        -0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.24,
+        0.39,
+        0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.23,
+        0.04
+       ],
+       "lo": [
+        -0.07,
+        -0.23,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.85,
+        0.39,
+        -0.24,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.39,
+        -0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.39,
+        0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.23,
+        0.04
+       ],
+       "lo": [
+        -0.07,
+        -0.23,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.85,
+        0.39,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.24,
+        0.39,
+        -0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.24,
+        0.39,
+        0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.23,
+        0.04
+       ],
+       "lo": [
+        -0.07,
+        -0.23,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.85,
+        0.39,
+        0.24,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.48,
+        0.39,
+        -0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.04,
+        0.23,
+        0.07
+       ],
+       "lo": [
+        -0.04,
+        -0.23,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.48,
+        0.39,
+        0.85,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.23,
+        0.04
+       ],
+       "lo": [
+        -0.07,
+        -0.23,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.85,
+        0.39,
+        0.48,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.35,
+        0.2,
+        0.03
+       ],
+       "lo": [
+        -0.35,
+        -0.2,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.38,
+        0.84,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.84,
+        0.04,
+        0.06
+       ],
+       "lo": [
+        -0.84,
+        -0.04,
+        -0.06
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.74,
+        -0.78,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.84,
+        0.04,
+        0.06
+       ],
+       "lo": [
+        -0.84,
+        -0.04,
+        -0.06
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.74,
+        0.78,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.06,
+        0.04,
+        0.72
+       ],
+       "lo": [
+        -0.06,
+        -0.04,
+        -0.72
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.78,
+        0.74,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.06,
+        0.04,
+        0.72
+       ],
+       "lo": [
+        -0.06,
+        -0.04,
+        -0.72
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.78,
+        0.74,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "gatling_blue_root__hullDark",
+       "mesh": "/Game/Models/gatling/SM_gatling_blue_root__hullDark.SM_gatling_blue_root__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 84
+      },
+      {
+       "material": "hazard",
+       "prim": "gatling_blue_root__hazard",
+       "mesh": "/Game/Models/gatling/SM_gatling_blue_root__hazard.SM_gatling_blue_root__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      },
+      {
+       "material": "hullMid",
+       "prim": "gatling_blue_root__hullMid",
+       "mesh": "/Game/Models/gatling/SM_gatling_blue_root__hullMid.SM_gatling_blue_root__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "gatling_blue_root__hullLight",
+       "mesh": "/Game/Models/gatling/SM_gatling_blue_root__hullLight.SM_gatling_blue_root__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      },
+      {
+       "material": "chrome",
+       "prim": "gatling_blue_root__chrome",
+       "mesh": "/Game/Models/gatling/SM_gatling_blue_root__chrome.SM_gatling_blue_root__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "team",
+       "prim": "gatling_blue_root__team",
+       "mesh": "/Game/Models/gatling/SM_gatling_blue_root__team.SM_gatling_blue_root__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 48
+      },
+      {
+       "material": "workGlow",
+       "prim": "gatling_blue_root__workGlow",
+       "mesh": "/Game/Models/gatling/SM_gatling_blue_root__workGlow.SM_gatling_blue_root__workGlow",
+       "materialInstance": "/Game/Models/Materials/MI_workGlow_8df957c5962b.MI_workGlow_8df957c5962b",
+       "materialKey": "8df957c5962b",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      },
+      {
+       "material": "gatlingFurnace",
+       "prim": "gatling_blue_root__gatlingFurnace",
+       "mesh": "/Game/Models/gatling/SM_gatling_blue_root__gatlingFurnace.SM_gatling_blue_root__gatlingFurnace",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingFurnace_6c82d4c48e80.MI_gatlingFurnace_6c82d4c48e80",
+       "materialKey": "6c82d4c48e80",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "head",
+     "path": "/gatling_blue/head",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.78,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.78,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "head"
+     ],
+     "driver": {
+      "what": "turret aim: yaw toward its target (-aim), an idle sweep with none",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.62,
+        0.08,
+        0.62
+       ],
+       "lo": [
+        -0.62,
+        -0.08,
+        -0.62
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.08,
+        0.0,
+        1
+       ],
+       "radius": 0.62,
+       "half": 0.08,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.24,
+        0.11,
+        0.24
+       ],
+       "lo": [
+        -0.24,
+        -0.11,
+        -0.24
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.18,
+        0.5,
+        -0.5,
+        1
+       ],
+       "radius": 0.24,
+       "half": 0.11,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.24,
+        0.11,
+        0.24
+       ],
+       "lo": [
+        -0.24,
+        -0.11,
+        -0.24
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.18,
+        0.5,
+        0.5,
+        1
+       ],
+       "radius": 0.24,
+       "half": 0.11,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.38,
+        0.17,
+        0.38
+       ],
+       "lo": [
+        -0.38,
+        -0.17,
+        -0.38
+       ],
+       "transform": [
+        0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.707107,
+        0.0,
+        0.707107,
+        0.0,
+        -0.06,
+        0.67,
+        0.0,
+        1
+       ],
+       "radius": 0.38,
+       "half": 0.17,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.42,
+        0.17,
+        0.32
+       ],
+       "lo": [
+        -0.42,
+        -0.17,
+        -0.32
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.04,
+        0.33,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.38,
+        0.33,
+        0.08
+       ],
+       "lo": [
+        -0.38,
+        -0.33,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.18,
+        0.49,
+        -0.42,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.38,
+        0.33,
+        0.08
+       ],
+       "lo": [
+        -0.38,
+        -0.33,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.18,
+        0.49,
+        0.42,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.35,
+        0.03,
+        0.35
+       ],
+       "lo": [
+        -0.35,
+        -0.03,
+        -0.35
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.06,
+        0.85,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "head__hullDark",
+       "mesh": "/Game/Models/gatling/SM_head__hullDark.SM_head__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 280
+      },
+      {
+       "material": "chrome",
+       "prim": "head__chrome",
+       "mesh": "/Game/Models/gatling/SM_head__chrome.SM_head__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 224
+      },
+      {
+       "material": "hullMid",
+       "prim": "head__hullMid",
+       "mesh": "/Game/Models/gatling/SM_head__hullMid.SM_head__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "head__hullLight",
+       "mesh": "/Game/Models/gatling/SM_head__hullLight.SM_head__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 36
+      },
+      {
+       "material": "team",
+       "prim": "head__team",
+       "mesh": "/Game/Models/gatling/SM_head__team.SM_head__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 24
+      },
+      {
+       "material": "gatlingFurnace",
+       "prim": "head__gatlingFurnace",
+       "mesh": "/Game/Models/gatling/SM_head__gatlingFurnace.SM_head__gatlingFurnace",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingFurnace_6c82d4c48e80.MI_gatlingFurnace_6c82d4c48e80",
+       "materialKey": "6c82d4c48e80",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "hopper",
+     "path": "/gatling_blue/head/hopper",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.06,
+      0.88,
+      0.0,
+      1
+     ],
+     "position": [
+      -0.06,
+      0.88,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "hopper"
+     ],
+     "driver": {
+      "what": "the furnace glow: brighter while it fires",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingFurnace",
+       "prim": "hopper__gatlingFurnace",
+       "mesh": "/Game/Models/gatling/SM_hopper__gatlingFurnace.SM_hopper__gatlingFurnace",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingFurnace_6c82d4c48e80.MI_gatlingFurnace_6c82d4c48e80",
+       "materialKey": "6c82d4c48e80",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "beacon",
+     "path": "/gatling_blue/head/beacon",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.4,
+      0.9,
+      0.3,
+      1
+     ],
+     "position": [
+      -0.4,
+      0.9,
+      0.3
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "beacon"
+     ],
+     "driver": {
+      "what": "beacon blink (0.25 s of every 1.2 s once built)",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowRed",
+       "prim": "beacon__glowRed",
+       "mesh": "/Game/Models/gatling/SM_beacon__glowRed.SM_beacon__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "barrels",
+     "path": "/gatling_blue/head/barrels",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.3,
+      0.5,
+      0.0,
+      1
+     ],
+     "position": [
+      0.3,
+      0.5,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "barrels"
+     ],
+     "driver": {
+      "what": "spins about its axis while it fires",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.25,
+        0.23,
+        0.25
+       ],
+       "lo": [
+        -0.25,
+        -0.23,
+        -0.25
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.23,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.25,
+       "half": 0.23,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.055,
+        0.31,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.31,
+        -0.055
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.71,
+        0.0,
+        0.13,
+        1
+       ],
+       "radius": 0.055,
+       "half": 0.31,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.055,
+        0.31,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.31,
+        -0.055
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.71,
+        0.112583,
+        0.065,
+        1
+       ],
+       "radius": 0.055,
+       "half": 0.31,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.055,
+        0.31,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.31,
+        -0.055
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.71,
+        0.112583,
+        -0.065,
+        1
+       ],
+       "radius": 0.055,
+       "half": 0.31,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.055,
+        0.31,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.31,
+        -0.055
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.71,
+        0.0,
+        -0.13,
+        1
+       ],
+       "radius": 0.055,
+       "half": 0.31,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.055,
+        0.31,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.31,
+        -0.055
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.71,
+        -0.112583,
+        -0.065,
+        1
+       ],
+       "radius": 0.055,
+       "half": 0.31,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.055,
+        0.31,
+        0.055
+       ],
+       "lo": [
+        -0.055,
+        -0.31,
+        -0.055
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.71,
+        -0.112583,
+        0.065,
+        1
+       ],
+       "radius": 0.055,
+       "half": 0.31,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.2,
+        0.03,
+        0.2
+       ],
+       "lo": [
+        -0.2,
+        -0.03,
+        -0.2
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.49,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.2,
+       "half": 0.03,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.2,
+        0.03,
+        0.2
+       ],
+       "lo": [
+        -0.2,
+        -0.03,
+        -0.2
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.85,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.2,
+       "half": 0.03,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "barrels__hullDark",
+       "mesh": "/Game/Models/gatling/SM_barrels__hullDark.SM_barrels__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 312
+      },
+      {
+       "material": "chrome",
+       "prim": "barrels__chrome",
+       "mesh": "/Game/Models/gatling/SM_barrels__chrome.SM_barrels__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 288
+      },
+      {
+       "material": "hullMid",
+       "prim": "barrels__hullMid",
+       "mesh": "/Game/Models/gatling/SM_barrels__hullMid.SM_barrels__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 144
+      }
+     ]
+    },
+    {
+     "name": "tips",
+     "path": "/gatling_blue/head/barrels/tips",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.02,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      1.02,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "barrels",
+     "handles": [
+      "tips"
+     ],
+     "driver": {
+      "what": "the barrels' white-hot ends: brighter while it fires",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gatlingHeat",
+       "prim": "tips__gatlingHeat",
+       "mesh": "/Game/Models/gatling/SM_tips__gatlingHeat.SM_tips__gatlingHeat",
+       "materialInstance": "/Game/Models/Materials/MI_gatlingHeat_dae35659db35.MI_gatlingHeat_dae35659db35",
+       "materialKey": "dae35659db35",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 240
+      }
+     ]
+    },
+    {
+     "name": "muzzles_0",
+     "path": "/gatling_blue/head/muzzles_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.4,
+      0.5,
+      0.0,
+      1
+     ],
+     "position": [
+      1.4,
+      0.5,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "head",
+     "handles": [
+      "muzzles_0"
+     ],
+     "meshes": []
+    },
+    {
+     "name": "flashes_0",
+     "path": "/gatling_blue/head/flashes_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.46,
+      0.5,
+      0.0,
+      1
+     ],
+     "position": [
+      1.46,
+      0.5,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "head",
+     "handles": [
+      "flashes_0"
+     ],
+     "driver": {
+      "what": "muzzle flash: shown a frame per round",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowYellow",
+       "prim": "flashes_0__glowYellow",
+       "mesh": "/Game/Models/gatling/SM_flashes_0__glowYellow.SM_flashes_0__glowYellow",
+       "materialInstance": "/Game/Models/Materials/MI_glowYellow_24ec247fb1b4.MI_glowYellow_24ec247fb1b4",
+       "materialKey": "24ec247fb1b4",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
       }
      ]
     }

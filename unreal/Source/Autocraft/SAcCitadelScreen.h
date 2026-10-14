@@ -12,9 +12,9 @@
 //   what was given, or why not                                  the keys
 //
 // Tabs: REALM, then SHOP (C2: blueprint copies and consumables from the
-// pilot's own wallet, docs/prospector-progression.md "The Citadel shop");
-// the upgrades (D1) add theirs to `ETab`, each its own body under the same
-// header and foot. Tab switches them.
+// pilot's own wallet, docs/prospector-progression.md "The Citadel shop"),
+// MISSIONS, DEFENCE and MERCS, each its own body under the same header and
+// foot. Tab switches them.
 //
 //   SHOP   ┌ BLUEPRINTS ──────────────────────────┐ ┌ SUPPLIES ───────────┐
 //          │ Citadel   ×1        80 ore      [BUY] │ │ 1 Repair kit   [BUY]│
@@ -29,6 +29,15 @@
 //            │ Mark the Ground    │ │ Hold the Line       │ │ Into the Nest      │
 //            │ what to do …  TAKE │ │ …              TAKE │ │ …             TAKE │
 //            └────────────────────┘ └─────────────────────┘ └────────────────────┘
+//
+// DEFENCE (D1, docs/mmorpg-m8.md): the Citadel's four corner turrets, a
+// card per stat (fire rate, damage, range) with its marks, what the next one
+// does and costs, bought from the realm wallet by any pilot (keys 1-3).
+//
+//   DEFENCE ┌ FIRE RATE ●●○ ────┐ ┌ DAMAGE ●○○ ───────┐ ┌ RANGE ○○○ ────────┐
+//           │ 4.8 → 5.6 rounds/s │ │ 2.5 → 3.1 a round  │ │ 7.5 → 8.5 cells    │
+//           │ 500 ore · 50 MH UP │ │ 500 ore · 50 MH UP │ │ 250 ore        UP  │
+//           └────────────────────┘ └────────────────────┘ └────────────────────┘
 //
 // MERCS (H2, docs/prospector-progression.md "Mercenaries"): the pilot's
 // mercenaries (what each does, what it delivered), HIRE with the fee, and
@@ -117,6 +126,24 @@ struct FAcMercField
 	bool operator==(const FAcMercField&) const = default;
 };
 
+/// A stat of the Citadel's corner turrets on the DEFENCE tab (D1).
+struct FAcDefenceLine
+{
+	/// "FIRE RATE", "DAMAGE", "RANGE".
+	FString Name;
+	/// Marks bought, and the most.
+	int64 Mark = 0;
+	int64 Most = 3;
+	/// What it is now and with the next mark ("4.8 rounds a second").
+	FString Now;
+	FString Next;
+	/// The next mark's price from the realm wallet.
+	int64 Ore = 0;
+	int64 Hydrogen = 0;
+
+	bool operator==(const FAcDefenceLine&) const = default;
+};
+
 /// What the Citadel screen shows.
 struct FAcCitadelScreenInfo
 {
@@ -163,6 +190,10 @@ struct FAcCitadelScreenInfo
 	int64 MercNextLevel = 0;
 	int64 Level = 1;
 	FString MercsWhyNot;
+	/// D1, the DEFENCE tab: the corner turrets' three stats; why none can
+	/// be upgraded from here.
+	TArray<FAcDefenceLine> Defence;
+	FString DefenceWhyNot;
 
 	bool operator==(const FAcCitadelScreenInfo&) const = default;
 };
@@ -173,6 +204,7 @@ DECLARE_DELEGATE_OneParam(FAcOnMissionTake, int32 /*Index*/);
 /// H2: hire (0), dismiss (1) or send (2) mercenary `Merc` (an index in
 /// `Mercs`) to field `Field` (an index in `MercFields`).
 DECLARE_DELEGATE_ThreeParams(FAcOnMerc, int32 /*Act*/, int32 /*Merc*/, int32 /*Field*/);
+DECLARE_DELEGATE_OneParam(FAcOnUpgrade, int32 /*Stat*/);
 
 class AUTOCRAFT_API SAcCitadelScreen : public SLeafWidget
 {
@@ -182,13 +214,14 @@ public:
 		SLATE_EVENT(FAcOnShopBuy, OnBuy)
 		SLATE_EVENT(FAcOnMissionTake, OnTake)
 		SLATE_EVENT(FAcOnMerc, OnMerc)
+		SLATE_EVENT(FAcOnUpgrade, OnUpgrade)
 		SLATE_EVENT(FSimpleDelegate, OnClose)
 	SLATE_END_ARGS()
 
 	/// The screen's tabs: the realm's wallet, the shop (C2), the missions
-	/// board (K2), the mercenaries (H2).
-	enum class ETab : uint8 { Realm, Shop, Missions, Mercs };
-	static constexpr int32 TabCount = 4;
+	/// board (K2), the corner turrets' upgrades (D1), the mercenaries (H2).
+	enum class ETab : uint8 { Realm, Shop, Missions, Defence, Mercs };
+	static constexpr int32 TabCount = 5;
 
 	/// The donate buttons: 100, 1,000 and all, of ore (0-2) and of MH (3-5).
 	static constexpr int32 DonateButtons = 6;
@@ -228,6 +261,11 @@ public:
 	void Dismiss(int32 Index);
 	int32 PickedField() const { return Picked; }
 	void PickField(int32 Index);
+	/// The DEFENCE tab (D1): why stat `Index` (0 fire rate, 1 damage, 2
+	/// range) can't take its next mark now (empty: it can), and its ask (a
+	/// click; keys 1-3 on the DEFENCE tab).
+	FString UpgradeWhyNot(int32 Index) const;
+	void Upgrade(int32 Index);
 
 	/// What button `Index` gives now (ore, MH): "all" is the wallet's.
 	TPair<int64, int64> Amount(int32 Index) const;
@@ -274,6 +312,7 @@ private:
 	void PaintShop(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMissions(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMercs(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
+	void PaintDefence(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintFoot(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintButton(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P, const FTarget& T, const FString& Label,
 		bool bLit, const FLinearColor& Accent) const;
@@ -293,11 +332,14 @@ private:
 	/// and the field picked on the MERCS tab.
 	FString MercAsked;
 	int32 Picked = 0;
+	/// What the last DEFENCE ask upgraded ("fire rate, mark 2"; empty: none).
+	FString Upgraded;
 
 	FAcOnDonate OnDonateDelegate;
 	FAcOnShopBuy OnBuyDelegate;
 	FAcOnMissionTake OnTakeDelegate;
 	FAcOnMerc OnMercDelegate;
+	FAcOnUpgrade OnUpgradeDelegate;
 	FSimpleDelegate OnCloseDelegate;
 	double OpenedAt = 0;
 	/// When the realm wallet last grew (its flash).
