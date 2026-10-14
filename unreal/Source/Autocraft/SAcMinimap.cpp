@@ -106,7 +106,9 @@ void SAcMinimap::SetMarks(const ac::GameState& Shown, const ac::MapDefinition& M
 	}
 	for (const ac::OreDeposit& P : Shown.patches)
 	{
-		if (P.remaining > 0) Dot(P.position, 1.6, Rgb(0.74, 0.56, 1));
+		// A survey flare (C2) shows the ore within it brighter and larger.
+		const bool bLit = Flare && ac::distance(P.position, Flare->Key) <= Flare->Value;
+		if (P.remaining > 0) Dot(P.position, bLit ? 2.6 : 1.6, bLit ? Rgb(0.9, 0.78, 1) : Rgb(0.74, 0.56, 1));
 	}
 	// Units, sized by bulk: infantry small, vehicles larger, flyers diamonds
 	// over the ground units. Aboard a Dropship or in a Bastion: not on the map.
@@ -169,6 +171,13 @@ void SAcMinimap::SetPads(TArray<ac::Vec2> InPads)
 		if (bSame) return;
 	}
 	Pads = MoveTemp(InPads);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcMinimap::SetFlare(TOptional<TPair<ac::Vec2, double>> InFlare)
+{
+	if (Flare == InFlare) return;
+	Flare = MoveTemp(InFlare);
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -353,6 +362,21 @@ int32 SAcMinimap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, con
 			Own.ToPaintGeometry(FVector2f(Size), FSlateLayoutTransform(FVector2f(TopLeft)), Turn,
 				FVector2f(0.5f, (float)(1 - PadS / Size.Y))),
 			SightImage.Brush.Get());
+	}
+	if (Flare)
+	{
+		// The survey flare's reach: a gold ring.
+		const double CellW = MapSize.X / FMath::Max(GroundBounds.width(), 1e-6);
+		const FVector2f C(Point(Flare->Key));
+		const float R = float(Flare->Value * CellW);
+		TArray<FVector2f> Ring;
+		for (int32 I = 0; I <= 48; ++I)
+		{
+			const float A = float(I) / 48 * UE_TWO_PI;
+			Ring.Add(C + FVector2f(FMath::Cos(A), FMath::Sin(A)) * R);
+		}
+		FSlateDrawElement::MakeLines(Out, ++Layer, Own.ToPaintGeometry(), Ring, ESlateDrawEffect::None, FAcHudStyle::LevelGold(), true,
+			(float)(1.4 * S));
 	}
 	// The flight pads (the MMORPG test): an amber target, under the marks.
 	for (const ac::Vec2& G : Pads)

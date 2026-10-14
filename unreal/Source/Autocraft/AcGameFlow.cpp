@@ -1278,6 +1278,21 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 				else if (Mmo->Donate(Ore, Hydrogen, &Why)) return;
 				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why);
 			})
+		.OnBuy_Lambda([Weak](bool bItem, int32 Index)
+			{
+				// C2, the shop: the screen's lines are the blueprints' order
+				// (`Progression::blueprintKinds`) and the items' (`Shop::items`).
+				if (!Weak.IsValid()) return;
+				UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+				FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+				const auto& Kinds = ac::Progression::blueprintKinds();
+				const auto& Items = ac::Shop::items();
+				FString Why;
+				if (!Mmo) Why = TEXT("Not in a world");
+				else if (bItem && Index >= 0 && size_t(Index) < Items.size() && Mmo->BuyItem(Items[size_t(Index)].item, &Why)) return;
+				else if (!bItem && Index >= 0 && size_t(Index) < Kinds.size() && Mmo->BuyBlueprint(Kinds[size_t(Index)], &Why)) return;
+				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("Nothing there")) : Why);
+			})
 		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseCitadelScreen(); })
 	];
 	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(CitadelScreen, EFocusCause::SetDirectly);
@@ -1343,8 +1358,46 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 			Info.Hydrogen = St.players[ac::Pilot::player].hydrogen;
 		}
 	}
+	// C2, the shop: every blueprint (copies held, the next copy's price, its
+	// floor) and the four consumables (stacks, prices, keys in the field).
+	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	{
+		const std::optional<ac::ProspectorProgress> G = AcProgressHud::Progress(*Mmo);
+		ac::ProspectorProgress Bought;
+		Bought.bought = P->bought;
+		for (const ac::StructureKind K : ac::Progression::blueprintKinds())
+		{
+			FAcShopLine X;
+			X.Name = UTF8_TO_TCHAR(ac::Simulation::title(K).c_str());
+			const auto Held = P->blueprints.find(K);
+			X.Held = Held == P->blueprints.end() ? 0 : Held->second;
+			const ac::ShopPrice Price = Bought.blueprintPrice(K);
+			X.Ore = Price.ore;
+			X.Hydrogen = Price.hydrogen;
+			if (G && G->level() < G->floor(K)) X.OpensAt = G->floor(K);
+			Info.Blueprints.Add(X);
+		}
+		int32 Key = 1;
+		for (const ac::ItemInfo& I : ac::Shop::items())
+		{
+			FAcShopLine X;
+			X.Name = UTF8_TO_TCHAR(I.title);
+			X.Note = UTF8_TO_TCHAR(I.text);
+			const auto Held = P->items.find(I.item);
+			X.Held = Held == P->items.end() ? 0 : Held->second;
+			X.Stack = I.stack;
+			X.Ore = I.ore;
+			X.Hydrogen = I.hydrogen;
+			X.Key = FString::FromInt(Key++);
+			Info.Items.Add(X);
+		}
+	}
 	// The server checks the place; the screen says so ahead.
-	if (!AtRealmCitadel(&Info.Builder)) Info.DonateWhyNot = TEXT("Donate at the realm's Citadel: stand where you unload");
+	if (!AtRealmCitadel(&Info.Builder))
+	{
+		Info.DonateWhyNot = TEXT("Donate at the realm's Citadel: stand where you unload");
+		Info.ShopWhyNot = TEXT("Buy at the realm's Citadel: stand where you unload");
+	}
 	CitadelScreen->SetInfo(Info);
 	if (Mmo->CitadelRefusal() != CitadelRefusalShown)
 	{

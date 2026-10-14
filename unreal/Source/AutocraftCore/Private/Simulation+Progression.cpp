@@ -105,6 +105,11 @@ void Simulation::addSkills(const Stat& stat, const Unit& u, Boost& b) const {
     }
 }
 
+bool Simulation::shielded(int64_t unit) const {
+    const auto c = skillClocks.find(unit);
+    return c != skillClocks.end() && c->second.shield && *c->second.shield > state.time;
+}
+
 // MARK: - Every Nth
 
 bool Simulation::everyNth(Work work, const Unit& u) {

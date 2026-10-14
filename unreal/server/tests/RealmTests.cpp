@@ -51,7 +51,7 @@ WorldParams params() {
 ProspectorProgress at(int64_t level) {
     ProspectorProgress g;
     g.xp = Progression::xp(level);
-    for (const StructureKind k : Progression::blueprintKinds()) g.blueprints.insert(k);
+    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
     return g;
 }
 
@@ -309,7 +309,7 @@ TEST(realm_old_save_buildings_become_the_realms) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(9));
+    EXPECT_EQ(store->schemaVersion(), int64_t(10));
     EXPECT_TRUE(store->rows("SELECT count(*) FROM pragma_table_info('buildings') WHERE name = 'built_by'")[0][0] == "1");
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());

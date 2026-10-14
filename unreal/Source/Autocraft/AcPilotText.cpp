@@ -286,8 +286,8 @@ TArray<FString> AcPilotText::MmoTips(const ac::Simulation& Sim, const ac::Unit& 
 	Tips.Add(BuildLine());
 	Tips.Add(TEXT("M  world map: on a pad, fly to another region"));
 	Tips.Add(TEXT("V  first or third person   ·   Esc  the top-down view"));
-	Tips.Add(TEXT("K  skill tree   ·   Q C G  your actives"));
-	if (bCitadel) Tips.Add(TEXT("H  at the Citadel: the realm's wallet and tax, donate"));
+	Tips.Add(TEXT("K  skill tree   ·   Q C G  your actives   ·   1 2 3 4  supplies"));
+	if (bCitadel) Tips.Add(TEXT("H  at the Citadel: the realm's wallet, donate, the shop"));
 	return Tips;
 }
 
@@ -661,6 +661,8 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 			B.Slot = I;
 			B.Key = FString::FromInt(I + 1);
 			B.Title = Title(K);
+			// C2: the blueprint copies held, each used up by one building.
+			if (In.bMmo) B.Title += FString::Printf(TEXT("  ×%lld"), (long long)AcProgressHud::Copies(In.Mmo, K));
 			B.Icon = FAcConsoleInfo::StructureIconName((int32)K);
 			// The price the pilot pays: a world's prices with an MH part (P6),
 			// Prefab and Efficient plans off it (the mirror has its progress).

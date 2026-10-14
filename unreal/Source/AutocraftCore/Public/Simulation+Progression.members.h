@@ -34,10 +34,15 @@ public:
         std::map<Skill, double> until;
         std::map<Work, int64_t> counts;
         bool quickfill = false;
+        /// A shield charge (C2, `Item::shieldCharge`) runs until this game
+        /// time: the unit takes no damage.
+        std::optional<double> shield;
         bool operator==(const SkillClock&) const = default;
     };
     /// Kept per pilot unit (its id).
     std::map<int64_t, SkillClock> skillClocks;
+    /// Pilot unit `unit` has a shield charge running now.
+    bool shielded(int64_t unit) const;
     /// Derrick tender: MH waiting in each of the pilot's Derricks (by id).
     std::map<int64_t, double> derrickTanks;
     /// Wellspring: the part of a whole MH a well (by index) has grown back.

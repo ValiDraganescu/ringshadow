@@ -317,6 +317,12 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* dn = std::get_if<net::RequestMessage::Donate>(&m.what)) {
         what = "donate " + std::to_string(dn->ore) + " ore " + std::to_string(dn->hydrogen) + " MH";
         why = world_.donate(pilot, dn->ore, dn->hydrogen);
+    } else if (const auto* by = std::get_if<net::RequestMessage::Buy>(&m.what)) {
+        what = "buy " + (by->blueprint ? std::string(rawValue(*by->blueprint)) + " blueprint" : std::string(rawValue(by->item)));
+        why = world_.buy(pilot, by->blueprint, by->item);
+    } else if (const auto* us = std::get_if<net::RequestMessage::Use>(&m.what)) {
+        what = "use " + std::string(rawValue(us->item));
+        why = world_.use(pilot, us->item);
     } else {
         return std::nullopt;
     }

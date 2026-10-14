@@ -74,7 +74,7 @@ TEST(hydrogen_derrick_pumped_and_unloaded_fills_the_wallet) {
     // The Citadel and Derrick blueprints, at the Derrick's level floor.
     ProspectorProgress g;
     g.xp = Progression::xp(Progression::blueprintFloor(StructureKind::derrick));
-    g.blueprints = {StructureKind::citadel, StructureKind::derrick};
+    g.blueprints = {{StructureKind::citadel, 1}, {StructureKind::derrick, 1}};
     w.setProgress(me, g);
     Simulation& sim = w.regionOf(me)->simulation();
     auto unit = [&] { return driven(w, me); };

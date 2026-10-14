@@ -199,9 +199,21 @@ void UAcMinimapSubsystem::OnFrame(const FAcFrame& Frame)
 			for (const ac::region::Place& P : ac::net::padsOnGround(*Here, Sim->Map().bounds)) Pads.Add(P.at);
 		}
 	}
+	// C2: a survey flare burning in this region (world time against the sky's).
+	TOptional<TPair<ac::Vec2, double>> Flare;
+	if (const FAcMmoClient* Mmo = Sim->MmoClient())
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		const ac::net::WorldMessage::Region* Here = Mmo->Here();
+		if (P && P->flare && Here && !Mmo->Travelling() && P->flare->region == Here->id && Mmo->Sky() && Mmo->Sky()->time < P->flare->until)
+		{
+			Flare = TPair<ac::Vec2, double>(P->flare->at, P->flare->radius);
+		}
+	}
 	for (const TSharedPtr<SAcMinimap>& M : All)
 	{
 		M->SetPads(Pads);
+		M->SetFlare(Flare);
 		M->SetMarks(Shown, Sim->Map());
 		M->SetFootprint(Footprint);
 		if (bFog) M->SetFog(Fog->MinimapTexture(), Fog->GridOrigin(), Fog->GridSize());

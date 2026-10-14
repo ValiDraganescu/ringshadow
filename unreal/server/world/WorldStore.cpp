@@ -167,13 +167,22 @@ ALTER TABLE pilots ADD COLUMN donated_ore INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE pilots ADD COLUMN donated_hydrogen INTEGER NOT NULL DEFAULT 0;
 )sql";
 
+/// Schema v10: blueprints stack (C2, docs/prospector-progression.md "The
+/// Citadel shop"): a pilot holds copies, and building uses one up. The
+/// copies live in the progress JSON; a pilot saved before (`stacked` 0) is
+/// given, on load, as many copies of each blueprint it had as the realm may
+/// still build of that kind, at least 1 (WorldMapSave.cpp).
+const char* const kV10 = R"sql(
+ALTER TABLE pilots ADD COLUMN stacked INTEGER NOT NULL DEFAULT 0;
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}};
     return steps;
 }
 
@@ -325,11 +334,12 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
     }
     {
         Stmt s(db_, "SELECT id, ore, hydrogen, region, unit, levels, progress, gated, contracts, rig, taxed_ore, taxed_hydrogen, "
-                    "donated_ore, donated_hydrogen FROM pilots ORDER BY id");
+                    "donated_ore, donated_hydrogen, stacked FROM pilots ORDER BY id");
         while (s.row())
             out.pilots.push_back(SavedPilot{s.colText(0), s.colInteger(1), s.colInteger(2), s.colText(3), s.optInteger(4),
                                             s.colText(5), s.colText(6), s.colInteger(7) != 0, s.colText(8), s.colText(9),
-                                            s.colInteger(10), s.colInteger(11), s.colInteger(12), s.colInteger(13)});
+                                            s.colInteger(10), s.colInteger(11), s.colInteger(12), s.colInteger(13),
+                                            s.colInteger(14) != 0});
         if (s.failed(error)) return std::nullopt;
     }
     {
@@ -506,8 +516,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
         const auto before = pilots_.find(p.id);
         if (before != pilots_.end() && before->second == p) continue;
         run(std::move(Stmt(db_, "INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels, progress, gated, contracts, rig, "
-                                "taxed_ore, taxed_hydrogen, donated_ore, donated_hydrogen) "
-                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                                "taxed_ore, taxed_hydrogen, donated_ore, donated_hydrogen, stacked) "
+                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                           .text(p.id)
                           .integer(p.ore)
                           .integer(p.hydrogen)
@@ -521,7 +531,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                           .integer(p.taxedOre)
                           .integer(p.taxedHydrogen)
                           .integer(p.donatedOre)
-                          .integer(p.donatedHydrogen)));
+                          .integer(p.donatedHydrogen)
+                          .integer(p.stacked ? 1 : 0)));
         n.changed += 1;
     }
     if (!ok || !exec("COMMIT", &why)) {

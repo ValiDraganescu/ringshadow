@@ -84,6 +84,9 @@ public:
 	/// Driving: the sight wedge from `At` toward `Heading` (world radians, as
 	/// on the compass); unset hides it.
 	void SetSight(TOptional<TPair<ac::Vec2, double>> Sight);
+	/// A survey flare burning (C2): its centre on the ground and its radius
+	/// in cells. A gold ring; the ore inside it drawn larger. Unset: none.
+	void SetFlare(TOptional<TPair<ac::Vec2, double>> InFlare);
 	/// The MMORPG test: the region's flight pads (ground), each a pad
 	/// marker; empty hides them.
 	void SetPads(TArray<ac::Vec2> Pads);
@@ -140,6 +143,7 @@ private:
 	TSharedPtr<FSlateBrush> FogBrush;
 	ac::Vec2 FogOrigin, FogSize;
 	TOptional<TPair<ac::Vec2, double>> Sight;
+	TOptional<TPair<ac::Vec2, double>> Flare;
 	FImage SightImage;
 
 	FImage DiscImage, DiamondImage;

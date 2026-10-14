@@ -1224,14 +1224,15 @@ void SAcSkillScreen::PaintBlueprints(FSlateWindowElementList& Out, const int32 L
 	const int64 Level = G ? G->level() : 1;
 	const auto& Kinds = ac::Progression::blueprintKinds();
 	int32 Found = 0;
-	for (const ac::StructureKind K : Kinds) Found += G && G->blueprints.count(K) ? 1 : 0;
+	for (const ac::StructureKind K : Kinds) Found += G && G->copies(K) > 0 ? 1 : 0;
 	for (int32 I = 0; I < Targets.Num(); ++I)
 	{
 		const FTarget& T = Targets[I];
 		if (T.Row != RowCard) continue;
 		const bool bHeldBack = T.Index >= (int32)Kinds.size();
 		const ac::StructureKind K = bHeldBack ? ac::StructureKind::garrison : Kinds[T.Index];
-		const bool bFound = !bHeldBack && G && G->blueprints.count(K);
+		// C2: held means a copy or more (each builds once).
+		const bool bFound = !bHeldBack && G && G->copies(K) > 0;
 		const int64 Floor = FMath::Max<int64>(1, ac::Progression::blueprintFloor(K) - Info.FloorCut);
 		const bool bReady = bFound && Level >= Floor;
 		const bool bHover = I == Hovered;
@@ -1261,9 +1262,9 @@ void SAcSkillScreen::PaintBlueprints(FSlateWindowElementList& Out, const int32 L
 			.Paint(Out, L + 3, P, FVector2f(X, B.Min.Y + 20));
 		FString Chip;
 		if (bHeldBack) Chip = TEXT("HELD BACK");
-		else if (bReady) Chip = TEXT("READY · B BUILDS IT");
-		else if (bFound) Chip = FString::Printf(TEXT("OPENS AT LEVEL %lld"), (long long)Floor);
-		else Chip = TEXT("NOT FOUND");
+		else if (bReady) Chip = FString::Printf(TEXT("×%lld READY · B BUILDS IT"), (long long)G->copies(K));
+		else if (bFound) Chip = FString::Printf(TEXT("×%lld · OPENS AT LEVEL %lld"), (long long)G->copies(K), (long long)Floor);
+		else Chip = TEXT("NONE HELD");
 		Label(Chip, 13, Accent, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.0f).Paint(Out, L + 3, P, FVector2f(X, B.Min.Y + 52));
 		if (!bHeldBack)
 		{
@@ -1275,15 +1276,16 @@ void SAcSkillScreen::PaintBlueprints(FSlateWindowElementList& Out, const int32 L
 		else if (bFound)
 		{
 			const auto Source = Info.Sources.find(K);
-			From = Source != Info.Sources.end() && !Source->second.IsEmpty() ? FString::Printf(TEXT("Found: %s"), *Source->second)
-				: FString(TEXT("Found."));
+			From = Source != Info.Sources.end() && !Source->second.IsEmpty()
+				? FString::Printf(TEXT("Found: %s. More copies at the Citadel's shop (H)."), *Source->second)
+				: FString(TEXT("More copies at the Citadel's shop (H)."));
 		}
 		else
 		{
 			const auto Marked = Info.SitesMarked.find(K);
 			const int32 N = Marked != Info.SitesMarked.end() ? Marked->second : 0;
-			From = N > 0 ? FString::Printf(TEXT("%d %s marked on the world map."), N, N == 1 ? TEXT("site") : TEXT("sites"))
-				: FString(TEXT("Somewhere in the world: no site marked yet."));
+			From = N > 0 ? FString::Printf(TEXT("%d %s marked on the world map, or buy a copy at the Citadel (H)."), N, N == 1 ? TEXT("site") : TEXT("sites"))
+				: FString(TEXT("Buy a copy at the Citadel (H), or find one at a site."));
 		}
 		float FY = B.Min.Y + 96;
 		for (const FString& Line2 : Wrap(From, 13, W))
@@ -1294,9 +1296,9 @@ void SAcSkillScreen::PaintBlueprints(FSlateWindowElementList& Out, const int32 L
 		}
 	}
 	// The count, under the cards.
-	Label(FString::Printf(TEXT("%d OF %d BLUEPRINTS FOUND"), Found, (int32)Kinds.size()), 14, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top,
+	Label(FString::Printf(TEXT("%d OF %d BLUEPRINTS HELD"), Found, (int32)Kinds.size()), 14, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top,
 		EAcFontWeight::Bold, 1.4f).Paint(Out, L, P, FVector2f(Pad + 4, SlotBox.Min.Y + 12));
-	Label(TEXT("Crates, wrecks, caches and vaults in the regions hold them. A blueprint found under its floor waits for the level."), 13, Dim(),
+	Label(TEXT("A blueprint builds once. Sites give a copy; the Citadel's shop (H) sells more, dearer each time."), 13, Dim(),
 		EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L, P, FVector2f(Pad + 4, SlotBox.Min.Y + 34));
 	Label(TEXT("TAB RIG · K OR ESC CLOSES"), 11, Faint(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.8f)
 		.Paint(Out, L, P, FVector2f(PanelW - Pad - 4, SlotBox.Min.Y + 34));

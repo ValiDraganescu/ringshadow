@@ -344,9 +344,9 @@ an hour at the well.
 ## Buildings in the MMO
 
 In a one-pilot world a building serves the Prospector, not an army. Each
-needs its blueprint, found in the world, and the pilot at or above its
-**level floor**. A blueprint found below the floor is kept and shows
-"opens at level N".
+needs a copy of its blueprint (found at a site or bought at the Citadel's
+shop, C2; building uses the copy up) and the pilot at or above its **level
+floor**. A copy held below the floor is kept and shows "opens at level N".
 
 | Building | What it does for the pilot | Floor | Limit | Cost (ore + MH) | Status |
 |---|---|---|---|---|---|
@@ -471,8 +471,8 @@ On screen:
   (keys 1 2 3) and of MH (4 5 6), dark when the wallet is short. The foot
   says what was given ("Given to the realm: 1,000 ore.") or why not. H or
   Esc closes it. The tabs are built to grow: C2's shop and D1's upgrades
-  add theirs beside REALM. The keys line, at the Citadel, says "H  at the
-  Citadel: the realm's wallet and tax, donate".
+  add theirs beside REALM (C2's SHOP is there now). The keys line, at the
+  Citadel, says "H  at the Citadel: the realm's wallet, donate, the shop".
 
 Tests: `core-tests/tests/ProgressionEffectsTests.cpp`
 (`realmTaxRounding`, `realmTaxOnUnload`, the Hab Dome depot),
@@ -483,6 +483,111 @@ loaded and migrated). Pictures: `-AcMmoShotsC1`.
 
 Hours to each floor at the model's pace: Derrick 13 min, Hab Dome 49 min,
 Foundry 1.95 h, Lab 4.6 h, Spacedock 9.1 h, Bastion 15.6 h, Sentinel 24.4 h.
+
+### The Citadel shop (C2)
+
+Decided by the user (2026-10-14, docs/mmorpg-m8.md): "I can buy the items
+from the citadel (items are consumables)." "I can unlock and buy any
+blueprint from the citadel shop. There must be a price progression. A
+blueprint can be used once so blueprints are stackable and consumable."
+
+- **Blueprints are copies.** A pilot holds a stack of copies per building
+  kind (`ProspectorProgress::blueprints`, kind → copies). Placing a building
+  uses one up (`WorldMap::build`); with none the build is refused "No
+  blueprint: buy one at the Citadel (H)". The level floor still holds: a
+  copy bought or found below it waits ("opens at level N").
+- **The shop** is the Citadel screen's **SHOP** tab (H, at the realm's
+  Citadel, standing where it unloads; Tab switches REALM and SHOP). It is
+  paid from the pilot's own wallet; the tax does not apply to purchases.
+  Every building kind the MMO has is in it (the Garrison stays held back).
+- **Sites still pay**: opening a site gives one copy of its blueprint, held
+  already or not, with the find's XP (50 × its floor); a blueprint survey
+  chip gives one copy too. The old "known already: 100 ore and 20 MH" rule
+  is gone. The opening chain (O1) is unchanged: the Landing crate gives the
+  Citadel copy that step 2 builds, the Lander wreck the Derrick copy step 5
+  builds.
+
+**The price** of the next copy of a blueprint grows with the building's
+level floor F and with the copies n this pilot has bought of that kind
+before (`Shop::blueprintPrice`, `ProspectorProgress::bought`):
+
+    ore = (50 + 25 × F) × 1.5^n      MH = 5 × F × 1.5^n
+
+each rounded to 10; the Citadel and the Derrick cost ore only, so the first
+loop still costs no MH. Copies found at sites don't count as bought.
+
+| Blueprint | Floor | 1st | 2nd | 3rd | 5th | 8th |
+|---|---|---|---|---|---|---|
+| Citadel | 1 | 80 | 110 | 170 | 380 | 1,280 |
+| Derrick | 3 | 130 | 190 | 280 | 630 | 2,140 |
+| Hab Dome | 8 | 250 + 40 | 380 + 60 | 560 + 90 | 1,270 + 200 | 4,270 + 680 |
+| Foundry | 15 | 430 + 80 | 640 + 110 | 960 + 170 | 2,150 + 380 | 7,260 + 1,280 |
+| Lab | 25 | 680 + 130 | 1,010 + 190 | 1,520 + 280 | 3,420 + 630 | 11,530 + 2,140 |
+| Spacedock | 35 | 930 + 180 | 1,390 + 260 | 2,080 + 390 | 4,680 + 890 | 15,800 + 2,990 |
+| Bastion | 45 | 1,180 + 230 | 1,760 + 340 | 2,640 + 510 | 5,950 + 1,140 | 20,080 + 3,840 |
+| Sentinel | 55 | 1,430 + 280 | 2,140 + 410 | 3,210 + 620 | 7,210 + 1,390 | 24,350 + 4,700 |
+
+(ore + MH.) The first Hab Dome copy, 250 ore and 40 MH, with the dome's own
+150 + 50, is a few minutes of mining at level 8, where it opens. Copies stay
+a sink: the realm's limits cap what stands, but buildings fall once the bugs
+come (N2), and every rebuild takes a dearer copy; by the fifth Hab Dome copy
+the price is 1,270 + 200, by the eighth 4,270 + 680.
+
+**The consumables** (`Shop::items`, `Item`), a first set of four, each held
+in a stack and used from the field with a key (1-4 were free while driving;
+the build menu takes the digits only while it is open):
+
+| Key | Item | Price | Stack | Cooldown | Use |
+|---|---|---|---|---|---|
+| 1 | Repair kit | 120 ore + 10 MH | 5 | 30 s | mends half the Prospector's full hp at once; refused when not hurt |
+| 2 | MH canister | 150 ore | 3 | 60 s | 25 MH into the wallet: fuel for jets (after the carried MH) and flights |
+| 3 | Shield charge | 100 ore + 30 MH | 3 | 45 s | no damage taken for 8 s (`SkillClock::shield`): a Shardling bite (2) or a Gloamwing spit (3) does nothing while it runs |
+| 4 | Survey flare | 80 ore + 15 MH | 5 | 20 s | every site within 40 cells goes on the pilot's map for good; for 60 s the minimap rings the 40 cells and draws the ore in them larger |
+
+Server-authoritative (`unreal/server/world/WorldShop.cpp`): `WorldMap::buy`
+and `WorldMap::use` check, pay and give; the cooldowns and a burning flare
+are kept per pilot on the world's clock, not saved (a server restart readies
+them); the shield runs on the region's clock in the unit's skill clock, and
+crosses regions with it.
+
+Refusals (the reply's text): "Buy at the realm's Citadel: stand where you
+unload", "Not enough ore: 250, you have 100", "Not enough MH: 40, you have
+10", "No Garrison blueprint in this world", "Repair kit: you hold 5, the
+most"; using: "No repair kits: buy them at the Citadel (H)", "Shield charge
+ready in 31 s", "Your Prospector is not hurt", "In flight", "Your Prospector
+is down", "Drive your Prospector first".
+
+On the wire (protocol 14, C2): the request's variant index takes **5 bits**
+(4 before); `RequestMessage::Buy{blueprint | item}` is 14 and
+`RequestMessage::Use{item}` 15; D1's request comes next, at 16.
+`ProgressMessage::blueprints` carries copies (kind → count), and `bought`,
+`items`, `itemReady` (world time), `shieldUntil` (world time) and `flare`
+(region, centre, radius, until) are new. `net::Client::buyBlueprint`,
+`buyItem`, `use`.
+
+On screen:
+
+- **SHOP** (`SAcCitadelScreen`, Tab from REALM): BLUEPRINTS, a row per
+  building (keys 1-8): the copies held (×N), "opens at level N" below the
+  floor, the next copy's price, BUY (dark when the wallet is short); and
+  SUPPLIES: each consumable with its key, what it does, held of the stack,
+  its price, BUY. The foot says "Bought: Hab Dome blueprint." or why not.
+- **The build menu** (B) shows the copies by each building's name ("Hab
+  Dome ×2"); with none, it is greyed "NO BLUEPRINT".
+- **The HUD**: four small cells right of the Q/C/G slots, their key caps 1
+  2 3 4, the count (×N), the cooldown's seconds, gold while a shield or a
+  flare runs. The keys line: "1 2 3 4  supplies".
+- The skill screen's BLUEPRINTS tab counts copies held ("×2 READY · B
+  BUILDS IT", "NONE HELD") and points to the shop.
+
+Tests: `core-tests/tests/ProgressionTests.cpp` (`blueprintPriceRises`,
+`blueprintCopiesAndItems`, the old list read as copies),
+`server/tests/ShopTests.cpp` (buying at rising prices, the refusals,
+building uses a copy, the consumables' use, stacks and cooldowns, the stacks
+saved), `server/tests/SitesTests.cpp` (a site gives a copy),
+`server/tests/FirstTenTests.cpp` (the opening chain), the old-save tests
+(the migration below), `net-tests/tests/ProtocolTests.cpp`. Pictures:
+`-AcMmoShotsC2`.
 
 ### On the server (P6)
 
@@ -645,8 +750,9 @@ the world for the next pilot. Site kinds:
 | cache | buried, unseen until within 6 cells (Surveyor and Scanner pulse show it sooner) | drill it out like a deposit, 8 s |
 | vault | a sealed vault on hard ground: a ridge top, a high pocket | stand there at its blueprint's floor and hold click, 10 s; reaching it may take a ramp or Cliff hop |
 
-A site whose blueprint the pilot already has gives 100 ore and 20 MH instead,
-once, and no XP.
+Each site gives one copy of its blueprint (C2: blueprints stack and are used
+up by building), held already or not, with the find's XP. Before C2 a site
+whose blueprint the pilot already had gave 100 ore and 20 MH instead.
 
 On the server (`WorldSites` in `unreal/server/world/WorldMap.h`): a site is
 reached when the Prospector's centre is within 2 cells of its point. The hold
@@ -721,6 +827,10 @@ Nothing costs MH today. This adds:
 - **Building costs**: the Hab Dome, Foundry, Lab, Spacedock, Bastion and
   Sentinel have an MH part (50 to 300).
 - **Hydrogen boost** burns 10 MH a use.
+- **The Citadel shop** (C2, "The Citadel shop"): blueprint copies from the
+  Hab Dome up have an MH part that grows 1.5× a copy bought (40 MH for the
+  first Hab Dome, 280 for the first Sentinel); the repair kit, the shield
+  charge and the survey flare cost 10 to 30 MH each.
 - **Foundry modules and Lab research** (P7, "Foundry and Lab"): modules at
   100 ore + 50 MH (Mk I), 300 + 200 (Mk II), 800 + 600 (Mk III); research
   300 MH (Mk II) and 900 MH (Mk III) per module.
@@ -800,6 +910,26 @@ Schema **v9** adds the realm wallet, one row, and each pilot's tally:
 An old save starts with an empty realm wallet and every pilot's tally at
 nothing. Tests: `server/tests/RealmWalletTests.cpp`
 (`realm_wallet_saved_and_loaded`).
+
+### The blueprint copies migration (schema v10, C2)
+
+Schema **v10** marks the pilots saved since blueprints stack:
+
+    ALTER TABLE pilots ADD COLUMN stacked INTEGER NOT NULL DEFAULT 0
+
+The copies live in the progress JSON (`blueprints` an object, kind →
+copies; before, a list of the kinds found, read as one copy each). A pilot
+saved before (`stacked` 0) gets, for each blueprint it had, **as many copies
+as the realm may still build of that kind under the current limit** (the
+pilot's, with Overbuild, less the realm's buildings of that kind across the
+world, finished or not), **at least 1**: a pilot with the Derrick blueprint
+in a realm with one Derrick holds 3; with the Citadel blueprint and the
+Citadel standing, 1. So nobody loses a building they could have put up, and
+nobody gets more than the realm can hold. Nothing was bought before, so
+every price starts at the first copy's. Saved again, the pilot is
+`stacked` 1. Tests: `server/tests/SitesTests.cpp`
+(`sites_v3_pilot_keeps_the_blueprints_of_its_buildings`),
+`OldSaveTests.cpp`, `SaveTests.cpp`.
 
 ## On screen
 
@@ -893,6 +1023,11 @@ Foundry and the Lab.
 - C1: the realm wallet small in the resource bar ("REALM", "1,240 · 56
   MH"); the unload toast's second line, "3 TO THE REALM"; H at the Citadel
   opens the Citadel screen ("The realm's tax (C1)").
+- C2: the consumables' stacks right of the Q/C/G slots (keys 1-4, the
+  count, the cooldown, gold while a shield or a flare runs); the build
+  menu's names carry the copies held ("Hab Dome ×2"); the Citadel screen's
+  SHOP tab; a survey flare rings its reach on the minimap ("The Citadel
+  shop (C2)").
 - R1: a building in sight names its builder ("Hab Dome  ·  built by Pilot
   045B"); a realm building finished anywhere is a toast to every pilot; the
   build menu's limit tag reads "REALM LIMIT".

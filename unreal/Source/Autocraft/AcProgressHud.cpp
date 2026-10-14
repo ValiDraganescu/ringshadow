@@ -113,6 +113,13 @@ void SAcProgressHud::SetSlots(const TOptional<std::array<FAcSlotView, 3>>& Slots
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcProgressHud::SetItems(const TArray<FAcItemView>& Items)
+{
+	if (Stacks == Items) return;
+	Stacks = Items;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcProgressHud::SetOpening(const TOptional<FOpening>& In)
 {
 	if (Opening == In) return;
@@ -214,6 +221,40 @@ void SAcProgressHud::PaintSlots(FSlateWindowElementList& Out, int32 Layer, const
 		const FBox2f Cap(FVector2f(C.X - 13, B.Min.Y - 11), FVector2f(C.X + 13, B.Min.Y + 11));
 		Box(Out, Layer + 3, G, Cap, S.bOpen ? FAcHudStyle::KeyYellow() : WithAlpha(FAcHudStyle::Soft(), 0.35f));
 		Label(Key, 16, FAcHudStyle::Glass(), EAcHAlign::Center, EAcVAlign::Center, EAcFontWeight::Bold, 0).Paint(Out, Layer + 4, G, Cap.GetCenter());
+	}
+	if (!Stacks.IsEmpty()) PaintItems(Out, Layer, G, FVector2f(O.X + RowW, O.Y), O.Y + Cell);
+}
+
+void SAcProgressHud::PaintItems(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, const FVector2f RowRight, const float RowBottom) const
+{
+	// Small cells right of the slots, sitting on the row's base: the key cap,
+	// the count, the cooldown's seconds; lit while its effect runs.
+	constexpr float S = 46;
+	constexpr float Between = 6;
+	for (int32 I = 0; I < Stacks.Num(); ++I)
+	{
+		const FAcItemView& V = Stacks[I];
+		const float X = RowRight.X + 18 + I * (S + Between);
+		const FBox2f B(FVector2f(X, RowBottom - S), FVector2f(X + S, RowBottom));
+		const FVector2f C = B.GetCenter();
+		const bool bHas = V.Held > 0;
+		const bool bCool = V.Left > 0;
+		const FLinearColor Accent = V.Running > 0 ? FAcHudStyle::LevelGold() : FAcHudStyle::Cyan();
+		Box(Out, Layer, G, B, WithAlpha(FAcHudStyle::Glass(), bHas ? 0.86f : 0.6f));
+		if (V.Running > 0) Box(Out, Layer, G, B.ExpandBy(-2), WithAlpha(Accent, 0.18f));
+		CutFrame(Out, Layer + 1, G, B, bHas ? WithAlpha(Accent, bCool ? 0.4f : 0.85f) : WithAlpha(FAcHudStyle::Soft(), 0.22f), 1.0f, 5);
+		Label(V.Short, 9, WithAlpha(FAcHudStyle::Soft(), bHas ? 0.9f : 0.45f), EAcHAlign::Center, EAcVAlign::Baseline, EAcFontWeight::Bold, 0.6f)
+			.Paint(Out, Layer + 2, G, FVector2f(C.X, B.Max.Y - 4));
+		const FString Mid = V.Running > 0 ? FString::Printf(TEXT("%d"), FMath::CeilToInt(V.Running))
+			: bCool ? FString::Printf(TEXT("%d"), FMath::CeilToInt(V.Left))
+			: FString::Printf(TEXT("×%lld"), (long long)V.Held);
+		Label(Mid, 15, V.Running > 0 ? Accent : bHas && !bCool ? FAcHudStyle::Text() : WithAlpha(FAcHudStyle::Soft(), 0.6f), EAcHAlign::Center,
+			EAcVAlign::Center, EAcFontWeight::Bold, 0).Paint(Out, Layer + 2, G, C + FVector2f(0, -1));
+		// The key cap on the top edge, small.
+		const FBox2f Cap(FVector2f(C.X - 9, B.Min.Y - 8), FVector2f(C.X + 9, B.Min.Y + 8));
+		Box(Out, Layer + 3, G, Cap, bHas ? FAcHudStyle::KeyYellow() : WithAlpha(FAcHudStyle::Soft(), 0.35f));
+		Label(FString::FromInt(I + 1), 12, FAcHudStyle::Glass(), EAcHAlign::Center, EAcVAlign::Center, EAcFontWeight::Bold, 0)
+			.Paint(Out, Layer + 4, G, Cap.GetCenter());
 	}
 }
 
@@ -354,11 +395,19 @@ FString AcProgressHud::BlueprintRefusal(const FAcMmoClient* Mmo, const ac::Struc
 	return Why ? Text(*Why) : FString();
 }
 
+int64 AcProgressHud::Copies(const FAcMmoClient* Mmo, const ac::StructureKind Kind)
+{
+	const ac::net::ProgressMessage* P = Mmo ? Mmo->Progress() : nullptr;
+	if (!P) return 0;
+	const auto It = P->blueprints.find(Kind);
+	return It == P->blueprints.end() ? 0 : It->second;
+}
+
 FString AcProgressHud::BlueprintTag(const FAcMmoClient* Mmo, const ac::StructureKind Kind)
 {
 	const std::optional<ac::ProspectorProgress> G = Mmo ? Progress(*Mmo) : std::nullopt;
 	if (!G || BlueprintRefusal(Mmo, Kind).IsEmpty()) return FString();
-	if (!G->blueprints.count(Kind)) return TEXT("NO BLUEPRINT");
+	if (G->copies(Kind) <= 0) return TEXT("NO BLUEPRINT");
 	if (G->level() < G->floor(Kind)) return FString::Printf(TEXT("LV %lld"), (long long)G->floor(Kind));
 	return TEXT("REALM LIMIT");
 }
@@ -939,6 +988,28 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 	const UAcConsoleSubsystem* ConsoleSub = UAcConsoleSubsystem::Get(this);
 	const TSharedPtr<SAcConsole> Console = ConsoleSub ? ConsoleSub->Console() : nullptr;
 	Hud->SetSlots(Row, Console ? Console->Layout() : FAcCabLayout());
+	// C2: the consumables' stacks beside the slots, their cooldowns and
+	// what runs (whole tenths of world time: a repaint when they move).
+	TArray<FAcItemView> Items;
+	if (Row)
+	{
+		const double SkyTime = Mmo->Sky() ? Mmo->Sky()->time : 0;
+		auto Tenths = [](double X) { return FMath::Max(0.0, std::ceil(X * 10) / 10); };
+		static const TCHAR* const Shorts[] = {TEXT("KIT"), TEXT("MH"), TEXT("SHIELD"), TEXT("FLARE")};
+		for (const ac::ItemInfo& I : ac::Shop::items())
+		{
+			FAcItemView V;
+			V.Short = Shorts[FMath::Clamp(int32(I.item), 0, 3)];
+			const auto Held = P->items.find(I.item);
+			V.Held = Held == P->items.end() ? 0 : Held->second;
+			V.Cooldown = I.cooldown;
+			if (const auto Ready = P->itemReady.find(I.item); Ready != P->itemReady.end()) V.Left = Tenths(Ready->second - SkyTime);
+			if (I.item == ac::Item::shieldCharge && P->shieldUntil > 0) V.Running = Tenths(P->shieldUntil - SkyTime);
+			if (I.item == ac::Item::surveyFlare && P->flare) V.Running = Tenths(P->flare->until - SkyTime);
+			Items.Add(V);
+		}
+	}
+	Hud->SetItems(Items);
 
 	// A site being opened: the hold ring (whole percents: a repaint each).
 	TOptional<SAcProgressHud::FOpening> Opening;
@@ -1064,13 +1135,7 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		Hud->Toast(TEXT("SKILLS RESET"), FString::Printf(TEXT("%lld points to spend  ·  K"), (long long)N.value), FAcHudStyle::Energy(), Now);
 		break;
 	case K::site:
-		// A site opened: its blueprint comes as its own news; one already
-		// known paid ore and MH instead.
-		if (N.value == 1)
-		{
-			Hud->Toast(TEXT("BLUEPRINT ALREADY KNOWN"), FString::Printf(TEXT("+%lld ore  ·  +%lld MH"), (long long)ac::net::kSiteOre,
-				(long long)ac::net::kSiteHydrogen), FAcHudStyle::Soft(), Now);
-		}
+		// A site opened: its blueprint copy comes as its own news (C2).
 		break;
 	case K::contract:
 	{

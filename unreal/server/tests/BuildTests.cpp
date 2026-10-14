@@ -179,7 +179,7 @@ TEST(build_world_from_blueprints_only) {
     EXPECT_EQ(sim.state.players[0].ore, int64_t(5000));
     ProspectorProgress g;
     g.xp = Progression::xp(3);
-    g.blueprints = {StructureKind::citadel, StructureKind::derrick};
+    g.blueprints = {{StructureKind::citadel, 1}, {StructureKind::derrick, 1}};
     w.setProgress(me, g);
     // A Citadel where it fits.
     EXPECT_TRUE(!w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel)).has_value());

@@ -274,6 +274,15 @@ public:
 	bool Donate(int64 Ore, int64 Hydrogen, FString* Why = nullptr);
 	const FString& CitadelRefusal() const { return LastCitadelRefusal; }
 	int32 CitadelKept() const { return CitadelDone; }
+	/// The Citadel shop's asks (C2, docs/prospector-progression.md "The
+	/// Citadel shop"): one blueprint copy, one consumable; answered as the
+	/// donations (`CitadelRefusal`, `CitadelKept`).
+	bool BuyBlueprint(ac::StructureKind Kind, FString* Why = nullptr);
+	bool BuyItem(ac::Item Item, FString* Why = nullptr);
+	/// C2: use a consumable in the field (keys 1-4). The server's refusal
+	/// comes back as a note; `ItemsUsed` counts the kept ones.
+	bool UseItem(ac::Item Item, FString* Why = nullptr);
+	int32 ItemsUsed() const { return ItemDone; }
 	/// The region the pilot is in (in flight: the one it lifted off from).
 	const ac::net::WorldMessage::Region* Here() const;
 	/// In flight: the region it flies to.
@@ -403,6 +412,9 @@ private:
 	TSet<uint32> CitadelAsked;
 	FString LastCitadelRefusal;
 	int32 CitadelDone = 0;
+	/// Consumable uses asked (request ids), and the ones kept.
+	TSet<uint32> ItemAsked;
+	int32 ItemDone = 0;
 	bool AskRig(const TCHAR* Verb, ac::Module Module, int64 Mark, FString* Why);
 	std::vector<ac::GameEvent> Events;
 };

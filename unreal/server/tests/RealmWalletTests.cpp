@@ -49,7 +49,7 @@ WorldParams params() {
 ProspectorProgress at(int64_t level) {
     ProspectorProgress g;
     g.xp = Progression::xp(level);
-    for (const StructureKind k : Progression::blueprintKinds()) g.blueprints.insert(k);
+    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
     return g;
 }
 
@@ -280,7 +280,7 @@ TEST(realm_wallet_saved_and_loaded) {
         ASSERT_TRUE(!w.donate(a, 100, 10).has_value());
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(9));
+        EXPECT_EQ(store->schemaVersion(), int64_t(10));
         ASSERT_TRUE(store->write(w.save(), &why).has_value());
         const auto rows = store->rows("SELECT ore, hydrogen FROM realm_wallet");
         ASSERT_TRUE(rows.size() == 1);
@@ -316,7 +316,7 @@ TEST(realm_wallet_saved_and_loaded) {
     }
     auto store = WorldStore::open(old, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(9));
+    EXPECT_EQ(store->schemaVersion(), int64_t(10));
     const auto save = store->load(&why);
     ASSERT_TRUE(save.has_value());
     EXPECT_EQ(save->realmOre, int64_t(0));

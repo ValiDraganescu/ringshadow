@@ -408,7 +408,20 @@ bool get(const json& j, ProspectorProgress& v) {
             SkillSpend x;
             if (get(e, x)) v.recent.push_back(x);
         }
-    r.orDefault("blueprints", v.blueprints);
+    // Blueprint copies (C2): before, the kinds found (a list), one copy
+    // each here; the server's migration counts them again (schema 10).
+    v.blueprints.clear();
+    if (auto it = j.find("blueprints"); it != j.end() && it->is_array()) {
+        std::set<StructureKind> found;
+        if (get(*it, found))
+            for (StructureKind k : found) v.blueprints[k] = 1;
+    } else {
+        r.orDefault("blueprints", v.blueprints);
+    }
+    std::erase_if(v.blueprints, [](const auto& e) { return e.second <= 0; });
+    r.orDefault("bought", v.bought);
+    r.orDefault("items", v.items);
+    std::erase_if(v.items, [](const auto& e) { return e.second <= 0; });
     r.orDefault("sites", v.sites);
     r.orDefault("regions", v.regions);
     r.orDefault("pads", v.pads);
@@ -557,6 +570,8 @@ json put(const ProspectorProgress& v) {
     w("freeRespec", v.freeRespec);
     w("recent", v.recent);
     w("blueprints", v.blueprints);
+    w("bought", v.bought);
+    w("items", v.items);
     w("sites", v.sites);
     w("regions", v.regions);
     w("pads", v.pads);

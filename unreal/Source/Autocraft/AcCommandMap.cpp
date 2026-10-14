@@ -8,6 +8,7 @@
 #include "AcLog.h"
 #include "AcMinimap.h"
 #include "AcMmo.h"
+#include "AcPilotBuild.h"
 #include "AcPointer.h"
 #include "AcProgressHud.h"
 #include "AcRtsPawn.h"
@@ -452,6 +453,21 @@ void UAcCommandMapSubsystem::PollKeys()
 			FAcMmoClient* Mmo = Sim->MmoClient();
 			ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
 			if (M && M->simulation().pilot) M->simulation().pilot->slot = I + 1;
+		}
+		// 1-4: the Citadel shop's consumables (C2: repair kit, MH canister,
+		// shield charge, survey flare) while driving, unless the build menu
+		// has the digits (the top-down view's card keeps them).
+		const UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+		if (Sim->Simulation().pilot && (!Build || (!Build->MenuOpen() && !Build->Placing())))
+		{
+			static const FKey ItemKeys[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four};
+			const auto& Items = ac::Shop::items();
+			for (int32 I = 0; I < 4 && size_t(I) < Items.size(); ++I)
+			{
+				if (!PC->WasInputKeyJustPressed(ItemKeys[I])) continue;
+				if (FAcMmoClient* Mmo = Sim->MmoClient()) Mmo->UseItem(Items[size_t(I)].item);
+				return;
+			}
 		}
 	}
 	if (PC->WasInputKeyJustPressed(EKeys::M))

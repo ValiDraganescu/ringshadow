@@ -180,7 +180,7 @@ TEST(contracts_always_reachable_at_the_pilots_level) {
     WorldMap w(first(), params());
     ASSERT_TRUE(w.join(me));
     ProspectorProgress g;
-    g.blueprints = {StructureKind::citadel, StructureKind::derrick};
+    g.blueprints = {{StructureKind::citadel, 1}, {StructureKind::derrick, 1}};
     w.setProgress(me, g);
     for (int day = 0; day < 40; day++) {
         w.setClock(w.nextDawn(w.clock()) + 1);
@@ -379,7 +379,7 @@ TEST(contracts_kept_through_the_save) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(9));
+    EXPECT_EQ(store->schemaVersion(), int64_t(10));
     const auto back = store->load(&why);
     ASSERT_TRUE(back.has_value());
     ASSERT_TRUE(back->pilots.size() == 1);
@@ -411,7 +411,7 @@ TEST(contracts_v4_save_migrates_and_draws) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(9));
+    EXPECT_EQ(store->schemaVersion(), int64_t(10));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);

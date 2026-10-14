@@ -179,26 +179,26 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
         // v0 (a new file) to v9.
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(9));
-        EXPECT_EQ(WorldStore::version(), int64_t(9));
+        EXPECT_EQ(store->schemaVersion(), int64_t(10));
+        EXPECT_EQ(WorldStore::version(), int64_t(10));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock', 'starfalls', "
                               "'realm_wallet')")[0][0],
                   std::string("10"));
         ASSERT_TRUE(store->write(sample(), &why).has_value());
     }
-    // A step that fails: the file stays at v9, its rows kept.
+    // A step that fails: the file stays at v10, its rows kept.
     std::vector<WorldStore::Migration> broken = WorldStore::migrations();
-    broken.push_back({10, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
+    broken.push_back({11, "ALTER TABLE no_such_table ADD COLUMN x TEXT"});
     EXPECT_TRUE(WorldStore::open(path, "first", &why, broken) == nullptr);
-    EXPECT_TRUE(why.find("migration to version 10") != std::string::npos);
-    // A future step: v9 to v10, the rows kept, the column there.
+    EXPECT_TRUE(why.find("migration to version 11") != std::string::npos);
+    // A future step: v10 to v11, the rows kept, the column there.
     std::vector<WorldStore::Migration> next = WorldStore::migrations();
-    next.push_back({10, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
+    next.push_back({11, "ALTER TABLE pilots ADD COLUMN title TEXT NOT NULL DEFAULT 'prospector'"});
     {
         auto store = WorldStore::open(path, "first", &why, next);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(10));
+        EXPECT_EQ(store->schemaVersion(), int64_t(11));
         const auto rows = store->rows("SELECT id, title FROM pilots ORDER BY id");
         ASSERT_TRUE(rows.size() == 2);
         EXPECT_TRUE(rows[0][1] == "prospector");
@@ -206,9 +206,9 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
         ASSERT_TRUE(back.has_value());
         EXPECT_TRUE(*back == sorted(sample()));
     }
-    // This build (v9) refuses a v10 file.
+    // This build (v10) refuses a v11 file.
     EXPECT_TRUE(WorldStore::open(path, "first", &why) == nullptr);
-    EXPECT_TRUE(why.find("schema version 10, this server knows 9") != std::string::npos);
+    EXPECT_TRUE(why.find("schema version 11, this server knows 10") != std::string::npos);
 }
 
 TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
@@ -227,7 +227,7 @@ TEST(save_v1_file_gets_the_worlds_clock_from_its_regions) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(9));
+    EXPECT_EQ(store->schemaVersion(), int64_t(10));
     const auto back = store->load(&why);
     ASSERT_TRUE(back.has_value());
     const double furthest = 321.5;
@@ -270,7 +270,7 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(9));
+    EXPECT_EQ(store->schemaVersion(), int64_t(10));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);
@@ -285,7 +285,9 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     EXPECT_EQ(g.unspent(), int64_t(9));
     EXPECT_TRUE(g.ranks.empty());
     EXPECT_TRUE(g.respecIsFree());
-    EXPECT_TRUE((g.blueprints == std::set<StructureKind>{StructureKind::citadel, StructureKind::derrick}));
+    // C2 (schema 10): copies, as many as the realm may still build, at
+    // least 1: the Citadel 1 (it stands), Derricks 4 - 1 (one going up).
+    EXPECT_TRUE((g.blueprints == std::map<StructureKind, int64_t>{{StructureKind::citadel, 1}, {StructureKind::derrick, 3}}));
     EXPECT_TRUE((g.feats == std::set<std::string>{WorldXp::built(StructureKind::citadel)}));
     // The strategy game's record is not a world's any more.
     EXPECT_TRUE(!w.levels(me) || w.levels(me)->picks(UnitKind::prospector).empty());

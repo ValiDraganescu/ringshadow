@@ -383,6 +383,56 @@ struct AUTOCRAFTCORE_API Rig {
     bool operator==(const Rig&) const = default;
 };
 
+/// The Citadel shop's consumables (C2, docs/prospector-progression.md "The
+/// Citadel shop"): bought from the pilot's wallet, kept in stacks, used from
+/// the field with keys 1-4. Append only: saves store the name.
+enum class Item : uint8_t { repairKit, hydrogenCanister, shieldCharge, surveyFlare };
+
+/// What a consumable is: its price, how many a pilot holds at most, its
+/// cooldown after a use, and how long its effect lasts (0: at once).
+struct ItemInfo {
+    Item item = Item::repairKit;
+    const char* title = "";
+    /// What it does, in a few words for the shop.
+    const char* text = "";
+    int64_t ore = 0;
+    int64_t hydrogen = 0;
+    int64_t stack = 1;
+    double cooldown = 0;
+    double lasts = 0;
+};
+
+/// Ore and MH a purchase costs.
+struct ShopPrice {
+    int64_t ore = 0;
+    int64_t hydrogen = 0;
+    bool operator==(const ShopPrice&) const = default;
+};
+
+/// The Citadel shop (C2): blueprints and consumables, paid from the pilot's
+/// own wallet (the tax does not apply).
+struct AUTOCRAFTCORE_API Shop {
+    /// A blueprint's price rises this much with each copy the pilot has
+    /// bought of that kind before.
+    static constexpr double blueprintGrowth = 1.5;
+    /// The `bought`th copy's price (0: the first) of `k`'s blueprint: ore
+    /// `(50 + 25 × floor) × 1.5^bought`, MH `5 × floor × 1.5^bought` (the
+    /// Citadel and the Derrick ore only), each rounded to 10. The floor is
+    /// the building's (`Progression::blueprintFloor`), not the pilot's.
+    /// Nothing for a kind with no blueprint (the Garrison).
+    static ShopPrice blueprintPrice(StructureKind k, int64_t bought);
+    /// The four consumables, in key order (1-4).
+    static const std::vector<ItemInfo>& items();
+    static const ItemInfo& item(Item i);
+    /// The repair kit gives back this share of the Prospector's full hp.
+    static constexpr double repairShare = 0.5;
+    /// The MH canister puts this much MH into the wallet.
+    static constexpr int64_t canisterHydrogen = 25;
+    /// The survey flare: sites within this many cells go on the pilot's
+    /// map, and the map shows the deposits within it while it burns.
+    static constexpr double flareRadius = 40;
+};
+
 /// A pilot's progression in a world: kept by the server, saved with the
 /// pilot (`SessionStore::encode`).
 struct AUTOCRAFTCORE_API ProspectorProgress {
@@ -398,8 +448,14 @@ struct AUTOCRAFTCORE_API ProspectorProgress {
     bool freeRespec = false;
     /// Points spent in the last `Progression::undoWindow` seconds, oldest first.
     std::vector<SkillSpend> recent;
-    /// Blueprints found.
-    std::set<StructureKind> blueprints;
+    /// Blueprint copies held (C2): building uses one up. A kind with none
+    /// has no entry.
+    std::map<StructureKind, int64_t> blueprints;
+    /// Blueprint copies bought at the Citadel, per kind, ever: the next
+    /// copy's price (`Shop::blueprintPrice`).
+    std::map<StructureKind, int64_t> bought;
+    /// Consumables held (C2). An item with none has no entry.
+    std::map<Item, int64_t> items;
     /// Sites found, regions and pads visited, feats done (ids the server
     /// gives), and survey chips found.
     std::set<std::string> sites;
@@ -467,8 +523,20 @@ struct AUTOCRAFTCORE_API ProspectorProgress {
     /// An ore load's chance of a survey chip (Core sampler, Lucky strike).
     double chipChance() const;
     /// Why the pilot can't put up a `k` now, owning `owned` of them in the
-    /// world: no blueprint, under its floor, or at its limit. Nil: it may.
+    /// world: no blueprint copy, under its floor, or at its limit. Nil: it may.
     std::optional<std::string> buildRefusal(StructureKind k, int64_t owned) const;
+
+    /// Blueprint copies of `k` held, and consumables of `i` held.
+    int64_t copies(StructureKind k) const;
+    int64_t held(Item i) const;
+    /// `n` more copies of `k` (a site, a chip, a purchase).
+    void giveBlueprint(StructureKind k, int64_t n = 1);
+    /// One copy of `k` used up (a building placed). False: none held.
+    bool useBlueprint(StructureKind k);
+    /// What the next copy of `k` costs this pilot.
+    ShopPrice blueprintPrice(StructureKind k) const;
+    /// One consumable of `i` used up. False: none held.
+    bool useItem(Item i);
 
     bool operator==(const ProspectorProgress&) const = default;
 };
@@ -498,6 +566,9 @@ template <> struct EnumInfo<SiteKind> {
 };
 template <> struct EnumInfo<Module> {
     static constexpr std::array<std::string_view, 5> names{"drillHead", "cargoPod", "plate", "torchTip", "surveyLens"};
+};
+template <> struct EnumInfo<Item> {
+    static constexpr std::array<std::string_view, 4> names{"repairKit", "hydrogenCanister", "shieldCharge", "surveyFlare"};
 };
 template <> struct EnumInfo<Beacon> {
     static constexpr std::array<std::string_view, 3> names{"citadel", "habDome", "derrick"};

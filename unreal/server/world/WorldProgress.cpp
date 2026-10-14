@@ -143,7 +143,9 @@ bool WorldMap::feat(PilotId pilot, const std::string& id) {
 
 bool WorldMap::findBlueprint(PilotId pilot, StructureKind kind, int64_t floor) {
     PilotState* p = pilotState(pilot);
-    if (!p || !p->progress.blueprints.insert(kind).second) return false;
+    if (!p) return false;
+    // C2: a copy, one use; every find pays (each site opens once a pilot).
+    p->progress.giveBlueprint(kind);
     const double xp = WorldXp::blueprintPerFloor * double(std::max<int64_t>(1, floor));
     // The level it opens at for this pilot (Blueprint savant).
     p->news.push_back(News{NewsKind::blueprint, std::string(rawValue(kind)), xp, p->progress.floor(kind), ""});
@@ -247,6 +249,21 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.taxPercent = Progression::realmTaxPercent;
     m.taxed = {it->second.taxed.ore, it->second.taxed.hydrogen};
     m.donated = {it->second.donated.ore, it->second.donated.hydrogen};
+    // C2: the shop's stacks, what is cooling down, a shield, a flare.
+    m.bought = g.bought;
+    m.items = g.items;
+    for (const auto& [item, at] : it->second.itemReady)
+        if (at > clock_) m.itemReady[item] = at;
+    if (const auto& f = it->second.flare; f && f->until > clock_)
+        m.flare = net::ProgressMessage::Flare{world_->regions[f->region].file.id, f->at, Shop::flareRadius, f->until};
+    if (!it->second.flight) {
+        const Region& r = *regions_[it->second.region];
+        const Simulation& sim = r.simulation();
+        if (const auto unit = r.driving(pilot))
+            if (const auto c = sim.skillClocks.find(*unit); c != sim.skillClocks.end() && c->second.shield &&
+                                                            *c->second.shield > sim.state.time)
+                m.shieldUntil = clock_ + (*c->second.shield - sim.state.time);
+    }
     if (const auto& o = it->second.opening)
         m.opening = net::ProgressMessage::Opening{siteId(o->region, o->site), o->refusal.empty() ? o->since : 0.0,
                                                   WorldSites::needs(world_->regions[o->region].built.sites[o->site].kind),
@@ -394,6 +411,7 @@ std::optional<WorldMap::Carried> WorldMap::takeClocks(size_t r, int64_t unit) {
     // Region time to seconds from now.
     for (auto& [s, t] : c.clock.ready) t -= sim.state.time;
     for (auto& [s, t] : c.clock.until) t -= sim.state.time;
+    if (c.clock.shield) *c.clock.shield -= sim.state.time;
     sim.skillClocks.erase(it);
     return c;
 }
@@ -406,6 +424,7 @@ void WorldMap::giveClocks(size_t r, int64_t unit, const std::optional<Carried>& 
     Simulation::SkillClock k = c->clock;
     for (auto& [s, t] : k.ready) t += from;
     for (auto& [s, t] : k.until) t += from;
+    if (k.shield) *k.shield += from;
     sim.skillClocks[unit] = k;
 }
 

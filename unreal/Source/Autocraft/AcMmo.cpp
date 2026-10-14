@@ -220,6 +220,8 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	CitadelAsked.Reset();
 	LastCitadelRefusal.Reset();
 	CitadelDone = 0;
+	ItemAsked.Reset();
+	ItemDone = 0;
 	FlightsAsked.Reset();
 	LastFlightRefusal.Reset();
 	bArriving = false;
@@ -728,6 +730,17 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (ItemAsked.Remove(R.request) > 0)
+		{
+			if (R.done) ItemDone += 1;
+			else
+			{
+				Notes.Add(Text(R.reason));
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: item use %u refused: %s"), R.request, *Text(R.reason));
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (FlightsAsked.Remove(R.request) > 0)
 		{
 			if (!R.done)
@@ -900,6 +913,35 @@ bool FAcMmoClient::Donate(const int64 Ore, const int64 Hydrogen, FString* Why)
 	LastCitadelRefusal.Reset();
 	CitadelAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: donate %lld ore %lld MH"), Id, (long long)Ore, (long long)Hydrogen);
+	return true;
+}
+
+bool FAcMmoClient::BuyBlueprint(const ac::StructureKind Kind, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->buyBlueprint(Kind);
+	LastCitadelRefusal.Reset();
+	CitadelAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: buy a %s blueprint"), Id, *Text(std::string(ac::rawValue(Kind))));
+	return true;
+}
+
+bool FAcMmoClient::BuyItem(const ac::Item Item, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->buyItem(Item);
+	LastCitadelRefusal.Reset();
+	CitadelAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: buy a %s"), Id, *Text(std::string(ac::rawValue(Item))));
+	return true;
+}
+
+bool FAcMmoClient::UseItem(const ac::Item Item, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->use(Item);
+	ItemAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: item use %u: %s"), Id, *Text(std::string(ac::rawValue(Item))));
 	return true;
 }
 

@@ -207,8 +207,9 @@ TEST(sites_each_pilot_opens_its_own) {
 
 // A wreck opens after 5 s of the act key held within reach; letting go
 // starts over; the Opening in the message counts from when it began. The
-// Derrick's blueprint is known already: 100 ore and 20 MH instead, no XP.
-TEST(sites_wreck_held_5_s_and_a_known_blueprint_pays_ore_and_mh) {
+// Derrick's blueprint is held already: the site gives a second copy (C2),
+// with its XP, and nothing into the wallet.
+TEST(sites_wreck_held_5_s_and_a_held_blueprint_gives_another_copy) {
     WorldMap w(first());
     ASSERT_TRUE(w.join(me));
     ASSERT_TRUE(w.findBlueprint(me, StructureKind::derrick, Progression::blueprintFloor(StructureKind::derrick)));
@@ -232,15 +233,16 @@ TEST(sites_wreck_held_5_s_and_a_known_blueprint_pays_ore_and_mh) {
     wait(w, me, ticks(w, 1.2), true);
     const auto g = *w.progress(me);
     EXPECT_TRUE(g.sites.count(wreck) == 1);
-    EXPECT_NEAR(g.xp, xp, 1e-9);
+    EXPECT_NEAR(g.xp, xp + WorldXp::blueprintPerFloor * 3, 1e-9);
+    EXPECT_EQ(g.copies(StructureKind::derrick), int64_t(2));
     const auto after = *w.wallet(me);
-    EXPECT_EQ(after.ore - wallet.ore, net::kSiteOre);
-    EXPECT_EQ(after.hydrogen - wallet.hydrogen, net::kSiteHydrogen);
+    EXPECT_EQ(after.ore, wallet.ore);
+    EXPECT_EQ(after.hydrogen, wallet.hydrogen);
     const auto news = w.takeNews(me);
     const auto* s = find(news, NewsKind::site);
     ASSERT_TRUE(s != nullptr);
-    EXPECT_EQ(s->value, int64_t(1));
-    EXPECT_EQ(count(news, NewsKind::blueprint), 0);
+    EXPECT_EQ(s->value, int64_t(0));
+    EXPECT_EQ(count(news, NewsKind::blueprint), 1);
     // Held on: nothing more.
     wait(w, me, ticks(w, 6), true);
     EXPECT_EQ(w.wallet(me)->ore, after.ore);
@@ -263,7 +265,7 @@ TEST(sites_vault_opens_only_at_its_floor_less_blueprint_savant) {
     // Level 49 with Blueprint savant at 3: the floor is 49.
     ProspectorProgress g = at(49);
     g.ranks[Skill::blueprintSavant] = 3;
-    g.blueprints = {StructureKind::citadel};
+    g.blueprints = {{StructureKind::citadel, 1}};
     EXPECT_EQ(g.floor(StructureKind::sentinel), int64_t(49));
     w.setProgress(me, g);
     w.takeNews(me);
@@ -315,12 +317,12 @@ TEST(sites_builds_refused_without_blueprint_under_floor_past_limit) {
     ASSERT_TRUE(w.join(me));
     auto why = w.build(me, StructureKind::citadel, *spot(w, me, StructureKind::citadel));
     ASSERT_TRUE(why.has_value());
-    EXPECT_TRUE(*why == "No Citadel blueprint yet: find it at a site");
+    EXPECT_TRUE(*why == "No blueprint: buy one at the Citadel (H)");
     why = w.build(me, StructureKind::garrison, drivenUnit(w, me)->position);
     ASSERT_TRUE(why.has_value());
     EXPECT_TRUE(*why == "No Garrison blueprint in this world");
     ProspectorProgress g = at(1);
-    g.blueprints = {StructureKind::citadel, StructureKind::derrick, StructureKind::habDome};
+    g.blueprints = {{StructureKind::citadel, 2}, {StructureKind::derrick, 1}, {StructureKind::habDome, 1}};
     w.setProgress(me, g);
     why = w.build(me, StructureKind::derrick, drivenUnit(w, me)->position);
     ASSERT_TRUE(why.has_value());
@@ -352,7 +354,7 @@ TEST(sites_builds_refused_without_blueprint_under_floor_past_limit) {
     EXPECT_EQ(o.limit(StructureKind::sentinel), int64_t(6));
     EXPECT_EQ(o.limit(StructureKind::foundry), int64_t(1));
     o.xp = Progression::xp(60);
-    o.blueprints = {StructureKind::habDome};
+    o.blueprints = {{StructureKind::habDome, 1}};
     EXPECT_TRUE(!o.buildRefusal(StructureKind::habDome, 4));
     EXPECT_TRUE(*o.buildRefusal(StructureKind::habDome, 5) == "Hab Dome limit reached: 5 (Overbuild allows more)");
 }
@@ -364,6 +366,8 @@ TEST(sites_dev_blueprints_give_every_blueprint) {
     WorldMap w(first(), params);
     ASSERT_TRUE(w.join(me));
     EXPECT_EQ(w.progress(me)->blueprints.size(), Progression::blueprintKinds().size());
+    for (const StructureKind k : Progression::blueprintKinds())
+        EXPECT_EQ(w.progress(me)->copies(k), WorldParams::devCopies);
     EXPECT_TRUE(!w.build(me, StructureKind::citadel, *spot(w, me, StructureKind::citadel)).has_value());
 }
 
@@ -504,7 +508,7 @@ TEST(sites_v3_pilot_keeps_the_blueprints_of_its_buildings) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(9));
+    EXPECT_EQ(store->schemaVersion(), int64_t(10));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);
@@ -512,7 +516,10 @@ TEST(sites_v3_pilot_keeps_the_blueprints_of_its_buildings) {
     WorldMap w(first());
     EXPECT_TRUE(w.restore(*loaded).empty());
     ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::restored);
-    EXPECT_TRUE((w.progress(me)->blueprints == std::set<StructureKind>{StructureKind::derrick, StructureKind::habDome}));
+    // Copies (schema 10): as many as the realm may still build, at least
+    // 1: Derricks 4 - 1, Hab Domes 3 - 1.
+    EXPECT_TRUE((w.progress(me)->blueprints ==
+                 std::map<StructureKind, int64_t>{{StructureKind::derrick, 3}, {StructureKind::habDome, 2}}));
     EXPECT_EQ(w.realmCount(StructureKind::habDome), int64_t(1));
     ASSERT_TRUE(store->write(w.save(), &why).has_value());
     EXPECT_TRUE(store->rows("SELECT gated FROM pilots")[0][0] == "1");

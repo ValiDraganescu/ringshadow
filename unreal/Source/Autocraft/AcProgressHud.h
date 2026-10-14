@@ -45,6 +45,21 @@ struct FAcSlotView
 	bool operator==(const FAcSlotView&) const = default;
 };
 
+/// A consumable's stack beside the slots (C2, keys 1-4).
+struct FAcItemView
+{
+	/// "KIT", "MH", "SHIELD", "FLARE".
+	FString Short;
+	int64 Held = 0;
+	/// Seconds until it can be used again, of `Cooldown` (whole tenths).
+	double Left = 0;
+	double Cooldown = 0;
+	/// Seconds its effect still runs (a shield, a flare; 0: none).
+	double Running = 0;
+
+	bool operator==(const FAcItemView&) const = default;
+};
+
 class AUTOCRAFT_API SAcProgressHud : public SLeafWidget
 {
 public:
@@ -55,6 +70,8 @@ public:
 
 	/// The slots (none: the row hides) over the dashboard of `Layout`.
 	void SetSlots(const TOptional<std::array<FAcSlotView, 3>>& Slots, const FAcCabLayout& Layout);
+	/// The consumables' stacks, small, right of the slots (shown with them).
+	void SetItems(const TArray<FAcItemView>& Items);
 	/// A find: `Title` large in `Accent`, `Sub` under it; 4.5 s, newest on top.
 	void Toast(const FString& Title, const FString& Sub, const FLinearColor& Accent, double Now);
 	int32 Toasts() const { return Notes.Num(); }
@@ -99,6 +116,7 @@ private:
 		double At = 0;
 	};
 	TOptional<std::array<FAcSlotView, 3>> Row;
+	TArray<FAcItemView> Stacks;
 	TOptional<FOpening> Opening;
 	TOptional<FRespawn> Respawn;
 	FAcCabLayout Lay;
@@ -107,6 +125,7 @@ private:
 
 	EActiveTimerReturnType Animate(double Now, float Dt);
 	void PaintSlots(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
+	void PaintItems(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f RowRight, float RowBottom) const;
 	void PaintOpening(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintRespawn(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintToasts(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size, double Now) const;
@@ -126,6 +145,8 @@ struct AUTOCRAFT_API AcProgressHud
 	/// world's first two (`net::kWorldBuildKinds`) only.
 	static FString BlueprintRefusal(const FAcMmoClient* Mmo, ac::StructureKind Kind);
 	/// That refusal in a word or two: "NO BLUEPRINT", "LV 15", "REALM LIMIT".
+	/// Blueprint copies of `Kind` the pilot holds (C2; 0: none or not known).
+	static int64 Copies(const FAcMmoClient* Mmo, ac::StructureKind Kind);
 	static FString BlueprintTag(const FAcMmoClient* Mmo, ac::StructureKind Kind);
 	/// Who built building `Id` of the pilot's region (R1): "you", another
 	/// pilot's callsign ("Pilot 045B"), or empty when not told.

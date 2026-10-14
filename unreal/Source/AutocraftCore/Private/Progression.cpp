@@ -766,13 +766,73 @@ double ProspectorProgress::chipChance() const {
 std::optional<std::string> ProspectorProgress::buildRefusal(StructureKind k, int64_t owned) const {
     const std::string name = Simulation::title(k);
     if (Progression::blueprintFloor(k) <= 0) return "No " + name + " blueprint in this world";
-    if (!blueprints.count(k)) return "No " + name + " blueprint yet: find it at a site";
+    if (copies(k) <= 0) return std::string("No blueprint: buy one at the Citadel (H)");
     if (level() < floor(k)) return "The " + name + " opens at level " + std::to_string(floor(k));
     if (owned >= limit(k)) {
         const bool more = k == StructureKind::habDome || k == StructureKind::derrick || k == StructureKind::sentinel;
         return name + " limit reached: " + std::to_string(limit(k)) + (more ? " (Overbuild allows more)" : "");
     }
     return std::nullopt;
+}
+
+int64_t ProspectorProgress::copies(StructureKind k) const {
+    const auto it = blueprints.find(k);
+    return it == blueprints.end() ? 0 : it->second;
+}
+
+int64_t ProspectorProgress::held(Item i) const {
+    const auto it = items.find(i);
+    return it == items.end() ? 0 : it->second;
+}
+
+void ProspectorProgress::giveBlueprint(StructureKind k, int64_t n) {
+    if (n > 0) blueprints[k] += n;
+}
+
+bool ProspectorProgress::useBlueprint(StructureKind k) {
+    const auto it = blueprints.find(k);
+    if (it == blueprints.end() || it->second <= 0) return false;
+    if (--it->second <= 0) blueprints.erase(it);
+    return true;
+}
+
+ShopPrice ProspectorProgress::blueprintPrice(StructureKind k) const {
+    const auto it = bought.find(k);
+    return Shop::blueprintPrice(k, it == bought.end() ? 0 : it->second);
+}
+
+bool ProspectorProgress::useItem(Item i) {
+    const auto it = items.find(i);
+    if (it == items.end() || it->second <= 0) return false;
+    if (--it->second <= 0) items.erase(it);
+    return true;
+}
+
+// MARK: - The Citadel shop (C2)
+
+ShopPrice Shop::blueprintPrice(StructureKind k, int64_t bought) {
+    const int64_t floor = Progression::blueprintFloor(k);
+    if (floor <= 0) return {};
+    const double grow = std::pow(blueprintGrowth, double(std::max<int64_t>(0, bought)));
+    auto ten = [](double x) { return int64_t(std::llround(x / 10.0)) * 10; };
+    const bool oreOnly = k == StructureKind::citadel || k == StructureKind::derrick;
+    return {std::max<int64_t>(10, ten(double(50 + 25 * floor) * grow)), oreOnly ? 0 : ten(double(5 * floor) * grow)};
+}
+
+const std::vector<ItemInfo>& Shop::items() {
+    static const std::vector<ItemInfo> list{
+        {Item::repairKit, "Repair kit", "Mends half the Prospector's hp at once", 120, 10, 5, 30, 0},
+        {Item::hydrogenCanister, "MH canister", "25 MH into the wallet, for jets and flights", 150, 0, 3, 60, 0},
+        {Item::shieldCharge, "Shield charge", "No damage taken for 8 s", 100, 30, 3, 45, 8},
+        {Item::surveyFlare, "Survey flare", "Sites and deposits near on the map, 60 s", 80, 15, 5, 20, 60},
+    };
+    return list;
+}
+
+const ItemInfo& Shop::item(Item i) {
+    for (const ItemInfo& x : items())
+        if (x.item == i) return x;
+    return items().front();
 }
 
 bool ProspectorProgress::spend(Skill s, double now) {

@@ -672,7 +672,7 @@ bool decode(const std::vector<uint8_t>& bytes, AckMessage& m) {
 std::vector<uint8_t> encode(const RequestMessage& m) {
     BitWriter w = start(MessageType::request);
     writeVarint(w, m.id);
-    w.writeBits(m.what.index(), 4);
+    w.writeBits(m.what.index(), 5);
     if (const auto* t = std::get_if<RequestMessage::Take>(&m.what)) writeSigned(w, t->unit);
     if (const auto* f = std::get_if<RequestMessage::Fly>(&m.what)) {
         writeString(w, f->region);
@@ -701,6 +701,12 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeSigned(w, p->ore);
         writeSigned(w, p->hydrogen);
     }
+    if (const auto* p = std::get_if<RequestMessage::Buy>(&m.what)) {
+        w.writeBool(p->blueprint.has_value());
+        if (p->blueprint) w.writeBits(uint64_t(*p->blueprint), 4);
+        else w.writeBits(uint64_t(p->item), 3);
+    }
+    if (const auto* p = std::get_if<RequestMessage::Use>(&m.what)) w.writeBits(uint64_t(p->item), 3);
     return w.bytes();
 }
 
@@ -708,7 +714,14 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
     BitReader r(bytes.data(), bytes.size());
     if (!open(bytes, MessageType::request, r)) return false;
     m.id = static_cast<uint32_t>(readVarint(r));
-    switch (r.readBits(4)) {
+    // An item (C2), in 3 bits.
+    auto readItem = [&](Item& item) {
+        const uint64_t i = r.readBits(3);
+        if (i >= uint64_t(allCases<Item>().size())) return false;
+        item = static_cast<Item>(i);
+        return true;
+    };
+    switch (r.readBits(5)) {
     case 0: m.what = RequestMessage::Take{readSigned(r)}; break;
     case 1: m.what = RequestMessage::HandBack{}; break;
     case 2: {
@@ -783,6 +796,24 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         m.what = p;
         break;
     }
+    case 14: {
+        RequestMessage::Buy p;
+        if (r.readBool()) {
+            const uint64_t kind = r.readBits(4);
+            if (kind >= uint64_t(allCases<StructureKind>().size())) return false;
+            p.blueprint = static_cast<StructureKind>(kind);
+        } else if (!readItem(p.item)) {
+            return false;
+        }
+        m.what = p;
+        break;
+    }
+    case 15: {
+        RequestMessage::Use p;
+        if (!readItem(p.item)) return false;
+        m.what = p;
+        break;
+    }
     default: return false;
     }
     return r.ok();
@@ -815,7 +846,10 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     writeSigned(w, m.respecPrice);
     w.writeBool(m.respecFree);
     writeVarint(w, m.blueprints.size());
-    for (StructureKind k : m.blueprints) w.writeBits(uint64_t(k), 4);
+    for (const auto& [k, n] : m.blueprints) {
+        w.writeBits(uint64_t(k), 4);
+        writeSigned(w, n);
+    }
     writeStrings(w, m.sitesKnown);
     writeStrings(w, m.sitesFound);
     w.writeBool(m.opening.has_value());
@@ -870,6 +904,30 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeSigned(w, p->hydrogen);
     }
     writeSigned(w, m.taxPercent);
+    writeVarint(w, m.bought.size());
+    for (const auto& [k, n] : m.bought) {
+        w.writeBits(uint64_t(k), 4);
+        writeSigned(w, n);
+    }
+    writeVarint(w, m.items.size());
+    for (const auto& [i, n] : m.items) {
+        w.writeBits(uint64_t(i), 3);
+        writeSigned(w, n);
+    }
+    writeVarint(w, m.itemReady.size());
+    for (const auto& [i, at] : m.itemReady) {
+        w.writeBits(uint64_t(i), 3);
+        codec::kMs.write(w, at);
+    }
+    codec::kMs.write(w, m.shieldUntil);
+    w.writeBool(m.flare.has_value());
+    if (m.flare) {
+        writeString(w, m.flare->region);
+        codec::Fixed{1000}.write(w, m.flare->at.x);
+        codec::Fixed{1000}.write(w, m.flare->at.y);
+        codec::Fixed{1000}.write(w, m.flare->radius);
+        codec::kMs.write(w, m.flare->until);
+    }
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 4);
@@ -923,7 +981,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     for (uint64_t i = 0; i < blueprints; i++) {
         const uint64_t k = r.readBits(4);
         if (k >= uint64_t(allCases<StructureKind>().size())) return false;
-        m.blueprints.insert(static_cast<StructureKind>(k));
+        m.blueprints[static_cast<StructureKind>(k)] = readSigned(r);
     }
     if (!readStrings(r, m.sitesKnown) || !readStrings(r, m.sitesFound)) return false;
     if (r.readBool()) {
@@ -990,6 +1048,43 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         p->hydrogen = readSigned(r);
     }
     m.taxPercent = readSigned(r);
+    const uint64_t bought = readVarint(r);
+    if (bought > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < bought; i++) {
+        const uint64_t k = r.readBits(4);
+        if (k >= uint64_t(allCases<StructureKind>().size())) return false;
+        m.bought[static_cast<StructureKind>(k)] = readSigned(r);
+    }
+    auto readItem = [&](Item& item) {
+        const uint64_t i = r.readBits(3);
+        if (i >= uint64_t(allCases<Item>().size())) return false;
+        item = static_cast<Item>(i);
+        return true;
+    };
+    const uint64_t items = readVarint(r);
+    if (items > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < items; i++) {
+        Item item{};
+        if (!readItem(item)) return false;
+        m.items[item] = readSigned(r);
+    }
+    const uint64_t itemReady = readVarint(r);
+    if (itemReady > r.bitsLeft()) return false;
+    for (uint64_t i = 0; i < itemReady; i++) {
+        Item item{};
+        if (!readItem(item)) return false;
+        codec::kMs.read(r, m.itemReady[item]);
+    }
+    codec::kMs.read(r, m.shieldUntil);
+    if (r.readBool()) {
+        ProgressMessage::Flare f;
+        if (!readString(r, f.region)) return false;
+        codec::Fixed{1000}.read(r, f.at.x);
+        codec::Fixed{1000}.read(r, f.at.y);
+        codec::Fixed{1000}.read(r, f.radius);
+        codec::kMs.read(r, f.until);
+        m.flare = f;
+    }
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {

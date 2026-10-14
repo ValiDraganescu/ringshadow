@@ -216,12 +216,12 @@ TEST(progression_respecKeepsFindsAndEmptiesSlots) {
     fillBelow(p, Branch::deepVein, 2, 5);
     ASSERT_TRUE(p.spend(Skill::overcharge, 0));
     ASSERT_TRUE(p.slot(0, Skill::overcharge));
-    p.blueprints.insert(StructureKind::derrick);
+    p.giveBlueprint(StructureKind::derrick);
     p.regions.insert("rust-hollow");
     ASSERT_TRUE(p.respec(0).has_value());
     EXPECT_TRUE(!p.slots[0].has_value());
     EXPECT_TRUE(p.ranks.empty());
-    EXPECT_TRUE(p.blueprints.count(StructureKind::derrick) == 1);
+    EXPECT_EQ(p.copies(StructureKind::derrick), int64_t(1));
     EXPECT_TRUE(p.regions.count("rust-hollow") == 1);
     EXPECT_EQ(p.xp, Progression::xp(30));
 }
@@ -315,7 +315,9 @@ TEST(progression_progressJsonRoundTrip) {
     ASSERT_TRUE(p.spend(Skill::overcharge, 12.5));
     ASSERT_TRUE(p.slot(1, Skill::overcharge));
     p.respecs = 2;
-    p.blueprints = {StructureKind::citadel, StructureKind::derrick};
+    p.blueprints = {{StructureKind::citadel, 1}, {StructureKind::derrick, 3}};
+    p.bought = {{StructureKind::derrick, 2}};
+    p.items = {{Item::repairKit, 4}, {Item::surveyFlare, 1}};
     p.sites = {"prospect-landing/lander-wreck"};
     p.regions = {"rust-hollow"};
     p.pads = {"rust-hollow/pad"};
@@ -335,6 +337,13 @@ TEST(progression_progressJsonRoundTrip) {
     EXPECT_TRUE(!old->slots[0].has_value());
     EXPECT_TRUE(old->slots[2] == Skill::overcharge);
     EXPECT_EQ(old->respecs, int64_t(0));
+    // Before C2 the blueprints were the kinds found, a list: one copy each.
+    const auto found = SessionStore::decode<ProspectorProgress>(R"({"xp": 10, "blueprints": ["citadel", "habDome"]})");
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->copies(StructureKind::citadel), int64_t(1));
+    EXPECT_EQ(found->copies(StructureKind::habDome), int64_t(1));
+    EXPECT_EQ(found->copies(StructureKind::derrick), int64_t(0));
+    EXPECT_TRUE(found->bought.empty() && found->items.empty());
 }
 
 // The skill screen's words: what a node gives in all at a rank, and every
@@ -365,4 +374,53 @@ TEST(progression_blueprintFloors) {
     EXPECT_EQ(Progression::blueprintFloor(StructureKind::garrison), int64_t(0));
     for (size_t i = 1; i < k.size(); i++)
         EXPECT_TRUE(Progression::blueprintFloor(k[i]) > Progression::blueprintFloor(k[i - 1]));
+}
+
+// The Citadel shop (C2): a blueprint's price grows with its floor and with
+// every copy bought; the Citadel and the Derrick cost ore only.
+TEST(progression_blueprintPriceRises) {
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::citadel, 0) == (ShopPrice{80, 0}));
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::derrick, 0) == (ShopPrice{130, 0}));
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::habDome, 0) == (ShopPrice{250, 40}));
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::habDome, 1) == (ShopPrice{380, 60}));
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::habDome, 4) == (ShopPrice{1270, 200}));
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::sentinel, 0) == (ShopPrice{1430, 280}));
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::garrison, 0) == ShopPrice{});
+    for (const StructureKind k : Progression::blueprintKinds())
+        for (int64_t n = 0; n < 8; n++) {
+            const ShopPrice a = Shop::blueprintPrice(k, n), b = Shop::blueprintPrice(k, n + 1);
+            EXPECT_TRUE(b.ore > a.ore && b.hydrogen >= a.hydrogen);
+        }
+    // Up the floors, dearer.
+    const auto& kinds = Progression::blueprintKinds();
+    for (size_t i = 1; i < kinds.size(); i++)
+        EXPECT_TRUE(Shop::blueprintPrice(kinds[i], 0).ore > Shop::blueprintPrice(kinds[i - 1], 0).ore);
+    ProspectorProgress p;
+    p.bought[StructureKind::habDome] = 1;
+    EXPECT_TRUE(p.blueprintPrice(StructureKind::habDome) == Shop::blueprintPrice(StructureKind::habDome, 1));
+}
+
+// Copies and stacks: given, used up one at a time, gone at none.
+TEST(progression_blueprintCopiesAndItems) {
+    ProspectorProgress p = atLevel(10);
+    EXPECT_TRUE(p.buildRefusal(StructureKind::citadel, 0) == std::string("No blueprint: buy one at the Citadel (H)"));
+    p.giveBlueprint(StructureKind::citadel, 2);
+    EXPECT_EQ(p.copies(StructureKind::citadel), int64_t(2));
+    EXPECT_TRUE(!p.buildRefusal(StructureKind::citadel, 0));
+    EXPECT_TRUE(p.useBlueprint(StructureKind::citadel));
+    EXPECT_TRUE(p.useBlueprint(StructureKind::citadel));
+    EXPECT_TRUE(!p.useBlueprint(StructureKind::citadel));
+    EXPECT_TRUE(p.blueprints.empty());
+    p.items[Item::shieldCharge] = 1;
+    EXPECT_EQ(p.held(Item::shieldCharge), int64_t(1));
+    EXPECT_TRUE(p.useItem(Item::shieldCharge));
+    EXPECT_TRUE(!p.useItem(Item::shieldCharge));
+    EXPECT_TRUE(p.items.empty());
+    // Four items, in key order, each with a price and a stack.
+    ASSERT_TRUE(Shop::items().size() == 4);
+    for (size_t i = 0; i < Shop::items().size(); i++) {
+        const ItemInfo& x = Shop::items()[i];
+        EXPECT_TRUE(size_t(x.item) == i && x.ore + x.hydrogen > 0 && x.stack > 0 && x.cooldown > 0);
+        EXPECT_TRUE(&Shop::item(x.item) == &x);
+    }
 }

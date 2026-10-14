@@ -132,6 +132,14 @@
 //      gave, the donate buttons
 //   03 after a donation of 1,000 ore: the realm wallet up, the foot's thanks
 //
+// -AcMmoShotsC2 (it adds -AcMmoDevRig: the realm's Citadel to stand at and a
+// full wallet): the Citadel shop (docs/mmorpg-m8.md C2), DIR/c2-NN-moment.png:
+//   01 the SHOP tab after buying a Hab Dome blueprint and a shield charge
+//      (and a repair kit): copies, prices up, stacks, the foot's "Bought"
+//   02 the build menu (B): every blueprint with its copies (×N)
+//   03 the shield charge used in the field (key 3): its stack lit and
+//      counting down by the Q/C/G slots
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -256,6 +264,12 @@ namespace
 	int64 C1DonatedBefore = 0;
 	/// The load it brought home.
 	int64 C1Load = 0;
+	/// -AcMmoShotsC2: the MH before buying, the Hab Dome copy's price and
+	/// the copies before, the items used before.
+	int64 C2Hydrogen = 0;
+	ac::ShopPrice C2Price;
+	int64 C2Copies = 0;
+	int32 C2Used = 0;
 	struct FB1Sample
 	{
 		double At;
@@ -559,7 +573,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// -AcMmoShotsG2: the dev rig's home (a Citadel, level 25, a full wallet),
 		// for this step only (the flow steps before it in the run go without).
 		if ((FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsG2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW2"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -605,6 +620,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1"))) T.Phase = 900;
 			// -AcMmoShotsC1: only the Citadel's tax and the realm wallet (1000-1012).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"))) T.Phase = 1000;
+			// -AcMmoShotsC2: only the Citadel shop (1100-1108).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2"))) T.Phase = 1100;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -2978,6 +2995,110 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 1009:
 		CloseCitadelScreen();
+		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsC2
+	case 1100:
+		// The dev rig's home: the Prospector where it unloads at the realm's Citadel.
+		if (S && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
+		{
+			Check(AtRealmCitadel(), TEXT("c2: the pilot stands at the realm's Citadel"));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("c2: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
+			{
+				Check(W->Key(EKeys::Tab) && W->Tab() == SAcCitadelScreen::ETab::Shop, TEXT("c2: Tab shows the SHOP"));
+			}
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel"));
+		return;
+	case 1101:
+	{
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (!W || !P || Since() < 1.0) return;
+		const FAcCitadelScreenInfo& I = W->GetInfo();
+		Check(I.Blueprints.Num() == int32(ac::Progression::blueprintKinds().size()) && I.Items.Num() == 4,
+			FString::Printf(TEXT("c2: the shop lists %d blueprints and %d supplies"), I.Blueprints.Num(), I.Items.Num()));
+		Check(I.ShopWhyNot.IsEmpty(), TEXT("c2: the shop sells here"));
+		Shots.OreBefore = Ore;
+		C2Hydrogen = Hydrogen;
+		C2Price = ac::Shop::blueprintPrice(ac::StructureKind::habDome, P->bought.count(ac::StructureKind::habDome) ? P->bought.at(ac::StructureKind::habDome) : 0);
+		const auto Copies = P->blueprints.find(ac::StructureKind::habDome);
+		C2Copies = Copies == P->blueprints.end() ? 0 : Copies->second;
+		// The Hab Dome's blueprint (key 3 on the SHOP tab), a repair kit, a shield charge.
+		Check(W->Key(EKeys::Three), TEXT("c2: key 3 buys a Hab Dome blueprint"));
+		Mmo->BuyItem(ac::Item::repairKit);
+		W->Buy(true, int32(ac::Item::shieldCharge));
+		Advance();
+		return;
+	}
+	case 1102:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		auto Has = [&](ac::Item I) { return P && P->items.count(I) && P->items.at(I) > 0; };
+		if (P && Has(ac::Item::repairKit) && Has(ac::Item::shieldCharge) && P->blueprints.count(ac::StructureKind::habDome)
+			&& P->blueprints.at(ac::StructureKind::habDome) == C2Copies + 1 && Mmo->CitadelKept() >= 3 && Since() > 1.0)
+		{
+			const ac::ItemInfo& Kit = ac::Shop::item(ac::Item::repairKit);
+			const ac::ItemInfo& Shield = ac::Shop::item(ac::Item::shieldCharge);
+			Check(Ore == Shots.OreBefore - C2Price.ore - Kit.ore - Shield.ore,
+				FString::Printf(TEXT("c2: the wallet paid in ore: %lld -> %lld"), (long long)Shots.OreBefore, (long long)Ore));
+			Check(Hydrogen == C2Hydrogen - C2Price.hydrogen - Kit.hydrogen - Shield.hydrogen,
+				FString::Printf(TEXT("c2: the wallet paid in MH: %lld -> %lld"), (long long)C2Hydrogen, (long long)Hydrogen));
+			const ac::ShopPrice Next = ac::Shop::blueprintPrice(ac::StructureKind::habDome, P->bought.at(ac::StructureKind::habDome));
+			Check(Next.ore > C2Price.ore, FString::Printf(TEXT("c2: the next Hab Dome copy costs more: %lld -> %lld ore"), (long long)C2Price.ore,
+				(long long)Next.ore));
+			Check(CitadelScreenWidget() && !CitadelScreenWidget()->KeptText().IsEmpty(), TEXT("c2: the foot says what was bought"));
+			Shoot(TEXT("c2-01-shop"), TEXT("the SHOP tab after buying a Hab Dome blueprint, a repair kit and a shield charge"));
+			return;
+		}
+		if (!Mmo->CitadelRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("c2: buy: %s"), *Mmo->CitadelRefusal()));
+			Finish();
+			return;
+		}
+		TimedOut(TEXT("the purchases kept"), 10);
+		return;
+	}
+	case 1103:
+	{
+		CloseCitadelScreen();
+		UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+		Check(Build && Build->Key(TEXT("b")) && Build->MenuOpen(), TEXT("c2: B opens the build menu"));
+		Check(AcProgressHud::Copies(Mmo, ac::StructureKind::habDome) == C2Copies + 1,
+			FString::Printf(TEXT("c2: the build menu counts %lld Hab Dome copies"), (long long)AcProgressHud::Copies(Mmo, ac::StructureKind::habDome)));
+		Advance();
+		return;
+	}
+	case 1104:
+		if (Since() > 1.0) Shoot(TEXT("c2-02-build-menu"), TEXT("the build menu: every blueprint with its copies"));
+		return;
+	case 1105:
+	{
+		if (UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this)) Build->Key(TEXT("esc"));
+		// Turned away from the Citadel's wall: the field, then the shield (key 3's ask).
+		Stop(Face(U->position * 2.0 - CitadelOf(*S)->position));
+		Check(Mmo->UseItem(ac::Item::shieldCharge), TEXT("c2: key 3 asks to use the shield charge"));
+		C2Used = Mmo->ItemsUsed();
+		Advance();
+		return;
+	}
+	case 1106:
+		if (const ac::net::ProgressMessage* P = Mmo->Progress(); P && P->shieldUntil > 0 && Since() > 1.0)
+		{
+			Check(!P->items.count(ac::Item::shieldCharge), TEXT("c2: the shield charge's stack is used up"));
+			Check(Mmo->ItemsUsed() > C2Used, TEXT("c2: the server kept the use"));
+			Check(P->itemReady.count(ac::Item::shieldCharge) == 1, TEXT("c2: the shield charge cools down"));
+			Shoot(TEXT("c2-03-shield-used"), TEXT("the shield charge running: its stack lit by the slots"));
+			return;
+		}
+		TimedOut(TEXT("the shield charge used"), 10);
+		return;
+	case 1107:
 		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;

@@ -11,9 +11,15 @@
 //   └─────────────────────────────┘ └─────────────────────────────────────┘
 //   what was given, or why not                                  the keys
 //
-// Built with tabs in mind: REALM is the first; the Citadel's shop (C2) and
-// its upgrades (D1) add theirs to `ETab`, each its own body under the same
-// header and foot.
+// Tabs: REALM, then SHOP (C2: blueprint copies and consumables from the
+// pilot's own wallet, docs/prospector-progression.md "The Citadel shop");
+// the upgrades (D1) add theirs to `ETab`, each its own body under the same
+// header and foot. Tab switches them.
+//
+//   SHOP   ┌ BLUEPRINTS ──────────────────────────┐ ┌ SUPPLIES ───────────┐
+//          │ Citadel   ×1        80 ore      [BUY] │ │ 1 Repair kit   [BUY]│
+//          │ Hab Dome  ×0  LV 8  250 ore · 40 MH … │ │ 2/5 · 120 ore · 10 MH│
+//          └───────────────────────────────────────┘ └─────────────────────┘
 //
 // The screen only shows and asks: a donation goes to its owner (`OnDonate`),
 // which asks the server and hands the answer back through `SetInfo` (a
@@ -23,6 +29,27 @@
 
 #include "CoreMinimal.h"
 #include "Widgets/SLeafWidget.h"
+
+/// A line of the Citadel's shop (C2): a blueprint or a consumable.
+struct FAcShopLine
+{
+	FString Name;
+	/// What it does (a consumable), in a few words.
+	FString Note;
+	/// Held now, and the most held (a consumable; 0: no cap).
+	int64 Held = 0;
+	int64 Stack = 0;
+	/// What the next one costs.
+	int64 Ore = 0;
+	int64 Hydrogen = 0;
+	/// The level a blueprint's building opens at, when the pilot is below
+	/// it (0: it builds now). Buying below the floor is allowed.
+	int64 OpensAt = 0;
+	/// A consumable's key in the field ("1").
+	FString Key;
+
+	bool operator==(const FAcShopLine&) const = default;
+};
 
 /// What the Citadel screen shows.
 struct FAcCitadelScreenInfo
@@ -45,23 +72,30 @@ struct FAcCitadelScreenInfo
 	FString Builder;
 	/// Why a donation can't go from here (empty: it can: at the Citadel).
 	FString DonateWhyNot;
+	/// C2, the shop: a line per blueprint (the build menu's order) and per
+	/// consumable (keys 1-4); why nothing can be bought from here.
+	TArray<FAcShopLine> Blueprints;
+	TArray<FAcShopLine> Items;
+	FString ShopWhyNot;
 
 	bool operator==(const FAcCitadelScreenInfo&) const = default;
 };
 
 DECLARE_DELEGATE_TwoParams(FAcOnDonate, int64 /*Ore*/, int64 /*Hydrogen*/);
+DECLARE_DELEGATE_TwoParams(FAcOnShopBuy, bool /*bItem*/, int32 /*Index*/);
 
 class AUTOCRAFT_API SAcCitadelScreen : public SLeafWidget
 {
 public:
 	SLATE_BEGIN_ARGS(SAcCitadelScreen) {}
 		SLATE_EVENT(FAcOnDonate, OnDonate)
+		SLATE_EVENT(FAcOnShopBuy, OnBuy)
 		SLATE_EVENT(FSimpleDelegate, OnClose)
 	SLATE_END_ARGS()
 
-	/// The screen's tabs: the realm's wallet now; the shop (C2) and the
-	/// upgrades (D1) come after it.
-	enum class ETab : uint8 { Realm };
+	/// The screen's tabs: the realm's wallet, the shop (C2); the upgrades
+	/// (D1) come after them.
+	enum class ETab : uint8 { Realm, Shop };
 
 	/// The donate buttons: 100, 1,000 and all, of ore (0-2) and of MH (3-5).
 	static constexpr int32 DonateButtons = 6;
@@ -80,6 +114,13 @@ public:
 	const FString& KeptText() const { return Kept; }
 
 	ETab Tab() const { return CurrentTab; }
+	void SetTab(ETab InTab);
+
+	/// The shop (C2): why line `Index` of the blueprints (or of the
+	/// consumables, `bItem`) can't be bought now (empty: it can), and its
+	/// ask (a click; keys 1-8 on the SHOP tab buy blueprints).
+	FString BuyWhyNot(bool bItem, int32 Index) const;
+	void Buy(bool bItem, int32 Index);
 
 	/// What button `Index` gives now (ore, MH): "all" is the wallet's.
 	TPair<int64, int64> Amount(int32 Index) const;
@@ -123,6 +164,7 @@ private:
 
 	void PaintHeader(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintRealm(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
+	void PaintShop(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintFoot(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintButton(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P, const FTarget& T, const FString& Label,
 		bool bLit, const FLinearColor& Accent) const;
@@ -133,8 +175,12 @@ private:
 	FString Kept;
 	/// What the last ask gave (ore, MH), for the foot once kept.
 	TPair<int64, int64> Asked{0, 0};
+	/// What the last shop ask bought ("Hab Dome blueprint"; empty: the last
+	/// ask was a donation).
+	FString Bought;
 
 	FAcOnDonate OnDonateDelegate;
+	FAcOnShopBuy OnBuyDelegate;
 	FSimpleDelegate OnCloseDelegate;
 	double OpenedAt = 0;
 	/// When the realm wallet last grew (its flash).
@@ -144,6 +190,8 @@ private:
 	mutable TArray<FTarget> Targets;
 	mutable FBox2f WalletBox;
 	mutable FBox2f DonateBox;
+	mutable FBox2f BlueprintBox;
+	mutable FBox2f ItemBox;
 	mutable FBox2f FootBox;
 	mutable float PanelScale = 1.0f;
 	mutable FVector2f PanelOrigin = FVector2f::ZeroVector;

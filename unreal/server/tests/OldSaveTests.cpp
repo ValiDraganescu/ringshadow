@@ -66,7 +66,7 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(9));
+    EXPECT_EQ(store->schemaVersion(), int64_t(10));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     WorldMap w(firstWorld());
@@ -85,7 +85,9 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     // Its progression kept, the blueprints of what it built given.
     const ProspectorProgress g = *w.progress(me);
     EXPECT_NEAR(g.xp, 900, 1e-9);
-    EXPECT_TRUE((g.blueprints == std::set<StructureKind>{StructureKind::citadel, StructureKind::derrick}));
+    // C2 (schema 10): copies, as many as the realm may still build, at
+    // least 1: the Citadel 1 (it stands, at least 1), Derricks 4 - 1.
+    EXPECT_TRUE((g.blueprints == std::map<StructureKind, int64_t>{{StructureKind::citadel, 1}, {StructureKind::derrick, 3}}));
     // Its contracts are drawn on the next step.
     w.step();
     EXPECT_TRUE(!w.contracts(me).empty());

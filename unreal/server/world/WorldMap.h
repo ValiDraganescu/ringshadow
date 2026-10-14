@@ -197,8 +197,10 @@ struct WorldParams {
     /// A well no one pumps grows back 1 MH every this many seconds, up to
     /// what it held at the start (docs/mmorpg-m6.md, "Decided"). 0: never.
     double wellRegrowEvery = 10;
-    /// Dev and shots (`--dev-blueprints`): a new pilot has every blueprint.
+    /// Dev and shots (`--dev-blueprints`): a new pilot has every blueprint,
+    /// `devCopies` copies of each (C2).
     bool devBlueprints = false;
+    static constexpr int64_t devCopies = 9;
     /// Dev and shots (`--dev-rig`): a new pilot owns a finished Citadel,
     /// Foundry and Lab round its Prospector (which stands where it unloads
     /// at the Citadel), and its rig is stocked: marks researched, modules
@@ -412,8 +414,8 @@ public:
     bool firstVisit(PilotId pilot, const std::string& region);
     bool firstLanding(PilotId pilot, const std::string& pad);
     bool feat(PilotId pilot, const std::string& id);
-    /// P4's finds: a blueprint (once each, 50 × its level floor; false when
-    /// it was known) and a survey chip (25 each): it marks the nearest site
+    /// P4's finds: a blueprint copy (C2: from every site and blueprint
+    /// chip, 50 × its level floor each) and a survey chip (25 each): it marks the nearest site
     /// the pilot doesn't know of, here or in a neighbour region, or one in
     /// `WorldSites::chipBlueprintOneIn` is a blueprint itself.
     bool findBlueprint(PilotId pilot, StructureKind kind, int64_t floor);
@@ -464,7 +466,21 @@ public:
     std::optional<Wallet> taxed(PilotId pilot) const;
     std::optional<Wallet> donated(PilotId pilot) const;
 
-    // MARK: KSTR contracts (docs/contracts.md, K1; WorldContracts.cpp)
+    // MARK: The Citadel shop (C2, docs/prospector-progression.md "The
+    // Citadel shop"; WorldShop.cpp)
+
+    /// Buys one copy of `blueprint`'s blueprint (set), or one `item`, from
+    /// the pilot's wallet at the core's price (`Shop`), standing where it
+    /// unloads at the realm's Citadel. The reason when refused (away from
+    /// the Citadel, no such blueprint, the stack full, the wallet short).
+    std::optional<std::string> buy(PilotId pilot, std::optional<StructureKind> blueprint, Item item);
+    /// Uses one `item` from the pilot's stacks on its Prospector where it
+    /// stands. The reason when refused (none held, cooling down, in flight
+    /// or down, a repair kit on a Prospector not hurt).
+    std::optional<std::string> use(PilotId pilot, Item item);
+    /// The world's clock when the pilot's `item` is ready again (nil: now).
+    std::optional<double> itemReady(PilotId pilot, Item item) const;
+
 
     /// The pilot's contracts today (empty: not a world, or not drawn yet:
     /// the next step draws them).
@@ -603,6 +619,16 @@ private:
         /// donated (saved).
         Wallet taxed;
         Wallet donated;
+        /// C2: when each consumable used is ready again (the world's
+        /// clock), and a survey flare burning (its region, the Prospector's
+        /// position there when lit, until the world's clock). Not saved.
+        std::map<Item, double> itemReady;
+        struct Flare {
+            size_t region = 0;
+            Vec2 at{0, 0};
+            double until = 0;
+        };
+        std::optional<Flare> flare;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {

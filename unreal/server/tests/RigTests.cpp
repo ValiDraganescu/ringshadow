@@ -47,7 +47,7 @@ ProspectorProgress at(int64_t level, const std::map<Skill, int64_t>& ranks = {})
     ProspectorProgress g;
     g.xp = Progression::xp(level);
     g.ranks = ranks;
-    for (const StructureKind k : Progression::blueprintKinds()) g.blueprints.insert(k);
+    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
     return g;
 }
 
@@ -410,7 +410,7 @@ TEST(rig_save_round_trip) {
     {
         auto store = WorldStore::open(path, first().file.id, &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(9));
+        EXPECT_EQ(store->schemaVersion(), int64_t(10));
         const auto old = store->load(&why);
         ASSERT_TRUE(old.has_value() && old->pilots.size() == 1);
         EXPECT_TRUE(old->pilots[0].rig.empty());

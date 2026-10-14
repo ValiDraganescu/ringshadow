@@ -33,7 +33,7 @@ SavedUnit savedUnit(const Unit& u, const std::string& owner) {
 ProspectorProgress converted(const PilotRecord& old, const std::string& key, const WorldSave& save) {
     ProspectorProgress g;
     g.xp = old.xp(UnitKind::prospector) * 10;
-    g.blueprints = {StructureKind::citadel, StructureKind::derrick};
+    g.blueprints = {{StructureKind::citadel, 1}, {StructureKind::derrick, 1}};
     for (const SavedRegion& r : save.regions)
         for (const SavedBuilding& b : r.buildings)
             if (b.builtBy == key && !b.buildLeft) g.feats.insert(WorldXp::built(b.kind));
@@ -282,7 +282,14 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         if (!sp.gated)
             for (const SavedRegion& r : save.regions)
                 for (const SavedBuilding& b : r.buildings)
-                    if (b.builtBy == sp.id && Progression::blueprintFloor(b.kind) > 0) p.progress.blueprints.insert(b.kind);
+                    if (b.builtBy == sp.id && Progression::blueprintFloor(b.kind) > 0 && !p.progress.copies(b.kind))
+                        p.progress.giveBlueprint(b.kind);
+        // Saved before blueprints stacked (C2, schema 10): each blueprint it
+        // had becomes as many copies as the realm may still build of that
+        // kind under its limit (the pilot's, with Overbuild), at least 1.
+        if (!sp.stacked)
+            for (auto& [kind, n] : p.progress.blueprints)
+                n = std::max<int64_t>(1, p.progress.limit(kind) - realmCount(kind));
         away_[sp.id] = p;
     }
     // Starfalls coming and craters with their deposits: the deposits back

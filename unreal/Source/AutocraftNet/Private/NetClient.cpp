@@ -53,6 +53,9 @@ uint32_t Client::research(Module module, int64_t mark) { return request(RequestM
 uint32_t Client::fit(Module module, int64_t mark) { return request(RequestMessage::Fit{module, mark}); }
 
 uint32_t Client::donate(int64_t ore, int64_t hydrogen) { return request(RequestMessage::Donate{ore, hydrogen}); }
+uint32_t Client::buyBlueprint(StructureKind kind) { return request(RequestMessage::Buy{kind, Item::repairKit}); }
+uint32_t Client::buyItem(Item item) { return request(RequestMessage::Buy{std::nullopt, item}); }
+uint32_t Client::use(Item item) { return request(RequestMessage::Use{item}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;

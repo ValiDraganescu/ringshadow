@@ -377,9 +377,25 @@ struct RequestMessage {
         int64_t hydrogen = 0;
         bool operator==(const Donate&) const = default;
     };
+    /// C2: buy one blueprint copy of `blueprint` (set), or one `item` (no
+    /// blueprint), from the wallet, at the realm's Citadel (where it
+    /// unloads). The price is the core's (`Shop`).
+    struct Buy {
+        std::optional<StructureKind> blueprint;
+        Item item = Item::repairKit;
+        bool operator==(const Buy&) const = default;
+    };
+    /// C2: use one `item` from the pilot's stacks, in the field.
+    struct Use {
+        Item item = Item::repairKit;
+        bool operator==(const Use&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
-    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate> what;
+    /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
+    /// 14, Use 15, and D1's request comes next.
+    std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use>
+        what;
     bool operator==(const RequestMessage&) const = default;
 };
 
@@ -463,8 +479,8 @@ struct ProgressMessage {
     /// ("cold-fork/Fork wreck"), "blueprint" when the chip was a blueprint
     /// itself (its own `blueprint` news follows), or empty (nothing left to
     /// mark); `value` the chips found in all. `site`: `id` the site opened;
-    /// `value` 0 when it gave a new blueprint, 1 when the blueprint was known
-    /// and it gave `kSiteOre` ore and `kSiteHydrogen` MH instead.
+    /// `value` 0 (C2: every site gives a blueprint copy; before, 1 told of
+    /// ore and MH given for a blueprint known already).
     ///
     /// K1: `contract`: a contract done, `id` its number, `xp` what it paid,
     /// `value` the MH it paid.
@@ -506,7 +522,8 @@ struct ProgressMessage {
     /// MH the next respec costs, and whether it is free.
     int64_t respecPrice = 0;
     bool respecFree = true;
-    std::set<StructureKind> blueprints;
+    /// Blueprint copies held, by kind (C2: building uses one up).
+    std::map<StructureKind, int64_t> blueprints;
     /// Blueprint sites the pilot knows of, and has opened (ids; P4):
     /// "<region id>/<site name>", the region file's `sites`.
     std::set<std::string> sitesKnown;
@@ -571,6 +588,25 @@ struct ProgressMessage {
     int64_t taxPercent = 0;
     Purse taxed;
     Purse donated;
+    /// C2, the Citadel shop: blueprint copies bought by kind (the next
+    /// one's price, `Shop::blueprintPrice`), consumables held, when each
+    /// used one is ready again (world time, `Sky::time`), and a shield
+    /// charge running until (world time; 0: none).
+    std::map<StructureKind, int64_t> bought;
+    std::map<Item, int64_t> items;
+    std::map<Item, double> itemReady;
+    double shieldUntil = 0;
+    /// A survey flare burning: in region `region` (a world region id),
+    /// round region ground point `at`, `radius` cells, until world time
+    /// `until`. The map shows the deposits within it.
+    struct Flare {
+        std::string region;
+        Vec2 at{0, 0};
+        double radius = 0;
+        double until = 0;
+        bool operator==(const Flare&) const = default;
+    };
+    std::optional<Flare> flare;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };
@@ -588,9 +624,6 @@ struct EventMessage {
 /// (`ProspectorProgress::buildRefusal`) and no longer reads this list.
 inline constexpr std::array<StructureKind, 2> kWorldBuildKinds{StructureKind::citadel, StructureKind::derrick};
 inline constexpr const char* kWorldBuildRefusal = "Only a Citadel or a Derrick can be built here";
-/// What a site gives when its blueprint is known already (once, no XP).
-inline constexpr int64_t kSiteOre = 100;
-inline constexpr int64_t kSiteHydrogen = 20;
 inline constexpr bool worldBuilds(StructureKind kind) {
     for (const StructureKind k : kWorldBuildKinds)
         if (k == kind) return true;

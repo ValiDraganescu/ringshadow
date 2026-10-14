@@ -109,18 +109,9 @@ void WorldMap::openSite(PilotId pilot, PilotState& p, size_t r, size_t i) {
     if (!p.progress.sites.insert(id).second) return;
     p.progress.known.insert(id);
     const StructureKind kind = world_->regions[r].built.sites[i].blueprint;
-    const bool fresh = !p.progress.blueprints.count(kind);
-    p.news.push_back(News{NewsKind::site, id, 0, fresh ? 0 : 1, ""});
-    if (fresh) {
-        findBlueprint(pilot, kind, Progression::blueprintFloor(kind));
-        return;
-    }
-    // Known already: ore and MH instead, no XP.
-    bankOut(p, p.region);
-    p.wallet.ore += net::kSiteOre;
-    p.wallet.hydrogen += net::kSiteHydrogen;
-    bankIn(p, p.region);
-    pushProgress(pilot);
+    // C2: every site gives a copy of its blueprint, held already or not.
+    p.news.push_back(News{NewsKind::site, id, 0, 0, ""});
+    findBlueprint(pilot, kind, Progression::blueprintFloor(kind));
 }
 
 // MARK: - Survey chips

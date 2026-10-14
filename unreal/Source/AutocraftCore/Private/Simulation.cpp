@@ -2369,6 +2369,8 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
             const Unit v = state.units[i];
             const double aimed = amount * rate(Stat::DamageTaken{}, v);
             amount = shieldTakes(static_cast<int64_t>(i), aimed);
+            // A shield charge (C2) takes all of it.
+            if (shielded(v.id)) amount = 0;
             const double lost = ac::min(amount, ac::max(0.0, v.hp)), shielded = aimed - amount;
             const bool kill = v.hp > 0 && amount >= v.hp;
             tally(v, [&](Tally& t) { t.damageTaken += lost; t.shieldAbsorbed += shielded; });

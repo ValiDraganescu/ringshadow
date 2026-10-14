@@ -353,9 +353,9 @@ bool WorldMap::join(PilotId pilot) {
     p.wallet = Wallet{params_.startOre, params_.startHydrogen};
     // A new pilot: the first ten minutes (docs/contracts.md).
     p.firstStep = std::clamp(params_.firstStep, 0, WorldContracts::firstSteps);
-    // Dev: every blueprint.
+    // Dev: every blueprint, a stack of each.
     if (params_.devBlueprints)
-        for (const StructureKind k : Progression::blueprintKinds()) p.progress.blueprints.insert(k);
+        for (const StructureKind k : Progression::blueprintKinds()) p.progress.giveBlueprint(k, WorldParams::devCopies);
     const Region& r = start();
     const Unit u = startProspector();
     PilotState& in = pilots_[pilot] = p;
@@ -492,6 +492,8 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     const int64_t id = regions_[p.region]->simulation().state.nextID;
     if (auto why = regions_[p.region]->build(pilot, kind, at)) return why;
     builtBy_[p.region][id] = p.key;
+    // C2: placing it uses up one blueprint copy.
+    if (world_) p.progress.useBlueprint(kind);
     // Paid from the side's bank: the wallet follows at once. Its skills
     // reach the new building.
     if (world_) {

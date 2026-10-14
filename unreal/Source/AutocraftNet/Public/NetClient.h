@@ -78,6 +78,11 @@ public:
     /// C1: give ore and MH from the wallet to the realm wallet, at the
     /// realm's Citadel.
     uint32_t donate(int64_t ore, int64_t hydrogen);
+    /// C2, the Citadel shop: buy one blueprint copy, or one consumable (at
+    /// the realm's Citadel); use one consumable in the field.
+    uint32_t buyBlueprint(StructureKind kind);
+    uint32_t buyItem(Item item);
+    uint32_t use(Item item);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }
