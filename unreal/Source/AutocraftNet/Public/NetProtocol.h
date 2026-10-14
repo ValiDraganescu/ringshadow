@@ -469,6 +469,22 @@ struct ProgressMessage {
     /// abandoned ones are replaced (docs/contracts.md).
     std::vector<Contract> contracts;
     double contractsDawn = 0;
+    /// The pilot's Prospector fell (P6): it comes back at world time `at`
+    /// (`Sky::time`) in region `region` (a world region id), beside its
+    /// `home` (a Citadel or a Hab Dome; nil: the world's start pad),
+    /// carrying `cargo` (MH if `hydrogen`: Second wind). Nil: on its feet.
+    struct Respawn {
+        double at = 0;
+        std::string region;
+        std::optional<StructureKind> home;
+        int64_t cargo = 0;
+        bool hydrogen = false;
+        bool operator==(const Respawn&) const = default;
+    };
+    std::optional<Respawn> respawn;
+    /// Ringwalker: world time a flight from anywhere is ready again (0:
+    /// ready, or not learned).
+    double ringwalkerReady = 0;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };
@@ -523,6 +539,9 @@ struct WorldMessage {
         std::string name;
         /// Region cells from the north-west corner (docs/regions.md).
         Vec2 at;
+        /// A pad of the pilot's own (P6): its Spacedock, or a building
+        /// Homing beacon makes a pad. Nil: the region file's pad.
+        std::optional<StructureKind> building{};
         bool operator==(const Pad&) const = default;
     };
     struct Region {

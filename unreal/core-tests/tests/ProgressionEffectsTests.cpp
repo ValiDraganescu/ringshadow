@@ -364,14 +364,16 @@ TEST(ProgressionEffects_ownBuildings) {
 }
 
 /// Head start: a building the pilot places starts a quarter built, and is
-/// its own; Efficient plans and Prefab add up on the MH (42% less).
+/// its own; Efficient plans and Prefab add up on the MH (42% less), on the
+/// world's prices (a Foundry 300 ore + 150 MH).
 TEST(ProgressionEffects_placingAndBuildingCost) {
     auto [sim, prospector, citadel] = driven();
     learn(sim, {{Skill::prefab, 3}, {Skill::efficientPlans, 3}, {Skill::headStart, 1}});
-    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::foundry, 0), 132, 58));
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::foundry, 0), 264, 87));
     EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::foundry, 1), 150, 100)); // not red's
     const auto [me, out] = outside(sim, prospector, citadel);
     sim.state.players[0].ore = 1000;
+    sim.state.players[0].hydrogen = 100;
     // The first open spot out from the Prospector.
     std::optional<Vec2> at;
     for (double d = 3; d <= 12 && !at; d += 0.5) {
@@ -515,4 +517,89 @@ TEST(ProgressionEffects_secondWind) {
     EXPECT_EQ(sim.fallen->cargo, int64_t(30));
     EXPECT_TRUE(!sim.fallen->hydrogen);
     EXPECT_NEAR(sim.fallen->sooner, 0.75, 1e-12);
+}
+
+/// A world's buildings (P6): the world's prices with an MH part, no
+/// strategy-game prerequisite (a Bastion needs no Garrison), and a refusal
+/// when the MH is short. With no progress: the strategy game's rules.
+TEST(ProgressionEffects_worldBuildingPrices) {
+    auto [sim, prospector, citadel] = driven();
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::foundry, 0), 150, 100));
+    sim.state.players[0].ore = 1000;
+    sim.state.players[0].hydrogen = 1000;
+    EXPECT_EQ(sim.buildRefusal(StructureKind::bastion, 0).value_or(""), std::string("Needs a Garrison"));
+    learn(sim, {});
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::citadel, 0), 400, 0));
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::derrick, 0), 75, 0));
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::habDome, 0), 150, 50));
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::foundry, 0), 300, 150));
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::lab, 0), 200, 200));
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::spacedock, 0), 400, 300));
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::bastion, 0), 250, 100));
+    EXPECT_TRUE(isPrice(sim.buildCost(StructureKind::sentinel, 0), 150, 100));
+    EXPECT_TRUE(!sim.buildRefusal(StructureKind::bastion, 0).has_value());
+    EXPECT_TRUE(!sim.buildRefusal(StructureKind::spacedock, 0).has_value());
+    sim.state.players[0].hydrogen = 49;
+    EXPECT_EQ(sim.buildRefusal(StructureKind::habDome, 0).value_or(""), std::string("Not enough MH"));
+    EXPECT_TRUE(!sim.buildRefusal(StructureKind::derrick, 0).has_value());
+}
+
+/// A Hab Dome of the pilot's own is a field depot in a world: a load
+/// walked up to it goes into the wallet, with its XP. Someone else's, an
+/// unfinished one, or with no progress (the strategy game): nothing.
+TEST(ProgressionEffects_habDomeDepot) {
+    auto [sim, prospector, citadel] = driven();
+    const auto [me, out] = outside(sim, prospector, citadel);
+    Structure dome(801, StructureKind::habDome, 0, me + out * (Rules::radius(StructureKind::habDome) + 0.5));
+    sim.state.structures.push_back(dome);
+    const int64_t ore = sim.state.players[0].ore;
+    // No progress: only a Citadel takes a load.
+    unitRef(sim, prospector).carrying = 25;
+    run(sim, 1.0 / 30);
+    EXPECT_EQ(sim.state.players[0].ore, ore);
+    // A world, but not its own.
+    learn(sim, {});
+    run(sim, 1.0 / 30);
+    EXPECT_EQ(sim.state.players[0].ore, ore);
+    // Its own, being built.
+    sim.pilotBuildings.insert(801);
+    sim.state.structures.back().buildLeft = 5;
+    run(sim, 1.0 / 30);
+    EXPECT_EQ(sim.state.players[0].ore, ore);
+    // Its own, finished: the depot.
+    sim.state.structures.back().buildLeft = std::nullopt;
+    run(sim, 1.0 / 30);
+    EXPECT_EQ(sim.state.players[0].ore, ore + 25);
+    EXPECT_EQ(unit(sim, prospector).carrying, int64_t(0));
+    unitRef(sim, prospector).carrying = 20;
+    unitRef(sim, prospector).hydrogen = true;
+    const int64_t mh = sim.state.players[0].hydrogen;
+    run(sim, 1.0 / 30);
+    EXPECT_EQ(sim.state.players[0].hydrogen, mh + 20);
+}
+
+/// A world's Lab stands on its own: the Prospector places it and welds it
+/// up like any other building (the strategy game's Lab is an add-on).
+TEST(ProgressionEffects_labStandsAlone) {
+    auto [sim, prospector, citadel] = driven();
+    learn(sim, {});
+    const auto [me, out] = outside(sim, prospector, citadel);
+    sim.state.players[0].ore = 1000;
+    sim.state.players[0].hydrogen = 1000;
+    std::optional<Vec2> at;
+    for (double d = 3; d <= 12 && !at; d += 0.5) {
+        const auto p = sim.snap(StructureKind::lab, me + out * d);
+        if (p && !sim.placementRefusal(StructureKind::lab, *p)) at = p;
+    }
+    ASSERT_TRUE(at.has_value());
+    EXPECT_TRUE(!sim.pilotBuild(StructureKind::lab, *at).has_value());
+    EXPECT_EQ(sim.state.players[0].ore, int64_t(800));
+    EXPECT_EQ(sim.state.players[0].hydrogen, int64_t(800));
+    const Structure lab = sim.state.structures.back();
+    EXPECT_EQ(lab.kind, StructureKind::lab);
+    EXPECT_TRUE(!lab.parent.has_value());
+    run(sim, 3);
+    const auto now = sim.state.structure(lab.id);
+    ASSERT_TRUE(now.has_value());
+    EXPECT_TRUE(now->buildLeft.value_or(0) < Rules::buildTime(StructureKind::lab) - 2);
 }

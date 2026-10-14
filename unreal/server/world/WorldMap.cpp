@@ -410,24 +410,48 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     if (!to) return "no region " + std::string(regionId);
     const auto& pads = world_->regions[*to].built.pads;
     const auto pad = std::find_if(pads.begin(), pads.end(), [&](const region::Place& q) { return q.name == padName; });
-    if (pad == pads.end()) return "no pad " + std::string(padName) + " in " + std::string(regionId);
+    // Or a pad of its own there (P6): its Spacedock, a Homing beacon.
+    const std::vector<OwnPad> own = ownPads(p);
+    const auto mine = std::find_if(own.begin(), own.end(), [&](const OwnPad& o) { return o.region == *to && o.name == padName; });
+    if (pad == pads.end() && mine == own.end()) return "no pad " + std::string(padName) + " in " + std::string(regionId);
     Region& here = *regions_[p.region];
     const auto unit = here.driving(pilot);
     if (!unit) return "nothing driven";
     const auto u = here.simulation().state.unit(*unit);
     if (!u || u->kind != UnitKind::prospector) return "only a Prospector flies";
-    // The client's rule too (`net::padsOnGround`, `region::nearestPad`).
+    // The client's rule too (`net::padsOnGround`, `region::nearestPad`),
+    // within Pad link's reach; or by a pad of its own.
+    const double reach = padReach(p);
     const auto near = region::nearestPad(world_->regions[p.region].built.pads, u->position);
-    if (!near || near->distance > params_.padReach) return "not at a pad";
-    if (*to != p.region && regions_[*to]->driven()) return "another pilot drives there";
+    bool atPad = near && near->distance <= reach;
+    for (const OwnPad& o : own)
+        if (o.region == p.region &&
+            distance(o.at, u->position) <= std::max(reach, Rules::radius(o.kind) + WorldRoles::buildingPadReach))
+            atPad = true;
+    // Ringwalker: from anywhere, once every its cooldown.
+    bool ringwalk = false;
+    if (!atPad) {
+        std::optional<double> cooldown;
+        for (const SkillEffect& e : Progression::effects(Skill::ringwalker, p.progress.rank(Skill::ringwalker)))
+            if (const auto* w = e.as<SkillEffect::Ringwalker>()) cooldown = w->cooldown;
+        if (!cooldown) return "not at a pad";
+        if (clock_ < p.ringwalkerReady) return "Ringwalker is ready in " + std::to_string(int64_t(std::ceil(p.ringwalkerReady - clock_))) + " s";
+        ringwalk = true;
+        p.ringwalkerReady = clock_ + *cooldown;
+    }
+    if (*to != p.region && regions_[*to]->driven()) {
+        if (ringwalk) p.ringwalkerReady = 0;
+        return "another pilot drives there";
+    }
     bankOut(p, p.region);
     Flight f;
     f.clocks = takeClocks(p.region, *unit);
     f.unit = *here.release(*unit);
     p.record = here.levels(pilot);
     f.to = *to;
-    f.pad = size_t(pad - pads.begin());
-    f.landsAt = tick_ + std::max<int64_t>(1, std::llround(params_.flightTime / here.description().step));
+    if (pad != pads.end()) f.pad = size_t(pad - pads.begin());
+    else f.own = mine->at;
+    f.landsAt = tick_ + std::max<int64_t>(1, std::llround(flightTime(p) / here.description().step));
     p.flight = f;
     p.last = std::nullopt;
     moves_.push_back(Moved{pilot, std::nullopt});
@@ -486,6 +510,8 @@ void WorldMap::step() {
     workAfter(work);
     sites();
     contracts();
+    respawns();
+    ownPadsChanged();
     regrowWells(dt);
     for (auto& [id, p] : pilots_)
         if (!p.flight) {
@@ -579,9 +605,10 @@ void WorldMap::landings() {
         }
         const region::Built& there = world_->regions[f.to].built;
         Region& now = *regions_[f.to];
-        arrive(pilot, p, f.to, f.unit, there.regionAt(there.pads[f.pad].at), lastInput);
+        arrive(pilot, p, f.to, f.unit, there.regionAt(landing(f)), lastInput);
         giveClocks(f.to, *p.unit, f.clocks);
-        firstLanding(pilot, world_->regions[f.to].file.id + "/" + there.pads[f.pad].name);
+        // A pad of its own pays no first landing.
+        if (!f.own) firstLanding(pilot, world_->regions[f.to].file.id + "/" + there.pads[f.pad].name);
         if (f.to != from) firstVisit(pilot, world_->regions[f.to].file.id);
         if (f.to == from) {
             moves_.push_back(Moved{pilot, std::nullopt});
@@ -650,6 +677,10 @@ std::optional<net::WorldMessage> WorldMap::worldMessage(PilotId pilot) const {
         m.regions.push_back(out);
     }
     const auto it = pilots_.find(pilot);
+    // Its own pads (P6), in region cells like the file's.
+    if (it != pilots_.end())
+        for (const OwnPad& o : ownPads(it->second))
+            m.regions[o.region].pads.push_back({o.name, world_->regions[o.region].built.regionAt(o.at), o.kind});
     if (it != pilots_.end()) {
         m.here = int64_t(it->second.region);
         if (it->second.flight) m.flyingTo = int64_t(it->second.flight->to);

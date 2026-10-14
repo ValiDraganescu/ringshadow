@@ -677,9 +677,11 @@ void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
         Structure s = state.structures[i];
         if (auto left = s.buildLeft) {
             // A building only rises while its Prospector works on it; a
-            // Lab while the building it serves stands.
+            // Lab while the building it serves stands (a world's Lab stands
+            // alone, welded like any other).
+            const bool addon = s.kind == Structure::Kind::lab && s.parent;
             std::optional<Unit> builder;
-            if (s.kind != Structure::Kind::lab && s.builder) {
+            if (!addon && s.builder) {
                 for (const auto& u : state.units) {
                     if (u.id == *s.builder) {
                         if (u.task == Unit::Task::building && u.structure == s.id) builder = u;
@@ -687,8 +689,8 @@ void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
                     }
                 }
             }
-            const bool welding = s.kind == Structure::Kind::lab
-                ? (s.parent ? any(state.structures, [&](const Structure& o) { return o.id == *s.parent; }) : false)
+            const bool welding = addon
+                ? any(state.structures, [&](const Structure& o) { return o.id == *s.parent; })
                 : builder.has_value();
             if (welding) {
                 // The driven Prospector welds `Rules.heroWork` times as fast,

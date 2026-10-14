@@ -257,6 +257,12 @@ struct AUTOCRAFTCORE_API Progression {
     /// How many of a building a pilot may have across the world (0: none,
     /// the Garrison). Overbuild raises the Hab Dome, Derrick and Sentinel.
     static int64_t buildingLimit(StructureKind k);
+    /// What a building costs in a world, ore and MH, before the skills
+    /// (docs/prospector-progression.md, "Buildings in the MMO"): the
+    /// Citadel and the Derrick ore only, the rest an MH part too. The
+    /// Garrison keeps the strategy game's price.
+    static int64_t worldOre(StructureKind k);
+    static int64_t worldHydrogen(StructureKind k);
     /// An ore load's chance of turning up a survey chip, before the skills.
     static constexpr double chipChance = 0.005;
 

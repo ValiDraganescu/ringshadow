@@ -246,8 +246,10 @@ double Region::buildReach(StructureKind kind) {
 std::optional<std::string> Region::build(PilotId pilot, StructureKind kind, Vec2 at) {
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end() || !it->second.drives) return "Nothing driven";
-    if (std::find(PilotBuild::kinds.begin(), PilotBuild::kinds.end(), kind) == PilotBuild::kinds.end())
-        return "A Prospector can't build that";
+    // A world's Prospector also puts up a Lab (P6).
+    const auto& kinds = description_.wild ? std::vector<StructureKind>(PilotBuild::worldKinds.begin(), PilotBuild::worldKinds.end())
+                                          : std::vector<StructureKind>(PilotBuild::kinds.begin(), PilotBuild::kinds.end());
+    if (std::find(kinds.begin(), kinds.end(), kind) == kinds.end()) return "A Prospector can't build that";
     const auto u = sim_.pilotUnit();
     if (!u || u->id != *it->second.drives || !PilotBuild::builds(u->kind)) return "No Prospector";
     if (!std::isfinite(at.x) || !std::isfinite(at.y)) return "Can't build there";

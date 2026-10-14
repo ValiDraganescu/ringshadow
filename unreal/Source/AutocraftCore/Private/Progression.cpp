@@ -526,6 +526,33 @@ int64_t Progression::buildingLimit(StructureKind k) {
     }
 }
 
+int64_t Progression::worldOre(StructureKind k) {
+    switch (k) {
+    case StructureKind::citadel: return 400;
+    case StructureKind::derrick: return 75;
+    case StructureKind::habDome: return 150;
+    case StructureKind::foundry: return 300;
+    case StructureKind::lab: return 200;
+    case StructureKind::spacedock: return 400;
+    case StructureKind::bastion: return 250;
+    case StructureKind::sentinel: return 150;
+    default: return Rules::cost(k);
+    }
+}
+
+int64_t Progression::worldHydrogen(StructureKind k) {
+    switch (k) {
+    case StructureKind::citadel: case StructureKind::derrick: return 0;
+    case StructureKind::habDome: return 50;
+    case StructureKind::foundry: return 150;
+    case StructureKind::lab: return 200;
+    case StructureKind::spacedock: return 300;
+    case StructureKind::bastion: return 100;
+    case StructureKind::sentinel: return 100;
+    default: return Rules::hydrogenCost(k);
+    }
+}
+
 // MARK: - The balance
 
 namespace {

@@ -489,6 +489,8 @@ std::vector<uint8_t> encode(const WorldMessage& m) {
             writeString(w, p.name);
             writeDouble(w, p.at.x);
             writeDouble(w, p.at.y);
+            w.writeBool(p.building.has_value());
+            if (p.building) w.writeBits(uint64_t(*p.building), 4);
         }
     }
     writeVarint(w, static_cast<uint64_t>(m.here));
@@ -519,6 +521,11 @@ bool decode(const std::vector<uint8_t>& bytes, WorldMessage& m) {
             if (!readString(r, p.name)) return false;
             p.at.x = readDouble(r);
             p.at.y = readDouble(r);
+            if (r.readBool()) {
+                const uint64_t k = r.readBits(4);
+                if (k >= uint64_t(allCases<StructureKind>().size())) return false;
+                p.building = static_cast<StructureKind>(k);
+            }
         }
     }
     m.here = static_cast<int64_t>(readVarint(r));
@@ -727,6 +734,16 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeSigned(w, c.hydrogen);
     }
     codec::kMs.write(w, m.contractsDawn);
+    w.writeBool(m.respawn.has_value());
+    if (m.respawn) {
+        codec::kMs.write(w, m.respawn->at);
+        writeString(w, m.respawn->region);
+        w.writeBool(m.respawn->home.has_value());
+        if (m.respawn->home) w.writeBits(uint64_t(*m.respawn->home), 4);
+        writeSigned(w, m.respawn->cargo);
+        w.writeBool(m.respawn->hydrogen);
+    }
+    codec::kMs.write(w, m.ringwalkerReady);
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 4);
@@ -809,6 +826,20 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         m.contracts.push_back(std::move(c));
     }
     codec::kMs.read(r, m.contractsDawn);
+    if (r.readBool()) {
+        ProgressMessage::Respawn s;
+        codec::kMs.read(r, s.at);
+        if (!readString(r, s.region)) return false;
+        if (r.readBool()) {
+            const uint64_t k = r.readBits(4);
+            if (k >= uint64_t(allCases<StructureKind>().size())) return false;
+            s.home = static_cast<StructureKind>(k);
+        }
+        s.cargo = readSigned(r);
+        s.hydrogen = r.readBool();
+        m.respawn = s;
+    }
+    codec::kMs.read(r, m.ringwalkerReady);
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {

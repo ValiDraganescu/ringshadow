@@ -214,7 +214,7 @@ Contract WorldMap::drawContract(PilotId, const PilotState& p, std::mt19937_64& d
     // What it can build: a blueprint it has, at its floor, under its limit.
     std::vector<StructureKind> builds;
     for (const StructureKind k : Progression::blueprintKinds()) {
-        const bool byHand = std::find(PilotBuild::kinds.begin(), PilotBuild::kinds.end(), k) != PilotBuild::kinds.end();
+        const bool byHand = std::find(PilotBuild::worldKinds.begin(), PilotBuild::worldKinds.end(), k) != PilotBuild::worldKinds.end();
         if (byHand && !p.progress.buildRefusal(k, owned(p, k))) builds.push_back(k);
     }
 

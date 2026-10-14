@@ -728,7 +728,16 @@ TEST(protocol_progress_round_trips) {
     m.opening = ProgressMessage::Opening{"start/wreck", 812.5, 5, ""};
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
-    EXPECT_EQ(kProtocolVersion, uint16_t(7));
+    // Fallen (P6): back at a Hab Dome in Cold Fork at 920.25 with 30 MH,
+    // and Ringwalker ready at 1000; then at the start pad.
+    m.respawn = ProgressMessage::Respawn{920.25, "cold-fork", StructureKind::habDome, 30, true};
+    m.ringwalkerReady = 1000;
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back == m);
+    m.respawn = ProgressMessage::Respawn{12, "start", std::nullopt, 0, false};
+    ASSERT_TRUE(decode(encode(m), back));
+    EXPECT_TRUE(back == m);
+    EXPECT_TRUE(kProtocolVersion >= uint16_t(8));
 }
 
 TEST(mirror_takes_snapshots_into_its_simulation) {
@@ -830,6 +839,9 @@ TEST(protocol_world_messages_round_trip) {
         g.column = i % 3;
         g.row = i / 3;
         g.pads = {{"landing", Vec2(72, 48)}, {"far", Vec2(10.5, 90)}};
+        // The pilot's own pads (P6).
+        if (i == 2) g.pads.push_back({"Spacedock", Vec2(30.5, 41), StructureKind::spacedock});
+        if (i == 4) g.pads.push_back({"Hab Dome 2", Vec2(12, 60.5), StructureKind::habDome});
         m.regions.push_back(g);
     }
     m.here = 4;

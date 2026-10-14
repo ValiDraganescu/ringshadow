@@ -350,14 +350,14 @@ needs its blueprint, found in the world, and the pilot at or above its
 
 | Building | What it does for the pilot | Floor | Limit | Cost (ore + MH) | Status |
 |---|---|---|---|---|---|
-| Citadel | Home: unload point, respawn point, where the respec is made | 1 | 1 | 400 | as today; respawn and respec are proposals |
+| Citadel | Home: unload point, respawn point, where the respec is made | 1 | 1 | 400 | on the server (P6) |
 | Derrick | Pumps MH on a well (as today) | 3 | 4 | 75 | as today |
-| Hab Dome | A field depot: unload ore and MH into the wallet away from home, and a respawn point | 8 | 3 | 150 + 50 | proposal |
-| Foundry | Makes rig modules: drill head, cargo pod, plate, torch tip, survey lens (open question 3) | 15 | 1 | 300 + 150 | proposal |
-| Lab | Researches better module marks (Mk II, Mk III) for MH and time | 25 | 1 | 200 + 200 | proposal |
-| Spacedock | A private pad: fly from it and land on it from any pad; later, routes to far worlds | 35 | 1 | 400 + 300 | proposal |
-| Bastion | A bunker: the Prospector climbs in, takes no damage, its torch fires from it at +2 range. For holding a claim in no-man's land | 45 | 2 | 250 + 100 | proposal, matters later |
-| Sentinel | A missile turret that guards your buildings, ground and air | 55 | 4 | 150 + 100 | proposal, matters later |
+| Hab Dome | A field depot: unload ore and MH into the wallet away from home, and a respawn point | 8 | 3 | 150 + 50 | on the server (P6) |
+| Foundry | Makes rig modules: drill head, cargo pod, plate, torch tip, survey lens (open question 3) | 15 | 1 | 300 + 150 | built (P6); modules in P7 |
+| Lab | Researches better module marks (Mk II, Mk III) for MH and time | 25 | 1 | 200 + 200 | built (P6), standing alone; research in P7 |
+| Spacedock | A private pad: fly from it and land on it from any pad; later, routes to far worlds | 35 | 1 | 400 + 300 | on the server (P6) |
+| Bastion | A bunker: the Prospector climbs in, takes no damage, its torch fires from it at +2 range. For holding a claim in no-man's land | 45 | 2 | 250 + 100 | built (P6); its fight matters later |
+| Sentinel | A missile turret that guards your buildings, ground and air | 55 | 4 | 150 + 100 | built (P6); its fight matters later |
 | Garrison | Trains other kinds in the strategy game. Held back: no blueprint in the world while the MMO is Prospector only | | | | held back |
 
 Limits are per pilot, across the world. Overbuild raises the Hab Dome,
@@ -366,6 +366,64 @@ first loop costs no MH.
 
 Hours to each floor at the model's pace: Derrick 13 min, Hab Dome 49 min,
 Foundry 1.95 h, Lab 4.6 h, Spacedock 9.1 h, Bastion 15.6 h, Sentinel 24.4 h.
+
+### On the server (P6)
+
+Code: `unreal/server/world/WorldRoles.cpp`, and the core where the rule is
+shared (`Progression::worldOre` and `worldHydrogen`, `Simulation::buildCost`,
+`prospectorDeposit`). Tests: `server/tests/RolesTests.cpp` and the last three
+in `core-tests/tests/ProgressionEffectsTests.cpp`.
+
+- **Prices.** A world's pilot pays the table's prices, less its skills
+  (Prefab, Efficient plans). A build the wallet can't pay is refused: "Not
+  enough ore", "Not enough MH". The strategy game's prerequisites don't
+  apply in a world (a Bastion needs no Garrison): blueprints, floors and
+  limits are the gates.
+- **Respawn.** A fallen Prospector comes back after 10 s
+  (`WorldParams::respawnDelay`) beside its home: its own finished Citadel
+  or Hab Dome nearest where it fell. One in the same region wins by
+  distance; otherwise the one fewest grid steps away. A region another
+  pilot drives is skipped. With no home it comes back at the world's start
+  pad. Second wind cuts the wait (25%, 50%, 75%) and keeps that share of
+  the cargo. A pilot who leaves while fallen comes back at home when it
+  joins again.
+- **Respec** only at the pilot's own Citadel, in its unload range (since
+  P3). A Hab Dome is not enough.
+- **Hab Dome depot.** Ore and MH walked up to one of the pilot's own
+  finished Hab Domes go into the wallet, with their XP and contract credit,
+  as at the Citadel.
+- **Spacedock.** A pad of the pilot's own. The Prospector flies from within
+  2 cells of its edge, and lands on it from any pad. It shows in the
+  pilot's World message as a pad named "Spacedock" with `building` set. No
+  other pilot sees it, and landing on it pays no first-landing XP.
+- **Lab.** A world's Prospector builds one, standing alone and welded like
+  any other building. The strategy game's Lab stays an add-on, and its
+  build list is unchanged.
+- **Bastion and Sentinel.** Only their build rules for now (blueprint,
+  floor, limit, price). The bunker and the turret matter once the world
+  has fights.
+
+The Wayfinder's travel nodes:
+
+- **Pad link:** flights leave from within 8, 12 or 16 cells of a pad's
+  centre.
+- **Homing beacon:** the pilot's Citadel becomes a pad of its own; at rank
+  2 its Hab Domes too, at rank 3 its Derricks. They are named "Citadel",
+  "Hab Dome 1", "Derrick 2", numbered by building id.
+- **Short hop:** a flight takes 4 s less 20% a rank, down to 1.6 s.
+- **Ringwalker:** a flight from anywhere, once every 120 s of the world's
+  clock. A pad still works while it waits.
+- **Surveyor and Scanner pulse:** wired in P4b (`WorldSites.cpp`).
+
+On the wire (protocol 8):
+
+- `ProgressMessage::respawn`: when the fallen Prospector comes back (world
+  time), in which region, beside what (a Citadel, a Hab Dome, or nil for
+  the start pad), with what cargo. Nil while it stands.
+- `ProgressMessage::ringwalkerReady`: when Ringwalker is ready again (0:
+  ready).
+- `WorldMessage::Pad::building`: the kind of a pad of the pilot's own. The
+  message is sent again whenever these pads change.
 
 ### Blueprint sites
 

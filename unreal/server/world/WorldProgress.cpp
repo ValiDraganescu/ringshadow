@@ -17,7 +17,8 @@ using NewsKind = net::ProgressMessage::NewsKind;
 
 namespace {
 
-double price(StructureKind kind) { return double(Rules::cost(kind) + Rules::hydrogenCost(kind)); }
+/// A building's price in a world, ore and MH (the welding and repair XP).
+double price(StructureKind kind) { return double(Progression::worldOre(kind) + Progression::worldHydrogen(kind)); }
 
 } // namespace
 
@@ -199,6 +200,8 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.sitesKnown = g.known;
     m.contracts = it->second.contracts;
     m.contractsDawn = nextDawn(clock_);
+    m.respawn = respawning(pilot);
+    m.ringwalkerReady = it->second.ringwalkerReady > clock_ ? it->second.ringwalkerReady : 0;
     if (const auto& o = it->second.opening)
         m.opening = net::ProgressMessage::Opening{siteId(o->region, o->site), o->refusal.empty() ? o->since : 0.0,
                                                   WorldSites::needs(world_->regions[o->region].built.sites[o->site].kind),

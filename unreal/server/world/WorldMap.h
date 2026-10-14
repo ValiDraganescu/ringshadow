@@ -196,6 +196,33 @@ struct WorldParams {
     /// Contracts to drill under a ringshadow sweep are drawn (off until the
     /// server pays the sweep, E1: `WorldMap::underSweep`).
     bool sweepContracts = false;
+    /// Seconds (the world's clock) a fallen Prospector waits before it comes
+    /// back at its Citadel or nearest Hab Dome (P6); Second wind cuts it.
+    double respawnDelay = 10;
+};
+
+/// The buildings' jobs for the pilot in a world (P6, docs/prospector-progression.md
+/// "Buildings in the MMO"; WorldRoles.cpp): where a fallen Prospector comes
+/// back, and the pads of the pilot's own (its Spacedock, and with Homing
+/// beacon its Citadel, Hab Domes and Derricks).
+struct WorldRoles {
+    /// A building counts as the pilot's pad within this many cells of its
+    /// edge (at least the pilot's pad reach from its centre).
+    static constexpr double buildingPadReach = 2.0;
+};
+
+/// A pad of the pilot's own: a finished building of its own in region
+/// `region`, where it flies from and lands. `name` is what the Fly request
+/// names: "Spacedock", "Citadel", or "Hab Dome 2" and "Derrick 3" (by the
+/// building's id among the pilot's own of that kind, from 1).
+struct OwnPad {
+    size_t region = 0;
+    int64_t building = 0;
+    StructureKind kind = StructureKind::spacedock;
+    std::string name;
+    /// The building's centre on the region's ground.
+    Vec2 at{0, 0};
+    bool operator==(const OwnPad&) const = default;
 };
 
 /// What the server tells a pilot after a step: its place in the world
@@ -279,9 +306,20 @@ public:
     /// The level-up card pick (`Region::pick`). The reason when refused.
     std::optional<std::string> pick(PilotId pilot, UnitKind kind, Perk perk);
 
-    /// Fly from the pad the driven Prospector stands at to `pad` of `region`.
-    /// The reason when refused.
+    /// Fly from the pad the driven Prospector stands at to `pad` of `region`:
+    /// a region file's pad, or one of the pilot's own (`ownPads`). It flies
+    /// from within `padReach` of a pad's centre, or near a pad of its own
+    /// (`WorldRoles::buildingPadReach`); with Ringwalker from anywhere, once
+    /// every its cooldown. The reason when refused.
     std::optional<std::string> fly(PilotId pilot, std::string_view region, std::string_view pad);
+    /// The pilot's pad reach (Pad link) and flight time (Short hop).
+    double padReach(PilotId pilot) const;
+    double flightTime(PilotId pilot) const;
+    /// The pilot's own pads across the world (P6).
+    std::vector<OwnPad> ownPads(PilotId pilot) const;
+    /// The pilot's Prospector fell and waits to come back (P6): when, where
+    /// and with what (nil: on its feet, or not a world).
+    std::optional<net::ProgressMessage::Respawn> respawning(PilotId pilot) const;
 
     /// Build with the driven Prospector where the pilot is (`Region::build`),
     /// paid from its wallet; in a world only `net::kWorldBuildKinds`, and
@@ -398,7 +436,27 @@ private:
         std::optional<Carried> clocks;
         size_t to = 0;
         size_t pad = 0;
+        /// Landing on a pad of the pilot's own: its building's centre on
+        /// the ground (nil: the region's pad `pad`).
+        std::optional<Vec2> own;
         int64_t landsAt = 0;
+    };
+    /// A fallen Prospector (P6): back at world time `until`, with `cargo`
+    /// (Second wind); it fell in region `region` at region position `at`.
+    struct Down {
+        double until = 0;
+        size_t region = 0;
+        Vec2 at{0, 0};
+        int64_t cargo = 0;
+        bool hydrogen = false;
+    };
+    /// Where a fallen Prospector comes back: beside a building of its own in
+    /// region `region` (`at`: the building's centre on the ground), or the
+    /// world's start pad (`kind` nil).
+    struct Home {
+        size_t region = 0;
+        Vec2 at{0, 0};
+        std::optional<StructureKind> kind;
     };
     struct PilotState {
         size_t region = 0;
@@ -429,6 +487,14 @@ private:
         std::vector<net::Contract> contracts;
         std::optional<int64_t> contractDay;
         uint32_t nextContract = 1;
+        /// Its Prospector fell (P6), not saved: a pilot that comes back
+        /// with none gets a new one at home.
+        std::optional<Down> down;
+        /// Ringwalker: the world's clock when a flight from anywhere is
+        /// ready again.
+        double ringwalkerReady = 0;
+        /// Its own pads as its client was last told (the World message).
+        std::vector<OwnPad> padsTold;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {
@@ -518,6 +584,25 @@ private:
     /// The site nearest the pilot that it doesn't know of, here or in a
     /// neighbour region (nil: none left).
     std::optional<std::pair<size_t, size_t>> nearestUnknown(const PilotState& p) const;
+    // WorldRoles.cpp.
+    /// Each step: fallen Prospectors noted and brought back home; the World
+    /// message again when the pilot's own pads change.
+    void respawns();
+    void ownPadsChanged();
+    std::vector<OwnPad> ownPads(const PilotState& p) const;
+    double padReach(const PilotState& p) const;
+    double flightTime(const PilotState& p) const;
+    /// Where `p` comes back: its Citadel or Hab Dome nearest where it fell
+    /// (`from` in region `region`; a region nearer on the grid first, one
+    /// another pilot drives skipped), else the start pad. Nil: nowhere free.
+    std::optional<Home> home(const PilotState& p, size_t region, Vec2 from) const;
+    /// A new Prospector for `p` at `h`, with `cargo` (MH if `hydrogen`); into
+    /// that region, its client told.
+    void respawn(PilotId pilot, PilotState& p, const Home& h, int64_t cargo, bool hydrogen);
+    /// The region change `p` is told after it moved into region `to`.
+    void regionChanged(PilotId pilot, PilotState& p, size_t to);
+    /// Where a flight lands, on the ground of its region.
+    Vec2 landing(const Flight& f) const;
     // WorldContracts.cpp.
     /// Each step: a new day's draw, the reach contracts.
     void contracts();

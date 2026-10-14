@@ -63,8 +63,15 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
     Region& r = *regions_[in.region];
     const auto i = in.unit ? r.simulation().unitIndex(*in.unit) : std::nullopt;
     if (!i) {
-        // Its Prospector is gone: a new one at the start pad, its wallet
-        // and levels kept.
+        // Its Prospector is gone (it fell): a new one at home, its Citadel
+        // or a Hab Dome, else the start pad; its wallet and levels kept.
+        in.down = std::nullopt;
+        const auto h = home(in, in.region, Vec2(0, 0));
+        if (h && h->kind) {
+            const Unit u = regions_[h->region]->simulation().freshUnit(UnitKind::prospector, 0, Pilot::player, h->at, 0);
+            arrive(pilot, in, h->region, u, regions_[h->region]->places()->regionAt(h->at), -1);
+            return Seated::restored;
+        }
         const Unit u = startProspector();
         arrive(pilot, in, start_, u, start().places()->regionAt(u.position), -1);
         return Seated::restored;
@@ -86,7 +93,7 @@ void WorldMap::park(const PilotState& p) {
         // In the air: it lands at its pad now, with no one in it.
         const Flight f = *q.flight;
         Unit v = f.unit;
-        v.position = world_->regions[f.to].built.pads[f.pad].at;
+        v.position = landing(f);
         q.unit = regions_[f.to]->admit(v);
         q.region = f.to;
         q.flight = std::nullopt;
@@ -116,7 +123,7 @@ WorldSave WorldMap::save() const {
             unit = regions_[r]->simulation().state.nextID + extra[r]++;
             SavedUnit u = savedUnit(p.flight->unit, p.key);
             u.id = *unit;
-            u.at = world_->regions[r].built.pads[p.flight->pad].at;
+            u.at = this->landing(*p.flight);
             landing[r].push_back(u);
         } else if (unit) {
             owned[r][*unit] = p.key;

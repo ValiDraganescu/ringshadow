@@ -500,7 +500,7 @@ std::optional<PilotTarget> Simulation::prospectorTarget(const Unit& u) const {
         }
         if (!own || distance(s.position, u.position) < distance(own->position, u.position)) own = &s;
     }
-    if (!own || own->kind == Structure::Kind::lab) return std::nullopt;
+    if (!own || (own->kind == Structure::Kind::lab && own->parent)) return std::nullopt;
     const Structure& s = *own;
     if (!s.complete()) {
         bool welded = false;
@@ -530,7 +530,7 @@ std::optional<PilotTarget> Simulation::pilotRepair(const Unit& u) const {
     if (const auto v = hurtMachine(u)) return PilotTarget(PilotTarget::Repair{*v});
     const Structure* best = nullptr;
     for (const Structure& s : state.structures) {
-        if (!(s.owner == u.owner && s.complete() && s.kind != Structure::Kind::lab && s.hp < fullHP(s)
+        if (!(s.owner == u.owner && s.complete() && !(s.kind == Structure::Kind::lab && s.parent) && s.hp < fullHP(s)
               && NavGrid::insideStructure(u.position, s, workReach(u)) && ahead(u, s.position))) {
             continue;
         }
@@ -698,7 +698,8 @@ bool Simulation::prospectorMend(Unit& u, int64_t id, const Pilot& p, double dt) 
     return true;
 }
 
-/// A load is dropped off by walking up to one's own Citadel.
+/// A load is dropped off by walking up to one's own Citadel; in a world
+/// also at one of the pilot's own finished Hab Domes, its field depots.
 void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
     if (!(u.carrying > 0)) return;
     std::optional<Structure> citadel;
@@ -706,6 +707,15 @@ void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
         if (NavGrid::insideStructure(u.position, b, pilotDepositReach)) {
             citadel = b;
             break;
+        }
+    }
+    if (!citadel && skilled(u)) {
+        for (const Structure& b : state.structures) {
+            if (b.kind == Structure::Kind::habDome && b.complete() && b.owner == u.owner && ownBuilding(b)
+                && NavGrid::insideStructure(u.position, b, pilotDepositReach)) {
+                citadel = b;
+                break;
+            }
         }
     }
     if (!citadel) return;
@@ -779,7 +789,11 @@ std::optional<std::string> Simulation::buildRefusal(Structure::Kind kind, int64_
     const Price price = buildCost(kind, owner);
     if (p.ore < price.ore) return "Not enough ore";
     if (p.hydrogen < price.hydrogen) return "Not enough MH";
-    if (const auto need = Rules::requires_(kind)) {
+    // A world's pilot builds from blueprints, not up the strategy game's
+    // tech tree.
+    const auto d = pilotUnit();
+    const bool world = d && d->owner == owner && skilled(*d);
+    if (const auto need = Rules::requires_(kind); need && !world) {
         const bool has_ = std::any_of(state.structures.begin(), state.structures.end(), [&](const Structure& s) {
             return s.kind == *need && s.complete() && s.owner == owner;
         });

@@ -251,6 +251,8 @@ Price Simulation::buildCost(StructureKind kind, int64_t owner) const {
     // Efficient plans: the MH part, adding up with Prefab.
     Boost h = b;
     h.percent += skilled(*d) ? skillBoost(SkillStat::buildingHydrogenCost).percent : 0.0;
+    // A world's pilot pays the world's prices.
+    if (skilled(*d)) return Price{b.apply(Progression::worldOre(kind)), h.apply(Progression::worldHydrogen(kind))};
     return Price{b.apply(Rules::cost(kind)), h.apply(Rules::hydrogenCost(kind))};
 }
 
