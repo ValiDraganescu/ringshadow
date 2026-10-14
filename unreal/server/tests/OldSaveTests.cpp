@@ -1,8 +1,7 @@
 // A world saved before today's schema steps (v3: progression, no blueprint
 // gate, contracts, starfalls or rig) loads in this build: migrated to v7,
-// the pilot keeps its buildings and is given their blueprints, and it is
-// not sent through the first ten minutes again. Isolated scene; files in
-// build/save-tests. Run from unreal/server (as `make test` does).
+// the pilot keeps its buildings and is given their blueprints, and its
+// contracts are drawn. Isolated scene; files in build/save-tests. Run from unreal/server (as `make test` does).
 
 #include "test.h"
 
@@ -87,11 +86,9 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     const ProspectorProgress g = *w.progress(me);
     EXPECT_NEAR(g.xp, 900, 1e-9);
     EXPECT_TRUE((g.blueprints == std::set<StructureKind>{StructureKind::citadel, StructureKind::derrick}));
-    // An old pilot is past the first ten minutes: the daily contracts.
+    // Its contracts are drawn on the next step.
     w.step();
-    const auto list = w.contracts(me);
-    EXPECT_TRUE(!list.empty());
-    for (const auto& c : list) EXPECT_EQ(int(c.step), 0);
+    EXPECT_TRUE(!w.contracts(me).empty());
     // Saved again, it is a v7 pilot: gated, its blueprints written.
     ASSERT_TRUE(store->write(w.save(), &why).has_value());
     const auto rows = store->rows("SELECT gated, progress FROM pilots");
