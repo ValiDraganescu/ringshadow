@@ -28,8 +28,9 @@ Runs alongside the end of M6 (P4b–P7): workers freed from M6 start here.
 | K1 | KSTR contracts: the radio offers 3 contracts a day per pilot (deliver ore/MH, reach a site, build, survive an event); rewards XP and MH; a contract panel and a radio voice line | P3 | server done; panel with P5 |
 | F1 | Flight worth watching: the pad-to-pad flight and jump jets burn MH, with thrust, dust and a camera that sells it | P3 | in progress |
 | G1 | Rig screen (J / RIG tab): fitting, Foundry, Lab with prices, countdowns, refusals; module icons | P7 | done |
-| G2 | Client screens: KSTR contract panel, respawn countdown, Hab Dome depot, own pads and Ringwalker in the flight menu, worldKinds build menu; P5 follow-ups | K1, P6 | in progress |
+| G2 | Client screens: KSTR contract panel, respawn countdown, Hab Dome depot, own pads and Ringwalker in the flight menu, worldKinds build menu; P5 follow-ups | K1, P6 | done |
 | J1 | Sound for the new moments: ringshadow approach and pass, starfall streak and impact, crater hum, level-up, blueprint found, contract done, module made; offline WAV checks only | E1, E2, P5 | in progress |
+| W2 | Blueprint sites you can see: a model per site kind (crate, wreck, cache, vault) at every site, opened state, beacon at distance; the contract panel compact by default | P4b, G2 | in progress |
 | S1 | Fast picture runs: a dev-only clock jump mid-run (no waiting for night), a starfall lead of ~8–10 s, `-AcMmoShotsOnly=` to shoot chosen moments; Starfall set under 1 min with the same 9 pictures (user-approved, via the build-train session) | E2 | in progress |
 
 Done when: in a hidden run a pilot starts at Prospect Landing, takes a

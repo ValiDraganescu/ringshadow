@@ -367,3 +367,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T J1 sound for the new moments → first-hour.
 - N S1: Starfall run 3 min 50 s → 44 s.
 - D Manager: editor Python scripts via queue --python; lock exception ended.
+- T G2 done 9f50bcf, a468a83: 11 shots checked; core 452, server 144, net 67.
+- I Sites have no 3D model: opening ring over bare ground.
+- I Contract panel covers a third of the view.
+- T W2 site models + compact panel → progression-core.
