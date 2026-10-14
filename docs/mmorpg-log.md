@@ -466,3 +466,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: 4 consumables: repair kit, MH canister, shield, flare.
 - T C2 (shop, protocol 14, save v10) briefed to wt1.
 - D User: Brood picks: Shardling quill, Gloamwing lantern, Lodeback hermit, Matriarch crowned.
+- T N1 step 1 c6644c4: docs/creatures.md, names, concepts merged.
+- D N1: the Matriarch nests in Slag Pockets.
