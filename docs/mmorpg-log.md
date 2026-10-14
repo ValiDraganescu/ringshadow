@@ -438,3 +438,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I User bugs: mining sparks linger; AI-driven Prospector moves laggily.
 - I User at level 10 asked "now what?" → L1 goal contracts.
 - T B1 (sparks, AI movement) briefed to wt1; wt3 closed, W3 parked 8a1678e.
+- T B1 done 0a42c5a: sparks on game clock; seat follows last-driven unit.
+- N B1: spark tail 1.0 s → 0.5–0.6 s; AI walk jitter 142% → 8.7%.
+- N B1 suites: core 454, server 154, net 67 pass.
+- I Far units still skip snapshots; particles step at 20 Hz in MMO.

@@ -55,7 +55,7 @@ Run in this order, one worker at a time.
 
 | # | Task | Needs | Status |
 |---|---|---|---|
-| B1 | Bugs: mining sparks stop when drilling stops; the Prospector moves smoothly (no lag) when its AI drives it and the pilot isn't | | |
+| B1 | Bugs: mining sparks stop when drilling stops; the Prospector moves smoothly (no lag) when its AI drives it and the pilot isn't | | done 0a42c5a |
 | R1 | Realm buildings: every building belongs to the world; any pilot unloads, respawns, lands and is defended by any building; limits per realm; protocol and save migrate; old saves load | | |
 | C1 | Citadel tax and realm wallet: a share of every unload (start 10%) goes to the realm wallet, a donate action, the realm wallet shown at the Citadel and in the HUD | R1 | |
 | C2 | Citadel shop: consumables (repair kit, MH canister, shield charge, scanner pulse; first set decided in the task) and every blueprint, from the pilot's wallet, prices rising per blueprint level and per copy bought; blueprints stack and are used up by building; a shop screen | C1 | |
