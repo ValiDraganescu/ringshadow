@@ -1,0 +1,397 @@
+{
+ "about": "The Brood's sounds (docs/creatures.md, docs/mmorpg-m8.md N1, 2026-10-14): per kind an idle chitter, an attack, a hurt and a death; the Lodeback's chew while it mines; the Matriarch's roar, slam and spit; broodswarm, a swarm coming (the raid warning). Takes are made into unreal/server/build/n1/takes, all kept in art/models/<kind>/sounds/; the picks are copied to unreal/Resources/Sounds/sfx/<stem>_<n>.wav (docs/creatures.md, \"Sounds\", lists them). Organic chitin and insect sounds, no voices, no music; checked offline (Tools/Audio/check_sounds.py), never played aloud.",
+ "voices": {},
+ "entries": [
+  {
+   "id": "shardlingidle_1",
+   "kind": "sfx",
+   "prompt": "small alien insect clicking and chittering quietly, dry chitin mandibles ticking, a few soft clicks and a low chirr, organic insect creature sound, no voices, no music",
+   "seconds": 2.5,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlingidle_2",
+   "kind": "sfx",
+   "prompt": "small alien insect clicking and chittering quietly, dry chitin mandibles ticking, a few soft clicks and a low chirr, organic insect creature sound, no voices, no music",
+   "seconds": 2.5,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlingidle_3",
+   "kind": "sfx",
+   "prompt": "small alien insect clicking and chittering quietly, dry chitin mandibles ticking, a few soft clicks and a low chirr, organic insect creature sound, no voices, no music",
+   "seconds": 2.5,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlingbite_1",
+   "kind": "sfx",
+   "prompt": "quick vicious insect bite, hard chitin mandibles snapping shut with a crunch and a short hiss, organic insect creature sound, no voices, no music",
+   "seconds": 0.8,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlingbite_2",
+   "kind": "sfx",
+   "prompt": "quick vicious insect bite, hard chitin mandibles snapping shut with a crunch and a short hiss, organic insect creature sound, no voices, no music",
+   "seconds": 0.8,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlingbite_3",
+   "kind": "sfx",
+   "prompt": "quick vicious insect bite, hard chitin mandibles snapping shut with a crunch and a short hiss, organic insect creature sound, no voices, no music",
+   "seconds": 0.8,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlinghurt_1",
+   "kind": "sfx",
+   "prompt": "small alien bug struck, sharp chitin crack and a high pained screech, short, organic insect creature sound, no voices, no music",
+   "seconds": 0.7,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlinghurt_2",
+   "kind": "sfx",
+   "prompt": "small alien bug struck, sharp chitin crack and a high pained screech, short, organic insect creature sound, no voices, no music",
+   "seconds": 0.7,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlinghurt_3",
+   "kind": "sfx",
+   "prompt": "small alien bug struck, sharp chitin crack and a high pained screech, short, organic insect creature sound, no voices, no music",
+   "seconds": 0.7,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlingdeath_1",
+   "kind": "sfx",
+   "prompt": "small alien insect dying, carapace cracking, a wet squelch, a falling shrill screech that fades into twitching clicks, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlingdeath_2",
+   "kind": "sfx",
+   "prompt": "small alien insect dying, carapace cracking, a wet squelch, a falling shrill screech that fades into twitching clicks, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "shardlingdeath_3",
+   "kind": "sfx",
+   "prompt": "small alien insect dying, carapace cracking, a wet squelch, a falling shrill screech that fades into twitching clicks, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwingidle_1",
+   "kind": "sfx",
+   "prompt": "large flying insect hovering, deep buzzing wing drone like a giant dragonfly, steady fluttering whirr with a faint glassy shimmer, seamless, organic insect creature sound, no voices, no music",
+   "seconds": 6,
+   "influence": 0.55,
+   "loop": true
+  },
+  {
+   "id": "gloamwingidle_2",
+   "kind": "sfx",
+   "prompt": "large flying insect hovering, deep buzzing wing drone like a giant dragonfly, steady fluttering whirr with a faint glassy shimmer, seamless, organic insect creature sound, no voices, no music",
+   "seconds": 6,
+   "influence": 0.55,
+   "loop": true
+  },
+  {
+   "id": "gloamwingspit_1",
+   "kind": "sfx",
+   "prompt": "giant flying insect spits a bolt of acid, a wet throaty hiss and a sizzling spit, short, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwingspit_2",
+   "kind": "sfx",
+   "prompt": "giant flying insect spits a bolt of acid, a wet throaty hiss and a sizzling spit, short, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwingspit_3",
+   "kind": "sfx",
+   "prompt": "giant flying insect spits a bolt of acid, a wet throaty hiss and a sizzling spit, short, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwinghurt_1",
+   "kind": "sfx",
+   "prompt": "flying insect struck, wings stutter, a thin shrill buzzing shriek, short, organic insect creature sound, no voices, no music",
+   "seconds": 0.7,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwinghurt_2",
+   "kind": "sfx",
+   "prompt": "flying insect struck, wings stutter, a thin shrill buzzing shriek, short, organic insect creature sound, no voices, no music",
+   "seconds": 0.7,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwinghurt_3",
+   "kind": "sfx",
+   "prompt": "flying insect struck, wings stutter, a thin shrill buzzing shriek, short, organic insect creature sound, no voices, no music",
+   "seconds": 0.7,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwingdeath_1",
+   "kind": "sfx",
+   "prompt": "giant flying insect dying, wing buzz sputters and stops, a shrill keening fall and a dry chitin thud on the ground, organic insect creature sound, no voices, no music",
+   "seconds": 2.0,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwingdeath_2",
+   "kind": "sfx",
+   "prompt": "giant flying insect dying, wing buzz sputters and stops, a shrill keening fall and a dry chitin thud on the ground, organic insect creature sound, no voices, no music",
+   "seconds": 2.0,
+   "influence": 0.5
+  },
+  {
+   "id": "gloamwingdeath_3",
+   "kind": "sfx",
+   "prompt": "giant flying insect dying, wing buzz sputters and stops, a shrill keening fall and a dry chitin thud on the ground, organic insect creature sound, no voices, no music",
+   "seconds": 2.0,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackidle_1",
+   "kind": "sfx",
+   "prompt": "big heavy alien beetle grumbling, slow low clicks and a deep gurgling rumble from a full belly, rocks shifting inside it, organic insect creature sound, no voices, no music",
+   "seconds": 3,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackidle_2",
+   "kind": "sfx",
+   "prompt": "big heavy alien beetle grumbling, slow low clicks and a deep gurgling rumble from a full belly, rocks shifting inside it, organic insect creature sound, no voices, no music",
+   "seconds": 3,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackidle_3",
+   "kind": "sfx",
+   "prompt": "big heavy alien beetle grumbling, slow low clicks and a deep gurgling rumble from a full belly, rocks shifting inside it, organic insect creature sound, no voices, no music",
+   "seconds": 3,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackchew_1",
+   "kind": "sfx",
+   "prompt": "giant beetle grinding rock with a heavy jaw, crunching gravel and stone between hard mandibles, steady chewing, seamless, organic insect creature sound, no voices, no music",
+   "seconds": 4,
+   "influence": 0.55,
+   "loop": true
+  },
+  {
+   "id": "lodebackchew_2",
+   "kind": "sfx",
+   "prompt": "giant beetle grinding rock with a heavy jaw, crunching gravel and stone between hard mandibles, steady chewing, seamless, organic insect creature sound, no voices, no music",
+   "seconds": 4,
+   "influence": 0.55,
+   "loop": true
+  },
+  {
+   "id": "lodebackbite_1",
+   "kind": "sfx",
+   "prompt": "heavy beast bite, a big chitin jaw slamming shut on metal, a deep crunch and a grunt, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackbite_2",
+   "kind": "sfx",
+   "prompt": "heavy beast bite, a big chitin jaw slamming shut on metal, a deep crunch and a grunt, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackbite_3",
+   "kind": "sfx",
+   "prompt": "heavy beast bite, a big chitin jaw slamming shut on metal, a deep crunch and a grunt, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackhurt_1",
+   "kind": "sfx",
+   "prompt": "big armoured beetle hit, a deep hollow knock on a heavy shell and a low bellowing groan, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackhurt_2",
+   "kind": "sfx",
+   "prompt": "big armoured beetle hit, a deep hollow knock on a heavy shell and a low bellowing groan, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackhurt_3",
+   "kind": "sfx",
+   "prompt": "big armoured beetle hit, a deep hollow knock on a heavy shell and a low bellowing groan, organic insect creature sound, no voices, no music",
+   "seconds": 1.0,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackdeath_1",
+   "kind": "sfx",
+   "prompt": "huge beetle dying, heavy shell cracking open, a sac bursting with a wet glassy splash and pebbles spilling out, a fading low moan, organic insect creature sound, no voices, no music",
+   "seconds": 2.5,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackdeath_2",
+   "kind": "sfx",
+   "prompt": "huge beetle dying, heavy shell cracking open, a sac bursting with a wet glassy splash and pebbles spilling out, a fading low moan, organic insect creature sound, no voices, no music",
+   "seconds": 2.5,
+   "influence": 0.5
+  },
+  {
+   "id": "lodebackdeath_3",
+   "kind": "sfx",
+   "prompt": "huge beetle dying, heavy shell cracking open, a sac bursting with a wet glassy splash and pebbles spilling out, a fading low moan, organic insect creature sound, no voices, no music",
+   "seconds": 2.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchidle_1",
+   "kind": "sfx",
+   "prompt": "gigantic alien insect queen breathing in a cavern, slow deep rasping breath, low resonant chitin creaks and distant clicking of a swarm, ominous, organic insect creature sound, no voices, no music",
+   "seconds": 8,
+   "influence": 0.5,
+   "loop": true
+  },
+  {
+   "id": "matriarchidle_2",
+   "kind": "sfx",
+   "prompt": "gigantic alien insect queen breathing in a cavern, slow deep rasping breath, low resonant chitin creaks and distant clicking of a swarm, ominous, organic insect creature sound, no voices, no music",
+   "seconds": 8,
+   "influence": 0.5,
+   "loop": true
+  },
+  {
+   "id": "matriarchroar_1",
+   "kind": "sfx",
+   "prompt": "colossal alien insect queen roar, an enormous layered screeching bellow with deep sub-bass and chittering overtones, echoing over a desert, terrifying, organic insect creature sound, no voices, no music",
+   "seconds": 4,
+   "influence": 0.6
+  },
+  {
+   "id": "matriarchroar_2",
+   "kind": "sfx",
+   "prompt": "colossal alien insect queen roar, an enormous layered screeching bellow with deep sub-bass and chittering overtones, echoing over a desert, terrifying, organic insect creature sound, no voices, no music",
+   "seconds": 4,
+   "influence": 0.6
+  },
+  {
+   "id": "matriarchroar_3",
+   "kind": "sfx",
+   "prompt": "colossal alien insect queen roar, an enormous layered screeching bellow with deep sub-bass and chittering overtones, echoing over a desert, terrifying, organic insect creature sound, no voices, no music",
+   "seconds": 4,
+   "influence": 0.6
+  },
+  {
+   "id": "matriarchslam_1",
+   "kind": "sfx",
+   "prompt": "giant creature slams two huge clawed limbs into the ground, massive earth-shaking impact, rocks cracking and debris falling, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchslam_2",
+   "kind": "sfx",
+   "prompt": "giant creature slams two huge clawed limbs into the ground, massive earth-shaking impact, rocks cracking and debris falling, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchslam_3",
+   "kind": "sfx",
+   "prompt": "giant creature slams two huge clawed limbs into the ground, massive earth-shaking impact, rocks cracking and debris falling, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchspit_1",
+   "kind": "sfx",
+   "prompt": "giant creature spits a big glob of acid, a deep throaty retch and a heavy sizzling splash, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchspit_2",
+   "kind": "sfx",
+   "prompt": "giant creature spits a big glob of acid, a deep throaty retch and a heavy sizzling splash, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchhurt_1",
+   "kind": "sfx",
+   "prompt": "giant insect queen wounded, a deep chitin crack and an angry shrieking growl, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchhurt_2",
+   "kind": "sfx",
+   "prompt": "giant insect queen wounded, a deep chitin crack and an angry shrieking growl, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchhurt_3",
+   "kind": "sfx",
+   "prompt": "giant insect queen wounded, a deep chitin crack and an angry shrieking growl, organic insect creature sound, no voices, no music",
+   "seconds": 1.5,
+   "influence": 0.5
+  },
+  {
+   "id": "matriarchdeath_1",
+   "kind": "sfx",
+   "prompt": "colossal alien insect queen dying, a long falling shriek that sinks into a deep groan, huge shell cracking and collapsing with a heavy ground-shaking crash, organic insect creature sound, no voices, no music",
+   "seconds": 6,
+   "influence": 0.6
+  },
+  {
+   "id": "matriarchdeath_2",
+   "kind": "sfx",
+   "prompt": "colossal alien insect queen dying, a long falling shriek that sinks into a deep groan, huge shell cracking and collapsing with a heavy ground-shaking crash, organic insect creature sound, no voices, no music",
+   "seconds": 6,
+   "influence": 0.6
+  },
+  {
+   "id": "broodswarm_1",
+   "kind": "sfx",
+   "prompt": "a swarm of alien insects approaching from the distance, hundreds of chittering clicks and skittering chitin legs over rock, rising in volume, with buzzing wings, menacing, organic insect creature sound, no voices, no music",
+   "seconds": 8,
+   "influence": 0.55
+  },
+  {
+   "id": "broodswarm_2",
+   "kind": "sfx",
+   "prompt": "a swarm of alien insects approaching from the distance, hundreds of chittering clicks and skittering chitin legs over rock, rising in volume, with buzzing wings, menacing, organic insect creature sound, no voices, no music",
+   "seconds": 8,
+   "influence": 0.55
+  },
+  {
+   "id": "broodswarm_3",
+   "kind": "sfx",
+   "prompt": "a swarm of alien insects approaching from the distance, hundreds of chittering clicks and skittering chitin legs over rock, rising in volume, with buzzing wings, menacing, organic insect creature sound, no voices, no music",
+   "seconds": 8,
+   "influence": 0.55
+  }
+ ]
+}

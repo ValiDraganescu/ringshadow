@@ -424,5 +424,12 @@ under the game's names (`sfx/<name>_<n>`). Checked offline with
 | `matriarchroar`, `matriarchslam`, `matriarchspit`, `matriarchhurt`, `matriarchdeath` | |
 | `broodswarm` | a raid coming: the 20 s warning, from the raid's bearing |
 
+`Tools/AudioGen/brood_pick.py` copies every take to `art/models/<kind>/sounds/`
+(`broodswarm` with the Shardling's), and levels the picks (to about −22 LUFS
+for idles and loops, −15 for bites, spits, hurts and deaths, −9 for the
+Matriarch's roar, the gain capped at a −1 dBFS peak). Two to three picks a
+name; one for `lodebackhurt` (the other takes were near silent) and
+`matriarchidle` (the other jumped at its loop seam).
+
 Importing them into `unreal/Content/Audio/Sfx/` and `Sounds.json` comes
 with N2, when the game plays them.
