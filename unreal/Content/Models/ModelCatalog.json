@@ -83487,6 +83487,960 @@
        "triangles": 1104
       }
      ]
+    },
+    {
+     "name": "markPlate",
+     "path": "/sentinel_blue/markPlate",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "markPlate"
+     ],
+     "rays": [
+      {
+       "hi": [
+        0.42,
+        0.18,
+        0.02
+       ],
+       "lo": [
+        -0.42,
+        -0.18,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.3,
+        0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.42,
+        0.18,
+        0.02
+       ],
+       "lo": [
+        -0.42,
+        -0.18,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.3,
+        -0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.44,
+        0.015,
+        0.025
+       ],
+       "lo": [
+        -0.44,
+        -0.015,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.495,
+        0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.44,
+        0.015,
+        0.025
+       ],
+       "lo": [
+        -0.44,
+        -0.015,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.495,
+        -0.96,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "markPlate__hullDark",
+       "mesh": "/Game/Models/turretmarks/SM_markPlate__hullDark.SM_markPlate__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hullMid",
+       "prim": "markPlate__hullMid",
+       "mesh": "/Game/Models/turretmarks/SM_markPlate__hullMid.SM_markPlate__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 600
+      }
+     ]
+    },
+    {
+     "name": "marks_0",
+     "path": "/sentinel_blue/marks_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_0"
+     ],
+     "driver": {
+      "what": "rate mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_0__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_0__markRate.SM_marks_0__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_1",
+     "path": "/sentinel_blue/marks_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_1"
+     ],
+     "driver": {
+      "what": "rate mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_1__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_1__markRate.SM_marks_1__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_2",
+     "path": "/sentinel_blue/marks_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_2"
+     ],
+     "driver": {
+      "what": "rate mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_2__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_2__markRate.SM_marks_2__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_3",
+     "path": "/sentinel_blue/marks_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_3"
+     ],
+     "driver": {
+      "what": "damage mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_3__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_3__markDamage.SM_marks_3__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_4",
+     "path": "/sentinel_blue/marks_4",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_4"
+     ],
+     "driver": {
+      "what": "damage mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_4__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_4__markDamage.SM_marks_4__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_5",
+     "path": "/sentinel_blue/marks_5",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_5"
+     ],
+     "driver": {
+      "what": "damage mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_5__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_5__markDamage.SM_marks_5__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_6",
+     "path": "/sentinel_blue/marks_6",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_6"
+     ],
+     "driver": {
+      "what": "range mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_6__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_6__markRange.SM_marks_6__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_7",
+     "path": "/sentinel_blue/marks_7",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_7"
+     ],
+     "driver": {
+      "what": "range mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_7__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_7__markRange.SM_marks_7__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_8",
+     "path": "/sentinel_blue/marks_8",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_8"
+     ],
+     "driver": {
+      "what": "range mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_8__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_8__markRange.SM_marks_8__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_9",
+     "path": "/sentinel_blue/marks_9",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_9"
+     ],
+     "driver": {
+      "what": "air mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_9__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_9__markAir.SM_marks_9__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_10",
+     "path": "/sentinel_blue/marks_10",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_10"
+     ],
+     "driver": {
+      "what": "air mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_10__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_10__markAir.SM_marks_10__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_11",
+     "path": "/sentinel_blue/marks_11",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_blue_root",
+     "handles": [
+      "marks_11"
+     ],
+     "driver": {
+      "what": "air mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_11__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_11__markAir.SM_marks_11__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
     }
    ]
   },
@@ -199091,6 +200045,960 @@
        "triangles": 1104
       }
      ]
+    },
+    {
+     "name": "markPlate",
+     "path": "/sentinel_red/markPlate",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "markPlate"
+     ],
+     "rays": [
+      {
+       "hi": [
+        0.42,
+        0.18,
+        0.02
+       ],
+       "lo": [
+        -0.42,
+        -0.18,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.3,
+        0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.42,
+        0.18,
+        0.02
+       ],
+       "lo": [
+        -0.42,
+        -0.18,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.3,
+        -0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.44,
+        0.015,
+        0.025
+       ],
+       "lo": [
+        -0.44,
+        -0.015,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.495,
+        0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.44,
+        0.015,
+        0.025
+       ],
+       "lo": [
+        -0.44,
+        -0.015,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.495,
+        -0.96,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "markPlate__hullDark",
+       "mesh": "/Game/Models/turretmarks/SM_markPlate__hullDark.SM_markPlate__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hullMid",
+       "prim": "markPlate__hullMid",
+       "mesh": "/Game/Models/turretmarks/SM_markPlate__hullMid.SM_markPlate__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 600
+      }
+     ]
+    },
+    {
+     "name": "marks_0",
+     "path": "/sentinel_red/marks_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_0"
+     ],
+     "driver": {
+      "what": "rate mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_0__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_0__markRate.SM_marks_0__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_1",
+     "path": "/sentinel_red/marks_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_1"
+     ],
+     "driver": {
+      "what": "rate mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_1__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_1__markRate.SM_marks_1__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_2",
+     "path": "/sentinel_red/marks_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_2"
+     ],
+     "driver": {
+      "what": "rate mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_2__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_2__markRate.SM_marks_2__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_3",
+     "path": "/sentinel_red/marks_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_3"
+     ],
+     "driver": {
+      "what": "damage mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_3__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_3__markDamage.SM_marks_3__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_4",
+     "path": "/sentinel_red/marks_4",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_4"
+     ],
+     "driver": {
+      "what": "damage mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_4__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_4__markDamage.SM_marks_4__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_5",
+     "path": "/sentinel_red/marks_5",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_5"
+     ],
+     "driver": {
+      "what": "damage mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_5__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_5__markDamage.SM_marks_5__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_6",
+     "path": "/sentinel_red/marks_6",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_6"
+     ],
+     "driver": {
+      "what": "range mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_6__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_6__markRange.SM_marks_6__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_7",
+     "path": "/sentinel_red/marks_7",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_7"
+     ],
+     "driver": {
+      "what": "range mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_7__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_7__markRange.SM_marks_7__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_8",
+     "path": "/sentinel_red/marks_8",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_8"
+     ],
+     "driver": {
+      "what": "range mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_8__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_8__markRange.SM_marks_8__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_9",
+     "path": "/sentinel_red/marks_9",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_9"
+     ],
+     "driver": {
+      "what": "air mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_9__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_9__markAir.SM_marks_9__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_10",
+     "path": "/sentinel_red/marks_10",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_10"
+     ],
+     "driver": {
+      "what": "air mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_10__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_10__markAir.SM_marks_10__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_11",
+     "path": "/sentinel_red/marks_11",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "sentinel_red_root",
+     "handles": [
+      "marks_11"
+     ],
+     "driver": {
+      "what": "air mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_11__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_11__markAir.SM_marks_11__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
     }
    ]
   },
@@ -274542,6 +276450,960 @@
        "blend": "opaque",
        "team": [],
        "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "markPlate",
+     "path": "/gatling_blue/markPlate",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "markPlate"
+     ],
+     "rays": [
+      {
+       "hi": [
+        0.42,
+        0.18,
+        0.02
+       ],
+       "lo": [
+        -0.42,
+        -0.18,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.3,
+        0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.42,
+        0.18,
+        0.02
+       ],
+       "lo": [
+        -0.42,
+        -0.18,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.3,
+        -0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.44,
+        0.015,
+        0.025
+       ],
+       "lo": [
+        -0.44,
+        -0.015,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.495,
+        0.96,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.44,
+        0.015,
+        0.025
+       ],
+       "lo": [
+        -0.44,
+        -0.015,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.495,
+        -0.96,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "markPlate__hullDark",
+       "mesh": "/Game/Models/turretmarks/SM_markPlate__hullDark.SM_markPlate__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hullMid",
+       "prim": "markPlate__hullMid",
+       "mesh": "/Game/Models/turretmarks/SM_markPlate__hullMid.SM_markPlate__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 600
+      }
+     ]
+    },
+    {
+     "name": "marks_0",
+     "path": "/gatling_blue/marks_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_0"
+     ],
+     "driver": {
+      "what": "rate mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_0__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_0__markRate.SM_marks_0__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_1",
+     "path": "/gatling_blue/marks_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_1"
+     ],
+     "driver": {
+      "what": "rate mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_1__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_1__markRate.SM_marks_1__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_2",
+     "path": "/gatling_blue/marks_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_2"
+     ],
+     "driver": {
+      "what": "rate mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRate",
+       "prim": "marks_2__markRate",
+       "mesh": "/Game/Models/turretmarks/SM_marks_2__markRate.SM_marks_2__markRate",
+       "materialInstance": "/Game/Models/Materials/MI_markRate_4f7fee89a303.MI_markRate_4f7fee89a303",
+       "materialKey": "4f7fee89a303",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_3",
+     "path": "/gatling_blue/marks_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_3"
+     ],
+     "driver": {
+      "what": "damage mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_3__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_3__markDamage.SM_marks_3__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_4",
+     "path": "/gatling_blue/marks_4",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_4"
+     ],
+     "driver": {
+      "what": "damage mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_4__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_4__markDamage.SM_marks_4__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_5",
+     "path": "/gatling_blue/marks_5",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_5"
+     ],
+     "driver": {
+      "what": "damage mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markDamage",
+       "prim": "marks_5__markDamage",
+       "mesh": "/Game/Models/turretmarks/SM_marks_5__markDamage.SM_marks_5__markDamage",
+       "materialInstance": "/Game/Models/Materials/MI_markDamage_e199f8461a10.MI_markDamage_e199f8461a10",
+       "materialKey": "e199f8461a10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_6",
+     "path": "/gatling_blue/marks_6",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_6"
+     ],
+     "driver": {
+      "what": "range mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_6__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_6__markRange.SM_marks_6__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_7",
+     "path": "/gatling_blue/marks_7",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_7"
+     ],
+     "driver": {
+      "what": "range mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_7__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_7__markRange.SM_marks_7__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_8",
+     "path": "/gatling_blue/marks_8",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_8"
+     ],
+     "driver": {
+      "what": "range mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markRange",
+       "prim": "marks_8__markRange",
+       "mesh": "/Game/Models/turretmarks/SM_marks_8__markRange.SM_marks_8__markRange",
+       "materialInstance": "/Game/Models/Materials/MI_markRange_ed263252bd99.MI_markRange_ed263252bd99",
+       "materialKey": "ed263252bd99",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_9",
+     "path": "/gatling_blue/marks_9",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_9"
+     ],
+     "driver": {
+      "what": "air mark 1: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_9__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_9__markAir.SM_marks_9__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_10",
+     "path": "/gatling_blue/marks_10",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_10"
+     ],
+     "driver": {
+      "what": "air mark 2: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_10__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_10__markAir.SM_marks_10__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      }
+     ]
+    },
+    {
+     "name": "marks_11",
+     "path": "/gatling_blue/marks_11",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "gatling_blue_root",
+     "handles": [
+      "marks_11"
+     ],
+     "driver": {
+      "what": "air mark 3: lit once bought",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseSentinel",
+       "AcPoseBuildings2.cpp:PoseGatling"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "markAir",
+       "prim": "marks_11__markAir",
+       "mesh": "/Game/Models/turretmarks/SM_marks_11__markAir.SM_marks_11__markAir",
+       "materialInstance": "/Game/Models/Materials/MI_markAir_184daf010afb.MI_markAir_184daf010afb",
+       "materialKey": "184daf010afb",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
       }
      ]
     }

@@ -310,6 +310,12 @@ public:
 	/// D1: the realm's Citadel turrets take their next mark of `Stat`, paid
 	/// from the realm wallet; answered as the donations.
 	bool UpgradeCitadel(ac::DefenceStat Stat, FString* Why = nullptr);
+	/// D3: placed turret `Turret` takes its next mark of `Stat`, paid from
+	/// the pilot's own wallet. The server's refusals: `TurretRefusal` (and a
+	/// note); `TurretKept` counts the kept asks.
+	bool UpgradeTurret(int64 Turret, ac::DefenceStat Stat, FString* Why = nullptr);
+	const FString& TurretRefusal() const { return LastTurretRefusal; }
+	int32 TurretKept() const { return TurretDone; }
 	/// C2: use a consumable in the field (keys 1-4). The server's refusal
 	/// comes back as a note; `ItemsUsed` counts the kept ones.
 	bool UseItem(ac::Item Item, FString* Why = nullptr);
@@ -474,6 +480,10 @@ private:
 	/// Citadel asks (request ids), the last refusal, the ones kept.
 	TSet<uint32> CitadelAsked;
 	FString LastCitadelRefusal;
+	/// D3: the turret card's asks.
+	TSet<uint32> TurretAsked;
+	FString LastTurretRefusal;
+	int32 TurretDone = 0;
 	int32 CitadelDone = 0;
 	/// Consumable uses asked (request ids), and the ones kept.
 	TSet<uint32> ItemAsked;

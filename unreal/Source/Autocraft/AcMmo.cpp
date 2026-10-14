@@ -253,6 +253,8 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	LastRigRefusal.Reset();
 	CitadelAsked.Reset();
 	LastCitadelRefusal.Reset();
+	TurretAsked.Reset();
+	LastTurretRefusal.Reset();
 	CitadelDone = 0;
 	ItemAsked.Reset();
 	ItemDone = 0;
@@ -812,6 +814,21 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (TurretAsked.Remove(R.request) > 0)
+		{
+			if (R.done)
+			{
+				TurretDone += 1;
+			}
+			else
+			{
+				LastTurretRefusal = Text(R.reason);
+				Notes.Add(LastTurretRefusal);
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: turret ask %u refused: %s"), R.request, *LastTurretRefusal);
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (CitadelAsked.Remove(R.request) > 0)
 		{
 			if (R.done)
@@ -1059,6 +1076,16 @@ bool FAcMmoClient::UpgradeCitadel(const ac::DefenceStat Stat, FString* Why)
 	LastCitadelRefusal.Reset();
 	CitadelAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: upgrade %s"), Id, *Text(std::string(ac::rawValue(Stat))));
+	return true;
+}
+
+bool FAcMmoClient::UpgradeTurret(const int64 Turret, const ac::DefenceStat Stat, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->upgradeTurret(Turret, Stat);
+	LastTurretRefusal.Reset();
+	TurretAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: turret ask %u: upgrade %lld %s"), Id, (long long)Turret, *Text(std::string(ac::rawValue(Stat))));
 	return true;
 }
 

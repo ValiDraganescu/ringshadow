@@ -2,6 +2,7 @@
 
 #include "AcNewKinds.h"
 #include "AcProgressHud.h"
+#include "Defence.h"
 #include "Flight.h"
 #include "Leveling.h"
 #include "NetProtocol.h"
@@ -467,6 +468,13 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		if (const FString By = AcProgressHud::BuiltBy(In.Mmo, F.Sight->target); !By.IsEmpty())
 		{
 			Info.Sight->Title += FString::Printf(TEXT("  ·  built by %s"), *By);
+		}
+		// D3: a turret of the realm close enough to upgrade.
+		const std::optional<ac::Structure> T = Sim.state.structure(F.Sight->target);
+		if (!Info.Prompt && T && ac::Defence::upgradable(T->kind) && T->complete()
+			&& ac::distance(U.position, T->position) - ac::Rules::radius(T->kind) - ac::Rules::radius(U.kind) <= ac::Defence::turretReach)
+		{
+			Info.Prompt = FString::Printf(TEXT("U  ·  the %s's card: its marks"), *Title(T->kind));
 		}
 	}
 	if (!Info.Prompt && Info.Sight)

@@ -109,6 +109,13 @@ namespace
 				// The game's own keys wait while the screen is up (⌘Q still quits).
 				return !Event.IsCommandDown();
 			}
+			if (TSharedPtr<SAcTurretCard> S = F->TurretCardWidget())
+			{
+				if (K == EKeys::Escape || (K == EKeys::U && !Event.IsCommandDown())) { F->CloseTurretCard(); return true; }
+				if (!Event.IsCommandDown() && S->Key(K)) return true;
+				// The game's own keys wait while the card is up (⌘Q still quits).
+				return !Event.IsCommandDown();
+			}
 			if (TSharedPtr<SAcJournalScreen> S = F->JournalScreenWidget())
 			{
 				if (K == EKeys::Escape || (K == EKeys::L && !Event.IsCommandDown())) { F->CloseJournalScreen(); return true; }
@@ -390,6 +397,7 @@ void UAcGameFlowSubsystem::Deinitialize()
 	CloseSkillScreen();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseTurretCard();
 	CloseJournalScreen();
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
 	{
@@ -840,6 +848,7 @@ void UAcGameFlowSubsystem::StopMmo()
 	CloseSkillScreen();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseTurretCard();
 	CloseJournalScreen();
 	LeaveDriving();
 	Sim->StopMmo();
@@ -866,6 +875,7 @@ void UAcGameFlowSubsystem::TickMmo()
 	TickSkillScreen();
 	TickRigScreen();
 	TickCitadelScreen();
+	TickTurretCard();
 	TickJournalScreen();
 	TickMissions();
 	if (!MmoBanner) return;
@@ -932,6 +942,7 @@ bool UAcGameFlowSubsystem::OpenWorldMap()
 	CloseSkillScreen();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseTurretCard();
 	CloseJournalScreen();
 	const AAcHUD* Hud = AAcHUD::Get(this);
 	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
@@ -1102,6 +1113,7 @@ bool UAcGameFlowSubsystem::OpenSkillScreen()
 	CloseWorldMap();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseTurretCard();
 	CloseJournalScreen();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	// Each ask goes to the server; a refusal at once (not connected) shows here,
@@ -1231,6 +1243,7 @@ bool UAcGameFlowSubsystem::OpenRigScreen()
 	CloseWorldMap();
 	CloseSkillScreen();
 	CloseCitadelScreen();
+	CloseTurretCard();
 	CloseJournalScreen();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	// As the skill screen's: a refusal at once here, the server's own
@@ -1378,6 +1391,7 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 	CloseSkillScreen();
 	CloseRigScreen();
 	CloseJournalScreen();
+	CloseTurretCard();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	Root->AddLayer(CitadelScreenLayer)
 	[
@@ -1499,6 +1513,7 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 	if (!Mmo)
 	{
 		CloseCitadelScreen();
+	CloseTurretCard();
 		return;
 	}
 	FAcCitadelScreenInfo Info;
@@ -1684,6 +1699,7 @@ bool UAcGameFlowSubsystem::OpenJournalScreen()
 	CloseSkillScreen();
 	CloseRigScreen();
 	CloseCitadelScreen();
+	CloseTurretCard();
 	TWeakObjectPtr<UAcGameFlowSubsystem> Weak(this);
 	Root->AddLayer(JournalScreenLayer)
 	[

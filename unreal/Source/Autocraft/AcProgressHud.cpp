@@ -22,6 +22,7 @@
 #include "HAL/PlatformTime.h"
 #include "Rendering/DrawElements.h"
 
+#include "Defence.h"
 #include "Pilot.h"
 #include "RegionFile.h"
 #include "Simulation.h"
@@ -1246,6 +1247,22 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 				FString::Printf(TEXT("Back at the Citadel, at work again in %lld minutes"), (long long)(N.value / 60)), Orange, Now);
 		}
 		UE_LOG(LogAutocraft, Log, TEXT("progress: merc %s %s %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
+		break;
+	}
+	case K::upgraded:
+	{
+		// D3: a turret here took a mark ("gatling/air"), and who paid.
+		const std::string Id = N.id;
+		const size_t Slash = Id.find('/');
+		const std::optional<ac::StructureKind> Kind = ac::parse<ac::StructureKind>(Id.substr(0, Slash));
+		const std::optional<ac::DefenceStat> Stat =
+			Slash == std::string::npos ? std::nullopt : ac::parse<ac::DefenceStat>(Id.substr(Slash + 1));
+		const FString Name = Kind ? Upper(ac::Simulation::title(*Kind)) : FString(TEXT("TURRET"));
+		const FString What = Stat ? Upper(ac::Defence::title(*Stat)) : FString(TEXT("A STAT"));
+		const FString By = N.by.empty() ? FString(TEXT("a pilot")) : (P && N.by == P->callsign ? FString(TEXT("you")) : Text(N.by));
+		Hud->Toast(FString::Printf(TEXT("%s UPGRADED"), *Name), FString::Printf(TEXT("%s mark %lld  ·  upgraded by %s"), *What,
+			(long long)N.value, *By), FAcHudStyle::Srgb(1.0, 0.55, 0.25), Now);
+		UE_LOG(LogAutocraft, Log, TEXT("progress: %s upgraded by %s, mark %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
 		break;
 	}
 	default:

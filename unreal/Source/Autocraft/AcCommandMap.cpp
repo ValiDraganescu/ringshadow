@@ -395,7 +395,7 @@ void UAcCommandMapSubsystem::PollKeys()
 	if (Mods.IsCommandDown() || Mods.IsControlDown()) return;
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsMmo())
 	{
-		// The MMORPG test: K is the skill screen, J the rig screen, H the Citadel, L the Journal, Q/C/G the pilot's actives
+		// The MMORPG test: K is the skill screen, J the rig screen, H the Citadel, L the Journal, U a turret's card, Q/C/G the pilot's actives
 		// (the server uses the slot's skill; docs/prospector-progression.md).
 		UAcGameFlowSubsystem* Flow = UAcGameFlowSubsystem::Get(this);
 		if (Flow && PC->WasInputKeyJustPressed(EKeys::K))
@@ -419,6 +419,13 @@ void UAcCommandMapSubsystem::PollKeys()
 		if (Flow && PC->WasInputKeyJustPressed(EKeys::H))
 		{
 			Flow->ToggleCitadelScreen();
+			return;
+		}
+		// U: a turret's card (D3: a Sentinel or a Gatling Gun of the realm
+		// near, its marks from the pilot's wallet).
+		if (Flow && PC->WasInputKeyJustPressed(EKeys::U))
+		{
+			Flow->ToggleTurretCard();
 			return;
 		}
 		// X: arm an abandon of a KSTR contract; then 1, 2, 3 drop that one

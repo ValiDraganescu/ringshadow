@@ -56,6 +56,7 @@
 #include "SAcMmoBanner.h"
 #include "SAcNewGame.h"
 #include "SAcCitadelScreen.h"
+#include "SAcTurretCard.h"
 #include "SAcJournalScreen.h"
 #include "SAcRigScreen.h"
 #include "SAcSkillScreen.h"
@@ -148,6 +149,17 @@ public:
 	void CloseCitadelScreen();
 	void ToggleCitadelScreen();
 	TSharedPtr<SAcCitadelScreen> CitadelScreenWidget() const { return CitadelScreen; }
+	/// A placed turret's card (U in the mode; D3, docs/mmorpg-m8.md): the
+	/// Sentinel or Gatling Gun of the realm under the crosshair within
+	/// `Defence::turretReach`, else the nearest that close; its marks, bought
+	/// from the pilot's wallet. False outside the mode, without a HUD, or
+	/// with no turret near (the HUD says so). AcGameFlowTurret.cpp.
+	bool OpenTurretCard();
+	void CloseTurretCard();
+	void ToggleTurretCard();
+	TSharedPtr<SAcTurretCard> TurretCardWidget() const { return TurretCard; }
+	/// The realm's turret the card would open on now (nil: none near).
+	std::optional<int64> NearTurret() const;
 	/// The pilot's Journal (L in the mode; K2, docs/missions.md): the Citadel
 	/// missions it signed up for, their briefings, places and narrations.
 	/// False outside the mode or without a HUD.
@@ -195,6 +207,13 @@ private:
 	/// The server's last Citadel refusal, and the kept asks, already handed to the screen.
 	FString CitadelRefusalShown;
 	int32 CitadelKeptShown = 0;
+	TSharedPtr<SAcTurretCard> TurretCard;
+	/// The turret the card shows; its state each frame; the server's last
+	/// turret refusal and kept asks already handed to it.
+	int64 TurretCardId = 0;
+	void TickTurretCard();
+	FString TurretRefusalShown;
+	int32 TurretKeptShown = 0;
 	TSharedPtr<SAcJournalScreen> JournalScreen;
 	/// The Journal's state from the client's progress, each frame; and the
 	/// missions just signed up for (their sting and narration).

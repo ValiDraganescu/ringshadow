@@ -279,6 +279,26 @@ namespace
 		if (bBusy || Scale < 0.999) P.bAnimated = true;
 	}
 
+	// MARK: A placed turret's marks (D3; Tools/Editor/models/turret_marks.py)
+
+	/// The chevrons on the base: `marks_<n>` (n = stat × 3 + mark) lit while
+	/// the turret has more than `mark` marks of `stat`, a slow breath on them.
+	void PoseMarks(const FAcPoseContext& C, FAcPose& P, const bool bLive)
+	{
+		static const FParts Marks(TEXT("marks"), 12);
+		const ac::TurretMarks Have = C.Structure->marks.value_or(ac::TurretMarks{});
+		const FAcModelInfo& M = C.Model;
+		for (int32 N = 0; N < 12; ++N)
+		{
+			const int32 Part = Marks(M, N);
+			if (Part == INDEX_NONE) continue;
+			const ac::DefenceStat Stat = ac::DefenceStat(N / 3);
+			const bool bOn = bLive && Have.of(Stat) > N % 3;
+			P.Visible[Part] = bOn;
+			if (bOn) P.Emission[Part] = float(0.85 + 0.15 * std::sin(C.Time * 2.2 + N * 0.4));
+		}
+	}
+
 	// MARK: Sentinel (GameScene.animate :524; Simulation.stepTurret)
 
 	struct FSentinelState : FAcPoseState
@@ -313,6 +333,7 @@ namespace
 			Mem.Pod[K] = Ease(Mem.Pod[K], bTracking ? 0.55 : 0.3, 0.04, C.Dt);
 			SetEuler(M, P, Pods(M, K), 0, 0, Mem.Pod[K]);
 		}
+		PoseMarks(C, P, bLive);
 	}
 
 	// MARK: Gatling gun (D2, docs/mmorpg-m8.md; Tools/Editor/models/gatling.py)
@@ -350,6 +371,7 @@ namespace
 		if (const int32 T = Tips.Get(M); T != INDEX_NONE) P.Emission[T] = float(bLive ? 0.15 + 1.6 * Mem.Heat : 0.05);
 		if (const int32 H = Hopper.Get(M); H != INDEX_NONE) P.Emission[H] = float(bLive ? 0.55 + 0.9 * Mem.Heat : 0.08);
 		if (const int32 F = Flashes(M, 0); F != INDEX_NONE) P.Visible[F] = bLive && Since >= 0.0 && Since < 0.05;
+		PoseMarks(C, P, bLive);
 	}
 
 	FAcPoseRegistration RegGatling(ac::StructureKind::gatling, &PoseGatling);

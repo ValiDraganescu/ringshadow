@@ -332,15 +332,67 @@ The defences are the core's buildings with a weapon (`Defence.h`,
   each, three of each, from the realm wallet: 250 ore, then 500 + 50 MH, then
   1,000 + 150 MH (`Defence::citadelPrice`). Any pilot buys them at the
   Citadel; refused away from it, when the realm wallet is short, and at the
-  last mark. The same marks will fit placed turrets (D3, paid by the pilot).
+  last mark. The same marks fit placed turrets (D3, below, paid by the pilot).
 - **Bugs turn on the defence that shoots them**: a hit from a building sets
   its group on that building while it stands within the leash
   (`BroodGroup::turret`), before its raid's building. A defence's builder
   earns half the XP of the damage it does (`WorldMap::defenceXpShare`).
 - **Prospect Landing's Citadel can be raided now** that it defends itself;
   its other buildings still only beyond 25 cells of it.
-- **Dev and shots**: `defence wallet|blueprints|citadel|gatling|aa`
-  (`WorldMap::devDefence`); `-AcMmoShotsD` makes the five pictures.
+- **Dev and shots**: `defence wallet|purse|blueprints|citadel|gatling|aa|air|flyers`
+  (`WorldMap::devDefence`); `-AcMmoShotsD` makes the five pictures,
+  `-AcMmoShotsD3` the four of the turret upgrades.
+
+### As built (D3, 2026-10-15): turret upgrades
+
+Every placed Sentinel (the AA tower) and Gatling Gun takes marks on
+`Structure::marks`, as the Citadel's guns do, three of each stat:
+
+| Stat | A mark | Sentinel | Gatling Gun |
+|---|---|---|---|
+| Fire rate | +20% shots a second | 1 → 1.6 volleys a second | 4 → 6.4 shots a second |
+| Damage | +25% a shot | 12 → 21 a missile | 4 → 7 a round |
+| Range | +1 cell | 7 → 10 (its air reach) | ground 6 → 9 |
+| Air reach | +0.5 cell (Gatling Gun only) | (none: its range is its reach) | 4.5 → 6, never as far as the AA tower's 7 |
+
+A Gatling Gun's range marks leave its air reach be: the air is the AA
+tower's job. Prices, from the upgrading pilot's own wallet, no tax
+(`Defence::turretPrice`):
+
+| Mark | Gatling Gun (each stat) | Sentinel (each stat) |
+|---|---|---|
+| 1 | 100 ore + 50 MH | 150 ore + 75 MH |
+| 2 | 300 ore + 200 MH | 450 ore + 300 MH |
+| 3 | 800 ore + 500 MH | 1,200 ore + 750 MH |
+| All marks | 4,800 ore + 3,000 MH (four stats) | 5,400 ore + 3,375 MH (three stats) |
+
+A whole Gatling Gun is about an hour and a half of pumping MH at a Derrick
+(2,000 MH an hour), the same scale as a rig at Mk III: the MH sink of levels
+20 to 30, when the canyon waves (Z2) want the guns.
+
+- **The turret card** (U): near a turret of the realm (within 4 cells of
+  its edge; the one under the crosshair first, else the nearest) U opens a
+  small card: its name, hp, kills and builder, a column a stat with its
+  marks as chevrons, now and next, the price, UPGRADE (keys 1-4). Refused:
+  too far ("Too far: stand within 4 cells of the Gatling Gun"), the wallet
+  short ("Your wallet is short: 300 MH needed, you have 120"), the last
+  mark ("Air reach is at its last mark").
+- **Any pilot upgrades any turret** of the realm: it defends everyone.
+  Every pilot in the region gets the toast "GATLING GUN UPGRADED · Air
+  reach mark 2 · upgraded by Pilot 045B" (`NewsKind::upgraded`).
+- **On the turret**: a small plate at the front and back of its base, a
+  column of three chevrons a stat, lit in the stat's colour (amber fire
+  rate, ember damage, ice range, sky-blue air reach) once bought; the card
+  draws the same chevrons (`Tools/Editor/models/turret_marks.py`,
+  `PoseMarks`).
+- **Kills**: each defence counts the bugs it kills (`WorldMap::kills_`),
+  saved with it; the card shows them (`ProgressMessage::turretKills`).
+- **Saved** with the building (schema 16: `mark_rate`, `mark_damage`,
+  `mark_range`, `mark_air`, `kills` on `buildings`). A felled turret loses
+  its marks and kills, no refund: a new one in its place starts bare (Z2's
+  Matriarch fells a canyon's turrets this way).
+- **Wire** (protocol 21): request 19 `UpgradeTurret{turret, stat}`; the
+  marks travel with the structure (four 2-bit stats).
 
 ## Server and client (N2)
 

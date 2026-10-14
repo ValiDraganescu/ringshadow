@@ -352,13 +352,13 @@ floor**. A copy held below the floor is kept and shows "opens at level N".
 |---|---|---|---|---|---|
 | Citadel | Home: unload point, respawn point, where the respec is made | 1 | 1 | 400 | on the server (P6) |
 | Derrick | Pumps MH on a well (as today) | 3 | 4 | 75 | as today |
-| Gatling gun | A rotary cannon firing red-hot ore and MH amalgam rounds: ground targets in range 6, air within 4.5 (D2) | 5 | 6 | 125 + 25 | on the server (D2) |
+| Gatling gun | A rotary cannon firing red-hot ore and MH amalgam rounds: ground targets in range 6, air within 4.5 (D2); marks from the pilot's wallet at the turret (U, D3; [creatures.md](creatures.md) "As built (D3)") | 5 | 6 | 125 + 25 | on the server (D2, D3) |
 | Hab Dome | A field depot: unload ore and MH into the wallet away from home, and a respawn point | 8 | 3 | 150 + 50 | on the server (P6) |
 | Foundry | Makes rig modules: drill head, cargo pod, plate, torch tip, survey lens ("Foundry and Lab") | 15 | 1 | 300 + 150 | on the server (P7) |
 | Lab | Researches better module marks (Mk II, Mk III) for MH and time | 25 | 1 | 200 + 200 | on the server (P7), standing alone |
 | Spacedock | A private pad: fly from it and land on it from any pad; later, routes to far worlds | 35 | 1 | 400 + 300 | on the server (P6) |
 | Bastion | A bunker: the Prospector climbs in, takes no damage, its torch fires from it at +2 range. For holding a claim in no-man's land | 45 | 2 | 250 + 100 | built (P6); its fight matters later |
-| Sentinel | The AA tower: missile pods at the air only, range 7, outranging a Gloamwing's spit (D2) | 10 | 4 | 150 + 100 | on the server (D2) |
+| Sentinel | The AA tower: missile pods at the air only, range 7, outranging a Gloamwing's spit (D2); marks from the pilot's wallet at the turret (U, D3) | 10 | 4 | 150 + 100 | on the server (D2, D3) |
 | Garrison | Trains other kinds in the strategy game. Held back: no blueprint in the world while the MMO is Prospector only | | | | held back |
 
 Limits are the realm's, across the world (R1, below): the table's numbers

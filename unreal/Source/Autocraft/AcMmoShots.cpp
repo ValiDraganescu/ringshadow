@@ -208,6 +208,14 @@
 //   06 the mercenary's tooltip: its name, field, what it delivered
 //   07 the map closed: the mercenary drilling in the world, orange
 //
+// -AcMmoShotsD3 (with -AcMmoDevRig): turret upgrades (docs/mmorpg-m8.md D3),
+// out past the Citadel's guns, a Gatling Gun placed ahead and Gloamwings
+// hovering 5 to 5.8 cells from its edge (`defence air`), DIR/d3-NN-moment.png:
+//   01 the bare gun: its chevrons dark, the Gloamwings out of its air reach
+//   02 the turret card (U) after marks bought from the pilot's wallet
+//   03 the gun with its marks: the chevrons lit on its base
+//   04 the marked gun hitting a Gloamwing at its new air reach
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -372,6 +380,9 @@ namespace
 	int32 DKept = 0;
 	int64 DRealmOre = 0;
 	bool DStaged = false;
+	/// -AcMmoShotsD3: the turret card's kept asks, the keys pressed so far.
+	int32 D3Kept = 0;
+	int32 D3Step = 0;
 	struct FB1Sample
 	{
 		double At;
@@ -479,6 +490,15 @@ namespace
 				return true;
 		}
 		return false;
+	}
+
+	/// The gatling gun nearest `At` in the mirror (null: none).
+	const ac::Structure* NearestGatling(const ac::GameState& S, const ac::Vec2 At)
+	{
+		const ac::Structure* Out = nullptr;
+		for (const ac::Structure& X : S.structures)
+			if (X.kind == ac::StructureKind::gatling && (!Out || ac::distance(X.position, At) < ac::distance(Out->position, At))) Out = &X;
+		return Out;
 	}
 
 	/// The live bug of `Kind` nearest `At` in the mirror (null: none).
@@ -688,7 +708,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsK2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -762,6 +783,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))) T.Phase = 1600;
 			// -AcMmoShotsM2: the satellite world map (1700-1712).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))) T.Phase = 1700;
+			// -AcMmoShotsD3: only the turret upgrades (1800-1809).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3"))) T.Phase = 1800;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -4212,6 +4235,178 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 1611:
 		if (UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this)) Build->Key(TEXT("esc"));
 		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsD3
+	case 1800:
+		// The dev rig's home: the pilot's wallet filled; out past the corner
+		// turrets' reach (34 cells), where a gun fights alone.
+		if (S && U && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("defence purse")), TEXT("d3: the server fills the pilot's wallet"));
+			const ac::Vec2 C = CitadelOf(*S)->position;
+			const ac::Vec2 Out = ac::normalize(U->position - C + ac::Vec2(0.01, 0));
+			const ac::Vec2 To = C + Out * 34.0;
+			Route({FVector2D(To.x, To.y)});
+			DStaged = false;
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel"));
+		return;
+	case 1801:
+	{
+		if (!DStaged)
+		{
+			const int32 D = Drive();
+			if (D == 0) return;
+			if (D < 0) Stop(U->heading);
+			Check(Mmo->DevClock(TEXT("brood clear\ndefence air")), TEXT("d3: the server stages a gatling gun and Gloamwings beyond its air reach"));
+			DStaged = true;
+			T.PhaseAt = Now;
+			return;
+		}
+		const ac::Structure* Gun = NearestGatling(*S, U->position);
+		const ac::Unit* G = Gun ? NearestBug(*S, Gun->position, ac::UnitKind::gloamwing) : nullptr;
+		if (Gun) Stop(Face(G ? Gun->position * 0.75 + G->position * 0.25 : Gun->position));
+		int32 Hit = 0;
+		for (const ac::Unit& X : S->units)
+			if (X.kind == ac::UnitKind::gloamwing && X.bug && X.hp < ac::Rules::hp(X.kind)) Hit++;
+		if (Gun && G && Since() > 3.0)
+		{
+			Check(!Gun->marks.has_value(), TEXT("d3: the gun starts bare"));
+			Check(Hit == 0, FString::Printf(TEXT("d3: the bare gun can't reach the Gloamwings (%d hit)"), Hit));
+			Shoot(TEXT("d3-01-before"), TEXT("a bare gatling gun: its chevrons dark, Gloamwings beyond its air reach"));
+			return;
+		}
+		TimedOut(TEXT("the gatling gun and its Gloamwings"), 30);
+		return;
+	}
+	case 1802:
+		Check(NearTurret().has_value(), TEXT("d3: a turret is near"));
+		Check(OpenTurretCard() && TurretCardWidget().IsValid(), TEXT("d3: U opens the turret card"));
+		D3Step = 0;
+		D3Kept = Mmo->TurretKept();
+		Advance();
+		return;
+	case 1803:
+	{
+		// Air reach to its last mark, a mark of fire rate, two of damage, one of range.
+		static const FKey Presses[] = {EKeys::Four, EKeys::Four, EKeys::Four, EKeys::One, EKeys::Two, EKeys::Two, EKeys::Three};
+		const TSharedPtr<SAcTurretCard> W = TurretCardWidget();
+		if (!W)
+		{
+			Check(false, TEXT("d3: the turret card stays open"));
+			Advance();
+			return;
+		}
+		if (!Mmo->TurretRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("d3: upgrade: %s"), *Mmo->TurretRefusal()));
+			Advance();
+			return;
+		}
+		if (D3Step == 0 && Since() > 1.0)
+		{
+			Check(W->GetInfo().Lines.Num() == 4, FString::Printf(TEXT("d3: the card lists four stats (%d)"), W->GetInfo().Lines.Num()));
+			Check(W->GetInfo().WhyNot.IsEmpty(), TEXT("d3: the gun can be upgraded from here"));
+		}
+		if (D3Step < int32(UE_ARRAY_COUNT(Presses)) && Mmo->TurretKept() == D3Kept + D3Step && Since() > 1.0 + 0.4 * D3Step)
+		{
+			W->Key(Presses[D3Step]);
+			D3Step++;
+			return;
+		}
+		if (D3Step == int32(UE_ARRAY_COUNT(Presses)) && Mmo->TurretKept() == D3Kept + D3Step && Since() > 1.0 + 0.4 * D3Step + 1.0)
+		{
+			const ac::Structure* Gun = NearestGatling(*S, U->position);
+			const ac::TurretMarks Want{.rate = 1, .damage = 2, .range = 1, .air = 3};
+			Check(Gun && Gun->marks == Want, TEXT("d3: the gun carries its marks (rate 1, damage 2, range 1, air 3)"));
+			Check(W->GetInfo().Lines.Num() == 4 && W->GetInfo().Lines[3].Mark == 3, TEXT("d3: the card shows air reach at its last mark"));
+			Check(!W->KeptText().IsEmpty(), TEXT("d3: the foot says what was upgraded"));
+			Shoot(TEXT("d3-02-card"), TEXT("the turret card after marks from the pilot's wallet"));
+			return;
+		}
+		TimedOut(TEXT("the marks kept"), 30);
+		return;
+	}
+	case 1804:
+	{
+		// Up to the gun, its base filling the view: the chevrons readable.
+		CloseTurretCard();
+		const ac::Structure* Gun = NearestGatling(*S, U->position);
+		if (!Gun)
+		{
+			Check(false, TEXT("d3: the gun stands"));
+			Advance();
+			return;
+		}
+		const ac::Vec2 To = Gun->position + ac::normalize(U->position - Gun->position + ac::Vec2(0.01, 0)) * (ac::Rules::radius(Gun->kind) + 1.7);
+		Route({FVector2D(To.x, To.y)});
+		DStaged = false;
+		Advance();
+		return;
+	}
+	case 1805:
+	{
+		const ac::Structure* Gun = NearestGatling(*S, U->position);
+		if (!DStaged)
+		{
+			const int32 D = Drive();
+			if (D == 0) return;
+			if (Pilot->ChaseEye()) Pilot->ToggleView();
+			DStaged = true;
+			T.PhaseAt = Now;
+			return;
+		}
+		if (Gun) Stop(Face(Gun->position));
+		// The upgrade toasts gone first.
+		if (Gun && Since() > 7.0)
+		{
+			Check(Gun->marks && Gun->marks->total() == 7, TEXT("d3: the gun's seven marks lit on its base"));
+			Shoot(TEXT("d3-03-after"), TEXT("the gatling gun with its marks: the chevrons lit on its base"));
+			return;
+		}
+		TimedOut(TEXT("the marked gun up close"), 30);
+		return;
+	}
+	case 1806:
+		if (!Pilot->ChaseEye()) Pilot->ToggleView();
+		// Fresh Gloamwings at 5 to 5.8 cells: the first ones were shot down
+		// while the card was open.
+		Check(Mmo->DevClock(TEXT("brood clear\ndefence flyers")), TEXT("d3: the server sends Gloamwings at the gun's new air reach"));
+		Advance();
+		return;
+	case 1807:
+	{
+		const ac::Structure* Gun = NearestGatling(*S, U->position);
+		const ac::Unit* G = Gun ? NearestBug(*S, Gun->position, ac::UnitKind::gloamwing) : nullptr;
+		if (Gun) Stop(Face(G ? (Gun->position + G->position) * 0.5 : Gun->position));
+		// A Gloamwing hurt while it hovers beyond the bare reach: the new air reach.
+		const ac::Unit* Far = nullptr;
+		for (const ac::Unit& X : S->units)
+		{
+			if (!Gun || X.kind != ac::UnitKind::gloamwing || !X.bug || X.hp <= 0 || X.hp >= ac::Rules::hp(X.kind)) continue;
+			const double Gap = ac::distance(X.position, Gun->position) - ac::Rules::radius(X.kind) - ac::Rules::radius(Gun->kind);
+			if (Gap > ac::UnitStats::gatling.airRange) Far = &X;
+		}
+		if (Gun && Far && Gun->target && Since() > 0.3)
+		{
+			const double Gap = ac::distance(Far->position, Gun->position) - ac::Rules::radius(Far->kind) - ac::Rules::radius(Gun->kind);
+			Check(true, FString::Printf(TEXT("d3: the marked gun hits a Gloamwing %.2f cells from its edge (bare reach %.1f)"), Gap,
+				ac::UnitStats::gatling.airRange));
+			Shoot(TEXT("d3-04-air-reach"), TEXT("the marked gatling gun hitting a Gloamwing at its new air reach"));
+			return;
+		}
+		TimedOut(TEXT("the marked gun hitting a Gloamwing"), 30);
+		return;
+	}
+	case 1808:
+		Mmo->DevClock(TEXT("brood clear"));
+		Advance();
+		return;
+	case 1809:
+		Check(Shots.Saved + Shots.Skipped == 4, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	default:
