@@ -698,3 +698,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N A2: wave layer 0.45 at wave 1 to 1.0 at wave 10; in 3 s, out 4 s; lines under 6 s.
 - N A2: ElevenLabs spent ~1,936 TTS characters and 2 music generations (66 s, 50 s).
 - I F2 (user): can't pick a Landing Pad on the map; PickPad fails silently on an unpickable pad; wt1 on it.
+- N F2 map: cause: the realm has one Landing Pad (Sorrel's, where the pilot stands); other pads are regions' own; the click says nothing. Fix in progress.
+- I hidden runs' servers append to the user's server.log; wt1 fixes with the map.
