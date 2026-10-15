@@ -37,7 +37,7 @@ Follows M8 (the realm under siege), which closes with Q2 and S3.
 | B2 | Balance pass: M8's economy against the pace model (tax, shop prices, mercenary wages and output, mission and wave pay, turret marks), tests that pin the curves, a table in docs | M8 | done 4b73be0 |
 | Z4 | Free placement in canyons (user, 2026-10-15): no build spots; a pilot places any building anywhere standable in the zone, packed as close or far as they like, under the ordinary build rules (footprint, reach, price); the Brood walks round what it can and attacks what blocks its path; the three canyons' region files, validate, preview, the map, the DEFENCE tab and the canyon docs updated; shot sets rerun | Z3 | done 07909c1 |
 | R2 | Realm projects: the realm wallet's sink. At the Citadel's REALM tab any human starts a project when the wallet covers it: Beacon (Dropship fares halved realm-wide), Relay (night sight widened in the realm), Armoury (every turret fights one mark up), Dock Crew (mercenaries mine at 1/12); each lasts one world day, costs 2–4 hours of one pilot's tax in ore and MH, rising per repeat; a realm-wide toast and a KSTR line on start and end; frontier pilots never start one; saved and sent; balance test pinned | B2 | |
-| K3 | A local packaged Mac build (not a release): first Dropship call, frame times in the canyon and at the nest, startup time; fixes for what only shows packaged | Q2 | |
+| K3 | A local packaged Mac build (not a release): first Dropship call, frame times in the canyon and at the nest, startup time; fixes for what only shows packaged | Q2 | done a8a2507 |
 
 Done when: in a hidden run, frontier pilots mine and build around a
 pilot, one of them joins a wave at The Fork, a second canyon plays its

@@ -712,3 +712,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Z4: Fork cycle resolves every wave, longest out 16 s (was 1,146 s); held through wave 10 with 12+5 guns.
 - D R2 (manager): realm projects at the Citadel as the realm wallet's sink: a day-long realm-wide benefit each, humans start them, price rises per repeat.
 - T web: siege-sound and build-anywhere posts live (f059ac5).
+- T K3 done a8a2507: Development and Shipping package cleanly (~3 min); docs/builds.md Measuring packaged.
+- N K3: first-call stall cause: our 1 s jobs held the engine's 2 background workers; a 108 ms engine task waited 860 ms. Fixed: AcWork pool, GPU-calm readback, async map pictures.
+- N K3: call at 5 s worst frame packaged 1547/92/32 -> 35/37/42 ms; editor 1628/78/160 -> 366/60/38; startup packaged 3.0-4.2 s, editor 13-17.
+- T K3: /Game/Weather was not cooked (no rain packaged); cook-check now fails such a gap.
+- I K3 open: 2/35 packaged launches exit empty; -trace run crashes on exit; FindConsoleObject per frame; wt1 on them.
