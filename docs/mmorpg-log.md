@@ -605,3 +605,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: L1 = a KSTR NEXT-goal thread after O1, one at a time, never blocking.
 - T L1 briefed to wt2 (protocol 25).
 - I W4 regression: black slab in Slag Pockets near the nest (n1b after-final n3-02) → W4b.
+- T L1 done 6d1f777: KSTR NEXT goal thread, 15 goals, Journal NEXT section.
+- D L1: a goal pays 3 min of play + (5+level) MH; met goals pass unpaid.
+- N Protocol 25, schema 18 (pilots.goals).
+- N L1 suites: core 488, server 241, net 85 pass.
+- I HUD XP read 200 above the server after O1 until the next pay → look.
+- I Level-up banner and NEXT toast stack mid-frame → U1.
+- T U1 (HUD declutter) next for wt2.
