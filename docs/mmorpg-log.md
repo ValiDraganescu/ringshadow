@@ -776,3 +776,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N W5: core 505 (+ slow map test), net 99, server 336, six MMO flows and 92 automation tests green; clean checkout.
 - D protocol numbers only go up: W5 bumped to 34 after S4 took 33; N4 takes 35, E1 36.
 - T web: the two-pilots post live at /blog/two-pilots (2dc2fab); the blog is caught up.
+- T N4 done ff5daa2: the hunt; called at a Citadel (REALM tab, humans, free, once a world day); defenders and guard mercenaries travel to the nest's 30-cell ring by the rules, go in at 2 min; protocol 35, schema 25.
+- D mercenaries have a role: miner (default) or guard, switchable on MERCS; guards walk only (no fare from the hirer's wallet unasked); same wage.
+- D the Matriarch counts as 1 bug to N3's hardest hitter, not the killing blow; "Bring Her Down" moves from level 35 to 20.
+- I hunters idle at the ring were killed by Slag Pockets' bugs before the charge; they now fight bugs within 10 cells while holding.
+- N hunt travel by the rules: next door 30 s, Ashen Shelf (4 regions off) 114 s, a downed Prospector 184 s; a far corner of the First Reach walks in within 2 min.
+- N N4 shots n4-01..05; five KSTR hunt lines (47 in all); core 505, net 102, server 341; clean checkout.
