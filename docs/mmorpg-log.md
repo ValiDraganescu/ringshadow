@@ -589,3 +589,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N N1b frame time with 17–19 bugs: 10.42 → 10.77 ms mean, p95 11.65 → 11.95.
 - T N1b step 2 16a7aca: opal quills, glass wings and lantern, gold glass sac.
 - I N2 shots fail linger/raid-timing checks on old models too (flaky staging).
+- T W4 done 3ea6610, 7af31c6, 8a287b6: borders, 14 passages, palettes, seamless crossing.
+- N W4 crossing: worst frame 13.2 ms (p95 13.1), pace ±4%, camera step 0.08 cells.
+- D W4: a client world frame instead of origin rebasing (rebase cost 20–27 ms).
+- N W4 suites: core 488, server 233, net 84 pass; 9 regions validate.
+- I W4 regions still read as rectangular bowls (walls along cell edges) → W4b.
+- T W4b (irregular outlines) next for wt1, then Z1.
