@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace ac {
 
@@ -267,6 +268,29 @@ bool Simulation::bugOnPath(Unit& u, double dt) {
     Bug& b = *u.bug;
     if (b.leaving || b.leg >= b.path.size()) return false;
     const Vec2 to = b.path[b.leg];
+    // Z4: pilots build anywhere in a canyon. A walker routes round their
+    // buildings while a way to its next point is open; when they wall it
+    // off, it bites through the nearest building of its foes.
+    if (nav && !u.stats().air) {
+        if (b.breach) {
+            const auto t = target(*b.breach);
+            if (!t || !t->structure) b.breach = std::nullopt;
+        }
+        if (state.time >= b.breachCheck) {
+            b.breachCheck = state.time + Brood::breachEvery;
+            b.breach = std::nullopt;
+            const auto k = nav->index(u.position);
+            if (k && !nav->reachable(*k, to, Brood::pathReach, false)) {
+                double best = std::numeric_limits<double>::infinity();
+                for (const Structure& s : state.structures)
+                    if (s.hp > 0 && state.hostile(s.owner, u.owner) && distance(s.position, u.position) < best) {
+                        best = distance(s.position, u.position);
+                        b.breach = s.id;
+                    }
+            }
+        }
+        if (b.breach && bugAttack(u, *b.breach, dt)) return true;
+    }
     b.state = Bug::State::move;
     b.pace = paceFor(u, Brood::marchSpeed(u.kind));
     if (travel(u, to, 0.5, dt) || distance(u.position, to) <= Brood::pathReach) {

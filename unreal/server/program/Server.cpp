@@ -147,7 +147,7 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devGoal(line));
             continue;
         }
-        // The canyon game (WorldMap::devCanyon): `canyon send N|fail|beat|hold|reset|break S|turrets G [A [FIRST]]`.
+        // The canyon game (WorldMap::devCanyon): `canyon send N|fail|beat|hold|reset|break S|turrets G [A [FIRST]]|place KIND X Y…`.
         if (line.rfind("canyon", 0) == 0) {
             said.push_back(world_.devCanyon(line));
             continue;

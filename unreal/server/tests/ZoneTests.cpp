@@ -1,5 +1,5 @@
 // Canyon zones (Z1, docs/regions.md "zones"): the `cut` height edit, a
-// zone's entrances, paths, prize and build spots in a region file (parse,
+// zone's entrances, paths and prize in a region file (Z4: no build spots; parse,
 // write, validate), Cold Fork's canyon, a group of bugs walking a path to the
 // prize, and a save from before the canyon. Isolated scenes: a map built and
 // looked at, or one group stepped for a minute or two; run from unreal/server.
@@ -45,7 +45,8 @@ std::string mesa(const std::string& zone = "", const std::string& more = "") {
 }
 
 /// The canyon's zone: its mouth at the north end of the cut, one path down
-/// the floor to the prize, spots on the rims at the bend.
+/// the floor to the prize; `spots` as an old file has them (Z4: read and
+/// ignored).
 std::string zone(const std::string& spots = R"([])", const std::string& path = R"([[60, 14], [60, 30], [80, 45], [80, 49]])",
                  const std::string& entrance = R"([60, 12])") {
     return R"({"id": "bend", "name": "The Bend", "outline": [[36, 4], [104, 4], [104, 84], [36, 84]],
@@ -172,7 +173,8 @@ TEST(Zone_roundTrip) {
     EXPECT_EQ(z.paths[0].points.size(), size_t(4));
     EXPECT_EQ(z.prizeDeposits, (std::vector<int64_t>{0, 1}));
     EXPECT_EQ(z.prizeWells, (std::vector<int64_t>{0}));
-    EXPECT_EQ(z.spots.size(), size_t(2));
+    // Z4: an old file's build spots are read past and not written back.
+    EXPECT_TRUE(write(f).find("spots") == std::string::npos);
     EXPECT_EQ(f.height[1].op, HeightEdit::Kind::cut);
     const Parsed again = parse(write(f));
     ASSERT_TRUE(again.file.has_value());
@@ -188,15 +190,10 @@ TEST(Zone_roundTrip) {
             EXPECT_TRUE(distance(d.position, b.ground(Vec2(60, 12))) < 1e-9);
         }
     EXPECT_EQ(tunnels, 1);
-    // A survey marker on each build spot.
-    int markers = 0;
-    for (const Doodad& d : b.map.doodads)
-        if (d.kind == Doodad::Kind::buildSpot) markers += 1;
-    EXPECT_EQ(markers, 2);
-    // The tunnel is walked through (no rock where the bugs come out), the
-    // marker walked over and built over.
+    // No build spot markers (Z4).
+    for (const Doodad& d : b.map.doodads) EXPECT_TRUE(d.kind != Doodad::Kind::buildSpot);
+    // The tunnel is walked through (no rock where the bugs come out).
     EXPECT_TRUE(NavGrid::footprint(Doodad::Kind::broodTunnel).empty());
-    EXPECT_TRUE(NavGrid::footprint(Doodad::Kind::buildSpot).empty());
 }
 
 /// What the parser refuses in a zone.
@@ -225,35 +222,8 @@ TEST(Zone_parseProblems) {
 TEST(Zone_validationProblems) {
     for (const Problem& p : problemsOf(mesa(zone()))) std::printf("    unexpected: %s\n", p.text().c_str());
     EXPECT_TRUE(problemsOf(mesa(zone())).empty());
-    // Spots over the canyon: on each rim, the nearest point out from the
-    // path that validates (past the cliff, and the shelf where the wall
-    // steps).
-    const std::vector<Vec2> way{Vec2(60, 14), Vec2(60, 30), Vec2(80, 45)};
-    std::vector<Vec2> rims, outward;
-    for (const double side : {1.0, -1.0}) {
-        bool found = false;
-        for (size_t k = 0; k + 1 < way.size() && !found; k++) {
-            const Vec2 dir = normalize(way[k + 1] - way[k]), normal(-dir.y, dir.x);
-            for (double a = 0; a <= distance(way[k], way[k + 1]) && !found; a += 2)
-                for (double d = 3; d <= 7.5 && !found; d += 0.5) {
-                    const Vec2 p = way[k] + dir * a + normal * (side * d);
-                    const std::string spot = "[[" + std::to_string(p.x) + ", " + std::to_string(p.y) + "]]";
-                    if (!problemsOf(mesa(zone(spot))).empty()) continue;
-                    std::printf("  a rim spot %.1f cells out from the path at %.0f, %.0f\n", d, p.x, p.y);
-                    rims.push_back(p);
-                    outward.push_back(normal * side);
-                    found = true;
-                }
-        }
-    }
-    ASSERT_TRUE(rims.size() == size_t(2));
-    const std::string both = "[[" + std::to_string(rims[0].x) + ", " + std::to_string(rims[0].y) + "], [" + std::to_string(rims[1].x) + ", " +
-                             std::to_string(rims[1].y) + "]]";
-    EXPECT_TRUE(problemsOf(mesa(zone(both))).empty());
-    const Vec2 next = rims[0] + outward[0] * 1.5;
-    const std::string crowded = "[[" + std::to_string(rims[0].x) + ", " + std::to_string(rims[0].y) + "], [" + std::to_string(next.x) +
-                                ", " + std::to_string(next.y) + "]]";
-    EXPECT_TRUE(has(problemsOf(mesa(zone(crowded))), "spots[1]", "on top of spots[0]"));
+    // Z4: an old file's spots, wherever they are, are no problem.
+    EXPECT_TRUE(problemsOf(mesa(zone(R"([[45, 40], [78.5, 44], [63.6, 20]])"))).empty());
     // A path over the rim, not along the floor.
     EXPECT_TRUE(has(problemsOf(mesa(zone(R"([])", R"([[60, 14], [70, 20], [80, 49]])"))), "paths[0]", "not walkable end to end"));
     // A path that starts far from its entrance, or ends far from the prize.
@@ -261,18 +231,6 @@ TEST(Zone_validationProblems) {
     EXPECT_TRUE(has(problemsOf(mesa(zone(R"([])", R"([[60, 14], [60, 30]])"))), "paths[0]", "from the prize's middle"));
     // An entrance out in the open.
     EXPECT_TRUE(has(problemsOf(mesa(zone(R"([])", R"([[92, 78], [80, 72], [80, 49]])", R"([92, 78])"))), "entrances[0]", "stands in the open"));
-    // Spots: too far from the path, down on the floor, on the cliff, cut
-    // off on a pillar no ramp reaches.
-    EXPECT_TRUE(has(problemsOf(mesa(zone(R"([[45, 40]])"))), "spots[0]", "too far from every path"));
-    EXPECT_TRUE(has(problemsOf(mesa(zone(R"([[78.5, 44]])"))), "spots[0]", "not above the path"));
-    EXPECT_TRUE(has(problemsOf(mesa(zone(R"([[63.6, 20]])"))), "spots[0]", "on a cliff face"));
-    const std::string pillar = R"({"id": "t", "name": "T", "size": "medium", "base": {"style": "openField", "seed": 1, "drop": ["resources", "doodads"]},
-      "height": [{"op": "raise", "area": {"rect": [64, 20, 72, 28]}, "level": 2}],
-      "deposits": [{"at": [70, 50], "amount": 900}],
-      "zones": [{"id": "p", "name": "P", "outline": [[40, 4], [100, 4], [100, 64], [40, 64]],
-        "entrances": [{"name": "M", "at": [60, 18]}], "paths": [{"from": "M", "line": [[60, 19], [60, 48], [68, 50]]}],
-        "prize": {"deposits": [0]}, "spots": [[67, 24]]}]})";
-    EXPECT_TRUE(has(problemsOf(pillar), "spots[0]", "cut off"));
     // The prize outside the zone.
     EXPECT_TRUE(has(problemsOf(mesa(R"({"id": "z", "name": "Z", "outline": [[40, 4], [100, 4], [100, 40], [40, 40]],
         "entrances": [{"name": "Mouth", "at": [60, 12]}], "paths": [{"from": "Mouth", "line": [[60, 14], [60, 30], [70, 37]]}],
@@ -281,8 +239,7 @@ TEST(Zone_validationProblems) {
 
 /// Cold Fork's canyon: The Fork, two tunnels whose paths wind down the
 /// floor to the prize at the junction, a field richer than any other ore
-/// in the region, build spots on the rims two levels over the paths, all
-/// valid; the region's pad still reaches it.
+/// in the region, all valid; the region's pad still reaches it.
 TEST(Zone_coldForkHasTheFork) {
     const RegionFile f = parsed(read("regions/cold-fork.json"));
     ASSERT_TRUE(f.zones.size() == size_t(1));
@@ -290,7 +247,6 @@ TEST(Zone_coldForkHasTheFork) {
     EXPECT_EQ(z.id, std::string("the-fork"));
     EXPECT_TRUE(z.entrances.size() >= 2 && z.entrances.size() <= 3);
     EXPECT_EQ(z.paths.size(), z.entrances.size());
-    EXPECT_TRUE(z.spots.size() >= 8);
     int64_t prizeLeast = std::numeric_limits<int64_t>::max(), elsewhereMost = 0;
     for (size_t i = 0; i < f.deposits.size(); i++) {
         const bool prize = std::find(z.prizeDeposits.begin(), z.prizeDeposits.end(), int64_t(i)) != z.prizeDeposits.end();
@@ -304,17 +260,6 @@ TEST(Zone_coldForkHasTheFork) {
     const std::vector<Problem> problems = validate(f, b);
     for (const Problem& p : problems) std::printf("    %s\n", p.text().c_str());
     EXPECT_TRUE(problems.empty());
-    const TerrainField field(b.map);
-    const Zone& g = b.zones[0];
-    // The floor: two levels under every spot.
-    for (const Vec2 s : g.spots) {
-        double low = std::numeric_limits<double>::infinity();
-        for (const Zone::Path& p : g.paths)
-            for (Vec2 q : p.points) low = std::min(low, field.height(q));
-        if (!(field.height(s) - low > 1.8 * b.map.levelHeight))
-            std::printf("    spot at %.1f, %.1f is %.2f over the floor's %.2f\n", s.x, s.y, field.height(s), low);
-        EXPECT_TRUE(field.height(s) - low > 1.8 * b.map.levelHeight);
-    }
 }
 
 /// A group told to walk a path follows it along the canyon's floor, from

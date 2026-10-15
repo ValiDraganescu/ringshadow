@@ -67,8 +67,9 @@ const TArray<FAcZonePlace>& AcCanyon::Places(const FAcMmoClient& Mmo)
 					for (const int64_t I : Z.prizeWells)
 						if (I >= 0 && size_t(I) < F.wells.size()) Prize.push_back(F.wells[size_t(I)].at);
 				for (const ac::Vec2 Q : Prize) P.Middle = P.Middle + Q / double(Prize.size());
-				for (const ac::Vec2 S : Z.spots) P.Reach = FMath::Max(P.Reach, ac::distance(S, P.Middle));
-				P.Reach += 3;
+				// As the server (Z4: pilots build anywhere in the zone): its
+				// outline's farthest corner.
+				for (const ac::Vec2 O : Z.outline) P.Reach = FMath::Max(P.Reach, ac::distance(O, P.Middle));
 				for (const ac::region::Zone::Entrance& E : Z.entrances)
 				{
 					P.Entrances.Add(Text(E.name));

@@ -88,7 +88,7 @@ size_t into(WorldMap& w, const std::string& zone) {
 } // namespace
 
 /// Both canyons validate in their regions' files: two tunnels each, paths
-/// walkable end to end (a roost's flown), spots over them, a prize richer
+/// walkable end to end (a roost's flown), a prize richer
 /// than the region's other ore; the Drowned Cut's flood inside its zone, the
 /// Roost's roost on a ledge over the prize.
 TEST(CanyonTwist_bothValidate) {
@@ -102,7 +102,6 @@ TEST(CanyonTwist_bothValidate) {
         const std::vector<Problem> problems = validate(f, b);
         for (const Problem& p : problems) std::printf("    %s\n", p.text().c_str());
         EXPECT_TRUE(problems.empty());
-        EXPECT_TRUE(z.spots.size() >= 6);
         int64_t tunnels = 0;
         for (const Zone::Entrance& e : z.entrances) tunnels += e.roost ? 0 : 1;
         EXPECT_EQ(tunnels, int64_t(2));
@@ -113,7 +112,7 @@ TEST(CanyonTwist_bothValidate) {
             else elsewhereMost = std::max(elsewhereMost, f.deposits[i].amount);
         }
         EXPECT_TRUE(prizeLeast > elsewhereMost);
-        std::printf("  %s: %zu spots, %zu paths, flood %zu corners\n", zone.c_str(), z.spots.size(), z.paths.size(), z.flood.size());
+        std::printf("  %s: %zu paths, flood %zu corners\n", zone.c_str(), z.paths.size(), z.flood.size());
     }
     const RegionFile brine = parsed("regions/brine-pans.json");
     EXPECT_TRUE(brine.brood == 2 && brine.zones[0].flood.size() >= 3 && brine.zones[0].floodSlow == 0.5);

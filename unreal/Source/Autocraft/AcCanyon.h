@@ -23,8 +23,8 @@ struct FAcZonePlace
 	FString Name;
 	/// The zone's id ("the-fork"; A2's radio lines are keyed by it).
 	FString Id;
-	/// The prize's middle and the zone's reach round it (its farthest
-	/// build spot and 3 cells), region cells.
+	/// The prize's middle and the zone's reach round it (its outline's
+	/// farthest corner), region cells.
 	ac::Vec2 Middle{0, 0};
 	double Reach = 0;
 	/// Its entrances' names, by index ("North tunnel").

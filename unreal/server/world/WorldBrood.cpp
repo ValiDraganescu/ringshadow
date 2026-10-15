@@ -34,6 +34,9 @@ constexpr double kInf = 1e18;
 /// A leaving bug this close to its exit point (3 cells in from the edge) is
 /// out of the region (S3: by day nothing in it is out of sight).
 constexpr double kExitReached = 1.5;
+/// A leaving bug this long without headway (half a cell) can get no nearer
+/// its exit: it goes where it stands.
+constexpr double kLeaveStall = 4;
 
 struct Weights {
     double deposit, well, site, pad, building, crater;
@@ -362,10 +365,18 @@ std::optional<int64_t> WorldMap::sendAlongPath(size_t r, const std::string& zone
     for (size_t k = 0; k + 1 < way.points.size(); k++) length += distance(way.points[k], way.points[k + 1]);
     BroodGroup& grp = brood_[r].groups.back();
     grp.lingerUntil += length / Brood::marchSpeed(UnitKind::shardling);
+    // It leaves the way it came, into its tunnel (Z4: the region's nearest
+    // edge from a canyon is often behind its wall, out of reach, and a
+    // Lodeback fleeing there stood until the wave's time ran out).
+    for (BroodGroup& gg : brood_[r].groups)
+        if (gg.id >= *g) gg.exit = way.points.front();
     for (Unit& u : regions_[r]->simulation().state.units)
-        if (u.bug && u.bug->group == *g) {
-            u.bug->path = way.points;
-            u.bug->leg = 0;
+        if (u.bug && u.bug->group >= *g) {
+            if (u.bug->group == *g) {
+                u.bug->path = way.points;
+                u.bug->leg = 0;
+            }
+            u.bug->exit = way.points.front();
         }
     return g;
 }
@@ -742,17 +753,28 @@ void WorldMap::broodThink(size_t r) {
             // itself unseen): it vanishes. By day a world region's pilots
             // see all of it (S3): it walks on to its exit at the edge and
             // goes from there, into the next region as it were.
+            // One that can get no nearer its exit (walled off) goes where it
+            // stands after `kLeaveStall` s without headway (Z4: a wave's
+            // straggler held the wave out until its time ran out).
             if (b.leaving) {
                 const bool unseen = !inSight(r, u.position) && (distance(u.position, g.site) > g.radius || !inSight(r, g.site))
                                     && !sim.sees(Pilot::player, u.id);
-                if (unseen || distance(u.position, b.exit) <= kExitReached) gone.insert(u.id);
+                auto [st_, fresh] = br.leaveStall.try_emplace(u.id, u.position, clock_);
+                if (!fresh && distance(st_->second.first, u.position) > 0.5) st_->second = {u.position, clock_};
+                const bool stalled = clock_ - st_->second.second >= kLeaveStall;
+                if (unseen || distance(u.position, b.exit) <= kExitReached || stalled) gone.insert(u.id);
+            } else {
+                br.leaveStall.erase(u.id);
             }
         }
     }
     if (!gone.empty()) {
         std::erase_if(st.units, [&](const Unit& u) { return gone.count(u.id) > 0; });
         sim.reindex();
-        for (const int64_t id : gone) br.sacs.erase(id);
+        for (const int64_t id : gone) {
+            br.sacs.erase(id);
+            br.leaveStall.erase(id);
+        }
         for (BroodGroup& g : br.groups) std::erase_if(g.bugs, [&](int64_t id) { return gone.count(id) > 0; });
     }
     std::erase_if(br.groups, [](const BroodGroup& g) { return g.bugs.empty(); });

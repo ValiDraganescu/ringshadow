@@ -76,12 +76,14 @@ build turrets on the rims ([docs/regions.md](../../../docs/regions.md),
    just short of the prize (not on a deposit), the prize by index into the
    file's `deposits` and `wells` (append them: saves keep deposits by
    index, so move a deposit the canyon takes rather than delete it).
-3. Spots: a gatling gun reaches 6 cells, so a spot is 5–7 cells from its
-   path, on the rim past the cliff, where the wall is sheer (a shelf pushes
-   the rim out of reach). Validate a grid of candidates and keep the ones
-   that pass, near the bends and the tunnels.
+3. No build spots (Z4): pilots build anywhere standable in the zone. Leave
+   room for it: flat rims a gatling gun's reach (6 cells) from the paths,
+   reached by ramps, and floor wide enough to pack guns on. Know every way
+   into the prize: a walker routes round buildings while any way is open
+   (the Drowned Cut's Salt tunnel opens onto the outside ground, so its
+   basin is reached up the gorge too).
 4. `$T validate`, `$T preview` (paths, chevrons toward the prize, tunnels,
-   the prize ringed, spots numbered), rebake the map.
+   the prize ringed), rebake the map.
 
 ## Pitfalls
 

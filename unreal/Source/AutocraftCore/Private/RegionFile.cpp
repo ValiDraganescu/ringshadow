@@ -842,9 +842,8 @@ Parsed parse(std::string_view text) {
         } else {
             ok = false;
         }
-        if (const json* sp = r.field(j, "spots", w, false)) {
-            if (const auto ps = r.points(*sp, w + ".spots", 0)) z.spots = *ps; else ok = false;
-        }
+        // Z4: build spots are gone (pilots build anywhere); an old file's
+        // `spots` are read past.
         // Z3: a flooded floor, its outline and how slow the walkers wade.
         if (const json* fl = r.field(j, "flood", w, false)) {
             if (r.object(*fl, w + ".flood", {"outline", "slow"})) {
@@ -1024,7 +1023,6 @@ std::string write(const RegionFile& f) {
             if (!z.prizeDeposits.empty()) prize["deposits"] = z.prizeDeposits;
             if (!z.prizeWells.empty()) prize["wells"] = z.prizeWells;
             j["prize"] = prize;
-            if (!z.spots.empty()) j["spots"] = pts(z.spots);
             if (!z.flood.empty()) {
                 ordered fl{{"outline", pts(z.flood)}};
                 if (z.floodSlow != 0.5) fl["slow"] = number(z.floodSlow);
@@ -1147,7 +1145,6 @@ Built build(const RegionFile& f) {
         for (Vec2& p : gz.outline) p = g(p);
         for (Zone::Entrance& e : gz.entrances) e.at = g(e.at);
         for (Zone::Path& p : gz.paths) for (Vec2& q : p.points) q = g(q);
-        for (Vec2& p : gz.spots) p = g(p);
         for (Vec2& p : gz.flood) p = g(p);
         b.zones.push_back(gz);
     }
@@ -1200,8 +1197,8 @@ Built build(const RegionFile& f) {
         d.variant = static_cast<uint32_t>(fnv1a64(f.id + "|nest"));
         m.doodads.push_back(d);
     }
-    // A zone's marks (Z1): a Brood tunnel's mouth at each entrance, a
-    // survey marker on each build spot.
+    // A zone's marks (Z1): a Brood tunnel's mouth at each entrance (Z4: no
+    // build spots to mark).
     for (const Zone& z : b.zones) {
         for (const Zone::Entrance& e : z.entrances) {
             Doodad d;
@@ -1211,13 +1208,6 @@ Built build(const RegionFile& f) {
             d.position = e.at;
             d.rotation = e.facing * pi / 180;
             d.variant = static_cast<uint32_t>(fnv1a64(f.id + "|" + z.id + "|" + e.name));
-            m.doodads.push_back(d);
-        }
-        for (size_t i = 0; i < z.spots.size(); i++) {
-            Doodad d;
-            d.kind = Doodad::Kind::buildSpot;
-            d.position = z.spots[i];
-            d.variant = static_cast<uint32_t>(fnv1a64(f.id + "|" + z.id + "|spot|" + std::to_string(i)));
             m.doodads.push_back(d);
         }
     }
@@ -1514,8 +1504,7 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
         if (f.nest && !inside(*f.nest)) add("nest", "is outside the border's outline", b.ground(*f.nest));
     }
     // Zones (Z1): entrances in the walls, paths walkable from them to the
-    // prize along the floor, the prize joined to the pads, spots on high
-    // ground over the paths.
+    // prize along the floor, the prize joined to the pads.
     const auto mainOf = [&](Vec2 p) -> std::optional<int32_t> {
         const auto k = nav.index(p);
         if (!k || !nav.free(*k) || nav.inRock(p)) return std::nullopt;
@@ -1599,50 +1588,6 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
         // Z3: a flooded floor lies in the zone, over the canyon's floor.
         for (size_t k = 0; k < z.flood.size(); k++)
             if (!inZone(z.flood[k], 0.01)) add(wz + ".flood", "corner " + std::to_string(k) + " lies outside the zone's outline", z.flood[k]);
-        // Spots: a turret's flat footprint on high ground over a path, in
-        // reach of it, joined to the open ground, clear of ore, wells, the
-        // pads' plates and each other.
-        for (size_t i = 0; i < z.spots.size(); i++) {
-            const Vec2 s = z.spots[i];
-            const std::string ws = wz + ".spots[" + std::to_string(i) + "]";
-            double near = std::numeric_limits<double>::infinity();
-            Vec2 lane = s;
-            for (const Zone::Path& p : z.paths) {
-                for (size_t k = 0; k + 1 < p.points.size(); k++) {
-                    const Vec2 a = p.points[k], e = p.points[k + 1] - a;
-                    const double len2 = dot(e, e);
-                    const double t = len2 > 0 ? std::clamp(dot(s - a, e) / len2, 0.0, 1.0) : 0.0;
-                    const Vec2 q = a + e * t;
-                    if (distance(s, q) < near) { near = distance(s, q); lane = q; }
-                }
-            }
-            bool flat = !steepNear(s);
-            for (int k = 0; k < 8 && flat; k++) {
-                const double a = 2 * pi * k / 8;
-                flat = !steep(s + Vec2(std::cos(a), std::sin(a)) * spotRadius);
-            }
-            // In sight of the lane: the ground between under the line from a
-            // turret's gun to a bug.
-            bool sight = true;
-            const double from = field.height(s) + 1.5, to = field.height(lane) + 0.5;
-            for (double t = 0.05; t < 0.95 && sight; t += 0.05)
-                sight = field.height(s + (lane - s) * t) <= from + (to - from) * t + 0.05;
-            std::optional<std::string> twice;
-            for (size_t j = 0; j < i && !twice; j++)
-                if (distance(z.spots[j], s) < spotGap) twice = "on top of spots[" + std::to_string(j) + "]";
-            const auto region = mainOf(s);
-            if (!inZone(s, 0)) add(ws, "lies outside the zone's outline", s);
-            else if (!flat) add(ws, "on a cliff face (a turret needs flat ground " + num(spotRadius) + " cells round it)", s);
-            else if (const auto r = rock(s, spotRadius)) add(ws, rockText(*r), s);
-            else if (const auto c = crowded(s, "", spotRadius + 1.5, spotRadius + 2)) add(ws, *c, s);
-            else if (touchesPadPlate(b.pads, s, spotRadius)) add(ws, "on a pad's plate", s);
-            else if (twice) add(ws, *twice + ": keep spots " + num(spotGap) + " cells apart", s);
-            else if (!region || *region != main) add(ws, "cut off: no ramp joins it to the region's open ground", s);
-            else if (!(near <= spotReach)) add(ws, "too far from every path (" + num(near) + " cells; a turret reaches " + num(spotReach) + ")", s);
-            else if (field.height(s) < field.height(lane) + 0.9 * m.levelHeight)
-                add(ws, "not above the path: a spot stands on the rim, a level or more over it (not on a ramp)", s);
-            else if (!sight) add(ws, "the path at " + pointText(b.regionAt(lane)) + " is out of its sight", s);
-        }
     }
     return out;
 }

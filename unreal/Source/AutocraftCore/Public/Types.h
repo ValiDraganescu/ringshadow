@@ -1107,6 +1107,10 @@ struct Bug {
     /// `leg` the next, then on to its site.
     std::vector<Vec2> path;
     size_t leg = 0;
+    /// Z4: its path walled off by the pilots' buildings (no way round): the
+    /// one it bites through, and when it looks again (server only).
+    std::optional<int64_t> breach;
+    double breachCheck = -1;
     /// Leaving: it walks to `exit`, and the director takes it away out of
     /// every pilot's sight.
     bool leaving = false;

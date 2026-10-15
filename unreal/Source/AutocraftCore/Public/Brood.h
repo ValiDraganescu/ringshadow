@@ -54,6 +54,10 @@ struct AUTOCRAFTCORE_API Brood {
     /// A bug on a path (Z1) takes its next waypoint once within this many
     /// cells of the one before.
     static constexpr double pathReach = 2.0;
+    /// Z4: a walker on a canyon's path looks this often whether its next
+    /// point is still reachable; walled off, it bites through the nearest
+    /// building of its foes.
+    static constexpr double breachEvery = 0.5;
     /// A wandering bug picks a new spot in its site every 3 to 8 s.
     static constexpr double wanderMin = 3;
     static constexpr double wanderMax = 8;

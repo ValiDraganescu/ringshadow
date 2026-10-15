@@ -128,8 +128,10 @@ cells):
 - **Gorge.** A gorge runs south out to the salt pan.
 - **Landmark.** A half-drowned hauler lies at the basin's east shore.
 - **Ramps** lead up to the north and south rims.
-- **Build spots:** seven, along the Salt arm's south rim, the basin's west
-  rim and the north rim.
+- **Two ways in.** The Salt tunnel's mouth opens onto the ground outside
+  the mesa, so a walker can also go out, round the mesa's foot and up the
+  gorge into the basin: a wall across the Salt arm alone is walked round.
+  The flooded canyon's second twist; hold the gorge too.
 
 **The twist: the brine.** The zone's `flood` covers the basin and the lower
 Salt arm:
@@ -175,7 +177,6 @@ Gloamwings roost. Its canyon is a level-2 mesa over the south-west terrace
 - **Access.** The Dust vault's knoll joins the mesa by a bridge of level-2
   ground; ramps lead up from the terrace and from the basin's floor to the
   south-west rim.
-- **Build spots:** seven, on the rims round the basin and the arms.
 
 **The twist: the roost.** One of the zone's entrances is a **roost**
 (`"roost": true`): a ledge, not a tunnel.
@@ -224,6 +225,36 @@ off the roost. Their pay is × 1.3 (`WorldCanyon::payScale`).
   6. its wave panel;
   7. the map on each, The Drowned Cut;
   8. then The Roost.
+
+## Building (Z4)
+
+The user (2026-10-15): "on the TD area I don't want to have explicit slots
+for what and where to build, the players can place whatever anywhere, they
+can pack the buildings up as close or far as they want."
+
+- **No build spots.** A pilot places any building anywhere standable in a
+  zone (the rims, the floor, the paths themselves) under the ordinary build
+  rules only: the footprint (level, standable, nothing in the way), the
+  build reach, the price, the floor and the realm's limits. No spacing
+  beyond the footprints: guns pack side by side. Turrets and their marks are
+  paid as anywhere.
+- **The walkers route round** what the pilots build while any way to their
+  next path point is open, and **bite through** the nearest of the pilots'
+  buildings when there is none (they look every 0.5 s,
+  `Brood::breachEvery`). Gloamwings fly over as before.
+- **Two cells to funnel, none to wall.** Buildings snap to whole cells and
+  the walk keeps 0.35 of a cell off every footprint (`NavGrid::clearance`),
+  so the narrowest gap a walker uses is 2 cells: pack guns tight to wall a
+  way off (a 1-cell gap is a wall, bitten through), leave two cells to
+  funnel a wave past them.
+- **A wave always resolves.** A wave's bugs leave by their own tunnel, and a
+  leaving bug that can get no nearer its exit (4 s without half a cell of
+  headway) goes where it stands. Before, a fleeing Lodeback walked to the
+  region's nearest edge, behind The Fork's wall, and stood there until the
+  wave's time ran out (B2's 19-minute wave).
+- **Frontier pilots** build no turrets in a canyon (P1's defenders fight
+  there and patrol the prize); their builders keep their own 6-cell habit
+  elsewhere.
 
 ## Pay
 
@@ -296,9 +327,14 @@ pilot's region's first zone:
 | `canyon hold` | the last wave beaten |
 | `canyon reset` | back to WAITING and wave 1 |
 | `canyon break S` | the next wave in S seconds |
-| `canyon turrets G [A [FIRST]]` | G finished Gatling Guns and A AA towers of the realm on the zone's build spots from FIRST on, built by the pilot |
+| `canyon turrets G [A [FIRST]]` | G finished Gatling Guns and A AA towers of the realm beside the zone's paths (the rims first, the floor's edge next, the arms in turn), the first FIRST free places passed over, built by the pilot |
+| `canyon place gatling\|sentinel X Y [X Y …]` | finished guns at those region cells, built by the pilot, under the ordinary build rules (a refused place is passed over) |
 
 `brood zone here` (Z1) takes the pilot into The Fork's gorge.
+
+`-AcMmoShotsZ4` (phases 3100-3103) takes one picture: a block of Gatling Guns
+packed on The Fork's floor by the prize, two AA towers beside it, wave 3
+coming at it.
 
 `-AcMmoShotsZ2` (phases 2500-2525) takes twelve pictures:
 1. wave 1 down the north arm;
@@ -348,9 +384,10 @@ The decisions left these open; each is the simplest that fits them.
   don't gnaw; they fail a wave by its time.
 - **"Bugs on the prize"** means within 9 cells of its middle.
 - **The zone's turrets**, which the siege fells, are every Sentinel and Gatling
-  Gun of the realm within the zone's reach of the prize's middle: its farthest
-  build spot and 3 cells (The Fork: 27 cells). The Citadel's guns are never in
-  a canyon.
+  Gun of the realm within the zone's reach of the prize's middle: its
+  outline's farthest corner (Z4; The Fork 34 cells, the Drowned Cut 43, the
+  Roost 21; before, the farthest build spot and 3). The Citadel's guns are
+  never in a canyon.
 - **She comes out of a tunnel.** The siege brings the Matriarch out of the
   tunnel of the wave that broke through, not in at the region's edge. Her
   escort fights only turrets, and a pilot that hits it.

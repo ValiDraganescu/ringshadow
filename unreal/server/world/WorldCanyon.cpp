@@ -25,6 +25,7 @@
 #include "WorldMap.h"
 
 #include "Brood.h"
+#include "TerrainField.h"
 #include "Progression.h"
 #include "Rules.h"
 
@@ -42,6 +43,56 @@ using State = WorldMap::CanyonState;
 using G = WorldCanyon::Group;
 
 constexpr double kFar = 1e18;
+
+/// Z4, for the dev line and the shots (pilots build anywhere): places a
+/// `kind` of the realm's guns may go in zone `z`, beside its paths and clear
+/// of the lanes: along each path every 3 cells from the prize out, 6 to 7.5
+/// cells to either side of it (the rims), else 3 to 4.5 (the floor's edge),
+/// level and free under the ordinary
+/// build rules, in the zone's outline, off the pads' plates; the paths taken
+/// in turn, so guns spread over every arm.
+std::vector<Vec2> gunPlaces(const Simulation& sim, const region::Zone& z, const std::vector<region::Place>& pads, StructureKind kind) {
+    std::vector<std::vector<Vec2>> per(z.paths.size());
+    auto lane = [&](Vec2 q) {
+        double d = kFar;
+        for (const region::Zone::Path& p : z.paths)
+            for (size_t k = 0; k + 1 < p.points.size(); k++) {
+                const Vec2 a = p.points[k], e = p.points[k + 1] - a;
+                const double len2 = dot(e, e);
+                const double t = len2 > 0 ? std::clamp(dot(q - a, e) / len2, 0.0, 1.0) : 0.0;
+                d = std::min(d, distance(q, a + e * t));
+            }
+        return d;
+    };
+    for (size_t i = 0; i < z.paths.size(); i++) {
+        const std::vector<Vec2>& pts = z.paths[i].points;
+        // From the prize end back toward the mouth.
+        for (size_t k = pts.size(); k-- > 1;) {
+            const Vec2 a = pts[k], e = pts[k - 1] - a;
+            const double len = length(e);
+            if (len <= 0) continue;
+            const Vec2 dir = e / len, side(-dir.y, dir.x);
+            for (double t = 0; t < len; t += 3)
+                for (const double off : {6.0, -6.0, 7.5, -7.5, 4.5, -4.5, 3.0, -3.0}) {
+                    const auto at = sim.snap(kind, a + dir * t + side * off);
+                    if (!at || signedDistance(*at, z.outline) > 0 || lane(*at) < 2) continue;
+                    if (sim.placementRefusal(kind, *at) || region::touchesPadPlate(pads, *at, Rules::radius(kind))) continue;
+                    per[i].push_back(*at);
+                }
+        }
+    }
+    std::vector<Vec2> out;
+    for (size_t k = 0;; k++) {
+        bool any = false;
+        for (const std::vector<Vec2>& v : per)
+            if (k < v.size()) {
+                any = true;
+                out.push_back(v[k]);
+            }
+        if (!any) break;
+    }
+    return out;
+}
 
 /// A turret the Matriarch fells: the pilots' placed guns (as her siege).
 bool turret(StructureKind k) { return k == StructureKind::sentinel || k == StructureKind::gatling; }
@@ -630,31 +681,81 @@ std::string WorldMap::devCanyon(const std::string& line) {
         return "dev: canyon: the next wave in " + std::to_string(int(s)) + " s";
     }
     if (what == "turrets") {
-        // Finished guns of the realm on the zone's build spots, built by the pilot.
+        // Finished guns of the realm beside the zone's paths (Z4: no build
+        // spots; `gunPlaces`), built by the pilot: the first FIRST places
+        // passed over.
         int64_t gatlings = 0, towers = 0, first = 0;
         in >> gatlings >> towers >> first;
         Simulation& sim = regions_[r]->simulation();
         GameState& st = sim.state;
-        int64_t placed = 0;
+        int64_t placed = 0, skipped = 0;
         for (int64_t k = 0; k < gatlings + towers; k++) {
-            const size_t s = size_t(first + k);
-            if (s >= z.spots.size()) break;
             const StructureKind kind = k < gatlings ? StructureKind::gatling : StructureKind::sentinel;
-            const Vec2 at = z.spots[s];
-            bool clear = true;
-            for (const Structure& b : st.structures)
-                if (distance(b.position, at) < Rules::radius(b.kind) + Rules::radius(kind)) clear = false;
-            if (!clear) continue;
-            st.structures.push_back(Structure(st.nextID++, kind, Pilot::player, at));
+            std::optional<Vec2> at;
+            for (const Vec2 q : gunPlaces(sim, z, places->pads, kind)) {
+                bool clear = true;
+                for (const Structure& b : st.structures)
+                    if (std::abs(b.position.x - q.x) < Rules::radius(b.kind) + Rules::radius(kind) &&
+                        std::abs(b.position.y - q.y) < Rules::radius(b.kind) + Rules::radius(kind))
+                        clear = false;
+                if (!clear) continue;
+                if (skipped < first) {
+                    skipped++;
+                    continue;
+                }
+                at = q;
+                break;
+            }
+            if (!at) break;
+            st.structures.push_back(Structure(st.nextID++, kind, Pilot::player, *at));
             st.structures.back().hp = Rules::hp(kind);
             builtBy_[r][st.structures.back().id] = p.key;
             placed += 1;
+            sim.reindex();
+            sim.refreshNav();
         }
-        sim.reindex();
-        sim.refreshNav();
-        return "dev: canyon: " + std::to_string(placed) + " turrets on " + zone + "'s spots";
+        return "dev: canyon: " + std::to_string(placed) + " turrets beside " + zone + "'s paths";
     }
-    return "dev: canyon: '" + what + "' is not send N|fail|beat|hold|reset|break S|turrets G [A [FIRST]]";
+    if (what == "place") {
+        // `place gatling|sentinel X Y [X Y …]`: finished guns of the realm at
+        // those region cells, built by the pilot (Z4: anywhere standable,
+        // under the ordinary build rules; a refused place is passed over).
+        std::string kindName;
+        in >> kindName;
+        const StructureKind kind = kindName == "sentinel" ? StructureKind::sentinel : StructureKind::gatling;
+        Simulation& sim = regions_[r]->simulation();
+        GameState& st = sim.state;
+        int64_t placed = 0, refused = 0;
+        double x = 0, y = 0;
+        while (in >> x >> y) {
+            // Snapped as a pilot's placement is; nudged a cell at most, as a
+            // pilot would, when the snapped cell is refused.
+            const Vec2 want = places->ground(Vec2(x, y));
+            std::optional<Vec2> at;
+            double best = kFar;
+            for (const double dx : {0.0, 1.0, -1.0})
+                for (const double dy : {0.0, 1.0, -1.0}) {
+                    const auto q = sim.snap(kind, want + Vec2(dx, dy));
+                    if (!q || distance(*q, want) >= best || sim.placementRefusal(kind, *q) ||
+                        region::touchesPadPlate(places->pads, *q, Rules::radius(kind)))
+                        continue;
+                    best = distance(*q, want);
+                    at = q;
+                }
+            if (!at) {
+                refused += 1;
+                continue;
+            }
+            st.structures.push_back(Structure(st.nextID++, kind, Pilot::player, *at));
+            st.structures.back().hp = Rules::hp(kind);
+            builtBy_[r][st.structures.back().id] = p.key;
+            placed += 1;
+            sim.reindex();
+            sim.refreshNav();
+        }
+        return "dev: canyon: " + std::to_string(placed) + " " + kindName + " placed, " + std::to_string(refused) + " refused";
+    }
+    return "dev: canyon: '" + what + "' is not send N|fail|beat|hold|reset|break S|turrets G [A [FIRST]]|place KIND X Y…";
 }
 
 } // namespace ac::server

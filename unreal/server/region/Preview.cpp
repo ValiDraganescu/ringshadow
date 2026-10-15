@@ -49,7 +49,6 @@ constexpr Rgb zoneColour{255, 150, 60};
 constexpr Rgb floodColour{70, 170, 220};
 constexpr Rgb pathColour{240, 70, 50};
 constexpr Rgb entranceColour{40, 20, 50};
-constexpr Rgb spotColour{70, 150, 255};
 constexpr Rgb borderColour{255, 236, 200};
 constexpr Rgb problemColour{255, 64, 64};
 
@@ -254,7 +253,7 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     // Doodads: rock where they block, a dot where they are only plants.
     for (const Doodad& d : map.doodads) {
         const auto circles = NavGrid::circles(d);
-        // A zone's tunnels and spots are drawn with the zone (below).
+        // A zone's tunnels are drawn with the zone (below).
         if (d.kind == Doodad::Kind::broodTunnel || d.kind == Doodad::Kind::buildSpot) continue;
         if (circles.empty()) { disc(built.regionAt(d.position), 0.25, plantColour, 1); continue; }
         const bool landmark = d.kind >= Doodad::Kind::arch;
@@ -327,7 +326,7 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
 
     // Canyon zones (Z1): the outline dashed, each path a line with chevrons
     // toward the prize, the entrances dark with a glowing rim, the prize
-    // ringed, the build spots blue squares.
+    // ringed (Z4: no build spots; pilots build anywhere).
     const auto stroke = [&](Vec2 a, Vec2 b, double thick, Rgb col, int dash) {
         const double len = distance(a, b);
         const int steps = std::max(1, static_cast<int>(len * s));
@@ -402,15 +401,6 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
             }
             label(mid + Vec2(r * 0.7, r * 0.7 + 1), "PRIZE", padColour);
         }
-        for (size_t i = 0; i < z.spots.size(); i++) {
-            const Vec2 r = built.regionAt(z.spots[i]);
-            const auto [cx, cy] = pixel(r);
-            const int k = std::max(5, static_cast<int>(region::spotRadius * s));
-            for (int y = -k; y <= k; y++)
-                for (int x = -k; x <= k; x++)
-                    c.blend(cx + x, cy + y, std::max(std::abs(x), std::abs(y)) > k - 2 ? background : spotColour);
-            c.text(cx - 3, cy - 6, std::to_string(i + 1), ink);
-        }
     }
 
     // The grid, labelled every 8 cells (16 when cells are small).
@@ -476,7 +466,6 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         swatch(zoneColour, "zone outline");
         swatch(pathColour, "the Brood's path");
         swatch(entranceColour, "tunnel mouth");
-        swatch(spotColour, "build spot");
         swatch(floodColour, "flooded floor (brine)");
     }
     swatch(problemColour, "problem");

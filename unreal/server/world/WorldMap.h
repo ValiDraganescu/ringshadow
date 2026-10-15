@@ -1154,8 +1154,11 @@ public:
     void canyonReset(size_t r, std::string_view zone);
     /// Dev and shots (`canyon …` lines): the first pilot's region's first
     /// zone: `send N` (wave N out now), `fail`, `beat`, `hold` (the last
-    /// wave beaten), `reset`, `turrets G [A]` (G finished Gatling Guns and A
-    /// AA towers of the realm on its build spots, built by the pilot),
+    /// wave beaten), `reset`, `turrets G [A [FIRST]]` (G finished Gatling
+    /// Guns and A AA towers of the realm beside its paths, built by the
+    /// pilot; Z4: no build spots, the first FIRST free places passed over),
+    /// `place gatling|sentinel X Y [X Y …]` (guns at those region cells,
+    /// under the ordinary build rules),
     /// `break S` (the next wave in S seconds).
     std::string devCanyon(const std::string& line);
 
@@ -1705,6 +1708,9 @@ private:
         /// Each Lodeback's sac and the deposit it ate from, after the last
         /// step: its ore goes back when it dies.
         std::map<int64_t, std::pair<double, std::optional<int64_t>>> sacs;
+        /// A leaving bug's last headway: where, and when (Z4: one that can
+        /// get no nearer its exit goes where it stands).
+        std::map<int64_t, std::pair<Vec2, double>> leaveStall;
     };
     /// Each step: the hits on bugs (XP, aggro), a dead Lodeback's ore back,
     /// a starfall's impact; every `WorldBrood::think` s the groups' orders,

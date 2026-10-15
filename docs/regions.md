@@ -141,7 +141,7 @@ region's landmark, not as clutter. Their feet are solid (`NavGrid::footprint`).
 | `relayDish` | a crashed relay dish on its side, its mast snapped | 4 across | the dish and its mast |
 | `broodNest` | the Matriarch's hive mound: chitin plates, opal ore, egg pods, a crown of spines (put down by `nest`, below) | 12 across, spines to 5 high | none: walked over |
 | `broodTunnel` | a Brood tunnel's mouth in a canyon wall: a black hollow, a frame of rock and chitin, a faint violet glow (put down by a zone's entrance, below) | 5 across, 4 high | none: walked through |
-| `buildSpot` | a build spot's survey marker: an amber ring, four lit stakes (put down by a zone's spot) | 2.4 across | none: walked over, built over |
+| `buildSpot` | retired (Z4: no build spots); a region file never puts one down | 2.4 across | none: walked over, built over |
 
 The First Reach has two in each region (the region files' `doodads`). Glass Flats' Glass Needle rises to level 4
 and Brine Pans' Brine Stack to level 3 (sheer, under their rock crowns).
@@ -277,10 +277,11 @@ outline by hand from there if a place needs it.
 A canyon zone (Z1, docs/mmorpg-m8.md "canyon defence"): a tower-defence
 ground in the region. The Brood comes out of tunnels in the canyon's walls
 and walks fixed paths along its floor to a prize, a field of rich ore and
-an MH well, to mine it for itself; pilots build turrets on the rims over
-the paths. Every zone plays the canyon game (Z2, [canyon.md](canyon.md)):
-waves down its paths, its build spots' turrets, the Matriarch when a wave
-breaks through.
+an MH well, to mine it for itself; pilots build turrets anywhere standable
+in it (Z4: the rims, the floor, the paths themselves, packed as tight as the
+footprints let them). Every zone plays the canyon game (Z2,
+[canyon.md](canyon.md)): waves down its paths, the pilots' turrets, the
+Matriarch when a wave breaks through.
 
 ```json
 "zones": [{
@@ -288,14 +289,15 @@ breaks through.
   "outline": [[95, 3], [141, 3], [141, 39], [95, 38]],
   "entrances": [{"name": "North tunnel", "at": [107.5, 7.5], "facing": -90}],
   "paths": [{"from": "North tunnel", "line": [[107.5, 8], [105.6, 13.5], [110, 21], [113, 22.6]]}],
-  "prize": {"deposits": [52, 53, 54], "wells": [5]},
-  "spots": [[99, 13], [100, 19]]
+  "prize": {"deposits": [52, 53, 54], "wells": [5]}
 }]
 ```
 
 - `id` a slug, unique in the file; `name` shown to players.
-- `outline`: the zone's ground (≥ 3 corners). Its paths, spots and prize
-  lie inside it, its entrances within 2 cells of it.
+- `outline`: the zone's ground (≥ 3 corners). Its paths and prize lie
+  inside it, its entrances within 2 cells of it. Its farthest corner from the
+  prize is the zone's reach: the Matriarch fells every turret within it
+  when a wave breaks through.
 - `entrances`: named tunnels' mouths. Each stands on open floor at the foot
   of a wall (a cliff or the border's rock within 4 cells), `facing` degrees
   from east toward north, into the canyon. The build puts a Brood tunnel's
@@ -310,14 +312,10 @@ breaks through.
   well at least). Each lies inside the zone, joined to the pads. Make it
   richer than anything round it (The Fork's: 6000 a deposit, an MH well of
   6000, against Cold Fork's 3600 at most).
-- `spots`: build spots on the rims (each a turret's 2 by 2 cells). Flat
-  ground a cell round it, clear of rock, ore, wells, a pad's plate and the
-  other spots (3 cells), joined to the pads by a ramp, a level or more
-  over its path (not on a ramp), within 7 cells of a path (a gatling gun's
-  range, 6, and a cell), the path in its sight (the ground between under
-  the line from a turret's gun to a bug). The build puts a survey marker on
-  each (`buildSpot`: an amber ring and four lit stakes; walked over, built
-  over).
+- No `spots` (Z4, 2026-10-15): pilots build anywhere standable in a zone
+  under the ordinary build rules (the footprint, the build reach, the
+  price, the floor and the realm's limits). A file with them still parses;
+  they are read and ignored, and not written back.
 
 Z3 adds two twists:
 - **`flood`** (optional): `{"outline": [[x, z], ...], "slow": 0.5}`, a
@@ -339,7 +337,7 @@ mined ore stays with its deposit.
 
 The preview draws the outline dashed orange, each path red with chevrons
 toward the prize, the tunnels dark with a violet rim, the prize ringed in
-gold, the spots as numbered blue squares.
+gold.
 
 The server sends a group down a path (`WorldMap::sendAlongPath`,
 docs/creatures.md "Canyon paths"): it comes out of the tunnel, walks the
@@ -350,9 +348,8 @@ region's north-east, two arms cut down to the floor from a tunnel in the
 north wall and one in the east wall, winding to the junction's basin with
 six 6000-ore deposits round an MH well of 6000, a gorge from it out to the
 passage valley, ramps up to the west rim, the south-east rim and the rim
-between the arms (where the derrick ruin stands), twelve spots near the
-bends and the tunnels. Pictures: `-AcMmoShots=DIR -AcMmoShotsZ1`
-(AcMmoShots.cpp).
+between the arms (where the derrick ruin stands). Pictures:
+`-AcMmoShots=DIR -AcMmoShotsZ1` (AcMmoShots.cpp).
 
 ## Problems
 
@@ -377,9 +374,7 @@ and the region position:
 - a zone's path that names no entrance, an entrance with no path, a prize
   index past the file's list; an entrance off the floor or out in the
   open; a path not walkable end to end, starting far from its entrance or
-  ending far from the prize; a prize outside the zone or cut off; a spot
-  on a cliff, in rock, on ore, a well or a pad's plate, on another spot,
-  cut off, too far from every path, not above it, or without sight of it.
+  ending far from the prize; a prize outside the zone or cut off.
 
 "Cut off" means not joined to the region's largest open area on the
 walking grid. A problem never stops `build` or `preview`.

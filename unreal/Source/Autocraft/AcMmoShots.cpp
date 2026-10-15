@@ -275,6 +275,11 @@
 //   04 Cold Fork at noon, wave 10 out of the canyon's mouths: all of it told
 //   05 the same with `daylight off`
 //
+// -AcMmoShotsZ4 (as Z1's): free placement in canyons (docs/canyon.md
+// "Building"), DIR/z4-NN-moment.png:
+//   01 a tightly packed defence on The Fork's floor by the prize, its guns'
+//      footprints touching, wave 3 coming at it
+//
 // -AcMmoShotsZ1 (at 11:00, clear weather, every region been to): the first
 // canyon zone, The Fork in Cold Fork (docs/regions.md "zones"), the pilot
 // taken into its gorge by the server's dev line (`brood zone here`), a
@@ -284,8 +289,9 @@
 //   03 a Brood tunnel's mouth at the end of the east arm
 //   04 the prize field at the junction: the rich ore round the MH well, a
 //      group sent down each path (`brood zone PATH`) on it
-//   05 the zone from high up: both arms, the junction, the spots' markers
-//   06 build spots along the west rim, close
+//   05 the zone from high up: both arms, the junction
+//   06 the west rim over the north arm, close (Z4: no build spots; pilots
+//      build anywhere)
 //   07 the world map on Cold Fork: the canyon on the satellite picture
 // (The preview with the paths is the region tool's: `autocraft-region
 // preview regions/cold-fork.json`.)
@@ -1100,7 +1106,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		// -AcMmoShotsZ1 and Z2: as W4's, late morning, clear, every region been to.
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))
-			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3")))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -1186,6 +1193,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsMapPick"))) T.Phase = 3000;
 			// -AcMmoShotsA2: the siege heard (2900-2916).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsA2"))) T.Phase = 2900;
+			// -AcMmoShotsZ4: free placement in canyons (3100-3103).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4"))) T.Phase = 3100;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
@@ -4679,8 +4688,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 2301:
 	{
-		// In Cold Fork, its ground and its neighbours' built; its tunnels and
-		// its spots' markers drawn.
+		// In Cold Fork, its ground and its neighbours' built; its tunnels drawn
+		// (Z4: no build spots' markers).
 		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
 		const TOptional<FAcRegionAround> Ground = Mmo->HereGround();
 		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
@@ -4690,7 +4699,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			return;
 		}
 		Check(Terrain->DrawnAt(ac::Doodad::Kind::broodTunnel).IsSet(), TEXT("z1: a Brood tunnel's mouth drawn in Cold Fork"));
-		Check(Terrain->DrawnAt(ac::Doodad::Kind::buildSpot).IsSet(), TEXT("z1: the build spots' markers drawn in Cold Fork"));
+		Check(!Terrain->DrawnAt(ac::Doodad::Kind::buildSpot).IsSet(), TEXT("z1: no build spot markers in Cold Fork (Z4)"));
 		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(0, ECVF_SetByCode);
 		if (!W4Cam.IsValid())
 		{
@@ -4737,9 +4746,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			for (const int64 I : Z.prizeDeposits) Prize = Prize + Z1File->deposits[size_t(I)].at / double(Z.prizeDeposits.size());
 			const std::vector<ac::Vec2>& North = Z.paths[0].points;
 			const std::vector<ac::Vec2>& East = Z.paths.size() > 1 ? Z.paths[1].points : North;
+			// Camera places on The Fork's rims (Z4: the old build spots'
+			// cells, kept for the pictures; pilots build anywhere).
+			static const ac::Vec2 Rims[] = {{99, 13}, {100, 19}, {102.5, 22.5}, {106.5, 26.5}, {112.5, 8.5}, {112.5, 14},
+				{115, 18.5}, {129, 13}, {132.5, 11.5}, {136, 20.5}, {133, 24}, {129.5, 27.5}};
 			const auto SpotNear = [&](const ac::Vec2 P) {
-				ac::Vec2 Best = Z.spots.empty() ? P : Z.spots[0];
-				for (const ac::Vec2 Spot : Z.spots)
+				ac::Vec2 Best = Rims[0];
+				for (const ac::Vec2 Spot : Rims)
 					if (ac::distance(Spot, P) < ac::distance(Best, P)) Best = Spot;
 				return Best;
 			};
@@ -4786,11 +4799,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				EyeH = 34.0;
 				LookH = Ground(Prize);
 				break;
-			default:  // Along the west rim's spots (west of the north arm), close.
+			default:  // Along the west rim (west of the north arm), close.
 			{
 				ac::Vec2 A = North.front(), B = North.back();
 				double Lo = 1e9, Hi = -1e9;
-				for (const ac::Vec2 Spot : Z.spots)
+				for (const ac::Vec2 Spot : Rims)
 				{
 					if (Spot.x >= North.front().x) continue;
 					if (Spot.y < Lo) Lo = Spot.y, A = Spot;
@@ -4814,13 +4827,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		W4Set = false;
 		const int32 K = T.Phase < 2305 ? T.Phase - 2302 : T.Phase - 2303;
 		static const TCHAR* const Names[] = {TEXT("z1-01-canyon-from-a-rim"), TEXT("z1-02-floor-up-at-a-bend"), TEXT("z1-03-a-tunnel"),
-			TEXT("z1-04-prize-at-the-junction"), TEXT("z1-05-the-zone-from-above"), TEXT("z1-06-build-spots")};
+			TEXT("z1-04-prize-at-the-junction"), TEXT("z1-05-the-zone-from-above"), TEXT("z1-06-the-west-rim")};
 		static const TCHAR* const Whats[] = {TEXT("The Fork from the west rim: the north arm winding down to the junction"),
 			TEXT("on the canyon's floor at the north arm's end, looking back up it past its bend"),
 			TEXT("a Brood tunnel's mouth at the end of the east arm"),
 			TEXT("the prize field at the junction: the rich ore round the MH well, a group from each tunnel on it"),
-			TEXT("the zone from high up: both arms, the junction, the build spots' markers"),
-			TEXT("build spots along the west rim, their markers over the north arm")};
+			TEXT("the zone from high up: both arms, the junction"),
+			TEXT("the west rim over the north arm, close")};
 		ShootClean(Names[K], Whats[K]);
 		return;
 	}
@@ -4890,7 +4903,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// phase's lines wait for these to be read (one file, overwritten).
 		if (!W4Set)
 		{
-			Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\ncanyon turrets 0 1 1")), TEXT("z2: the zone reset, an AA tower on the north rim"));
+			Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\ncanyon place sentinel 100 19")), TEXT("z2: the zone reset, an AA tower on the west rim"));
 			W4Set = true;
 			W4ShotAt = Now;
 			return;
@@ -4925,7 +4938,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		};
 		static const FStep Steps[] = {
 			{2502, TEXT("canyon send 1"), TEXT("z2: the opening wave sent"), 3.5},
-			{2505, TEXT("canyon turrets 1 0 0\ncanyon turrets 2 0 2\ncanyon turrets 1 2 8\ncanyon reset\ncanyon send 1"),
+			{2505, TEXT("canyon place gatling 99 13 102.5 22.5 106.5 26.5 132.5 11.5\ncanyon place sentinel 136 20.5 133 24\ncanyon reset\ncanyon send 1"),
 				TEXT("z2: Gatling Guns on the rims, AA towers by the east arm, wave 1 again"), 2.2},
 			{2509, TEXT("canyon send 4"), TEXT("z2: wave 4 sent, its Gloamwings down the east arm"), 1.8},
 			{2511, TEXT("canyon fail"), TEXT("z2: wave 4 broken through"), 1.5},
@@ -5017,13 +5030,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			switch (T.Phase)
 			{
 			case 2503:  // Behind the AA tower on the west rim, down into the north arm.
-				Eye = G(Z.spots[1] + ac::Vec2(-4, 3));
+				Eye = G(ac::Vec2(100, 19) + ac::Vec2(-4, 3));
 				Look = G(ac::Vec2(106.5, 13));
 				EyeUp = 6.0;
 				LookUp = 0.0;
 				break;
 			case 2506:  // Behind the west rim's guns, over the arm.
-				Eye = G(Z.spots[1] + ac::Vec2(-3, 4));
+				Eye = G(ac::Vec2(100, 19) + ac::Vec2(-3, 4));
 				Look = G(ac::Vec2(106, 15));
 				EyeUp = 4.0;
 				LookUp = 0.0;
@@ -5148,7 +5161,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	{
 		const TSharedPtr<SAcJournalScreen> J = JournalScreenWidget();
 		if (!J || Since() < 1.5) return;
-		Check(J->GetInfo().Canyons.Num() == 1, FString::Printf(TEXT("z2: the Journal shows the zone (%d)"), J->GetInfo().Canyons.Num()));
+		// Every canyon of the world (Z3 added the Drowned Cut and the Roost).
+		Check(J->GetInfo().Canyons.Num() == 3, FString::Printf(TEXT("z2: the Journal shows the world's three zones (%d)"), J->GetInfo().Canyons.Num()));
 		Shoot(TEXT("z2-12-journal"), TEXT("the Journal: The Fork's state in its header"));
 		return;
 	}
@@ -6105,6 +6119,97 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 2714:
 		Check(Mmo->DevClock(TEXT("daylight on")), TEXT("s3: daylight on again"));
 		Check(Shots.Saved + Shots.Skipped >= 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsZ4
+	case 3100:
+	{
+		// Seated; Cold Fork's zone from its file; the pilot taken into The Fork.
+		if (!(U && Mmo->World() && Since() > 2.0)) return;
+		FString Text;
+		if (FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectDir(), TEXT("server/regions/cold-fork.json"))))
+		{
+			const ac::region::Parsed P = ac::region::parse(TCHAR_TO_UTF8(*Text));
+			if (P.file && !P.file->zones.empty()) Z1File = *P.file;
+		}
+		Check(Z1File.IsSet(), TEXT("z4: Cold Fork's file has its zone"));
+		if (!Z1File) return Finish();
+		Check(Mmo->DevClock(TEXT("brood clear\nbrood zone here")), TEXT("z4: the server takes the pilot to The Fork"));
+		Advance();
+		return;
+	}
+	case 3101:
+	{
+		// In Cold Fork, its ground built: a block of guns packed on the floor
+		// south of the prize, as close as the footprints let them (the server
+		// refuses what doesn't fit: ore, cliffs), then wave 3.
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const TOptional<FAcRegionAround> Ground = Mmo->HereGround();
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (!(U && Ground && Ground->Id == TEXT("cold-fork") && Sets >= 4 && Ready == Sets && Since() > 3.0))
+		{
+			TimedOut(TEXT("z4: in Cold Fork, its ground built"), 120);
+			return;
+		}
+		if (!W4Set)
+		{
+			const ac::region::Zone& Z = Z1File->zones[0];
+			ac::Vec2 Prize(0, 0);
+			for (const int64 I : Z.prizeDeposits) Prize = Prize + Z1File->deposits[size_t(I)].at / double(Z.prizeDeposits.size());
+			FString Line = TEXT("canyon reset\ncanyon place gatling");
+			for (int32 Y = 0; Y < 3; ++Y)
+				for (int32 X = -2; X <= 2; ++X) Line += FString::Printf(TEXT(" %.1f %.1f"), Prize.x + 2.0 * X, Prize.y + 6.0 + 2.0 * Y);
+			Line += FString::Printf(TEXT("\ncanyon place sentinel %.1f %.1f %.1f %.1f"), Prize.x - 6.0, Prize.y + 8.0, Prize.x + 6.0, Prize.y + 8.0);
+			Check(Mmo->DevClock(Line), TEXT("z4: a block of Gatling Guns packed on the floor by the prize, two AA towers"));
+			W4Set = true;
+			W4ShotAt = Now;
+			return;
+		}
+		if (Now - W4ShotAt < 2.0) return;
+		Check(Mmo->DevClock(TEXT("canyon send 3")), TEXT("z4: wave 3 sent at it"));
+		W4Set = false;
+		Advance();
+		return;
+	}
+	case 3102:
+	{
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		if (!Pc || !Terrain || !Z1File) return;
+		const ac::region::Zone& Z = Z1File->zones[0];
+		ac::Vec2 Prize(0, 0);
+		for (const int64 I : Z.prizeDeposits) Prize = Prize + Z1File->deposits[size_t(I)].at / double(Z.prizeDeposits.size());
+		const auto G = [&](const ac::Vec2 R) { const FVector2D V = Cell(R.x, R.y); return ac::Vec2(V.X, V.Y); };
+		if (!W4Cam.IsValid())
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+			W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+			W4Cam->GetCameraComponent()->SetFieldOfView(60.f);
+		}
+		const ac::Vec2 Block = Prize + ac::Vec2(0, 8);
+		const ac::Vec2 Eye = Block + ac::Vec2(-7, 9);
+		const FVector EyeW = AcSpace::ToWorld(G(Eye), Terrain->FieldHeight(G(Eye)) + 7.0);
+		const FVector AtW = AcSpace::ToWorld(G(Block), Terrain->FieldHeight(G(Block)));
+		W4Cam->SetActorLocationAndRotation(EyeW, (AtW - EyeW).Rotation());
+		if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		if (Since() < 7.0) return;
+		int32 Guns = 0;
+		if (S)
+			for (const ac::Structure& B : S->structures)
+				if ((B.kind == ac::StructureKind::gatling || B.kind == ac::StructureKind::sentinel) && B.hp > 0
+					&& ac::distance(B.position, G(Block)) < 10)
+					Guns++;
+		// The floor takes six side by side by the prize (the rest refused:
+		// ore, the walls).
+		Check(Guns >= 6, FString::Printf(TEXT("z4: the packed guns stand on the floor (%d)"), Guns));
+		ShootClean(TEXT("z4-01-packed-defence"), TEXT("a tightly packed defence on The Fork's floor by the prize, wave 3 coming at it"));
+		return;
+	}
+	case 3103:
+		if (W4Cam.IsValid()) W4Cam->Destroy();
+		Check(Shots.Saved + Shots.Skipped >= 1, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsL1

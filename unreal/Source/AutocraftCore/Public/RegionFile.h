@@ -117,8 +117,10 @@ struct Border {
 };
 
 /// A canyon zone (Z1, docs/regions.md "zones"): where the Brood comes in
-/// (its tunnels' mouths), the ways it walks from each to the prize (a field
-/// of rich ore and an MH well), and the spots on the rims to defend it from.
+/// (its tunnels' mouths), and the ways it walks from each to the prize (a
+/// field of rich ore and an MH well). Z4: no build spots; pilots build
+/// anywhere standable in it under the ordinary rules (an old file's `spots`
+/// are read and ignored).
 struct Zone {
     struct Entrance {
         std::string name;
@@ -145,8 +147,6 @@ struct Zone {
     std::vector<Path> paths;
     /// The prize: indices into the file's `deposits` and `wells`.
     std::vector<int64_t> prizeDeposits, prizeWells;
-    /// Build spots on the rims, for turrets over the paths.
-    std::vector<Vec2> spots;
     /// Z3: a flooded floor (brine): the Brood's walkers wade through it at
     /// `floodSlow` of their speed; flyers pass over. Empty: none.
     std::vector<Vec2> flood;
@@ -223,12 +223,6 @@ constexpr double padRadius = 3.0;
 /// give way; no pad within `nestClear` of it (the horde's ring).
 constexpr double nestMound = 6.0;
 constexpr double nestClear = 30.0;
-/// A zone's build spot (Z1): a turret's footprint (`Rules::radius`) of flat
-/// ground on high ground, within `spotReach` of a path (a gatling gun's
-/// range, 6, and a cell), at least `spotGap` from the next spot.
-constexpr double spotRadius = 1.0;
-constexpr double spotReach = 7.0;
-constexpr double spotGap = 3.0;
 /// A path starts within this of its entrance and ends within `prizeReach`
 /// of the prize's middle; an entrance stands within `mouthReach` of a wall.
 constexpr double pathStart = 3.0;

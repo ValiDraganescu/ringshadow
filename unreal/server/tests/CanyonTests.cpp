@@ -85,7 +85,7 @@ int64_t alive(const WorldMap& w, UnitKind kind) {
     return n;
 }
 
-/// Finished guns of the realm on The Fork's build spots `first`… (the dev
+/// Finished guns of the realm beside The Fork's paths, past `first` free places (the dev
 /// line's: built by the first pilot on line).
 void turrets(WorldMap& w, int64_t gatlings, int64_t towers, int64_t from) {
     std::printf("  %s\n", w.devCanyon("canyon turrets " + std::to_string(gatlings) + " " + std::to_string(towers) + " " + std::to_string(from)).c_str());
@@ -382,7 +382,7 @@ TEST(Canyon_wavesPauseWithNoPilotNear) {
     WorldMap w(first(), params());
     seatIn(w, a, keyA);
     const size_t r = coldFork(w);
-    turrets(w, 2, 0, 7);
+    turrets(w, 2, 0, 0);
     const size_t slag = *w.regionNamed("slag-pockets");
     const Vec2 home = w.region(r).places()->ground(Vec2(100, 52));
     // WAITING's countdown stops while away.
@@ -424,16 +424,26 @@ TEST(Canyon_rewardsByDamage) {
     ASSERT_TRUE(w.seat(b, keyB) == WorldMap::Seated::fresh);
     w.step();
     const size_t r = coldFork(w);
-    // A's gun at the first spot, B's at the third (the dev line builds for
-    // the first pilot on line, so B's is handed to B).
+    // A's gun at the first free place by the north arm's end (the dev
+    // line's), B's beside it, as close as the footprints let it (Z4: anywhere
+    // standable), both over the arm wave 2 comes down; B's is handed to B.
     turrets(w, 1, 0, 0);
-    GameState& st = w.region(r).simulation().state;
-    const Vec2 spot = w.region(r).places()->zones[0].spots[2];
-    st.structures.push_back(Structure(st.nextID++, StructureKind::gatling, Pilot::player, spot));
+    Simulation& sim = w.region(r).simulation();
+    GameState& st = sim.state;
+    const Vec2 gunAt = st.structures.back().position;
+    std::optional<Vec2> beside;
+    for (double rad = 2; rad <= 4 && !beside; rad += 0.5)
+        for (int k = 0; k < 16 && !beside; k++) {
+            const double t = k * 2 * pi / 16;
+            const auto q = sim.snap(StructureKind::gatling, gunAt + Vec2(std::cos(t), std::sin(t)) * rad);
+            if (q && !sim.placementRefusal(StructureKind::gatling, *q)) beside = q;
+        }
+    ASSERT_TRUE(beside.has_value());
+    st.structures.push_back(Structure(st.nextID++, StructureKind::gatling, Pilot::player, *beside));
     st.structures.back().hp = Rules::hp(StructureKind::gatling);
     const int64_t gunB = st.structures.back().id;
-    w.region(r).simulation().reindex();
-    w.region(r).simulation().refreshNav();
+    sim.reindex();
+    sim.refreshNav();
     // Hand it to B: a save and a restore keep who built what.
     WorldSave s = w.save();
     for (SavedRegion& sr : s.regions)

@@ -273,14 +273,14 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
                 c.name = z.name;
                 c.next = WorldCanyon::firstWait;
                 // The prize's middle (its deposits, else its wells), and the
-                // zone's reach round it: its farthest build spot and 3 cells.
+                // zone's reach round it: its outline's farthest corner (Z4:
+                // pilots build anywhere in it).
                 std::vector<Vec2> prize;
                 for (const int64_t i : z.prizeDeposits) prize.push_back(places->map.deposits[size_t(i)].position);
                 if (prize.empty())
                     for (const int64_t i : z.prizeWells) prize.push_back(places->map.wells[size_t(i)].position);
                 for (const Vec2 p : prize) c.middle = c.middle + p / double(prize.size());
-                for (const Vec2 s : z.spots) c.reach = std::max(c.reach, distance(s, c.middle));
-                c.reach += 3;
+                for (const Vec2 o : z.outline) c.reach = std::max(c.reach, distance(o, c.middle));
                 canyons_.push_back(c);
             }
         }
