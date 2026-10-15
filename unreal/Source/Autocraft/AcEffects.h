@@ -299,6 +299,8 @@ private:
 	FAcEffectPool* SlugCorePool = nullptr;
 	FAcEffectPool* SlugHaloPool = nullptr;
 	FAcEffectPool* AmalgamPool = nullptr;
+	/// N1b: the amalgam's orange halo round each round's white-hot core.
+	FAcEffectPool* AmalgamHaloPool = nullptr;
 	TArray<double> TracerUntil, FlashUntil;
 	TArray<FFlight> Rounds, Slugs, Amalgams;
 	TArray<double> AmalgamLength;

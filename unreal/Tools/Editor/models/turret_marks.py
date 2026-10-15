@@ -24,23 +24,25 @@ from ac_modelkit import Model, box, load_catalog, save_catalog  # noqa: E402
 
 POSES = ["AcPoseBuildings2.cpp:PoseSentinel", "AcPoseBuildings2.cpp:PoseGatling"]
 PREFIXES = ("markPlate", "marks_")
-# The stats' colours, as the turret card's (SAcTurretCard.cpp StatColor): amber, ember red, ice, sky blue.
+# The stats' colours, as the turret card's (SAcTurretCard.cpp StatColor): amber, ember red, ice, sky blue. N1b: strong
+# and saturated (the unlit master adds the base colour to the lamp: a white base washed them pale), the base the hue
+# itself so the lit sum keeps it.
 COLOURS = {
-    "markRate": (1.3, 0.62, 0.06),
-    "markDamage": (1.3, 0.22, 0.08),
-    "markRange": (0.3, 0.95, 1.3),
-    "markAir": (0.25, 0.5, 1.4),
+    "markRate": (2.6, 0.95, 0.0),
+    "markDamage": (2.8, 0.10, 0.02),
+    "markRange": (0.05, 1.5, 2.4),
+    "markAir": (0.12, 0.30, 3.0),
 }
 STATS = list(COLOURS)
 FACE = 98.0      # the plates' outer face, just inside the footprint's edge
-COL = 19.0       # between two stats' columns
-ROWS = (22.0, 33.0, 44.0)
+COL = 21.0       # between two stats' columns
+ROWS = (20.0, 32.0, 44.0)
 
 m = Model("turretmarks", category="building")
 for name in ("hullDark", "hullMid"):
     m.material(name)
 for name, emissive in COLOURS.items():
-    m.material(name, parent="emissive", color=(1, 1, 1), emissive=emissive)
+    m.material(name, parent="emissive", color=tuple(min(v * 0.15, 0.4) for v in emissive), emissive=emissive)
 
 
 # The four faces: (normal axis, sign). A chevron is drawn in the XZ plane on a Y face; on an X face the same shape
@@ -53,10 +55,11 @@ def at_face(axis, sign, along, out, z):
 
 
 def chevron(axis, sign, c, z, out, depth):
-    """An upward chevron (^), 14 cm wide, centred `c` along the face `out` cm from the middle."""
+    """An upward chevron (^), 18 cm wide and bold (N1b: read from the usual camera), centred `c` along the face `out`
+    cm from the middle."""
     yaw = 90 if axis == "x" else 0
-    return [box((9, depth, 2.6), at=at_face(axis, sign, c - 3.4, out, z), rot=(35, yaw, 0)),
-            box((9, depth, 2.6), at=at_face(axis, sign, c + 3.4, out, z), rot=(-35, yaw, 0))]
+    return [box((11, depth, 4.2), at=at_face(axis, sign, c - 4.2, out, z), rot=(35, yaw, 0)),
+            box((11, depth, 4.2), at=at_face(axis, sign, c + 4.2, out, z), rot=(-35, yaw, 0))]
 
 
 cols = [(s - 1.5) * COL for s in range(4)]

@@ -31,9 +31,12 @@ m = Model("gatling", category="building", notes=[
     "Under construction the body rises out of the ground like every building. height 1.3"])
 for name in ("hullLight", "hullMid", "hullDark", "hazard", "team", "chrome", "workGlow", "glowRed", "glowYellow"):
     m.material(name)
-# The amalgam's heat: white-hot at the barrel tips, furnace orange in the hopper and the back vent.
-m.material("gatlingHeat", parent="emissive", color=(1, 1, 1), emissive=(2.2, 1.0, 0.35))
-m.material("gatlingFurnace", parent="emissive", color=(1, 1, 1), emissive=(1.6, 0.48, 0.07))
+# The amalgam's heat: white-hot orange at the barrel tips, furnace orange in the hopper and the back vent. N1b: the
+# base colour is the hue (the unlit master adds it to the lamp: a white base washed both to white).
+m.material("gatlingHeat", parent="emissive", color=(0.55, 0.24, 0.05), emissive=(2.6, 1.0, 0.22))
+m.material("gatlingFurnace", parent="emissive", color=(0.45, 0.10, 0.0), emissive=(2.2, 0.55, 0.04))
+m.material("gatlingMolten", parent="emissive", color=(0.6, 0.22, 0.02), emissive=(3.0, 1.1, 0.12))
+m.material("gunmetal", parent="hull", color=(0.035, 0.036, 0.04), metallic=0.85, roughness=0.32)
 
 
 def d(what, channels=("rotation",)):
@@ -63,6 +66,9 @@ m.mesh(m.root, "team", [box((168, 12, 8), at=(0, s * 78, 70), base=True) for s i
        [box((12, 144, 8), at=(s * 78, 0, 70), base=True) for s in (-1, 1)])
 m.mesh(m.root, "workGlow", [box((26, 3, 7), at=(x, 83, 60), base=True) for x in (-58, 58)] +
        [box((3, 26, 7), at=(83, y, 60), base=True) for y in (-40, 40)], solid=False)
+# the concept's orange heat slits over the fins, front and sides
+m.mesh(m.root, "gatlingFurnace", [box((30, 3, 6), at=(x, s * 84, 64), base=True) for x in (-30, 30) for s in (-1, 1)] +
+       [box((3, 30, 6), at=(84, y, 64), base=True) for y in (-10, 10)], solid=False)
 # the heat vent at the back
 m.mesh(m.root, "hullDark", [box((10, 70, 34), at=(-86, 0, 22), base=True)])
 m.mesh(m.root, "gatlingFurnace", [box((3, 56, 4), at=(-91.5, 0, 26 + 7 * k), base=True) for k in range(4)], solid=False)
@@ -78,28 +84,35 @@ for s in (-1, 1):
     m.mesh(head, "hullDark", [cyl(24, 22, at=(18, s * 50 - 11, 128), axis="y", base=True, sides=20)])
     m.mesh(head, "chrome", [cyl(14, 4, at=(18, s * 61 - 2, 128), axis="y", base=True, sides=16)], solid=False)
     m.mesh(head, "team", [box((40, 3, 10), at=(18, s * 50.5, 100), base=True)], solid=False)
-# the hopper: a funnel of steel with the amalgam glowing in its mouth
-m.mesh(head, "hullDark", [cyl(30, 34, at=(-6, 0, 128), base=True, r1=46, sides=4, rot=(0, 45, 0))])
-m.mesh(head, "hullLight", [box((70, 70, 6), at=(-6, 0, 160), base=True)])
-hopper = m.part("hopper", parent=head, at=(-6, 0, 166), driver=d("the furnace glow: brighter while it fires", ("emission",)))
-m.mesh(hopper, "gatlingFurnace", [box((58, 58, 3), at=(-6, 0, 164), base=True)], solid=False)
-m.mesh(head, "gatlingFurnace", [box((3, 30, 6), at=(x, 0, 138), base=True) for x in (-38, 26)], solid=False)
-beacon = m.part("beacon", parent=head, at=(-40, 30, 168), driver=d("beacon blink (0.25 s of every 1.2 s once built)",
+# the hopper: a tall square funnel of steel widening upward (the concept's furnace), a heavy rim, the amalgam molten
+# in its mouth and glowing through slits in its faces
+m.mesh(head, "hullDark", [cyl(36, 54, at=(-6, 0, 128), base=True, r1=66, sides=4, rot=(0, 45, 0))])
+m.mesh(head, "hullLight", [box((100, 12, 10), at=(-6, s * 44, 180), base=True) for s in (-1, 1)] +
+       [box((12, 100, 10), at=(-6 + s * 44, 0, 180), base=True) for s in (-1, 1)])
+hopper = m.part("hopper", parent=head, at=(-6, 0, 184), driver=d("the furnace glow: brighter while it fires", ("emission",)))
+m.mesh(hopper, "gatlingMolten", [box((78, 78, 4), at=(-6, 0, 178), base=True)], solid=False)
+m.mesh(hopper, "gatlingFurnace", [box((3, 34, 7), at=(-6 + s * 35, 0, 150), base=True) for s in (-1, 1)] +
+       [box((34, 3, 7), at=(-6, s * 35, 150), base=True) for s in (-1, 1)] +
+       [box((3, 40, 4), at=(-6 + s * 46, 0, 174), base=True) for s in (-1, 1)] +
+       [box((40, 3, 4), at=(-6, s * 46, 174), base=True) for s in (-1, 1)], solid=False)
+beacon = m.part("beacon", parent=head, at=(-40, 30, 190), driver=d("beacon blink (0.25 s of every 1.2 s once built)",
                                                                       ("visibility",)))
-m.mesh(beacon, "glowRed", sphere(5, at=(-40, 30, 172), steps=8), solid=False)
+m.mesh(beacon, "glowRed", sphere(5, at=(-52, 40, 192), steps=8), solid=False)
 
 # --- the rotary cannon: the ribbed jacket, six barrels round the axle, their hot tips ---------------------------
 AXIS = (30, 0, 128)
 barrels = m.part("barrels", parent=head, at=AXIS, driver=d("spins about its axis while it fires"))
-m.mesh(barrels, "hullDark", [cyl(25, 46, at=(30, 0, 128), axis="x", base=True, sides=18)])
-m.mesh(barrels, "chrome", [cyl(27, 5, at=(34 + 10 * k, 0, 128), axis="x", base=True, sides=18) for k in range(4)], solid=False)
+m.mesh(barrels, "gunmetal", [cyl(25, 46, at=(30, 0, 128), axis="x", base=True, sides=18)])
+# the ribbed cooling jacket: deep fins round it, a chrome band at each end
+m.mesh(barrels, "hullDark", [cyl(30, 3.5, at=(36 + 5.5 * k, 0, 128), axis="x", base=True, sides=18) for k in range(7)], solid=False)
+m.mesh(barrels, "chrome", [cyl(28, 4, at=(x, 0, 128), axis="x", base=True, sides=18) for x in (31, 73)], solid=False)
 m.mesh(barrels, "hullMid", [cyl(20, 6, at=(76, 0, 128), axis="x", base=True, sides=18),
                             cyl(20, 6, at=(112, 0, 128), axis="x", base=True, sides=18)])
 bores = []
 for k in range(6):
     a = k * math.pi / 3
     bores.append((math.cos(a) * 13, math.sin(a) * 13))
-m.mesh(barrels, "hullDark", [cyl(5.5, 62, at=(70, y, 128 + z), axis="x", base=True, sides=10) for y, z in bores])
+m.mesh(barrels, "gunmetal", [cyl(5.5, 62, at=(70, y, 128 + z), axis="x", base=True, sides=10) for y, z in bores])
 tips = m.part("tips", parent=barrels, at=(132, 0, 128), driver=d("the barrels' white-hot ends: brighter while it fires",
                                                                  ("emission",)))
 m.mesh(tips, "gatlingHeat", [cyl(5.8, 6, at=(130, y, 128 + z), axis="x", base=True, sides=10) for y, z in bores],
