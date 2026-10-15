@@ -260,3 +260,52 @@ TEST(goals_old_save_picks_up_at_the_right_goal) {
     EXPECT_TRUE(goalKey(again) == "gatling");
     EXPECT_EQ(paid(again.takeNews(me)), 0);
 }
+
+// A finished Foundry leads to the rig screen: order a Drill head Mk I (its
+// price from the rules), then fit it where you unload; a finished Lab leads
+// to researching Mk II. Each paid when done, the next at once.
+TEST(goals_the_foundry_and_the_lab_lead_to_the_rig_screen) {
+    WorldParams p = params(4);
+    p.devRig = true;
+    WorldMap w(first(), p);
+    ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::fresh);
+    second(w);
+    // The dev rig's Foundry and Lab, with an empty rig.
+    ProspectorProgress g = *w.progress(me);
+    g.rig = Rig{};
+    w.setProgress(me, g);
+    w.devGoal("goal level 15");
+    ASSERT_TRUE(goalKey(w) == "module");
+    std::printf("  %s\n", goal(w)->pitch.c_str());
+    EXPECT_TRUE(goal(w)->pitch.find("Your Foundry is up: J, order a Drill head Mk I (100 ore + 50 MH, 60 s)") != std::string::npos);
+    EXPECT_TRUE(goal(w)->hint == "J  RIG SCREEN  ·  ORDER A DRILL HEAD MK I");
+    w.takeNews(me);
+    ASSERT_TRUE(!w.make(me, Module::drillHead, 1).has_value());
+    second(w);
+    std::string id;
+    EXPECT_EQ(paid(w.takeNews(me), &id), 1);
+    EXPECT_TRUE(id == "module");
+    // Ordered: fit it when it comes, at the Citadel (marked).
+    ASSERT_TRUE(goalKey(w) == "fit");
+    std::printf("  %s\n", goal(w)->pitch.c_str());
+    EXPECT_TRUE(goal(w)->pitch.find("Your Drill head is in the stores") != std::string::npos);
+    EXPECT_TRUE(goal(w)->marked);
+    second(w, 62);
+    EXPECT_EQ(w.progress(me)->rig.stock(Module::drillHead, 1), int64_t(1));
+    EXPECT_TRUE(goalKey(w) == "fit");
+    g = *w.progress(me);
+    ASSERT_TRUE(g.rig.fit(Module::drillHead, 1));
+    w.setProgress(me, g);
+    w.takeNews(me);
+    second(w);
+    EXPECT_EQ(paid(w.takeNews(me), &id), 1);
+    EXPECT_TRUE(id == "fit");
+    // The Lab is up (the dev rig's): passed unpaid on the way; research Mk II.
+    ASSERT_TRUE(goalKey(w) == "research");
+    std::printf("  %s\n", goal(w)->pitch.c_str());
+    EXPECT_TRUE(goal(w)->pitch.find("Your Lab is up: J, research Mk II of the Drill head (300 MH, 10 min)") != std::string::npos);
+    ASSERT_TRUE(!w.research(me, Module::drillHead, 2).has_value());
+    second(w);
+    EXPECT_EQ(paid(w.takeNews(me), &id), 1);
+    EXPECT_TRUE(id == "research");
+}

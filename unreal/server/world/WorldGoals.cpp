@@ -84,14 +84,22 @@ const std::vector<WorldGoals::Entry>& WorldGoals::chain() {
          "Plans in hand and level 15: put the Foundry up. The realm gets one, so put it where it counts.",
          "Without a Foundry the rig stays as it landed. With one, every module is a step past what skills do.",
          "B  BUILD THE FOUNDRY"},
-        {"module", 15, "Make a Module",
-         "The Foundry's warm. Order a module on the rig screen and fit it when it's done.",
-         "Modules lift the rig past what the tree alone does, Mk II and up. The Lab opens the higher marks.",
-         "J  RIG SCREEN  ·  MAKE A MODULE"},
+        {"module", 15, "Order a Module",
+         "Your Foundry is up: J, order a Drill head Mk I ({price}). It drills faster for good.",
+         "Modules lift the rig past what the tree alone does. The Foundry makes them; the Lab opens the higher marks.",
+         "J  RIG SCREEN  ·  ORDER A DRILL HEAD MK I"},
+        {"fit", 15, "Fit It",
+         "Your {what} is in the stores, or will be soon: stand where you unload, J, and fit it.",
+         "A module in the stores does nothing. Fitted, it works on every load from then on.",
+         "AT A CITADEL OR HAB DOME  ·  J  ·  FIT IT"},
         {"lab", 25, "Raise the Lab",
          "Level 25 and the Lab's plans are open. It researches the marks the Foundry can't make yet.",
-         "The Lab opens Mk III and up for every module, for every pilot of the realm.",
+         "The Lab opens Mk II and up for every module.",
          "B  BUILD THE LAB"},
+        {"research", 25, "Research Mk II",
+         "Your Lab is up: J, research Mk II of the Drill head ({price}). Then the Foundry can make it.",
+         "Mk II doubles a module's step; Mk III comes after it.",
+         "J  RIG SCREEN  ·  RESEARCH MK II"},
         {"spacedock", 35, "A Dock for Ships",
          "Level 35: Spacedock plans. The realm's ships start here, and so does the long way out.",
          "The Spacedock is the realm's yard: the biggest build on the frontier, one a realm.",
@@ -166,8 +174,15 @@ bool WorldMap::goalMet(const PilotState& p, const WorldGoals::Entry& e) const {
         return site && g.sites.count(siteId(site->first, site->second));
     }
     if (key == "foundry") return realmFinished(StructureKind::foundry);
-    if (key == "module") return p.goalsDid.count("made") || !g.rig.stores.empty() || !g.rig.fitted.empty();
+    if (key == "module") return p.goalsDid.count("made") || g.rig.making || !g.rig.stores.empty() || !g.rig.fitted.empty();
+    if (key == "fit") return !g.rig.fitted.empty();
     if (key == "lab") return realmFinished(StructureKind::lab);
+    if (key == "research") {
+        if (g.rig.research) return true;
+        for (const Module m : Modules::all())
+            if (g.rig.researchedMark(m) >= 2) return true;
+        return false;
+    }
     if (key == "spacedock") return realmFinished(StructureKind::spacedock);
     if (key == "matriarch") return p.goalsDid.count("matriarch") > 0 || !nestRegion();
     return true;
@@ -254,7 +269,7 @@ std::optional<net::Goal> WorldMap::goalMessage(PilotId pilot, const PilotState& 
     out.level = e->level;
     out.xp = WorldGoals::xp(level);
     out.hydrogen = WorldGoals::hydrogen(level);
-    std::string what;
+    std::string what, price;
     auto mark = [&](size_t r, Vec2 at) {
         out.marked = true;
         out.region = world_->regions[r].file.id;
@@ -292,6 +307,24 @@ std::optional<net::Goal> WorldMap::goalMessage(PilotId pilot, const PilotState& 
         } else {
             what = "Citadel's shop";
         }
+    } else if (p.goal == "module" || p.goal == "research") {
+        // The price from the rules (Mk I at the Foundry, Mk II at the Lab).
+        const auto secs = [](double t) {
+            return t >= 120 ? std::to_string(int64_t(std::llround(t / 60))) + " min" : std::to_string(int64_t(std::llround(t))) + " s";
+        };
+        price = p.goal == "module" ? std::to_string(Modules::ore(1)) + " ore + " + std::to_string(Modules::hydrogen(1)) + " MH, " +
+                                         secs(Modules::makeTime(1))
+                                   : std::to_string(Modules::researchHydrogen(2)) + " MH, " + secs(Modules::researchTime(2));
+    } else if (p.goal == "fit") {
+        // What waits: the stores' first, else the Foundry's job; marked at
+        // the nearest place to fit it (the pilot's region's Citadel).
+        const Rig& rig = p.progress.rig;
+        what = !rig.stores.empty() ? Modules::title(rig.stores.front().module)
+               : rig.making       ? Modules::title(rig.making->module)
+                                  : std::string("module");
+        if (!p.flight)
+            for (const Structure& s : regions_[p.region]->simulation().state.structures)
+                if (!out.marked && s.kind == StructureKind::citadel && s.complete() && realm(s)) mark(p.region, s.position);
     } else if (p.goal == "matriarch") {
         if (const auto r = nestRegion()) {
             what = world_->regions[*r].file.name;
@@ -301,7 +334,7 @@ std::optional<net::Goal> WorldMap::goalMessage(PilotId pilot, const PilotState& 
     (void)pilot;
     const std::string n = std::to_string(p.progress.unspent());
     out.title = e->title;
-    out.pitch = filled(filled(e->pitch, "{n}", n), "{what}", what);
+    out.pitch = filled(filled(filled(e->pitch, "{n}", n), "{what}", what), "{price}", price);
     out.why = e->why;
     std::string hint = filled(filled(e->hint, "{n}", n), "{what}", what);
     for (char& c : hint) c = char(std::toupper(uint8_t(c)));

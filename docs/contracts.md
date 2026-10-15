@@ -252,16 +252,20 @@ little when done.
 | 9 | sentinel | 10 | Eyes on the Sky | a finished Sentinel (the AA tower) of its own, or the realm at the limit | |
 | 10 | foundryPlans | 10 | The Foundry Hunt | the Foundry's blueprint held or its site opened, or the realm has a Foundry | the world's first Foundry site (Fork wreck, Cold Fork), put on the map |
 | 11 | foundry | 15 | Light the Foundry | the realm has a finished Foundry | |
-| 12 | module | 15 | Make a Module | the Foundry made a module for it (or one in its stores or fitted) | |
-| 13 | lab | 25 | Raise the Lab | the realm has a finished Lab | |
-| 14 | spacedock | 35 | A Dock for Ships | the realm has a finished Spacedock | |
-| 15 | matriarch | 35 | The Matriarch | it fought her when she fell (or the world has no nest) | her nest |
+| 12 | module | 15 | Order a Module | a module ordered at the Foundry (making, made, in its stores or fitted) | |
+| 13 | fit | 15 | Fit It | a module fitted | the Citadel in the pilot's region |
+| 14 | lab | 25 | Raise the Lab | the realm has a finished Lab | |
+| 15 | research | 25 | Research Mk II | a Lab research running, or Mk II of any module researched | |
+| 16 | spacedock | 35 | A Dock for Ships | the realm has a finished Spacedock | |
+| 17 | matriarch | 35 | The Matriarch | it fought her when she fell (or the world has no nest) | her nest |
 
 The Foundry, the Lab and the Spacedock are one a realm, so their goals are
 met by any pilot's. The build goals count as met when the realm is at the
 pilot's limit for that kind, so a goal is never one it can't do.
 
-**The radio's lines.** `{n}` the points waiting, `{what}` a place.
+**The radio's lines.** `{n}` the points waiting, `{what}` a place (a
+module for *Fit It*), `{price}` the price and the time from the rules
+(`Modules::ore`, `hydrogen`, `makeTime`, `researchHydrogen`, `researchTime`).
 
 1. *Pump Some Silver*: "No tank pumped yet? Put a Derrick on a well and fill it once. MH flies you, builds for you and pays the help."
 2. *Spend Your Points*: "You're sitting on {n} skill points. KSTR can't spend them for you, and they don't earn interest."
@@ -274,10 +278,12 @@ pilot's limit for that kind, so a goal is never one it can't do.
 9. *Eyes on the Sky*: "Gloamwings come in over the walls. Sentinel plans open at 10: an AA tower by your buildings keeps the sky clear."
 10. *The Foundry Hunt*: "Foundry plans are out there, in the {what}. They open at 15: find them before then and you're ready."
 11. *Light the Foundry*: "Plans in hand and level 15: put the Foundry up. The realm gets one, so put it where it counts."
-12. *Make a Module*: "The Foundry's warm. Order a module on the rig screen and fit it when it's done."
-13. *Raise the Lab*: "Level 25 and the Lab's plans are open. It researches the marks the Foundry can't make yet."
-14. *A Dock for Ships*: "Level 35: Spacedock plans. The realm's ships start here, and so does the long way out."
-15. *The Matriarch*: "She's in {what}, in her nest, and the horde with her. Bring friends and turrets; everyone who fights her gets a share."
+12. *Order a Module*: "Your Foundry is up: J, order a Drill head Mk I ({price}). It drills faster for good." ({price}: "100 ore + 50 MH, 60 s")
+13. *Fit It*: "Your {what} is in the stores, or will be soon: stand where you unload, J, and fit it."
+14. *Raise the Lab*: "Level 25 and the Lab's plans are open. It researches the marks the Foundry can't make yet."
+15. *Research Mk II*: "Your Lab is up: J, research Mk II of the Drill head ({price}). Then the Foundry can make it." ({price}: "300 MH, 10 min")
+16. *A Dock for Ships*: "Level 35: Spacedock plans. The realm's ships start here, and so does the long way out."
+17. *The Matriarch*: "She's in {what}, in her nest, and the horde with her. Bring friends and turrets; everyone who fights her gets a share."
 
 Each goal also has a line on why it matters (the Journal) and a short HUD
 line ("B  BUILD A GATLING GUN BY YOUR ORE"). Text only for now; narration
