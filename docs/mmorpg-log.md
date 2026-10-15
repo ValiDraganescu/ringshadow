@@ -706,3 +706,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Z4 (manager): nav clearance stays 0.35; walkers pass a 2-cell gap, a 1-cell gap is a wall they bite through.
 - N Z4: straggler cause: a hit Lodeback fled to the region edge behind the canyon wall; now leaves by its tunnel, vanishes after 4 s without headway.
 - T web: analytics steps 1-5 merged (8ac5a50): Worker, Analytics Engine, D1 admin, agents, tracker; MIT code vendored with its licence.
+- T web: analytics steps 6-7 merged (ec52594): nightly rollup, privacy page, footer on every page.
