@@ -740,3 +740,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I starfalls: all land again at each server start (ids from 1); their state is unsaved; later.
 - N W5: two clients on one world work (two_clients.py); found and fixed: a region's bank was shared by its humans, the Take gate, B blind to A's flight; protocol 30.
 - D numbering (manager): W5 protocol 30; X2/starfalls take protocol 31 and schema 23 if needed.
+- I cause (user's frozen world): the sky carried all 61 starfalls in every snapshot part (~1.15 KB each, 16 parts); the 65 KB/s budget let one part out per tick, so no whole snapshot arrived after fall 61; the client froze at 12:24. Not a death, not lost buildings.
+- T fix (wt1): the snapshot lists falls coming or landed in the last 30 s plus the region's craters, at most 24; 2 parts on the user's save; tested.
