@@ -8,6 +8,30 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Two more canyons: the brine and the roost
+
+15 October 2026 · M9 · 8 pictures
+
+The Drowned Cut in Brine Pans, where the Brood's walkers wade at half speed, and The Roost in Dust Terraces, where every Gloamwing comes off a spire over the walls.
+
+Read it: https://ringshadow.com/blog/two-canyons
+
+## By day you see the whole region
+
+15 October 2026 · M8 · 5 pictures
+
+No fog by day: every unit, bug and building in your region is sent and drawn, and dusk eases the sight down to the night's. Measured at the nest and at The Fork.
+
+Read it: https://ringshadow.com/blog/daylight
+
+## Frontier pilots: you're no longer the only one out here
+
+15 October 2026 · M9 · 8 pictures
+
+Five pilots of the server's own in every world, with callsigns, paints and habits, mining, building, fighting and talking on the radio by the same rules as you.
+
+Read it: https://ringshadow.com/blog/frontier-pilots
+
 ## The realm under siege: the M8 showreel
 
 15 October 2026 · M8 · A video and 12 pictures

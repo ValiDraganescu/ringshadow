@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daylight · Ringshadow</title>
+  <meta name="description" content="By day a Ringshadow pilot sees its whole region, with every unit, bug and building sent; dusk eases the sight down to the night's. Measured at the nest and at The Fork.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="By day you see the whole region">
+  <meta property="og:description" content="No fog by day: every unit, bug and building in your region is sent and drawn. Dusk closes the sight to the night's.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/daylight/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/daylight">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/daylight">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="daylight.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>By day you see the whole region</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M8 · The realm under siege</p>
+        <p class="lede">The regions aren't that big, so by day there's no fog: every unit, bug and building in yours is sent to you and drawn. Through dusk the sight closes in to the night's, round your headlamp, and opens again at dawn. This closes milestone 8.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/daylight/cover.jpg" alt="The Matriarch's nest in Slag Pockets at noon seen from far across the lava flats, the whole horde drawn, the HUD counting 27 enemies" width="1200" height="750"></div>
+        <figcaption>Slag Pockets at noon from 55 cells away: the nest, the Matriarch and her horde, all told to the client.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <p>My remark was short: by day the line of sight should be the whole region, since the zones are small. Until now a pilot saw what the fog of war allowed, by night and by day alike, and the server sent only that. That kept a hacked client from revealing anything, and it stays that way: nothing hidden by the fog ever leaves the server. What changed is what the fog allows by day.</p>
+
+        <h2>Day, dusk, night</h2>
+        <p>By day a pilot sees all of its region, every level of it, so every unit, bug and building in it is sent, the far ones in fewer snapshots than the near ones. Through dusk the sight closes in round the driven unit to the night's: half its day reach plus the headlamp's wedge, easing down by the same share at each step of the lamps' dark, over about one game hour, which is about 100 real seconds. Night is unchanged. Neighbouring regions are as before.</p>
+        <p>Measured in Prospect Landing at dusk, the half-cells a pilot sees: 55,296 at 18.0 h, 22,256 at 18.3, 5,356 at 18.5 and 618 at 19.0.</p>
+        <p>One rule followed from it. A bug that has eaten its fill and is leaving used to vanish once it was out of the pilot's interest. Now it vanishes only out of real sight or at the region's edge, so by day you watch a Lodeback carry your ore all the way home.</p>
+
+        <h2>What it costs</h2>
+        <p>The worry was bytes and frame time, so both were measured, at the two busiest places in the world.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Scene at noon</th><th>Units told before</th><th>Now</th><th>Bytes a second to the client</th></tr></thead>
+            <tbody>
+              <tr><td>The nest in Slag Pockets</td><td>2 of 29</td><td>29 of 29</td><td>2,022 → 3,730</td></tr>
+              <tr><td>The Fork, wave 10 out</td><td>1 of 35</td><td>35 of 35</td><td>2,090 → 4,103</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The server's world tick stays at 0.25 ms at the 99th percentile. In the game the frame is 12.2 to 12.7 ms median with or without the daylight sight, and the GPU 11.7 to 12.2 ms, so the extra units drawn cost nothing you'd notice.</p>
+      </div>
+
+      <section class="album" aria-labelledby="a1">
+        <h2 class="album-title" id="a1">In pictures</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/daylight/01-nest-noon.webp"><img src="media/daylight/01-nest-noon-t.webp" alt="The nest in Slag Pockets at noon, the horde drawn from far away, 27 enemies on the HUD" width="640" height="400" loading="lazy"></a><span class="cap">Noon, before and after: the whole horde at the nest, 27 enemies counted.</span></li>
+          <li class="reveal"><a href="media/daylight/02-nest-before.webp"><img src="media/daylight/02-nest-before-t.webp" alt="The same view before: the nest in the distance with almost nothing drawn, 1 enemy on the HUD" width="640" height="400" loading="lazy"></a><span class="cap">Before: the same spot, one enemy told.</span></li>
+          <li class="reveal"><a href="media/daylight/03-nest-night.webp"><img src="media/daylight/03-nest-night-t.webp" alt="The same view at night: only the lava-lit ground near the Prospector" width="640" height="400" loading="lazy"></a><span class="cap">Night is unchanged: the headlamp and the lava.</span></li>
+          <li class="reveal"><a href="media/daylight/04-fork-noon.webp"><img src="media/daylight/04-fork-noon-t.webp" alt="The Fork at noon with wave 10 out, 34 bugs on the panel, the whole canyon drawn" width="640" height="400" loading="lazy"></a><span class="cap">The Fork at noon with wave 10 out: all 34 bugs told.</span></li>
+          <li class="reveal"><a href="media/daylight/05-fork-before.webp"><img src="media/daylight/05-fork-before-t.webp" alt="The Fork before: the wave panel counts 34 bugs but the canyon is empty" width="640" height="400" loading="lazy"></a><span class="cap">Before: the panel counts 34, the eye sees one.</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <p>The pictures also fixed a testing annoyance: the Brood and Matriarch shot sets had been failing their checks because the night's six-cell sight hid the scenes they were checking. They hold noon now.</p>
+        <p>Every test suite passes: 496 core, 279 server and 91 network.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="frontier-pilots.html">Before: frontier pilots</a>
+        <a class="btn" href="two-canyons.html">Next: two more canyons</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="daylight.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

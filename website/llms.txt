@@ -12,6 +12,9 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [Two more canyons: the brine and the roost](https://ringshadow.com/blog/two-canyons.md): Two more canyons in Ringshadow's world: The Drowned Cut in Brine Pans, a flooded basin where the Brood's walkers wade at half speed, and The Roost in Dust Terraces, a spire every Gloamwing launches from.
+- [By day you see the whole region](https://ringshadow.com/blog/daylight.md): By day a Ringshadow pilot sees its whole region, with every unit, bug and building sent; dusk eases the sight down to the night's. Measured at the nest and at The Fork.
+- [Frontier pilots: you're no longer the only one out here](https://ringshadow.com/blog/frontier-pilots.md): Five pilots of the server's own in every Ringshadow world: callsigns, paints and habits, mining, building, fighting and talking on the radio by the same rules as you.
 - [The realm under siege: the M8 showreel](https://ringshadow.com/blog/realm-under-siege.md): The M8 showreel: 67 seconds of the Brood, the Citadel's guns, the Dropship, The Fork and the Matriarch, cut the morning after I asked the agents for all of it.
 - [Holding The Fork: ten waves, and the Matriarch if you fail](https://ringshadow.com/blog/canyon-game.md): The canyon game is in Ringshadow: ten waves of the Brood down The Fork's two arms, guns on the rims, and if a wave breaks through, the Matriarch comes out of the tunnel and fells every turret.
 - [The Dropship: no more flying alone](https://ringshadow.com/blog/dropship.md): The Prospector no longer flies by itself. Pilots build Landing Pads and ride the Dropship between them: board, lift off, bank under the ringed giant, dash through cloud and land in another region, 16 to 20 seconds and never a fade.

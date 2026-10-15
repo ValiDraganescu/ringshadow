@@ -428,6 +428,30 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Two more canyons: the brine and the roost
+
+15 October 2026 · M9 · 8 pictures
+
+The Drowned Cut in Brine Pans, where the Brood's walkers wade at half speed, and The Roost in Dust Terraces, where every Gloamwing comes off a spire over the walls.
+
+Read it: https://ringshadow.com/blog/two-canyons
+
+## By day you see the whole region
+
+15 October 2026 · M8 · 5 pictures
+
+No fog by day: every unit, bug and building in your region is sent and drawn, and dusk eases the sight down to the night's. Measured at the nest and at The Fork.
+
+Read it: https://ringshadow.com/blog/daylight
+
+## Frontier pilots: you're no longer the only one out here
+
+15 October 2026 · M9 · 8 pictures
+
+Five pilots of the server's own in every world, with callsigns, paints and habits, mining, building, fighting and talking on the radio by the same rules as you.
+
+Read it: https://ringshadow.com/blog/frontier-pilots
+
 ## The realm under siege: the M8 showreel
 
 15 October 2026 · M8 · A video and 12 pictures
@@ -579,6 +603,165 @@ Read it: https://ringshadow.com/blog/the-realm
 Two days, seven milestones: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.
 
 Read it: https://ringshadow.com/blog/how-we-got-here
+
+
+---
+
+# Two more canyons: the brine and the roost
+
+> Two more canyons in Ringshadow's world: The Drowned Cut in Brine Pans, a flooded basin where the Brood's walkers wade at half speed, and The Roost in Dust Terraces, a spire every Gloamwing launches from.
+
+Source: https://ringshadow.com/blog/two-canyons
+
+15 October 2026 · M9 · A living frontier
+
+The Fork has company. The Drowned Cut in Brine Pans is a flooded basin where the Brood's walkers wade at half speed, and The Roost in Dust Terraces has a spire every Gloamwing launches from, over the walls and past the tunnels' guns.
+
+![The Drowned Cut from above: a white salt mesa cut by two arms that meet at a flooded basin with the prize in its middle, yellow build spots on the rims, a wrecked hauler on the east shore](https://ringshadow.com/blog/media/two-canyons/cover.jpg)
+
+*The Drowned Cut from above: the Salt arm from the west, the Gull arm from the north, the brine in the basin.*
+
+Each canyon plays [The Fork's game](https://ringshadow.com/blog/canyon-game): ten waves along its arms to a prize, the first replaying until beaten, the Matriarch if a wave gets through, the canyon held for a world day after the tenth. What each one adds is a twist of its own.
+
+## The Drowned Cut, Brine Pans
+
+Brine Pans is the salt flats, so its canyon is flooded. Two arms meet in a basin: the long Salt arm winding in from a tunnel in the west wall, and the short Gull arm dropping in from the north. The prize is five deposits of 6,000 ore round a 6,000 MH well, and a half-drowned hauler lies on the east shore. Seven build spots sit on the Salt arm's south rim, the basin's west rim and the north rim.
+
+The brine covers the basin and the lower Salt arm, and the Brood's walkers wade through it at half speed, so they spend longer under the rims' guns. Gloamwings fly over it unslowed, and so do pilots: your Prospector's movement is predicted on your machine, and a slow the server applied alone would rubber-band you. The waves are walker-heavy for it, 120 walkers over the ten waves against The Fork's 115, with the mini-boss Lodebacks from wave 5.
+
+Measured: the Salt arm takes 12.8 seconds to march through the brine against 10.7 dry. Of 2,104 samples of wading walkers, 2,104 were slowed; of 4,150 samples of flyers, none.
+
+## The Roost, Dust Terraces
+
+Dust Terraces is stepped sandstone with high ledges, which is where the Gloamwings roost. Its canyon is a mesa over the south-west terrace with two tunnels, the Ochre and the Dust, winding to a basin, and a spire rising at the basin's west edge with a nest of chitin on top. The prize is five deposits of 7,500 ore round a 7,500 MH well, with seven build spots on the rims.
+
+The spire is the twist. One of the zone's entrances is a roost, a ledge and not a tunnel, and every Gloamwing of a wave comes off it, a level or more over the prize, and flies down over the walls. The walkers still come out of the tunnels. So the flyers come from the one place the tunnels' guns don't cover, and the AA towers belong by the spire. The warnings say it as it is: "14 bugs from the Dust tunnel and The Roost". It's a level-3 region, so the waves are heavier, 63 flyers over the ten against The Fork's 34, and wave 10 is 42 bugs.
+
+The pay of a level-3 canyon is higher than The Fork's. The balance pass is going over every number in the economy right now, so the figures wait for it.
+
+## In pictures
+
+- ![The Drowned Cut from above: the salt mesa, two arms, the flooded basin and the prize](https://ringshadow.com/blog/media/two-canyons/01-drowned-cut.webp) The Drowned Cut from above.
+- ![A Lodeback wading through the salt-green brine at the mouth of the Salt tunnel](https://ringshadow.com/blog/media/two-canyons/02-waders.webp) A Lodeback wading at half speed.
+- ![The wave panel THE DROWNED CUT · WAVE 6 / 10, 16 bugs from the Salt and Gull tunnels](https://ringshadow.com/blog/media/two-canyons/03-drowned-cut-wave.webp) Wave 6 of The Drowned Cut: 16 bugs from the Salt and Gull tunnels.
+- ![The Roost from above: a sandstone mesa, two winding arms, the basin with the prize and the chitin nest on the spire](https://ringshadow.com/blog/media/two-canyons/04-roost.webp) The Roost from above, the nest on its spire at the basin's west edge.
+- ![Gloamwings launching off the spire's nest under a gatling gun's fire](https://ringshadow.com/blog/media/two-canyons/05-gloamwings.webp) Gloamwings off the roost, under fire.
+- ![The warning THE ROOST: WAVE 4 OF 10, 14 bugs from the Dust tunnel and The Roost, with the region banner DUST TERRACES](https://ringshadow.com/blog/media/two-canyons/06-roost-wave.webp) Wave 4 of The Roost: 14 bugs from the Dust tunnel and The Roost.
+- ![The world map on Brine Pans with the canyon's ring over the mesa](https://ringshadow.com/blog/media/two-canyons/07-map-brine.webp) Brine Pans on the map, the canyon ringed.
+- ![The world map on Dust Terraces with the canyon's ring in the south-west](https://ringshadow.com/blog/media/two-canyons/08-map-dust.webp) Dust Terraces on the map.
+
+## The same for every canyon
+
+The states, the fail mark, the Matriarch's siege and the hold are The Fork's. A [frontier defender](https://ringshadow.com/blog/frontier-pilots) goes to any canyon whose wave a human is holding. And the save keeps each zone's row, so the three canyons' games carry on between sessions.
+
+
+---
+
+# By day you see the whole region
+
+> By day a Ringshadow pilot sees its whole region, with every unit, bug and building sent; dusk eases the sight down to the night's. Measured at the nest and at The Fork.
+
+Source: https://ringshadow.com/blog/daylight
+
+15 October 2026 · M8 · The realm under siege
+
+The regions aren't that big, so by day there's no fog: every unit, bug and building in yours is sent to you and drawn. Through dusk the sight closes in to the night's, round your headlamp, and opens again at dawn. This closes milestone 8.
+
+![The Matriarch's nest in Slag Pockets at noon seen from far across the lava flats, the whole horde drawn, the HUD counting 27 enemies](https://ringshadow.com/blog/media/daylight/cover.jpg)
+
+*Slag Pockets at noon from 55 cells away: the nest, the Matriarch and her horde, all told to the client.*
+
+My remark was short: by day the line of sight should be the whole region, since the zones are small. Until now a pilot saw what the fog of war allowed, by night and by day alike, and the server sent only that. That kept a hacked client from revealing anything, and it stays that way: nothing hidden by the fog ever leaves the server. What changed is what the fog allows by day.
+
+## Day, dusk, night
+
+By day a pilot sees all of its region, every level of it, so every unit, bug and building in it is sent, the far ones in fewer snapshots than the near ones. Through dusk the sight closes in round the driven unit to the night's: half its day reach plus the headlamp's wedge, easing down by the same share at each step of the lamps' dark, over about one game hour, which is about 100 real seconds. Night is unchanged. Neighbouring regions are as before.
+
+Measured in Prospect Landing at dusk, the half-cells a pilot sees: 55,296 at 18.0 h, 22,256 at 18.3, 5,356 at 18.5 and 618 at 19.0.
+
+One rule followed from it. A bug that has eaten its fill and is leaving used to vanish once it was out of the pilot's interest. Now it vanishes only out of real sight or at the region's edge, so by day you watch a Lodeback carry your ore all the way home.
+
+## What it costs
+
+The worry was bytes and frame time, so both were measured, at the two busiest places in the world.
+
+| Scene at noon | Units told before | Now | Bytes a second to the client |
+|---|---|---|---|
+| The nest in Slag Pockets | 2 of 29 | 29 of 29 | 2,022 → 3,730 |
+| The Fork, wave 10 out | 1 of 35 | 35 of 35 | 2,090 → 4,103 |
+
+The server's world tick stays at 0.25 ms at the 99th percentile. In the game the frame is 12.2 to 12.7 ms median with or without the daylight sight, and the GPU 11.7 to 12.2 ms, so the extra units drawn cost nothing you'd notice.
+
+## In pictures
+
+- ![The nest in Slag Pockets at noon, the horde drawn from far away, 27 enemies on the HUD](https://ringshadow.com/blog/media/daylight/01-nest-noon.webp) Noon, before and after: the whole horde at the nest, 27 enemies counted.
+- ![The same view before: the nest in the distance with almost nothing drawn, 1 enemy on the HUD](https://ringshadow.com/blog/media/daylight/02-nest-before.webp) Before: the same spot, one enemy told.
+- ![The same view at night: only the lava-lit ground near the Prospector](https://ringshadow.com/blog/media/daylight/03-nest-night.webp) Night is unchanged: the headlamp and the lava.
+- ![The Fork at noon with wave 10 out, 34 bugs on the panel, the whole canyon drawn](https://ringshadow.com/blog/media/daylight/04-fork-noon.webp) The Fork at noon with wave 10 out: all 34 bugs told.
+- ![The Fork before: the wave panel counts 34 bugs but the canyon is empty](https://ringshadow.com/blog/media/daylight/05-fork-before.webp) Before: the panel counts 34, the eye sees one.
+
+The pictures also fixed a testing annoyance: the Brood and Matriarch shot sets had been failing their checks because the night's six-cell sight hid the scenes they were checking. They hold noon now.
+
+Every test suite passes: 496 core, 279 server and 91 network.
+
+
+---
+
+# Frontier pilots: you're no longer the only one out here
+
+> Five pilots of the server's own in every Ringshadow world: callsigns, paints and habits, mining, building, fighting and talking on the radio by the same rules as you.
+
+Source: https://ringshadow.com/blog/frontier-pilots
+
+15 October 2026 · M9 · A living frontier
+
+A world with one pilot in it reads as empty. Now the server runs five pilots of its own in every world, each with a callsign, a paint and a habit, and they mine, build, take missions, fight bugs and talk on the radio by the same rules you play by.
+
+![A frontier pilot's Prospector drilling an ore rock, the tag LARKSPUR · LV 34 over it](https://ringshadow.com/blog/media/frontier-pilots/cover.jpg)
+
+*Larkspur, level 34, a miner, drilling at Prospect Landing.*
+
+This is the first piece of milestone 9, which the manager named a living frontier. The question behind it is what makes an evening worth logging in for, and the first answer is company.
+
+## Who they are
+
+Five per world by default, up to six. Their callsigns come from a list of twelve: Vesper, Kestrel, Corvid, Tamsin, Brindle, Sorrel, Moraine, Talus, Lumen, Calder, Drover and Larkspur, in the order the world's dice give. They wear the team paints, green, gold, violet, teal and pink, and never your blue or the mercenaries' orange. Each has a habit:
+
+- Miners: drill and haul, put a Derrick on the well by their field, and raise a Hab Dome where the haul home is long.
+- Builders: put up realm buildings where they help: a gatling gun by a field the Brood keeps raiding, a Landing Pad in a region that has a Citadel or a canyon and no pad. Otherwise they drill to earn their keep.
+- The defender: joins a canyon wave whenever you are in that canyon's region, fights bugs near the realm's buildings, mends anything below 90% and patrols from building to building.
+- The wanderer: opens the sites nobody has opened, takes surveys of the regions next door, and moves on, on foot or by Dropship when both regions have a pad.
+
+## The same rules as you
+
+No cheats. A frontier pilot starts with a new pilot's wallet, 600 ore and 40 MH, earns XP at the world's rates and levels on the same curve, spending its points down its habit's branch of the skill tree. It buys blueprints at the Citadel at the shop's price, builds at the blueprint's floor and under the realm's limits, pays the tax on every unload and the fare for every flight. Its buildings belong to the realm, like yours. What it can't have is your skills' boosts: the core gives those only to the unit you drive.
+
+Caps keep the realm yours: at most eight of their buildings in a world, one Hab Dome, two Derricks, two gatling guns, one Landing Pad per region, and never the last slot under a limit. That one is always left for a human. They never build a Citadel, a Foundry, a Lab, a Spacedock, a Bastion or an AA tower.
+
+## When they come
+
+They arrive once a human has finished the opening chain, by Dropship, 45 seconds later, one every 40 seconds, each announced to everyone with a hello on the radio. While you are still on the chain, they keep 14 cells off its places: the start pad, its two sites, the nearest deposit and the well.
+
+Where you can see them, their Prospectors are real units in the simulation, steered with the core's own orders. Everywhere else their work is booked on the world's clock, a straight-line walk and a drill's worth of ore per trip, so a miner in a region nobody is looking at still fills its wallet. Unlike the mercenaries, they don't catch up time the server was down.
+
+## In pictures
+
+- ![Larkspur's Prospector drilling an ore rock at Prospect Landing, its tag over it](https://ringshadow.com/blog/media/frontier-pilots/01-miner.webp) Larkspur, a miner, at work beside the human.
+- ![A freshly built Hab Dome and the toast ON THE FRONTIER: Sorrel built a Hab Dome in Prospect Landing](https://ringshadow.com/blog/media/frontier-pilots/02-builder.webp) A deed on the frontier: Sorrel built a Hab Dome.
+- ![The toast KSTR · SORREL: Bugs inbound at Prospect Landing. Sorrel sees them, keep your heads down](https://ringshadow.com/blog/media/frontier-pilots/03-radio.webp) Sorrel on the radio when the Brood's raid is called.
+- ![The world map with the frontier pilots' dots in their paints](https://ringshadow.com/blog/media/frontier-pilots/04-map.webp) Their dots on the map, in their paints.
+- ![The map tooltip LARKSPUR · LV 34, Frontier pilot · Miner, Mining in Prospect Landing](https://ringshadow.com/blog/media/frontier-pilots/05-tooltip.webp) Hover one: who, what, where.
+- ![Brindle's Prospector at The Fork's prize among the ore rocks](https://ringshadow.com/blog/media/frontier-pilots/06-defender.webp) Brindle, the defender, at The Fork.
+- ![The defender at The Fork with the wave panel up](https://ringshadow.com/blog/media/frontier-pilots/07-defender-hud.webp) Fighting the wave beside you, paid by damage like anyone.
+- ![A frontier pilot at night, its tag in the headlamp's light](https://ringshadow.com/blog/media/frontier-pilots/08-night-tag.webp) At night a tag shows only over a unit you can actually see.
+
+## What you see
+
+Their Prospectors wear a tag, "VESPER · LV 14", and the first pictures showed tags floating with nothing under them, over units the fog or the distance hid. A fix the same morning draws a tag only over a unit you can see: drawn, inside the sight's light, with no ground or building between the camera and its head. The mercenaries' tags follow the same rule.
+
+On the map each one is a dot in its paint, with a tooltip for its name, habit and what it is doing. Notable deeds come as toasts headed ON THE FRONTIER: "Tamsin opened the Ridge wreck in Cold Fork", "Kestrel built a Derrick in Prospect Landing". And they talk on KSTR: a hello on landing, a warning when a raid is called, a cheer when a wave is beaten ("Wave down at The Fork. Brindle owes somebody a drink"), a cry for help when one is badly hurt, and chatter at most every ten world minutes.
+
+Every test suite passes: 496 core, 279 server and 91 network.
 
 
 ---

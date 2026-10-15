@@ -6,10 +6,34 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T07:20:00Z</updated>
+  <updated>2026-10-15T08:40:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>Two more canyons: the brine and the roost</title>
+    <id>tag:ringshadow,2026-10-15:blog/two-canyons</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/two-canyons"/>
+    <published>2026-10-15T08:40:00Z</published>
+    <updated>2026-10-15T08:40:00Z</updated>
+    <summary>The Drowned Cut in Brine Pans, where the Brood's walkers wade at half speed, and The Roost in Dust Terraces, where every Gloamwing comes off a spire over the walls.</summary>
+  </entry>
+  <entry>
+    <title>By day you see the whole region</title>
+    <id>tag:ringshadow,2026-10-15:blog/daylight</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/daylight"/>
+    <published>2026-10-15T08:30:00Z</published>
+    <updated>2026-10-15T08:30:00Z</updated>
+    <summary>No fog by day: every unit, bug and building in your region is sent and drawn, and dusk eases the sight down to the night's. Measured at the nest and at The Fork.</summary>
+  </entry>
+  <entry>
+    <title>Frontier pilots: you're no longer the only one out here</title>
+    <id>tag:ringshadow,2026-10-15:blog/frontier-pilots</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/frontier-pilots"/>
+    <published>2026-10-15T08:20:00Z</published>
+    <updated>2026-10-15T08:20:00Z</updated>
+    <summary>Five pilots of the server's own in every world, with callsigns, paints and habits, mining, building, fighting and talking on the radio by the same rules as you.</summary>
+  </entry>
   <entry>
     <title>The realm under siege: the M8 showreel</title>
     <id>tag:ringshadow,2026-10-15:blog/realm-under-siege</id>
