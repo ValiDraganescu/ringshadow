@@ -265,6 +265,80 @@
       }) : [el("p", { textContent: "No events in this range." })]));
     }
 
+    // --- Requests
+
+    const reqForm = $("#requests-filter");
+    let reqPage = 0;
+    const STATUS_ORDER = ["2xx", "3xx", "4xx", "5xx", "unknown"];
+
+    function drawStatus(svg, series, bucket) {
+      const W = 800, H = 220, left = 44, bottom = 22, top = 8;
+      const totals = series.map((s) => Object.values(s.byClass).reduce((a, b) => a + b, 0));
+      const max = Math.max(1, ...totals);
+      const bw = (W - left) / Math.max(1, series.length);
+      const label = (t) => (bucket === "hour" ? t.slice(0, 13) + ":00" : t.slice(0, 10));
+      const kids = [
+        svgEl("line", { x1: left, x2: W, y1: H - bottom, y2: H - bottom, class: "axis" }),
+        Object.assign(svgEl("text", { x: left - 6, y: top + 10, class: "tick", "text-anchor": "end" }), { textContent: fmt(max) }),
+        Object.assign(svgEl("text", { x: left - 6, y: H - bottom, class: "tick", "text-anchor": "end" }), { textContent: "0" }),
+      ];
+      series.forEach((s, i) => {
+        let y = H - bottom;
+        for (const k of STATUS_ORDER) {
+          const v = s.byClass[k] || 0;
+          if (!v) continue;
+          const h = (v / max) * (H - bottom - top);
+          y -= h;
+          const r = svgEl("rect", { x: left + i * bw + 1, y, width: Math.max(1, bw - 2), height: h, class: "k-" + k });
+          r.append(Object.assign(svgEl("title", {}), { textContent: `${label(s.t)} · ${k}: ${fmt(v)}` }));
+          kids.push(r);
+        }
+      });
+      if (series.length) {
+        kids.push(Object.assign(svgEl("text", { x: left, y: H - 6, class: "tick" }), { textContent: label(series[0].t) }));
+        kids.push(Object.assign(svgEl("text", { x: W, y: H - 6, class: "tick", "text-anchor": "end" }), { textContent: label(series.at(-1).t) }));
+      }
+      svg.replaceChildren(...kids);
+      const present = STATUS_ORDER.filter((k) => series.some((s) => s.byClass[k]));
+      $("#requests-chart .legend").replaceChildren(...present.map((k) => el("span", { class: "key" }, el("i", { class: "k-" + k }), k)));
+    }
+
+    async function loadRequests() {
+      const v = values(reqForm);
+      const q = new URLSearchParams(Object.fromEntries(Object.entries(v).filter(([, x]) => x)));
+      q.set("page", String(reqPage));
+      const summary = $("#requests .summary");
+      summary.textContent = "Loading…";
+      const { ok, data } = await api("requests?" + q);
+      if (!ok) {
+        summary.textContent = data.error || "The log didn't load.";
+        return;
+      }
+      summary.textContent = `${span(data.range)} · page ${data.page + 1}`;
+      if (data.series) drawStatus($("#requests-chart svg"), data.series, data.range.bucket);
+      $("#requests-log tbody").replaceChildren(...(data.rows.length ? data.rows.map((r) => {
+        const st = el("span", { class: "status s" + String(r.status).charAt(0), textContent: r.status ? String(r.status) : "?" });
+        const flags = [r.admin ? "admin" : "", r.sample > 1 ? "×" + r.sample : "", r.kind === "server" ? "counted" : ""].filter(Boolean).join(" ");
+        return row(r.t.slice(5), r.method || "–", el("code", { textContent: r.path }), st, fmt(r.bytes), fmt(r.ms), r.source || "–",
+          `${r.label} (${r.class})`, el("code", { class: "ua", textContent: r.ua, title: r.ua }), flags);
+      }) : [row("No requests match.", "", "", "", "", "", "", "", "", "")]));
+      $("#requests-newer").disabled = data.page === 0;
+      $("#requests-older").disabled = !data.more;
+    }
+    reqForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      reqPage = 0;
+      loadRequests();
+    });
+    $("#requests-newer").addEventListener("click", () => {
+      reqPage = Math.max(0, reqPage - 1);
+      loadRequests();
+    });
+    $("#requests-older").addEventListener("click", () => {
+      reqPage += 1;
+      loadRequests();
+    });
+
     // --- History
 
     const historyForm = $("#history-range");
@@ -281,8 +355,8 @@
       summary.textContent = `${data.from} to ${data.to} · ${fmt(data.days.length)} day${data.days.length === 1 ? "" : "s"} rolled up`;
       drawPeople($("#history-chart svg"), data.days.map((d) => ({ t: d.day, views: d.views, visitors: d.visitors })), "day");
       $("#history-days tbody").replaceChildren(...(data.days.length
-        ? [...data.days].reverse().map((d) => row(d.day, fmt(d.views), fmt(d.visitors), fmt(d.agents), fmt(d.events)))
-        : [row("No rollups yet: the first runs at 02:10 UTC.", "", "", "", "")]));
+        ? [...data.days].reverse().map((d) => row(d.day, fmt(d.views), fmt(d.visitors), fmt(d.agents), fmt(d.events), fmt(d.requests), fmt(d.errors)))
+        : [row("No rollups yet: the first runs at 02:10 UTC.", "", "", "", "", "", "")]));
       const tops = (sel, list = [], third = (r) => fmt(r.visitors ?? 0)) =>
         $(sel + " tbody").replaceChildren(...(list.length ? list.map((r) => row(r.key || "(none)", fmt(r.hits), third(r))) : [row("Nothing yet.", "", "")]));
       tops("#hist-path", data.top["page.path"]);
@@ -442,6 +516,7 @@
       visitors: loadVisitors,
       events: loadEvents,
       agents: () => Promise.all([loadAgents(), loadRules()]),
+      requests: () => Promise.all([loadRequests(), loadRules()]),
       history: loadHistory,
       admins: loadAdmins,
     };

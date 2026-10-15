@@ -7,11 +7,13 @@
 //   server label <label>   fetches, by the rules at rollup time
 //   server class <class>   fetches
 //   event  event <name>    count
+//   request status <2xx..5xx, unknown>   every request the Worker answered
 
 import { compileRules } from "./agents.js";
 import { listRules } from "./rules.js";
 import {
-  DAY, byKeyFrom, eventsSql, pageByColumnSql, pageTotalsSql, relabel, serverByAgentSql, totalsFrom,
+  DAY, byKeyFrom, classKey, eventsSql, pageByColumnSql, pageTotalsSql, relabel, requestClassTotalsSql, serverByAgentSql,
+  totalsFrom,
 } from "./stats.js";
 
 export const dayBefore = (ms) => new Date(ms - DAY).toISOString().slice(0, 10);
@@ -41,6 +43,9 @@ export function rollupRows(day, r, compiled) {
   const events = new Map();
   for (const row of r.events) events.set(row.event, (events.get(row.event) || 0) + (Number(row.count) || 0));
   for (const [k, v] of events) add("event", "event", k, v);
+  const statuses = new Map();
+  for (const row of r.requests || []) statuses.set(classKey(row.cls), (statuses.get(classKey(row.cls)) || 0) + (Number(row.n) || 0));
+  for (const [k, v] of statuses) add("request", "status", k, v);
   return rows;
 }
 
@@ -48,15 +53,16 @@ export function rollupRows(day, r, compiled) {
 export async function rollupDay(env, day) {
   const params = { from: day + "T00:00:00.000Z", to: new Date(Date.parse(day + "T00:00:00Z") + DAY).toISOString() };
   const q = async (query) => (await env.HITS_SQL.query({ query, params })).data;
-  const [pageTotals, paths, referrers, countries, server, events] = await Promise.all([
+  const [pageTotals, paths, referrers, countries, server, events, requests] = await Promise.all([
     q(pageTotalsSql()),
     q(pageByColumnSql("path")),
     q(pageByColumnSql("referrer")),
     q(pageByColumnSql("country")),
     q(serverByAgentSql("day")),
     q(eventsSql("day")),
+    q(requestClassTotalsSql()),
   ]);
-  const rows = rollupRows(day, { pageTotals, paths, referrers, countries, server, events }, compileRules(await listRules(env)));
+  const rows = rollupRows(day, { pageTotals, paths, referrers, countries, server, events, requests }, compileRules(await listRules(env)));
   const insert = env.ADMIN.prepare("INSERT INTO rollups_day (day, kind, dim, key, hits, visitors) VALUES (?, ?, ?, ?, ?, ?)");
   await env.ADMIN.batch([
     env.ADMIN.prepare("DELETE FROM rollups_day WHERE day = ?").bind(day),
@@ -69,16 +75,20 @@ export async function rollupDay(env, day) {
 export async function history(env, from, to) {
   const { results: days } = await env.ADMIN.prepare(
     `SELECT day, kind, dim, key, hits, visitors FROM rollups_day
-      WHERE day >= ? AND day <= ? AND (dim = 'total' OR (kind = 'server' AND dim = 'class' AND key = 'browser') OR kind = 'event')
+      WHERE day >= ? AND day <= ? AND (dim = 'total' OR (kind = 'server' AND dim = 'class' AND key = 'browser') OR kind = 'event' OR kind = 'request')
       ORDER BY day`,
   ).bind(from, to).all();
   const byDay = new Map();
   for (const r of days) {
-    const d = byDay.get(r.day) || { day: r.day, views: 0, visitors: 0, fetches: 0, browsers: 0, events: 0 };
+    const d = byDay.get(r.day) || { day: r.day, views: 0, visitors: 0, fetches: 0, browsers: 0, events: 0, requests: 0, errors: 0 };
     if (r.kind === "page") Object.assign(d, { views: r.hits, visitors: r.visitors || 0 });
     else if (r.kind === "server" && r.dim === "total") d.fetches = r.hits;
     else if (r.kind === "server") d.browsers = r.hits;
     else if (r.kind === "event") d.events += r.hits;
+    else if (r.kind === "request") {
+      d.requests += r.hits;
+      if (r.key === "4xx" || r.key === "5xx") d.errors += r.hits;
+    }
     byDay.set(r.day, d);
   }
   const { results: tops } = await env.ADMIN.prepare(

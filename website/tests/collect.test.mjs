@@ -19,15 +19,15 @@ function req(query, headers = {}) {
 test("a first page view: one visitor, a bounce", () => {
   const p = collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/blog/the-brood&r=news.example.org&ht=1&us=x&um=social"));
   assert.deepEqual(p.indexes, ["ringshadow"]);
-  assert.deepEqual(p.blobs, ["page", "/blog/the-brood", "ringshadow.com", "news.example.org", "DE", "Chrome", "141.x.x.x", "desktop", "", "", "", "", "", "x", "social"]);
-  assert.deepEqual(p.doubles, [1, 1, 0, 0]);
+  assert.deepEqual(p.blobs, ["page", "/blog/the-brood", "ringshadow.com", "news.example.org", "DE", "Chrome", "141.x.x.x", "desktop", "", "", "", "", "", "x", "social", "", "", ""]);
+  assert.deepEqual(p.doubles, [1, 1, 0, 0, 0, 0, 0]);
 });
 
 test("the second view takes the bounce back, the third is plain", () => {
-  assert.deepEqual(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/&ht=2")).doubles, [0, -1, 0, 0]);
-  assert.deepEqual(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/&ht=3")).doubles, [0, 0, 0, 0]);
-  assert.deepEqual(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/&ht=9")).doubles, [0, 0, 0, 0]);
-  assert.deepEqual(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/")).doubles, [1, 1, 0, 0]); // no counter: a first hit
+  assert.deepEqual(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/&ht=2")).doubles, [0, -1, 0, 0, 0, 0, 0]);
+  assert.deepEqual(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/&ht=3")).doubles, [0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/&ht=9")).doubles, [0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/")).doubles, [1, 1, 0, 0, 0, 0, 0]); // no counter: a first hit
 });
 
 test("an event is neither a view nor a visitor", () => {
@@ -35,7 +35,7 @@ test("an event is neither a view nor a visitor", () => {
   assert.equal(p.blobs[0], "event");
   assert.equal(p.blobs[8], "download-windows");
   assert.equal(p.blobs[13], "");
-  assert.deepEqual(p.doubles, [0, 0, 0, 0]);
+  assert.deepEqual(p.doubles, [0, 0, 0, 0, 0, 0, 0]);
   assert.equal(collectPoint(req("sid=ringshadow&h=ringshadow.com&p=/&e=something-else")), null);
 });
 

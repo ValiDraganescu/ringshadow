@@ -128,6 +128,17 @@ details ol { margin: 6px 0 0; padding-left: 20px; }
 .k-other-bot { fill: #ff8a65; background: #ff8a65; }
 .k-unlabelled { fill: #7d8fa0; background: #7d8fa0; }
 .k-views { fill: #2f7f9e; background: #2f7f9e; }
+.k-2xx { fill: #59d9ff; background: #59d9ff; }
+.k-3xx { fill: #b28cff; background: #b28cff; }
+.k-4xx { fill: #ffb333; background: #ffb333; }
+.k-5xx { fill: #ff6b5a; background: #ff6b5a; }
+.k-unknown { fill: #7d8fa0; background: #7d8fa0; }
+.status.s2 { background: var(--cyan); }
+.status.s3 { background: #b28cff; }
+.status.s5 { background: var(--red); }
+.log { font-size: 13px; }
+.log code.ua { display: inline-block; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.pager { margin-top: 12px; }
 .k-visitors { fill: #ccf2ff; background: #ccf2ff; }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 4px; }

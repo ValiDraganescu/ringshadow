@@ -21,6 +21,7 @@
       <a href="#visitors">Visitors</a>
       <a href="#events">Events</a>
       <a href="#agents">Agents</a>
+      <a href="#requests">Requests</a>
       <a href="#history">History</a>
       <a href="#admins">Admins</a>
     </nav>
@@ -177,6 +178,39 @@
       </div>
     </section>
 
+    <section id="requests" class="view" hidden>
+      <h2>Requests</h2>
+      <p class="note">Every request the Worker answered: pages, the feed, the text files, redirects, 404s, the tracker's calls, the admin and its API. Pictures, fonts, CSS and JS under /assets/ and /blog/media/ never reach the Worker and are not here. A row marked ×N stands for N requests (Analytics Engine samples bursts). Times are UTC; the duration is the Worker's wait for the assets, the database or the SQL API.</p>
+      <form id="requests-filter" class="inline" novalidate>
+        <label>Range
+          <select name="range"><option value="24h">24 h</option><option value="7d">7 d</option></select></label>
+        <label>Status
+          <select name="status"><option value="">any</option><option>2xx</option><option>3xx</option><option>4xx</option><option>5xx</option></select></label>
+        <label>Method
+          <select name="method"><option value="">any</option><option>GET</option><option>HEAD</option><option>POST</option><option>PUT</option><option>DELETE</option><option>OPTIONS</option></select></label>
+        <label>Source
+          <select name="source"><option value="">any</option><option>assets</option><option>api</option><option>collect</option><option>notfound</option><option>redirect</option></select></label>
+        <label>Path contains <input name="path" autocomplete="off" spellcheck="false"></label>
+        <label>Label <input name="label" list="label-names" autocomplete="off"></label>
+        <button type="submit">Show</button>
+      </form>
+      <p class="summary" role="status" aria-live="polite"></p>
+      <figure class="chart" id="requests-chart">
+        <svg viewBox="0 0 800 220" role="img" aria-label="Answers by status class over time"></svg>
+        <figcaption class="legend"></figcaption>
+      </figure>
+      <div class="part">
+        <table class="list log" id="requests-log">
+          <thead><tr><th>Time</th><th>Method</th><th>Path</th><th>Status</th><th>Bytes</th><th>ms</th><th>Source</th><th>Agent</th><th>User-Agent</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="buttons pager">
+          <button type="button" class="quiet" id="requests-newer" disabled>Newer</button>
+          <button type="button" class="quiet" id="requests-older" disabled>Older</button>
+        </div>
+      </div>
+    </section>
+
     <section id="history" class="view" hidden>
       <h2>History</h2>
       <p class="note">Every day rolled up at 02:10 UTC into the admin's own database, kept after Analytics Engine's 90 days. Views and visitors are people (the tracker); agent fetches leave out browsers' page fetches.</p>
@@ -192,7 +226,7 @@
       </figure>
       <div class="part">
         <h3>Days</h3>
-        <table class="list" id="history-days"><thead><tr><th>Day</th><th>Views</th><th>Visitors</th><th>Agent fetches</th><th>Events</th></tr></thead><tbody></tbody></table>
+        <table class="list" id="history-days"><thead><tr><th>Day</th><th>Views</th><th>Visitors</th><th>Agent fetches</th><th>Events</th><th>Requests</th><th>4xx and 5xx</th></tr></thead><tbody></tbody></table>
       </div>
       <div class="cols">
         <div class="part"><h3>Pages</h3><table class="list" id="hist-path"><thead><tr><th>Page</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>

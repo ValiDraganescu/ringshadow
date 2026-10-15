@@ -23,6 +23,7 @@ test("a day's rows: page totals and keys, agents by label and class, events", ()
       { ua: "odd/1", wclass: "unlabelled", wlabel: "unlabelled", hits: "2", probes: "2" },
     ],
     events: [{ event: "download-mac", path: "/", t: "x", count: "2" }, { event: "download-mac", path: "/blog/", t: "x", count: "1" }],
+    requests: [{ cls: 2, n: "20" }, { cls: 4, n: "3" }, { cls: 0, n: "7" }],
   }, compileRules(SEED_RULES));
   const get = (kind, dim, key) => rows.find((r) => r.kind === kind && r.dim === dim && r.key === key);
   assert.deepEqual(get("page", "total", ""), { day: "2026-10-15", kind: "page", dim: "total", key: "", hits: 5, visitors: 3 });
@@ -36,4 +37,5 @@ test("a day's rows: page totals and keys, agents by label and class, events", ()
   assert.equal(get("server", "class", "ai-crawler").hits, 5);
   assert.equal(get("event", "event", "download-mac").hits, 3);
   assert.equal(get("server", "total", "").visitors, null);
+  assert.deepEqual(["2xx", "4xx", "unknown"].map((k) => get("request", "status", k).hits), [20, 3, 7]);
 });

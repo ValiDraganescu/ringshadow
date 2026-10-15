@@ -232,7 +232,7 @@ its reasons are in `docs/website-analytics.md`; what readers are told is in
 
 | Path | What |
 |---|---|
-| `src/worker.js` | Routing: `/c/` the collector, `/api/admin/` the admin's API, `/admin/` its pages (only with a session), everything else the assets, counted. The nightly rollup. |
+| `src/worker.js` | Routing: `/c/` the collector, `/api/admin/` the admin's API, `/admin/` its pages (only with a session), everything else the assets. Every answer is logged as one point (the request log); the counted page and text fetches are the agents' numbers. The nightly rollup. |
 | `src/hits.js`, `src/agents.js`, `src/rules.js` | A server hit's data point; the agent rules (in D1, cached a minute) that label a User-Agent. |
 | `src/collect.js`, `assets/js/count.js` | The readers' counter and its collector. |
 | `src/vendor/counterscale/` | Counterscale's visitor and bounce logic (MIT), with its licence and source commit. |

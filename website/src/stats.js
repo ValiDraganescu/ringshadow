@@ -260,3 +260,96 @@ export function eventsFrom(rows, range) {
     }))
     .sort((a, b) => b.total - a.total);
 }
+
+// --- The request log: every request the Worker answered (kind=server and
+// kind=request), newest first, filtered, a page at a time.
+
+export const LOG_PAGE = 50;
+const STATUS_CLASSES = { "2xx": [200, 300], "3xx": [300, 400], "4xx": [400, 500], "5xx": [500, 600] };
+const METHODS = ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"];
+const SOURCES = ["assets", "api", "collect", "notfound", "redirect"];
+
+// The filters a request asks for, as SQL conditions and named parameters.
+// Only known values pass; the free-text ones go in as parameters.
+export function logFilters(q) {
+  const conds = [];
+  const params = {};
+  const cls = STATUS_CLASSES[q.get("status")];
+  if (cls) {
+    conds.push("double4 >= $lo AND double4 < $hi");
+    Object.assign(params, { lo: cls[0], hi: cls[1] });
+  }
+  const method = (q.get("method") || "").toUpperCase();
+  if (METHODS.includes(method)) {
+    conds.push("blob16 = $method");
+    params.method = method;
+  }
+  const source = q.get("source");
+  if (SOURCES.includes(source)) {
+    conds.push("blob18 = $source");
+    params.source = source;
+  }
+  const path = (q.get("path") || "").slice(0, 200);
+  if (path) {
+    conds.push("blob2 LIKE $path");
+    params.path = "%" + path.replace(/[\\%_]/g, (c) => "\\" + c) + "%";
+  }
+  const label = (q.get("label") || "").slice(0, 80);
+  if (label) {
+    conds.push("blob10 = $label");
+    params.label = label;
+  }
+  return { conds, params };
+}
+
+const requestWhere = (conds) =>
+  `WHERE blob1 IN ('server', 'request') AND blob3 = '${SITE_HOST}' AND timestamp >= $from AND timestamp < $to` +
+  conds.map((c) => " AND " + c).join("");
+
+export function requestLogSql(conds, page) {
+  const offset = Math.max(0, Math.floor(Number(page) || 0)) * LOG_PAGE;
+  return `SELECT timestamp AS t, blob1 AS kind, blob16 AS method, blob2 AS path, double4 AS status, double5 AS bytes,
+  double6 AS ms, blob18 AS source, blob17 AS type, blob10 AS label, blob11 AS class, blob12 AS ua, blob5 AS country,
+  double7 AS admin, "sampleInterval" AS si
+FROM ${DATASET}
+${requestWhere(conds)}
+ORDER BY timestamp DESC LIMIT ${LOG_PAGE + 1} OFFSET ${offset}`;
+}
+
+// Answers by status class over time (0 is a row written before the status was).
+export function requestClassesSql(bucket, conds) {
+  return `SELECT ${bucketOf(bucket)} AS t, floor(double4 / 100) AS cls, COUNT(*) AS n
+FROM ${DATASET}
+${requestWhere(conds)}
+GROUP BY t, cls`;
+}
+
+export const classKey = (cls) => (Number(cls) >= 1 ? Math.floor(Number(cls)) + "xx" : "unknown");
+
+export function requestClassesFrom(rows, range) {
+  const by = new Map(buckets(range).map((b) => [b, {}]));
+  for (const r of rows) {
+    const t = String(r.t);
+    const s = by.get(t) || {};
+    const k = classKey(r.cls);
+    s[k] = (s[k] || 0) + n(r.n);
+    by.set(t, s);
+  }
+  return [...by].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([t, byClass]) => ({ t, byClass }));
+}
+
+export function requestRow(r) {
+  return {
+    t: String(r.t), kind: r.kind, method: r.method || "", path: r.path, status: n(r.status), bytes: n(r.bytes),
+    ms: n(r.ms), source: r.source || "", type: r.type || "", label: r.label, class: r.class, ua: r.ua,
+    country: r.country, admin: n(r.admin) === 1, sample: n(r.si) || 1,
+  };
+}
+
+// For the rollup: requests per status class over a day.
+export function requestClassTotalsSql() {
+  return `SELECT floor(double4 / 100) AS cls, COUNT(*) AS n
+FROM ${DATASET}
+${requestWhere([])}
+GROUP BY cls`;
+}

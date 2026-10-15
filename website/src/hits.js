@@ -36,8 +36,9 @@ export function point(f) {
       f.kind, f.path, f.host, f.referrer, f.country,
       f.browser, f.browserVersion, f.device, f.event,
       f.agentLabel, f.agentClass, f.userAgent, f.asset, f.utmSource, f.utmMedium,
+      f.method, f.contentType, f.source,
     ].map((v) => (v == null ? "" : String(v))),
-    doubles: [f.newVisitor || 0, f.bounce || 0, f.dropped || 0, f.status || 0],
+    doubles: [f.newVisitor || 0, f.bounce || 0, f.dropped || 0, f.status || 0, f.bytes || 0, f.ms || 0, f.admin || 0],
   };
 }
 
@@ -75,13 +76,21 @@ export function referrerHost(request) {
 // The point for one server hit. A browser's raw User-Agent is not kept, only
 // its family: the string is needed for labelling bots, not people.
 export function serverPoint(request, asset, compiledRules, status = 0) {
+  return requestPoint(request, compiledRules, { kind: "server", asset, status });
+}
+
+// The point for one request the Worker answered: kind=server for a counted
+// fetch (isCounted), kind=request for everything else. The path never
+// carries the query, and nothing of the body or the credentials is kept.
+// r: { kind, asset, status, contentType, source, bytes, ms, admin }
+export function requestPoint(request, compiledRules, r) {
   const url = new URL(request.url);
   const ua = request.headers.get("User-Agent") || "";
   const agent = classify(ua, compiledRules);
   const kept = agent.class === "browser" ? browserFamily(ua) : ua.slice(0, MAX_UA);
   return point({
     index: indexOf(kept),
-    kind: "server",
+    kind: r.kind,
     path: url.pathname.slice(0, MAX_PATH),
     host: url.host,
     referrer: referrerHost(request),
@@ -89,9 +98,36 @@ export function serverPoint(request, asset, compiledRules, status = 0) {
     agentLabel: agent.label,
     agentClass: agent.class,
     userAgent: kept,
-    asset,
-    status,
+    asset: r.asset || "",
+    status: r.status || 0,
+    method: request.method,
+    contentType: String(r.contentType || "").split(";")[0].trim().slice(0, 100),
+    source: r.source || "",
+    bytes: r.bytes || 0,
+    ms: r.ms || 0,
+    admin: r.admin ? 1 : 0,
   });
+}
+
+// Where an answer came from, for the request log.
+export function sourceOf(route, status) {
+  if (route === "api" || route === "collect") return route;
+  if (status >= 300 && status < 400) return "redirect";
+  if (status === 404) return "notfound";
+  return "assets";
+}
+
+// The response to send and how many body bytes it carries: Content-Length
+// when the answer has one, else the body read once. Only pages, text and
+// JSON reach the Worker (pictures and video skip it), so the read is small,
+// and answering with the buffer keeps a Content-Length that a counting
+// stream would lose. A HEAD answer carries none.
+export async function measured(request, response) {
+  if (request.method === "HEAD" || !response.body) return { response, bytes: 0 };
+  const length = response.headers.get("Content-Length");
+  if (length !== null) return { response, bytes: Number(length) || 0 };
+  const body = await response.arrayBuffer();
+  return { response: new Response(body, response), bytes: body.byteLength };
 }
 
 // A token bucket per isolate: at most `rate` server points a second, bursts

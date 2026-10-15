@@ -126,10 +126,16 @@ would weigh twice here.
 | blob13 | `asset`: `html`, `feed`, `llms`, `md`, `other` | server hits |
 | blob14 | `utm_source` of the page's address | page hits |
 | blob15 | `utm_medium` of the page's address | page hits |
+| blob16 | the request's `method` | server and request points |
+| blob17 | the answer's `content type`, without parameters | server and request points |
+| blob18 | the answer's `source`: `assets`, `api`, `collect`, `notfound`, `redirect` | server and request points |
 | double1 | `new_visitor` (1 on the first hit of the day) | the collector, Counterscale's cache-header trick |
 | double2 | `bounce` (1, then −1, then 0) | the collector |
 | double3 | `dropped` server points since the last report | `kind=meta`, path `dropped-server-points`, the Worker's token bucket |
-| double4 | the response `status` (a 404 is a probe for a hole; 0 on rows written before 2026-10-15 09:3x) | server hits |
+| double4 | the response `status` (a 404 is a probe for a hole; 0 on rows written before 2026-10-15 09:3x) | server and request points |
+| double5 | the answer's body `bytes` (Content-Length, else the streamed count; 0 for HEAD) | server and request points |
+| double6 | the Worker's `duration` in ms up to the answer's headers (Workers move the clock only at I/O, so this is the wait for the assets, D1 or the SQL API) | server and request points |
+| double7 | `admin`: 1 when a signed-in admin made the request | server and request points |
 
 Why the raw User-Agent only on server hits: that is the string the admin
 labels, and a bot has no privacy to keep. A human's tracker hit stores the
@@ -326,6 +332,30 @@ of 20 points a second for `kind=server`, with a counter of dropped points
 written as one `kind=meta` row a minute, so a crawler storm shows up as a
 number rather than as silence.
 
+## The request log
+
+Since step 8 every request the Worker answers writes exactly one point.
+What the counting above takes (a GET of a page, the feed, a text or
+Markdown file, answered 200 or 404) stays `kind=server`, unchanged, so the
+Agents and people views read what they read before. Everything else is
+`kind=request`: HEAD and Range requests, 304s, redirects, `/c/*` (the
+tracker's calls, logged besides the page point the collector writes),
+`/api/admin/*` (successes and failures; the path without its query, never
+the body or credentials) and the `/admin/*` pages. Both kinds carry the
+method, status, bytes, content type, duration, source and the admin flag,
+are labelled by the same rules and indexed by the User-Agent, pass the same
+token bucket, and skip `ringshadow-` User-Agents. A signed-in admin's
+requests are logged with `admin=1` (they are still never counted as a
+reader). Files under `/assets/` and `/blog/media/` never reach the Worker
+and are not logged.
+
+The admin's Requests section reads the log for 24 hours or 7 days, newest
+first, 50 rows a page, filtered by status class, method, source, a path
+fragment and the label (as written), with a chart of answers by status
+class. A load is two SQL reads, each further page one. The nightly rollup
+adds the day's requests per status class (`request`, `status`, `2xx` …
+`5xx`, `unknown` for rows written before the status was).
+
 ## Keeping history: the rollup
 
 Analytics Engine keeps three months. A cron at 02:10 UTC rolls the previous day
@@ -379,6 +409,15 @@ Each step ends in a deploy, since every step leaves the site working as before.
    is stored. `website/README.md` updated: the Worker, the bindings, how to
    run `wrangler dev` with a local D1, how to add a migration. Done when the
    README's commands run as written.
+8. **The request log** (asked for by the developer on 2026-10-15, after
+   step 7). Every request the Worker answers writes a point (see "The
+   request log"), and the admin gets a Requests section. Done when a HEAD,
+   a redirect (`/blog/the-brood.html`), a 404 probe, a `/c/collect` call
+   and an admin API 401 each appear in the Requests log with the right
+   method, status, bytes, source and duration; the people views and the
+   Agents totals are unchanged by the step (the same range before and
+   after); node tests and the smoke test pass; and the live crawl shows no
+   header differences.
 
 Steps 1, 2 and 5 touch what readers see and get a check on the live site
 after each deploy. Steps 3 and 4 need the developer once: to run the register
@@ -388,9 +427,9 @@ page, and, if the setup code is used, to set it.
 
 | Limit | Free tier | Where we sit |
 |---|---|---|
-| Worker requests | 100,000 a day | pages, text files, admin and collector; assets skip it |
+| Worker requests | 100,000 a day | pages, text files, admin and collector (a reader's page view is 3: the page, `/c/cache`, `/c/collect`); assets skip it |
 | Worker CPU | 10 ms a request | only the password hash comes near it |
-| Analytics Engine writes | 100,000 points a day | one per page fetch plus one per human view; the token bucket caps a storm |
+| Analytics Engine writes | 100,000 points a day | one per Worker request (step 8) plus one per human view or event: a reader's page view is 4 points (the page, `/c/cache`, `/c/collect` and the view), so about 25,000 page views a day; the token bucket caps a storm |
 | Analytics Engine reads | 10,000 queries a day | the admin's views, a handful per page load |
 | Retention | 3 months | the rollup keeps the rest in D1 |
 | D1 | 5 M reads, 100,000 writes a day, 500 MB | sessions, rules, rollups: thousands, not millions |

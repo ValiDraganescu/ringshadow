@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { compileRules } from "../src/agents.js";
 import { SEED_RULES } from "./seed.mjs";
-import { Bucket, SELF_CHECK_PREFIX, assetKind, indexOf, isCounted, point, serverPoint } from "../src/hits.js";
+import { Bucket, SELF_CHECK_PREFIX, assetKind, indexOf, isCounted, measured, point, requestPoint, serverPoint, sourceOf } from "../src/hits.js";
 
 const rules = compileRules(SEED_RULES);
 
@@ -45,9 +45,9 @@ test("our own checks are never written; a marker inside a real agent's string is
 test("a server point carries the plan's slots", () => {
   const p = serverPoint(req("/blog/the-brood", { headers: { "User-Agent": "GPTBot/1.2", Referer: "https://example.org/a/b?c" } }), "html", rules, 200);
   assert.deepEqual(p.indexes, ["GPTBot/1.2"]);
-  assert.deepEqual(p.blobs, ["server", "/blog/the-brood", "ringshadow.com", "example.org", "RO", "", "", "", "", "OpenAI", "ai-crawler", "GPTBot/1.2", "html", "", ""]);
-  assert.deepEqual(p.doubles, [0, 0, 0, 200]);
-  assert.deepEqual(serverPoint(req("/wp-login.php"), "html", rules, 404).doubles, [0, 0, 0, 404]);
+  assert.deepEqual(p.blobs, ["server", "/blog/the-brood", "ringshadow.com", "example.org", "RO", "", "", "", "", "OpenAI", "ai-crawler", "GPTBot/1.2", "html", "", "", "GET", "", ""]);
+  assert.deepEqual(p.doubles, [0, 0, 0, 200, 0, 0, 0]);
+  assert.deepEqual(serverPoint(req("/wp-login.php"), "html", rules, 404).doubles, [0, 0, 0, 404, 0, 0, 0]);
 });
 
 test("a browser's server point keeps only its family", () => {
@@ -82,4 +82,34 @@ test("the bucket passes 20 a second and reports what it drops once a minute", ()
   const meta = b.report(t + 60_000, "ringshadow.com");
   assert.deepEqual(meta, point({ kind: "meta", path: "dropped-server-points", host: "ringshadow.com", dropped: 15 }));
   assert.equal(b.report(t + 60_001, "ringshadow.com"), null);
+});
+
+test("a request point: method, type, source, bytes, duration, admin; no query", () => {
+  const r = req("/api/admin/rules?x=secret", { method: "POST", headers: { "User-Agent": "curl/8.7.1" } });
+  const p = requestPoint(r, rules, { kind: "request", status: 401, contentType: "application/json; charset=utf-8", source: "api", bytes: 27, ms: 12, admin: true });
+  assert.deepEqual(p.blobs.slice(0, 2), ["request", "/api/admin/rules"]);
+  assert.deepEqual(p.blobs.slice(12), ["", "", "", "POST", "application/json", "api"]);
+  assert.deepEqual(p.doubles, [0, 0, 0, 401, 27, 12, 1]);
+  assert.ok(!JSON.stringify(p).includes("secret"));
+});
+
+test("the answer's source", () => {
+  assert.equal(sourceOf("assets", 200), "assets");
+  assert.equal(sourceOf("assets", 307), "redirect");
+  assert.equal(sourceOf("admin", 302), "redirect");
+  assert.equal(sourceOf("assets", 404), "notfound");
+  assert.equal(sourceOf("api", 401), "api");
+  assert.equal(sourceOf("collect", 200), "collect");
+});
+
+test("bytes: Content-Length, else the body read once; none for HEAD", async () => {
+  const get = new Request("https://ringshadow.com/");
+  assert.equal((await measured(get, new Response("hello", { headers: { "Content-Length": "5" } }))).bytes, 5);
+  const streamed = await measured(get, new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(3)); c.enqueue(new Uint8Array(4)); c.close(); } }), { status: 201, headers: { "X-A": "1" } }));
+  assert.equal(streamed.bytes, 7);
+  assert.equal(streamed.response.status, 201);
+  assert.equal(streamed.response.headers.get("X-A"), "1");
+  assert.equal((await streamed.response.arrayBuffer()).byteLength, 7);
+  assert.equal((await measured(new Request("https://ringshadow.com/", { method: "HEAD" }), new Response("x", { headers: { "Content-Length": "9" } }))).bytes, 0);
+  assert.equal((await measured(get, new Response(null, { status: 304 }))).bytes, 0);
 });

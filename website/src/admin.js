@@ -6,8 +6,8 @@ import { compileRules } from "./agents.js";
 import { history } from "./rollup.js";
 import { addRule, changeRule, deleteRule, listRules, testRules } from "./rules.js";
 import {
-  DAY, agentsView, byKeyFrom, droppedSql, eventsFrom, eventsSql, pageByColumnSql, pageSeriesSql, parseRange,
-  seriesFrom, serverByAgentSql, serverPathsSql,
+  DAY, LOG_PAGE, agentsView, byKeyFrom, droppedSql, eventsFrom, eventsSql, logFilters, pageByColumnSql, pageSeriesSql,
+  parseRange, requestClassesFrom, requestClassesSql, requestLogSql, requestRow, seriesFrom, serverByAgentSql, serverPathsSql,
 } from "./stats.js";
 import {
   LOCK_FAILS, LOCK_MINUTES, PW_ITERS, SESSION_DAYS,
@@ -58,6 +58,17 @@ export async function currentSession(request, env) {
        FROM sessions s JOIN admins a ON a.id = s.admin_id
       WHERE s.id = ? AND s.expires_at > ?`,
   ).bind(id, isoNow()).first();
+}
+
+// Whether a request comes from a signed-in admin. Readers carry no cookie,
+// so D1 is only asked when one is there.
+export async function isSignedIn(request, env) {
+  if (!(request.headers.get("Cookie") || "").includes("admin_session=")) return false;
+  try {
+    return !!(await currentSession(request, env));
+  } catch {
+    return false;
+  }
 }
 
 async function startSession(env, adminId, request) {
@@ -290,6 +301,31 @@ async function historyStats(request, env) {
   return json(await history(env, from, to));
 }
 
+// The request log: a page of rows (newest first) and the answers by status
+// class over the range, both with the same filters; the log only for 24 h or
+// 7 d. Two SQL reads a load, one a page.
+async function requestStats(request, env) {
+  const q = new URL(request.url).searchParams;
+  if (!["24h", "7d"].includes(q.get("range") || "24h")) return json({ error: "The request log covers 24 h or 7 d." }, 400);
+  const range = parseRange(new URLSearchParams({ range: q.get("range") || "24h" }));
+  const { conds, params } = logFilters(q);
+  const all = { ...params, from: range.from, to: range.to };
+  const page = Math.max(0, Math.floor(Number(q.get("page")) || 0));
+  try {
+    const [log, classes] = await Promise.all([
+      env.HITS_SQL.query({ query: requestLogSql(conds, page), params: all }),
+      page === 0 ? env.HITS_SQL.query({ query: requestClassesSql(range.bucket, conds), params: all }) : null,
+    ]);
+    const rows = log.data.map(requestRow);
+    return json({
+      range, page, more: rows.length > LOG_PAGE, rows: rows.slice(0, LOG_PAGE),
+      series: classes ? requestClassesFrom(classes.data, range) : null,
+    });
+  } catch (err) {
+    return sqlError(err);
+  }
+}
+
 const answer = (r) => json(r.body, r.status);
 
 // Routes under /api/admin/. Writes need an Origin from this site; everything
@@ -318,6 +354,7 @@ export async function handleApi(request, env) {
   const view = route.match(/^GET \/api\/admin\/stats\/(overview|pages|sources|visitors|events)$/);
   if (view) return peopleStats(request, env, view[1]);
   if (route === "GET /api/admin/history") return historyStats(request, env);
+  if (route === "GET /api/admin/requests") return requestStats(request, env);
   if (route === "GET /api/admin/rules") return json({ rules: await listRules(env) });
   if (route === "POST /api/admin/rules/test") return json(await testRules(env, (await readJson(request))?.ua));
   if (route === "POST /api/admin/rules") return answer(await addRule(env, await readJson(request), session.admin_id));

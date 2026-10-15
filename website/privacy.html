@@ -54,8 +54,11 @@
         <h2>Bots and other agents</h2>
         <p>Every fetch of a page, the feed, <code>llms.txt</code>, <code>llms-full.txt</code> or a Markdown copy is also counted on the server. When it comes from something that is not a browser (a search crawler, an assistant fetching a page for someone, a feed reader), the count keeps its full User-Agent, the path and the answer's status, so the developer can see which agents read the site and label them. A browser's own page fetch is counted with the browser's name only.</p>
 
+        <h2>The request log</h2>
+        <p>Every request the site's server answers is also logged, once: the time, the method, the path without anything after a question mark, the status, the size and type of the answer, how long the server took, the country, the host of the referring site, and the User-Agent (only the browser's name for a browser). The bodies of requests and answers, passwords and cookies are never logged. Pictures, fonts, styles and scripts are served without reaching that server and are not logged.</p>
+
         <h2>Where it is kept, and for how long</h2>
-        <p>The numbers stay in the site's own Cloudflare account, in Workers Analytics Engine, and nobody else gets them. There is no third-party script, and the page's security policy lets it talk only to ringshadow.com. Single hits are kept three months, then dropped. Each day's totals (views, visitors, and the counts per page, referring site, country, agent and event) are kept in the site's database after that.</p>
+        <p>The numbers stay in the site's own Cloudflare account, in Workers Analytics Engine, and nobody else gets them. There is no third-party script, and the page's security policy lets it talk only to ringshadow.com. Single hits and the request log are kept three months, then dropped. Each day's totals (views, visitors, requests by status, and the counts per page, referring site, country, agent and event) are kept in the site's database after that.</p>
 
         <h2>Not being counted</h2>
         <p>The script counts only on ringshadow.com. With JavaScript turned off, the only record is the page fetch itself, and for a browser that is its name. Adding <code>?nocount</code> to an address skips that page.</p>

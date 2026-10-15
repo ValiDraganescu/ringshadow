@@ -87,3 +87,27 @@ test("what a rule needs", () => {
   assert.match(ruleProblem({ ...ok, match: "regex", pattern: "(" }), /regex/);
   assert.match(ruleProblem({ ...ok, priority: 1.5 }), /Priority/);
 });
+
+import { classKey, logFilters, requestClassesFrom, requestLogSql, requestRow } from "../src/stats.js";
+
+test("the request log's filters: known values only, free text as parameters", () => {
+  const f = logFilters(new URLSearchParams("status=4xx&method=head&source=notfound&path=wp_%25&label=Anthropic&junk=1"));
+  assert.deepEqual(f.conds, ["double4 >= $lo AND double4 < $hi", "blob16 = $method", "blob18 = $source", "blob2 LIKE $path", "blob10 = $label"]);
+  assert.deepEqual(f.params, { lo: 400, hi: 500, method: "HEAD", source: "notfound", path: "%wp\\_\\%%", label: "Anthropic" });
+  assert.deepEqual(logFilters(new URLSearchParams("status=9xx&method=DROP&source=x")).conds, []);
+  const sql = requestLogSql(f.conds, 2);
+  assert.match(sql, /blob1 IN \('server', 'request'\) AND blob3 = 'ringshadow.com'/);
+  assert.match(sql, /ORDER BY timestamp DESC LIMIT 51 OFFSET 100$/);
+  assert.match(requestLogSql([], "x; DROP"), /LIMIT 51 OFFSET 0$/);
+});
+
+test("answers by status class, and a log row", () => {
+  assert.deepEqual([classKey(2), classKey(4.0), classKey(0)], ["2xx", "4xx", "unknown"]);
+  const range = { from: "2026-10-15T08:00:00.000Z", to: "2026-10-15T10:00:00.000Z", bucket: "hour" };
+  assert.deepEqual(requestClassesFrom([{ t: "2026-10-15 09:00:00", cls: 2, n: "5" }, { t: "2026-10-15 09:00:00", cls: 4, n: "1" }], range), [
+    { t: "2026-10-15 08:00:00", byClass: {} },
+    { t: "2026-10-15 09:00:00", byClass: { "2xx": 5, "4xx": 1 } },
+  ]);
+  const r = requestRow({ t: "2026-10-15 09:00:01", kind: "request", method: "HEAD", path: "/", status: 200, bytes: "0", ms: 3, source: "assets", admin: 0, si: "1" });
+  assert.deepEqual([r.method, r.status, r.bytes, r.ms, r.source, r.admin, r.sample], ["HEAD", 200, 0, 3, "assets", false, 1]);
+});
