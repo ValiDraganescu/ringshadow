@@ -297,6 +297,17 @@
 //   11 the world map on Cold Fork: the zone's ring and its state
 //   12 the Journal: the zone's state in its header
 //
+// -AcMmoShotsP1 (at 11:00, clear weather, every region been to, the opening
+// chain done, the dev rig's Citadel): frontier pilots (docs/frontier.md),
+// staged by the server's dev lines (`frontier …`), DIR/p1-NN-moment.png:
+//   01 a frontier miner drilling near the pilot, its tag ("VESPER · LV 14")
+//   02 a builder's Hab Dome finished: the deed's toast ("… built a Hab Dome in …")
+//   03 a KSTR radio line from a frontier pilot
+//   04 the world map: the frontier pilots' dots in their paints
+//   05 a frontier pilot's tooltip: callsign, level, habit, what it does
+//   06 at The Fork: a defender fighting the wave beside the pilot (no HUD)
+//   07 the same with the HUD (its tag, the wave panel)
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -1026,8 +1037,16 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
 				FCommandLine::Append(TEXT(" -AcMmoDevSeen=start,cold-fork,glass-flats,tern-ridge,slag-pockets,brine-pans,dust-terraces,rust-hollow,ashen-shelf"));
 		}
+		// -AcMmoShotsP1: as Z2's, and the opening chain done (the frontier
+		// pilots come only after it), the dev rig's Citadel.
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")))
+		{
+			if (int32 Step = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoFirstStep="), Step)) FCommandLine::Append(TEXT(" -AcMmoFirstStep=0"));
+			if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) FCommandLine::Append(TEXT(" -AcMmoDevRig"));
+		}
 		// -AcMmoShotsZ1 and Z2: as W4's, late morning, clear, every region been to.
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2")))
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -1109,6 +1128,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1"))) T.Phase = 2300;
 			// -AcMmoShotsZ2: the canyon game (2500-2525).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))) T.Phase = 2500;
+			// -AcMmoShotsP1: frontier pilots (2600-2613).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1"))) T.Phase = 2600;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -5075,6 +5096,255 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Shots.Saved + Shots.Skipped >= 12, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
+	// MARK: -AcMmoShotsP1
+	case 2600:
+	case 2601:
+	case 2602:
+	case 2603:
+	case 2604:
+	case 2605:
+	case 2606:
+	case 2607:
+	case 2608:
+	case 2609:
+	case 2610:
+	case 2611:
+	case 2612:
+	case 2613:
+	{
+		// The frontier pilots now: the sky's list, the roster.
+		const std::optional<ac::net::Sky>& Sky = Mmo ? Mmo->Sky() : std::optional<ac::net::Sky>();
+		const ac::net::ProgressMessage* Pm = Mmo ? Mmo->Progress() : nullptr;
+		auto Of = [&](const ac::net::FrontierHabit Habit) -> const ac::net::Sky::Frontier* {
+			if (!Sky || !Pm) return nullptr;
+			for (const ac::net::ProgressMessage::FrontierPilot& X : Pm->frontier)
+				if (X.habit == Habit)
+					for (const ac::net::Sky::Frontier& F : Sky->frontier)
+						if (F.id == X.id) return &F;
+			return nullptr;
+		};
+		auto UnitOf = [&](const ac::net::Sky::Frontier* F) -> const ac::Unit* {
+			if (!F || !S || F->unit == 0) return nullptr;
+			for (const ac::Unit& X : S->units)
+				if (X.id == F->unit) return &X;
+			return nullptr;
+		};
+		const SAcProgressHud* Hud = nullptr;
+		if (const UAcProgressHudSubsystem* H = UAcProgressHudSubsystem::Get(this)) Hud = H->Widget().Get();
+		auto Toasted = [&](const TCHAR* Prefix) {
+			if (!Hud) return false;
+			for (const FString& X : Hud->ToastTitles())
+				if (X.StartsWith(Prefix)) return true;
+			return false;
+		};
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		// The free camera at `Eye`, looking at `Look` (ground points), up.
+		auto Frame = [&](const ac::Vec2 Eye, const double EyeUp, const ac::Vec2 Look, const double LookUp) {
+			if (!Pc || !Terrain) return;
+			if (!W4Cam.IsValid())
+			{
+				FActorSpawnParameters Params;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+				W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+				W4Cam->GetCameraComponent()->SetFieldOfView(62.f);
+			}
+			const FVector EyeW = AcSpace::ToWorld(Eye, Terrain->FieldHeight(Eye) + EyeUp);
+			const FVector AtW = AcSpace::ToWorld(Look, Terrain->FieldHeight(Look) + LookUp);
+			W4Cam->SetActorLocationAndRotation(EyeW, (AtW - EyeW).Rotation());
+			if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		};
+		auto Back = [&] {
+			if (Pc && Pilot && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+		};
+		switch (T.Phase)
+		{
+		case 2600:
+			// Seated at the dev rig's Citadel, the ground built: a miner beside.
+			if (!(Seated() && Terrain && Terrain->NumSets() > 0 && Terrain->NumSetsComplete() == Terrain->NumSets() && Since() > 3.0))
+			{
+				TimedOut(TEXT("p1: seated, the ground built"), 120);
+				return;
+			}
+			Check(Mmo->DevClock(TEXT("brood clear\nfrontier here miner 6")), TEXT("p1: a frontier miner beside the pilot"));
+			Advance();
+			return;
+		case 2601:
+		{
+			// The miner at its drill.
+			const ac::Unit* M1 = UnitOf(Of(ac::net::FrontierHabit::miner));
+			if (!(M1 && M1->task == ac::Unit::Task::mining && Since() > 2.0))
+			{
+				TimedOut(TEXT("p1: the frontier miner drilling"), 120);
+				return;
+			}
+			if (!W4Set)
+			{
+				const ac::Vec2 Away = U ? ac::normalize(U->position - M1->position + ac::Vec2(0.01, 0)) : ac::Vec2(1, 0);
+				Frame(M1->position + Away * 9 + ac::Vec2(-Away.y, Away.x) * 3, 4.0, M1->position, 1.0);
+				W4Set = true;
+				W4ShotAt = Now;
+				return;
+			}
+			if (Now - W4ShotAt < 1.5) return;
+			W4Set = false;
+			const ac::net::Sky::Frontier* F = Of(ac::net::FrontierHabit::miner);
+			Check(F && F->doing == ac::net::FrontierDoing::mining, TEXT("p1: told as mining"));
+			Shoot(TEXT("p1-01-frontier-miner-drilling"), TEXT("a frontier miner drilling near the pilot, its tag over it"));
+			return;
+		}
+		case 2602:
+			Back();
+			Check(Mmo->DevClock(TEXT("frontier here builder -6\nfrontier build habDome")), TEXT("p1: a builder puts up a Hab Dome"));
+			Advance();
+			return;
+		case 2603:
+		{
+			// Its Hab Dome finished: the deed's toast.
+			// A second after it is first seen (the toast has faded in).
+			if (!Toasted(TEXT("ON THE FRONTIER")))
+			{
+				W4ShotAt = Now;
+				TimedOut(TEXT("p1: the builder's deed told"), 60);
+				return;
+			}
+			if (Now - W4ShotAt < 1.0) return;
+			const ac::Structure* Dome = nullptr;
+			const ac::Unit* B = UnitOf(Of(ac::net::FrontierHabit::builder));
+			if (S && B)
+				for (const ac::Structure& X : S->structures)
+					if (X.kind == ac::StructureKind::habDome && (!Dome || ac::distance(X.position, B->position) < ac::distance(Dome->position, B->position))) Dome = &X;
+			Check(Dome && Dome->complete(), TEXT("p1: the Hab Dome stands"));
+			if (Dome && U)
+			{
+				const ac::Vec2 Away = ac::normalize(U->position - Dome->position + ac::Vec2(0.01, 0));
+				Frame(Dome->position + Away * 14 + ac::Vec2(-Away.y, Away.x) * 4, 6.0, Dome->position, 1.5);
+			}
+			if (Hud) UE_LOG(LogAutocraft, Display, TEXT("mmoshots: p1: toasts %s"), *FString::Join(Hud->ToastTitles(), TEXT(" | ")));
+			Shoot(TEXT("p1-02-builder-hab-dome-deed"), TEXT("a frontier builder's Hab Dome finished, the deed's toast"));
+			return;
+		}
+		case 2604:
+			Back();
+			if (Since() < 4.0) return;  // the deed's toast fades first
+			Check(Mmo->DevClock(TEXT("frontier radio raid")), TEXT("p1: a raid warning on the radio"));
+			Advance();
+			return;
+		case 2605:
+			if (!(Toasted(TEXT("KSTR  ·")) && Since() > 1.0))
+			{
+				TimedOut(TEXT("p1: the radio line told"), 60);
+				return;
+			}
+			Shoot(TEXT("p1-03-radio-line"), TEXT("a KSTR radio line from a frontier pilot"));
+			return;
+		case 2606:
+			if (Since() < 1.0) return;
+			ToggleWorldMap();
+			W4Set = false;
+			Advance();
+			return;
+		case 2607:
+		{
+			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+			if (!Map || Since() < 1.5) return;
+			if (!W4Set)
+			{
+				W4Set = true;
+				Check(Map->ShowRegion(TEXT("start"), 1.6), TEXT("p1: the map round Prospect Landing"));
+				return;
+			}
+			if (Since() < 2.5) return;
+			W4Set = false;
+			int32 Dots = 0;
+			for (const ac::net::atlas::Item& It : Map->GetInfo().Items) Dots += It.kind == ac::net::atlas::Kind::frontier ? 1 : 0;
+			Check(Dots >= 2, FString::Printf(TEXT("p1: the frontier pilots on the map (%d)"), Dots));
+			Shoot(TEXT("p1-04-map-frontier-markers"), TEXT("the world map: the frontier pilots' dots in their paints"));
+			return;
+		}
+		case 2608:
+		{
+			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+			if (!Map) return;
+			const ac::net::Sky::Frontier* F = Of(ac::net::FrontierHabit::miner);
+			const uint32 Id = F ? F->id : 0;
+			const bool bHover = Map->HoverWhere([&](const ac::net::atlas::Item& It) {
+				return It.kind == ac::net::atlas::Kind::frontier && (Id == 0 || It.ref == (F ? F->unit : 0));
+			});
+			Check(bHover, TEXT("p1: a frontier pilot hovered"));
+			if (Since() < 1.0) return;
+			Shoot(TEXT("p1-05-map-tooltip"), TEXT("a frontier pilot's tooltip: callsign, level, habit, what it does"));
+			return;
+		}
+		case 2609:
+			ToggleWorldMap();
+			Check(Mmo->DevClock(TEXT("brood clear\nbrood zone here")), TEXT("p1: the server takes the pilot to The Fork"));
+			Advance();
+			return;
+		case 2610:
+		{
+			// In Cold Fork, its ground built: a defender beside, wave 1 sent.
+			const TOptional<FAcRegionAround> Ground = Mmo->HereGround();
+			const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+			if (!(U && Ground && Ground->Id == TEXT("cold-fork") && Sets >= 4 && Ready == Sets && Since() > 3.0))
+			{
+				TimedOut(TEXT("p1: in Cold Fork, its ground built"), 120);
+				return;
+			}
+			if (!W4Set)
+			{
+				Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\nfrontier here defender 4\ncanyon send 1")),
+					TEXT("p1: a frontier defender beside the pilot, the opening wave sent"));
+				W4Set = true;
+				return;
+			}
+			W4Set = false;
+			Advance();
+			return;
+		}
+		case 2611:
+		{
+			// The defender at the wave's bugs.
+			const ac::net::Sky::Frontier* F = Of(ac::net::FrontierHabit::defender);
+			const ac::Unit* D = UnitOf(F);
+			const ac::Unit* Bug = nullptr;
+			if (S && D)
+				for (const ac::Unit& X : S->units)
+					if (X.bug && X.hp > 0 && (!Bug || ac::distance(X.position, D->position) < ac::distance(Bug->position, D->position))) Bug = &X;
+			if (!(F && F->doing == ac::net::FrontierDoing::fighting && D && Bug && ac::distance(Bug->position, D->position) < 6
+					&& (!U || ac::distance(U->position, D->position) < 16)))
+			{
+				TimedOut(TEXT("p1: the frontier defender fighting the wave"), 150);
+				return;
+			}
+			if (!W4Set)
+			{
+				// Over the pilot's shoulder: the pilot, the defender beside it, the bug.
+				const ac::Vec2 Mid = (D->position + Bug->position) * 0.5;
+				const ac::Vec2 From = U ? U->position : D->position;
+				const ac::Vec2 Behind = ac::normalize(From - Mid + ac::Vec2(0.01, 0));
+				Frame(From + Behind * 6 + ac::Vec2(-Behind.y, Behind.x) * 2, 4.0, Mid, 0.8);
+				W4Set = true;
+				W4ShotAt = Now;
+				return;
+			}
+			if (Now - W4ShotAt < 0.6) return;
+			W4Set = false;
+			ShootClean(TEXT("p1-06-defender-at-the-fork"), TEXT("at The Fork: a frontier defender fighting the wave beside the pilot"));
+			return;
+		}
+		case 2612:
+			Shoot(TEXT("p1-07-defender-with-the-hud"), TEXT("the same with the HUD: its tag, the wave panel"));
+			return;
+		default:
+			Back();
+			if (W4Cam.IsValid()) W4Cam->Destroy();
+			Check(Shots.Saved + Shots.Skipped >= 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+			Finish();
+			return;
+		}
+	}
 	// MARK: -AcMmoShotsL1
 	case 2100:
 		// The first ten minutes' last step open: a point spent ends it.
