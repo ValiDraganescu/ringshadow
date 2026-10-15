@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [The realm under siege: the M8 showreel](https://ringshadow.com/blog/realm-under-siege.md): The M8 showreel: 67 seconds of the Brood, the Citadel's guns, the Dropship, The Fork and the Matriarch, cut the morning after I asked the agents for all of it.
 - [Holding The Fork: ten waves, and the Matriarch if you fail](https://ringshadow.com/blog/canyon-game.md): The canyon game is in Ringshadow: ten waves of the Brood down The Fork's two arms, guns on the rims, and if a wave breaks through, the Matriarch comes out of the tunnel and fells every turret.
 - [The Dropship: no more flying alone](https://ringshadow.com/blog/dropship.md): The Prospector no longer flies by itself. Pilots build Landing Pads and ride the Dropship between them: board, lift off, bank under the ringed giant, dash through cloud and land in another region, 16 to 20 seconds and never a fade.
 - [The Fork: the first canyon to hold](https://ringshadow.com/blog/the-fork.md): The first canyon in Ringshadow's world: The Fork in Cold Fork, two winding arms from Brood tunnels to a prize of 36,000 ore and 6,000 MH, with 12 build spots on the rims for the turrets that will hold it.

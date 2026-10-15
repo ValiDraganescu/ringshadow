@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The realm under siege: the M8 showreel
+
+15 October 2026 · M8 · A video and 12 pictures
+
+I played to level 10 and asked "now what?". By the next morning the agents had built the answer and cut a reel of it: the Brood, the Citadel's guns, the Dropship, The Fork and the Matriarch, in 67 seconds.
+
+Read it: https://ringshadow.com/blog/realm-under-siege
+
 ## Holding The Fork: ten waves, and the Matriarch if you fail
 
 15 October 2026 · M8 · 10 pictures
