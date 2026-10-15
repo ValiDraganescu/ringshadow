@@ -366,6 +366,41 @@ TEST(matriarch_dev_lines) {
     EXPECT_TRUE(w.matriarch().has_value());
 }
 
+/// The shots' roar scene (-AcMmoShotsN3): her horde held, the pilot set 20
+/// cells due north of her, the hour held at noon (Q2: the set ran on the
+/// world clock, and at night sight halves, 6 cells but for the headlamp's
+/// cone: none of her horde was in it); she roars and some of her horde is in
+/// the pilot's snapshots with her for the roar, over 12 broods.
+TEST(matriarch_dev_near_horde_in_sight) {
+    int fewest = 99;
+    for (uint64_t seed = 1; seed <= 12; seed++) {
+        WorldParams p = params();
+        p.broodSeed = seed * 0x9e3779b97f4a7c15ULL;
+        p.heldHour = 12;
+        WorldMap w(first(), p);
+        ASSERT_TRUE(w.join(me));
+        w.step();
+        ASSERT_TRUE(w.devMatriarch("matriarch here 55").find("55 cells") != std::string::npos);
+        stepFor(w, 1);
+        EXPECT_EQ(w.devMatriarch("matriarch calm"), "dev: matriarch calm");
+        stepFor(w, 1);
+        ASSERT_TRUE(w.devMatriarch("matriarch near 20 -90").find("20 cells") != std::string::npos);
+        bool roared = false;
+        for (int k = 0; k < 8; k++) {
+            stepFor(w, 0.25);
+            const Snapshot s = w.regionOf(me)->snapshot(me);
+            int horde = 0;
+            for (const auto& e : s.entities)
+                if (const Unit* u = e.unit(); u && u->bug && u->kind != UnitKind::matriarch && u->hp > 0) horde++;
+            fewest = std::min(fewest, horde);
+            if (const Unit* q = queen(w); q && q->bug->state == Bug::State::roar) roared = true;
+        }
+        EXPECT_TRUE(roared);
+    }
+    std::printf("  at least %d of her horde in sight\n", fewest);
+    EXPECT_TRUE(fewest >= 1);
+}
+
 /// A Matriarch hunt (a perilous hunt for her alone) is done when she falls,
 /// for every pilot who fought her; a Shardling killed doesn't count for it.
 TEST(matriarch_hunt_done_when_she_falls) {

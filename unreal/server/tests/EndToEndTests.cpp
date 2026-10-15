@@ -402,10 +402,15 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     ASSERT_TRUE(c.until([&] { return hc.world()->ferry.has_value(); }, 3));
     ASSERT_TRUE(c.until([&] { return hc.visit() == 1; }, 20));
     EXPECT_TRUE(hc.world()->ferry.has_value() && !hc.mirror()->driven());
+    // The touch down. The World message that ends the ferry is reliable, the
+    // snapshot that drives the Prospector is not: under the lag simulator's
+    // loss either comes first, so wait for both (and for the first snapshot's
+    // side before reading the ore).
     ASSERT_TRUE(c.until([&] { return hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()); }, 10));
-    EXPECT_TRUE(!hc.world()->ferry.has_value());
+    ASSERT_TRUE(c.until([&] { return !hc.world()->ferry.has_value(); }, 3));
     EXPECT_TRUE(hc.regionChange()->regionId == "cold-fork");
     EXPECT_TRUE(hc.mirror()->matches());
+    ASSERT_TRUE(c.until([&] { return hc.mirror()->simulation().state.players.size() == 2; }, 3));
     EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(600));
     p->stop();
     const std::string log = readFile(logPath("world"));

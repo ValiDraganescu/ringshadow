@@ -129,7 +129,9 @@
 // from a Landing Pad by the start pad to one in Cold Fork (the `ferry` dev
 // lines put them up), each moment on the flight's clock, DIR/f2-NN-moment.png
 // (-AcMmoHour=12 for noon, 19 for dusk); the frame times aboard logged as
-// `f2 perf:` (-AcMmoShotsOnly=none: the flight with no picture taken):
+// `f2 perf:` (-AcMmoShotsOnly=none: the flight with no picture taken;
+// -AcMmoShotsF2Twice: a second flight back; -AcMmoShotsF2Settled: the call
+// only once every ground set round the region is built, Q2's measure):
 //   01 the flight menu: only Landing Pads in regions been to
 //   02 the Dropship coming down onto the pad   03 the Prospector boarding
 //   04 the lift-off         05 a banking turn, the giant in view
@@ -524,6 +526,8 @@ namespace
 	TArray<uint8> F2Stages;
 	double F2Last = -1;
 	int32 F2Switch = -1;
+	/// -AcMmoShotsF2Settled: since when every ground set round the region is built.
+	double F2SettledAt = -1;
 	/// -AcMmoShotsF2Twice: 1 on the second flight.
 	int32 F2Round = 0;
 	/// The phase whose scene was staged (its first frame done).
@@ -662,6 +666,13 @@ namespace
 	{
 		if (!B.buildLeft) return 1;
 		return 1 - *B.buildLeft / ac::Rules::buildTime(B.kind);
+	}
+
+	/// -AcMmoHour= given: the run holds its own hour.
+	bool HourGiven()
+	{
+		double Hour = -1;
+		return FParse::Value(FCommandLine::Get(), TEXT("AcMmoHour="), Hour);
 	}
 }
 
@@ -2745,7 +2756,20 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	// The Dropship from a Landing Pad by the start pad to one in Cold Fork,
 	// its moments on the flight's clock; the frame times through it.
 	case 2400:
-		if (Since() > 2.0)
+	{
+		// -AcMmoShotsF2Settled (Q2, the first call's stall): the call only
+		// once every ground set round the region is built and drawn 3 s.
+		bool bSettled = true;
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsF2Settled")))
+		{
+			const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+			const bool bBuilt = Terrain && Terrain->NumSets() >= 9 && Terrain->NumSetsComplete() == Terrain->NumSets();
+			if (!bBuilt) F2SettledAt = -1;
+			else if (F2SettledAt < 0) F2SettledAt = Now;
+			bSettled = F2SettledAt > 0 && Now - F2SettledAt > 3.0;
+			if (!bSettled && Since() > 60.0) TimedOut(TEXT("f2: the ground round the region built"), 60);
+		}
+		if (bSettled && Since() > 2.0)
 		{
 			// A Landing Pad under the pilot, one in Cold Fork (seen), one in
 			// Slag Pockets (not seen: the menu leaves it out), MH to fly.
@@ -2754,6 +2778,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 		}
 		return;
+	}
 	case 2401:
 	{
 		const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
@@ -5543,6 +5568,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				if (X.remaining > 0 && ac::distance(X.position, C) > 16 && (!D || ac::distance(X.position, To) < ac::distance(D->position, To))) D = &X;
 			const ac::Vec2 Near = D ? D->position + ac::normalize(To - D->position + ac::Vec2(0.01, 0)) * 10.0 : To;
 			Route({FVector2D(To.x, To.y), FVector2D(Near.x, Near.y)});
+			// Noon, unless -AcMmoHour says (Q2: on the world clock, a night
+			// run's sight was half, and lingering bugs fell out of it).
+			if (!HourGiven()) Check(Mmo->DevClock(TEXT("hour 12")), TEXT("n2: noon"));
 			Advance();
 			return;
 		}
@@ -6044,7 +6072,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// Taken to Slag Pockets, 55 cells from the nest.
 		if (S && U && Mmo->Progress() && Since() > 3.0)
 		{
-			Check(Mmo->DevClock(TEXT("matriarch here 55")), TEXT("n3: the server takes the pilot to the Matriarch's nest"));
+			// Noon, unless -AcMmoHour says (Q2: on the world clock, a night
+			// run's sight was half, and her horde out of it).
+			Check(Mmo->DevClock(HourGiven() ? TEXT("matriarch here 55") : TEXT("hour 12\nmatriarch here 55")),
+				TEXT("n3: the server takes the pilot to the Matriarch's nest"));
 			Advance();
 			return;
 		}
@@ -6097,8 +6128,17 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	{
 		const ac::Unit* Q = S ? NearestBug(*S, U ? U->position : ac::Vec2(), ac::UnitKind::matriarch) : nullptr;
 		if (Q && U) Stop(Face(Q->position));
-		if (Q && Q->bug && Q->bug->state == ac::Bug::State::roar && N3RoarAt < 0) N3RoarAt = Now;
-		if (N3RoarAt > 0 && Now - N3RoarAt > 0.9)
+		// The roar's age on the server's clock: the picture 0.9 s into it, or
+		// at once when the mirror shows it later than that (it lasts 2 s).
+		const std::optional<ac::net::Sky>& Heard = Mmo->Sky();
+		const double Age = Heard && !Heard->roars.empty() ? Heard->time - Heard->roars.back().at : -1;
+		if (Q && Q->bug && Q->bug->state == ac::Bug::State::roar && N3RoarAt < 0)
+		{
+			N3RoarAt = Now;
+			UE_LOG(LogAutocraft, Display, TEXT("flowtest: mmoshots: n3: her roar first seen %.2f s into it"), Age);
+		}
+		const bool bStillRoaring = Q && Q->bug && Q->bug->state == ac::Bug::State::roar;
+		if (N3RoarAt > 0 && (Now - N3RoarAt > 0.9 || (Age >= 0.9 && bStillRoaring)))
 		{
 			Check(Mmo->Sky() && !Mmo->Sky()->roars.empty(), TEXT("n3: the roar is told on the wire"));
 			int32 Horde = 0;

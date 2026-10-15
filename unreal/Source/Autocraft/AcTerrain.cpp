@@ -745,11 +745,19 @@ void AAcTerrain::SyncAround()
 		Version += 1;
 	}
 	// One set a step a frame, a few milliseconds of it, a while after the
-	// region changed (the frames round a crossing stay clear).
-	if (Mmo->SinceRegionChange() < 2.0) return;
+	// region changed (the frames round a crossing stay clear); at the
+	// session's start from the first frame (Q2). One at a time all the same:
+	// eight sets drawn at once held frames for seconds.
+	if (Mmo->SinceRegionChange() < 2.0 && !Mmo->SessionStart()) return;
+	// Aboard the Dropship only the target's set builds (Q2): a set filled in
+	// under the ship's high view cost a 0.5 to 0.8 s frame each (its
+	// instances added with the whole region in sight), where the same set
+	// filled in from the ground cost nothing; the rest wait for the landing.
+	const ac::net::WorldMessage* W = Mmo->World();
+	const TOptional<int64> Only = Mmo->Travelling() ? TOptional<int64>(W && W->flyingTo ? *W->flyingTo : INDEX_NONE) : TOptional<int64>();
 	for (TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
 	{
-		if (!S.Value || S.Value->IsComplete()) continue;
+		if (!S.Value || S.Value->IsComplete() || (Only && S.Value->Region() != *Only)) continue;
 		S.Value->Step(4.0);
 		break;
 	}

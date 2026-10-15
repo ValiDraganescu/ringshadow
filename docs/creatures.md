@@ -534,7 +534,13 @@ What N2 built, and the choices the design left open.
 - **Dev and shots.** The server's dev control takes `brood linger`,
   `brood attack`, `brood dive`, `brood lodeback`, `brood raid` and
   `brood clear` (`WorldMap::devBrood`); `-AcMmoShotsN2` stages its five
-  pictures with them.
+  pictures with them, at noon unless `-AcMmoHour` says (Q2: at night sight
+  halves, and the scenes fell out of it). `linger` draws its group's site in
+  to 4 cells on the pilot's side of the deposit, 6.5 cells off, so all four
+  are in the Prospector's sight and it stands outside their site; `raid`
+  puts its Hab Dome up out of reach of the realm's guns, the raiders' way in
+  too (a dome beside the Citadel had its raid shot down by the corner
+  turrets before it bit).
 
 ### As built (N3, 2026-10-15): the Matriarch and her nest
 
@@ -655,6 +661,11 @@ Her numbers are `ac::Matriarch` (Brood.h); the core steps her
   3. a slam;
   4. the bar with her wounded;
   5. her down with the toasts.
+
+  It holds noon unless `-AcMmoHour` says (Q2: on the world clock a night
+  run's Prospector saw 6 cells, none of her horde 20 cells off), and takes
+  the roar's picture 0.9 s into the roar by the server's clock (the World
+  sky's roar `at`), at once if the mirror shows it later than that.
 
 ## Models and how to drive them
 

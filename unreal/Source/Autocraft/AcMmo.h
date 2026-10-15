@@ -302,6 +302,11 @@ public:
 	/// ahead waits a while after it, so the frames round a crossing stay
 	/// clear (W4).
 	double SinceRegionChange() const { return LastNow - RegionChangedAt; }
+	/// The session's first region, on the ground (Q2): what is round it is
+	/// made from the first frame, two at a time, not a region at a time 2 s
+	/// apart over 15 s (a Dropship called then drew half-built sets in its
+	/// wide view: a 0.5 s frame).
+	bool SessionStart() const { return Visit() == 0 && !Travelling(); }
 	bool LastTookPrepared() const { return Net && Net->tookPrepared(); }
 
 	// MARK: The world

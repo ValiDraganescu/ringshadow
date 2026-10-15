@@ -75,6 +75,15 @@ namespace
 		}
 		return Heading;
 	}
+
+	/// Whether `U` can stand all along the straight line from `From` to `To`.
+	bool OpenLane(const ac::Simulation& Sim, const ac::Unit& U, const ac::Vec2 From, const ac::Vec2 To)
+	{
+		const double Length = ac::distance(From, To);
+		for (double D = 0; D <= Length; D += 0.25)
+			if (!Sim.pilotCanStand(U, From + (To - From) * (D / FMath::Max(Length, 1e-6)))) return false;
+		return true;
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcMmoDriveTest, "Autocraft.Mmo.DriveProspector", Flags)
@@ -304,8 +313,44 @@ bool FAcMmoCrossEdgeTest::RunTest(const FString&)
 	const FString MapWas = Utf(Client.Mirror()->region().mapName);
 	const int64 VisitWas = Client.Visit();
 	const int64 GenerationWas = Client.Generation();
-	// East along the pad's row to the east edge's opening (z 39 to 57), the
-	// way the pilot pawn steers: into the mirror's pilot, each frame.
+	// East to the east edge's opening (rows 41 to 55 of the region file, -7
+	// to 7 on the centred ground), the way the pilot pawn steers: into the
+	// mirror's pilot, each frame. The opening has the start's MH well in its
+	// mouth and boulders either side (W4b): the row is the one nearest the
+	// middle with an open lane to the edge (the mirror's own ground says),
+	// reached 6 cells east of the pad first. Where it was every 5 s, for a
+	// run that does not cross.
+	std::optional<ac::Vec2> Turn, Edge;
+	{
+		const ac::net::Mirror* M = Client.Mirror();
+		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+		if (!U)
+		{
+			AddError(TEXT("no Prospector to drive"));
+			return false;
+		}
+		const ac::Simulation& Sim = M->simulation();
+		const ac::GroundRect& B = Sim.map->bounds;
+		const double Middle = (B.minZ + B.maxZ) / 2;
+		for (double Off = 0; Off <= 6.0 && !Edge; Off += 0.5)
+			for (const double Row : {Middle - Off, Middle + Off})
+			{
+				const ac::Vec2 A(U->position.x + 6, Row), E(B.maxX - 0.5, Row);
+				if (!Edge && OpenLane(Sim, *U, U->position, A) && OpenLane(Sim, *U, A, E))
+				{
+					Turn = A;
+					Edge = ac::Vec2(B.maxX + 4, Row);
+				}
+			}
+		if (!Edge)
+		{
+			AddError(TEXT("no open lane through the east opening"));
+			return false;
+		}
+		AddInfo(FString::Printf(TEXT("the lane: row %.1f"), Edge->y));
+	}
+	FString Trail;
+	double TrailAt = FPlatformTime::Seconds();
 	const bool bCrossed = RunUntil(Client, [&] {
 		if (Client.Phase() == FAcMmoClient::EPhase::Failed) return true;
 		if (Client.Visit() > VisitWas && !Client.Travelling()) return true;
@@ -314,10 +359,15 @@ bool FAcMmoCrossEdgeTest::RunTest(const FString&)
 		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
 		if (S && S->pilot && U)
 		{
-			const ac::GroundRect& B = S->map->bounds;
-			const ac::Vec2 To(B.maxX + 4, B.minZ + 48);
+			if (Turn && U->position.x >= Turn->x - 0.5) Turn.reset();
+			const ac::Vec2 To = Turn ? *Turn : *Edge;
 			S->pilot->walk = ac::Vec2(1, 0);
 			S->pilot->heading = std::atan2(To.y - U->position.y, To.x - U->position.x);
+			if (FPlatformTime::Seconds() >= TrailAt)
+			{
+				TrailAt += 5.0;
+				Trail += FString::Printf(TEXT(" (%.1f,%.1f)"), U->position.x, U->position.y);
+			}
 		}
 		return false;
 	}, 60.0);
@@ -325,12 +375,17 @@ bool FAcMmoCrossEdgeTest::RunTest(const FString&)
 	{
 		const ac::net::Mirror* M = Client.Mirror();
 		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
-		AddError(FString::Printf(TEXT("did not cross: phase %d, %s; visit %lld, unit at %.1f,%.1f"), (int32)Client.Phase(), *Client.Message(),
-			(long long)Client.Visit(), U ? U->position.x : 0.0, U ? U->position.y : 0.0));
+		AddError(FString::Printf(TEXT("did not cross: phase %d, %s; visit %lld, unit at %.1f,%.1f; every 5 s:%s"), (int32)Client.Phase(),
+			*Client.Message(), (long long)Client.Visit(), U ? U->position.x : 0.0, U ? U->position.y : 0.0, *Trail));
 		return false;
 	}
-	// The World message may come a moment after the RegionChange.
-	RunUntil(Client, [&] { return Client.Here() && Utf(Client.Here()->id) == TEXT("tern-ridge"); }, 3.0);
+	// The World message may come a moment after the RegionChange, and the new
+	// region's first snapshot after both: the mirror made ahead (W4) drives the
+	// carried-over Prospector until it comes.
+	RunUntil(Client, [&] {
+		return Client.Here() && Utf(Client.Here()->id) == TEXT("tern-ridge") && Client.Mirror()
+			&& ac::net::visitOf(Client.Mirror()->game()) == Client.Visit();
+	}, 3.0);
 	CheckArrived(*this, Client, TEXT("tern-ridge"), MapWas);
 	TestEqual(TEXT("one region change"), Client.Visit(), VisitWas + 1);
 	TestTrue(TEXT("the game rebuilds on the new mirror"), Client.Generation() > GenerationWas);

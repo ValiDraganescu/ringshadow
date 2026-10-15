@@ -156,8 +156,13 @@ void FAcMmoClient::PrepareAround()
 		const bool bMayBuild = Target == INDEX_NONE || bTarget || MirrorsMade.Contains(Utf(W->regions[size_t(Target)].id));
 		const std::shared_ptr<const ac::MapDefinition>* Map = BuiltMaps.Find(Id);
 		// One at a time, a while after the region changed (W4: the frames
-		// round a crossing keep the machine to themselves).
-		if ((!Map || bWantMirror) && bMayBuild && Building.IsEmpty() && SinceRegionChange() > 2.0)
+		// round a crossing keep the machine to themselves); two at a time
+		// from the start at the session's start (Q2: the ground round it
+		// built in its first seconds, before a Dropship's wide view draws it;
+		// all eight at once starved the frames).
+		const bool bNow = SessionStart() && Target == INDEX_NONE;
+		if ((!Map || bWantMirror) && bMayBuild && !Building.Contains(Id)
+			&& (bNow ? Building.Num() < 2 : Building.IsEmpty() && SinceRegionChange() > 2.0))
 		{
 			const std::string Text = TCHAR_TO_UTF8(**Body);
 			const ac::net::RegionDescription Like = M->region();

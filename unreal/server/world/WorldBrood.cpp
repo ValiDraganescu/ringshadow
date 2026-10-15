@@ -15,6 +15,7 @@
 #include "WorldMap.h"
 
 #include "Brood.h"
+#include "Defence.h"
 #include "Ringshadow.h"
 #include "Rules.h"
 
@@ -868,6 +869,28 @@ std::string WorldMap::devBrood(const std::string& line) {
         }
         if (!dep) return "dev: brood linger: no deposit";
         g = spawnBroodGroup(r, UnitKind::shardling, 4, Poi::deposit, int64_t(*dep), st.patches[*dep].position, true);
+        if (g) {
+            // In its sight means all of them (Q2: a site 6 cells round the
+            // deposit, 9 or more off, let some wander out of the Prospector's
+            // 12): the site drawn in to 4 cells on the pilot's side of the
+            // deposit, its middle 6.5 cells off, the pilot still outside it.
+            BroodGroup& grp = brood_[r].groups.back();
+            const Vec2 dp = st.patches[*dep].position;
+            grp.radius = 4;
+            grp.site = at + normalize(dp - at + Vec2(0.01, 0)) * (grp.radius + 2.5);
+            if (sim.nav) grp.site = sim.nav->nearestFree(grp.site).value_or(grp.site);
+            int64_t k = 0;
+            for (Unit& u : st.units)
+                if (u.bug && u.bug->group == grp.id) {
+                    const double a = double(k++) * 2.399963;
+                    Vec2 spot = grp.site + Vec2(std::cos(a), std::sin(a)) * 1.5;
+                    if (sim.nav) spot = sim.nav->nearestFree(spot).value_or(spot);
+                    u.position = spot;
+                    u.bug->site = grp.site;
+                    u.bug->siteRadius = grp.radius;
+                }
+            sim.reindex();
+        }
     } else if (what == "attack") {
         // Shardlings on the pilot, its site round it.
         const auto dep = nearestDeposit();
@@ -906,21 +929,33 @@ std::string WorldMap::devBrood(const std::string& line) {
         }
     } else if (what == "raid") {
         // A raid on the realm's Hab Dome nearest the pilot; with none, one
-        // put up finished 12 cells ahead of it (dev and shots only).
+        // put up finished 12 cells ahead of it (dev and shots only), turning
+        // as far as behind it for a spot. The put-up one stands out of the
+        // realm's guns' reach, and so does the raiders' way in from 9 to 11
+        // cells beyond it: a Citadel's corner turrets (D3) shot a raid put
+        // up beside the dev rig's Citadel before it bit (Q2).
         std::optional<Structure> target;
         for (const Structure& b : st.structures)
             if (realm(b) && b.complete() && b.kind == StructureKind::habDome &&
                 (!target || distance(b.position, at) < distance(target->position, at)))
                 target = b;
+        auto underGuns = [&](Vec2 q) {
+            for (const Structure& b : st.structures)
+                if (const auto gun = b.hp > 0 ? Defence::weapon(b) : std::nullopt)
+                    if (distance(b.position, q) < gun->range + Rules::radius(b.kind) + 2) return true;
+            return false;
+        };
         if (!target) {
             for (double k = 12; k <= 24 && !target; k += 2)
-                for (const double turn : {0.0, 0.5, -0.5, 1.0, -1.0}) {
+                for (const double turn : {0.0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.2, -2.2, pi}) {
                     const Vec2 dir(std::cos(heading + turn), std::sin(heading + turn));
                     const Vec2 spot = at + dir * k;
                     if (!sim.nav || !sim.nav->walkable(spot) || sim.nav->inRock(spot)) continue;
                     bool clear = true;
                     for (const Structure& b : st.structures)
                         if (distance(b.position, spot) < Rules::radius(b.kind) + Rules::radius(StructureKind::habDome) + 1.5) clear = false;
+                    const Vec2 off = normalize(spot - at + Vec2(0.01, 0));
+                    for (double d = 0; d <= 11 && clear; d += 1) clear = !underGuns(spot + off * d);
                     if (!clear) continue;
                     st.structures.push_back(Structure(st.nextID++, StructureKind::habDome, Pilot::player, spot));
                     target = st.structures.back();

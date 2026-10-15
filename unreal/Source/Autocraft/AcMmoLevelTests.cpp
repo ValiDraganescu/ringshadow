@@ -1,11 +1,12 @@
-// Leveling in the MMORPG mode (AcMmo.h `Pick`, docs/mmorpg-m3.md S3) against
-// the real local server on the first world: the server stages the level
-// (`--dev-xp 60`, as the dev XP cheat: the new pilot's Prospector seated at
-// the start pad with 60 XP, level 2); the mirror shows level 2 and level 2's
-// two cards; a card not on offer is refused here; the first card is picked
-// through a Pick request; the mirror shows it kept and nothing more waiting.
-// One isolated moment of a few seconds, in real time. Run hidden as
-// AcMmoTests.cpp says (`Automation RunTests Autocraft.Mmo.LevelPick`).
+// Leveling in the MMORPG mode against the real local server on the first
+// world. Since P3 a world has no level-up cards: the server owns the pilot's
+// progression (Progression.h), and `--dev-xp` gives a new pilot that much of
+// its XP at once. The server stages level 2 (`--dev-xp` = Progression::xp(2));
+// the Progress message shows level 2 and its one skill point; a card is
+// refused here (the driven kind has none on offer); the point goes into a
+// tier 1 node through a Spend request; the Progress message shows the rank
+// and no point left. One isolated moment of a few seconds, in real time. Run
+// hidden as AcMmoTests.cpp says (`Automation RunTests Autocraft.Mmo.LevelPick`).
 #include "AcLeveling.h"
 #include "AcMmo.h"
 
@@ -14,6 +15,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Leveling.h"
+#include "Progression.h"
 #include "Simulation.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -40,57 +42,60 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcMmoLevelPickTest, "Autocraft.Mmo.LevelPick",
 bool FAcMmoLevelPickTest::RunTest(const FString&)
 {
 	constexpr ac::UnitKind Prospector = ac::UnitKind::prospector;
+	const double Xp = ac::Progression::xp(2);
 	FAcMmoClient Client;
-	Client.ExtraServerArgs = {"--dev-xp", "60"};
+	Client.ExtraServerArgs = {"--dev-xp", std::to_string(Xp)};
 	if (!Client.Start(FPlatformTime::Seconds()))
 	{
 		AddError(FString::Printf(TEXT("the local server did not start: %s"), *Client.Message()));
 		return false;
 	}
-	auto Levels = [&]() -> ac::PilotRecord
-	{
-		return Client.Mirror() ? Client.Mirror()->simulation().levels() : ac::PilotRecord();
-	};
 	const bool bLeveled = RunUntil(Client, [&] {
 		return Client.Phase() == FAcMmoClient::EPhase::Failed
-			|| (Client.Driven() && Client.Mirror() && Client.Mirror()->unit(*Client.Driven()) && Levels().level(Prospector) == 2);
+			|| (Client.Driven() && Client.Mirror() && Client.Mirror()->unit(*Client.Driven()) && Client.Progress()
+				&& Client.Progress()->level == 2);
 	}, 15.0);
 	if (!bLeveled || Client.Phase() == FAcMmoClient::EPhase::Failed)
 	{
-		AddError(FString::Printf(TEXT("no level 2 Prospector driven: phase %d, %s, level %lld"), (int32)Client.Phase(), *Client.Message(),
-			(long long)Levels().level(Prospector)));
+		AddError(FString::Printf(TEXT("no level 2 pilot driving: phase %d, %s, level %lld"), (int32)Client.Phase(), *Client.Message(),
+			Client.Progress() ? (long long)Client.Progress()->level : 0LL));
 		return false;
 	}
-	TestEqual(TEXT("60 XP, from the server"), Levels().xp(Prospector), 60.0);
-	// The cards the HUD shows (the driven kind's offer).
-	const TOptional<FAcPickOffer> Offer = FAcPickOffer::Of(Levels(), Prospector);
-	if (!Offer)
-	{
-		AddError(TEXT("no cards on offer at level 2"));
-		return false;
-	}
-	TestEqual(TEXT("level 2's cards"), Offer->Level, 2);
-	TestTrue(TEXT("Quick drill or Light frame"),
-		Offer->Perks == TArray<ac::Perk>({ac::Perk::prospectorQuickDrill, ac::Perk::prospectorLightFrame}));
+	TestEqual(TEXT("its XP, from the server"), Client.Progress()->xp, Xp);
+	TestEqual(TEXT("level 2's one skill point"), Client.Progress()->points, int64(1));
 
-	// Not on offer: refused here, nothing sent.
+	// No cards in a world: none on offer, refused here, nothing sent.
+	const ac::PilotRecord Record = Client.Mirror()->simulation().levels();
+	TestFalse(TEXT("no cards on offer"), FAcPickOffer::Of(Record, Prospector).IsSet());
 	FString Why;
-	TestFalse(TEXT("level 4's card refused"), Client.Pick(Prospector, ac::Perk::prospectorBigHaul, &Why));
-	TestEqual(TEXT("why"), Why, FString(TEXT("Not on offer")));
+	TestFalse(TEXT("a card refused"), Client.Pick(Prospector, ac::Perk::prospectorQuickDrill, &Why));
 	TestFalse(TEXT("nothing on its way"), Client.PickInFlight());
+	AddInfo(FString::Printf(TEXT("card refused: %s"), *Why));
 
-	// The first card, through the server.
-	const ac::Perk Card = Offer->Perks[0];
-	TestTrue(TEXT("asked"), Client.Pick(Prospector, Card, &Why));
-	TestFalse(TEXT("a second pick waits for the first"), Client.Pick(Prospector, Offer->Perks[1], &Why));
+	// The point into the first tier 1 node with ranks to fill, through the server.
+	std::optional<ac::Skill> Skill;
+	for (const ac::SkillNode& N : ac::Progression::nodes())
+		if (N.tier == 1 && !N.active)
+		{
+			Skill = N.skill;
+			break;
+		}
+	if (!Skill)
+	{
+		AddError(TEXT("no tier 1 node"));
+		return false;
+	}
+	TestTrue(TEXT("asked"), Client.Spend(*Skill, &Why));
 	const bool bKept = RunUntil(Client, [&] {
-		return Client.PicksKept() == 1 && Levels().picks(Prospector) == std::vector<ac::Perk>{Card};
+		if (!Client.SkillRefusal().IsEmpty()) return true;
+		const ac::net::ProgressMessage* P = Client.Progress();
+		return Client.SkillsKept() == 1 && P && P->ranks.count(*Skill) && P->ranks.at(*Skill) == 1;
 	}, 5.0);
-	TestTrue(TEXT("the pick is kept and shows in the mirror"), bKept);
-	TestTrue(TEXT("no refusal"), Client.PickRefusal().IsEmpty());
-	TestTrue(TEXT("nothing more waiting"), !FAcPickOffer::Of(Levels(), Prospector).IsSet());
-	TestTrue(TEXT("the mirror's driven Prospector has it on"), Client.Mirror()->simulation().active(Card));
-	AddInfo(FString::Printf(TEXT("picked %s at level %lld"), *AcLeveling::Name(Card), (long long)Levels().level(Prospector)));
+	TestTrue(FString::Printf(TEXT("the point is kept and shows in the progress (%s)"), *Client.SkillRefusal()), bKept);
+	TestTrue(TEXT("no refusal"), Client.SkillRefusal().IsEmpty());
+	TestEqual(TEXT("no point left"), Client.Progress() ? Client.Progress()->points : -1, int64(0));
+	AddInfo(FString::Printf(TEXT("spent on %s at level %lld"), *FString(UTF8_TO_TCHAR(ac::Progression::node(*Skill).title.c_str())),
+		Client.Progress() ? (long long)Client.Progress()->level : 0LL));
 	TestTrue(TEXT("still connected"), Client.Phase() == FAcMmoClient::EPhase::Playing);
 	Client.Stop();
 	return true;

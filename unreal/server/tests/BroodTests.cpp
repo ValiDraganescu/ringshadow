@@ -516,3 +516,89 @@ TEST(brood_bugs_on_the_pilot_are_always_sent) {
         }
     EXPECT_EQ(bugs, 3);
 }
+
+/// The shots' raid (`brood raid`, -AcMmoShotsN2): at the dev rig's home,
+/// the pilot out from the Citadel on every side and facing every way, the
+/// Hab Dome put up ahead of it is bitten within 40 s.
+TEST(brood_dev_raid_bites_its_dome_round_the_rig) {
+    int bitten = 0, staged = 0;
+    for (int side = 0; side < 8; side++)
+        for (int facing = 0; facing < 4; facing++) {
+            WorldParams p = params();
+            p.devRig = true;
+            WorldMap w(first(), p);
+            ASSERT_TRUE(w.seat(me, "") == WorldMap::Seated::fresh);
+            w.step();
+            Simulation& sim = simOf(w);
+            const Structure* c = nullptr;
+            for (const Structure& b : sim.state.structures)
+                if (b.kind == StructureKind::citadel) c = &b;
+            ASSERT_TRUE(c != nullptr);
+            const double a = side * pi / 4;
+            Unit* u = drivenUnit(w, me);
+            const Vec2 at = c->position + Vec2(std::cos(a), std::sin(a)) * 13;
+            if (!sim.pilotCanStand(*u, at)) continue;
+            u->position = at;
+            u->heading = a + facing * pi / 2;
+            sim.reindex();
+            const std::string said = w.devBrood("brood raid");
+            if (said.find("group") == std::string::npos) {
+                std::printf("  side %d facing %d: %s\n", side, facing, said.c_str());
+                continue;
+            }
+            staged++;
+            const Structure* dome = nullptr;
+            for (const Structure& b : sim.state.structures)
+                if (b.kind == StructureKind::habDome) dome = &b;
+            ASSERT_TRUE(dome != nullptr);
+            const int64_t id = dome->id;
+            const Vec2 domeAt = dome->position;
+            double hp = Rules::hp(StructureKind::habDome);
+            double t = 0;
+            for (; t < 40 && hp >= Rules::hp(StructureKind::habDome) - 8; t += 0.5) {
+                stepFor(w, 0.5);
+                for (const Structure& b : simOf(w).state.structures)
+                    if (b.id == id) hp = b.hp;
+            }
+            if (hp < Rules::hp(StructureKind::habDome) - 8) {
+                bitten++;
+                continue;
+            }
+            int alive = 0;
+            double nearest = 1e9;
+            for (const Unit& x : simOf(w).state.units)
+                if (x.bug && x.hp > 0) {
+                    alive++;
+                    nearest = std::min(nearest, distance(x.position, domeAt));
+                }
+            std::printf("  side %d facing %d: dome at %.1f,%.1f not bitten in 40 s; %d bugs, nearest %.1f cells off\n", side, facing,
+                        domeAt.x, domeAt.y, alive, nearest);
+        }
+    std::printf("  %d of %d raids bit their dome\n", bitten, staged);
+    EXPECT_EQ(bitten, staged);
+}
+
+/// The shots' lingering scene (`brood linger`, -AcMmoShotsN2): all four
+/// Shardlings in the pilot's snapshots for 10 s (in the Prospector's sight),
+/// none on it.
+TEST(brood_dev_linger_stays_in_sight) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.join(me));
+    w.step();
+    const std::string said = w.devBrood("brood linger");
+    ASSERT_TRUE(said.find("group") != std::string::npos);
+    int fewest = 4;
+    for (int k = 0; k < 20; k++) {
+        stepFor(w, 0.5);
+        const Snapshot s = w.regionOf(me)->snapshot(me);
+        int seen = 0;
+        for (const auto& e : s.entities)
+            if (const Unit* u = e.unit(); u && u->kind == UnitKind::shardling && u->bug) {
+                seen++;
+                EXPECT_TRUE(u->bug->state == Bug::State::idle || u->bug->state == Bug::State::move);
+            }
+        fewest = std::min(fewest, seen);
+    }
+    std::printf("  at least %d of 4 in sight\n", fewest);
+    EXPECT_EQ(fewest, 4);
+}
