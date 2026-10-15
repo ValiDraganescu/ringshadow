@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16); the frontier pilots (schema 21). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16); the frontier pilots (schema 21); the week's standings (schema 24). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -208,6 +208,9 @@ struct WorldSave {
     std::string frontier{};
     /// The realm's projects (R2, schema 22). A save from before has none.
     std::vector<SavedProject> projects{};
+    /// The realm week's standings (S4, schema 24), as JSON
+    /// (WorldStandings.cpp). Empty: a save from before.
+    std::string standings{};
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -224,7 +227,8 @@ public:
     /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions;
     /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills;
     /// 17: the Matriarch's nests; 18: KSTR's next goal; 20: the canyons' games;
-    /// 21: the frontier pilots; 22: the realm's projects; 23: a pilot's away ledger).
+    /// 21: the frontier pilots; 22: the realm's projects; 23: a pilot's away ledger;
+    /// 24: the realm week's standings).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 
@@ -288,6 +292,7 @@ private:
     std::vector<SavedCanyon> canyons_;
     std::string frontier_;
     std::vector<SavedProject> projects_;
+    std::string standings_;
 };
 
 } // namespace ac::server

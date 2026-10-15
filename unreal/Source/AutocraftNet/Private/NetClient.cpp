@@ -127,6 +127,11 @@ void Client::message(const std::vector<uint8_t>& data) {
         progress_ = m;
         return;
     }
+    case MessageType::standings: {
+        StandingsMessage m;
+        if (decode(data, m)) standings_ = std::move(m);
+        return;
+    }
     case MessageType::snapshot: {
         const std::optional<SnapshotPart> part = reader_.read(data);
         if (!part) {

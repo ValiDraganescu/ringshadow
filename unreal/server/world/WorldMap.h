@@ -1358,6 +1358,37 @@ public:
     /// the save (`Server::writeAway`).
     std::map<std::string, std::array<std::string, 2>> awaySummaries() const;
 
+    // MARK: Realm standings (S4, docs/mmorpg-play.md "Standings"; WorldStandings.cpp)
+
+    /// The realm week's counts by key (a human's 32 hex digits or a frontier
+    /// pilot's "frontier:…"): ore delivered, bugs felled, waves held,
+    /// buildings raised. Saved with the world (schema 24).
+    struct Standing {
+        int64_t ore = 0;
+        int64_t bugs = 0;
+        int64_t waves = 0;
+        int64_t built = 0;
+        bool operator==(const Standing&) const = default;
+    };
+    const std::map<std::string, Standing>& standings() const { return standings_; }
+    /// The week's start on the world clock, its length (`net::kWeekDays`
+    /// world days) and its end.
+    double weekStart() const { return weekStart_; }
+    double weekLength() const { return double(net::kWeekDays) * params_.dayLength; }
+    double weekEnds() const { return weekStart_ + weekLength(); }
+    /// The table as pilot `pilot` is told it (nil: not a world, or not
+    /// joined): ranked, its own row always in it.
+    std::optional<net::StandingsMessage> standingsMessage(PilotId pilot) const;
+    /// The week ends now (its top hauler told, the counts start again,
+    /// the next week from the clock now): tests, dev and shots. What KSTR
+    /// says (`net::weekTopLine`).
+    std::string weekEndNow();
+    /// Tests: a count added to the pilot with key `key` (frontier keys too).
+    void standNote(const std::string& key, int64_t Standing::*stat, int64_t n);
+    /// Dev and shots (`week …` lines): `end` (the week ends now), `left S`
+    /// (the week ends S seconds from now), `list`. What it did, one line.
+    std::string devWeek(const std::string& line);
+
     /// Wall-clock ms the last `step` took over all the regions.
     double lastStepMs() const { return lastStepMs_; }
 
@@ -1964,6 +1995,17 @@ private:
     const FrontierPilot* frontierByKey(const std::string& key) const;
     std::vector<FrontierPilot> frontier_;
     std::vector<std::string> radioLog_;
+    /// S4: the week's counts by key, and its start on the world clock.
+    std::map<std::string, Standing> standings_;
+    double weekStart_ = 0;
+    /// Each step: the week ended (`clock_` past its end): told, started again.
+    void standingsStep();
+    std::string weekEnd();
+    /// A pilot's name in the standings by its key: a frontier pilot's
+    /// callsign, else `callsign`.
+    std::string standingName(const std::string& key) const;
+    std::string encodeStandings() const;
+    bool decodeStandings(const std::string& json);
     /// X2: the world's clock and realm wallet when the save was loaded
     /// (the start of the time away of a pilot saved on line); -1: not loaded.
     double loadedAt_ = -1;

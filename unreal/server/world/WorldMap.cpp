@@ -611,6 +611,7 @@ void WorldMap::step() {
     brood();
     canyonsStep();
     projectsStep();
+    standingsStep();
     respawns();
     rigs();
     landingPadsChanged();
@@ -648,12 +649,16 @@ void WorldMap::idle(double seconds) {
     brood();
     canyonsStep();
     projectsStep();
+    standingsStep();
 }
 
 double WorldMap::catchUp(double seconds) {
     if (!world_ || !(seconds > 0)) return 0;
     const double moved = std::min(seconds, params_.catchUpCap);
     setClock(clock_ + moved);
+    // S4: a week that ended while the world was down ends with what it
+    // counted; the gap's work counts to the week now.
+    standingsStep();
     sites();
     contracts();
     goals();

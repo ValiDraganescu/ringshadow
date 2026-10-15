@@ -92,7 +92,7 @@ TEST(away_ledger_saved_loaded_and_cleared_on_show) {
         ASSERT_TRUE(kept.size() == size_t(2));
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(23));
+        EXPECT_EQ(store->schemaVersion(), WorldStore::version());
         ASSERT_TRUE(store->write(w.save(), &why).has_value());
         // The pilot on line: an empty column; the one off line: its ledger.
         EXPECT_TRUE(store->rows("SELECT away FROM pilots WHERE id = '" + keyA + "'")[0][0].empty());

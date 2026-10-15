@@ -180,6 +180,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devCanyon(line));
             continue;
         }
+        // The realm week (WorldMap::devWeek): `week end|left S|list`.
+        if (line.rfind("week", 0) == 0) {
+            said.push_back(world_.devWeek(line));
+            continue;
+        }
         // The Citadel board (WorldMap::devMissions): `missions here`.
         if (line.rfind("missions", 0) == 0) {
             said.push_back(world_.devMissions(line));
@@ -205,7 +210,7 @@ std::vector<std::string> Server::devControl(const std::string& text) {
         }
         const double was = world_.clock();
         if (!world_.isWorld() || std::sscanf(line.c_str(), "%15s %lf", what, &v) != 2) {
-            said.push_back("dev: control '" + line + "' not done (no world, or not `clock|hour|ahead|catchup N`)");
+            said.push_back("dev: control '" + line + "' not done (no world, or not `clock|hour|ahead|catchup|idle N`)");
             continue;
         }
         const std::string w = what;
@@ -222,8 +227,18 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(out);
             continue;
         }
+        else if (w == "idle" && v >= 0) {
+            // S4's shots: the world idles `v` s as with no pilot on line
+            // (the regions held; the frontier pilots' work and the
+            // mercenaries' booked), a second at a time.
+            for (double left = v; left > 1e-9; left -= 1.0) world_.idle(std::min(1.0, left));
+            char out[160];
+            std::snprintf(out, sizeof out, "dev: idled %.0f s: clock %.1f s -> %.1f s", v, was, world_.clock());
+            said.push_back(out);
+            continue;
+        }
         else {
-            said.push_back("dev: control '" + line + "' not done (not `clock|hour|ahead|catchup N`)");
+            said.push_back("dev: control '" + line + "' not done (not `clock|hour|ahead|catchup|idle N`)");
             continue;
         }
         char out[160];
@@ -534,6 +549,15 @@ void Server::sendProgress(net::ConnectionId c, Client& client) {
     client.told = *m;
 }
 
+void Server::sendStandings(net::ConnectionId c, Client& client) {
+    // At most once a second, and only when it changed (S4).
+    if (client.standingsTold && ticked_ % 60 != 0) return;
+    auto m = world_.standingsMessage(client.pilot);
+    if (!m || (client.standingsTold && *client.standingsTold == *m)) return;
+    sendReliable(c, net::encode(*m));
+    client.standingsTold = std::move(m);
+}
+
 void Server::join(net::ConnectionId c, Client& client, const std::vector<uint8_t>& data, double now) {
     net::JoinMessage m;
     if (client.seated || !net::decode(data, m)) return;
@@ -570,6 +594,7 @@ void Server::sendSnapshots(double now) {
     for (auto& [c, client] : clients_) {
         if (!client.seated) continue;
         sendProgress(c, client);
+        sendStandings(c, client);
         net::Snapshot s = world_.snapshot(client.pilot, options_.interest);
         if (!s.events.empty())
             for (const auto& bytes : net::encodeEvents(s.serverTick, s.events))

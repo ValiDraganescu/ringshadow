@@ -353,6 +353,8 @@ void WorldMap::realmNews() {
                 // P1: a frontier pilot's building is its deed (WorldFrontier.cpp).
                 if (const auto k = builtBy_[r].find(c->structure); k != builtBy_[r].end() && frontierKey(k->second)) continue;
                 const std::string by = builder(r, c->structure);
+                // S4: a building raised, to its builder's week.
+                if (const auto k = builtBy_[r].find(c->structure); k != builtBy_[r].end()) standNote(k->second, &Standing::built, 1);
                 for (auto& [id, p] : pilots_)
                     p.news.push_back(News{NewsKind::built, std::string(rawValue(c->kind)), 0, p.region == r && !p.flight ? 1 : 0, by});
             }
@@ -375,6 +377,8 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
                 contractWork(w.pilot, *p, w.hydrogen ? net::Contract::Kind::deliverHydrogen : net::Contract::Kind::deliverOre, "",
                              d->amount);
                 missionWork(w.pilot, *p, net::CitadelMission::Kind::haul, w.hydrogen ? "hydrogen" : "ore", d->amount);
+                // S4: the week's ore.
+                if (!w.hydrogen) standNote(p->key, &Standing::ore, d->amount);
             }
             if (const auto* c = e.as<GameEvent::Constructed>(); c && built(*p, w.region, c->structure)) {
                 feats.push_back(WorldXp::built(c->kind));

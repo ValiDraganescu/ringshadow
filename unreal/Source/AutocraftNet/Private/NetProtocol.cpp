@@ -249,7 +249,7 @@ void appendBits(BitWriter& w, const uint8_t* src, size_t from, size_t bits) {
 std::optional<MessageType> messageType(const std::vector<uint8_t>& message) {
     if (message.empty()) return std::nullopt;
     const uint8_t t = message[0];
-    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::progress)) return std::nullopt;
+    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::standings)) return std::nullopt;
     return static_cast<MessageType>(t);
 }
 
@@ -1453,7 +1453,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         for (AwayRow& row : a.rows) {
             row.at = readDouble(r);
             const uint64_t kind = r.readBits(4);
-            if (kind > uint64_t(AwayKind::projectEnd)) return false;
+            if (kind > uint64_t(AwayKind::week)) return false;
             row.kind = static_cast<AwayKind>(kind);
             if (!readString(r, row.who) || !readString(r, row.what) || !readString(r, row.where)) return false;
             row.value = readSigned(r);
@@ -1465,13 +1465,59 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(5);
-        if (kind > uint64_t(ProgressMessage::NewsKind::project)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::week)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);
         n.value = readSigned(r);
         if (!readString(r, n.by)) return false;
         m.news.push_back(n);
+    }
+    return r.ok();
+}
+
+std::vector<uint8_t> encode(const StandingsMessage& m) {
+    BitWriter w = start(MessageType::standings);
+    writeDouble(w, m.weekStart);
+    writeDouble(w, m.weekEnds);
+    writeVarint(w, m.rows.size());
+    for (const WeekStanding& s : m.rows) {
+        writeString(w, s.callsign);
+        w.writeBool(s.frontier);
+        writeSigned(w, s.ore);
+        writeSigned(w, s.bugs);
+        writeSigned(w, s.waves);
+        writeSigned(w, s.built);
+        writeVarint(w, uint64_t(std::max<int64_t>(0, s.rank)));
+    }
+    w.writeBool(m.you.has_value());
+    if (m.you) writeVarint(w, uint64_t(*m.you));
+    return w.bytes();
+}
+
+bool decode(const std::vector<uint8_t>& bytes, StandingsMessage& m) {
+    BitReader r(bytes.data(), bytes.size());
+    if (!open(bytes, MessageType::standings, r)) return false;
+    m = StandingsMessage{};
+    m.weekStart = readDouble(r);
+    m.weekEnds = readDouble(r);
+    const uint64_t rows = readVarint(r);
+    // The viewer's own past the most.
+    if (rows > kStandingsMost + 1 || !r.ok()) return false;
+    m.rows.assign(size_t(rows), {});
+    for (WeekStanding& s : m.rows) {
+        if (!readString(r, s.callsign)) return false;
+        s.frontier = r.readBool();
+        s.ore = readSigned(r);
+        s.bugs = readSigned(r);
+        s.waves = readSigned(r);
+        s.built = readSigned(r);
+        s.rank = int64_t(readVarint(r));
+    }
+    if (r.readBool()) {
+        const uint64_t you = readVarint(r);
+        if (you >= rows) return false;
+        m.you = int64_t(you);
     }
     return r.ok();
 }

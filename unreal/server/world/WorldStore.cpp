@@ -248,13 +248,20 @@ const char* const kV23 = R"sql(
 ALTER TABLE pilots ADD COLUMN away TEXT NOT NULL DEFAULT '';
 )sql";
 
+/// Schema 24 (S4): the realm week's standings, one row, as JSON
+/// (WorldStandings.cpp): the week's start on the world clock and each
+/// pilot's counts. A save from before has none: the week starts at the load.
+const char* const kV24 = R"sql(
+CREATE TABLE standings (id INTEGER PRIMARY KEY CHECK (id = 1), state TEXT NOT NULL);
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}};
     return steps;
 }
 
@@ -462,6 +469,11 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         while (s.row()) out.projects.push_back(SavedProject{s.colText(0), s.colInteger(1), s.colReal(2), s.colText(3)});
         if (s.failed(error)) return std::nullopt;
     }
+    {
+        Stmt s(db_, "SELECT state FROM standings WHERE id = 1");
+        if (s.row()) out.standings = s.colText(0);
+        if (s.failed(error)) return std::nullopt;
+    }
     regions_.clear();
     clock_ = std::nullopt;
     realm_ = std::nullopt;
@@ -485,6 +497,7 @@ void WorldStore::remember(const WorldSave& save) {
     canyons_ = save.canyons;
     frontier_ = save.frontier;
     projects_ = save.projects;
+    standings_ = save.standings;
     for (const SavedRegion& r : save.regions) {
         regions_[r.id] = {r.time, r.nextId};
         // A region written whole: its rows are these and no others.
@@ -650,6 +663,12 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                               .integer(x.runs)
                               .real(x.ends)
                               .text(x.by)));
+        n.changed += 1;
+    }
+    // The week's standings (S4): one row, written whole when it changed.
+    if (standings_ != save.standings) {
+        run(std::move(Stmt(db_, "INSERT INTO standings (id, state) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET state = excluded.state")
+                          .text(save.standings)));
         n.changed += 1;
     }
     if (clock_ != save.clock) {

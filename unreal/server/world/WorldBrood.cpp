@@ -581,12 +581,19 @@ void WorldMap::brood() {
             for (auto& [pilot, p] : pilots_)
                 if (!p.flight && p.region == r && p.unit == h.shooter) {
                     earn(p, Brood::xp(h.kind) * share);
+                    // S4: the week's bugs felled (the Matriarch's too).
+                    if (h.kill) standNote(p.key, &Standing::bugs, 1);
                     // A kill counts for its hunt missions (K2); the
                     // Matriarch's for every pilot who fought her (`queenDown`).
                     if (h.kill && h.kind != UnitKind::matriarch) broodKill(pilot, h.kind, r);
                 }
             // A defence's kill counts on its card (D3).
             if (h.kill && st.structure(h.shooter)) kills_[r][h.shooter] += 1;
+            // S4: a defence's kill, to its human builder's week (a frontier
+            // pilot's counts in `frontierHit`).
+            if (h.kill)
+                if (const auto by = builtBy_[r].find(h.shooter); by != builtBy_[r].end() && !frontierKey(by->second))
+                    standNote(by->second, &Standing::bugs, 1);
             // A defence's hit (D1, D2): its builder earns a share, wherever
             // it is (the Citadel's corner turrets included).
             if (const auto by = builtBy_[r].find(h.shooter); by != builtBy_[r].end())

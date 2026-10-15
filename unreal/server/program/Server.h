@@ -111,8 +111,11 @@ public:
     /// Dev and shots (`--dev-control FILE`, main.cpp): the lines of the
     /// control file, each one a move of the world's clock, done at once:
     /// `clock T` to T seconds, `hour H` on to the next hour H, `ahead S`
-    /// S seconds on; `brood …` a Brood scene near the first pilot
-    /// (WorldMap::devBrood). A line a log line each (what it did, or why not).
+    /// S seconds on, `catchup S` a restart after S seconds down (X2),
+    /// `idle S` S seconds idled as with no pilot on line (S4); `brood …` a
+    /// Brood scene near the first pilot (WorldMap::devBrood), `week …` the
+    /// realm week (WorldMap::devWeek). A line a log line each (what it did,
+    /// or why not).
     std::vector<std::string> devControl(const std::string& text);
 
 private:
@@ -127,6 +130,8 @@ private:
         uint64_t bytesAtStats = 0;
         /// The progression it was last told (a world).
         std::optional<net::ProgressMessage> told;
+        /// S4: the standings it was last told.
+        std::optional<net::StandingsMessage> standingsTold;
     };
 
     void handle(const net::Event& e, double now);
@@ -141,6 +146,8 @@ private:
     std::optional<std::optional<std::string>> skillTree(const net::RequestMessage& m, PilotId pilot);
     /// The pilot's progression when it changed (more than its XP), with its news.
     void sendProgress(net::ConnectionId c, Client& client);
+    /// S4: the realm week's standings when they changed (at most once a second).
+    void sendStandings(net::ConnectionId c, Client& client);
     void statsLine(double now);
     void log(const std::string& line) const;
     /// A log line for each starfall told and landed.

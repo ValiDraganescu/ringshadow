@@ -1,5 +1,7 @@
 #include "AwayReport.h"
 
+#include "Standings.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -22,7 +24,8 @@ int rank(AwayKind k) {
     case AwayKind::fallen: return 2;
     case AwayKind::queenDown:
     case AwayKind::queenBack: return 3;
-    case AwayKind::frontier: return 4;
+    case AwayKind::frontier:
+    case AwayKind::week: return 4;
     case AwayKind::projectStart:
     case AwayKind::projectEnd: return 5;
     case AwayKind::raid: return 6;
@@ -72,6 +75,7 @@ std::string awayLine(const AwayRow& r) {
     case AwayKind::queenBack: return "The Matriarch is back in her nest";
     case AwayKind::projectStart: return (r.who.empty() ? std::string("The realm") : r.who) + " started " + r.what;
     case AwayKind::projectEnd: return r.what + " ran its course";
+    case AwayKind::week: return weekTopLine(r.who, r.value);
     }
     return r.what;
 }

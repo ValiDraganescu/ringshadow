@@ -182,6 +182,7 @@ WorldSave WorldMap::save() const {
     for (const FrontierPilot& f : frontier_)
         if (f.unit && !f.travelTo && frontierUnitOf(f)) owned[f.region][*f.unit] = f.key;
     out.frontier = encodeFrontier();
+    out.standings = encodeStandings();
     // R2: every kind that ever ran.
     for (int k = 0; k < RealmProject::count; k++) {
         const auto& pr = projects_[size_t(k)];
@@ -458,6 +459,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     // away from the load on.
     loadedAt_ = clock_;
     loadedRealm_ = realm_;
+    // S4: the week's standings (none before schema 24: the week starts now).
+    if (!decodeStandings(save.standings)) problems.push_back("the week's standings do not read, the week starts again");
     return problems;
 }
 

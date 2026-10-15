@@ -9,13 +9,14 @@
 // Welcome (reliable, the first message after connected), Snapshot
 // (unreliable, NetSnapshot.h), Event (reliable), Reply (reliable),
 // RegionChange and World (reliable), Progress (reliable, a world's pilot's
-// skill tree). A Welcome or a RegionChange that
+// skill tree), Standings (reliable, the realm week's, Standings.h). A Welcome or a RegionChange that
 // carries a region file too large for one reliable message goes on the bulk
 // channel.
 #pragma once
 
 #include "AutocraftNetApi.h"
 #include "AwayReport.h"
+#include "Standings.h"
 #include "NetBitStream.h"
 
 #include "Flight.h"
@@ -52,6 +53,7 @@ enum class MessageType : uint8_t {
     world = 9,
     join = 10,
     progress = 11,
+    standings = 12,
 };
 
 /// The type of a message, or nil when it is none of ours.
@@ -742,8 +744,12 @@ struct ProgressMessage {
     ///
     /// R2: `project`, to every human on line: "start/<slug>" a realm project
     /// started (`by`: who), "end/<slug>" one ran out (`RealmProject::slug`).
+    ///
+    /// S4: `week`, to every human on line when the realm week ends: "top"
+    /// (`by`: its top hauler's callsign, `value`: the ore), "none" (nobody
+    /// hauled).
     enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
-                                    merc, upgraded, matriarch, goal, canyon, frontier, project };
+                                    merc, upgraded, matriarch, goal, canyon, frontier, project, week };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -1049,6 +1055,7 @@ AUTOCRAFTNET_API std::vector<uint8_t> encode(const RequestMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const ReplyMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const JoinMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const ProgressMessage& m);
+AUTOCRAFTNET_API std::vector<uint8_t> encode(const StandingsMessage& m);
 /// As many Event messages as the events need, each within a reliable
 /// message's size.
 AUTOCRAFTNET_API std::vector<std::vector<uint8_t>> encodeEvents(int64_t serverTick, const std::vector<GameEvent>& events);
@@ -1063,6 +1070,7 @@ AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, RequestMessage& 
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, ReplyMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, JoinMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& out);
+AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, StandingsMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, EventMessage& out);
 
 // MARK: - Bits the messages share

@@ -184,6 +184,8 @@ struct Input {
     std::vector<KnownSite> sites;
     std::vector<ContractMark> contracts;
     std::vector<ZoneMark> zones;
+    /// S4: the realm week's standings (a pilot's rank line in its tooltip).
+    const StandingsMessage* standings = nullptr;
 };
 
 /// Whether pad `pad` of region `region` (indices in the World message) may be

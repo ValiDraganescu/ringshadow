@@ -41,6 +41,8 @@ enum class AwayKind : uint8_t {
     projectStart,
     /// A realm project ran its course.
     projectEnd,
+    /// S4: the realm week ended (`who` its top hauler, `value` the ore).
+    week,
 };
 
 struct AwayRow {

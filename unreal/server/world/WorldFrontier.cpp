@@ -886,6 +886,7 @@ void WorldMap::frontierUnload(FrontierPilot& f, int64_t amount, bool hydrogen) {
     (hydrogen ? f.taxed.hydrogen : f.taxed.ore) += tax;
     (hydrogen ? f.wallet.hydrogen : f.wallet.ore) += amount - tax;
     frontierEarn(f, double(amount) * (hydrogen ? WorldXp::hydrogen : WorldXp::ore));
+    if (!hydrogen) standNote(f.key, &Standing::ore, amount);
     if (hydrogen) f.trips = 0;
     else f.trips += 1;
 }
@@ -899,7 +900,10 @@ void WorldMap::frontierHit(size_t r, const Simulation::BugHit& h) {
         if (!mine) continue;
         const double share = h.hp / std::max(1.0, Rules::hp(h.kind));
         frontierEarn(f, Brood::xp(h.kind) * share * (f.unit == h.shooter ? 1.0 : defenceXpShare));
-        if (h.kill) f.kills += 1;
+        if (h.kill) {
+            f.kills += 1;
+            standNote(f.key, &Standing::bugs, 1);
+        }
         for (Canyon& c : canyons_)
             if (c.region == r && c.bugs.count(h.bug) && h.hp > 0) c.frontierDamage[f.id] += h.hp;
     }
@@ -949,6 +953,7 @@ void WorldMap::frontierEvents(FrontierPilot& f) {
         } else if (s->complete()) {
             f.building = std::nullopt;
             f.built += 1;
+            standNote(f.key, &Standing::built, 1);
             frontierEarn(f, WorldXp::feat(WorldXp::built(s->kind)) * (f.progress.feats.insert(WorldXp::built(s->kind)).second ? 1 : 0));
             frontierDeed(f, f.callsign + " built " + kindWord(s->kind) + " in " + world_->regions[f.region].file.name);
         }

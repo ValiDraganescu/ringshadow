@@ -421,6 +421,15 @@ TEST(atlas_frontier_pilots) {
     EXPECT_TRUE(has(it->lines, "Building in rust-hollow"));
     EXPECT_EQ(it->paint, int32_t(3));
     EXPECT_TRUE(it->region == 3 && distance(it->at, placeOf(places, 3)->fromCells(Vec2(40, 30))) < 1e-9);
+    EXPECT_EQ(it->lines.size(), size_t(2));
+    // S4: with the week's standings, its rank and leading stat.
+    StandingsMessage st;
+    st.rows = {WeekStanding{"Pilot 1A2B", false, 6000, 0, 0, 0, 1}, WeekStanding{"Vesper", true, 4200, 3, 0, 1, 2}};
+    in.standings = &st;
+    const auto ranked = items(in, places);
+    const atlas::Item* again = find(ranked, Kind::frontier);
+    ASSERT_TRUE(again != nullptr);
+    EXPECT_TRUE(has(again->lines, "2nd · 4,200 ore this week"));
 }
 
 /// The map's pick rule (the user, 2026-10-15: "I can't pick a landing on the

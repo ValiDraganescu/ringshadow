@@ -459,6 +459,8 @@ void WorldMap::waveBeaten(Canyon& c) {
         PilotState* p = pilotState(pilot);
         if (!p || !(d > 0)) continue;
         fighters += 1;
+        // S4: a wave held, to each who fought it.
+        standNote(p->key, &Standing::waves, 1);
         const double share = std::max(d / std::max(1.0, total), WorldCanyon::floorShare);
         const double xp = std::round(WorldCanyon::xp(c.wave) * bonus * share);
         const int64_t ore = std::llround(double(WorldCanyon::ore(c.wave)) * bonus * share);
@@ -481,6 +483,7 @@ void WorldMap::waveBeaten(Canyon& c) {
         FrontierPilot* f = frontierPilot(id);
         if (!f || !(d > 0)) continue;
         fighters += 1;
+        standNote(f->key, &Standing::waves, 1);
         const double share = std::max(d / std::max(1.0, total), WorldCanyon::floorShare);
         f->wallet.ore += std::llround(double(WorldCanyon::ore(c.wave)) * bonus * share);
         f->wallet.hydrogen += std::llround(double(WorldCanyon::hydrogen(c.wave)) * bonus * share);

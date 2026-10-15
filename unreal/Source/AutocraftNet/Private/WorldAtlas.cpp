@@ -230,6 +230,9 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
                 it.kind = Kind::you;
                 it.title = progress && !progress->callsign.empty() ? "You · " + progress->callsign : "You";
                 it.lines = {"Your Prospector", load};
+                // S4: its rank this week.
+                if (in.standings && in.standings->you)
+                    it.lines.push_back(standingLine(in.standings->rows[size_t(*in.standings->you)].rank, in.standings->rows[size_t(*in.standings->you)]));
                 it.own = true;
             } else if (progress && progress->mercTags.count(u.id)) {
                 it.kind = Kind::merc;
@@ -304,6 +307,9 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
             std::string doing = title(f.doing);
             if (!doing.empty()) doing[0] = char(std::toupper(static_cast<unsigned char>(doing[0])));
             it.lines = {std::string("Frontier pilot · ") + (who ? title(who->habit) : "") , doing + " in " + p->name};
+            // S4: its rank this week and its leading stat.
+            if (in.standings && who)
+                if (const auto line = standingLineOf(*in.standings, who->callsign, true)) it.lines.push_back(*line);
             it.paint = who ? who->paint : 2;
             out.push_back(std::move(it));
         }

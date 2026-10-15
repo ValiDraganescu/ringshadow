@@ -139,6 +139,8 @@ public:
     std::vector<ProgressMessage::News> news;
     /// X2: the away report its join brought (the caller takes it).
     std::optional<AwayReport> away;
+    /// S4: the realm week's standings, the newest (nil: none yet).
+    const std::optional<StandingsMessage>& standings() const { return standings_; }
     /// Snapshot parts waiting for their region's mirror.
     static constexpr size_t kMaxWaiting = 64;
 
@@ -164,6 +166,7 @@ private:
     std::optional<RegionChange> regionChange_;
     std::optional<WorldMessage> world_;
     std::optional<ProgressMessage> progress_;
+    std::optional<StandingsMessage> standings_;
     int64_t visit_ = 0;
     std::deque<SnapshotPart> waiting_;
     std::deque<PilotInput> sent_;
