@@ -286,6 +286,7 @@
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
+#include "RHI.h"
 #include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
@@ -398,6 +399,9 @@ namespace
 	int64 N3Strikes = -1;
 	double N3SlamAt = -1;
 	double N3RoarAt = -1;
+	/// -AcMmoShotsN3Perf=S (N1b): frame and GPU times over S s after the roar's picture, the nest full of bugs in view.
+	TArray<double> N3Frames, N3Gpu;
+	double N3FrameAt = -1;
 	struct FB1Sample
 	{
 		double At;
@@ -4501,12 +4505,49 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	}
 	case 1905:
+	{
+		// -AcMmoShotsN3Perf=S: the frame and GPU times over S s first, 10 cells from her, her horde held still in sight.
+		double PerfFor = 0;
+		FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsN3Perf="), PerfFor);
+		if (PerfFor > 0 && N3FrameAt != -2)
+		{
+			if (N3FrameAt < 0 && N3Frames.Num() == 0 && Since() < 0.5)
+			{
+				if (N3FrameAt == -1) Check(Mmo->DevClock(TEXT("matriarch near 10 -90\nmatriarch calm")), TEXT("n3: the pilot amid the held horde, for the frame times"));
+				N3FrameAt = -3;
+			}
+			const ac::Unit* Q = S && U ? NearestBug(*S, U->position, ac::UnitKind::matriarch) : nullptr;
+			if (Q) Stop(Face(Q->position));
+			if (Since() > 1.0)
+			{
+				if (N3FrameAt > 0)
+				{
+					N3Frames.Add((Now - N3FrameAt) * 1000.0);
+					N3Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+				}
+				N3FrameAt = Now;
+			}
+			if (Since() < 1.0 + PerfFor) return;
+			int32 Bugs = 0;
+			if (S)
+				for (const ac::Unit& X : S->units)
+					if (X.bug && X.hp > 0) Bugs++;
+			auto Pct = [](TArray<double> V, const double P) { V.Sort(); return V.Num() ? V[FMath::Clamp(int32(P * V.Num()), 0, V.Num() - 1)] : 0.0; };
+			double Sum = 0;
+			for (const double F : N3Frames) Sum += F;
+			UE_LOG(LogAutocraft, Log, TEXT("n3 perf: %d bugs sent to the pilot, %d frames over %.0f s: frame mean %.2f p50 %.2f p95 %.2f ms, gpu p50 %.2f p95 %.2f ms"),
+				Bugs, N3Frames.Num(), PerfFor, N3Frames.Num() ? Sum / N3Frames.Num() : 0.0, Pct(N3Frames, 0.5), Pct(N3Frames, 0.95), Pct(N3Gpu, 0.5), Pct(N3Gpu, 0.95));
+			N3FrameAt = -2;
+			T.PhaseAt = Now;
+			return;
+		}
 		// In front of her: her slam.
 		Check(Mmo->DevClock(TEXT("matriarch near 6.2 -90\nmatriarch slam")), TEXT("n3: the pilot in front of her, her slam"));
 		N3SlamAt = -1;
 		N3Strikes = -1;
 		Advance();
 		return;
+	}
 	case 1906:
 	{
 		const ac::Unit* Q = S ? NearestBug(*S, U ? U->position : ac::Vec2(), ac::UnitKind::matriarch) : nullptr;

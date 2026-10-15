@@ -2,11 +2,11 @@
 # name, parent, pivot in the model frame (UE cm: x forward, y right, z up), what moves it, materials.
 # `_0` is the unit's left (UE -Y), `_1` its right.
 matriarch_blue_root -              pivot (   0.0,    0.0,    0.0)  the unit or building transform: position on the ground, heading (yaw = -heading for units) | no mesh
-body           matriarch_blue_root pivot (   0.0,    0.0,  220.0)  body: slow breath, turns to its target, rears up 1 cell on the roar, sinks on death | chitin(9),chitinUnder(1),chitinMid(8),glowDim_queen(16),oreFleck(40)
-abdomen        body           pivot (-190.0,    0.0,  240.0)  egg sac: swells with her breath, pulses brighter on the roar | glowBody_queen(1),chitin(4),glowTip(12)
+body           matriarch_blue_root pivot (   0.0,    0.0,  220.0)  body: slow breath, turns to its target, rears up 1 cell on the roar, sinks on death | chitin(9),chitinUnder(1),chitinMid(8),glowDim_queen(16),opal(40)
+abdomen        body           pivot (-190.0,    0.0,  240.0)  egg sac: swells with her breath, pulses brighter on the roar | egg_queen(1),chitin(4),chitinMid(10)
 head           body           pivot ( 300.0,    0.0,  600.0)  head: turns to its target, lunges on the spit, lifts on the roar | chitin(1),chitinMid(1),glow_queen(7)
 jaw            head           pivot ( 380.0,    0.0,  575.0)  jaw: gapes on the roar and the spit | chitinMid(1),chitin(4),glowDim_queen(1)
-crown          head           pivot ( 300.0,    0.0,  660.0)  crown: breathes with the body's glow; fans open (spreads and scales out) on the roar, folds on death | chitin(14),glow_queen(13),glowTip(13)
+crown          head           pivot ( 300.0,    0.0,  660.0)  crown: breathes with the body's glow; fans open (spreads and scales out) on the roar, folds on death | chitin(14),crownGlow(13),glowTip(13),glass_queen(12)
 forelimb_0     body           pivot ( 250.0, -105.0,  470.0)  forelimb: rise over 0.8 s and crash down on the slam; braced on the roar | chitin(3),chitinMid(2),glowDim_queen(2)
 forelimb_1     body           pivot ( 250.0,  105.0,  470.0)  forelimb: rise over 0.8 s and crash down on the slam; braced on the roar | chitin(3),chitinMid(2),glowDim_queen(2)
 leg_0          body           pivot ( 110.0, -130.0,  200.0)  leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_queen(1)
@@ -15,4 +15,4 @@ leg_2          body           pivot (-130.0, -130.0,  200.0)  leg: a slow shifti
 leg_3          body           pivot ( 110.0,  130.0,  200.0)  leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_queen(1)
 leg_4          body           pivot ( -10.0,  130.0,  200.0)  leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_queen(1)
 leg_5          body           pivot (-130.0,  130.0,  200.0)  leg: a slow shifting step when she turns (0, 2, 4 against 1, 3, 5) | chitin(2),chitinMid(1),glowDim_queen(1)
-pods           body           pivot ( 200.0,    0.0,  380.0)  egg pods: pulse with the breath; flare when Shardlings hatch on the roar | glowBody_queen(14),chitinMid(2)
+pods           body           pivot ( 200.0,    0.0,  380.0)  egg pods: pulse with the breath; flare when Shardlings hatch on the roar | egg_queen(18),chitinMid(2)

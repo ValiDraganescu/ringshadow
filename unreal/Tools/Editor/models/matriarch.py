@@ -17,8 +17,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ac_modelkit import Model, box, cyl, sphere, bar, loft, ring_box  # noqa: E402
-from brood_kit import materials, flecks, scatter  # noqa: E402
+from ac_modelkit import Model, box, cyl, sphere, bar, loft, ring_box, v_add, v_sub  # noqa: E402
+from brood_kit import materials, painted, flecks, scatter  # noqa: E402
 
 POSE = "AcPoseBrood.cpp:PoseMatriarch"
 
@@ -28,7 +28,10 @@ m = Model("matriarch", category="unit", notes=[
     "jaw gapes), death (sinks, crown folds, glow dies). No team colour: violet glow fixed.",
     "Parts: body, abdomen, head, jaw, crown, forelimb_0/1, leg_0..5, pods."])
 GLOW, DIM = materials(m, "queen")
-m.material("glowTip", parent="emissive", color=(1, 1, 1), emissive=(0.15, 1.6, 1.3))
+EGG, GLASS, OPAL = painted(m, "queen")
+# N1b: the crown's lamps saturated (the full-strength violet bloomed pink-white): a violet core strip, teal tips.
+m.material("glowTip", parent="emissive", color=(0.02, 0.5, 0.4), emissive=(0.04, 1.15, 0.85))
+m.material("crownGlow", parent="emissive", color=(0.25, 0.04, 0.5), emissive=(0.42, 0.06, 0.85))
 
 
 def d(what, channels=("rotation",)):
@@ -52,14 +55,15 @@ for x, w, h in TRUNK[1:-1]:
     m.mesh(body, DIM, [box((20, 5, 8), at=(x + 20, s * (w - 2), 200)) for s in (-1, 1)], solid=False)
 m.mesh(body, "chitin", [bar((x, 0, 220 + h - 6), (x - 30, 0, 220 + h + 50), 22, 18, taper=0.15, side=(0, 1, 0))
                         for x, w, h in TRUNK[1:5]], solid=False)                          # dorsal spikes
-m.mesh(body, "oreFleck", flecks(scatter(0, 0, 230, 180, 150, 100, 40, seed=7), r=6), solid=False)
+m.mesh(body, OPAL, flecks(scatter(0, 0, 230, 180, 150, 100, 40, seed=7), r=9), solid=False)  # opal ore crusted on her plates
 
 # --- the egg sac: huge, glowing, banded ---------------------------------------------------------------------------------
 abdomen = m.part("abdomen", parent=body, at=(-190, 0, 240), driver=d("egg sac: swells with her breath, pulses brighter on the roar", ("scale", "emission")))
-m.mesh(abdomen, "glowBody_queen", sphere(200, at=(-370, 0, 250), squash=(1.2, 0.95, 0.95), steps=20))
+m.mesh(abdomen, EGG, sphere(200, at=(-370, 0, 250), squash=(1.2, 0.95, 0.95), steps=28))
 m.mesh(abdomen, "chitin", [cyl(r, 14, at=(-370 + dx, 0, 250), axis="x") for dx, r in ((-170, 116), (-75, 186), (35, 180), (125, 118))], solid=False)
-m.mesh(abdomen, "glowTip", [sphere(1, at=(-370 + 175 * math.cos(a) * 1.15, 175 * math.sin(a) * 0.9, 275 + 100 * math.sin(3 * a)), squash=(9, 9, 9), steps=6)
-                            for a in [k * 2 * math.pi / 12 for k in range(12)]], solid=False)  # teal veins' nodes
+# the plated underside the sac rests on (the veins are the egg material's own)
+m.mesh(abdomen, "chitinMid", [box((90, 70, 30), at=(-370 + 110 * math.cos(a), 150 * math.sin(a), 95), rot=(0, math.degrees(a), 0))
+                              for a in [k * 2 * math.pi / 10 for k in range(10)]], solid=False)
 
 # --- head, eyes, jaw -----------------------------------------------------------------------------------------------------
 head = m.part("head", parent=body, at=(300, 0, 600), driver=d("head: turns to its target, lunges on the spit, lifts on the roar"))
@@ -77,6 +81,7 @@ m.mesh(jaw, DIM, box((30, 70, 12), at=(440, 0, 568)), solid=False)              
 crown = m.part("crown", parent=head, at=(300, 0, 660), driver=d("crown: breathes with the body's glow; fans open (spreads and scales out) on the roar, folds on death", ("rotation", "scale", "emission")))
 m.mesh(crown, "chitin", sphere(1, at=(300, 0, 660), squash=(50, 110, 60)))
 N = 13
+spines = []
 for k in range(N):
     a = math.radians(-78 + 156 * k / (N - 1))       # the fan's angle from straight up, toward +Y
     ln = 300 - 70 * abs(a) / math.radians(78)
@@ -84,8 +89,16 @@ for k in range(N):
     tip = (300 - ln * 0.45, math.sin(a) * (60 + ln * 0.85), 660 + math.cos(a) * (40 + ln * 0.85))
     mid = tuple(base[i] + (tip[i] - base[i]) * 0.7 for i in range(3))
     m.mesh(crown, "chitin", bar(base, mid, 26, 16, taper=0.6, side=(1, 0, 0)))
-    m.mesh(crown, GLOW, bar(tuple(base[i] + (tip[i] - base[i]) * 0.1 for i in range(3)), mid, 12, 18, taper=0.6, side=(1, 0, 0)), solid=False)
-    m.mesh(crown, "glowTip", bar(mid, tip, 12, 8, taper=0.1, side=(1, 0, 0)))
+    m.mesh(crown, "crownGlow", bar(tuple(base[i] + (tip[i] - base[i]) * 0.1 for i in range(3)), mid, 12, 18, taper=0.6, side=(1, 0, 0)), solid=False)
+    m.mesh(crown, "glowTip", bar(mid, tip, 14, 10, taper=0.1, side=(1, 0, 0)))
+    spines.append((base, mid))
+# the fan's violet membrane between the spines, lit through, to 60% up
+for (b0, m0), (b1, m1) in zip(spines, spines[1:]):
+    lo0, lo1 = [tuple(b[i] + (mm[i] - b[i]) * 0.12 for i in range(3)) for b, mm in ((b0, m0), (b1, m1))]
+    hi0, hi1 = [tuple(b[i] + (mm[i] - b[i]) * 0.8 for i in range(3)) for b, mm in ((b0, m0), (b1, m1))]
+    t = (3, 0, 0)
+    m.mesh(crown, GLASS, loft([[v_sub(lo0, t), v_sub(lo1, t), v_add(lo1, t), v_add(lo0, t)],
+                               [v_sub(hi0, t), v_sub(hi1, t), v_add(hi1, t), v_add(hi0, t)]]), solid=False)
 
 # --- two great forelimbs, hooked ---------------------------------------------------------------------------------------
 for i, s in enumerate((-1, 1)):
@@ -114,9 +127,12 @@ for k in range(6):
 pods = m.part("pods", parent=body, at=(200, 0, 380), driver=d("egg pods: pulse with the breath; flare when Shardlings hatch on the roar", ("emission", "scale")))
 pp = []
 for s in (-1, 1):
-    for j, (x, z) in enumerate(((170, 360), (210, 420), (150, 430), (230, 350), (190, 480), (130, 380), (250, 450))):
-        pp.append(sphere(30 + (j % 3) * 6, at=(x, s * (130 + (j % 2) * 18), z), squash=(0.8, 0.8, 1.15), steps=10))
-m.mesh(pods, "glowBody_queen", pp)
+    # N1b: big lilac pods on her shoulders and flanks, as in the concept (they read from across the nest)
+    for j, (x, z) in enumerate(((170, 360), (210, 425), (145, 440), (235, 350), (195, 500), (125, 380), (255, 460),
+                                (230, 545), (165, 530))):
+        r = 40 + (j % 3) * 8
+        pp.append(sphere(r, at=(x, s * (150 + (j % 2) * 26 + r * 0.3), z), squash=(0.85, 0.8, 1.2), rot=(0, 0, s * 12), steps=14))
+m.mesh(pods, EGG, pp)
 m.mesh(pods, "chitinMid", [sphere(1, at=(190, s * 120, 410), squash=(90, 30, 100)) for s in (-1, 1)], solid=False)  # the sockets they hang from
 
 m.write()

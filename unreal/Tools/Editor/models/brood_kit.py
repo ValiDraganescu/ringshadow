@@ -48,3 +48,35 @@ def scatter(cx, cy, cz, rx, ry, rz, n, seed=1, top_only=True):
         e = math.asin(v) if top_only else math.asin(2 * v - 1)
         pts.append((cx + rx * math.cos(e) * math.cos(a), cy + ry * math.cos(e) * math.sin(a), cz + rz * math.sin(e)))
     return pts
+
+
+# N1b, the painted look (make_brood_materials.py): the hue each kind's lit flesh and glass glow in. Big surfaces keep
+# their glow near half the lamp's hue, so daylight doesn't wash them to white.
+SHELL = {
+    "queen": (0.20, 0.14, 0.34),   # lilac egg shells (paler bloomed pink in the sun)
+    "violet": (0.30, 0.16, 0.42),
+    "gold": (0.42, 0.30, 0.16),
+    "teal": (0.12, 0.34, 0.30),
+}
+VEIN = {
+    "queen": (0.06, 0.75, 0.62),   # teal veins over violet
+    "violet": (0.55, 0.20, 1.10),
+    "gold": (1.10, 0.62, 0.15),
+    "teal": (0.06, 0.75, 0.62),
+}
+
+
+def painted(m, glow):
+    """Declare the painted family for `glow`: `egg_<c>` (an egg pod or sac lit from within, veined), `glass_<c>` (a
+    glass sac or wing membrane: translucent, glowing at the rim, veined), and `opal` (iridescent opal chitin: quills,
+    crystals, flecks). Returns their names."""
+    c = GLOW[glow]
+    half = tuple(v * 0.5 for v in c)
+    m.material("egg_" + glow, parent="broodEgg", color=SHELL[glow], roughness=0.18, emissive=half,
+               params={"VeinColor": VEIN[glow], "PatternScale": 0.035})
+    m.material("glass_" + glow, parent="broodGlass", blend="translucent", double_sided=True, color=SHELL[glow],
+               roughness=0.08, emissive=tuple(v * 0.35 for v in c), opacity=0.22,
+               params={"VeinColor": tuple(v * 0.6 for v in VEIN[glow]), "PatternScale": 0.05})
+    m.material("opal", parent="broodOpal", color=(0.10, 0.09, 0.13), metallic=0.35, roughness=0.22,
+               params={"OpalGain": 1.4, "PatternScale": 0.05})
+    return "egg_" + glow, "glass_" + glow, "opal"

@@ -682,12 +682,13 @@ class Model:
         return _catalog_materials(self._doc)
 
     def material(self, name, parent=None, color=None, metallic=0.0, roughness=0.5, emissive=None, team=(),
-                 blend="opaque", opacity=None, double_sided=False):
+                 blend="opaque", opacity=None, double_sided=False, params=None):
         """Declare a material. With no `parent` it is a name that already exists in the catalog (hullLight,
         hullMid, hullDark, hazard, team, chrome, glowCold, glowRed, ...), reused as it is. With `parent`
         ('hull' lit, 'emissive' unlit lamp, 'additive') a new instance is made on first write: color is the
         base colour (linear rgb), emissive the lamp colour (linear, may be above 1), team the flags
-        (TeamTint, TeamGlow). The key is a hash of the description, so the same description is one
+        (TeamTint, TeamGlow). The brood's painted masters are parents too ('broodEgg', 'broodOpal', 'broodGlass':
+        make_brood_materials.py); `params` sets their own parameters ({name: rgb tuple or scalar}). The key is a hash of the description, so the same description is one
         instance in every model."""
         if parent is None:
             known = self._known()
@@ -699,6 +700,8 @@ class Model:
         spec = {"name": name, "parent": parent, "color": list(color or (1, 1, 1)), "metallic": metallic,
                 "roughness": roughness, "emissive": list(emissive) if emissive else None, "team": sorted(team),
                 "blend": blend, "opacity": opacity, "doubleSided": double_sided}
+        if params:
+            spec["params"] = {k: list(v) if isinstance(v, (tuple, list)) else v for k, v in params.items()}
         key = hashlib.md5(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:12]
         path = A.mi_asset_path({"name": name, "key": key})
         self._materials[name] = Material(name, key, A.object_path(path), blend, sorted(team), spec)
@@ -834,6 +837,9 @@ def log(msg):
         print("[modelkit] " + msg)
 
 
+BROOD_PARENTS = ("broodEgg", "broodOpal", "broodGlass")
+
+
 def make_material_instance(mat, masters, make_materials):
     """A new MI_<name>_<key> through make_materials.make_instance, unless it exists."""
     path = mat.instance.split(".")[0]
@@ -851,7 +857,26 @@ def make_material_instance(mat, masters, make_materials):
         desc["opacity"] = s["opacity"]
     if s["doubleSided"]:
         desc["doubleSided"] = True
-    make_materials.make_instance(desc, set(s["team"]), masters)
+    mi = make_materials.make_instance(desc, set(s["team"]), masters)
+    if s["parent"] in BROOD_PARENTS:
+        import make_brood_materials
+        master = make_brood_materials.ensure()[make_brood_materials.MASTERS[s["parent"]]]
+        MEL = unreal.MaterialEditingLibrary
+        MEL.set_material_instance_parent(mi, master)
+        # The values again on the new parent (the overrides of a parameter it lacks are dropped).
+        own = {"BaseColorTint": s["color"], "Metallic": s["metallic"], "Roughness": s["roughness"]}
+        if s["emissive"]:
+            own["EmissiveColor"] = s["emissive"]
+        if s["opacity"] is not None:
+            own["Opacity"] = s["opacity"]
+        own.update(s.get("params") or {})
+        for k, v in own.items():
+            if isinstance(v, list):
+                MEL.set_material_instance_vector_parameter_value(mi, k, unreal.LinearColor(*(list(v) + [1.0])[:4]))
+            else:
+                MEL.set_material_instance_scalar_parameter_value(mi, k, float(v))
+        MEL.update_material_instance(mi)
+        unreal.EditorAssetLibrary.save_loaded_asset(mi)
     log("material instance " + path)
 
 

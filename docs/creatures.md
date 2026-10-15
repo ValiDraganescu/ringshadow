@@ -689,6 +689,15 @@ scale (the Prospector is the right-hand model in both):
 - [lineup.jpg](creatures/lineup.jpg): all four and the Prospector
 - [lineup-small.jpg](creatures/lineup-small.jpg): without the Matriarch
 
+N1b painted them (`Tools/Editor/make_brood_materials.py`): the egg pods and
+sacs are a lit glassy shell over a glow from inside, deepest through the middle,
+crossed by teal veins; opal chitin (quills, crystals, the ore crusted on the
+shells) shifts teal, violet and gold with the view; wings and the Lodeback's
+sac are tinted glass, lit at the rim, with what is inside showing through. The
+Matriarch's crown is dark spines with a lit violet core, a violet membrane
+between them and teal tips; her nest is a mound in three tiers of plates with
+ore veins glowing in the seams, opal crystals and clusters of pods.
+
 They are blockout-grade models from the concepts (pipeline steps 0, 1, 6, 7);
 the turnaround painting and refinement (steps 2 to 5) can follow when N2 shows
 them in the game's own camera.
