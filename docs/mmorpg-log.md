@@ -798,3 +798,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N B2 on the new start region: 8,334 ore/h at level 1 (was 7,884), 14,166 at level 20; one pilot mines a region dry in ~75 min (50 at level 20), then 1,080/h regrowth region-wide; the pace model stands.
 - I the realm's all-in bench reads x2.6-2.7 from level 10 because the canyon cycle pays 5,801 XP/h (B2: 4,549); from the canyons' later changes, not E1; to revisit.
 - N E1 shots e1-01..06; core 511, net 102, server 351; clean checkout; default and G2 shot sets restaged.
+- T web: the scarcity post live at /blog/scarcity (13aae20).
