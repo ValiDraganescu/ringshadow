@@ -799,3 +799,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I the realm's all-in bench reads x2.6-2.7 from level 10 because the canyon cycle pays 5,801 XP/h (B2: 4,549); from the canyons' later changes, not E1; to revisit.
 - N E1 shots e1-01..06; core 511, net 102, server 351; clean checkout; default and G2 shot sets restaged.
 - T web: the scarcity post live at /blog/scarcity (13aae20).
+- T Q3 merged 582a6b9: the idle soak, soak.py run|catchup|table, build/soak-save [days], an idle stats line every 5 min, three fixes with tests; core 511, net 102, server 354, clean checkout.
+- T Q3 soak 2 h idle, The First: save 140 KB flat, WAL <=4 MB (checkpointed at min 70), RSS <=23 MB (compressed to 10-13 MB from min 40), CPU 2.9 s (0.04%), idle call mean 0.05-0.57 ms max 23 ms, ledger 11 rows, log +2.2 KB/h.
+- T Q3 catch-up, down 30 h: moved 24 h (the cap) in 4.9 ms, start 0.75 s, mercenaries a day at most, frontier 0, five weeks told once, ledger +2 rows; passes on E1's head too.
+- D Q3: an empty realm week is one ledger row (its time the last); past the 120-row cap the routine rows (frontier deeds, weeks) go first, the mercenaries', canyons' and Matriarch rows stay; idle saves every 60 s (WAL 10 -> 1 KB/s); server.log moves to .1 past 8 MB at start.
+- I Q3: starfalls kept grow without bound while the world idles (a fall's deposit stays until mined, nobody mines off line): 95 a day before E1, 36 a day on E1, the save +8 KB a day; idle cost flat (0.065 ms) over 36 projected world days; to bound (no new fall while N stand unmined, or a fall's deposit fades after a few days).
+- N M10 complete: W5, X2, S4, N4, U2, E1, R3, Q3 all merged; paused at the user's word 2026-10-15.
