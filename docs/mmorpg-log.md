@@ -596,3 +596,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I W4 regions still read as rectangular bowls (walls along cell edges) → W4b.
 - T W4b (irregular outlines) next for wt1, then Z1.
 - N Correction: W4 crossing pace 4.55–4.95 vs 4.63 (−2% to +7%), not ±4%.
+- T N1b done 46256b2, 16a7aca, 2328694: brood masters, painted gatling, turrets, tracers, chevrons.
+- N N1b frame time on W4: mean 10.52 ms, p95 11.16, GPU p50 10.42 (before 10.42/11.65/10.12).
+- I Lamp wash cause: M_Emissive adds base colour; white base → white lamps.
+- I W4 regression: nest mound not drawn (terrain doodad batches) → W4b.
+- I N3/N2 shot checks flaky (bugs out of interest at 20 cells) on old models too.
+- I Corner turrets still small from the usual camera.
