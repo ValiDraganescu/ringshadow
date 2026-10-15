@@ -656,3 +656,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N M8 showcase page with the reel: https://claude.ai/artifact/2HzdMomE91pfyQApz7N3r2
 - I User: whether to post the M8 reel (private until then).
 - D User: by day the line of sight is the whole region (zones are small) → S3.
+- D Manager: M9 'a living frontier': P1 frontier pilots, Z3 canyons, A2 sound, B2 balance, K3 packaged build.
+- D Manager: frontier pilots follow the pilot's rules; a packaged build is not a release.
+- T P1 (frontier pilots) next for wt1.
