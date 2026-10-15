@@ -38,5 +38,5 @@ TEST(snapshot_sky_carries_the_human_pilots_and_their_flights) {
     ASSERT_TRUE(p.has_value());
     ASSERT_TRUE(p->snapshot.sky.has_value());
     EXPECT_TRUE(*p->snapshot.sky == sky);
-    EXPECT_TRUE(kProtocolVersion >= uint16_t(30));
+    EXPECT_TRUE(kProtocolVersion >= uint16_t(34));
 }
