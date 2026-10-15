@@ -218,13 +218,23 @@ bool SAcWorldMap::PickPad(const FString& RegionId, const FString& PadName)
 		if (Text(G.id) != RegionId) continue;
 		for (int32 P = 0; P < (int32)G.pads.size(); ++P)
 		{
-			if (Text(G.pads[P].name) != PadName || !Pickable(R, P)) continue;
+			if (Text(G.pads[P].name) != PadName) continue;
+			// The rule and its words (atlas::padPick): a refusal says why.
+			const ac::net::atlas::PadPick Rule = ac::net::atlas::padPick(*Info.World, Info.Seen, R, P);
+			if (!Rule.ok)
+			{
+				SetRefusal(Text(Rule.why));
+				UE_LOG(LogAutocraft, Log, TEXT("world map: no pick: %s"), *Text(Rule.why));
+				return false;
+			}
 			Pick = FPick{R, P};
 			Refusal.Reset();
 			Invalidate(EInvalidateWidgetReason::Paint);
+			UE_LOG(LogAutocraft, Log, TEXT("world map: pick %s %s"), *RegionId, *PadName);
 			return true;
 		}
 	}
+	UE_LOG(LogAutocraft, Log, TEXT("world map: no pick: no pad %s in %s"), *PadName, *RegionId);
 	return false;
 }
 
@@ -256,7 +266,7 @@ bool SAcWorldMap::Pickable(const int32 Region, const int32 Pad) const
 	if (!Info.World || Region < 0 || Region >= (int32)Info.World->regions.size()) return false;
 	const ac::net::WorldMessage::Region& G = Info.World->regions[Region];
 	if (Pad < 0 || Pad >= (int32)G.pads.size() || !G.pads[Pad].building) return false;
-	return Region == (int32)Info.World->here || Info.Seen.count(G.id) > 0;
+	return ac::net::atlas::padPick(*Info.World, Info.Seen, Region, Pad).ok || (Region == (int32)Info.World->here && G.pads[Pad].building);
 }
 
 bool SAcWorldMap::PickIsHere() const
@@ -314,10 +324,23 @@ bool SAcWorldMap::MovePick(const int32 DX, const int32 DY)
 		}
 	}
 	if (Best.Region == INDEX_NONE) Best = Wide;
-	if (Best.Region == INDEX_NONE) return false;
+	if (Best.Region == INDEX_NONE)
+	{
+		// The keys as a click: why nothing comes up.
+		bool bElsewhere = false;
+		for (int32 R = 0; R < (int32)Info.World->regions.size(); ++R)
+			for (int32 P = 0; P < (int32)Info.World->regions[R].pads.size(); ++P)
+				bElsewhere = bElsewhere || (R != (int32)Info.World->here && Pickable(R, P));
+		const FString Why = bElsewhere ? FString(TEXT("No Landing Pad that way")) : Text(ac::net::atlas::onlyHere);
+		SetRefusal(Why);
+		UE_LOG(LogAutocraft, Log, TEXT("world map: no pick: %s"), *Why);
+		return false;
+	}
 	Pick = Best;
 	Refusal.Reset();
 	Invalidate(EInvalidateWidgetReason::Paint);
+	const ac::net::WorldMessage::Region& G = Info.World->regions[Pick.Region];
+	UE_LOG(LogAutocraft, Log, TEXT("world map: pick %s %s"), *Text(G.id), *Text(G.pads[Pick.Pad].name));
 	return true;
 }
 

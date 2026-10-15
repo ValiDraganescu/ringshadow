@@ -422,3 +422,33 @@ TEST(atlas_frontier_pilots) {
     EXPECT_EQ(it->paint, int32_t(3));
     EXPECT_TRUE(it->region == 3 && distance(it->at, placeOf(places, 3)->fromCells(Vec2(40, 30))) < 1e-9);
 }
+
+/// The map's pick rule (the user, 2026-10-15: "I can't pick a landing on the
+/// map"): a Landing Pad of the realm in a region been to is picked; a region
+/// file's own pad, a region not discovered, a region with no Landing Pad, and
+/// a realm with its only Landing Pad here are refused, each with its line.
+TEST(atlas_pad_pick_rule_and_its_refusals) {
+    WorldMessage w = firstReach();
+    // The user's realm: one Landing Pad, here at Prospect Landing (a frontier
+    // builder's), and every region's own pad.
+    w.regions[4].pads.push_back(WorldMessage::Pad{"Landing Pad 1", Vec2(60, 44), StructureKind::landingPad});
+    w.regions[3].pads = {WorldMessage::Pad{"landing", Vec2(72, 48), std::nullopt}};
+    w.regions[1].pads = {WorldMessage::Pad{"landing", Vec2(72, 48), std::nullopt}};
+    const std::set<std::string> seen{"start", "rust-hollow", "cold-fork"};
+    PadPick p = padPick(w, seen, 3, 0);
+    EXPECT_TRUE(!p.ok && p.why == std::string(onlyHere));
+    EXPECT_TRUE(!padPick(w, seen, 4, 1).ok);
+    // A Landing Pad in Rust Hollow (been to): picked; its own pad refused.
+    w.regions[3].pads.push_back(WorldMessage::Pad{"Landing Pad 1", Vec2(40, 30), StructureKind::landingPad});
+    EXPECT_TRUE(padPick(w, seen, 3, 1).ok);
+    EXPECT_TRUE(padPick(w, seen, 4, 1).ok);
+    p = padPick(w, seen, 3, 0);
+    EXPECT_EQ(p.why, std::string("That is rust-hollow's own pad: the Dropship lands only on a Landing Pad"));
+    // Cold Fork: been to, no Landing Pad.
+    p = padPick(w, seen, 1, 0);
+    EXPECT_EQ(p.why, std::string("No Landing Pad in cold-fork: build one there first"));
+    // Glass Flats: a Landing Pad, never been there.
+    w.regions[2].pads = {WorldMessage::Pad{"Landing Pad 1", Vec2(40, 30), StructureKind::landingPad}};
+    p = padPick(w, seen, 2, 0);
+    EXPECT_EQ(p.why, std::string("Not discovered yet: glass-flats. Go there on foot first"));
+}

@@ -78,6 +78,11 @@ FString FAcMmoClient::ServerProgram()
 
 FString FAcMmoClient::ServerLog()
 {
+	// A run with a world of its own (-AcSaveDir, -AcMmoDir, the shots, a flow
+	// test: every hidden run) logs beside it, never into the player's log.
+	const FString Own = Directory();
+	const FString Players = FPaths::Combine(FPlatformProcess::UserHomeDir(), TEXT("Library/Application Support/Autocraft/Unreal/mmo"));
+	if (Own != Players) return FPaths::Combine(Own, TEXT("server.log"));
 	return FPaths::Combine(FPlatformProcess::UserHomeDir(), TEXT("Library"), TEXT("Logs"), TEXT("Autocraft"), TEXT("server.log"));
 }
 
@@ -350,6 +355,8 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Token.push_back(Hex[B & 15]);
 	}
 	std::vector<std::string> Args = {"--world", Utf8(WorldFile), "--bind", "127.0.0.1", "--port", "0"};
+	// Its log: the player's for the player's world, else beside the run's own.
+	Args.insert(Args.end(), {"--log", Utf8(ServerLog())});
 	// S2: detached, it outlives the game (its run file beside the save);
 	// attached, it ends with this process.
 	if (bDetached) Args.push_back("--detached");

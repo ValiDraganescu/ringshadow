@@ -514,6 +514,23 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
     return out;
 }
 
+PadPick padPick(const WorldMessage& world, const std::set<std::string>& seen, int64_t region, int64_t pad) {
+    if (region < 0 || region >= int64_t(world.regions.size())) return {false, "No such region"};
+    const WorldMessage::Region& r = world.regions[size_t(region)];
+    if (pad < 0 || pad >= int64_t(r.pads.size())) return {false, "No such pad"};
+    // No Landing Pad of the realm anywhere but here: nothing to fly to yet.
+    bool elsewhere = false;
+    for (size_t k = 0; k < world.regions.size(); k++)
+        if (int64_t(k) != world.here)
+            for (const WorldMessage::Pad& q : world.regions[k].pads) elsewhere = elsewhere || q.building.has_value();
+    if (!elsewhere) return {false, onlyHere};
+    if (region != world.here && !seen.count(r.id)) return {false, "Not discovered yet: " + r.name + ". Go there on foot first"};
+    if (r.pads[size_t(pad)].building) return {true, ""};
+    const bool realm = std::any_of(r.pads.begin(), r.pads.end(), [](const WorldMessage::Pad& q) { return q.building.has_value(); });
+    if (!realm) return {false, "No Landing Pad in " + r.name + ": build one there first"};
+    return {false, "That is " + r.name + "'s own pad: the Dropship lands only on a Landing Pad"};
+}
+
 std::optional<size_t> pick(const std::vector<Item>& items, const View& view, Vec2 screen, Vec2 point, double reach) {
     std::optional<size_t> best;
     double bestEdge = 0;

@@ -307,6 +307,13 @@
 //   11 the world map on Cold Fork: the zone's ring and its state
 //   12 the Journal: the zone's state in its header
 //
+// -AcMmoShotsMapPick (the dev rig, the chain done): the world map's pad
+// pick and its refusals (the user, 2026-10-15: "I can't pick a landing on the
+// map"): a Landing Pad only here, a click on Rust Hollow's own pad (DIR/
+// mappick-01-only-here.png: "Only one Landing Pad in the realm, here…"), then
+// a Landing Pad in Rust Hollow (been to): its own pad refused (02, "That is
+// Rust Hollow's own pad…"), its Landing Pad picked (03).
+//
 // -AcMmoShotsA2 (-nosound; the dev rig, the chain done): the siege heard
 // (docs/music.md "Siege layers"), checked from its cue timeline, never
 // played aloud: a wave at The Fork (the wave layer up, the radio ducked,
@@ -1078,8 +1085,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
 				FCommandLine::Append(TEXT(" -AcMmoDevSeen=start,cold-fork,glass-flats,tern-ridge,slag-pockets,brine-pans,dust-terraces,rust-hollow,ashen-shelf"));
 		}
-		// -AcMmoShotsA2: the chain done, the dev rig (its Citadel by the pad).
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsA2")))
+		// -AcMmoShotsA2 and MapPick: the chain done, the dev rig (its Citadel by the pad).
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsA2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsMapPick")))
 		{
 			if (int32 Step = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoFirstStep="), Step)) FCommandLine::Append(TEXT(" -AcMmoFirstStep=0"));
 			if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1175,6 +1182,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1"))) T.Phase = 2300;
 			// -AcMmoShotsZ2: the canyon game (2500-2525).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))) T.Phase = 2500;
+			// -AcMmoShotsMapPick: the map's pad pick and refusals (3000-3008).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsMapPick"))) T.Phase = 3000;
 			// -AcMmoShotsA2: the siege heard (2900-2916).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsA2"))) T.Phase = 2900;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
@@ -5149,6 +5158,91 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Shots.Saved + Shots.Skipped >= 12, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
+	// MARK: -AcMmoShotsMapPick
+	case 3000:
+	case 3001:
+	case 3002:
+	case 3003:
+	case 3004:
+	case 3005:
+	case 3006:
+	case 3007:
+	case 3008:
+	{
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		switch (T.Phase)
+		{
+		case 3000:
+			if (!(Seated() && Since() > 3.0))
+			{
+				TimedOut(TEXT("mappick: seated"), 120);
+				return;
+			}
+			// A Landing Pad here only, and Rust Hollow been to.
+			Check(Mmo->DevClock(TEXT("ferry pad here\nferry seen")), TEXT("mappick: a Landing Pad here, every region seen"));
+			Advance();
+			return;
+		case 3001:
+			if (Since() < 2.0) return;
+			Check(OpenWorldMap(), TEXT("mappick: the world map opened"));
+			Advance();
+			return;
+		case 3002:
+			if (!Map || Since() < 1.5) return;
+			if (!W4Set)
+			{
+				W4Set = true;
+				Check(Map->ShowRegion(TEXT("start"), 1.8), TEXT("mappick: the map round Prospect Landing"));
+				// A click on Rust Hollow's own pad.
+				Check(!Map->PickPad(TEXT("rust-hollow"), TEXT("landing")), TEXT("mappick: Rust Hollow's own pad refused"));
+				return;
+			}
+			if (Since() < 2.5) return;
+			W4Set = false;
+			Check(Map->RefusalText().StartsWith(TEXT("Only one Landing Pad in the realm")),
+				FString::Printf(TEXT("mappick: the refusal line says so (%s)"), *Map->RefusalText()));
+			Shoot(TEXT("mappick-01-only-here"), TEXT("a click on another region's own pad, only one Landing Pad in the realm: the refusal line"));
+			return;
+		case 3003:
+			if (Map) ToggleWorldMap();
+			Check(Mmo->DevClock(TEXT("ferry pad rust-hollow")), TEXT("mappick: a Landing Pad in Rust Hollow"));
+			Advance();
+			return;
+		case 3004:
+			if (Since() < 2.0) return;
+			Check(OpenWorldMap(), TEXT("mappick: the world map again"));
+			Advance();
+			return;
+		case 3005:
+			if (!Map || Since() < 1.5) return;
+			if (!W4Set)
+			{
+				W4Set = true;
+				Map->ShowRegion(TEXT("rust-hollow"), 1.6);
+				Check(!Map->PickPad(TEXT("rust-hollow"), TEXT("landing")), TEXT("mappick: Rust Hollow's own pad refused again"));
+				return;
+			}
+			if (Since() < 2.5) return;
+			W4Set = false;
+			Check(Map->RefusalText().Contains(TEXT("own pad")), FString::Printf(TEXT("mappick: the own pad's line (%s)"), *Map->RefusalText()));
+			Shoot(TEXT("mappick-02-own-pad"), TEXT("Rust Hollow's own pad: the Dropship lands only on a Landing Pad"));
+			return;
+		case 3006:
+			if (!Map) return;
+			Check(Map->PickPad(TEXT("rust-hollow"), TEXT("Landing Pad 1")), TEXT("mappick: Rust Hollow's Landing Pad picked"));
+			Advance();
+			return;
+		case 3007:
+			if (Since() < 1.5) return;
+			Shoot(TEXT("mappick-03-picked"), TEXT("Rust Hollow's Landing Pad picked: FLY"));
+			return;
+		default:
+			if (Map) ToggleWorldMap();
+			Check(Shots.Saved >= 3, FString::Printf(TEXT("%d pictures in %s"), Shots.Saved, *Shots.Dir));
+			Finish();
+			return;
+		}
+	}
 	// MARK: -AcMmoShotsA2
 	case 2900:
 	case 2901:

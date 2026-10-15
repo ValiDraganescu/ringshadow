@@ -186,6 +186,22 @@ struct Input {
     std::vector<ZoneMark> zones;
 };
 
+/// Whether pad `pad` of region `region` (indices in the World message) may be
+/// picked to fly to: a Landing Pad or the Spacedock of the realm (`building`)
+/// in the pilot's region or one it has been to (`seen`). `why` when not, one
+/// line for the map's refusal: "Not discovered yet: <region>. Go there on foot
+/// first", "No Landing Pad in <region>: build one there first" (a region file's
+/// pad, none of the realm's there), "That is <region>'s own pad: the Dropship
+/// lands only on a Landing Pad" (a region file's pad beside the realm's);
+/// with no Landing Pad of the realm outside the pilot's region, `onlyHere`.
+struct PadPick {
+    bool ok = false;
+    std::string why;
+};
+/// The refusal when the realm has no Landing Pad outside the pilot's region.
+inline constexpr const char* onlyHere = "Only one Landing Pad in the realm, here. Walk to another region and build one (B) to fly between them.";
+AUTOCRAFTNET_API PadPick padPick(const WorldMessage& world, const std::set<std::string>& seen, int64_t region, int64_t pad);
+
 /// Everything to draw, in `Kind` order.
 AUTOCRAFTNET_API std::vector<Item> items(const Input& in, const std::vector<Place>& places);
 
