@@ -790,3 +790,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I hidden_run.py --app now isolates the packaged config (-UserDir); earlier K3 runs may have written the user's packaged config.
 - T N4 follow-up 14bd80b: the hunt's toasts read whole ("The Matriarch is down · the hardest blows: you").
 - N U2: core 511, net 102, server 341; clean checkout.
+- D Q3: the catch-up books mercenaries only (24 h cap); frontier pilots work only while the server runs (a world day of their idle work costs ~64 s CPU); start stays under 1 s.
