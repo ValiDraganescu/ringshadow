@@ -248,6 +248,12 @@ wallet; the blueprint copies; the supplies up to their stack. The news is
 - "No such mission in your Journal"
 - "That mission is done already"
 
+**Dev and shots:** the dev control's `missions here` (`devMissions`) draws
+the first pilot's board again (its own draws, other dice; the board's day
+kept) until an easy survey or hold in its region is on it. `-AcMmoShotsK2`
+sends it first (Q2): a new pilot's board comes from its key's dice, and at
+the dev rig's home a quarter of them had neither.
+
 **Params:** `WorldParams::missions` (on), `missionSeed` (0: the world's id)
 and `huntMissions` (off until N2).
 

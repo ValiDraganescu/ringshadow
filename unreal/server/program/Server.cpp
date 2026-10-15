@@ -152,6 +152,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devCanyon(line));
             continue;
         }
+        // The Citadel board (WorldMap::devMissions): `missions here`.
+        if (line.rfind("missions", 0) == 0) {
+            said.push_back(world_.devMissions(line));
+            continue;
+        }
         // The Matriarch's scenes (WorldMap::devMatriarch): `matriarch here|near|roar|calm|slam|hurt|down|back|siege`.
         if (line.rfind("matriarch", 0) == 0) {
             said.push_back(world_.devMatriarch(line));

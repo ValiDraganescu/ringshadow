@@ -1046,6 +1046,9 @@ public:
     /// one unpaid; `goal level N` gives the first pilot level N's XP and
     /// passes the goals under it unpaid.
     std::string devGoal(const std::string& line);
+    /// Dev and shots (K2, Q2): `missions here` draws the first pilot's board
+    /// again until an easy survey or hold in its region is on it.
+    std::string devMissions(const std::string& line);
 
     // MARK: Mercenaries (H2, `WorldMercs`; WorldMercs.cpp)
 

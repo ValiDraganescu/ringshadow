@@ -7,7 +7,8 @@
 //                    [--save file]  (a world's save: loaded at start, written every 5 s and on stop)
 //                    [--dev-xp xp]  (dev, tests: a new pilot's Prospector earns that much XP at once)
 //                    [--dev-blueprints 1]  (dev, tests, shots: a new pilot has every blueprint)
-//                    [--dev-seen a,b]  (dev, shots: a new pilot has been to these regions)
+//                    [--dev-//                                           `ferry pad [here|REGION]|seen|go REGION|mh N`, or the Citadel board's:
+//                                           `missions here`; Server::devControl) a,b]  (dev, shots: a new pilot has been to these regions)
 //                    [--dev-rig 1]  (dev, shots: a new pilot owns a finished Citadel, Foundry and Lab, its rig stocked)
 //                    [--dev-hydrogen mh]  (dev, tests, shots: a new pilot's wallet gets that much MH at once)
 //                    [--first-step n]  (dev, shots: a new pilot starts the first ten minutes at step n, 1-6; 0 none;
@@ -20,7 +21,8 @@
 //                    [--dev-control file]  (dev, shots: read 4 times a second, then removed; each line moves the
 //                                           world's clock at once: `clock T`, `hour H`, `ahead S`, or stages a Brood
 //                                           scene: `brood linger|attack|dive|lodeback|raid|clear`, or the Dropship's:
-//                                           `ferry pad [here|REGION]|seen|go REGION|mh N`; Server::devControl)
+//                                           `ferry pad [here|REGION]|seen|go REGION|mh N`, or the Citadel
+//                                           board's: `missions here`; Server::devControl)
 //                    [--brood 0|1]  (the Brood's director spawns bugs; on unless 0)
 //                    [--dev-down s]  (dev, shots: the save counts as written s seconds earlier: the start catches
 //                                     the world up on that much more, H2's mercenaries' work with it)

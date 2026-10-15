@@ -504,3 +504,30 @@ TEST(missions_v10_save_migrates_and_draws) {
     EXPECT_EQ(w.board(a).size(), size_t(3 * WorldMissions::offers));
     EXPECT_TRUE(w.journal(a).empty());
 }
+
+/// The K2 pictures' board (`missions here`, Q2): a new pilot at the dev
+/// rig's home (its Citadel: haul offers too) has an easy survey or hold in
+/// its region only by its key's dice; the dev line draws it again until one
+/// is, for any key.
+TEST(missions_dev_here_puts_an_easy_point_offer_here) {
+    int before = 0;
+    for (int k = 0; k < 16; k++) {
+        WorldParams p = params();
+        p.devRig = true;
+        WorldMap w(first(), p);
+        ASSERT_TRUE(w.seat(a, "q2-key-" + std::to_string(k)) == WorldMap::Seated::fresh);
+        w.step();
+        const std::string here = "start";
+        auto has = [&] {
+            for (const CM& m : w.board(a))
+                if (m.tier == Tier::easy && (m.kind == Kind::survey || m.kind == Kind::hold) && m.region == here) return true;
+            return false;
+        };
+        before += has() ? 1 : 0;
+        const std::string said = w.devMissions("missions here");
+        EXPECT_TRUE(said.find("an easy survey or hold in start") != std::string::npos);
+        EXPECT_TRUE(has());
+        EXPECT_EQ(w.board(a).size(), size_t(3 * WorldMissions::offers));
+    }
+    std::printf("  %d of 16 new pilots' boards had one before the dev line\n", before);
+}

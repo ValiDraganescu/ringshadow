@@ -843,6 +843,27 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Shots.StallAt = U ? FVector2D(U->position.x, U->position.y) : FVector2D::ZeroVector;
 		Shots.StallSince = Now;
 	};
+	// To `P`, round the realm's Citadel when it stands in the way (Q2: since
+	// W4b the dev rig's Prospector unloads on its west side and the nearest
+	// ore lies behind it; the B1 and C1 sets drove into its wall).
+	auto RouteRound = [&](const ac::Vec2 P) {
+		const ac::Structure* C = S && U ? CitadelOf(*S) : nullptr;
+		const ac::Vec2 A = U ? U->position : P;
+		const ac::Vec2 D = P - A;
+		const double L = ac::distance(A, P);
+		const double R = C ? ac::Rules::radius(C->kind) + 2.0 : 0.0;
+		const double T = C && L > 0 ? FMath::Clamp(ac::dot(C->position - A, D) / (L * L), 0.0, 1.0) : 0.0;
+		if (!C || L <= 0 || ac::distance(A + D * T, C->position) >= R)
+		{
+			Route({FVector2D(P.x, P.y)});
+			return;
+		}
+		// Past it on the side the Prospector stands, square to the way.
+		ac::Vec2 N(-D.y / L, D.x / L);
+		if (ac::dot(A - C->position, N) < 0) N = N * -1.0;
+		const ac::Vec2 W = C->position + N * (R + 1.0);
+		Route({FVector2D(W.x, W.y), FVector2D(P.x, P.y)});
+	};
 	auto Stalled = [&](const TCHAR* What) {
 		Check(false, FString::Printf(TEXT("%s: stalled %s, heading for %s"), What, *Where(),
 			Shots.Route.IsValidIndex(Shots.RouteAt) ? *Shots.Route[Shots.RouteAt].ToString() : TEXT("-")));
@@ -3236,7 +3257,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			return;
 		}
 		Shots.Patch = Best;
-		Route({FVector2D(S->patches[Best].position.x, S->patches[Best].position.y)});
+		RouteRound(S->patches[Best].position);
 		Advance();
 		return;
 	}
@@ -3403,7 +3424,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Mmo->Progress()->taxPercent == ac::Progression::realmTaxPercent,
 			FString::Printf(TEXT("c1: the tax told: %lld%%"), (long long)Mmo->Progress()->taxPercent));
 		Shots.Patch = Best;
-		Route({FVector2D(S->patches[Best].position.x, S->patches[Best].position.y)});
+		RouteRound(S->patches[Best].position);
 		Advance();
 		return;
 	}
@@ -5312,6 +5333,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (S && CitadelOf(*S) && Mmo->Progress() && Mmo->Progress()->board.size() == 6 && Since() > 3.0)
 		{
 			Check(AtRealmCitadel(), TEXT("k2: the pilot stands at the realm's Citadel"));
+			// A new pilot's board is drawn from its key's dice: an easy survey
+			// or hold here only by chance (Q2). The server draws it again.
+			Check(Mmo->DevClock(TEXT("missions here")), TEXT("k2: the server draws the board with an offer here"));
 			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("k2: H opens the Citadel screen"));
 			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
 			{

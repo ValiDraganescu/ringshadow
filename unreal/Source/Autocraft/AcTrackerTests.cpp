@@ -88,6 +88,7 @@ bool FAcTrackerWritesTest::RunTest(const FString&)
 	FTempDb Db;
 	const ac::GameState State = BigGame();
 	int32 Kinds = 0;
+	int32 Levels = 0;
 	{
 		FAcTracker Tracker(Db.Path);
 		const ac::Session Session = SessionOf(State, "GAME-A");
@@ -95,6 +96,7 @@ bool FAcTrackerWritesTest::RunTest(const FString&)
 		ac::TrackedGame Game = ac::TrackedGame::make(Session, State, Tracker.Build(), Tracker.OS(), ac::Date::now());
 		const double MakeMs = (FPlatformTime::Seconds() - T0) * 1000.0;
 		Kinds = (int32)Game.kinds.size();
+		Levels = (int32)Game.levels.size();
 		AddInfo(FString::Printf(TEXT("rows built on the game thread: %.3f ms (%d players, %d kinds, %d levels)"), MakeMs,
 			(int32)Game.players.size(), Kinds, (int32)Game.levels.size()));
 		Tracker.Write(Game);
@@ -120,7 +122,8 @@ bool FAcTrackerWritesTest::RunTest(const FString&)
 	TestEqual(TEXT("one game, written in order: the last write stands"), FString(UTF8_TO_TCHAR(Cell(*Store, "SELECT result FROM games").c_str())), FString(TEXT("lost")));
 	TestEqual(TEXT("one games row"), FString(UTF8_TO_TCHAR(Cell(*Store, "SELECT COUNT(*) FROM games").c_str())), FString(TEXT("1")));
 	TestEqual(TEXT("its kinds"), FString(UTF8_TO_TCHAR(Cell(*Store, "SELECT COUNT(*) FROM kinds").c_str())), FString::FromInt(Kinds));
-	TestEqual(TEXT("its levels"), FString(UTF8_TO_TCHAR(Cell(*Store, "SELECT COUNT(*) FROM levels").c_str())), FString::FromInt(Kinds * 9));
+	// Every row the game made (the Brood's kinds have no levels: not 9 a kind).
+	TestEqual(TEXT("its levels"), FString(UTF8_TO_TCHAR(Cell(*Store, "SELECT COUNT(*) FROM levels").c_str())), FString::FromInt(Levels));
 	TestEqual(TEXT("its players"), FString(UTF8_TO_TCHAR(Cell(*Store, "SELECT COUNT(*) FROM players").c_str())), FString::FromInt((int32)State.players.size()));
 	// The engine's SQLite is built for a custom platform without shared memory,
 	// so a WAL request may stay in the rollback journal: the store takes the
