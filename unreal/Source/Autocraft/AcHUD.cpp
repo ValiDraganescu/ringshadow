@@ -1,5 +1,6 @@
 #include "AcHUD.h"
 
+#include "AcDaylight.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
 #include "AcMmo.h"
@@ -7,16 +8,19 @@
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
+#include "AcModelCatalog.h"
 #include "AcWorldRenderer.h"
 #include "SAcResourceBar.h"
 #include "SAcRoot.h"
 #include "SAcScoreboard.h"
+#include "TagSight.h"
 
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Slate/SRetainerWidget.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
@@ -230,9 +234,48 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 
 	// H2: the mercenaries here, any pilot's: their orange paint and a tag
 	// over each one drawn ("MERC · FLINT"); P1's frontier pilots in theirs.
+	// A tag only over a unit the pilot sees (TagSight.h): drawn, in its
+	// sight (driving: the night's circle, the day's region), with no ground
+	// or building between the camera and the unit's head.
 	TArray<TPair<FString, FVector2f>> Tags;
 	TMap<int64, int32> Paint;
 	UAcWorldRenderer* Renderer = UAcWorldRenderer::Get(this);
+	const ac::GameState& Shown = *Frame.State;
+	std::vector<ac::TagSight::Block> Blocks;
+	if (Renderer)
+		for (const ac::Structure& B : Shown.structures)
+		{
+			const FAcModelInfo* Model = Renderer->ModelOf(B.id);
+			const double Base = Terrain ? Terrain->FieldHeight(B.position) : 0.0;
+			const double Top = Model && Model->Bounds.IsValid ? AcSpace::ToCells(Model->Bounds.Max.Z) : 2.0;
+			Blocks.push_back({B.position, ac::Rules::radius(B.kind) * 0.85, Base, Base + Top});
+		}
+	FVector EyeW = FVector::ZeroVector;
+	if (PlayerOwner && PlayerOwner->PlayerCameraManager) EyeW = PlayerOwner->PlayerCameraManager->GetCameraLocation();
+	const ac::Vec2 Eye = AcSpace::ToSim(EyeW);
+	const double EyeUp = AcSpace::HeightToSim(EyeW);
+	// Driving: as far as the veil's light reaches (AAcPilotAids::Veil): the
+	// sky's reach by day, the pilot's own sight circle as the dark comes.
+	std::optional<std::pair<ac::Vec2, double>> Sight;
+	if (PilotSight)
+	{
+		const AAcDaylight* Day = AAcDaylight::Find(GetWorld());
+		const double Reach = Day ? Day->GetSkyTones().Reach : 110.0;
+		const double Dark = Day ? FMath::Clamp(double(Day->GetDark()), 0.0, 1.0) : 0.0;
+		Sight = std::make_pair(PilotSight->Key, FMath::Lerp(FMath::Max(Reach, PilotSight->Value), PilotSight->Value, Dark));
+	}
+	auto Ground = [&](const ac::Vec2 P) { return Terrain ? Terrain->FieldHeight(P) : 0.0; };
+	auto TagAt = [&](const int64 Id, FVector2f& At) {
+		const ac::Unit* U = nullptr;
+		for (const ac::Unit& X : Shown.units)
+			if (X.id == Id) U = &X;
+		// Not drawn: aboard, in a Derrick or a Bastion, or out of the picture.
+		if (!U || U->task == ac::Unit::Task::aboard || U->task == ac::Unit::Task::inDerrick || U->task == ac::Unit::Task::inBastion) return false;
+		const TConstArrayView<FTransform> World = Renderer->PartWorld(Id);
+		if (World.Num() == 0) return false;
+		if (!ac::TagSight::seen(U->position, 2.0, Eye, EyeUp, Sight, Ground, Blocks)) return false;
+		return ProjectToPoints(World[0].GetLocation() + FVector(0, 0, AcSpace::ToCm(2.4)), At);
+	};
 	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsMmo() && Renderer)
 	{
 		const FAcMmoClient* Mmo = Sim->MmoClient();
@@ -253,9 +296,8 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 							Team = X.paint;
 						}
 					Paint.Add(F.unit, Team);
-					const TConstArrayView<FTransform> World = Renderer->PartWorld(F.unit);
 					FVector2f At;
-					if (World.Num() > 0 && ProjectToPoints(World[0].GetLocation() + FVector(0, 0, AcSpace::ToCm(2.4)), At))
+					if (TagAt(F.unit, At))
 					{
 						Tags.Add({FString::Printf(TEXT("%s · LV %lld"), *FString(UTF8_TO_TCHAR(Name.c_str())).ToUpper(), (long long)F.level), At});
 					}
@@ -264,9 +306,8 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 			for (const auto& [Id, Name] : P->mercTags)
 			{
 				Paint.Add(Id, UAcWorldRenderer::MercenaryTeam);
-				const TConstArrayView<FTransform> World = Renderer->PartWorld(Id);
 				FVector2f At;
-				if (World.Num() > 0 && ProjectToPoints(World[0].GetLocation() + FVector(0, 0, AcSpace::ToCm(2.4)), At))
+				if (TagAt(Id, At))
 				{
 					Tags.Add({FString::Printf(TEXT("MERC · %s"), *FString(UTF8_TO_TCHAR(Name.c_str())).ToUpper()), At});
 				}

@@ -5202,7 +5202,19 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		case 2603:
 		{
 			// Its Hab Dome finished: the deed's toast.
-			// A second after it is first seen (the toast has faded in).
+			// The camera on the Hab Dome from the start (a cut lands its tags
+			// a frame late); the picture a second after the deed is first
+			// seen (the toast has faded in).
+			const ac::Structure* Dome = nullptr;
+			const ac::Unit* B = UnitOf(Of(ac::net::FrontierHabit::builder));
+			if (S && B)
+				for (const ac::Structure& X : S->structures)
+					if (X.kind == ac::StructureKind::habDome && (!Dome || ac::distance(X.position, B->position) < ac::distance(Dome->position, B->position))) Dome = &X;
+			if (Dome && U)
+			{
+				const ac::Vec2 Away = ac::normalize(U->position - Dome->position + ac::Vec2(0.01, 0));
+				Frame(Dome->position + Away * 14 + ac::Vec2(-Away.y, Away.x) * 4, 6.0, Dome->position, 1.5);
+			}
 			if (!Toasted(TEXT("ON THE FRONTIER")))
 			{
 				W4ShotAt = Now;
@@ -5210,17 +5222,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				return;
 			}
 			if (Now - W4ShotAt < 1.0) return;
-			const ac::Structure* Dome = nullptr;
-			const ac::Unit* B = UnitOf(Of(ac::net::FrontierHabit::builder));
-			if (S && B)
-				for (const ac::Structure& X : S->structures)
-					if (X.kind == ac::StructureKind::habDome && (!Dome || ac::distance(X.position, B->position) < ac::distance(Dome->position, B->position))) Dome = &X;
 			Check(Dome && Dome->complete(), TEXT("p1: the Hab Dome stands"));
-			if (Dome && U)
-			{
-				const ac::Vec2 Away = ac::normalize(U->position - Dome->position + ac::Vec2(0.01, 0));
-				Frame(Dome->position + Away * 14 + ac::Vec2(-Away.y, Away.x) * 4, 6.0, Dome->position, 1.5);
-			}
 			if (Hud) UE_LOG(LogAutocraft, Display, TEXT("mmoshots: p1: toasts %s"), *FString::Join(Hud->ToastTitles(), TEXT(" | ")));
 			Shoot(TEXT("p1-02-builder-hab-dome-deed"), TEXT("a frontier builder's Hab Dome finished, the deed's toast"));
 			return;
