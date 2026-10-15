@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Two Pilots · Ringshadow</title>
+  <meta name="description" content="Two humans on one Ringshadow world: the core that drove one pilot per region now drives several, and two game clients on one server, one under 150 ms of lag and 5% loss, checked each other's Prospector, buildings, flights, tax and wave pay from both sides.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="Two pilots on one world">
+  <meta property="og:description" content="The mode called an MMORPG had only ever been played by one human. Now the core drives several pilots in a region, and two clients on one server checked each other from both sides, one under lag. 17 pictures.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/two-pilots/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/two-pilots">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/two-pilots">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="two-pilots.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/count.js" defer data-site="ringshadow"></script>
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>Two pilots on one world</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M10 · The long game</p>
+        <p class="lede">The mode is called an MMORPG and had only ever been played by one human at a time. That was the first task on the milestone 10 list, and it came in two merges today: the core simulation learned to drive several pilots in one region, and then two game clients on one local server checked each other, from both sides, with one of them under 150 ms of lag and 5% loss.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/two-pilots/cover.jpg" alt="Pilot A's view at the Citadel: the other human's Prospector with the tag PILOT 2B96 over it, standing by the Hab Dome and the Foundry, a corner gun in the foreground" width="1200" height="750"></div>
+        <figcaption>The first picture of one human seeing another in this game: pilot A at the Citadel, pilot B tagged PILOT 2B96.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>The core</h2>
+        <p>Since the first milestone the core simulation drove exactly one pilot per region. The pilot's context, its progress, its skill effects, its own buildings, its headlamp and its circle of daylight, sat in one place, and a second human in a region where someone else drove could not drive at all. The morning's merge keeps the active driver's context where it was and holds each other human's beside it; the step swaps each in for its own unit's turn, its levelling and its skills, every AI and commander check counts all the driven units, and the vision gives each its own headlamp and daylight. The single-player strategy game has no other drivers, so its golden tests are untouched, and nothing changed on the wire or in the save. Seventeen files, 572 lines in and 119 out.</p>
+
+        <h2>The two clients</h2>
+        <p>The afternoon's merge is the check. A new tool runs two games and the world server under the one hidden-run slot, the second game through the lag simulator at 150 ms each way and 5% loss, and takes pictures from both. What each saw: the other's Prospector in the realm's blue with its callsign over it, and the tag hidden when a building is in the way. One pilot starting the Beacon, the other getting the toast and seeing the project running on its own REALM tab with the halved fare. One pilot's Hab Dome rising on the other's screen, the deed toast naming who built it, the map tooltip saying the same. Unloading at the other's Dome, with the tax landing in the realm wallet on both screens. The Dropship seen from the ground: coming down, the other pilot walking aboard, lifting off. The Fork's first wave fought by both and each paid its share by the damage it did, 40 ore to one and 20 to the other. And one pilot leaving during the siege and coming back where it left, with its wallet.</p>
+        <p>Each pilot keeps its own wallet in a shared region now; a region's bank had been shared by its humans. Two more things were wrong and are fixed. A game closing under lag never sent its goodbye, so the other fought alone for the 10 seconds the server waits before letting a silent pilot go. And a flight between Landing Pads that share a building id, since ids count per region, was refused as "At Landing Pad 1 already". Protocol 34. The suites stand at 505, 99 and 336.</p>
+
+        <h2>What a second human needs</h2>
+        <p>A second game with a folder of its own, so it gets a pilot key of its own, and the share file the first game writes: the port, a one-time token and the server's control file. The second game joins with that file. Both are flags on the command line for now, in the play doc. Not yet: two Macs on a network, since the server binds to the local address only; telling who is who, since both humans wear the same blue and only the tag tells them apart; a chat or a party. Those are the long game.</p>
+      </div>
+
+      <section class="album" aria-label="Pictures">
+        <ul class="shots">
+          <li class="reveal"><a href="media/two-pilots/01-a-sees-b.webp"><img src="media/two-pilots/01-a-sees-b-t.webp" alt="Pilot A's view at the Citadel: the other Prospector with the tag PILOT 2B96 over it, by the Hab Dome and the Foundry" width="640" height="400" loading="lazy"></a><span class="cap">A sees B at the Citadel, tagged PILOT 2B96.</span></li>
+          <li class="reveal"><a href="media/two-pilots/02-b-sees-a.webp"><img src="media/two-pilots/02-b-sees-a-t.webp" alt="Pilot B's view, with RTT 371 ms and 150 ms lag each way at 5% loss in the corner: the other Prospector tagged PILOT B2B4 by a corner gun" width="640" height="400" loading="lazy"></a><span class="cap">B sees A, through 150 ms each way and 5% loss.</span></li>
+          <li class="reveal"><a href="media/two-pilots/03-behind-citadel.webp"><img src="media/two-pilots/03-behind-citadel-t.webp" alt="The Citadel from the front with a Hab Dome beside it, no tag in sight: the other pilot stands behind the building" width="640" height="400" loading="lazy"></a><span class="cap">A tag shows only when nothing is in the way: B is behind the Citadel.</span></li>
+          <li class="reveal"><a href="media/two-pilots/04-beacon-toast.webp"><img src="media/two-pilots/04-beacon-toast-t.webp" alt="Pilot B's screen with the Citadel and the toast THE REALM LIT THE BEACON, Dropship flights half price till tomorrow, started by Pilot B2B4" width="640" height="400" loading="lazy"></a><span class="cap">A starts the Beacon; B gets the toast, naming who started it.</span></li>
+          <li class="reveal"><a href="media/two-pilots/05-realm-tab.webp"><img src="media/two-pilots/05-realm-tab-t.webp" alt="Pilot B's REALM tab: the realm wallet at 1,000 ore and 300 MH, the Beacon card RUNNING with 40 min left, started by Pilot B2B4" width="640" height="400" loading="lazy"></a><span class="cap">B's REALM tab: the Beacon running, started by the other pilot.</span></li>
+          <li class="reveal"><a href="media/two-pilots/06-dome-rising.webp"><img src="media/two-pilots/06-dome-rising-t.webp" alt="The Citadel with a Hab Dome's frame rising at its side, seen by pilot B" width="640" height="400" loading="lazy"></a><span class="cap">A's Hab Dome rising on B's screen.</span></li>
+          <li class="reveal"><a href="media/two-pilots/07-deed-toast.webp"><img src="media/two-pilots/07-deed-toast-t.webp" alt="Pilot B's screen with the toast PILOT B2B4 BUILT A HAB DOME, in Prospect Landing, every pilot's, and A's green outline on the Citadel" width="640" height="400" loading="lazy"></a><span class="cap">The deed toast: PILOT B2B4 BUILT A HAB DOME.</span></li>
+          <li class="reveal"><a href="media/two-pilots/08-map-tooltip.webp"><img src="media/two-pilots/08-map-tooltip-t.webp" alt="The world map on B's screen with a tooltip on the new Hab Dome: Built by Pilot B2B4, HP 400 / 400" width="640" height="400" loading="lazy"></a><span class="cap">The map's tooltip says who built it.</span></li>
+          <li class="reveal"><a href="media/two-pilots/09-unloaded.webp"><img src="media/two-pilots/09-unloaded-t.webp" alt="Pilot B at A's Hab Dome, its wallet reading 6,613 +24 ore and the realm 1,003, the tag PILOT B2B4 in the distance" width="640" height="400" loading="lazy"></a><span class="cap">B unloads at A's Dome: 24 ore to B, 3 to the realm.</span></li>
+          <li class="reveal"><a href="media/two-pilots/10-realm-tax.webp"><img src="media/two-pilots/10-realm-tax-t.webp" alt="Pilot A's screen, the realm reading 1,003 ore and 300 MH, the tag PILOT 2B96 across the field" width="640" height="400" loading="lazy"></a><span class="cap">A sees the realm wallet go up by the same 3 ore.</span></li>
+          <li class="reveal"><a href="media/two-pilots/11-ship-down.webp"><img src="media/two-pilots/11-ship-down-t.webp" alt="The Dropship coming down over A's pad on B's screen, its engines lit, the frontier pilot Larkspur under it" width="640" height="400" loading="lazy"></a><span class="cap">A calls the Dropship; B watches it come down.</span></li>
+          <li class="reveal"><a href="media/two-pilots/12-boarding.webp"><img src="media/two-pilots/12-boarding-t.webp" alt="The Dropship on the pad on B's screen, A's green outline walking up its ramp" width="640" height="400" loading="lazy"></a><span class="cap">A walks aboard, seen by B.</span></li>
+          <li class="reveal"><a href="media/two-pilots/13-lift.webp"><img src="media/two-pilots/13-lift-t.webp" alt="The Dropship on the pad with its ramp up, the ground crew gone, on B's screen" width="640" height="400" loading="lazy"></a><span class="cap">Lift off; the tag is gone while A is aboard.</span></li>
+          <li class="reveal"><a href="media/two-pilots/14-a-share.webp"><img src="media/two-pilots/14-a-share-t.webp" alt="Pilot A in The Fork's passage with the toasts THE FORK: WAVE 1 BEATEN, KSTR Larkspur's line, and YOUR SHARE: THE FORK WAVE 1 +40 ore +11 MH +53 XP" width="640" height="400" loading="lazy"></a><span class="cap">The Fork's first wave beaten: A's share, 40 ore, 11 MH, 53 XP.</span></li>
+          <li class="reveal"><a href="media/two-pilots/15-b-share.webp"><img src="media/two-pilots/15-b-share-t.webp" alt="Pilot B in The Fork with the same wave toasts and YOUR SHARE: THE FORK WAVE 1 +20 ore +5 MH +27 XP, the tag PILOT B2B4 up the passage" width="640" height="400" loading="lazy"></a><span class="cap">B's share of the same wave: 20 ore, 5 MH, 27 XP, by the damage done.</span></li>
+          <li class="reveal"><a href="media/two-pilots/16-b-back.webp"><img src="media/two-pilots/16-b-back-t.webp" alt="Night in The Fork on B's screen, wave 3 of 10 due in 9:20, no other pilot in sight, B's wallet at 6,644 ore and 4,205 MH" width="640" height="400" loading="lazy"></a><span class="cap">B leaves during the siege and comes back where it left, with its wallet.</span></li>
+          <li class="reveal"><a href="media/two-pilots/17-a-sees-b-back.webp"><img src="media/two-pilots/17-a-sees-b-back-t.webp" alt="Night in The Fork on A's screen, the tag PILOT 2B96 back over the other Prospector beside a bug" width="640" height="400" loading="lazy"></a><span class="cap">A sees B back.</span></li>
+        </ul>
+      </section>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="standings.html">Before: realm standings</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="two-pilots.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No cookies for readers, first-party analytics without tracking across sites. <a href="../privacy.html">Privacy</a>.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

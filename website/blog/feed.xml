@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T16:15:00Z</updated>
+  <updated>2026-10-15T16:45:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>Two pilots on one world</title>
+    <id>tag:ringshadow,2026-10-15:blog/two-pilots</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/two-pilots"/>
+    <published>2026-10-15T16:45:00Z</published>
+    <updated>2026-10-15T16:45:00Z</updated>
+    <summary>The mode called an MMORPG had only ever been played by one human. Now the core drives several pilots in a region, and two clients on one server, one under 150 ms of lag and 5% loss, checked each other's Prospector, buildings, flights, tax and wave pay from both sides.</summary>
+  </entry>
   <entry>
     <title>Realm standings: the week, counted</title>
     <id>tag:ringshadow,2026-10-15:blog/standings</id>

@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Two pilots on one world
+
+15 October 2026 · M10 · 17 pictures
+
+The mode called an MMORPG had only ever been played by one human. Now the core drives several pilots in a region, and two clients on one server, one under 150 ms of lag and 5% loss, checked each other's Prospector, buildings, flights, tax and wave pay from both sides.
+
+Read it: https://ringshadow.com/blog/two-pilots
+
 ## Realm standings: the week, counted
 
 15 October 2026 · M10 · 3 pictures
