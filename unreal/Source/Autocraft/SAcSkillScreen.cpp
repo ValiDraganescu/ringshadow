@@ -1277,8 +1277,8 @@ void SAcSkillScreen::PaintBlueprints(FSlateWindowElementList& Out, const int32 L
 		{
 			const auto Source = Info.Sources.find(K);
 			From = Source != Info.Sources.end() && !Source->second.IsEmpty()
-				? FString::Printf(TEXT("Found: %s. More copies at the Citadel's shop (H)."), *Source->second)
-				: FString(TEXT("More copies at the Citadel's shop (H)."));
+				? FString::Printf(TEXT("Found: %s. More copies at a Citadel's shop (H)."), *Source->second)
+				: FString(TEXT("More copies at a Citadel's shop (H)."));
 		}
 		else
 		{
@@ -1298,7 +1298,7 @@ void SAcSkillScreen::PaintBlueprints(FSlateWindowElementList& Out, const int32 L
 	// The count, under the cards.
 	Label(FString::Printf(TEXT("%d OF %d BLUEPRINTS HELD"), Found, (int32)Kinds.size()), 14, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top,
 		EAcFontWeight::Bold, 1.4f).Paint(Out, L, P, FVector2f(Pad + 4, SlotBox.Min.Y + 12));
-	Label(TEXT("A blueprint builds once. Sites give a copy; the Citadel's shop (H) sells more, dearer each time."), 13, Dim(),
+	Label(TEXT("A blueprint builds once. Sites give a copy; a Citadel's shop (H) sells more, dearer each time."), 13, Dim(),
 		EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L, P, FVector2f(Pad + 4, SlotBox.Min.Y + 34));
 	Label(TEXT("TAB RIG · K OR ESC CLOSES"), 11, Faint(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.8f)
 		.Paint(Out, L, P, FVector2f(PanelW - Pad - 4, SlotBox.Min.Y + 34));

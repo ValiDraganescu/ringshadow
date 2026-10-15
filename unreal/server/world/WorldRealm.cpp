@@ -28,7 +28,7 @@ std::optional<std::string> WorldMap::donate(PilotId pilot, int64_t ore, int64_t 
     if (!p) return "Not in a world";
     if (ore < 0 || hydrogen < 0 || ore + hydrogen <= 0) return "Nothing to donate";
     // At the realm's Citadel, in its unload range.
-    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Donate at the realm's Citadel: stand where you unload");
+    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Donate at a Citadel: stand where you unload");
     bankOut(*p, p->region);
     if (ore > p->wallet.ore) return "Not enough ore: you have " + std::to_string(p->wallet.ore);
     if (hydrogen > p->wallet.hydrogen) return "Not enough MH: you have " + std::to_string(p->wallet.hydrogen);

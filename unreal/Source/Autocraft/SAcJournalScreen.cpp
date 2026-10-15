@@ -420,7 +420,7 @@ void SAcJournalScreen::PaintHeader(FSlateWindowElementList& Out, const int32 L, 
 	Title.Paint(Out, L, P, FVector2f(Pad + 2, 44));
 	int32 Taken = 0;
 	for (const FAcJournalEntry& E : Info.Entries) Taken += E.bDone ? 0 : 1;
-	Label(FString::Printf(TEXT("%d / %d missions · the Citadel's board (H)"), Taken, Info.Most), 14, Dim(), EAcHAlign::Left, EAcVAlign::Top,
+	Label(FString::Printf(TEXT("%d / %d missions · a Citadel's board (H)"), Taken, Info.Most), 14, Dim(), EAcHAlign::Left, EAcVAlign::Top,
 		EAcFontWeight::SemiBold, 0.4f)
 		.Paint(Out, L, P, FVector2f(Pad + 196, 58));
 	// The canyon zones' games, right of it, left of ESC (Z2).
@@ -477,7 +477,7 @@ void SAcJournalScreen::PaintList(FSlateWindowElementList& Out, const int32 L, co
 	Label(TEXT("MISSIONS"), 13, Brass(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f).Paint(Out, L + 2, P, B.Min + FVector2f(18, 14));
 	if (Info.Entries.IsEmpty())
 	{
-		const TArray<FString> Lines = Wrapped(Info.bKnown ? TEXT("None yet. Sign up at the realm's Citadel: H, then the MISSIONS tab.")
+		const TArray<FString> Lines = Wrapped(Info.bKnown ? TEXT("None yet. Sign up at a Citadel: H, then the MISSIONS tab.")
 														  : TEXT("Waiting for the server…"),
 			14, ListW - 40, 4);
 		for (int32 K = 0; K < Lines.Num(); ++K)
@@ -648,7 +648,7 @@ void SAcJournalScreen::PaintFoot(FSlateWindowElementList& Out, const int32 L, co
 {
 	const FBox2f F = FootBox;
 	Box(Out, L, P, FBox2f(FVector2f(Pad, F.Min.Y - 8), FVector2f(PanelW - Pad, F.Min.Y - 7)), WithAlpha(Brass(), 0.14f));
-	FString State = TEXT("New offers on the Citadel's board at every dawn; a done mission leaves the Journal then.");
+	FString State = TEXT("New offers on the Citadels' boards at every dawn; a done mission leaves the Journal then.");
 	FLinearColor StateColor = FAcHudStyle::Soft();
 	if (!Refusal.IsEmpty())
 	{

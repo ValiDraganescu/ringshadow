@@ -39,7 +39,7 @@ int64_t WorldMap::realmCount(StructureKind kind) const {
 }
 
 int64_t WorldMap::limitCount(StructureKind kind, size_t region) const {
-    if (kind != StructureKind::landingPad) return realmCount(kind);
+    if (!Progression::perRegion(kind)) return realmCount(kind);
     int64_t n = 0;
     for (const Structure& b : regions_[region]->simulation().state.structures)
         if (b.kind == kind && realm(b)) n += 1;

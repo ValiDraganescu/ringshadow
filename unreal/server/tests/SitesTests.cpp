@@ -319,7 +319,7 @@ TEST(sites_builds_refused_without_blueprint_under_floor_past_limit) {
     ASSERT_TRUE(w.join(me));
     auto why = w.build(me, StructureKind::citadel, *spot(w, me, StructureKind::citadel));
     ASSERT_TRUE(why.has_value());
-    EXPECT_TRUE(*why == "No blueprint: buy one at the Citadel (H)");
+    EXPECT_TRUE(*why == "No blueprint: buy one at a Citadel (H)");
     why = w.build(me, StructureKind::garrison, drivenUnit(w, me)->position);
     ASSERT_TRUE(why.has_value());
     EXPECT_TRUE(*why == "No Garrison blueprint in this world");
@@ -337,7 +337,7 @@ TEST(sites_builds_refused_without_blueprint_under_floor_past_limit) {
     EXPECT_EQ(w.realmCount(StructureKind::citadel), int64_t(1));
     why = w.build(me, StructureKind::citadel, *spot(w, me, StructureKind::citadel));
     ASSERT_TRUE(why.has_value());
-    EXPECT_TRUE(*why == "Citadel limit reached: 1");
+    EXPECT_TRUE(*why == "This region has its Citadel: one a region");
     // Savant at 1: the Derrick opens at level 1, so the gate lets it by
     // (the ground refuses it here: no well).
     g = *w.progress(me);

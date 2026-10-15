@@ -208,7 +208,7 @@ TEST(realm_donate_at_the_citadel) {
     fill(w, a, 1000, 100);
 
     besides(w, a, *s.dome);
-    EXPECT_TRUE(w.donate(a, 100, 0).value_or("").rfind("Donate at the realm's Citadel", 0) == 0);
+    EXPECT_TRUE(w.donate(a, 100, 0).value_or("").rfind("Donate at a Citadel", 0) == 0);
     Unit* u = drivenUnit(w, a);
     u->position = u->position + Vec2(0, -30);
     w.step();

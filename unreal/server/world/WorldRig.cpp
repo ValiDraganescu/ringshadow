@@ -41,6 +41,18 @@ std::optional<std::pair<size_t, int64_t>> WorldMap::realmCitadel() const {
     return std::nullopt;
 }
 
+std::optional<std::pair<size_t, int64_t>> WorldMap::citadelAt(PilotId pilot, const PilotState& p) {
+    if (p.flight) return std::nullopt;
+    Region& r = *regions_[p.region];
+    const auto unit = r.driving(pilot);
+    const auto u = unit ? r.simulation().state.unit(*unit) : std::nullopt;
+    if (!u) return std::nullopt;
+    for (const Structure& b : r.simulation().state.structures)
+        if (b.kind == StructureKind::citadel && b.complete() && realm(b) && NavGrid::insideStructure(u->position, b, Simulation::pilotDepositReach))
+            return std::pair{p.region, b.id};
+    return std::nullopt;
+}
+
 bool WorldMap::atRealm(PilotId pilot, const PilotState& p, std::initializer_list<StructureKind> kinds) {
     if (p.flight) return false;
     Region& r = *regions_[p.region];

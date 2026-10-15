@@ -118,6 +118,25 @@ are, stays clear (U1; the pieces in `AcProgressHud.h`, `SAcLevelUp.h`,
 - **Q, C, G** over the dashboard left of the Prospector; the supplies' cells
   (1-4) right of it.
 
+## The Citadels
+
+Since R3 (2026-10-15) every region may have one Citadel, built like the
+first (B, 1, click) from a Citadel blueprint, sold at any Citadel's shop
+(dearer each copy). A second in the same region is refused: "This region has
+its Citadel: one a region". Every Citadel is a full home:
+
+- unload there: the wallet gets the load, the realm the tax;
+- fall in its region and the Prospector comes back at the nearest Citadel
+  or Hab Dome;
+- respec there;
+- H opens the Citadel screen on the realm's one wallet: the shop, the
+  missions, the defence, the mercenaries (one hired there works the field
+  nearest that Citadel) and the realm projects;
+- its four corner turrets fire with the realm's marks.
+
+Frontier pilots never build a Citadel. The goals that send a pilot to a
+Citadel mark the one in its region, else the realm's first.
+
 ## Realm projects
 
 The realm wallet (every pilot's tax and donations, top right under the

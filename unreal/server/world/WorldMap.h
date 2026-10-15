@@ -1638,6 +1638,9 @@ private:
     bool builtFinished(const PilotState& p, StructureKind kind) const;
     /// The realm's finished Citadel (region, id), the first by region.
     std::optional<std::pair<size_t, int64_t>> realmCitadel() const;
+    /// The finished realm Citadel the pilot's Prospector stands at, where it
+    /// unloads (R3: one a region, every one a home).
+    std::optional<std::pair<size_t, int64_t>> citadelAt(PilotId pilot, const PilotState& p);
     /// The driven Prospector stands where it unloads at one of the realm's
     /// finished buildings of these kinds.
     bool atRealm(PilotId pilot, const PilotState& p, std::initializer_list<StructureKind> kinds);

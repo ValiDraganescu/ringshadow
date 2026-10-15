@@ -32,7 +32,7 @@ std::optional<std::string> WorldMap::startProject(PilotId pilot, RealmProject::K
     PilotState* p = pilotState(pilot);
     if (!p) return "Not in a world";
     if (auto why = projectRefusal(p->key, kind)) return why;
-    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Start a project at the realm's Citadel: stand where you unload");
+    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Start a project at a Citadel: stand where you unload");
     const RealmProject::Price price = projectPrice(kind);
     if (!spendRealm(Wallet{price.ore, price.hydrogen})) return std::string("The realm wallet is short");
     projectRuns_[size_t(kind)] += 1;

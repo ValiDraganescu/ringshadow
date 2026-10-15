@@ -1,5 +1,5 @@
 // Mercenary prospectors (H2, docs/prospector-progression.md "Mercenaries"):
-// hired at the realm's Citadel for a fee that rises with each one held, up
+// hired at a Citadel for a fee that rises with each one held, up
 // to 1, 2 or 3 by level; a wage in MH at each world dawn, and a mercenary
 // the wallet cannot pay leaves; in a day each delivers what its pilot mines
 // in an hour, taxed, from a field that really empties, live, idle and
@@ -264,7 +264,7 @@ TEST(mercs_hire_limits_fees_and_refusals) {
     w.step();
     why = w.hireMerc(a);
     ASSERT_TRUE(why.has_value());
-    EXPECT_TRUE(*why == "Hire at the realm's Citadel: stand where you unload");
+    EXPECT_TRUE(*why == "Hire at a Citadel: stand where you unload");
     // The client is told.
     const auto m = *w.progressMessage(a);
     EXPECT_EQ(m.mercs.size(), size_t(2));

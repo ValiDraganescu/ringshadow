@@ -1,6 +1,6 @@
 // The Citadel shop (WorldMap.h, C2; docs/prospector-progression.md "The
 // Citadel shop"): blueprint copies and consumables bought from the pilot's
-// own wallet at the realm's Citadel, and the consumables used in the field.
+// own wallet at a Citadel, and the consumables used in the field.
 // The prices and the items are the core's (`Shop`), so the client shows
 // the same numbers.
 
@@ -38,7 +38,7 @@ std::optional<std::string> WorldMap::buy(PilotId pilot, std::optional<StructureK
         price = {x.ore, x.hydrogen};
     }
     // At the realm's Citadel, in its unload range.
-    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Buy at the realm's Citadel: stand where you unload");
+    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Buy at a Citadel: stand where you unload");
     bankOut(*p, p->region);
     if (price.ore > p->wallet.ore)
         return "Not enough ore: " + std::to_string(price.ore) + ", you have " + std::to_string(p->wallet.ore);

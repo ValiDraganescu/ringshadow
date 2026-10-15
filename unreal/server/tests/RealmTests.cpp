@@ -152,7 +152,7 @@ std::string freshFile(const std::string& name) {
 
 // Pilot B uses what pilot A built: it unloads at A's Hab Dome and Citadel,
 // respecs at A's Citadel, and comes back at them when it falls. A second
-// Citadel is refused (one a realm), and the progress message counts the
+// Citadel in its region is refused (one a region, R3), and the progress message counts the
 // realm's buildings and names their builder.
 TEST(realm_second_pilot_uses_the_first_pilots_hab_dome_and_citadel) {
     TwoPilots s;
@@ -170,7 +170,7 @@ TEST(realm_second_pilot_uses_the_first_pilots_hab_dome_and_citadel) {
     const Structure citadel = *structure(sim, *s.citadel);
     const Structure dome = *structure(sim, *s.dome);
 
-    // The realm's limits: no second Citadel, wherever B stands.
+    // The limits: no second Citadel in this region (R3: one a region).
     const Vec2 west = w.regionOf(b)->places()->ground(Vec2(30, 48));
     fill(w, b, 1000, 100);
     const int64_t ore = w.wallet(b)->ore;

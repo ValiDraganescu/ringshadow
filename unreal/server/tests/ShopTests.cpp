@@ -202,7 +202,7 @@ TEST(shop_refusals) {
     w.step();
     why = w.buy(a, std::nullopt, Item::surveyFlare);
     ASSERT_TRUE(why.has_value());
-    EXPECT_TRUE(*why == "Buy at the realm's Citadel: stand where you unload");
+    EXPECT_TRUE(*why == "Buy at a Citadel: stand where you unload");
     EXPECT_EQ(w.progress(a)->held(Item::surveyFlare), int64_t(0));
 }
 
@@ -223,7 +223,7 @@ TEST(shop_building_uses_a_copy) {
     EXPECT_EQ(w.progress(a)->copies(StructureKind::habDome), int64_t(0));
     const auto why = w.build(a, StructureKind::habDome, drivenUnit(w, a)->position + Vec2(0, -8));
     ASSERT_TRUE(why.has_value());
-    EXPECT_TRUE(*why == "No blueprint: buy one at the Citadel (H)");
+    EXPECT_TRUE(*why == "No blueprint: buy one at a Citadel (H)");
 }
 
 // The consumables: each bought, used in the field, its stack down by one,

@@ -284,6 +284,15 @@
 //   02 the Citadel's REALM tab: the Beacon started and running (who, time
 //      left), the other projects' prices
 //
+// -AcMmoShotsR3 (with -AcMmoDevRig, as Z1's light): a Citadel in every
+// region (docs/mmorpg-play.md "The Citadels"): a second Citadel's blueprint
+// bought at home, the pilot taken to Cold Fork, DIR/r3-NN-moment.png:
+//   01 the Citadel's ghost placed in Cold Fork (B, the build menu)
+//   02 the second Citadel rising in Cold Fork, welded
+//   03 finished, its four corner turrets on, from a free camera
+//   04 the Citadel screen (H) at the Cold Fork Citadel: the realm's one
+//      wallet, its tabs
+//
 // -AcMmoShotsZ4 (as Z1's): free placement in canyons (docs/canyon.md
 // "Building"), DIR/z4-NN-moment.png:
 //   01 a tightly packed defence on The Fork's floor by the prize, its guns'
@@ -1090,7 +1099,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1127,7 +1136,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// -AcMmoShotsZ1 and Z2: as W4's, late morning, clear, every region been to.
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))
 			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))
-			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4")))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -1224,6 +1233,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4"))) T.Phase = 3100;
 			// -AcMmoShotsR2: realm projects (3200-3206).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2"))) T.Phase = 3200;
+			// -AcMmoShotsR3: a Citadel a region (3300-3310).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))) T.Phase = 3300;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
@@ -3767,10 +3778,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	// MARK: -AcMmoShotsC2
 	case 1100:
-		// The dev rig's home: the Prospector where it unloads at the realm's Citadel.
+		// The dev rig's home: the Prospector where it unloads at a Citadel.
 		if (S && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
 		{
-			Check(AtRealmCitadel(), TEXT("c2: the pilot stands at the realm's Citadel"));
+			Check(AtRealmCitadel(), TEXT("c2: the pilot stands at a Citadel"));
 			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("c2: H opens the Citadel screen"));
 			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
 			{
@@ -3944,10 +3955,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	// MARK: -AcMmoShotsH2, -AcMmoShotsH2Away
 	case 1500:
-		// The dev rig's home: the Prospector where it unloads at the realm's Citadel.
+		// The dev rig's home: the Prospector where it unloads at a Citadel.
 		if (S && CitadelOf(*S) && Mmo->Progress() && !Mmo->Progress()->mercFields.empty() && Since() > 3.0)
 		{
-			Check(AtRealmCitadel(), TEXT("h2: the pilot stands at the realm's Citadel"));
+			Check(AtRealmCitadel(), TEXT("h2: the pilot stands at a Citadel"));
 			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("h2: H opens the Citadel screen"));
 			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
 			{
@@ -6319,7 +6330,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (S && U && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
 		{
 			Check(Mmo->DevClock(TEXT("defence wallet")), TEXT("r2: the server fills the realm wallet"));
-			Check(AtRealmCitadel(), TEXT("r2: the pilot stands at the realm's Citadel"));
+			Check(AtRealmCitadel(), TEXT("r2: the pilot stands at a Citadel"));
 			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("r2: H opens the Citadel screen"));
 			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->SetTab(SAcCitadelScreen::ETab::Realm);
 			Advance();
@@ -6412,6 +6423,143 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Finish();
 		return;
 	}
+	// MARK: -AcMmoShotsR3
+	case 3300:
+		// The dev rig's home: a Citadel blueprint bought at its Citadel, then
+		// Cold Fork.
+		if (S && U && CitadelOf(*S) && Mmo->Progress() && Seated() && Since() > 3.0)
+		{
+			FString Why;
+			Check(AtRealmCitadel(), TEXT("r3: the pilot stands at the home Citadel"));
+			Check(Mmo->BuyBlueprint(ac::StructureKind::citadel, &Why), FString::Printf(TEXT("r3: a Citadel blueprint bought at home (%s)"), *Why));
+			Check(Mmo->DevClock(TEXT("ferry go cold-fork")), TEXT("r3: the server takes the pilot to Cold Fork"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel"));
+		return;
+	case 3301:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		const bool bCopy = P && P->blueprints.count(ac::StructureKind::citadel) && P->blueprints.at(ac::StructureKind::citadel) > 0;
+		if (Here == TEXT("cold-fork") && Seated() && bCopy && U && M && Since() > 2.0)
+		{
+			Check(!CitadelOf(*S), TEXT("r3: no Citadel in Cold Fork yet"));
+			// Off the pad's plate: 12 cells away from it, onto open ground.
+			ac::Vec2 Pad = U->position;
+			double Best = 1e9;
+			for (const ac::region::Place& Q : ac::net::padsOnGround(*Mmo->Here(), M->simulation().map->bounds))
+				if (ac::distance(Q.at, U->position) < Best)
+				{
+					Best = ac::distance(Q.at, U->position);
+					Pad = Q.at;
+				}
+			const ac::Vec2 To = U->position + ac::normalize(U->position - Pad + ac::Vec2(0, 0.01)) * 12.0;
+			Route({FVector2D(To.x, To.y)});
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("in Cold Fork with a Citadel blueprint"), 30);
+		return;
+	}
+	case 3302:
+	{
+		const int32 R = Drive();
+		if (R < 0) return Stalled(TEXT("r3: off the pad"));
+		if (R == 0) return;
+		UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+		const int32 Number = AcPilotText::BuildKinds(true).IndexOfByKey(ac::StructureKind::citadel) + 1;
+		Check(Build && Build->Key(TEXT("b")) && Build->MenuOpen(), TEXT("r3: B opened the build menu"));
+		Check(Number > 0 && Build && Build->Key(FString::FromInt(Number)) && Build->Placing().IsSet()
+			&& *Build->Placing() == ac::StructureKind::citadel, TEXT("r3: a Citadel held out in Cold Fork (the region has none)"));
+		Advance();
+		return;
+	}
+	case 3303:
+		if (Since() > 1.5)
+		{
+			UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+			Check(Build && Build->Spot(ac::StructureKind::citadel).IsSet(), TEXT("r3: the ghost has a spot"));
+			Shoot(TEXT("r3-01-ghost-cold-fork"), TEXT("the second Citadel's ghost placed in Cold Fork"));
+		}
+		return;
+	case 3304:
+		if (UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this)) Check(Build->Key(TEXT("place")), TEXT("r3: placed (the Build request)"));
+		Advance();
+		return;
+	case 3305:
+		if (const ac::Structure* C = S ? CitadelOf(*S) : nullptr; C && Built(*C) >= 0.5)
+		{
+			Shoot(TEXT("r3-02-rising"), FString::Printf(TEXT("the second Citadel rising in Cold Fork, %.0f%%"), Built(*C) * 100));
+			return;
+		}
+		for (const FString& Why : Mmo->TakeBuildRefusals()) Check(false, FString::Printf(TEXT("r3: built, not refused: %s"), *Why));
+		TimedOut(TEXT("the Cold Fork Citadel half up"), WeldLimit);
+		return;
+	case 3306:
+		if (const ac::Structure* C = S ? CitadelOf(*S) : nullptr; C && C->complete() && Since() > 2.0)
+		{
+			// From a free camera: the Citadel and its four corner turrets.
+			APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+			const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+			if (Pc && Terrain)
+			{
+				if (!W4Cam.IsValid())
+				{
+					FActorSpawnParameters Params;
+					Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+					W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+					W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+					W4Cam->GetCameraComponent()->SetFieldOfView(62.f);
+				}
+				const ac::Vec2 Out = U ? ac::normalize(U->position - C->position + ac::Vec2(0.01, 0)) : ac::Vec2(1, 0);
+				const ac::Vec2 Eye = C->position + Out * 13.0 + ac::Vec2(-Out.y, Out.x) * 6.0;
+				const FVector EyeW = AcSpace::ToWorld(Eye, Terrain->FieldHeight(Eye) + 7.0);
+				const FVector AtW = AcSpace::ToWorld(C->position, Terrain->FieldHeight(C->position) + 1.2);
+				W4Cam->SetActorLocationAndRotation(EyeW, (AtW - EyeW).Rotation());
+				if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+			}
+			if (Since() < 3.0) return;
+			// (The corner guns' state is the server's; the picture shows them.)
+			Check(C->complete(), TEXT("r3: the Cold Fork Citadel finished"));
+			ShootClean(TEXT("r3-03-citadel-with-turrets"), TEXT("the second Citadel finished in Cold Fork, its four corner turrets"));
+			return;
+		}
+		TimedOut(TEXT("the Cold Fork Citadel finished"), WeldLimit);
+		return;
+	case 3307:
+		if (APlayerController* Pc = GetWorld()->GetFirstPlayerController(); Pc && Pilot && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+		if (W4Cam.IsValid()) W4Cam->Destroy();
+		Advance();
+		return;
+	case 3308:
+		// Straight at it until it stands where it unloads.
+		if (const ac::Structure* C = S ? CitadelOf(*S) : nullptr; C && U && Pilot)
+		{
+			if (!AtRealmCitadel())
+			{
+				Pilot->SetTestInput(FVector2D(0, -1), Face(C->position));
+				TimedOut(TEXT("r3: at the Cold Fork Citadel"), 20);
+				return;
+			}
+			Stop(Pilot->Yaw());
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("r3: H opens the Citadel screen in Cold Fork"));
+			Check(CitadelScreenWidget().IsValid() && CitadelScreenWidget()->GetInfo().ShopWhyNot.IsEmpty(), TEXT("r3: its shop sells here"));
+			Advance();
+		}
+		return;
+	case 3309:
+		if (Since() > 1.5) Shoot(TEXT("r3-04-citadel-screen-cold-fork"), TEXT("the Citadel screen at the Cold Fork Citadel: the realm's one wallet"));
+		return;
+	case 3310:
+		{
+			CloseCitadelScreen();
+			const FString Why = AcProgressHud::BlueprintRefusal(Mmo, ac::StructureKind::citadel);
+			Check(Why == TEXT("This region has its Citadel: one a region"), FString::Printf(TEXT("r3: the build menu refuses a second here (%s)"), *Why));
+			Check(Shots.Saved + Shots.Skipped >= 4, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+			Finish();
+			return;
+		}
 	// MARK: -AcMmoShotsL1
 	case 2100:
 		// The first ten minutes' last step open: a point spent ends it.
@@ -6523,10 +6671,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	// MARK: -AcMmoShotsU1
 	case 2200:
-		// The dev rig's home, at the realm's Citadel: ten levels at once.
+		// The dev rig's home, at a Citadel: ten levels at once.
 		if (S && U && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
 		{
-			Check(AtRealmCitadel(), TEXT("u1: the pilot stands at the realm's Citadel"));
+			Check(AtRealmCitadel(), TEXT("u1: the pilot stands at a Citadel"));
 			Check(Mmo->DevClock(TEXT("goal level 35")), TEXT("u1: the dev line makes the pilot level 35"));
 			Advance();
 			return;
@@ -6738,10 +6886,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	// MARK: -AcMmoShotsK2
 	case 1200:
-		// The dev rig's home: the Prospector where it unloads at the realm's Citadel.
+		// The dev rig's home: the Prospector where it unloads at a Citadel.
 		if (S && CitadelOf(*S) && Mmo->Progress() && Mmo->Progress()->board.size() == 6 && Since() > 3.0)
 		{
-			Check(AtRealmCitadel(), TEXT("k2: the pilot stands at the realm's Citadel"));
+			Check(AtRealmCitadel(), TEXT("k2: the pilot stands at a Citadel"));
 			// A new pilot's board is drawn from its key's dice: an easy survey
 			// or hold here only by chance (Q2). The server draws it again.
 			Check(Mmo->DevClock(TEXT("missions here")), TEXT("k2: the server draws the board with an easy survey here"));
@@ -7189,7 +7337,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (S && U && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
 		{
 			Check(Mmo->DevClock(TEXT("defence wallet\ndefence blueprints")), TEXT("d: the server fills the realm wallet and gives turret blueprints"));
-			Check(AtRealmCitadel(), TEXT("d: the pilot stands at the realm's Citadel"));
+			Check(AtRealmCitadel(), TEXT("d: the pilot stands at a Citadel"));
 			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("d: H opens the Citadel screen"));
 			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
 			{

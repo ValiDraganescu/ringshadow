@@ -422,7 +422,7 @@ TEST(progression_blueprintPriceRises) {
 // Copies and stacks: given, used up one at a time, gone at none.
 TEST(progression_blueprintCopiesAndItems) {
     ProspectorProgress p = atLevel(10);
-    EXPECT_TRUE(p.buildRefusal(StructureKind::citadel, 0) == std::string("No blueprint: buy one at the Citadel (H)"));
+    EXPECT_TRUE(p.buildRefusal(StructureKind::citadel, 0) == std::string("No blueprint: buy one at a Citadel (H)"));
     p.giveBlueprint(StructureKind::citadel, 2);
     EXPECT_EQ(p.copies(StructureKind::citadel), int64_t(2));
     EXPECT_TRUE(!p.buildRefusal(StructureKind::citadel, 0));

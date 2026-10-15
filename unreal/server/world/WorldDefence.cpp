@@ -26,7 +26,7 @@ std::optional<std::string> WorldMap::upgradeCitadel(PilotId pilot, DefenceStat s
     PilotState* p = pilotState(pilot);
     if (!p) return "Not in a world";
     if (!atRealm(pilot, *p, {StructureKind::citadel}))
-        return std::string("Upgrade at the realm's Citadel: stand where you unload");
+        return std::string("Upgrade at a Citadel: stand where you unload");
     if (const auto no = Defence::citadelRefusal(stat, citadelMarks_, realm_.ore, realm_.hydrogen)) return no;
     const ShopPrice price = Defence::citadelPrice(stat, citadelMarks_.of(stat) + 1);
     if (!spendRealm(Wallet{price.ore, price.hydrogen})) return "The realm wallet is short";

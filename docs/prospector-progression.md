@@ -357,7 +357,7 @@ floor**. A copy held below the floor is kept and shows "opens at level N".
 
 | Building | What it does for the pilot | Floor | Limit | Cost (ore + MH) | Status |
 |---|---|---|---|---|---|
-| Citadel | Home: unload point, respawn point, where the respec is made | 1 | 1 | 400 | on the server (P6) |
+| Citadel | Home: unload point (the realm's tax), respawn point, where the respec is made, the Citadel screen (H); four corner turrets | 1 | 1 a region (R3) | 400 | on the server (P6, R3) |
 | Derrick | Pumps MH on a well (as today) | 3 | 4 | 75 | as today |
 | Gatling gun | A rotary cannon firing red-hot ore and MH amalgam rounds: ground targets in range 6, air within 4.5 (D2); marks from the pilot's wallet at the turret (U, D3; [creatures.md](creatures.md) "As built (D3)") | 5 | 6 | 125 + 25 | on the server (D2, D3) |
 | Hab Dome | A field depot: unload ore and MH into the wallet away from home, and a respawn point | 8 | 3 | 150 + 50 | on the server (P6) |
@@ -370,7 +370,8 @@ floor**. A copy held below the floor is kept and shows "opens at level N".
 | Garrison | Trains other kinds in the strategy game. Held back: no blueprint in the world while the MMO is Prospector only | | | | held back |
 
 Limits are the realm's, across the world (R1, below): the table's numbers
-count every pilot's buildings together. Overbuild raises the Hab Dome,
+count every pilot's buildings together; the Citadel's and the Landing Pad's
+count a region (R3, F2). Overbuild raises the Hab Dome,
 Derrick and Sentinel limits. The Citadel and the Derrick stay ore only, so the
 first loop costs no MH.
 
@@ -392,7 +393,7 @@ in the world uses every building.
   realm's Landing Pads (F2). Later tasks build on this: the Citadel's tax
   into a realm wallet (C1), defences that guard the realm (D1, D2).
 - **Limits per realm.** A build is refused once the realm has the table's
-  number of that kind, whoever built them: one Citadel, four Derricks,
+  number of that kind, whoever built them: one Citadel a region (R3), four Derricks,
   three Hab Domes, one Foundry, one Lab, one Spacedock, two Bastions, four
   Sentinels (`WorldMap::realmCount`, `ProspectorProgress::buildRefusal`).
   **Overbuild still works**, for the pilot that has it: its ranks raise the
@@ -400,14 +401,20 @@ in the world uses every building.
   Sentinel a rank), so a pilot with Overbuild 2 puts up a fifth and sixth
   Derrick where one without is refused at four. The extra buildings are the
   realm's like any other.
-- **One Citadel a realm.** A new pilot in an empty world builds it (the
-  opening chain's step 2, as O1 made it). A pilot new to a world that has
-  its Citadel already gets step 2 as "The Realm's Citadel": a reach
-  contract to it (`<region id>/Citadel`), naming who built it, done when its
-  Prospector stands where it unloads there. If another pilot finishes the
-  Citadel while a pilot's step 2 still says "build one", the step turns into
-  the reach. A save from before with two pilots' Citadels keeps both
-  standing; no third can be built.
+- **A Citadel a region (R3, the user, 2026-10-15).** Until then one
+  Citadel a realm. Now every region may have one, each a full home: a
+  Prospector unloads at any of them with the realm's tax, comes back at the
+  nearest when it falls, respecs at any; H at any opens the Citadel screen
+  on the realm's one wallet, shop, missions, defence, mercs and projects
+  (a mercenary hired there works the field nearest that Citadel); each has
+  its four free corner turrets with the realm's marks. A second in the same
+  region is refused ("This region has its Citadel: one a region"). The
+  blueprint sells at any Citadel at the price per copy as before. Frontier
+  pilots never build one. A new pilot in an empty world builds the first
+  (the opening chain's step 2); one new to a world with a Citadel gets step
+  2 as a reach to it, as before. The goals that send a pilot to "a Citadel"
+  mark the one in its region, else the realm's first. Tests:
+  `server/tests/RolesTests.cpp` (`roles_a_citadel_a_region_each_a_home`).
 - **Who sees what.** Every pilot sees the realm's buildings as friendly (one
   side, as before). Building limits in the build menu count the realm's
   ("REALM LIMIT"). A building finished anywhere in the world is told to every

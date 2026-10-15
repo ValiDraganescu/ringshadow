@@ -1405,10 +1405,10 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 	const AAcHUD* Hud = AAcHUD::Get(this);
 	const TSharedPtr<SAcRoot> Root = Hud ? Hud->Root() : nullptr;
 	if (!Root) return false;
-	// Only at the realm's Citadel, where the Prospector unloads (C1).
+	// Only at a Citadel, where the Prospector unloads (C1).
 	if (!AtRealmCitadel())
 	{
-		Sim->Refuse(TEXT("H opens the realm's Citadel: walk up to it, where you unload"));
+		Sim->Refuse(TEXT("H opens a Citadel: walk up to one, where you unload"));
 		return false;
 	}
 	CloseWorldMap();
@@ -1726,12 +1726,12 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 	// The server checks the place; the screen says so ahead.
 	if (!AtRealmCitadel(&Info.Builder))
 	{
-		Info.ProjectsWhyNot = TEXT("Start a project at the realm's Citadel: stand where you unload");
-		Info.DefenceWhyNot = TEXT("Upgrade at the realm's Citadel: stand where you unload");
-		Info.DonateWhyNot = TEXT("Donate at the realm's Citadel: stand where you unload");
-		Info.ShopWhyNot = TEXT("Buy at the realm's Citadel: stand where you unload");
-		Info.MissionsWhyNot = TEXT("Sign up at the realm's Citadel: stand where you unload");
-		Info.MercsWhyNot = TEXT("Hire at the realm's Citadel: stand where you unload");
+		Info.ProjectsWhyNot = TEXT("Start a project at a Citadel: stand where you unload");
+		Info.DefenceWhyNot = TEXT("Upgrade at a Citadel: stand where you unload");
+		Info.DonateWhyNot = TEXT("Donate at a Citadel: stand where you unload");
+		Info.ShopWhyNot = TEXT("Buy at a Citadel: stand where you unload");
+		Info.MissionsWhyNot = TEXT("Sign up at a Citadel: stand where you unload");
+		Info.MercsWhyNot = TEXT("Hire at a Citadel: stand where you unload");
 	}
 	CitadelScreen->SetInfo(Info);
 	if (Mmo->CitadelRefusal() != CitadelRefusalShown)

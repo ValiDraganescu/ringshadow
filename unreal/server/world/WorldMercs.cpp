@@ -142,10 +142,9 @@ std::optional<std::string> WorldMap::hireMerc(PilotId pilot) {
         if (const int64_t next = WorldMercs::nextLevel(held)) why += ": " + std::to_string(held + 1) + " at level " + std::to_string(next);
         return why;
     }
-    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Hire at the realm's Citadel: stand where you unload");
-    // The nearest field with ore to the realm's Citadel, in its region.
-    const auto citadel = realmCitadel();
-    if (!citadel) return std::string("The realm has no Citadel");
+    // R3: at any Citadel; the merc works the nearest field to that one.
+    const auto citadel = citadelAt(pilot, *p);
+    if (!citadel) return std::string("Hire at a Citadel: stand where you unload");
     const size_t r = citadel->first;
     const auto at = regions_[r]->simulation().state.structure(citadel->second);
     std::optional<int64_t> field;
@@ -500,13 +499,11 @@ void WorldMap::mercsTold(const PilotState& p, net::ProgressMessage& m) const {
                                                                                : Merc::State::working;
         m.mercs.push_back(std::move(out));
     }
-    // The fields with ore in the regions with a realm Citadel, the
-    // Citadel's own region first.
-    const auto citadel = realmCitadel();
-    std::vector<size_t> order;
-    if (citadel) order.push_back(citadel->first);
+    // The fields with ore in the regions with a realm Citadel, the pilot's
+    // own region first (R3: a Citadel a region).
+    std::vector<size_t> order{p.region};
     for (size_t r = 0; r < regions_.size(); r++)
-        if (!citadel || r != citadel->first) order.push_back(r);
+        if (r != p.region) order.push_back(r);
     for (size_t r : order) {
         if (regions_[r]->simulation().bases(Pilot::player).empty()) continue;
         for (size_t f = 0; f < fields(r).size(); f++) {

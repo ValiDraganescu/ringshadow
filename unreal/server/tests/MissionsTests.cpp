@@ -278,7 +278,7 @@ TEST(missions_board_refreshes_at_dawn) {
     EXPECT_TRUE(w.journal(a)[0].id == before[0].id && w.journal(a)[0].state == State::taken);
 }
 
-// Signing up: at the realm's Citadel only, three at once at most, an offer
+// Signing up: at a Citadel only, three at once at most, an offer
 // on the board only; abandoning: a taken one, from anywhere, free; a done
 // one stays.
 TEST(missions_take_abandon_and_limit) {
@@ -303,7 +303,7 @@ TEST(missions_take_abandon_and_limit) {
     EXPECT_TRUE(*w.wallet(a) == wallet);
     EXPECT_TRUE(w.journal(a).size() == 2);
     // Away from the Citadel: refused.
-    EXPECT_TRUE(w.takeMission(a, board[3].id) == std::optional<std::string>("Sign up at the realm's Citadel: stand where you unload"));
+    EXPECT_TRUE(w.takeMission(a, board[3].id) == std::optional<std::string>("Sign up at a Citadel: stand where you unload"));
     besides(w, a, *s.citadel);
     EXPECT_TRUE(!w.takeMission(a, board[3].id).has_value());
     // A done one can't be dropped.
@@ -313,7 +313,7 @@ TEST(missions_take_abandon_and_limit) {
     EXPECT_TRUE(w.abandonMission(a, journal[0].id) == std::optional<std::string>("That mission is done already"));
 }
 
-// A haul: ore unloaded at the realm's Citadel counts; done, it pays its XP,
+// A haul: ore unloaded at a Citadel counts; done, it pays its XP,
 // ore and MH once, with its news, and supplies up to the stack.
 TEST(missions_haul_completes_and_pays) {
     Board1 s;

@@ -505,7 +505,16 @@ FString AcProgressHud::BlueprintRefusal(const FAcMmoClient* Mmo, const ac::Struc
 	// counting the realm's buildings of that kind across the world (R1: the
 	// limits are the realm's).
 	int64 Owned = 0;
-	if (const ac::net::ProgressMessage* P = Mmo->Progress())
+	if (ac::Progression::perRegion(Kind))
+	{
+		// Counted in the region (the Landing Pad, the Citadel since R3): the
+		// mirror's, the region the pilot stands in now (the Progress message
+		// is not sent again on a region change).
+		if (const ac::net::Mirror* M = Mmo->Mirror())
+			for (const ac::Structure& B : M->simulation().state.structures)
+				Owned += B.kind == Kind && B.owner == ac::Pilot::player ? 1 : 0;
+	}
+	else if (const ac::net::ProgressMessage* P = Mmo->Progress())
 	{
 		if (const auto It = P->realm.find(Kind); It != P->realm.end()) Owned = It->second;
 	}
@@ -1541,7 +1550,7 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		else if (N.id == "left")
 		{
 			Hud->Toast(FString::Printf(TEXT("MERCENARY LEFT: %s"), *Name),
-				FString::Printf(TEXT("Unpaid at dawn: the wage is %lld MH  ·  H hires at the Citadel"), (long long)N.value), FAcHudStyle::Amber(), Now);
+				FString::Printf(TEXT("Unpaid at dawn: the wage is %lld MH  ·  H hires at a Citadel"), (long long)N.value), FAcHudStyle::Amber(), Now);
 		}
 		else if (N.id == "down")
 		{

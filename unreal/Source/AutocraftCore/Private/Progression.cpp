@@ -528,6 +528,7 @@ int64_t Progression::blueprintFloor(StructureKind k) {
 
 int64_t Progression::buildingLimit(StructureKind k) {
     switch (k) {
+    // R3: one a region (`perRegion`).
     case StructureKind::citadel: return 1;
     case StructureKind::derrick: return 4;
     case StructureKind::habDome: return 3;
@@ -775,10 +776,11 @@ double ProspectorProgress::chipChance() const {
 std::optional<std::string> ProspectorProgress::buildRefusal(StructureKind k, int64_t owned) const {
     const std::string name = Simulation::title(k);
     if (Progression::blueprintFloor(k) <= 0) return "No " + name + " blueprint in this world";
-    if (copies(k) <= 0) return std::string("No blueprint: buy one at the Citadel (H)");
+    if (copies(k) <= 0) return std::string("No blueprint: buy one at a Citadel (H)");
     if (level() < floor(k)) return "The " + name + " opens at level " + std::to_string(floor(k));
     if (owned >= limit(k)) {
         if (k == StructureKind::landingPad) return "Landing Pad limit reached: " + std::to_string(limit(k)) + " in a region";
+        if (k == StructureKind::citadel) return std::string("This region has its Citadel: one a region");
         const bool more = k == StructureKind::habDome || k == StructureKind::derrick || k == StructureKind::sentinel;
         return name + " limit reached: " + std::to_string(limit(k)) + (more ? " (Overbuild allows more)" : "");
     }

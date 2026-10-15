@@ -176,7 +176,7 @@ TEST(defence_citadel_upgrades_from_the_realm_wallet) {
     Unit* u = drivenUnit(w, a);
     u->position = u->position + Vec2(0, -30);
     w.step();
-    EXPECT_TRUE(w.upgradeCitadel(a, DefenceStat::rate).value_or("").rfind("Upgrade at the realm's Citadel", 0) == 0);
+    EXPECT_TRUE(w.upgradeCitadel(a, DefenceStat::rate).value_or("").rfind("Upgrade at a Citadel", 0) == 0);
 
     besides(w, a, *s.citadel);
     EXPECT_TRUE(w.upgradeCitadel(a, DefenceStat::rate).value_or("") == "The realm wallet is short: 250 ore needed, it has 0");
@@ -260,7 +260,7 @@ TEST(defence_turrets_blueprints_floors_and_limits) {
     EXPECT_TRUE(g.buildRefusal(StructureKind::sentinel, 4).value_or("").rfind("Sentinel limit reached: 4", 0) == 0);
     ProspectorProgress none;
     none.xp = Progression::xp(10);
-    EXPECT_TRUE(none.buildRefusal(StructureKind::gatling, 0).value_or("") == "No blueprint: buy one at the Citadel (H)");
+    EXPECT_TRUE(none.buildRefusal(StructureKind::gatling, 0).value_or("") == "No blueprint: buy one at a Citadel (H)");
     bool gat = false, aa = false;
     for (const StructureKind k : PilotBuild::worldKinds) {
         gat = gat || k == StructureKind::gatling;

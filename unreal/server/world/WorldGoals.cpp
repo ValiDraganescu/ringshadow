@@ -48,22 +48,22 @@ const std::vector<WorldGoals::Entry>& WorldGoals::chain() {
          "You're sitting on {n} skill points. KSTR can't spend them for you, and they don't earn interest.",
          "Each level gives a point. The tree turns them into a faster drill, a bigger hold, a tougher rig.",
          "K  SPEND YOUR SKILL POINTS  ·  {n} LEFT"},
-        {"mission", 1, "Sign Up at the Citadel",
-         "The Citadel's board has work with real pay. Walk in, press H, take something off MISSIONS.",
+        {"mission", 1, "Sign Up at a Citadel",
+         "Every Citadel's board has work with real pay. Walk up to your nearest, press H, take something off MISSIONS.",
          "Missions pay more than the radio: ore, MH, blueprint copies, supplies. The Journal (L) keeps them.",
-         "H  AT THE CITADEL  ·  MISSIONS  ·  TAKE ONE"},
+         "H  AT A CITADEL  ·  MISSIONS  ·  TAKE ONE"},
         {"shop", 1, "Stock Up",
-         "The Citadel sells kits, canisters, shield charges and flares. Buy one before you need one, not after.",
+         "Every Citadel sells kits, canisters, shield charges and flares. Buy one before you need one, not after.",
          "Supplies get you out of trouble in the field: a repair, a tank of MH, a shield, a flare that shows the ore.",
-         "H  AT THE CITADEL  ·  SHOP  ·  BUY A SUPPLY"},
+         "H  AT A CITADEL  ·  SHOP  ·  BUY A SUPPLY"},
         {"gatling", 5, "Guard Your Ore",
-         "The bugs have found your veins. Gatling plans are in the Citadel's shop: set one by the ore you work.",
+         "The bugs have found your veins. Gatling plans are in any Citadel's shop: set one by the ore you work.",
          "The Brood mines unguarded veins and bites buildings. A gatling gun shoots ground bugs and low flyers.",
          "B  BUILD A GATLING GUN BY YOUR ORE"},
         {"merc", 5, "Hire a Hand",
-         "Mercenaries mine while you sleep, for a fee and a daily wage. The Citadel's MERCS tab has names.",
+         "Mercenaries mine while you sleep, for a fee and a daily wage. Any Citadel's MERCS tab has names.",
          "A mercenary works a field at a 24th of your rate, around the clock, into your wallet.",
-         "H  AT THE CITADEL  ·  MERCS  ·  HIRE ONE"},
+         "H  AT A CITADEL  ·  MERCS  ·  HIRE ONE"},
         {"dome", 8, "A Roof Away from Home",
          "Hab Dome plans open at 8. Raise one in another region: a depot to unload at, a bed to wake up in.",
          "A Hab Dome is a field depot and a respawn point, so far ore is worth the walk.",
@@ -260,11 +260,20 @@ std::optional<net::Goal> WorldMap::goalMessage(PilotId pilot, const PilotState& 
         out.region = world_->regions[r].file.id;
         out.at = at;
     };
-    // The Citadel's goals point at the realm's Citadel.
+    // The Citadel's goals point at the nearest Citadel (R3: one a region):
+    // the pilot's region's, else the realm's first.
     if (p.goal == "mission" || p.goal == "shop" || p.goal == "merc") {
-        if (const auto c = realmCitadel())
-            for (const Structure& s : regions_[c->first]->simulation().state.structures)
-                if (s.id == c->second) mark(c->first, s.position);
+        bool here = false;
+        if (!p.flight)
+            for (const Structure& s : regions_[p.region]->simulation().state.structures)
+                if (!here && s.kind == StructureKind::citadel && s.complete() && realm(s)) {
+                    mark(p.region, s.position);
+                    here = true;
+                }
+        if (!here)
+            if (const auto c = realmCitadel())
+                for (const Structure& s : regions_[c->first]->simulation().state.structures)
+                    if (s.id == c->second) mark(c->first, s.position);
     } else if (p.goal == "derrick" && !p.flight) {
         // The nearest well with MH in the pilot's region.
         const Region& here = *regions_[p.region];

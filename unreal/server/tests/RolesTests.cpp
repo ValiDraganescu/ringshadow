@@ -657,3 +657,55 @@ TEST(roles_rejoin_after_hand_back_drives_again) {
     ASSERT_TRUE(simOf(w, me).pilot.has_value());
     EXPECT_EQ(simOf(w, me).pilot->unit, mine);
 }
+
+// R3 (the user, 2026-10-15): a Citadel a region, every one a home. A second
+// in the same region is refused; one in a neighbour stands; the realm's tax
+// is taken at it, the shop sells at it, and a Prospector that falls there
+// comes back at it, the nearest.
+TEST(roles_a_citadel_a_region_each_a_home) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::fresh);
+    w.setProgress(me, at(10));
+    ASSERT_TRUE(put(w, me, StructureKind::citadel).has_value());
+    std::string why;
+    EXPECT_TRUE(!put(w, me, StructureKind::citadel, &why).has_value());
+    EXPECT_EQ(why, std::string("This region has its Citadel: one a region"));
+    EXPECT_EQ(w.realmCount(StructureKind::citadel), int64_t(1));
+    // The Progress message counts this region's Citadels (the build menu).
+    EXPECT_EQ(w.progressMessage(me)->realm.at(StructureKind::citadel), int64_t(1));
+
+    goTo(w, me, "cold-fork");
+    EXPECT_EQ(w.progressMessage(me)->realm.count(StructureKind::citadel), size_t(0));
+    fill(w, me, 2000, 200);
+    const auto second = put(w, me, StructureKind::citadel);
+    ASSERT_TRUE(second.has_value());
+    EXPECT_EQ(w.realmCount(StructureKind::citadel), int64_t(2));
+    const Structure fork = *building(w, me, *second);
+
+    // The shop at the second Citadel.
+    Unit* u = drivenUnit(w, me);
+    u->position = fork.position + Vec2(Rules::radius(StructureKind::citadel) + 0.4, 0);
+    u->task = Unit::Task::idle;
+    fill(w, me, 2000, 200);
+    EXPECT_TRUE(!w.buy(me, StructureKind::habDome, Item::repairKit).has_value());
+
+    // The tax at the second Citadel: an unload there feeds the realm wallet.
+    const int64_t realmBefore = w.realmWallet().ore;
+    u = drivenUnit(w, me);
+    u->carrying = 100;
+    u->hydrogen = false;
+    u->task = Unit::Task::idle;
+    wait(w, me, 6.0);
+    EXPECT_TRUE(w.realmWallet().ore > realmBefore);
+
+    // Fallen in Cold Fork: back at its Citadel, the nearest.
+    fall(w, me);
+    const auto r = w.respawning(me);
+    ASSERT_TRUE(r.has_value());
+    EXPECT_EQ(r->region, std::string("cold-fork"));
+    EXPECT_TRUE(r->home == std::optional<StructureKind>(StructureKind::citadel));
+    wait(w, me, 10.1);
+    ASSERT_TRUE(drivenUnit(w, me) != nullptr);
+    EXPECT_EQ(first().regions[*w.where(me)].file.id, std::string("cold-fork"));
+    EXPECT_TRUE(distance(drivenUnit(w, me)->position, fork.position) < Rules::radius(StructureKind::citadel) + 3);
+}

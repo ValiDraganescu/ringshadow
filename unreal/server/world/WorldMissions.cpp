@@ -1,5 +1,5 @@
 // Citadel missions (WorldMap.h `WorldMissions`, K2; docs/missions.md): a
-// board of offers per pilot at the realm's Citadel, two a tier (easy, hard,
+// board of offers per pilot at a Citadel, two a tier (easy, hard,
 // perilous), drawn by the server's dice per pilot and world day; the pilot
 // signs up for up to three at once and follows them in its Journal. Each
 // mission comes from a template: its title, the briefing its narration
@@ -515,7 +515,7 @@ std::optional<std::string> WorldMap::takeMission(PilotId pilot, uint32_t mission
     const auto taken = std::count_if(p->journal.begin(), p->journal.end(), [](const Mission& m) { return m.state == State::taken; });
     if (size_t(taken) >= WorldMissions::journal)
         return "Your Journal holds " + std::to_string(WorldMissions::journal) + " missions: finish or abandon one (L)";
-    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Sign up at the realm's Citadel: stand where you unload");
+    if (!atRealm(pilot, *p, {StructureKind::citadel})) return std::string("Sign up at a Citadel: stand where you unload");
     Mission m = *it;
     m.state = State::taken;
     m.have = 0;

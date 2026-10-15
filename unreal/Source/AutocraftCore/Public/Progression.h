@@ -258,6 +258,9 @@ struct AUTOCRAFTCORE_API Progression {
     /// the Garrison). Overbuild raises the Hab Dome, Derrick and Sentinel.
     /// The Landing Pad's is per region (F2: the server counts the region's).
     static int64_t buildingLimit(StructureKind k);
+    /// Counted in a region, not across the realm: the Landing Pad (F2) and,
+    /// since R3 (2026-10-15), the Citadel: one a region, each a full home.
+    static bool perRegion(StructureKind k) { return k == StructureKind::landingPad || k == StructureKind::citadel; }
     /// Landing Pads a region may have (F2).
     static constexpr int64_t landingPadsPerRegion = 2;
     /// What a building costs in a world, ore and MH, before the skills
