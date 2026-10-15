@@ -219,6 +219,46 @@ struct Sky {
         bool operator==(const Roar&) const = default;
     };
     std::vector<Roar> roars;
+    /// A canyon zone's game (Z2, docs/canyon.md), the same for every pilot:
+    /// its state, its wave, the bugs of it left, its clocks and the prize
+    /// taken against the fail mark. The wave panel, the warnings, the map
+    /// and the Journal read it.
+    struct Zone {
+        /// WAITING: wave 1 comes again and again until it is beaten;
+        /// RUNNING: the waves, one after another; FAILED: a wave broke
+        /// through, the Matriarch's siege; HELD: the canyon held, no waves.
+        enum class State : uint8_t { waiting, running, failed, held };
+        /// Index in the World message's `regions`, and in that region
+        /// file's `zones`.
+        int64_t region = 0;
+        int64_t zone = 0;
+        State state = State::waiting;
+        /// The wave out, or the next one (1…`waves`); 0: none yet.
+        int64_t wave = 0;
+        int64_t waves = 0;
+        /// Bugs of the wave out still alive (0: none out).
+        int64_t left = 0;
+        /// World time (`time`) the next wave comes (WAITING, RUNNING
+        /// between waves), or FAILED's and HELD's end. Nil: not counting
+        /// (no pilot near, or a wave out).
+        std::optional<double> next;
+        /// World time the wave out runs out of time: past it, a bug on the
+        /// prize fails it. Nil: no wave out.
+        std::optional<double> ends;
+        /// Ore the wave out has taken from the prize, and the mark that
+        /// fails it.
+        int64_t taken = 0;
+        int64_t mark = 0;
+        /// The entrances the wave out came from (bit k: the zone's
+        /// `entrances[k]`).
+        uint32_t tunnels = 0;
+        /// No pilot near: the waves wait.
+        bool paused = false;
+        /// The wave out is a mini-boss wave.
+        bool boss = false;
+        bool operator==(const Zone&) const = default;
+    };
+    std::vector<Zone> zones;
     double hour() const { return WorldClock::hourAt(time, dayLength, heldHour); }
     bool operator==(const Sky&) const = default;
 };
@@ -656,8 +696,15 @@ struct ProgressMessage {
     ///
     /// L1: `goal`: KSTR's next goal done, `id` its key, `by` its title,
     /// `xp` what it paid, `value` the MH.
+    ///
+    /// Z2: `canyon`, `by` the zone's name ("The Fork"): "wave/<n>/<MH>"
+    /// (and "/<blueprint>" for the last wave) to each pilot who fought a
+    /// wave beaten, `xp` and `value` (the ore) its share; "held" to every
+    /// pilot when the last wave is beaten (`value`: the pilots who fought
+    /// it); "failed" to every pilot when a wave breaks through (`value`:
+    /// the wave), "spared" when the Matriarch can't come (she is down).
     enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
-                                    merc, upgraded, matriarch, goal };
+                                    merc, upgraded, matriarch, goal, canyon };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;

@@ -457,6 +457,20 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
         it.lines = {"Contract · " + p->name};
         out.push_back(std::move(it));
     }
+    // The canyon zones' games.
+    for (const ZoneMark& z : in.zones) {
+        const Place* p = placeOf(places, z.region);
+        if (!p) continue;
+        Item it;
+        it.kind = Kind::zone;
+        it.region = p->index;
+        it.at = p->fromCells(z.at);
+        it.radius = z.radius;
+        it.flag = z.alert;
+        it.title = z.title;
+        it.lines = z.lines;
+        out.push_back(std::move(it));
+    }
     std::stable_sort(out.begin(), out.end(), [](const Item& a, const Item& b) { return a.kind < b.kind; });
     return out;
 }

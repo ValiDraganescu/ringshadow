@@ -102,6 +102,8 @@ struct AUTOCRAFTNET_API View {
 /// first wins between two as near.
 enum class Kind : uint8_t {
     you, mission, site, pad, merc, pilot, bugs, building, starfall, crater, deposit, well, contract,
+    /// A canyon zone's game (Z2): its state over its prize.
+    zone,
 };
 
 struct Item {
@@ -153,6 +155,18 @@ struct ContractMark {
     std::string title;
 };
 
+/// A canyon zone (Z2) as the game reads it from its region file and the sky:
+/// its region, its prize's middle (region cells) and reach, its name and
+/// state; `alert` while a wave is out or the zone has fallen.
+struct ZoneMark {
+    std::string region;
+    Vec2 at{0, 0};
+    double radius = 0;
+    std::string title;
+    std::vector<std::string> lines;
+    bool alert = false;
+};
+
 /// What the items are made from.
 struct Input {
     const WorldMessage* world = nullptr;
@@ -164,6 +178,7 @@ struct Input {
     std::optional<Sky> sky;
     std::vector<KnownSite> sites;
     std::vector<ContractMark> contracts;
+    std::vector<ZoneMark> zones;
 };
 
 /// Everything to draw, in `Kind` order.

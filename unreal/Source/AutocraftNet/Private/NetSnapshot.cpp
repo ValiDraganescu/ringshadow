@@ -274,6 +274,22 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
             Pos{}.write(w, x.position);
             kMs.write(w, x.at);
         }
+        writeVarint(w, s.sky->zones.size());
+        for (const Sky::Zone& z : s.sky->zones) {
+            writeVarint(w, uint64_t(z.region));
+            writeVarint(w, uint64_t(z.zone));
+            Enum<Sky::Zone::State, 2>{}.write(w, z.state);
+            writeVarint(w, uint64_t(z.wave));
+            writeVarint(w, uint64_t(z.waves));
+            writeVarint(w, uint64_t(z.left));
+            Opt<Fixed>{kMs}.write(w, z.next);
+            Opt<Fixed>{kMs}.write(w, z.ends);
+            writeVarint(w, uint64_t(z.taken));
+            writeVarint(w, uint64_t(z.mark));
+            writeVarint(w, z.tunnels);
+            w.writeBool(z.paused);
+            w.writeBool(z.boss);
+        }
     }
     Opt<Fixed>{kMs}.write(w, s.xp);
     writeVarint(w, s.players.size());
@@ -730,6 +746,24 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
             x.region = int64_t(readVarint(r));
             Pos{}.read(r, x.position);
             kMs.read(r, x.at);
+        }
+        const uint64_t zones = readVarint(r);
+        if (zones > 64 || !r.ok()) return std::nullopt;
+        sky.zones.assign(size_t(zones), {});
+        for (Sky::Zone& z : sky.zones) {
+            z.region = int64_t(readVarint(r));
+            z.zone = int64_t(readVarint(r));
+            Enum<Sky::Zone::State, 2>{}.read(r, z.state);
+            z.wave = int64_t(readVarint(r));
+            z.waves = int64_t(readVarint(r));
+            z.left = int64_t(readVarint(r));
+            Opt<Fixed>{kMs}.read(r, z.next);
+            Opt<Fixed>{kMs}.read(r, z.ends);
+            z.taken = int64_t(readVarint(r));
+            z.mark = int64_t(readVarint(r));
+            z.tunnels = uint32_t(readVarint(r));
+            z.paused = r.readBool();
+            z.boss = r.readBool();
         }
         s.sky = sky;
     }

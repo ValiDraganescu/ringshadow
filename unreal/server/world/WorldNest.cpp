@@ -383,14 +383,14 @@ void WorldMap::matriarchReturnNow() {
 
 // MARK: - The siege (Z2's hook)
 
-bool WorldMap::matriarchSiege(size_t r, Vec2 at, double radius, int64_t escort) {
+bool WorldMap::matriarchSiege(size_t r, Vec2 at, double radius, int64_t escort, std::optional<Vec2> from) {
     const auto nr = nestRegion();
     if (!nr || nest_.downAt || siege_ || r >= regions_.size() || !regions_[r]->simulation().broodSide) return false;
     if (brood_.size() < regions_.size()) brood_.resize(regions_.size());
     Simulation& sim = regions_[r]->simulation();
     GameState& st = sim.state;
     std::optional<int64_t> queen;
-    if (r == *nr) {
+    if (r == *nr && !from) {
         // From the nest: she walks there.
         for (const Unit& u : st.units)
             if (nest_.queen && u.id == *nest_.queen && u.hp > 0) queen = u.id;
@@ -411,9 +411,10 @@ bool WorldMap::matriarchSiege(size_t r, Vec2 at, double radius, int64_t escort) 
             std::erase_if(brood_[*nr].groups, [](const BroodGroup& g) { return g.bugs.empty(); });
             nest_.queen = std::nullopt;
         }
-        const auto from = spawnPoint(r, at);
-        if (!from) return false;
-        const auto g = spawnBroodGroup(r, UnitKind::matriarch, 1, Poi::nest, WorldNest::queenKey, *from, false);
+        // A canyon's tunnel (Z2), else the region's edge.
+        const auto in = from ? from : spawnPoint(r, at);
+        if (!in) return false;
+        const auto g = spawnBroodGroup(r, UnitKind::matriarch, 1, Poi::nest, WorldNest::queenKey, *in, false);
         if (!g) return false;
         queen = brood_[r].groups.back().bugs.front();
     }

@@ -399,6 +399,13 @@ bool WorldMap::spawnGroup(size_t r) {
     };
     auto calm = [&](Vec2 at) {
         if (citadel && distance(at, *citadel) < WorldBrood::citadelCalm) return true;
+        // A canyon's prize (Z2): only its waves come for it.
+        for (const region::Zone& z : places.zones) {
+            for (const int64_t i : z.prizeDeposits)
+                if (distance(places.map.deposits[size_t(i)].position, at) < 0.01) return true;
+            for (const int64_t i : z.prizeWells)
+                if (distance(places.map.wells[size_t(i)].position, at) < 0.01) return true;
+        }
         if (startPad && distance(at, *startPad) < WorldBrood::startCalm) return true;
         return false;
     };
@@ -551,6 +558,8 @@ void WorldMap::brood() {
         for (const Simulation::BugHit& h : sim.bugHits) {
             // The Matriarch keeps her own tally: who hurt her, by how much.
             if (h.kind == UnitKind::matriarch) queenHit(r, h);
+            // A bug of a canyon's wave: who fought it (Z2's pay).
+            canyonHit(r, h);
             const double share = h.hp / std::max(1.0, Rules::hp(h.kind));
             for (auto& [pilot, p] : pilots_)
                 if (!p.flight && p.region == r && p.unit == h.shooter) {

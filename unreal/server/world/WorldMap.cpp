@@ -259,6 +259,31 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
     // The survey chips' dice: their own stream, off the world's id.
     chips_.seed(params_.chipSeed ? params_.chipSeed : uint64_t(WorldClock::weatherSeed(world.file.id)) ^ 0x5eedc41b5ULL);
     if (params_.weatherHold) weather_->hold(*params_.weatherHold);
+    // The canyon zones' games (Z2): each waits for its first wave.
+    if (params_.canyons)
+        for (size_t r = 0; r < regions_.size(); r++) {
+            const auto& places = regions_[r]->places();
+            if (!places) continue;
+            for (size_t k = 0; k < places->zones.size(); k++) {
+                const region::Zone& z = places->zones[k];
+                Canyon c;
+                c.region = r;
+                c.zone = k;
+                c.id = z.id;
+                c.name = z.name;
+                c.next = WorldCanyon::firstWait;
+                // The prize's middle (its deposits, else its wells), and the
+                // zone's reach round it: its farthest build spot and 3 cells.
+                std::vector<Vec2> prize;
+                for (const int64_t i : z.prizeDeposits) prize.push_back(places->map.deposits[size_t(i)].position);
+                if (prize.empty())
+                    for (const int64_t i : z.prizeWells) prize.push_back(places->map.wells[size_t(i)].position);
+                for (const Vec2 p : prize) c.middle = c.middle + p / double(prize.size());
+                for (const Vec2 s : z.spots) c.reach = std::max(c.reach, distance(s, c.middle));
+                c.reach += 3;
+                canyons_.push_back(c);
+            }
+        }
     updateSky();
 }
 
@@ -582,6 +607,7 @@ void WorldMap::step() {
     missions();
     starfall();
     brood();
+    canyonsStep();
     respawns();
     rigs();
     landingPadsChanged();
@@ -612,8 +638,10 @@ void WorldMap::idle(double seconds) {
     mercsBook(clock_ - seconds, clock_);
     // The Brood's director on the world's clock: with no pilot near it
     // spawns and raids nothing, and a region's bugs go `idleDespawn` s
-    // after the last pilot left (WorldBrood.cpp).
+    // after the last pilot left (WorldBrood.cpp). The canyons' waves wait;
+    // their FAILED and HELD ends come on the clock (WorldCanyon.cpp).
     brood();
+    canyonsStep();
 }
 
 double WorldMap::catchUp(double seconds) {
@@ -630,6 +658,7 @@ double WorldMap::catchUp(double seconds) {
     landingPadsChanged();
     // No pilot on line: no group spawns, no raid is told, none piles up.
     brood();
+    canyonsStep();
     offlineWork(moved);
     return moved;
 }

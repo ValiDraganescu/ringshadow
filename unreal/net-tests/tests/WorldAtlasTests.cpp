@@ -362,3 +362,25 @@ TEST(atlas_thousands) {
     EXPECT_EQ(thousands(1240), std::string("1,240"));
     EXPECT_EQ(thousands(-1234567), std::string("-1,234,567"));
 }
+
+/// A canyon zone (Z2) over its prize: its name and state, in its region's
+/// place, drawn last of the kinds.
+TEST(atlas_canyon_zones) {
+    const WorldMessage w = firstReach();
+    ProgressMessage p;
+    Input in;
+    in.world = &w;
+    in.progress = &p;
+    in.zones.push_back(ZoneMark{w.regions[1].id, Vec2(118, 27.5), 27, "THE FORK", {"Wave 3 of 10 · 7 bugs left"}, true});
+    in.zones.push_back(ZoneMark{"nowhere", Vec2(1, 1), 5, "LOST", {}, false});
+    const std::vector<atlas::Place> places = layout(w, {});
+    const std::vector<atlas::Item> all = items(in, places);
+    const atlas::Item* z = find(all, atlas::Kind::zone);
+    ASSERT_TRUE(z != nullptr);
+    EXPECT_TRUE(z->title == "THE FORK" && z->flag && z->radius == 27);
+    EXPECT_TRUE(has(z->lines, "Wave 3 of 10 · 7 bugs left"));
+    EXPECT_TRUE(z->at == placeOf(places, w.regions[1].id)->fromCells(Vec2(118, 27.5)));
+    int zones = 0;
+    for (const atlas::Item& it : all) zones += it.kind == atlas::Kind::zone;
+    EXPECT_EQ(zones, 1);
+}

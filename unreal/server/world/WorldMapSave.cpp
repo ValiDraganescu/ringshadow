@@ -208,6 +208,11 @@ WorldSave WorldMap::save() const {
     // The Matriarch down (N3): when she fell and when she comes back.
     if (const auto nr = nestRegion(); nr && nest_.downAt && nest_.backAt)
         out.nests.push_back(SavedNest{world_->regions[*nr].file.id, *nest_.downAt, *nest_.backAt});
+    // The canyons' games (Z2): a wave out comes again whole after a break.
+    for (const Canyon& c : canyons_) {
+        const double next = !c.out ? c.next : clock_ + (c.state == CanyonState::waiting ? WorldCanyon::firstWait : WorldCanyon::breakFor);
+        out.canyons.push_back(SavedCanyon{world_->regions[c.region].file.id, c.id, int64_t(c.state), c.wave, next});
+    }
     return out;
 }
 
@@ -367,6 +372,36 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         nest_.backAt = sn.backAt;
         nest_.calmUntil = sn.downAt + Matriarch::calmDays * params_.dayLength;
     }
+    // The canyons' games (Z2; none before schema 20: each waits for wave 1).
+    // FAILED comes back without its siege: at its end the zone's turrets
+    // fall and it starts over.
+    for (Canyon& c : canyons_) {
+        c = [&] {
+            Canyon fresh;
+            fresh.region = c.region;
+            fresh.zone = c.zone;
+            fresh.id = c.id;
+            fresh.name = c.name;
+            fresh.middle = c.middle;
+            fresh.reach = c.reach;
+            return fresh;
+        }();
+        c.next = save.clock + WorldCanyon::firstWait;
+        for (const SavedCanyon& sc : save.canyons) {
+            if (regionNamed(sc.region) != c.region || sc.zone != c.id) continue;
+            if (sc.state < 0 || sc.state > int64_t(CanyonState::held) || sc.wave < 1 || sc.wave > WorldCanyon::count()) {
+                problems.push_back("canyon " + sc.region + "/" + sc.zone + ": state " + std::to_string(sc.state) + ", wave " +
+                                   std::to_string(sc.wave) + " do not read, left waiting");
+                continue;
+            }
+            c.state = CanyonState(sc.state);
+            c.wave = sc.wave;
+            c.next = sc.next;
+        }
+    }
+    for (const SavedCanyon& sc : save.canyons)
+        if (!regionNamed(sc.region) || !canyon(*regionNamed(sc.region), sc.zone))
+            problems.push_back("canyon " + sc.region + "/" + sc.zone + ": no such zone now, left out");
     // The world's hour goes on where it was.
     setClock(save.clock);
     return problems;

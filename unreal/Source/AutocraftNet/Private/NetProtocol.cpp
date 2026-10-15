@@ -1393,7 +1393,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(5);
-        if (kind > uint64_t(ProgressMessage::NewsKind::goal)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::canyon)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

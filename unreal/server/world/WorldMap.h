@@ -338,6 +338,9 @@ struct WorldParams {
     /// and its dice (0: seeded by the world's id).
     bool brood = true;
     uint64_t broodSeed = 0;
+    /// The canyon game (Z2, WorldCanyon.cpp) in every canyon zone (`--canyons
+    /// 0` turns it off); it runs whether the director spawns or not.
+    bool canyons = true;
     /// S2: the longest time the server was down that a start catches the
     /// world up on (`WorldMap::catchUp`): a day of the Mac's clock.
     double catchUpCap = 24 * 3600;
@@ -419,6 +422,64 @@ struct WorldBrood {
     static constexpr double craterHot = 180;
     /// The director's think: every this many seconds.
     static constexpr double think = 0.25;
+};
+
+/// The canyon game (Z2, docs/canyon.md; WorldCanyon.cpp): a canyon zone's
+/// waves of the Brood along its paths to the prize, its numbers.
+struct WorldCanyon {
+    /// One group of a wave: `count` bugs of `kind` (and `escort` Shardlings
+    /// in a group of their own) down path `path` (taken modulo the zone's
+    /// paths; wave 1's turns with each replay).
+    struct Group {
+        size_t path = 0;
+        UnitKind kind = UnitKind::shardling;
+        int64_t count = 0;
+        int64_t escort = 0;
+    };
+    struct Wave {
+        std::vector<Group> groups;
+        /// A mini-boss wave: the hoard (Lodebacks with a heavy escort).
+        bool boss = false;
+    };
+    /// The waves, 1 to N (N = 10 for every zone, The Fork first).
+    static const std::vector<Wave>& waves();
+    static int64_t count() { return int64_t(waves().size()); }
+    /// WAITING: wave 1 comes this long after the zone is quiet (a reset, the
+    /// hold's end, the server's start) and again this often while it is not
+    /// beaten, counted only while a pilot is in the region or next to it.
+    static constexpr double firstWait = 60;
+    static constexpr double replayEvery = 180;
+    /// RUNNING: the break between two waves (its countdown on the panel).
+    static constexpr double breakFor = 30;
+    /// A wave's time: its walk down the longest path at its slowest bug's
+    /// march, and this; past it, a bug of the wave on the prize fails it.
+    static constexpr double hold = 90;
+    /// The fail mark: ore of the prize the wave's bugs take (eaten into a
+    /// Lodeback's sac and carried off, or gnawed by Shardlings).
+    static constexpr int64_t failOre = 300;
+    /// A Shardling of a wave on the prize, with nothing to fight, gnaws this
+    /// much ore a second from the prize's deposit nearest it.
+    static constexpr double gnaw = 0.5;
+    /// "On the prize": within this many cells of the prize's middle.
+    static constexpr double onPrize = 9;
+    /// FAILED: the Matriarch's siege, with this many Shardlings; it ends
+    /// when she goes home, or after `failedMax` s (then every turret left
+    /// in the zone falls as if she came).
+    static constexpr int64_t siegeEscort = 6;
+    static constexpr double failedMax = 600;
+    /// HELD: this many world days.
+    static constexpr double heldDays = 1;
+    /// The canyon's think: every this many seconds.
+    static constexpr double think = 0.25;
+    /// A wave beaten pays its fighters, split by the damage each did to the
+    /// wave's bugs (its Prospector, and the defences it built while on line),
+    /// at least `floorShare` each: XP, ore and MH rising with the wave; the
+    /// last wave pays `lastBonus` times and a rare blueprint copy to each.
+    static double xp(int64_t wave);
+    static int64_t ore(int64_t wave);
+    static int64_t hydrogen(int64_t wave);
+    static constexpr double floorShare = 0.1;
+    static constexpr double lastBonus = 2;
 };
 
 /// The buildings' jobs for the pilot in a world (P6, docs/prospector-progression.md
@@ -895,7 +956,9 @@ public:
     /// `r`'s ground point `at`, fells every turret (a Sentinel, a Gatling
     /// Gun) of the realm within `radius` of it, then goes home. False: no
     /// nest, she is down, or out on a siege already.
-    bool matriarchSiege(size_t r, Vec2 at, double radius, int64_t escort = 8);
+    /// `from`: where she comes in, out of sight (a canyon's tunnel, Z2;
+    /// nil: her nest in its region, else the region's edge).
+    bool matriarchSiege(size_t r, Vec2 at, double radius, int64_t escort = 8, std::optional<Vec2> from = std::nullopt);
     /// A siege under way (nil: none): where, and whether she is on her way home.
     struct Siege {
         size_t region = 0;
@@ -911,6 +974,73 @@ public:
     /// nest (`here`), she roars at it (`roar`), slams (`slam`), is felled by
     /// it (`down`), back (`back`), a siege at the pilot (`siege`).
     std::string devMatriarch(const std::string& line);
+    // MARK: The canyon game (Z2, docs/canyon.md; WorldCanyon.cpp)
+
+    using CanyonState = net::Sky::Zone::State;
+    /// A canyon zone's game: its state, its wave, the wave's bugs and what
+    /// they took, the damage each pilot did to them.
+    struct Canyon {
+        size_t region = 0;
+        /// Index in the region's `zones`, and its id and name.
+        size_t zone = 0;
+        std::string id;
+        std::string name;
+        CanyonState state = CanyonState::waiting;
+        /// The wave out, or the next one (1…`WorldCanyon::count()`).
+        int64_t wave = 1;
+        /// Its bugs are out.
+        bool out = false;
+        /// World clock: WAITING and RUNNING the next wave (no wave out),
+        /// FAILED and HELD their end.
+        double next = 0;
+        /// The wave out's time runs out (world clock).
+        double ends = 0;
+        /// Wave 1 sent while WAITING, in all (its arm turns with each).
+        int64_t replays = 0;
+        /// No pilot in the region or next to it: the waves wait.
+        bool paused = false;
+        /// The wave's bugs (alive, a body, or gone), those killed, each
+        /// Lodeback's sac at the last think; the ore gnawed and carried off.
+        std::set<int64_t> bugs;
+        std::set<int64_t> killed;
+        std::map<int64_t, double> sacs;
+        double gnawed = 0;
+        int64_t carried = 0;
+        /// The entrances the wave came from (bit k: `entrances[k]`).
+        uint32_t tunnels = 0;
+        /// Hp of the wave's bugs each pilot took (its Prospector, or a
+        /// defence it built).
+        std::map<PilotId, double> damage;
+        /// FAILED: the Matriarch came (a siege under way, or done).
+        bool siege = false;
+        /// The prize's ground middle; the zone's turrets stand within
+        /// `reach` of it (its farthest build spot and 3 cells).
+        Vec2 middle{0, 0};
+        double reach = 0;
+        /// Bugs of the wave out alive at the last think.
+        int64_t left = 0;
+        /// Ore the wave out took: gnawed, carried off, in its Lodebacks' sacs.
+        int64_t taken() const;
+    };
+    /// Every canyon zone of the world, in region order.
+    const std::vector<Canyon>& canyons() const { return canyons_; }
+    /// Zone `zone` of region `r` (nil: none).
+    const Canyon* canyon(size_t r, std::string_view zone) const;
+    /// Tests, dev and shots: wave `wave` out now (RUNNING; wave 1 while
+    /// WAITING is its replay), the wave out failed now, beaten now (its
+    /// bugs gone, its fighters paid as they fought), the zone reset. False:
+    /// no such zone, or no brood side.
+    bool canyonSend(size_t r, std::string_view zone, int64_t wave);
+    bool canyonFail(size_t r, std::string_view zone);
+    bool canyonBeat(size_t r, std::string_view zone);
+    void canyonReset(size_t r, std::string_view zone);
+    /// Dev and shots (`canyon …` lines): the first pilot's region's first
+    /// zone: `send N` (wave N out now), `fail`, `beat`, `hold` (the last
+    /// wave beaten), `reset`, `turrets G [A]` (G finished Gatling Guns and A
+    /// AA towers of the realm on its build spots, built by the pilot),
+    /// `break S` (the next wave in S seconds).
+    std::string devCanyon(const std::string& line);
+
     /// Dev and shots (L1): `goal` says the goal shown; `goal pass KEY` passes
     /// one unpaid; `goal level N` gives the first pilot level N's XP and
     /// passes the goals under it unpaid.
@@ -1410,6 +1540,33 @@ private:
     int64_t nextGroup_ = 1;
     std::mt19937_64 broodDice_;
     double broodThought_ = -1e9;
+    // WorldCanyon.cpp.
+    /// Each step (and idle): every `WorldCanyon::think` s each zone's game.
+    void canyonsStep();
+    void canyonThink(Canyon& c, double dt);
+    /// A hit on a bug of a wave: who did it, toward the wave's pay.
+    void canyonHit(size_t r, const Simulation::BugHit& h);
+    /// The wave `c.wave` out now, down its paths.
+    bool sendWave(Canyon& c);
+    /// The wave out beaten (its fighters paid; the next wave, or HELD), or
+    /// broken through (WAITING: wave 1 comes again; RUNNING: FAILED).
+    void waveBeaten(Canyon& c);
+    void waveFailed(Canyon& c);
+    /// The wave's bugs left go on as any group: they linger a while and leave.
+    void releaseWave(Canyon& c);
+    /// Back to WAITING and wave 1, the prize full again.
+    void resetCanyon(Canyon& c);
+    void refillPrize(const Canyon& c);
+    /// Every turret of the realm still standing in the zone falls (FAILED's
+    /// end without the Matriarch there).
+    void fellZoneTurrets(const Canyon& c);
+    /// A pilot (not in flight) in region `r` or next to it.
+    bool pilotNear(size_t r) const;
+    Canyon* canyonOf(size_t r, std::string_view zone);
+    /// The zones' games as the sky carries them.
+    std::vector<net::Sky::Zone> skyZones() const;
+    std::vector<Canyon> canyons_;
+    double canyonThought_ = -1e9;
     /// The clock the goals were last checked at (L1).
     double goalsAt_ = -1e9;
     /// Falls whose impact the bugs felt; pilots' Prospectors last seen (a

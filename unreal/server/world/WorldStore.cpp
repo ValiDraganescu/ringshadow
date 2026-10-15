@@ -221,13 +221,20 @@ const char* const kV18 = R"sql(
 ALTER TABLE pilots ADD COLUMN goals TEXT NOT NULL DEFAULT '';
 )sql";
 
+/// Schema 20 (Z2; 19 is kept for F2): each canyon zone's game, its state,
+/// wave and next change. A save from before has every zone waiting.
+const char* const kV20 = R"sql(
+CREATE TABLE canyons (region TEXT NOT NULL, zone TEXT NOT NULL, state INTEGER NOT NULL, wave INTEGER NOT NULL, next REAL NOT NULL,
+                      PRIMARY KEY (region, zone));
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}};
     return steps;
 }
 
@@ -420,6 +427,11 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         while (s.row()) out.nests.push_back(SavedNest{s.colText(0), s.colReal(1), s.colReal(2)});
         if (s.failed(error)) return std::nullopt;
     }
+    {
+        Stmt s(db_, "SELECT region, zone, state, wave, next FROM canyons ORDER BY region, zone");
+        while (s.row()) out.canyons.push_back(SavedCanyon{s.colText(0), s.colText(1), s.colInteger(2), s.colInteger(3), s.colReal(4)});
+        if (s.failed(error)) return std::nullopt;
+    }
     regions_.clear();
     clock_ = std::nullopt;
     realm_ = std::nullopt;
@@ -440,6 +452,7 @@ void WorldStore::remember(const WorldSave& save) {
     marks_ = save.citadelMarks;
     starfalls_ = save.starfalls;
     nests_ = save.nests;
+    canyons_ = save.canyons;
     for (const SavedRegion& r : save.regions) {
         regions_[r.id] = {r.time, r.nextId};
         // A region written whole: its rows are these and no others.
@@ -576,6 +589,18 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                               .text(x.region)
                               .real(x.downAt)
                               .real(x.backAt)));
+        n.changed += 1;
+    }
+    // The canyons: one row a zone, written whole when any changed.
+    if (canyons_ != save.canyons) {
+        run(Stmt(db_, "DELETE FROM canyons"));
+        for (const SavedCanyon& x : save.canyons)
+            run(std::move(Stmt(db_, "INSERT INTO canyons (region, zone, state, wave, next) VALUES (?, ?, ?, ?, ?)")
+                              .text(x.region)
+                              .text(x.zone)
+                              .integer(x.state)
+                              .integer(x.wave)
+                              .real(x.next)));
         n.changed += 1;
     }
     if (clock_ != save.clock) {

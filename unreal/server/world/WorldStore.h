@@ -156,6 +156,18 @@ struct SavedNest {
     bool operator==(const SavedNest&) const = default;
 };
 
+/// A canyon zone's game (Z2, schema 20): its region and zone ids, its state
+/// (`Sky::Zone::State`), its wave and the world clock of its next change
+/// (the next wave, FAILED's or HELD's end).
+struct SavedCanyon {
+    std::string region;
+    std::string zone;
+    int64_t state = 0;
+    int64_t wave = 1;
+    double next = 0;
+    bool operator==(const SavedCanyon&) const = default;
+};
+
 struct WorldSave {
     std::vector<SavedRegion> regions;
     std::vector<SavedPilot> pilots;
@@ -174,6 +186,8 @@ struct WorldSave {
     TurretMarks citadelMarks{};
     /// The nests whose Matriarch is down (N3, schema 17).
     std::vector<SavedNest> nests{};
+    /// The canyon zones' games (Z2, schema 20).
+    std::vector<SavedCanyon> canyons{};
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -189,7 +203,7 @@ public:
     /// 5: contracts; 6: starfalls; 7: the rig; 8: the realm's buildings;
     /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions;
     /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills;
-    /// 17: the Matriarch's nests).
+    /// 17: the Matriarch's nests; 18: KSTR's next goal; 20: the canyons' games).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 
@@ -250,6 +264,7 @@ private:
     std::optional<TurretMarks> marks_;
     std::vector<SavedStarfall> starfalls_;
     std::vector<SavedNest> nests_;
+    std::vector<SavedCanyon> canyons_;
 };
 
 } // namespace ac::server
