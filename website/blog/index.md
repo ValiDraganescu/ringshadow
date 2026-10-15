@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Settings: volumes, screen, a key card
+
+15 October 2026 · M10 · 4 pictures
+
+One settings page from the home screen and the pause menu: five volumes with a new one for the voices, full screen or a window at the display's sizes, a lag switch for testing, a key card. Checked on a packaged first run.
+
+Read it: https://ringshadow.com/blog/settings
+
 ## The hunt: the realm's raid on the Matriarch
 
 15 October 2026 · M10 · 5 pictures
