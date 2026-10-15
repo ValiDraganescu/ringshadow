@@ -782,3 +782,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I hunters idle at the ring were killed by Slag Pockets' bugs before the charge; they now fight bugs within 10 cells while holding.
 - N hunt travel by the rules: next door 30 s, Ashen Shelf (4 regions off) 114 s, a downed Prospector 184 s; a far corner of the First Reach walks in within 2 min.
 - N N4 shots n4-01..05; five KSTR hunt lines (47 in all); core 505, net 102, server 341; clean checkout.
+- T web: the hunt post live at /blog/the-hunt (6366fe0).
