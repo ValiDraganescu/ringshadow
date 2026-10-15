@@ -1,0 +1,20 @@
+{
+  "about": "A2, the siege layers (docs/music.md \"Siege layers\"): two music beds that play over KSTR while a canyon is fought, the radio ducked under them. siege_wave rises with a canyon wave near the pilot (its gain grows with the wave's number); siege_matriarch plays while the Matriarch comes for a canyon's turrets. ElevenLabs Music, instrumental, our own; made into seamless loops by loopmusic.py (the intro and the ending cut, a 2 s cross-fade), then mp3 (unreal/Resources/Sounds/siege/<id>.mp3) the game streams and loops.",
+  "voices": {},
+  "entries": [
+    {
+      "id": "siege_wave",
+      "kind": "music",
+      "ms": 66000,
+      "fx": "loopmusic 0.5 3 2",
+      "prompt": "Instrumental siege tension bed for a dusty frontier space western, 112 BPM, D minor, constant intensity from the first bar to the last with no intro and no ending, built to loop: driving tom-heavy war drums and deep taiko hits, a gritty overdriven slide guitar ostinato, low staccato strings, a pulsing analog synth bass, eerie alien synth swells, urgent and relentless. No vocals."
+    },
+    {
+      "id": "siege_matriarch",
+      "kind": "music",
+      "ms": 50000,
+      "fx": "loopmusic 0.5 3 2",
+      "prompt": "Instrumental monster boss dread bed for a frontier space western, 84 BPM, C minor, constant intensity with no intro and no ending, built to loop: huge low brass blasts, pounding timpani and war drums, dissonant cello and double bass tremolo, a deep guttural alien synth growl, scraping metallic textures, slow crushing menace. No vocals, no choir."
+    }
+  ]
+}

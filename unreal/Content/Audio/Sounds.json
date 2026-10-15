@@ -3899,6 +3899,176 @@
    "seconds": 20.546
   }
  },
+ "kstr": {
+  "canyon-the-drowned-cut-beaten": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_drowned_cut_beaten.SW_canyon_the_drowned_cut_beaten",
+   "source": "kstr/canyon-the-drowned-cut-beaten.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-drowned-cut-beaten.wav",
+   "seconds": 4.18
+  },
+  "canyon-the-drowned-cut-fallen": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_drowned_cut_fallen.SW_canyon_the_drowned_cut_fallen",
+   "source": "kstr/canyon-the-drowned-cut-fallen.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-drowned-cut-fallen.wav",
+   "seconds": 4.26
+  },
+  "canyon-the-drowned-cut-held": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_drowned_cut_held.SW_canyon_the_drowned_cut_held",
+   "source": "kstr/canyon-the-drowned-cut-held.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-drowned-cut-held.wav",
+   "seconds": 4.4
+  },
+  "canyon-the-drowned-cut-wave": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_drowned_cut_wave.SW_canyon_the_drowned_cut_wave",
+   "source": "kstr/canyon-the-drowned-cut-wave.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-drowned-cut-wave.wav",
+   "seconds": 3.84
+  },
+  "canyon-the-fork-beaten": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_fork_beaten.SW_canyon_the_fork_beaten",
+   "source": "kstr/canyon-the-fork-beaten.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-fork-beaten.wav",
+   "seconds": 3.96
+  },
+  "canyon-the-fork-fallen": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_fork_fallen.SW_canyon_the_fork_fallen",
+   "source": "kstr/canyon-the-fork-fallen.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-fork-fallen.wav",
+   "seconds": 3.96
+  },
+  "canyon-the-fork-held": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_fork_held.SW_canyon_the_fork_held",
+   "source": "kstr/canyon-the-fork-held.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-fork-held.wav",
+   "seconds": 4.18
+  },
+  "canyon-the-fork-wave": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_fork_wave.SW_canyon_the_fork_wave",
+   "source": "kstr/canyon-the-fork-wave.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-fork-wave.wav",
+   "seconds": 3.62
+  },
+  "canyon-the-roost-beaten": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_roost_beaten.SW_canyon_the_roost_beaten",
+   "source": "kstr/canyon-the-roost-beaten.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-roost-beaten.wav",
+   "seconds": 4.08
+  },
+  "canyon-the-roost-fallen": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_roost_fallen.SW_canyon_the_roost_fallen",
+   "source": "kstr/canyon-the-roost-fallen.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-roost-fallen.wav",
+   "seconds": 3.86
+  },
+  "canyon-the-roost-held": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_roost_held.SW_canyon_the_roost_held",
+   "source": "kstr/canyon-the-roost-held.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-roost-held.wav",
+   "seconds": 4.22
+  },
+  "canyon-the-roost-wave": {
+   "asset": "/Game/Audio/Kstr/SW_canyon_the_roost_wave.SW_canyon_the_roost_wave",
+   "source": "kstr/canyon-the-roost-wave.wav",
+   "prepared": "Content-src/sounds/kstr/canyon-the-roost-wave.wav",
+   "seconds": 3.64
+  },
+  "goal-active": {
+   "asset": "/Game/Audio/Kstr/SW_goal_active.SW_goal_active",
+   "source": "kstr/goal-active.wav",
+   "prepared": "Content-src/sounds/kstr/goal-active.wav",
+   "seconds": 4.16
+  },
+  "goal-derrick": {
+   "asset": "/Game/Audio/Kstr/SW_goal_derrick.SW_goal_derrick",
+   "source": "kstr/goal-derrick.wav",
+   "prepared": "Content-src/sounds/kstr/goal-derrick.wav",
+   "seconds": 5.98
+  },
+  "goal-dome": {
+   "asset": "/Game/Audio/Kstr/SW_goal_dome.SW_goal_dome",
+   "source": "kstr/goal-dome.wav",
+   "prepared": "Content-src/sounds/kstr/goal-dome.wav",
+   "seconds": 4.74
+  },
+  "goal-done": {
+   "asset": "/Game/Audio/Kstr/SW_goal_done.SW_goal_done",
+   "source": "kstr/goal-done.wav",
+   "prepared": "Content-src/sounds/kstr/goal-done.wav",
+   "seconds": 4.46
+  },
+  "goal-foundry": {
+   "asset": "/Game/Audio/Kstr/SW_goal_foundry.SW_goal_foundry",
+   "source": "kstr/goal-foundry.wav",
+   "prepared": "Content-src/sounds/kstr/goal-foundry.wav",
+   "seconds": 4.36
+  },
+  "goal-foundryplans": {
+   "asset": "/Game/Audio/Kstr/SW_goal_foundryplans.SW_goal_foundryplans",
+   "source": "kstr/goal-foundryplans.wav",
+   "prepared": "Content-src/sounds/kstr/goal-foundryplans.wav",
+   "seconds": 5.16
+  },
+  "goal-gatling": {
+   "asset": "/Game/Audio/Kstr/SW_goal_gatling.SW_goal_gatling",
+   "source": "kstr/goal-gatling.wav",
+   "prepared": "Content-src/sounds/kstr/goal-gatling.wav",
+   "seconds": 4.98
+  },
+  "goal-lab": {
+   "asset": "/Game/Audio/Kstr/SW_goal_lab.SW_goal_lab",
+   "source": "kstr/goal-lab.wav",
+   "prepared": "Content-src/sounds/kstr/goal-lab.wav",
+   "seconds": 3.92
+  },
+  "goal-matriarch": {
+   "asset": "/Game/Audio/Kstr/SW_goal_matriarch.SW_goal_matriarch",
+   "source": "kstr/goal-matriarch.wav",
+   "prepared": "Content-src/sounds/kstr/goal-matriarch.wav",
+   "seconds": 4.78
+  },
+  "goal-merc": {
+   "asset": "/Game/Audio/Kstr/SW_goal_merc.SW_goal_merc",
+   "source": "kstr/goal-merc.wav",
+   "prepared": "Content-src/sounds/kstr/goal-merc.wav",
+   "seconds": 4.66
+  },
+  "goal-mission": {
+   "asset": "/Game/Audio/Kstr/SW_goal_mission.SW_goal_mission",
+   "source": "kstr/goal-mission.wav",
+   "prepared": "Content-src/sounds/kstr/goal-mission.wav",
+   "seconds": 4.5
+  },
+  "goal-module": {
+   "asset": "/Game/Audio/Kstr/SW_goal_module.SW_goal_module",
+   "source": "kstr/goal-module.wav",
+   "prepared": "Content-src/sounds/kstr/goal-module.wav",
+   "seconds": 4.02
+  },
+  "goal-sentinel": {
+   "asset": "/Game/Audio/Kstr/SW_goal_sentinel.SW_goal_sentinel",
+   "source": "kstr/goal-sentinel.wav",
+   "prepared": "Content-src/sounds/kstr/goal-sentinel.wav",
+   "seconds": 5.14
+  },
+  "goal-shop": {
+   "asset": "/Game/Audio/Kstr/SW_goal_shop.SW_goal_shop",
+   "source": "kstr/goal-shop.wav",
+   "prepared": "Content-src/sounds/kstr/goal-shop.wav",
+   "seconds": 5.5
+  },
+  "goal-skills": {
+   "asset": "/Game/Audio/Kstr/SW_goal_skills.SW_goal_skills",
+   "source": "kstr/goal-skills.wav",
+   "prepared": "Content-src/sounds/kstr/goal-skills.wav",
+   "seconds": 4.28
+  },
+  "goal-spacedock": {
+   "asset": "/Game/Audio/Kstr/SW_goal_spacedock.SW_goal_spacedock",
+   "source": "kstr/goal-spacedock.wav",
+   "prepared": "Content-src/sounds/kstr/goal-spacedock.wav",
+   "seconds": 5.36
+  }
+ },
  "unusedInSwift": [
   "atlasdeath",
   "atlasmove",

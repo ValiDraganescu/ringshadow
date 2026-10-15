@@ -1,0 +1,204 @@
+{
+  "about": "A2, the siege's radio voice (docs/music.md \"Siege layers\"): KSTR's announcer reads the goal lines (a new goal from the radio's chain, one done) and the canyon news (a wave coming, a wave beaten, a canyon held, a canyon fallen with the Matriarch coming), one line each, under 6 s. The game plays them through its radio-line queue (narration first, never two at once), the text stays on the HUD. Same voice and radio.py as the station's ads. KSTR is written K-S-T-R so it is spelled out.",
+  "voices": {
+    "announcer": "sM0OsGgRUQMd8tCIWOCm"
+  },
+  "entries": [
+    {
+      "id": "goal-done",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright, upbeat] Goal done, Prospector! K-S-T-R has your next one.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-derrick",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up from K-S-T-R: pump some silver. Put a Derrick on a well!",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-skills",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright, teasing] Next up: spend those skill points. They don't earn interest!",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-mission",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: sign up at the Citadel. The board has real pay.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-shop",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: stock up at the Citadel shop. Before you need it, not after!",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-gatling",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright, serious] Next up: guard your ore. Set a Gatling Gun by your veins.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-merc",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: hire a hand. Mercenaries mine while you sleep!",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-dome",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[warm] Next up: a roof away from home. Raise a Hab Dome out there.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-active",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[excited] Level ten! Next up: put something on Q.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-sentinel",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: eyes on the sky. An AA tower keeps the Gloamwings off.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-foundryplans",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[intrigued] Next up: the Foundry hunt. Find those plans before level fifteen.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-foundry",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: light the Foundry. One for the whole realm.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-module",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: make a module. The Foundry's warm!",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-lab",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: raise the Lab. The high marks start there.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-spacedock",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[awed] Next up: a dock for ships. The long way out starts here.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-matriarch",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[serious, low] Next up: the Matriarch. Bring friends. Bring turrets.",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-fork-wave",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[urgent, breaking news] Bugs in The Fork! Wave incoming, get on those guns!",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-fork-beaten",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[relieved, bright] Wave beaten at The Fork. Nice shooting, Prospectors!",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-fork-held",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[triumphant] The Fork is held! A whole day of peace out there.",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-fork-fallen",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[alarmed] The Fork has fallen! The Matriarch is coming for the turrets!",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-drowned-cut-wave",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[urgent, breaking news] Bugs in The Drowned Cut! Wave incoming, get on those guns!",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-drowned-cut-beaten",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[relieved, bright] Wave beaten at The Drowned Cut. Nice shooting, Prospectors!",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-drowned-cut-held",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[triumphant] The Drowned Cut is held! A whole day of peace out there.",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-drowned-cut-fallen",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[alarmed] The Drowned Cut has fallen! The Matriarch is coming for the turrets!",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-roost-wave",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[urgent, breaking news] Bugs in The Roost! Wave incoming, get on those guns!",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-roost-beaten",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[relieved, bright] Wave beaten at The Roost. Nice shooting, Prospectors!",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-roost-held",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[triumphant] The Roost is held! A whole day of peace out there.",
+      "fx": "radio"
+    },
+    {
+      "id": "canyon-the-roost-fallen",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[alarmed] The Roost has fallen! The Matriarch is coming for the turrets!",
+      "fx": "radio"
+    }
+  ]
+}

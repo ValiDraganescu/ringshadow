@@ -7,8 +7,8 @@
 Two stages, both rerunnable:
 
 1. prepare (plain Python, no Unreal): every WAV under
-   unreal/Resources/Sounds/{sfx,ads,missions} becomes a mono 16-bit WAV in
-   unreal/Content-src/sounds/{sfx,ads,missions}/, downmixed and peak-normalised to 0.8
+   unreal/Resources/Sounds/{sfx,ads,missions,kstr} becomes a mono 16-bit WAV in
+   unreal/Content-src/sounds/{sfx,ads,missions,kstr}/, downmixed and peak-normalised to 0.8
    as the Swift game does at load (AudioDirector.loadMono + Synth.normalize).
    The sample rate is kept (24/44.1/48 kHz; Unreal resamples). A format the
    `wave` module cannot read is converted with afconvert first. Files whose
@@ -142,7 +142,7 @@ def prepare():
         with open(STAMPS) as f:
             stamps = json.load(f)
     done, made = {}, 0
-    for group in ("sfx", "ads", "missions"):
+    for group in ("sfx", "ads", "missions", "kstr"):
         src_dir = os.path.join(SOUNDS, group)
         if not os.path.isdir(src_dir):
             done[group] = []
@@ -220,6 +220,11 @@ def ad_asset(ad_id):
     return "/Game/Audio/Ads/SW_%s" % ad_id
 
 
+def kstr_asset(key):
+    # A2: KSTR's spoken lines (the goals, the canyon news).
+    return "/Game/Audio/Kstr/SW_" + key.replace("-", "_")
+
+
 def mission_asset(key):
     return "/Game/Audio/Missions/SW_%s" % key.replace("-", "_")
 
@@ -258,6 +263,13 @@ def build_table(prepared):
         path = mission_asset(key)
         missions[key] = {"asset": path + "." + path.rsplit("/", 1)[1], "source": "missions/" + e["file"],
                          "prepared": e["prepared"], "seconds": e["seconds"]}
+    # A2: KSTR's spoken lines, by key (goal-<key>, canyon-<zone>-<event>).
+    kstr = {}
+    for e in prepared.get("kstr", []):
+        key = e["file"][:-4]
+        path = kstr_asset(key)
+        kstr[key] = {"asset": path + "." + path.rsplit("/", 1)[1], "source": "kstr/" + e["file"],
+                     "prepared": e["prepared"], "seconds": e["seconds"]}
     unused = sorted(n for n, s in sounds.items() if not s["board"] and not s["audioSwiftLines"])
     return {
         "madeBy": SCRIPT,
@@ -268,6 +280,7 @@ def build_table(prepared):
         "sounds": dict(sorted(sounds.items())),
         "ads": dict(sorted(ads.items())),
         "missions": dict(sorted(missions.items())),
+        "kstr": dict(sorted(kstr.items())),
         "unusedInSwift": unused,
     }
 
@@ -292,7 +305,7 @@ def import_all(table):
         for v in s["variants"]:
             pkg = v["asset"].split(".")[0]
             jobs.append((v["prepared"], pkg.rsplit("/", 1)[0], pkg.rsplit("/", 1)[1], v["source"]))
-    for ad_id, a in list(table["ads"].items()) + list(table["missions"].items()):
+    for ad_id, a in list(table["ads"].items()) + list(table["missions"].items()) + list(table.get("kstr", {}).items()):
         pkg = a["asset"].split(".")[0]
         jobs.append((a["prepared"], pkg.rsplit("/", 1)[0], pkg.rsplit("/", 1)[1], a["source"]))
 
