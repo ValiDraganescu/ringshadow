@@ -57,6 +57,11 @@ XP per hour of play at level L:
   at level 51, ×2.98 at level 100. This is the average build. An all-economy
   build levels faster, a Hardshell-heavy one slower. The model is an
   estimate: tune `500` and `3` once real hours are measured.
+- The curve is pure mining. Missions and canyons come on top: a pilot who
+  mines, takes the Citadel board and holds a canyon runs about ×2 the
+  curve (×1.86 to ×2.02 measured at levels 1 to 20; level 10 in about 36
+  minutes, not 66). [balance.md](balance.md) has the targets, the
+  measures and the bench (B2).
 
 This curve is in **plain XP**: 1 XP an ore, as in the strategy game. The
 world's ×0.1 (`Simulation::xpScale`, `kWorldXpScale`) goes back to 1, because

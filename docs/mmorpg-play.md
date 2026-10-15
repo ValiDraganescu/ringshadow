@@ -172,7 +172,7 @@ Add these to the game's command line.
 | `-AcMmoRingshadow=70` | Starts a ringshadow sweep 70 s after the server starts (its `--ringshadow`: the world's clock moves on to it). Without it the sweeps come at 11:30 and 16:00 world time ([weather.md](weather.md), "Ringshadow sweep"). |
 | `-AcMmoStarfall=40` | A starfall lands 40–58 cells from the first pilot that drives, 40 s after it drives, told at once (the server's `--starfall`). Without it the falls come 2–3 times a world day on the world's dice ([weather.md](weather.md), "Starfall"). |
 | `-AcMmoClockHour=17` | Moves the world's clock on to that hour at the start and lets it run (the server's `--clock-hour`, 0–24), unlike `-AcMmoHour`, which holds it. |
-| `-AcMmoDevXp=55` | A new pilot's Prospector gets this much XP at once (the server's `--dev-xp`). Level 2 is at 60 XP. |
+| `-AcMmoDevXp=55` | A new pilot's Prospector gets this much XP at once (the server's `--dev-xp`). Level 2 is at 503 XP (`Progression::xp(2)`). |
 | `-AcMmoServer=PATH` | Dev: starts the local server from PATH instead of `unreal/server/build/autocraft-server`, when the file is there. The build train passes its own server, built from the same tree as the module. |
 | `-AcMmoPerfPanel` | Shows the perf panel (FPS, GPU, CPU) in the mode. It is off for players; ⌘D toggles it in the mode and the choice is kept (`ac.PerfPanelMmo`), apart from the RTS's own panel. |
 | `-AcMmoShots=DIR` | The picture harness: plays a new world through every moment and saves a PNG of each to `DIR`, with its own pilot and world in `DIR/mmo` ([mmorpg-shots.md](mmorpg-shots.md), `unreal/Source/Autocraft/AcMmoShots.cpp`). |

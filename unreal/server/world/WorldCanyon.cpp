@@ -137,9 +137,11 @@ const std::vector<WorldCanyon::Wave>& WorldCanyon::waves(std::string_view zone) 
 
 double WorldCanyon::payScale(int64_t broodLevel) { return broodLevel >= 3 ? 1.3 : 1.0; }
 
-double WorldCanyon::xp(int64_t wave) { return 200.0 * double(wave); }
-int64_t WorldCanyon::ore(int64_t wave) { return 150 * wave; }
-int64_t WorldCanyon::hydrogen(int64_t wave) { return 40 * wave; }
+// B2 (docs/balance.md): 0.4 of Z2's 200, 150 and 40 a wave, so a held
+// canyon and the board bring an active pilot to about twice the mining curve.
+double WorldCanyon::xp(int64_t wave) { return 80.0 * double(wave); }
+int64_t WorldCanyon::ore(int64_t wave) { return 60 * wave; }
+int64_t WorldCanyon::hydrogen(int64_t wave) { return 16 * wave; }
 
 int64_t WorldMap::Canyon::taken() const {
     int64_t t = int64_t(std::floor(gnawed)) + carried;

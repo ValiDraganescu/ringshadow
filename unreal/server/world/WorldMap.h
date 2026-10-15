@@ -208,8 +208,8 @@ struct WorldMissions {
     /// Minutes of play a tier's XP is worth (`WorldContracts::perMinute`).
     static double minutes(net::CitadelMission::Tier tier);
     /// What a mission of `tier` pays at `level`: XP rounded to 5; ore
-    /// (150, 450, 1,000 at level 1, +2% a level, to 50); MH (10, 30, 60 and
-    /// 2, 4, 8 a level, to 5).
+    /// (75, 225, 500 at level 1, +2% a level, to 25); MH (10, 30, 60 and
+    /// 2, 4, 8 a level, to 5). B2: 3, 8, 15 minutes (docs/balance.md).
     static double xp(net::CitadelMission::Tier tier, int64_t level);
     static int64_t ore(net::CitadelMission::Tier tier, int64_t level);
     static int64_t hydrogen(net::CitadelMission::Tier tier, int64_t level);
@@ -488,7 +488,8 @@ struct WorldCanyon {
     static constexpr double think = 0.25;
     /// A wave beaten pays its fighters, split by the damage each did to the
     /// wave's bugs (its Prospector, and the defences it built while on line),
-    /// at least `floorShare` each: XP, ore and MH rising with the wave; the
+    /// at least `floorShare` each: XP, ore and MH rising with the wave (80,
+    /// 60 and 16 × n; B2: 0.4 of Z2's 200, 150 and 40, docs/balance.md); the
     /// last wave pays `lastBonus` times and a rare blueprint copy to each.
     static double xp(int64_t wave);
     static int64_t ore(int64_t wave);

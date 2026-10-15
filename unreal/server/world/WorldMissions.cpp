@@ -157,20 +157,24 @@ const std::vector<MissionTemplate>& missionTemplates() {
 
 // MARK: - The numbers
 
+// B2 (docs/balance.md): about three times the time a mission takes (an
+// easy one about a minute, a hard 2-3, a perilous 4-6), so the board and
+// the canyons bring an active pilot to about twice the mining curve. Before
+// B2: 8, 20, 40 minutes and 150, 450, 1,000 ore.
 double WorldMissions::minutes(Tier tier) {
     switch (tier) {
-    case Tier::easy: return 8;
-    case Tier::hard: return 20;
-    case Tier::perilous: return 40;
+    case Tier::easy: return 3;
+    case Tier::hard: return 8;
+    case Tier::perilous: return 15;
     }
-    return 8;
+    return 3;
 }
 
 double WorldMissions::xp(Tier tier, int64_t level) { return double(roundTo(WorldContracts::perMinute(level) * minutes(tier), 5)); }
 
 int64_t WorldMissions::ore(Tier tier, int64_t level) {
-    static const double base[] = {150, 450, 1000};
-    return roundTo(base[size_t(tier)] * scale(level), 50);
+    static const double base[] = {75, 225, 500};
+    return roundTo(base[size_t(tier)] * scale(level), 25);
 }
 
 int64_t WorldMissions::hydrogen(Tier tier, int64_t level) {

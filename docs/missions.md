@@ -44,14 +44,16 @@ Hauls are easy or hard only; every other kind can come in any tier.
 
 | Tier | Where | XP | Ore | MH | And |
 |---|---|---|---|---|---|
-| Easy | home | 8 minutes of play | 150 | 10 + 2 × level | — |
-| Hard | next door | 20 minutes | 450 | 30 + 4 × level | 1 blueprint copy, or 2 supplies |
-| Perilous | far corners | 40 minutes | 1,000 | 60 + 8 × level | 2 blueprint copies, or 3 supplies |
+| Easy | home | 3 minutes of play | 75 | 10 + 2 × level | — |
+| Hard | next door | 8 minutes | 225 | 30 + 4 × level | 1 blueprint copy, or 2 supplies |
+| Perilous | far corners | 15 minutes | 500 | 60 + 8 × level | 2 blueprint copies, or 3 supplies |
 
 - **XP** is a number of minutes of play at the pace model's rate
   (`WorldContracts::perMinute`: 4,500 an hour at level 1, +2% a level),
-  rounded to 5. At level 1 that is 600, 1,500 and 3,000.
-- **Ore** rises 2% a level, rounded to 50. **MH** is rounded to 5.
+  rounded to 5. At level 1 that is 225, 600 and 1,125: about three times
+  the time a mission takes (B2, [balance.md](balance.md); before B2 8, 20
+  and 40 minutes, 150, 450 and 1,000 ore).
+- **Ore** rises 2% a level, rounded to 25. **MH** is rounded to 5.
 - **The blueprint** is a random kind the pilot could build within ten levels
   of its own. The Citadel is never a reward.
 - **Supplies** are one of the shop's four consumables, added up to the

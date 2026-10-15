@@ -184,10 +184,11 @@ TEST(missions_rewards_rise_by_tier) {
         EXPECT_TRUE(WorldMissions::hydrogen(Tier::easy, level) < WorldMissions::hydrogen(Tier::hard, level));
         EXPECT_TRUE(WorldMissions::hydrogen(Tier::hard, level) < WorldMissions::hydrogen(Tier::perilous, level));
     }
-    EXPECT_NEAR(WorldMissions::xp(Tier::easy, 1), 600, 1e-9);
-    EXPECT_NEAR(WorldMissions::xp(Tier::hard, 1), 1500, 1e-9);
-    EXPECT_NEAR(WorldMissions::xp(Tier::perilous, 1), 3000, 1e-9);
-    EXPECT_EQ(WorldMissions::ore(Tier::easy, 1), int64_t(150));
+    // B2 (docs/balance.md): 3, 8, 15 minutes of play and 75, 225, 500 ore.
+    EXPECT_NEAR(WorldMissions::xp(Tier::easy, 1), 225, 1e-9);
+    EXPECT_NEAR(WorldMissions::xp(Tier::hard, 1), 600, 1e-9);
+    EXPECT_NEAR(WorldMissions::xp(Tier::perilous, 1), 1125, 1e-9);
+    EXPECT_EQ(WorldMissions::ore(Tier::easy, 1), int64_t(75));
     EXPECT_EQ(WorldMissions::hydrogen(Tier::perilous, 1), int64_t(70));
     EXPECT_TRUE(WorldMissions::haulOre(Tier::easy, 1) < WorldMissions::haulOre(Tier::hard, 1));
     EXPECT_TRUE(WorldMissions::scan(Tier::easy) < WorldMissions::scan(Tier::perilous));

@@ -234,13 +234,17 @@ least a tenth. This comes on top of the kill XP every bug pays as anywhere.
 
 | | Wave n | Wave 10 |
 |---|---|---|
-| XP | 200 × n | 4,000 |
-| Ore | 150 × n | 3,000 |
-| MH | 40 × n | 800 |
+| XP | 80 × n | 1,600 |
+| Ore | 60 × n | 1,200 |
+| MH | 16 × n | 320 |
 | Blueprint | | one rare copy each (one of the three with the highest floors) |
 
-Each fighter is told "YOUR SHARE: THE FORK WAVE 3", with "+450 ore · +120 MH ·
-+600 XP" (news `canyon`, "wave/<n>/<MH>[/<blueprint>]").
+B2 ([balance.md](balance.md)) set the pay to 0.4 of Z2's 200, 150 and 40 a
+wave, so a held canyon and the Citadel board bring an active pilot to about
+twice the mining curve. A level-3 region's zone pays × 1.3 (Z3).
+
+Each fighter is told "YOUR SHARE: THE FORK WAVE 3", with "+180 ore · +48 MH ·
++240 XP" (news `canyon`, "wave/<n>/<MH>[/<blueprint>]").
 
 KSTR tells the whole world two things, in the banner slot:
 - **THE FORK HELD**, when the last wave falls ("held", with how many fought it);

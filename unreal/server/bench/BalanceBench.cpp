@@ -19,6 +19,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -50,7 +52,10 @@ bool clear(const Simulation& sim, Vec2 a, Vec2 b) {
     return true;
 }
 
-Out run(const LoadedWorld& world, int64_t level, bool economy, double minutes) {
+enum class Build { none, average, economy };
+const char* named(Build b) { return b == Build::none ? "none" : b == Build::average ? "average" : "economy"; }
+
+Out run(const LoadedWorld& world, int64_t level, Build build, double minutes) {
     WorldParams p;
     p.firstStep = 0;
     p.devXp = Progression::xp(level);
@@ -66,13 +71,18 @@ Out run(const LoadedWorld& world, int64_t level, bool economy, double minutes) {
         return {};
     }
     for (int i = 0; i < 60; i++) w.step();
-    if (economy) {
+    if (build != Build::none) {
+        // Every point (economy), or half of them (average: the pace model's
+        // "average build", the rest elsewhere), into the drill and the road.
+        const int64_t points = level - 1;
+        int64_t spend = build == Build::economy ? points : points / 2;
         const Skill order[] = {Skill::quickDrill, Skill::bigHaul, Skill::lightFrame, Skill::deepBore, Skill::oreSled, Skill::densePack};
-        for (bool spent = true; spent;) {
+        for (bool spent = true; spent && spend > 0;) {
             spent = false;
-            for (const Skill s : order)
-                if (!w.spend(me, s)) {
+            for (const Skill sk : order)
+                if (!w.spend(me, sk)) {
                     spent = true;
+                    spend--;
                     break;
                 }
         }
@@ -181,7 +191,12 @@ Out run(const LoadedWorld& world, int64_t level, bool economy, double minutes) {
 /// `gatlings` Gatling Guns and `towers` AA towers of the pilot's on the
 /// zone's build spots (`canyon turrets`), the pilot standing south of the
 /// canyon. Each wave's time out and its pay to the pilot (XP, ore, MH).
-void canyon(const LoadedWorld& world, int64_t level, int64_t gatlings, int64_t towers) {
+struct Cycle {
+    bool held = false;
+    double xp = 0, ore = 0, mh = 0, waves = 0, all = 0;
+};
+
+Cycle canyon(const LoadedWorld& world, int64_t level, int64_t gatlings, int64_t towers) {
     WorldParams p;
     p.contracts = false;
     p.missions = false;
@@ -190,14 +205,14 @@ void canyon(const LoadedWorld& world, int64_t level, int64_t gatlings, int64_t t
     p.frontier = 0;
     p.firstStep = 0;
     WorldMap w(world, p);
-    if (w.seat(me, key) != WorldMap::Seated::fresh) return;
+    if (w.seat(me, key) != WorldMap::Seated::fresh) return {};
     ProspectorProgress g;
     g.xp = Progression::xp(level);
     for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
     w.setProgress(me, g);
     w.step();
     const size_t r = *w.regionNamed("cold-fork");
-    if (!w.devTransfer(me, r, w.region(r).places()->ground(Vec2(100, 52)))) return;
+    if (!w.devTransfer(me, r, w.region(r).places()->ground(Vec2(100, 52)))) return {};
     w.step();
     const std::string zone = w.region(r).places()->zones.front().id;
     std::printf("  %s\n", w.devCanyon("canyon turrets " + std::to_string(gatlings) + " " + std::to_string(towers) + " 0").c_str());
@@ -239,10 +254,11 @@ void canyon(const LoadedWorld& world, int64_t level, int64_t gatlings, int64_t t
                         "the pace %.0f a minute\n",
                         c.state == WorldMap::CanyonState::held ? "HELD" : "FAILED", all / 60, fight / 60, sumXp, sumOre, sumMh,
                         sumXp + sumOre + 2 * sumMh, (sumXp + sumOre + 2 * sumMh) / (all / 60), WorldContracts::perMinute(level));
-            return;
+            return Cycle{c.state == WorldMap::CanyonState::held, sumXp, sumOre, sumMh, fight / 60, all / 60};
         }
     }
     std::printf("  not held in 90 min\n");
+    return {};
 }
 
 } // namespace
@@ -254,17 +270,93 @@ int main(int argc, char** argv) {
         for (const std::string& p : load.problems) std::fprintf(stderr, "%s\n", p.c_str());
         return 1;
     }
+    // 1. Mining: what a pilot unloads and keeps an hour.
+    std::printf("Mining, %.0f game minutes a run, counted an hour (target: 6,000 at level 1, +2%% a level, all work):\n", minutes);
     std::printf("level  build     target/h  ore/h   kept/h  tax/h  xp/h    trips/h  walk\n");
-    for (const int64_t level : {1, 5, 10, 20})
-        for (const bool economy : {false, true}) {
-            const Out o = run(*load.world, level, economy, minutes);
+    const int64_t levels[] = {1, 5, 10, 15, 20};
+    std::map<int64_t, double> mined;
+    for (const int64_t level : levels)
+        for (const Build b : {Build::none, Build::average, Build::economy}) {
+            const Out o = run(*load.world, level, b, minutes);
+            if (b == Build::average) mined[level] = o.xp;
             const double target = 6000 * (1 + 0.02 * double(level - 1));
-            std::printf("%5lld  %-8s  %7.0f  %6.0f  %6.0f  %5.0f  %6.0f  %6.0f  %4.1f\n", (long long)level, economy ? "economy" : "none",
-                        target, o.ore, o.kept, o.tax, o.xp, o.trips, o.walk);
+            std::printf("%5lld  %-8s  %7.0f  %6.0f  %6.0f  %5.0f  %6.0f  %6.0f  %4.1f\n", (long long)level, named(b), target, o.ore, o.kept,
+                        o.tax, o.xp, o.trips, o.walk);
         }
-    for (const auto [g, t] : {std::pair{8, 3}, std::pair{10, 4}}) {
+
+    // 2. A held canyon cycle at level 15, the pilot's guns on The Fork.
+    // The guns alone don't hold waves 9 and 10 (the pilot fights too): the
+    // best cycle reached counts, its XP over its whole time (a low mark:
+    // wave 10's double pay never comes in).
+    Cycle held;
+    for (const auto [g, t] : {std::pair{8, 3}, std::pair{10, 4}, std::pair{12, 5}}) {
         std::printf("\nThe Fork, pilot level 15, %d Gatling Guns and %d AA towers:\n", g, t);
-        canyon(*load.world, 15, g, t);
+        const Cycle c = canyon(*load.world, 15, g, t);
+        if (c.xp > held.xp) held = c;
+        if (c.held) break;
     }
+
+    // 3. The all-in pilot: an hour of play is three quarters work (the pace
+    // model), 45 minutes. The board's six offers a world day (40 minutes:
+    // 9 an hour), each taking about 1, 2.5 and 5 minutes (easy, hard,
+    // perilous: the walk to its place and its ask); from level 10 one
+    // canyon cycle in 70 minutes (its waves and breaks; then the 40-minute
+    // hold, when the pilot mines); the rest of the work mining at the
+    // average build. XP only (the levels).
+    const double missionMin[3] = {1, 2.5, 5};
+    auto mining = [&](int64_t level) {
+        // Between the measured levels, in a straight line.
+        auto hi = mined.lower_bound(level);
+        if (hi == mined.end()) return mined.rbegin()->second;
+        if (hi->first == level || hi == mined.begin()) return hi->second;
+        auto lo = std::prev(hi);
+        const double t = double(level - lo->first) / double(hi->first - lo->first);
+        return lo->second + (hi->second - lo->second) * t;
+    };
+    struct Hour { double xp, mine, board, canyon, boardMin, canyonMin; };
+    auto allIn = [&](int64_t level) {
+        Hour h{};
+        h.boardMin = 0;
+        double boardXp = 0;
+        for (int t = 0; t < 3; t++) {
+            boardXp += 2 * WorldMissions::xp(net::CitadelMission::Tier(t), level);
+            h.boardMin += 2 * missionMin[t];
+        }
+        // An hour: 1.5 world days of the board.
+        boardXp *= 60.0 / 40;
+        h.boardMin *= 60.0 / 40;
+        if (level >= 10 && held.xp > 0) {
+            h.canyon = held.xp * 60 / 70;
+            h.canyonMin = held.all * 60 / 70;
+        }
+        const double work = 45;
+        const double share = std::min(1.0, (work - h.canyonMin) / h.boardMin);
+        h.board = boardXp * share;
+        h.boardMin *= share;
+        const double mineMin = std::max(0.0, work - h.canyonMin - h.boardMin);
+        h.mine = mining(level) * mineMin / 60;
+        h.xp = h.mine + h.board + h.canyon;
+        return h;
+    };
+    std::printf("\nThe all-in pilot, an hour (45 minutes of work), XP; the curve is the pace model's:\n");
+    std::printf("level  curve/h  mining  board  canyon  all-in  x curve   (board %%, canyon %% of the work)\n");
+    for (const int64_t level : {1, 5, 10, 15, 20}) {
+        const Hour h = allIn(level);
+        const double curve = WorldContracts::perMinute(level) * 60;
+        std::printf("%5lld  %7.0f  %6.0f  %5.0f  %6.0f  %6.0f  %6.2f    (%.0f, %.0f)\n", (long long)level, curve, h.mine, h.board, h.canyon, h.xp,
+                    h.xp / curve, h.boardMin / 45 * 100, h.canyonMin / 45 * 100);
+    }
+    // Level 1 to 10 at the all-in rate, a minute at a time.
+    double xp = 0, at = 0;
+    while (xp < Progression::xp(10) && at < 600) {
+        xp += allIn(Progression::level(xp)).xp / 60;
+        at += 1;
+    }
+    double pure = 0, atPure = 0;
+    while (pure < Progression::xp(10) && atPure < 600) {
+        pure += WorldContracts::perMinute(Progression::level(pure));
+        atPure += 1;
+    }
+    std::printf("Level 1 to 10: %.0f minutes all-in, %.0f on the pace model's curve\n", at, atPure);
     return 0;
 }

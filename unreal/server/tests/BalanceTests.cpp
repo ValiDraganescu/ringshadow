@@ -8,11 +8,13 @@
 
 #include "test.h"
 
+#include "Brood.h"
 #include "Defence.h"
 #include "Progression.h"
 #include "WorldMap.h"
 
 #include <cmath>
+#include <cstdio>
 
 namespace {
 
@@ -126,20 +128,22 @@ TEST(balance_mercenaries) {
     }
 }
 
-/// Mission pay by tier: 8, 20, 40 minutes of play as XP; 150, 450, 1,000 ore
-/// rising 2% a level (to 50); 10 + 2L, 30 + 4L, 60 + 8L MH (to 5).
+/// Mission pay by tier (B2): 3, 8, 15 minutes of play as XP (about three
+/// times the time each takes); 75, 225, 500 ore rising 2% a level (to 25);
+/// 10 + 2L, 30 + 4L, 60 + 8L MH (to 5). Before B2: 8, 20, 40 minutes and
+/// 150, 450, 1,000 ore.
 TEST(balance_mission_pay) {
-    EXPECT_NEAR(WorldMissions::minutes(Tier::easy), 8, 1e-9);
-    EXPECT_NEAR(WorldMissions::minutes(Tier::hard), 20, 1e-9);
-    EXPECT_NEAR(WorldMissions::minutes(Tier::perilous), 40, 1e-9);
+    EXPECT_NEAR(WorldMissions::minutes(Tier::easy), 3, 1e-9);
+    EXPECT_NEAR(WorldMissions::minutes(Tier::hard), 8, 1e-9);
+    EXPECT_NEAR(WorldMissions::minutes(Tier::perilous), 15, 1e-9);
     struct Row { int64_t level; Tier tier; double xp; int64_t ore, hydrogen, haulOre, haulHydrogen; };
     const Row rows[] = {
-        {1, Tier::easy, 600, 150, 10, 200, 40},      {1, Tier::hard, 1500, 450, 35, 800, 150},
-        {1, Tier::perilous, 3000, 1000, 70, 800, 150}, {5, Tier::easy, 650, 150, 20, 200, 40},
-        {5, Tier::hard, 1620, 500, 50, 850, 160},    {5, Tier::perilous, 3240, 1100, 100, 850, 160},
-        {10, Tier::easy, 710, 200, 30, 250, 50},     {10, Tier::hard, 1770, 550, 70, 950, 180},
-        {10, Tier::perilous, 3540, 1200, 140, 950, 180}, {20, Tier::easy, 830, 200, 50, 300, 60},
-        {20, Tier::hard, 2070, 600, 110, 1100, 210}, {20, Tier::perilous, 4140, 1400, 220, 1100, 210},
+        {1, Tier::easy, 225, 75, 10, 200, 40},        {1, Tier::hard, 600, 225, 35, 800, 150},
+        {1, Tier::perilous, 1125, 500, 70, 800, 150}, {5, Tier::easy, 245, 75, 20, 200, 40},
+        {5, Tier::hard, 650, 250, 50, 850, 160},      {5, Tier::perilous, 1215, 550, 100, 850, 160},
+        {10, Tier::easy, 265, 100, 30, 250, 50},      {10, Tier::hard, 710, 275, 70, 950, 180},
+        {10, Tier::perilous, 1330, 600, 140, 950, 180}, {20, Tier::easy, 310, 100, 50, 300, 60},
+        {20, Tier::hard, 830, 300, 110, 1100, 210},   {20, Tier::perilous, 1550, 700, 220, 1100, 210},
     };
     for (const Row& r : rows) {
         EXPECT_NEAR(WorldMissions::xp(r.tier, r.level), r.xp, 1e-9);
@@ -157,14 +161,20 @@ TEST(balance_mission_pay) {
     }
 }
 
-/// Canyon pay: 200 XP, 150 ore and 40 MH times the wave; the last wave
-/// twice that; each fighter at least a tenth.
+/// Canyon pay (B2): 80 XP, 60 ore and 16 MH times the wave (0.4 of Z2's
+/// 200, 150, 40); the last wave twice that; × 1.3 in a level-3 region (Z3);
+/// each fighter at least a tenth.
 TEST(balance_wave_pay) {
     for (int64_t n = 1; n <= 10; n++) {
-        EXPECT_NEAR(WorldCanyon::xp(n), 200.0 * double(n), 1e-9);
-        EXPECT_EQ(WorldCanyon::ore(n), 150 * n);
-        EXPECT_EQ(WorldCanyon::hydrogen(n), 40 * n);
+        EXPECT_NEAR(WorldCanyon::xp(n), 80.0 * double(n), 1e-9);
+        EXPECT_EQ(WorldCanyon::ore(n), 60 * n);
+        EXPECT_EQ(WorldCanyon::hydrogen(n), 16 * n);
     }
+    EXPECT_NEAR(WorldCanyon::payScale(2), 1.0, 1e-9);
+    EXPECT_NEAR(WorldCanyon::payScale(3), 1.3, 1e-9);
+    EXPECT_NEAR(WorldCanyon::payScale(4), 1.3, 1e-9);
+    // Every zone has ten waves.
+    for (const char* zone : {"the-fork", "the-drowned-cut", "the-roost"}) EXPECT_EQ(WorldCanyon::waves(zone).size(), size_t(10));
     EXPECT_EQ(WorldCanyon::count(), int64_t(10));
     EXPECT_NEAR(WorldCanyon::lastBonus, 2, 1e-9);
     EXPECT_NEAR(WorldCanyon::floorShare, 0.1, 1e-9);
@@ -187,12 +197,20 @@ TEST(balance_turret_marks) {
             EXPECT_TRUE(Defence::citadelPrice(s, m) == citadel[m - 1]);
         }
     }
-    // A Gatling Gun's three marks of one stat cost less than its builder's
-    // share of one wave 5 held at a tenth (ore, MH at 2), plus the gun.
-    const double marks = 100 + 300 + 800 + 2 * (50 + 200 + 500);
-    const double share = WorldCanyon::floorShare * (WorldCanyon::xp(5) + double(WorldCanyon::ore(5)) + 2 * double(WorldCanyon::hydrogen(5)));
-    EXPECT_TRUE(marks > share);
-    EXPECT_TRUE(marks < 2 * share * 10);
+    // Against a turret's kill value: a gun's builder takes half the kill XP
+    // of what it kills (`WorldMap::defenceXpShare`). One mark of one stat
+    // pays back within a held cycle's kills (waves 1 to 10, all of them the
+    // builder's guns'); a stat's three marks within two cycles.
+    for (const char* zone : {"the-fork", "the-drowned-cut", "the-roost"}) {
+        double cycle = 0;
+        for (const WorldCanyon::Wave& wv : WorldCanyon::waves(zone))
+            for (const WorldCanyon::Group& g : wv.groups)
+                cycle += double(g.count) * Brood::xp(g.kind) + double(g.escort) * Brood::xp(UnitKind::shardling);
+        const double builder = cycle * WorldMap::defenceXpShare;
+        std::printf("  %s: a held cycle's kills %.0f XP, %.0f to the guns' builder\n", zone, cycle, builder);
+        EXPECT_TRUE(100 + 2 * 50 <= builder);
+        EXPECT_TRUE(100 + 300 + 800 + 2 * (50 + 200 + 500) <= 2 * builder);
+    }
 }
 
 /// A frontier pilot's booked mining: an unskilled Prospector's load of 5
