@@ -1,5 +1,5 @@
 {
-  "about": "A2, the siege's radio voice (docs/music.md \"Siege layers\"): KSTR's announcer reads the goal lines (a new goal from the radio's chain, one done) and the canyon news (a wave coming, a wave beaten, a canyon held, a canyon fallen with the Matriarch coming), one line each, under 6 s. The game plays them through its radio-line queue (narration first, never two at once), the text stays on the HUD. Same voice and radio.py as the station's ads. KSTR is written K-S-T-R so it is spelled out. R2 adds the realm projects' lines: one when a project starts, one when it ends (docs/mmorpg-play.md \"Realm projects\"). X2 adds the welcome back (docs/mmorpg-play.md \"Coming back\"): one line on the return, by what the away report holds (a loss, a canyon held, the mercenaries' deliveries); and the Foundry and Lab goals read what to do next (order a module, fit it, research Mk II). S4 adds the realm week's end (docs/mmorpg-play.md \"Standings\"): one take for every week; the toast carries the top hauler's name and number.",
+  "about": "A2, the siege's radio voice (docs/music.md \"Siege layers\"): KSTR's announcer reads the goal lines (a new goal from the radio's chain, one done) and the canyon news (a wave coming, a wave beaten, a canyon held, a canyon fallen with the Matriarch coming), one line each, under 6 s. The game plays them through its radio-line queue (narration first, never two at once), the text stays on the HUD. Same voice and radio.py as the station's ads. KSTR is written K-S-T-R so it is spelled out. R2 adds the realm projects' lines: one when a project starts, one when it ends (docs/mmorpg-play.md \"Realm projects\"). X2 adds the welcome back (docs/mmorpg-play.md \"Coming back\"): one line on the return, by what the away report holds (a loss, a canyon held, the mercenaries' deliveries); and the Foundry and Lab goals read what to do next (order a module, fit it, research Mk II). S4 adds the realm week's end (docs/mmorpg-play.md \"Standings\"): one take for every week; the toast carries the top hauler's name and number. N4 adds the hunt (docs/mmorpg-play.md \"The hunt\"): the call, the party gathered at the ring, the charge, her fall, the hunt failed; one take each, the toasts carry who and where.",
   "voices": {
     "announcer": "sM0OsGgRUQMd8tCIWOCm"
   },
@@ -297,6 +297,41 @@
       "voice": "announcer",
       "text": "[bright, proud] The week is counted, pilots! See the standings at the Citadel.",
       "fx": "radio"
-    }
+    },
+  {
+   "id": "hunt-called",
+   "kind": "say",
+   "voice": "announcer",
+   "text": "[urgent, rallying] The hunt is called! Defenders and guards, to the Matriarch's ring.",
+   "fx": "radio"
+  },
+  {
+   "id": "hunt-gathered",
+   "kind": "say",
+   "voice": "announcer",
+   "text": "[low, steady] The party's at the ring. Step inside it, caller, and we go in.",
+   "fx": "radio"
+  },
+  {
+   "id": "hunt-charge",
+   "kind": "say",
+   "voice": "announcer",
+   "text": "[fierce, shouting] Go, go, go! Everybody in, bring her down!",
+   "fx": "radio"
+  },
+  {
+   "id": "hunt-down",
+   "kind": "say",
+   "voice": "announcer",
+   "text": "[triumphant] She's down! The Matriarch is down! Good hunting, pilots.",
+   "fx": "radio"
+  },
+  {
+   "id": "hunt-failed",
+   "kind": "say",
+   "voice": "announcer",
+   "text": "[somber] The hunt failed. She still stands. We try again tomorrow.",
+   "fx": "radio"
+  }
   ]
 }

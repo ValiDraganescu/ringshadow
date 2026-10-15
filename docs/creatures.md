@@ -167,6 +167,13 @@ nest on her own; her horde does, and a canyon's failed wave calls her out
 Readable from far: she is 9.5 cells tall, her crown spines glow violet and
 pulse with her breath, and her roar is heard across the region.
 
+**The hunt (N4).** She is the realm's raid: once a world day a human calls
+THE HUNT at a Citadel, and the frontier defenders and the guard mercenaries
+gather on her nest's 30-cell ring, then go in with the caller. Her fight,
+her pay and her return are N3's as above; in the realm week's standings she
+counts as one bug felled to her hardest hitter. mmorpg-play.md "The hunt"
+has the rules.
+
 ## Where they come from and what draws them
 
 Bugs are spawned by the server's **brood director**, region by region, and

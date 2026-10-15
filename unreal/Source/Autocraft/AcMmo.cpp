@@ -1200,6 +1200,16 @@ bool FAcMmoClient::StartProject(const ac::RealmProject::Kind Kind, FString* Why)
 	return true;
 }
 
+bool FAcMmoClient::CallHunt(FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->callHunt();
+	LastCitadelRefusal.Reset();
+	CitadelAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: call the hunt"), Id);
+	return true;
+}
+
 bool FAcMmoClient::ProjectOn(const ac::RealmProject::Kind Kind) const
 {
 	const ac::net::ProgressMessage* P = Progress();
@@ -1386,6 +1396,11 @@ const ac::net::ProgressMessage* FAcMmoClient::Progress() const
 const ac::net::StandingsMessage* FAcMmoClient::Standings() const
 {
 	return Net && Net->standings() ? &*Net->standings() : nullptr;
+}
+
+const ac::net::HuntMessage* FAcMmoClient::Hunt() const
+{
+	return Net && Net->hunt() ? &*Net->hunt() : nullptr;
 }
 
 std::optional<double> FAcMmoClient::Xp() const

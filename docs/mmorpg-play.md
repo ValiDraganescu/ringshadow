@@ -133,6 +133,13 @@ its Citadel: one a region". Every Citadel is a full home:
 - H opens the Citadel screen on the realm's one wallet: the shop, the
   missions, the defence, the mercenaries (one hired there works the field
   nearest that Citadel) and the realm projects;
+- a mercenary is a miner or a guard (N4): HIRE or HIRE A GUARD on the MERCS
+  tab, and its GUARD / MINER button switches it any time, anywhere. A guard
+  mines as a miner, for the same wage, until THE HUNT is called; then it
+  walks to the hunt's ring (on foot, through the openings), holds there,
+  fights her with the party, and walks back to its field after. It mines
+  nothing while it is away, so its week is a miner's less the hunts it
+  answered;
 - its four corner turrets fire with the realm's marks.
 
 Frontier pilots never build a Citadel. The goals that send a pilot to a
@@ -258,6 +265,60 @@ own, at most once a second when it changed (protocol 33).
   the end once. KSTR's line is one take for every week: a pilot's name
   (often "Pilot 1A2B") and a number don't read well spoken, so the toast
   carries them.
+
+## The hunt
+
+The Matriarch (N3) is the realm's raid. At level 20 KSTR's goals lead to
+**Bring Her Down**: where her nest is, marked, and that THE HUNT is called on
+the Citadel's REALM tab.
+
+- **The call.** Any human pilot calls THE HUNT on the REALM tab (beside the
+  standings), standing at a Citadel: free, once a world day for the whole
+  realm (the next call at dawn). Refused with the reason when she is down
+  ("She is down: back in 1 h 59 m": N3's three world days), out on a siege,
+  a hunt is already on, or the day's hunt was called. A frontier pilot never
+  calls it. Every pilot on line gets THE HUNT IS CALLED and KSTR's
+  `hunt-called`.
+- **The party.** Chosen at the call: every frontier defender that has come,
+  and every guard mercenary of every pilot, on line or off. Each takes a
+  place on the ring 30 cells round her nest (6 cells apart, on the side of
+  the region's pad) and goes there by the realm's rules: a defender walks
+  through the openings, or flies the Dropship between the realm's pads when
+  both regions have one and its wallet has the fare and 10 MH over; a guard
+  walks. Nobody jumps: one that can't get there in time comes late, one with
+  no way comes not at all, one whose Prospector was down at the call comes
+  when it is back. At the ring they hold, and fight the bugs that come at
+  them. In the First Reach a defender in the next region is there in about
+  30 s, one from the far corner in about 2 minutes.
+- **Seeing it.** The REALM tab's hunt box: its state (GATHERING, THE
+  ASSAULT, SHE FELL, THE HUNT FAILED), the time left, the party (the caller,
+  each defender in its paint, each guard with its hirer), AT THE RING, ON THE
+  WAY or DOWN. The map (M): a red ring round her nest, the guards and the
+  caller as dots ringed red (green at the ring), a defender's tooltip says
+  "On the hunt · at the ring". In the world, the party is there to see.
+  When all the party is at the ring (or the time is up) KSTR says
+  `hunt-gathered` with THE HUNT IS GATHERED.
+- **The assault.** At 2 minutes, or when the caller steps inside the ring
+  if that is later, they go in together: THE HUNT GOES IN and KSTR's
+  `hunt-charge`; the defenders and the guards fight her. The fight is N3's:
+  her slam, spit and roar, her pay to every pilot who hurt her by its share
+  of the damage (a guard's hits count to its hirer on line, as a turret's
+  to its builder), her return in three world days.
+- **Her fall.** THE HUNT BROUGHT HER DOWN ("The Matriarch is down, Pilot
+  1A2B hardest") to every pilot on line, KSTR's `hunt-down`, N3's banner and
+  each share; an away row for every pilot off line ("Pilot 1A2B's hunt in
+  Slag Pockets brought her down"). In the standings she counts as one bug
+  felled to her hardest hitter, as N3 names them (her killing blow no
+  longer counts to whoever struck it).
+- **It fails** when ten minutes pass after the call and she stands, or when
+  the caller and every one of the party that went in are down: THE HUNT
+  FAILED, KSTR's `hunt-failed`, an away row. She stands and the day's call
+  is spent.
+- **Saved** with the world (schema 25): the hunt on, its party and their
+  places, the day's call; a guard's role and its walk with the mercenaries.
+  The server sends each pilot the hunt in a message of its own, at most once
+  a second when it changed (protocol 35: the Hunt message, the CallHunt
+  request, the role on a mercenary).
 
 ## Saving
 

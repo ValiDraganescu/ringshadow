@@ -1728,6 +1728,26 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		UE_LOG(LogAutocraft, Log, TEXT("progress: project %s by %s"), *Id, *Text(N.by));
 		break;
 	}
+	case K::hunt:
+	{
+		// N4: the realm's hunt: called, gathered, the charge, her fall, the
+		// hunt failed. A realm-wide toast and KSTR's line for each (one
+		// take each: the toast says who and where).
+		const FLinearColor Blood = FAcHudStyle::Srgb(1.0, 0.42, 0.32);
+		const std::string Id = N.id;
+		const std::string Kind = Id.substr(0, Id.find('/'));
+		std::string By = N.by;
+		if (P && !By.empty() && By == P->callsign) By = "you";
+		FString Line = Text(ac::net::huntNewsLine(Id, By, N.value));
+		if (By == "you" && !Line.IsEmpty()) Line[0] = FChar::ToUpper(Line[0]);
+		Hud->Toast(Text(ac::net::huntNewsTitle(Id)), Line, Kind == "won" ? FAcHudStyle::LevelGold() : Blood, Now + 0.01);
+		static const TMap<FString, FString> Says = {{TEXT("called"), TEXT("hunt-called")}, {TEXT("gathered"), TEXT("hunt-gathered")},
+			{TEXT("charge"), TEXT("hunt-charge")}, {TEXT("won"), TEXT("hunt-down")}, {TEXT("failed"), TEXT("hunt-failed")}};
+		if (const FString* Say = Says.Find(Text(Kind)))
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->SayRadio(*Say);
+		UE_LOG(LogAutocraft, Log, TEXT("progress: hunt %s by %s, %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
+		break;
+	}
 	case K::week:
 	{
 		// S4: the realm week ended: its top hauler on a realm-wide toast

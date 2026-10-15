@@ -4080,6 +4080,36 @@
    "prepared": "Content-src/sounds/kstr/goal-spacedock.wav",
    "seconds": 5.36
   },
+  "hunt-called": {
+   "asset": "/Game/Audio/Kstr/SW_hunt_called.SW_hunt_called",
+   "source": "kstr/hunt-called.wav",
+   "prepared": "Content-src/sounds/kstr/hunt-called.wav",
+   "seconds": 4.34
+  },
+  "hunt-charge": {
+   "asset": "/Game/Audio/Kstr/SW_hunt_charge.SW_hunt_charge",
+   "source": "kstr/hunt-charge.wav",
+   "prepared": "Content-src/sounds/kstr/hunt-charge.wav",
+   "seconds": 3.58
+  },
+  "hunt-down": {
+   "asset": "/Game/Audio/Kstr/SW_hunt_down.SW_hunt_down",
+   "source": "kstr/hunt-down.wav",
+   "prepared": "Content-src/sounds/kstr/hunt-down.wav",
+   "seconds": 4.96
+  },
+  "hunt-failed": {
+   "asset": "/Game/Audio/Kstr/SW_hunt_failed.SW_hunt_failed",
+   "source": "kstr/hunt-failed.wav",
+   "prepared": "Content-src/sounds/kstr/hunt-failed.wav",
+   "seconds": 4.8
+  },
+  "hunt-gathered": {
+   "asset": "/Game/Audio/Kstr/SW_hunt_gathered.SW_hunt_gathered",
+   "source": "kstr/hunt-gathered.wav",
+   "prepared": "Content-src/sounds/kstr/hunt-gathered.wav",
+   "seconds": 4.3
+  },
   "project-armoury-end": {
    "asset": "/Game/Audio/Kstr/SW_project_armoury_end.SW_project_armoury_end",
    "source": "kstr/project-armoury-end.wav",

@@ -287,6 +287,15 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		Test.Emplace();
 		Steps.ParseIntoArray(Test->Steps, TEXT(","));
+		// N4: mmohunt is -AcMmoShotsN4's steps with their checks (AcMmoShots.cpp),
+		// its pictures in -AcMmoShots's folder (else Saved/MmoHunt).
+		if (const int32 Hunt = Test->Steps.IndexOfByKey(TEXT("mmohunt")); Hunt != INDEX_NONE)
+		{
+			Test->Steps[Hunt] = TEXT("mmoshots");
+			if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4"))) FCommandLine::Append(TEXT(" -AcMmoShotsN4"));
+			if (FString Dir; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir))
+				FCommandLine::Append(*FString::Printf(TEXT(" -AcMmoShots=%s"), *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("MmoHunt"))));
+		}
 		UE_LOG(LogAutocraft, Log, TEXT("flowtest: %s in %s"), *Steps, *AcSaves::Directory());
 		// What is on disk before the game opens, and what is imported.
 		Test->Before = ReadSession(WindowFile());
@@ -1124,6 +1133,7 @@ void UAcGameFlowSubsystem::TickWorldMap()
 		In.zones = AcCanyon::Marks(*Mmo);
 		// S4: a pilot's rank this week in its tooltip.
 		In.standings = Mmo->Standings();
+		In.hunt = Mmo->Hunt();
 		Info.Items = ac::net::atlas::items(In, Places);
 		// The ringshadow band over every region it crosses now.
 		if (In.sky)
@@ -1487,13 +1497,15 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 				using Ask = ac::net::RequestMessage::Merc;
 				FString Why;
 				Ask A;
-				A.act = Act == 0 ? Ask::Act::hire : Act == 1 ? Ask::Act::dismiss : Ask::Act::assign;
+				// N4: 3 hires a guard, 4 sets a mercenary's role (`Field` 1: a guard).
+				A.act = Act == 0 || Act == 3 ? Ask::Act::hire : Act == 1 ? Ask::Act::dismiss : Act == 4 ? Ask::Act::role : Ask::Act::assign;
+				A.guard = Act == 3 || (Act == 4 && Field == 1);
 				if (!Mmo || !P) Why = TEXT("Not in a world");
-				else if (Act != 0 && (Merc < 0 || size_t(Merc) >= P->mercs.size())) Why = TEXT("No mercenary there");
+				else if (Act != 0 && Act != 3 && (Merc < 0 || size_t(Merc) >= P->mercs.size())) Why = TEXT("No mercenary there");
 				else if (Act == 2 && (Field < 0 || size_t(Field) >= P->mercFields.size())) Why = TEXT("No field there");
 				else
 				{
-					if (Act != 0) A.merc = P->mercs[size_t(Merc)].id;
+					if (Act != 0 && Act != 3) A.merc = P->mercs[size_t(Merc)].id;
 					if (Act == 2)
 					{
 						A.region = P->mercFields[size_t(Field)].region;
@@ -1524,6 +1536,17 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 				if (!Mmo) Why = TEXT("Not in a world");
 				else if (Index >= 0 && Index < ac::RealmProject::count && Mmo->StartProject(ac::RealmProject::Kind(Index), &Why)) return;
 				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("Nothing there")) : Why);
+			})
+		.OnHunt_Lambda([Weak]()
+			{
+				// N4, the REALM tab: THE HUNT called.
+				if (!Weak.IsValid()) return;
+				UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+				FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+				FString Why;
+				if (!Mmo) Why = TEXT("Not in a world");
+				else if (Mmo->CallHunt(&Why)) return;
+				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why);
 			})
 		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseCitadelScreen(); })
 	];
@@ -1659,6 +1682,8 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 			X.Region = UTF8_TO_TCHAR(M.region.c_str());
 			X.Field = M.field;
 			X.Delivered = M.delivered;
+			X.bGuard = M.guard;
+			X.bHunting = M.hunting;
 			switch (M.state)
 			{
 			case State::working: X.Doing = TEXT("Mining ") + FieldName(M.region, M.field); break;
@@ -1668,6 +1693,14 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 				break;
 			case State::empty: X.Doing = FieldName(M.region, M.field) + TEXT(" is mined out: send it to another"); break;
 			case State::noDepot: X.Doing = TEXT("No realm Citadel to haul to in ") + AcMissions::RegionName(*Mmo, M.region); break;
+			}
+			// N4: away on the hunt (on its way, at the ring, in the fight, or back).
+			if (M.hunting && M.state != State::down)
+			{
+				const ac::net::HuntMessage* H = Mmo->Hunt();
+				const bool bOn = H && (H->state == ac::net::HuntMessage::State::gathering || H->state == ac::net::HuntMessage::State::assault);
+				X.Doing = bOn ? FString::Printf(TEXT("On the hunt: to the ring in %s"), UTF8_TO_TCHAR(H->regionName.c_str()))
+							  : FString(TEXT("Back from the hunt: walking to its field"));
 			}
 			Info.Mercs.Add(X);
 		}
@@ -1768,9 +1801,41 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 			Info.Standings.Add(X);
 		}
 	}
+	// N4: THE HUNT, beside the standings.
+	if (const ac::net::HuntMessage* H = Mmo->Hunt())
+	{
+		using HS = ac::net::HuntMessage::State;
+		const double Now = Mmo->Sky() ? Mmo->Sky()->time : H->calledAt;
+		Info.bHuntKnown = true;
+		Info.bHuntOn = H->state == HS::gathering || H->state == HS::assault;
+		Info.HuntState = H->state == HS::gathering ? TEXT("GATHERING")
+			: H->state == HS::assault			   ? TEXT("THE ASSAULT")
+			: H->state == HS::won				   ? TEXT("SHE FELL")
+			: H->state == HS::failed			   ? TEXT("THE HUNT FAILED")
+			: H->refusal.empty()				   ? TEXT("NOT CALLED TODAY")
+												   : TEXT("NOT NOW");
+		Info.HuntLine = UTF8_TO_TCHAR(ac::net::huntLine(*H, Now).c_str());
+		// After an end, the next call's word.
+		if ((H->state == HS::won || H->state == HS::failed) && !H->refusal.empty()) Info.HuntLine = UTF8_TO_TCHAR(H->refusal.c_str());
+		Info.HuntWhere = UTF8_TO_TCHAR(H->regionName.c_str());
+		Info.HuntWhyNot = UTF8_TO_TCHAR(H->refusal.c_str());
+		for (const ac::net::HuntHunter& X : H->party)
+		{
+			FAcHuntPartyLine L;
+			L.Name = UTF8_TO_TCHAR(X.name.c_str());
+			L.Paint = X.kind == ac::net::HuntHunter::Kind::frontier ? X.paint : -1;
+			L.Tag = X.kind == ac::net::HuntHunter::Kind::human	   ? FString(TEXT("CALLER"))
+				: X.kind == ac::net::HuntHunter::Kind::frontier ? FString(TEXT("FRONTIER"))
+																: FString::Printf(TEXT("GUARD · %s"), UTF8_TO_TCHAR(X.owner.c_str()));
+			L.bThere = X.there;
+			L.bDown = X.down;
+			Info.HuntParty.Add(L);
+		}
+	}
 	// The server checks the place; the screen says so ahead.
 	if (!AtRealmCitadel(&Info.Builder))
 	{
+		if (Info.HuntWhyNot.IsEmpty()) Info.HuntWhyNot = TEXT("Call the hunt at a Citadel: stand where you unload");
 		Info.ProjectsWhyNot = TEXT("Start a project at a Citadel: stand where you unload");
 		Info.DefenceWhyNot = TEXT("Upgrade at a Citadel: stand where you unload");
 		Info.DonateWhyNot = TEXT("Donate at a Citadel: stand where you unload");

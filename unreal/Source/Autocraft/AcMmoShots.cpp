@@ -312,6 +312,20 @@
 //   02 the world map: a frontier pilot's tooltip with its rank this week
 //   03 the week ended (`week end`): THE WEEK IS COUNTED, its top hauler
 //
+// -AcMmoShotsN4 (with -AcMmoDevRig, the chain done, as S4's), and the flow
+// test mmohunt (`-AcFlowTest=mmohunt -AcMmoShots=DIR`, the same steps with
+// their checks): the hunt (docs/mmorpg-play.md "The hunt"): a frontier
+// defender beside the pilot, two guards hired at its Citadel, THE HUNT called
+// on the REALM tab; the party walks to the ring round her nest by the rules;
+// the pilot taken there (`matriarch here`), the gathering's two minutes
+// jumped (`hunt gathered`), the pilot steps inside the ring, they go in; her
+// fall cut short (`matriarch hurt`, `matriarch down`), DIR/n4-NN-moment.png:
+//   01 the REALM tab: THE HUNT called, gathering, its party
+//   02 the world map: the ring round her nest, the party on the way and there
+//   03 the party gathered at the ring, from the pilot's place by it
+//   04 the charge: THE HUNT GOES IN
+//   05 her fall: THE HUNT BROUGHT HER DOWN, the share
+//
 // -AcMmoShotsZ4 (as Z1's): free placement in canyons (docs/canyon.md
 // "Building"), DIR/z4-NN-moment.png:
 //   01 a tightly packed defence on The Fork's floor by the prize, its guns'
@@ -1123,7 +1137,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1152,7 +1167,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		// -AcMmoShotsP1: as Z2's, and the opening chain done (the frontier
 		// pilots come only after it), the dev rig's Citadel. S4 too.
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")))
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4"))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4")))
 		{
 			if (int32 Step = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoFirstStep="), Step)) FCommandLine::Append(TEXT(" -AcMmoFirstStep=0"));
 			if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1161,7 +1177,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))
 			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))
 			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))
-			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -1264,6 +1280,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2"))) T.Phase = 3400;
 			// -AcMmoShotsS4: realm standings (3500-3509).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4"))) T.Phase = 3500;
+			// -AcMmoShotsN4 (and mmohunt): the hunt (3600-3615).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4"))) T.Phase = 3600;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
@@ -6853,6 +6871,213 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 3509:
 		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsN4 (mmohunt)
+	case 3600:
+		// The dev rig's home, the chain done: a frontier defender beside the
+		// pilot; the MERCS tab.
+		if (S && CitadelOf(*S) && Mmo->Progress() && !Mmo->Progress()->mercFields.empty() && Mmo->Hunt() && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(HourGiven() ? TEXT("brood clear\nhunt open\nfrontier here defender 6")
+											: TEXT("hour 12\nbrood clear\nhunt open\nfrontier here defender 6")),
+				TEXT("n4: a frontier defender beside the pilot"));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("n4: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->SetTab(SAcCitadelScreen::ETab::Mercs);
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel, the mercenaries' fields, the hunt told"));
+		return;
+	case 3601:
+		if (Since() < 1.0) return;
+		if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->Hire(true);
+		Advance();
+		return;
+	case 3602:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->mercs.size() == 1 && Since() > 1.5)
+		{
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->Hire(true);
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("n4: the first guard hired"), 15);
+		return;
+	}
+	case 3603:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->mercs.size() == 2 && Since() > 1.5)
+		{
+			Check(P->mercs[0].guard && P->mercs[1].guard, TEXT("n4: two guards hired (HIRE A GUARD)"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->SetTab(SAcCitadelScreen::ETab::Realm);
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("n4: the second guard hired"), 15);
+		return;
+	}
+	case 3604:
+	{
+		const ac::net::HuntMessage* H = Mmo->Hunt();
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		if (H && W && H->refusal.empty() && W->HuntWhyNot().IsEmpty() && Since() > 1.0)
+		{
+			Check(H->state == ac::net::HuntMessage::State::none, TEXT("n4: no hunt on before the call"));
+			W->CallHunt();
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("n4: THE HUNT open to call"), 15);
+		return;
+	}
+	case 3605:
+	{
+		const ac::net::HuntMessage* H = Mmo->Hunt();
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		if (H && W && H->state == ac::net::HuntMessage::State::gathering && H->party.size() >= 4 && Since() > 2.5)
+		{
+			const FAcCitadelScreenInfo& I = W->GetInfo();
+			Check(I.bHuntOn && I.HuntParty.Num() >= 4 && I.HuntState == TEXT("GATHERING"),
+				FString::Printf(TEXT("n4: the REALM tab's hunt: %s, %d in the party (the caller, a defender, two guards)"), *I.HuntState, I.HuntParty.Num()));
+			Check(!W->HuntWhyNot().IsEmpty(), FString::Printf(TEXT("n4: a second call refused: %s"), *W->HuntWhyNot()));
+			Check(!W->KeptText().IsEmpty(), FString::Printf(TEXT("n4: the call kept: %s"), *W->KeptText()));
+			Shoot(TEXT("n4-01-realm-hunt"), TEXT("the REALM tab: THE HUNT called, gathering, its party"));
+			return;
+		}
+		TimedOut(TEXT("n4: the hunt called, its party told"), 15);
+		return;
+	}
+	case 3606:
+		CloseCitadelScreen();
+		if (Since() < 1.0) return;
+		ToggleWorldMap();
+		W4Set = false;
+		Advance();
+		return;
+	case 3607:
+	{
+		// The ring on the map, two of the party there (the defender, a guard).
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		const ac::net::HuntMessage* H = Mmo->Hunt();
+		if (!Map || !H) return;
+		if (!W4Set)
+		{
+			W4Set = true;
+			Check(Map->ShowRegion(TEXT("slag-pockets"), 1.4), TEXT("n4: the map round Slag Pockets"));
+			return;
+		}
+		int32 Guards = 0;
+		for (const ac::net::HuntHunter& X : H->party) Guards += X.kind == ac::net::HuntHunter::Kind::merc && X.there ? 1 : 0;
+		if (ac::net::huntThere(*H) >= 2 && Guards >= 1 && Since() > 3.0)
+		{
+			for (const ac::net::HuntHunter& X : H->party)
+				UE_LOG(LogAutocraft, Log, TEXT("n4: %s %s: %s"), *Utf(X.name), X.kind == ac::net::HuntHunter::Kind::merc ? TEXT("guard") : TEXT("hunter"),
+					X.down ? TEXT("down") : X.there ? TEXT("at the ring") : TEXT("on the way"));
+			Check(true, FString::Printf(TEXT("n4: %lld of the party at the ring %.0f s after the call, by the rules"), (long long)ac::net::huntThere(*H),
+				Mmo->Sky() ? Mmo->Sky()->time - H->calledAt : -1.0));
+			W4Set = false;
+			Shoot(TEXT("n4-02-map-ring"), TEXT("the world map: the ring round her nest, the party on the way and there"));
+			return;
+		}
+		TimedOut(TEXT("n4: a defender and a guard at the ring"), 150);
+		return;
+	}
+	case 3608:
+		// The map closed once; the pilot taken to her nest's region, on the
+		// ring's side, outside it.
+		if (!W4Set)
+		{
+			W4Set = true;
+			ToggleWorldMap();
+			return;
+		}
+		if (Since() < 1.5) return;
+		W4Set = false;
+		Check(Mmo->DevClock(TEXT("matriarch here 44")), TEXT("n4: the pilot taken to her nest, outside the ring"));
+		Advance();
+		return;
+	case 3609:
+		if (Here == TEXT("slag-pockets") && U && S && NearestBug(*S, U->position, ac::UnitKind::matriarch))
+		{
+			Check(Mmo->DevClock(TEXT("matriarch calm")), TEXT("n4: the horde held still for the pictures"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("n4: in Slag Pockets, the Matriarch sent"), 40);
+		return;
+	case 3610:
+	{
+		const ac::Unit* Q = NearestBug(*S, U->position, ac::UnitKind::matriarch);
+		if (Q) Stop(Face(Q->position));
+		const ac::net::HuntMessage* H = Mmo->Hunt();
+		if (Q && H && ac::net::huntThere(*H) >= 2 && Since() > 5.0)
+		{
+			Check(H->state == ac::net::HuntMessage::State::gathering, TEXT("n4: still gathering: the caller outside the ring"));
+			ShootClean(TEXT("n4-03-ring"), TEXT("the party gathered at the ring round her nest"));
+			return;
+		}
+		TimedOut(TEXT("n4: the party at the ring in sight"), 30);
+		return;
+	}
+	case 3611:
+		// The gathering's two minutes jumped; the pilot inside the ring.
+		Check(Mmo->DevClock(TEXT("hunt gathered\nmatriarch here 24")), TEXT("n4: the gathering over, the caller inside the ring"));
+		Advance();
+		return;
+	case 3612:
+	{
+		const ac::Unit* Q = S && U ? NearestBug(*S, U->position, ac::UnitKind::matriarch) : nullptr;
+		if (Q) Stop(Face(Q->position));
+		const ac::net::HuntMessage* H = Mmo->Hunt();
+		const UAcProgressHudSubsystem* Hs = UAcProgressHudSubsystem::Get(this);
+		const TSharedPtr<SAcProgressHud> Hud = Hs ? Hs->Widget() : nullptr;
+		bool bToast = false;
+		if (Hud)
+			for (const FString& X : Hud->ToastTitles()) bToast = bToast || X == TEXT("THE HUNT GOES IN");
+		if (H && H->state == ac::net::HuntMessage::State::assault && bToast && Since() > 3.0)
+		{
+			Check(true, TEXT("n4: the assault: THE HUNT GOES IN"));
+			Shoot(TEXT("n4-04-charge"), TEXT("the charge: THE HUNT GOES IN, the party in"));
+			return;
+		}
+		TimedOut(TEXT("n4: the charge"), 20);
+		return;
+	}
+	case 3613:
+		// Her fight cut short: hurt by the pilot, then down by its hit.
+		Check(Mmo->DevClock(TEXT("matriarch hurt 0.6\nmatriarch down")), TEXT("n4: her fight cut short"));
+		Advance();
+		return;
+	case 3614:
+	{
+		const ac::net::HuntMessage* H = Mmo->Hunt();
+		const UAcProgressHudSubsystem* Hs = UAcProgressHudSubsystem::Get(this);
+		const TSharedPtr<SAcProgressHud> Hud = Hs ? Hs->Widget() : nullptr;
+		bool bFall = false, bShare = false;
+		if (Hud)
+			for (const FString& X : Hud->ToastTitles())
+			{
+				bFall = bFall || X == TEXT("THE HUNT BROUGHT HER DOWN");
+				bShare = bShare || X == TEXT("YOUR SHARE OF THE MATRIARCH");
+			}
+		if (H && H->state == ac::net::HuntMessage::State::won && bFall && Since() > 2.2)
+		{
+			Check(bShare, TEXT("n4: her pay: YOUR SHARE OF THE MATRIARCH"));
+			const ac::net::StandingsMessage* St = Mmo->Standings();
+			const bool bCounted = St && St->you && St->rows[size_t(*St->you)].bugs >= 1;
+			Check(bCounted, TEXT("n4: she counts as a bug felled to her hardest hitter"));
+			Check(!H->refusal.empty(), FString::Printf(TEXT("n4: the day's call spent: %s"), UTF8_TO_TCHAR(H->refusal.c_str())));
+			Shoot(TEXT("n4-05-fall-toast"), TEXT("her fall: THE HUNT BROUGHT HER DOWN, the share"));
+			return;
+		}
+		TimedOut(TEXT("n4: her fall's toast"), 20);
+		return;
+	}
+	case 3615:
+		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsL1

@@ -166,13 +166,20 @@ The station's announcer reads one line for each of these:
 - S4's week's end (`week-counted`: "The week is counted, pilots! See the
   standings at the Citadel."; mmorpg-play.md "Standings"). One take for
   every week: the top hauler's name and ore are on the toast, not spoken.
+- N4's hunt (mmorpg-play.md "The hunt"), one take each, the toasts carry who
+  and where: `hunt-called` ("The hunt is called! Defenders and guards, to the
+  Matriarch's ring."), `hunt-gathered` ("The party's at the ring. Step
+  inside it, caller, and we go in."), `hunt-charge` ("Go, go, go! Everybody
+  in, bring her down!"), `hunt-down` ("She's down! The Matriarch is down!
+  Good hunting, pilots."), `hunt-failed` ("The hunt failed. She still
+  stands. We try again tomorrow.").
 
 The text stays on the HUD as before.
 
-**The lines.** There are 42, all under 6 s (the longest is 5.98 s; R2's
+**The lines.** There are 47, all under 6 s (the longest is 5.98 s; R2's
 eight run 3.3 to 5.6 s; X2's three welcomes and the Foundry and Lab goals
 `goal-module`, made again for the order, `goal-fit` and `goal-research`
-run 4.5 to 5.5 s; S4's `week-counted` 3.9 s). They
+run 4.5 to 5.5 s; S4's `week-counted` 3.9 s; N4's five 3.6 to 5.0 s). They
 use the ads' voice, "Autocraft KSTR Announcer" (`eleven_v4`), and go
 through `radio.py`. Their scripts are in
 `Tools/AudioGen/kstrnews.manifest.json`, each with its delivery cue in

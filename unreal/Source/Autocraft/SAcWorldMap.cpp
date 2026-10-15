@@ -821,6 +821,29 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 			}
 			break;
 		}
+		case ac::net::atlas::Kind::hunt:
+		{
+			// N4: the hunt's ring round her nest, red; brighter in the
+			// assault; its name over it.
+			const FLinearColor Ink = FAcHudStyle::Srgb(1.0, 0.42, 0.32);
+			const float R = FMath::Max(Ground, U * 1.2f);
+			Fill(Out, L, G, Circle(C, R, 48), WithAlpha(Ink, It.flag ? 0.16f : 0.08f));
+			Outlined(Out, L + 1, G, Circle(C, R, 48), WithAlpha(Ink, 0.95f), It.flag ? 2.5f : 2.f);
+			Shadowed(Out, L + 2, G, Label(It.flag ? TEXT("THE ASSAULT") : TEXT("THE HUNT"), 11, Ink, EAcHAlign::Center, EAcVAlign::Center,
+				EAcFontWeight::Bold), C - FVector2f(0, R + 9.f));
+			break;
+		}
+		case ac::net::atlas::Kind::hunter:
+		{
+			// N4: a guard mercenary (orange) or the caller (pale) on the
+			// hunt, ringed red; green ringed at the ring.
+			const FLinearColor Ink = It.own ? FAcHudStyle::Srgb(0.86, 0.9, 1) : MercOrange();
+			const float R = U * 0.36f;
+			Fill(Out, L, G, Circle(C, R + 1.5f, 16), FLinearColor(0, 0, 0, 0.85f));
+			Fill(Out, L + 1, G, Circle(C, R, 16), Ink);
+			Lines(Out, L + 2, G, Circle(C, R + 3.f, 16), It.flag ? FAcHudStyle::Srgb(0.45, 0.95, 0.62) : FAcHudStyle::Srgb(1.0, 0.42, 0.32), 1.5f);
+			break;
+		}
 		case ac::net::atlas::Kind::frontier:
 		{
 			// P1: a frontier pilot, a dot in its paint ringed dark, a white
@@ -1015,6 +1038,8 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 		case ac::net::atlas::Kind::contract: TitleColor = Kstr(); break;
 		case ac::net::atlas::Kind::zone: TitleColor = It.flag ? BroodRed() : FAcHudStyle::Srgb(1.0, 0.6, 0.22); break;
 		case ac::net::atlas::Kind::frontier: TitleColor = FAcHudStyle::TeamPaint(It.paint); break;
+		case ac::net::atlas::Kind::hunt: TitleColor = FAcHudStyle::Srgb(1.0, 0.42, 0.32); break;
+		case ac::net::atlas::Kind::hunter: TitleColor = It.own ? FAcHudStyle::Text() : MercOrange(); break;
 		default: break;
 		}
 		Rows.Add(Label(Text(It.title), 16, TitleColor, EAcHAlign::Left, EAcVAlign::Top));

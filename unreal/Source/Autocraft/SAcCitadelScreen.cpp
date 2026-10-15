@@ -24,6 +24,11 @@ namespace
 	/// the top 8 and the pilot's own after a gap.
 	constexpr float StandingRowH = 24;
 	constexpr float StandingsH = 74 + 9 * StandingRowH + 12;
+	/// N4: the standings' width; THE HUNT beside them.
+	constexpr float StandingsW = 640;
+	/// The hunt's party rows.
+	constexpr float HuntRowH = 22;
+	constexpr int32 HuntRows = 6;
 
 	enum ERow : int32
 	{
@@ -39,6 +44,8 @@ namespace
 		RowField = 10,
 		RowUpgrade = 11,
 		RowProject = 12,
+		RowRole = 13,
+		RowHunt = 14,
 	};
 
 	// The mercenaries' rows (H2).
@@ -155,6 +162,7 @@ void SAcCitadelScreen::Construct(const FArguments& InArgs)
 	OnMercDelegate = InArgs._OnMerc;
 	OnUpgradeDelegate = InArgs._OnUpgrade;
 	OnProjectDelegate = InArgs._OnProject;
+	OnHuntDelegate = InArgs._OnHunt;
 	OnCloseDelegate = InArgs._OnClose;
 	SetCanTick(false);
 	OpenedAt = Clock();
@@ -184,19 +192,22 @@ void SAcCitadelScreen::SetRefusal(const FString& Why)
 {
 	Refusal = Why;
 	if (!Why.IsEmpty()) Kept.Reset();
+	if (!Why.IsEmpty()) HuntCalled.Reset();
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
 void SAcCitadelScreen::SetKept()
 {
 	Refusal.Reset();
-	Kept = !Started.IsEmpty() ? FString::Printf(TEXT("Started: the realm's %s, for a world day. Paid from the realm wallet."), *Started)
+	Kept = !HuntCalled.IsEmpty() ? FString::Printf(TEXT("THE HUNT is called: the realm's defenders and guards gather at the ring in %s."), *HuntCalled)
+		: !Started.IsEmpty() ? FString::Printf(TEXT("Started: the realm's %s, for a world day. Paid from the realm wallet."), *Started)
 		: !Upgraded.IsEmpty() ? FString::Printf(TEXT("Upgraded: the corner turrets' %s. Paid from the realm wallet."), *Upgraded)
 		: !MercAsked.IsEmpty() ? MercAsked
 		: !Signed.IsEmpty() ? FString::Printf(TEXT("Signed up: %s. It's in your Journal (L)."), *Signed)
 		: !Bought.IsEmpty()
 		? FString::Printf(TEXT("Bought: %s. Paid from your wallet."), *Bought)
 		: FString::Printf(TEXT("Given to the realm: %s. Every pilot's Citadel thanks you."), *Purse(Asked.Key, Asked.Value));
+	HuntCalled.Reset();
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -338,7 +349,7 @@ FString SAcCitadelScreen::SendWhyNot(const int32 Index) const
 	return FString();
 }
 
-void SAcCitadelScreen::Hire()
+void SAcCitadelScreen::Hire(const bool bGuard)
 {
 	if (const FString Why = HireWhyNot(); !Why.IsEmpty())
 	{
@@ -352,8 +363,32 @@ void SAcCitadelScreen::Hire()
 	Signed.Reset();
 	Upgraded.Reset();
 	Started.Reset();
-	MercAsked = FString::Printf(TEXT("Hired: on its way to the field nearest the Citadel. Paid %s."), *Purse(Info.MercFeeOre, Info.MercFeeHydrogen));
-	OnMercDelegate.ExecuteIfBound(0, INDEX_NONE, INDEX_NONE);
+	MercAsked = bGuard
+		? FString::Printf(TEXT("Hired a guard: it mines the field nearest the Citadel and answers THE HUNT. Paid %s."),
+			  *Purse(Info.MercFeeOre, Info.MercFeeHydrogen))
+		: FString::Printf(TEXT("Hired: on its way to the field nearest the Citadel. Paid %s."), *Purse(Info.MercFeeOre, Info.MercFeeHydrogen));
+	OnMercDelegate.ExecuteIfBound(bGuard ? 3 : 0, INDEX_NONE, INDEX_NONE);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcCitadelScreen::Role(const int32 Index)
+{
+	if (!Info.Mercs.IsValidIndex(Index))
+	{
+		SetRefusal(TEXT("No mercenary there"));
+		return;
+	}
+	const FAcMercLine& X = Info.Mercs[Index];
+	Refusal.Reset();
+	Kept.Reset();
+	Asked = {0, 0};
+	Bought.Reset();
+	Signed.Reset();
+	Upgraded.Reset();
+	Started.Reset();
+	MercAsked = X.bGuard ? FString::Printf(TEXT("%s is a miner again: it stays at its field when THE HUNT is called."), *X.Name)
+						 : FString::Printf(TEXT("%s is a guard: it answers THE HUNT, then goes back to its field."), *X.Name);
+	OnMercDelegate.ExecuteIfBound(4, Index, X.bGuard ? 0 : 1);
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -469,6 +504,32 @@ void SAcCitadelScreen::StartProject(const int32 Index)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+FString SAcCitadelScreen::HuntWhyNot() const
+{
+	if (!Info.bHuntKnown) return TEXT("Waiting for the server…");
+	return Info.HuntWhyNot;
+}
+
+void SAcCitadelScreen::CallHunt()
+{
+	if (const FString Why = HuntWhyNot(); !Why.IsEmpty())
+	{
+		SetRefusal(Why);
+		return;
+	}
+	Refusal.Reset();
+	Kept.Reset();
+	Asked = {0, 0};
+	Bought.Reset();
+	Signed.Reset();
+	MercAsked.Reset();
+	Upgraded.Reset();
+	Started.Reset();
+	HuntCalled = Info.HuntWhere.IsEmpty() ? FString(TEXT("her nest")) : Info.HuntWhere;
+	OnHuntDelegate.ExecuteIfBound();
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcCitadelScreen::Close() { OnCloseDelegate.ExecuteIfBound(); }
 
 bool SAcCitadelScreen::Key(const FKey& InKey)
@@ -542,7 +603,8 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 	WalletBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + WalletW, Top + BodyH));
 	DonateBox = FBox2f(FVector2f(Pad + WalletW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
 	ProjectsBox = FBox2f(FVector2f(Pad, Top + BodyH + Gap), FVector2f(PanelW - Pad, Top + BodyH + Gap + ProjectsH));
-	StandingsBox = FBox2f(FVector2f(Pad, ProjectsBox.Max.Y + Gap), FVector2f(PanelW - Pad, ProjectsBox.Max.Y + Gap + StandingsH));
+	StandingsBox = FBox2f(FVector2f(Pad, ProjectsBox.Max.Y + Gap), FVector2f(Pad + StandingsW, ProjectsBox.Max.Y + Gap + StandingsH));
+	HuntBox = FBox2f(FVector2f(StandingsBox.Max.X + Gap, StandingsBox.Min.Y), FVector2f(PanelW - Pad, StandingsBox.Max.Y));
 	BlueprintBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + BlueprintsW, Top + BodyH));
 	ItemBox = FBox2f(FVector2f(Pad + BlueprintsW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
 	const float TierW = (PanelW - 2 * Pad - 2 * Gap) / 3;
@@ -561,8 +623,12 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 			const float Y = MercBox.Min.Y + 44 + I * MercRowH + MercRowH - 10 - BuyH;
 			Add(FBox2f(FVector2f(MercBox.Max.X - 14 - 2 * BuyW - 26, Y), FVector2f(MercBox.Max.X - 14 - BuyW - 26, Y + BuyH)), RowSend, I);
 			Add(FBox2f(FVector2f(MercBox.Max.X - 14 - BuyW - 16, Y), FVector2f(MercBox.Max.X - 14, Y + BuyH)), RowDismiss, I);
+			// N4: its role, GUARD or MINER, left of SEND.
+			Add(FBox2f(FVector2f(MercBox.Max.X - 14 - 3 * BuyW - 36, Y), FVector2f(MercBox.Max.X - 14 - 2 * BuyW - 36, Y + BuyH)), RowRole, I);
 		}
 		Add(FBox2f(FVector2f(MercBox.Min.X + 18, MercBox.Max.Y - 44), FVector2f(MercBox.Min.X + 18 + 96, MercBox.Max.Y - 14)), RowHire, 0);
+		Add(FBox2f(FVector2f(MercBox.Min.X + 18 + 96 + 10, MercBox.Max.Y - 44), FVector2f(MercBox.Min.X + 18 + 96 + 10 + 150, MercBox.Max.Y - 14)),
+			RowHire, 1);
 		for (int32 I = 0; I < FMath::Min(Info.MercFields.Num(), FieldRows); ++I)
 		{
 			const float Y = FieldBox.Min.Y + 40 + I * FieldRowH;
@@ -609,6 +675,8 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 			Add(FBox2f(FVector2f(X + CardW - 14 - 96, ProjectsBox.Max.Y - 14 - 32), FVector2f(X + CardW - 14, ProjectsBox.Max.Y - 14)),
 				RowProject, I);
 		}
+		// N4: CALL THE HUNT at the hunt's foot.
+		Add(FBox2f(FVector2f(HuntBox.Min.X + 18, HuntBox.Max.Y - 18 - 40), FVector2f(HuntBox.Max.X - 18, HuntBox.Max.Y - 18)), RowHunt, 0);
 	}
 	else
 	{
@@ -653,7 +721,9 @@ void SAcCitadelScreen::Press(const FTarget& T)
 	case RowBuyBlueprint: Buy(false, T.Index); break;
 	case RowBuyItem: Buy(true, T.Index); break;
 	case RowTake: Take(T.Index); break;
-	case RowHire: Hire(); break;
+	case RowHire: Hire(T.Index == 1); break;
+	case RowRole: Role(T.Index); break;
+	case RowHunt: CallHunt(); break;
 	case RowSend: Send(T.Index); break;
 	case RowDismiss: Dismiss(T.Index); break;
 	case RowField: PickField(T.Index); break;
@@ -749,6 +819,7 @@ int32 SAcCitadelScreen::OnPaint(const FPaintArgs& Args, const FGeometry& Geometr
 	case ETab::Realm:
 		PaintRealm(Out, L, P);
 		PaintStandings(Out, L, P);
+		PaintHunt(Out, L, P);
 		break;
 	case ETab::Shop: PaintShop(Out, L, P); break;
 	case ETab::Missions: PaintMissions(Out, L, P); break;
@@ -931,11 +1002,11 @@ void SAcCitadelScreen::PaintStandings(FSlateWindowElementList& Out, const int32 
 	CutFrame(Out, L + 1, P, B, Steel(), 1, 10);
 	Label(TEXT("STANDINGS  ·  THIS WEEK"), 13, RealmGold(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f)
 		.Paint(Out, L + 2, P, B.Min + FVector2f(18, 14));
-	Label(Info.bStandingsKnown ? Info.WeekLeft + TEXT("  ·  the counts start again at the week's end") : FString(TEXT("Waiting for the server…")), 13,
+	Label(Info.bStandingsKnown ? Info.WeekLeft : FString(TEXT("Waiting for the server…")), 13,
 		FAcHudStyle::Soft(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.4f).Paint(Out, L + 2, P, FVector2f(B.Max.X - 18, B.Min.Y + 15));
 	// The columns: rank, pilot, then the four counts right-aligned.
 	const float XRank = B.Min.X + 30, XName = B.Min.X + 64;
-	const float XCols[] = {B.Min.X + 560, B.Min.X + 680, B.Min.X + 820, B.Max.X - 30};
+	const float XCols[] = {B.Min.X + 352, B.Min.X + 432, B.Min.X + 540, B.Max.X - 24};
 	static const TCHAR* const Heads[] = {TEXT("ORE"), TEXT("BUGS"), TEXT("WAVES HELD"), TEXT("BUILT")};
 	const float HeadY = B.Min.Y + 46;
 	Label(TEXT("#"), 11, Dim(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 1.2f).Paint(Out, L + 2, P, FVector2f(XRank, HeadY));
@@ -986,6 +1057,75 @@ void SAcCitadelScreen::PaintStandings(FSlateWindowElementList& Out, const int32 
 				EAcVAlign::Center, C == 0 ? EAcFontWeight::Bold : EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(XCols[C], Mid));
 		}
 		Y += StandingRowH;
+	}
+}
+
+void SAcCitadelScreen::PaintHunt(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const
+{
+	const FBox2f B = HuntBox;
+	const FLinearColor Blood = FAcHudStyle::Srgb(1.0, 0.42, 0.32);
+	Box(Out, L, P, B, FAcHudStyle::Srgb(0.03, 0.055, 0.09, 0.9));
+	if (Info.bHuntOn) Box(Out, L + 1, P, B.ExpandBy(-2), WithAlpha(Blood, 0.07f));
+	CutFrame(Out, L + 1, P, B, Info.bHuntOn ? WithAlpha(Blood, 0.75f) : Steel(), 1, 10);
+	Label(TEXT("THE HUNT"), 13, Blood, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f).Paint(Out, L + 2, P, B.Min + FVector2f(18, 14));
+	Label(Info.HuntWhere.IsEmpty() ? FString(TEXT("the Matriarch")) : FString::Printf(TEXT("the Matriarch  ·  %s"), *Info.HuntWhere), 12, Dim(),
+		EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.4f).Paint(Out, L + 2, P, FVector2f(B.Max.X - 18, B.Min.Y + 15));
+	if (!Info.bHuntKnown)
+	{
+		Label(TEXT("Waiting for the server…"), 14, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L + 2, P, B.Min + FVector2f(18, 50));
+		return;
+	}
+	Label(Info.HuntState, 17, Info.bHuntOn ? Blood : FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.0f)
+		.Paint(Out, L + 2, P, B.Min + FVector2f(18, 44));
+	// The line under it, in two when long.
+	FString First = Info.HuntLine, Second;
+	if (int32 Colon = INDEX_NONE; Info.HuntLine.Len() > 42 && Info.HuntLine.FindChar(TEXT(':'), Colon))
+	{
+		First = Info.HuntLine.Left(Colon + 1);
+		Second = Info.HuntLine.Mid(Colon + 1).TrimStart();
+	}
+	Label(First, 13, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, B.Min + FVector2f(18, 70));
+	if (!Second.IsEmpty())
+		Label(Second, 13, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, B.Min + FVector2f(18, 88));
+	// The party: the caller, the defenders, the guards; at the ring or on
+	// the way, or down.
+	float Y = B.Min.Y + 114;
+	if (Info.HuntParty.Num() == 0)
+	{
+		Label(Info.bHuntOn ? TEXT("No defenders or guards answered.") : TEXT("Frontier defenders and your guards answer the call."), 12, Dim(),
+			EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L + 2, P, FVector2f(B.Min.X + 18, Y));
+	}
+	for (int32 I = 0; I < FMath::Min(Info.HuntParty.Num(), HuntRows); ++I)
+	{
+		const FAcHuntPartyLine& X = Info.HuntParty[I];
+		const float Mid = Y + HuntRowH / 2;
+		const FLinearColor Dot = X.Paint >= 0 ? FAcHudStyle::TeamPaint(X.Paint) : X.Tag.StartsWith(TEXT("GUARD")) ? MercOrange() : FAcHudStyle::Srgb(0.86, 0.9, 1);
+		Box(Out, L + 2, P, FBox2f(FVector2f(B.Min.X + 18, Mid - 5), FVector2f(B.Min.X + 28, Mid + 5)), FLinearColor(0, 0, 0, 0.85f));
+		Box(Out, L + 3, P, FBox2f(FVector2f(B.Min.X + 19.5f, Mid - 3.5f), FVector2f(B.Min.X + 26.5f, Mid + 3.5f)), Dot);
+		FAcHudText Name = Label(X.Name, 14, X.bDown ? Faint() : FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::Bold);
+		Name.Paint(Out, L + 2, P, FVector2f(B.Min.X + 36, Mid));
+		Label(X.Tag, 10, Dim(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::SemiBold, 1.0f)
+			.Paint(Out, L + 2, P, FVector2f(B.Min.X + 36 + Name.Measure().X + 8, Mid + 1));
+		const FString Where = X.bDown ? FString(TEXT("DOWN")) : X.bThere ? FString(TEXT("AT THE RING")) : FString(TEXT("ON THE WAY"));
+		Label(Where, 10, X.bDown ? Refused() : X.bThere ? Ready() : FAcHudStyle::Amber(), EAcHAlign::Right, EAcVAlign::Center, EAcFontWeight::Bold, 1.0f)
+			.Paint(Out, L + 2, P, FVector2f(B.Max.X - 18, Mid + 1));
+		Y += HuntRowH;
+	}
+	if (Info.HuntParty.Num() > HuntRows)
+	{
+		Label(FString::Printf(TEXT("and %d more"), Info.HuntParty.Num() - HuntRows), 11, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold)
+			.Paint(Out, L + 2, P, FVector2f(B.Min.X + 36, Y + 2));
+	}
+	for (const FTarget& T : Targets)
+	{
+		if (T.Row != RowHunt) continue;
+		const FString Why = HuntWhyNot();
+		PaintButton(Out, L, P, T, Info.bHuntOn ? TEXT("THE HUNT IS ON") : TEXT("CALL THE HUNT"), Why.IsEmpty(), Blood);
+		if (!Why.IsEmpty() && !Info.bHuntOn)
+		{
+			Label(Why, 11, FAcHudStyle::Amber(), EAcHAlign::Left, EAcVAlign::Baseline, EAcFontWeight::SemiBold)
+				.Paint(Out, L + 2, P, FVector2f(T.Box.Min.X, T.Box.Min.Y - 6));
+		}
 	}
 }
 
@@ -1140,13 +1280,21 @@ void SAcCitadelScreen::PaintMercs(FSlateWindowElementList& Out, const int32 L, c
 			const FLinearColor C = X.State == 0 ? Ready() : X.State == 1 ? MercOrange() : FAcHudStyle::Amber();
 			Box(Out, L + 1, P, Row, WithAlpha(MercOrange(), 0.05f));
 			Box(Out, L + 1, P, FBox2f(Row.Min, FVector2f(Row.Min.X + 4, Row.Max.Y)), MercOrange());
-			Label(FString::Printf(TEXT("MERC · %s"), *X.Name.ToUpper()), 16, MercOrange(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.0f)
-				.Paint(Out, L + 2, P, Row.Min + FVector2f(14, 7));
+			FAcHudText Name = Label(FString::Printf(TEXT("MERC · %s"), *X.Name.ToUpper()), 16, MercOrange(), EAcHAlign::Left, EAcVAlign::Top,
+				EAcFontWeight::Bold, 1.0f);
+			Name.Paint(Out, L + 2, P, Row.Min + FVector2f(14, 7));
+			// N4: a guard's tag (and on the hunt now).
+			if (X.bGuard)
+			{
+				Label(X.bHunting ? TEXT("GUARD  ·  ON THE HUNT") : TEXT("GUARD"), 11, X.bHunting ? Refused() : RealmGold(), EAcHAlign::Left,
+					EAcVAlign::Top, EAcFontWeight::Bold, 1.2f).Paint(Out, L + 2, P, Row.Min + FVector2f(14 + Name.Measure().X + 12, 11));
+			}
 			Label(X.Doing, 13, C, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, Row.Min + FVector2f(14, 31));
 			Label(FString::Printf(TEXT("delivered %s ore"), *Grouped(X.Delivered)), 12, FAcHudStyle::Soft(), EAcHAlign::Right, EAcVAlign::Top,
 				EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(Row.Max.X - 8, Row.Min.Y + 9));
 			if (const FTarget* T = Find(RowSend, I)) PaintButton(Out, L, P, *T, TEXT("SEND"), SendWhyNot(I).IsEmpty(), MercOrange());
 			if (const FTarget* T = Find(RowDismiss, I)) PaintButton(Out, L, P, *T, TEXT("DISMISS"), true, Refused());
+			if (const FTarget* T = Find(RowRole, I)) PaintButton(Out, L, P, *T, X.bGuard ? TEXT("GUARD") : TEXT("MINER"), true, RealmGold());
 		}
 		else
 		{
@@ -1157,9 +1305,11 @@ void SAcCitadelScreen::PaintMercs(FSlateWindowElementList& Out, const int32 L, c
 				.Paint(Out, L + 2, P, FVector2f(Row.Min.X + 14, Row.GetCenter().Y));
 		}
 	}
-	if (const FTarget* T = Find(RowHire, 0))
+	if (const FTarget* G = Find(RowHire, 1)) PaintButton(Out, L, P, *G, TEXT("HIRE A GUARD"), HireWhyNot().IsEmpty(), RealmGold());
+	if (const FTarget* H = Find(RowHire, 0))
 	{
-		PaintButton(Out, L, P, *T, TEXT("HIRE"), HireWhyNot().IsEmpty(), MercOrange());
+		PaintButton(Out, L, P, *H, TEXT("HIRE"), HireWhyNot().IsEmpty(), MercOrange());
+		const FTarget* T = Find(RowHire, 1) ? Find(RowHire, 1) : H;
 		Label(FString::Printf(TEXT("%s  ·  then %lld MH a day at dawn"), *Purse(Info.MercFeeOre, Info.MercFeeHydrogen), (long long)Info.MercWage), 14,
 			FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold)
 			.Paint(Out, L + 2, P, FVector2f(T->Box.Max.X + 14, T->Box.Min.Y - 1));

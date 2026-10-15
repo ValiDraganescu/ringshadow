@@ -16,7 +16,7 @@ WorldMap.h). Tests: `unreal/server/tests/FrontierTests.cpp`,
 |---|---|---|
 | 1, 5 | Miner | Drills and hauls. Puts a Derrick on the well by its field and pumps a tank every fourth trip. Builds a Hab Dome by a field more than 24 cells from any depot. |
 | 2, 6 | Builder | Builds realm buildings where they help: a Gatling Gun by a field the Brood lingered at in the last 15 world minutes (when no turret guards it), a Landing Pad in a region with a Citadel or a canyon and no pad, a Hab Dome where the haul is long. Otherwise it drills to earn its keep. |
-| 3 | Defender | Joins a canyon wave whenever a human is in that canyon's region. Fights bugs within 16 cells of the realm's buildings, mends a building below 90% hp, and patrols from one realm building to the next, a minute each. Every other minute it drills. |
+| 3 | Defender | Answers THE HUNT first (N4): to its place on the ring round the Matriarch's nest, walking through the openings or flying the Dropship when both regions have a Landing Pad and the fare leaves 10 MH; it holds there, fighting the bugs that come at it, and goes in with the party at the charge. Joins a canyon wave whenever a human is in that canyon's region. Fights bugs within 16 cells of the realm's buildings, mends a building below 90% hp, and patrols from one realm building to the next, a minute each. Every other minute it drills. |
 | 4 | Wanderer | Opens the region's sites it has not opened (a vault only at its floor). At the realm's Citadel it takes a survey of a region next door. Otherwise it moves on to a region it has not seen, on foot through the openings or by Dropship when both regions have a Landing Pad and the fare leaves 10 MH. |
 
 - **Pilots per world:** `--frontier N`, 0 to 6, default 5. `0` turns them off.

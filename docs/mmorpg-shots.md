@@ -32,7 +32,11 @@ and `FAcMmoClient::DevClock` moves the world's clock with it at once:
 `catchup S` catches the world up as a restart after S s down (X2), `idle S`
 idles it S s as with nobody on line (S4: the frontier pilots' and the
 mercenaries' work booked), `week end|left S|list` ends the realm week, sets
-its time left or lists the standings (S4).
+its time left or lists the standings (S4), `hunt call|gathered|fail|open|list`
+calls THE HUNT as the first pilot (anywhere), ends its gathering's two
+minutes now, fails it, opens the day's call again or lists the party (N4).
+The flow test `mmohunt` runs `-AcMmoShotsN4`'s steps with their checks
+(`-AcFlowTest=mmohunt -AcMmoShots=DIR`).
 The game never passes the file, so a normal game cannot reach it. The
 Starfall set jumps to 19:00 for its night pictures and takes about 40 s,
 not 4 minutes. `-AcMmoShotsOnly=sf-02,sf-08` (names, numbers, or a set's

@@ -115,6 +115,9 @@ struct FAcMercLine
 	FString Region;
 	int64 Field = 0;
 	int64 Delivered = 0;
+	/// N4: a guard (answers the hunt), and away on one now.
+	bool bGuard = false;
+	bool bHunting = false;
 
 	bool operator==(const FAcMercLine&) const = default;
 };
@@ -188,6 +191,21 @@ struct FAcStandingLine
 	bool operator==(const FAcStandingLine&) const = default;
 };
 
+/// N4: one of the hunt's party on the REALM tab: the caller, a frontier
+/// defender (in its paint), a guard mercenary (whose).
+struct FAcHuntPartyLine
+{
+	FString Name;
+	/// "CALLER", "FRONTIER", "GUARD · Pilot 1A2B".
+	FString Tag;
+	/// A frontier pilot's paint (-1: none).
+	int32 Paint = -1;
+	bool bThere = false;
+	bool bDown = false;
+
+	bool operator==(const FAcHuntPartyLine&) const = default;
+};
+
 /// What the Citadel screen shows.
 struct FAcCitadelScreenInfo
 {
@@ -249,6 +267,17 @@ struct FAcCitadelScreenInfo
 	bool bStandingsKnown = false;
 	TArray<FAcStandingLine> Standings;
 	FString WeekLeft;
+	/// N4, the REALM tab's hunt: told yet, on (gathering or the assault),
+	/// its state ("NOT CALLED TODAY", "GATHERING", "THE ASSAULT", "SHE
+	/// FELL", "THE HUNT FAILED") and its line (`net::huntLine`), where she
+	/// is, why it can't be called now (empty: it can), the party.
+	bool bHuntKnown = false;
+	bool bHuntOn = false;
+	FString HuntState;
+	FString HuntLine;
+	FString HuntWhere;
+	FString HuntWhyNot;
+	TArray<FAcHuntPartyLine> HuntParty;
 
 	bool operator==(const FAcCitadelScreenInfo&) const = default;
 };
@@ -257,7 +286,8 @@ DECLARE_DELEGATE_TwoParams(FAcOnDonate, int64 /*Ore*/, int64 /*Hydrogen*/);
 DECLARE_DELEGATE_TwoParams(FAcOnShopBuy, bool /*bItem*/, int32 /*Index*/);
 DECLARE_DELEGATE_OneParam(FAcOnMissionTake, int32 /*Index*/);
 /// H2: hire (0), dismiss (1) or send (2) mercenary `Merc` (an index in
-/// `Mercs`) to field `Field` (an index in `MercFields`).
+/// `Mercs`) to field `Field` (an index in `MercFields`); N4: hire a guard
+/// (3), make mercenary `Merc` a guard (4, `Field` 1) or a miner (4, 0).
 DECLARE_DELEGATE_ThreeParams(FAcOnMerc, int32 /*Act*/, int32 /*Merc*/, int32 /*Field*/);
 DECLARE_DELEGATE_OneParam(FAcOnUpgrade, int32 /*Stat*/);
 /// R2: start the realm project of kind `Kind` (`ac::RealmProject::Kind`).
@@ -273,6 +303,7 @@ public:
 		SLATE_EVENT(FAcOnMerc, OnMerc)
 		SLATE_EVENT(FAcOnUpgrade, OnUpgrade)
 		SLATE_EVENT(FAcOnProject, OnProject)
+		SLATE_EVENT(FSimpleDelegate, OnHunt)
 		SLATE_EVENT(FSimpleDelegate, OnClose)
 	SLATE_END_ARGS()
 
@@ -314,7 +345,10 @@ public:
 	/// asks (clicks); the field picked (keys 1-8 on the MERCS tab).
 	FString HireWhyNot() const;
 	FString SendWhyNot(int32 Index) const;
-	void Hire();
+	/// N4: `bGuard` hires a guard (it answers the hunt); `Role` makes
+	/// mercenary `Index` a guard, or a miner again.
+	void Hire(bool bGuard = false);
+	void Role(int32 Index);
 	void Send(int32 Index);
 	void Dismiss(int32 Index);
 	int32 PickedField() const { return Picked; }
@@ -328,6 +362,10 @@ public:
 	/// now (empty: it can), and its ask (a click; keys 7-0 on the REALM tab).
 	FString ProjectWhyNot(int32 Index) const;
 	void StartProject(int32 Index);
+	/// N4: why THE HUNT can't be called now (empty: it can), and its ask
+	/// (a click on the REALM tab).
+	FString HuntWhyNot() const;
+	void CallHunt();
 
 	/// What button `Index` gives now (ore, MH): "all" is the wallet's.
 	TPair<int64, int64> Amount(int32 Index) const;
@@ -374,6 +412,8 @@ private:
 	void PaintShop(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	/// S4: the REALM tab's standings, under the projects.
 	void PaintStandings(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
+	/// N4: THE HUNT, beside the standings.
+	void PaintHunt(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMissions(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMercs(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintDefence(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
@@ -400,6 +440,8 @@ private:
 	FString Upgraded;
 	/// R2: the project the last REALM ask started ("Beacon"; empty: none).
 	FString Started;
+	/// N4: the last ask called the hunt (where).
+	FString HuntCalled;
 
 	FAcOnDonate OnDonateDelegate;
 	FAcOnShopBuy OnBuyDelegate;
@@ -407,6 +449,7 @@ private:
 	FAcOnMerc OnMercDelegate;
 	FAcOnUpgrade OnUpgradeDelegate;
 	FAcOnProject OnProjectDelegate;
+	FSimpleDelegate OnHuntDelegate;
 	FSimpleDelegate OnCloseDelegate;
 	double OpenedAt = 0;
 	/// When the realm wallet last grew (its flash).
@@ -418,6 +461,7 @@ private:
 	mutable FBox2f DonateBox;
 	mutable FBox2f ProjectsBox;
 	mutable FBox2f StandingsBox;
+	mutable FBox2f HuntBox;
 	mutable FBox2f BlueprintBox;
 	mutable FBox2f ItemBox;
 	mutable FBox2f TierBox[3];

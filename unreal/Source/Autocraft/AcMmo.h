@@ -334,6 +334,8 @@ public:
 	std::optional<ac::net::AwayReport> TakeAway();
 	/// S4: the realm week's standings, the newest (null: not told yet).
 	const ac::net::StandingsMessage* Standings() const;
+	/// N4: the realm's hunt, the newest (null: not told yet).
+	const ac::net::HuntMessage* Hunt() const;
 	/// The skill screen's asks (P5): a point into `Skill`, the last point in
 	/// it back, every point back (at the pilot's Citadel), an active into
 	/// slot `Index` (0 Q, 1 C, 2 G; unset: empty it). False, with `Why`: not
@@ -377,6 +379,9 @@ public:
 	/// (the REALM tab); and whether one of that kind runs now (the Progress
 	/// message's projects, on the sky's clock).
 	bool StartProject(ac::RealmProject::Kind Kind, FString* Why = nullptr);
+	/// N4: THE HUNT called (the REALM tab), free, once a world day
+	/// realm-wide; answered as the Citadel's asks.
+	bool CallHunt(FString* Why = nullptr);
 	bool ProjectOn(ac::RealmProject::Kind Kind) const;
 	/// D3: placed turret `Turret` takes its next mark of `Stat`, paid from
 	/// the pilot's own wallet. The server's refusals: `TurretRefusal` (and a

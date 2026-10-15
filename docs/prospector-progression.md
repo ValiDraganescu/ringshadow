@@ -635,6 +635,15 @@ progress in background even if I quit the game." Built in H2
   most at level 12: 2 at level 15"), short of the fee, away from the
   Citadel, and with no field. **DISMISS** lets one go at any time, with no
   refund.
+- **Its role (N4).** A miner (**HIRE**) or a guard (**HIRE A GUARD**), and
+  the row's **GUARD / MINER** button switches it any time, anywhere, for
+  the same wage. A guard mines as a miner until THE HUNT is called; then it
+  walks to its place on the ring round the Matriarch's nest (through the
+  openings, never there at once), holds there fighting what comes at it,
+  goes in at the charge, and walks back to its field after
+  (mmorpg-play.md "The hunt"). Away, it mines nothing; fallen, it is back at
+  its Citadel as any fallen mercenary and out of the hunt. Its hits on her
+  count to its hirer on line.
 - **The wage.** At each world dawn (every world day, 40 minutes) each
   mercenary takes **5 + level / 5 MH** (`WorldMercs::wage`; 6 at level 5,
   11 at 30) from the pilot's wallet, in the order hired. One the wallet
