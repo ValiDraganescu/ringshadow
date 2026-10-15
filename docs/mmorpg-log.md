@@ -732,3 +732,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T W5 core 6a09229: several humans drive in one region (Simulation::drivers); RTS path unchanged, goldens hold; no wire or save change.
 - N W5 core: 17 files +572 -119; TwoPilotsTests: both move, drill, level, headlamp, own skills; server 317.
 - I goals (user): a built Foundry gives no next step; the goal line should lead to J and a Mk I module, then to fitting; wt1 with X2.
+- T K3 leftovers done 441c57b: launch race retried, trace exit crash documented, cvars cached, Build/Mac leftovers ignored.
+- N W4 crossing: worst frame 31-37 ms -> 13.9-14.4 at 1x; pace +-2%; checks count input ticks; 5-of-5 pending a quiet Mac.
+- I packaged Development launches die 2/35 on an engine memory-tracker start-up race; Shipping unaffected; hidden_run retries.
