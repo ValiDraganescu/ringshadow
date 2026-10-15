@@ -643,3 +643,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I F2: one 522 ms first-draw stall at the first call (editor build; check packaged).
 - I CrossEdgeEast and LevelPick automation tests still fail (pre-existing).
 - N F2 suites: core 496, server 254, net 85; mmofly replaced and passing.
+- D Manager: Q2 stability pass before the showcase → wt2.
