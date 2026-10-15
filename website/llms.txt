@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [The day the sky got too heavy](https://ringshadow.com/blog/heavy-sky.md): A Prospector that seemed to die and a world that came back empty: neither happened. Sixty-one starfalls rode in every network part of every snapshot, and no snapshot arrived whole. The save was intact all along.
 - [The crossing hitch: three wrong checks and five real causes](https://ringshadow.com/blog/crossing-hitch.md): A region crossing in Ringshadow's online mode hitched five frames after the change. The checks that watched it were wrong three ways, and the spike had five causes, all fixed: 31 to 37 ms down to about 14.
 - [Realm projects: what the tax is for](https://ringshadow.com/blog/realm-projects.md): The realm wallet in Ringshadow now funds four realm-wide projects a world day long: the Beacon halves Dropship fares, the Relay widens every pilot's night sight, the Armoury lifts every turret a mark, the Dock Crew doubles the mercenaries.
 - [The packaged build, measured: a 1,547 ms stall down to 42](https://ringshadow.com/blog/packaged.md): Ringshadow's online mode packaged as a Mac app and measured, not shipped: it starts four times sooner than the editor, draws as fast, and the first Dropship call's 1.5-second stall is gone.

@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The day the sky got too heavy
+
+15 October 2026 · A bug story · 1 chart
+
+A Prospector that seemed to die and a world that came back empty: neither happened. Sixty-one starfalls rode in every part of every snapshot, so no snapshot arrived whole. The save was intact all along; the fix is what a pilot is told.
+
+Read it: https://ringshadow.com/blog/heavy-sky
+
 ## The crossing hitch: three wrong checks and five real causes
 
 15 October 2026 · M9 · 1 chart

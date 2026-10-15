@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T12:40:00Z</updated>
+  <updated>2026-10-15T13:05:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The day the sky got too heavy</title>
+    <id>tag:ringshadow,2026-10-15:blog/heavy-sky</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/heavy-sky"/>
+    <published>2026-10-15T13:05:00Z</published>
+    <updated>2026-10-15T13:05:00Z</updated>
+    <summary>A Prospector that seemed to die and a world that came back empty: neither happened. Sixty-one starfalls rode in every part of every snapshot, so no snapshot arrived whole. The save was intact all along; the fix is what a pilot is told.</summary>
+  </entry>
   <entry>
     <title>The crossing hitch: three wrong checks and five real causes</title>
     <id>tag:ringshadow,2026-10-15:blog/crossing-hitch</id>

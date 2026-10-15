@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Heavy Sky · Ringshadow</title>
+  <meta name="description" content="A Prospector that seemed to die and a world that came back empty: neither happened. Sixty-one starfalls rode in every network part of every snapshot, and no snapshot arrived whole. The save was intact all along.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="The day the sky got too heavy">
+  <meta property="og:description" content="A Prospector that seemed to die and a world that came back empty: neither happened. Sixty-one starfalls rode in every part of every snapshot, and no snapshot arrived whole.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/heavy-sky/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/heavy-sky">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/heavy-sky">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="heavy-sky.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/count.js" defer data-site="ringshadow"></script>
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>The day the sky got too heavy</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · A bug story</p>
+        <p class="lede">This afternoon I reported two things from my own world: my Prospector had died while I wasn't driving it, and after a restart all my buildings were gone. Neither had happened. The save held unit #206 alive and 12 buildings the whole time. What had happened was that the sky had grown too heavy for the network to carry, and the game showed me the last thing it had seen, then nothing.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/heavy-sky/cover.jpg" alt="A diagram: one amber block for a tick's budget of 1.1 KB; a row of 16 grey parts for the snapshot before the fix, with a dashed line after the first one marked what one tick lets out, labelled never whole; two cyan parts for the snapshot after, labelled whole" width="1200" height="675"></div>
+        <figcaption>One snapshot of the pilot's view, in network parts, against what one tick lets out to a client.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>What the save said</h2>
+        <p>The world runs on a local server while the game is closed, and that server keeps every starfall the world ever had: its crater and its deposit stay, since a fallen star is something to walk to. My world is two days old and had 61 of them. The agent that took the report opened the save first, the way the team's rule says to, and found nothing wrong in it. Unit #206, my Prospector, alive. Twelve buildings where I'd put them. The respawn path has tests and they passed. So the server had the world, and the game wasn't getting it.</p>
+
+        <h2>What the network said</h2>
+        <p>A snapshot is what the server sends each client every tick: the pilot's view of the world, cut into parts that fit a network packet. The sky, with its list of starfalls, rode in every part, because any part might be the first one a client decodes. At 61 falls the sky alone made each part about 1.15 KB. My pilot's view needed 16 parts. A client's budget is 64 KB a second, which at 60 ticks a second is about 1.1 KB a tick: one part. The next tick the server started the snapshot again from part 1. So from the 61st fall, at 12:24 UTC, no snapshot of my world ever arrived whole, while the server sent its full 65 KB a second of parts that never added up.</p>
+        <p>The game does the sensible thing with an incomplete snapshot: it keeps the last complete one. That's why the Prospector stood still, which read as dead, and why the next entry into the world showed an empty one. It had never received a world to show.</p>
+
+        <h2>The fix</h2>
+        <p>Every fall still stays in the world. What changed is what a pilot is told. A snapshot now lists the falls that are coming or landed in the last 30 seconds, from any region, since those are the streaks in the sky and the radio's news, plus the craters of the pilot's own region, which are the ones drawn, newest first and at most 24. My save went from 16 parts a snapshot to 2. A server test fills a world with 61 falls and checks that a snapshot fits in two parts, and a flow test enters my world's save, leaves with the server running, enters again, stops and enters once more, finding the buildings and the Prospector each time.</p>
+        <p>The same pass added tests for two things that already worked, a Prospector that falls while handed back respawns and a rejoin drives it again, had the server log each region's buildings and units as it loads them, and cleared up a line in the log. Every server start said "23 starfalls landed". That was noise from the saved falls being reported again, and no ore was ever created by it.</p>
+        <p>Two days of play and a sky of 61 falls is what it took to find a packet budget. A world with more pilots would have found it sooner, which is the next milestone's first task.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="crossing-hitch.html">Before: the crossing hitch</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="heavy-sky.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No cookies for readers, first-party analytics without tracking across sites. <a href="../privacy.html">Privacy</a>.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>
