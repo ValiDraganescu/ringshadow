@@ -620,3 +620,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: F2 Landing Pad building; region pads arrival-only; jump jets stay.
 - D Manager: Spacedock halves flight MH; Ringwalker: free and 30% faster; beacon removed.
 - T F2 briefed to wt2 (protocol 26, schema 19).
+- T W4b done 426e7da: 9 regions reshaped (bays, spurs, necks, islands), shape.py in git.
+- I W4 regressions fixed: off-origin ground sets placed doodads twice offset.
+- N W4b: land 50–66% of each cell; one world rock colour on wall tops.
+- N W4b crossing 11.6 ms median, 13.2 max at change; suites 494/241/85.
+- I e2e_world_spawn_and_fly_to_a_neighbour flaky under load (snapshot race).
+- T Z1 (first canyon) next for wt1.
