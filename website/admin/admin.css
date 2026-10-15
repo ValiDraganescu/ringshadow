@@ -127,6 +127,16 @@ details ol { margin: 6px 0 0; padding-left: 20px; }
 .k-monitor { fill: #6fdc8c; background: #6fdc8c; }
 .k-other-bot { fill: #ff8a65; background: #ff8a65; }
 .k-unlabelled { fill: #7d8fa0; background: #7d8fa0; }
+.k-views { fill: #2f7f9e; background: #2f7f9e; }
+.k-visitors { fill: #ccf2ff; background: #ccf2ff; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 4px; }
+.tile { background: var(--night-2); padding: 14px 16px; color: var(--soft); }
+.tile b { color: var(--ink); font: 600 28px/1.1 var(--display); }
+.tile-k { display: block; font-size: 13px; letter-spacing: 0.04em; margin-bottom: 4px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 28px; }
+.cols .part { margin-top: 36px; }
+#range-bar { margin-bottom: 8px; }
 
 @media (max-width: 640px) {
   .list thead { display: none; }

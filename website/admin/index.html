@@ -15,6 +15,11 @@
     <a class="brand" href="/"><img src="/assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
     <span class="tag">ADMIN</span>
     <nav class="sections" aria-label="Sections">
+      <a href="#overview">Overview</a>
+      <a href="#pages">Pages</a>
+      <a href="#sources">Sources</a>
+      <a href="#visitors">Visitors</a>
+      <a href="#events">Events</a>
       <a href="#agents">Agents</a>
       <a href="#admins">Admins</a>
     </nav>
@@ -28,20 +33,73 @@
       <p>You signed in with a one-time password. Choose your own before anything else.</p>
     </section>
 
+    <div id="range-bar" hidden>
+        <div class="range" role="group" aria-label="Range">
+          <button type="button" data-range="24h">24 h</button>
+          <button type="button" data-range="7d" aria-pressed="true">7 d</button>
+          <button type="button" data-range="30d">30 d</button>
+          <button type="button" data-range="90d">90 d</button>
+          <button type="button" data-range="custom">Custom</button>
+        </div>
+        <form id="custom-range" class="inline" hidden novalidate>
+          <label>From <input name="from" type="date" required></label>
+          <label>To <input name="to" type="date" required></label>
+          <button type="submit">Show</button>
+        </form>
+    </div>
+
+    <section id="overview" class="view" hidden>
+      <h2>Overview</h2>
+      <p class="note">People, counted by the site's own tracker: a visitor is one browser on one day, a view is one page load. Agents are on their own page.</p>
+      <div class="tiles">
+        <div class="tile"><span class="tile-k">Today</span><b class="t-today-visitors"></b> visitors · <b class="t-today-views"></b> views</div>
+        <div class="tile"><span class="tile-k">7 days</span><b class="t-week-visitors"></b> visitors · <b class="t-week-views"></b> views</div>
+        <div class="tile"><span class="tile-k">30 days</span><b class="t-month-visitors"></b> visitors · <b class="t-month-views"></b> views</div>
+      </div>
+      <figure class="chart" id="overview-chart">
+        <svg viewBox="0 0 800 220" role="img" aria-label="Views and visitors a day, the last 30 days"></svg>
+        <figcaption class="legend"><span class="key"><i class="k-views"></i>views</span><span class="key"><i class="k-visitors"></i>visitors</span></figcaption>
+      </figure>
+      <div class="cols">
+        <div class="part"><h3>Top pages</h3><table class="list" id="ov-pages"><thead><tr><th>Page</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+        <div class="part"><h3>Top referrers</h3><table class="list" id="ov-referrers"><thead><tr><th>From</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+        <div class="part"><h3>Top countries</h3><table class="list" id="ov-countries"><thead><tr><th>Country</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="pages" class="view" hidden>
+      <h2>Pages</h2>
+      <p class="summary" role="status" aria-live="polite"></p>
+      <table class="list" id="pages-table"><thead><tr><th>Page</th><th>Views</th><th>Visitors</th><th>Bounce</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section id="sources" class="view" hidden>
+      <h2>Sources</h2>
+      <p class="summary" role="status" aria-live="polite"></p>
+      <div class="part"><h3>Referrers</h3><table class="list" id="src-referrers"><thead><tr><th>From</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+      <div class="part"><h3>UTM source</h3><table class="list" id="src-utm-source"><thead><tr><th>Source</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+      <div class="part"><h3>UTM medium</h3><table class="list" id="src-utm-medium"><thead><tr><th>Medium</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section id="visitors" class="view" hidden>
+      <h2>Visitors</h2>
+      <p class="summary" role="status" aria-live="polite"></p>
+      <div class="cols">
+        <div class="part"><h3>Countries</h3><table class="list" id="vis-countries"><thead><tr><th>Country</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+        <div class="part"><h3>Devices</h3><table class="list" id="vis-devices"><thead><tr><th>Device</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+        <div class="part"><h3>Browsers</h3><table class="list" id="vis-browsers"><thead><tr><th>Browser</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="events" class="view" hidden>
+      <h2>Events</h2>
+      <p class="summary" role="status" aria-live="polite"></p>
+      <p class="note">A click on the download button, one event per build, and the first play of a video on a post.</p>
+      <div id="events-list"></div>
+    </section>
+
     <section id="agents" class="view" hidden>
       <h2>Agents</h2>
-      <div class="range" role="group" aria-label="Range">
-        <button type="button" data-range="24h">24 h</button>
-        <button type="button" data-range="7d" aria-pressed="true">7 d</button>
-        <button type="button" data-range="30d">30 d</button>
-        <button type="button" data-range="90d">90 d</button>
-        <button type="button" data-range="custom">Custom</button>
-      </div>
-      <form id="custom-range" class="inline" hidden novalidate>
-        <label>From <input name="from" type="date" required></label>
-        <label>To <input name="to" type="date" required></label>
-        <button type="submit">Show</button>
-      </form>
       <p class="summary" role="status" aria-live="polite"></p>
       <label class="check"><input type="checkbox" id="probes-only"> Probes only: fetches answered 400 or above, mostly bots trying addresses that don't exist</label>
       <p class="note">Every fetch of a page, the feed, the text files and the Markdown copies by anything that isn't a browser. A browser's own page fetches are counted apart; people are counted by the tracker, so the two numbers never add up to one total.</p>

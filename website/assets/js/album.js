@@ -75,3 +75,9 @@
   });
   stage.addEventListener("pointercancel", () => { x0 = null; });
 })();
+
+// Videos with controls (the posts' showreels): the first play of each is one
+// video-play event for the site's counter (count.js).
+for (const video of document.querySelectorAll("video[controls]")) {
+  video.addEventListener("play", () => window.count?.("video-play"), { once: true });
+}

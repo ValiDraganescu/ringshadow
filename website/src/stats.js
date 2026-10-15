@@ -6,10 +6,11 @@
 
 import { classify } from "./agents.js";
 import { SITE_HOST } from "./hits.js";
+import { accumulateCountsFromRowResult, fixNegativeBounces } from "./vendor/counterscale/counts.js";
 
 export const DATASET = "events.analyticsEngine.ringshadow_hits";
 export const RETENTION_DAYS = 90;
-const DAY = 86_400_000;
+export const DAY = 86_400_000;
 const SPANS = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 };
 
 // The range a request asks for: ?range=24h|7d|30d|90d, or ?range=custom
@@ -147,4 +148,108 @@ export function agentsView(byAgent, byPath, compiled) {
     series: [...series].map(([t, byClass]) => ({ t, byClass })).sort((a, b) => (a.t < b.t ? -1 : 1)),
     unlabelled: [...unlabelled.values()].sort(byHits),
   };
+}
+
+// --- People: the tracker's kind=page points (and kind=event for events).
+// Counterscale's way: group by the visitor and bounce columns and add up in
+// the Worker (src/vendor/counterscale/counts.js).
+
+// The page-hit columns the views group by.
+export const COLUMNS = {
+  path: "blob2",
+  referrer: "blob4",
+  country: "blob5",
+  browser: "blob6",
+  device: "blob8",
+  utmSource: "blob14",
+  utmMedium: "blob15",
+};
+
+export function pageSeriesSql(bucket) {
+  return `SELECT ${bucketOf(bucket)} AS t, double1 AS isVisitor, double2 AS isBounce, COUNT(*) AS count
+FROM ${DATASET}
+${where("page")}
+GROUP BY t, isVisitor, isBounce`;
+}
+
+export function pageByColumnSql(column) {
+  const blob = COLUMNS[column];
+  if (!blob) throw new Error("unknown column " + column);
+  return `SELECT ${blob} AS key, double1 AS isVisitor, double2 AS isBounce, COUNT(*) AS count
+FROM ${DATASET}
+${where("page")}
+GROUP BY key, isVisitor, isBounce`;
+}
+
+export function eventsSql(bucket) {
+  return `SELECT blob9 AS event, blob2 AS path, ${bucketOf(bucket)} AS t, COUNT(*) AS count
+FROM ${DATASET}
+${where("event")}
+GROUP BY event, path, t`;
+}
+
+const zero = () => ({ views: 0, visitors: 0, bounces: 0 });
+const asRow = (r) => ({ count: n(r.count), isVisitor: n(r.isVisitor), isBounce: n(r.isBounce) });
+
+// Every bucket of a range, as the SQL API writes them ("2026-10-15 00:00:00").
+export function buckets(range) {
+  const step = range.bucket === "hour" ? 3_600_000 : DAY;
+  const out = [];
+  for (let t = Math.floor(Date.parse(range.from) / step) * step; t < Date.parse(range.to); t += step) {
+    out.push(new Date(t).toISOString().slice(0, 19).replace("T", " "));
+  }
+  return out;
+}
+
+// Views, visitors and bounces per bucket, gaps filled, bounces moved back.
+export function seriesFrom(rows, range) {
+  const by = new Map(buckets(range).map((b) => [b, zero()]));
+  for (const r of rows) {
+    const k = String(r.t);
+    if (!by.has(k)) by.set(k, zero());
+    accumulateCountsFromRowResult(by.get(k), asRow(r));
+  }
+  const sorted = [...by].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  return fixNegativeBounces(sorted).map(([t, c]) => ({ t, ...c }));
+}
+
+export function totalsFrom(rows) {
+  const c = zero();
+  for (const r of rows) accumulateCountsFromRowResult(c, asRow(r));
+  return c;
+}
+
+// Views, visitors and bounces per key, most viewed first.
+export function byKeyFrom(rows, limit = 100) {
+  const by = new Map();
+  for (const r of rows) {
+    const k = String(r.key ?? "");
+    if (!by.has(k)) by.set(k, zero());
+    accumulateCountsFromRowResult(by.get(k), asRow(r));
+  }
+  return [...by]
+    .map(([key, c]) => ({ key, ...c, bounces: Math.max(0, c.bounces) }))
+    .sort((a, b) => b.views - a.views || (a.key < b.key ? -1 : 1))
+    .slice(0, limit);
+}
+
+// Events per name: the total, per bucket, and per page.
+export function eventsFrom(rows, range) {
+  const names = new Map();
+  for (const r of rows) {
+    const e = names.get(r.event) || { event: r.event, total: 0, series: new Map(buckets(range).map((b) => [b, 0])), pages: new Map() };
+    const c = n(r.count);
+    e.total += c;
+    e.series.set(String(r.t), (e.series.get(String(r.t)) || 0) + c);
+    e.pages.set(r.path, (e.pages.get(r.path) || 0) + c);
+    names.set(r.event, e);
+  }
+  return [...names.values()]
+    .map((e) => ({
+      event: e.event,
+      total: e.total,
+      series: [...e.series].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([t, count]) => ({ t, count })),
+      pages: [...e.pages].map(([path, count]) => ({ path, count })).sort((a, b) => b.count - a.count),
+    }))
+    .sort((a, b) => b.total - a.total);
 }

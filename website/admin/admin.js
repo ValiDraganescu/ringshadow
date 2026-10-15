@@ -135,10 +135,11 @@
       if (document.body.classList.contains("must-change")) setTimeout(() => location.reload(), 900);
     });
 
-    // --- Agents
+    // --- The range, shared by every view but Overview and Admins
 
     let range = { range: "7d" };
     const query = () => new URLSearchParams(range).toString();
+    const span = (r) => `${r.from.slice(0, 16).replace("T", " ")} to ${r.to.slice(0, 16).replace("T", " ")} UTC`;
 
     for (const b of document.querySelectorAll(".range button")) {
       b.addEventListener("click", () => {
@@ -146,22 +147,127 @@
         $("#custom-range").hidden = b.dataset.range !== "custom";
         if (b.dataset.range !== "custom") {
           range = { range: b.dataset.range };
-          loadAgents();
+          reload();
         }
       });
     }
     onSubmit($("#custom-range"), async (v) => {
       range = { range: "custom", from: v.from, to: v.to };
-      await loadAgents();
+      await reload();
     });
 
-    const CLASS_ORDER = ["ai-crawler", "ai-assistant", "search", "monitor", "other-bot", "unlabelled"];
+    // --- People
+
     const SVG = "http://www.w3.org/2000/svg";
     const svgEl = (tag, attrs) => {
       const e = document.createElementNS(SVG, tag);
       for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
       return e;
     };
+
+    const pct = (a, b) => (b ? Math.round((100 * a) / b) + "%" : "–");
+    const fill = (sel, list, withBounce = false) =>
+      $(sel + " tbody").replaceChildren(...(list.length
+        ? list.map((r) => withBounce
+          ? row(el("code", { textContent: r.key || "(none)" }), fmt(r.views), fmt(r.visitors), pct(r.bounces, r.visitors))
+          : row(r.key || "(direct or none)", fmt(r.views), fmt(r.visitors)))
+        : [row("Nothing yet.", "", "")]));
+
+    // Views as bars, visitors as narrower bars inside them, one per bucket.
+    function drawPeople(svg, series, bucket) {
+      const W = 800, H = 220, left = 44, bottom = 22, top = 8;
+      const max = Math.max(1, ...series.map((s) => s.views));
+      const bw = (W - left) / Math.max(1, series.length);
+      const y = (v) => H - bottom - (v / max) * (H - bottom - top);
+      const label = (t) => (bucket === "hour" ? t.slice(0, 13) + ":00" : t.slice(0, 10));
+      const kids = [
+        svgEl("line", { x1: left, x2: W, y1: H - bottom, y2: H - bottom, class: "axis" }),
+        Object.assign(svgEl("text", { x: left - 6, y: top + 10, class: "tick", "text-anchor": "end" }), { textContent: fmt(max) }),
+        Object.assign(svgEl("text", { x: left - 6, y: H - bottom, class: "tick", "text-anchor": "end" }), { textContent: "0" }),
+      ];
+      series.forEach((s, i) => {
+        const x = left + i * bw;
+        const g = svgEl("g", {});
+        g.append(Object.assign(svgEl("title", {}), { textContent: `${label(s.t)} · ${fmt(s.views)} views · ${fmt(s.visitors)} visitors` }));
+        if (s.views) g.append(svgEl("rect", { x: x + 1, y: y(s.views), width: Math.max(1, bw - 2), height: H - bottom - y(s.views), class: "k-views" }));
+        if (s.visitors) g.append(svgEl("rect", { x: x + bw * 0.25, y: y(s.visitors), width: Math.max(1, bw * 0.5), height: H - bottom - y(s.visitors), class: "k-visitors" }));
+        kids.push(g);
+      });
+      if (series.length) {
+        kids.push(Object.assign(svgEl("text", { x: left, y: H - 6, class: "tick" }), { textContent: label(series[0].t) }));
+        kids.push(Object.assign(svgEl("text", { x: W, y: H - 6, class: "tick", "text-anchor": "end" }), { textContent: label(series.at(-1).t) }));
+      }
+      svg.replaceChildren(...kids);
+    }
+
+    async function people(view, summarySel) {
+      const summary = summarySel && $(summarySel);
+      if (summary) summary.textContent = "Loading…";
+      const { ok, data } = await api(`stats/${view}?` + query());
+      if (!ok) {
+        if (summary) summary.textContent = data.error || "The stats didn't load.";
+        return null;
+      }
+      if (summary) summary.textContent = span(data.range);
+      return data;
+    }
+
+    async function loadOverview() {
+      const { ok, data } = await api("stats/overview");
+      if (!ok) return;
+      for (const k of ["today", "week", "month"]) {
+        $(`.t-${k}-visitors`).textContent = fmt(data[k].visitors);
+        $(`.t-${k}-views`).textContent = fmt(data[k].views);
+      }
+      drawPeople($("#overview-chart svg"), data.series, "day");
+      fill("#ov-pages", data.pages);
+      fill("#ov-referrers", data.referrers);
+      fill("#ov-countries", data.countries);
+    }
+
+    async function loadPages() {
+      const data = await people("pages", "#pages .summary");
+      if (data) fill("#pages-table", data.pages, true);
+    }
+
+    async function loadSources() {
+      const data = await people("sources", "#sources .summary");
+      if (!data) return;
+      fill("#src-referrers", data.referrers);
+      fill("#src-utm-source", data.utmSources);
+      fill("#src-utm-medium", data.utmMedia);
+    }
+
+    async function loadVisitors() {
+      const data = await people("visitors", "#visitors .summary");
+      if (!data) return;
+      fill("#vis-countries", data.countries);
+      fill("#vis-devices", data.devices);
+      fill("#vis-browsers", data.browsers);
+    }
+
+    async function loadEvents() {
+      const data = await people("events", "#events .summary");
+      if (!data) return;
+      $("#events-list").replaceChildren(...(data.events.length ? data.events.map((e) => {
+        const svg = svgEl("svg", { viewBox: "0 0 800 120", role: "img", "aria-label": `${e.event} over time` });
+        const max = Math.max(1, ...e.series.map((s) => s.count));
+        const bw = 800 / Math.max(1, e.series.length);
+        svg.append(...e.series.filter((s) => s.count).map((s) => {
+          const i = e.series.indexOf(s), h = (s.count / max) * 110;
+          const r = svgEl("rect", { x: i * bw + 1, y: 120 - h, width: Math.max(1, bw - 2), height: h, class: "k-views" });
+          r.append(Object.assign(svgEl("title", {}), { textContent: `${s.t} · ${fmt(s.count)}` }));
+          return r;
+        }));
+        const pages = el("table", { class: "list" }, el("thead", {}, el("tr", {}, el("th", { textContent: "Page" }), el("th", { textContent: "Count" }))),
+          el("tbody", {}, ...e.pages.map((p) => row(el("code", { textContent: p.path }), fmt(p.count)))));
+        return el("div", { class: "part" }, el("h3", { textContent: `${e.event} · ${fmt(e.total)}` }), el("figure", { class: "chart" }, svg), pages);
+      }) : [el("p", { textContent: "No events in this range." })]));
+    }
+
+    // --- Agents
+
+    const CLASS_ORDER = ["ai-crawler", "ai-assistant", "search", "monitor", "other-bot", "unlabelled"];
 
     // Stacked bars, one per hour or day of the range, by class.
     function drawChart(data) {
@@ -298,20 +404,34 @@
 
     // --- Sections
 
-    const VIEWS = ["agents", "admins"];
-    const loaded = new Set();
+    const VIEWS = {
+      overview: loadOverview,
+      pages: loadPages,
+      sources: loadSources,
+      visitors: loadVisitors,
+      events: loadEvents,
+      agents: () => Promise.all([loadAgents(), loadRules()]),
+      admins: loadAdmins,
+    };
+    const RANGED = ["pages", "sources", "visitors", "events", "agents"];
+    let loaded = new Set();
+    const current = () => (location.hash.slice(1) in VIEWS ? location.hash.slice(1) : "overview");
     function show() {
-      const want = location.hash.slice(1);
-      const id = VIEWS.includes(want) ? want : "agents";
-      for (const v of VIEWS) $("#" + v).hidden = v !== id;
+      const id = current();
+      for (const v of Object.keys(VIEWS)) $("#" + v).hidden = v !== id;
+      $("#range-bar").hidden = !RANGED.includes(id);
       for (const a of document.querySelectorAll(".sections a")) {
         if (a.getAttribute("href") === "#" + id) a.setAttribute("aria-current", "page");
         else a.removeAttribute("aria-current");
       }
       if (loaded.has(id)) return;
       loaded.add(id);
-      if (id === "agents") Promise.all([loadAgents(), loadRules()]);
-      if (id === "admins") loadAdmins();
+      VIEWS[id]();
+    }
+    // A new range: the ranged views load again when next shown.
+    function reload() {
+      loaded = new Set([...loaded].filter((v) => !RANGED.includes(v)));
+      show();
     }
 
     api("me").then(({ ok, data }) => {

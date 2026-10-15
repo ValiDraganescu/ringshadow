@@ -4,7 +4,10 @@
 
 import { compileRules } from "./agents.js";
 import { addRule, changeRule, deleteRule, listRules, testRules } from "./rules.js";
-import { agentsView, droppedSql, parseRange, serverByAgentSql, serverPathsSql } from "./stats.js";
+import {
+  DAY, agentsView, byKeyFrom, droppedSql, eventsFrom, eventsSql, pageByColumnSql, pageSeriesSql, parseRange,
+  seriesFrom, serverByAgentSql, serverPathsSql,
+} from "./stats.js";
 import {
   LOCK_FAILS, LOCK_MINUTES, PW_ITERS, SESSION_DAYS,
   hashPassword, isoNow, lockKeys, newSessionToken, normalEmail, oneTimePassword,
@@ -215,6 +218,66 @@ async function agentsStats(request, env) {
   return json({ range, probesOnly, dropped: Number(dropped.data[0]?.dropped) || 0, ...agentsView(byAgent.data, byPath.data, rules) });
 }
 
+// The people's views: each runs its queries over the range and adds up the
+// rows the Counterscale way. Overview ignores the range: today, 7 and 30 days.
+const sqlError = (err) => {
+  console.error("analytics sql failed", err);
+  return json({ error: "The analytics query failed" + (err.retryable ? "; try again." : ": " + err.message) }, 502);
+};
+
+async function rows(env, query, range) {
+  return (await env.HITS_SQL.query({ query, params: { from: range.from, to: range.to } })).data;
+}
+
+const VIEWS = {
+  async overview(env) {
+    const now = Date.now();
+    const month = { from: new Date(now - 30 * DAY).toISOString(), to: new Date(now).toISOString(), bucket: "day" };
+    const [series, paths, referrers, countries] = await Promise.all([
+      rows(env, pageSeriesSql("day"), month),
+      rows(env, pageByColumnSql("path"), month),
+      rows(env, pageByColumnSql("referrer"), month),
+      rows(env, pageByColumnSql("country"), month),
+    ]);
+    const days = seriesFrom(series, month);
+    const sum = (list) => list.reduce((a, d) => ({ views: a.views + d.views, visitors: a.visitors + d.visitors }), { views: 0, visitors: 0 });
+    return {
+      range: month,
+      today: sum(days.slice(-1)),
+      week: sum(days.slice(-7)),
+      month: sum(days),
+      series: days,
+      pages: byKeyFrom(paths, 5),
+      referrers: byKeyFrom(referrers.filter((r) => r.key), 5),
+      countries: byKeyFrom(countries, 5),
+    };
+  },
+  async pages(env, range) {
+    return { range, series: seriesFrom(await rows(env, pageSeriesSql(range.bucket), range), range), pages: byKeyFrom(await rows(env, pageByColumnSql("path"), range), 200) };
+  },
+  async sources(env, range) {
+    const [referrers, sources, media] = await Promise.all(["referrer", "utmSource", "utmMedium"].map((c) => rows(env, pageByColumnSql(c), range)));
+    return { range, referrers: byKeyFrom(referrers), utmSources: byKeyFrom(sources.filter((r) => r.key)), utmMedia: byKeyFrom(media.filter((r) => r.key)) };
+  },
+  async visitors(env, range) {
+    const [countries, devices, browsers] = await Promise.all(["country", "device", "browser"].map((c) => rows(env, pageByColumnSql(c), range)));
+    return { range, countries: byKeyFrom(countries), devices: byKeyFrom(devices), browsers: byKeyFrom(browsers) };
+  },
+  async events(env, range) {
+    return { range, events: eventsFrom(await rows(env, eventsSql(range.bucket), range), range) };
+  },
+};
+
+async function peopleStats(request, env, view) {
+  const range = parseRange(new URL(request.url).searchParams);
+  if (range.error) return json({ error: range.error }, 400);
+  try {
+    return json(await VIEWS[view](env, range));
+  } catch (err) {
+    return sqlError(err);
+  }
+}
+
 const answer = (r) => json(r.body, r.status);
 
 // Routes under /api/admin/. Writes need an Origin from this site; everything
@@ -240,6 +303,8 @@ export async function handleApi(request, env) {
   if (route === "GET /api/admin/admins") return listAdmins(env);
   if (route === "POST /api/admin/admins") return addAdmin(request, env);
   if (route === "GET /api/admin/stats/agents") return agentsStats(request, env);
+  const view = route.match(/^GET \/api\/admin\/stats\/(overview|pages|sources|visitors|events)$/);
+  if (view) return peopleStats(request, env, view[1]);
   if (route === "GET /api/admin/rules") return json({ rules: await listRules(env) });
   if (route === "POST /api/admin/rules/test") return json(await testRules(env, (await readJson(request))?.ua));
   if (route === "POST /api/admin/rules") return answer(await addRule(env, await readJson(request), session.admin_id));

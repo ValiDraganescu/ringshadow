@@ -119,11 +119,13 @@ would weigh twice here.
 | blob6 | `browser` name (parsed) | tracker hits only |
 | blob7 | `browser` version, major only | tracker hits only |
 | blob8 | `device`: desktop, mobile, tablet | tracker hits only |
-| blob9 | `event` name (`download-mac`, `video-play`) with the page in blob2 | `kind=event` |
+| blob9 | `event` name (`download-mac`, `download-windows`, `download-linux`, `video-play`) with the page in blob2 | `kind=event` |
 | blob10 | `agent_label` at write time (a cache; the query re-applies the current rules) | server hits |
 | blob11 | `agent_class` at write time | server hits |
 | blob12 | `user_agent`, raw, **server hits only**; for class `browser` only the family (`Chrome`) | the Worker |
 | blob13 | `asset`: `html`, `feed`, `llms`, `md`, `other` | server hits |
+| blob14 | `utm_source` of the page's address | page hits |
+| blob15 | `utm_medium` of the page's address | page hits |
 | double1 | `new_visitor` (1 on the first hit of the day) | the collector, Counterscale's cache-header trick |
 | double2 | `bounce` (1, then −1, then 0) | the collector |
 | double3 | `dropped` server points since the last report | `kind=meta`, path `dropped-server-points`, the Worker's token bucket |
@@ -230,7 +232,10 @@ page for the zone stays as a second opinion, with its 24-hour window.
   secret, set with `wrangler secret put` before the deploy and asked for on
   the form, so a stranger who reaches the page in the minutes before the
   developer does can't take the seat. Once one admin exists the route is
-  gone; more admins are added from inside.
+  gone; more admins are added from inside. The code was spent on
+  2026-10-15 and the secret deleted: if the admins table is ever emptied,
+  set `ADMIN_SETUP_CODE` again (`wrangler secret put`) before registering;
+  without it the register route answers 503.
 - **Passwords.** PBKDF2-SHA-256 through WebCrypto with a 16-byte salt, the
   iteration count stored with the hash so it can rise later. The free plan
   allows 10 ms of CPU per request, so the count is measured in step 3 and set
@@ -259,7 +264,7 @@ page for the zone stays as a second opinion, with its 24-hour window.
 | Pages | Page views and visitors per path over the range, with bounce. |
 | Sources | Referrer hosts, with the UTM source and medium when present. |
 | Visitors | Countries, devices, browsers. |
-| Events | `download-mac`, `video-play`, by day and by page. |
+| Events | `download-mac`, `download-windows`, `download-linux` (a click on the download button, one per build) and `video-play`, by day and by page. |
 | Agents | By label and class; paths per label; the Unlabelled table; the rules editor with Test. |
 | History | Daily rollups older than 90 days, from D1. |
 | Admins | Add an admin (email and a one-time password they must change), change own password, sign out everywhere. |
@@ -284,11 +289,16 @@ account token is stored anywhere.
 <script src="../assets/js/count.js" defer data-site="ringshadow"></script>
 ```
 
-On `DOMContentLoaded` it sends one `GET /c/collect?sid=ringshadow&p=/blog/x&h=ringshadow.com&r=<referrer host>`.
-The collector answers a 1×1 GIF with the `Last-Modified` trick from
-Counterscale for the daily visitor and bounce counts. `count.js` exports
-`window.count(name)`; `home.js` calls it on the download picker's button and
-`album.js` or the post page on a video's first `play`. The CSP stays as it is:
+On `DOMContentLoaded` it asks `GET /c/cache?sid=ringshadow` for the hit
+counter: a fixed address whose `Last-Modified` the browser's own HTTP cache
+keeps and sends back as `If-Modified-Since`, Counterscale's trick for the
+daily visitor and bounce counts (1 the day's first hit, 2 the second, 3
+after). Then it sends one `GET /c/collect?sid=ringshadow&p=/blog/x&h=ringshadow.com&r=<referrer host>&ht=<counter>`
+(plus `us` and `um` from the page's `utm_source` and `utm_medium`); the
+collector answers a 1×1 GIF. `count.js` exports `window.count(name)`;
+`home.js` calls it on the download picker's button (`download-mac`,
+`download-windows` or `download-linux`, for the build picked) and `album.js`
+on a post video's first `play`. The CSP stays as it is:
 the script is `'self'`, the request is `connect-src 'self'`. Nothing is read
 from or written to storage.
 
@@ -351,10 +361,14 @@ Each step ends in a deploy, since every step leaves the site working as before.
    Done when labelling a raw string from the Unlabelled table moves its
    history under the new label on the next load.
 5. **Humans.** `count.js`, the collector with Counterscale's visitor and
-   bounce logic, the two events, the tag on every page, Overview, Pages,
-   Sources, Visitors and Events. Done when a visit from a fresh browser is
-   one visitor and one view, the second page is a view and no bounce, a
-   download click is one event, and the CSP report console is clean.
+   bounce logic, the events (the download button, one name per build, and
+   a video's first play), the tag on every page (by `tools/count_tag.py`,
+   which the journalist runs on new posts), Overview, Pages, Sources,
+   Visitors and Events. Done when a visit from a fresh browser is one
+   visitor and one view, the second page is a view and no bounce, a
+   download click is one event (`download-mac`, `download-windows` or
+   `download-linux` for the build picked), and the CSP report console is
+   clean.
 6. **History.** The cron rollup, the History section. Done when yesterday's
    totals in D1 equal the Analytics Engine query for the same day.
 7. **Words and docs.** The footer: "No cookies for readers, first-party

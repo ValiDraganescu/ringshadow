@@ -101,10 +101,14 @@ addEventListener("DOMContentLoaded", () => {
       if (on && focus) b.focus();
     }
     go.href = rel + file;
+    go.dataset.os = os;
     go.textContent = `Download for ${name}`;
     need.textContent = needs;
   };
   if (go) {
+    // A click on the button is one event for the site's counter (count.js).
+    const event = { mac: "download-mac", win: "download-windows", linux: "download-linux" };
+    go.addEventListener("click", () => window.count?.(event[go.dataset.os]));
     const ua = navigator.userAgent;
     pick(/Windows/.test(ua) ? "win" : /Linux/.test(ua) && !/Android/.test(ua) ? "linux" : "mac");
     for (const [i, b] of seg.entries()) {

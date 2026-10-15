@@ -45,7 +45,7 @@ test("our own checks are never written; a marker inside a real agent's string is
 test("a server point carries the plan's slots", () => {
   const p = serverPoint(req("/blog/the-brood", { headers: { "User-Agent": "GPTBot/1.2", Referer: "https://example.org/a/b?c" } }), "html", rules, 200);
   assert.deepEqual(p.indexes, ["GPTBot/1.2"]);
-  assert.deepEqual(p.blobs, ["server", "/blog/the-brood", "ringshadow.com", "example.org", "RO", "", "", "", "", "OpenAI", "ai-crawler", "GPTBot/1.2", "html"]);
+  assert.deepEqual(p.blobs, ["server", "/blog/the-brood", "ringshadow.com", "example.org", "RO", "", "", "", "", "OpenAI", "ai-crawler", "GPTBot/1.2", "html", "", ""]);
   assert.deepEqual(p.doubles, [0, 0, 0, 200]);
   assert.deepEqual(serverPoint(req("/wp-login.php"), "html", rules, 404).doubles, [0, 0, 0, 404]);
 });

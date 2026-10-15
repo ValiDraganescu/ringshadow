@@ -35,7 +35,7 @@ export function point(f) {
     blobs: [
       f.kind, f.path, f.host, f.referrer, f.country,
       f.browser, f.browserVersion, f.device, f.event,
-      f.agentLabel, f.agentClass, f.userAgent, f.asset,
+      f.agentLabel, f.agentClass, f.userAgent, f.asset, f.utmSource, f.utmMedium,
     ].map((v) => (v == null ? "" : String(v))),
     doubles: [f.newVisitor || 0, f.bounce || 0, f.dropped || 0, f.status || 0],
   };
