@@ -585,3 +585,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N N3 suites: core 488, server 233, net 84 pass.
 - I Egg pods bloom flat pink; boss bar covers her name plate → N1b/U1.
 - T N1b art pass briefed to wt2 (Matriarch, bugs, gatling, turrets, tracers, chevrons).
+- T N1b step 1 46256b2: Matriarch egg/opal/glass materials, a tiered nest.
+- N N1b frame time with 17–19 bugs: 10.42 → 10.77 ms mean, p95 11.65 → 11.95.
