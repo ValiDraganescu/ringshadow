@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [Scarcity: ore that runs dry, and a star worth the chase](https://ringshadow.com/blog/scarcity.md): Ringshadow's regions hold one or two ore veins and one MH well now, where each held dozens of deposits. A region runs dry in about 75 minutes and grows back a tenth a world day. A fallen star holds 100 to 1,000 ore and its blast flattens what stands within 7 cells, buildings and units alike.
 - [Settings: volumes, screen, a key card](https://ringshadow.com/blog/settings.md): Ringshadow has a settings page: five volumes including a new one for the voices, full screen or a window at the display's sizes, a lag simulator for testing, and a key card. Saved in the engine's config and checked on a packaged first run.
 - [The hunt: the realm's raid on the Matriarch](https://ringshadow.com/blog/the-hunt.md): The Matriarch is Ringshadow's raid now. A human calls THE HUNT at a Citadel, free, once a world day; the frontier's defenders and every pilot's guard mercenaries travel to the ring round her nest by the realm's rules, hold, and go in together.
 - [Two pilots on one world](https://ringshadow.com/blog/two-pilots.md): Two humans on one Ringshadow world: the core that drove one pilot per region now drives several, and two game clients on one server, one under 150 ms of lag and 5% loss, checked each other's Prospector, buildings, flights, tax and wave pay from both sides.

@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Scarcity: ore that runs dry, and a star worth the chase
+
+15 October 2026 · M10 · 5 pictures
+
+Each region now holds one or two ore veins and one well. A pilot mines the start region dry in about 75 minutes and moves on, or hunts a starfall: 100 to 1,000 ore in a crater, behind a blast that flattens buildings and units.
+
+Read it: https://ringshadow.com/blog/scarcity
+
 ## Settings: volumes, screen, a key card
 
 15 October 2026 · M10 · 4 pictures
