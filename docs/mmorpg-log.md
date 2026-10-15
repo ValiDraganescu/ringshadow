@@ -783,3 +783,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N hunt travel by the rules: next door 30 s, Ashen Shelf (4 regions off) 114 s, a downed Prospector 184 s; a far corner of the First Reach walks in within 2 min.
 - N N4 shots n4-01..05; five KSTR hunt lines (47 in all); core 505, net 102, server 341; clean checkout.
 - T web: the hunt post live at /blog/the-hunt (6366fe0).
+- T U2 done de571b7: one settings page from home and pause; MASTER/MUSIC/VOICE/EFFECTS/ENVIRONMENT live, screen and resolution on OK, the lag switch, the key card; GameUserSettings.ini; a packaged first run and read-back checked with hidden_run --app.
+- D U2: VOICE (KSTR and narrations) is new and at 100 sounds as before; first-run defaults full screen native, music 80, voice and effects 100, lag off.
+- I the engine's display data on this Mac disagrees with itself (desktop 6772x2880 or 1728x1085, mode list sometimes empty); window sizes are the modes smaller than the display with a common-size fallback.
+- I a full screen at a non-native size switches the display; never applied in a hidden run: the user tries it by hand.
+- I hidden_run.py --app now isolates the packaged config (-UserDir); earlier K3 runs may have written the user's packaged config.
+- T N4 follow-up 14bd80b: the hunt's toasts read whole ("The Matriarch is down · the hardest blows: you").
+- N U2: core 511, net 102, server 341; clean checkout.
