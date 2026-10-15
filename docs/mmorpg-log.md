@@ -762,3 +762,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T goals after the Foundry and the Lab (user's "what now?"): Order a Module, Fit It, Research Mk II; KSTR lines made (f510428).
 - N X2 shots x2-01..03; core 505, net 95, server 325; clean checkout.
 - I protocol 31 and schema 23: the user's game and server both need the new build (rebuilt here; the user restarts).
+- T web: the away-report post live at /blog/away-report (3ca3c9f).
