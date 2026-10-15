@@ -6151,7 +6151,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			TimedOut(TEXT("z4: in Cold Fork, its ground built"), 120);
 			return;
 		}
-		if (!W4Set)
+		// The guns in the mirror: the server has read the line (the dev
+		// control file is one file, overwritten by the next line sent).
+		int32 Placed = 0;
+		if (S)
+			for (const ac::Structure& B : S->structures)
+				if (B.kind == ac::StructureKind::gatling && B.hp > 0) Placed++;
+		if (!W4Set || (Placed == 0 && Now - W4ShotAt > 5.0))
 		{
 			const ac::region::Zone& Z = Z1File->zones[0];
 			ac::Vec2 Prize(0, 0);
@@ -6165,7 +6171,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			W4ShotAt = Now;
 			return;
 		}
-		if (Now - W4ShotAt < 2.0) return;
+		if (Placed == 0 || Now - W4ShotAt < 2.0)
+		{
+			TimedOut(TEXT("z4: the packed guns placed"), 30);
+			return;
+		}
 		Check(Mmo->DevClock(TEXT("canyon send 3")), TEXT("z4: wave 3 sent at it"));
 		W4Set = false;
 		Advance();
