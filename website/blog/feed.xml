@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T08:40:00Z</updated>
+  <updated>2026-10-15T08:50:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The balance pass: about ×2 the mining curve, never over ×2.5</title>
+    <id>tag:ringshadow,2026-10-15:blog/balance</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/balance"/>
+    <published>2026-10-15T08:50:00Z</published>
+    <updated>2026-10-15T08:50:00Z</updated>
+    <summary>Missions and canyon waves paid far too well. Measured against the pace model and cut: a pilot who does everything now runs ×1.86 to ×2.02 the mining curve, and level 10 takes 36 minutes.</summary>
+  </entry>
   <entry>
     <title>Two more canyons: the brine and the roost</title>
     <id>tag:ringshadow,2026-10-15:blog/two-canyons</id>

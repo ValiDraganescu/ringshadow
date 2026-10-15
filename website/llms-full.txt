@@ -428,6 +428,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The balance pass: about ×2 the mining curve, never over ×2.5
+
+15 October 2026 · M9 · 1 chart
+
+Missions and canyon waves paid far too well. Measured against the pace model and cut: a pilot who does everything now runs ×1.86 to ×2.02 the mining curve, and level 10 takes 36 minutes.
+
+Read it: https://ringshadow.com/blog/balance
+
 ## Two more canyons: the brine and the roost
 
 15 October 2026 · M9 · 8 pictures
@@ -603,6 +611,46 @@ Read it: https://ringshadow.com/blog/the-realm
 Two days, seven milestones: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.
 
 Read it: https://ringshadow.com/blog/how-we-got-here
+
+
+---
+
+# The balance pass: about ×2 the mining curve, never over ×2.5
+
+> Ringshadow's balance pass: mission and canyon pay cut so that a pilot who mines, takes the board and holds a canyon runs about twice the mining curve, never over two and a half times.
+
+Source: https://ringshadow.com/blog/balance
+
+15 October 2026 · M9 · A living frontier
+
+Missions and canyon waves paid far too well: a pilot who did everything levelled about four times as fast as one who only mined. The agents measured every number in the economy against the pace model, cut two of them, and left the rest alone.
+
+![A bar chart of an hour of play in XP at levels 1, 5, 10, 15 and 20: the pace curve against the measured all-in pilot, ×1.86 to ×2.02, with the mission and wave pay before and after](https://ringshadow.com/blog/media/balance/cover.jpg)
+
+*An hour of play in XP, measured, against the curve the game is paced on.*
+
+The rule the manager set: risk and play should pay better than mining, without collapsing the curve. A pilot who mines, takes the Citadel's board and holds a canyon runs about twice the mining curve, and never over two and a half times.
+
+## How it was measured
+
+A bench runs isolated scenes, never a whole game. A driven Prospector mines for ten game minutes at levels 1, 5, 10, 15 and 20 with three skill builds. The Fork's waves run for a level-15 pilot with its own guns on the rims. Then an hour of play is filled the way the pace model fills it: three quarters work, nine missions an hour from the board, from level 10 one canyon cycle every 70 minutes, and mining for the rest. A test suite pins every curve, so a later change breaks a test before it breaks the game.
+
+## What changed
+
+- Missions: pay 3, 8 and 15 minutes of play in XP for easy, hard and perilous, about three times the time they take. They paid 8, 20 and 40, eight to sixteen times the time. Their ore is halved: 75, 225 and 500.
+- Canyon waves: pay 0.4 of before: 80 × n XP, 60 × n ore and 16 × n MH for wave n. Wave 10 still pays double, and a level-3 canyon still pays ×1.3.
+
+With those two, the all-in pilot runs ×1.87, ×1.86, ×2.02, ×1.95 and ×1.89 the curve at levels 1, 5, 10, 15 and 20, and reaches level 10 in 36 minutes. Before, it was about ×4 and 18 minutes. Pure mining takes 66.
+
+## What held
+
+Mining itself: 7,884 ore an hour at level 1, of which the Citadel's 10% tax takes 936. Shop prices: a first blueprint costs a few minutes of income at its floor, from 1.2 minutes for a Citadel to 12.9 for a Bastion. Mercenaries earn at most an eighth of the pilot. A frontier pilot's booked mining is a quarter of a pilot's, so five of them give the realm at most 745 ore an hour. The turret marks pay for themselves within a cycle or two of a held canyon.
+
+## Seen on the way
+
+Twelve gatling guns and five AA towers alone don't hold The Fork: waves 9 and 10 break through, and in each run one straggler stayed out for over a thousand seconds without reaching the guns or the prize. That goes into the canyon work. And the realm wallet has only one thing to spend on, the Citadel's twelve marks, which one pilot's tax buys in six or seven hours. What the realm spends on after that is a design question for later.
+
+The earlier posts on [missions](https://ringshadow.com/blog/missions) and [the canyon game](https://ringshadow.com/blog/canyon-game) carry the old figures with a note pointing here.
 
 
 ---
@@ -901,6 +949,8 @@ The whole world hears THE FORK HAS FALLEN. [The Matriarch](https://ringshadow.co
 Beat wave 10 and the whole world hears THE FORK HELD. For a world day, 40 minutes, no waves come and the prize is the pilots' to mine. Then the opening wave starts again.
 
 Every wave beaten pays everyone who fought it, split by the damage each did, turrets they built included, with at least a tenth each. On top of the XP for the kills, wave n pays 200 × n XP, 150 × n ore and 40 × n MH. Wave 10 pays double that, 4,000 XP, 3,000 ore and 800 MH, and a rare blueprint to each fighter.
+
+Changed by the balance pass on 15 October: a wave now pays 80 × n XP, 60 × n ore and 16 × n MH, 0.4 of the figures above; wave 10 still pays double. See [the balance post](https://ringshadow.com/blog/balance).
 
 One of the worker's pictures was meant to show Gloamwings meeting the AA towers' fire; the fire is there but the Gloamwings aren't in frame, so it isn't in the album.
 
@@ -1683,6 +1733,8 @@ A pilot at level 10 asked the obvious question: now what? The Citadel answers it
 ## The board
 
 The Citadel's third tab is MISSIONS. It offers two missions in each of three tiers, and you can carry up to three at once. The tier says where you'll go: easy missions stay in your home region, hard ones send you into the next region over, perilous ones go to the far corners, where the bugs nest. The reward scales with the tier: an easy one pays about 8 minutes of your level's XP, a hard one 20, a perilous one 40, plus ore and MH.
+
+Changed by the balance pass on 15 October: an easy mission now pays 3 minutes of your level's XP, a hard one 8, a perilous one 15, and half the ore: 75, 225 and 500. See [the balance post](https://ringshadow.com/blog/balance).
 
 There are five kinds of mission: survey (drive to a marker and hold still while the scanner runs), haul (bring ore or MH home to the realm's buildings), hold (stand in a ring while the ringshadow band passes over), salvage (open a sealed site) and hunt (kill bugs). The hunts stayed switched off until the bugs existed; they went live with [the Brood](https://ringshadow.com/blog/the-brood) later the same day.
 

@@ -16,6 +16,8 @@ A pilot at level 10 asked the obvious question: now what? The Citadel answers it
 
 The Citadel's third tab is MISSIONS. It offers two missions in each of three tiers, and you can carry up to three at once. The tier says where you'll go: easy missions stay in your home region, hard ones send you into the next region over, perilous ones go to the far corners, where the bugs nest. The reward scales with the tier: an easy one pays about 8 minutes of your level's XP, a hard one 20, a perilous one 40, plus ore and MH.
 
+Changed by the balance pass on 15 October: an easy mission now pays 3 minutes of your level's XP, a hard one 8, a perilous one 15, and half the ore: 75, 225 and 500. See [the balance post](https://ringshadow.com/blog/balance).
+
 There are five kinds of mission: survey (drive to a marker and hold still while the scanner runs), haul (bring ore or MH home to the realm's buildings), hold (stand in a ring while the ringshadow band passes over), salvage (open a sealed site) and hunt (kill bugs). The hunts stayed switched off until the bugs existed; they went live with [the Brood](https://ringshadow.com/blog/the-brood) later the same day.
 
 ## The Journal

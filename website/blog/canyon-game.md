@@ -60,4 +60,6 @@ Beat wave 10 and the whole world hears THE FORK HELD. For a world day, 40 minute
 
 Every wave beaten pays everyone who fought it, split by the damage each did, turrets they built included, with at least a tenth each. On top of the XP for the kills, wave n pays 200 × n XP, 150 × n ore and 40 × n MH. Wave 10 pays double that, 4,000 XP, 3,000 ore and 800 MH, and a rare blueprint to each fighter.
 
+Changed by the balance pass on 15 October: a wave now pays 80 × n XP, 60 × n ore and 16 × n MH, 0.4 of the figures above; wave 10 still pays double. See [the balance post](https://ringshadow.com/blog/balance).
+
 One of the worker's pictures was meant to show Gloamwings meeting the AA towers' fire; the fire is there but the Gloamwings aren't in frame, so it isn't in the album.

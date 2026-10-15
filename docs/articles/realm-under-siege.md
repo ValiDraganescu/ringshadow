@@ -62,7 +62,7 @@ The world map is a satellite view now: a top-down render of the real ground of e
 
 ## 0:42. The Fork
 
-A wave comes down the canyon's arm while guns wait on the rim. **The Fork is the first canyon that plays as tower defence**, cut into Cold Fork with two arms from the Brood's tunnels to a prize of ore and MH, and 12 build spots along the rims. The opening wave is four Shardlings and it replays until the pilots beat it. Then waves 2 to 10 come 30 seconds apart; wave 10 is 34 bugs. A wave breaks through when its bugs carry off 300 ore of the prize or its time runs out. Each wave beaten pays everyone who fought it, by damage done: 200 × n XP, 150 × n ore and 40 × n MH for wave n, double that for wave 10 plus a rare blueprint. Hold all ten and the canyon is the pilots' to mine for a world day, which is 40 minutes.
+A wave comes down the canyon's arm while guns wait on the rim. **The Fork is the first canyon that plays as tower defence**, cut into Cold Fork with two arms from the Brood's tunnels to a prize of ore and MH, and 12 build spots along the rims. The opening wave is four Shardlings and it replays until the pilots beat it. Then waves 2 to 10 come 30 seconds apart; wave 10 is 34 bugs. A wave breaks through when its bugs carry off 300 ore of the prize or its time runs out. Each wave beaten pays everyone who fought it, by damage done: 80 × n XP, 60 × n ore and 16 × n MH for wave n after the balance pass of 15 October (it was 200, 150 and 40 the night of the reel), double that for wave 10 plus a rare blueprint. Hold all ten and the canyon is the pilots' to mine for a world day, which is 40 minutes.
 
 ![The opening wave coming down The Fork's north arm, a Sentinel waiting on the rim](realm-under-siege/10-fork-wave.webp)
 

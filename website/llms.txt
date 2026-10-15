@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [The balance pass: about ×2 the mining curve, never over ×2.5](https://ringshadow.com/blog/balance.md): Ringshadow's balance pass: mission and canyon pay cut so that a pilot who mines, takes the board and holds a canyon runs about twice the mining curve, never over two and a half times.
 - [Two more canyons: the brine and the roost](https://ringshadow.com/blog/two-canyons.md): Two more canyons in Ringshadow's world: The Drowned Cut in Brine Pans, a flooded basin where the Brood's walkers wade at half speed, and The Roost in Dust Terraces, a spire every Gloamwing launches from.
 - [By day you see the whole region](https://ringshadow.com/blog/daylight.md): By day a Ringshadow pilot sees its whole region, with every unit, bug and building sent; dusk eases the sight down to the night's. Measured at the nest and at The Fork.
 - [Frontier pilots: you're no longer the only one out here](https://ringshadow.com/blog/frontier-pilots.md): Five pilots of the server's own in every Ringshadow world: callsigns, paints and habits, mining, building, fighting and talking on the radio by the same rules as you.

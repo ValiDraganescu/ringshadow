@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Balance Pass · Ringshadow</title>
+  <meta name="description" content="Ringshadow's balance pass: mission and canyon pay cut so that a pilot who mines, takes the board and holds a canyon runs about twice the mining curve, never over two and a half times.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="The balance pass: about ×2 the mining curve, never over ×2.5">
+  <meta property="og:description" content="Missions and canyon waves paid far too well. Now a pilot who does everything runs ×1.86 to ×2.02 the mining curve, and level 10 takes 36 minutes.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/balance/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/balance">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/balance">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="balance.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>The balance pass: about ×2 the mining curve, never over ×2.5</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M9 · A living frontier</p>
+        <p class="lede">Missions and canyon waves paid far too well: a pilot who did everything levelled about four times as fast as one who only mined. The agents measured every number in the economy against the pace model, cut two of them, and left the rest alone.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/balance/cover.jpg" alt="A bar chart of an hour of play in XP at levels 1, 5, 10, 15 and 20: the pace curve against the measured all-in pilot, ×1.86 to ×2.02, with the mission and wave pay before and after" width="1200" height="675"></div>
+        <figcaption>An hour of play in XP, measured, against the curve the game is paced on.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <p>The rule the manager set: risk and play should pay better than mining, without collapsing the curve. A pilot who mines, takes the Citadel's board and holds a canyon runs about twice the mining curve, and never over two and a half times.</p>
+
+        <h2>How it was measured</h2>
+        <p>A bench runs isolated scenes, never a whole game. A driven Prospector mines for ten game minutes at levels 1, 5, 10, 15 and 20 with three skill builds. The Fork's waves run for a level-15 pilot with its own guns on the rims. Then an hour of play is filled the way the pace model fills it: three quarters work, nine missions an hour from the board, from level 10 one canyon cycle every 70 minutes, and mining for the rest. A test suite pins every curve, so a later change breaks a test before it breaks the game.</p>
+
+        <h2>What changed</h2>
+        <ul>
+          <li><b>Missions</b> pay 3, 8 and 15 minutes of play in XP for easy, hard and perilous, about three times the time they take. They paid 8, 20 and 40, eight to sixteen times the time. Their ore is halved: 75, 225 and 500.</li>
+          <li><b>Canyon waves</b> pay 0.4 of before: 80 × n XP, 60 × n ore and 16 × n MH for wave n. Wave 10 still pays double, and a level-3 canyon still pays ×1.3.</li>
+        </ul>
+        <p>With those two, the all-in pilot runs ×1.87, ×1.86, ×2.02, ×1.95 and ×1.89 the curve at levels 1, 5, 10, 15 and 20, and reaches level 10 in 36 minutes. Before, it was about ×4 and 18 minutes. Pure mining takes 66.</p>
+
+        <h2>What held</h2>
+        <p>Mining itself: 7,884 ore an hour at level 1, of which the Citadel's 10% tax takes 936. Shop prices: a first blueprint costs a few minutes of income at its floor, from 1.2 minutes for a Citadel to 12.9 for a Bastion. Mercenaries earn at most an eighth of the pilot. A frontier pilot's booked mining is a quarter of a pilot's, so five of them give the realm at most 745 ore an hour. The turret marks pay for themselves within a cycle or two of a held canyon.</p>
+
+        <h2>Seen on the way</h2>
+        <p>Twelve gatling guns and five AA towers alone don't hold The Fork: waves 9 and 10 break through, and in each run one straggler stayed out for over a thousand seconds without reaching the guns or the prize. That goes into the canyon work. And the realm wallet has only one thing to spend on, the Citadel's twelve marks, which one pilot's tax buys in six or seven hours. What the realm spends on after that is a design question for later.</p>
+        <p>The earlier posts on <a href="missions.html">missions</a> and <a href="canyon-game.html">the canyon game</a> carry the old figures with a note pointing here.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="two-canyons.html">Before: two more canyons</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="balance.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

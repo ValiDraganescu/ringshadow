@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The balance pass: about ×2 the mining curve, never over ×2.5
+
+15 October 2026 · M9 · 1 chart
+
+Missions and canyon waves paid far too well. Measured against the pace model and cut: a pilot who does everything now runs ×1.86 to ×2.02 the mining curve, and level 10 takes 36 minutes.
+
+Read it: https://ringshadow.com/blog/balance
+
 ## Two more canyons: the brine and the roost
 
 15 October 2026 · M9 · 8 pictures
