@@ -1,16 +1,22 @@
 # Cloudflare: the Ringshadow website, served as static assets by a Worker
-# (Cloudflare now runs new Pages projects as Workers). No build step and no
-# code: this folder is the site. Deploy: see README.md.
+# (Cloudflare now runs new Pages projects as Workers). No build step: this
+# folder is the site, and src/worker.js stands in front of it. Deploy: see
+# README.md.
 name = "ringshadow"
-compatibility_date = "2026-10-14"
+main = "src/worker.js"
+compatibility_date = "2026-10-15"
 # Only ringshadow.com serves the site: no workers.dev address, no preview URLs.
 workers_dev = false
 preview_urls = false
 
 [assets]
 directory = "."
+binding = "ASSETS"
 not_found_handling = "404-page"
 html_handling = "auto-trailing-slash"
+# Pictures, fonts, CSS and JS go straight to the assets; everything else
+# (pages, the feed, the text files) runs through the Worker.
+run_worker_first = ["/*", "!/assets/*", "!/blog/media/*"]
 
 [[routes]]
 pattern = "ringshadow.com"

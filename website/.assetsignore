@@ -5,3 +5,6 @@ wrangler.toml
 .assetsignore
 .gitignore
 .wrangler
+src
+migrations
+tests
