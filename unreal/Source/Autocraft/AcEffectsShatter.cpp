@@ -346,7 +346,13 @@ namespace AcEffectsShatterPrivate
 			});
 		}
 
-		double Ground(const double X, const double Z) const { return Effects->GroundZ(ac::Vec2(X, Z)) / Cm; }
+		// (The pieces fly in Unreal's frame in SceneKit axes: the ground is the
+		// simulation's, the world frame's origin off, W4.)
+		double Ground(const double X, const double Z) const
+		{
+			const ac::Vec2 O = AcSpace::Origin();
+			return Effects->GroundZ(ac::Vec2(X - O.x, Z - O.y)) / Cm;
+		}
 
 		/// `GameScene.died` for a C5 kind.
 		void UnitDied(const FSpec& S, const ac::UnitKind Kind, const int64 Unit, const int32 Team, const ac::Vec2 At,

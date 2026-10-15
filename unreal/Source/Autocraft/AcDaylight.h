@@ -214,6 +214,8 @@ private:
 	FLinearColor TerrainHaze = FLinearColor(-1, -1, -1, -1);
 	/// The terrain's wetness and rain rate as last set.
 	float TerrainWet = -1, TerrainRain = -1;
+	/// The ground sets' list last set (`AAcTerrain::MaterialsVersion`).
+	int32 TerrainVersion = -1;
 	/// The weather this frame (AcWeather.h).
 	ac::WeatherSample Weather;
 	bool bSunShadows = true;

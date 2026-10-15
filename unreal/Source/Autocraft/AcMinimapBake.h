@@ -24,7 +24,7 @@ namespace ac
 
 namespace AcMinimapBake
 {
-	AUTOCRAFT_API FAcArtImage Terrain(const ac::TerrainField& Field, const ac::GroundRect& Rect, double PixelsPerCell = 4);
+	AUTOCRAFT_API FAcArtImage Terrain(const ac::TerrainField& Field, const ac::GroundRect& Rect, double PixelsPerCell = 4, bool bOneThread = false);
 	/// A white disc filling a `Size`-pixel square, edges a pixel soft.
 	AUTOCRAFT_API FAcArtImage Disc(int32 Size = 64);
 	/// A white diamond (a square on its corner) filling a `Size`-pixel square.

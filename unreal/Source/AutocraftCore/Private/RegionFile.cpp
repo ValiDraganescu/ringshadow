@@ -1006,13 +1006,13 @@ Built build(const RegionFile& f) {
                 const uint64_t hash = fnv1a64(f.id + "|wall|" + std::to_string(k++));
                 const auto unit = [hash](int shift) { return static_cast<double>((hash >> shift) & 0xffff) / 65535.0; };
                 const Vec2 p(x + (unit(0) - 0.5) * wallRockSpacing * 1.3, z + (unit(16) - 0.5) * wallRockSpacing * 1.3);
-                if (!(signedDistance(p, outline) > 2.5) || unit(32) < 0.4) continue;
+                if (!(signedDistance(p, outline) > 2.0) || unit(32) < 0.3) continue;
                 const double pick = unit(48);
                 Doodad d;
                 d.kind = pick < 0.45 ? Doodad::Kind::boulder : pick < 0.85 ? Doodad::Kind::rock : Doodad::Kind::rockSpire;
                 d.position = g(p);
                 d.rotation = unit(8) * 2 * pi;
-                d.scale = d.kind == Doodad::Kind::rockSpire ? 0.8 + unit(24) * 0.8 : 1.0 + unit(24) * 1.4;
+                d.scale = d.kind == Doodad::Kind::rockSpire ? 0.9 + unit(24) * 1.0 : 1.2 + unit(24) * 1.8;
                 d.variant = static_cast<uint32_t>(hash >> 7);
                 m.doodads.push_back(d);
             }

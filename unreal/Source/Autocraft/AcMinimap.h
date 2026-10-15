@@ -36,6 +36,8 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Async/Future.h"
+#include "AcCabArt.h"
 
 #include "Projection.h"
 #include "SimdMath.h"
@@ -89,6 +91,12 @@ private:
 	TArray<TWeakPtr<SAcMinimap>> Others;
 	TWeakPtr<SAcConsole> MountedOn;
 	TStrongObjectPtr<UTexture2D> TerrainTexture;
+	/// W4: each map's terrain picture by its ground key, baked ahead for the
+	/// regions round the pilot's (a worker thread draws it), so walking into
+	/// one takes it as it is.
+	TMap<FString, TSharedPtr<TStrongObjectPtr<UTexture2D>>> Baked;
+	TMap<FString, TFuture<struct FAcArtImage>> Baking;
+	void BakeAround(const UAcSimSubsystem& Sim);
 	ac::GroundRect MapBounds;
 	TOptional<TPair<ac::Vec2, double>> SightNow;
 	FDelegateHandle FrameHandle;

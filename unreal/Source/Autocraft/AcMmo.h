@@ -75,9 +75,24 @@
 #include "NetSocket.h"
 #include "Types.h"
 
+#include "Async/Future.h"
+
 #include <memory>
 #include <optional>
 #include <vector>
+
+/// W4: a region of the world as the game draws it round the pilot's: its
+/// map, its centre on the world's grid (cells, `ac::net::atlas::Place`), and
+/// the sides (bits 1 north, 2 east, 4 south, 8 west) with no region beyond
+/// it, the world's rim, where the ground's own border scenery goes.
+struct FAcRegionAround
+{
+	FString Id;
+	int64 Index = INDEX_NONE;
+	ac::Vec2 Centre{0, 0};
+	std::shared_ptr<const ac::MapDefinition> Map;
+	uint8 Rim = 0;
+};
 
 class AUTOCRAFT_API FAcMmoClient
 {
@@ -257,6 +272,36 @@ public:
 	const ac::net::Predictor& Prediction() const { return Predictor; }
 	void ClearPredictionStats() { Predictor.clearStats(); }
 
+	// MARK: Seamless regions (W4)
+
+	/// The pilot's region (its map null: the mirror's) and the regions
+	/// round it whose maps are built (drawn beyond its walls). Empty out of a
+	/// world. Built off the game's thread as the pilot arrives; the four
+	/// across its passages also get a mirror made ahead (`Client::prepare`).
+	TOptional<FAcRegionAround> HereGround() const;
+	/// The region the mirror is of: its index in the World message (the
+	/// message's `here` may say the next region a frame before its
+	/// RegionChange comes; INDEX_NONE: none yet).
+	int64 MirrorIndex() const;
+	const TArray<FAcRegionAround>& Around() const { return AroundNow; }
+	/// A seamless crossing just came (an edge, the same unit walking on):
+	/// how far the new region's centre is from the old one's (cells), once.
+	/// The game moves the world's origin by that much in the same frame.
+	TOptional<ac::Vec2> TakeSeamless();
+	/// The world frame (AcSpace.h, `Origin`): the centre on the world's grid
+	/// of the first region of the session (0 until known), and the pilot's
+	/// region's centre less it: where its ground lies in Unreal space.
+	ac::Vec2 SessionCentre() const { return Session.Get(ac::Vec2(0, 0)); }
+	ac::Vec2 FrameOrigin() const;
+	/// The last region change was a seamless crossing (`TakeSeamless`), and
+	/// whether its mirror was made ahead.
+	bool LastWasSeamless() const { return bLastSeamless; }
+	/// Seconds since the last region change (or the Welcome): what is made
+	/// ahead waits a while after it, so the frames round a crossing stay
+	/// clear (W4).
+	double SinceRegionChange() const { return LastNow - RegionChangedAt; }
+	bool LastTookPrepared() const { return Net && Net->tookPrepared(); }
+
 	// MARK: The world
 
 	/// A flight leaves from within this many cells of a pad's centre (the
@@ -407,6 +452,31 @@ private:
 	void ReadLag();
 	/// A RegionChange built a new mirror.
 	void OnRegionChange(const ac::net::RegionChange& Change);
+	/// W4: builds the maps (and the mirrors across the passages) of the
+	/// regions round the pilot's, off the game's thread; takes what is done.
+	void PrepareAround();
+	/// The world's region files, by id (read once from `WorldFile`).
+	const TMap<FString, FString>& RegionTexts();
+	struct FRegionBuilt
+	{
+		FString Id;
+		std::shared_ptr<const ac::MapDefinition> Map;
+		std::unique_ptr<ac::net::Mirror> Mirror;
+	};
+	TMap<FString, std::shared_ptr<const ac::MapDefinition>> BuiltMaps;
+	TMap<FString, TFuture<FRegionBuilt*>> Building;
+	/// Regions a mirror was made ahead for since the last region change.
+	TSet<FString> MirrorsMade;
+	TMap<FString, FString> Texts;
+	bool bTextsRead = false;
+	TArray<FAcRegionAround> AroundNow;
+	int64 AroundFor = -2;
+	TOptional<ac::Vec2> SeamlessShift;
+	/// The region the mirror is of (empty: the Welcome's, `here` then).
+	std::string MirrorRegion;
+	TOptional<ac::Vec2> Session;
+	double RegionChangedAt = 0;
+	bool bLastSeamless = false;
 
 	EPhase CurrentPhase = EPhase::Off;
 	FString StatusMessage;

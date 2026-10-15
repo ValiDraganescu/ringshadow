@@ -13,6 +13,10 @@
 // doodads and the border rocks never change; the playground's are rebuilt
 // when their list changes.
 //
+// The map's doodads and the border rocks are drawn by the map's ground set
+// (AAcRegionGround in AcTerrain.h, W4), with this file's `ModelFor` and
+// `Placement`; this actor keeps the playground's.
+//
 // Usage: `AAcDoodads::SpawnFor(World)` once per game world (AAcGameMode).
 #pragma once
 
@@ -57,8 +61,6 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> Root;
 
-	FAcSceneryBatches Map;
-	FAcSceneryBatches Border;
 	FAcSceneryBatches Placed;
 	std::vector<ac::Doodad> PlacedList;
 	FDelegateHandle GameStartedHandle, FrameHandle;

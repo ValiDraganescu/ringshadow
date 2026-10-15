@@ -248,6 +248,19 @@ public:
 	bool IsMmo() const { return Mmo != nullptr; }
 	/// The mode's client (null outside it).
 	FAcMmoClient* MmoClient() const { return Mmo.get(); }
+	/// W4: the `OnGameStarted` under way is a seamless region change: the
+	/// pilot walked over an edge into the next region, whose ground already
+	/// lies where it is in Unreal space (the world frame, AcSpace.h `Origin`,
+	/// moved with it: nothing on screen moves). Keep what is the same: the
+	/// seat, the view, the driven unit's model, the ground built for it.
+	bool IsSeamlessStart() const { return bSeamlessStart; }
+	/// How many seamless changes so far, and the frame the last one came in
+	/// (GFrameCounter), for the crossing's measures.
+	int32 SeamlessChanges() const { return Seamless; }
+	/// The last seamless change's distance, cells (the new region's centre
+	/// from the old one's).
+	ac::Vec2 SeamlessShift() const { return LastShift; }
+	uint64 SeamlessFrame() const { return SeamlessAt; }
 	/// Say no to the player: a short line on the screen (`OnRefused`).
 	void Refuse(const FString& Why);
 	FAcRefused OnRefused;
@@ -280,6 +293,10 @@ private:
 	void TickMmo(double RealDelta);
 	/// The game drawn becomes the mirror's (or the window game's again).
 	void ShowSimulation(ac::Simulation* Mirror);
+	bool bSeamlessStart = false;
+	int32 Seamless = 0;
+	uint64 SeamlessAt = 0;
+	ac::Vec2 LastShift{0, 0};
 	/// One fixed step, its searches worked out ahead on other threads when
 	/// `ac.SimPathAhead` says so (ac::PathAhead: the same game, bit for bit).
 	std::vector<ac::GameEvent> StepOnce();

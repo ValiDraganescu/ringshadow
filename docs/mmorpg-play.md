@@ -96,9 +96,12 @@ paid in ore, so MH only adds to the wallet and earns XP.
 
 ## Travel
 
-- **Edges.** Walk off a region's edge through an opening and you arrive in
-  the neighbour. The region's name comes up as you arrive. Not every stretch
-  of edge is open: cliffs and dunes close the rest.
+- **Passages.** A region is open land ringed by natural walls: cliff bands
+  with rock fields on top, the neighbours' ground beyond them. Where two
+  regions meet the walls part in a passage, the same gap from both sides
+  (one or two on each shared edge). Walk through it and you are in the
+  neighbour: no fade, no stop, the camera and your controls carry on. The
+  region's name comes up on the banner as you arrive.
 - **Pads.** Each region has at least one landing pad. Stand on one (within 4
   cells of its centre), press M, pick a pad in any region and press Return.
   The Prospector lifts off, flies for 4 s and lands on that pad. Off a pad the

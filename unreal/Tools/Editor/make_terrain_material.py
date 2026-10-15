@@ -16,8 +16,10 @@ The material is the Swift ground shader (`TerrainBuilder.surfaceShader`,
 Sources/Autocraft/Terrain.swift) as one Custom HLSL node, so the two read
 side by side. AAcTerrain (Source/Autocraft/AcTerrain.cpp) sets its
 parameters: `Splat` (the RGBA splat map: grass, highland, plating, scorch),
-`Bounds` (minX, minY, width, depth of the map, cells) and `Haze` (rgb, and
-the border's width in cells). On top of the Swift look: normal maps on every
+`Bounds` (minX, minY, width, depth of the map, cells, on the world's grid),
+`Origin` (W4: the pilot's region's centre on the world's grid; the material
+samples by world-grid cells, so nothing moves when the world's origin does)
+and `Haze` (rgb, and the border's width in cells). On top of the Swift look: normal maps on every
 ground texture and on the cliff rock, roughness that follows the texture,
 and a faint large-scale tint variation, all in the Swift palette. And the
 weather's wet ground (docs/weather.md; AAcDaylight sets `Wetness` and
@@ -97,7 +99,10 @@ def import_textures():
 HLSL = r"""
 float3 wp = WP / 100.0;
 float3 wn = normalize(VN);
-float2 g = wp.xy;
+// World-grid cells (W4): Origin is the pilot's region's centre on the
+// world's grid, so the ground's patterns stay put when the world's origin
+// moves at a seamless crossing, and run on across the regions' edges.
+float2 g = wp.xy + Origin.xy;
 float2 suv = (g - Bounds.xy) / Bounds.zw;
 float4 splat = Texture2DSampleLevel(Splat, SplatSampler, suv, 0);
 
@@ -127,8 +132,8 @@ c *= lerp(0.94, 1.06, saturate(macroV * 1.6 - 0.3));
 // Cliff rock on steep faces, projected sideways (triplanar on X and Y).
 float slope = 1.0 - wn.z;
 float rockW = smoothstep(0.22, 0.45, slope);
-float2 ux = float2(wp.y, -wp.z * 1.4) / 5.0;
-float2 uy = float2(wp.x, -wp.z * 1.4) / 5.0;
+float2 ux = float2(g.y, -wp.z * 1.4) / 5.0;
+float2 uy = float2(g.x, -wp.z * 1.4) / 5.0;
 float3 rx = Texture2DSample(Rock, RockSampler, ux).rgb;
 float3 ry = Texture2DSample(Rock, RockSampler, uy).rgb;
 float ax = abs(wn.x), ay = abs(wn.y);
@@ -144,7 +149,10 @@ c *= lerp(0.88, 1.0, saturate(wp.z / 2.4));
 float2 lo = Bounds.xy, hi = Bounds.xy + Bounds.zw;
 float past = length(max(max(lo - g, g - hi), 0.0));
 float inside = min(min(g.x - lo.x, hi.x - g.x), min(g.y - lo.y, hi.y - g.y));
-float edge = past > 0.0 ? past : max(inside, 0.0);
+// (Inside, only along the sides with no region beyond: a world's regions
+// meet without a seam.)
+float4 dsSeam = float4(g.y - lo.y, hi.x - g.x, hi.y - g.y, g.x - lo.x) + Neighbours * 1e4;
+float edge = past > 0.0 ? past : max(min(min(dsSeam.x, dsSeam.y), min(dsSeam.z, dsSeam.w)), 0.0);
 c *= 1.0 - 0.3 * (1.0 - smoothstep(0.0, 0.9, edge));
 float fade = 0.0;
 if (past > 0.0) {
@@ -391,6 +399,8 @@ def build_material(tex):
     sources.append(("Frost", scalar_param("Frost", 0.0)))
     sources.append(("EmberGain", scalar_param("EmberGain", 1.0)))
     sources.append(("Neighbours", vec_param("Neighbours", (0.0, 0.0, 0.0, 0.0))))
+    # W4: the pilot's region's centre on the world's grid (cells).
+    sources.append(("Origin", vec_param("Origin", (0.0, 0.0, 0.0, 0.0))))
     for e in "NESW":
         sources.append((f"NbTint{e}", vec_param(f"NbTint{e}", (0.2, 0.15, 0.1, 0.0))))
         sources.append((f"NbFx{e}", vec_param(f"NbFx{e}", (0.0, 0.0, 0.0, 0.0))))

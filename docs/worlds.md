@@ -88,12 +88,27 @@ the start pad (`-AcMmoNewWorld` with `-AcMmo`). A save that does not open
 log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
 `-AcSaveDir=DIR`'s `mmo` folder.
 
-- A RegionChange (over an edge, or a landing) gives the client a new mirror
-  of the new region: the prediction and the blending start over, and the
-  game rebuilds on it (terrain, doodads, minimap, fog: `OnGameStarted`). The
-  pilot keeps the seat: the view holds where it was until the new region's
-  first snapshot shows the unit, then follows it. Nothing of the old region
-  stays.
+- Walking over an edge is seamless (W4, docs/mmorpg-m8.md). The game draws
+  every region in one frame for the whole session (the world frame,
+  `AcSpace::Origin`: the pilot's region's centre on the world's grid less
+  the session's first region's), and the regions round the pilot's are
+  ready before it gets there: their ground (terrain, palette, doodads, the
+  walls' rocks: `AAcRegionGround`, a step a frame), their minimap pictures
+  and, across each passage, their mirror (`Client::prepare`), all made on
+  worker threads a couple of seconds after each arrival, one at a time.
+  The ground beyond the walls is the neighbours' own; only at the world's
+  rim does a region draw its border scenery. At the RegionChange the
+  client swaps in the mirror made ahead, carries the prediction over
+  (`Predictor::carryOver`: the unit, its inputs not yet used, the pilot's
+  controls), and the game takes the ground built ahead and draws on: no
+  fade, no hold, the seat and the camera kept, the unit's model kept under
+  its new id. The crossing is measured by `-AcMmoShotsW4` (`w4: crossing:`
+  in the log, `w4-crossing.csv`): frame times and the unit's pace round it.
+- A landing (a flight) gives the client a new mirror of the new region: the
+  prediction and the blending start over, and the game rebuilds on it
+  (terrain, doodads, minimap, fog: `OnGameStarted`). The pilot keeps the
+  seat: the view holds where it was until the new region's first snapshot
+  shows the unit, then follows it. Nothing of the old region stays.
 - The banner at the top shows the region the pilot is in and its style, or
   "Flying to …" while in flight. The top bar counts the pilot's units (no
   supply count in this mode).

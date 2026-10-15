@@ -2,6 +2,9 @@
 
 #include "AcDaylight.h"
 #include "AcLog.h"
+#include "AcSpace.h"
+#include "AcTerrain.h"
+#include "AcEffects.h"
 #include "AcPerf.h"
 #include "AcSaves.h"
 #include "AcSettings.h"
@@ -9,6 +12,12 @@
 #include "Async/Async.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Components/PrimitiveComponent.h"
+#include "UObject/UObjectIterator.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/Pawn.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformMisc.h"
 #include "HAL/PlatformProcess.h"
@@ -843,6 +852,7 @@ void UAcSimSubsystem::StopMmo()
 	if (!Mmo) return;
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: leaving the MMORPG test"));
 	Mmo->Stop();
+	AcSpace::SetOrigin(ac::Vec2(0, 0));
 	AAcDaylight::SetWorldSky(NullOpt);
 	// Out of the mode before the game rebuilds on the window game.
 	const std::unique_ptr<FAcMmoClient> Old = std::move(Mmo);
@@ -894,7 +904,23 @@ void UAcSimSubsystem::TickMmo(const double RealDelta)
 	{
 		MmoGeneration = Client.Generation();
 		MmoChoice = M->region().map;
+		// The world frame (W4): the new region's ground where it lies in
+		// Unreal space, so nothing moves when the pilot walks over an edge
+		// (AcSpace.h `Origin`); set before the game draws on.
+		const TOptional<ac::Vec2> Shift = Client.TakeSeamless();
+		const double Before = FPlatformTime::Seconds();
+		if (Shift) LastShift = *Shift;
+		AcSpace::SetOrigin(Client.FrameOrigin());
+		bSeamlessStart = Shift.IsSet();
 		ShowSimulation(&M->simulation());
+		bSeamlessStart = false;
+		if (Shift)
+		{
+			Seamless += 1;
+			SeamlessAt = GFrameCounter;
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: seamless change %d drawn on in %.1f ms (frame %llu)"), Seamless,
+				(FPlatformTime::Seconds() - Before) * 1000.0, (unsigned long long)SeamlessAt);
+		}
 	}
 	const double Dt = FMath::Clamp(RealDelta, 0.0, MaxFrameSeconds);
 	Frame.RealDelta = Dt;

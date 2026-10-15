@@ -450,7 +450,7 @@ void AAcRtsPawn::Apply()
 	// target on the ground plane, pitched down 56°.
 	const ac::CanvasProjection P = FreeView->projection();
 	const ac::Vec3 Eye = FreeView->cameraPosition();
-	SetActorLocationAndRotation(AcSpace::FromSceneKit(Eye.x, Eye.y, Eye.z), FRotator(-P.pitchDegrees, -90.0, 0.0));
+	SetActorLocationAndRotation(AcSpace::WorldFromSceneKit(Eye.x, Eye.y, Eye.z), FRotator(-P.pitchDegrees, -90.0, 0.0));
 	// SceneKit's field of view is vertical (`projectionDirection = .vertical`);
 	// Unreal's is horizontal: the same 30° up and down at this aspect.
 	const double Aspect = Size.X / FMath::Max(Size.Y, 1.0);
@@ -530,7 +530,7 @@ void AAcRtsPawn::Tick(float DeltaSeconds)
 	{
 		bShaking = true;
 		const ac::Vec3 Eye = FreeView->cameraPosition();
-		const FVector Base = AcSpace::FromSceneKit(Eye.x, Eye.y, Eye.z);
+		const FVector Base = AcSpace::WorldFromSceneKit(Eye.x, Eye.y, Eye.z);
 		SetActorLocation(Base + FVector(0.0, 0.0, Shake * AcSpace::ToCm(0.15)));
 	}
 	else if (bShaking)

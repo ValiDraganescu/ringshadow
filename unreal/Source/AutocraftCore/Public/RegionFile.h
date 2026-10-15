@@ -192,7 +192,7 @@ constexpr double laneDepth = 2.0;
 constexpr double mouthDepth = 5.0;
 constexpr double mouthSlope = 5.0;
 /// The walls' rocks: about one every this many cells each way (W4).
-constexpr double wallRockSpacing = 4.5;
+constexpr double wallRockSpacing = 3.4;
 
 /// The region built: its map (ground coordinates, centred) and its places.
 struct AUTOCRAFTCORE_API Built {

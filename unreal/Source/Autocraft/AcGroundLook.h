@@ -42,4 +42,11 @@ namespace AcGroundLook
 	/// pilot is in (from `Sim`'s world client) at `Hour`, with the slag's
 	/// embers stronger as it gets `Dark` (0-1). Only what changed is set.
 	void Apply(UMaterialInstanceDynamic* Material, const UAcSimSubsystem* Sim, double Hour, double Dark);
+	/// The same for region `Region` of the World message (W4: each ground
+	/// set's material is its own region's; INDEX_NONE: plain).
+	void Apply(UMaterialInstanceDynamic* Material, const UAcSimSubsystem* Sim, int64 Region, double Hour, double Dark);
+	/// A ground's palette and its neighbours' (N, E, S, W; unset: none),
+	/// out of a world (the map bake's region).
+	void ApplyGround(UMaterialInstanceDynamic* Material, ac::region::Ground Ground, const TOptional<ac::region::Ground> (&Around)[4],
+		double Hour, double Dark);
 }

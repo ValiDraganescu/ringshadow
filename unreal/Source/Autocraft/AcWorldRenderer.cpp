@@ -1,4 +1,5 @@
 #include "AcWorldRenderer.h"
+#include "AcMmo.h"
 
 #include "AcDaylight.h"
 #include "AcRingshadow.h"
@@ -144,6 +145,48 @@ void UAcWorldRenderer::EndPlay(const EEndPlayReason::Type Reason)
 
 void UAcWorldRenderer::OnGameStarted(UAcSimSubsystem& Sim)
 {
+	// W4: walked over an edge. The batches stay (clearing them makes the
+	// renderer cache every one again); the driven unit's model walks on under
+	// its new id, where it was (the world frame did not move); the old
+	// region's others are let go, quietly (they are not gone, only out of
+	// this region).
+	if (const FAcMmoClient* Mmo = Sim.MmoClient(); Sim.IsSeamlessStart() && Mmo && Mmo->Wanted())
+	{
+		const int64 NewId = *Mmo->Wanted();
+		TArray<TUniquePtr<FObject>> Keep;
+		const int32 Had = Objects.Num();
+		for (TUniquePtr<FObject>& O : Objects)
+		{
+			if (O->bUnit && O->Id == DrivenUnit && DrivenUnit != INDEX_NONE)
+			{
+				const auto Rekey = [&](const FLayout* L, const TArray<int32>& Slots) {
+					if (!L) return;
+					for (int32 K = 0; K < Slots.Num(); ++K)
+					{
+						FBatch& B = Batches[L->Batch[K]];
+						B.Owner[Slots[K]] = NewId;
+						if (B.ShownOwner.IsValidIndex(Slots[K]) && B.ShownOwner[Slots[K]] >= 0) B.ShownOwner[Slots[K]] = NewId;
+					}
+				};
+				Rekey(O->Layout, O->Slots);
+				Rekey(O->Scaffold, O->ScaffoldSlots);
+				O->Id = NewId;
+				Keep.Add(MoveTemp(O));
+				continue;
+			}
+			Free(*O);
+		}
+		Objects = MoveTemp(Keep);
+		ObjectIndex.Reset();
+		for (int32 I = 0; I < Objects.Num(); ++I) ObjectIndex.Add(Objects[I]->Id, I);
+		if (DrivenUnit != INDEX_NONE) DrivenUnit = NewId;
+		if (HiddenUnit != INDEX_NONE) HiddenUnit = NewId;
+		Field = std::make_unique<ac::TerrainField>(Sim.Map());
+		FieldMap = &Sim.Map();
+		UE_LOG(LogAutocraft, Log, TEXT("render: walked into a new region, #%lld drawn on (%d objects let go)"), (long long)NewId,
+			Had - Objects.Num());
+		return;
+	}
 	Clear();
 	if (FieldMap != &Sim.Map() || !Field)
 	{

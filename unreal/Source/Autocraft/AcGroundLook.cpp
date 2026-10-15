@@ -4,6 +4,7 @@
 #include "AcSimSubsystem.h"
 
 #include "Materials/MaterialInstanceDynamic.h"
+#include "UObject/ObjectKey.h"
 #include "UObject/WeakObjectPtrTemplates.h"
 
 namespace AcGroundLook
@@ -63,7 +64,8 @@ namespace AcGroundLook
 			float Frost = -1.0f;
 			float Embers = -1.0f;
 		};
-		FState GState;
+		/// Each material's last parameters (only what changed is set).
+		TMap<TObjectKey<UMaterialInstanceDynamic>, FState> GStates;
 
 		bool Same(const FPalette& A, const FPalette& B)
 		{
@@ -71,7 +73,17 @@ namespace AcGroundLook
 		}
 	}
 
+	static void Set(UMaterialInstanceDynamic* Material, const FPalette& Own, const FPalette (&Near)[4], const FLinearColor& Neighbours,
+		double Hour, double Dark);
+
 	void Apply(UMaterialInstanceDynamic* Material, const UAcSimSubsystem* Sim, const double Hour, const double Dark)
+	{
+		const FAcMmoClient* Mmo = Sim && Sim->IsMmo() ? Sim->MmoClient() : nullptr;
+		const ac::net::WorldMessage* World = Mmo ? Mmo->World() : nullptr;
+		Apply(Material, Sim, World ? World->here : INDEX_NONE, Hour, Dark);
+	}
+
+	void Apply(UMaterialInstanceDynamic* Material, const UAcSimSubsystem* Sim, const int64 Region, const double Hour, const double Dark)
 	{
 		if (!Material) return;
 		FPalette Own;
@@ -79,7 +91,9 @@ namespace AcGroundLook
 		FLinearColor Neighbours(0, 0, 0, 0);
 		const FAcMmoClient* Mmo = Sim && Sim->IsMmo() ? Sim->MmoClient() : nullptr;
 		const ac::net::WorldMessage* World = Mmo ? Mmo->World() : nullptr;
-		if (const ac::net::WorldMessage::Region* Here = Mmo ? Mmo->Here() : nullptr; Here && World)
+		const ac::net::WorldMessage::Region* Here =
+			World && Region >= 0 && Region < int64(World->regions.size()) ? &World->regions[size_t(Region)] : nullptr;
+		if (Here)
 		{
 			Own = Of(Here->ground);
 			// North, east, south, west: the grid's rows run north to south.
@@ -95,10 +109,37 @@ namespace AcGroundLook
 				}
 			}
 		}
+		Set(Material, Own, Near, Neighbours, Hour, Dark);
+	}
+
+	void ApplyGround(UMaterialInstanceDynamic* Material, const ac::region::Ground Ground, const TOptional<ac::region::Ground> (&Around)[4],
+		const double Hour, const double Dark)
+	{
+		if (!Material) return;
+		FPalette Near[4];
+		FLinearColor Neighbours(0, 0, 0, 0);
+		for (int32 E = 0; E < 4; E++)
+		{
+			if (!Around[E]) continue;
+			Near[E] = Of(*Around[E]);
+			Near[E].Frost = 0.0f;
+			Neighbours.Component(E) = 1.0f;
+		}
+		Set(Material, Of(Ground), Near, Neighbours, Hour, Dark);
+	}
+
+	static void Set(UMaterialInstanceDynamic* Material, const FPalette& Own, const FPalette (&Near)[4], const FLinearColor& Neighbours, const double Hour,
+		const double Dark)
+	{
 		const float Frost = Own.Frost * FrostAt(Hour);
 		const float Embers = float(FMath::Lerp(0.6, 1.5, FMath::Clamp(Dark, 0.0, 1.0)));
 
-		FState& S = GState;
+		if (GStates.Num() > 64)
+		{
+			for (auto It = GStates.CreateIterator(); It; ++It)
+				if (!It.Value().Material.IsValid()) It.RemoveCurrent();
+		}
+		FState& S = GStates.FindOrAdd(TObjectKey<UMaterialInstanceDynamic>(Material));
 		const bool bNew = S.Material.Get() != Material;
 		if (bNew || !Same(S.Own, Own))
 		{

@@ -6,11 +6,15 @@
 #include "AcShot.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
+#include "AcDoodads.h"
+#include "AcMmo.h"
+#include "AcModelCatalog.h"
 
 #include "FreeView.h"
 #include "Noise.h"
 #include "WindowMaps.h"
 
+#include "Async/Async.h"
 #include "Async/ParallelFor.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -159,11 +163,6 @@ namespace
 		return Mesh;
 	}
 
-	/// `FAcHeightGrid::ParallelRows` on Unreal's task graph.
-	void ParallelRows(int64_t N, const std::function<void(int64_t)>& Body)
-	{
-		ParallelFor(int32(N), [&Body](int32 J) { Body(J); });
-	}
 
 	TAutoConsoleVariable<int32> CVarBorderShadow(
 		TEXT("ac.TerrainBorderShadow"), 0,
@@ -175,9 +174,397 @@ double AAcTerrain::BorderWidth(const ac::GroundRect& B)
 	return FMath::Max(60.0, 0.45 * FMath::Max(B.width(), B.depth()));
 }
 
-AAcTerrain::AAcTerrain()
+FString AAcTerrain::KeyOf(const ac::MapDefinition& Map)
+{
+	return FString::Printf(TEXT("%s|%lld|%llu"), UTF8_TO_TCHAR(Map.name.c_str()), (long long)Map.version, (unsigned long long)Map.seed);
+}
+
+// MARK: - A ground set
+
+/// What a set's build makes off the game's thread: the field and the grid,
+/// the splat's texels, every mesh's description, the border rocks and where
+/// each doodad stands.
+struct AAcRegionGround::FPrepared
+{
+	std::unique_ptr<ac::TerrainField> Field;
+	FAcHeightGrid Grid;
+	TArray<uint8> SplatBytes;
+	int32 SplatW = 0, SplatH = 0;
+	struct FPiece
+	{
+		TUniquePtr<FMeshDescription> Mesh;
+		FString Name;
+		bool bShadow = true;
+	};
+	TArray<FPiece> Pieces;
+	TArray<FAcBorderRock> Rocks;
+	/// Each doodad and the field's height under it.
+	TArray<TPair<ac::Doodad, double>> Doodads;
+};
+
+namespace
+{
+	/// The CPU part of a set's build (`AAcRegionGround::FPrepared`): the
+	/// ground in 32-cell tiles, and the border scenery on the rim sides only
+	/// (bits 1 north, 2 east, 4 south, 8 west), so it never covers a
+	/// neighbour's ground.
+	template <class FPrep>
+	void PrepareGround(FPrep& P, const ac::MapDefinition& Map, const uint8 Rim, const bool bBorderShadow, const bool bAhead)
+	{
+		// Built ahead (W4): on one thread, never crowding the frame's own
+		// work on the task graph.
+		const EParallelForFlags Flags = bAhead ? EParallelForFlags::ForceSingleThread : EParallelForFlags::None;
+		const auto Each = [Flags](const int32 N, TFunctionRef<void(int32)> Body) { ParallelFor(N, Body, Flags); };
+		P.Field = std::make_unique<ac::TerrainField>(Map);
+		const ac::TerrainField& Field = *P.Field;
+		P.Grid = FAcHeightGrid(Field, AAcTerrain::Density, [&Each](int64_t N, const std::function<void(int64_t)>& Body) {
+			Each(int32(N), [&Body](int32 J) { Body(J); });
+		});
+		const ac::GroundRect B = Map.bounds;
+
+		// The splat map: RGBA, 4 texels per cell: grass, highland, plating,
+		// scorch. Row 0 is minY. BGRA in memory.
+		const double PerCell = AAcTerrain::SplatPerCell;
+		P.SplatW = int32(B.width() * PerCell);
+		P.SplatH = int32(B.depth() * PerCell);
+		P.SplatBytes.SetNumZeroed(P.SplatW * P.SplatH * 4);
+		const auto Byte = [](const double V) { return uint8(FMath::Clamp(V, 0.0, 1.0) * 255); };
+		Each(P.SplatH, [&](const int32 Y) {
+			const double Z = B.minZ + (double(Y) + 0.5) / PerCell;
+			for (int32 X = 0; X < P.SplatW; X++)
+			{
+				const ac::TerrainField::Materials M = Field.materials(ac::Vec2(B.minX + (double(X) + 0.5) / PerCell, Z));
+				uint8* Px = &P.SplatBytes[(Y * P.SplatW + X) * 4];
+				Px[0] = Byte(M.z);
+				Px[1] = Byte(M.y);
+				Px[2] = Byte(M.x);
+				Px[3] = Byte(M.w);
+			}
+		});
+
+		// The ground: tiles of TileCells × TileCells cells, sharing their
+		// edge vertices (same heights and normals on both sides, no seam).
+		{
+			FGridLines F;
+			F.Nx = P.Grid.nx;
+			F.Nz = P.Grid.nz;
+			F.Xs.resize(size_t(F.Nx));
+			F.Zs.resize(size_t(F.Nz));
+			for (int64 I = 0; I < F.Nx; I++) F.Xs[size_t(I)] = P.Grid.minX + double(I) * P.Grid.step;
+			for (int64 J = 0; J < F.Nz; J++) F.Zs[size_t(J)] = P.Grid.minZ + double(J) * P.Grid.step;
+			F.H = P.Grid.heights;
+			const int64 Per = int64(AAcTerrain::TileCells) * AAcTerrain::Density;
+			const int64 TilesX = FMath::DivideAndRoundUp<int64>(F.Nx - 1, Per), TilesZ = FMath::DivideAndRoundUp<int64>(F.Nz - 1, Per);
+			TArray<TUniquePtr<FMeshDescription>> Descriptions;
+			Descriptions.SetNum(int32(TilesX * TilesZ));
+			Each(Descriptions.Num(), [&](const int32 K) {
+				const int64 TX = K % TilesX, TZ = K / TilesX;
+				const int64 I0 = TX * Per, J0 = TZ * Per;
+				const int64 I1 = FMath::Min(I0 + Per, F.Nx - 1), J1 = FMath::Min(J0 + Per, F.Nz - 1);
+				Descriptions[K] = MakeDescription(F, I0, I1, J0, J1, /*bCentral*/ true, /*bUVs*/ true, [](int64, int64) { return false; });
+			});
+			for (int32 K = 0; K < Descriptions.Num(); K++)
+			{
+				if (!Descriptions[K]) continue;
+				P.Pieces.Add({MoveTemp(Descriptions[K]), FString::Printf(TEXT("Ground_%d_%d"), int32(K % TilesX), int32(K / TilesX)), true});
+			}
+		}
+
+		// The border scenery past the map's edge, on the rim sides.
+		if (Rim != 0)
+		{
+			const double Width = AAcTerrain::BorderWidth(B);
+			// Grid lines along one axis: 0.5 cells near the edges, wider out.
+			const auto Lines = [Width](const double Lo, const double Hi) {
+				const auto Step = [](const double D) { return FMath::Min(0.5 + D * 0.12, 4.0); };
+				std::vector<double> Out;
+				double D = Width;
+				while (D > 0.01)
+				{
+					Out.push_back(Lo - D);
+					D -= Step(D);
+				}
+				for (double X = Lo; X < Lo + 2; X += 0.5) Out.push_back(X);
+				for (double X = Lo + 2; X < Hi - 2; X += 1) Out.push_back(X);
+				for (double X = Hi - 2; X <= Hi; X += 0.5) Out.push_back(X);
+				D = 0.5;
+				while (D <= Width + 1e-9)
+				{
+					Out.push_back(Hi + D);
+					D += Step(D);
+				}
+				return Out;
+			};
+			FGridLines F;
+			F.Xs = Lines(B.minX, B.maxX);
+			F.Zs = Lines(B.minZ, B.maxZ);
+			F.Nx = int64(F.Xs.size());
+			F.Nz = int64(F.Zs.size());
+			F.H.assign(size_t(F.Nx * F.Nz), 0.0f);
+			Each(int32(F.Nz), [&](const int32 J) {
+				for (int64 I = 0; I < F.Nx; I++)
+				{
+					const ac::Vec2 Q(F.Xs[size_t(I)], F.Zs[size_t(J)]);
+					// Under the map's own mesh: a touch low, out of sight.
+					const double Sink = Field.outside(Q) > 0 ? 0.0 : 0.08;
+					F.H[size_t(J * F.Nx + I)] = float(Field.borderHeight(Q) - Sink);
+				}
+			});
+			// Cells wholly a cell inside the map are the map mesh's: skipped.
+			const ac::GroundRect Inner = B.inset(1);
+			const auto Skip = [&](const int64 I, const int64 J) {
+				return F.Xs[size_t(I)] >= Inner.minX && F.Xs[size_t(I + 1)] <= Inner.maxX && F.Zs[size_t(J)] >= Inner.minZ &&
+				       F.Zs[size_t(J + 1)] <= Inner.maxZ;
+			};
+			const auto Index = [](const std::vector<double>& V, const double X) {
+				return int64(std::lower_bound(V.begin(), V.end(), X) - V.begin());
+			};
+			const int64 IA = FMath::Clamp<int64>(Index(F.Xs, Inner.minX), 1, F.Nx - 1);
+			const int64 IB = FMath::Clamp<int64>(Index(F.Xs, Inner.maxX), IA, F.Nx - 1);
+			const int64 JA = FMath::Clamp<int64>(Index(F.Zs, Inner.minZ), 1, F.Nz - 1);
+			const int64 JB = FMath::Clamp<int64>(Index(F.Zs, Inner.maxZ), JA, F.Nz - 1);
+			// A north or south band reaches round a corner only where the
+			// side beyond it is the rim too.
+			const int64 I0 = (Rim & 8) ? 0 : IA, I1 = (Rim & 2) ? F.Nx - 1 : IB;
+			struct FBand { uint8 Side; int64 I0, I1, J0, J1; const TCHAR* Name; };
+			const FBand Bands[] = {
+				{1, I0, I1, 0, JA, TEXT("Border_N")},
+				{4, I0, I1, JB, F.Nz - 1, TEXT("Border_S")},
+				{8, 0, IA, JA, JB, TEXT("Border_W")},
+				{2, IB, F.Nx - 1, JA, JB, TEXT("Border_E")},
+			};
+			for (const FBand& Band : Bands)
+			{
+				if (!(Rim & Band.Side) || Band.I1 <= Band.I0 || Band.J1 <= Band.J0) continue;
+				TUniquePtr<FMeshDescription> MD = MakeDescription(F, Band.I0, Band.I1, Band.J0, Band.J1, /*bCentral*/ false, /*bUVs*/ false, Skip);
+				if (MD) P.Pieces.Add({MoveTemp(MD), Band.Name, bBorderShadow});
+			}
+
+			// `GameScene.borderRocks`: boulders and spires strewn over the
+			// border scenery, thickest near the map's edge (rim sides only).
+			const double Reach = 28.0;
+			ac::SeededRandom Rng(Map.seed + 0xB0D3);
+			using Kind = ac::Doodad::Kind;
+			const Kind Kinds[] = {Kind::rock, Kind::rock, Kind::boulder, Kind::rockSpire};
+			const int64 Count = int64((B.width() + B.depth()) * 2 * Reach / 110);
+			int64 Placed = 0;
+			for (int64 K = 0; K < Count * 20 && Placed < Count; K++)
+			{
+				// Swift evaluates the two coordinates left to right.
+				const double X = Rng.range(B.minX - Reach, B.maxX + Reach);
+				const double Y = Rng.range(B.minZ - Reach, B.maxZ + Reach);
+				const ac::Vec2 Q(X, Y);
+				const double D = Field.outside(Q);
+				if (!(D > 1.5) || !(D < Reach) || !(Rng.unit() < 1 - 0.6 * D / Reach)) continue;
+				const Kind Which = Kinds[FMath::Min(int32(Rng.unit() * 4), 3)];
+				const double Scale = Rng.range(0.7, 1.5) * (1 + 0.5 * D / Reach);
+				const double Turn = Rng.range(0, 2 * ac::pi);
+				// Past a side with a region beyond: that region's ground.
+				const bool bOn = (Q.y >= B.minZ || (Rim & 1)) && (Q.x <= B.maxX || (Rim & 2)) && (Q.y <= B.maxZ || (Rim & 4)) &&
+				                 (Q.x >= B.minX || (Rim & 8));
+				if (!bOn) continue;
+				FAcBorderRock Rock;
+				Rock.Kind = Which;
+				Rock.Variant = uint32(K);
+				// SceneKit `eulerAngles.y = a` is Unreal yaw -a (AcSpace.h).
+				Rock.Transform = FTransform(FRotator(0.0, -FMath::RadiansToDegrees(Turn), 0.0),
+				                            AcSpace::ToWorld(Q, Field.borderHeight(Q) - 0.15 * Scale), FVector(Scale));
+				P.Rocks.Add(Rock);
+				Placed++;
+			}
+		}
+
+		// Where each doodad stands.
+		P.Doodads.Reserve(int32(Map.doodads.size()));
+		for (const ac::Doodad& D : Map.doodads) P.Doodads.Add({D, Field.height(D.position)});
+	}
+
+	/// Doodads placed a step at a time on a set built ahead.
+	constexpr int32 DoodadsAStep = 120;
+}
+
+AAcRegionGround::AAcRegionGround()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	Root->SetMobility(EComponentMobility::Static);
+	RootComponent = Root;
+}
+
+void AAcRegionGround::Begin(std::shared_ptr<const ac::MapDefinition> InMap, const FString& Key, const ac::Vec2 Centre, const uint8 Rim,
+	const int64 Region, UMaterialInterface* Base)
+{
+	MapDef = MoveTemp(InMap);
+	MapKey = Key;
+	GridCentre = Centre;
+	RimSides = Rim;
+	RegionIndex = Region;
+	BaseMaterial = Base;
+}
+
+void AAcRegionGround::PrepareCpu()
+{
+	if (Prepared) return;
+	Prepared = MakeShared<FPrepared>();
+	const bool bShadow = CVarBorderShadow.GetValueOnGameThread() != 0;
+	const bool bAhead = !bNow;
+	Preparing = Async(EAsyncExecution::ThreadPool, [P = Prepared, Map = MapDef, Rim = RimSides, bShadow, bAhead]() { PrepareGround(*P, *Map, Rim, bShadow, bAhead); });
+}
+
+void AAcRegionGround::BuildNow()
+{
+	bNow = true;
+	PrepareCpu();
+	Step(TNumericLimits<double>::Max());
+}
+
+void AAcRegionGround::MakeMaterial()
+{
+	FieldPtr = MoveTemp(Prepared->Field);
+	HeightGrid = MoveTemp(Prepared->Grid);
+	BorderRocks = Prepared->Rocks;
+	Mat = UMaterialInstanceDynamic::Create(BaseMaterial, this, TEXT("TerrainMaterial"));
+	// A name of its own: a set's splat never waits on another's being let go.
+	SplatTex = UTexture2D::CreateTransient(Prepared->SplatW, Prepared->SplatH, PF_B8G8R8A8,
+		MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), TEXT("TerrainSplat")));
+	SplatTex->SRGB = false;
+	SplatTex->Filter = TF_Bilinear;
+	SplatTex->AddressX = TA_Clamp;
+	SplatTex->AddressY = TA_Clamp;
+	SplatTex->CompressionSettings = TC_VectorDisplacementmap;
+	SplatTex->NeverStream = true;
+	FTexture2DMipMap& Mip = SplatTex->GetPlatformData()->Mips[0];
+	void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);
+	FMemory::Memcpy(Data, Prepared->SplatBytes.GetData(), Prepared->SplatBytes.Num());
+	Mip.BulkData.Unlock();
+	SplatTex->UpdateResource();
+	Prepared->SplatBytes.Empty();
+	if (Mat)
+	{
+		const ac::GroundRect B = MapDef->bounds;
+		Mat->SetTextureParameterValue(TEXT("Splat"), SplatTex);
+		Mat->SetVectorParameterValue(TEXT("Origin"), FLinearColor(float(GridOrigin.x), float(GridOrigin.y), 0.f, 0.f));
+		// In world-grid cells (the material samples by them: `Origin`).
+		Mat->SetVectorParameterValue(TEXT("Bounds"), FLinearColor(float(B.minX + GridCentre.x), float(B.minZ + GridCentre.y), float(B.width()), float(B.depth())));
+		const FLinearColor H = AAcTerrain::Haze();
+		Mat->SetVectorParameterValue(TEXT("Haze"), FLinearColor(H.R, H.G, H.B, float(AAcTerrain::BorderWidth(B))));
+		// Which sides have a region beyond (N, E, S, W), until the palette's
+		// own sets it (AcGroundLook): the dark seam only at the world's rim.
+		Mat->SetVectorParameterValue(TEXT("Neighbours"), FLinearColor((RimSides & 1) ? 0.f : 1.f, (RimSides & 2) ? 0.f : 1.f,
+			(RimSides & 4) ? 0.f : 1.f, (RimSides & 8) ? 0.f : 1.f));
+	}
+	bMaterial = true;
+}
+
+void AAcRegionGround::SetOrigin(const ac::Vec2 Origin)
+{
+	GridOrigin = Origin;
+	if (Mat) Mat->SetVectorParameterValue(TEXT("Origin"), FLinearColor(float(Origin.x), float(Origin.y), 0.f, 0.f));
+}
+
+void AAcRegionGround::AddPiece(UStaticMesh* Mesh, const TCHAR* Name, const bool bCastShadow)
+{
+	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this, FName(Name));
+	C->SetMobility(EComponentMobility::Static);
+	C->SetStaticMesh(Mesh);
+	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	C->SetCanEverAffectNavigation(false);
+	C->SetCastShadow(bCastShadow);
+	C->bUseAsOccluder = true;
+	C->SetupAttachment(Root);
+	C->RegisterComponent();
+	AddInstanceComponent(C);
+	Pieces.Add(C);
+}
+
+bool AAcRegionGround::Step(const double BudgetMs)
+{
+	if (bComplete) return true;
+	PrepareCpu();
+	const double Start = FPlatformTime::Seconds();
+	const auto Left = [&] { return (FPlatformTime::Seconds() - Start) * 1000.0 < BudgetMs; };
+	// Built at once: wait for the worker; ahead: come back next frame.
+	if (!Preparing.IsReady())
+	{
+		if (BudgetMs < TNumericLimits<double>::Max()) return false;
+		Preparing.Wait();
+	}
+	do
+	{
+		if (!bMaterial)
+		{
+			MakeMaterial();
+			continue;
+		}
+		if (NextPiece < Prepared->Pieces.Num())
+		{
+			FPrepared::FPiece& P = Prepared->Pieces[NextPiece++];
+			UStaticMesh* Mesh = MakeMesh(this, FName(*(TEXT("SM_") + P.Name)), *P.Mesh, Mat);
+			AddPiece(Mesh, *P.Name, P.bShadow);
+			P.Mesh.Reset();
+			continue;
+		}
+		const FVector At = GetActorLocation();
+		if (NextDoodad == 0)
+		{
+			FAcSceneryOptions MapOptions;
+			DoodadBatches.Init(this, Root, MapOptions, TEXT("Doodad"));
+			FAcSceneryOptions RockOptions;
+			RockOptions.bCastShadow = false;  // GameScene.borderRocks: castsShadow = false
+			RockBatches.Init(this, Root, RockOptions, TEXT("BorderRock"));
+		}
+		if (NextDoodad < Prepared->Doodads.Num())
+		{
+			const int32 End = FMath::Min(NextDoodad + (BudgetMs < TNumericLimits<double>::Max() ? DoodadsAStep : Prepared->Doodads.Num()), Prepared->Doodads.Num());
+			TArray<FAcSceneryModel> Chunk;
+			for (; NextDoodad < End; ++NextDoodad)
+			{
+				const TPair<ac::Doodad, double>& D = Prepared->Doodads[NextDoodad];
+				const FAcModelInfo* M = AAcDoodads::ModelFor(D.Key.kind, D.Key.variant);
+				if (!M) continue;
+				FTransform T = AAcDoodads::Placement(D.Key, D.Value);
+				T.AddToTranslation(At);
+				Chunk.Add(DoodadBatches.AddModel(*M, T));
+			}
+			TArray<FAcSceneryModel*> Ptrs;
+			for (FAcSceneryModel& M : Chunk) Ptrs.Add(&M);
+			DoodadBatches.Flush(Ptrs);
+			DoodadModels.Append(MoveTemp(Chunk));
+			if (NextDoodad < Prepared->Doodads.Num()) continue;
+		}
+		if (NextDoodad >= Prepared->Doodads.Num())
+		{
+			TArray<FAcSceneryModel> Rocks;
+			for (const FAcBorderRock& R : BorderRocks)
+			{
+				const FAcModelInfo* M = AAcDoodads::ModelFor(R.Kind, R.Variant);
+				if (!M) continue;
+				FTransform T = R.Transform;
+				T.AddToTranslation(At);
+				Rocks.Add(RockBatches.AddModel(*M, T));
+			}
+			TArray<FAcSceneryModel*> Ptrs;
+			for (FAcSceneryModel& M : Rocks) Ptrs.Add(&M);
+			RockBatches.Flush(Ptrs);
+			Prepared.Reset();
+			bComplete = true;
+		}
+	} while (!bComplete && Left());
+	Spent += FPlatformTime::Seconds() - Start;
+	if (bComplete)
+	{
+		UE_LOG(LogAutocraft, Log, TEXT("ground: %s ready, %d pieces, %d doodads, %d border rocks, %.0f ms on the game's thread"),
+			UTF8_TO_TCHAR(MapDef->name.c_str()), Pieces.Num(), DoodadBatches.NumInstances(), BorderRocks.Num(), Spent * 1000.0);
+	}
+	return bComplete;
+}
+
+// MARK: - The terrain: the sets
+
+AAcTerrain::AAcTerrain()
+{
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	Root->SetMobility(EComponentMobility::Static);
 	RootComponent = Root;
@@ -226,7 +613,7 @@ void AAcTerrain::EndPlay(const EEndPlayReason::Type Reason)
 
 double AAcTerrain::GroundZ(const FVector& World) const
 {
-	return Grid.empty() ? 0.0 : AcSpace::ToCm(Grid.height(AcSpace::ToSim(World)));
+	return !Current || Current->Grid().empty() ? 0.0 : AcSpace::ToCm(Current->Grid().height(AcSpace::ToSim(World)));
 }
 
 void AAcTerrain::OnGameStarted(UAcSimSubsystem& Sim)
@@ -234,240 +621,145 @@ void AAcTerrain::OnGameStarted(UAcSimSubsystem& Sim)
 	Build(Sim.Map());
 }
 
-void AAcTerrain::Clear()
+AAcRegionGround* AAcTerrain::Spawn(std::shared_ptr<const ac::MapDefinition> Map, const FString& Key, const ac::Vec2 Centre, const uint8 Rim,
+	const int64 Region)
 {
-	for (UStaticMeshComponent* C : Pieces)
+	UMaterialInterface* Base = TerrainMaterial.LoadSynchronous();
+	if (!Base)
 	{
-		if (C) C->DestroyComponent();
+		UE_LOG(LogAutocraft, Error, TEXT("terrain: %s is missing (run Tools/Editor/make_terrain_material.py)"), *TerrainMaterial.ToString());
 	}
-	Pieces.Reset();
-	Rocks.Reset();
-	Grid = FAcHeightGrid();
-	Field.reset();
-	Map.reset();
+	// At its place in the world frame (AcSpace.h `Origin`): its centre on
+	// the grid less the session's first region's. It never moves.
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	const ac::Vec2 At = Centre - SessionCentre();
+	AAcRegionGround* Set = GetWorld()->SpawnActor<AAcRegionGround>(AAcRegionGround::StaticClass(),
+		FTransform(FVector(AcSpace::ToCm(At.x), AcSpace::ToCm(At.y), 0.0)), Params);
+	Set->Begin(MoveTemp(Map), Key, Centre, Rim, Region, Base);
+	Set->SetOrigin(SessionCentre());
+	Sets.Add(Key, Set);
+	return Set;
 }
 
 void AAcTerrain::Build(const ac::MapDefinition& InMap)
 {
-	if (Map && *Map == InMap) return;
+	const FString Key = KeyOf(InMap);
+	if (Current && Current->Key() == Key && Current->Map() == InMap) return;
 	const double Start = FPlatformTime::Seconds();
-	Clear();
-	Map = InMap;
-	Field = std::make_unique<ac::TerrainField>(*Map);
-	Grid = FAcHeightGrid(*Field, Density, ParallelRows);
-
-	UMaterialInterface* Base = TerrainMaterial.LoadSynchronous();
-	if (!Base)
+	// Where it lies in a world, and its rim (out of one: the origin, all rim).
+	ac::Vec2 Centre(0, 0);
+	uint8 Rim = 0xF;
+	int64 Region = INDEX_NONE;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (const TOptional<FAcRegionAround> Here = Mmo ? Mmo->HereGround() : TOptional<FAcRegionAround>(); Here && Mmo->Mirror())
 	{
-		UE_LOG(LogAutocraft, Error, TEXT("terrain: %s is missing (run Tools/Editor/make_terrain_material.py)"),
-		       *TerrainMaterial.ToString());
+		Centre = Here->Centre;
+		Rim = Here->Rim;
+		Region = Here->Index;
 	}
-	Material = UMaterialInstanceDynamic::Create(Base, this, TEXT("TerrainMaterial"));
-	BuildSplat();
-	const ac::GroundRect B = Map->bounds;
-	if (Material)
+	TObjectPtr<AAcRegionGround>* Found = Sets.Find(Key);
+	AAcRegionGround* Set = Found ? Found->Get() : nullptr;
+	const bool bAhead = Set && Set->IsComplete();
+	// (A set made ahead knows its own place: the World message that says the
+	// pilot's region changed may come a frame after the region.)
+	if (Set && !(Set->Map() == InMap))
 	{
-		Material->SetTextureParameterValue(TEXT("Splat"), Splat);
-		Material->SetVectorParameterValue(TEXT("Bounds"), FLinearColor(float(B.minX), float(B.minZ), float(B.width()), float(B.depth())));
-		const FLinearColor H = Haze();
-		Material->SetVectorParameterValue(TEXT("Haze"), FLinearColor(H.R, H.G, H.B, float(BorderWidth(B))));
+		Sets.Remove(Key);
+		Set->Destroy();
+		Set = nullptr;
 	}
-	BuildGround();
-	BuildBorder();
-	PlaceBorderRocks();
-	UE_LOG(LogAutocraft, Log, TEXT("terrain: %s, %lld x %lld vertices, %d pieces, %d border rocks, built in %.0f ms"),
-	       UTF8_TO_TCHAR(Map->name.c_str()), (long long)Grid.nx, (long long)Grid.nz, Pieces.Num(), Rocks.Num(),
-	       (FPlatformTime::Seconds() - Start) * 1000.0);
-}
-
-UStaticMeshComponent* AAcTerrain::AddMeshComponent(UStaticMesh* Mesh, const TCHAR* Name, const bool bCastShadow)
-{
-	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this, FName(Name));
-	C->SetMobility(EComponentMobility::Static);
-	C->SetStaticMesh(Mesh);
-	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	C->SetCanEverAffectNavigation(false);
-	C->SetCastShadow(bCastShadow);
-	C->bUseAsOccluder = true;
-	C->SetupAttachment(Root);
-	C->RegisterComponent();
-	AddInstanceComponent(C);
-	Pieces.Add(C);
-	return C;
-}
-
-void AAcTerrain::BuildGround()
-{
-	// The grid the Swift mesh uses, from `Grid`'s heights.
-	FGridLines F;
-	F.Nx = Grid.nx;
-	F.Nz = Grid.nz;
-	F.Xs.resize(size_t(F.Nx));
-	F.Zs.resize(size_t(F.Nz));
-	for (int64 I = 0; I < F.Nx; I++) F.Xs[size_t(I)] = Grid.minX + double(I) * Grid.step;
-	for (int64 J = 0; J < F.Nz; J++) F.Zs[size_t(J)] = Grid.minZ + double(J) * Grid.step;
-	F.H = Grid.heights;
-
-	// Tiles of TileCells × TileCells cells, sharing their edge vertices
-	// (same heights and normals on both sides, so no seam).
-	const int64 Per = int64(TileCells) * Density;
-	const int64 TilesX = FMath::DivideAndRoundUp<int64>(F.Nx - 1, Per), TilesZ = FMath::DivideAndRoundUp<int64>(F.Nz - 1, Per);
-	TArray<TUniquePtr<FMeshDescription>> Descriptions;
-	Descriptions.SetNum(int32(TilesX * TilesZ));
-	ParallelFor(Descriptions.Num(), [&](const int32 K) {
-		const int64 TX = K % TilesX, TZ = K / TilesX;
-		const int64 I0 = TX * Per, J0 = TZ * Per;
-		const int64 I1 = FMath::Min(I0 + Per, F.Nx - 1), J1 = FMath::Min(J0 + Per, F.Nz - 1);
-		Descriptions[K] = MakeDescription(F, I0, I1, J0, J1, /*bCentral*/ true, /*bUVs*/ true, [](int64, int64) { return false; });
-	});
-	for (int32 K = 0; K < Descriptions.Num(); K++)
+	if (!Set)
 	{
-		if (!Descriptions[K]) continue;
-		const FString Name = FString::Printf(TEXT("Ground_%d_%d"), int32(K % TilesX), int32(K / TilesX));
-		UStaticMesh* Mesh = MakeMesh(this, FName(*(TEXT("SM_") + Name)), *Descriptions[K], Material);
-		AddMeshComponent(Mesh, *Name, /*bCastShadow*/ true);
-	}
-}
-
-void AAcTerrain::BuildBorder()
-{
-	const ac::GroundRect B = Map->bounds;
-	const double Width = BorderWidth(B);
-	// Grid lines along one axis: 0.5 cells near the edges, wider out.
-	const auto Lines = [Width](const double Lo, const double Hi) {
-		const auto Step = [](const double D) { return FMath::Min(0.5 + D * 0.12, 4.0); };
-		std::vector<double> Out;
-		double D = Width;
-		while (D > 0.01)
+		// Out of a world, or another world: only this map's ground.
+		if (!Mmo)
 		{
-			Out.push_back(Lo - D);
-			D -= Step(D);
+			for (TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
+				if (S.Value) S.Value->Destroy();
+			Sets.Reset();
+			Current = nullptr;
 		}
-		for (double X = Lo; X < Lo + 2; X += 0.5) Out.push_back(X);
-		for (double X = Lo + 2; X < Hi - 2; X += 1) Out.push_back(X);
-		for (double X = Hi - 2; X <= Hi; X += 0.5) Out.push_back(X);
-		D = 0.5;
-		while (D <= Width + 1e-9)
-		{
-			Out.push_back(Hi + D);
-			D += Step(D);
-		}
-		return Out;
-	};
-	FGridLines F;
-	F.Xs = Lines(B.minX, B.maxX);
-	F.Zs = Lines(B.minZ, B.maxZ);
-	F.Nx = int64(F.Xs.size());
-	F.Nz = int64(F.Zs.size());
-	F.H.assign(size_t(F.Nx * F.Nz), 0.0f);
-	ParallelFor(int32(F.Nz), [&](const int32 J) {
-		for (int64 I = 0; I < F.Nx; I++)
-		{
-			const ac::Vec2 P(F.Xs[size_t(I)], F.Zs[size_t(J)]);
-			// Under the map's own mesh: a touch low, out of sight.
-			const double Sink = Field->outside(P) > 0 ? 0.0 : 0.08;
-			F.H[size_t(J * F.Nx + I)] = float(Field->borderHeight(P) - Sink);
-		}
-	});
-	// Cells wholly a cell inside the map are the map mesh's: skipped.
-	const ac::GroundRect Inner = B.inset(1);
-	const auto Skip = [&](const int64 I, const int64 J) {
-		return F.Xs[size_t(I)] >= Inner.minX && F.Xs[size_t(I + 1)] <= Inner.maxX && F.Zs[size_t(J)] >= Inner.minZ &&
-		       F.Zs[size_t(J + 1)] <= Inner.maxZ;
-	};
-	// Four pieces (one per side band), so each is culled on its own.
-	const auto Index = [](const std::vector<double>& V, const double X) {
-		return int64(std::lower_bound(V.begin(), V.end(), X) - V.begin());
-	};
-	const int64 IA = FMath::Clamp<int64>(Index(F.Xs, Inner.minX), 1, F.Nx - 1);
-	const int64 IB = FMath::Clamp<int64>(Index(F.Xs, Inner.maxX), IA, F.Nx - 1);
-	struct FBand { int64 I0, I1, J0, J1; const TCHAR* Name; };
-	const int64 JA = FMath::Clamp<int64>(Index(F.Zs, Inner.minZ), 1, F.Nz - 1);
-	const int64 JB = FMath::Clamp<int64>(Index(F.Zs, Inner.maxZ), JA, F.Nz - 1);
-	const FBand Bands[] = {
-		{0, F.Nx - 1, 0, JA, TEXT("Border_N")},
-		{0, F.Nx - 1, JB, F.Nz - 1, TEXT("Border_S")},
-		{0, IA, JA, JB, TEXT("Border_W")},
-		{IB, F.Nx - 1, JA, JB, TEXT("Border_E")},
-	};
-	const bool bShadow = CVarBorderShadow.GetValueOnGameThread() != 0;
-	for (const FBand& Band : Bands)
+		Set = Spawn(std::make_shared<const ac::MapDefinition>(InMap), Key, Centre, Rim, Region);
+	}
+	if (!Set->IsComplete()) Set->BuildNow();
+	MakeCurrent(Set);
+	UE_LOG(LogAutocraft, Log, TEXT("terrain: %s, %lld x %lld vertices, %d border rocks, %s in %.0f ms"), UTF8_TO_TCHAR(InMap.name.c_str()),
+		(long long)Set->Grid().nx, (long long)Set->Grid().nz, Set->Rocks().Num(), bAhead ? TEXT("built ahead, taken") : TEXT("built"),
+		(FPlatformTime::Seconds() - Start) * 1000.0);
+}
+
+void AAcTerrain::MakeCurrent(AAcRegionGround* Set)
+{
+	Current = Set;
+	Version += 1;
+}
+
+ac::Vec2 AAcTerrain::SessionCentre() const
+{
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	return Mmo ? Mmo->SessionCentre() : ac::Vec2(0, 0);
+}
+
+void AAcTerrain::Tick(const float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	SyncAround();
+}
+
+void AAcTerrain::SyncAround()
+{
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo || !Current) return;
+	TSet<FString> Keep;
+	Keep.Add(Current->Key());
+	for (const FAcRegionAround& A : Mmo->Around())
 	{
-		TUniquePtr<FMeshDescription> MD = MakeDescription(F, Band.I0, Band.I1, Band.J0, Band.J1, /*bCentral*/ false, /*bUVs*/ false, Skip);
-		if (!MD) continue;
-		UStaticMesh* Mesh = MakeMesh(this, FName(*(FString(TEXT("SM_")) + Band.Name)), *MD, Material);
-		AddMeshComponent(Mesh, Band.Name, bShadow);
+		if (!A.Map) continue;
+		const FString Key = KeyOf(*A.Map);
+		Keep.Add(Key);
+		if (Sets.Contains(Key)) continue;
+		Spawn(A.Map, Key, A.Centre, A.Rim, A.Index);
+		Version += 1;
+	}
+	// The far ones let go (a flight away, or two regions on).
+	for (auto It = Sets.CreateIterator(); It; ++It)
+	{
+		if (Keep.Contains(It.Key())) continue;
+		if (It.Value()) It.Value()->Destroy();
+		It.RemoveCurrent();
+		Version += 1;
+	}
+	// One set a step a frame, a few milliseconds of it, a while after the
+	// region changed (the frames round a crossing stay clear).
+	if (Mmo->SinceRegionChange() < 2.0) return;
+	for (TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
+	{
+		if (!S.Value || S.Value->IsComplete()) continue;
+		S.Value->Step(4.0);
+		break;
 	}
 }
 
-void AAcTerrain::BuildSplat()
+void AAcTerrain::ForEachMaterial(TFunctionRef<void(UMaterialInstanceDynamic*, int64 Region)> Each) const
 {
-	// RGBA, 4 texels per cell: grass, highland, plating, scorch. Row 0 is
-	// minY (the mesh's v = 0). Linear (not sRGB), uncompressed, no mips.
-	const ac::GroundRect B = Map->bounds;
-	const double PerCell = SplatPerCell;
-	const int32 W = int32(B.width() * PerCell), H = int32(B.depth() * PerCell);
-	TArray<uint8> Bytes;
-	Bytes.SetNumZeroed(W * H * 4);
-	const auto Byte = [](const double V) { return uint8(FMath::Clamp(V, 0.0, 1.0) * 255); };
-	ParallelFor(H, [&](const int32 Y) {
-		const double Z = B.minZ + (double(Y) + 0.5) / PerCell;
-		for (int32 X = 0; X < W; X++)
-		{
-			const ac::TerrainField::Materials M = Field->materials(ac::Vec2(B.minX + (double(X) + 0.5) / PerCell, Z));
-			uint8* Px = &Bytes[(Y * W + X) * 4];
-			// BGRA in memory.
-			Px[0] = Byte(M.z);
-			Px[1] = Byte(M.y);
-			Px[2] = Byte(M.x);
-			Px[3] = Byte(M.w);
-		}
-	});
-	Splat = UTexture2D::CreateTransient(W, H, PF_B8G8R8A8, TEXT("TerrainSplat"));
-	Splat->SRGB = false;
-	Splat->Filter = TF_Bilinear;
-	Splat->AddressX = TA_Clamp;
-	Splat->AddressY = TA_Clamp;
-	Splat->CompressionSettings = TC_VectorDisplacementmap;
-	Splat->NeverStream = true;
-	FTexture2DMipMap& Mip = Splat->GetPlatformData()->Mips[0];
-	void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);
-	FMemory::Memcpy(Data, Bytes.GetData(), Bytes.Num());
-	Mip.BulkData.Unlock();
-	Splat->UpdateResource();
+	if (Current && Current->Material()) Each(Current->Material(), Current->Region());
+	for (const TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
+		if (S.Value && S.Value != Current && S.Value->Material()) Each(S.Value->Material(), S.Value->Region());
 }
 
-void AAcTerrain::PlaceBorderRocks()
+int32 AAcTerrain::NumSets() const
 {
-	// `GameScene.borderRocks`: boulders and spires strewn over the border
-	// scenery, thickest near the map's edge.
-	const ac::GroundRect B = Map->bounds;
-	const double Reach = 28.0;
-	ac::SeededRandom Rng(Map->seed + 0xB0D3);
-	using Kind = ac::Doodad::Kind;
-	const Kind Kinds[] = {Kind::rock, Kind::rock, Kind::boulder, Kind::rockSpire};
-	const int64 Count = int64((B.width() + B.depth()) * 2 * Reach / 110);
-	int64 Placed = 0;
-	for (int64 K = 0; K < Count * 20 && Placed < Count; K++)
-	{
-		// Swift evaluates the two coordinates left to right.
-		const double X = Rng.range(B.minX - Reach, B.maxX + Reach);
-		const double Y = Rng.range(B.minZ - Reach, B.maxZ + Reach);
-		const ac::Vec2 P(X, Y);
-		const double D = Field->outside(P);
-		if (!(D > 1.5) || !(D < Reach) || !(Rng.unit() < 1 - 0.6 * D / Reach)) continue;
-		const Kind Which = Kinds[FMath::Min(int32(Rng.unit() * 4), 3)];
-		const double Scale = Rng.range(0.7, 1.5) * (1 + 0.5 * D / Reach);
-		const double Turn = Rng.range(0, 2 * ac::pi);
-		FAcBorderRock Rock;
-		Rock.Kind = Which;
-		Rock.Variant = uint32(K);
-		// SceneKit `eulerAngles.y = a` is Unreal yaw -a (AcSpace.h).
-		Rock.Transform = FTransform(FRotator(0.0, -FMath::RadiansToDegrees(Turn), 0.0),
-		                            AcSpace::ToWorld(P, Field->borderHeight(P) - 0.15 * Scale), FVector(Scale));
-		Rocks.Add(Rock);
-		Placed++;
-	}
+	return Sets.Num();
+}
+
+int32 AAcTerrain::NumSetsComplete() const
+{
+	int32 N = 0;
+	for (const TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets) N += S.Value && S.Value->IsComplete() ? 1 : 0;
+	return N;
 }
 
 // -AcTerrainView: the Swift game's default top-down framing and a stand-in
@@ -592,5 +884,5 @@ void AAcTerrain::StageViewIfAsked()
 	if (bViewStaged || !IsBuilt()) return;
 	if (!FParse::Param(Cmd, TEXT("AcTerrainView")) && !FParse::Value(Cmd, TEXT("AcTerrainView="), Zoom)) return;
 	bViewStaged = true;
-	StageTerrainView(GetWorld(), this, *Map);
+	StageTerrainView(GetWorld(), this, Current->Map());
 }

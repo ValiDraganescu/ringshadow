@@ -246,6 +246,16 @@ void AAcPilotPawn::OnGameStarted(UAcSimSubsystem& Sim)
 	// only the player gives the unit back.
 	if (const FAcMmoClient* Mmo = Sim.MmoClient(); Mmo && Driving())
 	{
+		// W4: walked over an edge, the same unit walking on under a new id:
+		// the seat, the view and its easing all stay (the world frame keeps
+		// every place where it was, AcSpace.h `Origin`).
+		if (Sim.IsSeamlessStart() && Mmo->Wanted())
+		{
+			UE_LOG(LogAutocraft, Log, TEXT("pilot: walked into a new region, driving on (#%lld is #%lld there)"), (long long)DrivenId,
+				(long long)*Mmo->Wanted());
+			DrivenId = *Mmo->Wanted();
+			return;
+		}
 		if (Mmo->Wanted())
 		{
 			LastEye.Reset();

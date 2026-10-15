@@ -141,6 +141,7 @@ void Predictor::draw(Mirror& mirror) const {
     // Carried over: the new region's mirror has no units yet; the game
     // draws this one until its first snapshot brings the server's.
     else if (carried_) sim.state.units.push_back(*u);
+    if (carried_) mirror.carried(*u);
 }
 
 } // namespace ac::net

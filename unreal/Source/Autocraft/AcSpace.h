@@ -34,16 +34,29 @@ namespace AcSpace
 	inline constexpr double CmPerCell = 100.0;
 	inline constexpr double CellsPerCm = 1.0 / CmPerCell;
 
+	/// The world frame (W4, seamless regions): where the simulation's ground
+	/// origin lies in Unreal space, cells. 0 out of the MMORPG world; in it,
+	/// the region the pilot is in's centre less the centre of the first
+	/// region of the session (FAcMmoClient sets it on each region change), so
+	/// every region keeps one place in Unreal space for the whole session and
+	/// nothing moves when the pilot walks from one into the next. Every sim ↔
+	/// Unreal point goes through `ToWorld`, `ToSim` or `Origin`.
+	inline ac::Vec2 GOrigin{0, 0};
+	inline ac::Vec2 Origin() { return GOrigin; }
+	inline void SetOrigin(const ac::Vec2 O) { GOrigin = O; }
+	/// The origin as an Unreal offset (cm, z 0).
+	inline FVector OriginCm() { return FVector(GOrigin.x * CmPerCell, GOrigin.y * CmPerCell, 0.0); }
+
 	/// A sim ground point and a height (cells) → an Unreal world location.
 	inline FVector ToWorld(const ac::Vec2 P, const double Height = 0.0)
 	{
-		return FVector(P.x * CmPerCell, P.y * CmPerCell, Height * CmPerCell);
+		return FVector((P.x + GOrigin.x) * CmPerCell, (P.y + GOrigin.y) * CmPerCell, Height * CmPerCell);
 	}
 
 	/// An Unreal world location → the sim ground point under it.
 	inline ac::Vec2 ToSim(const FVector& W)
 	{
-		return ac::Vec2(W.X * CellsPerCm, W.Y * CellsPerCm);
+		return ac::Vec2(W.X * CellsPerCm - GOrigin.x, W.Y * CellsPerCm - GOrigin.y);
 	}
 
 	/// An Unreal world location's height in cells.
@@ -56,7 +69,9 @@ namespace AcSpace
 	inline double ToCm(const double Cells) { return Cells * CmPerCell; }
 	inline double ToCells(const double Cm) { return Cm * CellsPerCm; }
 
-	/// A SceneKit point (x, y, z), Y up, in cells → an Unreal location.
+	/// A SceneKit point (x, y, z), Y up, in cells → an Unreal location, or
+	/// an offset (a model's part, a direction): no origin. A point of the
+	/// simulation's ground in SceneKit axes goes through `WorldFromSceneKit`.
 	inline FVector FromSceneKit(const double X, const double Y, const double Z)
 	{
 		return FVector(X * CmPerCell, Z * CmPerCell, Y * CmPerCell);
@@ -66,6 +81,17 @@ namespace AcSpace
 	inline FVector ToSceneKit(const FVector& W)
 	{
 		return FVector(W.X * CellsPerCm, W.Z * CellsPerCm, W.Y * CellsPerCm);
+	}
+
+	/// A point of the simulation (SceneKit axes, cells) → Unreal world, and
+	/// back: the world frame's origin added (`ToWorld`).
+	inline FVector WorldFromSceneKit(const double X, const double Y, const double Z)
+	{
+		return FromSceneKit(X, Y, Z) + OriginCm();
+	}
+	inline FVector SceneKitFromWorld(const FVector& W)
+	{
+		return ToSceneKit(W - OriginCm());
 	}
 
 	/// A SceneKit direction or scale (no units): (x, y, z) → (x, z, y).

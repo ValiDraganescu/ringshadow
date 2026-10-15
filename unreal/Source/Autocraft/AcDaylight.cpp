@@ -653,28 +653,38 @@ void AAcDaylight::Update(const double Time)
 	{
 		if (AAcTerrain* Terrain = AAcTerrain::Find(World); Terrain && Terrain->GetMaterial())
 		{
+			// On every ground set's material (W4: the regions round the
+			// pilot's too), again whenever the sets change.
 			const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+			const bool bSets = Terrain->MaterialsVersion() != TerrainVersion;
+			TerrainVersion = Terrain->MaterialsVersion();
 			const double Reach = Sim && Sim->IsRunning() ? AAcTerrain::BorderWidth(Sim->Map().bounds) : 90.0;
 			const FLinearColor Want(Haze.R, Haze.G, Haze.B, float(Reach));
-			if (!Want.Equals(TerrainHaze, 1.0f / 512))
-			{
-				TerrainHaze = Want;
-				Terrain->GetMaterial()->SetVectorParameterValue(TEXT("Haze"), Want);
-			}
+			const bool bHaze = bSets || !Want.Equals(TerrainHaze, 1.0f / 512);
+			TerrainHaze = Want;
 			// The wet ground (M_Terrain's `Wetness`): darker, glossy, puddles.
 			const float Wet = float(Weather.wetness * CVarWet.GetValueOnGameThread());
 			const float Drops = float(Weather.rain);
-			if (FMath::Abs(Wet - TerrainWet) > 1.0f / 256 || FMath::Abs(Drops - TerrainRain) > 1.0f / 256)
+			const bool bWet = bSets || FMath::Abs(Wet - TerrainWet) > 1.0f / 256 || FMath::Abs(Drops - TerrainRain) > 1.0f / 256;
+			if (bWet)
 			{
 				TerrainWet = Wet;
 				TerrainRain = Drops;
-				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("Wetness"), Wet);
-				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("RainRate"), Drops);
-				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("Ripples"), CVarRipples.GetValueOnGameThread());
-				Terrain->GetMaterial()->SetScalarParameterValue(TEXT("Gloss"), CVarGloss.GetValueOnGameThread());
 			}
-			// The region's ground palette, blended toward the neighbours' at the edges.
-			AcGroundLook::Apply(Terrain->GetMaterial(), Sim, Hour, Dark);
+			Terrain->ForEachMaterial([&](UMaterialInstanceDynamic* M, const int64 Region) {
+				if (bHaze) M->SetVectorParameterValue(TEXT("Haze"), Want);
+				if (bWet)
+				{
+					M->SetScalarParameterValue(TEXT("Wetness"), Wet);
+					M->SetScalarParameterValue(TEXT("RainRate"), Drops);
+					M->SetScalarParameterValue(TEXT("Ripples"), CVarRipples.GetValueOnGameThread());
+					M->SetScalarParameterValue(TEXT("Gloss"), CVarGloss.GetValueOnGameThread());
+				}
+				// Its region's ground palette, blended toward the neighbours' at the edges.
+				if (const TOptional<AAcTerrain::FGroundOverride>& Over = Terrain->GetGroundOverride(); Over && M == Terrain->GetMaterial())
+					AcGroundLook::ApplyGround(M, Over->Own, Over->Around, Hour, Dark);
+				else if (Region != INDEX_NONE || M == Terrain->GetMaterial()) AcGroundLook::Apply(M, Sim, Region, Hour, Dark);
+			});
 		}
 	}
 

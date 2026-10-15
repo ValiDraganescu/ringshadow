@@ -220,7 +220,7 @@ and its edges never show as a line or a fence.
   region cells. Outside it the ground rises into a wall `level` levels
   high (1…4, default 4), its cliff face at the outline, its top rising a
   level or so further out, rocks, boulders and spires strewn over it (the
-  build adds them, about one every 4.5 cells). Walls are no ground: nothing
+  build adds them, about one every 3.4 cells), the tops bare rock-strewn highland. Walls are no ground: nothing
   walks on them, a cliff hop does not land on them.
 - Round each opening the outline goes out to the edge: the passage is a gap
   in the walls, its faces 1.5 cells past each end of the span.

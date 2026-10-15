@@ -205,15 +205,19 @@ double TerrainField::walled(Vec2 p, double h) const {
     const Wall w = wall(p);
     if (!(w.coverage > 0)) return h;
     const RegionEdges& e = *map.edges;
-    // The wall's top: its level at the outline, rising a level or so further
-    // out (not near an edge, where both sides must meet).
+    // The wall's top: its level, up to most of a level more along the way
+    // (a broken skyline), rising another level or two further out, rough
+    // (not near an edge, where both sides must meet exactly at its level).
     const Vec2 q = fold(p);
-    const double away = smoothstep(2 * cliffHalf, 2 * cliffHalf + 8, w.outside);
-    const double rise = away * (1 - w.edge) * map.levelHeight * max(0.55 + 0.6 * noise.fbm(q.x * 0.08 - 7, q.y * 0.08 + 11), 0.0);
-    const double top = static_cast<double>(e.level) * map.levelHeight + rise;
+    const double free = 1 - w.edge;
+    const double away = smoothstep(0.3, 7, w.outside);
+    const double skyline = (0.5 + 0.5 * noise.fbm(q.x * 0.11 + 31, q.y * 0.11 - 17)) * 0.85;
+    const double ridge = away * max(0.7 + 0.8 * noise.fbm(q.x * 0.07 - 7, q.y * 0.07 + 11), 0.0);
+    const double rough = 0.18 * (0.5 + 0.5 * noise.fbm(q.x * 0.6 + 5, q.y * 0.6 - 3)) * away;
+    const double top = (static_cast<double>(e.level) + free * (skyline + ridge + rough)) * map.levelHeight;
     h += max(top - h, 0.0) * w.coverage;
-    // Craggy noise on its face, as on a cliff's.
-    h += 4 * w.coverage * (1 - w.coverage) * (1 - w.edge) * noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 0.45;
+    // Craggy noise on its face, more than a plain cliff's.
+    h += 4 * w.coverage * (1 - w.coverage) * free * noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 1.1;
     return h;
 }
 
@@ -302,6 +306,14 @@ TerrainField::Materials TerrainField::materials(Vec2 p) const {
         case GroundPatch::Kind::gravel: highland = max(highland, w * 0.8); break;
         case GroundPatch::Kind::scorch: scorch = max(scorch, w); break;
         }
+    }
+    // A region's walls (W4): bare rock-strewn highland, darker in patches,
+    // no grass (the same along a shared edge on both sides).
+    if (const Wall w = wall(p); w.coverage > 0) {
+        const double patchy = 0.5 + 0.5 * noise.fbm(q.x * 0.21 - 13, q.y * 0.21 + 5);
+        highland = highland + (1 - highland) * w.coverage;
+        grass *= 1 - w.coverage;
+        scorch = max(scorch, w.coverage * (0.3 + 0.25 * (patchy * (1 - w.edge) + 0.5 * w.edge)));
     }
     // Grass thins out on cliff faces and ramps.
     const RampBlend r = ramp(p);

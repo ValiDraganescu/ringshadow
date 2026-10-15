@@ -133,25 +133,13 @@ void AAcDoodads::PlaceAll(FAcSceneryBatches& Batches, const std::vector<ac::Dood
 
 void AAcDoodads::Rebuild(UAcSimSubsystem& Sim)
 {
-	const double Start = FPlatformTime::Seconds();
-	Map.Clear();
-	Border.Clear();
+	// The map's doodads and the border rocks are the ground set's now
+	// (AAcRegionGround, W4: each region's own, built ahead with its ground).
+	// Here: what the playground puts down.
 	Placed.Clear();
 	PlacedList.clear();
 	FAcSceneryOptions MapOptions;
-	Map.Init(this, Root, MapOptions, TEXT("Doodad"));
-	FAcSceneryOptions BorderOptions;
-	BorderOptions.bCastShadow = false;  // GameScene.borderRocks: castsShadow = false
-	Border.Init(this, Root, BorderOptions, TEXT("BorderRock"));
 	Placed.Init(this, Root, MapOptions, TEXT("PlacedDoodad"));
-
-	AAcTerrain* Terrain = AAcTerrain::SpawnFor(GetWorld());
-	if (!Terrain || !Terrain->IsBuilt())
-	{
-		UE_LOG(LogAutocraft, Error, TEXT("doodads: no terrain to stand on"));
-		return;
-	}
-	PlaceAll(Map, Sim.Map().doodads);
 	{
 		// One line a kind: how many, and where the first stands (to frame shots).
 		TMap<FString, TPair<int32, ac::Vec2>> Kinds;
@@ -165,24 +153,11 @@ void AAcDoodads::Rebuild(UAcSimSubsystem& Sim)
 			UE_LOG(LogAutocraft, Log, TEXT("doodads: %d %s, first at %.1f,%.1f"), K.Value.Key, *K.Key, K.Value.Value.x, K.Value.Value.y);
 		}
 	}
-
-	TArray<FAcSceneryModel> Rocks;
-	for (const FAcBorderRock& R : Terrain->BorderRocks())
-	{
-		if (const FAcModelInfo* M = ModelFor(R.Kind, R.Variant)) Rocks.Add(Border.AddModel(*M, R.Transform));
-	}
-	TArray<FAcSceneryModel*> Ptrs;
-	for (FAcSceneryModel& M : Rocks) Ptrs.Add(&M);
-	Border.Flush(Ptrs);
-
 	if (Sim.State().doodads)
 	{
 		PlacedList = *Sim.State().doodads;
 		PlaceAll(Placed, PlacedList);
 	}
-	UE_LOG(LogAutocraft, Log, TEXT("doodads: %d map doodads (%d instances, %d meshes), %d border rocks (%d instances), %d placed, in %.0f ms"),
-		int32(Sim.Map().doodads.size()), Map.NumInstances(), Map.NumComponents(), Terrain->BorderRocks().Num(), Border.NumInstances(),
-		int32(PlacedList.size()), (FPlatformTime::Seconds() - Start) * 1000.0);
 }
 
 void AAcDoodads::OnFrame(const FAcFrame& Frame)

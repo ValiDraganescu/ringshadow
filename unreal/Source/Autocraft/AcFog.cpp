@@ -1,4 +1,5 @@
 #include "AcFog.h"
+#include "AcSpace.h"
 
 #include "AcLog.h"
 #include "AcSimSubsystem.h"
@@ -188,7 +189,9 @@ void AAcFog::Rebuild(UAcSimSubsystem& Sim)
 	{
 		Material->SetTextureParameterValue(TEXT("Fog"), Vision);
 		const ac::Vec2 S = GridSize();
-		Material->SetVectorParameterValue(TEXT("Rect"), FLinearColor(float(Origin.x), float(Origin.y), float(1.0 / S.x), float(1.0 / S.y)));
+		// (In Unreal's frame: the world frame's origin on, W4.)
+		const ac::Vec2 At = Origin + AcSpace::Origin();
+		Material->SetVectorParameterValue(TEXT("Rect"), FLinearColor(float(At.x), float(At.y), float(1.0 / S.x), float(1.0 / S.y)));
 		Material->SetVectorParameterValue(TEXT("Texel"), FLinearColor(1.0f / float(W), 1.0f / float(H), 0.0f, 0.0f));
 	}
 	UE_LOG(LogAutocraft, Log, TEXT("fog: %dx%d half cells from (%.1f, %.1f)"), W, H, Origin.x, Origin.y);

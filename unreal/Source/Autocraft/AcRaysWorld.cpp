@@ -19,15 +19,18 @@
 
 // --- Space ---------------------------------------------------------------------
 
+// The rays' space is the simulation's (SceneKit axes, cells, the world
+// frame's origin taken off, W4): the ground grid and the units' positions
+// are in it.
 FAcF3 AcRaySpace::Point(const FVector& W)
 {
-	const FVector S = AcSpace::ToSceneKit(W);
+	const FVector S = AcSpace::SceneKitFromWorld(W);
 	return {float(S.X), float(S.Y), float(S.Z)};
 }
 
 FVector AcRaySpace::ToUnreal(const FAcF3 S)
 {
-	return AcSpace::FromSceneKit(S.x, S.y, S.z);
+	return AcSpace::WorldFromSceneKit(S.x, S.y, S.z);
 }
 
 FAcMat4 AcRaySpace::Matrix(const FTransform& T)
@@ -35,7 +38,9 @@ FAcMat4 AcRaySpace::Matrix(const FTransform& T)
 	// Unreal's matrix is row-vector (p' = p·M, row i the image of axis i);
 	// as a column-major matrix A(r, c) = M[c][r]. SceneKit's = swap·A·swap
 	// (Y↔Z on both sides; the cm cancel), translation swapped and in cells.
-	const FMatrix M = T.ToMatrixWithScale();
+	FTransform InSim = T;
+	InSim.AddToTranslation(-AcSpace::OriginCm());
+	const FMatrix M = InSim.ToMatrixWithScale();
 	static constexpr int Swap[3] = {0, 2, 1};
 	FAcMat4 Out;
 	for (int C = 0; C < 3; C++)

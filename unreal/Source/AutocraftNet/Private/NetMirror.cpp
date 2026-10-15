@@ -43,6 +43,10 @@ void Mirror::expect(int64_t unit, double heading) {
     sim_->pilot = Pilot(unit, heading);
 }
 
+void Mirror::carried(const Unit& u) {
+    if (snapshotId_ == 0) units_[u.id] = u;
+}
+
 RegionDescription Mirror::describe(const RegionDescription& like, const std::string& regionFile) {
     RegionDescription d = like;
     d.regionFile = regionFile;
@@ -57,6 +61,10 @@ RegionDescription Mirror::describe(const RegionDescription& like, const std::str
 }
 
 void Mirror::startOver() {
+    // The pilot's controls kept for the same unit (W4: a mirror's first
+    // snapshot is a new game to it, and the unit carried over a seamless
+    // edge walks on through it).
+    if (sim_->pilot) keptPilot_ = sim_->pilot;
     // The map's patches and wells as they start; the rest comes in snapshots.
     sim_->state = GameState::new_(*sim_->map);
     sim_->state.units.clear();
@@ -182,8 +190,10 @@ void Mirror::rebuild() {
             Pilot p;
             p.unit = *driven_;
             p.heading = units_[*driven_].heading;
+            if (keptPilot_ && keptPilot_->unit == *driven_) p = *keptPilot_;
             sim_->pilot = p;
         }
+        keptPilot_ = std::nullopt;
     } else {
         sim_->pilot = std::nullopt;
     }

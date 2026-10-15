@@ -405,7 +405,12 @@ Files in `Source/Autocraft/`; read the headers, they are the spec.
 
 - **`AcSpace.h`** (namespace `AcSpace`, header only). **1 cell = 100 cm**
   (`CmPerCell`). `ToWorld(ac::Vec2, heightCells) → FVector(x·100, y·100,
-  h·100)`, `ToSim(FVector) → Vec2`, `HeightToSim`, `ToCm`/`ToCells`.
+  h·100)`, `ToSim(FVector) → Vec2`, `HeightToSim`, `ToCm`/`ToCells`. In the
+  MMORPG world both add the world frame's `Origin` (W4: the pilot's region's
+  centre on the world's grid less the session's first region's, so regions
+  keep their place in Unreal space and walking between them moves
+  nothing); a simulation point in SceneKit axes goes through
+  `WorldFromSceneKit` / `SceneKitFromWorld`.
   SceneKit `(x, y, z)` → `FromSceneKit` = UE `(x, z, y)·100`
   (`ToSceneKit` back); `AxesFromSceneKit` for directions and scales;
   `QuatFromSceneKit(x, y, z, w) = FQuat(-x, -z, -y, w)`;

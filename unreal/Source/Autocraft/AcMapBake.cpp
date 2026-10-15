@@ -4,6 +4,7 @@
 #include "AcLog.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
+#include "AcTerrain.h"
 
 #include "Components/SceneCaptureComponent2D.h"
 #include "Dom/JsonObject.h"
@@ -74,10 +75,13 @@ void UAcMapBakeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		Failures += 1;
 		return;
 	}
+	int32 RowAt = 0;
 	for (const TSharedPtr<FJsonValue>& Row : *Rows)
 	{
+		int32 ColumnAt = -1;
 		for (const TSharedPtr<FJsonValue>& Entry : Row->AsArray())
 		{
+			ColumnAt += 1;
 			FString File;
 			if (!Entry->TryGetString(File)) continue;
 			FRegion R;
@@ -91,9 +95,14 @@ void UAcMapBakeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 			}
 			R.Id = Text(Parsed.file->id);
 			R.Choice = ac::MapChoice{Parsed.file->style, Parsed.file->size, 2};
+			R.Ground = Parsed.file->ground;
+			R.Column = ColumnAt;
+			R.Row = RowAt;
+			All.Add(R);
 			if (Only.Num() > 0 && !Only.Contains(R.Id)) continue;
 			Regions.Add(MoveTemp(R));
 		}
+		RowAt += 1;
 	}
 	UE_LOG(LogAutocraft, Log, TEXT("mapbake: %d regions of %s to %s at %d px a cell, hour %.1f"), Regions.Num(), *WorldPath, *Dir,
 		PixelsPerCell, Hour);
@@ -152,6 +161,17 @@ void UAcMapBakeSubsystem::Show(const int32 Index)
 	auto Next = std::make_unique<ac::net::Mirror>(D);
 	Sim->ShowStill(&Next->simulation(), Regions[Index].Choice);
 	Mirror = std::move(Next);
+	// Its own palette, and its neighbours' toward the edges.
+	if (AAcTerrain* Terrain = AAcTerrain::Find(GetWorld()))
+	{
+		AAcTerrain::FGroundOverride Over;
+		Over.Own = Regions[Index].Ground;
+		const int32 Step[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+		for (int32 E = 0; E < 4; E++)
+			for (const FRegion& O : All)
+				if (O.Column == Regions[Index].Column + Step[E][0] && O.Row == Regions[Index].Row + Step[E][1]) Over.Around[E] = O.Ground;
+		Terrain->SetGroundOverride(Over);
+	}
 	UE_LOG(LogAutocraft, Log, TEXT("mapbake: showing %s"), *Regions[Index].Id);
 }
 

@@ -19,7 +19,7 @@ namespace
 	}
 }
 
-FAcArtImage AcMinimapBake::Terrain(const ac::TerrainField& Field, const ac::GroundRect& B, const double PixelsPerCell)
+FAcArtImage AcMinimapBake::Terrain(const ac::TerrainField& Field, const ac::GroundRect& B, const double PixelsPerCell, const bool bOneThread)
 {
 	FAcArtImage I;
 	const int32 W = int32(B.width() * PixelsPerCell), H = int32(B.depth() * PixelsPerCell);
@@ -59,7 +59,7 @@ FAcArtImage AcMinimapBake::Terrain(const ac::TerrainField& Field, const ac::Grou
 			C *= Shade * (Slope > 1.2 ? 0.45 : 1);
 			Px = FColor(Byte(C.X), Byte(C.Y), Byte(C.Z), 255);
 		}
-	});
+	}, bOneThread ? EParallelForFlags::ForceSingleThread : EParallelForFlags::None);
 	return I;
 }
 

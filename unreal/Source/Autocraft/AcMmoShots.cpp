@@ -225,6 +225,19 @@
 //   04 the boss bar with her wounded
 //   05 her down: her body sinking, "THE MATRIARCH IS DOWN"
 //
+// -AcMmoShotsW4 (at 11:00, clear weather, every region been to unless told):
+// seamless regions (docs/mmorpg-m8.md W4), DIR/w4-NN-moment.png:
+//   p-<id> each region's palette from above, a free camera over its middle
+//     (the nine: `w4/grid.py` puts them in a grid)
+//   01 a border seen from inside: Prospect Landing's north wall, its cliff
+//   02 the same wall from higher: over it, the neighbour's ground beyond
+//   03 the east passage from Prospect Landing: the gap, Tern Ridge beyond
+//   04 the same passage from Tern Ridge, looking back
+//   (a measured walk east through it, nothing shot: the crossing's numbers,
+//   frame times and the unit's speed, logged as `w4: crossing:`)
+//   05-NN walking back west through it, a frame every 0.4 s, chase camera
+//   then the world map: 20 the world, 21 Prospect Landing filling it
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -281,8 +294,17 @@
 #include "Starfall.h"
 #include "Simulation.h"
 
+#include "AcTerrain.h"
+#include "AcSpace.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
+#include "Misc/App.h"
+#include "RHI.h"
+#include "RegionFile.h"
+#include "WorldAtlas.h"
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
@@ -391,6 +413,27 @@ namespace
 	int32 DKept = 0;
 	int64 DRealmOre = 0;
 	bool DStaged = false;
+	/// -AcMmoShotsW4: the free camera, the regions in grid order, the shot
+	/// counter, and the crossing's samples (each frame: real seconds, its
+	/// length, the frame number, the unit and the eye on the world's grid).
+	TWeakObjectPtr<ACameraActor> W4Cam;
+	TArray<int64> W4Order;
+	int32 W4Next = 0;
+	bool W4Set = false;
+	struct FW4Sample
+	{
+		double At = 0;
+		double Dt = 0;
+		uint64 Frame = 0;
+		ac::Vec2 Unit;
+		ac::Vec2 Eye;
+		/// The engine's last game thread, render thread and GPU frame, ms.
+		double Game = 0, Render = 0, Gpu = 0;
+	};
+	TArray<FW4Sample> W4Walk;
+	double W4LastAt = -1;
+	double W4ShotAt = -1;
+	int32 W4Frames = 0;
 	/// -AcMmoShotsD3: the turret card's kept asks, the keys pressed so far.
 	int32 D3Kept = 0;
 	int32 D3Step = 0;
@@ -650,6 +693,22 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		FScreenshotRequest::RequestScreenshot(Shots.Pending, /*bShowUI*/ true, /*bAddFilenameSuffix*/ false);
 		Advance();
 	};
+	// The same without the HUD (-AcMmoShotsW4's free camera).
+	auto ShootClean = [&](const TCHAR* Name, const FString& What) {
+		if (!Wanted(Name))
+		{
+			Shots.Skipped += 1;
+			Advance();
+			return;
+		}
+		Shots.Pending = FPaths::Combine(Shots.Dir, FString(Name) + TEXT(".png"));
+		IFileManager::Get().Delete(*Shots.Pending, false, true, true);
+		Shots.LastSize = -1;
+		Shots.Waited = 0;
+		UE_LOG(LogAutocraft, Display, TEXT("mmoshots: %s: %s"), Name, *What);
+		FScreenshotRequest::RequestScreenshot(Shots.Pending, /*bShowUI*/ false, /*bAddFilenameSuffix*/ false);
+		Advance();
+	};
 	// Drives the route: 1 there, 0 on the way, -1 stalled (4 s without half a cell).
 	auto Drive = [&]() -> int32 {
 		if (!U || !Pilot) return 0;
@@ -741,6 +800,14 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (double In = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoStarfall="), In)) FCommandLine::Append(TEXT(" -AcMmoStarfall=10"));
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=17"));
 		}
+		// -AcMmoShotsW4: late morning, clear, every region been to (the map).
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4")))
+		{
+			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
+			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
+			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
+				FCommandLine::Append(TEXT(" -AcMmoDevSeen=start,cold-fork,glass-flats,tern-ridge,slag-pockets,brine-pans,dust-terraces,rust-hollow,ashen-shelf"));
+		}
 		// -AcMmoShotsM2: some regions been to, the rest uncharted.
 		if (FString Seen; FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2")) && !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
 		{
@@ -806,6 +873,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3"))) T.Phase = 1800;
 			// -AcMmoShotsN3: only the Matriarch (1900-1911).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))) T.Phase = 1900;
+			// -AcMmoShotsW4: seamless regions (2000-2024).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4"))) T.Phase = 2000;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -3712,6 +3781,371 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 1712:
 		Check(Shots.Saved + Shots.Skipped == 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsW4
+	case 2000:
+	{
+		// Every ground set round Prospect Landing built (the eight
+		// neighbours' too), the minimap's pictures, a moment for the light.
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (!(U && Mmo->World() && Sets >= 9 && Ready == Sets && Since() > 3.0))
+		{
+			TimedOut(TEXT("w4: the nine regions' ground built"), 120);
+			return;
+		}
+		UE_LOG(LogAutocraft, Display, TEXT("w4: %d ground sets ready in %.1f s"), Sets, Since());
+		// The regions in the grid's order, north-west first.
+		W4Order.Reset();
+		const ac::net::WorldMessage& W = *Mmo->World();
+		for (int64 Row = 0; Row < W.rows; ++Row)
+			for (int64 Col = 0; Col < W.columns; ++Col)
+				for (size_t I = 0; I < W.regions.size(); ++I)
+					if (W.regions[I].column == Col && W.regions[I].row == Row) W4Order.Add(int64(I));
+		W4Next = 0;
+		W4Set = false;
+		// The free camera's pictures without the pilot's distance veil (it
+		// is the pilot's view, far from the free camera).
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(0, ECVF_SetByCode);
+		Advance();
+		return;
+	}
+	case 2001:
+	{
+		// Each region's palette from above: a free camera south of its middle.
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		if (W4Next >= W4Order.Num() || !Pc || !Terrain)
+		{
+			W4Next = 0;
+			W4Set = false;
+			T.Phase = 2010;
+			T.PhaseAt = Now;
+			return;
+		}
+		const ac::net::WorldMessage& W = *Mmo->World();
+		const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(W, {});
+		const ac::net::atlas::Place* There = ac::net::atlas::placeOf(Places, W4Order[W4Next]);
+		if (!There) return;
+		const ac::Vec2 Mid = There->centre() - Terrain->CurrentCentre();
+		if (!W4Set)
+		{
+			if (!W4Cam.IsValid())
+			{
+				FActorSpawnParameters Params;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+				W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+				W4Cam->GetCameraComponent()->SetFieldOfView(70.f);
+			}
+			const FVector Eye = AcSpace::ToWorld(Mid + ac::Vec2(0, 62), 72);
+			const FVector At = AcSpace::ToWorld(Mid, 2);
+			W4Cam->SetActorLocationAndRotation(Eye, (At - Eye).Rotation());
+			W4Set = true;
+			W4ShotAt = Now;
+		}
+		if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		if (Now - W4ShotAt < 2.0) return;
+		const FString Id = Utf(W.regions[size_t(W4Order[W4Next])].id);
+		W4Next += 1;
+		W4Set = false;
+		ShootClean(*FString::Printf(TEXT("w4-p-%s"), *Id), FString::Printf(TEXT("%s's ground from above: its palette, its walls"), *Id));
+		T.Phase = 2001;
+		return;
+	}
+	case 2010:
+	case 2011:
+	case 2012:
+	case 2013:
+	{
+		// The free camera at the border and the passage, Prospect Landing's
+		// cells (past 144: Tern Ridge's ground beyond its east edge).
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		if (!Pc || !Terrain || !W4Cam.IsValid()) return;
+		if (!W4Set)
+		{
+			// The north wall: the outline's corner furthest north between x 16
+			// and 52 (west of the north passage).
+			ac::Vec2 Wall(34, 10);
+			FString Text;
+			if (FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectDir(), TEXT("server/regions/start.json"))))
+			{
+				const ac::region::Parsed P = ac::region::parse(TCHAR_TO_UTF8(*Text));
+				if (P.file && P.file->border)
+				{
+					double Best = 1e9;
+					for (const ac::Vec2 Q : P.file->border->outline)
+						if (Q.x > 16 && Q.x < 52 && Q.y > 2 && Q.y < Best) Best = Q.y, Wall = Q;
+				}
+			}
+			const auto G = [&](const double X, const double Y) { const FVector2D V = Cell(X, Y); return ac::Vec2(V.X, V.Y); };
+			const auto Ground = [&](const ac::Vec2 P) { return Terrain->FieldHeight(P); };
+			ac::Vec2 EyeAt, LookAt;
+			double EyeH = 0, LookH = 0;
+			switch (T.Phase)
+			{
+			case 2010:  // The wall from inside, a few metres up.
+				EyeAt = G(Wall.x - 6, Wall.y + 22);
+				LookAt = G(Wall.x, Wall.y);
+				EyeH = Ground(EyeAt) + 4.0;
+				LookH = Ground(EyeAt) + 6.5;
+				break;
+			case 2011:  // Over it: the neighbour's ground beyond.
+				EyeAt = G(Wall.x - 6, Wall.y + 26);
+				LookAt = G(Wall.x, Wall.y - 45);
+				EyeH = Ground(EyeAt) + 34.0;
+				LookH = 0.0;
+				break;
+			case 2012:  // The east passage from Prospect Landing.
+				EyeAt = G(118, 48);
+				LookAt = G(170, 48);
+				EyeH = Ground(EyeAt) + 4.0;
+				LookH = Ground(G(140, 48)) + 1.0;
+				break;
+			default:  // The same passage from Tern Ridge, looking back.
+				EyeAt = G(170, 48);
+				LookAt = G(118, 48);
+				EyeH = Ground(G(143, 48)) + 4.0;
+				LookH = Ground(G(140, 48)) + 1.0;
+				break;
+			}
+			const FVector Eye = AcSpace::ToWorld(EyeAt, EyeH);
+			const FVector At = AcSpace::ToWorld(LookAt, LookH);
+			W4Cam->SetActorLocationAndRotation(Eye, (At - Eye).Rotation());
+			W4Set = true;
+			W4ShotAt = Now;
+		}
+		if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		if (Now - W4ShotAt < 2.0) return;
+		W4Set = false;
+		static const TCHAR* const Names[] = {TEXT("w4-01-wall-inside"), TEXT("w4-02-over-the-wall"), TEXT("w4-03-passage-from-start"),
+			TEXT("w4-04-passage-from-tern-ridge")};
+		static const TCHAR* const Whats[] = {TEXT("Prospect Landing's north wall from inside: the cliff band, its rocks"),
+			TEXT("over the wall: Cold Fork's ground beyond it"), TEXT("the east passage from Prospect Landing: the gap, Tern Ridge beyond"),
+			TEXT("the same passage from Tern Ridge, looking back into Prospect Landing")};
+		ShootClean(Names[T.Phase - 2010], Whats[T.Phase - 2010]);
+		return;
+	}
+	case 2014:
+	{
+		// Back in the pilot's chase view; to the east passage's mouth: east
+		// along the pad's row, round the well at (128, 50) on its north side.
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		if (Pc && Pilot && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(1, ECVF_SetByCode);
+		if (Since() < 1.0) return;
+		Route({Cell(118, 48), Cell(124, 46), Cell(134, 47)});
+		Mmo->ClearPredictionStats();
+		W4Walk.Reset();
+		W4LastAt = -1;
+		Advance();
+		return;
+	}
+	case 2015:
+	{
+		const int32 R = Drive();
+		if (R < 0) return Stalled(TEXT("w4: to the east passage"));
+		if (R == 0) return;
+		Advance();
+		return;
+	}
+	case 2016:
+	{
+		// The measured walk: east through the passage, nothing shot, every
+		// frame sampled from 8 cells before the edge to 14 into Tern Ridge.
+		if (!Pilot || !U) return;
+		Pilot->SetTestInput(FVector2D(0, -1), 0.0);
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const APlayerController* Pc2 = GetWorld()->GetFirstPlayerController();
+		if (Terrain && Pc2 && Pc2->PlayerCameraManager)
+		{
+			const std::optional<ac::Unit> Shown = Mmo->Prediction().shown();
+			const ac::Vec2 Unit = (Shown ? Shown->position : U->position) + Terrain->CurrentCentre();
+			const FVector Cam = Pc2->PlayerCameraManager->GetCameraLocation() + FVector(GetWorld()->OriginLocation);
+			W4Walk.Add({Now, FApp::GetDeltaTime(), GFrameCounter, Unit, ac::Vec2(Cam.X / 100.0, Cam.Y / 100.0),
+				FPlatformTime::ToMilliseconds(GGameThreadTime), FPlatformTime::ToMilliseconds(GRenderThreadTime),
+				FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles())});
+		}
+		const ac::GroundRect& B = M->simulation().map->bounds;
+		const double X = U->position.x - B.minX;
+		// (The mirror's region: the World message may say the next a frame early.)
+		const TOptional<FAcRegionAround> Now4 = Mmo->HereGround();
+		if (Now4 && Now4->Id == TEXT("tern-ridge") && X > 14)
+		{
+			Stop(0.0);
+			Advance();
+		}
+		else TimedOut(TEXT("w4: walked through into Tern Ridge"), 40);
+		return;
+	}
+	case 2017:
+	{
+		// The crossing's numbers: frame times and the unit's pace round the
+		// frame the change came in, against the walk before it.
+		const uint64 Change = Sim->SeamlessFrame();
+		int32 At = INDEX_NONE;
+		for (int32 I = 0; I < W4Walk.Num(); ++I)
+			if (At == INDEX_NONE && W4Walk[I].Frame >= Change) At = I;
+		Check(Sim->SeamlessChanges() >= 1 && At != INDEX_NONE && At > 40 && At + 30 < W4Walk.Num(),
+			FString::Printf(TEXT("w4: a seamless change in the walk (%d changes, at sample %d of %d)"), Sim->SeamlessChanges(), At, W4Walk.Num()));
+		Check(Mmo->LastWasSeamless() && Mmo->LastTookPrepared(), TEXT("w4: the change was seamless, its mirror made ahead"));
+		if (At != INDEX_NONE && At > 40 && At + 30 < W4Walk.Num())
+		{
+			TArray<double> Before;
+			for (int32 I = 1; I < At - 5; ++I) Before.Add(W4Walk[I].Dt * 1000.0);
+			Before.Sort();
+			const double Median = Before[Before.Num() / 2], P95 = Before[FMath::Min(Before.Num() - 1, int32(Before.Num() * 0.95))];
+			double Worst = 0, WorstNear = 0;
+			for (int32 I = At - 2; I <= At + 3; ++I) Worst = FMath::Max(Worst, W4Walk[I].Dt * 1000.0);
+			for (int32 I = At - 30; I <= At + 30; ++I) WorstNear = FMath::Max(WorstNear, W4Walk[I].Dt * 1000.0);
+			// The pace on the world's grid: before (cells/s), and over each
+			// 0.25 s window (the unit steps on the 60 Hz input ticks, not on
+			// every frame) from 10 frames before the change to 20 after.
+			const auto Pace = [&](const int32 I, const bool bEye) {
+				int32 J = I;
+				while (J > 1 && W4Walk[I].At - W4Walk[J].At < 0.25) --J;
+				const double Dt = W4Walk[I].At - W4Walk[J].At;
+				const ac::Vec2 A = bEye ? W4Walk[J].Eye : W4Walk[J].Unit, Bp = bEye ? W4Walk[I].Eye : W4Walk[I].Unit;
+				return Dt > 1e-4 ? ac::distance(A, Bp) / Dt : 0.0;
+			};
+			double Sum = 0, Time = 0;
+			for (int32 I = At - 40; I < At - 10; ++I)
+			{
+				Sum += ac::distance(W4Walk[I - 1].Unit, W4Walk[I].Unit);
+				Time += W4Walk[I].At - W4Walk[I - 1].At;
+			}
+			const double Mean = Time > 0 ? Sum / Time : 0;
+			double Lo = 1e9, Hi = 0, EyeLo = 1e9, EyeHi = 0, Jump = 0;
+			for (int32 I = At - 10; I <= At + 20; ++I)
+			{
+				Lo = FMath::Min(Lo, Pace(I, false));
+				Hi = FMath::Max(Hi, Pace(I, false));
+				EyeLo = FMath::Min(EyeLo, Pace(I, true));
+				EyeHi = FMath::Max(EyeHi, Pace(I, true));
+				Jump = FMath::Max(Jump, ac::distance(W4Walk[I - 1].Eye, W4Walk[I].Eye));
+			}
+			// And how far the unit falls behind (or runs ahead of) the line it
+			// walked before the change, carried on through it: a stop, a jump.
+			double Lag = 0;
+			{
+				const FW4Sample& A0 = W4Walk[At - 60 > 0 ? At - 60 : 1];
+				const FW4Sample& A1 = W4Walk[At - 5];
+				const double Span = A1.At - A0.At;
+				const ac::Vec2 Vel = Span > 0 ? (A1.Unit - A0.Unit) / Span : ac::Vec2(0, 0);
+				// Along the way it walked (it was still turning onto it).
+				const double Speed = ac::length(Vel);
+				const ac::Vec2 Dir = Speed > 1e-6 ? Vel / Speed : ac::Vec2(1, 0);
+				for (int32 I = At - 5; I <= At + 40; ++I)
+				{
+					const double Expected = Speed * (W4Walk[I].At - A1.At);
+					const double Went = ac::dot(W4Walk[I].Unit - A1.Unit, Dir);
+					Lag = FMath::Max(Lag, FMath::Abs(Went - Expected));
+				}
+			}
+			const FString Line = FString::Printf(
+				TEXT("w4: crossing: frames before it %.1f ms median, %.1f ms 95th percentile; at the change (2 before to 3 after) %.1f ms at most, "
+					 "%.1f ms within 30 frames; the unit %.2f cells/s before, %.2f..%.2f cells/s each frame round it; the eye %.2f..%.2f cells/s, "
+					 "its largest step %.3f cells; at most %.3f cells off the line it walked before"),
+				Median, P95, Worst, WorstNear, Mean, Lo, Hi, EyeLo, EyeHi, Jump, Lag);
+			const ac::net::Predictor::Stats& Ps = Mmo->Prediction().stats();
+			UE_LOG(LogAutocraft, Display, TEXT("%s"), *Line);
+			UE_LOG(LogAutocraft, Display, TEXT("w4: crossing: the prediction corrected %lld times over the walk, by %.4f cells at most (%lld snaps)"),
+				(long long)Ps.corrections, Ps.errorMax, (long long)Ps.snaps);
+			FFileHelper::SaveStringToFile(Line + TEXT("\n"), *FPaths::Combine(Shots.Dir, TEXT("w4-crossing.txt")));
+			// Each frame round it, for the record.
+			FString Rows = TEXT("frame,ms,unit_x,unit_y,eye_x,eye_y,game_ms,render_ms,gpu_ms\n");
+			for (int32 I = FMath::Max(1, At - 60); I < FMath::Min(W4Walk.Num(), At + 60); ++I)
+				Rows += FString::Printf(TEXT("%lld,%.2f,%.4f,%.4f,%.4f,%.4f,%.2f,%.2f,%.2f\n"), (long long)(int64(W4Walk[I].Frame) - int64(Change)),
+					W4Walk[I].Dt * 1000.0, W4Walk[I].Unit.x, W4Walk[I].Unit.y, W4Walk[I].Eye.x, W4Walk[I].Eye.y, W4Walk[I].Game, W4Walk[I].Render,
+					W4Walk[I].Gpu);
+			FFileHelper::SaveStringToFile(Rows, *FPaths::Combine(Shots.Dir, TEXT("w4-crossing.csv")));
+			Check(Worst <= FMath::Max(P95 * 1.25, Median + 4.0),
+				FString::Printf(TEXT("w4: no hitch at the change (%.1f ms against %.1f ms median, %.1f ms 95th)"), Worst, Median, P95));
+			Check(Lo > Mean * 0.9 && Hi < Mean * 1.1, FString::Printf(TEXT("w4: the unit's pace held (%.2f..%.2f against %.2f cells/s)"), Lo, Hi, Mean));
+			Check(Lag < 0.12, FString::Printf(TEXT("w4: no stop, no jump (%.3f cells off its line, under one input tick's step)"), Lag));
+			Check(Jump < 0.5, FString::Printf(TEXT("w4: no camera jump (largest step %.3f cells)"), Jump));
+		}
+		Advance();
+		return;
+	}
+	case 2018:
+		// A breath, then back west through it, a picture every 0.4 s.
+		if (Since() < 1.0) return;
+		W4Frames = 0;
+		W4ShotAt = -1;
+		Advance();
+		return;
+	case 2019:
+	{
+		if (!Pilot || !U) return;
+		Pilot->SetTestInput(FVector2D(0, -1), ac::pi);
+		const ac::GroundRect& B = M->simulation().map->bounds;
+		const double X = U->position.x - B.minX;
+		const TOptional<FAcRegionAround> Now4 = Mmo->HereGround();
+		const FString In4 = Now4 ? Now4->Id : FString();
+		// From 9 cells before Tern Ridge's west edge to 9 into Prospect Landing.
+		const bool bIn = (In4 == TEXT("tern-ridge") && X < 9) || (In4 == TEXT("start") && X > 135);
+		if (In4 == TEXT("start") && X <= 135)
+		{
+			Stop(ac::pi);
+			T.Phase = 2020;
+			T.PhaseAt = Now;
+			return;
+		}
+		if (bIn && (W4ShotAt < 0 || Now - W4ShotAt > 0.4))
+		{
+			W4ShotAt = Now;
+			W4Frames += 1;
+			Shoot(*FString::Printf(TEXT("w4-%02d-walk-%s"), 4 + W4Frames, *In4),
+				FString::Printf(TEXT("walking west through the passage, frame %d, %s"), W4Frames, *Where()));
+			T.Phase = 2019;
+			return;
+		}
+		TimedOut(TEXT("w4: walked back into Prospect Landing"), 60);
+		return;
+	}
+	case 2020:
+		Check(W4Frames >= 6, FString::Printf(TEXT("w4: %d frames of the walk through"), W4Frames));
+		ToggleWorldMap();
+		Advance();
+		return;
+	case 2021:
+	{
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map || Since() < 1.5) return;
+		Map->ShowWorld();
+		Advance();
+		return;
+	}
+	case 2022:
+	{
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map || Since() < 1.0) return;
+		Check(Map->PicturesShown() == 9, FString::Printf(TEXT("w4: %d regions drawn from their pictures"), Map->PicturesShown()));
+		Shoot(TEXT("w4-20-world-map"), TEXT("the world map: the nine regions' new shapes, walls and passages, stitched"));
+		return;
+	}
+	case 2023:
+	{
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map) return;
+		if (!W4Set)
+		{
+			W4Set = true;
+			Check(Map->ShowRegion(TEXT("start"), 1.6), TEXT("w4: the map on Prospect Landing"));
+			return;
+		}
+		if (Since() < 1.0) return;
+		W4Set = false;
+		Shoot(TEXT("w4-21-world-map-start"), TEXT("the world map round Prospect Landing: its walls, its passages, the neighbours'"));
+		return;
+	}
+	case 2024:
+		ToggleWorldMap();
+		if (W4Cam.IsValid()) W4Cam->Destroy();
+		Check(Shots.Saved + Shots.Skipped >= 9 + 4 + 6 + 2, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsK2

@@ -158,8 +158,11 @@ void AAcRingshadow::Tick(const float DeltaSeconds)
 	{
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepDirX"), float(Band->dir.x));
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepDirY"), float(Band->dir.y));
-		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepLead"), float(Band->lead));
-		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepTrail"), float(Band->trail));
+		// The materials measure across the band in Unreal's frame: the world
+		// frame's origin along it on (W4).
+		const double Along = ac::dot(AcSpace::Origin(), Band->dir);
+		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepLead"), float(Band->lead + Along));
+		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepTrail"), float(Band->trail + Along));
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("SweepSoft"), float(Band->soft));
 		// The ring's arc on the sky dome (M_AcSky), behind the clouds.
 		UKismetMaterialLibrary::SetScalarParameterValue(this, WorldParameters, TEXT("RingOn"), 1.0f);

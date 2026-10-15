@@ -1,5 +1,8 @@
 #include "AcMinimap.h"
 
+#include "AcTerrain.h"
+#include "Async/Async.h"
+
 #include "AcMissions.h"
 
 #include "AcMmo.h"
@@ -87,6 +90,9 @@ void UAcMinimapSubsystem::Deinitialize()
 	Main.Reset();
 	Others.Reset();
 	TerrainTexture.Reset();
+	Baked.Reset();
+	for (TPair<FString, TFuture<FAcArtImage>>& B : Baking) B.Value.Wait();
+	Baking.Reset();
 	Super::Deinitialize();
 }
 
@@ -101,9 +107,22 @@ void UAcMinimapSubsystem::Build(const UAcSimSubsystem& Sim)
 	const ac::MapDefinition& Map = Sim.Map();
 	// The window game has a free camera: the minimap covers the map's bounds.
 	MapBounds = Map.bounds;
-	const ac::TerrainField Field(Map);
-	const FAcArtImage Image = AcMinimapBake::Terrain(Field, MapBounds, PixelsPerCell);
-	TerrainTexture.Reset(AcCabArt::ToTexture(Image, TEXT("AcMinimapTerrain")));
+	// Baked ahead (W4), or now.
+	const FString Key = AAcTerrain::KeyOf(Map);
+	FAcArtImage Image;
+	if (const TSharedPtr<TStrongObjectPtr<UTexture2D>>* Ahead = Baked.Find(Key); Ahead && (*Ahead)->IsValid())
+	{
+		TerrainTexture.Reset((*Ahead)->Get());
+		Image.Width = TerrainTexture->GetSizeX();
+		Image.Height = TerrainTexture->GetSizeY();
+	}
+	else
+	{
+		const ac::TerrainField Field(Map);
+		Image = AcMinimapBake::Terrain(Field, MapBounds, PixelsPerCell);
+		TerrainTexture.Reset(AcCabArt::ToTexture(Image, TEXT("AcMinimapTerrain")));
+		if (Sim.IsMmo()) Baked.Add(Key, MakeShared<TStrongObjectPtr<UTexture2D>>(TerrainTexture.Get()));
+	}
 	const FVector2D Size = FAcCabLayout::MinimapSizeFor(MapBounds.width(), MapBounds.depth());
 	if (!Main)
 	{
@@ -174,11 +193,46 @@ bool UAcMinimapSubsystem::PressAt(const FVector2D Fraction)
 	return bOn;
 }
 
+void UAcMinimapSubsystem::BakeAround(const UAcSimSubsystem& Sim)
+{
+	const FAcMmoClient* Mmo = Sim.MmoClient();
+	if (!Mmo) return;
+	for (auto It = Baking.CreateIterator(); It; ++It)
+	{
+		if (!It.Value().IsReady()) continue;
+		const FAcArtImage Image = It.Value().Get();
+		Baked.Add(It.Key(), MakeShared<TStrongObjectPtr<UTexture2D>>(AcCabArt::ToTexture(Image, TEXT("AcMinimapTerrain"))));
+		It.RemoveCurrent();
+		// One a frame: a texture's upload is small, but not nothing.
+		break;
+	}
+	TSet<FString> Keep;
+	Keep.Add(AAcTerrain::KeyOf(Sim.Map()));
+	for (const FAcRegionAround& A : Mmo->Around())
+		if (A.Map) Keep.Add(AAcTerrain::KeyOf(*A.Map));
+	for (const FAcRegionAround& A : Mmo->Around())
+	{
+		if (!A.Map) continue;
+		const FString Key = AAcTerrain::KeyOf(*A.Map);
+		if (Baked.Contains(Key) || Baking.Contains(Key)) continue;
+		// One at a time, a while after the region changed, on one thread
+		// (never crowding the frames, W4).
+		if (!Baking.IsEmpty() || Mmo->SinceRegionChange() < 2.0) break;
+		Baking.Add(Key, Async(EAsyncExecution::ThreadPool, [Map = A.Map, Ppc = PixelsPerCell]() {
+			const ac::TerrainField Field(*Map);
+			return AcMinimapBake::Terrain(Field, Map->bounds, Ppc, true);
+		}));
+	}
+	for (auto It = Baked.CreateIterator(); It; ++It)
+		if (!Keep.Contains(It.Key())) It.RemoveCurrent();
+}
+
 void UAcMinimapSubsystem::OnFrame(const FAcFrame& Frame)
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim || !Sim->IsRunning() || !Main) return;
 	Mount();
+	BakeAround(*Sim);
 
 	TArray<TSharedPtr<SAcMinimap>> All = {Main};
 	Others.RemoveAll([](const TWeakPtr<SAcMinimap>& W) { return !W.IsValid(); });

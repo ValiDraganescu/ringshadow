@@ -38,6 +38,9 @@ public:
     /// carried over a seamless edge), so the game and the prediction drive
     /// it at once. The first snapshot says for itself.
     void expect(int64_t unit, double heading);
+    /// Before its first snapshot: the carried unit as drawn (`Predictor::draw`),
+    /// so `unit` finds it too.
+    void carried(const Unit& u);
 
     Mirror(const Mirror&) = delete;
     Mirror& operator=(const Mirror&) = delete;
@@ -91,6 +94,8 @@ private:
     int64_t lastInputTick_ = -1;
     int64_t game_ = -1;
     std::optional<int64_t> driven_;
+    /// The pilot as it was before a `startOver`, for the next rebuild.
+    std::optional<Pilot> keptPilot_;
     std::optional<Sky> sky_;
     std::optional<double> xp_;
     bool playersKnown_ = false;

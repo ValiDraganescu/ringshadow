@@ -13,6 +13,7 @@
 #include "Misc/Paths.h"
 #include "Flight.h"
 #include "Progression.h"
+#include "WorldAtlas.h"
 #include "Rules.h"
 
 #include <string>
@@ -42,6 +43,13 @@ FAcMmoClient::FAcMmoClient() = default;
 FAcMmoClient::~FAcMmoClient()
 {
 	Stop();
+	// The regions still being made ahead (W4): waited for and let go.
+	for (TPair<FString, TFuture<FRegionBuilt*>>& B : Building)
+	{
+		B.Value.Wait();
+		delete B.Value.Get();
+	}
+	Building.Reset();
 }
 
 FString FAcMmoClient::BundledServerDir()
@@ -487,6 +495,9 @@ void FAcMmoClient::Connect(const double Now)
 	LagIo = MakeUnique<ac::net::LagSimulator>(Socket, uint64(FPlatformTime::Cycles64()));
 	LagIo->setDefault(LagNow);
 	Net = MakeUnique<ac::net::Client>(*LagIo, Config);
+	MirrorRegion.clear();
+	Session.Reset();
+	MirrorsMade.Reset();
 	Net->onSnapshot = [this](const ac::net::SnapshotPart& Part)
 	{
 		// The server's clock, and where everyone stood in this snapshot.
@@ -606,6 +617,8 @@ void FAcMmoClient::Tick(const double Now)
 	}
 	// The driven unit put right by what the server said.
 	if (ac::net::Mirror* Mm = Net->mirror()) Predictor.reconcile(*Mm);
+	// The regions round the pilot's, made ahead (W4).
+	PrepareAround();
 	ReadReplies();
 	for (ac::GameEvent& E : Net->events) Events.push_back(std::move(E));
 	Net->events.clear();
@@ -665,7 +678,18 @@ void FAcMmoClient::Blend(const double Now)
 	ac::net::Mirror* M = Mirror();
 	const double Dt = LastBlend > 0 ? FMath::Clamp(Now - LastBlend, 0.0, 0.25) : 0.0;
 	LastBlend = Now;
-	if (!M || M->snapshotId() == 0) return;
+	if (!M) return;
+	// Carried over a seamless edge, before the new region's first snapshot:
+	// the driven unit drawn on from the prediction (W4).
+	if (M->snapshotId() == 0)
+	{
+		if (bLastSeamless && Predictor.predicted())
+		{
+			Predictor.ease(Dt);
+			Predictor.draw(*M);
+		}
+		return;
+	}
 	if (const std::optional<double> At = Interp.renderTick(Now))
 	{
 		Interp.apply(*At, M->simulation().state.units, M->driven());
@@ -1146,6 +1170,55 @@ TArray<FString> FAcMmoClient::TakeNotes()
 
 void FAcMmoClient::OnRegionChange(const ac::net::RegionChange& Change)
 {
+	// W4: over an edge into a neighbour, the same unit walking on (not a
+	// flight): seamless. Its prediction carries over into the new mirror, the
+	// game moves the world's origin by the regions' distance and draws on.
+	MirrorsMade.Reset();
+	bLastSeamless = false;
+	RegionChangedAt = LastNow;
+	const ac::net::WorldMessage* W = World();
+	if (W && !W->flyingTo && Change.driven && Predictor.predicted() && Net->mirror())
+	{
+		const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, {});
+		const ac::net::atlas::Place* From = ac::net::atlas::placeOf(Places, MirrorIndex());
+		const ac::net::atlas::Place* To = ac::net::atlas::placeOf(Places, Change.regionId);
+		if (From && To && From != To)
+		{
+			const ac::Vec2 D = To->centre() - From->centre();
+			const bool bSide = (FMath::Abs(D.x) < 1e-6) != (FMath::Abs(D.y) < 1e-6);
+			if (bSide)
+			{
+				Interp.reset();
+				Predictor.carryOver(*Net->mirror(), *Change.driven, ac::Vec2(-D.x, -D.y), Change.visit);
+				// The controls as they were: the inputs go on unbroken (the
+				// pawn writes the new mirror's pilot from its next frame on).
+				if (ac::Simulation& NewSim = Net->mirror()->simulation(); NewSim.pilot)
+				{
+					const ac::net::PilotInput& Was = Net->steer;
+					NewSim.pilot->walk = Was.walk;
+					NewSim.pilot->heading = Was.heading;
+					NewSim.pilot->hold = Was.hold;
+					NewSim.pilot->mend = Was.mend;
+					NewSim.pilot->crosshair = Was.crosshair;
+				}
+				WantedUnit = Change.driven;
+				bAutoTaken = true;
+				bAdopt = false;
+				bArriving = false;
+				SeenMirror = Net->mirror();
+				SeenGame = -1;
+				MirrorGeneration += 1;
+				SeamlessShift = D;
+				bLastSeamless = true;
+				MirrorRegion = Change.regionId;
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: region change %lld: walked into %s (%s), driving #%lld, seamless (%+.0f, %+.0f cells, mirror %s)"),
+					(long long)Change.visit, *Text(Change.regionId), *Text(Change.region.mapName), (long long)*Change.driven, D.x, D.y,
+					Net->tookPrepared() ? TEXT("made ahead") : TEXT("built now"));
+				return;
+			}
+		}
+	}
+	MirrorRegion = Change.regionId;
 	// A new region: what was blended and predicted was the old one's.
 	Interp.reset();
 	Predictor.reset();

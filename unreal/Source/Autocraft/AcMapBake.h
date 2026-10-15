@@ -20,6 +20,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RegionFile.h"
 #include "Subsystems/WorldSubsystem.h"
 
 #include "NetMirror.h"
@@ -52,6 +53,10 @@ private:
 		FString Id;
 		FString Text;
 		ac::MapChoice Choice;
+		/// Its palette and its place on the grid (W3, W4): the ground is
+		/// painted as in the game, blended toward the neighbours' at the edges.
+		ac::region::Ground Ground = ac::region::Ground::plain;
+		int32 Column = 0, Row = 0;
 	};
 	/// Shows region `Index`, or captures it once it has settled.
 	void Show(int32 Index);
@@ -59,6 +64,8 @@ private:
 
 	FString Dir;
 	TArray<FRegion> Regions;
+	/// Every region of the world (the neighbours' palettes).
+	TArray<FRegion> All;
 	int32 PixelsPerCell = 8;
 	double Hour = 10.5;
 	int32 Current = INDEX_NONE;
