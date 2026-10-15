@@ -757,3 +757,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N R3 shots r3-01..04: the Cold Fork Citadel built, turrets on, H screen there; core 505, net 92, server 321.
 - I wt1's parked X2 edits (WorldStore, protocol 31) fail 6 server tests in its tree; the R3 commit alone passes.
 - T web: the Citadels post live at /blog/citadels (7b9e4a1).
+- T X2 done aa8272c: the away report; home lines under ENTER THE REACH, a toast, KSTR's welcome, a Journal page; protocol 31, schema 23.
+- D away rows from the server's own ledger (mercs, frontier deeds, raids, canyons, the Matriarch, projects); sent once, then cleared; first.away beside the save for the home screen.
+- T goals after the Foundry and the Lab (user's "what now?"): Order a Module, Fit It, Research Mk II; KSTR lines made (f510428).
+- N X2 shots x2-01..03; core 505, net 95, server 325; clean checkout.
+- I protocol 31 and schema 23: the user's game and server both need the new build (rebuilt here; the user restarts).
