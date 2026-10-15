@@ -724,3 +724,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N R2: prices 2,000/2,500/4,000/3,000 ore + 100/150/300/200 MH, x1.2 per repeat; Beacon fare 15 -> 8 MH; Relay midnight 673 -> 1,179 cells.
 - N R2: 8 KSTR project lines 3.3-5.6 s made offline.
 - T M9 complete but K3 leftovers (wt1).
+- I W5: the core drives one pilot per simulation (M1 limit); a second human in the same region can't drive.
+- D W5 (manager): multi-driver core: Simulation keeps pilots keyed by unit; the RTS keeps one and its goldens; land core first, then the two-client checks.
