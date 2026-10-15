@@ -352,6 +352,13 @@ void Region::step() {
         p.slot = h.slot;
         p.crosshair = h.crosshair;
     }
+    // A world's region by day (S3): the pilots' daylight round the one who
+    // drives, else round the first one's focus (aboard, its pad).
+    sim_.daylightAt = std::nullopt;
+    if (daylight_ && built_ && !pilots_.empty()) {
+        const auto& [id, seat] = driver ? *pilots_.find(*driver) : *pilots_.begin();
+        sim_.daylightAt = focus(seat, side(id));
+    }
     std::vector<GameEvent> events = sim_.step(description_.step);
     lastEvents_ = events;
     tick_ += 1;

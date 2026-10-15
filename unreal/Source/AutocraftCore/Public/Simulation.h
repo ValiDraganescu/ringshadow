@@ -107,6 +107,11 @@ public:
     std::vector<Landing> landings;
     /// The Prospector the player drives by hand (see `take`); nil: the AI has them all.
     std::optional<Pilot> pilot;
+    /// C++ only, a world's region (S3): its pilots' daylight centres here
+    /// (the driven unit's place when one is driven). By day the pilots'
+    /// side (`Pilot::player`) sees the whole map, at night as everywhere
+    /// else (`Rules::daylightReach`). Nil: no daylight sight (every other game).
+    std::optional<Vec2> daylightAt;
     /// Level-ups earned since the step began, for `.leveledUp` events.
     std::vector<GameEvent> levelUps;
     /// C++ only: every XP the driven unit earns (`earn`) is multiplied by

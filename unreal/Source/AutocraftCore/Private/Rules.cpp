@@ -176,6 +176,11 @@ double Rules::dark(double hour) {
     return 1.0 - t * t * (3.0 - 2.0 * t);
 }
 
+double Rules::daylightReach(double hour, double night, double span) {
+    if (!(night > 0) || span <= night) return night;
+    return night * std::pow(span / night, 1.0 - dark(hour));
+}
+
 double Rules::vision(StructureKind k) {
     switch (k) {
     case StructureKind::citadel: case StructureKind::sentinel: return 11;

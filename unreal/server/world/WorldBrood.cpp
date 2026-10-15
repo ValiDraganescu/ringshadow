@@ -31,6 +31,9 @@ using region::Edge;
 namespace {
 
 constexpr double kInf = 1e18;
+/// A leaving bug this close to its exit point (3 cells in from the edge) is
+/// out of the region (S3: by day nothing in it is out of sight).
+constexpr double kExitReached = 1.5;
 
 struct Weights {
     double deposit, well, site, pad, building, crater;
@@ -736,9 +739,14 @@ void WorldMap::broodThink(size_t r) {
             }
             if (b.leaving) b.exit = g.exit;
             // Out of sight on its way out (out of its site, or the site
-            // itself unseen): it vanishes.
-            if (b.leaving && !inSight(r, u.position) && (distance(u.position, g.site) > g.radius || !inSight(r, g.site)))
-                gone.insert(u.id);
+            // itself unseen): it vanishes. By day a world region's pilots
+            // see all of it (S3): it walks on to its exit at the edge and
+            // goes from there, into the next region as it were.
+            if (b.leaving) {
+                const bool unseen = !inSight(r, u.position) && (distance(u.position, g.site) > g.radius || !inSight(r, g.site))
+                                    && !sim.sees(Pilot::player, u.id);
+                if (unseen || distance(u.position, b.exit) <= kExitReached) gone.insert(u.id);
+            }
         }
     }
     if (!gone.empty()) {

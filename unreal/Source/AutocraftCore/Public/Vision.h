@@ -92,9 +92,12 @@ struct Vision {
     /// that close and by enemy Sentinels (`spots`). `beams`: a headlamp's
     /// heading (world radians) by unit id; that unit also sees its day
     /// sight out within `Rules::headlampCone` of it, night or not.
+    /// `daylight`: a world region's daylight (S3), a circle `p` sees on
+    /// every level, as the sun lights the high ground too.
     Sight sight(int64_t p, const GameState& state, std::vector<uint64_t>& explored,
                 const std::map<int64_t, double>& farther = {}, const std::map<int64_t, double>& reveal = {},
-                const std::map<int64_t, double>& beams = {}) const;
+                const std::map<int64_t, double>& beams = {},
+                std::optional<std::pair<Vec2, double>> daylight = std::nullopt) const;
 
     /// A buried Scorpion `u` is out of sight of player `p` (and its allies):
     /// down in the ground and done reloading, with no unit or building of

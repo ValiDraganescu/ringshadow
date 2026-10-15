@@ -344,6 +344,13 @@ struct AUTOCRAFTCORE_API Rules {
     /// it as far as the Prospector sees by day, night or not. The game
     /// layer's spot light has the same cone.
     static constexpr double headlampCone = 22.5;
+    /// A world's region by day (S3, "zones are not that big"): the pilots'
+    /// sight reaches `span` (the whole region) with the sun up and closes in
+    /// through dusk to `night`, its sight at night (`sightScale`, the
+    /// headlamp's wedge on top), by the same share at every step of
+    /// `dark` (geometric: half dark is the middle of the two on a log
+    /// scale, 6 to 180 cells meets at 33). Back up at dawn the same way.
+    static double daylightReach(double hour, double night, double span);
     /// A ground unit this close to a watchtower's centre holds it, and sees
     /// `towerSight` round the tower (22).
     static constexpr double towerReach = 2.6;

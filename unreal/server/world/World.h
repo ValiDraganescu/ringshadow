@@ -148,6 +148,10 @@ public:
     std::optional<int64_t> driving(PilotId pilot) const;
     /// Some pilot drives here (the core drives one unit a region).
     bool driven() const;
+    /// A world's region by day (S3): its pilots see all of it, the sight
+    /// closing in through dusk to the night's (`Simulation::daylightAt`).
+    /// On; the bench turns it off to measure against the sight before it.
+    void setDaylight(bool on) { daylight_ = on; }
 
     /// The pilot's driven Prospector puts up a `kind` near `at` (snapped as
     /// `Simulation::snap` does), paid from its side's bank: the core's own
@@ -238,6 +242,7 @@ private:
     int64_t tick_ = 0;
     int64_t game_ = 0;
     std::map<PilotId, Seat> pilots_;
+    bool daylight_ = true;
     std::vector<GameEvent> lastEvents_;
     /// The map's own deposits; those after them (a starfall's, told to
     /// every pilot) go to every pilot here, seen or not.
