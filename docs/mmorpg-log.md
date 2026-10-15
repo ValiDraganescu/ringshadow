@@ -756,3 +756,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D limit per region (Progression::perRegion: Citadel, Landing Pad); a merc hired at a Citadel works its nearest field; goals mark the pilot's region's Citadel.
 - N R3 shots r3-01..04: the Cold Fork Citadel built, turrets on, H screen there; core 505, net 92, server 321.
 - I wt1's parked X2 edits (WorldStore, protocol 31) fail 6 server tests in its tree; the R3 commit alone passes.
+- T web: the Citadels post live at /blog/citadels (7b9e4a1).
