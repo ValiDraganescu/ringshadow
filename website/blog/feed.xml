@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T03:00:00Z</updated>
+  <updated>2026-10-15T03:30:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>A quieter HUD: the same moments, before and after</title>
+    <id>tag:ringshadow,2026-10-15:blog/hud</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/hud"/>
+    <published>2026-10-15T03:30:00Z</published>
+    <updated>2026-10-15T03:30:00Z</updated>
+    <summary>The HUD, decluttered: one lane of toasts at the upper left, one banner slot under the compass, a contract panel a third of its old height, and the same moments before and after.</summary>
+  </entry>
   <entry>
     <title>“I reached level 10, now what?”</title>
     <id>tag:ringshadow,2026-10-15:blog/now-what</id>

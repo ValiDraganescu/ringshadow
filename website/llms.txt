@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [A quieter HUD: the same moments, before and after](https://ringshadow.com/blog/hud.md): Ringshadow's HUD, decluttered: one lane of toasts at the upper left, one banner slot under the compass, a contract panel a third of its old height, and the same moments before and after.
 - [“I reached level 10, now what?”](https://ringshadow.com/blog/now-what.md): After the first ten minutes, KSTR now keeps one goal in front of every Ringshadow pilot, from a chain of 15 picked by level and by what the pilot has done, from pumping MH at level 3 to the Matriarch at 35.
 - [The Brood, painted: before and after the art pass](https://ringshadow.com/blog/brood-art.md): The art pass on Ringshadow's Brood: veined egg shells lit from within, opal chitin that shifts colour with the view, glass wings, the Matriarch's glowing sac and crown, and the gatling gun painted from its forge concept. Before and after.
 - [Through the walls: walking between regions](https://ringshadow.com/blog/passages.md): Ringshadow's regions now have grounds of their own, cliff walls and 14 passages between them, and walking from one region into the next happens without a reload or a jump.

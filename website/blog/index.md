@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## A quieter HUD: the same moments, before and after
+
+15 October 2026 · M8 · 10 pictures
+
+One lane of toasts at the upper left, one banner slot under the compass, and a contract panel a third of its old height.
+
+Read it: https://ringshadow.com/blog/hud
+
 ## “I reached level 10, now what?”
 
 15 October 2026 · M8 · 6 pictures

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A Quieter HUD · Ringshadow</title>
+  <meta name="description" content="Ringshadow's HUD, decluttered: one lane of toasts at the upper left, one banner slot under the compass, a contract panel a third of its old height, and the same moments before and after.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="A quieter HUD: the same moments, before and after">
+  <meta property="og:description" content="Ringshadow's HUD, decluttered: one lane of toasts at the upper left, one banner slot under the compass, a contract panel a third of its old height, and the same moments before and after.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/hud/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/hud">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/hud">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="hud.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>A quieter HUD: the same moments, before and after</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M8 · The realm under siege</p>
+        <p class="lede">Every feature this week brought its own message: goals, missions, contracts, raids, starfalls, the Matriarch. They all landed in the middle of the screen, on top of the Prospector and on top of each other. Now each kind of message has one place to go.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/hud/cover.jpg" alt="A raid on the Citadel: the banner BROOD SWARM under the compass, two small toasts at the upper left, the Prospector's view clear" width="1200" height="750"></div>
+        <figcaption>A raid now: one banner under the compass, the rest at the upper left, the middle clear.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>Where things go now</h2>
+        <p>Toasts go in one lane at the upper left, three at most; the rest wait their turn. The same news arriving twice is merged into one, and unloads add up, so a run of deliveries reads "+72 ORE · 9 TO THE REALM" instead of a stack of small ones.</p>
+        <p>The big moments get one banner slot under the compass: a level-up, a raid warning, the Matriarch down, a region's name when you arrive. They come one at a time, and they wait while a screen like the Journal or the map is open, so you don't miss one behind it.</p>
+        <p>The contract panel is one line of titles plus the NEXT line, 52 points tall where it was 158. It opens in full only when there's news about a contract. The Matriarch's boss bar is a compact plate under the compass. The Q, C and G slots moved to the left of the Prospector and the supplies to its right. And a finished job no longer says "CONTRACT DONE: CONTRACT".</p>
+      </div>
+
+      <section class="album pairs" aria-labelledby="a1">
+        <h2 class="album-title" id="a1">Before and after</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/hud/01-busy-before.webp"><img src="media/hud/01-busy-before-t.webp" alt="Before: a goal, a mission and a contract done all at once, stacked in the middle of the screen over the Prospector" width="640" height="400" loading="lazy"></a><span class="cap">Before: a goal, a mission and a contract finishing at once, stacked on the Prospector.</span></li>
+          <li class="reveal"><a href="media/hud/02-busy-after.webp"><img src="media/hud/02-busy-after-t.webp" alt="After: the same moment, the three messages small at the upper left, the contract panel one line" width="640" height="400" loading="lazy"></a><span class="cap">After: the same moment, at the upper left. The panel is one line.</span></li>
+          <li class="reveal"><a href="media/hud/03-raid-before.webp"><img src="media/hud/03-raid-before-t.webp" alt="Before: a raid, with the BROOD SWARM banner, a starfall warning, ore and a survey chip all overlapping mid-screen" width="640" height="400" loading="lazy"></a><span class="cap">Before: a raid, a starfall and a delivery on top of each other.</span></li>
+          <li class="reveal"><a href="media/hud/04-raid-after.webp"><img src="media/hud/04-raid-after-t.webp" alt="After: BROOD SWARM alone under the compass, the starfall warning and the ore in the lane" width="640" height="400" loading="lazy"></a><span class="cap">After: the raid gets the banner, the rest go in the lane.</span></li>
+          <li class="reveal"><a href="media/hud/05-boss-before.webp"><img src="media/hud/05-boss-before-t.webp" alt="Before: the Matriarch's boss bar wide across the top of the view" width="640" height="400" loading="lazy"></a><span class="cap">Before: the boss bar across the top.</span></li>
+          <li class="reveal"><a href="media/hud/06-boss-after.webp"><img src="media/hud/06-boss-after-t.webp" alt="After: the boss bar a compact plate under the compass, the banner KSTR: BROOD SWARM under it" width="640" height="400" loading="lazy"></a><span class="cap">After: a compact plate, with the raid banner under it.</span></li>
+          <li class="reveal"><a href="media/hud/07-level-before.webp"><img src="media/hud/07-level-before-t.webp" alt="Before: the level-up banner with the contract panel open beside it" width="640" height="400" loading="lazy"></a><span class="cap">Before: a level-up.</span></li>
+          <li class="reveal"><a href="media/hud/08-level-after.webp"><img src="media/hud/08-level-after-t.webp" alt="After: the level-up banner under the compass, the panel one line" width="640" height="400" loading="lazy"></a><span class="cap">After: the same level-up.</span></li>
+          <li class="reveal"><a href="media/hud/09-panel-before.webp"><img src="media/hud/09-panel-before-t.webp" alt="Before: the contract panel at its old height" width="640" height="400" loading="lazy"></a><span class="cap">Before: the contract panel, 158 points tall.</span></li>
+          <li class="reveal"><a href="media/hud/10-panel-after.webp"><img src="media/hud/10-panel-after-t.webp" alt="After: the contract panel as one line of titles and the NEXT line" width="640" height="400" loading="lazy"></a><span class="cap">After: 52 points.</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <h2>The XP that wasn't missing</h2>
+        <p>The same pass looked into a 200 XP gap in the level bar. It turned out to be a 6 that looked like an 8 at 12 points. The digits are 13 points now.</p>
+        <p>Every test suite passes: 494 core, 241 server and 85 network.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="now-what.html">Before: now what?</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="hud.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>
