@@ -750,3 +750,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T starfall snapshot fix done 50c42b4: a pilot's snapshot lists only recent falls and its region's craters (max 24); the user's world comes back intact.
 - I the '23 starfalls landed' at each start was log noise; saved falls keep their deposits; no ore created.
 - T logs: buildings and units per region on load; pilot fell/respawns lines.
+- T web: heavy-sky post live (7ec1904); admin visitor map (1eb9f6f).
