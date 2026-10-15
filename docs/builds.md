@@ -89,6 +89,13 @@ A new file the game reads at run time goes on that list too. `Shatter` is
 staged inside the pak by `DirectoriesToAlwaysStageAsUFS` in
 `DefaultGame.ini`.
 
+Cooked assets the code loads by path (`/Game/Weather/M_AcRain...`) are found
+by no reference the cook follows: each such folder is in
+`DirectoriesToAlwaysCook`. `build_release.sh cook-check` (run by `mac`)
+fails when a `/Game/<folder>/` named in `unreal/Source` is missing there:
+until K3 (2026-10-15) `/Game/Weather` was, and the packaged game had no
+rain, no lens drops and no lightning.
+
 The editor's plugins (`ModelContextProtocol`, `AllToolsets`,
 `PythonScriptPlugin`, `EditorScriptingUtilities`, `USDImporter`) have
 `"TargetAllowList": ["Editor"]` in `Autocraft.uproject`, so a player's game
@@ -147,6 +154,79 @@ entitlement and the renamed `Info.plist` breaks it ("Signing the Mac build").
 3 minutes, the app 1.0 GB, the zip 617 MB, the server 2.6 MB of it. Its
 binary, run hidden with `-AcMmo` (a copy with `LSUIElement` set, so no Dock
 icon), started the bundled server and was seated in a Prospector.
+
+### Measuring packaged
+
+A packaged game is measured the way hidden editor runs are (K3,
+2026-10-15): build it with `build_release.sh mac --config Development
+--ad-hoc` (Shipping compiles the log out, and the numbers are read from
+it), copy the app into the ignored `unreal/server/build/k3/`, and run it
+with `hidden_run.py --app`:
+
+```sh
+uv run unreal/Tools/hidden_run.py --out unreal/server/build/k3/runs/app-call5-1 --res 1728x1084 \
+  --app unreal/server/build/k3/Ringshadow.app -- -AcMap=highlands-small -AcFlowTest=mmoshots \
+  -AcMmoShots={out} -AcMmoShotsOnly=none -AcMmoShotsF2 -AcMmoHour=12 -AcMmoShotsF2CallAt=5
+```
+
+`--app` runs `Ringshadow-hidden.app` beside it (`LSUIElement` set, signed
+ad hoc, made again when the app changes): no Dock icon, offscreen,
+`-nosound`, its own save and its own world server, one run at a time with
+every other hidden run. It lists handled ensures, which a packaged game
+hits where the editor doesn't. Every MMO run logs `k3: seated N s after
+the process started` (the startup: process start to the first frame the
+pilot drives); `-AcMmoShotsF2CallAt=S` calls the Dropship S s after
+seating and logs `worst frame since the call`; `-AcMmoShotsS3` logs the
+canyon (wave 10 out) and the nest at noon as `s3 perf:`. A trace: add
+`-trace=default,gpu,loadtime,task -statnamedevents -tracefile={out}/x.utrace`
+and export it with `UnrealInsightsBG` (unreal/Tools/README.md); a traced
+packaged run crashes on exit after its log closes (exit -11), the trace
+whole.
+
+K3's numbers, three runs each, M4 Max, other worktrees' runs and builds
+beside (load 6–12), before and after the fixes below:
+
+| | packaged before | packaged after | editor before | editor after |
+|---|---|---|---|---|
+| Startup to the first driven frame | 3.5–5.5 s | 3.0–4.2 s | 14.4–23.7 s | 12.9–16.9 s |
+| Dropship called 5 s after seating: worst frame | 1547 / 92 / 32 ms | 35 / 37 / 42 ms | 1628 / 78 / 160 ms | 366 / 60 / 38 ms |
+| Called 30 s after seating: worst frame | 62 / 31 ms | 30 / 39 / 30 ms | 31 / 92 / 30 ms | 104 / 36 / 48 ms |
+| Frames over 250 ms in the 10 s after seating | 2–3 a run, to 1.8 s | none | 2–5 a run, to 1.9 s | 0–3 a run, to 365 ms |
+
+Frame times, p50 / p95 (the first packaged run of each, under load 12,
+had a p95 of 17–20 ms, left out; the fixes touch the session's first seconds only, and a
+run of each after them matched):
+
+| Scene | packaged 1728×1084 | editor 1728×1084 | packaged 2560×1440 | editor 2560×1440 |
+|---|---|---|---|---|
+| Canyon, wave 10 out (The Fork, noon) | 12.0–12.3 / 13.1 ms | 12.5–12.6 / 13.5–13.6 ms | 13.0–13.4 / 14.1 ms | 13.2–13.6 / 14.2–14.6 ms |
+| The nest at noon (Slag Pockets, 34 bugs) | 11.8–11.9 / 12.9–13.0 ms | 11.8–12.1 / 12.8–13.1 ms | 12.6–13.2 / 13.8–14.2 ms | 12.9–13.3 / 14.2–14.5 ms |
+
+The packaged game draws as fast as the editor's game; it starts four
+times sooner. The first call's stall showed in both, and its cause was
+not the call: a session's first ~10 s ran at 1–2 s frames, and a call
+landing there took one. The trace named three causes, all fixed:
+- The game's long CPU jobs (a region made ahead, a ground set's prepare,
+  a minimap bake: about 1 s each) ran on the engine's thread pool, which
+  is the task graph's two background workers. A 108 ms engine task the
+  render thread waited on (`UpdatePrimitive`) sat 860 ms behind them. They
+  run on the game's own pool now (`AcWork.h`, three threads).
+- The baked console art read its copy back as soon as it could, and Metal
+  maps a readback only once the whole GPU is idle
+  (`RHIMapStagingSurface`): 668 ms with the session's first frames queued.
+  It reads once the GPU is calm (`AcBakedArt.cpp`).
+- The world map loaded each region's picture as it first drew it, behind
+  everything else the loader read then (1–2 s a picture). They load as
+  the world arrives (`AcMmoAround.cpp`).
+
+What only the package showed: `/Game/Weather` was not cooked (no rain;
+`cook-check` above); the GameFeatureData rule named a class the package
+lacks, an ensure at every start; the meshes the game builds at run time
+had no UV densities, an ensure (`AcBuiltMesh.h`). Left as they are: the
+engine's volumetric cloud default (`m_SimpleVolumetricCloud_Inst`) is not
+cooked and logs a warning once (the sky sets its own material), and two
+packaged launches in about 35 exited at once with nothing in its log,
+right after another run (`hidden_run.py` now prints the exit code).
 
 ## AWS
 
