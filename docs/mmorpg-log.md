@@ -587,3 +587,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T N1b art pass briefed to wt2 (Matriarch, bugs, gatling, turrets, tracers, chevrons).
 - T N1b step 1 46256b2: Matriarch egg/opal/glass materials, a tiered nest.
 - N N1b frame time with 17–19 bugs: 10.42 → 10.77 ms mean, p95 11.65 → 11.95.
+- T N1b step 2 16a7aca: opal quills, glass wings and lantern, gold glass sac.
+- I N2 shots fail linger/raid-timing checks on old models too (flaky staging).
