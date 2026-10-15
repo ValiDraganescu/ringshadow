@@ -39,6 +39,6 @@ Point at anything and a tooltip says what's worth knowing. A deposit shows how m
 
 ## What isn't right yet
 
-The pictures show the regions as near rectangles, because that's still how they read from above: their walls run along the cells' edges. A second pass on the outlines is next, and the map will be rebaked after it.
+The pictures show the regions as near rectangles, because that's still how they read from above: their walls run along the cells' edges. A second pass on the outlines is next, and the map will be rebaked after it. [Both have landed since.](https://ringshadow.com/blog/valleys)
 
 The test suites passed when it landed: 473 core, 216 server and 81 network.

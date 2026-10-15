@@ -366,8 +366,8 @@ Buildings become the realm's, and the Prospector gets enemies. Parts have landed
 
 Buildings belong to the realm, the Citadel taxes, sells and sends you on missions, and alien bugs swarm the places worth being. Now the realm has guns to hold them off, and the Brood has its queen.
 
-- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors, the satellite map, the Citadel's turrets, the AA tower and the gatling gun, turret upgrades, the Matriarch at her nest, a ground for each region with walls and passages you walk through without a seam, the art pass on the Brood and the guns, a goal from the radio after the first ten minutes, a quieter HUD
-- Then: outlines that follow the land, canyon defence in waves, the Dropship between landing pads
+- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors, the satellite map, the Citadel's turrets, the AA tower and the gatling gun, turret upgrades, the Matriarch at her nest, a ground for each region with walls and passages you walk through without a seam, the art pass on the Brood and the guns, a goal from the radio after the first ten minutes, a quieter HUD, regions shaped as valleys
+- Then: canyon defence in waves, the Dropship between landing pads
 
 The terminator · next
 
@@ -427,6 +427,14 @@ Source: https://ringshadow.com/blog/
 How the game is being made, as it happens: what landed, what it looks like, and what's next. Every picture comes from the game, recorded by the agents that build it.
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
+
+## Valleys, not tiles: the regions reshaped
+
+15 October 2026 · M8 · 10 pictures
+
+Nine squares became nine basins: bays, rock spurs, islands, terraced walls, and one high land of rock running between them.
+
+Read it: https://ringshadow.com/blog/valleys
 
 ## A quieter HUD: the same moments, before and after
 
@@ -539,6 +547,60 @@ Read it: https://ringshadow.com/blog/the-realm
 Two days, seven milestones: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.
 
 Read it: https://ringshadow.com/blog/how-we-got-here
+
+
+---
+
+# Valleys, not tiles: the regions reshaped
+
+> Ringshadow's nine regions reshaped as natural basins: bays, rock spurs, necks, islands of rock, terraced walls and passages that narrow like canyon mouths, with one high land of rock running between them.
+
+Source: https://ringshadow.com/blog/valleys
+
+15 October 2026 · M8 · The realm under siege
+
+After the regions got [walls and passages](https://ringshadow.com/blog/passages), they still looked like what they are underneath: nine squares in a grid. Now each one is a basin with a shape of its own, and from above the high ground runs on between them as one land.
+
+![Looking into a bay: banded canyon walls stepping down with a shelf halfway up, ore deposits on the grass at their foot](https://ringshadow.com/blog/media/valleys/cover.jpg)
+
+*Into a bay: the wall steps down with a shelf halfway up.*
+
+## A shape for each region
+
+A new tool draws the shapes, and it's in the repo with the rest. Each region is now a natural basin taking 50 to 66% of its square. Bays cut 10 to 30% into the land, rock spurs push out between them, and where two bays face each other the land pinches into a neck. Three regions have islands of rock in the middle that the land runs round. No straight run of wall is longer than about 12 to 15 cells, and every passage narrows toward its gap like the mouth of a canyon.
+
+For each region the tool tries 40 shapes, checks that every pad, deposit and site can still be reached on foot from the landing pad, and keeps the valid one with the shortest straight wall. Deposits the walls would have swallowed move onto the land nearby.
+
+The walls step: along stretches of them there's a shelf a few cells wide halfway up, then the rest of the climb. Their tops share one rock colour across the whole world, whatever the ground below, so on the map the high land reads as one piece with basins cut into it.
+
+## From above, before and after
+
+- ![Before: the world map, nine regions as nine filled squares](https://ringshadow.com/blog/media/valleys/01-map-before.webp) Before: nine squares.
+- ![After: the world map, each region an irregular basin inside one stretch of rocky high ground](https://ringshadow.com/blog/media/valleys/02-map-after.webp) After: nine basins in one land.
+- ![Before: the nine regions seen at an angle, each filling its square](https://ringshadow.com/blog/media/valleys/03-grid-before.webp) Before, seen at an angle.
+- ![After: the same nine regions, bays, spurs and islands of rock in each](https://ringshadow.com/blog/media/valleys/04-grid-after.webp) After: bays, spurs and islands.
+
+## On the ground
+
+- ![Banded canyon walls stepping down into a bay, a shelf halfway up](https://ringshadow.com/blog/media/valleys/05-bay.webp) A bay, with its shelf.
+- ![Walking along a wall that bends out of sight, the far side of the basin beyond](https://ringshadow.com/blog/media/valleys/06-wall.webp) Along a wall: it bends before it gets long.
+- ![The passage out of Prospect Landing between two banded walls, Tern Ridge beyond](https://ringshadow.com/blog/media/valleys/07-passage-start.webp) The passage from Prospect Landing.
+- ![The same passage from Tern Ridge, the start's beacon beyond](https://ringshadow.com/blog/media/valleys/08-passage-tern-ridge.webp) The same passage from Tern Ridge.
+
+## The nest is back
+
+Two bugs came in with the walls, and both are fixed. [The Matriarch's](https://ringshadow.com/blog/matriarch) nest mound had stopped drawing, and a black slab stood near her in Slag Pockets. Both had one cause: a set of ground built away from the world's origin placed its scenery twice, the second copy offset.
+
+## Slag Pockets, fixed
+
+- ![The Matriarch's nest seen from the pad in Slag Pockets, the mound drawn again](https://ringshadow.com/blog/media/valleys/09-nest.webp) The nest from the pad, its mound back.
+- ![The Matriarch felled at her nest, no black slab in the view](https://ringshadow.com/blog/media/valleys/10-down.webp) Her fall, with no slab in the way.
+
+## The crossing, measured again
+
+Walking from Tern Ridge into Prospect Landing on the new shapes, frames ran 11.6 ms at the median, and the longest at the moment of the crossing was 13.2 ms. The walk held between 4.55 and 4.99 cells a second against 4.79 before it, and the camera's largest step was 0.08 cells.
+
+Every test suite passes: 494 core, 241 server and 85 network.
 
 
 ---
@@ -683,7 +745,7 @@ Glowing, see-through materials cost more to draw. With 18 to 22 bugs in sight, t
 
 ## What isn't right yet
 
-The nest's mound stopped drawing when the regions got their walls, so the nest pictures here were taken before that change. The fix is part of the next pass on the regions' outlines. The Citadel's corner turrets are bigger now, but from the usual camera they still read small.
+The nest's mound stopped drawing when the regions got their walls, so the nest pictures here were taken before that change. The fix is part of the next pass on the regions' outlines, and [it has landed since](https://ringshadow.com/blog/valleys). The Citadel's corner turrets are bigger now, but from the usual camera they still read small.
 
 
 ---
@@ -744,7 +806,7 @@ Measured on a walk from Tern Ridge into Prospect Landing:
 
 ## What isn't right yet
 
-From above, the regions still read as rectangles: their walls follow the cells' edges in long straight runs. A second pass that gives each region an irregular outline is next, and after it the first canyon gets cut into a region for the [turrets](https://ringshadow.com/blog/turrets) to hold.
+From above, the regions still read as rectangles: their walls follow the cells' edges in long straight runs. A second pass that gives each region an irregular outline is next ([it has landed since](https://ringshadow.com/blog/valleys)), and after it the first canyon gets cut into a region for the [turrets](https://ringshadow.com/blog/turrets) to hold.
 
 Every test suite passes: 488 core, 233 server and 84 network, and all nine regions validate.
 
@@ -792,7 +854,7 @@ Point at anything and a tooltip says what's worth knowing. A deposit shows how m
 
 ## What isn't right yet
 
-The pictures show the regions as near rectangles, because that's still how they read from above: their walls run along the cells' edges. A second pass on the outlines is next, and the map will be rebaked after it.
+The pictures show the regions as near rectangles, because that's still how they read from above: their walls run along the cells' edges. A second pass on the outlines is next, and the map will be rebaked after it. [Both have landed since.](https://ringshadow.com/blog/valleys)
 
 The test suites passed when it landed: 473 core, 216 server and 81 network.
 

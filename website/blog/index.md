@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Valleys, not tiles: the regions reshaped
+
+15 October 2026 · M8 · 10 pictures
+
+Nine squares became nine basins: bays, rock spurs, islands, terraced walls, and one high land of rock running between them.
+
+Read it: https://ringshadow.com/blog/valleys
+
 ## A quieter HUD: the same moments, before and after
 
 15 October 2026 · M8 · 10 pictures

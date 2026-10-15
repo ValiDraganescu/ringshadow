@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Valleys, Not Tiles · Ringshadow</title>
+  <meta name="description" content="Ringshadow's nine regions reshaped as natural basins: bays, rock spurs, necks, islands of rock, terraced walls and passages that narrow like canyon mouths, with one high land of rock running between them.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="Valleys, not tiles: the regions reshaped">
+  <meta property="og:description" content="Ringshadow's nine regions reshaped as natural basins: bays, rock spurs, necks, islands of rock, terraced walls and passages that narrow like canyon mouths, with one high land of rock running between them.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/valleys/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/valleys">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/valleys">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="valleys.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>Valleys, not tiles: the regions reshaped</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M8 · The realm under siege</p>
+        <p class="lede">After the regions got <a href="passages.html">walls and passages</a>, they still looked like what they are underneath: nine squares in a grid. Now each one is a basin with a shape of its own, and from above the high ground runs on between them as one land.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/valleys/cover.jpg" alt="Looking into a bay: banded canyon walls stepping down with a shelf halfway up, ore deposits on the grass at their foot" width="1200" height="750"></div>
+        <figcaption>Into a bay: the wall steps down with a shelf halfway up.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>A shape for each region</h2>
+        <p>A new tool draws the shapes, and it's in the repo with the rest. Each region is now a natural basin taking 50 to 66% of its square. Bays cut 10 to 30% into the land, rock spurs push out between them, and where two bays face each other the land pinches into a neck. Three regions have islands of rock in the middle that the land runs round. No straight run of wall is longer than about 12 to 15 cells, and every passage narrows toward its gap like the mouth of a canyon.</p>
+        <p>For each region the tool tries 40 shapes, checks that every pad, deposit and site can still be reached on foot from the landing pad, and keeps the valid one with the shortest straight wall. Deposits the walls would have swallowed move onto the land nearby.</p>
+        <p>The walls step: along stretches of them there's a shelf a few cells wide halfway up, then the rest of the climb. Their tops share one rock colour across the whole world, whatever the ground below, so on the map the high land reads as one piece with basins cut into it.</p>
+      </div>
+
+      <section class="album pairs" aria-labelledby="a1">
+        <h2 class="album-title" id="a1">From above, before and after</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/valleys/01-map-before.webp"><img src="media/valleys/01-map-before-t.webp" alt="Before: the world map, nine regions as nine filled squares" width="640" height="400" loading="lazy"></a><span class="cap">Before: nine squares.</span></li>
+          <li class="reveal"><a href="media/valleys/02-map-after.webp"><img src="media/valleys/02-map-after-t.webp" alt="After: the world map, each region an irregular basin inside one stretch of rocky high ground" width="640" height="400" loading="lazy"></a><span class="cap">After: nine basins in one land.</span></li>
+          <li class="reveal"><a href="media/valleys/03-grid-before.webp"><img src="media/valleys/03-grid-before-t.webp" alt="Before: the nine regions seen at an angle, each filling its square" width="640" height="400" loading="lazy"></a><span class="cap">Before, seen at an angle.</span></li>
+          <li class="reveal"><a href="media/valleys/04-grid-after.webp"><img src="media/valleys/04-grid-after-t.webp" alt="After: the same nine regions, bays, spurs and islands of rock in each" width="640" height="400" loading="lazy"></a><span class="cap">After: bays, spurs and islands.</span></li>
+        </ul>
+      </section>
+
+      <section class="album" aria-labelledby="a2">
+        <h2 class="album-title" id="a2">On the ground</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/valleys/05-bay.webp"><img src="media/valleys/05-bay-t.webp" alt="Banded canyon walls stepping down into a bay, a shelf halfway up" width="640" height="400" loading="lazy"></a><span class="cap">A bay, with its shelf.</span></li>
+          <li class="reveal"><a href="media/valleys/06-wall.webp"><img src="media/valleys/06-wall-t.webp" alt="Walking along a wall that bends out of sight, the far side of the basin beyond" width="640" height="400" loading="lazy"></a><span class="cap">Along a wall: it bends before it gets long.</span></li>
+          <li class="reveal"><a href="media/valleys/07-passage-start.webp"><img src="media/valleys/07-passage-start-t.webp" alt="The passage out of Prospect Landing between two banded walls, Tern Ridge beyond" width="640" height="400" loading="lazy"></a><span class="cap">The passage from Prospect Landing.</span></li>
+          <li class="reveal"><a href="media/valleys/08-passage-tern-ridge.webp"><img src="media/valleys/08-passage-tern-ridge-t.webp" alt="The same passage from Tern Ridge, the start's beacon beyond" width="640" height="400" loading="lazy"></a><span class="cap">The same passage from Tern Ridge.</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <h2>The nest is back</h2>
+        <p>Two bugs came in with the walls, and both are fixed. <a href="matriarch.html">The Matriarch's</a> nest mound had stopped drawing, and a black slab stood near her in Slag Pockets. Both had one cause: a set of ground built away from the world's origin placed its scenery twice, the second copy offset.</p>
+      </div>
+
+      <section class="album" aria-labelledby="a3">
+        <h2 class="album-title" id="a3">Slag Pockets, fixed</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/valleys/09-nest.webp"><img src="media/valleys/09-nest-t.webp" alt="The Matriarch's nest seen from the pad in Slag Pockets, the mound drawn again" width="640" height="400" loading="lazy"></a><span class="cap">The nest from the pad, its mound back.</span></li>
+          <li class="reveal"><a href="media/valleys/10-down.webp"><img src="media/valleys/10-down-t.webp" alt="The Matriarch felled at her nest, no black slab in the view" width="640" height="400" loading="lazy"></a><span class="cap">Her fall, with no slab in the way.</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <h2>The crossing, measured again</h2>
+        <p>Walking from Tern Ridge into Prospect Landing on the new shapes, frames ran 11.6 ms at the median, and the longest at the moment of the crossing was 13.2 ms. The walk held between 4.55 and 4.99 cells a second against 4.79 before it, and the camera's largest step was 0.08 cells.</p>
+        <p>Every test suite passes: 494 core, 241 server and 85 network.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="hud.html">Before: a quieter HUD</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="valleys.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

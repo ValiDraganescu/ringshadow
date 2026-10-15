@@ -54,6 +54,6 @@ Measured on a walk from Tern Ridge into Prospect Landing:
 
 ## What isn't right yet
 
-From above, the regions still read as rectangles: their walls follow the cells' edges in long straight runs. A second pass that gives each region an irregular outline is next, and after it the first canyon gets cut into a region for the [turrets](https://ringshadow.com/blog/turrets) to hold.
+From above, the regions still read as rectangles: their walls follow the cells' edges in long straight runs. A second pass that gives each region an irregular outline is next ([it has landed since](https://ringshadow.com/blog/valleys)), and after it the first canyon gets cut into a region for the [turrets](https://ringshadow.com/blog/turrets) to hold.
 
 Every test suite passes: 488 core, 233 server and 84 network, and all nine regions validate.

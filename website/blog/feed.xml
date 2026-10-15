@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T03:30:00Z</updated>
+  <updated>2026-10-15T04:00:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>Valleys, not tiles: the regions reshaped</title>
+    <id>tag:ringshadow,2026-10-15:blog/valleys</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/valleys"/>
+    <published>2026-10-15T04:00:00Z</published>
+    <updated>2026-10-15T04:00:00Z</updated>
+    <summary>The nine regions reshaped as natural basins: bays, rock spurs, necks, islands of rock, terraced walls and passages that narrow like canyon mouths, with one high land of rock running between them.</summary>
+  </entry>
   <entry>
     <title>A quieter HUD: the same moments, before and after</title>
     <id>tag:ringshadow,2026-10-15:blog/hud</id>

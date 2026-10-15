@@ -46,4 +46,4 @@ Glowing, see-through materials cost more to draw. With 18 to 22 bugs in sight, t
 
 ## What isn't right yet
 
-The nest's mound stopped drawing when the regions got their walls, so the nest pictures here were taken before that change. The fix is part of the next pass on the regions' outlines. The Citadel's corner turrets are bigger now, but from the usual camera they still read small.
+The nest's mound stopped drawing when the regions got their walls, so the nest pictures here were taken before that change. The fix is part of the next pass on the regions' outlines, and [it has landed since](https://ringshadow.com/blog/valleys). The Citadel's corner turrets are bigger now, but from the usual camera they still read small.
