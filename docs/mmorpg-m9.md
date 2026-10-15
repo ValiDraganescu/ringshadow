@@ -28,7 +28,7 @@ Follows M8 (the realm under siege), which closes with Q2 and S3.
 
 | # | Task | Needs | Status |
 |---|---|---|---|
-| P1 | Frontier pilots: 4–6 server-run pilots per world with callsigns, levels and a habit each (miner, builder, defender, hauler), living by the pilot's rules; seen on the map, in toasts ("Pilot Vesper built a Hab Dome"), on the KSTR radio; they join canyon waves near them; saved | M8 | |
+| P1 | Frontier pilots: 4–6 server-run pilots per world with callsigns, levels and a habit each (miner, builder, defender, hauler), living by the pilot's rules; seen on the map, in toasts ("Pilot Vesper built a Hab Dome"), on the KSTR radio; they join canyon waves near them; saved | M8 | done ddf0508 |
 | Z3 | Two more canyons: one in a level-2 region, one in a level-3 region, each with a twist (a three-arm junction, a bridge over the prize, a flooded floor that slows, a Gloamwing roost); validated, previewed, map rebaked | Z2 | |
 | A2 | Siege sound: wave and Matriarch music layers over the radio (ducked like narration), radio voice for KSTR goals and canyon news, Dropship flight sounds; offline checks only | Z2, F2, L1 | |
 | B2 | Balance pass: M8's economy against the pace model (tax, shop prices, mercenary wages and output, mission and wave pay, turret marks), tests that pin the curves, a table in docs | M8 | |

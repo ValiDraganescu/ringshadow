@@ -667,3 +667,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I First Dropship call in an editor session's first 6–10 s: 0.4–1.4 s frame → K3 (packaged).
 - I W4 crossing timing checks flaky (pace/hitch/line) → wt1 later.
 - T S3 (daylight sight) next for wt2.
+- T P1 done e43247c, c4207b8, ddf0508: 5 frontier pilots per world by the pilot's rules.
+- D P1: habits miner/builder/defender/wanderer; caps 8 buildings, ≤1 Hab Dome, 2 Derricks, 2 Gatlings.
+- D P1: arrive 45 s after a human's O1, keep 14 cells off its places; booked where no human.
+- N Protocol 28, schema 21; suites core 496, server 279, net 91.
+- I P1: tags float with no Prospector under them (p1-02) → check fog/LOD.
