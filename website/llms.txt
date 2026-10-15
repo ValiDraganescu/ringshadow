@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [The idle soak: what the world does while nobody is on line](https://ringshadow.com/blog/idle-soak.md): Ringshadow's world server measured for two hours with the game closed: the save stays at 140 KB, memory under 23 MB, 2.9 seconds of CPU, and a world down 30 hours catches up its capped day in 4.9 ms. Three leaks fixed on the way.
 - [Scarcity: ore that runs dry, and a star worth the chase](https://ringshadow.com/blog/scarcity.md): Ringshadow's regions hold one or two ore veins and one MH well now, where each held dozens of deposits. A region runs dry in about 75 minutes and grows back a tenth a world day. A fallen star holds 100 to 1,000 ore and its blast flattens what stands within 7 cells, buildings and units alike.
 - [Settings: volumes, screen, a key card](https://ringshadow.com/blog/settings.md): Ringshadow has a settings page: five volumes including a new one for the voices, full screen or a window at the display's sizes, a lag simulator for testing, and a key card. Saved in the engine's config and checked on a packaged first run.
 - [The hunt: the realm's raid on the Matriarch](https://ringshadow.com/blog/the-hunt.md): The Matriarch is Ringshadow's raid now. A human calls THE HUNT at a Citadel, free, once a world day; the frontier's defenders and every pilot's guard mercenaries travel to the ring round her nest by the realm's rules, hold, and go in together.

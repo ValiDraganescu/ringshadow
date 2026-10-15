@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The idle soak: what the world does while nobody is on line
+
+15 October 2026 · M10 · 1 chart
+
+Two hours of the world server alone, the game closed: the save at 140 KB, memory under 23 MB, 2.9 seconds of CPU, the idle call under a millisecond. Down 30 hours, it catches up a day in 4.9 ms. Three leaks fixed.
+
+Read it: https://ringshadow.com/blog/idle-soak
+
 ## Scarcity: ore that runs dry, and a star worth the chase
 
 15 October 2026 · M10 · 5 pictures

@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T18:55:00Z</updated>
+  <updated>2026-10-15T20:05:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The idle soak: what the world does while nobody is on line</title>
+    <id>tag:ringshadow,2026-10-15:blog/idle-soak</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/idle-soak"/>
+    <published>2026-10-15T20:05:00Z</published>
+    <updated>2026-10-15T20:05:00Z</updated>
+    <summary>Two hours of the world server alone, the game closed: the save at 140 KB, memory under 23 MB, 2.9 seconds of CPU, the idle call under a millisecond. Down 30 hours, it catches up a day in 4.9 ms. Three leaks fixed.</summary>
+  </entry>
   <entry>
     <title>Scarcity: ore that runs dry, and a star worth the chase</title>
     <id>tag:ringshadow,2026-10-15:blog/scarcity</id>
