@@ -617,3 +617,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T U1 done 67d9241: toast lane upper left, one banner slot, compact panel and boss bar.
 - I Correction: the HUD XP gap was a 6/8 misread of 12 pt digits; now 13 pt.
 - N U1 suites: core 494, server 241, net 85; U1 shots 13/13.
+- D Manager: F2 Landing Pad building; region pads arrival-only; jump jets stay.
+- D Manager: Spacedock halves flight MH; Ringwalker: free and 30% faster; beacon removed.
+- T F2 briefed to wt2 (protocol 26, schema 19).
