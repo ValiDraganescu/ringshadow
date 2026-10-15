@@ -747,3 +747,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D E1 (user): a fallen star holds 100-1,000 ore; the fall is epic; its impact damages a quarter of the region's diameter and destroys what it lands on, buildings and units.
 - D E1 (user): starfalls spare the home region's Citadel area (25 cells round it, manager's number); nothing else is spared.
 - D R3 (user): at most one Citadel a region (was one a realm); each a full home with its corner turrets.
+- T starfall snapshot fix done 50c42b4: a pilot's snapshot lists only recent falls and its region's craters (max 24); the user's world comes back intact.
+- I the '23 starfalls landed' at each start was log noise; saved falls keep their deposits; no ore created.
+- T logs: buildings and units per region on load; pilot fell/respawns lines.
