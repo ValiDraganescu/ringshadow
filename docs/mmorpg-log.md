@@ -745,3 +745,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D E1 (user): resources too abundant; at most 1-2 ore veins and one MH well a region; starfalls worth the hunt.
 - D E1 (manager): veins regrow a tenth a world day; starfalls ~1 a day at 2,000-3,000 ore; existing worlds adopt the new veins on load.
 - D E1 (user): a fallen star holds 100-1,000 ore; the fall is epic; its impact damages a quarter of the region's diameter and destroys what it lands on, buildings and units.
+- D E1 (user): starfalls spare the home region's Citadel area (25 cells round it, manager's number); nothing else is spared.
+- D R3 (user): at most one Citadel a region (was one a realm); each a full home with its corner turrets.
