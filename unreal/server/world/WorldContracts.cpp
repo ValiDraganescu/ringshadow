@@ -372,7 +372,7 @@ void WorldMap::payContract(PilotId pilot, PilotState& p, Contract& c) {
     // Done: paid now, replaced at dawn (a first-ten-minutes step: by the
     // next step at once).
     c.state = State::done;
-    p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::contract, std::to_string(c.id), c.xp, c.hydrogen, ""});
+    p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::contract, std::to_string(c.id), c.xp, c.hydrogen, c.title});
     const int64_t level = p.progress.level();
     earn(p, c.xp);
     if (!p.flight) bankOut(p, p.region);

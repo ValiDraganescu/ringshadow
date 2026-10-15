@@ -94,6 +94,29 @@ The wallet (top right: ore, then MH) is the pilot's own and goes with it to
 every region. Today a world builds only a Citadel and a Derrick, and both are
 paid in ore, so MH only adds to the wallet and earns XP.
 
+## The HUD
+
+Laid out so the middle of the view, where the Prospector and the action
+are, stays clear (U1; the pieces in `AcProgressHud.h`, `SAcLevelUp.h`,
+`HudLanes.h`):
+
+- **Top centre.** The compass, the marks over and under it, and the plate
+  of what you aim at. Under them the **boss bar** when the Matriarch is near:
+  her name and hp in one line over a slim bar.
+- **The banner slot**, under the compass (or under the boss bar): a level
+  reached, a raid's warning ("KSTR: BROOD SWARM"), "THE MATRIARCH IS DOWN".
+  One at a time; the next waits its turn. While a screen is open (K, J, H,
+  L, M, U) it waits, and shows when the screen closes.
+- **The toast lane**, upper left under the region's name: everything else
+  (a contract, mission or goal done, KSTR's next goal, a find, a load home).
+  Three at most, newest on top, about 4 s each; more wait their turn. The
+  same news again merges into the one shown ("SURVEY CHIP ×2"), and loads
+  home add up: "+24 ORE" three times reads "+72 ORE".
+- **The contract panel**, right, over the dashboard: compact by default
+  (the titles in one line and the NEXT line); T shows it whole.
+- **Q, C, G** over the dashboard left of the Prospector; the supplies' cells
+  (1-4) right of it.
+
 ## Travel
 
 - **Passages.** A region is open land ringed by natural walls: cliff bands

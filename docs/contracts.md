@@ -115,11 +115,13 @@ is a frontier station: dry, warm, a bit wry, with no real-world names.
 
 ## On screen
 
-- **Compact.** By default the panel is one small line a contract over the
-  dashboard's right edge ("KSTR · CONTRACTS", "T more"): its key, the title
-  and a thin bar, or PAID / ABANDONED. **T** opens the whole panel and
-  closes it again; a contract that changes (more ore home, done, a new one)
-  opens it for 6 s by itself, and an armed abandon keeps it open.
+- **Compact.** By default the panel is a slim strip over the dashboard's
+  right edge, about a third of the whole panel's height (U1): "KSTR", the
+  three titles in one line ("1 Ore Run · 2 Lost and Found · 3 Prove the
+  Vein"; a paid one green, an abandoned one dim), "T more", and the NEXT
+  line under them. **T** opens the whole panel and closes it again; a
+  contract that is new, done or dropped opens it for 6 s by itself (more ore
+  home does not), and an armed abandon keeps it open.
 - **The panel.** The three slots on a panel that stands on the dashboard
   over its right well and grille ("KSTR 88.7 · CONTRACTS", "T less"). Each row: its
   key (1, 2, 3), the title, the pay ("+600 XP · +15 MH"), the radio's line,
@@ -132,6 +134,8 @@ is a frontier station: dry, warm, a bit wry, with no real-world names.
   1, 2 or 3 then drops that slot's contract (`Client.abandon`); X again or
   Esc keeps them, and it disarms by itself after 6 s.
 - **Done.** A toast: "CONTRACT DONE: PROVE THE VEIN", "+710 XP · +30 MH".
+  The news carries the contract's title (`by`), so the toast never falls
+  back to "CONTRACT".
 - **Where.** Open reach and drill contracts ring their region green on the
   world map with "KSTR · <title>"; a reach's site or pad gets a green
   target. In the pilot's region a reach's place shows on the compass
@@ -186,7 +190,8 @@ before the Derrick.
   - The panel's head reads "KSTR · FIRST STEPS 3 / 6" in gold.
   - The open step is drawn in gold with its hint, for example "DRILL A LOAD,
     BRING IT HOME 2 / 5 ORE" or "HOLD CLICK ON THE LANDER WRECK · 5 S". In
-    the compact panel the hint is a second line under the title.
+    the compact panel the strip reads "STEP 3/6" and the step's title, its
+    hint a second line under it.
   - The cockpit's tip line under the card is the step's tip alone, for
     example "Hold click drill ore at a deposit · walk into your Citadel to
     unload".

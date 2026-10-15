@@ -19,6 +19,7 @@
 #include "AcCab.h"
 #include "AcConsoleInfo.h"
 #include "AcPilotText.h"
+#include "HudLanes.h"
 #include "Progression.h"
 #include "SAcWorldMap.h"
 
@@ -72,9 +73,28 @@ public:
 	void SetSlots(const TOptional<std::array<FAcSlotView, 3>>& Slots, const FAcCabLayout& Layout);
 	/// The consumables' stacks, small, right of the slots (shown with them).
 	void SetItems(const TArray<FAcItemView>& Items);
-	/// A find: `Title` large in `Accent`, `Sub` under it; 4.5 s, newest on top.
+	/// A toast in the one lane (U1, `ac::ToastLane`): the view's upper left,
+	/// under the region's name; `Title` in `Accent`, `Sub` under it; three at
+	/// most, newest on top, the rest waiting; the same title again merges.
 	void Toast(const FString& Title, const FString& Sub, const FLinearColor& Accent, double Now);
-	int32 Toasts() const { return Notes.Num(); }
+	/// A load home: `Amount` of `Unit` ("ORE", "MH") in the wallet, `Tax` to
+	/// the realm. Gains add up in one toast ("+72 ORE").
+	void Gain(const FString& Unit, int64 Amount, int64 Tax, double Now);
+	/// Toasts on screen, and their titles newest first.
+	int32 Toasts() const { return int32(Lane.shown.size()); }
+	int32 ToastsWaiting() const { return int32(Lane.waiting.size()); }
+	TArray<FString> ToastTitles() const;
+	/// Where the lane and the boss bar stand (points from the view's top):
+	/// the banner slot's top under them (the compass, the target's plate,
+	/// the boss bar when shown).
+	static constexpr float LaneLeft = 32;
+	static constexpr float LaneTop = 74;
+	static constexpr float BossTop = 140;
+	float BannerTop() const { return BossBar ? BossTop + 46 : BossTop + 2; }
+	/// The slot row's and the stacks' boxes as last painted (U1: clear of
+	/// the pawn), points from the view's top-left.
+	FBox2f SlotsBox() const { return SlotsAt; }
+	FBox2f StacksBox() const { return StacksAt; }
 	/// A site being opened (the act key held at a wreck, a cache, a vault):
 	/// a ring round the reticle, `Share` of the way; or why holding does
 	/// nothing there. Unset: none.
@@ -122,20 +142,15 @@ public:
 		FSlateWindowElementList& Out, int32 Layer, const FWidgetStyle& Style, bool bParentEnabled) const override;
 
 private:
-	struct FNote
-	{
-		FString Title;
-		FString Sub;
-		FLinearColor Accent;
-		double At = 0;
-	};
 	TOptional<std::array<FAcSlotView, 3>> Row;
 	TArray<FAcItemView> Stacks;
 	TOptional<FOpening> Opening;
 	TOptional<FRespawn> Respawn;
 	TOptional<FBoss> BossBar;
 	FAcCabLayout Lay;
-	TArray<FNote> Notes;
+	ac::ToastLane Lane;
+	mutable FBox2f SlotsAt = FBox2f(ForceInit);
+	mutable FBox2f StacksAt = FBox2f(ForceInit);
 	TSharedPtr<FActiveTimerHandle> Timer;
 
 	EActiveTimerReturnType Animate(double Now, float Dt);

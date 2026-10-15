@@ -17,6 +17,7 @@
 #include "AcBakedArt.h"
 #include "AcCab.h"
 #include "AcLeveling.h"
+#include "HudLanes.h"
 
 class UTexture2D;
 struct FAcCommandMapColumn;
@@ -42,11 +43,22 @@ public:
 	/// unanimated. `bKeys` (the MMORPG test mode): the line under it says
 	/// the keys that pick, on a darker plate, held a little longer.
 	void Show(ac::UnitKind Kind, int32 Level, double Now, bool bHold, bool bKeys = false);
-	/// The MMORPG mode's Prospector level (docs/prospector-progression.md,
-	/// "The level-up"): `InTitle`, `InSub` ("+1 SKILL POINT · K") and, at a
-	/// gate level, `InGate` ("TIER 2 OPEN") under it in cyan.
-	void ShowLines(const FString& InTitle, const FString& InSub, const FString& InGate, double Now, bool bHold = false);
+	/// The MMORPG mode's banner slot (U1, docs/mmorpg-play.md "The HUD"): a
+	/// level reached (docs/prospector-progression.md, "The level-up"), a
+	/// raid's warning, the Matriarch down. `InTitle` in `InAccent`, `InSub`
+	/// ("+1 SKILL POINT · K") and `InGate` ("TIER 2 OPEN") under it in cyan.
+	/// One at a time at the top of the view; the next waits its turn
+	/// (`ac::BannerQueue`).
+	void ShowLines(const FString& InTitle, const FString& InSub, const FString& InGate, double Now, bool bHold = false,
+		const FLinearColor& InAccent = FLinearColor(0, 0, 0, 0));
+	/// The slot's top edge (points from the view's top: under the compass,
+	/// or under the boss bar), and whether a screen covers the view (the
+	/// banner waits, its clock stopped).
+	void Place(float InTop, bool bInHeld);
 	bool IsShowing(double Now) const;
+	/// The banner in the slot now ("": none), and how many wait.
+	FString SlotTitle() const;
+	int32 SlotWaiting() const { return int32(Queue.waiting.size()); }
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D::ZeroVector; }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -60,6 +72,11 @@ private:
 	bool bHeld = false;
 	bool bOn = false;
 	bool bKeyed = false;
+	/// The MMORPG mode's slot: its queue, where it stands, held under a screen.
+	ac::BannerQueue Queue;
+	bool bQueued = false;
+	bool bQueueHeld = false;
+	float SlotTop = 142;
 	mutable FAcLevelPlate Plate;
 	TSharedPtr<FActiveTimerHandle> Timer;
 

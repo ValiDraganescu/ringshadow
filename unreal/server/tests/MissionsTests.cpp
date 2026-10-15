@@ -347,7 +347,7 @@ TEST(missions_haul_completes_and_pays) {
     EXPECT_EQ(w.progress(a)->held(Item::repairKit), int64_t(5));
     const auto news = w.takeNews(a);
     bool told = false;
-    for (const auto& n : news) told = told || (n.kind == NewsKind::mission && n.id == "50" && n.value == m.ore);
+    for (const auto& n : news) told = told || (n.kind == NewsKind::mission && n.id == "50" && n.value == m.ore && n.by == m.title && !n.by.empty());
     EXPECT_TRUE(told);
     // More ore: nothing more.
     const double after = w.progress(a)->xp;

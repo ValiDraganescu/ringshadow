@@ -249,6 +249,8 @@ TEST(contracts_deliver_ore_and_mh) {
     ASSERT_TRUE(n != nullptr);
     EXPECT_TRUE(n->id == "10");
     EXPECT_EQ(n->value, list[0].hydrogen);
+    // U1: its title rides with it (the toast reads it, never "CONTRACT").
+    EXPECT_TRUE(n->by == list[0].title && !n->by.empty());
     // MH: 20 a trip.
     for (int trip = 0; trip < 2; trip++) {
         drivenUnit(w, me)->carrying = 20;

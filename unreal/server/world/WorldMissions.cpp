@@ -450,7 +450,7 @@ void WorldMap::missionWork(PilotId pilot, PilotState& p, Kind kind, const std::s
 void WorldMap::payMission(PilotId pilot, PilotState& p, Mission& m) {
     // Done: paid now; it leaves the Journal when the board is next drawn.
     m.state = State::done;
-    p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::mission, std::to_string(m.id), m.xp, m.ore, ""});
+    p.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::mission, std::to_string(m.id), m.xp, m.ore, m.title});
     earn(p, m.xp);
     if (!p.flight) bankOut(p, p.region);
     p.wallet.ore += m.ore;

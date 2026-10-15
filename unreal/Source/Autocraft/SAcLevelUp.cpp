@@ -188,25 +188,38 @@ void SAcLevelBanner::Show(const ac::UnitKind Kind, const int32 Level, const doub
 	bKeyed = bKeys;
 }
 
-void SAcLevelBanner::ShowLines(const FString& InTitle, const FString& InSub, const FString& InGate, const double Now, const bool bHold)
+void SAcLevelBanner::ShowLines(const FString& InTitle, const FString& InSub, const FString& InGate, const double Now, const bool bHold,
+	const FLinearColor& InAccent)
 {
-	Title = InTitle;
-	Sub = InSub;
-	Gate = InGate;
+	const FLinearColor Ink = InAccent.A > 0 ? InAccent : Gold();
+	ac::BannerQueue::Banner B;
+	B.title = TCHAR_TO_UTF8(*InTitle);
+	B.sub = TCHAR_TO_UTF8(*InSub);
+	B.gate = TCHAR_TO_UTF8(*InGate);
+	B.accent = {Ink.R, Ink.G, Ink.B, Ink.A};
+	Queue.push(B, Now);
+	Queue.step(Now, bQueueHeld);
+	bQueued = true;
 	bKeyed = true;
-	Since = Now;
 	bHeld = bHold;
 	bOn = true;
 	Invalidate(EInvalidateWidgetReason::Paint);
-	// Painted again every frame while it runs (Slate keeps a still widget's last paint).
-	if (!bHold && !Timer.IsValid())
-	{
-		Timer = RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateSP(this, &SAcLevelBanner::Animate));
-	}
+	if (!Timer.IsValid()) Timer = RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateSP(this, &SAcLevelBanner::Animate));
 }
+
+void SAcLevelBanner::Place(const float InTop, const bool bInHeld)
+{
+	if (SlotTop == InTop && bQueueHeld == bInHeld) return;
+	SlotTop = InTop;
+	bQueueHeld = bInHeld;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+FString SAcLevelBanner::SlotTitle() const { return Queue.current ? FString(UTF8_TO_TCHAR(Queue.current->title.c_str())) : FString(); }
 
 EActiveTimerReturnType SAcLevelBanner::Animate(double CurrentTime, float DeltaTime)
 {
+	if (bQueued) Queue.step(FPlatformTime::Seconds(), bQueueHeld || bHeld);
 	Invalidate(EInvalidateWidgetReason::Paint);
 	if (IsShowing(FPlatformTime::Seconds())) return EActiveTimerReturnType::Continue;
 	Timer.Reset();
@@ -215,6 +228,7 @@ EActiveTimerReturnType SAcLevelBanner::Animate(double CurrentTime, float DeltaTi
 
 bool SAcLevelBanner::IsShowing(const double Now) const
 {
+	if (bQueued) return Queue.current.has_value() || !Queue.waiting.empty();
 	return bOn && (bHeld || Now - Since < 0.18 + (bKeyed ? 3.6 : 2.4) + 0.6);
 }
 
@@ -226,33 +240,54 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	const FVector2D Size(Geometry.GetLocalSize());
 	if (Size.X <= 0 || Size.Y <= 0) return Layer;
 
-	// The run: in (0.18 s: fade in, ×1.15 → 1), 2.4 s, out (0.6 s fade).
-	// The MMORPG test mode's holds 3.6 s.
-	const double Hold = bKeyed ? 3.6 : 2.4;
+	// The MMORPG slot: the queue's banner, at the top under the compass
+	// (or the boss bar); hidden under a screen.
+	FString Title_ = Title, Sub_ = Sub, Gate_ = Gate;
+	FLinearColor Ink = Gold();
 	double A = 1, Scale = 1;
-	if (!bHeld)
+	FVector2D O;
+	if (bQueued)
 	{
-		const double T = Now - Since;
-		if (T < 0.18)
-		{
-			const double K = T / 0.18;
-			A = K;
-			Scale = 1.15 + (1 - 1.15) * K;
-		}
-		else if (T > 0.18 + Hold)
-		{
-			A = FMath::Max(0.0, 1 - (T - 0.18 - Hold) / 0.6);
-		}
+		if (!Queue.current || bQueueHeld) return Layer;
+		Title_ = UTF8_TO_TCHAR(Queue.current->title.c_str());
+		Sub_ = UTF8_TO_TCHAR(Queue.current->sub.c_str());
+		Gate_ = UTF8_TO_TCHAR(Queue.current->gate.c_str());
+		const std::array<float, 4>& Q = Queue.current->accent;
+		Ink = FLinearColor(Q[0], Q[1], Q[2], Q[3]);
+		A = Queue.alpha();
+		Scale = Queue.scale();
+		// The plate's top edge at `SlotTop` (its top is 50 over the title's line, y up).
+		O = FVector2D(FMath::RoundHalfFromZero(Size.X / 2), FMath::RoundHalfFromZero(Size.Y - SlotTop - 50));
 	}
-	// `n.position`: the middle, 74 % up the view (Swift points, y up).
-	const FVector2D O(FMath::RoundHalfFromZero(Size.X / 2), FMath::RoundHalfFromZero(Size.Y * 0.74));
+	else
+	{
+		// The run: in (0.18 s: fade in, ×1.15 → 1), 2.4 s, out (0.6 s fade).
+		// The MMORPG test mode's holds 3.6 s.
+		const double Hold = bKeyed ? 3.6 : 2.4;
+		if (!bHeld)
+		{
+			const double T = Now - Since;
+			if (T < 0.18)
+			{
+				const double K = T / 0.18;
+				A = K;
+				Scale = 1.15 + (1 - 1.15) * K;
+			}
+			else if (T > 0.18 + Hold)
+			{
+				A = FMath::Max(0.0, 1 - (T - 0.18 - Hold) / 0.6);
+			}
+		}
+		// `n.position`: the middle, 74 % up the view (Swift points, y up).
+		O = FVector2D(FMath::RoundHalfFromZero(Size.X / 2), FMath::RoundHalfFromZero(Size.Y * 0.74));
+	}
 	const FGeometry G = Scale == 1 ? Geometry
 		: Geometry.MakeChild(FSlateRenderTransform(float(Scale)), FVector2f(float(O.X / Size.X), float((Size.Y - O.Y) / Size.Y)));
 
-	const double TitleW = FAcConsolePaint::TextWidth(Title, 40), SubW = FAcConsolePaint::TextWidth(Sub, bKeyed ? 16 : 14);
+	const double TitleW = FAcConsolePaint::TextWidth(Title_, 40), SubW = FAcConsolePaint::TextWidth(Sub_, bKeyed ? 16 : 14);
 	// A gate level's line under the rest (the MMORPG mode).
-	const double Extra = Gate.IsEmpty() ? 0 : 24;
-	const double W = FMath::Max(FMath::Max(TitleW, SubW), FAcConsolePaint::TextWidth(Gate, 15)) + 80, H = 82 + Extra;
+	const double Extra = Gate_.IsEmpty() ? 0 : 24;
+	const double W = FMath::Max(FMath::Max(TitleW, SubW), FAcConsolePaint::TextWidth(Gate_, 15)) + 80, H = 82 + Extra;
 	int32 L = Layer;
 	FPaint P{&Out, &G, L, Size.Y};
 	// `Chrome.plateNode(..., cuts: (14, 14, 4, 4), leds: false, seed: 23)`.
@@ -266,12 +301,12 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	for (const double Side : {-1.0, 1.0})
 	{
 		const double X = O.X + Side * (TitleW / 2 + 22);
-		P.Fill(FAcRect(X - 11, O.Y + 16 - 1, 22, 2), Alpha(Gold(), A));
+		P.Fill(FAcRect(X - 11, O.Y + 16 - 1, 22, 2), Alpha(Ink, A));
 	}
 	// One amber line: no name tint on the kind (Swift's banner has none).
-	P.Text(Title, 40, Gold(), FVector2D(O.X, O.Y + 2), EAcHAlign::Center, false, float(A));
-	P.Text(Sub, bKeyed ? 16 : 14, bKeyed ? White(0.95) : FAcHudStyle::Soft(), FVector2D(O.X, O.Y - 20), EAcHAlign::Center, false, float(A));
-	if (!Gate.IsEmpty()) P.Text(Gate, 15, FAcHudStyle::Cyan(), FVector2D(O.X, O.Y - 44), EAcHAlign::Center, false, float(A));
+	P.Text(Title_, 40, Ink, FVector2D(O.X, O.Y + 2), EAcHAlign::Center, false, float(A));
+	P.Text(Sub_, bKeyed ? 16 : 14, bKeyed ? White(0.95) : FAcHudStyle::Soft(), FVector2D(O.X, O.Y - 20), EAcHAlign::Center, false, float(A));
+	if (!Gate_.IsEmpty()) P.Text(Gate_, 15, FAcHudStyle::Cyan(), FVector2D(O.X, O.Y - 44), EAcHAlign::Center, false, float(A));
 	return L;
 }
 

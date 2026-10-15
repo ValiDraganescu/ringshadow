@@ -738,7 +738,11 @@ void SAcConsole::PaintCenter(FPaint& P, const FAcCardInfo& In) const
 		P.Fill(Xp.Inset(-1, -1), Gray(0, 0.6));
 		P.Stroke(Xp.Inset(-1, -1), 1, Alpha(Gold, 0.45));
 		P.Fill(FAcRect(Xp.X, Xp.Y, Xp.W * In.Level->Fraction, Xp.H), Gold);
-		P.Text(In.Level->Text, 12, Gold, FVector2D(Xp.MaxX(), Xp.MinY() - 15), EAcHAlign::Right);
+		// The numbers a size up, spaced (U1: at 12 points bold a 6 read as an 8).
+		FAcHudText XpText(In.Level->Text, FAcHudStyle::Font(13, EAcFontWeight::Medium), Gold, EAcHAlign::Right);
+		XpText.Accent = FLinearColor::Transparent;
+		XpText.Kern = 0.8f;
+		P.Text(XpText, FVector2D(Xp.MaxX(), Xp.MinY() - 16));
 		// The points waiting (the MMORPG mode): a lit pill over the bar's start.
 		if (!In.Level->Badge.IsEmpty())
 		{
@@ -1000,59 +1004,62 @@ namespace
 void SAcConsole::PaintContractsCompact(FPaint& P) const
 {
 	const FAcContractsInfo& C = *Contracts;
-	// A first-ten-minutes step open: a second line under it, its hint.
-	const double RowH = 30, HintH = 22, Wide = 400;
-	double RowsH = 0;
-	for (const FAcContractRow& Row : C.Rows) RowsH += RowH + (Row.bFirst && Row.State == FAcContractRow::EState::Open ? HintH : 0);
-	// L1: KSTR's next goal, a small line along the foot.
-	const double NextH = C.bNext ? 24 : 0;
+	// U1: titles only, in one line ("1 Ore Run · 2 Lost and Found · 3 …");
+	// a first-ten-minutes step open: the step and its hint instead. The
+	// NEXT line along the foot; T shows the whole panel.
+	const FAcContractRow* Step = nullptr;
+	for (const FAcContractRow& Row : C.Rows)
+		if (Row.bFirst && Row.State == FAcContractRow::EState::Open) Step = &Row;
+	const double LineH = 20, Wide = 400;
+	const double NextH = C.bNext ? LineH : 0;
+	const double StepH = Step ? LineH : 0;
 	const FAcRect Whole = RightPanel(1, 0);
-	const FAcRect R(Whole.MaxX() - Wide, Whole.MinY(), Wide, 36 + FMath::Max(RowsH, RowH) + 8 + NextH);
+	const FAcRect R(Whole.MaxX() - Wide, Whole.MinY(), Wide, 12 + LineH + StepH + NextH);
 	PaintPanelGlass(P, R);
-	if (C.bNext) PaintNext(P, R.MinX() + 14, R.MaxX() - 14, R.MinY() + 10, false);
-	const double X = R.MinX() + 14, Right = R.MaxX() - 14;
-	double Y = R.MaxY() - 26;
-	const FString Head = C.FirstStep > 0 ? FString::Printf(TEXT("KSTR  ·  FIRST STEPS  %d / 6"), C.FirstStep) : FString(TEXT("KSTR  ·  CONTRACTS"));
-	FAcHudText Name(Head, FAcHudStyle::Font(14), C.FirstStep > 0 ? FAcHudStyle::LevelGold() : FAcHudStyle::Cyan());
-	Name.Accent = FLinearColor::Transparent;
-	Name.Kern = 1.0f;
-	P.Text(Name, FVector2D(X, Y));
-	P.Text(TEXT("T  more"), 13, Gray(0.6), FVector2D(Right, Y), EAcHAlign::Right);
-	Y -= 4;
-	for (int32 I = 0; I < C.Rows.Num(); ++I)
+	const double X = R.MinX() + 12, Right = R.MaxX() - 12;
+	if (C.bNext) PaintNext(P, X, Right, R.MinY() + 8, false);
+	double Y = R.MaxY() - 22;
+	// The station's tag, and T on the right.
+	FAcHudText Tag(Step ? FString::Printf(TEXT("STEP %d/6"), C.FirstStep) : FString(TEXT("KSTR")), FAcHudStyle::Font(12),
+		Step ? FAcHudStyle::LevelGold() : FAcHudStyle::Cyan());
+	Tag.Accent = FLinearColor::Transparent;
+	Tag.Kern = 1.2f;
+	P.Text(Tag, FVector2D(X, Y + 1));
+	const double KeyW = FPaint::TextWidth(TEXT("T  more"), 12);
+	P.Text(TEXT("T  more"), 12, Gray(0.55), FVector2D(Right, Y + 1), EAcHAlign::Right);
+	double Tx = X + FPaint::TextWidth(Tag.Text, 12) + 14;
+	const double Room = Right - KeyW - 12;
+	if (Step)
+	{
+		P.Text(Fit(Step->Title, 14, Room - Tx), 14, FAcHudStyle::LevelGold(), FVector2D(Tx, Y));
+		P.Text(Fit(Step->Progress, 13, Right - X - 8), 13, Alpha(FAcHudStyle::LevelGold(), 0.85), FVector2D(X + 8, Y - LineH));
+		P.FillRounded(FAcRect(X - 6, Y - LineH + 2, 2, 2 * LineH - 4), 1, FAcHudStyle::LevelGold());
+		return;
+	}
+	if (C.Rows.IsEmpty())
+	{
+		P.Text(TEXT("The radio is quiet"), 13, Gray(0.6), FVector2D(Tx, Y));
+		return;
+	}
+	for (int32 I = 0; I < C.Rows.Num() && Tx < Room; ++I)
 	{
 		const FAcContractRow& Row = C.Rows[I];
 		const bool bOpen = Row.State == FAcContractRow::EState::Open;
 		const bool bDone = Row.State == FAcContractRow::EState::Done;
-		const bool bStep = Row.bFirst && bOpen;
-		Y -= RowH + (bStep ? HintH : 0);
-		const float A = bOpen ? 1.f : 0.6f;
-		const double By = Y + 9 + (bStep ? HintH : 0);
-		if (bStep)
+		if (I > 0)
 		{
-			// The step: a gold edge down its side, its hint under the title.
-			P.FillRounded(FAcRect(X - 8, Y + 4, 3, RowH + HintH - 6), 1, FAcHudStyle::LevelGold());
-			P.Text(Fit(Row.Progress, 13, Right - X - 20), 13, Alpha(FAcHudStyle::LevelGold(), 0.9), FVector2D(X + 20, Y + 8));
+			P.Text(TEXT("·"), 13, Gray(0.45), FVector2D(Tx, Y));
+			Tx += FPaint::TextWidth(TEXT("·"), 13) + 8;
 		}
-		P.Text(FString::FromInt(I + 1), 13, Gray(0.5), FVector2D(X, By));
-		// Its bar (open) or its tag (paid, abandoned) on the right; the title fills the rest.
-		const double BarW = 92;
-		const FString Tag = bOpen ? FString() : bDone ? FString(TEXT("PAID")) : FString(TEXT("ABANDONED"));
-		const double TagW = bOpen ? BarW : FPaint::TextWidth(Tag, 13);
-		const double Tx = X + 20, Tw = Right - TagW - 12 - Tx;
-		P.Text(Fit(Row.Title, 15, Tw), 15, bDone ? Rgb(0.75, 1, 0.8) : bStep ? FAcHudStyle::LevelGold() : Gray(0.95, A), FVector2D(Tx, By));
-		if (bOpen)
-		{
-			const FLinearColor Ink = bStep ? FAcHudStyle::LevelGold() : FAcHudStyle::Cyan();
-			const FAcRect Bar(Right - BarW, By + 3, BarW, 7);
-			P.FillRounded(Bar, 2, Gray(0, 0.55));
-			if (Row.Share > 0) P.FillRounded(FAcRect(Bar.MinX(), Bar.MinY(), FMath::Max(3.0, BarW * FMath::Clamp(Row.Share, 0.0, 1.0)), Bar.H), 2, Ink);
-			P.Stroke(Bar, 2, Alpha(Ink, 0.45), 1);
-		}
-		else
-		{
-			P.Text(Tag, 13, bDone ? Rgb(0.45, 1, 0.55) : Rgb(1, 0.62, 0.3), FVector2D(Right, By), EAcHAlign::Right);
-		}
+		const FString Num = FString::FromInt(I + 1);
+		P.Text(Num, 12, Gray(0.5), FVector2D(Tx, Y));
+		Tx += FPaint::TextWidth(Num, 12) + 5;
+		// Each title its share of what is left; a done one green, an
+		// abandoned one dim.
+		const double Share = (Room - Tx) / FMath::Max(1, C.Rows.Num() - I) - (I + 1 < C.Rows.Num() ? 22 : 0);
+		const FString Title = Fit(Row.Title, 14, FMath::Max(24.0, Share));
+		P.Text(Title, 14, bDone ? Rgb(0.6, 1, 0.68) : bOpen ? Gray(0.95) : Gray(0.55), FVector2D(Tx, Y));
+		Tx += FPaint::TextWidth(Title, 14) + 8;
 	}
 }
 

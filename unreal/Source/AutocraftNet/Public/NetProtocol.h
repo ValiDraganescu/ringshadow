@@ -625,7 +625,7 @@ struct ProgressMessage {
     /// ore and MH given for a blueprint known already).
     ///
     /// K1: `contract`: a contract done, `id` its number, `xp` what it paid,
-    /// `value` the MH it paid.
+    /// `value` the MH it paid, `by` its title (U1).
     ///
     /// P7: `made`: the Foundry finished a module, `id` its code name
     /// ("drillHead"), `value` its mark; it waits in the stores. `researched`:
@@ -637,7 +637,7 @@ struct ProgressMessage {
     /// in the pilot's region.
     ///
     /// K2: `mission`: a Citadel mission done, `id` its number, `xp` what it
-    /// paid, `value` its ore.
+    /// paid, `value` its ore, `by` its title (U1).
     ///
     /// H2: `merc`: `id` "away" (while the pilot was off line its mercenaries
     /// delivered `value` ore to its wallet, after the tax), "left" (`by`

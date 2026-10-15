@@ -401,11 +401,20 @@ void UAcLevelingSubsystem::LevelUp(const ac::UnitKind Kind, const int32 Level, c
 	BannerWidget->Show(Kind, Level, Clock(), bHold, Sim && Sim->IsMmo());
 }
 
-void UAcLevelingSubsystem::ShowBanner(const FString& Title, const FString& Sub, const FString& Gate, const bool bHold)
+void UAcLevelingSubsystem::ShowBanner(const FString& Title, const FString& Sub, const FString& Gate, const bool bHold, const FLinearColor& Accent)
 {
 	if (!Mount()) return;
-	BannerWidget->ShowLines(Title, Sub, Gate, Clock(), bHold);
+	BannerWidget->ShowLines(Title, Sub, Gate, Clock(), bHold, Accent);
 }
+
+void UAcLevelingSubsystem::PlaceBanner(const float Top, const bool bHeld)
+{
+	if (BannerWidget) BannerWidget->Place(Top, bHeld);
+}
+
+FString UAcLevelingSubsystem::BannerTitleShown() const { return BannerWidget ? BannerWidget->SlotTitle() : FString(); }
+
+bool UAcLevelingSubsystem::BannerShowing() const { return BannerWidget && BannerWidget->IsShowing(FPlatformTime::Seconds()); }
 
 bool UAcLevelingSubsystem::Earn(const double Xp)
 {

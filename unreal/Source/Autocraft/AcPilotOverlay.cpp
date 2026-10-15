@@ -224,9 +224,10 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 		// in Swift's still (made at the shot, drawn the same frame).
 		if (bAtShot && Widget) Widget->Hold(TOptional<double>(HeldMarkAge), bHeldHurt, !HeldNote.IsEmpty());
 	}
-	// The MMORPG test: the load the pilot unloaded, large over the reticle
-	// (docs/mmorpg-shots.md #11).
-	if (Sim->IsMmo() && Widget)
+	// The MMORPG mode: the load the pilot unloaded, a toast in the one lane
+	// (U1: gains add up, "+72 ORE", the realm's share under it).
+	const UAcProgressHudSubsystem* ProgressHud = UAcProgressHudSubsystem::Get(this);
+	if (const TSharedPtr<SAcProgressHud> Lane = Sim->IsMmo() && ProgressHud ? ProgressHud->Widget() : nullptr)
 	{
 		for (const ac::GameEvent& E : Frame.Events)
 		{
@@ -236,9 +237,7 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 				// What reached the wallet, and the realm's tax (C1): "+22 ORE",
 				// "3 TO THE REALM".
 				const bool bMh = D->hydrogen || bLoadWasHydrogen;
-				Widget->Gain(FString::Printf(TEXT("+%lld %s"), (long long)(D->amount - D->tax), bMh ? TEXT("MH") : TEXT("ORE")),
-					FPlatformTime::Seconds(),
-					D->tax > 0 ? FString::Printf(TEXT("%lld TO THE REALM"), (long long)D->tax) : FString());
+				Lane->Gain(bMh ? TEXT("MH") : TEXT("ORE"), D->amount - D->tax, D->tax, FPlatformTime::Seconds());
 			}
 		}
 	}

@@ -39,13 +39,14 @@
 
 namespace
 {
-	/// A toast stays this long (the last 0.6 s fading), seconds.
-	constexpr double ToastSeconds = 4.5;
-	/// At most this many toasts at once (the oldest goes).
-	constexpr int32 MaxToasts = 4;
 	/// A slot's square, the gap between, points.
 	constexpr float Cell = 76;
 	constexpr float CellGap = 14;
+	/// The slots and the stacks stand this far either side of the view's
+	/// middle (U1): clear of the pawn, which stands there.
+	constexpr float PawnClear = 190;
+	/// A toast's widest, points.
+	constexpr float ToastMaxW = 520;
 
 	FString Text(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 
@@ -147,52 +148,70 @@ void SAcProgressHud::SetBoss(const TOptional<FBoss>& In)
 
 void SAcProgressHud::PaintBoss(FSlateWindowElementList& Out, const int32 Layer, const FGeometry& G, const FVector2f Size) const
 {
-	// Top centre: a wide bar under her name, the hp in numbers at its right.
+	// Under the compass and the target's plate (U1): her name and the hp in
+	// one line over a slim bar, on one glass plate; the banner slot under it.
 	const FBoss& B = *BossBar;
-	const float W = FMath::RoundHalfFromZero(FMath::Min(Size.X * 0.5f, 760.f));
+	const float W = FMath::RoundHalfFromZero(FMath::Min(Size.X * 0.36f, 580.f));
 	const float X = FMath::RoundHalfFromZero(Size.X / 2 - W / 2);
-	// Under the compass strip, its name clear of it.
-	const float Y = FMath::RoundHalfFromZero(FMath::Max(150.f, Size.Y * 0.16f));
-	const float H = 16;
+	const float Top = BossTop;
+	const float Y = Top + 24;
+	const float H = 10;
 	const FLinearColor Violet = FAcHudStyle::Srgb(0.78, 0.36, 1.0);
 	const FLinearColor Teal = FAcHudStyle::Srgb(0.3, 0.95, 0.85);
 	const double Share = FMath::Clamp(B.Hp / FMath::Max(1.0, B.Max), 0.0, 1.0);
-	Label(B.Name, 22, B.Hp > 0 ? Violet : WithAlpha(FAcHudStyle::Soft(), 0.8f), EAcHAlign::Center, EAcVAlign::Baseline, EAcFontWeight::Bold, 2.4f)
-		.Paint(Out, Layer + 2, G, FVector2f(Size.X / 2, Y - 6));
-	const FBox2f Frame(FVector2f(X - 4, Y - 4), FVector2f(X + W + 4, Y + H + 4));
-	Box(Out, Layer, G, Frame, WithAlpha(FAcHudStyle::Glass(), 0.86f));
-	Box(Out, Layer + 1, G, FBox2f(FVector2f(X, Y), FVector2f(X + W, Y + H)), WithAlpha(Violet, 0.14f));
-	if (Share > 0) Box(Out, Layer + 1, G, FBox2f(FVector2f(X, Y), FVector2f(X + float(W * Share), Y + H)), WithAlpha(Violet, 0.92f));
-	// A teal vein along the bar's top edge, as on her body.
-	if (Share > 0) Box(Out, Layer + 2, G, FBox2f(FVector2f(X, Y), FVector2f(X + float(W * Share), Y + 3)), WithAlpha(Teal, 0.8f));
-	// Quarter marks.
-	for (int32 Q = 1; Q < 4; ++Q)
-		Box(Out, Layer + 2, G, FBox2f(FVector2f(X + W * Q / 4.f - 1, Y), FVector2f(X + W * Q / 4.f + 1, Y + H)), WithAlpha(FAcHudStyle::Glass(), 0.7f));
-	CutFrame(Out, Layer + 2, G, Frame, WithAlpha(B.bRoaring ? Teal : Violet, B.bRoaring ? 1.0f : 0.6f), B.bRoaring ? 2.f : 1.f, 8);
+	const FBox2f Frame(FVector2f(X - 10, Top), FVector2f(X + W + 10, Y + H + 8));
+	Box(Out, Layer, G, Frame, WithAlpha(FAcHudStyle::Glass(), 0.8f));
+	CutFrame(Out, Layer + 2, G, Frame, WithAlpha(B.bRoaring ? Teal : Violet, B.bRoaring ? 1.0f : 0.55f), B.bRoaring ? 2.f : 1.f, 8);
+	FString Name = B.Name;
+	if (!B.Sub.IsEmpty()) Name += TEXT("  ·  ") + B.Sub;
+	Label(Name, 15, B.Hp > 0 ? Violet : WithAlpha(FAcHudStyle::Soft(), 0.8f), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f)
+		.Paint(Out, Layer + 2, G, FVector2f(X, Top + 4));
 	const FString Numbers = B.Hp > 0 ? FString::Printf(TEXT("%s / %s"), *FText::AsNumber(FMath::CeilToInt64(B.Hp)).ToString(),
 											*FText::AsNumber(FMath::RoundToInt64(B.Max)).ToString())
 									 : FString(TEXT("DOWN"));
 	Label(Numbers, 13, WithAlpha(FAcHudStyle::Text(), 0.9f), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::Medium, 0.6f)
-		.Paint(Out, Layer + 2, G, FVector2f(X + W, Y + H + 8));
-	if (!B.Sub.IsEmpty())
-		Label(B.Sub, 13, WithAlpha(FAcHudStyle::Soft(), 0.85f), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium, 0.6f)
-			.Paint(Out, Layer + 2, G, FVector2f(X, Y + H + 8));
+		.Paint(Out, Layer + 2, G, FVector2f(X + W, Top + 6));
+	Box(Out, Layer + 1, G, FBox2f(FVector2f(X, Y), FVector2f(X + W, Y + H)), WithAlpha(Violet, 0.14f));
+	if (Share > 0) Box(Out, Layer + 1, G, FBox2f(FVector2f(X, Y), FVector2f(X + float(W * Share), Y + H)), WithAlpha(Violet, 0.92f));
+	// A teal vein along the bar's top edge, as on her body.
+	if (Share > 0) Box(Out, Layer + 2, G, FBox2f(FVector2f(X, Y), FVector2f(X + float(W * Share), Y + 2)), WithAlpha(Teal, 0.8f));
+	// Quarter marks.
+	for (int32 Q = 1; Q < 4; ++Q)
+		Box(Out, Layer + 2, G, FBox2f(FVector2f(X + W * Q / 4.f - 1, Y), FVector2f(X + W * Q / 4.f + 1, Y + H)), WithAlpha(FAcHudStyle::Glass(), 0.7f));
 }
 
 void SAcProgressHud::Toast(const FString& Title, const FString& Sub, const FLinearColor& Accent, const double Now)
 {
-	Notes.Insert(FNote{Title, Sub, Accent, Now}, 0);
-	if (Notes.Num() > MaxToasts) Notes.SetNum(MaxToasts);
+	ac::ToastLane::Toast T;
+	T.title = TCHAR_TO_UTF8(*Title);
+	T.sub = TCHAR_TO_UTF8(*Sub);
+	T.accent = {Accent.R, Accent.G, Accent.B, Accent.A};
+	Lane.push(std::move(T), Now);
 	Invalidate(EInvalidateWidgetReason::Paint);
 	if (!Timer.IsValid()) Timer = RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateSP(this, &SAcProgressHud::Animate));
 }
 
+void SAcProgressHud::Gain(const FString& Unit, const int64 Amount, const int64 Tax, const double Now)
+{
+	// Ore in the Prospector's violet, MH in ice.
+	const FLinearColor Ink = Unit == TEXT("MH") ? FAcHudStyle::Srgb(0.84, 0.92, 0.98) : FAcHudStyle::Srgb(0.78, 0.66, 1);
+	Lane.gain(TCHAR_TO_UTF8(*Unit), Amount, Tax, {Ink.R, Ink.G, Ink.B, Ink.A}, Now);
+	Invalidate(EInvalidateWidgetReason::Paint);
+	if (!Timer.IsValid()) Timer = RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateSP(this, &SAcProgressHud::Animate));
+}
+
+TArray<FString> SAcProgressHud::ToastTitles() const
+{
+	TArray<FString> Out;
+	for (const ac::ToastLane::Toast& T : Lane.shown) Out.Add(UTF8_TO_TCHAR(T.title.c_str()));
+	return Out;
+}
+
 EActiveTimerReturnType SAcProgressHud::Animate(double, float)
 {
-	const double Now = FPlatformTime::Seconds();
-	Notes.RemoveAll([Now](const FNote& N) { return Now - N.At > ToastSeconds; });
+	Lane.step(FPlatformTime::Seconds());
 	Invalidate(EInvalidateWidgetReason::Paint);
-	if (!Notes.IsEmpty()) return EActiveTimerReturnType::Continue;
+	if (!Lane.empty()) return EActiveTimerReturnType::Continue;
 	Timer.Reset();
 	return EActiveTimerReturnType::Stop;
 }
@@ -214,11 +233,13 @@ void SAcProgressHud::PaintSlots(FSlateWindowElementList& Out, int32 Layer, const
 {
 	// Bottom centre: on the dashboard's brow over its middle face (Swift
 	// points, y up, in the layout), else a fifth of the way up the view.
+	// U1: left of the pawn, which stands in the middle; the stacks right of it.
 	const float RowW = 3 * Cell + 2 * CellGap;
 	const bool bCab = Lay.Size.X > 0 && Lay.FaceTop > 0;
 	const float MidX = bCab ? float(Lay.Window.MidX()) : Size.X / 2;
 	const float Bottom = bCab ? Size.Y - float(Lay.FaceTop) - 22 : Size.Y * 0.8f;
-	const FVector2f O(FMath::RoundHalfFromZero(MidX - RowW / 2), FMath::RoundHalfFromZero(Bottom - Cell));
+	const FVector2f O(FMath::RoundHalfFromZero(MidX - PawnClear - RowW), FMath::RoundHalfFromZero(Bottom - Cell));
+	SlotsAt = FBox2f(O - FVector2f(0, 11), O + FVector2f(RowW, Cell));
 	const FLinearColor Glass = FAcHudStyle::Glass();
 	for (int32 I = 0; I < 3; ++I)
 	{
@@ -268,7 +289,7 @@ void SAcProgressHud::PaintSlots(FSlateWindowElementList& Out, int32 Layer, const
 		Box(Out, Layer + 3, G, Cap, S.bOpen ? FAcHudStyle::KeyYellow() : WithAlpha(FAcHudStyle::Soft(), 0.35f));
 		Label(Key, 16, FAcHudStyle::Glass(), EAcHAlign::Center, EAcVAlign::Center, EAcFontWeight::Bold, 0).Paint(Out, Layer + 4, G, Cap.GetCenter());
 	}
-	if (!Stacks.IsEmpty()) PaintItems(Out, Layer, G, FVector2f(O.X + RowW, O.Y), O.Y + Cell);
+	if (!Stacks.IsEmpty()) PaintItems(Out, Layer, G, FVector2f(MidX + PawnClear - 18, O.Y), O.Y + Cell);
 }
 
 void SAcProgressHud::PaintItems(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, const FVector2f RowRight, const float RowBottom) const
@@ -277,6 +298,7 @@ void SAcProgressHud::PaintItems(FSlateWindowElementList& Out, int32 Layer, const
 	// the count, the cooldown's seconds; lit while its effect runs.
 	constexpr float S = 46;
 	constexpr float Between = 6;
+	StacksAt = FBox2f(FVector2f(RowRight.X + 18, RowBottom - S - 8), FVector2f(RowRight.X + 18 + Stacks.Num() * (S + Between) - Between, RowBottom));
 	for (int32 I = 0; I < Stacks.Num(); ++I)
 	{
 		const FAcItemView& V = Stacks[I];
@@ -354,27 +376,35 @@ void SAcProgressHud::PaintRespawn(FSlateWindowElementList& Out, int32 Layer, con
 
 void SAcProgressHud::PaintToasts(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, const FVector2f Size, const double Now) const
 {
-	// Under the level banner's place (74 % up the view), newest on top.
-	float Y = FMath::RoundHalfFromZero(Size.Y * 0.36f);
-	for (const FNote& N : Notes)
+	// U1: the one lane, upper left under the region's name, off the subject
+	// in the middle; newest on top, sliding in from the left.
+	float Y = LaneTop;
+	for (const ac::ToastLane::Toast& N : Lane.shown)
 	{
-		const double T = Now - N.At;
-		if (T < 0 || T > ToastSeconds) continue;
-		const float A = float(T < 0.2 ? T / 0.2 : T > ToastSeconds - 0.6 ? (ToastSeconds - T) / 0.6 : 1.0);
-		const FAcHudText Title = Label(N.Title, 20, WithAlpha(N.Accent, A), EAcHAlign::Center, EAcVAlign::Top, EAcFontWeight::Bold, 1.2f);
-		const FAcHudText Sub = Label(N.Sub, 14, WithAlpha(FAcHudStyle::Text(), 0.9f * A), EAcHAlign::Center, EAcVAlign::Top,
+		const float A = float(ac::ToastLane::alpha(N, Now));
+		if (A <= 0) continue;
+		const FLinearColor Accent(N.accent[0], N.accent[1], N.accent[2], N.accent[3]);
+		FString Title = UTF8_TO_TCHAR(N.title.c_str());
+		// The same news again (not a gain, which adds up): how many.
+		if (N.unit.empty() && N.count > 1) Title += FString::Printf(TEXT("  ×%lld"), (long long)N.count);
+		const FString SubText = UTF8_TO_TCHAR(N.sub.c_str());
+		const FAcHudText TitleT = Label(Title, 17, WithAlpha(Accent, A), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.0f);
+		const FAcHudText Sub = Label(SubText, 13, WithAlpha(FAcHudStyle::Text(), 0.9f * A), EAcHAlign::Left, EAcVAlign::Top,
 			EAcFontWeight::Medium, 0.4f);
-		const float W = FMath::Max(Title.Measure().X, N.Sub.IsEmpty() ? 0.f : Sub.Measure().X) + 56;
-		const float H = N.Sub.IsEmpty() ? 38 : 58;
-		// Slides down into place.
-		const float Drop = T < 0.2 ? float(8 * (1 - T / 0.2)) : 0;
-		const FBox2f B(FVector2f(Size.X / 2 - W / 2, Y - Drop), FVector2f(Size.X / 2 + W / 2, Y - Drop + H));
+		const float W = FMath::Min(ToastMaxW, FMath::Max(TitleT.Measure().X, SubText.IsEmpty() ? 0.f : Sub.Measure().X) + 34);
+		const float H = SubText.IsEmpty() ? 32 : 50;
+		const double Age = N.shownAt ? Now - *N.shownAt : 0;
+		const float Slide = Age < 0.2 ? float(14 * (1 - Age / 0.2)) : 0;
+		const FBox2f B(FVector2f(LaneLeft - Slide, Y), FVector2f(LaneLeft - Slide + W, Y + H));
 		Box(Out, Layer, G, B, WithAlpha(FAcHudStyle::Glass(), 0.84f * A));
-		Box(Out, Layer + 1, G, FBox2f(B.Min, FVector2f(B.Min.X + 3, B.Max.Y)), WithAlpha(N.Accent, A));
-		CutFrame(Out, Layer + 1, G, B, WithAlpha(N.Accent, 0.6f * A), 1, 8);
-		Title.Paint(Out, Layer + 2, G, FVector2f(B.GetCenter().X, B.Min.Y + 8));
-		if (!N.Sub.IsEmpty()) Sub.Paint(Out, Layer + 2, G, FVector2f(B.GetCenter().X, B.Min.Y + 33));
-		Y += H + 8;
+		Box(Out, Layer + 1, G, FBox2f(B.Min, FVector2f(B.Min.X + 3, B.Max.Y)), WithAlpha(Accent, A));
+		CutFrame(Out, Layer + 1, G, B, WithAlpha(Accent, 0.5f * A), 1, 7);
+		// Clipped to the plate: a long line ends at its edge.
+		Out.PushClip(FSlateClippingZone(G.ToPaintGeometry(FVector2D(B.GetSize() - FVector2f(6, 0)), FSlateLayoutTransform(FVector2D(B.Min)))));
+		TitleT.Paint(Out, Layer + 2, G, FVector2f(B.Min.X + 14, B.Min.Y + 7));
+		if (!SubText.IsEmpty()) Sub.Paint(Out, Layer + 2, G, FVector2f(B.Min.X + 14, B.Min.Y + 29));
+		Out.PopClip();
+		Y += H + 6;
 	}
 }
 
@@ -1043,17 +1073,25 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 	// The Matriarch in the mirror (in sight, or close enough to fight): her
 	// boss bar (N3).
 	Hud->SetBoss(AcProgressHud::Boss(*Mmo));
+	// The banner slot: under the compass (or the boss bar); it waits while a
+	// screen covers the view (U1).
+	if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this))
+	{
+		const AAcPilotPawn* Pilot = AAcPilotPawn::Find(this);
+		L->PlaceBanner(Hud->BannerTop(), Pilot && Pilot->ScreenOpen());
+	}
 	// The KSTR contracts on the dashboard's right panel.
 	if (UAcConsoleSubsystem* C = UAcConsoleSubsystem::Get(this); C && C->Console())
 	{
 		TOptional<FAcContractsInfo> Panel;
 		if (Mmo->Progress() && (!Mmo->Progress()->contracts.empty() || Mmo->Progress()->goal))
 		{
-			// What changes a contract (not its countdown): opens the panel a while.
+			// A contract new, done or dropped (not its progress, a load at a
+			// time: U1) opens the panel a while.
 			FString Seen;
 			for (const ac::net::Contract& K : Mmo->Progress()->contracts)
 			{
-				Seen += FString::Printf(TEXT("%u:%d:%lld;"), K.id, int32(K.state), (long long)K.have);
+				Seen += FString::Printf(TEXT("%u:%d;"), K.id, int32(K.state));
 				ContractTitles.Add(K.id, Upper(K.title));
 			}
 			if (Seen != ContractsSeen)
@@ -1265,10 +1303,11 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		break;
 	case K::contract:
 	{
-		// A KSTR contract done: its title from the slots, or as last seen.
+		// A KSTR contract done: its title as the news tells it (U1), else
+		// from the slots, or as last seen.
 		FString Title = TEXT("CONTRACT");
 		if (const FString* Was = ContractTitles.Find(uint32(FCString::Atoi64(*Text(N.id))))) Title = *Was;
-		if (P)
+		if (P && N.by.empty())
 		{
 			for (const ac::net::Contract& C : P->contracts)
 			{
@@ -1277,6 +1316,7 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		}
 		FString Pay = Xp;
 		if (N.value > 0) Pay += FString::Printf(TEXT("%s+%lld MH"), Pay.IsEmpty() ? TEXT("") : TEXT("  ·  "), (long long)N.value);
+		if (!N.by.empty()) Title = Upper(N.by);
 		Hud->Toast(FString::Printf(TEXT("CONTRACT DONE: %s"), *Title), Pay, FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
 		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
 		break;
@@ -1322,15 +1362,16 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 	}
 	case K::mission:
 	{
-		// K2: a Citadel mission done: its title from the Journal, the pay.
-		FString Title = TEXT("MISSION");
+		// K2: a Citadel mission done: its title as the news tells it (U1)
+		// or from the Journal, the pay.
+		FString Title = N.by.empty() ? FString(TEXT("MISSION")) : Upper(N.by);
 		FString Pay = Xp;
 		if (P)
 		{
 			for (const ac::net::CitadelMission& M : P->journal)
 			{
 				if (std::to_string(M.id) != N.id) continue;
-				Title = Upper(M.title);
+				if (N.by.empty()) Title = Upper(M.title);
 				Pay = AcMissions::Reward(M);
 			}
 		}
@@ -1393,7 +1434,9 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 			const FString By = N.by.empty() ? FString() : (P && N.by == P->callsign ? FString(TEXT("you")) : Text(N.by));
 			const FString Who = N.value == 1 ? FString(TEXT("Felled by one pilot"))
 											 : FString::Printf(TEXT("Felled by %lld pilots"), (long long)N.value);
-			Hud->Toast(TEXT("THE MATRIARCH IS DOWN"), By.IsEmpty() ? Who : Who + TEXT("  ·  the hardest blows: ") + By, Violet, Now);
+			// The banner slot, not a toast (U1).
+			if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this))
+				L->ShowBanner(TEXT("THE MATRIARCH IS DOWN"), By.IsEmpty() ? Who : Who + TEXT("  ·  the hardest blows: ") + By, FString(), false, Violet);
 			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
 		}
 		else if (Id.rfind("share/", 0) == 0)

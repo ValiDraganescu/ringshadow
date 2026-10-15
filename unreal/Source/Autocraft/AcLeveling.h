@@ -144,7 +144,15 @@ public:
 	void LevelUp(ac::UnitKind Kind, int32 Level, bool bHold = false);
 	/// The MMORPG mode's Prospector level (`UAcProgressHudSubsystem`): the
 	/// banner with its lines (`SAcLevelBanner::ShowLines`).
-	void ShowBanner(const FString& Title, const FString& Sub, const FString& Gate, bool bHold = false);
+	void ShowBanner(const FString& Title, const FString& Sub, const FString& Gate, bool bHold = false,
+		const FLinearColor& Accent = FLinearColor(0, 0, 0, 0));
+	/// The MMORPG banner slot's top edge (points from the view's top) and
+	/// whether a screen covers the view (U1: the banner waits under it).
+	void PlaceBanner(float Top, bool bHeld);
+	/// A banner is up now (or waiting its turn in the MMORPG slot).
+	bool BannerShowing() const;
+	/// The MMORPG slot's banner now ("": none).
+	FString BannerTitleShown() const;
 	/// Dev: XP for the driven unit (`sim.earn`); false when not driving.
 	bool Earn(double Xp);
 	/// The command map's pick buttons as last drawn (Swift points, y up), for scripted clicks.

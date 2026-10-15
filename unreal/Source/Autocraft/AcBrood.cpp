@@ -6,6 +6,7 @@
 #include "AcHudStyle.h"
 #include "AcLog.h"
 #include "AcMmo.h"
+#include "AcLeveling.h"
 #include "AcProgressHud.h"
 #include "AcSimSubsystem.h"
 
@@ -158,10 +159,8 @@ void AAcBrood::Tick(const float DeltaSeconds)
 		const FString Sub = Line(Building, Metres, Bearing, Region);
 		UE_LOG(LogAutocraft, Display, TEXT("brood: %s, %s (raid %u on building %lld, arrives at clock %.1f s)"), *Title(), *Sub, R.id,
 			(long long)R.building, R.arrives);
-		if (const UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this))
-		{
-			if (const TSharedPtr<SAcProgressHud> W = Hud->Widget()) W->Toast(Title(), Sub, FAcHudStyle::Srgb(1, 0.35, 0.25), FPlatformTime::Seconds());
-		}
+		// The banner slot (U1): one at a time at the top, never over the action.
+		if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this)) L->ShowBanner(Title(), Sub, FString(), false, FAcHudStyle::Srgb(1, 0.35, 0.25));
 		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->PlayMenu("broodswarm", SwarmGain);
 	}
 	// The Matriarch's roars: heard in her region and next door.

@@ -457,7 +457,8 @@ On the wire (protocol 13, C1): `ProgressMessage::realmWallet`, `taxPercent`,
 On screen:
 
 - The unload toast says what reached the wallet and the realm's cut under
-  it, in the realm's gold: "+22 ORE", "3 TO THE REALM".
+  it: "+22 ORE", "3 TO THE REALM". It is a toast in the one lane (U1);
+  loads home while it is up add to it ("+66 ORE", "9 TO THE REALM").
 - The resource bar, top right, shows the realm wallet small where the
   strategy game's supply count is: "REALM" over "1,240 · 56 MH".
 - **The Citadel screen (H)**, at the realm's Citadel (`SAcCitadelScreen`): H
@@ -1117,8 +1118,9 @@ Foundry and the Lab.
 - The level number and the XP bar stay where they are; the bar runs from
   this level's XP to the next.
 - A points badge by the bar when points wait: "3 POINTS · K".
-- The slot row, bottom centre: Q, C, G with the active's icon and a
-  cooldown ring.
+- The slot row over the dashboard, left of the Prospector (U1: clear of the
+  pawn in the middle): Q, C, G with the active's icon and a cooldown ring;
+  the supplies' cells (1-4) right of it.
 - The Z/X cards go in the MMO mode.
 - A toast for a find: "BLUEPRINT FOUND: FOUNDRY (opens at level 15)",
   "SURVEY CHIP: a site marked in Cold Fork".

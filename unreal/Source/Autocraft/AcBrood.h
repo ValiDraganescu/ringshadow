@@ -1,8 +1,8 @@
 // `AAcBrood`: the Brood's raids told to the pilot in the MMORPG mode
 // (docs/creatures.md, "Raids on buildings"). The server's director tells a
 // raid 20 s before it reaches its building (`net::Sky::raids`); for a raid in
-// the pilot's region or next to it this shows the KSTR radio's toast,
-// "KSTR: BROOD SWARM" over "heading for the Hab Dome  ·  140 m NE", and plays
+// the pilot's region or next to it this shows the banner (the one slot at
+// the top, U1), "KSTR: BROOD SWARM" over "heading for the Hab Dome  ·  140 m NE", and plays
 // the swarm (`broodswarm`) in the pilot's ear, once a raid.
 //
 // The Matriarch's roars (N3, `net::Sky::roars`): heard across her region and

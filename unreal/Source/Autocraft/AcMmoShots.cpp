@@ -80,6 +80,16 @@
 //   06 dev `goal level 10`: a level-10 pilot's goal (an active on Q)
 //   07 the Journal's NEXT section for it
 //
+// -AcMmoShotsU1 (the dev rig: a Citadel, level 25): the HUD decluttered
+// (docs/mmorpg-play.md "The HUD", docs/mmorpg-m8.md U1), DIR/u1-NN-moment.png:
+//   01 dev `goal level 35`: the level-up banner and the NEXT toast at once
+//   02 the contract panel compact   03 T: the panel whole
+//   04 a busy moment: three unloads, a contract, a mission and a goal done
+//   05-09 K, J, H, L, M opened over a banner and toasts
+//   10 a raid on the Citadel with toasts   11 U: a gatling gun's card
+//   12 the Matriarch's roar: the boss bar under the compass
+//   13 the Matriarch down: her banner, the bar felled
+//
 // -AcMmoShotsRingshadow (with -AcMmoRingshadow=70: a sweep 70 s after the
 // server starts; docs/weather.md "Ringshadow sweep"): only the sweep, third
 // person on the start pad toward the giant, DIR/rs-NN-moment.png:
@@ -458,6 +468,10 @@ namespace
 	double N3FrameAt = -1;
 	// -AcMmoShotsL1: when the skill points' goal was seen done.
 	double L1DoneAt = 0;
+	// -AcMmoShotsU1: when her roar began; the staged gun's id.
+	double U1RoarAt = -1;
+	/// The phase whose scene was staged (its first frame done).
+	int32 U1Staged = -1;
 	struct FB1Sample
 	{
 		double At;
@@ -760,6 +774,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	auto Face = [&](const ac::Vec2 At) {
 		return U ? std::atan2(At.y - U->position.y, At.x - U->position.x) : 0.0;
 	};
+	// -AcMmoShotsU1: a load home as the unload tells it.
+	auto U1Gain = [&](const int64 Amount, const int64 Tax) {
+		const UAcProgressHudSubsystem* H = UAcProgressHudSubsystem::Get(this);
+		if (const TSharedPtr<SAcProgressHud> W = H ? H->Widget() : nullptr) W->Gain(TEXT("ORE"), Amount, Tax, FPlatformTime::Seconds());
+	};
 
 	// The level-up cards, the first time they are up (the weld's XP).
 	UAcLevelingSubsystem* Leveling = UAcLevelingSubsystem::Get(this);
@@ -810,7 +829,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -900,6 +920,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4"))) T.Phase = 2000;
 			// -AcMmoShotsL1: KSTR's next goal (2100-2112).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsL1"))) T.Phase = 2100;
+			// -AcMmoShotsU1: the HUD decluttered (2200-2216).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1"))) T.Phase = 2200;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -4280,6 +4302,221 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 2112:
 		CloseJournalScreen();
 		Check(Shots.Saved + Shots.Skipped == 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsU1
+	case 2200:
+		// The dev rig's home, at the realm's Citadel: ten levels at once.
+		if (S && U && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
+		{
+			Check(AtRealmCitadel(), TEXT("u1: the pilot stands at the realm's Citadel"));
+			Check(Mmo->DevClock(TEXT("goal level 35")), TEXT("u1: the dev line makes the pilot level 35"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel"));
+		return;
+	case 2201:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->level >= 35 && Since() > 1.2)
+		{
+			const UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this);
+			Check(L && L->BannerShowing(), TEXT("u1: the level-up banner is up"));
+			Shoot(TEXT("u1-01-level-up"), TEXT("the level-up banner and KSTR's NEXT toast at once"));
+			return;
+		}
+		TimedOut(TEXT("u1: level 35"), 20);
+		return;
+	}
+	case 2202:
+		// The panel as it stands most of the time.
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && Hud->ContractsExpanded()) Hud->ToggleContracts();
+		if (Since() > 6.0) Shoot(TEXT("u1-02-panel-compact"), TEXT("the contract panel compact: titles, the NEXT line"));
+		return;
+	case 2203:
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && !Hud->ContractsExpanded()) Hud->ToggleContracts();
+		if (Since() > 1.0) Shoot(TEXT("u1-03-panel-whole"), TEXT("T: the contract panel whole"));
+		return;
+	case 2204:
+	{
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this))
+		{
+			if (Hud->ContractsExpanded()) Hud->ToggleContracts();
+			// Three loads home, a contract, a mission and a goal done at once.
+			for (int32 I = 0; I < 3; ++I) U1Gain(24, 3);
+			using K = ac::net::ProgressMessage::NewsKind;
+			const ac::net::ProgressMessage* P = Mmo->Progress();
+			ac::net::ProgressMessage::News N;
+			if (P && !P->contracts.empty())
+			{
+				N.kind = K::contract;
+				N.id = std::to_string(P->contracts[0].id);
+				N.xp = P->contracts[0].xp;
+				N.value = P->contracts[0].hydrogen;
+				N.by = P->contracts[0].title;
+				Hud->PreviewNews(N);
+			}
+			N = {};
+			N.kind = K::mission;
+			N.id = "9001";
+			N.xp = 1200;
+			N.value = 400;
+			N.by = "Salvage the Ore Hauler";
+			Hud->PreviewNews(N);
+			N = {};
+			N.kind = K::goal;
+			N.id = "spacedock";
+			N.xp = 600;
+			N.value = 40;
+			N.by = "A Dock for Ships";
+			Hud->PreviewNews(N);
+		}
+		Advance();
+		return;
+	}
+	case 2205:
+		if (Since() > 0.8) Shoot(TEXT("u1-04-busy"), TEXT("a busy moment: three unloads, a contract, a mission and a goal done"));
+		return;
+	case 2206:
+	case 2207:
+	case 2208:
+	case 2209:
+	case 2210:
+	{
+		// Each screen over a banner and toasts: it opens clean on top.
+		static const TCHAR* const Names[] = {TEXT("k"), TEXT("j"), TEXT("h"), TEXT("l"), TEXT("m")};
+		static const TCHAR* const Says[] = {TEXT("K: the skill screen"), TEXT("J: the rig screen"), TEXT("H: the Citadel screen"),
+			TEXT("L: the Journal"), TEXT("M: the world map")};
+		const int32 I = T.Phase - 2206;
+		if (U1Staged != T.Phase)
+		{
+			U1Staged = T.Phase;
+			T.PhaseAt = Now;
+			CloseSkillScreen();
+			CloseRigScreen();
+			CloseCitadelScreen();
+			CloseJournalScreen();
+			CloseWorldMap();
+			if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this))
+				L->ShowBanner(TEXT("BROOD SWARM"), TEXT("heading for the Citadel  ·  12 m NE"), FString());
+			if (const UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && Hud->Widget())
+				Hud->Widget()->Toast(TEXT("SURVEY CHIP"), TEXT("A site marked in Prospect Landing"), FAcHudStyle::Cyan(), FPlatformTime::Seconds());
+			const bool bOpen = I == 0 ? OpenSkillScreen() : I == 1 ? OpenRigScreen() : I == 2 ? OpenCitadelScreen() : I == 3 ? OpenJournalScreen()
+																																	  : OpenWorldMap();
+			Check(bOpen, FString::Printf(TEXT("u1: %s opens"), Says[I]));
+			return;
+		}
+		if (Since() > 1.2) Shoot(*FString::Printf(TEXT("u1-%02d-screen-%s"), 5 + I, Names[I]), FString::Printf(TEXT("%s over a banner and toasts"), Says[I]));
+		return;
+	}
+	case 2211:
+		CloseWorldMap();
+		Check(Mmo->DevClock(TEXT("brood clear\ndefence citadel")), TEXT("u1: the server stages a raid on the Citadel"));
+		Advance();
+		return;
+	case 2212:
+	{
+		const std::optional<ac::net::Sky>& Sky = Mmo->Sky();
+		if (const ac::Structure* C = S ? CitadelOf(*S) : nullptr) Stop(Face(C->position));
+		if (Sky && !Sky->raids.empty() && Since() > 2.0)
+		{
+			if (const UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && Hud->Widget())
+			{
+				Hud->Widget()->Toast(TEXT("KSTR: STARFALL IN 60"), TEXT("Prospect Landing  ·  bearing 040°, 320 m"), FAcHudStyle::Amber(),
+					FPlatformTime::Seconds());
+			}
+			U1Gain(24, 3);
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the raid told"), 15);
+		return;
+	}
+	case 2213:
+		if (const ac::Structure* C = S ? CitadelOf(*S) : nullptr) Stop(Face(C->position));
+		if (Since() > 0.8) Shoot(TEXT("u1-10-raid"), TEXT("a raid on the Citadel: its warning, toasts beside it"));
+		return;
+	case 2214:
+	{
+		// A gatling gun ahead: U opens its card.
+		if (U1Staged != T.Phase)
+		{
+			U1Staged = T.Phase;
+			T.PhaseAt = Now;
+			Check(Mmo->DevClock(TEXT("brood clear\ndefence gatling")), TEXT("u1: the server stages a gatling gun ahead"));
+			return;
+		}
+		const ac::Structure* Gun = S && U ? NearestGatling(*S, U->position) : nullptr;
+		if (Gun && Since() > 1.0 && !NearTurret())
+		{
+			// Up to it: within the card's reach.
+			const ac::Vec2 Back = ac::normalize(U->position - Gun->position + ac::Vec2(0.01, 0));
+			const ac::Vec2 To = Gun->position + Back * (ac::Rules::radius(Gun->kind) + 1.5);
+			if (Shots.Route.Num() != 1 || FVector2D(To.x, To.y) != Shots.Route[0]) Route({FVector2D(To.x, To.y)});
+			Drive();
+		}
+		else if (Gun && Since() > 1.0 && OpenTurretCard())
+		{
+			Stop(Face(Gun->position));
+			if (Since() > 4.0) Shoot(TEXT("u1-11-screen-u"), TEXT("U: the gatling gun's card"));
+			return;
+		}
+		TimedOut(TEXT("u1: the gun's card"), 30);
+		return;
+	}
+	case 2215:
+		CloseTurretCard();
+		Check(Mmo->DevClock(TEXT("brood clear\nmatriarch here 55")), TEXT("u1: the server takes the pilot to the Matriarch's nest"));
+		U1RoarAt = -1;
+		Advance();
+		return;
+	case 2216:
+		if (Here == TEXT("slag-pockets") && U && S && NearestBug(*S, U->position, ac::UnitKind::matriarch) && Since() > 2.0)
+		{
+			Check(Mmo->DevClock(TEXT("matriarch calm\nmatriarch near 20 -90")), TEXT("u1: the pilot walks up to her, her horde held"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("in Slag Pockets, the Matriarch sent"), 40);
+		return;
+	case 2217:
+	{
+		const ac::Unit* Q = S && U ? NearestBug(*S, U->position, ac::UnitKind::matriarch) : nullptr;
+		if (Q) Stop(Face(Q->position));
+		if (Q && Q->bug && Q->bug->state == ac::Bug::State::roar && U1RoarAt < 0) U1RoarAt = Now;
+		if (U1RoarAt > 0 && Now - U1RoarAt > 0.9)
+		{
+			const TSharedPtr<SAcProgressHud> W = UAcProgressHudSubsystem::Get(this) ? UAcProgressHudSubsystem::Get(this)->Widget() : nullptr;
+			Check(W && W->Boss().IsSet(), TEXT("u1: the boss bar near her"));
+			Shoot(TEXT("u1-12-boss"), TEXT("the Matriarch's roar: the boss bar under the compass, her plate clear"));
+			return;
+		}
+		TimedOut(TEXT("her roar"), 20);
+		return;
+	}
+	case 2218:
+		Check(Mmo->DevClock(TEXT("matriarch down")), TEXT("u1: the Matriarch is felled"));
+		Advance();
+		return;
+	case 2219:
+	{
+		const ac::Unit* Q = nullptr;
+		if (S)
+			for (const ac::Unit& X : S->units)
+				if (X.kind == ac::UnitKind::matriarch && X.bug) Q = &X;
+		if (Q && U) Stop(Face(Q->position));
+		if (Q && Q->bug && Q->bug->state == ac::Bug::State::dead && Since() > 1.6)
+		{
+			Shoot(TEXT("u1-13-down"), TEXT("the Matriarch down: her banner in the slot, the bar felled"));
+			return;
+		}
+		TimedOut(TEXT("her body"), 15);
+		return;
+	}
+	case 2220:
+		Mmo->DevClock(TEXT("matriarch back"));
+		Check(Shots.Saved + Shots.Skipped == 13, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsK2

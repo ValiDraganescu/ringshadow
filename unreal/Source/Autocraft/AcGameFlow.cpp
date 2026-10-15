@@ -8,6 +8,7 @@
 #include "AcHUD.h"
 #include "AcLog.h"
 #include "AcHudStyle.h"
+#include "AcLeveling.h"
 #include "AcMissions.h"
 #include "AcPilotPawn.h"
 #include "AcPointer.h"
@@ -903,7 +904,11 @@ void UAcGameFlowSubsystem::TickMmo()
 			&& !Mmo->Travelling() && !(Pawn && Pawn->InFlight()) && Mmo->Visit() != MmoTitledVisit)
 		{
 			MmoTitledVisit = Mmo->Visit();
-			MmoBanner->ShowTitle(Text(Here->name), Text(ac::title(Here->style)), FPlatformTime::Seconds());
+			// The one banner slot (U1): it waits its turn behind a level or a raid.
+			if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this))
+				L->ShowBanner(Text(Here->name).ToUpper(), Text(ac::title(Here->style)).ToUpper(), FString(), false, FAcHudStyle::Srgb(0.93, 0.97, 1.0));
+			else
+				MmoBanner->ShowTitle(Text(Here->name), Text(ac::title(Here->style)), FPlatformTime::Seconds());
 		}
 		// Small: the round trip only when it is high enough to feel (on this
 		// machine it is mostly frame time), and the lag set on it (ac.MmoLag).

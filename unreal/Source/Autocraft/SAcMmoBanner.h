@@ -10,9 +10,10 @@
 // and the connection's line in a small box at the view's top left; the
 // status and the refusals centred under the compass and its marks. On
 // arriving in a region (a landing, an edge crossing, the start) its title
-// fades in large over the upper middle: the name, under it the style
-// (`ShowTitle`; 0.5 s in, 2.5 s, 1 s out). The round trip shows only when it
-// is high (`SetStats` with `bWarn`: amber).
+// goes to the one banner slot (U1, `UAcLevelingSubsystem::ShowBanner`): the
+// name, under it the style; `ShowTitle` paints it here only without one
+// (0.5 s in, 2.5 s, 1 s out). The round trip shows only when it is high
+// (`SetStats` with `bWarn`: amber).
 #pragma once
 
 #include "CoreMinimal.h"

@@ -247,7 +247,8 @@ Prospector that hits them.
   from it.
 - Warning: 20 s before a raid reaches its building, every pilot in the
   region and the ones next to it hears the swarm coming (`broodswarm`) and
-  gets a toast: "BROOD SWARM · heading for the Hab Dome · 140 m NE".
+  gets a banner at the top: "BROOD SWARM · heading for the Hab Dome · 140 m
+  NE" (the one banner slot, U1).
 - A building that falls is destroyed (N2 decides what remains: a wreck the
   pilot can rebuild at a discount is the suggestion). Bugs never eat
   buildings or carry anything off.
@@ -528,7 +529,7 @@ What N2 built, and the choices the design left open.
   sounds (`FAcAudioRules`: a strike sound on each strike, a hurt cry, the
   chitter, the deaths; a Gloamwing's wings and a Lodeback's chewing as
   loops, the nearest three), and `AAcBrood` (AcBrood.h): the raid's KSTR
-  toast, "KSTR: BROOD SWARM" over "heading for the Hab Dome  ·  140 m NE",
+  banner, "KSTR: BROOD SWARM" over "heading for the Hab Dome  ·  140 m NE",
   and the swarm in the ear.
 - **Dev and shots.** The server's dev control takes `brood linger`,
   `brood attack`, `brood dive`, `brood lodeback`, `brood raid` and
@@ -616,9 +617,11 @@ Her numbers are `ac::Matriarch` (Brood.h); the core steps her
   - Her strike sounds (`matriarchslam`, `matriarchspit`).
   - Her roar heard across her region and faintly next door, the view shaking
     within 35 cells for its 2 s (`AAcBrood`, `UAcEffects::Rumble`).
-  - The boss bar at the top of the HUD (`SAcProgressHud::FBoss`), within 35
-    cells or while she is wounded, flaring while she roars.
-  - The toasts.
+  - The boss bar under the compass and the target's plate
+    (`SAcProgressHud::FBoss`): her name and hp in one line over a slim bar,
+    within 35 cells or while she is wounded, flaring while she roars.
+  - "THE MATRIARCH IS DOWN" in the banner slot under the bar; the share a
+    toast.
 - **Choices.**
   - She stays within her tether (6 cells), so she does not block paths the
     way a building would: she is a unit of radius 3.5.
