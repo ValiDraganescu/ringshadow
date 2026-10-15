@@ -69,7 +69,7 @@ run_worker_first = ["/*", "!/assets/*", "!/blog/media/*"]   # new
 
 [[analytics_engine_datasets]]                # new
 binding = "HITS"
-dataset = "ringshadow_hits"
+dataset = "ringshadow_hits2"
 
 [[d1_databases]]                             # new
 binding = "ADMIN"
@@ -96,13 +96,16 @@ through it: pages, the feed, the text files, the admin, the collector.
 
 ### Analytics Engine: one point per hit
 
-Dataset `ringshadow_hits`. Rows are immutable and kept three months. The
+Dataset `ringshadow_hits2` (`ringshadow_hits` until 2026-10-15: the build
+day's test traffic lives there and ages out after three months, since an
+Analytics Engine dataset cannot be emptied, only left behind). Rows are
+immutable and kept three months. The
 index is Analytics Engine's sampling key: when one index writes fast, its
 rows are sampled (kept with a `sampleInterval` weight). So server hits are
 indexed by their User-Agent (the first 96 bytes, a browser's family), and a
 crawler storm thins only the stormer's rows, never a rare agent's string;
 people's hits and `meta` rows are indexed by the site id. Queries select by
-`blob1` (kind) and `blob3` (host), not by the index. The SQL API (`events.analyticsEngine.ringshadow_hits`) samples these
+`blob1` (kind) and `blob3` (host), not by the index. The SQL API (`events.analyticsEngine.ringshadow_hits2`) samples these
 datasets adaptively and applies the weights itself in `COUNT`, `SUM`,
 `countIf` and `sumIf`, so counts are `COUNT(*)`; Counterscale's
 `SUM(_sample_interval)` is the older Analytics Engine SQL API's form and

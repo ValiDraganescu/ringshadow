@@ -247,7 +247,7 @@ The Worker's bindings, all in `wrangler.toml`:
 | Binding | What |
 |---|---|
 | `ASSETS` | This folder. |
-| `HITS` | The Analytics Engine dataset `ringshadow_hits`: one point per page view, event, or page and text fetch. Kept three months. |
+| `HITS` | The Analytics Engine dataset `ringshadow_hits2`: one point per page view, event, or page and text fetch. Kept three months. |
 | `HITS_SQL` | The Analytics SQL binding that reads it, with no API token. It reads the live data even under `wrangler dev`. |
 | `ADMIN` | The D1 database `ringshadow-admin`: admins, sessions, lockouts, agent rules, daily rollups. |
 | cron `10 2 * * *` | Rolls the previous day into D1 at 02:10 UTC. |
@@ -291,7 +291,7 @@ does), and the Worker never counts those. To look at the raw data from the
 terminal, the `cf` CLI's login can read it:
 
 ```sh
-pnpm dlx cf sql query "SELECT blob1, COUNT(*) FROM events.analyticsEngine.ringshadow_hits WHERE timestamp > NOW() - INTERVAL '1' DAY GROUP BY blob1" --scope-account f510a16043d1521697b8974165f9c78d
+pnpm dlx cf sql query "SELECT blob1, COUNT(*) FROM events.analyticsEngine.ringshadow_hits2 WHERE timestamp > NOW() - INTERVAL '1' DAY GROUP BY blob1" --scope-account f510a16043d1521697b8974165f9c78d
 ```
 
 The first admin registered on 2026-10-15 with a one-time setup code, and the

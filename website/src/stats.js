@@ -8,7 +8,7 @@ import { classify } from "./agents.js";
 import { SITE_HOST } from "./hits.js";
 import { accumulateCountsFromRowResult, fixNegativeBounces } from "./vendor/counterscale/counts.js";
 
-export const DATASET = "events.analyticsEngine.ringshadow_hits";
+export const DATASET = "events.analyticsEngine.ringshadow_hits2";
 export const RETENTION_DAYS = 90;
 export const DAY = 86_400_000;
 const SPANS = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 };

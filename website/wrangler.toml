@@ -21,7 +21,7 @@ run_worker_first = ["/*", "!/assets/*", "!/blog/media/*"]
 # One point per page, feed, text or Markdown fetch (src/hits.js).
 [[analytics_engine_datasets]]
 binding = "HITS"
-dataset = "ringshadow_hits"
+dataset = "ringshadow_hits2"
 
 # The read side: the admin's stats query the dataset through the Analytics
 # SQL binding, scoped to this account, with no API token stored anywhere.
