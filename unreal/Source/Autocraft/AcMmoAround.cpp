@@ -7,13 +7,16 @@
 
 #include "AcLog.h"
 #include "AcSpace.h"
+#include "AcWork.h"
 
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
+#include "Engine/Texture2D.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "UObject/UObjectGlobals.h"
 
 #include "NetMirror.h"
 #include "RegionFile.h"
@@ -124,6 +127,27 @@ void FAcMmoClient::PrepareAround()
 	}
 	const ac::net::WorldMessage* W = World();
 	const ac::net::Mirror* M = Net ? Net->mirror() : nullptr;
+	// The world map's pictures (SAcWorldMap::Picture loads one as it first
+	// paints it): asked for as the world arrives, off the game thread, so a
+	// map opened in the session's first seconds never waits for the loader
+	// behind everything else it reads then (K3: 1-2 s a picture, packaged).
+	if (W)
+	{
+		static TSet<FString> PicturesAsked;
+		for (const ac::net::WorldMessage::Region& Q : W->regions)
+		{
+			const FString Asset = TEXT("T_AcMap_") + Utf(Q.id).Replace(TEXT("-"), TEXT("_"));
+			if (PicturesAsked.Contains(Asset)) continue;
+			PicturesAsked.Add(Asset);
+			LoadPackageAsync(TEXT("/Game/UI/Map/") + Asset, FLoadPackageAsyncDelegate::CreateLambda(
+				[Asset](const FName&, UPackage* Package, const EAsyncLoadingResult::Type Result)
+				{
+					// Rooted as the map's own load roots it.
+					if (UTexture2D* T = Result == EAsyncLoadingResult::Succeeded && Package ? FindObject<UTexture2D>(Package, *Asset) : nullptr)
+						T->AddToRoot();
+				}));
+		}
+	}
 	// Aboard the Dropship (F2): the target region is made ahead too, map and
 	// mirror, wherever it lies; the ground round the pilot's region stays.
 	if (!W || !M || (W->flyingTo && !W->ferry)) return;
@@ -167,7 +191,7 @@ void FAcMmoClient::PrepareAround()
 			const std::string Text = TCHAR_TO_UTF8(**Body);
 			const ac::net::RegionDescription Like = M->region();
 			const FString IdCopy = Id;
-			Building.Add(Id, Async(EAsyncExecution::ThreadPool, [Text, Like, IdCopy, bWantMirror]() -> FRegionBuilt* {
+			Building.Add(Id, AcWork::Run([Text, Like, IdCopy, bWantMirror]() -> FRegionBuilt* {
 				FRegionBuilt* Out = new FRegionBuilt();
 				Out->Id = IdCopy;
 				if (const ac::region::Parsed P = ac::region::parse(Text); P.file)

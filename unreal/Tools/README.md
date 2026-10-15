@@ -215,3 +215,5 @@ Agents' game runs must never show in the Dock, take focus or move the mouse:
 - Never pass `-log`, which opens a console window; use `-abslog=PATH`.
 - The MMO world server outlives a normal game (S2): `hidden_run.py` adds `-AcMmoServerAttached` so it ends with the run, unless the flags say `-AcMmoServerDetached` (the S2 shot set, which stops its server itself). The run names any world server left on its folder.
 - With `-RenderOffscreen`, `-nullrhi` or `-AcHeadless`, the pawns never capture or lock the mouse (`AcHeadless.h`).
+- A packaged game (K3): `hidden_run.py --app unreal/server/build/k3/Ringshadow.app` runs `Ringshadow-hidden.app` beside it, a copy with `LSUIElement` set and signed ad hoc, made again when the app changes; the same flags, its own save, one slot ([docs/builds.md](../../docs/builds.md) "Measuring packaged").
+- An Insights trace is read with `UnrealInsightsBG.app` beside `UnrealInsights.app`, made the same way as the editor's copy (bundle id `com.epicgames.UnrealInsights.headless`), under the slot with `--raw` and `-NoUI -AutoQuit`, one export command per run.

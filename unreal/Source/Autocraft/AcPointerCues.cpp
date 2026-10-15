@@ -1,5 +1,6 @@
 #include "AcPointerCues.h"
 
+#include "AcBuiltMesh.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
 #include "AcSpace.h"
@@ -181,6 +182,7 @@ namespace
 		Params.bBuildSimpleCollision = false;
 		Params.bAllowCpuAccess = false;
 		Mesh->BuildFromMeshDescriptions({&MD}, Params);
+		AcBuiltMeshReady(Mesh);
 		return Mesh;
 	}
 

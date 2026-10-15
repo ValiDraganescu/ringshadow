@@ -17,6 +17,7 @@
 #   build_release.sh mac [--version V] [--config C] [--ad-hoc]   package the Mac build on this Mac
 #                                           (--ad-hoc: signed ad hoc, locally: no certificate, no notarizing)
 #   build_release.sh sign APP ZIP           sign, notarize and zip a Mac .app (mac does it)
+#   build_release.sh cook-check             every /Game folder the code loads by path is cooked (mac does it)
 #   build_release.sh release TAG --notes FILE [REF] [--on-demand]
 #                                           all of it: tag REF (default HEAD) as TAG (v0.1.2), build
 #                                           Windows and Linux in AWS and the Mac in the release worktree
@@ -444,6 +445,21 @@ fix_linux() {
 	say "Linux: executable bits set"
 }
 
+# The game loads most assets by path (/Game/Weather/M_AcRain...), which the
+# cook can't follow: each such folder must be in DefaultGame.ini's
+# DirectoriesToAlwaysCook (the maps in MapsToCook), or the package lacks it
+# (K3: no rain, 2026-10-15).
+cmd_cook-check() {
+	local ini="$repo/unreal/Config/DefaultGame.ini" missing="" d
+	for d in $(grep -rhoE '/Game/[A-Za-z0-9_]+/' "$repo/unreal/Source" | sort -u); do
+		d=${d%/}
+		[ "$d" = /Game/Maps ] && continue
+		grep -q "DirectoriesToAlwaysCook=(Path=\"$d\")" "$ini" || missing="$missing $d"
+	done
+	[ -z "$missing" ] || die "loaded by path but not cooked (add to DirectoriesToAlwaysCook in $ini):$missing"
+	say "cook check: every /Game folder loaded by path is cooked"
+}
+
 cmd_mac() {
 	local version="" config=Shipping adhoc=0
 	while [ $# -gt 0 ]; do
@@ -460,6 +476,7 @@ cmd_mac() {
 	local archive="$dir/mac"
 	rm -rf "$archive"
 	mkdir -p "$dir"
+	cmd_cook-check
 	say "packaging the Mac build $version ($config) from the working tree"
 	"$uat" BuildCookRun -project="$repo/unreal/Autocraft.uproject" -target=Autocraft -platform=Mac \
 		-clientconfig="$config" -build -cook -stage -pak -iostore -compressed \
@@ -813,6 +830,6 @@ if [ "${1:-}" = --region ]; then
 	export AWS_REGION=$2; shift 2
 fi
 case ${1:-} in
-	infra|setup|rdp|image|build|mac|sign|release|test|dcv|status|stop) c=$1; shift; "cmd_$c" "$@" ;;
-	*) sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	infra|setup|rdp|image|build|mac|sign|cook-check|release|test|dcv|status|stop) c=$1; shift; "cmd_$c" "$@" ;;
+	*) sed -n '2,38p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

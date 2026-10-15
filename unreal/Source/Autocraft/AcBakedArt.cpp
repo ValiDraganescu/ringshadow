@@ -45,6 +45,32 @@ namespace
 	}
 }
 
+namespace
+{
+	/// The GPU has been calm (`CalmFrames` frames under `CalmMs` each) since
+	/// before this frame. Metal maps a readback only once the whole GPU is
+	/// idle (FMetalDynamicRHI::RHIMapStagingSurface): in a session's first
+	/// seconds its queue is long, and a read held the render thread 668 ms
+	/// (K3, a packaged trace); once calm, it waits a frame at most.
+	constexpr double CalmMs = 20.0;
+	constexpr int32 CalmFrames = 30;
+	/// Read back anyway this long after the bake.
+	constexpr double ReadLatest = 15.0;
+
+	bool GpuCalm()
+	{
+		static uint64 Seen = 0;
+		static int32 Calm = 0;
+		if (Seen != GFrameCounter)
+		{
+			Seen = GFrameCounter;
+			const double Ms = FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0));
+			Calm = Ms > 0 && Ms < CalmMs ? Calm + 1 : 0;
+		}
+		return Calm >= CalmFrames;
+	}
+}
+
 struct FAcBakedArt::FPending
 {
 	TUniquePtr<FRHIGPUTextureReadback> Readback;
@@ -52,6 +78,8 @@ struct FAcBakedArt::FPending
 	TArray<FColor> Data;
 	std::atomic<bool> bDone{false};
 	std::atomic<bool> bAsked{false};
+	/// When it was baked (`FPlatformTime::Seconds`).
+	double BakedAt = 0;
 };
 
 void FAcBakedArt::Reset()
@@ -114,6 +142,7 @@ void FAcBakedArt::Bake(const FAcArtList& List, const FAcRect& Area)
 	// The copy back, queued behind the drawing.
 	Pending = MakeShared<FPending, ESPMode::ThreadSafe>();
 	Pending->Pixels = Px;
+	Pending->BakedAt = FPlatformTime::Seconds();
 	FTextureRenderTargetResource* Resource = T->GameThread_GetRenderTargetResource();
 	ENQUEUE_RENDER_COMMAND(AcBakedArtCopy)([P = Pending, Resource](FRHICommandListImmediate& RHICmdList)
 	{
@@ -152,6 +181,8 @@ void FAcBakedArt::Poll() const
 		Target.Reset();
 		return;
 	}
+	// Read once the GPU is calm (the target draws meanwhile).
+	if (!GpuCalm() && FPlatformTime::Seconds() - Pending->BakedAt < ReadLatest) return;
 	if (Pending->bAsked.exchange(true)) return;
 	ENQUEUE_RENDER_COMMAND(AcBakedArtPoll)([P = Pending](FRHICommandListImmediate&)
 	{

@@ -6,8 +6,9 @@
 // on screen), which is read back, without waiting for the GPU, into an sRGB
 // texture, as the Core Graphics art was: drawn smaller (2 pixels a point on
 // a 1× screen) it is filtered in linear light, so its thin lit lines keep
-// their weight. Until the copy is back (a frame or two) the target itself is
-// drawn, premultiplied and as it is (`Effects`, `Tint`).
+// their weight. The copy is read once the GPU is calm (on Metal a read waits
+// for the whole GPU: a session's first seconds, a few seconds); until then
+// the target itself is drawn, premultiplied and as it is (`Effects`, `Tint`).
 #pragma once
 
 #include "CoreMinimal.h"

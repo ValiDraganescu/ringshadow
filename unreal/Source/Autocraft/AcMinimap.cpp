@@ -1,6 +1,7 @@
 #include "AcMinimap.h"
 
 #include "AcTerrain.h"
+#include "AcWork.h"
 #include "Async/Async.h"
 
 #include "AcMissions.h"
@@ -218,7 +219,7 @@ void UAcMinimapSubsystem::BakeAround(const UAcSimSubsystem& Sim)
 		// One at a time, a while after the region changed, on one thread
 		// (never crowding the frames, W4).
 		if (!Baking.IsEmpty() || Mmo->SinceRegionChange() < 2.0) break;
-		Baking.Add(Key, Async(EAsyncExecution::ThreadPool, [Map = A.Map, Ppc = PixelsPerCell]() {
+		Baking.Add(Key, AcWork::Run([Map = A.Map, Ppc = PixelsPerCell]() {
 			const ac::TerrainField Field(*Map);
 			return AcMinimapBake::Terrain(Field, Map->bounds, Ppc, true);
 		}));

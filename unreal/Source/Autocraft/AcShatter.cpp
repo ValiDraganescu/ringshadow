@@ -2,6 +2,7 @@
 // See AcShatter.h.
 #include "AcShatter.h"
 
+#include "AcBuiltMesh.h"
 #include "AcEffectsDeaths.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
@@ -1177,6 +1178,7 @@ void FAcShatterLibrary::Build(FJob& J, const double UntilSeconds)
 			Params.bBuildSimpleCollision = false;
 			Params.bAllowCpuAccess = false;
 			Mesh->BuildFromMeshDescriptions({O.MD.Get()}, Params);
+			AcBuiltMeshReady(Mesh);
 			O.MD.Reset();
 			Keep.Emplace(Mesh);
 			Sub.StaticMesh = Mesh;

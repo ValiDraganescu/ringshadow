@@ -131,7 +131,10 @@
 // (-AcMmoHour=12 for noon, 19 for dusk); the frame times aboard logged as
 // `f2 perf:` (-AcMmoShotsOnly=none: the flight with no picture taken;
 // -AcMmoShotsF2Twice: a second flight back; -AcMmoShotsF2Settled: the call
-// only once every ground set round the region is built, Q2's measure):
+// only once every ground set round the region is built, Q2's measure;
+// -AcMmoShotsF2CallAt=S: the call S s after seating, K3's measure, with the
+// worst frame since the call logged as `f2 perf (flight 1): worst frame`;
+// every run logs `k3: seated N s after the process started`):
 //   01 the flight menu: only Landing Pads in regions been to
 //   02 the Dropship coming down onto the pad   03 the Prospector boarding
 //   04 the lift-off         05 a banking turn, the giant in view
@@ -599,6 +602,15 @@ namespace
 	double F2SettledAt = -1;
 	/// -AcMmoShotsF2Twice: 1 on the second flight.
 	int32 F2Round = 0;
+	/// When the pilot was first seated (K3: the startup time, and
+	/// -AcMmoShotsF2CallAt's clock).
+	double SeatedAt = -1;
+	/// K3: every frame from the call on, aboard or not yet: the worst one and
+	/// which it was (the first call's stall).
+	double F2Prev = -1;
+	double F2CallWorst = 0;
+	int32 F2CallFrame = 0;
+	int32 F2CallWorstAt = -1;
 	/// The phase whose scene was staged (its first frame done).
 	int32 U1Staged = -1;
 	struct FB1Sample
@@ -1130,6 +1142,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Advance();
 		return;
 	case 1:
+		// K3: the startup time, from the process's start to the first frame
+		// the pilot drives.
+		if (Seated() && Mmo->Here() && SeatedAt < 0)
+		{
+			SeatedAt = Now;
+			UE_LOG(LogAutocraft, Log, TEXT("k3: seated %.2f s after the process started"), Now - GStartTime);
+		}
 		// Seated on the start pad; a few seconds for the ground, the light
 		// and the exposure to settle.
 		if (Seated() && Mmo->Here() && Since() > 1.0)
@@ -2954,7 +2973,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			bSettled = F2SettledAt > 0 && Now - F2SettledAt > 3.0;
 			if (!bSettled && Since() > 60.0) TimedOut(TEXT("f2: the ground round the region built"), 60);
 		}
-		if (bSettled && Since() > 2.0)
+		// -AcMmoShotsF2CallAt=S: the call S s after seating (K3: 5 and 30),
+		// the steps before it at once.
+		double CallAt = -1;
+		FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsF2CallAt="), CallAt);
+		if (bSettled && Since() > (CallAt >= 0 ? 0.0 : 2.0))
 		{
 			// A Landing Pad under the pilot, one in Cold Fork (seen), one in
 			// Slag Pockets (not seen: the menu leaves it out), MH to fly.
@@ -2997,13 +3020,23 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Since() > 1.2) Shoot(TEXT("f2-01-menu"), TEXT("the flight menu: only the Landing Pads in regions been to, Cold Fork picked"));
 		return;
 	case 2404:
+		if (double CallAt = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsF2CallAt="), CallAt) && Now - SeatedAt < CallAt)
+		{
+			TimedOut(TEXT("f2: the call's moment"), CallAt + 30);
+			return;
+		}
 		if (const TSharedPtr<SAcWorldMap> Map = WorldMapWidget())
 		{
+			UE_LOG(LogAutocraft, Log, TEXT("k3: the Dropship called %.2f s after seating"), Now - SeatedAt);
 			F2Frames.Reset();
 			F2Gpu.Reset();
 			F2Stages.Reset();
 			F2Last = -1;
 			F2Switch = -1;
+			F2Prev = Now;
+			F2CallWorst = 0;
+			F2CallFrame = 0;
+			F2CallWorstAt = -1;
 			Map->Fly();
 			Advance();
 			return;
@@ -3019,7 +3052,18 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 2410:
 	case 2411:
 	{
-		// The frame times, every frame aboard (and the step out).
+		// Every frame since the call (K3), then the frame times aboard (and
+		// the step out).
+		if (F2Prev > 0)
+		{
+			++F2CallFrame;
+			if (Now - F2Prev > F2CallWorst)
+			{
+				F2CallWorst = Now - F2Prev;
+				F2CallWorstAt = F2CallFrame;
+			}
+		}
+		F2Prev = Now;
 		if (Pilot->InFlight())
 		{
 			if (F2Last > 0)
@@ -3097,6 +3141,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			UE_LOG(LogAutocraft, Log, TEXT("f2 perf (flight %d): %d frames aboard: frame mean %.2f p50 %.2f p95 %.2f p99 %.2f max %.2f ms; round the region change (frame %d) max %.2f ms; gpu p50 %.2f p95 %.2f ms"),
 				F2Round + 1, F2Frames.Num(), F2Frames.Num() ? Sum / F2Frames.Num() : 0.0, Pct(F2Frames, 0.5), Pct(F2Frames, 0.95), Pct(F2Frames, 0.99), Worst, F2Switch,
 				NearSwitch, Pct(F2Gpu, 0.5), Pct(F2Gpu, 0.95));
+			UE_LOG(LogAutocraft, Log, TEXT("f2 perf (flight %d): worst frame since the call %.2f ms (frame %d of %d)"), F2Round + 1, F2CallWorst * 1000.0,
+				F2CallWorstAt, F2CallFrame);
 			for (int32 St = 1; St <= int32(EAcFlightStage::StepOut); ++St)
 			{
 				TArray<double> In;
@@ -3124,6 +3170,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			F2Stages.Reset();
 			F2Last = -1;
 			F2Switch = -1;
+			F2Prev = Now;
+			F2CallWorst = 0;
+			F2CallFrame = 0;
+			F2CallWorstAt = -1;
 			FString Why;
 			Check(Mmo->Fly(TEXT("start"), TEXT("Landing Pad 1"), &Why), FString::Printf(TEXT("f2: the second flight asked for (%s)"), *Why));
 			T.Phase = 2405;

@@ -2,6 +2,7 @@
 // `GameScene.borderRocks` (GameScene.swift). See AcTerrain.h.
 #include "AcTerrain.h"
 
+#include "AcBuiltMesh.h"
 #include "AcLog.h"
 #include "AcShot.h"
 #include "AcSimSubsystem.h"
@@ -9,6 +10,7 @@
 #include "AcDoodads.h"
 #include "AcMmo.h"
 #include "AcModelCatalog.h"
+#include "AcWork.h"
 
 #include "FreeView.h"
 #include "Noise.h"
@@ -160,6 +162,7 @@ namespace
 		Params.bBuildSimpleCollision = false;
 		Params.bAllowCpuAccess = false;
 		Mesh->BuildFromMeshDescriptions({&MD}, Params);
+		AcBuiltMeshReady(Mesh);
 		return Mesh;
 	}
 
@@ -411,7 +414,7 @@ void AAcRegionGround::PrepareCpu()
 	Prepared = MakeShared<FPrepared>();
 	const bool bShadow = CVarBorderShadow.GetValueOnGameThread() != 0;
 	const bool bAhead = !bNow;
-	Preparing = Async(EAsyncExecution::ThreadPool, [P = Prepared, Map = MapDef, Rim = RimSides, bShadow, bAhead]() { PrepareGround(*P, *Map, Rim, bShadow, bAhead); });
+	Preparing = AcWork::Run([P = Prepared, Map = MapDef, Rim = RimSides, bShadow, bAhead]() { PrepareGround(*P, *Map, Rim, bShadow, bAhead); });
 }
 
 void AAcRegionGround::BuildNow()

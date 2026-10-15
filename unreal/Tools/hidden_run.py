@@ -16,11 +16,15 @@ run past its timeout, and prints what the log says.
     $R --out unreal/server/build/pick --tests Autocraft.Pick
     $R --out unreal/server/build/mat --python unreal/Tools/Editor/make_resource_materials.py
     $R --out unreal/Saved/Shots --raw -- uv run unreal/Tools/shots/compare.py top
+    $R --out unreal/server/build/k3/run --app unreal/server/build/k3/Ringshadow.app -- -AcFlowTest=mmoshots ...
 
 Modes: pictures (the default: -game -RenderOffscreen at --res), --headless
 (-game -nullrhi: flow steps that need no pictures; cheaper), --tests PREFIX
 (automation tests in the editor, -nullrhi), --python SCRIPT (an editor script
-as the pythonscript commandlet), --raw (the flags are a whole command, for a
+as the pythonscript commandlet), --app APP (a packaged Mac game instead of the
+editor, in the pictures or --headless mode: it runs a copy of APP beside it,
+APP-hidden.app, with LSUIElement set so it gets no Dock icon, signed ad hoc,
+made again when APP is newer), --raw (the flags are a whole command, for a
 tool that starts the editor itself: it runs as given, under the slot, at low
 priority, and only its exit code counts). `{out}` in the flags becomes --out. The run
 gets its own -AcSaveDir in --out unless the flags name one, and keeps the MMO
@@ -43,6 +47,7 @@ import fcntl
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -88,6 +93,39 @@ def staleness_warnings() -> list[str]:
     return out
 
 
+def hidden_app(app: Path) -> Path:
+    """A copy of the packaged APP with LSUIElement set (no Dock icon), its
+    signature made again ad hoc; made once, again when APP changes."""
+    copy = app.with_name(app.stem + "-hidden.app")
+    stamp = copy.with_suffix(".from")
+    want = f"{app.resolve()} {(app / 'Contents/Info.plist').stat().st_mtime} {app_binary(app).stat().st_mtime}"
+    if stamp.exists() and stamp.read_text() == want:
+        return copy
+    say(f"making the hidden copy {copy}")
+    if copy.exists():
+        shutil.rmtree(copy)  # the old hidden copy, by its exact path
+    subprocess.run(["ditto", str(app), str(copy)], check=True)
+    plist = copy / "Contents/Info.plist"
+    if subprocess.run(["/usr/libexec/PlistBuddy", "-c", "Set :LSUIElement true", str(plist)],
+                      capture_output=True).returncode != 0:
+        subprocess.run(["/usr/libexec/PlistBuddy", "-c", "Add :LSUIElement bool true", str(plist)], check=True)
+    subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(copy)], check=True, capture_output=True)
+    stamp.write_text(want)
+    return copy
+
+
+def app_binary(app: Path) -> Path:
+    """The game's executable in a packaged .app (it keeps the project's name)."""
+    macos = app / "Contents/MacOS"
+    names = [p for p in macos.iterdir() if p.is_file() and os.access(p, os.X_OK)]
+    for p in names:
+        if p.name == "Autocraft":
+            return p
+    if len(names) == 1:
+        return names[0]
+    raise SystemExit(f"no game executable in {macos}")
+
+
 def command(a, out: Path, flags: list[str]) -> list[str]:
     flags = [f.replace("{out}", str(out)) for f in flags]
     if a.raw:
@@ -103,7 +141,11 @@ def command(a, out: Path, flags: list[str]) -> list[str]:
         return [str(EDITOR_BG), str(UPROJECT), "-nullrhi", *HIDDEN, log,
                 f"-ExecCmds=Automation RunTests {a.tests}; Quit",
                 "-TestExit=Automation Test Queue Empty", *flags]
-    cmd = [str(EDITOR_BG), str(UPROJECT), a.level, "-game"]
+    if a.app:
+        # A packaged game: no project, no -game; the same hidden flags.
+        cmd = [str(app_binary(hidden_app(Path(a.app).resolve()))), a.level]
+    else:
+        cmd = [str(EDITOR_BG), str(UPROJECT), a.level, "-game"]
     if a.headless:
         cmd += ["-nullrhi"]
     else:
@@ -167,6 +209,12 @@ def read_log(path: Path, python: bool) -> tuple[bool, list[str]]:
             show.append(f"{len(errs)} Python error lines")
             show += ["  " + e for e in errs]
             failed = True
+    # A handled ensure doesn't fail the run, but it is a stack walk on the
+    # game thread and a bug to name (K3: the packaged game's).
+    ensures = [l.split("Ensure condition failed:", 1)[1].strip()[:160] for l in lines if "Ensure condition failed:" in l]
+    if ensures:
+        show.append(f"{len(ensures)} handled ensures")
+        show += ["  " + e for e in ensures[:4]]
     if re.search(r"=== Critical error|Fatal error|Assertion failed", text):
         show.append("CRASHED: read the log")
         failed = True
@@ -212,6 +260,7 @@ def main() -> None:
     mode.add_argument("--tests", help="automation tests, e.g. Autocraft.Pick")
     mode.add_argument("--python", help="an editor script, e.g. unreal/Tools/Editor/make_input.py")
     mode.add_argument("--raw", action="store_true", help="the flags are a whole command to run under the slot")
+    p.add_argument("--app", help="a packaged Mac game (.app) to run instead of the editor")
     p.add_argument("--level", default="/Game/Maps/Battlefield")
     p.add_argument("--res", default="1600x1000")
     p.add_argument("--timeout", type=float, default=15, help="minutes")
@@ -222,11 +271,17 @@ def main() -> None:
     out = (out if out.is_absolute() else Path.cwd() / out).resolve()
     out.mkdir(parents=True, exist_ok=True)
 
-    if not MODULE.exists():
+    if a.app:
+        if a.tests or a.python or a.raw:
+            p.error("--app runs the game: the pictures or --headless mode only")
+        if not (Path(a.app) / "Contents/MacOS").is_dir():
+            p.error(f"--app: no packaged app at {a.app}")
+    elif not MODULE.exists():
         print("the Autocraft module is missing: build first (unreal/Tools/build.sh)")
         sys.exit(3)
-    for w in staleness_warnings():
-        say("WARNING: " + w)
+    else:
+        for w in staleness_warnings():
+            say("WARNING: " + w)
 
     fd = take_slot(out)
     cmd = command(a, out, flags)
@@ -255,7 +310,7 @@ def main() -> None:
         failed, show = read_log(out / "run.log", bool(a.python))
     if timed_out:
         show = [f"killed after {a.timeout:g} min"]
-    elif child.returncode not in (0, None) and not failed:
+    elif child.returncode not in (0, None):
         failed = True
         show.append(f"exit code {child.returncode}")
     status = "TIMEOUT" if timed_out else "FAILED" if failed else "OK"
