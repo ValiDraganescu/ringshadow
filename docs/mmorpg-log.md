@@ -729,3 +729,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T web: realm-projects post live (467ffe5).
 - N W4 flaky: pace check aliased 84 Hz frames vs 60 Hz ticks; the +5 spike was cockpit rebuild, overlay rebake, mesh path lookups, Brood meshes on the game thread; fixed.
 - D W4 (manager): arrival banners baked ahead with the region, plates cached by size; other plates read back only under 2x screen scale (Metal readback ~18 ms).
+- T W5 core 6a09229: several humans drive in one region (Simulation::drivers); RTS path unchanged, goldens hold; no wire or save change.
+- N W5 core: 17 files +572 -119; TwoPilotsTests: both move, drill, level, headlamp, own skills; server 317.
