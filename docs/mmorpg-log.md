@@ -629,3 +629,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: the first canyon in Cold Fork: 2–3 arms from bug tunnels to an ore+MH prize.
 - D Manager: region files get zones (entrances, paths, prize, build spots).
 - T Z1 briefed to wt1.
+- T Z1 done 14f564c: The Fork in Cold Fork: 2 arms, tunnels, 6×6000 ore + 6000 MH prize, 12 spots.
+- D Z1: region `cut` op and `zones`; sendAlongPath walks a group tunnel → prize.
+- N Z1: 18-cell paths walked in 6.0–6.7 s, ≤1.4 cells off line; suites 494/249/85.
+- T Z2 (the canyon wave game) next for wt1.
