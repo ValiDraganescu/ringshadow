@@ -770,3 +770,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D numbering: wt2's W5 takes protocol 34 on rebase; N4 takes 35 and schema 25.
 - D N4: mercenaries get a role at hire, miner (default) or guard, switchable on MERCS; guards answer the hunt, mine otherwise, same wage.
 - T web: the standings post live at /blog/standings (f39e50a).
+- T W5 done 0fb9d75: two humans on one world, checked from both games (mmotwo, 18 pictures); each pilot its own wallet; the sky carries pilots and their flights; protocol 34.
+- T W5 fixes: a game closing under lag sends its goodbye (LagSimulator::drain); a flight between pads sharing a building id no longer refused; each pilot told of the other's finished building.
+- I the engine's teardown can hang on exit; two_clients.py kills a game 20 s after its last mark.
+- N W5: core 505 (+ slow map test), net 99, server 336, six MMO flows and 92 automation tests green; clean checkout.
+- D protocol numbers only go up: W5 bumped to 34 after S4 took 33; N4 takes 35, E1 36.
