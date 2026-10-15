@@ -578,3 +578,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T N3 (the Matriarch) next for wt2.
 - D Manager: Matriarch kill shared by damage; she returns after world days.
 - T N3 briefed to wt2 (protocol 24); siege hook for Z2.
+- T N3 done 613afc4, 1cfe38d: the Matriarch at her nest in Slag Pockets.
+- D N3: slam 40/60, spit 18/30 at 12, roar rallies ×1.3 and hatches 4.
+- D N3: kill pays 3,000 ore + 1,500 MH by damage + a rare blueprint; back in 3 days.
+- N Protocol 24 (news kind 5 bits), schema 17 (nests); matriarchSiege() ready for Z2.
+- N N3 suites: core 488, server 233, net 84 pass.
+- I Egg pods bloom flat pink; boss bar covers her name plate → N1b/U1.

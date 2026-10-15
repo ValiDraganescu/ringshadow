@@ -109,7 +109,7 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | N2 | Bugs in the world: server spawns at POIs, linger, attack pilots in their site and buildings, mine unprotected veins and leave; snapshots; client draws, animates, sounds; buildings take damage and can fall | N1, R1 | done 591206b |
 | D1 | Citadel weapons: four free point-defence turrets, one per corner, fire at bugs in range; realm-wallet upgrades for fire rate, damage and range | N2, C1 | done 5f7c9aa |
 | D2 | Defence buildings: AA tower (Sentinel model, air only) and the gatling gun (new model, amalgam rounds, ground and close air), blueprints, prices, build menu | N2, C2 | done 5f7c9aa |
-| N3 | The brood queen: a giant in a region other than Prospect Landing, a nest with many bugs, her own attack and sound, a reward for killing her | N2 | |
+| N3 | The brood queen: a giant in a region other than Prospect Landing, a nest with many bugs, her own attack and sound, a reward for killing her | N2 | done 1cfe38d |
 | D3 | Turret upgrades: per AA tower and gatling, marks for fire rate, damage and range (and the gatling's air reach), paid at the turret from the pilot's wallet; shown on the turret | D2 | done ece5e3f |
 | Z1 | The first canyon zone: a canyon cut into a level-2 region (walls, rims to build on, 2–3 entrances, paths that meet at a prize field of rich ore and MH); region file support for zones, paths and build spots; validate and preview | N2 | |
 | Z2 | The canyon game: waves along the paths to the prize, wave 1 replays until beaten, then escalating waves; a failed wave brings the Matriarch, who fells every turret in the zone and resets it to wave 1; rewards per wave, the held canyon after the last wave; wave HUD, warnings, narration lines | Z1, D2, N3 | |
