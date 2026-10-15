@@ -31,6 +31,8 @@ namespace
 		case Kind::derrickRuin: return TEXT("derrickRuin");
 		case Kind::relayDish: return TEXT("relayDish");
 		case Kind::broodNest: return TEXT("broodNest");
+		case Kind::broodTunnel: return TEXT("broodTunnel");
+		case Kind::buildSpot: return TEXT("buildSpot");
 		}
 		return TEXT("rock");
 	}

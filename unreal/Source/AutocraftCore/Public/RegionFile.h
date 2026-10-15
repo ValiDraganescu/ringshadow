@@ -41,7 +41,7 @@ struct Edit {
     HeightEdit::Kind op = HeightEdit::Kind::raise;
     /// raise, lower, flatten.
     Area area;
-    /// ridge: its line; ramp: `from` then `to`.
+    /// ridge, cut: its line; ramp: `from` then `to`.
     std::vector<Vec2> line;
     int64_t level = 0;
     /// ramp: the `from` end's level (`level` is the `to` end's).
@@ -116,6 +116,36 @@ struct Border {
     bool operator==(const Border&) const = default;
 };
 
+/// A canyon zone (Z1, docs/regions.md "zones"): where the Brood comes in
+/// (its tunnels' mouths), the ways it walks from each to the prize (a field
+/// of rich ore and an MH well), and the spots on the rims to defend it from.
+struct Zone {
+    struct Entrance {
+        std::string name;
+        Vec2 at;
+        /// Degrees: the way the mouth faces (into the canyon), from east
+        /// toward north, as a doodad's rotation turns its +x.
+        double facing = 0;
+        bool operator==(const Entrance&) const = default;
+    };
+    /// From an entrance (its name) along the canyon's floor to the prize.
+    struct Path {
+        std::string from;
+        std::vector<Vec2> points;
+        bool operator==(const Path&) const = default;
+    };
+    std::string id;
+    std::string name;
+    std::vector<Vec2> outline;
+    std::vector<Entrance> entrances;
+    std::vector<Path> paths;
+    /// The prize: indices into the file's `deposits` and `wells`.
+    std::vector<int64_t> prizeDeposits, prizeWells;
+    /// Build spots on the rims, for turrets over the paths.
+    std::vector<Vec2> spots;
+    bool operator==(const Zone&) const = default;
+};
+
 struct RegionFile {
     std::string id;
     std::string name;
@@ -144,6 +174,8 @@ struct RegionFile {
     std::optional<Vec2> nest;
     /// By `Edge`.
     std::array<std::vector<Span>, 4> openings;
+    /// Canyon zones (Z1).
+    std::vector<Zone> zones;
 
     /// Width and depth, cells.
     Vec2 extent() const;
@@ -183,6 +215,17 @@ constexpr double padRadius = 3.0;
 /// give way; no pad within `nestClear` of it (the horde's ring).
 constexpr double nestMound = 6.0;
 constexpr double nestClear = 30.0;
+/// A zone's build spot (Z1): a turret's footprint (`Rules::radius`) of flat
+/// ground on high ground, within `spotReach` of a path (a gatling gun's
+/// range, 6, and a cell), at least `spotGap` from the next spot.
+constexpr double spotRadius = 1.0;
+constexpr double spotReach = 7.0;
+constexpr double spotGap = 3.0;
+/// A path starts within this of its entrance and ends within `prizeReach`
+/// of the prize's middle; an entrance stands within `mouthReach` of a wall.
+constexpr double pathStart = 3.0;
+constexpr double prizeReach = 8.0;
+constexpr double mouthReach = 4.0;
 /// A flight leaves from within this many cells of a pad's centre: the
 /// foundation plate drawn on each pad is this wide a disc (the server's and
 /// the client's one rule, `nearestPad`).
@@ -205,6 +248,9 @@ struct AUTOCRAFTCORE_API Built {
     /// The Matriarch's nest, ground coordinates (nil: none).
     std::optional<Vec2> nest;
     std::array<std::vector<Span>, 4> openings;
+    /// Canyon zones, ground coordinates; their prizes as indices into the
+    /// built map's `deposits` and `wells`.
+    std::vector<Zone> zones;
     /// Base rocks and plants taken away because they stood on something
     /// crafted (a deposit, a well, a pad, a spawn point, a site, an
     /// opening's lane).

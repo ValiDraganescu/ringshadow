@@ -60,6 +60,29 @@ reach the edge round it.
    levels, the walls (level 3–4 colour) outside.
 5. Rebake the satellite map (`uv run unreal/Tools/bake_map.py`).
 
+## Canyon zones (Z1)
+
+A canyon zone is a tower-defence ground in a region: the Brood comes out of
+tunnels and walks fixed paths along a canyon's floor to a prize; pilots
+build turrets on the rims ([docs/regions.md](../../../docs/regions.md),
+"zones"). Cold Fork's The Fork is the first.
+
+1. Raise the zone's ground into a mesa (`raise`, level 2) and cut the arms
+   into it with `cut` (a line, `width` 5–6, level 0); a `cut` with a short
+   line and a wide width makes the junction's basin. Ramps up from the low
+   ground and from the floor to the rims.
+2. The `zones` entry: entrances at the arms' ends against a wall (`facing`
+   into the canyon), one path from each along the floor's middle, ending
+   just short of the prize (not on a deposit), the prize by index into the
+   file's `deposits` and `wells` (append them: saves keep deposits by
+   index, so move a deposit the canyon takes rather than delete it).
+3. Spots: a gatling gun reaches 6 cells, so a spot is 5–7 cells from its
+   path, on the rim past the cliff, where the wall is sheer (a shelf pushes
+   the rim out of reach). Validate a grid of candidates and keep the ones
+   that pass, near the bends and the tunnels.
+4. `$T validate`, `$T preview` (paths, chevrons toward the prize, tunnels,
+   the prize ringed, spots numbered), rebake the map.
+
 ## Pitfalls
 
 - Positions are cells from the **north-west corner**, z grows **south**

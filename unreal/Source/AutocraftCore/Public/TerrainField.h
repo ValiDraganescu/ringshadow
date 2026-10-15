@@ -80,6 +80,13 @@ struct AUTOCRAFTCORE_API TerrainField {
     /// A ramp's is its own blend.
     double editCoverage(Vec2 p, size_t k) const;
 
+    /// A cut's walls (Z1): how far out they step at `p`, a shelf half way
+    /// up `cutShelfMin` to `cutShelfMax` cells wide in stretches (0: a
+    /// sheer wall).
+    double cutShelf(Vec2 p) const;
+    static constexpr double cutShelfMin = 1.5;
+    static constexpr double cutShelfMax = 2.5;
+
     /// `h`, the ground's height at `p` before the height edits, after them.
     double edited(Vec2 p, double h) const;
 

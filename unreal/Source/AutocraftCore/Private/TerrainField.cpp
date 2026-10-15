@@ -27,7 +27,9 @@ TerrainField::TerrainField(const MapDefinition& map_) : map(map_), noise(map_.se
         // A ramp's blend reaches a third of its length past each end.
         const double along = e.kind == HeightEdit::Kind::ramp && e.points.size() == 2
                                  ? 0.4 * distance(e.points[0], e.points[1]) : 0.0;
-        const double reach = e.width / 2 * 1.25 + max(e.slope, 2 * cliffHalf) + along + 0.01;
+        // A cut's walls step out by a shelf at most (`cutShelf`).
+        const double shelf = e.kind == HeightEdit::Kind::cut ? cutShelfMax + 2 * cliffHalf : 0.0;
+        const double reach = e.width / 2 * 1.25 + max(e.slope, 2 * cliffHalf) + along + shelf + 0.01;
         editBounds.push_back(Bounds{lo - Vec2::repeating(reach), hi + Vec2::repeating(reach)});
     }
 }
@@ -64,10 +66,19 @@ double TerrainField::editCoverage(Vec2 p, size_t k) const {
         const double v = std::fabs(dot(p - e.points[0], perp)) / (e.width / 2);
         return (1 - smoothstep(0.8, 1.2, v)) * smoothstep(-0.35, -0.02, u) * (1 - smoothstep(1.02, 1.35, u));
     }
-    const double out = e.kind == HeightEdit::Kind::ridge ? lineDistance(p, e.points) - e.width / 2
-                                                          : signedDistance(p, e.points);
+    const bool line = e.kind == HeightEdit::Kind::ridge || e.kind == HeightEdit::Kind::cut;
+    const double out = line ? lineDistance(p, e.points) - e.width / 2 : signedDistance(p, e.points);
     const double edge = e.slope > 0 ? e.slope : 2 * cliffHalf;
+    // A cut's: out to its walls' tops, past a shelf where they step.
+    if (e.kind == HeightEdit::Kind::cut && !(e.slope > 0)) return smoothstep(edge, 0.0, out - cutShelf(p));
     return smoothstep(edge, 0.0, out);
+}
+
+double TerrainField::cutShelf(Vec2 p) const {
+    // As the region's walls' terraces (`walled`), on noise of its own.
+    const Vec2 q = fold(p);
+    const double step = noise.fbm(q.x * 0.06 - 41, q.y * 0.06 + 13);
+    return smoothstep(0.14, 0.24, step) * (cutShelfMin + (cutShelfMax - cutShelfMin) * smoothstep(0.24, 0.5, step));
 }
 
 double TerrainField::edited(Vec2 p, double h) const {
@@ -80,6 +91,24 @@ double TerrainField::edited(Vec2 p, double h) const {
         case HeightEdit::Kind::raise:
         case HeightEdit::Kind::ridge: h += max(target - h, 0.0) * t; break;
         case HeightEdit::Kind::lower: h -= max(h - target, 0.0) * t; break;
+        case HeightEdit::Kind::cut: {
+            // The floor within its width; where it is two levels deep or more
+            // and the walls step, a shelf half way up, then the rest.
+            const double depth = max(h - target, 0.0);
+            const double shelf = !(e.slope > 0) && depth >= 1.5 * map.levelHeight ? cutShelf(p) : 0.0;
+            const double out = lineDistance(p, e.points) - e.width / 2;
+            const double edge = e.slope > 0 ? e.slope : 2 * cliffHalf;
+            const double inner = smoothstep(edge, 0.0, out);
+            const double outer = shelf > 0 ? t : inner;
+            h -= depth * 0.5 * (inner + outer);
+            // Craggy noise on each face, as on a plateau's, where it cuts.
+            if (!(e.slope > 0)) {
+                const Vec2 q = fold(p);
+                h += 4 * (inner * (1 - inner) + outer * (1 - outer)) * smoothstep(0.0, map.levelHeight, depth) *
+                     noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 0.45;
+            }
+            continue;
+        }
         case HeightEdit::Kind::flatten: h += (target - h) * t; break;
         case HeightEdit::Kind::ramp: {
             const Vec2 axis = e.points[1] - e.points[0];
@@ -310,13 +339,15 @@ int64_t TerrainField::level(Vec2 p) const {
         if (e.kind == HeightEdit::Kind::ramp || e.points.empty()) continue;
         const Bounds& b = editBounds[k];
         if (p.x < b.lo.x || p.x > b.hi.x || p.y < b.lo.y || p.y > b.hi.y) continue;
-        const bool inside = e.kind == HeightEdit::Kind::ridge ? lineDistance(p, e.points) <= e.width / 2
-                                                               : signedDistance(p, e.points) < 0;
+        const bool inside = e.kind == HeightEdit::Kind::ridge || e.kind == HeightEdit::Kind::cut
+                                ? lineDistance(p, e.points) <= e.width / 2
+                                : signedDistance(p, e.points) < 0;
         if (!inside) continue;
         switch (e.kind) {
         case HeightEdit::Kind::raise:
         case HeightEdit::Kind::ridge: l = std::max(l, e.level); break;
-        case HeightEdit::Kind::lower: l = std::min(l, e.level); break;
+        case HeightEdit::Kind::lower:
+        case HeightEdit::Kind::cut: l = std::min(l, e.level); break;
         case HeightEdit::Kind::flatten: l = e.level; break;
         case HeightEdit::Kind::ramp: break;
         }
@@ -327,7 +358,7 @@ int64_t TerrainField::level(Vec2 p) const {
 /// Ground material weights: grass, highland, plating, scorch. Dirt fills
 /// whatever is left. Cliff rock is chosen by slope in the renderer.
 TerrainField::Materials TerrainField::materials(Vec2 p) const {
-    double grass = 0.0, highland = 0.0, plating = 0.0, scorch = 0.0;
+    double grass = 0.0, highland = 0.0, plating = 0.0, scorch = 0.0, cutFloor = 0.0;
     const double wobble = edgeWobble(p);
     for (size_t k = 0; k < map.plateaus.size(); k++) {
         if (!(map.plateaus[k].level > 0)) continue;
@@ -342,6 +373,15 @@ TerrainField::Materials TerrainField::materials(Vec2 p) const {
         if (!(t > 0)) continue;
         if (e.level > 0 && (e.kind == HeightEdit::Kind::raise || e.kind == HeightEdit::Kind::ridge)) highland = max(highland, t);
         else if (e.level == 0 && e.kind != HeightEdit::Kind::raise && e.kind != HeightEdit::Kind::ridge) highland *= 1 - t;
+        // A canyon's floor (Z1) a darker tone than the ground above it.
+        if (e.kind == HeightEdit::Kind::cut) {
+            const double floor = smoothstep(2 * cliffHalf, -0.5, lineDistance(p, e.points) - e.width / 2);
+            cutFloor = max(cutFloor, floor);
+        }
+    }
+    if (cutFloor > 0) {
+        const Vec2 qf = fold(p);
+        scorch = max(scorch, cutFloor * (0.42 + 0.18 * noise.fbm(qf.x * 0.3 - 13, qf.y * 0.3 + 5)));
     }
     const Vec2 q = fold(p);
     highland *= 0.55 + 0.45 * smoothstep(-0.3, 0.3, noise.fbm(q.x * 0.11 + 40, q.y * 0.11));

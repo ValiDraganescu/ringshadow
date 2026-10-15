@@ -51,6 +51,9 @@ struct AUTOCRAFTCORE_API Brood {
     static constexpr double scareFor = 10;
     /// A dead bug's body lies this long (its death pose), then goes.
     static constexpr double bodyStays = 6;
+    /// A bug on a path (Z1) takes its next waypoint once within this many
+    /// cells of the one before.
+    static constexpr double pathReach = 2.0;
     /// A wandering bug picks a new spot in its site every 3 to 8 s.
     static constexpr double wanderMin = 3;
     static constexpr double wanderMax = 8;

@@ -30,6 +30,9 @@ private:
     bool bugAttack(Unit& u, int64_t id, double dt);
     /// A Gloamwing's height toward where its state wants it.
     void bugClimb(Unit& u, double dt) const;
+    /// A bug on a path (Z1): a step toward its next waypoint. False: the
+    /// path is walked.
+    bool bugOnPath(Unit& u, double dt);
     /// A random spot in the bug's site, by its own dice.
     Vec2 bugWanderSpot(const Unit& u) const;
     /// The Matriarch's step (N3): her slam's crash, her roar's pose, her

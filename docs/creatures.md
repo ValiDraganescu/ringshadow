@@ -591,6 +591,17 @@ Her numbers are `ac::Matriarch` (Brood.h); the core steps her
     every pilot hears "THE MATRIARCH STIRS".
   - A region left alone two minutes keeps the nest as its counts: it comes
     back full and she whole.
+- **Canyon paths (Z1, for Z2's waves).** `WorldMap::sendAlongPath(region,
+  zone, path, kind, count, escort)`: a group comes out of the path's
+  tunnel (docs/regions.md "zones") and walks its waypoints in turn
+  (`Bug::path`, `Bug::leg`; `Simulation::bugOnPath`: the next once within
+  `Brood::pathReach`, 2 cells), at its march, then on to its site, the
+  prize deposit nearest the path's end (a Lodeback's meal; a well when the
+  prize has no ore), and lingers there. It never leaves on the way (its
+  linger starts late by the path's length over its march). A hit or a pilot
+  in its site turns it as anywhere. Dev and shots: `brood zone PATH [KIND
+  COUNT]` (the pilot's region's first zone), `brood zone here` (the pilot
+  to the first zone's region, 8 cells south of its prize).
 - **The siege hook (for Z2).** `WorldMap::matriarchSiege(region, at, radius,
   escort)`: she leaves the nest with `escort` Shardlings.
   - From her own region she walks there; to another region she comes in at

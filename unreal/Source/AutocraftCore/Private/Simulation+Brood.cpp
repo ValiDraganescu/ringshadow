@@ -263,6 +263,20 @@ void Simulation::stepMatriarch(Unit& u, double dt) {
     }
 }
 
+bool Simulation::bugOnPath(Unit& u, double dt) {
+    Bug& b = *u.bug;
+    if (b.leaving || b.leg >= b.path.size()) return false;
+    const Vec2 to = b.path[b.leg];
+    b.state = Bug::State::move;
+    b.pace = paceFor(u, Brood::marchSpeed(u.kind));
+    if (travel(u, to, 0.5, dt) || distance(u.position, to) <= Brood::pathReach) {
+        b.leg++;
+        b.coming = true;
+    }
+    bugClimb(u, dt);
+    return true;
+}
+
 void Simulation::stepBug(Unit& u, double dt, std::vector<GameEvent>&) {
     if (!u.bug) u.bug = Bug{};
     if (u.kind == Unit::Kind::matriarch) {
@@ -324,6 +338,7 @@ void Simulation::stepBug(Unit& u, double dt, std::vector<GameEvent>&) {
             travel(u, b.exit, 0.5, dt);
             return;
         }
+        if (bugOnPath(u, dt)) return;
         if (b.deposit && *b.deposit >= 0 && *b.deposit < static_cast<int64_t>(state.patches.size())) {
             OreDeposit& p = state.patches[size_t(*b.deposit)];
             const double reach = Brood::eatReach + Rules::radius(u.kind);
@@ -382,6 +397,7 @@ void Simulation::stepBug(Unit& u, double dt, std::vector<GameEvent>&) {
         b.raid = std::nullopt;
     }
     b.diveFrom = std::nullopt;
+    if (bugOnPath(u, dt)) return;
     if (b.leaving) {
         b.state = Bug::State::move;
         b.pace = paceFor(u, Brood::marchSpeed(u.kind));

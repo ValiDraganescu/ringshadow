@@ -261,6 +261,21 @@
 //   05-NN walking back west through it, a frame every 0.4 s, chase camera
 //   then the world map: 20 the world, 21 Prospect Landing filling it
 //
+// -AcMmoShotsZ1 (at 11:00, clear weather, every region been to): the first
+// canyon zone, The Fork in Cold Fork (docs/regions.md "zones"), the pilot
+// taken into its gorge by the server's dev line (`brood zone here`), a
+// free camera, DIR/z1-NN-moment.png:
+//   01 the canyon from a rim: the west rim over the north arm, to the junction
+//   02 from the floor at the north arm's end, looking up it past its bend
+//   03 a Brood tunnel's mouth at the end of the east arm
+//   04 the prize field at the junction: the rich ore round the MH well, a
+//      group sent down each path (`brood zone PATH`) on it
+//   05 the zone from high up: both arms, the junction, the spots' markers
+//   06 build spots along the west rim, close
+//   07 the world map on Cold Fork: the canyon on the satellite picture
+// (The preview with the paths is the region tool's: `autocraft-region
+// preview regions/cold-fork.json`.)
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -457,6 +472,8 @@ namespace
 	double W4LastAt = -1;
 	double W4ShotAt = -1;
 	int32 W4Frames = 0;
+	/// -AcMmoShotsZ1: Cold Fork's file (its zone).
+	TOptional<ac::region::RegionFile> Z1File;
 	/// -AcMmoShotsD3: the turret card's kept asks, the keys pressed so far.
 	int32 D3Kept = 0;
 	int32 D3Step = 0;
@@ -853,6 +870,14 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
 				FCommandLine::Append(TEXT(" -AcMmoDevSeen=start,cold-fork,glass-flats,tern-ridge,slag-pockets,brine-pans,dust-terraces,rust-hollow,ashen-shelf"));
 		}
+		// -AcMmoShotsZ1: as W4's, late morning, clear, every region been to.
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")))
+		{
+			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
+			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
+			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
+				FCommandLine::Append(TEXT(" -AcMmoDevSeen=start,cold-fork,glass-flats,tern-ridge,slag-pockets,brine-pans,dust-terraces,rust-hollow,ashen-shelf"));
+		}
 		// -AcMmoShotsM2: some regions been to, the rest uncharted.
 		if (FString Seen; FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2")) && !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
 		{
@@ -924,6 +949,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsL1"))) T.Phase = 2100;
 			// -AcMmoShotsU1: the HUD decluttered (2200-2216).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1"))) T.Phase = 2200;
+			// -AcMmoShotsZ1: the first canyon zone (2300-2311).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1"))) T.Phase = 2300;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -4255,6 +4282,203 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		ToggleWorldMap();
 		if (W4Cam.IsValid()) W4Cam->Destroy();
 		Check(Shots.Saved + Shots.Skipped >= 9 + 6 + 6 + 2, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsZ1
+	case 2300:
+	{
+		// Seated at Prospect Landing; Cold Fork from its file (its zone), then
+		// the server takes the pilot there, to the gorge's mouth.
+		if (!(U && Mmo->World() && Since() > 2.0)) return;
+		FString Text;
+		if (FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectDir(), TEXT("server/regions/cold-fork.json"))))
+		{
+			const ac::region::Parsed P = ac::region::parse(TCHAR_TO_UTF8(*Text));
+			if (P.file && !P.file->zones.empty()) Z1File = *P.file;
+		}
+		Check(Z1File.IsSet(), TEXT("z1: Cold Fork's file has its zone"));
+		if (!Z1File) return Finish();
+		Check(Mmo->DevClock(TEXT("brood clear\nbrood zone here")), TEXT("z1: the server takes the pilot to Cold Fork's canyon"));
+		Advance();
+		return;
+	}
+	case 2301:
+	{
+		// In Cold Fork, its ground and its neighbours' built; its tunnels and
+		// its spots' markers drawn.
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const TOptional<FAcRegionAround> Ground = Mmo->HereGround();
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (!(U && Ground && Ground->Id == TEXT("cold-fork") && Sets >= 4 && Ready == Sets && Since() > 3.0))
+		{
+			TimedOut(TEXT("z1: in Cold Fork, its ground built"), 120);
+			return;
+		}
+		Check(Terrain->DrawnAt(ac::Doodad::Kind::broodTunnel).IsSet(), TEXT("z1: a Brood tunnel's mouth drawn in Cold Fork"));
+		Check(Terrain->DrawnAt(ac::Doodad::Kind::buildSpot).IsSet(), TEXT("z1: the build spots' markers drawn in Cold Fork"));
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(0, ECVF_SetByCode);
+		if (!W4Cam.IsValid())
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+			W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+			W4Cam->GetCameraComponent()->SetFieldOfView(70.f);
+		}
+		W4Set = false;
+		Advance();
+		return;
+	}
+	case 2305:
+		// Two groups down the paths, one from each tunnel: at the prize by
+		// its picture.
+		if (!W4Set)
+		{
+			Check(Mmo->DevClock(TEXT("brood zone 0 shardling 5\nbrood zone 1 shardling 5")), TEXT("z1: a group sent down each path"));
+			W4Set = true;
+			return;
+		}
+		if (Since() < 9.0) return;
+		W4Set = false;
+		Advance();
+		return;
+	case 2302:
+	case 2303:
+	case 2304:
+	case 2306:
+	case 2307:
+	case 2308:
+	{
+		// A free camera in Cold Fork: its cells, its ground's heights.
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		if (!Pc || !Terrain || !W4Cam.IsValid() || !Z1File) return;
+		if (!W4Set)
+		{
+			const ac::region::Zone& Z = Z1File->zones[0];
+			const auto G = [&](const ac::Vec2 R) { const FVector2D V = Cell(R.x, R.y); return ac::Vec2(V.X, V.Y); };
+			const auto Ground = [&](const ac::Vec2 R) { return Terrain->FieldHeight(G(R)); };
+			ac::Vec2 Prize(0, 0);
+			for (const int64 I : Z.prizeDeposits) Prize = Prize + Z1File->deposits[size_t(I)].at / double(Z.prizeDeposits.size());
+			const std::vector<ac::Vec2>& North = Z.paths[0].points;
+			const std::vector<ac::Vec2>& East = Z.paths.size() > 1 ? Z.paths[1].points : North;
+			const auto SpotNear = [&](const ac::Vec2 P) {
+				ac::Vec2 Best = Z.spots.empty() ? P : Z.spots[0];
+				for (const ac::Vec2 Spot : Z.spots)
+					if (ac::distance(Spot, P) < ac::distance(Best, P)) Best = Spot;
+				return Best;
+			};
+			ac::Vec2 Eye, Look;
+			double EyeH = 0, LookH = 0;
+			switch (T.Phase)
+			{
+			case 2302:  // From the west rim over the north arm's bend, to the junction.
+			{
+				const ac::Vec2 Rim = SpotNear(North[North.size() / 2]);
+				Eye = Rim + ac::normalize(Rim - North[North.size() / 2]) * 2.0;
+				Look = Prize;
+				EyeH = Ground(Eye) + 3.0;
+				LookH = Ground(Look) + 0.5;
+				break;
+			}
+			case 2303:  // On the floor at the north arm's end, looking back up it past its bend.
+				Eye = North.back();
+				Look = North[North.size() / 2];
+				EyeH = Ground(Eye) + 1.4;
+				LookH = Ground(Look) + 3.2;
+				break;
+			case 2304:  // Up the east arm's floor to its tunnel.
+			{
+				const ac::Vec2 Mouth = Z.entrances.size() > 1 ? Z.entrances[1].at : Z.entrances[0].at;
+				Eye = East[FMath::Min<size_t>(3, East.size() - 1)];
+				Look = Mouth;
+				EyeH = Ground(Eye) + 1.6;
+				LookH = Ground(Mouth) + 1.2;
+				break;
+			}
+			case 2306:  // The prize from the rim between the arms, the bugs on it.
+			{
+				const ac::Vec2 Rim = SpotNear(Prize + ac::Vec2(0, -10));
+				Eye = Rim + ac::normalize(Rim - Prize) * 1.5;
+				Look = Prize;
+				EyeH = Ground(Eye) + 4.0;
+				LookH = Ground(Prize);
+				break;
+			}
+			case 2307:  // The whole zone from high up, south-west of it.
+				Eye = Prize + ac::Vec2(-26, 26);
+				Look = Prize + ac::Vec2(2, -8);
+				EyeH = 34.0;
+				LookH = Ground(Prize);
+				break;
+			default:  // Along the west rim's spots (west of the north arm), close.
+			{
+				ac::Vec2 A = North.front(), B = North.back();
+				double Lo = 1e9, Hi = -1e9;
+				for (const ac::Vec2 Spot : Z.spots)
+				{
+					if (Spot.x >= North.front().x) continue;
+					if (Spot.y < Lo) Lo = Spot.y, A = Spot;
+					if (Spot.y > Hi) Hi = Spot.y, B = Spot;
+				}
+				Eye = B + ac::normalize(B - A) * 5.0 + ac::Vec2(-2.0, 0);
+				Look = A;
+				EyeH = Ground(Eye) + 3.2;
+				LookH = Ground(A);
+				break;
+			}
+			}
+			const FVector EyeW = AcSpace::ToWorld(G(Eye), EyeH);
+			const FVector AtW = AcSpace::ToWorld(G(Look), LookH);
+			W4Cam->SetActorLocationAndRotation(EyeW, (AtW - EyeW).Rotation());
+			W4Set = true;
+			W4ShotAt = Now;
+		}
+		if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		if (Now - W4ShotAt < 2.0) return;
+		W4Set = false;
+		const int32 K = T.Phase < 2305 ? T.Phase - 2302 : T.Phase - 2303;
+		static const TCHAR* const Names[] = {TEXT("z1-01-canyon-from-a-rim"), TEXT("z1-02-floor-up-at-a-bend"), TEXT("z1-03-a-tunnel"),
+			TEXT("z1-04-prize-at-the-junction"), TEXT("z1-05-the-zone-from-above"), TEXT("z1-06-build-spots")};
+		static const TCHAR* const Whats[] = {TEXT("The Fork from the west rim: the north arm winding down to the junction"),
+			TEXT("on the canyon's floor at the north arm's end, looking back up it past its bend"),
+			TEXT("a Brood tunnel's mouth at the end of the east arm"),
+			TEXT("the prize field at the junction: the rich ore round the MH well, a group from each tunnel on it"),
+			TEXT("the zone from high up: both arms, the junction, the build spots' markers"),
+			TEXT("build spots along the west rim, their markers over the north arm")};
+		ShootClean(Names[K], Whats[K]);
+		return;
+	}
+	case 2309:
+	{
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		if (Pc && Pilot && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(1, ECVF_SetByCode);
+		if (Since() < 1.0) return;
+		ToggleWorldMap();
+		W4Set = false;
+		Advance();
+		return;
+	}
+	case 2310:
+	{
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map || Since() < 1.5) return;
+		if (!W4Set)
+		{
+			W4Set = true;
+			Check(Map->ShowRegion(TEXT("cold-fork"), 1.0), TEXT("z1: the map on Cold Fork"));
+			return;
+		}
+		if (Since() < 2.5) return;
+		W4Set = false;
+		Shoot(TEXT("z1-07-map-cold-fork"), TEXT("the world map on Cold Fork: the canyon on its satellite picture"));
+		return;
+	}
+	case 2311:
+		ToggleWorldMap();
+		if (W4Cam.IsValid()) W4Cam->Destroy();
+		Check(Shots.Saved + Shots.Skipped >= 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsL1

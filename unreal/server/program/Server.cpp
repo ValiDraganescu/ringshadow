@@ -127,7 +127,7 @@ std::vector<std::string> Server::devControl(const std::string& text) {
         char what[16] = {};
         double v = 0;
         if (line.find_first_not_of(" \t\r") == std::string::npos) continue;
-        // The Brood's scenes (WorldMap::devBrood): `brood linger|attack|dive|lodeback|raid|clear`.
+        // The Brood's scenes (WorldMap::devBrood): `brood linger|attack|dive|lodeback|raid|zone|clear`.
         if (line.rfind("brood", 0) == 0) {
             said.push_back(world_.devBrood(line));
             continue;

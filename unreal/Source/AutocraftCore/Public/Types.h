@@ -753,10 +753,13 @@ struct Doodad {
     /// a stone arch, a hauler half sunk in the ground, a ruined derrick tower,
     /// a crashed relay dish; and the Matriarch's nest, a hive mound of chitin
     /// and ore with glowing egg pods, which a region file's `nest` puts down
-    /// (N3; walked over: the queen stands in its bowl).
+    /// (N3; walked over: the queen stands in its bowl); and a canyon zone's
+    /// marks (Z1): a Brood tunnel's mouth in its wall, dark with a faint
+    /// glow, at each entrance (walked through: the bugs come out of it), and
+    /// a survey marker on each build spot (walked over, built over).
     enum class Kind : uint8_t {
         rock, boulder, rockSpire, crate, crateStack, plant, bush, debris, deadTree, tower,
-        arch, sunkHauler, derrickRuin, relayDish, broodNest
+        arch, sunkHauler, derrickRuin, relayDish, broodNest, broodTunnel, buildSpot
     };
     Kind kind = Kind::rock;
     Vec2 position;
@@ -774,16 +777,19 @@ struct Doodad {
 /// ramps and bases make (a region file's `height` layer, docs/regions.md).
 /// The edits apply in order, each on the ground the ones before it left.
 struct HeightEdit {
-    enum class Kind : uint8_t { raise, lower, flatten, ridge, ramp };
+    /// `cut` (Z1): a canyon along a line, `width` across its floor, down to
+    /// the level; where it is two levels deep or more its walls step in
+    /// stretches, a shelf half way up (as a region's walls do).
+    enum class Kind : uint8_t { raise, lower, flatten, ridge, ramp, cut };
     Kind kind = Kind::raise;
-    /// raise, lower, flatten: the area's outline; ridge: its line; ramp:
+    /// raise, lower, flatten: the area's outline; ridge, cut: its line; ramp:
     /// the low end, then the high end. Ground coordinates.
     std::vector<Vec2> points;
     /// The level reached (a ramp's high end).
     int64_t level = 0;
     /// A ramp's low end.
     int64_t fromLevel = 0;
-    /// A ridge's or a ramp's width, cells.
+    /// A ridge's, a cut's or a ramp's width, cells.
     double width = 0;
     /// How far past the outline (a ridge: past its sides) the ground takes
     /// to reach the level, cells; 0 is a cliff.
@@ -1097,6 +1103,10 @@ struct Bug {
     std::optional<int64_t> deposit;
     /// On its way to the site (not lingering yet).
     bool coming = true;
+    /// A canyon zone's path (Z1): it walks these waypoints in turn first,
+    /// `leg` the next, then on to its site.
+    std::vector<Vec2> path;
+    size_t leg = 0;
     /// Leaving: it walks to `exit`, and the director takes it away out of
     /// every pilot's sight.
     bool leaving = false;
@@ -1786,12 +1796,12 @@ template <> struct EnumInfo<GroundPatch::Kind> {
     static constexpr std::array<std::string_view, 3> names{"grass", "gravel", "scorch"};
 };
 template <> struct EnumInfo<Doodad::Kind> {
-    static constexpr std::array<std::string_view, 15> names{
+    static constexpr std::array<std::string_view, 17> names{
         "rock", "boulder", "rockSpire", "crate", "crateStack", "plant", "bush", "debris", "deadTree", "tower",
-        "arch", "sunkHauler", "derrickRuin", "relayDish", "broodNest"};
+        "arch", "sunkHauler", "derrickRuin", "relayDish", "broodNest", "broodTunnel", "buildSpot"};
 };
 template <> struct EnumInfo<HeightEdit::Kind> {
-    static constexpr std::array<std::string_view, 5> names{"raise", "lower", "flatten", "ridge", "ramp"};
+    static constexpr std::array<std::string_view, 6> names{"raise", "lower", "flatten", "ridge", "ramp", "cut"};
 };
 template <> struct EnumInfo<TargetClass> {
     static constexpr std::array<std::string_view, 4> names{"armored", "light", "bio", "building"};

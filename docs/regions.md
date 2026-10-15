@@ -59,7 +59,8 @@ mesa or spire. One level is 2.4 high.
   "pads": [{"name": "Landing", "at": [72, 48]}],
   "spawns": [{"name": "Gate", "at": [72, 56]}],
   "sites": [{"name": "Lander wreck", "kind": "wreck", "at": [50, 30], "blueprint": "derrick"}],
-  "openings": {"north": [[64, 80]], "west": [[40, 56]]}
+  "openings": {"north": [[64, 80]], "west": [[40, 56]]},
+  "zones": [ ... ]                      // canyon zones (Z1, below)
 }
 ```
 
@@ -78,12 +79,17 @@ base's plateaus and ramps.
 | `flatten` | `area`, `level`, `slope`? | ground in the area exactly at the level, no roll |
 | `ridge` | `line` [[x, z], …] ≥ 2, `width`, `level`, `slope`? | a wall along the line, `width` across its top |
 | `ramp` | `from`, `to`, `width`, `fromLevel`, `level` | a drivable slope from `from` (on `fromLevel`) to `to` (on `level`) |
+| `cut` | `line` [[x, z], …] ≥ 2, `width`, `level`, `slope`? | a canyon along the line, `width` across its floor, down to the level (never up); its floor a darker tone |
 
 - `area`: corners `[[x, z], …]` (≥ 3), `{"rect": [x0, z0, x1, z1]}` or
   `{"circle": [x, z, r]}`. Everything inside the outline is at the level.
 - `slope`: cells past the outline (a ridge: past its sides) the ground takes
   to reach the level. Left out or 0: a **cliff** (1.2 cells, not drivable).
   Drivable from about 4 cells a level.
+- A `cut` two levels deep or more steps its walls in stretches (Z1): a shelf
+  half way up, 1.5 to 2.5 cells wide, then the rest of the climb, where the
+  terrain's noise says (`TerrainField::cutShelf`; about a quarter of a
+  wall). A short line with a wide `width` makes a round basin.
 - A ramp cuts through cliffs written before it. Its ends must stand on their
   levels 1.5 cells past each end; it needs about 5 cells of length a level.
   Write it after the cliffs it crosses.
@@ -134,12 +140,15 @@ region's landmark, not as clutter. Their feet are solid (`NavGrid::footprint`).
 | `derrickRuin` | the steel lattice of a derrick tower, bent, a fallen piece beside it | 9 high | 2.5 across |
 | `relayDish` | a crashed relay dish on its side, its mast snapped | 4 across | the dish and its mast |
 | `broodNest` | the Matriarch's hive mound: chitin plates, opal ore, egg pods, a crown of spines (put down by `nest`, below) | 12 across, spines to 5 high | none: walked over |
+| `broodTunnel` | a Brood tunnel's mouth in a canyon wall: a black hollow, a frame of rock and chitin, a faint violet glow (put down by a zone's entrance, below) | 5 across, 4 high | none: walked through |
+| `buildSpot` | a build spot's survey marker: an amber ring, four lit stakes (put down by a zone's spot) | 2.4 across | none: walked over, built over |
 
 The First Reach has two in each region (the region files' `doodads`). Glass Flats' Glass Needle rises to level 4
 and Brine Pans' Brine Stack to level 3 (sheer, under their rock crowns).
 
 The models: `unreal/Tools/Editor/models/landmarks.py` (concepts in
-`art/models/landmarks/concepts/`).
+`art/models/landmarks/concepts/`); the nest's `brood_nest.py`, a zone's
+marks `canyon.py`.
 
 Pictures: `-AcMmoShots=DIR -AcMmoShotsW3` (AcMmoShots.cpp) visits each region
 of `-AcMmoW3Regions=a,b,c` (default start, rust-hollow, glass-flats,
@@ -263,6 +272,72 @@ and keeps, of 40 seeds, the valid one with the shortest straight wall.
 Rerunning it on a shaped file keeps what is already inside; edit the
 outline by hand from there if a place needs it.
 
+## zones
+
+A canyon zone (Z1, docs/mmorpg-m8.md "canyon defence"): a tower-defence
+ground in the region. The Brood comes out of tunnels in the canyon's walls
+and walks fixed paths along its floor to a prize, a field of rich ore and
+an MH well, to mine it for itself; pilots build turrets on the rims over
+the paths. Waves come with Z2.
+
+```json
+"zones": [{
+  "id": "the-fork", "name": "The Fork",
+  "outline": [[95, 3], [141, 3], [141, 39], [95, 38]],
+  "entrances": [{"name": "North tunnel", "at": [107.5, 7.5], "facing": -90}],
+  "paths": [{"from": "North tunnel", "line": [[107.5, 8], [105.6, 13.5], [110, 21], [113, 22.6]]}],
+  "prize": {"deposits": [52, 53, 54], "wells": [5]},
+  "spots": [[99, 13], [100, 19]]
+}]
+```
+
+- `id` a slug, unique in the file; `name` shown to players.
+- `outline`: the zone's ground (≥ 3 corners). Its paths, spots and prize
+  lie inside it, its entrances within 2 cells of it.
+- `entrances`: named tunnels' mouths. Each stands on open floor at the foot
+  of a wall (a cliff or the border's rock within 4 cells), `facing` degrees
+  from east toward north, into the canyon. The build puts a Brood tunnel's
+  mouth there (`broodTunnel`, walked through: a black hollow framed by rock
+  and chitin, a faint violet glow in its throat).
+- `paths`: one or more from each entrance (`from` its name), a polyline on
+  the canyon's floor. It starts within 3 cells of its entrance and ends
+  within 8 of the prize's middle, short of the deposits; every half cell of
+  it is open walkable ground (no cliff, rock or ore) joined to the region's
+  pads.
+- `prize`: indices into the file's `deposits` and `wells` (a deposit or a
+  well at least). Each lies inside the zone, joined to the pads. Make it
+  richer than anything round it (The Fork's: 6000 a deposit, an MH well of
+  6000, against Cold Fork's 3600 at most).
+- `spots`: build spots on the rims (each a turret's 2 by 2 cells). Flat
+  ground a cell round it, clear of rock, ore, wells, a pad's plate and the
+  other spots (3 cells), joined to the pads by a ramp, a level or more
+  over its path (not on a ramp), within 7 cells of a path (a gatling gun's
+  range, 6, and a cell), the path in its sight (the ground between under
+  the line from a turret's gun to a bug). The build puts a survey marker on
+  each (`buildSpot`: an amber ring and four lit stakes; walked over, built
+  over).
+
+Saves keep deposits and wells by their index: append a zone's prize after
+the others, and move (not delete) a deposit its canyon takes, so a save's
+mined ore stays with its deposit.
+
+The preview draws the outline dashed orange, each path red with chevrons
+toward the prize, the tunnels dark with a violet rim, the prize ringed in
+gold, the spots as numbered blue squares.
+
+The server sends a group down a path (`WorldMap::sendAlongPath`,
+docs/creatures.md "Canyon paths"): it comes out of the tunnel, walks the
+waypoints in turn, then lingers at the prize, and a Lodeback eats it.
+
+**The Fork** (Cold Fork, brood level 2): a level-2 mesa over the
+region's north-east, two arms cut down to the floor from a tunnel in the
+north wall and one in the east wall, winding to the junction's basin with
+six 6000-ore deposits round an MH well of 6000, a gorge from it out to the
+passage valley, ramps up to the west rim, the south-east rim and the rim
+between the arms (where the derrick ruin stands), twelve spots near the
+bends and the tunnels. Pictures: `-AcMmoShots=DIR -AcMmoShotsZ1`
+(AcMmoShots.cpp).
+
 ## Problems
 
 `validate` (and `build`, `preview`) reports, each with its place in the file
@@ -282,7 +357,13 @@ and the region position:
 - an opening blocked (a cliff, a rock, ore, a well) or cut off;
 - a border whose outline crosses itself or closes a passage, an island
   outside the outline, and a pad, spawn, site, deposit or well outside the
-  land (outside the outline or on an island).
+  land (outside the outline or on an island);
+- a zone's path that names no entrance, an entrance with no path, a prize
+  index past the file's list; an entrance off the floor or out in the
+  open; a path not walkable end to end, starting far from its entrance or
+  ending far from the prize; a prize outside the zone or cut off; a spot
+  on a cliff, in rock, on ore, a well or a pad's plate, on another spot,
+  cut off, too far from every path, not above it, or without sight of it.
 
 "Cut off" means not joined to the region's largest open area on the
 walking grid. A problem never stops `build` or `preview`.

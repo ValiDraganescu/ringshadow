@@ -833,10 +833,20 @@ public:
     /// already when `arrived`. A raid's POI is a building. Nil: no brood side.
     std::optional<int64_t> spawnBroodGroup(size_t r, UnitKind kind, int64_t count, Poi poi, int64_t key,
                                            std::optional<Vec2> from = std::nullopt, bool arrived = false, int64_t escort = 0);
+    /// A canyon zone's path (Z1; Z2's waves): a group of `count` bugs of
+    /// `kind` (with `escort` Shardlings) out of the mouth of path `path` of
+    /// zone `zone` of region `r`, walking the path along the canyon's floor
+    /// to the prize (its site the prize deposit at the path's end, a
+    /// Lodeback's meal; a well when the prize has no ore). Nil: no such zone
+    /// or path, or no brood side.
+    std::optional<int64_t> sendAlongPath(size_t r, const std::string& zone, size_t path, UnitKind kind, int64_t count,
+                                         int64_t escort = 0);
     /// Tests: the director's next group in region `r` comes now.
     void broodNow(size_t r);
     /// Dev and shots (`--dev-control`'s `brood …` lines): a scene near the
-    /// first pilot on line. What it did, or why not.
+    /// first pilot on line (`brood zone PATH [KIND COUNT]`: a group along a
+    /// path of its region's first zone; `brood zone here`: the pilot to the
+    /// first zone's region, in sight of its prize). What it did, or why not.
     std::string devBrood(const std::string& line);
     /// Dev and shots (`defence …` lines, WorldDefence.cpp): the realm wallet
     /// filled (`wallet`), gatling and AA tower blueprint copies for the

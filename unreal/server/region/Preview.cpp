@@ -45,6 +45,10 @@ constexpr Rgb spawnColour{80, 235, 130};
 constexpr Rgb siteColour{232, 168, 36};
 constexpr Rgb nestColour{214, 72, 220};
 constexpr Rgb openingColour{60, 220, 240};
+constexpr Rgb zoneColour{255, 150, 60};
+constexpr Rgb pathColour{240, 70, 50};
+constexpr Rgb entranceColour{40, 20, 50};
+constexpr Rgb spotColour{70, 150, 255};
 constexpr Rgb borderColour{255, 236, 200};
 constexpr Rgb problemColour{255, 64, 64};
 
@@ -249,6 +253,8 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     // Doodads: rock where they block, a dot where they are only plants.
     for (const Doodad& d : map.doodads) {
         const auto circles = NavGrid::circles(d);
+        // A zone's tunnels and spots are drawn with the zone (below).
+        if (d.kind == Doodad::Kind::broodTunnel || d.kind == Doodad::Kind::buildSpot) continue;
         if (circles.empty()) { disc(built.regionAt(d.position), 0.25, plantColour, 1); continue; }
         const bool landmark = d.kind >= Doodad::Kind::arch;
         for (const auto& [centre, radius] : circles) disc(built.regionAt(centre), radius, landmark ? landmarkColour : rockColour, 0.92);
@@ -318,6 +324,74 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         label(r + Vec2(-region::nestMound * 2, region::nestMound + 1.5), "NEST (the Matriarch)", nestColour);
     }
 
+    // Canyon zones (Z1): the outline dashed, each path a line with chevrons
+    // toward the prize, the entrances dark with a glowing rim, the prize
+    // ringed, the build spots blue squares.
+    const auto stroke = [&](Vec2 a, Vec2 b, double thick, Rgb col, int dash) {
+        const double len = distance(a, b);
+        const int steps = std::max(1, static_cast<int>(len * s));
+        for (int k = 0; k <= steps; k++) {
+            if (dash > 0 && (k / dash) % 2 == 1) continue;
+            disc(a + (b - a) * (static_cast<double>(k) / steps), thick / 2, col, 1);
+        }
+    };
+    for (const region::Zone& z : built.zones) {
+        std::vector<Vec2> o;
+        for (Vec2 p : z.outline) o.push_back(built.regionAt(p));
+        for (size_t i = 0; i < o.size(); i++) stroke(o[i], o[(i + 1) % o.size()], 0.35, zoneColour, 4);
+        Vec2 north = o.front();
+        for (Vec2 p : o) if (p.y < north.y) north = p;
+        label(north + Vec2(-2, -2), "ZONE " + z.name, zoneColour);
+        for (const region::Zone::Path& path : z.paths) {
+            for (size_t i = 0; i + 1 < path.points.size(); i++)
+                stroke(built.regionAt(path.points[i]), built.regionAt(path.points[i + 1]), 0.45, pathColour, 0);
+            // Chevrons every 6 cells along it.
+            double walked = 0, next = 3;
+            for (size_t i = 0; i + 1 < path.points.size(); i++) {
+                const Vec2 a = built.regionAt(path.points[i]), b = built.regionAt(path.points[i + 1]);
+                const double len = distance(a, b);
+                if (!(len > 0)) continue;
+                const Vec2 d = (b - a) / len, n(-d.y, d.x);
+                while (next <= walked + len) {
+                    const Vec2 tip = a + d * (next - walked);
+                    stroke(tip, tip - d * 1.2 + n * 0.9, 0.35, pathColour, 0);
+                    stroke(tip, tip - d * 1.2 - n * 0.9, 0.35, pathColour, 0);
+                    next += 6;
+                }
+                walked += len;
+            }
+        }
+        for (const region::Zone::Entrance& e : z.entrances) {
+            const Vec2 r = built.regionAt(e.at);
+            disc(r, 1.6, entranceColour, 0.95);
+            ring(r, 1.6, 0.3, nestColour);
+            label(r + Vec2(1.6, 1.4), e.name, zoneColour);
+        }
+        if (!z.prizeDeposits.empty() || !z.prizeWells.empty()) {
+            std::vector<Vec2> pieces;
+            for (int64_t i : z.prizeDeposits) pieces.push_back(built.regionAt(map.deposits[size_t(i)].position));
+            for (int64_t i : z.prizeWells) pieces.push_back(built.regionAt(map.wells[size_t(i)].position));
+            Vec2 mid(0, 0);
+            for (Vec2 p : pieces) mid = mid + p / double(pieces.size());
+            double r = 2;
+            for (Vec2 p : pieces) r = std::max(r, distance(p, mid) + 2);
+            for (int k = 0; k < 64; k += 2) {
+                const double a0 = k * 2 * 3.14159265358979 / 64, a1 = (k + 1) * 2 * 3.14159265358979 / 64;
+                stroke(mid + Vec2(std::cos(a0), std::sin(a0)) * r, mid + Vec2(std::cos(a1), std::sin(a1)) * r, 0.4, padColour, 0);
+            }
+            label(mid + Vec2(r * 0.7, r * 0.7 + 1), "PRIZE", padColour);
+        }
+        for (size_t i = 0; i < z.spots.size(); i++) {
+            const Vec2 r = built.regionAt(z.spots[i]);
+            const auto [cx, cy] = pixel(r);
+            const int k = std::max(5, static_cast<int>(region::spotRadius * s));
+            for (int y = -k; y <= k; y++)
+                for (int x = -k; x <= k; x++)
+                    c.blend(cx + x, cy + y, std::max(std::abs(x), std::abs(y)) > k - 2 ? background : spotColour);
+            c.text(cx - 3, cy - 6, std::to_string(i + 1), ink);
+        }
+    }
+
     // The grid, labelled every 8 cells (16 when cells are small).
     const int step = s >= 6 ? 8 : 16;
     for (int x = 0; x <= static_cast<int>(extent.x); x += step) {
@@ -377,6 +451,12 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
     swatch(nestColour, "nest (its horde's ring dotted)");
     swatch(openingColour, "opening (L: its floor level)");
     if (file.border) swatch(borderColour, "border outline (walls outside)");
+    if (!file.zones.empty()) {
+        swatch(zoneColour, "zone outline");
+        swatch(pathColour, "the Brood's path");
+        swatch(entranceColour, "tunnel mouth");
+        swatch(spotColour, "build spot");
+    }
     swatch(problemColour, "problem");
     y += lineHeight + 12;
     for (const auto& [t, col] : notes) {

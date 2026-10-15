@@ -318,6 +318,54 @@ std::optional<int64_t> WorldMap::spawnBroodGroup(size_t r, UnitKind kind, int64_
     return g.id;
 }
 
+std::optional<int64_t> WorldMap::sendAlongPath(size_t r, const std::string& zone, size_t path, UnitKind kind, int64_t count,
+                                               int64_t escort) {
+    if (r >= regions_.size() || !regions_[r]->places()) return std::nullopt;
+    const region::Built& places = *regions_[r]->places();
+    const auto z = std::find_if(places.zones.begin(), places.zones.end(), [&](const region::Zone& x) { return x.id == zone; });
+    if (z == places.zones.end() || path >= z->paths.size()) return std::nullopt;
+    const region::Zone::Path& way = z->paths[path];
+    const auto mouth = std::find_if(z->entrances.begin(), z->entrances.end(), [&](const region::Zone::Entrance& e) { return e.name == way.from; });
+    if (mouth == z->entrances.end()) return std::nullopt;
+    // The prize at the path's end: its nearest deposit with ore (the state's
+    // patch at that place), else its nearest well.
+    const GameState& st = regions_[r]->simulation().state;
+    const Vec2 end = way.points.back();
+    std::optional<std::pair<Poi, int64_t>> prize;
+    double best = kInf;
+    for (const int64_t i : z->prizeDeposits) {
+        const Vec2 at = places.map.deposits[size_t(i)].position;
+        for (size_t k = 0; k < st.patches.size(); k++)
+            if (distance(st.patches[k].position, at) < 0.01 && st.patches[k].remaining > 0 && distance(at, end) < best) {
+                best = distance(at, end);
+                prize = {Poi::deposit, int64_t(k)};
+            }
+    }
+    if (!prize && st.wells)
+        for (const int64_t i : z->prizeWells) {
+            const Vec2 at = places.map.wells[size_t(i)].position;
+            for (size_t k = 0; k < st.wells->size(); k++)
+                if (distance((*st.wells)[k].position, at) < 0.01 && distance(at, end) < best) {
+                    best = distance(at, end);
+                    prize = {Poi::well, int64_t(k)};
+                }
+        }
+    if (!prize) return std::nullopt;
+    const auto g = spawnBroodGroup(r, kind, count, prize->first, prize->second, mouth->at, false, escort);
+    if (!g) return std::nullopt;
+    // The walk along the floor, then the prize; no leaving on the way.
+    double length = distance(mouth->at, way.points.front());
+    for (size_t k = 0; k + 1 < way.points.size(); k++) length += distance(way.points[k], way.points[k + 1]);
+    BroodGroup& grp = brood_[r].groups.back();
+    grp.lingerUntil += length / Brood::marchSpeed(UnitKind::shardling);
+    for (Unit& u : regions_[r]->simulation().state.units)
+        if (u.bug && u.bug->group == *g) {
+            u.bug->path = way.points;
+            u.bug->leg = 0;
+        }
+    return g;
+}
+
 bool WorldMap::spawnGroup(size_t r) {
     const int64_t level = world_->regions[r].file.brood;
     Region& region = *regions_[r];
@@ -752,6 +800,29 @@ std::string WorldMap::devBrood(const std::string& line) {
     in >> word >> what;
     if (!world_ || pilots_.empty()) return "dev: brood: no world, or no pilot";
     const auto& [pilot, p] = *pilots_.begin();
+    // `brood zone here` (Z1): the pilot to the first canyon zone's region,
+    // 8 cells south of its prize (The Fork: in its gorge, the prize in its
+    // sight, out of the bugs' site there).
+    if (what == "zone") {
+        std::string here;
+        std::istringstream peek(line);
+        peek >> word >> what >> here;
+        if (here == "here") {
+            for (size_t zr = 0; zr < regions_.size(); zr++) {
+                const auto& places = regions_[zr]->places();
+                if (!places || places->zones.empty()) continue;
+                const region::Zone& z = places->zones.front();
+                Vec2 prize(0, 0);
+                for (const int64_t i : z.prizeDeposits) prize = prize + places->map.deposits[size_t(i)].position / double(z.prizeDeposits.size());
+                const Simulation& there = regions_[zr]->simulation();
+                const Vec2 to = there.nav ? there.nav->nearestFree(prize + Vec2(0, 8)).value_or(prize + Vec2(0, 8)) : prize + Vec2(0, 8);
+                if (zr == p.region) return "dev: brood zone here: the pilot is in " + world_->regions[zr].file.id + " already";
+                if (!devTransfer(pilot, zr, to)) return "dev: brood zone here: the pilot can't be taken there";
+                return "dev: brood zone here: the pilot to " + world_->regions[zr].file.id;
+            }
+            return "dev: brood zone here: no zone in the world";
+        }
+    }
     const size_t r = p.region;
     if (!regions_[r]->simulation().broodSide) return "dev: brood: no brood level in " + world_->regions[r].file.id;
     Simulation& sim = regions_[r]->simulation();
@@ -863,13 +934,24 @@ std::string WorldMap::devBrood(const std::string& line) {
                 }
             }
         }
+    } else if (what == "zone") {
+        // A group along a path of the region's first canyon zone (Z1).
+        size_t path = 0;
+        std::string kind = "shardling";
+        int64_t count = 6;
+        in >> path >> kind >> count;
+        const auto k = ac::parse<UnitKind>(kind);
+        const auto& zones = regions_[r]->places() ? regions_[r]->places()->zones : std::vector<region::Zone>{};
+        if (zones.empty()) return "dev: brood zone: no zone in " + world_->regions[r].file.id;
+        if (!k) return "dev: brood zone: no unit kind '" + kind + "'";
+        g = sendAlongPath(r, zones.front().id, path, *k, std::clamp<int64_t>(count, 1, 24));
     } else if (what == "clear") {
         std::erase_if(st.units, [](const Unit& u) { return u.bug.has_value(); });
         sim.reindex();
         brood_[r].groups.clear();
         return "dev: brood cleared";
     } else {
-        return "dev: brood: '" + what + "' is not linger|attack|dive|lodeback|raid|clear";
+        return "dev: brood: '" + what + "' is not linger|attack|dive|lodeback|raid|zone|clear";
     }
     if (!g) return "dev: brood " + what + ": not placed";
     return "dev: brood " + what + ": group " + std::to_string(*g) + " in " + world_->regions[r].file.id;

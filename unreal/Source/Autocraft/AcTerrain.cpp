@@ -767,6 +767,13 @@ int32 AAcTerrain::NumSets() const
 	return Sets.Num();
 }
 
+TOptional<FVector> AAcTerrain::DrawnIn(const int64 Region, const ac::Doodad::Kind Kind) const
+{
+	for (const TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
+		if (S.Value && S.Value->Region() == Region) return S.Value->DrawnAt(Kind);
+	return TOptional<FVector>();
+}
+
 int32 AAcTerrain::NumSetsComplete() const
 {
 	int32 N = 0;

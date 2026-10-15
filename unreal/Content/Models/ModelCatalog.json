@@ -286689,6 +286689,358 @@
      ]
     }
    ]
+  },
+  {
+   "name": "doodad_broodTunnel_blue",
+   "file": "",
+   "category": "doodad",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -5.5,
+    -3.6,
+    -4.755951
+   ],
+   "boundsMax": [
+    3.939461,
+    5.85,
+    4.755951
+   ],
+   "triangles": 3056,
+   "team": "blue",
+   "base": "doodad_broodTunnel",
+   "canonical": "doodad_broodTunnel_blue",
+   "notes": [
+    "A Brood tunnel's mouth at the foot of a canyon wall (Z1): a hollow 5 cells across and 3.6 high going black into the rock, its frame of dark boulders crusted with chitin plates and resin, opal flecks in the crust, a faint violet glow in its throat and in the seams round its rim, the rubble the bugs dug out spilled in front. The bugs of the zone's paths come out of it; it faces +X, into the canyon."
+   ],
+   "parts": [
+    {
+     "name": "doodad_broodTunnel_blue_root",
+     "path": "/doodad_broodTunnel_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/doodad_broodTunnel_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "doodad_broodTunnel_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "the mark itself, standing still",
+      "channels": [],
+      "functions": [
+       "AcDoodads.cpp:AAcDoodads::Rebuild"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "void",
+       "prim": "body__void",
+       "mesh": "/Game/Models/doodad_broodTunnel/SM_body__void.SM_body__void",
+       "materialInstance": "/Game/Models/Materials/MI_void_316ee51b4331.MI_void_316ee51b4331",
+       "materialKey": "316ee51b4331",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 768
+      },
+      {
+       "material": "rockDark",
+       "prim": "body__rockDark",
+       "mesh": "/Game/Models/doodad_broodTunnel/SM_body__rockDark.SM_body__rockDark",
+       "materialInstance": "/Game/Models/Materials/MI_rockDark_632d7be04de6.MI_rockDark_632d7be04de6",
+       "materialKey": "632d7be04de6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 1656
+      },
+      {
+       "material": "chitin",
+       "prim": "body__chitin",
+       "mesh": "/Game/Models/doodad_broodTunnel/SM_body__chitin.SM_body__chitin",
+       "materialInstance": "/Game/Models/Materials/MI_chitin_f7da463bcd9a.MI_chitin_f7da463bcd9a",
+       "materialKey": "f7da463bcd9a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 108
+      },
+      {
+       "material": "resin",
+       "prim": "body__resin",
+       "mesh": "/Game/Models/doodad_broodTunnel/SM_body__resin.SM_body__resin",
+       "materialInstance": "/Game/Models/Materials/MI_resin_36e351d0aa30.MI_resin_36e351d0aa30",
+       "materialKey": "36e351d0aa30",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 216
+      },
+      {
+       "material": "throat",
+       "prim": "body__throat",
+       "mesh": "/Game/Models/doodad_broodTunnel/SM_body__throat.SM_body__throat",
+       "materialInstance": "/Game/Models/Materials/MI_throat_a4e1ab20f03d.MI_throat_a4e1ab20f03d",
+       "materialKey": "a4e1ab20f03d",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      },
+      {
+       "material": "glowDim_violet",
+       "prim": "body__glowDim_violet",
+       "mesh": "/Game/Models/doodad_broodTunnel/SM_body__glowDim_violet.SM_body__glowDim_violet",
+       "materialInstance": "/Game/Models/Materials/MI_glowDim_violet_084161d0a834.MI_glowDim_violet_084161d0a834",
+       "materialKey": "084161d0a834",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 212
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "doodad_buildSpot_blue",
+   "file": "",
+   "category": "doodad",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -1.2,
+    0.0,
+    -1.2
+   ],
+   "boundsMax": [
+    1.2,
+    0.72,
+    1.2
+   ],
+   "triangles": 720,
+   "team": "blue",
+   "base": "doodad_buildSpot",
+   "canonical": "doodad_buildSpot_blue",
+   "notes": [
+    "A build spot on a canyon's rim (Z1): a turret's 2 by 2 cells of levelled gravel in a painted amber ring, four survey stakes at its corners with lit amber caps, so pilots see where a turret overlooks the Brood's paths, from the rim, from the canyon floor and on the map."
+   ],
+   "parts": [
+    {
+     "name": "doodad_buildSpot_blue_root",
+     "path": "/doodad_buildSpot_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "body",
+     "path": "/doodad_buildSpot_blue/body",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "doodad_buildSpot_blue_root",
+     "handles": [
+      "body"
+     ],
+     "driver": {
+      "what": "the mark itself, standing still",
+      "channels": [],
+      "functions": [
+       "AcDoodads.cpp:AAcDoodads::Rebuild"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "gravel",
+       "prim": "body__gravel",
+       "mesh": "/Game/Models/doodad_buildSpot/SM_body__gravel.SM_body__gravel",
+       "materialInstance": "/Game/Models/Materials/MI_gravel_b8af01c3c47f.MI_gravel_b8af01c3c47f",
+       "materialKey": "b8af01c3c47f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 128
+      },
+      {
+       "material": "paintAmber",
+       "prim": "body__paintAmber",
+       "mesh": "/Game/Models/doodad_buildSpot/SM_body__paintAmber.SM_body__paintAmber",
+       "materialInstance": "/Game/Models/Materials/MI_paintAmber_d0b164745fd0.MI_paintAmber_d0b164745fd0",
+       "materialKey": "d0b164745fd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 336
+      },
+      {
+       "material": "stake",
+       "prim": "body__stake",
+       "mesh": "/Game/Models/doodad_buildSpot/SM_body__stake.SM_body__stake",
+       "materialInstance": "/Game/Models/Materials/MI_stake_897e6a2e9898.MI_stake_897e6a2e9898",
+       "materialKey": "897e6a2e9898",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 128
+      },
+      {
+       "material": "capAmber",
+       "prim": "body__capAmber",
+       "mesh": "/Game/Models/doodad_buildSpot/SM_body__capAmber.SM_body__capAmber",
+       "materialInstance": "/Game/Models/Materials/MI_capAmber_69b1099ba8b6.MI_capAmber_69b1099ba8b6",
+       "materialKey": "69b1099ba8b6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 128
+      }
+     ]
+    }
+   ]
   }
  ]
 }

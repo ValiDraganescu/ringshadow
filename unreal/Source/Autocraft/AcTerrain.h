@@ -255,6 +255,8 @@ public:
 	int32 MaterialsVersion() const { return Version; }
 	/// Where the current set drew the first doodad of a kind (`AAcRegionGround::DrawnAt`).
 	TOptional<FVector> DrawnAt(const ac::Doodad::Kind Kind) const { return Current ? Current->DrawnAt(Kind) : TOptional<FVector>(); }
+	/// The same in region `Region`'s set (a neighbour's too; Z1's shots).
+	TOptional<FVector> DrawnIn(const int64 Region, const ac::Doodad::Kind Kind) const;
 	/// The current set's centre on the world's grid (cells; 0 out of a world).
 	ac::Vec2 CurrentCentre() const { return Current ? Current->Centre() : ac::Vec2(0, 0); }
 	/// The ground sets (tests, pictures): how many, how many built.
