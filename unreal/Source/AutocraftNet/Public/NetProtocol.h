@@ -17,6 +17,7 @@
 #include "AutocraftNetApi.h"
 #include "NetBitStream.h"
 
+#include "Flight.h"
 #include "Pilot.h"
 #include "Progression.h"
 #include "RegionFile.h"
@@ -724,9 +725,6 @@ struct ProgressMessage {
         bool operator==(const Respawn&) const = default;
     };
     std::optional<Respawn> respawn;
-    /// Ringwalker: world time a flight from anywhere is ready again (0:
-    /// ready, or not learned).
-    double ringwalkerReady = 0;
     /// The pilot's rig (P7): its fitted modules, its stores, the marks
     /// researched, the Foundry's job and the Lab's (`done` in world time,
     /// `Sky::time`).
@@ -880,8 +878,9 @@ struct WorldMessage {
         std::string name;
         /// Region cells from the north-west corner (docs/regions.md).
         Vec2 at;
-        /// A pad of the pilot's own (P6): its Spacedock, or a building
-        /// Homing beacon makes a pad. Nil: the region file's pad.
+        /// A pad the Dropship lands on (F2): a Landing Pad or a Spacedock
+        /// the realm built ("Landing Pad 2", "Spacedock"). Nil: the region
+        /// file's pad, where new pilots start and arrive, not flown to.
         std::optional<StructureKind> building{};
         bool operator==(const Pad&) const = default;
     };
@@ -909,6 +908,20 @@ struct WorldMessage {
     int64_t here = 0;
     /// In flight to `regions[flyingTo]` (nil: on the ground).
     std::optional<int64_t> flyingTo;
+    /// F2: the Dropship's flight, while the pilot is aboard (`ac::Ferry`).
+    struct Ferry {
+        /// Index in `regions` of the region it left, and the pad it boarded
+        /// at (region cells there); the target pad by name and place.
+        int64_t from = 0;
+        Vec2 boarded;
+        std::string pad;
+        Vec2 at;
+        ac::Ferry::Plan plan;
+        /// Seconds since the call when this message was sent.
+        double elapsed = 0;
+        bool operator==(const Ferry&) const = default;
+    };
+    std::optional<Ferry> ferry;
     bool operator==(const WorldMessage&) const = default;
 };
 

@@ -55,9 +55,6 @@ enum class Work : uint8_t {
 /// "Blueprint sites").
 enum class SiteKind : uint8_t { crate, wreck, cache, vault };
 
-/// Where a Homing beacon lets the pilot fly from.
-enum class Beacon : uint8_t { citadel, habDome, derrick };
-
 /// A number a skill changes that the strategy game's `Stat` lacks. Times
 /// are "how long" (`.percent(-0.15)`: 15% sooner), chances and shares are
 /// `.plus`. Behaviour comes in P2.
@@ -138,12 +135,12 @@ struct SkillEffect {
     struct Wellspring { double perMinute; auto operator<=>(const Wellspring&) const = default; };
     /// Pump straight from a well without a Derrick, at `share` of a Derrick's rate.
     struct FieldPump { double share; auto operator<=>(const FieldPump&) const = default; };
-    /// Fly from within `radius` cells of a pad's centre (4 without it).
+    /// Call the Dropship from within `radius` cells of a Landing Pad's
+    /// centre (4 without it).
     struct PadLink { double radius; auto operator<=>(const PadLink&) const = default; };
-    /// These buildings of the pilot's count as pads.
-    struct HomingBeacon { std::vector<Beacon> from; auto operator<=>(const HomingBeacon&) const = default; };
-    /// Fly from anywhere, not only a pad, once every `cooldown` seconds.
-    struct Ringwalker { double cooldown; auto operator<=>(const Ringwalker&) const = default; };
+    /// F2: flights cost no MH, and the Dropship flies `faster` (0.3: 30%)
+    /// faster.
+    struct Ringwalker { double faster; auto operator<=>(const Ringwalker&) const = default; };
     /// Blueprint sites show on the HUD compass within `radius` cells.
     struct Surveyor { double radius; auto operator<=>(const Surveyor&) const = default; };
     /// Arriving in a region shows these kinds of its sites on the world map.
@@ -152,7 +149,7 @@ struct SkillEffect {
     struct SecondWind { double sooner; double cargo; auto operator<=>(const SecondWind&) const = default; };
 
     AC_CASES(SkillEffect, Core, Stat, BuildingLimit, EveryNth, Burst, ShieldUp, SeismicCharge, Quickfill,
-             EmergencyWeld, DerrickTender, Wellspring, FieldPump, PadLink, HomingBeacon, Ringwalker, Surveyor,
+             EmergencyWeld, DerrickTender, Wellspring, FieldPump, PadLink, Ringwalker, Surveyor,
              ScannerPulse, SecondWind)
     auto operator<=>(const SkillEffect&) const = default;
 };
@@ -232,9 +229,12 @@ struct AUTOCRAFTCORE_API Progression {
     /// "Q", "C", "G".
     static const char* slotKey(int64_t slot);
 
-    /// Every node, in `Skill` order.
+    /// Every node in the tree, in `Skill` order (the retired ones left out).
     static const std::vector<SkillNode>& nodes();
+    /// A skill's node, a retired one too (no ranks).
     static const SkillNode& node(Skill s);
+    /// Gone from the tree; old saves give its points back (F2: Homing beacon).
+    static bool retired(Skill s);
     static const BranchInfo& branch(Branch b);
     /// What `rank` of a node does (its rank row repeated, or its `byRank`
     /// row); empty at rank 0.
@@ -256,10 +256,13 @@ struct AUTOCRAFTCORE_API Progression {
     static int64_t blueprintFloor(StructureKind k);
     /// How many of a building a pilot may have across the world (0: none,
     /// the Garrison). Overbuild raises the Hab Dome, Derrick and Sentinel.
+    /// The Landing Pad's is per region (F2: the server counts the region's).
     static int64_t buildingLimit(StructureKind k);
+    /// Landing Pads a region may have (F2).
+    static constexpr int64_t landingPadsPerRegion = 2;
     /// What a building costs in a world, ore and MH, before the skills
     /// (docs/prospector-progression.md, "Buildings in the MMO"): the
-    /// Citadel and the Derrick ore only, the rest an MH part too. The
+    /// Citadel, the Derrick and the Landing Pad ore only, the rest an MH part too. The
     /// Garrison keeps the strategy game's price.
     static int64_t worldOre(StructureKind k);
     static int64_t worldHydrogen(StructureKind k);
@@ -417,7 +420,7 @@ struct AUTOCRAFTCORE_API Shop {
     static constexpr double blueprintGrowth = 1.5;
     /// The `bought`th copy's price (0: the first) of `k`'s blueprint: ore
     /// `(50 + 25 × floor) × 1.5^bought`, MH `5 × floor × 1.5^bought` (the
-    /// Citadel and the Derrick ore only), each rounded to 10. The floor is
+    /// Citadel, the Derrick and the Landing Pad ore only), each rounded to 10. The floor is
     /// the building's (`Progression::blueprintFloor`), not the pilot's.
     /// Nothing for a kind with no blueprint (the Garrison).
     static ShopPrice blueprintPrice(StructureKind k, int64_t bought);
@@ -569,9 +572,6 @@ template <> struct EnumInfo<Module> {
 };
 template <> struct EnumInfo<Item> {
     static constexpr std::array<std::string_view, 4> names{"repairKit", "hydrogenCanister", "shieldCharge", "surveyFlare"};
-};
-template <> struct EnumInfo<Beacon> {
-    static constexpr std::array<std::string_view, 3> names{"citadel", "habDome", "derrick"};
 };
 template <> struct EnumInfo<SkillStat> {
     static constexpr std::array<std::string_view, 16> names{

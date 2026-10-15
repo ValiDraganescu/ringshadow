@@ -2,8 +2,8 @@
 // "Buildings in the MMO"): a fallen Prospector back at its Citadel or nearest
 // Hab Dome (Second wind sooner, with cargo), the Hab Dome a depot, the
 // respec only at the Citadel, the world's MH prices, the Lab, the Spacedock
-// a pad of the realm's (R1), and the Wayfinder's flight nodes (Pad link,
-// Homing beacon, Short hop, Ringwalker). Isolated scenes of a few seconds on
+// the big Landing Pad (F2), and the Wayfinder's flight nodes (Pad link,
+// Short hop, Ringwalker) on the Dropship's flights between Landing Pads. Isolated scenes of a few seconds on
 // The First Reach; run from unreal/server.
 
 #include "test.h"
@@ -209,8 +209,9 @@ TEST(roles_respawn_at_the_nearest_hab_dome) {
     w.setProgress(me, at(10));
     fill(w, me, 2000, 500);
     ASSERT_TRUE(put(w, me, StructureKind::citadel).has_value());
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
-    wait(w, me, 4.2);
+    const size_t fork = *w.regionNamed("cold-fork");
+    ASSERT_TRUE(w.devTransfer(me, fork, first().regions[fork].built.pads[0].at));
+    wait(w, me, 0.2);
     ASSERT_TRUE(first().regions[*w.where(me)].file.id == std::string("cold-fork"));
     const auto dome = put(w, me, StructureKind::habDome);
     ASSERT_TRUE(dome.has_value());
@@ -331,119 +332,269 @@ TEST(roles_lab_in_a_world) {
     EXPECT_TRUE(why.rfind("Lab limit reached", 0) == 0);
 }
 
-// The Spacedock: a pad of the realm's (R1). It shows in every pilot's World
-// message; it flies from it, and lands on it from any pad, with no
-// first-landing XP.
-TEST(roles_spacedock_pad) {
-    WorldParams fuel = params();
-    fuel.startHydrogen = 100;  // a flight costs MH (F1)
-    WorldMap w(first(), fuel);
+// F2, the Dropship (docs/mmorpg-m8.md): Landing Pads the realm builds, the
+// flight between two of them, its refusals, its price and its stages.
+
+namespace {
+
+/// The pilot's Prospector into region `id` at its pad (`devTransfer`): the
+/// region seen.
+void goTo(WorldMap& w, PilotId p, const std::string& id) {
+    const size_t r = *w.regionNamed(id);
+    ASSERT_TRUE(w.devTransfer(p, r, first().regions[r].built.pads[0].at));
+    w.step();
+}
+
+/// A Landing Pad put up beside the Prospector (finished), and the Prospector
+/// moved onto it. Its ground point.
+Vec2 landingPad(WorldMap& w, PilotId p) {
+    const auto id = put(w, p, StructureKind::landingPad);
+    EXPECT_TRUE(id.has_value());
+    if (!id) return Vec2(0, 0);
+    const Vec2 at = building(w, p, *id)->position;
+    moveTo(w, p, at);
+    return at;
+}
+
+/// Is the pilot's Prospector in any region's simulation?
+bool anywhere(WorldMap& w, int64_t kindCount) {
+    int64_t n = 0;
+    for (size_t r = 0; r < w.regionCount(); r++)
+        for (const Unit& u : w.region(r).simulation().state.units)
+            if (u.kind == UnitKind::prospector) n += 1;
+    return n >= kindCount;
+}
+
+} // namespace
+
+// A Landing Pad: level 1, ore only, two in a region (a third refused), more
+// in another region; the realm's, in every pilot's World message, numbered
+// across the world; a region file's pad is not one.
+TEST(roles_landing_pad_built_and_limited) {
+    WorldMap w(first(), params());
+    w.seat(me, key);
+    w.setProgress(me, at(1));
+    fill(w, me, 2000, 0);
+    moveTo(w, me, startPad() + Vec2(0, 10));
+    ASSERT_TRUE(put(w, me, StructureKind::landingPad).has_value());
+    moveTo(w, me, startPad() + Vec2(10, 10));
+    ASSERT_TRUE(put(w, me, StructureKind::landingPad).has_value());
+    moveTo(w, me, startPad() + Vec2(-10, 10));
+    std::string why;
+    EXPECT_TRUE(!put(w, me, StructureKind::landingPad, &why).has_value());
+    EXPECT_EQ(why, std::string("Landing Pad limit reached: 2 in a region"));
+    goTo(w, me, "cold-fork");
+    fill(w, me, 2000, 0);
+    moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));
+    ASSERT_TRUE(put(w, me, StructureKind::landingPad).has_value());
+    const auto pads = w.landingPads();
+    ASSERT_TRUE(pads.size() == size_t(3));
+    // Numbered in their region: Cold Fork's is its Landing Pad 1.
+    EXPECT_EQ(pads[0].name, std::string("Landing Pad 1"));
+    EXPECT_EQ(first().regions[pads[0].region].file.id, std::string("cold-fork"));
+    EXPECT_EQ(pads[2].name, std::string("Landing Pad 2"));
+    // Every pilot's World message: the region file's pad, then the realm's.
+    w.join(other);
+    const auto theirs = *w.worldMessage(other);
+    const auto& start = theirs.regions[first().start].pads;
+    ASSERT_TRUE(start.size() == size_t(3));
+    EXPECT_TRUE(!start[0].building);
+    EXPECT_TRUE(start[1].name == "Landing Pad 1" && start[1].building == std::optional(StructureKind::landingPad));
+    EXPECT_TRUE(start[2].name == "Landing Pad 2");
+}
+
+// The refusals: not on a Landing Pad, a region not seen yet, no Landing Pad
+// there, a pad that isn't there, the pad it stands on, MH short; a region
+// file's pad is no Landing Pad.
+TEST(roles_flight_refusals) {
+    WorldMap w(first(), params());
+    w.seat(me, key);
+    w.setProgress(me, at(5));
+    fill(w, me, 2000, 0);
+    EXPECT_EQ(w.fly(me, "start", "landing").value_or(""), std::string("No Landing Pad in Prospect Landing: build one there first"));
+    goTo(w, me, "cold-fork");
+    fill(w, me, 2000, 0);
+    moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));
+    const Vec2 far = landingPad(w, me);
+    goTo(w, me, "start");
+    fill(w, me, 2000, 0);
+    moveTo(w, me, startPad() + Vec2(0, 10));
+    const Vec2 here = landingPad(w, me);
+    moveTo(w, me, here + Vec2(0, w.padReach(me) + 0.5));
+    EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 1").value_or(""),
+              std::string("Not at a Landing Pad: stand on one to call the Dropship"));
+    moveTo(w, me, here);
+    EXPECT_EQ(w.fly(me, "slag-pockets", "Landing Pad 1").value_or(""),
+              std::string("Not discovered yet: Slag Pockets. Go there on foot first"));
+    EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 7").value_or(""), std::string("No Landing Pad 7 in Cold Fork"));
+    EXPECT_EQ(w.fly(me, "start", "Landing Pad 1").value_or(""), std::string("At Landing Pad 1 already"));
+    EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 1").value_or(""), std::string("Not enough MH to fly: 15 MH, you have 0"));
+    (void)far;
+    EXPECT_TRUE(!w.flying(me));
+}
+
+// The flight: the price taken at the call (10 + 5 a step), the Prospector
+// aboard at once (in no region: nothing can touch it), the pilot moved into
+// the target region when the approach starts with nothing driven (the World
+// message's ferry says where and when), then the Prospector on the target
+// pad at the touch down, a first landing paid once.
+TEST(roles_flight_between_landing_pads) {
+    WorldMap w(first(), params());
+    w.seat(me, key);
+    w.setProgress(me, at(5));
+    goTo(w, me, "cold-fork");
+    fill(w, me, 2000, 0);
+    moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));
+    const Vec2 there = landingPad(w, me);
+    goTo(w, me, "start");
+    fill(w, me, 2000, 40);
+    moveTo(w, me, startPad() + Vec2(0, 10));
+    const Vec2 here = landingPad(w, me);
+    const double xp = w.progress(me)->xp;
+    ASSERT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
+    EXPECT_TRUE(w.flying(me));
+    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(25));
+    EXPECT_TRUE(drivenUnit(w, me) == nullptr);
+    EXPECT_TRUE(!anywhere(w, 1));
+    const auto m = *w.worldMessage(me);
+    ASSERT_TRUE(m.ferry.has_value());
+    EXPECT_EQ(m.ferry->pad, std::string("Landing Pad 1"));
+    EXPECT_EQ(m.ferry->from, int64_t(first().start));
+    EXPECT_TRUE(m.ferry->plan == Ferry::plan(1));
+    const size_t fork = *w.regionNamed("cold-fork");
+    EXPECT_TRUE(length(m.ferry->at - first().regions[fork].built.regionAt(there)) < 1e-9);
+    EXPECT_TRUE(length(m.ferry->boarded - first().regions[first().start].built.regionAt(here)) < 1e-9);
+    const Ferry::Plan plan = Ferry::plan(1);
+    // Before the approach: still in its region, aboard.
+    wait(w, me, plan.approachAt() - 0.2);
+    EXPECT_EQ(*w.where(me), first().start);
+    EXPECT_TRUE(!anywhere(w, 1));
+    w.takeMoves();
+    wait(w, me, 0.4);
+    // The approach: in the target region, nothing driven yet; its region
+    // change told.
+    EXPECT_EQ(*w.where(me), fork);
+    EXPECT_TRUE(w.flying(me) && drivenUnit(w, me) == nullptr);
+    bool changed = false;
+    for (const Moved& mv : w.takeMoves()) changed = changed || (mv.pilot == me && mv.change && mv.change->regionId == "cold-fork");
+    EXPECT_TRUE(changed);
+    EXPECT_TRUE(w.worldMessage(me)->ferry.has_value());
+    // The touch down: on the target pad.
+    wait(w, me, plan.approach - 0.4);
+    EXPECT_TRUE(w.flying(me));
+    wait(w, me, 0.3);
+    EXPECT_TRUE(!w.flying(me));
+    ASSERT_TRUE(drivenUnit(w, me) != nullptr);
+    EXPECT_TRUE(distance(drivenUnit(w, me)->position, there) < Rules::radius(StructureKind::landingPad) + 1);
+    EXPECT_TRUE(!w.worldMessage(me)->ferry.has_value());
+    EXPECT_TRUE(w.progress(me)->pads.count("cold-fork/Landing Pad 1") == 1);
+    EXPECT_TRUE(w.progress(me)->xp > xp);
+}
+
+// Aboard, untouchable: a Prospector at 1 hp that boards comes down whole
+// as it was, never hit; bugs on the pad find nothing to bite.
+TEST(roles_flight_aboard_untouchable) {
+    WorldMap w(first(), params());
+    w.seat(me, key);
+    w.setProgress(me, at(5));
+    fill(w, me, 2000, 40);
+    moveTo(w, me, startPad() + Vec2(0, 10));
+    landingPad(w, me);
+    moveTo(w, me, startPad() + Vec2(12, 10));
+    landingPad(w, me);
+    drivenUnit(w, me)->hp = 1;
+    ASSERT_TRUE(!w.fly(me, "start", "Landing Pad 1"));
+    for (int i = 0; i < 40; i++) {
+        wait(w, me, 0.5);
+        if (!w.flying(me)) break;
+        EXPECT_TRUE(drivenUnit(w, me) == nullptr && !anywhere(w, 1));
+        EXPECT_TRUE(!w.respawning(me).has_value());
+    }
+    ASSERT_TRUE(!w.flying(me) && drivenUnit(w, me) != nullptr);
+    EXPECT_NEAR(drivenUnit(w, me)->hp, 1, 1e-9);
+    // A hop on the same ground: no region change, the full plan's time.
+    EXPECT_EQ(*w.where(me), first().start);
+}
+
+// The Spacedock: the big pad. Flights from it cost half (rounded up); it
+// is a Landing Pad to land on too, by name.
+TEST(roles_spacedock_halves_the_price) {
+    WorldMap w(first(), params());
     w.seat(me, key);
     w.setProgress(me, at(35));
-    fill(w, me, 1000, 1000);
-    moveTo(w, me, startPad() + Vec2(0, 9));
+    goTo(w, me, "slag-pockets");
+    fill(w, me, 3000, 1000);
+    moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));
+    landingPad(w, me);
+    goTo(w, me, "start");
+    fill(w, me, 3000, 1000);
+    moveTo(w, me, startPad() + Vec2(0, 12));
     const auto dock = put(w, me, StructureKind::spacedock);
     ASSERT_TRUE(dock.has_value());
     const Vec2 dockAt = building(w, me, *dock)->position;
-    const auto pads = w.ownPads(me);
-    ASSERT_TRUE(pads.size() == size_t(1));
-    EXPECT_EQ(pads[0].name, std::string("Spacedock"));
-    const auto m = *w.worldMessage(me);
-    const auto& start = m.regions[first().start].pads;
-    ASSERT_TRUE(!start.empty());
-    EXPECT_TRUE(start.back().name == "Spacedock" && start.back().building == std::optional<StructureKind>(StructureKind::spacedock));
-    // The realm's (R1): another pilot's World message has it too.
-    w.join(other);
-    const auto theirs = *w.worldMessage(other);
-    const auto& theirStart = theirs.regions[first().start].pads;
-    ASSERT_TRUE(!theirStart.empty());
-    EXPECT_TRUE(theirStart.back().name == "Spacedock" &&
-                theirStart.back().building == std::optional<StructureKind>(StructureKind::spacedock));
-    // From its far side, out of the start pad's reach.
-    const Vec2 away = normalize(dockAt - startPad());
-    moveTo(w, me, dockAt + away * (Rules::radius(StructureKind::spacedock) + 1));
-    ASSERT_TRUE(distance(drivenUnit(w, me)->position, startPad()) > w.padReach(me));
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
-    wait(w, me, 4.2);
-    ASSERT_TRUE(first().regions[*w.where(me)].file.id == std::string("cold-fork"));
-    // Back onto it.
-    EXPECT_TRUE(w.fly(me, "start", "Dock").has_value());
+    bool named = false;
+    for (const LandingPad& o : w.landingPads()) named = named || (o.name == "Spacedock" && o.kind == StructureKind::spacedock);
+    EXPECT_TRUE(named);
+    // From its edge: 20 MH to Slag Pockets (two steps), 10 from the dock.
+    moveTo(w, me, dockAt + Vec2(0, Rules::radius(StructureKind::spacedock) + 1));
+    fill(w, me, 3000, 100);
+    ASSERT_TRUE(!w.fly(me, "slag-pockets", "Landing Pad 1"));
+    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(90));
+    wait(w, me, Ferry::plan(2).total() + 0.2);
+    ASSERT_TRUE(!w.flying(me));
+    EXPECT_EQ(first().regions[*w.where(me)].file.id, std::string("slag-pockets"));
+    // Back onto the Spacedock: full price from a Landing Pad.
+    fill(w, me, 3000, 100);
     ASSERT_TRUE(!w.fly(me, "start", "Spacedock"));
-    wait(w, me, 4.2);
-    EXPECT_EQ(*w.where(me), first().start);
+    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(80));
+    wait(w, me, Ferry::plan(2).total() + 0.2);
     ASSERT_TRUE(drivenUnit(w, me) != nullptr);
     EXPECT_TRUE(distance(drivenUnit(w, me)->position, dockAt) < Rules::radius(StructureKind::spacedock) + 3);
-    EXPECT_TRUE(w.progress(me)->pads.count("start/Spacedock") == 0);
 }
 
-// Homing beacon: rank 1 the Citadel is a pad, rank 2 the Hab Domes too
-// ("Hab Dome 1"); a change sends the World message again.
-TEST(roles_homing_beacon) {
+// Ringwalker: flights cost no MH, from any Landing Pad, and the Dropship
+// comes 30% faster (the plan, and the landing).
+TEST(roles_ringwalker_free_and_faster) {
     WorldMap w(first(), params());
     w.seat(me, key);
-    w.setProgress(me, at(30));
-    fill(w, me, 3000, 1000);
-    const auto citadel = put(w, me, StructureKind::citadel);
-    ASSERT_TRUE(citadel.has_value());
-    moveTo(w, me, startPad() + Vec2(0, 14));
-    ASSERT_TRUE(put(w, me, StructureKind::habDome).has_value());
-    EXPECT_TRUE(w.ownPads(me).empty());
-    w.takeMoves();
-    w.setProgress(me, at(30, {{Skill::homingBeacon, 1}}));
-    w.step();
-    ASSERT_TRUE(w.ownPads(me).size() == size_t(1));
-    EXPECT_EQ(w.ownPads(me)[0].name, std::string("Citadel"));
-    bool told = false;
-    for (const Moved& mv : w.takeMoves()) told = told || mv.pilot == me;
-    EXPECT_TRUE(told);
-    w.setProgress(me, at(30, {{Skill::homingBeacon, 2}}));
-    w.step();
-    ASSERT_TRUE(w.ownPads(me).size() == size_t(2));
-    EXPECT_EQ(w.ownPads(me)[1].name, std::string("Hab Dome 1"));
-    // Fly from the dome to the Citadel.
-    const Vec2 citadelAt = building(w, me, *citadel)->position;
-    ASSERT_TRUE(!w.fly(me, "start", "Citadel"));
-    wait(w, me, 4.2);
-    EXPECT_TRUE(distance(drivenUnit(w, me)->position, citadelAt) < Rules::radius(StructureKind::citadel) + 3);
-}
-
-// Pad link: rank 3 flies from 16 cells of a pad's centre, not 17.
-// Short hop: rank 3 lands in 1.6 s, not 4.
-TEST(roles_pad_link_and_short_hop) {
-    WorldParams fuel = params();
-    fuel.startHydrogen = 100;  // a flight costs MH (F1)
-    WorldMap w(first(), fuel);
-    w.seat(me, key);
-    w.setProgress(me, at(40, {{Skill::padLink, 3}, {Skill::shortHop, 3}}));
-    EXPECT_NEAR(w.padReach(me), 16, 1e-9);
-    EXPECT_NEAR(w.flightTime(me), 1.6, 1e-9);
-    moveTo(w, me, startPad() + Vec2(0, 17));
-    EXPECT_TRUE(w.fly(me, "cold-fork", "landing") == std::optional<std::string>("not at a pad"));
-    moveTo(w, me, startPad() + Vec2(0, 15.5));
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
-    wait(w, me, 1.5);
-    EXPECT_TRUE(w.flying(me));
-    wait(w, me, 0.2);
+    w.setProgress(me, at(80, {{Skill::ringwalker, 1}}));
+    goTo(w, me, "cold-fork");
+    fill(w, me, 2000, 0);
+    moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));
+    landingPad(w, me);
+    goTo(w, me, "start");
+    fill(w, me, 2000, 0);
+    moveTo(w, me, startPad() + Vec2(0, 10));
+    landingPad(w, me);
+    const Ferry::Plan plan = w.ferryPlan(me, *w.regionNamed("cold-fork"));
+    EXPECT_NEAR(plan.total() * 1.3, Ferry::plan(1).total(), 1e-9);
+    ASSERT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
+    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(0));
+    wait(w, me, plan.total() + 0.2);
     EXPECT_TRUE(!w.flying(me));
     EXPECT_EQ(first().regions[*w.where(me)].file.id, std::string("cold-fork"));
 }
 
-// Ringwalker: a flight from anywhere, then not again for 120 s (the
-// Progress message says when); a pad still works meanwhile.
-TEST(roles_ringwalker) {
-    WorldParams fuel = params();
-    fuel.startHydrogen = 100;  // a flight costs MH (F1)
-    WorldMap w(first(), fuel);
+// Pad link: rank 3 calls the Dropship from 16 cells of a Landing Pad's
+// centre, not 17. Short hop: rank 3 takes 60% off the dash, only.
+TEST(roles_pad_link_and_short_hop) {
+    WorldMap w(first(), params());
     w.seat(me, key);
-    w.setProgress(me, at(80, {{Skill::ringwalker, 1}}));
-    moveTo(w, me, startPad() + Vec2(0, 30));
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
-    EXPECT_NEAR(w.progressMessage(me)->ringwalkerReady, w.clock() + 120, 1e-6);
-    wait(w, me, 4.2);
-    const Vec2 pad = first().regions[*w.where(me)].built.pads[0].at;
-    moveTo(w, me, pad + Vec2(0, 30));
-    const auto why = w.fly(me, "start", "landing");
-    EXPECT_TRUE(why.value_or("").rfind("Ringwalker is ready in", 0) == 0);
-    moveTo(w, me, pad);
-    EXPECT_TRUE(!w.fly(me, "start", "landing"));
+    w.setProgress(me, at(40, {{Skill::padLink, 3}, {Skill::shortHop, 3}}));
+    EXPECT_NEAR(w.padReach(me), 16, 1e-9);
+    const Ferry::Plan plan = w.ferryPlan(me, *w.regionNamed("cold-fork"));
+    EXPECT_NEAR(plan.dash, Ferry::plan(1).dash * 0.4, 1e-9);
+    EXPECT_NEAR(plan.lift, Ferry::lift, 1e-9);
+    goTo(w, me, "cold-fork");
+    fill(w, me, 2000, 0);
+    moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));
+    landingPad(w, me);
+    goTo(w, me, "start");
+    fill(w, me, 2000, 100);
+    moveTo(w, me, startPad() + Vec2(0, 20));
+    const Vec2 pad = landingPad(w, me);
+    moveTo(w, me, pad + Vec2(17, 0));
+    EXPECT_TRUE(w.fly(me, "cold-fork", "Landing Pad 1").has_value());
+    moveTo(w, me, pad + Vec2(15.5, 0));
+    EXPECT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
 }

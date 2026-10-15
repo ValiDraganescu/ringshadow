@@ -38,6 +38,14 @@ int64_t WorldMap::realmCount(StructureKind kind) const {
     return n;
 }
 
+int64_t WorldMap::limitCount(StructureKind kind, size_t region) const {
+    if (kind != StructureKind::landingPad) return realmCount(kind);
+    int64_t n = 0;
+    for (const Structure& b : regions_[region]->simulation().state.structures)
+        if (b.kind == kind && realm(b)) n += 1;
+    return n;
+}
+
 // MARK: - Seeing and opening
 
 void WorldMap::scan(PilotState& p, size_t r) {

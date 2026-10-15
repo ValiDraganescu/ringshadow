@@ -308,12 +308,10 @@ TEST(contracts_reach_a_site_and_a_pad) {
     drivenUnit(w, me)->position = wreck + Vec2(1, 0);
     wait(w, me, 1);
     EXPECT_TRUE(w.contracts(me)[0].state == State::done);
-    // Back to the pad and over to Cold Fork.
-    const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
-    drivenUnit(w, me)->position = pad;
-    wait(w, me, 1);
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
-    for (int i = 0; i < 60 * 10 && w.flying(me); i++) wait(w, me, 1);
+    // Over to Cold Fork, onto its pad (F2: the region file's pad is reached,
+    // not flown to).
+    const size_t fork = *w.regionNamed("cold-fork");
+    ASSERT_TRUE(w.devTransfer(me, fork, first().regions[fork].built.pads[0].at));
     wait(w, me, 2);
     EXPECT_TRUE(w.contracts(me)[1].state == State::done);
 }

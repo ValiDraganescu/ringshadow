@@ -32,7 +32,9 @@ enum class StructureKind : uint8_t {
     citadel, habDome, garrison, bastion, derrick, foundry, spacedock, lab, sentinel,
     // D2 (docs/mmorpg-m8.md): the MMO's gatling gun. Appended: saves store
     // the name, the wire the index (4 bits).
-    gatling
+    gatling,
+    // F2: the Landing Pad, where the Dropship sets down (docs/mmorpg-m8.md).
+    landingPad
 };
 
 /// One unit type's numbers (in real seconds; ranges edge to edge).
@@ -260,8 +262,11 @@ struct AUTOCRAFTCORE_API Rules {
     static double buildTime(StructureKind k);
     static int64_t supply(StructureKind k);
     /// Half the footprint side: 5x5 Citadel; 3x3 Garrison, Bastion,
-    /// Derrick, Foundry and Spacedock; 2x2 Hab Dome, Lab, Sentinel and gatling gun.
+    /// Derrick, Foundry, Spacedock and Landing Pad; 2x2 Hab Dome, Lab, Sentinel and gatling gun.
     static double radius(StructureKind k);
+    /// Units walk over it (F2: a Landing Pad is a deck on the ground, the
+    /// Prospector stands on it to call the Dropship and steps out onto it).
+    static bool walkable(StructureKind k) { return k == StructureKind::landingPad; }
     /// A building needs one of these finished first (the tech tree).
     /// (`requires` is a C++ keyword.)
     static std::optional<StructureKind> requires_(StructureKind k);

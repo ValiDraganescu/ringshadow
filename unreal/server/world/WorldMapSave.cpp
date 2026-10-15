@@ -101,10 +101,10 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
 void WorldMap::park(const PilotState& p) {
     PilotState q = p;
     if (q.flight) {
-        // In the air: it lands at its pad now, with no one in it.
+        // Aboard the Dropship: it lands at the target pad now, with no one in it.
         const Flight f = *q.flight;
         Unit v = f.unit;
-        v.position = landing(f);
+        v.position = f.at;
         q.unit = regions_[f.to]->admit(v);
         q.region = f.to;
         q.flight = std::nullopt;
@@ -134,7 +134,7 @@ WorldSave WorldMap::save() const {
             unit = regions_[r]->simulation().state.nextID + extra[r]++;
             SavedUnit u = savedUnit(p.flight->unit, p.key);
             u.id = *unit;
-            u.at = this->landing(*p.flight);
+            u.at = p.flight->at;
             landing[r].push_back(u);
         } else if (unit) {
             owned[r][*unit] = p.key;
@@ -324,6 +324,16 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         if (!sp.stacked)
             for (auto& [kind, n] : p.progress.blueprints)
                 n = std::max<int64_t>(1, p.progress.limit(kind) - realmCount(kind));
+        // F2: Homing beacon is retired. Its points come back to spend
+        // again (out of the slots too), and a Landing Pad blueprint takes
+        // its place. Idempotent: a pilot without its ranks is left as it is.
+        if (p.progress.ranks.erase(Skill::homingBeacon) > 0) {
+            for (auto& s : p.progress.slots)
+                if (s == Skill::homingBeacon) s = std::nullopt;
+            std::erase_if(p.progress.recent, [](const SkillSpend& x) { return x.skill == Skill::homingBeacon; });
+            p.progress.giveBlueprint(StructureKind::landingPad);
+            problems.push_back("pilot " + sp.id.substr(0, 8) + ": Homing beacon retired, its points back and a Landing Pad blueprint given");
+        }
         away_[sp.id] = p;
     }
     // Starfalls coming and craters with their deposits: the deposits back

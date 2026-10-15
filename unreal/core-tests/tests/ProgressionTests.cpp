@@ -70,26 +70,35 @@ TEST(progression_pointsAreLevelLessOne) {
     EXPECT_EQ(atLevel(60).unspent(), int64_t(59));
 }
 
-TEST(progression_treeHolds185Points37ABranch) {
-    EXPECT_EQ(Progression::nodes().size(), size_t(65));
-    EXPECT_EQ(Progression::treePoints(), int64_t(185));
+// F2: Wayfinder lost Homing beacon (3 points, 12 nodes); its skill stays,
+// retired, with no ranks.
+TEST(progression_treeHolds182Points37ABranch) {
+    EXPECT_EQ(Progression::nodes().size(), size_t(64));
+    EXPECT_EQ(Progression::treePoints(), int64_t(182));
     for (Branch b : allCases<Branch>()) {
-        EXPECT_EQ(Progression::branchPoints(b), int64_t(37));
+        const bool wayfinder = b == Branch::wayfinder;
+        EXPECT_EQ(Progression::branchPoints(b), int64_t(wayfinder ? 34 : 37));
         int64_t count = 0, capstones = 0;
         for (const auto& n : Progression::nodes())
             if (n.branch == b) {
                 count += 1;
                 if (n.tier == Progression::capstone) capstones += 1;
             }
-        EXPECT_EQ(count, int64_t(13));
+        EXPECT_EQ(count, int64_t(wayfinder ? 12 : 13));
         EXPECT_EQ(capstones, int64_t(1));
     }
     for (Skill s : allCases<Skill>()) {
         const SkillNode& n = Progression::node(s);
         EXPECT_TRUE(n.skill == s);
         EXPECT_TRUE(!n.title.empty() && !n.text.empty());
+        if (Progression::retired(s)) {
+            EXPECT_EQ(n.ranks, int64_t(0));
+            continue;
+        }
         EXPECT_TRUE(n.byRank.empty() ? !n.effects.empty() : int64_t(n.byRank.size()) == n.ranks);
     }
+    EXPECT_TRUE(Progression::retired(Skill::homingBeacon));
+    EXPECT_TRUE(ProspectorProgress{}.spendRefusal(Skill::homingBeacon).has_value());
     EXPECT_TRUE(Progression::branch(Branch::hardshell).text.find("for the frontier") != std::string::npos);
 }
 
@@ -357,25 +366,30 @@ TEST(progression_rankText) {
     EXPECT_TRUE(Progression::rankText(Skill::longArm, 3) == "Weld and repair from 1.5 cells farther");
     EXPECT_TRUE(Progression::rankText(Skill::bulwark, 2) == "Damage taken −10%");
     EXPECT_TRUE(Progression::rankText(Skill::overbuild, 2) == "+2 Hab Dome, Derrick and Sentinel allowed");
-    EXPECT_TRUE(Progression::rankText(Skill::homingBeacon, 2) == "Your Citadel and Hab Domes count as a pad");
+    EXPECT_TRUE(Progression::rankText(Skill::padLink, 2) == "Call the Dropship from within 12 cells of a Landing Pad");
+    EXPECT_TRUE(Progression::rankText(Skill::ringwalker, 1) == "Flights cost no MH, from any Landing Pad, and the Dropship comes 30% faster.");
     EXPECT_TRUE(Progression::rankText(Skill::scannerPulse, 3) == "Arriving marks a region's wrecks, caches and vaults");
     EXPECT_TRUE(Progression::rankText(Skill::overcharge, 1) == Progression::node(Skill::overcharge).text);
     for (const SkillNode& n : Progression::nodes())
         for (int64_t r = 1; r <= n.ranks; r++) EXPECT_TRUE(!Progression::rankText(n.skill, r).empty());
 }
 
-// The blueprints: nine buildings, the floors of the doc's table, rising
-// (D2: the gatling gun at 5, the Sentinel down to 10).
+// The blueprints: ten buildings, the floors of the doc's table, rising
+// (D2: the gatling gun at 5, the Sentinel down to 10; F2: the Landing Pad
+// at 1 with the Citadel).
 TEST(progression_blueprintFloors) {
     const auto& k = Progression::blueprintKinds();
-    ASSERT_TRUE(k.size() == size_t(9));
+    ASSERT_TRUE(k.size() == size_t(10));
     EXPECT_TRUE(k.front() == StructureKind::citadel);
+    EXPECT_EQ(Progression::blueprintFloor(StructureKind::landingPad), int64_t(1));
+    EXPECT_EQ(Progression::buildingLimit(StructureKind::landingPad), int64_t(2));
     EXPECT_EQ(Progression::blueprintFloor(StructureKind::derrick), int64_t(3));
     EXPECT_EQ(Progression::blueprintFloor(StructureKind::gatling), int64_t(5));
     EXPECT_EQ(Progression::blueprintFloor(StructureKind::sentinel), int64_t(10));
     EXPECT_EQ(Progression::blueprintFloor(StructureKind::garrison), int64_t(0));
     for (size_t i = 1; i < k.size(); i++)
-        EXPECT_TRUE(Progression::blueprintFloor(k[i]) > Progression::blueprintFloor(k[i - 1]));
+        EXPECT_TRUE(Progression::blueprintFloor(k[i]) >= Progression::blueprintFloor(k[i - 1]));
+    EXPECT_TRUE(Progression::blueprintFloor(k[2]) > Progression::blueprintFloor(k[1]));
 }
 
 // The Citadel shop (C2): a blueprint's price grows with its floor and with
@@ -389,6 +403,8 @@ TEST(progression_blueprintPriceRises) {
     EXPECT_TRUE(Shop::blueprintPrice(StructureKind::sentinel, 0) == (ShopPrice{300, 50}));
     EXPECT_TRUE(Shop::blueprintPrice(StructureKind::gatling, 0) == (ShopPrice{180, 30}));
     EXPECT_TRUE(Shop::blueprintPrice(StructureKind::garrison, 0) == ShopPrice{});
+    // F2: the Landing Pad as cheap as the Citadel's, ore only.
+    EXPECT_TRUE(Shop::blueprintPrice(StructureKind::landingPad, 0) == (ShopPrice{80, 0}));
     for (const StructureKind k : Progression::blueprintKinds())
         for (int64_t n = 0; n < 8; n++) {
             const ShopPrice a = Shop::blueprintPrice(k, n), b = Shop::blueprintPrice(k, n + 1);
@@ -397,7 +413,7 @@ TEST(progression_blueprintPriceRises) {
     // Up the floors, dearer.
     const auto& kinds = Progression::blueprintKinds();
     for (size_t i = 1; i < kinds.size(); i++)
-        EXPECT_TRUE(Shop::blueprintPrice(kinds[i], 0).ore > Shop::blueprintPrice(kinds[i - 1], 0).ore);
+        EXPECT_TRUE(Shop::blueprintPrice(kinds[i], 0).ore >= Shop::blueprintPrice(kinds[i - 1], 0).ore);
     ProspectorProgress p;
     p.bought[StructureKind::habDome] = 1;
     EXPECT_TRUE(p.blueprintPrice(StructureKind::habDome) == Shop::blueprintPrice(StructureKind::habDome, 1));

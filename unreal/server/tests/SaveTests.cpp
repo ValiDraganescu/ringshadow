@@ -428,10 +428,10 @@ TEST(save_pilot_restored_by_id_where_it_left) {
     fuel.startHydrogen = 100;  // a flight costs MH (F1)
     WorldMap w(firstWorld(), fuel);
     ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
-    // Flies to Cold Fork, lands, steps off the pad.
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "landing"));
-    for (int i = 0; i < 600 && w.flying(me); i++) w.step();
-    ASSERT_TRUE(!w.flying(me));
+    // Taken to Cold Fork's pad, steps off it.
+    const size_t fork = *w.regionNamed("cold-fork");
+    ASSERT_TRUE(w.devTransfer(me, fork, firstWorld().regions[fork].built.pads[0].at));
+    w.step();
     ASSERT_TRUE(*w.where(me) == *w.regionNamed("cold-fork"));
     Unit* u = driven(w, me);
     ASSERT_TRUE(u != nullptr);
@@ -476,14 +476,12 @@ TEST(save_pilot_restored_by_id_where_it_left) {
     EXPECT_EQ(back->carrying, int64_t(4));
     EXPECT_EQ(again.wallet(later)->ore, int64_t(123));
     EXPECT_EQ(again.wallet(later)->hydrogen, int64_t(17));
-    // Its progression as it left: the XP, the point spent, the one-offs of
-    // the flight (a first flight, Cold Fork, its pad).
+    // Its progression as it left: the XP, the point spent, the one-off of
+    // the visit (Cold Fork).
     ASSERT_TRUE(again.progress(later).has_value());
     EXPECT_TRUE(*again.progress(later) == *progress);
     EXPECT_EQ(again.progress(later)->rank(Skill::quickDrill), int64_t(1));
     EXPECT_TRUE(again.progress(later)->regions.count("cold-fork") == 1);
-    EXPECT_TRUE(again.progress(later)->pads.count("cold-fork/landing") == 1);
-    EXPECT_TRUE(again.progress(later)->feats.count(WorldXp::flightFeat) == 1);
     // The bank of its region is its wallet.
     EXPECT_EQ(again.regionOf(later)->simulation().state.players[0].ore, int64_t(123));
     // The same key twice on line: refused.
@@ -618,4 +616,69 @@ TEST(save_server_writes_every_5_s_what_changed_and_on_stop) {
     server.stop(now, "the server stopped");
     EXPECT_EQ(server.world().away(), size_t(1));
     EXPECT_EQ(store->rows("SELECT region FROM pilots")[0][0], std::string("start"));
+}
+
+// F2: Homing beacon is retired. A pilot saved with it comes back with its
+// points to spend again and a Landing Pad blueprint in their place; loaded
+// again, nothing more.
+TEST(save_homing_beacon_converted) {
+    constexpr PilotId me = 7;
+    WorldMap w(firstWorld(), blueprinted());
+    ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
+    ProspectorProgress old = *w.progress(me);
+    old.xp = Progression::xp(30);
+    old.ranks = {{Skill::homingBeacon, 2}, {Skill::jumpJets, 3}};
+    const int64_t copies = old.copies(StructureKind::landingPad);
+    w.setProgress(me, old);
+    const WorldSave saved = w.save();
+    WorldMap again(firstWorld());
+    const std::vector<std::string> said = again.restore(saved);
+    ASSERT_TRUE(said.size() == size_t(1));
+    EXPECT_TRUE(said[0].find("Homing beacon retired") != std::string::npos);
+    ASSERT_TRUE(again.seat(me, keyA) == WorldMap::Seated::restored);
+    const ProspectorProgress now = *again.progress(me);
+    EXPECT_EQ(now.rank(Skill::homingBeacon), int64_t(0));
+    EXPECT_EQ(now.rank(Skill::jumpJets), int64_t(3));
+    EXPECT_EQ(now.unspent(), old.unspent() + 2);
+    EXPECT_EQ(now.copies(StructureKind::landingPad), copies + 1);
+    // Saved and loaded again: as it was.
+    WorldMap third(firstWorld());
+    EXPECT_TRUE(third.restore(again.save()).empty());
+    ASSERT_TRUE(third.seat(me, keyA) == WorldMap::Seated::restored);
+    EXPECT_EQ(third.progress(me)->copies(StructureKind::landingPad), copies + 1);
+}
+
+// F2: a pilot saved aboard the Dropship (the server stopped mid-flight) comes
+// back standing on the target pad, the flight paid.
+TEST(save_aboard_lands_on_the_target_pad) {
+    constexpr PilotId me = 7;
+    WorldParams p = blueprinted();
+    p.startHydrogen = 100;
+    p.devSeen = {"cold-fork"};
+    WorldMap w(firstWorld(), p);
+    ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
+    const size_t fork = *w.regionNamed("cold-fork");
+    const Vec2 home = firstWorld().regions[firstWorld().start].built.pads[firstWorld().startPad].at;
+    ASSERT_TRUE(w.devLandingPad(firstWorld().start, home + Vec2(0, 10)).has_value());
+    ASSERT_TRUE(w.devLandingPad(fork, firstWorld().regions[fork].built.pads[0].at + Vec2(0, 10)).has_value());
+    Vec2 here, there;
+    for (const LandingPad& o : w.landingPads()) (o.region == fork ? there : here) = o.at;
+    driven(w, me)->position = here;
+    w.step();
+    const int64_t before = w.wallet(me)->hydrogen;
+    ASSERT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
+    EXPECT_EQ(w.wallet(me)->hydrogen, before - 15);
+    for (int i = 0; i < 120; i++) w.step();
+    ASSERT_TRUE(w.flying(me));
+    const int64_t paid = w.wallet(me)->hydrogen;
+    const WorldSave saved = w.save();
+    WorldMap again(firstWorld());
+    EXPECT_TRUE(again.restore(saved).empty());
+    ASSERT_TRUE(again.seat(me, keyA) == WorldMap::Seated::restored);
+    EXPECT_TRUE(!again.flying(me));
+    EXPECT_EQ(*again.where(me), fork);
+    const Unit* u = driven(again, me);
+    ASSERT_TRUE(u != nullptr);
+    EXPECT_TRUE(distance(u->position, there) < 1.5);
+    EXPECT_EQ(again.wallet(me)->hydrogen, paid);
 }

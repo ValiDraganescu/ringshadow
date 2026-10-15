@@ -111,6 +111,10 @@ public:
     /// `lastInput`: the pilot's last input applied where it was before (a
     /// region change), so its next inputs carry on.
     bool join(PilotId pilot, int64_t lastInput = -1);
+    /// F2: while the pilot is aboard the Dropship (driving nothing), its
+    /// snapshots follow ground point `at` (a pad), not its last unit; nil:
+    /// as before.
+    void watch(PilotId pilot, std::optional<Vec2> at);
     std::vector<PilotId> pilots() const;
     /// Hands back whatever it drove. Its levels go with the seat: read
     /// `levels` first to keep them.
@@ -214,6 +218,8 @@ private:
         /// The unit it drove last: while it drives none, its snapshots
         /// follow that one (its AI at work), not the start base.
         std::optional<int64_t> drove;
+        /// What its snapshots follow while it drives nothing (`watch`).
+        std::optional<Vec2> watching;
         std::vector<GameEvent> events;
         int64_t snapshots = 0;
         std::unordered_map<int64_t, Waiting> waiting;

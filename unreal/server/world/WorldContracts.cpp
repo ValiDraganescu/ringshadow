@@ -72,8 +72,8 @@ const std::vector<Line>& lines(Kind kind, bool pad = false) {
         {"Lost and Found", "The {what}, out in {where}. Nobody's been. Be the first, then tell us about it."},
     };
     static const std::vector<Line> padLines{
-        {"Postcard from {where}", "Land at the {what} pad in {where}. The view's on us."},
-        {"Check the Pad", "The {what} pad in {where} hasn't answered in days. Fly over and wave."},
+        {"Postcard from {where}", "Stand on the {what} pad in {where}. The view's on us."},
+        {"Check the Pad", "The {what} pad in {where} hasn't answered in days. Go over and wave."},
     };
     static const std::vector<Line> build{
         {"Put Something Up", "The Reach could use a {what}. You have the plans; we have faith. Mostly."},
@@ -241,7 +241,7 @@ Contract WorldMap::drawContract(PilotId, const PilotState& p, std::mt19937_64& d
     std::vector<StructureKind> builds;
     for (const StructureKind k : Progression::blueprintKinds()) {
         const bool byHand = std::find(PilotBuild::worldKinds.begin(), PilotBuild::worldKinds.end(), k) != PilotBuild::worldKinds.end();
-        if (byHand && !p.progress.buildRefusal(k, realmCount(k))) builds.push_back(k);
+        if (byHand && !p.progress.buildRefusal(k, limitCount(k, p.region))) builds.push_back(k);
     }
 
     struct Option {

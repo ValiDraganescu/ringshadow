@@ -86,11 +86,12 @@ void standAt(WorldMap& w, PilotId p, const std::string& region, const std::strin
     drivenUnit(w, p)->position = siteAt(region, name) + Vec2(off, 0);
 }
 
-/// Flies from the start pad to `region`'s landing and waits it out.
+/// Taken to `region`'s pad (`devTransfer`, as a crossing hands it over).
 bool flyTo(WorldMap& w, PilotId p, const std::string& region) {
-    if (w.fly(p, region, "landing")) return false;
-    for (int i = 0; i < ticks(w, 10) && w.flying(p); i++) wait(w, p, 1);
-    return !w.flying(p) && w.regionOf(p) == &w.region(*w.regionNamed(region));
+    const size_t r = *w.regionNamed(region);
+    if (!w.devTransfer(p, r, w.loaded()->regions[r].built.pads[0].at)) return false;
+    wait(w, p, 1);
+    return w.regionOf(p) == &w.region(r);
 }
 
 int count(const std::vector<net::ProgressMessage::News>& news, NewsKind kind) {

@@ -751,10 +751,9 @@ TEST(protocol_progress_round_trips) {
     m.opening = ProgressMessage::Opening{"start/wreck", 812.5, 5, ""};
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
-    // Fallen (P6): back at a Hab Dome in Cold Fork at 920.25 with 30 MH,
-    // and Ringwalker ready at 1000; then at the start pad.
+    // Fallen (P6): back at a Hab Dome in Cold Fork at 920.25 with 30 MH;
+    // then at the start pad.
     m.respawn = ProgressMessage::Respawn{920.25, "cold-fork", StructureKind::habDome, 30, true};
-    m.ringwalkerReady = 1000;
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
     m.respawn = ProgressMessage::Respawn{12, "start", std::nullopt, 0, false};
@@ -943,9 +942,9 @@ TEST(protocol_world_messages_round_trip) {
         g.column = i % 3;
         g.row = i / 3;
         g.pads = {{"landing", Vec2(72, 48)}, {"far", Vec2(10.5, 90)}};
-        // The pilot's own pads (P6).
+        // The realm's Landing Pads and Spacedock (F2).
         if (i == 2) g.pads.push_back({"Spacedock", Vec2(30.5, 41), StructureKind::spacedock});
-        if (i == 4) g.pads.push_back({"Hab Dome 2", Vec2(12, 60.5), StructureKind::habDome});
+        if (i == 4) g.pads.push_back({"Landing Pad 2", Vec2(12, 60.5), StructureKind::landingPad});
         // The Matriarch's nest (N3), in one region.
         if (i == 5) g.nest = Vec2(122, 44.5);
         m.regions.push_back(g);
@@ -955,6 +954,19 @@ TEST(protocol_world_messages_round_trip) {
     WorldMessage mb;
     ASSERT_TRUE(decode(encode(m), mb));
     EXPECT_TRUE(mb == m);
+    // F2: aboard the Dropship, its flight with it.
+    WorldMessage::Ferry f0;
+    f0.from = 4;
+    f0.boarded = Vec2(12, 60.5);
+    f0.pad = "Landing Pad 1";
+    f0.at = Vec2(70.25, 33);
+    f0.plan = ac::Ferry::plan(2, -0.4, 0.3);
+    f0.elapsed = 7.125;
+    m.ferry = f0;
+    ASSERT_TRUE(decode(encode(m), mb));
+    EXPECT_TRUE(mb == m);
+    EXPECT_TRUE(mb.ferry->plan == ac::Ferry::plan(2, -0.4, 0.3));
+    m.ferry = std::nullopt;
     m.flyingTo = std::nullopt;
     ASSERT_TRUE(decode(encode(m), mb));
     EXPECT_TRUE(mb == m);

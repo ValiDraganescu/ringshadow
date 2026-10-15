@@ -1,5 +1,5 @@
 // The Prospector's progression in the MMORPG mode (docs/prospector-progression.md):
-// the curve, the gates, the 65 nodes, the balance and its signature, and
+// the curve, the gates, the 64 nodes (65 skills, Homing beacon retired), the balance and its signature, and
 // `ProspectorProgress`'s rules.
 #include "Progression.h"
 
@@ -232,21 +232,20 @@ std::vector<SkillNode> table() {
                          "Jump a cell farther, a rank. At rank 3 a jump burns 1 MH."));
         t.push_back(ranked(S::padLink, b, 3,
                            {{SkillEffect::PadLink{8}}, {SkillEffect::PadLink{12}}, {SkillEffect::PadLink{16}}},
-                           "Pad link", "Fly from within 8 cells of a pad, up from 4; then 12, then 16."));
-        t.push_back(ranked(S::homingBeacon, b, 3,
-                           {{SkillEffect::HomingBeacon{{Beacon::citadel}}},
-                            {SkillEffect::HomingBeacon{{Beacon::citadel, Beacon::habDome}}},
-                            {SkillEffect::HomingBeacon{{Beacon::citadel, Beacon::habDome, Beacon::derrick}}}},
-                           "Homing beacon", "Your Citadel counts as a pad; then your Hab Domes, then your Derricks."));
+                           "Pad link", "Call the Dropship from within 8 cells of a Landing Pad, up from 4; then 12, then 16."));
+        // F2: Homing beacon is gone (the Dropship lands only on Landing
+        // Pads). Its place stays, with no ranks, for the table's order and
+        // old saves (`retired`); `nodes()` leaves it out.
+        t.push_back(node(S::homingBeacon, b, 3, 0, {}, "Homing beacon", "Retired: the Dropship lands only on Landing Pads."));
         t.push_back(node(S::luckyStrike, b, 4, 5, {skillStat(SkillStat::chipChance, pct(0.10))}, "Lucky strike",
                          "Survey chips come 10% more often, a rank."));
         t.push_back(active(S::sprint, b, 4, 30,
                            SkillEffect::Core{Effect::Burst{Burst{.seconds = 6, .cooldown = 30, .speed = 0.6}}},
                            "Sprint", "Walk 60% faster for 6 s. Ready again in 30 s."));
         t.push_back(node(S::shortHop, b, 4, 3, {skillStat(SkillStat::flightTime, pct(-0.20))}, "Short hop",
-                         "Flights take 20% less time, a rank."));
-        t.push_back(node(S::ringwalker, b, Progression::capstone, 1, {SkillEffect::Ringwalker{120}}, "Ringwalker",
-                         "Fly from anywhere, not only a pad, once every 120 s."));
+                         "The Dropship's dash across the sky is 20% shorter, a rank."));
+        t.push_back(node(S::ringwalker, b, Progression::capstone, 1, {SkillEffect::Ringwalker{0.3}}, "Ringwalker",
+                         "Flights cost no MH, from any Landing Pad, and the Dropship comes 30% faster."));
     }
 
     // Hardshell (the plate)
@@ -291,7 +290,9 @@ std::vector<SkillNode> table() {
 
 } // namespace
 
-const std::vector<SkillNode>& Progression::nodes() {
+namespace {
+/// Every skill's node, the retired ones too, in `Skill` order.
+const std::vector<SkillNode>& everyNode() {
     static const std::vector<SkillNode> n = [] {
         auto t = table();
         std::sort(t.begin(), t.end(), [](const SkillNode& a, const SkillNode& b) { return a.skill < b.skill; });
@@ -299,8 +300,21 @@ const std::vector<SkillNode>& Progression::nodes() {
     }();
     return n;
 }
+} // namespace
 
-const SkillNode& Progression::node(Skill s) { return nodes()[static_cast<size_t>(s)]; }
+const std::vector<SkillNode>& Progression::nodes() {
+    static const std::vector<SkillNode> n = [] {
+        std::vector<SkillNode> t;
+        for (const SkillNode& x : everyNode())
+            if (!retired(x.skill)) t.push_back(x);
+        return t;
+    }();
+    return n;
+}
+
+const SkillNode& Progression::node(Skill s) { return everyNode()[static_cast<size_t>(s)]; }
+
+bool Progression::retired(Skill s) { return s == Skill::homingBeacon; }
 
 const BranchInfo& Progression::branch(Branch b) {
     static const std::array<BranchInfo, 5> info{{
@@ -376,14 +390,6 @@ std::string plural(SiteKind k) {
     }
     return "sites";
 }
-std::string plural(Beacon b) {
-    switch (b) {
-    case Beacon::citadel: return "Citadel";
-    case Beacon::habDome: return "Hab Domes";
-    case Beacon::derrick: return "Derricks";
-    }
-    return "";
-}
 
 /// A stat of the strategy game's, changed by `c` in all.
 std::string coreWords(const Stat& stat, const Change& c) {
@@ -441,12 +447,9 @@ std::string effectWords(const SkillEffect& e) {
         return "Derricks fill a " + number(t->tank) + " MH tank, " + number(t->perMinute) + " MH a minute";
     if (auto w = e.as<SkillEffect::Wellspring>()) return "Wells under your Derricks grow back " + number(w->perMinute) + " MH a minute";
     if (auto f = e.as<SkillEffect::FieldPump>()) return "Pump straight from a well at " + percent(f->share) + " of a Derrick's rate";
-    if (auto p = e.as<SkillEffect::PadLink>()) return "Fly from within " + number(p->radius) + " cells of a pad";
-    if (auto h = e.as<SkillEffect::HomingBeacon>()) {
-        std::vector<std::string> w;
-        for (Beacon b : h->from) w.push_back(plural(b));
-        return "Your " + list(w) + (h->from.size() == 1 ? " counts" : " count") + " as a pad";
-    }
+    if (auto p = e.as<SkillEffect::PadLink>()) return "Call the Dropship from within " + number(p->radius) + " cells of a Landing Pad";
+    if (auto r = e.as<SkillEffect::Ringwalker>())
+        return "Flights cost no MH, and the Dropship comes " + percent(r->faster) + " faster";
     if (auto s = e.as<SkillEffect::Surveyor>()) return "Sites show on the compass within " + number(s->radius) + " cells";
     if (auto p = e.as<SkillEffect::ScannerPulse>()) {
         std::vector<std::string> w;
@@ -500,7 +503,8 @@ std::string Progression::rankText(Skill s, int64_t rank) {
 
 const std::vector<StructureKind>& Progression::blueprintKinds() {
     // By floor (D2 brought the gatling gun in at 5 and the Sentinel down to 10).
-    static const std::vector<StructureKind> k{StructureKind::citadel,  StructureKind::derrick, StructureKind::gatling,
+    // F2: the Landing Pad at 1, beside the Citadel.
+    static const std::vector<StructureKind> k{StructureKind::citadel,  StructureKind::landingPad, StructureKind::derrick, StructureKind::gatling,
                                               StructureKind::habDome,  StructureKind::sentinel, StructureKind::foundry,
                                               StructureKind::lab,      StructureKind::spacedock, StructureKind::bastion};
     return k;
@@ -509,6 +513,7 @@ const std::vector<StructureKind>& Progression::blueprintKinds() {
 int64_t Progression::blueprintFloor(StructureKind k) {
     switch (k) {
     case StructureKind::citadel: return 1;
+    case StructureKind::landingPad: return 1;
     case StructureKind::derrick: return 3;
     case StructureKind::gatling: return 5;
     case StructureKind::habDome: return 8;
@@ -532,6 +537,8 @@ int64_t Progression::buildingLimit(StructureKind k) {
     case StructureKind::bastion: return 2;
     case StructureKind::sentinel: return 4;
     case StructureKind::gatling: return 6;
+    // F2: per region, not per realm (the server counts the region's).
+    case StructureKind::landingPad: return Progression::landingPadsPerRegion;
     default: return 0;
     }
 }
@@ -547,13 +554,14 @@ int64_t Progression::worldOre(StructureKind k) {
     case StructureKind::bastion: return 250;
     case StructureKind::sentinel: return 150;
     case StructureKind::gatling: return 125;
+    case StructureKind::landingPad: return 60;
     default: return Rules::cost(k);
     }
 }
 
 int64_t Progression::worldHydrogen(StructureKind k) {
     switch (k) {
-    case StructureKind::citadel: case StructureKind::derrick: return 0;
+    case StructureKind::citadel: case StructureKind::derrick: case StructureKind::landingPad: return 0;
     case StructureKind::habDome: return 50;
     case StructureKind::foundry: return 150;
     case StructureKind::lab: return 200;
@@ -593,12 +601,7 @@ std::string describe(const SkillEffect& e) {
     if (auto w = e.as<SkillEffect::Wellspring>()) return "wellspring(" + d(w->perMinute) + ")";
     if (auto f = e.as<SkillEffect::FieldPump>()) return "fieldPump(" + d(f->share) + ")";
     if (auto p = e.as<SkillEffect::PadLink>()) return "padLink(" + d(p->radius) + ")";
-    if (auto h = e.as<SkillEffect::HomingBeacon>()) {
-        std::string s = "homingBeacon(";
-        for (size_t i = 0; i < h->from.size(); i++) s += (i ? ", " : "") + std::string(rawValue(h->from[i]));
-        return s + ")";
-    }
-    if (auto r = e.as<SkillEffect::Ringwalker>()) return "ringwalker(" + d(r->cooldown) + ")";
+    if (auto r = e.as<SkillEffect::Ringwalker>()) return "ringwalker(" + d(r->faster) + ")";
     if (auto s = e.as<SkillEffect::Surveyor>()) return "surveyor(" + d(s->radius) + ")";
     if (auto p = e.as<SkillEffect::ScannerPulse>()) {
         std::string s = "scannerPulse(";
@@ -685,6 +688,7 @@ std::optional<int64_t> ProspectorProgress::slotOf(Skill s) const {
 /// that branch" before the first point there).
 std::optional<std::string> ProspectorProgress::spendRefusal(Skill s) const {
     const SkillNode& n = Progression::node(s);
+    if (Progression::retired(s)) return std::string("Retired: ") + n.text;
     if (rank(s) >= n.ranks)
         return "Full: " + std::to_string(n.ranks) + " of " + std::to_string(n.ranks);
     const Gate g = Progression::gate(n.tier);
@@ -774,6 +778,7 @@ std::optional<std::string> ProspectorProgress::buildRefusal(StructureKind k, int
     if (copies(k) <= 0) return std::string("No blueprint: buy one at the Citadel (H)");
     if (level() < floor(k)) return "The " + name + " opens at level " + std::to_string(floor(k));
     if (owned >= limit(k)) {
+        if (k == StructureKind::landingPad) return "Landing Pad limit reached: " + std::to_string(limit(k)) + " in a region";
         const bool more = k == StructureKind::habDome || k == StructureKind::derrick || k == StructureKind::sentinel;
         return name + " limit reached: " + std::to_string(limit(k)) + (more ? " (Overbuild allows more)" : "");
     }
@@ -820,7 +825,7 @@ ShopPrice Shop::blueprintPrice(StructureKind k, int64_t bought) {
     if (floor <= 0) return {};
     const double grow = std::pow(blueprintGrowth, double(std::max<int64_t>(0, bought)));
     auto ten = [](double x) { return int64_t(std::llround(x / 10.0)) * 10; };
-    const bool oreOnly = k == StructureKind::citadel || k == StructureKind::derrick;
+    const bool oreOnly = k == StructureKind::citadel || k == StructureKind::derrick || k == StructureKind::landingPad;
     return {std::max<int64_t>(10, ten(double(50 + 25 * floor) * grow)), oreOnly ? 0 : ten(double(5 * floor) * grow)};
 }
 

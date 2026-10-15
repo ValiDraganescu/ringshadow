@@ -64,6 +64,11 @@ bool Region::join(PilotId pilot, int64_t lastInput) {
     return pilots_.emplace(pilot, seat).second;
 }
 
+void Region::watch(PilotId pilot, std::optional<Vec2> at) {
+    const auto it = pilots_.find(pilot);
+    if (it != pilots_.end()) it->second.watching = at;
+}
+
 std::vector<PilotId> Region::pilots() const {
     std::vector<PilotId> out;
     for (const auto& [id, seat] : pilots_) out.push_back(id);

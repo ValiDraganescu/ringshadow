@@ -137,6 +137,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devDefence(line));
             continue;
         }
+        // The Dropship's scenes (WorldMap::devFerry): `ferry pad [here|REGION]|seen|go REGION|mh N`.
+        if (line.rfind("ferry", 0) == 0) {
+            said.push_back(world_.devFerry(line));
+            continue;
+        }
         // KSTR's next goal (WorldMap::devGoal): `goal`, `goal pass KEY`, `goal level N`.
         if (line.rfind("goal", 0) == 0) {
             said.push_back(world_.devGoal(line));

@@ -350,9 +350,14 @@ TEST(e2e_local_server_as_the_game_starts_it) {
 
 TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     // The real program on the first world: the pilot starts at the pad in a
-    // Prospector with 600 ore, flies to Cold Fork's pad, and the client
-    // follows it there.
-    std::vector<std::string> args = {kProgram, "--world", "worlds/first.json", "--dev-hydrogen", "100", "--log", logPath("world")};
+    // Prospector with 600 ore; a Landing Pad under it and one in Cold Fork
+    // (the dev control's `ferry pad`), the Dropship there (F2), and the
+    // client follows it: the region change at the approach, nothing driven,
+    // then its Prospector on the pad.
+    const std::string control = "build/e2e-world.control";
+    std::remove(control.c_str());
+    std::vector<std::string> args = {kProgram, "--world", "worlds/first.json", "--dev-hydrogen", "100", "--log", logPath("world"),
+                                     "--dev-control", control};
     std::remove(logPath("world").c_str());
     auto p = Process::start(args);
     ASSERT_TRUE(p.has_value());
@@ -375,17 +380,37 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(600));
     EXPECT_EQ(hc.mirror()->simulation().state.units.size(), size_t(1));
     EXPECT_TRUE(hc.mirror()->unit(*hc.mirror()->driven())->kind == UnitKind::prospector);
-    const uint32_t req = hc.fly("cold-fork", "landing");
+    // A region file's pad is no Landing Pad.
+    const uint32_t no = hc.fly("cold-fork", "landing");
+    ASSERT_TRUE(c.until([&] { return hc.replies.count(no) > 0; }, 3));
+    EXPECT_TRUE(!hc.replies[no].done);
+    if (FILE* f = std::fopen(control.c_str(), "wb")) {
+        std::fputs("ferry pad here\nferry pad cold-fork\n", f);
+        std::fclose(f);
+    }
+    auto pads = [&](const std::string& id) {
+        size_t n = 0;
+        for (const auto& g : hc.world()->regions)
+            if (g.id == id)
+                for (const auto& q : g.pads) n += q.building ? 1 : 0;
+        return n;
+    };
+    ASSERT_TRUE(c.until([&] { return pads("start") == 1 && pads("cold-fork") == 1; }, 5));
+    const uint32_t req = hc.fly("cold-fork", "Landing Pad 1");
     ASSERT_TRUE(c.until([&] { return hc.replies.count(req) > 0; }, 3));
     EXPECT_TRUE(hc.replies[req].done);
-    ASSERT_TRUE(c.until([&] { return hc.visit() == 1 && hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()); }, 10));
+    ASSERT_TRUE(c.until([&] { return hc.world()->ferry.has_value(); }, 3));
+    ASSERT_TRUE(c.until([&] { return hc.visit() == 1; }, 20));
+    EXPECT_TRUE(hc.world()->ferry.has_value() && !hc.mirror()->driven());
+    ASSERT_TRUE(c.until([&] { return hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()); }, 10));
+    EXPECT_TRUE(!hc.world()->ferry.has_value());
     EXPECT_TRUE(hc.regionChange()->regionId == "cold-fork");
     EXPECT_TRUE(hc.mirror()->matches());
     EXPECT_EQ(hc.mirror()->simulation().state.players[0].ore, int64_t(600));
     p->stop();
     const std::string log = readFile(logPath("world"));
     EXPECT_TRUE(log.find("start: world first (9 regions)") != std::string::npos);
-    EXPECT_TRUE(log.find("flies to cold-fork landing") != std::string::npos);
+    EXPECT_TRUE(log.find("flies to cold-fork Landing Pad 1") != std::string::npos);
     EXPECT_TRUE(log.find("to cold-fork") != std::string::npos);
 }
 

@@ -604,6 +604,18 @@ std::vector<uint8_t> encode(const WorldMessage& m) {
     writeVarint(w, static_cast<uint64_t>(m.here));
     w.writeBool(m.flyingTo.has_value());
     if (m.flyingTo) writeVarint(w, static_cast<uint64_t>(*m.flyingTo));
+    w.writeBool(m.ferry.has_value());
+    if (m.ferry) {
+        const WorldMessage::Ferry& f = *m.ferry;
+        writeVarint(w, static_cast<uint64_t>(f.from));
+        writeDouble(w, f.boarded.x);
+        writeDouble(w, f.boarded.y);
+        writeString(w, f.pad);
+        writeDouble(w, f.at.x);
+        writeDouble(w, f.at.y);
+        for (const double s : {f.plan.descend, f.plan.board, f.plan.lift, f.plan.turns, f.plan.dash, f.plan.approach, f.elapsed})
+            writeDouble(w, s);
+    }
     return w.bytes();
 }
 
@@ -645,6 +657,19 @@ bool decode(const std::vector<uint8_t>& bytes, WorldMessage& m) {
     m.here = static_cast<int64_t>(readVarint(r));
     m.flyingTo = std::nullopt;
     if (r.readBool()) m.flyingTo = static_cast<int64_t>(readVarint(r));
+    m.ferry = std::nullopt;
+    if (r.readBool()) {
+        WorldMessage::Ferry f;
+        f.from = static_cast<int64_t>(readVarint(r));
+        f.boarded.x = readDouble(r);
+        f.boarded.y = readDouble(r);
+        if (!readString(r, f.pad)) return false;
+        f.at.x = readDouble(r);
+        f.at.y = readDouble(r);
+        for (double* s : {&f.plan.descend, &f.plan.board, &f.plan.lift, &f.plan.turns, &f.plan.dash, &f.plan.approach, &f.elapsed})
+            *s = readDouble(r);
+        m.ferry = f;
+    }
     return r.ok();
 }
 
@@ -1051,7 +1076,6 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeSigned(w, m.respawn->cargo);
         w.writeBool(m.respawn->hydrogen);
     }
-    codec::kMs.write(w, m.ringwalkerReady);
     writeRig(w, m.rig);
     w.writeBool(m.foundry);
     w.writeBool(m.lab);
@@ -1249,7 +1273,6 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         s.hydrogen = r.readBool();
         m.respawn = s;
     }
-    codec::kMs.read(r, m.ringwalkerReady);
     if (!readRig(r, m.rig)) return false;
     m.foundry = r.readBool();
     m.lab = r.readBool();

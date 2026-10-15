@@ -9,6 +9,7 @@
 #include "World.h"
 #include "WorldStore.h"
 
+#include "Flight.h"
 #include "RegionFile.h"
 #include "Weather.h"
 #include "WorldClock.h"
@@ -275,10 +276,9 @@ struct WorldParams {
     /// opening's lane, 2 cells, is checked open by the region's validation;
     /// a blocked spot gives the nearest open one).
     double arriveDepth = 2.5;
-    /// A flight leaves from within this many cells of a pad's centre.
+    /// The Dropship is called from within this many cells of a Landing
+    /// Pad's centre (F2; Pad link reaches farther).
     double padReach = region::padReach;
-    /// Seconds a pad-to-pad flight takes.
-    double flightTime = 4.0;
     /// Dev and tests (`--dev-xp`, as the game's -AcEarn): XP a new pilot's
     /// Prospector earns at once, when seated at the start pad. 0: none.
     double devXp = 0;
@@ -423,27 +423,25 @@ struct WorldBrood {
 
 /// The buildings' jobs for the pilot in a world (P6, docs/prospector-progression.md
 /// "Buildings in the MMO"; WorldRoles.cpp): where a fallen Prospector comes
-/// back, and the pads of the pilot's own (its Spacedock, and with Homing
-/// beacon its Citadel, Hab Domes and Derricks).
+/// back, and the realm's Landing Pads (F2) the Dropship flies between.
 struct WorldRoles {
-    /// A building counts as the pilot's pad within this many cells of its
+    /// A Spacedock counts as a Landing Pad within this many cells of its
     /// edge (at least the pilot's pad reach from its centre).
     static constexpr double buildingPadReach = 2.0;
 };
 
-/// A pad of the pilot's own: a finished building of the realm's in region
-/// `region` (R1: a Spacedock, or one its Homing beacon makes a pad), where
-/// it flies from and lands. `name` is what the Fly request names:
-/// "Spacedock", "Citadel", or "Hab Dome 2" and "Derrick 3" (by the
-/// building's id among the realm's of that kind, from 1).
-struct OwnPad {
+/// A Landing Pad (F2): a finished Landing Pad or Spacedock of the realm's in
+/// region `region`, where the Dropship sets down. Every pilot uses every
+/// one. `name` is what the Fly request names with the region: "Landing Pad
+/// 1" or "Landing Pad 2" (by building id within the region) or "Spacedock".
+struct LandingPad {
     size_t region = 0;
     int64_t building = 0;
-    StructureKind kind = StructureKind::spacedock;
+    StructureKind kind = StructureKind::landingPad;
     std::string name;
     /// The building's centre on the region's ground.
     Vec2 at{0, 0};
-    bool operator==(const OwnPad&) const = default;
+    bool operator==(const LandingPad&) const = default;
 };
 
 /// What the server tells a pilot after a step: its place in the world
@@ -527,18 +525,22 @@ public:
     /// The level-up card pick (`Region::pick`). The reason when refused.
     std::optional<std::string> pick(PilotId pilot, UnitKind kind, Perk perk);
 
-    /// Fly from the pad the driven Prospector stands at to `pad` of `region`:
-    /// a region file's pad, or one of the pilot's own (`ownPads`). It flies
-    /// from within `padReach` of a pad's centre, or near a pad of its own
-    /// (`WorldRoles::buildingPadReach`); with Ringwalker from anywhere, once
-    /// every its cooldown. The reason when refused.
+    /// F2: call the Dropship at the Landing Pad the driven Prospector stands
+    /// on (within `padReach`, Pad link's reach) and fly to Landing Pad `pad`
+    /// of `region`, a region the pilot has been to. The Prospector boards at
+    /// once (out of its region, untouchable); the pilot moves into the
+    /// target region when the approach starts, and the Prospector stands on
+    /// the target pad at the touch down (`ac::Ferry`). The price is taken at
+    /// the call (`ac::Flight::price`: half from a Spacedock, nothing with
+    /// Ringwalker). The reason when refused.
     std::optional<std::string> fly(PilotId pilot, std::string_view region, std::string_view pad);
-    /// The pilot's pad reach (Pad link) and flight time (Short hop).
+    /// The pilot's pad reach (Pad link).
     double padReach(PilotId pilot) const;
-    double flightTime(PilotId pilot) const;
-    /// The pilot's own pads across the world (P6; R1: the realm's
-    /// buildings its skills make pads, until F2's landing pads).
-    std::vector<OwnPad> ownPads(PilotId pilot) const;
+    /// The flight's plan from the pilot's region to region `to` (its grid
+    /// steps, Short hop, Ringwalker).
+    Ferry::Plan ferryPlan(PilotId pilot, size_t to) const;
+    /// The realm's Landing Pads across the world (F2).
+    std::vector<LandingPad> landingPads() const;
     /// The pilot's Prospector fell and waits to come back (P6): when, where
     /// and with what (nil: on its feet, or not a world).
     std::optional<net::ProgressMessage::Respawn> respawning(PilotId pilot) const;
@@ -639,6 +641,9 @@ public:
     /// The realm's buildings of a kind across the world, finished or not
     /// (R1: the limits are the realm's).
     int64_t realmCount(StructureKind kind) const;
+    /// What a kind's limit counts for a pilot in region `region`: the
+    /// realm's (`realmCount`), the region's own for a Landing Pad (F2).
+    int64_t limitCount(StructureKind kind, size_t region) const;
     /// A site's id, "<region id>/<site name>".
     std::string siteId(size_t region, size_t site) const;
     // MARK: The rig (P7, docs/prospector-progression.md "Foundry and Lab"; WorldRig.cpp)
@@ -861,6 +866,16 @@ public:
     /// there.
     bool devTransfer(PilotId pilot, size_t to, Vec2 at);
 
+    // MARK: The Dropship (F2; WorldFerry.cpp)
+
+    /// Tests, dev and shots: a finished Landing Pad of the realm in region
+    /// `r` on open ground at or round ground point `near` (ahead along
+    /// `heading` first). Its building id; nil: no room.
+    std::optional<int64_t> devLandingPad(size_t r, Vec2 near, std::optional<double> heading = std::nullopt);
+    /// Dev and shots (`ferry pad [here|REGION]|seen|go REGION|mh N`), for the
+    /// first pilot: what was done, one line.
+    std::string devFerry(const std::string& line);
+
     // MARK: The Matriarch (N3, docs/creatures.md "The Matriarch"; WorldNest.cpp)
 
     /// Region `r`'s nest, ground point (nil: none).
@@ -949,14 +964,23 @@ private:
         Simulation::SkillClock clock;
         double at = 0;
     };
+    /// Aboard the Dropship (F2): the Prospector out of every region, from
+    /// region `from`'s pad at `boarded` (ground) to the pad `pad` of region
+    /// `to` at `at` (ground, its building's centre). The pilot moves into
+    /// `to` at tick `switchAt` (`switched`), the Prospector lands at
+    /// `landsAt`; `started` is the world's clock at the call.
     struct Flight {
         Unit unit;
         std::optional<Carried> clocks;
+        size_t from = 0;
+        Vec2 boarded{0, 0};
         size_t to = 0;
-        size_t pad = 0;
-        /// Landing on a pad of the pilot's own: its building's centre on
-        /// the ground (nil: the region's pad `pad`).
-        std::optional<Vec2> own;
+        std::string pad;
+        Vec2 at{0, 0};
+        Ferry::Plan plan;
+        double started = 0;
+        int64_t switchAt = 0;
+        bool switched = false;
         int64_t landsAt = 0;
     };
     /// A fallen Prospector (P6): back at world time `until`, with `cargo`
@@ -1014,11 +1038,8 @@ private:
         /// Its Prospector fell (P6), not saved: a pilot that comes back
         /// with none gets a new one at home.
         std::optional<Down> down;
-        /// Ringwalker: the world's clock when a flight from anywhere is
-        /// ready again.
-        double ringwalkerReady = 0;
-        /// Its own pads as its client was last told (the World message).
-        std::vector<OwnPad> padsTold;
+        /// The Landing Pads as its client was last told (the World message).
+        std::vector<LandingPad> padsTold;
         /// C1: what it has given the realm wallet in all, in tax and
         /// donated (saved).
         Wallet taxed;
@@ -1195,10 +1216,12 @@ private:
     /// Each step: fallen Prospectors noted and brought back home; the World
     /// message again when the pilot's own pads change.
     void respawns();
-    void ownPadsChanged();
-    std::vector<OwnPad> ownPads(const PilotState& p) const;
+    void landingPadsChanged();
     double padReach(const PilotState& p) const;
-    double flightTime(const PilotState& p) const;
+    Ferry::Plan ferryPlan(const PilotState& p, size_t to) const;
+    /// Has the pilot been to region `r` (its region, the start region, or
+    /// one it visited)?
+    bool seen(const PilotState& p, size_t r) const;
     /// Where `p` comes back: its Citadel or Hab Dome nearest where it fell
     /// (`from` in region `region`; a region nearer on the grid first, one
     /// another pilot drives skipped), else the start pad. Nil: nowhere free.
@@ -1208,8 +1231,6 @@ private:
     void respawn(PilotId pilot, PilotState& p, const Home& h, int64_t cargo, bool hydrogen);
     /// The region change `p` is told after it moved into region `to`.
     void regionChanged(PilotId pilot, PilotState& p, size_t to);
-    /// Where a flight lands, on the ground of its region.
-    Vec2 landing(const Flight& f) const;
     // WorldContracts.cpp.
     /// Each step: the Foundries' and Labs' jobs done by now (P7).
     void rigs();

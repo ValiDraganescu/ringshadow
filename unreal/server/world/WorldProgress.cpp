@@ -233,7 +233,6 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.contractsDawn = nextDawn(clock_);
     m.goal = goalMessage(pilot, it->second);
     m.respawn = respawning(pilot);
-    m.ringwalkerReady = it->second.ringwalkerReady > clock_ ? it->second.ringwalkerReady : 0;
     m.rig = g.rig;
     m.foundry = realmFinished(StructureKind::foundry);
     m.lab = realmFinished(StructureKind::lab);

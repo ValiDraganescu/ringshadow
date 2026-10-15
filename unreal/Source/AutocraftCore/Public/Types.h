@@ -1766,8 +1766,9 @@ template <> struct EnumInfo<UnitKind> {
         "peregrine", "atlas", "scorpion", "shardling", "gloamwing", "lodeback", "matriarch"};
 };
 template <> struct EnumInfo<StructureKind> {
-    static constexpr std::array<std::string_view, 10> names{
-        "citadel", "habDome", "garrison", "bastion", "derrick", "foundry", "spacedock", "lab", "sentinel", "gatling"};
+    static constexpr std::array<std::string_view, 11> names{
+        "citadel", "habDome", "garrison", "bastion", "derrick", "foundry", "spacedock", "lab", "sentinel", "gatling",
+        "landingPad"};
 };
 template <> struct EnumInfo<DefenceStat> {
     static constexpr std::array<std::string_view, 4> names{"rate", "damage", "range", "air"};

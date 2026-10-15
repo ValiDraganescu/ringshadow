@@ -14,6 +14,8 @@ namespace ac::server {
 Vec2 Region::focus(const Seat& seat, int64_t side) const {
     if (seat.drives)
         if (const auto i = sim_.unitIndex(*seat.drives)) return sim_.state.units[static_cast<size_t>(*i)].position;
+    // Aboard the Dropship (F2): the pad it boarded at or lands on.
+    if (seat.watching) return *seat.watching;
     // Not driving: the unit it drove last, as its AI works it; else the
     // side's start base.
     if (seat.drove)

@@ -19,7 +19,8 @@
 //                    [--clock-hour h]  (dev, shots: move the world's clock on to hour h, 0-24; it runs on from there)
 //                    [--dev-control file]  (dev, shots: read 4 times a second, then removed; each line moves the
 //                                           world's clock at once: `clock T`, `hour H`, `ahead S`, or stages a Brood
-//                                           scene: `brood linger|attack|dive|lodeback|raid|clear`; Server::devControl)
+//                                           scene: `brood linger|attack|dive|lodeback|raid|clear`, or the Dropship's:
+//                                           `ferry pad [here|REGION]|seen|go REGION|mh N`; Server::devControl)
 //                    [--brood 0|1]  (the Brood's director spawns bugs; on unless 0)
 //                    [--dev-down s]  (dev, shots: the save counts as written s seconds earlier: the start catches
 //                                     the world up on that much more, H2's mercenaries' work with it)

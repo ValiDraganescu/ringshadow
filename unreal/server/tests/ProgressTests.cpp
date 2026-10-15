@@ -181,8 +181,9 @@ TEST(progress_welding_pays_half_the_cost_and_the_citadel_feat) {
 }
 
 // The one-offs, once per pilot: a first region (250), a first flight (50),
-// a first landing on a pad (50); the start region and its pad pay nothing,
-// and doing it all again pays nothing more. Another pilot is paid its own.
+// a first landing on a Landing Pad (50, F2: the start region's too); the
+// start region pays nothing, and doing it all again pays nothing more.
+// Another pilot is paid its own.
 TEST(progress_one_offs_paid_once) {
     WorldParams fuel = blueprinted();
     fuel.startHydrogen = 100;  // a flight costs MH (F1)
@@ -190,7 +191,9 @@ TEST(progress_one_offs_paid_once) {
     w.join(me);
     w.join(other);
     const std::string start = first().regions[first().start].file.id;
-    const std::string startPad = first().regions[first().start].file.pads[first().startPad].name;
+    const std::string startPad = "Landing Pad 1";
+    const Vec2 home = first().regions[first().start].built.pads[first().startPad].at;
+    ASSERT_TRUE(w.devLandingPad(first().start, home + Vec2(0, 10)).has_value());
     const Vec2 ext = w.start().places()->extent();
     const auto& span = w.start().places()->openings[size_t(Edge::east)][0];
     auto east = [&] {
@@ -200,11 +203,12 @@ TEST(progress_one_offs_paid_once) {
         const int64_t v = w.visit(me);
         return drive(w, me, 0, 180, [&] { return w.visit(me) == v + 1; });
     };
+    // From the Landing Pad of the region it is in.
     auto flyTo = [&](const std::string& region, const std::string& pad) {
-        Region& here = *w.regionOf(me);
-        drivenUnit(w, me)->position = here.places()->pads[0].at;
+        for (const LandingPad& o : w.landingPads())
+            if (o.region == *w.where(me)) drivenUnit(w, me)->position = o.at;
         if (w.fly(me, region, pad)) return false;
-        for (int i = 0; i < 600 && w.flying(me); i++) w.step();
+        for (int i = 0; i < 60 * 30 && w.flying(me); i++) w.step();
         return !w.flying(me);
     };
     ASSERT_TRUE(east());
@@ -213,13 +217,16 @@ TEST(progress_one_offs_paid_once) {
     EXPECT_TRUE(hasNews(w.takeNews(me), NewsKind::region, there));
     // M2: the regions been to go to the client (the world map's pictures).
     EXPECT_TRUE(w.progressMessage(me)->regionsSeen.count(there) == 1);
-    // Back to the start pad: a first flight; the start's pad and region pay nothing.
+    const size_t thereAt = *w.regionNamed(there);
+    ASSERT_TRUE(w.devLandingPad(thereAt, drivenUnit(w, me)->position + Vec2(-8, 0)).has_value());
+    // Back to the start's Landing Pad: a first flight and a first landing;
+    // the start region pays nothing.
     ASSERT_TRUE(flyTo(start, startPad));
-    EXPECT_NEAR(w.progress(me)->xp, WorldXp::region + WorldXp::firstFlight, 1e-9);
+    EXPECT_NEAR(w.progress(me)->xp, WorldXp::region + WorldXp::firstFlight + WorldXp::pad, 1e-9);
     // To the other region's pad: its first landing.
-    const std::string farPad = first().regions[*w.regionNamed(there)].file.pads[0].name;
+    const std::string farPad = "Landing Pad 1";
     ASSERT_TRUE(flyTo(there, farPad));
-    const double all = WorldXp::region + WorldXp::firstFlight + WorldXp::pad;
+    const double all = WorldXp::region + WorldXp::firstFlight + 2 * WorldXp::pad;
     EXPECT_NEAR(w.progress(me)->xp, all, 1e-9);
     EXPECT_TRUE(w.progress(me)->pads.count(there + "/" + farPad) == 1);
     // All again: nothing more.
@@ -330,11 +337,17 @@ TEST(progress_kept_through_an_edge_and_a_flight) {
     ASSERT_TRUE(drive(w, me, 0, 180, [&] { return w.visit(me) == 1; }));
     EXPECT_EQ(w.progress(me)->rank(Skill::quickDrill), int64_t(1));
     EXPECT_NEAR(w.progress(me)->xp, before.xp + WorldXp::region, 1e-9);
-    drivenUnit(w, me)->position = w.regionOf(me)->places()->pads[0].at;
-    ASSERT_TRUE(!w.fly(me, first().regions[first().start].file.id, first().regions[first().start].file.pads[first().startPad].name));
+    // F2: from a Landing Pad here to one at the start.
+    const Vec2 home = first().regions[first().start].built.pads[first().startPad].at;
+    ASSERT_TRUE(w.devLandingPad(first().start, home + Vec2(0, 10)).has_value());
+    const auto padHere = w.devLandingPad(*w.where(me), drivenUnit(w, me)->position + Vec2(-8, 0));
+    ASSERT_TRUE(padHere.has_value());
+    for (const LandingPad& o : w.landingPads())
+        if (o.building == *padHere && o.region == *w.where(me)) drivenUnit(w, me)->position = o.at;
+    ASSERT_TRUE(!w.fly(me, first().regions[first().start].file.id, "Landing Pad 1"));
     // In flight: still its own, and a request still lands.
     ASSERT_TRUE(!w.spend(me, Skill::quickDrill));
-    for (int i = 0; i < 600 && w.flying(me); i++) w.step();
+    for (int i = 0; i < 60 * 30 && w.flying(me); i++) w.step();
     ASSERT_TRUE(!w.flying(me));
     EXPECT_EQ(w.progress(me)->rank(Skill::quickDrill), int64_t(2));
 }

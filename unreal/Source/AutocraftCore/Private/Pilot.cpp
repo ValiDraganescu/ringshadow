@@ -236,7 +236,7 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
     if (nav && (!nav->standable(p) || nav->inRock(p))) return false;
     const double r = Rules::radius(u.kind) * 0.8;
     if (std::any_of(state.structures.begin(), state.structures.end(),
-                    [&](const Structure& s) { return NavGrid::insideStructure(p, s, r); })) {
+                    [&](const Structure& s) { return !Rules::walkable(s.kind) && NavGrid::insideStructure(p, s, r); })) {
         return false;
     }
     if (std::any_of(state.patches.begin(), state.patches.end(), [&](const OreDeposit& m) {
@@ -963,6 +963,7 @@ std::string Simulation::title(Structure::Kind k) {
     case Structure::Kind::lab: return "Lab";
     case Structure::Kind::sentinel: return "Sentinel";
     case Structure::Kind::gatling: return "Gatling Gun";
+    case Structure::Kind::landingPad: return "Landing Pad";
     }
     return "";
 }

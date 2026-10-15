@@ -244,7 +244,7 @@ bool NavGrid::insideStructure(Vec2 p, const Structure& st, double grow) {
 /// here are pushed out.
 bool NavGrid::solid(Vec2 p, const GameState& s) {
     for (const Structure& st : s.structures) {
-        if (insideStructure(p, st, -0.05)) return true;
+        if (!Rules::walkable(st.kind) && insideStructure(p, st, -0.05)) return true;
     }
     for (const OreDeposit& m : s.patches) {
         if (m.remaining > 0 && insidePatch(p, m, -0.05)) return true;
@@ -374,6 +374,7 @@ bool NavGrid::setDynamic(const GameState& s) {
         mark(o - Vec2(g, g), o + Vec2(g, g), [o, g](Vec2 q) { return distance(q, o) < g; });
     }
     for (const Structure& st : s.structures) {
+        if (Rules::walkable(st.kind)) continue;
         const double r = Rules::radius(st.kind) + c;
         mark(st.position - Vec2(r, r), st.position + Vec2(r, r), [&st, c](Vec2 q) { return insideStructure(q, st, c); });
     }

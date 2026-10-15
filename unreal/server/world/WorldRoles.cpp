@@ -1,9 +1,9 @@
 // The buildings' jobs for the pilot in a world (WorldMap.h, P6;
 // docs/prospector-progression.md "Buildings in the MMO"): a fallen
 // Prospector comes back at the realm's Citadel or nearest Hab Dome, and the
-// pilot's own pads (the realm's Spacedock; with Homing beacon the realm's
-// Citadel, Hab Domes and Derricks; R1: whoever built them), with the
-// Wayfinder's flight nodes (Pad link, Short hop).
+// realm's Landing Pads and Spacedock the Dropship flies between (F2; R1:
+// whoever built them), with the Wayfinder's flight nodes (Pad link, Short
+// hop, Ringwalker).
 
 #include "WorldMap.h"
 
@@ -14,44 +14,30 @@
 
 namespace ac::server {
 
-// MARK: - Pads of its own
+// MARK: - Landing Pads
 
-std::vector<OwnPad> WorldMap::ownPads(const PilotState& p) const {
-    std::vector<OwnPad> out;
+std::vector<LandingPad> WorldMap::landingPads() const {
+    std::vector<LandingPad> out;
     if (!world_) return out;
-    // Homing beacon: these of its buildings count as pads.
-    std::vector<Beacon> beacons;
-    for (const SkillEffect& e : Progression::effects(Skill::homingBeacon, p.progress.rank(Skill::homingBeacon)))
-        if (const auto* h = e.as<SkillEffect::HomingBeacon>()) beacons = h->from;
-    auto beacon = [&](StructureKind k) {
-        const std::optional<Beacon> b = k == StructureKind::citadel   ? std::optional(Beacon::citadel)
-                                        : k == StructureKind::habDome ? std::optional(Beacon::habDome)
-                                        : k == StructureKind::derrick ? std::optional(Beacon::derrick)
-                                                                      : std::nullopt;
-        return b && std::find(beacons.begin(), beacons.end(), *b) != beacons.end();
-    };
-    // By kind, then id across the world: "Hab Dome 1", "Hab Dome 2".
-    std::map<StructureKind, std::vector<OwnPad>> kinds;
-    for (size_t r = 0; r < regions_.size(); r++)
+    // By region; in each its Landing Pads by id, "Landing Pad 1" and
+    // "Landing Pad 2" (two at most), then the Spacedock (one in the realm).
+    for (size_t r = 0; r < regions_.size(); r++) {
+        std::vector<LandingPad> here;
         for (const Structure& b : regions_[r]->simulation().state.structures) {
             if (!b.complete() || !realm(b)) continue;
-            if (b.kind != StructureKind::spacedock && !beacon(b.kind)) continue;
-            kinds[b.kind].push_back(OwnPad{r, b.id, b.kind, "", b.position});
+            if (b.kind != StructureKind::landingPad && b.kind != StructureKind::spacedock) continue;
+            here.push_back(LandingPad{r, b.id, b.kind, "", b.position});
         }
-    for (auto& [kind, list] : kinds) {
-        std::sort(list.begin(), list.end(), [](const OwnPad& a, const OwnPad& b) { return a.building < b.building; });
-        const bool numbered = Progression::buildingLimit(kind) > 1;
-        for (size_t i = 0; i < list.size(); i++) {
-            list[i].name = Simulation::title(kind) + (numbered ? " " + std::to_string(i + 1) : "");
-            out.push_back(list[i]);
+        std::sort(here.begin(), here.end(), [](const LandingPad& a, const LandingPad& b) {
+            return a.kind != b.kind ? a.kind == StructureKind::landingPad : a.building < b.building;
+        });
+        int64_t n = 0;
+        for (LandingPad& o : here) {
+            o.name = o.kind == StructureKind::landingPad ? "Landing Pad " + std::to_string(++n) : Simulation::title(o.kind);
+            out.push_back(o);
         }
     }
     return out;
-}
-
-std::vector<OwnPad> WorldMap::ownPads(PilotId pilot) const {
-    const auto it = pilots_.find(pilot);
-    return it == pilots_.end() ? std::vector<OwnPad>{} : ownPads(it->second);
 }
 
 double WorldMap::padReach(const PilotState& p) const {
@@ -66,26 +52,32 @@ double WorldMap::padReach(PilotId pilot) const {
     return it == pilots_.end() ? params_.padReach : padReach(it->second);
 }
 
-double WorldMap::flightTime(const PilotState& p) const {
-    // Short hop: 20% less a rank.
-    const double share = 1 + p.progress.skillBoost(SkillStat::flightTime).percent;
-    return params_.flightTime * std::max(0.0, share);
+Ferry::Plan WorldMap::ferryPlan(const PilotState& p, size_t to) const {
+    const WorldRegion& a = world_->regions[p.region];
+    const WorldRegion& b = world_->regions[to];
+    // Short hop: 20% off the dash a rank; Ringwalker: 30% faster.
+    double faster = 0;
+    for (const SkillEffect& e : Progression::effects(Skill::ringwalker, p.progress.rank(Skill::ringwalker)))
+        if (const auto* w = e.as<SkillEffect::Ringwalker>()) faster = w->faster;
+    return Ferry::plan(ac::Flight::steps(a.column, a.row, b.column, b.row), p.progress.skillBoost(SkillStat::flightTime).percent,
+                       faster);
 }
 
-double WorldMap::flightTime(PilotId pilot) const {
+Ferry::Plan WorldMap::ferryPlan(PilotId pilot, size_t to) const {
     const auto it = pilots_.find(pilot);
-    return it == pilots_.end() ? params_.flightTime : flightTime(it->second);
+    if (it == pilots_.end() || !world_ || to >= regions_.size()) return Ferry::plan(0);
+    return ferryPlan(it->second, to);
 }
 
-Vec2 WorldMap::landing(const Flight& f) const {
-    return f.own ? *f.own : world_->regions[f.to].built.pads[f.pad].at;
+bool WorldMap::seen(const PilotState& p, size_t r) const {
+    return r == p.region || r == start_ || p.progress.regions.count(world_->regions[r].file.id) > 0;
 }
 
-void WorldMap::ownPadsChanged() {
+void WorldMap::landingPadsChanged() {
+    const std::vector<LandingPad> now = landingPads();
     for (auto& [id, p] : pilots_) {
-        std::vector<OwnPad> now = ownPads(p);
         if (now == p.padsTold) continue;
-        p.padsTold = std::move(now);
+        p.padsTold = now;
         // The World message again (`Server::sendMoves`).
         moves_.push_back(Moved{id, std::nullopt});
     }
