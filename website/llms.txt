@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [Realm standings: the week, counted](https://ringshadow.com/blog/standings.md): Over the realm week every pilot in Ringshadow, human and frontier alike, is counted on ore delivered, bugs felled, canyon waves held and buildings raised. A table on the Citadel's REALM tab, a rank in the map's tooltips, and a toast when the week is counted.
 - [The away report: what your world did without you](https://ringshadow.com/blog/away-report.md): Ringshadow's server keeps a ledger for every pilot off line, from its own bookkeeping and never invented: deliveries, deeds, raids, waves, the Matriarch, realm projects. It reads it to you on the home screen, in a toast, on the radio and in the Journal.
 - [A Citadel in every region](https://ringshadow.com/blog/citadels.md): Ringshadow's realm limit is now one Citadel a region instead of one a realm. Each is a full home: unload with the realm's tax, respawn at the nearest, respec, the Citadel screen on the one wallet, four corner turrets.
 - [The day the sky got too heavy](https://ringshadow.com/blog/heavy-sky.md): A Prospector that seemed to die and a world that came back empty: neither happened. Sixty-one starfalls rode in every network part of every snapshot, and no snapshot arrived whole. The save was intact all along.

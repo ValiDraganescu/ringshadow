@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Realm standings: the week, counted
+
+15 October 2026 · M10 · 3 pictures
+
+Every pilot, human and frontier alike, counted over the realm week on ore delivered, bugs felled, waves held and buildings raised. The top 8 on the Citadel's REALM tab, a rank in the map's tooltips, a toast and a radio call when the week is counted.
+
+Read it: https://ringshadow.com/blog/standings
+
 ## The away report: what your world did without you
 
 15 October 2026 · M10 · 3 pictures

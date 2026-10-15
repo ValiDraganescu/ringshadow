@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Realm Standings · Ringshadow</title>
+  <meta name="description" content="Over the realm week every pilot in Ringshadow, human and frontier alike, is counted on ore delivered, bugs felled, canyon waves held and buildings raised. A table on the Citadel's REALM tab, a rank in the map's tooltips, and a toast when the week is counted.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="Realm standings: the week, counted">
+  <meta property="og:description" content="Every pilot, human and frontier alike, counted over the realm week on ore, bugs, waves held and buildings. Top 8 on the Citadel's REALM tab, a rank in the map tooltips, a toast at the week's end.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/standings/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/standings">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/standings">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="standings.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/count.js" defer data-site="ringshadow"></script>
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>Realm standings: the week, counted</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M10 · The long game</p>
+        <p class="lede">A realm is a few humans and the frontier pilots the server runs beside them, and until today nobody kept score. Now every pilot's week is counted, humans and frontier alike, on four things the server already sees, and the realm has a table to argue over.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/standings/cover.jpg" alt="The Citadel's REALM tab with STANDINGS · THIS WEEK under the realm projects: Larkspur, Sorrel and Brindle marked FRONTIER with 2,975, 2,965 and 1,385 ore, then You in gold with 550, four columns ore, bugs, waves held and built, 2 h 32 m left" width="1200" height="750"></div>
+        <figcaption>STANDINGS · THIS WEEK on the Citadel's REALM tab, two hours into a staged week: three frontier pilots ahead of the human.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>What counts</h2>
+        <p>The realm week is seven world days, 4 hours and 40 minutes of the clock. Over it, each pilot is counted on ore delivered, every unload at a realm building before the tax, with your mercenaries' deliveries counted to you; bugs felled, by your Prospector or by a turret you built; canyon waves held, a wave beaten that you fought, as the pay split already counts the fighters; and buildings raised, yours, finished. Nothing is estimated. The counts are taken where the server already books the thing, which is also why a frontier pilot's numbers are real: its work is booked by the same rules as its pay. A frontier hauler books 1,485 ore an hour against the balance curve's 1,489, so a week of nothing but hauling tops out at about 6,900 ore. A human who does more than haul can beat that.</p>
+
+        <h2>Where it shows</h2>
+        <p>On the Citadel's REALM tab, under the realm projects, STANDINGS · THIS WEEK: the top 8 pilots by ore, then bugs, waves and buildings as the tie-breaks, the four columns, your own row in gold after a gap when you're not among them, a frontier pilot's dot in its paint with FRONTIER beside its name, and the week's time left. On the world map, a frontier pilot's tooltip and your own add the rank and the leading stat: "1st · 2,975 ore this week". At the week's end every pilot on line gets THE WEEK IS COUNTED with the top hauler's name and ore, and KSTR calls it: "The week is counted, pilots! See the standings at the Citadel." A pilot off line finds the same line in the away report. Then the counts start again. A world down for weeks tells the end once.</p>
+        <p>KSTR's line is one take for every week, on purpose: a callsign like Pilot 1A2B and a number read badly spoken, so the toast carries them and the radio carries the occasion. One side effect worth knowing: a human's turret kills now count as bugs felled, as the frontier's always did; the hunt missions still count only what the Prospector itself kills.</p>
+        <p>The pictures come from a hidden run with three frontier pilots staged, a mercenary hired and two hours of booked work. The standings are saved with the world, with the week's start on the world clock, and a save from before starts its week at the load. Protocol 33, save schema 24, the suites at 505, 97 and 331.</p>
+      </div>
+
+      <section class="album" aria-label="Pictures">
+        <ul class="shots">
+          <li class="reveal"><a href="media/standings/01-standings.webp"><img src="media/standings/01-standings-t.webp" alt="The REALM tab with the standings table under the projects: three frontier pilots then You in gold, with 2 h 32 m left of the week" width="640" height="400" loading="lazy"></a><span class="cap">The table: top 8 by ore, your row in gold, the week's time left.</span></li>
+          <li class="reveal"><a href="media/standings/02-tooltip.webp"><img src="media/standings/02-tooltip-t.webp" alt="The world map of Prospect Landing with a tooltip on Larkspur: Frontier pilot, Miner, Hauling ore in Prospect Landing, 1st · 2,975 ore this week" width="640" height="400" loading="lazy"></a><span class="cap">The map's tooltip on a frontier pilot adds its rank and its leading stat.</span></li>
+          <li class="reveal"><a href="media/standings/03-toast.webp"><img src="media/standings/03-toast-t.webp" alt="The Citadel from the ground with two frontier pilots' outlines on it, and the toast THE WEEK IS COUNTED: This week's top hauler: Larkspur, 2,980 ore · standings at the Citadel" width="640" height="400" loading="lazy"></a><span class="cap">The week's end: the toast names the top hauler; KSTR calls the week counted.</span></li>
+        </ul>
+      </section>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="away-report.html">Before: the away report</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="standings.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No cookies for readers, first-party analytics without tracking across sites. <a href="../privacy.html">Privacy</a>.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

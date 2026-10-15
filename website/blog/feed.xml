@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T15:20:00Z</updated>
+  <updated>2026-10-15T16:15:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>Realm standings: the week, counted</title>
+    <id>tag:ringshadow,2026-10-15:blog/standings</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/standings"/>
+    <published>2026-10-15T16:15:00Z</published>
+    <updated>2026-10-15T16:15:00Z</updated>
+    <summary>Every pilot, human and frontier alike, counted over the realm week on ore delivered, bugs felled, waves held and buildings raised. The top 8 on the Citadel's REALM tab, a rank in the map's tooltips, a toast and a radio call when the week is counted.</summary>
+  </entry>
   <entry>
     <title>The away report: what your world did without you</title>
     <id>tag:ringshadow,2026-10-15:blog/away-report</id>
