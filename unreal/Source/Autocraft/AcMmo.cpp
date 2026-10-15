@@ -1321,6 +1321,25 @@ std::optional<double> FAcMmoClient::Xp() const
 	return std::nullopt;
 }
 
+std::optional<ac::net::AwayReport> FAcMmoClient::TakeAway()
+{
+	std::optional<ac::net::AwayReport> Out;
+	if (Net) Out.swap(Net->away);
+	return Out;
+}
+
+std::optional<std::array<FString, 2>> FAcMmoClient::AwayLines(const FString& File)
+{
+	// The key as it is, never a new one made here.
+	FString Hex;
+	if (!IFileManager::Get().FileExists(*PilotKeyFile()) || !FFileHelper::LoadFileToString(Hex, *PilotKeyFile())) return std::nullopt;
+	const std::optional<ac::net::PilotKey> Key = ac::net::pilotKeyFromHex(Utf8(Hex.TrimStartAndEnd()));
+	if (!Key) return std::nullopt;
+	const auto Lines = ac::net::readAwayFile(ac::net::awayFilePath(Utf8(File)), ac::net::pilotKeyHex(*Key));
+	if (!Lines || (*Lines)[0].empty()) return std::nullopt;
+	return std::array<FString, 2>{Text((*Lines)[0]), Text((*Lines)[1])};
+}
+
 std::vector<ac::net::ProgressMessage::News> FAcMmoClient::TakeProgressNews()
 {
 	std::vector<ac::net::ProgressMessage::News> Out;

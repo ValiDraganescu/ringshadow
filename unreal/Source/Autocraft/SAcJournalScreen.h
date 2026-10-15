@@ -90,6 +90,16 @@ struct FAcJournalInfo
 	/// WAVE 3 / 10 · Next wave in 0:24"); `CanyonAlert`: a wave out or one fallen.
 	TArray<FString> Canyons;
 	bool bCanyonAlert = false;
+	/// X2: WHILE YOU WERE AWAY (`bAway`), the first row of the list: the
+	/// time away, the realm wallet's change, and each thing the world did
+	/// with when (the away report's rows, the most telling first); picked
+	/// when the Journal opens on it unread.
+	bool bAway = false;
+	bool bAwayUnread = false;
+	FString AwayRan;
+	FString AwayRealm;
+	TArray<FString> AwayWhen;
+	TArray<FString> AwayLines;
 
 	bool operator==(const FAcJournalInfo&) const = default;
 };
@@ -115,6 +125,9 @@ public:
 	/// list changes.
 	int32 Picked() const { return Pick; }
 	void SetPicked(int32 Index);
+	/// X2: the WHILE YOU WERE AWAY page is the one shown.
+	bool AwayPicked() const { return bAwayPicked; }
+	void PickAway();
 	/// Why the last ask was refused (empty: none), and a line of what was
 	/// done ("Playing the briefing…"). Shown at the foot.
 	void SetRefusal(const FString& Why);
@@ -163,12 +176,16 @@ private:
 	void PaintList(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintPage(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMap(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P, const FAcJournalEntry& E, const FBox2f& B) const;
+	void PaintAway(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintFoot(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintButton(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P, const FTarget& T, const FString& Label,
 		bool bLit, const FLinearColor& Accent) const;
 
 	FAcJournalInfo Info;
 	int32 Pick = 0;
+	bool bAwayPicked = false;
+	/// Opened on the away page once (unread): later the missions stay picked.
+	bool bAwayOpened = false;
 	uint32 PickedId = 0;
 	bool bArmed = false;
 	FString Refusal;

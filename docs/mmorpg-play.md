@@ -192,6 +192,41 @@ START:
   down; the Dropship doesn't land there. Off a Landing Pad, or with no
   Landing Pad at the other end, the map says why it can't fly.
 
+## Coming back
+
+The world runs on while you're away (a detached server, or the time it
+was down caught up when it starts again). The server keeps a ledger for
+every pilot off line, a row for each thing it saw happen, never made up:
+
+- what each of your mercenaries delivered (added up, one row a
+  mercenary);
+- the frontier pilots' deeds (built, opened, surveyed);
+- raids: a raid told on a realm building, a building it took;
+- the canyons: waves beaten (added up, one row a canyon), a canyon held, a
+  canyon fallen;
+- the Matriarch down (who hit her hardest) or back in her nest;
+- realm projects started (by whom) and run out;
+- with the time you were away and the realm wallet's change.
+
+It is saved with the world (schema 23), and it comes in the first
+Progress after you enter (protocol 31), once; then it starts again empty.
+
+- **The home screen.** Under ENTER THE REACH: "Your world ran 6 h 12 m."
+  in amber and the most telling things under it ("Slate delivered 1,240
+  ore · The Fork held · Sorrel built a Derrick in Cold Fork · 2 more"). The
+  server writes these two lines beside the save (`first.away`, one row a
+  pilot) on each idle tick and save, so the home screen reads them with no
+  connection. They are what the server knew when it last wrote them.
+- **The toast.** On entering: WHILE YOU WERE AWAY, the time, the first
+  thing and how many more, "L JOURNAL". KSTR reads a welcome: a building or
+  a canyon lost or the Matriarch back (`welcome-brood`), else a canyon
+  held (`welcome-held`), else the mercenaries' deliveries
+  (`welcome-mercs`).
+- **The Journal.** L opens on WHILE YOU WERE AWAY while it is unread, the
+  first row of the list (Up from the first mission goes back to it): the
+  time away, the realm wallet's change, and every row, newest first, with
+  how long before your return.
+
 ## Saving
 
 The server saves the world on its own: the changed parts every 5 s, and

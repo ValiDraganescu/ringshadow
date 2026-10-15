@@ -1,5 +1,5 @@
 {
-  "about": "A2, the siege's radio voice (docs/music.md \"Siege layers\"): KSTR's announcer reads the goal lines (a new goal from the radio's chain, one done) and the canyon news (a wave coming, a wave beaten, a canyon held, a canyon fallen with the Matriarch coming), one line each, under 6 s. The game plays them through its radio-line queue (narration first, never two at once), the text stays on the HUD. Same voice and radio.py as the station's ads. KSTR is written K-S-T-R so it is spelled out. R2 adds the realm projects' lines: one when a project starts, one when it ends (docs/mmorpg-play.md \"Realm projects\").",
+  "about": "A2, the siege's radio voice (docs/music.md \"Siege layers\"): KSTR's announcer reads the goal lines (a new goal from the radio's chain, one done) and the canyon news (a wave coming, a wave beaten, a canyon held, a canyon fallen with the Matriarch coming), one line each, under 6 s. The game plays them through its radio-line queue (narration first, never two at once), the text stays on the HUD. Same voice and radio.py as the station's ads. KSTR is written K-S-T-R so it is spelled out. R2 adds the realm projects' lines: one when a project starts, one when it ends (docs/mmorpg-play.md \"Realm projects\"). X2 adds the welcome back (docs/mmorpg-play.md \"Coming back\"): one line on the return, by what the away report holds (a loss, a canyon held, the mercenaries' deliveries); and the Foundry and Lab goals read what to do next (order a module, fit it, research Mk II).",
   "voices": {
     "announcer": "sM0OsGgRUQMd8tCIWOCm"
   },
@@ -92,7 +92,14 @@
       "id": "goal-module",
       "kind": "say",
       "voice": "announcer",
-      "text": "[bright] Next up: make a module. The Foundry's warm!",
+      "text": "[bright] Next up: order a drill head at the Foundry. Press J for the rig screen!",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-fit",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: fit that module. Stand where you unload and press J.",
       "fx": "radio"
     },
     {
@@ -100,6 +107,13 @@
       "kind": "say",
       "voice": "announcer",
       "text": "[bright] Next up: raise the Lab. The high marks start there.",
+      "fx": "radio"
+    },
+    {
+      "id": "goal-research",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] Next up: research Mark Two at the Lab. The bigger drills start there.",
       "fx": "radio"
     },
     {
@@ -254,6 +268,27 @@
       "kind": "say",
       "voice": "announcer",
       "text": "[calm] The Dock Crew's gone home. Mercenaries back to their own pace.",
+      "fx": "radio"
+    },
+    {
+      "id": "welcome-mercs",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[warm, upbeat] Welcome back, Prospector! Your crew kept drilling. The Journal has the tally.",
+      "fx": "radio"
+    },
+    {
+      "id": "welcome-held",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright, proud] Welcome back! The canyon held while you were gone. The Journal has the rest.",
+      "fx": "radio"
+    },
+    {
+      "id": "welcome-brood",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[urgent] Welcome back, Prospector. The Brood hit us while you were out. Check the Journal.",
       "fx": "radio"
     }
   ]

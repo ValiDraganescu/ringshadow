@@ -57,8 +57,9 @@ struct AwayRow {
 };
 
 struct AwayReport {
-    /// World seconds since the pilot left.
+    /// World seconds since the pilot left; the world's clock at its return.
     double ran = 0;
+    double back = 0;
     /// The realm wallet's change meanwhile.
     int64_t realmOre = 0;
     int64_t realmHydrogen = 0;
@@ -69,6 +70,8 @@ struct AwayReport {
 /// "Slate delivered 1,240 ore", "Sorrel built a Derrick in Cold Fork",
 /// "The Fork held", "A raid took the Hab Dome in Rust Hollow".
 AUTOCRAFTNET_API std::string awayLine(const AwayRow& row);
+/// When a row happened, before the return: "2 h 10 m ago".
+AUTOCRAFTNET_API std::string awayWhen(const AwayReport& report, const AwayRow& row);
 /// "6 h 12 m", "14 m", "under a minute".
 AUTOCRAFTNET_API std::string awayRan(double seconds);
 /// 1,240 (thousands with commas).

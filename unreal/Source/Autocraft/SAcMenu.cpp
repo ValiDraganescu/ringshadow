@@ -32,6 +32,8 @@ namespace
 	constexpr float HomeButtonH = 40;
 	constexpr float GroupGap = 26;
 	constexpr float GroupHeadH = 22;
+	/// X2: the away lines' block (a line and the what, in up to two).
+	constexpr float AwayH = 62;
 
 	/// Full size up to a 1000-point-high window; past it the panel grows
 	/// with the window (a 2560x1600 window at 1x: 1.6), so it never shrinks
@@ -118,6 +120,14 @@ void SAcMenu::SetReach(const FString& Line)
 {
 	if (Line == ReachLine) return;
 	ReachLine = Line;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcMenu::SetAway(const FString& Ran, const FString& What)
+{
+	if (Ran == AwayRanLine && What == AwayWhatLine) return;
+	AwayRanLine = Ran;
+	AwayWhatLine = What;
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -349,6 +359,7 @@ void SAcMenu::Layout(const FVector2f ViewSize) const
 	float Y = bHome ? 132 : 84;
 	CardBox = FBox2f(FVector2f::ZeroVector, FVector2f::ZeroVector);
 	GroupAt = FVector2f::ZeroVector;
+	AwayAt = FVector2f::ZeroVector;
 	if (bConfirmNewWorld) Y = 84 + 3 * 22 + 18;
 	else if (!bHome && !GameTitle.IsEmpty())
 	{
@@ -383,6 +394,12 @@ void SAcMenu::Layout(const FVector2f ViewSize) const
 		if (bHome && B[I].bHalf) Y += GroupGap - ButtonGap;
 		Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(W - Pad, Y + H)));
 		Y += H + ButtonGap;
+		// X2: the away lines under the way in.
+		if (bHome && B[I].bPrimary && !AwayRanLine.IsEmpty())
+		{
+			AwayAt = FVector2f(Pad + 2, Y - 2);
+			Y += AwayH;
+		}
 	}
 	PanelSize = FVector2f(W, Y - ButtonGap + Pad);
 	PanelScale = FMath::Clamp(FMath::Min((ViewSize.X - 40) / PanelSize.X, (ViewSize.Y - 40) / PanelSize.Y), 0.3f, MaxScale(ViewSize));
@@ -728,6 +745,44 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 		Head.Paint(Out, L, P, GroupAt);
 		const float X = GroupAt.X + Head.Measure().X + 10;
 		Box(Out, L, P, FBox2f(FVector2f(X, GroupAt.Y + 5), FVector2f(PanelSize.X - Pad, GroupAt.Y + 6)), FAcHudStyle::Srgb(0.3, 0.42, 0.52, 0.6));
+	}
+
+	if (bHome && !bConfirmNewWorld && AwayAt != FVector2f::ZeroVector)
+	{
+		// X2: what the world did while the pilot was away: the time in amber,
+		// the most telling things under it (wrapped in two at most).
+		const float Width = PanelSize.X - 2 * Pad - 4;
+		FAcHudText Ran = Label(AwayRanLine, 13, FAcHudStyle::Srgb(1.0, 0.72, 0.3), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold);
+		Ran.Kern = 0.4f;
+		Ran.Paint(Out, L, P, AwayAt);
+		auto Wide = [&](const FString& S) { return Label(S, 12, FLinearColor::White, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Measure().X; };
+		TArray<FString> Words;
+		AwayWhatLine.ParseIntoArray(Words, TEXT(" "), true);
+		TArray<FString> Rows;
+		FString Row;
+		for (const FString& Word : Words)
+		{
+			const FString Longer = Row.IsEmpty() ? Word : Row + TEXT(" ") + Word;
+			if (Row.IsEmpty() || Wide(Longer) <= Width) Row = Longer;
+			else
+			{
+				Rows.Add(Row);
+				Row = Word;
+			}
+		}
+		if (!Row.IsEmpty()) Rows.Add(Row);
+		if (Rows.Num() > 2)
+		{
+			FString Last = Rows[1];
+			while (!Last.IsEmpty() && Wide(Last + TEXT("…")) > Width) Last.LeftChopInline(1);
+			Rows.SetNum(1);
+			Rows.Add(Last + TEXT("…"));
+		}
+		for (int32 K = 0; K < Rows.Num(); ++K)
+		{
+			Label(Rows[K], 12, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+				.Paint(Out, L, P, AwayAt + FVector2f(0, 20 + K * 17));
+		}
 	}
 
 	const TArray<FButton> B = Buttons();

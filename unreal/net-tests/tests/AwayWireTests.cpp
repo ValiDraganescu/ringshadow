@@ -21,6 +21,7 @@ using namespace ac::net;
 AwayReport sample() {
     AwayReport r;
     r.ran = 6 * 3600 + 12 * 60 + 30;
+    r.back = 1300 + 2 * 3600 + 10 * 60;
     r.realmOre = 410;
     r.realmHydrogen = -60;
     r.rows.push_back(AwayRow{120, AwayKind::frontier, "Sorrel", "Sorrel built a Derrick in Cold Fork", "", 0});
@@ -58,6 +59,7 @@ TEST(away_lines_say_what_the_rows_hold) {
     EXPECT_EQ(awayRan(2 * 86400 + 3 * 3600), std::string("2 d 3 h"));
     const AwayReport r = sample();
     EXPECT_EQ(awayLine(r.rows[2]), std::string("Slate delivered 1,240 ore"));
+    EXPECT_EQ(awayWhen(r, r.rows[5]), std::string("2 h 13 m ago"));
     EXPECT_EQ(awayLine(r.rows[4]), std::string("A raid hit the Hab Dome in Rust Hollow"));
     EXPECT_EQ(awayLine(AwayRow{0, AwayKind::fell, "", "Hab Dome", "Rust Hollow", 0}), std::string("A raid took the Hab Dome in Rust Hollow"));
     EXPECT_EQ(awayLine(r.rows[1]), std::string("The Fork: 4 waves beaten"));

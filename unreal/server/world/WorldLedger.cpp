@@ -55,6 +55,7 @@ net::AwayReport WorldMap::awayReport(const PilotState& p) const {
     const double from = left ? p.leftAt : std::max(0.0, loadedAt_);
     const Wallet realm = left ? p.realmAtLeave : loadedRealm_;
     out.ran = std::max(0.0, clock_ - from);
+    out.back = clock_;
     out.realmOre = realm_.ore - realm.ore;
     out.realmHydrogen = realm_.hydrogen - realm.hydrogen;
     out.rows = p.ledger;

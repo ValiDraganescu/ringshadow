@@ -293,6 +293,16 @@
 //   04 the Citadel screen (H) at the Cold Fork Citadel: the realm's one
 //      wallet, its tabs
 //
+// -AcMmoShotsX2 (with -AcMmoDevRig and -AcMmoServerDetached): coming back
+// (docs/mmorpg-play.md "Coming back"): a mercenary hired at the dev rig's
+// Citadel, QUIT TO HOME (the world server runs on), the world caught up on
+// three hours as a restart after that long would (`catchup 10800`), then
+// in again; the detached server stopped at the end, DIR/x2-NN-moment.png:
+//   01 home: the two away lines under ENTER THE REACH, from the summary
+//      file the server wrote beside the save
+//   02 in again: the WHILE YOU WERE AWAY toast (KSTR's welcome read)
+//   03 the Journal (L) opened on WHILE YOU WERE AWAY: every row, with when
+//
 // -AcMmoShotsZ4 (as Z1's): free placement in canyons (docs/canyon.md
 // "Building"), DIR/z4-NN-moment.png:
 //   01 a tightly packed defence on The Fork's floor by the prize, its guns'
@@ -543,6 +553,10 @@ namespace
 	/// mercenary's unit.
 	int32 H2Kept = 0;
 	int64 H2Unit = 0;
+	/// X2: the home screen's away lines as shot.
+	FString X2Ran;
+	FString X2What;
+	int32 X2Cues = 0;
 	/// -AcMmoShotsM2: the mercenary's unit, the mission taken.
 	int64 M2Unit = 0;
 	uint32 M2Mission = 0;
@@ -1099,7 +1113,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1235,6 +1250,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2"))) T.Phase = 3200;
 			// -AcMmoShotsR3: a Citadel a region (3300-3310).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))) T.Phase = 3300;
+			// -AcMmoShotsX2: coming back (3400-3411).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2"))) T.Phase = 3400;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
@@ -6560,6 +6577,130 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Finish();
 			return;
 		}
+	// MARK: -AcMmoShotsX2
+	case 3400:
+		// The dev rig's home: hire a mercenary at its Citadel (as H2's).
+		if (S && CitadelOf(*S) && Mmo->Progress() && !Mmo->Progress()->mercFields.empty() && Since() > 3.0)
+		{
+			Check(FAcMmoClient::RunningServer(Mmo->SavePath).has_value(), TEXT("x2: the world server runs detached"));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("x2: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
+			{
+				for (int32 K = 0; K < SAcCitadelScreen::TabCount && W->Tab() != SAcCitadelScreen::ETab::Mercs; ++K) W->Key(EKeys::Tab);
+			}
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel and the mercenaries' fields"));
+		return;
+	case 3401:
+		if (Since() < 1.0) return;
+		if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->Hire();
+		Advance();
+		return;
+	case 3402:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->mercs.size() == 1 && P->mercs[0].unit > 0 && Since() > 2.0)
+		{
+			Check(true, FString::Printf(TEXT("x2: %s hired"), *Utf(P->mercs[0].name)));
+			CloseCitadelScreen();
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the mercenary hired"), 15);
+		return;
+	}
+	case 3403:
+		// QUIT TO HOME: the server runs on, the pilot off line.
+		if (Since() < 3.0) return;
+		StopMmo();
+		OpenMenu(EAcMenuMode::Home);
+		Advance();
+		return;
+	case 3404:
+		if (Since() < 2.0) return;
+		Check(FAcMmoClient::RunningServer().has_value(), TEXT("x2: the world server runs on at home"));
+		Check(FAcMmoClient::DevClock(TEXT("catchup 10800")), TEXT("x2: the world caught up on three hours"));
+		Advance();
+		return;
+	case 3405:
+	{
+		// The summary file, read again until the server wrote it.
+		if (FMath::Fmod(Since(), 1.0) < 0.05) OpenMenu(EAcMenuMode::Home);
+		const TSharedPtr<SAcMenu> W = MenuWidget();
+		if (W && W->AwayRan().StartsWith(TEXT("Your world ran 3 h")) && W->AwayWhat().Contains(TEXT("delivered")) && Since() > 2.0)
+		{
+			X2Ran = W->AwayRan();
+			X2What = W->AwayWhat();
+			Check(true, FString::Printf(TEXT("x2: home: \"%s\" \"%s\""), *X2Ran, *X2What));
+			Shoot(TEXT("x2-01-home"), TEXT("home: the away lines under ENTER THE REACH"));
+			return;
+		}
+		TimedOut(TEXT("the away lines on the home screen"), 30);
+		return;
+	}
+	case 3406:
+		if (const UAcMusicPlayer* Music = UAcMusicPlayer::Get(this)) X2Cues = Music->Cues().Num();
+		OnMenuPick(EAcMenuAction::Mmo);
+		Advance();
+		return;
+	case 3407:
+	{
+		const UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this);
+		const double Age = Hud && Hud->AwayReportAt() > 0 ? FPlatformTime::Seconds() - Hud->AwayReportAt() : -1;
+		if (Seated() && Hud && Hud->Away() && Age >= 0.6)
+		{
+			const ac::net::AwayReport& R = *Hud->Away();
+			bool bMerc = false;
+			for (const ac::net::AwayRow& Row : R.rows) bMerc = bMerc || (Row.kind == ac::net::AwayKind::merc && Row.value > 0);
+			Check(bMerc && R.ran >= 10800, FString::Printf(TEXT("x2: the report: %d rows, %s, the mercenary's deliveries in it"), int32(R.rows.size()),
+				*Utf(ac::net::awayRan(R.ran))));
+			Check(Utf(ac::net::awaySummary(R)[1]) == X2What,
+				FString::Printf(TEXT("x2: the toast's report is the home screen's (\"%s\")"), *Utf(ac::net::awaySummary(R)[1])));
+			bool bHeard = false;
+			if (const UAcMusicPlayer* Music = UAcMusicPlayer::Get(this))
+				for (int32 I = X2Cues; I < Music->Cues().Num(); ++I)
+					bHeard = bHeard || (Music->Cues()[I].Kind == TEXT("radio") && Music->Cues()[I].Name == Utf(ac::net::awayVoice(R)));
+			Check(bHeard, FString::Printf(TEXT("x2: KSTR's welcome read (%s)"), *Utf(ac::net::awayVoice(R))));
+			Check(Age < 3.8, FString::Printf(TEXT("x2: the toast still up (%.1f s old)"), Age));
+			Shoot(TEXT("x2-02-toast"), TEXT("in again: WHILE YOU WERE AWAY"));
+			return;
+		}
+		TimedOut(TEXT("the away report on the return"), 40);
+		return;
+	}
+	case 3408:
+		Check(OpenJournalScreen() && JournalScreenWidget().IsValid(), TEXT("x2: L opens the Journal"));
+		Advance();
+		return;
+	case 3409:
+	{
+		const TSharedPtr<SAcJournalScreen> W = JournalScreenWidget();
+		if (!W || Since() < 1.2) return;
+		Check(W->AwayPicked() && W->GetInfo().bAway && !W->GetInfo().AwayLines.IsEmpty(),
+			FString::Printf(TEXT("x2: the Journal opens on WHILE YOU WERE AWAY (%d rows)"), W->GetInfo().AwayLines.Num()));
+		Shoot(TEXT("x2-03-journal"), TEXT("the Journal: WHILE YOU WERE AWAY, every row with when"));
+		return;
+	}
+	case 3410:
+	{
+		CloseJournalScreen();
+		const UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this);
+		Check(Hud && !Hud->AwayUnread(), TEXT("x2: read once shown"));
+		// Home, and the detached server stopped (STOP).
+		StopMmo();
+		OpenMenu(EAcMenuMode::Home);
+		Advance();
+		return;
+	}
+	case 3411:
+		if (Since() < 2.0) return;
+		OnMenuPick(EAcMenuAction::StopServer);
+		Check(!FAcMmoClient::RunningServer().has_value(), TEXT("x2: STOP saved and stopped the world server"));
+		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
 	// MARK: -AcMmoShotsL1
 	case 2100:
 		// The first ten minutes' last step open: a point spent ends it.

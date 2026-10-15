@@ -1185,6 +1185,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     w.writeBool(m.away.has_value());
     if (m.away) {
         writeDouble(w, m.away->ran);
+        writeDouble(w, m.away->back);
         writeSigned(w, m.away->realmOre);
         writeSigned(w, m.away->realmHydrogen);
         writeVarint(w, m.away->rows.size());
@@ -1443,6 +1444,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     if (r.readBool()) {
         AwayReport a;
         a.ran = readDouble(r);
+        a.back = readDouble(r);
         a.realmOre = readSigned(r);
         a.realmHydrogen = readSigned(r);
         const uint64_t rows = readVarint(r);

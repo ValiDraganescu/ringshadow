@@ -3996,6 +3996,12 @@
    "prepared": "Content-src/sounds/kstr/goal-done.wav",
    "seconds": 4.46
   },
+  "goal-fit": {
+   "asset": "/Game/Audio/Kstr/SW_goal_fit.SW_goal_fit",
+   "source": "kstr/goal-fit.wav",
+   "prepared": "Content-src/sounds/kstr/goal-fit.wav",
+   "seconds": 4.76
+  },
   "goal-foundry": {
    "asset": "/Game/Audio/Kstr/SW_goal_foundry.SW_goal_foundry",
    "source": "kstr/goal-foundry.wav",
@@ -4042,7 +4048,13 @@
    "asset": "/Game/Audio/Kstr/SW_goal_module.SW_goal_module",
    "source": "kstr/goal-module.wav",
    "prepared": "Content-src/sounds/kstr/goal-module.wav",
-   "seconds": 4.02
+   "seconds": 5.06
+  },
+  "goal-research": {
+   "asset": "/Game/Audio/Kstr/SW_goal_research.SW_goal_research",
+   "source": "kstr/goal-research.wav",
+   "prepared": "Content-src/sounds/kstr/goal-research.wav",
+   "seconds": 4.9
   },
   "goal-sentinel": {
    "asset": "/Game/Audio/Kstr/SW_goal_sentinel.SW_goal_sentinel",
@@ -4115,6 +4127,24 @@
    "source": "kstr/project-relay-start.wav",
    "prepared": "Content-src/sounds/kstr/project-relay-start.wav",
    "seconds": 5.62
+  },
+  "welcome-brood": {
+   "asset": "/Game/Audio/Kstr/SW_welcome_brood.SW_welcome_brood",
+   "source": "kstr/welcome-brood.wav",
+   "prepared": "Content-src/sounds/kstr/welcome-brood.wav",
+   "seconds": 4.54
+  },
+  "welcome-held": {
+   "asset": "/Game/Audio/Kstr/SW_welcome_held.SW_welcome_held",
+   "source": "kstr/welcome-held.wav",
+   "prepared": "Content-src/sounds/kstr/welcome-held.wav",
+   "seconds": 4.96
+  },
+  "welcome-mercs": {
+   "asset": "/Game/Audio/Kstr/SW_welcome_mercs.SW_welcome_mercs",
+   "source": "kstr/welcome-mercs.wav",
+   "prepared": "Content-src/sounds/kstr/welcome-mercs.wav",
+   "seconds": 5.46
   }
  },
  "unusedInSwift": [

@@ -28,6 +28,7 @@ namespace
 		RowPlay = 2,
 		RowAbandon = 3,
 		RowClose = 4,
+		RowAway = 5,
 	};
 
 	FLinearColor WithAlpha(FLinearColor C, float A)
@@ -109,6 +110,8 @@ namespace
 	FLinearColor Ready() { return FAcHudStyle::Srgb(0.45, 0.95, 0.62); }
 	/// The Journal's leather-and-brass: the Citadel's gold.
 	FLinearColor Brass() { return FAcHudStyle::Srgb(1.0, 0.82, 0.42); }
+	/// X2: the away page's amber, the toast's.
+	FLinearColor AwayInk() { return FAcHudStyle::Srgb(1.0, 0.6, 0.22); }
 	FLinearColor TierColor(int32 Tier)
 	{
 		return Tier == 0 ? FAcHudStyle::Srgb(0.45, 0.95, 0.62) : Tier == 1 ? FAcHudStyle::Srgb(1.0, 0.72, 0.3) : FAcHudStyle::Srgb(1.0, 0.36, 0.3);
@@ -140,14 +143,31 @@ void SAcJournalScreen::SetInfo(const FAcJournalInfo& In)
 {
 	if (In == Info) return;
 	Info = In;
-	// Keep the picked mission on its id.
+	// Keep the picked mission on its id (and the away page when it is shown).
+	const bool bWasAway = bAwayPicked;
 	const int32 Same = Info.Entries.IndexOfByPredicate([&](const FAcJournalEntry& E) { return E.Id == PickedId; });
 	SetPicked(Same != INDEX_NONE ? Same : FMath::Clamp(Pick, 0, FMath::Max(0, Info.Entries.Num() - 1)));
+	bAwayPicked = bWasAway && Info.bAway;
+	// X2: opened on the away report while it is unread.
+	if (Info.bAway && Info.bAwayUnread && !bAwayOpened)
+	{
+		bAwayOpened = true;
+		bAwayPicked = true;
+	}
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcJournalScreen::PickAway()
+{
+	if (!Info.bAway) return;
+	bAwayPicked = true;
+	bArmed = false;
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
 void SAcJournalScreen::SetPicked(const int32 Index)
 {
+	bAwayPicked = false;
 	const int32 Was = Pick;
 	Pick = Info.Entries.IsEmpty() ? 0 : FMath::Clamp(Index, 0, Info.Entries.Num() - 1);
 	const uint32 Id = Info.Entries.IsValidIndex(Pick) ? Info.Entries[Pick].Id : 0;
@@ -172,7 +192,7 @@ void SAcJournalScreen::SetNote(const FString& InNote)
 
 void SAcJournalScreen::Play()
 {
-	if (!Info.Entries.IsValidIndex(Pick)) return;
+	if (bAwayPicked || !Info.Entries.IsValidIndex(Pick)) return;
 	const FAcJournalEntry& E = Info.Entries[Pick];
 	if (E.Narration.IsEmpty())
 	{
@@ -185,7 +205,7 @@ void SAcJournalScreen::Play()
 
 void SAcJournalScreen::Abandon()
 {
-	if (!Info.Entries.IsValidIndex(Pick)) return;
+	if (bAwayPicked || !Info.Entries.IsValidIndex(Pick)) return;
 	const FAcJournalEntry& E = Info.Entries[Pick];
 	if (E.bDone)
 	{
@@ -219,12 +239,19 @@ bool SAcJournalScreen::Key(const FKey& InKey)
 	}
 	if (InKey == EKeys::Up || InKey == EKeys::W)
 	{
-		SetPicked(Pick - 1);
+		// X2: above the first mission, the away page.
+		if (!bAwayPicked && Pick == 0 && Info.bAway) PickAway();
+		else if (!bAwayPicked) SetPicked(Pick - 1);
 		return true;
 	}
 	if (InKey == EKeys::Down || InKey == EKeys::S || InKey == EKeys::Tab)
 	{
-		SetPicked(InKey == EKeys::Tab && Pick + 1 >= Info.Entries.Num() ? 0 : Pick + 1);
+		if (bAwayPicked)
+		{
+			if (!Info.Entries.IsEmpty()) SetPicked(0);
+		}
+		else if (InKey == EKeys::Tab && Pick + 1 >= Info.Entries.Num() && Info.bAway) PickAway();
+		else SetPicked(InKey == EKeys::Tab && Pick + 1 >= Info.Entries.Num() ? 0 : Pick + 1);
 		return true;
 	}
 	if (InKey == EKeys::P || InKey == EKeys::Enter || InKey == EKeys::SpaceBar)
@@ -260,13 +287,16 @@ void SAcJournalScreen::Layout(const FVector2f ViewSize) const
 	const float Top = HeaderH + 16 + (Info.bNext ? NextH + 12 : 0);
 	ListBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + ListW, Top + BodyH));
 	PageBox = FBox2f(FVector2f(Pad + ListW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
+	// X2: the away report first.
+	const int32 Off = Info.bAway ? 1 : 0;
+	if (Info.bAway) Add(FBox2f(FVector2f(ListBox.Min.X + 10, ListBox.Min.Y + 42), FVector2f(ListBox.Max.X - 10, ListBox.Min.Y + 42 + EntryH)), RowAway, 0);
 	for (int32 I = 0; I < Info.Entries.Num(); ++I)
 	{
-		const float Y = ListBox.Min.Y + 42 + I * (EntryH + 6);
+		const float Y = ListBox.Min.Y + 42 + (I + Off) * (EntryH + 6);
 		if (Y + EntryH > ListBox.Max.Y) break;
 		Add(FBox2f(FVector2f(ListBox.Min.X + 10, Y), FVector2f(ListBox.Max.X - 10, Y + EntryH)), RowEntry, I);
 	}
-	if (Info.Entries.IsValidIndex(Pick))
+	if (!bAwayPicked && Info.Entries.IsValidIndex(Pick))
 	{
 		const float X = PageBox.Max.X - 18 - SideW;
 		Add(FBox2f(FVector2f(X, PageBox.Min.Y + 18), FVector2f(PageBox.Max.X - 18, PageBox.Min.Y + 54)), RowPlay, Pick);
@@ -298,6 +328,7 @@ void SAcJournalScreen::Press(const FTarget& T)
 	switch (T.Row)
 	{
 	case RowEntry: SetPicked(T.Index); break;
+	case RowAway: PickAway(); break;
 	case RowPlay: Play(); break;
 	case RowAbandon: Abandon(); break;
 	case RowClose: Close(); break;
@@ -475,14 +506,34 @@ void SAcJournalScreen::PaintList(FSlateWindowElementList& Out, const int32 L, co
 	Box(Out, L, P, B, FAcHudStyle::Srgb(0.03, 0.055, 0.09, 0.9));
 	CutFrame(Out, L + 1, P, B, Steel(), 1, 10);
 	Label(TEXT("MISSIONS"), 13, Brass(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f).Paint(Out, L + 2, P, B.Min + FVector2f(18, 14));
+	// X2: the away report's row.
+	for (const FTarget& T : Targets)
+	{
+		if (T.Row != RowAway) continue;
+		const bool bHover = Targets.IsValidIndex(Hovered) && &Targets[Hovered] == &T;
+		const FLinearColor C = AwayInk();
+		Box(Out, L + 1, P, T.Box, bAwayPicked ? WithAlpha(C, 0.12f) : bHover ? WithAlpha(Steel(), 0.18f) : WithAlpha(Steel(), 0.06f));
+		if (bAwayPicked) CutFrame(Out, L + 2, P, T.Box, WithAlpha(C, 0.8f), 1.5f, 6);
+		Box(Out, L + 2, P, FBox2f(T.Box.Min, FVector2f(T.Box.Min.X + 4, T.Box.Max.Y)), C);
+		Label(TEXT("While You Were Away"), 16, FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold)
+			.Paint(Out, L + 3, P, T.Box.Min + FVector2f(14, 8));
+		Label(Info.bAwayUnread ? TEXT("THE WORLD RAN ON · NEW") : TEXT("THE WORLD RAN ON"), 10, C, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.0f)
+			.Paint(Out, L + 3, P, T.Box.Min + FVector2f(14, 30));
+		Label(FString::Printf(TEXT("%d"), Info.AwayLines.Num()), 12, FAcHudStyle::Soft(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold)
+			.Paint(Out, L + 3, P, FVector2f(T.Box.Max.X - 10, T.Box.Min.Y + 29));
+		const TArray<FString> Ran = Wrapped(Info.AwayRan, 11, T.Box.GetSize().X - 28, 1, EAcFontWeight::Medium);
+		Label(Ran.IsEmpty() ? FString() : Ran[0], 11, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L + 3, P, T.Box.Min + FVector2f(14, 46));
+	}
 	if (Info.Entries.IsEmpty())
 	{
+		const float Below = Info.bAway ? EntryH + 6 : 0;
 		const TArray<FString> Lines = Wrapped(Info.bKnown ? TEXT("None yet. Sign up at a Citadel: H, then the MISSIONS tab.")
 														  : TEXT("Waiting for the server…"),
 			14, ListW - 40, 4);
 		for (int32 K = 0; K < Lines.Num(); ++K)
 		{
-			Label(Lines[K], 14, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L + 2, P, B.Min + FVector2f(18, 52 + K * 19));
+			Label(Lines[K], 14, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium).Paint(Out, L + 2, P, B.Min + FVector2f(18, 52 + Below + K * 19));
 		}
 		return;
 	}
@@ -490,7 +541,7 @@ void SAcJournalScreen::PaintList(FSlateWindowElementList& Out, const int32 L, co
 	{
 		if (T.Row != RowEntry) continue;
 		const FAcJournalEntry& E = Info.Entries[T.Index];
-		const bool bOn = T.Index == Pick;
+		const bool bOn = !bAwayPicked && T.Index == Pick;
 		const bool bHover = Targets.IsValidIndex(Hovered) && &Targets[Hovered] == &T;
 		const FLinearColor C = TierColor(E.Tier);
 		Box(Out, L + 1, P, T.Box, bOn ? WithAlpha(C, 0.12f) : bHover ? WithAlpha(Steel(), 0.18f) : WithAlpha(Steel(), 0.06f));
@@ -516,6 +567,11 @@ void SAcJournalScreen::PaintPage(FSlateWindowElementList& Out, const int32 L, co
 	const FBox2f B = PageBox;
 	Box(Out, L, P, B, FAcHudStyle::Srgb(0.03, 0.055, 0.09, 0.9));
 	CutFrame(Out, L + 1, P, B, Steel(), 1, 10);
+	if (bAwayPicked)
+	{
+		PaintAway(Out, L, P);
+		return;
+	}
 	if (!Info.Entries.IsValidIndex(Pick))
 	{
 		Label(TEXT("Missions you sign up for at the Citadel show here: the briefing, what to do, the map, the narration."), 14, Dim(),
@@ -593,6 +649,50 @@ void SAcJournalScreen::PaintPage(FSlateWindowElementList& Out, const int32 L, co
 	{
 		Label(TEXT("The marker is on your minimap and compass."), 12, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
 			.Paint(Out, L + 2, P, FVector2f(SX, MapBox.Max.Y + 46));
+	}
+}
+
+void SAcJournalScreen::PaintAway(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const
+{
+	// X2: what the world did while the pilot was away, each thing with when.
+	const FBox2f B = PageBox;
+	const FLinearColor C = AwayInk();
+	const float X = B.Min.X + 22, Right = B.Max.X - 22;
+	Box(Out, L + 1, P, FBox2f(FVector2f(B.Min.X + 10, B.Min.Y + 14), FVector2f(B.Min.X + 14, B.Min.Y + 30)), C);
+	Label(TEXT("WHILE YOU WERE AWAY"), 13, C, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.4f).Paint(Out, L + 2, P, FVector2f(X, B.Min.Y + 14));
+	FAcHudText Title = Label(Info.AwayRan, 26, FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 0.2f);
+	Title.ShadowOffset = FVector2f(0, 2);
+	Title.ShadowColor = FLinearColor(0, 0, 0, 0.5f);
+	Title.Paint(Out, L + 2, P, FVector2f(X, B.Min.Y + 36));
+	if (!Info.AwayRealm.IsEmpty())
+	{
+		Label(Info.AwayRealm, 14, Brass(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(X, B.Min.Y + 72));
+	}
+	Label(TEXT("WHAT HAPPENED"), 11, Brass(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f).Paint(Out, L + 2, P, FVector2f(X, B.Min.Y + 104));
+	constexpr float WhenW = 120, RowStep = 21;
+	const float Top = B.Min.Y + 124;
+	const int32 Fit = FMath::Max(1, int32((B.Max.Y - 16 - Top) / RowStep));
+	const int32 N = Info.AwayLines.Num();
+	const int32 Shown = N > Fit ? Fit - 1 : N;
+	for (int32 K = 0; K < Shown; ++K)
+	{
+		const float Y = Top + K * RowStep;
+		if (K % 2 == 0) Box(Out, L + 1, P, FBox2f(FVector2f(X - 8, Y - 3), FVector2f(Right + 8, Y + RowStep - 3)), WithAlpha(Steel(), 0.07f));
+		Label(Info.AwayWhen.IsValidIndex(K) ? Info.AwayWhen[K] : FString(), 12, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold)
+			.Paint(Out, L + 2, P, FVector2f(X, Y + 1));
+		const TArray<FString> Line = Wrapped(Info.AwayLines[K], 14, Right - X - WhenW, 1, EAcFontWeight::Medium);
+		Label(Line.IsEmpty() ? FString() : Line[0], 14, FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L + 2, P, FVector2f(X + WhenW, Y));
+	}
+	if (Shown < N)
+	{
+		Label(FString::Printf(TEXT("and %d more, older"), N - Shown), 13, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L + 2, P, FVector2f(X + WhenW, Top + Shown * RowStep));
+	}
+	if (N == 0)
+	{
+		Label(TEXT("Quiet: nothing the radio heard."), 14, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L + 2, P, FVector2f(X, Top));
 	}
 }
 

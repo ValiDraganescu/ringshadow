@@ -56,6 +56,8 @@ std::string awayRan(double seconds) {
     return std::to_string(d) + " d " + std::to_string(h % 24) + " h";
 }
 
+std::string awayWhen(const AwayReport& report, const AwayRow& row) { return awayRan(report.back - row.at) + " ago"; }
+
 std::string awayLine(const AwayRow& r) {
     switch (r.kind) {
     case AwayKind::merc: return r.who + " delivered " + awayNumber(r.value) + " ore";

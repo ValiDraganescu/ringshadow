@@ -279,6 +279,13 @@ public:
 	int64 AwayToasted() const { return AwayOre; }
 	/// When it was shown (real seconds, `FPlatformTime::Seconds`).
 	double AwayToastedAt() const { return AwayAt; }
+	/// X2: the away report the join brought (unset: none this session), the
+	/// Journal's WHILE YOU WERE AWAY page; unread until the Journal shows it.
+	const std::optional<ac::net::AwayReport>& Away() const { return AwayReport; }
+	bool AwayUnread() const { return bAwayUnread; }
+	void AwayRead() { bAwayUnread = false; }
+	/// When its toast was shown (real seconds; 0: not yet).
+	double AwayReportAt() const { return AwayReportShownAt; }
 	/// T: the contract panel whole, or back to one line a contract.
 	void ToggleContracts();
 	bool ContractsExpanded() const;
@@ -292,6 +299,11 @@ public:
 private:
 	int64 AwayOre = 0;
 	double AwayAt = 0;
+	std::optional<ac::net::AwayReport> AwayReport;
+	bool bAwayUnread = false;
+	double AwayReportShownAt = 0;
+	/// X2: its toast and KSTR's welcome.
+	void AwayTold(const double Now);
 	void OnFrame(const FAcFrame& Frame);
 	bool Mount();
 	/// The server's news: the banner, the sound, the toasts.

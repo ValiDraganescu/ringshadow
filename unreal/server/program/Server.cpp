@@ -205,15 +205,25 @@ std::vector<std::string> Server::devControl(const std::string& text) {
         }
         const double was = world_.clock();
         if (!world_.isWorld() || std::sscanf(line.c_str(), "%15s %lf", what, &v) != 2) {
-            said.push_back("dev: control '" + line + "' not done (no world, or not `clock|hour|ahead N`)");
+            said.push_back("dev: control '" + line + "' not done (no world, or not `clock|hour|ahead|catchup N`)");
             continue;
         }
         const std::string w = what;
         if (w == "clock" && v >= 0) world_.setClock(v);
         else if (w == "hour" && v >= 0 && v <= 24) world_.setClock(WorldClock::timeOf(v, was, world_.params().dayLength));
         else if (w == "ahead" && v >= 0) world_.setClock(was + v);
+        else if (w == "catchup" && v >= 0) {
+            // X2's shots: the world caught up on `v` s, as a restart after
+            // that long down (the mercenaries' work, the projects' ends…).
+            const double moved = world_.catchUp(v);
+            writeAway();
+            char out[160];
+            std::snprintf(out, sizeof out, "dev: caught up %.0f s: clock %.1f s -> %.1f s", moved, was, world_.clock());
+            said.push_back(out);
+            continue;
+        }
         else {
-            said.push_back("dev: control '" + line + "' not done (not `clock|hour|ahead N`)");
+            said.push_back("dev: control '" + line + "' not done (not `clock|hour|ahead|catchup N`)");
             continue;
         }
         char out[160];

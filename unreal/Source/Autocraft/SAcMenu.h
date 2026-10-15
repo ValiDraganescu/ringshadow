@@ -63,6 +63,12 @@ public:
 	/// S2: "World server running · since 21:40" when the world's server runs
 	/// on its own (a STOP row on the home screen); empty: none.
 	void SetServer(const FString& Line);
+	/// X2: what the world did while the pilot was away, under ENTER THE
+	/// REACH ("Your world ran 6 h 12 m." and the most telling things;
+	/// empty: none). From the server's summary file beside the save.
+	void SetAway(const FString& Ran, const FString& What);
+	const FString& AwayRan() const { return AwayRanLine; }
+	const FString& AwayWhat() const { return AwayWhatLine; }
 	const FString& ServerText() const { return ServerLine; }
 	/// The song title for the home screen's bottom-left line (empty: none).
 	void SetNowPlaying(const FString& Title);
@@ -132,6 +138,8 @@ private:
 	FAcOnMenuPick OnSoundDelegate;
 	FString ReachLine;
 	FString ServerLine;
+	FString AwayRanLine;
+	FString AwayWhatLine;
 	FString GameTitle;
 	FString GameDetail;
 	int32 Highlighted = 0;
@@ -149,6 +157,8 @@ private:
 	mutable FBox2f CardBox;
 	/// The home screen's group heading (its top left; zero: none).
 	mutable FVector2f GroupAt = FVector2f::ZeroVector;
+	/// X2: where the away lines start (zero: none shown).
+	mutable FVector2f AwayAt = FVector2f::ZeroVector;
 	/// The sliders' tracks (Settings page; `Boxes` has their rows, then BACK).
 	mutable TArray<FBox2f> Tracks;
 	mutable float PanelScale = 1.0f;

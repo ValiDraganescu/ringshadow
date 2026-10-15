@@ -78,6 +78,7 @@
 
 #include "Async/Future.h"
 
+#include <array>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -164,6 +165,10 @@ public:
 	/// True when none runs now (or none ran); false, with `Why`, when it
 	/// did not stop in time.
 	static bool StopWorldServer(const FString& File = SaveFile(), FString* Why = nullptr);
+	/// X2: the home screen's two away lines for this Mac's pilot, from the
+	/// summary file the world server writes beside the save `File`
+	/// (`ac::net::awayFilePath`). Unset: no file, no key, or nothing told.
+	static std::optional<std::array<FString, 2>> AwayLines(const FString& File = SaveFile());
 
 	/// Starts the server on the world file and connects to it. `Now`:
 	/// seconds on any steady clock (the same one `Tick` gets). False
@@ -229,7 +234,8 @@ public:
 	/// next H) or `ahead S`, or stages a scene (`ferry pad here`, …), through
 	/// its `--dev-control` file (DIR/mmo/dev-control.txt). False when the run
 	/// is neither (the game never has it) or the file was not written.
-	bool DevClock(const FString& Line);
+	/// Static: a detached server reads it with the game at home too (X2).
+	static bool DevClock(const FString& Line);
 	static bool DevControlled();
 	/// The pilot's key sent in the Join (unset: a new random one at each
 	/// start, a new pilot).
@@ -324,6 +330,8 @@ public:
 	const ac::net::ProgressMessage* Progress() const;
 	std::optional<double> Xp() const;
 	std::vector<ac::net::ProgressMessage::News> TakeProgressNews();
+	/// X2: the away report the join brought, once (the caller keeps it).
+	std::optional<ac::net::AwayReport> TakeAway();
 	/// The skill screen's asks (P5): a point into `Skill`, the last point in
 	/// it back, every point back (at the pilot's Citadel), an active into
 	/// slot `Index` (0 Q, 1 C, 2 G; unset: empty it). False, with `Why`: not

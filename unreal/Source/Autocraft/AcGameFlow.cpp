@@ -732,6 +732,17 @@ void UAcGameFlowSubsystem::RefreshMenuGame()
 		}
 	}
 	Menu->SetServer(ServerLine);
+	// X2: what the world did while the pilot was away (home only): the
+	// summary file the world server writes beside the save.
+	FString AwayRan, AwayWhat;
+	if (Menu->Mode() == EAcMenuMode::Home)
+		if (const std::optional<std::array<FString, 2>> Away = FAcMmoClient::AwayLines())
+		{
+			AwayRan = (*Away)[0];
+			AwayWhat = (*Away)[1];
+		}
+	if (AwayRan != Menu->AwayRan()) UE_LOG(LogAutocraft, Log, TEXT("menu: away: %s %s"), *AwayRan, *AwayWhat);
+	Menu->SetAway(AwayRan, AwayWhat);
 	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!bHasGame || !Sim || !Sim->IsRunning() || !Sim->Choice())
 	{
@@ -1985,7 +1996,30 @@ void UAcGameFlowSubsystem::TickJournalScreen()
 			Info.Entries.Add(E);
 		}
 	}
+	// X2: what the world did while the pilot was away, first in the list.
+	if (UAcProgressHudSubsystem* Progress = UAcProgressHudSubsystem::Get(this); Progress && Progress->Away())
+	{
+		const ac::net::AwayReport& R = *Progress->Away();
+		Info.bAway = true;
+		Info.bAwayUnread = Progress->AwayUnread();
+		Info.AwayRan = Text(ac::net::awaySummary(R)[0]);
+		if (Info.AwayRan.IsEmpty()) Info.AwayRan = FString::Printf(TEXT("Your world ran %s."), *Text(ac::net::awayRan(R.ran)));
+		auto Signed = [](int64 V) { return (V >= 0 ? TEXT("+") : TEXT("")) + Text(ac::net::awayNumber(V)); };
+		if (R.realmOre != 0 || R.realmHydrogen != 0)
+			Info.AwayRealm = FString::Printf(TEXT("The realm's wallet  %s ore  ·  %s MH"), *Signed(R.realmOre), *Signed(R.realmHydrogen));
+		// The newest first, as a log.
+		std::vector<ac::net::AwayRow> Rows = R.rows;
+		std::stable_sort(Rows.begin(), Rows.end(), [](const ac::net::AwayRow& A, const ac::net::AwayRow& B) { return A.at > B.at; });
+		for (const ac::net::AwayRow& Row : Rows)
+		{
+			Info.AwayWhen.Add(Text(ac::net::awayWhen(R, Row)));
+			Info.AwayLines.Add(Text(ac::net::awayLine(Row)));
+		}
+	}
 	JournalScreen->SetInfo(Info);
+	// Read once shown.
+	if (JournalScreen->AwayPicked())
+		if (UAcProgressHudSubsystem* Progress = UAcProgressHudSubsystem::Get(this)) Progress->AwayRead();
 }
 
 // MARK: - -AcFlowTest

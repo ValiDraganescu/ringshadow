@@ -1359,6 +1359,14 @@ void UAcProgressHudSubsystem::News(FAcMmoClient& Mmo)
 	const ac::net::ProgressMessage* P = Mmo.Progress();
 	const double Now = FPlatformTime::Seconds();
 	int64 Reached = -1;
+	// X2: what the world did while the pilot was away, before the news (its
+	// toast says the mercenaries' deliveries too).
+	if (std::optional<ac::net::AwayReport> A = Mmo.TakeAway())
+	{
+		AwayReport = std::move(A);
+		bAwayUnread = true;
+		AwayTold(Now);
+	}
 	for (const ac::net::ProgressMessage::News& N : Mmo.TakeProgressNews()) NewsItem(Mmo, N, Now, Reached);
 	const int64 Level = P ? ac::Progression::level(Mmo.Xp().value_or(P->xp)) : -1;
 	// The first progress sets where the pilot is: no banner for a resumed pilot.
@@ -1383,6 +1391,28 @@ void UAcProgressHudSubsystem::News(FAcMmoClient& Mmo)
 		// A new world, a respec of the save: start again from here.
 		Shown = Level;
 	}
+}
+
+void UAcProgressHudSubsystem::AwayTold(const double Now)
+{
+	if (!AwayReport) return;
+	const ac::net::AwayReport& R = *AwayReport;
+	AwayReportShownAt = Now;
+	const std::array<std::string, 2> Two = ac::net::awaySummary(R, 1);
+	const int32 More = FMath::Max(0, int32(R.rows.size()) - 1);
+	FString Sub = Text(Two[0]);
+	if (!R.rows.empty()) Sub += TEXT("  ·  ") + Text(ac::net::awayLine(ac::net::awayOrdered(R.rows).front()));
+	if (More > 0) Sub += FString::Printf(TEXT("  ·  %d more"), More);
+	Sub += TEXT("  ·  L JOURNAL");
+	if (Hud) Hud->Toast(TEXT("WHILE YOU WERE AWAY"), Sub, FAcHudStyle::Srgb(1.0, 0.6, 0.22), Now);
+	const std::string Voice = ac::net::awayVoice(R);
+	if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this))
+	{
+		if (!Voice.empty()) Audio->SayRadio(Text(Voice));
+		else Audio->Rules().News(FAcAudioRules::ENews::Paid);
+	}
+	UE_LOG(LogAutocraft, Log, TEXT("progress: away %s, %d rows, realm %+lld ore %+lld MH, KSTR %s"), *Text(ac::net::awayRan(R.ran)),
+		int32(R.rows.size()), (long long)R.realmOre, (long long)R.realmHydrogen, Voice.empty() ? TEXT("none") : *Text(Voice));
 }
 
 void UAcProgressHudSubsystem::PreviewNews(const ac::net::ProgressMessage::News& N)
@@ -1543,9 +1573,14 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		{
 			AwayOre = N.value;
 			AwayAt = Now;
-			Hud->Toast(TEXT("WHILE YOU WERE AWAY"), FString::Printf(TEXT("Mercs delivered %s ore"), *FText::AsNumber(N.value).ToString()), Orange,
-				Now);
-			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
+			// X2: the away report's toast says it already (its deliveries by
+			// mercenary), with KSTR's welcome.
+			if (AwayReportShownAt != Now)
+			{
+				Hud->Toast(TEXT("WHILE YOU WERE AWAY"), FString::Printf(TEXT("Mercs delivered %s ore"), *FText::AsNumber(N.value).ToString()),
+					Orange, Now);
+				if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
+			}
 		}
 		else if (N.id == "left")
 		{
