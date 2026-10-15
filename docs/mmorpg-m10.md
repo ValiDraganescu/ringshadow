@@ -25,6 +25,9 @@ Follows M9 (a living frontier), which closes with R2 and K3's leftovers.
   and resolution, the key card. A packaged first run must need nothing else.
 - Soaks measure only the background server's idle path, which is what runs
   when the game is closed: never AIs playing a game.
+- Scarcity (user, 2026-10-15): at most one or two ore veins and one MH
+  well a region, so a fallen star is worth the hunt and a pilot moves on when
+  a region runs dry. Veins regrow slowly (manager) so the world never dies.
 - Two workers at a time, on files that don't overlap.
 
 ## Tasks
@@ -36,6 +39,7 @@ Follows M9 (a living frontier), which closes with R2 and K3's leftovers.
 | S4 | Realm standings: ore delivered, bugs felled, waves held, buildings raised, per pilot (humans and frontier) over the realm week; a STANDINGS list on the REALM tab and a line in the map tooltips; the weekly reset with a KSTR line ("This week's top hauler: Vesper, 18,400 ore"); saved | P1, R2 | |
 | N4 | The hunt: at level 20 the goals lead to "bring her down"; a human calls THE HUNT on the REALM tab (free, once a world day); frontier defenders and fighting mercenaries gather at the nest's 30-cell ring over 2 min, then go in with the pilot; KSTR narrates the gathering, the roar and the fall; her N3 pay and her return in three world days stand; a flow test and pictures | N3, P1 | |
 | U2 | Settings: music, voice and effects volumes (the radio's duck rules kept), window or full screen and resolution, the key card, the lag simulator's switch; saved in the game's config; the pause menu's SETTINGS opens it; a packaged first run checked from the home screen to the field and back with hidden_run --app | K3 | |
+| E1 | Scarcity (user, 2026-10-15: "resources are too abundant"): each region holds at most 1–2 ore veins (a vein: a tight cluster of 3–5 mounds) and one MH well, today's 36–58 deposits and 5–6 wells gone; a region's ore by level (about 6,000–8,000 at level 1, 10,000–12,000 at 2, 15,000–20,000 at 3); a canyon's prize is 1–2 rich veins round its well; veins regrow slowly (a tenth a world day) so the world never dies; starfalls about one a world day, 2,000–3,000 ore, the richest thing around, their state saved; the region tool validates the limits; maps and previews rebaked; frontier pilots and mercenaries mine the same veins; an existing world adopts the new veins on its next load (buildings and wells kept); B2's bench re-run on the new start region and balance.md updated; shot sets restaged | Z4, B2 | |
 | Q3 | Idle soak: the background server alone for 2 h of wall clock at the 2 Hz idle tick with the frontier's booked work, mercenaries and canyons; memory, save size and tick time flat; the 24 h catch-up cap exercised; fixes | P1, K3 | |
 
 Done when: in a hidden run two clients fight a wave at The Fork together

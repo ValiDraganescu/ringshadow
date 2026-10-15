@@ -742,3 +742,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D numbering (manager): W5 protocol 30; X2/starfalls take protocol 31 and schema 23 if needed.
 - I cause (user's frozen world): the sky carried all 61 starfalls in every snapshot part (~1.15 KB each, 16 parts); the 65 KB/s budget let one part out per tick, so no whole snapshot arrived after fall 61; the client froze at 12:24. Not a death, not lost buildings.
 - T fix (wt1): the snapshot lists falls coming or landed in the last 30 s plus the region's craters, at most 24; 2 parts on the user's save; tested.
+- D E1 (user): resources too abundant; at most 1-2 ore veins and one MH well a region; starfalls worth the hunt.
+- D E1 (manager): veins regrow a tenth a world day; starfalls ~1 a day at 2,000-3,000 ore; existing worlds adopt the new veins on load.
