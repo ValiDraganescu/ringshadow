@@ -701,3 +701,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N F2 map: cause: the realm has one Landing Pad (Sorrel's, where the pilot stands); other pads are regions' own; the click says nothing. Fix in progress.
 - I hidden runs' servers append to the user's server.log; wt1 fixes with the map.
 - T web: balance post live (b568f2c); analytics step 1 merged (1bfc29f).
+- T F2 map fix 98d9b5c: an unpickable pad says why (only one pad, undiscovered, no pad, region's own); picks logged.
+- T hidden runs' servers log beside their own save (98d9b5c); the user's server.log untouched.
