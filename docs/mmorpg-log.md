@@ -736,3 +736,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N W4 crossing: worst frame 31-37 ms -> 13.9-14.4 at 1x; pace +-2%; checks count input ticks; 5-of-5 pending a quiet Mac.
 - I packaged Development launches die 2/35 on an engine memory-tracker start-up race; Shipping unaffected; hidden_run retries.
 - I respawn (user): a Prospector that falls while handed back is never respawned (respawns() needs p.unit); the pilot is stuck; wt1 fixing before X2.
+- I re-entry (user): the second entry into the mode in one editor process shows no world (0 units, no buildings) while the server sends 65 KB/s; the save is whole; the respawn path is fine (tests). wt1 on it.
+- I starfalls: all land again at each server start (ids from 1); their state is unsaved; later.
