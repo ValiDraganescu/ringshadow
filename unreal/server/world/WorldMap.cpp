@@ -554,7 +554,7 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
         }
     }
     if (!from) return std::string("Not at a Landing Pad: stand on one to call the Dropship");
-    if (from->building == target->building) return "At " + target->name + " already";
+    if (from->region == target->region && from->building == target->building) return "At " + target->name + " already";
     // The flight's MH (F1): a base and a share a step across the grid; half
     // from a Spacedock, nothing with Ringwalker (F2); half again while the
     // realm's Beacon burns (R2).

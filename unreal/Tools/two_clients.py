@@ -77,8 +77,18 @@ def main() -> None:
     headless = a.headless and not a.shots
     deadline = time.time() + a.minutes * 60
 
-    def wait(proc: subprocess.Popen, name: str) -> int:
+    def wait(proc: subprocess.Popen, name: str, done: Path | None = None) -> int:
+        # `done`: the game's last mark. The engine's teardown can hang after
+        # the flow ends; 20 s past the mark it is killed and counts as ended.
+        done_at = None
         while proc.poll() is None:
+            if done is not None and done_at is None and done.exists():
+                done_at = time.time()
+            if done_at is not None and time.time() - done_at > 20:
+                hr.say(f"{name}: still closing 20 s after {done.name}, killed")
+                proc.kill()
+                proc.wait()
+                return 0
             if time.time() > deadline:
                 hr.say(f"{name}: past {a.minutes:g} min, killed")
                 proc.kill()
@@ -90,7 +100,7 @@ def main() -> None:
 
     game_a = launch(root, "A", flags_a, headless, a.res, a.level)
     game_b = launch(root, "B", flags_b, headless, a.res, a.level)
-    codes = {"B": wait(game_b, "B")}
+    codes = {"B": wait(game_b, "B", sync / "B.quit")}
     # B left mid-wave on purpose: its game again, its own save and key.
     if (sync / "B.quit").exists():
         game_b2 = launch(root, "B2", flags_b + ["-AcMmoTwoBack", f"-AcSaveDir={root / 'B' / 'save'}"], headless, a.res, a.level)

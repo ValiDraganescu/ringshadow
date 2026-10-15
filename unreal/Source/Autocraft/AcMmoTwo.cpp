@@ -37,7 +37,9 @@
 #include "AcPilotPawn.h"
 #include "AcProgressHud.h"
 #include "AcSimSubsystem.h"
+#include "AcSpace.h"
 #include "AcTerrain.h"
+#include "AcWorldRenderer.h"
 #include "SAcCitadelScreen.h"
 #include "SAcWorldMap.h"
 
@@ -91,6 +93,7 @@ namespace
 		double DescendSeen = -1;
 		double ToastSeen = -1;
 		double GoneAt = -1;
+		ac::Vec2 ForkAt{0, 0};
 		double LastNow = 0;
 		bool bSent = false;
 		bool bShotStage[8] = {};
@@ -326,6 +329,11 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 	{
 	case 0:
 	{
+		// The game ticking first: a join sent while the engine still loads
+		// waits out its welcome before a packet leaves.
+		static uint64 FirstFrame = 0;
+		if (FirstFrame == 0) FirstFrame = GFrameCounter;
+		if (GFrameCounter < FirstFrame + 60) return;
 		if (Sim && Sim->IsMmo()) StopMmo();
 		Two = FTwo();
 		FParse::Value(FCommandLine::Get(), TEXT("AcMmoTwo="), Two.Role);
@@ -391,7 +399,10 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 		const ac::Unit* O = OtherUnit();
 		// Turned a little off it: the chase camera sits behind this one's
 		// own Prospector, which would hide the other one standing dead ahead.
-		if (O) Stop(Face(O->position) + (bPictures ? 0.35 : 0.0));
+		// A short step toward it first: the chase camera swings behind a unit
+		// that moves (turned on the spot, it keeps the seat's view).
+		if (O && bPictures && Since() < 0.8 && ac::distance(U->position, O->position) > 2.5) Pilot->SetTestInput(FVector2D(0, -1), Face(O->position) + 0.35);
+		else if (O) Stop(Face(O->position) + (bPictures ? 0.35 : 0.0));
 		if (!(O && Since() > 3.0)) return void(TimedOut(TEXT("the other's Prospector here")));
 		const ac::net::Sky::Human* H = OtherHuman();
 		Say(H && H->unit == O->id && !H->ferry, FString::Printf(TEXT("the sky names %s driving #%lld here"), *Two.OtherCallsign, (long long)O->id));
@@ -399,6 +410,13 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 		{
 			if (!Tagged(Two.OtherCallsign) && Since() < 10.0) return;
 			Say(Tagged(Two.OtherCallsign), FString::Printf(TEXT("the tag \"%s\" over its Prospector, %.1f cells off"), *Two.OtherCallsign.ToUpper(), ac::distance(U->position, O->position)));
+			if (const UAcWorldRenderer* Rn = UAcWorldRenderer::Get(this))
+			{
+				const TConstArrayView<FTransform> Parts = Rn->PartWorld(O->id);
+				const ac::Vec2 Drawn = Parts.Num() ? AcSpace::ToSim(Parts[0].GetLocation()) : ac::Vec2(-999, -999);
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: mmotwo %s: the other's #%lld in the mirror at %.1f,%.1f (task %d), drawn at %.1f,%.1f, this one at %.1f,%.1f"), *Two.Role,
+					(long long)O->id, O->position.x, O->position.y, int32(O->task), Drawn.x, Drawn.y, U->position.x, U->position.y);
+			}
 		}
 		Shoot(FString::Printf(TEXT("w5-01-%s-sees-other"), R), FString::Printf(TEXT("%s's Prospector in the realm's blue, its tag over it"), *Two.OtherCallsign));
 		return;
@@ -926,6 +944,7 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 		if (!(Seated() && Here == TEXT("cold-fork") && GroundReady() && Since() > 3.0)) return void(TimedOut(TEXT("at The Fork"), 120));
 		Two.Ore = Ore;
 		Two.Hydrogen = Hydrogen;
+		if (U) Two.ForkAt = U->position;
 		SyncMark(TEXT("fork"));
 		Advance();
 		return;
@@ -943,9 +962,18 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 		Advance();
 		return;
 	case 31:
-		// Both strike wave 1's bugs.
-		Fight();
-		if (Two.Struck > 4.0 && !Two.bSent)
+		// Both strike wave 1's bugs; each, its strikes in, steps back to the
+		// open ground it came on while the other's come.
+		if (!Two.bSent) Fight();
+		else if (U && Pilot)
+		{
+			Pilot->Press(false);
+			if (ac::distance(U->position, Two.ForkAt) > 1.5) Pilot->SetTestInput(FVector2D(0, -1), Face(Two.ForkAt));
+			else Stop(Pilot->Yaw());
+		}
+		// Each one's strikes in (the bugs fell a Prospector that fights on
+		// long, at the pictures' pace).
+		if (Two.Struck > 1.5 && !Two.bSent)
 		{
 			Two.bSent = true;
 			SyncMark(TEXT("struck"), FString::Printf(TEXT("%.1f"), Two.Struck));
@@ -953,7 +981,7 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 		if (bA && Two.bSent && SyncSeen(TEXT("struck")) && Since() > 2.0)
 		{
 			if (Pilot) Pilot->Press(false);
-			Say(Mmo->DevClock(TEXT("canyon beat")), TEXT("wave 1 beaten (both struck it)"));
+			Say(Mmo->DevClock(TEXT("canyon beat\nbrood clear")), TEXT("wave 1 beaten (both struck it), its bugs gone"));
 			Advance();
 			return;
 		}
@@ -1032,7 +1060,9 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 		{
 			Two.bSent = true;
 			Two.QuitSeen = Now;
-			Say(Mmo->DevClock(TEXT("canyon beat")), TEXT("wave 2 beaten with B away"));
+			// One control file read: the beat and the next wave held off (two
+			// writes in a tick keep only the second).
+			Say(Mmo->DevClock(TEXT("canyon beat\nbrood clear\ncanyon break 600")), TEXT("wave 2 beaten with B away, its bugs gone, the next held off"));
 		}
 		if (Two.bSent && !OtherHuman() && !Two.bOtherGone)
 		{
@@ -1040,8 +1070,13 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 			Two.GoneAt = Now;
 			Say(true, FString::Printf(TEXT("B gone from the sky %.1f s after it quit; the server carries on (%s)"), Now - Two.QuitSeen, *Where()));
 		}
-		// A drives on: a few cells off where B left (B comes back there).
-		if (Two.bOtherGone && Pilot && Now - Two.GoneAt < 1.5) Pilot->SetTestInput(FVector2D(0, -1), Pilot->Yaw());
+		// A drives on: back toward the open ground it came to The Fork on, a
+		// few cells off where B left (B comes back there).
+		if (Two.bOtherGone && Pilot && U && Now - Two.GoneAt < 2.5 && ac::distance(U->position, Two.ForkAt) > 1.5)
+		{
+			Pilot->Press(false);
+			Pilot->SetTestInput(FVector2D(0, -1), Face(Two.ForkAt));
+		}
 		else Fight();
 		if (Two.bOtherGone && OtherUnit() && SyncSeen(TEXT("back")))
 		{

@@ -362,6 +362,29 @@ TEST(world_closed_edges_stop_it) {
     }
 }
 
+// Building ids count per region: a Landing Pad here and the target pad in
+// another region may share one, and the flight between them still goes (W5:
+// "At Landing Pad 1 already" once refused it).
+TEST(world_flight_between_pads_with_one_id) {
+    WorldParams fuel;
+    fuel.startHydrogen = 200;
+    fuel.devSeen = {"cold-fork"};
+    WorldMap w(first(), fuel);
+    w.join(me);
+    const size_t fork = *w.regionNamed("cold-fork");
+    const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
+    GameState& there = w.region(fork).simulation().state;
+    there.nextID = std::max(there.nextID, w.start().simulation().state.nextID);
+    w.start().simulation().state.nextID = there.nextID;
+    const auto here = w.devLandingPad(first().start, pad + Vec2(0, 10));
+    const auto far = w.devLandingPad(fork, first().regions[fork].built.pads[0].at + Vec2(0, 10));
+    ASSERT_TRUE(here.has_value() && far.has_value());
+    EXPECT_EQ(*here, *far);
+    put(w, me, w.start().places()->regionAt(padIn(w, first().start)), 0);
+    EXPECT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
+    EXPECT_TRUE(w.flying(me));
+}
+
 // A flight's MH (F1, docs/prospector-progression.md "MH sinks"): a base and
 // a share a grid step, taken at the call; refused with the price and the
 // wallet when it is short, nothing taken and nothing flown (F2: between
