@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register · Ringshadow admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#030912">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/admin/admin.js" defer></script>
+</head>
+<body data-page="register">
+  <main class="door">
+    <a class="brand" href="/"><img src="/assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
+    <h1>The first admin</h1>
+    <p>This page is open only until the first admin exists. The setup code is the one set on the Worker.</p>
+    <form id="register" novalidate>
+      <label>Setup code <input name="code" type="text" autocomplete="off" spellcheck="false" required></label>
+      <label>Email <input name="email" type="email" autocomplete="username" required></label>
+      <label>Password <span class="hint">at least 12 characters, not your email</span>
+        <input name="password" type="password" autocomplete="new-password" minlength="12" required></label>
+      <label>Password again <input name="again" type="password" autocomplete="new-password" minlength="12" required></label>
+      <button type="submit">Register</button>
+      <p class="msg" role="status" aria-live="polite"></p>
+    </form>
+  </main>
+</body>
+</html>

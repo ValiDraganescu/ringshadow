@@ -223,11 +223,18 @@ page for the zone stays as a second opinion, with its 24-hour window.
   allows 10 ms of CPU per request, so the count is measured in step 3 and set
   to what fits with margin (Cloudflare's own example uses 100,000). At least
   12 characters, checked against the email.
-- **Sessions.** A 32-byte random id in D1, 30 days, carried in a cookie
-  `admin_session`, `HttpOnly; Secure; SameSite=Strict; Path=/`. The cookie is
+- **Sessions.** A 32-byte random id, 30 days, carried in a cookie
+  `admin_session`, `HttpOnly; Secure; SameSite=Strict; Path=/`. D1 keeps the
+  id's SHA-256, so the table alone opens nothing. The cookie is
   only ever set for an admin, so readers still get none. Logout deletes the
   row. Every API write needs the `Origin` header to match the site.
-- **Lockout.** Five failed logins on an email or a /24 lock it for 15 minutes.
+- **Lockout.** Five failed logins on an email or a /24 lock it for 15 minutes
+  (an IPv6 address counts by its /64). An unknown email costs the same hash
+  as a known one, so timing doesn't tell which emails exist.
+- **One-time passwords.** An admin added from inside gets a generated
+  20-character password, shown once, and `admins.must_change_pw = 1`: until
+  they choose their own, the API answers only `me`, `password`, `logout`
+  and `signout-all`.
 
 ### Sections
 
@@ -304,14 +311,18 @@ Each step ends in a deploy, since every step leaves the site working as before.
    Worker's requests.
 2. **Server-side counting.** The dataset binding, the point writer, the seed
    rules as a JS table for now. Done when a `curl -A GPTBot` of a post shows
-   up in the SQL within a minute labelled OpenAI, and an image fetch writes
-   nothing.
+   up in the SQL within about a minute (measured 46 to 67 s: Analytics
+   Engine's ingestion) labelled OpenAI, and an image fetch writes nothing.
 3. **D1 and the admin's door.** The database, migration 0001, the register
    page while empty, login, sessions, lockout, logout, the gated `/admin/`
-   shell with nothing in it. Done when the first admin is registered, the
-   register route is gone, a wrong password five times locks for 15 minutes,
-   the PBKDF2 cost is measured under the CPU limit, and a reader's response
-   carries no `Set-Cookie`.
+   shell, and the Admins section in it (the door's own management, so the
+   developer can change the password right after registering). Done when
+   the first admin is registered, the register route is gone, a wrong
+   password five times locks for 15 minutes, the PBKDF2 cost is measured
+   under the CPU limit, a reader's response carries no `Set-Cookie`, a
+   second admin is added with a one-time password that must be changed on
+   first login, an admin's own password is changed, and "sign out
+   everywhere" clears every session row.
 4. **The analytics section, server hits first.** The Analytics SQL binding,
    the stats API, the Agents section with labels, rules and the Unlabelled
    table, rules moved from the JS table into D1 with the migration's seed.

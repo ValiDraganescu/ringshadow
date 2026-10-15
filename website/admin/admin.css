@@ -1,0 +1,101 @@
+/* The admin's look: the site's night and cyan (ring.css), plainer, for work. */
+
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/assets/fonts/BarlowCondensed-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Exo 2";
+  src: url("/assets/fonts/Exo2-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --night: #030912;
+  --night-2: #0a1728;
+  --night-3: #13263b;
+  --ink: #ebf7ff;
+  --soft: #a9c3d4;
+  --cyan: #59d9ff;
+  --ice: #ccf2ff;
+  --amber: #ffb333;
+  --red: #ff6b5a;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --text: "Exo 2", system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--text);
+}
+[hidden] { display: none !important; }
+a { color: var(--cyan); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1; margin: 0; }
+h1 { font-size: 44px; }
+h2 { font-size: 34px; margin-bottom: 20px; }
+h3 { font-size: 24px; margin-bottom: 12px; }
+p { margin: 0 0 12px; max-width: 62ch; color: var(--soft); }
+
+.brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none;
+  font: 600 22px/1 var(--display); letter-spacing: 0.08em; }
+
+/* The door: sign in and register. */
+.door { max-width: 420px; margin: 0 auto; padding: 48px 16px; display: grid; gap: 22px; }
+
+form { display: grid; gap: 14px; max-width: 420px; }
+label { display: grid; gap: 6px; font-size: 14px; color: var(--soft); }
+.hint { font-size: 13px; color: var(--soft); opacity: 0.8; }
+input {
+  font: inherit; color: var(--ink); background: var(--night-2);
+  border: 1px solid var(--night-3); border-radius: 0; padding: 10px 12px; min-width: 0;
+}
+input:focus { border-color: var(--cyan); outline: none; }
+button {
+  font: 600 18px/1 var(--display); letter-spacing: 0.04em; cursor: pointer;
+  color: var(--night); background: var(--cyan); border: 0; border-radius: 0; padding: 12px 18px;
+  justify-self: start;
+}
+button:disabled { opacity: 0.6; cursor: wait; }
+button.quiet { background: transparent; color: var(--soft); padding: 8px 10px; }
+button.quiet:hover { color: var(--ink); }
+button.danger { background: var(--red); }
+.msg { min-height: 1.5em; margin: 0; color: var(--amber); }
+.msg.good { color: var(--cyan); }
+
+/* The shell. */
+.bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+  padding: 14px 16px; background: var(--night-2); border-bottom: 1px solid var(--night-3);
+}
+.tag { font: 600 15px/1 var(--display); letter-spacing: 0.12em; color: var(--cyan); }
+.sections { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+.sections a { color: var(--soft); text-decoration: none; padding: 6px 10px; font-weight: 600; }
+.sections a[aria-current="page"] { color: var(--ink); background: var(--night-3); }
+.who { color: var(--soft); font-size: 14px; overflow-wrap: anywhere; }
+
+.shell { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+.shell section + section { margin-top: 48px; }
+.part { margin-top: 36px; }
+.part:first-of-type { margin-top: 0; }
+
+.list { width: 100%; border-collapse: collapse; font-size: 15px; }
+.list th { text-align: left; font-weight: 600; color: var(--soft); font-size: 13px; letter-spacing: 0.04em; }
+.list th, .list td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--night-3); overflow-wrap: anywhere; }
+.otp { color: var(--ink); background: var(--night-2); padding: 12px 14px; max-width: 62ch; }
+.otp code { color: var(--cyan); font-size: 17px; user-select: all; }
+
+@media (max-width: 640px) {
+  .list thead { display: none; }
+  .list tr { display: grid; grid-template-columns: 1fr 1fr; padding: 8px 0; border-bottom: 1px solid var(--night-3); }
+  .list td { border: 0; padding: 2px 8px 2px 0; }
+  .list td:first-child { grid-column: 1 / -1; color: var(--ink); }
+}

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ringshadow admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#030912">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/admin/admin.js" defer></script>
+</head>
+<body data-page="shell">
+  <header class="bar">
+    <a class="brand" href="/"><img src="/assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
+    <span class="tag">ADMIN</span>
+    <nav class="sections" aria-label="Sections">
+      <a href="#admins" aria-current="page">Admins</a>
+    </nav>
+    <span class="who"></span>
+    <button id="signout" type="button" class="quiet">Sign out</button>
+  </header>
+
+  <main class="shell">
+    <section id="must-change" hidden>
+      <h2>Choose your own password</h2>
+      <p>You signed in with a one-time password. Choose your own before anything else.</p>
+    </section>
+
+    <section id="admins" hidden>
+      <h2>Admins</h2>
+
+      <div class="part" id="admin-list">
+        <table class="list">
+          <thead><tr><th>Email</th><th>Since</th><th>Last sign-in</th><th>Password</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="part" id="admin-add">
+        <h3>Add an admin</h3>
+        <form id="add" novalidate>
+          <label>Email <input name="email" type="email" autocomplete="off" required></label>
+          <button type="submit">Add</button>
+          <p class="msg" role="status" aria-live="polite"></p>
+        </form>
+        <p class="otp" hidden>One-time password for <span class="otp-email"></span>: <code class="otp-pw"></code><br>
+          It shows only now. Send it to them; they choose their own at first sign-in.</p>
+      </div>
+
+      <div class="part" id="own-password">
+        <h3>Your password</h3>
+        <form id="password" novalidate>
+          <label>Current password <input name="current" type="password" autocomplete="current-password" required></label>
+          <label>New password <span class="hint">at least 12 characters, not your email</span>
+            <input name="next" type="password" autocomplete="new-password" minlength="12" required></label>
+          <label>New password again <input name="again" type="password" autocomplete="new-password" minlength="12" required></label>
+          <button type="submit">Change password</button>
+          <p class="msg" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="part" id="everywhere">
+        <h3>Sign out everywhere</h3>
+        <p>Ends every session: every admin, every device, this one too.</p>
+        <button id="signout-all" type="button" class="danger">Sign out everywhere</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

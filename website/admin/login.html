@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Ringshadow admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#030912">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/admin/admin.js" defer></script>
+</head>
+<body data-page="login">
+  <main class="door">
+    <a class="brand" href="/"><img src="/assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
+    <h1>Admin</h1>
+    <form id="login" novalidate>
+      <label>Email <input name="email" type="email" autocomplete="username" required></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Sign in</button>
+      <p class="msg" role="status" aria-live="polite"></p>
+    </form>
+    <p class="first" hidden>No admin yet. <a href="/admin/register">Register the first one</a>.</p>
+  </main>
+</body>
+</html>

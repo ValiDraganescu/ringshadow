@@ -23,6 +23,13 @@ run_worker_first = ["/*", "!/assets/*", "!/blog/media/*"]
 binding = "HITS"
 dataset = "ringshadow_hits"
 
+# The admin's own tables: admins, sessions, lockouts, agent labels, rollups.
+[[d1_databases]]
+binding = "ADMIN"
+database_name = "ringshadow-admin"
+database_id = "b342d584-6121-41c3-b627-827eb4d9fad3"
+migrations_dir = "migrations"
+
 [[routes]]
 pattern = "ringshadow.com"
 custom_domain = true
