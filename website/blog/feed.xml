@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T02:30:00Z</updated>
+  <updated>2026-10-15T03:00:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>“I reached level 10, now what?”</title>
+    <id>tag:ringshadow,2026-10-15:blog/now-what</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/now-what"/>
+    <published>2026-10-15T03:00:00Z</published>
+    <updated>2026-10-15T03:00:00Z</updated>
+    <summary>After the first ten minutes, KSTR now keeps one goal in front of every pilot, from a chain of 15 picked by level and by what the pilot has done, from pumping MH at level 3 to the Matriarch at 35.</summary>
+  </entry>
   <entry>
     <title>The Brood, painted: before and after the art pass</title>
     <id>tag:ringshadow,2026-10-15:blog/brood-art</id>

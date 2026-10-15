@@ -149,7 +149,7 @@ Buildings become the realm's, and the Prospector gets enemies. Parts have landed
 
 Buildings belong to the realm, the Citadel taxes, sells and sends you on missions, and alien bugs swarm the places worth being. Now the realm has guns to hold them off, and the Brood has its queen.
 
-- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors, the satellite map, the Citadel's turrets, the AA tower and the gatling gun, turret upgrades, the Matriarch at her nest, a ground for each region with walls and passages you walk through without a seam, the art pass on the Brood and the guns
+- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors, the satellite map, the Citadel's turrets, the AA tower and the gatling gun, turret upgrades, the Matriarch at her nest, a ground for each region with walls and passages you walk through without a seam, the art pass on the Brood and the guns, a goal from the radio after the first ten minutes
 - Then: outlines that follow the land, canyon defence in waves, the Dropship between landing pads
 
 The terminator · next

@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## “I reached level 10, now what?”
+
+15 October 2026 · M8 · 6 pictures
+
+The radio now keeps one goal in front of every pilot, from a chain of 15 picked by level and by what you've done, from pumping MH to the Matriarch.
+
+Read it: https://ringshadow.com/blog/now-what
+
 ## The Brood, painted: before and after the art pass
 
 15 October 2026 · M8 · 12 pictures
