@@ -4290,7 +4290,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			return;
 		}
 		K2Target = Taken->at;
-		Route({FVector2D(Taken->at.x, Taken->at.y)});
+		// (The way there is found along the walking grid: the next phase.)
+		Shots.Route.Reset();
+		Shots.RouteAt = 0;
 		Advance();
 		return;
 	}
@@ -4303,7 +4305,22 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		}
-		if (Drive() == 1) Route({FVector2D(K2Target.x, K2Target.y)});
+		if (Drive() == 1)
+		{
+			// Along the walking grid, as into the ring.
+			TArray<FVector2D> Way;
+			if (const ac::Simulation& Ms = M->simulation(); Ms.nav && U)
+			{
+				const auto P = Ms.nav->path(U->position, K2Target, 12.0);
+				if (P)
+					for (const ac::Vec2 Q : *P) Way.Add(FVector2D(Q.x, Q.y));
+			}
+			if (Way.IsEmpty()) Way.Add(FVector2D(K2Target.x, K2Target.y));
+			Shots.Route = Way;
+			Shots.RouteAt = 0;
+			Shots.StallAt = U ? FVector2D(U->position.x, U->position.y) : FVector2D::ZeroVector;
+			Shots.StallSince = Now;
+		}
 		if (Now - Shots.StallSince > 4.0) Stalled(TEXT("to the mission's place"));
 		return;
 	}
@@ -4336,7 +4353,21 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		}
-		if (Drive() == 1) Route({FVector2D(K2Target.x, K2Target.y)});
+		if (Drive() == 1)
+		{
+			// Along the walking grid (a ridge or a wall may stand on the
+			// straight line) to free ground inside the ring (its centre may be
+			// a deposit, solid); straight at the centre only with no way.
+			TArray<FVector2D> Way;
+			if (const ac::Simulation& Ms = M->simulation(); Ms.nav && U)
+				if (const auto P = Ms.nav->path(U->position, K2Target, FMath::Max(0.6, Taken->radius * 0.4 - 0.4)))
+					for (const ac::Vec2 Q : *P) Way.Add(FVector2D(Q.x, Q.y));
+			if (Way.IsEmpty()) Way.Add(FVector2D(K2Target.x, K2Target.y));
+			Shots.Route = Way;
+			Shots.RouteAt = 0;
+			Shots.StallAt = U ? FVector2D(U->position.x, U->position.y) : FVector2D::ZeroVector;
+			Shots.StallSince = Now;
+		}
 		if (Now - Shots.StallSince > 4.0) Stalled(TEXT("into the mission's ring"));
 		return;
 	}

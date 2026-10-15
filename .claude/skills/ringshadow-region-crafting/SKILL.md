@@ -39,6 +39,27 @@ Run from the repo root; `T=unreal/server/build/autocraft-region`.
 8. **Report**: the file path, the final preview's path, and `$T build FILE`'s
    summary (ore, MH, open ground).
 
+## Borders and passages (W4)
+
+A world's region is never a rectangle: its `border` outlines the playable
+land and walls rise outside it ([docs/regions.md](../../../docs/regions.md),
+"border"). Every opening on a shared edge needs the same span and floor
+level in both files (`{"span": [a, b], "level": n}`), and the outline must
+reach the edge round it.
+
+1. Pick each passage where both neighbours' ground is level:
+   `$T edges FILE --depth 8` prints a level digit every 2 cells along each
+   edge (`#` a cliff) for both files.
+2. Draw the outline 6–20 cells in from the rectangle, irregular, out to
+   the edge round each passage, clear of everything placed (a pad, a site,
+   ore and wells need a cell inside it).
+3. `$T validate` both files, then load the world (`make -C unreal/server
+   test FILTER=world_load`, or start the server on it): it checks that the
+   passages line up and the ground meets along every shared edge.
+4. Preview and look: the dotted outline, the cyan passages with their L
+   levels, the walls (level 3–4 colour) outside.
+5. Rebake the satellite map (`uv run unreal/Tools/bake_map.py`).
+
 ## Pitfalls
 
 - Positions are cells from the **north-west corner**, z grows **south**
@@ -64,3 +85,7 @@ Run from the repo root; `T=unreal/server/build/autocraft-region`.
   spawn south of the pad (or a row off) so both names read.
 - `build`'s "main open area" a point under "open ground" is usually a
   ridge top with no ramp: a wall, not a cut-off place.
+- A border's outline must not cross itself; with big lobes, cut the corners
+  (the outline's points drop inside a neighbouring side's wall band).
+- Walls are not ground: nothing stands or lands on them. A thing left
+  outside the outline is a problem, not a hidden prize.
