@@ -22,6 +22,9 @@
 
 namespace
 {
+	/// W5: the joined server's dev control file (the joining game's dev clock
+	/// writes beside it, its `.joined`); empty: the game's own server.
+	FString GJoinedControl;
 	TAutoConsoleVariable<FString> CVarMmoLag(TEXT("ac.MmoLag"), TEXT(""),
 		TEXT("Lag on the MMORPG test's connection, each way: \"delay_ms jitter_ms loss_pct\" (e.g. 150 20 5); empty or 0: none. ")
 		TEXT("-AcMmoLag=150,20,5 sets it at the start."),
@@ -97,7 +100,7 @@ bool FAcMmoClient::DevClock(const FString& Line)
 	if (!DevControlled()) return false;
 	// Written aside, then moved in: the server never reads half a line.
 	// W5: a joining game writes beside the server's own file (its `.joined`).
-	const FString File = bJoined && !JoinedControl.IsEmpty() ? JoinedControl + TEXT(".joined") : FPaths::Combine(Directory(), TEXT("dev-control.txt"));
+	const FString File = !GJoinedControl.IsEmpty() ? GJoinedControl + TEXT(".joined") : FPaths::Combine(Directory(), TEXT("dev-control.txt"));
 	const FString Aside = File + TEXT(".new");
 	if (!FFileHelper::SaveStringToFile(Line + TEXT("\n"), *Aside) || !IFileManager::Get().Move(*File, *Aside, true, true)) return false;
 	UE_LOG(LogAutocraft, Display, TEXT("mmo: dev clock: %s"), *Line);
@@ -292,6 +295,7 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	bJoined = false;
 	bShared = false;
 	JoinedControl.Reset();
+	GJoinedControl.Reset();
 	if (FParse::Value(FCommandLine::Get(), TEXT("AcMmoJoin="), JoinFile) && !JoinFile.IsEmpty())
 	{
 		bJoined = true;
@@ -534,6 +538,7 @@ bool FAcMmoClient::ReadJoinFile()
 	ServerPort = uint16(Port);
 	Token = Utf8(Lines[1].TrimStartAndEnd());
 	JoinedControl = Lines.Num() > 2 ? Lines[2].TrimStartAndEnd() : FString();
+	GJoinedControl = JoinedControl;
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: joining the world server on port %d"), Port);
 	return true;
 }
