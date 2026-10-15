@@ -604,3 +604,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I Corner turrets still small from the usual camera.
 - D Manager: L1 = a KSTR NEXT-goal thread after O1, one at a time, never blocking.
 - T L1 briefed to wt2 (protocol 25).
+- I W4 regression: black slab in Slag Pockets near the nest (n1b after-final n3-02) → W4b.
