@@ -168,6 +168,17 @@ struct SavedCanyon {
     bool operator==(const SavedCanyon&) const = default;
 };
 
+/// R2: one kind of realm project (schema 22): its slug
+/// (`RealmProject::slug`), how many the realm started, and the one running
+/// until world clock `ends` (0: none) and who started it.
+struct SavedProject {
+    std::string kind;
+    int64_t runs = 0;
+    double ends = 0;
+    std::string by;
+    bool operator==(const SavedProject&) const = default;
+};
+
 struct WorldSave {
     std::vector<SavedRegion> regions;
     std::vector<SavedPilot> pilots;
@@ -191,6 +202,8 @@ struct WorldSave {
     /// The frontier pilots the server runs (P1, schema 21), as JSON
     /// (WorldFrontier.cpp). Empty: none come yet.
     std::string frontier{};
+    /// The realm's projects (R2, schema 22). A save from before has none.
+    std::vector<SavedProject> projects{};
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -207,7 +220,7 @@ public:
     /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions;
     /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills;
     /// 17: the Matriarch's nests; 18: KSTR's next goal; 20: the canyons' games;
-    /// 21: the frontier pilots).
+    /// 21: the frontier pilots; 22: the realm's projects).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 
@@ -270,6 +283,7 @@ private:
     std::vector<SavedNest> nests_;
     std::vector<SavedCanyon> canyons_;
     std::string frontier_;
+    std::vector<SavedProject> projects_;
 };
 
 } // namespace ac::server

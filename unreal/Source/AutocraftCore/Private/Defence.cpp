@@ -25,11 +25,14 @@ UnitStats Defence::apply(UnitStats w, const TurretMarks& m) {
     return w;
 }
 
-std::optional<UnitStats> Defence::weapon(const Structure& s) {
+std::optional<UnitStats> Defence::weapon(const Structure& s, int64_t bonus) {
     std::optional<UnitStats> w = Rules::turret(s.kind);
     if (!w && s.kind == StructureKind::citadel && s.marks) w = UnitStats::citadelGuns;
     if (!w) return std::nullopt;
-    return s.marks ? apply(*w, *s.marks) : *w;
+    if (bonus <= 0) return s.marks ? apply(*w, *s.marks) : *w;
+    TurretMarks m = s.marks.value_or(TurretMarks{});
+    for (int64_t* k : {&m.rate, &m.damage, &m.range, &m.air}) *k = std::min<int64_t>(*k + bonus, marksMax);
+    return apply(*w, m);
 }
 
 ShopPrice Defence::citadelPrice(DefenceStat, int64_t mark) {

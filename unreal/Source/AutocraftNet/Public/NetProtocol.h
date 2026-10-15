@@ -521,14 +521,20 @@ struct RequestMessage {
         DefenceStat stat = DefenceStat::rate;
         bool operator==(const UpgradeTurret&) const = default;
     };
+    /// R2: start the realm project of `kind` (`RealmProject::Kind`), paid
+    /// from the realm wallet, at the realm's Citadel (where it unloads).
+    struct StartProject {
+        uint8_t kind = 0;
+        bool operator==(const StartProject&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
     /// 14, Use 15, MissionAsk 16 (protocol 16), UpgradeCitadel 17 (protocol
     /// 20; kept for it since 18), Merc 18 (protocol 19), UpgradeTurret 19
-    /// (protocol 21).
+    /// (protocol 21), StartProject 20 (protocol 29).
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret>
+                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject>
         what;
     bool operator==(const RequestMessage&) const = default;
 };
@@ -732,8 +738,11 @@ struct ProgressMessage {
     /// (`by`: the line, `value`: the frontier pilot's id), "deed" a notable
     /// deed (`by`: "Vesper built a Hab Dome in Rust Hollow"), "come" one
     /// landed (`by`: its line).
+    ///
+    /// R2: `project`, to every human on line: "start/<slug>" a realm project
+    /// started (`by`: who), "end/<slug>" one ran out (`RealmProject::slug`).
     enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
-                                    merc, upgraded, matriarch, goal, canyon, frontier };
+                                    merc, upgraded, matriarch, goal, canyon, frontier, project };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -913,6 +922,17 @@ struct ProgressMessage {
         bool operator==(const FrontierPilot&) const = default;
     };
     std::vector<FrontierPilot> frontier;
+    /// R2: the realm's projects, one entry a kind (`RealmProject::Kind`, in
+    /// order): how many the realm has started (the next one's price is
+    /// `RealmProject::price`), and the one running: until world time `ends`
+    /// (`Sky::time`; 0: none running), started by `by` (a callsign).
+    struct Project {
+        int64_t runs = 0;
+        double ends = 0;
+        std::string by;
+        bool operator==(const Project&) const = default;
+    };
+    std::vector<Project> projects;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

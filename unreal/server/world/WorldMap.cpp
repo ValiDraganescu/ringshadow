@@ -511,11 +511,13 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     if (from->building == target->building) return "At " + target->name + " already";
     if (*to != p.region && regions_[*to]->driven()) return std::string("Another pilot drives there");
     // The flight's MH (F1): a base and a share a step across the grid; half
-    // from a Spacedock, nothing with Ringwalker (F2).
+    // from a Spacedock, nothing with Ringwalker (F2); half again while the
+    // realm's Beacon burns (R2).
     const WorldRegion& origin = world_->regions[p.region];
     const bool ringwalker = p.progress.rank(Skill::ringwalker) > 0;
     const int64_t price = ac::Flight::price(ac::Flight::steps(origin.column, origin.row, dest.column, dest.row),
-                                            from->kind == StructureKind::spacedock, ringwalker);
+                                            from->kind == StructureKind::spacedock, ringwalker,
+                                            projectOn(RealmProject::Kind::beacon));
     if (auto why = ac::Flight::refusal(price, here.simulation().state.players[0].hydrogen)) return why;
     bankOut(p, p.region);
     p.wallet.hydrogen -= price;
@@ -609,6 +611,7 @@ void WorldMap::step() {
     starfall();
     brood();
     canyonsStep();
+    projectsStep();
     respawns();
     rigs();
     landingPadsChanged();
@@ -645,6 +648,7 @@ void WorldMap::idle(double seconds) {
     // their FAILED and HELD ends come on the clock (WorldCanyon.cpp).
     brood();
     canyonsStep();
+    projectsStep();
 }
 
 double WorldMap::catchUp(double seconds) {
@@ -663,6 +667,9 @@ double WorldMap::catchUp(double seconds) {
     brood();
     canyonsStep();
     offlineWork(moved);
+    // R2: after the mercenaries' booked work (a Dock Crew that ran out in
+    // the gap counts until its end).
+    projectsStep();
     return moved;
 }
 

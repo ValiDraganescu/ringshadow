@@ -34,11 +34,14 @@ struct Flight {
     static int64_t hydrogen(int64_t steps) { return baseHydrogen + stepHydrogen * (steps > 0 ? steps : 0); }
 
     /// F2: what a flight `steps` long costs from a Spacedock (`spacedock`:
-    /// half, rounded up) or with Ringwalker (`ringwalker`: nothing).
-    static int64_t price(int64_t steps, bool spacedock, bool ringwalker) {
+    /// half, rounded up) or with Ringwalker (`ringwalker`: nothing). R2:
+    /// while the realm's Beacon burns (`beacon`) half again, so a quarter
+    /// from a Spacedock, rounded up.
+    static int64_t price(int64_t steps, bool spacedock, bool ringwalker, bool beacon = false) {
         if (ringwalker) return 0;
         const int64_t whole = hydrogen(steps);
-        return spacedock ? (whole + 1) / 2 : whole;
+        const int64_t by = (spacedock ? 2 : 1) * (beacon ? 2 : 1);
+        return (whole + by - 1) / by;
     }
 
     /// Why a wallet of `have` MH can't pay `price` (none: it can).

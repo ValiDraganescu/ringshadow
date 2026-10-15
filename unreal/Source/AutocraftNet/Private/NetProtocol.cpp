@@ -851,6 +851,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeSigned(w, p->turret);
         w.writeBits(uint64_t(p->stat), 2);
     }
+    if (const auto* p = std::get_if<RequestMessage::StartProject>(&m.what)) w.writeBits(uint64_t(p->kind), 3);
     return w.bytes();
 }
 
@@ -988,6 +989,12 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         RequestMessage::UpgradeTurret p;
         p.turret = readSigned(r);
         p.stat = static_cast<DefenceStat>(r.readBits(2));
+        m.what = p;
+        break;
+    }
+    case 20: {
+        RequestMessage::StartProject p;
+        p.kind = uint8_t(r.readBits(3));
         m.what = p;
         break;
     }
@@ -1168,6 +1175,12 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeString(w, f.callsign);
         w.writeBits(uint64_t(f.habit), 2);
         w.writeBits(uint64_t(f.paint), 3);
+    }
+    writeVarint(w, m.projects.size());
+    for (const auto& p : m.projects) {
+        writeSigned(w, p.runs);
+        writeDouble(w, p.ends);
+        writeString(w, p.by);
     }
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
@@ -1404,12 +1417,20 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         f.habit = static_cast<FrontierHabit>(r.readBits(2));
         f.paint = int32_t(r.readBits(3));
     }
+    const uint64_t projects = readVarint(r);
+    if (projects > 8 || !r.ok()) return false;
+    m.projects.assign(size_t(projects), {});
+    for (auto& p : m.projects) {
+        p.runs = readSigned(r);
+        p.ends = readDouble(r);
+        if (!readString(r, p.by)) return false;
+    }
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(5);
-        if (kind > uint64_t(ProgressMessage::NewsKind::frontier)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::project)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

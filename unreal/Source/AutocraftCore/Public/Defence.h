@@ -60,8 +60,9 @@ struct AUTOCRAFTCORE_API Defence {
     /// The weapon of building `s` as it stands: a Sentinel's or a gatling
     /// gun's (`Rules::turret`), each of a Citadel's corner turrets when the
     /// server armed it (`Structure::marks` set), with its marks. Nil: it
-    /// doesn't shoot.
-    static std::optional<UnitStats> weapon(const Structure& s);
+    /// doesn't shoot. `bonus`: as many marks more in every stat, to
+    /// `marksMax` (R2: the realm's Armoury).
+    static std::optional<UnitStats> weapon(const Structure& s, int64_t bonus = 0);
     /// What the Citadel's `mark`th mark (1 to `marksMax`) of `stat` costs
     /// the realm wallet: ore 250, 500, 1,000; MH 0, 50, 150.
     static ShopPrice citadelPrice(DefenceStat stat, int64_t mark);

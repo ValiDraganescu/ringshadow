@@ -714,7 +714,7 @@ void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
                     events.push_back(GameEvent::Constructed{s.id, s.kind, s.position});
                 }
             }
-        } else if (auto w = Defence::weapon(s)) {
+        } else if (auto w = Defence::weapon(s, s.owner == Pilot::player ? turretBonus : 0)) {
             stepTurret(s, *w, dt, events);
         } else if (s.research && s.researchLeft) {
             const auto up = *s.research;

@@ -712,7 +712,7 @@ FrontierPlan WorldMap::wandererPlan(const FrontierPilot& f) const {
         padThere = padThere || l.region == *go;
     }
     const int64_t steps = std::abs(world_->regions[r].column - world_->regions[*go].column) + std::abs(world_->regions[r].row - world_->regions[*go].row);
-    if (padHere && padThere && steps >= 2 && f.wallet.hydrogen >= ::ac::Flight::price(steps, false, false) + WorldFrontier::reserveHydrogen) {
+    if (padHere && padThere && steps >= 2 && f.wallet.hydrogen >= ::ac::Flight::price(steps, false, false, projectOn(RealmProject::Kind::beacon)) + WorldFrontier::reserveHydrogen) {
         p.act = Act::fly;
         p.why = "flying to " + world_->regions[*go].file.name;
     }
@@ -803,7 +803,7 @@ std::optional<std::string> WorldMap::frontierFly(uint32_t id, size_t to) {
     if (!there) return "No Landing Pad in " + world_->regions[to].file.name;
     const int64_t steps = std::abs(world_->regions[f->region].column - world_->regions[to].column) +
                           std::abs(world_->regions[f->region].row - world_->regions[to].row);
-    const int64_t price = ::ac::Flight::price(steps, from->kind == StructureKind::spacedock, false);
+    const int64_t price = ::ac::Flight::price(steps, from->kind == StructureKind::spacedock, false, projectOn(RealmProject::Kind::beacon));
     if (auto why = ::ac::Flight::refusal(price, f->wallet.hydrogen)) return why;
     f->wallet.hydrogen -= price;
     // Aboard: out of the region until the touch down.

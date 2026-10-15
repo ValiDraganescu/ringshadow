@@ -258,6 +258,12 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.realmWallet = {realm_.ore, realm_.hydrogen};
     m.taxPercent = Progression::realmTaxPercent;
     m.citadelMarks = citadelMarks_;
+    // R2: the realm's projects, one a kind.
+    m.projects.clear();
+    for (int k = 0; k < RealmProject::count; k++) {
+        const auto& pr = projects_[size_t(k)];
+        m.projects.push_back(net::ProgressMessage::Project{projectRuns_[size_t(k)], pr ? pr->ends : 0.0, pr ? pr->by : std::string()});
+    }
     m.taxed = {it->second.taxed.ore, it->second.taxed.hydrogen};
     m.donated = {it->second.donated.ore, it->second.donated.hydrogen};
     // C2: the shop's stacks, what is cooling down, a shield, a flare.

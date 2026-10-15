@@ -338,7 +338,10 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr double nightSight = 0.5;
     /// What every sight radius is multiplied by at `hour`: 1 by day,
     /// `nightSight` at night, eased through dusk and dawn.
-    static double sightScale(double hour) { return 1.0 - (1.0 - nightSight) * dark(hour); }
+    static double sightScale(double hour) { return sightScale(hour, nightSight); }
+    /// The same with `night` the share at full night (R2: the realm's Relay
+    /// widens the pilots' to `nightSight` × 1.5).
+    static double sightScale(double hour, double night) { return 1.0 - (1.0 - night) * dark(hour); }
     /// A driven Prospector's headlamp: its beam is this many degrees either
     /// side of where the crosshair is (`Pilot::heading`), and it sees along
     /// it as far as the Prospector sees by day, night or not. The game

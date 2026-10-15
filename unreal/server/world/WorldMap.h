@@ -10,6 +10,7 @@
 #include "WorldStore.h"
 
 #include "Flight.h"
+#include "RealmProjects.h"
 #include "RegionFile.h"
 #include "Weather.h"
 #include "WorldClock.h"
@@ -247,7 +248,8 @@ struct WorldMercs {
     /// Ore a second at the pilot's `level`: the pace model's hour of work
     /// (`WorldContracts::perMinute` × 60, 1 XP an ore) over `hours` hours.
     static constexpr double hours = 24;
-    static double rate(int64_t level);
+    /// R2: `dockCrew` (the realm's Dock Crew), over `RealmProject::dockCrewHours`.
+    static double rate(int64_t level, bool dockCrew = false);
     /// A trip's load: it drills until it has worked this much (at least
     /// `Rules::miningTime` s), so the realm's tax is 10% of it.
     static constexpr int64_t load = 10;
@@ -853,6 +855,36 @@ public:
     /// Takes `cost` from the realm wallet (D1: the Citadel's upgrades).
     /// False, taking nothing, when the wallet is short or `cost` negative.
     bool spendRealm(const Wallet& cost);
+
+    // MARK: Realm projects (R2; docs/mmorpg-play.md "Realm projects"; WorldProjects.cpp)
+
+    /// A project running: its kind, the world clock it ends at, who started
+    /// it (a callsign).
+    struct Project {
+        RealmProject::Kind kind = RealmProject::Kind::beacon;
+        double ends = 0;
+        std::string by;
+        bool operator==(const Project&) const = default;
+    };
+    /// Each kind's project running now (nil: none), by kind.
+    const std::array<std::optional<Project>, RealmProject::count>& projects() const { return projects_; }
+    /// How many of `kind` the realm has started (the price rises with them).
+    int64_t projectRuns(RealmProject::Kind kind) const { return projectRuns_[size_t(kind)]; }
+    bool projectOn(RealmProject::Kind kind) const { return projects_[size_t(kind)].has_value(); }
+    /// What `kind` costs the realm wallet now.
+    RealmProject::Price projectPrice(RealmProject::Kind kind) const { return RealmProject::price(kind, projectRuns(kind)); }
+    /// Why the pilot with key `key` can't start `kind` now (one of each
+    /// kind at a time, the realm wallet short; a frontier pilot never), or
+    /// nil.
+    std::optional<std::string> projectRefusal(const std::string& key, RealmProject::Kind kind) const;
+    /// Starts `kind`, paid from the realm wallet, for a world day: any human
+    /// pilot, from the Citadel's REALM tab (at the realm's Citadel, where it
+    /// unloads). Every pilot on line is told. The reason when refused.
+    std::optional<std::string> startProject(PilotId pilot, RealmProject::Kind kind);
+    /// Saves and tests: the projects and their runs as they are.
+    void setProjects(const std::array<std::optional<Project>, RealmProject::count>& p,
+                     const std::array<int64_t, RealmProject::count>& runs);
+
     // MARK: The defences (D1, D2; docs/mmorpg-m8.md; WorldDefence.cpp)
 
     /// The marks the realm's Citadel turrets have (saved with the world).
@@ -1481,6 +1513,9 @@ private:
     std::vector<std::map<int64_t, std::string>> builtBy_;
     /// The realm wallet (C1).
     Wallet realm_;
+    /// R2: the projects running and how many of each the realm started.
+    std::array<std::optional<Project>, RealmProject::count> projects_{};
+    std::array<int64_t, RealmProject::count> projectRuns_{};
     /// The realm's Citadel turrets' marks (D1).
     TurretMarks citadelMarks_;
     /// The bugs each defence has killed, per region (building id → kills;
@@ -1777,6 +1812,9 @@ private:
     // WorldCanyon.cpp.
     /// Each step (and idle): every `WorldCanyon::think` s each zone's game.
     void canyonsStep();
+    /// R2: projects that ran out end (every pilot on line told); the
+    /// running ones' effects on every region (sight, turrets).
+    void projectsStep();
     void canyonThink(Canyon& c, double dt);
     /// A hit on a bug of a wave: who did it, toward the wave's pay.
     void canyonHit(size_t r, const Simulation::BugHit& h);

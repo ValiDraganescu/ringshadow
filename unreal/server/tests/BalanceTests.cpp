@@ -11,6 +11,7 @@
 #include "Brood.h"
 #include "Defence.h"
 #include "Progression.h"
+#include "RealmProjects.h"
 #include "WorldMap.h"
 
 #include <cmath>
@@ -223,4 +224,31 @@ TEST(balance_frontier_booked) {
     // What five of them give the realm an hour, at 10% (at most): under one
     // driven pilot's tax.
     EXPECT_TRUE(5 * WorldFrontier::bookRate() * 3600 * 0.1 < WorldContracts::perMinute(1) * 60 * 0.2);
+}
+
+/// R2, realm projects: the first one's price 2 to 4 hours of one mining
+/// pilot's tax (936 to 1,218 ore an hour, docs/balance.md), MH beside it;
+/// each repeat of a kind a fifth more (ore to 50, MH to 10).
+TEST(balance_realm_projects) {
+    using Kind = RealmProject::Kind;
+    struct Row { Kind kind; RealmProject::Price price[4]; };
+    const Row rows[] = {
+        {Kind::beacon, {{2000, 100}, {2400, 120}, {2900, 140}, {3450, 170}}},
+        {Kind::relay, {{2500, 150}, {3000, 180}, {3600, 220}, {4300, 260}}},
+        {Kind::dockCrew, {{3000, 200}, {3600, 240}, {4300, 290}, {5200, 350}}},
+        {Kind::armoury, {{4000, 300}, {4800, 360}, {5750, 430}, {6900, 520}}},
+    };
+    for (const Row& r : rows) {
+        for (int64_t n = 0; n < 4; n++) {
+            const RealmProject::Price p = RealmProject::price(r.kind, n);
+            if (!(p == r.price[n]))
+                std::printf("  %s run %lld: %lld ore %lld MH\n", RealmProject::title(r.kind), (long long)n, (long long)p.ore, (long long)p.hydrogen);
+            EXPECT_TRUE(p == r.price[n]);
+        }
+        const double hours = double(RealmProject::base(r.kind).ore) / 1000.0;
+        EXPECT_TRUE(hours >= 2 && hours <= 4);
+    }
+    EXPECT_NEAR(RealmProject::growth, 1.2, 1e-12);
+    EXPECT_NEAR(RealmProject::days, 1, 1e-12);
+    EXPECT_NEAR(RealmProject::dockCrewHours, WorldMercs::hours / 2, 1e-12);
 }

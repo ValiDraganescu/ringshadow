@@ -37,7 +37,9 @@ int64_t WorldMercs::feeHydrogen(int64_t held) { return 50 << std::clamp<int64_t>
 
 int64_t WorldMercs::wage(int64_t level) { return 5 + std::max<int64_t>(level, 1) / 5; }
 
-double WorldMercs::rate(int64_t level) { return WorldContracts::perMinute(level) * 60 / (hours * 3600); }
+double WorldMercs::rate(int64_t level, bool dockCrew) {
+    return WorldContracts::perMinute(level) * 60 / ((dockCrew ? RealmProject::dockCrewHours : hours) * 3600);
+}
 
 const std::vector<std::string>& WorldMercs::names() {
     static const std::vector<std::string> n = {"Bracken", "Cinder", "Dace",   "Ember",  "Flint",  "Garnet", "Harrow", "Ingot",
@@ -350,7 +352,7 @@ void WorldMap::mercsStep(double dt) {
                 if (u.task == Task::idle) u.timer = 1;
                 continue;
             }
-            m.owed += WorldMercs::rate(p.progress.level()) * dt;
+            m.owed += WorldMercs::rate(p.progress.level(), projectOn(RealmProject::Kind::dockCrew)) * dt;
             // Bound for a deposit outside its field (a new field): this one.
             const auto& f = field[size_t(m.field)];
             if ((u.task == Task::toPatch || u.task == Task::waiting || u.task == Task::mining) &&
@@ -428,7 +430,11 @@ void WorldMap::mercsBook(double from, double to) {
             const auto& field = fields(m.region);
             if (size_t(m.field) >= field.size() || fieldOre(m.region, m.field) <= 0) continue;
             if (!depot(m.region, fieldAt(m.region, m.field))) continue;
-            m.owed += WorldMercs::rate(p.progress.level()) * (b - start);
+            // R2: the Dock Crew's share of the span at twice the rate.
+            double crew = 0;
+            if (const auto& dc = projects_[size_t(RealmProject::Kind::dockCrew)])
+                crew = std::max(0.0, std::min(b, dc->ends) - std::max(start, dc->ends - RealmProject::days * params_.dayLength));
+            m.owed += WorldMercs::rate(p.progress.level()) * (b - start - crew) + WorldMercs::rate(p.progress.level(), true) * crew;
             // Whole ore from its field, its own deposit first, then the
             // nearest to it.
             const auto i = sim.unitIndex(*m.unit);
@@ -515,7 +521,7 @@ void WorldMap::mercsTold(const PilotState& p, net::ProgressMessage& m) const {
     m.mercLimit = WorldMercs::limit(level);
     m.mercFee = {WorldMercs::feeOre(held), WorldMercs::feeHydrogen(held)};
     m.mercWage = WorldMercs::wage(level);
-    m.mercRate = WorldMercs::rate(level) * 3600;
+    m.mercRate = WorldMercs::rate(level, projectOn(RealmProject::Kind::dockCrew)) * 3600;
     m.mercNextLevel = WorldMercs::nextLevel(m.mercLimit);
     // Every mercenary's unit in the pilot's region, any pilot's.
     if (!p.flight) {

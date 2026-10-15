@@ -169,6 +169,13 @@ WorldSave WorldMap::save() const {
     for (const FrontierPilot& f : frontier_)
         if (f.unit && !f.travelTo && frontierUnitOf(f)) owned[f.region][*f.unit] = f.key;
     out.frontier = encodeFrontier();
+    // R2: every kind that ever ran.
+    for (int k = 0; k < RealmProject::count; k++) {
+        const auto& pr = projects_[size_t(k)];
+        if (projectRuns_[size_t(k)] == 0 && !pr) continue;
+        out.projects.push_back(SavedProject{RealmProject::slug(RealmProject::Kind(k)), projectRuns_[size_t(k)], pr ? pr->ends : 0.0,
+                                            pr ? pr->by : std::string()});
+    }
     std::sort(out.pilots.begin(), out.pilots.end(), [](const SavedPilot& a, const SavedPilot& b) { return a.id < b.id; });
 
     for (size_t i = 0; i < n; i++) {
@@ -415,6 +422,21 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     // P1: the frontier pilots (none before schema 21: they come after the
     // opening chain, as in a new world).
     if (!decodeFrontier(save.frontier)) problems.push_back("frontier pilots do not read, they come again");
+    // R2: the realm's projects (none before schema 22); one that ran out
+    // while the world was down ends at the next step (`projectsStep`).
+    projects_ = {};
+    projectRuns_ = {};
+    for (const SavedProject& x : save.projects) {
+        std::optional<RealmProject::Kind> kind;
+        for (int k = 0; k < RealmProject::count; k++)
+            if (x.kind == RealmProject::slug(RealmProject::Kind(k))) kind = RealmProject::Kind(k);
+        if (!kind) {
+            problems.push_back("realm project " + x.kind + " is not known: dropped");
+            continue;
+        }
+        projectRuns_[size_t(*kind)] = x.runs;
+        if (x.ends > 0) projects_[size_t(*kind)] = Project{*kind, x.ends, x.by};
+    }
     // The world's hour goes on where it was.
     setClock(save.clock);
     return problems;

@@ -418,6 +418,16 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
     } else if (const auto* uc = std::get_if<net::RequestMessage::UpgradeCitadel>(&m.what)) {
         what = "upgrade the Citadel's " + std::string(rawValue(uc->stat));
         why = world_.upgradeCitadel(pilot, uc->stat);
+    } else if (const auto* sp = std::get_if<net::RequestMessage::StartProject>(&m.what)) {
+        // R2: a realm project, paid from the realm wallet.
+        if (sp->kind >= RealmProject::count) {
+            what = "start a realm project";
+            why = std::string("No such project");
+        } else {
+            const auto kind = RealmProject::Kind(sp->kind);
+            what = "start the realm's " + std::string(RealmProject::title(kind));
+            why = world_.startProject(pilot, kind);
+        }
     } else if (const auto* ut = std::get_if<net::RequestMessage::UpgradeTurret>(&m.what)) {
         what = "upgrade turret " + std::to_string(ut->turret) + "'s " + std::string(rawValue(ut->stat));
         why = world_.upgradeTurret(pilot, ut->turret, ut->stat);

@@ -112,6 +112,12 @@ public:
     /// side (`Pilot::player`) sees the whole map, at night as everywhere
     /// else (`Rules::daylightReach`). Nil: no daylight sight (every other game).
     std::optional<Vec2> daylightAt;
+    /// C++ only, a world (R2): the pilots' side's night sight × this (the
+    /// realm's Relay: 1.5; the headlamp's wedge untouched). 1 elsewhere.
+    double nightWiden = 1;
+    /// C++ only, a world (R2): the pilots' side's turrets (the Citadel's
+    /// corner guns too) fight as this many marks up (the realm's Armoury).
+    int64_t turretBonus = 0;
     /// Level-ups earned since the step began, for `.leveledUp` events.
     std::vector<GameEvent> levelUps;
     /// C++ only: every XP the driven unit earns (`earn`) is multiplied by

@@ -186,7 +186,8 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
 /// change it (Spotter), by id.
 Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& explored,
                     const std::map<int64_t, double>& farther, const std::map<int64_t, double>& reveal,
-                    const std::map<int64_t, double>& beams, std::optional<std::pair<Vec2, double>> daylight) const {
+                    const std::map<int64_t, double>& beams, std::optional<std::pair<Vec2, double>> daylight,
+                    double nightShare) const {
     const int64_t cells = width * height;
     Sight s;
     s.seen.assign(static_cast<size_t>(cells), 0);
@@ -195,7 +196,7 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
     if (explored.size() != words) explored.assign(words, 0);
     // Every viewer: where, how far, from what level (nil: the air). At
     // night everything sees closer in (`Rules::sightScale`).
-    const double night = Rules::sightScale(Rules::hourAt(state.time, state.dayLength, state.heldHour));
+    const double night = Rules::sightScale(Rules::hourAt(state.time, state.dayLength, state.heldHour), nightShare);
     std::vector<Viewer> viewers;
     std::vector<bool> holds(towers.size(), false);
     // A world region's daylight: every level, so the widest of all by day.
@@ -456,7 +457,7 @@ void Simulation::look() {
                 reach = f != farther.end() ? f->second : Rules::vision(u.kind);
             }
         const double hour = Rules::hourAt(state.time, state.dayLength, state.heldHour);
-        const double night = reach * Rules::sightScale(hour);
+        const double night = reach * Rules::sightScale(hour, Rules::nightSight * nightWiden);
         const double span = std::hypot(static_cast<double>(vision->width), static_cast<double>(vision->height)) * Vision::cell;
         const double r = Rules::daylightReach(hour, night, span);
         // Through the night it is the unit's own circle: none on top.
@@ -479,8 +480,9 @@ void Simulation::look() {
         const auto merging = std::chrono::steady_clock::now();
         Intel k = members.size() == 1 ? intel_[p] : teamIntel(intel_, members);
         stepTimes.merge += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - merging).count();
-        seen[p] = vision->sight(pl, state, k.explored, farther, reveal, beams,
-                                state.allied(pl, Pilot::player) ? daylight : std::nullopt);
+        const bool pilots = state.allied(pl, Pilot::player);
+        seen[p] = vision->sight(pl, state, k.explored, farther, reveal, beams, pilots ? daylight : std::nullopt,
+                                Rules::nightSight * (pilots ? nightWiden : 1.0));
         const Sight& s = seen[p];
         if (k.sites.size() != sites.size()) k.sites.assign(sites.size(), -std::numeric_limits<double>::infinity());
         for (size_t j = 0; j < sites.size(); ++j) {

@@ -93,11 +93,13 @@ struct Vision {
     /// heading (world radians) by unit id; that unit also sees its day
     /// sight out within `Rules::headlampCone` of it, night or not.
     /// `daylight`: a world region's daylight (S3), a circle `p` sees on
-    /// every level, as the sun lights the high ground too.
+    /// every level, as the sun lights the high ground too. `nightShare`:
+    /// how much of its sight a viewer keeps at full night (`Rules::nightSight`;
+    /// R2's Relay widens the pilots' side).
     Sight sight(int64_t p, const GameState& state, std::vector<uint64_t>& explored,
                 const std::map<int64_t, double>& farther = {}, const std::map<int64_t, double>& reveal = {},
                 const std::map<int64_t, double>& beams = {},
-                std::optional<std::pair<Vec2, double>> daylight = std::nullopt) const;
+                std::optional<std::pair<Vec2, double>> daylight = std::nullopt, double nightShare = 0.5) const;
 
     /// A buried Scorpion `u` is out of sight of player `p` (and its allies):
     /// down in the ground and done reloading, with no unit or building of
