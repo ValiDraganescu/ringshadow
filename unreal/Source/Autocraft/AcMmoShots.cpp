@@ -459,6 +459,10 @@ namespace
 	ac::Vec2 K2Target{0, 0};
 	/// When it was first seen done (the toast fades in).
 	double K2DoneAt = -1;
+	/// -AcMmoShotsK2: the drive's way out of a corner (Q2): backing up until,
+	/// and how many times so far.
+	double K2BackUntil = -1;
+	int32 K2Unsticks = 0;
 	/// -AcMmoShotsH2: the Citadel's kept asks before the hire, the
 	/// mercenary's unit.
 	int32 H2Kept = 0;
@@ -863,6 +867,74 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (ac::dot(A - C->position, N) < 0) N = N * -1.0;
 		const ac::Vec2 W = C->position + N * (R + 1.0);
 		Route({FVector2D(W.x, W.y), FVector2D(P.x, P.y)});
+	};
+	// A walking-grid route made drivable (Q2): the grid keeps 0.35 cells off
+	// obstacles, the Prospector's body needs more (`pilotCanStand`), so a leg
+	// that cuts a corner gets its end moved to the nearest spot, up to 2.5
+	// cells off, from which this leg and the next are open.
+	auto Drivable = [&](TArray<FVector2D>& Way) {
+		if (!M || !U) return;
+		const ac::Simulation& Sim = M->simulation();
+		// (From its far side: the start may be where the unit stands now,
+		// pressed against what it unloads at.)
+		auto Open = [&](const ac::Vec2 A, const ac::Vec2 B) {
+			const double L = ac::distance(A, B);
+			for (double D = 0.4; D <= L; D += 0.2)
+				if (!Sim.pilotCanStand(*U, A + (B - A) * (D / FMath::Max(L, 1e-6)))) return false;
+			return true;
+		};
+		ac::Vec2 From = U->position;
+		for (int32 I = 0; I < Way.Num(); ++I)
+		{
+			const ac::Vec2 W(Way[I].X, Way[I].Y);
+			const TOptional<ac::Vec2> Next = I + 1 < Way.Num() ? TOptional<ac::Vec2>(ac::Vec2(Way[I + 1].X, Way[I + 1].Y)) : TOptional<ac::Vec2>();
+			if (Open(From, W) && (!Next || Open(W, *Next)))
+			{
+				From = W;
+				continue;
+			}
+			TOptional<ac::Vec2> Best;
+			for (double R = 0.5; R <= 2.5 && !Best; R += 0.5)
+				for (int32 K = 0; K < 16 && !Best; ++K)
+				{
+					const double A = K * 2.0 * PI / 16;
+					const ac::Vec2 C = W + ac::Vec2(std::cos(A), std::sin(A)) * R;
+					if (Open(From, C) && (!Next || Open(C, *Next))) Best = C;
+				}
+			if (!Best)
+				for (double R = 0.5; R <= 2.5 && !Best; R += 0.5)
+					for (int32 K = 0; K < 16 && !Best; ++K)
+					{
+						const double A = K * 2.0 * PI / 16;
+						const ac::Vec2 C = W + ac::Vec2(std::cos(A), std::sin(A)) * R;
+						if (Open(From, C)) Best = C;
+					}
+			if (Best)
+			{
+				Way[I] = FVector2D(Best->x, Best->y);
+				From = *Best;
+			}
+			else
+				From = W;
+		}
+	};
+	// K2's drive along the walking grid, wedged (the grid's path keeps no
+	// room for the Prospector's width and cuts close by deposits): back up
+	// 0.8 s and plan again from there, twice at most (Q2). True: handled.
+	auto K2Unstick = [&]() -> bool {
+		if (Pilot && Now < K2BackUntil)
+		{
+			Pilot->SetTestInput(FVector2D(0, 1), Pilot->Yaw());
+			return true;
+		}
+		if (Now - Shots.StallSince <= 4.0 || K2Unsticks >= 2) return false;
+		K2Unsticks += 1;
+		K2BackUntil = Now + 0.8;
+		Shots.Route.Reset();
+		Shots.RouteAt = 0;
+		Shots.StallSince = Now + 0.8;
+		UE_LOG(LogAutocraft, Display, TEXT("flowtest: mmoshots: k2: wedged at %s, backing up to plan again (%d)"), *Where(), K2Unsticks);
+		return true;
 	};
 	auto Stalled = [&](const TCHAR* What) {
 		Check(false, FString::Printf(TEXT("%s: stalled %s, heading for %s"), What, *Where(),
@@ -5335,7 +5407,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(AtRealmCitadel(), TEXT("k2: the pilot stands at the realm's Citadel"));
 			// A new pilot's board is drawn from its key's dice: an easy survey
 			// or hold here only by chance (Q2). The server draws it again.
-			Check(Mmo->DevClock(TEXT("missions here")), TEXT("k2: the server draws the board with an offer here"));
+			Check(Mmo->DevClock(TEXT("missions here")), TEXT("k2: the server draws the board with an easy survey here"));
 			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("k2: H opens the Citadel screen"));
 			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
 			{
@@ -5359,15 +5431,19 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(I.Offers.Num() == 6 && Tiers[0] == 2 && Tiers[1] == 2 && Tiers[2] == 2,
 			FString::Printf(TEXT("k2: the board offers %d: %d easy, %d hard, %d perilous"), I.Offers.Num(), Tiers[0], Tiers[1], Tiers[2]));
 		Check(I.MissionsWhyNot.IsEmpty(), TEXT("k2: the board signs up here"));
-		// The offer to take: an easy survey or hold here, the nearest first.
+		// The offer to take: an easy survey here (the server's `missions here`
+		// puts one on), else an easy hold, else any survey or hold here; the
+		// nearest first.
 		K2Index = -1;
 		double Best = 1e9;
-		for (int32 Pass = 0; Pass < 2 && K2Index < 0; ++Pass)
+		for (int32 Pass = 0; Pass < 3 && K2Index < 0; ++Pass)
 			for (int32 X = 0; X < int32(P->board.size()); ++X)
 			{
 				const ac::net::CitadelMission& O = P->board[size_t(X)];
-				const bool bPoint = O.kind == ac::net::CitadelMission::Kind::survey || O.kind == ac::net::CitadelMission::Kind::hold;
-				if (!bPoint || (Pass == 0 && O.tier != ac::net::CitadelMission::Tier::easy) || Utf(O.region) != Here) continue;
+				const bool bSurvey = O.kind == ac::net::CitadelMission::Kind::survey;
+				const bool bPoint = bSurvey || O.kind == ac::net::CitadelMission::Kind::hold;
+				const bool bEasy = O.tier == ac::net::CitadelMission::Tier::easy;
+				if (!bPoint || (Pass < 2 && !bEasy) || (Pass == 0 && !bSurvey) || Utf(O.region) != Here) continue;
 				const double D = ac::distance(O.at, U->position);
 				if (D < Best)
 				{
@@ -5472,6 +5548,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			return;
 		}
 		K2Target = Taken->at;
+		K2Unsticks = 0;
+		K2BackUntil = -1;
 		// (The way there is found along the walking grid: the next phase.)
 		Shots.Route.Reset();
 		Shots.RouteAt = 0;
@@ -5487,6 +5565,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		}
+		if (K2Unstick()) return;
 		if (Drive() == 1)
 		{
 			// Along the walking grid, as into the ring.
@@ -5498,6 +5577,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 					for (const ac::Vec2 Q : *P) Way.Add(FVector2D(Q.x, Q.y));
 			}
 			if (Way.IsEmpty()) Way.Add(FVector2D(K2Target.x, K2Target.y));
+			Drivable(Way);
 			Shots.Route = Way;
 			Shots.RouteAt = 0;
 			Shots.StallAt = U ? FVector2D(U->position.x, U->position.y) : FVector2D::ZeroVector;
@@ -5519,7 +5599,18 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		const ac::net::CitadelMission* Taken = nullptr;
 		for (const ac::net::CitadelMission& X : Mmo->Progress()->journal)
 			if (X.id == K2Id) Taken = &X;
-		if (!Taken) return;
+		if (!Taken)
+		{
+			TimedOut(TEXT("k2: the mission in the Journal"), 20);
+			return;
+		}
+		// Done already (Q2: a survey's ring reached the marker picture's spot,
+		// and its scan ran out there): on to its picture.
+		if (Taken->state == ac::net::CitadelMission::State::done)
+		{
+			Advance();
+			return;
+		}
 		if (U && ac::distance(U->position, K2Target) < FMath::Max(1.0, Taken->radius * 0.4))
 		{
 			Stop(Face(K2Target));
@@ -5535,22 +5626,47 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		}
+		if (K2Unstick()) return;
 		if (Drive() == 1)
 		{
 			// Along the walking grid (a ridge or a wall may stand on the
 			// straight line) to free ground inside the ring (its centre may be
 			// a deposit, solid); straight at the centre only with no way.
+			// The spot: the centre, else the nearest ground the Prospector
+			// stands on well inside the ring (Q2: a centre in a deposit left
+			// the route ending short of it).
+			const double Inside = FMath::Max(1.0, Taken->radius * 0.4) - 0.3;
+			ac::Vec2 Goal = K2Target;
+			if (const ac::Simulation& Ms = M->simulation(); U && !Ms.pilotCanStand(*U, K2Target))
+			{
+				double Near = 1e9;
+				for (double R = 0.5; R <= Inside; R += 0.25)
+					for (int32 K = 0; K < 24; ++K)
+					{
+						const double A = K * 2.0 * PI / 24;
+						const ac::Vec2 C = K2Target + ac::Vec2(std::cos(A), std::sin(A)) * R;
+						if (Ms.pilotCanStand(*U, C) && ac::distance(C, U->position) < Near)
+						{
+							Near = ac::distance(C, U->position);
+							Goal = C;
+						}
+					}
+			}
 			TArray<FVector2D> Way;
 			if (const ac::Simulation& Ms = M->simulation(); Ms.nav && U)
-				if (const auto P = Ms.nav->path(U->position, K2Target, FMath::Max(0.6, Taken->radius * 0.4 - 0.4)))
+				if (const auto P = Ms.nav->path(U->position, Goal, 0.5))
 					for (const ac::Vec2 Q : *P) Way.Add(FVector2D(Q.x, Q.y));
-			if (Way.IsEmpty()) Way.Add(FVector2D(K2Target.x, K2Target.y));
+			Way.Add(FVector2D(Goal.x, Goal.y));
+			Drivable(Way);
 			Shots.Route = Way;
 			Shots.RouteAt = 0;
 			Shots.StallAt = U ? FVector2D(U->position.x, U->position.y) : FVector2D::ZeroVector;
 			Shots.StallSince = Now;
 		}
 		if (Now - Shots.StallSince > 4.0) Stalled(TEXT("into the mission's ring"));
+		// A route that ends short of the ring's middle is planned again each
+		// time and never stalls (Q2: a run waited 15 min): a time limit.
+		TimedOut(TEXT("into the mission's ring"), 60);
 		return;
 	}
 	case 1210:

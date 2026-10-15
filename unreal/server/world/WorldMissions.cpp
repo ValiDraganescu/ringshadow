@@ -637,9 +637,10 @@ bool WorldMap::decodeMissions(const std::string& text, PilotState& p) {
 
 std::string WorldMap::devMissions(const std::string& line) {
     // `missions here`: the first pilot's board drawn again (its own draws,
-    // other dice) until an easy survey or hold in its region is on it; the
-    // board's day kept. The K2 pictures take one (Q2: with a new pilot key
-    // each run, the two easy offers were neither a third of the time).
+    // other dice) until an easy survey in its region is on it; the board's
+    // day kept. The K2 pictures take it (Q2: with a new pilot key each run,
+    // a quarter of the rig's boards had no easy survey or hold here, and a
+    // hold's spot may see no 30 s under the band in the next sweep).
     if (!world_ || pilots_.empty()) return "dev: missions: no world, or no pilot";
     auto& [pilot, p] = *pilots_.begin();
     if (line != "missions here") return "dev: missions: '" + line + "' is not `missions here`";
@@ -647,7 +648,7 @@ std::string WorldMap::devMissions(const std::string& line) {
     const std::optional<int64_t> day = p.boardDay;
     auto has = [&] {
         return std::any_of(p.board.begin(), p.board.end(), [&](const Mission& m) {
-            return m.tier == Tier::easy && (m.kind == Kind::survey || m.kind == Kind::hold) && m.region == here;
+            return m.tier == Tier::easy && m.kind == Kind::survey && m.region == here;
         });
     };
     int64_t tries = 0;
@@ -655,7 +656,7 @@ std::string WorldMap::devMissions(const std::string& line) {
     p.boardDay = day;
     pushProgress(pilot);
     if (!has()) return "dev: missions here: none in " + here + " after 64 draws";
-    return "dev: missions here: an easy survey or hold in " + here + " after " + std::to_string(tries) + " draws";
+    return "dev: missions here: an easy survey in " + here + " after " + std::to_string(tries) + " draws";
 }
 
 } // namespace ac::server

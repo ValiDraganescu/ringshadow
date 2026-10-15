@@ -250,9 +250,10 @@ wallet; the blueprint copies; the supplies up to their stack. The news is
 
 **Dev and shots:** the dev control's `missions here` (`devMissions`) draws
 the first pilot's board again (its own draws, other dice; the board's day
-kept) until an easy survey or hold in its region is on it. `-AcMmoShotsK2`
-sends it first (Q2): a new pilot's board comes from its key's dice, and at
-the dev rig's home a quarter of them had neither.
+kept) until an easy survey in its region is on it. `-AcMmoShotsK2` sends it
+first and takes that survey (Q2): a new pilot's board comes from its key's
+dice (at the dev rig's home a quarter had no easy survey or hold here), and a
+hold's spot may see no 30 s under the band in the next sweep.
 
 **Params:** `WorldParams::missions` (on), `missionSeed` (0: the world's id)
 and `huntMissions` (off until N2).

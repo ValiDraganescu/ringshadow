@@ -380,11 +380,13 @@ bool FAcMmoCrossEdgeTest::RunTest(const FString&)
 		return false;
 	}
 	// The World message may come a moment after the RegionChange, and the new
-	// region's first snapshot after both: the mirror made ahead (W4) drives the
-	// carried-over Prospector until it comes.
+	// region's first snapshot after both (in parts: the driven unit's may be
+	// a later one): the mirror made ahead (W4) drives the carried-over
+	// Prospector until they come.
 	RunUntil(Client, [&] {
-		return Client.Here() && Utf(Client.Here()->id) == TEXT("tern-ridge") && Client.Mirror()
-			&& ac::net::visitOf(Client.Mirror()->game()) == Client.Visit();
+		const ac::net::Mirror* M = Client.Mirror();
+		return Client.Here() && Utf(Client.Here()->id) == TEXT("tern-ridge") && M && ac::net::visitOf(M->game()) == Client.Visit()
+			&& Client.Driven() && M->unit(*Client.Driven());
 	}, 3.0);
 	CheckArrived(*this, Client, TEXT("tern-ridge"), MapWas);
 	TestEqual(TEXT("one region change"), Client.Visit(), VisitWas + 1);
