@@ -685,3 +685,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T P1 shot fixed e09d8be: pins the staged miner by id, 'poor' wallet; 3/3 clean.
 - N B2: canyon waves 1-9 pay ~21k XP-eq in 28 min (x8 pace); missions x8-16 their time; mining holds.
 - D B2 (manager): active play pays about x2 the mining curve, never over x2.5: missions XP ~x3 real time (3/8/15 min), ore x0.5; wave pay x0.4, wave 10 x2 stays; measure after.
+- I A2: ElevenLabs out of credits (4 left); 5/28 KSTR lines made; ~1,700 credits needed to fill the rest; beds cut from own retired tracks meanwhile.
