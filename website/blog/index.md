@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## A Citadel in every region
+
+15 October 2026 · M10 · 4 pictures
+
+The realm limit is now one Citadel a region instead of one a realm, and each is a full home: unload with the realm's tax, respawn at the nearest, respec, the Citadel screen on the one wallet, four corner turrets. Milestone 10's first merge.
+
+Read it: https://ringshadow.com/blog/citadels
+
 ## The day the sky got too heavy
 
 15 October 2026 · A bug story · 1 chart

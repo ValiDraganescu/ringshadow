@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T13:05:00Z</updated>
+  <updated>2026-10-15T15:00:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>A Citadel in every region</title>
+    <id>tag:ringshadow,2026-10-15:blog/citadels</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/citadels"/>
+    <published>2026-10-15T15:00:00Z</published>
+    <updated>2026-10-15T15:00:00Z</updated>
+    <summary>The realm limit is now one Citadel a region instead of one a realm, and each is a full home: unload with the realm's tax, respawn at the nearest, respec, the Citadel screen on the one wallet, four corner turrets. Milestone 10's first merge.</summary>
+  </entry>
   <entry>
     <title>The day the sky got too heavy</title>
     <id>tag:ringshadow,2026-10-15:blog/heavy-sky</id>
