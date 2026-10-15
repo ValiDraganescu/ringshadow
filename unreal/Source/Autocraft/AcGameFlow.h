@@ -303,6 +303,11 @@ private:
 	/// -AcMmoShots=DIR (AcMmoShots.cpp): the MMO moments staged in a new
 	/// world, a PNG of each (HUD on) in DIR; run as the flow step `mmoshots`.
 	void TickMmoShots();
+	/// `mmotwo` (W5, AcMmoTwo.cpp): two humans on one world, this game one
+	/// of them (-AcMmoTwo=A|B), the other a second game process
+	/// (unreal/Tools/two_clients.py); pictures with -AcMmoShots=DIR
+	/// -AcMmoShotsW5.
+	void TickMmoTwo();
 	struct FMmoShots
 	{
 		FString Dir;

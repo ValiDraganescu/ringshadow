@@ -533,6 +533,18 @@ private:
 	uint16 ServerPort = 0;
 	bool bDetached = false;
 	bool bReattached = false;
+	/// W5, two pilots on one Mac for a test: -AcMmoShare=FILE writes the
+	/// server's port, token and dev control file there once connected;
+	/// -AcMmoJoin=FILE (another game) connects to that server instead of
+	/// starting one, its own pilot key and save dir, and its dev lines go
+	/// to the server's file. The joining game never stops the server.
+	bool bJoined = false;
+	FString JoinFile;
+	FString JoinedControl;
+	bool bShared = false;
+	/// The join file read: the port and token (false: not there yet).
+	bool ReadJoinFile();
+	void WriteShareFile();
 	FString WorldFile;
 	double StartedAt = 0;
 	double ConnectAt = 0;

@@ -315,6 +315,19 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 					}
 				}
 			}
+			// W5: the other human pilots here: "PILOT 2B3C" over their
+			// Prospectors, by TagSight's rules as the frontier's.
+			if (const std::optional<ac::net::Sky>& Sky = Mmo->Sky(); Sky && Mmo->World())
+			{
+				const ac::net::Mirror* M = Mmo->Mirror();
+				const std::optional<int64_t> Mine = M ? M->driven() : std::nullopt;
+				for (const ac::net::Sky::Human& H : Sky->pilots)
+				{
+					if (H.unit == 0 || H.region != Mmo->World()->here || (Mine && H.unit == *Mine)) continue;
+					FVector2f At;
+					if (TagAt(H.unit, At)) Tags.Add({FString(UTF8_TO_TCHAR(H.callsign.c_str())).ToUpper(), At});
+				}
+			}
 			for (const auto& [Id, Name] : P->mercTags)
 			{
 				Paint.Add(Id, UAcWorldRenderer::MercenaryTeam);
@@ -327,5 +340,7 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 		}
 	}
 	if (Renderer) Renderer->SetTeamPaint(MoveTemp(Paint));
+	LastTags.Reset();
+	for (const TPair<FString, FVector2f>& T : Tags) LastTags.Add(T.Key);
 	RootWidget->SetTags(MoveTemp(Tags));
 }

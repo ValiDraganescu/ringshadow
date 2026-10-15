@@ -376,7 +376,7 @@ std::string WorldMap::devGoal(const std::string& line) {
     std::string word, what, arg;
     in >> word >> what >> arg;
     if (!world_ || pilots_.empty()) return "dev: goal: no world, or no pilot";
-    auto& [pilot, p] = *pilots_.begin();
+    auto& [pilot, p] = *devPilot();
     if (what == "pass" && WorldGoals::find(arg)) {
         p.goalsPassed.insert(arg);
         if (p.goal == arg) p.goal.clear();

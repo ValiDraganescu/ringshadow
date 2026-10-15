@@ -64,6 +64,7 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
     }
     PilotState& in = pilots_[pilot] = back->second;
     away_.erase(back);
+    joinOrder_[pilot] = ++joins_;
     // H2: what its mercenaries delivered while it was away.
     if (in.mercAway > 0) {
         in.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::merc, "away", 0, in.mercAway, ""});

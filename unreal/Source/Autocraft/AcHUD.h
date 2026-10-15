@@ -52,7 +52,11 @@ public:
 	/// retainer that draws it as one picture; it stays there.
 	void SetFade(float Opacity);
 
+	/// The name tags drawn last frame (H2's, P1's, W5's), for the flow tests.
+	const TArray<FString>& TagsShown() const { return LastTags; }
+
 private:
+	TArray<FString> LastTags;
 	void Attach();
 	void OnFrame(const FAcFrame& Frame);
 	void OnGameStarted(UAcSimSubsystem& Sim);

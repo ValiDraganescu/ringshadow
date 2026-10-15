@@ -13,6 +13,20 @@ using namespace codec;
 
 namespace {
 
+/// W5: a short text (a callsign), as the Progress message writes its own.
+void writeText(BitWriter& w, const std::string& s) {
+    writeVarint(w, s.size());
+    for (char c : s) w.writeU8(static_cast<uint8_t>(c));
+}
+
+bool readText(BitReader& r, std::string& s) {
+    const uint64_t n = readVarint(r);
+    if (n > 64 || n * 8 > r.bitsLeft()) return false;
+    s.resize(static_cast<size_t>(n));
+    for (char& c : s) c = static_cast<char>(r.readU8());
+    return r.ok();
+}
+
 /// What an item is; its key is unique within its kind.
 enum class Kind : uint8_t {
     unit = 1,
@@ -301,6 +315,21 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
             writeVarint(w, uint64_t(f.unit));
             writeVarint(w, uint64_t(f.level));
             w.writeBits(uint64_t(f.doing), 4);
+        }
+        writeVarint(w, s.sky->pilots.size());
+        for (const Sky::Human& h : s.sky->pilots) {
+            writeText(w, h.callsign);
+            writeVarint(w, uint64_t(h.region));
+            writeVarint(w, uint64_t(h.unit));
+            w.writeBool(h.ferry.has_value());
+            if (h.ferry) {
+                const Sky::Human::Ferry& f = *h.ferry;
+                Pos{}.write(w, f.boarded);
+                writeVarint(w, uint64_t(f.to));
+                Pos{}.write(w, f.at);
+                for (const double x : {f.plan.descend, f.plan.board, f.plan.lift, f.plan.turns, f.plan.dash, f.plan.approach, f.elapsed})
+                    kMs.write(w, x);
+            }
         }
     }
     Opt<Fixed>{kMs}.write(w, s.xp);
@@ -789,6 +818,23 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
             f.unit = int64_t(readVarint(r));
             f.level = int64_t(readVarint(r));
             f.doing = static_cast<FrontierDoing>(r.readBits(4));
+        }
+        const uint64_t humans = readVarint(r);
+        if (humans > 64 || !r.ok()) return std::nullopt;
+        sky.pilots.assign(size_t(humans), {});
+        for (Sky::Human& h : sky.pilots) {
+            if (!readText(r, h.callsign)) return std::nullopt;
+            h.region = int64_t(readVarint(r));
+            h.unit = int64_t(readVarint(r));
+            if (r.readBool()) {
+                Sky::Human::Ferry f;
+                Pos{}.read(r, f.boarded);
+                f.to = int64_t(readVarint(r));
+                Pos{}.read(r, f.at);
+                for (double* x : {&f.plan.descend, &f.plan.board, &f.plan.lift, &f.plan.turns, &f.plan.dash, &f.plan.approach, &f.elapsed})
+                    kMs.read(r, *x);
+                h.ferry = f;
+            }
         }
         s.sky = sky;
     }

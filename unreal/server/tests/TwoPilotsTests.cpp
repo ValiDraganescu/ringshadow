@@ -5,6 +5,8 @@
 // headlamp beam at night, and either leaving leaves the other driving.
 // Isolated scenes of a few seconds on The First Reach; run from unreal/server.
 
+#include <set>
+
 #include "test.h"
 
 #include "Rules.h"
@@ -191,4 +193,151 @@ TEST(two_pilots_keep_their_own_skills_and_one_leaves) {
     EXPECT_TRUE(sim.pilot && sim.pilot->unit == *r.driving(b));
     EXPECT_TRUE(sim.drivers.empty());
     EXPECT_NEAR(sim.boost(Stat::Speed{}, *driven(w, b)).apply(1.0), speedB, 1e-9);
+}
+
+/// Each keeps its own wallet in the region (W5): the side's bank is the
+/// active driver's, the other's is swapped in for its own turn. A build
+/// costs its builder only, each snapshot tells its own pilot's, and one
+/// leaving and coming back finds its own again.
+TEST(two_pilots_keep_their_own_wallets) {
+    WorldMap w(first(), params());
+    seatBoth(w);
+    Region& r = *w.regionOf(a);
+    Simulation& sim = r.simulation();
+    r.setBank(a, 900, 30);
+    r.setBank(b, 100, 5);
+    w.step();
+    EXPECT_TRUE(w.wallet(a) == (WorldMap::Wallet{900, 30}));
+    EXPECT_TRUE(w.wallet(b) == (WorldMap::Wallet{100, 5}));
+    EXPECT_EQ(r.snapshot(a).players[0].ore, int64_t(900));
+    EXPECT_EQ(r.snapshot(b).players[0].ore, int64_t(100));
+    // B (the other driver, not the active one) builds: B pays.
+    ProspectorProgress pb = *w.progress(b);
+    pb.xp = Progression::xp(20);
+    pb.giveBlueprint(StructureKind::habDome);
+    w.setProgress(b, pb);
+    r.setBank(b, 2000, 500);
+    w.step();
+    // Off the start pad's ground.
+    Unit* ub = driven(w, b);
+    ub->position = ub->position + Vec2(0, 18);
+    if (!sim.nav->walkable(ub->position)) ub->position = *sim.nav->nearestFree(ub->position);
+    ub->task = Unit::Task::idle;
+    w.step();
+    const Vec2 from = driven(w, b)->position;
+    const double reach = Region::buildReach(StructureKind::habDome);
+    bool built = false;
+    for (double d = reach; d <= reach + Region::buildSlack && !built; d += 0.5)
+        for (int k = 0; k < 16 && !built; k++) {
+            const double h = k * 2 * pi / 16;
+            const auto spot = sim.snap(StructureKind::habDome, from + Vec2(std::cos(h), std::sin(h)) * d);
+            if (!spot || sim.placementRefusal(StructureKind::habDome, *spot)) continue;
+            const auto why = w.build(b, StructureKind::habDome, *spot);
+            if (why && k == 0) std::printf("  refused: %s\n", why->c_str());
+            built = !why;
+        }
+    ASSERT_TRUE(built);
+    w.step();
+    std::printf("  after B's Hab Dome: A %lld ore, B %lld ore\n", (long long)w.wallet(a)->ore, (long long)w.wallet(b)->ore);
+    EXPECT_EQ(w.wallet(a)->ore, int64_t(900));
+    EXPECT_TRUE(w.wallet(b)->ore < 2000 && w.wallet(b)->ore >= 2000 - 3 * Rules::cost(StructureKind::habDome));
+    EXPECT_EQ(w.wallet(a)->hydrogen, int64_t(30));
+    // B leaves and comes back (a new connection, its key): its own again.
+    const WorldMap::Wallet left = *w.wallet(b);
+    w.leave(b);
+    for (int i = 0; i < 30; i++) w.step();
+    EXPECT_TRUE(w.wallet(a) == (WorldMap::Wallet{900, 30}));
+    constexpr PilotId b2 = 103;
+    EXPECT_TRUE(w.seat(b2, keyB) == WorldMap::Seated::restored);
+    w.step();
+    EXPECT_TRUE(w.wallet(b2) == left);
+    EXPECT_TRUE(w.wallet(a) == (WorldMap::Wallet{900, 30}));
+    EXPECT_TRUE(w.regionOf(b2)->driving(b2).has_value());
+}
+
+/// A dev line for the second human (`as 2 LINE`, Server::devControl): it
+/// acts on that pilot, the first left as it was.
+TEST(two_pilots_dev_lines_for_the_second) {
+    WorldMap w(first(), params());
+    seatBoth(w);
+    const WorldMap::Wallet wa = *w.wallet(a);
+    EXPECT_TRUE(w.devPilotId(1) == a && w.devPilotId(2) == b && !w.devPilotId(3));
+    w.devAs = w.devPilotId(2);
+    w.devFerry("ferry mh 77");
+    w.devAs = std::nullopt;
+    w.step();
+    EXPECT_EQ(w.wallet(b)->hydrogen, int64_t(77));
+    EXPECT_TRUE(w.wallet(a) == wa);
+}
+
+/// Dev lines go by when each pilot joined, not by its connection id (they
+/// are random): the first to join is pilot 1, even with the larger id.
+TEST(two_pilots_dev_lines_go_by_join_order) {
+    WorldMap w(first(), params());
+    constexpr PilotId big = 4000000000, small = 800000000;
+    EXPECT_TRUE(w.seat(big, keyA) == WorldMap::Seated::fresh);
+    w.step();
+    EXPECT_TRUE(w.seat(small, keyB) == WorldMap::Seated::fresh);
+    w.step();
+    EXPECT_TRUE(w.devPilotId(1) == big && w.devPilotId(2) == small);
+    w.devFerry("ferry mh 33");
+    w.step();
+    EXPECT_EQ(w.wallet(big)->hydrogen, int64_t(33));
+    // The first leaves and comes back: last in the order now.
+    w.leave(big);
+    w.step();
+    EXPECT_TRUE(w.seat(big + 1, keyA) == WorldMap::Seated::restored);
+    EXPECT_TRUE(w.devPilotId(1) == small && w.devPilotId(2) == big + 1);
+}
+
+/// Each welds what it puts up (W5): A's building and B's, each finished by
+/// its own Prospector standing by it, the other driving too.
+TEST(two_pilots_each_weld_their_own_building) {
+    WorldMap w(first(), params());
+    seatBoth(w);
+    Region& r = *w.regionOf(a);
+    Simulation& sim = r.simulation();
+    std::map<PilotId, int64_t> built;
+    for (const PilotId who : {a, b}) {
+        ProspectorProgress pr = *w.progress(who);
+        pr.xp = Progression::xp(20);
+        pr.giveBlueprint(StructureKind::habDome);
+        w.setProgress(who, pr);
+        r.setBank(who, 3000, 500);
+        Unit* u = driven(w, who);
+        u->position = u->position + Vec2(who == a ? -16 : 16, 18);
+        if (!sim.nav->walkable(u->position)) u->position = *sim.nav->nearestFree(u->position);
+        u->task = Unit::Task::idle;
+    }
+    w.step();
+    for (const PilotId who : {a, b}) {
+        const Vec2 from = driven(w, who)->position;
+        const double reach = Region::buildReach(StructureKind::habDome);
+        for (double d = reach; d <= reach + Region::buildSlack && !built.count(who); d += 0.5)
+            for (int k = 0; k < 16 && !built.count(who); k++) {
+                const double h = k * 2 * pi / 16;
+                const auto spot = sim.snap(StructureKind::habDome, from + Vec2(std::cos(h), std::sin(h)) * d);
+                if (!spot || sim.placementRefusal(StructureKind::habDome, *spot)) continue;
+                const int64_t id = sim.state.nextID;
+                if (!w.build(who, StructureKind::habDome, *spot)) built[who] = id;
+            }
+    }
+    ASSERT_TRUE(built.size() == 2);
+    (void)w.takeNews(a);
+    (void)w.takeNews(b);
+    for (int i = 0; i < 60 * 120; i++) {
+        drive(w, 1, Vec2(0, 0), 0.0, Vec2(0, 0), 0.0);
+        if (sim.state.structure(built[a])->complete() && sim.state.structure(built[b])->complete()) break;
+    }
+    std::printf("  A's Hab Dome %.0f hp, B's %.0f hp, after %.0f s\n", double(sim.state.structure(built[a])->hp),
+                double(sim.state.structure(built[b])->hp), sim.state.time);
+    EXPECT_TRUE(sim.state.structure(built[a])->complete());
+    EXPECT_TRUE(sim.state.structure(built[b])->complete());
+    // Each is told of both: "PILOT 443E BUILT A HAB DOME" on the other's HUD.
+    for (const PilotId who : {a, b}) {
+        std::set<std::string> by;
+        for (const auto& n : w.takeNews(who))
+            if (n.kind == net::ProgressMessage::NewsKind::built) by.insert(n.by);
+        EXPECT_EQ(by.size(), size_t(2));
+    }
 }

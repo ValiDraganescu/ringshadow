@@ -423,16 +423,18 @@ int main(int argc, char** argv) {
                 why = "parent " + std::to_string(parent) + " is gone";
                 break;
             }
-            // Dev and shots: the control file's clock moves, once each.
+            // Dev and shots: the control file's clock moves, once each; a
+            // game that joined (W5) writes its own beside it, `.joined`.
             if (!devControlPath.empty())
-                if (FILE* f = std::fopen(devControlPath.c_str(), "rb")) {
-                    std::string text;
-                    char buf[512];
-                    for (size_t got; (got = std::fread(buf, 1, sizeof buf, f)) > 0;) text.append(buf, got);
-                    std::fclose(f);
-                    std::remove(devControlPath.c_str());
-                    server.devControl(text);
-                }
+                for (const std::string& path : {devControlPath, devControlPath + ".joined"})
+                    if (FILE* f = std::fopen(path.c_str(), "rb")) {
+                        std::string text;
+                        char buf[512];
+                        for (size_t got; (got = std::fread(buf, 1, sizeof buf, f)) > 0;) text.append(buf, got);
+                        std::fclose(f);
+                        std::remove(path.c_str());
+                        server.devControl(text);
+                    }
         }
         // S2: no one on line, a world idles: its clock and timers at 2 Hz,
         // woken at once by a datagram (a pilot connecting).

@@ -536,7 +536,7 @@ std::string WorldMap::devMatriarch(const std::string& line) {
     if (!world_ || pilots_.empty()) return "dev: matriarch: no world, or no pilot";
     const auto nr = nestRegion();
     if (!nr) return "dev: matriarch: no nest in the world";
-    auto& [pilot, p] = *pilots_.begin();
+    auto& [pilot, p] = *devPilot();
     const Vec2 home = *nestAt(*nr);
     if (what == "back") {
         nest_.held = false;

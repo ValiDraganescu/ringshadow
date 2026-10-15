@@ -684,6 +684,20 @@ public:
     int64_t visit(PilotId pilot) const;
     bool flying(PilotId pilot) const;
 
+    /// Dev lines (Server::devControl) act on the first pilot on line; `as
+    /// N LINE` on the N-th by its id (W5: 2, the second human). Nil: none.
+    std::optional<PilotId> devPilotId(int64_t n) const {
+        if (n < 1) return std::nullopt;
+        std::vector<std::pair<int64_t, PilotId>> order;
+        for (const auto& [id, p] : pilots_) {
+            const auto o = joinOrder_.find(id);
+            order.push_back({o == joinOrder_.end() ? 0 : o->second, id});
+        }
+        std::sort(order.begin(), order.end());
+        return size_t(n) <= order.size() ? std::optional(order[size_t(n - 1)].second) : std::nullopt;
+    }
+    std::optional<PilotId> devAs;
+
     struct Wallet {
         int64_t ore = 0;
         int64_t hydrogen = 0;
@@ -780,7 +794,8 @@ public:
     /// The clock and the weather as the snapshots carry them (nil: not a
     /// world). The weather is the same over the whole world: `Weather`
     /// seeded by the world's id, sampled at the clock.
-    std::optional<net::Sky> sky() const { return world_ ? std::optional<net::Sky>(sky_) : std::nullopt; }
+    /// W5: with the human pilots on line, each with the Prospector it drives.
+    std::optional<net::Sky> sky() const;
     /// The weather sampled at the clock now.
     const WeatherSample& weather() const { return weatherNow_; }
 
@@ -1558,6 +1573,15 @@ private:
     std::vector<std::unique_ptr<Region>> regions_;
     size_t start_ = 0;
     std::map<PilotId, PilotState> pilots_;
+    /// When each pilot on line joined (a count; connection ids are random).
+    std::map<PilotId, int64_t> joinOrder_;
+    int64_t joins_ = 0;
+    /// The pilot a dev line acts on (`devAs`, else the first to join).
+    std::map<PilotId, PilotState>::iterator devPilot() {
+        const auto first = devPilotId(1);
+        const auto it = pilots_.find(devAs ? *devAs : first.value_or(0));
+        return it != pilots_.end() ? it : pilots_.begin();
+    }
     /// Kept pilots off line, by key.
     std::map<std::string, PilotState> away_;
     /// Who built each building, per region (building id → key).

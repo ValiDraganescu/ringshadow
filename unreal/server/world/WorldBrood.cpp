@@ -856,7 +856,7 @@ std::string WorldMap::devBrood(const std::string& line) {
     std::string word, what;
     in >> word >> what;
     if (!world_ || pilots_.empty()) return "dev: brood: no world, or no pilot";
-    const auto& [pilot, p] = *pilots_.begin();
+    const auto& [pilot, p] = *devPilot();
     // `brood zone here [ZONE]` (Z1; Z3 names one): the pilot to the first
     // canyon zone's region (or ZONE's),
     // 8 cells south of its prize (The Fork: in its gorge, the prize in its

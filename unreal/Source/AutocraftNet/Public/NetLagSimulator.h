@@ -58,6 +58,9 @@ public:
     bool receive(double now, Address& from, uint8_t* buffer, size_t capacity, size_t& size) override;
     /// Sends the outgoing packets that are due; send and receive do it too.
     void pump(double now);
+    /// Sends every outgoing packet held, due or not: the game is closing
+    /// and its last packets (the goodbye) have left the machine already.
+    void drain(double now);
 
     /// Packets the simulator dropped, both ways.
     uint64_t lost() const { return lost_; }

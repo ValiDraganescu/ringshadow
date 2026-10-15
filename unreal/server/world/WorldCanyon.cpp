@@ -654,7 +654,7 @@ std::string WorldMap::devCanyon(const std::string& line) {
     std::string word, what;
     in >> word >> what;
     if (!world_ || pilots_.empty()) return "dev: canyon: no world, or no pilot";
-    const auto& [pilot, p] = *pilots_.begin();
+    const auto& [pilot, p] = *devPilot();
     const size_t r = p.region;
     const auto& places = regions_[r]->places();
     if (!places || places->zones.empty()) return "dev: canyon: no zone in " + world_->regions[r].file.id;

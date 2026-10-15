@@ -1519,12 +1519,14 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 	}
 	case K::built:
 	{
-		// R1: a building of the realm finished, by this pilot or another.
+		// R1: a building of the realm finished, by this pilot or another; W5:
+		// told as the frontier's deeds are, "PILOT 443E BUILT A HAB DOME".
 		const std::optional<ac::StructureKind> Kind = ac::parse<ac::StructureKind>(N.id);
 		const FString Name = Kind ? Upper(ac::Simulation::title(*Kind)) : Text(N.id).ToUpper();
-		const FString By = N.by.empty() ? FString(TEXT("a pilot")) : (P && N.by == P->callsign ? FString(TEXT("you")) : Text(N.by));
-		const FString Where = N.value == 1 ? FString(TEXT("here")) : FString(TEXT("in the realm"));
-		Hud->Toast(FString::Printf(TEXT("%s BUILT"), *Name), FString::Printf(TEXT("Built by %s  ·  %s  ·  every pilot's"), *By, *Where),
+		const FString By = N.by.empty() ? FString(TEXT("A PILOT")) : (P && N.by == P->callsign ? FString(TEXT("YOU")) : Text(N.by).ToUpper());
+		const FString Where = N.value == 1 && Mmo.Here() ? FString::Printf(TEXT("in %s"), *Text(Mmo.Here()->name)) : FString(TEXT("elsewhere in the realm"));
+		const FString A = Name.Len() > 0 && FString(TEXT("AEIOU")).Contains(Name.Left(1)) ? TEXT("AN") : TEXT("A");
+		Hud->Toast(FString::Printf(TEXT("%s BUILT %s %s"), *By, *A, *Name), FString::Printf(TEXT("%s  ·  every pilot's"), *Where),
 			FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
 		break;
 	}

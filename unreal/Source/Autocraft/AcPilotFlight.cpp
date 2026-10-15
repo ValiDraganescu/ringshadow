@@ -16,6 +16,7 @@
 #include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
+#include "AcTerrain.h"
 #include "AcWorldRenderer.h"
 
 #include "Camera/PlayerCameraManager.h"
@@ -659,4 +660,197 @@ void AAcPilotPawn::SetFade(const double Amount)
 	if (!Manager) return;
 	if (Amount <= 0.001) Manager->StopCameraFade();
 	else Manager->SetManualCameraFade(float(FMath::Min(Amount, 1.0)), FLinearColor::Black, false);
+}
+
+// MARK: - The other pilots' flights (W5)
+
+namespace
+{
+	struct FWatched
+	{
+		double Start = 0;
+		double ElapsedSeen = -1;
+		AcPilotFlight::FPath Path;
+		int64 From = 0;
+		int64 To = 0;
+		bool bToHeight = false;
+		double LastFx = -1;
+		int32 Slot = 0;
+		/// Where its Prospector stood when it called the ship, and its model.
+		FTransform Stood;
+		FName Rider;
+		EAcFlightStage Stage = EAcFlightStage::None;
+	};
+	TMap<FString, FWatched> GWatched;
+	/// The last place of each other pilot's Prospector on the ground here,
+	/// and its model: the ship takes that one aboard.
+	TMap<FString, TPair<FTransform, FName>> GLastSeen;
+
+	FName WatchedName(const TCHAR* What, const int32 Slot) { return FName(*FString::Printf(TEXT("AcWatched%s%d"), What, Slot)); }
+	double GroundAt(const UWorld* World, const ac::Vec2 P)
+	{
+		const AAcTerrain* T = AAcTerrain::Find(World);
+		return T ? T->FieldHeight(P) : 0.0;
+	}
+}
+
+TArray<TPair<FString, EAcFlightStage>> AcPilotFlight::Watched()
+{
+	TArray<TPair<FString, EAcFlightStage>> Out;
+	for (const auto& [Name, X] : GWatched)
+		if (X.Stage != EAcFlightStage::None) Out.Add({Name, X.Stage});
+	return Out;
+}
+
+void AcPilotFlight::TickWatched(UWorld* World)
+{
+	const UAcSimSubsystem* Sim = World ? UAcSimSubsystem::Get(World) : nullptr;
+	const FAcMmoClient* Mmo = Sim && Sim->IsMmo() ? Sim->MmoClient() : nullptr;
+	const ac::net::WorldMessage* W = Mmo ? Mmo->World() : nullptr;
+	const ac::net::ProgressMessage* P = Mmo ? Mmo->Progress() : nullptr;
+	const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
+	const double Now = FPlatformTime::Seconds();
+	auto HideSlot = [&](const int32 Slot) {
+		if (!World) return;
+		if (AAcFlightShip* Ship = AAcFlightShip::SpawnFor(World, WatchedName(TEXT("Ship"), Slot))) Ship->Hide();
+		if (AAcFlightShip* Rider = AAcFlightShip::SpawnFor(World, WatchedName(TEXT("Rider"), Slot))) Rider->Hide();
+	};
+	TSet<FString> Live;
+	if (Mmo && W && Mmo->Sky())
+	{
+		const UAcWorldRenderer* Renderer = UAcWorldRenderer::Get(World);
+		for (const ac::net::Sky::Human& H : Mmo->Sky()->pilots)
+		{
+			if (P && H.callsign == P->callsign) continue;
+			const FString Name = UTF8_TO_TCHAR(H.callsign.c_str());
+			// On the ground here: where it stands, for the ship to take it from.
+			if (!H.ferry)
+			{
+				if (const ac::Unit* U = M && H.unit && H.region == W->here ? M->unit(H.unit) : nullptr)
+				{
+					const FAcModelInfo* Model = Renderer ? Renderer->ModelOf(U->id) : nullptr;
+					GLastSeen.Add(Name, {FTransform(AcSpace::QuatFromHeading(U->heading), AcSpace::ToWorld(U->position, GroundAt(World, U->position))),
+						Model ? Model->Name : FName()});
+				}
+				continue;
+			}
+			const ac::net::Sky::Human::Ferry& F = *H.ferry;
+			FWatched* X = GWatched.Find(Name);
+			if (!X || X->From != H.region || X->To != F.to)
+			{
+				const TOptional<FVector> A = Mmo->RegionPoint(H.region, F.boarded);
+				if (!A) continue;
+				FWatched New;
+				New.Start = Now - F.elapsed;
+				New.From = H.region;
+				New.To = F.to;
+				New.Path.Plan = F.plan;
+				New.Path.A = *A;
+				// The target pad once its region's map is known (else the
+				// giant's way: the ship goes off toward it).
+				New.Path.B = Mmo->RegionPoint(F.to, F.at).Get(*A);
+				New.Path.Giant = GiantWay();
+				TSet<int32> Taken;
+				for (const auto& [K, V] : GWatched) Taken.Add(V.Slot);
+				while (Taken.Contains(New.Slot)) New.Slot += 1;
+				if (const TPair<FTransform, FName>* Seen = GLastSeen.Find(Name))
+				{
+					New.Stood = Seen->Key;
+					New.Rider = Seen->Value;
+				}
+				else
+				{
+					New.Stood = FTransform(*A);
+				}
+				if (UAcEffects* Fx = UAcEffects::Get(World)) New.Path.A.Z = GroundCm(Fx, New.Path.A, New.Stood.GetLocation().Z);
+				New.Path.B.Z = New.Path.A.Z;
+				UE_LOG(LogAutocraft, Log, TEXT("flight: %s's Dropship called at %s, %.1f s in (total %.1f)"), *Name,
+					*New.Path.A.ToCompactString(), F.elapsed, F.plan.total());
+				X = &GWatched.Add(Name, New);
+			}
+			else if (F.elapsed != X->ElapsedSeen && FMath::Abs(X->Start - (Now - F.elapsed)) > 0.25)
+			{
+				X->Start = Now - F.elapsed;
+			}
+			X->ElapsedSeen = F.elapsed;
+			if (const TOptional<FVector> B = Mmo->RegionPoint(F.to, F.at); B && X->Path.B.Equals(X->Path.A, 1.0))
+			{
+				X->Path.B.X = B->X;
+				X->Path.B.Y = B->Y;
+			}
+			Live.Add(Name);
+		}
+	}
+	// Gone from the sky's flights: landed (its Prospector on the ground
+	// again) or off line.
+	for (auto It = GWatched.CreateIterator(); It; ++It)
+	{
+		if (Live.Contains(It.Key())) continue;
+		HideSlot(It.Value().Slot);
+		It.RemoveCurrent();
+	}
+	if (!World || !W) return;
+	UAcEffects* Fx = UAcEffects::Get(World);
+	for (auto& [Name, X] : GWatched)
+	{
+		const ac::Ferry::Plan& Plan = X.Path.Plan;
+		const double T = Now - X.Start;
+		// Here while it leaves (up to the switch), or where it comes in.
+		const bool bLeaving = W->here == X.From && T < Plan.approachAt();
+		const bool bComing = W->here == X.To && T >= Plan.approachAt() && T < Plan.total() + 1.0;
+		if (!bLeaving && !bComing)
+		{
+			X.Stage = EAcFlightStage::None;
+			HideSlot(X.Slot);
+			continue;
+		}
+		if (bComing && !X.bToHeight && Fx)
+		{
+			X.Path.B.Z = GroundCm(Fx, X.Path.B, X.Path.B.Z);
+			X.bToHeight = true;
+		}
+		const double Tc = FMath::Min(T, Plan.total());
+		const EAcFlightStage Was = X.Stage;
+		X.Stage = X.Path.Stage(Tc);
+		if (X.Stage != Was)
+		{
+			const FVector At = X.Path.Pos(Tc);
+			UE_LOG(LogAutocraft, Log, TEXT("flight: %s's Dropship, stage %d at %s (%s), rider %s from %s"), *Name, int32(X.Stage), *At.ToCompactString(),
+				bLeaving ? TEXT("leaving here") : TEXT("coming here"), *X.Rider.ToString(), *X.Stood.GetLocation().ToCompactString());
+		}
+		double Dt = 0;
+		if (Fx)
+		{
+			Dt = X.LastFx >= 0 ? FMath::Clamp(Fx->Now() - X.LastFx, 0.0, 0.1) : 0.0;
+			X.LastFx = Fx->Now();
+		}
+		const FVector Body = X.Path.Pos(Tc);
+		const FQuat Rot = X.Path.Rot(FMath::Min(Tc, Plan.total() - 0.31));
+		const double Thrust = X.Path.Thrust(Tc);
+		if (AAcFlightShip* Ship = AAcFlightShip::SpawnFor(World, WatchedName(TEXT("Ship"), X.Slot)))
+		{
+			Ship->SetScale(ShipScale);
+			Ship->Show(DropshipModel, 0, FTransform(Rot, Body), ShipLift());
+			Ship->SetGlow(1.0 + 2.5 * Thrust);
+		}
+		if (Fx && X.Stage != EAcFlightStage::Board) Jets(*Fx, Body + Up() * Cells(Belly), Rot, Thrust, Dt);
+		// Its Prospector: standing where it called the ship, then up the ramp.
+		AAcFlightShip* Rider = AAcFlightShip::SpawnFor(World, WatchedName(TEXT("Rider"), X.Slot));
+		if (!Rider) continue;
+		if (bLeaving && (X.Stage == EAcFlightStage::Descend || X.Stage == EAcFlightStage::Board) && !X.Rider.IsNone())
+		{
+			const FVector Back = -Rot.GetForwardVector();
+			const FVector Stood = X.Stood.GetLocation();
+			const FVector RampAt = X.Path.A + Back * Cells(Ramp * ShipScale) + FVector(0, 0, Stood.Z - X.Path.A.Z);
+			const double U = X.Stage == EAcFlightStage::Board ? (Tc - Plan.boardAt()) / Plan.board : 0.0;
+			const FVector P0 = FMath::Lerp(Stood, RampAt, Ease(FMath::Min(U / 0.7, 1.0)));
+			const FVector Pos = U > 0.7 ? FMath::Lerp(RampAt, X.Path.A + Up() * Cells(0.3), (U - 0.7) / 0.3) : P0;
+			FVector Dir = U < 0.7 ? RampAt - Stood : X.Path.A - RampAt;
+			Dir.Z = 0;
+			const FQuat Face = Dir.SizeSquared() > 1 ? Dir.Rotation().Quaternion() : X.Stood.GetRotation();
+			if (U < 0.98) Rider->Show(X.Rider, 0, FTransform(U > 0 ? Face : X.Stood.GetRotation(), Pos), 0);
+			else Rider->Hide();
+		}
+		else Rider->Hide();
+	}
 }

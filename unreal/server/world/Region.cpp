@@ -97,6 +97,7 @@ std::optional<Unit> Region::release(int64_t unit) {
     const Unit out = sim_.state.units[static_cast<size_t>(*i)];
     for (auto& [id, seat] : pilots_)
         if (seat.drives == unit) {
+            keepBank(seat);
             if (drivesNow(seat)) stashLevels(seat);
             seat.drives = std::nullopt;
         }
@@ -133,6 +134,7 @@ bool Region::take(PilotId pilot, int64_t unit) {
     if (drivesNow(seat) && *seat.drives == unit) return true;
     // Driving another: that one goes back to the AI first.
     if (drivesNow(seat)) {
+        keepBank(seat);
         stashLevels(seat);
         sim_.handBack(*seat.drives);
         seat.drives = std::nullopt;
@@ -142,6 +144,11 @@ bool Region::take(PilotId pilot, int64_t unit) {
     if (!sim_.drive(unit, seat.levels)) return false;
     seat.drives = unit;
     seat.drove = unit;
+    // Another human drives too: its own bank in its context.
+    if (const auto k = sim_.driverIndex(unit); k && seat.bank) {
+        sim_.drivers[*k].ore = seat.bank->first;
+        sim_.drivers[*k].hydrogen = seat.bank->second;
+    }
     // Its skills on the unit it drives now.
     loadProgress(seat);
     // Until its first input the unit stands, facing where it faces.
@@ -157,11 +164,43 @@ bool Region::take(PilotId pilot, int64_t unit) {
 void Region::handBack(PilotId pilot) {
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end() || !it->second.drives) return;
+    keepBank(it->second);
     if (drivesNow(it->second)) {
         stashLevels(it->second);
         sim_.handBack(*it->second.drives);
     }
     it->second.drives = std::nullopt;
+}
+
+std::optional<std::pair<int64_t, int64_t>> Region::bank(PilotId pilot) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return std::nullopt;
+    Seat& seat = it->second;
+    const Player& side = sim_.state.players[static_cast<size_t>(Pilot::player)];
+    if (drivesNow(seat)) return sim_.asDriver(*seat.drives, [&] { return std::pair{side.ore, side.hydrogen}; });
+    if (!sim_.pilot) return std::pair{side.ore, side.hydrogen};
+    return seat.bank;
+}
+
+void Region::setBank(PilotId pilot, int64_t ore, int64_t hydrogen) {
+    const auto it = pilots_.find(pilot);
+    if (it == pilots_.end()) return;
+    Seat& seat = it->second;
+    seat.bank = std::pair{ore, hydrogen};
+    Player& side = sim_.state.players[static_cast<size_t>(Pilot::player)];
+    auto set = [&] {
+        side.ore = ore;
+        side.hydrogen = hydrogen;
+    };
+    if (drivesNow(seat)) sim_.asDriver(*seat.drives, set);
+    else if (!sim_.pilot) set();
+}
+
+void Region::keepBank(Seat& seat) {
+    const Player& side = sim_.state.players[static_cast<size_t>(Pilot::player)];
+    if (drivesNow(seat)) seat.bank = sim_.asDriver(*seat.drives, [&] { return std::pair{side.ore, side.hydrogen}; });
+    // Its unit gone and no one driving: the side's is still its own.
+    else if (seat.drives && !sim_.pilot) seat.bank = std::pair{side.ore, side.hydrogen};
 }
 
 bool Region::drivesNow(const Seat& seat) const { return seat.drives && sim_.piloted(*seat.drives); }
@@ -386,6 +425,7 @@ void Region::step() {
         // The driven unit died, or got where it cannot be driven from: its
         // levels kept, its driver's context handed back (W5).
         if (seat.drives && (!drivesNow(seat) || !sim_.unitIndex(*seat.drives))) {
+            keepBank(seat);
             stashLevels(seat);
             sim_.handBack(*seat.drives);
             seat.drives = std::nullopt;

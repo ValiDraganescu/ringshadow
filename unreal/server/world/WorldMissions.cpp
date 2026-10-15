@@ -646,7 +646,7 @@ std::string WorldMap::devMissions(const std::string& line) {
     // a quarter of the rig's boards had no easy survey or hold here, and a
     // hold's spot may see no 30 s under the band in the next sweep).
     if (!world_ || pilots_.empty()) return "dev: missions: no world, or no pilot";
-    auto& [pilot, p] = *pilots_.begin();
+    auto& [pilot, p] = *devPilot();
     if (line != "missions here") return "dev: missions: '" + line + "' is not `missions here`";
     const std::string here = world_->regions[p.region].file.id;
     const std::optional<int64_t> day = p.boardDay;

@@ -155,6 +155,23 @@ std::vector<std::string> Server::devControl(const std::string& text) {
         char what[16] = {};
         double v = 0;
         if (line.find_first_not_of(" \t\r") == std::string::npos) continue;
+        // W5: `as N LINE`, the line for the N-th pilot on line (2: the
+        // second human), not the first.
+        if (int n = 0, used = 0; line.rfind("as ", 0) == 0 && std::sscanf(line.c_str(), "as %d %n", &n, &used) == 1 && used > 0) {
+            world_.devAs = world_.devPilotId(n);
+            if (!world_.devAs) {
+                said.push_back("dev: control '" + line + "' not done (no pilot " + std::to_string(n) + " on line)");
+                continue;
+            }
+            // (Logged once, here.)
+            const auto log = options_.log;
+            options_.log = nullptr;
+            const std::vector<std::string> one = devControl(line.substr(size_t(used)));
+            options_.log = log;
+            world_.devAs = std::nullopt;
+            for (const std::string& x : one) said.push_back("as " + std::to_string(n) + ": " + x);
+            continue;
+        }
         // The Brood's scenes (WorldMap::devBrood): `brood linger|attack|dive|lodeback|raid|zone|clear`.
         if (line.rfind("brood", 0) == 0) {
             said.push_back(world_.devBrood(line));
@@ -393,11 +410,9 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
         Region* region = world_.regionOf(client.pilot);
         if (!region) return;
         if (const auto* take = std::get_if<net::RequestMessage::Take>(&m.what)) {
-            bool other = false;
-            for (const auto& [id, o] : clients_)
-                if (id != c && region->driving(o.pilot)) other = true;
+            // W5: another human driving here takes nothing from this one
+            // (Region::take refuses its unit).
             if (world_.flying(client.pilot)) reply.reason = "in flight";
-            else if (other) reply.reason = "another pilot drives";
             else if (!region->take(client.pilot, take->unit)) reply.reason = "that unit cannot be driven";
             else reply.done = true;
             if (!reply.done)

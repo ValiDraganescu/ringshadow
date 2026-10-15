@@ -96,7 +96,8 @@ bool FAcMmoClient::DevClock(const FString& Line)
 {
 	if (!DevControlled()) return false;
 	// Written aside, then moved in: the server never reads half a line.
-	const FString File = FPaths::Combine(Directory(), TEXT("dev-control.txt"));
+	// W5: a joining game writes beside the server's own file (its `.joined`).
+	const FString File = bJoined && !JoinedControl.IsEmpty() ? JoinedControl + TEXT(".joined") : FPaths::Combine(Directory(), TEXT("dev-control.txt"));
 	const FString Aside = File + TEXT(".new");
 	if (!FFileHelper::SaveStringToFile(Line + TEXT("\n"), *Aside) || !IFileManager::Get().Move(*File, *Aside, true, true)) return false;
 	UE_LOG(LogAutocraft, Display, TEXT("mmo: dev clock: %s"), *Line);
@@ -286,6 +287,23 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	bArriving = false;
 	Notes.Reset();
 	Events.clear();
+	// W5: -AcMmoJoin=FILE: another game's server, its port and token from
+	// the file that game writes (-AcMmoShare); connected on a Tick once there.
+	bJoined = false;
+	bShared = false;
+	JoinedControl.Reset();
+	if (FParse::Value(FCommandLine::Get(), TEXT("AcMmoJoin="), JoinFile) && !JoinFile.IsEmpty())
+	{
+		bJoined = true;
+		bDetached = false;
+		bReattached = false;
+		ServerPort = 0;
+		CurrentPhase = EPhase::Starting;
+		StatusMessage = TEXT("Joining the other game's world server…");
+		StartedAt = Now;
+		UE_LOG(LogAutocraft, Log, TEXT("mmo: joining the world server named in %s"), *JoinFile);
+		return true;
+	}
 	const FString Program = ServerProgram();
 	if (!FPaths::FileExists(Program))
 	{
@@ -465,10 +483,17 @@ void FAcMmoClient::Stop()
 		// The unit goes back to its AI; the server tells its other clients.
 		if (Driven()) Net->handBack();
 		Net->flush(LastNow);
-		// Detached, it runs on: the pilot leaves now, not at the timeout.
-		if (bDetached) Net->disconnect(LastNow, "the game left");
+		// Detached (or joined to another game's), it runs on: the pilot
+		// leaves now, not at the timeout.
+		if (bDetached || bJoined) Net->disconnect(LastNow, "the game left");
+		// The lag setting holds packets back: they go now, the goodbye too.
+		if (LagIo) LagIo->drain(LastNow);
 	}
-	if (bDetached)
+	if (bJoined)
+	{
+		UE_LOG(LogAutocraft, Log, TEXT("mmo: left the other game's world server on port %d"), (int32)ServerPort);
+	}
+	else if (bDetached)
 	{
 		UE_LOG(LogAutocraft, Log, TEXT("mmo: left the world server running on port %d (save %s)"), (int32)ServerPort, *Tilde(SavePath));
 		Server.release();
@@ -496,6 +521,36 @@ void FAcMmoClient::Stop()
 	StatusMessage.Reset();
 }
 
+bool FAcMmoClient::ReadJoinFile()
+{
+	FString Text;
+	if (!FFileHelper::LoadFileToString(Text, *JoinFile)) return false;
+	TArray<FString> Lines;
+	Text.ParseIntoArrayLines(Lines);
+	// "port", "token", "control" (the server's dev control file), a line each.
+	if (Lines.Num() < 2) return false;
+	const int32 Port = FCString::Atoi(*Lines[0]);
+	if (Port <= 0 || Port > 65535 || Lines[1].IsEmpty()) return false;
+	ServerPort = uint16(Port);
+	Token = Utf8(Lines[1].TrimStartAndEnd());
+	JoinedControl = Lines.Num() > 2 ? Lines[2].TrimStartAndEnd() : FString();
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: joining the world server on port %d"), Port);
+	return true;
+}
+
+void FAcMmoClient::WriteShareFile()
+{
+	FString Path;
+	if (bShared || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShare="), Path) || Path.IsEmpty() || ServerPort == 0) return;
+	bShared = true;
+	// Written aside, then moved in: the joining game never reads half of it.
+	const FString Body = FString::Printf(TEXT("%d\n%s\n%s\n"), (int32)ServerPort, UTF8_TO_TCHAR(Token.c_str()),
+		*FPaths::ConvertRelativePathToFull(FPaths::Combine(Directory(), TEXT("dev-control.txt"))));
+	const FString Aside = Path + TEXT(".new");
+	if (FFileHelper::SaveStringToFile(Body, *Aside) && IFileManager::Get().Move(*Path, *Aside, true, true))
+		UE_LOG(LogAutocraft, Log, TEXT("mmo: the world server on port %d shared in %s"), (int32)ServerPort, *Path);
+}
+
 void FAcMmoClient::Connect(const double Now)
 {
 	if (!Socket.open(ac::net::Address::loopback(0)))
@@ -505,6 +560,8 @@ void FAcMmoClient::Connect(const double Now)
 	}
 	ac::net::ClientConfig Config;
 	if (Server.state() == ac::net::LocalServer::State::running) ServerPort = Server.port();
+	// W5: another game on this Mac may join this server (-AcMmoShare).
+	if (!bJoined) WriteShareFile();
 	Config.server = ac::net::Address::loopback(ServerPort);
 	Config.token.assign(Token.begin(), Token.end());
 	// The lag setting's simulator between them (none set: it passes all on at once).
@@ -547,6 +604,13 @@ void FAcMmoClient::Tick(const double Now)
 		Fail(CurrentPhase == EPhase::Starting ? FString::Printf(TEXT("The local server did not start: %s.\nIts log: %s"), *Why, *Tilde(ServerLog()))
 		                                      : FString::Printf(TEXT("The local server stopped (%s).\nIts log: %s"), *Why, *Tilde(ServerLog())));
 		return;
+	}
+	if (CurrentPhase == EPhase::Starting && bJoined)
+	{
+		if (ReadJoinFile()) Connect(Now);
+		else if (Now - StartedAt > 180)
+			Fail(FString::Printf(TEXT("No world server to join: %s did not come in 180 s."), *JoinFile));
+		if (CurrentPhase != EPhase::Connecting) return;
 	}
 	if (CurrentPhase == EPhase::Starting)
 	{

@@ -116,8 +116,12 @@ void Simulation::swapDriver(size_t k) {
     std::swap(progress, d.progress);
     std::swap(skillEffects, d.skillEffects);
     std::swap(pilotBuildings, d.buildings);
-    if (Pilot::player >= 0 && Pilot::player < static_cast<int64_t>(state.players.size()))
-        std::swap(state.players[static_cast<size_t>(Pilot::player)].pilot, d.levels);
+    if (Pilot::player >= 0 && Pilot::player < static_cast<int64_t>(state.players.size())) {
+        Player& side = state.players[static_cast<size_t>(Pilot::player)];
+        std::swap(side.pilot, d.levels);
+        std::swap(side.ore, d.ore);
+        std::swap(side.hydrogen, d.hydrogen);
+    }
 }
 
 bool Simulation::drive(int64_t unit, const std::optional<PilotRecord>& levels) {

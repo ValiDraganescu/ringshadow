@@ -68,6 +68,15 @@ namespace AcPilotFlight
 		return false;
 	}
 
+	/// W5: the other human pilots' flights (the sky's, `Sky::Human::ferry`),
+	/// each frame: while this pilot is in the region one leaves, the
+	/// Dropship coming down onto its pad, its Prospector walking up the ramp,
+	/// the lift and the way out; while in the region it comes to, the
+	/// approach and the touch down. The game flow's tick calls it.
+	void TickWatched(UWorld* World);
+	/// The flights drawn this frame: each pilot's callsign and its stage.
+	TArray<TPair<FString, EAcFlightStage>> Watched();
+
 	/// The ship drawn bigger than the strategy game's Dropship: it carries a
 	/// Prospector, and fills a 3-cell pad.
 	inline constexpr double ShipScale = 1.6;

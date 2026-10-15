@@ -111,3 +111,27 @@ TEST(lag_settingsPerRemoteAndBothWays) {
     EXPECT_TRUE(lag.receive(1.5, from, buf, sizeof buf, size));
     EXPECT_TRUE(from == far.self());
 }
+
+TEST(lag_drainSendsWhatItHolds) {
+    // A game closing under the lag setting: its held packets (the goodbye
+    // among them) leave at once, not never.
+    MemoryNet net;
+    MemoryPort a(net, kClientAddress), b(net, kServerAddress);
+    LagSimulator lag(a, 3);
+    LagSettings s;
+    s.delay = 0.15;
+    lag.set(kServerAddress, s);
+    for (uint32_t i = 0; i < 3; i++) {
+        const auto m = u32Bytes(i);
+        lag.send(1.0, kServerAddress, m.data(), m.size());
+    }
+    uint8_t buf[64];
+    Address from;
+    size_t size = 0;
+    EXPECT_TRUE(!b.receive(1.0, from, buf, sizeof buf, size));
+    lag.drain(1.0);
+    std::vector<uint32_t> got;
+    while (b.receive(1.0, from, buf, sizeof buf, size)) got.push_back(bytesU32(std::vector<uint8_t>(buf, buf + size)));
+    ASSERT_TRUE(got.size() == 3);
+    for (uint32_t i = 0; i < 3; i++) EXPECT_EQ(got[i], i);
+}

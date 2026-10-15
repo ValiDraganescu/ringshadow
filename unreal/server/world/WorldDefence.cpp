@@ -84,7 +84,7 @@ std::string WorldMap::devDefence(const std::string& line) {
     std::string word, what;
     in >> word >> what;
     if (!world_ || pilots_.empty()) return "dev: defence: no world, or no pilot";
-    auto& [pilot, p] = *pilots_.begin();
+    auto& [pilot, p] = *devPilot();
     if (what == "wallet") {
         realm_.ore += 3000;
         realm_.hydrogen += 400;

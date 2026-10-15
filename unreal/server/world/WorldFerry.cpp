@@ -38,7 +38,7 @@ std::string WorldMap::devFerry(const std::string& line) {
     std::string word, what, arg, more;
     in >> word >> what >> arg >> more;
     if (!world_ || pilots_.empty()) return "dev: ferry: no world, or no pilot";
-    auto& [pilot, p] = *pilots_.begin();
+    auto& [pilot, p] = *devPilot();
     if (what == "seen") {
         for (const WorldRegion& g : world_->regions) p.progress.regions.insert(g.file.id);
         pushProgress(pilot);

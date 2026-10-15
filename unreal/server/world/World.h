@@ -128,6 +128,12 @@ public:
     bool take(PilotId pilot, int64_t unit);
     /// Give the driven unit back to its AI.
     void handBack(PilotId pilot);
+    /// The pilot's bank here, its wallet while in the region (W5): the
+    /// side's while it is the only one driving, its own driver's context
+    /// while another human drives too (the core swaps each in for its own
+    /// turn). Nil: not joined, or its own not known while another drives.
+    std::optional<std::pair<int64_t, int64_t>> bank(PilotId pilot);
+    void setBank(PilotId pilot, int64_t ore, int64_t hydrogen);
 
     /// The pilot's levels and picks, per kind (the core's own record, as
     /// a game's session saves it; docs/leveling.md). Each pilot has its
@@ -233,7 +239,11 @@ private:
         /// Its progression and own buildings (`setProgress`).
         std::optional<ProspectorProgress> progress;
         std::set<int64_t> buildings;
+        /// Its bank (ore, MH) as last set or kept (`bank`).
+        std::optional<std::pair<int64_t, int64_t>> bank;
     };
+    /// Its bank out of the simulation before its driver's context goes.
+    void keepBank(Seat& seat);
 
     std::optional<region::Built> built_;
     MapDefinition map_;

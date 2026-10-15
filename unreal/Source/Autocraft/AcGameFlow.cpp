@@ -1,4 +1,6 @@
 #include "AcGameFlow.h"
+
+#include "AcPilotFlight.h"
 #include "AcMusicPlayer.h"
 
 #include "AcAudioDirector.h"
@@ -298,13 +300,15 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		// The MMO moments in pictures (AcMmoShots.cpp): a flow step of its own.
 		Test.Emplace();
-		Test->Steps.Add(TEXT("mmoshots"));
+		// -AcMmoShotsW5: two pilots' pictures, the `mmotwo` step's (AcMmoTwo.cpp).
+		Test->Steps.Add(FParse::Param(Cmd, TEXT("AcMmoShotsW5")) ? TEXT("mmotwo") : TEXT("mmoshots"));
 		Shots.Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), ShotsDir);
 		UE_LOG(LogAutocraft, Log, TEXT("mmoshots: pictures to %s, saves in %s, the pilot in %s"), *Shots.Dir, *AcSaves::Directory(),
 			*FAcMmoClient::Directory());
 	}
 	// mmoshots as one of the listed steps (after flow tests, in one run).
-	if (FString ShotsDir; Test && Test->Steps.Contains(TEXT("mmoshots")) && Shots.Dir.IsEmpty() && FParse::Value(Cmd, TEXT("AcMmoShots="), ShotsDir))
+	if (FString ShotsDir; Test && (Test->Steps.Contains(TEXT("mmoshots")) || Test->Steps.Contains(TEXT("mmotwo"))) && Shots.Dir.IsEmpty()
+		&& FParse::Value(Cmd, TEXT("AcMmoShots="), ShotsDir))
 	{
 		Shots.Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), ShotsDir);
 	}
@@ -440,6 +444,8 @@ void UAcGameFlowSubsystem::Tick(const float DeltaTime)
 		}
 	}
 	TickMmo();
+	// W5: the other pilots' Dropships in flight.
+	AcPilotFlight::TickWatched(GetWorld());
 	if (bHomeWhenReady)
 	{
 		const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
@@ -2092,6 +2098,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 	if (Step == TEXT("mmoshots"))
 	{
 		TickMmoShots();
+		return;
+	}
+	if (Step == TEXT("mmotwo"))
+	{
+		TickMmoTwo();
 		return;
 	}
 	if (Step.StartsWith(TEXT("mmo")))

@@ -35,6 +35,14 @@ void LagSimulator::pump(double now) {
     }
 }
 
+void LagSimulator::drain(double now) {
+    while (!outgoing_.empty()) {
+        const Held& h = outgoing_.top();
+        inner_.send(now, h.remote, h.data.data(), h.data.size());
+        outgoing_.pop();
+    }
+}
+
 bool LagSimulator::send(double now, const Address& to, const uint8_t* data, size_t size) {
     hold(outgoing_, now, to, data, size);
     pump(now);

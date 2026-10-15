@@ -2,7 +2,8 @@
 
 How to play Ringshadow's MMORPG test mode as it is on 2026-10-13: one
 Prospector in a world of nine regions, run by a server on your own Mac. No
-AI units and no other players yet. The design is in [mmorpg.md](mmorpg.md).
+AI units yet; a second human can join on the same Mac ("Two pilots", below).
+The design is in [mmorpg.md](mmorpg.md).
 
 ## Starting it
 
@@ -275,6 +276,55 @@ buildings. Leave the mode with Esc (top-down), Esc again, QUIT TO HOME.
 Deleting the save is what the home screen's NEW WORLD does. Deleting the key makes
 you a new pilot. `-AcSaveDir=DIR` moves both to `DIR/mmo`, and `-AcMmoDir=DIR`
 moves them to `DIR`.
+
+## Two pilots
+
+Two humans can play one world (W5, 2026-10-15). Each drives a Prospector of
+its own, with its own wallet, levels, skills and buildings. The realm is
+shared: its wallet, its Citadel and the other buildings, its projects, the
+canyons' waves.
+
+What the second human needs:
+
+| What | How |
+|---|---|
+| A second pilot key | A second game with a folder of its own: `-AcMmoDir=DIR` (or `-AcSaveDir=DIR`, which uses `DIR/mmo`). The key is made there the first time it joins. Two games sharing one folder would share one key, and so one pilot. |
+| The world to join | The first game starts the server as always and names it in a file: `-AcMmoShare=FILE` writes the port, the one-time token and the server's dev-control file, a line each. The second game joins with `-AcMmoJoin=FILE`. It waits up to 180 s for the file, then connects with that port and token. |
+
+On one Mac, for a test:
+
+```sh
+# The first pilot: the world server, shared.
+UnrealEditor unreal/Autocraft.uproject -game -AcMmo -AcMmoShare=/tmp/ringshadow-join.txt
+# The second pilot: its own key, joining.
+UnrealEditor unreal/Autocraft.uproject -game -AcMmo -AcMmoDir=$HOME/ringshadow-second -AcMmoJoin=/tmp/ringshadow-join.txt
+```
+
+What each one sees:
+
+- The other's Prospector in the realm's blue, with a tag over it: its callsign, `PILOT 2B3C`. Like the frontier pilots' tags, it shows only when nothing is in the way: no ground, no building.
+- The other's Dropship flights. The ship comes down on the other's pad, the Prospector walks aboard, the ship lifts off and goes. Where it lands, the ship comes in and touches down. The tag is gone while the other is aboard.
+- The realm's news: "PILOT 443E BUILT A HAB DOME", and projects started ("THE REALM LIT THE BEACON"). The world map shows the other's buildings, and the tooltip says who built each one.
+- The realm's tax. A load unloaded at the other's Hab Dome pays the realm, and both see the realm wallet go up.
+- At a canyon, each is paid its share of a beaten wave, by the damage it did.
+
+Leaving: the second game's QUIT TO HOME (or quitting it) only disconnects it.
+It says goodbye on the way out, so its Prospector goes back at once; if the
+goodbye is lost, the server lets it go after 10 s without a word from it.
+The server goes on with the first game. Joining again with the same folder
+brings the pilot back where it left, with its wallet. The first game owns the
+server: when it quits, the world stops for both.
+
+Not yet:
+
+- **Two Macs on a LAN.** The game starts the server bound to 127.0.0.1, and a joining game connects to 127.0.0.1. The server program has `--bind`, but the game never passes another address, and the share file names no host.
+- **Seeing who is who.** Both humans are in the same blue; only the tag tells them apart. There is no chat and no party.
+- **Dev lines for the second pilot.** The server's dev lines act on the first pilot. Only the test harness writes `as 2 LINE` for the second.
+
+The check is `unreal/Tools/two_clients.py`, under the hidden-run slot. It runs
+the flow step `mmotwo` (`AcMmoTwo.cpp`) in two games at once, through the lag
+simulator (150 ms, 5% loss) on the second. It is headless, or takes pictures
+with `--shots DIR` (the `-AcMmoShotsW5` set, `w5-NN-a|b-*.png`).
 
 ## Dev flags
 

@@ -286,6 +286,30 @@ struct Sky {
         bool operator==(const Frontier&) const = default;
     };
     std::vector<Frontier> frontier;
+    /// W5: the human pilots on line (docs/mmorpg-play.md "Two pilots"):
+    /// each one's callsign ("Pilot 2B3C"), its region (of the World message)
+    /// and the Prospector it drives there (0: none, aboard the Dropship).
+    /// A client tags the others' as it tags the frontier's.
+    struct Human {
+        std::string callsign;
+        int64_t region = 0;
+        int64_t unit = 0;
+        /// Aboard the Dropship (F2): the flight as the others see it come
+        /// down, take it aboard, lift and go, and come in at the target.
+        /// `region` is the one it left; the pads in region cells there and
+        /// at `to`; seconds since the call when this was sent.
+        struct Ferry {
+            Vec2 boarded;
+            int64_t to = 0;
+            Vec2 at;
+            ac::Ferry::Plan plan;
+            double elapsed = 0;
+            bool operator==(const Ferry&) const = default;
+        };
+        std::optional<Ferry> ferry;
+        bool operator==(const Human&) const = default;
+    };
+    std::vector<Human> pilots;
     double hour() const { return WorldClock::hourAt(time, dayLength, heldHour); }
     bool operator==(const Sky&) const = default;
 };

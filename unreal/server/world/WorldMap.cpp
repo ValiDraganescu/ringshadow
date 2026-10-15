@@ -287,6 +287,30 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
     updateSky();
 }
 
+std::optional<net::Sky> WorldMap::sky() const {
+    if (!world_) return std::nullopt;
+    net::Sky out = sky_;
+    out.pilots.clear();
+    for (const auto& [id, p] : pilots_) {
+        if (p.key.empty()) continue;
+        const auto u = !p.flight && p.region < regions_.size() ? regions_[p.region]->driving(id) : std::nullopt;
+        net::Sky::Human h{callsign(p.key), int64_t(p.region), u.value_or(0), std::nullopt};
+        // Aboard: its flight for the others to watch (from the region it left).
+        if (const auto& f = p.flight) {
+            h.region = int64_t(f->from);
+            net::Sky::Human::Ferry ship;
+            ship.boarded = world_->regions[f->from].built.regionAt(f->boarded);
+            ship.to = int64_t(f->to);
+            ship.at = world_->regions[f->to].built.regionAt(f->at);
+            ship.plan = f->plan;
+            ship.elapsed = clock_ - f->started;
+            h.ferry = ship;
+        }
+        out.pilots.push_back(h);
+    }
+    return out;
+}
+
 void WorldMap::setClock(double time) {
     clock_ = std::max(0.0, time);
     updateSky();
@@ -345,14 +369,34 @@ std::optional<WorldMap::Wallet> WorldMap::wallet(PilotId pilot) const {
     return it->second.wallet;
 }
 
+// W5: each pilot's own bank in the region (Region::bank), another human
+// driving there or not; a pilot not seated there (kept off line) only where
+// no one drives.
 void WorldMap::bankIn(const PilotState& p, size_t r) {
-    Player& side = regions_[r]->simulation().state.players[0];
+    for (const auto& [id, q] : pilots_)
+        if (&q == &p && regions_[r]->joined(id)) {
+            regions_[r]->setBank(id, p.wallet.ore, p.wallet.hydrogen);
+            return;
+        }
+    Simulation& sim = regions_[r]->simulation();
+    if (sim.pilot) return;
+    Player& side = sim.state.players[0];
     side.ore = p.wallet.ore;
     side.hydrogen = p.wallet.hydrogen;
 }
 
 void WorldMap::bankOut(PilotState& p, size_t r) {
-    const Player& side = regions_[r]->simulation().state.players[0];
+    for (const auto& [id, q] : pilots_)
+        if (&q == &p && regions_[r]->joined(id)) {
+            if (const auto b = regions_[r]->bank(id)) {
+                p.wallet.ore = b->first;
+                p.wallet.hydrogen = b->second;
+            }
+            return;
+        }
+    const Simulation& sim = regions_[r]->simulation();
+    if (sim.pilot) return;
+    const Player& side = sim.state.players[0];
     p.wallet.ore = side.ore;
     p.wallet.hydrogen = side.hydrogen;
 }
@@ -407,6 +451,7 @@ Unit WorldMap::startProspector() const {
 
 bool WorldMap::join(PilotId pilot) {
     if (pilots_.count(pilot)) return false;
+    joinOrder_[pilot] = ++joins_;
     PilotState p;
     p.region = start_;
     if (!world_) {
@@ -468,6 +513,7 @@ void WorldMap::leave(PilotId pilot) {
     // A kept pilot waits for its key (WorldMapSave.cpp).
     if (world_ && !it->second.key.empty()) park(it->second);
     pilots_.erase(it);
+    joinOrder_.erase(pilot);
 }
 
 std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionId, std::string_view padName) {
@@ -517,8 +563,8 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     const int64_t price = ac::Flight::price(ac::Flight::steps(origin.column, origin.row, dest.column, dest.row),
                                             from->kind == StructureKind::spacedock, ringwalker,
                                             projectOn(RealmProject::Kind::beacon));
-    if (auto why = ac::Flight::refusal(price, here.simulation().state.players[0].hydrogen)) return why;
     bankOut(p, p.region);
+    if (auto why = ac::Flight::refusal(price, p.wallet.hydrogen)) return why;
     p.wallet.hydrogen -= price;
     bankIn(p, p.region);
     Flight f;

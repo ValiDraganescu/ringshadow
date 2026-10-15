@@ -84,6 +84,9 @@ public:
         std::vector<SkillEffect> skillEffects;
         std::set<int64_t> buildings;
         std::optional<PilotRecord> levels;
+        /// Its bank: the side's ore and MH while it is swapped in.
+        int64_t ore = 0;
+        int64_t hydrogen = 0;
     };
     std::vector<Driver> drivers;
     /// The other driver driving `unit` (an index in `drivers`), if any.
