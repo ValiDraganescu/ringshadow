@@ -4,6 +4,8 @@
 
 #include "WorldMap.h"
 
+#include <tuple>
+
 #include "Brood.h"
 
 #include "Defence.h"
@@ -217,6 +219,10 @@ WorldSave WorldMap::save() const {
         const double next = !c.out ? c.next : clock_ + (c.state == CanyonState::waiting ? WorldCanyon::firstWait : WorldCanyon::breakFor);
         out.canyons.push_back(SavedCanyon{world_->regions[c.region].file.id, c.id, int64_t(c.state), c.wave, next});
     }
+    // In the store's order (by region, then zone): an unchanged world writes
+    // nothing (Z3: more than one zone).
+    std::sort(out.canyons.begin(), out.canyons.end(),
+              [](const SavedCanyon& x, const SavedCanyon& y) { return std::tie(x.region, x.zone) < std::tie(y.region, y.zone); });
     return out;
 }
 

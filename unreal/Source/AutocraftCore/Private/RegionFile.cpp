@@ -744,7 +744,7 @@ Parsed parse(std::string_view text) {
         }
     }
     r.list(root, "zones", f.zones, [&](const json& j, const std::string& w) -> std::optional<Zone> {
-        if (!r.object(j, w, {"id", "name", "outline", "entrances", "paths", "prize", "spots"})) return std::nullopt;
+        if (!r.object(j, w, {"id", "name", "outline", "entrances", "paths", "prize", "spots", "flood"})) return std::nullopt;
         Zone z;
         bool ok = true;
         if (const auto id = r.text(j, "id", w, true)) {
@@ -773,7 +773,12 @@ Parsed parse(std::string_view text) {
             for (size_t i = 0; i < es->size(); i++) {
                 const std::string we = w + ".entrances[" + std::to_string(i) + "]";
                 const json& e = (*es)[i];
-                if (!r.object(e, we, {"name", "at", "facing"})) { ok = false; continue; }
+                if (!r.object(e, we, {"name", "at", "facing", "roost"})) { ok = false; continue; }
+                bool roost = false;
+                if (e.contains("roost")) {
+                    if (!e["roost"].is_boolean()) { r.add(we + ".roost", "must be true or false"); ok = false; continue; }
+                    roost = e["roost"].get<bool>();
+                }
                 const auto name = r.text(e, "name", we, true);
                 const auto at = r.point(e, "at", we);
                 const auto facing = r.number(e, "facing", we, false, -360, 360);
@@ -781,7 +786,7 @@ Parsed parse(std::string_view text) {
                 if (!name || !at) { ok = false; continue; }
                 const bool twice = std::any_of(z.entrances.begin(), z.entrances.end(), [&](const Zone::Entrance& x) { return x.name == *name; });
                 if (twice) { r.add(we + ".name", "\"" + *name + "\" is used twice", *at); ok = false; continue; }
-                z.entrances.push_back(Zone::Entrance{*name, *at, facing.value_or(0)});
+                z.entrances.push_back(Zone::Entrance{*name, *at, facing.value_or(0), roost});
             }
             if (es->empty()) { r.add(w + ".entrances", "needs at least one entrance"); ok = false; }
         }
@@ -839,6 +844,16 @@ Parsed parse(std::string_view text) {
         }
         if (const json* sp = r.field(j, "spots", w, false)) {
             if (const auto ps = r.points(*sp, w + ".spots", 0)) z.spots = *ps; else ok = false;
+        }
+        // Z3: a flooded floor, its outline and how slow the walkers wade.
+        if (const json* fl = r.field(j, "flood", w, false)) {
+            if (r.object(*fl, w + ".flood", {"outline", "slow"})) {
+                const json* o2 = r.field(*fl, "outline", w + ".flood", true);
+                if (const auto ps = o2 ? r.points(*o2, w + ".flood.outline", 3) : std::nullopt) z.flood = *ps; else ok = false;
+                if (const auto slow = r.number(*fl, "slow", w + ".flood", false, 0.1, 0.9)) z.floodSlow = *slow;
+            } else {
+                ok = false;
+            }
         }
         return ok ? std::optional(z) : std::nullopt;
     });
@@ -998,6 +1013,7 @@ std::string write(const RegionFile& f) {
             for (const Zone::Entrance& e : z.entrances) {
                 ordered x{{"name", e.name}, {"at", pointNumbers(e.at)}};
                 if (e.facing != 0) x["facing"] = number(e.facing);
+                if (e.roost) x["roost"] = true;
                 es.push_back(x);
             }
             j["entrances"] = es;
@@ -1009,6 +1025,11 @@ std::string write(const RegionFile& f) {
             if (!z.prizeWells.empty()) prize["wells"] = z.prizeWells;
             j["prize"] = prize;
             if (!z.spots.empty()) j["spots"] = pts(z.spots);
+            if (!z.flood.empty()) {
+                ordered fl{{"outline", pts(z.flood)}};
+                if (z.floodSlow != 0.5) fl["slow"] = number(z.floodSlow);
+                j["flood"] = fl;
+            }
             list.push_back(j);
         }
         root["zones"] = list;
@@ -1127,6 +1148,7 @@ Built build(const RegionFile& f) {
         for (Zone::Entrance& e : gz.entrances) e.at = g(e.at);
         for (Zone::Path& p : gz.paths) for (Vec2& q : p.points) q = g(q);
         for (Vec2& p : gz.spots) p = g(p);
+        for (Vec2& p : gz.flood) p = g(p);
         b.zones.push_back(gz);
     }
     // The base's rocks and plants give way to what the file puts down.
@@ -1183,7 +1205,9 @@ Built build(const RegionFile& f) {
     for (const Zone& z : b.zones) {
         for (const Zone::Entrance& e : z.entrances) {
             Doodad d;
-            d.kind = Doodad::Kind::broodTunnel;
+            // Z3: a roost is a small nest on its ledge.
+            d.kind = e.roost ? Doodad::Kind::broodNest : Doodad::Kind::broodTunnel;
+            if (e.roost) d.scale = 0.5;
             d.position = e.at;
             d.rotation = e.facing * pi / 180;
             d.variant = static_cast<uint32_t>(fnv1a64(f.id + "|" + z.id + "|" + e.name));
@@ -1528,6 +1552,15 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
                     wall = steep(q) || (f.border && landOutside(b.regionAt(q), f.border->outline, f.border->islands) > 0);
                 }
             }
+            if (e.roost) {
+                // Z3: a roost on a ledge: open ground a level or more over the
+                // prize, not on a cliff face (no wall needed: flyers leave it).
+                if (!inZone(e.at, 2)) add(we, "lies outside the zone's outline", e.at);
+                else if (steepNear(e.at)) add(we, "on a cliff face", e.at);
+                else if (!prize.empty() && field.height(e.at) < field.height(middle) + 0.9 * m.levelHeight)
+                    add(we, "a roost stands on a ledge, a level or more over the prize", e.at);
+                continue;
+            }
             if (!inZone(e.at, 2)) add(we, "lies outside the zone's outline", e.at);
             else if (steepNear(e.at)) add(we, "on a cliff face", e.at);
             else if (!mainOf(e.at)) add(we, "in rock or blocked ground", e.at);
@@ -1546,6 +1579,8 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
                 add(wp, "ends " + num(distance(p.points.back(), middle)) + " cells from the prize's middle " +
                             pointText(b.regionAt(middle)) + "; end within " + num(prizeReach), p.points.back());
             std::optional<std::pair<Vec2, std::string>> bad;
+            // Z3: a roost's path is flown, over the walls: in the zone only.
+            const bool flown = entrance != z.entrances.end() && entrance->roost;
             for (size_t k = 0; k + 1 < p.points.size() && !bad; k++) {
                 const Vec2 a = p.points[k], c = p.points[k + 1];
                 const double len = distance(a, c);
@@ -1553,6 +1588,7 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
                     const Vec2 q = a + (c - a) * (len > 0 ? s / len : 0);
                     const auto region = mainOf(q);
                     if (!inZone(q, 0)) bad = {q, "leaves the zone's outline"};
+                    else if (flown) continue;
                     else if (steep(q)) bad = {q, "crosses a cliff"};
                     else if (!region) bad = {q, "runs into rock or blocked ground"};
                     else if (*region != main) bad = {q, "runs over ground cut off from the region's open ground"};
@@ -1560,6 +1596,9 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
             }
             if (bad) add(wp, "not walkable end to end: it " + bad->second, bad->first);
         }
+        // Z3: a flooded floor lies in the zone, over the canyon's floor.
+        for (size_t k = 0; k < z.flood.size(); k++)
+            if (!inZone(z.flood[k], 0.01)) add(wz + ".flood", "corner " + std::to_string(k) + " lies outside the zone's outline", z.flood[k]);
         // Spots: a turret's flat footprint on high ground over a path, in
         // reach of it, joined to the open ground, clear of ore, wells, the
         // pads' plates and each other.

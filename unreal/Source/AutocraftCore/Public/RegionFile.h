@@ -126,6 +126,10 @@ struct Zone {
         /// Degrees: the way the mouth faces (into the canyon), from east
         /// toward north, as a doodad's rotation turns its +x.
         double facing = 0;
+        /// Z3: a Gloamwing roost on a ledge over the canyon, not a tunnel:
+        /// only flyers come out of it (and fly its paths over the walls); its
+        /// mark is a small nest of chitin, not a tunnel's mouth.
+        bool roost = false;
         bool operator==(const Entrance&) const = default;
     };
     /// From an entrance (its name) along the canyon's floor to the prize.
@@ -143,6 +147,10 @@ struct Zone {
     std::vector<int64_t> prizeDeposits, prizeWells;
     /// Build spots on the rims, for turrets over the paths.
     std::vector<Vec2> spots;
+    /// Z3: a flooded floor (brine): the Brood's walkers wade through it at
+    /// `floodSlow` of their speed; flyers pass over. Empty: none.
+    std::vector<Vec2> flood;
+    double floodSlow = 0.5;
     bool operator==(const Zone&) const = default;
 };
 

@@ -608,9 +608,11 @@ TEST(save_server_writes_every_5_s_what_changed_and_on_stop) {
     const int64_t deposits = std::atoll(store->rows("SELECT count(*) FROM deposits")[0][0].c_str());
     EXPECT_TRUE(deposits > 0);
     EXPECT_TRUE(server.lastSave().changed > deposits);
-    // The next: the regions' clocks, and nothing of the ground that stood still.
+    // The next: the regions' clocks, and nothing of the ground that stood
+    // still; the canyons' row too (Z3: a zone with no pilot near holds its
+    // countdown, which moves on with the world's clock).
     run(5);
-    EXPECT_TRUE(server.lastSave().changed <= int64_t(server.world().regionCount()) + 2);
+    EXPECT_TRUE(server.lastSave().changed <= int64_t(server.world().regionCount()) + 3);
     EXPECT_EQ(server.lastSave().removed, int64_t(0));
     // On stop: written, the pilot kept off line.
     server.stop(now, "the server stopped");

@@ -59,6 +59,15 @@ std::vector<StructureKind> rareBlueprints() {
     return k;
 }
 
+/// Ground point `p` inside polygon `poly` (even-odd).
+bool inPolygon(Vec2 p, const std::vector<Vec2>& poly) {
+    bool in = false;
+    for (size_t i = 0, j = poly.size() - 1; i < poly.size(); j = i++)
+        if ((poly[i].y > p.y) != (poly[j].y > p.y) && p.x < (poly[j].x - poly[i].x) * (p.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
+            in = !in;
+    return in;
+}
+
 double pathLength(Vec2 mouth, const std::vector<Vec2>& points) {
     if (points.empty()) return 0;
     double length = distance(mouth, points.front());
@@ -90,6 +99,43 @@ const std::vector<WorldCanyon::Wave>& WorldCanyon::waves() {
     };
     return w;
 }
+
+const std::vector<WorldCanyon::Wave>& WorldCanyon::waves(std::string_view zone) {
+    // Z3. The Drowned Cut (Brine Pans, level 2): path 0 the Salt arm (long,
+    // through the brine), path 1 the Gull arm. Waders slow in the brine, so
+    // more walkers and earlier Lodebacks; its flyers skim the water.
+    static const std::vector<Wave> drowned = {
+        {{G{0, UnitKind::shardling, 4, 0}}},
+        {{G{0, UnitKind::shardling, 8, 0}}},
+        {{G{0, UnitKind::shardling, 5, 0}, G{1, UnitKind::shardling, 5, 0}}},
+        {{G{1, UnitKind::shardling, 6, 0}, G{0, UnitKind::gloamwing, 3, 0}}},
+        {{G{0, UnitKind::lodeback, 2, 6}, G{1, UnitKind::gloamwing, 3, 0}}, true},
+        {{G{0, UnitKind::shardling, 10, 0}, G{1, UnitKind::shardling, 6, 0}}},
+        {{G{1, UnitKind::lodeback, 1, 4}, G{0, UnitKind::shardling, 8, 0}, G{0, UnitKind::gloamwing, 4, 0}}},
+        {{G{0, UnitKind::gloamwing, 6, 0}, G{1, UnitKind::gloamwing, 6, 0}, G{1, UnitKind::shardling, 8, 0}}},
+        {{G{0, UnitKind::shardling, 12, 0}, G{1, UnitKind::lodeback, 2, 5}, G{1, UnitKind::gloamwing, 4, 0}}},
+        {{G{0, UnitKind::lodeback, 3, 12}, G{1, UnitKind::lodeback, 3, 10}, G{0, UnitKind::gloamwing, 6, 0}}, true},
+    };
+    // The Roost (Dust Terraces, level 3): path 0 the Ochre arm, path 1 the
+    // Dust arm; every Gloamwing comes off the roost's ledge. More of all.
+    static const std::vector<Wave> roost = {
+        {{G{0, UnitKind::shardling, 5, 0}}},
+        {{G{1, UnitKind::shardling, 6, 0}, G{0, UnitKind::gloamwing, 3, 0}}},
+        {{G{0, UnitKind::shardling, 6, 0}, G{1, UnitKind::shardling, 6, 0}, G{0, UnitKind::gloamwing, 4, 0}}},
+        {{G{1, UnitKind::shardling, 8, 0}, G{0, UnitKind::gloamwing, 6, 0}}},
+        {{G{0, UnitKind::lodeback, 2, 8}, G{0, UnitKind::gloamwing, 6, 0}}, true},
+        {{G{0, UnitKind::shardling, 10, 0}, G{1, UnitKind::shardling, 6, 0}, G{0, UnitKind::gloamwing, 6, 0}}},
+        {{G{0, UnitKind::shardling, 8, 0}, G{1, UnitKind::lodeback, 1, 5}, G{0, UnitKind::gloamwing, 8, 0}}},
+        {{G{0, UnitKind::gloamwing, 10, 0}, G{1, UnitKind::shardling, 10, 0}}},
+        {{G{0, UnitKind::shardling, 12, 0}, G{1, UnitKind::lodeback, 2, 6}, G{0, UnitKind::gloamwing, 8, 0}}},
+        {{G{0, UnitKind::lodeback, 3, 12}, G{1, UnitKind::lodeback, 3, 12}, G{0, UnitKind::gloamwing, 12, 0}}, true},
+    };
+    if (zone == "the-drowned-cut") return drowned;
+    if (zone == "the-roost") return roost;
+    return waves();
+}
+
+double WorldCanyon::payScale(int64_t broodLevel) { return broodLevel >= 3 ? 1.3 : 1.0; }
 
 double WorldCanyon::xp(int64_t wave) { return 200.0 * double(wave); }
 int64_t WorldCanyon::ore(int64_t wave) { return 150 * wave; }
@@ -142,7 +188,7 @@ std::vector<net::Sky::Zone> WorldMap::skyZones() const {
         z.mark = WorldCanyon::failOre;
         z.tunnels = c.out ? c.tunnels : 0;
         z.paused = c.paused;
-        z.boss = c.wave >= 1 && c.wave <= WorldCanyon::count() && WorldCanyon::waves()[size_t(c.wave - 1)].boss;
+        z.boss = c.wave >= 1 && c.wave <= WorldCanyon::count() && WorldCanyon::waves(c.id)[size_t(c.wave - 1)].boss;
         out.push_back(z);
     }
     return out;
@@ -178,6 +224,14 @@ void WorldMap::canyonsStep() {
 void WorldMap::canyonThink(Canyon& c, double dt) {
     Simulation& sim = regions_[c.region]->simulation();
     GameState& st = sim.state;
+    // Z3: a flooded floor slows the Brood's walkers wading through it (its
+    // flyers pass over), renewed every think.
+    if (const region::Zone& z = regions_[c.region]->places()->zones[c.zone]; !z.flood.empty() && sim.broodSide)
+        for (Unit& u : st.units)
+            if (u.owner == *sim.broodSide && u.hp > 0 && u.kind != UnitKind::gloamwing && inPolygon(u.position, z.flood)) {
+                u.slowUntil = st.time + WorldCanyon::floodHold;
+                u.slowedTo = std::min(u.slowedTo.value_or(1.0), z.floodSlow);
+            }
     const bool near = pilotNear(c.region);
     c.paused = !near;
     switch (c.state) {
@@ -283,7 +337,7 @@ bool WorldMap::sendWave(Canyon& c) {
     const region::Built& places = *regions_[c.region]->places();
     const region::Zone& z = places.zones[c.zone];
     if (z.paths.empty() || c.wave < 1 || c.wave > WorldCanyon::count()) return false;
-    const WorldCanyon::Wave& wave = WorldCanyon::waves()[size_t(c.wave - 1)];
+    const WorldCanyon::Wave& wave = WorldCanyon::waves(c.id)[size_t(c.wave - 1)];
     c.bugs.clear();
     c.killed.clear();
     c.sacs.clear();
@@ -295,13 +349,23 @@ bool WorldMap::sendWave(Canyon& c) {
     // Wave 1 waiting turns from arm to arm with each replay.
     const size_t turn = c.state == State::waiting ? size_t(c.replays) : 0;
     double longest = 0;
+    // Z3: a roost's paths are the flyers' (every Gloamwing comes off it);
+    // the walkers take the tunnels' paths.
+    std::vector<size_t> walk, fly;
+    for (size_t k = 0; k < z.paths.size(); k++) {
+        const auto e = std::find_if(z.entrances.begin(), z.entrances.end(), [&](const region::Zone::Entrance& x) { return x.name == z.paths[k].from; });
+        (e != z.entrances.end() && e->roost ? fly : walk).push_back(k);
+    }
+    if (walk.empty()) walk = fly;
     for (const WorldCanyon::Group& g : wave.groups) {
-        const size_t path = (g.path + turn) % z.paths.size();
-        const region::Zone::Path& way = z.paths[path];
-        const auto mouth = std::find_if(z.entrances.begin(), z.entrances.end(), [&](const region::Zone::Entrance& e) { return e.name == way.from; });
-        if (mouth == z.entrances.end()) continue;
-        auto send = [&](UnitKind kind, int64_t count) {
-            if (count <= 0) return;
+        const bool flyer = g.kind == UnitKind::gloamwing;
+        const std::vector<size_t>& ways = flyer && !fly.empty() ? fly : walk;
+        const size_t path = ways[(g.path + turn) % ways.size()];
+        auto send = [&](UnitKind kind, int64_t count, size_t along) {
+            const region::Zone::Path& way = z.paths[along];
+            const auto mouth = std::find_if(z.entrances.begin(), z.entrances.end(), [&](const region::Zone::Entrance& e) { return e.name == way.from; });
+            if (mouth == z.entrances.end() || count <= 0) return;
+            const size_t path = along;
             const auto id = sendAlongPath(c.region, c.id, path, kind, count);
             if (!id) return;
             for (BroodGroup& grp : brood_[c.region].groups)
@@ -312,10 +376,11 @@ bool WorldMap::sendWave(Canyon& c) {
                     for (const int64_t b : grp.bugs) c.bugs.insert(b);
                 }
             longest = std::max(longest, pathLength(mouth->at, way.points) / Brood::marchSpeed(kind));
+            c.tunnels |= 1u << uint32_t(mouth - z.entrances.begin());
         };
-        send(g.kind, g.count);
-        send(UnitKind::shardling, g.escort);
-        c.tunnels |= 1u << uint32_t(mouth - z.entrances.begin());
+        send(g.kind, g.count, path);
+        // An escort walks: a flyer's from the walkers' first path.
+        send(UnitKind::shardling, g.escort, flyer ? walk[(g.path + turn) % walk.size()] : path);
     }
     if (c.bugs.empty()) return false;
     if (c.state == State::waiting) c.replays += 1;
@@ -333,7 +398,8 @@ void WorldMap::waveBeaten(Canyon& c) {
     // P1: frontier pilots fought it too, paid by the same split.
     for (const auto& [id, d] : c.frontierDamage) total += d;
     const std::vector<StructureKind> rare = rareBlueprints();
-    const double bonus = last ? WorldCanyon::lastBonus : 1;
+    // Z3: a level-3 region's canyon pays more.
+    const double bonus = (last ? WorldCanyon::lastBonus : 1) * WorldCanyon::payScale(world_->regions[c.region].file.brood);
     int64_t fighters = 0;
     for (const auto& [pilot, d] : c.damage) {
         PilotState* p = pilotState(pilot);

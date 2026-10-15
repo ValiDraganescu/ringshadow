@@ -447,8 +447,17 @@ struct WorldCanyon {
         /// A mini-boss wave: the hoard (Lodebacks with a heavy escort).
         bool boss = false;
     };
-    /// The waves, 1 to N (N = 10 for every zone, The Fork first).
+    /// The waves, 1 to N (N = 10 for every zone, The Fork first); a zone's
+    /// own table by its id (Z3: The Drowned Cut's waders, The Roost's
+    /// flyers), The Fork's for any other.
     static const std::vector<Wave>& waves();
+    static const std::vector<Wave>& waves(std::string_view zone);
+    /// Z3: a wave's pay by its region's brood level: × 1 at level 2, × 1.3
+    /// at level 3 (and on).
+    static double payScale(int64_t broodLevel);
+    /// Z3, a flooded floor: the Brood's walkers in it are slowed for this
+    /// long past each think (the canyon's think renews it).
+    static constexpr double floodHold = 0.4;
     static int64_t count() { return int64_t(waves().size()); }
     /// WAITING: wave 1 comes this long after the zone is quiet (a reset, the
     /// hold's end, the server's start) and again this often while it is not

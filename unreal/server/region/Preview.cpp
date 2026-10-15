@@ -46,6 +46,7 @@ constexpr Rgb siteColour{232, 168, 36};
 constexpr Rgb nestColour{214, 72, 220};
 constexpr Rgb openingColour{60, 220, 240};
 constexpr Rgb zoneColour{255, 150, 60};
+constexpr Rgb floodColour{70, 170, 220};
 constexpr Rgb pathColour{240, 70, 50};
 constexpr Rgb entranceColour{40, 20, 50};
 constexpr Rgb spotColour{70, 150, 255};
@@ -336,6 +337,26 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         }
     };
     for (const region::Zone& z : built.zones) {
+        // Z3: a flooded floor, brine blue, under the rest.
+        if (!z.flood.empty()) {
+            std::vector<Vec2> f;
+            for (Vec2 p : z.flood) f.push_back(built.regionAt(p));
+            double x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+            for (Vec2 p : f) {
+                x0 = std::min(x0, p.x), y0 = std::min(y0, p.y), x1 = std::max(x1, p.x), y1 = std::max(y1, p.y);
+            }
+            const auto inside = [&](Vec2 q) {
+                bool in = false;
+                for (size_t i = 0, j = f.size() - 1; i < f.size(); j = i++)
+                    if ((f[i].y > q.y) != (f[j].y > q.y) && q.x < (f[j].x - f[i].x) * (q.y - f[i].y) / (f[j].y - f[i].y) + f[i].x) in = !in;
+                return in;
+            };
+            for (double y = y0; y <= y1; y += 0.5)
+                for (double x = x0; x <= x1; x += 0.5)
+                    if (inside(Vec2(x, y))) disc(Vec2(x, y), 0.4, floodColour, 0.55);
+            for (size_t i = 0; i < f.size(); i++) stroke(f[i], f[(i + 1) % f.size()], 0.25, floodColour, 0);
+            label(f.front() + Vec2(0.5, -1.5), "BRINE (walkers x" + std::to_string(int(std::round(z.floodSlow * 100))) + "%)", floodColour);
+        }
         std::vector<Vec2> o;
         for (Vec2 p : z.outline) o.push_back(built.regionAt(p));
         for (size_t i = 0; i < o.size(); i++) stroke(o[i], o[(i + 1) % o.size()], 0.35, zoneColour, 4);
@@ -363,9 +384,9 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         }
         for (const region::Zone::Entrance& e : z.entrances) {
             const Vec2 r = built.regionAt(e.at);
-            disc(r, 1.6, entranceColour, 0.95);
-            ring(r, 1.6, 0.3, nestColour);
-            label(r + Vec2(1.6, 1.4), e.name, zoneColour);
+            disc(r, 1.6, e.roost ? nestColour : entranceColour, 0.95);
+            ring(r, 1.6, 0.3, e.roost ? zoneColour : nestColour);
+            label(r + Vec2(1.6, 1.4), e.roost ? e.name + " (roost: flyers)" : e.name, zoneColour);
         }
         if (!z.prizeDeposits.empty() || !z.prizeWells.empty()) {
             std::vector<Vec2> pieces;
@@ -456,6 +477,7 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         swatch(pathColour, "the Brood's path");
         swatch(entranceColour, "tunnel mouth");
         swatch(spotColour, "build spot");
+        swatch(floodColour, "flooded floor (brine)");
     }
     swatch(problemColour, "problem");
     y += lineHeight + 12;

@@ -473,10 +473,12 @@ TEST(Canyon_savedAndLoaded) {
     ASSERT_TRUE(w.canyonSend(r, fork, 4));
     stepFor(w, 1);
     const WorldSave s = w.save();
-    ASSERT_TRUE(s.canyons.size() == 1);
-    EXPECT_TRUE(s.canyons[0].region == "cold-fork" && s.canyons[0].zone == fork);
-    EXPECT_EQ(s.canyons[0].state, int64_t(State::running));
-    EXPECT_EQ(s.canyons[0].wave, int64_t(4));
+    // Z3: three zones in the world (The Drowned Cut, The Fork, The Roost),
+    // by region id; The Fork's is the second.
+    ASSERT_TRUE(s.canyons.size() == 3);
+    EXPECT_TRUE(s.canyons[1].region == "cold-fork" && s.canyons[1].zone == fork);
+    EXPECT_EQ(s.canyons[1].state, int64_t(State::running));
+    EXPECT_EQ(s.canyons[1].wave, int64_t(4));
     // Through the file.
     mkdir("build/save-tests", 0755);
     const std::string path = "build/save-tests/canyon.sqlite";
@@ -505,9 +507,9 @@ TEST(Canyon_savedAndLoaded) {
     EXPECT_TRUE(std::abs(theFork(v).next - (s.clock + WorldCanyon::breakFor)) < 0.5);
     // HELD and FAILED come back with their ends.
     WorldSave held = s;
-    held.canyons[0].state = int64_t(State::held);
-    held.canyons[0].wave = 10;
-    held.canyons[0].next = s.clock + 500;
+    held.canyons[1].state = int64_t(State::held);
+    held.canyons[1].wave = 10;
+    held.canyons[1].next = s.clock + 500;
     WorldMap h(first(), params());
     EXPECT_TRUE(h.restore(held).empty());
     EXPECT_TRUE(theFork(h).state == State::held && std::abs(theFork(h).next - (s.clock + 500)) < 1e-6);

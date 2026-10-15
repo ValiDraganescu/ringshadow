@@ -822,18 +822,22 @@ std::string WorldMap::devBrood(const std::string& line) {
     in >> word >> what;
     if (!world_ || pilots_.empty()) return "dev: brood: no world, or no pilot";
     const auto& [pilot, p] = *pilots_.begin();
-    // `brood zone here` (Z1): the pilot to the first canyon zone's region,
+    // `brood zone here [ZONE]` (Z1; Z3 names one): the pilot to the first
+    // canyon zone's region (or ZONE's),
     // 8 cells south of its prize (The Fork: in its gorge, the prize in its
     // sight, out of the bugs' site there).
     if (what == "zone") {
-        std::string here;
+        std::string here, which;
         std::istringstream peek(line);
-        peek >> word >> what >> here;
+        peek >> word >> what >> here >> which;
         if (here == "here") {
+            // Z3: `brood zone here ZONE` (a zone's id): that zone's region.
             for (size_t zr = 0; zr < regions_.size(); zr++) {
                 const auto& places = regions_[zr]->places();
                 if (!places || places->zones.empty()) continue;
-                const region::Zone& z = places->zones.front();
+                const auto named = std::find_if(places->zones.begin(), places->zones.end(), [&](const region::Zone& x) { return x.id == which; });
+                if (!which.empty() && named == places->zones.end()) continue;
+                const region::Zone& z = which.empty() ? places->zones.front() : *named;
                 Vec2 prize(0, 0);
                 for (const int64_t i : z.prizeDeposits) prize = prize + places->map.deposits[size_t(i)].position / double(z.prizeDeposits.size());
                 const Simulation& there = regions_[zr]->simulation();
