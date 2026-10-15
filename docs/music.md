@@ -198,6 +198,13 @@ The radio ducks under each line as under a narration. A line with no file
 is only logged: `audio: radio line <key>: no voice yet (text only)`. A
 goal that is only a wait for a level is not read.
 
+**The player's volumes** (U2, the Settings page; [mmorpg-play.md](mmorpg-play.md)
+"Settings"). MUSIC sets the radio's level (80 on a first run). VOICE sets KSTR's
+lines and the narrations (100). MASTER scales both, with the effects.
+VOICE follows the slider live, while a line is speaking too. The ducks
+above work the same at any level: a narration or a line takes the radio
+down, and a siege bed rides over it, both relative to MUSIC.
+
 ### The Dropship's flight
 
 F1's effects play on F2's ferry:

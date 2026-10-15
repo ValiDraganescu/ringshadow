@@ -25,6 +25,16 @@ namespace
 
 	FString BuildLine() { return TEXT("B  build menu   ·   number  pick   ·   click  place"); }
 
+	// The MMORPG Prospector's tips (`MmoTips`), the key card's too (U2).
+	const TCHAR* const TipDrill = TEXT("Hold click  drill ore at a deposit");
+	const TCHAR* const TipDerrick = TEXT("click  enter your Derrick   ·   R + hold click  repair it");
+	const TCHAR* const TipRepair = TEXT("Hold click  repair a damaged building");
+	const TCHAR* const TipMap = TEXT("M  world map: on a pad, fly to another region");
+	const TCHAR* const TipView = TEXT("V  first or third person   ·   Esc  the top-down view");
+	const TCHAR* const TipSkills = TEXT("K  skill tree   ·   Q C G  your actives   ·   1 2 3 4  supplies");
+	const TCHAR* const TipCitadel = TEXT("H  at the Citadel: the realm's wallet, the shop, missions   ·   L  your Journal");
+	const TCHAR* const TipMusic = TEXT("F7 F8 F9  music back, pause, next   ·   [ or ]  vote the track down or up");
+
 	/// `transit`: a move under way that holds the unit, for the work ring.
 	struct FTransit
 	{
@@ -258,7 +268,7 @@ TArray<FString> AcPilotText::Tips(const ac::Unit& U)
 	TArray<FString> Tips = {MoveLine(U, T), FString::Join(Parts, Dot), ac::PilotBuild::builds(U.kind) ? BuildLine() : FString(),
 		FString::Printf(TEXT("V  first or third person   ·   Tab  next %s"), *Title(U.kind)),
 		TEXT("Esc or F  leave   ·   Space or E  same as a click"), TEXT("Option-scroll  hearing range"),
-		TEXT("F7 F8 F9  music back, pause, next   ·   [ or ]  vote the track down or up"),
+		TipMusic,
 		TEXT("Z or X  pick a level-up card   ·   hold Option  free the pointer to click one")};
 	Tips.RemoveAll([](const FString& L) { return L.IsEmpty(); });
 	return Tips;
@@ -278,18 +288,44 @@ TArray<FString> AcPilotText::MmoTips(const ac::Simulation& Sim, const ac::Unit& 
 		bHurt |= B.hp < ac::Rules::hp(B.kind) && B.complete();
 	}
 	TArray<FString> Tips = {MoveLine(U, T)};
-	if (bOre) Tips.Add(TEXT("Hold click  drill ore at a deposit"));
+	if (bOre) Tips.Add(TipDrill);
 	const FString Depot = DepotWords(Sim, U.owner);
 	Tips.Add(bCitadel ? FString::Printf(TEXT("Walk into  %s to unload the ore"), Depot == TEXT("the Citadel") ? TEXT("your Citadel") : *Depot)
 					  : FString(TEXT("B  build a Citadel, to bring ore home")));
-	if (bDerrick) Tips.Add(TEXT("click  enter your Derrick   ·   R + hold click  repair it"));
-	else if (bHurt) Tips.Add(TEXT("Hold click  repair a damaged building"));
+	if (bDerrick) Tips.Add(TipDerrick);
+	else if (bHurt) Tips.Add(TipRepair);
 	Tips.Add(BuildLine());
-	Tips.Add(TEXT("M  world map: on a pad, fly to another region"));
-	Tips.Add(TEXT("V  first or third person   ·   Esc  the top-down view"));
-	Tips.Add(TEXT("K  skill tree   ·   Q C G  your actives   ·   1 2 3 4  supplies"));
-	if (bCitadel) Tips.Add(TEXT("H  at the Citadel: the realm's wallet, the shop, missions   ·   L  your Journal"));
+	Tips.Add(TipMap);
+	Tips.Add(TipView);
+	Tips.Add(TipSkills);
+	if (bCitadel) Tips.Add(TipCitadel);
 	return Tips;
+}
+
+TArray<AcPilotText::FKeyGroup> AcPilotText::KeyCard()
+{
+	// Each tip split at its dots, each part at its first double space: the
+	// key, then what it does ("Hold click  drill ore at a deposit").
+	auto Group = [](const TCHAR* Title, const TArray<FString>& Lines) {
+		FKeyGroup G{Title, {}};
+		for (const FString& Line : Lines)
+		{
+			TArray<FString> Parts;
+			Line.ParseIntoArray(Parts, Dot, true);
+			for (const FString& Part : Parts)
+			{
+				const int32 At = Part.Find(TEXT("  "));
+				if (At == INDEX_NONE) G.Rows.Add({Part, FString()});
+				else G.Rows.Add({Part.Left(At), Part.Mid(At + 2).TrimStart()});
+			}
+		}
+		return G;
+	};
+	const FString Walk = FAcPilotText::Of(ac::UnitKind::prospector).Move;
+	return {Group(TEXT("ON FOOT"), {Walk, TipDrill, TipRepair, TipDerrick, TEXT("Walk into  your Citadel to unload the ore")}),
+		Group(TEXT("BUILDING"), {BuildLine()}),
+		Group(TEXT("THE REACH"), {TipMap, TipView, TipSkills, TipCitadel}),
+		Group(TEXT("MUSIC"), {TipMusic})};
 }
 
 TArray<ac::StructureKind> AcPilotText::BuildKinds(const bool bMmo)

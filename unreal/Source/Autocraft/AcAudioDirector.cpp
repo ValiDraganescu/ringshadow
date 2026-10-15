@@ -96,6 +96,12 @@ float AcSound::AmbientGain()
 	return MasterGain() * FMath::Clamp(UAcSettings::Get().AmbientVolume, 0.f, 1.f);
 }
 
+float AcSound::SpeechGain()
+{
+	const UAcSettings& S = UAcSettings::Get();
+	return FMath::Clamp(S.MasterVolume, 0.f, 1.f) * FMath::Clamp(S.VoiceVolume, 0.f, 1.f);
+}
+
 namespace
 {
 	const ac::Unit* FindUnit(const ac::Simulation& Sim, int64 Id)
@@ -1395,7 +1401,7 @@ bool UAcAudioDirector::PlayNarration(const FString& Key)
 		UE_LOG(LogAutocraft, Warning, TEXT("audio: narration %s: no wave %s"), *Key, *N->Key);
 		return false;
 	}
-	NarrationVoice = UGameplayStatics::CreateSound2D(GetWorld(), Wave, 1.0f, 1.0f, 0.0f, nullptr, true, false);
+	NarrationVoice = UGameplayStatics::CreateSound2D(GetWorld(), Wave, AcSound::SpeechGain(), 1.0f, 0.0f, nullptr, true, false);
 	if (NarrationVoice) NarrationVoice->Play();
 	UE_LOG(LogAutocraft, Log, TEXT("audio: narration %s, %.1f s"), *Key, N->Value);
 	return true;
@@ -1433,6 +1439,9 @@ bool UAcAudioDirector::SayRadio(const FString& Key)
 
 void UAcAudioDirector::TickRadio()
 {
+	// U2: the voice volume, live, on what is speaking (the duck stays the radio's).
+	if (RadioVoice) RadioVoice->SetVolumeMultiplier(RadioVoiceGain * AcSound::SpeechGain());
+	if (NarrationVoice) NarrationVoice->SetVolumeMultiplier(AcSound::SpeechGain());
 	const std::optional<ac::VoiceQueue::Line> Line = RadioQueue.next(RadioClock());
 	if (!Line) return;
 	const FString Key = UTF8_TO_TCHAR(Line->key.c_str());
@@ -1450,7 +1459,8 @@ void UAcAudioDirector::TickRadio()
 	}
 	USoundWave* Wave = LoadObject<USoundWave>(nullptr, *L->Key);
 	if (!Wave) return;
-	RadioVoice = UGameplayStatics::CreateSound2D(GetWorld(), Wave, FMath::Min(Gain, 1.f), 1.0f, 0.0f, nullptr, true, false);
+	RadioVoiceGain = FMath::Min(Gain, 1.f);
+	RadioVoice = UGameplayStatics::CreateSound2D(GetWorld(), Wave, RadioVoiceGain * AcSound::SpeechGain(), 1.0f, 0.0f, nullptr, true, false);
 	if (RadioVoice) RadioVoice->Play();
 	UE_LOG(LogAutocraft, Log, TEXT("audio: radio line %s, %.1f s"), *Key, L->Value);
 }

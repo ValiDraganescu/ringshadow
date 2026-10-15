@@ -23,9 +23,18 @@
 // NEW WORLD opens a page that says what it deletes, with DELETE AND START
 // OVER and BACK (highlighted): only the first picks it.
 //
-// Settings (from either): sliders for the master, music, effects and
-// environment volumes and the mouse turn while driving, then BACK. They
-// change `UAcSettings` live and store it on the way back.
+// Settings (from either, U2; docs/mmorpg-play.md "Settings"):
+//   SOUND     MASTER, MUSIC, VOICE, EFFECTS, ENVIRONMENT (0-100, live)
+//   CONTROLS  MOUSE TURN
+//   SCREEN    SCREEN (FULL SCREEN / WINDOW), RESOLUTION (the display's
+//             modes): chosen here, applied on OK
+//   TESTING   LAG SIMULATOR (OFF / two_clients.py's preset, live), its
+//             warning under it
+//   [KEY CARD] [OK]
+// The volumes, the mouse turn and the lag change `UAcSettings` live and are
+// stored on the way out (OK or Esc); OK also applies the screen, Esc leaves
+// it as it was. KEY CARD shows the keys as the HUD's TIP line names them
+// (read only); Esc or BACK there returns to the page.
 //
 // Modal: every click stays here. Up/Down move the highlight, Left/Right move
 // a slider, Return picks (routed by the flow's key processor), the mouse
@@ -39,6 +48,8 @@ class FAcLauncherArt;
 
 enum class EAcMenuMode : uint8 { Home, Pause };
 enum class EAcMenuAction : uint8 { Resume, NewGame, QuitToHome, QuitApp, Settings, Mmo, MmoNewWorld, Back, StopServer };
+/// The Settings page's rows, in order (the highlight's index).
+enum class EAcSettingsRow : uint8 { Master, Music, Voice, Effects, Environment, Look, Screen, Resolution, Lag, KeyCard, Ok };
 
 DECLARE_DELEGATE_OneParam(FAcOnMenuPick, EAcMenuAction);
 
@@ -79,17 +90,33 @@ public:
 	/// Keys (from the flow's key processor): -1 up, +1 down; Pick the highlighted.
 	void Move(int32 Step);
 	void PickHighlighted();
-	/// Left/Right on the Settings page: the highlighted slider a step.
+	/// Left/Right on the Settings page: the highlighted slider a step, the
+	/// highlighted choice the next or the one before.
 	void Adjust(int32 Step);
-	/// Back from the Settings page (stores the settings); false when not on it.
+	/// Back from the key card to the Settings page, from the Settings page
+	/// (stores the settings, the screen as it was); false when on neither.
 	bool Back();
 	bool InSettings() const { return bSettings; }
+	bool InKeyCard() const { return bSettings && bKeyCard; }
+	/// The Settings page's highlighted row; highlight one (stills, flow tests).
+	EAcSettingsRow SettingsRow() const { return EAcSettingsRow(FMath::Clamp(Highlighted, 0, int32(EAcSettingsRow::Ok))); }
+	void HighlightRow(EAcSettingsRow Row);
+	/// SCREEN and RESOLUTION as chosen on the page (applied on OK).
+	bool PendingFullScreen() const { return bPendingFull; }
+	FIntPoint PendingResolution() const;
+	/// The resolutions offered (read when the page opens, again when SCREEN
+	/// changes: a window's must be smaller than the display).
+	const TArray<FIntPoint>& ResolutionChoices() const { return Resolutions; }
+	/// What a row shows on the right ("55", "WINDOW", "OFF").
+	FString ChoiceTextFor(EAcSettingsRow Row) const { return int32(Row) < SliderCount() ? SliderText(int32(Row)) : ChoiceText(Row); }
 	/// The new world's page is up (MMORPG NEW WORLD picked, not confirmed).
 	bool ConfirmingNewWorld() const { return bConfirmNewWorld; }
 	/// Highlights the button for `Action` on the page shown; false: none.
 	bool Highlight(EAcMenuAction Action);
 	/// Opens the Settings page whatever buttons there are (stills).
 	void OpenSettings();
+	/// The key card, from the Settings page.
+	void OpenKeyCard();
 
 	// SWidget
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -132,6 +159,19 @@ private:
 	static float SliderGet(int32 I);
 	static void SliderSet(int32 I, float Fraction);
 	void DragTo(FVector2f LocalPoint);
+	/// The Settings page's choices (SCREEN, RESOLUTION, LAG SIMULATOR): their
+	/// names, what they show, a step through them.
+	static FString ChoiceName(EAcSettingsRow Row);
+	FString ChoiceText(EAcSettingsRow Row) const;
+	void Choose(EAcSettingsRow Row, int32 Step);
+	/// The page opened: the screen's choices read from the settings.
+	void ReadScreen();
+	/// The screen chosen differs from the one in use.
+	bool ScreenChanged() const;
+	/// OK: applies the screen, then as Back.
+	void Ok();
+	void PaintSettings(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
+	void PaintKeyCard(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 
 	EAcMenuMode MenuMode = EAcMenuMode::Home;
 	FAcOnMenuPick OnPickDelegate;
@@ -145,7 +185,12 @@ private:
 	int32 Highlighted = 0;
 	int32 Pressed = INDEX_NONE;
 	bool bSettings = false;
+	bool bKeyCard = false;
 	bool bConfirmNewWorld = false;
+	/// SCREEN and RESOLUTION chosen (index into `Resolutions`).
+	bool bPendingFull = true;
+	int32 PendingRes = INDEX_NONE;
+	TArray<FIntPoint> Resolutions;
 	int32 Dragging = INDEX_NONE;
 	FString NowPlaying;
 	/// The key art (home only); the clock of its drift and crossfade starts at the first paint.
@@ -159,8 +204,13 @@ private:
 	mutable FVector2f GroupAt = FVector2f::ZeroVector;
 	/// X2: where the away lines start (zero: none shown).
 	mutable FVector2f AwayAt = FVector2f::ZeroVector;
-	/// The sliders' tracks (Settings page; `Boxes` has their rows, then BACK).
+	/// The sliders' tracks (Settings page; `Boxes` has every row, KEY CARD and
+	/// OK last; the key card's has only BACK).
 	mutable TArray<FBox2f> Tracks;
+	/// The Settings page's group headings and the lag's warning line.
+	mutable TArray<TPair<FString, FVector2f>> Headings;
+	mutable FVector2f WarnAt = FVector2f::ZeroVector;
+	mutable FVector2f ScreenNoteAt = FVector2f::ZeroVector;
 	mutable float PanelScale = 1.0f;
 	mutable FVector2f PanelOrigin = FVector2f::ZeroVector;
 	mutable FVector2f PanelSize = FVector2f::ZeroVector;

@@ -241,6 +241,44 @@ launch; the switch takes its lock only where
 players never hit it. `hidden_run.py` runs a launch that died before its
 log opened again (three tries) and says why, from its crash report.
 
+### The packaged first run (U2)
+
+A packaged first run must need nothing else. The check (2026-10-15) runs
+two of `mmosettings`'s steps on a Development package, signed ad hoc, from
+the home screen to the field and back. Both runs share one fresh config
+folder:
+
+```sh
+unreal/Tools/release/build_release.sh mac --version u2 --config Development --ad-hoc
+ditto unreal/Saved/Releases/u2/mac/Ringshadow.app unreal/server/build/u2/pkg/Ringshadow.app
+U=$PWD/unreal/server/build/u2/pkg-user/
+R="uv run unreal/Tools/hidden_run.py"
+$R --out unreal/server/build/u2/pkg-run1 --app unreal/server/build/u2/pkg/Ringshadow.app -- -AcMap=highlands-small \
+  -UserDir=$U -AcRemember -AcSettingsFirstRun -AcFlowTest=mmosettings -AcMmoShots={out}
+$R --out unreal/server/build/u2/pkg-run2 --app unreal/server/build/u2/pkg/Ringshadow.app -- -AcMap=highlands-small \
+  -UserDir=$U -AcRemember -AcFlowTest=mmosettingsback
+```
+
+1. **The first run** finds no config. It checks a first run's defaults: full
+   screen at the display's own resolution, music 80, voice and effects 100,
+   the lag off.
+2. It opens SETTINGS from the home screen, sets VOICE to 55 and SCREEN to a
+   WINDOW at the smallest size offered, and presses OK. It enters the Reach,
+   is seated, and checks the view at that size.
+3. It opens the pause menu's SETTINGS, flips the lag switch on and off,
+   opens the KEY CARD, and quits to home.
+4. **The second run** starts the app again on the same config. It reads
+   VOICE 55 and the window back from `Saved/Config/Mac/GameUserSettings.ini`,
+   enters the field and comes back.
+
+Both ran in 15 and 7 s with no failures and no ensures.
+
+`hidden_run.py --app` now gives every packaged run its own config folder,
+`-UserDir=OUT/user/`, unless the flags name one. Without it, a packaged game
+reads and writes `~/Library/Application Support/Epic/Autocraft/Saved/Config/`,
+the user's own. A hidden run never takes the display: OK resizes its window
+offscreen, and a full screen is only logged (`UAcSettings::ApplyScreen`).
+
 ## AWS
 
 - **Account** 569854554192, CLI profile `ringshadow` (`aws login --profile

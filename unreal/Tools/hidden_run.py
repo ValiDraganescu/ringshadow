@@ -28,7 +28,8 @@ APP-hidden.app, with LSUIElement set so it gets no Dock icon, signed ad hoc,
 made again when APP is newer), --raw (the flags are a whole command, for a
 tool that starts the editor itself: it runs as given, under the slot, at low
 priority, and only its exit code counts). `{out}` in the flags becomes --out. The run
-gets its own -AcSaveDir in --out unless the flags name one, and keeps the MMO
+gets its own -AcSaveDir in --out unless the flags name one (a packaged game
+its own config too: -UserDir=OUT/user/), and keeps the MMO
 world server attached (-AcMmoServerAttached: it ends with the run) unless the
 flags say -AcMmoServerDetached (the one scenario that checks the reattach; it
 stops its server itself). A world server left running on the run's folder
@@ -155,6 +156,10 @@ def command(a, out: Path, flags: list[str]) -> list[str]:
     cmd += [*HIDDEN, log]
     if not any(f.startswith("-AcSaveDir") for f in flags):
         cmd.append(f"-AcSaveDir={out / 'save'}")
+    # A packaged game keeps its config (GameUserSettings.ini) in the user's
+    # Library unless told otherwise: the run's own, in OUT/user (U2).
+    if a.app and not any(f.lower().startswith("-userdir=") for f in flags):
+        cmd.append(f"-UserDir={out / 'user'}/")
     return cmd + flags
 
 

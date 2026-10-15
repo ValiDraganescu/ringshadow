@@ -4,6 +4,8 @@
 #include "AcHudText.h"
 #include "AcSettings.h"
 #include "AcLauncherArt.h"
+#include "AcPilotText.h"
+#include "PlayerSettings.h"
 
 #include "Misc/App.h"
 #include "Misc/Paths.h"
@@ -22,9 +24,18 @@ namespace
 	constexpr float ButtonGap = 10;
 	constexpr float CardH = 66;
 	constexpr float RowH = 40;
-	constexpr float LabelW = 130;
 	constexpr float ValueW = 56;
 	constexpr float LookMin = 0.25f, LookMax = 3.f;
+	// U2: the Settings page (its choices and the lag's warning need the
+	// room) and the key card.
+	constexpr float SettingsW = 520;
+	constexpr float SettingsLabelW = 150;
+	constexpr float HeadH = 22;
+	constexpr float NoteH = 18;
+	constexpr float KeyCardW = 640;
+	constexpr float KeyColW = 170;
+	constexpr float KeyRowH = 22;
+	constexpr float KeyHeadH = 28;
 	// The home screen (H1): a wider panel for the wordmark, ENTER THE REACH
 	// tall, the rest shorter.
 	constexpr float HomeW = 460;
@@ -143,6 +154,7 @@ void SAcMenu::SetMode(const EAcMenuMode InMode)
 {
 	MenuMode = InMode;
 	bSettings = false;
+	bKeyCard = false;
 	bConfirmNewWorld = false;
 	Dragging = INDEX_NONE;
 	Highlighted = 0;
@@ -186,23 +198,24 @@ TArray<SAcMenu::FButton> SAcMenu::Buttons() const
 
 // MARK: - Settings
 
-int32 SAcMenu::SliderCount() { return 5; }
+int32 SAcMenu::SliderCount() { return int32(EAcSettingsRow::Look) + 1; }
 
 FString SAcMenu::SliderName(const int32 I)
 {
-	static const TCHAR* Names[] = {TEXT("MASTER"), TEXT("MUSIC"), TEXT("EFFECTS"), TEXT("ENVIRONMENT"), TEXT("MOUSE TURN")};
-	return Names[FMath::Clamp(I, 0, 4)];
+	static const TCHAR* Names[] = {TEXT("MASTER"), TEXT("MUSIC"), TEXT("VOICE"), TEXT("EFFECTS"), TEXT("ENVIRONMENT"), TEXT("MOUSE TURN")};
+	return Names[FMath::Clamp(I, 0, 5)];
 }
 
 float SAcMenu::SliderGet(const int32 I)
 {
 	const UAcSettings& S = UAcSettings::Get();
-	switch (I)
+	switch (EAcSettingsRow(I))
 	{
-	case 0: return FMath::Clamp(S.MasterVolume, 0.f, 1.f);
-	case 1: return S.bMusic ? FMath::Clamp(S.MusicVolume, 0.f, 1.f) : 0.f;
-	case 2: return FMath::Clamp(S.SfxVolume, 0.f, 1.f);
-	case 3: return FMath::Clamp(S.AmbientVolume, 0.f, 1.f);
+	case EAcSettingsRow::Master: return FMath::Clamp(S.MasterVolume, 0.f, 1.f);
+	case EAcSettingsRow::Music: return S.bMusic ? FMath::Clamp(S.MusicVolume, 0.f, 1.f) : 0.f;
+	case EAcSettingsRow::Voice: return FMath::Clamp(S.VoiceVolume, 0.f, 1.f);
+	case EAcSettingsRow::Effects: return FMath::Clamp(S.SfxVolume, 0.f, 1.f);
+	case EAcSettingsRow::Environment: return FMath::Clamp(S.AmbientVolume, 0.f, 1.f);
 	default: return FMath::Clamp((S.LookSpeed - LookMin) / (LookMax - LookMin), 0.f, 1.f);
 	}
 }
@@ -211,28 +224,137 @@ void SAcMenu::SliderSet(const int32 I, float F)
 {
 	UAcSettings& S = UAcSettings::Get();
 	F = FMath::Clamp(F, 0.f, 1.f);
-	switch (I)
+	switch (EAcSettingsRow(I))
 	{
-	case 0: S.MasterVolume = F; break;
-	case 1: S.MusicVolume = F; S.bMusic = F > 0.f; break;
-	case 2: S.SfxVolume = F; break;
-	case 3: S.AmbientVolume = F; break;
+	case EAcSettingsRow::Master: S.MasterVolume = F; break;
+	case EAcSettingsRow::Music: S.MusicVolume = F; S.bMusic = F > 0.f; break;
+	case EAcSettingsRow::Voice: S.VoiceVolume = F; break;
+	case EAcSettingsRow::Effects: S.SfxVolume = F; break;
+	case EAcSettingsRow::Environment: S.AmbientVolume = F; break;
 	default: S.LookSpeed = LookMin + F * (LookMax - LookMin); break;
 	}
 }
 
 FString SAcMenu::SliderText(const int32 I)
 {
-	if (I == 4) return FString::Printf(TEXT("%.2f×"), UAcSettings::Get().LookSpeed);
-	return FString::Printf(TEXT("%d%%"), FMath::RoundToInt(SliderGet(I) * 100));
+	if (EAcSettingsRow(I) == EAcSettingsRow::Look) return FString::Printf(TEXT("%.2f×"), UAcSettings::Get().LookSpeed);
+	return FString::Printf(TEXT("%d"), ac::PlayerSettings::percent(SliderGet(I)));
+}
+
+FString SAcMenu::ChoiceName(const EAcSettingsRow Row)
+{
+	switch (Row)
+	{
+	case EAcSettingsRow::Screen: return TEXT("SCREEN");
+	case EAcSettingsRow::Resolution: return TEXT("RESOLUTION");
+	default: return TEXT("LAG SIMULATOR");
+	}
+}
+
+FIntPoint SAcMenu::PendingResolution() const
+{
+	return Resolutions.IsValidIndex(PendingRes) ? Resolutions[PendingRes] : UAcSettings::Desktop();
+}
+
+FString SAcMenu::ChoiceText(const EAcSettingsRow Row) const
+{
+	switch (Row)
+	{
+	case EAcSettingsRow::Screen: return bPendingFull ? TEXT("FULL SCREEN") : TEXT("WINDOW");
+	case EAcSettingsRow::Resolution:
+	{
+		const FIntPoint R = PendingResolution();
+		const bool bNative = R == UAcSettings::Desktop();
+		return FString::Printf(TEXT("%d × %d%s"), R.X, R.Y, bNative ? TEXT("  NATIVE") : TEXT(""));
+	}
+	default: return UAcSettings::Get().bMmoLag ? TEXT("150 MS · 5% LOST") : TEXT("OFF");
+	}
+}
+
+void SAcMenu::Choose(const EAcSettingsRow Row, const int32 Step)
+{
+	switch (Row)
+	{
+	case EAcSettingsRow::Screen:
+	{
+		// The other mode's list; the size kept, or the nearest it offers.
+		const FIntPoint Was = PendingResolution();
+		bPendingFull = !bPendingFull;
+		Resolutions = UAcSettings::Resolutions(bPendingFull);
+		std::vector<ac::Resolution> List;
+		for (const FIntPoint& R : Resolutions) List.push_back({R.X, R.Y});
+		PendingRes = ac::ScreenChoices::index(List, {Was.X, Was.Y});
+		break;
+	}
+	case EAcSettingsRow::Resolution:
+		if (Resolutions.Num() > 0) PendingRes = (FMath::Max(PendingRes, 0) + Step + Resolutions.Num()) % Resolutions.Num();
+		break;
+	case EAcSettingsRow::Lag:
+		UAcSettings::Get().bMmoLag = !UAcSettings::Get().bMmoLag;
+		UAcSettings::ApplyLag();
+		break;
+	default: break;
+	}
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcMenu::ReadScreen()
+{
+	const UAcSettings& S = UAcSettings::Get();
+	bPendingFull = S.GetFullscreenMode() != EWindowMode::Windowed;
+	Resolutions = UAcSettings::Resolutions(bPendingFull);
+	FIntPoint Now = S.GetScreenResolution();
+	if (Now.X <= 0 || Now.Y <= 0 || bPendingFull && S.GetFullscreenMode() == EWindowMode::WindowedFullscreen) Now = UAcSettings::Desktop();
+	std::vector<ac::Resolution> List;
+	for (const FIntPoint& R : Resolutions) List.push_back({R.X, R.Y});
+	PendingRes = ac::ScreenChoices::index(List, {Now.X, Now.Y});
+}
+
+bool SAcMenu::ScreenChanged() const
+{
+	const UAcSettings& S = UAcSettings::Get();
+	const bool bFull = S.GetFullscreenMode() != EWindowMode::Windowed;
+	if (bFull != bPendingFull) return true;
+	FIntPoint Now = S.GetScreenResolution();
+	if (Now.X <= 0 || Now.Y <= 0 || bFull && S.GetFullscreenMode() == EWindowMode::WindowedFullscreen) Now = UAcSettings::Desktop();
+	return Now != PendingResolution();
+}
+
+void SAcMenu::Ok()
+{
+	if (ScreenChanged())
+	{
+		UAcSettings& S = UAcSettings::Get();
+		S.SetFullscreenMode(bPendingFull ? EWindowMode::WindowedFullscreen : EWindowMode::Windowed);
+		S.SetScreenResolution(PendingResolution());
+		UAcSettings::ApplyScreen();
+	}
+	Back();
 }
 
 void SAcMenu::Adjust(const int32 Step)
 {
-	if (!bSettings || Highlighted >= SliderCount()) return;
-	// Volumes in 5% steps; the mouse turn in 0.25× steps (1/11 of its range).
-	const float Unit = Highlighted == 4 ? 0.25f / (LookMax - LookMin) : 0.05f;
-	SliderSet(Highlighted, FMath::RoundToFloat(SliderGet(Highlighted) / Unit + Step) * Unit);
+	if (!bSettings || bKeyCard) return;
+	const EAcSettingsRow Row = SettingsRow();
+	if (Row == EAcSettingsRow::KeyCard || Row == EAcSettingsRow::Ok)
+	{
+		// KEY CARD and OK share a row: Left and Right move between them.
+		Highlighted = int32(Step < 0 ? EAcSettingsRow::KeyCard : EAcSettingsRow::Ok);
+		Invalidate(EInvalidateWidgetReason::Paint);
+		return;
+	}
+	if (Highlighted >= SliderCount())
+	{
+		Choose(Row, Step);
+		return;
+	}
+	if (Row == EAcSettingsRow::Look)
+	{
+		// The mouse turn in 0.25× steps (1/11 of its range).
+		const float Unit = 0.25f / (LookMax - LookMin);
+		SliderSet(Highlighted, FMath::RoundToFloat(SliderGet(Highlighted) / Unit + Step) * Unit);
+	}
+	else SliderSet(Highlighted, float(ac::PlayerSettings::stepVolume(SliderGet(Highlighted), Step)));
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -240,6 +362,22 @@ void SAcMenu::OpenSettings()
 {
 	const int32 I = Buttons().IndexOfByPredicate([](const FButton& B) { return B.Action == EAcMenuAction::Settings; });
 	if (I != INDEX_NONE) Pick(I);
+}
+
+void SAcMenu::OpenKeyCard()
+{
+	if (!bSettings) return;
+	bKeyCard = true;
+	Highlighted = 0;
+	Pressed = INDEX_NONE;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcMenu::HighlightRow(const EAcSettingsRow Row)
+{
+	if (!bSettings || bKeyCard) return;
+	Highlighted = int32(Row);
+	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
 bool SAcMenu::Highlight(const EAcMenuAction Action)
@@ -260,6 +398,13 @@ bool SAcMenu::Back()
 		return true;
 	}
 	if (!bSettings) return false;
+	if (bKeyCard)
+	{
+		bKeyCard = false;
+		Highlighted = int32(EAcSettingsRow::KeyCard);
+		Invalidate(EInvalidateWidgetReason::Paint);
+		return true;
+	}
 	if (UAcSettings::Remembers()) UAcSettings::Store();
 	bSettings = false;
 	Dragging = INDEX_NONE;
@@ -280,7 +425,20 @@ void SAcMenu::DragTo(const FVector2f Local)
 
 void SAcMenu::Move(const int32 Step)
 {
-	const int32 N = bSettings ? SliderCount() + 1 : Buttons().Num();
+	const int32 N = bKeyCard ? 1 : bSettings ? int32(EAcSettingsRow::Ok) + 1 : Buttons().Num();
+	// KEY CARD and OK share the last row: Down from either wraps to the top.
+	if (bSettings && !bKeyCard && Step > 0 && Highlighted == int32(EAcSettingsRow::KeyCard))
+	{
+		Highlighted = 0;
+		Invalidate(EInvalidateWidgetReason::Paint);
+		return;
+	}
+	if (bSettings && !bKeyCard && Step < 0 && Highlighted == int32(EAcSettingsRow::Ok))
+	{
+		Highlighted = int32(EAcSettingsRow::Lag);
+		Invalidate(EInvalidateWidgetReason::Paint);
+		return;
+	}
 	Highlighted = (Highlighted + Step + N) % N;
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
@@ -294,10 +452,32 @@ void SAcMenu::Pick(const int32 Index)
 {
 	if (bSettings)
 	{
-		if (Index == SliderCount())
+		if (bKeyCard)
 		{
+			if (Index == 0)
+			{
+				OnSoundDelegate.ExecuteIfBound(EAcMenuAction::Back);
+				Back();
+			}
+			return;
+		}
+		switch (EAcSettingsRow(Index))
+		{
+		case EAcSettingsRow::Screen:
+		case EAcSettingsRow::Resolution:
+		case EAcSettingsRow::Lag:
+			OnSoundDelegate.ExecuteIfBound(EAcMenuAction::Settings);
+			Choose(EAcSettingsRow(Index), 1);
+			break;
+		case EAcSettingsRow::KeyCard:
+			OnSoundDelegate.ExecuteIfBound(EAcMenuAction::Settings);
+			OpenKeyCard();
+			break;
+		case EAcSettingsRow::Ok:
 			OnSoundDelegate.ExecuteIfBound(EAcMenuAction::Back);
-			Back();
+			Ok();
+			break;
+		default: break;
 		}
 		return;
 	}
@@ -323,6 +503,8 @@ void SAcMenu::Pick(const int32 Index)
 	if (B[Index].Action == EAcMenuAction::Settings)
 	{
 		bSettings = true;
+		bKeyCard = false;
+		ReadScreen();
 		Highlighted = 0;
 		Invalidate(EInvalidateWidgetReason::Paint);
 		return;
@@ -336,22 +518,64 @@ void SAcMenu::Layout(const FVector2f ViewSize) const
 {
 	Boxes.Reset();
 	Tracks.Reset();
-	if (bSettings)
-	{
-		float Y = 84;
-		for (int32 I = 0; I < SliderCount(); ++I)
-		{
-			Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(PanelW - Pad, Y + RowH)));
-			const float Mid = Y + RowH / 2;
-			Tracks.Add(FBox2f(FVector2f(Pad + LabelW, Mid - 3), FVector2f(PanelW - Pad - ValueW, Mid + 3)));
-			Y += RowH + 4;
-		}
-		Y += 18;
-		Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(PanelW - Pad, Y + ButtonH)));
-		PanelSize = FVector2f(PanelW, Y + ButtonH + Pad);
+	Headings.Reset();
+	WarnAt = ScreenNoteAt = FVector2f::ZeroVector;
+	auto Fit = [&](const float W, const float Y) {
+		PanelSize = FVector2f(W, Y);
 		PanelScale = FMath::Clamp(FMath::Min((ViewSize.X - 40) / PanelSize.X, (ViewSize.Y - 40) / PanelSize.Y), 0.3f, MaxScale(ViewSize));
 		PanelOrigin = (ViewSize - PanelSize * PanelScale) * 0.5f;
 		if (ArtShowing()) PanelOrigin.X = FMath::Min(ViewSize.X * 0.08f, ViewSize.X - PanelSize.X * PanelScale - 20.f);
+	};
+	if (bKeyCard)
+	{
+		// The groups' rows (painted from the same list), then BACK.
+		float Y = 84 + NoteH + 8;
+		for (const AcPilotText::FKeyGroup& G : AcPilotText::KeyCard()) Y += KeyHeadH + G.Rows.Num() * KeyRowH;
+		Y += 14;
+		Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(KeyCardW - Pad, Y + ButtonH)));
+		Fit(KeyCardW, Y + ButtonH + Pad);
+		return;
+	}
+	if (bSettings)
+	{
+		const float W = SettingsW;
+		float Y = 84;
+		auto Head = [&](const TCHAR* Title) {
+			Headings.Add({Title, FVector2f(Pad, Y)});
+			Y += HeadH;
+		};
+		auto Row = [&] {
+			Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(W - Pad, Y + RowH)));
+			Y += RowH + 4;
+		};
+		for (int32 I = 0; I < SliderCount(); ++I)
+		{
+			if (I == int32(EAcSettingsRow::Master)) Head(TEXT("SOUND"));
+			if (I == int32(EAcSettingsRow::Look))
+			{
+				Y += 8;
+				Head(TEXT("CONTROLS"));
+			}
+			const float Mid = Y + RowH / 2;
+			Tracks.Add(FBox2f(FVector2f(Pad + SettingsLabelW, Mid - 3), FVector2f(W - Pad - ValueW, Mid + 3)));
+			Row();
+		}
+		Y += 8;
+		Head(TEXT("SCREEN"));
+		Row();
+		Row();
+		ScreenNoteAt = FVector2f(Pad + 2, Y - 2);
+		Y += NoteH;
+		Y += 8;
+		Head(TEXT("TESTING"));
+		Row();
+		WarnAt = FVector2f(Pad + 2, Y - 2);
+		Y += NoteH + 14;
+		// KEY CARD and OK, halves of one row.
+		const float Mid = W * 0.5f;
+		Boxes.Add(FBox2f(FVector2f(Pad, Y), FVector2f(Mid - ButtonGap * 0.5f, Y + ButtonH)));
+		Boxes.Add(FBox2f(FVector2f(Mid + ButtonGap * 0.5f, Y), FVector2f(W - Pad, Y + ButtonH)));
+		Fit(W, Y + ButtonH + Pad);
 		return;
 	}
 	const bool bHome = MenuMode == EAcMenuMode::Home && !bConfirmNewWorld;
@@ -426,7 +650,7 @@ FReply SAcMenu::OnMouseButtonDown(const FGeometry& Geometry, const FPointerEvent
 		const FVector2f Local(Geometry.AbsoluteToLocal(Event.GetScreenSpacePosition()));
 		Pressed = ButtonAt(Local);
 		Invalidate(EInvalidateWidgetReason::Paint);
-		if (bSettings && Pressed != INDEX_NONE && Pressed < SliderCount())
+		if (bSettings && !bKeyCard && Pressed != INDEX_NONE && Pressed < SliderCount())
 		{
 			// A slider row: the value under the pointer, then dragged.
 			Highlighted = Dragging = Pressed;
@@ -451,7 +675,16 @@ FReply SAcMenu::OnMouseButtonUp(const FGeometry& Geometry, const FPointerEvent& 
 		const int32 Was = Pressed;
 		Pressed = INDEX_NONE;
 		Invalidate(EInvalidateWidgetReason::Paint);
-		if (Hit == Was) Pick(Hit);
+		const bool bChoice = bSettings && !bKeyCard && Hit >= int32(EAcSettingsRow::Screen) && Hit <= int32(EAcSettingsRow::Lag);
+		if (Hit == Was && bChoice && Boxes.IsValidIndex(Hit))
+		{
+			// A choice: its left half steps back, its right half on.
+			const FVector2f P = (FVector2f(Geometry.AbsoluteToLocal(Event.GetScreenSpacePosition())) - PanelOrigin) / PanelScale;
+			const float Split = Boxes[Hit].Min.X + SettingsLabelW + (Boxes[Hit].Max.X - Boxes[Hit].Min.X - SettingsLabelW) * 0.5f;
+			OnSoundDelegate.ExecuteIfBound(EAcMenuAction::Settings);
+			Choose(EAcSettingsRow(Hit), P.X < Split ? -1 : 1);
+		}
+		else if (Hit == Was) Pick(Hit);
 	}
 	return FReply::Handled();
 }
@@ -648,6 +881,116 @@ void SAcMenu::PaintWordmark(FSlateWindowElementList& Out, const int32 Layer, con
 	}
 }
 
+namespace
+{
+	/// A button of the Settings page or the key card (BACK, KEY CARD, OK).
+	void PaintButton(FSlateWindowElementList& Out, const int32 L, const FGeometry& P, const FBox2f& B, const FString& Text, const bool bHot)
+	{
+		Box(Out, L, P, B, bHot ? FAcHudStyle::Srgb(0.08, 0.3, 0.42, 1) : FAcHudStyle::Srgb(0.05, 0.09, 0.14, 1));
+		Frame(Out, L + 1, P, B, bHot ? FAcHudStyle::Cyan() : FAcHudStyle::Srgb(0.3, 0.42, 0.52, 0.8), bHot ? 1.5f : 1.0f);
+		Label(Text, 18, bHot ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.75, 0.85, 0.92), EAcHAlign::Center, EAcVAlign::Center)
+			.Paint(Out, L + 2, P, B.GetCenter() + FVector2f(0, 0.5f));
+	}
+
+	/// A group's heading: small caps over a hairline to the panel's edge.
+	void PaintHeading(FSlateWindowElementList& Out, const int32 L, const FGeometry& P, const FString& Title, const FVector2f At, const float Right)
+	{
+		FAcHudText Head = Label(Title, 12, FAcHudStyle::Srgb(0.55, 0.7, 0.8), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold);
+		Head.Kern = 1.5f;
+		Head.Paint(Out, L, P, At);
+		const float X = At.X + Head.Measure().X + 10;
+		Box(Out, L, P, FBox2f(FVector2f(X, At.Y + 5), FVector2f(Right, At.Y + 6)), FAcHudStyle::Srgb(0.3, 0.42, 0.52, 0.6));
+	}
+}
+
+void SAcMenu::PaintSettings(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const
+{
+	const float W = PanelSize.X;
+	Label(TEXT("SETTINGS"), 34, FAcHudStyle::Ice(), EAcHAlign::Center).Paint(Out, L, P, FVector2f(W / 2, 26));
+	for (const TPair<FString, FVector2f>& H : Headings) PaintHeading(Out, L, P, H.Key, H.Value, W - Pad);
+	const FLinearColor Soft = FAcHudStyle::Srgb(0.75, 0.85, 0.92);
+	for (int32 I = 0; I <= int32(EAcSettingsRow::Lag) && I < Boxes.Num(); ++I)
+	{
+		const bool bHot = I == Highlighted;
+		const FBox2f& R = Boxes[I];
+		if (bHot) Box(Out, L, P, R, FAcHudStyle::Srgb(0.06, 0.14, 0.2, 1));
+		if (bHot) Frame(Out, L + 1, P, R, FAcHudStyle::Cyan(), 1);
+		const float Y = R.GetCenter().Y + 0.5f;
+		if (I < SliderCount() && Tracks.IsValidIndex(I))
+		{
+			Label(SliderName(I), 15, bHot ? FAcHudStyle::Text() : Soft, EAcHAlign::Left, EAcVAlign::Center).Paint(Out, L + 2, P, FVector2f(R.Min.X + 12, Y));
+			const FBox2f& T = Tracks[I];
+			const float F = SliderGet(I);
+			Box(Out, L + 1, P, T, FAcHudStyle::Srgb(0.12, 0.18, 0.24, 1));
+			Box(Out, L + 2, P, FBox2f(T.Min, FVector2f(FMath::Lerp(T.Min.X, T.Max.X, F), T.Max.Y)), FAcHudStyle::Cyan());
+			const float KX = FMath::Lerp(T.Min.X, T.Max.X, F);
+			Box(Out, L + 3, P, FBox2f(FVector2f(KX - 4, T.Min.Y - 7), FVector2f(KX + 4, T.Max.Y + 7)),
+				bHot ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.6, 0.72, 0.8));
+			Label(SliderText(I), 14, FAcHudStyle::Text(), EAcHAlign::Right, EAcVAlign::Center, EAcFontWeight::Medium)
+				.Paint(Out, L + 2, P, FVector2f(R.Max.X - 10, Y));
+			continue;
+		}
+		// A choice: its name, then "‹  WHAT  ›" over the value's room.
+		const EAcSettingsRow Row = EAcSettingsRow(I);
+		Label(ChoiceName(Row), 15, bHot ? FAcHudStyle::Text() : Soft, EAcHAlign::Left, EAcVAlign::Center).Paint(Out, L + 2, P, FVector2f(R.Min.X + 12, Y));
+		const float X0 = R.Min.X + SettingsLabelW, X1 = R.Max.X - 10;
+		const FLinearColor Arrow = bHot ? FAcHudStyle::Cyan() : FAcHudStyle::Srgb(0.4, 0.55, 0.65);
+		Label(TEXT("‹"), 20, Arrow, EAcHAlign::Left, EAcVAlign::Center).Paint(Out, L + 2, P, FVector2f(X0, Y - 1));
+		Label(TEXT("›"), 20, Arrow, EAcHAlign::Right, EAcVAlign::Center).Paint(Out, L + 2, P, FVector2f(X1, Y - 1));
+		const bool bLagOn = Row == EAcSettingsRow::Lag && UAcSettings::Get().bMmoLag;
+		Label(ChoiceText(Row), 15, bLagOn ? FAcHudStyle::Srgb(1.0, 0.72, 0.3) : FAcHudStyle::Text(), EAcHAlign::Center, EAcVAlign::Center,
+			EAcFontWeight::SemiBold)
+			.Paint(Out, L + 2, P, FVector2f((X0 + X1) * 0.5f, Y));
+	}
+	// Under RESOLUTION: what OK does with the screen chosen.
+	if (ScreenNoteAt != FVector2f::ZeroVector)
+	{
+		const bool bChanged = ScreenChanged();
+		const FIntPoint D = UAcSettings::Desktop();
+		const FString Note = bChanged ? FString(TEXT("OK applies the screen chosen; Esc keeps the one in use."))
+			: !bPendingFull                ? FString::Printf(TEXT("A window this size; the display's own is %d × %d."), D.X, D.Y)
+			: PendingResolution() != D     ? FString(TEXT("Full screen at this size switches the display to it."))
+										   : FString(TEXT("Full screen at the display's own resolution."));
+		Label(Note, 12, bChanged ? FAcHudStyle::Srgb(1.0, 0.72, 0.3) : FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L, P, ScreenNoteAt);
+	}
+	// Under the lag simulator: that it is for testing.
+	if (WarnAt != FVector2f::ZeroVector)
+	{
+		Label(TEXT("For testing only: it delays and drops the game's packets to the world server."), 12, FAcHudStyle::Srgb(1.0, 0.72, 0.3),
+			EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L, P, WarnAt);
+	}
+	if (Boxes.IsValidIndex(int32(EAcSettingsRow::Ok)))
+	{
+		PaintButton(Out, L, P, Boxes[int32(EAcSettingsRow::KeyCard)], TEXT("KEY CARD"), Highlighted == int32(EAcSettingsRow::KeyCard));
+		PaintButton(Out, L, P, Boxes[int32(EAcSettingsRow::Ok)], TEXT("OK"), Highlighted == int32(EAcSettingsRow::Ok));
+	}
+}
+
+void SAcMenu::PaintKeyCard(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const
+{
+	const float W = PanelSize.X;
+	Label(TEXT("KEY CARD"), 34, FAcHudStyle::Ice(), EAcHAlign::Center).Paint(Out, L, P, FVector2f(W / 2, 26));
+	Label(TEXT("The keys as the HUD's TIP line names them."), 13, FAcHudStyle::Soft(), EAcHAlign::Center, EAcVAlign::Top, EAcFontWeight::Medium)
+		.Paint(Out, L, P, FVector2f(W / 2, 80));
+	float Y = 84 + NoteH + 8;
+	for (const AcPilotText::FKeyGroup& G : AcPilotText::KeyCard())
+	{
+		PaintHeading(Out, L, P, G.Title, FVector2f(Pad, Y + 6), W - Pad);
+		Y += KeyHeadH;
+		for (const AcPilotText::FKeyRow& R : G.Rows)
+		{
+			const float Mid = Y + KeyRowH * 0.5f + 0.5f;
+			Label(R.Key, 15, FAcHudStyle::Cyan(), EAcHAlign::Right, EAcVAlign::Center).Paint(Out, L, P, FVector2f(Pad + KeyColW, Mid));
+			Label(R.What, 15, FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::Medium)
+				.Paint(Out, L, P, FVector2f(Pad + KeyColW + 16, Mid));
+			Y += KeyRowH;
+		}
+	}
+	if (Boxes.Num() > 0) PaintButton(Out, L, P, Boxes[0], TEXT("BACK"), Highlighted == 0);
+}
+
 int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
 	FSlateWindowElementList& Out, int32 Layer, const FWidgetStyle& Style, bool bParentEnabled) const
 {
@@ -671,33 +1014,14 @@ int32 SAcMenu::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const 
 	Frame(Out, Layer + 2, P, Panel.ExpandBy(-4), FAcHudStyle::Srgb(0.35, 0.85, 1, 0.28), 1);
 	const int32 L = Layer + 3;
 
+	if (bKeyCard)
+	{
+		PaintKeyCard(Out, L, P);
+		return L + 4;
+	}
 	if (bSettings)
 	{
-		Label(TEXT("SETTINGS"), 34, FAcHudStyle::Ice(), EAcHAlign::Center).Paint(Out, L, P, FVector2f(PanelW / 2, 26));
-		for (int32 I = 0; I < SliderCount() && I < Tracks.Num(); ++I)
-		{
-			const bool bHot = I == Highlighted;
-			const FBox2f& R = Boxes[I];
-			if (bHot) Box(Out, L, P, R, FAcHudStyle::Srgb(0.06, 0.14, 0.2, 1));
-			if (bHot) Frame(Out, L + 1, P, R, FAcHudStyle::Cyan(), 1);
-			Label(SliderName(I), 15, bHot ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.75, 0.85, 0.92), EAcHAlign::Left, EAcVAlign::Center)
-				.Paint(Out, L + 2, P, FVector2f(R.Min.X + 12, R.GetCenter().Y + 0.5f));
-			const FBox2f& T = Tracks[I];
-			const float F = SliderGet(I);
-			Box(Out, L + 1, P, T, FAcHudStyle::Srgb(0.12, 0.18, 0.24, 1));
-			Box(Out, L + 2, P, FBox2f(T.Min, FVector2f(FMath::Lerp(T.Min.X, T.Max.X, F), T.Max.Y)), FAcHudStyle::Cyan());
-			const float KX = FMath::Lerp(T.Min.X, T.Max.X, F);
-			Box(Out, L + 3, P, FBox2f(FVector2f(KX - 4, T.Min.Y - 7), FVector2f(KX + 4, T.Max.Y + 7)),
-				bHot ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.6, 0.72, 0.8));
-			Label(SliderText(I), 14, FAcHudStyle::Text(), EAcHAlign::Right, EAcVAlign::Center, EAcFontWeight::Medium)
-				.Paint(Out, L + 2, P, FVector2f(R.Max.X - 10, R.GetCenter().Y + 0.5f));
-		}
-		const FBox2f& BackBox = Boxes.Last();
-		const bool bHot = Highlighted == SliderCount();
-		Box(Out, L, P, BackBox, bHot ? FAcHudStyle::Srgb(0.08, 0.3, 0.42, 1) : FAcHudStyle::Srgb(0.05, 0.09, 0.14, 1));
-		Frame(Out, L + 1, P, BackBox, bHot ? FAcHudStyle::Cyan() : FAcHudStyle::Srgb(0.3, 0.42, 0.52, 0.8), bHot ? 1.5f : 1.0f);
-		Label(TEXT("BACK"), 18, bHot ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.75, 0.85, 0.92), EAcHAlign::Center, EAcVAlign::Center)
-			.Paint(Out, L + 2, P, BackBox.GetCenter() + FVector2f(0, 0.5f));
+		PaintSettings(Out, L, P);
 		return L + 4;
 	}
 

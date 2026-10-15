@@ -119,6 +119,62 @@ are, stays clear (U1; the pieces in `AcProgressHud.h`, `SAcLevelUp.h`,
 - **Q, C, G** over the dashboard left of the Prospector; the supplies' cells
   (1-4) right of it.
 
+## Settings
+
+**SETTINGS** on the home screen and on the pause menu (Esc in the top-down
+view) open the same page (U2; `SAcMenu`). Up and Down move the highlight,
+Left and Right move a slider or a choice, Return picks, the mouse clicks
+and drags. Esc closes it.
+
+| Row | What it does |
+|---|---|
+| **MASTER, MUSIC, VOICE, EFFECTS, ENVIRONMENT** | Volumes, 0–100 in steps of 5, heard at once. VOICE is the spoken words: KSTR's radio lines and the narrations. EFFECTS covers shots, tools and the units' report-ins; ENVIRONMENT covers wind, rain and hum. MASTER scales all of them. |
+| **MOUSE TURN** | The driven unit's mouse turn, 0.25× to 3×. |
+| **SCREEN** | FULL SCREEN or WINDOW. |
+| **RESOLUTION** | The display's own modes from 1280 × 720 up. Full screen offers sizes up to the display's own, marked NATIVE. A window offers only sizes smaller than the display, so it fits on the screen. A display that lists no modes gets the common 16:9 and 16:10 sizes. |
+| **LAG SIMULATOR** | OFF, or two_clients.py's preset: 150 ms each way, up to 20 ms more, 5% of packets lost (`ac.MmoLag`). It holds the game's link to the world server back. The orange line under it says it is for testing. A `-AcMmoLag=` on the command line wins over it. |
+| **KEY CARD** | The keys as the HUD's TIP line names them, all at once: on foot, building, the Reach, music. Read only: no rebinding yet. Esc or BACK returns to the page. |
+| **OK** | Applies SCREEN and RESOLUTION, stores everything and closes the page. |
+
+The volumes, the mouse turn and the lag switch apply as they change. OK
+and Esc both store them. Only OK applies a new screen; Esc keeps the one in
+use. Full screen at the display's own resolution is borderless and leaves
+the display alone. Full screen at another size switches the display to it,
+as the engine does on a Mac.
+
+**Where it is kept.** In the game's config, `GameUserSettings.ini`
+(`UAcSettings`, section `[/Script/Autocraft.AcSettings]`), read at start.
+The pilot key and the save are not in it: they are files in the save folder
+(`pilot.key`, see "Saving"). The engine's own keys hold the screen
+(`FullscreenMode`, `ResolutionSizeX`/`Y`). Ours hold the volumes
+(`MasterVolume`, `MusicVolume`, `VoiceVolume`, `SfxVolume`,
+`AmbientVolume`), `LookSpeed` and `bMmoLag`. A packaged game keeps the file
+in `~/Library/Application Support/Epic/Autocraft/Saved/Config/Mac/`. An
+editor run keeps it in `unreal/Saved/Config/MacEditor/`.
+
+**A first run** (no file yet): full screen at the display's own resolution,
+music 80, voice, effects and the rest 100, the lag off
+(`ac::PlayerSettings`, `PlayerSettings.h`).
+
+**Two things the engine does itself.** It copies a window's size into the
+settings whenever the window is resized, and it saves the settings when the
+game quits. So the stored size is always the size the window really got.
+
+**Tests.**
+- `make -C unreal/core-tests FILTER=PlayerSettings` covers the defaults, the
+  steps, the resolution lists and the screen's mode.
+- `--tests Autocraft.Settings` writes the config and reads it back.
+- The flows: `-AcFlowTest=mmosettings` (with `-AcSettingsFirstRun`, on a
+  fresh config) opens the page from both places, sets VOICE to 55 and a
+  WINDOW at the smallest size (`-AcSettingsLargest` takes the largest),
+  stores it, plays in the field, checks the lag switch and the key card, and
+  quits to home. `-AcFlowTest=mmosettingsback`, run on the same config after
+  a restart, reads them back.
+
+Run both hidden with their own config: `-UserDir=DIR/ -AcRemember`. Hidden
+runs store nothing without `-AcRemember`. `-AcMmoShotsU2 -AcMmoShots=DIR`
+takes the pictures.
+
 ## The Citadels
 
 Since R3 (2026-10-15) every region may have one Citadel, built like the

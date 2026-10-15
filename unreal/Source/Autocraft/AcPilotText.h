@@ -190,6 +190,20 @@ struct AUTOCRAFT_API AcPilotText
 	/// (a Derrick's line with a Derrick of the pilot's, the unload line with
 	/// a Citadel, the pick keys with a pick waiting; no music keys).
 	static TArray<FString> MmoTips(const ac::Simulation& Sim, const ac::Unit& U);
+	/// U2: the key card (the Settings page's KEY CARD): the MMORPG
+	/// Prospector's keys as its TIP line names them, every one at once, by
+	/// group; each a key and what it does. Read only.
+	struct FKeyRow
+	{
+		FString Key;
+		FString What;
+	};
+	struct FKeyGroup
+	{
+		FString Title;
+		TArray<FKeyRow> Rows;
+	};
+	static TArray<FKeyGroup> KeyCard();
 	/// The build menu's buildings, in order (keys 1, 2, …): the MMORPG test
 	/// mode's list there, else `PilotBuild.kinds`.
 	static TArray<ac::StructureKind> BuildKinds(bool bMmo);

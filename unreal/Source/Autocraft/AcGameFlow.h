@@ -299,6 +299,13 @@ private:
 	void TickMmoHudFlow(const FString& Step);
 	/// A key through the flow's key processor, as the player presses it.
 	bool PressFlowKey(const struct FKey& Key);
+	/// U2: `mmosettings` (the Settings page from the home screen and the
+	/// pause menu, a volume and the screen changed and stored, the key card)
+	/// and `mmosettingsback` (a restart: read back); AcSettingsFlowTest.cpp.
+	void TickSettingsFlow(const FString& Step);
+	/// The picture asked for (-AcMmoShots=DIR), waited for before the next.
+	FString SettingsShot;
+	FIntPoint SettingsWant = FIntPoint::ZeroValue;
 	FVector2D RtsTargetWas = FVector2D::ZeroVector;
 	/// -AcMmoShots=DIR (AcMmoShots.cpp): the MMO moments staged in a new
 	/// world, a PNG of each (HUD on) in DIR; run as the flow step `mmoshots`.

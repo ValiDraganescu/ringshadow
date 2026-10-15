@@ -235,6 +235,9 @@ namespace AcSound
 	/// The master gain times the player's effects / environment volume.
 	AUTOCRAFT_API float SfxGain();
 	AUTOCRAFT_API float AmbientGain();
+	/// U2: the spoken words (KSTR's lines, the narrations): the player's
+	/// master volume times its voice volume (0…1), live; full at both 100.
+	AUTOCRAFT_API float SpeechGain();
 }
 
 /// Which voices a one-shot plays on: deposits and voice lines, the fight
@@ -608,6 +611,8 @@ private:
 	ac::VoiceQueue RadioQueue;
 	UPROPERTY(Transient)
 	TObjectPtr<UAudioComponent> RadioVoice;
+	/// Its gain before the player's voice volume (U2: that is applied live).
+	float RadioVoiceGain = 1.f;
 	/// The clock the queue runs on (the music player's).
 	double RadioClock() const;
 	void TickRadio();

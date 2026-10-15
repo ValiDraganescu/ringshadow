@@ -310,7 +310,10 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		// The MMO moments in pictures (AcMmoShots.cpp): a flow step of its own.
 		Test.Emplace();
 		// -AcMmoShotsW5: two pilots' pictures, the `mmotwo` step's (AcMmoTwo.cpp).
-		Test->Steps.Add(FParse::Param(Cmd, TEXT("AcMmoShotsW5")) ? TEXT("mmotwo") : TEXT("mmoshots"));
+		// -AcMmoShotsU2: the Settings page's pictures, the `mmosettings` step's.
+		Test->Steps.Add(FParse::Param(Cmd, TEXT("AcMmoShotsW5")) ? TEXT("mmotwo")
+				: FParse::Param(Cmd, TEXT("AcMmoShotsU2"))     ? TEXT("mmosettings")
+															   : TEXT("mmoshots"));
 		Shots.Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), ShotsDir);
 		UE_LOG(LogAutocraft, Log, TEXT("mmoshots: pictures to %s, saves in %s, the pilot in %s"), *Shots.Dir, *AcSaves::Directory(),
 			*FAcMmoClient::Directory());
@@ -342,6 +345,8 @@ void UAcGameFlowSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		{
 			V->Set(UAcSettings::Get().bShowPerfMmo ? 1 : 0, ECVF_SetByGameSetting);
 		}
+		// U2: the lag simulator as the Settings page left it.
+		UAcSettings::ApplyLag();
 	}
 	if (FSlateApplication::IsInitialized())
 	{
@@ -2170,6 +2175,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 		TickMmoTwo();
 		return;
 	}
+	if (Step == TEXT("mmosettings") || Step == TEXT("mmosettingsback"))
+	{
+		TickSettingsFlow(Step);
+		return;
+	}
 	if (Step.StartsWith(TEXT("mmo")))
 	{
 		TickMmoFlow(Step);
@@ -2349,7 +2359,8 @@ void UAcGameFlowSubsystem::TickFlowTest()
 			{
 				UAcSettings& Set = UAcSettings::Get();
 				const float Was = Set.SfxVolume;
-				Press(EKeys::Down);  // Master, Music, Effects
+				Press(EKeys::Down);  // Master, Music, Voice, Effects
+				Press(EKeys::Down);
 				Press(EKeys::Down);
 				Press(EKeys::Left);
 				const float Lower = Set.SfxVolume;
