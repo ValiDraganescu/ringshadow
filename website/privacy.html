@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy · Ringshadow</title>
+  <meta name="description" content="What ringshadow.com counts about its readers and the bots that fetch it, where it is kept and for how long. It sets no cookies for readers and keeps nothing that follows you to other sites.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="Privacy · Ringshadow">
+  <meta property="og:description" content="What ringshadow.com counts about its readers and the bots that fetch it, where it is kept and for how long.">
+  <meta property="og:image" content="https://ringshadow.com/assets/media/key-art.jpg">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/privacy">
+  <link rel="canonical" href="https://ringshadow.com/privacy">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/site.css">
+  <link rel="stylesheet" href="assets/css/ring.css">
+  <link rel="stylesheet" href="assets/css/blog.css">
+  <script src="assets/js/count.js" defer data-site="ringshadow"></script>
+  <script src="assets/js/ring.js"></script>
+  <script src="assets/js/stars.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="index.html"><img src="assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="roadmap.html">Roadmap</a></li>
+      <li><a href="blog/index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>Privacy</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time></p>
+        <p class="lede">This site counts its readers and the bots that fetch it, on its own server. It sets no cookies for readers and keeps nothing that could follow you to another site.</p>
+      </header>
+
+      <div class="prose">
+        <h2>A page view</h2>
+        <p>When a page loads, a small script from this site, <code>count.js</code>, makes two requests to ringshadow.com. The first one asks for a visit counter. Your browser keeps the answer in its own cache, the way it keeps a picture, and sends its date back with the next page. That date says whether this is your first page today, your second, or a later one, which is how the site counts visitors without a cookie.</p>
+        <p>The second request reports the page's path, the host name of the site that linked to it, without the rest of its address, and a campaign tag if the link carried one (<code>utm_source</code> and <code>utm_medium</code>). The server adds the country that Cloudflare reads from the connection, and from your browser's User-Agent only the browser's name, its major version and whether it is a desktop, a phone or a tablet. Your IP address and the full User-Agent are not stored.</p>
+        <p>A click on the download button and the first play of a video on a post are counted the same way, as events.</p>
+
+        <h2>Bots and other agents</h2>
+        <p>Every fetch of a page, the feed, <code>llms.txt</code>, <code>llms-full.txt</code> or a Markdown copy is also counted on the server. When it comes from something that is not a browser (a search crawler, an assistant fetching a page for someone, a feed reader), the count keeps its full User-Agent, the path and the answer's status, so the developer can see which agents read the site and label them. A browser's own page fetch is counted with the browser's name only.</p>
+
+        <h2>Where it is kept, and for how long</h2>
+        <p>The numbers stay in the site's own Cloudflare account, in Workers Analytics Engine, and nobody else gets them. There is no third-party script, and the page's security policy lets it talk only to ringshadow.com. Single hits are kept three months, then dropped. Each day's totals (views, visitors, and the counts per page, referring site, country, agent and event) are kept in the site's database after that.</p>
+
+        <h2>Not being counted</h2>
+        <p>The script counts only on ringshadow.com. With JavaScript turned off, the only record is the page fetch itself, and for a browser that is its name. Adding <code>?nocount</code> to an address skips that page.</p>
+        <p>The one cookie the site sets belongs to its admin page and is set only when the admin signs in. The admin's own visits are not counted.</p>
+        <p>Questions go to the <a href="https://github.com/ValiDraganescu/ringshadow/issues">project's issues on GitHub</a>. The code that does all of this is in the repository, under <code>website/src/</code>.</p>
+      </div>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="index.html">Home</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="blog/index.html">Blog</a></li><li><a href="blog/feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="llms.txt">llms.txt</a></li></ul>
+      <p class="foot-note">The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No cookies for readers, first-party analytics without tracking across sites. <a href="privacy.html">Privacy</a>.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

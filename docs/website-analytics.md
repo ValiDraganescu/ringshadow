@@ -303,8 +303,11 @@ the script is `'self'`, the request is `connect-src 'self'`. Nothing is read
 from or written to storage.
 
 Localhost and `wrangler dev` are not counted (the host check), and a
-`?nocount` query or `data-count="off"` on the page skips the beacon for the
-admin's own visits.
+`?nocount` query or `data-count="off"` on the page skips the beacon for that
+page. A signed-in admin is never counted: the tracker's requests go with
+same-origin credentials, readers have no cookie to send, and when an
+`admin_session` cookie resolves to a live session the collector writes
+nothing.
 
 ## Counting agents: the Worker
 

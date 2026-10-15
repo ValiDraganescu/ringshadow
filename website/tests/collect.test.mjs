@@ -71,19 +71,35 @@ test("the visit counter through the HTTP cache (Counterscale's)", () => {
 test("the collector's answers", async () => {
   const writes = [];
   const env = { HITS: { writeDataPoint: (p) => writes.push(p) } };
-  const cache = handleCollect(new Request("https://ringshadow.com/c/cache?sid=ringshadow"), env);
+  const cache = await handleCollect(new Request("https://ringshadow.com/c/cache?sid=ringshadow"), env);
   assert.deepEqual(await cache.json(), { ht: 1 });
   assert.ok(cache.headers.get("Last-Modified"));
   assert.equal(cache.headers.get("Cache-Control"), "no-cache");
   assert.equal(cache.headers.get("Access-Control-Allow-Origin"), null);
   assert.equal(cache.headers.get("Set-Cookie"), null);
-  const gif = handleCollect(req("sid=ringshadow&h=ringshadow.com&p=/&ht=1"), env);
+  const gif = await handleCollect(req("sid=ringshadow&h=ringshadow.com&p=/&ht=1"), env);
   assert.equal(gif.headers.get("Content-Type"), "image/gif");
   assert.equal((await gif.arrayBuffer()).byteLength, 42);
   assert.equal(writes.length, 1);
-  handleCollect(req("sid=ringshadow&h=localhost&p=/&ht=1"), env);
+  await handleCollect(req("sid=ringshadow&h=localhost&p=/&ht=1"), env);
   assert.equal(writes.length, 1);
-  assert.equal(handleCollect(new Request("https://ringshadow.com/c/collect", { method: "POST" }), env).status, 405);
+  assert.equal((await handleCollect(new Request("https://ringshadow.com/c/collect", { method: "POST" }), env)).status, 405);
+});
+
+test("a signed-in admin is not counted; a reader never touches D1", async () => {
+  const writes = [];
+  let asked = 0;
+  const d1 = (session) => ({
+    prepare: () => ({ bind: () => ({ first: async () => { asked++; return session; } }) }),
+  });
+  const hits = { writeDataPoint: (p) => writes.push(p) };
+  const q = "sid=ringshadow&h=ringshadow.com&p=/&ht=3";
+  await handleCollect(req(q, { Cookie: "admin_session=abc" }), { HITS: hits, ADMIN: d1({ id: "x", admin_id: 1 }) });
+  assert.deepEqual([writes.length, asked], [0, 1]);
+  await handleCollect(req(q, { Cookie: "admin_session=expired" }), { HITS: hits, ADMIN: d1(null) });
+  assert.deepEqual([writes.length, asked], [1, 2]);
+  await handleCollect(req(q), { HITS: hits, ADMIN: d1({ id: "x" }) });
+  assert.deepEqual([writes.length, asked], [2, 2]);
 });
 
 test("Counterscale's counting: views, visitors, bounces, and a bounce moved back", () => {

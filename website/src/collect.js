@@ -3,6 +3,7 @@
 // kind=page or kind=event point and answers a 1x1 GIF. Same origin only.
 // The visitor and bounce logic is Counterscale's (src/vendor/counterscale/).
 
+import { currentSession } from "./admin.js";
 import { browserFamily } from "./agents.js";
 import { SITE_ID, isSelfCheck, point } from "./hits.js";
 import { getBounceValue, handleCacheHeaders, hitsFromParam, maskBrowserVersion } from "./vendor/counterscale/visitors.js";
@@ -72,7 +73,19 @@ export function collectPoint(request) {
   });
 }
 
-export function handleCollect(request, env) {
+// A signed-in admin is never counted: their own visits would fill the
+// numbers they read. Readers carry no cookie, so D1 is only asked when one is
+// there.
+async function isAdmin(request, env) {
+  if (!(request.headers.get("Cookie") || "").includes("admin_session=")) return false;
+  try {
+    return !!(await currentSession(request, env));
+  } catch {
+    return false;
+  }
+}
+
+export async function handleCollect(request, env) {
   const path = new URL(request.url).pathname;
   if (request.method !== "GET") return new Response(null, { status: 405, headers: { Allow: "GET" } });
   if (path === "/c/cache") {
@@ -83,7 +96,7 @@ export function handleCollect(request, env) {
   }
   if (path === "/c/collect") {
     const p = collectPoint(request);
-    if (p && env.HITS) env.HITS.writeDataPoint(p);
+    if (p && env.HITS && !(await isAdmin(request, env))) env.HITS.writeDataPoint(p);
     return new Response(GIF, { headers: { "Content-Type": "image/gif", ...NO_CACHE } });
   }
   return new Response("Not found", { status: 404 });

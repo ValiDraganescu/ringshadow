@@ -1,8 +1,11 @@
 # The Ringshadow website
 
-The game's static website: a home page (`index.html`), a roadmap
-(`roadmap.html`) and a blog (`blog/`). It is plain HTML, CSS and JavaScript with no build step,
-no framework and no server side, so this folder deploys as it is.
+The game's website: a home page (`index.html`), a roadmap
+(`roadmap.html`), a blog (`blog/`) and a privacy page (`privacy.html`). It is
+plain HTML, CSS and JavaScript with no build step and no framework, so this
+folder deploys as it is. A small Worker (`src/`) stands in front of the
+files: it counts readers and agents, and it runs the admin (see "Analytics
+and the admin").
 
 | Path | What |
 |---|---|
@@ -17,10 +20,14 @@ no framework and no server side, so this folder deploys as it is.
 | `assets/css/blog.css`, `assets/js/album.js` | The blog's look, and the albums' lightbox (keys, swipes, captions). |
 | `tools/album.py` | Copies pictures into an album, resized and recompressed (`uv run`). |
 | `llms.txt`, `llms-full.txt`, `*.md` | For language models; written by `tools/llms.py`, never by hand. |
+| `privacy.html` | What the site counts, where it is kept and for how long. |
+| `assets/js/count.js`, `tools/count_tag.py` | The readers' counter, and the tool that puts its tag in every page. |
+| `src/`, `admin/`, `migrations/`, `tests/` | The Worker, the admin's pages, the admin's D1 tables, the tests: see "Analytics and the admin". |
 
 The palette is the game's HUD (`unreal/Source/Autocraft/AcHudStyle.h`):
 glass `#030912`, cyan `#59d9ff`, ice `#ccf2ff`. Everything is self-hosted:
-no CDN, no web fonts from elsewhere, no trackers, no analytics.
+no CDN, no web fonts from elsewhere, no third-party scripts. The site
+counts its own readers, without cookies (see "Analytics and the admin").
 
 ## The home page's design
 
@@ -106,7 +113,9 @@ goes through the humanizer skill (`/humanizer`, github.com/blader/humanizer)
 before it ships: no staged contrasts, one-line closers, run-ups, bold
 labels or dashes, and nothing added that the log doesn't say.
 
-After any page changes, run `uv run website/tools/llms.py`. It writes the
+A new post needs the counter's tag: run `uv run website/tools/count_tag.py`
+(it tags every page that lacks it; `--check` only lists them). After any
+page changes, run `uv run website/tools/llms.py`. It writes the
 files for language models (llmstxt.org): a Markdown copy of every page at
 its address plus `.md` (`/blog/the-brood.md`), `llms.txt` (what Ringshadow
 is, and a link to each page's Markdown) and `llms-full.txt` (all of it in
@@ -165,13 +174,16 @@ work either way. A new post adds its own address in the same places, and a
 line in `sitemap.xml`.
 
 The site is **live at https://ringshadow.com** since 2026-10-14. Cloudflare
-runs it as a Worker that only serves this folder's files ("static assets";
-new Pages projects are Workers now). There is no code and no build step.
+runs it as a Worker that serves this folder's files ("static assets"; new
+Pages projects are Workers now). Since 2026-10-15 the Worker has a script,
+`src/worker.js`, which runs first for the pages and the text files; files
+under `assets/` and `blog/media/` go straight to the assets. Wrangler
+bundles the script on deploy, so the site still has no build step.
 
 | File | What |
 |---|---|
-| `wrangler.toml` | The Worker `ringshadow`: serves this folder, `404.html` for unknown paths, `.html` dropped from addresses, on the custom domain ringshadow.com only (no workers.dev, no preview URLs). |
-| `.assetsignore` | Leaves the README, `tools/` and the config out of the upload. |
+| `wrangler.toml` | The Worker `ringshadow`: `src/worker.js` in front of this folder, `404.html` for unknown paths, `.html` dropped from addresses, the bindings and the cron (see "Analytics and the admin"), on the custom domain ringshadow.com only (no workers.dev, no preview URLs). |
+| `.assetsignore` | Leaves the README, `tools/`, `src/`, `migrations/`, `tests/` and the config out of the upload. |
 | `_headers` | Security headers (CSP self only) and browser caching. |
 | `404.html` | The not-found page. |
 | `robots.txt`, `sitemap.xml` | For search engines. |
@@ -195,7 +207,8 @@ pnpm dlx wrangler@4.151.0 deploy --message "what changed"
 ```
 
 `pnpm dlx wrangler@4.151.0 dev` serves the folder locally the way Cloudflare
-does (port 8787): the 404 page, the redirects, the headers.
+does (port 8787): the 404 page, the redirects, the headers, and the Worker
+with a local D1 (see below).
 
 **The domain** (zone settings, not in this folder; set 2026-10-14 with the
 `cf` CLI, run as `pnpm dlx cf`): Always Use HTTPS on (http answers 301 to
@@ -208,3 +221,81 @@ site has run on HTTPS for a while.
 
 Limits that matter: 25 MiB a file, 20,000 files (the site is 15 MB in about
 155 files), 100 `_headers` rules.
+
+## Analytics and the admin
+
+The site counts its readers and the agents that fetch it, first-party and
+without cookies for readers, and has an admin page at
+https://ringshadow.com/admin/ behind an email and password. The design and
+its reasons are in `docs/website-analytics.md`; what readers are told is in
+`privacy.html`.
+
+| Path | What |
+|---|---|
+| `src/worker.js` | Routing: `/c/` the collector, `/api/admin/` the admin's API, `/admin/` its pages (only with a session), everything else the assets, counted. The nightly rollup. |
+| `src/hits.js`, `src/agents.js`, `src/rules.js` | A server hit's data point; the agent rules (in D1, cached a minute) that label a User-Agent. |
+| `src/collect.js`, `assets/js/count.js` | The readers' counter and its collector. |
+| `src/vendor/counterscale/` | Counterscale's visitor and bounce logic (MIT), with its licence and source commit. |
+| `src/admin.js`, `src/auth.js` | The admin's door (register, sign in, sessions, lockout) and its API. |
+| `src/stats.js`, `src/rollup.js` | The stats queries and views; the nightly rollup and History. |
+| `admin/` | The admin's pages, script and stylesheet. |
+| `migrations/` | The admin's D1 tables, applied in order. |
+| `tests/` | Node tests, the crawl comparison and the admin's smoke test. |
+
+The Worker's bindings, all in `wrangler.toml`:
+
+| Binding | What |
+|---|---|
+| `ASSETS` | This folder. |
+| `HITS` | The Analytics Engine dataset `ringshadow_hits`: one point per page view, event, or page and text fetch. Kept three months. |
+| `HITS_SQL` | The Analytics SQL binding that reads it, with no API token. It reads the live data even under `wrangler dev`. |
+| `ADMIN` | The D1 database `ringshadow-admin`: admins, sessions, lockouts, agent rules, daily rollups. |
+| cron `10 2 * * *` | Rolls the previous day into D1 at 02:10 UTC. |
+
+**Run it locally** with a local D1, from this folder:
+
+```sh
+pnpm dlx wrangler@4.151.0 d1 migrations apply ringshadow-admin --local
+pnpm dlx wrangler@4.151.0 dev --var ADMIN_SETUP_CODE:local-code
+```
+
+Then open http://localhost:8787/admin/register and register with the code
+`local-code`; the local D1 lives in `.wrangler/`, which git and the upload
+both leave out. Locally the collector counts nothing (it counts only the
+host ringshadow.com), and the stats read the live dataset.
+
+**Add a migration**, from this folder: create it, write the SQL, apply it
+locally, test, then apply it to the live database before deploying code
+that needs it.
+
+```sh
+pnpm dlx wrangler@4.151.0 d1 migrations create ringshadow-admin add_something
+pnpm dlx wrangler@4.151.0 d1 migrations apply ringshadow-admin --local
+pnpm dlx wrangler@4.151.0 d1 migrations apply ringshadow-admin --remote
+```
+
+**Test**, from the repository root. The crawl compares two runs, before and
+after a deploy; the smoke test runs the admin's door end to end against a
+local `wrangler dev` with an empty local D1 (its header says how), never
+against the live site.
+
+```sh
+node --test "website/tests/*.test.mjs"
+uv run website/tests/crawl.py https://ringshadow.com > before.json
+uv run website/tests/crawl.py https://ringshadow.com > after.json
+uv run website/tests/crawl.py --diff before.json after.json
+```
+
+Our own checks send a User-Agent starting with `ringshadow-` (the crawl
+does), and the Worker never counts those. To look at the raw data from the
+terminal, the `cf` CLI's login can read it:
+
+```sh
+pnpm dlx cf sql query "SELECT blob1, COUNT(*) FROM events.analyticsEngine.ringshadow_hits WHERE timestamp > NOW() - INTERVAL '1' DAY GROUP BY blob1" --scope-account f510a16043d1521697b8974165f9c78d
+```
+
+The first admin registered on 2026-10-15 with a one-time setup code, and the
+`ADMIN_SETUP_CODE` secret was deleted after. If the admins table is ever
+emptied, set it again with `pnpm dlx wrangler@4.151.0 secret put
+ADMIN_SETUP_CODE` before registering. More admins are added from the
+Admins section.

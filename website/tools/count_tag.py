@@ -9,8 +9,8 @@ a path relative to the page like the site's other links:
 
   <script src="../assets/js/count.js" defer data-site="ringshadow"></script>
 
-Pages: index.html, roadmap.html and every page in blog/. The 404 page and the
-admin are left out. Run it after adding a post; it changes nothing on a page
+Pages: index.html, roadmap.html, privacy.html and every page in blog/. The
+404 page and the admin are left out. Run it after adding a post; it changes nothing on a page
 that has the tag already.
 
   uv run website/tools/count_tag.py           # tag what lacks it
@@ -25,7 +25,7 @@ SITE = Path(__file__).resolve().parent.parent
 
 
 def pages():
-    return [SITE / "index.html", SITE / "roadmap.html", *sorted((SITE / "blog").glob("*.html"))]
+    return [SITE / "index.html", SITE / "roadmap.html", SITE / "privacy.html", *sorted((SITE / "blog").glob("*.html"))]
 
 
 def tag_for(page: Path) -> str:

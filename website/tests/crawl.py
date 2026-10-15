@@ -47,7 +47,8 @@ def paths():
         p = re.sub(r"^https?://[^/]+", "", loc) or "/"
         out.append(p)
         md = "/index.md" if p == "/" else (p + "index.md" if p.endswith("/") else p + ".md")
-        out.append(md)
+        if (SITE / md.lstrip("/")).exists():
+            out.append(md)
     return list(dict.fromkeys(out + EXTRA))
 
 

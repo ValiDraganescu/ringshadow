@@ -4,6 +4,8 @@
 // /c/collect with the path, the referrer's host and that counter.
 // count(name) sends an event. Nothing is read from or written to storage.
 // Off on other hosts, with ?nocount, and on a page with data-count="off".
+// The requests go with same-origin credentials: readers have no cookie to
+// send, and a signed-in admin's session tells the collector not to count.
 
 (() => {
   const site = document.currentScript?.dataset.site;
@@ -21,7 +23,7 @@
 
   function send(extra) {
     const q = new URLSearchParams({ sid: site, h: location.host, p: location.pathname, r: referrer(), ...extra });
-    fetch("/c/collect?" + q, { credentials: "omit", keepalive: true }).catch(() => {});
+    fetch("/c/collect?" + q, { keepalive: true }).catch(() => {});
   }
 
   window.count = (name) => {
@@ -31,7 +33,7 @@
 
   const utm = new URLSearchParams(location.search);
   const view = () =>
-    fetch("/c/cache?sid=" + encodeURIComponent(site), { credentials: "omit" })
+    fetch("/c/cache?sid=" + encodeURIComponent(site))
       .then((r) => r.json())
       .then((d) => d.ht, () => 1)
       .then((ht) => send({ ht: String(ht || 1), us: utm.get("utm_source") || "", um: utm.get("utm_medium") || "" }));
