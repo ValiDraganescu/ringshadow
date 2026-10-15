@@ -659,3 +659,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: M9 'a living frontier': P1 frontier pilots, Z3 canyons, A2 sound, B2 balance, K3 packaged build.
 - D Manager: frontier pilots follow the pilot's rules; a packaged build is not a release.
 - T P1 (frontier pilots) next for wt1.
+- D Manager: frontier pilots arrive after the human's O1; idle bookkeeping where no human is.
+- T P1 briefed to wt1 (protocol 28, schema 21).
