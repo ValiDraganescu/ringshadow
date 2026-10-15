@@ -182,6 +182,12 @@ float4 gf = GroundFx;
     gt = lerp(gt, NbTintS, w.z); gf = lerp(gf, NbFxS, w.z);
     gt = lerp(gt, NbTintW, w.w); gf = lerp(gf, NbFxW, w.w);
 }
+// The walls' tops (W4b, AcTerrain sets WallZ: the walls' level, off
+// otherwise): no region's palette there but one rock for the whole world,
+// so the high ground between the regions runs on as one land.
+float wallW = smoothstep(WallZ - 0.6, WallZ + 0.4, wp.z) * (1.0 - fade);
+gt.a *= 1.0 - wallW;
+gf *= 1.0 - wallW;
 float crack = 0.0, plateV = 0.5, facet = 0.0;
 float2 facetTilt = float2(0.0, 0.0);
 float3 ember = float3(0.0, 0.0, 0.0);
@@ -293,6 +299,13 @@ if (wet > 0.0) {
     n = normalize(lerp(n, wn, puddle) + float3(rip * (puddle + wet * 0.25) * Ripples, 0.0));
 }
 n = normalize(n + float3(facetTilt * facet, 0.0));
+// The world's rock on the walls' tops: weathered highland and cliff rock,
+// grey-brown, the same in every region.
+{
+    float3 worldRock = lerp(high * float3(0.95, 0.9, 0.85), rock, 0.45 + 0.3 * rockW) * float3(0.66, 0.62, 0.58);
+    worldRock *= lerp(0.85, 1.12, saturate(macroV * 1.6 - 0.3));
+    c = lerp(c, worldRock * lerp(1.0, 0.6, wet), wallW);
+}
 Nrm = normalize(lerp(n, wn, fade));
 
 // Roughness: the Swift value (plating is smoother and a little metallic),
@@ -398,6 +411,8 @@ def build_material(tex):
     sources.append(("GroundFx", vec_param("GroundFx", (0.0, 0.0, 0.0, 0.0))))
     sources.append(("Frost", scalar_param("Frost", 0.0)))
     sources.append(("EmberGain", scalar_param("EmberGain", 1.0)))
+    # The walls' tops' height (W4b, AcTerrain): off unless a region has walls.
+    sources.append(("WallZ", scalar_param("WallZ", 100000.0)))
     sources.append(("Neighbours", vec_param("Neighbours", (0.0, 0.0, 0.0, 0.0))))
     # W4: the pilot's region's centre on the world's grid (cells).
     sources.append(("Origin", vec_param("Origin", (0.0, 0.0, 0.0, 0.0))))

@@ -328,13 +328,15 @@ TEST(RegionFile_previewWritesPng) {
 // stand outside the outline, the gaps stay at the passage's level to the
 // edge, and a unit stands past an open edge by the overhang only.
 TEST(RegionFile_borderWallsAndPassages) {
-    const std::string layers = R"("border": {"outline": [[10, 10], [134, 10], [134, 40], [144, 40], [144, 56], [134, 56], [134, 86], [10, 86]], "level": 4},
+    const std::string layers = R"("border": {"outline": [[10, 10], [134, 10], [134, 40], [144, 40], [144, 56], [134, 56], [134, 86], [10, 86]],
+        "islands": [[[30, 60], [44, 60], [44, 74], [30, 74]]], "level": 4},
         "pads": [{"name": "landing", "at": [72, 48]}],
         "openings": {"east": [{"span": [41, 55], "level": 0}]})";
     const RegionFile f = parsed(flat(layers));
     ASSERT_TRUE(f.border.has_value());
     EXPECT_EQ(f.border->outline.size(), size_t(8));
     EXPECT_EQ(f.border->level, int64_t(4));
+    EXPECT_EQ(f.border->islands.size(), size_t(1));
     ASSERT_TRUE(f.openings[size_t(Edge::east)].size() == 1);
     EXPECT_TRUE(f.openings[size_t(Edge::east)][0].level == std::optional<int64_t>(0));
     // Written and read back the same.
@@ -349,10 +351,35 @@ TEST(RegionFile_borderWallsAndPassages) {
     const double H = b.map.levelHeight;
     // Walls outside the outline, the land inside as it was, the gap at its floor.
     EXPECT_TRUE(field.height(b.ground(Vec2(4, 48))) >= 4 * H - 1e-9);
-    EXPECT_TRUE(field.height(b.ground(Vec2(72, 4))) >= 4 * H - 1e-9);
+    // (Near the outline a terrace may step the face half way up; by the
+    // edge it stands full.)
+    EXPECT_TRUE(field.height(b.ground(Vec2(72, 4))) >= 2 * H - 1e-9);
+    EXPECT_TRUE(field.height(b.ground(Vec2(72, 1))) >= 4 * H - 1e-9);
     EXPECT_TRUE(field.height(b.ground(Vec2(72, 48))) < 0.5 * H);
+    // An island of rock: walled like the border.
+    EXPECT_TRUE(field.height(b.ground(Vec2(37, 67))) >= 4 * H - 1e-9);
     EXPECT_NEAR(field.height(b.ground(Vec2(144, 48))), 0.0, 1e-9);
-    EXPECT_NEAR(field.height(b.ground(Vec2(144, 20))), 4 * H, 1e-9);
+    // On a walled stretch of the edge: the wall's level, and the edge's own
+    // profile over it (W4b), the same in a neighbour whose west edge has
+    // the same gap; its level exactly near the corners.
+    EXPECT_TRUE(field.height(b.ground(Vec2(144, 20))) >= 4 * H - 1e-9);
+    EXPECT_TRUE(field.height(b.ground(Vec2(144, 20))) < 6 * H);
+    EXPECT_NEAR(field.height(b.ground(Vec2(144, 1))), 4 * H, 1e-9);
+    {
+        const RegionFile g = parsed(flat(R"("border": {"outline": [[10, 10], [134, 10], [134, 86], [10, 86], [10, 56], [0, 56], [0, 40], [10, 40]], "level": 4},
+        "pads": [{"name": "landing", "at": [72, 48]}],
+        "openings": {"west": [{"span": [41, 55], "level": 0}]})"));
+        const Built c = build(g);
+        const TerrainField west(c.map);
+        double worst = 0, rise = 0;
+        for (double z = 1; z < 95; z += 0.5) {
+            const double here = field.height(b.ground(Vec2(144, z))), there = west.height(c.ground(Vec2(0, z)));
+            worst = std::max(worst, std::fabs(here - there));
+            rise = std::max(rise, here - 4 * H);
+        }
+        EXPECT_TRUE(worst < 0.01);
+        EXPECT_TRUE(rise > 0.5 * H);
+    }
     // The walk: up to the edge in the gap, nowhere near it elsewhere.
     NavGrid nav(b.map, field);
     EXPECT_TRUE(nav.standable(b.ground(Vec2(143.8, 48))));
@@ -375,6 +402,12 @@ TEST(RegionFile_borderProblems) {
     EXPECT_TRUE(has(parseProblems(flat(R"("border": {"outline": [[10, 10], [130, 80], [130, 10], [10, 80]]})")), "border.outline", "crosses"));
     EXPECT_TRUE(has(parseProblems(flat(R"("border": {"outline": [[10, 10], [130, 10], [130, 80]], "level": 9})")), "border.level", "must be"));
     EXPECT_TRUE(has(parseProblems(flat(R"("openings": {"east": [{"span": [41, 55], "level": 0, "wide": 1}]})")), "openings.east[0]", "unknown key"));
+    // An island outside the outline.
+    EXPECT_TRUE(has(parseProblems(flat(R"("border": {"outline": [[10, 10], [130, 10], [130, 80], [10, 80]], "islands": [[[50, 50], [140, 50], [60, 60]]]})")),
+                    "border.islands[0]", "outside the border's outline"));
+    // A pad on an island: off the land.
+    EXPECT_TRUE(has(problemsOf(flat(R"("border": {"outline": [[10, 10], [134, 10], [134, 86], [10, 86]], "islands": [[[30, 30], [50, 30], [50, 50], [30, 50]]]},
+        "pads": [{"name": "landing", "at": [72, 48]}, {"name": "rock", "at": [40, 40]}])")), "pads[1]", "outside the border's outline"));
     // An outline that shuts the passage, and a pad left outside it.
     const auto problems = problemsOf(flat(R"("border": {"outline": [[10, 10], [134, 10], [134, 86], [10, 86]]},
         "pads": [{"name": "landing", "at": [72, 48]}, {"name": "far", "at": [140, 20]}],

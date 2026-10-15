@@ -807,6 +807,8 @@ struct AUTOCRAFTCORE_API RegionEdges {
     /// The playable land's outline, ground coordinates (empty: no walls).
     /// Outside it the ground rises into a wall `level` levels high.
     std::vector<Vec2> outline;
+    /// Islands of high rock inside it (W4b): walls like the border's.
+    std::vector<std::vector<Vec2>> islands;
     int64_t level = 0;
     std::vector<Gap> gaps;
 

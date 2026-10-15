@@ -577,7 +577,7 @@ Parsed parse(std::string_view text) {
     if (const auto brood = r.integer(root, "brood", "", false, 0, 4)) f.brood = *brood;
     r.list(root, "height", f.height, [&](const json& j, const std::string& w) { return r.edit(j, w); });
     if (const json* border = r.field(root, "border", "", false)) {
-        if (r.object(*border, "border", {"outline", "level"})) {
+        if (r.object(*border, "border", {"outline", "islands", "level"})) {
             Border b;
             bool ok = true;
             const json* o = r.field(*border, "outline", "border", true);
@@ -602,6 +602,27 @@ Parsed parse(std::string_view text) {
                             ok = false;
                             break;
                         }
+                    }
+                }
+            }
+            // Islands of high rock (W4b): each inside the outline.
+            if (const json* is = r.field(*border, "islands", "border", false)) {
+                if (!is->is_array()) {
+                    r.add("border.islands", "must be a list of outlines");
+                    ok = false;
+                } else {
+                    for (size_t i = 0; i < is->size(); i++) {
+                        const std::string w = "border.islands[" + std::to_string(i) + "]";
+                        const auto island = r.points((*is)[i], w, 3);
+                        if (!island) { ok = false; continue; }
+                        for (Vec2 q : *island) {
+                            if (ps && !(signedDistance(q, *ps) < 0)) {
+                                r.add(w, "lies outside the border's outline", q);
+                                ok = false;
+                                break;
+                            }
+                        }
+                        b.islands.push_back(*island);
                     }
                 }
             }
@@ -793,7 +814,17 @@ std::string write(const RegionFile& f) {
     if (f.border) {
         ordered ps = ordered::array();
         for (Vec2 p : f.border->outline) ps.push_back(pointNumbers(p));
-        root["border"] = ordered{{"outline", ps}, {"level", f.border->level}};
+        root["border"] = ordered{{"outline", ps}};
+        if (!f.border->islands.empty()) {
+            ordered is = ordered::array();
+            for (const std::vector<Vec2>& island : f.border->islands) {
+                ordered qs = ordered::array();
+                for (Vec2 p : island) qs.push_back(pointNumbers(p));
+                is.push_back(qs);
+            }
+            root["border"]["islands"] = is;
+        }
+        root["border"]["level"] = f.border->level;
     }
     if (!f.deposits.empty()) {
         ordered list = ordered::array();
@@ -928,6 +959,10 @@ Built build(const RegionFile& f) {
         RegionEdges edges;
         if (f.border) {
             for (Vec2 p : f.border->outline) edges.outline.push_back(g(p));
+            for (const std::vector<Vec2>& island : f.border->islands) {
+                edges.islands.emplace_back();
+                for (Vec2 p : island) edges.islands.back().push_back(g(p));
+            }
             edges.level = f.border->level;
         }
         for (size_t e = 0; e < 4; e++) {
@@ -999,14 +1034,14 @@ Built build(const RegionFile& f) {
     // The walls' rocks: boulders, rocks and spires strewn over them, on a
     // jittered grid, past the outline by more than a cliff's width.
     if (f.border) {
-        const std::vector<Vec2>& outline = f.border->outline;
+        const Border& border = *f.border;
         int64_t k = 0;
         for (double z = wallRockSpacing / 2; z < ext.y; z += wallRockSpacing) {
             for (double x = wallRockSpacing / 2; x < ext.x; x += wallRockSpacing) {
                 const uint64_t hash = fnv1a64(f.id + "|wall|" + std::to_string(k++));
                 const auto unit = [hash](int shift) { return static_cast<double>((hash >> shift) & 0xffff) / 65535.0; };
                 const Vec2 p(x + (unit(0) - 0.5) * wallRockSpacing * 1.3, z + (unit(16) - 0.5) * wallRockSpacing * 1.3);
-                if (!(signedDistance(p, outline) > 2.0) || unit(32) < 0.3) continue;
+                if (!(landOutside(p, border.outline, border.islands) > 2.0) || unit(32) < 0.3) continue;
                 const double pick = unit(48);
                 Doodad d;
                 d.kind = pick < 0.45 ? Doodad::Kind::boulder : pick < 0.85 ? Doodad::Kind::rock : Doodad::Kind::rockSpire;
@@ -1265,7 +1300,7 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
                 for (double a = s.from + 0.5; a <= s.to - 0.5 + 1e-9 && !shut; a += 1) {
                     for (double d = RegionEdges::edgeBand; d <= mouthDepth + 4 && !shut; d += 1) {
                         const Vec2 q = b.edgePoint(edge, a, d);
-                        if (signedDistance(q, f.border->outline) > 0) shut = q;
+                        if (landOutside(q, f.border->outline, f.border->islands) > 0) shut = q;
                     }
                 }
                 if (shut) add(where, "the border's outline closes the passage here: draw it out to the edge round the span", b.ground(*shut));
@@ -1275,7 +1310,7 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
     // W4: the border's outline lies inside the region, and every pad, spawn
     // point and site inside it.
     if (f.border) {
-        const auto inside = [&](Vec2 r) { return signedDistance(r, f.border->outline) < -1; };
+        const auto inside = [&](Vec2 r) { return landOutside(r, f.border->outline, f.border->islands) < -1; };
         for (size_t i = 0; i < f.pads.size(); i++)
             if (!inside(f.pads[i].at)) add("pads[" + std::to_string(i) + "]", "is outside the border's outline", b.ground(f.pads[i].at));
         for (size_t i = 0; i < f.spawns.size(); i++)

@@ -20,6 +20,7 @@ autocraft-region validate FILE        problems one a line; exit 1 if any
 autocraft-region build FILE           summary (ore, wells, open ground) + problems
 autocraft-region preview FILE -o OUT.png [--scale PX]
 autocraft-region edges FILE [--depth D]   the ground's level along each edge
+autocraft-region levels FILE [--bare]     the ground a cell at a time (# cliff, o rock)
 autocraft-region format FILE              rewrite it in the tool's layout
 ```
 
@@ -213,33 +214,54 @@ playable land, and the walls outside it, so a region is never a rectangle
 and its edges never show as a line or a fence.
 
 ```json
-"border": {"outline": [[0, 41], [6, 30], [14, 22], ...], "level": 4}
+"border": {"outline": [[0, 41], [6, 30], [14, 22], ...], "islands": [[[48, 52], [56, 50], ...]], "level": 4}
 ```
 
 - `outline`: the playable land's corners (≥ 3, no side crossing another),
   region cells. Outside it the ground rises into a wall `level` levels
   high (1…4, default 4), its cliff face at the outline, its top rising a
   level or so further out, rocks, boulders and spires strewn over it (the
-  build adds them, about one every 3.4 cells), the tops bare rock-strewn highland. Walls are no ground: nothing
-  walks on them, a cliff hop does not land on them.
+  build adds them, about one every 3.4 cells), the tops bare rock-strewn highland
+  in one rock colour for the whole world, not the region's palette (W4b: the
+  terrain material's `WallZ`), so the high ground between regions reads as
+  one land. Walls are no ground: nothing
+  walks on them, a cliff hop does not land on them. Along stretches of
+  the wall its face steps: a shelf half way up, a few cells wide, then the
+  rest of the climb (W4b).
+- `islands` (optional, W4b): outlines of high rock inside the outline,
+  walled the same way: the land runs round them.
 - Round each opening the outline goes out to the edge: the passage is a gap
   in the walls, its faces 1.5 cells past each end of the span.
 - Within 4 cells of an edge the walls follow the edge's openings alone (a
-  wall everywhere but in the gaps, exactly the wall's level at the edge), so
-  two regions' walls meet without a seam and the world reads as one piece.
+  wall everywhere but in the gaps), their top along the edge a profile both
+  sides compute alike from where along it and the edge's openings (flat at
+  the wall's level near the corners), so two regions' walls meet without a
+  seam or a flat band and the world reads as one piece.
 - A unit walks up to an open edge and up to 1 cell past it
   (`RegionEdges::overhang`); the server hands it to the neighbour there
   (docs/worlds.md, "Edges").
 - Everything placed (pads, spawns, sites, deposits, wells) lies inside the
-  outline by at least a cell.
+  outline, and outside every island, by at least a cell.
 
 `autocraft-region edges FILE [--depth D]` prints the ground's level along
 each edge, D cells in, so a passage goes where both neighbours' ground is
-at one level; `autocraft-region format FILE` rewrites a file in the tool's
-own layout. The First Reach's borders and passages were drawn by a script
-(an outline inset 6–20 cells from the rectangle by a smooth noise, out to
-the edge round each passage, clear of what the region holds), then checked
-by eye on the previews; edit the outline by hand from there.
+at one level; `autocraft-region levels FILE [--bare]` prints the ground a
+cell at a time (a level digit, `#` a cliff, `o` rock in the way; `--bare`
+without the walls); `autocraft-region format FILE` rewrites a file in the
+tool's own layout.
+
+The First Reach's passages were placed by W4; its shapes (W4b) are drawn by
+`uv run unreal/Tools/regions/shape.py [REGION ...] [--seed REGION=N]`: a
+natural shape well inside the cell (bays cutting 10–30% in, rock spurs,
+necks where two bays face each other, corners mostly rock, an island of
+rock in some, no straight run of wall much over 12 cells), a valley
+narrowing into each passage, land kept round everything that must stay
+reachable and joined to the pad's land by the walkable way round
+(`levels --bare`). Deposits the walls take move in onto the land near
+where they were; plants and debris on the rock go. It validates each try
+and keeps, of 40 seeds, the valid one with the shortest straight wall.
+Rerunning it on a shaped file keeps what is already inside; edit the
+outline by hand from there if a place needs it.
 
 ## Problems
 
@@ -258,8 +280,9 @@ and the region position:
   cliff hop to it);
 - a ramp end on the wrong level, a ramp too steep;
 - an opening blocked (a cliff, a rock, ore, a well) or cut off;
-- a border whose outline crosses itself or closes a passage, and a pad,
-  spawn, site, deposit or well outside it.
+- a border whose outline crosses itself or closes a passage, an island
+  outside the outline, and a pad, spawn, site, deposit or well outside the
+  land (outside the outline or on an island).
 
 "Cut off" means not joined to the region's largest open area on the
 walking grid. A problem never stops `build` or `preview`.

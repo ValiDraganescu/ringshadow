@@ -63,12 +63,20 @@ Simulation& simOf(WorldMap& w) { return w.regionOf(me)->simulation(); }
 /// The deposit of the pilot's region farthest from its Prospector (out of
 /// its sight), with ore.
 size_t farDeposit(WorldMap& w) {
-    const GameState& st = simOf(w).state;
+    const Simulation& sim = simOf(w);
+    const GameState& st = sim.state;
     const Vec2 at = drivenUnit(w, me)->position;
+    // The tests stand the pilot south of it, in its site and past its leash:
+    // open ground there (W4b: regions' walls run close to some deposits).
+    const auto room = [&](Vec2 p) {
+        for (const double k : {WorldBrood::siteRadius - 2.5, WorldBrood::siteRadius + 3, 9.0, WorldBrood::siteRadius + WorldBrood::leash + 6})
+            if (!sim.nav || !sim.nav->walkable(p + Vec2(0, k))) return false;
+        return true;
+    };
     size_t best = 0;
     double d = -1;
     for (size_t i = 0; i < st.patches.size(); i++)
-        if (st.patches[i].remaining > 100 && distance(st.patches[i].position, at) > d) {
+        if (st.patches[i].remaining > 100 && room(st.patches[i].position) && distance(st.patches[i].position, at) > d) {
             d = distance(st.patches[i].position, at);
             best = i;
         }

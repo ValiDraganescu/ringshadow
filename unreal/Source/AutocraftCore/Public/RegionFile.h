@@ -110,6 +110,8 @@ struct Span {
 /// of its playable land, and the walls' level outside it.
 struct Border {
     std::vector<Vec2> outline;
+    /// Islands of high rock inside the outline (W4b), walled the same.
+    std::vector<std::vector<Vec2>> islands;
     int64_t level = 4;
     bool operator==(const Border&) const = default;
 };

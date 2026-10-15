@@ -367,8 +367,11 @@ namespace
 				Rock.Kind = Which;
 				Rock.Variant = uint32(K);
 				// SceneKit `eulerAngles.y = a` is Unreal yaw -a (AcSpace.h).
+				// In the set's own frame (the actor stands at its place in the
+				// world): not `ToWorld`, whose origin moves with the pilot.
 				Rock.Transform = FTransform(FRotator(0.0, -FMath::RadiansToDegrees(Turn), 0.0),
-				                            AcSpace::ToWorld(Q, Field.borderHeight(Q) - 0.15 * Scale), FVector(Scale));
+				                            FVector(AcSpace::ToCm(Q.x), AcSpace::ToCm(Q.y), AcSpace::ToCm(Field.borderHeight(Q) - 0.15 * Scale)),
+				                            FVector(Scale));
 				P.Rocks.Add(Rock);
 				Placed++;
 			}
@@ -452,6 +455,11 @@ void AAcRegionGround::MakeMaterial()
 		// own sets it (AcGroundLook): the dark seam only at the world's rim.
 		Mat->SetVectorParameterValue(TEXT("Neighbours"), FLinearColor((RimSides & 1) ? 0.f : 1.f, (RimSides & 2) ? 0.f : 1.f,
 			(RimSides & 4) ? 0.f : 1.f, (RimSides & 8) ? 0.f : 1.f));
+		// The walls' tops (W4b): one rock for the whole world above this
+		// height, not the region's palette, so the high ground between the
+		// regions reads as one land and no cell shows by its colour.
+		if (MapDef->edges && !MapDef->edges->outline.empty())
+			Mat->SetScalarParameterValue(TEXT("WallZ"), float(double(MapDef->edges->level) * MapDef->levelHeight - 0.5));
 	}
 	bMaterial = true;
 }
@@ -522,8 +530,12 @@ bool AAcRegionGround::Step(const double BudgetMs)
 				const TPair<ac::Doodad, double>& D = Prepared->Doodads[NextDoodad];
 				const FAcModelInfo* M = AAcDoodads::ModelFor(D.Key.kind, D.Key.variant);
 				if (!M) continue;
+				// `Placement` is in the world frame of now (`ToWorld`); the set's
+				// own frame takes the origin back out, as a set built after the
+				// pilot left the session's first region stands off it.
 				FTransform T = AAcDoodads::Placement(D.Key, D.Value);
-				T.AddToTranslation(At);
+				T.AddToTranslation(At - AcSpace::OriginCm());
+				if (!FirstOfKind.Contains(uint8(D.Key.kind))) FirstOfKind.Add(uint8(D.Key.kind), T.GetTranslation());
 				Chunk.Add(DoodadBatches.AddModel(*M, T));
 			}
 			TArray<FAcSceneryModel*> Ptrs;

@@ -2,8 +2,10 @@
 #include "TerrainField.h"
 
 #include "RegionFile.h"
+#include "ScreenConfig.h"
 
 #include <cmath>
+#include <string>
 #include <limits>
 
 namespace ac {
@@ -177,7 +179,7 @@ TerrainField::Wall TerrainField::wall(Vec2 p) const {
     if (!map.edges || map.edges->outline.empty()) return Wall{};
     const RegionEdges& e = *map.edges;
     // A cliff's width past the outline the wall stands full.
-    const double outside = signedDistance(p, e.outline);
+    const double outside = landOutside(p, e.outline, e.islands);
     double cover = smoothstep(0.0, 2 * cliffHalf, outside);
     // Near an edge the gaps alone say: the same on both sides of it.
     double nearEdge = 0;
@@ -201,23 +203,69 @@ TerrainField::Wall TerrainField::wall(Vec2 p) const {
     return Wall{cover, nearEdge, outside};
 }
 
+namespace {
+
+/// The walls' top along a shared edge over its level, levels (W4b): a
+/// profile both sides compute alike, from where along the edge and the
+/// edge's gaps alone (the same spans on both sides), so the two meet
+/// exactly without a flat band; none near the corners, where four meet.
+double seamRise(const RegionEdges& e, const GroundRect& b, int64_t edge, double at) {
+    std::string key = edge % 2 == 0 ? "ns" : "ew";
+    for (const RegionEdges::Gap& g : e.gaps)
+        if (g.edge == edge) key += "|" + std::to_string(std::lround(g.from * 4)) + "-" + std::to_string(std::lround(g.to * 4));
+    const uint64_t seed = fnv1a64(key);
+    const auto lattice = [seed](int64_t i, uint64_t salt) {
+        uint64_t x = seed ^ (static_cast<uint64_t>(i) * 0x9e3779b97f4a7c15ull) ^ salt;
+        x ^= x >> 31; x *= 0xbf58476d1ce4e5b9ull; x ^= x >> 29;
+        return static_cast<double>(x & 0xffff) / 65535.0;
+    };
+    const auto octave = [&](double spacing, uint64_t salt) {
+        const double u = at / spacing, f = u - std::floor(u);
+        const int64_t i = static_cast<int64_t>(std::floor(u));
+        const double t = f * f * (3 - 2 * f);
+        return lattice(i, salt) + (lattice(i + 1, salt) - lattice(i, salt)) * t;
+    };
+    const double lo = edge % 2 == 0 ? b.minX : b.minZ, hi = edge % 2 == 0 ? b.maxX : b.maxZ;
+    const double ends = smoothstep(RegionEdges::edgeBand + 1, RegionEdges::edgeBand + 7, min(at - lo, hi - at));
+    return ends * (0.15 + 1.1 * octave(11, 1) + 0.35 * octave(3.7, 2));
+}
+
+} // namespace
+
 double TerrainField::walled(Vec2 p, double h) const {
     const Wall w = wall(p);
     if (!(w.coverage > 0)) return h;
     const RegionEdges& e = *map.edges;
     // The wall's top: its level, up to most of a level more along the way
-    // (a broken skyline), rising another level or two further out, rough
-    // (not near an edge, where both sides must meet exactly at its level).
+    // (a broken skyline), rising another level or two further out, rough;
+    // near an edge, the edge's own profile, the same on both sides of it.
     const Vec2 q = fold(p);
     const double free = 1 - w.edge;
     const double away = smoothstep(0.3, 7, w.outside);
     const double skyline = (0.5 + 0.5 * noise.fbm(q.x * 0.11 + 31, q.y * 0.11 - 17)) * 0.85;
     const double ridge = away * max(0.7 + 0.8 * noise.fbm(q.x * 0.07 - 7, q.y * 0.07 + 11), 0.0);
     const double rough = 0.18 * (0.5 + 0.5 * noise.fbm(q.x * 0.6 + 5, q.y * 0.6 - 3)) * away;
-    const double top = (static_cast<double>(e.level) + free * (skyline + ridge + rough)) * map.levelHeight;
-    h += max(top - h, 0.0) * w.coverage;
-    // Craggy noise on its face, more than a plain cliff's.
+    double seam = 0, weights = 0;
+    for (int64_t k = 0; k < 4; k++) {
+        const double d = max(RegionEdges::depth(map.bounds, k, p), 0.0);
+        const double wk = 1 - smoothstep(0.0, RegionEdges::edgeBand, d);
+        if (!(wk > 0)) continue;
+        seam += wk * seamRise(e, map.bounds, k, RegionEdges::along(map.bounds, k, p));
+        weights += wk;
+    }
+    if (weights > 0) seam /= weights;
+    const double top = (static_cast<double>(e.level) + free * (skyline + ridge + rough) + w.edge * seam) * map.levelHeight;
+    // Terraces (W4b): along stretches of the wall its face steps, a shelf
+    // half way up 2.5 to 6 cells wide (never a sliver), then the rest of
+    // the climb.
+    const double step = noise.fbm(q.x * 0.045 + 19, q.y * 0.045 - 29);
+    const double shelf = 2.5 + 8.0 * max(step, 0.0);
+    const double terrace = free * smoothstep(0.04, 0.2, step);
+    const double second = smoothstep(shelf, shelf + 2 * cliffHalf, w.outside);
+    h += max(top - h, 0.0) * w.coverage * (1 - 0.5 * terrace * (1 - second));
+    // Craggy noise on its faces, more than a plain cliff's.
     h += 4 * w.coverage * (1 - w.coverage) * free * noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 1.1;
+    h += 4 * terrace * second * (1 - second) * noise.fbm(q.x * 0.9 - 8.3, q.y * 0.9 + 2) * 0.8;
     return h;
 }
 
@@ -342,6 +390,12 @@ TerrainField::Materials TerrainField::materials(Vec2 p) const {
 }
 
 /// Signed distance from `p` to a polygon: negative inside.
+double landOutside(Vec2 p, const std::vector<Vec2>& outline, const std::vector<std::vector<Vec2>>& islands) {
+    double d = signedDistance(p, outline);
+    for (const std::vector<Vec2>& island : islands) d = max(d, -signedDistance(p, island));
+    return d;
+}
+
 double signedDistance(Vec2 p, const std::vector<Vec2>& poly) {
     if (!(poly.size() > 2)) return std::numeric_limits<double>::infinity();
     double d = length_squared(p - poly[0]);

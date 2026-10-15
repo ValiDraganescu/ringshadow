@@ -197,6 +197,10 @@ UE 5.8's USD importer reads all of this.
   tail fins are rigid and baked in). If a future part does, its `pivot` is in
   the manifest; compose transform × pivot⁻¹ when you rotate it.
 
+## Region shapes
+
+`regions/shape.py` draws The First Reach's region shapes (W4b): each region file's border outline and islands, with the deposits the walls take moved onto the land. Run it again after changing a region's passages or places near the rock (`uv run unreal/Tools/regions/shape.py [REGION ...] [--seed REGION=N]`, docs/regions.md "border").
+
 ## Building and running beside other agents
 
 `build.sh` builds this worktree's editor module at low priority; UE's build tool lets one build run at a time on the Mac, so builds from every worktree queue behind each other. `hidden_run.py` starts every hidden editor or game run: it waits for the Mac's one run slot (an `flock` on `~/Library/Caches/Autocraft/hidden-run.lock`, freed when its holder dies), adds the flags below, kills a run past its timeout and prints the flow steps, pictures and tests from the log. Its `--help` lists the modes.

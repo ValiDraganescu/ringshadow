@@ -909,6 +909,7 @@ template <class IO> void fields(IO& io, MapDefinition& v) {
 
 template <class IO> void fields(IO& io, RegionEdges& v) {
     io("outline", v.outline);
+    io.orZero("islands", v.islands);
     io("level", v.level);
     io("gaps", v.gaps);
 }

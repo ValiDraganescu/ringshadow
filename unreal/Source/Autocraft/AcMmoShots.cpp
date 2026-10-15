@@ -254,6 +254,8 @@
 //   02 the same wall from higher: over it, the neighbour's ground beyond
 //   03 the east passage from Prospect Landing: the gap, Tern Ridge beyond
 //   04 the same passage from Tern Ridge, looking back
+//   15 into a bay of Prospect Landing: the land reaching in among the walls
+//   16 along a wall of Prospect Landing: it meanders and steps (W4b)
 //   (a measured walk east through it, nothing shot: the crossing's numbers,
 //   frame times and the unit's speed, logged as `w4: crossing:`)
 //   05-NN walking back west through it, a frame every 0.4 s, chase camera
@@ -916,7 +918,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3"))) T.Phase = 1800;
 			// -AcMmoShotsN3: only the Matriarch (1900-1911).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))) T.Phase = 1900;
-			// -AcMmoShotsW4: seamless regions (2000-2024).
+			// -AcMmoShotsW4: seamless regions (2000-2026).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4"))) T.Phase = 2000;
 			// -AcMmoShotsL1: KSTR's next goal (2100-2112).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsL1"))) T.Phase = 2100;
@@ -3905,9 +3907,12 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 2011:
 	case 2012:
 	case 2013:
+	case 2014:
+	case 2015:
 	{
 		// The free camera at the border and the passage, Prospect Landing's
-		// cells (past 144: Tern Ridge's ground beyond its east edge).
+		// cells (past 144: Tern Ridge's ground beyond its east edge); then
+		// (W4b) a bay of land among the walls and a stretch of wall.
 		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
 		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
 		if (!Pc || !Terrain || !W4Cam.IsValid()) return;
@@ -3916,15 +3921,43 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			// The north wall: the outline's corner furthest north between x 16
 			// and 52 (west of the north passage).
 			ac::Vec2 Wall(34, 10);
+			// The bay: the outline's corner nearest the cell's edge away from
+			// the passages, the land reaching in among the walls; the wall
+			// walked along: a dozen corners of the outline round the north-west.
+			ac::Vec2 Bay(20, 80), AlongFrom(30, 20), AlongTo(50, 16);
 			FString Text;
 			if (FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectDir(), TEXT("server/regions/start.json"))))
 			{
 				const ac::region::Parsed P = ac::region::parse(TCHAR_TO_UTF8(*Text));
 				if (P.file && P.file->border)
 				{
-					double Best = 1e9;
-					for (const ac::Vec2 Q : P.file->border->outline)
+					const std::vector<ac::Vec2>& O = P.file->border->outline;
+					double Best = 1e9, Edge = 1e9, Far = -1;
+					for (const ac::Vec2 Q : O)
 						if (Q.x > 16 && Q.x < 52 && Q.y > 2 && Q.y < Best) Best = Q.y, Wall = Q;
+					const auto NearPassage = [&](const ac::Vec2 Q) {
+						for (size_t E = 0; E < 4; E++)
+							for (const ac::region::Span& Sp : P.file->openings[E])
+							{
+								const double Along = E % 2 == 0 ? Q.x : Q.y;
+								if (Along > Sp.from - 24 && Along < Sp.to + 24) return true;
+							}
+						return false;
+					};
+					for (const ac::Vec2 Q : O)
+					{
+						const double D = FMath::Min(FMath::Min(Q.x, 144.0 - Q.x), FMath::Min(Q.y, 96.0 - Q.y));
+						if (D > 3 && D < Edge && !NearPassage(Q)) Edge = D, Bay = Q;
+					}
+					// Along: the corner deepest in from the north-west quarter's
+					// edges, and the one a dozen corners on.
+					for (size_t I = 0; I < O.size(); I++)
+					{
+						const ac::Vec2 Q = O[I];
+						const double D = FMath::Min(Q.x, Q.y);
+						if (Q.x < 60 && Q.y < 40 && D > Far && !NearPassage(Q))
+							Far = D, AlongFrom = Q, AlongTo = O[(I + 12) % O.size()];
+					}
 				}
 			}
 			const auto G = [&](const double X, const double Y) { const FVector2D V = Cell(X, Y); return ac::Vec2(V.X, V.Y); };
@@ -3951,12 +3984,39 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				EyeH = Ground(EyeAt) + 4.0;
 				LookH = Ground(G(140, 48)) + 1.0;
 				break;
-			default:  // The same passage from Tern Ridge, looking back.
+			case 2013:  // The same passage from Tern Ridge, looking back.
 				EyeAt = G(170, 48);
 				LookAt = G(118, 48);
 				EyeH = Ground(G(143, 48)) + 4.0;
 				LookH = Ground(G(140, 48)) + 1.0;
 				break;
+			case 2014:  // Into the bay: from the open land toward the pad.
+			{
+				// From the pad's side, 34 cells out and a little up: the land
+				// reaching into the bay, its walls closing round it.
+				const ac::Vec2 Pad(76, 48);
+				const ac::Vec2 In = Bay + ac::normalize(Pad - Bay) * FMath::Min(34.0, ac::distance(Pad, Bay) - 4.0);
+				EyeAt = G(In.x, In.y);
+				LookAt = G(Bay.x, Bay.y);
+				EyeH = Ground(EyeAt) + 9.0;
+				LookH = Ground(LookAt) + 2.0;
+				break;
+			}
+			default:  // Along the wall: on the land beside it, looking along.
+			{
+				const ac::Vec2 Pad(76, 48);
+				const auto Off = [&](ac::Vec2 P, const double Clear) {
+					for (int32 K = 0; K < 60 && Terrain->GetField().wall(G(P.x, P.y)).outside > -Clear; K++)
+						P = P + ac::normalize(Pad - P) * 0.5;
+					return P;
+				};
+				const ac::Vec2 From = Off(AlongFrom, 7.0), To = Off(AlongTo, 4.0);
+				EyeAt = G(From.x, From.y);
+				LookAt = G(To.x, To.y);
+				EyeH = Ground(EyeAt) + 3.5;
+				LookH = Ground(EyeAt) + 4.5;
+				break;
+			}
 			}
 			const FVector Eye = AcSpace::ToWorld(EyeAt, EyeH);
 			const FVector At = AcSpace::ToWorld(LookAt, LookH);
@@ -3968,14 +4028,16 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Now - W4ShotAt < 2.0) return;
 		W4Set = false;
 		static const TCHAR* const Names[] = {TEXT("w4-01-wall-inside"), TEXT("w4-02-over-the-wall"), TEXT("w4-03-passage-from-start"),
-			TEXT("w4-04-passage-from-tern-ridge")};
+			TEXT("w4-04-passage-from-tern-ridge"), TEXT("w4-15-into-a-bay"), TEXT("w4-16-along-a-wall")};
 		static const TCHAR* const Whats[] = {TEXT("Prospect Landing's north wall from inside: the cliff band, its rocks"),
 			TEXT("over the wall: Cold Fork's ground beyond it"), TEXT("the east passage from Prospect Landing: the gap, Tern Ridge beyond"),
-			TEXT("the same passage from Tern Ridge, looking back into Prospect Landing")};
+			TEXT("the same passage from Tern Ridge, looking back into Prospect Landing"),
+			TEXT("into a bay of Prospect Landing: the land reaching in among the walls"),
+			TEXT("along a wall of Prospect Landing: it meanders and steps")};
 		ShootClean(Names[T.Phase - 2010], Whats[T.Phase - 2010]);
 		return;
 	}
-	case 2014:
+	case 2016:
 	{
 		// Back in the pilot's chase view; to the east passage's mouth: east
 		// along the pad's row, round the well at (128, 50) on its north side.
@@ -3990,7 +4052,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Advance();
 		return;
 	}
-	case 2015:
+	case 2017:
 	{
 		const int32 R = Drive();
 		if (R < 0) return Stalled(TEXT("w4: to the east passage"));
@@ -3998,7 +4060,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Advance();
 		return;
 	}
-	case 2016:
+	case 2018:
 	{
 		// The measured walk: east through the passage, nothing shot, every
 		// frame sampled from 8 cells before the edge to 14 into Tern Ridge.
@@ -4027,7 +4089,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		else TimedOut(TEXT("w4: walked through into Tern Ridge"), 40);
 		return;
 	}
-	case 2017:
+	case 2019:
 	{
 		// The crossing's numbers: frame times and the unit's pace round the
 		// frame the change came in, against the walk before it.
@@ -4117,14 +4179,14 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Advance();
 		return;
 	}
-	case 2018:
+	case 2020:
 		// A breath, then back west through it, a picture every 0.4 s.
 		if (Since() < 1.0) return;
 		W4Frames = 0;
 		W4ShotAt = -1;
 		Advance();
 		return;
-	case 2019:
+	case 2021:
 	{
 		if (!Pilot || !U) return;
 		Pilot->SetTestInput(FVector2D(0, -1), ac::pi);
@@ -4137,7 +4199,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (In4 == TEXT("start") && X <= 135)
 		{
 			Stop(ac::pi);
-			T.Phase = 2020;
+			T.Phase = 2022;
 			T.PhaseAt = Now;
 			return;
 		}
@@ -4147,18 +4209,18 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			W4Frames += 1;
 			Shoot(*FString::Printf(TEXT("w4-%02d-walk-%s"), 4 + W4Frames, *In4),
 				FString::Printf(TEXT("walking west through the passage, frame %d, %s"), W4Frames, *Where()));
-			T.Phase = 2019;
+			T.Phase = 2021;
 			return;
 		}
 		TimedOut(TEXT("w4: walked back into Prospect Landing"), 60);
 		return;
 	}
-	case 2020:
+	case 2022:
 		Check(W4Frames >= 6, FString::Printf(TEXT("w4: %d frames of the walk through"), W4Frames));
 		ToggleWorldMap();
 		Advance();
 		return;
-	case 2021:
+	case 2023:
 	{
 		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
 		if (!Map || Since() < 1.5) return;
@@ -4166,7 +4228,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Advance();
 		return;
 	}
-	case 2022:
+	case 2024:
 	{
 		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
 		if (!Map || Since() < 1.0) return;
@@ -4174,7 +4236,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Shoot(TEXT("w4-20-world-map"), TEXT("the world map: the nine regions' new shapes, walls and passages, stitched"));
 		return;
 	}
-	case 2023:
+	case 2025:
 	{
 		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
 		if (!Map) return;
@@ -4189,10 +4251,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Shoot(TEXT("w4-21-world-map-start"), TEXT("the world map round Prospect Landing: its walls, its passages, the neighbours'"));
 		return;
 	}
-	case 2024:
+	case 2026:
 		ToggleWorldMap();
 		if (W4Cam.IsValid()) W4Cam->Destroy();
-		Check(Shots.Saved + Shots.Skipped >= 9 + 4 + 6 + 2, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Check(Shots.Saved + Shots.Skipped >= 9 + 6 + 6 + 2, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsL1
@@ -5308,6 +5370,17 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(Far > 40.0, FString::Printf(TEXT("n3: she is sent from afar (%.0f cells off)"), Far));
 			const TSharedPtr<SAcProgressHud> W = UAcProgressHudSubsystem::Get(this) ? UAcProgressHudSubsystem::Get(this)->Widget() : nullptr;
 			Check(W && !W->Boss().IsSet(), TEXT("n3: no boss bar from afar"));
+			// The nest's mound drawn where the map puts it (the region's
+			// ground set, W4b: built after the pilot left the first region).
+			{
+				const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+				TOptional<ac::Vec2> Nest;
+				for (const ac::Doodad& D : Sim->Map().doodads)
+					if (D.kind == ac::Doodad::Kind::broodNest) Nest = D.position;
+				const TOptional<FVector> Drawn = Terrain ? Terrain->DrawnAt(ac::Doodad::Kind::broodNest) : TOptional<FVector>();
+				const double Off = Nest && Drawn ? FVector::Dist2D(*Drawn, AcSpace::ToWorld(*Nest)) / AcSpace::CmPerCell : -1.0;
+				Check(Off >= 0 && Off < 0.5, FString::Printf(TEXT("n3: the nest's mound drawn at the nest (%.2f cells off)"), Off));
+			}
 			Shoot(TEXT("n3-01-nest-afar"), TEXT("the Matriarch's nest from afar: her crown over its rim"));
 			return;
 		}

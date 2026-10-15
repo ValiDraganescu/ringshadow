@@ -173,9 +173,13 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
         }
     }
 
-    // The border's outline (W4): a dotted line round the playable land.
+    // The border's outline (W4): a dotted line round the playable land, and
+    // round each island of rock in it (W4b).
     if (file.border) {
-        const std::vector<Vec2>& o = file.border->outline;
+        std::vector<const std::vector<Vec2>*> loops{&file.border->outline};
+        for (const std::vector<Vec2>& island : file.border->islands) loops.push_back(&island);
+        for (const std::vector<Vec2>* loop : loops) {
+        const std::vector<Vec2>& o = *loop;
         for (size_t i = 0; i < o.size(); i++) {
             const Vec2 a = o[i], b = o[(i + 1) % o.size()];
             const double len = distance(a, b);
@@ -185,6 +189,7 @@ Image preview(const RegionFile& file, const Built& built, const std::vector<Prob
                 const auto [px, py] = pixel(a + (b - a) * (static_cast<double>(k) / steps));
                 c.rect(px - 1, py - 1, px + 1, py + 1, borderColour, 0.9);
             }
+        }
         }
     }
 

@@ -133,4 +133,8 @@ inline double smoothstep(double e0, double e1, double x) {
 /// Signed distance from `p` to a polygon: negative inside.
 double signedDistance(Vec2 p, const std::vector<Vec2>& poly);
 
+/// How far `p` lies past a region's playable land (W4b): outside its
+/// outline or inside one of its islands, cells (negative: on the land).
+double landOutside(Vec2 p, const std::vector<Vec2>& outline, const std::vector<std::vector<Vec2>>& islands);
+
 } // namespace ac

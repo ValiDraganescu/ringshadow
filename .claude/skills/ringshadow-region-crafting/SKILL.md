@@ -87,5 +87,10 @@ reach the edge round it.
   ridge top with no ramp: a wall, not a cut-off place.
 - A border's outline must not cross itself; with big lobes, cut the corners
   (the outline's points drop inside a neighbouring side's wall band).
+- The First Reach's shapes come from `uv run unreal/Tools/regions/shape.py
+  REGION` (W4b): rerun it after moving a passage or adding a place near the
+  rock, or pass `--seed REGION=N` to try another shape; it validates every
+  try. `autocraft-region levels FILE --bare` shows where the bare ground
+  walks (a level digit), its cliffs (`#`) and rocks (`o`).
 - Walls are not ground: nothing stands or lands on them. A thing left
   outside the outline is a problem, not a hidden prize.

@@ -126,6 +126,14 @@ public:
 	UMaterialInstanceDynamic* Material() const { return Mat; }
 	UTexture2D* Splat() const { return SplatTex; }
 	const TArray<FAcBorderRock>& Rocks() const { return BorderRocks; }
+	/// Where the set drew the first doodad of a kind, Unreal world (none:
+	/// none drawn yet), for the shots to check a landmark stands where the
+	/// map puts it.
+	TOptional<FVector> DrawnAt(const ac::Doodad::Kind Kind) const
+	{
+		const FVector* At = FirstOfKind.Find(uint8(Kind));
+		return At ? TOptional<FVector>(*At) : TOptional<FVector>();
+	}
 	/// The world-grid cells of Unreal's origin (the session's first region's
 	/// centre: the material's `Origin`).
 	void SetOrigin(ac::Vec2 Origin);
@@ -175,6 +183,7 @@ private:
 	FAcSceneryBatches DoodadBatches;
 	FAcSceneryBatches RockBatches;
 	TArray<FAcSceneryModel> DoodadModels;
+	TMap<uint8, FVector> FirstOfKind;
 };
 
 UCLASS()
@@ -244,6 +253,8 @@ public:
 	void SetGroundOverride(TOptional<FGroundOverride> Ground) { GroundOverride = MoveTemp(Ground); }
 	const TOptional<FGroundOverride>& GetGroundOverride() const { return GroundOverride; }
 	int32 MaterialsVersion() const { return Version; }
+	/// Where the current set drew the first doodad of a kind (`AAcRegionGround::DrawnAt`).
+	TOptional<FVector> DrawnAt(const ac::Doodad::Kind Kind) const { return Current ? Current->DrawnAt(Kind) : TOptional<FVector>(); }
 	/// The current set's centre on the world's grid (cells; 0 out of a world).
 	ac::Vec2 CurrentCentre() const { return Current ? Current->Centre() : ac::Vec2(0, 0); }
 	/// The ground sets (tests, pictures): how many, how many built.

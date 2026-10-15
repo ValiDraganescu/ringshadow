@@ -6,6 +6,7 @@
 //   autocraft-region build FILE
 //   autocraft-region preview FILE -o OUT.png [--scale PX]
 //   autocraft-region edges FILE [--depth D]
+//   autocraft-region levels FILE [--bare]
 //   autocraft-region format FILE
 
 #include "Preview.h"
@@ -40,6 +41,8 @@ int usage() {
                  "                                                draw it from above, problems marked\n"
                  "  autocraft-region edges FILE [--depth D]       the ground's level along each edge, D cells in\n"
                  "                                                (default 6): where a passage's floor can meet\n"
+                 "  autocraft-region levels FILE [--bare]         the ground's level a cell at a time (# a cliff, o rock\n"
+                 "                                                in the way), --bare without the border's walls\n"
                  "  autocraft-region format FILE                  rewrite it in the tool's own layout\n"
                  "Format: docs/regions.md\n");
     return 2;
@@ -229,6 +232,39 @@ int edges(const std::string& path, const std::vector<std::string>& args) {
     return 0;
 }
 
+/// The ground a cell at a time, a row a line from the north: its level
+/// digit, `#` a cliff, `o` rock in the way of a unit (W4b: the region
+/// shapes' tool reads it to keep the land joined). `--bare`: as if the
+/// file had no border.
+int levels(const std::string& path, const std::vector<std::string>& args) {
+    auto file = load(path);
+    if (!file) return 1;
+    if (std::find(args.begin(), args.end(), "--bare") != args.end()) file->border.reset();
+    const Built built = build(*file);
+    const TerrainField field(built.map);
+    NavGrid nav(built.map, field);
+    GameState ground = GameState::new_(built.map);
+    ground.structures.clear();
+    ground.units.clear();
+    nav.setDynamic(ground);
+    const double H = built.map.levelHeight;
+    const Vec2 x = built.extent();
+    for (int z = 0; z < static_cast<int>(x.y); z++) {
+        std::string row;
+        for (int i = 0; i < static_cast<int>(x.x); i++) {
+            const Vec2 p = built.ground(Vec2(i + 0.5, z + 0.5));
+            const double dx = field.height(p + Vec2(0.5, 0)) - field.height(p - Vec2(0.5, 0));
+            const double dz = field.height(p + Vec2(0, 0.5)) - field.height(p - Vec2(0, 0.5));
+            const auto cell = nav.index(p);
+            if (std::sqrt(dx * dx + dz * dz) > NavGrid::maxSlope) row += '#';
+            else if (!cell || !nav.free(*cell) || nav.inRock(p)) row += 'o';
+            else row += static_cast<char>('0' + std::clamp<long>(std::lround(field.height(p) / H), 0, 9));
+        }
+        std::printf("%s\n", row.c_str());
+    }
+    return 0;
+}
+
 int format(const std::string& path) {
     const auto file = load(path);
     if (!file) return 1;
@@ -251,6 +287,7 @@ int main(int argc, char** argv) {
     if (command == "build") return summary(args[1]);
     if (command == "preview") return draw(args[1], args);
     if (command == "edges") return edges(args[1], args);
+    if (command == "levels") return levels(args[1], args);
     if (command == "format") return format(args[1]);
     return usage();
 }
