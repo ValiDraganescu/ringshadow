@@ -694,3 +694,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N B2: mining L1 7,884 ore/h, 936 tax; mercs <= 1/8 of the pilot; frontier 1,489/h.
 - I B2: The Fork waves 9-10 with 12 guns + 5 AA: a straggler stays out 1,066-1,150 s; canyon look (Z4).
 - I B2: realm wallet's only sink is 12 Citadel marks (~6-7 h of one pilot's tax); needs a sink later.
+- T A2 done 7f68374: siege beds (ElevenLabs Music, looped), 28 KSTR lines, flight cues; radio ducks -24 dB.
+- N A2: wave layer 0.45 at wave 1 to 1.0 at wave 10; in 3 s, out 4 s; lines under 6 s.
+- N A2: ElevenLabs spent ~1,936 TTS characters and 2 music generations (66 s, 50 s).
+- I F2 (user): can't pick a Landing Pad on the map; PickPad fails silently on an unpickable pad; wt1 on it.
