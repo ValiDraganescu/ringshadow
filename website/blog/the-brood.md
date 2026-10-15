@@ -44,7 +44,7 @@ The numbers are tuned so you count the group before you walk in. One Shardling i
 
 ## The models
 
-The agent built a blockout model of each from the paintings, sized against the Prospector, and 49 sounds for them: idle chitter, bites, wingbeats, the swarm coming. The models are rough on purpose for now. A pass that takes them closer to the paintings (the Matriarch's crown and sac, the opal quills, the Lodeback's glass sac) is queued.
+The agent built a blockout model of each from the paintings, sized against the Prospector, and 49 sounds for them: idle chitter, bites, wingbeats, the swarm coming. The models are rough on purpose for now. A pass that takes them closer to the paintings (the Matriarch's crown and sac, the opal quills, the Lodeback's glass sac) is queued. [It has landed since.](https://ringshadow.com/blog/brood-art)
 
 ## The blockout models
 

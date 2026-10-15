@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [The Brood, painted: before and after the art pass](https://ringshadow.com/blog/brood-art.md): The art pass on Ringshadow's Brood: veined egg shells lit from within, opal chitin that shifts colour with the view, glass wings, the Matriarch's glowing sac and crown, and the gatling gun painted from its forge concept. Before and after.
 - [Through the walls: walking between regions](https://ringshadow.com/blog/passages.md): Ringshadow's regions now have grounds of their own, cliff walls and 14 passages between them, and walking from one region into the next happens without a reload or a jump.
 - [The world map: the real ground, seen from above](https://ringshadow.com/blog/world-map.md): Press M and Ringshadow's world map shows every region you've been to as a picture of its real ground from above, with live pilots, mercenaries, the Brood, buildings and deposits, and a tooltip on each.
 - [The Matriarch wakes in Slag Pockets](https://ringshadow.com/blog/matriarch.md): The Brood's queen now lives at her nest in Slag Pockets: 6,000 hp, a slam, an acid spit and a roar that rallies her horde. Pilots who bring her down share 3,000 ore, 1,500 MH and a rare blueprint.

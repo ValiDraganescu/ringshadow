@@ -115,6 +115,8 @@
 .album-grid .cap { display: block; margin-top: 12px; font-size: var(--f-small); color: var(--soft); line-height: 1.45; }
 .album.wide .album-grid { grid-template-columns: 1fr; }
 .album.wide .album-grid img { aspect-ratio: auto; object-fit: contain; clip-path: none; }
+/* Before and after: two to a row, the pair side by side at every width. */
+.album.pairs .album-grid { grid-template-columns: 1fr 1fr; }
 /* A wide picture smaller than the column: shown at its own size. */
 .album.fit { max-width: 960px; }
 

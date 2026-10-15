@@ -53,7 +53,7 @@ The Citadel's mission board knows about her too: one perilous hunt in three is "
 
 ## What isn't right yet
 
-Her egg pods still read as flat pink shapes in the pictures, nothing like the glowing pods in the painting. An art pass on her and the rest of the Brood is queued.
+Her egg pods still read as flat pink shapes in the pictures, nothing like the glowing pods in the painting. An art pass on her and the rest of the Brood is queued. [It has landed since.](https://ringshadow.com/blog/brood-art)
 
 Every test suite passes: 488 core, 233 server and 84 network.
 

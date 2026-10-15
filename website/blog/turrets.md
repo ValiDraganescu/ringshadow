@@ -59,7 +59,7 @@ A turret that falls loses its marks and its kills, with no refund, and a new one
 
 ## What isn't right yet
 
-The gatling gun in the pictures is a blockout, not the painted forge from the [concept post](https://ringshadow.com/blog/defences). The Citadel's corner turrets read small from the ground, and the amalgam rounds don't draw their tracer streams yet. All three are on the list for the Brood's art pass. One bug turned up while building the upgrades: the client's pose table had room for nine building kinds, and the gatling gun is the tenth, so its head never turned and its barrels never spun. It's sized from the building list now, and the gun turns and fires.
+The gatling gun in the pictures is a blockout, not the painted forge from the [concept post](https://ringshadow.com/blog/defences). The Citadel's corner turrets read small from the ground, and the amalgam rounds don't draw their tracer streams yet. All three are on the list for the Brood's art pass, which [has landed since](https://ringshadow.com/blog/brood-art). One bug turned up while building the upgrades: the client's pose table had room for nine building kinds, and the gatling gun is the tenth, so its head never turned and its barrels never spun. It's sized from the building list now, and the gun turns and fires.
 
 Every test suite passes: 475 core, 219 server and 82 network.
 

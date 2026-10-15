@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The Brood, painted: before and after the art pass
+
+15 October 2026 · M8 · 12 pictures
+
+Veined egg shells lit from within, opal chitin, glass wings, the Matriarch's glowing sac and crown, and the gatling gun painted from its concept. The same scenes, before and after.
+
+Read it: https://ringshadow.com/blog/brood-art
+
 ## Through the walls: walking between regions
 
 15 October 2026 · M8 · 10 pictures

@@ -366,7 +366,7 @@ Buildings become the realm's, and the Prospector gets enemies. Parts have landed
 
 Buildings belong to the realm, the Citadel taxes, sells and sends you on missions, and alien bugs swarm the places worth being. Now the realm has guns to hold them off, and the Brood has its queen.
 
-- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors, the satellite map, the Citadel's turrets, the AA tower and the gatling gun, turret upgrades, the Matriarch at her nest, a ground for each region with walls and passages you walk through without a seam
+- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors, the satellite map, the Citadel's turrets, the AA tower and the gatling gun, turret upgrades, the Matriarch at her nest, a ground for each region with walls and passages you walk through without a seam, the art pass on the Brood and the guns
 - Then: outlines that follow the land, canyon defence in waves, the Dropship between landing pads
 
 The terminator · next
@@ -427,6 +427,14 @@ Source: https://ringshadow.com/blog/
 How the game is being made, as it happens: what landed, what it looks like, and what's next. Every picture comes from the game, recorded by the agents that build it.
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
+
+## The Brood, painted: before and after the art pass
+
+15 October 2026 · M8 · 12 pictures
+
+Veined egg shells lit from within, opal chitin, glass wings, the Matriarch's glowing sac and crown, and the gatling gun painted from its concept. The same scenes, before and after.
+
+Read it: https://ringshadow.com/blog/brood-art
 
 ## Through the walls: walking between regions
 
@@ -515,6 +523,59 @@ Read it: https://ringshadow.com/blog/the-realm
 Two days, seven milestones: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.
 
 Read it: https://ringshadow.com/blog/how-we-got-here
+
+
+---
+
+# The Brood, painted: before and after the art pass
+
+> The art pass on Ringshadow's Brood: veined egg shells lit from within, opal chitin that shifts colour with the view, glass wings, the Matriarch's glowing sac and crown, and the gatling gun painted from its forge concept. Before and after.
+
+Source: https://ringshadow.com/blog/brood-art
+
+15 October 2026 · M8 · The realm under siege
+
+The Brood went into the world as blockouts: the right shapes and sizes, in flat colours. Every post since has said an art pass was queued. It has landed, and the pictures below are the same scenes before and after.
+
+![The Matriarch at her nest after the art pass: her sac and egg pods glowing violet with pale veins, teal tips on her crown](https://ringshadow.com/blog/media/brood-art/cover.jpg)
+
+*The Matriarch roaring at her nest, after the pass.*
+
+## Three new materials
+
+Most of the change comes from three materials the whole Brood now shares. The egg shell is veined and lit from within. The opal chitin is dark plates with a sheen of teal, violet and gold that moves as the view does. The glass is translucent, for wings and sacs. The paintings from [the day the Brood was designed](https://ringshadow.com/blog/the-brood) were the reference.
+
+The Matriarch's sac and egg pods glow with veins now, and her crown has a violet membrane between the spines, with teal tips. Her nest is a tiered mound with glowing seams of ore and clusters of opal. Shardlings have opal quills. Gloamwings have veined wings of violet glass and a lit lantern. A Lodeback carries a glass sac lit gold, with dark ore packed round a gold heart.
+
+## The Brood, before and after
+
+- ![Before: the Matriarch's model with a flat pink sac and flat pink pods](https://ringshadow.com/blog/media/brood-art/01-queen-before.webp) Before: her sac and pods in flat pink.
+- ![After: the Matriarch's sac a glossy violet shell with pale veins, her pods clustered and lit](https://ringshadow.com/blog/media/brood-art/02-queen-after.webp) After: veined shell, lit from within.
+- ![Before: a Lodeback with a flat yellow sac, a Gloamwing and a Shardling in plain colours](https://ringshadow.com/blog/media/brood-art/03-brood-before.webp) Before: Lodeback, Gloamwing, Shardling.
+- ![After: the Lodeback's sac gold glass with ore inside, the Gloamwing's wings violet glass, the Shardling's quills opal](https://ringshadow.com/blog/media/brood-art/04-brood-after.webp) After: the gold glass sac, glass wings, opal quills.
+- ![Before: the Matriarch roaring at her nest, her body flat black and pink](https://ringshadow.com/blog/media/brood-art/05-roar-before.webp) Before: the roar.
+- ![After: the same roar, her sac and pods glowing violet with veins, the nest in tiers](https://ringshadow.com/blog/media/brood-art/06-roar-after.webp) After: the same roar.
+- ![Before: the nest seen from the pad in Slag Pockets, the Matriarch a dark shape with pink spots](https://ringshadow.com/blog/media/brood-art/07-nest-before.webp) Before: the nest from the pad.
+- ![After: the nest from the pad, the Matriarch's crown and pods glowing over the rim](https://ringshadow.com/blog/media/brood-art/08-nest-after.webp) After: the crown and pods read across the slag.
+
+## The guns too
+
+The pass covered the [defences](https://ringshadow.com/blog/turrets) as well. The gatling gun is painted from its forge concept now: a tall furnace hopper of molten amalgam with glowing slits, over a ribbed gunmetal jacket. The Citadel's corner turrets are 1.8 times bigger, with lit rings at the muzzle. The amalgam rounds are drawn as a white-hot core in an orange halo, and they throw bigger sparks where they hit. The upgrade chevrons on a turret's base glow in their stats' colours: amber, red, ice and blue.
+
+## The gatling gun, before and after
+
+- ![Before: the gatling gun as a grey blockout box firing at a Shardling](https://ringshadow.com/blog/media/brood-art/11-gatling-before.webp) Before: the blockout, firing at a swarm.
+- ![After: the painted gatling gun with its furnace hopper, rounds streaking into a Shardling](https://ringshadow.com/blog/media/brood-art/12-gatling-after.webp) After: the forge, with its rounds drawn.
+- ![Before: an upgraded gatling gun with white chevrons on its base](https://ringshadow.com/blog/media/brood-art/15-chevrons-before.webp) Before: the upgrade chevrons in plain white.
+- ![After: the same gun painted, its chevrons glowing amber, red, ice and blue](https://ringshadow.com/blog/media/brood-art/16-chevrons-after.webp) After: each stat in its own colour.
+
+## What it costs
+
+Glowing, see-through materials cost more to draw. With 18 to 22 bugs in sight, the GPU's median frame went from 10.12 to 10.42 ms, about 0.3 ms more. The whole frame averages 10.52 ms, and its 95th percentile is 11.16 ms, well inside the 16.7 ms a frame at 60 a second allows.
+
+## What isn't right yet
+
+The nest's mound stopped drawing when the regions got their walls, so the nest pictures here were taken before that change. The fix is part of the next pass on the regions' outlines. The Citadel's corner turrets are bigger now, but from the usual camera they still read small.
 
 
 ---
@@ -685,7 +746,7 @@ The Citadel's mission board knows about her too: one perilous hunt in three is "
 
 ## What isn't right yet
 
-Her egg pods still read as flat pink shapes in the pictures, nothing like the glowing pods in the painting. An art pass on her and the rest of the Brood is queued.
+Her egg pods still read as flat pink shapes in the pictures, nothing like the glowing pods in the painting. An art pass on her and the rest of the Brood is queued. [It has landed since.](https://ringshadow.com/blog/brood-art)
 
 Every test suite passes: 488 core, 233 server and 84 network.
 
@@ -757,7 +818,7 @@ A turret that falls loses its marks and its kills, with no refund, and a new one
 
 ## What isn't right yet
 
-The gatling gun in the pictures is a blockout, not the painted forge from the [concept post](https://ringshadow.com/blog/defences). The Citadel's corner turrets read small from the ground, and the amalgam rounds don't draw their tracer streams yet. All three are on the list for the Brood's art pass. One bug turned up while building the upgrades: the client's pose table had room for nine building kinds, and the gatling gun is the tenth, so its head never turned and its barrels never spun. It's sized from the building list now, and the gun turns and fires.
+The gatling gun in the pictures is a blockout, not the painted forge from the [concept post](https://ringshadow.com/blog/defences). The Citadel's corner turrets read small from the ground, and the amalgam rounds don't draw their tracer streams yet. All three are on the list for the Brood's art pass, which [has landed since](https://ringshadow.com/blog/brood-art). One bug turned up while building the upgrades: the client's pose table had room for nine building kinds, and the gatling gun is the tenth, so its head never turned and its barrels never spun. It's sized from the building list now, and the gun turns and fires.
 
 Every test suite passes: 475 core, 219 server and 82 network.
 
@@ -946,7 +1007,7 @@ The numbers are tuned so you count the group before you walk in. One Shardling i
 
 ## The models
 
-The agent built a blockout model of each from the paintings, sized against the Prospector, and 49 sounds for them: idle chitter, bites, wingbeats, the swarm coming. The models are rough on purpose for now. A pass that takes them closer to the paintings (the Matriarch's crown and sac, the opal quills, the Lodeback's glass sac) is queued.
+The agent built a blockout model of each from the paintings, sized against the Prospector, and 49 sounds for them: idle chitter, bites, wingbeats, the swarm coming. The models are rough on purpose for now. A pass that takes them closer to the paintings (the Matriarch's crown and sac, the opal quills, the Lodeback's glass sac) is queued. [It has landed since.](https://ringshadow.com/blog/brood-art)
 
 ## The blockout models
 
