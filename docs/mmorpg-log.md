@@ -602,3 +602,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I W4 regression: nest mound not drawn (terrain doodad batches) → W4b.
 - I N3/N2 shot checks flaky (bugs out of interest at 20 cells) on old models too.
 - I Corner turrets still small from the usual camera.
+- D Manager: L1 = a KSTR NEXT-goal thread after O1, one at a time, never blocking.
+- T L1 briefed to wt2 (protocol 25).
