@@ -400,7 +400,8 @@ void UAcBuildingFx::Lights()
 		Holder->SetRootComponent(Root);
 		Root->RegisterComponent();
 	}
-	const IConsoleVariable* FalloffVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.LampFalloff"));
+	// Found once (AcLamps.cpp registers it): a lookup every frame costs.
+	static const IConsoleVariable* FalloffVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.LampFalloff"));
 	const float Falloff = FMath::Max(0.5f, FalloffVar ? FalloffVar->GetFloat() : 3.f);
 	while (Pool.Num() < N && Holder)
 	{

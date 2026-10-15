@@ -283,6 +283,8 @@ int32 UAcWorldRenderer::BatchFor(const FAcModelInfo& Model, const int32 Part, co
 	const uint64 Key = (GetTypeHash(X.Mesh.ToString()) | (uint64(GetTypeHash(X.MaterialInstance.ToString())) << 32))
 		^ (uint64(Stencil) * 0x9E3779B97F4A7C15ull);
 	if (const int32* Found = BatchIndex.Find(Key)) return *Found;
+	TRACE_CPUPROFILER_EVENT_SCOPE(AcWorldRenderer_NewBatch);
+	if (NewBatches++ == 0) FirstNewBatch = X.Mesh.ToString();
 
 	UStaticMesh* Mesh_ = X.LoadMesh();
 	UInstancedStaticMeshComponent* C = nullptr;
@@ -364,8 +366,27 @@ namespace
 	}
 }
 
+void UAcWorldRenderer::Warm(const FAcModelInfo& Model)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(AcWorldRenderer_Warm);
+	const FLayout* L = LayoutFor(&Model);
+	if (!L) return;
+	for (const int32 I : L->Batch)
+	{
+		FBatch& B = Batches[I];
+		if (B.Xf.Num() > 0) continue;
+		// One instance, parked as a freed slot is: drawn as nothing.
+		const int32 S = Take(B.Custom, B.Xf, B.Free);
+		while (B.Owner.Num() <= S) B.Owner.Add(-1);
+		B.Xf[S] = Gone();
+		B.Dirty(S);
+		B.Free.Add(S);
+	}
+}
+
 void UAcWorldRenderer::Allocate(FObject& O)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(AcWorldRenderer_Allocate);
 	auto Fill = [&](const FLayout& L, TArray<int32>& Slots)
 	{
 		Slots.SetNumUninitialized(L.Batch.Num());
@@ -479,6 +500,7 @@ void UAcWorldRenderer::WriteObject(FObject& O)
 
 void UAcWorldRenderer::Upload()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(AcWorldRenderer_Upload);
 	TArray<FTransform> NewScratch, PrevScratch;
 	const bool bCheckPrev = CVarCheckPrev.GetValueOnGameThread() != 0;
 	for (FBatch& B : Batches)
@@ -650,6 +672,15 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 	}
 
 	const double T0 = FPlatformTime::Seconds();
+	// Many batches made in one frame after the first: their meshes loaded on
+	// the game thread then (K3), named for the record.
+	if (NewBatches > 8 && !bFirstSync)
+		UE_LOG(LogAutocraft, Log, TEXT("render: %d new batches in one frame (the first %s)"), NewBatches, *FirstNewBatch);
+	NewBatches = 0;
+	// A model a preload readied, warmed: one a frame.
+	ToWarm.Append(FAcModelCatalog::TakeReady());
+	if (!ToWarm.IsEmpty())
+		if (const FAcModelInfo* M = Catalog.Find(ToWarm.Pop(EAllowShrinking::No))) Warm(*M);
 	Stats = FStats();
 	++FrameNumber;
 	const ac::GameState& Shown = CVarShowAll.GetValueOnGameThread() != 0 ? Sim->State() : Sim->Shown();

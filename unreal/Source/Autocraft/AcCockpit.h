@@ -180,6 +180,8 @@ private:
 	FDelegateHandle FrameHandle;
 	TOptional<ac::UnitKind> Kind;
 	int64 UnitId = INDEX_NONE;
+	/// The owner whose team colour the meshes wear.
+	int64 BuiltOwner = INDEX_NONE;
 	FAcCockpitPose Posed;
 	std::shared_ptr<FState> State;
 	TArray<FVector> MuzzlesWorld;

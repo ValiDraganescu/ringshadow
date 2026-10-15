@@ -137,6 +137,7 @@ void UAcCockpitSubsystem::Clear()
 	Kind.Reset();
 	CockpitModel = nullptr;
 	UnitId = INDEX_NONE;
+	BuiltOwner = INDEX_NONE;
 	State.reset();
 	MuzzlesWorld.Reset();
 	Posed = FAcCockpitPose();
@@ -306,10 +307,25 @@ void UAcCockpitSubsystem::OnFrame(const FAcFrame& F)
 	// As the view follows it: a turret's look is the mouse's.
 	if (ac::Pilot::steers(U.kind) && ac::Pilot::turretRate(U.kind) && !Pawn->Eye().bThirdPerson) U.aim = Pawn->Yaw();
 	if (Stills().Anchor && U.kind == ac::UnitKind::longbow) U.anchor = *Stills().Anchor;
+	if (Kind && *Kind == U.kind && UnitId != U.id && GFrameCounter - Sim->SeamlessFrame() <= 2)
+	{
+		// The same machine under its new id after a seamless region change
+		// (W4, this frame or the last): the cockpit stays as it is, its
+		// meshes not made again (K3: their new primitives cost the render
+		// thread a 32 ms frame at every crossing).
+		UnitId = U.id;
+		if (BuiltOwner != U.owner)
+		{
+			BuiltOwner = U.owner;
+			for (UStaticMeshComponent* C : CompRefs)
+				if (IsValid(C)) C->SetCustomPrimitiveDataFloat(AcModelData::TeamIndex, float(FMath::Clamp<int64>(U.owner, 0, 7)));
+		}
+	}
 	if (!Kind || *Kind != U.kind || UnitId != U.id)
 	{
 		Build(U.kind, U.owner);
 		UnitId = U.id;
+		BuiltOwner = U.owner;
 		LastTime = -1.0;
 		ParticleTime = -1.0;
 		if (!Kind) return;

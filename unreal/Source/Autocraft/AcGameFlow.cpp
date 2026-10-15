@@ -898,6 +898,22 @@ void UAcGameFlowSubsystem::TickMmo()
 		// The world map says where the pilot is in its own header.
 		if (WorldMap) Place.Reset();
 		MmoBanner->SetPlace(Place, Mmo->FlyingTo() != nullptr);
+		// The arrival banners of the regions round the pilot, their plates
+		// baked ahead, one a frame (K3: a plate baked at the crossing and
+		// read back cost the render thread a GPU frame there).
+		if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this))
+			if (const ac::net::WorldMessage* W = Mmo->World())
+			{
+				static TSet<FString> Warmed;
+				for (const FAcRegionAround& A : Mmo->Around())
+				{
+					if (!A.Map || A.Index < 0 || A.Index >= int64(W->regions.size()) || Warmed.Contains(A.Id)) continue;
+					Warmed.Add(A.Id);
+					const ac::net::WorldMessage::Region& R = W->regions[size_t(A.Index)];
+					L->WarmBanner(Text(R.name).ToUpper(), Text(ac::title(R.style)).ToUpper(), FString());
+					break;
+				}
+			}
 		// Arrived in a region (the start, a landing once the ship is down,
 		// an edge crossing): its title over the view, once per arrival.
 		const AAcPilotPawn* Pawn = AAcPilotPawn::Find(this);

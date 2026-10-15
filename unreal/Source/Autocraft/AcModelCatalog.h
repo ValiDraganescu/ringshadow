@@ -148,6 +148,16 @@ public:
 	const FAcModelMesh* FindMesh(FName Model, FName Part, FName Material) const;
 	const TArray<FAcModelInfo>& All() const { return Models; }
 
+	/// Loads these models' meshes and materials off the game thread, and keeps
+	/// them loaded for the session: a region made ahead asks for what its
+	/// units and buildings are drawn with, so the crossing into it never
+	/// loads them on the game thread (K3: 68 meshes then, a 30 ms frame).
+	/// Models asked for before are passed over.
+	static void Preload(TArrayView<const FName> ModelNames);
+	/// The models a preload has finished loading since the last call: the
+	/// world renderer makes their batches ahead (`UAcWorldRenderer::Warm`).
+	static TArray<FName> TakeReady();
+
 	/// A SceneKit node transform as the manifest writes it (16 floats,
 	/// SCNMatrix4 order: rows are the X, Y, Z axes and the translation, in
 	/// cells) → an Unreal transform (cm). See AcSpace.h.

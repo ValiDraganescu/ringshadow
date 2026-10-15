@@ -6,6 +6,8 @@
 #include "AcMmo.h"
 
 #include "AcLog.h"
+#include "AcModelCatalog.h"
+#include "AcPose.h"
 #include "AcSpace.h"
 #include "AcWork.h"
 
@@ -117,6 +119,19 @@ void FAcMmoClient::PrepareAround()
 		if (Done->Map) BuiltMaps.Add(Done->Id, Done->Map);
 		if (Done->Mirror && Net)
 		{
+			// What the region's units and buildings are drawn with, loaded
+			// now, off the game thread (K3: else at the crossing).
+			{
+				TArray<FName> Models;
+				const ac::GameState& G = Done->Mirror->simulation().state;
+				for (const ac::Unit& U : G.units) Models.AddUnique(FName(*FString::Printf(TEXT("%s_blue"), AcPose::ModelBase(U.kind))));
+				for (const ac::Structure& S : G.structures)
+				{
+					Models.AddUnique(FName(*FString::Printf(TEXT("%s_blue"), AcPose::ModelBase(S.kind))));
+					Models.AddUnique(FName(*FString::Printf(TEXT("scaffold_%s_blue"), AcPose::ModelBase(S.kind))));
+				}
+				FAcModelCatalog::Preload(Models);
+			}
 			// Made for the region the pilot stood in then: still of this world
 			// (the description says), so still good.
 			Net->prepare(std::move(Done->Mirror));
@@ -124,6 +139,26 @@ void FAcMmoClient::PrepareAround()
 			UE_LOG(LogAutocraft, Log, TEXT("mmo: %s made ahead (map and mirror)"), *Done->Id);
 		}
 		delete Done;
+	}
+	// The Brood's models (shardling, gloamwing, lodeback, matriarch), loaded
+	// off the game thread a while after the regions round the first were
+	// made: the server sends its bugs only in snapshots, so a region made
+	// ahead can't say which come, and the first one seen after a crossing
+	// loaded its model on the game thread (K3: a Lodeback, 68 meshes, a
+	// 32 ms frame at every W4 crossing). Late enough to leave the session's
+	// first seconds alone.
+	{
+		static double MadeAt = -1;
+		static bool bBroodAsked = false;
+		if (MadeAt < 0 && !MirrorsMade.IsEmpty() && Building.IsEmpty()) MadeAt = FPlatformTime::Seconds();
+		if (!bBroodAsked && MadeAt > 0 && FPlatformTime::Seconds() - MadeAt > 8.0)
+		{
+			bBroodAsked = true;
+			TArray<FName> Brood;
+			for (const ac::UnitKind K : {ac::UnitKind::shardling, ac::UnitKind::gloamwing, ac::UnitKind::lodeback, ac::UnitKind::matriarch})
+				Brood.Add(FName(*FString::Printf(TEXT("%s_blue"), AcPose::ModelBase(K))));
+			FAcModelCatalog::Preload(Brood);
+		}
 	}
 	const ac::net::WorldMessage* W = World();
 	const ac::net::Mirror* M = Net ? Net->mirror() : nullptr;

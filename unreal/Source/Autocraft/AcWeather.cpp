@@ -322,7 +322,8 @@ void AAcWeather::Tick(const float DeltaSeconds)
 	// Wet hulls (M_Hull reads MPC_AcWorld.Wetness), as wet as the ground.
 	if (WeatherMpc)
 	{
-		const IConsoleVariable* Wet = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.Weather.Wet"));
+		// Found once (AcDaylight.cpp registers it): a lookup every frame costs.
+		static const IConsoleVariable* Wet = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.Weather.Wet"));
 		const float Want = float(Current.wetness) * (Wet ? Wet->GetFloat() : 1.0f);
 		if (FMath::Abs(Want - HullWet) > 1.0f / 256)
 		{

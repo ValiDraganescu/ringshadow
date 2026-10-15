@@ -88,6 +88,11 @@ public:
 
 	/// The renderer of `WorldContext`'s world (null if none was spawned).
 	static UAcWorldRenderer* Get(const UObject* WorldContext);
+	/// Makes a model's batches ahead, each with a hidden instance, so the
+	/// render thread builds their draw state now, not at the model's first
+	/// sight (K3: a Lodeback's 68 batches, a 33 ms render frame just after a
+	/// W4 crossing). The models a preload readied, one a frame.
+	void Warm(const FAcModelInfo& Model);
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -270,6 +275,11 @@ private:
 	int32 PrevForeignLogged = 0;
 	int64 PrevCheckedSum = 0, PrevForeignSum = 0;
 	bool bFirstSync = true;
+	/// Batches made since the last sync, and the first one's mesh.
+	int32 NewBatches = 0;
+	FString FirstNewBatch;
+	/// Models readied by a preload, warmed one a frame.
+	TArray<FName> ToWarm;
 	bool bStaged = false;
 	TOptional<FVector2D> FightCentre;
 	FStats Stats;

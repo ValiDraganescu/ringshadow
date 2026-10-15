@@ -23,11 +23,13 @@ class UTexture2D;
 struct FAcCommandMapColumn;
 struct FSlateBrush;
 
-/// A plate baked by `AcCabArt::BakePlate`, kept until its size changes.
+/// Plates baked by `AcCabArt::BakePlate`, one per size, kept: a banner
+/// sized to its words bakes a plate the first time a size is asked for, and
+/// a bake while playing costs the render thread a GPU frame on Metal when it
+/// is read back (FAcBakedArt), so a size seen before is drawn as it was (K3).
 struct FAcLevelPlate
 {
-	FAcBakedArt Art;
-	FVector2D For = FVector2D::ZeroVector;
+	TMap<FIntPoint, FAcBakedArt> Arts;
 
 	const FAcBakedArt& Get(FVector2D Size, double TL, double TR, double BR, double BL, int32 Seed);
 };
@@ -43,6 +45,12 @@ public:
 	/// unanimated. `bKeys` (the MMORPG test mode): the line under it says
 	/// the keys that pick, on a darker plate, held a little longer.
 	void Show(ac::UnitKind Kind, int32 Level, double Now, bool bHold, bool bKeys = false);
+	/// Bakes the plate these lines would be shown on, now (K3: a region's
+	/// arrival banner, baked as the region is made ahead, so the crossing
+	/// into it draws a plate already baked).
+	void WarmPlate(const FString& InTitle, const FString& InSub, const FString& InGate) const;
+	/// The plate's size for these lines (points).
+	static FVector2D PlateSize(const FString& InTitle, const FString& InSub, const FString& InGate, bool bInKeyed);
 	/// The MMORPG mode's banner slot (U1, docs/mmorpg-play.md "The HUD"): a
 	/// level reached (docs/prospector-progression.md, "The level-up"), a
 	/// raid's warning, the Matriarch down. `InTitle` in `InAccent`, `InSub`

@@ -23,6 +23,15 @@ unreal/Binaries/
 unreal/Intermediate/
 unreal/Saved/
 unreal/DerivedDataCache/
+# What UAT's packaging writes into Build/Mac (K3): the cook's file order, the
+# version counter, and copies of the engine's own Info.plist template and
+# sandbox entitlements (identical to Engine/Build/Mac/Resources; the package
+# needs none of them in git: build_release.sh sets the plist itself).
+unreal/Build/Mac/FileOpenOrder/
+unreal/Build/Mac/unreal.PackageVersionCounter
+unreal/Build/Mac/Resources/Info.Template.plist
+unreal/Build/Mac/Resources/Sandbox.NoNet.entitlements
+unreal/Build/Mac/Resources/Sandbox.Server.entitlements
 unreal/.vs/
 unreal/*.xcworkspace
 

@@ -114,6 +114,21 @@ log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
   fade, no hold, the seat and the camera kept, the unit's model kept under
   its new id. The crossing is measured by `-AcMmoShotsW4` (`w4: crossing:`
   in the log, `w4-crossing.csv`): frame times and the unit's pace round it.
+  Its checks (K3, 2026-10-15): no frame from 2 before the change to 8 after
+  over the 95th percentile ×1.25 or the median +4 ms (the change's work
+  reaches +5: the game thread's at +1, the render thread's a few frames
+  on); the pace in input ticks (the unit steps on the 60 Hz ticks, so a
+  frame moves it 0, 1 or 2 steps: each step the steady size ±10%, every
+  move a whole number of steps, the steps keeping the clock within 2), not
+  over a fixed time window, which swung 7% with where the frames fell
+  against the ticks. What the crossing used to cost, and no longer does:
+  the cockpit and the pilot overlay made again for the unit's new id (the
+  overlay's plate read back on the render thread), the first Brood model
+  seen after it loaded and first drawn on the game thread (they are loaded
+  and their batches made a while after the session starts), the arrival
+  banner's plate baked at the change (baked as each region round the pilot
+  is made, read back once the GPU is calm, never on first sight), and
+  Lumen capturing the new region's cards in one frame (100 a frame now).
 - The Dropship's approach (F2) changes region seamlessly too: from the call
   the client makes the target region ahead (its map, its ground set at its
   place on the world's grid, its mirror), so the region change moves the

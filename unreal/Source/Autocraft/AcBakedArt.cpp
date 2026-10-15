@@ -2,14 +2,19 @@
 
 #include "AcArtList.h"
 #include "AcCabArt.h"
+#include "AcLog.h"
 
 #include "RHIGPUReadback.h"
 #include "RenderingThread.h"
+#include "Containers/Ticker.h"
 #include "TextureResource.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Slate/WidgetRenderer.h"
 #include "Styling/SlateBrush.h"
 #include "Widgets/SLeafWidget.h"
+#include "Widgets/SWindow.h"
 
 #include <atomic>
 
@@ -56,6 +61,10 @@ namespace
 	constexpr int32 CalmFrames = 30;
 	/// Read back anyway this long after the bake.
 	constexpr double ReadLatest = 15.0;
+	/// ...and never sooner than this: a plate baked as a region changes (the
+	/// next arrival banners, baked ahead) is not read in the frames of the
+	/// change itself, however calm the GPU was before it (K3).
+	constexpr double ReadSoonest = 2.0;
 
 	bool GpuCalm()
 	{
@@ -139,10 +148,28 @@ void FAcBakedArt::Bake(const FAcArtList& List, const FAcRect& Area)
 	Brush->ImageSize = FVector2D(Px) / S;
 	Brush->SetResourceObject(T);
 
-	// The copy back, queued behind the drawing.
+	// The copy back, queued behind the drawing: only on a screen under 2×
+	// (K3). It is for the linear-light filtering of the art drawn smaller
+	// than baked (2 pixels a point); on a 2× screen it is drawn 1:1 and the
+	// target looks the same, and on Metal the read costs the render thread a
+	// GPU frame (RHIMapStagingSurface waits for the whole GPU to idle).
+	float ScreenScale = 1.f;
+	if (GEngine && GEngine->GameViewport)
+		if (const TSharedPtr<SWindow> Window = GEngine->GameViewport->GetWindow()) ScreenScale = Window->GetDPIScaleFactor();
+	static float LoggedScale = -1.f;
+	if (ScreenScale != LoggedScale)
+	{
+		LoggedScale = ScreenScale;
+		UE_LOG(LogAutocraft, Log, TEXT("baked art: a %.1f× screen, %s"), ScreenScale,
+			ScreenScale >= 2.f ? TEXT("drawn from its target") : TEXT("read back into a texture"));
+	}
+	if (ScreenScale >= 2.f) return;
 	Pending = MakeShared<FPending, ESPMode::ThreadSafe>();
 	Pending->Pixels = Px;
 	Pending->BakedAt = FPlatformTime::Seconds();
+	Waiting().Add(Pending);
+	static const FTSTicker::FDelegateHandle Ticker =
+		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) { AskAll(); return true; }));
 	FTextureRenderTargetResource* Resource = T->GameThread_GetRenderTargetResource();
 	ENQUEUE_RENDER_COMMAND(AcBakedArtCopy)([P = Pending, Resource](FRHICommandListImmediate& RHICmdList)
 	{
@@ -181,9 +208,38 @@ void FAcBakedArt::Poll() const
 		Target.Reset();
 		return;
 	}
+	Ask(Pending);
+}
+
+TArray<TWeakPtr<FAcBakedArt::FPending, ESPMode::ThreadSafe>>& FAcBakedArt::Waiting()
+{
+	static TArray<TWeakPtr<FPending, ESPMode::ThreadSafe>> List;
+	return List;
+}
+
+void FAcBakedArt::AskAll()
+{
+	TArray<TWeakPtr<FPending, ESPMode::ThreadSafe>>& List = Waiting();
+	for (int32 I = List.Num() - 1; I >= 0; --I)
+	{
+		const TSharedPtr<FPending, ESPMode::ThreadSafe> P = List[I].Pin();
+		if (!P || P->bDone)
+		{
+			List.RemoveAtSwap(I);
+			continue;
+		}
+		// One a frame: each read waits for the GPU once.
+		if (Ask(P)) return;
+	}
+}
+
+bool FAcBakedArt::Ask(const TSharedPtr<FPending, ESPMode::ThreadSafe>& Pending)
+{
 	// Read once the GPU is calm (the target draws meanwhile).
-	if (!GpuCalm() && FPlatformTime::Seconds() - Pending->BakedAt < ReadLatest) return;
-	if (Pending->bAsked.exchange(true)) return;
+	if (!Pending || Pending->bDone) return false;
+	const double Age = FPlatformTime::Seconds() - Pending->BakedAt;
+	if (Age < ReadSoonest || (!GpuCalm() && Age < ReadLatest)) return false;
+	if (Pending->bAsked.exchange(true)) return false;
 	ENQUEUE_RENDER_COMMAND(AcBakedArtPoll)([P = Pending](FRHICommandListImmediate&)
 	{
 		if (P->Readback && P->Readback->IsReady())
@@ -203,4 +259,5 @@ void FAcBakedArt::Poll() const
 		}
 		P->bAsked = false;
 	});
+	return true;
 }

@@ -401,6 +401,12 @@ void UAcLevelingSubsystem::LevelUp(const ac::UnitKind Kind, const int32 Level, c
 	BannerWidget->Show(Kind, Level, Clock(), bHold, Sim && Sim->IsMmo());
 }
 
+void UAcLevelingSubsystem::WarmBanner(const FString& Title, const FString& Sub, const FString& Gate)
+{
+	if (!Mount()) return;
+	BannerWidget->WarmPlate(Title, Sub, Gate);
+}
+
 void UAcLevelingSubsystem::ShowBanner(const FString& Title, const FString& Sub, const FString& Gate, const bool bHold, const FLinearColor& Accent)
 {
 	if (!Mount()) return;

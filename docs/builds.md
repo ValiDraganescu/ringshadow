@@ -173,15 +173,21 @@ uv run unreal/Tools/hidden_run.py --out unreal/server/build/k3/runs/app-call5-1 
 ad hoc, made again when the app changes): no Dock icon, offscreen,
 `-nosound`, its own save and its own world server, one run at a time with
 every other hidden run. It lists handled ensures, which a packaged game
-hits where the editor doesn't. Every MMO run logs `k3: seated N s after
+hits where the editor doesn't. Not `--headless`: a cooked game asserts
+under `-nullrhi` when it builds a mesh at run time ("RenderData should not
+initialize resources in headless cooked runs"), and this game builds the
+ground and more at run time. Every MMO run logs `k3: seated N s after
 the process started` (the startup: process start to the first frame the
 pilot drives); `-AcMmoShotsF2CallAt=S` calls the Dropship S s after
 seating and logs `worst frame since the call`; `-AcMmoShotsS3` logs the
 canyon (wave 10 out) and the nest at noon as `s3 perf:`. A trace: add
 `-trace=default,gpu,loadtime,task -statnamedevents -tracefile={out}/x.utrace`
-and export it with `UnrealInsightsBG` (unreal/Tools/README.md); a traced
-packaged run crashes on exit after its log closes (exit -11), the trace
-whole.
+and export it with `UnrealInsightsBG` (unreal/Tools/README.md). A traced
+packaged run crashes on exit, after its log and the trace are closed (exit
+-11, the trace whole): the engine's own check that every `FMemStack` page
+is back (`TLockFreeFixedSizeAllocator`'s destructor, at the process's
+static teardown) fails with tracing on, and the failed check logs into the
+log already torn down. An engine cost of the trace, nothing of the game's.
 
 K3's numbers, three runs each, M4 Max, other worktrees' runs and builds
 beside (load 6–12), before and after the fixes below:
@@ -225,8 +231,15 @@ lacks, an ensure at every start; the meshes the game builds at run time
 had no UV densities, an ensure (`AcBuiltMesh.h`). Left as they are: the
 engine's volumetric cloud default (`m_SimpleVolumetricCloud_Inst`) is not
 cooked and logs a warning once (the sky sets its own material), and two
-packaged launches in about 35 exited at once with nothing in its log,
-right after another run (`hidden_run.py` now prints the exit code).
+packaged launches in about 35 died at once with nothing in their log. The
+crash reports name an engine race in the Development build: the low-level
+memory tracker (LLM) starts on and is turned off once the command line is
+read, on the game thread, while the Cocoa thread allocates in AppKit's
+launch; the switch takes its lock only where
+`PLATFORM_HAS_MULTITHREADED_PREMAIN`, not on the Mac, and
+`FLLMTracker::PopTag` finds an empty stack. Shipping has no LLM, so
+players never hit it. `hidden_run.py` runs a launch that died before its
+log opened again (three tries) and says why, from its crash report.
 
 ## AWS
 

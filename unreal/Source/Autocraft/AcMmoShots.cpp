@@ -4577,44 +4577,61 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			for (int32 I = 1; I < At - 5; ++I) Before.Add(W4Walk[I].Dt * 1000.0);
 			Before.Sort();
 			const double Median = Before[Before.Num() / 2], P95 = Before[FMath::Min(Before.Num() - 1, int32(Before.Num() * 0.95))];
+			// The change's frames: from 2 before to 8 after, as far as its
+			// work reaches (the game thread's at +1, the render thread's a few
+			// frames on; K3: a check ending at +3 missed a 32 ms frame at +5
+			// in every run and failed only on the +1 frame's chance).
 			double Worst = 0, WorstNear = 0;
-			for (int32 I = At - 2; I <= At + 3; ++I) Worst = FMath::Max(Worst, W4Walk[I].Dt * 1000.0);
+			for (int32 I = At - 2; I <= At + 8; ++I) Worst = FMath::Max(Worst, W4Walk[I].Dt * 1000.0);
 			for (int32 I = At - 30; I <= At + 30; ++I) WorstNear = FMath::Max(WorstNear, W4Walk[I].Dt * 1000.0);
-			// The pace on the world's grid: before (cells/s), and over each
-			// 0.25 s window (the unit steps on the 60 Hz input ticks, not on
-			// every frame) from 10 frames before the change to 20 after.
-			const auto Pace = [&](const int32 I, const bool bEye) {
-				int32 J = I;
-				while (J > 1 && W4Walk[I].At - W4Walk[J].At < 0.25) --J;
-				const double Dt = W4Walk[I].At - W4Walk[J].At;
-				const ac::Vec2 A = bEye ? W4Walk[J].Eye : W4Walk[J].Unit, Bp = bEye ? W4Walk[I].Eye : W4Walk[I].Unit;
-				return Dt > 1e-4 ? ac::distance(A, Bp) / Dt : 0.0;
-			};
-			double Sum = 0, Time = 0;
+			// The pace in input ticks (K3): the unit steps on the 60 Hz ticks,
+			// not on the frames, so a frame moves it 0, 1 or 2 steps. Over any
+			// window of frames the count of steps is the clock's, give or take
+			// the window's ends; a pace over a fixed time window swung 7% with
+			// where the frames fell against the ticks, and a slow frame took a
+			// tick more. So: the step before the change (the median of the
+			// frames that moved), each frame's move a whole number of steps
+			// round it (a jump is not), each step of the steady size (the
+			// pace), and the steps keeping the clock (a stop loses some).
+			TArray<double> Moves;
 			for (int32 I = At - 40; I < At - 10; ++I)
-			{
-				Sum += ac::distance(W4Walk[I - 1].Unit, W4Walk[I].Unit);
-				Time += W4Walk[I].At - W4Walk[I - 1].At;
-			}
-			const double Mean = Time > 0 ? Sum / Time : 0;
-			double Lo = 1e9, Hi = 0, EyeLo = 1e9, EyeHi = 0, Jump = 0;
+				if (const double D = ac::distance(W4Walk[I - 1].Unit, W4Walk[I].Unit); D > 1e-3) Moves.Add(D);
+			Moves.Sort();
+			const double Step = Moves.Num() ? Moves[Moves.Num() / 2] : 0.0;
+			const double Mean = Step * 60.0;
+			double Lo = 1e9, Hi = 0, EyeLo = 1e9, EyeHi = 0, Jump = 0, Odd = 0;
+			int32 Ticks = 0;
 			for (int32 I = At - 10; I <= At + 20; ++I)
 			{
-				Lo = FMath::Min(Lo, Pace(I, false));
-				Hi = FMath::Max(Hi, Pace(I, false));
-				EyeLo = FMath::Min(EyeLo, Pace(I, true));
-				EyeHi = FMath::Max(EyeHi, Pace(I, true));
-				Jump = FMath::Max(Jump, ac::distance(W4Walk[I - 1].Eye, W4Walk[I].Eye));
+				const double D = ac::distance(W4Walk[I - 1].Unit, W4Walk[I].Unit);
+				const int32 K = Step > 0 ? FMath::RoundToInt32(D / Step) : 0;
+				Ticks += K;
+				Odd = FMath::Max(Odd, FMath::Abs(D - K * Step));
+				if (K > 0)
+				{
+					Lo = FMath::Min(Lo, D / K * 60.0);
+					Hi = FMath::Max(Hi, D / K * 60.0);
+				}
+				const double E = ac::distance(W4Walk[I - 1].Eye, W4Walk[I].Eye);
+				const int32 KE = Step > 0 ? FMath::RoundToInt32(E / Step) : 0;
+				if (KE > 0)
+				{
+					EyeLo = FMath::Min(EyeLo, E / KE * 60.0);
+					EyeHi = FMath::Max(EyeHi, E / KE * 60.0);
+				}
+				Jump = FMath::Max(Jump, E);
 			}
-			// And how far the unit falls behind (or runs ahead of) the line it
-			// walked before the change, carried on through it: a stop, a jump.
+			const double Span = W4Walk[At + 20].At - W4Walk[At - 11].At;
+			const double Clock = Span * 60.0;
+			// And how far it strays from the line it walked before, for the
+			// record only: the passage turns it a little as it slides along a
+			// wall, so a straight line's distance is no measure of a stop.
 			double Lag = 0;
 			{
 				const FW4Sample& A0 = W4Walk[At - 60 > 0 ? At - 60 : 1];
 				const FW4Sample& A1 = W4Walk[At - 5];
-				const double Span = A1.At - A0.At;
-				const ac::Vec2 Vel = Span > 0 ? (A1.Unit - A0.Unit) / Span : ac::Vec2(0, 0);
-				// Along the way it walked (it was still turning onto it).
+				const double SpanL = A1.At - A0.At;
+				const ac::Vec2 Vel = SpanL > 0 ? (A1.Unit - A0.Unit) / SpanL : ac::Vec2(0, 0);
 				const double Speed = ac::length(Vel);
 				const ac::Vec2 Dir = Speed > 1e-6 ? Vel / Speed : ac::Vec2(1, 0);
 				for (int32 I = At - 5; I <= At + 40; ++I)
@@ -4625,10 +4642,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				}
 			}
 			const FString Line = FString::Printf(
-				TEXT("w4: crossing: frames before it %.1f ms median, %.1f ms 95th percentile; at the change (2 before to 3 after) %.1f ms at most, "
-					 "%.1f ms within 30 frames; the unit %.2f cells/s before, %.2f..%.2f cells/s each frame round it; the eye %.2f..%.2f cells/s, "
+				TEXT("w4: crossing: frames before it %.1f ms median, %.1f ms 95th percentile; at the change (2 before to 8 after) %.1f ms at most, "
+					 "%.1f ms within 30 frames; the unit %.2f cells/s before (%.4f cells a tick), %.2f..%.2f cells/s each tick round it, "
+					 "%d ticks over %.1f of the clock, its moves %.4f cells off whole ticks; the eye %.2f..%.2f cells/s, "
 					 "its largest step %.3f cells; at most %.3f cells off the line it walked before"),
-				Median, P95, Worst, WorstNear, Mean, Lo, Hi, EyeLo, EyeHi, Jump, Lag);
+				Median, P95, Worst, WorstNear, Mean, Step, Lo, Hi, Ticks, Clock, Odd, EyeLo, EyeHi, Jump, Lag);
 			const ac::net::Predictor::Stats& Ps = Mmo->Prediction().stats();
 			UE_LOG(LogAutocraft, Display, TEXT("%s"), *Line);
 			UE_LOG(LogAutocraft, Display, TEXT("w4: crossing: the prediction corrected %lld times over the walk, by %.4f cells at most (%lld snaps)"),
@@ -4643,8 +4661,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			FFileHelper::SaveStringToFile(Rows, *FPaths::Combine(Shots.Dir, TEXT("w4-crossing.csv")));
 			Check(Worst <= FMath::Max(P95 * 1.25, Median + 4.0),
 				FString::Printf(TEXT("w4: no hitch at the change (%.1f ms against %.1f ms median, %.1f ms 95th)"), Worst, Median, P95));
-			Check(Lo > Mean * 0.9 && Hi < Mean * 1.1, FString::Printf(TEXT("w4: the unit's pace held (%.2f..%.2f against %.2f cells/s)"), Lo, Hi, Mean));
-			Check(Lag < 0.12, FString::Printf(TEXT("w4: no stop, no jump (%.3f cells off its line, under one input tick's step)"), Lag));
+			Check(Lo > Mean * 0.9 && Hi < Mean * 1.1, FString::Printf(TEXT("w4: the unit's pace held (%.2f..%.2f against %.2f cells/s a tick)"), Lo, Hi, Mean));
+			Check(Odd < Step * 0.25 && FMath::Abs(Ticks - Clock) <= 2.0,
+				FString::Printf(TEXT("w4: no stop, no jump (%d ticks over %.1f of the clock; moves %.4f cells off whole ticks of %.4f)"), Ticks, Clock, Odd, Step));
 			Check(Jump < 0.5, FString::Printf(TEXT("w4: no camera jump (largest step %.3f cells)"), Jump));
 		}
 		Advance();
@@ -4669,6 +4688,17 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		const bool bIn = (In4 == TEXT("tern-ridge") && X < 9) || (In4 == TEXT("start") && X > 135);
 		if (In4 == TEXT("start") && X <= 135)
 		{
+			Stop(ac::pi);
+			T.Phase = 2022;
+			T.PhaseAt = Now;
+			return;
+		}
+		// Each picture starts the phase again, so its timeout never comes: a
+		// unit stuck in the passage took pictures until the run was killed
+		// (K3). 60 is 24 s of walk; it takes 6-8.
+		if (W4Frames >= 60)
+		{
+			Check(false, FString::Printf(TEXT("w4: walked back into Prospect Landing within %d pictures (%s)"), W4Frames, *Where()));
 			Stop(ac::pi);
 			T.Phase = 2022;
 			T.PhaseAt = Now;

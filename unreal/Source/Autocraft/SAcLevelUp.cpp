@@ -132,10 +132,27 @@ namespace
 const FAcBakedArt& FAcLevelPlate::Get(const FVector2D Size, const double TL, const double TR, const double BR, const double BL,
 	const int32 Seed)
 {
-	if (Art.Get() && For == Size) return Art;
-	For = Size;
+	const FIntPoint Key(FMath::RoundToInt32(Size.X * 4), FMath::RoundToInt32(Size.Y * 4));
+	if (const FAcBakedArt* Found = Arts.Find(Key); Found && Found->Get()) return *Found;
+	// A few dozen sizes in a session at most; never grown past that.
+	if (Arts.Num() >= 64) Arts.Reset();
+	FAcBakedArt& Art = Arts.FindOrAdd(Key);
 	AcCabArt::BakePlate(Art, Size, FAcCuts{TL, TR, BR, BL}, false, Seed);
 	return Art;
+}
+
+FVector2D SAcLevelBanner::PlateSize(const FString& InTitle, const FString& InSub, const FString& InGate, const bool bInKeyed)
+{
+	const double TitleW = FAcConsolePaint::TextWidth(InTitle, 40), SubW = FAcConsolePaint::TextWidth(InSub, bInKeyed ? 16 : 14);
+	// A gate level's line under the rest (the MMORPG mode).
+	const double Extra = InGate.IsEmpty() ? 0 : 24;
+	return FVector2D(FMath::Max(FMath::Max(TitleW, SubW), FAcConsolePaint::TextWidth(InGate, 15)) + 80, 82 + Extra);
+}
+
+void SAcLevelBanner::WarmPlate(const FString& InTitle, const FString& InSub, const FString& InGate) const
+{
+	// As `ShowLines` shows them (keyed).
+	Plate.Get(PlateSize(InTitle, InSub, InGate, true), 14, 14, 4, 4, 23);
 }
 
 // MARK: - The marks
@@ -284,10 +301,10 @@ int32 SAcLevelBanner::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 	const FGeometry G = Scale == 1 ? Geometry
 		: Geometry.MakeChild(FSlateRenderTransform(float(Scale)), FVector2f(float(O.X / Size.X), float((Size.Y - O.Y) / Size.Y)));
 
-	const double TitleW = FAcConsolePaint::TextWidth(Title_, 40), SubW = FAcConsolePaint::TextWidth(Sub_, bKeyed ? 16 : 14);
-	// A gate level's line under the rest (the MMORPG mode).
+	const double TitleW = FAcConsolePaint::TextWidth(Title_, 40);
+	const FVector2D PlateWH = PlateSize(Title_, Sub_, Gate_, bKeyed);
 	const double Extra = Gate_.IsEmpty() ? 0 : 24;
-	const double W = FMath::Max(FMath::Max(TitleW, SubW), FAcConsolePaint::TextWidth(Gate_, 15)) + 80, H = 82 + Extra;
+	const double W = PlateWH.X, H = PlateWH.Y;
 	int32 L = Layer;
 	FPaint P{&Out, &G, L, Size.Y};
 	// `Chrome.plateNode(..., cuts: (14, 14, 4, 4), leds: false, seed: 23)`.

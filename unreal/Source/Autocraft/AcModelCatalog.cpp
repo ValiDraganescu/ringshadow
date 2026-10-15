@@ -3,21 +3,76 @@
 #include "AcLog.h"
 #include "AcSpace.h"
 
+#include "Engine/AssetManager.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/StreamableManager.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
+// Found in memory first: `TryLoad` goes through StaticLoadObject every
+// time, loaded or not, about 0.2 ms a call (K3: a model's meshes drawn again
+// after a seamless region change took 136 of them, a 30 ms frame).
 UStaticMesh* FAcModelMesh::LoadMesh() const
 {
-	return Cast<UStaticMesh>(Mesh.TryLoad());
+	UObject* O = Mesh.ResolveObject();
+	return Cast<UStaticMesh>(O ? O : Mesh.TryLoad());
 }
 
 UMaterialInterface* FAcModelMesh::LoadMaterial() const
 {
-	return Cast<UMaterialInterface>(MaterialInstance.TryLoad());
+	UObject* O = MaterialInstance.ResolveObject();
+	return Cast<UMaterialInterface>(O ? O : MaterialInstance.TryLoad());
+}
+
+namespace
+{
+	TArray<FName>& ReadyModels()
+	{
+		static TArray<FName> Ready;
+		return Ready;
+	}
+}
+
+TArray<FName> FAcModelCatalog::TakeReady()
+{
+	return MoveTemp(ReadyModels());
+}
+
+void FAcModelCatalog::Preload(const TArrayView<const FName> ModelNames)
+{
+	static TSet<FName> Asked;
+	static TArray<TSharedPtr<FStreamableHandle>> Held;
+	const FAcModelCatalog& Catalog = Get();
+	TArray<FSoftObjectPath> Paths;
+	TArray<FName> Models;
+	for (const FName Name : ModelNames)
+	{
+		if (Asked.Contains(Name)) continue;
+		Asked.Add(Name);
+		const FAcModelInfo* Model = Catalog.Find(Name);
+		if (!Model) continue;
+		Models.Add(Name);
+		for (const FAcModelPart& Part : Model->Parts)
+			for (const FAcModelMesh& X : Part.Meshes)
+			{
+				if (X.Mesh.IsValid() && !X.Mesh.ResolveObject()) Paths.AddUnique(X.Mesh);
+				if (X.MaterialInstance.IsValid() && !X.MaterialInstance.ResolveObject()) Paths.AddUnique(X.MaterialInstance);
+			}
+	}
+	if (Paths.IsEmpty() || !UAssetManager::IsInitialized())
+	{
+		ReadyModels().Append(Models);
+		return;
+	}
+	// Ready once loaded (the delegate runs on the game thread).
+	if (TSharedPtr<FStreamableHandle> H = UAssetManager::GetStreamableManager().RequestAsyncLoad(Paths,
+			FStreamableDelegate::CreateLambda([Models] { ReadyModels().Append(Models); }),
+			FStreamableManager::DefaultAsyncLoadPriority, /*bManageActiveHandle*/ true))
+		Held.Add(H);
+	UE_LOG(LogAutocraft, Log, TEXT("models: %d meshes and materials asked for ahead"), Paths.Num());
 }
 
 const FAcModelPart* FAcModelInfo::FindPart(const FName Part) const

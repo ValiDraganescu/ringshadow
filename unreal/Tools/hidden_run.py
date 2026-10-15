@@ -22,7 +22,8 @@ Modes: pictures (the default: -game -RenderOffscreen at --res), --headless
 (-game -nullrhi: flow steps that need no pictures; cheaper), --tests PREFIX
 (automation tests in the editor, -nullrhi), --python SCRIPT (an editor script
 as the pythonscript commandlet), --app APP (a packaged Mac game instead of the
-editor, in the pictures or --headless mode: it runs a copy of APP beside it,
+editor, in the pictures mode (not --headless: a cooked game asserts under
+-nullrhi): it runs a copy of APP beside it,
 APP-hidden.app, with LSUIElement set so it gets no Dock icon, signed ad hoc,
 made again when APP is newer), --raw (the flags are a whole command, for a
 tool that starts the editor itself: it runs as given, under the slot, at low
@@ -221,6 +222,37 @@ def read_log(path: Path, python: bool) -> tuple[bool, list[str]]:
     return failed, show
 
 
+# A run whose process died before its log opened is tried this often.
+STILLBORN_TRIES = 3
+
+
+def stillborn(out: Path, binary: str, began: float) -> str | None:
+    """Why a run died before writing its log, from the crash report macOS
+    wrote for it, or None when the log has lines (an ordinary failure).
+
+    The packaged Development game sometimes dies at launch (K3, 2 of ~35):
+    the Cocoa thread allocates in AppKit's launch while the game thread turns
+    the low-level memory tracker (LLM) off, unguarded on the Mac
+    (FLLMGlobals::ProcessCommandLineInner locks only with
+    PLATFORM_HAS_MULTITHREADED_PREMAIN), and FLLMTracker::PopTag finds an
+    empty stack. An engine race; Shipping has no LLM."""
+    log = out / "run.log"
+    if log.exists() and log.stat().st_size > 0:
+        return None
+    reports = Path.home() / "Library/Logs/DiagnosticReports"
+    name = Path(binary).name
+    for _ in range(10):  # the report lands a moment after the exit
+        found = sorted((p for p in reports.glob(f"{name}-*.ips") if p.stat().st_mtime >= began - 1),
+                       key=lambda p: p.stat().st_mtime)
+        if found:
+            text = found[-1].read_text(errors="replace")
+            if "FLLMTracker::PopTag" in text:
+                return f"the Development build's LLM start-up race (engine; {found[-1].name})"
+            return f"a crash at launch ({found[-1].name})"
+        time.sleep(0.5)
+    return "no crash report"
+
+
 def servers_left(out: Path) -> list[str]:
     """World servers still running on the run's folder (a detached one the
     run did not stop)."""
@@ -272,8 +304,10 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
 
     if a.app:
-        if a.tests or a.python or a.raw:
-            p.error("--app runs the game: the pictures or --headless mode only")
+        if a.tests or a.python or a.raw or a.headless:
+            # -nullrhi: a cooked game may not build mesh render data, and the
+            # game builds meshes at run time (StaticMesh.cpp asserts, K3).
+            p.error("--app runs the game in the pictures mode only (a cooked game asserts under -nullrhi)")
         if not (Path(a.app) / "Contents/MacOS").is_dir():
             p.error(f"--app: no packaged app at {a.app}")
     elif not MODULE.exists():
@@ -288,18 +322,27 @@ def main() -> None:
     started = time.time()
     say(f"running in {out}")
     timed_out = False
-    with (out / "run.out").open("w") as so:
-        child = subprocess.Popen(["nice", "-n", "10", *cmd], stdout=so, stderr=subprocess.STDOUT,
-                                 stdin=subprocess.DEVNULL, cwd=REPO, start_new_session=True)
-        try:
-            child.wait(timeout=a.timeout * 60)
-        except subprocess.TimeoutExpired:
-            os.killpg(child.pid, signal.SIGKILL)
-            child.wait()
-            timed_out = True
-        except KeyboardInterrupt:
-            os.killpg(child.pid, signal.SIGKILL)
-            raise
+    for attempt in range(1, STILLBORN_TRIES + 1):
+        began = time.time()
+        with (out / "run.out").open("w") as so:
+            child = subprocess.Popen(["nice", "-n", "10", *cmd], stdout=so, stderr=subprocess.STDOUT,
+                                     stdin=subprocess.DEVNULL, cwd=REPO, start_new_session=True)
+            try:
+                child.wait(timeout=a.timeout * 60)
+            except subprocess.TimeoutExpired:
+                os.killpg(child.pid, signal.SIGKILL)
+                child.wait()
+                timed_out = True
+            except KeyboardInterrupt:
+                os.killpg(child.pid, signal.SIGKILL)
+                raise
+        # A run that died before its log opened yields nothing: said why
+        # (its crash report) and run again, never a silent empty result.
+        why = None if a.raw or timed_out or child.returncode == 0 else stillborn(out, cmd[0], began)
+        if why is None:
+            break
+        say(f"the run died before its log opened (exit {child.returncode}): {why}"
+            + (f"; again ({attempt + 1} of {STILLBORN_TRIES})" if attempt < STILLBORN_TRIES else ""))
     fcntl.flock(fd, fcntl.LOCK_UN)
     os.close(fd)
 

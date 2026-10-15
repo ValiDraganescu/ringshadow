@@ -144,6 +144,8 @@ public:
 	void LevelUp(ac::UnitKind Kind, int32 Level, bool bHold = false);
 	/// The MMORPG mode's Prospector level (`UAcProgressHudSubsystem`): the
 	/// banner with its lines (`SAcLevelBanner::ShowLines`).
+	/// Bakes the banner plate these lines would take, ahead (K3).
+	void WarmBanner(const FString& Title, const FString& Sub, const FString& Gate);
 	void ShowBanner(const FString& Title, const FString& Sub, const FString& Gate, bool bHold = false,
 		const FLinearColor& Accent = FLinearColor(0, 0, 0, 0));
 	/// The MMORPG banner slot's top edge (points from the view's top) and

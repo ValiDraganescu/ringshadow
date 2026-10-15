@@ -182,6 +182,13 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	}
 	const UAcConsoleSubsystem* ConsoleSub = UAcConsoleSubsystem::Get(this);
 	const bool bConsole = ConsoleSub && ConsoleSub->Console().IsValid();
+	if (DrivenId != U.id && GFrameCounter - Sim->SeamlessFrame() <= 2)
+	{
+		// The same machine under its new id after a seamless region change
+		// (W4): the overlay stays as it is, its console art not baked again
+		// (K3: its copy back held the render thread 18 ms at every crossing).
+		DrivenId = U.id;
+	}
 	if (DrivenId != U.id)
 	{
 		// A new ride (`takeOver`: `pilotHit = nil`).
