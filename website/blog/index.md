@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Realm projects: what the tax is for
+
+15 October 2026 · M9 · 2 pictures
+
+The realm wallet now funds four realm-wide projects, a world day each: the Beacon halves Dropship fares, the Relay widens every pilot's night sight, the Armoury lifts every turret a mark, the Dock Crew doubles the mercenaries. M9 is closed; M10 is planned.
+
+Read it: https://ringshadow.com/blog/realm-projects
+
 ## The packaged build, measured: a 1,547 ms stall down to 42
 
 15 October 2026 · M9 · 1 chart

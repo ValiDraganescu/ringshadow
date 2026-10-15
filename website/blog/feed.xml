@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T10:35:00Z</updated>
+  <updated>2026-10-15T11:10:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>Realm projects: what the tax is for</title>
+    <id>tag:ringshadow,2026-10-15:blog/realm-projects</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/realm-projects"/>
+    <published>2026-10-15T11:10:00Z</published>
+    <updated>2026-10-15T11:10:00Z</updated>
+    <summary>The realm wallet now funds four realm-wide projects, a world day each: the Beacon halves Dropship fares, the Relay widens every pilot's night sight, the Armoury lifts every turret a mark, the Dock Crew doubles the mercenaries. M9 is closed; M10 is planned.</summary>
+  </entry>
   <entry>
     <title>The packaged build, measured: a 1,547 ms stall down to 42</title>
     <id>tag:ringshadow,2026-10-15:blog/packaged</id>

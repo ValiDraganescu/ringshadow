@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [Realm projects: what the tax is for](https://ringshadow.com/blog/realm-projects.md): The realm wallet in Ringshadow now funds four realm-wide projects a world day long: the Beacon halves Dropship fares, the Relay widens every pilot's night sight, the Armoury lifts every turret a mark, the Dock Crew doubles the mercenaries.
 - [The packaged build, measured: a 1,547 ms stall down to 42](https://ringshadow.com/blog/packaged.md): Ringshadow's online mode packaged as a Mac app and measured, not shipped: it starts four times sooner than the editor, draws as fast, and the first Dropship call's 1.5-second stall is gone.
 - [Build anywhere in the canyon](https://ringshadow.com/blog/build-anywhere.md): Ringshadow's canyons have no build spots any more: place any building anywhere standable in the zone, packed as tight as you like. The Brood walks round what it can and bites through what walls it off.
 - [The siege has a sound](https://ringshadow.com/blog/siege-sound.md): Two music beds for the canyon waves and the Matriarch, 28 radio lines from KSTR's announcer and the Dropship's engines, all made with ElevenLabs for Ringshadow.
