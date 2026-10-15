@@ -1,10 +1,12 @@
-// Starfall (docs/weather.md, "Starfall"; docs/mmorpg-m7.md E2): two or three
-// times a world day a meteor streaks across the sky under the gas giant and
-// lands somewhere in the world, leaving a crater with a rich deposit, first
-// come first served. The server picks the times (seeded dice per world, a
-// pure function of the world's seed and day: `impacts`) and the places (its
-// own rules, WorldStarfall.cpp) and tells every pilot (`net::Sky::starfalls`);
-// the client draws the streak (`head`), the impact and the crater.
+// Starfall (docs/weather.md, "Starfall"; docs/mmorpg-m7.md E2, m10.md E1):
+// about once a world day a meteor streaks across the sky under the gas giant
+// and lands somewhere in the world. Its blast destroys what it falls on and
+// hurts what stands round it (`blastRadius`); it leaves a crater with a
+// deposit of 100 to 1,000 ore, first come first served. The server picks
+// the times (seeded dice per world, a pure function of the world's seed and
+// day: `impacts`) and the places (its own rules, WorldStarfall.cpp), does the
+// blast's damage and tells every pilot (`net::Sky::starfalls`); the client
+// draws the streak (`head`), the flash, the shockwave and the crater.
 #pragma once
 
 #include "AutocraftCoreApi.h"
@@ -18,9 +20,9 @@
 namespace ac {
 
 struct AUTOCRAFTCORE_API Starfall {
-    /// Falls a world day: 2 or 3, by the day's dice.
-    static constexpr int64_t fewest = 2;
-    static constexpr int64_t most = 3;
+    /// Falls a world day, by the day's dice (E1: one, realm-wide).
+    static constexpr int64_t fewest = 1;
+    static constexpr int64_t most = 1;
     /// The radio tells every pilot this many seconds before the impact: the
     /// place is picked then.
     static constexpr double warning = 60;
@@ -37,10 +39,28 @@ struct AUTOCRAFTCORE_API Starfall {
     /// after the impact (a world day). The deposit stays until emptied.
     static constexpr double craterRadius = 4;
     static constexpr double craterLife = WorldClock::dayLength;
-    /// The deposit: this many times a normal deposit's ore (the median of
-    /// the region's own), at least `minOre`; never grows back.
-    static constexpr double richness = 3;
-    static constexpr int64_t minOre = 3000;
+    /// The deposit (E1): `oreFewest` to `oreMost` ore, by the fall's dice;
+    /// never grows back.
+    static constexpr int64_t oreFewest = 100;
+    static constexpr int64_t oreMost = 1000;
+    /// The blast (E1): about a quarter of the region's diameter across (its
+    /// longer side's); everything within `blastKill` of that radius of the
+    /// impact is destroyed, buildings and units alike, and the damage falls
+    /// off from there to nothing at its edge. A thing is as near as its
+    /// nearest edge.
+    static constexpr double blastAcross = 0.25;
+    static constexpr double blastKill = 0.4;
+    /// The home's ground (E1): no blast reaches the start region's Citadel
+    /// or this many cells round it.
+    static constexpr double homeSpared = 25;
+    /// The blast's radius in a region `extent` (width, depth) cells.
+    static double blastRadius(Vec2 extent);
+    /// The share of its whole hp the blast takes from a thing `distance`
+    /// cells from the impact (past its edge) in a blast of `radius`: 1
+    /// (destroyed) within `blastKill` of it, then down to 0 at the edge.
+    static double blastShare(double distance, double radius);
+    /// A fall's ore by its dice.
+    static int64_t oreFrom(uint64_t dice);
     /// Ore drilled from it pays this many times the XP: the share over 1 at
     /// the drill, the plain XP when the load is unloaded.
     static constexpr double xp = 1.5;

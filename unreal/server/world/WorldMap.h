@@ -1037,9 +1037,14 @@ public:
     std::optional<Fall> forceStarfall(double in, std::optional<size_t> region = std::nullopt,
                                       std::optional<PilotId> near = std::nullopt);
     /// Whether ground point `at` of region `r` takes a crater: open, flat
-    /// ground joined to the region's pads, clear of its sites, pads, ore,
-    /// wells and buildings, and of the map's edge.
+    /// ground joined to the region's pads, clear of its sites, pads, ore and
+    /// wells, and of the map's edge (E1: buildings and units are in the
+    /// blast's way, not the crater's). Its blast never reaches the home's
+    /// ground (`homeSpared`): the start region's Citadels, or with none its
+    /// pads, and `Starfall::homeSpared` cells round them.
     bool craterFits(size_t r, Vec2 at) const;
+    /// E1: whether a blast at `at` in region `r` reaches the home's ground.
+    bool reachesHome(size_t r, Vec2 at) const;
     /// The starfall dice's seed (`params().starfallSeed`, or the world's id).
     uint64_t starfallSeed() const;
 
@@ -1926,6 +1931,10 @@ private:
     /// A fall's deposit into its region (`fall.patch` set): at the impact,
     /// and from a save.
     void landFall(Fall& fall, int64_t remaining, std::optional<int64_t> id = std::nullopt);
+    /// E1: a fall's blast at its impact (not from a save): every building
+    /// and unit within `Starfall::blastRadius` of it loses
+    /// `Starfall::blastShare` of its whole hp, by its nearest edge.
+    void blast(const Fall& fall);
     /// A spot for a crater in region `r` by the dice (nil: none found);
     /// `near`: 40-58 cells from it, ahead along `heading` first.
     std::optional<Vec2> craterSpot(size_t r, std::mt19937_64& dice, std::optional<Vec2> near = std::nullopt,

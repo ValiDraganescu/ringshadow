@@ -1,9 +1,11 @@
-// Starfall on the server (docs/weather.md "Starfall"; docs/mmorpg-m7.md E2):
-// the schedule's falls told a minute before their impacts, each placed then
-// on open ground of a region weighted toward the pilots; at the impact a rich
-// deposit in the crater, first come first served, that never grows back;
-// gone from the sky's list once its crater has faded and its deposit is
-// empty.
+// Starfall on the server (docs/weather.md "Starfall"; docs/mmorpg-m7.md E2,
+// m10.md E1): the schedule's falls told a minute before their impacts, each
+// placed then on open ground of a region weighted toward the pilots, never
+// where its blast would reach the home's ground; at the impact the blast
+// (what it falls on destroyed, the damage falling off to its edge) and a
+// deposit of 100 to 1,000 ore in the crater, first come first served, that
+// never grows back; gone from the sky's list once its crater has faded and
+// its deposit is empty.
 
 #include "WorldMap.h"
 
@@ -29,8 +31,6 @@ constexpr double kPadGap = region::padReach + 3;
 constexpr double kSiteGap = 4;
 constexpr double kOreGap = 2.5;
 constexpr double kWellGap = 3.5;
-constexpr double kBuildingGap = 2;
-constexpr double kUnitGap = 1;
 /// Another fall's crater in the same region.
 constexpr double kFallGap = 2 * Starfall::craterRadius + 6;
 /// A forced fall near a pilot: this far from its Prospector, cells.
@@ -40,16 +40,6 @@ constexpr int kTries = 300;
 
 double uniform(std::mt19937_64& dice, double lo, double hi) {
     return lo + (hi - lo) * double(dice() >> 11) * (1.0 / 9007199254740992.0);
-}
-
-/// A normal deposit's ore in a region: the median of the region file's own
-/// (the first `own` patches).
-int64_t normalOre(const GameState& st, size_t own) {
-    std::vector<int64_t> amounts;
-    for (size_t i = 0; i < std::min(own, st.patches.size()); i++) amounts.push_back(st.patches[i].initial);
-    if (amounts.empty()) return 0;
-    std::nth_element(amounts.begin(), amounts.begin() + long(amounts.size() / 2), amounts.end());
-    return amounts[amounts.size() / 2];
 }
 
 } // namespace
@@ -94,13 +84,46 @@ bool WorldMap::craterFits(size_t r, Vec2 at) const {
     if (st.wells)
         for (const Well& w : *st.wells)
             if (near(w.position, kWellGap)) return false;
-    for (const Structure& s : st.structures)
-        if (near(s.position, Rules::radius(s.kind) + kBuildingGap)) return false;
-    for (const Unit& u : st.units)
-        if (near(u.position, Rules::radius(u.kind) + kUnitGap)) return false;
     for (const Fall& f : falls_)
         if (f.region == r && length(f.at - at) < kFallGap) return false;
-    return true;
+    return !reachesHome(r, at);
+}
+
+bool WorldMap::reachesHome(size_t r, Vec2 at) const {
+    if (r != start_ || r >= regions_.size()) return false;
+    const Region& reg = *regions_[r];
+    const double reach = Starfall::blastRadius(reg.places() ? reg.places()->extent() : Vec2(0, 0)) + Starfall::homeSpared;
+    bool citadel = false;
+    for (const Structure& s : reg.simulation().state.structures) {
+        if (s.kind != StructureKind::citadel) continue;
+        citadel = true;
+        if (length(s.position - at) < Rules::radius(s.kind) + reach) return true;
+    }
+    // No Citadel yet: where a new pilot lands and the home will rise.
+    if (!citadel && reg.places())
+        for (const region::Place& p : reg.places()->pads)
+            if (length(p.at - at) < reach) return true;
+    return false;
+}
+
+void WorldMap::blast(const Fall& fall) {
+    Simulation& sim = regions_[fall.region]->simulation();
+    GameState& st = sim.state;
+    const auto& places = regions_[fall.region]->places();
+    const double R = Starfall::blastRadius(places ? places->extent() : Vec2(0, 0));
+    if (!(R > 0)) return;
+    for (Structure& s : st.structures) {
+        if (s.hp <= 0) continue;
+        const double share = Starfall::blastShare(std::max(0.0, length(s.position - fall.at) - Rules::radius(s.kind)), R);
+        if (share >= 1) s.hp = 0;
+        else if (share > 0) s.hp -= share * Rules::hp(s.kind);
+    }
+    for (Unit& u : st.units) {
+        if (u.hp <= 0) continue;
+        const double share = Starfall::blastShare(std::max(0.0, length(u.position - fall.at) - Rules::radius(u.kind)), R);
+        if (share >= 1) u.hp = 0;
+        else if (share > 0) u.hp -= share * sim.maxHP(u);
+    }
 }
 
 std::optional<Vec2> WorldMap::craterSpot(size_t r, std::mt19937_64& dice, std::optional<Vec2> near, double heading) const {
@@ -164,10 +187,14 @@ std::optional<WorldMap::Fall> WorldMap::forceStarfall(double in, std::optional<s
         r = region ? *region : fallRegion(dice);
         if (r >= regions_.size()) return std::nullopt;
         at = craterSpot(r, dice);
+        // No open ground there (and none asked for): the next regions round.
+        for (size_t k = 1; !at && !region && k < regions_.size(); k++) {
+            r = (r + 1) % regions_.size();
+            at = craterSpot(r, dice);
+        }
     }
     if (!at) return std::nullopt;
-    const GameState& st = regions_[r]->simulation().state;
-    const int64_t ore = std::max(Starfall::minOre, int64_t(std::llround(Starfall::richness * double(normalOre(st, ownPatches_[r])))));
+    const int64_t ore = Starfall::oreFrom(dice());
     Fall f{nextFall_++, r, *at, clock_ + std::max(0.0, in), std::fmod(from + 360, 360.0), std::nullopt, ore, ore};
     falls_.push_back(f);
     sky_.starfalls = skyFalls();
@@ -219,9 +246,7 @@ void WorldMap::starfall() {
                 at = craterSpot(r, dice);
             }
             if (!at) continue;
-            const GameState& st = regions_[r]->simulation().state;
-            const int64_t ore =
-                std::max(Starfall::minOre, int64_t(std::llround(Starfall::richness * double(normalOre(st, ownPatches_[r])))));
+            const int64_t ore = Starfall::oreFrom(dice());
             falls_.push_back(Fall{nextFall_++, r, *at, t, Starfall::bearingFrom(dice()), std::nullopt, ore, ore});
         }
     }
@@ -236,7 +261,10 @@ void WorldMap::starfall() {
             }
     for (Fall& f : falls_) {
         if (!f.patch) {
-            if (now >= f.impact) landFall(f, f.ore);
+            if (now >= f.impact) {
+                blast(f);
+                landFall(f, f.ore);
+            }
             continue;
         }
         GameState& st = regions_[f.region]->simulation().state;

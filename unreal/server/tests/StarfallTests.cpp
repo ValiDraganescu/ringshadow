@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <limits>
 #include <map>
+#include <memory>
 
 namespace {
 
@@ -94,7 +95,7 @@ std::string fresh(const std::string& name) {
 
 } // namespace
 
-TEST(starfall_schedule_two_or_three_a_day_by_the_seed) {
+TEST(starfall_schedule_one_a_day_by_the_seed) {
     const double day = WorldClock::dayLength;
     int64_t total = 0;
     for (int64_t d = 0; d < 30; d++) {
@@ -110,12 +111,12 @@ TEST(starfall_schedule_two_or_three_a_day_by_the_seed) {
         // The same seed, the same times; another seed, others.
         EXPECT_TRUE(Starfall::impacts(kSeed, d, day) == t);
     }
-    EXPECT_TRUE(total > 30 * 2 && total < 30 * 3);
+    // E1: about one a world day, realm-wide.
+    EXPECT_EQ(total, int64_t(30));
     EXPECT_TRUE(Starfall::impacts(kSeed, 3, day) != Starfall::impacts(kSeed + 1, 3, day));
     // The next impact after a time: the first of the day, then on.
     const auto d0 = Starfall::impacts(kSeed, 0, day);
     EXPECT_NEAR(Starfall::next(kSeed, 0, day), d0[0], 1e-9);
-    EXPECT_NEAR(Starfall::next(kSeed, d0[0], day), d0[1], 1e-9);
     EXPECT_NEAR(Starfall::next(kSeed, d0.back(), day), Starfall::impacts(kSeed, 1, day)[0], 1e-9);
     // From the giant's side of the sky.
     for (uint64_t i = 0; i < 50; i++) {
@@ -151,7 +152,7 @@ TEST(starfall_told_a_minute_before_lands_a_rich_deposit) {
     // Told once.
     stepFor(w, 5);
     EXPECT_EQ(w.starfalls().size(), size_t(1));
-    // The impact: a deposit after the region's own, three times a normal one.
+    // The impact: a deposit after the region's own, of 100 to 1,000 ore (E1).
     const size_t own = w.region(f.region).simulation().state.patches.size();
     w.setClock(impact - 0.5);
     stepFor(w, 1);
@@ -162,11 +163,7 @@ TEST(starfall_told_a_minute_before_lands_a_rich_deposit) {
     const OreDeposit& d = st.patches[own];
     EXPECT_NEAR(d.position.x, f.at.x, 1e-9);
     EXPECT_NEAR(d.position.y, f.at.y, 1e-9);
-    std::vector<int64_t> amounts;
-    for (size_t i = 0; i < own; i++) amounts.push_back(st.patches[i].initial);
-    std::sort(amounts.begin(), amounts.end());
-    const int64_t normal = amounts[amounts.size() / 2];
-    EXPECT_EQ(d.initial, std::max(Starfall::minOre, int64_t(std::llround(3.0 * double(normal)))));
+    EXPECT_TRUE(d.initial >= Starfall::oreFewest && d.initial <= Starfall::oreMost);
     EXPECT_EQ(d.remaining, d.initial);
     std::set<int64_t> ids;
     for (const OreDeposit& p : st.patches) ids.insert(p.id);
@@ -196,15 +193,23 @@ TEST(starfall_lands_on_open_ground_only) {
             }
     EXPECT_TRUE(cliffs > 0);
     // Weighted toward the pilot's region and its neighbours; every one placed
-    // by the rules, clear of the region's pads, sites and ore.
+    // by the rules, clear of the region's pads, sites and ore. Ten at a time
+    // in a fresh world (E1: the home's ground spared, a region holds only so
+    // many craters at once).
     std::map<size_t, int> count;
     int placed = 0;
+    std::unique_ptr<WorldMap> v;
     for (int i = 0; i < 60; i++) {
-        const auto f = w.forceStarfall(30);
+        if (i % 10 == 0) {
+            v = std::make_unique<WorldMap>(first(), params());
+            ASSERT_TRUE(v->join(me));
+            v->setClock(1 + 977.0 * i);
+        }
+        const auto f = v->forceStarfall(30);
         if (!f) continue;
         placed += 1;
         count[f->region] += 1;
-        const Region& g = w.region(f->region);
+        const Region& g = v->region(f->region);
         for (const region::Place& p : g.places()->pads)
             EXPECT_TRUE(length(p.at - f->at) >= Starfall::craterRadius + region::padReach + 3 - 1e-9);
         for (const region::Site& p : g.places()->sites) EXPECT_TRUE(length(p.at - f->at) >= Starfall::craterRadius + 4 - 1e-9);
@@ -392,4 +397,113 @@ TEST(starfall_many_falls_keep_the_snapshot_small) {
     net::SnapshotWriter wr;
     const auto o = wr.write(s, 0, 1 << 20);
     EXPECT_TRUE(o.messages.size() <= 2);
+}
+
+/// E1: a fall's ore is 100 to 1,000, spread over the range.
+TEST(starfall_ore_one_hundred_to_a_thousand) {
+    int64_t lo = Starfall::oreMost, hi = Starfall::oreFewest;
+    for (uint64_t i = 0; i < 2000; i++) {
+        const int64_t ore = Starfall::oreFrom(Starfall::mix(i));
+        EXPECT_TRUE(ore >= Starfall::oreFewest && ore <= Starfall::oreMost);
+        lo = std::min(lo, ore);
+        hi = std::max(hi, ore);
+    }
+    EXPECT_TRUE(lo < 150 && hi > 950);
+    // The blast: a quarter of a medium region's 144 cells across.
+    EXPECT_NEAR(Starfall::blastRadius(Vec2(144, 96)), 18, 1e-9);
+    EXPECT_NEAR(Starfall::blastShare(0, 18), 1, 1e-9);
+    EXPECT_NEAR(Starfall::blastShare(18 * Starfall::blastKill, 18), 1, 1e-9);
+    EXPECT_TRUE(Starfall::blastShare(12, 18) > 0 && Starfall::blastShare(12, 18) < 1);
+    EXPECT_NEAR(Starfall::blastShare(18, 18), 0, 1e-9);
+}
+
+/// E1: the blast destroys a building and a unit it falls on and hurts, not
+/// kills, a building and a unit at its edge; past its edge nothing.
+TEST(starfall_blast_destroys_at_the_centre_and_hurts_to_its_edge) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.join(me));
+    stepFor(w, 0.5);
+    const size_t r = *w.regionNamed("tern-ridge");
+    const auto f = w.forceStarfall(3, r);
+    ASSERT_TRUE(f.has_value());
+    // A moment before the impact, so the units stand where they are put.
+    w.setClock(f->impact - 0.1);
+    Simulation& sim = w.region(r).simulation();
+    GameState& st = sim.state;
+    const double R = Starfall::blastRadius(w.region(r).places()->extent());
+    const auto kind = StructureKind::habDome;
+    const double rb = Rules::radius(kind);
+    // At the centre, at the edge (1.5 cells inside it, by its nearest edge),
+    // and past it, each way round so they stand clear of each other.
+    const int64_t centre = st.nextID++, edge = st.nextID++, past = st.nextID++;
+    st.structures.push_back(Structure(centre, kind, Pilot::player, f->at + Vec2(2, 0)));
+    st.structures.push_back(Structure(edge, kind, Pilot::player, f->at + Vec2(0, R - 1.5 + rb)));
+    st.structures.push_back(Structure(past, kind, Pilot::player, f->at + Vec2(-(R + 2 + rb), 0)));
+    const auto ranger = UnitKind::ranger;
+    const double ru = Rules::radius(ranger);
+    const int64_t uCentre = st.nextID++, uEdge = st.nextID++, uPast = st.nextID++;
+    st.units.push_back(sim.freshUnit(ranger, uCentre, Pilot::player, f->at + Vec2(0, -2), 0));
+    st.units.push_back(sim.freshUnit(ranger, uEdge, Pilot::player, f->at + Vec2(R - 1.5 + ru, 3), 0));
+    st.units.push_back(sim.freshUnit(ranger, uPast, Pilot::player, f->at + Vec2(-3, -(R + 2 + ru)), 0));
+    sim.reindex();
+    const double full = Rules::hp(kind), unitFull = sim.maxHP(*st.unit(uEdge));
+    stepFor(w, 0.25);
+    ASSERT_TRUE(w.starfalls()[0].patch.has_value());
+    EXPECT_TRUE(!st.structure(centre).has_value());
+    EXPECT_TRUE(!st.unit(uCentre).has_value());
+    ASSERT_TRUE(st.structure(edge).has_value() && st.structure(past).has_value());
+    std::printf("  blast %.0f cells: the edge's Hab Dome %.0f of %.0f hp, its Ranger %.0f of %.0f\n", R, st.structure(edge)->hp, full,
+                st.unit(uEdge)->hp, unitFull);
+    EXPECT_TRUE(st.structure(edge)->hp > 0 && st.structure(edge)->hp < full);
+    EXPECT_NEAR(st.structure(past)->hp, full, 1e-9);
+    ASSERT_TRUE(st.unit(uEdge).has_value() && st.unit(uPast).has_value());
+    EXPECT_TRUE(st.unit(uEdge)->hp > 0 && st.unit(uEdge)->hp < unitFull);
+    EXPECT_NEAR(st.unit(uPast)->hp, unitFull, 1e-9);
+}
+
+/// E1: no fall's blast reaches the start region's Citadel or the 25 cells
+/// round it (with no Citadel yet, its pad); elsewhere, beside another
+/// region's Citadel too, nothing is spared.
+TEST(starfall_spares_the_home_ground_only) {
+    WorldMap w(first(), params());
+    const size_t s = *w.regionNamed("start");
+    GameState& st = w.region(s).simulation().state;
+    const double R = Starfall::blastRadius(w.region(s).places()->extent());
+    const Vec2 pad = w.region(s).places()->pads.at(0).at;
+    const GroundRect b = w.region(s).simulation().map->bounds;
+    // With no Citadel: round the pad.
+    int fits = 0;
+    for (double x = b.minX; x <= b.maxX; x += 2)
+        for (double z = b.minZ; z <= b.maxZ; z += 2)
+            if (w.craterFits(s, Vec2(x, z))) {
+                fits += 1;
+                EXPECT_TRUE(length(Vec2(x, z) - pad) >= R + Starfall::homeSpared);
+            }
+    EXPECT_TRUE(fits > 0);
+    // A Citadel: round it (and no longer the pad).
+    const Vec2 home = pad + Vec2(-30, 6);
+    st.structures.push_back(Structure(st.nextID++, StructureKind::citadel, Pilot::player, home));
+    w.region(s).simulation().reindex();
+    const double reach = Rules::radius(StructureKind::citadel) + Starfall::homeSpared + R;
+    fits = 0;
+    int nearPad = 0;
+    for (double x = b.minX; x <= b.maxX; x += 2)
+        for (double z = b.minZ; z <= b.maxZ; z += 2)
+            if (w.craterFits(s, Vec2(x, z))) {
+                fits += 1;
+                EXPECT_TRUE(length(Vec2(x, z) - home) >= reach);
+                if (length(Vec2(x, z) - pad) < R + Starfall::homeSpared) nearPad += 1;
+            }
+    EXPECT_TRUE(fits > 0 && nearPad > 0);
+    // Another region's Citadel: not spared.
+    const size_t t = *w.regionNamed("tern-ridge");
+    GameState& tt = w.region(t).simulation().state;
+    const Vec2 there = w.region(t).places()->pads.at(0).at + Vec2(20, 10);
+    tt.structures.push_back(Structure(tt.nextID++, StructureKind::citadel, Pilot::player, there));
+    w.region(t).simulation().reindex();
+    int beside = 0;
+    for (double x = -24; x <= 24; x += 2)
+        for (double z = -24; z <= 24; z += 2)
+            if (w.craterFits(t, there + Vec2(x, z))) beside += 1;
+    EXPECT_TRUE(beside > 0);
 }

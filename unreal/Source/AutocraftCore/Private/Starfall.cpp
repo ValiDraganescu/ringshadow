@@ -54,6 +54,19 @@ double Starfall::bearing(Vec2 from, Vec2 to) {
     return b < 0 ? b + 360 : b;
 }
 
+double Starfall::blastRadius(Vec2 extent) { return std::max(extent.x, extent.y) * blastAcross / 2; }
+
+double Starfall::blastShare(double distance, double radius) {
+    const double kill = radius * blastKill;
+    if (distance <= kill) return 1;
+    if (distance >= radius) return 0;
+    return (radius - distance) / (radius - kill);
+}
+
+int64_t Starfall::oreFrom(uint64_t dice) {
+    return oreFewest + int64_t(mix(dice ^ 0x0bea11ULL) % uint64_t(oreMost - oreFewest + 1));
+}
+
 Vec3 Starfall::head(double before, double bearing) {
     const double along = speed * std::max(0.0, before);
     const Vec2 back = toward(bearing) * (along * std::cos(descent * kPi / 180.0));
