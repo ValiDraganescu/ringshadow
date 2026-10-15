@@ -735,3 +735,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T K3 leftovers done 441c57b: launch race retried, trace exit crash documented, cvars cached, Build/Mac leftovers ignored.
 - N W4 crossing: worst frame 31-37 ms -> 13.9-14.4 at 1x; pace +-2%; checks count input ticks; 5-of-5 pending a quiet Mac.
 - I packaged Development launches die 2/35 on an engine memory-tracker start-up race; Shipping unaffected; hidden_run retries.
+- I respawn (user): a Prospector that falls while handed back is never respawned (respawns() needs p.unit); the pilot is stuck; wt1 fixing before X2.
