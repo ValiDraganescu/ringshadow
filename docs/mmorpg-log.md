@@ -731,3 +731,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D W4 (manager): arrival banners baked ahead with the region, plates cached by size; other plates read back only under 2x screen scale (Metal readback ~18 ms).
 - T W5 core 6a09229: several humans drive in one region (Simulation::drivers); RTS path unchanged, goldens hold; no wire or save change.
 - N W5 core: 17 files +572 -119; TwoPilotsTests: both move, drill, level, headlamp, own skills; server 317.
+- I goals (user): a built Foundry gives no next step; the goal line should lead to J and a Mk I module, then to fitting; wt1 with X2.
