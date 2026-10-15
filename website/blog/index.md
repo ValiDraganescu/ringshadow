@@ -8,6 +8,22 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Through the walls: walking between regions
+
+15 October 2026 · M8 · 10 pictures
+
+Each region has its own ground, cliff walls and passages, and you walk from one into the next without anything moving or reloading.
+
+Read it: https://ringshadow.com/blog/passages
+
+## The world map: the real ground, seen from above
+
+15 October 2026 · M8 · 7 pictures
+
+M shows every region you've seen as a picture of its ground from above, with what's alive drawn over it and a tooltip on everything.
+
+Read it: https://ringshadow.com/blog/world-map
+
 ## The Matriarch wakes in Slag Pockets
 
 15 October 2026 · M8 · 6 pictures

@@ -12,6 +12,8 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [Through the walls: walking between regions](https://ringshadow.com/blog/passages.md): Ringshadow's regions now have grounds of their own, cliff walls and 14 passages between them, and walking from one region into the next happens without a reload or a jump.
+- [The world map: the real ground, seen from above](https://ringshadow.com/blog/world-map.md): Press M and Ringshadow's world map shows every region you've been to as a picture of its real ground from above, with live pilots, mercenaries, the Brood, buildings and deposits, and a tooltip on each.
 - [The Matriarch wakes in Slag Pockets](https://ringshadow.com/blog/matriarch.md): The Brood's queen now lives at her nest in Slag Pockets: 6,000 hp, a slam, an acid spit and a roar that rallies her horde. Pilots who bring her down share 3,000 ore, 1,500 MH and a rare blueprint.
 - [Guns for the realm: the Citadel shoots back](https://ringshadow.com/blog/turrets.md): The Citadel now shoots back with four corner turrets, pilots build a Sentinel AA tower and a gatling gun firing red-hot ore-and-MH rounds, and every placed turret takes upgrades paid from your own wallet.
 - [Mercenaries: they mine while you sleep](https://ringshadow.com/blog/mercenaries.md): Hire mercenary prospectors at Ringshadow's Citadel: in a world day each one mines what you mine in an hour, and they keep working while the game is closed.

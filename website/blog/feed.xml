@@ -6,10 +6,26 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T01:00:00Z</updated>
+  <updated>2026-10-15T02:00:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>Through the walls: walking between regions</title>
+    <id>tag:ringshadow,2026-10-15:blog/passages</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/passages"/>
+    <published>2026-10-15T02:00:00Z</published>
+    <updated>2026-10-15T02:00:00Z</updated>
+    <summary>Each region now has a ground of its own, cliff walls and passages, and walking from one region into the next happens without a reload or a jump.</summary>
+  </entry>
+  <entry>
+    <title>The world map: the real ground, seen from above</title>
+    <id>tag:ringshadow,2026-10-15:blog/world-map</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/world-map"/>
+    <published>2026-10-15T01:30:00Z</published>
+    <updated>2026-10-15T01:30:00Z</updated>
+    <summary>Press M for a picture of every region you've been to, its real ground seen from above, with pilots, mercenaries, the Brood, buildings and deposits live on it and a tooltip on each.</summary>
+  </entry>
   <entry>
     <title>The Matriarch wakes in Slag Pockets</title>
     <id>tag:ringshadow,2026-10-15:blog/matriarch</id>

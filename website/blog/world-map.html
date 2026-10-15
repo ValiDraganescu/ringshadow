@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The World Map · Ringshadow</title>
+  <meta name="description" content="Press M and Ringshadow's world map shows every region you've been to as a picture of its real ground from above, with live pilots, mercenaries, the Brood, buildings and deposits, and a tooltip on each.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="The world map: the real ground, seen from above">
+  <meta property="og:description" content="Press M and Ringshadow's world map shows every region you've been to as a picture of its real ground from above, with live pilots, mercenaries, the Brood, buildings and deposits, and a tooltip on each.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/world-map/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/world-map">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/world-map">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="world-map.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>The world map: the real ground, seen from above</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M8 · The realm under siege</p>
+        <p class="lede">The map on M used to be a drawing: flat colours, one per region. Now it's a picture of the actual ground taken from straight above, with everything that's alive drawn over it, and you can point at any of it to ask what it is.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/world-map/cover.jpg" alt="The world map: nine regions in a three by three grid, each a top-down picture of its ground, from grey ash and glittering glass to rust, salt and slag" width="1200" height="750"></div>
+        <figcaption>The whole world on M, after the regions got their own grounds.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>A photograph of every region</h2>
+        <p>Each region is baked into one picture. The game builds the region the way a client would and photographs it with a camera pointing straight down: its terrain, cliffs, rocks and plants, its ore and wells, lit at half past ten in the morning in clear weather, with no units and no fog. That's 8 pixels a cell, 1152 × 768 for a medium region, north up. A script does the whole world in two hidden runs, so when a region changes the map is rebaked in one command.</p>
+        <p>The pictures lie side by side as the regions do. A region you haven't been to stays dark, with its outline and its name, UNCHARTED. The map opens centred on you; the wheel zooms, dragging pans, and the world keeps running while it's open.</p>
+      </div>
+
+      <section class="album" aria-labelledby="a1">
+        <h2 class="album-title" id="a1">The map, twice</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/world-map/01-world-m2.webp"><img src="media/world-map/01-world-m2-t.webp" alt="The world map when it first landed: six regions in desert colours, three still dark and UNCHARTED" width="640" height="400" loading="lazy"></a><span class="cap">When it landed: six regions seen, three still uncharted, before each region had a ground of its own.</span></li>
+          <li class="reveal"><a href="media/world-map/02-world-palettes.webp"><img src="media/world-map/02-world-palettes-t.webp" alt="The world map rebaked: all nine regions, each in its own ground" width="640" height="400" loading="lazy"></a><span class="cap">Rebaked a few hours later, once each region had a <a href="passages.html">ground of its own</a>.</span></li>
+          <li class="reveal"><a href="media/world-map/03-prospect-landing.webp"><img src="media/world-map/03-prospect-landing-t.webp" alt="Zoomed in on Prospect Landing: the Citadel, pads, deposits in violet, plants and cliffs" width="640" height="400" loading="lazy"></a><span class="cap">Zoomed in on Prospect Landing. Violet marks are deposits, the rings are pads.</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <h2>What's alive on it</h2>
+        <p>Over the pictures the map draws what's happening now: you as a cyan arrow, other pilots, your mercenaries in orange, the Brood in red groups with their count, the realm's buildings, deposits in violet that shrink as they empty, MH wells, the blueprint sites you know of in gold, pads as yellow rings, starfalls and their craters, the missions in your Journal and the ringshadow band while it sweeps across. Live units, buildings and deposits show only in the region you're in. Elsewhere the map shows what you know: sites, pads, missions, and your mercenaries at their fields.</p>
+        <p>Point at anything and a tooltip says what's worth knowing. A deposit shows how much ore is left, and whether a Lodeback is eating it. A building shows who built it and its HP. A site shows its blueprint and whether it's been opened. A mission shows its tier and instructions, and a mercenary its field and what it has delivered. Clicking a mission or a site points your compass at it.</p>
+      </div>
+
+      <section class="album" aria-labelledby="a2">
+        <h2 class="album-title" id="a2">Tooltips</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/world-map/04-tip-deposit.webp"><img src="media/world-map/04-tip-deposit-t.webp" alt="The map with a tooltip on an ore deposit" width="640" height="400" loading="lazy"></a><span class="cap">A deposit and the ore left in it.</span></li>
+          <li class="reveal"><a href="media/world-map/05-tip-building.webp"><img src="media/world-map/05-tip-building-t.webp" alt="The map with a tooltip on the Citadel: Built by you, HP 1,500 of 1,500" width="640" height="400" loading="lazy"></a><span class="cap">The Citadel: built by you, HP 1,500 of 1,500.</span></li>
+          <li class="reveal"><a href="media/world-map/06-tip-mission.webp"><img src="media/world-map/06-tip-mission-t.webp" alt="The map with a tooltip on a mission marker: Mark the Ground, an easy survey mission in Prospect Landing" width="640" height="400" loading="lazy"></a><span class="cap">Mark the Ground, an easy survey mission. Click it to steer the compass there.</span></li>
+          <li class="reveal"><a href="media/world-map/07-tip-merc.webp"><img src="media/world-map/07-tip-merc-t.webp" alt="The map with a tooltip on a mercenary named Zinc, working field 2 in Prospect Landing" width="640" height="400" loading="lazy"></a><span class="cap">Zinc, a <a href="mercenaries.html">mercenary</a>, just hired: field 2, nothing delivered yet.</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <h2>What isn't right yet</h2>
+        <p>The pictures show the regions as near rectangles, because that's still how they read from above: their walls run along the cells' edges. A second pass on the outlines is next, and the map will be rebaked after it.</p>
+        <p>The test suites passed when it landed: 473 core, 216 server and 81 network.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="matriarch.html">Before: the Matriarch</a>
+        <a class="btn" href="passages.html">Next: through the walls</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="how-we-got-here.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>
