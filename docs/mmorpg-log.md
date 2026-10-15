@@ -689,3 +689,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T web: posts frontier pilots, daylight, two canyons live (3eb78a5).
 - I A2 resolved: ElevenLabs upgraded 2026-10-15; the 23 lines and both beds get made for real.
 - D Z4 (user): canyons have no build spots; build anywhere in the zone, packed freely; bugs route round or attack what blocks them.
+- T B2 done 4b73be0: missions 3/8/15 min XP, ore 75/225/500; waves 80/60/16 x n; docs/balance.md.
+- N B2: all-in pilot x1.86-2.02 the curve at L1-20 (x4 before); L1-L10 36 min (66 pure mining).
+- N B2: mining L1 7,884 ore/h, 936 tax; mercs <= 1/8 of the pilot; frontier 1,489/h.
+- I B2: The Fork waves 9-10 with 12 guns + 5 AA: a straggler stays out 1,066-1,150 s; canyon look (Z4).
+- I B2: realm wallet's only sink is 12 Citadel marks (~6-7 h of one pilot's tax); needs a sink later.
