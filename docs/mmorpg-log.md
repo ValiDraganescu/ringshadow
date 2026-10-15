@@ -584,3 +584,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Protocol 24 (news kind 5 bits), schema 17 (nests); matriarchSiege() ready for Z2.
 - N N3 suites: core 488, server 233, net 84 pass.
 - I Egg pods bloom flat pink; boss bar covers her name plate → N1b/U1.
+- T N1b art pass briefed to wt2 (Matriarch, bugs, gatling, turrets, tracers, chevrons).
