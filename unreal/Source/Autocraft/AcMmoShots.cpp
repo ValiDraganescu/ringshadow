@@ -307,6 +307,16 @@
 //   11 the world map on Cold Fork: the zone's ring and its state
 //   12 the Journal: the zone's state in its header
 //
+// -AcMmoShotsA2 (-nosound; the dev rig, the chain done): the siege heard
+// (docs/music.md "Siege layers"), checked from its cue timeline, never
+// played aloud: a wave at The Fork (the wave layer up, the radio ducked,
+// KSTR's "wave incoming"), the wave beaten (its line), a wave broken
+// through (the Matriarch's layer, "has fallen"), the canyon held (both
+// layers out, the radio back up over 2 s, "held"), a goal reached (KSTR's
+// next-goal line), then a Dropship flight (lift, cruise, retro, touch).
+// One picture at the end (the HUD after the landing); the timeline is
+// logged as `mmoshots: a2: cue ...` lines.
+//
 // -AcMmoShotsZ3 (at 11:00, clear weather, every region been to): the canyons
 // after The Fork (docs/canyon.md), staged by the server's dev lines
 // (`brood zone here ZONE`, `canyon …`), DIR/z3-NN-moment.png:
@@ -542,6 +552,8 @@ namespace
 	TOptional<ac::region::RegionFile> Z1File;
 	/// -AcMmoShotsZ2: the zone's turrets standing when the wave broke through.
 	int32 Z2Turrets = 0;
+	/// -AcMmoShotsA2: the cue timeline's length when the step began.
+	int32 A2From = 0;
 	/// -AcMmoShotsP1: the frontier miner the dev line staged (its id).
 	uint32 P1Miner = 0;
 	/// -AcMmoShotsD3: the turret card's kept asks, the keys pressed so far.
@@ -1066,6 +1078,12 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
 				FCommandLine::Append(TEXT(" -AcMmoDevSeen=start,cold-fork,glass-flats,tern-ridge,slag-pockets,brine-pans,dust-terraces,rust-hollow,ashen-shelf"));
 		}
+		// -AcMmoShotsA2: the chain done, the dev rig (its Citadel by the pad).
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsA2")))
+		{
+			if (int32 Step = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoFirstStep="), Step)) FCommandLine::Append(TEXT(" -AcMmoFirstStep=0"));
+			if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) FCommandLine::Append(TEXT(" -AcMmoDevRig"));
+		}
 		// -AcMmoShotsP1: as Z2's, and the opening chain done (the frontier
 		// pilots come only after it), the dev rig's Citadel.
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")))
@@ -1157,6 +1175,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1"))) T.Phase = 2300;
 			// -AcMmoShotsZ2: the canyon game (2500-2525).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))) T.Phase = 2500;
+			// -AcMmoShotsA2: the siege heard (2900-2916).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsA2"))) T.Phase = 2900;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
@@ -5129,6 +5149,169 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Shots.Saved + Shots.Skipped >= 12, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
+	// MARK: -AcMmoShotsA2
+	case 2900:
+	case 2901:
+	case 2902:
+	case 2903:
+	case 2904:
+	case 2905:
+	case 2906:
+	case 2907:
+	case 2908:
+	case 2909:
+	case 2910:
+	case 2911:
+	case 2912:
+	case 2913:
+	case 2914:
+	case 2915:
+	case 2916:
+	{
+		UAcMusicPlayer* Music = UAcMusicPlayer::Get(this);
+		if (!Music) return;
+		// In the timeline since the step began (`A2From`), or ever.
+		auto HeardSince = [&](const TCHAR* Kind, const FString& Name, const int32 From) {
+			for (int32 I = From; I < Music->Cues().Num(); ++I)
+				if (Music->Cues()[I].Kind == Kind && Music->Cues()[I].Name.StartsWith(Name)) return true;
+			return false;
+		};
+		auto Heard = [&](const TCHAR* Kind, const FString& Name) { return HeardSince(Kind, Name, A2From); };
+		// The step's dev lines, then what it waits for in the timeline.
+		auto Stage = [&](const TCHAR* Lines, const TCHAR* What, TFunctionRef<bool()> Done, const double Limit) {
+			if (!W4Set)
+			{
+				Check(Mmo->DevClock(Lines), What);
+				W4Set = true;
+				A2From = Music->Cues().Num();
+				return;
+			}
+			if (!Done())
+			{
+				TimedOut(What, Limit);
+				return;
+			}
+			W4Set = false;
+			Check(true, FString::Printf(TEXT("a2: %s after %.1f s"), What, Since()));
+			Advance();
+		};
+		switch (T.Phase)
+		{
+		case 2900:
+			if (!(Seated() && Since() > 3.0))
+			{
+				TimedOut(TEXT("a2: seated"), 120);
+				return;
+			}
+			Check(Mmo->DevClock(TEXT("brood clear\nbrood zone here the-fork")), TEXT("a2: to The Fork"));
+			Advance();
+			return;
+		case 2901:
+		{
+			const TOptional<FAcRegionAround> Ground = Mmo->HereGround();
+			if (!(U && Ground && Ground->Id == TEXT("cold-fork") && Since() > 3.0))
+			{
+				TimedOut(TEXT("a2: in Cold Fork"), 120);
+				return;
+			}
+			Advance();
+			return;
+		}
+		case 2902:
+			// A wave: its layer rises, the radio ducks, KSTR calls it.
+			Stage(TEXT("brood clear\ncanyon reset\ncanyon turrets 2 1 0\ncanyon send 3"), TEXT("a2: wave 3 at The Fork, its layer up"),
+				[&] { return Music->SiegeWave() > 0.5 && Heard(TEXT("radio"), TEXT("canyon-the-fork-wave")) && Music->SiegeRadio() < 0.07; }, 30);
+			return;
+		case 2903:
+			if (Since() < 4.0) return;
+			Advance();
+			return;
+		case 2904:
+			Stage(TEXT("canyon beat"), TEXT("a2: wave 3 beaten, KSTR says so"), [&] { return Heard(TEXT("radio"), TEXT("canyon-the-fork-beaten")); }, 30);
+			return;
+		case 2905:
+			// A wave broken through: the Matriarch's layer, "has fallen".
+			Stage(TEXT("canyon send 5\ncanyon fail"), TEXT("a2: The Fork fallen, the Matriarch's layer up"),
+				[&] { return Music->SiegeMatriarch() > 0.9 && Heard(TEXT("radio"), TEXT("canyon-the-fork-fallen")); }, 40);
+			return;
+		case 2906:
+			if (Since() < 3.0) return;
+			Advance();
+			return;
+		case 2907:
+			// Held: both layers out, the radio back to full.
+			Stage(TEXT("canyon hold"), TEXT("a2: The Fork held, the layers out and the radio back"),
+				[&] { return Music->SiegeWave() == 0 && Music->SiegeMatriarch() == 0 && Music->SiegeRadio() == 1.0 && Heard(TEXT("radio"), TEXT("canyon-the-fork-held")); },
+				40);
+			return;
+		case 2908:
+			// A goal: the next one from KSTR, read.
+			Stage(TEXT("goal level 10"), TEXT("a2: a new goal, read by KSTR"), [&] {
+				for (int32 I = A2From; I < Music->Cues().Num(); ++I)
+					if (Music->Cues()[I].Kind == TEXT("radio") && Music->Cues()[I].Name.StartsWith(TEXT("goal-")) && Music->Cues()[I].Gain > 0) return true;
+				return false;
+			}, 30);
+			return;
+		case 2909:
+			// The Dropship: pads here and at Prospect Landing, then fly.
+			Stage(TEXT("ferry pad here\nferry pad start\nferry mh 200"), TEXT("a2: Landing Pads here and at Prospect Landing"),
+				[&] { return Since() > 2.0; }, 10);
+			return;
+		case 2910:
+			if (Since() < 1.0) return;
+			Check(OpenWorldMap(), TEXT("a2: the world map opened"));
+			Advance();
+			return;
+		case 2911:
+		{
+			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+			if (!Map || Since() < 1.0) return;
+			Check(Map->PickPad(TEXT("start"), TEXT("Landing Pad 1")), TEXT("a2: Prospect Landing's pad picked"));
+			Shots.VisitWas = Mmo->Visit();
+			A2From = Music->Cues().Num();
+			Map->Fly();
+			Advance();
+			return;
+		}
+		case 2912:
+			if (!Heard(TEXT("flight"), TEXT("flroar")))
+			{
+				TimedOut(TEXT("a2: lifted off"), 30);
+				return;
+			}
+			Advance();
+			return;
+		case 2913:
+			if (!(Mmo->Visit() > Shots.VisitWas && Seated() && Since() > 3.0 && Heard(TEXT("flight"), TEXT("fltouch"))))
+			{
+				TimedOut(TEXT("a2: landed"), 90);
+				return;
+			}
+			Advance();
+			return;
+		case 2914:
+			Shoot(TEXT("a2-01-landed"), TEXT("landed at Prospect Landing after the siege's timeline"));
+			return;
+		default:
+		{
+			// The timeline, every cue in order.
+			int32 Layers = 0, Lines = 0, Flight = 0;
+			for (const UAcMusicPlayer::FCue& C : Music->Cues())
+			{
+				UE_LOG(LogAutocraft, Display, TEXT("mmoshots: a2: cue %7.2f s  %-6s %-44s gain %.3f"), C.At, *C.Kind, *C.Name, C.Gain);
+				Layers += C.Kind == TEXT("layer") ? 1 : 0;
+				Lines += C.Kind == TEXT("radio") ? 1 : 0;
+				Flight += C.Kind == TEXT("flight") ? 1 : 0;
+			}
+			Check(HeardSince(TEXT("layer"), TEXT("siege_wave"), 0) && HeardSince(TEXT("layer"), TEXT("siege_matriarch"), 0), TEXT("a2: both layers in the timeline"));
+			Check(HeardSince(TEXT("flight"), TEXT("flroar"), 0) && HeardSince(TEXT("flight"), TEXT("flcruise on"), 0) && HeardSince(TEXT("flight"), TEXT("fltouch"), 0),
+				TEXT("a2: the Dropship's lift, cruise and touch"));
+			Check(Lines >= 5, FString::Printf(TEXT("a2: %d KSTR lines, %d layer cues, %d flight cues"), Lines, Layers, Flight));
+			Finish();
+			return;
+		}
+		}
+	}
 	// MARK: -AcMmoShotsZ3
 	case 2800:
 	case 2801:

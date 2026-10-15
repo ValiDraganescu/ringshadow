@@ -58,6 +58,7 @@ const TArray<FAcZonePlace>& AcCanyon::Places(const FAcMmoClient& Mmo)
 				P.RegionName = Text(F.name);
 				P.Index = K;
 				P.Name = Text(Z.name);
+				P.Id = Text(Z.id);
 				// As the server: the prize's deposits, else its wells.
 				std::vector<ac::Vec2> Prize;
 				for (const int64_t I : Z.prizeDeposits)
@@ -80,6 +81,13 @@ const TArray<FAcZonePlace>& AcCanyon::Places(const FAcMmoClient& Mmo)
 		}
 	}
 	return Cache;
+}
+
+FString AcCanyon::IdOf(const FAcMmoClient& Mmo, const FString& Name)
+{
+	for (const FAcZonePlace& P : Places(Mmo))
+		if (P.Name.Equals(Name, ESearchCase::IgnoreCase)) return P.Id;
+	return FString();
 }
 
 const FAcZonePlace* AcCanyon::Place(const FAcMmoClient& Mmo, const FZone& Z)

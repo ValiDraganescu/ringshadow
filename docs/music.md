@@ -108,6 +108,107 @@ line in `titles.json`, and a run of that command. The spots were checked
 by transcribing them (Whisper, locally): each says its script and no
 direction aloud.
 
+## Siege layers
+
+**What it is.** The siege is heard (A2, docs/mmorpg-m9.md) over KSTR 88.7, in
+three parts. Everything is made offline and checked offline: no run ever
+plays it aloud.
+
+### The music layers
+
+Two beds play over the radio while a canyon is fought near the pilot:
+- **The wave layer** (`unreal/Resources/Sounds/siege/siege_wave.mp3`,
+  60.5 s). It rises while a wave is out near the pilot, or while the game
+  runs between waves. Its gain grows with the wave's number: 0.45 at wave 1,
+  1 at the last.
+- **The Matriarch layer** (`siege_matriarch.mp3`, 44.5 s). It plays while
+  she comes for a canyon's turrets (FAILED), or while she stands in the
+  pilot's region.
+
+**Fades.** Both fade in over 3 s and out over 4 s. They go out on HELD, a
+reset, or with no canyon near; HELD ends both, even with her still in
+sight.
+
+**The radio** ducks under them as it does under a narration, to −24 dB in
+0.5 s. It comes back over 2 s once they have gone.
+
+**Code.** The mix is engine-free and tested (`ac::SiegeMix`,
+`AutocraftCore/Public/SiegeSound.h`). The music player plays the beds as
+looping streams (`UAcMp3Wave::bLoopFile`, `AcSiegeLayers.cpp`) and
+multiplies the radio's gain by the lower of the narration's duck and the
+siege's.
+
+**How the beds were made.** Both are ElevenLabs Music (`music_v2_5`),
+instrumental and our own; the prompts are in
+`Tools/AudioGen/siege.manifest.json`. `loopmusic.py` made them into
+seamless loops: half a second off the head, 3 s (the model's ending) off
+the tail, the last 2 s cross-faded over the start with equal power. They
+were then encoded to MP3 (192 kbps). Both hold within ±2 dB from end to
+end (−12 to −16 dBFS over 2 s blocks, peaks at −1.2 and −1.6 dBFS).
+
+**Fallbacks.** While credits were out, loops cut from two of our retired
+stand-ins served instead: Firefight from 2:14 for the wave, Rising
+Pressure from 0:46 for the Matriarch. They wait in
+`Tools/AudioGen/raw/fallback/` (not shipped). A dedicated bed replaces a
+layer under the same id.
+
+### KSTR's voice
+
+The station's announcer reads one line for each of these:
+- a new goal from the radio's chain (`goal-<key>`), and one done
+  (`goal-done`);
+- the canyon news, for each canyon (`canyon-<zone>-wave`, `-beaten`,
+  `-held`, `-fallen`). "Fallen" says the Matriarch is coming.
+
+The text stays on the HUD as before.
+
+**The lines.** There are 28, all under 6 s (the longest is 5.98 s). They
+use the ads' voice, "Autocraft KSTR Announcer" (`eleven_v4`), and go
+through `radio.py`. Their scripts are in
+`Tools/AudioGen/kstrnews.manifest.json`, each with its delivery cue in
+brackets; "KSTR" is written K-S-T-R so it is spelled out. They ship in
+`unreal/Resources/Sounds/kstr/` and are imported as `/Game/Audio/Kstr/` by
+`import_sounds.py` (its `kstr` group).
+
+**The queue.** A line goes through `ac::VoiceQueue`:
+- one at a time, 0.6 s apart;
+- never over a narration: a narration comes first, and cuts a line that is
+  speaking;
+- at most 4 waiting; a line older than 20 s is dropped;
+- the same line twice in a row plays once.
+
+The radio ducks under each line as under a narration. A line with no file
+is only logged: `audio: radio line <key>: no voice yet (text only)`. A
+goal that is only a wait for a level is not read.
+
+### The Dropship's flight
+
+F1's effects play on F2's ferry:
+- `flspool` (the engines spooling on the pad);
+- `flroar` (the lift-off; the departing ship's too);
+- `flcruise` (the flight bed, a loop while it cruises);
+- `flretro` (the retro burst on the approach);
+- `fltouch` (the touchdown at either pad).
+
+They are ElevenLabs sound effects (`Tools/AudioGen/flight.manifest.json`),
+silent under `-nosound`.
+
+### The cue timeline
+
+Every siege cue is logged as `audio: cue <kind> <name> at <s> s gain <g>`,
+silent runs included: a layer's level as it moves (each 0.1), the radio's
+duck, each KSTR line, each Dropship sound. The music player keeps them for
+the shots. `-AcMmoShotsA2` (phases 2900-2916) checks the timeline from a
+`-nosound` run:
+1. a wave at The Fork: its layer up, the radio ducked, "wave incoming";
+2. the wave beaten: its line;
+3. a wave broken through: the Matriarch's layer, "has fallen";
+4. the canyon held: both layers out, the radio back at full, "held";
+5. a goal reached: KSTR's line for the next goal;
+6. a Dropship flight to Prospect Landing: lift, cruise, retro, touch.
+
+It prints the whole timeline at the end as `mmoshots: a2: cue …` lines.
+
 ## The player
 
 Status, 2026-10-02: built (`MusicPlayer.swift`, `MusicDeck.swift`,

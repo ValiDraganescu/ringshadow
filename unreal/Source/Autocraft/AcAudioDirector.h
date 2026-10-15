@@ -38,6 +38,7 @@
 //   (`ac.AudioFlat 1` does the same in real time).
 #pragma once
 
+#include "SiegeSound.h"
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 
@@ -520,6 +521,11 @@ public:
 	void StopNarration();
 	/// A narration is playing (with no device: never).
 	bool IsNarrating() const;
+	/// A2: KSTR's announcer reads line `Key` (`goal-derrick`, `canyon-the-fork-wave`;
+	/// docs/music.md "Siege layers"): queued behind a narration and any line
+	/// speaking, the radio ducked under it. A line with no voice yet is only
+	/// logged (its text stays on the HUD). False: no such line.
+	bool SayRadio(const FString& Key);
 	/// How long a narration lasts, seconds (0: not known).
 	double NarrationSeconds(const FString& Key) const;
 	/// -AcAudioRecord: asked for, started, written (AcShot's -AcShotRecord
@@ -596,6 +602,15 @@ private:
 	TMap<FString, TPair<FString, double>> Narrations;
 	UPROPERTY(Transient)
 	TObjectPtr<UAudioComponent> NarrationVoice;
+	/// A2: KSTR's spoken lines by key (Sounds.json "kstr"), the queue that
+	/// paces them (narration first), the one speaking.
+	TMap<FString, TPair<FString, double>> RadioLines;
+	ac::VoiceQueue RadioQueue;
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> RadioVoice;
+	/// The clock the queue runs on (the music player's).
+	double RadioClock() const;
+	void TickRadio();
 
 	UPROPERTY(Transient)
 	TObjectPtr<USoundAttenuation> Panned;

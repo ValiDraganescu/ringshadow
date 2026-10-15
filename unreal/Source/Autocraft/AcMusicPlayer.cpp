@@ -580,6 +580,8 @@ void UAcMusicPlayer::Tick(float DeltaTime)
 		DuckLoggedAt = Clock;
 		UE_LOG(LogAutocraft, Log, TEXT("music: duck %.1f dB (gain %.3f) at %.2f s"), 20.0 * std::log10(FMath::Max(D, 1e-6)), D, Clock);
 	}
+	// A2: the siege layers over the radio.
+	StepSiege(DeltaTime);
 	// The player's volumes (`UAcSettings`: MasterVolume, bMusic, MusicVolume), live.
 	if (Voice && Loaded)
 	{
@@ -824,7 +826,8 @@ float UAcMusicPlayer::VoiceGain(const bool bAd) const
 	// An ad plays +6 dB over the songs (`AdGain`), never past full.
 	const float Music = AcSound::MusicGain();
 	const float Gain = bAd ? FMath::Min(Music * AdGain, 1.f) : Music;
-	return (bMuted ? 0.f : Gain) * AcSound::MasterGain() * float(Duck.gain(Clock));
+	// A2: under the siege layers too, at the lower of the two.
+	return (bMuted ? 0.f : Gain) * AcSound::MasterGain() * float(FMath::Min(Duck.gain(Clock), Siege.radio));
 }
 
 void UAcMusicPlayer::DuckFor(const double Seconds)

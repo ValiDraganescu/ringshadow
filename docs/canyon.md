@@ -314,6 +314,16 @@ pilot's region's first zone:
 11. the map;
 12. the Journal.
 
+## The siege heard (A2)
+
+While a wave is out near the pilot, a wave music layer rises over KSTR 88.7,
+louder with the wave's number; the Matriarch's own layer plays while she
+comes for the turrets (FAILED). Both fade out on HELD, and the radio ducks
+under them and comes back over 2 s after. KSTR's announcer reads the
+canyon's news: a wave coming, a wave beaten, the canyon held, the canyon
+fallen with the Matriarch coming, one line each per canyon, queued behind
+any narration. Details: [music.md](music.md), "Siege layers".
+
 ## Wire and save
 
 - **Protocol 27** (26 is F2's):

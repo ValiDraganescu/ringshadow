@@ -4,6 +4,7 @@
 #include "AcPilotFlight.h"
 
 #include "AcAudioDirector.h"
+#include "AcMusicPlayer.h"
 #include "AcEffects.h"
 #include "AcEffectsBursts.h"
 #include "AcEffectsExtension.h"
@@ -96,10 +97,25 @@ namespace
 	void Hear(const UObject* Ctx, const FAcAudioRules::EFlight Moment)
 	{
 		if (UAcAudioDirector* A = UAcAudioDirector::Get(Ctx)) A->Rules().Flight(Moment);
+		// A2's cue timeline: the Dropship's moments.
+		if (UAcMusicPlayer* M = UAcMusicPlayer::Get(Ctx))
+		{
+			switch (Moment)
+			{
+			case FAcAudioRules::EFlight::Spool: M->Cue(TEXT("flight"), TEXT("flspool"), AcSound::FlightSpoolGain); break;
+			case FAcAudioRules::EFlight::LiftOff: M->Cue(TEXT("flight"), TEXT("flroar"), AcSound::FlightRoarGain); break;
+			case FAcAudioRules::EFlight::Retro: M->Cue(TEXT("flight"), TEXT("flretro"), AcSound::FlightRetroGain); break;
+			case FAcAudioRules::EFlight::Touchdown: M->Cue(TEXT("flight"), TEXT("fltouch"), AcSound::FlightTouchGain); break;
+			}
+		}
 	}
 	void Cruise(const UObject* Ctx, const bool bOn)
 	{
 		if (UAcAudioDirector* A = UAcAudioDirector::Get(Ctx)) A->Rules().Cruise(bOn);
+		static bool bWas = false;
+		if (bOn != bWas)
+			if (UAcMusicPlayer* M = UAcMusicPlayer::Get(Ctx)) M->Cue(TEXT("flight"), bOn ? TEXT("flcruise on") : TEXT("flcruise off"), bOn ? AcSound::FlightCruiseGain : 0.0);
+		bWas = bOn;
 	}
 
 	/// The dust the jets blow off the ground `Height` cells under them: a

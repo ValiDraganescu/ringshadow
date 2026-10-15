@@ -1179,6 +1179,10 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 			Hud->Toast(FString::Printf(TEXT("KSTR  ·  NEXT: %s"), *Upper(Pm->goal->title)), Text(Pm->goal->pitch), FAcHudStyle::LevelGold(),
 				FPlatformTime::Seconds());
 			UE_LOG(LogAutocraft, Log, TEXT("contracts: next goal %s, %s"), *Text(Pm->goal->key), *Text(Pm->goal->title));
+			// A2: KSTR's announcer reads it.
+			// (Not a wait for a level, "level:N": nothing to read yet.)
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this); Audio && Pm->goal->key.rfind("level:", 0) != 0)
+				Audio->SayRadio(TEXT("goal-") + Text(Pm->goal->key).ToLower());
 		}
 		if (Pm) GoalSeen = Goal;
 		C->Console()->SetContracts(Panel);
@@ -1316,7 +1320,12 @@ void UAcProgressHudSubsystem::CanyonWarnings(FAcMmoClient& Mmo)
 		const FString Sub = FString::Printf(TEXT("%lld bugs from %s%s"), (long long)Z->left, *AcCanyon::Tunnels(*Z, Place),
 			Z->state == FZone::State::waiting ? TEXT("  ·  beat it to start the canyon's game") : TEXT(""));
 		Hud->Toast(Title, Sub, Red, Now);
-		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->PlayMenu("broodswarm", 0.7f);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this))
+		{
+			Audio->PlayMenu("broodswarm", 0.7f);
+			// A2: KSTR calls it.
+			if (Place && !Place->Id.IsEmpty()) Audio->SayRadio(FString::Printf(TEXT("canyon-%s-wave"), *Place->Id));
+		}
 		UE_LOG(LogAutocraft, Log, TEXT("canyon: %s"), *(Title + TEXT(" · ") + Sub));
 	}
 	else if (Was.bOut && !Is.bOut)
@@ -1326,6 +1335,8 @@ void UAcProgressHudSubsystem::CanyonWarnings(FAcMmoClient& Mmo)
 			Hud->Toast(FString::Printf(TEXT("%s: WAVE %lld BEATEN"), *Name, (long long)Was.Wave), AcCanyon::Line(*Z, Clock),
 				FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
 			UE_LOG(LogAutocraft, Log, TEXT("canyon: wave %lld beaten"), (long long)Was.Wave);
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this); Audio && Place && !Place->Id.IsEmpty())
+				Audio->SayRadio(FString::Printf(TEXT("canyon-%s-beaten"), *Place->Id));
 		}
 		else if (Z->state == FZone::State::waiting && Was.State == uint8(FZone::State::waiting))
 		{
@@ -1485,7 +1496,12 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		if (N.value > 0) Pay += FString::Printf(TEXT("%s+%lld MH"), Pay.IsEmpty() ? TEXT("") : TEXT("  ·  "), (long long)N.value);
 		Hud->Toast(FString::Printf(TEXT("GOAL DONE: %s"), *Upper(N.by)), Pay, FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
 		UE_LOG(LogAutocraft, Log, TEXT("progress: goal %s done: %s"), *Text(N.id), *Text(N.by));
-		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this))
+		{
+			Audio->Rules().News(FAcAudioRules::ENews::Paid);
+			// A2: KSTR says so (the next goal's own line follows when it comes).
+			Audio->SayRadio(TEXT("goal-done"));
+		}
 		break;
 	}
 	case K::mission:
@@ -1575,6 +1591,10 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		else if (Id == "held" || Id == "failed")
 		{
 			const bool bHeld = Id == "held";
+			// A2: KSTR reads the news.
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this))
+				if (const FString Zid = AcCanyon::IdOf(Mmo, Zone); !Zid.IsEmpty())
+					Audio->SayRadio(FString::Printf(TEXT("canyon-%s-%s"), *Zid, bHeld ? TEXT("held") : TEXT("fallen")));
 			const FString Title = bHeld ? FString::Printf(TEXT("%s HELD"), *Zone.ToUpper()) : FString::Printf(TEXT("%s HAS FALLEN"), *Zone.ToUpper());
 			const FString Sub = bHeld ? (N.value > 0 ? FString::Printf(TEXT("KSTR: the canyon is the pilots' for a world day  ·  %lld fought the last wave"),
 														   (long long)N.value)

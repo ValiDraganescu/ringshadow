@@ -81,6 +81,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Autocraft|Audio")
 	FAcMp3Info Info;
+	/** Play it round and round (A2's siege beds): at its end, its start again. */
+	UPROPERTY(BlueprintReadOnly, Category = "Autocraft|Audio")
+	bool bLoopFile = false;
 
 	/** Point the wave at `Path` with the facts `Probe` read from it. */
 	void Init(const FString& Path, const FAcMp3Info& InInfo);

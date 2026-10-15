@@ -122,8 +122,8 @@ namespace
 	class FAcMp3Generator final : public ISoundGenerator
 	{
 	public:
-		FAcMp3Generator(const FString& Path, int32 InChannels, float StartTime)
-			: Channels(FMath::Max(InChannels, 1))
+		FAcMp3Generator(const FString& Path, int32 InChannels, float StartTime, bool bInLoop)
+			: Channels(FMath::Max(InChannels, 1)), bLoop(bInLoop)
 		{
 			if (Stream.Open(Path) && Stream.NumChannels() == Channels)
 			{
@@ -142,7 +142,14 @@ namespace
 		virtual int32 OnGenerateAudio(float* OutAudio, int32 NumSamples) override
 		{
 			const int64 Frames = NumSamples / Channels;
-			const int64 Got = bDone ? 0 : Stream.Read(OutAudio, Frames);
+			int64 Got = bDone ? 0 : Stream.Read(OutAudio, Frames);
+			// A loop (A2's siege beds): back to the start, on into the same buffer.
+			while (bLoop && !bDone && Got < Frames && Stream.Seek(0))
+			{
+				const int64 More = Stream.Read(OutAudio + Got * Channels, Frames - Got);
+				if (More <= 0) break;
+				Got += More;
+			}
 			const int32 Written = static_cast<int32>(Got * Channels);
 			if (Written < NumSamples)
 			{
@@ -163,6 +170,7 @@ namespace
 	private:
 		FAcMp3Stream Stream;
 		int32 Channels;
+		bool bLoop = false;
 		bool bDone = false;
 	};
 }
@@ -182,7 +190,7 @@ void UAcMp3Wave::Init(const FString& Path, const FAcMp3Info& InInfo)
 
 ISoundGeneratorPtr UAcMp3Wave::CreateSoundGenerator(const FSoundGeneratorInitParams& InParams)
 {
-	return MakeShared<FAcMp3Generator, ESPMode::ThreadSafe>(FilePath, NumChannels, InParams.StartTime);
+	return MakeShared<FAcMp3Generator, ESPMode::ThreadSafe>(FilePath, NumChannels, InParams.StartTime, bLoopFile);
 }
 
 Audio::EAudioMixerStreamDataFormat::Type UAcMp3Wave::GetGeneratedPCMDataFormat() const

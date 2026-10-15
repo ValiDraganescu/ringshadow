@@ -1139,6 +1139,20 @@ void UAcAudioDirector::LoadBank()
 			Narrations.Add(FString(Pair.Key), {M->GetStringField(TEXT("asset")), Seconds});
 		}
 	}
+	// A2: KSTR's spoken lines (the goals, the canyon news).
+	RadioLines.Reset();
+	const TSharedPtr<FJsonObject>* Kstr = nullptr;
+	if (Root->TryGetObjectField(TEXT("kstr"), Kstr))
+	{
+		for (const auto& Pair : (*Kstr)->Values)
+		{
+			const TSharedPtr<FJsonObject> M = Pair.Value->AsObject();
+			if (!M) continue;
+			double Seconds = 0;
+			M->TryGetNumberField(TEXT("seconds"), Seconds);
+			RadioLines.Add(FString(Pair.Key), {M->GetStringField(TEXT("asset")), Seconds});
+		}
+	}
 	BankLoadedAt = FPlatformTime::Seconds();
 	if (Missing > 0) UE_LOG(LogAutocraft, Warning, TEXT("audio: %d sound waves missing (run Tools/Editor/import_sounds.py)"), Missing);
 }
@@ -1364,6 +1378,10 @@ bool UAcAudioDirector::PlayNarration(const FString& Key)
 		return false;
 	}
 	StopNarration();
+	// A2: KSTR's lines wait for it; one speaking is cut.
+	RadioQueue.narration(RadioClock(), N->Value);
+	if (RadioVoice) RadioVoice->Stop();
+	RadioVoice = nullptr;
 	// A1: the radio ducks under it, a -nosound run too (its gain is logged).
 	if (UAcMusicPlayer* Music = UAcMusicPlayer::Get(this)) Music->DuckFor(N->Value);
 	if (!HasDevice() || bMuted)
@@ -1385,9 +1403,56 @@ bool UAcAudioDirector::PlayNarration(const FString& Key)
 
 void UAcAudioDirector::StopNarration()
 {
+	if (NarrationVoice && NarrationVoice->IsPlaying()) RadioQueue.narrationEnded(RadioClock());
 	if (NarrationVoice) NarrationVoice->Stop();
 	NarrationVoice = nullptr;
 	if (UAcMusicPlayer* Music = UAcMusicPlayer::Get(this)) Music->Unduck();
+}
+
+double UAcAudioDirector::RadioClock() const
+{
+	const UAcMusicPlayer* Music = UAcMusicPlayer::Get(this);
+	return Music ? Music->Now() : FPlatformTime::Seconds();
+}
+
+bool UAcAudioDirector::SayRadio(const FString& Key)
+{
+	UAcMusicPlayer* Music = UAcMusicPlayer::Get(this);
+	const TPair<FString, double>* L = RadioLines.Find(Key);
+	if (!L)
+	{
+		UE_LOG(LogAutocraft, Log, TEXT("audio: radio line %s: no voice yet (text only)"), *Key);
+		if (Music) Music->Cue(TEXT("radio"), Key + TEXT(" (text only)"), 0);
+		return false;
+	}
+	RadioQueue.push(RadioClock(), TCHAR_TO_UTF8(*Key), L->Value);
+	UE_LOG(LogAutocraft, Log, TEXT("audio: radio line %s queued (%d waiting)"), *Key, int32(RadioQueue.size()));
+	TickRadio();
+	return true;
+}
+
+void UAcAudioDirector::TickRadio()
+{
+	const std::optional<ac::VoiceQueue::Line> Line = RadioQueue.next(RadioClock());
+	if (!Line) return;
+	const FString Key = UTF8_TO_TCHAR(Line->key.c_str());
+	const TPair<FString, double>* L = RadioLines.Find(Key);
+	if (!L) return;
+	// The radio ducks under the voice, as under a narration (the user's rule).
+	UAcMusicPlayer* Music = UAcMusicPlayer::Get(this);
+	if (Music) Music->DuckFor(L->Value);
+	const float Gain = AcSound::NewsGain * 2.0f;
+	if (Music) Music->Cue(TEXT("radio"), Key, Gain);
+	if (!HasDevice() || bMuted)
+	{
+		UE_LOG(LogAutocraft, Log, TEXT("audio: radio line %s, %.1f s (%s)"), *Key, L->Value, bMuted ? TEXT("muted") : TEXT("no device"));
+		return;
+	}
+	USoundWave* Wave = LoadObject<USoundWave>(nullptr, *L->Key);
+	if (!Wave) return;
+	RadioVoice = UGameplayStatics::CreateSound2D(GetWorld(), Wave, FMath::Min(Gain, 1.f), 1.0f, 0.0f, nullptr, true, false);
+	if (RadioVoice) RadioVoice->Play();
+	UE_LOG(LogAutocraft, Log, TEXT("audio: radio line %s, %.1f s"), *Key, L->Value);
 }
 
 bool UAcAudioDirector::IsNarrating() const { return NarrationVoice && NarrationVoice->IsPlaying(); }
@@ -1528,6 +1593,8 @@ void UAcAudioDirector::OnFrame(const FAcFrame& Frame)
 	UAcSimSubsystem* Sim = GetWorld() ? GetWorld()->GetSubsystem<UAcSimSubsystem>() : nullptr;
 	if (!Sim || !Sim->IsRunning() || !Frame.State) return;
 	Brain.LocalPlayer = Frame.LocalPlayer;
+	// A2: the next KSTR line when the queue lets one go.
+	TickRadio();
 	// A fixed step (-UseFixedTimeStep -FPS=60, the offline checks) is 1/60
 	// in float (`1 / FixedFPS`, 0.0166666675): summed, the clock runs ahead
 	// of Swift's, which adds 1.0 / 60 in double, and the limiter's

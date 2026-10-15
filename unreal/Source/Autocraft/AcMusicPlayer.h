@@ -28,6 +28,7 @@
 #include "Tickable.h"
 
 #include "MusicDuck.h"
+#include "SiegeSound.h"
 #include "MusicQueue.h"
 #include "Noise.h"
 
@@ -121,6 +122,23 @@ public:
 	void Unduck();
 	/// The ducking factor now (1: none).
 	double DuckGain() const { return Duck.gain(Clock); }
+	/// A2, the siege layers (docs/music.md "Siege layers"): their gains now
+	/// (0…1) and the radio's factor under them (1 at rest).
+	double SiegeWave() const { return Siege.wave; }
+	double SiegeMatriarch() const { return Siege.matriarch; }
+	double SiegeRadio() const { return Siege.radio; }
+	/// A2's cue timeline: every siege cue (a layer's change, a radio line, a
+	/// Dropship sound) as it happens, logged `audio: cue <kind> <name> at
+	/// <s> s gain <g>` and kept for the shots (`-AcMmoShotsA2`).
+	struct FCue
+	{
+		FString Kind;
+		FString Name;
+		double At = 0;
+		double Gain = 0;
+	};
+	void Cue(const FString& Kind, const FString& Name, double Gain);
+	const TArray<FCue>& Cues() const { return CueLog; }
 
 	/// The track shown (the one loaded, else the next up); unset with none.
 	TOptional<FAcNowPlaying> NowPlaying() const;
@@ -224,6 +242,21 @@ private:
 	ac::MusicDuck Duck;
 	double DuckLogged = 1.0;
 	double DuckLoggedAt = -1.0;
+	/// A2: the siege layers (AcSiegeLayers.cpp): the mix, the two looping
+	/// beds, the levels last logged.
+	ac::SiegeMix Siege;
+	void StepSiege(float Dt);
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> WaveLayer;
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> QueenLayer;
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> WaveBed;
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> QueenBed;
+	double SiegeLogged[3] = {0, 0, 1};
+	FString SiegeWhat;
+	TArray<FCue> CueLog;
 	TOptional<double> GapUntil;
 	TOptional<FPlay> Play;
 	TMap<FString, FString> Titles;

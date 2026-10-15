@@ -21,6 +21,8 @@ struct FAcZonePlace
 	FString RegionName;
 	int32 Index = 0;
 	FString Name;
+	/// The zone's id ("the-fork"; A2's radio lines are keyed by it).
+	FString Id;
 	/// The prize's middle and the zone's reach round it (its farthest
 	/// build spot and 3 cells), region cells.
 	ac::Vec2 Middle{0, 0};
@@ -39,6 +41,8 @@ struct AUTOCRAFT_API AcCanyon
 {
 	/// Every canyon zone of the world (read once a world file).
 	static const TArray<FAcZonePlace>& Places(const FAcMmoClient& Mmo);
+	/// A2: a zone's id by its name ("The Fork" → "the-fork"; empty: none).
+	static FString IdOf(const FAcMmoClient& Mmo, const FString& Name);
 	/// The place of a zone of the sky (nil: not known).
 	static const FAcZonePlace* Place(const FAcMmoClient& Mmo, const ac::net::Sky::Zone& Z);
 	/// The zone in the pilot's region, else next to it (nil: none near).
