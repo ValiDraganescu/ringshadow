@@ -229,7 +229,7 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 	}
 
 	// H2: the mercenaries here, any pilot's: their orange paint and a tag
-	// over each one drawn ("MERC · FLINT").
+	// over each one drawn ("MERC · FLINT"); P1's frontier pilots in theirs.
 	TArray<TPair<FString, FVector2f>> Tags;
 	TMap<int64, int32> Paint;
 	UAcWorldRenderer* Renderer = UAcWorldRenderer::Get(this);
@@ -238,6 +238,29 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 		const FAcMmoClient* Mmo = Sim->MmoClient();
 		if (const ac::net::ProgressMessage* P = Mmo ? Mmo->Progress() : nullptr)
 		{
+			// P1: the frontier pilots here, in their paints: "VESPER · LV 14".
+			if (const std::optional<ac::net::Sky>& Sky = Mmo->Sky(); Sky && Mmo->World())
+			{
+				for (const ac::net::Sky::Frontier& F : Sky->frontier)
+				{
+					if (F.unit == 0 || F.region != Mmo->World()->here) continue;
+					std::string Name = "PILOT";
+					int32 Team = 2;
+					for (const ac::net::ProgressMessage::FrontierPilot& X : P->frontier)
+						if (X.id == F.id)
+						{
+							Name = X.callsign;
+							Team = X.paint;
+						}
+					Paint.Add(F.unit, Team);
+					const TConstArrayView<FTransform> World = Renderer->PartWorld(F.unit);
+					FVector2f At;
+					if (World.Num() > 0 && ProjectToPoints(World[0].GetLocation() + FVector(0, 0, AcSpace::ToCm(2.4)), At))
+					{
+						Tags.Add({FString::Printf(TEXT("%s · LV %lld"), *FString(UTF8_TO_TCHAR(Name.c_str())).ToUpper(), (long long)F.level), At});
+					}
+				}
+			}
 			for (const auto& [Id, Name] : P->mercTags)
 			{
 				Paint.Add(Id, UAcWorldRenderer::MercenaryTeam);

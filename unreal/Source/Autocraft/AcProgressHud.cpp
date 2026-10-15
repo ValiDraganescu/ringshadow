@@ -1631,6 +1631,27 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		UE_LOG(LogAutocraft, Log, TEXT("progress: matriarch %s by %s, %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
 		break;
 	}
+	case K::frontier:
+	{
+		// P1: the frontier pilots: a KSTR radio line ("KSTR · VESPER"), a
+		// deed ("Vesper built a Hab Dome in Rust Hollow"), one landed. In its
+		// paint.
+		FString Callsign = TEXT("FRONTIER");
+		FLinearColor Ink = FAcHudStyle::Srgb(0.45, 1, 0.55);
+		if (P)
+			for (const ac::net::ProgressMessage::FrontierPilot& X : P->frontier)
+				if (int64(X.id) == N.value)
+				{
+					Callsign = Text(X.callsign).ToUpper();
+					Ink = FAcHudStyle::TeamPaint(X.paint);
+				}
+		const std::string Id = N.id;
+		if (Id == "radio") Hud->Toast(FString::Printf(TEXT("KSTR  ·  %s"), *Callsign), Text(N.by), Ink, Now);
+		else if (Id == "deed") Hud->Toast(TEXT("ON THE FRONTIER"), Text(N.by), Ink, Now);
+		else if (Id == "come") Hud->Toast(FString::Printf(TEXT("%s LANDED"), *Callsign), Text(N.by), Ink, Now);
+		UE_LOG(LogAutocraft, Log, TEXT("progress: frontier %s: %s"), *Text(N.id), *Text(N.by));
+		break;
+	}
 	default:
 		break;
 	}

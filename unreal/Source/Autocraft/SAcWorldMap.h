@@ -6,7 +6,8 @@
 //   [the world from above: every region the pilot has been to as its baked
 //    satellite picture (/Game/UI/Map, AcMapBake.h) at its place on the
 //    world's grid, seamless; the others dark, their outline and name only.
-//    Over them, live: the pilot, other pilots, mercenaries, the Brood in
+//    Over them, live: the pilot, other pilots, mercenaries, frontier pilots
+//    (P1, in their paints), the Brood in
 //    groups, the realm's buildings, deposits (sized by the ore left), wells,
 //    known blueprint sites, pads, starfalls and craters, the Journal's
 //    missions, KSTR's places, the ringshadow band while it sweeps]

@@ -798,6 +798,22 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 			}
 			break;
 		}
+		case ac::net::atlas::Kind::frontier:
+		{
+			// P1: a frontier pilot, a dot in its paint ringed dark, a white
+			// ring round it; its callsign and level beside it zoomed in.
+			const FLinearColor Ink = FAcHudStyle::TeamPaint(It.paint);
+			const float R = U * 0.42f;
+			Fill(Out, L, G, Circle(C, R + 1.5f, 16), FLinearColor(0, 0, 0, 0.85f));
+			Fill(Out, L + 1, G, Circle(C, R, 16), Ink);
+			Lines(Out, L + 2, G, Circle(C, R + 3.f, 16), FAcHudStyle::Srgb(0.92, 0.97, 1, 0.8), 1.f);
+			if (Z >= 2)
+			{
+				Shadowed(Out, L + 3, G, Label(Text(It.title), 10, Ink, EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::SemiBold),
+					C + FVector2f(R + 6, 0));
+			}
+			break;
+		}
 		case ac::net::atlas::Kind::contract:
 		{
 			const float R = It.flag ? 8.f : 0.f;
@@ -975,6 +991,7 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 		case ac::net::atlas::Kind::starfall: TitleColor = FAcHudStyle::Amber(); break;
 		case ac::net::atlas::Kind::contract: TitleColor = Kstr(); break;
 		case ac::net::atlas::Kind::zone: TitleColor = It.flag ? BroodRed() : FAcHudStyle::Srgb(1.0, 0.6, 0.22); break;
+		case ac::net::atlas::Kind::frontier: TitleColor = FAcHudStyle::TeamPaint(It.paint); break;
 		default: break;
 		}
 		Rows.Add(Label(Text(It.title), 16, TitleColor, EAcHAlign::Left, EAcVAlign::Top));

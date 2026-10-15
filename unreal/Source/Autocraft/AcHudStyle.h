@@ -96,6 +96,22 @@ public:
 	static FLinearColor KeyYellow() { return Srgb(1, 0.85, 0.3); }
 	/// Energy (Dropship), violet.
 	static FLinearColor Energy() { return Srgb(0.75, 0.45, 1); }
+	/// A team palette colour (MPC_AcTeams, make_materials.py's PALETTE),
+	/// lifted for the HUD: a frontier pilot's paint on the map and its tag (P1).
+	static FLinearColor TeamPaint(int32 Team)
+	{
+		switch (Team)
+		{
+		case 0: return Srgb(0.36, 0.5, 1.0);
+		case 1: return Srgb(1.0, 0.36, 0.3);
+		case 2: return Srgb(0.42, 0.95, 0.45);
+		case 3: return Srgb(1.0, 0.82, 0.3);
+		case 4: return Srgb(0.78, 0.5, 1.0);
+		case 5: return Srgb(0.3, 0.92, 0.95);
+		case 6: return Srgb(1.0, 0.55, 0.12);
+		default: return Srgb(1.0, 0.55, 0.8);
+		}
+	}
 	/// Levels and XP, gold (`LevelInfo.color`).
 	static FLinearColor LevelGold() { return Srgb(1, 0.8, 0.32); }
 	/// A press queued for the team's AI (`Console.queueColor`).
