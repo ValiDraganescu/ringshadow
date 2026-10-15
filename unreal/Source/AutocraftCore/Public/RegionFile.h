@@ -241,6 +241,31 @@ constexpr double mouthSlope = 5.0;
 /// The walls' rocks: about one every this many cells each way (W4).
 constexpr double wallRockSpacing = 3.4;
 
+/// Scarcity (E1; docs/regions.md, "Scarcity"): a region of a world (brood
+/// level 1 or more) holds at most `veinsMost` ore veins and `wellsMost` MH
+/// well. A vein is a tight cluster of `moundsFewest` to `moundsMost`
+/// deposits (mounds), each within `veinReach` cells of the vein's middle;
+/// deposits within `veinLink` cells of each other are one vein.
+constexpr int64_t veinsMost = 2;
+constexpr int64_t moundsFewest = 3;
+constexpr int64_t moundsMost = 5;
+constexpr int64_t wellsMost = 1;
+constexpr double veinLink = 7.0;
+constexpr double veinReach = 6.0;
+/// A deposit grows back this share of its full ore a world day, up to full
+/// (the server's regions, on the world's clock: `WorldMap::regrowVeins`).
+constexpr double regrowPerDay = 0.1;
+/// A region's ore in all, by brood level: 1 about 6,000-8,000, 2
+/// 10,000-12,000, 3 and 4 15,000-20,000. Nil: no limit (level 0).
+struct OreRange {
+    int64_t fewest = 0;
+    int64_t most = 0;
+};
+AUTOCRAFTCORE_API std::optional<OreRange> oreRange(int64_t brood);
+/// The deposits in veins (indices into `deposits`), each vein in the order
+/// of its first deposit.
+AUTOCRAFTCORE_API std::vector<std::vector<size_t>> veins(const std::vector<Deposit>& deposits);
+
 /// The region built: its map (ground coordinates, centred) and its places.
 struct AUTOCRAFTCORE_API Built {
     MapDefinition map;

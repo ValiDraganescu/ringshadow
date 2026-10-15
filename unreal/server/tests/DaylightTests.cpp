@@ -219,7 +219,10 @@ TEST(daylight_a_leaving_group_goes_at_the_edge) {
     ASSERT_TRUE(w.join(me));
     at(w, 12.0);
     const auto r = *w.where(me);
-    const size_t dep = farDeposit(w);
+    // The east vein (E1): a clear way from it to the region's edge.
+    size_t dep = 0;
+    for (size_t i = 0; i < simOf(w).state.patches.size(); i++)
+        if (simOf(w).state.patches[i].position.x > simOf(w).state.patches[dep].position.x) dep = i;
     const Vec2 site = simOf(w).state.patches[dep].position;
     const auto g = w.spawnBroodGroup(r, UnitKind::shardling, 3, WorldMap::Poi::deposit, int64_t(dep), site, true);
     ASSERT_TRUE(g.has_value());

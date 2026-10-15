@@ -438,6 +438,10 @@ public:
     void bury(std::vector<GameEvent>& events);
     /// Dry patches grow back `Rules.regrowDelay` after running out.
     void regrow(std::vector<GameEvent>& events);
+    /// False: no patch grows back by the game's rule. The MMORPG's server
+    /// books its regions' regrowth on the world's clock itself (E1,
+    /// docs/regions.md "Scarcity"; `WorldMap::regrowVeins`).
+    bool regrows = true;
     /// Clear a patch's miner (or a well's harvester) if that Prospector is no
     /// longer drilling it (inside it).
     void releaseStaleMiners();

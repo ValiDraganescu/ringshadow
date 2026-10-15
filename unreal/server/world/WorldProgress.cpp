@@ -493,4 +493,26 @@ void WorldMap::regrowWells(double dt) {
     }
 }
 
+void WorldMap::regrowVeins(double from, double to) {
+    if (!(params_.veinRegrow > 0) || !(to > from)) return;
+    for (size_t r = 0; r < regions_.size(); r++) {
+        Simulation& sim = regions_[r]->simulation();
+        GameState& st = sim.state;
+        for (size_t i = 0; i < std::min(ownPatches_[r], st.patches.size()); i++) {
+            OreDeposit& d = st.patches[i];
+            if (d.remaining >= d.initial) continue;
+            const auto share = sim.regrowShare.find(int64_t(i));
+            const double s = share != sim.regrowShare.end() ? std::max(0.05, share->second) : 1.0;
+            // Ore a second; whole ore by the clock, so a step's grain does
+            // not change what a day gives.
+            const double rate = params_.veinRegrow * double(d.initial) / params_.dayLength / s;
+            const int64_t grow = int64_t(std::floor(to * rate)) - int64_t(std::floor(from * rate));
+            if (grow <= 0) continue;
+            d.remaining = std::min(d.initial, std::max<int64_t>(0, d.remaining) + grow);
+            d.depletedAt = std::nullopt;
+            if (d.remaining >= d.initial && share != sim.regrowShare.end()) sim.regrowShare.erase(share);
+        }
+    }
+}
+
 } // namespace ac::server

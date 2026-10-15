@@ -280,8 +280,15 @@ TEST(mercs_hire_limits_fees_and_refusals) {
 // ore it has worked is exactly the rate × the time, and what it unloads
 // reaches the pilot's wallet less the realm's tax, with no XP; the field
 // loses as much.
+/// The ore counted to the unit: no regrowth (E1).
+static WorldParams still() {
+    WorldParams p = params();
+    p.veinRegrow = 0;
+    return p;
+}
+
 TEST(mercs_live_work_paced_and_taxed) {
-    Mercs1 s(100);
+    Mercs1 s(100, still());
     ASSERT_TRUE(s.citadel.has_value());
     WorldMap& w = s.w;
     ASSERT_TRUE(!w.hireMerc(a).has_value());
@@ -334,12 +341,17 @@ TEST(mercs_live_work_paced_and_taxed) {
 // an hour at its level (the pace model), taxed, and its field gives as
 // much.
 TEST(mercs_a_day_is_the_pilots_hour) {
-    Mercs1 s(5);
+    Mercs1 s(5, still());
     ASSERT_TRUE(s.citadel.has_value());
     WorldMap& w = s.w;
     ASSERT_TRUE(!w.hireMerc(a).has_value());
     fill(w, a, 0, 3000);
     const auto m0 = w.mercs(a)[0];
+    // The pace model alone: a field that does not run dry in the day (E1's
+    // veins would: then the mercenary waits, `mercs_wait_at_a_dry_field`),
+    // counted to the unit with no regrowth.
+    Simulation& sim = w.region(m0.region).simulation();
+    for (size_t k : w.fields(m0.region)[size_t(m0.field)]) sim.state.patches[k].initial = sim.state.patches[k].remaining = 4000;
     auto fieldOre = [&] {
         int64_t n = 0;
         for (size_t k : w.fields(m0.region)[size_t(m0.field)]) n += w.region(m0.region).simulation().state.patches[k].remaining;
@@ -493,7 +505,7 @@ TEST(mercs_saved_loaded_and_caught_up_off_line) {
     int64_t fieldBefore = 0;
     WorldMap::Wallet wallet;
     {
-        Mercs1 s(20);
+        Mercs1 s(20, still());
         ASSERT_TRUE(s.citadel.has_value());
         WorldMap& w = s.w;
         ASSERT_TRUE(!w.hireMerc(a).has_value());
@@ -514,7 +526,7 @@ TEST(mercs_saved_loaded_and_caught_up_off_line) {
     ASSERT_TRUE(store != nullptr);
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
-    WorldMap w(first(), params());
+    WorldMap w(first(), still());
     EXPECT_TRUE(w.restore(*loaded).empty());
     auto back = w.mercsOf(keyA);
     ASSERT_TRUE(back.size() == size_t(1));
@@ -582,4 +594,48 @@ TEST(mercs_old_save_migrates) {
     ASSERT_TRUE(w.seat(a, keyA) == WorldMap::Seated::restored);
     EXPECT_TRUE(w.mercs(a).empty());
     EXPECT_EQ(w.progressMessage(a)->mercs.size(), size_t(0));
+}
+
+// E1: a mercenary whose field is mined out stands at it, unpaid (no ore
+// owed), and goes back to work as its vein grows back: over a world day
+// held it delivers the tenth the vein regrows, no more.
+TEST(mercs_wait_at_a_dry_field) {
+    {
+        Mercs1 s(20, still());
+        ASSERT_TRUE(s.citadel.has_value());
+        WorldMap& w = s.w;
+        ASSERT_TRUE(!w.hireMerc(a).has_value());
+        const auto m0 = w.mercs(a)[0];
+        Simulation& sim = w.region(m0.region).simulation();
+        for (size_t k : w.fields(m0.region)[size_t(m0.field)]) sim.state.patches[k].remaining = 0;
+        wait(w, a, 60 * 60);
+        const auto m = w.mercs(a)[0];
+        EXPECT_EQ(m.delivered, m0.delivered);
+        EXPECT_TRUE(m.owed < 1e-9);
+        const Unit* u = unitOf(w, m);
+        ASSERT_TRUE(u != nullptr);
+        EXPECT_TRUE(u->task != Unit::Task::mining);
+    }
+    Mercs1 s(20);
+    ASSERT_TRUE(s.citadel.has_value());
+    WorldMap& w = s.w;
+    ASSERT_TRUE(!w.hireMerc(a).has_value());
+    const auto m0 = w.mercs(a)[0];
+    Simulation& sim = w.region(m0.region).simulation();
+    int64_t full = 0;
+    for (size_t k : w.fields(m0.region)[size_t(m0.field)]) {
+        full += sim.state.patches[k].initial;
+        sim.state.patches[k].remaining = 0;
+    }
+    const int64_t wallet0 = w.wallet(a)->ore;
+    const int64_t realm0 = w.realmWallet().ore;
+    const int64_t hand0 = unitOf(w, m0)->carrying;
+    for (int i = 0; i < int(WorldClock::dayLength * 2); i++) w.idle(0.5);
+    const int64_t taken = (w.wallet(a)->ore - wallet0) + (w.realmWallet().ore - realm0) + (unitOf(w, w.mercs(a)[0])->carrying - hand0);
+    int64_t left = 0;
+    for (size_t k : w.fields(m0.region)[size_t(m0.field)]) left += sim.state.patches[k].remaining;
+    std::printf("  a dry field of %lld over a world day: %lld regrown and taken, %lld left in it\n", (long long)full, (long long)taken,
+                (long long)left);
+    EXPECT_TRUE(taken > 0);
+    EXPECT_NEAR(double(taken + left), double(full) * region::regrowPerDay, double(2 * WorldMercs::load));
 }

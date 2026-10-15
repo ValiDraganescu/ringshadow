@@ -288,6 +288,10 @@ struct WorldParams {
     double devXp = 0;
     /// The world's day, seconds (`WorldClock::dayLength`, 40 minutes).
     double dayLength = WorldClock::dayLength;
+    /// E1: the share of its full ore a region file's deposit grows back a
+    /// world day, up to full (`region::regrowPerDay`). 0: none (tests that
+    /// count ore to the unit).
+    double veinRegrow = region::regrowPerDay;
     /// Dev and shots (`--hour 22`): hold the world's hour (0-24).
     std::optional<double> heldHour;
     /// Dev and shots (`--weather storm`): hold the weather, 0 clear .. 3
@@ -693,6 +697,13 @@ public:
     /// the pilots off line until they come back. What could not be used,
     /// one a line (a region the world has no more, levels that do not read).
     std::vector<std::string> restore(const WorldSave& save);
+    /// E1: region `r`'s saved deposits and wells adopted into its region
+    /// file's layout (`restore`, after the buildings): by their places
+    /// (schema 26), else by index while the file has as many. What the
+    /// file no longer lays out is gone, but a well a Derrick stands on is
+    /// kept; the file's new veins come in full; a mound under a building is
+    /// left empty for good.
+    void adopt(size_t r, const SavedRegion& saved);
     bool joined(PilotId pilot) const { return pilots_.count(pilot) > 0; }
     /// The region the pilot is in (in flight: the one it lifted off from).
     std::optional<size_t> where(PilotId pilot) const;
@@ -1764,6 +1775,11 @@ private:
     /// four corner turrets fire on their own (`Defence::weapon`).
     void armCitadels();
     void regrowWells(double dt);
+    /// E1: each region file's deposit below full grows back
+    /// `veinRegrow` of its full ore a world day, from world time `from` to
+    /// `to`, up to full; Quick regrowth's share (the Simulation's
+    /// `regrowShare`) shortens it. A starfall's deposit never grows.
+    void regrowVeins(double from, double to);
     // WorldSites.cpp.
     /// After a step: sites seen, reached, held open.
     void sites();

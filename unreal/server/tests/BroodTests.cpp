@@ -230,7 +230,10 @@ TEST(brood_a_hit_turns_the_group_and_pays_xp) {
 /// A Lodeback eats an unprotected deposit (60 ore gone from the world),
 /// walks out of sight and vanishes.
 TEST(brood_lodeback_eats_a_deposit_and_vanishes) {
-    WorldMap w(first(), params());
+    // The ore counted to the unit: no regrowth (E1) meanwhile.
+    WorldParams p = params();
+    p.veinRegrow = 0;
+    WorldMap w(first(), p);
     ASSERT_TRUE(w.join(me));
     w.step();
     const size_t r = *w.where(me);
@@ -293,11 +296,15 @@ TEST(brood_lodebacks_skip_guarded_ore) {
     w.step();
     const size_t r = *w.where(me);
     GameState& st = simOf(w).state;
-    // A Hab Dome by every deposit within 40 cells of the Prospector.
+    // A Hab Dome by every deposit of the vein nearest the Prospector (E1:
+    // the region's other vein is left unguarded).
     std::vector<Vec2> domes;
     const Vec2 home = drivenUnit(w, me)->position;
+    size_t nearest = 0;
+    for (size_t i = 0; i < st.patches.size(); i++)
+        if (distance(st.patches[i].position, home) < distance(st.patches[nearest].position, home)) nearest = i;
     for (size_t i = 0; i < st.patches.size(); i++) {
-        if (distance(st.patches[i].position, home) > 40) continue;
+        if (distance(st.patches[i].position, st.patches[nearest].position) > 2 * region::veinReach) continue;
         const Vec2 at = simOf(w).nav->nearestFree(st.patches[i].position + Vec2(4, 0)).value_or(st.patches[i].position);
         st.structures.push_back(Structure(st.nextID++, StructureKind::habDome, Pilot::player, at));
         domes.push_back(at);

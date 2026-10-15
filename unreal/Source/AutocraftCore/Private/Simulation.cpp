@@ -2767,6 +2767,7 @@ void Simulation::bury(std::vector<GameEvent>& events) {
 
 /// Dry patches grow back `Rules.regrowDelay` after running out.
 void Simulation::regrow(std::vector<GameEvent>& events) {
+    if (!regrows) return;
     for (size_t i = 0; i < state.patches.size(); i++) {
         auto& p = state.patches[i];
         if (!(p.remaining <= 0)) continue;

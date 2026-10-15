@@ -64,9 +64,10 @@ WorldSave sample() {
     r.buildings.push_back(SavedBuilding{9, StructureKind::habDome, Vec2(14, 2), keyB, 12.5, 40.75});
     r.units.push_back(SavedUnit{3, UnitKind::prospector, Vec2(1.5, 2.5), 0.75, 45.5, 5, true, keyA});
     r.units.push_back(SavedUnit{12, UnitKind::prospector, Vec2(-4, 8), 3.0, 60, 0, false, keyB});
-    r.deposits.push_back(SavedDeposit{0, 1500, std::nullopt});
-    r.deposits.push_back(SavedDeposit{1, 0, 99.5});
-    r.wells.push_back(SavedWell{0, 2200});
+    // The start's first two mounds and its well, where they lie (schema 26).
+    r.deposits.push_back(SavedDeposit{0, 1500, std::nullopt, Vec2(53 - 72, 46 - 48)});
+    r.deposits.push_back(SavedDeposit{1, 0, 99.5, Vec2(53.4 - 72, 49.6 - 48)});
+    r.wells.push_back(SavedWell{0, 2200, Vec2(60 - 72, 36 - 48)});
     s.regions.push_back(r);
     SavedRegion o;
     o.id = "cold-fork";
@@ -180,7 +181,7 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
         EXPECT_EQ(store->schemaVersion(), WorldStore::version());
-        EXPECT_EQ(WorldStore::version(), int64_t(25));
+        EXPECT_EQ(WorldStore::version(), int64_t(26));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock', 'starfalls', "
                               "'realm_wallet', 'nests', 'canyons', 'frontier', 'standings', 'hunt')")[0][0],

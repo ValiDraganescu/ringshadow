@@ -325,10 +325,10 @@ TEST(Zone_aLodebackMinesThePrize) {
     EXPECT_TRUE(after < before);
 }
 
-/// A save from before the canyon: the north-east vein's deposits keep their
-/// indices and their ore (moved down into the valley), the prize comes in
-/// full, a Prospector saved where the canyon's wall now stands is put on
-/// open ground.
+/// A save from before the canyon (and before E1's veins): its deposits by
+/// index of an older layout are gone, the region file's veins and the prize
+/// come in full, a Prospector saved where the canyon's wall now stands is
+/// put on open ground.
 TEST(Zone_aSaveFromBeforeTheCanyonLoads) {
     const std::string key = "00112233445566778899aabbccddeef0";
     WorldSave s;
@@ -338,8 +338,8 @@ TEST(Zone_aSaveFromBeforeTheCanyonLoads) {
     r.nextId = 20;
     // Region (116, 20): before the canyon low ground, now the rim's wall.
     r.units.push_back(SavedUnit{7, UnitKind::prospector, Vec2(116 - 72, 20 - 48), 0, 60, 0, false, key});
-    r.deposits.push_back(SavedDeposit{33, 700, std::nullopt});
-    r.wells.push_back(SavedWell{3, 1000});
+    r.deposits.push_back(SavedDeposit{33, 700, std::nullopt, std::nullopt});
+    r.wells.push_back(SavedWell{3, 1000, std::nullopt});
     s.regions.push_back(r);
     s.pilots.push_back(SavedPilot{key, 100, 0, "cold-fork", 7, "", ""});
     WorldMap w(first());
@@ -348,16 +348,11 @@ TEST(Zone_aSaveFromBeforeTheCanyonLoads) {
     EXPECT_TRUE(problems.empty());
     const size_t cf = *w.regionNamed("cold-fork");
     const GameState& st = w.region(cf).simulation().state;
-    ASSERT_TRUE(st.patches.size() > 33);
-    EXPECT_EQ(st.patches[33].remaining, int64_t(700));
-    EXPECT_TRUE(distance(st.patches[33].position, Vec2(113.9 - 72, 39.1 - 48)) < 12);
+    const auto& file = w.region(cf).places()->map.deposits;
+    ASSERT_TRUE(st.patches.size() == file.size());
+    for (size_t k = 0; k < file.size(); k++) EXPECT_EQ(st.patches[k].remaining, file[k].amount);
     const region::Zone& z = w.region(cf).places()->zones.at(0);
-    for (int64_t i : z.prizeDeposits) {
-        const Vec2 at = w.region(cf).places()->map.deposits[size_t(i)].position;
-        for (const OreDeposit& d : st.patches)
-            if (distance(d.position, at) < 0.01) EXPECT_EQ(d.remaining, int64_t(6000));
-    }
-    EXPECT_EQ((*st.wells)[3].remaining, int64_t(1000));
+    ASSERT_TRUE(st.wells && st.wells->size() == size_t(1));
     EXPECT_EQ((*st.wells)[size_t(z.prizeWells[0])].remaining, int64_t(6000));
     ASSERT_TRUE(w.seat(3, key) == WorldMap::Seated::restored);
     const Simulation& sim = w.region(cf).simulation();

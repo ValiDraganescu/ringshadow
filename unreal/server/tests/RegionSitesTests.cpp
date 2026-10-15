@@ -223,5 +223,6 @@ TEST(RegionSites_firstReach) {
     EXPECT_TRUE(distance(wreck->at, pad) < 32);
     double nearestWell = 1e9;
     for (const WellSite& w : start.wells) nearestWell = std::min(nearestWell, distance(w.at, wreck->at));
-    EXPECT_TRUE(start.wells.size() >= 2 && nearestWell < 14);
+    // E1: its one well, by the wreck that gives the Derrick.
+    EXPECT_TRUE(int64_t(start.wells.size()) == region::wellsMost && nearestWell < 14);
 }

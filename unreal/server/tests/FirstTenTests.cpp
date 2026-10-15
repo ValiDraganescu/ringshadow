@@ -127,12 +127,12 @@ void haul(WorldMap& w, int64_t ore) {
     wait(w, me, 10);
 }
 
-/// A Derrick on the start's south well, welded, and pumped once (as
+/// A Derrick on the start's well (E1: its one), welded, and pumped once (as
 /// HydrogenTests.cpp). False: refused or never pumped.
 bool derrickPumped(WorldMap& w) {
     Simulation& sim = w.regionOf(me)->simulation();
     Unit* u = driven(w, me);
-    const Vec2 wellCell = w.regionOf(me)->places()->ground(Vec2(60, 61));
+    const Vec2 wellCell = w.regionOf(me)->places()->ground(Vec2(60, 36));
     std::optional<Vec2> wellAt;
     for (const Well& x : *sim.state.wells)
         if (distance(x.position, wellCell) < 1.0) wellAt = x.position;

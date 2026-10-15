@@ -218,9 +218,10 @@ WorldSave WorldMap::save() const {
         std::sort(r.units.begin(), r.units.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
         // The region file's own deposits; starfall deposits go with their falls.
         for (size_t k = 0; k < std::min(st.patches.size(), ownPatches_[i]); k++)
-            r.deposits.push_back(SavedDeposit{int64_t(k), st.patches[k].remaining, st.patches[k].depletedAt});
+            r.deposits.push_back(SavedDeposit{int64_t(k), st.patches[k].remaining, st.patches[k].depletedAt, st.patches[k].position});
         if (st.wells)
-            for (size_t k = 0; k < st.wells->size(); k++) r.wells.push_back(SavedWell{int64_t(k), (*st.wells)[k].remaining});
+            for (size_t k = 0; k < st.wells->size(); k++)
+                r.wells.push_back(SavedWell{int64_t(k), (*st.wells)[k].remaining, (*st.wells)[k].position});
         out.regions.push_back(std::move(r));
     }
     std::sort(out.regions.begin(), out.regions.end(), [](const SavedRegion& a, const SavedRegion& b) { return a.id < b.id; });
@@ -290,22 +291,7 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             next = std::max(next, u.id + 1);
         }
         for (OreDeposit& d : st.patches) d.miner = std::nullopt;
-        for (const SavedDeposit& d : sr.deposits) {
-            if (d.index < 0 || d.index >= int64_t(st.patches.size())) {
-                problems.push_back("region " + sr.id + ": no deposit " + std::to_string(d.index) + " any more");
-                continue;
-            }
-            st.patches[size_t(d.index)].remaining = d.remaining;
-            st.patches[size_t(d.index)].depletedAt = d.depletedAt;
-        }
-        for (const SavedWell& w : sr.wells) {
-            if (!st.wells || w.index < 0 || w.index >= int64_t(st.wells->size())) {
-                problems.push_back("region " + sr.id + ": no well " + std::to_string(w.index) + " any more");
-                continue;
-            }
-            (*st.wells)[size_t(w.index)].remaining = w.remaining;
-            (*st.wells)[size_t(w.index)].harvester = std::nullopt;
-        }
+        adopt(*i, sr);
         st.nextID = next;
         sim.reindex();
         sim.refreshSupply();
@@ -466,6 +452,81 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     // N4: the hunt (none before schema 25: the day's call is open).
     if (!decodeHunt(save.hunt)) problems.push_back("the hunt does not read, the day's call is open");
     return problems;
+}
+
+void WorldMap::adopt(size_t r, const SavedRegion& sr) {
+    Simulation& sim = regions_[r]->simulation();
+    GameState& st = sim.state;
+    // The same place: a region file's positions as built, to the save's.
+    constexpr double kSame = 0.5;
+    const size_t own = std::min(ownPatches_[r], st.patches.size());
+    const auto placed = [](const auto& rows) {
+        return std::any_of(rows.begin(), rows.end(), [](const auto& x) { return x.at.has_value(); });
+    };
+    const auto derrickAt = [&](Vec2 at) {
+        return std::any_of(st.structures.begin(), st.structures.end(),
+                           [&](const Structure& b) { return b.kind == StructureKind::derrick && distance(b.position, at) < kSame; });
+    };
+    const auto put = [&](size_t k, const SavedDeposit& d) {
+        st.patches[k].remaining = std::min(d.remaining, st.patches[k].initial);
+        st.patches[k].depletedAt = d.depletedAt;
+    };
+    if (placed(sr.deposits)) {
+        for (const SavedDeposit& d : sr.deposits)
+            for (size_t k = 0; d.at && k < own; k++)
+                if (distance(st.patches[k].position, *d.at) < kSame) {
+                    put(k, d);
+                    break;
+                }
+    } else if (sr.deposits.size() == own) {
+        // An older save of the same layout: by index.
+        for (const SavedDeposit& d : sr.deposits)
+            if (d.index >= 0 && size_t(d.index) < own) put(size_t(d.index), d);
+    }
+    // A mound the new layout puts under a building: empty, for good.
+    for (size_t k = 0; k < own; k++) {
+        OreDeposit& d = st.patches[k];
+        for (const Structure& b : st.structures)
+            if (distance(b.position, d.position) < Rules::radius(b.kind) + 1.0) {
+                d.initial = 0;
+                d.remaining = 0;
+                d.depletedAt = std::nullopt;
+                break;
+            }
+    }
+    if (!st.wells) return;
+    std::vector<Well>& wells = *st.wells;
+    for (Well& w : wells) w.harvester = std::nullopt;
+    const auto keep = [&](Vec2 at, int64_t remaining) {
+        wells.push_back(Well{at, remaining, std::nullopt});
+        wellFull_[r].push_back(std::max(remaining, Rules::wellHydrogen));
+        wellIdle_[r].push_back(0.0);
+        wellLast_[r].push_back(remaining);
+    };
+    const size_t file = wells.size();
+    if (placed(sr.wells)) {
+        for (const SavedWell& w : sr.wells) {
+            if (!w.at) continue;
+            bool found = false;
+            for (size_t k = 0; k < file && !found; k++)
+                if (distance(wells[k].position, *w.at) < kSame) {
+                    wells[k].remaining = w.remaining;
+                    found = true;
+                }
+            if (!found && derrickAt(*w.at)) keep(*w.at, w.remaining);
+        }
+    } else if (sr.wells.size() == file) {
+        for (const SavedWell& w : sr.wells)
+            if (w.index >= 0 && size_t(w.index) < file) wells[size_t(w.index)].remaining = w.remaining;
+    } else {
+        // An older save of another layout: a Derrick off the file's wells
+        // keeps a well under it, full (the save knew its well by index only).
+        for (const Structure& b : st.structures) {
+            if (b.kind != StructureKind::derrick) continue;
+            const bool on = std::any_of(wells.begin(), wells.end(), [&](const Well& w) { return distance(w.position, b.position) < kSame; });
+            if (!on) keep(b.position, Rules::wellHydrogen);
+        }
+    }
 }
 
 } // namespace ac::server

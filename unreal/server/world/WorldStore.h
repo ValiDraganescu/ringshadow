@@ -58,16 +58,21 @@ struct SavedUnit {
 };
 
 /// An ore deposit (`GameState.patches`, by index) or an MH well
-/// (`GameState.wells`): what is left.
+/// (`GameState.wells`): what is left, and where it lies (schema 26, ground
+/// cells; nil: an older save, by index alone). A region file whose
+/// deposits changed is adopted on load by the places (E1,
+/// `WorldMap::restore`).
 struct SavedDeposit {
     int64_t index = 0;
     int64_t remaining = 0;
     std::optional<double> depletedAt;
+    std::optional<Vec2> at;
     bool operator==(const SavedDeposit&) const = default;
 };
 struct SavedWell {
     int64_t index = 0;
     int64_t remaining = 0;
+    std::optional<Vec2> at;
     bool operator==(const SavedWell&) const = default;
 };
 
@@ -231,7 +236,8 @@ public:
     /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills;
     /// 17: the Matriarch's nests; 18: KSTR's next goal; 20: the canyons' games;
     /// 21: the frontier pilots; 22: the realm's projects; 23: a pilot's away ledger;
-    /// 24: the realm week's standings; 25: the realm's hunt).
+    /// 24: the realm week's standings; 25: the realm's hunt; 26: deposits
+    /// and wells with their places, E1's adoption of new veins).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 

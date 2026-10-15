@@ -472,6 +472,32 @@ std::string Problem::text() const {
     return where + (at ? " at " + pointText(*at) : "") + ": " + message;
 }
 
+std::optional<OreRange> oreRange(int64_t brood) {
+    if (brood <= 0) return std::nullopt;
+    if (brood == 1) return OreRange{6000, 8000};
+    if (brood == 2) return OreRange{10000, 12000};
+    return OreRange{15000, 20000};
+}
+
+std::vector<std::vector<size_t>> veins(const std::vector<Deposit>& deposits) {
+    std::vector<int64_t> vein(deposits.size(), -1);
+    std::vector<std::vector<size_t>> out;
+    for (size_t i = 0; i < deposits.size(); i++) {
+        if (vein[i] >= 0) continue;
+        vein[i] = int64_t(out.size());
+        out.push_back({i});
+        // Everything linked to it, through any of its mounds.
+        for (size_t k = 0; k < out.back().size(); k++)
+            for (size_t j = 0; j < deposits.size(); j++)
+                if (vein[j] < 0 && distance(deposits[out.back()[k]].at, deposits[j].at) <= veinLink) {
+                    vein[j] = vein[i];
+                    out.back().push_back(j);
+                }
+        std::sort(out.back().begin(), out.back().end());
+    }
+    return out;
+}
+
 std::optional<PadNear> nearestPad(const std::vector<Place>& pads, Vec2 at) {
     std::optional<PadNear> best;
     for (const Place& p : pads) {
@@ -1588,6 +1614,36 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
         // Z3: a flooded floor lies in the zone, over the canyon's floor.
         for (size_t k = 0; k < z.flood.size(); k++)
             if (!inZone(z.flood[k], 0.01)) add(wz + ".flood", "corner " + std::to_string(k) + " lies outside the zone's outline", z.flood[k]);
+    }
+    // Scarcity (E1): a world region's veins, wells and ore in all.
+    if (const auto range = oreRange(f.brood)) {
+        if (!f.dropResources) out.push_back(Problem{"base.drop", "a region of brood level 1 or more drops the base's ore and wells (\"resources\")", std::nullopt});
+        const auto vs = veins(f.deposits);
+        if (int64_t(vs.size()) > veinsMost)
+            out.push_back(Problem{"deposits", std::to_string(vs.size()) + " veins; a region holds at most " + std::to_string(veinsMost), std::nullopt});
+        for (const auto& v : vs) {
+            Vec2 middle(0, 0);
+            for (const size_t i : v) middle = middle + f.deposits[i].at / double(v.size());
+            const std::string first = "deposits[" + std::to_string(v.front()) + "]";
+            if (int64_t(v.size()) < moundsFewest || int64_t(v.size()) > moundsMost)
+                out.push_back(Problem{first, "a vein of " + std::to_string(v.size()) + " mounds; a vein holds " + std::to_string(moundsFewest) +
+                                                 " to " + std::to_string(moundsMost),
+                                      middle});
+            for (const size_t i : v)
+                if (distance(f.deposits[i].at, middle) > veinReach)
+                    out.push_back(Problem{"deposits[" + std::to_string(i) + "]",
+                                          num(distance(f.deposits[i].at, middle)) + " cells from its vein's middle " + pointText(middle) +
+                                              "; a vein's mounds lie within " + num(veinReach),
+                                          f.deposits[i].at});
+        }
+        if (int64_t(f.wells.size()) > wellsMost)
+            out.push_back(Problem{"wells", std::to_string(f.wells.size()) + " wells; a region holds at most " + std::to_string(wellsMost), std::nullopt});
+        int64_t ore = 0;
+        for (const Deposit& d : f.deposits) ore += d.amount;
+        if (ore < range->fewest || ore > range->most)
+            out.push_back(Problem{"deposits", std::to_string(ore) + " ore in all; a brood level " + std::to_string(f.brood) + " region holds " +
+                                                  std::to_string(range->fewest) + " to " + std::to_string(range->most),
+                                  std::nullopt});
     }
     return out;
 }

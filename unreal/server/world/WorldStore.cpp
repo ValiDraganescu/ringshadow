@@ -262,13 +262,31 @@ const char* const kV25 = R"sql(
 CREATE TABLE hunt (id INTEGER PRIMARY KEY CHECK (id = 1), state TEXT NOT NULL);
 )sql";
 
+/// Schema 26 (E1): where each deposit and well lies (ground cells), so a
+/// region file whose veins changed is adopted on load (WorldMapSave.cpp).
+/// A save from before has none: its deposits go by index while the region
+/// file's count is the same, else the file's new veins come in full.
+const char* const kV26 = R"sql(
+ALTER TABLE deposits ADD COLUMN x REAL;
+ALTER TABLE deposits ADD COLUMN y REAL;
+ALTER TABLE wells ADD COLUMN x REAL;
+ALTER TABLE wells ADD COLUMN y REAL;
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
+
+/// A row's place at columns `c` and `c + 1`: nil when either is NULL (a
+/// row from before schema 26).
+std::optional<Vec2> place(const Stmt& s, int c) {
+    if (s.isNull(c) || s.isNull(c + 1)) return std::nullopt;
+    return Vec2(s.colReal(c), s.colReal(c + 1));
+}
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}, {25, kV25}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}, {25, kV25}, {26, kV26}};
     return steps;
 }
 
@@ -411,13 +429,14 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.failed(error)) return std::nullopt;
     }
     {
-        Stmt s(db_, "SELECT region, idx, remaining, depleted_at FROM deposits ORDER BY region, idx");
-        while (s.row()) region(s.colText(0)).deposits.push_back(SavedDeposit{s.colInteger(1), s.colInteger(2), s.optReal(3)});
+        Stmt s(db_, "SELECT region, idx, remaining, depleted_at, x, y FROM deposits ORDER BY region, idx");
+        while (s.row())
+            region(s.colText(0)).deposits.push_back(SavedDeposit{s.colInteger(1), s.colInteger(2), s.optReal(3), place(s, 4)});
         if (s.failed(error)) return std::nullopt;
     }
     {
-        Stmt s(db_, "SELECT region, idx, remaining FROM wells ORDER BY region, idx");
-        while (s.row()) region(s.colText(0)).wells.push_back(SavedWell{s.colInteger(1), s.colInteger(2)});
+        Stmt s(db_, "SELECT region, idx, remaining, x, y FROM wells ORDER BY region, idx");
+        while (s.row()) region(s.colText(0)).wells.push_back(SavedWell{s.colInteger(1), s.colInteger(2), place(s, 3)});
         if (s.failed(error)) return std::nullopt;
     }
     {
@@ -606,19 +625,23 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                "units", "id");
         rowsOf(r.id, r.deposits, deposits_, [](const SavedDeposit& d) { return d.index; },
                [&](const SavedDeposit& d) {
-                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO deposits (region, idx, remaining, depleted_at) VALUES (?, ?, ?, ?)")
+                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO deposits (region, idx, remaining, depleted_at, x, y) VALUES (?, ?, ?, ?, ?, ?)")
                                      .text(r.id)
                                      .integer(d.index)
                                      .integer(d.remaining)
-                                     .real(d.depletedAt)));
+                                     .real(d.depletedAt)
+                                     .real(d.at ? std::optional<double>(d.at->x) : std::nullopt)
+                                     .real(d.at ? std::optional<double>(d.at->y) : std::nullopt)));
                },
                "deposits", "idx");
         rowsOf(r.id, r.wells, wells_, [](const SavedWell& w) { return w.index; },
                [&](const SavedWell& w) {
-                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO wells (region, idx, remaining) VALUES (?, ?, ?)")
+                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO wells (region, idx, remaining, x, y) VALUES (?, ?, ?, ?, ?)")
                                      .text(r.id)
                                      .integer(w.index)
-                                     .integer(w.remaining)));
+                                     .integer(w.remaining)
+                                     .real(w.at ? std::optional<double>(w.at->x) : std::nullopt)
+                                     .real(w.at ? std::optional<double>(w.at->y) : std::nullopt)));
                },
                "wells", "idx");
     }

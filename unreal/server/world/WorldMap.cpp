@@ -254,6 +254,9 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
         wellLast_.push_back(full);
         wellFull_.push_back(std::move(full));
         ownPatches_.push_back(r->simulation().state.patches.size());
+        // E1: the deposits grow back on the world's clock (`regrowVeins`),
+        // not by the game's rule.
+        r->simulation().regrows = false;
     }
     weather_ = std::make_unique<Weather>(WorldClock::weatherSeed(world.file.id));
     // The survey chips' dice: their own stream, off the world's id.
@@ -663,6 +666,7 @@ void WorldMap::step() {
     rigs();
     landingPadsChanged();
     regrowWells(dt);
+    regrowVeins(clock_ - dt, clock_);
     for (auto& [id, p] : pilots_)
         if (!p.flight) {
             bankOut(p, p.region);
@@ -685,6 +689,7 @@ void WorldMap::idle(double seconds) {
     rigs();
     landingPadsChanged();
     regrowWells(seconds);
+    regrowVeins(clock_ - seconds, clock_);
     // The mercenaries' work as bookkeeping, the regions held (H2).
     mercsBook(clock_ - seconds, clock_);
     // P1: the frontier pilots' work, booked (WorldFrontier.cpp).
@@ -721,6 +726,7 @@ double WorldMap::catchUp(double seconds) {
     brood();
     canyonsStep();
     offlineWork(moved);
+    regrowVeins(clock_ - moved, clock_);
     // R2: after the mercenaries' booked work (a Dock Crew that ran out in
     // the gap counts until its end).
     projectsStep();

@@ -104,9 +104,9 @@ TEST(hydrogen_derrick_pumped_and_unloaded_fills_the_wallet) {
     }));
     EXPECT_EQ(w.wallet(me)->ore, int64_t(200));
 
-    // Over to the start region's south well (60, 61): the nearest spot the
+    // Over to the start region's well (60, 36; E1: its one): the nearest spot the
     // Prospector stands on, the Derrick's reach away, facing the well.
-    const Vec2 wellCell = w.regionOf(me)->places()->ground(Vec2(60, 61));
+    const Vec2 wellCell = w.regionOf(me)->places()->ground(Vec2(60, 36));
     const Well* well = nullptr;
     for (const Well& x : *sim.state.wells)
         if (distance(x.position, wellCell) < 1.0) well = &x;
