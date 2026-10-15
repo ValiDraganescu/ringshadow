@@ -719,3 +719,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I K3 open: 2/35 packaged launches exit empty; -trace run crashes on exit; FindConsoleObject per frame; wt1 on them.
 - D M10 (manager): the long game: W5 two humans, X2 away report, S4 realm standings, N4 the hunt, U2 settings, Q3 idle soak (docs/mmorpg-m10.md).
 - D M10 (manager): soaks measure only the background server's idle path; never AIs playing a game.
+- T web: packaged-build post live (0dda465).
