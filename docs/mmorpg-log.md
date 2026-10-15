@@ -769,3 +769,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N S4: frontier hauler booked 1,485 ore/h vs B2's curve 1,489; a week at most ~6,930; core 505, net 97, server 331; clean checkout.
 - D numbering: wt2's W5 takes protocol 34 on rebase; N4 takes 35 and schema 25.
 - D N4: mercenaries get a role at hire, miner (default) or guard, switchable on MERCS; guards answer the hunt, mine otherwise, same wage.
+- T web: the standings post live at /blog/standings (f39e50a).
