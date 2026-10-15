@@ -703,3 +703,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T web: balance post live (b568f2c); analytics step 1 merged (1bfc29f).
 - T F2 map fix 98d9b5c: an unpickable pad says why (only one pad, undiscovered, no pad, region's own); picks logged.
 - T hidden runs' servers log beside their own save (98d9b5c); the user's server.log untouched.
+- D Z4 (manager): nav clearance stays 0.35; walkers pass a 2-cell gap, a 1-cell gap is a wall they bite through.
+- N Z4: straggler cause: a hit Lodeback fled to the region edge behind the canyon wall; now leaves by its tunnel, vanishes after 4 s without headway.
