@@ -633,3 +633,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Z1: region `cut` op and `zones`; sendAlongPath walks a group tunnel → prize.
 - N Z1: 18-cell paths walked in 6.0–6.7 s, ≤1.4 cells off line; suites 494/249/85.
 - T Z2 (the canyon wave game) next for wt1.
+- D Manager: canyon states WAITING/RUNNING/FAILED/HELD; 10 waves; mini-bosses at 5, 10.
+- D Manager: waves pause with no pilot near; fail = prize ore carried off past a mark.
+- T Z2 briefed to wt1 (protocol 27, schema 20).
