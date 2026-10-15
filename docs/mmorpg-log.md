@@ -738,3 +738,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I respawn (user): a Prospector that falls while handed back is never respawned (respawns() needs p.unit); the pilot is stuck; wt1 fixing before X2.
 - I re-entry (user): the second entry into the mode in one editor process shows no world (0 units, no buildings) while the server sends 65 KB/s; the save is whole; the respawn path is fine (tests). wt1 on it.
 - I starfalls: all land again at each server start (ids from 1); their state is unsaved; later.
+- N W5: two clients on one world work (two_clients.py); found and fixed: a region's bank was shared by its humans, the Take gate, B blind to A's flight; protocol 30.
+- D numbering (manager): W5 protocol 30; X2/starfalls take protocol 31 and schema 23 if needed.
