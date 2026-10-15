@@ -679,3 +679,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N S3: frame p50 12.2–12.7 ms with or without daylight; GPU p50 11.7–12.2.
 - D S3: a leaving bug vanishes out of real sight or at the region's edge (manager accepts).
 - I P1 shot flaky: Of(miner) may pick another frontier miner than `here` brought; wt1.
+- T Z3 done e09d8be: The Drowned Cut (Brine Pans, flood slows walkers 0.5) and The Roost (Dust Terraces, Gloamwings off a spire).
+- N Z3: brine delays the Salt arm 12.8 s vs 10.7 dry; 2104/2104 waders slowed, 0/4150 flyers.
+- N Z3: wave tables per zone; Drowned Cut 120 walkers, Roost 63 flyers; level-3 pay x1.3.
+- T P1 shot fixed e09d8be: pins the staged miner by id, 'poor' wallet; 3/3 clean.
