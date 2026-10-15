@@ -626,3 +626,6 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N W4b crossing 11.6 ms median, 13.2 max at change; suites 494/241/85.
 - I e2e_world_spawn_and_fly_to_a_neighbour flaky under load (snapshot race).
 - T Z1 (first canyon) next for wt1.
+- D Manager: the first canyon in Cold Fork: 2–3 arms from bug tunnels to an ore+MH prize.
+- D Manager: region files get zones (entrances, paths, prize, build spots).
+- T Z1 briefed to wt1.
