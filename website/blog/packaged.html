@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Packaged Build · Ringshadow</title>
+  <meta name="description" content="Ringshadow's online mode packaged as a Mac app and measured, not shipped: it starts four times sooner than the editor, draws as fast, and the first Dropship call's 1.5-second stall is gone.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="The packaged build, measured: a 1,547 ms stall down to 42">
+  <meta property="og:description" content="The online mode packaged as a Mac app and measured in hidden runs. Not a release. The first Dropship call's stall had three causes, all fixed.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/packaged/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/packaged">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/packaged">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="packaged.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/count.js" defer data-site="ringshadow"></script>
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>The packaged build, measured: a 1,547 ms stall down to 42</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M9 · A living frontier</p>
+        <p class="lede">Everything on this blog so far ran inside the Unreal editor. Today an agent packaged the online mode as a Mac app and measured it the way the hidden runs measure the editor. Nothing is shipped: the app isn't published and this isn't a release. It's a measurement, and it found the real cause of a stall I'd felt from the first day.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/packaged/cover.jpg" alt="A bar chart on a log scale: the worst frame after a Dropship call 5 seconds into a session, packaged 1547 ms before and 42 after, editor 1628 before and 366 after, with startup times, canyon frame times and the app's size below" width="1200" height="540"></div>
+        <figcaption>The worst frame after calling the Dropship 5 seconds into a session, three runs each, before and after the fixes.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>The stall</h2>
+        <p>Call the Dropship in a session's first ten seconds and the game froze for over a second. It showed in the packaged app as much as in the editor, so the cause wasn't editor overhead, and it wasn't the call either: the session's first ten seconds were running at one to two seconds a frame, and a call landing there took one.</p>
+        <p>A trace named three causes. The game's own long jobs, a region made ahead, a ground set prepared, a minimap baked, about a second each, ran on the engine's thread pool, which is the two background workers the engine's task graph also uses. A 108 ms engine task the render thread was waiting on sat 860 ms behind them in the queue. Second, the baked console art read its copy back from the GPU as soon as it could, and on Metal a readback waits until the whole GPU is idle: 668 ms with the first frames queued. Third, the world map loaded each region's picture the first time it drew it, behind everything else the loader was reading, one to two seconds a picture.</p>
+        <p>The fixes: those jobs run on a thread pool of the game's own now, three threads; the art reads back once the GPU is calm; the map's pictures load as the world arrives. The worst frame after a call 5 seconds in went from 1,547, 92 and 32 ms over three packaged runs to 35, 37 and 42, and in the editor from 1,628, 78 and 160 to 366, 60 and 38. Frames over a quarter of a second in the first ten seconds: two or three a run before, none after, in the packaged app.</p>
+
+        <h2>What the package is like</h2>
+        <p>It starts four times sooner than the editor: 3.0 to 4.2 seconds from the process starting to the first frame you drive, against 12.9 to 16.9. And it draws as fast as the editor's game. In The Fork with wave 10 out at noon, the median frame is 12.0 to 12.3 ms packaged and 12.5 to 12.6 in the editor at 1728 × 1084; at the nest in Slag Pockets with 34 bugs, 11.8 to 11.9 against 11.8 to 12.1. At 2560 × 1440 the canyon runs 13.0 to 13.4 ms packaged. Both the Development and the Shipping package take about three minutes to build; the Shipping app is 936 MB.</p>
+
+        <h2>What only the package showed</h2>
+        <p>The weather wasn't cooked into the package, so a packaged game had no rain. The build script's cook check now fails on a gap like that. Two more ensures that the editor never hit, a rule naming a class the package lacks and run-time meshes without UV densities, are fixed too. The hidden-run tool learned to run a packaged app the way it runs the editor: offscreen, silent, no Dock icon, its own save and world server, one run at a time.</p>
+        <p>Every number here is from three hidden runs on the development Mac with other worktrees building beside them, and the full tables are in the repo's builds doc.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="build-anywhere.html">Before: build anywhere</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="packaged.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No cookies for readers, first-party analytics without tracking across sites. <a href="../privacy.html">Privacy</a>.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

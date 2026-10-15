@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The packaged build, measured: a 1,547 ms stall down to 42
+
+15 October 2026 · M9 · 1 chart
+
+The online mode packaged as a Mac app and measured in hidden runs, not shipped: it starts four times sooner than the editor, draws as fast, and the first Dropship call's stall had three causes, all fixed.
+
+Read it: https://ringshadow.com/blog/packaged
+
 ## Build anywhere in the canyon
 
 15 October 2026 · M9 · 5 pictures

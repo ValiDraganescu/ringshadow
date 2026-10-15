@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T10:20:00Z</updated>
+  <updated>2026-10-15T10:35:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The packaged build, measured: a 1,547 ms stall down to 42</title>
+    <id>tag:ringshadow,2026-10-15:blog/packaged</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/packaged"/>
+    <published>2026-10-15T10:35:00Z</published>
+    <updated>2026-10-15T10:35:00Z</updated>
+    <summary>The online mode packaged as a Mac app and measured in hidden runs, not shipped: it starts four times sooner than the editor, draws as fast, and the first Dropship call's stall had three causes, all fixed.</summary>
+  </entry>
   <entry>
     <title>Build anywhere in the canyon</title>
     <id>tag:ringshadow,2026-10-15:blog/build-anywhere</id>
