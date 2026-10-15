@@ -2,6 +2,9 @@
 // Sentinel; the gatling gun (D2). See AcPoseBuildings.h.
 #include "AcPoseBuildings.h"
 
+#include "AcPilotFlight.h"
+#include "AcSpace.h"
+
 #include "Rules.h"
 #include "Types.h"
 
@@ -374,6 +377,26 @@ namespace
 		PoseMarks(C, P, bLive);
 	}
 
+	/// F2's Landing Pad: the corner lamps the working light, steady; on and
+	/// off in turn (front pair, then back) while the Dropship is over it
+	/// (`AcPilotFlight::PadBusy`).
+	void PoseLandingPad(const FAcPoseContext& C, FAcPose& P)
+	{
+		const ac::Structure& S = *C.Structure;
+		const FAcModelInfo& M = C.Model;
+		const bool bLive = CommonPose(C, P, Welding(C));
+		const double Ph = Phase(C);
+		static const FParts Lamps(TEXT("lamps"), 4);
+		const bool bBusy = bLive && AcPilotFlight::PadBusy(AcSpace::ToWorld(S.position));
+		for (int32 K = 0; K < 4; ++K)
+		{
+			const int32 L = Lamps(M, K);
+			if (L == INDEX_NONE) continue;
+			Lamp(P, L, !bLive ? 0.05 : bBusy ? Glow(Ph, K < 2 ? 0.0 : 0.65) : 1.2, 2.0);
+		}
+	}
+
+	FAcPoseRegistration RegLandingPad(ac::StructureKind::landingPad, &PoseLandingPad);
 	FAcPoseRegistration RegGatling(ac::StructureKind::gatling, &PoseGatling);
 	FAcPoseRegistration RegFoundry(ac::StructureKind::foundry, &PoseFoundry);
 	FAcPoseRegistration RegSpacedock(ac::StructureKind::spacedock, &PoseSpacedock);

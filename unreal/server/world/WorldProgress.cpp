@@ -229,6 +229,8 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.sitesFound = g.sites;
     m.sitesKnown = g.known;
     m.regionsSeen = g.regions;
+    // The start region is every pilot's (F2: the Dropship flies there).
+    if (world_) m.regionsSeen.insert(world_->regions[start_].file.id);
     m.contracts = it->second.contracts;
     m.contractsDawn = nextDawn(clock_);
     m.goal = goalMessage(pilot, it->second);

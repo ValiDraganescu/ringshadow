@@ -223,11 +223,13 @@ public:
 	/// Tests and dev: more arguments for the server program at `Start`
 	/// (`--dev-xp 360`).
 	std::vector<std::string> ExtraServerArgs;
-	/// Shots only (-AcMmoShots=DIR): moves the world's clock on the server
-	/// at once, `clock T`, `hour H` (on to the next H) or `ahead S`, through
+	/// Shots and flows only (-AcMmoShots=DIR, -AcFlowTest=): moves the
+	/// world's clock on the server at once, `clock T`, `hour H` (on to the
+	/// next H) or `ahead S`, or stages a scene (`ferry pad here`, …), through
 	/// its `--dev-control` file (DIR/mmo/dev-control.txt). False when the run
-	/// is not a shot run (the game never has it) or the file was not written.
+	/// is neither (the game never has it) or the file was not written.
 	bool DevClock(const FString& Line);
+	static bool DevControlled();
 	/// The pilot's key sent in the Join (unset: a new random one at each
 	/// start, a new pilot).
 	std::optional<ac::net::PilotKey> PilotKey;
@@ -401,30 +403,54 @@ public:
 	const TOptional<FMapTarget>& GetMapTarget() const { return MapTarget; }
 	/// Region changes so far.
 	int64 Visit() const { return Net ? Net->visit() : 0; }
-	/// The pad of this region nearest the driven unit, and how far (cells).
+	/// The Landing Pad of this region nearest the driven unit (F2: a Landing
+	/// Pad or the Spacedock the realm built), and how far (cells).
 	struct FPadNear
 	{
 		FString Name;
 		double Distance = 0;
-		/// A flight leaves from within this of it (P6): Pad link's reach; a
-		/// pad of the pilot's own (`building`) also its radius + 2.
+		/// The Dropship is called from within this of it: Pad link's reach;
+		/// the Spacedock also its radius + 2.
 		double Reach = ac::region::padReach;
-		/// The pilot's own (its Spacedock, a Homing beacon's building).
-		std::optional<ac::StructureKind> Building;
+		ac::StructureKind Building = ac::StructureKind::landingPad;
 		bool Within() const { return Distance <= Reach; }
 	};
-	/// The pad the driven unit can fly from (the nearest within its reach),
-	/// else the nearest: the server's rule (`WorldMap::fly`).
+	/// The Landing Pad the driven unit can call the Dropship at (the nearest
+	/// within its reach), else the nearest; unset: none in this region. The
+	/// server's rule (`WorldMap::fly`).
 	std::optional<FPadNear> NearestPad() const;
 	/// Pad link's reach (the server's `padReach`), from the pilot's ranks.
 	double PadReachNow() const;
-	/// Ringwalker: learned (unset: not), and the seconds until it is ready
-	/// (0: a flight from anywhere now).
-	std::optional<double> RingwalkerIn() const;
-	/// What a flight from here to region `RegionId` costs in MH (F1,
-	/// `ac::Flight`: a base and a share a grid step; the server's price).
-	/// Unset: no world yet, or no such region.
+	/// Ringwalker learned: flights cost no MH, the Dropship 30% faster.
+	bool Ringwalker() const;
+	/// The regions the pilot has been to (ids; its own region too): the
+	/// only ones the Dropship flies to.
+	bool Seen(const std::string& RegionId) const;
+	/// What a flight from the Landing Pad here to region `RegionId` costs in
+	/// MH (`ac::Flight::price`: a base and a share a grid step, half from a
+	/// Spacedock, nothing with Ringwalker; the server's price). Unset: no
+	/// world yet, or no such region.
 	std::optional<int64> FlightPrice(const FString& RegionId) const;
+	/// F2: the Dropship's flight while the pilot is aboard (from the World
+	/// message's ferry): the real-seconds clock at the call (`StartWall`,
+	/// `FPlatformTime::Seconds`), its stages, the boarding pad and the target
+	/// pad in Unreal space (the session's frame, AcSpace.h; on the ground,
+	/// heights left to the drawing), the target region. Unset: on the ground.
+	struct FFerry
+	{
+		double StartWall = 0;
+		ac::Ferry::Plan Plan;
+		FVector From = FVector::ZeroVector;
+		TOptional<FVector> To;
+		int64 ToIndex = INDEX_NONE;
+		FString ToRegion;
+		FString Pad;
+	};
+	const TOptional<FFerry>& Ferry() const { return FerryNow; }
+	/// The Unreal point (session frame, z 0) of region cells `At` of region
+	/// `Index` of the World message: its built map's ground (unset: that
+	/// map is not built yet, and not the mirror's).
+	TOptional<FVector> RegionPoint(int64 Index, ac::Vec2 At) const;
 	/// The wallet's MH now (the mirror's side bank). Unset: nothing seen yet.
 	std::optional<int64> HydrogenNow() const;
 	/// Why a `Kind` may not stand at `At` (ground) in this region: its
@@ -526,6 +552,10 @@ private:
 	/// landing) as the one wanted, once, if it is not `AdoptOld`.
 	bool bAdopt = false;
 	std::optional<int64> AdoptOld;
+	/// F2: the Dropship's flight (`Ferry`), followed from the World messages.
+	TOptional<FFerry> FerryNow;
+	double FerryElapsedSeen = -1;
+	void FollowFerry(double Now);
 	double LastRead = 0;
 	/// The requests in flight: id → the unit asked for (none: a hand back).
 	TMap<uint32, std::optional<int64>> Asked;

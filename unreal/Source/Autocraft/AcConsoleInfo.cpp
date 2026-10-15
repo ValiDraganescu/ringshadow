@@ -44,7 +44,7 @@ FString FAcConsoleInfo::IconName(const int32 UnitKind)
 FString FAcConsoleInfo::StructureIconName(const int32 StructureKind)
 {
 	static const TCHAR* Names[] = {TEXT("citadel"), TEXT("habdome"), TEXT("garrison"), TEXT("bastion"), TEXT("derrick"),
-		TEXT("foundry"), TEXT("spacedock"), TEXT("lab"), TEXT("sentinel"), TEXT("gatling")};
+		TEXT("foundry"), TEXT("spacedock"), TEXT("lab"), TEXT("sentinel"), TEXT("gatling"), TEXT("landingpad")};
 	return StructureKind >= 0 && StructureKind < (int32)UE_ARRAY_COUNT(Names) ? Names[StructureKind] : TEXT("");
 }
 
@@ -127,6 +127,10 @@ FAcCardInfo FAcConsoleInfo::ForStructure(const ac::Simulation& Sim, const ac::St
 	else if (St.kind == Kind::gatling)
 	{
 		Info.Status = St.target ? TEXT("Firing") : TEXT("Watching the ground");
+	}
+	else if (St.kind == Kind::landingPad)
+	{
+		Info.Status = TEXT("Clear for the Dropship");
 	}
 	else if (St.kind == Kind::citadel && St.marks)
 	{

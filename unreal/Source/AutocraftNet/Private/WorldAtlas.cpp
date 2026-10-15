@@ -416,7 +416,12 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
             it.own = q.building.has_value();
             it.building = q.building;
             it.title = q.name;
-            it.lines = {it.own ? "Your " + Simulation::title(*q.building) + "'s pad" : "Landing pad", p.name};
+            // F2: the realm's Landing Pads (and the Spacedock) the Dropship
+            // flies between; a region file's pad is where new pilots come down.
+            it.lines = {!it.own                                  ? std::string("Where new pilots come down")
+                        : *q.building == StructureKind::spacedock ? std::string("The big pad: flights from it cost half")
+                                                                  : std::string("The realm's: the Dropship lands here"),
+                        p.name};
             out.push_back(std::move(it));
         }
     }

@@ -287041,6 +287041,882 @@
      ]
     }
    ]
+  },
+  {
+   "name": "landingPad_blue",
+   "file": "",
+   "category": "building",
+   "facing": "+Z forward, +Y up",
+   "boundsMin": [
+    -1.64,
+    0.0,
+    -1.64
+   ],
+   "boundsMax": [
+    1.64,
+    0.63,
+    1.64
+   ],
+   "triangles": 744,
+   "team": "blue",
+   "base": "landingPad",
+   "canonical": "landingPad_blue",
+   "notes": [
+    "F2's Landing Pad (docs/mmorpg-m8.md). Pose: PoseLandingPad: lamps_0..3 the working light (steady, alternating while the Dropship is over it), beacon.",
+    "Under construction the deck rises out of the ground like every building. height 0.18"
+   ],
+   "parts": [
+    {
+     "name": "landingPad_blue_root",
+     "path": "/landingPad_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "rays": [
+      {
+       "hi": [
+        1.5,
+        0.04,
+        1.5
+       ],
+       "lo": [
+        -1.5,
+        -0.04,
+        -1.5
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.1,
+        0.02,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.02,
+        -0.1
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.38,
+        0.44,
+        -1.38,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.1,
+        0.02,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.02,
+        -0.1
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.38,
+        0.44,
+        1.38,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.1,
+        0.02,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.02,
+        -0.1
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.38,
+        0.44,
+        -1.38,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.1,
+        0.02,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.02,
+        -0.1
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.38,
+        0.44,
+        1.38,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.42,
+        0.05,
+        1.42
+       ],
+       "lo": [
+        -1.42,
+        -0.05,
+        -1.42
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.13,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.5,
+        0.03,
+        0.07
+       ],
+       "lo": [
+        -1.5,
+        -0.03,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.03,
+        -1.57,
+        1
+       ]
+      },
+      {
+       "hi": [
+        1.5,
+        0.03,
+        0.07
+       ],
+       "lo": [
+        -1.5,
+        -0.03,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.03,
+        1.57,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.03,
+        1.5
+       ],
+       "lo": [
+        -0.07,
+        -0.03,
+        -1.5
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.57,
+        0.03,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.03,
+        1.5
+       ],
+       "lo": [
+        -0.07,
+        -0.03,
+        -1.5
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.57,
+        0.03,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.08,
+        0.17,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.17,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.38,
+        0.25,
+        -1.38,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.08,
+        0.17,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.17,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.38,
+        0.25,
+        1.38,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.08,
+        0.17,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.17,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.38,
+        0.25,
+        -1.38,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.08,
+        0.17,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.17,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.38,
+        0.25,
+        1.38,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "landingPad_blue_root__hullDark",
+       "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__hullDark.SM_landingPad_blue_root__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 132
+      },
+      {
+       "material": "hullMid",
+       "prim": "landingPad_blue_root__hullMid",
+       "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__hullMid.SM_landingPad_blue_root__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullLight",
+       "prim": "landingPad_blue_root__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__hullLight.SM_landingPad_blue_root__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 96
+      },
+      {
+       "material": "hazard",
+       "prim": "landingPad_blue_root__hazard",
+       "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__hazard.SM_landingPad_blue_root__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 48
+      },
+      {
+       "material": "team",
+       "prim": "landingPad_blue_root__team",
+       "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__team.SM_landingPad_blue_root__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 312
+      },
+      {
+       "material": "chrome",
+       "prim": "landingPad_blue_root__chrome",
+       "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__chrome.SM_landingPad_blue_root__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      }
+     ]
+    },
+    {
+     "name": "lamps_0",
+     "path": "/landingPad_blue/lamps_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.38,
+      0.46,
+      1.38,
+      1
+     ],
+     "position": [
+      -1.38,
+      0.46,
+      1.38
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "lamps_0"
+     ],
+     "driver": {
+      "what": "corner lamp 0: the working light",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "workGlow",
+       "prim": "lamps_0__workGlow",
+       "mesh": "/Game/Models/landingPad/SM_lamps_0__workGlow.SM_lamps_0__workGlow",
+       "materialInstance": "/Game/Models/Materials/MI_workGlow_8df957c5962b.MI_workGlow_8df957c5962b",
+       "materialKey": "8df957c5962b",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "lamps_1",
+     "path": "/landingPad_blue/lamps_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.38,
+      0.46,
+      1.38,
+      1
+     ],
+     "position": [
+      1.38,
+      0.46,
+      1.38
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "lamps_1"
+     ],
+     "driver": {
+      "what": "corner lamp 1: the working light",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "workGlow",
+       "prim": "lamps_1__workGlow",
+       "mesh": "/Game/Models/landingPad/SM_lamps_1__workGlow.SM_lamps_1__workGlow",
+       "materialInstance": "/Game/Models/Materials/MI_workGlow_8df957c5962b.MI_workGlow_8df957c5962b",
+       "materialKey": "8df957c5962b",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "lamps_2",
+     "path": "/landingPad_blue/lamps_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.38,
+      0.46,
+      -1.38,
+      1
+     ],
+     "position": [
+      -1.38,
+      0.46,
+      -1.38
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "lamps_2"
+     ],
+     "driver": {
+      "what": "corner lamp 2: the working light",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "workGlow",
+       "prim": "lamps_2__workGlow",
+       "mesh": "/Game/Models/landingPad/SM_lamps_2__workGlow.SM_lamps_2__workGlow",
+       "materialInstance": "/Game/Models/Materials/MI_workGlow_8df957c5962b.MI_workGlow_8df957c5962b",
+       "materialKey": "8df957c5962b",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "lamps_3",
+     "path": "/landingPad_blue/lamps_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.38,
+      0.46,
+      -1.38,
+      1
+     ],
+     "position": [
+      1.38,
+      0.46,
+      -1.38
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "lamps_3"
+     ],
+     "driver": {
+      "what": "corner lamp 3: the working light",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "workGlow",
+       "prim": "lamps_3__workGlow",
+       "mesh": "/Game/Models/landingPad/SM_lamps_3__workGlow.SM_lamps_3__workGlow",
+       "materialInstance": "/Game/Models/Materials/MI_workGlow_8df957c5962b.MI_workGlow_8df957c5962b",
+       "materialKey": "8df957c5962b",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "beacon",
+     "path": "/landingPad_blue/beacon",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.38,
+      0.56,
+      -1.38,
+      1
+     ],
+     "position": [
+      -1.38,
+      0.56,
+      -1.38
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "beacon"
+     ],
+     "driver": {
+      "what": "beacon blink (0.25 s of every 1.2 s once built)",
+      "channels": [
+       "visibility"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowRed",
+       "prim": "beacon__glowRed",
+       "mesh": "/Game/Models/landingPad/SM_beacon__glowRed.SM_beacon__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    }
+   ]
   }
  ]
 }

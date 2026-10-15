@@ -133,7 +133,9 @@ brisk and reward going places.
 
 ## The skill tree
 
-Five branches, 13 nodes each, 65 nodes in all.
+Five branches, 13 nodes each, 65 nodes in all. (F2 retired Homing beacon:
+Wayfinder has 12 nodes and 34 points now, the tree 64 nodes and 182 points;
+its tiers and capstone still open as below.)
 
 ### Points and gates
 
@@ -245,12 +247,12 @@ Theme: moving, surveying, finding the sites.
 | 2 | Scanner pulse | 3 | arriving in a region shows its sites on the world map: wrecks; then caches; then vaults | all three | new |
 | 2 | **Cliff hop** | 1 | jump up and down cliffs (passive), 2 MH a jump | | `CliffJump` |
 | 3 | Jump jets | 3 | jump reach +1 cell; at rank 3 a jump burns 1 MH | +3 | `Stat::JumpReach` |
-| 3 | Pad link | 3 | fly from within 8 / 12 / 16 cells of a pad's centre, up from 4 | 16 | new |
-| 3 | Homing beacon | 3 | your Citadel counts as a pad; then your Hab Domes too; then your Derricks too | all three | new |
+| 3 | Pad link | 3 | call the Dropship from within 8 / 12 / 16 cells of a Landing Pad's centre, up from 4 | 16 | new |
+| 3 | ~~Homing beacon~~ | | retired by F2 (the Dropship lands only on Landing Pads): old saves get its points back and a Landing Pad blueprint | | |
 | 4 | Lucky strike | 5 | survey chips come 10% more often | +50% | new: chip chance |
 | 4 | **Sprint** (active) | 1 | 6 s of walk +60%; cooldown 30 s | | `Burst` |
-| 4 | Short hop | 3 | flights take 20% less time | 60% less (4 s → 1.6 s) | new: flight time |
-| Cap | **Ringwalker** | 1 | fly from anywhere, not only a pad, once every 120 s | | new |
+| 4 | Short hop | 3 | the Dropship's dash across the sky 20% shorter | 60% shorter | new: flight time |
+| Cap | **Ringwalker** | 1 | flights cost no MH, from any Landing Pad, and the Dropship comes 30% faster (F2) | | new |
 
 ### Hardshell (the plate)
 
@@ -356,7 +358,8 @@ floor**. A copy held below the floor is kept and shows "opens at level N".
 | Hab Dome | A field depot: unload ore and MH into the wallet away from home, and a respawn point | 8 | 3 | 150 + 50 | on the server (P6) |
 | Foundry | Makes rig modules: drill head, cargo pod, plate, torch tip, survey lens ("Foundry and Lab") | 15 | 1 | 300 + 150 | on the server (P7) |
 | Lab | Researches better module marks (Mk II, Mk III) for MH and time | 25 | 1 | 200 + 200 | on the server (P7), standing alone |
-| Spacedock | A private pad: fly from it and land on it from any pad; later, routes to far worlds | 35 | 1 | 400 + 300 | on the server (P6) |
+| Landing Pad | Where the Dropship sets down (F2): a walkable 3 by 3 deck; flights only between Landing Pads, in regions the pilot has been to. The limit is per region | 1 | 2 a region | 60 | on the server (F2) |
+| Spacedock | The big pad (F2): a Landing Pad whose flights cost half the MH; later, routes to far worlds | 35 | 1 | 400 + 300 | on the server (P6, F2) |
 | Bastion | A bunker: the Prospector climbs in, takes no damage, its torch fires from it at +2 range. For holding a claim in no-man's land | 45 | 2 | 250 + 100 | built (P6); its fight matters later |
 | Sentinel | The AA tower: missile pods at the air only, range 7, outranging a Gloamwing's spit (D2); marks from the pilot's wallet at the turret (U, D3) | 10 | 4 | 150 + 100 | on the server (D2, D3) |
 | Garrison | Trains other kinds in the strategy game. Held back: no blueprint in the world while the MMO is Prospector only | | | | held back |
@@ -380,11 +383,9 @@ in the world uses every building.
 - **Used by every pilot.** Any pilot unloads at any finished Citadel or Hab
   Dome, comes back at the nearest of them when it falls, respecs at the
   Citadel, fits modules at the Citadel or a Hab Dome, and starts Foundry and
-  Lab jobs once the realm has one. Until F2's landing pads, a Spacedock is
-  every pilot's pad, and a pilot's Homing beacon makes the realm's Citadel,
-  Hab Domes and Derricks its pads. Later tasks build on this: the Citadel's
-  tax into a realm wallet (C1), defences that guard the realm (D1, D2), pads
-  any pilot lands on (F2).
+  Lab jobs once the realm has one, and flies the Dropship between any of the
+  realm's Landing Pads (F2). Later tasks build on this: the Citadel's tax
+  into a realm wallet (C1), defences that guard the realm (D1, D2).
 - **Limits per realm.** A build is refused once the realm has the table's
   number of that kind, whoever built them: one Citadel, four Derricks,
   three Hab Domes, one Foundry, one Lab, one Spacedock, two Bastions, four
@@ -707,10 +708,12 @@ in `core-tests/tests/ProgressionEffectsTests.cpp`.
 - **Hab Dome depot.** Ore and MH walked up to any finished Hab Dome of the
   realm go into the wallet, with their XP and contract credit, as at the
   Citadel.
-- **Spacedock.** A pad of the realm's (R1; F2 replaces it). The Prospector
-  flies from within 2 cells of its edge, and lands on it from any pad. It
-  shows in every pilot's World message as a pad named "Spacedock" with
-  `building` set. Landing on it pays no first-landing XP.
+- **Landing Pads and the Spacedock** (F2). The realm's finished Landing
+  Pads and its Spacedock are the Dropship's pads, named in their region
+  "Landing Pad 1", "Landing Pad 2" (by building id) and "Spacedock"; they
+  show in every pilot's World message with `building` set. The Dropship is
+  called within Pad link's reach of a Landing Pad's centre, or within 2
+  cells of the Spacedock's edge. A first landing on each pays 50 XP once.
 - **Lab.** A world's Prospector builds one, standing alone and welded like
   any other building. The strategy game's Lab stays an add-on, and its
   build list is unchanged.
@@ -720,15 +723,14 @@ in `core-tests/tests/ProgressionEffectsTests.cpp`.
 
 The Wayfinder's travel nodes:
 
-- **Pad link:** flights leave from within 8, 12 or 16 cells of a pad's
-  centre.
-- **Homing beacon:** the realm's Citadel becomes a pad of the pilot's own;
-  at rank 2 the Hab Domes too, at rank 3 the Derricks (R1: whoever built
-  them). They are named "Citadel", "Hab Dome 1", "Derrick 2", numbered by
-  building id.
-- **Short hop:** a flight takes 4 s less 20% a rank, down to 1.6 s.
-- **Ringwalker:** a flight from anywhere, once every 120 s of the world's
-  clock. A pad still works while it waits.
+- **Pad link:** the Dropship is called from within 8, 12 or 16 cells of a
+  Landing Pad's centre.
+- **Homing beacon:** retired by F2. Its place stays in the skill table with
+  no ranks (`Progression::retired`); a save that has it gets its points back
+  (out of the slots too) and one Landing Pad blueprint, on load.
+- **Short hop:** the Dropship's dash takes 20% less a rank (`ac::Ferry`).
+- **Ringwalker:** flights cost no MH, from any Landing Pad, and every stage
+  of the flight is 30% faster (F2).
 - **Surveyor and Scanner pulse:** wired in P4b (`WorldSites.cpp`).
 
 On the wire (protocol 8):
@@ -736,10 +738,9 @@ On the wire (protocol 8):
 - `ProgressMessage::respawn`: when the fallen Prospector comes back (world
   time), in which region, beside what (a Citadel, a Hab Dome, or nil for
   the start pad), with what cargo. Nil while it stands.
-- `ProgressMessage::ringwalkerReady`: when Ringwalker is ready again (0:
-  ready).
-- `WorldMessage::Pad::building`: the kind of a pad of the pilot's own. The
-  message is sent again whenever these pads change.
+- `WorldMessage::Pad::building`: the kind of a pad of the realm's (F2: a
+  Landing Pad or the Spacedock). The message is sent again whenever these
+  pads change. (Protocol 26 dropped `ProgressMessage::ringwalkerReady`.)
 
 On the wire (protocol 12, R1):
 
@@ -928,14 +929,14 @@ Nothing costs MH today. This adds:
 - **Foundry modules and Lab research** (P7, "Foundry and Lab"): modules at
   100 ore + 50 MH (Mk I), 300 + 200 (Mk II), 800 + 600 (Mk III); research
   300 MH (Mk II) and 900 MH (Mk III) per module.
-- **Pad flights** (F1): 10 MH for the lift-off and 5 MH more for each step
-  across the world's grid (columns plus rows apart): a hop to another pad
-  in the same region 10, a neighbour 15, the far corner of a 3 × 3 world
-  30. Ringwalker flights and flights to the pilot's own pads cost the same;
-  Pad link and Short hop change where and how fast, not the price. The
-  server takes it at lift-off (`WorldMap::fly`, `ac::Flight` in
-  `Flight.h`) and refuses a short wallet: "Not enough MH to fly: 15 MH, you
-  have 4". The world map shows each flight's price beside its pads, red
+- **Dropship flights** (F1, F2): 10 MH for the lift-off and 5 MH more for
+  each step across the world's grid (columns plus rows apart): a hop to
+  another Landing Pad in the same region 10, a neighbour 15, the far corner
+  of a 3 × 3 world 30. Half (rounded up) from a Spacedock; nothing with
+  Ringwalker. Pad link and Short hop change where and how fast, not the
+  price. The server takes it at the call (`WorldMap::fly`,
+  `ac::Flight::price` in `Flight.h`) and refuses a short wallet: "Not enough
+  MH to fly: 15 MH, you have 4". The world map shows each flight's price beside its pads, red
   when the wallet is short, and greys FLY. A new pilot starts with 0 MH, so
   its first flight waits for its first Derrick; `--dev-hydrogen N`
   (`-AcMmoDevHydrogen=N`) starts it with N MH, and the picture and flow
@@ -1152,10 +1153,12 @@ Foundry and the Lab.
 - R1: a building in sight names its builder ("Hab Dome  ·  built by Pilot
   045B"); a realm building finished anywhere is a toast to every pilot; the
   build menu's limit tag reads "REALM LIMIT".
-- The world map draws the pilot's own pads (Spacedock, Homing beacon) as
-  cyan squares; a flight leaves within Pad link's reach of a pad, within
-  radius + 2 of an own pad, or from anywhere with Ringwalker ready ("At
-  your Citadel: pick a pad", "Ringwalker is ready in 40 s").
+- The world map is the flight menu (F2): the realm's Landing Pads are cyan
+  squares, picked only in regions the pilot has been to (dim elsewhere);
+  the region files' pads are small dim circles, never picked. The Dropship
+  is called within Pad link's reach of a Landing Pad ("At Landing Pad 1:
+  pick a Landing Pad to fly to"; off one: "Not at a Landing Pad: Landing
+  Pad 1 is 12 cells away").
 
 ## How it fits the code
 

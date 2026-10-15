@@ -16,10 +16,13 @@
 // the server could move it.
 #include "AcMmo.h"
 
+#include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Misc/ScopeExit.h"
 
 #include "Simulation.h"
@@ -354,40 +357,60 @@ bool FAcMmoFlyTest::RunTest(const FString&)
 {
 	FAcMmoClient Client;
 	ON_SCOPE_EXIT { Client.Stop(); };
-	// A flight costs MH (F1): a new pilot has none until a Derrick pumps.
-	Client.ExtraServerArgs = {"--dev-hydrogen", "100"};
+	// A flight costs MH (F1): a new pilot has none until a Derrick pumps. F2:
+	// Landing Pads put up by the server's dev control.
+	const FString Control = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("AcMmoFlyTest.control"));
+	IFileManager::Get().Delete(*Control, false, true, true);
+	Client.ExtraServerArgs = {"--dev-hydrogen", "100", "--dev-control", std::string(TCHAR_TO_UTF8(*Control))};
 	if (!StartSeated(*this, Client)) return false;
 	const FString MapWas = Utf(Client.Mirror()->region().mapName);
 	const int64 VisitWas = Client.Visit();
-	const std::optional<FAcMmoClient::FPadNear> Near = Client.NearestPad();
-	TestTrue(TEXT("at the start pad"), Near && Near->Name == TEXT("landing") && Near->Distance <= FAcMmoClient::PadReach);
-	// The price, a grid step away: 10 + 5 MH, paid at lift-off.
-	TestEqual(TEXT("a flight to Cold Fork costs 15 MH"), Client.FlightPrice(TEXT("cold-fork")).value_or(-1), int64(15));
-	TestEqual(TEXT("100 MH in the wallet"), Client.HydrogenNow().value_or(-1), int64(100));
 	FString Why;
-	const bool bAsked = Client.Fly(TEXT("cold-fork"), TEXT("landing"), &Why);
+	TestFalse(TEXT("no Landing Pad yet: no flight"), Client.Fly(TEXT("cold-fork"), TEXT("Landing Pad 1"), &Why));
+	AddInfo(FString::Printf(TEXT("refused: %s"), *Why));
+	FFileHelper::SaveStringToFile(TEXT("ferry pad here\nferry pad cold-fork\n"), *Control);
+	const bool bPads = RunUntil(Client, [&] {
+		const std::optional<FAcMmoClient::FPadNear> Near = Client.NearestPad();
+		return Near && Near->Within() && Client.Seen("cold-fork");
+	}, 5.0);
+	TestTrue(TEXT("on a Landing Pad, Cold Fork seen"), bPads);
+	const std::optional<FAcMmoClient::FPadNear> Near = Client.NearestPad();
+	TestTrue(TEXT("at the start's Landing Pad"), Near && Near->Name == TEXT("Landing Pad 1") && Near->Within());
+	// The price, a grid step away: 10 + 5 MH, paid at the call.
+	TestEqual(TEXT("a flight to Cold Fork costs 15 MH"), Client.FlightPrice(TEXT("cold-fork")).value_or(-1), int64(15));
+	// (The wallet: 100 MH and what the first contracts paid by now.)
+	const int64 HydrogenWas = Client.HydrogenNow().value_or(-1);
+	TestTrue(TEXT("at least 100 MH in the wallet"), HydrogenWas >= 100);
+	TestFalse(TEXT("a region file's pad is no Landing Pad"), Client.Fly(TEXT("cold-fork"), TEXT("landing"), &Why));
+	const bool bAsked = Client.Fly(TEXT("cold-fork"), TEXT("Landing Pad 1"), &Why);
 	TestTrue(FString::Printf(TEXT("the flight asked for (%s)"), *Why), bAsked);
 	if (!bAsked) return false;
 	const bool bLifted = RunUntil(Client, [&] { return Client.FlyingTo() != nullptr || !Client.FlightRefusal().IsEmpty(); }, 5.0);
-	TestTrue(FString::Printf(TEXT("lifted off (%s)"), *Client.FlightRefusal()), bLifted && Client.FlyingTo());
+	TestTrue(FString::Printf(TEXT("aboard (%s)"), *Client.FlightRefusal()), bLifted && Client.FlyingTo());
 	if (Client.FlyingTo()) TestEqual(TEXT("flying to Cold Fork"), Utf(Client.FlyingTo()->id), FString(TEXT("cold-fork")));
 	TestTrue(TEXT("travelling: no unit to drive"), Client.Travelling());
-	const double LiftedAt = FPlatformTime::Seconds();
+	TestTrue(TEXT("the ferry followed"), Client.Ferry().IsSet());
+	const double CalledAt = FPlatformTime::Seconds();
+	// The approach: in Cold Fork, nothing driven yet.
+	const bool bSwitched = RunUntil(Client, [&] { return Client.Phase() == FAcMmoClient::EPhase::Failed || Client.Visit() > VisitWas; }, 30.0);
+	TestTrue(TEXT("into Cold Fork at the approach"), bSwitched && Client.Visit() > VisitWas);
+	TestTrue(TEXT("still aboard at the approach"), Client.Travelling() && Client.FlyingTo());
+	TestTrue(TEXT("the approach's change seamless"), Client.LastWasSeamless());
 	const bool bLanded = RunUntil(Client, [&] {
-		return Client.Phase() == FAcMmoClient::EPhase::Failed || (Client.Visit() > VisitWas && !Client.Travelling() && Client.Driven());
+		return Client.Phase() == FAcMmoClient::EPhase::Failed || (!Client.Travelling() && Client.Driven());
 	}, 15.0);
 	if (!bLanded || Client.Phase() == FAcMmoClient::EPhase::Failed)
 	{
 		AddError(FString::Printf(TEXT("did not land: phase %d, %s, visit %lld"), (int32)Client.Phase(), *Client.Message(), (long long)Client.Visit()));
 		return false;
 	}
-	AddInfo(FString::Printf(TEXT("landed %.1f s after lift-off"), FPlatformTime::Seconds() - LiftedAt));
+	AddInfo(FString::Printf(TEXT("landed %.1f s after the call"), FPlatformTime::Seconds() - CalledAt));
 	RunUntil(Client, [&] { return Client.Here() && Utf(Client.Here()->id) == TEXT("cold-fork") && !Client.FlyingTo(); }, 3.0);
 	CheckArrived(*this, Client, TEXT("cold-fork"), MapWas);
-	TestTrue(TEXT("no longer flying"), Client.FlyingTo() == nullptr);
+	TestTrue(TEXT("no longer flying"), Client.FlyingTo() == nullptr && !Client.Ferry().IsSet());
 	const std::optional<FAcMmoClient::FPadNear> There = Client.NearestPad();
-	TestTrue(TEXT("on Cold Fork's pad"), There && There->Name == TEXT("landing") && There->Distance <= FAcMmoClient::PadReach);
-	TestEqual(TEXT("85 MH left after the flight"), Client.HydrogenNow().value_or(-1), int64(85));
+	TestTrue(TEXT("on Cold Fork's Landing Pad"), There && There->Name == TEXT("Landing Pad 1") && There->Within());
+	TestEqual(TEXT("15 MH paid for the flight"), HydrogenWas - Client.HydrogenNow().value_or(-1), int64(15));
 	TestTrue(TEXT("still connected"), Client.Phase() == FAcMmoClient::EPhase::Playing);
 	return true;
 }

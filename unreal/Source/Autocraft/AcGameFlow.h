@@ -275,6 +275,8 @@ private:
 	/// pilot pawn and world map over the local server.
 	void TickMmoFlow(const FString& Step);
 	int64 MmoVisitWas = 0;
+	/// mmokeys (F2): the Landing Pads asked of the server.
+	bool bMmoPadsAsked = false;
 	/// `mmoresume`: what was left (the Citadel, the wallet, the unit, the key).
 	struct FMmoLeft
 	{
@@ -319,6 +321,8 @@ private:
 		int64 Derrick = -1;
 		int64 HydrogenBefore = -1;
 		int64 VisitWas = 0;
+		/// F2: the Landing Pads asked of the server (the default set's flight).
+		bool PadsAsked = false;
 		bool bCardsShot = false;
 		/// Moments a world without level-up cards skips (07, 18), counted
 		/// with the pictures.

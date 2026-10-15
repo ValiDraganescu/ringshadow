@@ -39,8 +39,8 @@
 //      shown directly, its words from AcProgressHud)
 //   03 X: an abandon armed          04 slot 3 abandoned: back at dawn
 //   05 the respawn screen (shown directly for a Citadel, 40 ore kept)
-//   06 Homing beacon learned: the world map at the pilot's own Citadel pad,
-//      the contracts' marks           07 the opening ring at the Lander wreck
+//   06 the world map at a Landing Pad (F2; Homing beacon before it was
+//      retired), the contracts' marks           07 the opening ring at the Lander wreck
 //   08 the wreck opened: its news toast   09 the world map, the site opened
 //   10 a Hab Dome built, a load drilled: the depot prompt
 //   11 the load unloaded at the Hab Dome
@@ -125,14 +125,16 @@
 //   05 the Foundry's job done: the stores up, the Foundry idle
 //   06 a Cargo pod Mk II asked for: the Foundry's new countdown
 //
-// -AcMmoShotsFlight (F1, AcPilotFlight.h): a pad flight from the start pad
-// to Cold Fork's, each moment on the flight's own clock, DIR/fl-NN-moment.png
-// (-AcMmoHour=12 for noon, 19 for dusk):
-//   01 the spool-up on the pad: the jets lit, the dust ring
-//   02 the lift-off, from low behind the pad, the giant beyond
-//   03 high over the region, heading for the giant
-//   04 the descent onto Cold Fork's pad on retro thrust
-//   05 the touch down: the dust thrown out     06 down, the pilot's view back
+// -AcMmoShotsF2 (or -AcMmoShotsFlight; F2, AcPilotFlight.h): the Dropship
+// from a Landing Pad by the start pad to one in Cold Fork (the `ferry` dev
+// lines put them up), each moment on the flight's clock, DIR/f2-NN-moment.png
+// (-AcMmoHour=12 for noon, 19 for dusk); the frame times aboard logged as
+// `f2 perf:` (-AcMmoShotsOnly=none: the flight with no picture taken):
+//   01 the flight menu: only Landing Pads in regions been to
+//   02 the Dropship coming down onto the pad   03 the Prospector boarding
+//   04 the lift-off         05 a banking turn, the giant in view
+//   06 the speed burst, clouds streaking       07 the approach, wide
+//   08 stepping out at the target pad          09 down, the view back
 //
 // -AcMmoShotsB1 (it adds -AcMmoDevRig: a Citadel to unload at): the drill's
 // sparks stopping and the AI's walk (docs/mmorpg-m8.md B1),
@@ -489,6 +491,15 @@ namespace
 	double L1DoneAt = 0;
 	// -AcMmoShotsU1: when her roar began; the staged gun's id.
 	double U1RoarAt = -1;
+	/// -AcMmoShotsF2: the frame and GPU times aboard, each frame's stage, the
+	/// frame the region change came in.
+	TArray<double> F2Frames;
+	TArray<double> F2Gpu;
+	TArray<uint8> F2Stages;
+	double F2Last = -1;
+	int32 F2Switch = -1;
+	/// -AcMmoShotsF2Twice: 1 on the second flight.
+	int32 F2Round = 0;
 	/// The phase whose scene was staged (its first frame done).
 	int32 U1Staged = -1;
 	struct FB1Sample
@@ -917,8 +928,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsO1"))) T.Phase = 800;
 			// -AcMmoShotsRig: only the rig screen (500-513).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
-			// -AcMmoShotsFlight: only a pad flight (520-527).
-			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsFlight"))) T.Phase = 520;
+			// -AcMmoShotsF2 (or -AcMmoShotsFlight): only the Dropship's flight (2400-2413).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsF2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsFlight"))) T.Phase = 2400;
 			// -AcMmoShotsB1: only the drill's sparks and the AI's walk (900-919).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1"))) T.Phase = 900;
 			// -AcMmoShotsC1: only the Citadel's tax and the realm wallet (1000-1012).
@@ -1321,14 +1332,22 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 26:
 	{
+		// F2: at the start pad, a Landing Pad put up under it and one in
+		// Cold Fork (the `ferry` dev lines), MH to fly.
 		const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
-		if (Near && Near->Distance < 1.5)
+		if (Near && Near->Within())
 		{
 			Stop(Pilot->Yaw());
 			Advance();
 			return;
 		}
-		if (Drive() < 0) Stalled(TEXT("to the pad"));
+		if (const int32 D = Drive(); D == 1 && !Shots.PadsAsked)
+		{
+			Shots.PadsAsked = true;
+			Check(Mmo->DevClock(TEXT("ferry pad here\nferry pad cold-fork\nferry mh 200")), TEXT("Landing Pads here and in Cold Fork"));
+		}
+		else if (D < 0) Stalled(TEXT("to the pad"));
+		if (Shots.PadsAsked) TimedOut(TEXT("on a Landing Pad"), 15);
 		return;
 	}
 	case 27:
@@ -1336,7 +1355,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		{
 			Check(OpenWorldMap(), TEXT("M opened the world map on the pad"));
 			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
-			Check(Map && Map->PickPad(TEXT("cold-fork"), TEXT("landing")), TEXT("picked Cold Fork's pad"));
+			Check(Map && Map->PickPad(TEXT("cold-fork"), TEXT("Landing Pad 1")), TEXT("picked Cold Fork's Landing Pad"));
 			Advance();
 		}
 		return;
@@ -1356,7 +1375,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Finish();
 		return;
 	case 40:
-		// The flight (4 s): a frame from its middle.
+		// The Dropship's flight (16 s and more): a frame from its start.
 		if (Mmo->FlyingTo())
 		{
 			if (Since() > 2.0) Shoot(TEXT("14-flight-mid"), FString::Printf(TEXT("in flight to %s"), *Utf(Mmo->FlyingTo()->id)));
@@ -1774,60 +1793,36 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Since() > 1.2) Shoot(TEXT("g2-05-respawn"), TEXT("the respawn screen"));
 		return;
 	case 610:
-	{
-		// Homing beacon (the Citadel a pad): its tier's points first.
+		// F2: a Landing Pad under the pilot (Homing beacon is retired).
 		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this)) Hud->PreviewRespawn(std::nullopt);
-		const std::optional<ac::ProspectorProgress> G = AcProgressHud::Progress(*Mmo);
-		if (!G)
-		{
-			TimedOut(TEXT("the progress"), 10);
-			return;
-		}
-		if (G->rank(ac::Skill::homingBeacon) >= 1)
-		{
-			Advance();
-			return;
-		}
-		if (Now - P5AskedAt > 0.7)
-		{
-			std::optional<ac::Skill> Want;
-			if (!G->spendRefusal(ac::Skill::homingBeacon)) Want = ac::Skill::homingBeacon;
-			const ac::Branch Branch = ac::Progression::node(ac::Skill::homingBeacon).branch;
-			for (const ac::SkillNode& N : ac::Progression::nodes())
-			{
-				if (!Want && N.branch == Branch && N.tier <= 2 && !N.active && !G->spendRefusal(N.skill)) Want = N.skill;
-			}
-			if (Want) Mmo->Spend(*Want);
-			P5AskedAt = Now;
-		}
-		TimedOut(TEXT("Homing beacon learned"), 40);
+		Check(Mmo->DevClock(TEXT("ferry pad here")), TEXT("g2: the server puts a Landing Pad under the pilot"));
+		Advance();
 		return;
-	}
 	case 611:
 	{
-		// The Citadel in the World message as the pilot's own pad.
-		bool bOwn = false;
+		// The Landing Pad in the World message.
+		bool bPad = false;
 		if (const ac::net::WorldMessage::Region* R = Mmo->Here())
 		{
-			for (const ac::net::WorldMessage::Pad& Q : R->pads) bOwn |= Q.building == ac::StructureKind::citadel;
+			for (const ac::net::WorldMessage::Pad& Q : R->pads) bPad |= Q.building == ac::StructureKind::landingPad;
 		}
-		if (bOwn && Since() > 1.0)
+		if (bPad && Since() > 1.0)
 		{
 			ToggleWorldMap();
 			Check(WorldMapWidget().IsValid(), TEXT("M opened the world map"));
 			Advance();
 			return;
 		}
-		TimedOut(TEXT("the Citadel a pad of the pilot's own"), 15);
+		TimedOut(TEXT("a Landing Pad of the realm's here"), 15);
 		return;
 	}
 	case 612:
 		if (Since() > 1.5)
 		{
 			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
-			Check(Near && Near->Building && Near->Within(), FString::Printf(TEXT("at the own pad: %s %.1f of %.1f"),
+			Check(Near && Near->Within(), FString::Printf(TEXT("at the Landing Pad: %s %.1f of %.1f"),
 				Near ? *Near->Name : TEXT("-"), Near ? Near->Distance : -1.0, Near ? Near->Reach : -1.0));
-			Shoot(TEXT("g2-06-map-own-pad"), TEXT("the world map at the pilot's own Citadel pad, the contracts' marks"));
+			Shoot(TEXT("g2-06-map-own-pad"), TEXT("the world map at a Landing Pad, the contracts' marks"));
 		}
 		return;
 	case 613:
@@ -2703,57 +2698,187 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
 		Finish();
 		return;
-	// MARK: -AcMmoShotsFlight
-	// A pad flight to Cold Fork, its moments on the flight's clock.
-	case 520:
+	// MARK: -AcMmoShotsF2 (and -AcMmoShotsFlight)
+	// The Dropship from a Landing Pad by the start pad to one in Cold Fork,
+	// its moments on the flight's clock; the frame times through it.
+	case 2400:
 		if (Since() > 2.0)
 		{
-			FString Why;
-			Check(Mmo->Fly(TEXT("cold-fork"), TEXT("landing"), &Why), FString::Printf(TEXT("the flight to Cold Fork asked for (%s, %s)"),
-				Why.IsEmpty() ? TEXT("ok") : *Why, *Where()));
-			if (!Why.IsEmpty()) Finish();
+			// A Landing Pad under the pilot, one in Cold Fork (seen), one in
+			// Slag Pockets (not seen: the menu leaves it out), MH to fly.
+			Check(Mmo->DevClock(TEXT("ferry pad here\nferry pad cold-fork\nferry pad slag-pockets unseen\nferry mh 200")),
+				TEXT("f2: the server puts up three Landing Pads and fills the MH"));
+			Advance();
+		}
+		return;
+	case 2401:
+	{
+		const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
+		bool bThere = false;
+		if (const ac::net::WorldMessage* W = Mmo->World())
+			for (const ac::net::WorldMessage::Region& G : W->regions)
+				if (G.id == "cold-fork")
+					for (const ac::net::WorldMessage::Pad& Q : G.pads) bThere |= Q.building == ac::StructureKind::landingPad;
+		if (Near && Near->Within() && bThere && Mmo->HydrogenNow().value_or(0) >= 100 && Since() > 1.0)
+		{
+			Stop(Pilot->Yaw());
+			Check(OpenWorldMap(), TEXT("f2: M opened the flight menu on the Landing Pad"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("f2: on a Landing Pad, one in Cold Fork"), 15);
+		return;
+	}
+	case 2402:
+		if (Since() > 1.0)
+		{
+			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+			Check(Map && !Map->PickPad(TEXT("cold-fork"), TEXT("landing")), TEXT("f2: a region file's pad is not flown to"));
+			Check(Map && !Map->PickPad(TEXT("slag-pockets"), TEXT("Landing Pad 1")), TEXT("f2: a Landing Pad in a region not seen is not flown to"));
+			Check(Map && Map->PickPad(TEXT("cold-fork"), TEXT("Landing Pad 1")), TEXT("f2: picked Cold Fork's Landing Pad"));
+			if (Map) Map->ShowWorld();
+			Advance();
+		}
+		return;
+	case 2403:
+		if (Since() > 1.2) Shoot(TEXT("f2-01-menu"), TEXT("the flight menu: only the Landing Pads in regions been to, Cold Fork picked"));
+		return;
+	case 2404:
+		if (const TSharedPtr<SAcWorldMap> Map = WorldMapWidget())
+		{
+			F2Frames.Reset();
+			F2Gpu.Reset();
+			F2Stages.Reset();
+			F2Last = -1;
+			F2Switch = -1;
+			Map->Fly();
+			Advance();
+			return;
+		}
+		Check(false, TEXT("f2: the flight menu still open for FLY"));
+		Finish();
+		return;
+	case 2405:
+	case 2406:
+	case 2407:
+	case 2408:
+	case 2409:
+	case 2410:
+	case 2411:
+	{
+		// The frame times, every frame aboard (and the step out).
+		if (Pilot->InFlight())
+		{
+			if (F2Last > 0)
+			{
+				F2Frames.Add((Now - F2Last) * 1000.0);
+				F2Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+				F2Stages.Add(uint8(Pilot->FlightStage()));
+				if (F2Switch < 0 && Mmo->Ferry() && Mmo->MirrorIndex() == Mmo->Ferry()->ToIndex) F2Switch = F2Frames.Num() - 1;
+			}
+			F2Last = Now;
+		}
+		if (!Mmo->FlightRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("f2: flight refused: %s"), *Mmo->FlightRefusal()));
+			Finish();
+			return;
+		}
+		const ac::Ferry::Plan* Pl = Pilot->FlightPlan();
+		const double Ft = Pilot->FlightSeconds();
+		if (!Pl)
+		{
+			TimedOut(TEXT("f2: the Dropship called"), 10);
+			return;
+		}
+		switch (T.Phase)
+		{
+		case 2405:
+			if (Ft >= Pl->descend * 0.62) Shoot(TEXT("f2-02-descend"), TEXT("the Dropship coming down onto the Landing Pad, the giant beyond"));
+			break;
+		case 2406:
+			if (Ft >= Pl->boardAt() + Pl->board * 0.45) Shoot(TEXT("f2-03-board"), TEXT("the Prospector walking up the ramp"));
+			break;
+		case 2407:
+			if (Ft >= Pl->liftAt() + Pl->lift * 0.75) Shoot(TEXT("f2-04-liftoff"), TEXT("the lift-off, dust racing out under it"));
+			break;
+		case 2408:
+			if (Ft >= Pl->turnsAt() + Pl->turns * 0.3) Shoot(TEXT("f2-05-turn"), TEXT("a banking turn, the ringed giant in view"));
+			break;
+		case 2409:
+			if (Ft >= Pl->dashAt() + Pl->dash * 0.45) Shoot(TEXT("f2-06-dash"), TEXT("the speed burst across the sky, clouds streaking"));
+			break;
+		case 2410:
+			if (Ft >= Pl->approachAt() + Pl->approach * 0.55 && Pilot->FlightStage() == EAcFlightStage::Approach)
+				Shoot(TEXT("f2-07-approach"), TEXT("the approach: slowing, coming down onto Cold Fork's Landing Pad"));
+			else if (Pilot->FlightStage() == EAcFlightStage::StepOut) Check(false, TEXT("f2: the approach passed before its picture"));
+			break;
+		default:
+			if (Pilot->FlightStage() == EAcFlightStage::StepOut && Ft >= Pl->total() + ac::Ferry::stepOut * 0.5)
+				Shoot(TEXT("f2-08-step-out"), TEXT("stepping out at the target pad"));
+			break;
+		}
+		TimedOut(TEXT("f2: the flight's moment"), 40);
+		return;
+	}
+	case 2412:
+		if (!Pilot->InFlight() && Seated() && Since() > 0.8)
+		{
+			// (-AcMmoShotsF2Twice: the second flight, back to the start's pad.)
+			const TCHAR* Into = F2Round == 0 ? TEXT("cold-fork") : TEXT("start");
+			Check(Here == Into, FString::Printf(TEXT("f2: down in %s"), *Where()));
+			Check(Sim->SeamlessChanges() >= 1 && Mmo->LastWasSeamless(), TEXT("f2: the approach's region change was seamless"));
+			Check(Mmo->LastTookPrepared(), TEXT("f2: the target region's mirror was made ahead"));
+			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
+			Check(Near && Near->Within(), TEXT("f2: standing on the target Landing Pad"));
+			// The frame times: the flight's and the region change's.
+			auto Pct = [](TArray<double> V, const double P) { V.Sort(); return V.Num() ? V[FMath::Clamp(int32(P * V.Num()), 0, V.Num() - 1)] : 0.0; };
+			double Sum = 0, Worst = 0, NearSwitch = 0;
+			for (const double F : F2Frames)
+			{
+				Sum += F;
+				Worst = FMath::Max(Worst, F);
+			}
+			if (F2Switch >= 0)
+				for (int32 I = FMath::Max(0, F2Switch - 5); I < FMath::Min(F2Frames.Num(), F2Switch + 6); ++I) NearSwitch = FMath::Max(NearSwitch, F2Frames[I]);
+			UE_LOG(LogAutocraft, Log, TEXT("f2 perf (flight %d): %d frames aboard: frame mean %.2f p50 %.2f p95 %.2f p99 %.2f max %.2f ms; round the region change (frame %d) max %.2f ms; gpu p50 %.2f p95 %.2f ms"),
+				F2Round + 1, F2Frames.Num(), F2Frames.Num() ? Sum / F2Frames.Num() : 0.0, Pct(F2Frames, 0.5), Pct(F2Frames, 0.95), Pct(F2Frames, 0.99), Worst, F2Switch,
+				NearSwitch, Pct(F2Gpu, 0.5), Pct(F2Gpu, 0.95));
+			for (int32 St = 1; St <= int32(EAcFlightStage::StepOut); ++St)
+			{
+				TArray<double> In;
+				for (int32 I = 0; I < F2Frames.Num(); ++I)
+					if (F2Stages[I] == St) In.Add(F2Frames[I]);
+				double Max = 0;
+				for (const double F : In) Max = FMath::Max(Max, F);
+				UE_LOG(LogAutocraft, Log, TEXT("f2 perf (flight %d): stage %d: %d frames, p50 %.2f p95 %.2f max %.2f ms"), F2Round + 1, St, In.Num(),
+					Pct(In, 0.5), Pct(In, 0.95), Max);
+			}
+			if (F2Round == 0) Shoot(TEXT("f2-09-landed"), TEXT("down on Cold Fork's Landing Pad, the pilot's view back, the Dropship lifting away"));
 			else Advance();
 		}
+		else TimedOut(TEXT("f2: down on Cold Fork's Landing Pad"), 15);
 		return;
-	case 521:
-		if (Pilot->FlightSeconds() >= 0.6) Shoot(TEXT("fl-01-spool"), TEXT("the spool-up: the jets lit on the pad, the dust ring"));
-		else if (!Mmo->FlightRefusal().IsEmpty())
+	case 2413:
+		// -AcMmoShotsF2Twice: the same flight's frame times again, back to the
+		// start's pad (what the first draw of the ship and its effects cost).
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsF2Twice")) && F2Round == 0)
 		{
-			Check(false, FString::Printf(TEXT("flight refused: %s"), *Mmo->FlightRefusal()));
-			Finish();
+			if (Since() < 2.0) return;
+			F2Round = 1;
+			F2Frames.Reset();
+			F2Gpu.Reset();
+			F2Stages.Reset();
+			F2Last = -1;
+			F2Switch = -1;
+			FString Why;
+			Check(Mmo->Fly(TEXT("start"), TEXT("Landing Pad 1"), &Why), FString::Printf(TEXT("f2: the second flight asked for (%s)"), *Why));
+			T.Phase = 2405;
+			T.PhaseAt = Now;
+			return;
 		}
-		else TimedOut(TEXT("the lift-off"), 10);
-		return;
-	case 522:
-		if (Pilot->FlightSeconds() >= 1.5) Shoot(TEXT("fl-02-liftoff"), TEXT("the lift-off from low behind the pad, the giant beyond"));
-		else TimedOut(TEXT("the lift-off's climb"), 10);
-		return;
-	case 523:
-		if (Pilot->FlightSeconds() >= 2.95 || Pilot->FlightStage() == EAcFlightStage::Landing)
-		{
-			Check(Pilot->FlightStage() == EAcFlightStage::Transit, TEXT("in transit for the high picture"));
-			Shoot(TEXT("fl-03-cruise"), TEXT("high over the region, heading for the giant"));
-		}
-		else TimedOut(TEXT("the transit"), 10);
-		return;
-	case 524:
-		if (Pilot->LandingSeconds() >= 0.55) Shoot(TEXT("fl-04-descent"), TEXT("the descent onto Cold Fork's pad, retro thrust"));
-		else TimedOut(TEXT("the landing"), 20);
-		return;
-	case 525:
-		if (Pilot->LandingSeconds() >= 1.3 || !Pilot->InFlight()) Shoot(TEXT("fl-05-touchdown"), TEXT("the touch down: dust thrown out"));
-		else TimedOut(TEXT("the touch down"), 10);
-		return;
-	case 526:
-		if (Seated() && !Pilot->InFlight() && Since() > 0.6)
-		{
-			Check(Here == TEXT("cold-fork"), FString::Printf(TEXT("landed %s"), *Where()));
-			Shoot(TEXT("fl-06-landed"), TEXT("down on Cold Fork's pad, the pilot's view back"));
-		}
-		else TimedOut(TEXT("down on Cold Fork's pad"), 15);
-		return;
-	case 527:
-		Check(Shots.Saved + Shots.Skipped == 6, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Check(Shots.Saved + Shots.Skipped == (F2Round ? 16 : 9),
+			FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsRig

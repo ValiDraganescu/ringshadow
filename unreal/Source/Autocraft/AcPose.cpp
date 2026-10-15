@@ -118,6 +118,7 @@ namespace AcPose
 		case ac::StructureKind::lab: return TEXT("lab");
 		case ac::StructureKind::sentinel: return TEXT("sentinel");
 		case ac::StructureKind::gatling: return TEXT("gatling");
+		case ac::StructureKind::landingPad: return TEXT("landingPad");
 		}
 		return TEXT("citadel");
 	}
@@ -137,6 +138,7 @@ namespace AcPose
 		case ac::StructureKind::lab: return 1.9;
 		case ac::StructureKind::sentinel: return 1.7;
 		case ac::StructureKind::gatling: return 1.3;
+		case ac::StructureKind::landingPad: return 0.18;
 		}
 		return 2.0;
 	}

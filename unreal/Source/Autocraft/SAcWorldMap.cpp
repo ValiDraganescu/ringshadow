@@ -218,7 +218,7 @@ bool SAcWorldMap::PickPad(const FString& RegionId, const FString& PadName)
 		if (Text(G.id) != RegionId) continue;
 		for (int32 P = 0; P < (int32)G.pads.size(); ++P)
 		{
-			if (Text(G.pads[P].name) != PadName) continue;
+			if (Text(G.pads[P].name) != PadName || !Pickable(R, P)) continue;
 			Pick = FPick{R, P};
 			Refusal.Reset();
 			Invalidate(EInvalidateWidgetReason::Paint);
@@ -240,23 +240,30 @@ FString SAcWorldMap::PickedPad() const
 
 SAcWorldMap::FPick SAcWorldMap::HerePad() const
 {
-	if (!Info.World) return FPick();
+	if (!Info.World || Info.NearPad.IsEmpty()) return FPick();
 	const int32 Here = (int32)Info.World->here;
 	if (Here < 0 || Here >= (int32)Info.World->regions.size()) return FPick();
 	const ac::net::WorldMessage::Region& G = Info.World->regions[Here];
-	if (G.pads.empty()) return FPick();
 	for (int32 P = 0; P < (int32)G.pads.size(); ++P)
 	{
-		if (Text(G.pads[P].name) == Info.NearPad) return FPick{Here, P};
+		if (G.pads[P].building && Text(G.pads[P].name) == Info.NearPad) return FPick{Here, P};
 	}
-	return FPick{Here, 0};
+	return FPick();
+}
+
+bool SAcWorldMap::Pickable(const int32 Region, const int32 Pad) const
+{
+	if (!Info.World || Region < 0 || Region >= (int32)Info.World->regions.size()) return false;
+	const ac::net::WorldMessage::Region& G = Info.World->regions[Region];
+	if (Pad < 0 || Pad >= (int32)G.pads.size() || !G.pads[Pad].building) return false;
+	return Region == (int32)Info.World->here || Info.Seen.count(G.id) > 0;
 }
 
 bool SAcWorldMap::PickIsHere() const
 {
 	if (!Info.World || Pick.Region == INDEX_NONE || !AtPad()) return false;
 	const FPick Mine = HerePad();
-	return Mine.Region == Pick.Region && Mine.Pad == Pick.Pad && Text(Info.World->regions[Pick.Region].pads[Pick.Pad].name) == Info.NearPad;
+	return Mine.Region == Pick.Region && Mine.Pad == Pick.Pad;
 }
 
 ac::Vec2 SAcWorldMap::PadPoint(const int32 Region, const int32 PadIndex) const
@@ -276,9 +283,10 @@ bool SAcWorldMap::MovePick(const int32 DX, const int32 DY)
 		Invalidate(EInvalidateWidgetReason::Paint);
 		return Pick.Region != INDEX_NONE;
 	}
-	// The nearest pad that way: along the arrow counts once, across it
+	// The nearest Landing Pad that way: along the arrow counts once, across it
 	// twice; a pad more across than along only when none is nearer the line.
 	const ac::Vec2 From = PadPoint(Pick.Region, Pick.Pad);
+	// (`Pick` may be on no Landing Pad: none here; then from the pilot.)
 	const ac::Vec2 Dir = ac::normalize(ac::Vec2(DX, DY));
 	FPick Best, Wide;
 	double BestScore = TNumericLimits<double>::Max();
@@ -287,7 +295,7 @@ bool SAcWorldMap::MovePick(const int32 DX, const int32 DY)
 	{
 		for (int32 P = 0; P < (int32)Info.World->regions[R].pads.size(); ++P)
 		{
-			if (R == Pick.Region && P == Pick.Pad) continue;
+			if ((R == Pick.Region && P == Pick.Pad) || !Pickable(R, P)) continue;
 			const ac::Vec2 D = PadPoint(R, P) - From;
 			const double Along = ac::dot(D, Dir);
 			const double Across = FMath::Abs(D.x * Dir.y - D.y * Dir.x);
@@ -317,12 +325,12 @@ void SAcWorldMap::Fly()
 {
 	if (!Info.World || Pick.Region == INDEX_NONE)
 	{
-		SetRefusal(TEXT("Pick a pad to fly to first"));
+		SetRefusal(TEXT("Pick a Landing Pad to fly to first"));
 		return;
 	}
 	if (PickIsHere())
 	{
-		SetRefusal(FString::Printf(TEXT("You are at pad %s: pick another pad to fly to"), *Info.NearPad));
+		SetRefusal(FString::Printf(TEXT("You are at %s: pick another Landing Pad to fly to"), *Info.NearPad));
 		return;
 	}
 	const ac::net::WorldMessage::Region& G = Info.World->regions[Pick.Region];
@@ -336,7 +344,7 @@ void SAcWorldMap::Close()
 
 bool SAcWorldMap::AtPad() const
 {
-	return (Info.NearDistance && *Info.NearDistance <= Info.PadReach) || (Info.RingwalkerIn && *Info.RingwalkerIn <= 0);
+	return Info.NearDistance && *Info.NearDistance <= Info.PadReach;
 }
 
 FString SAcWorldMap::PriceText(const int32 Region) const
@@ -359,7 +367,7 @@ FString SAcWorldMap::StateLine(FLinearColor& Color) const
 	if (!Info.FlyingTo.IsEmpty())
 	{
 		Color = FAcHudStyle::Amber();
-		return FString::Printf(TEXT("Flying to %s…"), *Info.FlyingTo);
+		return FString::Printf(TEXT("Aboard the Dropship to %s…"), *Info.FlyingTo);
 	}
 	if (!Refusal.IsEmpty())
 	{
@@ -367,17 +375,17 @@ FString SAcWorldMap::StateLine(FLinearColor& Color) const
 		return Refusal;
 	}
 	if (!Info.World) return TEXT("Waiting for the world…");
-	if (!Info.NearDistance) return TEXT("Nothing driven: no flight.");
+	if (!Info.NearDistance)
+	{
+		return TEXT("No Landing Pad in this region: build one (B) to call the Dropship.");
+	}
 	if (!AtPad())
 	{
-		const FString Ring = Info.RingwalkerIn ? FString::Printf(TEXT(" Ringwalker is ready in %.0f s."), std::ceil(*Info.RingwalkerIn)) : FString();
-		return FString::Printf(TEXT("Not at a pad: pad %s is %.0f cells away. Drive onto a pad to fly.%s"), *Info.NearPad, *Info.NearDistance, *Ring);
+		return FString::Printf(TEXT("Not at a Landing Pad: %s is %.0f cells away. Stand on it to call the Dropship."), *Info.NearPad,
+			*Info.NearDistance);
 	}
-	// At a pad, its own, or anywhere with Ringwalker ready.
-	const bool bOnPad = *Info.NearDistance <= Info.PadReach;
-	const FString From = !bOnPad ? FString(TEXT("Ringwalker ready"))
-		: Info.bOwnPad ? FString::Printf(TEXT("At your %s"), *Info.NearPad) : FString::Printf(TEXT("At pad %s"), *Info.NearPad);
-	if (Pick.Region == INDEX_NONE || (bOnPad && PickIsHere())) return FString::Printf(TEXT("%s: pick a pad to fly to."), *From);
+	const FString From = FString::Printf(TEXT("At %s%s"), *Info.NearPad, Info.bSpacedock ? TEXT(" (half the MH)") : TEXT(""));
+	if (Pick.Region == INDEX_NONE || PickIsHere()) return FString::Printf(TEXT("%s: pick a Landing Pad to fly to."), *From);
 	const ac::net::WorldMessage::Region& G = Info.World->regions[Pick.Region];
 	const FString Price = PriceText(Pick.Region);
 	if (Short(Pick.Region))
@@ -385,8 +393,8 @@ FString SAcWorldMap::StateLine(FLinearColor& Color) const
 		Color = FAcHudStyle::Srgb(1.0, 0.45, 0.4);
 		return FString::Printf(TEXT("Not enough MH to fly to %s: %s, you have %lld."), *Text(G.name), *Price, (long long)*Info.Hydrogen);
 	}
-	if (Price.IsEmpty()) return FString::Printf(TEXT("%s: FLY to %s in %s."), *From, *Text(G.pads[Pick.Pad].name), *Text(G.name));
-	return FString::Printf(TEXT("%s: FLY to %s in %s for %s."), *From, *Text(G.pads[Pick.Pad].name), *Text(G.name), *Price);
+	if (Price.IsEmpty()) return FString::Printf(TEXT("%s: FLY the Dropship to %s in %s."), *From, *Text(G.pads[Pick.Pad].name), *Text(G.name));
+	return FString::Printf(TEXT("%s: FLY the Dropship to %s in %s for %s."), *From, *Text(G.pads[Pick.Pad].name), *Text(G.name), *Price);
 }
 
 // MARK: - The view
@@ -824,8 +832,14 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 			int32 PadIndex = INDEX_NONE;
 			for (int32 Q = 0; G2 && Q < (int32)G2->pads.size(); ++Q) if (Text(G2->pads[Q].name) == Text(It.key)) PadIndex = Q;
 			const bool bPicked = int32(It.region) == Pick.Region && PadIndex == Pick.Pad;
-			const float R = FMath::Max(Ground, U * 0.5f);
-			const FLinearColor Ring = bPicked ? FAcHudStyle::Ice() : It.own ? FAcHudStyle::Cyan() : FAcHudStyle::KeyYellow();
+			// F2: the realm's Landing Pads the Dropship flies to, cyan squares;
+			// one in a region not been to yet dim; a region file's pad (where
+			// new pilots come down) a small dim circle, not flown to.
+			const bool bFlyTo = Pickable(int32(It.region), PadIndex);
+			const float R = It.own ? FMath::Max(Ground, U * 0.5f) : FMath::Max(Ground * 0.7f, U * 0.3f);
+			const FLinearColor Ring = bPicked ? FAcHudStyle::Ice()
+				: It.own ? (bFlyTo ? FAcHudStyle::Cyan() : FAcHudStyle::Srgb(0.35, 0.55, 0.62, 0.7))
+				: FAcHudStyle::Srgb(0.75, 0.7, 0.5, 0.55);
 			if (It.own) Outlined(Out, L, G, {C + FVector2f(-R, -R), C + FVector2f(R, -R), C + FVector2f(R, R), C + FVector2f(-R, R), C + FVector2f(-R, -R)}, Ring, 2.f);
 			else Outlined(Out, L, G, Circle(C, R, 20), Ring, 2.f);
 			Box(Out, L + 2, G, FBox2f(C - FVector2f(2, 2), C + FVector2f(2, 2)), Ring);
@@ -835,7 +849,7 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 			// buildings by it); always the picked one; none in a region not
 			// been to.
 			const ac::net::atlas::Place* In = ac::net::atlas::placeOf(Places, It.region);
-			if ((Z >= 2.5f && Z < 6.f && In && In->seen) || bPicked)
+			if ((bFlyTo && Z >= 2.5f && Z < 6.f && In && In->seen) || bPicked)
 			{
 				const FAcHudText Name = Label(Text(It.title), 12, bPicked ? FAcHudStyle::Text() : FAcHudStyle::Srgb(0.98, 0.92, 0.7), EAcHAlign::Left, EAcVAlign::Center);
 				Shadowed(Out, L + 3, G, Name, C + FVector2f(R + 6, 0));

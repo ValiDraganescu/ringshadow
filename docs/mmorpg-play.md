@@ -48,7 +48,8 @@ others dark with only their outline and name (UNCHARTED). It opens centred on
 you. Over the pictures, live: you (a cyan arrow), other pilots, mercenaries
 (orange), the Brood in groups (red, with their count), the realm's buildings,
 deposits (violet, smaller as they empty), MH wells, the blueprint sites you
-know of (gold), pads (yellow rings; yours cyan), starfalls and their craters,
+know of (gold), the realm's Landing Pads (cyan squares; dim in a region you
+have not been to) and the regions' own pads (small dim rings), starfalls and their craters,
 your Journal's missions (a ring in their tier's colour), KSTR's places, and
 the ringshadow band while it sweeps. Live units, buildings and deposits show
 in the region you are in; elsewhere the map shows what you know (sites, pads,
@@ -63,10 +64,10 @@ tier and instructions, a mercenary's name, field and the ore it delivered.
 |---|---|
 | Wheel | Zoom about the pointer |
 | Drag | Pan |
-| Click a pad, then FLY | Pick a pad and fly to it |
+| Click a Landing Pad, then FLY | Pick a Landing Pad and call the Dropship to fly there |
 | Click a mission or a site | The compass points at it (click again: no longer) |
-| Arrows or W A S D | Move the pad pick |
-| Return | Fly to the picked pad |
+| Arrows or W A S D | Move the pick between Landing Pads |
+| Return | Fly to the picked Landing Pad |
 | Esc or M | Close |
 
 The world goes on while the map is open. Nothing pauses.
@@ -125,10 +126,19 @@ are, stays clear (U1; the pieces in `AcProgressHud.h`, `SAcLevelUp.h`,
   (one or two on each shared edge). Walk through it and you are in the
   neighbour: no fade, no stop, the camera and your controls carry on. The
   region's name comes up on the banner as you arrive.
-- **Pads.** Each region has at least one landing pad. Stand on one (within 4
-  cells of its centre), press M, pick a pad in any region and press Return.
-  The Prospector lifts off, flies for 4 s and lands on that pad. Off a pad the
-  map says why it can't fly.
+- **The Dropship.** Your Prospector can't fly by itself: the Dropship
+  carries it between Landing Pads. Build a Landing Pad (B; level 1, 80 ore
+  for the blueprint at the Citadel, two in a region, any pilot uses any) in
+  the region you leave and one in the region you go to. Stand on yours
+  (within 4 cells of its centre), press M, pick a Landing Pad in a region
+  you have been to and press Return. The Dropship comes down onto the pad,
+  your Prospector walks up its ramp, and it lifts off, banks through two
+  turns, dashes across the sky and comes down onto the other pad, where you
+  step out: 16 to 20 s. Aboard, nothing can hurt you. It costs 10 MH and 5
+  a grid step, half from a Spacedock (the big pad), nothing with
+  Ringwalker. The pads each region came with are where new pilots come
+  down; the Dropship doesn't land there. Off a Landing Pad, or with no
+  Landing Pad at the other end, the map says why it can't fly.
 
 ## Saving
 

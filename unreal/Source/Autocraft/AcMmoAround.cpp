@@ -6,6 +6,7 @@
 #include "AcMmo.h"
 
 #include "AcLog.h"
+#include "AcSpace.h"
 
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
@@ -123,7 +124,9 @@ void FAcMmoClient::PrepareAround()
 	}
 	const ac::net::WorldMessage* W = World();
 	const ac::net::Mirror* M = Net ? Net->mirror() : nullptr;
-	if (!W || !M || W->flyingTo) return;
+	// Aboard the Dropship (F2): the target region is made ahead too, map and
+	// mirror, wherever it lies; the ground round the pilot's region stays.
+	if (!W || !M || (W->flyingTo && !W->ferry)) return;
 	// The Welcome's region: `here` until the first RegionChange names one.
 	if (MirrorRegion.empty() && W->here >= 0 && W->here < int64(W->regions.size()) && M->snapshotId() > 0)
 		MirrorRegion = W->regions[size_t(W->here)].id;
@@ -135,21 +138,26 @@ void FAcMmoClient::PrepareAround()
 	const TMap<FString, FString>& All = RegionTexts();
 	const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, {});
 	TArray<FAcRegionAround> Now;
-	for (const ac::net::WorldMessage::Region& Q : W->regions)
+	const int64 Target = W->ferry && W->flyingTo ? *W->flyingTo : INDEX_NONE;
+	for (int64 QI = 0; QI < int64(W->regions.size()); ++QI)
 	{
+		const ac::net::WorldMessage::Region& Q = W->regions[size_t(QI)];
 		const int64 DC = Q.column - R.column, DR = Q.row - R.row;
-		if ((DC == 0 && DR == 0) || FMath::Abs(DC) > 1 || FMath::Abs(DR) > 1) continue;
+		const bool bTarget = QI == Target && QI != Here->Index;
+		if (!bTarget && ((DC == 0 && DR == 0) || FMath::Abs(DC) > 1 || FMath::Abs(DR) > 1)) continue;
 		const FString Id = Utf(Q.id);
 		const FString* Body = All.Find(Id);
 		if (!Body) continue;
 		// Across a side (not a corner): a mirror made ahead too, as the
-		// pilot may walk in.
+		// pilot may walk in; and the Dropship's target, first (F2).
 		const bool bSide = (DC == 0) != (DR == 0);
-		const bool bWantMirror = bSide && !MirrorsMade.Contains(Id);
+		const bool bWantMirror = (bSide || bTarget) && !MirrorsMade.Contains(Id);
+		// The target before the rest.
+		const bool bMayBuild = Target == INDEX_NONE || bTarget || MirrorsMade.Contains(Utf(W->regions[size_t(Target)].id));
 		const std::shared_ptr<const ac::MapDefinition>* Map = BuiltMaps.Find(Id);
 		// One at a time, a while after the region changed (W4: the frames
 		// round a crossing keep the machine to themselves).
-		if ((!Map || bWantMirror) && Building.IsEmpty() && SinceRegionChange() > 2.0)
+		if ((!Map || bWantMirror) && bMayBuild && Building.IsEmpty() && SinceRegionChange() > 2.0)
 		{
 			const std::string Text = TCHAR_TO_UTF8(**Body);
 			const ac::net::RegionDescription Like = M->region();
@@ -181,4 +189,72 @@ void FAcMmoClient::PrepareAround()
 		Now.Add(MoveTemp(A));
 	}
 	AroundNow = MoveTemp(Now);
+}
+
+// MARK: - The Dropship (F2)
+
+TOptional<FVector> FAcMmoClient::RegionPoint(const int64 Index, const ac::Vec2 At) const
+{
+	const ac::net::WorldMessage* W = World();
+	if (!W || Index < 0 || Index >= int64(W->regions.size()) || !Session) return {};
+	const ac::net::WorldMessage::Region& R = W->regions[size_t(Index)];
+	// Its map: the mirror's, or one built ahead.
+	const ac::MapDefinition* Map = nullptr;
+	const ac::net::Mirror* M = Net ? Net->mirror() : nullptr;
+	if (M && MirrorIndex() == Index && M->simulation().map) Map = &*M->simulation().map;
+	else if (const std::shared_ptr<const ac::MapDefinition>* Built = BuiltMaps.Find(Utf(R.id))) Map = Built->get();
+	if (!Map) return {};
+	const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, {});
+	const ac::net::atlas::Place* P = ac::net::atlas::placeOf(Places, Index);
+	if (!P) return {};
+	// The cells on its ground (`padsOnGround`'s way), then where that ground
+	// lies in the session's frame (its centre less the session's).
+	ac::net::WorldMessage::Region One = R;
+	One.pads = {ac::net::WorldMessage::Pad{"", At}};
+	const ac::Vec2 Ground = ac::net::padsOnGround(One, Map->bounds)[0].at;
+	const ac::Vec2 Frame = P->centre() - *Session;
+	return FVector((Ground.x + Frame.x) * AcSpace::CmPerCell, (Ground.y + Frame.y) * AcSpace::CmPerCell, 0.0);
+}
+
+void FAcMmoClient::FollowFerry(const double Now)
+{
+	const ac::net::WorldMessage* W = World();
+	if (!W || !W->ferry || !W->flyingTo)
+	{
+		if (FerryNow) UE_LOG(LogAutocraft, Log, TEXT("mmo: the Dropship's flight is over"));
+		FerryNow.Reset();
+		return;
+	}
+	const ac::net::WorldMessage::Ferry& F = *W->ferry;
+	const FString ToRegion = Utf(W->regions[size_t(*W->flyingTo)].id);
+	const FString Pad = Utf(F.pad);
+	const double Start = Now - F.elapsed;
+	// The same World message each frame: its `elapsed` read once, when new.
+	const bool bNewMessage = F.elapsed != FerryElapsedSeen;
+	FerryElapsedSeen = F.elapsed;
+	if (!FerryNow || FerryNow->ToRegion != ToRegion || FerryNow->Pad != Pad)
+	{
+		FFerry New;
+		New.StartWall = Start;
+		New.Plan = F.plan;
+		New.ToIndex = *W->flyingTo;
+		New.ToRegion = ToRegion;
+		New.Pad = Pad;
+		// The boarding pad: on the mirror's ground while it is the region left.
+		New.From = RegionPoint(F.from, F.boarded).Get(FVector::ZeroVector);
+		FerryNow = New;
+		UE_LOG(LogAutocraft, Log, TEXT("mmo: aboard the Dropship to %s %s, %.1f s in of %.1f (switch at %.1f), from %s"), *ToRegion, *Pad,
+			F.elapsed, F.plan.total(), F.plan.approachAt(), *New.From.ToCompactString());
+	}
+	// A later World message (the switch): the server's clock again, when it
+	// drifted.
+	else if (bNewMessage && FMath::Abs(FerryNow->StartWall - Start) > 0.25)
+	{
+		FerryNow->StartWall = Start;
+	}
+	if (!FerryNow->To)
+	{
+		FerryNow->To = RegionPoint(*W->flyingTo, F.at);
+		if (FerryNow->To) UE_LOG(LogAutocraft, Log, TEXT("mmo: the Dropship's target pad at %s"), *FerryNow->To->ToCompactString());
+	}
 }

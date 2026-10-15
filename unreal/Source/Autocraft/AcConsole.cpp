@@ -104,11 +104,11 @@ namespace
 		{
 			// In flight: nothing to click or drive until it is down.
 			const ac::net::WorldMessage::Region* Where = To ? To : Here;
-			Info.Title = FString::Printf(TEXT("In flight to %s"), *Utf(Where->name));
-			Info.Status = To ? Utf(ac::title(Where->style)) : FString(TEXT("Coming down on the pad"));
+			Info.Title = FString::Printf(TEXT("Aboard the Dropship to %s"), *Utf(Where->name));
+			Info.Status = To ? Utf(ac::title(Where->style)) : FString(TEXT("Coming down on the Landing Pad"));
 			Info.Hp = Info.MaxHp = ac::Rules::hp(ac::UnitKind::prospector);
 			OutHeader = TEXT("IN FLIGHT");
-			OutLines = {FString::Printf(TEXT("To %s"), *Utf(Where->name)), TEXT("The Prospector flies itself"), TEXT("Its controls come back on landing")};
+			OutLines = {FString::Printf(TEXT("To %s"), *Utf(Where->name)), TEXT("The Dropship carries the Prospector"), TEXT("Its controls come back at the pad")};
 			return Info;
 		}
 		const ac::Unit* Mine = nullptr;

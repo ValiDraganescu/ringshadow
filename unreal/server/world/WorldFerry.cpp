@@ -35,8 +35,8 @@ std::optional<int64_t> WorldMap::devLandingPad(size_t r, Vec2 near, std::optiona
 
 std::string WorldMap::devFerry(const std::string& line) {
     std::istringstream in(line);
-    std::string word, what, arg;
-    in >> word >> what >> arg;
+    std::string word, what, arg, more;
+    in >> word >> what >> arg >> more;
     if (!world_ || pilots_.empty()) return "dev: ferry: no world, or no pilot";
     auto& [pilot, p] = *pilots_.begin();
     if (what == "seen") {
@@ -75,7 +75,9 @@ std::string WorldMap::devFerry(const std::string& line) {
             const auto there = regionNamed(arg);
             if (!there) return "dev: ferry pad: no region " + arg;
             r = *there;
-            p.progress.regions.insert(arg);
+            // `ferry pad REGION unseen`: the region left unseen (the flight
+            // menu's picture: a Landing Pad it can't fly to).
+            if (more != "unseen") p.progress.regions.insert(arg);
             const Vec2 pad = world_->regions[r].built.pads[0].at;
             id = devLandingPad(r, pad + Vec2(0, region::padReach + 5), std::nullopt);
         }
@@ -88,11 +90,12 @@ std::string WorldMap::devFerry(const std::string& line) {
                 if (p.unit && u.id == *p.unit && b != st.structures.end()) u.position = b->position;
         }
         landingPadsChanged();
+        pushProgress(pilot);
         for (const LandingPad& o : landingPads())
             if (o.building == *id && o.region == r) return "dev: ferry: " + o.name + " in " + world_->regions[r].file.id;
         return "dev: ferry: a Landing Pad in " + world_->regions[r].file.id;
     }
-    return "dev: ferry: pad [here|REGION] | seen | go REGION | mh N";
+    return "dev: ferry: pad [here|REGION [unseen]] | seen | go REGION | mh N";
 }
 
 } // namespace ac::server

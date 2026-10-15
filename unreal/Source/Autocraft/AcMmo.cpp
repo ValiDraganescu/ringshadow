@@ -16,6 +16,7 @@
 #include "WorldAtlas.h"
 #include "Rules.h"
 
+#include <algorithm>
 #include <string>
 #include <unistd.h>
 
@@ -88,13 +89,20 @@ FString FAcMmoClient::DefaultWorld()
 
 bool FAcMmoClient::DevClock(const FString& Line)
 {
-	if (FString Dir; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty()) return false;
+	if (!DevControlled()) return false;
 	// Written aside, then moved in: the server never reads half a line.
 	const FString File = FPaths::Combine(Directory(), TEXT("dev-control.txt"));
 	const FString Aside = File + TEXT(".new");
 	if (!FFileHelper::SaveStringToFile(Line + TEXT("\n"), *Aside) || !IFileManager::Get().Move(*File, *Aside, true, true)) return false;
 	UE_LOG(LogAutocraft, Display, TEXT("mmo: dev clock: %s"), *Line);
 	return true;
+}
+
+bool FAcMmoClient::DevControlled()
+{
+	FString Dir;
+	return (FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) && !Dir.IsEmpty())
+		|| (FParse::Value(FCommandLine::Get(), TEXT("AcFlowTest="), Dir) && !Dir.IsEmpty());
 }
 
 FString FAcMmoClient::Directory()
@@ -411,8 +419,9 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 		Args.push_back("--clock-hour");
 		Args.push_back(std::to_string(Hour));
 	}
-	// Shots only: the harness moves the world's clock mid-run (DevClock).
-	if (FString Dir; FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) && !Dir.IsEmpty())
+	// Shots and flows: the harness moves the world's clock mid-run, stages
+	// scenes (DevClock).
+	if (DevControlled())
 	{
 		Args.push_back("--dev-control");
 		Args.push_back(Utf8(FPaths::Combine(Directory(), TEXT("dev-control.txt"))));
@@ -617,7 +626,9 @@ void FAcMmoClient::Tick(const double Now)
 	}
 	// The driven unit put right by what the server said.
 	if (ac::net::Mirror* Mm = Net->mirror()) Predictor.reconcile(*Mm);
-	// The regions round the pilot's, made ahead (W4).
+	// The regions round the pilot's, made ahead (W4); the Dropship's flight
+	// and its target region (F2).
+	FollowFerry(Now);
 	PrepareAround();
 	ReadReplies();
 	for (ac::GameEvent& E : Net->events) Events.push_back(std::move(E));
@@ -1218,6 +1229,38 @@ void FAcMmoClient::OnRegionChange(const ac::net::RegionChange& Change)
 			}
 		}
 	}
+	// F2: the Dropship's approach into the target region: seamless too. Its
+	// map and mirror were made ahead (`PrepareAround`); the world frame moves
+	// by the regions' distance, the ship flies on in Unreal space; nothing is
+	// driven until the touch down (the first snapshot that shows the
+	// Prospector: adopted, `bAdopt`).
+	if (W && W->ferry && Net->mirror())
+	{
+		const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, {});
+		const ac::net::atlas::Place* From = ac::net::atlas::placeOf(Places, MirrorIndex());
+		const ac::net::atlas::Place* To = ac::net::atlas::placeOf(Places, Change.regionId);
+		if (From && To && From != To)
+		{
+			Interp.reset();
+			Predictor.reset();
+			LastBlend = 0;
+			WantedUnit = std::nullopt;
+			bAutoTaken = true;
+			bAdopt = true;
+			AdoptOld = std::nullopt;
+			bArriving = true;
+			SeenMirror = Net->mirror();
+			SeenGame = -1;
+			MirrorGeneration += 1;
+			SeamlessShift = To->centre() - From->centre();
+			bLastSeamless = true;
+			MirrorRegion = Change.regionId;
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: region change %lld: the Dropship comes in over %s (%s), seamless (%+.0f, %+.0f cells, mirror %s)"),
+				(long long)Change.visit, *Text(Change.regionId), *Text(Change.region.mapName), SeamlessShift->x, SeamlessShift->y,
+				Net->tookPrepared() ? TEXT("made ahead") : TEXT("built now"));
+			return;
+		}
+	}
 	MirrorRegion = Change.regionId;
 	// A new region: what was blended and predicted was the old one's.
 	Interp.reset();
@@ -1281,16 +1324,18 @@ std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
 	if (!R || !M || !M->driven() || Travelling()) return std::nullopt;
 	const ac::Unit* U = M->unit(*M->driven());
 	if (!U) return std::nullopt;
-	// The server's rule: pads on this map's ground within Pad link's reach;
-	// the pilot's own within its building's radius + 2 too (P6).
+	// The server's rule: the realm's Landing Pads (and Spacedock) on this
+	// map's ground within Pad link's reach, the Spacedock within its radius
+	// + 2 too. A region file's pad is no Landing Pad (F2).
 	const std::vector<ac::region::Place> Ground = ac::net::padsOnGround(*R, M->simulation().map->bounds);
 	const double Reach = PadReachNow();
 	std::optional<FPadNear> Best;
 	for (size_t I = 0; I < Ground.size() && I < R->pads.size(); ++I)
 	{
-		FPadNear P{Text(Ground[I].name), ac::distance(Ground[I].at, U->position), Reach, R->pads[I].building};
-		if (P.Building) P.Reach = FMath::Max(Reach, ac::Rules::radius(*P.Building) + 2.0);
-		// One it can fly from first, then the nearest.
+		if (!R->pads[I].building) continue;
+		FPadNear P{Text(Ground[I].name), ac::distance(Ground[I].at, U->position), Reach, *R->pads[I].building};
+		if (P.Building == ac::StructureKind::spacedock) P.Reach = FMath::Max(Reach, ac::Rules::radius(P.Building) + 2.0);
+		// One it can call the Dropship at first, then the nearest.
 		if (!Best || (P.Within() && !Best->Within()) || (P.Within() == Best->Within() && P.Distance < Best->Distance)) Best = P;
 	}
 	return Best;
@@ -1310,15 +1355,19 @@ double FAcMmoClient::PadReachNow() const
 	return Reach;
 }
 
-std::optional<double> FAcMmoClient::RingwalkerIn() const
+bool FAcMmoClient::Ringwalker() const
 {
 	const ac::net::ProgressMessage* P = Progress();
-	if (!P) return std::nullopt;
+	if (!P) return false;
 	const auto It = P->ranks.find(ac::Skill::ringwalker);
-	if (It == P->ranks.end() || It->second <= 0) return std::nullopt;
-	// World time; the message comes only on a change, so against the sky's clock.
-	const double Now = SkyNow ? SkyNow->time : 0;
-	return P->ringwalkerReady > Now ? P->ringwalkerReady - Now : 0.0;
+	return It != P->ranks.end() && It->second > 0;
+}
+
+bool FAcMmoClient::Seen(const std::string& RegionId) const
+{
+	if (const ac::net::WorldMessage::Region* H = Here(); H && H->id == RegionId) return true;
+	const ac::net::ProgressMessage* P = Progress();
+	return P && P->regionsSeen.count(RegionId) > 0;
 }
 
 std::optional<std::string> FAcMmoClient::PadPlateRefusal(const ac::StructureKind Kind, const ac::Vec2 At) const
@@ -1338,9 +1387,11 @@ std::optional<int64> FAcMmoClient::FlightPrice(const FString& RegionId) const
 	const ac::net::WorldMessage::Region* From = Here();
 	const ac::net::WorldMessage* W = World();
 	if (!From || !W) return std::nullopt;
+	const std::optional<FPadNear> Near = NearestPad();
+	const bool bDock = Near && Near->Within() && Near->Building == ac::StructureKind::spacedock;
 	for (const ac::net::WorldMessage::Region& To : W->regions)
 	{
-		if (Text(To.id) == RegionId) return ac::Flight::hydrogen(ac::Flight::steps(From->column, From->row, To.column, To.row));
+		if (Text(To.id) == RegionId) return ac::Flight::price(ac::Flight::steps(From->column, From->row, To.column, To.row), bDock, Ringwalker());
 	}
 	return std::nullopt;
 }
@@ -1360,18 +1411,27 @@ bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)
 		return false;
 	};
 	if (!Net || !Net->welcome() || !World()) return No(TEXT("Not connected to the world yet"));
-	if (FlyingTo()) return No(FString::Printf(TEXT("Already flying to %s"), *Text(FlyingTo()->name)));
+	if (FlyingTo()) return No(FString::Printf(TEXT("Aboard the Dropship to %s"), *Text(FlyingTo()->name)));
 	if (Travelling()) return No(TEXT("Still landing"));
 	if (!FlightsAsked.IsEmpty()) return No(TEXT("A flight is already asked for"));
-	const std::optional<FPadNear> Near = NearestPad();
-	if (!Near) return No(TEXT("Nothing driven to fly"));
-	// Ringwalker: from anywhere once its cooldown is over (the server decides).
-	const std::optional<double> Ring = RingwalkerIn();
-	if (!Near->Within() && !(Ring && *Ring <= 0))
+	const ac::net::WorldMessage* W = World();
+	const ac::net::WorldMessage::Region* To = nullptr;
+	for (const ac::net::WorldMessage::Region& G : W->regions)
 	{
-		if (Ring) return No(FString::Printf(TEXT("Ringwalker is ready in %.0f s; or drive onto a pad: %s is %.0f cells away"), std::ceil(*Ring), *Near->Name, Near->Distance));
-		return No(FString::Printf(TEXT("Drive onto a pad to fly: pad %s is %.0f cells away"), *Near->Name, Near->Distance));
+		if (Text(G.id) == Region) To = &G;
 	}
+	if (!To) return No(FString::Printf(TEXT("No region %s"), *Region));
+	// The server's refusals, in its words (F2).
+	if (!Seen(To->id)) return No(FString::Printf(TEXT("Not discovered yet: %s. Go there on foot first"), *Text(To->name)));
+	const bool bLanding = std::any_of(To->pads.begin(), To->pads.end(), [](const ac::net::WorldMessage::Pad& P) { return P.building.has_value(); });
+	if (!bLanding) return No(FString::Printf(TEXT("No Landing Pad in %s: build one there first"), *Text(To->name)));
+	const bool bThere = std::any_of(To->pads.begin(), To->pads.end(),
+		[&](const ac::net::WorldMessage::Pad& P) { return P.building && Text(P.name) == Pad; });
+	if (!bThere) return No(FString::Printf(TEXT("No %s in %s"), *Pad, *Text(To->name)));
+	const std::optional<FPadNear> Near = NearestPad();
+	if (!Mirror() || !Mirror()->driven()) return No(TEXT("Nothing driven"));
+	if (!Near || !Near->Within()) return No(TEXT("Not at a Landing Pad: stand on one to call the Dropship"));
+	if (To == Here() && Near->Name == Pad) return No(FString::Printf(TEXT("At %s already"), *Pad));
 	// The flight's MH (F1): the server's price and words.
 	if (const std::optional<int64> Price = FlightPrice(Region); Price && HydrogenNow())
 	{
@@ -1383,6 +1443,6 @@ bool FAcMmoClient::Fly(const FString& Region, const FString& Pad, FString* Why)
 	// A landing in this region brings a new unit with no RegionChange.
 	bAdopt = true;
 	AdoptOld = Driven();
-	UE_LOG(LogAutocraft, Log, TEXT("mmo: request %u: fly from pad %s to %s %s"), Id, *Near->Name, *Region, *Pad);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: request %u: the Dropship from %s to %s %s"), Id, *Near->Name, *Region, *Pad);
 	return true;
 }

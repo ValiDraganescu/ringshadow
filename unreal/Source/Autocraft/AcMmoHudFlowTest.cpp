@@ -137,6 +137,28 @@ void UAcGameFlowSubsystem::TickMmoHudFlow(const FString& Step)
 		{
 		case 2:
 		{
+			// F2: a Landing Pad in every region but Glass Flats (its spot by
+			// the pad is blocked: the dev line puts it higher, off the grid's
+			// rows), every region seen (the `ferry` dev lines; the flight menu
+			// picks only those), the pilot on the start's.
+			if (!bMmoPadsAsked)
+			{
+				bMmoPadsAsked = true;
+				Check(Mmo->DevClock(TEXT("ferry seen\nferry pad here\nferry pad tern-ridge\nferry pad slag-pockets\nferry pad brine-pans\n"
+					"ferry pad cold-fork\nferry pad ashen-shelf\nferry pad rust-hollow\nferry pad dust-terraces")),
+					TEXT("Landing Pads in every region asked for"));
+				return;
+			}
+			int32 Pads = 0;
+			if (const ac::net::WorldMessage* W = Mmo->World())
+				for (const ac::net::WorldMessage::Region& G : W->regions)
+					for (const ac::net::WorldMessage::Pad& Q : G.pads) Pads += Q.building.has_value();
+			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
+			if (Pads < 8 || !Near || !Near->Within())
+			{
+				Waited(TEXT("Landing Pads in every region, the pilot on one"), 10);
+				return;
+			}
 			// M opens the map (the command map's key hands it over).
 			ToggleWorldMap();
 			const TSharedPtr<SAcWorldMap> Open = WorldMapWidget();
@@ -151,11 +173,12 @@ void UAcGameFlowSubsystem::TickMmoHudFlow(const FString& Step)
 				Check(bTaken && Open->PickedRegion() == Want,
 					FString::Printf(TEXT("%s picks %s (picked %s)"), *K.ToString(), Want, *Open->PickedRegion()));
 			};
-			Check(Open->PickedRegion() == TEXT("start") && Open->PickedPad() == TEXT("landing"),
-				FString::Printf(TEXT("the pick starts on the start pad (%s %s)"), *Open->PickedRegion(), *Open->PickedPad()));
+			Check(Open->PickedRegion() == TEXT("start") && Open->PickedPad() == TEXT("Landing Pad 1"),
+				FString::Printf(TEXT("the pick starts on the start's Landing Pad (%s %s)"), *Open->PickedRegion(), *Open->PickedPad()));
+			Check(!Open->PickPad(TEXT("cold-fork"), TEXT("landing")), TEXT("a region file's pad is not picked"));
 			// Return on the pad it stands on: nothing to fly to.
 			PressFlowKey(EKeys::Enter);
-			Check(WorldMapWidget().IsValid() && !Mmo->FlyingTo() && Open->RefusalText().Contains(TEXT("pick another pad")),
+			Check(WorldMapWidget().IsValid() && !Mmo->FlyingTo() && Open->RefusalText().Contains(TEXT("pick another Landing Pad")),
 				FString::Printf(TEXT("Return on its own pad stays (\"%s\")"), *Open->RefusalText()));
 			Key(EKeys::Right, TEXT("tern-ridge"));
 			Key(EKeys::Down, TEXT("slag-pockets"));
@@ -168,8 +191,9 @@ void UAcGameFlowSubsystem::TickMmoHudFlow(const FString& Step)
 			Key(EKeys::D, TEXT("start"));
 			Key(EKeys::Right, TEXT("tern-ridge"));
 			// A click and the keys share the pick: picked as a click does, then moved.
-			Check(Open->PickPad(TEXT("glass-flats"), TEXT("landing")) && PressFlowKey(EKeys::Down) && Open->PickedRegion() == TEXT("tern-ridge"),
-				TEXT("a clicked pick moves with the keys (Glass Flats, Down: Tern Ridge)"));
+			Check(!Open->PickPad(TEXT("glass-flats"), TEXT("Landing Pad 1")), TEXT("no Landing Pad in Glass Flats: nothing to pick"));
+			Check(Open->PickPad(TEXT("slag-pockets"), TEXT("Landing Pad 1")) && PressFlowKey(EKeys::Up) && Open->PickedRegion() == TEXT("tern-ridge"),
+				TEXT("a clicked pick moves with the keys (Slag Pockets, Up: Tern Ridge)"));
 			// Slow frames from here, as mmofly.
 			Mmo->TestReadEvery = 0.2;
 			PressFlowKey(EKeys::Enter);
@@ -200,7 +224,7 @@ void UAcGameFlowSubsystem::TickMmoHudFlow(const FString& Step)
 			return;
 		case 5:
 		{
-			// Off the pad: drive away until well out of its reach.
+			// Off the Landing Pad: drive away until well out of its reach.
 			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
 			if (Near && Near->Distance > FAcMmoClient::PadReach + 3)
 			{
@@ -229,7 +253,7 @@ void UAcGameFlowSubsystem::TickMmoHudFlow(const FString& Step)
 			PressFlowKey(EKeys::Enter);
 			const FString Why = Open->RefusalText();
 			Check(WorldMapWidget().IsValid() && !Mmo->FlyingTo(), TEXT("Return off a pad: no flight, the map stays"));
-			Check(Why.StartsWith(TEXT("Drive onto a pad to fly")), FString::Printf(TEXT("the map says why: \"%s\""), *Why));
+			Check(Why.StartsWith(TEXT("Not at a Landing Pad")), FString::Printf(TEXT("the map says why: \"%s\""), *Why));
 			Check(PressFlowKey(EKeys::Escape) && !WorldMapWidget().IsValid(), TEXT("Esc closes the map"));
 			Finish();
 			return;

@@ -50,16 +50,18 @@ struct FAcWorldMapInfo
 	/// The compass's target set from the map (a mission's id or a site's
 	/// key; empty: none): ringed.
 	FString Target;
-	/// The pad of the pilot's region nearest its unit, and how far (cells).
+	/// The Landing Pad of the pilot's region nearest its unit (F2: a Landing
+	/// Pad or the Spacedock the realm built), and how far (cells); unset:
+	/// none in this region.
 	FString NearPad;
 	std::optional<double> NearDistance;
-	/// Within this of a pad's centre a flight can leave (the near pad's:
-	/// Pad link's reach, a pad of the pilot's own its building's radius + 2).
+	/// Within this of its centre the Dropship is called (Pad link's reach;
+	/// the Spacedock its radius + 2).
 	double PadReach = 4.0;
-	/// The near pad is the pilot's own (a Spacedock, a Homing beacon).
-	bool bOwnPad = false;
-	/// Ringwalker learned: seconds until a flight from anywhere (0: now).
-	std::optional<double> RingwalkerIn;
+	/// The near pad is the Spacedock (half the MH).
+	bool bSpacedock = false;
+	/// Ringwalker learned: flights cost no MH.
+	bool bRingwalker = false;
 	/// In flight to this region (empty: on the ground).
 	FString FlyingTo;
 	/// What a flight to each region costs in MH, by region id (F1,
@@ -190,8 +192,13 @@ private:
 	/// whether the wallet is short of it.
 	FString PriceText(int32 Region) const;
 	bool Short(int32 Region) const;
-	/// The pad of the pilot's region it stands nearest (else its first).
+	/// The Landing Pad of the pilot's region it stands nearest (none: no
+	/// Landing Pad there).
 	FPick HerePad() const;
+	/// A pad the Dropship flies to (F2): a Landing Pad (or the Spacedock) the
+	/// realm built, in a region the pilot has been to. The region files' pads
+	/// are shown, not picked.
+	bool Pickable(int32 Region, int32 Pad) const;
 	/// A pad's place on the world, cells.
 	ac::Vec2 PadPoint(int32 Region, int32 Pad) const;
 	/// A region's picture (null: not baked).

@@ -60,10 +60,20 @@ Any problem stops the server (exit 2, the problems on stderr):
   before it heard of the change still steer it there. Elsewhere the walls
   stop it. (A region with no openings at all keeps the old rule: within 2
   cells of the edge, in 2.5 cells inside the neighbour.)
-- Flights: a Prospector within 4 cells of a pad's centre may fly to any
-  region's pad (by region id and pad name). It lifts off, 4 s pass, it lands
-  on that pad. Refused away from a pad, in flight, where another pilot
-  drives, or when the wallet can't pay the flight's MH (10 + 5 a grid step;
+- Flights (F2, docs/mmorpg-m8.md): the Prospector does not fly by itself.
+  The realm builds Landing Pads (a building, level 1, two in a region, any
+  pilot uses any; the Spacedock is the big one); a Prospector within 4 cells
+  of one's centre (Pad link: 8, 12, 16) calls the Dropship to a Landing Pad
+  in a region the pilot has been to (by region id and pad name, "Landing
+  Pad 1"). The region files' pads are where new pilots appear, not flown
+  to. The Prospector boards at once (out of every region: nothing touches
+  it), the pilot moves into the target region when the approach starts,
+  and the Prospector stands on the target pad at the touch down, 16 to 20 s
+  after the call (`ac::Ferry`: descend 3, board 1.5, lift 2.5, turns 3, a
+  dash of 2 s and 1 s a grid step up to 6, approach 4). Refused off a
+  Landing Pad, aboard, to a region not seen, to a region with no Landing
+  Pad, where another pilot drives, or when the wallet can't pay (10 + 5 a
+  grid step, half from a Spacedock, nothing with Ringwalker;
   docs/prospector-progression.md, "MH sinks").
 - One pilot drives in a region at a time (the core drives one unit a
   region); a crossing into a region where another pilot drives stops at the edge, a
@@ -104,35 +114,43 @@ log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
   fade, no hold, the seat and the camera kept, the unit's model kept under
   its new id. The crossing is measured by `-AcMmoShotsW4` (`w4: crossing:`
   in the log, `w4-crossing.csv`): frame times and the unit's pace round it.
-- A landing (a flight) gives the client a new mirror of the new region: the
-  prediction and the blending start over, and the game rebuilds on it
-  (terrain, doodads, minimap, fog: `OnGameStarted`). The pilot keeps the
-  seat: the view holds where it was until the new region's first snapshot
-  shows the unit, then follows it. Nothing of the old region stays.
+- The Dropship's approach (F2) changes region seamlessly too: from the call
+  the client makes the target region ahead (its map, its ground set at its
+  place on the world's grid, its mirror), so the region change moves the
+  world frame under the ship and nothing is built then. The pilot keeps the
+  seat with nothing driven until the touch down's snapshot shows the
+  Prospector (adopted as the one wanted).
 - The banner at the top shows the region the pilot is in and its style, or
   "Flying to …" while in flight. The top bar counts the pilot's units (no
   supply count in this mode).
-- Each pad is drawn as a round foundation plate 4 cells across its centre
-  (`region::padReach`), the reach a flight leaves from; the generated
-  base's start plates are not drawn in a region. Server and client measure
-  "at a pad" with one rule (`region::nearestPad`, `net::padsOnGround`).
-- M opens the world map (in place of the command map): the grid of regions
-  with their names, styles and pads, the pilot's region ringed. Standing at
-  a pad, click a pad and FLY (or Return); away from a pad it says how far
-  the nearest pad is. M or Esc closes it. The unit stands while it is open.
+- Each region file's pad is drawn as a round foundation plate 4 cells
+  across its centre (`region::padReach`); the generated base's start plates
+  are not drawn in a region. A Landing Pad is a building: a 3 by 3 deck the
+  Prospector walks onto (`Rules::walkable`). Server and client measure "at
+  a pad" with one rule (`region::nearestPad`, `net::padsOnGround`).
+- M opens the world map (in place of the command map), the flight menu:
+  standing on a Landing Pad, click a Landing Pad in a region been to (a
+  cyan square; one in a region not seen yet dim, a region file's pad a
+  small dim circle, neither picked) and FLY (or Return); off one it says how
+  far the nearest Landing Pad is. M or Esc closes it. The unit stands while
+  it is open.
 - Only the player gives the unit back (Esc): a region change never does,
   and the server's seat after a landing is taken only then, so an old
   snapshot never takes the unit back again. A view held for travel gives
-  way to the top-down camera after 15 s.
-- A flight is shown (`AcPilotFlight.h`; only the picture, the server's
-  4 s stay the rule): the Prospector rises off the pad (1.5 s, dust and a
-  thrust glow), the camera goes up behind it and pulls back; in transit the
-  region falls away under it as the camera turns slowly round it, dimming
-  near the landing ("Flying to ..." on the banner). With the new region's
-  first snapshot it comes down onto the pad (1.5 s) and the camera settles
-  into the pilot's view; the input is held until it touches down. A late
-  landing keeps the transit view moving, up to the 15 s above.
-  `-AcMmoFlightShots=DIR` with `mmofly` saves a picture of each stage.
+  way to the top-down camera after 40 s.
+- The Dropship's flight is shown (`AcPilotFlight.h`; the server's stages
+  are the rule, the picture runs on the real-seconds clock from the call):
+  the Dropship comes in over a low camera and down onto the Landing Pad,
+  a copy of the Prospector walks up its ramp, it lifts off in a ring of
+  dust, climbs through two banking turns from the giant's way onto the
+  target's (the camera chasing), dashes across the sky through streaking
+  cloud, then slows and comes down onto the target pad, seen wide, and the
+  Prospector walks off where the server put it while the camera settles
+  into the pilot's view; control is back then, and the ship lifts away by
+  itself. Never a fade. The Landing Pads' lamps flash while it is over
+  them. `-AcMmoFlightShots=DIR` with `mmofly` saves a picture of four
+  stages; `-AcMmoShotsF2` is the picture set and the frame times
+  (`f2 perf:` in the log).
 - A flight's sound (F1b; `Tools/AudioGen/flight.manifest.json`, ElevenLabs
   sound effects in `unreal/Resources/Sounds/sfx/`; `FAcAudioRules::Flight`
   and `Cruise`, tested in `Autocraft.Audio.Rules.Flight`), all in the ear:
@@ -143,7 +161,7 @@ log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
   and the touchdown's thud with dust hissing out (`fltouch`).
 - Automation tests (hidden): `Autocraft.Mmo.CrossEdgeEast` (drive east over
   the start region's edge into Tern Ridge) and `Autocraft.Mmo.FlyToPad`
-  (fly to Cold Fork's pad), in `AcMmoTests.cpp`. Through the pilot pawn and
+  (the Dropship to Cold Fork's Landing Pad), in `AcMmoTests.cpp`. Through the pilot pawn and
   the world map, in a hidden game run: `-AcFlowTest=mmoresume,mmocross,mmofly,mmohandback`
   (`AcMmoFlowTest.cpp`; the network read only every 0.2 s while travelling,
   so a RegionChange and its first snapshot land in the same frame).

@@ -1050,10 +1050,10 @@ void UAcGameFlowSubsystem::TickWorldMap()
 		Info.NearPad = Near->Name;
 		Info.NearDistance = Near->Distance;
 		Info.PadReach = Near->Reach;
-		Info.bOwnPad = Near->Building.has_value();
+		Info.bSpacedock = Near->Building == ac::StructureKind::spacedock;
 	}
 	else Info.PadReach = Mmo->PadReachNow();
-	Info.RingwalkerIn = Mmo->RingwalkerIn();
+	Info.bRingwalker = Mmo->Ringwalker();
 	// What each flight costs (F1), and the wallet's MH.
 	if (const ac::net::WorldMessage* W = Mmo->World())
 	{

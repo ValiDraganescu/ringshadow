@@ -1,5 +1,6 @@
-// The MMORPG world's pad flight as the player sees it: the ship
-// (`AAcFlightShip`) and the pilot pawn's flight view (AcPilotFlight.h).
+// The MMORPG world's Dropship flight as the player sees it (F2): the ship and
+// the Prospector's copy (`AAcFlightShip`), and the pilot pawn's flight view
+// (AcPilotFlight.h).
 #include "AcPilotFlight.h"
 
 #include "AcAudioDirector.h"
@@ -8,9 +9,11 @@
 #include "AcEffectsExtension.h"
 #include "AcGasGiant.h"
 #include "AcLog.h"
+#include "AcMmo.h"
 #include "AcModelCatalog.h"
 #include "AcParticles.h"
 #include "AcPilotPawn.h"
+#include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcWorldRenderer.h"
 
@@ -142,12 +145,15 @@ AAcFlightShip::AAcFlightShip()
 	SetCanBeDamaged(false);
 }
 
-AAcFlightShip* AAcFlightShip::SpawnFor(UWorld* World)
+AAcFlightShip* AAcFlightShip::SpawnFor(UWorld* World, const FName Name)
 {
 	if (!World) return nullptr;
-	if (TActorIterator<AAcFlightShip> It(World); It) return *It;
+	for (TActorIterator<AAcFlightShip> It(World); It; ++It)
+	{
+		if (It->GetFName() == Name) return *It;
+	}
 	FActorSpawnParameters P;
-	P.Name = TEXT("AcFlightShip");
+	P.Name = Name;
 	P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	AAcFlightShip* Ship = World->SpawnActor<AAcFlightShip>(P);
 	if (Ship) Ship->Hide();
@@ -177,7 +183,8 @@ void AAcFlightShip::Build(const FName Model, const int32 Team)
 		bool bHidden = false;
 		for (int32 Q = P; Q != INDEX_NONE; Q = Info->Parts[Q].Parent) bHidden |= Info->Parts[Q].bHidden;
 		const FAcModelPart& Part = Info->Parts[P];
-		if (bHidden || Part.Opacity < 0.999f) continue;
+		// (A flier's ground shadow stays out: the flight's ship is in the air.)
+		if (bHidden || Part.Opacity < 0.999f || Part.Name.ToString().Contains(TEXT("shadow"))) continue;
 		const FTransform Rest = Info->RestToModel(P);
 		for (const FAcModelMesh& X : Part.Meshes)
 		{
@@ -216,6 +223,17 @@ bool AAcFlightShip::Show(const FName Model, const int32 Team, const FTransform& 
 	return true;
 }
 
+void AAcFlightShip::Prepare(const FName Model, const int32 Team)
+{
+	if (Key != Model || KeyTeam != Team) Build(Model, Team);
+	Hide();
+}
+
+void AAcFlightShip::SetScale(const double Scale)
+{
+	Root->SetWorldScale3D(FVector(Scale));
+}
+
 void AAcFlightShip::SetGlow(const double Glow)
 {
 	for (UStaticMeshComponent* C : Meshes)
@@ -232,11 +250,40 @@ void AAcFlightShip::Hide()
 
 // MARK: - The pilot pawn's flight view
 
+namespace
+{
+	/// The Dropship's model, the realm's colours.
+	const FName DropshipModel(TEXT("dropship_blue"));
+	/// The Dropship model's body hovers this high over its root (cells, the
+	/// strategy game's hover less the body's depth under its centre): the
+	/// flight lowers it so its belly sits on `Belly` over the pad.
+	constexpr double ModelHover = 1.9;
+	/// The ship's belly over its ground point (cells).
+	constexpr double Belly = 0.1;
+	double ShipLift() { return AcSpace::ToCm(Belly - ModelHover * AcPilotFlight::ShipScale); }
+	/// The ramp at the ship's back (cells behind its centre).
+	constexpr double Ramp = 1.6;
+
+	/// The ground's height (cm) under an Unreal point, `Fallback` off the
+	/// drawn ground.
+	double GroundCm(UAcEffects* Fx, const FVector& P, const double Fallback)
+	{
+		if (!Fx) return Fallback;
+		const double Z = Fx->GroundZ(AcSpace::ToSim(P));
+		return FMath::IsFinite(Z) ? Z : Fallback;
+	}
+
+	/// A camera easing after `Want` (a spring: `Rate` per second).
+	FVector Toward(const FVector& From, const FVector& Want, const double Rate, const double Dt)
+	{
+		return FMath::Lerp(From, Want, 1.0 - FMath::Exp(-Rate * Dt));
+	}
+}
+
 EAcFlightStage AAcPilotPawn::FlightStage() const
 {
 	if (!Flight) return EAcFlightStage::None;
-	if (Flight->LandStart >= 0) return EAcFlightStage::Landing;
-	return Wall() - Flight->Start < AcPilotFlight::LiftSeconds ? EAcFlightStage::LiftOff : EAcFlightStage::Transit;
+	return Flight->Path.Stage(Wall() - Flight->Start);
 }
 
 double AAcPilotPawn::FlightSeconds() const
@@ -244,223 +291,335 @@ double AAcPilotPawn::FlightSeconds() const
 	return Flight ? Wall() - Flight->Start : -1.0;
 }
 
-double AAcPilotPawn::LandingSeconds() const
+bool AAcPilotPawn::StartFlight()
 {
-	return Flight && Flight->LandStart >= 0 ? Wall() - Flight->LandStart : -1.0;
-}
-
-bool AAcPilotPawn::StartFlight(const int64 Visit)
-{
-	if (!LastPlacement || LastModel.IsNone())
-	{
-		UE_LOG(LogAutocraft, Log, TEXT("flight: lift-off with no unit seen: the view holds"));
-		return false;
-	}
-	FFlightShow F;
-	F.Start = Wall();
-	F.From = *LastPlacement;
-	// The view as it was drawn last (the pilot's eye, a chase camera, a dive).
-	F.EyeFrom = GetActorLocation();
-	F.RotFrom = GetActorQuat();
-	F.Model = LastModel;
-	F.Team = LastTeam;
-	F.Visit = Visit;
-	Flight = F;
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	if (!Mmo || !Mmo->Ferry()) return false;
+	const FAcMmoClient::FFerry& F = *Mmo->Ferry();
+	FFlightShow Show;
+	Show.Start = F.StartWall;
+	Show.Path.Plan = F.Plan;
+	Show.Path.A = F.From;
+	Show.Path.B = F.To.Get(F.From);
+	Show.Path.Giant = GiantWay();
+	// Where the Prospector stood (it walks aboard from there), and the view.
+	Show.From = LastPlacement.Get(FTransform(F.From));
+	Show.EyeFrom = GetActorLocation();
+	Show.RotFrom = GetActorQuat();
+	Show.Rider = LastModel;
+	Show.Team = LastTeam;
+	UAcEffects* Fx = UAcEffects::Get(this);
+	Show.Path.A.Z = GroundCm(Fx, Show.Path.A, Show.From.GetLocation().Z);
+	Show.Path.B.Z = Show.Path.A.Z;
+	Flight = Show;
 	Dive.Reset();
 	PullOut.Reset();
-	Hear(this, FAcAudioRules::EFlight::Spool);
-	// The cockpit off, the ship drawn.
+	Departure.Reset();
 	ApplyView();
-	UE_LOG(LogAutocraft, Log, TEXT("flight: lift-off at %s (%s)"), *F.From.GetLocation().ToCompactString(), *F.Model.ToString());
+	UE_LOG(LogAutocraft, Log, TEXT("flight: the Dropship called at %s for %s %s, %.1f s in (total %.1f)"), *Show.Path.A.ToCompactString(),
+		*F.ToRegion, *F.Pad, Wall() - Show.Start, Show.Path.Plan.total());
 	return true;
 }
 
-bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing, const int64 Visit)
+bool AAcPilotPawn::FlightView(FVector& At, FQuat& Rot, const FTransform* Landing)
 {
 	using namespace AcPilotFlight;
 	if (!Flight) return false;
+	FFlightShow& F = *Flight;
+	FPath& Trip = F.Path;
+	const ac::Ferry::Plan& Plan = Trip.Plan;
 	AAcFlightShip* Ship = AAcFlightShip::SpawnFor(GetWorld());
+	AAcFlightShip* Rider = AAcFlightShip::SpawnFor(GetWorld(), TEXT("AcFlightRider"));
 	UAcEffects* Fx = UAcEffects::Get(this);
-	// The effects' seconds since the last frame (the jets' streams).
 	double Dt = 0;
 	if (Fx)
 	{
-		Dt = Flight->LastFx >= 0 ? FMath::Clamp(Fx->Now() - Flight->LastFx, 0.0, 0.1) : 0.0;
-		Flight->LastFx = Fx->Now();
+		Dt = F.LastFx >= 0 ? FMath::Clamp(Fx->Now() - F.LastFx, 0.0, 0.1) : 0.0;
+		F.LastFx = Fx->Now();
 	}
-	const FVector Way = GiantWay();
-	const FVector Side = Across(Way);
-	// The ground under a point, cm (the camera kept over it).
-	auto Above = [&](FVector P, const double Cell)
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	const FAcMmoClient::FFerry* Live = Mmo && Mmo->Ferry() ? &*Mmo->Ferry() : nullptr;
+	// The server's clock again (a later World message), the target pad once
+	// its region's map is known, its height once its ground is drawn.
+	if (Live)
 	{
-		if (Fx) P.Z = FMath::Max(P.Z, Fx->GroundZ(AcSpace::ToSim(P)) + Cells(Cell));
-		return P;
-	};
+		F.Start = Live->StartWall;
+		if (Live->To)
+		{
+			Trip.B.X = Live->To->X;
+			Trip.B.Y = Live->To->Y;
+		}
+	}
+	const bool bSwitched = Mmo && Live && Mmo->MirrorIndex() == Live->ToIndex;
+	if ((bSwitched || Landing) && !F.bToHeight && Fx)
+	{
+		Trip.B.Z = GroundCm(Fx, Trip.B, Trip.B.Z);
+		F.bToHeight = true;
+	}
+	double T = Wall() - F.Start;
+	// The approach waits for the region change (another pilot drives there:
+	// the server holds the ship), the touch down for the Prospector.
+	if (Live && !bSwitched && T > Plan.approachAt() - 0.05) T = Plan.approachAt() - 0.05;
+	if (!Landing && T > Plan.total()) T = Plan.total();
+	if (Landing && F.StepOutStart < 0)
+	{
+		F.StepOutStart = Wall();
+		// The step out from the touch down on, as the server timed it.
+		T = FMath::Max(T, Plan.total());
+		UE_LOG(LogAutocraft, Log, TEXT("flight: on the target pad, %.1f s after the call; stepping out"), Wall() - F.Start);
+	}
+	const double Out = F.StepOutStart >= 0 ? Wall() - F.StepOutStart : -1.0;
+	const EAcFlightStage Moment = Out >= 0 ? EAcFlightStage::StepOut : Trip.Stage(T);
+	const FVector Way = Trip.Way();
+	const FVector Side = Trip.Side(Way);
+	const FVector Giant = Trip.Giant;
 
-	if (Landing)
-	{
-		if (Flight->LandStart < 0)
-		{
-			Flight->LandStart = Wall();
-			Flight->LastRing = -1;
-			if (const UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
-			{
-				if (const FAcModelInfo* Model = R->ModelOf(DrivenId)) Flight->Model = Model->Name;
-			}
-			ApplyView();
-			Hear(this, FAcAudioRules::EFlight::Retro);
-			UE_LOG(LogAutocraft, Log, TEXT("flight: landing at %s, %.1f s after the lift-off"), *Landing->GetLocation().ToCompactString(),
-				Wall() - Flight->Start);
-		}
-		const double L = Wall() - Flight->LandStart;
-		const FVector Pad = Landing->GetLocation();
-		// The cruise's wind gives way to the retro thrust.
-		Cruise(this, L < 0.4 * LandSeconds);
-		if (L >= LandSeconds)
-		{
-			if (Fx)
-			{
-				// Touch down: the ring of the blast, the dust thrown out.
-				Shock(*Fx, Pad, 3.5, 0.6);
-				DustRing(*Fx, Pad, 1.6, 0);
-				Fx->DustPuff(Pad, 1.2, Fx->Now());
-			}
-			Hear(this, FAcAudioRules::EFlight::Touchdown);
-			UE_LOG(LogAutocraft, Log, TEXT("flight: touched down, %.1f s after the lift-off"), Wall() - Flight->Start);
-			EndFlight();
-			return false;
-		}
-		// Down on its jets along the way it came, slowing over the pad.
-		const double H = LandHeight(L);
-		const FVector Body = Pad + Up() * Cells(H) - Way * Cells(LandDrift(L));
-		FTransform Place = *Landing;
-		Place.SetLocation(Pad - Way * Cells(LandDrift(L)));
-		if (Ship)
-		{
-			Ship->Show(Flight->Model, Flight->Team, Place, Cells(H));
-			Ship->SetGlow(1.0 + 2.5 * (1.0 - FMath::SmoothStep(0.6, 1.0, L / LandSeconds)));
-		}
-		if (Fx)
-		{
-			// Retro thrust: full as it comes in, easing at the pad.
-			Jets(*Fx, Body, Place.GetRotation(), 1.0 - 0.6 * FMath::SmoothStep(0.5, 1.0, L / LandSeconds), Dt);
-			if (H < 4.0 && Wall() - Flight->LastRing > 0.18)
-			{
-				Flight->LastRing = Wall();
-				DustRing(*Fx, Pad, 1.0 + 0.8 * (4.0 - H), H);
-			}
-		}
-		// From behind and beside it (the way it came), down into the
-		// pilot's own view.
-		const double S = L / LandSeconds;
-		const FVector Orbit = Above(Body - Way * Cells(11) + Side * Cells(5) + Up() * Cells(4), 1.5);
-		const FVector Pos = FMath::Lerp(Orbit, At, Ease(S));
-		// The ship left of the middle as it comes down: the arrival's toasts
-		// (a region discovered, a first landing) stand in the middle.
-		const FQuat On = LookAt(Pos, Body + Up() * Cells(0.6));
-		const FQuat Left = LookAt(Pos, Body + Up() * Cells(0.6) + On.GetRightVector() * Cells(0.22) * FVector::Dist(Pos, Body) / Cells(1));
-		Rot = FQuat::Slerp(Left, Rot, FMath::SmoothStep(0.5, 1.0, S));
-		At = Pos;
-		SetFade(LandFade(L));
-		return true;
-	}
-
-	// In the air: spooled up on the pad, then off it, up and away toward
-	// the giant.
-	const double T = Wall() - Flight->Start;
-	const double H = LiftHeight(T);
-	const FVector Ground = Flight->From.GetLocation();
-	const FVector Body = Ground + Up() * Cells(H) + Way * Cells(Drift(T));
-	// A RegionChange read, its first snapshot not yet: the old region is
-	// gone from under the ship; dark until the landing.
-	const bool bGone = Visit != Flight->Visit;
-	// The roar as the jets take hold; the cruise's wind once it climbs away.
-	if (!Flight->bRoared && T > SpoolSeconds)
-	{
-		Flight->bRoared = true;
-		Hear(this, FAcAudioRules::EFlight::LiftOff);
-	}
-	Cruise(this, T > 0.6 * LiftSeconds);
+	// The ship.
+	const FVector Body = Out >= 0 ? Trip.B : Trip.Pos(T);
+	const FQuat ShipRot = Out >= 0 ? Trip.Rot(Plan.total() - 0.31) : Trip.Rot(T);
+	const double Thrust = Out >= 0 ? 0.1 : Trip.Thrust(T);
 	if (Ship)
 	{
-		if (bGone) Ship->Hide();
-		else
+		Ship->SetScale(ShipScale);
+		Ship->Show(DropshipModel, F.Team, FTransform(ShipRot, Body), ShipLift());
+		Ship->SetGlow(1.0 + 2.5 * Thrust);
+	}
+	if (Fx && Moment != EAcFlightStage::Board && Moment != EAcFlightStage::StepOut)
+		Jets(*Fx, Body + Up() * Cells(Belly), ShipRot, Thrust, Dt);
+	// The pads' lamps while it is over them.
+	GBusyPads.Reset();
+	if (Moment <= EAcFlightStage::Lift) GBusyPads.Add(Trip.A);
+	if (Moment >= EAcFlightStage::Approach) GBusyPads.Add(Trip.B);
+
+	// The moments, heard and shown once.
+	if (!F.bLanded && Moment >= EAcFlightStage::Board)
+	{
+		F.bLanded = true;
+		Hear(this, FAcAudioRules::EFlight::Touchdown);
+		if (Fx)
 		{
-			FTransform Place = Flight->From;
-			Place.SetLocation(Ground + Way * Cells(Drift(T)));
-			Ship->Show(Flight->Model, Flight->Team, Place, Cells(H));
-			// The engines lit: the glow climbs through the spool-up.
-			Ship->SetGlow(1.0 + 3.0 * LiftThrust(T));
-			// A shudder on the pad while the jets spool up.
-			if (T < SpoolSeconds + 0.3)
-			{
-				const double Shake = Cells(0.025) * FMath::SmoothStep(0.0, SpoolSeconds, T) * (1.0 - FMath::SmoothStep(SpoolSeconds, SpoolSeconds + 0.3, T));
-				Ship->Show(Flight->Model, Flight->Team, Place, Cells(H) + Shake * FMath::Sin(T * 90.0));
-			}
+			Shock(*Fx, Trip.A, 3.5, 0.6);
+			DustRing(*Fx, Trip.A, 1.6, 0);
 		}
 	}
-	if (Fx && !bGone)
+	if (!F.bRoared && Moment >= EAcFlightStage::Lift)
 	{
-		Jets(*Fx, Body, Flight->From.GetRotation(), LiftThrust(T), Dt);
-		// The pad scorched and a shock ring off it as the jets take hold.
-		if (!Flight->bLiftRing && T > 0.25)
+		F.bRoared = true;
+		Hear(this, FAcAudioRules::EFlight::LiftOff);
+		if (Fx)
 		{
-			Flight->bLiftRing = true;
-			Shock(*Fx, Ground, 3.0, 0.5);
-		}
-		if (!Flight->bScorched && T > SpoolSeconds)
-		{
-			Flight->bScorched = true;
+			Shock(*Fx, Trip.A, 3.0, 0.5);
 			FAcScorchRequest Burn;
-			Burn.At = Ground;
+			Burn.At = Trip.A;
 			Burn.Radius = Cells(1.4);
 			Burn.Life = 30;
 			Burn.Time = Fx->Now();
 			Burn.Darkness = 0.6;
 			Fx->Scorch(Burn);
 		}
-		// The dust ring racing out while the jets are near the ground.
-		if (H < 5.0 && T > 0.15 && Wall() - Flight->LastRing > 0.16)
+	}
+	if (!F.bRetro && Moment >= EAcFlightStage::Approach)
+	{
+		F.bRetro = true;
+		Hear(this, FAcAudioRules::EFlight::Retro);
+	}
+	if (!F.bTouched && (Moment == EAcFlightStage::StepOut || T >= Plan.total() - 0.02))
+	{
+		F.bTouched = true;
+		Hear(this, FAcAudioRules::EFlight::Touchdown);
+		if (Fx)
 		{
-			Flight->LastRing = Wall();
-			DustRing(*Fx, Ground, 1.2 + 5.0 * FMath::Min(T / LiftSeconds, 1.0), H);
+			Shock(*Fx, Trip.B, 3.5, 0.6);
+			DustRing(*Fx, Trip.B, 1.6, 0);
+			Fx->DustPuff(Trip.B, 1.2, Fx->Now());
+		}
+	}
+	Cruise(this, Moment >= EAcFlightStage::Lift && Moment <= EAcFlightStage::Dash);
+	// The dust under the jets near the ground.
+	const double Low = (Body.Z - (Moment >= EAcFlightStage::Approach ? Trip.B.Z : Trip.A.Z)) / Cells(1);
+	if (Fx && Thrust > 0.3 && Low < 6.0 && Wall() - F.LastRing > 0.17)
+	{
+		F.LastRing = Wall();
+		DustRing(*Fx, Moment >= EAcFlightStage::Approach ? Trip.B : Trip.A, 1.0 + 0.9 * (6.0 - Low), Low);
+	}
+	// The dash: cloud streaks, puffs of pale vapour flung past the ship.
+	if (Fx && Moment == EAcFlightStage::Dash && Wall() - F.LastCloud > 0.05)
+	{
+		F.LastCloud = Wall();
+		if (FAcParticles* P = AcEffectsBursts::ParticlesOf(Fx))
+		{
+			const FVector Fwd = ShipRot.GetForwardVector();
+			for (int32 K = 0; K < 3; ++K)
+			{
+				const FVector Off = Fwd * Cells(FMath::FRandRange(14.0, 40.0)) + Side * Cells(FMath::FRandRange(-12.0, 12.0)) +
+					Up() * Cells(FMath::FRandRange(-6.0, 7.0));
+				FAcEmit Puff;
+				Puff.Size = FMath::FRandRange(2.5, 5.0);
+				Puff.Speed = 0.3;
+				Puff.Rate = 40;
+				Puff.Duration = 0.05;
+				P->Burst(EAcParticle::MuzzleSmoke, FTransform(Body + Off), Fx->Now(), Puff);
+			}
 		}
 	}
 
-	// The camera: low on the ground behind the pad, the giant beyond, up at
-	// the ship; then swinging up behind it as it heads off, levelling out.
-	const FVector Low = Above(Ground - Way * Cells(11) + Side * Cells(4) + Up() * Cells(1.6 + 0.7 * FMath::Min(H, LiftTop)), 1.2);
+	// The Prospector's copy: walking up the ramp, and off it at the target.
+	if (Rider)
+	{
+		const FVector Back = -ShipRot.GetForwardVector();
+		if (Moment == EAcFlightStage::Descend || Moment == EAcFlightStage::Board)
+		{
+			const FVector Stood = F.From.GetLocation();
+			const FVector RampAt = Trip.A + Back * Cells(Ramp * ShipScale) + FVector(0, 0, Stood.Z - Trip.A.Z);
+			const double U = Moment == EAcFlightStage::Board ? (T - Plan.boardAt()) / Plan.board : 0.0;
+			// Up to the ramp, then in.
+			const FVector P0 = FMath::Lerp(Stood, RampAt, Ease(FMath::Min(U / 0.7, 1.0)));
+			const FVector Pos = U > 0.7 ? FMath::Lerp(RampAt, Trip.A + Up() * Cells(0.3), (U - 0.7) / 0.3) : P0;
+			FVector Dir = (U < 0.7 ? RampAt - Stood : Trip.A - RampAt);
+			Dir.Z = 0;
+			const FQuat Face = Dir.SizeSquared() > 1 ? Dir.Rotation().Quaternion() : F.From.GetRotation();
+			if (U < 0.98 && !F.Rider.IsNone()) Rider->Show(F.Rider, F.Team, FTransform(U > 0 ? Face : F.From.GetRotation(), Pos), 0);
+			else Rider->Hide();
+		}
+		else if (Moment == EAcFlightStage::StepOut && Landing && !F.Rider.IsNone())
+		{
+			const double U = FMath::Clamp(Out / ac::Ferry::stepOut, 0.0, 1.0);
+			const FVector Hatch = Trip.B + Back * Cells(Ramp * ShipScale * 0.5) + Up() * Cells(0.2);
+			const FVector Stand = Landing->GetLocation();
+			FVector Dir = Stand - Hatch;
+			Dir.Z = 0;
+			Rider->Show(F.Rider, F.Team, FTransform(Dir.SizeSquared() > 1 ? Dir.Rotation().Quaternion() : Landing->GetRotation(),
+				FMath::Lerp(Hatch, Stand, Ease(U))), 0);
+		}
+		else Rider->Hide();
+	}
+
+	// The camera.
 	FVector Pos;
 	FQuat Aim;
-	// The ship a little left of the middle: the HUD's contracts sit right.
-	auto OnShip = [&](const FVector& From)
+	auto Look = [](const FVector& From, const FVector& To) { return LookAt(From, To); };
+	const FVector WideA = Trip.A - Giant * Cells(17) + Side * Cells(6) + Up() * Cells(2.2);
+	const FVector CloseA = Trip.A - Giant * Cells(9) + Side * Cells(4) + Up() * Cells(1.4);
+	const FVector ChaseAt = Body - ShipRot.GetForwardVector() * Cells(Moment == EAcFlightStage::Dash ? 11 : 15) + Up() * Cells(3.5);
+	// Beside the approach's glide path, back along it: the ship comes past
+	// and down onto the pad in front of the camera.
+	const FVector WideB = Trip.B - Way * Cells(11) + Side * Cells(10) + Up() * Cells(3.5);
+	switch (Moment)
 	{
-		const FQuat At0 = LookAt(From, Body + Up() * Cells(0.5));
-		return LookAt(From, Body + Up() * Cells(0.5) + At0.GetRightVector() * Cells(0.12) * FVector::Dist(From, Body) / Cells(1));
-	};
-	if (T < LiftSeconds)
+	case EAcFlightStage::Descend:
 	{
-		// Off the pilot's view at once, easing into the low spot.
-		const double In = 1.0 - FMath::Pow(1.0 - FMath::Clamp(T / 0.5, 0.0, 1.0), 3.0);
-		Pos = FMath::Lerp(Flight->EyeFrom, Low, In);
-		Aim = FQuat::Slerp(Flight->RotFrom, OnShip(Pos), FMath::SmoothStep(0.0, 0.35, T));
-		Flight->LowEye = Pos;
+		// Out of the pilot's eye to the low spot by the pad, looking along the
+		// giant's way: the ship comes in over the camera, the giant beyond.
+		const double In = Ease(T / 1.2);
+		Pos = FMath::Lerp(F.EyeFrom, WideA, In);
+		Aim = FQuat::Slerp(F.RotFrom, Look(Pos, Body + Up() * Cells(0.6)), Ease(T / 0.8));
+		break;
 	}
-	else
+	case EAcFlightStage::Board:
 	{
-		const double Tc = T - LiftSeconds;
-		const double Swing = FMath::SmoothStep(0.0, 1.4, Tc);
-		const FVector Behind = Body - Way * Cells(16) + Up() * Cells(4);
-		Pos = FMath::Lerp(Flight->LowEye, Behind, Ease(Swing));
-		// Up at the ship, then level along the way: the giant over it, the
-		// region falling away below.
-		const FQuat Level = FRotator(2.0, Way.Rotation().Yaw, 0).Quaternion();
-		Aim = FQuat::Slerp(OnShip(Pos), Level, FMath::SmoothStep(0.2, 1.6, Tc));
+		const double U = (T - Plan.boardAt()) / Plan.board;
+		Pos = FMath::Lerp(WideA, CloseA, Ease(U));
+		Aim = Look(Pos, Trip.A + Up() * Cells(0.8) - Giant * Cells(1.2));
+		break;
 	}
+	case EAcFlightStage::Lift:
+	{
+		const double U = (T - Plan.liftAt()) / Plan.lift;
+		Pos = FMath::Lerp(CloseA, WideA + Up() * Cells(1.0), Ease(U));
+		Aim = Look(Pos, Body + Up() * Cells(0.6));
+		break;
+	}
+	case EAcFlightStage::Turns:
+	case EAcFlightStage::Dash:
+	{
+		// The chase: easing after the ship, the view along its nose, banked
+		// with it a little.
+		const double U = (T - Plan.turnsAt()) / Plan.turns;
+		const FVector Want = Moment == EAcFlightStage::Turns && U < 0.5 ? FMath::Lerp(WideA + Up() * Cells(1.0), ChaseAt, Ease(U / 0.5)) : ChaseAt;
+		Pos = F.bCam ? Toward(F.Cam, Want, Moment == EAcFlightStage::Dash ? 14.0 : 5.0, Dt > 0 ? Dt : 1.0 / 60) : Want;
+		const FRotator R = ShipRot.Rotator();
+		const FQuat Along = Look(Pos, Body + ShipRot.GetForwardVector() * Cells(18) + Up() * Cells(1.0));
+		const FRotator A0 = Along.Rotator();
+		Aim = FRotator(A0.Pitch, A0.Yaw, R.Roll * 0.35).Quaternion();
+		break;
+	}
+	case EAcFlightStage::Approach:
+	{
+		// Wide from beside the approach's glide path, the ship coming down onto the pad.
+		const double U = (T - Plan.approachAt()) / Plan.approach;
+		Pos = FMath::Lerp(F.bCam ? F.Cam : WideB, WideB, Ease(U / 0.35));
+		Aim = FQuat::Slerp(F.bCam ? F.CamRot : Look(Pos, Body), Look(Pos, Body + Up() * Cells(0.5)), Ease(U / 0.3));
+		break;
+	}
+	default:
+	{
+		// The step out: round behind the ship, where the ramp is, the
+		// Prospector walking off it; then into the pilot's own view.
+		const double U = Landing ? FMath::Clamp(Out / ac::Ferry::stepOut, 0.0, 1.0) : 0.0;
+		const FVector Back = -ShipRot.GetForwardVector().GetSafeNormal2D();
+		const FVector RampCam = Trip.B + Back * Cells(8) + Side * Cells(5) + Up() * Cells(2.2);
+		const FVector From = FMath::Lerp(WideB, RampCam, Ease(U / 0.4));
+		Pos = FMath::Lerp(From, At, Ease((U - 0.45) / 0.55));
+		const FQuat OnRamp = Look(Pos, Trip.B + Back * Cells(Ramp) + Up() * Cells(0.5));
+		Aim = FQuat::Slerp(OnRamp, Rot, Ease((U - 0.45) / 0.55));
+		break;
+	}
+	}
+	F.Cam = Pos;
+	F.CamRot = Aim;
+	F.bCam = true;
 	At = Pos;
 	Rot = Aim;
-	SetFade(bGone ? 1.0 : TransitFade(T));
+	// Stepped out: the ship lifts away by itself, control is back.
+	if (Out >= ac::Ferry::stepOut)
+	{
+		FDeparture D;
+		D.Start = Wall();
+		D.At = Trip.B;
+		D.Way = ShipRot.GetForwardVector().GetSafeNormal2D();
+		D.Team = F.Team;
+		UE_LOG(LogAutocraft, Log, TEXT("flight: stepped out, %.1f s after the call"), Wall() - F.Start);
+		EndFlight();
+		Departure = D;
+		return false;
+	}
 	return true;
+}
+
+void AAcPilotPawn::Depart()
+{
+	using namespace AcPilotFlight;
+	if (!Departure) return;
+	AAcFlightShip* Ship = AAcFlightShip::SpawnFor(GetWorld());
+	UAcEffects* Fx = UAcEffects::Get(this);
+	const double T = Wall() - Departure->Start;
+	if (T >= DepartSeconds || !Ship)
+	{
+		if (Ship) Ship->Hide();
+		Departure.Reset();
+		GBusyPads.Reset();
+		Cruise(this, false);
+		return;
+	}
+	double Dt = 0;
+	if (Fx)
+	{
+		Dt = Departure->LastFx >= 0 ? FMath::Clamp(Fx->Now() - Departure->LastFx, 0.0, 0.1) : 0.0;
+		Departure->LastFx = Fx->Now();
+	}
+	// A breath on the pad, then up and away along its nose, speeding up.
+	const double U = FMath::Max(0.0, T - 0.6);
+	const FVector Body = Departure->At + Up() * Cells(1.2 * U * U) + Departure->Way * Cells(2.5 * U * U * U);
+	const FQuat Rot = FRotator(FMath::Min(12.0, 4.0 * U), Departure->Way.Rotation().Yaw, 0).Quaternion();
+	Ship->Show(DropshipModel, Departure->Team, FTransform(Rot, Body), ShipLift());
+	const double Thrust = FMath::SmoothStep(0.0, 0.6, T);
+	Ship->SetGlow(1.0 + 2.5 * Thrust);
+	if (Fx) Jets(*Fx, Body + Up() * Cells(Belly), Rot, Thrust, Dt);
+	GBusyPads.Reset();
+	if (T < 2.0) GBusyPads.Add(Departure->At);
+	if (T < 0.05) Hear(this, FAcAudioRules::EFlight::LiftOff);
 }
 
 void AAcPilotPawn::EndFlight()
@@ -470,12 +629,9 @@ void AAcPilotPawn::EndFlight()
 	Cruise(this, false);
 	if (UWorld* World = GetWorld())
 	{
-		if (TActorIterator<AAcFlightShip> It(World); It)
-		{
-			It->SetGlow(1.0);
-			It->Hide();
-		}
+		if (AAcFlightShip* Rider = AAcFlightShip::SpawnFor(World, TEXT("AcFlightRider"))) Rider->Hide();
 	}
+	AcPilotFlight::GBusyPads.Reset();
 	SetFade(0);
 	ApplyView();
 }

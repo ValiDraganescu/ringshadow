@@ -317,7 +317,7 @@ TEST(atlas_items_and_their_tooltips) {
     const atlas::Item* pad = find(all, atlas::Kind::pad);
     ASSERT_TRUE(pad != nullptr);
     EXPECT_EQ(pad->title, std::string("landing"));
-    EXPECT_TRUE(has(pad->lines, "Landing pad"));
+    EXPECT_TRUE(has(pad->lines, "Where new pilots come down"));
     const atlas::Item* mission = find(all, atlas::Kind::mission);
     ASSERT_TRUE(mission != nullptr);
     EXPECT_EQ(mission->title, std::string("The Glass Echo"));

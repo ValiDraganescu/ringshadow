@@ -219,15 +219,18 @@ public:
 	/// The camera is still flying down into the unit (the dive): the unit
 	/// drawn, no cockpit.
 	bool InDive() const { return (Dive.IsSet() && !Dive->bInside) || PulledOut() || InFlight(); }
-	/// The MMORPG world: a pad flight shown (AcPilotFlight.h): from the
-	/// lift-off until the landing touches down. The unit drawn as the
-	/// flight's ship, no cockpit, the pilot's input held.
+	/// The MMORPG world: the Dropship's flight shown (F2, AcPilotFlight.h):
+	/// from the call until the Prospector has stepped out at the target pad.
+	/// No cockpit, the pilot's input held.
 	bool InFlight() const { return Flight.IsSet(); }
 	EAcFlightStage FlightStage() const;
-	/// Real seconds since the flight's lift-off, and since its landing began
-	/// (< 0: not in flight, not landing yet). Pictures time their moments by them.
+	/// Real seconds since the call (< 0: not in flight). Pictures time their
+	/// moments by it.
 	double FlightSeconds() const;
-	double LandingSeconds() const;
+	/// The flight's stages (the server's), for pictures and flows.
+	const ac::Ferry::Plan* FlightPlan() const { return Flight ? &Flight->Path.Plan : nullptr; }
+	/// The Dropship after the step out, lifting away (none: gone).
+	bool Departing() const { return Departure.IsSet(); }
 	/// -AcPilotPullOut: the camera is out of the unit, on its way to the gas giant.
 	bool PulledOut() const { return PullOut.IsSet() && PullOut->bOutside; }
 	/// The eye (pitch, lean, third person) and the camera.
@@ -374,43 +377,64 @@ private:
 	/// The MMORPG world: the view held for a unit in travel since (`Clock`;
 	/// < 0: not held), at most this long.
 	double HoldSince = -1;
-	static constexpr double MaxHoldSeconds = 15.0;
-	/// The pad flight shown (AcPilotFlight.cpp): real seconds at the lift-off
-	/// and at the landing's start (< 0: not yet), where the unit stood and
-	/// the view was then, the model, the region changes so far.
+	static constexpr double MaxHoldSeconds = 40.0;
+	/// The Dropship's flight shown (AcPilotFlight.cpp): its way (the pads,
+	/// the stages), the real seconds at the call, where the unit stood and
+	/// the view was then, the Prospector's model (its copy walking aboard).
 	struct FFlightShow
 	{
+		AcPilotFlight::FPath Path;
 		double Start = 0;
-		double LandStart = -1;
 		FTransform From;
 		FVector EyeFrom = FVector::ZeroVector;
 		FQuat RotFrom = FQuat::Identity;
-		FName Model;
+		FName Rider;
 		int32 Team = 0;
-		int64 Visit = 0;
+		/// The target pad's ground height known (its region drawn).
+		bool bToHeight = false;
 		/// The effects' clock at the last frame drawn (the jets' streams).
 		double LastFx = -1;
-		/// The dust ring's last wave (real seconds), the pad scorched, the
-		/// shock ring of the lift-off and of the touch down sent.
+		/// The dust ring's last wave, the last cloud streak (real seconds);
+		/// the moments heard and shown once.
 		double LastRing = -1;
-		bool bScorched = false;
+		double LastCloud = -1;
+		bool bLanded = false;
 		bool bLiftRing = false;
-		/// The lift-off's roar sent (F1b).
+		bool bScorched = false;
 		bool bRoared = false;
-		/// The camera at the lift-off's end, where the transit's swing starts.
-		FVector LowEye = FVector::ZeroVector;
+		bool bRetro = false;
+		bool bTouched = false;
+		/// Real seconds when the Prospector was driven again after the touch
+		/// down: the step out's start (< 0: not yet).
+		double StepOutStart = -1;
+		/// The camera last frame (the chase eases after the ship).
+		FVector Cam = FVector::ZeroVector;
+		FQuat CamRot = FQuat::Identity;
+		bool bCam = false;
 	};
 	TOptional<FFlightShow> Flight;
+	/// The ship lifting away after the step out.
+	struct FDeparture
+	{
+		double Start = 0;
+		FVector At = FVector::ZeroVector;
+		FVector Way = FVector::ForwardVector;
+		int32 Team = 0;
+		double LastFx = -1;
+	};
+	TOptional<FDeparture> Departure;
+	void Depart();
 	/// The last followed unit's placement and model (the lift-off's start).
 	TOptional<FTransform> LastPlacement;
 	FName LastModel;
 	int32 LastTeam = 0;
-	/// Starts the flight from the last followed unit; false: nothing to show.
-	bool StartFlight(int64 Visit);
+	/// Starts the flight from the last followed unit and the client's ferry;
+	/// false: nothing to show.
+	bool StartFlight();
 	/// The flight's view this frame. `Landing`: the unit driven again (its
-	/// placement, and `At`, `Rot` its pilot view to settle into); null: in
-	/// the air (`At`, `Rot` out only). False once it touched down.
-	bool FlightView(FVector& At, FQuat& Rot, const FTransform* Landing, int64 Visit);
+	/// placement, and `At`, `Rot` its pilot view to settle into); null:
+	/// aboard (`At`, `Rot` out only). False once it has stepped out.
+	bool FlightView(FVector& At, FQuat& Rot, const FTransform* Landing);
 	/// The ship gone, the picture bright, the unit drawn.
 	void EndFlight();
 	void SetFade(double Amount);

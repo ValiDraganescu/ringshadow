@@ -150,14 +150,16 @@ void UAcWorldRenderer::OnGameStarted(UAcSimSubsystem& Sim)
 	// its new id, where it was (the world frame did not move); the old
 	// region's others are let go, quietly (they are not gone, only out of
 	// this region).
-	if (const FAcMmoClient* Mmo = Sim.MmoClient(); Sim.IsSeamlessStart() && Mmo && Mmo->Wanted())
+	// F2: the Dropship's approach into a new region the same way, with nothing
+	// driven to walk on (the ship is the pawn's).
+	if (const FAcMmoClient* Mmo = Sim.MmoClient(); Sim.IsSeamlessStart() && Mmo && (Mmo->Wanted() || Mmo->Ferry()))
 	{
-		const int64 NewId = *Mmo->Wanted();
+		const int64 NewId = Mmo->Wanted() ? *Mmo->Wanted() : INDEX_NONE;
 		TArray<TUniquePtr<FObject>> Keep;
 		const int32 Had = Objects.Num();
 		for (TUniquePtr<FObject>& O : Objects)
 		{
-			if (O->bUnit && O->Id == DrivenUnit && DrivenUnit != INDEX_NONE)
+			if (O->bUnit && O->Id == DrivenUnit && DrivenUnit != INDEX_NONE && NewId != INDEX_NONE)
 			{
 				const auto Rekey = [&](const FLayout* L, const TArray<int32>& Slots) {
 					if (!L) return;

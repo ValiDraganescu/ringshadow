@@ -264,6 +264,13 @@ void AAcPilotPawn::OnGameStarted(UAcSimSubsystem& Sim)
 			UE_LOG(LogAutocraft, Log, TEXT("pilot: into a new region, still seated (#%lld wanted)"), (long long)*Mmo->Wanted());
 			return;
 		}
+		// F2: aboard the Dropship, its approach into the target region: the
+		// seat and the flight go on (the Prospector comes at the touch down).
+		if (InFlight())
+		{
+			UE_LOG(LogAutocraft, Log, TEXT("pilot: the Dropship over a new region, still aboard"));
+			return;
+		}
 		Leave(false);
 		return;
 	}
@@ -511,6 +518,16 @@ bool AAcPilotPawn::TakeOver(const int64 Id)
 	FAcFrame None;
 	Follow(None);
 	if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().Trained(U->kind, U->position);
+	// F2: the Dropship and the Prospector's copy built ahead, hidden: the
+	// flight's call draws them at once.
+	if (Sim->IsMmo() && !InFlight())
+	{
+		if (AAcFlightShip* Ship = AAcFlightShip::SpawnFor(GetWorld())) Ship->Prepare(TEXT("dropship_blue"), (int32)FMath::Clamp<int64>(U->owner, 0, 7));
+		if (const UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
+			if (const FAcModelInfo* Model = R->ModelOf(Id))
+				if (AAcFlightShip* Rider = AAcFlightShip::SpawnFor(GetWorld(), TEXT("AcFlightRider")))
+					Rider->Prepare(Model->Name, (int32)FMath::Clamp<int64>(U->owner, 0, 7));
+	}
 	UE_LOG(LogAutocraft, Log, TEXT("pilot: driving %s #%lld"), *KindName(U->kind), (long long)Id);
 	OnTookOver.Broadcast(Id);
 	return true;
@@ -791,6 +808,8 @@ void AAcPilotPawn::Tick(const float DeltaSeconds)
 	BindPointer();
 	if (!ScriptKind.IsEmpty()) Script(FMath::Min(double(DeltaSeconds), 0.1));
 	Steer();
+	// F2: the Dropship lifting away after the step out.
+	Depart();
 }
 
 void AAcPilotPawn::Steer()
@@ -1033,12 +1052,12 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 			if (HoldSince < 0) HoldSince = Clock;
 			// A pad flight: the ship lifts off and the view goes with it
 			// (AcPilotFlight.h), never a frozen frame.
-			if (!Flight && Mmo->FlyingTo()) StartFlight(Mmo->Visit());
+			if (!Flight && Mmo->Ferry()) StartFlight();
 			if (Clock - HoldSince <= MaxHoldSeconds)
 			{
 				FVector At;
 				FQuat Rot;
-				if (Flight && FlightView(At, Rot, nullptr, Mmo->Visit())) SetActorLocationAndRotation(At, Rot);
+				if (Flight && FlightView(At, Rot, nullptr)) SetActorLocationAndRotation(At, Rot);
 				return;
 			}
 			UE_LOG(LogAutocraft, Log, TEXT("pilot: no unit to drive after %.0f s of travel"), MaxHoldSeconds);
@@ -1116,7 +1135,7 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	if (Flight)
 	{
 		const FAcMmoClient* Mmo = Sim->MmoClient();
-		FlightView(View, ViewRot, &*LastPlacement, Mmo ? Mmo->Visit() : 0);
+		FlightView(View, ViewRot, &*LastPlacement);
 	}
 	SetActorLocationAndRotation(View, ViewRot);
 	LastEye = At;
