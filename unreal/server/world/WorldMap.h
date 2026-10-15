@@ -1297,8 +1297,9 @@ public:
     /// The canyon wave pay a frontier pilot earned (Z2: its share by damage).
     /// The radio lines told so far (tests).
     const std::vector<std::string>& radioLog() const { return radioLog_; }
-    /// Dev and shots (`frontier …` lines): `here HABIT` (one of that habit
-    /// beside the first pilot, come and live), `build KIND` (the nearest one
+    /// Dev and shots (`frontier …` lines): `here HABIT [SIDE [poor]]` (one of
+    /// that habit beside the first pilot, come and live; `poor`: its wallet
+    /// emptied, so a miner only drills), `build KIND` (the nearest one
     /// puts up a KIND ahead of it, its blueprint and price given), `radio
     /// hello|raid|cheer|help`, `fight` (the nearest defender at the first
     /// zone's prize with its wave), `list`. What it did, one line.

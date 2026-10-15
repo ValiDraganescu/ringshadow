@@ -1551,7 +1551,11 @@ std::string WorldMap::devFrontier(const std::string& line) {
         f->travelTo = std::nullopt;
         f->downUntil = 0;
         double side = 0;
-        in >> side;
+        std::string poor;
+        in >> side >> poor;
+        // `poor`: an empty wallet, so it only drills (no blueprint to buy,
+        // nothing to build): the shots' miner at its drill.
+        if (poor == "poor") f->wallet = Wallet{0, 0};
         const Vec2 ahead(std::cos(heading), std::sin(heading));
         const Vec2 left(-ahead.y, ahead.x);
         frontierEnter(*f, first->region, here + ahead * 6 + left * (side == 0 ? 4 : side));

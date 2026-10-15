@@ -542,6 +542,8 @@ namespace
 	TOptional<ac::region::RegionFile> Z1File;
 	/// -AcMmoShotsZ2: the zone's turrets standing when the wave broke through.
 	int32 Z2Turrets = 0;
+	/// -AcMmoShotsP1: the frontier miner the dev line staged (its id).
+	uint32 P1Miner = 0;
 	/// -AcMmoShotsD3: the turret card's kept asks, the keys pressed so far.
 	int32 D3Kept = 0;
 	int32 D3Step = 0;
@@ -1155,8 +1157,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1"))) T.Phase = 2300;
 			// -AcMmoShotsZ2: the canyon game (2500-2525).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))) T.Phase = 2500;
-			// -AcMmoShotsZ3: the canyons after The Fork (2700-2712).
-			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2700;
+			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1"))) T.Phase = 2600;
 			// -AcMmoShotsS3: daylight sight (2700-2714).
@@ -5128,19 +5130,19 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Finish();
 		return;
 	// MARK: -AcMmoShotsZ3
-	case 2700:
-	case 2701:
-	case 2702:
-	case 2703:
-	case 2704:
-	case 2705:
-	case 2706:
-	case 2707:
-	case 2708:
-	case 2709:
-	case 2710:
-	case 2711:
-	case 2712:
+	case 2800:
+	case 2801:
+	case 2802:
+	case 2803:
+	case 2804:
+	case 2805:
+	case 2806:
+	case 2807:
+	case 2808:
+	case 2809:
+	case 2810:
+	case 2811:
+	case 2812:
 	{
 		// The two canyons' files (their zones in region cells).
 		static TOptional<ac::region::RegionFile> Brine, Dust;
@@ -5160,7 +5162,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(false, TEXT("z3: both canyons' files read"));
 			return Finish();
 		}
-		const bool bRoost = T.Phase >= 2706 && T.Phase <= 2710;
+		const bool bRoost = T.Phase >= 2806 && T.Phase <= 2810;
 		const ac::region::RegionFile& F = bRoost ? *Dust : *Brine;
 		const ac::region::Zone& Z = F.zones[0];
 		const auto G = [&](const ac::Vec2 R) { const FVector2D V = Cell(R.x, R.y); return ac::Vec2(V.X, V.Y); };
@@ -5200,7 +5202,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(0, ECVF_SetByCode);
 		switch (T.Phase)
 		{
-		case 2700:
+		case 2800:
 			if (!(Seated() && Since() > 3.0))
 			{
 				TimedOut(TEXT("z3: seated"), 120);
@@ -5209,7 +5211,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(Mmo->DevClock(TEXT("brood clear\nbrood zone here the-drowned-cut")), TEXT("z3: the server takes the pilot to The Drowned Cut"));
 			Advance();
 			return;
-		case 2701:
+		case 2801:
 			if (!(InRegion(TEXT("brine-pans")) && Since() > 3.0))
 			{
 				TimedOut(TEXT("z3: in Brine Pans, its ground built"), 120);
@@ -5227,7 +5229,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Frame(Prize + ac::Vec2(-6, 34), 42, Prize + ac::Vec2(-8, -2), 0);
 			Advance();
 			return;
-		case 2702:
+		case 2802:
 		{
 			Frame(Prize + ac::Vec2(-6, 34), 42, Prize + ac::Vec2(-8, -2), 0);
 			if (Since() < 1.5) return;
@@ -5236,7 +5238,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			ShootClean(TEXT("z3-01-drowned-cut-from-above"), TEXT("The Drowned Cut from above: the Salt and Gull arms, the brine over the basin"));
 			return;
 		}
-		case 2703:
+		case 2803:
 		{
 			// Wave 6: Shardlings down both arms, into the brine.
 			if (!W4Set)
@@ -5285,15 +5287,15 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		}
-		case 2704:
+		case 2804:
 			if (Now - W4ShotAt < 0.3) return;
 			ShootClean(TEXT("z3-02-waders-in-the-brine"), TEXT("a wave's Shardlings wading the brine, slowed"));
 			return;
-		case 2705:
+		case 2805:
 			Check(AcCanyon::Near(*Mmo) && AcCanyon::Near(*Mmo)->left > 0, TEXT("z3: The Drowned Cut's wave out"));
 			Shoot(TEXT("z3-03-drowned-cut-wave"), TEXT("the same with the HUD: The Drowned Cut's wave panel"));
 			return;
-		case 2706:
+		case 2806:
 			if (!W4Set)
 			{
 				Check(Mmo->DevClock(TEXT("canyon reset\nbrood clear\nbrood zone here the-roost")), TEXT("z3: the server takes the pilot to The Roost"));
@@ -5310,12 +5312,12 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\ncanyon turrets 1 2 0")), TEXT("z3: The Roost reset, turrets on its rims"));
 			Advance();
 			return;
-		case 2707:
+		case 2807:
 			Frame(Prize + ac::Vec2(10, 30), 40, Prize + ac::Vec2(-2, -1), 0);
 			if (Since() < 2.5) return;
 			ShootClean(TEXT("z3-04-the-roost-from-above"), TEXT("The Roost from above: the Ochre and Dust tunnels, the roost's spire over the basin"));
 			return;
-		case 2708:
+		case 2808:
 		{
 			// Wave 4: Shardlings down the Dust arm, six Gloamwings off the roost.
 			if (!W4Set)
@@ -5339,11 +5341,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			ShootClean(TEXT("z3-05-gloamwings-off-the-roost"), TEXT("the roost's Gloamwings lifting off its ledge toward the prize"));
 			return;
 		}
-		case 2709:
+		case 2809:
 			Check(AcCanyon::Near(*Mmo) && AcCanyon::Near(*Mmo)->left > 0, TEXT("z3: The Roost's wave out"));
 			Shoot(TEXT("z3-06-the-roost-wave"), TEXT("the same with the HUD: The Roost's wave panel"));
 			return;
-		case 2710:
+		case 2810:
 		{
 			if (Pc && Pilot && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
 			if (Since() < 1.0) return;
@@ -5365,7 +5367,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Shoot(TEXT("z3-07-map-drowned-cut"), TEXT("the world map on Brine Pans: The Drowned Cut's ring"));
 			return;
 		}
-		case 2711:
+		case 2811:
 		{
 			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
 			if (!Map) return;
@@ -5409,13 +5411,29 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// The frontier pilots now: the sky's list, the roster.
 		const std::optional<ac::net::Sky>& Sky = Mmo ? Mmo->Sky() : std::optional<ac::net::Sky>();
 		const ac::net::ProgressMessage* Pm = Mmo ? Mmo->Progress() : nullptr;
+		// The one of that habit the dev line brought: in the pilot's region,
+		// live, nearest it (a world has two miners and two builders; others
+		// land meanwhile).
 		auto Of = [&](const ac::net::FrontierHabit Habit) -> const ac::net::Sky::Frontier* {
 			if (!Sky || !Pm) return nullptr;
+			const ac::net::Sky::Frontier* Best = nullptr;
+			double Near = 1e18;
 			for (const ac::net::ProgressMessage::FrontierPilot& X : Pm->frontier)
 				if (X.habit == Habit)
 					for (const ac::net::Sky::Frontier& F : Sky->frontier)
-						if (F.id == X.id) return &F;
-			return nullptr;
+					{
+						if (F.id != X.id) continue;
+						double D = 1e12;
+						if (S && U && F.unit != 0)
+							for (const ac::Unit& V : S->units)
+								if (V.id == F.unit) D = ac::distance(V.position, U->position);
+						if (!Best || D < Near)
+						{
+							Best = &F;
+							Near = D;
+						}
+					}
+			return Best;
 		};
 		auto UnitOf = [&](const ac::net::Sky::Frontier* F) -> const ac::Unit* {
 			if (!F || !S || F->unit == 0) return nullptr;
@@ -5461,13 +5479,23 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				TimedOut(TEXT("p1: seated, the ground built"), 120);
 				return;
 			}
-			Check(Mmo->DevClock(TEXT("brood clear\nfrontier here miner 6")), TEXT("p1: a frontier miner beside the pilot"));
+			Check(Mmo->DevClock(TEXT("brood clear\nfrontier here miner 6 poor")), TEXT("p1: a frontier miner beside the pilot"));
+			P1Miner = 0;
 			Advance();
 			return;
 		case 2601:
 		{
-			// The miner at its drill.
-			const ac::Unit* M1 = UnitOf(Of(ac::net::FrontierHabit::miner));
+			// The miner at its drill: the one staged (pinned by its id once
+			// seen beside the pilot; others land meanwhile).
+			if (P1Miner == 0)
+				if (const ac::net::Sky::Frontier* F = Of(ac::net::FrontierHabit::miner); F && UnitOf(F) && U
+					&& ac::distance(UnitOf(F)->position, U->position) < 14)
+					P1Miner = F->id;
+			const ac::net::Sky::Frontier* Pinned = nullptr;
+			if (Sky)
+				for (const ac::net::Sky::Frontier& F : Sky->frontier)
+					if (F.id == P1Miner) Pinned = &F;
+			const ac::Unit* M1 = UnitOf(Pinned);
 			if (!(M1 && M1->task == ac::Unit::Task::mining && Since() > 2.0))
 			{
 				TimedOut(TEXT("p1: the frontier miner drilling"), 120);
@@ -5483,8 +5511,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			}
 			if (Now - W4ShotAt < 1.5) return;
 			W4Set = false;
-			const ac::net::Sky::Frontier* F = Of(ac::net::FrontierHabit::miner);
-			Check(F && F->doing == ac::net::FrontierDoing::mining, TEXT("p1: told as mining"));
+			Check(Pinned && Pinned->doing == ac::net::FrontierDoing::mining, TEXT("p1: told as mining"));
 			Shoot(TEXT("p1-01-frontier-miner-drilling"), TEXT("a frontier miner drilling near the pilot, its tag over it"));
 			return;
 		}

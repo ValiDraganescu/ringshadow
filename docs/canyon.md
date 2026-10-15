@@ -215,7 +215,7 @@ off the roost. Their pay is × 1.3 (`WorldCanyon::payScale`).
   writes nothing.
 - **Dev line.** `brood zone here ZONE` takes the pilot to a named zone's
   region. The `canyon …` lines work on the zone of the pilot's region.
-- **Pictures.** `-AcMmoShotsZ3` (phases 2700-2712) shoots eight:
+- **Pictures.** `-AcMmoShotsZ3` (phases 2800-2812) shoots eight:
   1. The Drowned Cut from above;
   2. waders in the brine;
   3. its wave panel;
