@@ -672,3 +672,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D P1: arrive 45 s after a human's O1, keep 14 cells off its places; booked where no human.
 - N Protocol 28, schema 21; suites core 496, server 279, net 91.
 - I P1: tags float with no Prospector under them (p1-02) → check fog/LOD.
+- T P1 tag fix f229c49: tags only over units the pilot can see (TagSight); merc tags too.
