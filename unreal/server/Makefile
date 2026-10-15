@@ -99,20 +99,25 @@ build/tests/main.o: $(CORE_TESTS)/main.cpp
 
 # `make bench`: build/regionbench (bench/RegionBench.cpp), build/netbench
 # (bench/NetBench.cpp), build/worldbench (bench/WorldBench.cpp) and
-# build/daybench (bench/DayBench.cpp), everything at -O3.
+# build/daybench (bench/DayBench.cpp) and build/balancebench
+# (bench/BalanceBench.cpp), everything at -O3.
 BENCH_FLAGS := $(subst -O2,-O3,$(CXXFLAGS)) -I../core-tests/bench
 BENCH_LIB := $(patsubst $(CORE)/Private/%.cpp,build/bench/core/%.o,$(CORE_SRC)) \
 	$(patsubst $(NET)/Private/%.cpp,build/bench/net/%.o,$(NET_SRC)) build/bench/net/monocypher.o \
 	$(patsubst world/%.cpp,build/bench/world/%.o,$(WORLD_SRC))
 BENCH_OBJ := $(BENCH_LIB) build/bench/program/Server.o \
 	$(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/RegionBench.o build/bench/NetBench.o \
-	build/bench/WorldBench.o build/bench/DayBench.o
+	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o
 
-bench: build/regionbench build/netbench build/worldbench build/daybench
+bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench
 	./build/regionbench 30 ../core-tests/fixtures/rally-jam.json
 	./build/netbench 20
 	./build/worldbench 30
 	./build/daybench 20
+	./build/balancebench 10
+
+build/balancebench: $(BENCH_LIB) build/bench/BalanceBench.o
+	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
 
 build/daybench: $(BENCH_LIB) build/bench/program/Server.o $(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/DayBench.o
 	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
