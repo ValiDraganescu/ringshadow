@@ -287,6 +287,9 @@ private:
 		FVector2D UnitAt = FVector2D::ZeroVector;
 		FString Region;
 		FString Key;
+		/// `mmoreenter`: the buildings and units the client had in view.
+		int32 Buildings = -1;
+		int32 Units = -1;
 	};
 	FMmoLeft MmoLeft;
 	/// Builds a Citadel next to the driven Prospector (once); its spot.

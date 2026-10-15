@@ -19,6 +19,13 @@
 //             Landing Pad (-AcMmoFlightShots=DIR: a PNG of four stages)
 //   mmohandback  Esc (a hand back) then a take again: the pawn never dives
 //             back in on an old snapshot, nor drops a unit just taken
+//   mmoreenter the world saved in -AcMmoDir entered from the home screen
+//             (ENTER THE REACH), left (QUIT TO HOME, the server left running),
+//             entered again in the same process, then the server STOPped from
+//             the home screen and entered once more: each time the same
+//             Prospector driven and every building and unit back in view (the
+//             user, 2026-10-15: the second entry showed nothing). Run with
+//             -AcMmoServerDetached; it stops its server itself
 //   mmoresume  a world that lasts (docs/mmorpg-m3.md S4): the home screen's
 //             MMORPG NEW WORLD (TEST), asked and confirmed; a Citadel built;
 //             the mode left and MMORPG (TEST) again: the Citadel, the wallet,
@@ -178,9 +185,10 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 	};
 	const bool bHand = Step == TEXT("mmohandback");
 	const bool bResume = Step == TEXT("mmoresume");
-	if (Step != TEXT("mmocross") && Step != TEXT("mmofly") && !bHand && !bResume)
+	const bool bReenter = Step == TEXT("mmoreenter");
+	if (Step != TEXT("mmocross") && Step != TEXT("mmofly") && !bHand && !bResume && !bReenter)
 	{
-		Check(false, FString::Printf(TEXT("no MMORPG step %s (mmocross, mmofly, mmohandback, mmoresume)"), *Step));
+		Check(false, FString::Printf(TEXT("no MMORPG step %s (mmocross, mmofly, mmohandback, mmoresume, mmoreenter)"), *Step));
 		NextStep();
 		return;
 	}
@@ -196,6 +204,73 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		if (!U || !Pilot || !Pilot->Camera()) return 1e9;
 		return FVector::Dist2D(Pilot->Camera()->GetComponentLocation(), AcSpace::ToWorld(U->position)) / AcSpace::ToCm(1.0);
 	};
+
+	if (bReenter)
+	{
+		const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
+		const ac::GameState* S = M ? &M->simulation().state : nullptr;
+		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+		auto Ready = [&] { return Seated() && Mmo->Here() && U && S && !S->structures.empty() && Since() > 2.0; };
+		auto PickOnHome = [&](const EAcMenuAction Action) {
+			if (!(OpenMenu(EAcMenuMode::Home) && Menu && Menu->Highlight(Action))) return false;
+			const TSharedPtr<SAcMenu> Held = Menu;
+			Held->PickHighlighted();
+			return true;
+		};
+		auto Seen = [&](const TCHAR* When) {
+			int32 Units = 0;
+			for (const ac::Unit& X : S->units) Units += X.owner == ac::Pilot::player ? 1 : 0;
+			const int32 Buildings = int32(S->structures.size());
+			if (MmoLeft.Buildings < 0)
+			{
+				MmoLeft.Buildings = Buildings;
+				MmoLeft.Units = Units;
+				MmoLeft.Unit = U->id;
+				Check(Buildings > 0, FString::Printf(TEXT("%s: %d buildings, %d of the side's units in view, driving #%lld"), When, Buildings, Units,
+					(long long)U->id));
+				return;
+			}
+			Check(Buildings == MmoLeft.Buildings && U->id == MmoLeft.Unit,
+				FString::Printf(TEXT("%s: %d buildings (%d before), %d of the side's units (%d), driving #%lld (#%lld)"), When, Buildings,
+					MmoLeft.Buildings, Units, MmoLeft.Units, (long long)U->id, (long long)MmoLeft.Unit));
+		};
+		const bool bLate = Since() > SeatSeconds;
+		switch (T.Phase)
+		{
+		case 0:
+			if (Sim && Sim->IsMmo()) StopMmo();
+			MmoLeft = FMmoLeft();
+			Check(PickOnHome(EAcMenuAction::Mmo) && Sim->IsMmo(), TEXT("ENTER THE REACH: the saved world"));
+			Advance();
+			return;
+		case 1:
+		case 2:
+		case 3:
+			if (!Ready())
+			{
+				if (bLate)
+				{
+					Check(false, FString::Printf(TEXT("entry %d: driving with the buildings in view within %.0f s (%d buildings, %s)"), T.Phase,
+						SeatSeconds, S ? int32(S->structures.size()) : -1, Mmo ? *Mmo->Message() : TEXT("no client")));
+					if (Mmo) PickOnHome(EAcMenuAction::StopServer);
+					Finish();
+				}
+				return;
+			}
+			Seen(T.Phase == 1 ? TEXT("first entry") : T.Phase == 2 ? TEXT("entered again, the server left running") : TEXT("entered after STOP"));
+			StopMmo();
+			Check(!Sim->IsMmo(), TEXT("QUIT TO HOME"));
+			// The third entry after STOP; the end: STOP again, the server gone.
+			if (T.Phase >= 2) Check(PickOnHome(EAcMenuAction::StopServer), TEXT("STOP the world server"));
+			if (T.Phase < 3) Check(PickOnHome(EAcMenuAction::Mmo) && Sim->IsMmo(), TEXT("ENTER THE REACH again"));
+			if (T.Phase == 3) NextStep();
+			else Advance();
+			return;
+		default:
+			Finish();
+			return;
+		}
+	}
 
 	if (bResume)
 	{

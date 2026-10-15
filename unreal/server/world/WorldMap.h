@@ -989,6 +989,8 @@ public:
     /// now: in region `region` (nil: weighted toward the regions with
     /// pilots, as the schedule does), or near `near` (a pilot: 40-58 cells
     /// from its Prospector, ahead of it if it can). Nil: no open ground.
+    /// The most falls a pilot's snapshot lists (`fallsFor`).
+    static constexpr size_t skyFallsMost = 24;
     std::optional<Fall> forceStarfall(double in, std::optional<size_t> region = std::nullopt,
                                       std::optional<PilotId> near = std::nullopt);
     /// Whether ground point `at` of region `r` takes a crater: open, flat
@@ -1732,6 +1734,9 @@ private:
     /// pilot next door 3.
     size_t fallRegion(std::mt19937_64& dice) const;
     std::vector<net::Sky::Starfall> skyFalls() const;
+    /// The falls a pilot in `region` is told in its snapshots (the sky's
+    /// list, cut: `WorldMap::snapshot`).
+    std::vector<net::Sky::Starfall> fallsFor(size_t region) const;
     // WorldBrood.cpp.
     struct BroodRegion {
         /// When the next group comes (world clock; nil: not running).

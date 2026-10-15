@@ -6,6 +6,7 @@
 #include "test.h"
 
 #include "NavGrid.h"
+#include "NetSnapshot.h"
 #include "Rules.h"
 #include "Starfall.h"
 #include "WorldMap.h"
@@ -359,4 +360,36 @@ TEST(starfall_save_round_trip) {
     again.step();
     EXPECT_EQ(again.starfalls().size(), size_t(2));
     EXPECT_TRUE(again.starfalls()[1].patch.has_value());
+}
+
+// A world that had many falls (61, the user's, 2026-10-15): every fall stays
+// in the world (its crater, its deposit), but a pilot's snapshot lists only
+// the falls coming or just down and its own region's craters, at most 24, so
+// a snapshot still fits in a part or two: with all of them the sky filled
+// each part and no snapshot ever arrived whole (the client saw nothing).
+TEST(starfall_many_falls_keep_the_snapshot_small) {
+    WorldMap w(first(), params());
+    w.join(me);
+    const size_t regions = first().regions.size();
+    for (int i = 0; i < 61; i++) {
+        ASSERT_TRUE(w.forceStarfall(0, size_t(i) % regions).has_value());
+        stepFor(w, 1.0);
+    }
+    stepFor(w, 31.0);
+    const auto coming = w.forceStarfall(40, w.regionNamed("cold-fork"));
+    ASSERT_TRUE(coming.has_value());
+    w.step();
+    const net::Snapshot s = w.snapshot(me);
+    ASSERT_TRUE(s.sky.has_value());
+    EXPECT_TRUE(s.sky->starfalls.size() <= WorldMap::skyFallsMost);
+    bool told = false;
+    for (const auto& f : s.sky->starfalls) {
+        told = told || f.id == coming->id;
+        // Landed and done: only this region's craters.
+        if (w.clock() >= f.impact + 30.0) EXPECT_EQ(size_t(f.region), *w.where(me));
+    }
+    EXPECT_TRUE(told);
+    net::SnapshotWriter wr;
+    const auto o = wr.write(s, 0, 1 << 20);
+    EXPECT_TRUE(o.messages.size() <= 2);
 }

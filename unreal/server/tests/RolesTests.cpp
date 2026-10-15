@@ -598,3 +598,62 @@ TEST(roles_pad_link_and_short_hop) {
     moveTo(w, me, pad + Vec2(15.5, 0));
     EXPECT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
 }
+
+// Handed back (the camera), its Prospector falls all the same: Down, then
+// back at home after the wait, handed back still (the user, 2026-10-15:
+// "my prospector died while I was not driving it, now I have no prospector").
+TEST(roles_respawn_while_handed_back) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::fresh);
+    const int64_t mine = drivenUnit(w, me)->id;
+    // As the user did: hand back, take, hand back, take, hand back.
+    w.regionOf(me)->handBack(me);
+    wait(w, me, 0.5);
+    ASSERT_TRUE(w.regionOf(me)->take(me, mine));
+    wait(w, me, 0.5);
+    w.regionOf(me)->handBack(me);
+    wait(w, me, 0.5);
+    ASSERT_TRUE(w.regionOf(me)->take(me, mine));
+    wait(w, me, 0.5);
+    w.regionOf(me)->handBack(me);
+    wait(w, me, 2.0);
+    EXPECT_TRUE(drivenUnit(w, me) == nullptr);
+    Simulation& sim = simOf(w, me);
+    const auto i = sim.unitIndex(mine);
+    ASSERT_TRUE(i.has_value());
+    sim.state.units[*i].hp = 0;
+    w.step();
+    const auto r = w.respawning(me);
+    ASSERT_TRUE(r.has_value());
+    wait(w, me, 10.1);
+    EXPECT_TRUE(!w.respawning(me).has_value());
+    bool mineAgain = false;
+    for (const Unit& u : simOf(w, me).state.units)
+        if (u.kind == UnitKind::prospector && u.id != mine && u.hp > 0 && u.owner == 0) mineAgain = true;
+    EXPECT_TRUE(mineAgain);
+}
+
+// Handed back, then the game left and came back: seated in its Prospector,
+// and the region's simulation has it as the active pilot's unit (the
+// snapshot's pilot, which the client dives in on).
+TEST(roles_rejoin_after_hand_back_drives_again) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::fresh);
+    const int64_t mine = drivenUnit(w, me)->id;
+    w.regionOf(me)->handBack(me);
+    wait(w, me, 0.5);
+    ASSERT_TRUE(w.regionOf(me)->take(me, mine));
+    wait(w, me, 0.5);
+    w.regionOf(me)->handBack(me);
+    wait(w, me, 1.0);
+    w.leave(me);
+    w.step();
+    ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::restored);
+    ASSERT_TRUE(w.regionOf(me)->driving(me) == std::optional<int64_t>(mine));
+    const Simulation& sim = simOf(w, me);
+    ASSERT_TRUE(sim.pilot.has_value());
+    EXPECT_EQ(sim.pilot->unit, mine);
+    wait(w, me, 1.0);
+    ASSERT_TRUE(simOf(w, me).pilot.has_value());
+    EXPECT_EQ(simOf(w, me).pilot->unit, mine);
+}

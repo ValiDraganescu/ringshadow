@@ -139,6 +139,8 @@ private:
     void log(const std::string& line) const;
     /// A log line for each starfall told and landed.
     void logStarfalls();
+    /// `pilot X fell in …` and `pilot X respawns in …`, as they happen.
+    void logRespawns();
 
     ServerOptions options_;
     WorldMap world_;
@@ -162,6 +164,7 @@ private:
     double idleFrom_ = 0;
     /// The starfalls last logged, and whether each had landed.
     std::map<uint32_t, bool> starfalls_;
+    std::map<PilotId, bool> respawns_;
 };
 
 } // namespace ac::server

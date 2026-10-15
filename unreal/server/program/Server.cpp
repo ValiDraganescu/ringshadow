@@ -37,6 +37,18 @@ Server::Server(net::PacketIo& io, const ServerOptions& options)
         for (const std::string& p : world_.restore(*options_.saved)) log("save: " + p);
         log("save: " + std::to_string(options_.saved->regions.size()) + " regions, " +
             std::to_string(options_.saved->pilots.size()) + " pilots loaded");
+        // What each region holds (a world that comes up empty on screen is
+        // told apart from one that came up empty here).
+        if (world_.isWorld())
+            for (size_t r = 0; r < world_.loaded()->regions.size(); r++)
+                log("save: " + world_.loaded()->regions[r].file.id + ": " +
+                    std::to_string(world_.region(r).simulation().state.structures.size()) + " buildings, " +
+                    std::to_string(world_.region(r).simulation().state.units.size()) + " units");
+        // The falls kept in the save: known, not told again as new.
+        if (world_.isWorld()) {
+            for (const WorldMap::Fall& f : world_.starfalls()) starfalls_[f.id] = f.patch.has_value();
+            log("save: " + std::to_string(starfalls_.size()) + " starfalls kept (their craters and deposits)");
+        }
         // S2: the time it was down, caught up (capped).
         if (const double savedAt = options_.saved->savedAt; savedAt > 0 && world_.isWorld()) {
             const double down = wallNow() - savedAt + std::max(0.0, options_.devDown);
@@ -218,6 +230,27 @@ void Server::logStarfalls() {
     starfalls_ = std::move(now);
 }
 
+void Server::logRespawns() {
+    if (!world_.isWorld()) return;
+    std::map<PilotId, bool> now;
+    for (const auto& [c, client] : clients_) {
+        if (!client.seated) continue;
+        const auto r = world_.respawning(client.pilot);
+        now[client.pilot] = r.has_value();
+        const auto was = respawns_.find(client.pilot);
+        const bool down = was != respawns_.end() && was->second;
+        if (r && !down) {
+            log("pilot " + std::to_string(client.pilot) + " fell in " + world_.loaded()->regions[*world_.where(client.pilot)].file.id +
+                ", back in " + format("%.0f", r->at - world_.clock()) + " s in " + r->region +
+                (r->home ? " at its " + std::string(rawValue(*r->home)) : std::string(" at the start pad")));
+        } else if (!r && down) {
+            const auto at = world_.where(client.pilot);
+            log("pilot " + std::to_string(client.pilot) + " respawns in " + (at ? world_.loaded()->regions[*at].file.id : std::string("?")));
+        }
+    }
+    respawns_ = std::move(now);
+}
+
 void Server::tick(double now, bool stepRegion) {
     const auto t0 = std::chrono::steady_clock::now();
     if (idling_) {
@@ -231,6 +264,7 @@ void Server::tick(double now, bool stepRegion) {
         stepSum_ += world_.lastStepMs();
         stepMax_ = std::max(stepMax_, world_.lastStepMs());
         logStarfalls();
+        logRespawns();
     }
     sendMoves();
     ticked_ += 1;

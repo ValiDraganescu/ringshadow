@@ -837,8 +837,32 @@ Snapshot WorldMap::snapshot(PilotId pilot, const InterestParams& params) {
     Snapshot s = r->snapshot(pilot, params);
     s.game = net::visitGame(visit(pilot), s.game);
     s.sky = sky();
-    if (world_) s.xp = pilots_[pilot].progress.xp;
+    if (world_) {
+        s.xp = pilots_[pilot].progress.xp;
+        if (s.sky) s.sky->starfalls = fallsFor(pilots_[pilot].region);
+    }
     return s;
+}
+
+std::vector<net::Sky::Starfall> WorldMap::fallsFor(size_t region) const {
+    // Every fall the world had stays (its crater, its deposit), and the sky
+    // rides in every part of every snapshot: all of them made each part
+    // ~1.1 KB, a snapshot of 16 entities 16 parts, more than a tick's budget
+    // ever let through, so no snapshot was ever whole and the client's world
+    // stood still, then came up empty on the next entry (the user's, 61
+    // falls, 2026-10-15). A pilot is told the falls coming or just down (the
+    // radio, the streaks, any region) and the craters of its own region (the
+    // ones drawn), the newest first, at most `skyFallsMost`.
+    const double now = clock_;
+    std::vector<net::Sky::Starfall> out;
+    for (auto it = falls_.rbegin(); it != falls_.rend() && out.size() < skyFallsMost; ++it) {
+        const Fall& f = *it;
+        const bool news = now < f.impact + 30.0;
+        if (!news && f.region != region) continue;
+        out.push_back(net::Sky::Starfall{f.id, int64_t(f.region), f.at, f.impact, f.from, f.patch});
+    }
+    std::reverse(out.begin(), out.end());
+    return out;
 }
 
 void WorldMap::deferred(PilotId pilot, const std::vector<int64_t>& ids) {
