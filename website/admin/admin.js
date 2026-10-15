@@ -6,10 +6,10 @@
   const page = document.body.dataset.page;
   const $ = (sel, el = document) => el.querySelector(sel);
 
-  async function api(path, body) {
+  async function api(path, body, method) {
     const init = body === undefined
-      ? {}
-      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+      ? (method ? { method } : {})
+      : { method: method || "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
     const r = await fetch("/api/admin/" + path, { credentials: "same-origin", ...init });
     let data = {};
     try {
@@ -73,33 +73,43 @@
 
   // --- The shell
 
+  const fmt = (x) => Number(x).toLocaleString("en-US");
+  const el = (tag, props = {}, ...kids) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === "class") e.className = v;
+      else if (k === "data") Object.assign(e.dataset, v);
+      else e[k] = v;
+    }
+    e.append(...kids);
+    return e;
+  };
+  const row = (...cells) => el("tr", {}, ...cells.map((c) => (c instanceof Node ? el("td", {}, c) : el("td", { textContent: c }))));
+
+  // A two-click button: the first click arms it, the second acts.
+  function twoClick(button, armedText, act) {
+    button.addEventListener("click", () => {
+      if (button.dataset.armed) return act();
+      button.dataset.armed = "1";
+      button.textContent = armedText;
+    });
+  }
+
   if (page === "shell") {
     const signOut = async (path) => {
       await api(path, {});
       location.assign("/admin/login");
     };
     $("#signout").addEventListener("click", () => signOut("logout"));
+    twoClick($("#signout-all"), "Click again: sign out everyone", () => signOut("signout-all"));
 
-    const all = $("#signout-all");
-    all.addEventListener("click", () => {
-      if (all.dataset.armed) return signOut("signout-all");
-      all.dataset.armed = "1";
-      all.textContent = "Click again: sign out everyone";
-    });
+    // --- Admins
 
     async function loadAdmins() {
       const { ok, data } = await api("admins");
       if (!ok) return;
-      const body = $("#admin-list tbody");
-      body.replaceChildren(...data.admins.map((a) => {
-        const tr = document.createElement("tr");
-        for (const text of [a.email, when(a.created_at), when(a.last_login_at), a.must_change_pw ? "one-time" : "own"]) {
-          const td = document.createElement("td");
-          td.textContent = text;
-          tr.append(td);
-        }
-        return tr;
-      }));
+      $("#admin-list tbody").replaceChildren(...data.admins.map((a) =>
+        row(a.email, when(a.created_at), when(a.last_login_at), a.must_change_pw ? "one-time" : "own")));
     }
 
     const add = $("#add");
@@ -125,17 +135,194 @@
       if (document.body.classList.contains("must-change")) setTimeout(() => location.reload(), 900);
     });
 
+    // --- Agents
+
+    let range = { range: "7d" };
+    const query = () => new URLSearchParams(range).toString();
+
+    for (const b of document.querySelectorAll(".range button")) {
+      b.addEventListener("click", () => {
+        for (const o of document.querySelectorAll(".range button")) o.setAttribute("aria-pressed", String(o === b));
+        $("#custom-range").hidden = b.dataset.range !== "custom";
+        if (b.dataset.range !== "custom") {
+          range = { range: b.dataset.range };
+          loadAgents();
+        }
+      });
+    }
+    onSubmit($("#custom-range"), async (v) => {
+      range = { range: "custom", from: v.from, to: v.to };
+      await loadAgents();
+    });
+
+    const CLASS_ORDER = ["ai-crawler", "ai-assistant", "search", "monitor", "other-bot", "unlabelled"];
+    const SVG = "http://www.w3.org/2000/svg";
+    const svgEl = (tag, attrs) => {
+      const e = document.createElementNS(SVG, tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      return e;
+    };
+
+    // Stacked bars, one per hour or day of the range, by class.
+    function drawChart(data) {
+      const svg = $("#agents-chart svg");
+      const step = data.range.bucket === "hour" ? 3_600_000 : 86_400_000;
+      const t0 = Math.floor(Date.parse(data.range.from) / step) * step;
+      const t1 = Date.parse(data.range.to);
+      const bySlot = new Map(data.series.map((s) => [Date.parse(s.t.replace(" ", "T") + "Z"), s.byClass]));
+      const slots = [];
+      for (let t = t0; t < t1; t += step) slots.push([t, bySlot.get(t) || {}]);
+      const totals = slots.map(([, c]) => Object.values(c).reduce((a, b) => a + b, 0));
+      const max = Math.max(1, ...totals);
+      const W = 800, H = 220, left = 44, bottom = 22, top = 8;
+      const bw = (W - left) / Math.max(1, slots.length);
+      const kids = [
+        svgEl("line", { x1: left, x2: W, y1: H - bottom, y2: H - bottom, class: "axis" }),
+        Object.assign(svgEl("text", { x: left - 6, y: top + 10, class: "tick", "text-anchor": "end" }), { textContent: fmt(max) }),
+        Object.assign(svgEl("text", { x: left - 6, y: H - bottom, class: "tick", "text-anchor": "end" }), { textContent: "0" }),
+      ];
+      slots.forEach(([t, byClass], i) => {
+        let y = H - bottom;
+        for (const k of CLASS_ORDER) {
+          const v = byClass[k] || 0;
+          if (!v) continue;
+          const h = (v / max) * (H - bottom - top);
+          y -= h;
+          const r = svgEl("rect", { x: left + i * bw + 1, y, width: Math.max(1, bw - 2), height: h, class: "k-" + k });
+          r.append(Object.assign(svgEl("title", {}), { textContent: `${new Date(t).toISOString().slice(0, step < 86_400_000 ? 13 : 10).replace("T", " ")}${step < 86_400_000 ? ":00" : ""} · ${k}: ${fmt(v)}` }));
+          kids.push(r);
+        }
+      });
+      const label = (t) => new Date(t).toISOString().slice(0, step < 86_400_000 ? 13 : 10).replace("T", " ") + (step < 86_400_000 ? ":00" : "");
+      if (slots.length) {
+        kids.push(Object.assign(svgEl("text", { x: left, y: H - 6, class: "tick" }), { textContent: label(slots[0][0]) }));
+        kids.push(Object.assign(svgEl("text", { x: W, y: H - 6, class: "tick", "text-anchor": "end" }), { textContent: label(slots.at(-1)[0]) }));
+      }
+      svg.replaceChildren(...kids);
+      const present = CLASS_ORDER.filter((k) => data.series.some((s) => s.byClass[k]));
+      $("#agents-chart .legend").replaceChildren(...present.map((k) => el("span", { class: "key" }, el("i", { class: "k-" + k }), k)));
+    }
+
+    function labelAs(ua) {
+      const form = $("#rule");
+      form.reset();
+      form.elements.id.value = "";
+      form.elements.pattern.value = ua;
+      $("#rule-title").textContent = "Label a string";
+      $("#rule-cancel").hidden = false;
+      say(form, "Cut the pattern down to the part that names the agent.");
+      $("#rule-part").scrollIntoView({ behavior: "smooth", block: "start" });
+      form.elements.pattern.focus();
+    }
+
+    async function loadAgents() {
+      const summary = $("#agents .summary");
+      summary.textContent = "Loading…";
+      const { ok, data } = await api("stats/agents?" + query());
+      if (!ok) {
+        summary.textContent = data.error || "The stats didn't load.";
+        return;
+      }
+      summary.textContent = `${fmt(data.total)} agent fetches · ${fmt(data.browsers)} browser page fetches` +
+        (data.dropped ? ` · ${fmt(data.dropped)} not counted (the rate cap)` : "") +
+        ` · ${data.range.from.slice(0, 16).replace("T", " ")} to ${data.range.to.slice(0, 16).replace("T", " ")} UTC`;
+      drawChart(data);
+      $("#agents-labels tbody").replaceChildren(...data.labels.map((l) => {
+        const paths = el("details", {}, el("summary", { textContent: `${l.paths.length} path${l.paths.length === 1 ? "" : "s"}` }),
+          el("ol", {}, ...l.paths.map((p) => el("li", {}, el("code", { textContent: p.path }), " " + fmt(p.hits)))));
+        return row(l.label, l.class, fmt(l.hits), fmt(l.strings), paths);
+      }));
+      $("#agents-unlabelled tbody").replaceChildren(...(data.unlabelled.length
+        ? data.unlabelled.map((u) => {
+          const b = el("button", { type: "button", class: "small", textContent: "Label as" });
+          b.addEventListener("click", () => labelAs(u.ua));
+          return row(el("code", { textContent: u.ua || "(no User-Agent)" }), fmt(u.hits), b);
+        })
+        : [row("Every string has a label.", "", "")]));
+    }
+
+    async function loadRules() {
+      const { ok, data } = await api("rules");
+      if (!ok) return;
+      $("#label-names").replaceChildren(...[...new Set(data.rules.map((r) => r.label))].map((l) => el("option", { value: l })));
+      $("#rules tbody").replaceChildren(...data.rules.map((r) => {
+        const edit = el("button", { type: "button", class: "small quiet", textContent: "Edit" });
+        edit.addEventListener("click", () => {
+          const form = $("#rule");
+          for (const k of ["id", "label", "class", "match", "pattern", "priority", "note"]) form.elements[k].value = r[k] ?? "";
+          $("#rule-title").textContent = "Change a rule";
+          $("#rule-cancel").hidden = false;
+          say(form, "");
+          $("#rule-part").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        const del = el("button", { type: "button", class: "small quiet", textContent: "Delete" });
+        twoClick(del, "Delete?", async () => {
+          await api("rules/" + r.id, undefined, "DELETE");
+          await Promise.all([loadRules(), loadAgents()]);
+        });
+        return row(r.label, r.class, r.match, el("code", { textContent: r.pattern }), String(r.priority), el("span", { class: "acts" }, edit, del));
+      }));
+    }
+
+    const ruleForm = $("#rule");
+    const resetRule = () => {
+      ruleForm.reset();
+      ruleForm.elements.id.value = "";
+      $("#rule-title").textContent = "A new rule";
+      $("#rule-cancel").hidden = true;
+    };
+    $("#rule-cancel").addEventListener("click", () => {
+      resetRule();
+      say(ruleForm, "");
+    });
+    onSubmit(ruleForm, async (v) => {
+      const body = { label: v.label, class: v.class, match: v.match, pattern: v.pattern, priority: Number(v.priority || 100), note: v.note };
+      const { ok, data } = v.id ? await api("rules/" + v.id, body, "PUT") : await api("rules", body);
+      if (!ok) return say(ruleForm, data.error || "Saving failed.");
+      resetRule();
+      say(ruleForm, `Saved: ${data.rule.match} "${data.rule.pattern}" is ${data.rule.label} (${data.rule.class}).`, true);
+      await Promise.all([loadRules(), loadAgents()]);
+    });
+
+    const testForm = $("#test");
+    onSubmit(testForm, async (v) => {
+      const { ok, data } = await api("rules/test", { ua: v.ua });
+      if (!ok) return say(testForm, data.error || "Testing failed.");
+      say(testForm, data.rule
+        ? `${data.label} (${data.class}), by rule ${data.rule.match} "${data.rule.pattern}", priority ${data.rule.priority}.`
+        : "unlabelled: no rule matches.", true);
+    });
+
+    // --- Sections
+
+    const VIEWS = ["agents", "admins"];
+    const loaded = new Set();
+    function show() {
+      const want = location.hash.slice(1);
+      const id = VIEWS.includes(want) ? want : "agents";
+      for (const v of VIEWS) $("#" + v).hidden = v !== id;
+      for (const a of document.querySelectorAll(".sections a")) {
+        if (a.getAttribute("href") === "#" + id) a.setAttribute("aria-current", "page");
+        else a.removeAttribute("aria-current");
+      }
+      if (loaded.has(id)) return;
+      loaded.add(id);
+      if (id === "agents") Promise.all([loadAgents(), loadRules()]);
+      if (id === "admins") loadAdmins();
+    }
+
     api("me").then(({ ok, data }) => {
       if (!ok) return location.assign("/admin/login");
       $(".who").textContent = data.email;
-      $("#admins").hidden = false;
       if (data.mustChange) {
         document.body.classList.add("must-change");
         $("#must-change").hidden = false;
-        for (const id of ["#admin-list", "#admin-add", "#everywhere", ".sections"]) $(id).hidden = true;
+        $("#admins").hidden = false;
+        for (const sel of ["#admin-list", "#admin-add", "#everywhere", ".sections"]) $(sel).hidden = true;
         return;
       }
-      loadAdmins();
+      window.addEventListener("hashchange", show);
+      show();
     });
   }
 })();

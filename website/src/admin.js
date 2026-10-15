@@ -2,6 +2,9 @@
 // with a session) and its API under /api/admin/. D1 binding ADMIN.
 // See docs/website-analytics.md, "The admin".
 
+import { compileRules } from "./agents.js";
+import { addRule, changeRule, deleteRule, listRules, testRules } from "./rules.js";
+import { agentsView, droppedSql, parseRange, serverByAgentSql, serverPathsSql } from "./stats.js";
 import {
   LOCK_FAILS, LOCK_MINUTES, PW_ITERS, SESSION_DAYS,
   hashPassword, isoNow, lockKeys, newSessionToken, normalEmail, oneTimePassword,
@@ -187,6 +190,31 @@ async function addAdmin(request, env) {
   return json({ ok: true, email, password }, 201);
 }
 
+// --- The analytics.
+
+// The Agents view. It reads the rules fresh from D1 rather than from the
+// isolate's cache, so a rule added a moment ago already relabels the history.
+async function agentsStats(request, env) {
+  const range = parseRange(new URL(request.url).searchParams);
+  if (range.error) return json({ error: range.error }, 400);
+  const params = { from: range.from, to: range.to };
+  let byAgent, byPath, dropped;
+  try {
+    [byAgent, byPath, dropped] = await Promise.all([
+      env.HITS_SQL.query({ query: serverByAgentSql(range.bucket), params }),
+      env.HITS_SQL.query({ query: serverPathsSql(), params }),
+      env.HITS_SQL.query({ query: droppedSql(), params }),
+    ]);
+  } catch (err) {
+    console.error("analytics sql failed", err);
+    return json({ error: "The analytics query failed" + (err.retryable ? "; try again." : ": " + err.message) }, 502);
+  }
+  const rules = compileRules(await listRules(env));
+  return json({ range, dropped: Number(dropped.data[0]?.dropped) || 0, ...agentsView(byAgent.data, byPath.data, rules) });
+}
+
+const answer = (r) => json(r.body, r.status);
+
 // Routes under /api/admin/. Writes need an Origin from this site; everything
 // but the state, login and register needs a session; an admin with a
 // one-time password can only change it or sign out.
@@ -209,6 +237,13 @@ export async function handleApi(request, env) {
   if (session.must_change_pw) return json({ error: "Change the one-time password first." }, 403);
   if (route === "GET /api/admin/admins") return listAdmins(env);
   if (route === "POST /api/admin/admins") return addAdmin(request, env);
+  if (route === "GET /api/admin/stats/agents") return agentsStats(request, env);
+  if (route === "GET /api/admin/rules") return json({ rules: await listRules(env) });
+  if (route === "POST /api/admin/rules/test") return json(await testRules(env, (await readJson(request))?.ua));
+  if (route === "POST /api/admin/rules") return answer(await addRule(env, await readJson(request), session.admin_id));
+  const rule = url.pathname.match(/^\/api\/admin\/rules\/(\d+)$/);
+  if (rule && request.method === "PUT") return answer(await changeRule(env, Number(rule[1]), await readJson(request)));
+  if (rule && request.method === "DELETE") return answer(await deleteRule(env, Number(rule[1])));
   return json({ error: "Not found." }, 404);
 }
 

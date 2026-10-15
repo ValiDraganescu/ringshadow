@@ -22,7 +22,8 @@ check() { # name expected actual
 # req METHOD PATH [JSON] [COOKIE] -> prints the status; headers land in $H, body in $H.body
 req() {
   local args=(-s -o "$H.body" -D "$H" -w "%{http_code}" -X "$1")
-  [ -n "${3:-}" ] && args+=(-H "Content-Type: application/json" -H "Origin: $ORIGIN" --data "$3")
+  [ "$1" != GET ] && args+=(-H "Origin: $ORIGIN")
+  [ -n "${3:-}" ] && args+=(-H "Content-Type: application/json" --data "$3")
   [ -n "${4:-}" ] && args+=(-H "Cookie: admin_session=$4")
   curl "${args[@]}" "$BASE$2"
 }
@@ -71,6 +72,21 @@ check "the first admin changes their password" 200 "$(req POST /api/admin/passwo
 check "a wrong current password is refused" 403 "$(req POST /api/admin/password "$(js current "$APW" next "$APW2 x")" "$SA")"
 check "the new password signs in" 200 "$(req POST /api/admin/login "$(js email "$A" password "$APW2")")"
 SA2=$(cookie)
+
+check "the seed rules" 32 "$(req GET /api/admin/rules '' "$SA2" >/dev/null; python3 -c "import json,sys; print(len(json.load(open(sys.argv[1]))['rules']))" "$H.body")"
+check "a new string is unlabelled" unlabelled "$(req POST /api/admin/rules/test "$(js ua "NewThing-Fetcher/2.0")" "$SA2" >/dev/null; field label)"
+check "GPTBot tests as OpenAI" OpenAI "$(req POST /api/admin/rules/test "$(js ua "GPTBot/1.2")" "$SA2" >/dev/null; field label)"
+check "a rule with a bad class is refused" 400 "$(req POST /api/admin/rules "$(js label NewThing class robot match contains pattern NewThing-Fetcher)" "$SA2")"
+check "label the string" 201 "$(req POST /api/admin/rules "$(js label NewThing class ai-assistant match contains pattern NewThing-Fetcher)" "$SA2")"
+RID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['rule']['id'])" "$H.body")
+check "now it tests as the new label" NewThing "$(req POST /api/admin/rules/test "$(js ua "NewThing-Fetcher/2.0")" "$SA2" >/dev/null; field label)"
+check "change the rule" 200 "$(req PUT /api/admin/rules/$RID "$(js label NewThing class ai-crawler match prefix pattern newthing priority 50)" "$SA2")"
+check "the change applies" ai-crawler "$(req POST /api/admin/rules/test "$(js ua "NewThing-Fetcher/2.0")" "$SA2" >/dev/null; field class)"
+check "a write without the Origin is refused" 403 "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -H "Cookie: admin_session=$SA2" "$BASE/api/admin/rules/$RID")"
+check "delete the rule" 200 "$(req DELETE /api/admin/rules/$RID '' "$SA2")"
+check "the string is unlabelled again" unlabelled "$(req POST /api/admin/rules/test "$(js ua "NewThing-Fetcher/2.0")" "$SA2" >/dev/null; field label)"
+check "deleting it twice" 404 "$(req DELETE /api/admin/rules/$RID '' "$SA2")"
+check "the rules need a session" 401 "$(req GET /api/admin/rules)"
 
 check "sessions before sign-out-everywhere > 1" 1 "$( [ "$(d1 'SELECT count(*) FROM sessions')" -gt 1 ] && echo 1 || echo 0)"
 check "sign out everywhere" 200 "$(req POST /api/admin/signout-all "$(js)" "$SA2")"

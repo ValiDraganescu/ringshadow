@@ -15,7 +15,8 @@
     <a class="brand" href="/"><img src="/assets/favicon.svg" alt="" width="34" height="34"><span>RINGSHADOW</span></a>
     <span class="tag">ADMIN</span>
     <nav class="sections" aria-label="Sections">
-      <a href="#admins" aria-current="page">Admins</a>
+      <a href="#agents">Agents</a>
+      <a href="#admins">Admins</a>
     </nav>
     <span class="who"></span>
     <button id="signout" type="button" class="quiet">Sign out</button>
@@ -27,7 +28,96 @@
       <p>You signed in with a one-time password. Choose your own before anything else.</p>
     </section>
 
-    <section id="admins" hidden>
+    <section id="agents" class="view" hidden>
+      <h2>Agents</h2>
+      <div class="range" role="group" aria-label="Range">
+        <button type="button" data-range="24h">24 h</button>
+        <button type="button" data-range="7d" aria-pressed="true">7 d</button>
+        <button type="button" data-range="30d">30 d</button>
+        <button type="button" data-range="90d">90 d</button>
+        <button type="button" data-range="custom">Custom</button>
+      </div>
+      <form id="custom-range" class="inline" hidden novalidate>
+        <label>From <input name="from" type="date" required></label>
+        <label>To <input name="to" type="date" required></label>
+        <button type="submit">Show</button>
+      </form>
+      <p class="summary" role="status" aria-live="polite"></p>
+      <p class="note">Every fetch of a page, the feed, the text files and the Markdown copies by anything that isn't a browser. A browser's own page fetches are counted apart; people are counted by the tracker, so the two numbers never add up to one total.</p>
+
+      <figure class="chart" id="agents-chart">
+        <svg viewBox="0 0 800 220" role="img" aria-label="Agent fetches over time, by class"></svg>
+        <figcaption class="legend"></figcaption>
+      </figure>
+
+      <div class="part">
+        <h3>By label</h3>
+        <table class="list" id="agents-labels">
+          <thead><tr><th>Label</th><th>Class</th><th>Fetches</th><th>Strings</th><th>Top paths</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="part">
+        <h3>Unlabelled</h3>
+        <p>Strings no rule matches. "Label as" opens a rule with the string in it: cut it down to the part that names the agent, pick a class and a label (an existing one groups it).</p>
+        <table class="list" id="agents-unlabelled">
+          <thead><tr><th>User-Agent</th><th>Fetches</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="part" id="rule-part">
+        <h3 id="rule-title">A new rule</h3>
+        <form id="rule" novalidate>
+          <input type="hidden" name="id">
+          <label>Label <input name="label" list="label-names" autocomplete="off" required></label>
+          <datalist id="label-names"></datalist>
+          <label>Class
+            <select name="class">
+              <option value="ai-crawler">ai-crawler</option>
+              <option value="ai-assistant">ai-assistant</option>
+              <option value="search">search</option>
+              <option value="monitor">monitor</option>
+              <option value="other-bot">other-bot</option>
+              <option value="browser">browser</option>
+            </select></label>
+          <label>Match
+            <select name="match">
+              <option value="contains">contains</option>
+              <option value="prefix">prefix</option>
+              <option value="regex">regex</option>
+            </select></label>
+          <label>Pattern <span class="hint">matching ignores case</span> <input name="pattern" autocomplete="off" spellcheck="false" required></label>
+          <label>Priority <span class="hint">lower wins when several match</span> <input name="priority" type="number" min="0" max="100000" step="1" value="100"></label>
+          <label>Note <input name="note" autocomplete="off"></label>
+          <div class="buttons">
+            <button type="submit">Save rule</button>
+            <button type="button" class="quiet" id="rule-cancel" hidden>Cancel</button>
+          </div>
+          <p class="msg" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="part">
+        <h3>Test a string</h3>
+        <form id="test" class="inline" novalidate>
+          <label>User-Agent <input name="ua" autocomplete="off" spellcheck="false" required></label>
+          <button type="submit">Test</button>
+          <p class="msg" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="part">
+        <h3>Rules</h3>
+        <table class="list" id="rules">
+          <thead><tr><th>Label</th><th>Class</th><th>Match</th><th>Pattern</th><th>Priority</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="admins" class="view" hidden>
       <h2>Admins</h2>
 
       <div class="part" id="admin-list">

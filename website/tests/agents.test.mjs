@@ -1,7 +1,8 @@
 // node --test "website/tests/*.test.mjs"
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { SEED_RULES, browserFamily, classify, compileRules } from "../src/agents.js";
+import { browserFamily, classify, compileRules } from "../src/agents.js";
+import { SEED_RULES } from "./seed.mjs";
 
 const rules = compileRules(SEED_RULES);
 const label = (ua) => classify(ua, rules);

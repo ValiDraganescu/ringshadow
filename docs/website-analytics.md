@@ -74,10 +74,10 @@ dataset = "ringshadow_hits"
 [[d1_databases]]                             # new
 binding = "ADMIN"
 database_name = "ringshadow-admin"
-database_id = "…"
+database_id = "b342d584-6121-41c3-b627-827eb4d9fad3"
 migrations_dir = "migrations"
 
-[[analytics_sql]]                            # new: the read side, no API token needed
+[analytics]                                  # new: the read side, no API token needed
 binding = "HITS_SQL"
 
 [triggers]                                   # new
@@ -97,7 +97,11 @@ through it: pages, the feed, the text files, the admin, the collector.
 ### Analytics Engine: one point per hit
 
 Dataset `ringshadow_hits`, index = site id. Rows are immutable and kept three
-months; counts use `SUM(_sample_interval)`, never `COUNT()`, as Counterscale does.
+months. The SQL API (`events.analyticsEngine.ringshadow_hits`) samples these
+datasets adaptively and applies the weights itself in `COUNT`, `SUM`,
+`countIf` and `sumIf`, so counts are `COUNT(*)`; Counterscale's
+`SUM(_sample_interval)` is the older Analytics Engine SQL API's form and
+would weigh twice here.
 
 | Slot | Field | Set by |
 |---|---|---|
@@ -256,11 +260,13 @@ library. The range picker is 24 h, 7 d, 30 d, 90 d and custom.
 
 ### The analytics API
 
-`GET /api/admin/stats/<view>?from=…&to=…` returns JSON. The SQL is
-Counterscale's, ported: visitors from `SUM(IF(double1=1,_sample_interval,0))`,
-views from `SUM(_sample_interval)`, bounce from double2, grouped by the blob the
-view asks for, with the time bound the SQL API requires. Reads go through the
-Analytics SQL binding (Wrangler 4.145 and later; we deploy with 4.151), so no
+`GET /api/admin/stats/<view>?range=24h|7d|30d|90d` (or
+`range=custom&from=YYYY-MM-DD&to=YYYY-MM-DD`) returns JSON. The SQL is
+Counterscale's, ported to the SQL API's weighting: visitors from
+`countIf(double1 = 1)`, views from `COUNT(*)`, bounce from `SUM(double2)`,
+grouped by the blob the view asks for, with the time bound the SQL API
+requires. Reads go through the Analytics SQL binding (`[analytics]` in
+`wrangler.toml`, Wrangler 4.145 and later; we deploy with 4.151), so no
 account token is stored anywhere.
 
 ## Counting humans: the tracker
