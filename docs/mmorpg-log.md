@@ -688,3 +688,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I A2: ElevenLabs out of credits (4 left); 5/28 KSTR lines made; ~1,700 credits needed to fill the rest; beds cut from own retired tracks meanwhile.
 - T web: posts frontier pilots, daylight, two canyons live (3eb78a5).
 - I A2 resolved: ElevenLabs upgraded 2026-10-15; the 23 lines and both beds get made for real.
+- D Z4 (user): canyons have no build spots; build anywhere in the zone, packed freely; bugs route round or attack what blocks them.

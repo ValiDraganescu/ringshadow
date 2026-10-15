@@ -22,6 +22,9 @@ Follows M8 (the realm under siege), which closes with Q2 and S3.
 - A local packaged Mac build to measure what the editor can't (the first
   Dropship call, frame times); building it is not a release: publishing
   stays the user's call.
+- Canyons have no build spots (user, 2026-10-15): the pilot builds anywhere in
+  the zone and packs the defence as tight or loose as they like; the Brood
+  routes round what it can and chews through what blocks it.
 - Two workers at a time, on files that don't overlap.
 
 ## Tasks
@@ -32,6 +35,7 @@ Follows M8 (the realm under siege), which closes with Q2 and S3.
 | Z3 | Two more canyons: one in a level-2 region, one in a level-3 region, each with a twist (a three-arm junction, a bridge over the prize, a flooded floor that slows, a Gloamwing roost); validated, previewed, map rebaked | Z2 | done e09d8be |
 | A2 | Siege sound: wave and Matriarch music layers over the radio (ducked like narration), radio voice for KSTR goals and canyon news, Dropship flight sounds; offline checks only | Z2, F2, L1 | |
 | B2 | Balance pass: M8's economy against the pace model (tax, shop prices, mercenary wages and output, mission and wave pay, turret marks), tests that pin the curves, a table in docs | M8 | |
+| Z4 | Free placement in canyons (user, 2026-10-15): no build spots; a pilot places any building anywhere standable in the zone, packed as close or far as they like, under the ordinary build rules (footprint, reach, price); the Brood walks round what it can and attacks what blocks its path; the three canyons' region files, validate, preview, the map, the DEFENCE tab and the canyon docs updated; shot sets rerun | Z3 | |
 | K3 | A local packaged Mac build (not a release): first Dropship call, frame times in the canyon and at the nest, startup time; fixes for what only shows packaged | Q2 | |
 
 Done when: in a hidden run, frontier pilots mine and build around a
