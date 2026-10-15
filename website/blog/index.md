@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The crossing hitch: three wrong checks and five real causes
+
+15 October 2026 · M9 · 1 chart
+
+The seamless region crossing hitched five frames after the change. The checks that watched it were wrong three ways and the spike had five causes, all fixed: 31 to 37 ms down to about 14. And why 2 of 35 packaged launches died.
+
+Read it: https://ringshadow.com/blog/crossing-hitch
+
 ## Realm projects: what the tax is for
 
 15 October 2026 · M9 · 2 pictures

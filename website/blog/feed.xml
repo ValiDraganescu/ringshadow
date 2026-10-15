@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T11:10:00Z</updated>
+  <updated>2026-10-15T12:40:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The crossing hitch: three wrong checks and five real causes</title>
+    <id>tag:ringshadow,2026-10-15:blog/crossing-hitch</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/crossing-hitch"/>
+    <published>2026-10-15T12:40:00Z</published>
+    <updated>2026-10-15T12:40:00Z</updated>
+    <summary>The seamless region crossing hitched five frames after the change. The checks that watched it were wrong three ways and the spike had five causes, all fixed: 31 to 37 ms down to about 14. And why 2 of 35 packaged launches died.</summary>
+  </entry>
   <entry>
     <title>Realm projects: what the tax is for</title>
     <id>tag:ringshadow,2026-10-15:blog/realm-projects</id>

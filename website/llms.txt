@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [The crossing hitch: three wrong checks and five real causes](https://ringshadow.com/blog/crossing-hitch.md): A region crossing in Ringshadow's online mode hitched five frames after the change. The checks that watched it were wrong three ways, and the spike had five causes, all fixed: 31 to 37 ms down to about 14.
 - [Realm projects: what the tax is for](https://ringshadow.com/blog/realm-projects.md): The realm wallet in Ringshadow now funds four realm-wide projects a world day long: the Beacon halves Dropship fares, the Relay widens every pilot's night sight, the Armoury lifts every turret a mark, the Dock Crew doubles the mercenaries.
 - [The packaged build, measured: a 1,547 ms stall down to 42](https://ringshadow.com/blog/packaged.md): Ringshadow's online mode packaged as a Mac app and measured, not shipped: it starts four times sooner than the editor, draws as fast, and the first Dropship call's 1.5-second stall is gone.
 - [Build anywhere in the canyon](https://ringshadow.com/blog/build-anywhere.md): Ringshadow's canyons have no build spots any more: place any building anywhere standable in the zone, packed as tight as you like. The Brood walks round what it can and bites through what walls it off.

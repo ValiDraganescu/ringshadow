@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Crossing Hitch · Ringshadow</title>
+  <meta name="description" content="A region crossing in Ringshadow's online mode hitched five frames after the change. The checks that watched it were wrong three ways, and the spike had five causes, all fixed: 31 to 37 ms down to about 14.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="The crossing hitch: three wrong checks and five real causes">
+  <meta property="og:description" content="The seamless region crossing hitched five frames after the change. The checks were wrong, the spike was real, and both are fixed: 31 to 37 ms down to about 14.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/crossing-hitch/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/crossing-hitch">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/crossing-hitch">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="crossing-hitch.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/count.js" defer data-site="ringshadow"></script>
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>The crossing hitch: three wrong checks and five real causes</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M9 · A living frontier</p>
+        <p class="lede">Walking from one region into the next is meant to be seamless: no fade, no hold, the seat and the camera kept. It mostly was, and a few frames after the change the game hitched. The hidden run that measured it flagged the crossing on some runs and not others, which is the worst kind of result. Today an agent found that the checks were wrong in three ways and the hitch was real in five, and fixed all of it.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/crossing-hitch/cover.jpg" alt="Two rows of bars, one frame each from 6 before a region change to 16 after: before the fixes a 31.8 ms spike at frame +5 over the 16.7 ms line, after the fixes every frame under it with 13.9 at the same place" width="1200" height="675"></div>
+        <figcaption>One crossing before and one after, frame by frame, from the runs' CSV files. Frame 0 is the region change.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>What the checks got wrong</h2>
+        <p>The run walks a Prospector through a passage into the next region and records every frame's time and the unit's position. Three things in how it judged the numbers made it flaky. It measured the unit's pace over a fixed slice of time, but the game draws at about 84 frames a second on this Mac while the unit steps on the 60 Hz input ticks, so a frame moves it zero, one or two steps, and the pace read 7% high or low depending on where the frames fell against the ticks. The passage bends, and the check counted the bend as the unit drifting off its line. And the hitch window closed 3 frames after the change while the spike sat at frame 5: the game thread's share of the change lands a frame after it and the render thread's a few frames on.</p>
+        <p>The check now counts input ticks (each step the steady size within a tenth, every move a whole number of steps, the steps keeping within 2 of the clock), compares the walk against the passage's own line, and watches from 2 frames before the change to 8 after.</p>
+
+        <h2>What the hitch was</h2>
+        <p>Once the window covered it, a trace showed the frame at +5 at 31 to 37 ms, two and a half times a normal frame, and named five causes. The cockpit and the pilot overlay were rebuilt for the unit's new id, though the unit itself was kept, and the overlay's plate was read back from the GPU on the render thread. Model meshes were looked up through their file path even when they were already in memory. The first Brood model was loaded on the game thread the first time one came into view, and the new region's bugs were in view. The arrival banner, the one naming the region you've entered, was baked at the change and read back at once. And the global illumination captured 300 of the new region's surface cards in one frame.</p>
+        <p>Each one is gone. The cockpit and the overlay survive the id change. Meshes are found in memory before any load. The Brood's models load a while after the session starts, with their draw batches, so the first bug costs nothing on sight. The banners are baked as each region round the pilot is made, their plates cached by size, and copied back by a ticker once the GPU is calm and two seconds after the bake, since a readback on Metal waits for the whole GPU to go idle, about 18 ms, and never at all on a 2× screen. The illumination captures 100 cards a frame and spreads the rest.</p>
+        <p>The worst frame round the change, at 1× screen scale, went from 31 to 37 ms over the runs that had the window right to 13.9 to 14.4 on a quiet Mac, under the 16.7 ms of 60 frames a second, and the unit's pace through the change stays within 2% of its pace before it. Two runs made while another worktree was building beside them still spiked, so the five-in-a-row pass the task asks for waits for a quiet machine.</p>
+
+        <h2>The launches that died</h2>
+        <p>The packaged build's post left one thing open: 2 of about 35 launches of the Development package exited at once with nothing in their log. The crash reports name the cause, and it isn't the game's. The engine's low-level memory tracker starts on and is switched off once the command line is read, on the game thread, while on the Mac the Cocoa thread is already allocating in the app framework's launch; the switch takes its lock only on platforms the engine marks as multithreaded before main, which the Mac isn't, and the tracker's tag stack comes up empty. The Shipping package has no tracker, so a player never meets it. The hidden-run tool now runs a launch that died before its log opened again, up to three times, and says why from the crash report instead of handing back an empty result.</p>
+        <p>Two smaller findings from the same pass: a traced packaged run's crash on exit is the engine's own check that every memory-stack page is back, failing at teardown with tracing on, after the log and the trace are already closed, so the trace is whole; and a cooked game can't run headless, because it builds its ground and more at run time and the render data asserts without a GPU, so the tool refuses that combination instead of letting it fail later. With this, milestone 9 is closed.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="realm-projects.html">Before: realm projects</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="crossing-hitch.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No cookies for readers, first-party analytics without tracking across sites. <a href="../privacy.html">Privacy</a>.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>
