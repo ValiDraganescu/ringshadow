@@ -726,3 +726,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T M9 complete but K3 leftovers (wt1).
 - I W5: the core drives one pilot per simulation (M1 limit); a second human in the same region can't drive.
 - D W5 (manager): multi-driver core: Simulation keeps pilots keyed by unit; the RTS keeps one and its goldens; land core first, then the two-client checks.
+- T web: realm-projects post live (467ffe5).
