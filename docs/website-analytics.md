@@ -96,8 +96,13 @@ through it: pages, the feed, the text files, the admin, the collector.
 
 ### Analytics Engine: one point per hit
 
-Dataset `ringshadow_hits`, index = site id. Rows are immutable and kept three
-months. The SQL API (`events.analyticsEngine.ringshadow_hits`) samples these
+Dataset `ringshadow_hits`. Rows are immutable and kept three months. The
+index is Analytics Engine's sampling key: when one index writes fast, its
+rows are sampled (kept with a `sampleInterval` weight). So server hits are
+indexed by their User-Agent (the first 96 bytes, a browser's family), and a
+crawler storm thins only the stormer's rows, never a rare agent's string;
+people's hits and `meta` rows are indexed by the site id. Queries select by
+`blob1` (kind) and `blob3` (host), not by the index. The SQL API (`events.analyticsEngine.ringshadow_hits`) samples these
 datasets adaptively and applies the weights itself in `COUNT`, `SUM`,
 `countIf` and `sumIf`, so counts are `COUNT(*)`; Counterscale's
 `SUM(_sample_interval)` is the older Analytics Engine SQL API's form and
@@ -105,6 +110,7 @@ would weigh twice here.
 
 | Slot | Field | Set by |
 |---|---|---|
+| index1 | server hits: the User-Agent's first 96 bytes; people's hits and `meta`: the site id | the Worker or the collector |
 | blob1 | `kind`: `page`, `event`, `server` | the collector or the Worker |
 | blob2 | `path` | both |
 | blob3 | `host` | both |
@@ -317,8 +323,9 @@ Each step ends in a deploy, since every step leaves the site working as before.
    and the feed returns the same status, body and headers as the day before
    (the `_headers` CSP included), and the Cloudflare dashboard shows the
    Worker's requests.
-2. **Server-side counting.** The dataset binding, the point writer, the seed
-   rules as a JS table for now. Done when a `curl -A GPTBot` of a post shows
+2. **Server-side counting.** The dataset binding, the point writer (server
+   hits indexed by their User-Agent, see "The data"), the seed rules as a JS
+   table for now. Done when a `curl -A GPTBot` of a post shows
    up in the SQL within about a minute (measured 46 to 67 s: Analytics
    Engine's ingestion) labelled OpenAI, and an image fetch writes nothing.
 3. **D1 and the admin's door.** The database, migration 0001, the register

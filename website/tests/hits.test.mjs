@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { compileRules } from "../src/agents.js";
 import { SEED_RULES } from "./seed.mjs";
-import { Bucket, assetKind, isCounted, point, serverPoint } from "../src/hits.js";
+import { Bucket, assetKind, indexOf, isCounted, point, serverPoint } from "../src/hits.js";
 
 const rules = compileRules(SEED_RULES);
 
@@ -37,7 +37,7 @@ test("what is counted", () => {
 
 test("a server point carries the plan's slots", () => {
   const p = serverPoint(req("/blog/the-brood", { headers: { "User-Agent": "GPTBot/1.2", Referer: "https://example.org/a/b?c" } }), "html", rules);
-  assert.deepEqual(p.indexes, ["ringshadow"]);
+  assert.deepEqual(p.indexes, ["GPTBot/1.2"]);
   assert.deepEqual(p.blobs, ["server", "/blog/the-brood", "ringshadow.com", "example.org", "RO", "", "", "", "", "OpenAI", "ai-crawler", "GPTBot/1.2", "html"]);
   assert.deepEqual(p.doubles, [0, 0, 0]);
 });
@@ -48,6 +48,18 @@ test("a browser's server point keeps only its family", () => {
   assert.equal(p.blobs[9], "Browsers");
   assert.equal(p.blobs[10], "browser");
   assert.equal(p.blobs[11], "Chrome");
+  assert.deepEqual(p.indexes, ["Chrome"]);
+});
+
+test("the index: the User-Agent cut to 96 bytes at a character boundary, the site id otherwise", () => {
+  assert.equal(indexOf("x".repeat(200)), "x".repeat(96));
+  const long = "a".repeat(95) + "é" + "b"; // é is 2 bytes and would straddle byte 96
+  assert.equal(indexOf(long), "a".repeat(95));
+  assert.equal(new TextEncoder().encode(indexOf("€".repeat(40))).length, 96);
+  assert.equal(indexOf(""), "-");
+  assert.deepEqual(point({ kind: "meta" }).indexes, ["ringshadow"]);
+  const none = serverPoint(req("/"), "html", rules);
+  assert.deepEqual(none.indexes, ["-"]);
 });
 
 test("the bucket passes 20 a second and reports what it drops once a minute", () => {

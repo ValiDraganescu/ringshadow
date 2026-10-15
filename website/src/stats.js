@@ -5,6 +5,7 @@
 // Engine SQL API (and Counterscale) summed _sample_interval.
 
 import { classify } from "./agents.js";
+import { SITE_HOST } from "./hits.js";
 
 export const DATASET = "events.analyticsEngine.ringshadow_hits";
 export const RETENTION_DAYS = 90;
@@ -39,8 +40,9 @@ export function parseRange(params, now = Date.now()) {
   };
 }
 
-const where = (extra = "") =>
-  `WHERE index1 = 'ringshadow' AND timestamp >= $from AND timestamp < $to${extra ? " AND " + extra : ""}`;
+// The index is the sampling key (the User-Agent for server hits), so the
+// queries select by kind and host instead.
+const where = (kind) => `WHERE blob1 = '${kind}' AND blob3 = '${SITE_HOST}' AND timestamp >= $from AND timestamp < $to`;
 const bucketOf = (bucket) => (bucket === "hour" ? "toStartOfHour(timestamp)" : "toStartOfDay(timestamp)");
 
 // Server hits by raw User-Agent and time bucket; the labels are applied in
@@ -48,19 +50,19 @@ const bucketOf = (bucket) => (bucket === "hour" ? "toStartOfHour(timestamp)" : "
 export function serverByAgentSql(bucket) {
   return `SELECT blob12 AS ua, blob11 AS wclass, blob10 AS wlabel, ${bucketOf(bucket)} AS t, COUNT(*) AS hits
 FROM ${DATASET}
-${where("blob1 = 'server'")}
+${where("server")}
 GROUP BY ua, wclass, wlabel, t`;
 }
 
 export function serverPathsSql() {
   return `SELECT blob12 AS ua, blob11 AS wclass, blob10 AS wlabel, blob2 AS path, COUNT(*) AS hits
 FROM ${DATASET}
-${where("blob1 = 'server'")}
+${where("server")}
 GROUP BY ua, wclass, wlabel, path`;
 }
 
 export function droppedSql() {
-  return `SELECT SUM(double3) AS dropped FROM ${DATASET} ${where("blob1 = 'meta'")}`;
+  return `SELECT SUM(double3) AS dropped FROM ${DATASET} ${where("meta")}`;
 }
 
 // A row's label under the current rules. A browser's raw string isn't kept

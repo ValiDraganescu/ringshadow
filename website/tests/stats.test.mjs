@@ -26,6 +26,8 @@ test("the SQL counts rows (the API applies the sample weights) inside the time b
   assert.match(sql, /COUNT\(\*\) AS hits/);
   assert.doesNotMatch(sql, /sample/i);
   assert.match(sql, /timestamp >= \$from AND timestamp < \$to/);
+  assert.match(sql, /blob1 = 'server' AND blob3 = 'ringshadow.com'/);
+  assert.doesNotMatch(sql, /index1/);
   assert.match(sql, /toStartOfDay\(timestamp\)/);
   assert.match(serverByAgentSql("hour"), /toStartOfHour\(timestamp\)/);
 });

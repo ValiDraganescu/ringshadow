@@ -6,13 +6,27 @@
 import { browserFamily, classify } from "./agents.js";
 
 export const SITE_ID = "ringshadow";
+export const SITE_HOST = "ringshadow.com";
 const MAX_UA = 512;
 const MAX_PATH = 512;
+const MAX_INDEX_BYTES = 96;
+
+// Analytics Engine samples by index when one index writes fast. Server hits
+// are indexed by their User-Agent, so a crawler storm thins only the
+// stormer's own rows; people's hits and meta rows by the site id.
+export function indexOf(s) {
+  const bytes = new TextEncoder().encode(String(s || "") || "-");
+  if (bytes.length <= MAX_INDEX_BYTES) return String(s || "") || "-";
+  // cut at a character boundary: drop UTF-8 continuation bytes at the end
+  let end = MAX_INDEX_BYTES;
+  while (end > 0 && (bytes[end] & 0xc0) === 0x80) end--;
+  return new TextDecoder().decode(bytes.slice(0, end));
+}
 
 // One point in the dataset's layout. Missing fields are empty strings or 0.
 export function point(f) {
   return {
-    indexes: [SITE_ID],
+    indexes: [f.index || SITE_ID],
     blobs: [
       f.kind, f.path, f.host, f.referrer, f.country,
       f.browser, f.browserVersion, f.device, f.event,
@@ -58,7 +72,9 @@ export function serverPoint(request, asset, compiledRules) {
   const url = new URL(request.url);
   const ua = request.headers.get("User-Agent") || "";
   const agent = classify(ua, compiledRules);
+  const kept = agent.class === "browser" ? browserFamily(ua) : ua.slice(0, MAX_UA);
   return point({
+    index: indexOf(kept),
     kind: "server",
     path: url.pathname.slice(0, MAX_PATH),
     host: url.host,
@@ -66,7 +82,7 @@ export function serverPoint(request, asset, compiledRules) {
     country: request.cf?.country || "",
     agentLabel: agent.label,
     agentClass: agent.class,
-    userAgent: agent.class === "browser" ? browserFamily(ua) : ua.slice(0, MAX_UA),
+    userAgent: kept,
     asset,
   });
 }
