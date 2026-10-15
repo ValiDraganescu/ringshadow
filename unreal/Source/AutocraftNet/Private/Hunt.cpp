@@ -66,8 +66,8 @@ std::string huntNewsLine(const std::string& id, const std::string& by, int64_t v
     if (kind == "gathered")
         return std::to_string(value) + (value == 1 ? " hunter" : " hunters") + " at the ring in " + at + ", waiting for " + (by.empty() ? "the caller" : by);
     if (kind == "charge") return std::to_string(value) + (value == 1 ? " hunter goes" : " hunters go") + " in at " + at;
-    if (kind == "won") return by.empty() ? "The Matriarch is down" : "The Matriarch is down, " + by + " hardest";
-    if (kind == "failed") return value > 0 ? "The party fell: she stands" : "Ten minutes and she stands";
+    if (kind == "won") return by.empty() ? "The Matriarch is down" : "The Matriarch is down · the hardest blows: " + by;
+    if (kind == "failed") return value > 0 ? "The party fell and she still stands" : "Ten minutes passed and she still stands";
     return "";
 }
 

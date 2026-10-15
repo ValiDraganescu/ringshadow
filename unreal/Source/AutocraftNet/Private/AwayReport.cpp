@@ -72,7 +72,7 @@ std::string awayLine(const AwayRow& r) {
     case AwayKind::fallen: return r.what + " fell to the Brood";
     case AwayKind::waves:
         return r.what + ": " + std::to_string(r.value) + (r.value == 1 ? " wave beaten" : " waves beaten");
-    case AwayKind::queenDown: return r.who.empty() ? "The Matriarch went down" : "The Matriarch went down, " + r.who + " hardest";
+    case AwayKind::queenDown: return r.who.empty() ? "The Matriarch went down" : "The Matriarch went down · the hardest blows: " + r.who;
     case AwayKind::queenBack: return "The Matriarch is back in her nest";
     case AwayKind::projectStart: return (r.who.empty() ? std::string("The realm") : r.who) + " started " + r.what;
     case AwayKind::projectEnd: return r.what + " ran its course";

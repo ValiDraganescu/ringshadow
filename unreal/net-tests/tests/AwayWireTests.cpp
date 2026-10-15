@@ -63,7 +63,7 @@ TEST(away_lines_say_what_the_rows_hold) {
     EXPECT_EQ(awayLine(r.rows[4]), std::string("A raid hit the Hab Dome in Rust Hollow"));
     EXPECT_EQ(awayLine(AwayRow{0, AwayKind::fell, "", "Hab Dome", "Rust Hollow", 0}), std::string("A raid took the Hab Dome in Rust Hollow"));
     EXPECT_EQ(awayLine(r.rows[1]), std::string("The Fork: 4 waves beaten"));
-    EXPECT_EQ(awayLine(AwayRow{0, AwayKind::queenDown, "Pilot 1A2B", "", "", 3}), std::string("The Matriarch went down, Pilot 1A2B hardest"));
+    EXPECT_EQ(awayLine(AwayRow{0, AwayKind::queenDown, "Pilot 1A2B", "", "", 3}), std::string("The Matriarch went down · the hardest blows: Pilot 1A2B"));
     EXPECT_EQ(awayLine(AwayRow{0, AwayKind::projectStart, "Pilot 1A2B", "the Beacon", "", 0}), std::string("Pilot 1A2B started the Beacon"));
     // The home screen's two lines: the most telling three, then the count.
     const auto two = awaySummary(r);

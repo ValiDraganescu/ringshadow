@@ -100,8 +100,8 @@ TEST(hunt_words) {
     EXPECT_EQ(huntNewsLine("called/Slag Pockets", "Pilot 1A2B", 0),
               std::string("Pilot 1A2B called it: defenders and guards to the ring in Slag Pockets"));
     EXPECT_EQ(huntNewsLine("charge/Slag Pockets", "", 4), std::string("4 hunters go in at Slag Pockets"));
-    EXPECT_EQ(huntNewsLine("won/Slag Pockets", "Pilot 1A2B", 3), std::string("The Matriarch is down, Pilot 1A2B hardest"));
-    EXPECT_EQ(huntNewsLine("failed/Slag Pockets", "", 0), std::string("Ten minutes and she stands"));
+    EXPECT_EQ(huntNewsLine("won/Slag Pockets", "Pilot 1A2B", 3), std::string("The Matriarch is down · the hardest blows: Pilot 1A2B"));
+    EXPECT_EQ(huntNewsLine("failed/Slag Pockets", "", 0), std::string("Ten minutes passed and she still stands"));
     EXPECT_EQ(awayLine(AwayRow{0, AwayKind::hunt, "Pilot 1A2B", "won", "Slag Pockets", 4}),
               std::string("Pilot 1A2B's hunt in Slag Pockets brought her down"));
     EXPECT_EQ(awayLine(AwayRow{0, AwayKind::hunt, "Pilot 1A2B", "failed", "Slag Pockets", 4}),

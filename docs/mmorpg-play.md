@@ -304,8 +304,8 @@ the Citadel's REALM tab.
   her slam, spit and roar, her pay to every pilot who hurt her by its share
   of the damage (a guard's hits count to its hirer on line, as a turret's
   to its builder), her return in three world days.
-- **Her fall.** THE HUNT BROUGHT HER DOWN ("The Matriarch is down, Pilot
-  1A2B hardest") to every pilot on line, KSTR's `hunt-down`, N3's banner and
+- **Her fall.** THE HUNT BROUGHT HER DOWN ("The Matriarch is down ·
+  the hardest blows: Pilot 1A2B") to every pilot on line, KSTR's `hunt-down`, N3's banner and
   each share; an away row for every pilot off line ("Pilot 1A2B's hunt in
   Slag Pockets brought her down"). In the standings she counts as one bug
   felled to her hardest hitter, as N3 names them (her killing blow no
