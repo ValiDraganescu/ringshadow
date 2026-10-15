@@ -202,6 +202,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devHunt(line));
             continue;
         }
+        // E1's scenes (WorldMap::devStarfall): `starfall victims`.
+        if (line.rfind("starfall", 0) == 0) {
+            said.push_back(world_.devStarfall(line));
+            continue;
+        }
         // The realm week (WorldMap::devWeek): `week end|left S|list`.
         if (line.rfind("week", 0) == 0) {
             said.push_back(world_.devWeek(line));

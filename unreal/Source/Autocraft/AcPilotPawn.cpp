@@ -1111,10 +1111,17 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	}
 	// A Quake stomp near the driven unit shakes the view a little (the
 	// pitch and yaw, a degree at most).
+	// A starfall's quake (E1) heaves it hard, a few degrees, and jolts it.
 	if (const UAcEffects* Fx = UAcEffects::Get(this))
 	{
 		const double Shake = Fx->StompShake(U.position, 24.0);
 		if (Shake != 0.0) Rot = Rot * FRotator(float(0.6 * Shake), float(0.4 * Shake), 0.f).Quaternion();
+		const double Quake = Fx->QuakeShake(U.position);
+		if (Quake != 0.0)
+		{
+			Rot = Rot * FRotator(float(1.2 * Quake), float(0.5 * Quake), float(0.8 * Quake)).Quaternion();
+			At += FVector(0.0, 0.0, Quake * AcSpace::ToCm(0.12));
+		}
 	}
 	// The dive: the camera on its way into the eye; the crosshair, the aim
 	// and the cockpit stay the eye's.

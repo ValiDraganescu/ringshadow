@@ -20,14 +20,17 @@ holds a canyon runs about ×2 the mining curve, and never over ×2.5.
 
 `make -C unreal/server bench` runs `build/balancebench 10`
 (`unreal/server/bench/BalanceBench.cpp`). It works on the first world, with no
-Brood, contracts, starfalls, frontier pilots or mercenaries, and has three
+Brood, contracts, starfalls, frontier pilots or mercenaries, and has four
 parts:
 
 1. **Mining.** A driven Prospector runs for 10 game minutes at levels 1, 5,
    10, 15 and 20.
-   - It mines from a Citadel east of the start's ore field, 15 cells from the
-     deposits. Each trip goes to the nearest deposit with a straight walk,
-     drills a full load and unloads at the Citadel's edge.
+   - It mines from a Citadel by the start pad, 14 cells from the west
+     vein's mounds. Each trip goes to the nearest deposit with a load's worth
+     of ore (20 or more) along the walking grid's path, drills a full load and
+     unloads at the Citadel's edge. A hand that stands still 3 s neither
+     drilling nor walking asks its way again (loaded) or leaves that deposit
+     for a minute (E1: a vein's mounds stand close).
    - Three builds:
      - **none:** no points spent;
      - **economy:** every point in Quick drill, Big haul, Light frame, Deep
@@ -53,13 +56,53 @@ parts:
 An XP-equivalent counts 1 ore as 1 XP and 1 MH as 2 XP (`WorldXp`: 1 an ore,
 2 an MH).
 
+4. **Scarcity (E1).** A level-1 pilot (no points) and a level-20 one (all
+   economy) mine the start region alone for 90 game minutes, the ore
+   unloaded counted each 10 minutes: when the veins run dry, and what their
+   regrowth gives after.
+
+## Scarcity (E1)
+
+Since E1 (the user, 2026-10-15) a region holds one or two veins and one
+well, its ore by level (docs/regions.md, "Scarcity"): Prospect Landing
+7,200, level 2 regions 11,000–11,200, levels 3 and 4 17,000. The bench on
+the new start region (2026-10-15):
+
+| Pilot | 0–10 | 10–20 | 20–30 | 30–40 | 40–50 | 50–60 | 60–70 | 70–80 | 80–90 min | In all |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Level 1, no points | 1,389 | 1,228 | 742 | 781 | 1,051 | 1,027 | 570 | 637 | (end) | 7,425 |
+| Level 20, all economy | 2,361 | 1,499 | 1,735 | 1,282 | 1,009 | 0 | 0 | 0 | | 7,886 |
+
+- **One pilot mines the start region dry in about 75 minutes at level 1,
+  50 at level 20.** The rate while it lasts is the mining rows below. The
+  dips at 20–40 minutes are the walk to the east vein, 25 cells from the
+  Citadel.
+- **Then only the regrowth comes in:** a tenth of the ore a world day, 720
+  in the start region every 40 minutes (1,080 an hour), 1,100 to 1,700 in
+  the others. A pilot who stays makes a sixth to a tenth of the pace
+  model's mining hour. The bench's hand waits for a load's worth on a
+  mound, so it shows 0 after it runs dry; a pilot walking for every 20 ore
+  gets those 1,080 at most.
+- **The pace model needs no change in its numbers.** Its mining hour (6,000
+  XP at level 1, +2% a level) holds for a pilot in a region with ore: about
+  the first hour in Prospect Landing, an hour and a half in a level-2
+  region, two and more in a level-3 one. After that the hour includes the
+  move: a Dropship flight or a walk to the next region (a minute or two), a
+  starfall (100–1,000 ore, about one a world day realm-wide), the board and
+  the canyons. What changes is where the hour is spent, not its size, so
+  nothing beyond the deposits was widened.
+- **Mercenaries and frontier pilots** mine the same veins by the same rules
+  (docs/frontier.md): a field mined out stops a mercenary's pay until it
+  grows back; a frontier miner with no deposit walks to the Citadel's
+  region. They make a region run dry sooner.
+
 ## The table
 
 | Number | Rule | Target (pace model) | Measured | Change |
 |---|---|---|---|---|
-| Mining, level 1 | 25 ore a load, 6 s drill, walk at 3.94 × 1.2 cells/s | 6,000 XP an hour all work (100 a minute) | 7,884 ore an hour unloaded (306 trips, 15.2-cell walk), 6,948 kept | none |
-| Mining, levels 5 / 10 / 15 / 20, average build | the drill and road skills | +2% a level: 6,480 / 7,080 / 7,680 / 8,280 | 8,334 / 8,634 / 11,172 / 12,624 | none |
-| Mining, levels 5 / 10 / 15 / 20, all economy | every point in the drill and road | "levels faster" | 8,634 / 12,624 / 13,956 / 13,956 | none |
+| Mining, level 1 | 25 ore a load, 6 s drill, walk at 3.94 × 1.2 cells/s | 6,000 XP an hour all work (100 a minute) | E1's start region: 8,334 ore an hour unloaded (324 trips, 13.8-cell walk), 7,344 kept, while its veins last (about 75 minutes; "Scarcity" above). Before E1: 7,884 (306 trips, 15.2-cell walk) | none |
+| Mining, levels 5 / 10 / 15 / 20, average build | the drill and road skills | +2% a level: 6,480 / 7,080 / 7,680 / 8,280 | 8,784 / 9,234 / 11,730 / 12,954 (before E1: 8,334 / 8,634 / 11,172 / 12,624) | none |
+| Mining, levels 5 / 10 / 15 / 20, all economy | every point in the drill and road | "levels faster" | 9,234 / 12,954 / 14,166 / 14,166 (before E1: 8,634 / 12,624 / 13,956 / 13,956) | none |
 | Realm tax | 10% of each load, rounded to nearest, at least 1, never the whole (`Progression::realmTax`) | 10% | 936 to 1,218 ore an hour from one mining pilot; 7 to 12% of a 25 to 49-ore load (whole numbers: 34 pays 3) | none |
 | Pace rate | `4,500 × (1 + 0.02 × (L − 1))` XP an hour | | 75 / 81 / 88.5 / 103.5 XP a minute at 1 / 5 / 10 / 20 | none |
 | Blueprint copy | `(50 + 25F) × 1.5ⁿ` ore, `5F × 1.5ⁿ` MH (none for the Citadel, Derrick, Landing Pad), to 10 | the first copy is a few minutes of income at its floor | Citadel 80 ore = 1.2 min of what a pilot keeps at its floor; Derrick 1.9; Gatling 3.3; Hab Dome 4.3; Sentinel 5.0; Foundry 6.8; Lab 9.4; Spacedock 11.4; Bastion 12.9 (the price rises with the floor, income 2% a level) | none |
@@ -73,8 +116,8 @@ An XP-equivalent counts 1 ore as 1 XP and 1 MH as 2 XP (`WorldXp`: 1 an ore,
 | Turret marks | Gatling 100 + 50, 300 + 200, 800 + 500 a stat; AA tower ×1.5; Citadel 250, 500 + 50, 1,000 + 150 (realm wallet) | a mark pays back within a held cycle's kills | a cycle's kill XP to the guns' builder: The Fork 1,825, The Drowned Cut 1,845, The Roost 2,420. A first mark (200 XP-eq) pays back within one cycle; a stat's three (2,700) within two | none |
 | Frontier booked mining | `5 / (6 + 2 × 12 / 3.94)` ore a second | neither starve nor flood | 0.41 ore/s = 1,489 an hour, a quarter of a pilot; five give the realm at most 745 ore an hour | none |
 | Realm projects (R2) | Beacon 2,000 + 100 MH, Relay 2,500 + 150, Dock Crew 3,000 + 200, Armoury 4,000 + 300; × 1.2 each repeat of a kind (ore to 50, MH to 10) | the realm wallet's sink, beside the Citadel's marks: 2 to 4 hours of one mining pilot's tax (936 to 1,218 ore an hour) | the first of each 2.0 / 2.5 / 3.0 / 4.0 hours of 1,000 ore of tax an hour; the fourth Armoury 6,900 ore + 520 MH (`balance_realm_projects`) | new (R2) |
-| **All-in pilot** | mining + the board + a canyon cycle | ×2 ± 0.3 of the curve | **before B2:** about ×4 (the board alone 15,300 XP an hour at level 1); **after:** ×1.87 / 1.86 / 2.02 / 1.95 / 1.89 at levels 1 / 5 / 10 / 15 / 20 | from the two changes above |
-| **Level 1 to 10** | | inside the first hour, around 30 min | **before:** about 18 min; **after:** 36 min (the pure-mining curve: 66) | from the two changes above |
+| **All-in pilot** | mining + the board + a canyon cycle | ×2 ± 0.3 of the curve | **before B2:** about ×4 (the board alone 15,300 XP an hour at level 1); **after:** ×1.87 / 1.86 / 2.02 / 1.95 / 1.89 at levels 1 / 5 / 10 / 15 / 20; **E1's re-run (2026-10-15):** ×1.90 / 1.89 / 2.71 / 2.67 / 2.62 (from level 10 the canyon's cycle pays 5,801 XP an hour against B2's 4,549: the canyons changed since, Z3/Z4, not E1; mining is a quarter of the hour or less) | from the two changes above |
+| **Level 1 to 10** | | inside the first hour, around 30 min | **before:** about 18 min; **after:** 36 min (the pure-mining curve: 66); E1's re-run 35 min | from the two changes above |
 
 The all-in hour, XP:
 

@@ -11,10 +11,15 @@
 //   sweeps the land, and a smoke trail that lingers half a minute and
 //   drifts on the wind; seen from the neighbouring regions too (placed by
 //   the world grid);
-// - the impact: a flash and its light, a dust ring thrown out and a column
-//   of smoke;
+// - the impact (E1, epic): a flash seen across the region (its light, the
+//   screen flaring white, strongest near), a shockwave ring racing out past
+//   the blast's edge, rocks thrown out glowing, a dust ring and a tall
+//   column of smoke, and the ground heaving under the camera
+//   (`UAcEffects::Quake`) within four blast radii; the server does the
+//   blast's damage;
 // - in the pilot's region, the crater (a decal, M_StarfallCrater) hot at
-//   first, fading over a world day, and its deposit drawn with M_OpalHot
+//   first, fading over a world day, the blast's ground scorched round it
+//   (the same decal, faint, the blast's width), and its deposit drawn with M_OpalHot
 //   (molten veins in a dark crust, its own glow at night, embers rising off
 //   it at night and heat shimmer over it by day, M_StarfallShimmer, and a
 //   warm light), hidden from AAcResources' plain ore (`AAcResources::Hot`).
@@ -30,6 +35,7 @@
 #include "GameFramework/Actor.h"
 
 #include "AcScenery.h"
+#include "SimdMath.h"
 
 #include "AcStarfall.generated.h"
 
@@ -63,6 +69,9 @@ private:
 		double From = 0;
 		bool bHere = false;
 		uint32 Id = 0;
+		/// Its blast's radius, cells (`ac::Starfall::blastRadius` of its
+		/// region).
+		double Blast = 18;
 		/// Its deposit's index in the mirror's patches (here, landed).
 		int64 Patch = -1;
 	};
@@ -72,6 +81,12 @@ private:
 	void Announce(const FDrawn& F, const FString& Region, double Time);
 	void DrawStreak(const FDrawn& F, double Time);
 	void DrawImpact(const FDrawn& F, double Time);
+	/// At the impact, once a fall: the quake and the screen's flash, by how
+	/// far the camera stands from it.
+	void Felt(const FDrawn& F);
+	/// Where the pilot stands (its driven unit; the camera before it is
+	/// seated), this region's ground.
+	ac::Vec2 ViewerAt() const;
 	void DrawCraters(const TArray<FDrawn>& Here, double Time, double Dark);
 	void SyncHotOre(const TArray<FDrawn>& Here);
 	void Glow(const FVector& At, double Cells, const FLinearColor& Colour, double Intensity, const FQuat& Turn = FQuat::Identity,
@@ -97,6 +112,11 @@ private:
 	TArray<TObjectPtr<UDecalComponent>> Decals;
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> DecalMaterials;
+	/// E1: the blast's scorched ground round each crater.
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UDecalComponent>> Scorches;
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> ScorchMaterials;
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInterface> CraterMaterial;
 	UPROPERTY(Transient)
@@ -121,7 +141,7 @@ private:
 	int64 HotRegion = -1;
 	int64 HotGeneration = -1;
 	/// The falls announced and told down (their ids).
-	TSet<uint32> Announced, Landed;
+	TSet<uint32> Announced, Landed, Quaked;
 	/// Instance data built each frame.
 	TArray<FTransform> GlowAt, SmokeAt, ShimmerAt;
 	TArray<float> GlowData, SmokeData, ShimmerData;

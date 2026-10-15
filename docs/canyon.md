@@ -7,6 +7,12 @@ mine it for itself. The pilots build turrets on the rims to hold it. The first
 zone is **The Fork** in Cold Fork: a mesa with two arms, the North tunnel's and
 the East tunnel's, cut to a junction where the prize lies.
 
+Since E1 (scarcity, [regions.md](regions.md) "Scarcity") the prize is its
+region's one MH well and its rich vein: five mounds in a ring 4 cells round
+the well (The Fork and The Drowned Cut 1,700 ore each, The Roost 2,600). The
+region's other vein lies outside the canyon, smaller. The prize fills up to
+its full ore at a reset and at the end of HELD, as before.
+
 The server runs the game (`unreal/server/world/WorldCanyon.cpp`). The sky
 carries each zone's state to every pilot (`Sky::zones`). The client shows it
 in the wave panel, the warnings, the map and the Journal (`AcCanyon.cpp`).
@@ -123,8 +129,8 @@ cells):
   east-south-east to a basin.
 - **Gull arm.** A short arm from the Gull tunnel in the north drops south to
   the same basin.
-- **Basin.** The prize lies in the basin: five 6000-ore deposits round an MH
-  well of 6000.
+- **Basin.** The prize lies in the basin: five 1,700-ore mounds in a ring
+  round an MH well of 6000 (E1; five of 6,000 before).
 - **Gorge.** A gorge runs south out to the salt pan.
 - **Landmark.** A half-drowned hauler lies at the basin's east shore.
 - **Ramps** lead up to the north and south rims.
@@ -170,7 +176,8 @@ Gloamwings roost. Its canyon is a level-2 mesa over the south-west terrace
   east then north to the basin at (30, 72).
 - **Dust arm.** From the Dust tunnel in the north-east, it runs down to the
   same basin.
-- **Prize.** Five 7500-ore deposits round an MH well of 7500.
+- **Prize.** Five 2,600-ore mounds in a ring round an MH well of 7500 (E1;
+  five of 7,500 before).
 - **Gorge.** It runs north out onto the terrace.
 - **Landmark.** A level-3 spire rises out of the mesa at the basin's west
   edge, with the roost's nest of chitin on its top.

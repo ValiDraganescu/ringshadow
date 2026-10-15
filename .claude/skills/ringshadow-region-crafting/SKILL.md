@@ -87,6 +87,16 @@ build turrets on the rims ([docs/regions.md](../../../docs/regions.md),
 
 ## Pitfalls
 
+- **Scarcity (E1).** A world region (brood 1 or more) holds at most two ore
+  veins of 3 to 5 mounds each, within 4.5 cells of the vein's middle, one MH
+  well, and its ore in all by brood level (6,000–8,000 at 1, 10,000–12,000
+  at 2, 15,000–20,000 at 3 and 4); `base.drop` must have `resources`.
+  `validate` names each breach. Lay a vein as a ring round an open middle
+  (2.6–3.2 cells out, each mound's `angle` along its radius) so a Prospector
+  never gets boxed in between mounds; a canyon's prize is the region's well
+  with a ring 4 cells round it. The numbers per region are in
+  docs/regions.md, "Scarcity"; changing a region's veins means rebaking its
+  satellite map (`bake_map.py --only ID`).
 - Positions are cells from the **north-west corner**, z grows **south**
   (down the picture). Read positions off the grid labels, not by guessing.
 - A cliff edge falls away **outside** the outline: an area's outline is the

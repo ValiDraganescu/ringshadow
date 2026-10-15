@@ -508,9 +508,19 @@ void WorldMap::regrowVeins(double from, double to) {
             const double rate = params_.veinRegrow * double(d.initial) / params_.dayLength / s;
             const int64_t grow = int64_t(std::floor(to * rate)) - int64_t(std::floor(from * rate));
             if (grow <= 0) continue;
+            const bool dry = d.remaining <= 0;
             d.remaining = std::min(d.initial, std::max<int64_t>(0, d.remaining) + grow);
             d.depletedAt = std::nullopt;
             if (d.remaining >= d.initial && share != sim.regrowShare.end()) sim.regrowShare.erase(share);
+            // A dry mound let units walk over it; growing back it stands up
+            // under them again: they are set clear of it, as at a crater.
+            if (dry)
+                for (Unit& u : st.units) {
+                    if (!NavGrid::insidePatch(u.position, d, Rules::radius(u.kind) + 0.3)) continue;
+                    Vec2 out = u.position - d.position;
+                    out = length(out) > 1e-6 ? out / length(out) : Vec2(1, 0);
+                    u.position = d.position + out * (1.6 + Rules::radius(u.kind));
+                }
         }
     }
 }

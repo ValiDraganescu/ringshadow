@@ -20,7 +20,7 @@
 //   18 after a level-up pick (Z); before 01 and here the HUD's plates must
 //      draw with their frames (FAcHudStyle::PlateProblem)
 //   the MH loop, between 12 and 13 (docs/mmorpg-play.md "The loop"):
-//   19 the Derrick's ghost on the south well    20 the Derrick built
+//   19 the Derrick's ghost on the well          20 the Derrick built
 //   21 pumping MH inside it                     22 the MH unloaded at the
 //                                                  Citadel, the wallet's MH up
 //
@@ -113,6 +113,16 @@
 //   05 the dust ring                   06 the crater and its hot deposit by day
 //   07 the same, first person          08 at night, third person
 //   09 at night, first person
+//
+// -AcMmoShotsE1 (it adds -AcMmoStarfall=30 -AcMmoClockHour=17, clear, the
+// start been to, unless the run gives them): scarcity and the epic fall
+// (docs/regions.md "Scarcity", docs/weather.md "Starfall"): the server puts
+// the realm's buildings and Prospectors in the fall's way (`starfall victims`),
+// third person on the start pad, DIR/e1-NN-moment.png:
+//   01 the world map: Prospect Landing's two veins and its one well
+//   02 what stands where it will fall, the radio's warning
+//   03 the streak coming in      04 the impact: the flash
+//   05 the shockwave racing out  06 the crater: what it destroyed, what it hurt
 //
 // -AcMmoShotsRig (with -AcMmoDevRig: the server gives the new pilot a
 // finished Citadel, Foundry and Lab, the Prospector where it unloads, and a
@@ -1151,6 +1161,15 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (double In = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoStarfall="), In)) FCommandLine::Append(TEXT(" -AcMmoStarfall=10"));
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=17"));
 		}
+		// -AcMmoShotsE1: a fall 30 s after the pilot drives (time to stage
+		// what stands in its way), late afternoon, clear, the start charted.
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsE1")))
+		{
+			if (double In = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoStarfall="), In)) FCommandLine::Append(TEXT(" -AcMmoStarfall=30"));
+			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=17"));
+			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
+			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen)) FCommandLine::Append(TEXT(" -AcMmoDevSeen=start"));
+		}
 		// -AcMmoShotsW4: late morning, clear, every region been to (the map).
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4")))
 		{
@@ -1282,6 +1301,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4"))) T.Phase = 3500;
 			// -AcMmoShotsN4 (and mmohunt): the hunt (3600-3615).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4"))) T.Phase = 3600;
+			// -AcMmoShotsE1: scarcity and the epic fall (3700-3709).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsE1"))) T.Phase = 3700;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
@@ -1525,10 +1546,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 50:
 	{
-		// Round the Citadel's west side, south to stand east of the south
-		// well (60, 61), facing it: a Derrick's reach (3 cells) away.
+		// Round the Citadel's west side, north to stand east of the region's
+		// one well (60, 36; E1), facing it: a Derrick's reach (3 cells) away.
 		const ac::Structure* C = CitadelOf(*S);
-		Route({FVector2D(C->position.x - 5, C->position.y + 5), Cell(63, 61)});
+		Route({FVector2D(C->position.x - 5, C->position.y - 5), Cell(63, 36)});
 		Advance();
 		return;
 	}
@@ -1538,7 +1559,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Stop(PI);
 			Advance();
 		}
-		else if (D < 0) Stalled(TEXT("to the south well"));
+		else if (D < 0) Stalled(TEXT("to the well"));
 		return;
 	case 52:
 		if (Since() > 1.5)
@@ -1553,7 +1574,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		return;
 	case 53:
-		if (Since() > 1.5) Shoot(TEXT("19-derrick-ghost"), TEXT("the Derrick's ghost on the south well"));
+		if (Since() > 1.5) Shoot(TEXT("19-derrick-ghost"), TEXT("the Derrick's ghost on the well"));
 		return;
 	case 54:
 		Shots.OreBefore = Ore;
@@ -1574,7 +1595,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			{
 				Check(Ore == Shots.OreBefore - ac::Rules::cost(ac::StructureKind::derrick),
 					FString::Printf(TEXT("the Derrick paid: %lld -> %lld ore"), (long long)Shots.OreBefore, (long long)Ore));
-				Shoot(TEXT("20-derrick-built"), TEXT("the Derrick finished on the south well"));
+				Shoot(TEXT("20-derrick-built"), TEXT("the Derrick finished on the well"));
 				return;
 			}
 		}
@@ -2249,7 +2270,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (const ac::Structure* D = S ? HabDomeOf(*S) : nullptr; D && D->complete())
 		{
 			G2Dome = D->id;
-			Route({Cell(66, 42), Cell(59, 43.5), Cell(58, 46)});
+			Route({Cell(66, 50), Cell(61, 50.1), Cell(58.8, 50.1)});
 			Advance();
 			return;
 		}
@@ -2260,7 +2281,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (const int32 D = Drive(); D == 1)
 		{
 			// Up to the deposit until the act key would drill it.
-			const FVector2D Deposit = Cell(53, 46);
+			// The west vein's east mound (E1).
+			const FVector2D Deposit = Cell(55.7, 50.1);
 			const ac::Vec2 At(Deposit.X, Deposit.Y);
 			const std::optional<ac::PilotTarget> Target = U ? M->simulation().pilotTarget(*U) : std::nullopt;
 			if (Target && Target->is<ac::PilotTarget::Patch>())
@@ -3513,6 +3535,117 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			return;
 		default:
 			Check(Shots.Saved + Shots.Skipped == 9, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+			Finish();
+			return;
+		}
+	}
+	// MARK: -AcMmoShotsE1
+	case 3700:
+	case 3701:
+	case 3702:
+	case 3703:
+	case 3704:
+	case 3705:
+	case 3706:
+	case 3707:
+	case 3708:
+	case 3709:
+	{
+		const std::optional<ac::net::Sky>& Sky = Mmo ? Mmo->Sky() : std::optional<ac::net::Sky>();
+		const ac::net::WorldMessage* Wm = Mmo ? Mmo->World() : nullptr;
+		const ac::net::Sky::Starfall* F = nullptr;
+		if (Sky && Wm)
+			for (const ac::net::Sky::Starfall& X : Sky->starfalls)
+				if (X.region == Wm->here) F = &X;
+		if (!F || !U)
+		{
+			TimedOut(TEXT("e1: a starfall told in the pilot's region (-AcMmoStarfall=30)"), 120);
+			return;
+		}
+		const double In = F->impact - Sky->time;
+		// Facing the impact from the pad, the streak's side of the sky in
+		// the frame's left part (as sf-'s).
+		auto AimAtStreak = [&] {
+			const ac::Vec3 H = ac::Starfall::head(FMath::Clamp(In, 0.3, ac::Starfall::streak), F->from);
+			const ac::Vec2 Head = F->at + ac::Vec2(H.x, H.z);
+			Stop(Face(Head) + 0.45);
+			Pilot->Eye().Pitch = FMath::Clamp(0.5 * std::atan2(H.y, FMath::Max(ac::distance(Head, U->position), 1.0)), 0.04, 0.35);
+		};
+		switch (T.Phase)
+		{
+		case 3700:
+			if (Since() < 1.0) return;
+			Check(OpenWorldMap(), TEXT("e1: M opened the world map"));
+			Advance();
+			return;
+		case 3701:
+			if (Since() > 2.5 || !Wanted(TEXT("e1-01-veins-map")))
+				Shoot(TEXT("e1-01-veins-map"), TEXT("the world map: Prospect Landing's two veins and its one well"));
+			return;
+		case 3702:
+			// Toward the fall, to 30 cells (its blast reaches 18), 20 s at most.
+			CloseWorldMap();
+			if (ac::distance(F->at, U->position) > 30.0 && Since() < 20.0 && In > 8.0)
+			{
+				Pilot->SetTestInput(FVector2D(0.0, -1.0), Face(F->at));
+				return;
+			}
+			Stop(Face(F->at));
+			Pilot->Eye().Pitch = 0.04;
+			Advance();
+			return;
+		case 3703:
+			// What stands in its way, put there a few seconds before (so the
+			// Prospectors have no time to be moved).
+			Stop(Face(F->at));
+			if (In > 7.0) return;
+			Check(Mmo->DevClock(TEXT("brood clear\nstarfall victims")), TEXT("e1: the realm's buildings and Prospectors in the fall's way"));
+			Advance();
+			return;
+		case 3704:
+			Stop(Face(F->at));
+			if (Since() > 1.2 || !Wanted(TEXT("e1-02-in-the-way")))
+				Shoot(TEXT("e1-02-in-the-way"), FString::Printf(TEXT("what stands where it will fall, %.0f s to go (%.0f cells off)"), In,
+					ac::distance(F->at, U->position)));
+			return;
+		case 3705:
+			AimAtStreak();
+			if (In <= 2.5 || !Wanted(TEXT("e1-03-streak")))
+				Shoot(TEXT("e1-03-streak"), FString::Printf(TEXT("the streak coming in, %.1f s to go"), In));
+			else TimedOut(TEXT("e1: the streak"), 60);
+			return;
+		case 3706:
+			Stop(Face(F->at));
+			Pilot->Eye().Pitch = 0.08;
+			if (-In >= 0.6 || (!Wanted(TEXT("e1-04-impact")) && In <= 0))
+				Shoot(TEXT("e1-04-impact"), FString::Printf(TEXT("the impact: the fireball and its flash, %.2f s after"), -In));
+			return;
+		case 3707:
+			Stop(Face(F->at));
+			if (-In >= 1.3 || !Wanted(TEXT("e1-05-shockwave")))
+				Shoot(TEXT("e1-05-shockwave"), FString::Printf(TEXT("the shockwave racing out, %.1f s after"), -In));
+			return;
+		case 3708:
+		{
+			// Closer once the smoke has thinned, looking down over the
+			// blast's ground.
+			static double Halted = -1.0;
+			if (ac::distance(F->at, U->position) > 22.0 && Since() < 20.0)
+			{
+				Pilot->SetTestInput(FVector2D(0.0, -1.0), Face(F->at));
+				Halted = -1.0;
+				return;
+			}
+			if (Halted < 0.0) Halted = Now;
+			Stop(Face(F->at));
+			Pilot->Eye().Pitch = -0.35;
+			if ((-In >= 14.0 && Now - Halted > 1.5) || !Wanted(TEXT("e1-06-crater")))
+				Shoot(TEXT("e1-06-crater"), FString::Printf(TEXT("the crater: what it destroyed, what it hurt (%.0f cells off, deposit %s)"),
+					ac::distance(F->at, U->position), F->patch ? TEXT("landed") : TEXT("missing")));
+			return;
+		}
+		default:
+			Check(Shots.Saved + Shots.Skipped == 6, FString::Printf(TEXT("e1: %d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 			Finish();
 			return;
 		}

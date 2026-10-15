@@ -1,5 +1,5 @@
 {
-  "about": "The MMORPG's new moments (docs/mmorpg-m7.md J1; docs/weather.md): the ringshadow sweep (rsdrone = the low drone swelling from the 60 s warning as the band comes, a loop; rspass = the pressure-drop whoosh as its edge passes over the pilot; rsbed = the cold airy bed under the band, a loop; rsrelease = the sun coming back; shimmer = the faint crystalline shimmer of ore flaring under the band, a loop), the starfall (sfstreak = the rising whistle-roar of the streak's 10 s, placed toward the impact; sfboom = the impact's deep boom; sfecho = its rolling echo off the hills, a few seconds later; sfcrater = the hot crater's hum and ember crackle, a loop at the deposit) and the progression's news (rankup = the Prospector's level-up sting; blueprint = a blueprint found; paid = a KSTR contract done; made = a module made in the Foundry; research = a mark researched in the Lab). Dusty frontier under a gas giant, the weight of a 1970s alien-invasion score, space: no voices, no music beds; short, mixed to sit under the music. Ids match the game's sound names (sfx/<name>_<n>).",
+  "about": "The MMORPG's new moments (docs/mmorpg-m7.md J1; docs/weather.md): the ringshadow sweep (rsdrone = the low drone swelling from the 60 s warning as the band comes, a loop; rspass = the pressure-drop whoosh as its edge passes over the pilot; rsbed = the cold airy bed under the band, a loop; rsrelease = the sun coming back; shimmer = the faint crystalline shimmer of ore flaring under the band, a loop), the starfall (sfstreak = the rising whistle-roar of the streak's 10 s, placed toward the impact; sfboom = the impact's deep boom; sfecho = its rolling echo off the hills, a few seconds later; sfimpact = E1's blast close by, the cracking detonation and the debris thrown out, with the boom near the impact; sfrumble = the ground shaking after it, a long low quake that calms; sfcrater = the hot crater's hum and ember crackle, a loop at the deposit) and the progression's news (rankup = the Prospector's level-up sting; blueprint = a blueprint found; paid = a KSTR contract done; made = a module made in the Foundry; research = a mark researched in the Lab). Dusty frontier under a gas giant, the weight of a 1970s alien-invasion score, space: no voices, no music beds; short, mixed to sit under the music. Ids match the game's sound names (sfx/<name>_<n>).",
   "voices": {},
   "entries": [
     {
@@ -68,6 +68,20 @@
       "prompt": "distant explosion echo rolling across wide canyons and hills, a long low rumbling roll that fades slowly into silence, outdoor desert, no initial bang",
       "seconds": 7,
       "influence": 0.55
+    },
+    {
+      "id": "sfimpact_1",
+      "kind": "sfx",
+      "prompt": "cataclysmic meteor strike close by: a blinding sharp cracking detonation, the air torn apart, a massive concussive blast wave with a deep sub bass punch, shattering rock and a wall of debris and gravel hurled outward, terrifying, cinematic, outdoor desert, no music",
+      "seconds": 6,
+      "influence": 0.65
+    },
+    {
+      "id": "sfrumble_1",
+      "kind": "sfx",
+      "prompt": "the ground shaking violently after a huge meteor impact: a deep heavy earthquake rumble, low groaning rock, stones rattling and sliding, slowly calming and fading out, very low frequencies, outdoor, no explosion, no music",
+      "seconds": 9,
+      "influence": 0.6
     },
     {
       "id": "sfcrater_1",

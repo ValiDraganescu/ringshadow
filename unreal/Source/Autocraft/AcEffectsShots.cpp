@@ -506,11 +506,34 @@ void UAcEffects::Rumble(const ac::Vec2 At, const double Time, const double Weigh
 	Stomps.Add({At, Time, Weight, Cap, Seconds});
 }
 
+void UAcEffects::Quake(const ac::Vec2 At, const double Time, const double Weight, const double Cap, const double Seconds)
+{
+	Stomps.Add({At, Time, Weight, Cap, Seconds, true});
+}
+
+double UAcEffects::QuakeShake(const ac::Vec2 From) const
+{
+	double K = 0.0;
+	for (const FStompMark& S : Stomps)
+	{
+		if (!S.bQuake) continue;
+		const double Age = NowTime - S.Time;
+		const double D = ac::distance(From, S.At);
+		if (!(Age >= 0.0 && Age < S.Seconds && D < S.Cap)) continue;
+		// A hard heave at first that rolls on and calms: two beats, so it
+		// reads as the ground, not a buzz.
+		const double Fall = 1.0 - D / S.Cap, Decay = 1.0 - Age / S.Seconds;
+		K += S.Weight * Fall * Decay * Decay * (0.7 * std::sin(Age * 31.0 + 0.5) + 0.3 * std::sin(Age * 13.0 + 1.7));
+	}
+	return FMath::Clamp(K, -3.0, 3.0);
+}
+
 double UAcEffects::StompShake(const ac::Vec2 From, const double Reach) const
 {
 	double K = 0.0;
 	for (const FStompMark& S : Stomps)
 	{
+		if (S.bQuake) continue;
 		const double Seconds = S.Seconds;
 		const double Age = NowTime - S.Time;
 		const double D = ac::distance(From, S.At);

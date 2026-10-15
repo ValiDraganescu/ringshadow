@@ -3,15 +3,17 @@
 // Prospector that only mines earns 100 XP a minute, 6,000 an hour; skills,
 // a Derrick and routes add 2% a level). The first world with the dev rig (a
 // Citadel at the start), one pilot at level 1, 5, 10 and 20, its Prospector
-// driven by a plain hand: to the deposit nearest the Citadel it can walk to
-// in a straight line, the drill held to a full load, back to the Citadel's
-// edge to unload, again. Two builds a level: no points spent, and every
+// driven by a plain hand: to the deposit nearest the Citadel with ore, along
+// the walking grid's path (E1: a vein's mounds stand close), the drill held
+// to a full load, back to the Citadel's edge to unload, again. Two builds a level: no points spent, and every
 // point in the drill and the road (Quick drill, Big haul, Light frame, Deep
 // bore, Ore sled, Dense pack, in that order, as the tree lets them). MINUTES
 // of game time a run (default 10), counted an hour: ore unloaded (the whole
 // load), what the pilot keeps (less the realm's 10%), the tax, the XP.
 // Isolated: no Brood, contracts, missions, starfalls, frontier pilots or
-// mercenaries. Built and run by `make bench` (-O3).
+// mercenaries. Built and run by `make bench` (-O3). E1: the start region's
+// veins run dry in a long run; part 4 mines 90 minutes in 10-minute slices
+// (the pilot waits at the Citadel while nothing has grown back).
 
 #include "WorldMap.h"
 
@@ -30,6 +32,8 @@ using namespace ac::server;
 namespace {
 
 constexpr PilotId me = 1;
+/// A deposit worth the walk: a load or more (E1).
+constexpr int64_t kLoadWorth = 20;
 const std::string key = "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2";
 
 struct Out {
@@ -44,18 +48,10 @@ Unit* driven(WorldMap& w) {
     return i ? &r->simulation().state.units[size_t(*i)] : nullptr;
 }
 
-/// A straight walk from `a` to `b` on open ground.
-bool clear(const Simulation& sim, Vec2 a, Vec2 b) {
-    const double d = distance(a, b);
-    for (double t = 0; t <= d; t += 0.25)
-        if (!sim.nav->walkable(a + (b - a) * (t / d))) return false;
-    return true;
-}
-
 enum class Build { none, average, economy };
 const char* named(Build b) { return b == Build::none ? "none" : b == Build::average ? "average" : "economy"; }
 
-Out run(const LoadedWorld& world, int64_t level, Build build, double minutes) {
+Out run(const LoadedWorld& world, int64_t level, Build build, double minutes, std::vector<double>* slices = nullptr) {
     WorldParams p;
     p.firstStep = 0;
     p.devXp = Progression::xp(level);
@@ -119,23 +115,40 @@ Out run(const LoadedWorld& world, int64_t level, Build build, double minutes) {
     sim.refreshNav();
     const Vec2 base = *spot;
     const double edgeAt = Rules::radius(StructureKind::citadel) + 0.5;
-    // Each trip: the deposit nearest the Citadel with ore and a straight walk.
+    // Each trip: the deposit nearest the Citadel with a load's worth of ore
+    // (a pilot does not walk for the little that has grown back) and a way
+    // to it (one the hand got stuck at left alone for a minute).
+    std::map<size_t, int> stuckAt;
+    int tick = 0;
     auto pick = [&]() -> std::optional<size_t> {
         std::optional<size_t> best;
         for (size_t k = 0; k < sim.state.patches.size(); k++) {
             const OreDeposit& d = sim.state.patches[k];
-            if (d.remaining <= 0) continue;
-            const Vec2 dir = normalize(d.position - base);
-            if (!clear(sim, base + dir * (edgeAt + 0.1), d.position - dir * 1.4)) continue;
+            if (d.remaining < kLoadWorth) continue;
+            if (const auto st = stuckAt.find(k); st != stuckAt.end() && tick - st->second < 60 * 60) continue;
+            if (!sim.nav->path(base + normalize(d.position - base) * (edgeAt + 0.1), d.position, Rules::mineRange)) continue;
             if (!best || distance(d.position, base) < distance(sim.state.patches[*best].position, base)) best = k;
         }
         return best;
     };
     std::optional<size_t> dep = pick();
     if (!dep) {
-        std::printf("  no deposit with a straight walk\n");
+        std::printf("  no deposit with a way to it\n");
         return {};
     }
+    // The way there along the walking grid, asked again every half second.
+    std::vector<Vec2> way;
+    int wayAt = -1000;
+    Vec2 wayTo(1e9, 1e9);
+    auto steer = [&](const Unit& v, Vec2 to, double stopAt, int now) {
+        if (now - wayAt >= 30 || distance(to, wayTo) > 0.01) {
+            way = sim.nav->path(v.position, to, stopAt).value_or(std::vector<Vec2>{to});
+            wayAt = now;
+            wayTo = to;
+        }
+        while (way.size() > 1 && distance(way.front(), v.position) < 0.6) way.erase(way.begin());
+        return way.empty() ? to : way.front();
+    };
     u->position = base + normalize(sim.state.patches[*dep].position - base) * edgeAt;
     u->carrying = 0;
     u->task = Unit::Task::idle;
@@ -146,22 +159,47 @@ Out run(const LoadedWorld& world, int64_t level, Build build, double minutes) {
     double walks = 0, legs = 0;
     const int ticks = int(minutes * 60 * 60);
     int64_t t = 0;
+    Vec2 lastAt(1e9, 1e9);
+    int stillSince = 0;
     for (int i = 0; i < ticks; i++) {
+        tick = i;
         u = driven(w);
         if (!u) break;
+        // No headway and no drilling for 3 s: another deposit.
+        if (distance(u->position, lastAt) > 0.3 || u->task == Unit::Task::mining) {
+            lastAt = u->position;
+            stillSince = i;
+        } else if (i - stillSince > 3 * 60) {
+            // Loaded: ask the way home again; else leave that deposit be.
+            if (u->carrying > 0 && u->task != Unit::Task::mining) wayAt = -1000;
+            else if (dep) {
+                stuckAt[*dep] = i;
+                dep = std::nullopt;
+            }
+            stillSince = i;
+        }
         PilotInput in;
         in.tick = ++t;
         in.visit = w.visit(me);
         const bool full = u->carrying > 0 && u->task != Unit::Task::mining;
-        if (!full && (!dep || sim.state.patches[*dep].remaining <= 0)) {
+        // E1: every 10 game minutes, the ore unloaded so far.
+        if (slices && i > 0 && i % (10 * 60 * 60) == 0)
+            slices->push_back(double(w.wallet(me)->ore - wallet0.ore + w.realmWallet().ore - realm0.ore));
+        if (!full && (!dep || sim.state.patches[*dep].remaining <= 0 || (u->task != Unit::Task::mining && sim.state.patches[*dep].remaining < kLoadWorth))) {
             dep = pick();
-            if (!dep) break;
+            // Mined dry: the pilot waits for the veins to grow back.
+            if (!dep) {
+                w.input(me, PilotInput{});
+                w.step();
+                continue;
+            }
         }
         const Vec2 ore = sim.state.patches[*dep].position;
-        const Vec2 to = full ? base : ore;
-        in.heading = std::atan2(to.y - u->position.y, to.x - u->position.x);
         const auto target = sim.pilotTarget(*u);
         const bool atOre = !full && target && target->as<PilotTarget::Patch>();
+        // Facing the ore once there (the drill takes what it faces).
+        const Vec2 to = full ? steer(*u, base, edgeAt, i) : atOre ? ore : steer(*u, ore, Rules::mineRange, i);
+        in.heading = std::atan2(to.y - u->position.y, to.x - u->position.x);
         in.walk = atOre || u->task == Unit::Task::mining ? Vec2(0, 0) : Vec2(1, 0);
         in.act = atOre && u->task != Unit::Task::mining;
         in.hold = !full;
@@ -174,6 +212,12 @@ Out run(const LoadedWorld& world, int64_t level, Build build, double minutes) {
             legs += 1;
         }
     }
+    if (slices && std::getenv("B2DEBUG"))
+        for (const OreDeposit& d : sim.state.patches)
+            std::printf("  mound (%.1f, %.1f): %lld of %lld left, %.1f from the Citadel, way %d, from the unit %d\n", d.position.x, d.position.y,
+                        (long long)d.remaining, (long long)d.initial, distance(d.position, base),
+                        int(sim.nav->path(base + normalize(d.position - base) * (edgeAt + 0.1), d.position, Rules::mineRange).has_value()),
+                        int(u && sim.nav->path(u->position, d.position, Rules::mineRange).has_value()));
     const double hours = minutes / 60;
     const auto wallet1 = *w.wallet(me);
     const auto realm1 = w.realmWallet();
@@ -283,6 +327,26 @@ int main(int argc, char** argv) {
             std::printf("%5lld  %-8s  %7.0f  %6.0f  %6.0f  %5.0f  %6.0f  %6.0f  %4.1f\n", (long long)level, named(b), target, o.ore, o.kept,
                         o.tax, o.xp, o.trips, o.walk);
         }
+
+    // 4. (E1) Scarcity: the start region's veins mined by a pilot alone for
+    // 90 minutes, ore unloaded a 10-minute slice: they run dry, then only
+    // their regrowth (a tenth of their ore a world day) comes in.
+    int64_t startOre = 0;
+    for (const WorldRegion& g : load.world->regions)
+        if (g.file.id == "start")
+            for (const region::Deposit& d : g.file.deposits) startOre += d.amount;
+    std::printf("\nScarcity (E1): the start region's %lld ore, 90 game minutes, ore unloaded each 10 minutes:\n", (long long)startOre);
+    for (const auto [level, b] : {std::pair{int64_t(1), Build::none}, std::pair{int64_t(20), Build::economy}}) {
+        std::vector<double> slices;
+        run(*load.world, level, b, 90, &slices);
+        std::printf("level %2lld %-8s", (long long)level, named(b));
+        double last = 0;
+        for (const double s : slices) {
+            std::printf(" %5.0f", s - last);
+            last = s;
+        }
+        std::printf("  (%.0f in all)\n", last);
+    }
 
     // 2. A held canyon cycle at level 15, the pilot's guns on The Fork.
     // The guns alone don't hold waves 9 and 10 (the pilot fights too): the

@@ -1,6 +1,7 @@
 // Starfalls on screen: see AcStarfall.h.
 #include "AcStarfall.h"
 
+#include "AcEffects.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
 #include "AcMmo.h"
@@ -54,9 +55,22 @@ namespace
 	constexpr double TrainEvery = 0.06;
 	constexpr double TrainLife = 4.5;
 	/// The impact: the flash's seconds, the dust ring's seconds and puffs.
-	constexpr double FlashLife = 1.4;
-	constexpr double DustLife = 9.0;
-	constexpr int32 DustPuffs = 56;
+	constexpr double FlashLife = 2.2;
+	constexpr double DustLife = 12.0;
+	constexpr int32 DustPuffs = 96;
+	/// E1: the shockwave's seconds and pieces (it races out to 1.6 × the
+	/// blast's radius), the rocks thrown out and how long they fly at most,
+	/// the quake (seconds, how far it is felt in blast radii, its weight
+	/// close by) and the screen's flash (seconds, how white near and far).
+	constexpr double ShockLife = 2.6;
+	constexpr int32 ShockPieces = 120;
+	constexpr int32 Ejecta = 34;
+	constexpr double EjectaLife = 4.0;
+	constexpr double QuakeSeconds = 3.6;
+	constexpr double QuakeReach = 4.0;
+	constexpr double QuakeWeight = 3.0;
+	constexpr double ScreenFlash = 1.1;
+	constexpr double ScreenNear = 0.4, ScreenFar = 0.18;
 	/// The crater: hot at first, cooling over this many seconds.
 	constexpr double CoolTime = 600.0;
 	/// The deposit drawn this much bigger than a plain one: rich.
@@ -172,6 +186,7 @@ void AAcStarfall::Off()
 	if (FlashLight) FlashLight->SetVisibility(false);
 	for (UPointLightComponent* L : CraterLights) L->SetVisibility(false);
 	for (UDecalComponent* D : Decals) D->SetVisibility(false);
+	for (UDecalComponent* D : Scorches) D->SetVisibility(false);
 	if (!Hot.IsEmpty())
 	{
 		HotOre.Clear();
@@ -204,9 +219,9 @@ void AAcStarfall::Shimmer(const FVector& At, const double Size, const double Str
 	ShimmerData.Add(float(FMath::Clamp(Strength, 0.0, 1.0)));
 }
 
-void AAcStarfall::Announce(const FDrawn& F, const FString& Region, const double Time)
+ac::Vec2 AAcStarfall::ViewerAt() const
 {
-	// From the pilot's Prospector (the camera before it is seated).
+	// The pilot's Prospector (the camera before it is seated).
 	const APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	const FVector Cam = PC && PC->PlayerCameraManager ? PC->PlayerCameraManager->GetCameraLocation() : FVector::ZeroVector;
 	ac::Vec2 From = AcSpace::ToSim(Cam);
@@ -214,6 +229,28 @@ void AAcStarfall::Announce(const FDrawn& F, const FString& Region, const double 
 	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
 	const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
 	if (const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr) From = U->position;
+	return From;
+}
+
+void AAcStarfall::Felt(const FDrawn& F)
+{
+	const ac::Vec2 At(F.Impact.X, F.Impact.Y);
+	const double D = ac::length(At - ViewerAt());
+	// The ground heaves under the camera, hard near the blast.
+	if (UAcEffects* Fx = UAcEffects::Get(this)) Fx->Quake(At, Fx->Now(), QuakeWeight, QuakeReach * F.Blast, QuakeSeconds);
+	// The screen flares white: near it nearly blinds, from the region's far
+	// side it still lights the sky; next door a glimmer.
+	const double Near = FMath::Clamp(1.0 - D / (8.0 * F.Blast), 0.0, 1.0);
+	const double Alpha = F.bHere ? FMath::Lerp(ScreenFar, ScreenNear, Near) : 0.15;
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController(); PC && PC->PlayerCameraManager)
+		PC->PlayerCameraManager->StartCameraFade(float(Alpha), 0.f, float(ScreenFlash), FLinearColor(1.0f, 0.92f, 0.78f), false, false);
+	UE_LOG(LogAutocraft, Display, TEXT("starfall: fall %u down %.0f cells off, its blast %.0f cells round: the quake, the flash at %.2f"), F.Id, D,
+		F.Blast, Alpha);
+}
+
+void AAcStarfall::Announce(const FDrawn& F, const FString& Region, const double Time)
+{
+	const ac::Vec2 From = ViewerAt();
 	const ac::Vec2 To(F.Impact.X, F.Impact.Y);
 	const double Bearing = ac::Starfall::bearing(From, To);
 	const double Metres = ac::length(To - From);
@@ -221,8 +258,8 @@ void AAcStarfall::Announce(const FDrawn& F, const FString& Region, const double 
 	const FString Title = bComing ? FString::Printf(TEXT("KSTR: STARFALL IN %.0f"), FMath::Max(1.0, F.ImpactTime - Time))
 								  : FString(TEXT("KSTR: STARFALL DOWN"));
 	const FString Where = Metres < 1000 ? FString::Printf(TEXT("%.0f m"), Metres) : FString::Printf(TEXT("%.1f km"), Metres / 1000);
-	const FString Sub = FString::Printf(TEXT("%s  ·  bearing %03.0f°, %s  ·  a rich deposit in the crater, first come first served"), *Region,
-		Bearing, *Where);
+	const FString Sub = FString::Printf(TEXT("%s  ·  bearing %03.0f°, %s  ·  its blast flattens %.0f m round: get clear  ·  ore in the crater, first come first served"),
+		*Region, Bearing, *Where, F.Blast);
 	UE_LOG(LogAutocraft, Display, TEXT("starfall: %s, %s (fall %u at clock %.1f s)"), *Title, *Sub, F.Id, F.ImpactTime);
 	if (const UAcProgressHudSubsystem* HudSys = UAcProgressHudSubsystem::Get(this))
 	{
@@ -277,12 +314,12 @@ void AAcStarfall::DrawStreak(const FDrawn& F, const double Time)
 			if (Len <= 1.0) continue;
 			const double Fresh = FMath::Exp(-Age * 2.4);
 			const double Cool = FMath::Exp(-Age * 0.55) * (1.0 - Age / TrainLife);
-			const double Thick = 1.4 + 2.2 * FMath::Sqrt(Age / TrainLife);
+			const double Thick = 2.4 + 3.6 * FMath::Sqrt(Age / TrainLife);
 			const FQuat Turn = FRotationMatrix::MakeFromX(Along / Len).ToQuat();
 			const FVector Mid = (A + B) * 0.5;
 			const double Stretch = Len / AcSpace::ToCm(Thick) * 1.35;
 			const FLinearColor Colour = FLinearColor::LerpUsingHSV(FLinearColor(0.75f, 0.85f, 1.0f), FLinearColor(1.0f, 0.45f, 0.12f), float(Fresh));
-			Glow(Mid, AcSpace::ToCm(Thick), Colour, 4.5 * Fresh + 0.9 * Cool, Turn, FVector(Stretch, 1.0, 1.0));
+			Glow(Mid, AcSpace::ToCm(Thick), Colour, 6.0 * Fresh + 1.2 * Cool, Turn, FVector(Stretch, 1.0, 1.0));
 		}
 	}
 	if (Before <= 0 || Before > ac::Starfall::streak)
@@ -297,10 +334,14 @@ void AAcStarfall::DrawStreak(const FDrawn& F, const double Time)
 	const double Seed = double(F.Id % 977);
 	const double Flare = FMath::Pow(FMath::Max(0.0, FMath::Sin(Time * 5.3 + Seed) * FMath::Sin(Time * 2.9 + 2.0 * Seed)), 6.0);
 	const double Flicker = 0.72 + 0.12 * FMath::Sin(Time * 37.0 + Seed) + 0.1 * FMath::Sin(Time * 61.0 + 3.0 * Seed) + 0.6 * Flare;
-	Glow(Head, AcSpace::ToCm(6.0), FLinearColor(1.0f, 0.97f, 0.9f), 60.0 * In * Flicker);
-	Glow(Head, AcSpace::ToCm(18.0), FLinearColor(1.0f, 0.6f, 0.25f), 2.6 * In * Flicker);
+	// E1: big enough to be seen from anywhere in the region, growing as it
+	// comes, its fire burning brighter in the last seconds.
+	const double Near = 1.0 + 0.8 * FMath::Clamp(1.0 - Before / ac::Starfall::streak, 0.0, 1.0);
+	Glow(Head, AcSpace::ToCm(11.0 * Near), FLinearColor(1.0f, 0.97f, 0.9f), 70.0 * In * Flicker);
+	Glow(Head, AcSpace::ToCm(36.0 * Near), FLinearColor(1.0f, 0.6f, 0.25f), 1.4 * In * Flicker);
+	Glow(Head, AcSpace::ToCm(80.0 * Near), FLinearColor(1.0f, 0.5f, 0.2f), 0.06 * In * Flicker);
 	const FQuat Along = FRotationMatrix::MakeFromX(Back).ToQuat();
-	Glow(Head + Back * AcSpace::ToCm(24.0), AcSpace::ToCm(2.0), FLinearColor(1.0f, 0.62f, 0.25f), 16.0 * In, Along, FVector(26.0, 1.0, 1.0));
+	Glow(Head + Back * AcSpace::ToCm(40.0), AcSpace::ToCm(3.5), FLinearColor(1.0f, 0.62f, 0.25f), 18.0 * In, Along, FVector(24.0, 1.0, 1.0));
 	const uint32 Sparks = F.Id * 31337u + 5u;
 	for (int32 K = 0; K < 10; ++K)
 	{
@@ -314,7 +355,7 @@ void AAcStarfall::DrawStreak(const FDrawn& F, const double Time)
 	HeadLight->SetWorldLocation(Head);
 	HeadLight->SetLightColor(FLinearColor(1.0f, 0.7f, 0.4f));
 	HeadLight->SetIntensity(float(1200.0 * In * Flicker * CVarLightGain.GetValueOnGameThread()));
-	HeadLight->SetAttenuationRadius(float(AcSpace::ToCm(100.0)));
+	HeadLight->SetAttenuationRadius(float(AcSpace::ToCm(120.0)));
 	HeadLight->SetVisibility(true);
 }
 
@@ -324,39 +365,87 @@ void AAcStarfall::DrawImpact(const FDrawn& F, const double Time)
 	if (Age < 0 || Age > DustLife) return;
 	const FVector Ground = Cells(F.Impact);
 	const uint32 Seed = F.Id * 104729u + 11u;
-	// The flash: a ball of light that swells and fades, and its light.
+	const double B = F.Blast;
+	// The flash: a fireball that swells over the blast's ground and fades,
+	// white at its heart, and its light across the region.
 	if (Age < FlashLife)
 	{
 		const double A = Age / FlashLife;
-		const double Fade = FMath::Exp(-Age * 4.0);
-		Glow(Ground + FVector(0, 0, AcSpace::ToCm(2.0)), AcSpace::ToCm(4.0 + 16.0 * FMath::Sqrt(A)), FLinearColor(1.0f, 0.72f, 0.42f), 1.5 * Fade);
-		Glow(Ground + FVector(0, 0, AcSpace::ToCm(2.0)), AcSpace::ToCm(3.0 + 4.5 * A), FLinearColor(1.0f, 0.97f, 0.9f), 6.0 * Fade);
-		FlashLight->SetWorldLocation(Ground + FVector(0, 0, AcSpace::ToCm(6.0)));
-		FlashLight->SetLightColor(FLinearColor(1.0f, 0.8f, 0.55f));
-		FlashLight->SetIntensity(float(600.0 * Fade * CVarLightGain.GetValueOnGameThread()));
-		FlashLight->SetAttenuationRadius(float(AcSpace::ToCm(50.0)));
+		const double Fade = FMath::Exp(-Age * 3.0);
+		const FVector Up = Ground + FVector(0, 0, AcSpace::ToCm(3.0 + 6.0 * FMath::Sqrt(A)));
+		Glow(Up, AcSpace::ToCm(10.0 + 2.4 * B * FMath::Sqrt(A)), FLinearColor(1.0f, 0.62f, 0.3f), 1.2 * Fade);
+		Glow(Up, AcSpace::ToCm(6.0 + 0.9 * B * A), FLinearColor(1.0f, 0.86f, 0.62f), 3.5 * Fade);
+		Glow(Up, AcSpace::ToCm(4.0 + 8.0 * A), FLinearColor(1.0f, 0.98f, 0.94f), 12.0 * Fade);
+		FlashLight->SetWorldLocation(Ground + FVector(0, 0, AcSpace::ToCm(12.0)));
+		FlashLight->SetLightColor(FLinearColor(1.0f, 0.82f, 0.6f));
+		FlashLight->SetIntensity(float(1500.0 * Fade * CVarLightGain.GetValueOnGameThread()));
+		FlashLight->SetAttenuationRadius(float(AcSpace::ToCm(14.0 * B)));
 		FlashLight->SetVisibility(true);
 	}
-	// The dust ring: thrown out fast, slowing, rising and thinning.
+	// The shockwave: a ring of hot, bright air racing over the ground past
+	// the blast's edge, slowing and fading; a ring of dust close behind it.
+	if (Age < ShockLife)
+	{
+		const double Front = B * 1.6 * (1.0 - FMath::Exp(-Age * 2.2));
+		const double Fade = FMath::Square(1.0 - Age / ShockLife);
+		const double Piece = UE_DOUBLE_TWO_PI * Front / ShockPieces;
+		for (int32 K = 0; K < ShockPieces && Front > 0.5; ++K)
+		{
+			const double Ang = (double(K) + 0.5) / ShockPieces * UE_DOUBLE_TWO_PI;
+			const FVector Dir(FMath::Cos(Ang), FMath::Sin(Ang), 0.0);
+			const FVector Tangent(-Dir.Y, Dir.X, 0.0);
+			const FQuat Turn = FRotationMatrix::MakeFromX(Tangent).ToQuat();
+			const double Thick = 0.7 + 1.1 * Age;
+			const FVector P = Ground + Dir * AcSpace::ToCm(Front) + FVector(0, 0, AcSpace::ToCm(0.6 + 0.8 * Age));
+			Glow(P, AcSpace::ToCm(Thick), FLinearColor(1.0f, 0.86f, 0.66f), 9.0 * Fade * (0.8 + 0.4 * Rand(Seed, K, 21)), Turn,
+				FVector(Piece / Thick * 1.25, 1.0, 0.7));
+			if (K % 3 == 0)
+				Smoke(Ground + Dir * AcSpace::ToCm(Front * 0.94) + FVector(0, 0, AcSpace::ToCm(1.2 + 1.5 * Age)),
+					AcSpace::ToCm(3.0 + 3.5 * Age), 0.55 * Fade, 0.15);
+		}
+	}
+	// Rocks thrown out of the crater, glowing as they fly and cooling,
+	// a little smoke behind each; they fall back on the blast's ground.
+	if (Age < EjectaLife)
+	{
+		constexpr double G = 22.0;
+		for (int32 K = 0; K < Ejecta; ++K)
+		{
+			const double Ang = Rand(Seed, K, 31) * UE_DOUBLE_TWO_PI;
+			const double Speed = 9.0 + 15.0 * Rand(Seed, K, 32);
+			const double Lift = FMath::DegreesToRadians(35.0 + 40.0 * Rand(Seed, K, 33));
+			const double Up = Speed * FMath::Sin(Lift), Out = Speed * FMath::Cos(Lift);
+			const double Flies = FMath::Min(EjectaLife, 2.0 * Up / G);
+			if (Age > Flies) continue;
+			const double H = Up * Age - 0.5 * G * Age * Age;
+			const FVector P = Ground + FVector(FMath::Cos(Ang) * AcSpace::ToCm(Out * Age), FMath::Sin(Ang) * AcSpace::ToCm(Out * Age), AcSpace::ToCm(0.5 + H));
+			const double Cooling = FMath::Exp(-Age * 0.9);
+			Glow(P, AcSpace::ToCm(0.3 + 0.35 * Rand(Seed, K, 34)), FLinearColor(1.0f, 0.5f + 0.3f * float(Cooling), 0.15f), 7.0 * Cooling);
+			Smoke(P, AcSpace::ToCm(1.2 + 1.5 * Age), 0.35 * (1.0 - Age / Flies), 0.5 * Cooling);
+		}
+	}
+	// The dust ring: thrown out fast to the blast's edge and past, slowing,
+	// rising and thinning.
 	const double A = Age / DustLife;
-	const double Out = ac::Starfall::craterRadius + 26.0 * (1.0 - FMath::Exp(-Age * 1.6));
+	const double Out = ac::Starfall::craterRadius + 1.5 * B * (1.0 - FMath::Exp(-Age * 1.6));
 	for (int32 K = 0; K < DustPuffs; ++K)
 	{
 		const double Ang = (double(K) + Rand(Seed, K, 1)) / DustPuffs * UE_DOUBLE_TWO_PI;
 		const double R = Out * (0.8 + 0.35 * Rand(Seed, K, 2));
 		const FVector P = Ground + FVector(FMath::Cos(Ang) * AcSpace::ToCm(R), FMath::Sin(Ang) * AcSpace::ToCm(R),
 										   AcSpace::ToCm(0.8 + 2.5 * A + 1.5 * Rand(Seed, K, 3)));
-		Smoke(P, AcSpace::ToCm(5.0 + 10.0 * FMath::Sqrt(A)) * (0.7 + 0.6 * Rand(Seed, K, 4)), 0.85 * (1.0 - A) * (1.0 - A),
+		Smoke(P, AcSpace::ToCm(6.0 + 16.0 * FMath::Sqrt(A)) * (0.7 + 0.6 * Rand(Seed, K, 4)), 0.85 * (1.0 - A) * (1.0 - A),
 			0.25 * FMath::Exp(-Age * 2.0));
 	}
-	// A column of smoke over the crater, lit from below at first.
-	for (int32 K = 0; K < 18; ++K)
+	// A column of smoke over the crater rising high, lit from below at
+	// first, its top spreading.
+	for (int32 K = 0; K < 30; ++K)
 	{
-		const double Up = (K + Rand(Seed, K, 5)) / 18.0;
-		const double H = Up * (4.0 + 22.0 * FMath::Sqrt(A));
-		const FVector P = Ground + FVector((Rand(Seed, K, 6) - 0.5) * AcSpace::ToCm(3.0 + 4.0 * Up), (Rand(Seed, K, 7) - 0.5) * AcSpace::ToCm(3.0 + 4.0 * Up),
-										   AcSpace::ToCm(H));
-		Smoke(P, AcSpace::ToCm(3.0 + 5.0 * Up + 3.0 * A), 0.6 * (1.0 - A) * (1.0 - 0.4 * Up), FMath::Exp(-Age * 0.8) * (1.0 - Up));
+		const double Up = (K + Rand(Seed, K, 5)) / 30.0;
+		const double H = Up * (6.0 + 45.0 * FMath::Sqrt(A));
+		const double Wide = 3.0 + 6.0 * Up + 8.0 * Up * Up * FMath::Sqrt(A);
+		const FVector P = Ground + FVector((Rand(Seed, K, 6) - 0.5) * AcSpace::ToCm(Wide), (Rand(Seed, K, 7) - 0.5) * AcSpace::ToCm(Wide), AcSpace::ToCm(H));
+		Smoke(P, AcSpace::ToCm(4.5 + 8.0 * Up + 5.0 * A), 0.65 * (1.0 - A) * (1.0 - 0.35 * Up), FMath::Exp(-Age * 0.8) * (1.0 - Up));
 	}
 }
 
@@ -395,6 +484,33 @@ void AAcStarfall::DrawCraters(const TArray<FDrawn>& Here, const double Time, con
 		const double Fade = Life < 0.8 ? 1.0 : FMath::Clamp((1.0 - Life) / 0.2, 0.0, 1.0);
 		const double Heat = FMath::Exp(-Age / (CoolTime / 3.0));
 		const double Span = ac::Starfall::craterRadius * 2.6;
+		// E1: the blast's ground round it, scorched, faint, the blast's width.
+		if (Scorches.Num() <= N)
+		{
+			UDecalComponent* S = NewObject<UDecalComponent>(this);
+			S->SetupAttachment(Root);
+			S->SetRelativeRotation(FRotator(-90.0, 0.0, 0.0));
+			S->SortOrder = -1;
+			S->RegisterComponent();
+			AddInstanceComponent(S);
+			UMaterialInstanceDynamic* M = CraterMaterial ? UMaterialInstanceDynamic::Create(CraterMaterial, this) : nullptr;
+			if (M) S->SetDecalMaterial(M);
+			Scorches.Add(S);
+			ScorchMaterials.Add(M);
+		}
+		{
+			UDecalComponent* S = Scorches[N];
+			const double Wide = F.Blast * 2.0;
+			S->SetWorldLocation(Cells(F.Impact));
+			S->DecalSize = FVector(AcSpace::ToCm(10.0), AcSpace::ToCm(Wide), AcSpace::ToCm(Wide));
+			S->SetVisibility(Fade > 0);
+			if (UMaterialInstanceDynamic* M = ScorchMaterials[N])
+			{
+				M->SetScalarParameterValue(TEXT("Fade"), float(0.55 * Fade));
+				M->SetScalarParameterValue(TEXT("Heat"), float(0.25 * Heat));
+				M->SetScalarParameterValue(TEXT("Seed"), float((F.Id + 41) % 97));
+			}
+		}
 		UDecalComponent* D = Decals[N];
 		D->SetWorldLocation(Cells(F.Impact));
 		D->DecalSize = FVector(AcSpace::ToCm(6.0), AcSpace::ToCm(Span), AcSpace::ToCm(Span));
@@ -424,6 +540,7 @@ void AAcStarfall::DrawCraters(const TArray<FDrawn>& Here, const double Time, con
 		Decals[I]->SetVisibility(false);
 		CraterLights[I]->SetVisibility(false);
 	}
+	for (int32 I = N; I < Scorches.Num(); ++I) Scorches[I]->SetVisibility(false);
 	// Embers off the hot deposits: sparks that rise, flicker and die, at
 	// night; by day a few small dim ones, and the air shimmering over it
 	// while it is hot.
@@ -578,6 +695,8 @@ void AAcStarfall::Tick(const float DeltaSeconds)
 		F.ImpactTime = S.impact;
 		F.From = S.from;
 		F.bHere = S.region == WorldMsg->here;
+		const ac::MapCells Its = ac::cells(R.size);
+		F.Blast = ac::Starfall::blastRadius(ac::Vec2(double(Its.width), double(Its.depth)));
 		// Another region's ground: placed by the world grid, side by side.
 		ac::Vec2 At = S.at;
 		double Height = 0;
@@ -604,6 +723,13 @@ void AAcStarfall::Tick(const float DeltaSeconds)
 		{
 			Landed.Add(S.id);
 			if (bNear) Announce(F, FString(UTF8_TO_TCHAR(R.name.c_str())), Time);
+		}
+		// The quake and the flash, felt as it comes down (not for an old one
+		// found on joining).
+		if (bNear && !Quaked.Contains(S.id) && Time >= S.impact && Time < S.impact + 3.0)
+		{
+			Quaked.Add(S.id);
+			Felt(F);
 		}
 		DrawStreak(F, Time);
 		DrawImpact(F, Time);

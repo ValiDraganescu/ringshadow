@@ -201,6 +201,14 @@ public:
 	/// A shake with no dust (the Matriarch's roar, N3): felt within `Cap`
 	/// cells of `At` for `Seconds`, at `Weight` (a stomp's 1).
 	void Rumble(ac::Vec2 At, double Time, double Weight, double Cap, double Seconds);
+	/// A starfall's quake (E1): the ground heaves under every camera within
+	/// `Cap` cells of `At` for `Seconds`, at `Weight` close by (up to 3),
+	/// falling off with the distance; its own reach, whatever the caller's
+	/// (`QuakeShake`; `StompShake` leaves it out).
+	void Quake(ac::Vec2 At, double Time, double Weight, double Cap, double Seconds);
+	/// How hard the quakes heave the ground under a camera at sim point
+	/// `From` now, -3…3 (0: none felt).
+	double QuakeShake(ac::Vec2 From) const;
 	/// The Matriarch's slam coming down at `At` (in front of her): the
 	/// stomp's dust and rings, a short heavy shake.
 	void MatriarchSlam(ac::Vec2 At, double Time);
@@ -316,7 +324,7 @@ private:
 	/// The Quake stomps of the last second (`StompShake`).
 	/// `Weight`: a stomp's 1, a footfall's less; `Cap`: how far it is felt, cells.
 	/// `Seconds`: how long it shakes (the Matriarch's roar: 2 s).
-	struct FStompMark { ac::Vec2 At; double Time = 0.0; double Weight = 1.0; double Cap = 1e9; double Seconds = 0.6; };
+	struct FStompMark { ac::Vec2 At; double Time = 0.0; double Weight = 1.0; double Cap = 1e9; double Seconds = 0.6; bool bQuake = false; };
 	TArray<FStompMark> Stomps;
 
 	TArray<TUniquePtr<FAcEffectsExtension>> Extensions;

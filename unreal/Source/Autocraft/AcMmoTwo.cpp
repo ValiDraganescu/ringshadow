@@ -322,7 +322,10 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 			return;
 		}
 		Pilot->Press(false);
-		Pilot->SetTestInput(FVector2D(0, ac::distance(U->position, Bug->position) > 1.6 ? -1 : 0), Face(Bug->position));
+		// Close, but a mound in the way (E1: a bug gnawing a prize ring's
+		// mound): step round it until the bug is what the act key strikes.
+		const bool bClose = ac::distance(U->position, Bug->position) <= 1.6;
+		Pilot->SetTestInput(FVector2D(bClose ? 1 : 0, bClose ? 0 : -1), Face(Bug->position));
 	};
 
 	switch (T.Phase)
@@ -962,13 +965,16 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 		Advance();
 		return;
 	case 31:
-		// Both strike wave 1's bugs; each, its strikes in, steps back to the
-		// open ground it came on while the other's come.
+		// Both strike wave 1's bugs; each, its strikes in, steps back past
+		// the open ground it came on (E1: the prize's ring sits round the
+		// well, and a bug turns on its hitter: out of its reach) while the
+		// other's come.
 		if (!Two.bSent) Fight();
 		else if (U && Pilot)
 		{
+			const ac::Vec2 Back = Two.ForkAt + ac::Vec2(0, 10);
 			Pilot->Press(false);
-			if (ac::distance(U->position, Two.ForkAt) > 1.5) Pilot->SetTestInput(FVector2D(0, -1), Face(Two.ForkAt));
+			if (ac::distance(U->position, Back) > 1.5) Pilot->SetTestInput(FVector2D(0, -1), Face(Back));
 			else Stop(Pilot->Yaw());
 		}
 		// Each one's strikes in (the bugs fell a Prospector that fights on

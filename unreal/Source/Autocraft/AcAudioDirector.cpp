@@ -702,6 +702,15 @@ void FAcAudioRules::Starfalls(const std::vector<FStarHear>& Falls)
 			// The echo carries: far off it is most of what is heard.
 			Later(FMath::Max(0.0, Travel) + AcSound::StarEchoAfter, "sfecho", F.At, AcSound::StarEchoGain * FMath::Max(Near, 0.6f),
 				EAcSoundPool::InEar, F.Pan);
+			// E1: close by the blast itself tears the air, and the ground
+			// shakes after it.
+			const float Close = FMath::Clamp(static_cast<float>(1.0 - F.Distance / AcSound::ImpactCells), 0.f, 1.f);
+			if (Close > 0.f)
+				Later(FMath::Max(0.0, Travel), "sfimpact", F.At, AcSound::StarImpactGain * (0.25f + 0.75f * Close), EAcSoundPool::InEar, F.Pan);
+			const float Shaken = FMath::Clamp(static_cast<float>(1.0 - F.Distance / AcSound::RumbleCells), 0.f, 1.f);
+			if (Shaken > 0.f)
+				Later(FMath::Max(0.0, Travel) + AcSound::RumbleAfter, "sfrumble", F.At, AcSound::StarRumbleGain * (0.3f + 0.7f * Shaken),
+					EAcSoundPool::InEar, F.Pan);
 		}
 		if (F.bCrater) Craters.push_back(F);
 	}

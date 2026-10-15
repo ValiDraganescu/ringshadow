@@ -192,11 +192,14 @@ On the game, `-AcMmoRingshadow=S` passes it on. The picture run is
 
 ## Starfall
 
-Two or three times a world day a meteor streaks across the sky under the
-gas giant and lands somewhere in the world. It leaves a crater with a rich
-deposit, first come, first served (docs/mmorpg-m7.md E2). It runs in the
-MMORPG mode only. The server owns it, the same for every pilot; the client
-only draws it and tells the pilot.
+About once a world day a meteor streaks across the sky under the gas giant
+and lands somewhere in the world. Its blast destroys what it falls on and
+hurts what stands round it; it leaves a crater with a deposit, first come,
+first served (docs/mmorpg-m7.md E2; m10.md E1: since the regions hold one or
+two veins, a fallen star is worth the chase and frightening to stand near).
+It runs in the MMORPG mode only. The server owns it, the same for every
+pilot, and does the blast's damage; the client draws it and tells the
+pilot.
 
 The schedule, the numbers and the streak's path are `ac::Starfall`
 (`unreal/Source/AutocraftCore/Public/Starfall.h`). The server's part is
@@ -205,10 +208,11 @@ The schedule, the numbers and the streak's path are `ac::Starfall`
 
 | What | Value |
 |---|---|
-| When | 2 or 3 a world day, by dice seeded with the world's id: one in each equal share of the day, in its middle 70%. The same world falls at the same times on every server and after every restart |
-| Where | picked when it is told, a minute before the impact. Any region, weighted toward the pilots: each region counts 1, each pilot in it 8, each pilot next door 3. Then a spot on open ground: flat (no cliff, no rock under the crater's 4 cells), joined to the region's pads, at least 12 cells from the map's edge, clear of pads (by 11 cells past the crater), sites (8), ore (6.5), wells (7.5), buildings, units and other craters |
-| The warning | 60 s before, to every pilot: the KSTR radio's toast, "STARFALL IN 60", with the region, the bearing and the distance from the pilot. Again at the impact ("STARFALL DOWN") in the pilot's region and the ones around it |
-| The deposit | at the impact a deposit appears in the crater with 3 × the region's median deposit's ore (at least 3,000). Ore drilled from it pays ×1.5 XP: the extra half when the load is drilled (to the pilot whose Prospector stands at the deposit), the plain XP when it is unloaded. It never grows back: emptied, it is gone |
+| When | one a world day realm-wide (E1; 2 or 3 before), by dice seeded with the world's id, in the middle 70% of the day. The same world falls at the same times on every server and after every restart |
+| Where | picked when it is told, a minute before the impact. Any region, weighted toward the pilots: each region counts 1, each pilot in it 8, each pilot next door 3. Then a spot on open ground: flat (no cliff, no rock under the crater's 4 cells), joined to the region's pads, at least 12 cells from the map's edge, clear of pads (by 11 cells past the crater), sites (8), ore (6.5), wells (7.5) and other craters. Buildings and units are in its way, not spared (E1). Never where its blast would reach the home's ground: the start region's Citadels and the 25 cells round them (with no Citadel yet, the start pad); elsewhere nothing is spared, in any region |
+| The blast | E1: a quarter of the region's diameter across (its longer side's): 18 cells round the impact in a medium region (`Starfall::blastRadius`). Within 40% of that (7.2 cells) everything is destroyed, buildings and units alike; from there the damage falls off to nothing at its edge, by each thing's nearest edge (`Starfall::blastShare`: a Hab Dome 1.5 cells inside the edge loses a seventh of its hp). The server does it at the impact (`WorldMap::blast`), not when a save is loaded |
+| The warning | 60 s before, to every pilot: the KSTR radio's toast, "STARFALL IN 60", with the region, the bearing and the distance from the pilot, and how far its blast flattens ("get clear"). Again at the impact ("STARFALL DOWN") in the pilot's region and the ones around it. A pilot has the minute to run |
+| The deposit | at the impact a deposit appears in the crater with 100 to 1,000 ore by the fall's dice (E1; 3 × the region's median before). Ore drilled from it pays ×1.5 XP: the extra half when the load is drilled (to the pilot whose Prospector stands at the deposit), the plain XP when it is unloaded. It never grows back: emptied, it is gone |
 | The crater | marks the ground for a world day (40 minutes), hot for the first few minutes. The fall is dropped once its crater has faded and its deposit is empty; a deposit with ore left outlives its crater |
 | Saved | told and landed falls (`starfalls`, schema 6): the place, the impact time and bearing, the deposit's id and the ore left. A restart puts the deposits back after the region file's own |
 
@@ -230,12 +234,24 @@ materials from `Tools/Editor/make_starfall_materials.py`):
   trail that glows near the head, then lingers for 30 s, spreading and
   drifting on the wind. It is drawn from the regions next door too, placed
   by the world grid.
-- **The impact.** A flash of light that swells and fades in 1.4 s, a ring of
-  dust thrown 30 cells out, and a column of smoke lit from below. All of it
-  settles in 9 s.
+- **The streak (E1).** Its head 11 cells across and growing as it comes,
+  a 36-cell halo and a long tail, so it is seen from anywhere in the region.
+- **The impact (E1).** A fireball that swells over the blast's ground and
+  fades in 2.2 s, its light reaching 14 blast radii (across the region); the
+  screen flares white for 1.1 s, 0.4 near the impact and 0.18 from the
+  region's far side (`StartCameraFade`). A shockwave: a ring of hot, bright
+  air racing out to 1.6 × the blast's radius over 2.6 s, a ring of dust
+  behind it. Rocks thrown out of the crater glowing, falling back over the
+  blast's ground. A dust ring out to 1.5 × the blast's radius and a column
+  of smoke 50 cells high, lit from below. All of it settles in 12 s.
+- **The quake (E1).** The ground heaves under the camera within four blast
+  radii (72 cells), hardest near, for 3.6 s (`UAcEffects::Quake`): the
+  pilot's view a few degrees and a jolt, the top-down view at any height.
 - **The crater.** A decal (`M_StarfallCrater`) 21 cells across: a scorched
   pit with glowing seams while it cools (10 minutes), a pale rim of thrown
-  rock and rays of dust. It fades out over the last fifth of its day.
+  rock and rays of dust. It fades out over the last fifth of its day. Under
+  it the blast's ground, scorched faintly, the blast's width (E1, the same
+  decal).
 - **The deposit.** Drawn 1.3 × a plain one's size in `M_OpalHot`: a dark,
   matte cooling crust cracked by molten veins, gold at their hearts and
   orange to deep red at their edges, that breathe, with sparks in the
@@ -252,7 +268,11 @@ materials from `Tools/Editor/make_starfall_materials.py`):
   impact. The take is a hit that dies away, played backwards
   (`Tools/AudioGen/rise.py`, the raw take in `Tools/AudioGen/raw/`). The
   boom (`sfboom`, two takes) arrives at the speed of sound (a cell is a
-  metre), and its roll off the hills (`sfecho`) 1.6 s after it. They are
+  metre), and its roll off the hills (`sfecho`) 1.6 s after it. E1: close
+  by the blast itself with the boom (`sfimpact`, the air torn apart and the
+  debris thrown out, heard to 180 cells) and the ground shaking after it
+  (`sfrumble`, a 9 s quake that calms, felt to 120 cells), both made with
+  ElevenLabs sound effects (`moments.manifest.json`). They are
   heard across the region and the next: from 500 cells off at 0.3 of their
   gain, from the impact's side whatever the distance. A hot crater in the
   pilot's region hums and crackles (`sfcrater`), placed at the crater,
@@ -270,6 +290,16 @@ the night it moves the world's clock on to 19:00 at once (the server's
 `--dev-control` file, shot runs only), so the run takes under a minute,
 not four. `-AcMmoShotsOnly=sf-02,sf-08` shoots only those moments; with
 none of `sf-02` to `sf-05` asked for, the clock jumps past the impact.
+
+E1's set, `-AcMmoShots=DIR -AcMmoShotsE1` (`e1-01` to `e1-06`, about a
+minute): the fall 30 s after the pilot drives, 17:00, clear. The pilot walks
+to 30 cells of the impact (its blast reaches 18); 7 s before it the server
+puts the realm's buildings and Prospectors in its way (the dev line
+`starfall victims`: a Hab Dome at its heart, a Gatling Gun and a Sentinel
+inside, a Hab Dome near the edge, Prospectors from the heart to the edge).
+The pictures: the world map with the start's two veins and its well, what
+stands in its way, the streak, the impact, the shockwave, and the crater
+with what it destroyed and what it hurt.
 
 ## Cost
 

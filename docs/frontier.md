@@ -80,6 +80,10 @@ opening chain (O1, the first ten minutes).
   - drilling gives `Rules::carry` ore over the drill time and a 12-cell walk each way (0.41 ore a second), taken from a real deposit and taxed;
   - a building rises as its welding would.
 - **Server downtime.** The server's down time is not caught up for them (unlike the mercenaries).
+- **When a region runs dry (E1).** Regions hold one or two veins now ([regions.md](regions.md), "Scarcity"), so they run dry. Frontier pilots and mercenaries mine the same veins by the same rules as a human, and none of them is given ore of its own:
+  - a frontier miner takes the nearest mound with ore that has a depot; with none left in its region it walks to the realm Citadel's region ("to the Citadel's fields"), and with none there either it idles ("no field with a depot") until a mound grows back (a tenth of its ore a world day);
+  - a mercenary stays at its field: mined out, it brings its load home and stands, unpaid (no ore owed), until the field grows back, then takes what has grown (booked or live). It is never moved to another field by itself; its pilot hires it again for another;
+  - starfall deposits are a human's to find: neither drills them unless one stands in its field.
 - **Falling.** A Prospector that falls comes back at the depot nearest where it fell, after `WorldParams::respawnDelay`, and loses its load.
 
 ## What the humans see
@@ -89,7 +93,7 @@ opening chain (O1, the first ten minutes).
 | In the world | Their Prospectors in their paints, outlined, with a tag "VESPER · LV 14" |
 | Satellite map (M) | A dot in each one's paint. The tooltip shows "VESPER · LV 14", "Frontier pilot · Miner" and "Mining in Rust Hollow". Pilots on their way don't show. |
 | Toasts, "ON THE FRONTIER" | Notable deeds: "Vesper built a Hab Dome in Rust Hollow", "Kestrel opened the Fork wreck in Cold Fork", "Corvid finished a Citadel survey of Glass Flats". A frontier building's "built" news is this deed, not the plain one. |
-| Standings (S4, the REALM tab and the map) | Their week beside the humans': the ore they unloaded (booked or live, before the tax), the bugs their Prospector and their turrets felled, the canyon waves they were paid a share of, the buildings they finished. Booked mining runs at 1,489 ore an hour at most ([balance.md](balance.md)), so a frontier miner hauls at most about 6,900 ore a week; a driven pilot at the pace model's 7,884 an hour passes it in an hour. See mmorpg-play.md "Standings". |
+| Standings (S4, the REALM tab and the map) | Their week beside the humans': the ore they unloaded (booked or live, before the tax), the bugs their Prospector and their turrets felled, the canyon waves they were paid a share of, the buildings they finished. Booked mining runs at 1,489 ore an hour at most ([balance.md](balance.md)), so a frontier miner hauls at most about 6,900 ore a week, less where the veins have run dry (E1); a driven pilot at 8,334 an hour passes it in an hour. See mmorpg-play.md "Standings". |
 | KSTR radio, text toasts "KSTR · VESPER" | A hello on landing, a raid warning when the Brood's raid is told, a cheer when a canyon wave is beaten, a cry for help when one is badly hurt or falls, chatter at most every 10 world minutes. At most one line every 45 s, except the hello and the cheer. |
 
 **Lines.** All written for the game:

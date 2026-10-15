@@ -526,6 +526,8 @@ void AAcRtsPawn::Tick(float DeltaSeconds)
 	{
 		if (const UAcEffects* Fx = UAcEffects::Get(this)) Shake = Fx->StompShake(FreeView->target, FreeView->visibleCells() * 0.6);
 	}
+	// A starfall's quake (E1) heaves it at any height: the ground shakes.
+	if (const UAcEffects* Fx = UAcEffects::Get(this)) Shake += Fx->QuakeShake(FreeView->target) * (1.0 + FreeView->visibleCells() / 60.0);
 	if (Shake != 0.0)
 	{
 		bShaking = true;

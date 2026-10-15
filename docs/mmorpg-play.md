@@ -96,6 +96,33 @@ The wallet (top right: ore, then MH) is the pilot's own and goes with it to
 every region. Today a world builds only a Citadel and a Derrick, and both are
 paid in ore, so MH only adds to the wallet and earns XP.
 
+## Ore runs dry
+
+A region holds one or two veins (a tight ring of 3 to 5 mounds) and one MH
+well: 7,200 ore in Prospect Landing, 11,000 or so in the regions next to it,
+17,000 in the far ones ([regions.md](regions.md), "Scarcity"). A pilot
+alone mines the start region dry in about an hour and a quarter (less
+with the drill and road skills). A mined-out mound grows back a tenth of its
+ore a world day, so a vein refills in ten world days: the world never dies,
+but a pilot who stays earns little. Move on: fly or walk to the next
+region, or hunt a starfall. Frontier pilots and mercenaries mine the same
+veins, so a shared region runs dry sooner; a mercenary at a dry field
+stands unpaid until it grows back.
+
+## Starfalls
+
+About once a world day a star falls somewhere in the world. KSTR warns
+every pilot a minute before: "STARFALL IN 60", the region, its bearing and
+distance, and how far its blast reaches ("get clear"). It is seen from
+anywhere in its region: the streak across the sky, the flash, the
+shockwave racing out, the ground shaking under you. Its blast flattens
+everything within about 7 cells of the impact, buildings and units alike,
+and hurts what stands out to 18 (a medium region's quarter); nothing is
+spared except the home: the start region's Citadel and 25 cells round it.
+Its crater holds 100 to 1,000 ore, first come first served, that never grows
+back, and drilling it pays half again in XP ([weather.md](weather.md),
+"Starfall").
+
 ## The HUD
 
 Laid out so the middle of the view, where the Prospector and the action
@@ -455,7 +482,7 @@ Add these to the game's command line.
 | `-AcMmoHour=22` | Holds the world's hour on the server (its `--hour`, 0–24): every region's sight at night and the sky follow it. Without it the world's clock runs: a 40-minute day, about 30 minutes light and 10 night (`ac::WorldClock`), saved with the world. `ac.Hour` does not move the MMO sky. |
 | `-AcMmoWeather=storm` | Holds the world's weather on the server (its `--weather`: `clear`, `cloudy`, `rain`, `storm`, or 0–3). Without it the weather follows its schedule on the world's clock, seeded by the world's id, the same in every region. `ac.Weather` does not move the MMO weather. |
 | `-AcMmoRingshadow=70` | Starts a ringshadow sweep 70 s after the server starts (its `--ringshadow`: the world's clock moves on to it). Without it the sweeps come at 11:30 and 16:00 world time ([weather.md](weather.md), "Ringshadow sweep"). |
-| `-AcMmoStarfall=40` | A starfall lands 40–58 cells from the first pilot that drives, 40 s after it drives, told at once (the server's `--starfall`). Without it the falls come 2–3 times a world day on the world's dice ([weather.md](weather.md), "Starfall"). |
+| `-AcMmoStarfall=40` | A starfall lands 40–58 cells from the first pilot that drives, 40 s after it drives, told at once (the server's `--starfall`). Without it about one a world day falls on the world's dice ([weather.md](weather.md), "Starfall"). |
 | `-AcMmoClockHour=17` | Moves the world's clock on to that hour at the start and lets it run (the server's `--clock-hour`, 0–24), unlike `-AcMmoHour`, which holds it. |
 | `-AcMmoDevXp=55` | A new pilot's Prospector gets this much XP at once (the server's `--dev-xp`). Level 2 is at 503 XP (`Progression::xp(2)`). |
 | `-AcMmoServer=PATH` | Dev: starts the local server from PATH instead of `unreal/server/build/autocraft-server`, when the file is there. The build train passes its own server, built from the same tree as the module. |

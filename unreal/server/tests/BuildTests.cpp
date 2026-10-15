@@ -133,12 +133,12 @@ TEST(build_refused_on_a_blocked_spot) {
     WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.join(me));
     const Simulation& sim = w.regionOf(me)->simulation();
-    // Facing the ore near the pad: on the deposits.
-    put(w, me, Vec2(57, 46), west);
+    // Facing the west vein (E1): on its mounds.
+    put(w, me, Vec2(58.5, 50), west);
     auto why = w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel));
     ASSERT_TRUE(why.has_value());
     // A Citadel by the ore: too close to it.
-    put(w, me, Vec2(62, 46), west);
+    put(w, me, Vec2(65, 50), west);
     why = w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel));
     ASSERT_TRUE(why.has_value());
     EXPECT_TRUE(*why == "Too close to resources");
@@ -261,8 +261,9 @@ TEST(build_mined_ore_unloaded_at_the_own_citadel_fills_the_wallet) {
     ASSERT_TRUE(!sim.placementRefusal(StructureKind::citadel, home));
     sim.placeStructure(StructureKind::citadel, Pilot::player, home);
     w.regionOf(me)->simulation().state.players[0].ore = 100;
-    // Drill the deposit at (53, 46) with the key held until it carries a load.
-    put(w, me, Vec2(54.2, 46), west);
+    // Drill the west vein's east mound at (55.7, 50.1) with the key held until it
+    // carries a load.
+    put(w, me, Vec2(57.4, 50.1), west);
     ASSERT_TRUE(run(w, me, 60 * 30, [&] { return driven(w, me)->carrying > 0; }, Vec2(0, 0), true));
     const int64_t load = driven(w, me)->carrying;
     EXPECT_EQ(w.wallet(me)->ore, int64_t(100));

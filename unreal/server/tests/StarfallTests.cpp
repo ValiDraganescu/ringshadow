@@ -507,3 +507,45 @@ TEST(starfall_spares_the_home_ground_only) {
             if (w.craterFits(t, there + Vec2(x, z))) beside += 1;
     EXPECT_TRUE(beside > 0);
 }
+
+/// E1's shots: `starfall victims` puts the realm's buildings and Prospectors in
+/// the way of the fall coming in the pilot's region; at the impact the one
+/// at its heart is gone, the one near its edge stands hurt.
+TEST(starfall_dev_victims_in_the_way) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.join(me));
+    stepFor(w, 0.5);
+    const size_t r = *w.where(me);
+    EXPECT_TRUE(w.devStarfall("starfall victims").find("no fall coming") != std::string::npos);
+    const auto f = w.forceStarfall(5, std::nullopt, me);
+    ASSERT_TRUE(f.has_value());
+    GameState& st = w.region(r).simulation().state;
+    const size_t before = st.structures.size(), unitsBefore = st.units.size();
+    const std::string said = w.devStarfall("starfall victims");
+    std::printf("  %s\n", said.c_str());
+    EXPECT_TRUE(st.structures.size() >= before + 3);
+    EXPECT_EQ(st.units.size(), unitsBefore + 3);
+    const double R = Starfall::blastRadius(w.region(r).places()->extent());
+    std::vector<int64_t> heart, edge;
+    for (const Structure& s : st.structures) {
+        const double d = length(s.position - f->at) - Rules::radius(s.kind);
+        if (d <= R * Starfall::blastKill) heart.push_back(s.id);
+        else if (d < R) edge.push_back(s.id);
+    }
+    ASSERT_TRUE(!heart.empty() && !edge.empty());
+    std::vector<int64_t> heartUnits;
+    for (const Unit& u : st.units)
+        if (u.kind == UnitKind::prospector && length(u.position - f->at) - Rules::radius(u.kind) <= R * Starfall::blastKill)
+            heartUnits.push_back(u.id);
+    ASSERT_TRUE(!heartUnits.empty());
+    stepFor(w, 6);
+    for (int64_t id : heart) EXPECT_TRUE(!st.structure(id).has_value());
+    for (int64_t id : heartUnits) EXPECT_TRUE(!st.unit(id).has_value());
+    bool hurt = false;
+    for (int64_t id : edge)
+        if (const auto s = st.structure(id); s && s->hp < Rules::hp(s->kind)) hurt = true;
+    EXPECT_TRUE(hurt);
+    // The pilot's own Prospector, 40 cells off or more, is untouched.
+    ASSERT_TRUE(drivenUnit(w, me) != nullptr);
+    EXPECT_TRUE(length(drivenUnit(w, me)->position - f->at) >= R);
+}

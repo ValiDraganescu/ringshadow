@@ -471,7 +471,8 @@ TEST(brood_caps_hold) {
         stepFor(w, 0.3);
         EXPECT_TRUE(w.broodAlive(r) <= WorldBrood::cap(1));
     }
-    EXPECT_TRUE(w.broodAlive(r) >= 4);
+    // E1: two veins and a well give the groups fewer places to gather.
+    EXPECT_TRUE(w.broodAlive(r) >= 3);
 }
 
 /// The opening's calm: in Prospect Landing the director holds while the

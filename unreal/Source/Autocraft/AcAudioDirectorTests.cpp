@@ -561,9 +561,25 @@ bool FAcAudioMomentsTest::RunTest(const FString&)
 	Cues = R.TakeCues();
 	TestEqual(TEXT("the boom once its sound arrives"), Count(Cues, "sfboom"), 1);
 	TestTrue(TEXT("the boom from the impact's side"), First(Cues, "sfboom") && First(Cues, "sfboom")->Pan.IsSet());
-	R.Advance(AcSound::StarEchoAfter);
+	TestEqual(TEXT("E1: the blast close by, with the boom"), Count(Cues, "sfimpact"), 1);
+	R.Advance(AcSound::RumbleAfter);
+	R.Due();
+	TestEqual(TEXT("E1: the ground shaking after it"), Count(R.TakeCues(), "sfrumble"), 1);
+	R.Advance(AcSound::StarEchoAfter - AcSound::RumbleAfter);
 	R.Due();
 	TestEqual(TEXT("its echo after"), Count(R.TakeCues(), "sfecho"), 1);
+	// Far off: the boom and the echo, no blast, no shaking.
+	FStar Away{9, -0.01, ac::Vec2{400, 0}, 400.0, 0.2f};
+	R.Starfalls({Away});
+	R.Advance(3.0);
+	R.Due();
+	Cues = R.TakeCues();
+	TestEqual(TEXT("far off the boom"), Count(Cues, "sfboom"), 1);
+	TestEqual(TEXT("far off no blast"), Count(Cues, "sfimpact"), 0);
+	TestEqual(TEXT("far off no shaking"), Count(Cues, "sfrumble"), 0);
+	R.Advance(AcSound::StarEchoAfter);
+	R.Due();
+	R.TakeCues();
 	Near.bCrater = true;
 	Near.Age = 30;
 	R.Starfalls({Near});

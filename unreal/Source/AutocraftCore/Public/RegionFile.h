@@ -250,8 +250,8 @@ constexpr int64_t veinsMost = 2;
 constexpr int64_t moundsFewest = 3;
 constexpr int64_t moundsMost = 5;
 constexpr int64_t wellsMost = 1;
-constexpr double veinLink = 7.0;
-constexpr double veinReach = 6.0;
+constexpr double veinLink = 5.5;
+constexpr double veinReach = 4.5;
 /// A deposit grows back this share of its full ore a world day, up to full
 /// (the server's regions, on the world's clock: `WorldMap::regrowVeins`).
 constexpr double regrowPerDay = 0.1;

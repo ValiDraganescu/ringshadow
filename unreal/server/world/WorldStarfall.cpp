@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <sstream>
 
 namespace ac::server {
 
@@ -305,6 +306,64 @@ void WorldMap::starfall() {
         return size_t(*f.patch) >= st.patches.size() || st.patches[size_t(*f.patch)].remaining <= 0;
     });
     sky_.starfalls = skyFalls();
+}
+
+std::string WorldMap::devStarfall(const std::string& line) {
+    std::istringstream in(line);
+    std::string word, what;
+    in >> word >> what;
+    if (!world_ || pilots_.empty()) return "dev: starfall: no world, or no pilot";
+    if (what != "victims") return "dev: starfall: '" + what + "' is not victims";
+    const auto& [pilot, p] = *devPilot();
+    const size_t r = p.region;
+    const Fall* fall = nullptr;
+    for (const Fall& f : falls_)
+        if (f.region == r && !f.patch) fall = &f;
+    if (!fall) return "dev: starfall: no fall coming in " + world_->regions[r].file.id;
+    Simulation& sim = regions_[r]->simulation();
+    GameState& st = sim.state;
+    const auto& places = regions_[r]->places();
+    const double R = Starfall::blastRadius(places ? places->extent() : Vec2(0, 0));
+    // Out from the heart (shares of the blast's radius), each its own way
+    // round; snapped as a pilot's placement is, nudged a little when refused.
+    struct Put { StructureKind kind; double out, turn; };
+    const Put puts[] = {{StructureKind::habDome, 0.0, 0.0}, {StructureKind::gatling, 0.4, 1.2}, {StructureKind::sentinel, 0.6, 3.4},
+                        {StructureKind::habDome, 0.88, 5.0}};
+    int64_t built = 0, refused = 0;
+    for (const Put& x : puts) {
+        std::optional<Vec2> at;
+        for (int k = 0; k < 24 && !at; k++) {
+            const double a = x.turn + 0.26 * double(k / 3) * (k % 2 ? 1 : -1);
+            const double out = std::max(0.0, x.out * R - Rules::radius(x.kind) * (x.out > 0.8 ? 1.0 : 0.0)) + 0.6 * double(k % 3);
+            const auto q = sim.snap(x.kind, fall->at + Vec2(std::cos(a), std::sin(a)) * out);
+            if (q && !sim.placementRefusal(x.kind, *q) && !(places && region::touchesPadPlate(places->pads, *q, Rules::radius(x.kind)))) at = q;
+        }
+        if (!at) {
+            refused += 1;
+            continue;
+        }
+        st.structures.push_back(Structure(st.nextID++, x.kind, Pilot::player, *at));
+        st.structures.back().hp = Rules::hp(x.kind);
+        builtBy_[r][st.structures.back().id] = p.key;
+        built += 1;
+        sim.reindex();
+        sim.refreshNav();
+    }
+    int64_t units = 0;
+    for (const double share : {0.15, 0.5, 0.92}) {
+        const double a = 2.2 + 6.0 * share;
+        const Vec2 want = fall->at + Vec2(std::cos(a), std::sin(a)) * (share * R);
+        const NavGrid* nav = sim.navGrid();
+        const auto at = nav ? nav->nearestFree(want) : std::optional<Vec2>(want);
+        if (!at) continue;
+        // Prospectors: they stand where they are put (Rangers go to their rally).
+        Unit u = sim.freshUnit(UnitKind::prospector, st.nextID++, Pilot::player, *at, a);
+        st.units.push_back(u);
+        units += 1;
+    }
+    sim.reindex();
+    return "dev: starfall: " + std::to_string(built) + " buildings (" + std::to_string(refused) + " refused) and " + std::to_string(units) +
+           " Prospectors in the way of fall " + std::to_string(fall->id) + " (blast " + std::to_string(int(std::lround(R))) + " cells)";
 }
 
 std::vector<net::Sky::Starfall> WorldMap::skyFalls() const {

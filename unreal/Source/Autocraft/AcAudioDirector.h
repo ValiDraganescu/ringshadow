@@ -198,6 +198,14 @@ namespace AcSound
 	inline constexpr float StarEchoGain = 0.6f;
 	inline constexpr double StarEchoAfter = 1.6;
 	inline constexpr float CraterGain = 0.2f;
+	/// E1: the blast close by (`sfimpact`, with the boom, heard to
+	/// `ImpactCells` off and loudest near) and the ground shaking after it
+	/// (`sfrumble`, felt to `RumbleCells` off, a beat after the boom).
+	inline constexpr float StarImpactGain = 1.0f;
+	inline constexpr double ImpactCells = 180.0;
+	inline constexpr float StarRumbleGain = 0.9f;
+	inline constexpr double RumbleCells = 120.0;
+	inline constexpr double RumbleAfter = 0.3;
 	inline constexpr double FarCells = 500.0;
 	inline constexpr float FarGain = 0.3f;
 	inline constexpr double SoundCellsPerSecond = 343.0;

@@ -96,16 +96,76 @@ base's plateaus and ramps.
 
 ## Resources and props
 
-- `deposits`: an ore patch, 2×1 cells. `amount` 1…100000 (the bases use
-  1800 and 900). `angle` degrees, the long axis from east toward north.
+- `deposits`: an ore patch (a mound), 2×1 cells. `amount` 1…100000.
+  `angle` degrees, the long axis from east toward north. A world region's
+  mounds come in veins ("Scarcity", below).
 - `wells`: an MH well; a Derrick stands on it (needs flat ground 1.5 cells
-  round). `amount` 1…100000 (the bases' hold 2250).
+  round). `amount` 1…100000 (the bases' hold 2250). One a world region.
 - `doodads`: `kind` rock | boulder | rockSpire | crate | crateStack | plant |
   bush | debris | deadTree | tower, or a landmark (below); `rotation`
   degrees; `scale` 0.25…4. Plants, bushes and debris are walkable; the
   rest is solid.
 - The base's rocks and plants give way to what the file puts down: deposits,
   wells, pads, spawns and opening lanes clear them.
+
+## Scarcity
+
+E1 (the user, 2026-10-15: "the resources are too abundant, I am not
+incentivized to hunt for fallen stars"). A region should run dry so a
+pilot moves on, and a fallen star should be worth the chase. A region of a
+world (brood level 1 or more) holds:
+
+- one or two ore **veins**. A vein is a tight cluster of 3 to 5 mounds,
+  each within 4.5 cells of the vein's middle; mounds within 5.5 cells of
+  each other are one vein (`region::veins`). The world's veins are rings
+  round an open middle (2.6 to 3.2 cells out), each mound's long axis along
+  its radius, so the gaps between them stay walkable: a mound mined to
+  nothing lets a Prospector walk over it, and growing back it would box one
+  in (the server sets units clear of a mound that grows back under them);
+- one MH **well**;
+- its ore in all by its brood level: about 6,000–8,000 at level 1,
+  10,000–12,000 at level 2, 15,000–20,000 at levels 3 and 4;
+- none of the base's own ore and wells (`base.drop` has `resources`).
+
+A canyon's prize is its region's well and a rich vein in a ring round it
+(4 cells out); the region's other vein lies outside the canyon, smaller.
+
+`validate` refuses a third vein, a vein of fewer than 3 or more than 5
+mounds, a mound off its vein's middle, a second well, ore outside the
+level's range, and the base's ore (brood 0, the example file, has no
+limit). The numbers are `region::veinsMost`, `moundsFewest`, `moundsMost`,
+`wellsMost`, `veinLink`, `veinReach` and `oreRange` in `RegionFile.h`.
+
+| region | id | brood | ore | veins (mounds × ore, middle) | well (at, MH) |
+|---|---|---|---|---|---|
+| Prospect Landing | start | 1 | 7,200 | 5 × 800 at (52, 50); 4 × 800 at (95, 38) | (60, 36), 2,250 |
+| Rust Hollow | rust-hollow | 2 | 11,000 | 5 × 1,200 at (52, 35); 4 × 1,250 at (110, 68) | (62, 30), 2,250 |
+| Tern Ridge | tern-ridge | 2 | 11,000 | 5 × 1,200 at (97, 56); 4 × 1,250 at (30, 30) | (66, 34), 2,250 |
+| Cold Fork | cold-fork | 2 | 11,200 | 5 × 1,700 round the well (the Fork's prize); 3 × 900 at (58, 68) | (118, 26.5), 6,000 |
+| Brine Pans | brine-pans | 2 | 11,200 | 5 × 1,700 round the well (the Drowned Cut's prize); 3 × 900 at (54, 69) | (108, 38.5), 6,000 |
+| Ashen Shelf | ashen-shelf | 3 | 17,000 | 5 × 2,000 at (55, 29); 4 × 1,750 at (116, 68) | (64, 30), 2,250 |
+| Glass Flats | glass-flats | 3 | 17,000 | 5 × 2,000 at (102, 61); 4 × 1,750 at (44, 37) | (90, 52), 2,250 |
+| Dust Terraces | dust-terraces | 3 | 17,000 | 5 × 2,600 round the well (the Roost's prize); 4 × 1,000 at (119, 34) | (31, 72), 7,500 |
+| Slag Pockets | slag-pockets | 4 | 17,000 | 5 × 2,000 at (52, 27); 4 × 1,750 at (114, 55) | (86, 30), 2,250 |
+
+**Regrowth.** A region file's mound grows back a tenth of its full ore a
+world day (40 minutes), up to full, on the world's clock: while the
+world idles with nobody on line and when a stopped server catches up too
+(`WorldMap::regrowVeins`; Quick regrowth's share shortens it). The world
+never dies, but a vein mined out takes ten world days to fill. A starfall's
+deposit never grows back. The game's own rule (a dry patch full again
+300 s on) is off in the server's regions (`Simulation::regrows`).
+
+**An existing world** adopts its region files' veins on its next load
+(schema 26 saves each deposit and well with its place; `WorldMap::adopt`):
+a saved deposit at a mound of the file keeps its ore; one the file no
+longer lays out is gone; the file's new mounds come in full. A save from
+before schema 26 (by index only) of another layout takes the new veins in
+full. Every building stays. A well a Derrick stands on is kept with its MH
+(from an older save, full), so the pilot's Derrick still pumps; the file's
+other old wells are gone. A new mound under a building is left empty for
+good (it neither blocks nor grows). Tested in
+`server/tests/ScarcityTests.cpp` and on a copy of a played save.
 
 ## ground
 
@@ -346,7 +406,7 @@ waypoints in turn, then lingers at the prize, and a Lodeback eats it.
 **The Fork** (Cold Fork, brood level 2): a level-2 mesa over the
 region's north-east, two arms cut down to the floor from a tunnel in the
 north wall and one in the east wall, winding to the junction's basin with
-six 6000-ore deposits round an MH well of 6000, a gorge from it out to the
+five rich mounds in a ring round its MH well (E1, "Scarcity"), a gorge from it out to the
 passage valley, ramps up to the west rim, the south-east rim and the rim
 between the arms (where the derrick ruin stands). Pictures:
 `-AcMmoShots=DIR -AcMmoShotsZ1` (AcMmoShots.cpp).
@@ -361,6 +421,10 @@ and the region position:
   shape too small, a name used twice, a span off its edge, short or
   overlapping;
 - a deposit or well on a cliff face, in rock, on top of another, cut off;
+- in a world region (brood 1 or more): more than two veins, a vein of
+  fewer than 3 or more than 5 mounds, a mound off its vein's middle, more
+  than one well, ore outside the level's range, the base's own ore
+  ("Scarcity");
 - a pad on a cliff, on uneven ground, in rock, on ore or a well, cut off;
 - a spawn on a cliff, in rock, on ore or a well, cut off;
 - a site on a cliff, in rock, on ore, a well, a pad's plate or another

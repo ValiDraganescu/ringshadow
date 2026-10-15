@@ -2860,6 +2860,32 @@
    "board": [],
    "audioSwiftLines": []
   },
+  "sfimpact": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/sfimpact/SW_sfimpact_1.SW_sfimpact_1",
+     "source": "sfx/sfimpact_1.wav",
+     "prepared": "Content-src/sounds/sfx/sfimpact_1.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "sfrumble": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/sfrumble/SW_sfrumble_1.SW_sfrumble_1",
+     "source": "sfx/sfrumble_1.wav",
+     "prepared": "Content-src/sounds/sfx/sfrumble_1.wav",
+     "seconds": 9.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "sfstreak": {
    "variants": [
     {
@@ -4237,6 +4263,8 @@
   "sfboom",
   "sfcrater",
   "sfecho",
+  "sfimpact",
+  "sfrumble",
   "sfstreak",
   "shardlingbite",
   "shardlingdeath",

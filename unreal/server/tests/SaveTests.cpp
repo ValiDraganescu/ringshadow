@@ -65,8 +65,8 @@ WorldSave sample() {
     r.units.push_back(SavedUnit{3, UnitKind::prospector, Vec2(1.5, 2.5), 0.75, 45.5, 5, true, keyA});
     r.units.push_back(SavedUnit{12, UnitKind::prospector, Vec2(-4, 8), 3.0, 60, 0, false, keyB});
     // The start's first two mounds and its well, where they lie (schema 26).
-    r.deposits.push_back(SavedDeposit{0, 1500, std::nullopt, Vec2(53 - 72, 46 - 48)});
-    r.deposits.push_back(SavedDeposit{1, 0, 99.5, Vec2(53.4 - 72, 49.6 - 48)});
+    r.deposits.push_back(SavedDeposit{0, 1500, std::nullopt, Vec2(55.7 - 72, 50.1 - 48)});
+    r.deposits.push_back(SavedDeposit{1, 0, 99.5, Vec2(53.5 - 72, 53.2 - 48)});
     r.wells.push_back(SavedWell{0, 2200, Vec2(60 - 72, 36 - 48)});
     s.regions.push_back(r);
     SavedRegion o;

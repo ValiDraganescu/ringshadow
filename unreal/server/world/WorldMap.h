@@ -1443,6 +1443,12 @@ public:
     /// Dev and shots (`week …` lines): `end` (the week ends now), `left S`
     /// (the week ends S seconds from now), `list`. What it did, one line.
     std::string devWeek(const std::string& line);
+    /// E1's scenes (shots): `starfall victims`, in the way of the fall told
+    /// in the pilot's region and not yet down: a Hab Dome at its heart, a
+    /// Gatling and a Sentinel inside its blast, a Hab Dome near its edge (the
+    /// realm's, built by the pilot), and Prospectors from the heart to the
+    /// edge.
+    std::string devStarfall(const std::string& line);
 
     // MARK: The hunt (N4, docs/mmorpg-play.md "The hunt"; WorldHunt.cpp)
 
