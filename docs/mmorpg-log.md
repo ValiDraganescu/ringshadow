@@ -595,3 +595,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N W4 suites: core 488, server 233, net 84 pass; 9 regions validate.
 - I W4 regions still read as rectangular bowls (walls along cell edges) → W4b.
 - T W4b (irregular outlines) next for wt1, then Z1.
+- N Correction: W4 crossing pace 4.55–4.95 vs 4.63 (−2% to +7%), not ±4%.
