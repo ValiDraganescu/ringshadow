@@ -171,6 +171,8 @@ struct WorldContracts {
 /// pilot and world day, in three tiers; the pilot signs up for up to three
 /// at once and follows them in its Journal.
 struct WorldMissions {
+    /// A Matriarch hunt's target (N3): her nest's region, marked.
+    static std::string queenTarget(const std::string& region) { return "matriarch:" + region; }
     /// Offers a tier on the board, and missions taken at once.
     static constexpr size_t offers = 2;
     static constexpr size_t journal = 3;
@@ -1296,6 +1298,9 @@ private:
         std::optional<double> downAt, backAt;
         /// The region's bugs stay away after her death until then.
         double calmUntil = -1e9;
+        /// Dev and shots (`matriarch calm`): she picks no foe herself and
+        /// holds her spit; `matriarch slam` names one.
+        bool held = false;
     };
     /// Each think in a region with a nest: her return, her spawn, the
     /// horde's numbers, her foe, her roars.

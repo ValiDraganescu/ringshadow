@@ -102,6 +102,20 @@ public:
 		bool operator==(const FRespawn&) const = default;
 	};
 	void SetRespawn(const TOptional<FRespawn>& In);
+	/// The Matriarch in sight or fighting (N3): her life as a big bar at the
+	/// top of the view, her name over it. Unset: not near.
+	struct FBoss
+	{
+		FString Name;
+		FString Sub;
+		double Hp = 0;
+		double Max = 1;
+		/// Rearing in a roar (the bar's frame flares).
+		bool bRoaring = false;
+		bool operator==(const FBoss&) const = default;
+	};
+	void SetBoss(const TOptional<FBoss>& In);
+	const TOptional<FBoss>& Boss() const { return BossBar; }
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D::ZeroVector; }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -119,6 +133,7 @@ private:
 	TArray<FAcItemView> Stacks;
 	TOptional<FOpening> Opening;
 	TOptional<FRespawn> Respawn;
+	TOptional<FBoss> BossBar;
 	FAcCabLayout Lay;
 	TArray<FNote> Notes;
 	TSharedPtr<FActiveTimerHandle> Timer;
@@ -128,6 +143,7 @@ private:
 	void PaintItems(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f RowRight, float RowBottom) const;
 	void PaintOpening(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintRespawn(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
+	void PaintBoss(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintToasts(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size, double Now) const;
 };
 
@@ -151,6 +167,10 @@ struct AUTOCRAFT_API AcProgressHud
 	/// Who built building `Id` of the pilot's region (R1): "you", another
 	/// pilot's callsign ("Pilot 045B"), or empty when not told.
 	static FString BuiltBy(const FAcMmoClient* Mmo, int64 Id);
+	/// The Matriarch's boss bar (N3): while she is in the mirror (the
+	/// server sends her in sight, and while she fights the pilot), and her
+	/// body's 6 s after she falls. Unset: not near.
+	static TOptional<SAcProgressHud::FBoss> Boss(const FAcMmoClient& Mmo);
 	/// The pilot's progression as the server sent it (none: not told yet).
 	static std::optional<ac::ProspectorProgress> Progress(const FAcMmoClient& Mmo);
 	/// The sites the pilot knows of, for the world map: looked up by

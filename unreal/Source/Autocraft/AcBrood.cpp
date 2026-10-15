@@ -2,6 +2,7 @@
 #include "AcBrood.h"
 
 #include "AcAudioDirector.h"
+#include "AcEffects.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
 #include "AcMmo.h"
@@ -11,6 +12,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
+#include "Brood.h"
 #include "NetMirror.h"
 #include "NetProtocol.h"
 #include "Simulation.h"
@@ -20,6 +22,15 @@ namespace
 {
 	/// The swarm's gain in the pilot's ear (the KSTR radio's toast with it).
 	constexpr float SwarmGain = 0.7f;
+	/// The Matriarch's roar: full within `RoarNear` cells, down to `RoarFar`
+	/// at `RoarAcross` (her region's width); next door, `RoarNextDoor`. The
+	/// view shakes within `RoarShakeCells`, for the roar's 2 s.
+	constexpr float RoarFull = 0.9f;
+	constexpr double RoarNear = 20.0;
+	constexpr double RoarAcross = 150.0;
+	constexpr float RoarFar = 0.3f;
+	constexpr float RoarNextDoor = 0.15f;
+	constexpr double RoarShakeCells = 35.0;
 
 	const TCHAR* Compass(const double Bearing)
 	{
@@ -32,7 +43,8 @@ namespace
 AAcBrood::AAcBrood()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 0.25f;
+	// Every frame: the Matriarch's strikes are drawn as they come.
+	PrimaryActorTick.TickInterval = 0.f;
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
@@ -62,6 +74,15 @@ FString AAcBrood::Line(const FString& Building, const double Metres, const doubl
 	return FString::Printf(TEXT("heading for the %s  ·  %s %s"), *Building, *Far, Compass(Bearing));
 }
 
+float AAcBrood::RoarGain(const double Cells, const bool bNextDoor)
+{
+	if (bNextDoor) return RoarNextDoor;
+	const double T = FMath::Clamp((Cells - RoarNear) / (RoarAcross - RoarNear), 0.0, 1.0);
+	return float(FMath::Lerp(double(RoarFull), double(RoarFar), T));
+}
+
+double AAcBrood::RoarShake(const double Cells) { return Cells < RoarShakeCells ? 0.9 * (1.0 - Cells / RoarShakeCells) + 0.1 : 0.0; }
+
 void AAcBrood::Tick(const float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -74,6 +95,50 @@ void AAcBrood::Tick(const float DeltaSeconds)
 	const ac::net::WorldMessage::Region& Here = World->regions[size_t(World->here)];
 	const ac::net::Mirror* M = Mmo->Mirror();
 	const ac::Unit* Me = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+	// The Matriarch's strikes: the slam's crash after her forelimbs rise,
+	// the spit's glob and puddle at once.
+	if (M)
+	{
+		UAcEffects* Fx = UAcEffects::Get(this);
+		const ac::GameState& St = M->simulation().state;
+		TSet<int64> Seen;
+		for (const ac::Unit& U : St.units)
+		{
+			if (U.kind != ac::UnitKind::matriarch || !U.bug) continue;
+			Seen.Add(U.id);
+			int64& Was = QueenStrikes.FindOrAdd(U.id, -1);
+			const bool bNew = Was >= 0 && U.bug->strikes != Was && U.hp > 0;
+			Was = U.bug->strikes;
+			if (!bNew || !Fx) continue;
+			const double Now = Fx->Now();
+			if (ac::Matriarch::spat(U.bug->sac))
+			{
+				std::optional<ac::Vec2> To;
+				double Height = 0;
+				if (U.target)
+				{
+					if (const auto V = St.unit(*U.target))
+					{
+						To = V->position;
+						if (V->bug) Height = V->bug->height;
+					}
+					else if (const auto B = St.structure(*U.target)) To = B->position;
+				}
+				if (To) Fx->MatriarchSpit(U.position, U.heading, *To, Height, Now);
+			}
+			else
+			{
+				const ac::Vec2 Front = U.position + ac::Vec2(std::cos(U.heading), std::sin(U.heading)) * (ac::Rules::radius(U.kind) + 1.6);
+				TWeakObjectPtr<UAcEffects> Weak(Fx);
+				Fx->After(ac::Matriarch::slamWindup, Now, [Weak, Front, Now]()
+				{
+					if (UAcEffects* E = Weak.Get()) E->MatriarchSlam(Front, Now + ac::Matriarch::slamWindup);
+				});
+			}
+		}
+		for (auto It = QueenStrikes.CreateIterator(); It; ++It)
+			if (!Seen.Contains(It.Key())) It.RemoveCurrent();
+	}
 	for (const ac::net::Sky::Raid& R : Sky->raids)
 	{
 		if (Told.Contains(R.id) || R.region < 0 || R.region >= int64(World->regions.size())) continue;
@@ -98,5 +163,21 @@ void AAcBrood::Tick(const float DeltaSeconds)
 			if (const TSharedPtr<SAcProgressHud> W = Hud->Widget()) W->Toast(Title(), Sub, FAcHudStyle::Srgb(1, 0.35, 0.25), FPlatformTime::Seconds());
 		}
 		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->PlayMenu("broodswarm", SwarmGain);
+	}
+	// The Matriarch's roars: heard in her region and next door.
+	for (const ac::net::Sky::Roar& R : Sky->roars)
+	{
+		if (Roared.Contains(R.id) || R.region < 0 || R.region >= int64(World->regions.size())) continue;
+		const ac::net::WorldMessage::Region& There = World->regions[size_t(R.region)];
+		const int64 Off = FMath::Abs(There.column - Here.column) + FMath::Abs(There.row - Here.row);
+		if (Off > 1) continue;
+		Roared.Add(R.id);
+		const double Cells = Off == 0 && Me ? ac::length(R.position - Me->position) : 1e9;
+		const float Gain = RoarGain(Cells, Off != 0);
+		UE_LOG(LogAutocraft, Display, TEXT("brood: the Matriarch roars (roar %u, %.0f cells off%s, gain %.2f)"), R.id, Off == 0 ? Cells : -1.0,
+			Off == 0 ? TEXT("") : TEXT(", next door"), Gain);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->PlayMenu("matriarchroar", Gain);
+		if (const double Shake = Off == 0 ? RoarShake(Cells) : 0.0; Shake > 0.0)
+			if (UAcEffects* Fx = UAcEffects::Get(this)) Fx->Rumble(R.position, Fx->Now(), Shake, RoarShakeCells * 2, ac::Matriarch::roarFor);
 	}
 }

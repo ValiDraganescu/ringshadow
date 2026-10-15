@@ -149,7 +149,8 @@ Lodeback gets the vein back.
 
 One giant in the world, in her nest in **Slag Pockets** (the world's
 south-east corner, two regions from Prospect Landing). She never leaves the
-nest; her horde does. N3 builds her.
+nest on her own; her horde does, and a canyon's failed wave calls her out
+(Z2's siege, below). As built: "As built (N3)".
 
 | | |
 |---|---|
@@ -533,6 +534,111 @@ What N2 built, and the choices the design left open.
   `brood attack`, `brood dive`, `brood lodeback`, `brood raid` and
   `brood clear` (`WorldMap::devBrood`); `-AcMmoShotsN2` stages its five
   pictures with them.
+
+### As built (N3, 2026-10-15): the Matriarch and her nest
+
+Her numbers are `ac::Matriarch` (Brood.h); the core steps her
+(`Simulation::stepMatriarch`), the server keeps her nest
+(`server/world/WorldNest.cpp`).
+
+- **The nest.** A region file's `"nest": {"at": [x, z]}` (docs/regions.md,
+  "nest"). Slag Pockets has it on its east plateau at [122, 44], 50 cells from
+  its pad. The build puts down the `broodNest` doodad there:
+  - a ring mound 12 cells across, of chitin plates, dark rock and opal ore;
+  - egg pods on its flanks and seven spines up to 5 cells round its rim;
+  - walked over: she stands in its bowl.
+  
+  The model is `Tools/Editor/models/brood_nest.py`, from the concept
+  `art/models/broodNest/concepts/c1-mound.jpg`.
+- **Her horde.** While a pilot is in her region or next to it, she stands at
+  the nest's centre with her horde round her, on top of the region's cap of
+  22:
+  - four packs of Shardlings 11 cells out, 16 to 24 in all;
+  - 4 to 8 Gloamwings over her.
+  
+  Their counts are drawn once. One hatchling every 20 s keeps the numbers up.
+  A pack turns on a pilot inside its 6-cell site and chases within the
+  nest's 30-cell ring.
+- **Her foe.** Whoever hit her last, else the nearest Prospector, else a
+  building of the realm, within her 6-cell tether plus her spit's 12.
+- **Slam.** Both forelimbs rise over 0.8 s, then crash down on every ground
+  foe within 3 cells of her edge in front of her: 40 to a unit, 60 to a
+  building, before armour. Every 4 s.
+- **Spit.** At ground or air within 12 cells: 18 to a unit, 30 to a
+  building. It leaves a puddle 2 cells wide that does 4 a second for 4 s
+  (`Simulation::puddles`). Every 3 s.
+- **Roar.** Once when a pilot first comes within 25 cells, and every 30 s in a
+  fight. She rears for 2 s. Every bug of the nest within 40 cells turns on her
+  foe and runs ×1.3 for 10 s (`Bug::rallyUntil`). 4 Shardlings hatch from her
+  pods, the nest holding at most 24. The roar goes on the wire
+  (`Sky::roars`, told 4 s).
+- **Mending.** She mends 20 a second after 20 s unhit.
+- **Seen from far.** Every pilot within 60 cells is sent her, in sight or not
+  (`Interest`), so her crown reads over the nest's rim.
+- **Her death.**
+  - XP as for any bug, by each hit's share of her 6,000 hp × 2,500.
+  - Every pilot who hurt her, with its Prospector or a defence it built,
+    gets its share of 3,000 ore and 1,500 MH by damage (5% at least) and one
+    rare blueprint copy (one of the three with the highest floors).
+  - Every pilot hears "THE MATRIARCH IS DOWN" (`NewsKind::matriarch`
+    "down"); each fighter gets "YOUR SHARE OF THE MATRIARCH".
+  - Her horde scatters with every group of the region, and no new group comes
+    for a world day.
+  - **She comes back three world days after her fall** (`Matriarch::returnDays`;
+    2 hours of the world's clock), saved across restarts (schema 17,
+    `nests`). The nest grows back from empty, one hatchling every 20 s, and
+    every pilot hears "THE MATRIARCH STIRS".
+  - A region left alone two minutes keeps the nest as its counts: it comes
+    back full and she whole.
+- **The siege hook (for Z2).** `WorldMap::matriarchSiege(region, at, radius,
+  escort)`: she leaves the nest with `escort` Shardlings.
+  - From her own region she walks there; to another region she comes in at
+    its edge out of sight.
+  - She fells every Sentinel and Gatling Gun of the realm within `radius`,
+    nearest first, her escort on the same one.
+  - Then she goes home: to the nest, or out at the edge to be back at the
+    nest when its region next wakes.
+  - Not wired to waves yet (Z2 does that).
+- **Hunt.** One perilous hunt in three is "The Matriarch" (docs/missions.md).
+- **Wire** (protocol 24):
+  - the World message's regions carry `nest`;
+  - `NewsKind::matriarch` ("down", "share/<MH>/<blueprint>" with the ore in
+    `value`, "back"); the news kind went from 4 to 5 bits, since the
+    sixteenth kind filled 4;
+  - her last strike rides in `Bug::sac` on the wire's own steps: 20 a slam,
+    40 a spit (`Matriarch::slammed`, `spat`).
+- **Client.**
+  - Her pose (`AcPoseBrood.cpp`): the breath; the slam's rise and crash; the
+    spit's draw and lunge; the roar's rear, the crown fanning, the pods
+    flaring; the death's sink and the crown folding.
+  - Her slam's dust and rings and her spit's glob and green puddle
+    (`UAcEffects::MatriarchSlam`, `MatriarchSpit`, from `AAcBrood`).
+  - Her strike sounds (`matriarchslam`, `matriarchspit`).
+  - Her roar heard across her region and faintly next door, the view shaking
+    within 35 cells for its 2 s (`AAcBrood`, `UAcEffects::Rumble`).
+  - The boss bar at the top of the HUD (`SAcProgressHud::FBoss`), within 35
+    cells or while she is wounded, flaring while she roars.
+  - The toasts.
+- **Choices.**
+  - She stays within her tether (6 cells), so she does not block paths the
+    way a building would: she is a unit of radius 3.5.
+  - The nest's mound has no solid feet.
+  - The rewards go to wallets, not a spilled deposit, so every fighter gets
+    its share.
+  - A defence's damage counts for its builder while online.
+  - One giant in the world: the first region with a `nest`.
+- **Dev and shots.** The server's dev lines:
+  - `matriarch here D` takes the first pilot to her region, D cells off;
+  - `near D [BEARING]`;
+  - `calm` (the horde still, her spit held);
+  - `roar`, `slam`, `hurt SHARE`, `down`, `back`, `siege`.
+  
+  `-AcMmoShotsN3` (phases 1900-1911) takes five pictures:
+  1. the nest from 55 cells;
+  2. her roar with the horde and the boss bar;
+  3. a slam;
+  4. the bar with her wounded;
+  5. her down with the toasts.
 
 ## Models and how to drive them
 

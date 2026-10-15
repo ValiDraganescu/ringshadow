@@ -78,6 +78,14 @@ Everything is paid into the wallet when the mission is done.
   the bugs, so no hunt is drawn until then. N2 calls
   `WorldMap::broodKill(pilot, kind, region)` for each kill. The templates and
   the server's count are ready for it.
+- **The Matriarch's hunt** (N3): one perilous hunt in three is for her alone
+  while her nest's region is in reach and she is home: titled "The
+  Matriarch", "Bring down the Matriarch at her nest in Slag Pockets. Every
+  pilot who hurts her shares her fall.", its marker her nest. Its target is
+  `matriarch:<region>`; her fall counts it for every pilot who hurt her,
+  wherever she fell. It reads the perilous hunt's briefing and narration
+  (`hunt-perilous`, "Into the Nest", which speaks of her nest), so no new
+  recording.
 
 ## The Journal (L)
 

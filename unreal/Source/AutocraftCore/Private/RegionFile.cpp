@@ -988,6 +988,14 @@ Built build(const RegionFile& f) {
         d.variant = static_cast<uint32_t>(fnv1a64(f.id + "|" + std::to_string(i)));
         m.doodads.push_back(d);
     }
+    // The Matriarch's nest (N3): its mound, a landmark at the file's `nest`.
+    if (f.nest) {
+        Doodad d;
+        d.kind = Doodad::Kind::broodNest;
+        d.position = g(*f.nest);
+        d.variant = static_cast<uint32_t>(fnv1a64(f.id + "|nest"));
+        m.doodads.push_back(d);
+    }
     // The walls' rocks: boulders, rocks and spires strewn over them, on a
     // jittered grid, past the outline by more than a cliff's width.
     if (f.border) {

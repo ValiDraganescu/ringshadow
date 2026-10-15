@@ -61,7 +61,10 @@ FString AcMissions::Progress(const FMission& M)
 	case FMission::Kind::survey: return FString::Printf(TEXT("%lld / %lld s scanned"), Have, Need);
 	case FMission::Kind::salvage: return TEXT("the site unopened");
 	case FMission::Kind::hold: return FString::Printf(TEXT("%lld / %lld s held in the shadow"), Have, Need);
-	case FMission::Kind::hunt: return FString::Printf(TEXT("%lld / %lld of the Brood"), Have, Need);
+	case FMission::Kind::hunt:
+		// N3: a hunt for the Matriarch herself.
+		if (M.target.rfind("matriarch:", 0) == 0) return TEXT("the Matriarch still stands");
+		return FString::Printf(TEXT("%lld / %lld of the Brood"), Have, Need);
 	}
 	return FString();
 }

@@ -507,8 +507,9 @@ void WorldMap::brood() {
             for (auto& [pilot, p] : pilots_)
                 if (!p.flight && p.region == r && p.unit == h.shooter) {
                     earn(p, Brood::xp(h.kind) * share);
-                    // A kill counts for its hunt missions (K2).
-                    if (h.kill) broodKill(pilot, h.kind, r);
+                    // A kill counts for its hunt missions (K2); the
+                    // Matriarch's for every pilot who fought her (`queenDown`).
+                    if (h.kill && h.kind != UnitKind::matriarch) broodKill(pilot, h.kind, r);
                 }
             // A defence's kill counts on its card (D3).
             if (h.kill && st.structure(h.shooter)) kills_[r][h.shooter] += 1;

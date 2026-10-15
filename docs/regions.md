@@ -132,6 +132,7 @@ region's landmark, not as clutter. Their feet are solid (`NavGrid::footprint`).
 | `sunkHauler` | a dead ore hauler half sunk in the ground, nose down | 5 long | its length along x |
 | `derrickRuin` | the steel lattice of a derrick tower, bent, a fallen piece beside it | 9 high | 2.5 across |
 | `relayDish` | a crashed relay dish on its side, its mast snapped | 4 across | the dish and its mast |
+| `broodNest` | the Matriarch's hive mound: chitin plates, opal ore, egg pods, a crown of spines (put down by `nest`, below) | 12 across, spines to 5 high | none: walked over |
 
 The First Reach has two in each region (the region files' `doodads`). Glass Flats' Glass Needle rises to level 4
 and Brine Pans' Brine Stack to level 3 (sheer, under their rock crowns).
@@ -175,6 +176,21 @@ it for themselves.
   `slope` of 5), a cache in a hollow (`lower` a circle on high ground, or
   a horseshoe of `ridge` round it on low ground), a vault on a pocket a level
   up (`raise` a circle with no slope), with a `ramp` or with none.
+
+## nest
+
+The Matriarch's nest ([creatures.md](creatures.md), "The Matriarch"; N3):
+`"nest": {"at": [x, z]}`, at most one in the world (Slag Pockets has it, on
+its east plateau at [122, 44]). The build puts the nest's mound there (the
+`broodNest` doodad, walked over: she stands in its bowl), and the server keeps
+her and her horde there.
+
+- Only in a brood level 4 region; on open ground joined to the rest (high
+  ground a ramp reaches is fine), not on a cliff face or in rock, inside the
+  border's outline.
+- No pad within 30 cells of it (her horde's ring). Rocks and plants within
+  6 cells give way to the mound.
+- The preview draws it violet, with its ring dotted.
 
 ## openings
 

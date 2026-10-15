@@ -216,6 +216,15 @@
 //   03 the gun with its marks: the chevrons lit on its base
 //   04 the marked gun hitting a Gloamwing at its new air reach
 //
+// -AcMmoShotsN3 (with -AcMmoDevRig): the Matriarch (docs/creatures.md N3),
+// the pilot taken to Slag Pockets by the server's dev line (`matriarch
+// here`), her horde held still for the pictures, DIR/n3-NN-moment.png:
+//   01 the nest from afar (55 cells): her crown over its rim
+//   02 her roar on first sight, the horde round her, the boss bar
+//   03 a slam: her forelimbs crashing down in front of the pilot
+//   04 the boss bar with her wounded
+//   05 her down: her body sinking, "THE MATRIARCH IS DOWN"
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -385,6 +394,10 @@ namespace
 	int32 D3Kept = 0;
 	int32 D3Step = 0;
 	int32 D3Logged = -1;
+	/// -AcMmoShotsN3: her strikes seen, when her slam began, when her roar began.
+	int64 N3Strikes = -1;
+	double N3SlamAt = -1;
+	double N3RoarAt = -1;
 	struct FB1Sample
 	{
 		double At;
@@ -711,7 +724,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -787,6 +800,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))) T.Phase = 1700;
 			// -AcMmoShotsD3: only the turret upgrades (1800-1809).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3"))) T.Phase = 1800;
+			// -AcMmoShotsN3: only the Matriarch (1900-1911).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))) T.Phase = 1900;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -4420,6 +4435,140 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 1809:
 		Check(Shots.Saved + Shots.Skipped == 4, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsN3
+	case 1900:
+		// Taken to Slag Pockets, 55 cells from the nest.
+		if (S && U && Mmo->Progress() && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("matriarch here 55")), TEXT("n3: the server takes the pilot to the Matriarch's nest"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig"));
+		return;
+	case 1901:
+		if (Here == TEXT("slag-pockets") && U && S && NearestBug(*S, U->position, ac::UnitKind::matriarch))
+		{
+			// Her horde held still and her spit held, for the pictures.
+			Check(Mmo->DevClock(TEXT("matriarch calm")), TEXT("n3: the horde held still"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("in Slag Pockets, the Matriarch sent"), 40);
+		return;
+	case 1902:
+	{
+		const ac::Unit* Q = NearestBug(*S, U->position, ac::UnitKind::matriarch);
+		if (Q) Stop(Face(Q->position));
+		if (Q && Since() > 6.0)
+		{
+			const double Far = ac::distance(U->position, Q->position);
+			Check(Far > 40.0, FString::Printf(TEXT("n3: she is sent from afar (%.0f cells off)"), Far));
+			const TSharedPtr<SAcProgressHud> W = UAcProgressHudSubsystem::Get(this) ? UAcProgressHudSubsystem::Get(this)->Widget() : nullptr;
+			Check(W && !W->Boss().IsSet(), TEXT("n3: no boss bar from afar"));
+			Shoot(TEXT("n3-01-nest-afar"), TEXT("the Matriarch's nest from afar: her crown over its rim"));
+			return;
+		}
+		TimedOut(TEXT("the nest from afar"), 20);
+		return;
+	}
+	case 1903:
+		// Within 25 cells: she roars at the pilot on first sight.
+		Check(Mmo->DevClock(TEXT("matriarch near 20 -90")), TEXT("n3: the pilot walks up to her"));
+		N3RoarAt = -1;
+		Advance();
+		return;
+	case 1904:
+	{
+		const ac::Unit* Q = S ? NearestBug(*S, U ? U->position : ac::Vec2(), ac::UnitKind::matriarch) : nullptr;
+		if (Q && U) Stop(Face(Q->position));
+		if (Q && Q->bug && Q->bug->state == ac::Bug::State::roar && N3RoarAt < 0) N3RoarAt = Now;
+		if (N3RoarAt > 0 && Now - N3RoarAt > 0.9)
+		{
+			Check(Mmo->Sky() && !Mmo->Sky()->roars.empty(), TEXT("n3: the roar is told on the wire"));
+			int32 Horde = 0;
+			for (const ac::Unit& X : S->units)
+				if (X.bug && X.kind != ac::UnitKind::matriarch && X.hp > 0) Horde++;
+			Check(Horde >= 1, FString::Printf(TEXT("n3: her horde round her (%d bugs in view)"), Horde));
+			const TSharedPtr<SAcProgressHud> W = UAcProgressHudSubsystem::Get(this) ? UAcProgressHudSubsystem::Get(this)->Widget() : nullptr;
+			Check(W && W->Boss().IsSet() && W->Boss()->bRoaring, TEXT("n3: the boss bar near her, flaring with the roar"));
+			Shoot(TEXT("n3-02-roar"), TEXT("the Matriarch roars on first sight, her horde round her"));
+			return;
+		}
+		TimedOut(TEXT("her roar"), 20);
+		return;
+	}
+	case 1905:
+		// In front of her: her slam.
+		Check(Mmo->DevClock(TEXT("matriarch near 6.2 -90\nmatriarch slam")), TEXT("n3: the pilot in front of her, her slam"));
+		N3SlamAt = -1;
+		N3Strikes = -1;
+		Advance();
+		return;
+	case 1906:
+	{
+		const ac::Unit* Q = S ? NearestBug(*S, U ? U->position : ac::Vec2(), ac::UnitKind::matriarch) : nullptr;
+		if (Q && U) Stop(Face(Q->position));
+		if (Q && Q->bug)
+		{
+			if (N3Strikes < 0) N3Strikes = Q->bug->strikes;
+			if (Q->bug->strikes != N3Strikes && N3SlamAt < 0 && ac::Matriarch::slammed(Q->bug->sac)) N3SlamAt = Now;
+			N3Strikes = Q->bug->strikes;
+		}
+		if (N3SlamAt > 0 && Now - N3SlamAt > ac::Matriarch::slamWindup + 0.06)
+		{
+			Check(Here == TEXT("slag-pockets"), TEXT("n3: the pilot still at the nest"));
+			Shoot(TEXT("n3-03-slam"), TEXT("the Matriarch's slam crashing down in front of the pilot"));
+			return;
+		}
+		TimedOut(TEXT("her slam"), 20);
+		return;
+	}
+	case 1907:
+		// Back off; she is wounded: the boss bar shows her life.
+		Check(Mmo->DevClock(TEXT("matriarch near 22 -90\nmatriarch calm\nmatriarch hurt 0.45")), TEXT("n3: the pilot backs off, she is wounded"));
+		Advance();
+		return;
+	case 1908:
+	{
+		const ac::Unit* Q = S ? NearestBug(*S, U ? U->position : ac::Vec2(), ac::UnitKind::matriarch) : nullptr;
+		if (Q && U) Stop(Face(Q->position));
+		const TSharedPtr<SAcProgressHud> W = UAcProgressHudSubsystem::Get(this) ? UAcProgressHudSubsystem::Get(this)->Widget() : nullptr;
+		if (W && W->Boss() && W->Boss()->Hp < 0.6 * W->Boss()->Max && Since() > 2.5)
+		{
+			Check(W->Boss()->Hp > 0.5 * W->Boss()->Max, FString::Printf(TEXT("n3: the boss bar shows her at %.0f of %.0f"), W->Boss()->Hp, W->Boss()->Max));
+			Shoot(TEXT("n3-04-boss-bar"), TEXT("the boss bar: the Matriarch wounded"));
+			return;
+		}
+		TimedOut(TEXT("the boss bar"), 20);
+		return;
+	}
+	case 1909:
+		// Felled: her body sinks, the world hears it.
+		Check(Mmo->DevClock(TEXT("matriarch down")), TEXT("n3: the Matriarch is felled"));
+		Advance();
+		return;
+	case 1910:
+	{
+		// Her body (the live-bug finder passes bodies over).
+		const ac::Unit* Q = nullptr;
+		if (S)
+			for (const ac::Unit& X : S->units)
+				if (X.kind == ac::UnitKind::matriarch && X.bug) Q = &X;
+		if (Q && U) Stop(Face(Q->position));
+		if (Q && Q->bug && Q->bug->state == ac::Bug::State::dead && Since() > 2.2)
+		{
+			Shoot(TEXT("n3-05-down"), TEXT("the Matriarch down: her body sinking, the world told"));
+			return;
+		}
+		TimedOut(TEXT("her body"), 15);
+		return;
+	}
+	case 1911:
+		Mmo->DevClock(TEXT("matriarch back"));
+		Check(Shots.Saved + Shots.Skipped == 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	default:

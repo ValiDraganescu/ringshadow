@@ -30,6 +30,7 @@ namespace
 		case Kind::sunkHauler: return TEXT("sunkHauler");
 		case Kind::derrickRuin: return TEXT("derrickRuin");
 		case Kind::relayDish: return TEXT("relayDish");
+		case Kind::broodNest: return TEXT("broodNest");
 		}
 		return TEXT("rock");
 	}

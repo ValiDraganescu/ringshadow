@@ -336,7 +336,7 @@ void UAcEffects::Update(const double Time)
 	TRACE_CPUPROFILER_EVENT_SCOPE(AcEffects_Update);
 	if (!TracerPool) return;
 	NowTime = Time;
-	Stomps.RemoveAll([Time](const FStompMark& S) { return Time - S.Time > 1.0; });
+	Stomps.RemoveAll([Time](const FStompMark& S) { return Time - S.Time > FMath::Max(1.0, S.Seconds); });
 	for (int32 I = 0; I < TracerUntil.Num(); ++I)
 	{
 		if (TracerPool->IsShown(I) && Time >= TracerUntil[I]) TracerPool->Hide(I);

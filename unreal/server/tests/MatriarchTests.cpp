@@ -359,8 +359,44 @@ TEST(matriarch_dev_lines) {
     EXPECT_EQ(w.devMatriarch("matriarch roar"), "dev: matriarch roars");
     EXPECT_TRUE(w.sky()->roars.size() == 1);
     EXPECT_EQ(w.devMatriarch("matriarch down"), "dev: matriarch down");
+    w.step();
     EXPECT_TRUE(w.matriarchBack().has_value());
     EXPECT_EQ(w.devMatriarch("matriarch back"), "dev: matriarch back");
     stepFor(w, 0.5);
     EXPECT_TRUE(w.matriarch().has_value());
+}
+
+/// A Matriarch hunt (a perilous hunt for her alone) is done when she falls,
+/// for every pilot who fought her; a Shardling killed doesn't count for it.
+TEST(matriarch_hunt_done_when_she_falls) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.join(me));
+    w.step();
+    toNest(w, me, 30);
+    stepFor(w, 0.5);
+    const size_t r = nestRegion(w);
+    net::CitadelMission m;
+    m.id = 900;
+    m.kind = net::CitadelMission::Kind::hunt;
+    m.tier = net::CitadelMission::Tier::perilous;
+    m.state = net::CitadelMission::State::taken;
+    m.title = "The Matriarch";
+    m.region = w.region(r).places() ? first().regions[r].file.id : "";
+    m.target = WorldMissions::queenTarget(first().regions[r].file.id);
+    m.need = 1;
+    w.setJournal(me, {m});
+    const Unit shooter = *unitOf(w, me);
+    // A Shardling of her horde first: not her.
+    for (const Unit& u : nestSim(w).state.units)
+        if (u.kind == UnitKind::shardling && u.hp > 0) {
+            nestSim(w).hit(u.id, u.hp + 1, false, &shooter);
+            break;
+        }
+    w.step();
+    EXPECT_TRUE(w.journal(me).front().state == net::CitadelMission::State::taken);
+    Unit* q = queen(w);
+    ASSERT_TRUE(q != nullptr);
+    nestSim(w).hit(q->id, q->hp + 1, false, &shooter);
+    w.step();
+    EXPECT_TRUE(w.journal(me).front().state == net::CitadelMission::State::done);
 }

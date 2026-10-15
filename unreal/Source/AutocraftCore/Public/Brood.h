@@ -98,6 +98,9 @@ struct Matriarch {
     /// She mends `mendRate` hp a second once `mendAfter` s passed without a hit.
     static constexpr double mendRate = 20;
     static constexpr double mendAfter = 20;
+    /// Readable from far: every pilot within `seenFrom` cells is sent her,
+    /// in sight or not (her crown over the nest's rim).
+    static constexpr double seenFrom = 60;
     /// She never goes farther than `tether` cells from her nest's centre
     /// (out on a siege: from the siege's place).
     static constexpr double tether = 6;
@@ -121,9 +124,13 @@ struct Matriarch {
     static constexpr double returnDays = 3;
     static constexpr double calmDays = 1;
     /// What her last strike was, in `Bug::sac` (the Lodeback's field; she
-    /// has no sac): the client plays the slam or the spit.
-    static constexpr double struckSlam = 1;
-    static constexpr double struckSpit = 2;
+    /// has no sac): the client plays the slam or the spit. On the wire's own
+    /// steps (a sac goes as 15ths of `Brood::sacFull`): 5 and 10.
+    static constexpr double struckSlam = Brood::sacFull / 3;
+    static constexpr double struckSpit = Brood::sacFull * 2 / 3;
+    /// The strike a sac read off the wire names.
+    static bool slammed(double sac) { return sac > struckSlam - 5 && sac < struckSlam + 5; }
+    static bool spat(double sac) { return sac > struckSpit - 5 && sac < struckSpit + 5; }
 };
 
 } // namespace ac

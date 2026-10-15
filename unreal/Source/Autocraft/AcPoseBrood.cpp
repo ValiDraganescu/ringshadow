@@ -15,7 +15,11 @@
 //     claws dig and the jaw grinds; the sac 0.55 to 1.0 of its size and as
 //     bright with its fill; a bite the head's thrust; dead, the sac bursts in
 //     a flash and the body sinks.
-//   The Matriarch (N3 builds her): a slow breath for now.
+//   The Matriarch (N3): a slow breath, the crown and egg pods glowing with
+//     it; the slam (forelimbs up over 0.8 s, then the crash), the spit (the
+//     head draws back and lunges, the jaw wide), the roar (she rears a cell,
+//     the crown fans open, the pods flare, 2 s); dead, she sinks, the crown
+//     folds, the glow dies over 4 s. Her strike's kind rides in `Bug::sac`.
 //
 // No team colour: the glow of each kind is its own (the models' materials).
 // Under the ringshadow band the glow brightens × 1.6 (`FAcPoseContext::Sweep`).
@@ -325,20 +329,120 @@ namespace
 
 	// --- The Matriarch (N3: her slam, spit, roar and death) -----------------------
 
+	/// Her memory past a bug's: when her roar began, her last strike's kind.
+	struct FQueenState : FBugState
+	{
+		TOptional<double> RoarAt;
+		double Struck = 0.0;
+	};
+
 	void PoseMatriarch(const FAcPoseContext& C, FAcPose& P)
 	{
-		static const FAcPartIndex Body(TEXT("body")), Abdomen(TEXT("abdomen")), Crown(TEXT("crown")), Pods(TEXT("pods"));
+		static const FAcPartIndex Body(TEXT("body")), Abdomen(TEXT("abdomen")), Crown(TEXT("crown")), Pods(TEXT("pods")),
+			Head(TEXT("head")), Jaw(TEXT("jaw"));
+		static const FAcPartIndex Fore[2] = {FAcPartIndex(TEXT("forelimb_0")), FAcPartIndex(TEXT("forelimb_1"))};
+		static const FAcPartIndex Legs[6] = {FAcPartIndex(TEXT("leg_0")), FAcPartIndex(TEXT("leg_1")), FAcPartIndex(TEXT("leg_2")),
+			FAcPartIndex(TEXT("leg_3")), FAcPartIndex(TEXT("leg_4")), FAcPartIndex(TEXT("leg_5"))};
 		const FAcModelInfo& M = C.Model;
-		FBugState& S = C.Memory.State<FBugState>();
+		const ac::Unit& U = *C.Unit;
+		const ac::Bug B = U.bug.value_or(ac::Bug{});
+		FQueenState& S = C.Memory.State<FQueenState>();
+		const int64 Before = S.Strikes;
 		Common(C, S, 1.0);
+		// The strike's kind rides in the sac (`Matriarch::struckSlam`, `struckSpit`).
+		if (S.Strikes != Before) S.Struck = B.sac;
+		const double Since = C.Time - S.StrikeAt;
 		P.bAnimated = true;
 		const double G = GlowOf(C, S, 4.0);
-		const double Breath = std::sin(2.0 * Pi * 0.2 * C.Time);
+		const double T = C.Time;
+		const double Breath = std::sin(2.0 * Pi * 0.2 * T);
 		for (int32 I = 0; I < P.Emission.Num(); ++I) P.Emission[I] = float(G);
+
+		if (S.DeadAt)
+		{
+			// She sinks, the crown folds, the glow dies over 4 s.
+			const double D = C.Time - *S.DeadAt;
+			const double Fall = Ease(D / 1.2), Sink = Ease(D / 4.0);
+			Move(P, M, Body.Get(M), FVector(0, 0, -60.0 * Fall - 90.0 * Sink));
+			Turn(P, M, Body.Get(M), RotX(0.18 * Fall) * RotY(0.12 * Fall));
+			Turn(P, M, Head.Get(M), RotY(0.5 * Fall));
+			Turn(P, M, Jaw.Get(M), RotY(0.25 * Fall));
+			if (const int32 I = Crown.Get(M); I != INDEX_NONE)
+				P.Local[I].SetScale3D(M.Parts[I].Rest.GetScale3D() * FMath::Max(0.05, 1.0 - 0.45 * Fall));
+			for (int32 L = 0; L < 6; ++L)
+			{
+				const double Side = L < 3 ? -1.0 : 1.0;
+				Turn(P, M, Legs[L].Get(M), RotX(Side * 0.45 * Fall));
+			}
+			for (int32 F = 0; F < 2; ++F) Turn(P, M, Fore[F].Get(M), RotY(0.6 * Fall));
+			return;
+		}
+
+		// The roar: she rears up a cell, the crown fans open, the jaw gapes,
+		// the forelimbs brace wide, the egg pods flare; 2 s, eased in and out.
+		const bool bRoaring = B.state == ac::Bug::State::roar;
+		if (bRoaring && !S.RoarAt) S.RoarAt = C.Time;
+		if (!bRoaring && S.RoarAt && C.Time - *S.RoarAt > ac::Matriarch::roarFor + 0.4) S.RoarAt.Reset();
+		const double RoarT = S.RoarAt ? C.Time - *S.RoarAt : 99.0;
+		const double Roar = RoarT < 99.0 ? Ease(RoarT / 0.35) * (1.0 - Ease((RoarT - ac::Matriarch::roarFor) / 0.4)) : 0.0;
+		const double Shudder = Roar * 0.03 * std::sin(T * 31.0);
+
+		// The slam: both forelimbs rise over 0.8 s, crash down, and come back.
+		double Lift = 0.0, Crash = 0.0;
+		if (ac::Matriarch::slammed(S.Struck) && Since >= 0.0 && Since < 2.0)
+		{
+			const double W = ac::Matriarch::slamWindup;
+			if (Since < W) Lift = Ease(Since / W);
+			else
+			{
+				const double After = Since - W;
+				Lift = 1.0 - Ease(After / 0.12);
+				Crash = After < 0.12 ? Ease(After / 0.12) : 1.0 - Ease((After - 0.12) / 0.9);
+			}
+		}
+		// The spit: the head draws back, then lunges, the jaw wide.
+		double Draw = 0.0, Lunge = 0.0;
+		if (ac::Matriarch::spat(S.Struck) && Since >= 0.0 && Since < 1.0)
+		{
+			Draw = Since < 0.18 ? Ease(Since / 0.18) : 1.0 - Ease((Since - 0.18) / 0.12);
+			Lunge = Since < 0.18 ? 0.0 : Since < 0.32 ? Ease((Since - 0.18) / 0.14) : 1.0 - Ease((Since - 0.32) / 0.5);
+		}
+
+		// The body: her breath, the rear of the roar, the slam's lean and
+		// crash forward, a slow sway when she walks.
+		const double Cycle = U.stride / 2.2;
 		for (const FAcPartIndex* X : {&Body, &Abdomen})
 			if (const int32 I = X->Get(M); I != INDEX_NONE) P.Local[I].SetScale3D(M.Parts[I].Rest.GetScale3D() * (1.0 + 0.03 * Breath));
-		Glow(P, Crown.Get(M), G * (1.0 + 0.25 * Breath));
-		Glow(P, Pods.Get(M), G * (1.0 + 0.2 * Breath));
+		Move(P, M, Body.Get(M), FVector(-20.0 * Lift + 25.0 * Crash, 0, 100.0 * Roar + 25.0 * Lift - 30.0 * Crash + 6.0 * Breath));
+		Turn(P, M, Body.Get(M), RotY(-0.22 * Roar - 0.1 * Lift + 0.14 * Crash) * RotX(0.04 * std::sin(Pi * 2.0 * Cycle) * S.Walk + Shudder));
+		// The egg sac swells and pulses brighter on the roar.
+		Glow(P, Abdomen.Get(M), G * (1.0 + 0.15 * Breath + 1.2 * Roar));
+		// The head: to her target, lifted on the roar, back and forth on the spit.
+		Move(P, M, Head.Get(M), FVector(-40.0 * Draw + 70.0 * Lunge, 0, 20.0 * Roar));
+		Turn(P, M, Head.Get(M), RotZ(AimAt(C, S, 0.5)) * RotY(-0.35 * Roar - 0.25 * Draw + 0.2 * Lunge + 0.25 * Crash));
+		Turn(P, M, Jaw.Get(M), RotY(0.55 * Roar + 0.45 * FMath::Max(Draw, Lunge) + 0.04 * (1.0 + Breath)));
+		// The crown: breathes, fans open on the roar.
+		if (const int32 I = Crown.Get(M); I != INDEX_NONE)
+		{
+			P.Local[I].SetScale3D(M.Parts[I].Rest.GetScale3D() * (1.0 + 0.35 * Roar + 0.02 * Breath));
+			Turn(P, M, I, RotY(-0.3 * Roar));
+		}
+		Glow(P, Crown.Get(M), G * (1.0 + 0.25 * Breath + 1.5 * Roar));
+		Glow(P, Pods.Get(M), G * (1.0 + 0.2 * Breath + 2.5 * Roar));
+		// The forelimbs: up for the slam, down in the crash, braced wide on the roar.
+		for (int32 F = 0; F < 2; ++F)
+		{
+			const double Side = F == 0 ? -1.0 : 1.0;
+			Turn(P, M, Fore[F].Get(M), RotY(-1.15 * Lift + 0.35 * Crash) * RotX(Side * 0.35 * Roar));
+		}
+		// The legs: a slow shifting step as she walks (0, 2, 4 against 1, 3, 5).
+		for (int32 L = 0; L < 6; ++L)
+		{
+			const double Side = L < 3 ? -1.0 : 1.0;
+			const double Phase = Pi * 2.0 * (Cycle + ((L % 2) == 0 ? 0.0 : 0.5));
+			Turn(P, M, Legs[L].Get(M),
+				RotZ(Side * 0.18 * std::sin(Phase) * S.Walk) * RotX(Side * (0.15 * FMath::Max(0.0, std::cos(Phase)) * S.Walk - 0.12 * Roar)));
+		}
 	}
 
 	FAcPoseRegistration RegShardling(ac::UnitKind::shardling, &PoseShardling);

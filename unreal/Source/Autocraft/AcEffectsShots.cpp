@@ -21,6 +21,7 @@
 #include "AcSpace.h"
 #include "AcWorldRenderer.h"
 
+#include "Brood.h"
 #include "Rules.h"
 #include "Simulation.h"
 #include "Types.h"
@@ -470,12 +471,47 @@ void UAcEffects::Footfall(const FVector& At, const double Time, const int32 Side
 	Stomps.Add({Sim, Time, 0.2, 8.0});
 }
 
+void UAcEffects::MatriarchSlam(const ac::Vec2 At, const double Time)
+{
+	StompImpact(At, ac::Matriarch::slamReach + 0.5, Time);
+	Rumble(At, Time, 1.0, 30.0, 0.8);
+}
+
+void UAcEffects::MatriarchSpit(const ac::Vec2 From, const double Heading, const ac::Vec2 To, const double Height, const double Time)
+{
+	// From her mouth: 3.6 cells ahead, 6 up.
+	const ac::Vec2 Mouth = From + ac::Vec2(std::cos(Heading), std::sin(Heading)) * 3.6;
+	const FVector A = AcSpace::ToWorld(Mouth, GroundZ(Mouth) / Cm + 6.0);
+	const FVector B = AcSpace::ToWorld(To, GroundZ(To) / Cm + 0.4 + Height);
+	Slug(A, B, Time);
+	TWeakObjectPtr<UAcEffects> Weak(this);
+	After(0.12, Time, [Weak, B, To, Time]()
+	{
+		UAcEffects* E = Weak.Get();
+		if (!E) return;
+		E->Flash(B, 1.6, Time + 0.12, 0.12);
+		// The puddle: acid green on the ground, as long as it burns.
+		FAcDecalRequest D;
+		D.At = AcSpace::ToWorld(To, E->GroundZ(To) / Cm);
+		D.Radius = ac::Matriarch::puddleRadius * Cm;
+		D.Color = FLinearColor(0.35f, 0.95f, 0.25f, 1.f);
+		D.Life = ac::Matriarch::puddleFor + 0.5;
+		D.Time = Time + 0.12;
+		E->Decal(D);
+	});
+}
+
+void UAcEffects::Rumble(const ac::Vec2 At, const double Time, const double Weight, const double Cap, const double Seconds)
+{
+	Stomps.Add({At, Time, Weight, Cap, Seconds});
+}
+
 double UAcEffects::StompShake(const ac::Vec2 From, const double Reach) const
 {
-	constexpr double Seconds = 0.6;
 	double K = 0.0;
 	for (const FStompMark& S : Stomps)
 	{
+		const double Seconds = S.Seconds;
 		const double Age = NowTime - S.Time;
 		const double D = ac::distance(From, S.At);
 		const double Felt = FMath::Min(Reach, S.Cap);

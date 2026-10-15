@@ -96,3 +96,28 @@ TEST(progress_carries_the_matriarchs_news) {
     m.news.front().kind = K(uint8_t(K::matriarch) + 1);
     EXPECT_TRUE(!decode(encode(m), back));
 }
+
+/// The Matriarch's last strike rides in her sac's 4 bits: the client tells
+/// her slam from her spit (N3).
+TEST(snapshot_tells_the_matriarchs_slam_from_her_spit) {
+    for (const double struck : {Matriarch::struckSlam, Matriarch::struckSpit}) {
+        Snapshot s;
+        Unit q(9, UnitKind::matriarch, 1, Vec2(10, 10), 0, Unit::Task::idle);
+        Bug b;
+        b.state = Bug::State::attack;
+        b.strikes = 3;
+        b.sac = struck;
+        q.bug = b;
+        s.entities.push_back(EntityState{q});
+        SnapshotWriter w;
+        SnapshotReader r;
+        const auto o = w.write(s, 0, 1 << 20);
+        ASSERT_TRUE(o.messages.size() == 1);
+        const auto p = r.read(o.messages[0]);
+        ASSERT_TRUE(p.has_value());
+        const Unit* back = p->snapshot.entities[0].unit();
+        ASSERT_TRUE(back && back->bug.has_value());
+        EXPECT_EQ(Matriarch::slammed(back->bug->sac), struck == Matriarch::struckSlam);
+        EXPECT_EQ(Matriarch::spat(back->bug->sac), struck == Matriarch::struckSpit);
+    }
+}

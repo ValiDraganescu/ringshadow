@@ -198,6 +198,16 @@ public:
 	/// `Reach` (the pilot's eye: a stomp near the driven unit; the top-down
 	/// view: only when zoomed in close).
 	double StompShake(ac::Vec2 From, double Reach) const;
+	/// A shake with no dust (the Matriarch's roar, N3): felt within `Cap`
+	/// cells of `At` for `Seconds`, at `Weight` (a stomp's 1).
+	void Rumble(ac::Vec2 At, double Time, double Weight, double Cap, double Seconds);
+	/// The Matriarch's slam coming down at `At` (in front of her): the
+	/// stomp's dust and rings, a short heavy shake.
+	void MatriarchSlam(ac::Vec2 At, double Time);
+	/// Her acid spit from her mouth (she stands at `From`, facing `Heading`)
+	/// to `To`, `Height` cells up (a flyer): a glob, a green flash, and the
+	/// puddle it leaves on the ground for its 4 s.
+	void MatriarchSpit(ac::Vec2 From, double Heading, ac::Vec2 To, double Height, double Time);
 
 	/// The pilot's view of the driven unit (chunk E; default: none).
 	void SetPilot(const FAcPilotFire& Pilot) { PilotFire = Pilot; }
@@ -303,7 +313,8 @@ private:
 	double NowTime = 0.0;
 	/// The Quake stomps of the last second (`StompShake`).
 	/// `Weight`: a stomp's 1, a footfall's less; `Cap`: how far it is felt, cells.
-	struct FStompMark { ac::Vec2 At; double Time = 0.0; double Weight = 1.0; double Cap = 1e9; };
+	/// `Seconds`: how long it shakes (the Matriarch's roar: 2 s).
+	struct FStompMark { ac::Vec2 At; double Time = 0.0; double Weight = 1.0; double Cap = 1e9; double Seconds = 0.6; };
 	TArray<FStompMark> Stomps;
 
 	TArray<TUniquePtr<FAcEffectsExtension>> Extensions;

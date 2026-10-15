@@ -11,6 +11,7 @@
 
 #include "WorldMap.h"
 
+#include "Brood.h"
 #include "Ringshadow.h"
 
 #ifndef JSON_NOEXCEPTION
@@ -303,6 +304,9 @@ std::optional<Mission> WorldMap::drawMission(const PilotState& p, std::mt19937_6
     }
     std::string where, what;
     bool hydrogen = false;
+    // N3: a perilous hunt may be for the Matriarch herself (one in three,
+    // while her nest's region is in reach and she is home).
+    bool queen = false;
     switch (kind) {
     case Kind::haul: {
         hydrogen = realmFinished(StructureKind::derrick) && roll(3) == 0;
@@ -358,6 +362,18 @@ std::optional<Mission> WorldMap::drawMission(const PilotState& p, std::mt19937_6
         break;
     }
     case Kind::hunt: {
+        const auto nest = nestRegion();
+        if (tier == Tier::perilous && nest && !nest_.downAt && std::find(pool.begin(), pool.end(), *nest) != pool.end() && roll(3) == 0) {
+            const WorldRegion& g = world_->regions[*nest];
+            queen = true;
+            m.region = g.file.id;
+            m.target = WorldMissions::queenTarget(g.file.id);
+            m.at = g.built.nest.value_or(Vec2(0, 0));
+            m.radius = Matriarch::nestRing;
+            m.need = 1;
+            where = g.file.name;
+            break;
+        }
         const size_t r = pool[roll(pool.size())];
         const WorldRegion& g = world_->regions[r];
         m.target = m.region = g.file.id;
@@ -374,6 +390,12 @@ std::optional<Mission> WorldMap::drawMission(const PilotState& p, std::mt19937_6
         m.briefing = t.briefing;
         m.instructions = fill(t.instructions, m.need, where, what);
         break;
+    }
+    // The Matriarch's hunt: the perilous hunt's briefing and narration (it
+    // speaks of her nest), its own title and line.
+    if (queen) {
+        m.title = "The Matriarch";
+        m.instructions = "Bring down the Matriarch at her nest in " + where + ". Every pilot who hurts her shares her fall.";
     }
     return m;
 }
@@ -444,10 +466,14 @@ void WorldMap::payMission(PilotId pilot, PilotState& p, Mission& m) {
     pushProgress(pilot);
 }
 
-void WorldMap::broodKill(PilotId pilot, UnitKind, size_t region) {
+void WorldMap::broodKill(PilotId pilot, UnitKind kind, size_t region) {
     PilotState* p = pilotState(pilot);
     if (!p || !world_ || region >= world_->regions.size()) return;
     missionWork(pilot, *p, Kind::hunt, world_->regions[region].file.id, 1);
+    // Her fall counts for a Matriarch hunt, wherever she fell (N3).
+    if (kind == UnitKind::matriarch)
+        if (const auto nest = nestRegion())
+            missionWork(pilot, *p, Kind::hunt, WorldMissions::queenTarget(world_->regions[*nest].file.id), 1);
 }
 
 // MARK: - Asked by the pilot, told to it

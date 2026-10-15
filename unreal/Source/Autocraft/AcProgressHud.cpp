@@ -22,6 +22,7 @@
 #include "HAL/PlatformTime.h"
 #include "Rendering/DrawElements.h"
 
+#include "Brood.h"
 #include "Defence.h"
 #include "Pilot.h"
 #include "RegionFile.h"
@@ -137,6 +138,47 @@ void SAcProgressHud::SetRespawn(const TOptional<FRespawn>& In)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcProgressHud::SetBoss(const TOptional<FBoss>& In)
+{
+	if (BossBar == In) return;
+	BossBar = In;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcProgressHud::PaintBoss(FSlateWindowElementList& Out, const int32 Layer, const FGeometry& G, const FVector2f Size) const
+{
+	// Top centre: a wide bar under her name, the hp in numbers at its right.
+	const FBoss& B = *BossBar;
+	const float W = FMath::RoundHalfFromZero(FMath::Min(Size.X * 0.5f, 760.f));
+	const float X = FMath::RoundHalfFromZero(Size.X / 2 - W / 2);
+	// Under the compass strip, its name clear of it.
+	const float Y = FMath::RoundHalfFromZero(FMath::Max(150.f, Size.Y * 0.16f));
+	const float H = 16;
+	const FLinearColor Violet = FAcHudStyle::Srgb(0.78, 0.36, 1.0);
+	const FLinearColor Teal = FAcHudStyle::Srgb(0.3, 0.95, 0.85);
+	const double Share = FMath::Clamp(B.Hp / FMath::Max(1.0, B.Max), 0.0, 1.0);
+	Label(B.Name, 22, B.Hp > 0 ? Violet : WithAlpha(FAcHudStyle::Soft(), 0.8f), EAcHAlign::Center, EAcVAlign::Baseline, EAcFontWeight::Bold, 2.4f)
+		.Paint(Out, Layer + 2, G, FVector2f(Size.X / 2, Y - 6));
+	const FBox2f Frame(FVector2f(X - 4, Y - 4), FVector2f(X + W + 4, Y + H + 4));
+	Box(Out, Layer, G, Frame, WithAlpha(FAcHudStyle::Glass(), 0.86f));
+	Box(Out, Layer + 1, G, FBox2f(FVector2f(X, Y), FVector2f(X + W, Y + H)), WithAlpha(Violet, 0.14f));
+	if (Share > 0) Box(Out, Layer + 1, G, FBox2f(FVector2f(X, Y), FVector2f(X + float(W * Share), Y + H)), WithAlpha(Violet, 0.92f));
+	// A teal vein along the bar's top edge, as on her body.
+	if (Share > 0) Box(Out, Layer + 2, G, FBox2f(FVector2f(X, Y), FVector2f(X + float(W * Share), Y + 3)), WithAlpha(Teal, 0.8f));
+	// Quarter marks.
+	for (int32 Q = 1; Q < 4; ++Q)
+		Box(Out, Layer + 2, G, FBox2f(FVector2f(X + W * Q / 4.f - 1, Y), FVector2f(X + W * Q / 4.f + 1, Y + H)), WithAlpha(FAcHudStyle::Glass(), 0.7f));
+	CutFrame(Out, Layer + 2, G, Frame, WithAlpha(B.bRoaring ? Teal : Violet, B.bRoaring ? 1.0f : 0.6f), B.bRoaring ? 2.f : 1.f, 8);
+	const FString Numbers = B.Hp > 0 ? FString::Printf(TEXT("%s / %s"), *FText::AsNumber(FMath::CeilToInt64(B.Hp)).ToString(),
+											*FText::AsNumber(FMath::RoundToInt64(B.Max)).ToString())
+									 : FString(TEXT("DOWN"));
+	Label(Numbers, 13, WithAlpha(FAcHudStyle::Text(), 0.9f), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::Medium, 0.6f)
+		.Paint(Out, Layer + 2, G, FVector2f(X + W, Y + H + 8));
+	if (!B.Sub.IsEmpty())
+		Label(B.Sub, 13, WithAlpha(FAcHudStyle::Soft(), 0.85f), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium, 0.6f)
+			.Paint(Out, Layer + 2, G, FVector2f(X, Y + H + 8));
+}
+
 void SAcProgressHud::Toast(const FString& Title, const FString& Sub, const FLinearColor& Accent, const double Now)
 {
 	Notes.Insert(FNote{Title, Sub, Accent, Now}, 0);
@@ -163,6 +205,7 @@ int32 SAcProgressHud::OnPaint(const FPaintArgs&, const FGeometry& Geometry, cons
 	if (Row) PaintSlots(Out, Layer, Geometry, Size);
 	if (Opening) PaintOpening(Out, Layer, Geometry, Size);
 	if (Respawn) PaintRespawn(Out, Layer, Geometry, Size);
+	if (BossBar) PaintBoss(Out, Layer + 2, Geometry, Size);
 	PaintToasts(Out, Layer + 4, Geometry, Size, FPlatformTime::Seconds());
 	return Layer + 8;
 }
@@ -413,6 +456,30 @@ FString AcProgressHud::BlueprintTag(const FAcMmoClient* Mmo, const ac::Structure
 	if (G->copies(Kind) <= 0) return TEXT("NO BLUEPRINT");
 	if (G->level() < G->floor(Kind)) return FString::Printf(TEXT("LV %lld"), (long long)G->floor(Kind));
 	return TEXT("REALM LIMIT");
+}
+
+TOptional<SAcProgressHud::FBoss> AcProgressHud::Boss(const FAcMmoClient& Mmo)
+{
+	const ac::net::Mirror* M = Mmo.Mirror();
+	if (!M) return {};
+	for (const ac::Unit& U : M->simulation().state.units)
+	{
+		if (U.kind != ac::UnitKind::matriarch || !U.bug) continue;
+		// She is sent from 60 cells off (her crown read from afar); the bar
+		// shows near her (35 cells) or once she is wounded (a fight).
+		const ac::Unit* Me = M->driven() ? M->unit(*M->driven()) : nullptr;
+		const bool bNear = Me && ac::distance(Me->position, U.position) <= ac::Matriarch::roarSight + 10;
+		if (!bNear && !(U.hp < ac::Rules::hp(U.kind) - 0.5)) continue;
+		SAcProgressHud::FBoss B;
+		B.Name = TEXT("THE MATRIARCH");
+		B.Sub = U.hp > 0 ? FString(TEXT("BROOD QUEEN")) : FString(TEXT("BROOD QUEEN  ·  FELLED"));
+		// Never past her max, nor 0 while she lives (the wire rounds hp).
+		B.Max = ac::Rules::hp(ac::UnitKind::matriarch);
+		B.Hp = ac::Rules::hpShown(U.hp, B.Max);
+		B.bRoaring = U.bug->state == ac::Bug::State::roar;
+		return B;
+	}
+	return {};
 }
 
 FString AcProgressHud::BuiltBy(const FAcMmoClient* Mmo, const int64 Id)
@@ -946,6 +1013,9 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 		Down = V;
 	}
 	Hud->SetRespawn(Down);
+	// The Matriarch in the mirror (in sight, or close enough to fight): her
+	// boss bar (N3).
+	Hud->SetBoss(AcProgressHud::Boss(*Mmo));
 	// The KSTR contracts on the dashboard's right panel.
 	if (UAcConsoleSubsystem* C = UAcConsoleSubsystem::Get(this); C && C->Console())
 	{
@@ -1263,6 +1333,42 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		Hud->Toast(FString::Printf(TEXT("%s UPGRADED"), *Name), FString::Printf(TEXT("%s mark %lld  ·  upgraded by %s"), *What,
 			(long long)N.value, *By), FAcHudStyle::Srgb(1.0, 0.55, 0.25), Now);
 		UE_LOG(LogAutocraft, Log, TEXT("progress: %s upgraded by %s, mark %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
+		break;
+	}
+	case K::matriarch:
+	{
+		// N3: the Matriarch down (to every pilot), a fighter's share
+		// ("share/<MH>/<blueprint>", the ore in `value`), her return.
+		const FLinearColor Violet = FAcHudStyle::Srgb(0.82, 0.42, 1.0);
+		const std::string Id = N.id;
+		if (Id == "down")
+		{
+			const FString By = N.by.empty() ? FString() : (P && N.by == P->callsign ? FString(TEXT("you")) : Text(N.by));
+			const FString Who = N.value == 1 ? FString(TEXT("Felled by one pilot"))
+											 : FString::Printf(TEXT("Felled by %lld pilots"), (long long)N.value);
+			Hud->Toast(TEXT("THE MATRIARCH IS DOWN"), By.IsEmpty() ? Who : Who + TEXT("  ·  the hardest blows: ") + By, Violet, Now);
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
+		}
+		else if (Id.rfind("share/", 0) == 0)
+		{
+			const size_t Slash = Id.find('/', 6);
+			const int64 Mh = FCString::Atoi64(*Text(Id.substr(6, Slash == std::string::npos ? std::string::npos : Slash - 6)));
+			const std::optional<ac::StructureKind> Kind =
+				Slash == std::string::npos ? std::nullopt : ac::parse<ac::StructureKind>(Id.substr(Slash + 1));
+			FString Sub = FString::Printf(TEXT("+%s ore  ·  +%s MH"), *FText::AsNumber(N.value).ToString(), *FText::AsNumber(Mh).ToString());
+			if (Kind) Sub += FString::Printf(TEXT("  ·  a %s blueprint"), *Text(ac::Simulation::title(*Kind)));
+			Hud->Toast(TEXT("YOUR SHARE OF THE MATRIARCH"), Sub, FAcHudStyle::LevelGold(), Now + 0.01);
+		}
+		else if (Id == "back")
+		{
+			FString Where = TEXT("her region");
+			if (const ac::net::WorldMessage* W = Mmo.World())
+				for (const ac::net::WorldMessage::Region& R : W->regions)
+					if (R.nest) Where = Text(R.name);
+			Hud->Toast(TEXT("THE MATRIARCH STIRS"), FString::Printf(TEXT("She is back in her nest in %s, and the nest grows again"), *Where), Violet,
+				Now);
+		}
+		UE_LOG(LogAutocraft, Log, TEXT("progress: matriarch %s by %s, %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
 		break;
 	}
 	default:

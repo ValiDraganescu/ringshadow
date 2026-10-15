@@ -41,6 +41,7 @@
 #include "Sound/SoundWave.h"
 #include "Sound/SoundClass.h"
 
+#include "Brood.h"
 #include "Ringshadow.h"
 #include "Rules.h"
 #include "NetProtocol.h"
@@ -622,7 +623,9 @@ void FAcAudioRules::Watch(const ac::GameState& State, const ac::Sight* Sight)
 		{
 			if (B.Strikes >= 0 && U.bug->strikes != B.Strikes)
 			{
-				const FName Sound = BroodStrikeOf(U.kind);
+				// The Matriarch's strike: her slam or her spit, by the sac's word (N3).
+				const FName Sound = U.kind == ac::UnitKind::matriarch && ac::Matriarch::spat(U.bug->sac) ? FName("matriarchspit")
+																												 : FName(BroodStrikeOf(U.kind));
 				if (Allow(Sound, 6)) OneShot(Sound, U.position, AcSound::BroodStrikeGain, EAcSoundPool::Combat);
 			}
 			if (B.Hp >= 0 && U.hp < B.Hp - 0.01)

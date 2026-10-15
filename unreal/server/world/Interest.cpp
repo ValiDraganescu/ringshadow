@@ -3,6 +3,7 @@
 // where waiting raises an entity's priority (docs/networking.md, "Interest").
 
 #include "World.h"
+#include "Brood.h"
 
 #include <algorithm>
 #include <cmath>
@@ -72,7 +73,9 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
     all.reserve(s.units.size() + s.structures.size());
     for (const Unit& u : s.units) {
         const bool own = s.allied(u.owner, me);
-        if (!own && !sim_.sees(me, u.id)) continue;
+        // The Matriarch is seen from far, in sight or not (N3).
+        const bool queen = u.kind == UnitKind::matriarch && distance(u.position, from) <= Matriarch::seenFrom;
+        if (!own && !queen && !sim_.sees(me, u.id)) continue;
         // A bug on the driven unit is in every snapshot from the moment it
         // turns on it, closing in or not.
         const bool at = driven >= 0 && (u.target == driven || u.lockTarget == driven || (u.bug && u.bug->prey == driven));

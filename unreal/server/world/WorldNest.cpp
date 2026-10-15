@@ -226,8 +226,12 @@ void WorldMap::nestThink(size_t r) {
                 raid = s.id;
             }
     }
-    b.prey = prey;
-    b.raid = raid;
+    if (n.held) {
+        b.spitReady = std::max(b.spitReady, st.time + 5);
+    } else {
+        b.prey = prey;
+        b.raid = raid;
+    }
 
     // Her roars: once when a pilot first comes near, and every
     // `roarEvery` s in a fight.
@@ -531,6 +535,7 @@ std::string WorldMap::devMatriarch(const std::string& line) {
     auto& [pilot, p] = *pilots_.begin();
     const Vec2 home = *nestAt(*nr);
     if (what == "back") {
+        nest_.held = false;
         matriarchReturnNow();
         broodNow(*nr);
         return "dev: matriarch back";
@@ -555,9 +560,11 @@ std::string WorldMap::devMatriarch(const std::string& line) {
         if (nest_.queen && u.id == *nest_.queen && u.hp > 0) q = &u;
     if (what == "here" || what == "near") {
         // Her horde stays its own; the pilot is set `d` cells off her, facing her.
-        double d = 40;
-        in >> d;
-        const double a = std::atan2(me->position.y - home.y, me->position.x - home.x);
+        // `d` cells off; at `bearing` degrees (ground frame, -90 north), else
+        // on the pilot's own bearing from her.
+        double d = 40, bearing = 1e9;
+        in >> d >> bearing;
+        const double a = bearing < 1e8 ? bearing * pi / 180 : std::atan2(me->position.y - home.y, me->position.x - home.x);
         Vec2 at = home + Vec2(std::cos(a), std::sin(a)) * d;
         if (sim.nav) at = sim.nav->nearestFree(at).value_or(at);
         for (Unit& u : st.units)
@@ -578,11 +585,13 @@ std::string WorldMap::devMatriarch(const std::string& line) {
     if (what == "calm") {
         // The horde holds still for pictures: nobody turns on the pilot.
         for (BroodGroup& g : brood_[*nr].groups) g.still = g.nest;
+        nest_.held = true;
         q->bug->prey = std::nullopt;
         q->bug->raid = std::nullopt;
         return "dev: matriarch calm";
     }
     if (what == "slam") {
+        // One slam on the pilot: she names it her foe; `calm` after takes it back.
         q->bug->prey = *p.unit;
         q->cooldown = std::nullopt;
         q->bug->roarUntil = -1;
@@ -597,15 +606,16 @@ std::string WorldMap::devMatriarch(const std::string& line) {
         return "dev: matriarch hurt";
     }
     if (what == "down") {
-        nest_.damage[pilot] += q->hp;
-        q->hp = 0;
-        queenDown(*nr);
+        // Felled by the pilot's hit, as in a fight: her body lies, her
+        // rewards and the world's news come with the hit (`queenHit`).
+        const Unit shooter = *me;
+        sim.hit(q->id, q->hp + 1, false, &shooter);
         return "dev: matriarch down";
     }
     if (what == "siege") {
         return matriarchSiege(*nr, me->position, 12, 6) ? "dev: matriarch siege at the pilot" : "dev: matriarch siege: refused";
     }
-    return "dev: matriarch: '" + what + "' is not here|near|roar|calm|slam|hurt|down|back|siege";
+    return "dev: matriarch: '" + what + "' is not here|near D [BEARING]|roar|calm|slam|hurt|down|back|siege";
 }
 
 } // namespace ac::server

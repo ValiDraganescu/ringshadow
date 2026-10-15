@@ -198,7 +198,8 @@ std::vector<NavGrid::Circle> NavGrid::footprint(Doodad::Kind k) {
     case Doodad::Kind::derrickRuin:
         return {{Vec2(0, 0), 1.25}, {Vec2(1.3, 0.9), 0.5}, {Vec2(2.4, -1.5), 0.45}, {Vec2(3.4, -1.9), 0.45}};
     case Doodad::Kind::relayDish: return {{Vec2(0, 0), 1.5}, {Vec2(-1.6, 0.6), 0.6}, {Vec2(1.5, -0.4), 0.5}};
-    case Doodad::Kind::plant: case Doodad::Kind::bush: case Doodad::Kind::debris: return {};
+    // The nest's mound is walked over: its queen stands in its bowl (N3).
+    case Doodad::Kind::plant: case Doodad::Kind::bush: case Doodad::Kind::debris: case Doodad::Kind::broodNest: return {};
     }
     return {};
 }
