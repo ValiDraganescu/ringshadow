@@ -221,8 +221,10 @@ page for the zone stays as a second opinion, with its 24-hour window.
 - **Passwords.** PBKDF2-SHA-256 through WebCrypto with a 16-byte salt, the
   iteration count stored with the hash so it can rise later. The free plan
   allows 10 ms of CPU per request, so the count is measured in step 3 and set
-  to what fits with margin (Cloudflare's own example uses 100,000). At least
-  12 characters, checked against the email.
+  to what fits with margin (Cloudflare's own example uses 100,000). Measured
+  on the live Worker 2026-10-15: 100,000 cost 17 to 32 ms of CPU a login, so
+  the count is 10,000 (a password change hashes twice). At least 12
+  characters, checked against the email.
 - **Sessions.** A 32-byte random id, 30 days, carried in a cookie
   `admin_session`, `HttpOnly; Secure; SameSite=Strict; Path=/`. D1 keeps the
   id's SHA-256, so the table alone opens nothing. The cookie is

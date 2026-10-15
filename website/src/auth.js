@@ -2,11 +2,12 @@
 // the lockout keys. Pure WebCrypto, so the tests run it under Node too.
 // See docs/website-analytics.md, "Access".
 
-// PBKDF2-SHA-256 iterations for new hashes. Measured in step 3 on the live
-// Worker (cpuTime from wrangler tail) to fit the free plan's 10 ms with
-// margin; 100,000 is also the most the Workers runtime accepts. The count is
-// stored with each hash, so raising it later only affects new passwords.
-export const PW_ITERS = 100_000;
+// PBKDF2-SHA-256 iterations for new hashes, set to fit the free plan's 10 ms
+// of CPU with margin. Measured on the live Worker 2026-10-15 (cpuTime from
+// wrangler tail): 100,000 cost 17 to 32 ms a login, over the limit; a
+// password change hashes twice, so it gets the tighter budget. The count is
+// stored with each hash, so changing it later only affects new passwords.
+export const PW_ITERS = 10_000;
 export const MIN_PW = 12;
 export const MAX_PW = 256;
 export const SESSION_DAYS = 30;
