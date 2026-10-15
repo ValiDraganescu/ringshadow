@@ -11,6 +11,11 @@ const MAX_UA = 512;
 const MAX_PATH = 512;
 const MAX_INDEX_BYTES = 96;
 
+// Our own checks (the crawl, tails, curls) send a User-Agent starting with
+// this and are never written.
+export const SELF_CHECK_PREFIX = "ringshadow-";
+export const isSelfCheck = (request) => (request.headers.get("User-Agent") || "").startsWith(SELF_CHECK_PREFIX);
+
 // Analytics Engine samples by index when one index writes fast. Server hits
 // are indexed by their User-Agent, so a crawler storm thins only the
 // stormer's own rows; people's hits and meta rows by the site id.
@@ -32,7 +37,7 @@ export function point(f) {
       f.browser, f.browserVersion, f.device, f.event,
       f.agentLabel, f.agentClass, f.userAgent, f.asset,
     ].map((v) => (v == null ? "" : String(v))),
-    doubles: [f.newVisitor || 0, f.bounce || 0, f.dropped || 0],
+    doubles: [f.newVisitor || 0, f.bounce || 0, f.dropped || 0, f.status || 0],
   };
 }
 
@@ -48,9 +53,10 @@ export function assetKind(path, contentType) {
 }
 
 // Whether a request and its answer make a server hit: GET only, no Range,
-// a counted content type, and no 304 or redirect (nothing was served).
+// a counted content type, no 304 or redirect (nothing was served), and not
+// one of our own checks. A 404 is counted: probes for holes are worth seeing.
 export function isCounted(request, response) {
-  if (request.method !== "GET" || request.headers.has("Range")) return null;
+  if (request.method !== "GET" || request.headers.has("Range") || isSelfCheck(request)) return null;
   if (response.status === 304 || response.status === 206) return null;
   if (response.status >= 300 && response.status < 400) return null;
   return assetKind(new URL(request.url).pathname, response.headers.get("Content-Type"));
@@ -68,7 +74,7 @@ export function referrerHost(request) {
 
 // The point for one server hit. A browser's raw User-Agent is not kept, only
 // its family: the string is needed for labelling bots, not people.
-export function serverPoint(request, asset, compiledRules) {
+export function serverPoint(request, asset, compiledRules, status = 0) {
   const url = new URL(request.url);
   const ua = request.headers.get("User-Agent") || "";
   const agent = classify(ua, compiledRules);
@@ -84,6 +90,7 @@ export function serverPoint(request, asset, compiledRules) {
     agentClass: agent.class,
     userAgent: kept,
     asset,
+    status,
   });
 }
 

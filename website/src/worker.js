@@ -18,7 +18,7 @@ async function count(env, request, response) {
   const passed = bucket.take(now);
   const meta = bucket.report(now, new URL(request.url).host);
   if (meta) env.HITS.writeDataPoint(meta);
-  if (passed) env.HITS.writeDataPoint(serverPoint(request, asset, await loadRules(env)));
+  if (passed) env.HITS.writeDataPoint(serverPoint(request, asset, await loadRules(env), response.status));
 }
 
 export default {

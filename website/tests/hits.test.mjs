@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { compileRules } from "../src/agents.js";
 import { SEED_RULES } from "./seed.mjs";
-import { Bucket, assetKind, indexOf, isCounted, point, serverPoint } from "../src/hits.js";
+import { Bucket, SELF_CHECK_PREFIX, assetKind, indexOf, isCounted, point, serverPoint } from "../src/hits.js";
 
 const rules = compileRules(SEED_RULES);
 
@@ -35,11 +35,19 @@ test("what is counted", () => {
   assert.equal(isCounted(req("/x.jpg"), res(200, "image/jpeg")), null);
 });
 
+test("our own checks are never written; a marker inside a real agent's string is", () => {
+  assert.equal(SELF_CHECK_PREFIX, "ringshadow-");
+  assert.equal(isCounted(req("/blog/x", { headers: { "User-Agent": "ringshadow-crawl-check" } }), res(200, "text/html")), null);
+  assert.equal(isCounted(req("/blog/x", { headers: { "User-Agent": "Ringshadow-other" } }), res(200, "text/html")), "html");
+  assert.equal(isCounted(req("/blog/x", { headers: { "User-Agent": "Mozilla/5.0 (compatible; ClaudeBot/1.0; ringshadow-fold-check)" } }), res(200, "text/html")), "html");
+});
+
 test("a server point carries the plan's slots", () => {
-  const p = serverPoint(req("/blog/the-brood", { headers: { "User-Agent": "GPTBot/1.2", Referer: "https://example.org/a/b?c" } }), "html", rules);
+  const p = serverPoint(req("/blog/the-brood", { headers: { "User-Agent": "GPTBot/1.2", Referer: "https://example.org/a/b?c" } }), "html", rules, 200);
   assert.deepEqual(p.indexes, ["GPTBot/1.2"]);
   assert.deepEqual(p.blobs, ["server", "/blog/the-brood", "ringshadow.com", "example.org", "RO", "", "", "", "", "OpenAI", "ai-crawler", "GPTBot/1.2", "html"]);
-  assert.deepEqual(p.doubles, [0, 0, 0]);
+  assert.deepEqual(p.doubles, [0, 0, 0, 200]);
+  assert.deepEqual(serverPoint(req("/wp-login.php"), "html", rules, 404).doubles, [0, 0, 0, 404]);
 });
 
 test("a browser's server point keeps only its family", () => {

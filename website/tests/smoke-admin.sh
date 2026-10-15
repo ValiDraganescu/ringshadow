@@ -21,7 +21,7 @@ check() { # name expected actual
 }
 # req METHOD PATH [JSON] [COOKIE] -> prints the status; headers land in $H, body in $H.body
 req() {
-  local args=(-s -o "$H.body" -D "$H" -w "%{http_code}" -X "$1")
+  local args=(-s -A ringshadow-smoke-admin -o "$H.body" -D "$H" -w "%{http_code}" -X "$1")
   [ "$1" != GET ] && args+=(-H "Origin: $ORIGIN")
   [ -n "${3:-}" ] && args+=(-H "Content-Type: application/json" --data "$3")
   [ -n "${4:-}" ] && args+=(-H "Cookie: admin_session=$4")
@@ -37,13 +37,13 @@ d1() { pnpm dlx wrangler@4.151.0 d1 execute ringshadow-admin --local --persist-t
 A=first@example.org; APW='orbit lantern 1971'; APW2='orbit lantern 2026'
 B=second@example.org; BPW='quiet harbour 3141'
 
-check "a reader's page sets no cookie" 0 "$(curl -s -D - -o /dev/null "$BASE/" | grep -ci '^set-cookie')"
+check "a reader's page sets no cookie" 0 "$(curl -s -A ringshadow-smoke-admin -D - -o /dev/null "$BASE/" | grep -ci '^set-cookie')"
 check "state: no admin yet" 200 "$(req GET /api/admin/state)"; check "hasAdmin false" False "$(field hasAdmin)"
 check "the shell redirects without a session" 302 "$(req GET /admin/)"
 check "to the login page" "/admin/login" "$(grep -i '^location:' "$H" | awk '{print $2}' | tr -d '\r')"
 check "the API needs a session" 401 "$(req GET /api/admin/me)"
 check "the register page while empty" 200 "$(req GET /admin/register)"
-check "a write without the site's Origin is refused" 403 "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data "$(js)" "$BASE/api/admin/register")"
+check "a write without the site's Origin is refused" 403 "$(curl -s -A ringshadow-smoke-admin -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data "$(js)" "$BASE/api/admin/register")"
 check "a wrong setup code" 403 "$(req POST /api/admin/register "$(js code "nope" email "$A" password "$APW")")"
 check "a short password" 400 "$(req POST /api/admin/register "$(js code "$CODE" email "$A" password "short")")"
 check "register the first admin" 201 "$(req POST /api/admin/register "$(js code "$CODE" email "$A" password "$APW")")"
@@ -82,7 +82,7 @@ RID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['rule']['i
 check "now it tests as the new label" NewThing "$(req POST /api/admin/rules/test "$(js ua "NewThing-Fetcher/2.0")" "$SA2" >/dev/null; field label)"
 check "change the rule" 200 "$(req PUT /api/admin/rules/$RID "$(js label NewThing class ai-crawler match prefix pattern newthing priority 50)" "$SA2")"
 check "the change applies" ai-crawler "$(req POST /api/admin/rules/test "$(js ua "NewThing-Fetcher/2.0")" "$SA2" >/dev/null; field class)"
-check "a write without the Origin is refused" 403 "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -H "Cookie: admin_session=$SA2" "$BASE/api/admin/rules/$RID")"
+check "a write without the Origin is refused" 403 "$(curl -s -A ringshadow-smoke-admin -o /dev/null -w '%{http_code}' -X DELETE -H "Cookie: admin_session=$SA2" "$BASE/api/admin/rules/$RID")"
 check "delete the rule" 200 "$(req DELETE /api/admin/rules/$RID '' "$SA2")"
 check "the string is unlabelled again" unlabelled "$(req POST /api/admin/rules/test "$(js ua "NewThing-Fetcher/2.0")" "$SA2" >/dev/null; field label)"
 check "deleting it twice" 404 "$(req DELETE /api/admin/rules/$RID '' "$SA2")"

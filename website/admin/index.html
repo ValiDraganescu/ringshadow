@@ -43,6 +43,7 @@
         <button type="submit">Show</button>
       </form>
       <p class="summary" role="status" aria-live="polite"></p>
+      <label class="check"><input type="checkbox" id="probes-only"> Probes only: fetches answered 400 or above, mostly bots trying addresses that don't exist</label>
       <p class="note">Every fetch of a page, the feed, the text files and the Markdown copies by anything that isn't a browser. A browser's own page fetches are counted apart; people are counted by the tracker, so the two numbers never add up to one total.</p>
 
       <figure class="chart" id="agents-chart">
@@ -53,7 +54,7 @@
       <div class="part">
         <h3>By label</h3>
         <table class="list" id="agents-labels">
-          <thead><tr><th>Label</th><th>Class</th><th>Fetches</th><th>Strings</th><th>Top paths</th></tr></thead>
+          <thead><tr><th>Label</th><th>Class</th><th>Fetches</th><th>Probes</th><th>Strings</th><th>Top paths</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -62,7 +63,7 @@
         <h3>Unlabelled</h3>
         <p>Strings no rule matches. "Label as" opens a rule with the string in it: cut it down to the part that names the agent, pick a class and a label (an existing one groups it).</p>
         <table class="list" id="agents-unlabelled">
-          <thead><tr><th>User-Agent</th><th>Fetches</th><th></th></tr></thead>
+          <thead><tr><th>User-Agent</th><th>Fetches</th><th>Probes</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>

@@ -127,6 +127,7 @@ would weigh twice here.
 | double1 | `new_visitor` (1 on the first hit of the day) | the collector, Counterscale's cache-header trick |
 | double2 | `bounce` (1, then −1, then 0) | the collector |
 | double3 | `dropped` server points since the last report | `kind=meta`, path `dropped-server-points`, the Worker's token bucket |
+| double4 | the response `status` (a 404 is a probe for a hole; 0 on rows written before 2026-10-15 09:3x) | server hits |
 
 Why the raw User-Agent only on server hits: that is the string the admin
 labels, and a bot has no privacy to keep. A human's tracker hit stores the
@@ -204,7 +205,9 @@ The seed list, shipped in the first migration and editable from the admin:
 | Browsers | browser | a regex for Chrome, Safari, Firefox, Edge with `Mozilla/5.0` and no `bot` token |
 
 The admin's Agents page shows, for the chosen range: hits by label and class,
-by day; the paths each label fetched most (the AI crawlers' interest in
+by day, with each label's probes (fetches answered 400 or above, usually bots
+trying for holes) in a column of their own and a "probes only" filter; the
+paths each label fetched most, a path answered 404 tagged with its status (the AI crawlers' interest in
 `llms-full.txt` against the posts); and the **Unlabelled** table, raw strings
 with counts and a "Label as…" control that opens a new rule prefilled with the
 string, where the admin picks `contains` on a chosen fragment, a class and an
@@ -298,8 +301,12 @@ admin's own visits.
 For every request the Worker serves from the assets with a content type of
 HTML, Atom, plain text or Markdown, it writes one `kind=server` point with the
 raw User-Agent, the label and class from the cached rules, the path, the
-referrer host, the country and the asset kind. The write is `writeDataPoint`,
-fire and forget. Range requests, `HEAD` and 304s are not counted.
+referrer host, the country, the asset kind and the response status (404s
+included: the 404 page is HTML, and the probes are worth seeing). The write
+is `writeDataPoint`, fire and forget. Range requests, `HEAD`, 304s and
+redirects are not counted, nor our own checks: a User-Agent starting with
+`ringshadow-` (`SELF_CHECK_PREFIX` in `src/hits.js`) is never written, and
+every check we run (the crawl, tails, curls) sends one.
 
 Guard rails on the free tier's 100,000 points a day: a per-isolate token bucket
 of 20 points a second for `kind=server`, with a counter of dropped points

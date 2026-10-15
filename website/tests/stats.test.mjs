@@ -23,7 +23,9 @@ test("ranges", () => {
 
 test("the SQL counts rows (the API applies the sample weights) inside the time bound", () => {
   const sql = serverByAgentSql("day");
-  assert.match(sql, /COUNT\(\*\) AS hits/);
+  assert.match(sql, /COUNT\(\*\) AS hits, countIf\(double4 >= 400\) AS probes/);
+  assert.match(serverByAgentSql("day", true), /AND double4 >= 400\n/);
+  assert.doesNotMatch(sql, /AND double4 >= 400\n/);
   assert.doesNotMatch(sql, /sample/i);
   assert.match(sql, /timestamp >= \$from AND timestamp < \$to/);
   assert.match(sql, /blob1 = 'server' AND blob3 = 'ringshadow.com'/);
@@ -33,25 +35,28 @@ test("the SQL counts rows (the API applies the sample weights) inside the time b
 });
 
 const rows = [
-  { ua: "GPTBot", wclass: "ai-crawler", wlabel: "OpenAI", t: "2026-10-14 00:00:00", hits: "3" },
-  { ua: "GPTBot", wclass: "ai-crawler", wlabel: "OpenAI", t: "2026-10-15 00:00:00", hits: "2" },
-  { ua: "NewThing-Fetcher/2.0", wclass: "unlabelled", wlabel: "unlabelled", t: "2026-10-14 00:00:00", hits: "4" },
-  { ua: "NewThing-Fetcher/2.0", wclass: "unlabelled", wlabel: "unlabelled", t: "2026-10-15 00:00:00", hits: "1" },
-  { ua: "Safari", wclass: "browser", wlabel: "Browsers", t: "2026-10-15 00:00:00", hits: "7" },
+  { ua: "GPTBot", wclass: "ai-crawler", wlabel: "OpenAI", t: "2026-10-14 00:00:00", hits: "3", probes: "0" },
+  { ua: "GPTBot", wclass: "ai-crawler", wlabel: "OpenAI", t: "2026-10-15 00:00:00", hits: "2", probes: "0" },
+  { ua: "NewThing-Fetcher/2.0", wclass: "unlabelled", wlabel: "unlabelled", t: "2026-10-14 00:00:00", hits: "4", probes: "3" },
+  { ua: "NewThing-Fetcher/2.0", wclass: "unlabelled", wlabel: "unlabelled", t: "2026-10-15 00:00:00", hits: "1", probes: "0" },
+  { ua: "Safari", wclass: "browser", wlabel: "Browsers", t: "2026-10-15 00:00:00", hits: "7", probes: "1" },
 ];
 const paths = [
-  { ua: "GPTBot", wclass: "ai-crawler", wlabel: "OpenAI", path: "/llms-full.txt", hits: "4" },
-  { ua: "GPTBot", wclass: "ai-crawler", wlabel: "OpenAI", path: "/blog/the-brood", hits: "1" },
-  { ua: "NewThing-Fetcher/2.0", wclass: "unlabelled", wlabel: "unlabelled", path: "/", hits: "5" },
+  { ua: "GPTBot", wclass: "ai-crawler", wlabel: "OpenAI", path: "/llms-full.txt", status: 200, hits: "4" },
+  { ua: "GPTBot", wclass: "ai-crawler", wlabel: "OpenAI", path: "/blog/the-brood", status: 200, hits: "1" },
+  { ua: "NewThing-Fetcher/2.0", wclass: "unlabelled", wlabel: "unlabelled", path: "/wp-login.php", status: 404, hits: "3" },
+  { ua: "NewThing-Fetcher/2.0", wclass: "unlabelled", wlabel: "unlabelled", path: "/", status: 200, hits: "2" },
 ];
 
-test("the agents view: labels, paths, the unlabelled strings, browsers apart", () => {
+test("the agents view: labels, probes, paths with their status, the unlabelled strings, browsers apart", () => {
   const v = agentsView(rows, paths, compileRules(SEED_RULES));
   assert.equal(v.total, 10);
+  assert.equal(v.probes, 3);
   assert.equal(v.browsers, 7);
-  assert.deepEqual(v.labels.map((l) => [l.label, l.class, l.hits]), [["OpenAI", "ai-crawler", 5], ["unlabelled", "unlabelled", 5]]);
-  assert.deepEqual(v.labels[0].paths, [{ path: "/llms-full.txt", hits: 4 }, { path: "/blog/the-brood", hits: 1 }]);
-  assert.deepEqual(v.unlabelled, [{ ua: "NewThing-Fetcher/2.0", hits: 5 }]);
+  assert.deepEqual(v.labels.map((l) => [l.label, l.class, l.hits, l.probes]), [["OpenAI", "ai-crawler", 5, 0], ["unlabelled", "unlabelled", 5, 3]]);
+  assert.deepEqual(v.labels[0].paths, [{ path: "/llms-full.txt", status: 200, hits: 4 }, { path: "/blog/the-brood", status: 200, hits: 1 }]);
+  assert.deepEqual(v.labels[1].paths, [{ path: "/wp-login.php", status: 404, hits: 3 }, { path: "/", status: 200, hits: 2 }]);
+  assert.deepEqual(v.unlabelled, [{ ua: "NewThing-Fetcher/2.0", hits: 5, probes: 3 }]);
   assert.deepEqual(v.series, [
     { t: "2026-10-14 00:00:00", byClass: { "ai-crawler": 3, unlabelled: 4 } },
     { t: "2026-10-15 00:00:00", byClass: { "ai-crawler": 2, unlabelled: 1 } },
@@ -61,10 +66,10 @@ test("the agents view: labels, paths, the unlabelled strings, browsers apart", (
 test("a new rule moves a string's history under its label", () => {
   const rules = compileRules([...SEED_RULES, { id: 99, label: "NewThing", class: "ai-assistant", match: "contains", pattern: "NewThing-Fetcher", priority: 100 }]);
   const v = agentsView(rows, paths, rules);
-  assert.deepEqual(v.labels.map((l) => [l.label, l.class, l.hits]), [["OpenAI", "ai-crawler", 5], ["NewThing", "ai-assistant", 5]]);
+  assert.deepEqual(v.labels.map((l) => [l.label, l.class, l.hits, l.probes]), [["OpenAI", "ai-crawler", 5, 0], ["NewThing", "ai-assistant", 5, 3]]);
   assert.deepEqual(v.unlabelled, []);
   assert.deepEqual(v.series[0].byClass, { "ai-crawler": 3, "ai-assistant": 4 });
-  assert.deepEqual(v.labels[1].paths, [{ path: "/", hits: 5 }]);
+  assert.deepEqual(v.labels[1].paths.map((p) => p.path), ["/wp-login.php", "/"]);
 });
 
 test("a browser row keeps the label it was written with", () => {

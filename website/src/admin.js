@@ -195,14 +195,16 @@ async function addAdmin(request, env) {
 // The Agents view. It reads the rules fresh from D1 rather than from the
 // isolate's cache, so a rule added a moment ago already relabels the history.
 async function agentsStats(request, env) {
-  const range = parseRange(new URL(request.url).searchParams);
+  const search = new URL(request.url).searchParams;
+  const range = parseRange(search);
   if (range.error) return json({ error: range.error }, 400);
+  const probesOnly = search.get("probes") === "1";
   const params = { from: range.from, to: range.to };
   let byAgent, byPath, dropped;
   try {
     [byAgent, byPath, dropped] = await Promise.all([
-      env.HITS_SQL.query({ query: serverByAgentSql(range.bucket), params }),
-      env.HITS_SQL.query({ query: serverPathsSql(), params }),
+      env.HITS_SQL.query({ query: serverByAgentSql(range.bucket, probesOnly), params }),
+      env.HITS_SQL.query({ query: serverPathsSql(probesOnly), params }),
       env.HITS_SQL.query({ query: droppedSql(), params }),
     ]);
   } catch (err) {
@@ -210,7 +212,7 @@ async function agentsStats(request, env) {
     return json({ error: "The analytics query failed" + (err.retryable ? "; try again." : ": " + err.message) }, 502);
   }
   const rules = compileRules(await listRules(env));
-  return json({ range, dropped: Number(dropped.data[0]?.dropped) || 0, ...agentsView(byAgent.data, byPath.data, rules) });
+  return json({ range, probesOnly, dropped: Number(dropped.data[0]?.dropped) || 0, ...agentsView(byAgent.data, byPath.data, rules) });
 }
 
 const answer = (r) => json(r.body, r.status);

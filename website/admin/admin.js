@@ -218,28 +218,31 @@
     async function loadAgents() {
       const summary = $("#agents .summary");
       summary.textContent = "Loading…";
-      const { ok, data } = await api("stats/agents?" + query());
+      const { ok, data } = await api("stats/agents?" + query() + ($("#probes-only").checked ? "&probes=1" : ""));
       if (!ok) {
         summary.textContent = data.error || "The stats didn't load.";
         return;
       }
-      summary.textContent = `${fmt(data.total)} agent fetches · ${fmt(data.browsers)} browser page fetches` +
+      summary.textContent = `${fmt(data.total)} agent fetches (${fmt(data.probes)} probes) · ${fmt(data.browsers)} browser page fetches` +
         (data.dropped ? ` · ${fmt(data.dropped)} not counted (the rate cap)` : "") +
         ` · ${data.range.from.slice(0, 16).replace("T", " ")} to ${data.range.to.slice(0, 16).replace("T", " ")} UTC`;
       drawChart(data);
       $("#agents-labels tbody").replaceChildren(...data.labels.map((l) => {
         const paths = el("details", {}, el("summary", { textContent: `${l.paths.length} path${l.paths.length === 1 ? "" : "s"}` }),
-          el("ol", {}, ...l.paths.map((p) => el("li", {}, el("code", { textContent: p.path }), " " + fmt(p.hits)))));
-        return row(l.label, l.class, fmt(l.hits), fmt(l.strings), paths);
+          el("ol", {}, ...l.paths.map((p) => el("li", {}, el("code", { textContent: p.path }),
+            ...(p.status >= 400 ? [" ", el("span", { class: "status", textContent: String(p.status) })] : []), " " + fmt(p.hits)))));
+        return row(l.label, l.class, fmt(l.hits), fmt(l.probes), fmt(l.strings), paths);
       }));
       $("#agents-unlabelled tbody").replaceChildren(...(data.unlabelled.length
         ? data.unlabelled.map((u) => {
           const b = el("button", { type: "button", class: "small", textContent: "Label as" });
           b.addEventListener("click", () => labelAs(u.ua));
-          return row(el("code", { textContent: u.ua || "(no User-Agent)" }), fmt(u.hits), b);
+          return row(el("code", { textContent: u.ua || "(no User-Agent)" }), fmt(u.hits), fmt(u.probes), b);
         })
-        : [row("Every string has a label.", "", "")]));
+        : [row("Every string has a label.", "", "", "")]));
     }
+
+    $("#probes-only").addEventListener("change", () => loadAgents());
 
     async function loadRules() {
       const { ok, data } = await api("rules");
