@@ -1028,7 +1028,8 @@ public:
     const Canyon* canyon(size_t r, std::string_view zone) const;
     /// Tests, dev and shots: wave `wave` out now (RUNNING; wave 1 while
     /// WAITING is its replay), the wave out failed now, beaten now (its
-    /// bugs gone, its fighters paid as they fought), the zone reset. False:
+    /// bugs gone, its fighters paid as they fought), the zone reset (the
+    /// wave out taken away at once, wave 1's arm the first again). False:
     /// no such zone, or no brood side.
     bool canyonSend(size_t r, std::string_view zone, int64_t wave);
     bool canyonFail(size_t r, std::string_view zone);

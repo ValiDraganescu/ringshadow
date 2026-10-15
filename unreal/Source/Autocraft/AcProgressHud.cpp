@@ -1,5 +1,7 @@
 #include "AcProgressHud.h"
 
+#include "AcCanyon.h"
+
 #include "AcMissions.h"
 
 #include "AcAudioDirector.h"
@@ -180,6 +182,45 @@ void SAcProgressHud::PaintBoss(FSlateWindowElementList& Out, const int32 Layer, 
 		Box(Out, Layer + 2, G, FBox2f(FVector2f(X + W * Q / 4.f - 1, Y), FVector2f(X + W * Q / 4.f + 1, Y + H)), WithAlpha(FAcHudStyle::Glass(), 0.7f));
 }
 
+void SAcProgressHud::SetCanyon(const TOptional<FCanyon>& In)
+{
+	if (CanyonPanel == In) return;
+	CanyonPanel = In;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SAcProgressHud::PaintCanyon(FSlateWindowElementList& Out, const int32 Layer, const FGeometry& G, const FVector2f Size) const
+{
+	// Under the compass (or the boss bar), the boss bar's glass: the zone and
+	// its wave on the first line, what it is doing under it, and while a wave
+	// is out the prize taken against the fail mark as a slim bar.
+	const FCanyon& C = *CanyonPanel;
+	const float W = FMath::RoundHalfFromZero(FMath::Min(Size.X * 0.32f, 520.f));
+	const float X = FMath::RoundHalfFromZero(Size.X / 2 - W / 2);
+	const float Top = CanyonTop();
+	const FLinearColor Orange = FAcHudStyle::Srgb(1.0, 0.6, 0.22);
+	const FLinearColor Red = FAcHudStyle::Srgb(1.0, 0.32, 0.26);
+	const FLinearColor Green = FAcHudStyle::Srgb(0.45, 1, 0.55);
+	const FLinearColor Ink = C.bAlert ? Red : C.bHeld ? Green : Orange;
+	const FBox2f Frame(FVector2f(X - 10, Top), FVector2f(X + W + 10, Top + CanyonHeight));
+	Box(Out, Layer, G, Frame, WithAlpha(FAcHudStyle::Glass(), 0.8f));
+	CutFrame(Out, Layer + 2, G, Frame, WithAlpha(Ink, C.bAlert ? 0.95f : 0.55f), C.bAlert ? 2.f : 1.f, 8);
+	Label(C.Name.ToUpper(), 15, Ink, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f).Paint(Out, Layer + 2, G, FVector2f(X, Top + 5));
+	Label(C.Title, 14, WithAlpha(FAcHudStyle::Text(), 0.95f), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.8f)
+		.Paint(Out, Layer + 2, G, FVector2f(X + W, Top + 6));
+	Label(C.Line, 13, WithAlpha(FAcHudStyle::Text(), 0.85f), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+		.Paint(Out, Layer + 2, G, FVector2f(X, Top + 26));
+	if (C.Taken)
+	{
+		// The prize's ore taken: amber, red past three quarters of the mark.
+		const float Y = Top + CanyonHeight - 9, H = 4;
+		const double Share = FMath::Clamp(*C.Taken, 0.0, 1.0);
+		Box(Out, Layer + 1, G, FBox2f(FVector2f(X, Y), FVector2f(X + W, Y + H)), WithAlpha(Orange, 0.16f));
+		if (Share > 0)
+			Box(Out, Layer + 1, G, FBox2f(FVector2f(X, Y), FVector2f(X + float(W * Share), Y + H)), WithAlpha(Share >= 0.75 ? Red : Orange, 0.95f));
+	}
+}
+
 void SAcProgressHud::Toast(const FString& Title, const FString& Sub, const FLinearColor& Accent, const double Now)
 {
 	ac::ToastLane::Toast T;
@@ -225,6 +266,7 @@ int32 SAcProgressHud::OnPaint(const FPaintArgs&, const FGeometry& Geometry, cons
 	if (Opening) PaintOpening(Out, Layer, Geometry, Size);
 	if (Respawn) PaintRespawn(Out, Layer, Geometry, Size);
 	if (BossBar) PaintBoss(Out, Layer + 2, Geometry, Size);
+	if (CanyonPanel) PaintCanyon(Out, Layer + 2, Geometry, Size);
 	PaintToasts(Out, Layer + 4, Geometry, Size, FPlatformTime::Seconds());
 	return Layer + 8;
 }
@@ -1073,6 +1115,24 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 	// The Matriarch in the mirror (in sight, or close enough to fight): her
 	// boss bar (N3).
 	Hud->SetBoss(AcProgressHud::Boss(*Mmo));
+	// A canyon zone near (Z2): its wave panel, its warnings.
+	{
+		TOptional<SAcProgressHud::FCanyon> Panel;
+		if (const ac::net::Sky::Zone* Z = AcCanyon::Near(*Mmo))
+		{
+			const FAcZonePlace* Place = AcCanyon::Place(*Mmo, *Z);
+			SAcProgressHud::FCanyon V;
+			V.Name = Place ? Place->Name : FString(TEXT("Canyon"));
+			V.Title = AcCanyon::Title(*Z);
+			V.Line = AcCanyon::Line(*Z, Mmo->Sky() ? Mmo->Sky()->time : 0);
+			if (Z->ends) V.Taken = double(Z->taken) / double(FMath::Max<int64>(1, Z->mark));
+			V.bAlert = Z->ends.has_value() || Z->state == ac::net::Sky::Zone::State::failed;
+			V.bHeld = Z->state == ac::net::Sky::Zone::State::held;
+			Panel = V;
+		}
+		Hud->SetCanyon(Panel);
+		CanyonWarnings(*Mmo);
+	}
 	// The banner slot: under the compass (or the boss bar); it waits while a
 	// screen covers the view (U1).
 	if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this))
@@ -1204,6 +1264,74 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 		Opening = V;
 	}
 	Hud->SetOpening(Opening);
+}
+
+void UAcProgressHudSubsystem::CanyonWarnings(FAcMmoClient& Mmo)
+{
+	// Z2: the zone's banner on coming into its region; a toast and the swarm
+	// when a wave comes (from which tunnels), when one is beaten, when the
+	// opening wave breaks through.
+	using FZone = ac::net::Sky::Zone;
+	const FZone* Z = AcCanyon::Near(Mmo);
+	const ac::net::WorldMessage* W = Mmo.World();
+	if (!Z || !W)
+	{
+		CanyonSeen.Reset();
+		if (!Z) CanyonBanner = -1;
+		return;
+	}
+	const FAcZonePlace* Place = AcCanyon::Place(Mmo, *Z);
+	const FString Name = Place ? Place->Name.ToUpper() : FString(TEXT("THE CANYON"));
+	const double Now = FPlatformTime::Seconds();
+	const double Clock = Mmo.Sky() ? Mmo.Sky()->time : 0;
+	if (Z->region == W->here && CanyonBanner != Z->region)
+	{
+		CanyonBanner = Z->region;
+		if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this))
+			L->ShowBanner(Name, TEXT("CANYON ZONE  ·  ") + AcCanyon::Title(*Z), AcCanyon::Line(*Z, Clock), false, FAcHudStyle::Srgb(1.0, 0.6, 0.22));
+	}
+	else if (Z->region != W->here)
+	{
+		CanyonBanner = -1;
+	}
+	FCanyonSeen Was;
+	const bool bKnew = CanyonSeen.IsSet() && CanyonSeen->Region == Z->region && CanyonSeen->Zone == Z->zone;
+	if (bKnew) Was = *CanyonSeen;
+	FCanyonSeen Is;
+	Is.Region = Z->region;
+	Is.Zone = Z->zone;
+	Is.State = uint8(Z->state);
+	Is.Wave = Z->wave;
+	Is.bOut = Z->ends.has_value();
+	Is.Ends = Z->ends.value_or(0);
+	CanyonSeen = Is;
+	if (!bKnew) return;
+	const FLinearColor Red = FAcHudStyle::Srgb(1.0, 0.32, 0.26);
+	if (Is.bOut && (!Was.bOut || Was.Wave != Is.Wave || FMath::Abs(Was.Ends - Is.Ends) > 5))
+	{
+		// A wave comes.
+		const FString Title = Z->state == FZone::State::waiting
+			? FString::Printf(TEXT("%s: THE OPENING WAVE"), *Name)
+			: FString::Printf(TEXT("%s: WAVE %lld OF %lld%s"), *Name, (long long)Z->wave, (long long)Z->waves, Z->boss ? TEXT(", MINI-BOSS") : TEXT(""));
+		const FString Sub = FString::Printf(TEXT("%lld bugs from %s%s"), (long long)Z->left, *AcCanyon::Tunnels(*Z, Place),
+			Z->state == FZone::State::waiting ? TEXT("  ·  beat it to start the canyon's game") : TEXT(""));
+		Hud->Toast(Title, Sub, Red, Now);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->PlayMenu("broodswarm", 0.7f);
+		UE_LOG(LogAutocraft, Log, TEXT("canyon: %s"), *(Title + TEXT(" · ") + Sub));
+	}
+	else if (Was.bOut && !Is.bOut)
+	{
+		if (Z->state == FZone::State::running && Is.Wave == Was.Wave + 1)
+		{
+			Hud->Toast(FString::Printf(TEXT("%s: WAVE %lld BEATEN"), *Name, (long long)Was.Wave), AcCanyon::Line(*Z, Clock),
+				FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
+			UE_LOG(LogAutocraft, Log, TEXT("canyon: wave %lld beaten"), (long long)Was.Wave);
+		}
+		else if (Z->state == FZone::State::waiting && Was.State == uint8(FZone::State::waiting))
+		{
+			Hud->Toast(FString::Printf(TEXT("%s: THE OPENING WAVE GOT THROUGH"), *Name), AcCanyon::Line(*Z, Clock), FAcHudStyle::Amber(), Now);
+		}
+	}
 }
 
 void UAcProgressHudSubsystem::News(FAcMmoClient& Mmo)
@@ -1421,6 +1549,48 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		Hud->Toast(FString::Printf(TEXT("%s UPGRADED"), *Name), FString::Printf(TEXT("%s mark %lld  ·  upgraded by %s"), *What,
 			(long long)N.value, *By), FAcHudStyle::Srgb(1.0, 0.55, 0.25), Now);
 		UE_LOG(LogAutocraft, Log, TEXT("progress: %s upgraded by %s, mark %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
+		break;
+	}
+	case K::canyon:
+	{
+		// Z2: a wave beaten (the fighter's share), the canyon held or fallen
+		// (to every pilot: the banner slot), spared (she is down).
+		const FString Zone = Text(N.by);
+		const std::string Id = N.id;
+		if (Id.rfind("wave/", 0) == 0)
+		{
+			// "wave/<n>/<MH>[/<blueprint>]".
+			TArray<FString> Parts;
+			Text(Id).ParseIntoArray(Parts, TEXT("/"));
+			const int64 Wave = Parts.Num() > 1 ? FCString::Atoi64(*Parts[1]) : 0;
+			const int64 Mh = Parts.Num() > 2 ? FCString::Atoi64(*Parts[2]) : 0;
+			FString Sub = FString::Printf(TEXT("+%s ore  ·  +%s MH"), *FText::AsNumber(N.value).ToString(), *FText::AsNumber(Mh).ToString());
+			if (!Xp.IsEmpty()) Sub += TEXT("  ·  ") + Xp;
+			if (Parts.Num() > 3)
+				if (const std::optional<ac::StructureKind> Kind = ac::parse<ac::StructureKind>(TCHAR_TO_UTF8(*Parts[3])))
+					Sub += FString::Printf(TEXT("  ·  a %s blueprint"), *Text(ac::Simulation::title(*Kind)));
+			Hud->Toast(FString::Printf(TEXT("YOUR SHARE: %s WAVE %lld"), *Zone.ToUpper(), (long long)Wave), Sub, FAcHudStyle::LevelGold(), Now + 0.01);
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
+		}
+		else if (Id == "held" || Id == "failed")
+		{
+			const bool bHeld = Id == "held";
+			const FString Title = bHeld ? FString::Printf(TEXT("%s HELD"), *Zone.ToUpper()) : FString::Printf(TEXT("%s HAS FALLEN"), *Zone.ToUpper());
+			const FString Sub = bHeld ? (N.value > 0 ? FString::Printf(TEXT("KSTR: the canyon is the pilots' for a world day  ·  %lld fought the last wave"),
+														   (long long)N.value)
+													 : FString(TEXT("KSTR: the canyon is the pilots' for a world day")))
+									  : FString::Printf(TEXT("KSTR: wave %lld broke through  ·  the Matriarch comes for its turrets"), (long long)N.value);
+			if (UAcLevelingSubsystem* L = UAcLevelingSubsystem::Get(this))
+				L->ShowBanner(Title, Sub, FString(), false, bHeld ? FAcHudStyle::Srgb(0.45, 1, 0.55) : FAcHudStyle::Srgb(1.0, 0.32, 0.26));
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
+		}
+		else if (Id == "spared")
+		{
+			Hud->Toast(FString::Printf(TEXT("%s BROKEN THROUGH"), *Zone.ToUpper()),
+				FString::Printf(TEXT("Wave %lld got through; the Matriarch is down, the turrets stand  ·  wave 1 again"), (long long)N.value),
+				FAcHudStyle::Amber(), Now);
+		}
+		UE_LOG(LogAutocraft, Log, TEXT("progress: canyon %s %s, %lld"), *Text(N.id), *Zone, (long long)N.value);
 		break;
 	}
 	case K::matriarch:

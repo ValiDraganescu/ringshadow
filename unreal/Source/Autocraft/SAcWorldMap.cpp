@@ -745,6 +745,23 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 		const float Ground = float(It.radius) * Z;
 		switch (It.kind)
 		{
+		case ac::net::atlas::Kind::zone:
+		{
+			// A canyon zone (Z2): a ring round its prize, orange; red while a
+			// wave is out or it has fallen; three chevrons inward.
+			const FLinearColor Ink = It.flag ? BroodRed() : FAcHudStyle::Srgb(1.0, 0.6, 0.22);
+			const float R = FMath::Max(Ground, U * 1.2f);
+			Outlined(Out, L, G, Circle(C, R, 40), WithAlpha(Ink, 0.85f), It.flag ? 2.f : 1.5f);
+			for (int32 K = 0; K < 3; ++K)
+			{
+				const float A = PI / 2 + K * 2 * PI / 3;
+				const FVector2f D(FMath::Cos(A), FMath::Sin(A));
+				const FVector2f N(-D.Y, D.X);
+				const FVector2f Tip = C + D * (R - 7.f);
+				Outlined(Out, L + 1, G, {Tip + D * 5.f + N * 4.f, Tip, Tip + D * 5.f - N * 4.f}, Ink, 1.5f);
+			}
+			break;
+		}
 		case ac::net::atlas::Kind::contract:
 		{
 			const float R = It.flag ? 8.f : 0.f;
@@ -921,6 +938,7 @@ int32 SAcWorldMap::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, co
 		case ac::net::atlas::Kind::crater:
 		case ac::net::atlas::Kind::starfall: TitleColor = FAcHudStyle::Amber(); break;
 		case ac::net::atlas::Kind::contract: TitleColor = Kstr(); break;
+		case ac::net::atlas::Kind::zone: TitleColor = It.flag ? BroodRed() : FAcHudStyle::Srgb(1.0, 0.6, 0.22); break;
 		default: break;
 		}
 		Rows.Add(Label(Text(It.title), 16, TitleColor, EAcHAlign::Left, EAcVAlign::Top));

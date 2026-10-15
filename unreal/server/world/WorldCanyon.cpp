@@ -453,17 +453,24 @@ void WorldMap::fellZoneTurrets(const Canyon& c) {
 
 // MARK: - Tests, dev and shots
 
+namespace {
+
+/// Tests, dev and shots: the wave out of `c` goes, its bugs taken away at once.
+void takeWaveAway(WorldMap::Canyon& c, GameState& st, std::vector<WorldMap::BroodGroup>& groups) {
+    const std::set<int64_t> bugs = c.bugs;
+    std::erase_if(st.units, [&](const Unit& u) { return bugs.count(u.id) > 0; });
+    for (WorldMap::BroodGroup& g : groups) std::erase_if(g.bugs, [&](int64_t b) { return bugs.count(b) > 0; });
+    std::erase_if(groups, [](const WorldMap::BroodGroup& g) { return g.bugs.empty(); });
+}
+
+} // namespace
+
 bool WorldMap::canyonSend(size_t r, std::string_view zone, int64_t wave) {
     Canyon* c = canyonOf(r, zone);
     if (!c || wave < 1 || wave > WorldCanyon::count()) return false;
     if (c->out) {
-        // The wave out goes: its bugs taken away at once.
-        GameState& st = regions_[r]->simulation().state;
-        const std::set<int64_t> bugs = c->bugs;
-        std::erase_if(st.units, [&](const Unit& u) { return bugs.count(u.id) > 0; });
+        takeWaveAway(*c, regions_[r]->simulation().state, brood_[r].groups);
         regions_[r]->simulation().reindex();
-        for (BroodGroup& g : brood_[r].groups) std::erase_if(g.bugs, [&](int64_t b) { return bugs.count(b) > 0; });
-        std::erase_if(brood_[r].groups, [](const BroodGroup& g) { return g.bugs.empty(); });
         releaseWave(*c);
     }
     if (c->state == State::failed || c->state == State::held) c->state = State::waiting;
@@ -491,6 +498,10 @@ bool WorldMap::canyonBeat(size_t r, std::string_view zone) {
 
 void WorldMap::canyonReset(size_t r, std::string_view zone) {
     if (Canyon* c = canyonOf(r, zone)) {
+        if (c->out && r < brood_.size()) {
+            takeWaveAway(*c, regions_[r]->simulation().state, brood_[r].groups);
+            regions_[r]->simulation().reindex();
+        }
         resetCanyon(*c);
         c->replays = 0;
         c->next = clock_ + WorldCanyon::firstWait;

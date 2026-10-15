@@ -610,7 +610,9 @@ Her numbers are `ac::Matriarch` (Brood.h); the core steps her
     nearest first, her escort on the same one.
   - Then she goes home: to the nest, or out at the edge to be back at the
     nest when its region next wakes.
-  - Not wired to waves yet (Z2 does that).
+  - `from` (Z2): she comes in there instead, out of a canyon's tunnel. Her
+    escort fights only the turrets (and a pilot that hits it).
+  - The canyon game calls her when a wave breaks through ([canyon.md](canyon.md)).
 - **Hunt.** One perilous hunt in three is "The Matriarch" (docs/missions.md).
 - **Wire** (protocol 24):
   - the World message's regions carry `nest`;

@@ -90,7 +90,10 @@ public:
 	static constexpr float LaneLeft = 32;
 	static constexpr float LaneTop = 74;
 	static constexpr float BossTop = 140;
-	float BannerTop() const { return BossBar ? BossTop + 46 : BossTop + 2; }
+	float BannerTop() const { return CanyonTop() + (CanyonPanel ? CanyonHeight + 6 : 0); }
+	/// The canyon's wave panel (Z2) stands under the boss bar, else in its place.
+	float CanyonTop() const { return BossBar ? BossTop + 46 : BossTop + 2; }
+	static constexpr float CanyonHeight = 54;
 	/// The slot row's and the stacks' boxes as last painted (U1: clear of
 	/// the pawn), points from the view's top-left.
 	FBox2f SlotsBox() const { return SlotsAt; }
@@ -136,6 +139,25 @@ public:
 	};
 	void SetBoss(const TOptional<FBoss>& In);
 	const TOptional<FBoss>& Boss() const { return BossBar; }
+	/// A canyon zone near (Z2): its wave panel under the compass: the zone's
+	/// name and wave, what it is doing ("7 bugs left · 120 / 300 ore taken",
+	/// "Next wave in 0:24"), and while a wave is out the prize taken against
+	/// the fail mark as a bar. Unset: no zone near.
+	struct FCanyon
+	{
+		FString Name;
+		FString Title;
+		FString Line;
+		/// The ore taken over the mark, 0…1 (unset: no wave out).
+		TOptional<double> Taken;
+		/// A wave out, or the zone fallen: the panel in the Brood's red.
+		bool bAlert = false;
+		/// Held: the panel in the realm's green.
+		bool bHeld = false;
+		bool operator==(const FCanyon&) const = default;
+	};
+	void SetCanyon(const TOptional<FCanyon>& In);
+	const TOptional<FCanyon>& Canyon() const { return CanyonPanel; }
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D::ZeroVector; }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -147,6 +169,7 @@ private:
 	TOptional<FOpening> Opening;
 	TOptional<FRespawn> Respawn;
 	TOptional<FBoss> BossBar;
+	TOptional<FCanyon> CanyonPanel;
 	FAcCabLayout Lay;
 	ac::ToastLane Lane;
 	mutable FBox2f SlotsAt = FBox2f(ForceInit);
@@ -159,6 +182,7 @@ private:
 	void PaintOpening(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintRespawn(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintBoss(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
+	void PaintCanyon(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size) const;
 	void PaintToasts(FSlateWindowElementList& Out, int32 Layer, const FGeometry& G, FVector2f Size, double Now) const;
 };
 
@@ -294,5 +318,20 @@ private:
 	/// Every contract's title as last seen, by id: a done one's toast when
 	/// the list no longer has it (the first ten minutes' last step).
 	TMap<uint32, FString> ContractTitles;
+	/// Z2: the canyon zone near as last seen (its region and index, state,
+	/// wave, a wave out and when it ends), for the warnings; the zone's
+	/// region whose banner was shown on coming in (-1: none).
+	struct FCanyonSeen
+	{
+		int64 Region = -1;
+		int64 Zone = -1;
+		uint8 State = 0;
+		int64 Wave = 0;
+		bool bOut = false;
+		double Ends = 0;
+	};
+	TOptional<FCanyonSeen> CanyonSeen;
+	int64 CanyonBanner = -1;
+	void CanyonWarnings(FAcMmoClient& Mmo);
 	std::optional<ac::net::ProgressMessage::Respawn> RespawnPreview;
 };

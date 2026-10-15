@@ -86,6 +86,10 @@ struct FAcJournalInfo
 	FString NextPitch;
 	FString NextPay;
 	FString NextWhere;
+	/// Z2: the canyon zones' games, a line each in the header ("THE FORK ·
+	/// WAVE 3 / 10 · Next wave in 0:24"); `CanyonAlert`: a wave out or one fallen.
+	TArray<FString> Canyons;
+	bool bCanyonAlert = false;
 
 	bool operator==(const FAcJournalInfo&) const = default;
 };

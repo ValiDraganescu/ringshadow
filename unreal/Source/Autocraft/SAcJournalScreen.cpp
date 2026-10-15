@@ -423,6 +423,13 @@ void SAcJournalScreen::PaintHeader(FSlateWindowElementList& Out, const int32 L, 
 	Label(FString::Printf(TEXT("%d / %d missions · the Citadel's board (H)"), Taken, Info.Most), 14, Dim(), EAcHAlign::Left, EAcVAlign::Top,
 		EAcFontWeight::SemiBold, 0.4f)
 		.Paint(Out, L, P, FVector2f(Pad + 196, 58));
+	// The canyon zones' games, right of it, left of ESC (Z2).
+	for (int32 K = 0; K < FMath::Min(2, Info.Canyons.Num()); ++K)
+	{
+		const FLinearColor Ink = Info.bCanyonAlert ? FAcHudStyle::Srgb(1.0, 0.32, 0.26) : FAcHudStyle::Srgb(1.0, 0.6, 0.22);
+		Label(Info.Canyons[K], 13, Ink, EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.4f)
+			.Paint(Out, L, P, FVector2f(PanelW - Pad - 56, 30 + K * 18));
+	}
 	for (const FTarget& T : Targets)
 	{
 		if (T.Row == RowClose) PaintButton(Out, L, P, T, TEXT("ESC"), false, Brass());

@@ -278,7 +278,9 @@ A canyon zone (Z1, docs/mmorpg-m8.md "canyon defence"): a tower-defence
 ground in the region. The Brood comes out of tunnels in the canyon's walls
 and walks fixed paths along its floor to a prize, a field of rich ore and
 an MH well, to mine it for itself; pilots build turrets on the rims over
-the paths. Waves come with Z2.
+the paths. Every zone plays the canyon game (Z2, [canyon.md](canyon.md)):
+waves down its paths, its build spots' turrets, the Matriarch when a wave
+breaks through.
 
 ```json
 "zones": [{

@@ -698,7 +698,9 @@ void WorldMap::broodThink(size_t r) {
             if (!t || t->hp <= 0 || distance(t->position, g.site) > g.radius + g.leash + Rules::radius(t->kind)) g.turret = std::nullopt;
         }
         // A pilot inside the site: the whole group turns on it (the nearest).
-        if (!g.prey && !g.leaving && !g.still) {
+        // Not the Matriarch's siege escort: its site is a whole canyon zone,
+        // and it comes for the turrets (a pilot that hits it is its prey).
+        if (!g.prey && !g.leaving && !g.still && !(siege_ && g.id == siegeEscort_)) {
             double best = g.radius;
             for (const Unit* u : prospectors)
                 if (distance(u->position, g.site) <= best) {

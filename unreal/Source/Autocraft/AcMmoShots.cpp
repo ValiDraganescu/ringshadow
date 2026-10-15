@@ -278,6 +278,23 @@
 // (The preview with the paths is the region tool's: `autocraft-region
 // preview regions/cold-fork.json`.)
 //
+// -AcMmoShotsZ2 (at 11:00, clear weather, every region been to): the canyon
+// game in The Fork (docs/canyon.md), the pilot in its gorge, the waves and
+// the turrets set by the server's dev lines (`canyon …`), a free camera
+// (the HUD's own pictures with it), DIR/z2-NN-moment.png:
+//   01 wave 1 coming down the north arm (an AA tower on the rim sees it)
+//   02 the wave panel: the opening wave, its bugs on the prize, the ore taken
+//   03 wave 1 again, the rim's Gatling Guns firing down on it
+//   04 wave 1 beaten: the toast, the share, the panel's countdown to wave 2
+//   05 wave 4's Gloamwings over the east arm meeting the AA towers' fire
+//   06 the wave broken through: THE FORK HAS FALLEN
+//   07 the Matriarch out of the east tunnel
+//   08 her felling the zone's turrets
+//   09 the reset: the turrets gone, the opening wave waiting again
+//   10 THE FORK HELD (the last wave beaten by the dev line)
+//   11 the world map on Cold Fork: the zone's ring and its state
+//   12 the Journal: the zone's state in its header
+//
 // -AcMmoShotsOnly=sf-02,sf-08 (names, numbers or a prefix and a number,
 // comma-separated): only those moments are shot; the others are passed over
 // (logged, counted as skipped), and in the Starfall set their waits too.
@@ -321,6 +338,7 @@
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
 #include "AcProgressHud.h"
+#include "AcCanyon.h"
 #include "AcShot.h"
 #include "AcSimSubsystem.h"
 #include "AcSites.h"
@@ -476,6 +494,8 @@ namespace
 	int32 W4Frames = 0;
 	/// -AcMmoShotsZ1: Cold Fork's file (its zone).
 	TOptional<ac::region::RegionFile> Z1File;
+	/// -AcMmoShotsZ2: the zone's turrets standing when the wave broke through.
+	int32 Z2Turrets = 0;
 	/// -AcMmoShotsD3: the turret card's kept asks, the keys pressed so far.
 	int32 D3Kept = 0;
 	int32 D3Step = 0;
@@ -881,8 +901,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen))
 				FCommandLine::Append(TEXT(" -AcMmoDevSeen=start,cold-fork,glass-flats,tern-ridge,slag-pockets,brine-pans,dust-terraces,rust-hollow,ashen-shelf"));
 		}
-		// -AcMmoShotsZ1: as W4's, late morning, clear, every region been to.
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")))
+		// -AcMmoShotsZ1 and Z2: as W4's, late morning, clear, every region been to.
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -962,6 +982,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1"))) T.Phase = 2200;
 			// -AcMmoShotsZ1: the first canyon zone (2300-2311).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1"))) T.Phase = 2300;
+			// -AcMmoShotsZ2: the canyon game (2500-2525).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))) T.Phase = 2500;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -4604,6 +4626,308 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		ToggleWorldMap();
 		if (W4Cam.IsValid()) W4Cam->Destroy();
 		Check(Shots.Saved + Shots.Skipped >= 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsZ2
+	case 2500:
+	{
+		// Seated at Prospect Landing; Cold Fork's zone from its file, the pilot
+		// taken into the gorge south of its prize.
+		if (!(U && Mmo->World() && Since() > 2.0)) return;
+		FString Text;
+		if (FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectDir(), TEXT("server/regions/cold-fork.json"))))
+		{
+			const ac::region::Parsed P = ac::region::parse(TCHAR_TO_UTF8(*Text));
+			if (P.file && !P.file->zones.empty()) Z1File = *P.file;
+		}
+		Check(Z1File.IsSet(), TEXT("z2: Cold Fork's file has its zone"));
+		if (!Z1File) return Finish();
+		Check(Mmo->DevClock(TEXT("brood clear\nbrood zone here")), TEXT("z2: the server takes the pilot to The Fork"));
+		Advance();
+		return;
+	}
+	case 2501:
+	{
+		// In Cold Fork, its ground built: the zone reset, an AA tower on the
+		// north arm's rim (it sees the arm, and never shoots a Shardling).
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const TOptional<FAcRegionAround> Ground = Mmo->HereGround();
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (!(U && Ground && Ground->Id == TEXT("cold-fork") && Sets >= 4 && Ready == Sets && Since() > 3.0))
+		{
+			TimedOut(TEXT("z2: in Cold Fork, its ground built"), 120);
+			return;
+		}
+		// The server reads the dev control file a moment later: the next
+		// phase's lines wait for these to be read (one file, overwritten).
+		if (!W4Set)
+		{
+			Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\ncanyon turrets 0 1 1")), TEXT("z2: the zone reset, an AA tower on the north rim"));
+			W4Set = true;
+			W4ShotAt = Now;
+			return;
+		}
+		if (Now - W4ShotAt < 1.5) return;
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(0, ECVF_SetByCode);
+		if (!W4Cam.IsValid())
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+			W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+			W4Cam->GetCameraComponent()->SetFieldOfView(70.f);
+		}
+		W4Set = false;
+		Advance();
+		return;
+	}
+	case 2502:
+	case 2505:
+	case 2509:
+	case 2511:
+	case 2519:
+	{
+		// The server's dev lines, then a few seconds of the game.
+		struct FStep
+		{
+			int32 Phase;
+			const TCHAR* Lines;
+			const TCHAR* What;
+			double Wait;
+		};
+		static const FStep Steps[] = {
+			{2502, TEXT("canyon send 1"), TEXT("z2: the opening wave sent"), 3.5},
+			{2505, TEXT("canyon turrets 1 0 0\ncanyon turrets 2 0 2\ncanyon turrets 1 2 8\ncanyon reset\ncanyon send 1"),
+				TEXT("z2: Gatling Guns on the rims, AA towers by the east arm, wave 1 again"), 2.2},
+			{2509, TEXT("canyon send 4"), TEXT("z2: wave 4 sent, its Gloamwings down the east arm"), 1.8},
+			{2511, TEXT("canyon fail"), TEXT("z2: wave 4 broken through"), 1.5},
+			{2519, TEXT("canyon hold"), TEXT("z2: the last wave beaten"), 1.5},
+		};
+		for (const FStep& S2 : Steps)
+		{
+			if (S2.Phase != T.Phase) continue;
+			if (!W4Set)
+			{
+				if (T.Phase == 2511 && S)
+				{
+					// The zone's turrets now, before the Matriarch comes.
+					Z2Turrets = 0;
+					for (const ac::Structure& B : S->structures)
+						Z2Turrets += (B.kind == ac::StructureKind::gatling || B.kind == ac::StructureKind::sentinel) && B.hp > 0 ? 1 : 0;
+				}
+				Check(Mmo->DevClock(S2.Lines), S2.What);
+				W4Set = true;
+				return;
+			}
+			if (Since() < S2.Wait) return;
+		}
+		W4Set = false;
+		Advance();
+		return;
+	}
+	case 2507:
+	case 2513:
+	case 2515:
+	case 2517:
+	{
+		// Waits on the game: wave 1 beaten; the Matriarch in sight; her first
+		// turret down; the zone reset.
+		if (!S) return;
+		const ac::net::Sky::Zone* Z = AcCanyon::Near(*Mmo);
+		bool bThere = false;
+		const ac::Unit* Queen = nullptr;
+		for (const ac::Unit& X : S->units)
+			if (X.kind == ac::UnitKind::matriarch && X.hp > 0) Queen = &X;
+		int32 Turrets = 0;
+		for (const ac::Structure& B : S->structures)
+			Turrets += (B.kind == ac::StructureKind::gatling || B.kind == ac::StructureKind::sentinel) && B.hp > 0 ? 1 : 0;
+		switch (T.Phase)
+		{
+		case 2507: bThere = Z && Z->state == ac::net::Sky::Zone::State::running && Z->wave == 2 && !Z->ends; break;
+		case 2513: bThere = Queen != nullptr && Since() > 4.0; break;
+		case 2515: bThere = Turrets < Z2Turrets; break;
+		default: bThere = Z && Z->state == ac::net::Sky::Zone::State::waiting && Turrets == 0; break;
+		}
+		static const TCHAR* const Waits[] = {TEXT("z2: wave 1 beaten by the rims' guns"), TEXT("z2: the Matriarch out of the tunnel"),
+			TEXT("z2: her first turret felled"), TEXT("z2: every zone turret down and the zone reset")};
+		const int32 K = T.Phase == 2507 ? 0 : T.Phase == 2513 ? 1 : T.Phase == 2515 ? 2 : 3;
+		if (!bThere)
+		{
+			TimedOut(Waits[K], K == 3 ? 420 : K == 2 ? 200 : 60);
+			return;
+		}
+		Check(true, FString::Printf(TEXT("%s after %.1f s (%d turrets standing)"), Waits[K], Since(), Turrets));
+		Advance();
+		return;
+	}
+	case 2503:
+	case 2504:
+	case 2506:
+	case 2508:
+	case 2510:
+	case 2512:
+	case 2514:
+	case 2516:
+	case 2518:
+	case 2520:
+	{
+		// A free camera in Cold Fork; the HUD's pictures keep it on.
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		if (!Pc || !Terrain || !W4Cam.IsValid() || !Z1File) return;
+		const ac::region::Zone& Z = Z1File->zones[0];
+		const auto G = [&](const ac::Vec2 R) { const FVector2D V = Cell(R.x, R.y); return ac::Vec2(V.X, V.Y); };
+		const auto Ground = [&](const ac::Vec2 Q) { return Terrain->FieldHeight(Q); };
+		ac::Vec2 Prize(0, 0);
+		for (const int64 I : Z.prizeDeposits) Prize = Prize + Z1File->deposits[size_t(I)].at / double(Z.prizeDeposits.size());
+		if (!W4Set)
+		{
+			// Eye and look on the ground (region cells → ground), and their
+			// heights over it.
+			ac::Vec2 Eye = G(Prize + ac::Vec2(0, 9.5)), Look = G(Prize);
+			double EyeUp = 3.5, LookUp = 0.5;
+			switch (T.Phase)
+			{
+			case 2503:  // Behind the AA tower on the west rim, down into the north arm.
+				Eye = G(Z.spots[1] + ac::Vec2(-4, 3));
+				Look = G(ac::Vec2(106.5, 13));
+				EyeUp = 6.0;
+				LookUp = 0.0;
+				break;
+			case 2506:  // Behind the west rim's guns, over the arm.
+				Eye = G(Z.spots[1] + ac::Vec2(-3, 4));
+				Look = G(ac::Vec2(106, 15));
+				EyeUp = 4.0;
+				LookUp = 0.0;
+				break;
+			case 2510:  // From the junction's east side up the east arm, at the flyers' height.
+				Eye = G(ac::Vec2(124, 29));
+				Look = G(ac::Vec2(133, 17));
+				EyeUp = 6.0;
+				LookUp = 3.5;
+				break;
+			case 2514:  // The east arm's floor, at its tunnel.
+				Eye = G(ac::Vec2(122, 23));
+				Look = G(Z.entrances.size() > 1 ? Z.entrances[1].at : Z.entrances[0].at);
+				EyeUp = 7.0;
+				LookUp = 3.5;
+				break;
+			case 2516:  // Her, from the prize's side.
+			{
+				const ac::Unit* Queen = nullptr;
+				if (S)
+					for (const ac::Unit& X : S->units)
+						if (X.kind == ac::UnitKind::matriarch && X.hp > 0) Queen = &X;
+				if (Queen)
+				{
+					const ac::Vec2 Her = Queen->position;
+					const ac::Vec2 Away = ac::normalize(G(Prize) - Her + ac::Vec2(0.01, 0));
+					Eye = Her + Away * 15 + ac::Vec2(-Away.y, Away.x) * 5;
+					Look = Her;
+					EyeUp = 7.0;
+					LookUp = 3.0;
+				}
+				break;
+			}
+			default: break;  // The gorge, the prize ahead: the HUD's pictures.
+			}
+			const FVector EyeW = AcSpace::ToWorld(Eye, Ground(Eye) + EyeUp);
+			const FVector AtW = AcSpace::ToWorld(Look, Ground(Look) + LookUp);
+			W4Cam->SetActorLocationAndRotation(EyeW, (AtW - EyeW).Rotation());
+			W4Set = true;
+			W4ShotAt = Now;
+		}
+		if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		if (Now - W4ShotAt < (T.Phase == 2504 || T.Phase == 2512 || T.Phase == 2520 ? 2.5 : 1.2)) return;
+		W4Set = false;
+		const ac::net::Sky::Zone* Near = AcCanyon::Near(*Mmo);
+		const SAcProgressHud* Hud = nullptr;
+		if (const UAcProgressHudSubsystem* H = UAcProgressHudSubsystem::Get(this)) Hud = H->Widget().Get();
+		switch (T.Phase)
+		{
+		case 2503:
+			Check(Near && Near->ends && Near->left > 0, TEXT("z2: the opening wave out"));
+			ShootClean(TEXT("z2-01-wave-1-down-the-north-arm"), TEXT("the opening wave of Shardlings coming down the north arm"));
+			return;
+		case 2504:
+			Check(Hud && Hud->Canyon().IsSet(), TEXT("z2: the wave panel shown"));
+			if (Hud && Hud->Canyon()) UE_LOG(LogAutocraft, Display, TEXT("mmoshots: z2: panel %s | %s | %s"), *Hud->Canyon()->Name, *Hud->Canyon()->Title, *Hud->Canyon()->Line);
+			Shoot(TEXT("z2-02-the-wave-panel"), TEXT("the wave panel: the opening wave on the prize, the ore it takes against the mark"));
+			return;
+		case 2506:
+			ShootClean(TEXT("z2-03-rim-guns-firing"), TEXT("wave 1 again, the west rim's Gatling Guns firing down into the north arm"));
+			return;
+		case 2508:
+			Check(Hud && Hud->ToastTitles().Num() > 0, TEXT("z2: the beaten wave's toasts"));
+			if (Hud) UE_LOG(LogAutocraft, Display, TEXT("mmoshots: z2: toasts %s"), *FString::Join(Hud->ToastTitles(), TEXT(" | ")));
+			Shoot(TEXT("z2-04-wave-1-beaten"), TEXT("wave 1 beaten: the toast, the pilot's share, the countdown to wave 2"));
+			return;
+		case 2510:
+			ShootClean(TEXT("z2-05-gloamwings-meet-aa-fire"), TEXT("wave 4's Gloamwings over the east arm, the AA towers firing"));
+			return;
+		case 2512:
+			Check(Near && Near->state == ac::net::Sky::Zone::State::failed, TEXT("z2: the zone fallen"));
+			Shoot(TEXT("z2-06-the-fork-has-fallen"), TEXT("the wave broken through: THE FORK HAS FALLEN"));
+			return;
+		case 2514:
+			ShootClean(TEXT("z2-07-the-matriarch-arrives"), TEXT("the Matriarch out of the east tunnel"));
+			return;
+		case 2516:
+			ShootClean(TEXT("z2-08-she-fells-the-turrets"), TEXT("the Matriarch felling the zone's turrets"));
+			return;
+		case 2518:
+			Check(Near && Near->state == ac::net::Sky::Zone::State::waiting && Near->wave == 1, TEXT("z2: the zone back at the opening wave"));
+			Shoot(TEXT("z2-09-the-reset"), TEXT("the reset: the turrets gone, the opening wave waiting again"));
+			return;
+		default:
+			Check(Near && Near->state == ac::net::Sky::Zone::State::held, TEXT("z2: the canyon held"));
+			Shoot(TEXT("z2-10-the-fork-held"), TEXT("THE FORK HELD: no waves for a world day"));
+			return;
+		}
+	}
+	case 2521:
+	{
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		if (Pc && Pilot && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(1, ECVF_SetByCode);
+		if (Since() < 1.0) return;
+		ToggleWorldMap();
+		W4Set = false;
+		Advance();
+		return;
+	}
+	case 2522:
+	{
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map || Since() < 1.5) return;
+		if (!W4Set)
+		{
+			W4Set = true;
+			Check(Map->ShowRegion(TEXT("cold-fork"), 1.0), TEXT("z2: the map on Cold Fork"));
+			return;
+		}
+		if (Since() < 2.5) return;
+		W4Set = false;
+		Shoot(TEXT("z2-11-map-the-fork"), TEXT("the world map on Cold Fork: The Fork's ring, held"));
+		return;
+	}
+	case 2523:
+		ToggleWorldMap();
+		Check(OpenJournalScreen() && JournalScreenWidget().IsValid(), TEXT("z2: L opens the Journal"));
+		Advance();
+		return;
+	case 2524:
+	{
+		const TSharedPtr<SAcJournalScreen> J = JournalScreenWidget();
+		if (!J || Since() < 1.5) return;
+		Check(J->GetInfo().Canyons.Num() == 1, FString::Printf(TEXT("z2: the Journal shows the zone (%d)"), J->GetInfo().Canyons.Num()));
+		Shoot(TEXT("z2-12-journal"), TEXT("the Journal: The Fork's state in its header"));
+		return;
+	}
+	case 2525:
+		CloseJournalScreen();
+		if (W4Cam.IsValid()) W4Cam->Destroy();
+		Check(Shots.Saved + Shots.Skipped >= 12, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsL1

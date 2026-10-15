@@ -9,6 +9,7 @@
 #include "AcLog.h"
 #include "AcHudStyle.h"
 #include "AcLeveling.h"
+#include "AcCanyon.h"
 #include "AcMissions.h"
 #include "AcPilotPawn.h"
 #include "AcPointer.h"
@@ -1086,6 +1087,8 @@ void UAcGameFlowSubsystem::TickWorldMap()
 			if (K.At) C.at = ac::Vec2(K.At->X * P->width, K.At->Y * P->depth);
 			In.contracts.push_back(C);
 		}
+		// The canyon zones' games (Z2).
+		In.zones = AcCanyon::Marks(*Mmo);
 		Info.Items = ac::net::atlas::items(In, Places);
 		// The ringshadow band over every region it crosses now.
 		if (In.sky)
@@ -1855,6 +1858,17 @@ void UAcGameFlowSubsystem::TickJournalScreen()
 	if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this); Audio && Audio->IsNarrating() == false && FPlatformTime::Seconds() > NarrationUntil)
 	{
 		Info.Playing.Reset();
+	}
+	// Z2: the canyon zones' games.
+	if (Mmo->Sky())
+	{
+		for (const ac::net::Sky::Zone& Z : Mmo->Sky()->zones)
+		{
+			const FAcZonePlace* Place = AcCanyon::Place(*Mmo, Z);
+			if (!Place) continue;
+			Info.Canyons.Add(FString::Printf(TEXT("%s  ·  %s  ·  %s"), *Place->Name.ToUpper(), *AcCanyon::Title(Z), *AcCanyon::Line(Z, Mmo->Sky()->time)));
+			Info.bCanyonAlert |= Z.ends.has_value() || Z.state == ac::net::Sky::Zone::State::failed;
+		}
 	}
 	if (const ac::net::ProgressMessage* P = Mmo->Progress())
 	{
