@@ -441,7 +441,8 @@
       $("#agents-labels tbody").replaceChildren(...data.labels.map((l) => {
         const paths = el("details", {}, el("summary", { textContent: `${l.paths.length} path${l.paths.length === 1 ? "" : "s"}` }),
           el("ol", {}, ...l.paths.map((p) => el("li", {}, el("code", { textContent: p.path }),
-            ...(p.status >= 400 ? [" ", el("span", { class: "status", textContent: String(p.status) })] : []), " " + fmt(p.hits)))));
+            " ", el("span", { class: "status s" + String(p.status).charAt(0), textContent: p.status ? String(p.status) : "?",
+              title: p.status ? "" : "fetched before the status was recorded (09:28 UTC, 15 October 2026)" }), " " + fmt(p.hits)))));
         return row(l.label, l.class, fmt(l.hits), fmt(l.probes), fmt(l.strings), paths);
       }));
       $("#agents-unlabelled tbody").replaceChildren(...(data.unlabelled.length
