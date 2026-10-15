@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The hunt: the realm's raid on the Matriarch
+
+15 October 2026 · M10 · 5 pictures
+
+A human calls THE HUNT at a Citadel, free, once a world day. The frontier's defenders and every pilot's guard mercenaries travel to the ring round her nest by the realm's rules, nobody teleports, and go in together at two minutes.
+
+Read it: https://ringshadow.com/blog/the-hunt
+
 ## Two pilots on one world
 
 15 October 2026 · M10 · 17 pictures
