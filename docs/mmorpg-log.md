@@ -763,3 +763,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N X2 shots x2-01..03; core 505, net 95, server 325; clean checkout.
 - I protocol 31 and schema 23: the user's game and server both need the new build (rebuilt here; the user restarts).
 - T web: the away-report post live at /blog/away-report (3ca3c9f).
+- T S4 done b40acd6: realm standings over the week (ore, bugs, waves held, built) on the REALM tab, a rank line in map tooltips, the week-end toast and KSTR line; protocol 33, schema 24.
+- D S4: KSTR's week line is one generic take; the toast carries the top hauler's name and ore (callsigns don't speak well).
+- I S4: a human's turret kills now count as bugs felled (as the frontier's did); hunt missions still count only Prospector kills.
+- N S4: frontier hauler booked 1,485 ore/h vs B2's curve 1,489; a week at most ~6,930; core 505, net 97, server 331; clean checkout.
+- D numbering: wt2's W5 takes protocol 34 on rebase; N4 takes 35 and schema 25.
+- D N4: mercenaries get a role at hire, miner (default) or guard, switchable on MERCS; guards answer the hunt, mine otherwise, same wage.
