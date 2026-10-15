@@ -8,6 +8,7 @@
 import { handleApi, handlePage, json } from "./admin.js";
 import { handleCollect } from "./collect.js";
 import { Bucket, isCounted, serverPoint } from "./hits.js";
+import { dayBefore, rollupDay } from "./rollup.js";
 import { loadRules } from "./rules.js";
 
 const bucket = new Bucket();
@@ -40,5 +41,11 @@ export default {
     const response = await env.ASSETS.fetch(request);
     ctx.waitUntil(count(env, request, response).catch((err) => console.error("count failed", err)));
     return response;
+  },
+
+  // The nightly rollup (wrangler.toml, cron 02:10 UTC): yesterday into D1.
+  async scheduled(controller, env, ctx) {
+    const day = dayBefore(controller.scheduledTime);
+    ctx.waitUntil(rollupDay(env, day).then((r) => console.log("rollup", JSON.stringify(r))));
   },
 };

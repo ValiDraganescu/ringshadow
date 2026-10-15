@@ -21,6 +21,7 @@
       <a href="#visitors">Visitors</a>
       <a href="#events">Events</a>
       <a href="#agents">Agents</a>
+      <a href="#history">History</a>
       <a href="#admins">Admins</a>
     </nav>
     <span class="who"></span>
@@ -173,6 +174,32 @@
           <thead><tr><th>Label</th><th>Class</th><th>Match</th><th>Pattern</th><th>Priority</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+    </section>
+
+    <section id="history" class="view" hidden>
+      <h2>History</h2>
+      <p class="note">Every day rolled up at 02:10 UTC into the admin's own database, kept after Analytics Engine's 90 days. Views and visitors are people (the tracker); agent fetches leave out browsers' page fetches.</p>
+      <form id="history-range" class="inline" novalidate>
+        <label>From <input name="from" type="date"></label>
+        <label>To <input name="to" type="date"></label>
+        <button type="submit">Show</button>
+      </form>
+      <p class="summary" role="status" aria-live="polite"></p>
+      <figure class="chart" id="history-chart">
+        <svg viewBox="0 0 800 220" role="img" aria-label="Views and visitors a day, from the rollups"></svg>
+        <figcaption class="legend"><span class="key"><i class="k-views"></i>views</span><span class="key"><i class="k-visitors"></i>visitors</span></figcaption>
+      </figure>
+      <div class="part">
+        <h3>Days</h3>
+        <table class="list" id="history-days"><thead><tr><th>Day</th><th>Views</th><th>Visitors</th><th>Agent fetches</th><th>Events</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="cols">
+        <div class="part"><h3>Pages</h3><table class="list" id="hist-path"><thead><tr><th>Page</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+        <div class="part"><h3>Referrers</h3><table class="list" id="hist-referrer"><thead><tr><th>From</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+        <div class="part"><h3>Countries</h3><table class="list" id="hist-country"><thead><tr><th>Country</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
+        <div class="part"><h3>Agents</h3><table class="list" id="hist-label"><thead><tr><th>Label</th><th>Fetches</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="part"><h3>Events</h3><table class="list" id="hist-event"><thead><tr><th>Event</th><th>Count</th><th></th></tr></thead><tbody></tbody></table></div>
       </div>
     </section>
 

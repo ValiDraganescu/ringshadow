@@ -165,6 +165,13 @@ export const COLUMNS = {
   utmMedium: "blob15",
 };
 
+export function pageTotalsSql() {
+  return `SELECT double1 AS isVisitor, double2 AS isBounce, COUNT(*) AS count
+FROM ${DATASET}
+${where("page")}
+GROUP BY isVisitor, isBounce`;
+}
+
 export function pageSeriesSql(bucket) {
   return `SELECT ${bucketOf(bucket)} AS t, double1 AS isVisitor, double2 AS isBounce, COUNT(*) AS count
 FROM ${DATASET}

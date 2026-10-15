@@ -3,6 +3,7 @@
 // See docs/website-analytics.md, "The admin".
 
 import { compileRules } from "./agents.js";
+import { history } from "./rollup.js";
 import { addRule, changeRule, deleteRule, listRules, testRules } from "./rules.js";
 import {
   DAY, agentsView, byKeyFrom, droppedSql, eventsFrom, eventsSql, pageByColumnSql, pageSeriesSql, parseRange,
@@ -278,6 +279,17 @@ async function peopleStats(request, env, view) {
   }
 }
 
+// The History view: D1's daily rollups, any span of days (default a year).
+async function historyStats(request, env) {
+  const q = new URL(request.url).searchParams;
+  const today = new Date().toISOString().slice(0, 10);
+  const to = q.get("to") || today;
+  const from = q.get("from") || new Date(Date.parse(to + "T00:00:00Z") - 365 * DAY).toISOString().slice(0, 10);
+  const date = /^\d{4}-\d{2}-\d{2}$/;
+  if (!date.test(from) || !date.test(to) || from > to) return json({ error: "History needs from and to dates, from first." }, 400);
+  return json(await history(env, from, to));
+}
+
 const answer = (r) => json(r.body, r.status);
 
 // Routes under /api/admin/. Writes need an Origin from this site; everything
@@ -305,6 +317,7 @@ export async function handleApi(request, env) {
   if (route === "GET /api/admin/stats/agents") return agentsStats(request, env);
   const view = route.match(/^GET \/api\/admin\/stats\/(overview|pages|sources|visitors|events)$/);
   if (view) return peopleStats(request, env, view[1]);
+  if (route === "GET /api/admin/history") return historyStats(request, env);
   if (route === "GET /api/admin/rules") return json({ rules: await listRules(env) });
   if (route === "POST /api/admin/rules/test") return json(await testRules(env, (await readJson(request))?.ua));
   if (route === "POST /api/admin/rules") return answer(await addRule(env, await readJson(request), session.admin_id));

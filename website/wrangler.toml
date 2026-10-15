@@ -35,6 +35,10 @@ database_name = "ringshadow-admin"
 database_id = "b342d584-6121-41c3-b627-827eb4d9fad3"
 migrations_dir = "migrations"
 
+# The nightly rollup into D1 (src/rollup.js): yesterday, at 02:10 UTC.
+[triggers]
+crons = ["10 2 * * *"]
+
 [[routes]]
 pattern = "ringshadow.com"
 custom_domain = true

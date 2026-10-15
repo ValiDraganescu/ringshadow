@@ -265,6 +265,37 @@
       }) : [el("p", { textContent: "No events in this range." })]));
     }
 
+    // --- History
+
+    const historyForm = $("#history-range");
+    async function loadHistory() {
+      const v = values(historyForm);
+      const q = new URLSearchParams(Object.fromEntries(Object.entries(v).filter(([, x]) => x)));
+      const summary = $("#history .summary");
+      summary.textContent = "Loading…";
+      const { ok, data } = await api("history?" + q);
+      if (!ok) {
+        summary.textContent = data.error || "The history didn't load.";
+        return;
+      }
+      summary.textContent = `${data.from} to ${data.to} · ${fmt(data.days.length)} day${data.days.length === 1 ? "" : "s"} rolled up`;
+      drawPeople($("#history-chart svg"), data.days.map((d) => ({ t: d.day, views: d.views, visitors: d.visitors })), "day");
+      $("#history-days tbody").replaceChildren(...(data.days.length
+        ? [...data.days].reverse().map((d) => row(d.day, fmt(d.views), fmt(d.visitors), fmt(d.agents), fmt(d.events)))
+        : [row("No rollups yet: the first runs at 02:10 UTC.", "", "", "", "")]));
+      const tops = (sel, list = [], third = (r) => fmt(r.visitors ?? 0)) =>
+        $(sel + " tbody").replaceChildren(...(list.length ? list.map((r) => row(r.key || "(none)", fmt(r.hits), third(r))) : [row("Nothing yet.", "", "")]));
+      tops("#hist-path", data.top["page.path"]);
+      tops("#hist-referrer", data.top["page.referrer"]);
+      tops("#hist-country", data.top["page.country"]);
+      tops("#hist-label", data.top["server.label"], () => "");
+      tops("#hist-event", data.top["event.event"], () => "");
+    }
+    historyForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      loadHistory();
+    });
+
     // --- Agents
 
     const CLASS_ORDER = ["ai-crawler", "ai-assistant", "search", "monitor", "other-bot", "unlabelled"];
@@ -411,6 +442,7 @@
       visitors: loadVisitors,
       events: loadEvents,
       agents: () => Promise.all([loadAgents(), loadRules()]),
+      history: loadHistory,
       admins: loadAdmins,
     };
     const RANGED = ["pages", "sources", "visitors", "events", "agents"];
