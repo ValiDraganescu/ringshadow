@@ -428,6 +428,7 @@ void SAcWorldMap::EnsureView(const FVector2f ViewSize) const
 	}
 	if (RegionToShow)
 	{
+		const ac::net::atlas::View Was = MapView;
 		if (const ac::net::atlas::Place* P = ac::net::atlas::placeOf(Places, std::string(TCHAR_TO_UTF8(**RegionToShow))))
 		{
 			const FVector2f Room = ViewSize - FVector2f(0, HeaderH + FooterH);
@@ -437,12 +438,43 @@ void SAcWorldMap::EnsureView(const FVector2f ViewSize) const
 			MapView.centre.y -= (HeaderH - FooterH) / 2 / MapView.scale;
 		}
 		RegionToShow.Reset();
+		if (GlideSeconds > 0)
+		{
+			GlideFrom = Was;
+			GlideTo = MapView;
+			GlideStart = FPlatformTime::Seconds();
+		}
 	}
+	if (GlideSeconds > 0)
+	{
+		// Eased in and out; the scale on a log curve and the centre by the
+		// inverse scale, so the point zoomed to drifts evenly to the middle.
+		const double K = FMath::Clamp((FPlatformTime::Seconds() - GlideStart) / GlideSeconds, 0.0, 1.0);
+		const double E = K * K * (3 - 2 * K);
+		const double A = GlideFrom.scale, B = GlideTo.scale;
+		MapView.scale = FMath::Exp(FMath::Lerp(FMath::Loge(A), FMath::Loge(B), E));
+		const double Along = FMath::IsNearlyEqual(A, B) ? E : (1 / A - 1 / MapView.scale) / (1 / A - 1 / B);
+		MapView.centre = GlideFrom.centre + (GlideTo.centre - GlideFrom.centre) * Along;
+		if (K >= 1) GlideSeconds = 0;
+	}
+}
+
+bool SAcWorldMap::GlideToRegion(const FString& RegionId, const double Fill, const double Seconds)
+{
+	if (!ShowRegion(RegionId, Fill)) return false;
+	GlideSeconds = FMath::Max(0.0, Seconds);
+	// Painted every frame while it glides.
+	RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateLambda([this](double, float) {
+		Invalidate(EInvalidateWidgetReason::Paint);
+		return GlideSeconds > 0 || RegionToShow ? EActiveTimerReturnType::Continue : EActiveTimerReturnType::Stop;
+	}));
+	return true;
 }
 
 void SAcWorldMap::SetView(const ac::Vec2 Centre, const double Scale)
 {
 	bViewSet = true;
+	GlideSeconds = 0;
 	MapView.centre = Centre;
 	MapView.scale = FMath::Clamp(Scale, ac::net::atlas::View::minScale, ac::net::atlas::View::maxScale);
 	Invalidate(EInvalidateWidgetReason::Paint);
@@ -452,6 +484,7 @@ void SAcWorldMap::ShowWorld()
 {
 	bViewSet = true;
 	bWorldToShow = true;
+	GlideSeconds = 0;
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -459,6 +492,7 @@ bool SAcWorldMap::ShowRegion(const FString& RegionId, const double Fill)
 {
 	if (!ac::net::atlas::placeOf(Places, std::string(TCHAR_TO_UTF8(*RegionId)))) return false;
 	bViewSet = true;
+	GlideSeconds = 0;
 	RegionToShow = RegionId;
 	RegionFill = Fill;
 	Invalidate(EInvalidateWidgetReason::Paint);
@@ -617,6 +651,7 @@ FReply SAcWorldMap::OnMouseMove(const FGeometry& Geometry, const FPointerEvent& 
 			MapView.pan(V2(Local - Pointer));
 			MapView.clamp(WorldBounds);
 			bViewSet = true;
+			GlideSeconds = 0;
 		}
 	}
 	if (FVector2f::Distance(Local, Pointer) > 0.5f) Scripted.Reset();
@@ -633,6 +668,7 @@ FReply SAcWorldMap::OnMouseWheel(const FGeometry& Geometry, const FPointerEvent&
 	const float Delta = Event.GetWheelDelta();
 	if (Delta != 0 && Size.X > 0)
 	{
+		GlideSeconds = 0;
 		MapView.zoomAt(V2(Local), V2(Size), FMath::Pow(ac::net::atlas::View::notch, Delta), Floor(Size));
 		MapView.clamp(WorldBounds);
 		bViewSet = true;

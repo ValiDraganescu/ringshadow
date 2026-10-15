@@ -311,6 +311,12 @@
 // `shot: recording starts at world T s`, to find it in the clip. Leave out
 // -UseFixedTimeStep: the server runs on the wall clock, so the client must
 // too; the clip's rate is the frames over the recording's wall seconds.
+// -AcMmoShotsClipDwell=S holds each moment S s on screen before the set goes
+// on (the world runs on meanwhile): a screen that closes at once (the
+// Journal, a tooltip) stays long enough to read.
+// The HUD's moments keep the HUD in the recording (with -AcShotUI), the
+// clean ones (the free camera's scenery) drop it; the M2 set's zoom into
+// Prospect Landing glides there over 4.5 s (SAcWorldMap::GlideToRegion).
 //
 // Its own folders (never the player's): the pilot key and the world's save
 // in DIR/mmo, the window game's sessions in DIR/save (AcMmo.cpp, AcSaves.cpp).
@@ -592,6 +598,8 @@ namespace
 	bool Clipping = false;
 	/// The set ended while recording: the recorder ends the run.
 	bool ClipEnded = false;
+	/// -AcMmoShotsClipDwell=S: the set waits until then after a moment.
+	double ClipDwellUntil = 0;
 
 	/// -AcMmoShotsOnly=sf-02,sf-08 (names or numbers, comma-separated): the
 	/// moments to shoot; the others are passed over (counted as skipped),
@@ -711,6 +719,12 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	};
 
 	if (ClipEnded) return;
+	// -AcMmoShotsClipDwell: the moment held on screen; the phase's clock starts after it.
+	if (Clipping && Now < ClipDwellUntil)
+	{
+		T.PhaseAt = Now;
+		return;
+	}
 	// -AcMmoShotsB1: after a drill stop, when sparks were last alive (every
 	// frame, a picture being written or not).
 	if (B1StoppedAt >= 0 && Sim)
@@ -742,6 +756,22 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		return;
 	}
+	// -AcMmoShotsClip: a moment is a mark in the recording, not a picture.
+	// The recording keeps the HUD for the HUD's pictures (with -AcShotUI)
+	// and drops it for the clean ones (the free camera's scenery).
+	auto Clip = [&](const TCHAR* Name, const FString& What, const bool bUI) {
+		if (!ClipHeld && !Clipping) return false;
+		UAcShotSubsystem* Shot = UAcShotSubsystem::Get(this);
+		if (!Clipping && Shot) Shot->Release();
+		Clipping = true;
+		ClipHeld = false;
+		if (Shot) Shot->SetShowUI(bUI && FParse::Param(FCommandLine::Get(), TEXT("AcShotUI")));
+		Shots.Saved += 1;
+		UE_LOG(LogAutocraft, Display, TEXT("mmoshots: clip: %s at world %.3f s: %s"), Name, GetWorld()->GetTimeSeconds(), *What);
+		Advance();
+		if (double Dwell = 0; FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsClipDwell="), Dwell) && Dwell > 0) ClipDwellUntil = Now + Dwell;
+		return true;
+	};
 	// Asks for a picture with the HUD; the phase moves on once it is written.
 	auto Shoot = [&](const TCHAR* Name, const FString& What) {
 		if (!Wanted(Name))
@@ -751,17 +781,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		}
-		if (ClipHeld || Clipping)
-		{
-			UAcShotSubsystem* Shot = UAcShotSubsystem::Get(this);
-			if (!Clipping && Shot) Shot->Release();
-			Clipping = true;
-			ClipHeld = false;
-			Shots.Saved += 1;
-			UE_LOG(LogAutocraft, Display, TEXT("mmoshots: clip: %s at world %.3f s: %s"), Name, GetWorld()->GetTimeSeconds(), *What);
-			Advance();
-			return;
-		}
+		if (Clip(Name, What, /*bUI*/ true)) return;
 		Shots.Pending = FPaths::Combine(Shots.Dir, FString(Name) + TEXT(".png"));
 		IFileManager::Get().Delete(*Shots.Pending, false, true, true);
 		Shots.LastSize = -1;
@@ -778,6 +798,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			Advance();
 			return;
 		}
+		if (Clip(Name, What, /*bUI*/ false)) return;
 		Shots.Pending = FPaths::Combine(Shots.Dir, FString(Name) + TEXT(".png"));
 		IFileManager::Get().Delete(*Shots.Pending, false, true, true);
 		Shots.LastSize = -1;
@@ -3504,9 +3525,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		C2Price = ac::Shop::blueprintPrice(ac::StructureKind::habDome, P->bought.count(ac::StructureKind::habDome) ? P->bought.at(ac::StructureKind::habDome) : 0);
 		const auto Copies = P->blueprints.find(ac::StructureKind::habDome);
 		C2Copies = Copies == P->blueprints.end() ? 0 : Copies->second;
-		// The Hab Dome's blueprint (key 4 on the SHOP tab since D2's gatling gun),
-		// a repair kit, a shield charge.
-		Check(W->Key(EKeys::Four), TEXT("c2: key 4 buys a Hab Dome blueprint"));
+		// The Hab Dome's blueprint (its key on the SHOP tab: its line's
+		// number, which moves as blueprints join), a repair kit, a shield charge.
+		static const FKey Digits[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight};
+		int32 Dome = INDEX_NONE;
+		for (int32 X = 0; X < W->GetInfo().Blueprints.Num() && X < 8; ++X)
+			if (W->GetInfo().Blueprints[X].Name == TEXT("Hab Dome")) Dome = X;
+		Check(Dome != INDEX_NONE && W->Key(Digits[Dome]), FString::Printf(TEXT("c2: key %d buys a Hab Dome blueprint"), Dome + 1));
 		Mmo->BuyItem(ac::Item::repairKit);
 		W->Buy(true, int32(ac::Item::shieldCharge));
 		Advance();
@@ -3872,11 +3897,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (!Map) return;
 		if (!M2Zoomed)
 		{
+			if (Clipping && Since() < 2.0) return;  // the world a moment first
 			M2Zoomed = true;
-			Check(Map->ShowRegion(TEXT("start")), TEXT("m2: zoomed into Prospect Landing"));
+			// A clip glides there slowly (the showreel); a picture jumps.
+			Check(Clipping ? Map->GlideToRegion(TEXT("start"), 1.0, 4.5) : Map->ShowRegion(TEXT("start")), TEXT("m2: zoomed into Prospect Landing"));
 			return;
 		}
-		if (Since() < 1.0) return;
+		if (Since() < (Clipping ? 5.5 : 1.0)) return;
 		Shoot(TEXT("m2-02-prospect-landing"), TEXT("Prospect Landing: the pilot, the mercenary, the Citadel, the deposits, the pad, the mission"));
 		return;
 	}

@@ -141,6 +141,10 @@ public:
 	void SetView(ac::Vec2 Centre, double Scale);
 	void ShowWorld();
 	bool ShowRegion(const FString& RegionId, double Fill = 1.0);
+	/// The same, gliding there from the view now over `Seconds` (eased in
+	/// and out, the zoom even on the eye; a pan, a wheel or another view
+	/// ends it): the showreel's slow zoom (unreal/Tools/showreel).
+	bool GlideToRegion(const FString& RegionId, double Fill, double Seconds);
 	bool HoverWhere(TFunctionRef<bool(const ac::net::atlas::Item&)> Matches);
 	FString TooltipText() const;
 	/// The item hovered (null: none), and what the map shows now.
@@ -222,6 +226,11 @@ private:
 	mutable TOptional<FString> RegionToShow;
 	mutable double RegionFill = 1.0;
 	mutable bool bWorldToShow = false;
+	/// GlideToRegion: the length (0: no glide), from and to, its start.
+	mutable double GlideSeconds = 0;
+	mutable ac::net::atlas::View GlideFrom;
+	mutable ac::net::atlas::View GlideTo;
+	mutable double GlideStart = 0;
 
 	/// The pointer (widget points), inside or not; a drag under way.
 	FVector2f Pointer = FVector2f::ZeroVector;
