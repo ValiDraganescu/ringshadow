@@ -1121,6 +1121,24 @@ bool FAcMmoClient::UpgradeCitadel(const ac::DefenceStat Stat, FString* Why)
 	return true;
 }
 
+bool FAcMmoClient::StartProject(const ac::RealmProject::Kind Kind, FString* Why)
+{
+	if (!CanAskSkills(Why)) return false;
+	const uint32 Id = Net->startProject(uint8_t(Kind));
+	LastCitadelRefusal.Reset();
+	CitadelAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: citadel ask %u: start the realm's %s"), Id, UTF8_TO_TCHAR(ac::RealmProject::title(Kind)));
+	return true;
+}
+
+bool FAcMmoClient::ProjectOn(const ac::RealmProject::Kind Kind) const
+{
+	const ac::net::ProgressMessage* P = Progress();
+	const size_t K = size_t(Kind);
+	if (!P || K >= P->projects.size() || !(P->projects[K].ends > 0)) return false;
+	return !Sky() || P->projects[K].ends > Sky()->time;
+}
+
 bool FAcMmoClient::UpgradeTurret(const int64 Turret, const ac::DefenceStat Stat, FString* Why)
 {
 	if (!CanAskSkills(Why)) return false;
@@ -1398,7 +1416,9 @@ std::optional<int64> FAcMmoClient::FlightPrice(const FString& RegionId) const
 	const bool bDock = Near && Near->Within() && Near->Building == ac::StructureKind::spacedock;
 	for (const ac::net::WorldMessage::Region& To : W->regions)
 	{
-		if (Text(To.id) == RegionId) return ac::Flight::price(ac::Flight::steps(From->column, From->row, To.column, To.row), bDock, Ringwalker());
+		if (Text(To.id) == RegionId)
+			return ac::Flight::price(ac::Flight::steps(From->column, From->row, To.column, To.row), bDock, Ringwalker(),
+				ProjectOn(ac::RealmProject::Kind::beacon));
 	}
 	return std::nullopt;
 }

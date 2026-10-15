@@ -18,6 +18,8 @@ namespace
 	constexpr float FootH = 56;
 	constexpr float ButtonW = 120;
 	constexpr float ButtonH = 50;
+	/// R2: the REALM tab's projects, under the wallet and the donations.
+	constexpr float ProjectsH = 196;
 
 	enum ERow : int32
 	{
@@ -32,6 +34,7 @@ namespace
 		RowDismiss = 9,
 		RowField = 10,
 		RowUpgrade = 11,
+		RowProject = 12,
 	};
 
 	// The mercenaries' rows (H2).
@@ -147,6 +150,7 @@ void SAcCitadelScreen::Construct(const FArguments& InArgs)
 	OnTakeDelegate = InArgs._OnTake;
 	OnMercDelegate = InArgs._OnMerc;
 	OnUpgradeDelegate = InArgs._OnUpgrade;
+	OnProjectDelegate = InArgs._OnProject;
 	OnCloseDelegate = InArgs._OnClose;
 	SetCanTick(false);
 	OpenedAt = Clock();
@@ -182,7 +186,8 @@ void SAcCitadelScreen::SetRefusal(const FString& Why)
 void SAcCitadelScreen::SetKept()
 {
 	Refusal.Reset();
-	Kept = !Upgraded.IsEmpty() ? FString::Printf(TEXT("Upgraded: the corner turrets' %s. Paid from the realm wallet."), *Upgraded)
+	Kept = !Started.IsEmpty() ? FString::Printf(TEXT("Started: the realm's %s, for a world day. Paid from the realm wallet."), *Started)
+		: !Upgraded.IsEmpty() ? FString::Printf(TEXT("Upgraded: the corner turrets' %s. Paid from the realm wallet."), *Upgraded)
 		: !MercAsked.IsEmpty() ? MercAsked
 		: !Signed.IsEmpty() ? FString::Printf(TEXT("Signed up: %s. It's in your Journal (L)."), *Signed)
 		: !Bought.IsEmpty()
@@ -228,6 +233,7 @@ void SAcCitadelScreen::Buy(const bool bItem, const int32 Index)
 	Bought = bItem ? X.Name : X.Name + TEXT(" blueprint");
 	MercAsked.Reset();
 	Upgraded.Reset();
+	Started.Reset();
 	OnBuyDelegate.ExecuteIfBound(bItem, Index);
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
@@ -266,6 +272,7 @@ void SAcCitadelScreen::Donate(const int32 Index)
 	Signed.Reset();
 	MercAsked.Reset();
 	Upgraded.Reset();
+	Started.Reset();
 	OnDonateDelegate.ExecuteIfBound(Asked.Key, Asked.Value);
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
@@ -294,6 +301,7 @@ void SAcCitadelScreen::Take(const int32 Index)
 	Signed = Info.Offers[Index].Title;
 	MercAsked.Reset();
 	Upgraded.Reset();
+	Started.Reset();
 	OnTakeDelegate.ExecuteIfBound(Index);
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
@@ -339,6 +347,7 @@ void SAcCitadelScreen::Hire()
 	Bought.Reset();
 	Signed.Reset();
 	Upgraded.Reset();
+	Started.Reset();
 	MercAsked = FString::Printf(TEXT("Hired: on its way to the field nearest the Citadel. Paid %s."), *Purse(Info.MercFeeOre, Info.MercFeeHydrogen));
 	OnMercDelegate.ExecuteIfBound(0, INDEX_NONE, INDEX_NONE);
 	Invalidate(EInvalidateWidgetReason::Paint);
@@ -357,6 +366,7 @@ void SAcCitadelScreen::Send(const int32 Index)
 	Bought.Reset();
 	Signed.Reset();
 	Upgraded.Reset();
+	Started.Reset();
 	MercAsked = FString::Printf(TEXT("%s is off to %s."), *Info.Mercs[Index].Name, *Info.MercFields[Picked].Name);
 	OnMercDelegate.ExecuteIfBound(2, Index, Picked);
 	Invalidate(EInvalidateWidgetReason::Paint);
@@ -375,6 +385,7 @@ void SAcCitadelScreen::Dismiss(const int32 Index)
 	Bought.Reset();
 	Signed.Reset();
 	Upgraded.Reset();
+	Started.Reset();
 	MercAsked = FString::Printf(TEXT("%s was let go. No refund."), *Info.Mercs[Index].Name);
 	OnMercDelegate.ExecuteIfBound(1, Index, INDEX_NONE);
 	Invalidate(EInvalidateWidgetReason::Paint);
@@ -420,6 +431,40 @@ void SAcCitadelScreen::Upgrade(const int32 Index)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+FString SAcCitadelScreen::ProjectWhyNot(const int32 Index) const
+{
+	if (!Info.bKnown) return TEXT("Waiting for the server…");
+	if (!Info.Projects.IsValidIndex(Index)) return TEXT("Nothing there");
+	const FAcProjectLine& X = Info.Projects[Index];
+	if (X.bRunning) return FString::Printf(TEXT("The realm's %s runs already"), *X.Title.Left(1).Append(X.Title.Mid(1).ToLower()));
+	if (!Info.ProjectsWhyNot.IsEmpty()) return Info.ProjectsWhyNot;
+	if (X.Ore > Info.RealmOre)
+		return FString::Printf(TEXT("The realm wallet is short: %s ore needed, it has %s"), *Grouped(X.Ore), *Grouped(Info.RealmOre));
+	if (X.Hydrogen > Info.RealmHydrogen)
+		return FString::Printf(TEXT("The realm wallet is short: %s MH needed, it has %s"), *Grouped(X.Hydrogen), *Grouped(Info.RealmHydrogen));
+	return FString();
+}
+
+void SAcCitadelScreen::StartProject(const int32 Index)
+{
+	if (const FString Why = ProjectWhyNot(Index); !Why.IsEmpty())
+	{
+		SetRefusal(Why);
+		return;
+	}
+	const FAcProjectLine& X = Info.Projects[Index];
+	Refusal.Reset();
+	Kept.Reset();
+	Asked = {0, 0};
+	Bought.Reset();
+	Signed.Reset();
+	MercAsked.Reset();
+	Upgraded.Reset();
+	Started = X.Title.Left(1).Append(X.Title.Mid(1).ToLower());
+	OnProjectDelegate.ExecuteIfBound(Index);
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcCitadelScreen::Close() { OnCloseDelegate.ExecuteIfBound(); }
 
 bool SAcCitadelScreen::Key(const FKey& InKey)
@@ -433,8 +478,20 @@ bool SAcCitadelScreen::Key(const FKey& InKey)
 		EKeys::Nine};
 	static const FKey Numpad[] = {EKeys::NumPadOne, EKeys::NumPadTwo, EKeys::NumPadThree, EKeys::NumPadFour, EKeys::NumPadFive,
 		EKeys::NumPadSix, EKeys::NumPadSeven, EKeys::NumPadEight, EKeys::NumPadNine};
-	// REALM: 1-6 give; SHOP: 1-9 buy a blueprint; MISSIONS: 1-6 sign up;
-	// DEFENCE: 1-3 upgrade; MERCS: 1-8 pick a field.
+	// REALM: 1-6 give, 7-0 start a project (R2); SHOP: 1-9 buy a
+	// blueprint; MISSIONS: 1-6 sign up; DEFENCE: 1-3 upgrade; MERCS: 1-8
+	// pick a field.
+	if (CurrentTab == ETab::Realm)
+	{
+		static const FKey ProjectKeys[] = {EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
+		static const FKey ProjectPad[] = {EKeys::NumPadSeven, EKeys::NumPadEight, EKeys::NumPadNine, EKeys::NumPadZero};
+		for (int32 I = 0; I < FMath::Min(Info.Projects.Num(), 4); ++I)
+			if (InKey == ProjectKeys[I] || InKey == ProjectPad[I])
+			{
+				StartProject(I);
+				return true;
+			}
+	}
 	const int32 Count = CurrentTab == ETab::Realm ? DonateButtons
 		: CurrentTab == ETab::Shop ? Info.Blueprints.Num()
 		: CurrentTab == ETab::Mercs ? FMath::Min(Info.MercFields.Num(), FieldRows)
@@ -480,6 +537,7 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 	const float Top = HeaderH + 16;
 	WalletBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + WalletW, Top + BodyH));
 	DonateBox = FBox2f(FVector2f(Pad + WalletW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
+	ProjectsBox = FBox2f(FVector2f(Pad, Top + BodyH + Gap), FVector2f(PanelW - Pad, Top + BodyH + Gap + ProjectsH));
 	BlueprintBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + BlueprintsW, Top + BodyH));
 	ItemBox = FBox2f(FVector2f(Pad + BlueprintsW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
 	const float TierW = (PanelW - 2 * Pad - 2 * Gap) / 3;
@@ -538,6 +596,14 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 			const float Y = DonateBox.Min.Y + 112 + (I / 3) * (ButtonH + 22);
 			Add(FBox2f(FVector2f(X, Y), FVector2f(X + ButtonW, Y + ButtonH)), RowDonate, I);
 		}
+		// R2: a START at the foot of each project's card.
+		const float CardW = (PanelW - 2 * Pad - 3 * Gap) / 4;
+		for (int32 I = 0; I < FMath::Min(Info.Projects.Num(), 4); ++I)
+		{
+			const float X = Pad + I * (CardW + Gap);
+			Add(FBox2f(FVector2f(X + CardW - 14 - 96, ProjectsBox.Max.Y - 14 - 32), FVector2f(X + CardW - 14, ProjectsBox.Max.Y - 14)),
+				RowProject, I);
+		}
 	}
 	else
 	{
@@ -553,7 +619,9 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 			Add(FBox2f(FVector2f(ItemBox.Max.X - 18 - BuyW, Y), FVector2f(ItemBox.Max.X - 18, Y + BuyH)), RowBuyItem, I);
 		}
 	}
-	FootBox = FBox2f(FVector2f(Pad, WalletBox.Max.Y + 16), FVector2f(PanelW - Pad, WalletBox.Max.Y + 16 + FootH));
+	// R2: the REALM tab's projects under its body.
+	const float BodyEnd = CurrentTab == ETab::Realm ? ProjectsBox.Max.Y : WalletBox.Max.Y;
+	FootBox = FBox2f(FVector2f(Pad, BodyEnd + 16), FVector2f(PanelW - Pad, BodyEnd + 16 + FootH));
 	PanelSize = FVector2f(PanelW, FootBox.Max.Y + 18);
 	PanelScale = FMath::Clamp(FMath::Min((ViewSize.X - 32) / PanelSize.X, (ViewSize.Y - 32) / PanelSize.Y), 0.3f, 1.0f);
 	PanelOrigin = ((ViewSize - PanelSize * PanelScale) * 0.5f).RoundToVector();
@@ -585,6 +653,7 @@ void SAcCitadelScreen::Press(const FTarget& T)
 	case RowDismiss: Dismiss(T.Index); break;
 	case RowField: PickField(T.Index); break;
 	case RowUpgrade: Upgrade(T.Index); break;
+	case RowProject: StartProject(T.Index); break;
 	case RowClose: Close(); break;
 	default: break;
 	}
@@ -794,6 +863,56 @@ void SAcCitadelScreen::PaintRealm(FSlateWindowElementList& Out, const int32 L, c
 	{
 		Label(Info.DonateWhyNot, 14, FAcHudStyle::Amber(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold)
 			.Paint(Out, L + 2, P, FVector2f(D.Min.X + 18, D.Max.Y - 34));
+	}
+
+	// R2: the realm's projects, a card each: what it does, its price from
+	// the realm wallet, or the one running (who started it, time left).
+	const float CardW = (PanelW - 2 * Pad - 3 * Gap) / 4;
+	Label(TEXT("REALM PROJECTS  ·  a world day each, paid from the realm wallet"), 11, Dim(), EAcHAlign::Left, EAcVAlign::Baseline,
+		EAcFontWeight::SemiBold, 1.2f).Paint(Out, L + 2, P, FVector2f(Pad + 2, ProjectsBox.Min.Y + 2));
+	static const TCHAR* const Keys[] = {TEXT("7"), TEXT("8"), TEXT("9"), TEXT("0")};
+	auto Find = [&](int32 Row, int32 Index) -> const FTarget* {
+		for (const FTarget& T : Targets)
+			if (T.Row == Row && T.Index == Index) return &T;
+		return nullptr;
+	};
+	for (int32 I = 0; I < FMath::Min(Info.Projects.Num(), 4); ++I)
+	{
+		const FAcProjectLine& X = Info.Projects[I];
+		const float Left = Pad + I * (CardW + Gap);
+		const FBox2f B(FVector2f(Left, ProjectsBox.Min.Y + 8), FVector2f(Left + CardW, ProjectsBox.Max.Y));
+		Box(Out, L, P, B, FAcHudStyle::Srgb(0.03, 0.055, 0.09, 0.9));
+		if (X.bRunning) Box(Out, L + 1, P, B.ExpandBy(-2), WithAlpha(RealmGold(), 0.08f));
+		CutFrame(Out, L + 1, P, B, X.bRunning ? WithAlpha(RealmGold(), 0.7f) : Steel(), 1, 10);
+		Label(X.Title, 15, RealmGold(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.4f).Paint(Out, L + 2, P, B.Min + FVector2f(14, 12));
+		Label(X.Effect, 13, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L + 2, P, B.Min + FVector2f(14, 38));
+		if (X.bRunning)
+		{
+			const int32 Minutes = FMath::Max(0, int32(FMath::CeilToDouble(X.Left / 60.0)));
+			Label(FString::Printf(TEXT("RUNNING  ·  %d min left"), Minutes), 13, FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Top,
+				EAcFontWeight::Bold, 0.6f).Paint(Out, L + 2, P, B.Min + FVector2f(14, 70));
+			Label(FString::Printf(TEXT("started by %s"), *X.By), 12, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold)
+				.Paint(Out, L + 2, P, B.Min + FVector2f(14, 92));
+			// Time left, as a bar.
+			const float Share = X.Day > 0 ? FMath::Clamp(float(X.Left / X.Day), 0.f, 1.f) : 0.f;
+			const FBox2f Bar(FVector2f(B.Min.X + 14, B.Min.Y + 116), FVector2f(B.Max.X - 14, B.Min.Y + 122));
+			Box(Out, L + 1, P, Bar, WithAlpha(Steel(), 0.5f));
+			Box(Out, L + 2, P, FBox2f(Bar.Min, FVector2f(Bar.Min.X + (Bar.Max.X - Bar.Min.X) * Share, Bar.Max.Y)), RealmGold());
+		}
+		else
+		{
+			Label(FString::Printf(TEXT("%s ore  ·  %s MH"), *Grouped(X.Ore), *Grouped(X.Hydrogen)), 14, FAcHudStyle::Text(), EAcHAlign::Left,
+				EAcVAlign::Top, EAcFontWeight::Bold, 0.4f).Paint(Out, L + 2, P, B.Min + FVector2f(14, 70));
+			Label(TEXT("a fifth more each time"), 12, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+				.Paint(Out, L + 2, P, B.Min + FVector2f(14, 92));
+		}
+		if (const FTarget* T = Find(RowProject, I))
+		{
+			PaintButton(Out, L, P, *T, X.bRunning ? TEXT("RUNNING") : TEXT("START"), ProjectWhyNot(I).IsEmpty(), RealmGold());
+			Label(Keys[I], 10, Faint(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold)
+				.Paint(Out, L + 4, P, FVector2f(T->Box.Max.X - 6, T->Box.Min.Y + 3));
+		}
 	}
 }
 
@@ -1106,6 +1225,10 @@ void SAcCitadelScreen::PaintFoot(FSlateWindowElementList& Out, const int32 L, co
 	else if (!MercAsked.IsEmpty())
 	{
 		State = TEXT("Asking the Citadel…");
+	}
+	else if (!Started.IsEmpty())
+	{
+		State = FString::Printf(TEXT("Starting the realm's %s…"), *Started);
 	}
 	else if (!Upgraded.IsEmpty())
 	{

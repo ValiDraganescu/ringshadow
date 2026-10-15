@@ -72,6 +72,7 @@ An XP-equivalent counts 1 ore as 1 XP and 1 MH as 2 XP (`WorldXp`: 1 an ore,
 | Canyon wave pay | `xp × n`, `ore × n`, `MH × n`; wave 10 ×2 and a rare copy; ×1.3 in a level-3 region (Z3); each fighter at least a tenth | ×0.4 | **before:** 10,623 XP + 6,750 ore + 1,800 MH for waves 1–9 in 27.8 min (×8 the pace); **after:** 5,307 XP + 2,700 ore + 720 MH in 25.9 min (waves 1–9, 12 + 5 guns) | **200 / 150 / 40 → 80 / 60 / 16 a wave** |
 | Turret marks | Gatling 100 + 50, 300 + 200, 800 + 500 a stat; AA tower ×1.5; Citadel 250, 500 + 50, 1,000 + 150 (realm wallet) | a mark pays back within a held cycle's kills | a cycle's kill XP to the guns' builder: The Fork 1,825, The Drowned Cut 1,845, The Roost 2,420. A first mark (200 XP-eq) pays back within one cycle; a stat's three (2,700) within two | none |
 | Frontier booked mining | `5 / (6 + 2 × 12 / 3.94)` ore a second | neither starve nor flood | 0.41 ore/s = 1,489 an hour, a quarter of a pilot; five give the realm at most 745 ore an hour | none |
+| Realm projects (R2) | Beacon 2,000 + 100 MH, Relay 2,500 + 150, Dock Crew 3,000 + 200, Armoury 4,000 + 300; × 1.2 each repeat of a kind (ore to 50, MH to 10) | the realm wallet's sink, beside the Citadel's marks: 2 to 4 hours of one mining pilot's tax (936 to 1,218 ore an hour) | the first of each 2.0 / 2.5 / 3.0 / 4.0 hours of 1,000 ore of tax an hour; the fourth Armoury 6,900 ore + 520 MH (`balance_realm_projects`) | new (R2) |
 | **All-in pilot** | mining + the board + a canyon cycle | ×2 ± 0.3 of the curve | **before B2:** about ×4 (the board alone 15,300 XP an hour at level 1); **after:** ×1.87 / 1.86 / 2.02 / 1.95 / 1.89 at levels 1 / 5 / 10 / 15 / 20 | from the two changes above |
 | **Level 1 to 10** | | inside the first hour, around 30 min | **before:** about 18 min; **after:** 36 min (the pure-mining curve: 66) | from the two changes above |
 
@@ -96,10 +97,10 @@ reached (waves 1–9). Wave 10 never paid, so this is a low mark.
   each run stayed out 1,066 to 1,150 s: a straggler that never came to the
   guns nor took the prize, until the wave's time ran out. Worth a look in
   the canyon's code (Z2/Z3).
-- **The realm wallet's only sink is the Citadel's marks:** 12 of them, 7,000
-  ore and 800 MH in all. One mining pilot's tax buys them all in about 6 to 7
-  hours. After that the realm only fills. That is a design question for a
-  later milestone (what the realm spends on).
+- **The realm wallet's only sink was the Citadel's marks:** 12 of them, 7,000
+  ore and 800 MH in all, bought by one mining pilot's tax in about 6 to 7
+  hours. R2's realm projects are the sink since (the row above): a world
+  day of each kind costs 2 to 4 hours of that tax, rising with each repeat.
 - **Booked pumping** (`frontierBookWork`) uses the ore load (5) and drill time
   in place of the MH load (4) and pump time (3.5 s). It comes to the same
   rate within 1% (0.414 against 0.417 MH/s), so it was left.

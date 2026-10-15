@@ -1,5 +1,5 @@
 {
-  "about": "A2, the siege's radio voice (docs/music.md \"Siege layers\"): KSTR's announcer reads the goal lines (a new goal from the radio's chain, one done) and the canyon news (a wave coming, a wave beaten, a canyon held, a canyon fallen with the Matriarch coming), one line each, under 6 s. The game plays them through its radio-line queue (narration first, never two at once), the text stays on the HUD. Same voice and radio.py as the station's ads. KSTR is written K-S-T-R so it is spelled out.",
+  "about": "A2, the siege's radio voice (docs/music.md \"Siege layers\"): KSTR's announcer reads the goal lines (a new goal from the radio's chain, one done) and the canyon news (a wave coming, a wave beaten, a canyon held, a canyon fallen with the Matriarch coming), one line each, under 6 s. The game plays them through its radio-line queue (narration first, never two at once), the text stays on the HUD. Same voice and radio.py as the station's ads. KSTR is written K-S-T-R so it is spelled out. R2 adds the realm projects' lines: one when a project starts, one when it ends (docs/mmorpg-play.md \"Realm projects\").",
   "voices": {
     "announcer": "sM0OsGgRUQMd8tCIWOCm"
   },
@@ -198,6 +198,62 @@
       "kind": "say",
       "voice": "announcer",
       "text": "[alarmed] The Roost has fallen! The Matriarch is coming for the turrets!",
+      "fx": "radio"
+    },
+    {
+      "id": "project-beacon-start",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright, proud] The realm lit the Beacon! Dropship flights half price till tomorrow.",
+      "fx": "radio"
+    },
+    {
+      "id": "project-beacon-end",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[calm] The Beacon is out. Flights are back to full fare.",
+      "fx": "radio"
+    },
+    {
+      "id": "project-relay-start",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright] The realm raised the Relay! Every pilot sees farther by night till tomorrow.",
+      "fx": "radio"
+    },
+    {
+      "id": "project-relay-end",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[calm] The Relay is down. Mind the dark out there.",
+      "fx": "radio"
+    },
+    {
+      "id": "project-armoury-start",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright, fierce] The realm opened the Armoury! Every turret fights a mark up till tomorrow.",
+      "fx": "radio"
+    },
+    {
+      "id": "project-armoury-end",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[calm] The Armoury is shut. Turrets back to their own marks.",
+      "fx": "radio"
+    },
+    {
+      "id": "project-dock-crew-start",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[bright, upbeat] The realm hired a Dock Crew! Mercenaries mine twice as fast till tomorrow.",
+      "fx": "radio"
+    },
+    {
+      "id": "project-dock-crew-end",
+      "kind": "say",
+      "voice": "announcer",
+      "text": "[calm] The Dock Crew's gone home. Mercenaries back to their own pace.",
       "fx": "radio"
     }
   ]

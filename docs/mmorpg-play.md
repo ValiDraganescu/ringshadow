@@ -118,6 +118,38 @@ are, stays clear (U1; the pieces in `AcProgressHud.h`, `SAcLevelUp.h`,
 - **Q, C, G** over the dashboard left of the Prospector; the supplies' cells
   (1-4) right of it.
 
+## Realm projects
+
+The realm wallet (every pilot's tax and donations, top right under the
+wallet as "REALM") buys a world day (40 minutes) of something the whole
+realm feels. Open the Citadel (H, standing where you unload); the REALM
+tab shows four cards under the wallet, keys 7, 8, 9 and 0 or a click on
+START:
+
+| Project | Effect, realm-wide, for a world day | First price (realm wallet) |
+|---|---|---|
+| Beacon | Dropship fares half (a quarter from a Spacedock) | 2,000 ore · 100 MH |
+| Relay | every pilot's night sight half again as wide (the headlamp as it was) | 2,500 ore · 150 MH |
+| Dock Crew | mercenaries mine twice as fast (1/12 of your rate, not 1/24) | 3,000 ore · 200 MH |
+| Armoury | every turret of the realm, the Citadel's corner guns too, fights one mark up in each stat (to the cap of 3) | 4,000 ore · 300 MH |
+
+- **Who.** Any pilot starts one; the realm wallet pays, not the pilot.
+  Frontier pilots never do. One of each kind at a time; several kinds can
+  run together.
+- **Price.** About 2 to 4 hours of one mining pilot's tax
+  ([balance.md](balance.md)); each time the realm starts the same kind
+  again it costs a fifth more.
+- **On screen.** A running card says who started it and the minutes left,
+  with a bar; the HUD's realm strip names the projects running with a gold
+  bar each. Every pilot on line gets a toast and KSTR's line when one
+  starts ("THE REALM LIT THE BEACON") and when it runs out ("THE BEACON IS
+  OUT").
+- **The clock.** A project ends a world day after it starts, on the world's
+  clock: while the game is closed too.
+- **The server** owns them (`WorldProjects.cpp`, `RealmProjects.h`), saves
+  them (schema 22) and sends them in the Progress message (protocol 29).
+  Pictures: `-AcMmoShots=DIR -AcMmoShotsR2`.
+
 ## Travel
 
 - **Passages.** A region is open land ringed by natural walls: cliff bands
@@ -136,7 +168,8 @@ are, stays clear (U1; the pieces in `AcProgressHud.h`, `SAcLevelUp.h`,
   turns, dashes across the sky and comes down onto the other pad, where you
   step out: 16 to 20 s. Aboard, nothing can hurt you. It costs 10 MH and 5
   a grid step, half from a Spacedock (the big pad), nothing with
-  Ringwalker. The pads each region came with are where new pilots come
+  Ringwalker; half again while the realm's Beacon burns (a quarter from a
+  Spacedock). The pads each region came with are where new pilots come
   down; the Dropship doesn't land there. Off a Landing Pad, or with no
   Landing Pad at the other end, the map says why it can't fly.
 

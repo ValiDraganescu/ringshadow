@@ -181,6 +181,18 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 			if (const ac::net::ProgressMessage* P = Mmo->Progress()) Realm = TPair<int64, int64>(P->realmWallet.ore, P->realmWallet.hydrogen);
 		}
 		if (RootWidget->ResourceBar()) RootWidget->ResourceBar()->SetRealm(Realm);
+		// R2: the realm's projects running, under the realm wallet.
+		TArray<TPair<FString, float>> Running;
+		if (const FAcMmoClient* Mmo = Sim->IsMmo() ? Sim->MmoClient() : nullptr)
+			if (const ac::net::ProgressMessage* P = Mmo->Progress())
+				for (int32 K = 0; K < ac::RealmProject::count && size_t(K) < P->projects.size(); ++K)
+					if (Mmo->ProjectOn(ac::RealmProject::Kind(K)))
+					{
+						const double Day = (Mmo->Sky() ? Mmo->Sky()->dayLength : ac::WorldClock::dayLength) * ac::RealmProject::days;
+						const double Left = P->projects[size_t(K)].ends - (Mmo->Sky() ? Mmo->Sky()->time : 0.0);
+						Running.Add({FString(UTF8_TO_TCHAR(ac::RealmProject::title(ac::RealmProject::Kind(K)))).ToUpper(), float(Left / Day)});
+					}
+		if (RootWidget->ResourceBar()) RootWidget->ResourceBar()->SetProjects(Running);
 		// The MMORPG test: a Prospector in flight between pads is in no
 		// region's state, but still the pilot's.
 		int64 Away = 0;

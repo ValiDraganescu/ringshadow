@@ -278,6 +278,12 @@
 //   04 Cold Fork at noon, wave 10 out of the canyon's mouths: all of it told
 //   05 the same with `daylight off`
 //
+// -AcMmoShotsR2 (with -AcMmoDevRig): realm projects (docs/mmorpg-play.md
+// "Realm projects"), DIR/r2-NN-moment.png:
+//   01 the realm-wide toast and the gold bar under the HUD's realm wallet
+//   02 the Citadel's REALM tab: the Beacon started and running (who, time
+//      left), the other projects' prices
+//
 // -AcMmoShotsZ4 (as Z1's): free placement in canyons (docs/canyon.md
 // "Building"), DIR/z4-NN-moment.png:
 //   01 a tightly packed defence on The Fork's floor by the prize, its guns'
@@ -401,6 +407,7 @@
 #include "AcLog.h"
 #include "AcMissions.h"
 #include "AcMmo.h"
+#include "Flight.h"
 #include "AcPilotBuild.h"
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
@@ -1082,7 +1089,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1214,6 +1222,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsA2"))) T.Phase = 2900;
 			// -AcMmoShotsZ4: free placement in canyons (3100-3103).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4"))) T.Phase = 3100;
+			// -AcMmoShotsR2: realm projects (3200-3206).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2"))) T.Phase = 3200;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
@@ -6272,6 +6282,106 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Shots.Saved + Shots.Skipped >= 1, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
+	// MARK: -AcMmoShotsR2
+	case 3200:
+		// The dev rig's home: the realm wallet filled, the Citadel screen open
+		// on its REALM tab, the pilot at the Citadel.
+		if (S && U && CitadelOf(*S) && Mmo->Progress() && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("defence wallet")), TEXT("r2: the server fills the realm wallet"));
+			Check(AtRealmCitadel(), TEXT("r2: the pilot stands at the realm's Citadel"));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("r2: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->SetTab(SAcCitadelScreen::ETab::Realm);
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel"));
+		return;
+	case 3201:
+	{
+		// The projects' cards filled, the Beacon affordable: key 7 starts it.
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (W && P && P->realmWallet.ore >= 3000 && W->GetInfo().Projects.Num() == ac::RealmProject::count && Since() > 1.0)
+		{
+			Check(W->ProjectWhyNot(0).IsEmpty(), TEXT("r2: the Beacon can be started here"));
+			DKept = Mmo->CitadelKept();
+			DRealmOre = P->realmWallet.ore;
+			Check(W->Key(EKeys::Seven), TEXT("r2: key 7 starts the Beacon"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the REALM tab's projects"), 15);
+		return;
+	}
+	case 3202:
+	{
+		// Kept: the realm wallet paid, the card runs; the screen closed at
+		// once for the toast while it is fresh.
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		if (P && W && Mmo->CitadelKept() > DKept && Mmo->ProjectOn(ac::RealmProject::Kind::beacon) && W->GetInfo().Projects.Num() > 0
+			&& W->GetInfo().Projects[0].bRunning)
+		{
+			const ac::RealmProject::Price Price = ac::RealmProject::price(ac::RealmProject::Kind::beacon, 0);
+			Check(P->realmWallet.ore == DRealmOre - Price.ore,
+				FString::Printf(TEXT("r2: the realm wallet paid: %lld -> %lld ore"), (long long)DRealmOre, (long long)P->realmWallet.ore));
+			Check(!W->KeptText().IsEmpty(), TEXT("r2: the foot says what was started"));
+			CloseCitadelScreen();
+			Advance();
+			return;
+		}
+		if (!Mmo->CitadelRefusal().IsEmpty())
+		{
+			Check(false, FString::Printf(TEXT("r2: start: %s"), *Mmo->CitadelRefusal()));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the Beacon started"), 10);
+		return;
+	}
+	case 3203:
+	{
+		// The toast and the HUD's realm strip with the bar.
+		const UAcProgressHudSubsystem* H = UAcProgressHudSubsystem::Get(this);
+		const TSharedPtr<SAcProgressHud> Hud = H ? H->Widget() : nullptr;
+		bool bToast = false;
+		if (Hud)
+			for (const FString& X : Hud->ToastTitles()) bToast = bToast || X.StartsWith(TEXT("THE REALM LIT THE BEACON"));
+		if (bToast && Since() > 0.6)
+		{
+			Shoot(TEXT("r2-01-toast-and-bar"), TEXT("the realm-wide toast \"THE REALM LIT THE BEACON\" and the gold bar under the HUD's realm wallet"));
+			return;
+		}
+		TimedOut(TEXT("r2: the Beacon's toast"), 10);
+		return;
+	}
+	case 3204:
+		// The REALM tab again, the Beacon running.
+		Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("r2: H opens the Citadel screen again"));
+		if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->SetTab(SAcCitadelScreen::ETab::Realm);
+		Advance();
+		return;
+	case 3205:
+		if (Since() < 1.5) return;
+		Shoot(TEXT("r2-02-realm-tab"), TEXT("the REALM tab: the Beacon running, who started it, its time left; the other projects' prices"));
+		return;
+	case 3206:
+	{
+		CloseCitadelScreen();
+		// The flight menu's fare with the Beacon: half (rounded up).
+		const std::optional<int64> Fare = Mmo->FlightPrice(TEXT("cold-fork"));
+		int64 Steps = -1;
+		if (const ac::net::WorldMessage* Wm = Mmo->World(); Wm && Mmo->Here())
+			for (const ac::net::WorldMessage::Region& R : Wm->regions)
+				if (Utf(R.id) == TEXT("cold-fork")) Steps = ac::Flight::steps(Mmo->Here()->column, Mmo->Here()->row, R.column, R.row);
+		const int64 Whole = Steps >= 0 ? ac::Flight::hydrogen(Steps) : -1;
+		Check(Fare.has_value() && Steps >= 0 && (*Fare == (Whole + 1) / 2 || *Fare == 0),
+			FString::Printf(TEXT("r2: a flight to Cold Fork costs %lld MH with the Beacon (%lld without)"), (long long)Fare.value_or(-1), (long long)Whole));
+		Check(Shots.Saved + Shots.Skipped >= 2, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	}
 	// MARK: -AcMmoShotsL1
 	case 2100:
 		// The first ten minutes' last step open: a point spent ends it.

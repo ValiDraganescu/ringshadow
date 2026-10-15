@@ -1651,6 +1651,37 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		UE_LOG(LogAutocraft, Log, TEXT("progress: matriarch %s by %s, %lld"), *Text(N.id), *Text(N.by), (long long)N.value);
 		break;
 	}
+	case K::project:
+	{
+		// R2: a realm project started ("start/<slug>", `by` who) or run out
+		// ("end/<slug>"): a toast to every pilot on line and KSTR's line.
+		struct FLine { const TCHAR* Slug; const TCHAR* Started; const TCHAR* StartedSub; const TCHAR* Ended; };
+		static const FLine Lines[] = {
+			{TEXT("beacon"), TEXT("THE REALM LIT THE BEACON"), TEXT("Dropship flights half price till tomorrow"), TEXT("THE BEACON IS OUT")},
+			{TEXT("relay"), TEXT("THE REALM RAISED THE RELAY"), TEXT("Every pilot sees half again as far by night till tomorrow"),
+				TEXT("THE RELAY IS DOWN")},
+			{TEXT("armoury"), TEXT("THE REALM OPENED THE ARMOURY"), TEXT("Every turret fights a mark up till tomorrow"), TEXT("THE ARMOURY IS SHUT")},
+			{TEXT("dock-crew"), TEXT("THE REALM HIRED A DOCK CREW"), TEXT("Mercenaries mine twice as fast till tomorrow"),
+				TEXT("THE DOCK CREW IS GONE")},
+		};
+		const FString Id = Text(N.id);
+		const bool bStart = Id.StartsWith(TEXT("start/"));
+		const FString Slug = Id.Mid(Id.Find(TEXT("/")) + 1);
+		for (const FLine& X : Lines)
+		{
+			if (Slug != X.Slug) continue;
+			const FString By = N.by.empty() ? FString() : (P && N.by == P->callsign ? FString(TEXT("you")) : Text(N.by));
+			if (bStart)
+				Hud->Toast(X.Started, By.IsEmpty() ? FString(X.StartedSub) : FString::Printf(TEXT("%s  ·  started by %s"), X.StartedSub, *By),
+					FAcHudStyle::LevelGold(), Now + 0.01);
+			else
+				Hud->Toast(X.Ended, TEXT("The realm's project ran its world day"), FAcHudStyle::Soft(), Now + 0.01);
+			if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this))
+				Audio->SayRadio(FString::Printf(TEXT("project-%s-%s"), X.Slug, bStart ? TEXT("start") : TEXT("end")));
+		}
+		UE_LOG(LogAutocraft, Log, TEXT("progress: project %s by %s"), *Id, *Text(N.by));
+		break;
+	}
 	case K::frontier:
 	{
 		// P1: the frontier pilots: a KSTR radio line ("KSTR · VESPER"), a

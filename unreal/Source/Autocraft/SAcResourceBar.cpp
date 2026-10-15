@@ -65,6 +65,13 @@ void SAcResourceBar::SetRealm(const TOptional<TPair<int64, int64>> OreHydrogen)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcResourceBar::SetProjects(const TArray<TPair<FString, float>>& InProjects)
+{
+	if (InProjects == Projects) return;
+	Projects = InProjects;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcResourceBar::SetShowSupply(const bool bShow)
 {
 	if (bShow == bShowSupply) return;
@@ -125,6 +132,25 @@ int32 SAcResourceBar::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry,
 		FAcHudText(FString::Printf(TEXT("%s · %s MH"), *FText::AsNumber(Realm->Key).ToString(), *FText::AsNumber(Realm->Value).ToString()),
 			FAcHudStyle::Font(13), FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Center)
 			.Paint(Out, Layer + 1, Geometry, FVector2f(232, Cy + 8));
+		// R2: the projects running: their names beside REALM, a gold bar
+		// under the wallet, a segment each, as full as its day is left.
+		if (!Projects.IsEmpty())
+		{
+			const FLinearColor Gold = FAcHudStyle::Srgb(1.0, 0.82, 0.42);
+			FString Names;
+			for (const TPair<FString, float>& X : Projects) Names += (Names.IsEmpty() ? TEXT("· ") : TEXT(" · ")) + X.Key;
+			FAcHudText(Names, FAcHudStyle::Font(10), Gold, EAcHAlign::Left, EAcVAlign::Center).Paint(Out, Layer + 1, Geometry, FVector2f(272, Cy - 8));
+			const float X0 = 232, W = 150, Gap = 4;
+			const float Seg = (W - Gap * float(Projects.Num() - 1)) / float(Projects.Num());
+			for (int32 I = 0; I < Projects.Num(); ++I)
+			{
+				const float Left = X0 + I * (Seg + Gap);
+				FSlateDrawElement::MakeBox(Out, Layer + 1, Geometry.ToPaintGeometry(FVector2D(Seg, 3), FSlateLayoutTransform(FVector2D(Left, Height - 6))),
+					FAcHudStyle::White(), ESlateDrawEffect::None, FAcHudStyle::Srgb(1.0, 0.82, 0.42, 0.22));
+				FSlateDrawElement::MakeBox(Out, Layer + 2, Geometry.ToPaintGeometry(FVector2D(Seg * FMath::Clamp(Projects[I].Value, 0.f, 1.f), 3),
+					FSlateLayoutTransform(FVector2D(Left, Height - 6))), FAcHudStyle::White(), ESlateDrawEffect::None, Gold);
+			}
+		}
 	}
 	return Layer + 3;
 }

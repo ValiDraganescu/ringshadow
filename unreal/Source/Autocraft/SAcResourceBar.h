@@ -39,6 +39,11 @@ public:
 	/// ("REALM" over "1,240 · 56 MH"). Unset: not shown.
 	void SetRealm(TOptional<TPair<int64, int64>> OreHydrogen);
 	TOptional<TPair<int64, int64>> GetRealm() const { return Realm; }
+	/// R2: the realm's projects running, each its name ("BEACON") and the
+	/// share of its world day left: a gold bar under the realm wallet, a
+	/// segment each, and their names beside "REALM".
+	void SetProjects(const TArray<TPair<FString, float>>& InProjects);
+	const TArray<TPair<FString, float>>& GetProjects() const { return Projects; }
 
 	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(Width, Height); }
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
@@ -54,6 +59,7 @@ private:
 	bool bFlashGains = false;
 	bool bRebase = false;
 	TOptional<TPair<int64, int64>> Realm;
+	TArray<TPair<FString, float>> Projects;
 	int32 GainsFlashed = 0;
 	/// The last gain of ore and MH, and when (real seconds).
 	int64 GainOre = 0, GainHydrogen = 0;

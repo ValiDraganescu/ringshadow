@@ -159,10 +159,13 @@ The station's announcer reads one line for each of these:
   (`goal-done`);
 - the canyon news, for each canyon (`canyon-<zone>-wave`, `-beaten`,
   `-held`, `-fallen`). "Fallen" says the Matriarch is coming.
+- R2's realm projects, each when it starts and when it runs out
+  (`project-<beacon|relay|armoury|dock-crew>-start`, `-end`).
 
 The text stays on the HUD as before.
 
-**The lines.** There are 28, all under 6 s (the longest is 5.98 s). They
+**The lines.** There are 36, all under 6 s (the longest is 5.98 s; R2's
+eight run 3.3 to 5.6 s). They
 use the ads' voice, "Autocraft KSTR Announcer" (`eleven_v4`), and go
 through `radio.py`. Their scripts are in
 `Tools/AudioGen/kstrnews.manifest.json`, each with its delivery cue in

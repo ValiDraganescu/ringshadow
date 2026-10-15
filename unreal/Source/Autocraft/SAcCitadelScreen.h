@@ -144,6 +144,25 @@ struct FAcDefenceLine
 	bool operator==(const FAcDefenceLine&) const = default;
 };
 
+/// R2: a realm project on the REALM tab: what it does, the next one's price
+/// (from the realm wallet), and the one running: who started it, seconds of
+/// world time left (0: none running) out of a world day.
+struct FAcProjectLine
+{
+	/// "BEACON".
+	FString Title;
+	/// "Dropship fares halved realm-wide".
+	FString Effect;
+	int64 Ore = 0;
+	int64 Hydrogen = 0;
+	bool bRunning = false;
+	FString By;
+	double Left = 0;
+	double Day = 2400;
+
+	bool operator==(const FAcProjectLine&) const = default;
+};
+
 /// What the Citadel screen shows.
 struct FAcCitadelScreenInfo
 {
@@ -194,6 +213,10 @@ struct FAcCitadelScreenInfo
 	/// be upgraded from here.
 	TArray<FAcDefenceLine> Defence;
 	FString DefenceWhyNot;
+	/// R2, the REALM tab's projects, in `ac::RealmProject::Kind`'s order;
+	/// why none can be started from here.
+	TArray<FAcProjectLine> Projects;
+	FString ProjectsWhyNot;
 
 	bool operator==(const FAcCitadelScreenInfo&) const = default;
 };
@@ -205,6 +228,8 @@ DECLARE_DELEGATE_OneParam(FAcOnMissionTake, int32 /*Index*/);
 /// `Mercs`) to field `Field` (an index in `MercFields`).
 DECLARE_DELEGATE_ThreeParams(FAcOnMerc, int32 /*Act*/, int32 /*Merc*/, int32 /*Field*/);
 DECLARE_DELEGATE_OneParam(FAcOnUpgrade, int32 /*Stat*/);
+/// R2: start the realm project of kind `Kind` (`ac::RealmProject::Kind`).
+DECLARE_DELEGATE_OneParam(FAcOnProject, int32 /*Kind*/);
 
 class AUTOCRAFT_API SAcCitadelScreen : public SLeafWidget
 {
@@ -215,6 +240,7 @@ public:
 		SLATE_EVENT(FAcOnMissionTake, OnTake)
 		SLATE_EVENT(FAcOnMerc, OnMerc)
 		SLATE_EVENT(FAcOnUpgrade, OnUpgrade)
+		SLATE_EVENT(FAcOnProject, OnProject)
 		SLATE_EVENT(FSimpleDelegate, OnClose)
 	SLATE_END_ARGS()
 
@@ -266,6 +292,10 @@ public:
 	/// click; keys 1-3 on the DEFENCE tab).
 	FString UpgradeWhyNot(int32 Index) const;
 	void Upgrade(int32 Index);
+	/// The REALM tab's projects (R2): why project `Index` can't be started
+	/// now (empty: it can), and its ask (a click; keys 7-0 on the REALM tab).
+	FString ProjectWhyNot(int32 Index) const;
+	void StartProject(int32 Index);
 
 	/// What button `Index` gives now (ore, MH): "all" is the wallet's.
 	TPair<int64, int64> Amount(int32 Index) const;
@@ -334,12 +364,15 @@ private:
 	int32 Picked = 0;
 	/// What the last DEFENCE ask upgraded ("fire rate, mark 2"; empty: none).
 	FString Upgraded;
+	/// R2: the project the last REALM ask started ("Beacon"; empty: none).
+	FString Started;
 
 	FAcOnDonate OnDonateDelegate;
 	FAcOnShopBuy OnBuyDelegate;
 	FAcOnMissionTake OnTakeDelegate;
 	FAcOnMerc OnMercDelegate;
 	FAcOnUpgrade OnUpgradeDelegate;
+	FAcOnProject OnProjectDelegate;
 	FSimpleDelegate OnCloseDelegate;
 	double OpenedAt = 0;
 	/// When the realm wallet last grew (its flash).
@@ -349,6 +382,7 @@ private:
 	mutable TArray<FTarget> Targets;
 	mutable FBox2f WalletBox;
 	mutable FBox2f DonateBox;
+	mutable FBox2f ProjectsBox;
 	mutable FBox2f BlueprintBox;
 	mutable FBox2f ItemBox;
 	mutable FBox2f TierBox[3];

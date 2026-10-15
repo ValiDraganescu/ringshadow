@@ -73,6 +73,7 @@
 #include "NetPredictor.h"
 #include "NetRunFile.h"
 #include "NetSocket.h"
+#include "RealmProjects.h"
 #include "Types.h"
 
 #include "Async/Future.h"
@@ -362,6 +363,11 @@ public:
 	/// D1: the realm's Citadel turrets take their next mark of `Stat`, paid
 	/// from the realm wallet; answered as the donations.
 	bool UpgradeCitadel(ac::DefenceStat Stat, FString* Why = nullptr);
+	/// R2: start the realm project of `Kind`, paid from the realm wallet
+	/// (the REALM tab); and whether one of that kind runs now (the Progress
+	/// message's projects, on the sky's clock).
+	bool StartProject(ac::RealmProject::Kind Kind, FString* Why = nullptr);
+	bool ProjectOn(ac::RealmProject::Kind Kind) const;
 	/// D3: placed turret `Turret` takes its next mark of `Stat`, paid from
 	/// the pilot's own wallet. The server's refusals: `TurretRefusal` (and a
 	/// note); `TurretKept` counts the kept asks.

@@ -4067,6 +4067,54 @@
    "source": "kstr/goal-spacedock.wav",
    "prepared": "Content-src/sounds/kstr/goal-spacedock.wav",
    "seconds": 5.36
+  },
+  "project-armoury-end": {
+   "asset": "/Game/Audio/Kstr/SW_project_armoury_end.SW_project_armoury_end",
+   "source": "kstr/project-armoury-end.wav",
+   "prepared": "Content-src/sounds/kstr/project-armoury-end.wav",
+   "seconds": 3.74
+  },
+  "project-armoury-start": {
+   "asset": "/Game/Audio/Kstr/SW_project_armoury_start.SW_project_armoury_start",
+   "source": "kstr/project-armoury-start.wav",
+   "prepared": "Content-src/sounds/kstr/project-armoury-start.wav",
+   "seconds": 4.88
+  },
+  "project-beacon-end": {
+   "asset": "/Game/Audio/Kstr/SW_project_beacon_end.SW_project_beacon_end",
+   "source": "kstr/project-beacon-end.wav",
+   "prepared": "Content-src/sounds/kstr/project-beacon-end.wav",
+   "seconds": 3.6
+  },
+  "project-beacon-start": {
+   "asset": "/Game/Audio/Kstr/SW_project_beacon_start.SW_project_beacon_start",
+   "source": "kstr/project-beacon-start.wav",
+   "prepared": "Content-src/sounds/kstr/project-beacon-start.wav",
+   "seconds": 4.56
+  },
+  "project-dock-crew-end": {
+   "asset": "/Game/Audio/Kstr/SW_project_dock_crew_end.SW_project_dock_crew_end",
+   "source": "kstr/project-dock-crew-end.wav",
+   "prepared": "Content-src/sounds/kstr/project-dock-crew-end.wav",
+   "seconds": 4.24
+  },
+  "project-dock-crew-start": {
+   "asset": "/Game/Audio/Kstr/SW_project_dock_crew_start.SW_project_dock_crew_start",
+   "source": "kstr/project-dock-crew-start.wav",
+   "prepared": "Content-src/sounds/kstr/project-dock-crew-start.wav",
+   "seconds": 5.08
+  },
+  "project-relay-end": {
+   "asset": "/Game/Audio/Kstr/SW_project_relay_end.SW_project_relay_end",
+   "source": "kstr/project-relay-end.wav",
+   "prepared": "Content-src/sounds/kstr/project-relay-end.wav",
+   "seconds": 3.26
+  },
+  "project-relay-start": {
+   "asset": "/Game/Audio/Kstr/SW_project_relay_start.SW_project_relay_start",
+   "source": "kstr/project-relay-start.wav",
+   "prepared": "Content-src/sounds/kstr/project-relay-start.wav",
+   "seconds": 5.62
   }
  },
  "unusedInSwift": [

@@ -1479,6 +1479,17 @@ bool UAcGameFlowSubsystem::OpenCitadelScreen()
 				else if (Index >= 0 && Index < 3 && Mmo->UpgradeCitadel(ac::DefenceStat(Index), &Why)) return;
 				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("Nothing there")) : Why);
 			})
+		.OnProject_Lambda([Weak](int32 Index)
+			{
+				// R2, the REALM tab: the cards are the kinds' order.
+				if (!Weak.IsValid()) return;
+				UAcSimSubsystem* S = UAcSimSubsystem::Get(Weak.Get());
+				FAcMmoClient* Mmo = S ? S->MmoClient() : nullptr;
+				FString Why;
+				if (!Mmo) Why = TEXT("Not in a world");
+				else if (Index >= 0 && Index < ac::RealmProject::count && Mmo->StartProject(ac::RealmProject::Kind(Index), &Why)) return;
+				if (Weak->CitadelScreen) Weak->CitadelScreen->SetRefusal(Why.IsEmpty() ? FString(TEXT("Nothing there")) : Why);
+			})
 		.OnClose_Lambda([Weak]() { if (Weak.IsValid()) Weak->CloseCitadelScreen(); })
 	];
 	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetKeyboardFocus(CitadelScreen, EFocusCause::SetDirectly);
@@ -1671,9 +1682,35 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 			Info.Defence.Add(X);
 		}
 	}
+	// R2: the realm's projects, a card a kind.
+	if (const ac::net::ProgressMessage* Pm = Mmo->Progress())
+	{
+		const double Now = Mmo->Sky() ? Mmo->Sky()->time : 0.0;
+		const double Day = Mmo->Sky() ? Mmo->Sky()->dayLength : ac::WorldClock::dayLength;
+		for (int32 K = 0; K < ac::RealmProject::count; ++K)
+		{
+			const auto Kind = ac::RealmProject::Kind(K);
+			FAcProjectLine X;
+			X.Title = FString(UTF8_TO_TCHAR(ac::RealmProject::title(Kind))).ToUpper();
+			X.Effect = UTF8_TO_TCHAR(ac::RealmProject::effect(Kind));
+			const int64 Runs = size_t(K) < Pm->projects.size() ? Pm->projects[size_t(K)].runs : 0;
+			const ac::RealmProject::Price Price = ac::RealmProject::price(Kind, Runs);
+			X.Ore = Price.ore;
+			X.Hydrogen = Price.hydrogen;
+			X.Day = Day * ac::RealmProject::days;
+			if (Mmo->ProjectOn(Kind))
+			{
+				X.bRunning = true;
+				X.By = Pm->projects[size_t(K)].by == Pm->callsign ? FString(TEXT("you")) : FString(UTF8_TO_TCHAR(Pm->projects[size_t(K)].by.c_str()));
+				X.Left = Pm->projects[size_t(K)].ends - Now;
+			}
+			Info.Projects.Add(X);
+		}
+	}
 	// The server checks the place; the screen says so ahead.
 	if (!AtRealmCitadel(&Info.Builder))
 	{
+		Info.ProjectsWhyNot = TEXT("Start a project at the realm's Citadel: stand where you unload");
 		Info.DefenceWhyNot = TEXT("Upgrade at the realm's Citadel: stand where you unload");
 		Info.DonateWhyNot = TEXT("Donate at the realm's Citadel: stand where you unload");
 		Info.ShopWhyNot = TEXT("Buy at the realm's Citadel: stand where you unload");
