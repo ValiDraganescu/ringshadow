@@ -214,3 +214,39 @@ TEST(away_server_sends_once_and_writes_the_summary_file) {
     // On line: out of the file.
     EXPECT_TRUE(!net::readAwayFile(file, keyA).has_value());
 }
+
+// Q3, the idle soak: a world left idle ends a realm week every 7 world
+// days; the weeks nobody hauled in are one row (its time the last), and
+// past the cap the routine rows (weeks, frontier deeds) go first, so a
+// canyon held a month ago is still told.
+TEST(away_ledger_bounded_on_a_long_idle) {
+    WorldMap w(first(), params());
+    ASSERT_TRUE(w.seat(b, keyB) == WorldMap::Seated::fresh);
+    w.step();
+    w.leave(b);
+    hold(w);
+    ASSERT_TRUE(w.ledgerOf(keyB)->size() == size_t(2));
+    for (int i = 0; i < 40; i++) {
+        w.idle(w.weekLength() / 4);
+        w.weekEndNow();
+    }
+    const std::vector<net::AwayRow>& rows = *w.ledgerOf(keyB);
+    ASSERT_TRUE(rows.size() == size_t(3));
+    EXPECT_TRUE(rows.back().kind == net::AwayKind::week && rows.back().who.empty());
+    EXPECT_NEAR(rows.back().at, w.clock(), 1e-9);
+    // Weeks with a top hauler, more than the cap holds.
+    for (int i = 0; i < 150; i++) {
+        w.standNote(keyA, &WorldMap::Standing::ore, 100 + i);
+        w.weekEndNow();
+    }
+    EXPECT_EQ(w.ledgerOf(keyB)->size(), size_t(120));
+    EXPECT_EQ(w.ledgerRows(), size_t(120));
+    bool held = false, waves = false;
+    for (const net::AwayRow& r : *w.ledgerOf(keyB)) {
+        held = held || r.kind == net::AwayKind::held;
+        waves = waves || r.kind == net::AwayKind::waves;
+    }
+    EXPECT_TRUE(held && waves);
+    // The newest week kept.
+    EXPECT_EQ(w.ledgerOf(keyB)->back().value, int64_t(249));
+}

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <sys/stat.h>
 
 namespace ac::server {
 
@@ -53,10 +54,13 @@ Server::Server(net::PacketIo& io, const ServerOptions& options)
         // S2: the time it was down, caught up (capped).
         if (const double savedAt = options_.saved->savedAt; savedAt > 0 && world_.isWorld()) {
             const double down = wallNow() - savedAt + std::max(0.0, options_.devDown);
+            const auto t0 = std::chrono::steady_clock::now();
             caughtUp_ = world_.catchUp(down);
+            const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
             if (caughtUp_ > 0)
                 log("catch-up: down " + format("%.0f", down) + " s, the world moved on " + format("%.0f", caughtUp_) + " s (cap " +
-                    format("%.0f", world_.params().catchUpCap) + " s), clock " + format("%.1f", world_.clock()) + " s");
+                    format("%.0f", world_.params().catchUpCap) + " s), clock " + format("%.1f", world_.clock()) + " s, in " +
+                    format("%.1f", ms) + " ms");
         }
         options_.saved = std::nullopt;
     }
@@ -68,6 +72,7 @@ double Server::wallNow() const {
 }
 
 void Server::idle(double now) {
+    const auto t0 = std::chrono::steady_clock::now();
     if (!idling_) {
         idling_ = true;
         idleFrom_ = now;
@@ -84,10 +89,27 @@ void Server::idle(double now) {
     }
     endpoint_.flush(now);
     if (savedAt_ < 0) savedAt_ = now;
-    if (options_.store && now - savedAt_ >= options_.saveEvery) {
+    if (options_.store && now - savedAt_ >= options_.idleSaveEvery) {
         savedAt_ = now;
         save();
     }
+    const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    idleSum_ += ms;
+    idleMax_ = std::max(idleMax_, ms);
+    idles_ += 1;
+    if (idleStatsFrom_ < 0) idleStatsFrom_ = now;
+    if (options_.idleStatsEvery > 0 && now - idleStatsFrom_ >= options_.idleStatsEvery) idleStatsLine(now);
+}
+
+void Server::idleStatsLine(double now) {
+    log("idle stats: " + std::to_string(idles_) + " calls, mean " + format("%.2f", idles_ ? idleSum_ / double(idles_) : 0) +
+        " ms max " + format("%.2f", idleMax_) + " ms, clock " + format("%.0f", world_.clock()) + " s, ledger " +
+        std::to_string(world_.ledgerRows()) + " rows, deposits " + std::to_string(world_.depositsOre()) + " ore, radio " +
+        std::to_string(world_.radioLog().size()) + " lines");
+    idleStatsFrom_ = now;
+    idleSum_ = 0;
+    idleMax_ = 0;
+    idles_ = 0;
 }
 
 bool Server::save() {
@@ -686,6 +708,14 @@ void Server::statsLine(double now) {
     ticks_ = 0;
     stepSum_ = 0;
     stepMax_ = 0;
+}
+
+bool rotateLog(const std::string& path, long long most) {
+    struct stat st {};
+    if (stat(path.c_str(), &st) != 0 || st.st_size <= most) return false;
+    const std::string old = path + ".1";
+    std::remove(old.c_str());
+    return std::rename(path.c_str(), old.c_str()) == 0;
 }
 
 } // namespace ac::server

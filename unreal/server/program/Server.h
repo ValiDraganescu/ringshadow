@@ -47,6 +47,9 @@ struct ServerOptions {
     std::optional<WorldSave> saved;
     WorldStore* store = nullptr;
     double saveEvery = 5;
+    /// Q3: the same while idle (no one on line): the clock's work changes a
+    /// little every call, and a save each 5 s wrote the WAL 10 KB a second.
+    double idleSaveEvery = 60;
     /// X2: the away summary file beside the save (`net::awayFilePath`),
     /// written on each idle tick and save when it changed. Empty: none.
     std::string awayFile;
@@ -57,6 +60,9 @@ struct ServerOptions {
     /// S2: seconds between `idle` calls with no client on line (the
     /// program's loop; 0: it steps at 60 Hz all the same).
     double idleEvery = 0.5;
+    /// Q3: seconds between the idle stats lines in the log (`--idle-stats`):
+    /// the idle calls' time, the ledgers' rows, the deposits' ore.
+    double idleStatsEvery = 300;
     /// Dev and shots (`--dev-down s`): the save counts as written this many
     /// seconds earlier, so the start catches up that much more (H2's
     /// "while you were away" on a run a minute after the last).
@@ -152,6 +158,7 @@ private:
     void sendStandings(net::ConnectionId c, Client& client);
     void sendHunt(net::ConnectionId c, Client& client);
     void statsLine(double now);
+    void idleStatsLine(double now);
     void log(const std::string& line) const;
     /// A log line for each starfall told and landed.
     void logStarfalls();
@@ -180,9 +187,19 @@ private:
     /// Idle since `idleFrom_` (the world's clock is that far on).
     bool idling_ = false;
     double idleFrom_ = 0;
+    /// Q3: the idle calls' time since the last idle stats line.
+    double idleStatsFrom_ = -1;
+    double idleSum_ = 0;
+    double idleMax_ = 0;
+    int64_t idles_ = 0;
     /// The starfalls last logged, and whether each had landed.
     std::map<uint32_t, bool> starfalls_;
     std::map<PilotId, bool> respawns_;
 };
+
+/// Q3: the log at `path` moved to `path`.1 (one kept, replacing the last)
+/// when it has grown past `most` bytes; the server calls it at start. True:
+/// moved.
+bool rotateLog(const std::string& path, long long most);
 
 } // namespace ac::server

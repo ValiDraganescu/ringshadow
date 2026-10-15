@@ -211,6 +211,8 @@ my computer is on)." Built in S2 (docs/mmorpg-m8.md).
   The regions' simulations wait, as while the server is
   down: units stand where they were. A datagram wakes it at once (the
   socket's `wait`), and the first pilot on line puts it back to 60 Hz.
+  Idle, it saves every 60 s (every 5 s on line) and on stop, and logs an
+  `idle stats` line every 5 min (`--idle-stats`; see "Soak" below).
   Measured on first.json (9 regions), no one on line: 0.01 s of CPU
   in 120 s idle (about 0.008% of a core, the resolution of `ps`), against
   0.3-0.5% stepping at 60 Hz as before (0.04-0.08 ms a tick).
@@ -236,6 +238,79 @@ my computer is on)." Built in S2 (docs/mmorpg-m8.md).
   automation); only `-AcMmoServerDetached` (the S2 shot set) runs it
   detached, and that set stops it at its end. `hidden_run.py` names a
   world server still running on the run's folder.
+
+## Soak (Q3, 2026-10-15)
+
+The world server alone, as it runs with the game closed: no client on
+line, the 2 Hz idle path. Never AIs playing a game. `uv run
+unreal/Tools/soak.py run --out DIR --minutes 120` makes the save
+(`build/soak-save`, The First: a pilot's rig, two mining mercenaries and a
+guard, the Beacon under way, The Fork held, the pilot off line with its
+ledger, the five frontier pilots landed), serves it at nice 10 and writes
+`DIR/soak.csv` every 5 min. The run of 2026-10-15, 2 h of wall clock on
+the M4 Max under a load of about 11 (`unreal/server/build/q3/soak/soak.csv`):
+
+| min | RSS MB | CPU s | save KB | WAL KB | log KB | idle call mean / max ms | ledger rows | deposits ore |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 21.9 | 5.7 | 140 | 0 | 1.2 | - | 2 | 876,805 |
+| 15 | 22.1 | 6.7 | 140 | 929 | 1.6 | 0.55 / 4.52 | 9 | 880,990 |
+| 30 | 22.7 | 7.0 | 140 | 1,786 | 2.0 | 0.06 / 1.30 | 10 | 879,805 |
+| 45 | 10.0 | 7.2 | 140 | 2,728 | 2.8 | 0.06 / 2.01 | 11 | 889,602 |
+| 60 | 10.9 | 7.3 | 140 | 3,645 | 3.4 | 0.08 / 4.36 | 11 | 893,792 |
+| 75 | 11.5 | 7.5 | 140 | 483 | 3.9 | 0.07 / 2.51 | 11 | 898,022 |
+| 90 | 12.5 | 7.7 | 140 | 1,400 | 4.5 | 0.19 / 3.30 | 11 | 902,212 |
+| 105 | 13.2 | 8.2 | 140 | 2,318 | 5.1 | 0.21 / 4.33 | 11 | 906,452 |
+| 120 | 13.2 | 8.6 | 140 | 3,223 | 5.5 | 0.20 / 3.47 | 11 | 905,667 |
+
+Flat, in numbers: the save stays at 140 KB, and the WAL stays under
+4 MB, since SQLite's checkpoint at 1000 pages folds it back (a 23 ms save
+at minute 70). The resident memory stays under 23 MB; macOS compressed
+the idle pages to 10 MB at minute 40. CPU is 2.9 s in 2 h (0.04% of a
+core). The idle call's mean stays under 1 ms and its max under 25 ms. The
+ledger stays at most 120 rows, and the log grows 2.2 KB an hour (the
+stats and the starfall lines). The ore goes up when a starfall lands
+(about 5,400 each) and down with the frontier's and the mercenaries'
+booked mining.
+
+Past the 2 h: `build/soak-save SAVE 36` idles the same world 36 world
+days (24 h of wall clock) in the server's 0.5 s calls. The idle call's
+mean stays 0.5-0.9 ms on the days the frontier works, with no trend. The
+starfalls kept grow by about 95 a day (2-3 a world day, kept until their
+deposit is emptied, and nobody mines them with nobody on line), and the
+save grows by about 8 KB a day with them. On E1's scarce world (the head
+after Q3's rebase, 119k ore in the deposits), the same 36 world days hold
+the idle call's mean at 0.064-0.070 ms and the save at 120 KB, with
+36 starfalls kept (one a world day). The 2 h soak above ran before E1.
+
+**On E1's head** the catch-up check passes the same way: 24 h of 30,
+a 0.75 s start, the mercenaries 837-1,017 ore each, the frontier none, the
+week once, the ledger 8 to 10 rows.
+
+**The catch-up** (`soak.py catchup`): the save served a minute, then
+started as if down 30 h (`--dev-down 108000`). The clock moved 24 h (the
+cap), in 4.9 ms, and the start took 0.75 s with the world loaded. Each of
+the three mercenaries delivered 2,088-2,218 ore for the gap, under a
+day's rate (about 7,110 each at level 30), because their fields ran out. The
+frontier pilots booked nothing (docs/frontier.md "Server downtime"). The
+realm weeks that ended in the gap (five) were told once, and the ledger
+went from 9 to 11 rows. The server test
+`runon_catch_up_of_a_day_books_the_mercs_and_stays_bounded` holds the
+same rules.
+
+**Fixed by Q3.** Each fix has a test, except the idle saves, which the
+soak's WAL column measures.
+
+- A week nobody hauled in was a ledger row every 7 world days (4 h 40 m
+  of wall clock). They are now one row, its time the last, and past 120
+  rows the routine rows (weeks, frontier deeds) go first
+  (`away_ledger_bounded_on_a_long_idle`).
+- The idle saves came every 5 s and wrote the WAL at 10 KB a second.
+  They now come every 60 s (`ServerOptions::idleSaveEvery`); a crash
+  while idle loses a minute at most.
+- `server.log` is never cut while it runs. Past 8 MB at start it moves to
+  `server.log.1` (`rotateLog`, `runon_log_rotates_past_its_size`).
+- The idle path's own timing: the `idle stats` line, and the catch-up
+  line's time.
 
 ## Single player first, on a local server
 

@@ -27,6 +27,7 @@
 //                    [--frontier n]  (frontier pilots the server runs, 0 to 6; 5 unless set)
 //                    [--dev-down s]  (dev, shots: the save counts as written s seconds earlier: the start catches
 //                                     the world up on that much more, H2's mercenaries' work with it)
+//                    [--idle-stats s]  (Q3: seconds between the idle stats lines; 300 unless set, 0 none)
 //                    [--detached | --attached]  (S2; attached, the default: it ends with --parent-pid's process;
 //                                                detached, with --save: it outlives the game, writes the run file
 //                                                beside the save (first.sqlite: first.run, net::RunFile) and removes
@@ -38,7 +39,8 @@
 // prints exactly `PORT <n>` on its standard output, and ticks at 60 Hz until
 // SIGTERM or SIGINT, or until the parent process is gone. A save that will
 // not open prints `FAILED save <why>` there instead and exits 1. Logs to
-// ~/Library/Logs/Autocraft/server.log unless told otherwise. With no client
+// ~/Library/Logs/Autocraft/server.log unless told otherwise (past 8 MB at start
+// it moves to server.log.1, the one before dropped). With no client
 // on line a world idles (S2): the clock and its timers move on at 2 Hz, the
 // regions wait, and a datagram wakes it at once (Server::idle).
 
@@ -121,7 +123,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-seen a,b] [--dev-rig 1] [--brood 0|1] [--frontier n] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--dev-down s] [--detached | --attached]\n"
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-seen a,b] [--dev-rig 1] [--brood 0|1] [--frontier n] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--dev-down s] [--idle-stats s] [--detached | --attached]\n"
                  "       autocraft-server --stop <save | folder>\n",
                  why);
     return 2;
@@ -204,6 +206,7 @@ int main(int argc, char** argv) {
     std::optional<double> heldHour, weatherHold, ringshadowIn, starfallIn, clockHour;
     bool detached = false;
     double devDown = 0;
+    double idleStats = 300;
     const char* home = std::getenv("HOME");
     std::string logPath = std::string(home ? home : ".") + "/Library/Logs/Autocraft/server.log";
     for (int i = 1; i < argc; i++) {
@@ -226,6 +229,7 @@ int main(int argc, char** argv) {
         else if (a == "--save") savePath = v;
         else if (a == "--dev-control") devControlPath = v;
         else if (a == "--dev-down") devDown = std::strtod(v.c_str(), nullptr);
+        else if (a == "--idle-stats") idleStats = std::strtod(v.c_str(), nullptr);
         else if (a == "--dev-xp") devXp = std::atof(v.c_str());
         else if (a == "--dev-blueprints") devBlueprints = v != "0";
         else if (a == "--dev-rig") devRig = v != "0";
@@ -284,7 +288,10 @@ int main(int argc, char** argv) {
     bind.port = uint16_t(port);
 
     makeFolders(logPath);
+    // Q3: a server that runs on for months keeps one old log, 8 MB at most.
+    const bool rotated = rotateLog(logPath, 8ll << 20);
     logFile = std::fopen(logPath.c_str(), "a");
+    if (rotated) logLine("log: the last moved to " + logPath + ".1");
 
     // The save: opened (and held) before anything else, loaded before the
     // first tick. One that will not open (not a database, another server
@@ -319,6 +326,7 @@ int main(int argc, char** argv) {
     options.worldParams.devSeen = devSeen;
     options.worldParams.devRig = devRig;
     options.devDown = devDown;
+    options.idleStatsEvery = idleStats;
     // A dev rig's pilot is past the first ten minutes unless told a step.
     options.worldParams.firstStep = firstStep.value_or(devRig ? 0 : 1);
     if (devHydrogen > 0) options.worldParams.startHydrogen = devHydrogen;

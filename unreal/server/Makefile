@@ -52,6 +52,14 @@ $(PROGRAM): $(LIB_OBJ) build/program/main.o
 $(BIN): $(LIB_OBJ) $(CLIENT_OBJ) $(REGION_OBJ) $(TEST_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
+# Q3: the idle soak's save (bench/SoakSave.cpp; unreal/Tools/soak.py runs it).
+build/soak-save: $(LIB_OBJ) build/bench/SoakSave.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
+
+build/bench/SoakSave.o: bench/SoakSave.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 $(REGION_TOOL): $(CORE_OBJ) $(REGION_OBJ) build/region/main.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 

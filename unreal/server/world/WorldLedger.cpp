@@ -25,11 +25,18 @@ constexpr size_t kLedgerMost = 120;
 
 bool addsUp(net::AwayKind k) { return k == net::AwayKind::merc || k == net::AwayKind::waves; }
 
+/// Q3: a realm week that ended with nobody hauling. A world left idle
+/// ends one every 7 world days; they are kept as one row, its time the last.
+bool emptyWeek(const net::AwayRow& r) { return r.kind == net::AwayKind::week && r.who.empty() && r.value == 0; }
+
+/// What goes first past the cap: the routine rows (frontier deeds, weeks).
+bool routine(const net::AwayRow& r) { return r.kind == net::AwayKind::frontier || r.kind == net::AwayKind::week; }
+
 } // namespace
 
 void WorldMap::awayNote(PilotState& p, net::AwayRow row) {
     row.at = clock_;
-    if (addsUp(row.kind))
+    if (addsUp(row.kind) || emptyWeek(row))
         for (net::AwayRow& r : p.ledger)
             if (r.kind == row.kind && r.who == row.who && r.what == row.what && r.where == row.where) {
                 r.value += row.value;
@@ -38,8 +45,9 @@ void WorldMap::awayNote(PilotState& p, net::AwayRow row) {
             }
     p.ledger.push_back(std::move(row));
     if (p.ledger.size() > kLedgerMost) {
-        // The oldest frontier deed, else the oldest row.
-        auto it = std::find_if(p.ledger.begin(), p.ledger.end(), [](const net::AwayRow& r) { return r.kind == net::AwayKind::frontier; });
+        // The oldest routine row (a frontier deed, a week), else the oldest:
+        // the mercenaries, the canyons, the Matriarch stay longest.
+        auto it = std::find_if(p.ledger.begin(), p.ledger.end(), routine);
         p.ledger.erase(it != p.ledger.end() ? it : p.ledger.begin());
     }
 }
@@ -80,6 +88,19 @@ std::map<std::string, std::array<std::string, 2>> WorldMap::awaySummaries() cons
     for (const auto& [key, p] : away_)
         out[key] = net::awaySummary(awayReport(p));
     return out;
+}
+
+size_t WorldMap::ledgerRows() const {
+    size_t n = 0;
+    for (const auto& [key, p] : away_) n += p.ledger.size();
+    return n;
+}
+
+int64_t WorldMap::depositsOre() const {
+    int64_t ore = 0;
+    for (const auto& r : regions_)
+        for (const auto& patch : r->simulation().state.patches) ore += patch.remaining;
+    return ore;
 }
 
 std::string WorldMap::encodeAway(const PilotState& p) const {

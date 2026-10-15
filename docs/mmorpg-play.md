@@ -297,7 +297,16 @@ every pilot off line, a row for each thing it saw happen, never made up:
   canyon fallen;
 - the Matriarch down (who hit her hardest) or back in her nest;
 - realm projects started (by whom) and run out;
+- the realm weeks that ended (their top hauler); the weeks nobody hauled
+  in are one row, its time the last;
 - with the time you were away and the realm wallet's change.
+
+The frontier pilots' deeds happen only while the server runs: the time it
+was down is caught up for the mercenaries, not for them
+([frontier.md](frontier.md) "Server downtime"). A ledger keeps 120 rows at
+most; past that the oldest routine row (a frontier deed, a week) goes
+first, so a canyon held or the mercenaries' deliveries stay (Q3, "Soak" in
+[mmorpg.md](mmorpg.md)).
 
 It is saved with the world (schema 23), and it comes in the first
 Progress after you enter (protocol 31), once; then it starts again empty.

@@ -1412,6 +1412,10 @@ public:
     /// (`net::awaySummary` of its ledger now); the server writes them beside
     /// the save (`Server::writeAway`).
     std::map<std::string, std::array<std::string, 2>> awaySummaries() const;
+    /// Q3: the rows in every ledger of a pilot off line (the soak's count).
+    size_t ledgerRows() const;
+    /// Q3: the ore left in every region's deposits (the soak's count).
+    int64_t depositsOre() const;
 
     // MARK: Realm standings (S4, docs/mmorpg-play.md "Standings"; WorldStandings.cpp)
 

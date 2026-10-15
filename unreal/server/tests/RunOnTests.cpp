@@ -14,6 +14,7 @@
 #include "WorldStore.h"
 #include "rig.h"
 
+#include <chrono>
 #include <cstdio>
 #include <string>
 #include <sys/stat.h>
@@ -304,4 +305,93 @@ TEST(runon_idle_and_catch_up_keep_the_brood_quiet) {
     for (size_t k = 0; k < w.regionCount(); k++) alive += w.broodAlive(k);
     EXPECT_EQ(alive, int64_t(0));
     EXPECT_TRUE(w.sky()->raids.empty());
+}
+
+// Q3, the soak's catch-up: a world with mercenaries, the frontier pilots
+// landed and a pilot off line, down 30 h. The clock moves 24 h (the cap);
+// the mercenaries' work is booked for those 24 h and not more; the frontier
+// pilots book nothing for the gap (docs/frontier.md "Server downtime"); the
+// realm week that ended in it is told once, however many passed; the away
+// ledger gains a few rows, not one per tick or per week.
+TEST(runon_catch_up_of_a_day_books_the_mercs_and_stays_bounded) {
+    WorldParams p;
+    p.devRig = true;
+    p.firstStep = 0;
+    WorldMap w(first(), p);
+    ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::fresh);
+    w.step();
+    ProspectorProgress g = *w.progress(me);
+    g.xp = Progression::xp(30);
+    w.setProgress(me, g);
+    w.step();
+    for (const bool guard : {false, false, true}) ASSERT_TRUE(!w.hireMerc(me, guard).has_value());
+    auto landed = [&] {
+        size_t n = 0;
+        for (const auto& f : w.frontier()) n += f.arrived ? 1 : 0;
+        return n;
+    };
+    for (int i = 0; i < 20 * 60 * 60 && landed() < w.frontier().size(); i++) w.step();
+    ASSERT_TRUE(landed() == w.frontier().size() && landed() > 0);
+    w.leave(me);
+    w.step();
+    auto delivered = [&] {
+        int64_t ore = 0;
+        for (const net::AwayRow& r : *w.ledgerOf(key)) ore += r.kind == net::AwayKind::merc ? r.value : 0;
+        return ore;
+    };
+    auto weeks = [&] {
+        size_t n = 0;
+        for (const net::AwayRow& r : *w.ledgerOf(key)) n += r.kind == net::AwayKind::week ? 1 : 0;
+        return n;
+    };
+    std::vector<WorldMap::Wallet> frontierBefore;
+    for (const auto& f : w.frontier()) frontierBefore.push_back(f.wallet);
+    const size_t rows = w.ledgerOf(key)->size();
+    const int64_t ore = delivered();
+    const double clock = w.clock();
+    const auto t0 = std::chrono::steady_clock::now();
+    EXPECT_NEAR(w.catchUp(30 * 3600), 24 * 3600, 1e-9);
+    const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    EXPECT_NEAR(w.clock() - clock, 24 * 3600, 1e-6);
+    // Two miners and a guard (a guard mines until a hunt is called): a
+    // day's rate each at most, whole loads.
+    const int64_t most = 3 * (int64_t(WorldMercs::rate(30) * 24 * 3600) + WorldMercs::load);
+    EXPECT_TRUE(delivered() > ore);
+    EXPECT_TRUE(delivered() - ore <= most);
+    for (size_t i = 0; i < w.frontier().size(); i++) EXPECT_TRUE(w.frontier()[i].wallet == frontierBefore[i]);
+    // 24 h is 5 realm weeks of The First's 40-minute days: told once.
+    EXPECT_TRUE(24 * 3600 > 5 * w.weekLength());
+    EXPECT_EQ(weeks(), size_t(1));
+    // A row a mercenary (their deliveries add up) and the week's.
+    EXPECT_TRUE(w.ledgerOf(key)->size() <= rows + 3 + 1);
+    EXPECT_TRUE(ms < 1000);
+    std::printf("  caught up 24 h in %.1f ms: mercenaries %lld ore (at most %lld), ledger %zu -> %zu rows\n", ms,
+                (long long)(delivered() - ore), (long long)most, rows, w.ledgerOf(key)->size());
+}
+
+// Q3: the server's log past its size at start moves to .1, the one before
+// dropped; under it, left.
+TEST(runon_log_rotates_past_its_size) {
+    mkdir("build/save-tests", 0755);
+    const std::string path = "build/save-tests/rotate.log";
+    std::remove(path.c_str());
+    std::remove((path + ".1").c_str());
+    auto write = [&](const std::string& file, size_t bytes) {
+        FILE* f = std::fopen(file.c_str(), "wb");
+        for (size_t i = 0; i < bytes; i++) std::fputc('x', f);
+        std::fclose(f);
+    };
+    auto sizeOf = [](const std::string& file) {
+        struct stat st {};
+        return stat(file.c_str(), &st) == 0 ? (long long)st.st_size : -1;
+    };
+    EXPECT_TRUE(!rotateLog(path, 100));
+    write(path, 100);
+    EXPECT_TRUE(!rotateLog(path, 100));
+    EXPECT_EQ(sizeOf(path), 100ll);
+    write(path + ".1", 7);
+    write(path, 101);
+    EXPECT_TRUE(rotateLog(path, 100));
+    EXPECT_EQ(sizeOf(path), -1ll);
+    EXPECT_EQ(sizeOf(path + ".1"), 101ll);
 }
