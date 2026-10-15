@@ -112,10 +112,11 @@ months; counts use `SUM(_sample_interval)`, never `COUNT()`, as Counterscale doe
 | blob9 | `event` name (`download-mac`, `video-play`) with the page in blob2 | `kind=event` |
 | blob10 | `agent_label` at write time (a cache; the query re-applies the current rules) | server hits |
 | blob11 | `agent_class` at write time | server hits |
-| blob12 | `user_agent`, raw, **server hits only** | the Worker |
+| blob12 | `user_agent`, raw, **server hits only**; for class `browser` only the family (`Chrome`) | the Worker |
 | blob13 | `asset`: `html`, `feed`, `llms`, `md`, `other` | server hits |
 | double1 | `new_visitor` (1 on the first hit of the day) | the collector, Counterscale's cache-header trick |
 | double2 | `bounce` (1, then −1, then 0) | the collector |
+| double3 | `dropped` server points since the last report | `kind=meta`, path `dropped-server-points`, the Worker's token bucket |
 
 Why the raw User-Agent only on server hits: that is the string the admin
 labels, and a bot has no privacy to keep. A human's tracker hit stores the

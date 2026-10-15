@@ -18,6 +18,11 @@ html_handling = "auto-trailing-slash"
 # (pages, the feed, the text files) runs through the Worker.
 run_worker_first = ["/*", "!/assets/*", "!/blog/media/*"]
 
+# One point per page, feed, text or Markdown fetch (src/hits.js).
+[[analytics_engine_datasets]]
+binding = "HITS"
+dataset = "ringshadow_hits"
+
 [[routes]]
 pattern = "ringshadow.com"
 custom_domain = true
