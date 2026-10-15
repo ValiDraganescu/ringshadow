@@ -661,3 +661,9 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T P1 (frontier pilots) next for wt1.
 - D Manager: frontier pilots arrive after the human's O1; idle bookkeeping where no human is.
 - T P1 briefed to wt1 (protocol 28, schema 21).
+- T Q2 done 875019e, e37cca0, 5696092: flaky checks fixed at their causes; full regression green.
+- N Q2: 27 shot sets, 6 flows, 92/92 automation, suites 496/267/88 on the rebased build.
+- I Q2: night sight (6 cells) hid N2/N3 scenes; shot sets hold noon.
+- I First Dropship call in an editor session's first 6–10 s: 0.4–1.4 s frame → K3 (packaged).
+- I W4 crossing timing checks flaky (pace/hitch/line) → wt1 later.
+- T S3 (daylight sight) next for wt2.

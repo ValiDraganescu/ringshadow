@@ -122,7 +122,7 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | S2 | The world runs on: the local server keeps running after the game quits (as long as the Mac is on), the game reattaches to it on start; offline catch-up when it was stopped; tests never leave a server behind | | done d5600c1 |
 | H2 | Mercenary prospectors: hire at the Citadel (a MERCS tab) for ore and MH; each mines an area at 1/24 of the pilot's rate, delivers to the pilot's wallet (taxed), shown on the map; work goes on while the game is closed | S2, C2 | done 7ad7951 |
 | A1 | The radio (music) ducks very low while a mission narration plays, and comes back smoothly after | K2 | done dfdf8fd |
-| Q2 | Stability pass: the flaky checks fixed (N2/N3 shot timing, e2e fly race, CrossEdgeEast, LevelPick), the first-call ship stall, every shot set and flow rerun on the current build | F2 | |
+| Q2 | Stability pass: the flaky checks fixed (N2/N3 shot timing, e2e fly race, CrossEdgeEast, LevelPick), the first-call ship stall, every shot set and flow rerun on the current build | F2 | done 5696092 |
 | V4 | The M8 showreel: a 60–90 s hidden-recorded clip of the realm under siege (the canyon waves and the Matriarch, the Dropship flight, the satellite map, the Brood, the Citadel) for the user and the blog | Z2, F2 | done 01ed934 |
 | S3 | Daylight sight: by day a pilot sees its whole region (no fog, every unit and building sent); dusk eases down to the night sight; snapshot size and frame time measured | Q2 | |
 | U1 | HUD declutter (from M7): one toast lane, Q/C/G clear of the pawn, compact contract panel, banners off the panels, no "CONTRACT DONE: CONTRACT" | | done 67d9241 |
