@@ -54,8 +54,8 @@ def scatter(cx, cy, cz, rx, ry, rz, n, seed=1, top_only=True):
 # their glow near half the lamp's hue, so daylight doesn't wash them to white.
 SHELL = {
     "queen": (0.20, 0.14, 0.34),   # lilac egg shells (paler bloomed pink in the sun)
-    "violet": (0.30, 0.16, 0.42),
-    "gold": (0.42, 0.30, 0.16),
+    "violet": (0.14, 0.05, 0.28),
+    "gold": (0.30, 0.17, 0.04),
     "teal": (0.12, 0.34, 0.30),
 }
 VEIN = {

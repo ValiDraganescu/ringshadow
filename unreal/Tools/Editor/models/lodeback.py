@@ -18,7 +18,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ac_modelkit import Model, box, sphere, bar, loft, ring_box  # noqa: E402
-from brood_kit import materials, flecks, scatter  # noqa: E402
+from brood_kit import materials, painted, flecks, scatter  # noqa: E402
 
 POSE = "AcPoseBrood.cpp:PoseLodeback"
 
@@ -28,6 +28,13 @@ m = Model("lodeback", category="unit", notes=[
     "death. No team colour: gold glow fixed.",
     "Parts: body, head, jaw, claw_0/1, leg_0..3, sac."])
 GLOW, DIM = materials(m, "gold")
+EGG, GLASS, OPAL = painted(m, "gold")
+# N1b: the sac a gold-lit glass where the swallowed ore shows through: opal ore shapes round a gold glow inside.
+m.material("sacGlass", parent="broodGlass", blend="translucent", double_sided=True, color=(0.30, 0.18, 0.05),
+           roughness=0.05, emissive=(0.34, 0.17, 0.02), opacity=0.12,
+           params={"VeinColor": (0.55, 0.30, 0.06), "PatternScale": 0.06})
+m.material("oreInside", parent="broodOpal", color=(0.05, 0.04, 0.035), metallic=0.5, roughness=0.15,
+           emissive=(0.12, 0.06, 0.008), params={"OpalGain": 2.6, "PatternScale": 0.2})
 m.material("oreNodule", parent="hull", color=(0.30, 0.34, 0.40), metallic=0.6, roughness=0.15)
 m.material("opalTeal", parent="emissive", color=(1, 1, 1), emissive=(0.1, 1.4, 1.1))
 m.material("opalViolet", parent="emissive", color=(1, 1, 1), emissive=(1.1, 0.2, 1.5))
@@ -86,15 +93,18 @@ for k in range(4):
 # --- the sac: glassy, gold-lit, ore nodules showing through ---------------------------------------------------------
 SB = (-22, 0, Z + 26)  # its base on the back: the pose scales it from here
 sac = m.part("sac", parent=body, at=SB, driver=d("sac: scale 0.55 empty to 1.0 full with the sac fill, its glow with it; bursts (scale to 0) on death", ("scale", "emission")))
-m.mesh(sac, "glowBody_gold", sphere(58, at=(-26, 0, Z + 72), squash=(1.15, 1.0, 0.8), steps=16))
+m.mesh(sac, "sacGlass", sphere(58, at=(-26, 0, Z + 72), squash=(1.15, 1.0, 0.8), steps=20))
+m.mesh(sac, EGG, sphere(26, at=(-26, 0, Z + 66), squash=(1.2, 1.0, 0.8), steps=12), solid=False)   # the gold glow at its heart
+# the swallowed ore inside the glass: angular opal chunks round the glow
 nod = []
 for i in range(14):
     a = 2 * math.pi * i / 14 + 0.4
-    e = 0.15 + 0.55 * ((i * 5) % 7) / 7
-    nod.append((-26 + 62 * math.cos(e) * math.cos(a) * 1.1, 56 * math.cos(e) * math.sin(a), Z + 72 + 44 * math.sin(e)))
-m.mesh(sac, "oreNodule", [sphere(9 + (i % 3) * 3, at=p, squash=(1.2, 1.0, 0.85), steps=8) for i, p in enumerate(nod)], solid=False)
-m.mesh(sac, "opalTeal", [sphere(3.5, at=(p[0], p[1] * 1.04, p[2] + 6), steps=5) for p in nod[::2]], solid=False)
-m.mesh(sac, "opalViolet", [sphere(3.0, at=(p[0] * 1.02, p[1], p[2] + 5), steps=5) for p in nod[1::2]], solid=False)
+    e = -0.2 + 0.75 * ((i * 5) % 7) / 7
+    nod.append((-26 + 44 * math.cos(e) * math.cos(a) * 1.1, 38 * math.cos(e) * math.sin(a), Z + 70 + 28 * math.sin(e)))
+m.mesh(sac, "oreInside", [box((14 + (i % 3) * 5, 11 + (i % 2) * 5, 16 + (i % 4) * 4), at=p, rot=(20 * (i % 5), 37 * i, 15 * (i % 3)))
+                          for i, p in enumerate(nod)], solid=False)
+m.mesh(sac, "opalTeal", [sphere(3.5, at=p, steps=5) for p in nod[::3]], solid=False)
+m.mesh(sac, "opalViolet", [sphere(3.0, at=(p[0], p[1], p[2] + 8), steps=5) for p in nod[1::3]], solid=False)
 m.mesh(sac, "chitinMid", [sphere(1, at=(-26 + 10 * s, 0, Z + 28), squash=(70, 56, 10)) for s in (0,)], solid=False)  # the rim it sits in
 
 m.write()

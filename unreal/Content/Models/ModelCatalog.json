@@ -264615,7 +264615,7 @@
     0.841744,
     0.649309
    ],
-   "triangles": 2224,
+   "triangles": 2384,
    "team": "blue",
    "base": "shardling",
    "canonical": "shardling_blue",
@@ -265319,24 +265319,24 @@
        "triangles": 312
       },
       {
-       "material": "crystal",
-       "prim": "body__crystal",
-       "mesh": "/Game/Models/shardling/SM_body__crystal.SM_body__crystal",
-       "materialInstance": "/Game/Models/Materials/MI_crystal_7aacda7c4dcf.MI_crystal_7aacda7c4dcf",
-       "materialKey": "7aacda7c4dcf",
+       "material": "quill",
+       "prim": "body__quill",
+       "mesh": "/Game/Models/shardling/SM_body__quill.SM_body__quill",
+       "materialInstance": "/Game/Models/Materials/MI_quill_53655d765fb6.MI_quill_53655d765fb6",
+       "materialKey": "53655d765fb6",
        "blend": "opaque",
        "team": [],
        "triangles": 192
       },
       {
-       "material": "oreFleck",
-       "prim": "body__oreFleck",
-       "mesh": "/Game/Models/shardling/SM_body__oreFleck.SM_body__oreFleck",
-       "materialInstance": "/Game/Models/Materials/MI_oreFleck_a21ed8be07a6.MI_oreFleck_a21ed8be07a6",
-       "materialKey": "a21ed8be07a6",
+       "material": "opal",
+       "prim": "body__opal",
+       "mesh": "/Game/Models/shardling/SM_body__opal.SM_body__opal",
+       "materialInstance": "/Game/Models/Materials/MI_opal_be0a50c786f0.MI_opal_be0a50c786f0",
+       "materialKey": "be0a50c786f0",
        "blend": "opaque",
        "team": [],
-       "triangles": 360
+       "triangles": 520
       }
      ]
     },
@@ -265717,11 +265717,11 @@
        "triangles": 32
       },
       {
-       "material": "crystal",
-       "prim": "mandible_0__crystal",
-       "mesh": "/Game/Models/shardling/SM_mandible_0__crystal.SM_mandible_0__crystal",
-       "materialInstance": "/Game/Models/Materials/MI_crystal_7aacda7c4dcf.MI_crystal_7aacda7c4dcf",
-       "materialKey": "7aacda7c4dcf",
+       "material": "quill",
+       "prim": "mandible_0__quill",
+       "mesh": "/Game/Models/shardling/SM_mandible_0__quill.SM_mandible_0__quill",
+       "materialInstance": "/Game/Models/Materials/MI_quill_53655d765fb6.MI_quill_53655d765fb6",
+       "materialKey": "53655d765fb6",
        "blend": "opaque",
        "team": [],
        "triangles": 32
@@ -265852,11 +265852,11 @@
        "triangles": 32
       },
       {
-       "material": "crystal",
-       "prim": "mandible_1__crystal",
-       "mesh": "/Game/Models/shardling/SM_mandible_1__crystal.SM_mandible_1__crystal",
-       "materialInstance": "/Game/Models/Materials/MI_crystal_7aacda7c4dcf.MI_crystal_7aacda7c4dcf",
-       "materialKey": "7aacda7c4dcf",
+       "material": "quill",
+       "prim": "mandible_1__quill",
+       "mesh": "/Game/Models/shardling/SM_mandible_1__quill.SM_mandible_1__quill",
+       "materialInstance": "/Game/Models/Materials/MI_quill_53655d765fb6.MI_quill_53655d765fb6",
+       "materialKey": "53655d765fb6",
        "blend": "opaque",
        "team": [],
        "triangles": 32
@@ -266942,7 +266942,7 @@
     1.250002,
     0.966826
    ],
-   "triangles": 1832,
+   "triangles": 1968,
    "team": "blue",
    "base": "gloamwing",
    "canonical": "gloamwing_blue",
@@ -267166,14 +267166,14 @@
        "triangles": 24
       },
       {
-       "material": "oreFleck",
-       "prim": "thorax__oreFleck",
-       "mesh": "/Game/Models/gloamwing/SM_thorax__oreFleck.SM_thorax__oreFleck",
-       "materialInstance": "/Game/Models/Materials/MI_oreFleck_a21ed8be07a6.MI_oreFleck_a21ed8be07a6",
-       "materialKey": "a21ed8be07a6",
+       "material": "opal",
+       "prim": "thorax__opal",
+       "mesh": "/Game/Models/gloamwing/SM_thorax__opal.SM_thorax__opal",
+       "materialInstance": "/Game/Models/Materials/MI_opal_be0a50c786f0.MI_opal_be0a50c786f0",
+       "materialKey": "be0a50c786f0",
        "blend": "opaque",
        "team": [],
-       "triangles": 200
+       "triangles": 240
       }
      ]
     },
@@ -267569,14 +267569,14 @@
      ],
      "meshes": [
       {
-       "material": "glowBody_violet",
-       "prim": "abdomen__glowBody_violet",
-       "mesh": "/Game/Models/gloamwing/SM_abdomen__glowBody_violet.SM_abdomen__glowBody_violet",
-       "materialInstance": "/Game/Models/Materials/MI_glowBody_violet_0df542d5a2b2.MI_glowBody_violet_0df542d5a2b2",
-       "materialKey": "0df542d5a2b2",
+       "material": "egg_violet",
+       "prim": "abdomen__egg_violet",
+       "mesh": "/Game/Models/gloamwing/SM_abdomen__egg_violet.SM_abdomen__egg_violet",
+       "materialInstance": "/Game/Models/Materials/MI_egg_violet_53d914bd3d05.MI_egg_violet_53d914bd3d05",
+       "materialKey": "53d914bd3d05",
        "blend": "opaque",
        "team": [],
-       "triangles": 96
+       "triangles": 192
       },
       {
        "material": "chitin",
@@ -267655,8 +267655,8 @@
        "material": "gloamWing",
        "prim": "wing_0__gloamWing",
        "mesh": "/Game/Models/gloamwing/SM_wing_0__gloamWing.SM_wing_0__gloamWing",
-       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2ed5ee444f37.MI_gloamWing_2ed5ee444f37",
-       "materialKey": "2ed5ee444f37",
+       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2202a0f89dc2.MI_gloamWing_2202a0f89dc2",
+       "materialKey": "2202a0f89dc2",
        "blend": "translucent",
        "team": [],
        "triangles": 32
@@ -267738,8 +267738,8 @@
        "material": "gloamWing",
        "prim": "wing_1__gloamWing",
        "mesh": "/Game/Models/gloamwing/SM_wing_1__gloamWing.SM_wing_1__gloamWing",
-       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2ed5ee444f37.MI_gloamWing_2ed5ee444f37",
-       "materialKey": "2ed5ee444f37",
+       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2202a0f89dc2.MI_gloamWing_2202a0f89dc2",
+       "materialKey": "2202a0f89dc2",
        "blend": "translucent",
        "team": [],
        "triangles": 32
@@ -267821,8 +267821,8 @@
        "material": "gloamWing",
        "prim": "wing_2__gloamWing",
        "mesh": "/Game/Models/gloamwing/SM_wing_2__gloamWing.SM_wing_2__gloamWing",
-       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2ed5ee444f37.MI_gloamWing_2ed5ee444f37",
-       "materialKey": "2ed5ee444f37",
+       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2202a0f89dc2.MI_gloamWing_2202a0f89dc2",
+       "materialKey": "2202a0f89dc2",
        "blend": "translucent",
        "team": [],
        "triangles": 32
@@ -267904,8 +267904,8 @@
        "material": "gloamWing",
        "prim": "wing_3__gloamWing",
        "mesh": "/Game/Models/gloamwing/SM_wing_3__gloamWing.SM_wing_3__gloamWing",
-       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2ed5ee444f37.MI_gloamWing_2ed5ee444f37",
-       "materialKey": "2ed5ee444f37",
+       "materialInstance": "/Game/Models/Materials/MI_gloamWing_2202a0f89dc2.MI_gloamWing_2202a0f89dc2",
+       "materialKey": "2202a0f89dc2",
        "blend": "translucent",
        "team": [],
        "triangles": 32
@@ -268608,7 +268608,7 @@
    "category": "unit",
    "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
    "boundsMin": [
-    -1.02511,
+    -0.96,
     -0.006041,
     -1.186017
    ],
@@ -268617,7 +268617,7 @@
     1.904,
     1.186017
    ],
-   "triangles": 3464,
+   "triangles": 3328,
    "team": "blue",
    "base": "lodeback",
    "canonical": "lodeback_blue",
@@ -270523,24 +270523,34 @@
      ],
      "meshes": [
       {
-       "material": "glowBody_gold",
-       "prim": "sac__glowBody_gold",
-       "mesh": "/Game/Models/lodeback/SM_sac__glowBody_gold.SM_sac__glowBody_gold",
-       "materialInstance": "/Game/Models/Materials/MI_glowBody_gold_9d5f4c86fd67.MI_glowBody_gold_9d5f4c86fd67",
-       "materialKey": "9d5f4c86fd67",
-       "blend": "opaque",
+       "material": "sacGlass",
+       "prim": "sac__sacGlass",
+       "mesh": "/Game/Models/lodeback/SM_sac__sacGlass.SM_sac__sacGlass",
+       "materialInstance": "/Game/Models/Materials/MI_sacGlass_0252e1f1802f.MI_sacGlass_0252e1f1802f",
+       "materialKey": "0252e1f1802f",
+       "blend": "translucent",
        "team": [],
-       "triangles": 192
+       "triangles": 320
       },
       {
-       "material": "oreNodule",
-       "prim": "sac__oreNodule",
-       "mesh": "/Game/Models/lodeback/SM_sac__oreNodule.SM_sac__oreNodule",
-       "materialInstance": "/Game/Models/Materials/MI_oreNodule_edfc7e4a9ea8.MI_oreNodule_edfc7e4a9ea8",
-       "materialKey": "edfc7e4a9ea8",
+       "material": "egg_gold",
+       "prim": "sac__egg_gold",
+       "mesh": "/Game/Models/lodeback/SM_sac__egg_gold.SM_sac__egg_gold",
+       "materialInstance": "/Game/Models/Materials/MI_egg_gold_00394d786879.MI_egg_gold_00394d786879",
+       "materialKey": "00394d786879",
        "blend": "opaque",
        "team": [],
-       "triangles": 448
+       "triangles": 96
+      },
+      {
+       "material": "oreInside",
+       "prim": "sac__oreInside",
+       "mesh": "/Game/Models/lodeback/SM_sac__oreInside.SM_sac__oreInside",
+       "materialInstance": "/Game/Models/Materials/MI_oreInside_36a98a185c10.MI_oreInside_36a98a185c10",
+       "materialKey": "36a98a185c10",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 168
       },
       {
        "material": "opalTeal",
@@ -270550,7 +270560,7 @@
        "materialKey": "ab5e0a422524",
        "blend": "opaque",
        "team": [],
-       "triangles": 140
+       "triangles": 100
       },
       {
        "material": "opalViolet",
@@ -270560,7 +270570,7 @@
        "materialKey": "61176cde396f",
        "blend": "opaque",
        "team": [],
-       "triangles": 140
+       "triangles": 100
       },
       {
        "material": "chitinMid",

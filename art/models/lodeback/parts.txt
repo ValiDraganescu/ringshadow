@@ -11,4 +11,4 @@ leg_0          body           pivot (  24.0,  -64.0,   66.0)  leg: slow walk, tw
 leg_1          body           pivot ( -36.0,  -64.0,   66.0)  leg: slow walk, two legs at a time (0, 3 against 1, 2) | chitin(2),chitinMid(1),glowDim_gold(1)
 leg_2          body           pivot (  24.0,   64.0,   66.0)  leg: slow walk, two legs at a time (0, 3 against 1, 2) | chitin(2),chitinMid(1),glowDim_gold(1)
 leg_3          body           pivot ( -36.0,   64.0,   66.0)  leg: slow walk, two legs at a time (0, 3 against 1, 2) | chitin(2),chitinMid(1),glowDim_gold(1)
-sac            body           pivot ( -22.0,    0.0,   98.0)  sac: scale 0.55 empty to 1.0 full with the sac fill, its glow with it; bursts (scale to 0) on death | glowBody_gold(1),oreNodule(14),opalTeal(7),opalViolet(7),chitinMid(1)
+sac            body           pivot ( -22.0,    0.0,   98.0)  sac: scale 0.55 empty to 1.0 full with the sac fill, its glow with it; bursts (scale to 0) on death | sacGlass(1),egg_gold(1),oreInside(14),opalTeal(5),opalViolet(5),chitinMid(1)

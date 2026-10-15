@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ac_modelkit import Model, box, cyl, sphere, bar, prism  # noqa: E402
-from brood_kit import materials, flecks, scatter  # noqa: E402
+from brood_kit import materials, painted, flecks, scatter  # noqa: E402
 
 POSE = "AcPoseBrood.cpp:PoseGloamwing"
 
@@ -26,8 +26,11 @@ m = Model("gloamwing", category="unit", notes=[
     "falling on death. No team colour: violet glow fixed.",
     "Parts: thorax, head, abdomen, wing_0..3, leg_0..3."])
 GLOW, DIM = materials(m, "violet")
-m.material("gloamWing", parent="hull", color=(0.30, 0.12, 0.42), metallic=0.0, roughness=0.3,
-           blend="translucent", opacity=0.45, double_sided=True)
+EGG, _GLASS, OPAL = painted(m, "violet")
+# N1b: the wings a violet membrane lit through, veined, clearer at the middle (make_brood_materials, broodGlass).
+m.material("gloamWing", parent="broodGlass", blend="translucent", double_sided=True, color=(0.26, 0.10, 0.40),
+           roughness=0.1, emissive=(0.10, 0.015, 0.22), opacity=0.25,
+           params={"VeinColor": (0.26, 0.08, 0.55), "PatternScale": 0.12})
 
 
 def d(what, channels=("rotation",)):
@@ -40,7 +43,7 @@ thorax = m.part("thorax", at=(0, 0, Z), driver=d("thorax: lifted to the hover he
 m.mesh(thorax, "chitin", sphere(20, at=(2, 0, Z), squash=(1.25, 0.9, 0.85)))
 m.mesh(thorax, "chitinMid", [box((26, 22, 6), at=(4, 0, Z + 15), rot=(0, 6, 0)), box((14, 26, 5), at=(-12, 0, Z + 12), rot=(0, -10, 0))])
 m.mesh(thorax, "chitin", [bar((-8, s * 10, Z + 14), (-16, s * 16, Z + 24), 5, taper=0.2) for s in (-1, 1)], solid=False)  # shoulder spikes
-m.mesh(thorax, "oreFleck", flecks(scatter(2, 0, Z + 4, 22, 16, 15, 10, seed=5)), solid=False)
+m.mesh(thorax, OPAL, flecks(scatter(2, 0, Z + 4, 22, 16, 15, 12, seed=5), r=2.0), solid=False)
 
 head = m.part("head", parent=thorax, at=(22, 0, Z + 2), driver=d("head: turns to its target, jerks back on the spit"))
 m.mesh(head, "chitin", sphere(12, at=(30, 0, Z + 1), squash=(1.0, 1.05, 0.9)))
@@ -51,7 +54,7 @@ m.mesh(head, "chitin", [bar((32, s * 5, Z + 9), (44, s * 12, Z + 22), 1.6, shape
 
 # --- the lantern: a swollen glassy abdomen, lit from inside, hanging below and behind --------------------------------
 abdomen = m.part("abdomen", parent=thorax, at=(-14, 0, Z - 8), driver=d("abdomen: sways behind the flight, flares bright on the spit", ("rotation", "emission")))
-m.mesh(abdomen, "glowBody_violet", sphere(24, at=(-34, 0, Z - 34), rot=(0, 35, 0), squash=(0.85, 0.85, 1.25)))
+m.mesh(abdomen, EGG, sphere(24, at=(-34, 0, Z - 34), rot=(0, 35, 0), squash=(0.85, 0.85, 1.25), steps=16))  # the lantern
 m.mesh(abdomen, "chitin", [cyl(r, 3.2, at=(-34 + 13 * t, 0, Z - 34 + 20 * t), axis="z", rot=(0, 35, 0))
                            for t, r in ((-1.25, 13), (-0.6, 22), (0.0, 25), (0.6, 22), (1.15, 15))], solid=False)  # chitin bands over the glow
 m.mesh(abdomen, "chitinMid", sphere(9, at=(-18, 0, Z - 10), squash=(1.2, 1, 1)))                                 # waist

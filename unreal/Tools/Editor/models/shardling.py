@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ac_modelkit import Model, box, sphere, bar, loft, ring_box  # noqa: E402
-from brood_kit import materials, flecks, scatter  # noqa: E402
+from brood_kit import materials, painted, flecks, scatter  # noqa: E402
 
 POSE = "AcPoseBrood.cpp:PoseShardling"
 
@@ -25,7 +25,10 @@ m = Model("shardling", category="unit", notes=[
     "lunge and mandible snap on each attack, flinch, death roll. No team colour: teal glow fixed.",
     "Parts: body, head, mandible_0/1, leg_0..5."])
 GLOW, DIM = materials(m, "teal")
-m.material("crystal", parent="hull", color=(0.62, 0.66, 0.70), metallic=0.35, roughness=0.12)
+_EGG, _GLASS, OPAL = painted(m, "teal")
+# N1b: the quills are opal (iridescent, teal-violet-gold with the view), not white cones.
+m.material("quill", parent="broodOpal", color=(0.16, 0.15, 0.20), metallic=0.3, roughness=0.15,
+           emissive=(0.0, 0.035, 0.03), params={"OpalGain": 3.2, "PatternScale": 0.25})
 
 
 def d(what, channels=("rotation",)):
@@ -49,9 +52,9 @@ QUILLS = [(30, 0, 22, 8), (18, -9, 26, 9), (16, 9, 24, 9), (4, 0, 34, 11), (-6, 
 for x, y, h, w in QUILLS:
     root = (x, y, Z + 14)
     tip = (x - h * 0.35, y * 1.6, Z + 14 + h)
-    m.mesh(body, "crystal", bar(root, tip, w, w * 0.8, taper=0.12, side=(1, 0, 0)))
+    m.mesh(body, "quill", bar(root, tip, w, w * 0.8, taper=0.12, side=(1, 0, 0)))
     m.mesh(body, GLOW, sphere(w * 0.45, at=(x, y, Z + 15), squash=(1.2, 1.2, 0.5), steps=6), solid=False)
-m.mesh(body, "oreFleck", flecks(scatter(-8, 0, Z + 4, 48, 22, 14, 18, seed=2)), solid=False)
+m.mesh(body, OPAL, flecks(scatter(-8, 0, Z + 4, 48, 22, 14, 26, seed=2), r=2.4), solid=False)  # opal ore crusted on the plates
 
 # --- head and mandibles ------------------------------------------------------------------------------------------------
 head = m.part("head", parent=body, at=(40, 0, Z + 2), driver=d("head: dips and thrusts on a bite, turns to its target"))
@@ -66,7 +69,7 @@ for i, s in enumerate((-1, 1)):
     tip = (86, s * 6, Z - 9)
     md = m.part("mandible_%d" % i, parent=head, at=root, driver=d("mandible: twitches at rest, opens wide and snaps shut on a bite"))
     m.mesh(md, "chitinMid", [bar(root, mid, 8, 6, taper=0.8), bar(mid, tip, 6.4, 5, taper=0.25)])
-    m.mesh(md, "crystal", [bar((70, s * 17, Z - 6), (72, s * 13, Z - 2), 2.6, taper=0.2),
+    m.mesh(md, "quill", [bar((70, s * 17, Z - 6), (72, s * 13, Z - 2), 2.6, taper=0.2),
                            bar((78, s * 16, Z - 8), (79, s * 12, Z - 4), 2.4, taper=0.2)], solid=False)  # teeth
 
 # --- six legs, splayed wide ---------------------------------------------------------------------------------------------
