@@ -319,6 +319,20 @@ breaks through.
   each (`buildSpot`: an amber ring and four lit stakes; walked over, built
   over).
 
+Z3 adds two twists:
+- **`flood`** (optional): `{"outline": [[x, z], ...], "slow": 0.5}`, a
+  flooded floor inside the zone (its corners within the outline). The
+  Brood's walkers wade through it at `slow` of their speed (0.1–0.9); its
+  flyers pass over. The client draws it as water at the floor's height.
+- **`roost`** (on an entrance, `"roost": true`): a ledge the flyers come
+  off, not a tunnel. Open ground a level or more over the prize, not on a
+  cliff face, no wall needed. Its paths are flown: they must stay inside the
+  zone, start near it and end near the prize, but may cross cliffs and walls.
+  The build puts a small `broodNest` on it.
+
+The preview draws the flood blue with its slow, and a roost as a nest with
+"(roost: flyers)" by its name.
+
 Saves keep deposits and wells by their index: append a zone's prize after
 the others, and move (not delete) a deposit its canyon takes, so a save's
 mined ore stays with its deposit.

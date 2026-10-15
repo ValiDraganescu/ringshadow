@@ -68,7 +68,13 @@ const TArray<FAcZonePlace>& AcCanyon::Places(const FAcMmoClient& Mmo)
 				for (const ac::Vec2 Q : Prize) P.Middle = P.Middle + Q / double(Prize.size());
 				for (const ac::Vec2 S : Z.spots) P.Reach = FMath::Max(P.Reach, ac::distance(S, P.Middle));
 				P.Reach += 3;
-				for (const ac::region::Zone::Entrance& E : Z.entrances) P.Entrances.Add(Text(E.name));
+				for (const ac::region::Zone::Entrance& E : Z.entrances)
+				{
+					P.Entrances.Add(Text(E.name));
+					P.Roost.Add(E.roost);
+					if (E.roost) P.Roosts.Add(E.at);
+				}
+				for (const ac::Vec2 Q : Z.flood) P.Flood.Add(Q);
 				Cache.Add(P);
 			}
 		}
@@ -138,16 +144,23 @@ FString AcCanyon::Line(const FZone& Z, const double Now)
 
 FString AcCanyon::Tunnels(const FZone& Z, const FAcZonePlace* Place)
 {
-	TArray<FString> Names;
+	TArray<FString> Names, Roosts;
 	for (int32 K = 0; K < 32; ++K)
 	{
 		if (!(Z.tunnels & (1u << uint32(K)))) continue;
-		Names.Add(Place && K < Place->Entrances.Num() ? Short(Place->Entrances[K]) : FString::Printf(TEXT("tunnel %d"), K + 1));
+		// Z3: a roost is named as it is ("The Roost"), not as a tunnel.
+		if (Place && K < Place->Roost.Num() && Place->Roost[K]) Roosts.Add(Place->Entrances[K]);
+		else Names.Add(Place && K < Place->Entrances.Num() ? Short(Place->Entrances[K]) : FString::Printf(TEXT("tunnel %d"), K + 1));
 	}
-	if (Names.IsEmpty()) return TEXT("the tunnels");
-	if (Names.Num() == 1) return TEXT("the ") + Names[0] + TEXT(" tunnel");
-	const FString Last = Names.Pop();
-	return TEXT("the ") + FString::Join(Names, TEXT(", ")) + TEXT(" and ") + Last + TEXT(" tunnels");
+	FString Out;
+	if (Names.Num() == 1) Out = TEXT("the ") + Names[0] + TEXT(" tunnel");
+	else if (Names.Num() > 1)
+	{
+		const FString Last = Names.Pop();
+		Out = TEXT("the ") + FString::Join(Names, TEXT(", ")) + TEXT(" and ") + Last + TEXT(" tunnels");
+	}
+	for (const FString& R : Roosts) Out = Out.IsEmpty() ? R : Out + TEXT(" and ") + R;
+	return Out.IsEmpty() ? FString(TEXT("the tunnels")) : Out;
 }
 
 std::vector<ac::net::atlas::ZoneMark> AcCanyon::Marks(const FAcMmoClient& Mmo)

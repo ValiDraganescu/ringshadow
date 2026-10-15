@@ -27,6 +27,12 @@ struct FAcZonePlace
 	double Reach = 0;
 	/// Its entrances' names, by index ("North tunnel").
 	TArray<FString> Entrances;
+	/// Z3: its flooded floor (region cells; empty: none), and its roosts'
+	/// places (region cells).
+	TArray<ac::Vec2> Flood;
+	TArray<ac::Vec2> Roosts;
+	/// Z3: which entrances are roosts (by index, as `Entrances`).
+	TArray<bool> Roost;
 };
 
 struct AUTOCRAFT_API AcCanyon

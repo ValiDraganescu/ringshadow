@@ -307,6 +307,18 @@
 //   11 the world map on Cold Fork: the zone's ring and its state
 //   12 the Journal: the zone's state in its header
 //
+// -AcMmoShotsZ3 (at 11:00, clear weather, every region been to): the canyons
+// after The Fork (docs/canyon.md), staged by the server's dev lines
+// (`brood zone here ZONE`, `canyon …`), DIR/z3-NN-moment.png:
+//   01 The Drowned Cut (Brine Pans) from above: the two arms, the brine
+//   02 a wave's Shardlings wading through the brine, slowed (no HUD)
+//   03 the same with the HUD: the wave panel
+//   04 The Roost (Dust Terraces) from above: the tunnels, the roost's spire
+//   05 Gloamwings coming off the roost's ledge (no HUD)
+//   06 the same with the HUD: the wave panel
+//   07 the world map on Brine Pans: The Drowned Cut's ring
+//   08 the world map on Dust Terraces: The Roost's ring
+//
 // -AcMmoShotsP1 (at 11:00, clear weather, every region been to, the opening
 // chain done, the dev rig's Citadel): frontier pilots (docs/frontier.md),
 // staged by the server's dev lines (`frontier …`), DIR/p1-NN-moment.png:
@@ -367,6 +379,7 @@
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
 #include "AcProgressHud.h"
+#include "AcBrine.h"
 #include "AcCanyon.h"
 #include "AcShot.h"
 #include "AcSimSubsystem.h"
@@ -1060,7 +1073,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		// -AcMmoShotsZ1 and Z2: as W4's, late morning, clear, every region been to.
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))
-			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -1142,6 +1155,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1"))) T.Phase = 2300;
 			// -AcMmoShotsZ2: the canyon game (2500-2525).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))) T.Phase = 2500;
+			// -AcMmoShotsZ3: the canyons after The Fork (2700-2712).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2700;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1"))) T.Phase = 2600;
 			// -AcMmoShotsS3: daylight sight (2700-2714).
@@ -5112,6 +5127,269 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(Shots.Saved + Shots.Skipped >= 12, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
+	// MARK: -AcMmoShotsZ3
+	case 2700:
+	case 2701:
+	case 2702:
+	case 2703:
+	case 2704:
+	case 2705:
+	case 2706:
+	case 2707:
+	case 2708:
+	case 2709:
+	case 2710:
+	case 2711:
+	case 2712:
+	{
+		// The two canyons' files (their zones in region cells).
+		static TOptional<ac::region::RegionFile> Brine, Dust;
+		auto Load = [](const TCHAR* Name, TOptional<ac::region::RegionFile>& Into) {
+			if (Into) return;
+			FString Text;
+			if (FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectDir(), TEXT("server/regions"), Name)))
+			{
+				const ac::region::Parsed P = ac::region::parse(TCHAR_TO_UTF8(*Text));
+				if (P.file && !P.file->zones.empty()) Into = *P.file;
+			}
+		};
+		Load(TEXT("brine-pans.json"), Brine);
+		Load(TEXT("dust-terraces.json"), Dust);
+		if (!Brine || !Dust)
+		{
+			Check(false, TEXT("z3: both canyons' files read"));
+			return Finish();
+		}
+		const bool bRoost = T.Phase >= 2706 && T.Phase <= 2710;
+		const ac::region::RegionFile& F = bRoost ? *Dust : *Brine;
+		const ac::region::Zone& Z = F.zones[0];
+		const auto G = [&](const ac::Vec2 R) { const FVector2D V = Cell(R.x, R.y); return ac::Vec2(V.X, V.Y); };
+		ac::Vec2 Prize(0, 0);
+		for (const int64 I : Z.prizeDeposits) Prize = Prize + F.deposits[size_t(I)].at / double(Z.prizeDeposits.size());
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const SAcProgressHud* Hud = nullptr;
+		if (const UAcProgressHudSubsystem* H = UAcProgressHudSubsystem::Get(this)) Hud = H->Widget().Get();
+		auto Frame = [&](const ac::Vec2 EyeCell, const double EyeUp, const ac::Vec2 LookCell, const double LookUp) {
+			if (!Pc || !Terrain) return;
+			if (!W4Cam.IsValid())
+			{
+				FActorSpawnParameters Params;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+				W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+				W4Cam->GetCameraComponent()->SetFieldOfView(62.f);
+			}
+			const ac::Vec2 Eye = G(EyeCell), Look = G(LookCell);
+			const FVector EyeW = AcSpace::ToWorld(Eye, Terrain->FieldHeight(Eye) + EyeUp);
+			const FVector AtW = AcSpace::ToWorld(Look, Terrain->FieldHeight(Look) + LookUp);
+			W4Cam->SetActorLocationAndRotation(EyeW, (AtW - EyeW).Rotation());
+			if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		};
+		auto InRegion = [&](const TCHAR* Id) {
+			const TOptional<FAcRegionAround> Ground = Mmo->HereGround();
+			const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+			return U && Ground && Ground->Id == Id && Sets >= 4 && Ready == Sets;
+		};
+		auto Bugs = [&](const bool bFlyers) {
+			int32 N = 0;
+			if (S)
+				for (const ac::Unit& X : S->units) N += X.bug && X.hp > 0 && (X.kind == ac::UnitKind::gloamwing) == bFlyers ? 1 : 0;
+			return N;
+		};
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(0, ECVF_SetByCode);
+		switch (T.Phase)
+		{
+		case 2700:
+			if (!(Seated() && Since() > 3.0))
+			{
+				TimedOut(TEXT("z3: seated"), 120);
+				return;
+			}
+			Check(Mmo->DevClock(TEXT("brood clear\nbrood zone here the-drowned-cut")), TEXT("z3: the server takes the pilot to The Drowned Cut"));
+			Advance();
+			return;
+		case 2701:
+			if (!(InRegion(TEXT("brine-pans")) && Since() > 3.0))
+			{
+				TimedOut(TEXT("z3: in Brine Pans, its ground built"), 120);
+				return;
+			}
+			if (!W4Set)
+			{
+				Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\ncanyon turrets 2 1 0")), TEXT("z3: The Drowned Cut reset, turrets on its rims"));
+				W4Set = true;
+				W4ShotAt = Now;
+				return;
+			}
+			if (Now - W4ShotAt < 2.0) return;
+			W4Set = false;
+			Frame(Prize + ac::Vec2(-6, 34), 42, Prize + ac::Vec2(-8, -2), 0);
+			Advance();
+			return;
+		case 2702:
+		{
+			Frame(Prize + ac::Vec2(-6, 34), 42, Prize + ac::Vec2(-8, -2), 0);
+			if (Since() < 1.5) return;
+			const AAcBrine* B = AAcBrine::Find(GetWorld());
+			Check(B && B->Sheets() == 1, FString::Printf(TEXT("z3: the brine drawn (%d sheets)"), B ? B->Sheets() : 0));
+			ShootClean(TEXT("z3-01-drowned-cut-from-above"), TEXT("The Drowned Cut from above: the Salt and Gull arms, the brine over the basin"));
+			return;
+		}
+		case 2703:
+		{
+			// Wave 6: Shardlings down both arms, into the brine.
+			if (!W4Set)
+			{
+				Check(Mmo->DevClock(TEXT("canyon send 6")), TEXT("z3: wave 6 down both arms"));
+				W4Set = true;
+				return;
+			}
+			// A walker in the brine.
+			const ac::Unit* Wader = nullptr;
+			std::vector<ac::Vec2> Flood;
+			for (const ac::Vec2 Q : Z.flood) Flood.push_back(G(Q));
+			if (S)
+				for (const ac::Unit& X : S->units)
+				{
+					if (!X.bug || X.hp <= 0 || X.kind == ac::UnitKind::gloamwing) continue;
+					bool In = false;
+					for (size_t I = 0, J = Flood.size() - 1; I < Flood.size(); J = I++)
+						if ((Flood[I].y > X.position.y) != (Flood[J].y > X.position.y)
+							&& X.position.x < (Flood[J].x - Flood[I].x) * (X.position.y - Flood[I].y) / (Flood[J].y - Flood[I].y) + Flood[I].x)
+							In = !In;
+					if (In && X.slowUntil.value_or(-1) > S->time) Wader = &X;
+				}
+			if (!Wader)
+			{
+				TimedOut(TEXT("z3: a Shardling wading the brine, slowed"), 120);
+				return;
+			}
+			W4Set = false;
+			const ac::Vec2 At = Wader->position;
+			const ac::Vec2 Back = ac::normalize(G(Prize) - At + ac::Vec2(0.01, 0));
+			{
+				// Low over the water, the wader ahead, toward its arm.
+				if (Pc && Terrain)
+				{
+					if (!W4Cam.IsValid()) Frame(Prize, 30, Prize, 0);
+					const ac::Vec2 Eye = At + Back * 9 + ac::Vec2(-Back.y, Back.x) * 3;
+					const FVector EyeW = AcSpace::ToWorld(Eye, Terrain->FieldHeight(At) + 3.5);
+					const FVector AtW = AcSpace::ToWorld(At, Terrain->FieldHeight(At) + 0.5);
+					W4Cam->SetActorLocationAndRotation(EyeW, (AtW - EyeW).Rotation());
+					if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+				}
+			}
+			UE_LOG(LogAutocraft, Display, TEXT("mmoshots: z3: a wader at %.1f,%.1f slowed to %.2f"), At.x, At.y, Wader->slowedTo.value_or(1));
+			W4ShotAt = Now;
+			Advance();
+			return;
+		}
+		case 2704:
+			if (Now - W4ShotAt < 0.3) return;
+			ShootClean(TEXT("z3-02-waders-in-the-brine"), TEXT("a wave's Shardlings wading the brine, slowed"));
+			return;
+		case 2705:
+			Check(AcCanyon::Near(*Mmo) && AcCanyon::Near(*Mmo)->left > 0, TEXT("z3: The Drowned Cut's wave out"));
+			Shoot(TEXT("z3-03-drowned-cut-wave"), TEXT("the same with the HUD: The Drowned Cut's wave panel"));
+			return;
+		case 2706:
+			if (!W4Set)
+			{
+				Check(Mmo->DevClock(TEXT("canyon reset\nbrood clear\nbrood zone here the-roost")), TEXT("z3: the server takes the pilot to The Roost"));
+				W4Set = true;
+				return;
+			}
+			if (!(InRegion(TEXT("dust-terraces")) && Since() > 3.0))
+			{
+				TimedOut(TEXT("z3: in Dust Terraces, its ground built"), 120);
+				return;
+			}
+			if (Now - W4ShotAt < 0) return;
+			W4Set = false;
+			Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\ncanyon turrets 1 2 0")), TEXT("z3: The Roost reset, turrets on its rims"));
+			Advance();
+			return;
+		case 2707:
+			Frame(Prize + ac::Vec2(10, 30), 40, Prize + ac::Vec2(-2, -1), 0);
+			if (Since() < 2.5) return;
+			ShootClean(TEXT("z3-04-the-roost-from-above"), TEXT("The Roost from above: the Ochre and Dust tunnels, the roost's spire over the basin"));
+			return;
+		case 2708:
+		{
+			// Wave 4: Shardlings down the Dust arm, six Gloamwings off the roost.
+			if (!W4Set)
+			{
+				Check(Mmo->DevClock(TEXT("canyon send 4")), TEXT("z3: wave 4: Gloamwings off the roost"));
+				W4Set = true;
+				W4ShotAt = Now;
+				return;
+			}
+			ac::Vec2 Roost(0, 0);
+			for (const ac::region::Zone::Entrance& E : Z.entrances)
+				if (E.roost) Roost = E.at;
+			// From the basin's far side, up at the roost's spire.
+			Frame(Prize + ac::Vec2(9, 3), 3.0, Roost, 2.0);
+			if (!(Bugs(true) >= 3 && Now - W4ShotAt > 1.6))
+			{
+				TimedOut(TEXT("z3: Gloamwings off the roost"), 60);
+				return;
+			}
+			W4Set = false;
+			ShootClean(TEXT("z3-05-gloamwings-off-the-roost"), TEXT("the roost's Gloamwings lifting off its ledge toward the prize"));
+			return;
+		}
+		case 2709:
+			Check(AcCanyon::Near(*Mmo) && AcCanyon::Near(*Mmo)->left > 0, TEXT("z3: The Roost's wave out"));
+			Shoot(TEXT("z3-06-the-roost-wave"), TEXT("the same with the HUD: The Roost's wave panel"));
+			return;
+		case 2710:
+		{
+			if (Pc && Pilot && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+			if (Since() < 1.0) return;
+			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+			if (!Map)
+			{
+				ToggleWorldMap();
+				return;
+			}
+			if (!W4Set)
+			{
+				W4Set = true;
+				W4ShotAt = Now;
+				Check(Map->ShowRegion(TEXT("brine-pans"), 1.0), TEXT("z3: the map on Brine Pans"));
+				return;
+			}
+			if (Now - W4ShotAt < 2.0) return;
+			W4Set = false;
+			Shoot(TEXT("z3-07-map-drowned-cut"), TEXT("the world map on Brine Pans: The Drowned Cut's ring"));
+			return;
+		}
+		case 2711:
+		{
+			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+			if (!Map) return;
+			if (!W4Set)
+			{
+				W4Set = true;
+				W4ShotAt = Now;
+				Check(Map->ShowRegion(TEXT("dust-terraces"), 1.0), TEXT("z3: the map on Dust Terraces"));
+				return;
+			}
+			if (Now - W4ShotAt < 2.0) return;
+			W4Set = false;
+			Shoot(TEXT("z3-08-map-the-roost"), TEXT("the world map on Dust Terraces: The Roost's ring"));
+			return;
+		}
+		default:
+			ToggleWorldMap();
+			if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(1, ECVF_SetByCode);
+			if (W4Cam.IsValid()) W4Cam->Destroy();
+			Check(Shots.Saved + Shots.Skipped >= 8, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+			Finish();
+			return;
+		}
+	}
 	// MARK: -AcMmoShotsP1
 	case 2600:
 	case 2601:

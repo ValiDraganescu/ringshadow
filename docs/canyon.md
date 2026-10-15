@@ -109,6 +109,122 @@ The mini-boss waves are hoards: Lodebacks (120 hp, armour 1) heavily escorted.
 They go straight for the ore, and the panel calls them MINI-BOSS. No new kind
 of bug was made for them.
 
+## The canyons after The Fork (Z3)
+
+Two more canyons, each in its own region and each with a twist. Both play
+the same game as The Fork, with their own ten waves.
+
+### The Drowned Cut (Brine Pans, brood level 2)
+
+**Where.** Brine Pans is the salt flats, so its canyon is flooded. It sits on a
+level-2 mesa over the region's north-east (x 70–126, z 21–51 in region
+cells):
+- **Salt arm.** A long arm from the Salt tunnel in the mesa's west wall winds
+  east-south-east to a basin.
+- **Gull arm.** A short arm from the Gull tunnel in the north drops south to
+  the same basin.
+- **Basin.** The prize lies in the basin: five 6000-ore deposits round an MH
+  well of 6000.
+- **Gorge.** A gorge runs south out to the salt pan.
+- **Landmark.** A half-drowned hauler lies at the basin's east shore.
+- **Ramps** lead up to the north and south rims.
+- **Build spots:** seven, along the Salt arm's south rim, the basin's west
+  rim and the north rim.
+
+**The twist: the brine.** The zone's `flood` covers the basin and the lower
+Salt arm:
+- The Brood's **walkers** wade through it at **half speed**. Each canyon think
+  (every 0.25 s) renews their slow (`WorldCanyon::floodHold`).
+- Its **Gloamwings** fly over it unslowed.
+- So the walkers spend longer under the rims' guns, but the flyers do not.
+- Pilots' Prospectors are not slowed. Their movement is predicted on the
+  client, and a server-only slow would rubber-band them.
+
+The client draws the brine as a sheet of dark salt-green water over the
+flood's outline at the floor's height (`AAcBrine`; the MH pool's material,
+its sky dimmed). The rims stand over it, so it shows only on the floor.
+
+**Its waves** are walker-heavy, with Lodebacks from the mini-boss wave:
+
+| Wave | Salt arm | Gull arm | Bugs | Notes |
+|---|---|---|---|---|
+| 1 | 4 Shardlings | | 4 | the opening wave; it turns arm with each replay |
+| 2 | 8 Shardlings | | 8 | |
+| 3 | 5 Shardlings | 5 Shardlings | 10 | |
+| 4 | 3 Gloamwings | 6 Shardlings | 9 | flyers over the brine |
+| 5 | 2 Lodebacks + 6 Shardlings | 3 Gloamwings | 11 | **mini-boss** |
+| 6 | 10 Shardlings | 6 Shardlings | 16 | |
+| 7 | 8 Shardlings, 4 Gloamwings | 1 Lodeback + 4 Shardlings | 17 | |
+| 8 | 6 Gloamwings | 6 Gloamwings, 8 Shardlings | 20 | |
+| 9 | 12 Shardlings | 2 Lodebacks + 5 Shardlings, 4 Gloamwings | 23 | |
+| 10 | 3 Lodebacks + 12 Shardlings, 6 Gloamwings | 3 Lodebacks + 10 Shardlings | 34 | **mini-boss** |
+
+### The Roost (Dust Terraces, brood level 3)
+
+**Where.** Dust Terraces is stepped sandstone with high ledges, where the
+Gloamwings roost. Its canyon is a level-2 mesa over the south-west terrace
+(x 15–48, z 60–88):
+- **Ochre arm.** From the Ochre tunnel in the south-west corner, it winds
+  east then north to the basin at (30, 72).
+- **Dust arm.** From the Dust tunnel in the north-east, it runs down to the
+  same basin.
+- **Prize.** Five 7500-ore deposits round an MH well of 7500.
+- **Gorge.** It runs north out onto the terrace.
+- **Landmark.** A level-3 spire rises out of the mesa at the basin's west
+  edge, with the roost's nest of chitin on its top.
+- **Access.** The Dust vault's knoll joins the mesa by a bridge of level-2
+  ground; ramps lead up from the terrace and from the basin's floor to the
+  south-west rim.
+- **Build spots:** seven, on the rims round the basin and the arms.
+
+**The twist: the roost.** One of the zone's entrances is a **roost**
+(`"roost": true`): a ledge, not a tunnel.
+- **Every Gloamwing** of a wave comes off the roost, a level or more over the
+  prize, and flies its path down to the prize over the walls.
+- **Walkers** come out of the two tunnels.
+- So the flyers come from the one place the tunnels' guns don't cover. The
+  AA towers belong by the spire.
+
+The roost's mark is a small nest of chitin (`broodNest`, half size) on the
+spire, not a tunnel's mouth. The warnings name it as it is: "14 bugs from
+the Dust tunnel and The Roost".
+
+**Its waves** are heavier (level 3) and carry nearly twice The Fork's flyers, all
+off the roost. Their pay is × 1.3 (`WorldCanyon::payScale`).
+
+| Wave | Ochre arm | Dust arm | Off the roost | Bugs | Notes |
+|---|---|---|---|---|---|
+| 1 | 5 Shardlings | | | 5 | the opening wave |
+| 2 | | 6 Shardlings | 3 Gloamwings | 9 | |
+| 3 | 6 Shardlings | 6 Shardlings | 4 Gloamwings | 16 | |
+| 4 | | 8 Shardlings | 6 Gloamwings | 14 | |
+| 5 | 2 Lodebacks + 8 Shardlings | | 6 Gloamwings | 16 | **mini-boss** |
+| 6 | 10 Shardlings | 6 Shardlings | 6 Gloamwings | 22 | |
+| 7 | 8 Shardlings | 1 Lodeback + 5 Shardlings | 8 Gloamwings | 22 | |
+| 8 | | 10 Shardlings | 10 Gloamwings | 20 | |
+| 9 | 12 Shardlings | 2 Lodebacks + 6 Shardlings | 8 Gloamwings | 28 | |
+| 10 | 3 Lodebacks + 12 Shardlings | 3 Lodebacks + 12 Shardlings | 12 Gloamwings | 42 | **mini-boss** |
+
+### The same for every canyon
+
+- **Rules.** The states, the fail mark, the Matriarch's siege, the hold and
+  the pay are The Fork's. A wave of a level-3 region pays × 1.3.
+- **Frontier pilots.** A frontier defender goes to any canyon whose wave a
+  human holds (P1, [frontier.md](frontier.md)).
+- **Save.** It keeps each zone's row, sorted by region id; an unchanged world
+  writes nothing.
+- **Dev line.** `brood zone here ZONE` takes the pilot to a named zone's
+  region. The `canyon …` lines work on the zone of the pilot's region.
+- **Pictures.** `-AcMmoShotsZ3` (phases 2700-2712) shoots eight:
+  1. The Drowned Cut from above;
+  2. waders in the brine;
+  3. its wave panel;
+  4. The Roost from above;
+  5. Gloamwings off the roost;
+  6. its wave panel;
+  7. the map on each, The Drowned Cut;
+  8. then The Roost.
+
 ## Pay
 
 A wave beaten pays every pilot who fought it, split by the damage each did to

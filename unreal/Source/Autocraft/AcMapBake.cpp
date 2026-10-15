@@ -62,7 +62,8 @@ void UAcMapBakeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	FString WorldPath = FPaths::Combine(FPaths::ProjectDir(), TEXT("server/worlds/first.json"));
 	if (FString Given; FParse::Value(Cmd, TEXT("AcMapBakeWorld="), Given)) WorldPath = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Given);
 	TArray<FString> Only;
-	if (FString List; FParse::Value(Cmd, TEXT("AcMapBakeOnly="), List)) List.ParseIntoArray(Only, TEXT(","));
+	// The whole list: the parser stops at a comma unless told not to.
+	if (FString List; FParse::Value(Cmd, TEXT("AcMapBakeOnly="), List, /*bShouldStopOnSeparator*/ false)) List.ParseIntoArray(Only, TEXT(","));
 
 	// The world's grid: every region file in it.
 	FString Json;
