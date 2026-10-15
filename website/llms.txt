@@ -12,6 +12,8 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [The Matriarch wakes in Slag Pockets](https://ringshadow.com/blog/matriarch.md): The Brood's queen now lives at her nest in Slag Pockets: 6,000 hp, a slam, an acid spit and a roar that rallies her horde. Pilots who bring her down share 3,000 ore, 1,500 MH and a rare blueprint.
+- [Guns for the realm: the Citadel shoots back](https://ringshadow.com/blog/turrets.md): The Citadel now shoots back with four corner turrets, pilots build a Sentinel AA tower and a gatling gun firing red-hot ore-and-MH rounds, and every placed turret takes upgrades paid from your own wallet.
 - [Mercenaries: they mine while you sleep](https://ringshadow.com/blog/mercenaries.md): Hire mercenary prospectors at Ringshadow's Citadel: in a world day each one mines what you mine in an hour, and they keep working while the game is closed.
 - [The world runs on after you quit](https://ringshadow.com/blog/world-runs-on.md): Quit Ringshadow and its world keeps going: the local server stays up on the Mac, the clock turns, meteors fall and the Brood roams, at about 0.008% of a CPU core.
 - [Coming next: guns for the realm, and a canyon to hold](https://ringshadow.com/blog/defences.md): What is being built now in Ringshadow: the Citadel's guns, an AA tower, a gatling gun firing red-hot ore-and-MH rounds, and a canyon the pilots defend wave by wave.

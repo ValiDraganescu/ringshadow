@@ -6,10 +6,26 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-14T23:30:00Z</updated>
+  <updated>2026-10-15T01:00:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The Matriarch wakes in Slag Pockets</title>
+    <id>tag:ringshadow,2026-10-15:blog/matriarch</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/matriarch"/>
+    <published>2026-10-15T01:00:00Z</published>
+    <updated>2026-10-15T01:00:00Z</updated>
+    <summary>The Brood's queen now lives at her nest in Slag Pockets: 6,000 hp, a slam, an acid spit and a roar that rallies her horde. Pilots who fell her share 3,000 ore, 1,500 MH and a rare blueprint.</summary>
+  </entry>
+  <entry>
+    <title>Guns for the realm: the Citadel shoots back</title>
+    <id>tag:ringshadow,2026-10-15:blog/turrets</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/turrets"/>
+    <published>2026-10-15T00:30:00Z</published>
+    <updated>2026-10-15T00:30:00Z</updated>
+    <summary>Four corner turrets on every Citadel, a Sentinel AA tower and a gatling gun firing red-hot ore-and-MH rounds, and upgrades on every turret paid from your own wallet.</summary>
+  </entry>
   <entry>
     <title>Mercenaries: they mine while you sleep</title>
     <id>tag:ringshadow,2026-10-14:blog/mercenaries</id>

@@ -38,7 +38,7 @@ The numbers are built against the Prospector, which has 45 hp, walks at 3.94 cel
 | Shardling | 20 | Packs at deposits, wells, sites and pads. Chases at 4.4, faster than you walk, so you can leave its site but you can't outrun it in the open. Bites for 2 every 1.2 s. |
 | Gloamwing | 30 | Flies at rooftop height and spits acid from 4 cells, out of the torch's reach. To spit at you it dives low, and for that moment the torch can hit it, if you time the swing. |
 | Lodeback | 120 | Never hunts. It finds a vein with no building within 10 cells and no pilot within 8, eats 1.5 ore a second into its sac, up to 60, and walks off out of sight. Hit it and it flees. Kill it and the sac bursts: the ore goes back into the vein. |
-| The Matriarch | 6,000 | 9.5 cells tall, she never leaves her nest in Slag Pockets, two regions from the start. Coming |
+| The Matriarch | 6,000 | 9.5 cells tall, she never leaves her nest in Slag Pockets, two regions from the start. [She's in the world now.](https://ringshadow.com/blog/matriarch) |
 
 The numbers are tuned so you count the group before you walk in. One Shardling is no threat, two cost a fresh pilot about half its hp, and five kill it in about five seconds. A pack of six on a Hab Dome takes it down in about 40 seconds: a raid has to be answered, and there's time to get there.
 

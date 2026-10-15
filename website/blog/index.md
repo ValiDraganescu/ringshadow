@@ -8,6 +8,22 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The Matriarch wakes in Slag Pockets
+
+15 October 2026 · M8 · 6 pictures
+
+The Brood's queen at her nest: a slam, an acid spit and a roar that rallies her horde. Pilots who fell her share 3,000 ore, 1,500 MH and a rare blueprint.
+
+Read it: https://ringshadow.com/blog/matriarch
+
+## Guns for the realm: the Citadel shoots back
+
+15 October 2026 · M8 · 9 pictures
+
+Four turrets on every Citadel, a Sentinel AA tower and a gatling gun you build, and marks on each turret paid from your own wallet.
+
+Read it: https://ringshadow.com/blog/turrets
+
 ## Mercenaries: they mine while you sleep
 
 14 October 2026 · M8 · 4 pictures

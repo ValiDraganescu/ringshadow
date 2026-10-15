@@ -147,11 +147,10 @@ Buildings become the realm's, and the Prospector gets enemies. Parts have landed
 
 ### The realm, the Brood and the defences (Next · M8)
 
-Buildings belong to the realm, the Citadel taxes, sells and sends you on missions, and alien bugs swarm the places worth being. Next come the guns to hold them off.
+Buildings belong to the realm, the Citadel taxes, sells and sends you on missions, and alien bugs swarm the places worth being. Now the realm has guns to hold them off, and the Brood has its queen.
 
-- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors
-- Being built: the Citadel's turrets, the AA tower and the gatling gun
-- Then: turret upgrades, canyon defence in waves, the Matriarch's nest, regions that follow the land, the Dropship between landing pads
+- Landed: the realm's buildings, the tax and the shop, missions and the Journal, the Brood, a world server that runs on after you quit, mercenary prospectors, the satellite map, the Citadel's turrets, the AA tower and the gatling gun, turret upgrades, the Matriarch at her nest
+- Then: canyon defence in waves, regions that follow the land, the Dropship between landing pads
 
 The terminator · next
 

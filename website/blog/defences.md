@@ -8,6 +8,8 @@ Source: https://ringshadow.com/blog/defences
 
 Nothing on this page is in the game yet. It's what the agents started on tonight, and what I've asked for after it. The posts about each piece will come when it lands.
 
+Since landed: [the guns and their upgrades](https://ringshadow.com/blog/turrets) and [the Matriarch](https://ringshadow.com/blog/matriarch).
+
 ![Concept painting of a gatling turret with a glowing furnace hopper on top, firing](https://ringshadow.com/blog/media/defences/01-gatling-forge.webp)
 
 *The gatling gun, "forge" concept: a furnace hopper feeding red-hot rounds.*
