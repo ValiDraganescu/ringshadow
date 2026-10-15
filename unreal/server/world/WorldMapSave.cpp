@@ -163,6 +163,10 @@ WorldSave WorldMap::save() const {
     for (const auto& [id, p] : pilots_)
         if (!p.key.empty()) pilotRow(p);
     for (const auto& [key, p] : away_) pilotRow(p);
+    // P1: the frontier pilots' units, as theirs; the rest of them as JSON.
+    for (const FrontierPilot& f : frontier_)
+        if (f.unit && !f.travelTo && frontierUnitOf(f)) owned[f.region][*f.unit] = f.key;
+    out.frontier = encodeFrontier();
     std::sort(out.pilots.begin(), out.pilots.end(), [](const SavedPilot& a, const SavedPilot& b) { return a.id < b.id; });
 
     for (size_t i = 0; i < n; i++) {
@@ -402,6 +406,9 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     for (const SavedCanyon& sc : save.canyons)
         if (!regionNamed(sc.region) || !canyon(*regionNamed(sc.region), sc.zone))
             problems.push_back("canyon " + sc.region + "/" + sc.zone + ": no such zone now, left out");
+    // P1: the frontier pilots (none before schema 21: they come after the
+    // opening chain, as in a new world).
+    if (!decodeFrontier(save.frontier)) problems.push_back("frontier pilots do not read, they come again");
     // The world's hour goes on where it was.
     setClock(save.clock);
     return problems;

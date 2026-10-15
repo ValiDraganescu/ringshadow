@@ -600,6 +600,7 @@ void WorldMap::step() {
     workAfter(work);
     realmTaxes();
     mercsStep(dt);
+    frontierStep(dt);
     realmNews();
     sites();
     contracts();
@@ -636,6 +637,8 @@ void WorldMap::idle(double seconds) {
     regrowWells(seconds);
     // The mercenaries' work as bookkeeping, the regions held (H2).
     mercsBook(clock_ - seconds, clock_);
+    // P1: the frontier pilots' work, booked (WorldFrontier.cpp).
+    frontierIdle(seconds);
     // The Brood's director on the world's clock: with no pilot near it
     // spawns and raids nothing, and a region's bugs go `idleDespawn` s
     // after the last pilot left (WorldBrood.cpp). The canyons' waves wait;

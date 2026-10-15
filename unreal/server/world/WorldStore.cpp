@@ -228,13 +228,20 @@ CREATE TABLE canyons (region TEXT NOT NULL, zone TEXT NOT NULL, state INTEGER NO
                       PRIMARY KEY (region, zone));
 )sql";
 
+/// Schema 21 (P1): the frontier pilots the server runs, one row, as JSON
+/// (WorldFrontier.cpp). A save from before has none: they come after the
+/// opening chain, as in a new world.
+const char* const kV21 = R"sql(
+CREATE TABLE frontier (id INTEGER PRIMARY KEY CHECK (id = 1), state TEXT NOT NULL);
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}};
     return steps;
 }
 
@@ -432,6 +439,11 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         while (s.row()) out.canyons.push_back(SavedCanyon{s.colText(0), s.colText(1), s.colInteger(2), s.colInteger(3), s.colReal(4)});
         if (s.failed(error)) return std::nullopt;
     }
+    {
+        Stmt s(db_, "SELECT state FROM frontier WHERE id = 1");
+        if (s.row()) out.frontier = s.colText(0);
+        if (s.failed(error)) return std::nullopt;
+    }
     regions_.clear();
     clock_ = std::nullopt;
     realm_ = std::nullopt;
@@ -453,6 +465,7 @@ void WorldStore::remember(const WorldSave& save) {
     starfalls_ = save.starfalls;
     nests_ = save.nests;
     canyons_ = save.canyons;
+    frontier_ = save.frontier;
     for (const SavedRegion& r : save.regions) {
         regions_[r.id] = {r.time, r.nextId};
         // A region written whole: its rows are these and no others.
@@ -601,6 +614,12 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                               .integer(x.state)
                               .integer(x.wave)
                               .real(x.next)));
+        n.changed += 1;
+    }
+    // The frontier pilots (P1): one row, written whole when it changed.
+    if (frontier_ != save.frontier) {
+        run(std::move(Stmt(db_, "INSERT INTO frontier (id, state) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET state = excluded.state")
+                          .text(save.frontier)));
         n.changed += 1;
     }
     if (clock_ != save.clock) {

@@ -561,6 +561,8 @@ void WorldMap::brood() {
             if (h.kind == UnitKind::matriarch) queenHit(r, h);
             // A bug of a canyon's wave: who fought it (Z2's pay).
             canyonHit(r, h);
+            // P1: a frontier pilot's hit (its XP, its kills, its wave share).
+            frontierHit(r, h);
             const double share = h.hp / std::max(1.0, Rules::hp(h.kind));
             for (auto& [pilot, p] : pilots_)
                 if (!p.flight && p.region == r && p.unit == h.shooter) {

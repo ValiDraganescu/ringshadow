@@ -73,7 +73,10 @@ bool WorldMap::built(const PilotState& p, size_t r, int64_t building) const {
 std::string WorldMap::builder(size_t r, int64_t building) const {
     if (r >= builtBy_.size()) return "";
     const auto by = builtBy_[r].find(building);
-    return by == builtBy_[r].end() || by->second.empty() ? std::string() : callsign(by->second);
+    if (by == builtBy_[r].end() || by->second.empty()) return std::string();
+    // P1: a frontier pilot's own callsign.
+    if (const FrontierPilot* f = frontierByKey(by->second)) return f->callsign;
+    return callsign(by->second);
 }
 
 std::string WorldMap::callsign(const std::string& key) {
@@ -269,6 +272,7 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.journal = it->second.journal;
     // H2: its mercenaries, the fields, the terms; the tags here.
     mercsTold(it->second, m);
+    frontierTold(m);
     if (!it->second.flight) {
         const Region& r = *regions_[it->second.region];
         const Simulation& sim = r.simulation();
@@ -338,6 +342,8 @@ void WorldMap::realmNews() {
             if (const auto* c = e.as<GameEvent::Constructed>()) {
                 const auto b = regions_[r]->simulation().state.structure(c->structure);
                 if (!b || !realm(*b)) continue;
+                // P1: a frontier pilot's building is its deed (WorldFrontier.cpp).
+                if (const auto k = builtBy_[r].find(c->structure); k != builtBy_[r].end() && frontierKey(k->second)) continue;
                 const std::string by = builder(r, c->structure);
                 for (auto& [id, p] : pilots_)
                     p.news.push_back(News{NewsKind::built, std::string(rawValue(c->kind)), 0, p.region == r && !p.flight ? 1 : 0, by});

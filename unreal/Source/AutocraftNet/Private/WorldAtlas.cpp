@@ -203,6 +203,12 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
         for (const ProgressMessage::Merc& m : progress->mercs)
             if (m.unit != 0) ownMercUnits.insert(m.unit);
 
+    // P1: the frontier pilots' units (drawn as theirs, below).
+    std::set<int64_t> frontierUnits;
+    if (in.sky)
+        for (const Sky::Frontier& f : in.sky->frontier)
+            if (f.unit != 0 && f.region == world.here) frontierUnits.insert(f.unit);
+
     // The units in the pilot's region: the pilot, other pilots, mercenaries,
     // the Brood.
     std::vector<const Unit*> brood;
@@ -212,6 +218,7 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
                 brood.push_back(&u);
                 continue;
             }
+            if (frontierUnits.count(u.id)) continue;
             if (u.owner != Pilot::player || u.kind != UnitKind::prospector) continue;
             Item it;
             it.region = here->index;
@@ -268,6 +275,38 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
             out.push_back(std::move(it));
         }
     }
+    // P1: the frontier pilots, wherever they are (on their way: not shown);
+    // in the pilot's region at their unit's place in the mirror.
+    if (in.sky)
+        for (const Sky::Frontier& f : in.sky->frontier) {
+            if (!f.region) continue;
+            const Place* p = placeOf(places, *f.region);
+            if (!p) continue;
+            const ProgressMessage::FrontierPilot* who = nullptr;
+            if (progress)
+                for (const ProgressMessage::FrontierPilot& x : progress->frontier)
+                    if (x.id == f.id) who = &x;
+            Item it;
+            it.kind = Kind::frontier;
+            it.region = p->index;
+            it.at = p->fromCells(f.at);
+            it.ref = f.unit;
+            if (state && f.unit != 0 && *f.region == world.here)
+                for (const Unit& u : state->units)
+                    if (u.id == f.unit) {
+                        it.at = p->fromGround(u.position);
+                        it.heading = u.heading;
+                    }
+            std::string name = who ? who->callsign : "Pilot";
+            it.key = name;
+            for (char& c : name) c = char(std::toupper(static_cast<unsigned char>(c)));
+            it.title = name + " · LV " + std::to_string(f.level);
+            std::string doing = title(f.doing);
+            if (!doing.empty()) doing[0] = char(std::toupper(static_cast<unsigned char>(doing[0])));
+            it.lines = {std::string("Frontier pilot · ") + (who ? title(who->habit) : "") , doing + " in " + p->name};
+            it.paint = who ? who->paint : 2;
+            out.push_back(std::move(it));
+        }
     // The Brood in groups.
     if (!brood.empty()) {
         std::vector<Vec2> at;

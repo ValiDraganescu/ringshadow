@@ -180,11 +180,11 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
         EXPECT_EQ(store->schemaVersion(), WorldStore::version());
-        EXPECT_EQ(WorldStore::version(), int64_t(20));
+        EXPECT_EQ(WorldStore::version(), int64_t(21));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock', 'starfalls', "
-                              "'realm_wallet', 'nests', 'canyons')")[0][0],
-                  std::string("12"));
+                              "'realm_wallet', 'nests', 'canyons', 'frontier')")[0][0],
+                  std::string("13"));
         ASSERT_TRUE(store->write(sample(), &why).has_value());
     }
     // A step that fails: the file stays at this build's version, its rows kept.

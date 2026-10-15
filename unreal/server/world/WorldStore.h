@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16); the frontier pilots (schema 21). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -188,6 +188,9 @@ struct WorldSave {
     std::vector<SavedNest> nests{};
     /// The canyon zones' games (Z2, schema 20).
     std::vector<SavedCanyon> canyons{};
+    /// The frontier pilots the server runs (P1, schema 21), as JSON
+    /// (WorldFrontier.cpp). Empty: none come yet.
+    std::string frontier{};
     bool operator==(const WorldSave&) const = default;
 };
 
@@ -203,7 +206,8 @@ public:
     /// 5: contracts; 6: starfalls; 7: the rig; 8: the realm's buildings;
     /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions;
     /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills;
-    /// 17: the Matriarch's nests; 18: KSTR's next goal; 20: the canyons' games).
+    /// 17: the Matriarch's nests; 18: KSTR's next goal; 20: the canyons' games;
+    /// 21: the frontier pilots).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 
@@ -265,6 +269,7 @@ private:
     std::vector<SavedStarfall> starfalls_;
     std::vector<SavedNest> nests_;
     std::vector<SavedCanyon> canyons_;
+    std::string frontier_;
 };
 
 } // namespace ac::server

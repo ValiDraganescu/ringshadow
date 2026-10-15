@@ -14,7 +14,9 @@
 #include "Weather.h"
 #include "WorldClock.h"
 
+#include <array>
 #include <cstdint>
+#include <functional>
 #include <initializer_list>
 #include <map>
 #include <memory>
@@ -344,6 +346,10 @@ struct WorldParams {
     /// S2: the longest time the server was down that a start catches the
     /// world up on (`WorldMap::catchUp`): a day of the Mac's clock.
     double catchUpCap = 24 * 3600;
+    /// P1: frontier pilots the server runs (`--frontier N`, 4 to 6; 0: none),
+    /// and their dice (0: seeded by the world's id).
+    int64_t frontier = 5;
+    uint64_t frontierSeed = 0;
 };
 
 /// The Matriarch's nest in a world (N3; WorldNest.cpp): the groups' keys
@@ -489,6 +495,104 @@ struct WorldRoles {
     /// A Spacedock counts as a Landing Pad within this many cells of its
     /// edge (at least the pilot's pad reach from its centre).
     static constexpr double buildingPadReach = 2.0;
+};
+
+/// Frontier pilots (P1, docs/frontier.md; WorldFrontier.cpp): the pilots the
+/// server runs so a world with one human is not empty. Each is a pilot in
+/// the world by the pilot's rules (its own wallet, XP, skills, blueprints
+/// bought at the shop, the Citadel's tax), with a callsign, a paint and a
+/// habit. Their numbers and caps.
+struct WorldFrontier {
+    /// Miner: drills and hauls, builds Derricks and Hab Domes by its fields.
+    /// Builder: realm buildings where they help (a Landing Pad, a Hab Dome,
+    /// a Gatling Gun by a raided field). Defender: patrols the realm's
+    /// buildings, fights bugs, mends, joins a canyon wave a human holds.
+    /// Wanderer: crosses regions on foot and by Dropship, opens sites,
+    /// takes Citadel missions.
+    using Habit = net::FrontierHabit;
+    using Doing = net::FrontierDoing;
+    /// The pilots a world runs (`WorldParams::frontier`, 4 to 6), the `i`th
+    /// one's habit: miner, builder, defender, wanderer, then miner, builder.
+    static Habit habitOf(size_t i);
+    /// Their callsigns (the tag reads "VESPER · LV 14").
+    static const std::vector<std::string>& callsigns();
+    /// Their paints: the team palette's green, gold, violet, teal and pink
+    /// (never the pilots' blue, the red, the mercenaries' orange).
+    static constexpr std::array<int32_t, 5> paints{2, 3, 4, 5, 7};
+    /// They come this long after the first human finishes the opening chain
+    /// (O1), one every `arriveEvery` (world seconds), by Dropship.
+    static constexpr double arriveAfter = 45;
+    static constexpr double arriveEvery = 40;
+    /// Their level when they come: the first human's, the `i`th one this
+    /// many levels on (wrapping), at least 2.
+    static int64_t levelAt(int64_t human, size_t i);
+    /// Their think, world seconds.
+    static constexpr double think = 1.0;
+    /// While a human is on the opening chain, nothing of theirs comes within
+    /// this many cells of its places (the start pad, the chain's sites, the
+    /// start region's first deposit and well).
+    static constexpr double keepOff = 14;
+    /// Booked work, where no human is near: an unskilled Prospector's trips,
+    /// `Rules::carry` ore over its drilling and a walk of `bookWalk` cells
+    /// each way: ore a second.
+    static constexpr double bookWalk = 12;
+    static double bookRate();
+    /// One pump trip in this many is MH (a miner with a Derrick by its field).
+    static constexpr int64_t pumpEvery = 4;
+    /// Caps on what they build, so the realm is never overbuilt and its
+    /// limits stay the humans': in the whole world at most `habDomes` Hab
+    /// Domes, `derricks` Derricks and `gatlings` Gatling Guns of theirs, a
+    /// Landing Pad a region (`landingPads`); a kind only while the realm
+    /// has two or more under its limit (one is always left for a human);
+    /// a Gatling Gun only by a raided field with none of the realm's turrets
+    /// within `turretField`; at most `buildingsInAll` of theirs; none within
+    /// `apart` cells of another building of the realm.
+    static constexpr int64_t habDomes = 1;
+    static constexpr int64_t derricks = 2;
+    static constexpr int64_t gatlings = 2;
+    static constexpr int64_t landingPads = 1;
+    static constexpr double turretField = 12;
+    static constexpr int64_t buildingsInAll = 8;
+    static constexpr double apart = 6;
+    /// A Hab Dome goes up by a field only when the nearest depot is farther
+    /// than this.
+    static constexpr double depotFar = 24;
+    /// A field was raided when a group of the Brood lingered at one of its
+    /// deposits within this many world seconds.
+    static constexpr double raidMemory = 900;
+    /// What they keep back when they buy: ore and MH.
+    static constexpr int64_t reserveOre = 50;
+    static constexpr int64_t reserveHydrogen = 10;
+    /// A defender guards its region's realm buildings: bugs within this of
+    /// one draw it; it patrols between them.
+    static constexpr double guard = 16;
+    /// A frontier pilot's hp share under which it walks away from a fight
+    /// (and calls for help).
+    static constexpr double flee = 0.3;
+    /// KSTR radio (text): at most one line every `radioEvery` world seconds
+    /// across the world, chatter at most every `chatterEvery`.
+    static constexpr double radioEvery = 45;
+    static constexpr double chatterEvery = 600;
+    /// A walk to the next region's opening counts as there within this.
+    static constexpr double edgeReach = 2.5;
+};
+
+/// A frontier pilot's next act (`WorldMap::frontierDecide`): the habit's
+/// decision, made on the world's state, in plain data (the tests read it).
+struct FrontierPlan {
+    enum class Act : uint8_t { rest, mine, haul, pump, buy, build, repair, fight, patrol, open, walk, fly, mission };
+    Act act = Act::rest;
+    /// buy, build: the building.
+    StructureKind kind = StructureKind::habDome;
+    /// A ground point in the pilot's region: where it goes, or builds.
+    Vec2 at{0, 0};
+    /// walk, fly, mission: the region it goes to.
+    size_t region = 0;
+    /// mine: a deposit; pump, repair, build's depot: a building; fight: a
+    /// bug; open: a site (index in the region's).
+    int64_t target = -1;
+    /// Why, one line (the log, the tests).
+    std::string why;
 };
 
 /// A Landing Pad (F2): a finished Landing Pad or Spacedock of the realm's in
@@ -1011,6 +1115,9 @@ public:
         /// Hp of the wave's bugs each pilot took (its Prospector, or a
         /// defence it built).
         std::map<PilotId, double> damage;
+        /// P1: hp of the wave's bugs each frontier pilot took (its Prospector,
+        /// or a defence it built), paid as a pilot's.
+        std::map<uint32_t, double> frontierDamage;
         /// FAILED: the Matriarch came (a siege under way, or done).
         bool siege = false;
         /// The prize's ground middle; the zone's turrets stand within
@@ -1081,6 +1188,112 @@ public:
     /// The pilot's mercenaries, on line or off (by key).
     std::vector<MercView> mercs(PilotId pilot) const;
     std::vector<MercView> mercsOf(const std::string& key) const;
+
+    // MARK: Frontier pilots (P1, `WorldFrontier`; WorldFrontier.cpp)
+
+    /// A frontier pilot: a pilot of the world the server runs.
+    struct FrontierPilot {
+        uint32_t id = 0;
+        /// Its key in the save and in `builtBy` ("frontier:vesper"; never a
+        /// human's, which are 32 hex digits), its callsign, paint and habit.
+        std::string key;
+        std::string callsign;
+        WorldFrontier::Habit habit = WorldFrontier::Habit::miner;
+        int32_t paint = 2;
+        ProspectorProgress progress;
+        Wallet wallet;
+        Wallet taxed;
+        /// Come (by Dropship) or still to come, at world clock `comes`.
+        bool arrived = false;
+        double comes = 0;
+        /// Its region, and its Prospector's ground point there (kept while it
+        /// has no unit: booked, down or on its way); its unit while live.
+        size_t region = 0;
+        Vec2 at{0, 0};
+        std::optional<int64_t> unit;
+        /// What it carries (MH if `hydrogen`).
+        int64_t cargo = 0;
+        bool hydrogen = false;
+        WorldFrontier::Doing doing = WorldFrontier::Doing::coming;
+        FrontierPlan plan;
+        /// Down (its Prospector fell): back at world clock `downUntil`.
+        double downUntil = 0;
+        /// On its way to region `travelTo` (through an opening on foot, or
+        /// aboard the Dropship when `aboard`): there at world clock `until`,
+        /// at its ground point `travelAt`.
+        std::optional<size_t> travelTo;
+        Vec2 travelAt{0, 0};
+        double until = 0;
+        bool aboard = false;
+        /// The building it welds (its id in `region`).
+        std::optional<int64_t> building;
+        /// A site it holds open since world clock `openSince` (index in its
+        /// region's sites).
+        std::optional<size_t> opening;
+        double openSince = 0;
+        /// A wanderer's Citadel mission: survey region `missionRegion` (taken
+        /// at the realm's Citadel, paid on reaching its middle), its tier.
+        std::optional<size_t> missionRegion;
+        net::CitadelMission::Tier missionTier = net::CitadelMission::Tier::easy;
+        /// Booked ore not whole yet; trips since its last pump.
+        double owed = 0;
+        int64_t trips = 0;
+        /// Its last think (world clock); its counts.
+        double thought = -1e9;
+        int64_t built = 0;
+        int64_t kills = 0;
+        /// Its hp after the last step (a fall, a cry for help).
+        double hp = 0;
+        double lastCry = -1e9;
+    };
+    /// Every frontier pilot, come or still to come (tests may change them).
+    const std::vector<FrontierPilot>& frontier() const { return frontier_; }
+    std::vector<FrontierPilot>& frontier() { return frontier_; }
+    FrontierPilot* frontierPilot(uint32_t id);
+    /// The first human pilot (any pilot kept by key, on line or not) has
+    /// finished the opening chain: the frontier pilots may come.
+    bool frontierOpen() const;
+    /// Some human on line is on the opening chain now.
+    bool chainRunning() const;
+    /// The opening chain's places in region `r` (ground points): the start
+    /// pad, the chain's sites, the start region's deposit nearest its pad
+    /// and its well nearest the Derrick's wreck. None outside the start region.
+    std::vector<Vec2> chainPlaces(size_t r) const;
+    /// Ground point `at` of region `r` is within `WorldFrontier::keepOff`
+    /// of a chain place while a human is on the chain.
+    bool keptOff(size_t r, Vec2 at) const;
+    /// A frontier pilot's Prospector is simulated (live): come, on its feet,
+    /// not on its way, and a human in its region or next to it. Else its
+    /// work is booked on the world's clock.
+    bool frontierLive(const FrontierPilot& f) const;
+    /// The roster now (`frontierOpen` and none yet): `WorldParams::frontier`
+    /// pilots, coming one after another. Done by the step; tests call it.
+    void frontierRoster();
+    /// The habit's decision now (no change to the world).
+    FrontierPlan frontierDecide(const FrontierPilot& f) const;
+    /// The rules, as for a pilot: a blueprint copy bought at the realm's
+    /// Citadel (the pilot's unit, or its booked place, where it unloads; the
+    /// shop's price from its own wallet), a building put up (its blueprint,
+    /// its floor and the realm's limits, the frontier caps, the pad plates,
+    /// the ground, the world's price from its wallet), a Dropship flight
+    /// from a realm Landing Pad to one in region `to` (`Flight::price`), the
+    /// Citadel mission taken. The reason when refused.
+    std::optional<std::string> frontierBuy(uint32_t id, StructureKind kind);
+    std::optional<std::string> frontierBuild(uint32_t id, StructureKind kind, Vec2 at);
+    std::optional<std::string> frontierFly(uint32_t id, size_t to);
+    std::optional<std::string> frontierMission(uint32_t id, size_t to);
+    /// Why it may not build a `kind` at ground point `at` of region `r` by
+    /// the frontier's caps (none: it may).
+    std::optional<std::string> frontierCap(size_t r, StructureKind kind, Vec2 at) const;
+    /// The canyon wave pay a frontier pilot earned (Z2: its share by damage).
+    /// The radio lines told so far (tests).
+    const std::vector<std::string>& radioLog() const { return radioLog_; }
+    /// Dev and shots (`frontier …` lines): `here HABIT` (one of that habit
+    /// beside the first pilot, come and live), `build KIND` (the nearest one
+    /// puts up a KIND ahead of it, its blueprint and price given), `radio
+    /// hello|raid|cheer|help`, `fight` (the nearest defender at the first
+    /// zone's prize with its wave), `list`. What it did, one line.
+    std::string devFrontier(const std::string& line);
 
     /// What the pilot's client is told of its progression now (no news).
     std::optional<net::ProgressMessage> progressMessage(PilotId pilot) const;
@@ -1578,6 +1791,94 @@ private:
     std::set<uint32_t> fallsFelt_;
     std::map<PilotId, int64_t> broodUnits_;
     std::map<PilotId, std::pair<double, Vec2>> respawned_;
+    // WorldFrontier.cpp.
+    /// Each step: the roster, the arrivals, every pilot's think, its unit
+    /// live or booked, its unloads, its fall, its welding, the radio.
+    void frontierStep(double dt);
+    /// `seconds` of the world's clock with the regions held (S2's idle):
+    /// their work as bookkeeping.
+    void frontierIdle(double seconds);
+    void frontierThink(FrontierPilot& f, double dt);
+    /// Acts on its plan: live, by its unit's orders; booked, at once on the
+    /// clock.
+    void frontierAct(FrontierPilot& f, double dt);
+    void frontierBookWork(FrontierPilot& f, double dt);
+    /// Its unit into its region (it comes live) at `f.at`, or out of it.
+    void frontierUnit(FrontierPilot& f, bool live);
+    /// Its unit's unloads (out of the region's bank, into its wallet, taxed,
+    /// with XP), its welding done, its fall.
+    void frontierEvents(FrontierPilot& f);
+    /// A hit on a bug by a frontier pilot's Prospector or a defence it built:
+    /// its XP, its kills (the Brood's step calls it).
+    void frontierHit(size_t r, const Simulation::BugHit& h);
+    /// A load of `amount` (MH if `hydrogen`) into its wallet: the realm's tax
+    /// on it, its XP.
+    void frontierUnload(FrontierPilot& f, int64_t amount, bool hydrogen);
+    void frontierEarn(FrontierPilot& f, double xp);
+    /// It comes into region `to` at ground point `at` (a walk's end, a
+    /// landing, an arrival).
+    void frontierEnter(FrontierPilot& f, size_t to, Vec2 at);
+    /// Its skill points spent by its habit's build (each its branch, in the
+    /// tree's order).
+    void frontierSkills(FrontierPilot& f);
+    /// Its unit (nil: none live).
+    Unit* frontierUnitOf(const FrontierPilot& f);
+    const Unit* frontierUnitOf(const FrontierPilot& f) const;
+    /// Where it is: its unit's ground point, else `f.at`.
+    Vec2 frontierAt(const FrontierPilot& f) const;
+    /// The realm depot (a finished Citadel or Hab Dome) nearest ground point
+    /// `at` of region `r`: its id.
+    std::optional<int64_t> frontierDepot(size_t r, Vec2 at) const;
+    /// Its unit (or booked place) where it unloads at a finished realm building
+    /// `building`.
+    bool frontierBeside(const FrontierPilot& f, int64_t building) const;
+    /// The next region on the way from `from` to `to` on foot (through the
+    /// openings), and the ground point it walks out at; nil: no way.
+    std::optional<std::pair<size_t, Vec2>> frontierStepToward(size_t from, size_t to, Vec2 at) const;
+    /// The plans by habit.
+    FrontierPlan minerPlan(const FrontierPilot& f) const;
+    FrontierPlan builderPlan(const FrontierPilot& f) const;
+    FrontierPlan defenderPlan(const FrontierPilot& f) const;
+    FrontierPlan wandererPlan(const FrontierPilot& f) const;
+    /// Shared pieces: a mining plan in its region (nil: no field with ore and
+    /// a depot), a haul, a blueprint to buy or a building to put up when it
+    /// has one, the building's spot near `near`.
+    std::optional<FrontierPlan> minePlan(const FrontierPilot& f) const;
+    std::optional<FrontierPlan> buildPlan(const FrontierPilot& f, StructureKind kind, Vec2 near, const std::string& why) const;
+    std::optional<Vec2> frontierSpot(const FrontierPilot& f, StructureKind kind, Vec2 near) const;
+    /// A field of region `r` raided lately (`WorldFrontier::raidMemory`) with
+    /// no turret of the realm by it: its middle.
+    std::optional<Vec2> raidedField(size_t r) const;
+    /// The bug of the Brood a defender should fight in its region (nil:
+    /// none near the realm's buildings or its post).
+    std::optional<int64_t> frontierFoe(const FrontierPilot& f) const;
+    /// A canyon a defender should join (a wave out, a human in its region).
+    const Canyon* frontierCanyon(const FrontierPilot& f) const;
+    /// KSTR radio (text): a line of `kind` ("hello", "raid", "cheer", "help",
+    /// "chatter", "deed") by `f`, told to every human on line; `force` skips
+    /// the pacing. The deeds are toasts.
+    void frontierRadio(const FrontierPilot& f, const std::string& kind, const std::string& what = "", bool force = false);
+    void frontierDeed(const FrontierPilot& f, const std::string& text);
+    /// The radio's pacing, each step: a raid told, a wave beaten, chatter.
+    void frontierChatter();
+    /// What the clients are told: the sky's list, the roster.
+    std::vector<net::Sky::Frontier> skyFrontier() const;
+    void frontierTold(net::ProgressMessage& m) const;
+    std::string encodeFrontier() const;
+    bool decodeFrontier(const std::string& json);
+    /// Its key is a frontier pilot's.
+    static bool frontierKey(const std::string& key) { return key.rfind("frontier:", 0) == 0; }
+    const FrontierPilot* frontierByKey(const std::string& key) const;
+    std::vector<FrontierPilot> frontier_;
+    std::vector<std::string> radioLog_;
+    double radioAt_ = -1e9;
+    double chatterAt_ = -1e9;
+    std::set<uint32_t> raidsHeard_;
+    std::set<std::pair<size_t, int64_t>> wavesHeard_;
+    /// The clock a group of the Brood last lingered at a field (region,
+    /// field index): a raided field.
+    std::map<std::pair<size_t, int64_t>, double> fieldRaided_;
+    std::mt19937_64 frontierDice_;
 };
 
 } // namespace ac::server

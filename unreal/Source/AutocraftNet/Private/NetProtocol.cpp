@@ -1162,6 +1162,13 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeString(w, name);
     }
     writeStrings(w, m.regionsSeen);
+    writeVarint(w, m.frontier.size());
+    for (const auto& f : m.frontier) {
+        writeVarint(w, f.id);
+        writeString(w, f.callsign);
+        w.writeBits(uint64_t(f.habit), 2);
+        w.writeBits(uint64_t(f.paint), 3);
+    }
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 5);  // 5 bits since N3: the sixteenth kind filled 4
@@ -1388,12 +1395,21 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         if (!readString(r, m.mercTags[id])) return false;
     }
     if (!readStrings(r, m.regionsSeen)) return false;
+    const uint64_t pilots = readVarint(r);
+    if (pilots > 64 || !r.ok()) return false;
+    m.frontier.assign(size_t(pilots), {});
+    for (auto& f : m.frontier) {
+        f.id = uint32_t(readVarint(r));
+        if (!readString(r, f.callsign)) return false;
+        f.habit = static_cast<FrontierHabit>(r.readBits(2));
+        f.paint = int32_t(r.readBits(3));
+    }
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(5);
-        if (kind > uint64_t(ProgressMessage::NewsKind::canyon)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::frontier)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);
@@ -1505,6 +1521,36 @@ std::vector<region::Place> padsOnGround(const WorldMessage::Region& r, const Gro
     std::vector<region::Place> out;
     for (const WorldMessage::Pad& p : r.pads) out.push_back(region::Place{p.name, Vec2(p.at.x + bounds.minX, p.at.y + bounds.minZ)});
     return out;
+}
+
+const char* title(FrontierHabit h) {
+    switch (h) {
+    case FrontierHabit::miner: return "Miner";
+    case FrontierHabit::builder: return "Builder";
+    case FrontierHabit::defender: return "Defender";
+    case FrontierHabit::wanderer: return "Wanderer";
+    }
+    return "";
+}
+
+const char* title(FrontierDoing d) {
+    switch (d) {
+    case FrontierDoing::coming: return "on the way in";
+    case FrontierDoing::mining: return "mining";
+    case FrontierDoing::hauling: return "hauling ore";
+    case FrontierDoing::pumping: return "pumping MH";
+    case FrontierDoing::buying: return "at the Citadel shop";
+    case FrontierDoing::building: return "building";
+    case FrontierDoing::patrolling: return "on patrol";
+    case FrontierDoing::fighting: return "fighting bugs";
+    case FrontierDoing::repairing: return "mending a building";
+    case FrontierDoing::walking: return "on the road";
+    case FrontierDoing::flying: return "aboard the Dropship";
+    case FrontierDoing::opening: return "opening a site";
+    case FrontierDoing::resting: return "resting";
+    case FrontierDoing::down: return "down, coming back";
+    }
+    return "";
 }
 
 } // namespace ac::net

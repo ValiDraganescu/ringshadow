@@ -384,3 +384,41 @@ TEST(atlas_canyon_zones) {
     for (const atlas::Item& it : all) zones += it.kind == atlas::Kind::zone;
     EXPECT_EQ(zones, 1);
 }
+
+/// P1: the frontier pilots on the map, each at its place in its region
+/// (none while on its way), in its paint, its tooltip its callsign and
+/// level, habit, what it is doing and where.
+TEST(atlas_frontier_pilots) {
+    const WorldMessage w = firstReach();
+    const auto places = layout(w, {"start", "rust-hollow"});
+    ProgressMessage p;
+    p.frontier = {ProgressMessage::FrontierPilot{1, "Vesper", FrontierHabit::miner, 3},
+                  ProgressMessage::FrontierPilot{2, "Kestrel", FrontierHabit::wanderer, 5}};
+    Sky sky;
+    Sky::Frontier vesper;
+    vesper.id = 1;
+    vesper.region = 3;
+    vesper.at = Vec2(40, 30);
+    vesper.level = 14;
+    vesper.doing = FrontierDoing::building;
+    Sky::Frontier kestrel;
+    kestrel.id = 2;
+    kestrel.level = 6;
+    kestrel.doing = FrontierDoing::flying;
+    sky.frontier = {vesper, kestrel};
+    Input in;
+    in.world = &w;
+    in.progress = &p;
+    in.sky = sky;
+    const auto all = items(in, places);
+    int64_t n = 0;
+    for (const auto& it : all) n += it.kind == Kind::frontier ? 1 : 0;
+    EXPECT_EQ(n, int64_t(1));
+    const atlas::Item* it = find(all, Kind::frontier);
+    ASSERT_TRUE(it != nullptr);
+    EXPECT_EQ(it->title, std::string("VESPER · LV 14"));
+    EXPECT_TRUE(has(it->lines, "Frontier pilot · Miner"));
+    EXPECT_TRUE(has(it->lines, "Building in rust-hollow"));
+    EXPECT_EQ(it->paint, int32_t(3));
+    EXPECT_TRUE(it->region == 3 && distance(it->at, placeOf(places, 3)->fromCells(Vec2(40, 30))) < 1e-9);
+}

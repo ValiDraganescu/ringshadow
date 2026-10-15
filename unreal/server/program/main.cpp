@@ -24,6 +24,7 @@
 //                                           `ferry pad [here|REGION]|seen|go REGION|mh N`, or the Citadel
 //                                           board's: `missions here`; Server::devControl)
 //                    [--brood 0|1]  (the Brood's director spawns bugs; on unless 0)
+//                    [--frontier n]  (frontier pilots the server runs, 0 to 6; 5 unless set)
 //                    [--dev-down s]  (dev, shots: the save counts as written s seconds earlier: the start catches
 //                                     the world up on that much more, H2's mercenaries' work with it)
 //                    [--detached | --attached]  (S2; attached, the default: it ends with --parent-pid's process;
@@ -119,7 +120,7 @@ int usage(const char* why) {
     std::fprintf(stderr,
                  "autocraft-server: %s\nusage: autocraft-server --world <file> | --map <highlands|openField|ridge|badlands> "
                  "--size <small|medium|large|huge> [--starts 2|4|8]; [--bind 127.0.0.1] [--port 0] "
-                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-seen a,b] [--dev-rig 1] [--brood 0|1] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--dev-down s] [--detached | --attached]\n"
+                 "[--parent-pid pid] [--log path] [--save file] [--dev-xp xp] [--dev-blueprints 1] [--dev-seen a,b] [--dev-rig 1] [--brood 0|1] [--frontier n] [--dev-hydrogen mh] [--first-step n] [--hour h] [--weather clear|cloudy|rain|storm] [--ringshadow s] [--starfall s] [--clock-hour h] [--dev-control file] [--dev-down s] [--detached | --attached]\n"
                  "       autocraft-server --stop <save | folder>\n",
                  why);
     return 2;
@@ -196,6 +197,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> devSeen;
     bool devRig = false;
     bool brood = true;
+    int64_t frontier = 5;
     long long devHydrogen = 0;
     std::optional<int> firstStep;
     std::optional<double> heldHour, weatherHold, ringshadowIn, starfallIn, clockHour;
@@ -234,6 +236,10 @@ int main(int argc, char** argv) {
             }
         }
         else if (a == "--brood") brood = v != "0";
+        else if (a == "--frontier") {
+            frontier = std::atoll(v.c_str());
+            if (frontier < 0 || frontier > 6) return usage("--frontier: 0…6");
+        }
         else if (a == "--dev-hydrogen") devHydrogen = std::atoll(v.c_str());
         else if (a == "--first-step") {
             firstStep = std::atoi(v.c_str());
@@ -319,6 +325,7 @@ int main(int argc, char** argv) {
     options.worldParams.weatherHold = weatherHold;
     options.worldParams.devStarfall = starfallIn;
     options.worldParams.brood = brood;
+    options.worldParams.frontier = frontier;
     options.token.assign(token.begin(), token.end());
     if (!net::secureRandom(options.secret.data(), options.secret.size())) {
         logLine("start failed: no secure random source");

@@ -83,7 +83,7 @@ TEST(snapshot_sky_carries_the_raids_and_roars) {
 }
 
 /// The Matriarch's news (N3): her fall to every pilot, each fighter's share
-/// and her return; a news kind past the last (Z2's canyon) is refused.
+/// and her return; a news kind past the last (P1's frontier) is refused.
 TEST(progress_carries_the_matriarchs_news) {
     ProgressMessage m;
     using K = ProgressMessage::NewsKind;
@@ -93,7 +93,7 @@ TEST(progress_carries_the_matriarchs_news) {
     ProgressMessage back;
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back.news == m.news);
-    m.news.front().kind = K(uint8_t(K::canyon) + 1);
+    m.news.front().kind = K(uint8_t(K::frontier) + 1);
     EXPECT_TRUE(!decode(encode(m), back));
 }
 

@@ -157,6 +157,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devMissions(line));
             continue;
         }
+        // Frontier pilots (WorldMap::devFrontier): `frontier here HABIT [SIDE]|build KIND|radio KIND|level N|list`.
+        if (line.rfind("frontier", 0) == 0) {
+            said.push_back(world_.devFrontier(line));
+            continue;
+        }
         // The Matriarch's scenes (WorldMap::devMatriarch): `matriarch here|near|roar|calm|slam|hurt|down|back|siege`.
         if (line.rfind("matriarch", 0) == 0) {
             said.push_back(world_.devMatriarch(line));

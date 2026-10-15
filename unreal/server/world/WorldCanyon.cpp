@@ -291,6 +291,7 @@ bool WorldMap::sendWave(Canyon& c) {
     c.carried = 0;
     c.tunnels = 0;
     c.damage.clear();
+    c.frontierDamage.clear();
     // Wave 1 waiting turns from arm to arm with each replay.
     const size_t turn = c.state == State::waiting ? size_t(c.replays) : 0;
     double longest = 0;
@@ -329,6 +330,8 @@ void WorldMap::waveBeaten(Canyon& c) {
     const bool last = c.wave >= WorldCanyon::count();
     double total = 0;
     for (const auto& [pilot, d] : c.damage) total += d;
+    // P1: frontier pilots fought it too, paid by the same split.
+    for (const auto& [id, d] : c.frontierDamage) total += d;
     const std::vector<StructureKind> rare = rareBlueprints();
     const double bonus = last ? WorldCanyon::lastBonus : 1;
     int64_t fighters = 0;
@@ -354,12 +357,23 @@ void WorldMap::waveBeaten(Canyon& c) {
         p->news.push_back(News{NewsKind::canyon, id, xp, ore, c.name});
         pushProgress(pilot);
     }
+    for (const auto& [id, d] : c.frontierDamage) {
+        FrontierPilot* f = frontierPilot(id);
+        if (!f || !(d > 0)) continue;
+        fighters += 1;
+        const double share = std::max(d / std::max(1.0, total), WorldCanyon::floorShare);
+        f->wallet.ore += std::llround(double(WorldCanyon::ore(c.wave)) * bonus * share);
+        f->wallet.hydrogen += std::llround(double(WorldCanyon::hydrogen(c.wave)) * bonus * share);
+        frontierEarn(*f, std::round(WorldCanyon::xp(c.wave) * bonus * share));
+        if (last && !rare.empty()) f->progress.giveBlueprint(rare[size_t(broodDice_() % rare.size())], 1);
+    }
     c.out = false;
     c.bugs.clear();
     c.killed.clear();
     c.sacs.clear();
     c.left = 0;
     c.damage.clear();
+    c.frontierDamage.clear();
     if (last) {
         // The canyon held: a world day of peace; the whole world hears it.
         c.state = State::held;
@@ -389,6 +403,7 @@ void WorldMap::waveFailed(Canyon& c) {
     // What the wave ate is gone; its bugs linger a while and leave.
     releaseWave(c);
     c.damage.clear();
+    c.frontierDamage.clear();
     if (c.state == State::waiting) {
         // Wave 1 comes again; nothing to lose yet.
         c.next = clock_ + WorldCanyon::replayEvery;
@@ -423,6 +438,7 @@ void WorldMap::resetCanyon(Canyon& c) {
     c.wave = 1;
     c.siege = false;
     c.damage.clear();
+    c.frontierDamage.clear();
     c.next = clock_ + WorldCanyon::replayEvery;
 }
 

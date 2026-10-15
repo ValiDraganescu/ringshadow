@@ -290,6 +290,18 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
             w.writeBool(z.paused);
             w.writeBool(z.boss);
         }
+        writeVarint(w, s.sky->frontier.size());
+        for (const Sky::Frontier& f : s.sky->frontier) {
+            writeVarint(w, f.id);
+            w.writeBool(f.region.has_value());
+            if (f.region) {
+                writeVarint(w, uint64_t(*f.region));
+                Pos{}.write(w, f.at);
+            }
+            writeVarint(w, uint64_t(f.unit));
+            writeVarint(w, uint64_t(f.level));
+            w.writeBits(uint64_t(f.doing), 4);
+        }
     }
     Opt<Fixed>{kMs}.write(w, s.xp);
     writeVarint(w, s.players.size());
@@ -764,6 +776,19 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
             z.tunnels = uint32_t(readVarint(r));
             z.paused = r.readBool();
             z.boss = r.readBool();
+        }
+        const uint64_t frontier = readVarint(r);
+        if (frontier > 64 || !r.ok()) return std::nullopt;
+        sky.frontier.assign(size_t(frontier), {});
+        for (Sky::Frontier& f : sky.frontier) {
+            f.id = uint32_t(readVarint(r));
+            if (r.readBool()) {
+                f.region = int64_t(readVarint(r));
+                Pos{}.read(r, f.at);
+            }
+            f.unit = int64_t(readVarint(r));
+            f.level = int64_t(readVarint(r));
+            f.doing = static_cast<FrontierDoing>(r.readBits(4));
         }
         s.sky = sky;
     }

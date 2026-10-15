@@ -156,6 +156,15 @@ struct FogView {
     bool operator==(const FogView&) const = default;
 };
 
+/// P1, the frontier pilots the server runs (docs/frontier.md): a habit
+/// each, and what one is doing now (the map's tooltip).
+enum class FrontierHabit : uint8_t { miner, builder, defender, wanderer };
+enum class FrontierDoing : uint8_t { coming, mining, hauling, pumping, buying, building, patrolling, fighting, repairing, walking, flying,
+                                     opening, resting, down };
+/// "Miner", "Builder", "Defender", "Wanderer"; "mining", "hauling ore", …
+AUTOCRAFTNET_API const char* title(FrontierHabit h);
+AUTOCRAFTNET_API const char* title(FrontierDoing d);
+
 /// The world's sky (docs/mmorpg-m6.md, C1): its clock and its weather, the
 /// same in every region of a world. The client's sky draws it: the hour from
 /// `WorldClock::hourAt`, the weather from `Weather(weatherSeed)` sampled at
@@ -259,6 +268,21 @@ struct Sky {
         bool operator==(const Zone&) const = default;
     };
     std::vector<Zone> zones;
+    /// P1: the frontier pilots come (docs/frontier.md): where each is (a
+    /// region of the World message, region cells from its north-west
+    /// corner; nil region: on its way), its Prospector there (0: none, its
+    /// work booked), its level and what it is doing. Their names and
+    /// paints are in the Progress message's roster (`id`).
+    struct Frontier {
+        uint32_t id = 0;
+        std::optional<int64_t> region;
+        Vec2 at;
+        int64_t unit = 0;
+        int64_t level = 1;
+        FrontierDoing doing = FrontierDoing::coming;
+        bool operator==(const Frontier&) const = default;
+    };
+    std::vector<Frontier> frontier;
     double hour() const { return WorldClock::hourAt(time, dayLength, heldHour); }
     bool operator==(const Sky&) const = default;
 };
@@ -703,8 +727,13 @@ struct ProgressMessage {
     /// pilot when the last wave is beaten (`value`: the pilots who fought
     /// it); "failed" to every pilot when a wave breaks through (`value`:
     /// the wave), "spared" when the Matriarch can't come (she is down).
+    ///
+    /// P1: `frontier`, to every human on line: "radio" a KSTR radio line
+    /// (`by`: the line, `value`: the frontier pilot's id), "deed" a notable
+    /// deed (`by`: "Vesper built a Hab Dome in Rust Hollow"), "come" one
+    /// landed (`by`: its line).
     enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
-                                    merc, upgraded, matriarch, goal, canyon };
+                                    merc, upgraded, matriarch, goal, canyon, frontier };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -874,6 +903,16 @@ struct ProgressMessage {
     /// M2: the world's regions the pilot has been to (ids; the map shows
     /// the rest dark).
     std::set<std::string> regionsSeen;
+    /// P1: the frontier pilots come (the roster: their callsigns, habits,
+    /// paints; `Sky::frontier` has where they are).
+    struct FrontierPilot {
+        uint32_t id = 0;
+        std::string callsign;
+        FrontierHabit habit = FrontierHabit::miner;
+        int32_t paint = 2;
+        bool operator==(const FrontierPilot&) const = default;
+    };
+    std::vector<FrontierPilot> frontier;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

@@ -15,8 +15,8 @@
 //   tooltip says: the pilot, other pilots, mercenaries, the Brood in groups,
 //   realm buildings, deposits and wells (the pilot's region: the mirror's),
 //   blueprint sites the pilot knows of, pads, starfalls and their craters,
-//   the Journal's missions and KSTR's places. `pick` finds the one under the
-//   pointer.
+//   the Journal's missions, KSTR's places and the frontier pilots (P1).
+//   `pick` finds the one under the pointer.
 // - **The ringshadow band** over a region, as a polygon on the map.
 #pragma once
 
@@ -104,6 +104,9 @@ enum class Kind : uint8_t {
     you, mission, site, pad, merc, pilot, bugs, building, starfall, crater, deposit, well, contract,
     /// A canyon zone's game (Z2): its state over its prize.
     zone,
+    /// A frontier pilot the server runs (P1): its callsign, habit, level and
+    /// what it is doing; in its paint (`paint`).
+    frontier,
 };
 
 struct Item {
@@ -132,6 +135,8 @@ struct Item {
     bool flag = false;
     /// A unit's heading, radians in the ground plane (the pilot's arrow).
     double heading = 0;
+    /// A frontier pilot's paint: the team palette's index (-1: none).
+    int32_t paint = -1;
     bool operator==(const Item&) const = default;
 };
 
