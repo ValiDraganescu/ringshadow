@@ -12,6 +12,7 @@ Every page below has a Markdown copy at its own address with `.md` added. The so
 
 ## Blog posts (newest first)
 
+- [The Dropship: no more flying alone](https://ringshadow.com/blog/dropship.md): The Prospector no longer flies by itself. Pilots build Landing Pads and ride the Dropship between them: board, lift off, bank under the ringed giant, dash through cloud and land in another region, 16 to 20 seconds and never a fade.
 - [The Fork: the first canyon to hold](https://ringshadow.com/blog/the-fork.md): The first canyon in Ringshadow's world: The Fork in Cold Fork, two winding arms from Brood tunnels to a prize of 36,000 ore and 6,000 MH, with 12 build spots on the rims for the turrets that will hold it.
 - [Valleys, not tiles: the regions reshaped](https://ringshadow.com/blog/valleys.md): Ringshadow's nine regions reshaped as natural basins: bays, rock spurs, necks, islands of rock, terraced walls and passages that narrow like canyon mouths, with one high land of rock running between them.
 - [A quieter HUD: the same moments, before and after](https://ringshadow.com/blog/hud.md): Ringshadow's HUD, decluttered: one lane of toasts at the upper left, one banner slot under the compass, a contract panel a third of its old height, and the same moments before and after.

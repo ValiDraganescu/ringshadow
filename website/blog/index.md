@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The Dropship: no more flying alone
+
+15 October 2026 · M8 · 9 pictures
+
+Build Landing Pads and ride the Dropship between them: lift-off, two turns under the giant, a dash through cloud and a landing in another region, with no fade.
+
+Read it: https://ringshadow.com/blog/dropship
+
 ## The Fork: the first canyon to hold
 
 15 October 2026 · M8 · 8 pictures

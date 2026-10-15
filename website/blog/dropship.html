@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Dropship · Ringshadow</title>
+  <meta name="description" content="The Prospector no longer flies by itself. Pilots build Landing Pads and ride the Dropship between them: board, lift off, bank under the ringed giant, dash through cloud and land in another region, 16 to 20 seconds and never a fade.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="The Dropship: no more flying alone">
+  <meta property="og:description" content="The Prospector no longer flies by itself. Pilots build Landing Pads and ride the Dropship between them: board, lift off, bank under the ringed giant, dash through cloud and land in another region, 16 to 20 seconds and never a fade.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/dropship/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/dropship">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/dropship">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="dropship.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>The Dropship: no more flying alone</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M8 · The realm under siege</p>
+        <p class="lede">The Prospector used to jump from pad to pad on its own. I wanted a ship to carry it instead, and now one does: you build a Landing Pad, call the Dropship, walk up its ramp and watch the flight to the other side of the world, with no loading screen and no fade.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/dropship/cover.jpg" alt="The Dropship banking through cloud, the ringed gas giant filling the sky behind it" width="1200" height="750"></div>
+        <figcaption>The second banking turn, with Ringshadow filling the sky.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>Landing Pads</h2>
+        <p>Flights go only between Landing Pads that pilots have built, and only to regions you've already been to. A Landing Pad is a building from level 1: its blueprint is 80 ore at the Citadel's shop and it costs 60 ore to build. A region can have two, and like every building they're the realm's, so any pilot uses any pad. The pads in the region files are where new pilots arrive; nobody flies to those.</p>
+        <p>A flight costs 10 MH plus 5 for each step across the map's grid, so 15 MH to the next region over. From a Spacedock, the big pad, it costs half. With the Ringwalker skill it's free and 30% faster. The old Homing beacon skill, which flew you home, is retired: pilots who had it get their points back and a Landing Pad blueprint.</p>
+
+        <h2>The flight</h2>
+        <p>Stand on a pad and press M to pick the pad you're going to. The Dropship comes down onto your pad, seen from a low camera, and the Prospector walks up its ramp. It lifts off in a ring of dust, banks twice with the ringed giant filling the sky, dashes through streaking cloud, swings wide onto the target pad, and you step out. The whole trip is 16 to 20 seconds; a longer trip only makes the dash longer.</p>
+        <p>The change of region happens during the approach, and drawing it takes 1.6 ms. Frames through the whole flight run 10.8 ms at the median and 12.2 ms at the 95th percentile.</p>
+      </div>
+
+      <section class="album" aria-labelledby="a1">
+        <h2 class="album-title" id="a1">Prospect Landing to Cold Fork</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/dropship/01-menu.webp"><img src="media/dropship/01-menu-t.webp" alt="The world map at a Landing Pad, Landing Pad 1 in Cold Fork picked, FLY for 15 MH" width="640" height="400" loading="lazy"></a><span class="cap">On a pad, M: Landing Pad 1 in Cold Fork, for 15 MH.</span></li>
+          <li class="reveal"><a href="media/dropship/02-descend.webp"><img src="media/dropship/02-descend-t.webp" alt="The Dropship descending on its thrusters, the gas giant behind it" width="640" height="400" loading="lazy"></a><span class="cap">The Dropship comes down.</span></li>
+          <li class="reveal"><a href="media/dropship/03-board.webp"><img src="media/dropship/03-board-t.webp" alt="The Dropship on the pad in a cloud of dust as the Prospector boards" width="640" height="400" loading="lazy"></a><span class="cap">Boarding.</span></li>
+          <li class="reveal"><a href="media/dropship/04-liftoff.webp"><img src="media/dropship/04-liftoff-t.webp" alt="Lift-off in a ring of dust, the giant and its rings behind" width="640" height="400" loading="lazy"></a><span class="cap">Lift-off in a ring of dust.</span></li>
+          <li class="reveal"><a href="media/dropship/05-turn.webp"><img src="media/dropship/05-turn-t.webp" alt="The Dropship banking hard in front of the giant" width="640" height="400" loading="lazy"></a><span class="cap">Banking under the giant.</span></li>
+          <li class="reveal"><a href="media/dropship/06-dash.webp"><img src="media/dropship/06-dash-t.webp" alt="The Dropship dashing through bright streaking cloud" width="640" height="400" loading="lazy"></a><span class="cap">The dash, through cloud.</span></li>
+          <li class="reveal"><a href="media/dropship/07-approach.webp"><img src="media/dropship/07-approach-t.webp" alt="The Dropship swinging wide on its approach between clouds" width="640" height="400" loading="lazy"></a><span class="cap">The wide approach.</span></li>
+          <li class="reveal"><a href="media/dropship/08-step-out.webp"><img src="media/dropship/08-step-out-t.webp" alt="The Dropship settling on the pad in Cold Fork in a cloud of dust" width="640" height="400" loading="lazy"></a><span class="cap">Down on the pad in Cold Fork.</span></li>
+          <li class="reveal"><a href="media/dropship/09-landed.webp"><img src="media/dropship/09-landed-t.webp" alt="The Prospector on the pad in Cold Fork, the region banner COLD FORK, THE RIDGE" width="640" height="400" loading="lazy"></a><span class="cap">Stepped out: Cold Fork.</span></li>
+        </ul>
+      </section>
+
+      <div class="prose">
+        <h2>What isn't right yet</h2>
+        <p>The first call in a session still stalls once, for 522 ms, the first time the ship is drawn. That's in the editor build; it hasn't been checked in a packaged one yet.</p>
+        <p>Every test suite passes: 496 core, 254 server and 85 network.</p>
+      </div>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="the-fork.html">Before: The Fork</a>
+        <a class="btn" href="index.html">All posts</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="dropship.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No trackers, no cookies.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

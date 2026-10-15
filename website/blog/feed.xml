@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T04:30:00Z</updated>
+  <updated>2026-10-15T05:00:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The Dropship: no more flying alone</title>
+    <id>tag:ringshadow,2026-10-15:blog/dropship</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/dropship"/>
+    <published>2026-10-15T05:00:00Z</published>
+    <updated>2026-10-15T05:00:00Z</updated>
+    <summary>The Prospector no longer flies by itself. Pilots build Landing Pads and ride the Dropship between them: board, lift off, bank under the ringed giant, dash through cloud and land in another region, 16 to 20 seconds and never a fade.</summary>
+  </entry>
   <entry>
     <title>The Fork: the first canyon to hold</title>
     <id>tag:ringshadow,2026-10-15:blog/the-fork</id>
