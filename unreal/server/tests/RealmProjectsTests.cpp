@@ -146,6 +146,10 @@ TEST(realm_projects_start_and_the_rules) {
     const auto own0 = *w.wallet(a);
     const auto realm0 = w.realmWallet();
     const RealmProject::Price beacon = RealmProject::price(Kind::beacon, 0);
+    // X2: a pilot off line, its ledger filling.
+    const std::string keyAway = "0a0b0c0d0e0f10111213141516171819";
+    ASSERT_TRUE(w.seat(89, keyAway) == WorldMap::Seated::fresh);
+    w.leave(89);
     ASSERT_TRUE(!w.startProject(a, Kind::beacon).has_value());
     EXPECT_TRUE(w.projectOn(Kind::beacon));
     EXPECT_EQ(w.realmWallet().ore, realm0.ore - beacon.ore);
@@ -155,6 +159,13 @@ TEST(realm_projects_start_and_the_rules) {
     EXPECT_NEAR(w.projects()[size_t(Kind::beacon)]->ends, w.clock() + w.params().dayLength, 1e-6);
     EXPECT_EQ(w.projects()[size_t(Kind::beacon)]->by, WorldMap::callsign(keyA));
     EXPECT_EQ(countNews(w, a, "start/beacon"), 1);
+    {
+        const auto* rows = w.ledgerOf(keyAway);
+        ASSERT_TRUE(rows != nullptr);
+        bool found = false;
+        for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::projectStart && (row.who == WorldMap::callsign(keyA) && row.what == "the Beacon"));
+        EXPECT_TRUE(found);
+    }
     // One of a kind at a time; another kind alongside.
     const auto again = w.startProject(a, Kind::beacon);
     ASSERT_TRUE(again.has_value());
@@ -265,12 +276,23 @@ TEST(realm_projects_end_on_the_worlds_clock) {
     ASSERT_TRUE(!w.startProject(a, Kind::relay).has_value());
     ASSERT_TRUE(!w.startProject(a, Kind::armoury).has_value());
     w.takeNews(a);
+    // X2: a pilot off line, its ledger filling.
+    const std::string keyAway = "0a0b0c0d0e0f10111213141516171819";
+    ASSERT_TRUE(w.seat(89, keyAway) == WorldMap::Seated::fresh);
+    w.leave(89);
     // Most of the day: still on.
     w.idle(w.params().dayLength - 5);
     EXPECT_TRUE(w.projectOn(Kind::relay));
     w.idle(10);
     EXPECT_TRUE(!w.projectOn(Kind::relay) && !w.projectOn(Kind::armoury));
     EXPECT_EQ(countNews(w, a, "end/relay"), 1);
+    {
+        const auto* rows = w.ledgerOf(keyAway);
+        ASSERT_TRUE(rows != nullptr);
+        bool found = false;
+        for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::projectEnd && (row.what == "The Relay"));
+        EXPECT_TRUE(found);
+    }
     EXPECT_NEAR(simOf(w, a).nightWiden, 1.0, 1e-9);
     EXPECT_EQ(simOf(w, a).turretBonus, int64_t(0));
     // Started again: the second costs a fifth more.
@@ -301,7 +323,7 @@ TEST(realm_projects_saved_and_loaded) {
         running = w.projects();
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
-        EXPECT_EQ(store->schemaVersion(), int64_t(22));
+        EXPECT_EQ(store->schemaVersion(), WorldStore::version());
         ASSERT_TRUE(store->write(w.save(), &why).has_value());
         EXPECT_EQ(store->rows("SELECT kind FROM realm_projects").size(), size_t(2));
     }
@@ -318,7 +340,9 @@ TEST(realm_projects_saved_and_loaded) {
     }
     // Schema 21: none.
     const std::string old = freshFile("realm-projects-v21");
-    const std::vector<WorldStore::Migration> v21(WorldStore::migrations().begin(), WorldStore::migrations().end() - 1);
+    std::vector<WorldStore::Migration> v21;
+    for (const auto& m : WorldStore::migrations())
+        if (m.version <= 21) v21.push_back(m);
     {
         auto store = WorldStore::open(old, "first", &why, v21);
         ASSERT_TRUE(store != nullptr);
@@ -326,7 +350,7 @@ TEST(realm_projects_saved_and_loaded) {
     }
     auto store = WorldStore::open(old, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(22));
+    EXPECT_EQ(store->schemaVersion(), WorldStore::version());
     const auto save = store->load(&why);
     ASSERT_TRUE(save.has_value());
     EXPECT_TRUE(save->projects.empty());

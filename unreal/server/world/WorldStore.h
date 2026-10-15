@@ -129,6 +129,10 @@ struct SavedPilot {
     /// Its next goal from KSTR (L1, schema 18) as JSON (WorldGoals.cpp).
     /// Empty: none chosen yet.
     std::string goals{};
+    /// Its away ledger (X2, schema 23) as JSON (WorldLedger.cpp): when it
+    /// left, the realm wallet then, and what happened since. Empty: on line,
+    /// or never left.
+    std::string away{};
     bool operator==(const SavedPilot&) const = default;
 };
 
@@ -220,7 +224,7 @@ public:
     /// 9: the realm wallet; 10: blueprints stack; 12: Citadel missions;
     /// 14: mercenaries; 15: the Citadel's marks; 16: a turret's marks and kills;
     /// 17: the Matriarch's nests; 18: KSTR's next goal; 20: the canyons' games;
-    /// 21: the frontier pilots; 22: the realm's projects).
+    /// 21: the frontier pilots; 22: the realm's projects; 23: a pilot's away ledger).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 

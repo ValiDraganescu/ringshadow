@@ -544,6 +544,16 @@ TEST(mercs_saved_loaded_and_caught_up_off_line) {
     for (const auto& n : w.takeNews(a))
         told = told || (n.kind == net::ProgressMessage::NewsKind::merc && n.id == "away" && n.value == delivered);
     EXPECT_TRUE(told);
+    // X2: the away report, saved with the world and made on the return:
+    // the deliveries by mercenary, the two hours, the realm's tax.
+    const auto report = w.takeAway(a);
+    ASSERT_TRUE(report.has_value());
+    EXPECT_TRUE(report->ran >= 7200);
+    ASSERT_TRUE(report->rows.size() == size_t(1));
+    EXPECT_TRUE(report->rows[0].kind == net::AwayKind::merc && report->rows[0].who == kept[0].name);
+    EXPECT_EQ(report->rows[0].value, delivered);
+    EXPECT_TRUE(report->realmOre > 0);
+    EXPECT_TRUE(!w.takeAway(a).has_value());
 }
 
 // A save from before mercenaries (schema 12) opens at 14 with none.

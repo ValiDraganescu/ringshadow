@@ -1,5 +1,6 @@
 #include "Server.h"
 
+#include "AwayReport.h"
 #include "NetProtocol.h"
 
 #include <algorithm>
@@ -79,6 +80,7 @@ void Server::idle(double now) {
         world_.idle(now - idleFrom_);
         idleFrom_ = now;
         logStarfalls();
+        writeAway();
     }
     endpoint_.flush(now);
     if (savedAt_ < 0) savedAt_ = now;
@@ -99,6 +101,20 @@ bool Server::save() {
         return false;
     }
     lastSave_ = *written;
+    writeAway();
+    return true;
+}
+
+bool Server::writeAway() {
+    if (options_.awayFile.empty()) return false;
+    const net::AwaySummaries all = world_.awaySummaries();
+    const std::string text = net::encodeAwayFile(all);
+    if (awayWritten_ && *awayWritten_ == text) return true;
+    if (!net::writeAwayFile(options_.awayFile, all)) {
+        log("away file failed: " + options_.awayFile);
+        return false;
+    }
+    awayWritten_ = text;
     return true;
 }
 
@@ -488,16 +504,23 @@ void Server::sendProgress(net::ConnectionId c, Client& client) {
     auto m = world_.progressMessage(client.pilot);
     if (!m) return;
     m->news = world_.takeNews(client.pilot);
+    // X2: what the world did while it was away, once.
+    m->away = world_.takeAway(client.pilot);
     // XP alone rides in the snapshots.
     net::ProgressMessage same = *m;
     same.xp = client.told ? client.told->xp : same.xp;
     same.news.clear();
-    if (client.told && *client.told == same && m->news.empty()) return;
+    same.away = std::nullopt;
+    if (client.told && *client.told == same && m->news.empty() && !m->away) return;
     for (const auto& n : m->news)
         if (n.kind == net::ProgressMessage::NewsKind::level)
             log("pilot " + std::to_string(client.pilot) + " reaches level " + std::to_string(n.value));
+    if (m->away)
+        log("pilot " + std::to_string(client.pilot) + " back after " + net::awayRan(m->away->ran) + ": " +
+            std::to_string(m->away->rows.size()) + " away rows told");
     sendReliable(c, net::encode(*m));
     m->news.clear();
+    m->away = std::nullopt;
     client.told = *m;
 }
 

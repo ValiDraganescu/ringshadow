@@ -15,6 +15,7 @@
 #pragma once
 
 #include "AutocraftNetApi.h"
+#include "AwayReport.h"
 #include "NetBitStream.h"
 
 #include "Flight.h"
@@ -933,6 +934,9 @@ struct ProgressMessage {
         bool operator==(const Project&) const = default;
     };
     std::vector<Project> projects;
+    /// X2: what happened while the pilot was off line (`AwayReport.h`), on
+    /// its first Progress after it joins; nil after (and for a new pilot).
+    std::optional<AwayReport> away;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

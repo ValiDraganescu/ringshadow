@@ -248,6 +248,10 @@ TEST(Canyon_failsOnTheOreTakenOrTheTime) {
     {
         WorldMap w(first(), params());
         seatIn(w, a, keyA);
+        // X2: a pilot off line, its ledger filling.
+        const std::string keyAway = "0a0b0c0d0e0f10111213141516171819";
+        ASSERT_TRUE(w.seat(89, keyAway) == WorldMap::Seated::fresh);
+        w.leave(89);
         ASSERT_TRUE(w.canyonSend(coldFork(w), fork, 5));
         int64_t taken = 0;
         double ends = 0;
@@ -267,6 +271,13 @@ TEST(Canyon_failsOnTheOreTakenOrTheTime) {
         const auto news = canyonNews(w, a);
         ASSERT_TRUE(news.size() == 1);
         EXPECT_TRUE(news[0].id == "failed" && news[0].value == 5 && news[0].by == "The Fork");
+        {
+            const auto* rows = w.ledgerOf(keyAway);
+            ASSERT_TRUE(rows != nullptr);
+            bool found = false;
+            for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::fallen && (row.what == "The Fork" && row.value == 5));
+            EXPECT_TRUE(found);
+        }
     }
     {
         WorldMap w(first(), params());
@@ -347,6 +358,10 @@ TEST(Canyon_theMatriarchFellsTheZonesTurretsAndItResets) {
 TEST(Canyon_heldAfterTheLastWave) {
     WorldMap w(first(), params());
     seatIn(w, a, keyA);
+    // X2: a pilot off line, its ledger filling.
+    const std::string keyAway = "0a0b0c0d0e0f10111213141516171819";
+    ASSERT_TRUE(w.seat(89, keyAway) == WorldMap::Seated::fresh);
+    w.leave(89);
     const size_t r = coldFork(w);
     ASSERT_TRUE(w.canyonSend(r, fork, 10));
     EXPECT_TRUE(theFork(w).out);
@@ -356,6 +371,20 @@ TEST(Canyon_heldAfterTheLastWave) {
     const auto news = canyonNews(w, a);
     ASSERT_TRUE(news.size() == 1);
     EXPECT_TRUE(news[0].id == "held" && news[0].by == "The Fork");
+    {
+        const auto* rows = w.ledgerOf(keyAway);
+        ASSERT_TRUE(rows != nullptr);
+        bool found = false;
+        for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::held && (row.what == "The Fork"));
+        EXPECT_TRUE(found);
+    }
+    {
+        const auto* rows = w.ledgerOf(keyAway);
+        ASSERT_TRUE(rows != nullptr);
+        bool found = false;
+        for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::waves && (row.what == "The Fork" && row.value == 1));
+        EXPECT_TRUE(found);
+    }
     // No wave in a few minutes with a pilot there.
     stepFor(w, 240);
     EXPECT_TRUE(theFork(w).state == State::held && !theFork(w).out);

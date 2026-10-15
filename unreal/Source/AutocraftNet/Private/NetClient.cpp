@@ -121,7 +121,9 @@ void Client::message(const std::vector<uint8_t>& data) {
         ProgressMessage m;
         if (!decode(data, m)) return;
         news.insert(news.end(), m.news.begin(), m.news.end());
+        if (m.away) away = m.away;
         m.news.clear();
+        m.away = std::nullopt;
         progress_ = m;
         return;
     }

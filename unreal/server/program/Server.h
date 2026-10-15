@@ -47,6 +47,9 @@ struct ServerOptions {
     std::optional<WorldSave> saved;
     WorldStore* store = nullptr;
     double saveEvery = 5;
+    /// X2: the away summary file beside the save (`net::awayFilePath`),
+    /// written on each idle tick and save when it changed. Empty: none.
+    std::string awayFile;
     /// The Mac's clock, Unix seconds (null: the system's): each save is
     /// stamped with it (`WorldSave::savedAt`), and a save loaded catches
     /// the world up on the time since (`WorldMap::catchUp`, S2).
@@ -79,6 +82,9 @@ public:
     /// Writes what changed to the store now (false: no store, or it
     /// failed, which the log says).
     bool save();
+    /// X2: writes the away summary file when its text changed (false: no
+    /// file, or it failed).
+    bool writeAway();
     /// Rows the last save wrote (changed, removed).
     WorldStore::Written lastSave() const { return lastSave_; }
 
@@ -156,6 +162,8 @@ private:
     double stepSum_ = 0;
     double stepMax_ = 0;
     double savedAt_ = -1;
+    /// X2: the away file's text last written.
+    std::optional<std::string> awayWritten_;
     WorldStore::Written lastSave_;
     double wallNow() const;
     double caughtUp_ = 0;

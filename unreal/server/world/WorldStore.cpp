@@ -242,13 +242,19 @@ const char* const kV22 = R"sql(
 CREATE TABLE realm_projects (kind TEXT PRIMARY KEY, runs INTEGER NOT NULL, ends REAL NOT NULL, started_by TEXT NOT NULL);
 )sql";
 
+/// Schema 23 (X2): a pilot's away ledger (JSON, WorldLedger.cpp). A save from
+/// before has none: the pilots come back with no report.
+const char* const kV23 = R"sql(
+ALTER TABLE pilots ADD COLUMN away TEXT NOT NULL DEFAULT '';
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 } // namespace
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}};
     return steps;
 }
 
@@ -402,12 +408,12 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
     }
     {
         Stmt s(db_, "SELECT id, ore, hydrogen, region, unit, levels, progress, gated, contracts, rig, taxed_ore, taxed_hydrogen, "
-                    "donated_ore, donated_hydrogen, stacked, missions, mercs, goals FROM pilots ORDER BY id");
+                    "donated_ore, donated_hydrogen, stacked, missions, mercs, goals, away FROM pilots ORDER BY id");
         while (s.row())
             out.pilots.push_back(SavedPilot{s.colText(0), s.colInteger(1), s.colInteger(2), s.colText(3), s.optInteger(4),
                                             s.colText(5), s.colText(6), s.colInteger(7) != 0, s.colText(8), s.colText(9),
                                             s.colInteger(10), s.colInteger(11), s.colInteger(12), s.colInteger(13),
-                                            s.colInteger(14) != 0, s.colText(15), s.colText(16), s.colText(17)});
+                                            s.colInteger(14) != 0, s.colText(15), s.colText(16), s.colText(17), s.colText(18)});
         if (s.failed(error)) return std::nullopt;
     }
     {
@@ -677,8 +683,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
         const auto before = pilots_.find(p.id);
         if (before != pilots_.end() && before->second == p) continue;
         run(std::move(Stmt(db_, "INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels, progress, gated, contracts, rig, "
-                                "taxed_ore, taxed_hydrogen, donated_ore, donated_hydrogen, stacked, missions, mercs, goals) "
-                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                                "taxed_ore, taxed_hydrogen, donated_ore, donated_hydrogen, stacked, missions, mercs, goals, away) "
+                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                           .text(p.id)
                           .integer(p.ore)
                           .integer(p.hydrogen)
@@ -696,7 +702,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                           .integer(p.stacked ? 1 : 0)
                           .text(p.missions)
                           .text(p.mercs)
-                          .text(p.goals)));
+                          .text(p.goals)
+                          .text(p.away)));
         n.changed += 1;
     }
     if (!ok || !exec("COMMIT", &why)) {

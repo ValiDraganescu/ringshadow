@@ -127,6 +127,7 @@ void WorldMap::nestThink(size_t r) {
         n.regrow = true;
         n.shardlings = n.gloamwings = 0;
         for (auto& [pilot, p] : pilots_) p.news.push_back(News{NewsKind::matriarch, "back", 0, 0, ""});
+        awayNoteAll(net::AwayRow{0, net::AwayKind::queenBack, "", "", world_->regions[r].file.name, 0});
     }
     if (n.downAt) return;
     // Out on a siege elsewhere: the nest waits without her.
@@ -358,6 +359,7 @@ void WorldMap::queenDown(size_t r) {
     n.damage.clear();
     // The whole world hears it.
     for (auto& [pilot, p] : pilots_) p.news.push_back(News{NewsKind::matriarch, "down", 0, fighters, top});
+    awayNoteAll(net::AwayRow{0, net::AwayKind::queenDown, top, "", world_->regions[r].file.name, fighters});
     // The horde scatters, and every group of the region with it.
     if (r < brood_.size())
         for (BroodGroup& g : brood_[r].groups) {

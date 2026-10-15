@@ -702,6 +702,10 @@ TEST(Frontier_toldToThePilots) {
     EXPECT_TRUE(m->frontier[0].callsign == f.callsign && m->frontier[0].paint == f.paint);
     // A Hab Dome of its own, finished.
     w.takeNews(a);
+    // X2: a pilot off line, its ledger filling.
+    const std::string keyAway = "0a0b0c0d0e0f10111213141516171819";
+    ASSERT_TRUE(w.seat(79, keyAway) == WorldMap::Seated::fresh);
+    w.leave(79);
     std::printf("  %s\n", w.devFrontier("frontier build habDome").c_str());
     ASSERT_TRUE(f.building.has_value());
     stepFor(w, 3);
@@ -715,4 +719,11 @@ TEST(Frontier_toldToThePilots) {
     }
     EXPECT_TRUE(deed);
     EXPECT_TRUE(!(plain));
+    {
+        const auto* rows = w.ledgerOf(keyAway);
+        ASSERT_TRUE(rows != nullptr);
+        bool found = false;
+        for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::frontier && (row.who == f.callsign && row.what.find("built a Hab Dome in") != std::string::npos));
+        EXPECT_TRUE(found);
+    }
 }

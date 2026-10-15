@@ -42,6 +42,7 @@
 // on line a world idles (S2): the clock and its timers move on at 2 Hz, the
 // regions wait, and a datagram wakes it at once (Server::idle).
 
+#include "AwayReport.h"
 #include "NetPacket.h"
 #include "NetRunFile.h"
 #include "Ringshadow.h"
@@ -333,6 +334,7 @@ int main(int argc, char** argv) {
     }
     options.log = logLine;
     options.store = store.get();
+    if (!savePath.empty()) options.awayFile = net::awayFilePath(absolutePath(savePath));
     options.saved = std::move(saved);
 
     net::UdpSocket socket;

@@ -233,6 +233,10 @@ TEST(matriarch_killing_her_pays_all_who_fought) {
     const int64_t bpMine = copies(me);
     w.takeNews(me);
     w.takeNews(other);
+    // X2: a pilot off line, its ledger filling.
+    const std::string keyAway = "0a0b0c0d0e0f10111213141516171819";
+    ASSERT_TRUE(w.seat(79, keyAway) == WorldMap::Seated::fresh);
+    w.leave(79);
     q = queen(w);
     ASSERT_TRUE(q != nullptr);
     {
@@ -261,6 +265,13 @@ TEST(matriarch_killing_her_pays_all_who_fought) {
     for (const auto& n : w.takeNews(other))
         if (n.kind == net::ProgressMessage::NewsKind::matriarch && n.id == "down") theirsDown = true;
     EXPECT_TRUE(theirsDown);
+    {
+        const auto* rows = w.ledgerOf(keyAway);
+        ASSERT_TRUE(rows != nullptr);
+        bool found = false;
+        for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::queenDown && (!row.who.empty() && row.value == 2));
+        EXPECT_TRUE(found);
+    }
     // The horde scatters.
     for (const auto& g : w.broodGroups(nestRegion(w))) EXPECT_TRUE(!g.nest && g.leaving);
 }

@@ -38,6 +38,7 @@ std::optional<std::string> WorldMap::startProject(PilotId pilot, RealmProject::K
     projectRuns_[size_t(kind)] += 1;
     projects_[size_t(kind)] = Project{kind, clock_ + RealmProject::days * params_.dayLength, callsign(p->key)};
     for (auto& [id, q] : pilots_) q.news.push_back(News{NewsKind::project, std::string("start/") + RealmProject::slug(kind), 0, 0, callsign(p->key)});
+    awayNoteAll(net::AwayRow{0, net::AwayKind::projectStart, callsign(p->key), std::string("the ") + RealmProject::title(kind), "", 0});
     projectsStep();
     return std::nullopt;
 }
@@ -55,6 +56,7 @@ void WorldMap::projectsStep() {
         const RealmProject::Kind kind = pr->kind;
         pr = std::nullopt;
         for (auto& [id, q] : pilots_) q.news.push_back(News{NewsKind::project, std::string("end/") + RealmProject::slug(kind), 0, 0, ""});
+        awayNoteAll(net::AwayRow{0, net::AwayKind::projectEnd, "", std::string("The ") + RealmProject::title(kind), "", 0});
     }
     // The running ones' effects on every region's simulation.
     const double widen = projectOn(RealmProject::Kind::relay) ? RealmProject::relaySight : 1.0;

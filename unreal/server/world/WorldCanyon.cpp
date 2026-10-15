@@ -446,6 +446,7 @@ bool WorldMap::sendWave(Canyon& c) {
 void WorldMap::waveBeaten(Canyon& c) {
     // Its fighters' pay, by the damage each did (at least a floor share).
     const bool last = c.wave >= WorldCanyon::count();
+    awayNoteAll(net::AwayRow{0, net::AwayKind::waves, "", c.name, "", 1});
     double total = 0;
     for (const auto& [pilot, d] : c.damage) total += d;
     // P1: frontier pilots fought it too, paid by the same split.
@@ -498,6 +499,7 @@ void WorldMap::waveBeaten(Canyon& c) {
         c.state = State::held;
         c.next = clock_ + WorldCanyon::heldDays * params_.dayLength;
         for (auto& [pilot, p] : pilots_) p.news.push_back(News{NewsKind::canyon, "held", 0, fighters, c.name});
+        awayNoteAll(net::AwayRow{0, net::AwayKind::held, "", c.name, "", fighters});
         return;
     }
     // Wave 1 beaten while waiting starts the game.
@@ -536,6 +538,7 @@ void WorldMap::waveFailed(Canyon& c) {
         return;
     }
     for (auto& [pilot, p] : pilots_) p.news.push_back(News{NewsKind::canyon, "failed", 0, wave, c.name});
+    awayNoteAll(net::AwayRow{0, net::AwayKind::fallen, "", c.name, "", wave});
     c.state = State::failed;
     c.next = clock_ + WorldCanyon::failedMax;
     // She comes out of the tunnel the wave came from (the first of them).

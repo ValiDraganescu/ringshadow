@@ -344,6 +344,10 @@ TEST(brood_a_raid_is_told_damages_a_building_and_fells_it) {
                 from = q;
         }
     ASSERT_TRUE(distance(from, at) >= 60);
+    // X2: a pilot off line, its ledger filling.
+    const std::string keyAway = "0a0b0c0d0e0f10111213141516171819";
+    ASSERT_TRUE(w.seat(69, keyAway) == WorldMap::Seated::fresh);
+    w.leave(69);
     const auto id = w.spawnBroodGroup(r, UnitKind::shardling, 8, WorldMap::Poi::building, dome, from, false);
     ASSERT_TRUE(id.has_value());
     EXPECT_TRUE(groupOf(w, *id)->raid);
@@ -379,6 +383,20 @@ TEST(brood_a_raid_is_told_damages_a_building_and_fells_it) {
     // Told until it arrived, then dropped.
     EXPECT_TRUE(w.clock() > arrives);
     EXPECT_TRUE(w.sky()->raids.empty());
+    {
+        const auto* rows = w.ledgerOf(keyAway);
+        ASSERT_TRUE(rows != nullptr);
+        bool found = false;
+        for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::raid && (row.what == "Hab Dome" && !row.where.empty()));
+        EXPECT_TRUE(found);
+    }
+    {
+        const auto* rows = w.ledgerOf(keyAway);
+        ASSERT_TRUE(rows != nullptr);
+        bool found = false;
+        for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::fell && (row.what == "Hab Dome" && !row.where.empty()));
+        EXPECT_TRUE(found);
+    }
 }
 
 /// Under a ringshadow sweep a group's site is half again as wide and its

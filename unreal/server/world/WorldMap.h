@@ -1022,6 +1022,8 @@ public:
         /// A raid on building `key`: told (`Sky::Raid`) once.
         bool raid = false;
         uint32_t raidId = 0;
+        /// X2: the raided building's kind, kept for the away report's "took".
+        std::optional<StructureKind> raidKind;
         std::optional<int64_t> prey;
         /// A defence of the realm that shot it (D1, D2): the group attacks it
         /// while it stands within the leash, before its raid's building.
@@ -1347,6 +1349,14 @@ public:
     std::optional<net::ProgressMessage> progressMessage(PilotId pilot) const;
     /// What happened to the pilot's progression since the last call.
     std::vector<net::ProgressMessage::News> takeNews(PilotId pilot);
+    /// X2: the away report made on the pilot's return, once (nil after).
+    std::optional<net::AwayReport> takeAway(PilotId pilot);
+    /// X2: the ledger of a pilot off line so far (null: on line or unknown).
+    const std::vector<net::AwayRow>* ledgerOf(const std::string& key) const;
+    /// X2: the home screen's two lines for every pilot off line, by key
+    /// (`net::awaySummary` of its ledger now); the server writes them beside
+    /// the save (`Server::writeAway`).
+    std::map<std::string, std::array<std::string, 2>> awaySummaries() const;
 
     /// Wall-clock ms the last `step` took over all the regions.
     double lastStepMs() const { return lastStepMs_; }
@@ -1480,6 +1490,14 @@ private:
         int64_t mercDay = 0;
         uint32_t nextMerc = 1;
         int64_t mercAway = 0;
+        /// X2, the away report (saved, WorldLedger.cpp): what happened while
+        /// it was off line, when it left (world clock; -1: never) and the
+        /// realm wallet then; the report made of them on its return, sent in
+        /// its next Progress.
+        std::vector<net::AwayRow> ledger;
+        double leftAt = -1;
+        Wallet realmAtLeave;
+        std::optional<net::AwayReport> awayReport;
         /// L1, KSTR's next goal (saved, WorldGoals.cpp): the one shown now
         /// (its key; "level:N" a wait for level N; empty: none yet), the
         /// goals passed (paid, or skipped as met before they came up), and
@@ -1636,6 +1654,18 @@ private:
     void devRig(PilotId pilot);
     /// `p` built a finished building of `kind` (its credit).
     bool builtFinished(const PilotState& p, StructureKind kind) const;
+    // WorldLedger.cpp (X2).
+    /// A row of the away ledger, to one pilot off line (its mercenaries'
+    /// deliveries) or to every pilot off line (`awayNoteAll`: the world's
+    /// news). Deliveries and waves add up into one row each.
+    void awayNote(PilotState& p, net::AwayRow row);
+    void awayNoteAll(const net::AwayRow& row);
+    /// What `p`'s ledger says now: the world's clock since it left, the
+    /// realm wallet's change, the rows.
+    net::AwayReport awayReport(const PilotState& p) const;
+    std::string encodeAway(const PilotState& p) const;
+    bool decodeAway(const std::string& text, PilotState& p) const;
+
     /// The realm's finished Citadel (region, id), the first by region.
     std::optional<std::pair<size_t, int64_t>> realmCitadel() const;
     /// The finished realm Citadel the pilot's Prospector stands at, where it
@@ -1934,6 +1964,10 @@ private:
     const FrontierPilot* frontierByKey(const std::string& key) const;
     std::vector<FrontierPilot> frontier_;
     std::vector<std::string> radioLog_;
+    /// X2: the world's clock and realm wallet when the save was loaded
+    /// (the start of the time away of a pilot saved on line); -1: not loaded.
+    double loadedAt_ = -1;
+    Wallet loadedRealm_;
     double radioAt_ = -1e9;
     double chatterAt_ = -1e9;
     std::set<uint32_t> raidsHeard_;

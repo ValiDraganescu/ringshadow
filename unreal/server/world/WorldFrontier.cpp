@@ -1356,6 +1356,7 @@ void WorldMap::frontierRadio(const FrontierPilot& f, const std::string& kind, co
 void WorldMap::frontierDeed(const FrontierPilot& f, const std::string& text) {
     radioLog_.push_back(text);
     for (auto& [id, p] : pilots_) p.news.push_back(News{NewsKind::frontier, "deed", 0, int64_t(f.id), text});
+    awayNoteAll(net::AwayRow{0, net::AwayKind::frontier, f.callsign, text, "", 0});
 }
 
 void WorldMap::frontierChatter() {

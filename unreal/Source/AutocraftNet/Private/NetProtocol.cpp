@@ -1182,6 +1182,21 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeDouble(w, p.ends);
         writeString(w, p.by);
     }
+    w.writeBool(m.away.has_value());
+    if (m.away) {
+        writeDouble(w, m.away->ran);
+        writeSigned(w, m.away->realmOre);
+        writeSigned(w, m.away->realmHydrogen);
+        writeVarint(w, m.away->rows.size());
+        for (const AwayRow& a : m.away->rows) {
+            writeDouble(w, a.at);
+            w.writeBits(uint64_t(a.kind), 4);
+            writeString(w, a.who);
+            writeString(w, a.what);
+            writeString(w, a.where);
+            writeSigned(w, a.value);
+        }
+    }
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
         w.writeBits(uint64_t(n.kind), 5);  // 5 bits since N3: the sixteenth kind filled 4
@@ -1424,6 +1439,24 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         p.runs = readSigned(r);
         p.ends = readDouble(r);
         if (!readString(r, p.by)) return false;
+    }
+    if (r.readBool()) {
+        AwayReport a;
+        a.ran = readDouble(r);
+        a.realmOre = readSigned(r);
+        a.realmHydrogen = readSigned(r);
+        const uint64_t rows = readVarint(r);
+        if (rows > 256 || !r.ok()) return false;
+        a.rows.assign(size_t(rows), {});
+        for (AwayRow& row : a.rows) {
+            row.at = readDouble(r);
+            const uint64_t kind = r.readBits(4);
+            if (kind > uint64_t(AwayKind::projectEnd)) return false;
+            row.kind = static_cast<AwayKind>(kind);
+            if (!readString(r, row.who) || !readString(r, row.what) || !readString(r, row.where)) return false;
+            row.value = readSigned(r);
+        }
+        m.away = std::move(a);
     }
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;

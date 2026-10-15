@@ -69,6 +69,14 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
         in.news.push_back(net::ProgressMessage::News{net::ProgressMessage::NewsKind::merc, "away", 0, in.mercAway, ""});
         in.mercAway = 0;
     }
+    // X2: what the world did while it was away, told once on its next Progress.
+    {
+        // Told only when something happened (a row, or the realm's wallet moved).
+        const net::AwayReport report = awayReport(in);
+        if (!report.rows.empty() || report.realmOre != 0 || report.realmHydrogen != 0) in.awayReport = report;
+        in.ledger.clear();
+        in.leftAt = -1;
+    }
     in.flight = std::nullopt;
     in.last = std::nullopt;
     // A new connection: its client starts at visit 0.
@@ -111,6 +119,11 @@ void WorldMap::park(const PilotState& p) {
         q.flight = std::nullopt;
     }
     q.last = std::nullopt;
+    // X2: the ledger starts here; a report not yet shown is dropped.
+    q.leftAt = clock_;
+    q.realmAtLeave = realm_;
+    q.ledger.clear();
+    q.awayReport = std::nullopt;
     away_[q.key] = q;
 }
 
@@ -152,6 +165,7 @@ WorldSave WorldMap::save() const {
         s.missions = encodeMissions(p);
         s.mercs = encodeMercs(p);
         s.goals = encodeGoals(p);
+        s.away = encodeAway(p);
         // Its rig (P7), apart from the progress JSON.
         if (p.progress.rig != Rig{}) s.rig = SessionStore::encode(p.progress.rig, false);
         // What it has given the realm (C1).
@@ -326,6 +340,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             problems.push_back("pilot " + sp.id.substr(0, 8) + ": mercenaries do not read, left out");
         if (!decodeGoals(sp.goals, p))
             problems.push_back("pilot " + sp.id.substr(0, 8) + ": goals do not read, picked again");
+        if (!decodeAway(sp.away, p))
+            problems.push_back("pilot " + sp.id.substr(0, 8) + ": away ledger does not read, started again");
         // Its rig (P7): none before schema 7.
         p.progress.rig = Rig{};
         if (!sp.rig.empty()) {
@@ -438,6 +454,10 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     }
     // The world's hour goes on where it was.
     setClock(save.clock);
+    // X2: a pilot saved on line (or before the away ledger, schema 22) is
+    // away from the load on.
+    loadedAt_ = clock_;
+    loadedRealm_ = realm_;
     return problems;
 }
 

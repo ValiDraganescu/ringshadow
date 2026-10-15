@@ -732,7 +732,11 @@ void WorldMap::broodThink(size_t r) {
                 if (!u->bug->leaving) lodebacksLeaving = false;
             }
         // A raid's building fell: the raid is over.
-        if (g.raid && !st.structure(g.key)) g.leaving = true;
+        if (g.raid && !g.leaving && !st.structure(g.key)) {
+            g.leaving = true;
+            const std::string what = g.raidKind ? Simulation::title(*g.raidKind) : std::string("building");
+            awayNoteAll(net::AwayRow{0, net::AwayKind::fell, "", what, world_->regions[r].file.name, 0});
+        }
         if (!g.leaving && !g.raid && clock_ >= g.lingerUntil && !g.prey && !g.turret) g.leaving = true;
         if (lodebacks && lodebacksLeaving && !g.prey) g.leaving = true;
         for (Unit& u : st.units) {
@@ -799,6 +803,8 @@ void WorldMap::broodThink(size_t r) {
         x.arrives = clock_ + eta;
         raids_.push_back(x);
         g.raidId = x.id;
+        g.raidKind = b->kind;
+        awayNoteAll(net::AwayRow{0, net::AwayKind::raid, "", Simulation::title(b->kind), world_->regions[r].file.name, 0});
     }
 
     // The nest (N3) and a siege.

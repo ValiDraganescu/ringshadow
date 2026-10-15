@@ -271,7 +271,10 @@ void WorldMap::mercDelivered(PilotState& p, bool online, PilotState::Merc& m, in
     p.taxed.ore += tax;
     credit(p, online, Wallet{ore - tax, 0});
     m.delivered += ore - tax;
-    if (!online) p.mercAway += ore - tax;
+    if (!online) {
+        p.mercAway += ore - tax;
+        awayNote(p, net::AwayRow{0, net::AwayKind::merc, m.name, "", "", ore - tax});
+    }
 }
 
 void WorldMap::mercWages(double at) {

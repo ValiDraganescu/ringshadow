@@ -137,6 +137,8 @@ public:
     const std::optional<ProgressMessage>& progress() const { return progress_; }
     /// The progress news received, in order (the caller takes them).
     std::vector<ProgressMessage::News> news;
+    /// X2: the away report its join brought (the caller takes it).
+    std::optional<AwayReport> away;
     /// Snapshot parts waiting for their region's mirror.
     static constexpr size_t kMaxWaiting = 64;
 
