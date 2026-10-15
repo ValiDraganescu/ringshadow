@@ -286,8 +286,11 @@ them.
 
 A bug vanishes when its group leaves (linger over, a Lodeback with its sac
 full or fleeing) and it is out of every pilot's sight; when its region has
-had no pilot in or next to it for 2 minutes; never in sight of a pilot. A
-dead bug's body stays 6 s (the death pose), then fades.
+had no pilot in or next to it for 2 minutes; never in sight of a pilot. By
+day a pilot sees its whole region (S3), so a leaving group walks on to its
+exit at the region's edge (3 cells in) and goes there, into the next region
+as it were; at night it goes once out of sight, as before. A dead bug's
+body stays 6 s (the death pose), then fades.
 
 ## XP and rewards
 
@@ -665,7 +668,11 @@ Her numbers are `ac::Matriarch` (Brood.h); the core steps her
   It holds noon unless `-AcMmoHour` says (Q2: on the world clock a night
   run's Prospector saw 6 cells, none of her horde 20 cells off), and takes
   the roar's picture 0.9 s into the roar by the server's clock (the World
-  sky's roar `at`), at once if the mirror shows it later than that.
+  sky's roar `at`), at once if the mirror shows it later than that. Since
+  S3 the hold is all the sight N2 and N3 need: by day the pilot sees its
+  whole region, so a scene staged anywhere in it is in sight; the hold stays
+  because the night is as before (a run on the world clock can land at
+  night).
 
 ## Models and how to drive them
 

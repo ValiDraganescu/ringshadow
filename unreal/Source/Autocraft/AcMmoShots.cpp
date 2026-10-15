@@ -265,6 +265,16 @@
 //   05-NN walking back west through it, a frame every 0.4 s, chase camera
 //   then the world map: 20 the world, 21 Prospect Landing filling it
 //
+// -AcMmoShotsS3 (with -AcMmoDevRig): daylight sight (docs/creatures.md S3),
+// by day the pilot's whole region seen and told, DIR/s3-NN-moment.png, and
+// the frame and GPU times over -AcMmoShotsS3Perf=S s (8) each, logged as
+// `s3 perf:`:
+//   01 Slag Pockets at noon, 55 cells from the nest: her horde told
+//   02 the same with `daylight off`: the sight before S3
+//   03 the same at midnight: half sight and the headlamp, as before
+//   04 Cold Fork at noon, wave 10 out of the canyon's mouths: all of it told
+//   05 the same with `daylight off`
+//
 // -AcMmoShotsZ1 (at 11:00, clear weather, every region been to): the first
 // canyon zone, The Fork in Cold Fork (docs/regions.md "zones"), the pilot
 // taken into its gorge by the server's dev line (`brood zone here`), a
@@ -530,6 +540,10 @@ namespace
 	/// -AcMmoShotsN3Perf=S (N1b): frame and GPU times over S s after the roar's picture, the nest full of bugs in view.
 	TArray<double> N3Frames, N3Gpu;
 	double N3FrameAt = -1;
+	/// -AcMmoShotsS3: the frame and GPU times of the scene being measured.
+	TArray<double> S3Frames, S3Gpu;
+	double S3FrameAt = -1;
+	bool S3Set = false;
 	// -AcMmoShotsL1: when the skill points' goal was seen done.
 	double L1DoneAt = 0;
 	// -AcMmoShotsU1: when her roar began; the staged gun's id.
@@ -1016,7 +1030,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsH2Away")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsM2"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1130,6 +1144,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))) T.Phase = 2500;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1"))) T.Phase = 2600;
+			// -AcMmoShotsS3: daylight sight (2700-2714).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))) T.Phase = 2700;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -5347,6 +5363,168 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			return;
 		}
 	}
+	// MARK: -AcMmoShotsS3
+	case 2700:
+	case 2703:
+	case 2705:
+	case 2707:
+	case 2711:
+	case 2713:
+	{
+		// 2700: noon, the pilot taken to Slag Pockets 55 cells from the nest.
+		if (T.Phase == 2700)
+		{
+			if (!(S && U && Mmo->Progress() && Since() > 3.0))
+			{
+				TimedOut(TEXT("the dev rig"));
+				return;
+			}
+			Check(Mmo->DevClock(TEXT("hour 12\nmatriarch here 55")), TEXT("s3: noon, the server takes the pilot to the Matriarch's nest"));
+			Advance();
+			return;
+		}
+		// The others: the frame and GPU times over S s, facing the bugs.
+		const ac::Unit* B = S && U ? NearestBug(*S, U->position, ac::UnitKind::matriarch) : nullptr;
+		if (!B && S && U)
+			for (const ac::Unit& X : S->units)
+				if (X.bug && X.hp > 0 && (!B || ac::distance(X.position, U->position) < ac::distance(B->position, U->position))) B = &X;
+		if (B && U) Stop(Face(B->position));
+		double PerfFor = 8;
+		FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsS3Perf="), PerfFor);
+		if (Since() > 1.0)
+		{
+			if (S3FrameAt > 0)
+			{
+				S3Frames.Add((Now - S3FrameAt) * 1000.0);
+				S3Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+			}
+			S3FrameAt = Now;
+		}
+		if (Since() < 1.0 + PerfFor) return;
+		int32 Bugs = 0;
+		if (S)
+			for (const ac::Unit& X : S->units)
+				if (X.bug && X.hp > 0) Bugs++;
+		auto Pct = [](TArray<double> V, const double P) { V.Sort(); return V.Num() ? V[FMath::Clamp(int32(P * V.Num()), 0, V.Num() - 1)] : 0.0; };
+		double Sum = 0;
+		for (const double F : S3Frames) Sum += F;
+		const TCHAR* Scene = T.Phase == 2703 ? TEXT("nest, noon, daylight")
+			: T.Phase == 2705                ? TEXT("nest, noon, before S3")
+			: T.Phase == 2707                ? TEXT("nest, midnight")
+			: T.Phase == 2711                ? TEXT("fork, noon, daylight")
+											 : TEXT("fork, noon, before S3");
+		UE_LOG(LogAutocraft, Log, TEXT("s3 perf: %s: %d bugs told, %d units, %d frames over %.0f s: frame mean %.2f p50 %.2f p95 %.2f p99 %.2f ms, gpu p50 %.2f p95 %.2f ms"),
+			Scene, Bugs, S ? int32(S->units.size()) : 0, S3Frames.Num(), PerfFor, S3Frames.Num() ? Sum / S3Frames.Num() : 0.0, Pct(S3Frames, 0.5), Pct(S3Frames, 0.95),
+			Pct(S3Frames, 0.99), Pct(S3Gpu, 0.5), Pct(S3Gpu, 0.95));
+		S3Frames.Reset();
+		S3Gpu.Reset();
+		S3FrameAt = -1;
+		Advance();
+		return;
+	}
+	case 2701:
+	{
+		// In Slag Pockets, her and the ground round built: the horde held still.
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (Here == TEXT("slag-pockets") && U && S && NearestBug(*S, U->position, ac::UnitKind::matriarch) && Sets > 0 && Ready == Sets && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("matriarch calm")), TEXT("s3: the horde held still"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("s3: in Slag Pockets, the Matriarch sent, the ground built"), 60);
+		return;
+	}
+	case 2702:
+	case 2704:
+	case 2706:
+	case 2710:
+	case 2712:
+	{
+		// A scene: its dev lines, a few seconds, its checks and picture.
+		const TCHAR* Lines = T.Phase == 2704 ? TEXT("daylight off")
+			: T.Phase == 2706                ? TEXT("daylight on\nhour 0")
+			: T.Phase == 2712                ? TEXT("daylight off")
+											 : nullptr;
+		if (Lines && !S3Set)
+		{
+			Check(Mmo->DevClock(Lines), FString::Printf(TEXT("s3: %s"), Lines));
+			S3Set = true;
+			return;
+		}
+		const ac::Unit* Q = S && U ? NearestBug(*S, U->position, ac::UnitKind::matriarch) : nullptr;
+		const ac::Unit* B = Q;
+		if (!B && S && U)
+			for (const ac::Unit& X : S->units)
+				if (X.bug && X.hp > 0 && (!B || ac::distance(X.position, U->position) < ac::distance(B->position, U->position))) B = &X;
+		if (B && U) Stop(Face(B->position));
+		if (Since() < (T.Phase == 2710 ? 9.0 : 3.0)) return;
+		S3Set = false;
+		int32 Horde = 0;
+		double Farthest = 0;
+		if (S && U)
+			for (const ac::Unit& X : S->units)
+				if (X.bug && X.hp > 0 && X.kind != ac::UnitKind::matriarch)
+				{
+					Horde++;
+					Farthest = FMath::Max(Farthest, ac::distance(X.position, U->position));
+				}
+		// The share of the region's ground the mirror's fog shows seen.
+		double Seen = 0;
+		if (M && !M->simulation().sights.empty())
+		{
+			const std::vector<uint8_t>& C = M->simulation().sights[0].seen;
+			int64 N = 0;
+			for (const uint8_t X : C) N += X ? 1 : 0;
+			Seen = C.empty() ? 0 : double(N) / double(C.size());
+		}
+		switch (T.Phase)
+		{
+		case 2702:
+			Check(Horde >= 10 && Seen > 0.99, FString::Printf(TEXT("s3: by day the nest's horde told from afar (%d bugs, the farthest %.0f cells; %.0f%% of the ground seen)"), Horde, Farthest, Seen * 100));
+			Shoot(TEXT("s3-01-nest-noon"), TEXT("Slag Pockets at noon, 55 cells from the nest: her horde told"));
+			break;
+		case 2704:
+			Check(Horde <= 2 && Seen < 0.2, FString::Printf(TEXT("s3: before S3 the horde out of sight (%d bugs; %.0f%% seen)"), Horde, Seen * 100));
+			Shoot(TEXT("s3-02-nest-before"), TEXT("the same with the sight before S3"));
+			break;
+		case 2706:
+			Check(Horde <= 2 && Seen < 0.2, FString::Printf(TEXT("s3: at midnight the horde out of sight, as before (%d bugs; %.0f%% seen)"), Horde, Seen * 100));
+			Shoot(TEXT("s3-03-nest-night"), TEXT("the same at midnight: half sight and the headlamp"));
+			break;
+		case 2710:
+			Check(Horde >= 15 && Seen > 0.99, FString::Printf(TEXT("s3: by day wave 10 told across The Fork (%d bugs, the farthest %.0f cells; %.0f%% seen)"), Horde, Farthest, Seen * 100));
+			Shoot(TEXT("s3-04-fork-noon"), TEXT("Cold Fork at noon, wave 10 out: all of it told"));
+			break;
+		default:
+			Shoot(TEXT("s3-05-fork-before"), TEXT("the same with the sight before S3"));
+			break;
+		}
+		return;
+	}
+	case 2708:
+		Check(Mmo->DevClock(TEXT("daylight on\nhour 12\nferry go cold-fork")), TEXT("s3: noon again, the pilot taken to Cold Fork"));
+		Advance();
+		return;
+	case 2709:
+	{
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (Here == TEXT("cold-fork") && U && Sets > 0 && Ready == Sets && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\ncanyon send 10")), TEXT("s3: wave 10 sent down The Fork"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("s3: in Cold Fork, its ground built"), 90);
+		return;
+	}
+	case 2714:
+		Check(Mmo->DevClock(TEXT("daylight on")), TEXT("s3: daylight on again"));
+		Check(Shots.Saved + Shots.Skipped >= 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
 	// MARK: -AcMmoShotsL1
 	case 2100:
 		// The first ten minutes' last step open: a point spent ends it.

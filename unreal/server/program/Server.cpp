@@ -167,6 +167,14 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devMatriarch(line));
             continue;
         }
+        // Daylight sight (S3, Region::setDaylight): `daylight off` is the
+        // sight before it, to measure against; `daylight on` again.
+        if (line.rfind("daylight", 0) == 0) {
+            const bool on = line.find("off") == std::string::npos;
+            for (size_t r = 0; r < world_.regionCount(); r++) world_.region(r).setDaylight(on);
+            said.push_back(on ? "dev: daylight: on" : "dev: daylight: off (the sight before S3)");
+            continue;
+        }
         const double was = world_.clock();
         if (!world_.isWorld() || std::sscanf(line.c_str(), "%15s %lf", what, &v) != 2) {
             said.push_back("dev: control '" + line + "' not done (no world, or not `clock|hour|ahead N`)");

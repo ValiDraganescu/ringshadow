@@ -187,7 +187,18 @@ out what that pilot may know and sends only that:
 
 1. **Fog of war first.** Only what the pilot's side sees: the core already
    works this out (`Vision`). Nothing hidden by the fog ever leaves the
-   server, so a hacked client has nothing to reveal.
+   server, so a hacked client has nothing to reveal. In a world's region by
+   day the pilot sees all of it (S3, "zones are not that big"): no fog over
+   it, every level, so every unit, bug and building in it is told (the far
+   ones in fewer snapshots, below). Through dusk the sight closes in round
+   the driven unit to the night's (half its day sight and the headlamp's
+   wedge), by the same share at each step of the lamps' dark
+   (`Rules::daylightReach`), and opens again at dawn. Neighbouring regions
+   are as before. The dev line `daylight off` is the sight before S3.
+   `make -C unreal/server bench` runs `daybench` (bytes and tick times with
+   Slag Pockets' nest full and Cold Fork's wave 10 out, by day with and
+   without it and at night); `-AcMmoShotsS3` takes the same scenes' pictures
+   and frame times in the game (`s3 perf:` in the log).
 2. **Near before far.** The region is cut into cells. What is near the
    pilot goes in every snapshot; what is farther goes in fewer of them.
 3. **What matters first.** The driven machine, what shoots at it, what it
