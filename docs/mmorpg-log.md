@@ -649,3 +649,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Z2: pay 200n XP + 150n ore + 40n MH by damage; wave 10 ×2 + rare blueprint.
 - N Protocol 27, schema 20 (canyons); suites core 496, server 263, net 88.
 - T Every M8 task done but Q2; V4 (M8 showreel) next for wt1.
+- T V4 (M8 showreel, 60–90 s, 8 beats) briefed to wt1.
