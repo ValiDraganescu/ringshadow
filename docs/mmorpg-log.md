@@ -655,3 +655,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I V4 found the C2 set buying a Gatling on key 4 (shop grew); fixed by name.
 - N M8 showcase page with the reel: https://claude.ai/artifact/2HzdMomE91pfyQApz7N3r2
 - I User: whether to post the M8 reel (private until then).
+- D User: by day the line of sight is the whole region (zones are small) → S3.
