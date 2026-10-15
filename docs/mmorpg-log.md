@@ -775,3 +775,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I the engine's teardown can hang on exit; two_clients.py kills a game 20 s after its last mark.
 - N W5: core 505 (+ slow map test), net 99, server 336, six MMO flows and 92 automation tests green; clean checkout.
 - D protocol numbers only go up: W5 bumped to 34 after S4 took 33; N4 takes 35, E1 36.
+- T web: the two-pilots post live at /blog/two-pilots (2dc2fab); the blog is caught up.
