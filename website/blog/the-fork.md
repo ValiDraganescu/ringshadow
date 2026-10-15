@@ -44,6 +44,6 @@ Bugs sent down a path walk it from the tunnel to the prize, 18 cells in 6 to 6.7
 
 Every test suite passes: 494 core, 249 server and 85 network.
 
-### Coming
+### Coming ([landed since](https://ringshadow.com/blog/canyon-game))
 
 The waves. The first wave replays until the pilots beat it, then they grow harder, each paying the pilots who fought. If a wave carries off too much of the prize, [the Matriarch](https://ringshadow.com/blog/matriarch) comes out of her nest and fells every turret in The Fork, and it starts again from wave one.

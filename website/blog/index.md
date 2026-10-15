@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Holding The Fork: ten waves, and the Matriarch if you fail
+
+15 October 2026 · M8 · 10 pictures
+
+Tower defence inside the world: ten waves down the canyon's arms, guns on the rims, and if a wave breaks through, the Matriarch comes for every turret.
+
+Read it: https://ringshadow.com/blog/canyon-game
+
 ## The Dropship: no more flying alone
 
 15 October 2026 · M8 · 9 pictures
