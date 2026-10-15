@@ -687,3 +687,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D B2 (manager): active play pays about x2 the mining curve, never over x2.5: missions XP ~x3 real time (3/8/15 min), ore x0.5; wave pay x0.4, wave 10 x2 stays; measure after.
 - I A2: ElevenLabs out of credits (4 left); 5/28 KSTR lines made; ~1,700 credits needed to fill the rest; beds cut from own retired tracks meanwhile.
 - T web: posts frontier pilots, daylight, two canyons live (3eb78a5).
+- I A2 resolved: ElevenLabs upgraded 2026-10-15; the 23 lines and both beds get made for real.
