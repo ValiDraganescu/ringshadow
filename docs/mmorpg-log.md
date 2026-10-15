@@ -720,3 +720,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D M10 (manager): the long game: W5 two humans, X2 away report, S4 realm standings, N4 the hunt, U2 settings, Q3 idle soak (docs/mmorpg-m10.md).
 - D M10 (manager): soaks measure only the background server's idle path; never AIs playing a game.
 - T web: packaged-build post live (0dda465).
+- T R2 done a8e74a6: realm projects Beacon/Relay/Armoury/Dock Crew, a world day each, from the realm wallet; protocol 29, schema 22.
+- N R2: prices 2,000/2,500/4,000/3,000 ore + 100/150/300/200 MH, x1.2 per repeat; Beacon fare 15 -> 8 MH; Relay midnight 673 -> 1,179 cells.
+- N R2: 8 KSTR project lines 3.3-5.6 s made offline.
+- T M9 complete but K3 leftovers (wt1).
