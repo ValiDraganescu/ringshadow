@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T15:00:00Z</updated>
+  <updated>2026-10-15T15:20:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The away report: what your world did without you</title>
+    <id>tag:ringshadow,2026-10-15:blog/away-report</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/away-report"/>
+    <published>2026-10-15T15:20:00Z</published>
+    <updated>2026-10-15T15:20:00Z</updated>
+    <summary>The server keeps a ledger for every pilot off line, from its own bookkeeping and never invented, and reads it back on the home screen, in a toast, on the radio and in the Journal. Plus the goals that now lead on from a Foundry.</summary>
+  </entry>
   <entry>
     <title>A Citadel in every region</title>
     <id>tag:ringshadow,2026-10-15:blog/citadels</id>

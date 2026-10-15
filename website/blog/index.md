@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The away report: what your world did without you
+
+15 October 2026 · M10 · 3 pictures
+
+The server keeps a ledger for every pilot off line, from its own bookkeeping and never invented, and reads it back on the home screen, in a toast, on the radio and in the Journal. Plus the goals that now lead on from a Foundry.
+
+Read it: https://ringshadow.com/blog/away-report
+
 ## A Citadel in every region
 
 15 October 2026 · M10 · 4 pictures
