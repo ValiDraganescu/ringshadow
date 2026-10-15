@@ -1116,6 +1116,8 @@ void UAcGameFlowSubsystem::TickWorldMap()
 		}
 		// The canyon zones' games (Z2).
 		In.zones = AcCanyon::Marks(*Mmo);
+		// S4: a pilot's rank this week in its tooltip.
+		In.standings = Mmo->Standings();
 		Info.Items = ac::net::atlas::items(In, Places);
 		// The ringshadow band over every region it crosses now.
 		if (In.sky)
@@ -1732,6 +1734,32 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 				X.Left = Pm->projects[size_t(K)].ends - Now;
 			}
 			Info.Projects.Add(X);
+		}
+	}
+	// S4: the week's standings, the top 8 by ore and the pilot's own row.
+	if (const ac::net::StandingsMessage* St = Mmo->Standings())
+	{
+		Info.bStandingsKnown = true;
+		const double Now = Mmo->Sky() ? Mmo->Sky()->time : St->weekStart;
+		Info.WeekLeft = UTF8_TO_TCHAR(ac::net::weekLeft(St->weekEnds - Now).c_str());
+		for (int32 I = 0; I < int32(St->rows.size()); ++I)
+		{
+			const ac::net::WeekStanding& R = St->rows[size_t(I)];
+			const bool bYou = St->you && *St->you == I;
+			if (I >= FAcCitadelScreenInfo::StandingsTop && !bYou) continue;
+			FAcStandingLine X;
+			X.Name = bYou ? FString(TEXT("You")) : FString(UTF8_TO_TCHAR(R.callsign.c_str()));
+			X.bFrontier = R.frontier;
+			X.bYou = bYou;
+			if (const ac::net::ProgressMessage* Pm = Mmo->Progress(); Pm && R.frontier)
+				for (const ac::net::ProgressMessage::FrontierPilot& F : Pm->frontier)
+					if (F.callsign == R.callsign) X.Paint = F.paint;
+			X.Rank = R.rank;
+			X.Ore = R.ore;
+			X.Bugs = R.bugs;
+			X.Waves = R.waves;
+			X.Built = R.built;
+			Info.Standings.Add(X);
 		}
 	}
 	// The server checks the place; the screen says so ahead.

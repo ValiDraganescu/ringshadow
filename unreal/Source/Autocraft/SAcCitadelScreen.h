@@ -9,6 +9,12 @@
 //   │ TAX 10% of every unload …   │ │ MH   [ 100 ] [ 1,000 ] [ ALL ]      │
 //   │ YOU GAVE  tax · donated     │ │                                     │
 //   └─────────────────────────────┘ └─────────────────────────────────────┘
+//   ┌ REALM PROJECTS: four cards, START ────────────────────────────────┐
+//   ┌ STANDINGS · THIS WEEK ─────────────────────────── 3 d 4 h left ───┐
+//   │ #  PILOT              ORE     BUGS   WAVES HELD   BUILT          │
+//   │ 1  ● Vesper  frontier 18,400  12     0            2              │
+//   │ …  the top 8 by ore, then ··· and the pilot's own row (gold)     │
+//   └──────────────────────────────────────────────────────────────────┘
 //   what was given, or why not                                  the keys
 //
 // Tabs: REALM, then SHOP (C2: blueprint copies and consumables from the
@@ -163,9 +169,30 @@ struct FAcProjectLine
 	bool operator==(const FAcProjectLine&) const = default;
 };
 
+/// S4: a pilot's row in the REALM tab's standings: its rank this week, its
+/// name (a frontier pilot's callsign in its paint's way, a human's, "You"),
+/// its four counts.
+struct FAcStandingLine
+{
+	FString Name;
+	bool bFrontier = false;
+	bool bYou = false;
+	/// A frontier pilot's paint, as its dot on the map (-1: a human's).
+	int32 Paint = -1;
+	int64 Rank = 0;
+	int64 Ore = 0;
+	int64 Bugs = 0;
+	int64 Waves = 0;
+	int64 Built = 0;
+
+	bool operator==(const FAcStandingLine&) const = default;
+};
+
 /// What the Citadel screen shows.
 struct FAcCitadelScreenInfo
 {
+	/// S4: the most standings rows shown before the pilot's own.
+	static constexpr int32 StandingsTop = 8;
 	/// The server has told the realm's numbers (none yet: "Waiting…").
 	bool bKnown = false;
 	/// The realm wallet, and the tax in percent.
@@ -217,6 +244,11 @@ struct FAcCitadelScreenInfo
 	/// why none can be started from here.
 	TArray<FAcProjectLine> Projects;
 	FString ProjectsWhyNot;
+	/// S4, the REALM tab's standings: the top `StandingsTop` by ore, then
+	/// the pilot's own when it is not among them; the week's time left.
+	bool bStandingsKnown = false;
+	TArray<FAcStandingLine> Standings;
+	FString WeekLeft;
 
 	bool operator==(const FAcCitadelScreenInfo&) const = default;
 };
@@ -340,6 +372,8 @@ private:
 	void PaintHeader(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintRealm(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintShop(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
+	/// S4: the REALM tab's standings, under the projects.
+	void PaintStandings(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMissions(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMercs(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintDefence(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
@@ -383,6 +417,7 @@ private:
 	mutable FBox2f WalletBox;
 	mutable FBox2f DonateBox;
 	mutable FBox2f ProjectsBox;
+	mutable FBox2f StandingsBox;
 	mutable FBox2f BlueprintBox;
 	mutable FBox2f ItemBox;
 	mutable FBox2f TierBox[3];

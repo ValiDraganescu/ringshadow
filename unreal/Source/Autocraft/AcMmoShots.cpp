@@ -303,6 +303,15 @@
 //   02 in again: the WHILE YOU WERE AWAY toast (KSTR's welcome read)
 //   03 the Journal (L) opened on WHILE YOU WERE AWAY: every row, with when
 //
+// -AcMmoShotsS4 (with -AcMmoDevRig, the chain done, as P1's light): realm
+// standings (docs/mmorpg-play.md "Standings"): three frontier pilots staged
+// beside the pilot (`frontier here …`), a mercenary hired, the world idled
+// two hours as with nobody on line (`idle 7200`: their work booked by the
+// rules), DIR/s4-NN-moment.png:
+//   01 the Citadel's REALM tab: the week's standings, the pilot's own row
+//   02 the world map: a frontier pilot's tooltip with its rank this week
+//   03 the week ended (`week end`): THE WEEK IS COUNTED, its top hauler
+//
 // -AcMmoShotsZ4 (as Z1's): free placement in canyons (docs/canyon.md
 // "Building"), DIR/z4-NN-moment.png:
 //   01 a tightly packed defence on The Fork's floor by the prize, its guns'
@@ -1114,7 +1123,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsD3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1142,8 +1151,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) FCommandLine::Append(TEXT(" -AcMmoDevRig"));
 		}
 		// -AcMmoShotsP1: as Z2's, and the opening chain done (the frontier
-		// pilots come only after it), the dev rig's Citadel.
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")))
+		// pilots come only after it), the dev rig's Citadel. S4 too.
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")))
 		{
 			if (int32 Step = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoFirstStep="), Step)) FCommandLine::Append(TEXT(" -AcMmoFirstStep=0"));
 			if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1151,7 +1160,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		// -AcMmoShotsZ1 and Z2: as W4's, late morning, clear, every region been to.
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))
 			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))
-			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3")))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -1252,6 +1262,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))) T.Phase = 3300;
 			// -AcMmoShotsX2: coming back (3400-3411).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2"))) T.Phase = 3400;
+			// -AcMmoShotsS4: realm standings (3500-3509).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4"))) T.Phase = 3500;
 			// -AcMmoShotsZ3: the canyons after The Fork (2800-2812).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))) T.Phase = 2800;
 			// -AcMmoShotsP1: frontier pilots (2600-2613).
@@ -6698,6 +6710,148 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Since() < 2.0) return;
 		OnMenuPick(EAcMenuAction::StopServer);
 		Check(!FAcMmoClient::RunningServer().has_value(), TEXT("x2: STOP saved and stopped the world server"));
+		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsS4
+	case 3500:
+		// The dev rig's home, the chain done: three frontier pilots beside
+		// the pilot, a mercenary hired at its Citadel (as X2's).
+		if (S && CitadelOf(*S) && Mmo->Progress() && !Mmo->Progress()->mercFields.empty() && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("brood clear\nfrontier here miner 6 poor\nfrontier here builder -6\nfrontier here defender 4")),
+				TEXT("s4: three frontier pilots beside the pilot"));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("s4: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget())
+			{
+				for (int32 K = 0; K < SAcCitadelScreen::TabCount && W->Tab() != SAcCitadelScreen::ETab::Mercs; ++K) W->Key(EKeys::Tab);
+			}
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the dev rig's Citadel and the mercenaries' fields"));
+		return;
+	case 3501:
+		if (Since() < 1.0) return;
+		if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->Hire();
+		Advance();
+		return;
+	case 3502:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->mercs.size() == 1 && P->mercs[0].unit > 0 && Since() > 2.0)
+		{
+			CloseCitadelScreen();
+			// Two world hours of the frontier pilots' and the mercenary's
+			// work, booked as on a world with nobody on line.
+			Check(Mmo->DevClock(TEXT("idle 7200")), TEXT("s4: the world idles two hours"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("the mercenary hired"), 15);
+		return;
+	}
+	case 3503:
+	{
+		// The standings told: three frontier pilots or more with ore.
+		const ac::net::StandingsMessage* St = Mmo->Standings();
+		int32 Hauled = 0;
+		if (St)
+			for (const ac::net::WeekStanding& R : St->rows) Hauled += R.frontier && R.ore > 0 ? 1 : 0;
+		if (St && St->you && Hauled >= 2 && Since() > 3.0)
+		{
+			for (const ac::net::WeekStanding& R : St->rows)
+				UE_LOG(LogAutocraft, Log, TEXT("s4: %lld %s%s: %lld ore, %lld bugs, %lld waves, %lld built"), (long long)R.rank, *Utf(R.callsign),
+					R.frontier ? TEXT(" (frontier)") : TEXT(""), (long long)R.ore, (long long)R.bugs, (long long)R.waves, (long long)R.built);
+			Check(true, FString::Printf(TEXT("s4: %d pilots in the standings, %d frontier pilots hauled"), int32(St->rows.size()), Hauled));
+			Check(OpenCitadelScreen() && CitadelScreenWidget().IsValid(), TEXT("s4: H opens the Citadel screen"));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget()) W->SetTab(SAcCitadelScreen::ETab::Realm);
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("s4: the standings with the frontier pilots' work"), 60);
+		return;
+	}
+	case 3504:
+	{
+		const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget();
+		if (!W || Since() < 1.5) return;
+		const FAcCitadelScreenInfo& I = W->GetInfo();
+		bool bYou = false, bFrontier = false;
+		for (const FAcStandingLine& X : I.Standings)
+		{
+			bYou = bYou || X.bYou;
+			bFrontier = bFrontier || X.bFrontier;
+		}
+		Check(I.bStandingsKnown && bYou && bFrontier && !I.WeekLeft.IsEmpty(),
+			FString::Printf(TEXT("s4: the REALM tab's standings: %d rows, the pilot's own, frontier pilots, %s"), I.Standings.Num(), *I.WeekLeft));
+		Shoot(TEXT("s4-01-realm-standings"), TEXT("the REALM tab: the week's standings, frontier pilots and the pilot's own row, the time left"));
+		return;
+	}
+	case 3505:
+		CloseCitadelScreen();
+		if (Since() < 1.0) return;
+		ToggleWorldMap();
+		W4Set = false;
+		Advance();
+		return;
+	case 3506:
+	{
+		// A frontier pilot's dot with its rank line, hovered.
+		const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
+		if (!Map || Since() < 1.5) return;
+		if (!W4Set)
+		{
+			W4Set = true;
+			Check(Map->ShowRegion(TEXT("start"), 1.6), TEXT("s4: the map round Prospect Landing"));
+			return;
+		}
+		if (Since() < 2.5) return;
+		auto Ranked = [](const ac::net::atlas::Item& It) {
+			if (It.kind != ac::net::atlas::Kind::frontier) return false;
+			for (const std::string& L : It.lines)
+				if (L.find("this week") != std::string::npos && L.find(" ore ") != std::string::npos) return true;
+			return false;
+		};
+		const bool bHover = Map->HoverWhere(Ranked);
+		if (Since() < 3.5) return;
+		Check(bHover, TEXT("s4: a frontier pilot with its rank hovered"));
+		W4Set = false;
+		Shoot(TEXT("s4-02-map-tooltip"), TEXT("a frontier pilot's map tooltip with its rank and its ore this week"));
+		return;
+	}
+	case 3507:
+		// The map closed once, then the week ends.
+		if (!W4Set)
+		{
+			W4Set = true;
+			ToggleWorldMap();
+			return;
+		}
+		if (Since() < 1.5) return;
+		W4Set = false;
+		Check(!WorldMapWidget().IsValid(), TEXT("s4: the map closed"));
+		Check(Mmo->DevClock(TEXT("week end")), TEXT("s4: the week ends now"));
+		Advance();
+		return;
+	case 3508:
+	{
+		const UAcProgressHudSubsystem* H = UAcProgressHudSubsystem::Get(this);
+		const TSharedPtr<SAcProgressHud> Hud = H ? H->Widget() : nullptr;
+		bool bToast = false;
+		if (Hud)
+			for (const FString& X : Hud->ToastTitles()) bToast = bToast || X.StartsWith(TEXT("THE WEEK IS COUNTED"));
+		const ac::net::StandingsMessage* St = Mmo->Standings();
+		if (bToast && St && St->rows.size() <= 1 && Since() > 2.2)
+		{
+			Check(true, TEXT("s4: the counts start again"));
+			Shoot(TEXT("s4-03-week-toast"), TEXT("the week's end: THE WEEK IS COUNTED, its top hauler and the ore"));
+			return;
+		}
+		TimedOut(TEXT("s4: the week's toast"), 15);
+		return;
+	}
+	case 3509:
 		Check(Shots.Saved + Shots.Skipped == 3, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;

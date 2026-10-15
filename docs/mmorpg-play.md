@@ -227,6 +227,37 @@ Progress after you enter (protocol 31), once; then it starts again empty.
   time away, the realm wallet's change, and every row, newest first, with
   how long before your return.
 
+## Standings
+
+Every pilot's work over the realm week (seven world days, 4 h 40 m), the
+humans and the frontier pilots alike, counted where the server already sees
+it, never made up: **ore** delivered (each unload at a realm building, before
+the tax; your mercenaries' deliveries count to you), **bugs** felled (by your
+Prospector, or by a turret you built), **waves held** (a canyon wave beaten
+that you fought, as the pay split counts the fighters), **buildings** raised
+(yours, finished). A frontier pilot's counts are its own work, booked or
+live, by the same rules as its pay. It is saved with the world (schema 24),
+with the week's start on the world clock; a save from before starts its
+week at the load. The server sends each pilot the table in a message of its
+own, at most once a second when it changed (protocol 33).
+
+- **The REALM tab.** Under the projects, STANDINGS · THIS WEEK: the top 8
+  pilots by ore (then bugs, waves, buildings), the four columns, and your
+  own row in gold, after a gap when you are not among them; a frontier
+  pilot's dot in its paint with FRONTIER beside its name, a human's pale,
+  as the map draws them; the week's time left.
+- **The map.** A frontier pilot's tooltip and yours (M) add your rank and
+  the leading stat: "3rd · 4,200 ore this week" (ore when there is any, else
+  the first count that has some).
+- **The week's end.** Every pilot on line gets THE WEEK IS COUNTED: "This
+  week's top hauler: Vesper, 18,400 ore" (no hauler: "No ore was hauled this
+  week"), and KSTR's `week-counted`: "The week is counted, pilots! See the
+  standings at the Citadel." A pilot off line finds the same line in its
+  away report. Then the counts start again. A world down for weeks tells
+  the end once. KSTR's line is one take for every week: a pilot's name
+  (often "Pilot 1A2B") and a number don't read well spoken, so the toast
+  carries them.
+
 ## Saving
 
 The server saves the world on its own: the changed parts every 5 s, and

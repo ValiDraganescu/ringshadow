@@ -1726,6 +1726,19 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		UE_LOG(LogAutocraft, Log, TEXT("progress: project %s by %s"), *Id, *Text(N.by));
 		break;
 	}
+	case K::week:
+	{
+		// S4: the realm week ended: its top hauler on a realm-wide toast
+		// ("This week's top hauler: Vesper, 18,400 ore"), KSTR's line (one
+		// take for every week: the toast says the name and the number).
+		const bool bYou = P && !N.by.empty() && N.by == P->callsign;
+		const FString Line = bYou ? FString::Printf(TEXT("This week's top hauler: you, %s ore"), UTF8_TO_TCHAR(ac::net::awayNumber(N.value).c_str()))
+								  : Text(ac::net::weekTopLine(N.by, N.value));
+		Hud->Toast(TEXT("THE WEEK IS COUNTED"), Line + TEXT("  ·  standings at the Citadel"), FAcHudStyle::LevelGold(), Now + 0.01);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->SayRadio(TEXT("week-counted"));
+		UE_LOG(LogAutocraft, Log, TEXT("progress: week %s by %s, %lld ore"), *Text(N.id), *Text(N.by), (long long)N.value);
+		break;
+	}
 	case K::frontier:
 	{
 		// P1: the frontier pilots: a KSTR radio line ("KSTR · VESPER"), a

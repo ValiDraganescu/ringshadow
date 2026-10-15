@@ -1314,6 +1314,11 @@ const ac::net::ProgressMessage* FAcMmoClient::Progress() const
 	return Net && Net->progress() ? &*Net->progress() : nullptr;
 }
 
+const ac::net::StandingsMessage* FAcMmoClient::Standings() const
+{
+	return Net && Net->standings() ? &*Net->standings() : nullptr;
+}
+
 std::optional<double> FAcMmoClient::Xp() const
 {
 	if (Net && Net->mirror() && Net->mirror()->xp()) return Net->mirror()->xp();

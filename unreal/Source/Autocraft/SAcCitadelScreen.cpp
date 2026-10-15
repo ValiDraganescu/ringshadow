@@ -20,6 +20,10 @@ namespace
 	constexpr float ButtonH = 50;
 	/// R2: the REALM tab's projects, under the wallet and the donations.
 	constexpr float ProjectsH = 196;
+	/// S4: the REALM tab's standings, under the projects: a row a pilot,
+	/// the top 8 and the pilot's own after a gap.
+	constexpr float StandingRowH = 24;
+	constexpr float StandingsH = 74 + 9 * StandingRowH + 12;
 
 	enum ERow : int32
 	{
@@ -538,6 +542,7 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 	WalletBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + WalletW, Top + BodyH));
 	DonateBox = FBox2f(FVector2f(Pad + WalletW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
 	ProjectsBox = FBox2f(FVector2f(Pad, Top + BodyH + Gap), FVector2f(PanelW - Pad, Top + BodyH + Gap + ProjectsH));
+	StandingsBox = FBox2f(FVector2f(Pad, ProjectsBox.Max.Y + Gap), FVector2f(PanelW - Pad, ProjectsBox.Max.Y + Gap + StandingsH));
 	BlueprintBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + BlueprintsW, Top + BodyH));
 	ItemBox = FBox2f(FVector2f(Pad + BlueprintsW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
 	const float TierW = (PanelW - 2 * Pad - 2 * Gap) / 3;
@@ -620,7 +625,7 @@ void SAcCitadelScreen::Layout(const FVector2f ViewSize) const
 		}
 	}
 	// R2: the REALM tab's projects under its body.
-	const float BodyEnd = CurrentTab == ETab::Realm ? ProjectsBox.Max.Y : WalletBox.Max.Y;
+	const float BodyEnd = CurrentTab == ETab::Realm ? StandingsBox.Max.Y : WalletBox.Max.Y;
 	FootBox = FBox2f(FVector2f(Pad, BodyEnd + 16), FVector2f(PanelW - Pad, BodyEnd + 16 + FootH));
 	PanelSize = FVector2f(PanelW, FootBox.Max.Y + 18);
 	PanelScale = FMath::Clamp(FMath::Min((ViewSize.X - 32) / PanelSize.X, (ViewSize.Y - 32) / PanelSize.Y), 0.3f, 1.0f);
@@ -741,7 +746,10 @@ int32 SAcCitadelScreen::OnPaint(const FPaintArgs& Args, const FGeometry& Geometr
 	PaintHeader(Out, L, P);
 	switch (CurrentTab)
 	{
-	case ETab::Realm: PaintRealm(Out, L, P); break;
+	case ETab::Realm:
+		PaintRealm(Out, L, P);
+		PaintStandings(Out, L, P);
+		break;
 	case ETab::Shop: PaintShop(Out, L, P); break;
 	case ETab::Missions: PaintMissions(Out, L, P); break;
 	case ETab::Defence: PaintDefence(Out, L, P); break;
@@ -913,6 +921,71 @@ void SAcCitadelScreen::PaintRealm(FSlateWindowElementList& Out, const int32 L, c
 			Label(Keys[I], 10, Faint(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold)
 				.Paint(Out, L + 4, P, FVector2f(T->Box.Max.X - 6, T->Box.Min.Y + 3));
 		}
+	}
+}
+
+void SAcCitadelScreen::PaintStandings(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const
+{
+	const FBox2f B = StandingsBox;
+	Box(Out, L, P, B, FAcHudStyle::Srgb(0.03, 0.055, 0.09, 0.9));
+	CutFrame(Out, L + 1, P, B, Steel(), 1, 10);
+	Label(TEXT("STANDINGS  ·  THIS WEEK"), 13, RealmGold(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f)
+		.Paint(Out, L + 2, P, B.Min + FVector2f(18, 14));
+	Label(Info.bStandingsKnown ? Info.WeekLeft + TEXT("  ·  the counts start again at the week's end") : FString(TEXT("Waiting for the server…")), 13,
+		FAcHudStyle::Soft(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.4f).Paint(Out, L + 2, P, FVector2f(B.Max.X - 18, B.Min.Y + 15));
+	// The columns: rank, pilot, then the four counts right-aligned.
+	const float XRank = B.Min.X + 30, XName = B.Min.X + 64;
+	const float XCols[] = {B.Min.X + 560, B.Min.X + 680, B.Min.X + 820, B.Max.X - 30};
+	static const TCHAR* const Heads[] = {TEXT("ORE"), TEXT("BUGS"), TEXT("WAVES HELD"), TEXT("BUILT")};
+	const float HeadY = B.Min.Y + 46;
+	Label(TEXT("#"), 11, Dim(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 1.2f).Paint(Out, L + 2, P, FVector2f(XRank, HeadY));
+	Label(TEXT("PILOT"), 11, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold, 1.2f).Paint(Out, L + 2, P, FVector2f(XName, HeadY));
+	for (int32 C = 0; C < 4; ++C)
+	{
+		Label(Heads[C], 11, C == 0 ? FAcHudStyle::Amber() : Dim(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold, 1.2f)
+			.Paint(Out, L + 2, P, FVector2f(XCols[C], HeadY));
+	}
+	if (Info.bStandingsKnown && Info.Standings.Num() == 0)
+	{
+		Label(TEXT("Nothing counted yet this week."), 14, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+			.Paint(Out, L + 2, P, FVector2f(XName, B.Min.Y + 74));
+	}
+	float Y = B.Min.Y + 68;
+	for (int32 I = 0; I < Info.Standings.Num(); ++I)
+	{
+		const FAcStandingLine& X = Info.Standings[I];
+		// The pilot's own row past the top: after a gap.
+		if (I == FAcCitadelScreenInfo::StandingsTop)
+		{
+			Label(TEXT("···"), 14, Faint(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::Bold).Paint(Out, L + 2, P, FVector2f(XName, Y + 4));
+			Y += 12;
+		}
+		const FBox2f Row(FVector2f(B.Min.X + 10, Y), FVector2f(B.Max.X - 10, Y + StandingRowH));
+		if (X.bYou) Box(Out, L + 1, P, Row, WithAlpha(RealmGold(), 0.14f));
+		else if (I % 2 == 0) Box(Out, L + 1, P, Row, WithAlpha(Steel(), 0.08f));
+		const float Mid = Y + StandingRowH / 2;
+		const FLinearColor Ink = X.bYou ? RealmGold() : FAcHudStyle::Text();
+		Label(FString::Printf(TEXT("%lld"), (long long)X.Rank), 14, X.Rank <= 3 ? RealmGold() : Dim(), EAcHAlign::Right, EAcVAlign::Center,
+			EAcFontWeight::Bold).Paint(Out, L + 2, P, FVector2f(XRank, Mid));
+		// As the map draws them: a frontier pilot's dot in its paint, a
+		// human's pale.
+		const FLinearColor Dot = X.bFrontier ? FAcHudStyle::TeamPaint(X.Paint) : FAcHudStyle::Srgb(0.86, 0.9, 1);
+		Box(Out, L + 2, P, FBox2f(FVector2f(XName, Mid - 5), FVector2f(XName + 10, Mid + 5)), FLinearColor(0, 0, 0, 0.85f));
+		Box(Out, L + 3, P, FBox2f(FVector2f(XName + 1.5f, Mid - 3.5f), FVector2f(XName + 8.5f, Mid + 3.5f)), Dot);
+		FAcHudText Name = Label(X.Name, 15, Ink, EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::Bold);
+		Name.Paint(Out, L + 2, P, FVector2f(XName + 18, Mid));
+		if (X.bFrontier)
+		{
+			Label(TEXT("FRONTIER"), 10, X.Paint >= 0 ? WithAlpha(Dot, 0.85f) : Dim(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::SemiBold, 1.2f)
+				.Paint(Out, L + 2, P, FVector2f(XName + 18 + Name.Measure().X + 10, Mid + 1));
+		}
+		const int64 Counts[] = {X.Ore, X.Bugs, X.Waves, X.Built};
+		for (int32 C = 0; C < 4; ++C)
+		{
+			Label(Grouped(Counts[C]), C == 0 ? 15 : 14, Counts[C] > 0 ? (C == 0 ? Ink : FAcHudStyle::Text()) : Faint(), EAcHAlign::Right,
+				EAcVAlign::Center, C == 0 ? EAcFontWeight::Bold : EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(XCols[C], Mid));
+		}
+		Y += StandingRowH;
 	}
 }
 

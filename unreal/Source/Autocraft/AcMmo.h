@@ -332,6 +332,8 @@ public:
 	std::vector<ac::net::ProgressMessage::News> TakeProgressNews();
 	/// X2: the away report the join brought, once (the caller keeps it).
 	std::optional<ac::net::AwayReport> TakeAway();
+	/// S4: the realm week's standings, the newest (null: not told yet).
+	const ac::net::StandingsMessage* Standings() const;
 	/// The skill screen's asks (P5): a point into `Skill`, the last point in
 	/// it back, every point back (at the pilot's Citadel), an active into
 	/// slot `Index` (0 Q, 1 C, 2 G; unset: empty it). False, with `Why`: not

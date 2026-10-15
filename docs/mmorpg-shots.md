@@ -28,7 +28,11 @@ grep -E "mmoshots|flowtest" "$D/run.log"     # done when: flowtest: done, 0 fail
 Since 2026-10-14 (S1) the sets wait on the game, not on the world's clock.
 A shot run passes the server a `--dev-control` file (`DIR/mmo/dev-control.txt`),
 and `FAcMmoClient::DevClock` moves the world's clock with it at once:
-`clock T`, `hour H` (on to the next H) or `ahead S` (`Server::devControl`).
+`clock T`, `hour H` (on to the next H) or `ahead S` (`Server::devControl`);
+`catchup S` catches the world up as a restart after S s down (X2), `idle S`
+idles it S s as with nobody on line (S4: the frontier pilots' and the
+mercenaries' work booked), `week end|left S|list` ends the realm week, sets
+its time left or lists the standings (S4).
 The game never passes the file, so a normal game cannot reach it. The
 Starfall set jumps to 19:00 for its night pictures and takes about 40 s,
 not 4 minutes. `-AcMmoShotsOnly=sf-02,sf-08` (names, numbers, or a set's

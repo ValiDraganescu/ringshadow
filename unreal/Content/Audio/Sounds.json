@@ -4128,6 +4128,12 @@
    "prepared": "Content-src/sounds/kstr/project-relay-start.wav",
    "seconds": 5.62
   },
+  "week-counted": {
+   "asset": "/Game/Audio/Kstr/SW_week_counted.SW_week_counted",
+   "source": "kstr/week-counted.wav",
+   "prepared": "Content-src/sounds/kstr/week-counted.wav",
+   "seconds": 3.94
+  },
   "welcome-brood": {
    "asset": "/Game/Audio/Kstr/SW_welcome_brood.SW_welcome_brood",
    "source": "kstr/welcome-brood.wav",

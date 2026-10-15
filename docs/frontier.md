@@ -89,6 +89,7 @@ opening chain (O1, the first ten minutes).
 | In the world | Their Prospectors in their paints, outlined, with a tag "VESPER · LV 14" |
 | Satellite map (M) | A dot in each one's paint. The tooltip shows "VESPER · LV 14", "Frontier pilot · Miner" and "Mining in Rust Hollow". Pilots on their way don't show. |
 | Toasts, "ON THE FRONTIER" | Notable deeds: "Vesper built a Hab Dome in Rust Hollow", "Kestrel opened the Fork wreck in Cold Fork", "Corvid finished a Citadel survey of Glass Flats". A frontier building's "built" news is this deed, not the plain one. |
+| Standings (S4, the REALM tab and the map) | Their week beside the humans': the ore they unloaded (booked or live, before the tax), the bugs their Prospector and their turrets felled, the canyon waves they were paid a share of, the buildings they finished. Booked mining runs at 1,489 ore an hour at most ([balance.md](balance.md)), so a frontier miner hauls at most about 6,900 ore a week; a driven pilot at the pace model's 7,884 an hour passes it in an hour. See mmorpg-play.md "Standings". |
 | KSTR radio, text toasts "KSTR · VESPER" | A hello on landing, a raid warning when the Brood's raid is told, a cheer when a canyon wave is beaten, a cry for help when one is badly hurt or falls, chatter at most every 10 world minutes. At most one line every 45 s, except the hello and the cheer. |
 
 **Lines.** All written for the game:
