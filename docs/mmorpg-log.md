@@ -636,3 +636,10 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Manager: canyon states WAITING/RUNNING/FAILED/HELD; 10 waves; mini-bosses at 5, 10.
 - D Manager: waves pause with no pilot near; fail = prize ore carried off past a mark.
 - T Z2 briefed to wt1 (protocol 27, schema 20).
+- T F2 done 631d3a7, e044a1d: the Dropship between built Landing Pads, 16–20 s, no fade.
+- D F2: Landing Pad level 1, 80 ore blueprint, 60 to build, 2 per region; region pads start-only.
+- D F2: Homing beacon retired (points back + a pad blueprint); Ringwalker free and 30% faster.
+- N F2 frame times: p50 10.8, p95 12.2 ms; region change 1.6 ms; protocol 26.
+- I F2: one 522 ms first-draw stall at the first call (editor build; check packaged).
+- I CrossEdgeEast and LevelPick automation tests still fail (pre-existing).
+- N F2 suites: core 496, server 254, net 85; mmofly replaced and passing.
