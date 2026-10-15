@@ -272,7 +272,7 @@ page for the zone stays as a second opinion, with its 24-hour window.
 | Overview | Visitors and page views for today, 7 days, 30 days; a 30-day chart; the five top pages, referrers and countries. |
 | Pages | Page views and visitors per path over the range, with bounce. |
 | Sources | Referrer hosts, with the UTM source and medium when present. |
-| Visitors | Countries, devices, browsers. |
+| Visitors | A world map of visitors by country (see "The visitor map"), then countries, devices, browsers. |
 | Events | `download-mac`, `download-windows`, `download-linux` (a click on the download button, one per build) and `video-play`, by day and by page. |
 | Agents | By label and class; paths per label; the Unlabelled table; the rules editor with Test. |
 | History | Daily rollups older than 90 days, from D1. |
@@ -358,6 +358,42 @@ fragment and the label (as written), with a chart of answers by status
 class. A load is two SQL reads, each further page one. The nightly rollup
 adds the day's requests per status class (`request`, `status`, `2xx` …
 `5xx`, `unknown` for rows written before the status was).
+
+## The visitor map
+
+The Visitors section opens with a world map: each country coloured by its
+visitors in the chosen range, on five cyan steps of a log scale up to the
+range's most visitors, with the dark base for none. Hovering a country gives
+its name, visitors and page views; the countries table under it has the same
+numbers by name. It counts people only: the tracker's `kind=page` points,
+the same query as the countries table (`blob5`, the country Cloudflare
+reads from the connection), so agents and server hits stay out and a
+signed-in admin's visits were never written. The API returns every country
+(not the top 100) and counts a missing country as `XX`, Cloudflare's code
+for unknown.
+
+**The geometry** is `website/admin/world.json`, served like the rest of the
+admin only with a session. `website/tools/world_map.py` made it once from
+Natural Earth v5.1.2 (public domain), fetched at that release and checked
+against its SHA-256: the 1:110m admin-0 countries for the shapes, in the
+Natural Earth projection, 1000 units wide, Antarctica left out; 78 KB, 25 KB
+gzipped. The codes are ISO 3166-1 alpha-2, Natural Earth's `ISO_A2_EH`
+(France and Norway have -99 in `ISO_A2` for their overseas parts, Taiwan
+CN-TW). Three shapes have no code: Northern Cyprus is merged into Cyprus
+(`CY`) and Somaliland into Somalia (`SO`), which is how Cloudflare reports
+them, and Kosovo is `XK`, Cloudflare's code for it.
+
+**Small places** get a dot at Natural Earth's label point when they have
+visitors: the 1:110m shapes under 7 units across (Luxembourg, Qatar,
+Kuwait, Lebanon, Cyprus and others, about 2.5 px on a phone) and the 65
+places only the 1:50m file has (Singapore, Malta, Hong Kong, Bahrain,
+Andorra and others). A code with neither (`XX` unknown, `T1` Tor,
+Antarctica) is listed in a "No country on the map" line under it.
+
+To regenerate it (a new Natural Earth release, a different projection):
+change the release and hashes at the top of the script and run
+`uv run website/tools/world_map.py`; `website/tests/map.test.mjs` checks the
+output's shape.
 
 ## Keeping history: the rollup
 
@@ -461,6 +497,8 @@ Open, with the plan's default in brackets:
   SQL binding, AI Crawl Control, bot fields by plan).
 - benvinegar/counterscale v3.4.1: `packages/server/app/analytics/{collect,query,schema}.ts`,
   `packages/tracker/src/tracker.ts`, MIT.
+- Natural Earth v5.1.2, 1:110m and 1:50m admin-0 countries (public domain),
+  github.com/nvkelso/natural-earth-vector.
 - Cloudflare docs: Workers static assets (`run_worker_first`), Analytics
   Engine limits and sampling, the Analytics SQL binding, D1 pricing, Workers
   Free limits, AI Crawl Control.

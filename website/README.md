@@ -238,7 +238,8 @@ its reasons are in `docs/website-analytics.md`; what readers are told is in
 | `src/vendor/counterscale/` | Counterscale's visitor and bounce logic (MIT), with its licence and source commit. |
 | `src/admin.js`, `src/auth.js` | The admin's door (register, sign in, sessions, lockout) and its API. |
 | `src/stats.js`, `src/rollup.js` | The stats queries and views; the nightly rollup and History. |
-| `admin/` | The admin's pages, script and stylesheet. |
+| `admin/` | The admin's pages, script and stylesheet, and `world.json`, the Visitors map. |
+| `tools/world_map.py` | Makes `admin/world.json` from Natural Earth (`uv run`). |
 | `migrations/` | The admin's D1 tables, applied in order. |
 | `tests/` | Node tests, the crawl comparison and the admin's smoke test. |
 
@@ -293,6 +294,12 @@ terminal, the `cf` CLI's login can read it:
 ```sh
 pnpm dlx cf sql query "SELECT blob1, COUNT(*) FROM events.analyticsEngine.ringshadow_hits2 WHERE timestamp > NOW() - INTERVAL '1' DAY GROUP BY blob1" --scope-account f510a16043d1521697b8974165f9c78d
 ```
+
+The Visitors map's shapes come from Natural Earth (naturalearthdata.com,
+v5.1.2, 1:110m admin-0 countries, and 1:50m for the dots of small places),
+which is public domain. `tools/world_map.py` fetches it at that release,
+checks its SHA-256 and writes `admin/world.json`; run it only to change the
+release or the projection.
 
 The first admin registered on 2026-10-15 with a one-time setup code, and the
 `ADMIN_SETUP_CODE` secret was deleted after. If the admins table is ever

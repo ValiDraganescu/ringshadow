@@ -141,6 +141,17 @@ details ol { margin: 6px 0 0; padding-left: 20px; }
 .pager { margin-top: 12px; }
 .k-visitors { fill: #ccf2ff; background: #ccf2ff; }
 
+.map svg { background: var(--night); }
+.map path { fill-rule: evenodd; stroke: var(--night); stroke-width: 0.6; stroke-linejoin: round; }
+.map circle { stroke: var(--night); stroke-width: 1; }
+.map path:hover, .map circle:hover { stroke: var(--ice); stroke-width: 1.2; }
+.m0 { fill: var(--night-3); background: var(--night-3); }
+.m1 { fill: #1d4a63; background: #1d4a63; }
+.m2 { fill: #23708f; background: #23708f; }
+.m3 { fill: #2d98bd; background: #2d98bd; }
+.m4 { fill: #59d9ff; background: #59d9ff; }
+.m5 { fill: #ccf2ff; background: #ccf2ff; }
+
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 4px; }
 .tile { background: var(--night-2); padding: 14px 16px; color: var(--soft); }
 .tile b { color: var(--ink); font: 600 28px/1.1 var(--display); }

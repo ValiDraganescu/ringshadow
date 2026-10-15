@@ -240,6 +240,13 @@ export function byKeyFrom(rows, limit = 100) {
     .slice(0, limit);
 }
 
+// Views, visitors and bounces per country, every country (the map colours
+// them all). The collector stores "" when Cloudflare gives no country; it is
+// counted as XX, Cloudflare's own code for unknown.
+export function countriesFrom(rows) {
+  return byKeyFrom(rows.map((r) => ({ ...r, key: r.key || "XX" })), Infinity);
+}
+
 // Events per name: the total, per bucket, and per page.
 export function eventsFrom(rows, range) {
   const names = new Map();

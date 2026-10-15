@@ -222,7 +222,7 @@
       drawPeople($("#overview-chart svg"), data.series, "day");
       fill("#ov-pages", data.pages);
       fill("#ov-referrers", data.referrers);
-      fill("#ov-countries", data.countries);
+      fill("#ov-countries", named(data.countries));
     }
 
     async function loadPages() {
@@ -238,10 +238,92 @@
       fill("#src-utm-medium", data.utmMedia);
     }
 
+    // --- The map: countries by visitors (src/stats.js countriesFrom), the
+    // shapes from admin/world.json (tools/world_map.py).
+
+    const regions = (() => {
+      try {
+        return new Intl.DisplayNames(["en"], { type: "region" });
+      } catch {
+        return null;
+      }
+    })();
+    const ODD = { XX: "Unknown", T1: "Tor" };
+    function countryName(code) {
+      if (ODD[code]) return ODD[code];
+      try {
+        return regions?.of(code) || code;
+      } catch {
+        return code;
+      }
+    }
+    const countryLabel = (code) => (countryName(code) === code ? code : `${countryName(code)} (${code})`);
+    const named = (list) => list.map((r) => ({ ...r, key: countryLabel(r.key) }));
+
+    let world = null;
+    async function loadWorld() {
+      if (!world) {
+        const res = await fetch("/admin/world.json", { credentials: "same-origin" });
+        if (res.ok) world = await res.json();
+      }
+      return world;
+    }
+
+    // Five steps of cyan on a log scale up to the period's most visitors;
+    // zero stays the dark base.
+    const STEPS = 5;
+    const stepOf = (v, max) => (v > 0 ? Math.min(STEPS, Math.max(1, Math.ceil((STEPS * Math.log1p(v)) / Math.log1p(max)))) : 0);
+    function legendSteps(max) {
+      const edge = (i) => Math.floor(Math.expm1((Math.log1p(max) * i) / STEPS) + 1e-9);
+      const out = [[0, "0"]];
+      for (let i = 1; i <= STEPS; i++) {
+        const lo = i === 1 ? 1 : edge(i - 1) + 1;
+        const hi = i === STEPS ? max : edge(i);
+        if (lo <= hi) out.push([i, lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`]);
+      }
+      return out;
+    }
+
+    function drawMap(figure, map, countries) {
+      const svg = figure.querySelector("svg");
+      svg.setAttribute("viewBox", `0 0 ${map.width} ${map.height}`);
+      const by = new Map(countries.map((c) => [c.key, c]));
+      const max = Math.max(1, ...countries.map((c) => c.visitors));
+      const title = (code) => {
+        const c = by.get(code);
+        return Object.assign(svgEl("title", {}), {
+          textContent: c ? `${countryName(code)} · ${fmt(c.visitors)} visitors · ${fmt(c.views)} page views` : `${countryName(code)} · no visitors`,
+        });
+      };
+      const kids = Object.entries(map.paths).map(([code, d]) => {
+        const p = svgEl("path", { d, class: "m" + stepOf(by.get(code)?.visitors || 0, max) });
+        p.append(title(code));
+        return p;
+      });
+      for (const [code, [cx, cy]] of Object.entries(map.dots)) {
+        const v = by.get(code)?.visitors || 0;
+        if (!v) continue;
+        const dot = svgEl("circle", { cx, cy, r: 4, class: "m" + stepOf(v, max) });
+        dot.append(title(code));
+        kids.push(dot);
+      }
+      svg.replaceChildren(...kids);
+      figure.querySelector(".legend").replaceChildren(
+        el("span", { textContent: "Visitors:" }),
+        ...legendSteps(max).map(([i, text]) => el("span", { class: "key" }, el("i", { class: "m" + i }), text)),
+      );
+    }
+
     async function loadVisitors() {
-      const data = await people("visitors", "#visitors .summary");
+      const [data, map] = await Promise.all([people("visitors", "#visitors .summary"), loadWorld()]);
       if (!data) return;
-      fill("#vis-countries", data.countries);
+      if (map) drawMap($("#vis-map"), map, data.countries);
+      $("#vis-map").hidden = !map;
+      const nowhere = map ? data.countries.filter((c) => !map.paths[c.key] && !map.dots[c.key]) : [];
+      $("#vis-nowhere").hidden = !nowhere.length;
+      $("#vis-nowhere").textContent = "No country on the map: " +
+        nowhere.map((c) => `${countryLabel(c.key)}, ${fmt(c.visitors)} visitors, ${fmt(c.views)} page views`).join(" · ");
+      fill("#vis-countries", named(data.countries));
       fill("#vis-devices", data.devices);
       fill("#vis-browsers", data.browsers);
     }

@@ -6,7 +6,7 @@ import { compileRules } from "./agents.js";
 import { history } from "./rollup.js";
 import { addRule, changeRule, deleteRule, listRules, testRules } from "./rules.js";
 import {
-  DAY, LOG_PAGE, agentsView, byKeyFrom, droppedSql, eventsFrom, eventsSql, logFilters, pageByColumnSql, pageSeriesSql,
+  DAY, LOG_PAGE, agentsView, byKeyFrom, countriesFrom, droppedSql, eventsFrom, eventsSql, logFilters, pageByColumnSql, pageSeriesSql,
   parseRange, requestClassesFrom, requestClassesSql, requestLogSql, requestRow, seriesFrom, serverByAgentSql, serverPathsSql,
 } from "./stats.js";
 import {
@@ -273,14 +273,14 @@ const VIEWS = {
   },
   async visitors(env, range) {
     const [countries, devices, browsers] = await Promise.all(["country", "device", "browser"].map((c) => rows(env, pageByColumnSql(c), range)));
-    return { range, countries: byKeyFrom(countries), devices: byKeyFrom(devices), browsers: byKeyFrom(browsers) };
+    return { range, countries: countriesFrom(countries), devices: byKeyFrom(devices), browsers: byKeyFrom(browsers) };
   },
   async events(env, range) {
     return { range, events: eventsFrom(await rows(env, eventsSql(range.bucket), range), range) };
   },
 };
 
-async function peopleStats(request, env, view) {
+export async function peopleStats(request, env, view) {
   const range = parseRange(new URL(request.url).searchParams);
   if (range.error) return json({ error: range.error }, 400);
   try {

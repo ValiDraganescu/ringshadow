@@ -86,6 +86,12 @@
     <section id="visitors" class="view" hidden>
       <h2>Visitors</h2>
       <p class="summary" role="status" aria-live="polite"></p>
+      <figure class="chart map" id="vis-map">
+        <svg viewBox="0 0 1000 438" role="img" aria-label="Visitors by country"></svg>
+        <figcaption class="legend"></figcaption>
+      </figure>
+      <p class="note" id="vis-nowhere" hidden></p>
+      <p class="note">People only, from the tracker: a country's colour is its visitors in the period; hover a country for its visitors and page views. Places too small to see at this scale show as a dot when they have visitors.</p>
       <div class="cols">
         <div class="part"><h3>Countries</h3><table class="list" id="vis-countries"><thead><tr><th>Country</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
         <div class="part"><h3>Devices</h3><table class="list" id="vis-devices"><thead><tr><th>Device</th><th>Views</th><th>Visitors</th></tr></thead><tbody></tbody></table></div>
