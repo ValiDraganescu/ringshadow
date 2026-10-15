@@ -372,7 +372,7 @@ Vec2 openGround(const Simulation& sim, const Unit& u, Vec2 at, double reach) {
 
 bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Vec2 at, int64_t lastInput) {
     Region& r = *regions_[to];
-    const bool free = !r.driven();
+    // W5: every human drives its own Prospector, another pilot here or not.
     r.join(pilot, lastInput);
     p.region = to;
     bankIn(p, to);
@@ -388,7 +388,7 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
     const int64_t id = r.admit(v);
     p.unit = id;
     p.last = places.regionAt(v.position);
-    return free && r.take(pilot, id);
+    return r.take(pilot, id);
 }
 
 Unit WorldMap::startProspector() const {
@@ -509,7 +509,6 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     }
     if (!from) return std::string("Not at a Landing Pad: stand on one to call the Dropship");
     if (from->building == target->building) return "At " + target->name + " already";
-    if (*to != p.region && regions_[*to]->driven()) return std::string("Another pilot drives there");
     // The flight's MH (F1): a base and a share a step across the grid; half
     // from a Spacedock, nothing with Ringwalker (F2); half again while the
     // realm's Beacon burns (R2).
@@ -722,7 +721,7 @@ void WorldMap::crossings() {
             const auto to = neighbour(p.region, e);
             if (!to) continue;
             const region::Built& there = *regions_[*to]->places();
-            if (!inSpan(there.openings[size_t(opposite(e))], along) || regions_[*to]->driven()) continue;
+            if (!inSpan(there.openings[size_t(opposite(e))], along)) continue;
             const auto clocks = takeClocks(p.region, *unit);
             const Unit leaving = *here.release(*unit);
             const int64_t lastInput = here.lastInputTick(pilot);
@@ -757,7 +756,7 @@ bool WorldMap::devTransfer(PilotId pilot, size_t to, Vec2 at) {
     const auto it = pilots_.find(pilot);
     if (!world_ || it == pilots_.end() || to >= regions_.size()) return false;
     PilotState& p = it->second;
-    if (p.flight || !p.unit || p.region == to || regions_[to]->driven()) return false;
+    if (p.flight || !p.unit || p.region == to) return false;
     Region& here = *regions_[p.region];
     if (!here.simulation().state.unit(*p.unit)) return false;
     // As a crossing hands it over (`crossings`), to a point of its own.
@@ -789,10 +788,9 @@ void WorldMap::landings() {
         if (!p.flight) continue;
         Flight& f = *p.flight;
         // The approach: the pilot into the target region, nothing driven yet
-        // (its snapshots there follow the target pad). Another pilot drives
-        // there: it circles until the ground is free.
+        // (its snapshots there follow the target pad). W5: another pilot
+        // driving there is no matter.
         if (!f.switched && tick_ >= f.switchAt) {
-            if (regions_[f.to]->driven()) continue;
             Region& before = *regions_[p.region];
             const int64_t lastInput = before.lastInputTick(pilot);
             if (before.joined(pilot)) p.record = before.levels(pilot);
@@ -811,7 +809,6 @@ void WorldMap::landings() {
         }
         if (!f.switched || tick_ < f.landsAt) continue;
         // The touch down: the Prospector on the target pad.
-        if (regions_[f.to]->driven() && !regions_[f.to]->driving(pilot)) continue;
         const Flight done = f;
         p.flight = std::nullopt;
         Region& now = *regions_[done.to];

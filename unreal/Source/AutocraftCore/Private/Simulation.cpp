@@ -216,6 +216,8 @@ std::vector<GameEvent> Simulation::step(double dt) {
     alive.reserve(state.units.size());
     for (const auto& u : state.units) alive.push_back(u.hp > 0);
     if (pilot && unitIndexByID.find(pilot->unit) == unitIndexByID.end()) pilot = std::nullopt;
+    // W5: another human's unit gone keeps its context (its levels and
+    // progress) until its owner takes it back with `handBack`.
     const size_t count = state.units.size();
     // PathAhead's probe: its grid is final now; it stops when the real step is over.
     if (probing && pathAhead) pathAhead->probeAtUnits();
@@ -240,6 +242,11 @@ std::vector<GameEvent> Simulation::step(double dt) {
         pilot->ability = false;
         pilot->slot = 0;
     }
+    for (Driver& d : drivers) {
+        d.pilot.act = false;
+        d.pilot.ability = false;
+        d.pilot.slot = 0;
+    }
     std::vector<InFlight> due;
     std::vector<InFlight> later;
     for (auto& f : inFlight) {
@@ -251,6 +258,13 @@ std::vector<GameEvent> Simulation::step(double dt) {
     landings.clear();
     if (pilot || hpBonusHeld || burnsLeft) stepLeveling(dt);
     if (progress) stepSkills(dt);
+    // W5: each other human's own leveling (its tally, its auras) and skills.
+    for (size_t k = 0; k < drivers.size(); k++) {
+        swapDriver(k);
+        stepDriverLeveling(dt);
+        if (progress) stepSkills(dt);
+        swapDriver(k);
+    }
     separate();
     unstick(events);
     trapped(events);
@@ -273,18 +287,18 @@ bool Simulation::issue(const Command& command) {
 
 bool Simulation::issue(const Command& command, std::vector<GameEvent>& events) {
     using Task = Unit::Task;
-    // The unit the player drives takes no orders from the AI.
+    // A unit a human drives takes no orders from the AI (W5: any of them).
     if (pilot) {
-        const int64_t p = pilot->unit;
-        if (auto c = command.as<Command::Build>(); c && c->worker == p) return false;
-        if (auto c = command.as<Command::Harvest>(); c && c->worker == p) return false;
-        if (auto c = command.as<Command::Gather>(); c && c->worker == p) return false;
-        if (auto c = command.as<Command::Resume>(); c && c->worker == p) return false;
-        if (auto c = command.as<Command::Repair>(); c && c->worker == p) return false;
-        if (auto c = command.as<Command::Anchor>(); c && c->unit == p) return false;
-        if (auto c = command.as<Command::Mission>(); c && c->unit == p) return false;
-        if (auto c = command.as<Command::Board>(); c && (c->dropship == p || c->unit == p)) return false;
-        if (auto c = command.as<Command::Load>(); c && c->unit == p) return false;
+        auto driven = [&](int64_t id) { return piloted(id); };
+        if (auto c = command.as<Command::Build>(); c && driven(c->worker)) return false;
+        if (auto c = command.as<Command::Harvest>(); c && driven(c->worker)) return false;
+        if (auto c = command.as<Command::Gather>(); c && driven(c->worker)) return false;
+        if (auto c = command.as<Command::Resume>(); c && driven(c->worker)) return false;
+        if (auto c = command.as<Command::Repair>(); c && driven(c->worker)) return false;
+        if (auto c = command.as<Command::Anchor>(); c && driven(c->unit)) return false;
+        if (auto c = command.as<Command::Mission>(); c && driven(c->unit)) return false;
+        if (auto c = command.as<Command::Board>(); c && (driven(c->dropship) || (c->unit && driven(*c->unit)))) return false;
+        if (auto c = command.as<Command::Load>(); c && driven(c->unit)) return false;
     }
     auto structureIndex = [&](int64_t id) -> std::optional<size_t> {
         for (size_t i = 0; i < state.structures.size(); i++) if (state.structures[i].id == id) return i;
@@ -1047,7 +1061,7 @@ std::optional<Vec2> Simulation::rallyPoint(int64_t p) const {
 
 bool Simulation::inArmy(const Unit& u) const {
     return u.soldier() && !u.mission && u.task != Unit::Task::inBastion && u.task != Unit::Task::toBastion
-        && u.task != Unit::Task::aboard && !(pilot && pilot->unit == u.id);
+        && u.task != Unit::Task::aboard && !piloted(u.id);
 }
 
 /// A soldier's place in its army: soldiers take places in id order.
@@ -2576,7 +2590,7 @@ void Simulation::unstick(std::vector<GameEvent>& events) {
     std::set<int64_t> seen;
     for (size_t i = 0; i < state.units.size(); i++) {
         const Unit u = state.units[i];
-        if (!(!u.stats().air && !u.jumpFrom && u.anchor.value_or(0) == 0 && !(pilot && u.id == pilot->unit)
+        if (!(!u.stats().air && !u.jumpFrom && u.anchor.value_or(0) == 0 && !piloted(u.id)
               && u.task != Unit::Task::inBastion && u.task != Unit::Task::aboard && u.task != Unit::Task::inDerrick
               && (u.goal || (u.waypoints && !u.waypoints->empty())))) continue;
         seen.insert(u.id);
@@ -2624,7 +2638,7 @@ void Simulation::trapped(std::vector<GameEvent>& events) {
     std::set<int64_t> seen;
     for (size_t i = 0; i < state.units.size(); i++) {
         const Unit u = state.units[i];
-        if (!(u.hp > 0 && !u.stats().air && !u.jumpFrom && !(pilot && u.id == pilot->unit) && u.task != Task::inBastion)) continue;
+        if (!(u.hp > 0 && !u.stats().air && !u.jumpFrom && !piloted(u.id) && u.task != Task::inBastion)) continue;
         if (u.task == Task::aboard || u.task == Task::inDerrick || u.task == Task::building || u.task == Task::repairing
             || u.task == Task::mining || u.task == Task::waiting || u.task == Task::depositing) continue;
         if (!nav->boxedIn(u.position, pocketArea, u.kind == Unit::Kind::comet)) continue;
@@ -2902,6 +2916,13 @@ double Simulation::cost(int64_t p, const Unit& unit, const std::map<int64_t, int
 void Simulation::stepUnit(Unit& u, double dt, std::vector<GameEvent>& events) {
     using Task = Unit::Task;
     if (pilot && pilot->unit == u.id) { stepPiloted(u, dt, events); return; }
+    // W5: another human's unit, stepped with its own context.
+    if (const auto k = driverIndex(u.id)) {
+        swapDriver(*k);
+        stepPiloted(u, dt, events);
+        swapDriver(*k);
+        return;
+    }
     if (u.brood()) { stepBug(u, dt, events); return; }
     if (u.soldier()) { stepSoldier(u, dt, events); return; }
     if (u.task == Task::errand) { stepErrand(u, dt, events); return; }

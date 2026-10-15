@@ -90,8 +90,6 @@ std::optional<WorldMap::Home> WorldMap::home(const PilotState&, size_t region, V
     double bestScore = std::numeric_limits<double>::infinity();
     const WorldRegion& fell = world_->regions[region];
     for (size_t r = 0; r < regions_.size(); r++) {
-        // Another pilot drives there: not now.
-        if (r != region && regions_[r]->driven()) continue;
         const WorldRegion& g = world_->regions[r];
         const double steps = double(std::llabs(g.column - fell.column) + std::llabs(g.row - fell.row));
         for (const Structure& b : regions_[r]->simulation().state.structures) {
@@ -108,7 +106,6 @@ std::optional<WorldMap::Home> WorldMap::home(const PilotState&, size_t region, V
         }
     }
     if (best) return best;
-    if (start_ != region && regions_[start_]->driven()) return std::nullopt;
     return Home{start_, world_->regions[start_].built.pads[world_->startPad].at, std::nullopt};
 }
 

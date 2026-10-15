@@ -168,6 +168,11 @@
     /// units on fire burn (to the end, driven or not), then the mending
     /// auras around the driven unit.
     void stepLeveling(double dt);
+    /// W5: another human's own part of it (its tally and auras), its
+    /// context swapped in; and the two parts.
+    void stepDriverLeveling(double dt);
+    void driverTally(double dt);
+    void driverAuras(double dt);
 
     /// An hp pick coming on raises a unit's hp by as much (as the Aegis
     /// shield does); going off, it lowers its hp only to the new full.

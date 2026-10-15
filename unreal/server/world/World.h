@@ -259,7 +259,7 @@ private:
     void stashLevels(Seat& seat);
     /// The seat's progression into the simulation (it drives), and out.
     void loadProgress(const Seat& seat);
-    void clearProgress();
+    void clearProgress(const Seat& seat);
     void nextInput(Seat& seat);
 };
 

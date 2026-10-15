@@ -100,8 +100,9 @@ std::optional<Unit> Region::release(int64_t unit) {
             if (drivesNow(seat)) stashLevels(seat);
             seat.drives = std::nullopt;
         }
-    // Taken off the ground as it is: no hand-back to an AI.
-    if (sim_.pilot && sim_.pilot->unit == unit) sim_.pilot = std::nullopt;
+    // Taken off the ground as it is (W5: its driver's context goes, the
+    // next human driving here becomes the active one).
+    if (sim_.piloted(unit)) sim_.handBack(unit);
     GameState& s = sim_.state;
     for (auto& p : s.patches)
         if (p.miner == unit) p.miner = std::nullopt;
@@ -125,28 +126,28 @@ void Region::leave(PilotId pilot) {
 bool Region::take(PilotId pilot, int64_t unit) {
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end()) return false;
-    // One pilot in the simulation: another one's unit is not free.
-    for (const auto& [id, seat] : pilots_)
-        if (id != pilot && seat.drives) return false;
-    // Its own levels in the simulation before the core's take, which adds
-    // the kind at level 1 when it is new.
-    if (!drivesNow(it->second)) loadLevels(it->second);
-    if (!sim_.take(unit)) {
-        // The core hands back what it drove before it refuses.
-        if (!sim_.pilot) {
-            stashLevels(it->second);
-            it->second.drives = std::nullopt;
-        }
-        return false;
+    Seat& seat = it->second;
+    // W5: another human's unit is not free; every human drives its own.
+    if (seat.drives != unit && sim_.piloted(unit)) return false;
+    // Its own unit already: nothing to do.
+    if (drivesNow(seat) && *seat.drives == unit) return true;
+    // Driving another: that one goes back to the AI first.
+    if (drivesNow(seat)) {
+        stashLevels(seat);
+        sim_.handBack(*seat.drives);
+        seat.drives = std::nullopt;
     }
-    it->second.drives = unit;
-    it->second.drove = unit;
+    // Its own levels in the simulation with the take, which adds the kind
+    // at level 1 when it is new.
+    if (!sim_.drive(unit, seat.levels)) return false;
+    seat.drives = unit;
+    seat.drove = unit;
     // Its skills on the unit it drives now.
-    loadProgress(it->second);
+    loadProgress(seat);
     // Until its first input the unit stands, facing where it faces.
-    PilotInput& h = it->second.held;
+    PilotInput& h = seat.held;
     h.walk = Vec2(0, 0);
-    h.heading = sim_.pilot->heading;
+    h.heading = sim_.pilotFor(unit) ? sim_.pilotFor(unit)->heading : 0.0;
     h.act = h.ability = h.hold = h.mend = false;
     h.crosshair = std::nullopt;
     h.slot = 0;
@@ -156,14 +157,14 @@ bool Region::take(PilotId pilot, int64_t unit) {
 void Region::handBack(PilotId pilot) {
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end() || !it->second.drives) return;
-    if (sim_.pilot && sim_.pilot->unit == *it->second.drives) {
-        sim_.take(std::nullopt);
+    if (drivesNow(it->second)) {
         stashLevels(it->second);
+        sim_.handBack(*it->second.drives);
     }
     it->second.drives = std::nullopt;
 }
 
-bool Region::drivesNow(const Seat& seat) const { return seat.drives && sim_.pilot && sim_.pilot->unit == *seat.drives; }
+bool Region::drivesNow(const Seat& seat) const { return seat.drives && sim_.piloted(*seat.drives); }
 
 std::optional<PilotRecord>* Region::sideLevels() {
     auto& players = sim_.state.players;
@@ -172,35 +173,45 @@ std::optional<PilotRecord>* Region::sideLevels() {
 }
 
 void Region::loadLevels(Seat& seat) {
-    if (auto* side = sideLevels()) *side = seat.levels;
+    if (!seat.drives) return;
+    if (auto* own = sim_.levelsFor(*seat.drives)) *own = seat.levels;
 }
 
 void Region::stashLevels(Seat& seat) {
-    if (auto* side = sideLevels()) {
-        seat.levels = *side;
-        *side = std::nullopt;
+    if (!seat.drives) return;
+    // Its unit gone while the active driver: its context is still the active
+    // one (`handBack` hands the slot on after).
+    auto* own = sim_.levelsFor(*seat.drives);
+    if (!own && !sim_.pilot) own = sideLevels();
+    if (own) {
+        seat.levels = *own;
+        *own = std::nullopt;
     }
-    clearProgress();
+    clearProgress(seat);
 }
 
 void Region::loadProgress(const Seat& seat) {
-    sim_.setProgress(seat.progress);
-    sim_.pilotBuildings = seat.buildings;
+    if (!seat.drives) return;
+    sim_.setProgressFor(*seat.drives, seat.progress);
+    if (auto* own = sim_.buildingsFor(*seat.drives)) *own = seat.buildings;
 }
 
-void Region::clearProgress() {
-    sim_.setProgress(std::nullopt);
-    sim_.pilotBuildings.clear();
+void Region::clearProgress(const Seat& seat) {
+    if (!seat.drives) return;
+    if (!sim_.piloted(*seat.drives) && !sim_.pilot) {
+        sim_.setProgress(std::nullopt);
+        sim_.pilotBuildings.clear();
+        return;
+    }
+    sim_.setProgressFor(*seat.drives, std::nullopt);
+    if (auto* own = sim_.buildingsFor(*seat.drives)) own->clear();
 }
 
 std::optional<PilotRecord> Region::levels(PilotId pilot) const {
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end()) return std::nullopt;
-    if (drivesNow(it->second)) {
-        const auto& players = sim_.state.players;
-        if (Pilot::player >= 0 && Pilot::player < static_cast<int64_t>(players.size()))
-            return players[static_cast<size_t>(Pilot::player)].pilot;
-    }
+    if (drivesNow(it->second))
+        if (auto* own = const_cast<Simulation&>(sim_).levelsFor(*it->second.drives)) return *own;
     return it->second.levels;
 }
 
@@ -208,7 +219,7 @@ void Region::setLevels(PilotId pilot, const std::optional<PilotRecord>& levels) 
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end()) return;
     if (drivesNow(it->second)) {
-        if (auto* side = sideLevels()) *side = levels;
+        if (auto* own = sim_.levelsFor(*it->second.drives)) *own = levels;
     } else {
         it->second.levels = levels;
     }
@@ -231,8 +242,13 @@ std::optional<std::string> Region::pick(PilotId pilot, UnitKind kind, Perk perk)
     auto* side = sideLevels();
     if (!side) return "No side";
     // The core's own pick on the pilot's record: in the simulation while it
-    // drives; else lent to it for the pick (whoever drives keeps theirs).
-    const bool driving = drivesNow(seat);
+    // drives (W5: its own context); else lent to it for the pick (whoever
+    // drives keeps theirs).
+    if (drivesNow(seat)) {
+        const bool kept = sim_.asDriver(*seat.drives, [&] { return sim_.pick(perk); });
+        return kept ? std::nullopt : std::optional<std::string>("Can't pick that now");
+    }
+    const bool driving = false;
     std::optional<PilotRecord> driver;
     if (!driving) {
         driver = *side;
@@ -257,13 +273,16 @@ std::optional<std::string> Region::build(PilotId pilot, StructureKind kind, Vec2
     const auto& kinds = description_.wild ? std::vector<StructureKind>(PilotBuild::worldKinds.begin(), PilotBuild::worldKinds.end())
                                           : std::vector<StructureKind>(PilotBuild::kinds.begin(), PilotBuild::kinds.end());
     if (std::find(kinds.begin(), kinds.end(), kind) == kinds.end()) return "A Prospector can't build that";
-    const auto u = sim_.pilotUnit();
-    if (!u || u->id != *it->second.drives || !PilotBuild::builds(u->kind)) return "No Prospector";
-    if (!std::isfinite(at.x) || !std::isfinite(at.y)) return "Can't build there";
-    const auto p = sim_.snap(kind, at);
-    if (!p) return "No well here";
-    if (distance(u->position, *p) > buildReach(kind) + buildSlack) return "Too far away";
-    return sim_.pilotBuild(kind, *p);
+    // W5: with the context of the human driving it.
+    return sim_.asDriver(*it->second.drives, [&]() -> std::optional<std::string> {
+        const auto u = sim_.pilotUnit();
+        if (!u || u->id != *it->second.drives || !PilotBuild::builds(u->kind)) return "No Prospector";
+        if (!std::isfinite(at.x) || !std::isfinite(at.y)) return "Can't build there";
+        const auto p = sim_.snap(kind, at);
+        if (!p) return "No well here";
+        if (distance(u->position, *p) > buildReach(kind) + buildSlack) return "Too far away";
+        return sim_.pilotBuild(kind, *p);
+    });
 }
 
 std::optional<int64_t> Region::driving(PilotId pilot) const {
@@ -340,8 +359,9 @@ void Region::step() {
         if (drivesNow(seat)) driver = id;
     for (auto& [id, seat] : pilots_) {
         nextInput(seat);
-        if (!(seat.drives && sim_.pilot && sim_.pilot->unit == *seat.drives)) continue;
-        Pilot& p = *sim_.pilot;
+        Pilot* own = seat.drives ? sim_.pilotFor(*seat.drives) : nullptr;
+        if (!own) continue;
+        Pilot& p = *own;
         const PilotInput& h = seat.held;
         p.walk = h.walk;
         p.heading = h.heading;
@@ -363,9 +383,11 @@ void Region::step() {
     lastEvents_ = events;
     tick_ += 1;
     for (auto& [id, seat] : pilots_) {
-        // The driven unit died, or got where it cannot be driven from.
-        if (seat.drives && !drivesNow(seat)) {
+        // The driven unit died, or got where it cannot be driven from: its
+        // levels kept, its driver's context handed back (W5).
+        if (seat.drives && (!drivesNow(seat) || !sim_.unitIndex(*seat.drives))) {
             stashLevels(seat);
+            sim_.handBack(*seat.drives);
             seat.drives = std::nullopt;
         }
         for (const GameEvent& e : events) {

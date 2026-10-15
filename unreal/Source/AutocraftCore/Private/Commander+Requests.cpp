@@ -355,7 +355,7 @@ std::vector<RequestStatus> Commander::requestStatus(const Simulation& sim) const
     const Player& me = seen.state.players[static_cast<size_t>(player)];
     int64_t money = me.ore, hydrogen = me.hydrogen, supply = me.supplyCap - me.supplyUsed;
     std::set<int64_t> busy;
-    if (seen.pilot) { busy.insert(seen.pilot->unit); }
+    for (const int64_t d : seen.drivenUnits()) busy.insert(d);
     return requests(seen, money, hydrogen, supply, busy).status;
 }
 

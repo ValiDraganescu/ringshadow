@@ -90,12 +90,11 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
         return Seated::restored;
     }
     // Where it left its Prospector, driving it again.
-    const bool free = !r.driven();
     r.join(pilot);
     bankIn(in, in.region);
     r.setLevels(pilot, in.record);
     r.setProgress(pilot, in.progress, ownBuildings(in, in.region));
-    if (free) r.take(pilot, *in.unit);
+    r.take(pilot, *in.unit);
     in.last = r.places()->regionAt(r.simulation().state.units[size_t(*i)].position);
     return Seated::restored;
 }

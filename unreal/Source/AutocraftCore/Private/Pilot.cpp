@@ -97,8 +97,118 @@ bool Simulation::canDrive(const Unit& u) const {
     return u.task != Unit::Task::inBastion && u.task != Unit::Task::aboard && !u.jumpFrom;
 }
 
-/// True for the unit the player drives.
-bool Simulation::piloted(int64_t id) const { return pilot && pilot->unit == id; }
+/// True for a unit a human drives (W5: any of them).
+bool Simulation::piloted(int64_t id) const { return (pilot && pilot->unit == id) || driverIndex(id).has_value(); }
+
+// MARK: - More humans driving (W5)
+
+std::optional<size_t> Simulation::driverIndex(int64_t unit) const {
+    for (size_t k = 0; k < drivers.size(); k++)
+        if (drivers[k].pilot.unit == unit) return k;
+    return std::nullopt;
+}
+
+void Simulation::swapDriver(size_t k) {
+    Driver& d = drivers[k];
+    std::optional<Pilot> active = pilot;
+    pilot = d.pilot;
+    d.pilot = active.value_or(Pilot{});
+    std::swap(progress, d.progress);
+    std::swap(skillEffects, d.skillEffects);
+    std::swap(pilotBuildings, d.buildings);
+    if (Pilot::player >= 0 && Pilot::player < static_cast<int64_t>(state.players.size()))
+        std::swap(state.players[static_cast<size_t>(Pilot::player)].pilot, d.levels);
+}
+
+bool Simulation::drive(int64_t unit, const std::optional<PilotRecord>& levels) {
+    if (piloted(unit)) return false;
+    if (!pilot) {
+        if (Pilot::player >= 0 && Pilot::player < static_cast<int64_t>(state.players.size()))
+            state.players[static_cast<size_t>(Pilot::player)].pilot = levels;
+        return take(unit);
+    }
+    // One more: a fresh context (its own levels) swapped in, taken there,
+    // swapped back out.
+    drivers.push_back(Driver{});
+    drivers.back().levels = levels;
+    const size_t k = drivers.size() - 1;
+    // The empty driver's `pilot` is a placeholder: swapped in as none.
+    swapDriver(k);
+    pilot = std::nullopt;
+    const bool ok = take(unit);
+    if (ok) {
+        swapDriver(k);
+    } else {
+        // Back as it was: the active one returns, the empty one goes.
+        swapDriver(k);
+        drivers.pop_back();
+    }
+    return ok;
+}
+
+void Simulation::handBack(int64_t unit) {
+    if (pilot && pilot->unit == unit) {
+        take(std::nullopt);
+    } else if (const auto k = driverIndex(unit)) {
+        swapDriver(*k);
+        take(std::nullopt);
+        swapDriver(*k);
+        drivers.erase(drivers.begin() + static_cast<long>(*k));
+    }
+    // No active driver (handed back, or its unit gone): the last other
+    // driver becomes the active one, its context with it.
+    if (!pilot && !drivers.empty()) {
+        const size_t k = drivers.size() - 1;
+        swapDriver(k);
+        drivers.pop_back();
+    }
+}
+
+Pilot* Simulation::pilotFor(int64_t unit) {
+    if (pilot && pilot->unit == unit) return &*pilot;
+    if (const auto k = driverIndex(unit)) return &drivers[*k].pilot;
+    return nullptr;
+}
+
+std::optional<ProspectorProgress>* Simulation::progressFor(int64_t unit) {
+    if (pilot && pilot->unit == unit) return &progress;
+    if (const auto k = driverIndex(unit)) return &drivers[*k].progress;
+    return nullptr;
+}
+
+std::optional<PilotRecord>* Simulation::levelsFor(int64_t unit) {
+    if (pilot && pilot->unit == unit) {
+        if (Pilot::player < 0 || Pilot::player >= static_cast<int64_t>(state.players.size())) return nullptr;
+        return &state.players[static_cast<size_t>(Pilot::player)].pilot;
+    }
+    if (const auto k = driverIndex(unit)) return &drivers[*k].levels;
+    return nullptr;
+}
+
+std::set<int64_t>* Simulation::buildingsFor(int64_t unit) {
+    if (pilot && pilot->unit == unit) return &pilotBuildings;
+    if (const auto k = driverIndex(unit)) return &drivers[*k].buildings;
+    return nullptr;
+}
+
+void Simulation::setProgressFor(int64_t unit, const std::optional<ProspectorProgress>& p) {
+    if (pilot && pilot->unit == unit) {
+        setProgress(p);
+        return;
+    }
+    if (const auto k = driverIndex(unit)) {
+        swapDriver(*k);
+        setProgress(p);
+        swapDriver(*k);
+    }
+}
+
+std::vector<int64_t> Simulation::drivenUnits() const {
+    std::vector<int64_t> out;
+    if (pilot) out.push_back(pilot->unit);
+    for (const Driver& d : drivers) out.push_back(d.pilot.unit);
+    return out;
+}
 
 /// The unit the player drives, if it is alive.
 std::optional<Unit> Simulation::pilotUnit() const {

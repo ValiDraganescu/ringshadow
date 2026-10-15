@@ -69,6 +69,59 @@ public:
     /// Set (or clear) the driving pilot's progress and work out its effects.
     void setProgress(const std::optional<ProspectorProgress>& p);
 
+    // MARK: - More humans driving (W5)
+
+    /// C++ only, a world (W5): another human driving in this simulation. The
+    /// active driver's context lives in `pilot`, `progress`, `skillEffects`,
+    /// `pilotBuildings` and the side's `PilotRecord` (`state.players[
+    /// Pilot::player].pilot`); each other driver keeps its own here, and the
+    /// step swaps it in for its own unit's turn, its leveling and its
+    /// skills, and `boost` reads a unit with its driver's. The single-player
+    /// game never has one.
+    struct Driver {
+        Pilot pilot;
+        std::optional<ProspectorProgress> progress;
+        std::vector<SkillEffect> skillEffects;
+        std::set<int64_t> buildings;
+        std::optional<PilotRecord> levels;
+    };
+    std::vector<Driver> drivers;
+    /// The other driver driving `unit` (an index in `drivers`), if any.
+    std::optional<size_t> driverIndex(int64_t unit) const;
+    /// Swaps other driver `k`'s context with the active one (twice: back).
+    void swapDriver(size_t k);
+    /// `unit` taken by one more human: the active driver when none drives,
+    /// else another. False as `take` refuses (not the pilots', not drivable,
+    /// driven already).
+    bool drive(int64_t unit, const std::optional<PilotRecord>& levels = std::nullopt);
+    /// The human driving `unit` hands it back to the AI (the next other
+    /// driver becomes the active one when it was the active one).
+    void handBack(int64_t unit);
+    /// The input of the human driving `unit` (nil: none).
+    Pilot* pilotFor(int64_t unit);
+    /// The progress and the levels of the human driving `unit`, to set and
+    /// read (the active's are `progress` and the side's record).
+    std::optional<ProspectorProgress>* progressFor(int64_t unit);
+    std::optional<PilotRecord>* levelsFor(int64_t unit);
+    std::set<int64_t>* buildingsFor(int64_t unit);
+    /// `setProgress` for the human driving `unit`.
+    void setProgressFor(int64_t unit, const std::optional<ProspectorProgress>& p);
+    /// Every unit a human drives (the active one first).
+    std::vector<int64_t> drivenUnits() const;
+    /// Runs `f` with the context of the human driving `unit` as the active
+    /// one (swapped in and back; as it is when it is the active one or none
+    /// drives it): the server's asks for a seat (build, items, skills).
+    template <class F> auto asDriver(int64_t unit, F&& f) -> decltype(f()) {
+        const std::optional<size_t> k = (pilot && pilot->unit == unit) ? std::nullopt : driverIndex(unit);
+        struct Back {
+            Simulation& sim;
+            std::optional<size_t> k;
+            ~Back() { if (k) sim.swapDriver(*k); }
+        } back{*this, k};
+        if (k) swapDriver(*k);
+        return f();
+    }
+
     /// `progress` is set and `u` is the driven Prospector: its skills are on.
     bool skilled(const Unit& u) const;
 

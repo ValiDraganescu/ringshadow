@@ -122,7 +122,7 @@ std::vector<Command> Commander::orders(const Simulation& whole) const {
     if (!(player >= 0 && player < static_cast<int64_t>(sim.state.players.size()))) return {};
     // The Prospector the player drives is not the AI's to send anywhere.
     std::set<int64_t> busy;
-    if (sim.pilot) busy.insert(sim.pilot->unit);
+    for (const int64_t d : sim.drivenUnits()) busy.insert(d);
     // Prospectors scouting or pulled to fight are on their errand.
     const std::vector<Command> early = scouts(sim, busy) + militia(sim, busy);
     for (const Unit& u : sim.state.units) if (u.owner == player && u.task == Unit::Task::errand) busy.insert(u.id);

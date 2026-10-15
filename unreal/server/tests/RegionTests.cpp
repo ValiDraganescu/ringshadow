@@ -133,19 +133,26 @@ TEST(region_hand_back_returns_to_ai) {
     EXPECT_TRUE(!r.simulation().pilot);
 }
 
-TEST(region_take_refuses_others_units_and_a_second_pilot) {
+TEST(region_take_refuses_others_units_and_a_driven_one) {
     Region r(scene(false, true));
     r.join(me);
     r.join(me + 1);
     EXPECT_TRUE(!r.take(me, firstProspector(r.simulation(), 1)));
     EXPECT_TRUE(!r.take(99, firstProspector(r.simulation(), 0)));
-    ASSERT_TRUE(r.take(me, firstProspector(r.simulation(), 0)));
+    const int64_t mine = firstProspector(r.simulation(), 0);
+    ASSERT_TRUE(r.take(me, mine));
+    // W5: a second pilot drives a unit of its own, never one a human drives.
+    EXPECT_TRUE(!r.take(me + 1, mine));
     const int64_t other = put(r.simulation(), Unit::Kind::ranger, 0, citadelOf(r.simulation(), 0) + Vec2(4, 4));
-    EXPECT_TRUE(!r.take(me + 1, other));
-    // Leaving hands the unit back.
-    r.leave(me);
-    EXPECT_TRUE(!r.simulation().pilot);
     EXPECT_TRUE(r.take(me + 1, other));
+    EXPECT_TRUE(r.simulation().piloted(mine) && r.simulation().piloted(other));
+    // Leaving hands the unit back; the other pilot drives on, now the active one.
+    r.leave(me);
+    EXPECT_TRUE(!r.simulation().piloted(mine));
+    ASSERT_TRUE(r.simulation().pilot.has_value());
+    EXPECT_EQ(r.simulation().pilot->unit, other);
+    EXPECT_TRUE(r.simulation().drivers.empty());
+    EXPECT_EQ(*r.driving(me + 1), other);
 }
 
 TEST(region_last_input_tick) {

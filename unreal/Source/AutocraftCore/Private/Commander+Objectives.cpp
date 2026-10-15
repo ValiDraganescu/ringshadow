@@ -18,7 +18,7 @@ namespace {
 std::optional<int64_t> objectiveOf(const Unit& u) { return u.mission ? u.mission->objective() : std::nullopt; }
 
 /// `u.id != sim.pilot?.unit`.
-bool driven(const Simulation& sim, const Unit& u) { return sim.pilot && sim.pilot->unit == u.id; }
+bool driven(const Simulation& sim, const Unit& u) { return sim.piloted(u.id); }
 
 } // namespace
 

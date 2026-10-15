@@ -186,7 +186,7 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
 /// change it (Spotter), by id.
 Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& explored,
                     const std::map<int64_t, double>& farther, const std::map<int64_t, double>& reveal,
-                    const std::map<int64_t, double>& beams, std::optional<std::pair<Vec2, double>> daylight,
+                    const std::map<int64_t, double>& beams, const std::vector<std::pair<Vec2, double>>& daylight,
                     double nightShare) const {
     const int64_t cells = width * height;
     Sight s;
@@ -200,7 +200,8 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
     std::vector<Viewer> viewers;
     std::vector<bool> holds(towers.size(), false);
     // A world region's daylight: every level, so the widest of all by day.
-    if (daylight && daylight->second > 0) viewers.push_back(Viewer{daylight->first, daylight->second, std::nullopt});
+    for (const auto& [at, r] : daylight)
+        if (r > 0) viewers.push_back(Viewer{at, r, std::nullopt});
     // A headlamp's beam: its day sight out, a wedge round its heading.
     struct Beam { Viewer v; double heading; };
     std::vector<Beam> lamps;
@@ -431,9 +432,13 @@ void Simulation::look() {
     // Scorpion that is seen from closer in only.
     std::map<int64_t, double> farther, reveal, beams;
     if (pilot) {
-        // A driven Prospector's headlamp points where the crosshair is.
+        // A driven Prospector's headlamp points where the crosshair is
+        // (W5: every human's).
         if (const auto i = unitIndex(pilot->unit); i && state.units[*i].kind == Unit::Kind::prospector)
             beams[pilot->unit] = pilot->heading;
+        for (const Driver& d : drivers)
+            if (const auto i = unitIndex(d.pilot.unit); i && state.units[*i].kind == Unit::Kind::prospector)
+                beams[d.pilot.unit] = d.pilot.heading;
         for (const auto& u : state.units) {
             const Boost b = boost(Stat::Sight{}, u);
             if (b != Boost::none) farther[u.id] = b.apply(Rules::vision(u.kind));
@@ -445,23 +450,27 @@ void Simulation::look() {
     }
     // A world region's daylight (S3): round the pilot, the whole map by
     // day, closing in through dusk to the driven unit's night sight.
-    std::optional<std::pair<Vec2, double>> daylight;
+    // W5: one circle round each human driving here.
+    std::vector<std::pair<Vec2, double>> daylight;
     if (daylightAt) {
-        Vec2 at = *daylightAt;
-        double reach = Rules::vision(Unit::Kind::prospector);
-        if (pilot)
-            if (const auto i = unitIndex(pilot->unit)) {
-                const Unit& u = state.units[static_cast<size_t>(*i)];
-                at = u.position;
-                const auto f = farther.find(u.id);
-                reach = f != farther.end() ? f->second : Rules::vision(u.kind);
-            }
         const double hour = Rules::hourAt(state.time, state.dayLength, state.heldHour);
-        const double night = reach * Rules::sightScale(hour, Rules::nightSight * nightWiden);
         const double span = std::hypot(static_cast<double>(vision->width), static_cast<double>(vision->height)) * Vision::cell;
-        const double r = Rules::daylightReach(hour, night, span);
-        // Through the night it is the unit's own circle: none on top.
-        if (r > night + 1e-6) daylight = std::make_pair(at, r);
+        auto circle = [&](Vec2 at, double reach) {
+            const double night = reach * Rules::sightScale(hour, Rules::nightSight * nightWiden);
+            const double r = Rules::daylightReach(hour, night, span);
+            // Through the night it is the unit's own circle: none on top.
+            if (r > night + 1e-6) daylight.emplace_back(at, r);
+        };
+        const std::vector<int64_t> driven = drivenUnits();
+        bool any = false;
+        for (const int64_t id : driven)
+            if (const auto i = unitIndex(id)) {
+                const Unit& u = state.units[static_cast<size_t>(*i)];
+                const auto f = farther.find(u.id);
+                circle(u.position, f != farther.end() ? f->second : Rules::vision(u.kind));
+                any = true;
+            }
+        if (!any) circle(*daylightAt, Rules::vision(Unit::Kind::prospector));
     }
     sights.clear();
     std::vector<Sight> seen(state.players.size());
@@ -481,7 +490,7 @@ void Simulation::look() {
         Intel k = members.size() == 1 ? intel_[p] : teamIntel(intel_, members);
         stepTimes.merge += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - merging).count();
         const bool pilots = state.allied(pl, Pilot::player);
-        seen[p] = vision->sight(pl, state, k.explored, farther, reveal, beams, pilots ? daylight : std::nullopt,
+        seen[p] = vision->sight(pl, state, k.explored, farther, reveal, beams, pilots ? daylight : std::vector<std::pair<Vec2, double>>{},
                                 Rules::nightSight * (pilots ? nightWiden : 1.0));
         const Sight& s = seen[p];
         if (k.sites.size() != sites.size()) k.sites.assign(sites.size(), -std::numeric_limits<double>::infinity());

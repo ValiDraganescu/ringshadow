@@ -98,6 +98,13 @@ bool Simulation::keepPick(int64_t player, Perk perk) {
 /// The driven unit `u` did `xp` worth of work. A level crossed raises
 /// `.leveledUp` at the end of the step. Nothing for any other unit.
 void Simulation::earn(double xp, const Unit& u) {
+    // W5: another human's unit earns into its own record.
+    if (const auto k = (pilot && pilot->unit == u.id) ? std::nullopt : driverIndex(u.id)) {
+        swapDriver(*k);
+        earn(xp, u);
+        swapDriver(*k);
+        return;
+    }
     xp *= xpScale;
     if (!(xp > 0 && std::isfinite(xp) && piloted(u.id))) return;
     int64_t before = 1, after = 1;
@@ -127,6 +134,13 @@ void Simulation::earnHit(const Unit& shooter, double worth, double taken, double
 /// any other unit.
 void Simulation::tally(const Unit& u, const std::function<void(Tally&)>& body) {
     if (!piloted(u.id)) return;
+    // W5: another human's unit tallies into its own record.
+    if (const auto k = (pilot && pilot->unit == u.id) ? std::nullopt : driverIndex(u.id)) {
+        swapDriver(*k);
+        tally(u, body);
+        swapDriver(*k);
+        return;
+    }
     const UnitKind k = u.kind;
     updateLevels([&](PilotRecord& r) { body(r.kinds[k].tally); });
 }
@@ -154,6 +168,16 @@ Standing Simulation::standing(int64_t p) const { return state.standing(p); }
 /// on `u` now. Only while the player drives a unit, only on its team,
 /// and only the picks of the kind it drives: `.none` otherwise.
 Boost Simulation::boost(const Stat& stat, const Unit& u) const {
+    // W5: a unit another human drives, read with that human's context
+    // (swapped in and back: a read, the state as it was after).
+    if (!drivers.empty() && !(pilot && pilot->unit == u.id))
+        if (const auto k = driverIndex(u.id)) {
+            Simulation& self = const_cast<Simulation&>(*this);
+            self.swapDriver(*k);
+            const Boost b = boost(stat, u);
+            self.swapDriver(*k);
+            return b;
+        }
     if (!pilot) return Boost::none;
     const auto di = unitIndex(pilot->unit);
     if (!di) return Boost::none;
@@ -501,14 +525,7 @@ double Simulation::shieldTakes(int64_t i, double damage) {
 /// units on fire burn (to the end, driven or not), then the mending
 /// auras around the driven unit.
 void Simulation::stepLeveling(double dt) {
-    if (auto d = pilotUnit(); d && d->hp > 0) {
-        // Buried and unseen by every enemy side.
-        bool hiding = d->burrowed();
-        for (int64_t p = 0; hiding && p < static_cast<int64_t>(state.players.size()); p++) {
-            if (state.hostile(p, d->owner) && sees(p, d->id)) hiding = false;
-        }
-        tally(*d, [&](Tally& t) { t.seconds += dt; if (hiding) t.hiddenSeconds += dt; });
-    }
+    driverTally(dt);
     syncBonusHP();
     bool burns = false;
     for (size_t i = 0; i < state.units.size(); i++) {
@@ -529,6 +546,28 @@ void Simulation::stepLeveling(double dt) {
         burns = true;
     }
     burnsLeft = burns;
+    driverAuras(dt);
+}
+
+/// W5: another human's own leveling, its context swapped in: its driven
+/// unit's tally and its auras (the burns and the bonus hp are the step's).
+void Simulation::stepDriverLeveling(double dt) {
+    driverTally(dt);
+    driverAuras(dt);
+}
+
+void Simulation::driverTally(double dt) {
+    if (auto d = pilotUnit(); d && d->hp > 0) {
+        // Buried and unseen by every enemy side.
+        bool hiding = d->burrowed();
+        for (int64_t p = 0; hiding && p < static_cast<int64_t>(state.players.size()); p++) {
+            if (state.hostile(p, d->owner) && sees(p, d->id)) hiding = false;
+        }
+        tally(*d, [&](Tally& t) { t.seconds += dt; if (hiding) t.hiddenSeconds += dt; });
+    }
+}
+
+void Simulation::driverAuras(double dt) {
     if (auto de = drivenEffects()) {
         const Unit& d = de->first;
         for (const Effect& e : de->second) {
