@@ -173,6 +173,7 @@ std::optional<std::string> WorldMap::hireMerc(PilotId pilot) {
     // Its first wage at the next dawn.
     if (p->mercs.empty()) p->mercDay = contractDay(clock_);
     p->mercs.push_back(m);
+    goalDid(*p, "merc");
     pushProgress(pilot);
     return std::nullopt;
 }

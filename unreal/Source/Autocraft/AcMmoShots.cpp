@@ -69,6 +69,17 @@
 //   06 Make It Yours: the Derrick on the north well, pumped once
 //   07 a point spent on the skill screen  08 the daily three take over
 //
+// -AcMmoShotsL1 (it adds -AcMmoFirstStep=6 and level 4's XP): KSTR's next
+// goal after the first ten minutes (docs/contracts.md "What next",
+// docs/mmorpg-m8.md L1), DIR/l1-NN-moment.png:
+//   01 the chain's last point spent: the first goal's toast, the NEXT line
+//   02 the Journal (L): its NEXT section on top   03 the Derrick's goal
+//      passed (dev `goal pass derrick`): spend your points, their count
+//   04 the points spent: GOAL DONE and its pay, the next goal (a mission)
+//   05 T: the whole panel, the goal with the radio's line
+//   06 dev `goal level 10`: a level-10 pilot's goal (an active on Q)
+//   07 the Journal's NEXT section for it
+//
 // -AcMmoShotsRingshadow (with -AcMmoRingshadow=70: a sweep 70 s after the
 // server starts; docs/weather.md "Ringshadow sweep"): only the sweep, third
 // person on the start pad toward the giant, DIR/rs-NN-moment.png:
@@ -445,6 +456,8 @@ namespace
 	/// -AcMmoShotsN3Perf=S (N1b): frame and GPU times over S s after the roar's picture, the nest full of bugs in view.
 	TArray<double> N3Frames, N3Gpu;
 	double N3FrameAt = -1;
+	// -AcMmoShotsL1: when the skill points' goal was seen done.
+	double L1DoneAt = 0;
 	struct FB1Sample
 	{
 		double At;
@@ -771,6 +784,16 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				UE_LOG(LogAutocraft, Display, TEXT("mmoshots: clip: the recorder held for the first moment wanted"));
 			}
 		}
+		// -AcMmoShotsL1: the first ten minutes' last step at level 4 (its XP),
+		// so the chain ends with a point spent and the goals begin.
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsL1")))
+		{
+			if (int32 Step = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoFirstStep="), Step)) FCommandLine::Append(TEXT(" -AcMmoFirstStep=6"));
+			if (double Xp = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp))
+			{
+				FCommandLine::Append(*FString::Printf(TEXT(" -AcMmoDevXp=%.0f"), ac::Progression::xp(4)));
+			}
+		}
 		// -AcMmoShotsO1: the new pilot earns its levels (no dev XP).
 		if (double Xp = 0; FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsO1")) && !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevXp="), Xp))
 		{
@@ -875,6 +898,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))) T.Phase = 1900;
 			// -AcMmoShotsW4: seamless regions (2000-2024).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4"))) T.Phase = 2000;
+			// -AcMmoShotsL1: KSTR's next goal (2100-2112).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsL1"))) T.Phase = 2100;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -4146,6 +4171,115 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		ToggleWorldMap();
 		if (W4Cam.IsValid()) W4Cam->Destroy();
 		Check(Shots.Saved + Shots.Skipped >= 9 + 4 + 6 + 2, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsL1
+	case 2100:
+		// The first ten minutes' last step open: a point spent ends it.
+		if (const ac::net::Contract* Step = AcProgressHud::FirstStep(*Mmo); Step && Step->step == 6 && Since() > 2.0)
+		{
+			Check(!Mmo->Progress()->goal.has_value(), TEXT("l1: no goal while the first ten minutes run"));
+			Mmo->Spend(ac::Skill::quickDrill);
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("l1: the first ten minutes' step 6"));
+		return;
+	case 2101:
+	{
+		// The chain over: KSTR's first goal, its toast, the NEXT line.
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->goal && !AcProgressHud::FirstStep(*Mmo) && Since() > 2.5)
+		{
+			Check(P->goal->key == "derrick", FString::Printf(TEXT("l1: the first goal after the chain is the Derrick's (%s)"), UTF8_TO_TCHAR(P->goal->key.c_str())));
+			Check(P->goal->marked, TEXT("l1: the goal's marker on the nearest well"));
+			Shoot(TEXT("l1-01-next-after-o1"), TEXT("after the first ten minutes: KSTR's toast and the NEXT line under the contracts"));
+			return;
+		}
+		TimedOut(TEXT("l1: the first goal"), 20);
+		return;
+	}
+	case 2102:
+		Check(OpenJournalScreen() && JournalScreenWidget().IsValid(), TEXT("l1: L opens the Journal"));
+		Advance();
+		return;
+	case 2103:
+		if (Since() > 1.0)
+		{
+			const TSharedPtr<SAcJournalScreen> J = JournalScreenWidget();
+			Check(J && J->GetInfo().bNext && !J->GetInfo().NextWhy.IsEmpty(), TEXT("l1: the Journal's NEXT section, why it matters"));
+			Shoot(TEXT("l1-02-journal-next"), TEXT("the Journal (L): the NEXT section on top, the goal and why it matters"));
+		}
+		return;
+	case 2104:
+		CloseJournalScreen();
+		// The Derrick passed (dev): spending the points is next.
+		Check(Mmo->DevClock(TEXT("goal pass derrick")), TEXT("l1: the dev line passes the Derrick's goal"));
+		Advance();
+		return;
+	case 2105:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->goal && P->goal->key == "skills" && Since() > 3.0)
+		{
+			Shoot(TEXT("l1-03-goal-skills"), TEXT("the next goal: spend your skill points, the count in its line"));
+			return;
+		}
+		TimedOut(TEXT("l1: the skill points' goal"), 20);
+		return;
+	}
+	case 2106:
+	{
+		// Every point spent, one a second: the goal done, the next one in.
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->goal && P->goal->key == "mission")
+		{
+			L1DoneAt = Now;
+			Advance();
+			return;
+		}
+		if (P && P->points > 0 && Now - P5AskedAt > 1.0)
+		{
+			Mmo->Spend(ac::Skill::quickDrill);
+			P5AskedAt = Now;
+		}
+		TimedOut(TEXT("l1: the points spent, the goal done"), 20);
+		return;
+	}
+	case 2107:
+		if (Now - L1DoneAt > 1.2)
+		{
+			Shoot(TEXT("l1-04-goal-done"), TEXT("the goal done: its toast and pay, the next goal on the NEXT line"));
+		}
+		return;
+	case 2108:
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && !Hud->ContractsExpanded()) Hud->ToggleContracts();
+		if (Since() > 1.0) Shoot(TEXT("l1-05-panel-whole"), TEXT("T: the whole panel, the next goal with the radio's line"));
+		return;
+	case 2109:
+		if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && Hud->ContractsExpanded()) Hud->ToggleContracts();
+		Check(Mmo->DevClock(TEXT("goal level 10")), TEXT("l1: the dev line makes the pilot level 10"));
+		Advance();
+		return;
+	case 2110:
+	{
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (P && P->goal && P->goal->key == "active" && Since() > 3.0)
+		{
+			Check(P->level >= 10, FString::Printf(TEXT("l1: level %lld"), (long long)P->level));
+			Shoot(TEXT("l1-06-level-10"), TEXT("a level-10 pilot's goal: its first active on Q"));
+			return;
+		}
+		TimedOut(TEXT("l1: the level-10 goal"), 20);
+		return;
+	}
+	case 2111:
+		if (!JournalScreenWidget().IsValid()) Check(OpenJournalScreen(), TEXT("l1: L opens the Journal again"));
+		if (Since() > 1.0) Shoot(TEXT("l1-07-level-10-journal"), TEXT("the Journal's NEXT section for the level-10 goal"));
+		return;
+	case 2112:
+		CloseJournalScreen();
+		Check(Shots.Saved + Shots.Skipped == 7, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsK2

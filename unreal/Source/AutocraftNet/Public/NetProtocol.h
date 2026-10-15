@@ -531,6 +531,32 @@ struct Contract {
     bool operator==(const Contract&) const = default;
 };
 
+/// L1: KSTR's next goal after the first ten minutes (docs/contracts.md,
+/// "What next"): one at a time, chosen by the pilot's level and what it has
+/// done, paid a little when done; it never blocks anything.
+struct Goal {
+    /// Its code name ("gatling"); "level" while the next one waits for a
+    /// level (`level`).
+    std::string key;
+    /// Ready to show: the title, the radio's line, why it matters (the
+    /// Journal), the HUD's short line ("B  BUILD A GATLING GUN BY YOUR ORE").
+    std::string title;
+    std::string pitch;
+    std::string why;
+    std::string hint;
+    /// Its marker (`marked`): region `region` (a world region id), ground
+    /// point `at` there.
+    bool marked = false;
+    std::string region;
+    Vec2 at{0, 0};
+    /// The level it opens at (a wait: the level waited for).
+    int64_t level = 1;
+    /// What it pays when done (a wait: nothing).
+    double xp = 0;
+    int64_t hydrogen = 0;
+    bool operator==(const Goal&) const = default;
+};
+
 /// K2: a Citadel mission (docs/missions.md): a job on the realm's Citadel's
 /// board, in three tiers, that the pilot signs up for and follows in its
 /// Journal, paid in XP, ore and MH (hard and perilous: a blueprint copy or
@@ -626,8 +652,11 @@ struct ProgressMessage {
     /// pilots who fought her, `by`: the one who hurt her most); her share to
     /// each of them, "share/<MH>/<blueprint>" (`value`: the ore); "back"
     /// when she returns to her nest.
+    ///
+    /// L1: `goal`: KSTR's next goal done, `id` its key, `by` its title,
+    /// `xp` what it paid, `value` the MH.
     enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
-                                    merc, upgraded, matriarch };
+                                    merc, upgraded, matriarch, goal };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -679,6 +708,9 @@ struct ProgressMessage {
     /// abandoned ones are replaced (docs/contracts.md).
     std::vector<Contract> contracts;
     double contractsDawn = 0;
+    /// L1: KSTR's next goal (none: on the first ten minutes, or every goal
+    /// done).
+    std::optional<Goal> goal;
     /// The pilot's Prospector fell (P6): it comes back at world time `at`
     /// (`Sky::time`) in region `region` (a world region id), beside its
     /// `home` (a Citadel or a Hab Dome; nil: the world's start pad),

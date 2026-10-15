@@ -1004,9 +1004,12 @@ void SAcConsole::PaintContractsCompact(FPaint& P) const
 	const double RowH = 30, HintH = 22, Wide = 400;
 	double RowsH = 0;
 	for (const FAcContractRow& Row : C.Rows) RowsH += RowH + (Row.bFirst && Row.State == FAcContractRow::EState::Open ? HintH : 0);
+	// L1: KSTR's next goal, a small line along the foot.
+	const double NextH = C.bNext ? 24 : 0;
 	const FAcRect Whole = RightPanel(1, 0);
-	const FAcRect R(Whole.MaxX() - Wide, Whole.MinY(), Wide, 36 + FMath::Max(RowsH, RowH) + 8);
+	const FAcRect R(Whole.MaxX() - Wide, Whole.MinY(), Wide, 36 + FMath::Max(RowsH, RowH) + 8 + NextH);
 	PaintPanelGlass(P, R);
+	if (C.bNext) PaintNext(P, R.MinX() + 14, R.MaxX() - 14, R.MinY() + 10, false);
 	const double X = R.MinX() + 14, Right = R.MaxX() - 14;
 	double Y = R.MaxY() - 26;
 	const FString Head = C.FirstStep > 0 ? FString::Printf(TEXT("KSTR  ·  FIRST STEPS  %d / 6"), C.FirstStep) : FString(TEXT("KSTR  ·  CONTRACTS"));
@@ -1053,6 +1056,22 @@ void SAcConsole::PaintContractsCompact(FPaint& P) const
 	}
 }
 
+void SAcConsole::PaintNext(FPaint& P, const double X, const double Right, const double Y, const bool bPitch) const
+{
+	const FAcContractsInfo& C = *Contracts;
+	// "NEXT" in gold, the goal's title and its short line; the whole panel
+	// adds the radio's line above them.
+	const double Base = Y;
+	FAcHudText Tag(TEXT("NEXT"), FAcHudStyle::Font(12), FAcHudStyle::LevelGold());
+	Tag.Accent = FLinearColor::Transparent;
+	Tag.Kern = 1.4f;
+	P.Text(Tag, FVector2D(X, Base));
+	const double Tx = X + FPaint::TextWidth(TEXT("NEXT"), 12) + 12;
+	const FString Line = C.NextHint.IsEmpty() ? C.NextTitle : C.NextTitle + TEXT("  ·  ") + C.NextHint;
+	P.Text(Fit(Line, 13, Right - Tx), 13, Gray(0.88), FVector2D(Tx, Base));
+	if (bPitch) P.Text(Fit(C.NextPitch, 13, Right - X), 13, Gray(0.62), FVector2D(X, Base + 22));
+}
+
 void SAcConsole::PaintContracts(FPaint& P) const
 {
 	const FAcContractsInfo& C = *Contracts;
@@ -1062,8 +1081,12 @@ void SAcConsole::PaintContracts(FPaint& P) const
 		return;
 	}
 	const double RowH = 88;
-	const FAcRect R = RightPanel(FMath::Max(C.Rows.Num(), 1), RowH);
+	// L1: KSTR's next goal under the slots, with the radio's line.
+	const double NextH = C.bNext ? 50 : 0;
+	const FAcRect Slots = RightPanel(FMath::Max(C.Rows.Num(), 1), RowH);
+	const FAcRect R(Slots.MinX(), Slots.MinY(), Slots.W, Slots.H + NextH);
 	PaintPanelGlass(P, R);
+	if (C.bNext) PaintNext(P, R.MinX() + 16, R.MaxX() - 16, R.MinY() + 12, true);
 	const double X = R.MinX() + 16, Right = R.MaxX() - 16;
 	double Y = R.MaxY() - 30;
 	// The station's name as on the deck, then what the keys do.

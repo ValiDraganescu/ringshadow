@@ -350,6 +350,7 @@ void WorldMap::queenDown(size_t r) {
         if (!p->flight) bankIn(*p, p->region);
         p->progress.giveBlueprint(bp, 1);
         p->news.push_back(News{NewsKind::matriarch, "share/" + std::to_string(mh) + "/" + std::string(rawValue(bp)), 0, ore, ""});
+        goalDid(*p, "matriarch");
         // A hunt counts her for every pilot who fought her (K2).
         broodKill(pilot, UnitKind::matriarch, r);
         pushProgress(pilot);

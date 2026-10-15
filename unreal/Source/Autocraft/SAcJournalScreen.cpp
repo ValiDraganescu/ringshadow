@@ -19,6 +19,8 @@ namespace
 	constexpr float EntryH = 66;
 	constexpr float SideW = 270;
 	constexpr float MapH = 180;
+	// L1: the next goal's band under the header.
+	constexpr float NextH = 92;
 
 	enum ERow : int32
 	{
@@ -255,7 +257,7 @@ void SAcJournalScreen::Layout(const FVector2f ViewSize) const
 		Targets.Add(T);
 	};
 	Add(FBox2f(FVector2f(PanelW - Pad - 40, 26), FVector2f(PanelW - Pad, 58)), RowClose, 0);
-	const float Top = HeaderH + 16;
+	const float Top = HeaderH + 16 + (Info.bNext ? NextH + 12 : 0);
 	ListBox = FBox2f(FVector2f(Pad, Top), FVector2f(Pad + ListW, Top + BodyH));
 	PageBox = FBox2f(FVector2f(Pad + ListW + Gap, Top), FVector2f(PanelW - Pad, Top + BodyH));
 	for (int32 I = 0; I < Info.Entries.Num(); ++I)
@@ -379,6 +381,7 @@ int32 SAcJournalScreen::OnPaint(const FPaintArgs& Args, const FGeometry& Geometr
 	CutFrame(Out, Layer + 2, P, Panel.ExpandBy(-5), WithAlpha(Brass(), 0.28f), 1, 14);
 	const int32 L = Layer + 3;
 	PaintHeader(Out, L, P);
+	PaintNext(Out, L, P);
 	PaintList(Out, L, P);
 	PaintPage(Out, L, P);
 	PaintFoot(Out, L, P);
@@ -425,6 +428,38 @@ void SAcJournalScreen::PaintHeader(FSlateWindowElementList& Out, const int32 L, 
 		if (T.Row == RowClose) PaintButton(Out, L, P, T, TEXT("ESC"), false, Brass());
 	}
 	Box(Out, L, P, FBox2f(FVector2f(Pad, HeaderH), FVector2f(PanelW - Pad, HeaderH + 1)), WithAlpha(Brass(), 0.2f));
+}
+
+void SAcJournalScreen::PaintNext(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const
+{
+	if (!Info.bNext) return;
+	const FBox2f B(FVector2f(Pad, HeaderH + 16), FVector2f(PanelW - Pad, HeaderH + 16 + NextH));
+	const FLinearColor Gold = FAcHudStyle::LevelGold();
+	Box(Out, L, P, B, FAcHudStyle::Srgb(0.09, 0.07, 0.03, 0.92));
+	CutFrame(Out, L + 1, P, B, WithAlpha(Gold, 0.75f), 1.5f, 10);
+	Box(Out, L + 1, P, FBox2f(B.Min, FVector2f(B.Min.X + 4, B.Max.Y)), Gold);
+	const float X = B.Min.X + 20, Right = B.Max.X - 18;
+	Label(TEXT("NEXT  ·  KSTR"), 11, Gold, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 1.6f).Paint(Out, L + 2, P, FVector2f(X, B.Min.Y + 10));
+	if (!Info.NextPay.IsEmpty())
+	{
+		Label(Info.NextPay, 14, Brass(), EAcHAlign::Right, EAcVAlign::Top, EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(Right, B.Min.Y + 10));
+	}
+	// The title, what to do; why it matters; the radio's line.
+	const float TitleW = FMath::Min(380.f, Right - X);
+	const TArray<FString> Title = Wrapped(Info.NextTitle, 22, TitleW, 1, EAcFontWeight::Bold);
+	Label(Title.IsEmpty() ? FString() : Title[0], 22, FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Bold, 0.2f)
+		.Paint(Out, L + 2, P, FVector2f(X, B.Min.Y + 28));
+	const float HX = X + TitleW + 16;
+	const TArray<FString> Hint = Wrapped(Info.NextHint, 14, Right - HX, 1, EAcFontWeight::SemiBold);
+	Label(Hint.IsEmpty() ? FString() : Hint[0], 14, Gold, EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::SemiBold, 0.6f)
+		.Paint(Out, L + 2, P, FVector2f(HX, B.Min.Y + 34));
+	const FString Why = Info.NextWhere.IsEmpty() ? Info.NextWhy : Info.NextWhy + TEXT("  ") + Info.NextWhere;
+	const TArray<FString> WhyLines = Wrapped(Why, 14, Right - X, 1, EAcFontWeight::Medium);
+	Label(WhyLines.IsEmpty() ? FString() : WhyLines[0], 14, FAcHudStyle::Soft(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+		.Paint(Out, L + 2, P, FVector2f(X, B.Min.Y + 56));
+	const TArray<FString> Pitch = Wrapped(TEXT("\u201C") + Info.NextPitch + TEXT("\u201D"), 13, Right - X, 1, EAcFontWeight::Medium);
+	Label(Pitch.IsEmpty() ? FString() : Pitch[0], 13, Dim(), EAcHAlign::Left, EAcVAlign::Top, EAcFontWeight::Medium)
+		.Paint(Out, L + 2, P, FVector2f(X, B.Min.Y + 74));
 }
 
 void SAcJournalScreen::PaintList(FSlateWindowElementList& Out, const int32 L, const FGeometry& P) const

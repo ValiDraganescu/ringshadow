@@ -99,6 +99,7 @@ void WorldMap::rigs() {
         Rig& rig = p.progress.rig;
         if (!rig.making && !rig.research) continue;
         const auto [made, researched] = rig.finish(clock_);
+        if (made) goalDid(p, "made");
         if (made) p.news.push_back(News{NewsKind::made, std::string(rawValue(made->module)), 0, made->mark, ""});
         if (researched)
             p.news.push_back(News{NewsKind::researched, std::string(rawValue(researched->module)), 0, researched->mark, ""});
@@ -109,6 +110,7 @@ void WorldMap::rigs() {
         Rig& rig = p.progress.rig;
         if (!rig.making && !rig.research) continue;
         const auto [made, researched] = rig.finish(clock_);
+        if (made) goalDid(p, "made");
         if (made) p.news.push_back(News{NewsKind::made, std::string(rawValue(made->module)), 0, made->mark, ""});
         if (researched)
             p.news.push_back(News{NewsKind::researched, std::string(rawValue(researched->module)), 0, researched->mark, ""});

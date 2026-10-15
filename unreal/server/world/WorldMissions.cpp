@@ -519,6 +519,7 @@ std::optional<std::string> WorldMap::takeMission(PilotId pilot, uint32_t mission
     // Its place goes on the pilot's map: a salvage's site is known now.
     if (m.kind == Kind::salvage) p->progress.known.insert(m.target);
     p->journal.push_back(std::move(m));
+    goalDid(*p, "mission");
     pushProgress(pilot);
     return std::nullopt;
 }

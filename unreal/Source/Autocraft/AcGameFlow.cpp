@@ -1854,6 +1854,23 @@ void UAcGameFlowSubsystem::TickJournalScreen()
 	if (const ac::net::ProgressMessage* P = Mmo->Progress())
 	{
 		Info.bKnown = true;
+		// L1: KSTR's next goal on top.
+		if (const std::optional<ac::net::Goal>& G = P->goal)
+		{
+			Info.bNext = true;
+			Info.NextTitle = UTF8_TO_TCHAR(G->title.c_str());
+			Info.NextWhy = UTF8_TO_TCHAR(G->why.c_str());
+			Info.NextHint = UTF8_TO_TCHAR(G->hint.c_str());
+			Info.NextPitch = UTF8_TO_TCHAR(G->pitch.c_str());
+			if (G->xp > 0) Info.NextPay = FString::Printf(TEXT("+%lld XP"), (long long)std::llround(G->xp));
+			if (G->hydrogen > 0) Info.NextPay += FString::Printf(TEXT("  ·  +%lld MH"), (long long)G->hydrogen);
+			if (G->marked)
+			{
+				const FString Where = AcMissions::RegionName(*Mmo, G->region);
+				Info.NextWhere = Here && Here->id == G->region ? FString::Printf(TEXT("Marked here, in %s."), *Where)
+															   : FString::Printf(TEXT("Marked in %s, on your map."), *Where);
+			}
+		}
 		const UAcAudioDirector* Audio = UAcAudioDirector::Get(this);
 		for (const ac::net::CitadelMission& M : P->journal)
 		{

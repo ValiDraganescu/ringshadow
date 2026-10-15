@@ -166,6 +166,32 @@ struct WorldContracts {
     static int64_t firstHydrogen(int step);
 };
 
+/// L1, KSTR's next goal (docs/contracts.md "What next"; WorldGoals.cpp):
+/// after the first ten minutes, one goal at a time from a fixed chain,
+/// chosen by level and what the pilot has done; goals met before they come
+/// up are skipped, the one shown pays a little when done.
+struct WorldGoals {
+    struct Entry {
+        const char* key;
+        /// The level it opens at; before it the next goal waits.
+        int64_t level;
+        const char* title;
+        /// The radio's line (`{what}`: a place's name, `{n}`: a count).
+        const char* pitch;
+        const char* why;
+        const char* hint;
+    };
+    /// The chain, in order.
+    static const std::vector<Entry>& chain();
+    static const Entry* find(const std::string& key);
+    /// What a goal pays at `level`: 3 minutes of play (XP, to 5), `5 + level`
+    /// MH (to 5).
+    static double xp(int64_t level);
+    static int64_t hydrogen(int64_t level);
+    /// How often the goals are checked (world seconds).
+    static constexpr double every = 1.0;
+};
+
 /// Citadel missions (K2, docs/missions.md; WorldMissions.cpp): a board of
 /// offers per pilot at the realm's Citadel, drawn by the server's dice per
 /// pilot and world day, in three tiers; the pilot signs up for up to three
@@ -860,6 +886,10 @@ public:
     /// nest (`here`), she roars at it (`roar`), slams (`slam`), is felled by
     /// it (`down`), back (`back`), a siege at the pilot (`siege`).
     std::string devMatriarch(const std::string& line);
+    /// Dev and shots (L1): `goal` says the goal shown; `goal pass KEY` passes
+    /// one unpaid; `goal level N` gives the first pilot level N's XP and
+    /// passes the goals under it unpaid.
+    std::string devGoal(const std::string& line);
 
     // MARK: Mercenaries (H2, `WorldMercs`; WorldMercs.cpp)
 
@@ -1024,6 +1054,15 @@ private:
         int64_t mercDay = 0;
         uint32_t nextMerc = 1;
         int64_t mercAway = 0;
+        /// L1, KSTR's next goal (saved, WorldGoals.cpp): the one shown now
+        /// (its key; "level:N" a wait for level N; empty: none yet), the
+        /// goals passed (paid, or skipped as met before they came up), and
+        /// what it has done that its state no longer shows (a tank pumped, a
+        /// mission taken, a supply bought, a mercenary hired, a module made,
+        /// the Matriarch fought down).
+        std::string goal;
+        std::set<std::string> goalsPassed;
+        std::set<std::string> goalsDid;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {
@@ -1192,6 +1231,19 @@ private:
     std::optional<size_t> startSite(StructureKind kind) const;
     /// A pilot's Prospector filled a tank at a Derrick (step 5).
     void pumped(PilotId pilot, PilotState& p);
+    // WorldGoals.cpp.
+    /// Each step: every pilot's next goal checked, paid when done, the next
+    /// one chosen.
+    void goals();
+    void goalStep(PilotId pilot, PilotState& p);
+    bool goalMet(const PilotState& p, const WorldGoals::Entry& e) const;
+    std::optional<net::Goal> goalMessage(PilotId pilot, const PilotState& p) const;
+    /// Something done that the goals count (`PilotState::goalsDid`).
+    static void goalDid(PilotState& p, const std::string& what) { p.goalsDid.insert(what); }
+    /// The world's first blueprint site holding `kind`'s blueprint (region, site).
+    std::optional<std::pair<size_t, size_t>> worldSite(StructureKind kind) const;
+    static std::string encodeGoals(const PilotState& p);
+    static bool decodeGoals(const std::string& json, PilotState& p);
     // WorldMissions.cpp.
     /// Each step: a new day's board, the surveys, holds and salvages.
     void missions();
@@ -1327,6 +1379,8 @@ private:
     int64_t nextGroup_ = 1;
     std::mt19937_64 broodDice_;
     double broodThought_ = -1e9;
+    /// The clock the goals were last checked at (L1).
+    double goalsAt_ = -1e9;
     /// Falls whose impact the bugs felt; pilots' Prospectors last seen (a
     /// new one is a respawn: when, where).
     std::set<uint32_t> fallsFelt_;

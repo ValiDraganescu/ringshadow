@@ -683,6 +683,25 @@ TArray<FAcWorldMapInfo::FMark> AcProgressHud::ContractMarks(const FAcMmoClient& 
 		}
 		Out.Add(M);
 	}
+	// L1: KSTR's next goal, when it has a place (a well, the Citadel, a
+	// site, the nest).
+	if (P->goal && P->goal->marked)
+	{
+		if (const ac::net::WorldMessage* W = Mmo.World())
+		{
+			for (const ac::net::WorldMessage::Region& R : W->regions)
+			{
+				if (R.id != P->goal->region) continue;
+				const ac::MapCells Cells = ac::cells(R.size);
+				FAcWorldMapInfo::FMark M;
+				M.Title = Text(P->goal->title);
+				M.Region = Text(R.id);
+				M.At = FVector2f(float(FMath::Clamp((P->goal->at.x + Cells.width / 2.0) / FMath::Max(1.0, Cells.width), 0.0, 1.0)),
+					float(FMath::Clamp((P->goal->at.y + Cells.depth / 2.0) / FMath::Max(1.0, Cells.depth), 0.0, 1.0)));
+				Out.Add(M);
+			}
+		}
+	}
 	// The first ten minutes' steps with no place of their own: the pad to
 	// build by (2), the nearest ore (3), the nearest well, then the Derrick
 	// on it (5), in the pilot's region.
@@ -874,6 +893,14 @@ FAcContractsInfo AcProgressHud::Contracts(const FAcMmoClient& Mmo, const bool bA
 		}
 		Out.Rows.Add(Row);
 	}
+	// L1: KSTR's next goal.
+	if (P->goal)
+	{
+		Out.bNext = true;
+		Out.NextTitle = Text(P->goal->title);
+		Out.NextHint = Text(P->goal->hint);
+		Out.NextPitch = Text(P->goal->pitch);
+	}
 	return Out;
 }
 
@@ -1020,7 +1047,7 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 	if (UAcConsoleSubsystem* C = UAcConsoleSubsystem::Get(this); C && C->Console())
 	{
 		TOptional<FAcContractsInfo> Panel;
-		if (Mmo->Progress() && !Mmo->Progress()->contracts.empty())
+		if (Mmo->Progress() && (!Mmo->Progress()->contracts.empty() || Mmo->Progress()->goal))
 		{
 			// What changes a contract (not its countdown): opens the panel a while.
 			FString Seen;
@@ -1046,6 +1073,16 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 			UE_LOG(LogAutocraft, Log, TEXT("contracts: first ten minutes step %d, %s"), int32(Step->step), *Text(Step->title));
 		}
 		FirstSeen = Step ? Step->id : 0;
+		// L1: a new goal from KSTR: the radio calls it (its title, its line).
+		const ac::net::ProgressMessage* Pm = Mmo->Progress();
+		const FString Goal = Pm && Pm->goal ? Text(Pm->goal->key + "/" + Pm->goal->title) : FString();
+		if (!Goal.IsEmpty() && Goal != GoalSeen)
+		{
+			Hud->Toast(FString::Printf(TEXT("KSTR  ·  NEXT: %s"), *Upper(Pm->goal->title)), Text(Pm->goal->pitch), FAcHudStyle::LevelGold(),
+				FPlatformTime::Seconds());
+			UE_LOG(LogAutocraft, Log, TEXT("contracts: next goal %s, %s"), *Text(Pm->goal->key), *Text(Pm->goal->title));
+		}
+		if (Pm) GoalSeen = Goal;
 		C->Console()->SetContracts(Panel);
 	}
 
@@ -1271,6 +1308,16 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 		const FString Where = N.value == 1 ? FString(TEXT("here")) : FString(TEXT("in the realm"));
 		Hud->Toast(FString::Printf(TEXT("%s BUILT"), *Name), FString::Printf(TEXT("Built by %s  ·  %s  ·  every pilot's"), *By, *Where),
 			FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
+		break;
+	}
+	case K::goal:
+	{
+		// L1: KSTR's next goal done: its title, the pay; the next one follows.
+		FString Pay = Xp;
+		if (N.value > 0) Pay += FString::Printf(TEXT("%s+%lld MH"), Pay.IsEmpty() ? TEXT("") : TEXT("  ·  "), (long long)N.value);
+		Hud->Toast(FString::Printf(TEXT("GOAL DONE: %s"), *Upper(N.by)), Pay, FAcHudStyle::Srgb(0.45, 1, 0.55), Now);
+		UE_LOG(LogAutocraft, Log, TEXT("progress: goal %s done: %s"), *Text(N.id), *Text(N.by));
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Paid);
 		break;
 	}
 	case K::mission:

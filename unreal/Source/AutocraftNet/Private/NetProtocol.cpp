@@ -1027,6 +1027,21 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeSigned(w, c.hydrogen);
     }
     codec::kMs.write(w, m.contractsDawn);
+    w.writeBool(m.goal.has_value());
+    if (m.goal) {
+        writeString(w, m.goal->key);
+        writeString(w, m.goal->title);
+        writeString(w, m.goal->pitch);
+        writeString(w, m.goal->why);
+        writeString(w, m.goal->hint);
+        w.writeBool(m.goal->marked);
+        writeString(w, m.goal->region);
+        codec::Fixed{1000}.write(w, m.goal->at.x);
+        codec::Fixed{1000}.write(w, m.goal->at.y);
+        writeSigned(w, m.goal->level);
+        codec::Fixed{1000}.write(w, m.goal->xp);
+        writeSigned(w, m.goal->hydrogen);
+    }
     w.writeBool(m.respawn.has_value());
     if (m.respawn) {
         codec::kMs.write(w, m.respawn->at);
@@ -1208,6 +1223,20 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     }
     codec::kMs.read(r, m.contractsDawn);
     if (r.readBool()) {
+        Goal g;
+        if (!readString(r, g.key) || !readString(r, g.title) || !readString(r, g.pitch) || !readString(r, g.why) ||
+            !readString(r, g.hint))
+            return false;
+        g.marked = r.readBool();
+        if (!readString(r, g.region)) return false;
+        codec::Fixed{1000}.read(r, g.at.x);
+        codec::Fixed{1000}.read(r, g.at.y);
+        g.level = readSigned(r);
+        codec::Fixed{1000}.read(r, g.xp);
+        g.hydrogen = readSigned(r);
+        m.goal = std::move(g);
+    }
+    if (r.readBool()) {
         ProgressMessage::Respawn s;
         codec::kMs.read(r, s.at);
         if (!readString(r, s.region)) return false;
@@ -1341,7 +1370,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(5);
-        if (kind > uint64_t(ProgressMessage::NewsKind::matriarch)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::goal)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);

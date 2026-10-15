@@ -502,6 +502,7 @@ void WorldMap::firstTen(PilotId pilot, PilotState& p) {
 }
 
 void WorldMap::pumped(PilotId, PilotState& p) {
+    goalDid(p, "pumped");
     if (p.firstStep != 5) return;
     for (Contract& c : p.contracts)
         if (c.step == 5 && c.state == State::open && c.have >= 1) c.have = c.need;

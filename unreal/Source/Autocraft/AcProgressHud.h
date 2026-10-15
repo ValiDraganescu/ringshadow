@@ -274,6 +274,8 @@ private:
 	double ContractsChangedAt = -1;
 	/// The first ten minutes' step last told ("KSTR: <title>" when another opens).
 	uint32 FirstSeen = 0;
+	/// L1: the next goal last called ("key/title"; empty: none).
+	FString GoalSeen;
 	/// Every contract's title as last seen, by id: a done one's toast when
 	/// the list no longer has it (the first ten minutes' last step).
 	TMap<uint32, FString> ContractTitles;

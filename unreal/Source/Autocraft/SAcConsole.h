@@ -173,6 +173,9 @@ private:
 	void PaintContracts(class FAcConsolePaint& P) const;
 	/// The compact panel: one small line a contract (title, bar or tag).
 	void PaintContractsCompact(class FAcConsolePaint& P) const;
+	/// L1: the next goal's line along the contract panel's foot (`Y` its
+	/// baseline; `bPitch`: the radio's line above it).
+	void PaintNext(class FAcConsolePaint& P, double X, double Right, double Y, bool bPitch) const;
 	/// The panel's dark glass and its rims (`RightPanel`).
 	void PaintPanelGlass(class FAcConsolePaint& P, const FAcRect& R) const;
 	void PaintOver(class FAcConsolePaint& P) const;

@@ -211,6 +211,91 @@ in `unreal/server/tests/FirstTenTests.cpp`. Client:
 `AcProgressHud::FirstStep`, `FirstHint` and `FirstTip`; pictures from
 `-AcMmoShotsO1`.
 
+## What next
+
+After the first ten minutes KSTR keeps one goal in front of the pilot: the
+answer to "I reached level 10, now what?" (task L1 in
+[mmorpg-m8.md](mmorpg-m8.md)). It is not a contract: it sits beside the
+daily three and the Citadel's missions, never blocks anything, and pays a
+little when done.
+
+- **One at a time, from a chain.** The server walks the chain below in
+  order and shows the first goal the pilot hasn't passed whose level it has.
+  A goal already met when its turn comes is passed on the way, unpaid
+  ("skip what is met"). When every open goal is passed and the next needs a
+  higher level, the goal is a wait: *Reach Level 15*, "REACH LEVEL 15 · YOU
+  ARE 10", naming what the level opens; a wait pays nothing.
+- **Pay.** The goal shown pays when done: 3 minutes of play at the pilot's
+  level (`WorldGoals::xp`, 240 XP at level 4, to 5) and `5 + level` MH (to
+  5). The news `goal` tells the client; the next goal comes at once.
+- **Checked once a second** (`WorldGoals::every`), and right away after a
+  dev line.
+- **Who.** Every pilot past the first ten minutes, and every pilot from a
+  save made before L1: its first check passes what it has met and stops at
+  the first goal it hasn't.
+
+| # | Key | Level | Title | Done when (met) | Marker |
+|---|---|---|---|---|---|
+| 1 | derrick | 3 | Pump Some Silver | a tank pumped at a Derrick, or a finished Derrick of its own | the nearest well with MH, here |
+| 2 | skills | 1 | Spend Your Points | no points waiting (not offered while none wait) | |
+| 3 | mission | 1 | Sign Up at the Citadel | a Citadel mission taken (or one in the Journal) | the realm's Citadel |
+| 4 | shop | 1 | Stock Up | anything bought at the shop (or a supply or a bought blueprint held) | the realm's Citadel |
+| 5 | gatling | 5 | Guard Your Ore | a finished gatling gun of its own, or the realm at the limit | |
+| 6 | merc | 5 | Hire a Hand | a mercenary hired | the realm's Citadel |
+| 7 | dome | 8 | A Roof Away from Home | a finished Hab Dome of its own outside the start region, or the realm at the limit | |
+| 8 | active | 10 | Something for Q | a skill in an active slot | |
+| 9 | sentinel | 10 | Eyes on the Sky | a finished Sentinel (the AA tower) of its own, or the realm at the limit | |
+| 10 | foundryPlans | 10 | The Foundry Hunt | the Foundry's blueprint held or its site opened, or the realm has a Foundry | the world's first Foundry site (Fork wreck, Cold Fork), put on the map |
+| 11 | foundry | 15 | Light the Foundry | the realm has a finished Foundry | |
+| 12 | module | 15 | Make a Module | the Foundry made a module for it (or one in its stores or fitted) | |
+| 13 | lab | 25 | Raise the Lab | the realm has a finished Lab | |
+| 14 | spacedock | 35 | A Dock for Ships | the realm has a finished Spacedock | |
+| 15 | matriarch | 35 | The Matriarch | it fought her when she fell (or the world has no nest) | her nest |
+
+The Foundry, the Lab and the Spacedock are one a realm, so their goals are
+met by any pilot's. The build goals count as met when the realm is at the
+pilot's limit for that kind, so a goal is never one it can't do.
+
+**The radio's lines.** `{n}` the points waiting, `{what}` a place.
+
+1. *Pump Some Silver*: "No tank pumped yet? Put a Derrick on a well and fill it once. MH flies you, builds for you and pays the help."
+2. *Spend Your Points*: "You're sitting on {n} skill points. KSTR can't spend them for you, and they don't earn interest."
+3. *Sign Up at the Citadel*: "The Citadel's board has work with real pay. Walk in, press H, take something off MISSIONS."
+4. *Stock Up*: "The Citadel sells kits, canisters, shield charges and flares. Buy one before you need one, not after."
+5. *Guard Your Ore*: "The bugs have found your veins. Gatling plans are in the Citadel's shop: set one by the ore you work."
+6. *Hire a Hand*: "Mercenaries mine while you sleep, for a fee and a daily wage. The Citadel's MERCS tab has names."
+7. *A Roof Away from Home*: "Hab Dome plans open at 8. Raise one in another region: a depot to unload at, a bed to wake up in."
+8. *Something for Q*: "Level 10, and your first active slot. Put a skill with a button on Q; the tree marks which ones."
+9. *Eyes on the Sky*: "Gloamwings come in over the walls. Sentinel plans open at 10: an AA tower by your buildings keeps the sky clear."
+10. *The Foundry Hunt*: "Foundry plans are out there, in the {what}. They open at 15: find them before then and you're ready."
+11. *Light the Foundry*: "Plans in hand and level 15: put the Foundry up. The realm gets one, so put it where it counts."
+12. *Make a Module*: "The Foundry's warm. Order a module on the rig screen and fit it when it's done."
+13. *Raise the Lab*: "Level 25 and the Lab's plans are open. It researches the marks the Foundry can't make yet."
+14. *A Dock for Ships*: "Level 35: Spacedock plans. The realm's ships start here, and so does the long way out."
+15. *The Matriarch*: "She's in {what}, in her nest, and the horde with her. Bring friends and turrets; everyone who fights her gets a share."
+
+Each goal also has a line on why it matters (the Journal) and a short HUD
+line ("B  BUILD A GATLING GUN BY YOUR ORE"). Text only for now; narration
+can come later, as the missions' did.
+
+- **On screen.**
+  - A small line along the contract panel's foot: "NEXT" in gold, the
+    title and the HUD line. The whole panel (T) adds the radio's line.
+  - A new goal: a toast "KSTR · NEXT: GUARD YOUR ORE" with the radio's
+    line. A goal done: "GOAL DONE: SPEND YOUR POINTS", "+240 XP · +10 MH".
+  - The Journal (L) opens with a NEXT section on top: the title, the HUD
+    line, why it matters, where it is marked, the radio's line and the pay.
+  - A goal with a place puts a KSTR mark on the world map, the minimap and
+    the compass, as a contract's place does.
+- **Dev and pictures.** The server's dev control takes `goal` (says the
+  goal), `goal pass KEY` (passes one, unpaid) and `goal level N` (the first
+  pilot to level N, the goals under it passed). Pictures: `-AcMmoShotsL1`.
+
+Code: `WorldGoals`, `WorldMap::goals`, `goalStep`, `goalMet`,
+`goalMessage` (unreal/server/world/WorldGoals.cpp); tests in
+`unreal/server/tests/GoalsTests.cpp`. Client: `AcProgressHud::Contracts`
+(the NEXT line), `SAcConsole::PaintNext`, `SAcJournalScreen::PaintNext`.
+
 ## On the wire (protocol 7)
 
 `ProgressMessage` (reliable, sent whenever it changes) carries:
@@ -236,6 +321,12 @@ Two more pieces:
 
 - **News:** `NewsKind::contract` reports a finished contract. Its `id` is
   the contract's number as text, `xp` the XP it paid, and `value` the MH.
+- **The next goal (protocol 25):** `ProgressMessage::goal`, a `net::Goal`
+  or none: `key` ("gatling"; "level" for a wait), `title`, `pitch`, `why`,
+  `hint`, its marker (`marked`, `region`, `at`, a ground point there),
+  `level` (the one it opens at, or waits for) and the pay (`xp`,
+  `hydrogen`; 0 for a wait). `NewsKind::goal` says one was done: `id` its
+  key, `by` its title, `xp`, `value` the MH.
 - **Request:** `RequestMessage::Abandon{contract}`, sent from
   `net::Client::abandon(id)`. The refusal texts are "No such contract",
   "That contract is done already" and "That contract is dropped already".
@@ -248,3 +339,10 @@ region, need, have, xp, hydrogen, step}], "first": n}`. A pilot saved before v5 
 contracts; its first step draws them. `"first"` is the open step of the
 first ten minutes. A pilot without it is not on the chain: an old save's
 pilot skips it.
+
+Schema 18 adds `pilots.goals TEXT`, holding JSON: `{"goal": key,
+"passed": [keys], "did": [what]}`. `goal` is the one shown ("level:15" a
+wait); `passed` the goals paid or passed as met; `did` what it has done that
+its state no longer shows ("pumped", "mission", "shop", "merc", "made",
+"matriarch"). Empty: no goal chosen yet; an older pilot picks up at the first
+goal it hasn't met.

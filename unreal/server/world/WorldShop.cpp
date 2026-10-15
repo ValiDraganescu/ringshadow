@@ -53,6 +53,7 @@ std::optional<std::string> WorldMap::buy(PilotId pilot, std::optional<StructureK
     } else {
         p->progress.items[item] += 1;
     }
+    goalDid(*p, "shop");
     pushProgress(pilot);
     return std::nullopt;
 }

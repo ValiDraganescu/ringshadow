@@ -5,6 +5,10 @@
 // chrome, the Citadel screen's sibling:
 //
 //   THE PROSPECTOR'S JOURNAL   2/3 missions                                ESC
+//   ┌ NEXT · KSTR ──────────────────────────────────────────────────────────┐
+//   │ Guard Your Ore   B  BUILD A GATLING GUN BY YOUR ORE        +240 XP …  │
+//   │ why it matters · the radio's line                                     │
+//   └───────────────────────────────────────────────────────────────────────┘
 //   ┌ MISSIONS ─────────┐ ┌ SURVEY · HARD · Rust Hollow ──────────────────────┐
 //   │▸ Beyond the Ridge  │ │ Beyond the Ridge                        [▶ PLAY]  │
 //   │  8 / 15 s ▬▬▬      │ │ BRIEFING  the officer's words, wrapped …          │
@@ -73,6 +77,15 @@ struct FAcJournalInfo
 	FVector2f HereAt = FVector2f(0.5f, 0.5f);
 	/// The narration playing now (its key; empty: none).
 	FString Playing;
+	/// L1: KSTR's next goal (`bNext`), on top: its title, why it matters,
+	/// what to do (the HUD's line), the radio's line, the pay, where.
+	bool bNext = false;
+	FString NextTitle;
+	FString NextWhy;
+	FString NextHint;
+	FString NextPitch;
+	FString NextPay;
+	FString NextWhere;
 
 	bool operator==(const FAcJournalInfo&) const = default;
 };
@@ -142,6 +155,7 @@ private:
 	double Clock() const;
 
 	void PaintHeader(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
+	void PaintNext(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintList(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintPage(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P) const;
 	void PaintMap(FSlateWindowElementList& Out, int32 Layer, const FGeometry& P, const FAcJournalEntry& E, const FBox2f& B) const;

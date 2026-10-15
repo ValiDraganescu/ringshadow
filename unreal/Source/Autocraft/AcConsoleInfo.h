@@ -136,6 +136,12 @@ struct FAcContractsInfo
 	bool bExpanded = false;
 	/// On the first ten minutes: its step, 1…6 (0: the daily contracts).
 	int32 FirstStep = 0;
+	/// L1: KSTR's next goal (`bNext`), a small line under the contracts:
+	/// its title, the HUD's short line, the radio's line (the whole panel).
+	bool bNext = false;
+	FString NextTitle;
+	FString NextHint;
+	FString NextPitch;
 	bool operator==(const FAcContractsInfo&) const = default;
 };
 

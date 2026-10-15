@@ -569,6 +569,7 @@ void WorldMap::step() {
     realmNews();
     sites();
     contracts();
+    goals();
     missions();
     starfall();
     brood();
@@ -591,6 +592,7 @@ void WorldMap::idle(double seconds) {
     updateSky();
     sites();
     contracts();
+    goals();
     missions();
     starfall();
     respawns();
@@ -611,6 +613,7 @@ double WorldMap::catchUp(double seconds) {
     setClock(clock_ + moved);
     sites();
     contracts();
+    goals();
     missions();
     starfall();
     respawns();

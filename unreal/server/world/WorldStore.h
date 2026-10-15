@@ -126,6 +126,9 @@ struct SavedPilot {
     /// Its mercenaries (H2, schema 14) as JSON (WorldMercs.cpp). Empty:
     /// none ever hired.
     std::string mercs{};
+    /// Its next goal from KSTR (L1, schema 18) as JSON (WorldGoals.cpp).
+    /// Empty: none chosen yet.
+    std::string goals{};
     bool operator==(const SavedPilot&) const = default;
 };
 
