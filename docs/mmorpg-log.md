@@ -707,3 +707,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - N Z4: straggler cause: a hit Lodeback fled to the region edge behind the canyon wall; now leaves by its tunnel, vanishes after 4 s without headway.
 - T web: analytics steps 1-5 merged (8ac5a50): Worker, Analytics Engine, D1 admin, agents, tracker; MIT code vendored with its licence.
 - T web: analytics steps 6-7 merged (ec52594): nightly rollup, privacy page, footer on every page.
+- T Z4 done 07909c1: no build spots; build anywhere in a zone; walkers route round, bite through when walled; zone reach = outline's far corner.
+- N Z4: walled Salt arm: 3/4 walkers biting, none past; 2-cell gap: 4/4 through; 6 guns packed edge to edge.
+- N Z4: Fork cycle resolves every wave, longest out 16 s (was 1,146 s); held through wave 10 with 12+5 guns.
+- D R2 (manager): realm projects at the Citadel as the realm wallet's sink: a day-long realm-wide benefit each, humans start them, price rises per repeat.
