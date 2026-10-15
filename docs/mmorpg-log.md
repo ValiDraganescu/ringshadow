@@ -752,3 +752,7 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - T logs: buildings and units per region on load; pilot fell/respawns lines.
 - T web: heavy-sky post live (7ec1904); admin visitor map (1eb9f6f).
 - N W4 crossing at 1x: 5 of 5 green on a quiet Mac (load 5.6-7.9); K3 leftovers closed.
+- T R3 done eba8682: a Citadel a region, each a full home (unload, tax, respawn, respec, H, corner turrets).
+- D limit per region (Progression::perRegion: Citadel, Landing Pad); a merc hired at a Citadel works its nearest field; goals mark the pilot's region's Citadel.
+- N R3 shots r3-01..04: the Cold Fork Citadel built, turrets on, H screen there; core 505, net 92, server 321.
+- I wt1's parked X2 edits (WorldStore, protocol 31) fail 6 server tests in its tree; the R3 commit alone passes.
