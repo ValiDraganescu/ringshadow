@@ -612,3 +612,5 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I HUD XP read 200 above the server after O1 until the next pay → look.
 - I Level-up banner and NEXT toast stack mid-frame → U1.
 - T U1 (HUD declutter) next for wt2.
+- D Manager: one toast lane off-centre, one banner slot, compact contracts by default.
+- T U1 briefed to wt2 (+ the HUD XP gap).
