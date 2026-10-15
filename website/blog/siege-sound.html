@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Siege Has a Sound · Ringshadow</title>
+  <meta name="description" content="Two music beds for the canyon waves and the Matriarch, 28 radio lines from KSTR's announcer and the Dropship's engines, all made with ElevenLabs for Ringshadow.">
+  <meta name="theme-color" content="#030912">
+  <meta property="og:title" content="The siege has a sound">
+  <meta property="og:description" content="Two music beds for the waves and the Matriarch over the radio, KSTR's announcer reading the canyon news, and the Dropship's engines.">
+  <meta property="og:image" content="https://ringshadow.com/blog/media/siege-sound/cover.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ringshadow">
+  <meta property="og:url" content="https://ringshadow.com/blog/siege-sound">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://ringshadow.com/blog/siege-sound">
+  <link rel="alternate" type="text/markdown" title="This page as Markdown" href="siege-sound.md">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="application/atom+xml" title="The Ringshadow blog" href="feed.xml">
+  <link rel="preload" href="../assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/Exo2-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/ring.css">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+  <script src="../assets/js/count.js" defer data-site="ringshadow"></script>
+  <script src="../assets/js/ring.js"></script>
+  <script src="../assets/js/stars.js" defer></script>
+  <script src="../assets/js/album.js" defer></script>
+</head>
+<body class="ring blog" id="top">
+  <a class="skip" href="#main">Skip to the content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <nav class="bar" aria-label="Main">
+    <a class="bar-mark" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30">Ringshadow</a>
+    <ul>
+      <li><a href="../roadmap.html">Roadmap</a></li>
+      <li><a href="index.html">Blog</a></li>
+      <li><a href="https://github.com/ValiDraganescu/ringshadow">GitHub</a></li>
+    </ul>
+    <a class="btn btn-sm" href="../index.html#get">Download</a>
+  </nav>
+
+  <main id="main">
+    <article class="post">
+      <header class="post-head">
+        <h1>The siege has a sound</h1>
+        <p class="meta"><time datetime="2026-10-15">15 October 2026</time> · M9 · A living frontier</p>
+        <p class="lede">Two music beds rise over the radio while a canyon is fought near you, one for the waves and one for the Matriarch, and KSTR's announcer now reads the canyon news and your next goal out loud. The Dropship got its engines too. All of it made with ElevenLabs, and all of it ours.</p>
+      </header>
+
+      <figure class="post-cover reveal">
+        <div class="cut r16"><img src="media/siege-sound/cover.jpg" alt="The Dropship touching down on a Landing Pad at Prospect Landing in a cloud of dust, the wave panel reading THE FORK · HELD" width="1200" height="750"></div>
+        <figcaption>Touchdown at Prospect Landing after a held canyon: the flight sounds, then the radio comes back up.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2>The two beds</h2>
+        <p>While a wave is out near you, or the game runs between waves, the wave layer plays over KSTR 88.7, the radio ducked under it. Its volume grows with the wave: 0.45 at wave 1, full at wave 10. When a wave breaks through and the Matriarch comes for the turrets, her layer takes over, and it plays whenever she stands in your region. Both fade in over 3 seconds and out over 4, and both go quiet the moment the canyon is held. The radio ducks to −24 dB in half a second and comes back over 2 seconds once they've gone.</p>
+        <p>The beds are ElevenLabs Music, instrumental, written for the game: a siege tension bed at 112 BPM in D minor for the waves, a boss dread bed at 84 BPM in C minor for her. An agent turned each into a seamless loop, half a second off the head, three seconds off the tail where the model writes its ending, and the last two seconds cross-faded over the start at equal power. They hold within 2 dB from end to end. Listen:</p>
+
+        <div class="voice">
+          <h3>The wave layer · 60.5 s loop</h3>
+          <audio controls preload="none" src="media/siege-sound/siege-wave.m4a"></audio>
+        </div>
+        <div class="voice">
+          <h3>The Matriarch layer · 44.5 s loop</h3>
+          <audio controls preload="none" src="media/siege-sound/siege-matriarch.m4a"></audio>
+        </div>
+
+        <h2>KSTR speaks</h2>
+        <p>The station's announcer, the same glossy voice that reads the ads, now has 28 lines: one for each goal in the radio's chain and one for a goal done, and for each canyon a line for a wave incoming, a wave beaten, the canyon held and the canyon fallen. All of them are under six seconds. They go through a queue, one at a time with 0.6 seconds between, never over a mission narration, at most four waiting, and a line older than 20 seconds is dropped unread.</p>
+
+        <div class="voice">
+          <h3>The Fork has fallen</h3>
+          <audio controls preload="none" src="media/siege-sound/kstr-fork-fallen.m4a"></audio>
+          <p>"The Fork has fallen! The Matriarch is coming for the turrets!"</p>
+        </div>
+        <div class="voice">
+          <h3>The Fork is held</h3>
+          <audio controls preload="none" src="media/siege-sound/kstr-fork-held.m4a"></audio>
+          <p>"The Fork is held! A whole day of peace out there."</p>
+        </div>
+
+        <p>The Dropship's flight got its sounds from the same shop: the engines spooling on the pad, the roar of the lift-off, a cruise loop, the retro burst on the approach and the touchdown. They're ElevenLabs sound effects, and silent in the hidden test runs.</p>
+
+        <h2>Made offline, checked offline</h2>
+        <p>Halfway through, ElevenLabs ran out of credits with 4 left and 5 of the 28 lines made, so the agent cut stand-in loops from two of our own retired tracks and kept going. I topped the account up the same day and everything was made for real: about 1,900 characters of speech and two music generations, 66 and 50 seconds. No run ever plays any of it aloud. Every cue is written to the game's log, the layers' levels, the radio's duck, each line, each flight sound, and a silent test run checks the timeline: a wave at The Fork brings its layer up and the radio down, a wave beaten reads its line, a breakthrough brings her layer and "has fallen", a hold takes both out and the radio back to full, a goal reached reads the next one, and a flight plays lift, cruise, retro and touch in order.</p>
+
+        <h2>Also landed: the map says why</h2>
+        <p>Before, a Landing Pad you couldn't fly to just wouldn't pick. Now the map says why: only one pad in the realm, and where to build the second; that's the region's own pad and the Dropship lands only on a Landing Pad; or, when it can be picked, the fare.</p>
+      </div>
+
+      <section class="album" aria-labelledby="a1">
+        <h2 class="album-title" id="a1">In pictures</h2>
+        <ul class="album-grid">
+          <li class="reveal"><a href="media/siege-sound/01-landed.webp"><img src="media/siege-sound/01-landed-t.webp" alt="The Dropship down on a Landing Pad at Prospect Landing, dust settling, THE FORK · HELD on the panel" width="640" height="400" loading="lazy"></a><span class="cap">The flight's last cue, the touchdown, with The Fork held.</span></li>
+          <li class="reveal"><a href="media/siege-sound/02-map-only-here.webp"><img src="media/siege-sound/02-map-only-here-t.webp" alt="The world map with a message: only one Landing Pad in the realm, here; walk to another region and build one to fly between them" width="640" height="400" loading="lazy"></a><span class="cap">One pad in the realm: the map tells you to build the second.</span></li>
+          <li class="reveal"><a href="media/siege-sound/03-map-own-pad.webp"><img src="media/siege-sound/03-map-own-pad-t.webp" alt="The world map with a message: that is the region's own pad; the Dropship lands only on a Landing Pad" width="640" height="400" loading="lazy"></a><span class="cap">A region's own pad can't be picked, and the map says so.</span></li>
+          <li class="reveal"><a href="media/siege-sound/04-map-picked.webp"><img src="media/siege-sound/04-map-picked-t.webp" alt="The world map with a pad picked: FLY the Dropship to Landing Pad 1 in Rust Hollow for 15 MH" width="640" height="400" loading="lazy"></a><span class="cap">Picked: the Dropship to Rust Hollow for 15 MH.</span></li>
+        </ul>
+      </section>
+
+      <nav class="post-foot" aria-label="Posts">
+        <a class="tlink" href="balance.html">Before: the balance pass</a>
+        <a class="btn" href="build-anywhere.html">Next: build anywhere</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="foot">
+    <a class="blocks" href="#top" aria-label="Ringshadow, back to the top">
+      <span>R</span><span>I</span><span>N</span><span>G</span><span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span>
+    </a>
+    <div class="foot-cols">
+      <ul><li><a href="../index.html">Home</a></li><li><a href="../roadmap.html">Roadmap</a></li><li><a href="index.html">Blog</a></li><li><a href="feed.xml">Atom feed</a></li></ul>
+      <ul><li><a href="https://github.com/ValiDraganescu/ringshadow">Source on GitHub</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/releases">Releases</a></li><li><a href="https://github.com/ValiDraganescu/ringshadow/blob/main/LICENSE">CC0 licence</a></li></ul>
+      <ul><li>For language models:</li><li><a href="../llms.txt">llms.txt</a></li><li><a href="siege-sound.md">this page as Markdown</a></li></ul>
+      <p class="foot-note">Every picture on the blog comes from the game, recorded by the agents that build it. The fonts, Barlow Condensed and Exo 2, are under the SIL Open Font License.</p>
+    </div>
+    <p class="foot-last"><span>Public domain (CC0). No cookies for readers, first-party analytics without tracking across sites. <a href="../privacy.html">Privacy</a>.</span> <a class="btn btn-sm" href="#top">Back to the top</a></p>
+  </footer>
+</body>
+</html>

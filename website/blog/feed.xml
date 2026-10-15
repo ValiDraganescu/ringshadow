@@ -6,10 +6,26 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T08:50:00Z</updated>
+  <updated>2026-10-15T10:20:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>Build anywhere in the canyon</title>
+    <id>tag:ringshadow,2026-10-15:blog/build-anywhere</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/build-anywhere"/>
+    <published>2026-10-15T10:20:00Z</published>
+    <updated>2026-10-15T10:20:00Z</updated>
+    <summary>No more build spots: place any building anywhere standable in a canyon, packed as tight as you like. Walkers route round what they can and bite through what walls them off; two cells funnel, one cell walls.</summary>
+  </entry>
+  <entry>
+    <title>The siege has a sound</title>
+    <id>tag:ringshadow,2026-10-15:blog/siege-sound</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/siege-sound"/>
+    <published>2026-10-15T10:10:00Z</published>
+    <updated>2026-10-15T10:10:00Z</updated>
+    <summary>Two music beds for the canyon waves and the Matriarch over the radio, 28 lines from KSTR's announcer for the canyon news and your next goal, and the Dropship's engines, all made with ElevenLabs.</summary>
+  </entry>
   <entry>
     <title>The balance pass: about ×2 the mining curve, never over ×2.5</title>
     <id>tag:ringshadow,2026-10-15:blog/balance</id>

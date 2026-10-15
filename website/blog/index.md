@@ -8,6 +8,22 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Build anywhere in the canyon
+
+15 October 2026 · M9 · 5 pictures
+
+No more build spots: place any building anywhere standable in a canyon, packed as tight as you like. Walkers route round what they can and bite through what walls them off; two cells funnel, one cell walls.
+
+Read it: https://ringshadow.com/blog/build-anywhere
+
+## The siege has a sound
+
+15 October 2026 · M9 · 4 pictures and 4 sounds
+
+Two music beds for the canyon waves and the Matriarch over the radio, 28 lines from KSTR's announcer for the canyon news and your next goal, and the Dropship's engines, all made with ElevenLabs.
+
+Read it: https://ringshadow.com/blog/siege-sound
+
 ## The balance pass: about ×2 the mining curve, never over ×2.5
 
 15 October 2026 · M9 · 1 chart

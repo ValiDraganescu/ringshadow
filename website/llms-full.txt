@@ -428,6 +428,22 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## Build anywhere in the canyon
+
+15 October 2026 · M9 · 5 pictures
+
+No more build spots: place any building anywhere standable in a canyon, packed as tight as you like. Walkers route round what they can and bite through what walls them off; two cells funnel, one cell walls.
+
+Read it: https://ringshadow.com/blog/build-anywhere
+
+## The siege has a sound
+
+15 October 2026 · M9 · 4 pictures and 4 sounds
+
+Two music beds for the canyon waves and the Matriarch over the radio, 28 lines from KSTR's announcer for the canyon news and your next goal, and the Dropship's engines, all made with ElevenLabs.
+
+Read it: https://ringshadow.com/blog/siege-sound
+
 ## The balance pass: about ×2 the mining curve, never over ×2.5
 
 15 October 2026 · M9 · 1 chart
@@ -611,6 +627,107 @@ Read it: https://ringshadow.com/blog/the-realm
 Two days, seven milestones: our own server, a world that lasts, a hundred levels, the ringshadow sweep and starfall.
 
 Read it: https://ringshadow.com/blog/how-we-got-here
+
+
+---
+
+# Build anywhere in the canyon
+
+> Ringshadow's canyons have no build spots any more: place any building anywhere standable in the zone, packed as tight as you like. The Brood walks round what it can and bites through what walls it off.
+
+Source: https://ringshadow.com/blog/build-anywhere
+
+15 October 2026 · M9 · A living frontier
+
+I asked for this one: no more marked spots for the guns. You place any building anywhere you can stand in a canyon, on the rims, on the floor, across the Brood's path itself, packed as tight or as loose as you like. The walkers go round what they can and bite through what walls them off.
+
+![Six Gatling Guns packed edge to edge beside The Fork's prize, their amber hoppers glowing](https://ringshadow.com/blog/media/build-anywhere/cover.jpg)
+
+*Six Gatling Guns edge to edge by The Fork's prize. A day ago this took six marked spots along the rim.*
+
+My words to the manager: on the tower defence area I don't want explicit slots for what and where to build; players can place whatever anywhere, and pack the buildings as close or as far as they want. So the build spots are gone from all three canyons, and the ordinary rules are the only rules: the footprint has to fit on level, standable ground with nothing in the way, within your build reach, at the ordinary price and level floor, under the realm's limits. There's no spacing beyond the footprints, so guns pack side by side.
+
+## Two cells to funnel, none to wall
+
+The Brood's walkers now treat your buildings as the terrain they are. While any way to their next waypoint is open, they route round. When there is none, they bite through the nearest of your buildings, checking every half second. Gloamwings fly over as before. Buildings snap to whole cells and the walkers keep about a third of a cell off every footprint, so the narrowest gap they'll use is two cells. Pack tight to wall a way off, and they'll chew through; leave two cells, and they'll funnel through under your guns.
+
+Measured at The Drowned Cut: with the Salt arm walled off, 3 of 4 walkers bit the line and none got past it; with a two-cell gap, 4 of 4 came through and the line was untouched.
+
+## The straggler
+
+The balance pass found a wave at The Fork that stayed out for over a thousand seconds, nineteen minutes, without reaching the guns or the prize. The cause was a hit Lodeback fleeing to the region's nearest edge, which was behind the canyon wall, and standing there until the wave's clock ran out. Now a leaving bug goes out by its own tunnel, and one that can get no nearer its exit for 4 seconds vanishes where it stands. A full cycle resolves every wave; the longest a wave stayed out was 16 seconds, and 12 Gatling Guns with 5 AA towers hold The Fork through wave 10, which they couldn't before.
+
+## Small print
+
+The turrets the Matriarch fells when a wave gets through are every gun within the zone's outline: 34 cells from the prize at The Fork, 43 at The Drowned Cut, 21 at The Roost. The [frontier pilots](https://ringshadow.com/blog/frontier-pilots) build no turrets in a canyon; their defender fights there and patrols the prize. All three canyons' region files, the map and the DEFENCE tab were redone for it, and the pictures of [The Fork's game](https://ringshadow.com/blog/canyon-game) and [the other two canyons](https://ringshadow.com/blog/two-canyons) were shot again on the new layout.
+
+## In pictures
+
+- ![Six Gatling Guns packed edge to edge beside The Fork's prize](https://ringshadow.com/blog/media/build-anywhere/01-packed.webp) Packed: six guns with no gap between them.
+- ![A Sentinel and a Gatling Gun on The Fork's rim, a tracer streaking from the gun](https://ringshadow.com/blog/media/build-anywhere/02-rim-guns.webp) A Sentinel and a Gatling Gun on the rim, placed wherever they fit.
+- ![A Gloamwing in the canyon hit by a burst from the Sentinels on the rim](https://ringshadow.com/blog/media/build-anywhere/03-aa-fire.webp) A Gloamwing meeting the Sentinels' fire.
+- ![The banner THE FORK HELD over the prize, KSTR: the canyon is the pilots' for a world day](https://ringshadow.com/blog/media/build-anywhere/04-held.webp) THE FORK HELD, through wave 10 this time.
+- ![The top-down preview of the Cold Fork region file: the zone's outline, the two tunnels, the Brood's paths and the prize, with no build spots marked](https://ringshadow.com/blog/media/build-anywhere/05-cold-fork-preview.webp) The region file's preview after the change: the zone, the tunnels, the paths, the prize. No spots.
+
+
+---
+
+# The siege has a sound
+
+> Two music beds for the canyon waves and the Matriarch, 28 radio lines from KSTR's announcer and the Dropship's engines, all made with ElevenLabs for Ringshadow.
+
+Source: https://ringshadow.com/blog/siege-sound
+
+15 October 2026 · M9 · A living frontier
+
+Two music beds rise over the radio while a canyon is fought near you, one for the waves and one for the Matriarch, and KSTR's announcer now reads the canyon news and your next goal out loud. The Dropship got its engines too. All of it made with ElevenLabs, and all of it ours.
+
+![The Dropship touching down on a Landing Pad at Prospect Landing in a cloud of dust, the wave panel reading THE FORK · HELD](https://ringshadow.com/blog/media/siege-sound/cover.jpg)
+
+*Touchdown at Prospect Landing after a held canyon: the flight sounds, then the radio comes back up.*
+
+## The two beds
+
+While a wave is out near you, or the game runs between waves, the wave layer plays over KSTR 88.7, the radio ducked under it. Its volume grows with the wave: 0.45 at wave 1, full at wave 10. When a wave breaks through and the Matriarch comes for the turrets, her layer takes over, and it plays whenever she stands in your region. Both fade in over 3 seconds and out over 4, and both go quiet the moment the canyon is held. The radio ducks to −24 dB in half a second and comes back over 2 seconds once they've gone.
+
+The beds are ElevenLabs Music, instrumental, written for the game: a siege tension bed at 112 BPM in D minor for the waves, a boss dread bed at 84 BPM in C minor for her. An agent turned each into a seamless loop, half a second off the head, three seconds off the tail where the model writes its ending, and the last two seconds cross-faded over the start at equal power. They hold within 2 dB from end to end. Listen:
+
+### The wave layer · 60.5 s loop
+
+[Audio](https://ringshadow.com/blog/media/siege-sound/siege-wave.m4a)
+
+### The Matriarch layer · 44.5 s loop
+
+[Audio](https://ringshadow.com/blog/media/siege-sound/siege-matriarch.m4a)
+
+## KSTR speaks
+
+The station's announcer, the same glossy voice that reads the ads, now has 28 lines: one for each goal in the radio's chain and one for a goal done, and for each canyon a line for a wave incoming, a wave beaten, the canyon held and the canyon fallen. All of them are under six seconds. They go through a queue, one at a time with 0.6 seconds between, never over a mission narration, at most four waiting, and a line older than 20 seconds is dropped unread.
+
+### The Fork has fallen
+
+[Audio](https://ringshadow.com/blog/media/siege-sound/kstr-fork-fallen.m4a) "The Fork has fallen! The Matriarch is coming for the turrets!"
+
+### The Fork is held
+
+[Audio](https://ringshadow.com/blog/media/siege-sound/kstr-fork-held.m4a) "The Fork is held! A whole day of peace out there."
+
+The Dropship's flight got its sounds from the same shop: the engines spooling on the pad, the roar of the lift-off, a cruise loop, the retro burst on the approach and the touchdown. They're ElevenLabs sound effects, and silent in the hidden test runs.
+
+## Made offline, checked offline
+
+Halfway through, ElevenLabs ran out of credits with 4 left and 5 of the 28 lines made, so the agent cut stand-in loops from two of our own retired tracks and kept going. I topped the account up the same day and everything was made for real: about 1,900 characters of speech and two music generations, 66 and 50 seconds. No run ever plays any of it aloud. Every cue is written to the game's log, the layers' levels, the radio's duck, each line, each flight sound, and a silent test run checks the timeline: a wave at The Fork brings its layer up and the radio down, a wave beaten reads its line, a breakthrough brings her layer and "has fallen", a hold takes both out and the radio back to full, a goal reached reads the next one, and a flight plays lift, cruise, retro and touch in order.
+
+## Also landed: the map says why
+
+Before, a Landing Pad you couldn't fly to just wouldn't pick. Now the map says why: only one pad in the realm, and where to build the second; that's the region's own pad and the Dropship lands only on a Landing Pad; or, when it can be picked, the fare.
+
+## In pictures
+
+- ![The Dropship down on a Landing Pad at Prospect Landing, dust settling, THE FORK · HELD on the panel](https://ringshadow.com/blog/media/siege-sound/01-landed.webp) The flight's last cue, the touchdown, with The Fork held.
+- ![The world map with a message: only one Landing Pad in the realm, here; walk to another region and build one to fly between them](https://ringshadow.com/blog/media/siege-sound/02-map-only-here.webp) One pad in the realm: the map tells you to build the second.
+- ![The world map with a message: that is the region's own pad; the Dropship lands only on a Landing Pad](https://ringshadow.com/blog/media/siege-sound/03-map-own-pad.webp) A region's own pad can't be picked, and the map says so.
+- ![The world map with a pad picked: FLY the Dropship to Landing Pad 1 in Rust Hollow for 15 MH](https://ringshadow.com/blog/media/siege-sound/04-map-picked.webp) Picked: the Dropship to Rust Hollow for 15 MH.
 
 
 ---
