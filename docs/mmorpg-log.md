@@ -644,3 +644,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I CrossEdgeEast and LevelPick automation tests still fail (pre-existing).
 - N F2 suites: core 496, server 254, net 85; mmofly replaced and passing.
 - D Manager: Q2 stability pass before the showcase → wt2.
+- T Z2 done 6d97b4c, 6f1bc2e: The Fork plays 10 waves; WAITING/RUNNING/FAILED/HELD.
+- D Z2: breakthrough at 300 prize ore or time out; the Matriarch from the wave's tunnel.
+- D Z2: pay 200n XP + 150n ore + 40n MH by damage; wave 10 ×2 + rare blueprint.
+- N Protocol 27, schema 20 (canyons); suites core 496, server 263, net 88.
+- T Every M8 task done but Q2; V4 (M8 showreel) next for wt1.

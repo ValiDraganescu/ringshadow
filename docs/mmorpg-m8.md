@@ -112,7 +112,7 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | N3 | The brood queen: a giant in a region other than Prospect Landing, a nest with many bugs, her own attack and sound, a reward for killing her | N2 | done 1cfe38d |
 | D3 | Turret upgrades: per AA tower and gatling, marks for fire rate, damage and range (and the gatling's air reach), paid at the turret from the pilot's wallet; shown on the turret | D2 | done ece5e3f |
 | Z1 | The first canyon zone: a canyon cut into a level-2 region (walls, rims to build on, 2–3 entrances, paths that meet at a prize field of rich ore and MH); region file support for zones, paths and build spots; validate and preview | N2 | done 14f564c |
-| Z2 | The canyon game: waves along the paths to the prize, wave 1 replays until beaten, then escalating waves; a failed wave brings the Matriarch, who fells every turret in the zone and resets it to wave 1; rewards per wave, the held canyon after the last wave; wave HUD, warnings, narration lines | Z1, D2, N3 | |
+| Z2 | The canyon game: waves along the paths to the prize, wave 1 replays until beaten, then escalating waves; a failed wave brings the Matriarch, who fells every turret in the zone and resets it to wave 1; rewards per wave, the held canyon after the last wave; wave HUD, warnings, narration lines | Z1, D2, N3 | done 6f1bc2e |
 | W4 | Seamless regions: region borders follow the land (not rectangles), visible passages between regions, crossing on foot without a seam; folds in W3's ground palettes and landmarks | | done 8a287b6 |
 | W4b | Regions that don't read as rectangles: outlines with bays, spurs and necks well inside the cell, walls that meander and step, open land reaching into the corners in places; the map shows irregular shapes | W4 | done 426e7da |
 | F2 | The transport ship: the pilot can't fly alone; build a landing pad, board the Dropship, lift, turn, speed away, seamless approach and landing at a pad in a discovered region; flight menu shows only reachable pads | R1, W4 | done e044a1d |
@@ -123,6 +123,7 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | H2 | Mercenary prospectors: hire at the Citadel (a MERCS tab) for ore and MH; each mines an area at 1/24 of the pilot's rate, delivers to the pilot's wallet (taxed), shown on the map; work goes on while the game is closed | S2, C2 | done 7ad7951 |
 | A1 | The radio (music) ducks very low while a mission narration plays, and comes back smoothly after | K2 | done dfdf8fd |
 | Q2 | Stability pass: the flaky checks fixed (N2/N3 shot timing, e2e fly race, CrossEdgeEast, LevelPick), the first-call ship stall, every shot set and flow rerun on the current build | F2 | |
+| V4 | The M8 showreel: a 60–90 s hidden-recorded clip of the realm under siege (the canyon waves and the Matriarch, the Dropship flight, the satellite map, the Brood, the Citadel) for the user and the blog | Z2, F2 | |
 | U1 | HUD declutter (from M7): one toast lane, Q/C/G clear of the pawn, compact contract panel, banners off the panels, no "CONTRACT DONE: CONTRACT" | | done 67d9241 |
 
 Each task is done when the three suites pass, its hidden-run pictures
