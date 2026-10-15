@@ -805,3 +805,4 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - D Q3: an empty realm week is one ledger row (its time the last); past the 120-row cap the routine rows (frontier deeds, weeks) go first, the mercenaries', canyons' and Matriarch rows stay; idle saves every 60 s (WAL 10 -> 1 KB/s); server.log moves to .1 past 8 MB at start.
 - I Q3: starfalls kept grow without bound while the world idles (a fall's deposit stays until mined, nobody mines off line): 95 a day before E1, 36 a day on E1, the save +8 KB a day; idle cost flat (0.065 ms) over 36 projected world days; to bound (no new fall while N stand unmined, or a fall's deposit fades after a few days).
 - N M10 complete: W5, X2, S4, N4, U2, E1, R3, Q3 all merged; paused at the user's word 2026-10-15.
+- T web: the idle soak post live at /blog/idle-soak (854a3c5), M10 last; the blog at 18 posts.
