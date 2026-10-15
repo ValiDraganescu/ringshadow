@@ -93,7 +93,7 @@ TEST(progress_carries_the_matriarchs_news) {
     ProgressMessage back;
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back.news == m.news);
-    m.news.front().kind = K(uint8_t(K::week) + 1);
+    m.news.front().kind = K(uint8_t(K::hunt) + 1);
     EXPECT_TRUE(!decode(encode(m), back));
 }
 

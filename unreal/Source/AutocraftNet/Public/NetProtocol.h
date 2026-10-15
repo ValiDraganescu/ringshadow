@@ -9,13 +9,15 @@
 // Welcome (reliable, the first message after connected), Snapshot
 // (unreliable, NetSnapshot.h), Event (reliable), Reply (reliable),
 // RegionChange and World (reliable), Progress (reliable, a world's pilot's
-// skill tree), Standings (reliable, the realm week's, Standings.h). A Welcome or a RegionChange that
+// skill tree), Standings (reliable, the realm week's, Standings.h), Hunt
+// (reliable, the realm's hunt, Hunt.h). A Welcome or a RegionChange that
 // carries a region file too large for one reliable message goes on the bulk
 // channel.
 #pragma once
 
 #include "AutocraftNetApi.h"
 #include "AwayReport.h"
+#include "Hunt.h"
 #include "Standings.h"
 #include "NetBitStream.h"
 
@@ -54,6 +56,7 @@ enum class MessageType : uint8_t {
     join = 10,
     progress = 11,
     standings = 12,
+    hunt = 13,
 };
 
 /// The type of a message, or nil when it is none of ours.
@@ -531,12 +534,15 @@ struct RequestMessage {
     /// "Mercenaries"): hire one at the realm's Citadel (where it unloads),
     /// dismiss mercenary `merc`, or send it to deposit field `field` of
     /// region `region` (a world region id; `ProgressMessage::MercField`).
+    /// N4: `guard` hires a guard (a miner that answers the hunt), and
+    /// `role` makes mercenary `merc` a guard or a miner again.
     struct Merc {
-        enum class Act : uint8_t { hire, dismiss, assign };
+        enum class Act : uint8_t { hire, dismiss, assign, role };
         Act act = Act::hire;
         uint32_t merc = 0;
         std::string region;
         int64_t field = 0;
+        bool guard = false;
         bool operator==(const Merc&) const = default;
     };
     /// D3: placed turret `turret` (an AA tower or a gatling gun of the
@@ -554,14 +560,19 @@ struct RequestMessage {
         uint8_t kind = 0;
         bool operator==(const StartProject&) const = default;
     };
+    /// N4: call THE HUNT on the Matriarch, free, at the realm's Citadel
+    /// (where it unloads); once a world day realm-wide (WorldHunt.cpp).
+    struct CallHunt {
+        bool operator==(const CallHunt&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
     /// 14, Use 15, MissionAsk 16 (protocol 16), UpgradeCitadel 17 (protocol
     /// 20; kept for it since 18), Merc 18 (protocol 19), UpgradeTurret 19
-    /// (protocol 21), StartProject 20 (protocol 29).
+    /// (protocol 21), StartProject 20 (protocol 29), CallHunt 21 (protocol 35).
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject>
+                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt>
         what;
     bool operator==(const RequestMessage&) const = default;
 };
@@ -772,8 +783,15 @@ struct ProgressMessage {
     /// S4: `week`, to every human on line when the realm week ends: "top"
     /// (`by`: its top hauler's callsign, `value`: the ore), "none" (nobody
     /// hauled).
+    ///
+    /// N4: `hunt`, to every human on line: "called/<region name>" (`by`: the
+    /// caller), "gathered/<region name>" (`by`: the caller, `value`: the
+    /// party at the ring), "charge/<region name>" (`value`: the party going
+    /// in), "won/<region name>" (`by`: her hardest hitter, `value`: the
+    /// fighters), "failed/<region name>" (`value`: 1 the party fell, 0 the
+    /// time ran out). Hunt.h words them.
     enum class NewsKind : uint8_t { level, region, pad, feat, blueprint, chip, reset, site, contract, made, researched, built, mission,
-                                    merc, upgraded, matriarch, goal, canyon, frontier, project, week };
+                                    merc, upgraded, matriarch, goal, canyon, frontier, project, week, hunt };
     struct News {
         NewsKind kind = NewsKind::level;
         std::string id;
@@ -924,6 +942,10 @@ struct ProgressMessage {
         double downUntil = 0;
         int64_t delivered = 0;
         int64_t unit = 0;
+        /// N4: a guard (answers the hunt), and answering one now (on its
+        /// way to the ring, at it, in the fight, or back to its field).
+        bool guard = false;
+        bool hunting = false;
         bool operator==(const Merc&) const = default;
     };
     std::vector<Merc> mercs;
@@ -1080,6 +1102,7 @@ AUTOCRAFTNET_API std::vector<uint8_t> encode(const ReplyMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const JoinMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const ProgressMessage& m);
 AUTOCRAFTNET_API std::vector<uint8_t> encode(const StandingsMessage& m);
+AUTOCRAFTNET_API std::vector<uint8_t> encode(const HuntMessage& m);
 /// As many Event messages as the events need, each within a reliable
 /// message's size.
 AUTOCRAFTNET_API std::vector<std::vector<uint8_t>> encodeEvents(int64_t serverTick, const std::vector<GameEvent>& events);
@@ -1095,6 +1118,7 @@ AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, ReplyMessage& ou
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, JoinMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, StandingsMessage& out);
+AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, HuntMessage& out);
 AUTOCRAFTNET_API bool decode(const std::vector<uint8_t>& bytes, EventMessage& out);
 
 // MARK: - Bits the messages share

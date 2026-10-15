@@ -312,6 +312,11 @@ void WorldMap::queenHit(size_t r, const Simulation::BugHit& h) {
         if (const auto by = builtBy_[r].find(h.shooter); by != builtBy_[r].end())
             for (const auto& [pilot, p] : pilots_)
                 if (!p.key.empty() && p.key == by->second) who = pilot;
+    // N4: a mercenary's hits count to its hirer on line, as its defences'.
+    if (!who)
+        for (const auto& [pilot, p] : pilots_)
+            for (const PilotState::Merc& m : p.mercs)
+                if (m.unit == h.shooter && mercIn(m) == r) who = pilot;
     if (who && h.hp > 0) nest_.damage[*who] += h.hp;
     if (h.kill) queenDown(r);
 }
@@ -330,7 +335,7 @@ void WorldMap::queenDown(size_t r) {
     double total = 0;
     for (const auto& [pilot, d] : n.damage) total += d;
     const std::vector<StructureKind> rare = rareBlueprints();
-    std::string top;
+    std::string top, topKey;
     double most = 0;
     int64_t fighters = 0;
     for (const auto& [pilot, d] : n.damage) {
@@ -340,6 +345,7 @@ void WorldMap::queenDown(size_t r) {
         if (d > most) {
             most = d;
             top = callsign(p->key);
+            topKey = p->key;
         }
         const double share = std::max(d / std::max(1.0, total), Matriarch::rewardFloor);
         const int64_t ore = std::llround(double(Matriarch::rewardOre) * share);
@@ -357,6 +363,10 @@ void WorldMap::queenDown(size_t r) {
         pushProgress(pilot);
     }
     n.damage.clear();
+    // S4: she counts as a bug felled to her hardest hitter.
+    if (!topKey.empty()) standNote(topKey, &Standing::bugs, 1);
+    // N4: a hunt on is won.
+    huntEnd(true, false, top, fighters);
     // The whole world hears it.
     for (auto& [pilot, p] : pilots_) p.news.push_back(News{NewsKind::matriarch, "down", 0, fighters, top});
     awayNoteAll(net::AwayRow{0, net::AwayKind::queenDown, top, "", world_->regions[r].file.name, fighters});

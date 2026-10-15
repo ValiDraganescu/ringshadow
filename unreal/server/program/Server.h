@@ -132,6 +132,8 @@ private:
         std::optional<net::ProgressMessage> told;
         /// S4: the standings it was last told.
         std::optional<net::StandingsMessage> standingsTold;
+        /// N4: the hunt as last told.
+        std::optional<net::HuntMessage> huntTold;
     };
 
     void handle(const net::Event& e, double now);
@@ -148,6 +150,7 @@ private:
     void sendProgress(net::ConnectionId c, Client& client);
     /// S4: the realm week's standings when they changed (at most once a second).
     void sendStandings(net::ConnectionId c, Client& client);
+    void sendHunt(net::ConnectionId c, Client& client);
     void statsLine(double now);
     void log(const std::string& line) const;
     /// A log line for each starfall told and landed.

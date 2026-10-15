@@ -87,7 +87,11 @@ TEST(goals_chain_and_pay) {
     const auto& chain = WorldGoals::chain();
     EXPECT_TRUE(chain.size() >= size_t(14));
     EXPECT_TRUE(std::string(chain.front().key) == "derrick");
-    EXPECT_TRUE(std::string(chain.back().key) == "matriarch");
+    EXPECT_TRUE(std::string(chain.back().key) == "spacedock");
+    // N4: "Bring Her Down" at level 20, between the Foundry's and the Lab's.
+    ASSERT_TRUE(WorldGoals::find("matriarch") != nullptr);
+    EXPECT_EQ(WorldGoals::find("matriarch")->level, int64_t(20));
+    EXPECT_TRUE(std::string(WorldGoals::find("matriarch")->title) == "Bring Her Down");
     for (const auto& e : chain) {
         EXPECT_TRUE(WorldGoals::find(e.key) == &e);
         EXPECT_TRUE(*e.title && *e.pitch && *e.why && *e.hint);
@@ -300,6 +304,15 @@ TEST(goals_the_foundry_and_the_lab_lead_to_the_rig_screen) {
     second(w);
     EXPECT_EQ(paid(w.takeNews(me), &id), 1);
     EXPECT_TRUE(id == "fit");
+    // N4: at level 20 the chain leads to her nest and THE HUNT first.
+    ASSERT_TRUE(goalKey(w) == "matriarch");
+    std::printf("  %s\n", goal(w)->pitch.c_str());
+    EXPECT_TRUE(goal(w)->title == "Bring Her Down");
+    EXPECT_TRUE(goal(w)->pitch.find("She's in Slag Pockets") != std::string::npos);
+    EXPECT_TRUE(goal(w)->pitch.find("Call THE HUNT on the Citadel's REALM tab") != std::string::npos);
+    EXPECT_TRUE(goal(w)->hint == "H  AT A CITADEL  ·  REALM  ·  CALL THE HUNT  ·  SLAG POCKETS");
+    EXPECT_TRUE(goal(w)->marked);
+    w.devGoal("goal pass matriarch");
     // The Lab is up (the dev rig's): passed unpaid on the way; research Mk II.
     ASSERT_TRUE(goalKey(w) == "research");
     std::printf("  %s\n", goal(w)->pitch.c_str());

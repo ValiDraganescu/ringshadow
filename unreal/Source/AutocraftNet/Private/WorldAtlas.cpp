@@ -310,6 +310,11 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
             // S4: its rank this week and its leading stat.
             if (in.standings && who)
                 if (const auto line = standingLineOf(*in.standings, who->callsign, true)) it.lines.push_back(*line);
+            // N4: on the hunt.
+            if (in.hunt && who && (in.hunt->state == HuntMessage::State::gathering || in.hunt->state == HuntMessage::State::assault))
+                for (const HuntHunter& h : in.hunt->party)
+                    if (h.kind == HuntHunter::Kind::frontier && h.name == who->callsign)
+                        it.lines.push_back(h.down ? "On the hunt · down" : h.there ? "On the hunt · at the ring" : "On the hunt · on the way");
             it.paint = who ? who->paint : 2;
             out.push_back(std::move(it));
         }
@@ -516,6 +521,38 @@ std::vector<Item> items(const Input& in, const std::vector<Place>& places) {
         it.lines = z.lines;
         out.push_back(std::move(it));
     }
+    // N4: the hunt's ring round her nest, and the guards and the caller on it.
+    if (in.hunt && in.hunt->region && (in.hunt->state == HuntMessage::State::gathering || in.hunt->state == HuntMessage::State::assault))
+        if (const Place* p = placeOf(places, *in.hunt->region)) {
+            const HuntMessage& h = *in.hunt;
+            Item it;
+            it.kind = Kind::hunt;
+            it.region = p->index;
+            it.at = p->fromCells(Vec2(h.x, h.z));
+            it.radius = h.ring;
+            it.flag = h.state == HuntMessage::State::assault;
+            it.title = "THE HUNT · " + std::string(it.flag ? "THE ASSAULT" : "GATHERING");
+            it.lines = {huntLine(h, in.sky ? in.sky->time : h.calledAt), "Called by " + h.caller};
+            out.push_back(std::move(it));
+            for (const HuntHunter& x : h.party) {
+                if (x.kind == HuntHunter::Kind::frontier || !x.region) continue;
+                const Place* q = placeOf(places, *x.region);
+                if (!q) continue;
+                Item m;
+                m.kind = Kind::hunter;
+                m.region = q->index;
+                m.at = q->fromCells(Vec2(x.x, x.z));
+                m.flag = x.there;
+                m.own = x.kind == HuntHunter::Kind::human;
+                std::string name = x.name;
+                for (char& c : name) c = char(std::toupper(static_cast<unsigned char>(c)));
+                m.title = (x.kind == HuntHunter::Kind::merc ? "GUARD · " : "CALLER · ") + name;
+                m.lines = {x.kind == HuntHunter::Kind::merc ? x.owner + "'s mercenary" : std::string("Called THE HUNT"),
+                           x.down ? "Down" : x.there ? "At the ring" : "On the way"};
+                m.key = x.name;
+                out.push_back(std::move(m));
+            }
+        }
     std::stable_sort(out.begin(), out.end(), [](const Item& a, const Item& b) { return a.kind < b.kind; });
     return out;
 }

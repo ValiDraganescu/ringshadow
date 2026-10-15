@@ -105,7 +105,7 @@ bool WorldMap::decodeAway(const std::string& text, PilotState& p) const {
         for (const json& j : root["rows"]) {
             if (!j.is_object()) continue;
             const int kind = j.value("kind", -1);
-            if (kind < 0 || kind > int(net::AwayKind::week)) continue;
+            if (kind < 0 || kind > int(net::AwayKind::hunt)) continue;
             net::AwayRow r;
             r.at = j.value("at", 0.0);
             r.kind = net::AwayKind(kind);

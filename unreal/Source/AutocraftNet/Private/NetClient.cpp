@@ -61,6 +61,8 @@ uint32_t Client::abandonMission(uint32_t mission) { return request(RequestMessag
 uint32_t Client::merc(const RequestMessage::Merc& ask) { return request(ask); }
 uint32_t Client::upgradeCitadel(DefenceStat stat) { return request(RequestMessage::UpgradeCitadel{stat}); }
 uint32_t Client::startProject(uint8_t kind) { return request(RequestMessage::StartProject{kind}); }
+
+uint32_t Client::callHunt() { return request(RequestMessage::CallHunt{}); }
 uint32_t Client::upgradeTurret(int64_t turret, DefenceStat stat) { return request(RequestMessage::UpgradeTurret{turret, stat}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
@@ -130,6 +132,11 @@ void Client::message(const std::vector<uint8_t>& data) {
     case MessageType::standings: {
         StandingsMessage m;
         if (decode(data, m)) standings_ = std::move(m);
+        return;
+    }
+    case MessageType::hunt: {
+        HuntMessage m;
+        if (decode(data, m)) hunt_ = std::move(m);
         return;
     }
     case MessageType::snapshot: {

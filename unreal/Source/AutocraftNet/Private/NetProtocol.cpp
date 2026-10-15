@@ -249,7 +249,7 @@ void appendBits(BitWriter& w, const uint8_t* src, size_t from, size_t bits) {
 std::optional<MessageType> messageType(const std::vector<uint8_t>& message) {
     if (message.empty()) return std::nullopt;
     const uint8_t t = message[0];
-    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::standings)) return std::nullopt;
+    if (t < uint8_t(MessageType::welcome) || t > uint8_t(MessageType::hunt)) return std::nullopt;
     return static_cast<MessageType>(t);
 }
 
@@ -846,6 +846,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeVarint(w, p->merc);
         writeString(w, p->region);
         writeSigned(w, p->field);
+        w.writeBool(p->guard);
     }
     if (const auto* p = std::get_if<RequestMessage::UpgradeTurret>(&m.what)) {
         writeSigned(w, p->turret);
@@ -977,11 +978,12 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
     case 18: {
         RequestMessage::Merc p;
         const uint64_t act = r.readBits(2);
-        if (act > uint64_t(RequestMessage::Merc::Act::assign)) return false;
+        if (act > uint64_t(RequestMessage::Merc::Act::role)) return false;
         p.act = static_cast<RequestMessage::Merc::Act>(act);
         p.merc = static_cast<uint32_t>(readVarint(r));
         if (!readString(r, p.region)) return false;
         p.field = readSigned(r);
+        p.guard = r.readBool();
         m.what = p;
         break;
     }
@@ -998,6 +1000,7 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         m.what = p;
         break;
     }
+    case 21: m.what = RequestMessage::CallHunt{}; break;
     default: return false;
     }
     return r.ok();
@@ -1146,6 +1149,8 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         codec::kMs.write(w, x.downUntil);
         writeSigned(w, x.delivered);
         writeSigned(w, x.unit);
+        w.writeBool(x.guard);
+        w.writeBool(x.hunting);
     }
     writeVarint(w, m.mercFields.size());
     for (const auto& f : m.mercFields) {
@@ -1397,6 +1402,8 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         codec::kMs.read(r, x.downUntil);
         x.delivered = readSigned(r);
         x.unit = readSigned(r);
+        x.guard = r.readBool();
+        x.hunting = r.readBool();
         m.mercs.push_back(std::move(x));
     }
     const uint64_t fields = readVarint(r);
@@ -1453,7 +1460,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         for (AwayRow& row : a.rows) {
             row.at = readDouble(r);
             const uint64_t kind = r.readBits(4);
-            if (kind > uint64_t(AwayKind::week)) return false;
+            if (kind > uint64_t(AwayKind::hunt)) return false;
             row.kind = static_cast<AwayKind>(kind);
             if (!readString(r, row.who) || !readString(r, row.what) || !readString(r, row.where)) return false;
             row.value = readSigned(r);
@@ -1465,7 +1472,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     for (uint64_t i = 0; i < news; i++) {
         ProgressMessage::News n;
         const uint64_t kind = r.readBits(5);
-        if (kind > uint64_t(ProgressMessage::NewsKind::week)) return false;
+        if (kind > uint64_t(ProgressMessage::NewsKind::hunt)) return false;
         n.kind = static_cast<ProgressMessage::NewsKind>(kind);
         if (!readString(r, n.id)) return false;
         codec::Fixed{1000}.read(r, n.xp);
@@ -1518,6 +1525,61 @@ bool decode(const std::vector<uint8_t>& bytes, StandingsMessage& m) {
         const uint64_t you = readVarint(r);
         if (you >= rows) return false;
         m.you = int64_t(you);
+    }
+    return r.ok();
+}
+
+std::vector<uint8_t> encode(const HuntMessage& m) {
+    BitWriter w = start(MessageType::hunt);
+    w.writeBits(uint64_t(m.state), 3);
+    writeString(w, m.caller);
+    w.writeBool(m.region.has_value());
+    if (m.region) writeVarint(w, uint64_t(std::max<int64_t>(0, *m.region)));
+    writeString(w, m.regionName);
+    for (const double v : {m.x, m.z, m.ring, m.calledAt, m.gatherEnds, m.chargedAt, m.failsAt, m.endedAt, m.nextCall}) writeDouble(w, v);
+    writeString(w, m.refusal);
+    writeVarint(w, m.party.size());
+    for (const HuntHunter& h : m.party) {
+        w.writeBits(uint64_t(h.kind), 2);
+        writeString(w, h.name);
+        writeString(w, h.owner);
+        writeSigned(w, h.paint);
+        w.writeBool(h.region.has_value());
+        if (h.region) writeVarint(w, uint64_t(std::max<int64_t>(0, *h.region)));
+        writeDouble(w, h.x);
+        writeDouble(w, h.z);
+        w.writeBool(h.there);
+        w.writeBool(h.down);
+    }
+    return w.bytes();
+}
+
+bool decode(const std::vector<uint8_t>& bytes, HuntMessage& m) {
+    BitReader r(bytes.data(), bytes.size());
+    if (!open(bytes, MessageType::hunt, r)) return false;
+    m = HuntMessage{};
+    const uint64_t state = r.readBits(3);
+    if (state > uint64_t(HuntMessage::State::failed)) return false;
+    m.state = static_cast<HuntMessage::State>(state);
+    if (!readString(r, m.caller)) return false;
+    if (r.readBool()) m.region = int64_t(readVarint(r));
+    if (!readString(r, m.regionName)) return false;
+    for (double* v : {&m.x, &m.z, &m.ring, &m.calledAt, &m.gatherEnds, &m.chargedAt, &m.failsAt, &m.endedAt, &m.nextCall}) *v = readDouble(r);
+    if (!readString(r, m.refusal)) return false;
+    const uint64_t party = readVarint(r);
+    if (party > kHuntPartyMost || !r.ok()) return false;
+    m.party.assign(size_t(party), {});
+    for (HuntHunter& h : m.party) {
+        const uint64_t kind = r.readBits(2);
+        if (kind > uint64_t(HuntHunter::Kind::human)) return false;
+        h.kind = static_cast<HuntHunter::Kind>(kind);
+        if (!readString(r, h.name) || !readString(r, h.owner)) return false;
+        h.paint = int32_t(readSigned(r));
+        if (r.readBool()) h.region = int64_t(readVarint(r));
+        h.x = readDouble(r);
+        h.z = readDouble(r);
+        h.there = r.readBool();
+        h.down = r.readBool();
     }
     return r.ok();
 }

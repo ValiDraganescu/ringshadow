@@ -45,9 +45,9 @@ TEST(progress_carries_the_away_report_once) {
     ASSERT_TRUE(back.away.has_value());
     EXPECT_TRUE(*back.away == *m.away);
     // A kind past the last is refused.
-    m.away->rows[0].kind = AwayKind(uint8_t(AwayKind::week) + 1);
+    m.away->rows[0].kind = AwayKind(uint8_t(AwayKind::hunt) + 1);
     EXPECT_TRUE(!decode(encode(m), back));
-    EXPECT_EQ(kProtocolVersion, uint16_t(34));
+    EXPECT_EQ(kProtocolVersion, uint16_t(35));
 }
 
 TEST(away_lines_say_what_the_rows_hold) {

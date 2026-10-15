@@ -658,6 +658,7 @@ void WorldMap::step() {
     canyonsStep();
     projectsStep();
     standingsStep();
+    huntStep();
     respawns();
     rigs();
     landingPadsChanged();
@@ -696,6 +697,8 @@ void WorldMap::idle(double seconds) {
     canyonsStep();
     projectsStep();
     standingsStep();
+    // N4: a hunt with nobody on line runs out on the clock.
+    huntStep();
 }
 
 double WorldMap::catchUp(double seconds) {
@@ -705,6 +708,7 @@ double WorldMap::catchUp(double seconds) {
     // S4: a week that ended while the world was down ends with what it
     // counted; the gap's work counts to the week now.
     standingsStep();
+    huntStep();
     sites();
     contracts();
     goals();

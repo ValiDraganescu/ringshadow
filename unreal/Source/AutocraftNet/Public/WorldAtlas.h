@@ -107,6 +107,10 @@ enum class Kind : uint8_t {
     /// A frontier pilot the server runs (P1): its callsign, habit, level and
     /// what it is doing; in its paint (`paint`).
     frontier,
+    /// N4: the hunt's ring round her nest while a hunt is on (`flag`: the
+    /// assault), and a guard mercenary or the caller on the hunt.
+    hunt,
+    hunter,
 };
 
 struct Item {
@@ -186,6 +190,8 @@ struct Input {
     std::vector<ZoneMark> zones;
     /// S4: the realm week's standings (a pilot's rank line in its tooltip).
     const StandingsMessage* standings = nullptr;
+    /// N4: the realm's hunt (its ring and party while one is on).
+    const HuntMessage* hunt = nullptr;
 };
 
 /// Whether pad `pad` of region `region` (indices in the World message) may be

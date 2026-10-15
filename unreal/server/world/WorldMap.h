@@ -370,6 +370,23 @@ struct WorldNest {
     static constexpr double roarTold = 4;
 };
 
+/// The hunt (N4, docs/mmorpg-play.md "The hunt"; WorldHunt.cpp): the
+/// Matriarch as the realm's raid, its numbers.
+struct WorldHunt {
+    /// The gathering: two minutes from the call; the hunt fails ten minutes
+    /// after the call if she still stands (world seconds: the world's clock
+    /// runs with the wall clock while the server runs).
+    static constexpr double gather = 120;
+    static constexpr double lasts = 600;
+    /// The ring round her nest, and how near its place on it a hunter is
+    /// there; a hunter's place on the ring every `spacing` cells.
+    static constexpr double ring = 30;  // Matriarch::nestRing
+    static constexpr double there = 4;
+    static constexpr double spacing = 6;
+    /// A guard holding the ring fights a bug within this many cells.
+    static constexpr double guard = 10;
+};
+
 /// The Brood's director in a world (docs/creatures.md, "Where they come
 /// from"; WorldBrood.cpp): its numbers.
 struct WorldBrood {
@@ -1227,7 +1244,10 @@ public:
     /// fee from the wallet; it starts at the nearest field to the Citadel
     /// with ore. Refused below level 5, at the limit, short of the fee, and
     /// with no field. The reason when refused.
-    std::optional<std::string> hireMerc(PilotId pilot);
+    std::optional<std::string> hireMerc(PilotId pilot, bool guard = false);
+    /// N4: makes one a guard (it answers the hunt) or a miner again,
+    /// anywhere; a guard on a hunt finishes it.
+    std::optional<std::string> mercRole(PilotId pilot, uint32_t merc, bool guard);
     /// Lets one go (no refund), anywhere.
     std::optional<std::string> dismissMerc(PilotId pilot, uint32_t merc);
     /// Sends one to field `field` of region `region` (a world region id;
@@ -1248,6 +1268,10 @@ public:
         double owed = 0;
         double downUntil = 0;
         int64_t delivered = 0;
+        /// N4: a guard; answering a hunt; the region its unit is in.
+        bool guard = false;
+        bool hunting = false;
+        size_t in = 0;
     };
     /// The pilot's mercenaries, on line or off (by key).
     std::vector<MercView> mercs(PilotId pilot) const;
@@ -1404,6 +1428,65 @@ public:
     /// (the week ends S seconds from now), `list`. What it did, one line.
     std::string devWeek(const std::string& line);
 
+    // MARK: The hunt (N4, docs/mmorpg-play.md "The hunt"; WorldHunt.cpp)
+
+    /// The realm's hunt on the Matriarch: called by a human (free, once a
+    /// world day realm-wide); the frontier defenders and the guard
+    /// mercenaries (`party`, chosen at the call) walk to their places on
+    /// the ring round her nest, or fly the Dropship between the realm's
+    /// pads, and hold; at `WorldHunt::gather` seconds, or when the caller
+    /// steps inside the ring if later, they go in. Her fall (N3's, her pay
+    /// and her return as they are) wins it; the party fallen or
+    /// `WorldHunt::lasts` seconds fail it. Saved with the world (schema 25).
+    struct Hunt {
+        using State = net::HuntMessage::State;
+        State state = State::none;
+        /// The caller's key and callsign.
+        std::string callerKey;
+        std::string caller;
+        /// World clock: the call, the charge, the end (won or failed).
+        double calledAt = 0;
+        double chargedAt = 0;
+        double endedAt = 0;
+        /// The world day of the last call (`contractDay`; none yet: min).
+        int64_t day = INT64_MIN;
+        /// Her nest: its region and centre.
+        size_t region = 0;
+        Vec2 at{0, 0};
+        /// One of the party: a frontier pilot's key ("frontier:…") or a
+        /// mercenary's ("merc:<hirer key>:<id>"), its place on the ring, at
+        /// it (since world clock `reached`), fallen in the hunt.
+        struct Member {
+            std::string key;
+            Vec2 slot{0, 0};
+            bool there = false;
+            double reached = -1;
+            bool fell = false;
+            /// A frontier pilot down at the call: back at world clock
+            /// `downAtCall` (a later fall is the hunt's).
+            double downAtCall = 0;
+            bool operator==(const Member&) const = default;
+        };
+        std::vector<Member> party;
+        bool gatheredTold = false;
+        bool operator==(const Hunt&) const = default;
+    };
+    const Hunt& hunt() const { return hunt_; }
+    /// Why the pilot with key `key` can't call the hunt now (nil: it can,
+    /// at the realm's Citadel): a frontier pilot never; none while she is
+    /// down, out on a siege, a hunt is on, or the day's was called.
+    std::optional<std::string> huntRefusal(const std::string& key) const;
+    /// THE HUNT called by pilot `pilot` at the realm's Citadel (where it
+    /// unloads); why not.
+    std::optional<std::string> callHunt(PilotId pilot);
+    /// The hunt as pilot `pilot` is told it (nil: not a world, or not
+    /// joined).
+    std::optional<net::HuntMessage> huntMessage(PilotId pilot) const;
+    /// Dev and shots (`hunt …` lines): `call` (the first pilot calls it,
+    /// anywhere), `gathered` (the gathering's two minutes over now), `fail`,
+    /// `open` (the day's call open again), `list`. What it did, one line.
+    std::string devHunt(const std::string& line);
+
     /// Wall-clock ms the last `step` took over all the regions.
     double lastStepMs() const { return lastStepMs_; }
 
@@ -1531,6 +1614,13 @@ private:
             int64_t delivered = 0;
             /// Not saved: the world's clock it started drilling.
             std::optional<double> drilling;
+            /// N4: a guard (mines as a miner until a hunt is called, then
+            /// answers it); answering one now, or walking back to its field
+            /// after; the region its unit is in while away (nil: `region`).
+            bool guard = false;
+            bool hunting = false;
+            bool homeward = false;
+            std::optional<size_t> in;
         };
         std::vector<Merc> mercs;
         int64_t mercDay = 0;
@@ -1796,6 +1886,12 @@ private:
     /// A mercenary's unit beside the realm depot nearest its field (with
     /// its load); false: no depot there.
     bool mercUnit(PilotState::Merc& m);
+    /// N4: the region a mercenary's unit is in (away on a hunt: there).
+    static size_t mercIn(const PilotState::Merc& m) { return m.in.value_or(m.region); }
+    /// N4: a guard's walk to its place on the hunt's ring, its part in the
+    /// assault, and its walk back to its field after; through the openings
+    /// on foot, as any Prospector.
+    void mercTrek(PilotState& p, PilotState::Merc& m);
     /// A region's realm depot nearest `at` (its centre), and the field's
     /// centre and the ore left in it.
     std::optional<Vec2> depot(size_t r, Vec2 at) const;
@@ -2030,6 +2126,24 @@ private:
     std::string standingName(const std::string& key) const;
     std::string encodeStandings() const;
     bool decodeStandings(const std::string& json);
+    /// N4: the hunt, each step (its gathering, its charge, its failure),
+    /// its end (`won`: her fall; else `fellParty`: the party fell, or the
+    /// time ran out), a frontier defender's part in it (nil: none), a guard
+    /// mercenary's walk to the ring and back (WorldMercs.cpp).
+    Hunt hunt_;
+    void huntStep();
+    /// The hunt called by the pilot with key `key` (its rules checked).
+    void huntStart(const std::string& key);
+    void huntEnd(bool won, bool fellParty, const std::string& top, int64_t fighters);
+    std::optional<FrontierPlan> huntPlan(const FrontierPilot& f) const;
+    const Hunt::Member* huntMember(const std::string& key) const;
+    /// A hunt is on (gathering or in the assault).
+    bool huntOn() const { return hunt_.state == Hunt::State::gathering || hunt_.state == Hunt::State::assault; }
+    /// The ground point in region `next` across the opening at `out` (a
+    /// point at region `r`'s edge, `frontierStepToward`'s).
+    Vec2 farSide(size_t r, size_t next, Vec2 out) const;
+    std::string encodeHunt() const;
+    bool decodeHunt(const std::string& json);
     /// X2: the world's clock and realm wallet when the save was loaded
     /// (the start of the time away of a pilot saved on line); -1: not loaded.
     double loadedAt_ = -1;

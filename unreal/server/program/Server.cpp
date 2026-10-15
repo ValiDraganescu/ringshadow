@@ -197,6 +197,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devCanyon(line));
             continue;
         }
+        // The hunt (WorldMap::devHunt): `hunt call|gathered|fail|open|list`.
+        if (line.rfind("hunt", 0) == 0) {
+            said.push_back(world_.devHunt(line));
+            continue;
+        }
         // The realm week (WorldMap::devWeek): `week end|left S|list`.
         if (line.rfind("week", 0) == 0) {
             said.push_back(world_.devWeek(line));
@@ -518,14 +523,21 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
             what = "start the realm's " + std::string(RealmProject::title(kind));
             why = world_.startProject(pilot, kind);
         }
+    } else if (std::holds_alternative<net::RequestMessage::CallHunt>(m.what)) {
+        // N4: THE HUNT, free, once a world day realm-wide.
+        what = "call the hunt";
+        why = world_.callHunt(pilot);
     } else if (const auto* ut = std::get_if<net::RequestMessage::UpgradeTurret>(&m.what)) {
         what = "upgrade turret " + std::to_string(ut->turret) + "'s " + std::string(rawValue(ut->stat));
         why = world_.upgradeTurret(pilot, ut->turret, ut->stat);
     } else if (const auto* mc = std::get_if<net::RequestMessage::Merc>(&m.what)) {
         using Act = net::RequestMessage::Merc::Act;
         if (mc->act == Act::hire) {
-            what = "hire a mercenary";
-            why = world_.hireMerc(pilot);
+            what = mc->guard ? "hire a guard mercenary" : "hire a mercenary";
+            why = world_.hireMerc(pilot, mc->guard);
+        } else if (mc->act == Act::role) {
+            what = "make mercenary " + std::to_string(mc->merc) + (mc->guard ? " a guard" : " a miner");
+            why = world_.mercRole(pilot, mc->merc, mc->guard);
         } else if (mc->act == Act::dismiss) {
             what = "dismiss mercenary " + std::to_string(mc->merc);
             why = world_.dismissMerc(pilot, mc->merc);
@@ -573,6 +585,15 @@ void Server::sendStandings(net::ConnectionId c, Client& client) {
     client.standingsTold = std::move(m);
 }
 
+void Server::sendHunt(net::ConnectionId c, Client& client) {
+    // At most once a second, and only when it changed (N4).
+    if (client.huntTold && ticked_ % 60 != 0) return;
+    auto m = world_.huntMessage(client.pilot);
+    if (!m || (client.huntTold && *client.huntTold == *m)) return;
+    sendReliable(c, net::encode(*m));
+    client.huntTold = std::move(m);
+}
+
 void Server::join(net::ConnectionId c, Client& client, const std::vector<uint8_t>& data, double now) {
     net::JoinMessage m;
     if (client.seated || !net::decode(data, m)) return;
@@ -610,6 +631,7 @@ void Server::sendSnapshots(double now) {
         if (!client.seated) continue;
         sendProgress(c, client);
         sendStandings(c, client);
+        sendHunt(c, client);
         net::Snapshot s = world_.snapshot(client.pilot, options_.interest);
         if (!s.events.empty())
             for (const auto& bytes : net::encodeEvents(s.serverTick, s.events))

@@ -23,7 +23,8 @@ int rank(AwayKind k) {
     case AwayKind::held:
     case AwayKind::fallen: return 2;
     case AwayKind::queenDown:
-    case AwayKind::queenBack: return 3;
+    case AwayKind::queenBack:
+    case AwayKind::hunt: return 3;
     case AwayKind::frontier:
     case AwayKind::week: return 4;
     case AwayKind::projectStart:
@@ -76,6 +77,8 @@ std::string awayLine(const AwayRow& r) {
     case AwayKind::projectStart: return (r.who.empty() ? std::string("The realm") : r.who) + " started " + r.what;
     case AwayKind::projectEnd: return r.what + " ran its course";
     case AwayKind::week: return weekTopLine(r.who, r.value);
+    case AwayKind::hunt:
+        return (r.who.empty() ? std::string("A") : r.who + "'s") + " hunt" + in(r.where) + (r.what == "won" ? " brought her down" : " failed: she stands");
     }
     return r.what;
 }

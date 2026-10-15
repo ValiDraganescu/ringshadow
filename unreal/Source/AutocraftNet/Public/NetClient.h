@@ -97,6 +97,8 @@ public:
     uint32_t upgradeCitadel(DefenceStat stat);
     /// R2: start the realm project of `kind` (`RealmProject::Kind`).
     uint32_t startProject(uint8_t kind);
+    /// N4: THE HUNT called (`RequestMessage::CallHunt`).
+    uint32_t callHunt();
     /// D3: placed turret `turret` takes its next mark of `stat`, from the
     /// pilot's wallet (`RequestMessage::UpgradeTurret`).
     uint32_t upgradeTurret(int64_t turret, DefenceStat stat);
@@ -141,6 +143,8 @@ public:
     std::optional<AwayReport> away;
     /// S4: the realm week's standings, the newest (nil: none yet).
     const std::optional<StandingsMessage>& standings() const { return standings_; }
+    /// N4: the realm's hunt, the newest (nil: none told yet).
+    const std::optional<HuntMessage>& hunt() const { return hunt_; }
     /// Snapshot parts waiting for their region's mirror.
     static constexpr size_t kMaxWaiting = 64;
 
@@ -167,6 +171,7 @@ private:
     std::optional<WorldMessage> world_;
     std::optional<ProgressMessage> progress_;
     std::optional<StandingsMessage> standings_;
+    std::optional<HuntMessage> hunt_;
     int64_t visit_ = 0;
     std::deque<SnapshotPart> waiting_;
     std::deque<PilotInput> sent_;

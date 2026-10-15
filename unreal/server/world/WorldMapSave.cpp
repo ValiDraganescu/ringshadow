@@ -156,7 +156,7 @@ WorldSave WorldMap::save() const {
         }
         // Its mercenaries' units (H2), as its own.
         for (const PilotState::Merc& m : p.mercs)
-            if (m.unit) owned[m.region][*m.unit] = p.key;
+            if (m.unit) owned[mercIn(m)][*m.unit] = p.key;
         s.region = world_->regions[r].file.id;
         s.unit = unit;
         // Its progression; the strategy game's levels are not a world's
@@ -184,6 +184,7 @@ WorldSave WorldMap::save() const {
         if (f.unit && !f.travelTo && frontierUnitOf(f)) owned[f.region][*f.unit] = f.key;
     out.frontier = encodeFrontier();
     out.standings = encodeStandings();
+    out.hunt = encodeHunt();
     // R2: every kind that ever ran.
     for (int k = 0; k < RealmProject::count; k++) {
         const auto& pr = projects_[size_t(k)];
@@ -462,6 +463,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     loadedRealm_ = realm_;
     // S4: the week's standings (none before schema 24: the week starts now).
     if (!decodeStandings(save.standings)) problems.push_back("the week's standings do not read, the week starts again");
+    // N4: the hunt (none before schema 25: the day's call is open).
+    if (!decodeHunt(save.hunt)) problems.push_back("the hunt does not read, the day's call is open");
     return problems;
 }
 

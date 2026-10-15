@@ -130,7 +130,7 @@ bool WorldMap::mercUnit(PilotState::Merc& m) {
 
 // MARK: - Hiring
 
-std::optional<std::string> WorldMap::hireMerc(PilotId pilot) {
+std::optional<std::string> WorldMap::hireMerc(PilotId pilot, bool guard) {
     PilotState* p = pilotState(pilot);
     if (!p) return "Not in a world";
     const int64_t level = p->progress.level();
@@ -170,6 +170,7 @@ std::optional<std::string> WorldMap::hireMerc(PilotId pilot) {
     m.name = names[pick];
     m.region = r;
     m.field = *field;
+    m.guard = guard;
     mercUnit(m);
     // Its first wage at the next dawn.
     if (p->mercs.empty()) p->mercDay = contractDay(clock_);
@@ -184,8 +185,19 @@ std::optional<std::string> WorldMap::dismissMerc(PilotId pilot, uint32_t merc) {
     if (!p) return "Not in a world";
     const auto it = std::find_if(p->mercs.begin(), p->mercs.end(), [&](const PilotState::Merc& m) { return m.id == merc; });
     if (it == p->mercs.end()) return std::string("No such mercenary");
-    if (it->unit) regions_[it->region]->release(*it->unit);
+    if (it->unit) regions_[mercIn(*it)]->release(*it->unit);
     p->mercs.erase(it);
+    return std::nullopt;
+}
+
+std::optional<std::string> WorldMap::mercRole(PilotId pilot, uint32_t merc, bool guard) {
+    PilotState* p = pilotState(pilot);
+    if (!p) return "Not in a world";
+    const auto it = std::find_if(p->mercs.begin(), p->mercs.end(), [&](const PilotState::Merc& m) { return m.id == merc; });
+    if (it == p->mercs.end()) return std::string("No such mercenary");
+    // A guard on a hunt finishes it; the role counts from the next call.
+    it->guard = guard;
+    pushProgress(pilot);
     return std::nullopt;
 }
 
@@ -201,6 +213,7 @@ std::optional<std::string> WorldMap::assignMerc(PilotId pilot, uint32_t merc, st
     if (!depot(*r, fieldAt(*r, field))) return "No realm Citadel in " + name + " to haul to";
     if (fieldOre(*r, field) <= 0) return std::string("That field is mined out");
     PilotState::Merc& m = *it;
+    if (m.hunting || m.homeward || m.in) return m.name + " is away on the hunt: back at its field after";
     if (*r != m.region) {
         // Another region: there at once, at its Citadel, with its load.
         if (m.unit)
@@ -236,7 +249,7 @@ std::vector<WorldMap::MercView> WorldMap::mercs(PilotId pilot) const {
     if (it == pilots_.end()) return {};
     std::vector<MercView> out;
     for (const auto& m : it->second.mercs)
-        out.push_back(MercView{m.id, m.name, m.region, m.field, m.unit, m.owed, m.downUntil, m.delivered});
+        out.push_back(MercView{m.id, m.name, m.region, m.field, m.unit, m.owed, m.downUntil, m.delivered, m.guard, m.hunting, mercIn(m)});
     return out;
 }
 
@@ -247,7 +260,8 @@ std::vector<WorldMap::MercView> WorldMap::mercsOf(const std::string& key) const 
     if (const auto a = away_.find(key); a != away_.end()) p = &a->second;
     if (!p) return {};
     std::vector<MercView> out;
-    for (const auto& m : p->mercs) out.push_back(MercView{m.id, m.name, m.region, m.field, m.unit, m.owed, m.downUntil, m.delivered});
+    for (const auto& m : p->mercs)
+        out.push_back(MercView{m.id, m.name, m.region, m.field, m.unit, m.owed, m.downUntil, m.delivered, m.guard, m.hunting, mercIn(m)});
     return out;
 }
 
@@ -298,7 +312,7 @@ void WorldMap::mercWages(double at) {
                 }
                 // Unpaid: it leaves.
                 if (news) news->push_back(News{NewsKind::merc, "left", 0, wage, it->name});
-                if (it->unit) regions_[it->region]->release(*it->unit);
+                if (it->unit) regions_[mercIn(*it)]->release(*it->unit);
                 it = p.mercs.erase(it);
             }
             if (online && !p.flight) bankIn(p, p.region);
@@ -314,18 +328,26 @@ void WorldMap::mercsStep(double dt) {
     using Task = Unit::Task;
     auto steer = [&](PilotState& p, bool online) {
         for (PilotState::Merc& m : p.mercs) {
-            Simulation& sim = regions_[m.region]->simulation();
+            Simulation& sim = regions_[mercIn(m)]->simulation();
             GameState& st = sim.state;
             const auto i = m.unit ? sim.unitIndex(*m.unit) : std::nullopt;
             if (!i) {
                 // Fallen (or never placed): back at its depot at once, and at
-                // work after `downFor`.
+                // work after `downFor` (N4: out of the hunt, home).
                 if (m.unit) {
                     m.downUntil = clock_ + WorldMercs::downFor;
                     p.news.push_back(News{NewsKind::merc, "down", 0, int64_t(WorldMercs::downFor), m.name});
                 }
                 m.unit = std::nullopt;
+                m.in = std::nullopt;
+                m.hunting = m.homeward = false;
                 if (!mercUnit(m)) continue;
+                continue;
+            }
+            // N4: away on the hunt, or on its way back.
+            if (m.hunting || m.homeward || m.in) {
+                m.drilling = std::nullopt;
+                mercTrek(p, m);
                 continue;
             }
             Unit& u = st.units[size_t(*i)];
@@ -402,10 +424,10 @@ void WorldMap::mercsStep(double dt) {
         // Its unloads: out of the region's bank, into its pilot's wallet.
         for (PilotState::Merc& m : p.mercs) {
             if (!m.unit) continue;
-            for (const GameEvent& e : regions_[m.region]->lastEvents()) {
+            for (const GameEvent& e : regions_[mercIn(m)]->lastEvents()) {
                 const auto* d = e.as<GameEvent::Deposited>();
                 if (!d || d->unit != *m.unit || d->amount <= 0) continue;
-                Player& side = regions_[m.region]->simulation().state.players[0];
+                Player& side = regions_[mercIn(m)]->simulation().state.players[0];
                 (d->hydrogen ? side.hydrogen : side.ore) -= d->amount;
                 mercDelivered(p, online, m, d->amount);
                 m.cargo = 0;
@@ -422,6 +444,8 @@ void WorldMap::mercsStep(double dt) {
 void WorldMap::mercsBook(double from, double to) {
     auto work = [&](PilotState& p, bool online, double a, double b) {
         for (PilotState::Merc& m : p.mercs) {
+            // N4: away on the hunt: no work booked.
+            if (m.hunting || m.homeward || m.in) continue;
             Simulation& sim = regions_[m.region]->simulation();
             GameState& st = sim.state;
             const double start = std::max(a, m.downUntil);
@@ -498,6 +522,8 @@ void WorldMap::mercsTold(const PilotState& p, net::ProgressMessage& m) const {
         out.downUntil = x.downUntil > clock_ ? x.downUntil : 0;
         out.delivered = x.delivered;
         out.unit = x.unit.value_or(0);
+        out.guard = x.guard;
+        out.hunting = x.hunting || x.homeward || x.in.has_value();
         out.state = out.downUntil > 0                                          ? Merc::State::down
                     : !depot(x.region, fieldAt(x.region, x.field))            ? Merc::State::noDepot
                     : fieldOre(x.region, x.field) <= 0                         ? Merc::State::empty
@@ -529,7 +555,7 @@ void WorldMap::mercsTold(const PilotState& p, net::ProgressMessage& m) const {
     if (!p.flight) {
         auto tag = [&](const PilotState& q) {
             for (const auto& x : q.mercs)
-                if (x.unit && x.region == p.region) m.mercTags[*x.unit] = x.name;
+                if (x.unit && mercIn(x) == p.region) m.mercTags[*x.unit] = x.name;
         };
         for (const auto& [id, q] : pilots_) tag(q);
         for (const auto& [key, q] : away_) tag(q);
@@ -545,6 +571,11 @@ std::string WorldMap::encodeMercs(const PilotState& p) const {
         json j{{"id", m.id},       {"name", m.name},   {"region", world_->regions[m.region].file.id}, {"field", m.field},          {"owed", m.owed},
                {"down", m.downUntil}, {"cargo", m.cargo}, {"delivered", m.delivered}};
         if (m.unit) j["unit"] = *m.unit;
+        // N4: its role, and the hunt it is away on.
+        if (m.guard) j["guard"] = true;
+        if (m.hunting) j["hunting"] = true;
+        if (m.homeward) j["homeward"] = true;
+        if (m.in) j["in"] = world_->regions[*m.in].file.id;
         list.push_back(j);
     }
     return json{{"day", p.mercDay}, {"next", p.nextMerc}, {"away", p.mercAway}, {"list", list}}.dump();
@@ -570,6 +601,10 @@ bool WorldMap::decodeMercs(const std::string& text, PilotState& p) const {
         m.downUntil = j.value("down", 0.0);
         m.cargo = j.value("cargo", int64_t(0));
         m.delivered = j.value("delivered", int64_t(0));
+        m.guard = j.value("guard", false);
+        m.hunting = j.value("hunting", false);
+        m.homeward = j.value("homeward", false);
+        if (j.contains("in") && j["in"].is_string()) m.in = regionNamed(j["in"].get<std::string>());
         out.push_back(m);
     }
     p.mercs = std::move(out);

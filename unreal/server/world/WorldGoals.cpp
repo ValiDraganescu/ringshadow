@@ -92,6 +92,10 @@ const std::vector<WorldGoals::Entry>& WorldGoals::chain() {
          "Your {what} is in the stores, or will be soon: stand where you unload, J, and fit it.",
          "A module in the stores does nothing. Fitted, it works on every load from then on.",
          "AT A CITADEL OR HAB DOME  ·  J  ·  FIT IT"},
+        {"matriarch", 20, "Bring Her Down",
+         "She's in {what}, in her nest, the horde round her. Call THE HUNT on the Citadel's REALM tab: the realm's defenders and guards gather at her ring.",
+         "One call a day for the whole realm. Her rare blueprints, ore and MH are shared by the damage done; she's back three days after.",
+         "H  AT A CITADEL  ·  REALM  ·  CALL THE HUNT  ·  {what}"},
         {"lab", 25, "Raise the Lab",
          "Level 25 and the Lab's plans are open. It researches the marks the Foundry can't make yet.",
          "The Lab opens Mk II and up for every module.",
@@ -104,10 +108,6 @@ const std::vector<WorldGoals::Entry>& WorldGoals::chain() {
          "Level 35: Spacedock plans. The realm's ships start here, and so does the long way out.",
          "The Spacedock is the realm's yard: the biggest build on the frontier, one a realm.",
          "B  BUILD THE SPACEDOCK"},
-        {"matriarch", 35, "The Matriarch",
-         "She's in {what}, in her nest, and the horde with her. Bring friends and turrets; everyone who fights her gets a share.",
-         "The brood queen drops rare blueprints, ore and MH, shared by the damage done. She comes back after three days.",
-         "HUNT THE MATRIARCH  ·  {what}"},
     };
     return all;
 }

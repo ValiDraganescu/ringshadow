@@ -573,6 +573,8 @@ FrontierPlan WorldMap::defenderPlan(const FrontierPilot& f) const {
     const GameState& st = sim.state;
     const Vec2 at = frontierAt(f);
     FrontierPlan p;
+    // N4: the hunt called: to its ring, then in with the party.
+    if (auto h = huntPlan(f)) return *h;
     // A wave a human holds: there, and at its bugs.
     if (const Canyon* c = frontierCanyon(f)) {
         if (c->region != r) {
@@ -902,7 +904,8 @@ void WorldMap::frontierHit(size_t r, const Simulation::BugHit& h) {
         frontierEarn(f, Brood::xp(h.kind) * share * (f.unit == h.shooter ? 1.0 : defenceXpShare));
         if (h.kill) {
             f.kills += 1;
-            standNote(f.key, &Standing::bugs, 1);
+            // S4: the Matriarch counts to her hardest hitter (`queenDown`).
+            if (h.kind != UnitKind::matriarch) standNote(f.key, &Standing::bugs, 1);
         }
         for (Canyon& c : canyons_)
             if (c.region == r && c.bugs.count(h.bug) && h.hp > 0) c.frontierDamage[f.id] += h.hp;
