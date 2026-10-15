@@ -674,3 +674,8 @@ Design: [mmorpg.md](mmorpg.md), [networking.md](networking.md). Plan: [mmorpg-m1
 - I P1: tags float with no Prospector under them (p1-02) → check fog/LOD.
 - T P1 tag fix f229c49: tags only over units the pilot can see (TagSight); merc tags too.
 - T X1: M8 showreel blog post + X Article draft xd_dcf3cf44 (da1689b); user publishes.
+- T S3 done a43cd52: by day the whole region is seen; dusk eases to night sight.
+- N S3: nest noon 2022→3730 B/s, 29/29 told; fork 2090→4103 B/s; tick p99 0.25 ms.
+- N S3: frame p50 12.2–12.7 ms with or without daylight; GPU p50 11.7–12.2.
+- D S3: a leaving bug vanishes out of real sight or at the region's edge (manager accepts).
+- I P1 shot flaky: Of(miner) may pick another frontier miner than `here` brought; wt1.

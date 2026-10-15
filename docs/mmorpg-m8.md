@@ -124,7 +124,7 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | A1 | The radio (music) ducks very low while a mission narration plays, and comes back smoothly after | K2 | done dfdf8fd |
 | Q2 | Stability pass: the flaky checks fixed (N2/N3 shot timing, e2e fly race, CrossEdgeEast, LevelPick), the first-call ship stall, every shot set and flow rerun on the current build | F2 | done 5696092 |
 | V4 | The M8 showreel: a 60–90 s hidden-recorded clip of the realm under siege (the canyon waves and the Matriarch, the Dropship flight, the satellite map, the Brood, the Citadel) for the user and the blog | Z2, F2 | done 01ed934 |
-| S3 | Daylight sight: by day a pilot sees its whole region (no fog, every unit and building sent); dusk eases down to the night sight; snapshot size and frame time measured | Q2 | |
+| S3 | Daylight sight: by day a pilot sees its whole region (no fog, every unit and building sent); dusk eases down to the night sight; snapshot size and frame time measured | Q2 | done a43cd52 |
 | U1 | HUD declutter (from M7): one toast lane, Q/C/G clear of the pawn, compact contract panel, banners off the panels, no "CONTRACT DONE: CONTRACT" | | done 67d9241 |
 
 Each task is done when the three suites pass, its hidden-run pictures
