@@ -6,10 +6,18 @@
   <id>tag:ringshadow,2026-10-14:blog</id>
   <link rel="self" href="https://ringshadow.com/blog/feed.xml"/>
   <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/"/>
-  <updated>2026-10-15T04:00:00Z</updated>
+  <updated>2026-10-15T04:30:00Z</updated>
   <author><name>Ringshadow</name></author>
   <rights>Public domain (CC0 1.0)</rights>
 
+  <entry>
+    <title>The Fork: the first canyon to hold</title>
+    <id>tag:ringshadow,2026-10-15:blog/the-fork</id>
+    <link rel="alternate" type="text/html" href="https://ringshadow.com/blog/the-fork"/>
+    <published>2026-10-15T04:30:00Z</published>
+    <updated>2026-10-15T04:30:00Z</updated>
+    <summary>The first canyon: The Fork in Cold Fork, two winding arms from Brood tunnels to a prize of 36,000 ore and 6,000 MH, with 12 build spots on the rims for the turrets that will hold it.</summary>
+  </entry>
   <entry>
     <title>Valleys, not tiles: the regions reshaped</title>
     <id>tag:ringshadow,2026-10-15:blog/valleys</id>

@@ -8,7 +8,7 @@ Source: https://ringshadow.com/blog/defences
 
 Nothing on this page is in the game yet. It's what the agents started on tonight, and what I've asked for after it. The posts about each piece will come when it lands.
 
-Since landed: [the guns and their upgrades](https://ringshadow.com/blog/turrets), [the Matriarch](https://ringshadow.com/blog/matriarch), [the satellite map](https://ringshadow.com/blog/world-map) and [passages between regions](https://ringshadow.com/blog/passages).
+Since landed: [the guns and their upgrades](https://ringshadow.com/blog/turrets), [the Matriarch](https://ringshadow.com/blog/matriarch), [the satellite map](https://ringshadow.com/blog/world-map), [passages between regions](https://ringshadow.com/blog/passages) and [the first canyon](https://ringshadow.com/blog/the-fork).
 
 ![Concept painting of a gatling turret with a glowing furnace hopper on top, firing](https://ringshadow.com/blog/media/defences/01-gatling-forge.webp)
 

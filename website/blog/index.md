@@ -8,6 +8,14 @@ How the game is being made, as it happens: what landed, what it looks like, and 
 
 Follow it with the [Atom feed](https://ringshadow.com/blog/feed.xml).
 
+## The Fork: the first canyon to hold
+
+15 October 2026 · M8 · 8 pictures
+
+Two winding arms from Brood tunnels to a prize of 36,000 ore and 6,000 MH, and 12 spots on the rims for the guns. The waves come next.
+
+Read it: https://ringshadow.com/blog/the-fork
+
 ## Valleys, not tiles: the regions reshaped
 
 15 October 2026 · M8 · 10 pictures
