@@ -64,7 +64,8 @@ TEST(Defence_citadelTurretsHitGroundAndAir) {
     run(m, 0.6);
     EXPECT_TRUE(hurt(m, ground));
     EXPECT_TRUE(hurt(m, air));
-    const auto& guns = m.state.structure(c)->guns;
+    const std::optional<Structure> citadel = m.state.structure(c);
+    const auto& guns = citadel->guns;
     ASSERT_TRUE(guns.has_value());
     int64_t targets = 0;
     for (const CornerGun& g : *guns) targets += g.target ? 1 : 0;

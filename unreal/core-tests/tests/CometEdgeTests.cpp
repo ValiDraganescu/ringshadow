@@ -42,7 +42,8 @@ int64_t takeoffs(bool fastPaths) {
 } // namespace
 
 TEST(cometEdge_pathFromACliffFaceGoesOnNotBack) {
-    const NavGrid& nav = *Simulation(bare(1, 0, {}, {}, 1), highlands()).nav;
+    const Simulation sim(bare(1, 0, {}, {}, 1), highlands());
+    const NavGrid& nav = *sim.nav;
     ASSERT_TRUE(nav.cliff(onFace));
     ASSERT_TRUE(!nav.walkable(onFace));
     const auto way = nav.path(onFace, foe, 1, true);
