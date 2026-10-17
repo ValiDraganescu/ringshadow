@@ -288,6 +288,17 @@
 //   04 Cold Fork at noon, wave 10 out of the canyon's mouths: all of it told
 //   05 the same with `daylight off`
 //
+// -AcMmoShotsBench (with -AcMmoDevRig): the MMO bench (docs/perf.md), the
+// client's standard scenes, each settled, then timed -AcMmoBenchSeconds=S
+// (10) with FAcBenchMeter (AcBenchMeter.h) and logged as one `bench-result`
+// line (bench.py --mmo reads them; -AcBenchGpu adds `stat gpu`'s passes),
+// then its picture, DIR/NAME.png, to compare A with B:
+//   mmo-home-noon    Prospect Landing at noon, facing the pilot's Citadel
+//   mmo-home-night   the same at midnight: the lamps and the headlamp
+//   mmo-nest-noon    Slag Pockets at noon, 55 cells from the nest, her horde told
+//   mmo-fork-wave    Cold Fork at noon, wave 10 down The Fork, facing the nearest bug
+// The weather is the world's (-AcMmoWeather=clear for the standard runs).
+//
 // -AcMmoShotsR2 (with -AcMmoDevRig): realm projects (docs/mmorpg-play.md
 // "Realm projects"), DIR/r2-NN-moment.png:
 //   01 the realm-wide toast and the gold bar under the HUD's realm wallet
@@ -464,6 +475,8 @@
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
 #include "AcProgressHud.h"
+#include "AcBenchMeter.h"
+#include "Dom/JsonObject.h"
 #include "AcBrine.h"
 #include "AcCanyon.h"
 #include "AcShot.h"
@@ -650,6 +663,11 @@ namespace
 	TArray<double> S3Frames, S3Gpu;
 	double S3FrameAt = -1;
 	bool S3Set = false;
+	/// -AcMmoShotsBench: the scene's meter, its step (0 its lines, 1 settling,
+	/// 2 timed, 3 the stats shown, 4 hidden again) and when the step began.
+	FAcBenchMeter BenchMeter;
+	int32 BenchStep = 0;
+	double BenchAt = 0;
 	// -AcMmoShotsL1: when the skill points' goal was seen done.
 	double L1DoneAt = 0;
 	// -AcMmoShotsU1: when her roar began; the staged gun's id.
@@ -1148,7 +1166,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsBench")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1309,6 +1327,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1"))) T.Phase = 2600;
 			// -AcMmoShotsS3: daylight sight (2700-2714).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))) T.Phase = 2700;
+			// -AcMmoShotsBench: the MMO bench (4000-4009).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsBench"))) T.Phase = 4000;
 		}
 		else TimedOut(TEXT("seated"));
 		return;
@@ -6400,6 +6420,127 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 2714:
 		Check(Mmo->DevClock(TEXT("daylight on")), TEXT("s3: daylight on again"));
 		Check(Shots.Saved + Shots.Skipped >= 5, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsBench
+	case 4000:
+	{
+		// Seated at home, its ground built: noon.
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (Seated() && S && Mmo->Progress() && CitadelOf(*S) && Sets > 0 && Ready == Sets && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("hour 12")), TEXT("bench: noon at home"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("bench: seated at home by the Citadel, the ground built"));
+		return;
+	}
+	case 4003:
+		Check(Mmo->DevClock(TEXT("hour 12\nmatriarch here 55")), TEXT("bench: noon, the server takes the pilot to the Matriarch's nest"));
+		Advance();
+		return;
+	case 4004:
+	{
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (Here == TEXT("slag-pockets") && U && S && NearestBug(*S, U->position, ac::UnitKind::matriarch) && Sets > 0 && Ready == Sets && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("matriarch calm")), TEXT("bench: the horde held still"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("bench: in Slag Pockets, the Matriarch sent, the ground built"), 60);
+		return;
+	}
+	case 4006:
+		Check(Mmo->DevClock(TEXT("hour 12\nferry go cold-fork")), TEXT("bench: the pilot taken to Cold Fork"));
+		Advance();
+		return;
+	case 4007:
+	{
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (Here == TEXT("cold-fork") && U && Sets > 0 && Ready == Sets && Since() > 3.0)
+		{
+			Check(Mmo->DevClock(TEXT("brood clear\ncanyon reset\ncanyon send 10")), TEXT("bench: wave 10 sent down The Fork"));
+			Advance();
+			return;
+		}
+		TimedOut(TEXT("bench: in Cold Fork, its ground built"), 90);
+		return;
+	}
+	case 4001:
+	case 4002:
+	case 4005:
+	case 4008:
+	{
+		// A scene: its dev lines, settled, timed, its stats read, its picture.
+		const TCHAR* Name = T.Phase == 4001 ? TEXT("mmo-home-noon")
+			: T.Phase == 4002                ? TEXT("mmo-home-night")
+			: T.Phase == 4005                ? TEXT("mmo-nest-noon")
+											 : TEXT("mmo-fork-wave");
+		const TCHAR* Lines = T.Phase == 4002 ? TEXT("hour 0") : nullptr;
+		const double Settle = T.Phase == 4008 ? 9.0 : 3.0;
+		double Seconds = 10;
+		FParse::Value(FCommandLine::Get(), TEXT("AcMmoBenchSeconds="), Seconds);
+		const bool bGpu = FParse::Param(FCommandLine::Get(), TEXT("AcBenchGpu"));
+		// Facing the Citadel at home, the nearest bug (her first) out there.
+		if (S && U)
+		{
+			const ac::Unit* B = T.Phase >= 4005 ? NearestBug(*S, U->position, ac::UnitKind::matriarch) : nullptr;
+			if (!B && T.Phase >= 4005)
+				for (const ac::Unit& X : S->units)
+					if (X.bug && X.hp > 0 && (!B || ac::distance(X.position, U->position) < ac::distance(B->position, U->position))) B = &X;
+			const ac::Structure* C = T.Phase < 4005 ? CitadelOf(*S) : nullptr;
+			if (B) Stop(Face(B->position));
+			else if (C) Stop(Face(C->position));
+		}
+		switch (BenchStep)
+		{
+		case 0:
+			if (Lines) Check(Mmo->DevClock(Lines), FString::Printf(TEXT("bench: %s"), Lines));
+			BenchStep = 1;
+			T.PhaseAt = Now;
+			return;
+		case 1:
+			if (Since() < Settle) return;
+			BenchMeter.Begin();
+			BenchStep = 2;
+			return;
+		case 2:
+			BenchMeter.Frame();
+			if (Since() < Settle + Seconds) return;
+			BenchMeter.End();
+			FAcBenchMeter::ShowStats(GetWorld(), true, bGpu);
+			BenchStep = 3;
+			BenchAt = Now;
+			return;
+		case 3:
+			// The RHI counts draws only while its stats show: read for a while.
+			BenchMeter.ReadStats(bGpu);
+			if (Now - BenchAt < 2.0) return;
+			FAcBenchMeter::ShowStats(GetWorld(), false, bGpu);
+			BenchStep = 4;
+			BenchAt = Now;
+			return;
+		default:
+			if (Now - BenchAt < 0.5) return;
+			UE_LOG(LogAutocraft, Display, TEXT("bench-result %s"), *BenchMeter.Json(Name, this, [&](FJsonObject& J) {
+				J.SetStringField(TEXT("region"), Here);
+				int32 Bugs = 0;
+				if (S)
+					for (const ac::Unit& X : S->units) Bugs += X.bug && X.hp > 0 ? 1 : 0;
+				J.SetNumberField(TEXT("bugs"), Bugs);
+			}));
+			BenchStep = 0;
+			Shoot(Name, FString::Printf(TEXT("the MMO bench's %s"), Name));
+			return;
+		}
+	}
+	case 4009:
+		Check(Shots.Saved + Shots.Skipped >= 4, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsZ4

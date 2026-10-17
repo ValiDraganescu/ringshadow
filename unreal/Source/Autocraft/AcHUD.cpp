@@ -32,6 +32,9 @@
 static TAutoConsoleVariable<float> CVarAcHudScale(
 	TEXT("ac.HudScale"), 0.0f,
 	TEXT("Pixels per HUD point (Swift point). 0: the window's backing scale (2 on Retina)."));
+static TAutoConsoleVariable<bool> CVarAcHudHide(
+	TEXT("ac.HudHide"), false,
+	TEXT("The whole HUD collapsed (a measuring aid: the bench's A/B of what the HUD costs, docs/perf.md)."));
 
 AAcHUD::AAcHUD()
 {
@@ -150,6 +153,8 @@ void AAcHUD::OnGameStarted(UAcSimSubsystem& Sim)
 void AAcHUD::OnFrame(const FAcFrame& Frame)
 {
 	if (!RootWidget || !Frame.State) return;
+	const EVisibility HudShown = CVarAcHudHide.GetValueOnGameThread() ? EVisibility::Collapsed : EVisibility::SelfHitTestInvisible;
+	if (RootWidget->GetVisibility() != HudShown) RootWidget->SetVisibility(HudShown);
 	if (!bLoggedScale)
 	{
 		bLoggedScale = true;

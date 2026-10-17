@@ -545,7 +545,7 @@ Prerequisites from other agents: **Core** (the C++ port: `Simulation`,
 | D7 | Minimap: terrain bake, marks, footprint quad, fog brush, click and drag to move the camera | D2, B10 |
 | D8 | Command map: map, stance, sites, objectives, requests, order menu (`orders(at:)`), world beacons | D7, D5 |
 | D9 | Music deck faceplate | D2, C8 |
-| D10 | Perf: tick laps, Insights scopes, the 10 s perf line, `SAcPerfPanel` | A1, D1 |
+| D10 | Perf: tick laps, Insights scopes, the 10 s perf line, `SAcPerfPanel` (the rounds since 2026-10-18: [docs/perf.md](../docs/perf.md)) | A1, D1 |
 
 ### Phase E: driving (after B and D2)
 
@@ -567,7 +567,7 @@ Prerequisites from other agents: **Core** (the C++ port: `Simulation`,
 |---|---|---|
 | F1 | Game flow: new-game dialog with preview, restart, victory lap → next game, autosave every 15 s and on quit (background), AI and fog toggles, `UAcSettings` | A1, D1, D7 |
 | F2 | Reference shots: `-AcShot` scenes matching `windowshot` (top-down, `--select`, `--pilot` scenes, `--orders`), and a side-by-side check list against Swift renders | E6, D8 |
-| F3 | Bench: load `bench/badlands-large.json`, stage the fight (core `Bench.stageFight` logic), the 9 shots, 90 timed frames, GPU and tick numbers | F2 |
+| F3 | Bench: load `bench/badlands-large.json`, stage the fight (core `Bench.stageFight` logic), the 9 shots, 90 timed frames, GPU and tick numbers (the standard since 2026-10-18 is the MMO bench, `bench.py --mmo`: [docs/perf.md](../docs/perf.md)) | F2 |
 | F4 | Eight players: palette, scoreboard list, hostility checks, minimap, banner, an 8-player map from the core | Core (8 players), D1, D7 |
 | F5 | Playground mode (palette, place, remove, sides, toggles) | F1, D4 |
 | P1 | Measure: late-game 2 and 8 players, sim tick versus render; decide on a sim worker thread and pose culling | F3, F4 |

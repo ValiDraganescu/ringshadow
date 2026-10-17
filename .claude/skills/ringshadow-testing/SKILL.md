@@ -26,7 +26,7 @@ Every Unreal process runs hidden, silent and focus-free: see [Hidden runs](#hidd
 | Audio | offline to WAV with `-deterministicaudio`, then check the file; the rule tests are `Autocraft.Audio.*` | – |
 | Only assets, materials or Python tools | no test; look at a render | – |
 
-Perf (`unreal/Tools/bench/bench.py`, `make -C unreal/core-tests bench` then `simbench`) and `unreal/Tools/shots/compare.py` over every scene run only when the user asks.
+Perf (`unreal/Tools/bench/bench.py`, `make -C unreal/core-tests bench` then `simbench`) and `unreal/Tools/shots/compare.py` over every scene run only when the user asks, or when a perf worker's brief says so. The client's standard is the MMO bench, `bench.py --mmo` ([docs/perf.md](../../../docs/perf.md) "Client").
 
 ## Core tests
 

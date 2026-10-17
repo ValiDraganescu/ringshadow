@@ -1,5 +1,7 @@
 #include "AcBench.h"
 
+#include "AcBenchMeter.h"
+
 #include "AcLog.h"
 #include "AcPerf.h"
 #include "AcPerfSystem.h"
@@ -39,51 +41,8 @@
 
 namespace
 {
-	/// A counter of a shown stat group (`stat rhi`), its average over the
-	/// stats frame; -1 if the group is not shown (as AcWorldRenderer's).
-	double StatCounter(const TCHAR* Name)
-	{
-#if STATS
-		const FGameThreadStatsData* D = FLatestGameThreadStatsData::Get().Latest;
-		if (!D) return -1;
-		const FName Short(Name);
-		for (const FActiveStatGroupInfo& G : D->ActiveStatGroups)
-		{
-			for (const FComplexStatMessage& M : G.CountersAggregate)
-			{
-				if (M.NameAndInfo.GetShortName() != Short) continue;
-				return M.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double
-					? M.GetValue_double(EComplexStatField::IncAve)
-					: double(M.GetValue_int64(EComplexStatField::IncAve));
-			}
-		}
-#endif
-		return -1;
-	}
-
-	/// `stat gpu`'s passes on the first graphics queue: busy ms a frame (the
-	/// stats' average), largest first.
-	TArray<TPair<FString, double>> GpuStatPasses()
-	{
-		TArray<TPair<FString, double>> Out;
-#if STATS
-		const FGameThreadStatsData* D = FLatestGameThreadStatsData::Get().Latest;
-		if (!D) return Out;
-		for (int32 G = 0; G < D->ActiveStatGroups.Num(); ++G)
-		{
-			if (!D->GroupNames.IsValidIndex(G) || D->GroupNames[G].ToString() != TEXT("STATGROUP_GPU0_Graphics0")) continue;
-			for (const FComplexStatMessage& M : D->ActiveStatGroups[G].GpuStatsAggregate)
-			{
-				// The type is the short name's number: 0 busy, 1 wait, 2 idle (StatsRender2.cpp).
-				if (M.GetShortName().GetNumber() != 0) continue;
-				if (M.NameAndInfo.GetField<EStatDataType>() != EStatDataType::ST_double) continue;
-				Out.Emplace(M.GetDescription(), M.GetValue_double(EComplexStatField::IncAve));
-			}
-		}
-		Out.Sort([](const TPair<FString, double>& A, const TPair<FString, double>& B) { return A.Value > B.Value; });
-#endif
-		return Out;
-	}
+	double StatCounter(const TCHAR* Name) { return FAcBenchMeter::StatCounter(Name); }
+	TArray<TPair<FString, double>> GpuStatPasses() { return FAcBenchMeter::GpuStatPasses(); }
 }
 
 // MARK: - Shots

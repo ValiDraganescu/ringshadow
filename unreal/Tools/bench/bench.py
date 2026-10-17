@@ -12,6 +12,15 @@ shot by shot, one process a shot, and a table in the shape of Swift's.
     uv run unreal/Tools/bench/bench.py --gpu --shot pilot \
         --variant base= --variant c32=-ForceDPCVars=r.VolumetricCloud.ViewRaySampleMaxCount=32
                                    # `stat gpu` per pass, A/B variants interleaved
+    uv run unreal/Tools/bench/bench.py --mmo --rounds 2 --gpu \
+        --variant base= --variant off=-dpcvars=ac.RenderMaterialDescFrames=0
+                                   # the MMO bench (the standard since 2026-10-18)
+
+The MMO bench (`--mmo`, docs/perf.md): one world client a run through
+`hidden_run.py` (its own slot, so not under `hidden_run.py --raw`), the
+`-AcMmoShotsBench` set on highlands-small's world with clear weather: the
+scenes MMO_SHOTS, each settled, timed `--seconds` on the wall clock (the
+server runs on it) and pictured (`png/<variant>-<round>/NAME.png`).
 
 Shots (Bench.shots): fight fight-night base wide pilot pilot-night third
 army army-night, `late` (fixture `unreal/bench/late.json`: zoomed fully out
@@ -59,6 +68,8 @@ LATE = UNREAL / "bench/late.json"
 SHOTS = ["fight", "fight-night", "base", "wide", "pilot", "pilot-night", "third", "army", "army-night", "late", "late8", "late8-base"]
 HOURS = {"fight-night": 23, "pilot-night": 23, "army-night": 23}
 PARTS = ["sim", "events", "scene", "hud", "audio", "save"]
+MMO_SHOTS = ["mmo-home-noon", "mmo-home-night", "mmo-nest-noon", "mmo-fork-wave"]
+HIDDEN_RUN = UNREAL / "Tools/hidden_run.py"
 
 
 def load_now() -> float:
@@ -144,6 +155,34 @@ def ue_shot(shot: str, w: int, h: int, scale: int, a: argparse.Namespace, out: P
     return None
 
 
+def mmo_run(w: int, h: int, a: argparse.Namespace, out: Path, variant: tuple[str, list[str]], rnd: int) -> dict[str, dict]:
+    """One MMO bench run (every scene): {scene: result}."""
+    tag = f"{variant[0] or 'base'}-{rnd}-{w}x{h}"
+    run_dir = out / "runs" / tag
+    cmd = ["uv", "run", str(HIDDEN_RUN), "--out", str(run_dir), "--res", f"{w}x{h}", "--timeout", "20", "--",
+           "-AcMap=highlands-small", "-AcFlowTest=mmoshots", f"-AcMmoShots={run_dir / 'png'}", "-AcMmoShotsBench",
+           "-AcMmoWeather=clear", f"-AcMmoBenchSeconds={a.seconds}"]
+    if a.gpu:
+        cmd += ["-AcBenchGpu"]
+    cmd += variant[1]
+    code = run(cmd, out / "logs" / f"mmo-{tag}.stdout", timeout=3600)
+    log = run_dir / "run.log"
+    text = log.read_text(errors="replace") if log.exists() else ""
+    found: dict[str, dict] = {}
+    for line in text.splitlines():
+        at = line.find("bench-result ")
+        if at < 0:
+            continue
+        try:
+            r = json.loads(line[at + len("bench-result "):])
+        except json.JSONDecodeError:
+            continue
+        found[r["shot"]] = r
+    if code != 0 or len(found) < len(MMO_SHOTS):
+        print(f"  mmo {tag}: exit {code}, {len(found)} of {len(MMO_SHOTS)} scenes, see {log}", file=sys.stderr)
+    return found
+
+
 def swift_shot(shot: str, w: int, h: int, scale: int, a: argparse.Namespace, out: Path) -> dict | None:
     if shot.startswith("late8"):
         return None
@@ -227,6 +266,25 @@ def report(runs: list[dict], machine: str, a: argparse.Namespace) -> str:
                 out.append(lines[0] + f"  | {r['load_before']:.1f}->{r['load_after']:.1f}")
                 out.append(lines[1])
             out.append("```")
+        if a.mmo:
+            # The MMO bench: Unreal only, the frame's spread and its hitches.
+            out.append("\n### MMO bench (mean of rounds)\n")
+            out.append("| scene | frame p50 | p95 | p99 | max | >33 ms | gpu p50 | gpu busy | game p50 | game p95 | render p50 | rhi p50 | tick p95 | units | load |")
+            out.append("|" + "---|" * 15)
+            for shot in dict.fromkeys(r["shot"] for r in here):
+                rs = [r for r in here if r["shot"] == shot and r["result"]]
+                if not rs:
+                    out.append(f"| {shot} | failed |" + " |" * 13)
+                    continue
+
+                def m(key: str, d: int = 1) -> str:
+                    return f"{sum(r['result'].get(key, 0) for r in rs) / len(rs):.{d}f}"
+
+                ld = sum((r["load_before"] + r["load_after"]) / 2 for r in rs) / len(rs)
+                out.append(f"| {shot} | {m('frameP50')} | {m('frameP95')} | {m('frameP99')} | {m('frameMax', 0)} | {m('over33', 1)}"
+                           f" | {m('gpuWallP50')} | {m('gpuBusy')} | {m('gameP50')} | {m('gameP95')} | {m('renderP50')} | {m('rhiP50')}"
+                           f" | {m('tickP95', 2)} | {m('units', 0)} | {ld:.1f} |")
+            continue
         # Side by side: the headline numbers.
         out.append("\n### Side by side (Swift | Unreal; mean of rounds)\n")
         out.append("| shot | gpu busy S | gpu busy U | gpu p50 S | gpu p50 U | tick p95 S | tick p95 U | render p95 S | render p95 U"
@@ -304,17 +362,21 @@ def main() -> int:
     ap.add_argument("--png", action="store_true", help="save each shot's last frame")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--gpu", action="store_true", help="Unreal: `stat gpu` per pass after the timed frames (-AcBenchGpu)")
+    ap.add_argument("--mmo", action="store_true", help="the MMO bench: -AcMmoShotsBench's scenes, one world client a run")
+    ap.add_argument("--seconds", type=float, default=10, help="--mmo: timed seconds a scene")
     ap.add_argument("--variant", action="append", default=[],
                     help="Unreal: NAME=ARGS, extra command-line args (e.g. '-dpcvars=r.ScreenPercentage=67'); "
                          "repeatable, run interleaved shot by shot; `base=` for none")
     a = ap.parse_args()
 
+    if a.mmo and a.shot == ",".join(SHOTS):
+        a.shot = ",".join(MMO_SHOTS)
     shots = [s for s in a.shot.split(",") if s]
-    unknown = [s for s in shots if s not in SHOTS]
+    unknown = [s for s in shots if s not in (MMO_SHOTS if a.mmo else SHOTS)]
     if unknown:
         ap.error(f"no such shot: {', '.join(unknown)}; shots: {', '.join(SHOTS)}")
     sizes = []
-    for s in a.size or ["1920x1080@1", "5120x1378@2"]:
+    for s in a.size or (["1920x1080@1"] if a.mmo else ["1920x1080@1", "5120x1378@2"]):
         dims, _, scale = s.partition("@")
         w, h = (int(v) for v in dims.lower().split("x"))
         sizes.append((w, h, int(scale or 1)))
@@ -329,6 +391,30 @@ def main() -> int:
     engines = (["swift"] if a.swift else []) + ([] if a.no_ue else ["ue"])
     variants = [(v.partition("=")[0], v.partition("=")[2].split()) for v in a.variant] or [("", [])]
     runs: list[dict] = []
+    if a.mmo:
+        for rnd in range(1, a.rounds + 1):
+            for (w, h, scale) in sizes:
+                for variant in variants:
+                    before, who = load_now(), busiest()
+                    t0 = time.time()
+                    found = mmo_run(w, h, a, out, variant, rnd)
+                    after = load_now()
+                    for shot in shots:
+                        r = found.get(shot)
+                        label = f"{shot}/{variant[0]}" if variant[0] else shot
+                        runs.append({"engine": "ue", "shot": label, "w": w, "h": h, "scale": scale, "round": rnd,
+                                     "load_before": before, "load_after": after, "busiest": who, "result": r,
+                                     "seconds": time.time() - t0})
+                        extra = (f"gpu p50 {r['gpuWallP50']:.1f}, frame p50 {r['frameP50']:.1f} p95 {r['frameP95']:.1f}, "
+                                 f"game p50 {r['gameP50']:.1f}" if r else "")
+                        print(f"  mmo   {label:24} {w}x{h} #{rnd}: {'ok' if r else 'FAILED'} {extra} "
+                              f"(load {before:.1f}->{after:.1f})", flush=True)
+                    (out / "results.json").write_text(json.dumps({"machine": m, "runs": runs}, indent=1))
+        text = report(runs, m, a)
+        (out / "report.md").write_text(text)
+        print()
+        print(text)
+        return 0 if all(r["result"] for r in runs) else 1
     for rnd in range(1, a.rounds + 1):
         for (w, h, scale) in sizes:
             for shot in shots:

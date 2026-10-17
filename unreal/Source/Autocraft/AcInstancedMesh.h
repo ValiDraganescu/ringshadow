@@ -9,6 +9,11 @@
 //   which walks the transforms it sends anyway);
 // - otherwise the box of the instances' origins, grown by the mesh's reach
 //   at the largest scale (a min/max per instance, no box turned).
+// - the materials' property descriptor kept from one instance update to
+//   the next (an ISM works it out from every material's relevance each
+//   time its instances are sent: ~5 % of the game thread with 1,500
+//   units), made again when the mesh or the materials change, and every
+//   `ac.RenderMaterialDescFrames` updates in case a shader finished.
 // Use it wherever an ISM's instances move every frame.
 #pragma once
 
@@ -29,8 +34,17 @@ public:
 	void SetBox(const FBox& WorldBox);
 
 	virtual FBoxSphereBounds CalcBounds(const FTransform& BoundTransform) const override;
+	using UInstancedStaticMeshComponent::BuildComponentInstanceData;
+	virtual void BuildComponentInstanceData(EShaderPlatform InShaderPlatform, FInstanceUpdateComponentDesc& OutData) override;
 
 private:
+	/// The materials' descriptor, what it was worked out for, and the updates left before it is again.
+	FPrimitiveMaterialPropertyDescriptor MaterialDesc;
+	TArray<TObjectPtr<UMaterialInterface>> DescMaterials;
+	const UStaticMesh* DescMesh = nullptr;
+	EShaderPlatform DescPlatform = SP_NumPlatforms;
+	int32 DescLeft = 0;
+
 	/// The box told, in the component's space.
 	FBox Box{ForceInit};
 	bool bTold = false;
