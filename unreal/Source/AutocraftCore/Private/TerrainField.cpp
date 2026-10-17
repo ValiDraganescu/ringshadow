@@ -4,6 +4,8 @@
 #include "RegionFile.h"
 #include "ScreenConfig.h"
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <string>
 #include <limits>
@@ -32,9 +34,21 @@ TerrainField::TerrainField(const MapDefinition& map_) : map(map_), noise(map_.se
         const double reach = e.width / 2 * 1.25 + max(e.slope, 2 * cliffHalf) + along + shelf + 0.01;
         editBounds.push_back(Bounds{lo - Vec2::repeating(reach), hi + Vec2::repeating(reach)});
     }
+    if (map.edges) {
+        outlineRuns = PolygonRuns(map.edges->outline);
+        islandRuns.reserve(map.edges->islands.size());
+        for (const std::vector<Vec2>& island : map.edges->islands) islandRuns.emplace_back(island);
+    }
 }
 
 namespace {
+
+/// `h + k * n() * s`, the noise `n` not sampled when `k` is 0: the product
+/// is then a zero, which leaves every `h` but -0 exactly as it is.
+template <class N> double plusNoise(double h, double k, N n, double s) {
+    if (k == 0 && !(h == 0 && std::signbit(h))) return h;
+    return h + k * n() * s;
+}
 
 /// Distance from `p` to a line through `points`.
 double lineDistance(Vec2 p, const std::vector<Vec2>& points) {
@@ -104,8 +118,8 @@ double TerrainField::edited(Vec2 p, double h) const {
             // Craggy noise on each face, as on a plateau's, where it cuts.
             if (!(e.slope > 0)) {
                 const Vec2 q = fold(p);
-                h += 4 * (inner * (1 - inner) + outer * (1 - outer)) * smoothstep(0.0, map.levelHeight, depth) *
-                     noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 0.45;
+                h = plusNoise(h, 4 * (inner * (1 - inner) + outer * (1 - outer)) * smoothstep(0.0, map.levelHeight, depth),
+                              [&] { return noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9); }, 0.45);
             }
             continue;
         }
@@ -121,7 +135,7 @@ double TerrainField::edited(Vec2 p, double h) const {
         // Craggy noise on a cliff's face, as on a plateau's.
         if (e.slope > 0 || e.kind == HeightEdit::Kind::flatten || e.kind == HeightEdit::Kind::ramp) continue;
         const Vec2 q = fold(p);
-        h += 4 * t * (1 - t) * noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 0.45;
+        h = plusNoise(h, 4 * t * (1 - t), [&] { return noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9); }, 0.45);
     }
     return h;
 }
@@ -147,10 +161,17 @@ double TerrainField::plateauCoverage(Vec2 p, size_t k, double wobble) const {
 /// noise on the cliff faces.
 TerrainField::Cliff TerrainField::cliffHeight(Vec2 p) const {
     double h = 0.0, crag = 0.0;
-    const double wobble = edgeWobble(p);
+    // The wobble's noise only once a plateau is near enough to need it.
+    double wobble = 0;
+    bool wobbled = false;
     for (size_t k = 0; k < map.plateaus.size(); k++) {
         const Plateau& plateau = map.plateaus[k];
-        const double t = plateauCoverage(p, k, wobble);
+        const Bounds& b = plateauBounds[k];
+        if (!wobbled && length(max(max(b.lo - p, p - b.hi), Vec2::zero)) < edgeReach()) {
+            wobble = edgeWobble(p);
+            wobbled = true;
+        }
+        const double t = wobbled ? plateauCoverage(p, k, wobble) : 0.0;
         h = max(h, static_cast<double>(plateau.level) * map.levelHeight * t);
         crag = max(crag, 4 * t * (1 - t));
     }
@@ -186,7 +207,7 @@ double TerrainField::height(Vec2 p) const {
     const Cliff c = cliffHeight(p);
     const double base = c.height, crag = c.crag;
     const Vec2 q = fold(p);
-    double h = base + crag * noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 0.45;
+    double h = plusNoise(base, crag, [&] { return noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9); }, 0.45);
     const RampBlend r = ramp(p);
     if (r.weight > 0) h = h + (r.height - h) * r.weight;
     // Gentle rolling ground everywhere, flattened under base sites.
@@ -206,9 +227,17 @@ double TerrainField::height(Vec2 p) const {
 
 TerrainField::Wall TerrainField::wall(Vec2 p) const {
     if (!map.edges || map.edges->outline.empty()) return Wall{};
+    return wallAt(p, landOutside(p));
+}
+
+TerrainField::Wall TerrainField::wallNear(Vec2 p) const {
+    if (!map.edges || map.edges->outline.empty()) return Wall{};
+    return wallAt(p, landOutside(p, wallReach()));
+}
+
+TerrainField::Wall TerrainField::wallAt(Vec2 p, double outside) const {
     const RegionEdges& e = *map.edges;
     // A cliff's width past the outline the wall stands full.
-    const double outside = landOutside(p, e.outline, e.islands);
     double cover = smoothstep(0.0, 2 * cliffHalf, outside);
     // Near an edge the gaps alone say: the same on both sides of it.
     double nearEdge = 0;
@@ -262,7 +291,8 @@ double seamRise(const RegionEdges& e, const GroundRect& b, int64_t edge, double 
 } // namespace
 
 double TerrainField::walled(Vec2 p, double h) const {
-    const Wall w = wall(p);
+    if (openLand(p)) return h;
+    const Wall w = wallNear(p);
     if (!(w.coverage > 0)) return h;
     const RegionEdges& e = *map.edges;
     // The wall's top: its level, up to most of a level more along the way
@@ -271,9 +301,11 @@ double TerrainField::walled(Vec2 p, double h) const {
     const Vec2 q = fold(p);
     const double free = 1 - w.edge;
     const double away = smoothstep(0.3, 7, w.outside);
+    // Where `away` is 0 the ridge and the roughness are +0 (`away` times
+    // what is never negative): their noise is not sampled.
     const double skyline = (0.5 + 0.5 * noise.fbm(q.x * 0.11 + 31, q.y * 0.11 - 17)) * 0.85;
-    const double ridge = away * max(0.7 + 0.8 * noise.fbm(q.x * 0.07 - 7, q.y * 0.07 + 11), 0.0);
-    const double rough = 0.18 * (0.5 + 0.5 * noise.fbm(q.x * 0.6 + 5, q.y * 0.6 - 3)) * away;
+    const double ridge = away == 0 ? 0.0 : away * max(0.7 + 0.8 * noise.fbm(q.x * 0.07 - 7, q.y * 0.07 + 11), 0.0);
+    const double rough = away == 0 ? 0.0 : 0.18 * (0.5 + 0.5 * noise.fbm(q.x * 0.6 + 5, q.y * 0.6 - 3)) * away;
     double seam = 0, weights = 0;
     for (int64_t k = 0; k < 4; k++) {
         const double d = max(RegionEdges::depth(map.bounds, k, p), 0.0);
@@ -293,8 +325,8 @@ double TerrainField::walled(Vec2 p, double h) const {
     const double second = smoothstep(shelf, shelf + 2 * cliffHalf, w.outside);
     h += max(top - h, 0.0) * w.coverage * (1 - 0.5 * terrace * (1 - second));
     // Craggy noise on its faces, more than a plain cliff's.
-    h += 4 * w.coverage * (1 - w.coverage) * free * noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9) * 1.1;
-    h += 4 * terrace * second * (1 - second) * noise.fbm(q.x * 0.9 - 8.3, q.y * 0.9 + 2) * 0.8;
+    h = plusNoise(h, 4 * w.coverage * (1 - w.coverage) * free, [&] { return noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9); }, 1.1);
+    h = plusNoise(h, 4 * terrace * second * (1 - second), [&] { return noise.fbm(q.x * 0.9 - 8.3, q.y * 0.9 + 2); }, 0.8);
     return h;
 }
 
@@ -397,7 +429,7 @@ TerrainField::Materials TerrainField::materials(Vec2 p) const {
     }
     // A region's walls (W4): bare rock-strewn highland, darker in patches,
     // no grass (the same along a shared edge on both sides).
-    if (const Wall w = wall(p); w.coverage > 0) {
+    if (const Wall w = openLand(p) ? Wall{} : wallNear(p); w.coverage > 0) {
         const double patchy = 0.5 + 0.5 * noise.fbm(q.x * 0.21 - 13, q.y * 0.21 + 5);
         highland = highland + (1 - highland) * w.coverage;
         grass *= 1 - w.coverage;
@@ -436,6 +468,23 @@ double landOutside(Vec2 p, const std::vector<Vec2>& outline, const std::vector<s
     return d;
 }
 
+namespace {
+
+/// `signedDistance`'s edge from `a` to `b`: the squared distance from `p`,
+/// kept in `d` when nearer (a point edge's is NaN, and kept never).
+inline void edgeNearer(Vec2 p, Vec2 a, Vec2 b, double& d) {
+    const Vec2 e = b - a, w = p - a;
+    const double t = min(max(dot(w, e) / dot(e, e), 0.0), 1.0);
+    d = min(d, length_squared(w - e * t));
+}
+
+/// The edge crosses `p`'s row to its right.
+inline bool edgeCrosses(Vec2 p, Vec2 a, Vec2 b) {
+    return (a.y > p.y) != (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x;
+}
+
+} // namespace
+
 double signedDistance(Vec2 p, const std::vector<Vec2>& poly) {
     if (!(poly.size() > 2)) return std::numeric_limits<double>::infinity();
     double d = length_squared(p - poly[0]);
@@ -443,15 +492,143 @@ double signedDistance(Vec2 p, const std::vector<Vec2>& poly) {
     size_t j = poly.size() - 1;
     for (size_t i = 0; i < poly.size(); i++) {
         const Vec2 a = poly[i], b = poly[j];
-        const Vec2 e = b - a, w = p - a;
-        const double t = min(max(dot(w, e) / dot(e, e), 0.0), 1.0);
-        d = min(d, length_squared(w - e * t));
-        if ((a.y > p.y) != (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) {
-            inside = !inside;
-        }
+        edgeNearer(p, a, b, d);
+        if (edgeCrosses(p, a, b)) inside = !inside;
         j = i;
     }
     return inside ? -std::sqrt(d) : std::sqrt(d);
+}
+
+TerrainField::PolygonRuns::PolygonRuns(const std::vector<Vec2>& poly) : points(poly.size()) {
+    if (!(poly.size() > 2)) return;
+    const double inf = std::numeric_limits<double>::infinity();
+    for (size_t k = 0; k * run < poly.size(); k++) {
+        Vec2 lo = Vec2::repeating(inf), hi = Vec2::repeating(-inf);
+        for (size_t i = k * run; i < std::min((k + 1) * run, poly.size()); i++) {
+            const Vec2 b = poly[i == 0 ? poly.size() - 1 : i - 1];
+            lo = min(lo, min(poly[i], b));
+            hi = max(hi, max(poly[i], b));
+        }
+        boxes.push_back(Bounds{lo, hi});
+    }
+    double lo = inf, hi = -inf;
+    for (const Bounds& b : boxes) {
+        lo = std::fmin(lo, b.lo.y);
+        hi = std::fmax(hi, b.hi.y);
+    }
+    if (!(hi > lo) || !std::isfinite(lo) || !std::isfinite(hi) || boxes.size() > 0xffff) return;
+    bandLo = lo;
+    bandStep = (hi - lo) / double(bands);
+    band.resize(bands);
+    // `bandOf` is monotonic, so a run whose box spans a row lands in that
+    // row's band.
+    for (size_t k = 0; k < boxes.size(); k++)
+        for (size_t r = bandOf(boxes[k].lo.y); r <= bandOf(boxes[k].hi.y); r++) band[r].push_back(uint16_t(k));
+}
+
+size_t TerrainField::PolygonRuns::bandOf(double y) const {
+    const double r = std::floor((y - bandLo) / bandStep);
+    return r < 0 ? 0 : r >= double(bands) ? bands - 1 : size_t(r);
+}
+
+double TerrainField::PolygonRuns::signedDistance(Vec2 p, const std::vector<Vec2>& poly, double cap) const {
+    if (points != poly.size() || !(poly.size() > 2) || boxes.size() > 64 || !std::isfinite(p.x) || !std::isfinite(p.y))
+        return ac::signedDistance(p, poly);
+    const size_t n = poly.size();
+    double d = length_squared(p - poly[0]);
+    bool inside = false;
+    const double capSq = cap * cap;
+    // Each run's box: how near `p` it is (squared), the nearest first.
+    std::array<double, 64> gap{};
+    size_t first = 0;
+    for (size_t k = 0; k < boxes.size(); k++) {
+        const Bounds& b = boxes[k];
+        const double dx = max(max(b.lo.x - p.x, p.x - b.hi.x), 0.0), dz = max(max(b.lo.y - p.y, p.y - b.hi.y), 0.0);
+        gap[k] = dx * dx + dz * dz;
+        if (gap[k] < gap[first]) first = k;
+    }
+    // A run whose box lies further than the nearest edge so far, or than
+    // `cap` (with room for the rounding of either), holds no nearer edge
+    // that counts: the minimum, which does not hang on the order, stays the
+    // same bit for bit. A run whose ends are all on one side of the row
+    // crosses it nowhere.
+    auto measure = [&](size_t k) {
+        const Bounds& b = boxes[k];
+        const double bound = min(d, capSq);
+        const bool nearer = !(gap[k] > bound + 1e-7 + 1e-9 * bound);
+        const bool row = !(b.hi.y <= p.y || b.lo.y > p.y);
+        if (!nearer && !row) return;
+        for (size_t i = k * run; i < std::min((k + 1) * run, n); i++) {
+            const Vec2 a = poly[i], e = poly[i == 0 ? n - 1 : i - 1];
+            if (nearer) edgeNearer(p, a, e, d);
+            if (row && edgeCrosses(p, a, e)) inside = !inside;
+        }
+    };
+    measure(first);
+    for (size_t k = 0; k < boxes.size(); k++)
+        if (k != first) measure(k);
+    return inside ? -std::sqrt(d) : std::sqrt(d);
+}
+
+bool TerrainField::PolygonRuns::inside(Vec2 p, const std::vector<Vec2>& poly) const {
+    if (!(poly.size() > 2) || !std::isfinite(p.x) || !std::isfinite(p.y)) return false;
+    const size_t n = poly.size();
+    bool in = false;
+    auto cross = [&](size_t k) {
+        if (boxes[k].hi.y <= p.y || boxes[k].lo.y > p.y) return;
+        for (size_t i = k * run; i < std::min((k + 1) * run, n); i++)
+            if (edgeCrosses(p, poly[i], poly[i == 0 ? n - 1 : i - 1])) in = !in;
+    };
+    if (points != n) {
+        for (size_t i = 0; i < n; i++)
+            if (edgeCrosses(p, poly[i], poly[i == 0 ? n - 1 : i - 1])) in = !in;
+    } else if (band.empty()) {
+        for (size_t k = 0; k < boxes.size(); k++) cross(k);
+    } else {
+        for (const uint16_t k : band[bandOf(p.y)]) cross(k);
+    }
+    return in;
+}
+
+bool TerrainField::openLand(Vec2 p) const {
+    if (!map.edges || map.edges->outline.empty()) return true;
+    // As `wall` weighs the edges: any band that reaches `p` may wall it.
+    for (int64_t k = 0; k < 4; k++) {
+        const double d = max(RegionEdges::depth(map.bounds, k, p), 0.0);
+        const double w = 1 - smoothstep(0.0, RegionEdges::edgeBand, d);
+        if (w > 0) return false;
+    }
+    // Inside the outline, out of every island: `landOutside` is at most 0,
+    // and the wall's smoothstep of it exactly 0.
+    const RegionEdges& e = *map.edges;
+    if (!outlineRuns.inside(p, e.outline)) return false;
+    for (size_t k = 0; k < e.islands.size(); k++)
+        if (k >= islandRuns.size() || islandRuns[k].inside(p, e.islands[k])) return false;
+    return true;
+}
+
+double TerrainField::landOutside(Vec2 p) const {
+    const RegionEdges& e = *map.edges;
+    double d = outlineRuns.signedDistance(p, e.outline);
+    for (size_t k = 0; k < e.islands.size(); k++)
+        d = max(d, -(k < islandRuns.size() ? islandRuns[k].signedDistance(p, e.islands[k]) : ac::signedDistance(p, e.islands[k])));
+    return d;
+}
+
+double TerrainField::landOutside(Vec2 p, double cap) const {
+    const RegionEdges& e = *map.edges;
+    if (islandRuns.size() != e.islands.size()) return landOutside(p);
+    // Inside the outline and out of every island: on the land, at most 0.
+    const bool in = outlineRuns.inside(p, e.outline);
+    bool onIsland = false;
+    for (size_t k = 0; k < e.islands.size() && !onIsland; k++) onIsland = islandRuns[k].inside(p, e.islands[k]);
+    if (in && !onIsland) return -1;
+    // Past the land: the outline's distance (outside it) or an island's
+    // (inside it) says, each exact under `cap`. The others are at most 0.
+    double d = in ? -1 : outlineRuns.signedDistance(p, e.outline, cap);
+    for (size_t k = 0; k < e.islands.size(); k++)
+        if (islandRuns[k].inside(p, e.islands[k])) d = max(d, -islandRuns[k].signedDistance(p, e.islands[k], cap));
+    return d;
 }
 
 /// The ground point under canvas point `c`: the first place the camera

@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -35,8 +36,46 @@ struct AUTOCRAFTCORE_API TerrainField {
     /// Each height edit's reach (`MapDefinition::heightEdits`): past it the
     /// edit changes nothing.
     std::vector<Bounds> editBounds;
+    /// A polygon's edges in runs of `run`, each with the box round its
+    /// edges' ends: `signedDistance` bit for bit, without measuring the
+    /// runs that can hold neither the nearest edge nor a crossing of the
+    /// point's row.
+    struct PolygonRuns {
+        static constexpr size_t run = 8;
+        static constexpr size_t bands = 32;
+        /// The polygon's points when the runs were made (another polygon:
+        /// measured whole).
+        size_t points = 0;
+        /// Run `k`: edges `k * run` up to `(k + 1) * run` (edge `i` from
+        /// point `i` to the one before it, as `signedDistance` walks).
+        std::vector<Bounds> boxes;
+        /// The runs whose boxes reach into each of `bands` rows across the
+        /// polygon's height, from `bandLo`, `bandStep` tall.
+        std::vector<std::vector<uint16_t>> band;
+        double bandLo = 0, bandStep = 1;
+        size_t bandOf(double y) const;
+        PolygonRuns() = default;
+        explicit PolygonRuns(const std::vector<Vec2>& poly);
+        /// `ac::signedDistance`, bit for bit where its size is under
+        /// `cap` (further: some distance of at least `cap`, same sign).
+        double signedDistance(Vec2 p, const std::vector<Vec2>& poly,
+                              double cap = std::numeric_limits<double>::infinity()) const;
+        /// `signedDistance`'s inside (its sign), from the runs that cross
+        /// the point's row alone.
+        bool inside(Vec2 p, const std::vector<Vec2>& poly) const;
+    };
+    /// The region's outline and islands (`MapDefinition::edges`) in runs.
+    PolygonRuns outlineRuns;
+    std::vector<PolygonRuns> islandRuns;
 
     explicit TerrainField(const MapDefinition& map_);
+
+    /// `ac::landOutside` for the region's own outline and islands, bit for
+    /// bit, by their runs (a walking grid asks it some 20 times a cell).
+    double landOutside(Vec2 p) const;
+    /// The same where it lies between 0 and `cap`; on the land some value
+    /// of at most 0, past `cap` some value of at least `cap`.
+    double landOutside(Vec2 p, double cap) const;
 
     /// Where noise is sampled for `p`: on a mirrored map the east half reads
     /// the west half's noise, so the two halves are one shape.
@@ -98,6 +137,19 @@ struct AUTOCRAFTCORE_API TerrainField {
     /// it). 0 with no walls.
     struct Wall { double coverage = 0, edge = 0, outside = 0; };
     Wall wall(Vec2 p) const;
+    /// `wall(p)` with its `outside` as `landOutside(p, wallReach())` gives
+    /// it: all `walled`, `materials` and the walking grid read of it.
+    Wall wallNear(Vec2 p) const;
+    /// Past this far beyond the outline every smoothstep `walled` takes of
+    /// the distance stands at 1 (the deepest terrace's shelf, 10.5 cells,
+    /// plus a cliff's width, and a cell to spare).
+    double wallReach() const { return 2.5 + 8.0 + 2 * cliffHalf + 1.0; }
+    /// `wall` with `outside` given.
+    Wall wallAt(Vec2 p, double outside) const;
+    /// On the region's land (inside its outline, out of its islands) and
+    /// off every edge's band: there `wall(p).coverage` is exactly 0, known
+    /// without measuring how far the outline is. False says nothing.
+    bool openLand(Vec2 p) const;
     /// `h` after the region's walls: raised to their level (higher further
     /// from the outline) where they stand.
     double walled(Vec2 p, double h) const;

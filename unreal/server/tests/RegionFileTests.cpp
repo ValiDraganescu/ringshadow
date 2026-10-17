@@ -9,7 +9,9 @@
 #include "RegionFile.h"
 #include "TerrainField.h"
 
+#include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -414,4 +416,53 @@ TEST(RegionFile_borderProblems) {
         "openings": {"east": [{"span": [41, 55], "level": 0}]})"));
     EXPECT_TRUE(has(problems, "openings.east[0]", "the border's outline closes the passage"));
     EXPECT_TRUE(has(problems, "pads[1]", "outside the border's outline"));
+}
+
+// docs/perf.md "Server" round 2: the terrain measures a region's outline
+// by runs of edges (`TerrainField::PolygonRuns`) and knows the open land
+// by its sign alone; each answer is the plain one bit for bit, in every
+// region file, on a half-cell grid over the region and past its edges.
+TEST(RegionFile_outlineRunsMeasureAsThePolygon) {
+    auto bits = [](double v) {
+        uint64_t b;
+        std::memcpy(&b, &v, sizeof b);
+        return b;
+    };
+    size_t regions = 0, points = 0, off = 0;
+    for (const auto& entry : std::filesystem::directory_iterator("regions")) {
+        if (entry.path().extension() != ".json") continue;
+        std::ifstream in(entry.path());
+        std::stringstream text;
+        text << in.rdbuf();
+        const RegionFile f = parsed(text.str());
+        const Built b = build(f);
+        if (!b.map.edges || b.map.edges->outline.empty()) continue;
+        const TerrainField field(b.map);
+        const RegionEdges& e = *b.map.edges;
+        regions += 1;
+        bool same = true;
+        const GroundRect& r = b.map.bounds;
+        for (double z = r.minZ - 6; z < r.maxZ + 6; z += 0.5)
+            for (double x = r.minX - 6; x < r.maxX + 6; x += 0.5) {
+                const Vec2 p(x + 0.013, z + 0.029);
+                points += 1;
+                const double plain = signedDistance(p, e.outline);
+                same = same && bits(field.outlineRuns.signedDistance(p, e.outline)) == bits(plain);
+                same = same && field.outlineRuns.inside(p, e.outline) == std::signbit(plain);
+                same = same && bits(field.landOutside(p)) == bits(landOutside(p, e.outline, e.islands));
+                const TerrainField::Wall w = field.wall(p), n = field.wallNear(p);
+                same = same && bits(w.coverage) == bits(n.coverage) && bits(w.edge) == bits(n.edge);
+                if (w.outside > 0 && w.outside < field.wallReach()) same = same && bits(w.outside) == bits(n.outside);
+                else if (w.outside <= 0) same = same && n.outside <= 0;
+                else same = same && n.outside >= field.wallReach();
+                if (field.openLand(p)) {
+                    off += 1;
+                    same = same && w.coverage == 0;
+                }
+            }
+        if (!same) std::printf("    %s: the runs differ\n", f.id.c_str());
+        EXPECT_TRUE(same);
+    }
+    EXPECT_TRUE(regions >= 9);
+    EXPECT_TRUE(off > 0 && off < points);
 }

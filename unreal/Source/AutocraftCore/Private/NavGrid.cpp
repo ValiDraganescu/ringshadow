@@ -312,7 +312,7 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
             if (!map.inPlay(p, heightAt)) continue;
             // A region's walls (W4) are no ground: nothing walks on them,
             // nothing jumps onto them.
-            if (walls && field.wall(p).coverage > 0.5) continue;
+            if (walls && !field.openLand(p) && field.wallNear(p).coverage > 0.5) continue;
             if (steep) cptr[z * width_ + x] = 1; else ptr[z * width_ + x] = 1;
         }
     };
