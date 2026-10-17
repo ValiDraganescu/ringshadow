@@ -4,13 +4,15 @@
 //
 // The sheet spec is a JSON file (B3's: scratchpad `ue/b3/sheets.json`):
 //   { "sheets": [ { "kind": "comet", "gap": 1.5, "cy": 1.0, "D": 30,
-//       "fov": 6.2, "width": 2400, "height": 640,
-//       "frames": [ { "time": 10, "stride": 0.3, "walking": true,
-//                     "aiming": false, "since": null, "jump": 0.3,
+//       "fov": 6.2, "width": 2400, "height": 640, "live": false,
+//       "frames": [ { "time": 10, "stride": 0.3, "walking": true, "walk": 0,
+//                     "aiming": false, "mining": false, "since": null, "jump": 0.3,
 //                     "twist": 0, "moving": false, "turn": 0, "aim": 0,
-//                     "flameLength": 3, "speed": 0, "warm": 0 }, … ] } ] }
+//                     "flameLength": 3, "speed": 0, "warm": 0,
+//                     "prop": "ore_0", "propAt": 1.5 }, … ] } ] }
 // Copy k stands at sim (x_k, 0), x_k = (k − (N−1)/2)·gap, heading
-// π/2 + 0.6 (the Swift preview's turn), on flat ground; the camera
+// π/2 + 0.6 (the Swift preview's turn; the sheet's `heading` overrides it,
+// 0 is a profile), on flat ground; the camera
 // (SceneKit space) at (0, cy + 0.55·D, D) looks at (0, cy, 0) with a
 // vertical FOV `fov`; the sun from (-4, 8, 6) as the Swift preview's.
 // A frame's inputs become sim state and renderer memory the way the game
@@ -19,7 +21,16 @@
 // a Juggernaut's `twist` → where it last shot (`lastAim`); a Firefly's
 // `aim` → `Unit.aim`, `turn` → the smoothed turn rate (×4), `flameLength`
 // → the memory's, `warm` poses first while it drives at `speed` cells a
-// frame (the wheel roll and smear carry over).
+// frame (the wheel roll and smear carry over); `mining` → task mining with
+// its `timer` (5 s: past the fork's pickup, so the drill runs). A frame's
+// `prop` puts another catalog model (an ore deposit, `ore_0`) at rest
+// `propAt` cells ahead of the copy: what the motion acts on.
+//
+// `live` (the playground): the copies move. Each frame's `time` runs on
+// from the first frame after the shot's hold, and its `stride` advances
+// `walk` cells a second; with -AcShotRecord the sheet is a clip of the
+// animations side by side (the ringshadow-video skill's record.py, the
+// `pose-sheet` sims).
 //
 // Run it in the model level with -AcShot (offscreen, no sound):
 //   UnrealEditor Autocraft.uproject /Game/Maps/ModelRow -game -RenderOffscreen
@@ -36,6 +47,7 @@
 
 class ACameraActor;
 class UStaticMeshComponent;
+struct FAcPoseSheetCopy;
 
 UCLASS()
 class AUTOCRAFT_API AAcPoseSheet : public AActor
@@ -49,6 +61,13 @@ public:
 
 private:
 	void Build(const FString& Kind, const FString& SpecFile);
+	/// Poses a copy `Elapsed` s after its frame and moves its meshes there
+	/// (creating them the first time).
+	void Place(FAcPoseSheetCopy& Copy, double Elapsed);
+
+	TArray<TSharedPtr<FAcPoseSheetCopy>> Copies;
+	bool bLive = false;
+	double LiveTime = 0.0;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UStaticMeshComponent>> Meshes;

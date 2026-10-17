@@ -1,0 +1,56 @@
+{
+ "sheets": [
+  {
+   "kind": "prospector",
+   "gap": 1.7,
+   "cy": 0.75,
+   "D": 30,
+   "fov": 7.4,
+   "width": 2400,
+   "height": 640,
+   "frames": [
+    {
+     "time": 10,
+     "stride": 19.635,
+     "walking": true
+    },
+    {
+     "time": 10,
+     "stride": 19.8804,
+     "walking": true
+    },
+    {
+     "time": 10,
+     "stride": 20.1258,
+     "walking": true
+    },
+    {
+     "time": 10,
+     "stride": 20.3713,
+     "walking": true
+    },
+    {
+     "time": 10,
+     "stride": 20.6167,
+     "walking": true
+    },
+    {
+     "time": 10,
+     "stride": 20.8621,
+     "walking": true
+    },
+    {
+     "time": 10,
+     "stride": 21.1076,
+     "walking": true
+    },
+    {
+     "time": 10,
+     "stride": 21.353,
+     "walking": true
+    }
+   ],
+   "heading": 0.0
+  }
+ ]
+}

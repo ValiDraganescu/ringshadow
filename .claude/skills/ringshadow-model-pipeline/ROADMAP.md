@@ -5,7 +5,7 @@ Agreed with the user on 2026-09-30, for the Swift game; reread for Unreal on 202
 1. **Module file.** A JSON per unit (`art/models/<unit>/modules.json`): each module's name, purpose, parent, pivot, mirror pair, material or texture region, animation role (the part names the `AcPose*.cpp` pose code finds: `gun`, `head`, legs…), and primitive. The model script's part tree (MODELLING.md) is its first draft; `stencil.parts.png` says which pixels belong to which part.
 2. **Per-part comparison.** Score each part, not only each view: the part's pixels in `stencil.parts.png` against the painted mask around them. A view's IoU misses a part that changes shape inside the same outline (the Ranger's boxy front pauldrons).
 3. **Data-driven builder with hot reload.** `ac_modelkit.py` reads the module file (box, panel, cylinder, sphere patch, outline slab) and builds the meshes, so a model is data instead of a script; each try is one hidden editor run.
-4. **Animation check.** A strip of frames from `AcPoseSheet` (walk, aim, fire, death; `unreal/SHOTS.md`) to catch pivots in the wrong place before the game.
+4. **Animation check.** A strip of frames from `AcPoseSheet` (walk, aim, fire, death; `unreal/SHOTS.md`) to catch pivots in the wrong place before the game. Started 2026-10-17: the sheet takes a `heading` (0 is a profile) and step 8 (MOCAP.md) renders a stride with and without a gait table.
 
 Option noted, not chosen: Hunyuan3D-2mv makes a mesh from four views, which could serve as a third reference for proportions; it gives no parts, rig or team colour.
 

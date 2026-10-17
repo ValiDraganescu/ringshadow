@@ -66,7 +66,7 @@ def load() -> tuple[dict, dict[str, dict]]:
 def command(sim: dict, d: dict, frames: Path, log: Path) -> list[str]:
     w, h, fps = sim.get("width", d["width"]), sim.get("height", d["height"]), sim.get("fps", d["fps"])
     cmd = [
-        str(UE_BIN), str(UPROJECT), "/Game/Maps/Battlefield", "-game",
+        str(UE_BIN), str(UPROJECT), sim.get("level", "/Game/Maps/Battlefield"), "-game",
         "-RenderOffscreen", "-windowed", "-ForceRes", f"-ResX={w}", f"-ResY={h}",
         "-unattended", "-nosplash",
         "-ini:Input:[/Script/Engine.InputSettings]:bCaptureMouseOnLaunch=False",
@@ -86,7 +86,8 @@ def command(sim: dict, d: dict, frames: Path, log: Path) -> list[str]:
     if path := sim.get("camera"):
         cmd.append(f"-AcCamPath={path}")
     # Typed flags come first: they win where a chunk reads the first match.
-    cmd += d.get("flags", []) + sim.get("flags", [])
+    # `{repo}` in a flag is the repo root (the game resolves a relative path against its binary).
+    cmd += [f.replace("{repo}", str(REPO)) for f in d.get("flags", []) + sim.get("flags", [])]
     if scene := sim.get("scene"):
         cmd.append(f"-AcScene={scene}")
     return cmd

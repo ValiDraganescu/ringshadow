@@ -1,0 +1,88 @@
+{
+ "sheets": [
+  {
+   "kind": "prospector",
+   "gap": 2.4,
+   "cy": 0.75,
+   "D": 30,
+   "fov": 7.4,
+   "width": 2400,
+   "height": 640,
+   "heading": 0.0,
+   "frames": [
+    {
+     "label": "t0",
+     "time": 10.0,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    },
+    {
+     "label": "t1",
+     "time": 10.4688,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    },
+    {
+     "label": "t2",
+     "time": 10.9375,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    },
+    {
+     "label": "t3",
+     "time": 11.4062,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    },
+    {
+     "label": "t4",
+     "time": 11.875,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    },
+    {
+     "label": "t5",
+     "time": 12.3438,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    },
+    {
+     "label": "t6",
+     "time": 12.8125,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    },
+    {
+     "label": "t7",
+     "time": 13.2812,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    }
+   ]
+  }
+ ]
+}

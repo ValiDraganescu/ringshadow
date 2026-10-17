@@ -1,580 +1,614 @@
 {
-  "_about": [
-    "Micro simulations for scripts/record.py: one short, staged moment of the game per row, recorded hidden at a fixed step.",
-    "scene: a scene of unreal/Tools/shots/scenes.json (-AcScene=NAME, which adds that table's defaults and the scene's flags).",
-    "flags: the game's own flags, typed before the scene's (the first match wins). The staging flags are documented in their headers:",
-    "  -AcPilot/-AcPilotPath/-AcPilotThird/-AcPilotStage/-AcPilotVariant (AcPilotPawn.h), -AcStageFight/-AcCamAtArmy (AcWorldRenderer.h),",
-    "  -AcOrders/-AcQueue (AcCommandMap.h), -AcHour (AcDaylight), -AcMap, -AcZoom, -AcCamAt, -AcSelect, -AcHover.",
-    "  -AcPilotStage pauses the game after staging: a still. Moving clips use -AcPilot with -AcPilotPath.",
-    "  -AcPilotDiveAt=S takes over S seconds into the recording, so the clip shows the dive from the RTS view into the unit (-AcPilotDive=S its length, 1.2).",
-    "seconds: the clip length; warm: frames rendered before recording (lets TSR, Lumen and exposure settle); width/height/fps: per sim overrides.",
-    "sound: record the game's mix offline into the clip (default true); music: let the game's music play (default true; false adds -AcNoMusic).",
-    "camera: an RTS camera move, -AcCamPath (AcRtsPawn.h): 'T:DX,DZ,PPC;...' with T in clip seconds, DX,DZ cells from the start view, PPC the zoom (points per cell, 0 = the start zoom; about 10 is far, 40 normal, 130 the closest)."
+ "_about": [
+  "Micro simulations for scripts/record.py: one short, staged moment of the game per row, recorded hidden at a fixed step.",
+  "scene: a scene of unreal/Tools/shots/scenes.json (-AcScene=NAME, which adds that table's defaults and the scene's flags).",
+  "flags: the game's own flags, typed before the scene's (the first match wins). The staging flags are documented in their headers:",
+  "  -AcPilot/-AcPilotPath/-AcPilotThird/-AcPilotStage/-AcPilotVariant (AcPilotPawn.h), -AcStageFight/-AcCamAtArmy (AcWorldRenderer.h),",
+  "  -AcOrders/-AcQueue (AcCommandMap.h), -AcHour (AcDaylight), -AcMap, -AcZoom, -AcCamAt, -AcSelect, -AcHover.",
+  "  -AcPilotStage pauses the game after staging: a still. Moving clips use -AcPilot with -AcPilotPath.",
+  "  -AcPilotDiveAt=S takes over S seconds into the recording, so the clip shows the dive from the RTS view into the unit (-AcPilotDive=S its length, 1.2).",
+  "seconds: the clip length; warm: frames rendered before recording (lets TSR, Lumen and exposure settle); width/height/fps: per sim overrides.",
+  "sound: record the game's mix offline into the clip (default true); music: let the game's music play (default true; false adds -AcNoMusic).",
+  "camera: an RTS camera move, -AcCamPath (AcRtsPawn.h): 'T:DX,DZ,PPC;...' with T in clip seconds, DX,DZ cells from the start view, PPC the zoom (points per cell, 0 = the start zoom; about 10 is far, 40 normal, 130 the closest).",
+  "level: another map than /Game/Maps/Battlefield (the pose-sheet sims run in /Game/Maps/ModelRow with -AcPoseSheet, AcPoseVehiclesSheet.h). {repo} in a flag is the repo root: a file the game must find needs an absolute path."
+ ],
+ "defaults": {
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "seconds": 4,
+  "warm": 60,
+  "flags": [
+   "-AcNew",
+   "-AcNoSave",
+   "-AcShotUI",
+   "-AcHudScale=1",
+   "-AcNoPerfPanel"
   ],
-  "defaults": {
-    "width": 1920,
-    "height": 1080,
-    "fps": 30,
-    "seconds": 4,
-    "warm": 60,
-    "flags": [
-      "-AcNew",
-      "-AcNoSave",
-      "-AcShotUI",
-      "-AcHudScale=1",
-      "-AcNoPerfPanel"
-    ],
-    "sound": true,
-    "music": true
+  "sound": true,
+  "music": true
+ },
+ "sims": [
+  {
+   "name": "ranger-duel",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotPath=act:2,w+right:1.5,w:1.5"
+   ],
+   "seconds": 5,
+   "notes": "First person: a Ranger duels the enemy Ranger ahead, loses, and the view drops back to the RTS view over the base."
   },
-  "sims": [
-    {
-      "name": "ranger-duel",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotPath=act:2,w+right:1.5,w:1.5"
-      ],
-      "seconds": 5,
-      "notes": "First person: a Ranger duels the enemy Ranger ahead, loses, and the view drops back to the RTS view over the base."
-    },
-    {
-      "name": "ranger-dive",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotDiveAt=1",
-        "-AcPilotPath=wait:0.6,w:2.4"
-      ],
-      "seconds": 5,
-      "notes": "The RTS view over the base, then the dive into a Ranger and a short walk in first person."
-    },
-    {
-      "name": "ranger-dive-full",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotDiveAt=1",
-        "-AcPilotPath=wait:0.6,aim:0.4,aim+act:2.4,w+right:1.6,leave:0.1,wait:2"
-      ],
-      "seconds": 10,
-      "notes": "The whole drive: the RTS view over the base, the dive into a Ranger, aiming at the enemy Ranger's chest and firing from where it lands (walking first runs into it), walking off to the right, then Esc hands it back and the view returns to the RTS view."
-    },
-    {
-      "name": "ranger-dive-giant",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotDiveAt=1",
-        "-AcPilotFoeHp=20",
-        "-AcPilotPullOut=3.6,5",
-        "-AcPilotPath=wait:0.6,aim:0.4,aim+act:2.4,wait:8"
-      ],
-      "seconds": 12,
-      "notes": "The dive into a Ranger, a duel aimed at the enemy's chest that the Ranger wins (-AcPilotFoeHp), then the camera pulls out of the Ranger up to the gas giant: the signature ending."
-    },
-    {
-      "name": "ranger-giant-intro",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotThird",
-        "-AcPilotPullOut=0.3,4",
-        "-AcPilotPath=wait:8"
-      ],
-      "seconds": 5,
-      "sound": false,
-      "notes": "A pull-out from a Ranger by the base up to the gas giant, played in reverse as the opening: the gas giant comes down into the scene."
-    },
-    {
-      "name": "ranger-third-walk",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotThird",
-        "-AcPilotPath=w:2,w+left:2"
-      ],
-      "seconds": 4,
-      "notes": "Third person: a Ranger walks and turns."
-    },
-    {
-      "name": "ranger-third-to-first",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotThird",
-        "-AcPilotVariant=minigun+shield+flyer",
-        "-AcPilotFoeHp=20",
-        "-AcPilotPullOut=6.8,5",
-        "-AcPilotPath=wait:0.3,aim:0.3,aim+act:1.8,view:0.1,wait:0.3,aim:0.4,aim+act:2.6,wait:8"
-      ],
-      "seconds": 13,
-      "notes": "Third person over a Ranger with the Mini gun and the Aegis Shield: it guns down the enemy Ranger, V switches to first person, it turns up to an enemy Kestrel and shoots it down, then the camera pulls out to the gas giant."
-    },
-    {
-      "name": "comet-drive",
-      "flags": [
-        "-AcPilot=comet",
-        "-AcPilotPath=w:2,w+right:1.5,ability:1"
-      ],
-      "seconds": 5,
-      "notes": "First person: a Comet drives out and uses its ability."
-    },
-    {
-      "name": "prospector-mining",
-      "scene": "pilot-mining",
-      "seconds": 4,
-      "notes": "First person: a Prospector drills Stardust Ore."
-    },
-    {
-      "name": "kstr-dusk-mining",
-      "flags": [
-        "-AcPilot=prospector",
-        "-AcPilotStage",
-        "-AcPilotLive",
-        "-AcPilotThird",
-        "-AcHour=18",
-        "-AcMusicAd=quicksilver_cola",
-        "-AcPilotPullOut=15.5,5",
-        "-AcPilotPath=act:5,w+left:2,w:5,w+right:3.5,wait:8"
-      ],
-      "seconds": 21,
-      "warm": 30,
-      "notes": "Dusk, third person: a Prospector drills at the ore until its hopper is full, then drives off around the field, while KSTR 88.7 Stardust plays its Quicksilver Cola ad (the deck shows it); then the eject to the gas giant."
-    },
-    {
-      "name": "kstr-scorpion-ridge",
-      "flags": [
-        "-AcPilot=scorpion",
-        "-AcPilotAt=ridge",
-        "-AcPilotMiners=6",
-        "-AcPilotThird",
-        "-AcHour=6",
-        "-AcMusicAd=citadel_timeshares",
-        "-AcPilotPullOut=13,5",
-        "-AcPilotPath=wait:2,left:0.6,wait:0.6,right:1.2,wait:0.6,left:0.6,wait:15"
-      ],
-      "seconds": 19,
-      "warm": 30,
-      "notes": "Dawn, third person: a Scorpion on a ridge over the player's base, its Prospectors busy below, the gas giant behind the base, while KSTR plays the Citadel Timeshares ad; then the eject."
-    },
-    {
-      "name": "prospector-level-up",
-      "flags": [
-        "-AcPilot=prospector",
-        "-AcPilotStage",
-        "-AcPilotLive",
-        "-AcHour=21",
-        "-AcLevel=prospector:2",
-        "-AcPicks=1",
-        "-AcEarn=100@2",
-        "-AcPickKey=z@3",
-        "-AcPilotPullOut=9,5",
-        "-AcPilotPath=act:9,wait:8"
-      ],
-      "seconds": 15,
-      "notes": "Night, first person: a Prospector drills, reaches level 3, the two cards come up over the cockpit (Rig master, Plating), it keeps Rig master (every Prospector pumps Metallic Hydrogen 20% faster), then the eject to the gas giant."
-    },
-    {
-      "name": "fight-12",
-      "flags": [
-        "-AcStageFight=12",
-        "-AcCamAtArmy",
-        "-AcNoFog"
-      ],
-      "seconds": 6,
-      "notes": "RTS view: two armies of 12 meet."
-    },
-    {
-      "name": "base-night",
-      "scene": "top-night",
-      "seconds": 4,
-      "notes": "RTS view: the base at night, beacons blinking."
-    },
-    {
-      "name": "fight-12-dive",
-      "flags": [
-        "-AcStageFight=12",
-        "-AcCamAtArmy",
-        "-AcNoFog"
-      ],
-      "camera": "0:-10,6,18;6:0,0,75",
-      "seconds": 6,
-      "notes": "RTS view: the camera sweeps in from afar and dives into the fight."
-    },
-    {
-      "name": "base-flyover",
-      "flags": [
-        "-AcHour=19"
-      ],
-      "camera": "0:-6,0,45;6:6,-4,45",
-      "seconds": 6,
-      "notes": "RTS view: a slow pan across the base at dusk."
-    },
-    {
-      "name": "longbow-ramp-dive",
-      "flags": [
-        "-AcPilot=longbow",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=slope",
-        "-AcPilotThird",
-        "-AcHour=10",
-        "-AcPilotDiveAt=1",
-        "-AcCamAt=-24,1",
-        "-AcPilotPath=wait:0.6,w:3.6"
-      ],
-      "seconds": 6.5,
-      "music": false,
-      "notes": "Day: the top-down view over the player's ramp, the dive into a Longbow on its top, and the drive down it in third person."
-    },
-    {
-      "name": "longbow-siege-first",
-      "flags": [
-        "-AcPilot=longbow",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=enemy",
-        "-AcHour=11",
-        "-AcPilotPath=wait:0.3,w:2.4,ability:3,act:4.5"
-      ],
-      "seconds": 10.5,
-      "music": false,
-      "notes": "Day, first person: a Longbow drives up to the enemy base, anchors (the cockpit changes) and shells the buildings."
-    },
-    {
-      "name": "longbow-walk-third",
-      "flags": [
-        "-AcPilot=longbow",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=53.6,3.0",
-        "-AcPilotYaw=-1.68",
-        "-AcPilotVariant=anchored",
-        "-AcPilotThird",
-        "-AcHour=19",
-        "-AcPilotPath=act:1.5,w+act:3,w+right+act:2.5"
-      ],
-      "seconds": 7,
-      "music": false,
-      "notes": "Dusk, third person: an anchored Longbow walks on its legs, firing at the enemy base."
-    },
-    {
-      "name": "longbow-rts-night",
-      "flags": [
-        "-AcPilot=longbow",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=53.2,-1.5",
-        "-AcPilotYaw=-1.68",
-        "-AcPilotVariant=anchored",
-        "-AcHour=22",
-        "-AcNoFog",
-        "-AcCamAt=52.5,-8",
-        "-AcPilotPath=leave:0.1"
-      ],
-      "seconds": 7,
-      "music": false,
-      "notes": "Night, top-down: an anchored Longbow left to itself shells the enemy base; the camera pushes in.",
-      "camera": "0:0,6,30;7:0,-2,60"
-    },
-    {
-      "name": "longbow-packup-first",
-      "flags": [
-        "-AcPilot=longbow",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=53.2,-1.5",
-        "-AcPilotYaw=-1.68",
-        "-AcPilotVariant=anchored",
-        "-AcHour=22",
-        "-AcPilotPath=act:1.2,ability:2.9,w+act:2.5,act:1.6"
-      ],
-      "seconds": 8.5,
-      "music": false,
-      "notes": "Night, first person: an anchored Longbow fires, packs up into tank mode, drives in and fires on the move."
-    },
-    {
-      "name": "longbow-finale",
-      "flags": [
-        "-AcPilot=longbow",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=enemy",
-        "-AcPilotThird",
-        "-AcHour=22",
-        "-AcPilotPullOut=3.2,5",
-        "-AcPilotPath=w+act:2.6,act:8.4"
-      ],
-      "seconds": 11,
-      "music": false,
-      "notes": "Night, third person: a Longbow drives in firing, then the camera pulls out and turns to the gas giant."
-    },
-    {
-      "name": "longbow-siege-giant",
-      "flags": [
-        "-AcPilot=longbow",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=enemy",
-        "-AcPilotThird",
-        "-AcHour=19",
-        "-AcPilotPullOut=10.5,5",
-        "-AcPilotPath=wait:0.3,w:2.4,ability:3,act:4.8,act:8"
-      ],
-      "seconds": 16,
-      "music": false,
-      "notes": "Dusk, third person: a Longbow drives up to the enemy base, anchors into artillery and shells the buildings, then the eject to the gas giant."
-    },
-    {
-      "name": "home-to-match",
-      "flags": [
-        "-AcHomePlay=7",
-        "-AcLauncherArtStart=3",
-        "-AcStage=12",
-        "-AcStageBuildings",
-        "-AcHour=10"
-      ],
-      "camera": "0:0,0,0;5.2:0,0,0;12:10,-6,45",
-      "seconds": 12,
-      "music": false,
-      "notes": "The home screen: the night-base key art with the gas giant, drifting (no pixel snapping since a9e3d2e), RESUME GAME pressed at 5 s of the clip (-AcHomePlay counts from the home screen, 2 s before recording starts), then the RTS view over a staged base, the camera easing over to its army."
-    },
-    {
-      "name": "ranger-night-close",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotVariant=far",
-        "-AcPilotFoeHp=20",
-        "-AcHour=23",
-        "-AcPilotPullOut=13.5,5",
-        "-AcPilotPath=wait:1.2,left:1.2,right:2.4,left:1.2,w:2.4,aim:0.3,aim+act:3,wait:8"
-      ],
-      "seconds": 19,
-      "notes": "Night, first person: a Ranger at its Citadel looks round into the dark (sight halves at night: the ground is lost 20 cells out), walks ahead, an enemy Ranger staged 7.7 cells off (out of night sight) comes out of the dark at about 4.5 cells, the Ranger guns it down, then the eject to the gas giant."
-    },
-    {
-      "name": "claude-ad-a",
-      "flags": [
-        "-AcPilot=prospector",
-        "-AcPilotStage",
-        "-AcPilotLive",
-        "-AcPilotThird",
-        "-AcHour=7",
-        "-AcPilotPath=act:9,w+left:2,w:5,w+right:3.5,act:8",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=0"
-      ],
-      "seconds": 28,
-      "notes": "Morning, third person: a Prospector drills ore and drives round the field while KSTR plays the Claude ad from its start. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-b",
-      "flags": [
-        "-AcHour=9",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=23.5"
-      ],
-      "seconds": 20,
-      "camera": "0:-8,0,45;19:8,-4,45",
-      "notes": "Day, RTS view: a slow pan across the base, the Claude ad 26 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-c",
-      "flags": [
-        "-AcStageFight=30",
-        "-AcCamAtArmy",
-        "-AcNoFog",
-        "-AcHour=11",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=41.5"
-      ],
-      "seconds": 18,
-      "camera": "0:-6,3,26;17:1,-1,55",
-      "notes": "RTS view: two armies of 30 meet; the Claude ad 44 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-d",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotVariant=far",
-        "-AcPilotFoeHp=20",
-        "-AcHour=23",
-        "-AcPilotPullOut=13.5,5",
-        "-AcPilotPath=wait:1.2,left:1.2,right:2.4,left:1.2,w:2.4,aim:0.3,aim+act:3,wait:8",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=57.5"
-      ],
-      "seconds": 21,
-      "notes": "Night, first person: ranger-night-close under the Claude ad, 60 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-e",
-      "flags": [
-        "-AcPilot=longbow",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=enemy",
-        "-AcPilotThird",
-        "-AcHour=19",
-        "-AcPilotPullOut=15,5",
-        "-AcPilotPath=wait:0.3,w:2.4,ability:3,act:4.8,act:12",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=76.5"
-      ],
-      "seconds": 22,
-      "notes": "Dusk, third person: a Longbow anchors and shells the enemy base, then the eject; the Claude ad 79 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-f",
-      "flags": [
-        "-AcPilot=prospector",
-        "-AcPilotStage",
-        "-AcPilotLive",
-        "-AcHour=21",
-        "-AcPilotPullOut=6,5",
-        "-AcPilotPath=act:6,wait:9",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=96.5"
-      ],
-      "seconds": 16,
-      "notes": "Night, first person: a Prospector drills, then the camera rises to the gas giant as the host says 'a giant ringed planet'; the Claude ad 99 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-g",
-      "flags": [
-        "-AcPilot=peregrine",
-        "-AcPilotStage",
-        "-AcPilotLive",
-        "-AcNoAI",
-        "-AcPilotThird",
-        "-AcHour=10",
-        "-AcPilotPath=w:7.5",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=110.5"
-      ],
-      "seconds": 8.5,
-      "notes": "Day, third person: a Peregrine flies out as the host names it; the Claude ad 113 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-h",
-      "flags": [
-        "-AcPilot=atlas",
-        "-AcPilotThird",
-        "-AcHour=10",
-        "-AcPilotPath=wait:0.3,w:5",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=117"
-      ],
-      "seconds": 6,
-      "notes": "Day, third person: an Atlas walks as the host names it; the Claude ad 119.5 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-i",
-      "flags": [
-        "-AcPilot=scorpion",
-        "-AcPilotAt=ridge",
-        "-AcPilotMiners=6",
-        "-AcPilotThird",
-        "-AcHour=7",
-        "-AcPilotPath=wait:1,left:0.6,wait:0.6,right:1.2,ability:1,wait:4",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=121"
-      ],
-      "seconds": 8.5,
-      "notes": "Morning, third person: a Scorpion on a ridge over the base ('the little burrowing mine that chirps'); the Claude ad 123.5 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-k",
-      "flags": [
-        "-AcStageFight=40",
-        "-AcCamAtArmy",
-        "-AcNoFog",
-        "-AcHour=18",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=160.5"
-      ],
-      "seconds": 21,
-      "camera": "0:-8,4,30;20:4,-2,60",
-      "notes": "Dusk, RTS view: two armies of 40 fight ('several going at once'); the Claude ad 163 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-l",
-      "flags": [
-        "-AcPilot=atlas",
-        "-AcNoAI",
-        "-AcStageBuildings",
-        "-AcPilotAt=enemy",
-        "-AcPilotThird",
-        "-AcHour=19",
-        "-AcPilotPath=wait:0.3,w:3,act:13",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=179.5"
-      ],
-      "seconds": 17,
-      "notes": "Dusk, third person: an Atlas walks up to the enemy base firing; the Claude ad 182 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-m",
-      "flags": [
-        "-AcPilot=ranger",
-        "-AcPilotThird",
-        "-AcPilotVariant=minigun+shield+flyer",
-        "-AcPilotFoeHp=20",
-        "-AcPilotPullOut=6.8,5",
-        "-AcPilotPath=wait:0.3,aim:0.3,aim+act:1.8,view:0.1,wait:0.3,aim:0.4,aim+act:2.6,wait:8",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=194.5"
-      ],
-      "seconds": 15,
-      "notes": "ranger-third-to-first under the end of the Claude ad (197 s in), then the eject to the gas giant. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-n",
-      "flags": [
-        "-AcPilot=comet",
-        "-AcPilotThird",
-        "-AcHour=16",
-        "-AcPilotPath=w:2,w+right:1.5,ability:1.5,w:4",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=49.5"
-      ],
-      "seconds": 9,
-      "notes": "Afternoon, third person: a Comet drives out and jumps; the Claude ad 52 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "claude-ad-p",
-      "flags": [
-        "-AcHour=22",
-        "-AcMusicAd=claude",
-        "-AcMusicAdAt=170.75"
-      ],
-      "camera": "0:-4,2,30;10:2,-1,55",
-      "seconds": 10,
-      "notes": "Night, RTS view: the camera pushes in over the base ('one writing the radio ads you hear'); the Claude ad 173 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
-    },
-    {
-      "name": "weather-storm-clears",
-      "flags": [
-        "-AcPilot=prospector",
-        "-AcNoAI",
-        "-AcPilotAt=ridge",
-        "-AcHour=16.5",
-        "-AcWeatherSeed=42",
-        "-AcWeatherFrom=2185",
-        "-AcWeatherSpeed=16",
-        "-AcPilotPullOut=15.6,5",
-        "-AcPilotPath=wait:0.3,left:1.6,up:0.35,w:3,w+right:0.6,w:4,w+left:0.6,w:5,wait:9",
-        "-ExecCmds=DisableAllScreenMessages"
-      ],
-      "seconds": 21,
-      "notes": "Afternoon, first person in a Prospector: the end of a storm as a 16x time-lapse of seed 42's schedule (from 2185 s: lightning, the rain easing, the sky clearing to cumulus by ~2435 s), then the pull-out to the gas giant. The weather post (docs/x-posts/weather.md)."
-    },
-    {
-      "name": "weather-lightning",
-      "flags": [
-        "-AcSkyView=21",
-        "-AcHour=23",
-        "-AcWeather=storm",
-        "-AcWeatherSeed=42",
-        "-AcWeatherFrom=48",
-        "-ExecCmds=DisableAllScreenMessages"
-      ],
-      "seconds": 14,
-      "notes": "Night, the sky view facing a held storm (seed 42): the close strike at 53.44 s of weather time (about 3.4 s into the clip) lights the cloud above it from inside, the bolt below; it is 2.6 km off, so its thunder comes 7.6 s later (about 11 s in). The weather post's second part (docs/x-posts/weather.md)."
-    }
-  ]
+  {
+   "name": "ranger-dive",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotDiveAt=1",
+    "-AcPilotPath=wait:0.6,w:2.4"
+   ],
+   "seconds": 5,
+   "notes": "The RTS view over the base, then the dive into a Ranger and a short walk in first person."
+  },
+  {
+   "name": "ranger-dive-full",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotDiveAt=1",
+    "-AcPilotPath=wait:0.6,aim:0.4,aim+act:2.4,w+right:1.6,leave:0.1,wait:2"
+   ],
+   "seconds": 10,
+   "notes": "The whole drive: the RTS view over the base, the dive into a Ranger, aiming at the enemy Ranger's chest and firing from where it lands (walking first runs into it), walking off to the right, then Esc hands it back and the view returns to the RTS view."
+  },
+  {
+   "name": "ranger-dive-giant",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotDiveAt=1",
+    "-AcPilotFoeHp=20",
+    "-AcPilotPullOut=3.6,5",
+    "-AcPilotPath=wait:0.6,aim:0.4,aim+act:2.4,wait:8"
+   ],
+   "seconds": 12,
+   "notes": "The dive into a Ranger, a duel aimed at the enemy's chest that the Ranger wins (-AcPilotFoeHp), then the camera pulls out of the Ranger up to the gas giant: the signature ending."
+  },
+  {
+   "name": "ranger-giant-intro",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotThird",
+    "-AcPilotPullOut=0.3,4",
+    "-AcPilotPath=wait:8"
+   ],
+   "seconds": 5,
+   "sound": false,
+   "notes": "A pull-out from a Ranger by the base up to the gas giant, played in reverse as the opening: the gas giant comes down into the scene."
+  },
+  {
+   "name": "ranger-third-walk",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotThird",
+    "-AcPilotPath=w:2,w+left:2"
+   ],
+   "seconds": 4,
+   "notes": "Third person: a Ranger walks and turns."
+  },
+  {
+   "name": "ranger-third-to-first",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotThird",
+    "-AcPilotVariant=minigun+shield+flyer",
+    "-AcPilotFoeHp=20",
+    "-AcPilotPullOut=6.8,5",
+    "-AcPilotPath=wait:0.3,aim:0.3,aim+act:1.8,view:0.1,wait:0.3,aim:0.4,aim+act:2.6,wait:8"
+   ],
+   "seconds": 13,
+   "notes": "Third person over a Ranger with the Mini gun and the Aegis Shield: it guns down the enemy Ranger, V switches to first person, it turns up to an enemy Kestrel and shoots it down, then the camera pulls out to the gas giant."
+  },
+  {
+   "name": "comet-drive",
+   "flags": [
+    "-AcPilot=comet",
+    "-AcPilotPath=w:2,w+right:1.5,ability:1"
+   ],
+   "seconds": 5,
+   "notes": "First person: a Comet drives out and uses its ability."
+  },
+  {
+   "name": "prospector-mining",
+   "scene": "pilot-mining",
+   "seconds": 4,
+   "notes": "First person: a Prospector drills Stardust Ore."
+  },
+  {
+   "name": "kstr-dusk-mining",
+   "flags": [
+    "-AcPilot=prospector",
+    "-AcPilotStage",
+    "-AcPilotLive",
+    "-AcPilotThird",
+    "-AcHour=18",
+    "-AcMusicAd=quicksilver_cola",
+    "-AcPilotPullOut=15.5,5",
+    "-AcPilotPath=act:5,w+left:2,w:5,w+right:3.5,wait:8"
+   ],
+   "seconds": 21,
+   "warm": 30,
+   "notes": "Dusk, third person: a Prospector drills at the ore until its hopper is full, then drives off around the field, while KSTR 88.7 Stardust plays its Quicksilver Cola ad (the deck shows it); then the eject to the gas giant."
+  },
+  {
+   "name": "kstr-scorpion-ridge",
+   "flags": [
+    "-AcPilot=scorpion",
+    "-AcPilotAt=ridge",
+    "-AcPilotMiners=6",
+    "-AcPilotThird",
+    "-AcHour=6",
+    "-AcMusicAd=citadel_timeshares",
+    "-AcPilotPullOut=13,5",
+    "-AcPilotPath=wait:2,left:0.6,wait:0.6,right:1.2,wait:0.6,left:0.6,wait:15"
+   ],
+   "seconds": 19,
+   "warm": 30,
+   "notes": "Dawn, third person: a Scorpion on a ridge over the player's base, its Prospectors busy below, the gas giant behind the base, while KSTR plays the Citadel Timeshares ad; then the eject."
+  },
+  {
+   "name": "prospector-level-up",
+   "flags": [
+    "-AcPilot=prospector",
+    "-AcPilotStage",
+    "-AcPilotLive",
+    "-AcHour=21",
+    "-AcLevel=prospector:2",
+    "-AcPicks=1",
+    "-AcEarn=100@2",
+    "-AcPickKey=z@3",
+    "-AcPilotPullOut=9,5",
+    "-AcPilotPath=act:9,wait:8"
+   ],
+   "seconds": 15,
+   "notes": "Night, first person: a Prospector drills, reaches level 3, the two cards come up over the cockpit (Rig master, Plating), it keeps Rig master (every Prospector pumps Metallic Hydrogen 20% faster), then the eject to the gas giant."
+  },
+  {
+   "name": "fight-12",
+   "flags": [
+    "-AcStageFight=12",
+    "-AcCamAtArmy",
+    "-AcNoFog"
+   ],
+   "seconds": 6,
+   "notes": "RTS view: two armies of 12 meet."
+  },
+  {
+   "name": "base-night",
+   "scene": "top-night",
+   "seconds": 4,
+   "notes": "RTS view: the base at night, beacons blinking."
+  },
+  {
+   "name": "fight-12-dive",
+   "flags": [
+    "-AcStageFight=12",
+    "-AcCamAtArmy",
+    "-AcNoFog"
+   ],
+   "camera": "0:-10,6,18;6:0,0,75",
+   "seconds": 6,
+   "notes": "RTS view: the camera sweeps in from afar and dives into the fight."
+  },
+  {
+   "name": "base-flyover",
+   "flags": [
+    "-AcHour=19"
+   ],
+   "camera": "0:-6,0,45;6:6,-4,45",
+   "seconds": 6,
+   "notes": "RTS view: a slow pan across the base at dusk."
+  },
+  {
+   "name": "longbow-ramp-dive",
+   "flags": [
+    "-AcPilot=longbow",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=slope",
+    "-AcPilotThird",
+    "-AcHour=10",
+    "-AcPilotDiveAt=1",
+    "-AcCamAt=-24,1",
+    "-AcPilotPath=wait:0.6,w:3.6"
+   ],
+   "seconds": 6.5,
+   "music": false,
+   "notes": "Day: the top-down view over the player's ramp, the dive into a Longbow on its top, and the drive down it in third person."
+  },
+  {
+   "name": "longbow-siege-first",
+   "flags": [
+    "-AcPilot=longbow",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=enemy",
+    "-AcHour=11",
+    "-AcPilotPath=wait:0.3,w:2.4,ability:3,act:4.5"
+   ],
+   "seconds": 10.5,
+   "music": false,
+   "notes": "Day, first person: a Longbow drives up to the enemy base, anchors (the cockpit changes) and shells the buildings."
+  },
+  {
+   "name": "longbow-walk-third",
+   "flags": [
+    "-AcPilot=longbow",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=53.6,3.0",
+    "-AcPilotYaw=-1.68",
+    "-AcPilotVariant=anchored",
+    "-AcPilotThird",
+    "-AcHour=19",
+    "-AcPilotPath=act:1.5,w+act:3,w+right+act:2.5"
+   ],
+   "seconds": 7,
+   "music": false,
+   "notes": "Dusk, third person: an anchored Longbow walks on its legs, firing at the enemy base."
+  },
+  {
+   "name": "longbow-rts-night",
+   "flags": [
+    "-AcPilot=longbow",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=53.2,-1.5",
+    "-AcPilotYaw=-1.68",
+    "-AcPilotVariant=anchored",
+    "-AcHour=22",
+    "-AcNoFog",
+    "-AcCamAt=52.5,-8",
+    "-AcPilotPath=leave:0.1"
+   ],
+   "seconds": 7,
+   "music": false,
+   "notes": "Night, top-down: an anchored Longbow left to itself shells the enemy base; the camera pushes in.",
+   "camera": "0:0,6,30;7:0,-2,60"
+  },
+  {
+   "name": "longbow-packup-first",
+   "flags": [
+    "-AcPilot=longbow",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=53.2,-1.5",
+    "-AcPilotYaw=-1.68",
+    "-AcPilotVariant=anchored",
+    "-AcHour=22",
+    "-AcPilotPath=act:1.2,ability:2.9,w+act:2.5,act:1.6"
+   ],
+   "seconds": 8.5,
+   "music": false,
+   "notes": "Night, first person: an anchored Longbow fires, packs up into tank mode, drives in and fires on the move."
+  },
+  {
+   "name": "longbow-finale",
+   "flags": [
+    "-AcPilot=longbow",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=enemy",
+    "-AcPilotThird",
+    "-AcHour=22",
+    "-AcPilotPullOut=3.2,5",
+    "-AcPilotPath=w+act:2.6,act:8.4"
+   ],
+   "seconds": 11,
+   "music": false,
+   "notes": "Night, third person: a Longbow drives in firing, then the camera pulls out and turns to the gas giant."
+  },
+  {
+   "name": "longbow-siege-giant",
+   "flags": [
+    "-AcPilot=longbow",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=enemy",
+    "-AcPilotThird",
+    "-AcHour=19",
+    "-AcPilotPullOut=10.5,5",
+    "-AcPilotPath=wait:0.3,w:2.4,ability:3,act:4.8,act:8"
+   ],
+   "seconds": 16,
+   "music": false,
+   "notes": "Dusk, third person: a Longbow drives up to the enemy base, anchors into artillery and shells the buildings, then the eject to the gas giant."
+  },
+  {
+   "name": "home-to-match",
+   "flags": [
+    "-AcHomePlay=7",
+    "-AcLauncherArtStart=3",
+    "-AcStage=12",
+    "-AcStageBuildings",
+    "-AcHour=10"
+   ],
+   "camera": "0:0,0,0;5.2:0,0,0;12:10,-6,45",
+   "seconds": 12,
+   "music": false,
+   "notes": "The home screen: the night-base key art with the gas giant, drifting (no pixel snapping since a9e3d2e), RESUME GAME pressed at 5 s of the clip (-AcHomePlay counts from the home screen, 2 s before recording starts), then the RTS view over a staged base, the camera easing over to its army."
+  },
+  {
+   "name": "ranger-night-close",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotVariant=far",
+    "-AcPilotFoeHp=20",
+    "-AcHour=23",
+    "-AcPilotPullOut=13.5,5",
+    "-AcPilotPath=wait:1.2,left:1.2,right:2.4,left:1.2,w:2.4,aim:0.3,aim+act:3,wait:8"
+   ],
+   "seconds": 19,
+   "notes": "Night, first person: a Ranger at its Citadel looks round into the dark (sight halves at night: the ground is lost 20 cells out), walks ahead, an enemy Ranger staged 7.7 cells off (out of night sight) comes out of the dark at about 4.5 cells, the Ranger guns it down, then the eject to the gas giant."
+  },
+  {
+   "name": "claude-ad-a",
+   "flags": [
+    "-AcPilot=prospector",
+    "-AcPilotStage",
+    "-AcPilotLive",
+    "-AcPilotThird",
+    "-AcHour=7",
+    "-AcPilotPath=act:9,w+left:2,w:5,w+right:3.5,act:8",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=0"
+   ],
+   "seconds": 28,
+   "notes": "Morning, third person: a Prospector drills ore and drives round the field while KSTR plays the Claude ad from its start. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-b",
+   "flags": [
+    "-AcHour=9",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=23.5"
+   ],
+   "seconds": 20,
+   "camera": "0:-8,0,45;19:8,-4,45",
+   "notes": "Day, RTS view: a slow pan across the base, the Claude ad 26 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-c",
+   "flags": [
+    "-AcStageFight=30",
+    "-AcCamAtArmy",
+    "-AcNoFog",
+    "-AcHour=11",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=41.5"
+   ],
+   "seconds": 18,
+   "camera": "0:-6,3,26;17:1,-1,55",
+   "notes": "RTS view: two armies of 30 meet; the Claude ad 44 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-d",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotVariant=far",
+    "-AcPilotFoeHp=20",
+    "-AcHour=23",
+    "-AcPilotPullOut=13.5,5",
+    "-AcPilotPath=wait:1.2,left:1.2,right:2.4,left:1.2,w:2.4,aim:0.3,aim+act:3,wait:8",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=57.5"
+   ],
+   "seconds": 21,
+   "notes": "Night, first person: ranger-night-close under the Claude ad, 60 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-e",
+   "flags": [
+    "-AcPilot=longbow",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=enemy",
+    "-AcPilotThird",
+    "-AcHour=19",
+    "-AcPilotPullOut=15,5",
+    "-AcPilotPath=wait:0.3,w:2.4,ability:3,act:4.8,act:12",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=76.5"
+   ],
+   "seconds": 22,
+   "notes": "Dusk, third person: a Longbow anchors and shells the enemy base, then the eject; the Claude ad 79 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-f",
+   "flags": [
+    "-AcPilot=prospector",
+    "-AcPilotStage",
+    "-AcPilotLive",
+    "-AcHour=21",
+    "-AcPilotPullOut=6,5",
+    "-AcPilotPath=act:6,wait:9",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=96.5"
+   ],
+   "seconds": 16,
+   "notes": "Night, first person: a Prospector drills, then the camera rises to the gas giant as the host says 'a giant ringed planet'; the Claude ad 99 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-g",
+   "flags": [
+    "-AcPilot=peregrine",
+    "-AcPilotStage",
+    "-AcPilotLive",
+    "-AcNoAI",
+    "-AcPilotThird",
+    "-AcHour=10",
+    "-AcPilotPath=w:7.5",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=110.5"
+   ],
+   "seconds": 8.5,
+   "notes": "Day, third person: a Peregrine flies out as the host names it; the Claude ad 113 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-h",
+   "flags": [
+    "-AcPilot=atlas",
+    "-AcPilotThird",
+    "-AcHour=10",
+    "-AcPilotPath=wait:0.3,w:5",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=117"
+   ],
+   "seconds": 6,
+   "notes": "Day, third person: an Atlas walks as the host names it; the Claude ad 119.5 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-i",
+   "flags": [
+    "-AcPilot=scorpion",
+    "-AcPilotAt=ridge",
+    "-AcPilotMiners=6",
+    "-AcPilotThird",
+    "-AcHour=7",
+    "-AcPilotPath=wait:1,left:0.6,wait:0.6,right:1.2,ability:1,wait:4",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=121"
+   ],
+   "seconds": 8.5,
+   "notes": "Morning, third person: a Scorpion on a ridge over the base ('the little burrowing mine that chirps'); the Claude ad 123.5 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-k",
+   "flags": [
+    "-AcStageFight=40",
+    "-AcCamAtArmy",
+    "-AcNoFog",
+    "-AcHour=18",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=160.5"
+   ],
+   "seconds": 21,
+   "camera": "0:-8,4,30;20:4,-2,60",
+   "notes": "Dusk, RTS view: two armies of 40 fight ('several going at once'); the Claude ad 163 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-l",
+   "flags": [
+    "-AcPilot=atlas",
+    "-AcNoAI",
+    "-AcStageBuildings",
+    "-AcPilotAt=enemy",
+    "-AcPilotThird",
+    "-AcHour=19",
+    "-AcPilotPath=wait:0.3,w:3,act:13",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=179.5"
+   ],
+   "seconds": 17,
+   "notes": "Dusk, third person: an Atlas walks up to the enemy base firing; the Claude ad 182 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-m",
+   "flags": [
+    "-AcPilot=ranger",
+    "-AcPilotThird",
+    "-AcPilotVariant=minigun+shield+flyer",
+    "-AcPilotFoeHp=20",
+    "-AcPilotPullOut=6.8,5",
+    "-AcPilotPath=wait:0.3,aim:0.3,aim+act:1.8,view:0.1,wait:0.3,aim:0.4,aim+act:2.6,wait:8",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=194.5"
+   ],
+   "seconds": 15,
+   "notes": "ranger-third-to-first under the end of the Claude ad (197 s in), then the eject to the gas giant. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-n",
+   "flags": [
+    "-AcPilot=comet",
+    "-AcPilotThird",
+    "-AcHour=16",
+    "-AcPilotPath=w:2,w+right:1.5,ability:1.5,w:4",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=49.5"
+   ],
+   "seconds": 9,
+   "notes": "Afternoon, third person: a Comet drives out and jumps; the Claude ad 52 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "claude-ad-p",
+   "flags": [
+    "-AcHour=22",
+    "-AcMusicAd=claude",
+    "-AcMusicAdAt=170.75"
+   ],
+   "camera": "0:-4,2,30;10:2,-1,55",
+   "seconds": 10,
+   "notes": "Night, RTS view: the camera pushes in over the base ('one writing the radio ads you hear'); the Claude ad 173 s in. Part of the Claude ad video (docs/x-posts/claude-ad.md)."
+  },
+  {
+   "name": "weather-storm-clears",
+   "flags": [
+    "-AcPilot=prospector",
+    "-AcNoAI",
+    "-AcPilotAt=ridge",
+    "-AcHour=16.5",
+    "-AcWeatherSeed=42",
+    "-AcWeatherFrom=2185",
+    "-AcWeatherSpeed=16",
+    "-AcPilotPullOut=15.6,5",
+    "-AcPilotPath=wait:0.3,left:1.6,up:0.35,w:3,w+right:0.6,w:4,w+left:0.6,w:5,wait:9",
+    "-ExecCmds=DisableAllScreenMessages"
+   ],
+   "seconds": 21,
+   "notes": "Afternoon, first person in a Prospector: the end of a storm as a 16x time-lapse of seed 42's schedule (from 2185 s: lightning, the rain easing, the sky clearing to cumulus by ~2435 s), then the pull-out to the gas giant. The weather post (docs/x-posts/weather.md)."
+  },
+  {
+   "name": "weather-lightning",
+   "flags": [
+    "-AcSkyView=21",
+    "-AcHour=23",
+    "-AcWeather=storm",
+    "-AcWeatherSeed=42",
+    "-AcWeatherFrom=48",
+    "-ExecCmds=DisableAllScreenMessages"
+   ],
+   "seconds": 14,
+   "notes": "Night, the sky view facing a held storm (seed 42): the close strike at 53.44 s of weather time (about 3.4 s into the clip) lights the cloud above it from inside, the bolt below; it is 2.6 km off, so its thunder comes 7.6 s later (about 11 s in). The weather post's second part (docs/x-posts/weather.md)."
+  },
+  {
+   "name": "pose-sheet-prospector",
+   "level": "/Game/Maps/ModelRow",
+   "width": 1920,
+   "height": 640,
+   "seconds": 8,
+   "warm": 30,
+   "sound": false,
+   "music": false,
+   "flags": [
+    "-AcNoAI",
+    "-AcPoseSheet=prospector",
+    "-AcPoseSheetSpec={repo}/art/models/prospector/mocap/sheet/live.json"
+   ],
+   "notes": "The mocap playground: the Prospector's measured walk and drill stroke (Gaits/prospector_walk.json, prospector_drill.json) live in the model row, in profile, an ore deposit under the drill."
+  },
+  {
+   "name": "pose-sheet-prospector-before",
+   "level": "/Game/Maps/ModelRow",
+   "width": 1920,
+   "height": 640,
+   "seconds": 8,
+   "warm": 30,
+   "sound": false,
+   "music": false,
+   "flags": [
+    "-AcNoAI",
+    "-AcPoseSheet=prospector",
+    "-AcPoseSheetSpec={repo}/art/models/prospector/mocap/sheet/live.json",
+    "-AcNoGait"
+   ],
+   "notes": "The same playground with the procedural sines (-AcNoGait), for the before."
+  }
+ ]
 }

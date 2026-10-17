@@ -13,12 +13,12 @@ Save every render you judge by to `art/models/<unit>/previews/` and tell the use
 
 ## Status: what exists, what is to build
 
-Steps 0 to 4, 6 and 7 run today; step 5 is by hand. Build a helper when a step needs one, in `unreal/Tools/Editor/` or `.claude/skills/ringshadow-model-pipeline/`, and move it from this list to "exists" in the same edit.
+Steps 0 to 4, 6, 7 and 8 run today; step 5 is by hand. Build a helper when a step needs one, in `unreal/Tools/Editor/` or `.claude/skills/ringshadow-model-pipeline/`, and move it from this list to "exists" in the same edit.
 
 To build:
 - Paint onto UE meshes (skin projection and nets): parked, see [NETS.md](NETS.md).
 
-Exists: `model.sh stencil`, `stencil.py` and `-AcModelView` / `-AcModelPaint` in `AAcModelRow` (with `make_stencil_material.py`), `unreal/Tools/Editor/ac_modelkit.py` (parts, materials, rays, catalog merge, checked by `check_modelkit.py`), `models/peregrine.py`, `atlas.py`, `scorpion.py` (blockouts), the catalog merge (`ac_modelkit.merge_entry`; `import_models.py` still rewrites the whole catalog, never run it), `import_models.py` and `ac_models.py` (Swift-export path, `Content-src/models`, which will be gone), `make_materials.py` (the master materials and one `MI_<name>_<key>` per material), `make_model_row.py` and `AAcModelRow` (`/Game/Maps/ModelRow`), `-AcShot`, `-AcShotScenes`, `AcPlayground`, `AcPoseSheet` (`unreal/SHOTS.md`), `model.sh prompt|split|decal` and the Python tools in this folder.
+Exists: `mocap/` (step 8), `model.sh stencil`, `stencil.py` and `-AcModelView` / `-AcModelPaint` in `AAcModelRow` (with `make_stencil_material.py`), `unreal/Tools/Editor/ac_modelkit.py` (parts, materials, rays, catalog merge, checked by `check_modelkit.py`), `models/peregrine.py`, `atlas.py`, `scorpion.py` (blockouts), the catalog merge (`ac_modelkit.merge_entry`; `import_models.py` still rewrites the whole catalog, never run it), `import_models.py` and `ac_models.py` (Swift-export path, `Content-src/models`, which will be gone), `make_materials.py` (the master materials and one `MI_<name>_<key>` per material), `make_model_row.py` and `AAcModelRow` (`/Game/Maps/ModelRow`), `-AcShot`, `-AcShotScenes`, `AcPlayground`, `AcPoseSheet` (`unreal/SHOTS.md`), `model.sh prompt|split|decal` and the Python tools in this folder.
 
 ## Steps
 
@@ -85,6 +85,12 @@ Render with the model row (hidden run): the focused model in its 3/4 view, both 
 
 Done when the previews show the painting's shapes on the right parts in both team colours and the log (`-abslog=` file) has no catalog or asset-load error for the model.
 
+### 8. Mocap a motion from a video model
+
+A motion cycle measured instead of written: coloured dots on the joints of the side-view stencil (and, for a motion on something, the thing in the plate: an ore nodule under the drill), `mcp__orchestrator__grok_video` animates the plate, `mocap/track.py` follows the dots, `mocap/lift.py` (a walk: hip, knee and sole angles over one stride) or `mocap/lift_drill.py` (a drill stroke: the hull's lean, the arm's push, the drill's pitch over one stroke) turns them into a table, and the pose function plays it from `unreal/Content/Models/Gaits/<unit>_<motion>.json`. The steps, the prompts that worked and what the video model does to markers are in [MOCAP.md](MOCAP.md).
+
+Done when the lift's chart shows the cycles overlaying, the profile pose sheets with and without the table are in `mocap/sheet/`, the live sheet clips (the playground, `sheet/live.json`) show the motion moving, and `Autocraft.Gait` passes.
+
 ## Hidden runs (every UE run)
 
 Never relaunch the user's game or editor windows. Every UE process you start runs hidden: the Dock-less copy `/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditorBG.app/Contents/MacOS/UnrealEditor` (`unreal/Tools/README.md`, "Hidden test runs", has how it is made), with `-unattended -nosplash -nosound`, `-RenderOffscreen` (or `-nullrhi` for scripts), `"-ini:Input:[/Script/Engine.InputSettings]:bCaptureMouseOnLaunch=False"` and `-abslog=<path>` (never `-log`). From the repo root:
@@ -112,6 +118,7 @@ Record every hiccup and fact you meet in this pipeline as it happens, in [HICCUP
 - [HICCUPS.md](HICCUPS.md): what Grok did on each unit's concept and painting rounds.
 - [PROMPTS.md](PROMPTS.md): the template version log and the results table. `sheet-rules.txt` and `nets-rules.txt` are the templates.
 - [NETS.md](NETS.md): nets, decals and paint onto meshes (parked, with the tools that survive).
+- [MOCAP.md](MOCAP.md): step 8, a motion measured from an AI video of the model; `mocap/plate.py`, `track.py`, `lift.py`, `lift_drill.py`, `<unit>-markers.json`, `<unit>-drill-markers.json`.
 - [ROADMAP.md](ROADMAP.md): planned stages.
 - `model.sh` (`prompt`, `split`, `decal`), `split.py`, `decal.py` and the nets tools (`tint.py`, `legend.py`, `recolour.py`, `relayout.py`, `netscheck.py`, `install_nets.py`).
 - Other sessions edit the repo at once: small `Edit`s on live files, never copy a file over one. Delete with `rm` and the exact full path.

@@ -1,5 +1,6 @@
 #include "AcPoseInfantry.h"
 
+#include "AcGaitTable.h"
 #include "AcModelCatalog.h"
 #include "AcSpace.h"
 
@@ -409,14 +410,25 @@ namespace AcPoseInfantry
 
 		// A short, heavy stride: each knee bends as its leg swings through,
 		// the boots stay near level, and the hull sinks so the lower boot
-		// stays on the ground.
+		// stays on the ground. With a measured gait table
+		// (Content/Models/Gaits/prospector_walk.json, from a video of the
+		// model walking) the hip, knee and sole follow the table instead,
+		// the legs half a stride apart; the knee never bends backwards.
+		static const FAcGaitTable* const Gait = FAcGaitTable::Find(TEXT("prospector_walk"));
 		TArray<double, TInlineAllocator<4>> Soles;
 		for (int32 I = 0; I < 2; ++I)
 		{
 			const double Side = I == 0 ? 1.0 : -1.0;
-			const double Hip = bWalking ? Side * 0.45 * std::sin(Phase) : 0.0;
-			const double Knee = bWalking ? 0.1 + 1.1 * std::pow(FMath::Max(0.0, Side * std::cos(Phase + 0.2)), 1.2) : 0.0;
-			const double Ankle = -(Hip - Knee) * 0.8;
+			double Hip = bWalking ? Side * 0.45 * std::sin(Phase) : 0.0;
+			double Knee = bWalking ? 0.1 + 1.1 * std::pow(FMath::Max(0.0, Side * std::cos(Phase + 0.2)), 1.2) : 0.0;
+			double Ankle = -(Hip - Knee) * 0.8;
+			if (Gait && bWalking)
+			{
+				const double Ph = Phase / (2 * Pi) + (I == 0 ? 0.0 : 0.5);
+				Hip = Gait->HipAt(Ph);
+				Knee = FMath::Max(0.0, Gait->KneeAt(Ph));
+				Ankle = Gait->FootAt(Ph) - Hip + Knee;
+			}
 			if (Legs.Hip[I] != INDEX_NONE) P.Local[Legs.Hip[I]] = SkTurned(M.Parts[Legs.Hip[I]], SkZ(Hip));
 			Bend(M, P, Legs, I, ProspectorShin, Knee, Ankle);
 			SoleHeights(ProspectorSoles, ProspectorShin, Hip, Knee, Ankle, Soles);
@@ -473,8 +485,23 @@ namespace AcPoseInfantry
 		const bool bMining = U.working() && !F.bPicking;
 		double DrillTurn = bMining ? Time * 25 : 0.0;
 		// Drilling: the arm pushes into the rock in slow strokes and the whole
-		// body shudders with the bit.
+		// body shudders with the bit. With a measured stroke
+		// (Gaits/prospector_drill.json, the mocap step of the model pipeline)
+		// the hull's lean, the arm's push and the drill's pitch play from the
+		// table on the clock, each unit at its own phase.
+		static const FAcGaitTable* const Stroke = FAcGaitTable::Find(TEXT("prospector_drill"));
+		const bool bStroke = bMining && Stroke && Stroke->PeriodS > 0.0;
+		const double StrokePhase = bStroke ? Time / Stroke->PeriodS + std::fmod(Id, 7.0) / 7.0 : 0.0;
 		double Push = bMining ? 0.06 * (0.5 + 0.5 * std::sin(Time * 2.4 + Id)) : 0.0;
+		// The hull's lean, + the top forward into the rock (SkZ turns the top back).
+		double Lean = bMining ? 0.1 + Push * 0.8 : 0.16 * Smoothstep(0, 1, F.Reach);
+		double DrillPitch = 0.0;
+		if (bStroke)
+		{
+			Push = Stroke->At(TEXT("push"), StrokePhase);
+			Lean = Stroke->At(TEXT("lean"), StrokePhase);
+			DrillPitch = Stroke->At(TEXT("pitch"), StrokePhase);
+		}
 		// A cutter strike: the arm jabs out and snaps back.
 		if (C.Memory.LastShot && Time - *C.Memory.LastShot < 0.3)
 		{
@@ -493,13 +520,14 @@ namespace AcPoseInfantry
 		if (DrillArm != INDEX_NONE)
 		{
 			const FAcModelPart& A = M.Parts[DrillArm];
-			P.Local[DrillArm] = Sk(FVector(DrillArmX + Push, A.SkPosition.Y, A.SkPosition.Z), FQuat::Identity, A.SkScale);
+			// The drill's pitch, + the tip down (SkZ turns a forward limb up).
+			P.Local[DrillArm] = Sk(FVector(DrillArmX + Push, A.SkPosition.Y, A.SkPosition.Z), SkZ(-DrillPitch), A.SkScale);
 		}
 		if (Body != INDEX_NONE)
 		{
 			// Pitched with the stride; picking up, it leans in after the fork.
 			const double Pitch = bWalking ? std::sin(U.stride * 3.2) * 0.04 : 0.0;
-			const double Roll = bMining ? -0.1 - Push * 0.8 + std::sin(Time * 31) * 0.012 : -0.16 * Smoothstep(0, 1, F.Reach);
+			const double Roll = -Lean + (bMining ? std::sin(Time * 31) * 0.012 : 0.0);
 			P.Local[Body] = SkTurned(M.Parts[Body], SkZ(Roll) * SkX(Pitch));
 		}
 

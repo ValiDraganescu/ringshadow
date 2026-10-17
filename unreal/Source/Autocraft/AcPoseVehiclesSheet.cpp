@@ -68,11 +68,116 @@ namespace
 	}
 }
 
+/// One copy of the sheet: its unit, the game around it and the renderer
+/// memory, and the meshes that show its pose.
+struct FAcPoseSheetCopy
+{
+	explicit FAcPoseSheetCopy(ac::Unit InUnit) : U(MoveTemp(InUnit)) {}
+	ac::Unit U;
+	ac::GameState State;
+	FAcUnitMemory Memory;
+	const FAcModelInfo* Model = nullptr;
+	FAcPoseFn Fn = nullptr;
+	FString Kind, Label;
+	int32 Index = 0;
+	double Time0 = 10.0, Stride0 = 0.0, Walk = 0.0, Speed = 0.0;
+	int32 Warm = 0;
+	bool bFirefly = false;
+	ac::Vec2 At, Dir;
+	/// Each mesh component of the copy and the part it shows.
+	TArray<TPair<int32, TObjectPtr<UStaticMeshComponent>>> Parts;
+	TArray<FName> Materials;
+};
+
 AAcPoseSheet::AAcPoseSheet()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bTickEvenWhenPaused = true;
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+}
+
+
+void AAcPoseSheet::Place(FAcPoseSheetCopy& Copy, const double Elapsed)
+{
+	static const ac::MapDefinition Map = ac::WindowMaps::playground();
+	static const ac::TerrainField Field(Map);
+	ac::Unit& U = Copy.U;
+	const double Time = Copy.Time0 + Elapsed;
+	Copy.State.time = Time;
+	if (Elapsed > 0.0) U.stride = Copy.Stride0 + Copy.Walk * Elapsed;
+	FAcPose Pose;
+	auto PoseAt = [&](const int32 Step)
+	{
+		// Warm-up steps drive up to the copy's place.
+		if (Copy.bFirefly)
+		{
+			U.stride = 5.0 + double(Step) * Copy.Speed;
+			U.position = Copy.At - Copy.Dir * (Copy.Speed * double(Copy.Warm + 1 - Step));
+		}
+		FAcPoseContext C{Copy.State, &U, nullptr, *Copy.Model, Field, Copy.Memory, Time, 0.0, false, 0};
+		AcPose::RestUnit(C, Pose);
+		if (Copy.Fn) Copy.Fn(C, Pose);
+	};
+	const int32 Steps = Copy.bFirefly && Elapsed == 0.0 ? Copy.Warm + 1 : 1;
+	for (int32 Step = 1; Step <= Steps; ++Step) PoseAt(Step);
+
+	// On flat ground: the placement less the playground's height here.
+	FTransform Placement = Pose.Placement;
+	Placement.AddToTranslation(FVector(0, 0, -AcSpace::ToCm(Field.height(U.position))));
+	const FAcModelInfo& Model = *Copy.Model;
+	TArray<FTransform> World;
+	TArray<bool> Visible = Pose.Visible;
+	World.SetNum(Model.Parts.Num());
+	for (int32 P = 0; P < Model.Parts.Num(); ++P)
+	{
+		const int32 Parent = Model.Parts[P].Parent;
+		World[P] = Pose.Local[P] * (Parent != INDEX_NONE ? World[Parent] : Placement);
+		if (Parent != INDEX_NONE) Visible[P] = Visible[P] && Visible[Parent];
+	}
+	auto EmissionOf = [&](const int32 P, const FName Material)
+	{
+		float Emission = Pose.Emission[P];
+		for (const FAcPose::FMeshEmission& Over : Pose.MeshEmission)
+		{
+			if (Over.Part == P && Over.Material == Material) Emission = Over.Value;
+		}
+		return Emission;
+	};
+	if (Copy.Parts.IsEmpty())
+	{
+		for (int32 P = 0; P < Model.Parts.Num(); ++P)
+		{
+			for (const FAcModelMesh& Mesh : Model.Parts[P].Meshes)
+			{
+				UStaticMesh* SM = Mesh.LoadMesh();
+				if (!SM) continue;
+				UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+				C->SetupAttachment(RootComponent);
+				C->SetStaticMesh(SM);
+				if (UMaterialInterface* Mat = Mesh.LoadMaterial()) C->SetMaterial(0, Mat);
+				C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				C->SetCustomPrimitiveDataFloat(AcModelData::TeamIndex, 0.f);
+				C->SetCustomPrimitiveDataFloat(AcModelData::EmissionScale, EmissionOf(P, Mesh.Material));
+				C->SetWorldTransform(World[P]);
+				C->SetVisibility(Visible[P]);
+				C->RegisterComponent();
+				Meshes.Add(C);
+				Copy.Parts.Emplace(P, C);
+				Copy.Materials.Add(Mesh.Material);
+			}
+		}
+		UE_LOG(LogAutocraft, Log, TEXT("pose sheet: %s frame %d '%s' placed at %s"), *Copy.Kind, Copy.Index, *Copy.Label,
+			*Placement.GetTranslation().ToString());
+		return;
+	}
+	for (int32 I = 0; I < Copy.Parts.Num(); ++I)
+	{
+		const int32 P = Copy.Parts[I].Key;
+		UStaticMeshComponent* C = Copy.Parts[I].Value;
+		C->SetWorldTransform(World[P]);
+		C->SetVisibility(Visible[P]);
+		C->SetCustomPrimitiveDataFloat(AcModelData::EmissionScale, EmissionOf(P, Copy.Materials[I]));
+	}
 }
 
 void AAcPoseSheet::BeginPlay()
@@ -113,27 +218,45 @@ void AAcPoseSheet::Build(const FString& KindName, const FString& SpecFile)
 	const TArray<TSharedPtr<FJsonValue>>& Frames = Sheet->GetArrayField(TEXT("frames"));
 	const int32 N = Frames.Num();
 	const double Gap = Num(Sheet, TEXT("gap"), 1.5);
-	const double Heading = UE_DOUBLE_HALF_PI + 0.6;
+	// `heading` in the sheet turns the copies (radians; 0 faces along the row, a profile).
+	const double Heading = Num(Sheet, TEXT("heading"), UE_DOUBLE_HALF_PI + 0.6);
 	const ac::Vec2 Dir(std::cos(Heading), std::sin(Heading));
-	const ac::MapDefinition Map = ac::WindowMaps::playground();
-	const ac::TerrainField Field(Map);
 
+	bLive = Flag(Sheet, TEXT("live"));
 	for (int32 K = 0; K < N; ++K)
 	{
 		const TSharedPtr<FJsonObject> F = Frames[K]->AsObject();
-		const double Time = Num(F, TEXT("time"), 10.0);
-		const ac::Vec2 At((double(K) - double(N - 1) / 2.0) * Gap, 0.0);
+		TSharedPtr<FAcPoseSheetCopy> Copy = MakeShared<FAcPoseSheetCopy>(ac::Unit(7, *Kind, 0, ac::Vec2(0, 0), Heading, ac::Unit::Task::idle));
+		Copy->Model = Model;
+		Copy->Fn = Fn;
+		Copy->Kind = KindName;
+		Copy->Index = K;
+		Copy->Time0 = Num(F, TEXT("time"), 10.0);
+		Copy->At = ac::Vec2((double(K) - double(N - 1) / 2.0) * Gap, 0.0);
+		Copy->Dir = Dir;
 		const TOptional<double> Since = Maybe(F, TEXT("since"));
-		const int32 Warm = int32(Num(F, TEXT("warm"), 0.0));
-		const double Speed = Num(F, TEXT("speed"), 0.0);
-		const bool bFirefly = *Kind == ac::UnitKind::firefly;
+		Copy->Warm = int32(Num(F, TEXT("warm"), 0.0));
+		Copy->Speed = Num(F, TEXT("speed"), 0.0);
+		Copy->Walk = Num(F, TEXT("walk"), 0.0);
+		Copy->bFirefly = *Kind == ac::UnitKind::firefly;
+		const double Time = Copy->Time0;
+		const ac::Vec2 At = Copy->At;
+		const bool bFirefly = Copy->bFirefly;
 
-		ac::Unit U(7, *Kind, 0, At, Heading, ac::Unit::Task::idle);
+		ac::Unit& U = Copy->U;
+		U.position = At;
 		U.stride = Num(F, TEXT("stride"), 0.0);
+		Copy->Stride0 = U.stride;
 		U.moving = bFirefly ? Flag(F, TEXT("moving")) : Flag(F, TEXT("walking"));
 		if (Flag(F, TEXT("aiming")))
 		{
 			U.task = ac::Unit::Task::attacking;
+			U.moving = false;
+		}
+		if (Flag(F, TEXT("mining")))
+		{
+			U.task = ac::Unit::Task::mining;
+			U.timer = Num(F, TEXT("timer"), 5.0);
 			U.moving = false;
 		}
 		if (const TOptional<double> J = Maybe(F, TEXT("jump")))
@@ -155,7 +278,7 @@ void AAcPoseSheet::Build(const FString& KindName, const FString& SpecFile)
 		if (const TOptional<double> Cd = Maybe(F, TEXT("cooldown"))) U.cooldown = *Cd;
 		if (const TOptional<double> St = Maybe(F, TEXT("stomp"))) U.stompedAt = Time - *St;
 
-		ac::GameState State;
+		ac::GameState& State = Copy->State;
 		State.time = Time;
 		if (const TOptional<double> Lock = Maybe(F, TEXT("lock")))
 		{
@@ -168,7 +291,7 @@ void AAcPoseSheet::Build(const FString& KindName, const FString& SpecFile)
 			U.task = ac::Unit::Task::attacking;
 			U.target = 99;
 		}
-		FAcUnitMemory Memory;
+		FAcUnitMemory& Memory = Copy->Memory;
 		if (Since) Memory.LastShot = Time - *Since;
 		if (*Kind == ac::UnitKind::juggernaut)
 		{
@@ -182,61 +305,48 @@ void AAcPoseSheet::Build(const FString& KindName, const FString& SpecFile)
 		// The turn rate held (no time passes between the sheet's poses).
 		Memory.TurnRate = 4.0 * Num(F, TEXT("turn"), 0.0);
 		Memory.LastHeading = Heading;
+		Copy->Label = F->GetStringField(TEXT("label"));
 
-		FAcPose Pose;
-		auto PoseAt = [&](const int32 Step)
+		// A prop at rest ahead of the copy (an ore deposit under the drill).
+		FString PropName;
+		if (F->TryGetStringField(TEXT("prop"), PropName))
 		{
-			// Warm-up steps drive up to the copy's place.
-			if (bFirefly)
+			if (const FAcModelInfo* Prop = FAcModelCatalog::Get().Find(FName(PropName)))
 			{
-				U.stride = 5.0 + double(Step) * Speed;
-				U.position = At - Dir * (Speed * double(Warm + 1 - Step));
-			}
-			FAcPoseContext C{State, &U, nullptr, *Model, Field, Memory, Time, 0.0, false, 0};
-			AcPose::RestUnit(C, Pose);
-			if (Fn) Fn(C, Pose);
-		};
-		for (int32 Step = 1; Step <= (bFirefly ? Warm + 1 : 1); ++Step) PoseAt(Step);
-
-		// On flat ground: the placement less the playground's height here.
-		FTransform Placement = Pose.Placement;
-		Placement.AddToTranslation(FVector(0, 0, -AcSpace::ToCm(Field.height(U.position))));
-		TArray<FTransform> World;
-		TArray<bool> Visible = Pose.Visible;
-		World.SetNum(Model->Parts.Num());
-		for (int32 P = 0; P < Model->Parts.Num(); ++P)
-		{
-			const int32 Parent = Model->Parts[P].Parent;
-			World[P] = Pose.Local[P] * (Parent != INDEX_NONE ? World[Parent] : Placement);
-			if (Parent != INDEX_NONE) Visible[P] = Visible[P] && Visible[Parent];
-		}
-		for (int32 P = 0; P < Model->Parts.Num(); ++P)
-		{
-			const FAcModelPart& Part = Model->Parts[P];
-			for (const FAcModelMesh& Mesh : Part.Meshes)
-			{
-				UStaticMesh* SM = Mesh.LoadMesh();
-				if (!SM) continue;
-				float Emission = Pose.Emission[P];
-				for (const FAcPose::FMeshEmission& Over : Pose.MeshEmission)
+				const ac::Vec2 PropAt = At + Dir * Num(F, TEXT("propAt"), 1.5);
+				FTransform Placement(FQuat::Identity, AcSpace::FromSceneKit(PropAt.x, 0, PropAt.y));
+				Placement.SetRotation(FQuat(FVector::UpVector, Num(F, TEXT("propTurn"), 0.0)));
+				TArray<FTransform> World;
+				World.SetNum(Prop->Parts.Num());
+				for (int32 P = 0; P < Prop->Parts.Num(); ++P)
 				{
-					if (Over.Part == P && Over.Material == Mesh.Material) Emission = Over.Value;
+					const int32 Parent = Prop->Parts[P].Parent;
+					World[P] = Prop->Parts[P].Rest * (Parent != INDEX_NONE ? World[Parent] : Placement);
+					for (const FAcModelMesh& Mesh : Prop->Parts[P].Meshes)
+					{
+						UStaticMesh* SM = Mesh.LoadMesh();
+						if (!SM) continue;
+						UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+						C->SetupAttachment(RootComponent);
+						C->SetStaticMesh(SM);
+						if (UMaterialInterface* Mat = Mesh.LoadMaterial()) C->SetMaterial(0, Mat);
+						C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+						C->SetCustomPrimitiveDataFloat(AcModelData::TeamIndex, 0.f);
+						C->SetCustomPrimitiveDataFloat(AcModelData::EmissionScale, 0.f);
+						C->SetWorldTransform(World[P]);
+						C->RegisterComponent();
+						Meshes.Add(C);
+					}
 				}
-				UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
-				C->SetupAttachment(RootComponent);
-				C->SetStaticMesh(SM);
-				if (UMaterialInterface* Mat = Mesh.LoadMaterial()) C->SetMaterial(0, Mat);
-				C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-				C->SetCustomPrimitiveDataFloat(AcModelData::TeamIndex, 0.f);
-				C->SetCustomPrimitiveDataFloat(AcModelData::EmissionScale, Emission);
-				C->SetWorldTransform(World[P]);
-				C->SetVisibility(Visible[P]);
-				C->RegisterComponent();
-				Meshes.Add(C);
+			}
+			else
+			{
+				UE_LOG(LogAutocraft, Warning, TEXT("pose sheet: no prop model %s"), *PropName);
 			}
 		}
-		UE_LOG(LogAutocraft, Log, TEXT("pose sheet: %s frame %d '%s' placed at %s"), *KindName, K,
-			*F->GetStringField(TEXT("label")), *Placement.GetTranslation().ToString());
+
+		Place(*Copy, 0.0);
+		Copies.Add(MoveTemp(Copy));
 	}
 
 	// Nothing else in the level: the model row and its floor hidden.
@@ -289,7 +399,15 @@ void AAcPoseSheet::Tick(const float DeltaSeconds)
 		Camera->GetCameraComponent()->SetFieldOfView(
 			float(FMath::RadiansToDegrees(2.0 * FMath::Atan(FMath::Tan(Half) * Aspect))));
 	}
-	if (!bHolding) return;
+	if (!bHolding)
+	{
+		if (bLive)
+		{
+			LiveTime += DeltaSeconds;
+			for (const TSharedPtr<FAcPoseSheetCopy>& Copy : Copies) Place(*Copy, LiveTime);
+		}
+		return;
+	}
 	bool bBusy = false;
 #if WITH_EDITOR
 	bBusy = (GShaderCompilingManager && GShaderCompilingManager->IsCompiling())

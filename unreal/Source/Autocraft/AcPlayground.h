@@ -24,7 +24,10 @@
 //       column (side, fog, unlimited, Clear, then the list), the status
 //       line, and Clear's question.
 //
-// Run: `-AcPlayground` (with `-AcNew` to start it over). Scripted (headless
+// Run: `-AcPlayground` (with `-AcNew` to start it over). In the editor:
+// `ac.Playground 1` in the console (the ` key or the Output Log's command
+// line), then Play; `ac.Playground 0` and Play is a game again. Drag pans,
+// the wheel or a pinch zooms, as in a game. Scripted (headless
 // shots and checks, through the same paths as the mouse; no desktop
 // automation):
 //   -AcPlaygroundLayout        put down Swift's `windowshot --playground`

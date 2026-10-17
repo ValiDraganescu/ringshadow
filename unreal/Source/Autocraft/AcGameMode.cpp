@@ -1,5 +1,7 @@
 #include "AcGameMode.h"
 
+#include "AcPlayground.h"
+
 #include "AcDaylight.h"
 #include "AcWeather.h"
 #include "AcDoodads.h"
@@ -41,7 +43,7 @@ EAcRunMode AAcGameMode::ReadRunMode()
 	FString Value;
 	if (FParse::Value(Cmd, TEXT("AcRunFor="), Value)) return EAcRunMode::RunFor;
 	if (FParse::Value(Cmd, TEXT("AcBench="), Value)) return EAcRunMode::Bench;
-	if (FParse::Param(Cmd, TEXT("AcPlayground"))) return EAcRunMode::Playground;
+	if (UAcPlaygroundSubsystem::IsPlaygroundRun()) return EAcRunMode::Playground;
 	if (FParse::Value(Cmd, TEXT("AcShot="), Value)) return EAcRunMode::Shot;
 	return EAcRunMode::Game;
 }

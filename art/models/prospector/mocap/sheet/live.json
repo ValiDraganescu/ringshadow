@@ -1,0 +1,33 @@
+{
+ "sheets": [
+  {
+   "kind": "prospector",
+   "gap": 3.0,
+   "cy": 0.7,
+   "D": 30,
+   "fov": 5.0,
+   "width": 1920,
+   "height": 640,
+   "heading": 0.0,
+   "live": true,
+   "frames": [
+    {
+     "label": "walk",
+     "time": 10,
+     "stride": 19.635,
+     "walking": true,
+     "walk": 3.94
+    },
+    {
+     "label": "drill",
+     "time": 10,
+     "mining": true,
+     "timer": 5,
+     "prop": "ore_0",
+     "propAt": 1.45,
+     "propTurn": 1.5708
+    }
+   ]
+  }
+ ]
+}

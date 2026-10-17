@@ -267,7 +267,18 @@ UAcPlaygroundSubsystem* UAcPlaygroundSubsystem::Get(const UObject* WorldContext)
 	return World ? World->GetSubsystem<UAcPlaygroundSubsystem>() : nullptr;
 }
 
-bool UAcPlaygroundSubsystem::IsPlaygroundRun() { return FParse::Param(FCommandLine::Get(), TEXT("AcPlayground")); }
+namespace
+{
+	// `ac.Playground 1` in the editor's console before Play opens the
+	// playground in PIE, where the command line is the editor's own.
+	TAutoConsoleVariable<int32> CVarPlayground(TEXT("ac.Playground"), 0,
+		TEXT("1: Play opens the playground (as -AcPlayground). Set it in the editor's console before pressing Play; 0 for a game."));
+}
+
+bool UAcPlaygroundSubsystem::IsPlaygroundRun()
+{
+	return FParse::Param(FCommandLine::Get(), TEXT("AcPlayground")) || CVarPlayground.GetValueOnAnyThread() != 0;
+}
 
 bool UAcPlaygroundSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
