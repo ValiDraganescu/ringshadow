@@ -6,6 +6,7 @@
 #include "AcPoseAir.h"
 #include "AcPoseNewKinds.h"
 
+#include "Rules.h"
 #include "Types.h"
 
 #include <array>
@@ -285,10 +286,9 @@ namespace AcKinds
 
 	bool IsBrood(const ac::UnitKind Kind)
 	{
-		// The one place the enum's order still means something: the Brood are
-		// the last block. Becomes `ac::Rules::stats(Kind).brood` when the core
-		// table has the flag (docs/kind-registry.md).
-		return Kind >= ac::UnitKind::shardling;
+		// The core's kind table says (docs/kind-registry.md): the enum's
+		// order means nothing here.
+		return ac::Rules::stats(Kind).brood;
 	}
 
 	TOptional<ac::UnitKind> Named(const FString& Name)

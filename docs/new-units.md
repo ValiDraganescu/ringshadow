@@ -450,24 +450,40 @@ Open, for the user:
 
 ## Where it lands in the code
 
-Append the new kinds at the **end** of `UnitKind` and the new picks at the
-end of `Perk`. A case without a payload is stored as its index, so
-appending keeps saved games loading.
+Since 2026-10-18 a kind is defined once and the rest derives from it or is
+checked against `allCases` ([kind-registry.md](kind-registry.md) has the
+audit, the target and what each worker changed). Put a new player kind
+after the last player kind and before the Brood block; the Brood are a
+`brood` flag, not an enum position. Saved games store a kind by its name;
+only the network wire stores the index, so a new kind bumps
+`kProtocolVersion` (`NetPacket.h`): the kind fields widen from the count.
 
-- Core (`unreal/Source/AutocraftCore`): `Rules.h` (`UnitKind`, the size of
-  `UnitStats::byKind` from 9 to 12, the stats, `slots`, `needsLab`,
-  `flight`, `vision`, `trains`), `Types.h` (`Perk`, `Tally`, the new
-  leveling cases), `Leveling.cpp` (the catalogue and the effects),
-  `Simulation.cpp` (bury, hidden, sting, stomp, air-only targeting),
-  `Vision.cpp` (hidden units and Sentinel detection), `Pilot.cpp` and
-  `Pilot+Kinds.cpp` (the abilities and firing when driven), the
-  `Commander*` files.
-- Game (`unreal/Source/Autocraft`): the files that name every kind today,
-  found with `grep -l hailstorm`: the pose files (`AcPose*`), the cockpits
-  (`AcCockpitKinds`), effects (`AcEffectsShots`, `AcEffectsDeaths*`,
-  `AcEffectsShatter*`), audio (`AcAudioDirector`), the console and pilot
-  text (`AcConsoleInfo`, `AcPilotText`, `AcPilotCamera`), the playground
-  (`AcPlayground`) and the minimap (`SAcMinimap`).
+- Core (`unreal/Source/AutocraftCore`): the enum case and its raw name in
+  `Rules.h` (the `static_assert` on `EnumInfo<UnitKind>::count` names the
+  last kind: move it); one row in `UnitStats::byKind` with the stats and
+  the facts that used to be if-chains (`title`, `brood`, `boards`,
+  `machine`, `drivable`, `cargoSlots`, `needsLab`, `trainedBy`, `vision`,
+  the shot flight, `turret` and its two rates, `steers` and the hull rates,
+  `anchors`/`burrows`/`jumps`/`builds`, `aiTrains`); `core-tests`
+  `KindTableTests` walks every row. A mechanic the table cannot express
+  (burying, a stomp, air-only targeting) is code in `Simulation.cpp`,
+  `Vision.cpp`, `Pilot+Kinds.cpp` and the `Commander*` files, as before;
+  with `aiTrains` the AI trains the kind from its building without a
+  Commander edit.
+- Leveling: `Leveling::perksPerKind` (18) rows in `Leveling.cpp`'s
+  `perkRows()` (perk, kind, title, text, effects), their `Perk` cases and
+  names in `Types.h`; `LevelingTableTests` checks the lists agree. New
+  `Tally` fields for the tracking columns.
+- Game (`unreal/Source/Autocraft`): one row in `AcKindTable.cpp` (the
+  look: muzzles, sounds, heights, the cockpit's eye and family, the minimap
+  mark, the death, bursts; names derive from the raw name), an
+  `AcPose<Kind>.cpp` with its `FAcPoseRegistration`, a cockpit pose in
+  `AcCockpitKinds` if it has its own cockpit, its help text in
+  `AcPilotText`. `Autocraft.Kinds.Complete` names whatever is missing: the
+  pose, the catalog model, the cockpit, the icon, the death, the sounds.
+- MMORPG: a pilot's kind is saved by name (`WorldMap::pilotKind`); the
+  tree is `Progression::nodes(kind)`, the Prospector's today and empty for
+  the rest, so a second playable kind needs its own tree there.
 - Golden tests: `unreal/core-tests/golden/*.json` were computed by the
   Swift game. The new kinds changed the leveling golden, which now holds
   them. The C++ core is its own reference: the goldens are frozen files,

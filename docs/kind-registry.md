@@ -194,3 +194,20 @@ follows from this doc.
 5. Run the suites: `Autocraft.Kinds.Complete` and `KindTableTests` name whatever is missing.
 6. A mechanic the table cannot express (burrowing, a stomp) is new code in `Simulation`,
    `Pilot+Kinds`, the effects and the Commander, as before.
+
+## What landed (2026-10-18)
+
+All five, fast-forward onto `worktree/MMORPG-variant`, every suite green on the merged
+tree (core 521, net 105, server 356, `Autocraft.Kinds.*` and the playground self-test),
+no golden and no wire byte changed: leveling `07d4e1d` (`perkRows()`,
+`LevelingTableTests`), net `6938848` (`kUnitKindBits`/`kStructureKindBits` from the counts,
+`KindWidthTests`), server `d28e66e` (`WorldMap::pilotKind`, `Progression::nodes(kind)`,
+`PilotProgress`, `PilotKindTests`), game `442759e` (`AcKindTable`, `AcNewKinds` deleted,
+`Autocraft.Kinds.Complete`), core `bb88605` (the kind table in `UnitStats::byKind`,
+`EnumArray` counters, the `aiTrains` fallback, `KindTableTests`). Deliberately left as
+code: the mechanics (anchor, bury, stomp, the cockpit pose functions, the per-kind help
+text, the Near carry sounds). Known, not changed: `AcEffectsNewKinds.cpp` and
+`AcPoseScorpion.cpp` use a flat 0.62 chest height instead of the row's (a probable bug,
+kept for zero behaviour change); the AI's and the pilot's turret and hull rates still
+differ (two fields, a balance decision for later); `WorldBrood.cpp`'s guard distance
+still names the Prospector.
