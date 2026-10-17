@@ -17,6 +17,23 @@
 
 namespace ac::net::codec {
 
+/// The bits that hold the values 0..n-1.
+constexpr int bitsFor(size_t n) {
+    int bits = 0;
+    while ((size_t(1) << bits) < n) bits++;
+    return bits;
+}
+/// The wire's unit and structure kinds take their widths from the counts: a new
+/// kind can widen them, which changes the bytes (bump kProtocolVersion).
+/// `kUnit…`, not `kKind…`: NetSnapshot.cpp's kKindBits is the item kind's width.
+constexpr size_t kUnitKindCount = EnumInfo<UnitKind>::names.size();
+constexpr int kUnitKindBits = bitsFor(kUnitKindCount);
+static_assert((size_t(1) << kUnitKindBits) >= kUnitKindCount);
+static_assert(kUnitKindCount <= 64, "the driven-kinds mask is one uint64_t");
+constexpr size_t kStructureKindCount = EnumInfo<StructureKind>::names.size();
+constexpr int kStructureKindBits = bitsFor(kStructureKindCount);
+static_assert((size_t(1) << kStructureKindBits) >= kStructureKindCount);
+
 /// A double as a signed integer of 1/`scale` steps (non-finite: 0).
 int64_t fixed(double v, double scale);
 
@@ -123,7 +140,7 @@ struct ReadAll {
 };
 
 template <class V, class X> void buildOrderFields(V& v, X& x) {
-    v(Enum<StructureKind, 4>{}, x.kind);
+    v(Enum<StructureKind, kStructureKindBits>{}, x.kind);
     v(Pos{}, x.position);
 }
 template <class V> void fields(V& v, const BuildOrder& x) { buildOrderFields<V, const BuildOrder>(v, x); }
@@ -181,7 +198,7 @@ struct GunsCodec {
 /// Every field of a unit, in wire order. A new field of `Unit` goes here.
 template <class V, class X> void unitFields(V& v, X& u) {
     v(Var{}, u.id);
-    v(Enum<UnitKind, 4>{}, u.kind);
+    v(Enum<UnitKind, kUnitKindBits>{}, u.kind);
     v(Var{}, u.owner);
     v(Pos{}, u.position);
     v(Health{2 * Rules::hp(u.kind)}, u.hp);
@@ -235,14 +252,14 @@ template <class V> void fields(V& v, Unit& x) { unitFields<V, Unit>(v, x); }
 
 template <class V, class X> void structureFields(V& v, X& b) {
     v(Var{}, b.id);
-    v(Enum<StructureKind, 4>{}, b.kind);
+    v(Enum<StructureKind, kStructureKindBits>{}, b.kind);
     v(Var{}, b.owner);
     v(Pos{}, b.position);
     v(Health{2 * Rules::hp(b.kind)}, b.hp);
     v(Opt<Fixed>{kMs}, b.buildLeft);
     v(Opt<Var>{}, b.builder);
     v(Opt<Fixed>{kMs}, b.training);
-    v(Opt<Vec<Enum<UnitKind, 4>>>{}, b.line);
+    v(Opt<Vec<Enum<UnitKind, kUnitKindBits>>>{}, b.line);
     v(Opt<Vec<Var>>{}, b.crew);
     v(Opt<Var>{}, b.addon);
     v(Opt<Var>{}, b.parent);
@@ -348,7 +365,7 @@ template <class V, class X> void playerFields(V& v, X& c) {
     v(Opt<Var>{}, p.unitsLost);
     v(Opt<Var>{}, p.team);
     v(Bool{}, c.pilot);
-    v(Enum<uint64_t, 16>{}, c.kinds);
+    v(Enum<uint64_t, int(kUnitKindCount)>{}, c.kinds);
 }
 template <class V> void fields(V& v, const PlayerCore& x) { playerFields<V, const PlayerCore>(v, x); }
 template <class V> void fields(V& v, PlayerCore& x) { playerFields<V, PlayerCore>(v, x); }

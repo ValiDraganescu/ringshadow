@@ -55,7 +55,7 @@ constexpr double kRecordSeconds = 2;
 constexpr double kResetSeconds = 1;
 
 uint64_t keyOf(Kind k, uint64_t v) { return (uint64_t(k) << 56) | (v & ((uint64_t(1) << 56) - 1)); }
-uint64_t kindKey(int64_t player, UnitKind k) { return uint64_t(player) * 16 + uint64_t(k); }
+uint64_t kindKey(int64_t player, UnitKind k) { return uint64_t(player) * kUnitKindCount + uint64_t(k); }
 uint64_t stampKey(int64_t player, UnitKind k, size_t i) { return kindKey(player, k) * 16 + i; }
 
 int64_t signExtend(uint64_t v, int bits) {
@@ -276,7 +276,7 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
             writeVarint(w, x.id);
             writeVarint(w, uint64_t(x.region));
             writeVarint(w, uint64_t(x.building));
-            Enum<StructureKind, 4>{}.write(w, x.kind);
+            Enum<StructureKind, kStructureKindBits>{}.write(w, x.kind);
             Pos{}.write(w, x.at);
             Pos{}.write(w, x.from);
             kMs.write(w, x.arrives);
@@ -705,7 +705,7 @@ struct SnapshotReader::State {
             out[p] = c->player;
             if (!c->pilot) continue;
             PilotRecord rec;
-            for (unsigned k = 0; k < 16; k++) {
+            for (unsigned k = 0; k < kUnitKindCount; k++) {
                 if (!(c->kinds & (uint64_t(1) << k))) continue;
                 const UnitKind kind = static_cast<UnitKind>(k);
                 KindRecord kr;
@@ -774,7 +774,7 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
             x.id = uint32_t(readVarint(r));
             x.region = int64_t(readVarint(r));
             x.building = int64_t(readVarint(r));
-            Enum<StructureKind, 4>{}.read(r, x.kind);
+            Enum<StructureKind, kStructureKindBits>{}.read(r, x.kind);
             Pos{}.read(r, x.at);
             Pos{}.read(r, x.from);
             kMs.read(r, x.arrives);

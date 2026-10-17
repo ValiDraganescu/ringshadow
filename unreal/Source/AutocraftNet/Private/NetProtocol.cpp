@@ -418,15 +418,15 @@ void MissionCodec::read(BitReader& r, Mission& m) const {
 
 void RequestWhat::write(BitWriter& w, const Request::What& x) const {
     w.writeBits(x.index(), 2);
-    if (const auto* u = x.as<Request::What::Unit>()) w.writeBits(static_cast<uint64_t>(u->kind), 4);
-    if (const auto* b = x.as<Request::What::Building>()) w.writeBits(static_cast<uint64_t>(b->kind), 4);
+    if (const auto* u = x.as<Request::What::Unit>()) w.writeBits(static_cast<uint64_t>(u->kind), codec::kUnitKindBits);
+    if (const auto* b = x.as<Request::What::Building>()) w.writeBits(static_cast<uint64_t>(b->kind), codec::kStructureKindBits);
     if (const auto* g = x.as<Request::What::Upgrade>()) w.writeBits(static_cast<uint64_t>(g->upgrade), 2);
 }
 
 void RequestWhat::read(BitReader& r, Request::What& x) const {
     const uint64_t i = r.readBits(2);
-    if (i == 0) x = Request::What(Request::What::Unit{static_cast<UnitKind>(r.readBits(4))});
-    else if (i == 1) x = Request::What(Request::What::Building{static_cast<StructureKind>(r.readBits(4))});
+    if (i == 0) x = Request::What(Request::What::Unit{static_cast<UnitKind>(r.readBits(codec::kUnitKindBits))});
+    else if (i == 1) x = Request::What(Request::What::Building{static_cast<StructureKind>(r.readBits(codec::kStructureKindBits))});
     else x = Request::What(Request::What::Upgrade{static_cast<Upgrade>(r.readBits(2))});
 }
 
@@ -443,8 +443,8 @@ void writeEvent(BitWriter& w, const GameEvent& e) {
         [&](const auto& x) {
             using E = std::decay_t<decltype(x)>;
             using G = GameEvent;
-            auto unitKind = [&](UnitKind k) { w.writeBits(uint64_t(k), 4); };
-            auto structureKind = [&](StructureKind k) { w.writeBits(uint64_t(k), 4); };
+            auto unitKind = [&](UnitKind k) { w.writeBits(uint64_t(k), codec::kUnitKindBits); };
+            auto structureKind = [&](StructureKind k) { w.writeBits(uint64_t(k), codec::kStructureKindBits); };
             if constexpr (std::is_same_v<E, G::Deposited>) { id(x.unit); id(x.amount); pos.write(w, x.at); id(x.tax); w.writeBool(x.hydrogen); }
             else if constexpr (std::is_same_v<E, G::PatchDepleted> || std::is_same_v<E, G::PatchRegrown>) { id(x.patch); }
             else if constexpr (std::is_same_v<E, G::Trained>) { id(x.unit); unitKind(x.kind); pos.write(w, x.at); }
@@ -468,8 +468,8 @@ bool readEvent(BitReader& r, GameEvent& e) {
     const Pos pos;
     auto id = [&] { return readSigned(r); };
     auto at = [&] { Vec2 v; pos.read(r, v); return v; };
-    auto unitKind = [&] { return static_cast<UnitKind>(r.readBits(4)); };
-    auto structureKind = [&] { return static_cast<StructureKind>(r.readBits(4)); };
+    auto unitKind = [&] { return static_cast<UnitKind>(r.readBits(codec::kUnitKindBits)); };
+    auto structureKind = [&] { return static_cast<StructureKind>(r.readBits(codec::kStructureKindBits)); };
     auto radius = [&] { double v = 0; codec::kCm.read(r, v); return v; };
     switch (r.readBits(5)) {
     case 0: { auto u = id(); auto a = id(); auto p = at(); auto t = id(); e = GameEvent(GameEvent::Deposited{u, a, p, t, r.readBool()}); break; }
@@ -593,7 +593,7 @@ std::vector<uint8_t> encode(const WorldMessage& m) {
             writeDouble(w, p.at.x);
             writeDouble(w, p.at.y);
             w.writeBool(p.building.has_value());
-            if (p.building) w.writeBits(uint64_t(*p.building), 4);
+            if (p.building) w.writeBits(uint64_t(*p.building), codec::kStructureKindBits);
         }
         w.writeBool(g.nest.has_value());
         if (g.nest) {
@@ -643,7 +643,7 @@ bool decode(const std::vector<uint8_t>& bytes, WorldMessage& m) {
             p.at.x = readDouble(r);
             p.at.y = readDouble(r);
             if (r.readBool()) {
-                const uint64_t k = r.readBits(4);
+                const uint64_t k = r.readBits(codec::kStructureKindBits);
                 if (k >= uint64_t(allCases<StructureKind>().size())) return false;
                 p.building = static_cast<StructureKind>(k);
             }
@@ -757,7 +757,7 @@ void writeMission(BitWriter& w, const CitadelMission& x) {
     writeSigned(w, x.ore);
     writeSigned(w, x.hydrogen);
     w.writeBool(x.blueprint.has_value());
-    if (x.blueprint) w.writeBits(uint64_t(*x.blueprint), 4);
+    if (x.blueprint) w.writeBits(uint64_t(*x.blueprint), codec::kStructureKindBits);
     w.writeBool(x.item.has_value());
     if (x.item) w.writeBits(uint64_t(*x.item), 3);
     writeSigned(w, x.count);
@@ -783,7 +783,7 @@ bool readMission(BitReader& r, CitadelMission& x) {
     x.ore = readSigned(r);
     x.hydrogen = readSigned(r);
     if (r.readBool()) {
-        const uint64_t k = r.readBits(4);
+        const uint64_t k = r.readBits(codec::kStructureKindBits);
         if (k >= uint64_t(allCases<StructureKind>().size())) return false;
         x.blueprint = static_cast<StructureKind>(k);
     }
@@ -808,7 +808,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         writeString(w, f->pad);
     }
     if (const auto* b = std::get_if<RequestMessage::Build>(&m.what)) {
-        w.writeBits(uint64_t(b->kind), 4);
+        w.writeBits(uint64_t(b->kind), codec::kStructureKindBits);
         codec::Pos{}.write(w, b->at);
     }
     if (const auto* p = std::get_if<RequestMessage::Pick>(&m.what)) {
@@ -832,7 +832,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
     }
     if (const auto* p = std::get_if<RequestMessage::Buy>(&m.what)) {
         w.writeBool(p->blueprint.has_value());
-        if (p->blueprint) w.writeBits(uint64_t(*p->blueprint), 4);
+        if (p->blueprint) w.writeBits(uint64_t(*p->blueprint), codec::kStructureKindBits);
         else w.writeBits(uint64_t(p->item), 3);
     }
     if (const auto* p = std::get_if<RequestMessage::Use>(&m.what)) w.writeBits(uint64_t(p->item), 3);
@@ -878,7 +878,7 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
     }
     case 3: {
         RequestMessage::Build b;
-        const uint64_t kind = r.readBits(4);
+        const uint64_t kind = r.readBits(codec::kStructureKindBits);
         if (kind >= uint64_t(allCases<StructureKind>().size())) return false;
         b.kind = static_cast<StructureKind>(kind);
         codec::Pos{}.read(r, b.at);
@@ -945,7 +945,7 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
     case 14: {
         RequestMessage::Buy p;
         if (r.readBool()) {
-            const uint64_t kind = r.readBits(4);
+            const uint64_t kind = r.readBits(codec::kStructureKindBits);
             if (kind >= uint64_t(allCases<StructureKind>().size())) return false;
             p.blueprint = static_cast<StructureKind>(kind);
         } else if (!readItem(p.item)) {
@@ -1034,7 +1034,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     w.writeBool(m.respecFree);
     writeVarint(w, m.blueprints.size());
     for (const auto& [k, n] : m.blueprints) {
-        w.writeBits(uint64_t(k), 4);
+        w.writeBits(uint64_t(k), codec::kStructureKindBits);
         writeSigned(w, n);
     }
     writeStrings(w, m.sitesKnown);
@@ -1082,7 +1082,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         codec::kMs.write(w, m.respawn->at);
         writeString(w, m.respawn->region);
         w.writeBool(m.respawn->home.has_value());
-        if (m.respawn->home) w.writeBits(uint64_t(*m.respawn->home), 4);
+        if (m.respawn->home) w.writeBits(uint64_t(*m.respawn->home), codec::kStructureKindBits);
         writeSigned(w, m.respawn->cargo);
         w.writeBool(m.respawn->hydrogen);
     }
@@ -1091,7 +1091,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     w.writeBool(m.lab);
     writeVarint(w, m.realm.size());
     for (const auto& [kind, n] : m.realm) {
-        w.writeBits(uint64_t(kind), 4);
+        w.writeBits(uint64_t(kind), codec::kStructureKindBits);
         writeSigned(w, n);
     }
     writeVarint(w, m.builders.size());
@@ -1112,7 +1112,7 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
     writeSigned(w, m.taxPercent);
     writeVarint(w, m.bought.size());
     for (const auto& [k, n] : m.bought) {
-        w.writeBits(uint64_t(k), 4);
+        w.writeBits(uint64_t(k), codec::kStructureKindBits);
         writeSigned(w, n);
     }
     writeVarint(w, m.items.size());
@@ -1254,7 +1254,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     const uint64_t blueprints = readVarint(r);
     if (blueprints > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < blueprints; i++) {
-        const uint64_t k = r.readBits(4);
+        const uint64_t k = r.readBits(codec::kStructureKindBits);
         if (k >= uint64_t(allCases<StructureKind>().size())) return false;
         m.blueprints[static_cast<StructureKind>(k)] = readSigned(r);
     }
@@ -1306,7 +1306,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         codec::kMs.read(r, s.at);
         if (!readString(r, s.region)) return false;
         if (r.readBool()) {
-            const uint64_t k = r.readBits(4);
+            const uint64_t k = r.readBits(codec::kStructureKindBits);
             if (k >= uint64_t(allCases<StructureKind>().size())) return false;
             s.home = static_cast<StructureKind>(k);
         }
@@ -1320,7 +1320,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     const uint64_t realm = readVarint(r);
     if (realm > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < realm; i++) {
-        const uint64_t k = r.readBits(4);
+        const uint64_t k = r.readBits(codec::kStructureKindBits);
         if (k >= uint64_t(allCases<StructureKind>().size())) return false;
         m.realm[static_cast<StructureKind>(k)] = readSigned(r);
     }
@@ -1345,7 +1345,7 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
     const uint64_t bought = readVarint(r);
     if (bought > r.bitsLeft()) return false;
     for (uint64_t i = 0; i < bought; i++) {
-        const uint64_t k = r.readBits(4);
+        const uint64_t k = r.readBits(codec::kStructureKindBits);
         if (k >= uint64_t(allCases<StructureKind>().size())) return false;
         m.bought[static_cast<StructureKind>(k)] = readSigned(r);
     }
