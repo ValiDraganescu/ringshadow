@@ -7,19 +7,15 @@
 namespace ac {
 
 double Rules::flight(UnitKind kind, bool anchored, double d) {
-    switch (kind) {
-    case UnitKind::juggernaut: return 0.15 + d / 14;
-    case UnitKind::longbow: if (anchored) return 0.3 + d * 0.035; return 0;
-    case UnitKind::firefly: return 0.09;
-    // A Kestrel's rockets and a Hailstorm's flak shells fly fast.
-    case UnitKind::kestrel: return 0.12 + d / 22;
-    case UnitKind::hailstorm: return 0.1 + d / 28;
-    // A Peregrine's seeker missiles fly; an Atlas's shells hit at once; a
-    // Scorpion's sting is a fast bolt.
-    case UnitKind::peregrine: return 0.1 + d / 30;
-    case UnitKind::scorpion: return 0.2;
-    default: return 0;
-    }
+    // An anchored kind that does not bury (a Longbow) fires its shock
+    // cannon (`UnitStats::anchor`); unanchored, a Longbow's 90 mm guns and an
+    // Atlas's shells hit at once.
+    const UnitStats& k = stats(kind);
+    const UnitStats& w = anchored && k.anchors && !k.burrows ? UnitStats::anchor : k;
+    double t = w.shotFlightBase;
+    if (w.shotFlightPerCell != 0) t += d * w.shotFlightPerCell;
+    if (w.shotSpeed > 0) t += d / w.shotSpeed;
+    return t;
 }
 
 int64_t Rules::cost(StructureKind k) {
@@ -81,14 +77,13 @@ std::optional<StructureKind> Rules::requires_(StructureKind k) {
 }
 
 /// The units a building trains, the ones needing a Lab included.
+/// In kind order (`UnitStats::trainedBy`).
 std::vector<UnitKind> Rules::trains(StructureKind k) {
-    switch (k) {
-    case StructureKind::citadel: return {UnitKind::prospector};
-    case StructureKind::garrison: return {UnitKind::ranger, UnitKind::comet, UnitKind::juggernaut};
-    case StructureKind::foundry: return {UnitKind::firefly, UnitKind::longbow, UnitKind::hailstorm, UnitKind::atlas, UnitKind::scorpion};
-    case StructureKind::spacedock: return {UnitKind::dropship, UnitKind::kestrel, UnitKind::peregrine};
-    default: return {};
+    std::vector<UnitKind> out;
+    for (size_t i = 0; i < UnitStats::byKind.size(); i++) {
+        if (UnitStats::byKind[i].trainedBy == k) out.push_back(static_cast<UnitKind>(i));
     }
+    return out;
 }
 
 /// The unit a building trains when none is named (the first it trains).
@@ -137,22 +132,6 @@ double Rules::damage(UnitKind attacker, bool anchored, bool armored, bool light,
 double Rules::damage(const UnitStats& a, bool armored, bool light, double armor) {
     const double bonus = a.bonusVsArmored > 0 && armored ? a.bonusVsArmored : a.bonusVsLight > 0 && light ? a.bonusVsLight : 0;
     return static_cast<double>(a.hits) * max(0.5, a.damage + bonus - armor);
-}
-
-/// How far each kind sees (sight radii).
-double Rules::vision(UnitKind k) {
-    switch (k) {
-    // Four cells more than the Swift game's, for guns whose rounds fly on
-    // (docs/shooter-feel.md).
-    case UnitKind::prospector: case UnitKind::scorpion: return 12;
-    case UnitKind::ranger: case UnitKind::comet: return 13;
-    case UnitKind::juggernaut: case UnitKind::firefly: case UnitKind::kestrel: return 14;
-    case UnitKind::longbow: case UnitKind::dropship: case UnitKind::hailstorm: case UnitKind::peregrine: case UnitKind::atlas: return 15;
-    // The Brood hunt by their site, not by sight (the director, Brood.h).
-    case UnitKind::shardling: case UnitKind::gloamwing: case UnitKind::lodeback: return 8;
-    case UnitKind::matriarch: return 25;
-    }
-    return 0;
 }
 
 double Rules::hourAt(double time, double day, std::optional<double> held) {

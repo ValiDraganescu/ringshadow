@@ -113,7 +113,7 @@ golden::json dump(const GameState& state, const MapDefinition& m) {
         j["scouts"] = describeAll(c.scouts(seen, {}));
         j["militia"] = describeAll(c.militia(seen, {}));
         j["mix"] = {mix.bio, mix.armored, mix.light, mix.air, mix.armedAir, mix.antiAir, mix.total};
-        j["counters"] = {k.longbows, k.perJuggernaut ? *k.perJuggernaut : -1, k.fireflies, k.hailstorms, k.sentinels, k.kestrels};
+        j["counters"] = {k.longbows(), k.perJuggernaut ? *k.perJuggernaut : -1, k.fireflies(), k.hailstorms(), k.sentinels, k.kestrels()};
         j["attackTarget"] = vec(c.attackTarget(seen, front));
         j["regroup"] = vec(c.regroup(mine, front, m.front()));
         j["gathered"] = c.gathered(mine, front);

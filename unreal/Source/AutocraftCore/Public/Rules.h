@@ -9,6 +9,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 namespace ac {
@@ -17,7 +18,8 @@ namespace ac {
 /// `Unit::Kind`.
 enum class UnitKind : uint8_t {
     prospector, ranger, comet, firefly, juggernaut, dropship, longbow, kestrel, hailstorm,
-    // docs/new-units.md: appended, since a saved game stores the index.
+    // docs/new-units.md: appended. Saves store the name; only the wire
+    // stores the index, so inserting a kind renumbers the ones after it there.
     peregrine, atlas, scorpion,
     // The Brood (docs/creatures.md): the MMO's bugs, on their own side.
     shardling, gloamwing, lodeback, matriarch
@@ -25,6 +27,18 @@ enum class UnitKind : uint8_t {
 /// Its place in `allCases`: a case without a payload is stored as
 /// its index in declaration order (`UnitTableTests` checks).
 constexpr int64_t ordinal(UnitKind k) { return static_cast<int64_t>(k); }
+
+/// The raw strings of an enum without payloads, in declaration order
+/// (specialised for each enum; the rest are in `Types.h`).
+template <class E> struct EnumInfo;
+template <> struct EnumInfo<UnitKind> {
+    static constexpr std::array<std::string_view, 16> names{
+        "prospector", "ranger", "comet", "firefly", "juggernaut", "dropship", "longbow", "kestrel", "hailstorm",
+        "peregrine", "atlas", "scorpion", "shardling", "gloamwing", "lodeback", "matriarch"};
+    static constexpr size_t count = names.size();
+};
+// The last kind: move it when you append.
+static_assert(EnumInfo<UnitKind>::count == size_t(UnitKind::matriarch) + 1);
 
 /// `Structure.Kind`, declared here so `Rules` can take it; `Types.h` nests it
 /// as `Structure::Kind`.
@@ -89,11 +103,70 @@ struct UnitStats {
     /// (a gatling gun's close air reach); 0: `range`.
     double airRange = 0;
 
+    // The kind table (docs/kind-registry.md): what a kind is beyond its
+    // numbers, read from `byKind` (the weapon rows below leave them at
+    // their defaults, but for the anchored shell's flight).
+    /// Its name as the game writes it (docs/naming.md).
+    std::string_view title;
+    /// A bug of the Brood (docs/creatures.md): never trained, never driven.
+    bool brood = false;
+    /// A Dropship takes it aboard (`Rules::boards`). `bio` is what a
+    /// Dropship heals and a pilot walks with.
+    bool boards = false;
+    /// What a Prospector mends (`Leveling::machines`); a player kind that is
+    /// not a machine is bio (`Leveling::bio`).
+    bool machine = false;
+    /// The player can take it over (`Pilot::drivable`).
+    bool drivable = false;
+    /// Dropship cargo slots it takes (`Rules::slots`).
+    int64_t cargoSlots = 1;
+    /// It needs a Lab on its building (`Rules::needsLab`).
+    bool needsLab = false;
+    /// The building that trains it (`Rules::trains`); none for the Brood.
+    std::optional<StructureKind> trainedBy;
+    /// How far it sees, its sight radius (`Rules::vision`): four cells more
+    /// than the Swift game's, for guns whose rounds fly on
+    /// (docs/shooter-feel.md). The Brood hunt by their site, not by sight
+    /// (the director, Brood.h).
+    double vision = 0;
+    /// How long its attack takes to land on a target `d` away
+    /// (`Rules::flight`): `shotFlightBase`, plus `d × shotFlightPerCell`,
+    /// plus `d / shotSpeed` (cells a second; 0: none). Both forms are kept
+    /// so every figure stays exactly as it was written.
+    double shotFlightBase = 0;
+    double shotFlightPerCell = 0;
+    double shotSpeed = 0;
+    /// A turret (a tank's, a Firefly's tail, a Hailstorm's flak mount, an
+    /// Atlas's torso) that traverses after the target, not the hull, and
+    /// how fast, radians a second: when the AI fights with it, and when
+    /// the player drives it (`Pilot::turretRate`).
+    bool turret = false;
+    double turretRateAi = 0;
+    double turretRatePilot = 0;
+    /// Driven as a vehicle: W/S drive it, A/D turn its hull (`Pilot::steers`).
+    bool steers = false;
+    /// How fast its hull turns, radians a second, when it walks
+    /// (`Simulation::move`; 0: `Rules::prospectorTurnRate`) and when the
+    /// player turns it (`Pilot::hullTurnRate`; 0: 2).
+    double hullTurnRateAi = 0;
+    double hullTurnRatePilot = 0;
+    /// It anchors (a Longbow) or buries (a Scorpion, which `burrows` too)
+    /// in place (`Unit::planted`); a Comet `jumps` cliffs; a Prospector
+    /// `builds`.
+    bool anchors = false;
+    bool burrows = false;
+    bool jumps = false;
+    bool builds = false;
+    /// The AI trains it from its building after its own picks
+    /// (`Commander`'s training chain), for a kind with no hand-written
+    /// place there yet. False for every kind the chain names.
+    bool aiTrains = false;
+
     /// `table` in `Unit.Kind.allCases` order, read by `Unit.Kind.ordinal`:
     /// a dictionary keyed by the kind hashes its name on every look-up, and
     /// the simulation looks up stats hundreds of thousands of times a step.
     /// (Swift's `table` dictionary is this array here.)
-    static const std::array<UnitStats, 16> byKind;
+    static const std::array<UnitStats, EnumInfo<UnitKind>::count> byKind;
     /// A Ranger's mini gun (the Mini gun upgrade): 4 a round, five rounds a
     /// second for 3 s, then a 1 s pause to reload. About 15 damage a second
     /// against the rifle's 10.
@@ -251,11 +324,9 @@ struct AUTOCRAFTCORE_API Rules {
     /// What a Dropship takes aboard: the infantry (bio units), and the
     /// Scorpion, which the harass AI carries to the enemy's ore lines. An
     /// Atlas would need more slots than any Dropship has.
-    static bool boards(UnitKind k) { return stats(k).bio || k == UnitKind::scorpion; }
+    static bool boards(UnitKind k) { return stats(k).boards; }
     /// An Atlas takes more slots than any Dropship has (even with Cargo bay).
-    static int64_t slots(UnitKind k) {
-        return k == UnitKind::atlas ? 16 : k == UnitKind::juggernaut ? 2 : k == UnitKind::longbow ? 4 : 1;
-    }
+    static int64_t slots(UnitKind k) { return stats(k).cargoSlots; }
 
     static int64_t cost(StructureKind k);
     static int64_t hydrogenCost(StructureKind k);
@@ -275,9 +346,7 @@ struct AUTOCRAFTCORE_API Rules {
     /// The unit a building trains when none is named (the first it trains).
     static std::optional<UnitKind> produces(StructureKind k);
     /// Units that need a Lab on their building (an add-on).
-    static bool needsLab(UnitKind k) {
-        return k == UnitKind::juggernaut || k == UnitKind::longbow || k == UnitKind::kestrel || k == UnitKind::atlas;
-    }
+    static bool needsLab(UnitKind k) { return stats(k).needsLab; }
     /// Where an add-on stands: on the building's +X side, toward the camera.
     static constexpr Vec2 addonOffset{2.5, 0.5};
     /// MH a well holds, taken 4 per trip, 3 Prospectors per Derrick.
@@ -288,7 +357,7 @@ struct AUTOCRAFTCORE_API Rules {
     /// like the ore drilling.
     static constexpr double hydrogenTime = 3.5;
 
-    static const UnitStats& stats(UnitKind k) { return UnitStats::byKind[static_cast<size_t>(ordinal(k))]; }
+    static constexpr const UnitStats& stats(UnitKind k) { return UnitStats::byKind[static_cast<size_t>(ordinal(k))]; }
     static int64_t cost(UnitKind k) { return stats(k).ore; }
     static int64_t hydrogenCost(UnitKind k) { return stats(k).hydrogen; }
     static double trainTime(UnitKind k) { return stats(k).trainTime; }
@@ -317,7 +386,7 @@ struct AUTOCRAFTCORE_API Rules {
 
     // From Vision.swift.
     /// How far each kind sees (sight radii).
-    static double vision(UnitKind k);
+    static double vision(UnitKind k) { return stats(k).vision; }
     static double vision(StructureKind k);
     /// The day, as the game layer draws it (AAcDaylight): `dayLength`
     /// seconds of game time, a game starting at `startHour`, the sun up
@@ -370,73 +439,89 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr double escortGap = 1.6;
 };
 
-inline constexpr std::array<UnitStats, 16> UnitStats::byKind{{
+inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byKind{{
     // Fusion cutter: 5 a hit, in melee reach. It fights only when it
     // has to (hit, or driven by the player).
     /* prospector */ {.hp = 45, .speed = Rules::prospectorSpeed, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 12,
                       .damage = 5, .cooldown = 1.07, .range = 0.1, .light = true, .bio = true, .hitsGround = true,
-                      .falloff = 0},
+                      .falloff = 0,
+                      .title = "Prospector", .boards = true, .machine = true, .drivable = true, .trainedBy = StructureKind::citadel, .vision = 12, .builds = true},
     /* ranger */ {.hp = 45, .speed = 3.15, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 18,
                   .damage = 6, .cooldown = 0.61, .range = 5, .light = true, .bio = true, .hitsGround = true, .hitsAir = true,
-                  .coneStand = 0.003, .coneMove = 0.12, .coneFire = 0.004, .coneRecovery = 0.35, .falloff = 0.9, .rounds = 3},
+                  .coneStand = 0.003, .coneMove = 0.12, .coneFire = 0.004, .coneRecovery = 0.35, .falloff = 0.9, .rounds = 3,
+                  .title = "Ranger", .boards = true, .drivable = true, .trainedBy = StructureKind::garrison, .vision = 13},
     // Twin pistols, 4 (+5 light) each; heals out of combat; jumps cliffs.
     /* comet */ {.hp = 60, .speed = 5.25, .radius = 0.375, .supply = 1, .ore = 50, .hydrogen = 50, .trainTime = 32,
                  .damage = 4, .hits = 2, .bonusVsLight = 5, .cooldown = 0.79, .range = 5, .light = true, .bio = true,
-                 .hitsGround = true},
+                 .hitsGround = true,
+                 .title = "Comet", .boards = true, .drivable = true, .trainedBy = StructureKind::garrison, .vision = 13, .jumps = true},
     // Flamethrower, 8 (+6 light) to everything in a line.
     /* firefly */ {.hp = 90, .speed = 5.95, .radius = 0.625, .supply = 2, .ore = 100, .trainTime = 21,
-                   .damage = 8, .bonusVsLight = 6, .cooldown = 1.79, .range = 5, .light = true, .hitsGround = true, .falloff = 0},
+                   .damage = 8, .bonusVsLight = 6, .cooldown = 1.79, .range = 5, .light = true, .hitsGround = true, .falloff = 0,
+                   .title = "Firefly", .machine = true, .drivable = true, .trainedBy = StructureKind::foundry, .vision = 14, .shotFlightBase = 0.09, .turret = true, .turretRateAi = 6, .turretRatePilot = 3.5, .steers = true, .hullTurnRateAi = 9, .hullTurnRatePilot = 3},
     // Breacher grenades, 10 (+10 armoured); each hit slows.
     /* juggernaut */ {.hp = 125, .armor = 1, .speed = 3.15, .radius = 0.5625, .supply = 2, .ore = 100, .hydrogen = 25,
                       .trainTime = 21, .damage = 10, .bonusVsArmored = 10, .cooldown = 1.07, .range = 6, .armored = true,
-                      .bio = true, .hitsGround = true},
+                      .bio = true, .hitsGround = true,
+                      .title = "Juggernaut", .boards = true, .drivable = true, .cargoSlots = 2, .needsLab = true, .trainedBy = StructureKind::garrison, .vision = 14, .shotFlightBase = 0.15, .shotSpeed = 14},
     /* dropship */ {.hp = 150, .armor = 1, .speed = 3.5, .radius = 0.75, .supply = 2, .ore = 100, .hydrogen = 100,
-                    .trainTime = 30, .armored = true, .air = true},
+                    .trainTime = 30, .armored = true, .air = true,
+                    .title = "Dropship", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15},
     // Tank mode; `anchor` holds the anchored numbers.
     /* longbow */ {.hp = 175, .armor = 1, .speed = 3.15, .radius = 0.875, .supply = 3, .ore = 150, .hydrogen = 125,
                    .trainTime = 32, .damage = 15, .bonusVsArmored = 10, .cooldown = 1.04, .range = 7, .armored = true,
-                   .hitsGround = true},
+                   .hitsGround = true,
+                   .title = "Longbow", .machine = true, .drivable = true, .cargoSlots = 4, .needsLab = true, .trainedBy = StructureKind::foundry, .vision = 15, .turret = true, .turretRateAi = 4, .turretRatePilot = 2.4, .steers = true, .hullTurnRateAi = 5, .anchors = true},
     // Twin rockets, 12 ×2, at the ground (`hitsGround`), and a rail gun at
     // the air (`UnitStats::railgun`, picked by `Simulation::weapon(u, air)`);
     // it flies over cliffs like the Dropship.
     /* kestrel */ {.hp = 140, .speed = 3.85, .radius = 0.625, .supply = 3, .ore = 150, .hydrogen = 100, .trainTime = 43,
                    .damage = 12, .hits = 2, .cooldown = 1.25, .range = 6, .armored = true, .air = true, .hitsGround = true,
-                   .hitsAir = true},
+                   .hitsAir = true,
+                   .title = "Kestrel", .machine = true, .drivable = true, .needsLab = true, .trainedBy = StructureKind::spacedock, .vision = 14, .shotFlightBase = 0.12, .shotSpeed = 22},
     // Flak, 12 (+8 armoured), at the air only, splashing enemy flyers
     // round its target (`Rules.flakSplash`).
     /* hailstorm */ {.hp = 135, .armor = 1, .speed = 3.15, .radius = 0.75, .supply = 2, .ore = 125, .hydrogen = 50,
                      .trainTime = 30, .damage = 12, .bonusVsArmored = 8, .cooldown = 1.0, .range = 7, .armored = true,
-                     .hitsAir = true},
+                     .hitsAir = true,
+                     .title = "Hailstorm", .machine = true, .drivable = true, .trainedBy = StructureKind::foundry, .vision = 15, .shotFlightBase = 0.1, .shotSpeed = 28, .turret = true, .turretRateAi = 5, .turretRatePilot = 3.2, .steers = true, .hullTurnRateAi = 6},
     // Seeker missiles, 10 ×2 (+6 armoured), at the air only; a light flyer.
     /* peregrine */ {.hp = 80, .speed = 5.6, .radius = 0.5, .supply = 2, .ore = 100, .hydrogen = 75, .trainTime = 28,
                      .damage = 10, .hits = 2, .bonusVsArmored = 6, .cooldown = 1.25, .range = 7, .light = true, .air = true,
-                     .hitsAir = true},
+                     .hitsAir = true,
+                     .title = "Peregrine", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15, .shotFlightBase = 0.1, .shotSpeed = 30},
     // Twin siege cannons, 25 ×2 (+15 armoured), at the ground only, with
     // splash (`Rules::atlasSplash`); the Quake stomp is `Rules::stomp*`.
     /* atlas */ {.hp = 500, .armor = 2, .speed = 2.2, .radius = 1.25, .supply = 6, .ore = 300, .hydrogen = 200,
                  .trainTime = 60, .damage = 25, .hits = 2, .bonusVsArmored = 15, .cooldown = 2.0, .range = 7, .armored = true,
-                 .hitsGround = true},
+                 .hitsGround = true,
+                 .title = "Atlas", .machine = true, .drivable = true, .cargoSlots = 16, .needsLab = true, .trainedBy = StructureKind::foundry, .vision = 15, .turret = true, .turretRateAi = Rules::atlasTorsoRate, .turretRatePilot = Rules::atlasTorsoRate, .steers = true, .hullTurnRateAi = Rules::atlasBodyRate, .hullTurnRatePilot = Rules::atlasBodyRate},
     // Sting, 60 (+30 armoured), ground and air, but only buried: `cooldown`
     // is its reload (it ticks while the Scorpion moves, too).
     /* scorpion */ {.hp = 90, .speed = 3.9, .radius = 0.5, .supply = 2, .ore = 75, .hydrogen = 25, .trainTime = 21,
                     .damage = 60, .bonusVsArmored = 30, .cooldown = 25, .range = 5, .light = true, .hitsGround = true,
-                    .hitsAir = true, .falloff = 0},
+                    .hitsAir = true, .falloff = 0,
+                    .title = "Scorpion", .boards = true, .machine = true, .drivable = true, .trainedBy = StructureKind::foundry, .vision = 12, .shotFlightBase = 0.2, .anchors = true, .burrows = true},
     // The Brood (docs/creatures.md; `Brood` has the rest of their numbers).
     // No cost: a bug is never trained. `speed` is the top speed (a
     // Shardling's chase); `Bug::pace` slows it to a wander.
     // A Shardling's bite: 2 to a unit, every 1.2 s, 0.3 past its radius.
     /* shardling */ {.hp = 20, .speed = 4.4, .radius = 0.45, .damage = 2, .cooldown = 1.2, .range = 0.3, .light = true,
-                     .bio = true, .hitsGround = true, .falloff = 0},
+                     .bio = true, .hitsGround = true, .falloff = 0,
+                     .title = "Shardling", .brood = true, .boards = true, .vision = 8},
     // A Gloamwing's acid spit: 3 to a unit, every 1.6 s, range 4; in the
     // air but for its dive (`Unit::airborne`).
     /* gloamwing */ {.hp = 30, .speed = 5.0, .radius = 0.5, .damage = 3, .cooldown = 1.6, .range = 4, .light = true,
-                     .bio = true, .air = true, .hitsGround = true, .falloff = 0},
+                     .bio = true, .air = true, .hitsGround = true, .falloff = 0,
+                     .title = "Gloamwing", .brood = true, .boards = true, .vision = 8},
     // A Lodeback's bite, only when cornered: 8 every 2 s.
     /* lodeback */ {.hp = 120, .armor = 1, .speed = 3.0, .radius = 1.0, .damage = 8, .cooldown = 2.0, .range = 0.4,
-                    .bio = true, .hitsGround = true, .falloff = 0},
+                    .bio = true, .hitsGround = true, .falloff = 0,
+                    .title = "Lodeback", .brood = true, .boards = true, .vision = 8},
     // The Matriarch's slam: 40 to the ground in front of her, every 4 s (N3).
     /* matriarch */ {.hp = 6000, .armor = 3, .speed = 0.8, .radius = 3.5, .damage = 40, .cooldown = 4.0, .range = 3,
-                     .armored = true, .bio = true, .hitsGround = true, .hitsAir = true, .falloff = 0},
+                     .armored = true, .bio = true, .hitsGround = true, .hitsAir = true, .falloff = 0,
+                     .title = "the Matriarch", .brood = true, .boards = true, .vision = 25},
 }};
 
 inline constexpr UnitStats UnitStats::minigun{.hp = 45, .speed = 3.15, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 18,
@@ -445,7 +530,8 @@ inline constexpr UnitStats UnitStats::minigun{.hp = 45, .speed = 3.15, .radius =
                                               .coneFire = 0.006, .coneRecovery = 0.5, .falloff = 0.5};
 inline constexpr UnitStats UnitStats::anchor{.hp = 175, .armor = 1, .speed = 0, .radius = 0.875, .supply = 3, .ore = 150, .hydrogen = 125,
                                              .trainTime = 32, .damage = 40, .bonusVsArmored = 30, .cooldown = 2.14, .range = 13,
-                                             .minRange = 2, .armored = true, .hitsGround = true};
+                                             .minRange = 2, .armored = true, .hitsGround = true, .shotFlightBase = 0.3,
+                                             .shotFlightPerCell = 0.035};
 inline constexpr UnitStats UnitStats::railgun{.hp = 140, .speed = 3.85, .radius = 0.625, .supply = 3, .ore = 150, .hydrogen = 100, .trainTime = 43,
                                               .damage = 34, .bonusVsArmored = 14, .cooldown = 3.2, .range = 8, .armored = true, .air = true,
                                               .hitsAir = true, .rail = true};

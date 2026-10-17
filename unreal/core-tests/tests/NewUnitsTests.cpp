@@ -836,20 +836,21 @@ Unit& unitById(GameState& s, int64_t id) {
 /// Atlas seen brings Kestrels, since nothing it has shoots air.
 TEST(newUnits_theAICountersFlyersAndAtlases) {
     const Commander c(homeMap_());
-    EXPECT_EQ(c.counters(Mix{.armored = 3, .air = 3, .armedAir = 3, .total = 6}).peregrines, int64_t(1)); // a Kestrel
-    EXPECT_EQ(c.counters(Mix{.armored = 9, .air = 9, .armedAir = 9, .total = 18}).peregrines, int64_t(3));
-    EXPECT_EQ(c.counters(Mix{.air = 99, .armedAir = 99, .total = 99}).peregrines, int64_t(8)); // capped
-    EXPECT_EQ(c.counters(Mix{.air = 4, .total = 4}).peregrines, int64_t(0)); // Dropships do not shoot
-    EXPECT_EQ(c.counters(Mix{.antiAir = 10, .total = 10}).kestrels, int64_t(0));
-    EXPECT_EQ(c.counters(Mix{.antiAir = 10, .total = 10, .atlases = 1}).kestrels, int64_t(2));
-    EXPECT_EQ(c.counters(Mix{.antiAir = 10, .total = 20, .atlases = 3}).kestrels, int64_t(4)); // two Atlases' worth
+    const auto atlases = [](Mix m, int64_t n) { m.kinds[Unit::Kind::atlas] = n; return m; };
+    EXPECT_EQ(c.counters(Mix{.armored = 3, .air = 3, .armedAir = 3, .total = 6}).peregrines(), int64_t(1)); // a Kestrel
+    EXPECT_EQ(c.counters(Mix{.armored = 9, .air = 9, .armedAir = 9, .total = 18}).peregrines(), int64_t(3));
+    EXPECT_EQ(c.counters(Mix{.air = 99, .armedAir = 99, .total = 99}).peregrines(), int64_t(8)); // capped
+    EXPECT_EQ(c.counters(Mix{.air = 4, .total = 4}).peregrines(), int64_t(0)); // Dropships do not shoot
+    EXPECT_EQ(c.counters(Mix{.antiAir = 10, .total = 10}).kestrels(), int64_t(0));
+    EXPECT_EQ(c.counters(atlases(Mix{.antiAir = 10, .total = 10}, 1)).kestrels(), int64_t(2));
+    EXPECT_EQ(c.counters(atlases(Mix{.antiAir = 10, .total = 20}, 3)).kestrels(), int64_t(4)); // two Atlases' worth
     GameState s = GameState::new_(homeMap_());
     Vec2 red = Vec2::zero;
     for (const auto& b : s.structures) if (b.owner == 1) red = b.position;
     add(s, Unit::Kind::atlas, red + Vec2(0, 8), 1);
     add(s, Unit::Kind::peregrine, red + Vec2(2, 8), 1);
     const Mix mix = c.enemyMix(s);
-    EXPECT_EQ(mix.atlases, int64_t(1));
+    EXPECT_EQ(mix.atlases(), int64_t(1));
     EXPECT_TRUE(mix.air == 2 && mix.armedAir == 2 && mix.armored == 6);
 }
 

@@ -484,7 +484,7 @@ bool Simulation::issue(const Command& command, std::vector<GameEvent>& events) {
     } else if (command.is<Command::Anchor>()) {
         const auto* c = command.as<Command::Anchor>();
         auto i = unitIndex(c->unit);
-        if (!i || (state.units[size_t(*i)].kind != Unit::Kind::longbow && state.units[size_t(*i)].kind != Unit::Kind::scorpion)) return false;
+        if (!i || !state.units[size_t(*i)].stats().anchors) return false;
         state.units[size_t(*i)].anchored = c->on;
         if (c->on) { state.units[size_t(*i)].goal = std::nullopt; state.units[size_t(*i)].waypoints = std::nullopt; }
     } else if (command.is<Command::Mission>()) {
@@ -925,9 +925,8 @@ Unit Simulation::freshUnit(Unit::Kind kind, int64_t id, int64_t owner_, Vec2 pos
     Unit u(id, kind, owner_, position, heading, task);
     u.hp = maxHP(u);
     if (kind == Unit::Kind::dropship) { u.energy = 50; u.cargo = std::vector<int64_t>{}; }
-    if (kind == Unit::Kind::longbow) { u.anchor = 0; u.anchored = false; u.aim = heading; }
-    if (kind == Unit::Kind::scorpion) { u.anchor = 0; u.anchored = false; }
-    if (kind == Unit::Kind::firefly || kind == Unit::Kind::hailstorm || kind == Unit::Kind::atlas) u.aim = heading;
+    if (u.stats().anchors) { u.anchor = 0; u.anchored = false; }
+    if (u.stats().turret) u.aim = heading;
     return u;
 }
 
@@ -1431,7 +1430,7 @@ double Simulation::hpLeft(int64_t id) const {
 ///   heal, or a Comet's own).
 std::optional<Vec2> Simulation::backOff(const Unit& u, const Target& t, const UnitStats& w, double d, double reach) const {
     // A Longbow's own answer is anchoring (`stepAnchor`).
-    if (!(u.stats().speed > 0 && u.kind != Unit::Kind::longbow && u.kind != Unit::Kind::scorpion && w.minRange == 0)) return std::nullopt;
+    if (!(u.stats().speed > 0 && !u.stats().anchors && w.minRange == 0)) return std::nullopt;
     const bool kite = u.cooldown.value_or(0) > kiteWindow && d < reach - 1 && outranges(u, t, w);
     if (!(kite || wounded(u))) return std::nullopt;
     // Keep the spot it is already backing off to.
@@ -1665,13 +1664,11 @@ void Simulation::stepSoldier(Unit& u, double dt, std::vector<GameEvent>& events)
 bool Simulation::fire(Unit& u, int64_t id, const Target& t, double dt, std::vector<GameEvent>& events, double moving) {
     const UnitStats w = weapon(u, t.air);
     bool ready;
-    if (u.kind == Unit::Kind::longbow || u.kind == Unit::Kind::firefly || u.kind == Unit::Kind::hailstorm
-        || u.kind == Unit::Kind::atlas) {
+    if (u.stats().turret) {
         const double want = std::atan2(t.position.y - u.position.y, t.position.x - u.position.x);
         const double now = u.aim.value_or(u.heading);
         const double diff = std::remainder(want - now, 2 * pi);
-        const double turnRate = u.kind == Unit::Kind::firefly ? 6.0 : u.kind == Unit::Kind::hailstorm ? 5.0
-            : u.kind == Unit::Kind::atlas ? Rules::atlasTorsoRate : 4.0;
+        const double turnRate = u.stats().turretRateAi;
         u.aim = std::remainder(now + ac::max(-turnRate * dt, ac::min(turnRate * dt, diff)), 2 * pi);
         const double anchor = u.anchor.value_or(0);
         ready = std::abs(diff) < 0.2 && (anchor == 0 || anchor >= 1);
@@ -1975,7 +1972,7 @@ void Simulation::stepBury(Unit& u) {
 /// `u`, and `u` is a soldier that can go and come (not a Dropship, a
 /// Longbow or a Scorpion, which have their own ways).
 bool Simulation::canFollow(const Unit& u, int64_t id) const {
-    if (u.kind == Unit::Kind::dropship || u.kind == Unit::Kind::longbow || u.kind == Unit::Kind::scorpion) return false;
+    if (u.kind == Unit::Kind::dropship || u.stats().anchors) return false;
     int64_t at = id;
     for (int k = 0; k < 16; k++) {
         if (at == u.id) return false;
@@ -3455,9 +3452,8 @@ bool Simulation::move(Unit& u, Vec2 target_, double stopAt, double dt) const {
     const double dist = length(d);
     if (dist <= stopAt + 1e-6) return true;
     if (u.planted()) return false;
-    const bool facing = turn(u, target_, dt, u.kind == Unit::Kind::longbow ? 5 : u.kind == Unit::Kind::hailstorm ? 6
-                                                 : u.kind == Unit::Kind::firefly ? 9
-                                                 : u.kind == Unit::Kind::atlas ? Rules::atlasBodyRate : Rules::prospectorTurnRate);
+    const double hull = u.stats().hullTurnRateAi;
+    const bool facing = turn(u, target_, dt, hull > 0 ? hull : Rules::prospectorTurnRate);
     const bool slowed = u.slowUntil.value_or(-1) > state.time;
     const double speed = Rules::speed(u.kind) * rate(Stat::Speed{}, u) * (facing ? 1 : 0.3) * (slowed ? u.slowedTo.value_or(0.5) : 1)
                          * (u.bug ? u.bug->pace * (u.bug->rallyUntil > state.time ? Matriarch::rallySpeed : 1) : 1);

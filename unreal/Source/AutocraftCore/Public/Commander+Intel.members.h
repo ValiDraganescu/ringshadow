@@ -20,8 +20,10 @@
         int64_t antiAir = 0;
         /// All its soldiers, on the ground and in the air.
         int64_t total = 0;
-        /// Atlases (a unit each): nothing it has shoots air.
-        int64_t atlases = 0;
+        /// Its soldiers of each kind, a unit each.
+        EnumArray<UnitKind, int64_t> kinds;
+        /// Atlases: nothing it has shoots air.
+        int64_t atlases() const { return kinds[UnitKind::atlas]; }
         /// The ground share of `total`.
         int64_t ground() const { return total - air; }
 
@@ -58,13 +60,15 @@
     /// - Peregrines against armed fliers: about one per armed flyer seen
     ///   (a Kestrel's 3 supply, a Peregrine's 2), up to 8.
     struct Counters {
-        int64_t longbows = 0;
+        /// The units of each kind it answers with.
+        EnumArray<UnitKind, int64_t> more;
         std::optional<int64_t> perJuggernaut;
-        int64_t fireflies = 0;
-        int64_t hailstorms = 0;
         int64_t sentinels = 0;
-        int64_t kestrels = 0;
-        int64_t peregrines = 0;
+        int64_t longbows() const { return more[UnitKind::longbow]; }
+        int64_t fireflies() const { return more[UnitKind::firefly]; }
+        int64_t hailstorms() const { return more[UnitKind::hailstorm]; }
+        int64_t kestrels() const { return more[UnitKind::kestrel]; }
+        int64_t peregrines() const { return more[UnitKind::peregrine]; }
 
         bool operator==(const Counters&) const = default;
     };

@@ -277,27 +277,31 @@ TEST(commanderCountersAnswerTheEnemyMix) {
     const Commander c(homeMap());
     EXPECT_TRUE(c.counters(Mix{}) == Commander::Counters{});
     const auto rangers = c.counters(Mix{.bio = 30, .light = 30, .total = 30});
-    EXPECT_EQ(rangers.longbows, 3);
-    EXPECT_EQ(rangers.fireflies, 7);
+    EXPECT_EQ(rangers.longbows(), 3);
+    EXPECT_EQ(rangers.fireflies(), 7);
     EXPECT_TRUE(!rangers.perJuggernaut.has_value());
     const auto armour = c.counters(Mix{.bio = 8, .armored = 20, .light = 4, .total = 24});
     EXPECT_TRUE(armour.perJuggernaut == std::optional<int64_t>(1));
-    EXPECT_EQ(armour.fireflies, 0);
+    EXPECT_EQ(armour.fireflies(), 0);
     // Seen units are counted by supply, air apart.
     GameState s = GameState::new_(homeMap());
     const Vec2 red = citadelOf(s, 1).position;
     for (int k = 0; k < 4; k++) add(s, Unit::Kind::ranger, red + Vec2(static_cast<double>(k), 6), 1);
     add(s, Unit::Kind::longbow, red + Vec2(0, 8), 1);
     add(s, Unit::Kind::dropship, red + Vec2(2, 8), 1);
-    EXPECT_TRUE(c.enemyMix(s) == (Mix{.bio = 4, .armored = 3, .light = 4, .air = 2, .antiAir = 4, .total = 9}));
+    Mix seen{.bio = 4, .armored = 3, .light = 4, .air = 2, .antiAir = 4, .total = 9};
+    seen.kinds[Unit::Kind::ranger] = 4;
+    seen.kinds[Unit::Kind::longbow] = 1;
+    seen.kinds[Unit::Kind::dropship] = 1;
+    EXPECT_TRUE(c.enemyMix(s) == seen);
     // Fliers: Hailstorms and Sentinels; Kestrels while anti-air is short.
     const auto kestrels = c.counters(Mix{.armored = 6, .air = 6, .armedAir = 6, .total = 12});
-    EXPECT_EQ(kestrels.hailstorms, 2);
+    EXPECT_EQ(kestrels.hailstorms(), 2);
     EXPECT_EQ(kestrels.sentinels, 1);
-    EXPECT_EQ(kestrels.kestrels, 2); // nothing of theirs shoots air
+    EXPECT_EQ(kestrels.kestrels(), 2); // nothing of theirs shoots air
     EXPECT_EQ(c.counters(Mix{.armored = 9, .air = 9, .armedAir = 9, .total = 9}).sentinels, 2);
-    EXPECT_EQ(c.counters(Mix{.bio = 10, .light = 10, .antiAir = 10, .total = 10}).kestrels, 0); // Rangers shoot air
-    EXPECT_EQ(c.counters(Mix{.air = 4, .total = 4}).hailstorms, 1); // Dropships
+    EXPECT_EQ(c.counters(Mix{.bio = 10, .light = 10, .antiAir = 10, .total = 10}).kestrels(), 0); // Rangers shoot air
+    EXPECT_EQ(c.counters(Mix{.air = 4, .total = 4}).hailstorms(), 1); // Dropships
     EXPECT_EQ(c.counters(Mix{.air = 4, .total = 4}).sentinels, 0);
 }
 

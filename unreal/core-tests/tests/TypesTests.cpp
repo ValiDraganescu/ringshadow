@@ -6,8 +6,11 @@
 #include "Types.h"
 
 TEST(types_enums_and_raw_values) {
-    EXPECT_EQ(ac::allCases<ac::Perk>().size(), size_t(216));
-    EXPECT_EQ(ac::allCases<ac::UnitKind>().size(), size_t(16));  // 12 and the Brood's 4
+    // Every player kind has its picks; the Brood's bugs have none.
+    size_t players = 0;
+    for (auto k : ac::allCases<ac::UnitKind>()) players += ac::Rules::stats(k).brood ? 0 : 1;
+    EXPECT_EQ(ac::allCases<ac::Perk>().size(), players * size_t(ac::Leveling::perksPerKind));
+    EXPECT_EQ(ac::allCases<ac::UnitKind>().size(), ac::EnumInfo<ac::UnitKind>::count);
     EXPECT_TRUE(ac::rawValue(ac::Unit::Kind::hailstorm) == "hailstorm");
     EXPECT_TRUE(ac::rawValue(ac::Stance::auto_) == "auto");
     EXPECT_TRUE(ac::parse<ac::Structure::Kind>("habDome") == ac::StructureKind::habDome);

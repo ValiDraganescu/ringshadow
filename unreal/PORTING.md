@@ -132,6 +132,28 @@ opens Windows, Steam and VR.
   there too. The rules in `AGENTS.md` hold: isolated scenarios only, never a
   whole game played by the AIs.
 
+## The kind table
+
+A unit kind is defined once, by its row in `UnitStats::byKind` (Rules.h,
+[docs/kind-registry.md](../docs/kind-registry.md)). Beside its numbers the
+row says what the kind is: its title, `brood`, `boards`, `machine`,
+`drivable`, `cargoSlots`, `needsLab`, `trainedBy`, `vision`, its shot's
+flight, its turret and hull turn rates (the AI's and the pilot's, two
+values each, as they were), `anchors`, `burrows`, `jumps`, `builds` and
+`aiTrains`. `Rules::boards/slots/needsLab/trains/vision/flight`,
+`Simulation::title`, `Unit::brood/planted/burrowed`, the `Pilot` kind
+questions, the turret and anchor checks in `Simulation.cpp` and
+`Leveling::machines`/`bio` (constexpr sets built from the rows) read it, so
+enum order means nothing beyond the wire. `trains(s)` is the rows trained by
+`s` in kind order. `EnumInfo<UnitKind>` lives beside the table and sizes it
+(`count`); a `static_assert` names the last kind, to move when one is
+appended. The Commander's `Counters` and `EnemyMix` hold their per-kind
+numbers in an `EnumArray` behind the old names, and its training chain
+trains a kind with `aiTrains` from its building when the hand-written picks
+take nothing (false for every kind today). `KindTableTests` walks
+`allCases`: every row complete, and every fact equal to the if-chain it
+replaced (written out in the test).
+
 ## Night sight (C++ only)
 
 The day's clock is the core's (`Rules::hourAt`, `sunHeight`, `dark`):

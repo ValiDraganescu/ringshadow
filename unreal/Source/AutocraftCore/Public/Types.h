@@ -66,6 +66,15 @@ template <class E> struct EnumSet {
     constexpr bool operator==(const EnumSet&) const = default;
 };
 
+/// One `T` per case of a payload-less enum, indexed by the case
+/// (`Commander::Counters`).
+template <class E, class T> struct EnumArray {
+    std::array<T, EnumInfo<E>::names.size()> values{};
+    constexpr T& operator[](E e) { return values[static_cast<size_t>(e)]; }
+    constexpr const T& operator[](E e) const { return values[static_cast<size_t>(e)]; }
+    constexpr bool operator==(const EnumArray&) const = default;
+};
+
 /// `indirect case`: a heap box with value semantics.
 template <class T> class Indirect {
 public:
@@ -546,11 +555,21 @@ struct AUTOCRAFTCORE_API Leveling {
     /// A Dropship that healed this recently is still healing (Cruise).
     static constexpr double healing = 0.25;
 
-    /// Machines: what a Prospector mends. Bio: what a Dropship heals.
-    static constexpr EnumSet<UnitKind> machines{UnitKind::prospector, UnitKind::firefly, UnitKind::longbow,
-                                                UnitKind::dropship, UnitKind::kestrel, UnitKind::hailstorm,
-                                                UnitKind::peregrine, UnitKind::atlas, UnitKind::scorpion};
-    static constexpr EnumSet<UnitKind> bio{UnitKind::ranger, UnitKind::comet, UnitKind::juggernaut};
+    /// Machines: what a Prospector mends. Bio: what a Dropship heals. Both
+    /// from the kind table: the machines, and the player kinds that are not.
+    static constexpr EnumSet<UnitKind> machines = [] {
+        EnumSet<UnitKind> s;
+        for (UnitKind k : allCases<UnitKind>()) if (UnitStats::byKind[size_t(k)].machine) s.insert(k);
+        return s;
+    }();
+    static constexpr EnumSet<UnitKind> bio = [] {
+        EnumSet<UnitKind> s;
+        for (UnitKind k : allCases<UnitKind>()) {
+            const UnitStats& st = UnitStats::byKind[size_t(k)];
+            if (!st.machine && !st.brood) s.insert(k);
+        }
+        return s;
+    }();
 
     /// A unit's worth for XP: its ore plus its MH.
     static double worth(UnitKind k);
@@ -1298,15 +1317,15 @@ struct AUTOCRAFTCORE_API Unit {
     bool walking() const;
     /// A Scorpion down in the ground (`anchor` is how far it has dug): it can
     /// sting, and it cannot move.
-    bool burrowed() const { return kind == Kind::scorpion && anchor.value_or(0) >= 1 && anchored == true; }
+    bool burrowed() const { return Rules::stats(kind).burrows && anchor.value_or(0) >= 1 && anchored == true; }
     /// A unit held where it is by its mode: a Longbow or a Scorpion burying,
     /// buried or digging out.
-    bool planted() const { return (kind == Kind::longbow || kind == Kind::scorpion) && anchor.value_or(0) > 0; }
+    bool planted() const { return Rules::stats(kind).anchors && anchor.value_or(0) > 0; }
     const UnitStats& stats() const { return Rules::stats(kind); }
     /// Soldiers: everything that is not a Prospector or a bug.
     bool soldier() const { return kind != Kind::prospector && !brood(); }
     /// A bug of the Brood (docs/creatures.md).
-    bool brood() const { return kind >= Kind::shardling; }
+    bool brood() const { return Rules::stats(kind).brood; }
     /// In the air now: a flyer, but a Gloamwing in its dive is at torch
     /// height and counts as ground (`Brood::low`).
     bool airborne() const;
@@ -1783,11 +1802,7 @@ struct Command {
 
 // MARK: - Raw strings
 
-template <> struct EnumInfo<UnitKind> {
-    static constexpr std::array<std::string_view, 16> names{
-        "prospector", "ranger", "comet", "firefly", "juggernaut", "dropship", "longbow", "kestrel", "hailstorm",
-        "peregrine", "atlas", "scorpion", "shardling", "gloamwing", "lodeback", "matriarch"};
-};
+// `EnumInfo<UnitKind>` is in Rules.h, beside the kind table it sizes.
 template <> struct EnumInfo<StructureKind> {
     static constexpr std::array<std::string_view, 11> names{
         "citadel", "habDome", "garrison", "bastion", "derrick", "foundry", "spacedock", "lab", "sentinel", "gatling",

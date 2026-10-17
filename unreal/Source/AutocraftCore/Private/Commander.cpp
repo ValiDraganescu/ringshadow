@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <tuple>
 
 namespace ac {
 
@@ -974,7 +975,7 @@ std::vector<Command> Commander::seekers(const Simulation& sim, const std::vector
         if (covered) continue;
         const auto pick = minBy(filtered(s.units, [&](const Unit& u) {
             return u.owner == player && u.hp > 0 && sim.inArmy(u) && !sent.count(u.id) && !sim.piloted(u.id)
-                && u.kind != Unit::Kind::longbow && u.kind != Unit::Kind::scorpion && u.kind != Unit::Kind::dropship
+                && !u.stats().anchors && u.kind != Unit::Kind::dropship
                 && u.stats().speed > 0 && !(u.planted());
         }), [&](const Unit& a, const Unit& b) {
             const double da = distance(a.position, spot), db = distance(b.position, spot);
@@ -1477,7 +1478,7 @@ std::vector<Command> Commander::spending(const Simulation& sim, std::set<int64_t
     bool placing = false;
     const bool cometsOut = !unlocked.count(UK::comet) || have[UK::comet] >= me.comets.value_or(1);
     const int64_t foundries = !mech || garrisonDone.empty() ? 0
-        : (style == Player::Style::mech || answer.longbows >= 4) && done.size() >= 2 ? 2 : 1;
+        : (style == Player::Style::mech || answer.longbows() >= 4) && done.size() >= 2 ? 2 : 1;
     const int64_t spacedocks = foundriesDone.empty() || (!unlocked.count(UK::dropship) && !unlocked.count(UK::kestrel)) ? 0 : 1;
     const std::pair<SK, int64_t> techs[] = {{SK::foundry, foundries}, {SK::spacedock, spacedocks}};
     for (const auto& [kind, want] : techs) {
@@ -1532,7 +1533,7 @@ std::vector<Command> Commander::spending(const Simulation& sim, std::set<int64_t
     const int64_t fireflies = unlocked.count(UK::firefly) ? me.fireflies.value_or(0) : 0;
     for (const Structure& f : foundriesDone) {
         if (!(!f.addon && unlocked.count(UK::longbow) && have[UK::firefly] >= fireflies
-              && have[UK::hailstorm] >= answer.hailstorms)) {
+              && have[UK::hailstorm] >= answer.hailstorms())) {
             continue;
         }
         lab(f);
@@ -1540,7 +1541,7 @@ std::vector<Command> Commander::spending(const Simulation& sim, std::set<int64_t
     // Kestrels: a few for harass and mech, more while the enemy is
     // short of anti-air; they need the Spacedock's Lab.
     const int64_t kestrels = !unlocked.count(UK::kestrel) ? 0
-        : (style == Player::Style::harass ? 3 : style == Player::Style::mech ? 2 : 0) + answer.kestrels;
+        : (style == Player::Style::harass ? 3 : style == Player::Style::mech ? 2 : 0) + answer.kestrels();
     if (kestrels > 0) {
         std::optional<Structure> dock;
         for (const Structure& b : spacedocksDone) if (!b.addon) { dock = b; break; }
@@ -1582,7 +1583,7 @@ std::vector<Command> Commander::spending(const Simulation& sim, std::set<int64_t
         return u.owner == player && (u.kind == UK::ranger || u.kind == UK::juggernaut);
     }));
     const int64_t dropships = ac::min<int64_t>(4, ac::max<int64_t>(me.drops == true ? 1 : 0, bioSupply / 8));
-    const int64_t tanks = (style == Player::Style::mech ? 12 : 2) + answer.longbows;
+    const int64_t tanks = (style == Player::Style::mech ? 12 : 2) + answer.longbows();
     const int64_t perJuggernaut = answer.perJuggernaut.value_or(style == Player::Style::bio ? 2 : 3);
     // Atlases: one per 40 supply of army for mech (up to 3), else one once
     // the army is big and the bank high. Scorpions: two at each base, one at each choke.
@@ -1598,14 +1599,15 @@ std::vector<Command> Commander::spending(const Simulation& sim, std::set<int64_t
             for (const Structure& x : s.structures) if (x.id == *b.addon) { addon = x; break; }
         }
         if (addon && !addon->complete()) continue; // Raising its lab.
+        const auto before = std::tuple(out.size(), money, hydrogen);
         switch (b.kind) {
         case SK::spacedock:
             if (have[UK::dropship] < dropships) train(b, UK::dropship);
-            else if (unlocked.count(UK::peregrine) && have[UK::peregrine] < answer.peregrines) train(b, UK::peregrine);
+            else if (unlocked.count(UK::peregrine) && have[UK::peregrine] < answer.peregrines()) train(b, UK::peregrine);
             else if (addon && have[UK::kestrel] < kestrels) train(b, UK::kestrel);
             break;
         case SK::foundry:
-            if (unlocked.count(UK::hailstorm) && have[UK::hailstorm] < answer.hailstorms) {
+            if (unlocked.count(UK::hailstorm) && have[UK::hailstorm] < answer.hailstorms()) {
                 train(b, UK::hailstorm);
             } else if (addon && unlocked.count(UK::atlas) && have[UK::atlas] < atlases) {
                 // The capstone: mech saves for it (one per 40 supply of army, up to
@@ -1620,7 +1622,7 @@ std::vector<Command> Commander::spending(const Simulation& sim, std::set<int64_t
             } else if (addon && unlocked.count(UK::longbow) && have[UK::longbow] < tanks) {
                 if (hydrogen >= Rules::hydrogenCost(UK::longbow)) train(b, UK::longbow);
                 else hydrogen -= Rules::hydrogenCost(UK::longbow); // Saving MH for it.
-            } else if (have[UK::firefly] < fireflies + (addon && style == Player::Style::mech ? 4 : 0) + answer.fireflies) {
+            } else if (have[UK::firefly] < fireflies + (addon && style == Player::Style::mech ? 4 : 0) + answer.fireflies()) {
                 train(b, UK::firefly);
             }
             break;
@@ -1635,6 +1637,15 @@ std::vector<Command> Commander::spending(const Simulation& sim, std::set<int64_t
             train(b, kind);
             break;
         }
+        }
+        // A kind the chain above does not name yet (`UnitStats::aiTrains`),
+        // in `Rules::trains` order, when the chain neither trained nor saved.
+        if (before == std::tuple(out.size(), money, hydrogen)) {
+            for (UK k : Rules::trains(b.kind)) {
+                if (!(Rules::stats(k).aiTrains && unlocked.count(k) && (addon || !Rules::needsLab(k)))) continue;
+                train(b, k);
+                break;
+            }
         }
     }
 

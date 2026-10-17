@@ -1083,26 +1083,6 @@ std::string Simulation::title(Structure::Kind k) {
 }
 
 /// A unit's name as the game writes it.
-std::string Simulation::title(Unit::Kind k) {
-    switch (k) {
-    case Unit::Kind::prospector: return "Prospector";
-    case Unit::Kind::ranger: return "Ranger";
-    case Unit::Kind::comet: return "Comet";
-    case Unit::Kind::firefly: return "Firefly";
-    case Unit::Kind::juggernaut: return "Juggernaut";
-    case Unit::Kind::dropship: return "Dropship";
-    case Unit::Kind::longbow: return "Longbow";
-    case Unit::Kind::kestrel: return "Kestrel";
-    case Unit::Kind::hailstorm: return "Hailstorm";
-    case Unit::Kind::peregrine: return "Peregrine";
-    case Unit::Kind::atlas: return "Atlas";
-    case Unit::Kind::scorpion: return "Scorpion";
-    case Unit::Kind::shardling: return "Shardling";
-    case Unit::Kind::gloamwing: return "Gloamwing";
-    case Unit::Kind::lodeback: return "Lodeback";
-    case Unit::Kind::matriarch: return "the Matriarch";
-    }
-    return "";
-}
+std::string Simulation::title(Unit::Kind k) { return std::string(Rules::stats(k).title); }
 
 } // namespace ac

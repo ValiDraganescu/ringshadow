@@ -72,25 +72,25 @@ struct Pilot {
 
     bool operator==(const Pilot&) const = default;
 
-    /// Kinds the player can take over: every kind.
-    static constexpr EnumSet<UnitKind> drivable{UnitKind::prospector, UnitKind::ranger, UnitKind::comet,
-                                                 UnitKind::firefly, UnitKind::juggernaut, UnitKind::dropship,
-                                                 UnitKind::longbow, UnitKind::kestrel, UnitKind::hailstorm,
-                                                 UnitKind::peregrine, UnitKind::atlas, UnitKind::scorpion};
+    /// Kinds the player can take over: every player kind (`UnitStats::drivable`).
+    static constexpr EnumSet<UnitKind> drivable = [] {
+        EnumSet<UnitKind> s;
+        for (UnitKind k : allCases<UnitKind>()) if (UnitStats::byKind[size_t(k)].drivable) s.insert(k);
+        return s;
+    }();
     /// The player whose units can be driven (the one the HUD shows).
     static constexpr int64_t player = 0;
 
     /// A vehicle, driven as in World of Tanks: W/S drive it, A/D turn its
     /// hull (it does not step sideways), and the mouse aims: the turret (a
     /// tank's, a Firefly's tail) traverses after the look (`turretRate`).
-    static bool steers(UnitKind k) {
-        return k == UnitKind::firefly || k == UnitKind::longbow || k == UnitKind::hailstorm || k == UnitKind::atlas;
-    }
+    static bool steers(UnitKind k) { return Rules::stats(k).steers; }
     /// It can step sideways (wheels and treads cannot).
     static bool strafes(UnitKind k) { return !steers(k); }
     /// How fast A/D turn a vehicle's hull, radians a second.
     static double hullTurnRate(UnitKind k) {
-        return k == UnitKind::firefly ? 3.0 : k == UnitKind::atlas ? Rules::atlasBodyRate : 2.0;
+        const double rate = Rules::stats(k).hullTurnRatePilot;
+        return rate > 0 ? rate : 2.0;
     }
     /// An anchored Longbow walks on its legs at this share of its pace, driving
     /// and turning.
@@ -101,25 +101,20 @@ struct Pilot {
         if (!u.anchor) return 1;
         const double s = *u.anchor;
         // A buried Scorpion cannot move at all.
-        if (u.kind == UnitKind::scorpion) return s == 0 ? 1 : 0;
+        if (Rules::stats(u.kind).burrows) return s == 0 ? 1 : 0;
         return s == 0 ? 1 : s >= 1 ? anchoredPace : 0;
     }
     /// How fast a turret traverses toward where the player looks, radians
-    /// a second; nil without a turret.
+    /// a second; nil without a turret. A Firefly's tail is lighter than a
+    /// tank's turret, a Hailstorm's flak mount built to track fast flyers,
+    /// an Atlas's torso swings twice as fast as its legs turn.
     static std::optional<double> turretRate(UnitKind k) {
-        switch (k) {
-        case UnitKind::longbow: return 2.4;
-        // The scorpion's tail: lighter than a tank's turret.
-        case UnitKind::firefly: return 3.5;
-        // The flak mount: built to track fast flyers.
-        case UnitKind::hailstorm: return 3.2;
-        // The Atlas's torso: its cannons swing twice as fast as its legs turn.
-        case UnitKind::atlas: return Rules::atlasTorsoRate;
-        default: return std::nullopt;
-        }
+        const UnitStats& st = Rules::stats(k);
+        if (!st.turret) return std::nullopt;
+        return st.turretRatePilot;
     }
     /// Walking into a cliff face, it jumps it.
-    static bool jumps(UnitKind k) { return k == UnitKind::comet; }
+    static bool jumps(UnitKind k) { return Rules::stats(k).jumps; }
 };
 
 /// The first enemy on a driven gun's line of fire (`pilotSight`).
@@ -267,7 +262,7 @@ struct PilotBuild {
         StructureKind::citadel, StructureKind::foundry, StructureKind::spacedock, StructureKind::sentinel,
         StructureKind::lab, StructureKind::gatling, StructureKind::landingPad};
     /// The driven kinds that can put buildings up.
-    static bool builds(UnitKind k) { return k == UnitKind::prospector; }
+    static bool builds(UnitKind k) { return Rules::stats(k).builds; }
 };
 
 } // namespace ac

@@ -15,10 +15,10 @@ Commander::EnemyMix Commander::enemyMix(const GameState& s) const {
     }
     for (const auto& u : s.units) {
         if (!(s.hostile(u.owner, player) && u.soldier())) { continue; }
-        const UnitStats st = u.stats();
+        const UnitStats& st = u.stats();
         const int64_t n = Rules::supply(u.kind);
         m.total += n;
-        if (u.kind == Unit::Kind::atlas) { m.atlases += 1; }
+        m.kinds[u.kind] += 1;
         if (st.hitsAir) { m.antiAir += n; }
         if (st.air) {
             m.air += n;
@@ -34,17 +34,18 @@ Commander::EnemyMix Commander::enemyMix(const GameState& s) const {
 
 Commander::Counters Commander::counters(const EnemyMix& m) const {
     Counters c;
-    c.longbows = ac::min<int64_t>(8, m.ground() / 8);
+    using UK = UnitKind;
+    c.more[UK::longbow] = ac::min<int64_t>(8, m.ground() / 8);
     if (m.ground() >= 6 && 3 * m.armored >= m.ground()) { c.perJuggernaut = 1; }
-    if (m.ground() >= 8 && 2 * m.light > m.ground()) { c.fireflies = ac::min<int64_t>(8, ac::min(m.light, m.bio) / 4); }
+    if (m.ground() >= 8 && 2 * m.light > m.ground()) { c.more[UK::firefly] = ac::min<int64_t>(8, ac::min(m.light, m.bio) / 4); }
     const int64_t fliers = 2 * m.armedAir + (m.air - m.armedAir);
-    if (fliers > 0) { c.hailstorms = ac::min<int64_t>(10, (fliers + 5) / 6); }
+    if (fliers > 0) { c.more[UK::hailstorm] = ac::min<int64_t>(10, (fliers + 5) / 6); }
     if (m.armedAir > 0) { c.sentinels = m.armedAir >= 9 ? 2 : 1; }
-    if (m.ground() > 0 && m.antiAir < 6) { c.kestrels = 2; }
+    if (m.ground() > 0 && m.antiAir < 6) { c.more[UK::kestrel] = 2; }
     // Nothing an Atlas has shoots air: Kestrels answer it.
-    c.kestrels += 2 * ac::min<int64_t>(2, m.atlases);
+    c.more[UK::kestrel] += 2 * ac::min<int64_t>(2, m.atlases());
     // About one Peregrine per armed flyer (a Kestrel is 3 supply, a Peregrine 2).
-    if (m.armedAir > 0) { c.peregrines = ac::min<int64_t>(8, (m.armedAir + 2) / 3); }
+    if (m.armedAir > 0) { c.more[UK::peregrine] = ac::min<int64_t>(8, (m.armedAir + 2) / 3); }
     return c;
 }
 
