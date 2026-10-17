@@ -191,6 +191,12 @@ void WorldMap::nestThink(size_t r) {
         if (packs + 1 >= n.shardlings && flyers + 1 >= n.gloamwings) n.regrow = false;
     }
     if (!queen || away) return;
+    // The horde's spawns and the hatchling may have moved the units
+    // (`spawnBroodGroup` adds to them): her by id again.
+    queen = std::nullopt;
+    for (Unit& u : st.units)
+        if (u.id == *n.queen) queen = &u;
+    if (!queen) return;
     Unit& q = **queen;
     Bug& b = *q.bug;
     if (siege_ && siege_->region == r) return;  // her orders are the siege's
@@ -205,18 +211,20 @@ void WorldMap::nestThink(size_t r) {
         if (const auto t = sim.target(*b.hitBy); t && distance(t->position, home) <= reach + t->radius && st.hostile(t->owner, q.owner))
             (t->structure ? raid : prey) = *b.hitBy;
     }
-    std::vector<std::pair<PilotId, const Unit*>> near;
+    // The pilots' units as they stand (`st.unit` gives a copy: kept here,
+    // not a pointer to it).
+    std::vector<std::pair<PilotId, Unit>> near;
     for (const auto& [pilot, p] : pilots_) {
         if (p.flight || p.region != r || !p.unit) continue;
         const auto u = st.unit(*p.unit);
-        if (u && u->hp > 0 && u->task != Unit::Task::aboard && u->task != Unit::Task::inDerrick) near.push_back({pilot, &*u});
+        if (u && u->hp > 0 && u->task != Unit::Task::aboard && u->task != Unit::Task::inDerrick) near.push_back({pilot, *u});
     }
     if (!prey && !raid) {
         double best = reach;
         for (const auto& [pilot, u] : near)
-            if (distance(u->position, home) <= best) {
-                best = distance(u->position, home);
-                prey = u->id;
+            if (distance(u.position, home) <= best) {
+                best = distance(u.position, home);
+                prey = u.id;
             }
     }
     if (!prey && !raid) {
@@ -239,13 +247,13 @@ void WorldMap::nestThink(size_t r) {
     if (st.time < b.roarUntil) return;
     std::erase_if(n.seen, [&](PilotId id) {
         return std::none_of(near.begin(), near.end(), [&](const auto& x) {
-            return x.first == id && distance(x.second->position, q.position) <= Matriarch::roarSight + 15;
+            return x.first == id && distance(x.second.position, q.position) <= Matriarch::roarSight + 15;
         });
     });
     for (const auto& [pilot, u] : near)
-        if (!n.seen.count(pilot) && distance(u->position, q.position) <= Matriarch::roarSight) {
+        if (!n.seen.count(pilot) && distance(u.position, q.position) <= Matriarch::roarSight) {
             n.seen.insert(pilot);
-            roar(r, q, u->id);
+            roar(r, q, u.id);
             return;
         }
     if ((prey || raid) && clock_ - n.lastRoar >= Matriarch::roarEvery) roar(r, q, prey ? prey : raid);
@@ -256,6 +264,9 @@ void WorldMap::roar(size_t r, Unit& q, std::optional<int64_t> at) {
     GameState& st = sim.state;
     q.bug->roarUntil = st.time + Matriarch::roarFor;
     nest_.lastRoar = clock_;
+    // Where she stands: the hatchlings below add to the units, so `q` is
+    // not read past the first.
+    const Vec2 at0 = q.position;
     const auto foe = at ? sim.target(*at) : std::nullopt;
     // Every bug of the nest within reach turns on her foe, and runs.
     for (BroodGroup& g : brood_[r].groups) {
@@ -282,7 +293,7 @@ void WorldMap::roar(size_t r, Unit& q, std::optional<int64_t> at) {
                     key = g.key;
                 }
         for (int64_t i = 0; i < std::min<int64_t>(Matriarch::hatch, Matriarch::nestShardlingsMax - packs); i++) {
-            hatch(r, UnitKind::shardling, key, q.position);
+            hatch(r, UnitKind::shardling, key, at0);
             // The hatchlings join the rally at once.
             for (const BroodGroup& g : brood_[r].groups)
                 if (g.nest && g.key == key)
@@ -295,7 +306,7 @@ void WorldMap::roar(size_t r, Unit& q, std::optional<int64_t> at) {
     net::Sky::Roar x;
     x.id = nextRoar_++;
     x.region = int64_t(r);
-    x.position = q.position;
+    x.position = at0;
     x.at = clock_;
     roars_.push_back(x);
     sky_.roars = roars_;
