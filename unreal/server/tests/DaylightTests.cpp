@@ -208,7 +208,8 @@ TEST(daylight_night_is_as_before) {
     without.daylightAt = std::nullopt;
     without.lookNow();
     size_t n = 0;
-    for (uint8_t c : without.sight(Pilot::player)->seen) n += c ? 1 : 0;
+    const std::optional<Sight> night = without.sight(Pilot::player);
+    for (uint8_t c : night->seen) n += c ? 1 : 0;
     EXPECT_TRUE(n < allCells(w) / 4);
 }
 

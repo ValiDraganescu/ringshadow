@@ -153,9 +153,10 @@ TEST(build_refused_on_a_blocked_spot) {
     EXPECT_TRUE(*why == "Too far away");
     EXPECT_TRUE(sim.state.structures.empty());
     EXPECT_EQ(w.wallet(me)->ore, int64_t(600));
-    // Not driving: nothing to build with.
+    // Not driving: nothing to build with (and no unit to hold a spot out
+    // ahead of: a fine one by the pad).
     w.regionOf(me)->handBack(me);
-    why = w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel));
+    why = w.build(me, StructureKind::citadel, w.regionOf(me)->places()->ground(Vec2(64, 48)));
     EXPECT_TRUE(why.has_value());
 }
 
