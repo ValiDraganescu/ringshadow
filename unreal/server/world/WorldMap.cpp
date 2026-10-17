@@ -438,7 +438,7 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
     return r.take(pilot, id);
 }
 
-Unit WorldMap::startProspector() const {
+Unit WorldMap::startUnit(UnitKind kind) const {
     const Vec2 at = world_->regions[start_].built.pads[world_->startPad].at;
     const GameState& s = start().simulation().state;
     const OreDeposit* near = nullptr;
@@ -449,7 +449,7 @@ Unit WorldMap::startProspector() const {
     }
     const Vec2 to = near ? near->position - at : Vec2(1, 0);
     const double heading = length(to) > 1e-9 ? std::atan2(to.y, to.x) : 0;
-    return start().simulation().freshUnit(UnitKind::prospector, 0, Pilot::player, at, heading);
+    return start().simulation().freshUnit(kind, 0, Pilot::player, at, heading);
 }
 
 bool WorldMap::join(PilotId pilot) {
@@ -470,7 +470,7 @@ bool WorldMap::join(PilotId pilot) {
     // Dev: regions been to.
     for (const std::string& id : params_.devSeen) p.progress.regions.insert(id);
     const Region& r = start();
-    const Unit u = startProspector();
+    const Unit u = startUnit(pilotKind(p));
     PilotState& in = pilots_[pilot] = p;
     arrive(pilot, in, start_, u, r.places()->regionAt(u.position), -1);
     // Dev: its progression's XP at once.
@@ -541,7 +541,7 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     const auto unit = here.driving(pilot);
     if (!unit) return "Nothing driven";
     const auto u = here.simulation().state.unit(*unit);
-    if (!u || u->kind != UnitKind::prospector) return "Only a Prospector boards the Dropship";
+    if (!u || !Rules::boards(u->kind)) return "That unit can't board the Dropship";
     // Standing on a Landing Pad here: within Pad link's reach of its centre
     // (a Spacedock: also within its edge and `buildingPadReach`).
     const double reach = padReach(p);

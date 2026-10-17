@@ -1201,6 +1201,16 @@ Foundry and the Lab.
     `freeRespec` (a tree change), `recent` (spends in the last 60 s),
     `blueprints`, `sites` found, `regions` and `pads` visited, `feats`,
     `chips`, `signature`. `refusal(spend)`, `refusal(slot)`, `refusal(respec)`.
+  - **The tree per kind** (2026-10-18, [kind-registry.md](kind-registry.md)):
+    `Progression::nodes(kind)` is the Prospector's tree for the Prospector and
+    empty for every other kind; `nodes()` is the Prospector's. The progress is
+    `PilotProgress` (`ProspectorProgress` its old name, kept), with the `kind`
+    the pilot drives, the Prospector by default. A point in a node not in the
+    kind's tree is refused ("Not in this pilot's tree"), so a kind without a
+    tree climbs nothing; a respec has no points to take back. `skilled` reads
+    the progress's kind, and a fitted plate adds a share of that kind's hp.
+    The blob writes `"kind"` only for another kind: a Prospector's is as it
+    was, and the tree, its balance and its signature did not move.
 - **The sim reads it** where it reads picks today: `Simulation::boost` adds the
   driven unit's skill effects when the region's sim has the pilot's progress
   (set by `Region` as it sets the side's `PilotRecord` today). With no

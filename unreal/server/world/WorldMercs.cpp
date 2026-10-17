@@ -109,7 +109,7 @@ bool WorldMap::mercUnit(PilotState::Merc& m) {
     Simulation& sim = r.simulation();
     // At the Citadel's edge, on the field's side, on open ground.
     const Vec2 out = normalize(field - *home);
-    Unit v = sim.freshUnit(UnitKind::prospector, 0, Pilot::player, *home, 0);
+    Unit v = sim.freshUnit(kMercenaryKind, 0, Pilot::player, *home, 0);
     const Vec2 first = *home + (out == Vec2(0, 0) ? Vec2(1, 0) : out) * (Rules::radius(StructureKind::citadel) + 1.0);
     v.position = first;
     for (double rad = 0; rad <= 6 && !sim.pilotCanStand(v, v.position); rad += 0.5)

@@ -1,6 +1,6 @@
 // The Prospector's progression in the MMORPG mode (docs/prospector-progression.md):
 // the curve, the gates, the 64 nodes (65 skills, Homing beacon retired), the balance and its signature, and
-// `ProspectorProgress`'s rules.
+// `PilotProgress`'s rules.
 #include "Progression.h"
 
 #include "Leveling.h"
@@ -302,14 +302,20 @@ const std::vector<SkillNode>& everyNode() {
 }
 } // namespace
 
-const std::vector<SkillNode>& Progression::nodes() {
+const std::vector<SkillNode>& Progression::nodes(UnitKind kind) {
     static const std::vector<SkillNode> n = [] {
         std::vector<SkillNode> t;
         for (const SkillNode& x : everyNode())
             if (!retired(x.skill)) t.push_back(x);
         return t;
     }();
-    return n;
+    static const std::vector<SkillNode> none;
+    return kind == UnitKind::prospector ? n : none;
+}
+
+bool Progression::inTree(UnitKind kind, Skill s) {
+    const auto& t = nodes(kind);
+    return std::any_of(t.begin(), t.end(), [&](const SkillNode& n) { return n.skill == s; });
 }
 
 const SkillNode& Progression::node(Skill s) { return everyNode()[static_cast<size_t>(s)]; }
@@ -649,25 +655,25 @@ const std::string& Progression::signature() {
 
 // MARK: - A pilot's progress
 
-int64_t ProspectorProgress::rank(Skill s) const {
+int64_t PilotProgress::rank(Skill s) const {
     auto it = ranks.find(s);
     return it == ranks.end() ? 0 : it->second;
 }
 
-int64_t ProspectorProgress::spent() const {
+int64_t PilotProgress::spent() const {
     int64_t sum = 0;
     for (const auto& [s, r] : ranks) sum += r;
     return sum;
 }
 
-int64_t ProspectorProgress::spent(Branch b) const {
+int64_t PilotProgress::spent(Branch b) const {
     int64_t sum = 0;
     for (const auto& [s, r] : ranks)
         if (Progression::node(s).branch == b) sum += r;
     return sum;
 }
 
-int64_t ProspectorProgress::spentBelow(Branch b, int64_t tier) const {
+int64_t PilotProgress::spentBelow(Branch b, int64_t tier) const {
     int64_t sum = 0;
     for (const auto& [s, r] : ranks) {
         const SkillNode& n = Progression::node(s);
@@ -676,9 +682,9 @@ int64_t ProspectorProgress::spentBelow(Branch b, int64_t tier) const {
     return sum;
 }
 
-int64_t ProspectorProgress::unspent() const { return Progression::points(level()) - spent(); }
+int64_t PilotProgress::unspent() const { return Progression::points(level()) - spent(); }
 
-std::optional<int64_t> ProspectorProgress::slotOf(Skill s) const {
+std::optional<int64_t> PilotProgress::slotOf(Skill s) const {
     for (int64_t i = 0; i < Progression::slotCount; i++)
         if (slots[static_cast<size_t>(i)] == s) return i;
     return std::nullopt;
@@ -687,9 +693,10 @@ std::optional<int64_t> ProspectorProgress::slotOf(Skill s) const {
 /// The gate counts the points in the branch's tiers below the node's, so
 /// a point in a tier never opens that tier (the doc's "points already in
 /// that branch" before the first point there).
-std::optional<std::string> ProspectorProgress::spendRefusal(Skill s) const {
+std::optional<std::string> PilotProgress::spendRefusal(Skill s) const {
     const SkillNode& n = Progression::node(s);
     if (Progression::retired(s)) return std::string("Retired: ") + n.text;
+    if (!Progression::inTree(kind, s)) return std::string("Not in this pilot's tree");
     if (rank(s) >= n.ranks)
         return "Full: " + std::to_string(n.ranks) + " of " + std::to_string(n.ranks);
     const Gate g = Progression::gate(n.tier);
@@ -702,13 +709,13 @@ std::optional<std::string> ProspectorProgress::spendRefusal(Skill s) const {
     return std::nullopt;
 }
 
-std::optional<std::string> ProspectorProgress::undoRefusal(Skill s, double now) const {
+std::optional<std::string> PilotProgress::undoRefusal(Skill s, double now) const {
     const bool fresh = std::any_of(recent.begin(), recent.end(), [&](const SkillSpend& x) {
         return x.skill == s && now - x.at <= Progression::undoWindow;
     });
     if (rank(s) == 0 || !fresh) return std::string("No point spent here in the last minute");
     // Without that point, every deeper node in the branch must still pass its gate.
-    ProspectorProgress after = *this;
+    PilotProgress after = *this;
     after.ranks[s] -= 1;
     const Branch b = Progression::node(s).branch;
     for (const auto& [other, r] : after.ranks) {
@@ -720,7 +727,7 @@ std::optional<std::string> ProspectorProgress::undoRefusal(Skill s, double now) 
     return std::nullopt;
 }
 
-std::optional<std::string> ProspectorProgress::slotRefusal(int64_t slot, std::optional<Skill> s) const {
+std::optional<std::string> PilotProgress::slotRefusal(int64_t slot, std::optional<Skill> s) const {
     if (slot < 0 || slot >= Progression::slotCount) return std::string("No such slot");
     if (level() < Progression::slotLevel(slot))
         return "Slot " + std::string(Progression::slotKey(slot)) + " opens at level " +
@@ -731,35 +738,35 @@ std::optional<std::string> ProspectorProgress::slotRefusal(int64_t slot, std::op
     return std::nullopt;
 }
 
-bool ProspectorProgress::respecIsFree() const {
+bool PilotProgress::respecIsFree() const {
     return respecs == 0 || freeRespec || (!signature.empty() && signature != Progression::signature());
 }
 
-int64_t ProspectorProgress::respecCost() const { return respecIsFree() ? 0 : Progression::respecPrice(level()); }
+int64_t PilotProgress::respecCost() const { return respecIsFree() ? 0 : Progression::respecPrice(level()); }
 
-std::optional<std::string> ProspectorProgress::respecRefusal(int64_t hydrogen) const {
+std::optional<std::string> PilotProgress::respecRefusal(int64_t hydrogen) const {
     if (spent() == 0) return std::string("No points spent");
     const int64_t cost = respecCost();
     if (hydrogen < cost) return "Needs " + std::to_string(cost) + " MH";
     return std::nullopt;
 }
 
-Boost ProspectorProgress::skillBoost(SkillStat stat) const {
+Boost PilotProgress::skillBoost(SkillStat stat) const {
     Boost b;
     for (const auto& [s, rank] : ranks)
         for (const SkillEffect& e : Progression::effects(s, rank))
             if (const auto* x = e.as<SkillEffect::Stat>(); x && x->stat == stat) b.add(x->change);
-    for (const SkillEffect& e : rig.effects())
+    for (const SkillEffect& e : rig.effects(kind))
         if (const auto* x = e.as<SkillEffect::Stat>(); x && x->stat == stat) b.add(x->change);
     return b;
 }
 
-int64_t ProspectorProgress::floor(StructureKind k) const {
+int64_t PilotProgress::floor(StructureKind k) const {
     const int64_t cut = int64_t(std::lround(skillBoost(SkillStat::blueprintFloorCut).plus));
     return std::max<int64_t>(1, Progression::blueprintFloor(k) - cut);
 }
 
-int64_t ProspectorProgress::limit(StructureKind k) const {
+int64_t PilotProgress::limit(StructureKind k) const {
     double plus = 0;
     for (const auto& [s, rank] : ranks)
         for (const SkillEffect& e : Progression::effects(s, rank))
@@ -768,12 +775,12 @@ int64_t ProspectorProgress::limit(StructureKind k) const {
     return base > 0 ? base + int64_t(std::lround(plus)) : 0;
 }
 
-double ProspectorProgress::chipChance() const {
+double PilotProgress::chipChance() const {
     const Boost b = skillBoost(SkillStat::chipChance);
     return (Progression::chipChance + b.plus) * (1 + b.percent);
 }
 
-std::optional<std::string> ProspectorProgress::buildRefusal(StructureKind k, int64_t owned) const {
+std::optional<std::string> PilotProgress::buildRefusal(StructureKind k, int64_t owned) const {
     const std::string name = Simulation::title(k);
     if (Progression::blueprintFloor(k) <= 0) return "No " + name + " blueprint in this world";
     if (copies(k) <= 0) return std::string("No blueprint: buy one at a Citadel (H)");
@@ -787,33 +794,33 @@ std::optional<std::string> ProspectorProgress::buildRefusal(StructureKind k, int
     return std::nullopt;
 }
 
-int64_t ProspectorProgress::copies(StructureKind k) const {
+int64_t PilotProgress::copies(StructureKind k) const {
     const auto it = blueprints.find(k);
     return it == blueprints.end() ? 0 : it->second;
 }
 
-int64_t ProspectorProgress::held(Item i) const {
+int64_t PilotProgress::held(Item i) const {
     const auto it = items.find(i);
     return it == items.end() ? 0 : it->second;
 }
 
-void ProspectorProgress::giveBlueprint(StructureKind k, int64_t n) {
+void PilotProgress::giveBlueprint(StructureKind k, int64_t n) {
     if (n > 0) blueprints[k] += n;
 }
 
-bool ProspectorProgress::useBlueprint(StructureKind k) {
+bool PilotProgress::useBlueprint(StructureKind k) {
     const auto it = blueprints.find(k);
     if (it == blueprints.end() || it->second <= 0) return false;
     if (--it->second <= 0) blueprints.erase(it);
     return true;
 }
 
-ShopPrice ProspectorProgress::blueprintPrice(StructureKind k) const {
+ShopPrice PilotProgress::blueprintPrice(StructureKind k) const {
     const auto it = bought.find(k);
     return Shop::blueprintPrice(k, it == bought.end() ? 0 : it->second);
 }
 
-bool ProspectorProgress::useItem(Item i) {
+bool PilotProgress::useItem(Item i) {
     const auto it = items.find(i);
     if (it == items.end() || it->second <= 0) return false;
     if (--it->second <= 0) items.erase(it);
@@ -847,7 +854,7 @@ const ItemInfo& Shop::item(Item i) {
     return items().front();
 }
 
-bool ProspectorProgress::spend(Skill s, double now) {
+bool PilotProgress::spend(Skill s, double now) {
     if (spendRefusal(s)) return false;
     ranks[s] += 1;
     std::erase_if(recent, [&](const SkillSpend& x) { return now - x.at > Progression::undoWindow; });
@@ -856,7 +863,7 @@ bool ProspectorProgress::spend(Skill s, double now) {
     return true;
 }
 
-bool ProspectorProgress::undo(Skill s, double now) {
+bool PilotProgress::undo(Skill s, double now) {
     if (undoRefusal(s, now)) return false;
     if (--ranks[s] == 0) {
         ranks.erase(s);
@@ -870,7 +877,7 @@ bool ProspectorProgress::undo(Skill s, double now) {
     return true;
 }
 
-bool ProspectorProgress::slot(int64_t index, std::optional<Skill> s) {
+bool PilotProgress::slot(int64_t index, std::optional<Skill> s) {
     if (slotRefusal(index, s)) return false;
     if (s)
         if (auto from = slotOf(*s)) slots[static_cast<size_t>(*from)].reset();
@@ -878,7 +885,7 @@ bool ProspectorProgress::slot(int64_t index, std::optional<Skill> s) {
     return true;
 }
 
-std::optional<int64_t> ProspectorProgress::respec(int64_t hydrogen) {
+std::optional<int64_t> PilotProgress::respec(int64_t hydrogen) {
     if (respecRefusal(hydrogen)) return std::nullopt;
     const int64_t cost = respecCost();
     ranks.clear();
@@ -930,15 +937,15 @@ int64_t Modules::researchHydrogen(int64_t mark) { return row<int64_t>({0, 300, 9
 double Modules::researchTime(int64_t mark) { return row<double>({0, 600, 1800}, mark); }
 double Modules::share(int64_t mark) { return row<double>({0.08, 0.16, 0.25}, mark); }
 
-std::vector<SkillEffect> Modules::effects(Module m, int64_t mark) {
+std::vector<SkillEffect> Modules::effects(Module m, int64_t mark, UnitKind kind) {
     const double s = share(mark);
     if (!(s > 0)) return {};
     auto driven = [](Stat stat, Change change) { return SkillEffect{SkillEffect::Core{Effect::Stat{stat, Scope::Driven{}, change}}}; };
     switch (m) {
     case Module::drillHead: return {driven(Stat::Drill{}, Change::Percent{s})};
     case Module::cargoPod: return {driven(Stat::OreCarry{}, Change::Percent{s}), driven(Stat::HydrogenCarry{}, Change::Percent{s})};
-    // The sim adds hp as `.plus`: the share of the Prospector's own.
-    case Module::plate: return {driven(Stat::Hp{}, Change::Plus{std::round(s * Rules::hp(UnitKind::prospector))})};
+    // The sim adds hp as `.plus`: the share of the kind's own.
+    case Module::plate: return {driven(Stat::Hp{}, Change::Plus{std::round(s * Rules::hp(kind))})};
     case Module::torchTip:
         return {driven(Stat::Damage{}, Change::Percent{s}), driven(Stat::Range{}, Change::Plus{0.25 * double(mark)})};
     case Module::surveyLens:
@@ -948,14 +955,14 @@ std::vector<SkillEffect> Modules::effects(Module m, int64_t mark) {
     return {};
 }
 
-std::string Modules::text(Module m, int64_t mark) {
+std::string Modules::text(Module m, int64_t mark, UnitKind kind) {
     const double s = share(mark);
     if (!(s > 0)) return "";
     const std::string pct = "+" + std::to_string(int(std::lround(s * 100))) + "%";
     switch (m) {
     case Module::drillHead: return "Drill " + pct;
     case Module::cargoPod: return "Ore and MH a trip " + pct;
-    case Module::plate: return "Hp +" + std::to_string(int(std::lround(s * Rules::hp(UnitKind::prospector))));
+    case Module::plate: return "Hp +" + std::to_string(int(std::lround(s * Rules::hp(kind))));
     case Module::torchTip: {
         char range[16];
         std::snprintf(range, sizeof range, "%.2g", 0.25 * double(mark));
@@ -1071,10 +1078,10 @@ std::pair<std::optional<ModuleJob>, std::optional<ModuleJob>> Rig::finish(double
     return out;
 }
 
-std::vector<SkillEffect> Rig::effects() const {
+std::vector<SkillEffect> Rig::effects(UnitKind kind) const {
     std::vector<SkillEffect> out;
     for (const auto& [m, mark] : fitted) {
-        const auto e = Modules::effects(m, mark);
+        const auto e = Modules::effects(m, mark, kind);
         out.insert(out.end(), e.begin(), e.end());
     }
     return out;

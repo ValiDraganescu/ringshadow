@@ -355,6 +355,45 @@ TEST(progression_progressJsonRoundTrip) {
     EXPECT_TRUE(found->bought.empty() && found->items.empty());
 }
 
+// The tree per kind (docs/kind-registry.md, "MMORPG: the pilot's kind"): the
+// Prospector's is the tree as it was, another kind has none yet and a point
+// there is refused; the kind is saved only when it is not the Prospector.
+TEST(progression_treePerKind) {
+    const auto& tree = Progression::nodes(UnitKind::prospector);
+    EXPECT_EQ(&tree, &Progression::nodes());
+    EXPECT_EQ(tree.size(), size_t(64));
+    EXPECT_TRUE(Progression::balance(tree) == Progression::balance());
+    EXPECT_TRUE(Leveling::fnv1a(Progression::balance(tree)) == Progression::signature());
+    EXPECT_TRUE(Progression::nodes(UnitKind::ranger).empty());
+    EXPECT_TRUE(Progression::inTree(UnitKind::prospector, Skill::quickDrill));
+    EXPECT_TRUE(!Progression::inTree(UnitKind::ranger, Skill::quickDrill));
+    // A Ranger pilot with points to spend: refused, nothing moves.
+    PilotProgress r = atLevel(10);
+    r.kind = UnitKind::ranger;
+    EXPECT_TRUE(r.spendRefusal(Skill::quickDrill).has_value());
+    EXPECT_TRUE(!r.spend(Skill::quickDrill, 0));
+    EXPECT_TRUE(r.ranks.empty());
+    EXPECT_TRUE(!r.respec(1000).has_value());
+    // The same pilot as a Prospector spends.
+    ProspectorProgress q = atLevel(10);
+    EXPECT_TRUE(q.kind == UnitKind::prospector);
+    EXPECT_TRUE(q.spend(Skill::quickDrill, 0));
+    // The blob: no "kind" for a Prospector, read back as one when absent.
+    EXPECT_TRUE(SessionStore::encode(q).find("\"kind\"") == std::string::npos);
+    const auto old = SessionStore::decode<PilotProgress>(R"({"xp": 600})");
+    ASSERT_TRUE(old.has_value());
+    EXPECT_TRUE(old->kind == UnitKind::prospector);
+    const auto back = SessionStore::decode<PilotProgress>(SessionStore::encode(r));
+    ASSERT_TRUE(back.has_value());
+    EXPECT_TRUE(back->kind == UnitKind::ranger);
+    EXPECT_TRUE(*back == r);
+    // A kind no longer known reads as the Prospector, the rest kept.
+    const auto gone = SessionStore::decode<PilotProgress>(R"({"xp": 600, "kind": "gone"})");
+    ASSERT_TRUE(gone.has_value());
+    EXPECT_TRUE(gone->kind == UnitKind::prospector);
+    EXPECT_EQ(gone->xp, 600.0);
+}
+
 // The skill screen's words: what a node gives in all at a rank, and every
 // rank of every node says something.
 TEST(progression_rankText) {

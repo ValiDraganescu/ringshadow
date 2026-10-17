@@ -168,6 +168,19 @@ and wells, and later the piece one server runs.
 - **Build wherever it fits.** There are no fixed plots. A pilot builds
   anywhere the building fits and pays its price to the game.
 
+### The pilot's kind (2026-10-18)
+
+A pilot drives the Prospector, and only the Prospector has a skill tree
+today; the server no longer assumes it. The kind is the pilot's own
+(`PilotProgress::kind`, saved in its progress blob as `"kind"` only when it
+is not the Prospector, so every save from before reads as one), and one
+accessor, `WorldMap::pilotKind`, gives it to every spawn of the pilot's
+unit: the start pad, the return with its unit gone, the respawn at home,
+the dev starfall's victims. The Dropship takes any kind that boards
+(`Rules::boards`). Mercenaries and frontier pilots drive
+`kMercenaryKind` and `kFrontierKind` (`World.h`), the Prospector
+([kind-registry.md](kind-registry.md), "MMORPG: the pilot's kind").
+
 ### Cities (proposal, not built yet)
 
 A city is not placed: it forms where pilots build close together. A group

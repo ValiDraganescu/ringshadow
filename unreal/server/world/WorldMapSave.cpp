@@ -37,6 +37,7 @@ SavedUnit savedUnit(const Unit& u, const std::string& owner) {
 /// the feats for the buildings it owns, without their XP.
 ProspectorProgress converted(const PilotRecord& old, const std::string& key, const WorldSave& save) {
     ProspectorProgress g;
+    // The old format's XP was the Prospector's: the only kind it had.
     g.xp = old.xp(UnitKind::prospector) * 10;
     g.blueprints = {{StructureKind::citadel, 1}, {StructureKind::derrick, 1}};
     for (const SavedRegion& r : save.regions)
@@ -90,11 +91,11 @@ WorldMap::Seated WorldMap::seat(PilotId pilot, const std::string& key) {
         in.down = std::nullopt;
         const auto h = home(in, in.region, Vec2(0, 0));
         if (h && h->kind) {
-            const Unit u = regions_[h->region]->simulation().freshUnit(UnitKind::prospector, 0, Pilot::player, h->at, 0);
+            const Unit u = regions_[h->region]->simulation().freshUnit(pilotKind(in), 0, Pilot::player, h->at, 0);
             arrive(pilot, in, h->region, u, regions_[h->region]->places()->regionAt(h->at), -1);
             return Seated::restored;
         }
-        const Unit u = startProspector();
+        const Unit u = startUnit(pilotKind(in));
         arrive(pilot, in, start_, u, start().places()->regionAt(u.position), -1);
         return Seated::restored;
     }

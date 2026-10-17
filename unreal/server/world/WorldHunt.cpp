@@ -386,7 +386,7 @@ void WorldMap::mercTrek(PilotState& p, PilotState::Merc& m) {
         const Vec2 in = farSide(r, step->first, step->second);
         regions_[r]->release(u.id);
         Simulation& next = regions_[step->first]->simulation();
-        Unit w = next.freshUnit(UnitKind::prospector, 0, Pilot::player, in, 0);
+        Unit w = next.freshUnit(kMercenaryKind, 0, Pilot::player, in, 0);
         w.position = openGround(next, w, in, 6);
         w.hp = std::min(w.hp, v.hp);
         w.carrying = v.carrying;

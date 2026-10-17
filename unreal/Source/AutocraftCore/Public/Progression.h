@@ -229,8 +229,14 @@ struct AUTOCRAFTCORE_API Progression {
     /// "Q", "C", "G".
     static const char* slotKey(int64_t slot);
 
-    /// Every node in the tree, in `Skill` order (the retired ones left out).
-    static const std::vector<SkillNode>& nodes();
+    /// Every node in a kind's tree, in `Skill` order (the retired ones left
+    /// out): the Prospector's; empty for a kind with no tree yet, so a point
+    /// there is refused (docs/kind-registry.md, "MMORPG: the pilot's kind").
+    static const std::vector<SkillNode>& nodes(UnitKind kind);
+    /// The Prospector's tree.
+    static const std::vector<SkillNode>& nodes() { return nodes(UnitKind::prospector); }
+    /// `s` is a node of `kind`'s tree (not retired).
+    static bool inTree(UnitKind kind, Skill s);
     /// A skill's node, a retired one too (no ranks).
     static const SkillNode& node(Skill s);
     /// Gone from the tree; old saves give its points back (F2: Homing beacon).
@@ -340,10 +346,11 @@ struct AUTOCRAFTCORE_API Modules {
     static double researchTime(int64_t mark);
     /// A mark's step: +8%, +16%, +25%.
     static double share(int64_t mark);
-    /// What a fitted module of `mark` does, as the tree's blocks (0: none).
-    static std::vector<SkillEffect> effects(Module m, int64_t mark);
+    /// What a fitted module of `mark` does on a `kind`, as the tree's blocks
+    /// (0: none). The plate adds a share of the kind's own hp.
+    static std::vector<SkillEffect> effects(Module m, int64_t mark, UnitKind kind = UnitKind::prospector);
     /// In a few words for the fitting screen: "Drill +16%".
-    static std::string text(Module m, int64_t mark);
+    static std::string text(Module m, int64_t mark, UnitKind kind = UnitKind::prospector);
 };
 
 /// The pilot's rig (P7): its fitted modules, its stores, the marks the Lab
@@ -383,8 +390,8 @@ struct AUTOCRAFTCORE_API Rig {
     /// The jobs done by `now`: the module into the stores, the mark opened.
     /// What finished (made, researched).
     std::pair<std::optional<ModuleJob>, std::optional<ModuleJob>> finish(double now);
-    /// What the fitted modules do, as the tree's blocks.
-    std::vector<SkillEffect> effects() const;
+    /// What the fitted modules do on a `kind`, as the tree's blocks.
+    std::vector<SkillEffect> effects(UnitKind kind = UnitKind::prospector) const;
 
     bool operator==(const Rig&) const = default;
 };
@@ -441,7 +448,10 @@ struct AUTOCRAFTCORE_API Shop {
 
 /// A pilot's progression in a world: kept by the server, saved with the
 /// pilot (`SessionStore::encode`).
-struct AUTOCRAFTCORE_API ProspectorProgress {
+struct AUTOCRAFTCORE_API PilotProgress {
+    /// The kind the pilot drives, whose tree it climbs (saved as "kind",
+    /// only when not the Prospector: older blobs read as one).
+    UnitKind kind = UnitKind::prospector;
     /// Plain XP in all.
     double xp = 0.0;
     /// Points in each node learned (rank 1 and up).
@@ -544,8 +554,10 @@ struct AUTOCRAFTCORE_API ProspectorProgress {
     /// One consumable of `i` used up. False: none held.
     bool useItem(Item i);
 
-    bool operator==(const ProspectorProgress&) const = default;
+    bool operator==(const PilotProgress&) const = default;
 };
+/// Its name before a pilot drove more than the Prospector.
+using ProspectorProgress = PilotProgress;
 
 template <> struct EnumInfo<Skill> {
     static constexpr std::array<std::string_view, 65> names{

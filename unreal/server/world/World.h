@@ -45,6 +45,10 @@ using PilotId = uint64_t;
 inline constexpr double kWorldXpScale = 0;
 /// A Pick request in a world: refused with this.
 inline constexpr const char* kWorldPickRefusal = "No level-up cards in a world: spend skill points (K)";
+/// What a pilot's hired mercenary (H2) and a frontier pilot drive: the
+/// Prospector, whatever the pilot drives (`WorldMap::pilotKind`).
+inline constexpr UnitKind kMercenaryKind = UnitKind::prospector;
+inline constexpr UnitKind kFrontierKind = UnitKind::prospector;
 
 /// How a region starts.
 struct RegionConfig {

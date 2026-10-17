@@ -1742,10 +1742,10 @@ private:
     std::vector<size_t> ownPatches_;
     bool devFallDone_ = false;
 
-    /// A new Prospector on the start pad, facing the start region's nearest
+    /// A new unit of `kind` on the start pad, facing the start region's nearest
     /// ore deposit (one with ore left first), so the first thing in view is
     /// work.
-    Unit startProspector() const;
+    Unit startUnit(UnitKind kind) const;
     /// The neighbour across an edge (nil: the world's border, or no region).
     std::optional<size_t> neighbour(size_t r, region::Edge e) const;
     /// Puts the pilot and its unit into region `to` at region position `at`
@@ -1763,6 +1763,10 @@ private:
     void park(const PilotState& p);
     // WorldProgress.cpp.
     PilotState* pilotState(PilotId pilot);
+    /// The kind `p` drives, every spawn of its own unit's (docs/kind-registry.md,
+    /// "MMORPG: the pilot's kind"): its progress's, the Prospector unless saved
+    /// otherwise.
+    static UnitKind pilotKind(const PilotState& p) { return p.progress.kind; }
     /// `p`'s own buildings in region `r` (the ids it built): its skills
     /// that reach buildings (Reinforced, Head start) reach these.
     std::set<int64_t> ownBuildings(const PilotState& p, size_t r) const;

@@ -125,7 +125,7 @@ public:
         return f();
     }
 
-    /// `progress` is set and `u` is the driven Prospector: its skills are on.
+    /// `progress` is set and `u` is the driven unit of its kind: its skills are on.
     bool skilled(const Unit& u) const;
 
     /// The first of the skills' effects of case `T`, for the driven

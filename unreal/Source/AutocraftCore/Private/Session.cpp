@@ -391,6 +391,10 @@ bool get(const json& j, ProspectorProgress& v) {
     if (!j.is_object()) return false;
     std::string error;
     Reader r{j, error};
+    // The kind: absent before a pilot drove more than the Prospector (a
+    // name no longer known reads as one too).
+    if (auto it = j.find("kind"); it != j.end() && it->is_string())
+        if (auto k = parse<UnitKind>(it->get_ref<const std::string&>())) v.kind = *k;
     r.orDefault("xp", v.xp);
     v.ranks.clear();
     if (auto it = j.find("ranks"); it != j.end() && it->is_object())
@@ -563,6 +567,8 @@ json put(const KindRecord& v) {
 
 json put(const ProspectorProgress& v) {
     Writer w;
+    // Only another kind's: a Prospector's blob stays as it was.
+    if (v.kind != UnitKind::prospector) w("kind", v.kind);
     w("xp", v.xp);
     w("ranks", v.ranks);
     json slots = json::array();

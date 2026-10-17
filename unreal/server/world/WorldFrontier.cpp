@@ -853,7 +853,7 @@ void WorldMap::frontierUnit(FrontierPilot& f, bool live) {
     }
     if (f.unit && frontierUnitOf(f)) return;
     Simulation& sim = regions_[f.region]->simulation();
-    Unit v = sim.freshUnit(UnitKind::prospector, 0, Pilot::player, f.at, 0);
+    Unit v = sim.freshUnit(kFrontierKind, 0, Pilot::player, f.at, 0);
     v.position = openGround(sim, v, f.at, 6);
     v.carrying = f.cargo;
     v.hydrogen = f.cargo > 0 && f.hydrogen ? std::optional<bool>(true) : std::nullopt;
@@ -942,7 +942,7 @@ void WorldMap::frontierEvents(FrontierPilot& f) {
         f.cargo = u->carrying;
         f.hydrogen = u->hydrogen == true;
         // Badly hurt: a cry on the radio, now and then.
-        if (u->hp < f.hp && u->hp < Rules::hp(UnitKind::prospector) * WorldFrontier::flee && clock_ - f.lastCry > 120) {
+        if (u->hp < f.hp && u->hp < Rules::hp(kFrontierKind) * WorldFrontier::flee && clock_ - f.lastCry > 120) {
             f.lastCry = clock_;
             frontierRadio(f, "help", world_->regions[f.region].file.name);
         }

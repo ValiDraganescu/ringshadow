@@ -356,8 +356,9 @@ std::string WorldMap::devStarfall(const std::string& line) {
         const NavGrid* nav = sim.navGrid();
         const auto at = nav ? nav->nearestFree(want) : std::optional<Vec2>(want);
         if (!at) continue;
-        // Prospectors: they stand where they are put (Rangers go to their rally).
-        Unit u = sim.freshUnit(UnitKind::prospector, st.nextID++, Pilot::player, *at, a);
+        // The pilot's kind (Prospectors today): they stand where they are put
+        // (Rangers go to their rally).
+        Unit u = sim.freshUnit(pilotKind(p), st.nextID++, Pilot::player, *at, a);
         st.units.push_back(u);
         units += 1;
     }

@@ -43,12 +43,12 @@ void Simulation::setProgress(const std::optional<ProspectorProgress>& p) {
         skillEffects.insert(skillEffects.end(), e.begin(), e.end());
     }
     // The fitted modules (P7): the same blocks.
-    const auto rig = p->rig.effects();
+    const auto rig = p->rig.effects(p->kind);
     skillEffects.insert(skillEffects.end(), rig.begin(), rig.end());
 }
 
 bool Simulation::skilled(const Unit& u) const {
-    return progress && u.kind == UnitKind::prospector && piloted(u.id);
+    return progress && u.kind == progress->kind && piloted(u.id);
 }
 
 Boost Simulation::skillBoost(SkillStat stat) const {

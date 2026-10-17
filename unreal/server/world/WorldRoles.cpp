@@ -167,8 +167,8 @@ void WorldMap::respawn(PilotId pilot, PilotState& p, const Home& h, int64_t carg
         if (from.pilots().empty()) bankIn(PilotState{}, was);
     }
     Region& to = *regions_[h.region];
-    // A new Prospector, with what Second wind kept.
-    Unit u = to.simulation().freshUnit(UnitKind::prospector, 0, Pilot::player, h.at, 0);
+    // A new unit of its kind, with what Second wind kept.
+    Unit u = to.simulation().freshUnit(pilotKind(p), 0, Pilot::player, h.at, 0);
     if (cargo > 0) {
         u.carrying = cargo;
         if (hydrogen) u.hydrogen = true;
