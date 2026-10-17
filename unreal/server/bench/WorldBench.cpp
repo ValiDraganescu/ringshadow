@@ -71,6 +71,11 @@ int main(int argc, char** argv) {
     std::printf("  step (all regions): mean %.3f ms, p50 %.3f, p95 %.3f, max %.3f\n", sum / double(step.size()), at(step, 0.5),
                 at(step, 0.95), at(step, 1.0));
     std::printf("  pilot's snapshot: p50 %.3f ms, max %.3f\n", at(snap, 0.5), at(snap, 1.0));
+    std::vector<size_t> slow(step.size());
+    for (size_t i = 0; i < slow.size(); i++) slow[i] = i;
+    std::sort(slow.begin(), slow.end(), [&](size_t a, size_t b) { return step[a] > step[b]; });
+    std::printf("  slowest steps:");
+    for (size_t i = 0; i < std::min<size_t>(5, slow.size()); i++) std::printf(" tick %zu %.3f ms%s", slow[i] + 1, step[slow[i]], i < 4 ? "," : "\n");
     const double samples = double((ticks + 59) / 60);
     for (size_t r = 0; r < w.regionCount(); r++)
         std::printf("  %-14s %.3f ms a step%s\n", load.world->regions[r].file.id.c_str(), regionSum[r] / samples,

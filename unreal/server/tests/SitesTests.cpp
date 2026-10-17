@@ -139,6 +139,20 @@ WorldParams unchained() {
     return p;
 }
 
+// perf.md "Server" round 1: the load keeps each site's reach from its
+// check, the same as `region::siteReach` works out (a pilot's first board
+// built every region's walking grid in a tick).
+TEST(sites_reach_from_the_load_is_site_reach) {
+    size_t sites = 0;
+    for (const WorldRegion& g : first().regions) {
+        const std::vector<region::SiteReach> reach = region::siteReach(g.built);
+        EXPECT_EQ(g.siteReach.size(), g.built.sites.size());
+        EXPECT_TRUE(g.siteReach == reach);
+        sites += reach.size();
+    }
+    EXPECT_TRUE(sites > 0);
+}
+
 // The Citadel's crate by Prospect Landing's pad: seen from the pad, opened
 // by walking into it: the blueprint (50 × floor 1) and its news. Stepping
 // off and back opens nothing again.

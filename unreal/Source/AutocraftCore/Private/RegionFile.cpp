@@ -1263,7 +1263,13 @@ Built build(const RegionFile& f) {
 }
 
 std::vector<Problem> validate(const RegionFile& f, const Built& b) {
+    std::vector<SiteReach> reach;
+    return validate(f, b, reach);
+}
+
+std::vector<Problem> validate(const RegionFile& f, const Built& b, std::vector<SiteReach>& siteReaches) {
     std::vector<Problem> out;
+    siteReaches.clear();
     const MapDefinition& m = b.map;
     const TerrainField field(m);
     NavGrid nav(m, field);
@@ -1439,6 +1445,7 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
             if (distance(b.sites[j].at, p) < 2 * siteRadius)
                 onSite = "on top of sites[" + std::to_string(j) + "] \"" + b.sites[j].name + "\"";
         const SiteReach how = reach.of(p);
+        siteReaches.push_back(how);
         if (steepNear(p)) add(where, "on a cliff face", p);
         else if (const auto r = rock(p, 1.0)) add(where, rockText(*r), p);
         else if (const auto c = crowded(p, "", 1.5 + NavGrid::clearance, 2.0 + NavGrid::clearance)) add(where, *c, p);

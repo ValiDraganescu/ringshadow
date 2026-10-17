@@ -50,6 +50,8 @@ struct WorldRegion {
     /// The file's text, as the clients get it.
     std::string text;
     region::Built built;
+    /// How a pilot reaches each of `built.sites`, from the load's check.
+    std::vector<region::SiteReach> siteReach;
 };
 
 struct LoadedWorld {
@@ -1729,8 +1731,9 @@ private:
     std::vector<std::map<int64_t, double>> owed_;
     std::map<std::pair<size_t, int64_t>, std::pair<int64_t, double>> repaid_;
     std::mt19937_64 chips_;
-    /// How a pilot reaches each region's sites (`region::siteReach`),
-    /// worked out the first time a contract needs it.
+    /// How a pilot reaches each region's sites (`region::siteReach`): the
+    /// load's (`WorldRegion::siteReach`), else worked out the first time a
+    /// contract needs it.
     std::vector<std::optional<std::vector<region::SiteReach>>> siteReach_;
     /// Starfall (WorldStarfall.cpp): the falls told, the clock the schedule
     /// was last read at, the next fall's id, each region's own deposits

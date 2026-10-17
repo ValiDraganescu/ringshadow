@@ -160,7 +160,7 @@ WorldLoad loadWorld(std::string_view text, const std::string& folder) {
             g.file = *parsed.file;
             g.text = *body;
             g.built = region::build(g.file);
-            for (const region::Problem& p : region::validate(g.file, g.built)) problem(where + ": " + p.text());
+            for (const region::Problem& p : region::validate(g.file, g.built, g.siteReach)) problem(where + ": " + p.text());
             if (g.file.pads.empty()) problem(where + ": no pad (every region needs one)");
             if (!ids.insert(g.file.id).second) problem(where + ": region id " + g.file.id + " used twice");
             w.regions.push_back(std::move(g));
@@ -245,6 +245,13 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
     builtBy_.resize(regions_.size());
     kills_.resize(regions_.size());
     owed_.resize(regions_.size());
+    // The sites' reach from the load: a pilot's first board or contract
+    // would build each region's walking grid for it in a tick (12 ms).
+    siteReach_.resize(regions_.size());
+    for (size_t r = 0; r < regions_.size(); r++) {
+        const WorldRegion& g = world.regions[r];
+        if (!g.built.sites.empty() && g.siteReach.size() == g.built.sites.size()) siteReach_[r] = g.siteReach;
+    }
     // What each well holds at the start is what it grows back to.
     for (const auto& r : regions_) {
         std::vector<int64_t> full;

@@ -311,6 +311,9 @@ enum class SiteReach : uint8_t { walk, ramp, cliffHop, none };
 AUTOCRAFTCORE_API std::string_view siteReachName(SiteReach r);
 /// By `built.sites`.
 AUTOCRAFTCORE_API std::vector<SiteReach> siteReach(const Built& built);
+/// `validate`, and `siteReach` from the same walk (the world server keeps
+/// it from the load, not from a tick).
+AUTOCRAFTCORE_API std::vector<Problem> validate(const RegionFile& file, const Built& built, std::vector<SiteReach>& reach);
 
 AUTOCRAFTCORE_API std::string_view edgeName(Edge e);
 
