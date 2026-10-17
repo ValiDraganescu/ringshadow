@@ -100,6 +100,12 @@ struct Vision {
                 const std::map<int64_t, double>& farther = {}, const std::map<int64_t, double>& reveal = {},
                 const std::map<int64_t, double>& beams = {},
                 const std::vector<std::pair<Vec2, double>>& daylight = {}, double nightShare = 0.5) const;
+    /// `sight`, into `s`: its arrays keep their room from the last time
+    /// (the simulation's looks reuse them).
+    void sightInto(Sight& s, int64_t p, const GameState& state, std::vector<uint64_t>& explored,
+                   const std::map<int64_t, double>& farther, const std::map<int64_t, double>& reveal,
+                   const std::map<int64_t, double>& beams, const std::vector<std::pair<Vec2, double>>& daylight,
+                   double nightShare) const;
 
     /// A buried Scorpion `u` is out of sight of player `p` (and its allies):
     /// down in the ground and done reloading, with no unit or building of

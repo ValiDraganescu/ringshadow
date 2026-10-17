@@ -263,3 +263,90 @@ TEST(vision_sightIsAMirror) {
     EXPECT_EQ(mismatches, int64_t(0));
     EXPECT_EQ(std::count(a.begin(), a.end(), uint8_t(1)), std::count(b.begin(), b.end(), uint8_t(1)));
 }
+
+namespace {
+
+/// `Vision::stamp` as it was before docs/perf.md "Server" round 3: every
+/// cell of the circle's box tested on its own.
+void stampPerCell(const Vision& v, Vec2 c, double r, std::optional<int8_t> level, std::vector<uint8_t>& seen,
+                  std::vector<uint8_t>& near, std::vector<uint64_t>& explored) {
+    const double cell = Vision::cell;
+    const int64_t x0 = max<int64_t>(0, static_cast<int64_t>(std::floor((c.x - r - v.origin.x) / cell)));
+    const int64_t x1 = min<int64_t>(v.width - 1, static_cast<int64_t>(std::floor((c.x + r - v.origin.x) / cell)));
+    const int64_t z0 = max<int64_t>(0, static_cast<int64_t>(std::floor((c.y - r - v.origin.y) / cell)));
+    const int64_t z1 = min<int64_t>(v.height - 1, static_cast<int64_t>(std::floor((c.y + r - v.origin.y) / cell)));
+    if (!(x0 <= x1 && z0 <= z1)) return;
+    const double r2 = r * r;
+    const int8_t top = level ? *level : std::numeric_limits<int8_t>::max();
+    for (int64_t z = z0; z <= z1; ++z) {
+        const double dz = v.origin.y + (static_cast<double>(z) + 0.5) * cell - c.y;
+        const double dz2 = dz * dz;
+        if (!(dz2 <= r2)) continue;
+        for (int64_t x = x0; x <= x1; ++x) {
+            const double dx = v.origin.x + (static_cast<double>(x) + 0.5) * cell - c.x;
+            if (!(dx * dx + dz2 <= r2)) continue;
+            const size_t i = static_cast<size_t>(z * v.width + x);
+            near[i] = 1;
+            if (v.tier[i] <= top && !seen[i]) {
+                seen[i] = 1;
+                explored[i >> 6] |= uint64_t(1) << static_cast<uint64_t>(i & 63);
+            }
+        }
+    }
+}
+
+} // namespace
+
+// The stamp fills each row's span of the circle at once; it marks what the
+// cell-by-cell test marked, byte for byte, for circles of every size, in
+// and off the map, on every level and in the air, stamped over each other.
+TEST(vision_stampSpansAsEveryCell) {
+    const Simulation sim(GameState::new_(homeMap()), homeMap());
+    const Vision& v = *sim.vision;
+    const size_t cells = static_cast<size_t>(v.width * v.height);
+    SeededRandom dice(20261018);
+    int64_t marked = 0;
+    for (int round = 0; round < 40; ++round) {
+        std::vector<uint8_t> seenA(cells, 0), nearA(cells, 0), seenB(cells, 0), nearB(cells, 0);
+        std::vector<uint64_t> exA((cells + 63) / 64, 0), exB((cells + 63) / 64, 0);
+        for (int k = 0; k < 60; ++k) {
+            const double w = static_cast<double>(v.width) * Vision::cell, h = static_cast<double>(v.height) * Vision::cell;
+            const Vec2 c = v.origin + Vec2(dice.range(-0.2 * w, 1.2 * w), dice.range(-0.2 * h, 1.2 * h));
+            // Round radii and cell-aligned centres too: the ties.
+            double r = k % 7 == 0 ? std::round(dice.range(0, 30)) * 0.5 : dice.range(0.01, k % 5 == 0 ? 200.0 : 25.0);
+            const Vec2 at = k % 4 == 0 ? Vec2(std::round(c.x * 4) / 4, std::round(c.y * 4) / 4) : c;
+            const std::optional<int8_t> level =
+                k % 3 == 0 ? std::nullopt : std::optional<int8_t>(static_cast<int8_t>(dice.random(-1, 4)));
+            v.stamp(at, r, level, seenA, nearA, exA);
+            stampPerCell(v, at, r, level, seenB, nearB, exB);
+        }
+        EXPECT_TRUE(seenA == seenB);
+        EXPECT_TRUE(nearA == nearB);
+        EXPECT_TRUE(exA == exB);
+        marked += std::count(nearB.begin(), nearB.end(), uint8_t(1));
+    }
+    EXPECT_TRUE(marked > 1000);
+}
+
+// A look fills the last look's arrays again (`Vision::sightInto`): into a
+// used Sight, what a new one gets, for both sides of a game in progress.
+TEST(vision_sightIntoAUsedSightIsAFreshOne) {
+    GameState s = field();
+    add(s, Unit::Kind::prospector, citadel(s, 0) + Vec2(6, 0), 0);
+    add(s, Unit::Kind::ranger, citadel(s, 1) - Vec2(9, 2), 1);
+    const Simulation sim(s, homeMap());
+    const Vision& v = *sim.vision;
+    for (int64_t p = 0; p < 2; ++p) {
+        std::vector<uint64_t> a, b;
+        const Sight fresh = v.sight(p, s, a);
+        Sight used;
+        used.seen.assign(fresh.seen.size(), 1);
+        used.near.assign(fresh.near.size() / 2, 1);
+        used.ids = {7, 8, 9};
+        v.sightInto(used, p, s, b, {}, {}, {}, {}, 0.5);
+        EXPECT_TRUE(used.seen == fresh.seen);
+        EXPECT_TRUE(used.near == fresh.near);
+        EXPECT_TRUE(used.ids == fresh.ids);
+        EXPECT_TRUE(a == b);
+    }
+}

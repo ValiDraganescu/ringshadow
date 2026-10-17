@@ -25,6 +25,8 @@ Every Unreal process runs hidden, silent and focus-free: see [Hidden runs](#hidd
 | Rendering or look | `uv run unreal/Tools/shots/compare.py SCENE` (see `unreal/SHOTS.md`) | one scene a few minutes; all scenes about 25 min |
 | Audio | offline to WAV with `-deterministicaudio`, then check the file; the rule tests are `Autocraft.Audio.*` | – |
 | Only assets, materials or Python tools | no test; look at a render | – |
+| The MMO server (`unreal/server`) or the net code | `make -C unreal/server test`, `make -C unreal/net-tests` | about a minute |
+| Pointers or references into vectors and optionals, a result that changes from run to run of one binary, a perf change that must stay bit for bit | `make -C unreal/server test-asan` (AddressSanitizer and UBSan, stops at the first finding) | a few minutes to build, half a minute to run |
 
 Perf (`unreal/Tools/bench/bench.py`, `make -C unreal/core-tests bench` then `simbench`) and `unreal/Tools/shots/compare.py` over every scene run only when the user asks, or when a perf worker's brief says so. The client's standard is the MMO bench, `bench.py --mmo` ([docs/perf.md](../../../docs/perf.md) "Client").
 

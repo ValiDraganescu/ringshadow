@@ -2,6 +2,8 @@
 // (`Simulation+Vision.members.h`).
 #include "Vision.h"
 
+#include <cstring>
+
 #include "Commander.h"
 #include "NavGrid.h"
 #include "Rules.h"
@@ -155,10 +157,10 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
     if (!(x0 <= x1 && z0 <= z1)) return;
     const double r2 = r * r;
     const int8_t top = level ? *level : std::numeric_limits<int8_t>::max();
-    const int8_t* t = tier.data();
-    uint8_t* s = seen.data();
-    uint8_t* n = near.data();
-    uint64_t* ex = explored.data();
+    const int8_t* __restrict t = tier.data();
+    uint8_t* __restrict s = seen.data();
+    uint8_t* __restrict n = near.data();
+    uint64_t* __restrict ex = explored.data();
     // A wedge: the cells whose centre is within the half angle of the heading.
     const Vec2 ahead = cone ? Vec2(std::cos(cone->first), std::sin(cone->first)) : Vec2::zero;
     const double edge = cone ? std::cos(cone->second) : 0.0;
@@ -167,16 +169,72 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
         const double dz2 = dz * dz;
         if (!(dz2 <= r2)) continue;
         const int64_t row = z * width;
-        for (int64_t x = x0; x <= x1; ++x) {
-            const double dx = origin.x + (static_cast<double>(x) + 0.5) * cell - c.x;
-            if (!(dx * dx + dz2 <= r2)) continue;
-            if (cone && dx * ahead.x + dz * ahead.y < edge * std::sqrt(dx * dx + dz2)) continue;
-            const int64_t i = row + x;
-            n[i] = 1;
-            if (t[i] <= top && !s[i]) {
-                s[i] = 1;
-                ex[i >> 6] |= uint64_t(1) << static_cast<uint64_t>(i & 63);
+        if (cone) {
+            for (int64_t x = x0; x <= x1; ++x) {
+                const double dx = origin.x + (static_cast<double>(x) + 0.5) * cell - c.x;
+                if (!(dx * dx + dz2 <= r2)) continue;
+                if (dx * ahead.x + dz * ahead.y < edge * std::sqrt(dx * dx + dz2)) continue;
+                const int64_t i = row + x;
+                n[i] = 1;
+                if (t[i] <= top && !s[i]) {
+                    s[i] = 1;
+                    ex[i >> 6] |= uint64_t(1) << static_cast<uint64_t>(i & 63);
+                }
             }
+            continue;
+        }
+        // The row's cells in the circle are one unbroken span: a cell's
+        // `dx` grows with `x` (rounding keeps the order), so the test, which
+        // grows with `|dx|`, passes from one end of the span to the other.
+        // Its ends from the circle's half chord, then set right by the same
+        // test, cell by cell; within them every cell passes.
+        auto in = [&](int64_t x) {
+            const double dx = origin.x + (static_cast<double>(x) + 0.5) * cell - c.x;
+            return dx * dx + dz2 <= r2;
+        };
+        // The nearest cell to the centre's column and its neighbours: the
+        // span, if any, holds one of them.
+        const int64_t mid = min(x1, max(x0, static_cast<int64_t>(std::floor((c.x - origin.x) / cell))));
+        int64_t seed = -1;
+        for (const int64_t x : {mid, mid - 1, mid + 1})
+            if (seed < 0 && x >= x0 && x <= x1 && in(x)) seed = x;
+        if (seed < 0) continue;
+        const double chord = std::sqrt(max(r2 - dz2, 0.0));
+        int64_t a = min(seed, max(x0, static_cast<int64_t>(std::floor((c.x - chord - origin.x) / cell))));
+        int64_t b = max(seed, min(x1, static_cast<int64_t>(std::floor((c.x + chord - origin.x) / cell))));
+        if (in(a)) { while (a > x0 && in(a - 1)) --a; } else { while (!in(a)) ++a; }
+        if (in(b)) { while (b < x1 && in(b + 1)) ++b; } else { while (!in(b)) --b; }
+        // What the per-cell test marked: in reach, and the ground seen where
+        // its level is not above the viewer's, its explored bit with it (a
+        // word's bits gathered, then written once).
+        int64_t i = row + a;
+        const int64_t end = row + b + 1;
+        std::memset(n + i, 1, static_cast<size_t>(end - i));
+        while (i < end) {
+            const int64_t from = i, stop = min(end, (i | 63) + 1);
+            uint64_t bits = 0;
+            if (!level) {
+                // In the air (or the daylight): every level, so every cell
+                // not seen yet is seen now. Eight at a time where they line
+                // up: `seen` holds 0 or 1, so each byte's low bit, flipped,
+                // says "not yet", and one multiply gathers the eight bits
+                // (byte k's to bit 56 + k).
+                for (; i < stop && (i & 7); ++i) bits |= uint64_t(s[i] == 0) << static_cast<uint64_t>(i & 63);
+                for (; i + 8 <= stop; i += 8) {
+                    uint64_t w;
+                    std::memcpy(&w, s + i, sizeof w);
+                    bits |= ((~w & 0x0101010101010101ull) * 0x0102040810204080ull >> 56) << static_cast<uint64_t>(i & 63);
+                }
+                for (; i < stop; ++i) bits |= uint64_t(s[i] == 0) << static_cast<uint64_t>(i & 63);
+                std::memset(s + from, 1, static_cast<size_t>(stop - from));
+            } else {
+                for (; i < stop; ++i) {
+                    const bool add = t[i] <= top && !s[i];
+                    s[i] |= static_cast<uint8_t>(add);
+                    bits |= uint64_t(add) << static_cast<uint64_t>(i & 63);
+                }
+            }
+            ex[from >> 6] |= bits;
         }
     }
 }
@@ -188,8 +246,17 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
                     const std::map<int64_t, double>& farther, const std::map<int64_t, double>& reveal,
                     const std::map<int64_t, double>& beams, const std::vector<std::pair<Vec2, double>>& daylight,
                     double nightShare) const {
-    const int64_t cells = width * height;
     Sight s;
+    sightInto(s, p, state, explored, farther, reveal, beams, daylight, nightShare);
+    return s;
+}
+
+void Vision::sightInto(Sight& s, int64_t p, const GameState& state, std::vector<uint64_t>& explored,
+                       const std::map<int64_t, double>& farther, const std::map<int64_t, double>& reveal,
+                       const std::map<int64_t, double>& beams, const std::vector<std::pair<Vec2, double>>& daylight,
+                       double nightShare) const {
+    const int64_t cells = width * height;
+    s.ids.clear();
     s.seen.assign(static_cast<size_t>(cells), 0);
     s.near.assign(static_cast<size_t>(cells), 0);
     const size_t words = static_cast<size_t>((cells + 63) / 64);
@@ -271,7 +338,6 @@ Sight Vision::sight(int64_t p, const GameState& state, std::vector<uint64_t>& ex
         if (!(state.hostile(b.owner, p) && b.hp > 0)) continue;
         if (sees(b, s.seen)) s.ids.insert(b.id);
     }
-    return s;
 }
 
 /// A buried Scorpion `u` is out of sight of player `p` (and its allies).
@@ -412,7 +478,9 @@ void Simulation::lookNow() {
 /// Work out what every player sees, and update what each knows.
 void Simulation::look() {
     if (!vision) { sights.clear(); return; }
-    std::vector<Intel> intel_ = state.intel ? *state.intel : std::vector<Intel>{};
+    // What each knows, taken (not copied) and put back at the end: nothing
+    // in between reads `state.intel`.
+    std::vector<Intel> intel_ = state.intel ? std::move(*state.intel) : std::vector<Intel>{};
     const int64_t cells = vision->width * vision->height;
     if (intel_.size() != state.players.size()) {
         // A new game: each knows where the others start, and that a
@@ -472,8 +540,11 @@ void Simulation::look() {
             }
         if (!any) circle(*daylightAt, Rules::vision(Unit::Kind::prospector));
     }
+    // The last look's sights, their arrays filled again (no new ones each
+    // look).
+    std::vector<Sight> seen = std::move(sights);
     sights.clear();
-    std::vector<Sight> seen(state.players.size());
+    seen.resize(state.players.size());
     const double now = state.time;
     // Allies see and remember alike (C++, teams): a team's sight and its
     // one memory (`teamIntel`: what any member has scouted) are worked
@@ -487,11 +558,11 @@ void Simulation::look() {
             if (state.allied(static_cast<int64_t>(q), pl)) members.push_back(q);
         }
         const auto merging = std::chrono::steady_clock::now();
-        Intel k = members.size() == 1 ? intel_[p] : teamIntel(intel_, members);
+        Intel k = members.size() == 1 ? std::move(intel_[p]) : teamIntel(intel_, members);
         stepTimes.merge += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - merging).count();
         const bool pilots = state.allied(pl, Pilot::player);
-        seen[p] = vision->sight(pl, state, k.explored, farther, reveal, beams, pilots ? daylight : std::vector<std::pair<Vec2, double>>{},
-                                Rules::nightSight * (pilots ? nightWiden : 1.0));
+        vision->sightInto(seen[p], pl, state, k.explored, farther, reveal, beams,
+                          pilots ? daylight : std::vector<std::pair<Vec2, double>>{}, Rules::nightSight * (pilots ? nightWiden : 1.0));
         const Sight& s = seen[p];
         if (k.sites.size() != sites.size()) k.sites.assign(sites.size(), -std::numeric_limits<double>::infinity());
         for (size_t j = 0; j < sites.size(); ++j) {
@@ -513,7 +584,7 @@ void Simulation::look() {
         buildings.insert(buildings.end(), shownNow.begin(), shownNow.end());
         // (Swift's `sort` is not stable either; ids are unique.)
         std::sort(buildings.begin(), buildings.end(), [](const Structure& a, const Structure& b) { return a.id < b.id; });
-        k.buildings = buildings;
+        k.buildings = std::move(buildings);
         // Units: the same, and a unit out of sight this long is gone
         // from mind.
         std::vector<Intel::Seen> units;
@@ -527,14 +598,16 @@ void Simulation::look() {
             if (state.hostile(u.owner, pl) && s.ids.count(u.id)) units.push_back(Intel::Seen{u, now});
         }
         std::sort(units.begin(), units.end(), [](const Intel::Seen& a, const Intel::Seen& b) { return a.unit.id < b.unit.id; });
-        k.units = units;
+        k.units = std::move(units);
         for (size_t q : members) {
             if (q != p) seen[q] = s;
         }
-        for (size_t q : members) intel_[q] = k;
+        for (size_t q : members)
+            if (q != members.back()) intel_[q] = k;
+        intel_[members.back()] = std::move(k);
     }
     sights = std::move(seen);
-    state.intel = intel_;
+    state.intel = std::move(intel_);
 }
 
 /// The game as player `p` knows it: its own units and buildings, the

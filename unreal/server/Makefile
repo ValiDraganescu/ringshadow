@@ -7,6 +7,8 @@
 #   make -C unreal/server              build/autocraft-server, build/autocraft-region
 #   make -C unreal/server test         the tests (FILTER=snapshot: only names with "snapshot")
 #   make -C unreal/server bench        the region bench and the network bench, at -O3
+#   make -C unreal/server test-asan    the tests built with AddressSanitizer and UBSan
+#                                      (build/asan/, -O1; stops at the first finding)
 #
 # Objects go to build/. The tests use core-tests' tiny framework (test.h, main.cpp)
 # and net-tests' in-memory network (rig.h).
@@ -39,7 +41,7 @@ LIB_OBJ := $(CORE_OBJ) $(NET_OBJ) $(WORLD_OBJ) $(SERVER_OBJ)
 PROGRAM := build/autocraft-server
 BIN := build/server-tests
 
-.PHONY: all test bench clean
+.PHONY: all test test-asan bench clean
 all: $(PROGRAM) $(REGION_TOOL)
 
 # The end-to-end tests start build/autocraft-server.
@@ -108,17 +110,18 @@ build/tests/main.o: $(CORE_TESTS)/main.cpp
 # `make bench`: build/regionbench (bench/RegionBench.cpp), build/netbench
 # (bench/NetBench.cpp), build/worldbench (bench/WorldBench.cpp) and
 # build/daybench (bench/DayBench.cpp), build/balancebench
-# (bench/BalanceBench.cpp), build/savebench (bench/SaveBench.cpp) and
-# build/loadbench (bench/LoadBench.cpp), everything at -O3.
+# (bench/BalanceBench.cpp), build/savebench (bench/SaveBench.cpp),
+# build/loadbench (bench/LoadBench.cpp) and build/lookbench
+# (bench/LookBench.cpp), everything at -O3.
 BENCH_FLAGS := $(subst -O2,-O3,$(CXXFLAGS)) -I../core-tests/bench
 BENCH_LIB := $(patsubst $(CORE)/Private/%.cpp,build/bench/core/%.o,$(CORE_SRC)) \
 	$(patsubst $(NET)/Private/%.cpp,build/bench/net/%.o,$(NET_SRC)) build/bench/net/monocypher.o \
 	$(patsubst world/%.cpp,build/bench/world/%.o,$(WORLD_SRC))
 BENCH_OBJ := $(BENCH_LIB) build/bench/program/Server.o \
 	$(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/RegionBench.o build/bench/NetBench.o \
-	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o build/bench/SaveBench.o build/bench/LoadBench.o
+	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o build/bench/SaveBench.o build/bench/LoadBench.o build/bench/LookBench.o
 
-bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench build/savebench build/loadbench
+bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench build/savebench build/loadbench build/lookbench
 	./build/regionbench 30 ../core-tests/fixtures/rally-jam.json
 	./build/netbench 20
 	./build/worldbench 30
@@ -126,6 +129,10 @@ bench: build/regionbench build/netbench build/worldbench build/daybench build/ba
 	./build/balancebench 10
 	./build/savebench 40
 	./build/loadbench 5
+	./build/lookbench 2000
+
+build/lookbench: $(BENCH_LIB) build/bench/LookBench.o
+	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
 
 build/loadbench: $(BENCH_LIB) build/bench/LoadBench.o
 	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
@@ -172,8 +179,63 @@ build/bench/%.o: bench/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(BENCH_FLAGS) -c $< -o $@
 
+# `make test-asan`: the same tests with AddressSanitizer and UBSan (-O1 -g),
+# objects in build/asan/. Halts at the first finding with its stacks. The
+# end-to-end tests still start the plain build/autocraft-server. A few
+# minutes to build at -j10, half a minute to run (docs/perf.md "Server").
+COMMA := ,
+ASAN_FLAGS := $(subst -O2,-O1 -g -fsanitize=address$(COMMA)undefined -fno-omit-frame-pointer,$(CXXFLAGS))
+ASAN_OBJ := $(patsubst $(CORE)/Private/%.cpp,build/asan/core/%.o,$(CORE_SRC)) \
+	$(patsubst $(NET)/Private/%.cpp,build/asan/net/%.o,$(NET_SRC)) build/asan/net/monocypher.o \
+	$(patsubst world/%.cpp,build/asan/world/%.o,$(WORLD_SRC)) build/asan/program/Server.o \
+	$(patsubst client/%.cpp,build/asan/client/%.o,$(CLIENT_SRC)) $(patsubst region/%.cpp,build/asan/region/%.o,$(REGION_SRC)) \
+	$(patsubst tests/%.cpp,build/asan/tests/%.o,$(TEST_SRC)) build/asan/tests/main.o
+
+test-asan: build/asan/server-tests $(PROGRAM) $(REGION_TOOL)
+	ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 ./build/asan/server-tests $(FILTER)
+
+build/asan/server-tests: $(ASAN_OBJ)
+	$(CXX) $(ASAN_FLAGS) -o $@ $^ $(LDLIBS)
+
+build/asan/core/%.o: $(CORE)/Private/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(ASAN_FLAGS) -c $< -o $@
+
+build/asan/net/%.o: $(NET)/Private/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(ASAN_FLAGS) -c $< -o $@
+
+build/asan/net/monocypher.o: $(MONOCYPHER) $(NET)/ThirdParty/monocypher/monocypher.h
+	@mkdir -p $(dir $@)
+	clang -std=c99 -O1 -g -fsanitize=address -c $< -o $@
+
+build/asan/world/%.o: world/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(ASAN_FLAGS) -c $< -o $@
+
+build/asan/program/%.o: program/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(ASAN_FLAGS) -c $< -o $@
+
+build/asan/client/%.o: client/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(ASAN_FLAGS) -c $< -o $@
+
+build/asan/region/%.o: region/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(ASAN_FLAGS) -c $< -o $@
+
+build/asan/tests/%.o: tests/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(ASAN_FLAGS) -c $< -o $@
+
+build/asan/tests/main.o: $(CORE_TESTS)/main.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(ASAN_FLAGS) -c $< -o $@
+
 clean:
 	rm -rf build
 
+-include $(ASAN_OBJ:.o=.d)
 -include $(CORE_OBJ:.o=.d) $(NET_OBJ:.o=.d) $(WORLD_OBJ:.o=.d) $(SERVER_OBJ:.o=.d) $(CLIENT_OBJ:.o=.d) \
 	$(TEST_OBJ:.o=.d) $(BENCH_OBJ:.o=.d) build/program/main.d $(REGION_OBJ:.o=.d) build/region/main.d

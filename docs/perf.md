@@ -190,3 +190,68 @@ M4's divider (2.57 against 1.58 ns for four). What is left of the start:
 `Noise::fbm` (29% of it), the runs' distance and inside (23%), and
 `WorldMap`'s single-threaded 130 ms (each region's `Vision` samples the
 terrain).
+
+### Round 3: the fog's look, and three dangling references (2026-10-18)
+
+A world region looks every 0.1 s (`Simulation::look`): what each side sees.
+By day (S3) a pilot's daylight is one circle over the whole region, about
+55,000 cells, and Time Profiler on `savebench` put `Vision::stamp` at half
+of the world's step. The new `lookbench` times the look alone in three
+regions of The First, at noon and at midnight.
+
+In the core's `Vision`, all bit for bit:
+
+- `stamp` fills each row's span of the circle at once. A row's cells in
+  the circle are one unbroken run (a cell's `dx` grows with `x`, rounding
+  keeps the order, and the test grows with `|dx|`); its ends come from the
+  half chord, set right by the same test, so the cells between need no
+  test. A cone (a headlamp) keeps the cell-by-cell loop.
+- The explored bits of a span are gathered in a register, a word at a
+  time, and written once (they were a read-modify-write of one word, cell
+  after cell, chained through memory), with restrict pointers.
+- In the air or the daylight (every level): `near` and `seen` by `memset`,
+  and the "not seen yet" bits 8 cells at a time: `seen` holds 0 or 1, so
+  `(~w & 0x0101010101010101) * 0x0102040810204080 >> 56` packs the eight
+  flipped low bits into a byte (byte k to bit k; checked on all 256
+  patterns).
+- `look` fills the last look's `Sight` arrays again (`Vision::sightInto`)
+  instead of allocating two region-sized arrays a side each time, and
+  moves the sides' `Intel` in and out instead of copying it.
+
+Tests: `vision_stampSpansAsEveryCell` (2,400 circles of every size, in and
+off the map, on every level and in the air, stamped over each other: the
+same bytes as the cell-by-cell loop), `vision_sightIntoAUsedSightIsAFreshOne`;
+the vision goldens and every core test pass.
+
+| `lookbench 2000`, 2 runs each in turns, load 4-6 | before µs | after µs |
+|---|---:|---:|
+| start, noon (one pilot) | 62.3-65.0 | 9.4-9.5 |
+| start, midnight | 7.7 | 4.9 |
+| nest, noon (29 bugs, the Matriarch) | 124.4-125.2 | 25.9-26.0 |
+| nest, midnight | 18.9-19.3 | 15.1-15.2 |
+| Cold Fork, noon | 62.6-64.3 | 9.4 |
+
+| `daybench 20`, the whole server tick by day, 3 runs each in turns, load 6 | before ms | after ms |
+|---|---:|---:|
+| nest, noon, daylight | 0.07 (p99 0.18-0.21) | 0.05 (p99 0.15-0.16) |
+| canyon wave, noon, daylight | 0.06 (p99 0.21-0.22) | 0.04 (p99 0.09) |
+
+**The dangling references.** Proving the look equal, the nest scene came out
+with 29 bugs or 33 from run to run of one binary, and only of the new one.
+An AddressSanitizer build found the cause in the base code: `nestThink`
+held the Matriarch as a pointer into the region's units, then the horde's
+spawns and a hatchling added units and the vector moved, so her site and
+tether went to freed memory and her foe was read from a stale copy;
+`roar` read her position after the hatchlings it adds; and the pilots near
+her were pointers to loop-local copies (`GameState::unit` returns one).
+What the step did hung on whether the freed block had been used again, so
+any change in allocation could flip it. Fixed in their own commit: only
+the steps that read freed or dead memory change. The same sweep found
+reads of dead memory in three tests (a null unit, a temporary's array, a
+temporary simulation's grid and a temporary copy's guns), fixed in the
+tests.
+
+`make -C unreal/server test-asan` (not the default) builds the server's
+tests with AddressSanitizer and UBSan in `build/asan/` and stops at the
+first finding: a few minutes to build, half a minute to run. The server,
+core and net suites all pass under both now.
