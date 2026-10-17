@@ -494,11 +494,27 @@ AUTOCRAFTCORE_API UnitKind kind(Perk p);
 AUTOCRAFTCORE_API int64_t level(Perk p);
 AUTOCRAFTCORE_API const std::string& title(Perk p);
 AUTOCRAFTCORE_API const std::string& effect(Perk p);
-/// What it does (`built`).
+/// What it does (its row's effects).
 AUTOCRAFTCORE_API const std::vector<Effect>& effects(Perk p);
 /// `Perk.offer(_:level:)`: the two picks a kind offers at `level` (2…10),
 /// the same every game.
 AUTOCRAFTCORE_API std::optional<std::pair<Perk, Perk>> perkOffer(UnitKind kind, int64_t level);
+
+/// One row of the perk table (docs/leveling.md, "Every kind"): the pick,
+/// its kind, title, effect text and what it does. `info`, `effects` and
+/// `perkOffer` read it.
+struct PerkRow {
+    Perk perk;
+    UnitKind kind;
+    const char* title;
+    const char* text;
+    std::vector<Effect> effects;
+};
+
+/// Every pick, one row each. A kind's `Leveling::perksPerKind` rows run in
+/// level order, level 2's two first: a row's level and slot come from its
+/// place among its kind's rows.
+AUTOCRAFTCORE_API const std::vector<PerkRow>& perkRows();
 
 /// Pilot leveling (docs/leveling.md): the more the player drives a kind of
 /// unit in a game, the better that kind gets, but only while the player
@@ -508,6 +524,8 @@ AUTOCRAFTCORE_API std::optional<std::pair<Perk, Perk>> perkOffer(UnitKind kind, 
 struct AUTOCRAFTCORE_API Leveling {
     /// The highest level a kind reaches.
     static constexpr int64_t cap = 10;
+    /// The picks of a player kind: two at each level from 2 to `cap`.
+    static constexpr int perksPerKind = 18;
     /// XP in all to reach `level`: `30 × L × (L − 1)` (0 for level 1).
     static double xp(int64_t toReach);
     /// The level `xp` in all reaches.
@@ -555,6 +573,7 @@ struct AUTOCRAFTCORE_API Leveling {
     static std::string fnv1a(const std::string& text);
 };
 static_assert(Leveling::radius == 6.0, "Aura's default radius is Leveling::radius");
+static_assert(Leveling::perksPerKind == 2 * (Leveling::cap - 1), "two picks at each level from 2 to the cap");
 
 // MARK: - The record (Leveling.swift)
 

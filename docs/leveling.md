@@ -29,8 +29,8 @@ to play, the Prospector first.
 
 ## What is there today
 
-The driven unit is already a hero, at a flat rate (`Rules.hero*` in
-`Sources/GameCore/State.swift`), and only while driven:
+The driven unit is already a hero, at a flat rate (`Rules::hero*` in
+`unreal/Source/AutocraftCore/Public/Rules.h`), and only while driven:
 
 | Hero stat | Today | Plain Prospector |
 | --- | --- | --- |
@@ -605,7 +605,7 @@ resume, and a game's rows can always be written again from its session.
      level: when reached, the standing then, the seconds driven by then,
      when picked). Its tolerant decoder reads old sessions without them.
    - The counts are added where XP is earned (`earn`, `earnHit` and their
-     callers in `Simulation.swift`, `Pilot.swift` and `Pilot+Kinds.swift`),
+     callers in `Simulation.cpp`, `Pilot.cpp` and `Pilot+Kinds.cpp`),
      plus kills, damage taken and deaths in `hit`, seconds driven in
      `stepLeveling`, and take-overs in `take`.
    - `keepPick` stamps the pick; the level-up stamps the level and the
@@ -762,10 +762,20 @@ differs from the text, or the text left room:
 
 ## How it fits the code
 
-`Sources/GameCore/Leveling.swift` holds the numbers, the record and the
-catalogue. `Simulation+Leveling.swift` holds the sim's side. Tests are in
-`Tests/GameCoreTests/LevelingTests.swift` (the framework and the Prospector) and
-`LevelingKindsTests.swift` (the other six kinds).
+The core (`unreal/Source/AutocraftCore`) has it all, engine-free.
+`Public/Types.h` declares the numbers (`Leveling`, with `perksPerKind`), the
+record, the `Perk` enum and its names, and the perk table's row (`PerkRow`).
+`Private/Leveling.cpp` holds the perk table (`perkRows()`), one row per pick:
+the perk, its kind, title, effect text and effects. A kind's 18 rows sit
+together in level order, level 2's two first; the level and the slot come
+from the row's place, and `info`, `effects`, `perkOffer`, the balance text
+and its signature are read from the table. `Private/Simulation+Leveling.cpp`
+holds the sim's side. Tests are in `unreal/core-tests/tests/`:
+`LevelingTests.cpp` (the framework and the Prospector), `LevelingKindsTests.cpp`
+(the other kinds), `LevelingTableTests.cpp` (the table against the enum and its
+names: one row per perk, `perksPerKind` per player kind in level order, a
+perk's name starting with its kind's) and `GoldenLevelingTests.cpp` (the
+balance against `golden/leveling.json`).
 
 ### The record
 
