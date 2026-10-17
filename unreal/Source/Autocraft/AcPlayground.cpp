@@ -5,6 +5,7 @@
 #include "AcHUD.h"
 #include "AcHologram.h"
 #include "AcHudStyle.h"
+#include "AcKindTable.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcPilotPawn.h"
@@ -45,16 +46,15 @@ namespace
 
 	constexpr double Pi = UE_DOUBLE_PI;
 
-	/// `ModelCatalog.titles` (the rest: the name with a capital).
+	/// `ModelCatalog.titles` (the rest: the name with a capital). A unit's
+	/// title is the core's (`Simulation::title`).
 	FString CatalogTitle(const FString& Name)
 	{
 		static const TMap<FString, FString> Titles = {
 			{TEXT("citadel"), TEXT("Citadel")}, {TEXT("garrison"), TEXT("Garrison")}, {TEXT("habdome"), TEXT("Hab Dome")},
-			{TEXT("bastion"), TEXT("Bastion")}, {TEXT("prospector"), TEXT("Prospector")}, {TEXT("ranger"), TEXT("Ranger")},
-			{TEXT("comet"), TEXT("Comet")}, {TEXT("derrick"), TEXT("Derrick")}, {TEXT("juggernaut"), TEXT("Juggernaut")},
-			{TEXT("firefly"), TEXT("Firefly")}, {TEXT("longbow"), TEXT("Longbow")}, {TEXT("dropship"), TEXT("Dropship")},
+			{TEXT("bastion"), TEXT("Bastion")}, {TEXT("derrick"), TEXT("Derrick")},
 			{TEXT("foundry"), TEXT("Foundry")}, {TEXT("spacedock"), TEXT("Spacedock")}, {TEXT("lab"), TEXT("Lab")},
-			{TEXT("kestrel"), TEXT("Kestrel")}, {TEXT("hailstorm"), TEXT("Hailstorm")}, {TEXT("sentinel"), TEXT("Sentinel")},
+			{TEXT("sentinel"), TEXT("Sentinel")},
 			{TEXT("ore"), TEXT("Ore deposit")}, {TEXT("well"), TEXT("MH well")}, {TEXT("rockSpire"), TEXT("Rock spire")},
 			{TEXT("crateStack"), TEXT("Crate stack")}, {TEXT("deadTree"), TEXT("Dead tree")},
 		};
@@ -135,7 +135,10 @@ FString FAcPaletteItem::CatalogName() const
 	return FString();
 }
 
-FString FAcPaletteItem::Title() const { return CatalogTitle(CatalogName()); }
+FString FAcPaletteItem::Title() const
+{
+	return Type == EType::Unit ? Text(ac::Simulation::title(Unit)) : CatalogTitle(CatalogName());
+}
 
 const TArray<TPair<FString, TArray<FAcPaletteItem>>>& FAcPaletteItem::Groups()
 {
@@ -145,7 +148,7 @@ const TArray<TPair<FString, TArray<FAcPaletteItem>>>& FAcPaletteItem::Groups()
 		for (const ac::StructureKind K : ac::allCases<ac::StructureKind>()) Buildings.Add(OfStructure(K));
 		// The Brood's bugs are the MMO director's, not the palette's.
 		for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
-			if (K < ac::UnitKind::shardling) Units.Add(OfUnit(K));
+			if (!AcKinds::IsBrood(K)) Units.Add(OfUnit(K));
 		for (const ac::Doodad::Kind K : ac::allCases<ac::Doodad::Kind>()) Doodads.Add(OfDoodad(K));
 		Out.Emplace(TEXT("Buildings"), Buildings);
 		Out.Emplace(TEXT("Units"), Units);
@@ -948,7 +951,7 @@ void UAcPlaygroundSubsystem::RunTest()
 	double X = -30;
 	for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
 	{
-		if (K >= ac::UnitKind::shardling) continue;  // the Brood: not in the palette
+		if (AcKinds::IsBrood(K)) continue;  // the Brood: not in the palette
 		Kinds += 1;
 		Placed += Put(Text(ac::rawValue(K)), ac::Vec2(X, -18), 5, Pi / 2) ? 1 : 0;
 		X += 3;

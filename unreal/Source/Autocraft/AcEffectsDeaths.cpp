@@ -6,6 +6,7 @@
 #include "AcEffectPool.h"
 #include "AcEffects.h"
 #include "AcEffectsExtension.h"
+#include "AcKindTable.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcSimSubsystem.h"
@@ -116,14 +117,15 @@ namespace AcDeathsPrivate
 		return I ? *I : INDEX_NONE;
 	}
 
+	/// The model of the kind that falls this way (its kind row's `Fall`).
 	const TCHAR* ModelName(const AcDeaths::EFall Kind)
 	{
-		switch (Kind)
+		for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
 		{
-		case AcDeaths::EFall::Juggernaut: return TEXT("juggernaut_blue");
-		case AcDeaths::EFall::Comet: return TEXT("comet_blue");
-		default: return TEXT("ranger_blue");
+			const FAcKindLook& L = AcKinds::Look(K);
+			if (L.Fall && *L.Fall == Kind) return *L.Model;
 		}
+		return TEXT("");
 	}
 }
 
@@ -133,16 +135,7 @@ namespace AcDeaths
 {
 	using namespace AcDeathsPrivate;
 
-	TOptional<EFall> FallOf(const ac::UnitKind Kind)
-	{
-		switch (Kind)
-		{
-		case ac::UnitKind::ranger: return EFall::Ranger;
-		case ac::UnitKind::juggernaut: return EFall::Juggernaut;
-		case ac::UnitKind::comet: return EFall::Comet;
-		default: return {};
-		}
-	}
+	TOptional<EFall> FallOf(const ac::UnitKind Kind) { return AcKinds::Look(Kind).Fall; }
 
 	FBody Start(const EFall Kind, const int64 Unit, const FAcModelInfo& Model, const FAcPose& Last)
 	{

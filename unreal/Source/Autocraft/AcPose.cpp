@@ -1,7 +1,7 @@
 #include "AcPose.h"
 
 #include "AcModelCatalog.h"
-#include "AcPoseNewKinds.h"
+#include "AcKindTable.h"
 #include "AcSpace.h"
 
 #include "TerrainField.h"
@@ -80,29 +80,7 @@ namespace AcPose
 		return (int32)Kind < StructureKinds ? StructureTable()[(int32)Kind] : nullptr;
 	}
 
-	const TCHAR* ModelBase(const ac::UnitKind Kind)
-	{
-		switch (Kind)
-		{
-		case ac::UnitKind::prospector: return TEXT("prospector");
-		case ac::UnitKind::ranger: return TEXT("ranger");
-		case ac::UnitKind::comet: return TEXT("comet");
-		case ac::UnitKind::firefly: return TEXT("firefly");
-		case ac::UnitKind::juggernaut: return TEXT("juggernaut");
-		case ac::UnitKind::dropship: return TEXT("dropship");
-		case ac::UnitKind::longbow: return TEXT("longbow");
-		case ac::UnitKind::kestrel: return TEXT("kestrel");
-		case ac::UnitKind::hailstorm: return TEXT("hailstorm");
-		case ac::UnitKind::peregrine: return TEXT("peregrine");
-		case ac::UnitKind::atlas: return TEXT("atlas");
-		case ac::UnitKind::scorpion: return TEXT("scorpion");
-		case ac::UnitKind::shardling: return TEXT("shardling");
-		case ac::UnitKind::gloamwing: return TEXT("gloamwing");
-		case ac::UnitKind::lodeback: return TEXT("lodeback");
-		case ac::UnitKind::matriarch: return TEXT("matriarch");
-		}
-		return TEXT("ranger");
-	}
+	const TCHAR* ModelBase(const ac::UnitKind Kind) { return *AcKinds::Look(Kind).Base; }
 
 	const TCHAR* ModelBase(const ac::StructureKind Kind)
 	{
@@ -148,17 +126,7 @@ namespace AcPose
 		return -(1.0 - S.progress()) * BuildingHeight(S.kind) * 0.92;
 	}
 
-	double Hover(const ac::UnitKind Kind)
-	{
-		// Models.hover (Models+Kestrel.swift:268).
-		switch (Kind)
-		{
-		case ac::UnitKind::dropship: return 2.4;
-		case ac::UnitKind::kestrel: return 2.1;
-		case ac::UnitKind::peregrine: return AcPoseNew::PeregrineHover;
-		default: return 0.0;
-		}
-	}
+	double Hover(const ac::UnitKind Kind) { return AcKinds::Look(Kind).Hover; }
 
 	double FlightBase(const FAcPoseContext& C)
 	{

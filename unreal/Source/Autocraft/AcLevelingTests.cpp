@@ -3,6 +3,7 @@
 // banner's lines). Run headless:
 //   UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
 //     -ExecCmds="Automation RunTests Autocraft.Leveling; Quit" -TestExit="Automation Test Queue Empty"
+#include "AcKindTable.h"
 #include "AcLeveling.h"
 #include "AcPilotText.h"
 
@@ -77,10 +78,12 @@ bool FAcLevelingReachTest::RunTest(const FString&)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcLevelingNewKindsTest, "Autocraft.Leveling.NewKinds", Flags)
 bool FAcLevelingNewKindsTest::RunTest(const FString&)
 {
-	// The Peregrine, the Atlas and the Scorpion: two picks at each level from 2 to 10, each with a
-	// title and a line that fits its card (a 245-point text well, three lines at size 12, no ellipsis).
-	for (const ac::UnitKind Kind : {ac::UnitKind::peregrine, ac::UnitKind::atlas, ac::UnitKind::scorpion})
+	// Every player kind, the Peregrine, the Atlas and the Scorpion included: two picks at each level
+	// from 2 to 10, each with a title and a line that fits its card (a 245-point text well, three
+	// lines at size 12, no ellipsis).
+	for (const ac::UnitKind Kind : ac::allCases<ac::UnitKind>())
 	{
+		if (AcKinds::IsBrood(Kind)) continue;
 		ac::PilotRecord R;
 		R.kinds[Kind] = At(10);
 		int32 Offers = 0;

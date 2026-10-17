@@ -8,6 +8,7 @@
 #include "AcPilotAudio.h"
 #include "AcEffects.h"
 #include "AcFog.h"
+#include "AcKindTable.h"
 #include "AcLamps.h"
 #include "AcLifeBars.h"
 #include "AcLog.h"
@@ -80,9 +81,6 @@ namespace
 
 	FString KindName(const ac::UnitKind K) { return UTF8_TO_TCHAR(std::string(ac::rawValue(K)).c_str()); }
 	FString TaskName(const ac::Unit::Task T) { return UTF8_TO_TCHAR(std::string(ac::rawValue(T)).c_str()); }
-
-	/// How high a unit's chest is over its feet (`GameScene.chestHeight`).
-	double ChestHeight(const ac::UnitKind K) { return K == ac::UnitKind::juggernaut ? 0.85 : 0.62; }
 
 	double GroundAt(const UWorld* World, const ac::Vec2 P)
 	{
@@ -1230,7 +1228,7 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 		if (const std::optional<ac::Unit> V = S.state.unit(*ScriptAimTarget))
 		{
 			// A flyer at its hover, the rest at the chest.
-			const double Up = ac::Rules::stats(V->kind).air ? AcPose::Hover(V->kind) : ChestHeight(V->kind);
+			const double Up = ac::Rules::stats(V->kind).air ? AcPose::Hover(V->kind) : AcKinds::Look(V->kind).ChestHeight;
 			AimAt(AcSpace::ToWorld(V->position, GroundAt(GetWorld(), V->position) + Up));
 		}
 		if (--ScriptAimRounds == 0) ScriptAimTarget.Reset();

@@ -1,6 +1,6 @@
 #include "AcPilotText.h"
 
-#include "AcNewKinds.h"
+#include "AcKindTable.h"
 #include "AcProgressHud.h"
 #include "Defence.h"
 #include "Flight.h"
@@ -226,10 +226,8 @@ TOptional<FAcPilotFrame> FAcPilotFrame::Of(const ac::Simulation& Sim)
 
 bool AcPilotText::HasCab(const ac::UnitKind Driven)
 {
-	// A new kind without a cockpit of its own rides in its stand-in's (AcNewKinds.h).
-	const ac::UnitKind Kind = AcNewKinds::BorrowedCockpit(Driven);
-	return Kind == ac::UnitKind::prospector || Kind == ac::UnitKind::firefly || Kind == ac::UnitKind::longbow
-		|| Kind == ac::UnitKind::hailstorm;
+	// A kind without a cockpit of its own rides in its stand-in's (AcKindTable.h).
+	return AcKinds::Look(AcKinds::CockpitKind(Driven)).bCab;
 }
 
 FString AcPilotText::Title(const ac::UnitKind Kind) { return Utf8(ac::Simulation::title(Kind)); }

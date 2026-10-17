@@ -4,6 +4,7 @@
 //   UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
 //     -ExecCmds="Automation RunTests Autocraft.Pilot.Text; Quit" -TestExit="Automation Test Queue Empty"
 #include "AcPilotText.h"
+#include "AcKindTable.h"
 
 #include "Misc/AutomationTest.h"
 
@@ -63,6 +64,12 @@ bool FAcPilotTextTest::RunTest(const FString&)
 	TestEqual(TEXT("%g whole"), AcPilotText::FormatG(5), FString(TEXT("5")));
 	TestEqual(TEXT("%g half"), AcPilotText::FormatG(6.5), FString(TEXT("6.5")));
 	TestTrue(TEXT("cabs"), AcPilotText::HasCab(ac::UnitKind::hailstorm) && !AcPilotText::HasCab(ac::UnitKind::ranger));
+	// The cab is the cockpit's: a kind riding in a stand-in's cockpit has the stand-in's cab.
+	for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
+	{
+		TestEqual(*FString::Printf(TEXT("%s's cab"), *AcKinds::Look(K).Base), AcPilotText::HasCab(K),
+			AcPilotText::HasCab(AcKinds::CockpitKind(K)));
+	}
 	return true;
 }
 

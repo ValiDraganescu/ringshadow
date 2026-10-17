@@ -1,5 +1,6 @@
 #include "AcPoseAir.h"
 
+#include "AcKindTable.h"
 #include "AcModelCatalog.h"
 #include "AcSpace.h"
 
@@ -304,7 +305,7 @@ namespace
 		{
 			if (const ac::Unit* V = FindUnit(C.State, *U.target))
 			{
-				const double Chest = V->kind == ac::UnitKind::juggernaut ? 0.85 : 0.62;
+				const double Chest = AcKinds::Look(V->kind).ChestHeight;
 				In.Healing = AcSpace::ToWorld(V->position, C.Ground(V->position) + Chest);
 			}
 		}

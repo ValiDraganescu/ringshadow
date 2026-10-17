@@ -3,6 +3,8 @@
 //   UnrealEditor Autocraft.uproject -ExecCmds="Automation RunTests Autocraft.Audio.Rules; Quit"
 //     -unattended -nullrhi -nosplash -nosound -log
 #include "AcAudioDirector.h"
+#include "AcKindTable.h"
+#include "AcPose.h"
 #include "AcPoseNewKinds.h"
 
 #include "Misc/AutomationTest.h"
@@ -69,20 +71,20 @@ bool FAcAudioWeaponsTest::RunTest(const FString&)
 	for (const FRow& R : Rows)
 	{
 		const FAcAudioRules::FWeapon W = FAcAudioRules::WeaponOf(R.Kind, R.bAnchored, R.bTower);
-		TestEqual(FString::Printf(TEXT("%hs name"), R.Name), FString(W.Name), FString(R.Name));
+		TestEqual(FString::Printf(TEXT("%hs name"), R.Name), W.Name.ToString(), FString(R.Name));
 		TestEqual(FString::Printf(TEXT("%hs gain"), R.Name), W.Gain, R.Gain);
 		TestEqual(FString::Printf(TEXT("%hs per second"), R.Name), W.PerSecond, R.Rate);
 	}
-	TestEqual(TEXT("prospector death"), FString(FAcAudioRules::DeathOf(ac::UnitKind::prospector)), FString(TEXT("prospectordeath")));
-	TestEqual(TEXT("hailstorm voice"), FString(FAcAudioRules::VoiceOf(ac::UnitKind::hailstorm)), FString(TEXT("vhailstorm")));
-	// The Scorpion's robot chirps are its own; the Peregrine pilot and the Atlas crew
-	// speak with library voices of their own.
-	TestEqual(TEXT("scorpion voice"), FString(FAcAudioRules::VoiceOf(ac::UnitKind::scorpion)), FString(TEXT("vscorpion")));
-	TestEqual(TEXT("scorpion death"), FString(FAcAudioRules::DeathOf(ac::UnitKind::scorpion)), FString(TEXT("scorpiondeath")));
-	TestEqual(TEXT("peregrine voice"), FString(FAcAudioRules::VoiceOf(ac::UnitKind::peregrine)), FString(TEXT("vperegrine")));
-	TestEqual(TEXT("peregrine death"), FString(FAcAudioRules::DeathOf(ac::UnitKind::peregrine)), FString(TEXT("peregrinedeath")));
-	TestEqual(TEXT("atlas voice"), FString(FAcAudioRules::VoiceOf(ac::UnitKind::atlas)), FString(TEXT("vatlas")));
-	TestEqual(TEXT("atlas death"), FString(FAcAudioRules::DeathOf(ac::UnitKind::atlas)), FString(TEXT("atlasdeath")));
+	// Every kind dies with `<kind>death`; a player kind reports in with `v<kind>` (the
+	// Scorpion's robot chirps, the Peregrine pilot's and the Atlas crew's library
+	// voices included), a bug never.
+	for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
+	{
+		const FString Raw = UTF8_TO_TCHAR(std::string(ac::rawValue(K)).c_str());
+		TestEqual(*FString::Printf(TEXT("%s death"), *Raw), FAcAudioRules::DeathOf(K).ToString(), Raw + TEXT("death"));
+		TestEqual(*FString::Printf(TEXT("%s voice"), *Raw), FAcAudioRules::VoiceOf(K).ToString(),
+			AcKinds::IsBrood(K) ? FName().ToString() : TEXT("v") + Raw);
+	}
 	return true;
 }
 
@@ -100,6 +102,16 @@ bool FAcAudioNewKindsTest::RunTest(const FString&)
 	R.Advance(3.0);
 	R.PullAway(ac::UnitKind::peregrine);
 	TestEqual(TEXT("a driven Peregrine's shriek"), Count(R.TakeCues(), "peregrinepass"), 1);
+	// Every kind with an engine plays it as it pulls away; the rest none.
+	for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
+	{
+		R.Advance(3.0);
+		R.PullAway(K);
+		const FName Engine = AcKinds::Look(K).MoveSound;
+		const std::vector<FAcSoundCue> Cues = R.TakeCues();
+		TestEqual(*FString::Printf(TEXT("%s pulls away"), AcPose::ModelBase(K)), static_cast<int32>(Cues.size()), Engine.IsNone() ? 0 : 1);
+		if (!Engine.IsNone()) TestEqual(TEXT("with its engine"), Count(Cues, Engine), 1);
+	}
 	// A Scorpion digs in, locks on, digs out.
 	ac::GameState S;
 	S.players.resize(1);

@@ -3,6 +3,7 @@
 //   UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
 //     -ExecCmds="Automation RunTests Autocraft.Outline; Quit"
 #include "AcOutline.h"
+#include "AcKindTable.h"
 
 #include "Misc/AutomationTest.h"
 
@@ -30,6 +31,12 @@ bool FAcOutlineWhoTest::RunTest(const FString&)
 	TestEqual(TEXT("an enemy Longbow neither"), int32(StencilFor(UnitKind::longbow, Buried, 1, false)), int32(StencilNone));
 	TestEqual(TEXT("a Ranger has none"), int32(StencilFor(UnitKind::ranger, std::nullopt, 0, true)), int32(StencilNone));
 	TestEqual(TEXT("the owner's index is held in range"), int32(StencilFor(UnitKind::scorpion, Buried, 40, true)), int32(TeamStencil(7)));
+	// Only the kinds the table outlines buried: every other kind has none, anchored or not.
+	for (const UnitKind K : ac::allCases<UnitKind>())
+	{
+		if (AcKinds::Look(K).bOutlineBuried) continue;
+		TestEqual(*FString::Printf(TEXT("%s: no outline"), *AcKinds::Look(K).Base), int32(StencilFor(K, Buried, 0, true)), int32(StencilNone));
+	}
 	return true;
 }
 

@@ -1,5 +1,7 @@
 #include "AcConsoleInfo.h"
 
+#include "AcKindTable.h"
+
 #include "Rules.h"
 #include "Simulation.h"
 #include "Types.h"
@@ -35,10 +37,8 @@ FString FAcCardInfo::LayoutKey() const
 
 FString FAcConsoleInfo::IconName(const int32 UnitKind)
 {
-	static const TCHAR* Names[] = {TEXT("prospector"), TEXT("ranger"), TEXT("comet"), TEXT("firefly"), TEXT("juggernaut"),
-		TEXT("dropship"), TEXT("longbow"), TEXT("kestrel"), TEXT("hailstorm"),
-		TEXT("peregrine"), TEXT("atlas"), TEXT("scorpion")};
-	return UnitKind >= 0 && UnitKind < (int32)UE_ARRAY_COUNT(Names) ? Names[UnitKind] : TEXT("");
+	const int32 Count = (int32)ac::allCases<ac::UnitKind>().size();
+	return UnitKind >= 0 && UnitKind < Count ? AcKinds::Look((ac::UnitKind)UnitKind).Icon : FString();
 }
 
 FString FAcConsoleInfo::StructureIconName(const int32 StructureKind)

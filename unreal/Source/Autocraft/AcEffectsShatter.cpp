@@ -7,6 +7,7 @@
 #include "AcEffects.h"
 #include "AcEffectsBursts.h"
 #include "AcEffectsExtension.h"
+#include "AcKindTable.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcParticles.h"
@@ -33,50 +34,16 @@ namespace AcEffectsShatter
 	bool SpecOf(const ac::UnitKind Kind, FSpec& S)
 	{
 		S = FSpec();
-		switch (Kind)
-		{
-		case ac::UnitKind::prospector:
-			S.Model = TEXT("prospector_blue"); S.Chunks = 7; S.Size = 0.7; S.Ring = 16;
-			return true;
-		case ac::UnitKind::firefly:
-			// `strip: [h.flame, h.flare, h.pilot]`.
-			S.Model = TEXT("firefly_blue"); S.Chunks = 10; S.Size = 1; S.Ring = 12;
-			S.Strip = {TEXT("flame"), TEXT("flare"), TEXT("pilot")};
-			return true;
-		case ac::UnitKind::longbow:
-			// `strip: t.flashes + [t.smoke]`.
-			S.Model = TEXT("longbow_blue"); S.Chunks = 14; S.Size = 1.35; S.Ring = 10;
-			S.Strip = {TEXT("flashes_"), TEXT("smoke")};
-			return true;
-		case ac::UnitKind::hailstorm:
-			S.Model = TEXT("hailstorm_blue"); S.Chunks = 12; S.Size = 1.2; S.Ring = 10;
-			S.Strip = {TEXT("flashes_")};
-			return true;
-		case ac::UnitKind::dropship:
-			// `strip: [m.beam]` + its ground shadow.
-			S.Model = TEXT("dropship_blue"); S.Chunks = 12; S.Size = 1.2; S.Ring = 6; S.bFlyer = true;
-			S.Strip = {TEXT("beam"), TEXT("shadow")};
-			return true;
-		case ac::UnitKind::kestrel:
-			S.Model = TEXT("kestrel_blue"); S.Chunks = 10; S.Size = 1.0; S.Ring = 8; S.bFlyer = true;
-			S.Strip = {TEXT("flashes_"), TEXT("shadow")};
-			return true;
-		case ac::UnitKind::peregrine:
-			// A light dart: shot down whole, then it bursts.
-			S.Model = TEXT("peregrine_blue"); S.Chunks = 9; S.Size = 0.9; S.Ring = 8; S.bFlyer = true;
-			return true;
-		case ac::UnitKind::atlas:
-			// Kneels, topples, then bursts: the biggest wreck of the units.
-			S.Model = TEXT("atlas_blue"); S.Chunks = 18; S.Size = 2.0; S.Ring = 4; S.bTopple = true;
-			return true;
-		case ac::UnitKind::scorpion:
-			// `strip: [mound]`: the heap of soil it buried in is not a wreck.
-			S.Model = TEXT("scorpion_blue"); S.Chunks = 8; S.Size = 0.7; S.Ring = 12;
-			S.Strip = {TEXT("mound")};
-			return true;
-		default:
-			return false;
-		}
+		const FAcKindLook& L = AcKinds::Look(Kind);
+		if (L.Death != EAcKindDeath::Shatter) return false;
+		S.Model = *L.Model;
+		S.Chunks = L.Shatter.Chunks;
+		S.Size = L.Shatter.Size;
+		S.Ring = L.Shatter.Ring;
+		S.Strip = L.Shatter.Strip;
+		S.bFlyer = L.Shatter.bFlyer;
+		S.bTopple = L.Shatter.bTopple;
+		return true;
 	}
 
 	bool SpecOf(const ac::StructureKind Kind, FSpec& S)
@@ -122,15 +89,15 @@ namespace AcEffectsShatterPrivate
 		virtual void Begin(UAcEffects& InEffects) override
 		{
 			Effects = &InEffects;
-			for (int32 K = 0; K <= int32(ac::UnitKind::scorpion); ++K)
+			for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
 			{
 				FSpec S;
-				if (SpecOf(ac::UnitKind(K), S)) MakeRig(S);
+				if (SpecOf(K, S)) MakeRig(S);
 			}
-			for (int32 K = 0; K <= int32(ac::StructureKind::landingPad); ++K)
+			for (const ac::StructureKind K : ac::allCases<ac::StructureKind>())
 			{
 				FSpec S;
-				if (SpecOf(ac::StructureKind(K), S)) MakeRig(S);
+				if (SpecOf(K, S)) MakeRig(S);
 			}
 			if (UAcWorldRenderer* R = Effects->Renderer())
 			{
@@ -752,21 +719,22 @@ namespace AcEffectsShatterPrivate
 				Start(*Rig, Id, 1, P, Y, Pose, Time);
 			}
 			Col = 0;
-			for (int32 K = 0; K <= int32(ac::StructureKind::landingPad); ++K)
+			for (const ac::StructureKind Kind : ac::allCases<ac::StructureKind>())
 			{
+				const int32 K = int32(Kind);
 				FSpec Spec;
-				SpecOf(ac::StructureKind(K), Spec);
+				SpecOf(Kind, Spec);
 				FRig* Rig = RigOf(FAcModelCatalog::Get().Find(FName(Spec.Model)));
 				if (!Rig) continue;
 				const ac::Vec2 P = *DemoAt + ac::Vec2(6.5 * Col++, 9);
 				if (!DemoWants(Spec.Model)) continue;
 				const int64 Id = 900101 + K;
-				ac::Structure B(Id, ac::StructureKind(K), 1, P);
+				ac::Structure B(Id, Kind, 1, P);
 				FAcUnitMemory Memory;
 				FAcPose Pose;
 				FAcPoseContext C{State, nullptr, &B, *Rig->Model, Field, Memory, Time, 0.0, false, 0};
 				AcPose::RestStructure(C, Pose);
-				if (const FAcPoseFn Fn = AcPose::Find(ac::StructureKind(K))) Fn(C, Pose);
+				if (const FAcPoseFn Fn = AcPose::Find(Kind)) Fn(C, Pose);
 				Start(*Rig, Id, 1, P, Effects->GroundZ(P) / Cm, Pose, Time);
 			}
 			UE_LOG(LogAutocraft, Log, TEXT("shatter: demo deaths at %.2f"), Time);

@@ -23,6 +23,7 @@
 
 #include "AcEffects.h"
 #include "AcEffectsExtension.h"
+#include "AcKindTable.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcParticles.h"
@@ -52,8 +53,6 @@ namespace
 	const FName CueDrill(TEXT("AcDrill")), CueCrystalBite(TEXT("AcCrystalBite"));
 	const FName PartEmitter1(TEXT("emitter_1")), PartEmitter2(TEXT("emitter_2"));
 	const FName PartMuzzle0(TEXT("muzzles_0")), PartMuzzle1(TEXT("muzzles_1")), PartFlameEnd(TEXT("flameEnd"));
-	const FName KindComet(TEXT("comet")), KindJuggernaut(TEXT("juggernaut")), KindFirefly(TEXT("firefly"));
-	const FName KindDropship(TEXT("dropship")), KindKestrel(TEXT("kestrel"));
 
 	class FAcBursts;
 	TMap<const UAcEffects*, FAcBursts*>& Live()
@@ -256,22 +255,24 @@ namespace
 					if (S) Damage(Id, **S, Pose, Time, Dt);
 					return;
 				}
-				const FName Kind = Model.Base;
-				if (Kind == KindDropship || Kind == KindKestrel)
+				// The model's kind row says what it streams.
+				const TOptional<ac::UnitKind> OfModel = AcKinds::OfBase(Model.Base);
+				if (!OfModel) return;
+				const FAcKindLook& Look = AcKinds::Look(*OfModel);
+				if (Look.Burst == EAcKindBurst::Thrusters)
 				{
 					// The Swift poses: thrusters' birth rate and speed by `moving`.
 					const ac::Unit* const* U = Units.Find(Id);
-					const bool bMoving = U && (*U)->walking();
-					const bool bDrop = Kind == KindDropship;
+					const int32 Moving = U && (*U)->walking() ? 0 : 1;
 					FAcEmit E;
-					E.Speed = bDrop ? (bMoving ? 2.4 : 1.3) : (bMoving ? 2.2 : 1.1);
-					const double Rate = bDrop ? (bMoving ? 80 : 32) : (bMoving ? 70 : 26);
+					E.Speed = Look.BurstSpeed[Moving];
+					const double Rate = Look.BurstRate[Moving];
 					if (const FTransform* P = Part(PartEmitter1)) Particles.Stream(EAcParticle::Plume, FAcParticles::KeyOf(Id, 1), *P, Rate, Time, Dt, E);
 					if (const FTransform* P = Part(PartEmitter2)) Particles.Stream(EAcParticle::Plume, FAcParticles::KeyOf(Id, 2), *P, Rate, Time, Dt, E);
 					return;
 				}
-				const bool bComet = Kind == KindComet, bJuggernaut = Kind == KindJuggernaut, bFirefly = Kind == KindFirefly;
-				if (!bComet && !bJuggernaut && !bFirefly) return;
+				const bool bComet = Look.Burst == EAcKindBurst::CometJets, bJuggernaut = Look.Burst == EAcKindBurst::MuzzleSmoke;
+				if (!bComet && !bJuggernaut && Look.Burst != EAcKindBurst::FireflyFire) return;
 				const ac::Unit* const* U = Units.Find(Id);
 				FAcUnitMemory* Memory = R->Memory(Id);
 				if (!U || !Memory) return;

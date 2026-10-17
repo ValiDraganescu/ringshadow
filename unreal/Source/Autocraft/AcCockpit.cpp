@@ -5,7 +5,7 @@
 #include "AcEffectsBursts.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
-#include "AcNewKinds.h"
+#include "AcKindTable.h"
 #include "AcParticles.h"
 #include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
@@ -148,8 +148,8 @@ void UAcCockpitSubsystem::Build(const ac::UnitKind InKind, const int64 Owner)
 	Clear();
 	AAcPilotPawn* Pawn = AAcPilotPawn::Find(GetWorld());
 	if (!Pawn || !Pawn->CockpitMount()) return;
-	// A new kind without a cockpit model of its own rides in its stand-in's (AcNewKinds.h).
-	const FName Name(*FString::Printf(TEXT("cockpit_%s_blue"), AcPose::ModelBase(AcNewKinds::BorrowedCockpit(InKind))));
+	// A kind without a cockpit model of its own rides in its stand-in's (AcKindTable.h).
+	const FName Name(*AcKinds::Look(AcKinds::CockpitKind(InKind)).CockpitModel);
 	const FAcModelInfo* Model = FAcModelCatalog::Get().Find(Name);
 	if (!Model)
 	{

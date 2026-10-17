@@ -1,5 +1,7 @@
 #include "AcOutline.h"
 
+#include "AcKindTable.h"
+
 namespace AcOutline
 {
 	EClass ClassOf(const uint8 Stencil)
@@ -21,7 +23,7 @@ namespace AcOutline
 
 	uint8 StencilFor(const ac::UnitKind Kind, const std::optional<double>& Anchor, const int64 Owner, const bool bAllied)
 	{
-		if (Kind != ac::UnitKind::scorpion || Anchor.value_or(0.0) <= 0.0) return StencilNone;
+		if (!AcKinds::Look(Kind).bOutlineBuried || Anchor.value_or(0.0) <= 0.0) return StencilNone;
 		return bAllied ? TeamStencil(Owner) : StencilFoe;
 	}
 

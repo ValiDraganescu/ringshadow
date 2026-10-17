@@ -1,11 +1,11 @@
 // Automation tests for the Peregrine's, the Atlas's and the Scorpion's poses
 // (AcPoseNewKinds.h), the Atlas's fall (AcShatter.h) and what a kind
-// borrows (AcNewKinds.h). Run headless:
+// borrows (AcKindTable.h). Run headless:
 //   UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
 //     -ExecCmds="Automation RunTests Autocraft.PoseNew; Quit"
 #include "AcEffectsShatter.h"
 #include "AcModelCatalog.h"
-#include "AcNewKinds.h"
+#include "AcKindTable.h"
 #include "AcPoseNewKinds.h"
 #include "AcShatter.h"
 
@@ -255,7 +255,7 @@ bool FAcPoseNewPartsTest::RunTest(const FString&)
 		{TEXT("body"), TEXT("eyes"), TEXT("launcher"), TEXT("tailLamp"), TEXT("mound"), TEXT("plates_0"), TEXT("plates_4"),
 			TEXT("legs_0"), TEXT("legs_5"), TEXT("shins_0"), TEXT("shins_5"), TEXT("pincers_0"), TEXT("pincers_1"),
 			TEXT("tail_0"), TEXT("tail_1"), TEXT("tail_2"), TEXT("tail_3")});
-	for (const ac::UnitKind K : {ac::UnitKind::peregrine, ac::UnitKind::atlas, ac::UnitKind::scorpion})
+	for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
 	{
 		TestNotNull(*FString::Printf(TEXT("pose for %s"), AcPose::ModelBase(K)), (void*)AcPose::Find(K));
 	}
@@ -460,6 +460,14 @@ bool FAcPoseNewDeathTest::RunTest(const FString&)
 	TestTrue(TEXT("an Atlas topples and bursts"), AcEffectsShatter::SpecOf(ac::UnitKind::atlas, Atlas) && Atlas.bTopple && !Atlas.bFlyer);
 	TestTrue(TEXT("a Scorpion bursts"), AcEffectsShatter::SpecOf(ac::UnitKind::scorpion, Scorpion) && !Scorpion.bFlyer && !Scorpion.bTopple);
 	TestTrue(TEXT("the Atlas is the biggest wreck"), Atlas.Size > Scorpion.Size && Atlas.Chunks > Scorpion.Chunks);
+	for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
+	{
+		AcEffectsShatter::FSpec Spec;
+		const bool bShatters = AcKinds::Look(K).Death == EAcKindDeath::Shatter;
+		TestEqual(*FString::Printf(TEXT("%s has a wreck exactly when its row says it shatters"), AcPose::ModelBase(K)),
+			AcEffectsShatter::SpecOf(K, Spec), bShatters);
+		if (bShatters) TestTrue(TEXT("and the wreck is no bigger than the Atlas's"), Spec.Size <= Atlas.Size && Spec.Chunks <= Atlas.Chunks);
+	}
 
 	FPoseScene Scene(TEXT("atlas_blue"));
 	if (!Scene.Model)
@@ -501,18 +509,20 @@ bool FAcPoseNewBorrowedTest::RunTest(const FString&)
 		AddError(TEXT("no model catalog"));
 		return false;
 	}
-	using ac::UnitKind;
-	for (const UnitKind K : {UnitKind::peregrine, UnitKind::atlas, UnitKind::scorpion})
+	for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
 	{
-		const FString Own = FString::Printf(TEXT("cockpit_%s_blue"), AcPose::ModelBase(K));
-		const bool bHas = Catalog.Find(FName(*Own)) != nullptr;
-		TestEqual(*FString::Printf(TEXT("%s is in the catalog exactly when HasCockpit says"), *Own), AcNewKinds::HasCockpit(K), bHas);
-		TestEqual(TEXT("the cockpit is its own or its stand-in's"), (int32)AcNewKinds::BorrowedCockpit(K),
-			(int32)(bHas ? K : AcNewKinds::CockpitStandIn(K)));
-		TestTrue(TEXT("the stand-in's cockpit is there to borrow"),
-			bHas || Catalog.Find(FName(*FString::Printf(TEXT("cockpit_%s_blue"), AcPose::ModelBase(AcNewKinds::CockpitStandIn(K))))));
-		TestNotNull(*FString::Printf(TEXT("%s's own model is in the catalog"), AcPose::ModelBase(K)),
-			Catalog.Find(FName(*FString::Printf(TEXT("%s_blue"), AcPose::ModelBase(K)))));
+		const FAcKindLook& L = AcKinds::Look(K);
+		if (L.Cockpit == EAcKindCockpit::None) continue;
+		const bool bHas = Catalog.Find(FName(*L.CockpitModel)) != nullptr;
+		if (L.Cockpit == EAcKindCockpit::Own && L.StandIn)
+		{
+			TestEqual(*FString::Printf(TEXT("%s is in the catalog exactly when HasCockpit says"), *L.CockpitModel), AcKinds::HasCockpit(K), bHas);
+		}
+		const TOptional<ac::UnitKind> StandIn = L.Cockpit == EAcKindCockpit::Borrowed || !bHas ? L.StandIn : TOptional<ac::UnitKind>();
+		TestEqual(TEXT("the cockpit is its own or its stand-in's"), (int32)AcKinds::CockpitKind(K), (int32)StandIn.Get(K));
+		TestTrue(*FString::Printf(TEXT("%s: the cockpit it drives with is there"), *L.Base),
+			Catalog.Find(FName(*AcKinds::Look(AcKinds::CockpitKind(K)).CockpitModel)) != nullptr);
+		TestNotNull(*FString::Printf(TEXT("%s's own model is in the catalog"), *L.Base), Catalog.Find(FName(*L.Model)));
 	}
 	return true;
 }

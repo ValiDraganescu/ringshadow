@@ -1,5 +1,6 @@
 #include "AcPoseVehiclesSheet.h"
 
+#include "AcKindTable.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcModelRow.h"
@@ -39,15 +40,6 @@
 
 namespace
 {
-	TOptional<ac::UnitKind> KindNamed(const FString& Name)
-	{
-		for (int32 K = 0; K <= (int32)ac::UnitKind::scorpion; ++K)
-		{
-			if (Name == AcPose::ModelBase((ac::UnitKind)K)) return (ac::UnitKind)K;
-		}
-		return {};
-	}
-
 	double Num(const TSharedPtr<FJsonObject>& O, const TCHAR* Key, const double Default)
 	{
 		double V = Default;
@@ -193,7 +185,7 @@ void AAcPoseSheet::BeginPlay()
 
 void AAcPoseSheet::Build(const FString& KindName, const FString& SpecFile)
 {
-	const TOptional<ac::UnitKind> Kind = KindNamed(KindName);
+	const TOptional<ac::UnitKind> Kind = AcKinds::Named(KindName);
 	const FAcModelInfo* Model = FAcModelCatalog::Get().Find(FName(KindName + TEXT("_blue")));
 	const FAcPoseFn Fn = Kind ? AcPose::Find(*Kind) : nullptr;
 	FString Text;

@@ -1,6 +1,7 @@
 #include "AcEffectsDeathsSheet.h"
 
 #include "AcEffectsDeaths.h"
+#include "AcKindTable.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcModelRow.h"
@@ -41,15 +42,6 @@ namespace AcDeathSheetPrivate
 		double V = Default;
 		return O->TryGetNumberField(Key, V) ? V : Default;
 	}
-
-	TOptional<ac::UnitKind> KindNamed(const FString& Name)
-	{
-		for (int32 K = 0; K <= (int32)ac::UnitKind::hailstorm; ++K)
-		{
-			if (Name == AcPose::ModelBase((ac::UnitKind)K)) return (ac::UnitKind)K;
-		}
-		return {};
-	}
 }
 
 AAcDeathSheet::AAcDeathSheet()
@@ -73,7 +65,7 @@ void AAcDeathSheet::BeginPlay()
 void AAcDeathSheet::Build(const FString& KindName, const FString& SpecFile)
 {
 	using namespace AcDeathSheetPrivate;
-	const TOptional<ac::UnitKind> Kind = KindNamed(KindName);
+	const TOptional<ac::UnitKind> Kind = AcKinds::Named(KindName);
 	const TOptional<AcDeaths::EFall> Fall = Kind ? AcDeaths::FallOf(*Kind) : TOptional<AcDeaths::EFall>();
 	const FAcModelInfo* Model = FAcModelCatalog::Get().Find(FName(KindName + TEXT("_blue")));
 	FString Text;

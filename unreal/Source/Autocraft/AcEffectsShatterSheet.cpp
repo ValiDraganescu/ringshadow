@@ -1,6 +1,7 @@
 #include "AcEffectsShatterSheet.h"
 
 #include "AcEffectsShatter.h"
+#include "AcKindTable.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcModelRow.h"
@@ -74,11 +75,9 @@ void AAcShatterSheet::Build(const FString& KindName, const FString& SpecFile)
 	AcEffectsShatter::FSpec Spec;
 	TOptional<ac::UnitKind> Unit;
 	TOptional<ac::StructureKind> Building;
-	for (int32 K = 0; K <= int32(ac::UnitKind::scorpion); ++K)
-		if (KindName == AcPose::ModelBase(ac::UnitKind(K)) && AcEffectsShatter::SpecOf(ac::UnitKind(K), Spec)) Unit = ac::UnitKind(K);
-	for (int32 K = 0; K <= int32(ac::StructureKind::landingPad); ++K)
-		if (KindName == AcPose::ModelBase(ac::StructureKind(K)) && AcEffectsShatter::SpecOf(ac::StructureKind(K), Spec))
-			Building = ac::StructureKind(K);
+	if (const TOptional<ac::UnitKind> K = AcKinds::Named(KindName); K && AcEffectsShatter::SpecOf(*K, Spec)) Unit = *K;
+	for (const ac::StructureKind K : ac::allCases<ac::StructureKind>())
+		if (KindName == AcPose::ModelBase(K) && AcEffectsShatter::SpecOf(K, Spec)) Building = K;
 	const FAcModelInfo* Model = Spec.Model ? FAcModelCatalog::Get().Find(FName(Spec.Model)) : nullptr;
 	FString Text;
 	TSharedPtr<FJsonObject> Root;

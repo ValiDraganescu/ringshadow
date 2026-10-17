@@ -1,5 +1,6 @@
 #include "AcPoseStill.h"
 
+#include "AcKindTable.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcModelRow.h"
@@ -34,15 +35,6 @@
 
 namespace
 {
-	TOptional<ac::UnitKind> KindNamed(const FString& Name)
-	{
-		for (int32 K = 0; K <= (int32)ac::UnitKind::hailstorm; ++K)
-		{
-			if (Name == AcPose::ModelBase((ac::UnitKind)K)) return (ac::UnitKind)K;
-		}
-		return {};
-	}
-
 	double Arg(const TCHAR* Key, const double Default)
 	{
 		double V = Default;
@@ -69,7 +61,7 @@ void AAcPoseStill::Build(const FString& Spec)
 {
 	const bool bBusy = Spec.EndsWith(TEXT("-busy"));
 	const FString Name = bBusy ? Spec.LeftChop(5) : Spec;
-	const TOptional<ac::UnitKind> Kind = KindNamed(Name);
+	const TOptional<ac::UnitKind> Kind = AcKinds::Named(Name);
 	const FAcModelInfo* Model = FAcModelCatalog::Get().Find(FName(Name + TEXT("_blue")));
 	const FAcPoseFn Fn = Kind ? AcPose::Find(*Kind) : nullptr;
 	if (!Kind || !Model)

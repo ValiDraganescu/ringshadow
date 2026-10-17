@@ -1,8 +1,6 @@
 #include "AcPilotCamera.h"
 
-#include "AcNewKinds.h"
-#include "AcPoseNewKinds.h"
-#include "AcPoseAir.h"
+#include "AcKindTable.h"
 #include "AcSpace.h"
 
 #include "Rules.h"
@@ -32,56 +30,11 @@ double FAcPilotCamera::HorizontalFov(const double Aspect)
 	return FMath::RadiansToDegrees(2.0 * std::atan(std::tan(Half) * FMath::Max(Aspect, 0.1)));
 }
 
-FVector FAcPilotCamera::Eye(const ac::UnitKind Kind)
-{
-	using K = ac::UnitKind;
-	switch (AcNewKinds::BorrowedCockpit(Kind))
-	{
-	// Between the two stacks, just behind their front faces.
-	case K::prospector: return FVector(0.0, 1.2, 0);
-	// Behind the Ranger's visor.
-	case K::ranger: return FVector(0.14, 0.92, 0);
-	// Behind the mask's eyes: as tall as the Comets it runs with.
-	case K::comet: return FVector(0.12, 0.93, 0);
-	// Behind the helmet's visor.
-	case K::juggernaut: return FVector(0.12, 1.3, 0);
-	// In the driver's seat inside the canopy, the stinger over it.
-	case K::firefly: return FVector(0.12, 0.66, 0);
-	// Up in the turret hatch, over the rail's breech.
-	case K::longbow: return FVector(-0.1, 1.3, 0);
-	// In the nose, behind the canopy, at the hover.
-	case K::dropship: return FVector(0.7, AcPoseAir::DropshipHover, 0);
-	// In the front seat, under the canopy, at the hover.
-	case K::kestrel: return FVector(0.5, AcPoseAir::KestrelHover + 0.2, 0);
-	// In the front of the Peregrine's bubble canopy (it spans x -14..42 cm), the eye
-	// 21 cm over the fuselage axis: the needle nose runs ahead down the middle.
-	case K::peregrine: return FVector(0.25, AcPoseNew::PeregrineHover + 0.21, 0);
-	// In the Atlas's cockpit slit, in the front of the torso.
-	case K::atlas: return FVector(0.55, 2.58, 0);
-	// Low over the Scorpion's shoulders, behind its head: the pincers at the bottom
-	// edges, the tail's launcher hung over the top of the view.
-	case K::scorpion: return FVector(0.52, 0.64, 0);
-	// Up on the flak mount, behind the cradle.
-	case K::hailstorm: return FVector(-0.35, 1.15, 0);
-	default: return FVector(0.0, 1.0, 0);
-	}
-}
+// The eye, its pivot and the first pitch are the cockpit's: the kind row of
+// the kind whose cockpit it drives with (AcKindTable.h).
+FVector FAcPilotCamera::Eye(const ac::UnitKind Kind) { return AcKinds::Look(AcKinds::CockpitKind(Kind)).Eye; }
 
-FVector FAcPilotCamera::Pivot(const ac::UnitKind Kind)
-{
-	using K = ac::UnitKind;
-	switch (AcNewKinds::BorrowedCockpit(Kind))
-	{
-	case K::longbow: return FVector(-0.22, 0.78, 0);
-	// The torso turns about its own axis over the legs.
-	case K::atlas: return FVector(0.0, 1.82, 0);
-	// The flak mount's centre on the bed.
-	case K::hailstorm: return FVector(-0.3, 0.52, 0);
-	// The driver stays in the seat while the tail aims.
-	case K::firefly: return Eye(K::firefly);
-	default: return FVector::ZeroVector;
-	}
-}
+FVector FAcPilotCamera::Pivot(const ac::UnitKind Kind) { return AcKinds::Look(AcKinds::CockpitKind(Kind)).Pivot; }
 
 double FAcPilotCamera::Bob(const ac::Unit& U)
 {
@@ -90,22 +43,7 @@ double FAcPilotCamera::Bob(const ac::Unit& U)
 	return 0.0;
 }
 
-double FAcPilotCamera::StartPitch(const ac::UnitKind Kind)
-{
-	using K = ac::UnitKind;
-	switch (AcNewKinds::BorrowedCockpit(Kind))
-	{
-	case K::firefly: return -0.18;
-	case K::longbow: return -0.12;
-	case K::hailstorm: return 0.1;
-	// The Atlas looks nearly level: its barrels run along the upper edge of the slit.
-	case K::atlas: return -0.08;
-	case K::dropship:
-	case K::peregrine:
-	case K::kestrel: return -0.55;
-	default: return -0.22;
-	}
-}
+double FAcPilotCamera::StartPitch(const ac::UnitKind Kind) { return AcKinds::Look(AcKinds::CockpitKind(Kind)).StartPitch; }
 
 void FAcPilotCamera::PitchLimits(const ac::UnitKind Kind, double& OutLow, double& OutHigh)
 {
@@ -116,8 +54,8 @@ void FAcPilotCamera::PitchLimits(const ac::UnitKind Kind, double& OutLow, double
 
 void FAcPilotCamera::Boom(const ac::UnitKind Kind, float& OutLift, float& OutLength)
 {
-	OutLift = Kind == ac::UnitKind::hailstorm ? 0.1f : 0.f;
-	OutLength = Kind == ac::UnitKind::hailstorm ? 1.5f : 1.f;
+	OutLift = AcKinds::Look(Kind).BoomLift;
+	OutLength = AcKinds::Look(Kind).BoomLength;
 	const float Shot = FMath::Max(1.f, CVarShotBoom.GetValueOnGameThread());
 	OutLength *= Shot;
 	OutLift += 2.f * (Shot - 1.f);

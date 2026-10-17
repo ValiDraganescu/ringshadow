@@ -414,18 +414,19 @@ public:
 	void Reset();
 
 	/// The sound a shooter fires, its gain and how many may start a
-	/// second (the `switch` in `AudioDirector.shot`).
-	struct FWeapon { const char* Name; float Gain; int32 PerSecond; };
+	/// second (the `switch` in `AudioDirector.shot`); a unit's are its kind
+	/// row's `Weapon` and `AltWeapon` (AcKindTable.h), as are the names below.
+	struct FWeapon { FName Name; float Gain; int32 PerSecond; };
 	static FWeapon WeaponOf(std::optional<ac::UnitKind> Kind, bool bAnchored, bool bTower,
 		std::optional<ac::StructureKind> TowerKind = std::nullopt);
 	/// `<kind>death`, and the report-in line `v<kind>`.
-	static const char* DeathOf(ac::UnitKind Kind);
+	static FName DeathOf(ac::UnitKind Kind);
 	/// A bug's strike (`<kind>bite`, `gloamwingspit`, `matriarchslam`), its
 	/// hurt cry, its idle chitter (none for a kind whose idle is a loop).
-	static const char* BroodStrikeOf(ac::UnitKind Kind);
-	static const char* BroodHurtOf(ac::UnitKind Kind);
-	static const char* BroodIdleOf(ac::UnitKind Kind);
-	static const char* VoiceOf(ac::UnitKind Kind);
+	static FName BroodStrikeOf(ac::UnitKind Kind);
+	static FName BroodHurtOf(ac::UnitKind Kind);
+	static FName BroodIdleOf(ac::UnitKind Kind);
+	static FName VoiceOf(ac::UnitKind Kind);
 
 	/// The driven unit (its misses and hits play in your ear), if any.
 	std::optional<int64> PilotUnit;

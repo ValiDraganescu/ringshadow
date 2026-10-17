@@ -225,7 +225,8 @@ namespace AcPose
 	AUTOCRAFT_API void RestUnit(const FAcPoseContext& Context, FAcPose& Pose);
 	AUTOCRAFT_API void RestStructure(const FAcPoseContext& Context, FAcPose& Pose);
 
-	/// Model names: `ranger`, `habdome` (the catalog's `base`).
+	/// Model names: `ranger`, `habdome` (the catalog's `base`); a unit's is
+	/// its kind row's `Base` (AcKindTable.h).
 	AUTOCRAFT_API const TCHAR* ModelBase(ac::UnitKind Kind);
 	AUTOCRAFT_API const TCHAR* ModelBase(ac::StructureKind Kind);
 
@@ -236,7 +237,8 @@ namespace AcPose
 	/// (`-(1 - progress)·height·0.92`), cells (≤ 0).
 	AUTOCRAFT_API double ConstructionSink(const ac::Structure& S);
 	/// A flyer's hover over its ground (`Models.hover`): already in the
-	/// body's rest transform, so the placement stays at the ground.
+	/// body's rest transform, so the placement stays at the ground. The
+	/// kind row's `Hover`.
 	AUTOCRAFT_API double Hover(ac::UnitKind Kind);
 	/// The ground a flyer flies over, smoothed (`GameScene.flightBase`:
 	/// rises early over a cliff ahead, sinks slowly off one). Updates

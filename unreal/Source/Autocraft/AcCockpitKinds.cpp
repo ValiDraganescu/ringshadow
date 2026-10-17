@@ -3,7 +3,7 @@
 #include "HAL/IConsoleManager.h"
 
 #include "AcModelCatalog.h"
-#include "AcNewKinds.h"
+#include "AcKindTable.h"
 #include "AcParticles.h"
 #include "AcPilotCamera.h"
 #include "AcPoseNewKinds.h"
@@ -307,8 +307,9 @@ struct UAcCockpitSubsystem::FState
 
 std::shared_ptr<UAcCockpitSubsystem::FState> AcCockpitKinds::Make(const UnitKind Driven, const FAcModelInfo& Cockpit)
 {
-	// A new kind without a cockpit of its own rides in its stand-in's (AcNewKinds.h).
-	const UnitKind Kind = AcNewKinds::BorrowedCockpit(Driven);
+	// A kind without a cockpit of its own rides in its stand-in's (AcKindTable.h).
+	const UnitKind Kind = AcKinds::CockpitKind(Driven);
+	const FAcKindLook& Look = AcKinds::Look(Kind);
 	auto S = std::make_shared<UAcCockpitSubsystem::FState>();
 	S->Kind = Kind;
 	S->Model = &Cockpit;
@@ -316,9 +317,9 @@ std::shared_ptr<UAcCockpitSubsystem::FState> AcCockpitKinds::Make(const UnitKind
 	S->Rig = PartOf(M, TEXT("rig"));
 	S->Level = PartOf(M, TEXT("level"));
 
-	switch (Kind)
+	switch (Look.Rig)
 	{
-	case UnitKind::prospector:
+	case EAcKindCockpitRig::Fork:
 	{
 		// `fork.rest` is the arm as built; `reached` points it at the middle
 		// of the view, 1.35 ahead (its local front +X).
@@ -327,31 +328,24 @@ std::shared_ptr<UAcCockpitSubsystem::FState> AcCockpitKinds::Make(const UnitKind
 		S->ForkReached = LookAlong(FVector(0, -0.02, -1.35) - Arm.Pos, SkXAxis);
 		break;
 	}
-	case UnitKind::comet:
-	case UnitKind::juggernaut:
+	case EAcKindCockpitRig::Held:
 	{
-		const bool bComet = Kind == UnitKind::comet;
 		for (int32 K = 0; K < 2; ++K)
 		{
+			const FString Index = FString::FromInt(K);
 			FHeld H;
-			H.Part = PartOf(M, *(bComet ? FString::Printf(TEXT("guns_%d_node"), K) : FString::Printf(TEXT("launchers_%d_node"), K)));
+			H.Part = PartOf(M, *Look.HeldNode.Replace(TEXT("%d"), *Index));
 			H.Rest = FNode(M, H.Part);
-			const int32 Mz = PartOf(M, *(bComet ? FString::Printf(TEXT("flashes_%d"), K) : FString::Printf(TEXT("muzzles_%d"), K)));
+			const int32 Mz = PartOf(M, *Look.HeldMuzzle.Replace(TEXT("%d"), *Index));
 			if (Mz != INDEX_NONE) H.Muzzle = M.Parts[Mz].SkPosition;
-			H.Axis = bComet ? FVector(0, -1, 0) : FVector(1, 0, 0);
+			H.Axis = Look.HeldAxis;
 			S->Held.Add(H);
 		}
 		break;
 	}
-	case UnitKind::firefly:
-	case UnitKind::longbow:
-	case UnitKind::hailstorm:
-	case UnitKind::peregrine:
-	case UnitKind::atlas:
-	case UnitKind::scorpion:
+	case EAcKindCockpitRig::UnitModel:
 	{
-		const FName UnitName(*FString::Printf(TEXT("%s_blue"), AcPose::ModelBase(Kind)));
-		S->UnitModel = FAcModelCatalog::Get().Find(UnitName);
+		S->UnitModel = FAcModelCatalog::Get().Find(FName(*Look.Model));
 		S->UnitPose = AcPose::Find(Kind);
 		S->ModelRoot = PartOf(M, TEXT("model_root"));
 		S->UnitPart.Init(INDEX_NONE, M.Parts.Num());
@@ -378,7 +372,7 @@ std::shared_ptr<UAcCockpitSubsystem::FState> AcCockpitKinds::Make(const UnitKind
 		}
 		break;
 	}
-	default:
+	case EAcKindCockpitRig::Plain:
 		break;
 	}
 	return S;

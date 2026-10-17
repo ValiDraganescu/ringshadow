@@ -2,6 +2,7 @@
 
 #include "AcConsolePaint.h"
 #include "AcHudStyle.h"
+#include "AcKindTable.h"
 #include "AcMinimapBake.h"
 
 #include "Engine/Texture2D.h"
@@ -120,24 +121,10 @@ void SAcMinimap::SetMarks(const ac::GameState& Shown, const ac::MapDefinition& M
 		M.Fill = Team(U.owner);
 		M.Stroke = White(0.9);
 		M.Line = 0.8 * S;
-		switch (U.kind)
-		{
-		case ac::UnitKind::dropship:
-		case ac::UnitKind::kestrel:
-		case ac::UnitKind::peregrine:
-			M.Shape = FAcMinimapMark::EShape::Diamond;
-			M.Radius = (U.kind == ac::UnitKind::dropship ? 2.6 : U.kind == ac::UnitKind::peregrine ? 1.8 : 2.2) * S;
-			M.Z = 2;
-			break;
-		case ac::UnitKind::ranger: M.Radius = 1.4 * S; M.Z = 1; break;
-		case ac::UnitKind::longbow: M.Radius = 2.5 * S; M.Z = 1; break;
-		case ac::UnitKind::atlas: M.Radius = 3.2 * S; M.Z = 1; break;
-		case ac::UnitKind::scorpion: M.Radius = 1.6 * S; M.Z = 1; break;
-		case ac::UnitKind::firefly:
-		case ac::UnitKind::juggernaut:
-		case ac::UnitKind::hailstorm: M.Radius = 2.0 * S; M.Z = 1; break;
-		default: M.Radius = 1.8 * S; M.Z = 1; break;
-		}
+		const FAcKindLook& L = AcKinds::Look(U.kind);
+		if (L.MinimapShape == EAcKindMinimap::Diamond) M.Shape = FAcMinimapMark::EShape::Diamond;
+		M.Radius = L.MinimapRadius * S;
+		M.Z = L.MinimapZ;
 		Marks.Add(M);
 	}
 	// SpriteKit draws by global z, then in tree order.

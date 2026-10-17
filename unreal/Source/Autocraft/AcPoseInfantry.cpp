@@ -1,6 +1,7 @@
 #include "AcPoseInfantry.h"
 
 #include "AcGaitTable.h"
+#include "AcKindTable.h"
 #include "AcModelCatalog.h"
 #include "AcSpace.h"
 
@@ -346,8 +347,6 @@ namespace AcPoseInfantry
 		return N;
 	}
 
-	double ChestHeight(const ac::UnitKind Kind) { return Kind == UnitKind::juggernaut ? 0.85 : 0.62; }
-
 	double BuildingRadius(const ac::StructureKind Kind)
 	{
 		switch (Kind)
@@ -572,7 +571,7 @@ namespace AcPoseInfantry
 				{
 					return AcSpace::ToWorld(V.position, C.Ground(V.position) + AcPose::Hover(V.kind));
 				}
-				return AcSpace::ToWorld(V.position, C.Ground(V.position) + ChestHeight(V.kind));
+				return AcSpace::ToWorld(V.position, C.Ground(V.position) + AcKinds::Look(V.kind).ChestHeight);
 			}
 			for (const ac::Structure& S : C.State.structures)
 			{

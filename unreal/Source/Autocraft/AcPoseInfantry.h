@@ -61,8 +61,6 @@ namespace AcPoseInfantry
 	/// are from the export's: a check of the torso fold and the axes.
 	AUTOCRAFT_API double RangerFoldError(const FAcModelInfo& Ranger);
 
-	/// GameScene.chestHeight: where rounds meet a unit, cells over its feet.
-	AUTOCRAFT_API double ChestHeight(ac::UnitKind Kind);
 	/// `Building.radius` (GameScene.makeBuilding), cells.
 	AUTOCRAFT_API double BuildingRadius(ac::StructureKind Kind);
 }

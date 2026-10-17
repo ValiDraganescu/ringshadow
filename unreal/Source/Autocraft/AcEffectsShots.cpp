@@ -14,7 +14,7 @@
 
 #include "AcLog.h"
 #include "AcModelCatalog.h"
-#include "AcNewKinds.h"
+#include "AcKindTable.h"
 #include "AcPose.h"
 #include "AcPoseNewKinds.h"
 #include "AcSimSubsystem.h"
@@ -53,27 +53,12 @@ namespace
 		return 1.0;
 	}
 
-	/// `Trooper.muzzles` (GameScene.swift:1646) as exported part names. The
-	/// Rhino Longbow's two prongs share one muzzle (`[muzzle, muzzle]`).
+	/// `Trooper.muzzles` (GameScene.swift:1646) as exported part names: the
+	/// kind row's (AcKindTable.h).
 	TArray<FName> MuzzleParts(const ac::UnitKind K, const bool bMinigun)
 	{
-		switch (K)
-		{
-		case ac::UnitKind::ranger: return {bMinigun ? FName(TEXT("minigun_flash")) : FName(TEXT("flash"))};
-		case ac::UnitKind::comet: return {TEXT("flashes_0"), TEXT("flashes_1")};
-		case ac::UnitKind::juggernaut: return {TEXT("muzzles_0"), TEXT("muzzles_1")};
-		case ac::UnitKind::firefly: return {TEXT("nozzle")};
-		case ac::UnitKind::longbow: return {TEXT("tankMuzzles_0"), TEXT("tankMuzzles_0"), TEXT("anchorMuzzle")};
-		case ac::UnitKind::dropship: return {TEXT("beamOrigin")};
-		case ac::UnitKind::kestrel: return {TEXT("muzzles_0"), TEXT("muzzles_1")};
-		case ac::UnitKind::hailstorm: return {TEXT("muzzles_0"), TEXT("muzzles_1"), TEXT("muzzles_2"), TEXT("muzzles_3")};
-		// The four rails (a volley leaves a pair of them), the two cannons, the launcher.
-		case ac::UnitKind::peregrine: return {TEXT("missiles_0"), TEXT("missiles_1"), TEXT("missiles_2"), TEXT("missiles_3")};
-		case ac::UnitKind::atlas: return {TEXT("cannons_0"), TEXT("cannons_1")};
-		case ac::UnitKind::scorpion: return {TEXT("launcher")};
-		case ac::UnitKind::prospector: return {};
-		}
-		return {};
+		const FAcKindLook& L = AcKinds::Look(K);
+		return bMinigun && L.UpgradedMuzzles.Num() > 0 ? L.UpgradedMuzzles : L.Muzzles;
 	}
 
 	/// A Bastion's firing slits (`Models.bastion`, Models.swift:505-540):
@@ -118,8 +103,8 @@ struct UAcEffects::FShooter
 	double Anchor = 0.0;
 	/// A Kestrel's target is a flyer: its rail gun, not its rockets.
 	bool bAirTarget = false;
-	/// The muzzles are where the part's meshes end (a new kind's barrels, rails
-	/// and launcher), not its pivot.
+	/// The muzzles are where the part's meshes end (the kind row's
+	/// `bMuzzleReach`: barrels, rails and a launcher), not its pivot.
 	bool bReach = false;
 };
 
@@ -255,7 +240,7 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 	S.Anchor = U->anchor.value_or(0.0);
 	if (const FAcUnitMemory* Mem = R->Memory(Unit)) S.Anchor = FMath::Max(S.Anchor, Mem->AnchorOf);
 	S.bMinigun = HasMinigun(*State, *U);
-	S.bReach = AcNewKinds::IsNew(U->kind);
+	S.bReach = AcKinds::Look(U->kind).bMuzzleReach;
 	if (const std::optional<ac::Unit> TA = State->unit(Target)) S.bAirTarget = ac::Rules::stats(TA->kind).air;
 	const TConstArrayView<FTransform> W = R->PartWorld(Unit);
 	S.Position = W.Num() > 0 ? AcSpace::ToSim(W[0].GetLocation()) : U->position;
@@ -371,7 +356,7 @@ void UAcEffects::Missed(const int64 Unit, const FVector& To, const double Time)
 	S.Anchor = U->anchor.value_or(0.0);
 	if (const FAcUnitMemory* Mem = R->Memory(Unit)) S.Anchor = FMath::Max(S.Anchor, Mem->AnchorOf);
 	S.bMinigun = HasMinigun(*State, *U);
-	S.bReach = AcNewKinds::IsNew(U->kind);
+	S.bReach = AcKinds::Look(U->kind).bMuzzleReach;
 	const TConstArrayView<FTransform> W = R->PartWorld(Unit);
 	S.Position = W.Num() > 0 ? AcSpace::ToSim(W[0].GetLocation()) : U->position;
 	if (S.bHidden && PilotFire.Muzzles.Num() > 0)

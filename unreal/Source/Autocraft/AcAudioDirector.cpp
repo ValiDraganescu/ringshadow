@@ -9,7 +9,7 @@
 #include "AcMmo.h"
 #include "AcMusicPlayer.h"
 #include "AcShot.h"
-#include "AcNewKinds.h"
+#include "AcKindTable.h"
 #include "AcPilotAudio.h"
 #include "AcPoseNewKinds.h"
 #include "AcRtsPawn.h"
@@ -70,9 +70,19 @@ float AcSound::MasterGain()
 
 float AcSound::Carry(const FName Sound)
 {
-	static const TSet<FName> Far = {"boom", "blast", "cannon", "anchorshot", "anchorhit", "rockets", "missile", "gatlingburst", "turretburst", "seekers", "flak",
-		"flakhit", "atlasshot", "stomp", "atlasdeath", "cometdeath", "dropshipdeath", "fireflydeath", "hailstormdeath",
-		"juggernautdeath", "kestreldeath", "longbowdeath", "peregrinedeath", "prospectordeath", "rangerdeath", "scorpiondeath"};
+	// The blasts, the towers' guns, the far weapons and the player kinds' deaths.
+	static const TSet<FName> Far = []
+	{
+		TSet<FName> F = {"boom", "blast", "anchorhit", "missile", "gatlingburst", "turretburst", "flakhit", "stomp"};
+		for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
+		{
+			const FAcKindLook& L = AcKinds::Look(K);
+			if (L.Weapon.bFar) F.Add(L.Weapon.Name);
+			if (L.AltWeapon.bFar) F.Add(L.AltWeapon.Name);
+			if (!AcKinds::IsBrood(K)) F.Add(L.DeathSound);
+		}
+		return F;
+	}();
 	static const TSet<FName> Near = {"drill", "weld", "step", "atlasstep", "hum", "deposit", "heal", "scorpionbury", "scorpionunbury",
 		"shimmer", "sfcrater"};
 	if (Far.Contains(Sound)) return 4.f / 3.f;
@@ -177,97 +187,21 @@ FAcAudioRules::FWeapon FAcAudioRules::WeaponOf(std::optional<ac::UnitKind> Kind,
 	if (bTower && TowerKind == ac::StructureKind::citadel) return {"turretburst", AcSound::TurretGain, 3};
 	if (bTower) return {"missile", AcSound::MissileGain, 5};
 	if (!Kind) return {"gun", 0.32f, 9};
-	switch (*Kind)
-	{
-	case ac::UnitKind::peregrine: return {"seekers", AcSound::RocketGain, 6};
-	case ac::UnitKind::atlas: return {"atlasshot", AcSound::AtlasShotGain, 3};
-	case ac::UnitKind::scorpion: return {"scorpionsting", AcSound::ScorpionStingGain, 3};
-	case ac::UnitKind::comet: return {"pistol", 0.3f, 8};
 	// `bAnchored` doubles as "the alternate weapon": a Kestrel firing its rail gun at a flier.
-	case ac::UnitKind::kestrel: return bAnchored ? FWeapon{"anchorshot", 0.45f, 3} : FWeapon{"rockets", AcSound::RocketGain, 6};
-	case ac::UnitKind::hailstorm: return {"flak", AcSound::FlakGain, 6};
-	case ac::UnitKind::prospector: return {"weld", 0.3f, 6};
-	case ac::UnitKind::firefly: return {"flame", 0.4f, 5};
-	case ac::UnitKind::juggernaut: return {"breacher", 0.4f, 6};
-	case ac::UnitKind::longbow: return bAnchored ? FWeapon{"anchorshot", 0.55f, 4} : FWeapon{"cannon", AcSound::TankCannonGain, 5};
-	default: return {"gun", 0.32f, 9};
-	}
+	const FAcKindLook& L = AcKinds::Look(*Kind);
+	const FAcKindSound& W = bAnchored && !L.AltWeapon.Name.IsNone() ? L.AltWeapon : L.Weapon;
+	return {W.Name, W.Gain, W.PerSecond};
 }
 
-const char* FAcAudioRules::BroodStrikeOf(ac::UnitKind Kind)
-{
-	switch (Kind)
-	{
-	case ac::UnitKind::gloamwing: return "gloamwingspit";
-	case ac::UnitKind::lodeback: return "lodebackbite";
-	case ac::UnitKind::matriarch: return "matriarchslam";
-	default: return "shardlingbite";
-	}
-}
+FName FAcAudioRules::BroodStrikeOf(ac::UnitKind Kind) { return AcKinds::Look(Kind).Strike; }
 
-const char* FAcAudioRules::BroodHurtOf(ac::UnitKind Kind)
-{
-	switch (Kind)
-	{
-	case ac::UnitKind::gloamwing: return "gloamwinghurt";
-	case ac::UnitKind::lodeback: return "lodebackhurt";
-	case ac::UnitKind::matriarch: return "matriarchhurt";
-	default: return "shardlinghurt";
-	}
-}
+FName FAcAudioRules::BroodHurtOf(ac::UnitKind Kind) { return AcKinds::Look(Kind).Hurt; }
 
-const char* FAcAudioRules::BroodIdleOf(ac::UnitKind Kind)
-{
-	switch (Kind)
-	{
-	case ac::UnitKind::shardling: return "shardlingidle";
-	case ac::UnitKind::lodeback: return "lodebackidle";
-	default: return nullptr;  // the Gloamwing's wings and the Matriarch's breath loop
-	}
-}
+FName FAcAudioRules::BroodIdleOf(ac::UnitKind Kind) { return AcKinds::Look(Kind).Idle; }
 
-const char* FAcAudioRules::DeathOf(ac::UnitKind Kind)
-{
-	switch (Kind)
-	{
-	case ac::UnitKind::shardling: return "shardlingdeath";
-	case ac::UnitKind::gloamwing: return "gloamwingdeath";
-	case ac::UnitKind::lodeback: return "lodebackdeath";
-	case ac::UnitKind::matriarch: return "matriarchdeath";
-	case ac::UnitKind::scorpion: return "scorpiondeath";
-	case ac::UnitKind::ranger: return "rangerdeath";
-	case ac::UnitKind::comet: return "cometdeath";
-	case ac::UnitKind::firefly: return "fireflydeath";
-	case ac::UnitKind::juggernaut: return "juggernautdeath";
-	case ac::UnitKind::dropship: return "dropshipdeath";
-	case ac::UnitKind::longbow: return "longbowdeath";
-	case ac::UnitKind::kestrel: return "kestreldeath";
-	case ac::UnitKind::hailstorm: return "hailstormdeath";
-	case ac::UnitKind::peregrine: return "peregrinedeath";
-	case ac::UnitKind::atlas: return "atlasdeath";
-	default: return "prospectordeath";
-	}
-}
+FName FAcAudioRules::DeathOf(ac::UnitKind Kind) { return AcKinds::Look(Kind).DeathSound; }
 
-const char* FAcAudioRules::VoiceOf(ac::UnitKind Kind)
-{
-	switch (Kind)
-	{
-	case ac::UnitKind::scorpion: return "vscorpion";
-	case ac::UnitKind::prospector: return "vprospector";
-	case ac::UnitKind::ranger: return "vranger";
-	case ac::UnitKind::comet: return "vcomet";
-	case ac::UnitKind::firefly: return "vfirefly";
-	case ac::UnitKind::juggernaut: return "vjuggernaut";
-	case ac::UnitKind::dropship: return "vdropship";
-	case ac::UnitKind::longbow: return "vlongbow";
-	case ac::UnitKind::kestrel: return "vkestrel";
-	case ac::UnitKind::hailstorm: return "vhailstorm";
-	case ac::UnitKind::peregrine: return "vperegrine";
-	case ac::UnitKind::atlas: return "vatlas";
-	default: return "vranger";
-	}
-}
+FName FAcAudioRules::VoiceOf(ac::UnitKind Kind) { return AcKinds::Look(Kind).Voice; }
 
 bool FAcAudioRules::Allow(FName Sound, int32 PerSecond)
 {
@@ -484,22 +418,10 @@ void FAcAudioRules::Picked()
 
 void FAcAudioRules::PullAway(ac::UnitKind Kind)
 {
-	const char* Sound = nullptr;
-	float Gain = 0.f;
-	switch (Kind)
-	{
-	case ac::UnitKind::atlas: Sound = "atlasmove"; Gain = AcSound::AtlasEngineGain; break;
-	case ac::UnitKind::scorpion: Sound = "scorpionmove"; Gain = AcSound::ScorpionEngineGain; break;
-	// The Dart-like shriek (docs/new-units.md, Peregrine sound).
-	case ac::UnitKind::peregrine: Sound = "peregrinepass"; Gain = AcSound::KestrelEngineGain; break;
-	case ac::UnitKind::firefly: Sound = "fireflymove"; Gain = AcSound::FireflyEngineGain; break;
-	case ac::UnitKind::dropship: Sound = "dropshipmove"; Gain = AcSound::DropshipEngineGain; break;
-	case ac::UnitKind::kestrel: Sound = "kestrelmove"; Gain = AcSound::KestrelEngineGain; break;
-	case ac::UnitKind::hailstorm: Sound = "hailstormmove"; Gain = AcSound::HailstormEngineGain; break;
-	default: return;
-	}
+	const FAcKindLook& L = AcKinds::Look(Kind);
+	if (L.MoveSound.IsNone()) return;
 	if (!(Now - LastEngine > AcSound::EngineEvery)) return;
-	if (OneShot(Sound, {}, Gain, EAcSoundPool::InEar)) LastEngine = Now;
+	if (OneShot(L.MoveSound, {}, L.MoveGain, EAcSoundPool::InEar)) LastEngine = Now;
 }
 
 void FAcAudioRules::Consume(const std::vector<ac::GameEvent>& Events, const ac::Simulation& Sim)
@@ -631,7 +553,7 @@ void FAcAudioRules::Watch(const ac::GameState& State, const ac::Sight* Sight)
 			{
 				// The Matriarch's strike: her slam or her spit, by the sac's word (N3).
 				const FName Sound = U.kind == ac::UnitKind::matriarch && ac::Matriarch::spat(U.bug->sac) ? FName("matriarchspit")
-																												 : FName(BroodStrikeOf(U.kind));
+																												 : BroodStrikeOf(U.kind);
 				if (Allow(Sound, 6)) OneShot(Sound, U.position, AcSound::BroodStrikeGain, EAcSoundPool::Combat);
 			}
 			if (B.Hp >= 0 && U.hp < B.Hp - 0.01)
@@ -640,7 +562,7 @@ void FAcAudioRules::Watch(const ac::GameState& State, const ac::Sight* Sight)
 				if (Allow(Sound, 3)) OneShot(Sound, U.position, AcSound::BroodHurtGain, EAcSoundPool::Combat);
 			}
 			const bool bCalm = U.bug->state == ac::Bug::State::idle || U.bug->state == ac::Bug::State::move;
-			if (const char* Idle = BroodIdleOf(U.kind); Idle && bCalm && Now >= B.NextIdle)
+			if (const FName Idle = BroodIdleOf(U.kind); !Idle.IsNone() && bCalm && Now >= B.NextIdle)
 			{
 				if (B.NextIdle > 0 && Allow(Idle, 2)) OneShot(Idle, U.position, AcSound::BroodIdleGain, EAcSoundPool::Combat);
 				B.NextIdle = Now + 4.0 + 8.0 * std::uniform_real_distribution<double>(0.0, 1.0)(Random);
