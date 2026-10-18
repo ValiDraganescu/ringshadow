@@ -125,6 +125,27 @@ void Simulation::swapDriver(size_t k) {
     }
 }
 
+std::pair<int64_t, int64_t> Simulation::bankFor(int64_t unit) const {
+    const Player& side = state.players[static_cast<size_t>(Pilot::player)];
+    const std::optional<size_t> k = (pilot && pilot->unit == unit) ? std::nullopt : driverIndex(unit);
+    // `swapDriver` trades the side's bank with the driver's when the side is there.
+    if (k && Pilot::player >= 0 && Pilot::player < static_cast<int64_t>(state.players.size()))
+        return {drivers[*k].ore, drivers[*k].hydrogen};
+    return {side.ore, side.hydrogen};
+}
+
+void Simulation::setBankFor(int64_t unit, int64_t ore, int64_t hydrogen) {
+    Player& side = state.players[static_cast<size_t>(Pilot::player)];
+    const std::optional<size_t> k = (pilot && pilot->unit == unit) ? std::nullopt : driverIndex(unit);
+    if (k && Pilot::player >= 0 && Pilot::player < static_cast<int64_t>(state.players.size())) {
+        drivers[*k].ore = ore;
+        drivers[*k].hydrogen = hydrogen;
+        return;
+    }
+    side.ore = ore;
+    side.hydrogen = hydrogen;
+}
+
 bool Simulation::drive(int64_t unit, const std::optional<PilotRecord>& levels) {
     if (piloted(unit)) return false;
     if (!pilot) {

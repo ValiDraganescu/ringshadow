@@ -509,3 +509,32 @@ The saves both write after the three days are the same, table by table
 in every region of The First, at 1,350 spots, the answer kept, the answer
 of a copy with nothing kept and the footprint read cell by cell as before
 agree.
+
+### Round 11: a driver's bank read in place; the WAL (2026-10-18)
+
+With several humans driving in one region (W5), the other drivers'
+contexts are swapped in for each of their reads (`Simulation::asDriver`,
+`swapDriver`: the `Pilot` copied, `PilotProgress` and the side's record
+moved three times each). Time Profiler on `crowdbench` with 16 pilots:
+`swapDriver` 10% of the step, its largest caller `Region::bank`, which the
+world's step asks for every pilot every tick to read two numbers. A
+driver's bank is the side's ore and MH only while it is swapped in, and
+`Driver::ore` and `hydrogen` otherwise: `Simulation::bankFor` and
+`setBankFor` read and set them in place, under the same condition the swap
+trades them on. `Region::bank`, `setBank` and `keepBank` use them.
+
+| `crowdbench 30`, 16 pilots, 4 runs each in turns, load 19-20 | before µs | after µs |
+|---|---:|---:|
+| the step | 19.9-21.0 | 17.9-19.4 |
+| the whole tick | 126-134 | 125-135 |
+
+The wire and state hashes are equal (1, 4, 16 pilots). The other swaps are
+real context switches (each driver's leveling, skills and piloted step use
+its whole context); making them cheaper needs a member-wise swap of
+`PilotProgress` that would go wrong the day a field is added: left.
+
+The save's WAL: about 55 KB a save in `savebench` for some 22 changed rows
+is SQLite's page granularity. The rows are small (the frontier's state
+4 KB, the pilot's row about 6 KB, 79 deposits, a few units), and a save
+touches some 14 pages of 4 KB across the tables and their B-trees. Writing
+fewer would mean another layout of the file: left.

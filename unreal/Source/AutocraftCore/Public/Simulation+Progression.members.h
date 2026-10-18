@@ -114,6 +114,12 @@ public:
     /// Runs `f` with the context of the human driving `unit` as the active
     /// one (swapped in and back; as it is when it is the active one or none
     /// drives it): the server's asks for a seat (build, items, skills).
+    /// The side's ore and MH as the human driving `unit` holds them: what
+    /// `asDriver` reads from the side, read in place (an other driver's bank
+    /// is its `Driver::ore` and `hydrogen` while another is swapped in).
+    std::pair<int64_t, int64_t> bankFor(int64_t unit) const;
+    /// Sets them, as `asDriver` setting the side's would.
+    void setBankFor(int64_t unit, int64_t ore, int64_t hydrogen);
     template <class F> auto asDriver(int64_t unit, F&& f) -> decltype(f()) {
         const std::optional<size_t> k = (pilot && pilot->unit == unit) ? std::nullopt : driverIndex(unit);
         struct Back {

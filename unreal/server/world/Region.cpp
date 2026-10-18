@@ -177,7 +177,7 @@ std::optional<std::pair<int64_t, int64_t>> Region::bank(PilotId pilot) {
     if (it == pilots_.end()) return std::nullopt;
     Seat& seat = it->second;
     const Player& side = sim_.state.players[static_cast<size_t>(Pilot::player)];
-    if (drivesNow(seat)) return sim_.asDriver(*seat.drives, [&] { return std::pair{side.ore, side.hydrogen}; });
+    if (drivesNow(seat)) return sim_.bankFor(*seat.drives);
     if (!sim_.pilot) return std::pair{side.ore, side.hydrogen};
     return seat.bank;
 }
@@ -192,13 +192,13 @@ void Region::setBank(PilotId pilot, int64_t ore, int64_t hydrogen) {
         side.ore = ore;
         side.hydrogen = hydrogen;
     };
-    if (drivesNow(seat)) sim_.asDriver(*seat.drives, set);
+    if (drivesNow(seat)) sim_.setBankFor(*seat.drives, ore, hydrogen);
     else if (!sim_.pilot) set();
 }
 
 void Region::keepBank(Seat& seat) {
     const Player& side = sim_.state.players[static_cast<size_t>(Pilot::player)];
-    if (drivesNow(seat)) seat.bank = sim_.asDriver(*seat.drives, [&] { return std::pair{side.ore, side.hydrogen}; });
+    if (drivesNow(seat)) seat.bank = sim_.bankFor(*seat.drives);
     // Its unit gone and no one driving: the side's is still its own.
     else if (seat.drives && !sim_.pilot) seat.bank = std::pair{side.ore, side.hydrogen};
 }
