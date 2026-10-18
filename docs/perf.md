@@ -255,3 +255,36 @@ tests.
 tests with AddressSanitizer and UBSan in `build/asan/` and stops at the
 first finding: a few minutes to build, half a minute to run. The server,
 core and net suites all pass under both now.
+
+### Round 4: the fog on the wire (2026-10-18)
+
+Time Profiler on `daybench`'s server tick by day put `SnapshotWriter::write`
+at 31% of it, most in its own body. The new `snapbench` times a pilot's
+snapshot apart from its writing, 20 a second with every part acknowledged,
+and hashes every byte written. The writing was 40-55 µs a snapshot even at
+midnight with nothing near: with the fog left out it was 3.5-15 µs. Timed
+inside, nearly all of the fog was building its chunks (37 µs a snapshot:
+the 27 chunks of 2,048 cells a region, 0.67 ns a cell), not comparing them
+with their baselines (2 µs) nor writing the ones that changed (0.1 µs).
+
+`fogChunk` (AutocraftNet's `NetSnapshot.cpp`) built a cell's byte with two
+branches and a division each. Where `near` and `explored` cover the chunk
+(the server's own fog, always) it now takes eight cells to a word: a byte's
+bits folded into its lowest bit say "not 0" for `seen` and `near`, and a
+256-entry table spreads the explored word's byte into bit 2 of each cell.
+Short arrays and a ragged tail keep the cell-by-cell loop.
+
+| `snapbench 20`, 3 runs each in turns, load 31-36 | before µs | after µs |
+|---|---:|---:|
+| start, noon, writing | 48.0-69.9 | 17.1-20.5 |
+| start, midnight | 43.5-53.0 | 13.4-14.0 |
+| nest, noon | 53.4-56.0 | 24.6-25.2 |
+| nest, midnight | 39.4-49.4 | 13.9-27.7 |
+
+The wire is the same: every scene's hash of all the bytes written is
+equal before and after (`fd5e5104ff08f662`, `467fab1c80dd1394`,
+`35325d9463465925`, `d4d978dd55fbf064`). Test
+`protocol_fog_chunks_of_any_bytes_and_sizes_round_trip` (net-tests): fogs of
+1 to 4,613 cells with any byte values, short `near` and `explored` arrays,
+whole and as deltas, come back as the fog quantised. A pilot's snapshots
+cost the server 0.4 ms a second instead of 0.9.

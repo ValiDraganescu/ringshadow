@@ -111,17 +111,18 @@ build/tests/main.o: $(CORE_TESTS)/main.cpp
 # (bench/NetBench.cpp), build/worldbench (bench/WorldBench.cpp) and
 # build/daybench (bench/DayBench.cpp), build/balancebench
 # (bench/BalanceBench.cpp), build/savebench (bench/SaveBench.cpp),
-# build/loadbench (bench/LoadBench.cpp) and build/lookbench
-# (bench/LookBench.cpp), everything at -O3.
+# build/loadbench (bench/LoadBench.cpp), build/lookbench
+# (bench/LookBench.cpp) and build/snapbench (bench/SnapBench.cpp),
+# everything at -O3.
 BENCH_FLAGS := $(subst -O2,-O3,$(CXXFLAGS)) -I../core-tests/bench
 BENCH_LIB := $(patsubst $(CORE)/Private/%.cpp,build/bench/core/%.o,$(CORE_SRC)) \
 	$(patsubst $(NET)/Private/%.cpp,build/bench/net/%.o,$(NET_SRC)) build/bench/net/monocypher.o \
 	$(patsubst world/%.cpp,build/bench/world/%.o,$(WORLD_SRC))
 BENCH_OBJ := $(BENCH_LIB) build/bench/program/Server.o \
 	$(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/RegionBench.o build/bench/NetBench.o \
-	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o build/bench/SaveBench.o build/bench/LoadBench.o build/bench/LookBench.o
+	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o build/bench/SaveBench.o build/bench/LoadBench.o build/bench/LookBench.o build/bench/SnapBench.o
 
-bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench build/savebench build/loadbench build/lookbench
+bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench build/savebench build/loadbench build/lookbench build/snapbench
 	./build/regionbench 30 ../core-tests/fixtures/rally-jam.json
 	./build/netbench 20
 	./build/worldbench 30
@@ -130,6 +131,10 @@ bench: build/regionbench build/netbench build/worldbench build/daybench build/ba
 	./build/savebench 40
 	./build/loadbench 5
 	./build/lookbench 2000
+	./build/snapbench 20
+
+build/snapbench: $(BENCH_LIB) build/bench/SnapBench.o
+	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
 
 build/lookbench: $(BENCH_LIB) build/bench/LookBench.o
 	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)

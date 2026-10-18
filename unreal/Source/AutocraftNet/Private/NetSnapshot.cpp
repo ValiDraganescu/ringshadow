@@ -4,7 +4,10 @@
 #include "NetTypes.h"
 
 #include <algorithm>
+#include <array>
+#include <bit>
 #include <cmath>
+#include <cstring>
 #include <limits>
 
 namespace ac::net {
@@ -192,14 +195,51 @@ struct DeltaRead {
 
 // MARK: - Fog
 
+/// Bit k of the index to bit 0 of byte k (little-endian bytes, as the
+/// cells lie in memory).
+static_assert(std::endian::native == std::endian::little, "fogChunk reads eight cells as one word");
+constexpr std::array<uint64_t, 256> kSpread = [] {
+    std::array<uint64_t, 256> t{};
+    for (size_t b = 0; b < 256; b++)
+        for (size_t k = 0; k < 8; k++) t[b] |= uint64_t((b >> k) & 1) << (8 * k);
+    return t;
+}();
+
 /// A cell: seen, near, explored, as bits 0, 1, 2.
 std::shared_ptr<const ItemBits> fogChunk(const FogView& f, size_t chunk) {
+    static_assert(kFogChunkCells % 64 == 0, "a chunk starts on an explored word");
     auto b = std::make_shared<ItemBits>();
     const size_t from = chunk * kFogChunkCells, to = std::min(f.seen.size(), from + kFogChunkCells);
     b->bytes.resize(to - from);
-    for (size_t i = from; i < to; i++) {
-        const bool explored = i / 64 < f.explored.size() && ((f.explored[i / 64] >> (i % 64)) & 1);
-        b->bytes[i - from] = static_cast<uint8_t>((f.seen[i] ? 1 : 0) | (i < f.near.size() && f.near[i] ? 2 : 0) | (explored ? 4 : 0));
+    uint8_t* out = b->bytes.data();
+    const uint8_t* seen = f.seen.data();
+    if (to <= f.near.size() && to <= f.explored.size() * 64) {
+        // `near` and `explored` cover the chunk (the server's own fog): eight
+        // cells to a word. A byte's bits folded into its lowest say "not 0";
+        // `kSpread` sets bit 2 of byte k for bit k of the explored byte.
+        const uint8_t* near = f.near.data();
+        constexpr uint64_t lo4 = 0x0f0f0f0f0f0f0f0full, lo2 = 0x0303030303030303ull, lo1 = 0x0101010101010101ull;
+        auto nonzero = [](uint64_t x) {
+            x = (x & lo4) | ((x >> 4) & lo4);
+            x = (x & lo2) | ((x >> 2) & lo2);
+            return (x & lo1) | ((x >> 1) & lo1);
+        };
+        size_t i = from;
+        for (; i + 8 <= to; i += 8) {
+            uint64_t sv, nv;
+            std::memcpy(&sv, seen + i, 8);
+            std::memcpy(&nv, near + i, 8);
+            const uint64_t e = (f.explored[i / 64] >> (i % 64)) & 0xff;
+            const uint64_t cells = nonzero(sv) | nonzero(nv) << 1 | kSpread[e] << 2;
+            std::memcpy(out + (i - from), &cells, 8);
+        }
+        for (; i < to; i++)
+            out[i - from] = static_cast<uint8_t>((seen[i] != 0) | (near[i] != 0) << 1 | ((f.explored[i / 64] >> (i % 64)) & 1) << 2);
+    } else {
+        for (size_t i = from; i < to; i++) {
+            const bool explored = i / 64 < f.explored.size() && ((f.explored[i / 64] >> (i % 64)) & 1);
+            out[i - from] = static_cast<uint8_t>((seen[i] ? 1 : 0) | (i < f.near.size() && f.near[i] ? 2 : 0) | (explored ? 4 : 0));
+        }
     }
     b->bits = b->bytes.size() * 8;
     return b;

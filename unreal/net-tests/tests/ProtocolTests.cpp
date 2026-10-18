@@ -1086,3 +1086,51 @@ TEST(mirror_builds_a_region_file) {
     region.regionFile.clear();
     EXPECT_TRUE(!Mirror(region).matches());
 }
+
+// docs/perf.md "Server" round 4: the writer builds a fog chunk eight cells
+// to a word. Any byte not 0 is a cell seen (or near), a ragged last chunk
+// and arrays shorter than the cells are read as before: what comes back is
+// the fog quantised, whole and as a delta.
+TEST(protocol_fog_chunks_of_any_bytes_and_sizes_round_trip) {
+    SeededRandom dice(4242);
+    for (const size_t cells : {size_t(1), size_t(63), size_t(2048), size_t(4099), size_t(2 * 2048 + 517)}) {
+        for (const bool shortArrays : {false, true}) {
+            Snapshot s;
+            s.serverTick = 10;
+            FogView fog;
+            fog.seen.resize(cells);
+            fog.near.resize(shortArrays && cells > 70 ? cells - 70 : cells);
+            fog.explored.assign(shortArrays && cells > 200 ? (cells - 200 + 63) / 64 : (cells + 63) / 64, 0);
+            const uint8_t values[] = {0, 0, 0, 1, 2, 128, 255};
+            // Runs of cells, as fog comes (cell by cell noise would not fit
+            // the snapshot's parts), of any byte values.
+            auto runs = [&](std::vector<uint8_t>& a) {
+                for (size_t i = 0; i < a.size();) {
+                    const size_t n = size_t(dice.random(1, 90));
+                    const uint8_t v = values[dice.random(0, 7)];
+                    for (size_t k = 0; k < n && i < a.size(); k++) a[i++] = dice.random(0, 6) ? v : values[dice.random(0, 7)];
+                }
+            };
+            auto shuffle = [&] {
+                runs(fog.seen);
+                runs(fog.near);
+                for (auto& w : fog.explored) w = dice.random(0, 2) ? 0 : ~uint64_t(0) << dice.random(0, 64);
+            };
+            shuffle();
+            s.fog = fog;
+            SnapshotWriter w;
+            SnapshotReader r;
+            // A snapshot whose fog did not change carries none: the last stands.
+            std::optional<FogView> got;
+            for (int round = 0; round < 3; round++) {
+                for (const SnapshotPart& p : roundTrip(w, r, s, 1.0 + round))
+                    if (p.snapshot.fog) got = p.snapshot.fog;
+                ASSERT_TRUE(got.has_value());
+                EXPECT_TRUE(*got == quantised(fog));
+                // Some cells change: the next is a delta.
+                for (size_t k = 0; k < 40; k++) fog.seen[size_t(dice.random(0, int64_t(cells)))] ^= 1;
+                s.fog = fog;
+            }
+        }
+    }
+}
