@@ -1248,3 +1248,31 @@ state.
 Every hash is the same (spreadbench's four, worldbench's nest
 1239e1800ff8ae42, crowdbench's); the core, server and net suites pass.
 Core touched (Simulation). The long tail now: a few percent a change.
+
+### Round 22: a ground viewer's cells eight at a time (2026-10-18)
+
+In the nest by day the look is half of the region's step, and most of it
+is the Brood's sight: its bugs stand on the ground, so `Vision::stamp`
+took their circles cell by cell (seen where the level is not above the
+viewer's and not seen yet, its explored bit gathered one at a time),
+where the air's and the daylight's go eight at a time. The ground's go
+eight at a time now too: the levels' bytes with their sign bit flipped
+compare as unsigned bytes, the textbook byte-wise compare (`x >= y` in
+each byte's high bit from `(x & ~y) | (~(x ^ y) & ((x | H) - (y & ~H)))`),
+and with `seen`'s "not yet" the same multiply gathers the eight explored
+bits. Exact for every level (any int8): the cell-by-cell test is the
+reference.
+
+`lookbench` now prints a hash of every side's sight (seen, near, the ids
+it sees) and explored cells after its last look.
+
+| `lookbench`, 3 runs each in turns, load 15-18 | before | after |
+|---|---:|---:|
+| the nest at noon (29 units) | 19.1-19.8 µs | 16.8-17.4 µs |
+| the nest at midnight | 15.0-15.3 µs | 14.5-14.7 µs |
+| the start, Cold Fork | 2.0-4.9 µs | 2.0-4.4 µs |
+
+The sights hashes are the same in all six scenes; worldbench's and
+spreadbench's state hashes too. Test `vision_stampComparesLevelsOfEveryByte`
+(levels of every byte value, viewers on every level including -128 and
+127, against the cell-by-cell stamp). Core touched (Vision).

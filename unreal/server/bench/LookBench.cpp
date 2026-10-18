@@ -5,7 +5,9 @@
 // Matriarch's nest full (her horde) and Cold Fork; each at noon (S3: by
 // day the pilot sees the whole region) and at midnight. LOOKS times
 // (default 2000) a scene, after 3 s of steps. Prints the mean and the
-// 99th percentile of one look. Built and run by `make bench` (-O3).
+// 99th percentile of one look, and a hash of every side's sight and
+// explored cells after the last (equal before and after a change that must
+// keep the fog). Built and run by `make bench` (-O3).
 
 #include "WorldMap.h"
 
@@ -60,8 +62,20 @@ void run(const LoadedWorld& world, const char* region, double hour, int looks) {
     for (double x : us) sum += x;
     size_t units = 0;
     for (const Unit& u : sim.state.units) units += u.hp > 0 ? 1 : 0;
-    std::printf("  %-13s %-8s %4zu units, %zu sides: look mean %7.1f us, p99 %7.1f us\n", region, hour == 12 ? "noon" : "midnight",
-                units, sim.state.players.size(), sum / double(looks), at(us, 0.99));
+    // What the last look left: every side's sight and explored cells.
+    uint64_t hash = 1469598103934665603ull;
+    auto mix = [&hash](uint64_t v) { hash = (hash ^ v) * 1099511628211ull; };
+    for (const Sight& s : sim.sights) {
+        for (const uint8_t b : s.seen) mix(b);
+        for (const uint8_t b : s.near) mix(b);
+        for (const int64_t i : s.ids) mix(uint64_t(i));
+    }
+    if (sim.state.intel)
+        for (const Intel& k : *sim.state.intel)
+            for (const uint64_t word : k.explored) mix(word);
+    std::printf("  %-13s %-8s %4zu units, %zu sides: look mean %7.1f us, p99 %7.1f us, sights %016llx\n", region,
+                hour == 12 ? "noon" : "midnight", units, sim.state.players.size(), sum / double(looks), at(us, 0.99),
+                (unsigned long long)hash);
 }
 
 } // namespace

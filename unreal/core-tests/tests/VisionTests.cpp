@@ -337,6 +337,36 @@ TEST(vision_stampSpansAsEveryCell) {
     EXPECT_TRUE(marked > 1000);
 }
 
+// docs/perf.md "Server" round 22: on the ground the stamp compares eight
+// levels at a time; for levels of every byte value (the map's are a few,
+// but a level is any int8) and viewers on every level, it marks what the
+// cell-by-cell test marks.
+TEST(vision_stampComparesLevelsOfEveryByte) {
+    const Simulation sim(GameState::new_(homeMap()), homeMap());
+    Vision v = *sim.vision;
+    SeededRandom dice(22);
+    for (int8_t& t : v.tier) t = static_cast<int8_t>(dice.random(-128, 127));
+    const size_t cells = static_cast<size_t>(v.width * v.height);
+    int64_t seen = 0;
+    for (int round = 0; round < 20; ++round) {
+        std::vector<uint8_t> seenA(cells, 0), nearA(cells, 0), seenB(cells, 0), nearB(cells, 0);
+        std::vector<uint64_t> exA((cells + 63) / 64, 0), exB((cells + 63) / 64, 0);
+        for (int k = 0; k < 40; ++k) {
+            const double w = static_cast<double>(v.width) * Vision::cell, h = static_cast<double>(v.height) * Vision::cell;
+            const Vec2 c = v.origin + Vec2(dice.range(0, w), dice.range(0, h));
+            const int8_t level = k % 5 == 0 ? (k % 10 == 0 ? int8_t(-128) : int8_t(127)) : static_cast<int8_t>(dice.random(-128, 127));
+            const double r = dice.range(0.3, 30);
+            v.stamp(c, r, level, seenA, nearA, exA);
+            stampPerCell(v, c, r, level, seenB, nearB, exB);
+        }
+        EXPECT_TRUE(seenA == seenB);
+        EXPECT_TRUE(nearA == nearB);
+        EXPECT_TRUE(exA == exB);
+        seen += std::count(seenB.begin(), seenB.end(), uint8_t(1));
+    }
+    EXPECT_TRUE(seen > 1000);
+}
+
 // A look fills the last look's arrays again (`Vision::sightInto`): into a
 // used Sight, what a new one gets, for both sides of a game in progress.
 TEST(vision_sightIntoAUsedSightIsAFreshOne) {

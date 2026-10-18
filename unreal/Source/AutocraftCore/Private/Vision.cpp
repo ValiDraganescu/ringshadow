@@ -243,11 +243,33 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
                 for (; i < stop; ++i) bits |= uint64_t(s[i] == 0) << static_cast<uint64_t>(i & 63);
                 std::memset(s + from, 1, static_cast<size_t>(stop - from));
             } else {
-                for (; i < stop; ++i) {
-                    const bool add = t[i] <= top && !s[i];
-                    s[i] |= static_cast<uint8_t>(add);
-                    bits |= uint64_t(add) << static_cast<uint64_t>(i & 63);
+                // On the ground: seen where its level is not above the
+                // viewer's and not seen yet. Eight at a time where they
+                // line up: the levels' bytes with their sign bit flipped
+                // compare as unsigned (`top >= t` in each byte's high bit,
+                // the textbook byte-wise compare), and with `seen`'s "not
+                // yet" the same multiply gathers the eight bits.
+                auto one = [&](int64_t k) {
+                    const bool add = t[k] <= top && !s[k];
+                    s[k] |= static_cast<uint8_t>(add);
+                    bits |= uint64_t(add) << static_cast<uint64_t>(k & 63);
+                };
+                constexpr uint64_t high = 0x8080808080808080ull, low = 0x0101010101010101ull;
+                const uint64_t x = (static_cast<uint64_t>(static_cast<uint8_t>(top)) * low) ^ high;
+                for (; i < stop && (i & 7); ++i) one(i);
+                for (; i + 8 <= stop; i += 8) {
+                    uint64_t y, w;
+                    std::memcpy(&y, t + i, sizeof y);
+                    std::memcpy(&w, s + i, sizeof w);
+                    y ^= high;
+                    const uint64_t d = (x | high) - (y & ~high);
+                    const uint64_t atOrBelow = ((x & ~y) | (~(x ^ y) & d)) & high;
+                    const uint64_t add = (atOrBelow >> 7) & ~w & low;
+                    w |= add;
+                    std::memcpy(s + i, &w, sizeof w);
+                    bits |= ((add * 0x0102040810204080ull) >> 56) << static_cast<uint64_t>(i & 63);
                 }
+                for (; i < stop; ++i) one(i);
             }
             ex[from >> 6] |= bits;
         }
