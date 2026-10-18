@@ -33,6 +33,7 @@ set.
 Run it headless through the one hidden-run slot:
   uv run unreal/Tools/hidden_run.py --out unreal/Saved/TerrainLab --python unreal/Tools/Editor/make_terrain_lab_material.py
 """
+import json
 import os
 
 import unreal
@@ -136,7 +137,7 @@ struct Lab
     // `ch`: colour and height; `nr`: the normal's xy in world X/Y (turned
     // back), roughness, occlusion.
     static void Hex(Texture2DArray CH, SamplerState CHs, Texture2DArray NR, SamplerState NRs, float2 uv, float2 dx, float2 dy,
-                    float slice, float contrast, out float4 ch, out float4 nr)
+                    float slice, float contrast, bool normals, out float4 ch, out float4 nr)
     {
         float2 st = uv * 3.4641016;
         float2 sk = float2(st.x - 0.57735027 * st.y, 1.15470054 * st.y);
@@ -147,28 +148,62 @@ struct Lab
         float s2 = 2.0 * s - 1.0;
         float3 w = float3(-t.z * s2, s - t.y * s2, s - t.x * s2);
         float2 v[3] = { base + float2(s, s), base + float2(s, 1.0 - s), base + float2(1.0 - s, s) };
-        float4 c[3];
-        float4 n[3];
-        float3 hw;
+        // Sharpen: mostly one cell's texture, the others only at the seams,
+        // the higher grain on top where they meet. A cell that barely weighs
+        // is not read at all (most pixels read one).
+        float3 pw = pow(max(w, 1e-4), contrast);
+        pw /= dot(pw, 1.0);
+        ch = 0; nr = 0;
+        float total = 0;
         [unroll] for (int k = 0; k < 3; k++)
         {
-            float2 h = Hash2(v[k]);
-            float a = h.x * 6.2831853;
-            float ca = cos(a), sa = sin(a);
-            float2x2 M = float2x2(ca, -sa, sa, ca);
-            float2 u = mul(M, uv) + h * 7.31;
-            c[k] = CH.SampleGrad(CHs, float3(u, slice), mul(M, dx), mul(M, dy));
-            n[k] = NR.SampleGrad(NRs, float3(u, slice), mul(M, dx), mul(M, dy));
-            float2 nxy = n[k].xy * 2.0 - 1.0;
-            n[k].xy = mul(transpose(M), nxy);
-            hw[k] = c[k].a;
+            [branch] if (pw[k] > 0.03)
+            {
+                float2 h = Hash2(v[k]);
+                float a = h.x * 6.2831853;
+                float ca = cos(a), sa = sin(a);
+                float2x2 M = float2x2(ca, -sa, sa, ca);
+                float2 u = mul(M, uv) + h * 7.31;
+                float4 c = CH.SampleGrad(CHs, float3(u, slice), mul(M, dx), mul(M, dy));
+                float4 n = float4(0.5, 0.5, 0.85, 1.0);
+                if (normals) n = NR.SampleGrad(NRs, float3(u, slice), mul(M, dx), mul(M, dy));
+                n.xy = mul(transpose(M), n.xy * 2.0 - 1.0);
+                float g = pw[k] * (0.25 + c.a);
+                ch += c * g; nr += n * g; total += g;
+            }
         }
-        // Sharpen: mostly one cell's texture, the others only at the seams,
-        // the higher grain on top where they meet.
-        float3 g = pow(max(w, 1e-4), contrast) * (0.25 + hw);
-        g /= dot(g, 1.0);
-        ch = c[0] * g.x + c[1] * g.y + c[2] * g.z;
-        nr = n[0] * g.x + n[1] * g.y + n[2] * g.z;
+        ch /= max(total, 1e-5); nr /= max(total, 1e-5);
+    }
+    // The height alone of a hex-tiled layer (the parallax's steps): the same
+    // cells, turns and weights as `Hex`, the height channel only.
+    static float HexHeight(Texture2DArray CH, SamplerState CHs, float2 uv, float2 dx, float2 dy, float slice, float contrast)
+    {
+        float2 st = uv * 3.4641016;
+        float2 sk = float2(st.x - 0.57735027 * st.y, 1.15470054 * st.y);
+        float2 base = floor(sk);
+        float3 t = float3(frac(sk), 0.0);
+        t.z = 1.0 - t.x - t.y;
+        float s = step(0.0, -t.z);
+        float s2 = 2.0 * s - 1.0;
+        float3 w = float3(-t.z * s2, s - t.y * s2, s - t.x * s2);
+        float2 v[3] = { base + float2(s, s), base + float2(s, 1.0 - s), base + float2(1.0 - s, s) };
+        float3 pw = pow(max(w, 1e-4), contrast);
+        pw /= dot(pw, 1.0);
+        float hs = 0, total = 0;
+        [unroll] for (int k = 0; k < 3; k++)
+        {
+            [branch] if (pw[k] > 0.03)
+            {
+                float2 h = Hash2(v[k]);
+                float a = h.x * 6.2831853;
+                float ca = cos(a), sa = sin(a);
+                float2x2 M = float2x2(ca, -sa, sa, ca);
+                float hk = CH.SampleGrad(CHs, float3(mul(M, uv) + h * 7.31, slice), mul(M, dx), mul(M, dy)).a;
+                float g = pw[k] * (0.25 + hk);
+                hs += hk * g; total += g;
+            }
+        }
+        return hs / max(total, 1e-5);
     }
     // A layer at both scales, cross-faded by distance (`near` 1: the near
     // scale only, 0: the far only; both sampled only in between).
@@ -179,22 +214,23 @@ struct Lab
         if (nearW > 0.001)
         {
             float4 a, b;
-            Hex(CH, CHs, NR, NRs, g / nearTile, gdx / nearTile, gdy / nearTile, slice, contrast, a, b);
+            Hex(CH, CHs, NR, NRs, g / nearTile, gdx / nearTile, gdy / nearTile, slice, contrast, true, a, b);
             ch += a * nearW; nr += b * nearW;
         }
         if (nearW < 0.999)
         {
             float4 a, b;
-            Hex(CH, CHs, NR, NRs, g / farTile + 0.37, gdx / farTile, gdy / farTile, slice, contrast, a, b);
+            // Far off, the colour alone: the normals' grain is under a pixel.
+            Hex(CH, CHs, NR, NRs, g / farTile + 0.37, gdx / farTile, gdy / farTile, slice, contrast, false, a, b);
             ch += a * (1.0 - nearW); nr += b * (1.0 - nearW);
         }
     }
     // A layer's colour in the game's palette: `target` (rgb; a, how much)
-    // carrying the texture's own light, dark and grain round its mean (the
-    // array's last mip), `k` of it.
-    static float3 Recolour(Texture2DArray CH, SamplerState CHs, float slice, float3 c, float4 target, float k)
+    // carrying the texture's own light, dark and grain round its mean
+    // (means.json, from terrain_lab_textures.py), `k` of it.
+    static float3 Recolour(float3 mean, float3 c, float4 target, float k)
     {
-        float3 mean = max(CH.SampleLevel(CHs, float3(0.5, 0.5, slice), 11.0).rgb, 1e-3);
+        mean = max(mean, 1e-3);
         float3 graded = target.rgb * max(1.0 + (c / mean - 1.0) * k, 0.0);
         return lerp(c, graded, target.a);
     }
@@ -214,9 +250,42 @@ float2 g = wp.xy + Origin.xy;
 float2 gdx = ddx(g), gdy = ddy(g);
 float2 suv = (g - Bounds.xy) / Bounds.zw;
 float4 splat = Texture2DSampleLevel(Splat, SplatSampler, suv, 0);
+float4 relief = Texture2DSampleLevel(Relief, ReliefSampler, suv, 0);
 float dist = length(Cam / 100.0 - wp);
 float nearW = 1.0 - smoothstep(NearFade.x, NearFade.y, dist);
 float contrast = HexContrast;
+float slope = 1.0 - wn.z;
+float rockW = smoothstep(0.22, 0.45, slope);
+
+// Round 2: parallax occlusion on the ground within ParallaxRange (start,
+// end of its fade, m): the base layer's height marched along the view, the
+// ground's every layer then read where the ray met it. Fades out to nothing
+// before the range's end, so nothing pops; off on cliffs and plating.
+{
+    float3 V = normalize(Cam / 100.0 - wp);
+    float depth = ParallaxDepth * (1.0 - smoothstep(ParallaxRange.x, ParallaxRange.y, dist)) * (1.0 - rockW) * (1.0 - splat.b);
+    if (depth > 1e-4 && V.z > 0.08 && nearW > 0.001)
+    {
+        float steps = lerp(16.0, 8.0, V.z);
+        float2 stepG = -V.xy / V.z * depth / steps;
+        float2 off = 0;
+        float level = 1.0;
+        float2 dx = gdx / NearTile, dy = gdy / NearTile;
+        float hNow = Lab::HexHeight(LabCH, LabCHSampler, g / NearTile, dx, dy, GroundLayer, contrast);
+        float hBefore = hNow, levelBefore = level;
+        [loop] for (int i = 0; i < 16 && hNow < level; i++)
+        {
+            hBefore = hNow; levelBefore = level;
+            off += stepG;
+            level -= 1.0 / steps;
+            hNow = Lab::HexHeight(LabCH, LabCHSampler, (g + off) / NearTile, dx, dy, GroundLayer, contrast);
+        }
+        // Between the last two steps, where the ray crossed the height.
+        float a = hNow - level, b = hBefore - levelBefore;
+        float t = saturate(a / min(a - b, -1e-4));
+        g += off - stepG * t;
+    }
+}
 
 float lo2 = 0.0;
 float2 lo = Bounds.xy, hi = Bounds.xy + Bounds.zw;
@@ -254,14 +323,14 @@ if (nbW > 0.01 && abs(nbLayer - GroundLayer) > 0.5)
 }
 // The plain dirt in the game's colour; a region's own texture as it is
 // (near an edge the neighbour's, mixed in above, is recoloured as much).
-float3 dirt = GroundLayer < 0.5 ? Lab::Recolour(LabCH, LabCHSampler, 0.0, chB.rgb, DirtColour, LayerDetail.x) : chB.rgb;
+float3 dirt = GroundLayer < 0.5 ? Lab::Recolour(MeanDirt.rgb, chB.rgb, DirtColour, LayerDetail.x) : chB.rgb;
 float4 chG = 0, nrG = 0, chH = 0, nrH = 0;
 if (splat.r > 0.001)
     Lab::Layer(LabCH, LabCHSampler, LabNR, LabNRSampler, g, gdx, gdy, 1.0, NearTile * 0.8, FarTile * 0.8, nearW, contrast, chG, nrG);
 if (splat.g > 0.001)
     Lab::Layer(LabCH, LabCHSampler, LabNR, LabNRSampler, g, gdx, gdy, 2.0, NearTile * 1.2, FarTile * 1.2, nearW, contrast, chH, nrH);
-float3 grass = Lab::Recolour(LabCH, LabCHSampler, 1.0, chG.rgb, GrassColour, LayerDetail.y);
-float3 high = Lab::Recolour(LabCH, LabCHSampler, 2.0, chH.rgb, HighColour, LayerDetail.z);
+float3 grass = Lab::Recolour(MeanGrass.rgb, chG.rgb, GrassColour, LayerDetail.y);
+float3 high = Lab::Recolour(MeanHigh.rgb, chH.rgb, HighColour, LayerDetail.z);
 float2 tp = g / 3.5;
 float3 plate = Texture2DSample(Plate, PlateSampler, tp).rgb;
 
@@ -281,8 +350,6 @@ c *= lerp(1.0 - MacroGain, 1.0 + MacroGain, macroV);
 
 // Cliff rock on steep faces, projected sideways (triplanar on X and Y),
 // hex-tiled as the ground.
-float slope = 1.0 - wn.z;
-float rockW = smoothstep(0.22, 0.45, slope);
 float2 ux = float2(g.y, -wp.z * 1.4) / RockTile;
 float2 uy = float2(g.x, -wp.z * 1.4) / RockTile;
 float ax = abs(wn.x), ay = abs(wn.y);
@@ -294,10 +361,10 @@ if (rockW > 0.001)
     float4 cx = 0, nx = 0, cy = 0, ny = 0;
     float sx = ax / max(ax + ay, 1e-3);
     if (sx > 0.01)
-        Lab::Hex(LabCH, LabCHSampler, LabNR, LabNRSampler, ux, float2(gdx.y, -ddx(wp.z) * 1.4) / RockTile, float2(gdy.y, -ddy(wp.z) * 1.4) / RockTile, 3.0, contrast, cx, nx);
+        Lab::Hex(LabCH, LabCHSampler, LabNR, LabNRSampler, ux, float2(gdx.y, -ddx(wp.z) * 1.4) / RockTile, float2(gdy.y, -ddy(wp.z) * 1.4) / RockTile, 3.0, contrast, true, cx, nx);
     if (sx < 0.99)
-        Lab::Hex(LabCH, LabCHSampler, LabNR, LabNRSampler, uy, float2(gdx.x, -ddx(wp.z) * 1.4) / RockTile, float2(gdy.x, -ddy(wp.z) * 1.4) / RockTile, 3.0, contrast, cy, ny);
-    rock = Lab::Recolour(LabCH, LabCHSampler, 3.0, cx.rgb * sx + cy.rgb * (1.0 - sx), RockColour, LayerDetail.w);
+        Lab::Hex(LabCH, LabCHSampler, LabNR, LabNRSampler, uy, float2(gdx.x, -ddx(wp.z) * 1.4) / RockTile, float2(gdy.x, -ddy(wp.z) * 1.4) / RockTile, 3.0, contrast, true, cy, ny);
+    rock = Lab::Recolour(MeanRock.rgb, cx.rgb * sx + cy.rgb * (1.0 - sx), RockColour, LayerDetail.w);
     // U along +Y (or +X), V down the face.
     dRock = float3(0.0, nx.x, -nx.y) * sx + float3(ny.x, 0.0, -ny.y) * (1.0 - sx);
     rockRough = nx.z * sx + ny.z * (1.0 - sx);
@@ -308,6 +375,13 @@ c = lerp(c, rock * 0.95, rockW);
 // the real one); the textures' own occlusion.
 c *= lerp(0.88, 1.0, saturate(wp.z / 2.4));
 c *= lerp(1.0, lerp(nr.w, 1.0, rockW), AoGain);
+// Round 2: the relief bake (AcTerrain: occlusion by the land round, and
+// curvature): cliff feet, gullies and craters darker, crests lighter; the
+// rock's cracks by its own occlusion.
+// Open flat ground sees walls far off: it stays full bright (above 0.87).
+c *= lerp(1.0, saturate(relief.r * 1.15), AoBake);
+c *= 1.0 - clamp((relief.g - 0.5) * 2.0, -1.0, 1.0) * CurveGain;
+c *= lerp(1.0, nr.w * nr.w, AoGain * rockW);
 
 // Past the map's edge (the border scenery, out of play): wild highland and
 // rock, dimmer, fading into the haze further out, with a faint dark seam
@@ -498,6 +572,8 @@ def build_material(arrays):
     color = unreal.MaterialSamplerType.SAMPLERTYPE_COLOR
     linear = unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR
     tex_param("Splat", "Splat", unreal.load_asset("/Engine/EngineResources/Black"), linear)
+    # Round 2's relief bake (AcTerrain); white: no occlusion, flat.
+    tex_param("Relief", "Relief", unreal.load_asset("/Engine/EngineResources/WhiteSquareTexture"), linear)
     tex_param("LabCH", "LabColour", arrays["CH"], color)
     tex_param("LabNR", "LabNormal", arrays["NR"], linear)
     tex_param("Plate", "Plating", unreal.load_asset(PLATING), color)
@@ -551,6 +627,11 @@ def build_material(arrays):
     sources.append(("RippleGain", scalar_param("RippleGain", 1.0)))
     sources.append(("AoGain", scalar_param("AoGain", 0.35)))
     sources.append(("LabTint", scalar_param("LabTint", 0.35)))
+    # Round 2: parallax (depth m, its fade m) and the relief bake.
+    sources.append(("ParallaxDepth", scalar_param("ParallaxDepth", 0.09)))
+    sources.append(("ParallaxRange", vec_param("ParallaxRange", (8.0, 12.0, 0.0, 0.0))))
+    sources.append(("AoBake", scalar_param("AoBake", 0.6)))
+    sources.append(("CurveGain", scalar_param("CurveGain", 0.25)))
     sources.append(("FxKeep", scalar_param("FxKeep", 0.6)))
     # The game's own colours (M_Terrain's mean albedo of each, linear): the
     # look keeps the map's read; the textures bring the grain.
@@ -560,6 +641,9 @@ def build_material(arrays):
     sources.append(("RockColour", vec_param("RockColour", (0.1, 0.078, 0.052, 1.0))))
     # How much of each texture's own light and dark shows round the colour:
     # dirt, grass (a soft set: pushed), highland, rock.
+    means = json.load(open(os.path.join(SRC, "means.json")))
+    for name, layer in (("MeanDirt", "Dirt"), ("MeanGrass", "Grass"), ("MeanHigh", "Highland"), ("MeanRock", "Rock")):
+        sources.append((name, vec_param(name, (*means[layer], 1.0))))
     sources.append(("LayerDetail", vec_param("LayerDetail", (0.6, 2.4, 0.7, 1.2))))
     sources.append(("T", node(unreal.MaterialExpressionTime, -900, y)))
 

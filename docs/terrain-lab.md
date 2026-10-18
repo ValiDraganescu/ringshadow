@@ -214,6 +214,8 @@ When the user says promote, in the worker's worktree, as one commit a round:
 | date | round | result | GPU pilot / fight | promoted |
 |---|---|---|---|---|
 | 2026-10-18 | plan | this page | 16.2 / 13.5 baseline | – |
+| 2026-10-18 | 1 | nine CC0 sets, hex tiling, near and far scale, recoloured to the game's colours; first cut over budget (base pass +0.8 to +1.7 ms) | +0.9 to +1.7 GPU busy, MMO bench 5120×1378, load 5-9 | – |
+| 2026-10-18 | 1+2 | weak hex cells skipped, far scale colour only, means as constants; parallax within 12 m, the relief bake (occlusion, curvature; 4 ms a region on a worker); no strata bands | +0.1 to +0.5 GPU busy (base pass +0.3 to +0.9), load 4.3 | – |
 
 ## 8. Open
 

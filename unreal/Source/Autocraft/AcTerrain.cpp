@@ -211,6 +211,10 @@ struct AAcRegionGround::FPrepared
 	FAcHeightGrid Grid;
 	TArray<uint8> SplatBytes;
 	int32 SplatW = 0, SplatH = 0;
+	/// The terrain lab's relief bake (round 2), the splat's size: R the
+	/// ground's occlusion by the land round it, G its curvature (0.5 flat,
+	/// more a hollow, less a crest).
+	TArray<uint8> ReliefBytes;
 	struct FPiece
 	{
 		TUniquePtr<FMeshDescription> Mesh;
@@ -262,6 +266,48 @@ namespace
 				Px[3] = Byte(M.w);
 			}
 		});
+
+		// The terrain lab's relief (docs/terrain-lab.md round 2), at the
+		// splat's texels from the drawn grid: the occlusion as a horizon
+		// search in 8 directions out to 8 cells (cliff feet, gullies and
+		// craters darken), the curvature as the ground a cell round against
+		// the texel's own. M_Terrain does not read it.
+		{
+			const double BakeStart = FPlatformTime::Seconds();
+			const FAcHeightGrid& G = P.Grid;
+			P.ReliefBytes.SetNumZeroed(P.SplatW * P.SplatH * 4);
+			const int32 Radii[] = {1, 2, 4, 8, 16, 32};
+			const double Dirs[8][2] = {{1, 0}, {0.7071, 0.7071}, {0, 1}, {-0.7071, 0.7071}, {-1, 0}, {-0.7071, -0.7071}, {0, -1}, {0.7071, -0.7071}};
+			Each(P.SplatH, [&](const int32 Y) {
+				const double Z = B.minZ + (double(Y) + 0.5) / PerCell;
+				const int64 J = FMath::RoundToInt64((Z - G.minZ) / G.step);
+				for (int32 X = 0; X < P.SplatW; X++)
+				{
+					const double Xc = B.minX + (double(X) + 0.5) / PerCell;
+					const int64 I = FMath::RoundToInt64((Xc - G.minX) / G.step);
+					const double H0 = G.at(I, J);
+					double Open = 0, Ring = 0;
+					for (const auto& D : Dirs)
+					{
+						double Steep = 0;
+						for (const int32 R : Radii)
+						{
+							const double Rise = G.at(I + FMath::RoundToInt64(D[0] * R), J + FMath::RoundToInt64(D[1] * R)) - H0;
+							Steep = FMath::Max(Steep, Rise / (R * G.step));
+							if (R == 4) Ring += Rise;
+						}
+						Open += 1.0 - Steep / FMath::Sqrt(1.0 + Steep * Steep);
+					}
+					uint8* Px = &P.ReliefBytes[(Y * P.SplatW + X) * 4];
+					// BGRA in memory: R at 2, G at 1.
+					Px[2] = Byte(Open / 8);
+					Px[1] = Byte(0.5 + Ring / 8 * 0.5);
+					Px[3] = 255;
+				}
+			});
+			UE_LOG(LogAutocraft, Log, TEXT("ground: %s relief baked, %d x %d, %.0f ms"), UTF8_TO_TCHAR(Map.name.c_str()), P.SplatW, P.SplatH,
+				(FPlatformTime::Seconds() - BakeStart) * 1000.0);
+		}
 
 		// The ground: tiles of TileCells × TileCells cells, sharing their
 		// edge vertices (same heights and normals on both sides, no seam).
@@ -463,6 +509,22 @@ void AAcRegionGround::MakeMaterial()
 	Mip.BulkData.Unlock();
 	SplatTex->UpdateResource();
 	Prepared->SplatBytes.Empty();
+	if (Prepared->ReliefBytes.Num() == Prepared->SplatW * Prepared->SplatH * 4)
+	{
+		ReliefTex = UTexture2D::CreateTransient(Prepared->SplatW, Prepared->SplatH, PF_B8G8R8A8,
+			MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), TEXT("TerrainRelief")));
+		ReliefTex->SRGB = false;
+		ReliefTex->Filter = TF_Bilinear;
+		ReliefTex->AddressX = TA_Clamp;
+		ReliefTex->AddressY = TA_Clamp;
+		ReliefTex->CompressionSettings = TC_VectorDisplacementmap;
+		ReliefTex->NeverStream = true;
+		FTexture2DMipMap& ReliefMip = ReliefTex->GetPlatformData()->Mips[0];
+		FMemory::Memcpy(ReliefMip.BulkData.Lock(LOCK_READ_WRITE), Prepared->ReliefBytes.GetData(), Prepared->ReliefBytes.Num());
+		ReliefMip.BulkData.Unlock();
+		ReliefTex->UpdateResource();
+	}
+	Prepared->ReliefBytes.Empty();
 	SetParameters();
 	bMaterial = true;
 }
@@ -472,6 +534,8 @@ void AAcRegionGround::SetParameters()
 	if (!Mat) return;
 	const ac::GroundRect B = MapDef->bounds;
 	Mat->SetTextureParameterValue(TEXT("Splat"), SplatTex);
+	// The lab's relief bake (M_Terrain has no such parameter).
+	if (ReliefTex) Mat->SetTextureParameterValue(TEXT("Relief"), ReliefTex);
 	Mat->SetVectorParameterValue(TEXT("Origin"), FLinearColor(float(GridOrigin.x), float(GridOrigin.y), 0.f, 0.f));
 	// In world-grid cells (the material samples by them: `Origin`).
 	Mat->SetVectorParameterValue(TEXT("Bounds"), FLinearColor(float(B.minX + GridCentre.x), float(B.minZ + GridCentre.y), float(B.width()), float(B.depth())));

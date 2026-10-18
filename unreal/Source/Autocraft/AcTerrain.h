@@ -171,6 +171,9 @@ private:
 	TObjectPtr<UMaterialInstanceDynamic> Mat;
 	UPROPERTY(Transient)
 	TObjectPtr<UTexture2D> SplatTex;
+	/// The terrain lab's relief bake (occlusion, curvature), the splat's size.
+	UPROPERTY(Transient)
+	TObjectPtr<UTexture2D> ReliefTex;
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInterface> BaseMaterial;
 

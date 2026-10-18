@@ -243,6 +243,18 @@ def sheet(path: Path) -> None:
     print(f"sheet: {path}")
 
 
+def means() -> None:
+    """Each layer's mean colour, linear, into means.json: the lab material's
+    recolouring divides by it (a constant, not a texture read)."""
+    out = {}
+    for layer in LAYERS:
+        rgb = np.asarray(Image.open(OUT / f"TL_{layer.name}_CH.png").convert("RGB").resize((256, 256)), dtype=np.float64) / 255.0
+        lin = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
+        out[layer.name] = [round(float(v), 5) for v in lin.reshape(-1, 3).mean(0)]
+    (OUT / "means.json").write_text(json.dumps(out, indent=1))
+    print("means:", out)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--sheet", type=Path, help="also write a review sheet (JPG) here")
@@ -254,6 +266,7 @@ def main() -> None:
         notes = pack(layer, download(layer))
         for note in notes:
             print(f"  {note}")
+    means()
     if args.sheet:
         sheet(args.sheet)
 
