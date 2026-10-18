@@ -615,6 +615,9 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
     if (!openPart()) return out;
 
     enum class Placed { written, unchanged, noRoom };
+    // One item's bits at a time, written here and then placed (its bytes
+    // kept from item to item).
+    BitWriter oneItem;
     // `cand`: the item's bits; `owned`, the same bits shared (a fog chunk's)
     // or none yet (made only if it is written).
     auto consider = [&](Kind kind, uint64_t keyValue, const ItemBits& cand, std::shared_ptr<const ItemBits> owned,
@@ -629,7 +632,8 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
         }
         if (!owned) owned = std::make_shared<const ItemBits>(cand);
         const std::shared_ptr<const ItemBits>& bits = owned;
-        BitWriter item;
+        BitWriter& item = oneItem;
+        item.clear();
         item.writeBool(true);
         item.writeBits(static_cast<uint64_t>(kind), kKindBits);
         writeVarint(item, keyValue);

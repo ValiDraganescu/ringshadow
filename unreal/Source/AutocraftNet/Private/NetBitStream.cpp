@@ -56,7 +56,9 @@ void BitWriter::writeBits(uint64_t value, int bits) {
     // The bytes past `bits_` are zero (only these writes add to them): the
     // value's bytes ORed in, the first at the bit offset, in one pass.
     const size_t end = bits_ + static_cast<size_t>(bits);
-    bytes_.resize((end + 7) / 8, 0);
+    // A byte or two more, mostly: pushed (the vector's own growth, inline)
+    // rather than resized (a call each time).
+    for (const size_t need = (end + 7) / 8; bytes_.size() < need;) bytes_.push_back(0);
     uint8_t* b = bytes_.data() + bits_ / 8;
     const int offset = static_cast<int>(bits_ % 8);
     *b |= static_cast<uint8_t>(value << offset);

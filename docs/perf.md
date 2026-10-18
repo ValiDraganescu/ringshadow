@@ -1064,3 +1064,26 @@ past its bound).
 
 It also takes most of the point out of round 18's threads: the nest's
 step, the one heavy region, is a third of what it was.
+
+### Round 20: the writer's items on one writer (2026-10-18)
+
+With 16 pilots in the start region a pilot's snapshot writing
+(`SnapshotWriter::write`) is most of the server's tick (16 x 13 µs every
+third tick, against a step of 17-19 µs). Every item it wrote made a
+`BitWriter` of its own, its bytes allocated and freed; and every
+`BitWriter::writeBits` grew its bytes with `resize`, a call each time,
+for the one or two bytes it adds. Now one writer holds each item in turn
+(cleared, its room kept), and `writeBits` pushes the bytes it adds. The
+same bytes in the same order.
+
+| 4 runs each in turns, load 11-14 | before | after |
+|---|---:|---:|
+| `crowdbench 10`, 16 pilots: a pilot's write | 12.9-14.3 µs | 11.3-12.7 µs |
+| the tick (step and all the snapshots) | 96-108 µs | 88-99 µs |
+| `snapbench 20`, start at noon: write | 6.0-6.4 µs | 5.5-5.8 µs |
+| the nest at noon: write | 11.3-12.3 µs | 10.2-11.3 µs |
+
+The wires are the same (crowdbench's three, snapbench's four:
+fd5e5104ff08f662, 467fab1c80dd1394, 35325d9463465925, d4d978dd55fbf064);
+the net, server and core suites pass. Tried and left out: `writeBits`
+inline in the header for up to 56 bits (no difference beyond this).
