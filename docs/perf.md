@@ -724,3 +724,22 @@ the same as stamping that circle on cleared arrays, and the same ids seen.
 
 Every hash the same. A pilot's region looks by day in 2.2 µs: 63 µs before
 round 3.
+
+### Round 16: the save's statements prepared once (2026-10-18)
+
+`WorldStore::write` prepared an SQLite statement for every row it wrote
+(some 20 a save, every 5 s with a pilot on line) and finalized it after.
+The store now keeps each statement prepared by its text
+(`WorldStore::cached`, finalized before the file closes); a `Stmt` that
+borrows one resets it and clears its values first, and resets it again
+when done. The same SQL with the same values: the same rows.
+
+| `savebench 100`, 3 runs each in turns, load 15 | before ms | after ms |
+|---|---:|---:|
+| the store's write, p50 | 0.147-0.186 | 0.109-0.111 |
+| its mean | 0.197-0.227 | 0.142-0.178 |
+| the whole save, mean | 0.378-0.421 | 0.324-0.362 |
+
+The files both write are the same (`sqlite3 .dump`, byte for byte:
+savebench's clock is its own, so `saved_at` too). A small win: 0.06 ms
+every 5 s.

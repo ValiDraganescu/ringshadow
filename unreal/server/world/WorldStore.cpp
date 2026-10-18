@@ -18,7 +18,19 @@ namespace {
 class Stmt {
 public:
     Stmt(sqlite3* db, const std::string& sql) : db_(db) { status_ = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt_, nullptr); }
-    ~Stmt() { sqlite3_finalize(stmt_); }
+    /// One the store keeps prepared (`WorldStore::cached`): reset, its
+    /// values cleared, and reset again when done; not finalized here.
+    Stmt(sqlite3* db, sqlite3_stmt* kept) : db_(db), stmt_(kept), owned_(false) {
+        if (!stmt_) status_ = SQLITE_ERROR;
+        else {
+            sqlite3_reset(stmt_);
+            sqlite3_clear_bindings(stmt_);
+        }
+    }
+    ~Stmt() {
+        if (owned_) sqlite3_finalize(stmt_);
+        else if (stmt_) sqlite3_reset(stmt_);
+    }
     Stmt(const Stmt&) = delete;
     Stmt& operator=(const Stmt&) = delete;
 
@@ -88,6 +100,7 @@ private:
     int status_ = SQLITE_OK;
     bool failed_ = false;
     int at_ = 0;
+    bool owned_ = true;
 };
 
 /// Schema v1. Positions in the region's ground cells (the core's units).
@@ -323,7 +336,22 @@ std::unique_ptr<WorldStore> WorldStore::open(const std::string& path, const std:
     return s;
 }
 
-WorldStore::~WorldStore() { sqlite3_close(db_); }
+WorldStore::~WorldStore() {
+    for (auto& [sql, stmt] : statements_) sqlite3_finalize(stmt);
+    sqlite3_close(db_);
+}
+
+sqlite3_stmt* WorldStore::cached(const std::string& sql) {
+    const auto it = statements_.find(sql);
+    if (it != statements_.end()) return it->second;
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        sqlite3_finalize(stmt);
+        return nullptr;
+    }
+    statements_.emplace(sql, stmt);
+    return stmt;
+}
 
 bool WorldStore::exec(const std::string& sql, std::string* error) {
     char* message = nullptr;
@@ -571,7 +599,7 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
         }
         for (auto it = before.lower_bound(Key{region, INT64_MIN}); it != before.end() && it->first.first == region; ++it) {
             if (seen.count(it->first.second)) continue;
-            run(std::move(Stmt(db_, std::string("DELETE FROM ") + table + " WHERE region = ? AND " + key + " = ?")
+            run(std::move(Stmt(db_, cached(std::string("DELETE FROM ") + table + " WHERE region = ? AND " + key + " = ?"))
                               .text(region)
                               .integer(it->first.second)));
             n.removed += 1;
@@ -580,8 +608,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     for (const SavedRegion& r : save.regions) {
         const auto before = regions_.find(r.id);
         if (before == regions_.end() || before->second != std::tuple<double, int64_t>{r.time, r.nextId}) {
-            run(std::move(Stmt(db_, "INSERT INTO regions (region, time, next_id) VALUES (?, ?, ?) ON CONFLICT(region) DO UPDATE "
-                                    "SET time = excluded.time, next_id = excluded.next_id")
+            run(std::move(Stmt(db_, cached("INSERT INTO regions (region, time, next_id) VALUES (?, ?, ?) ON CONFLICT(region) DO UPDATE "
+                                    "SET time = excluded.time, next_id = excluded.next_id"))
                               .text(r.id)
                               .real(r.time)
                               .integer(r.nextId)));
@@ -589,9 +617,9 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
         }
         rowsOf(r.id, r.buildings, buildings_, [](const SavedBuilding& b) { return b.id; },
                [&](const SavedBuilding& b) {
-                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO buildings (region, id, kind, x, y, built_by, build_left, hp, "
+                   run(std::move(Stmt(db_, cached("INSERT OR REPLACE INTO buildings (region, id, kind, x, y, built_by, build_left, hp, "
                                            "mark_rate, mark_damage, mark_range, mark_air, kills) "
-                                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
                                      .text(r.id)
                                      .integer(b.id)
                                      .text(std::string(rawValue(b.kind)))
@@ -609,8 +637,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                "buildings", "id");
         rowsOf(r.id, r.units, units_, [](const SavedUnit& u) { return u.id; },
                [&](const SavedUnit& u) {
-                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO units (region, id, kind, x, y, heading, hp, cargo, hydrogen, "
-                                           "owner) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                   run(std::move(Stmt(db_, cached("INSERT OR REPLACE INTO units (region, id, kind, x, y, heading, hp, cargo, hydrogen, "
+                                           "owner) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
                                      .text(r.id)
                                      .integer(u.id)
                                      .text(std::string(rawValue(u.kind)))
@@ -625,7 +653,7 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                "units", "id");
         rowsOf(r.id, r.deposits, deposits_, [](const SavedDeposit& d) { return d.index; },
                [&](const SavedDeposit& d) {
-                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO deposits (region, idx, remaining, depleted_at, x, y) VALUES (?, ?, ?, ?, ?, ?)")
+                   run(std::move(Stmt(db_, cached("INSERT OR REPLACE INTO deposits (region, idx, remaining, depleted_at, x, y) VALUES (?, ?, ?, ?, ?, ?)"))
                                      .text(r.id)
                                      .integer(d.index)
                                      .integer(d.remaining)
@@ -636,7 +664,7 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                "deposits", "idx");
         rowsOf(r.id, r.wells, wells_, [](const SavedWell& w) { return w.index; },
                [&](const SavedWell& w) {
-                   run(std::move(Stmt(db_, "INSERT OR REPLACE INTO wells (region, idx, remaining, x, y) VALUES (?, ?, ?, ?, ?)")
+                   run(std::move(Stmt(db_, cached("INSERT OR REPLACE INTO wells (region, idx, remaining, x, y) VALUES (?, ?, ?, ?, ?)"))
                                      .text(r.id)
                                      .integer(w.index)
                                      .integer(w.remaining)
@@ -647,10 +675,10 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     }
     // The starfalls: a handful, written whole when any changed.
     if (starfalls_ != save.starfalls) {
-        run(Stmt(db_, "DELETE FROM starfalls"));
+        run(Stmt(db_, cached("DELETE FROM starfalls")));
         for (const SavedStarfall& f : save.starfalls)
-            run(std::move(Stmt(db_, "INSERT INTO starfalls (id, region, x, y, impact, bearing, patch, ore, remaining) "
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            run(std::move(Stmt(db_, cached("INSERT INTO starfalls (id, region, x, y, impact, bearing, patch, ore, remaining) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
                               .integer(f.id)
                               .text(f.region)
                               .real(f.at.x)
@@ -664,9 +692,9 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     }
     // The nests: one row a fallen Matriarch, written whole when any changed.
     if (nests_ != save.nests) {
-        run(Stmt(db_, "DELETE FROM nests"));
+        run(Stmt(db_, cached("DELETE FROM nests")));
         for (const SavedNest& x : save.nests)
-            run(std::move(Stmt(db_, "INSERT INTO nests (region, down_at, back_at) VALUES (?, ?, ?)")
+            run(std::move(Stmt(db_, cached("INSERT INTO nests (region, down_at, back_at) VALUES (?, ?, ?)"))
                               .text(x.region)
                               .real(x.downAt)
                               .real(x.backAt)));
@@ -674,9 +702,9 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     }
     // The canyons: one row a zone, written whole when any changed.
     if (canyons_ != save.canyons) {
-        run(Stmt(db_, "DELETE FROM canyons"));
+        run(Stmt(db_, cached("DELETE FROM canyons")));
         for (const SavedCanyon& x : save.canyons)
-            run(std::move(Stmt(db_, "INSERT INTO canyons (region, zone, state, wave, next) VALUES (?, ?, ?, ?, ?)")
+            run(std::move(Stmt(db_, cached("INSERT INTO canyons (region, zone, state, wave, next) VALUES (?, ?, ?, ?, ?)"))
                               .text(x.region)
                               .text(x.zone)
                               .integer(x.state)
@@ -686,15 +714,15 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     }
     // The frontier pilots (P1): one row, written whole when it changed.
     if (frontier_ != save.frontier) {
-        run(std::move(Stmt(db_, "INSERT INTO frontier (id, state) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET state = excluded.state")
+        run(std::move(Stmt(db_, cached("INSERT INTO frontier (id, state) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET state = excluded.state"))
                           .text(save.frontier)));
         n.changed += 1;
     }
     // The realm's projects (R2): every row written when any changed.
     if (projects_ != save.projects) {
-        run(Stmt(db_, "DELETE FROM realm_projects"));
+        run(Stmt(db_, cached("DELETE FROM realm_projects")));
         for (const SavedProject& x : save.projects)
-            run(std::move(Stmt(db_, "INSERT INTO realm_projects (kind, runs, ends, started_by) VALUES (?, ?, ?, ?)")
+            run(std::move(Stmt(db_, cached("INSERT INTO realm_projects (kind, runs, ends, started_by) VALUES (?, ?, ?, ?)"))
                               .text(x.kind)
                               .integer(x.runs)
                               .real(x.ends)
@@ -703,38 +731,38 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     }
     // The week's standings (S4): one row, written whole when it changed.
     if (standings_ != save.standings) {
-        run(std::move(Stmt(db_, "INSERT INTO standings (id, state) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET state = excluded.state")
+        run(std::move(Stmt(db_, cached("INSERT INTO standings (id, state) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET state = excluded.state"))
                           .text(save.standings)));
         n.changed += 1;
     }
     // The hunt (N4): one row, written whole when it changed.
     if (hunt_ != save.hunt) {
-        run(std::move(Stmt(db_, "INSERT INTO hunt (id, state) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET state = excluded.state")
+        run(std::move(Stmt(db_, cached("INSERT INTO hunt (id, state) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET state = excluded.state"))
                           .text(save.hunt)));
         n.changed += 1;
     }
     if (clock_ != save.clock) {
-        run(std::move(Stmt(db_, "INSERT INTO world_clock (id, time) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET time = excluded.time")
+        run(std::move(Stmt(db_, cached("INSERT INTO world_clock (id, time) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET time = excluded.time"))
                           .real(save.clock)));
         n.changed += 1;
     }
     if (savedAt_ != save.savedAt) {
         char at[40];
         std::snprintf(at, sizeof at, "%.6f", save.savedAt);
-        run(std::move(Stmt(db_, "INSERT INTO meta (key, value) VALUES ('saved_at', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+        run(std::move(Stmt(db_, cached("INSERT INTO meta (key, value) VALUES ('saved_at', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"))
                           .text(at)));
         n.changed += 1;
     }
     if (realm_ != std::pair{save.realmOre, save.realmHydrogen}) {
-        run(std::move(Stmt(db_, "INSERT INTO realm_wallet (id, ore, hydrogen) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET "
-                                "ore = excluded.ore, hydrogen = excluded.hydrogen")
+        run(std::move(Stmt(db_, cached("INSERT INTO realm_wallet (id, ore, hydrogen) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET "
+                                "ore = excluded.ore, hydrogen = excluded.hydrogen"))
                           .integer(save.realmOre)
                           .integer(save.realmHydrogen)));
         n.changed += 1;
     }
     // A new file's row has none (the columns' default).
     if (marks_.value_or(TurretMarks{}) != save.citadelMarks) {
-        run(std::move(Stmt(db_, "UPDATE realm_wallet SET mark_rate = ?, mark_damage = ?, mark_range = ? WHERE id = 1")
+        run(std::move(Stmt(db_, cached("UPDATE realm_wallet SET mark_rate = ?, mark_damage = ?, mark_range = ? WHERE id = 1"))
                           .integer(save.citadelMarks.rate)
                           .integer(save.citadelMarks.damage)
                           .integer(save.citadelMarks.range)));
@@ -743,9 +771,9 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
     for (const SavedPilot& p : save.pilots) {
         const auto before = pilots_.find(p.id);
         if (before != pilots_.end() && before->second == p) continue;
-        run(std::move(Stmt(db_, "INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels, progress, gated, contracts, rig, "
+        run(std::move(Stmt(db_, cached("INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels, progress, gated, contracts, rig, "
                                 "taxed_ore, taxed_hydrogen, donated_ore, donated_hydrogen, stacked, missions, mercs, goals, away) "
-                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
                           .text(p.id)
                           .integer(p.ore)
                           .integer(p.hydrogen)

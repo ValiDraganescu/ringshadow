@@ -19,9 +19,11 @@
 #include <optional>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 struct sqlite3;
+struct sqlite3_stmt;
 
 namespace ac::server {
 
@@ -285,6 +287,9 @@ private:
 
     sqlite3* db_ = nullptr;
     std::string path_;
+    /// The write's statements, prepared once by their text (`cached`).
+    std::unordered_map<std::string, sqlite3_stmt*> statements_;
+    sqlite3_stmt* cached(const std::string& sql);
     // What the file holds now, by key.
     std::map<std::string, std::tuple<double, int64_t>> regions_;
     std::map<std::pair<std::string, int64_t>, SavedBuilding> buildings_;
