@@ -170,7 +170,7 @@ deeds, the ledgers, the save, the wire bytes and the simulation's hashes.
 The benches are `make -C unreal/server bench` (-O3); the M4 Max is shared,
 so every number carries the load average it ran under.
 
-Where it stands after round 10 (the first number before round 1, or
+Where it stands after round 15 (the first number before round 1, or
 before the round that first measured it):
 
 | | before | now |
@@ -178,15 +178,19 @@ before the round that first measured it):
 | the server's start (The First, cold) | ~850 ms, 5.5 s CPU | ~300 ms, 2.7 s CPU |
 | the first step after a pilot joins | 12-25 ms | under 1 ms |
 | the world's step, one pilot (`worldbench`) | 0.030 ms | 0.005 ms |
-| a look by day, a pilot's region (`lookbench`) | 63 µs | 9.4 µs |
-| writing a pilot's snapshot (`snapbench`) | 44-70 µs | 6-13 µs |
-| 16 pilots in one region, a tick (`crowdbench`) | 230 µs | ~136 µs |
+| the nest's step (`worldbench ... nest`) | 0.054 ms | 0.040 ms |
+| a look by day, a pilot's region (`lookbench`) | 63 µs | 2.2 µs |
+| building and writing a pilot's snapshot (`snapbench`, start, noon) | 3 + 44-70 µs | 1.8 + 6.0 µs |
+| 16 pilots in one region, a tick (`crowdbench`) | 230 µs | ~100 µs |
+| a path search on the nest's grid (`pathbench`) | 10.5 µs | 9.0 µs |
 | the idle call, no pilot on line (`soak-save` days) | 0.073-0.120 ms | 0.007-0.009 ms |
 
 Every change kept the results: the wire's bytes, the save, and the
 simulation's state hashes in the benches are the same before and after.
 Round 3 found and fixed three reads of freed or dead memory in the nest's
-code (the only change of behaviour, where it read garbage).
+code (the only change of behaviour, where it read garbage). What is left in
+every busy scene is the Brood's path searches (half the nest's step; their
+order cannot change) and the look's clearing of its arrays.
 
 ### Round 1: the first board's walking grids (2026-10-18)
 
