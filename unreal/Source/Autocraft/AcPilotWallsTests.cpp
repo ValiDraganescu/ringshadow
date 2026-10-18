@@ -79,6 +79,14 @@ bool FAcPilotChaseWallsTest::RunTest(const FString&)
 	TArray<AcPilotWalls::FSlab> Small;
 	AcPilotWalls::SlabsOf(Hab, 0.0, Small);
 	TestTrue(TEXT("a Hab Dome is a low wall"), Small.Num() == 1 && Small[0].bLow);
+	// The hall's gun console (+x +y corner): the boom from the hall's middle
+	// toward it at desk height stops short of it, a low obstacle.
+	bool bConsoleLow = false;
+	const FVector A = AcSpace::ToWorld(ac::Vec2(2, 2), 1.0), B = AcSpace::ToWorld(ac::Vec2(4.8, 4.8), 1.0);
+	const double T = AcPilotWalls::Sweep(A, B, AcSpace::ToCm(R), Closed, &bConsoleLow);
+	const FVector At = A + (B - A) * T;
+	TestTrue(TEXT("the console stops the boom"), T < 1 && AcSpace::ToSim(At).x < 4.0);
+	TestTrue(TEXT("the console is low"), bConsoleLow);
 	AcSpace::SetOrigin(Was);
 	ac::Rules::setCitadelHall(bHall);
 	return true;

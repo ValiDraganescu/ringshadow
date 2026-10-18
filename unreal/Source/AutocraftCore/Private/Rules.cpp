@@ -124,6 +124,10 @@ bool Footprint::blocks(Vec2 local, bool doorOpen, double grow) const {
 
 bool Footprint::inside(Vec2 local) const { return interior && interior->contains(local); }
 
+bool Footprint::furnished(Vec2 local, double grow) const {
+    return std::any_of(furniture.begin(), furniture.end(), [&](const Block& b) { return b.z0 <= 0.1 && b.contains(local, grow); });
+}
+
 const Footprint& Rules::footprint(StructureKind k) {
     // docs/citadel-interior.md section 2. With the hall, the Citadel's walls
     // 1 thick round a 10x10 hall 6 high, the roof slab 6 to 7, the doorway
@@ -153,6 +157,21 @@ const Footprint& Rules::footprint(StructureKind k) {
             f.door = Slab{{-1.5, 5}, {1.5, 6}, 0, 3};
             f.interior = Slab{{-5, -5}, {5, 5}, 0, 6};
             f.roof = Slab{{-5, -5}, {5, 5}, 6, 7};
+            // What stands in the hall, from the Citadel's model
+            // (docs/citadel-interior.md section 2): each corner's gun
+            // console, a box turned onto the corner's diagonal, its front
+            // 0.51 from the gunner's point (±4, ±4), and the conduit over
+            // it; the ladder up the back wall and the door's inner panel
+            // (both within the walls' own grow of a walker, there for the
+            // cameras). The baseboards, the jamb strips and the doorway's
+            // reveals stand under 0.1 proud of the walls: left out.
+            for (int k = 0; k < 4; k++) {
+                const double sx = k == 0 || k == 3 ? 1 : -1, sy = k < 2 ? 1 : -1;
+                f.furniture.push_back(Block{{4.693 * sx, 4.693 * sy}, {0.470, 0.585}, std::atan2(sy, sx), 0.05, 1.681});
+                f.furniture.push_back(Block{{4.983 * sx, 4.983 * sy}, {0.06, 0.057}, 0, 1.55, 6.0});
+            }
+            f.furniture.push_back(Block{{1.2, -4.86}, {0.25, 0.026}, 0, 0.05, 4.95}); // the ladder
+            f.furniture.push_back(Block{{2.25, 4.96}, {0.22, 0.04}, 0, 0.92, 1.48});  // the door panel
         }
         return t;
     };

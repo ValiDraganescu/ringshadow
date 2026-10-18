@@ -59,15 +59,19 @@ NavGrid::NavGrid(const MapDefinition& map, const TerrainField& field) {
     height = static_cast<int64_t>((b.maxZ - b.minZ) / cell);
     auto cached = cache().get(key);
     auto c = cache().get(key + "|cliffs");
-    if (cached && c) {
+    auto r = cache().get(key + "|rocky");
+    if (cached && c && r) {
         ground = std::move(*cached);
         cliffs = std::move(*c);
+        rocky = std::move(*r);
     } else {
         Layers built = buildGround(map, field, origin, width, height);
         ground = std::move(built.ground);
         cliffs = std::move(built.cliffs);
+        rocky = std::move(built.rocky);
         cache().set(key, ground);
         cache().set(key + "|cliffs", cliffs);
+        cache().set(key + "|rocky", rocky);
     }
     for (const Doodad& d : map.doodads) {
         for (const Circle& k : circles(d)) rocks.push_back(k);
@@ -106,8 +110,19 @@ bool NavGrid::standable(Vec2 p) const {
     return i ? ground[static_cast<size_t>(*i)] != 0 : false;
 }
 
-/// `p` is inside a doodad's rock (cells are coarser than rocks' edges).
-bool NavGrid::inRock(Vec2 p) const {
+/// The rock whose circle grown by `grow` holds `p` (cells are coarser than
+/// rocks' edges), the one `p` is deepest in.
+std::optional<NavGrid::Circle> NavGrid::rockAt(Vec2 p, double grow) const {
+    grow = std::min(grow, rockGrowMax);
+    std::optional<Circle> best;
+    double deepest = 0;
+    auto test = [&](const Circle& r) {
+        const double depth = r.second + grow - distance(r.first, p);
+        if (depth > 0 && (!best || depth > deepest)) {
+            best = r;
+            deepest = depth;
+        }
+    };
     // Only the rocks whose box reaches `p`'s bucket can hold it; the test
     // per rock is the same, so the answer is too.
     if (rocksIndexed == rocks.size()) {
@@ -115,17 +130,12 @@ bool NavGrid::inRock(Vec2 p) const {
         if (bx >= 0 && bz >= 0 && bx < static_cast<double>(rockColumns) && bz < static_cast<double>(rockRows)) {
             const size_t b = static_cast<size_t>(static_cast<int64_t>(bz) * rockColumns + static_cast<int64_t>(bx));
             const Circle* rs = rocks.data();
-            for (int32_t k = rockStart[b], end = rockStart[b + 1]; k < end; k++) {
-                const Circle& r = rs[rockList[static_cast<size_t>(k)]];
-                if (distance(r.first, p) < r.second) return true;
-            }
-            return false;
+            for (int32_t k = rockStart[b], end = rockStart[b + 1]; k < end; k++) test(rs[rockList[static_cast<size_t>(k)]]);
+            return best;
         }
     }
-    for (const Circle& r : rocks) {
-        if (distance(r.first, p) < r.second) return true;
-    }
-    return false;
+    for (const Circle& r : rocks) test(r);
+    return best;
 }
 
 /// Rebuild the rock buckets from `rocks`.
@@ -133,9 +143,9 @@ void NavGrid::indexRocks() {
     rockColumns = static_cast<int64_t>(std::ceil(static_cast<double>(width) * cell / rockBucket));
     rockRows = static_cast<int64_t>(std::ceil(static_cast<double>(height) * cell / rockBucket));
     const size_t buckets = static_cast<size_t>(rockColumns * rockRows);
-    // A rock's box, a little grown so rounding at a bucket's edge never
-    // leaves it out.
-    const double pad = 0.01;
+    // A rock's box, grown by the most `rockAt` grows it and a little more,
+    // so rounding at a bucket's edge never leaves it out.
+    const double pad = rockGrowMax + 0.01;
     auto span = [&](const Circle& r, int64_t& x0, int64_t& x1, int64_t& z0, int64_t& z1) {
         const double g = r.second + pad;
         x0 = std::max<int64_t>(0, static_cast<int64_t>(std::floor((r.first.x - g - origin.x) / rockBucket)));
@@ -295,6 +305,7 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
                                      int64_t height_) {
     std::vector<uint8_t> out(static_cast<size_t>(width_ * height_), 0);
     std::vector<uint8_t> cliff(static_cast<size_t>(width_ * height_), 0);
+    std::vector<uint8_t> rocky(static_cast<size_t>(width_ * height_), 0);
     const double c = clearance, e = cell / 2;
     std::vector<Circle> doodads;
     for (const Doodad& d : map.doodads) {
@@ -305,6 +316,7 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
     for (const WellSpec& w : map.wells) wells.push_back(w.position);
     uint8_t* ptr = out.data();
     uint8_t* cptr = cliff.data();
+    uint8_t* rptr = rocky.data();
     const std::function<double(Vec2)> heightAt = [&field](Vec2 q) { return field.height(q); };
     const bool walls = map.edges && !map.edges->outline.empty();
     auto row = [&](int64_t z) {
@@ -323,11 +335,13 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
                 }();
                 if (!open) continue;
             }
-            bool blocked = false;
+            // A doodad's cell is no ground; it is `rocky` if nothing else
+            // leaves it out (a driven unit meets the rock's circle there).
+            bool rock = false;
             for (const Circle& k : doodads) {
-                if (distance(k.first, p) < k.second + c) { blocked = true; break; }
+                if (distance(k.first, p) < k.second + c) { rock = true; break; }
             }
-            if (blocked) continue;
+            bool blocked = false;
             for (Vec2 w : wells) {
                 if (distance(w, p) < 1.5 + c) { blocked = true; break; }
             }
@@ -347,7 +361,13 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
                 const double dz = (field.height(q + Vec2(0, e)) - field.height(q - Vec2(0, e))) / cell;
                 steep = std::sqrt(dx * dx + dz * dz) > maxSlope;
             }
-            if (steep) cptr[z * width_ + x] = 1; else ptr[z * width_ + x] = 1;
+            if (rock) {
+                if (!steep) rptr[z * width_ + x] = 1;
+            } else if (steep) {
+                cptr[z * width_ + x] = 1;
+            } else {
+                ptr[z * width_ + x] = 1;
+            }
         }
     };
     // Rows in parallel (Swift's `DispatchQueue.concurrentPerform`): each
@@ -361,7 +381,7 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
     }
     for (int64_t z = 0; z < height_; z += threads) row(z);
     for (std::thread& th : pool) th.join();
-    return Layers{std::move(out), std::move(cliff)};
+    return Layers{std::move(out), std::move(cliff), std::move(rocky)};
 }
 
 /// Rebuild the building and ore layer when either changed (or a

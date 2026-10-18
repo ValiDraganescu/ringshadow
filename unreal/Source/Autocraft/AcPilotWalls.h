@@ -5,6 +5,10 @@
 // walk and the shelter. The door's slab is solid while the door is not open
 // (`open < 0.95`); a Citadel's roof is the hall's ceiling.
 //
+// The hall's furniture (`Footprint::furniture`, the gun consoles) is in the
+// list as its bounds: the consoles are under `LowWall`, so the boom lifts
+// over them.
+//
 // The third-person boom (`FAcPilotChase::Follow`) sweeps a sphere of
 // `ChaseRadius` from its pivot to the camera and stops it at the first
 // slab; the first-person eye (`FAcPilotCamera`'s, through `ClampEye`) sweeps

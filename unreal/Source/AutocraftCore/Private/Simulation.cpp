@@ -3476,7 +3476,7 @@ void Simulation::leap(Unit& u, Vec2 from, Vec2 next) const {
 /// The first walkable spot from `p` toward `next`, in 0.2-cell steps
 /// (where a jump over a cliff face comes down); nil if there is none
 /// before `next`.
-std::optional<Vec2> Simulation::landing(Vec2 p, Vec2 next) const {
+std::optional<Vec2> Simulation::landing(Vec2 p, Vec2 next, const Unit* driven) const {
     if (!nav) return std::nullopt;
     const Vec2 d = next - p;
     const double len = length(d);
@@ -3485,7 +3485,7 @@ std::optional<Vec2> Simulation::landing(Vec2 p, Vec2 next) const {
     const int64_t steps = static_cast<int64_t>(len / 0.2);
     for (int64_t k = 1; k <= steps; k++) {
         const Vec2 q = p + d / len * (static_cast<double>(k) * 0.2);
-        if (nav->walkable(q)) return q;
+        if (nav->walkable(q) && (!driven || pilotCanStand(*driven, q))) return q;
     }
     return std::nullopt;
 }

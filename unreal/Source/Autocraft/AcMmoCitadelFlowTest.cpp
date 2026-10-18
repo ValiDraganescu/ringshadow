@@ -20,7 +20,9 @@
 //             third-person view from 7 cells out at the wheel's zoom 0.45, 1
 //             and 2.6 (tps-zoom-0.45.png ...), then the same with the build
 //             menu's first building held out (tps-place-0.45.png ...; a
-//             refusal noted in the log instead); then first person again.
+//             refusal noted in the log instead); then up against the
+//             nearest rock, seen from the side (tps-rock.png, the gap from
+//             its footprint circle logged); then first person again.
 //             At the gun the wheel must leave the zoom alone.
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
@@ -216,7 +218,8 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	{
 	case 2:
 		// The door shut, a picture of it from out on the field, then to the doorstep.
-		if (!Hall.bShot && Pictures())
+		// (-AcMmoShotsTps's walk to a rock leaves the apron.)
+		if (!Hall.bShot && Pictures() && Hall.Tps <= 2 * int32(UE_ARRAY_COUNT(TpsZooms)))
 		{
 			// A few cells before the apron (the open ramp reaches 3 out),
 			// facing the door; the new Citadel and the ground streamed in.
@@ -225,15 +228,63 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 			if (!Settle(10.0)) return;
 		}
 		// -AcMmoShotsTps: third person at each zoom, then a building held out.
-		if (bTps && Hall.Tps <= 2 * int32(UE_ARRAY_COUNT(TpsZooms)))
+		if (bTps && Hall.Tps <= 2 * int32(UE_ARRAY_COUNT(TpsZooms)) + 2)
 		{
 			constexpr int32 Zooms = int32(UE_ARRAY_COUNT(TpsZooms));
 			if (Hall.Tps == 2 * Zooms)
 			{
-				// The last picture taken (a frame or more later): the view back.
+				// The last picture taken (a frame or more later): the building
+				// dropped, the zoom back to 1.
 				if (Now - Hall.TpsAt < 1.0) return;
 				if (Pilot->OnKey) Pilot->OnKey(TEXT("esc"));
 				Pilot->SetChaseZoom(1.f, true);
+				Hall.Tps += 1;
+				Hall.TpsAt = -1;
+				T.PhaseAt = Now;
+				return;
+			}
+			if (Hall.Tps == 2 * Zooms + 1)
+			{
+				// Up against the nearest rock (a single circle), then seen from its side.
+				TOptional<ac::NavGrid::Circle> Rock;
+				for (const ac::Doodad& D : S->map ? S->map->doodads : std::vector<ac::Doodad>())
+				{
+					const std::vector<ac::NavGrid::Circle> K = ac::NavGrid::circles(D);
+					if (D.kind != ac::Doodad::Kind::rock || K.size() != 1 || ac::distance(K[0].first, U->position) > 14) continue;
+					if (!Rock || ac::distance(K[0].first, U->position) < ac::distance(Rock->first, U->position)) Rock = K[0];
+				}
+				if (!Rock)
+				{
+					UE_LOG(LogAutocraft, Display, TEXT("flowtest: tps: no rock within 14 cells"));
+					Hall.Tps += 1;
+					Hall.TpsAt = Now;
+					return;
+				}
+				const ac::Vec2 D = Rock->first - U->position;
+				const double Keep = Rock->second + ac::NavGrid::clearance;
+				if (Hall.TpsAt < 0)
+				{
+					if (ac::length(D) > Keep + 0.08 && Since() < 12)
+					{
+						Pilot->SetTestInput(FVector2D(0, -1), std::atan2(D.y, D.x));
+						return;
+					}
+					Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x) + UE_DOUBLE_PI / 2);
+					Hall.TpsAt = Now;
+					return;
+				}
+				if (Now - Hall.TpsAt < 1.5) return;
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: tps: against the rock: the unit's centre %.3f cells off the footprint circle (r %.2f; the walk keeps %.2f)"),
+					ac::length(D) - Rock->second, Rock->second, ac::NavGrid::clearance);
+				Picture(TEXT("tps-rock"));
+				Hall.Tps += 1;
+				Hall.TpsAt = Now;
+				return;
+			}
+			if (Hall.Tps == 2 * Zooms + 2)
+			{
+				// The picture taken: first person again.
+				if (Now - Hall.TpsAt < 1.0) return;
 				if (Hall.bTpsToggled) Pilot->ToggleView();
 				Hall.Tps += 1;
 				T.PhaseAt = Now;

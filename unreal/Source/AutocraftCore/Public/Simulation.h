@@ -528,8 +528,10 @@ public:
     bool offCourse(const Unit& u, Vec2 from) const;
     /// A Comet stepping onto a cliff face jumps it.
     void leap(Unit& u, Vec2 from, Vec2 next) const;
-    /// The first walkable spot from `p` toward `next`, in 0.2-cell steps.
-    std::optional<Vec2> landing(Vec2 p, Vec2 next) const;
+    /// The first walkable spot from `p` toward `next`, in 0.2-cell steps;
+    /// for a driven unit (`driven`) one it can stand on (`pilotCanStand`:
+    /// clear of the rocks' grown circles too).
+    std::optional<Vec2> landing(Vec2 p, Vec2 next, const Unit* driven = nullptr) const;
     /// Turn toward `target`; true when facing it within a small angle.
     bool turn(Unit& u, Vec2 target, double dt, double rate = Rules::prospectorTurnRate) const;
     /// Walk toward `target` until within `stopAt`; true on arrival.

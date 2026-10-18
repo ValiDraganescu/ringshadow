@@ -122,7 +122,7 @@ bool Simulation::pilotJump(Unit& u, Vec2 step) {
     const Vec2 next = u.position + step;
     if (pilotCanStand(u, next) || !nav->cliff(next)) return false;
     const double reach = boost(Stat::JumpReach{}, u).apply(pilotJumpReach);
-    const auto land = landing(next, next + normalize(step) * reach);
+    const auto land = landing(next, next + normalize(step) * reach, &u);
     if (!land || !pilotCanStand(u, *land)) return false;
     // The jet pack's MH (F1b): the cargo first, then the wallet.
     if (int64_t cost = pilotJumpHydrogen(u); cost > 0) {

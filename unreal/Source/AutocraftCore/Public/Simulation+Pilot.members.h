@@ -48,10 +48,20 @@ public:
     /// minimum range on the sight: the shell would land on it.
     void pilotMiss(Unit& u, std::vector<GameEvent>& events);
 
-    /// Walk in the unit's own frame; blocked, it slides along whichever axis
-    /// is still open (a jumper takes off at a cliff face instead). Wheels
+    /// Walk in the unit's own frame; blocked, it slides along what blocks it
+    /// (`pilotSlide`; a jumper takes off at a cliff face instead). Wheels
     /// and treads do not sidestep; an anchored Longbow creeps (`Pilot.pace`).
     void pilotWalk(Unit& u, Vec2 walk, double dt);
+
+    /// The full step `d` is blocked: a step along what blocks it instead
+    /// (the step on the blocker's tangent, then the world axes, then the
+    /// step turned 25° and 50°), never back against `d`. Nil: no way.
+    std::optional<Vec2> pilotSlide(const Unit& u, Vec2 d) const;
+
+    /// What keeps the unit out of `to`, seen from `from`: the blocker's
+    /// outward normal at its point nearest `from`; for ground the grid
+    /// leaves out, the way the open ground round `from` lies.
+    std::optional<Vec2> pilotContact(const Unit& u, Vec2 from, Vec2 to) const;
 
     /// Nothing solid at `p` for the unit: open ground, clear of buildings
     /// and live ore deposits (a flyer goes anywhere on the map).

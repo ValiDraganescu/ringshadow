@@ -272,3 +272,74 @@ Known: `balance_aScorpionLosesToWhatSpotsItFirst` fails. With a Sentinel
 spotting the buried Scorpion, four Rangers now see it from 12 cells, walk in
 together to their range of 5, which is the sting's reach, and one sting with
 its splash kills all four.
+
+## Third person (2026-10-18)
+
+The user, driving in third person: the view needed a wheel to look over a
+building site; the unit sat left of the centre and did not go where the
+cursor pointed; it kept getting stuck on rocks and scenery.
+
+**Zoom.** The mouse wheel zooms the chase camera (`IA_PilotZoom`,
+`FAcPilotChase::FZoom`): the boom times a factor in [0.45, 2.6], 12% a
+notch, at most three notches an event (a trackpad's flick), eased to 95% in
+0.15 s. Past 1 the camera tilts down, smoothly, up to 25° more than the mouse
+pitch at 2.6: the far end is a view over the site. The factor is kept in
+`UAcSettings::ChaseZoom` when a ride ends. First person, at a gun, with the
+pointer out or the world map open, the wheel does nothing. While a building
+is held out the boom eases out to at least 1.8 (12.5° of tilt), because the
+centred unit hid the ghost right ahead of it at 0.45; the player's zoom comes
+back once the building is placed or dropped.
+
+**Centred, and the walk follows the camera.** The boom's pivot sat
+0.4 + 0.45·reach cells right of the unit (0.85 for a Prospector). The unit
+faces what the sight falls on, so at close range its forward was the line
+from the unit to that point, a visible angle off the camera's forward, and W
+walked along it. Now the offset is `ac.Chase.Shoulder`, cells at reach 1
+(0.12 by default; 0 centred; 0.85 the old boom), grown with the reach as
+before. On foot in third person W is the camera's forward across the ground
+and A/D its right (`AcPilotAim::ChaseWalk`), turned into the unit's frame
+and pre-scaled for backing (×0.6) and sidestepping (×0.8) (`Pilot::walkAlong`),
+so the step runs exactly along the camera's line whichever way the unit
+faces. Walking with the act key up and no target under the sight, the unit
+faces the camera's yaw (`AcPilotAim::ChaseHeading`); with act held or a target
+under the sight, the crosshair's point, as before. The turn between the two
+eases over about 0.06 s; the mouse's turns stay immediate. The eye, the shots
+and the sight are as before; first person and vehicles are unchanged. All of
+it is the client's: the server takes the walk and the heading as it always did.
+
+**Sliding along what blocks.** `Simulation::pilotWalk` tried the step, then
+its x, then its y: world-axis slides, poor against a round rock or a slanted
+edge. Now, blocked, `pilotSlide` tries in order: the step projected on the
+blocker's tangent at the contact (`pilotContact`: a rock's circle, a
+building's wall or door slab, the hall's furniture, an ore deposit's turned
+box, each by its point nearest the unit; for a cliff, a well, a region's
+wall or edge, the way the open ground round the unit lies); the old axis
+slides; the step turned 25°, then 50°, the side away from the blocker first.
+Never a step with a negative dot against the one wanted, and never onto
+ground the unit can't stand on: in a concave corner it stands still.
+
+**The rocks' teeth.** The map's rocks blocked a driven unit by the nav
+grid's half-cell cells (a cell out when its centre is within the rock's
+circle + 0.35): a staircase round each rock. Measured on the home map
+(10 open rocks × 360 directions), a walker stopped from 0.005 to 0.680 cells
+past the footprint circle, 0.312 on average. The footprints aren't padded
+past the models (a rock's 0.55 against its model's half size of 0.56 to
+0.71; a boulder's 1.15 plus a 0.45 lobe against 1.5 by 1.2): the teeth were
+the trouble, and they caught the slide. Now `NavGrid::rocky` marks the cells
+left out only for the map's doodads, and there the rock's circle grown by
+0.35 decides (`NavGrid::rockAt`): exactly 0.35 all round. A cliff jump lands
+only where the pilot can stand (`Simulation::landing`, `driven`). The AI's
+grid is unchanged; a unit handed back where it has no ground (beside a rock,
+or nearer a wall than its cells allow) steps onto the nearest free ground
+(`Simulation::take`), so the AI walks on and `trapped` never takes it for
+boxed in. The Prospector up against a rock, its centre 0.359 off
+the circle: art/perf/tps-feel/tps-rock.jpg.
+
+The hall's gun consoles block the walk and the cameras too
+(`Footprint::furniture`, docs/citadel-interior.md section 2).
+
+Tests: `Autocraft.Pilot.ChaseZoomClamps`, `Autocraft.Pilot.WalkFollowsTheCamera`,
+`Autocraft.Pilot.ChaseStopsAtWalls` (the console); core `pilot_slidesAlongARock`,
+`pilot_roundsACorner`, `pilot_standsAtEveryStationButNotInTheConsole`,
+`pilot_handedBackBesideARockStepsOntoTheGrid`.
+Pictures: `-AcFlowTest=mmocitadel -AcMmoShots=DIR -AcMmoShotsTps`.

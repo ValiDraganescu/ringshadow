@@ -49,6 +49,10 @@ void AcPilotWalls::SlabsOf(const ac::Structure& S, const double GroundCells, TAr
 	for (const ac::Slab& W : F.walls) Add(W, S.position, GroundCells, Sink, Out);
 	if (F.door && !(S.door && S.door->open >= 0.95)) Add(*F.door, S.position, GroundCells, Sink, Out);
 	if (F.roof) Add(*F.roof, S.position, GroundCells, Sink, Out);
+	// The hall's furniture (the consoles, turned: their bounds), low
+	// obstacles the boom looks over; only once the Citadel is complete.
+	if (F.interior && S.complete())
+		for (const ac::Block& B : F.furniture) Add(B.bounds(), S.position, GroundCells, Sink, Out);
 }
 
 void AcPilotWalls::Gather(UWorld* World, const ac::Vec2 Near, TArray<FSlab>& Out)

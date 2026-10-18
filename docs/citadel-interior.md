@@ -91,13 +91,29 @@ the open doorway is walkable):
 | interior | [-5, 5] | [-5, 5] | [0, 6] |
 | roof | [-5, 5] | [-5, 5] | [6, 7] |
 
+`furniture` (2026-10-18, the user: "in the Citadel I can clip through the
+turret terminal"): what stands in the hall, from the model, as turned boxes
+(`Block`: centre, half sides, angle). Each corner's gun console is a box on
+the corner's diagonal, centre (±4.693, ±4.693), half 0.470 along the diagonal
+and 0.585 across, z 0.05 to 1.681, its front 0.51 from the gunner's point
+(±4, ±4); over it the conduit to the ceiling; the ladder on the back wall and
+the door's inner panel. The walk is refused on furniture grown by
+radius·0.8 (`Footprint::furnished`; 0.30 for a Prospector, so the gunner's
+point keeps 0.21 to spare); `blocks` leaves it out, so shelter and the Brood
+are as before; the cameras sweep its bounds as low slabs (section 6). The
+baseboards, jamb strips and doorway reveals stand under 0.1 proud of the
+walls, inside the walls' own grow: left out.
+
 Who uses it:
 
 - `Simulation::pilotCanStand` (`Pilot.cpp`): a **human-driven** unit is
   refused where `footprint.blocks(p - s.position, doorOpen(s), radius·0.8)`
-  for a complete Citadel with the hall, the whole square for anything else
-  (a Citadel's scaffold too). So a pilot walks through the open door and
-  around the hall; the slide along x then y stays. A map doodad inside a
+  or `footprint.furnished(p - s.position, radius·0.8)` for a complete
+  Citadel with the hall, the whole square for anything else (a Citadel's
+  scaffold too). So a pilot walks through the open door and around the hall;
+  blocked, it slides along the wall or the console it meets
+  (`Simulation::pilotSlide`, docs/shooter-feel.md "Third person
+  (2026-10-18)"). A map doodad inside a
   complete Citadel's bounding square + 1 (`Simulation::swallowedByCitadel(Vec2)`,
   a saved world's Citadel grown over its rocks) blocks no pilot: its rock
   circles and the cells the grid left out for it (`swallowedDoodadCell`) are

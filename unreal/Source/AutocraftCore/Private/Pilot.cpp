@@ -39,6 +39,13 @@ bool Simulation::take(std::optional<int64_t> unit) {
                 u.jumpFrom = std::nullopt;
                 u.jumpTo = std::nullopt;
             }
+            // Driven, it stood where the AI's grid has no ground (beside a
+            // rock, by a building's wall: `pilotCanStand` is closer than the
+            // grid's cells): onto the nearest free ground, so the AI walks
+            // on from there and `trapped` never takes it for boxed in.
+            if (nav && !u.stats().air && !standsInHall(u) && !nav->walkable(u.position)) {
+                if (const auto out = nav->nearestFree(u.position, 3)) u.position = *out;
+            }
             if (u.task == Unit::Task::attacking) {
                 u.task = Unit::Task::idle;
                 u.target = std::nullopt;
@@ -320,8 +327,8 @@ void Simulation::pilotMiss(Unit& u, std::vector<GameEvent>& events) {
                                        off * std::sin(turn)});
 }
 
-/// Walk in the unit's own frame; blocked, it slides along whichever axis
-/// is still open (a jumper takes off at a cliff face instead). Wheels
+/// Walk in the unit's own frame; blocked, it slides along what blocks it
+/// (`pilotSlide`; a jumper takes off at a cliff face instead). Wheels
 /// and treads do not sidestep; an anchored Longbow creeps (`Pilot.pace`).
 void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
     const double pace = Pilot::pace(u);
@@ -342,17 +349,92 @@ void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
     const Vec2 d = dir * speed;
     if (pilotJumps(u) && pilotJump(u, d)) return;
     const Vec2 from = u.position;
-    for (const Vec2 step : {d, Vec2(d.x, 0), Vec2(0, d.y)}) {
-        if (!(length(step) > 1e-9)) continue;
-        if (pilotCanStand(u, u.position + step)) {
-            u.position += step;
-            break;
-        }
-    }
+    if (pilotCanStand(u, from + d)) u.position += d;
+    else if (const std::optional<Vec2> step = pilotSlide(u, d)) u.position += *step;
     u.stride += distance(from, u.position);
     // How fast it went, for its gun's cone.
     const double full = Rules::speed(u.kind) * dt;
     pilotPace = full > 0 ? distance(from, u.position) / full : 0;
+}
+
+/// The full step `d` is blocked: a step along what blocks it instead
+/// (docs/shooter-feel.md "Third person (2026-10-18)"). In order: the step
+/// projected on the blocker's tangent at the contact (`pilotContact`),
+/// turned the way the step leans; the world axes' slides; the step turned
+/// 25° and 50° to either side, the side away from the blocker first. Never
+/// a step back against the one wanted, and only onto ground it can stand
+/// on: in a concave corner it stands. Nil: no way.
+std::optional<Vec2> Simulation::pilotSlide(const Unit& u, Vec2 d) const {
+    const Vec2 from = u.position;
+    auto open = [&](Vec2 s) { return length(s) > 1e-9 && dot(s, d) >= 0 && pilotCanStand(u, from + s); };
+    const std::optional<Vec2> n = pilotContact(u, from, from + d);
+    if (n) {
+        Vec2 t(-n->y, n->x);
+        if (dot(t, d) < 0) t = -t;
+        if (const Vec2 s = t * dot(d, t); open(s)) return s;
+    }
+    for (const Vec2 s : {Vec2(d.x, 0), Vec2(0, d.y)}) {
+        if (open(s)) return s;
+    }
+    for (const double a : {25.0, 50.0}) {
+        const double ca = std::cos(a * pi / 180), sa = std::sin(a * pi / 180);
+        const Vec2 l(d.x * ca - d.y * sa, d.x * sa + d.y * ca), rr(d.x * ca + d.y * sa, -d.x * sa + d.y * ca);
+        // Away from the blocker first (with no contact known, the left).
+        const bool leftFirst = !n || dot(l, *n) >= dot(rr, *n);
+        for (const Vec2 s : {leftFirst ? l : rr, leftFirst ? rr : l}) {
+            if (open(s)) return s;
+        }
+    }
+    return std::nullopt;
+}
+
+/// What keeps the unit out of `to`, seen from `from`: the outward normal of
+/// the blocker at the point of it nearest `from` (a rock's circle, a
+/// building's slab or furniture, an ore deposit's box). For ground the grid
+/// leaves out (a cliff, a well, a region's wall or edge), the way the open
+/// ground round `from` lies. Nil: nothing blocks, or no way is open.
+std::optional<Vec2> Simulation::pilotContact(const Unit& u, Vec2 from, Vec2 to) const {
+    auto away = [&](Vec2 near) -> std::optional<Vec2> {
+        const Vec2 n = from - near;
+        const double len = length(n);
+        return len > 1e-9 ? std::optional<Vec2>(n / len) : std::nullopt;
+    };
+    const double r = Rules::radius(u.kind) * 0.8;
+    if (!u.stats().air) {
+        if (nav && !swallowedByCitadel(to)) {
+            if (const auto rock = nav->rockAt(to, NavGrid::clearance)) return away(rock->first);
+        }
+        for (const Structure& s : state.structures) {
+            if (Rules::walkable(s.kind) || !NavGrid::insideStructure(to, s, r)) continue;
+            const Footprint& f = Rules::footprint(s.kind);
+            const Vec2 at = to - s.position, seen = from - s.position;
+            auto nearestOf = [&](const Slab& w) {
+                return s.position + Vec2(std::max(w.min.x, std::min(w.max.x, seen.x)), std::max(w.min.y, std::min(w.max.y, seen.y)));
+            };
+            if (!f.interior || !s.complete()) return away(nearestOf(Slab{{-f.radius, -f.radius}, {f.radius, f.radius}}));
+            for (const Slab& w : f.walls) {
+                if (w.z0 <= 0 && w.contains(at, r)) return away(nearestOf(w));
+            }
+            if (f.door && !doorOpen(s) && f.door->contains(at, r)) return away(nearestOf(*f.door));
+            for (const Block& b : f.furniture) {
+                if (b.z0 <= 0.1 && b.contains(at, r)) return away(s.position + b.nearest(seen));
+            }
+        }
+        for (const OreDeposit& m : state.patches) {
+            if (!(m.remaining > 0 && NavGrid::insidePatch(to, m, r - 0.1))) continue;
+            const Block box{m.position, Vec2(1, 0.5), -m.angle};
+            return away(box.nearest(from));
+        }
+    }
+    // The grid's ground (or the map's bounds for a flyer): the open
+    // directions round `from`, summed.
+    Vec2 sum(0, 0);
+    for (int k = 0; k < 16; k++) {
+        const Vec2 dir(std::cos(k * pi / 8), std::sin(k * pi / 8));
+        if (pilotCanStand(u, from + dir * 0.3)) sum += dir;
+    }
+    const double len = length(sum);
+    return len > 1e-6 ? std::optional<Vec2>(sum / len) : std::nullopt;
 }
 
 /// Nothing solid at `p` for the unit: open ground, clear of buildings
@@ -371,10 +453,14 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
     }
     // A map doodad a complete Citadel swallowed (a saved world's Citadel
     // grown over its rocks, C1) is not there: the game hides it.
+    // The map's rocks are their circles grown by the grid's clearance, not
+    // the grid's cells round them (a staircase up to 0.35 cells deeper,
+    // which caught a walker sliding along a rock): their cells are
+    // `rocky`, and the circles decide.
     if (nav) {
         const bool swallowed = swallowedByCitadel(p);
-        if (!nav->standable(p) && !(swallowed && swallowedDoodadCell(p))) return false;
-        if (!swallowed && nav->inRock(p)) return false;
+        if (!nav->standable(p) && !nav->rockyCell(p) && !(swallowed && swallowedDoodadCell(p))) return false;
+        if (!swallowed && nav->rockAt(p, NavGrid::clearance)) return false;
     }
     const double r = Rules::radius(u.kind) * 0.8;
     // A complete Citadel with the hall blocks by its walls and its shut door
@@ -384,7 +470,7 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
             if (Rules::walkable(s.kind) || !NavGrid::insideStructure(p, s, r)) return false;
             const Footprint& f = Rules::footprint(s.kind);
             if (!f.interior || !s.complete()) return true;
-            return f.blocks(p - s.position, doorOpen(s), r);
+            return f.blocks(p - s.position, doorOpen(s), r) || f.furnished(p - s.position, r);
         })) {
         return false;
     }

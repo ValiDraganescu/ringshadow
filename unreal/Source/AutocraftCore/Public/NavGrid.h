@@ -169,6 +169,11 @@ struct AUTOCRAFTCORE_API NavGrid {
     /// Cliff faces a Comet can jump: too steep to walk, but clear of
     /// doodads and wells and in play.
     std::vector<uint8_t> cliffs;
+    /// Cells `ground` leaves out only for the map's doodads (their circles
+    /// grown by `clearance`, measured from the cell's centre): a driven unit
+    /// tests the rocks' circles there instead (`Simulation::pilotCanStand`),
+    /// so it meets a round rock, not the grid's staircase round it.
+    std::vector<uint8_t> rocky;
     /// The doodads' solid circles, for exact checks inside a free cell:
     /// the map's, then those put down in the playground (`setDynamic`).
     std::vector<Circle> rocks;
@@ -199,6 +204,9 @@ struct AUTOCRAFTCORE_API NavGrid {
     /// `inRock`: bucket `b` holds `rockList[rockStart[b] ..< rockStart[b + 1]]`,
     /// every rock whose circle's box reaches it. Rebuilt with `rocks`.
     static constexpr double rockBucket = 2.0;
+    /// The most `inRock` may grow a rock by (the buckets hold rocks this
+    /// much bigger).
+    static constexpr double rockGrowMax = 0.5;
     int64_t rockColumns = 0, rockRows = 0;
     std::vector<int32_t> rockStart, rockList;
     size_t rocksIndexed = 0;
@@ -255,7 +263,15 @@ struct AUTOCRAFTCORE_API NavGrid {
     bool standable(Vec2 p) const;
 
     /// `p` is inside a doodad's rock (cells are coarser than rocks' edges).
-    bool inRock(Vec2 p) const;
+    bool inRock(Vec2 p) const { return rockAt(p, 0).has_value(); }
+    /// The rock whose circle grown by `grow` (at most `rockGrowMax`) holds
+    /// `p`, the nearest of them to its edge; nil: none.
+    std::optional<Circle> rockAt(Vec2 p, double grow) const;
+    /// `p`'s cell is left out of `ground` only for the map's doodads.
+    bool rockyCell(Vec2 p) const {
+        const auto i = index(p);
+        return i && !rocky.empty() && rocky[static_cast<size_t>(*i)] != 0;
+    }
 
     /// `p` is on a cliff face a Comet can jump (and no building covers it).
     bool cliff(Vec2 p) const;
@@ -281,8 +297,9 @@ struct AUTOCRAFTCORE_API NavGrid {
     /// here are pushed out.
     static bool solid(Vec2 p, const GameState& s);
 
-    /// `(ground: [Bool], cliffs: [Bool])`.
-    struct Layers { std::vector<uint8_t> ground, cliffs; };
+    /// `(ground: [Bool], cliffs: [Bool])`, and the cells left out only for
+    /// doodads (`rocky`).
+    struct Layers { std::vector<uint8_t> ground, cliffs, rocky; };
     static Layers buildGround(const MapDefinition& map, const TerrainField& field, Vec2 origin_, int64_t width_,
                               int64_t height_);
 

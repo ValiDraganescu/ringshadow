@@ -6,6 +6,7 @@
 
 #include "SimdMath.h"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -221,6 +222,40 @@ struct Slab {
     bool operator==(const Slab&) const = default;
 };
 
+/// A solid piece turned about the vertical (the hall's gun consoles, built
+/// into the corners on their diagonal): a box of half sides `half` along its
+/// own axes, its x turned by `angle` toward +y, round `centre`.
+struct Block {
+    Vec2 centre, half;
+    double angle = 0;
+    double z0 = 0, z1 = 0;
+    /// `local` (the footprint's frame) in the block's own frame.
+    Vec2 own(Vec2 local) const {
+        const Vec2 d = local - centre;
+        const double c = std::cos(angle), s = std::sin(angle);
+        return Vec2(d.x * c + d.y * s, -d.x * s + d.y * c);
+    }
+    /// `local` is on it seen from above, grown by `grow` on every side.
+    bool contains(Vec2 local, double grow = 0) const {
+        const Vec2 o = own(local);
+        return std::abs(o.x) < half.x + grow && std::abs(o.y) < half.y + grow;
+    }
+    /// The point of it nearest `local` seen from above (the footprint's frame).
+    Vec2 nearest(Vec2 local) const {
+        const Vec2 o = own(local);
+        const Vec2 q(std::max(-half.x, std::min(half.x, o.x)), std::max(-half.y, std::min(half.y, o.y)));
+        const double c = std::cos(angle), s = std::sin(angle);
+        return centre + Vec2(q.x * c - q.y * s, q.x * s + q.y * c);
+    }
+    /// Its bounds as an upright slab (the cameras sweep boxes).
+    Slab bounds() const {
+        const double c = std::abs(std::cos(angle)), s = std::abs(std::sin(angle));
+        const Vec2 e(half.x * c + half.y * s, half.x * s + half.y * c);
+        return Slab{centre - e, centre + e, z0, z1};
+    }
+    bool operator==(const Block&) const = default;
+};
+
 /// A kind's solid parts (`Rules::footprint`): one truth for the pilot's
 /// walk, the cameras' sweep and the shelter. Every kind but the Citadel is
 /// one wall slab of its whole square; the Citadel is a hollow hall with a
@@ -236,6 +271,12 @@ struct AUTOCRAFTCORE_API Footprint {
     std::optional<Slab> interior;
     /// Over the interior (the cameras' ceiling).
     std::optional<Slab> roof;
+    /// What stands in the hall (the gun consoles, the ladder): solid to the
+    /// pilot's walk (`furnished`) and the cameras (low), not to the shelter
+    /// or the Brood (`blocks` leaves it out).
+    std::vector<Block> furniture;
+    /// `local` is on a piece of furniture grown by `grow`.
+    bool furnished(Vec2 local, double grow) const;
     /// `local` is on a wall standing on the ground (the lintel is overhead),
     /// or on the door while it is shut, each grown by `grow`: where a
     /// walker can't stand.
