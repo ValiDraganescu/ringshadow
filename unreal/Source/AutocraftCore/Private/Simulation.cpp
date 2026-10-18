@@ -2474,9 +2474,10 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
     for (size_t i = 0; i < state.structures.size(); i++) {
         if (state.structures[i].id != id) continue;
         const Structure st = state.structures[i];
-        // A Target Dummy lying down takes nothing; standing, it counts the hit (C2).
+        // A Target Dummy lying down (or falling this step) takes nothing;
+        // standing, it counts the hit (C2).
         if (st.kind == StructureKind::dummy && st.complete()) {
-            if (st.downUntil) return;
+            if (st.downUntil || !(st.hp > 0)) return;
             state.structures[i].hits += 1;
         }
         // Hardened works: the pilot's own buildings take less.
