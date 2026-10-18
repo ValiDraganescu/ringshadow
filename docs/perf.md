@@ -998,3 +998,69 @@ So with the gate "on" is "off" within the load's noise, and sending every
 step costs 3-6 µs a tick where the regions are light. It stays off; stage 2
 (a soak with it on, a fresh sanitizer sweep) decides whether it is turned
 on. It pays when the world has several crowded regions at once.
+
+### Round 19: the walking grid keeps its searches (2026-10-18)
+
+With round 18's spread of pilots, the world's own work after the region
+steps is 3.5% of a tick; the region steps are the rest, and half of them
+is the bugs' path searches (`NavGrid::pathSearch` and its heap, 46%). In
+`spreadbench 20` those are about 5,400 searches, most of 12 cells or
+fewer, but 2,395 close 500 to 1,640 cells each, and those 2,395 ask only
+52 different questions: the same start cell, target, stop distance and
+grid, asked again every few steps (bugs across a wall from their target,
+and units stepped back off their line, ask the same way again).
+
+The grid now keeps what each long search found (`NavGrid::searchMemo`):
+its cells, start to end, or that there is no way, by the question to the
+bit (start cell, target, stop distance, jumps, scan order, `fastSearch`),
+for searches that closed at least 64 cells. Asked again, the search is
+skipped and the straightening runs on the kept cells from where the unit
+stands now: the same path to the bit.
+
+Why the kept cells are the search's. The A* (`pathSearch` up to the
+straightening) reads its question and, of the grid, only `passable` (one
+byte a cell), `width`, `height`, `origin` and `cell` (set once, when the
+grid is made, before the first memo). It reads no unit (units are not on
+the grid: `dynamic`, and so `passable`, holds buildings, live deposits,
+wells and placed doodads only), no reservation, no random number and no
+cost but the fixed step lengths; its ties fall by the heap's order of the
+same pushes; its working arrays are reset per search (`Scratch::begin`:
+a new stamp, both heaps cleared); its counters are only written. The scan
+order is in the question (`east(from)`), and so is `fastSearch` (the
+heuristic and the heap). `passable` is written only by `indexPassable`,
+which `setDynamic` runs whenever its key or anything it builds from
+changes, and which makes a new, empty memo; a copy of the grid shares the
+memo only while its `passable` is the one the memo was filled on. The
+straightening, which also reads `ground`, `dynamic`, `cliffs` and where the
+unit stands, is not kept: it runs every time.
+
+The bound: at most 256 searches and 65,536 cells (512 KB) a grid; when
+either would be passed the memo is emptied and starts again (with 600
+different long questions in the test, it peaks at 256 searches and 44,705
+cells). A mutex guards it, for `PathAhead`'s workers and the world's step
+threads.
+
+| 3 runs each in turns, load 14-15 | before | after |
+|---|---:|---:|
+| `worldbench 30` from the nest: the world's step, mean | 0.046 ms | 0.015-0.016 ms |
+| its p50 / p95 | 0.037 / 0.121-0.125 ms | 0.008 / 0.049-0.052 ms |
+| `spreadbench 20`, 2 regions (the start and the nest) | 41.4-42.4 µs | 16.0-16.6 µs |
+| 4 regions (with the canyon wave) | 58.0-59.6 µs | 31.4-33.1 µs |
+| 2 regions with 8 pilots each | 36.0-37.5 µs | 27.5-28.4 µs |
+| `pathbench` (20,000 different questions) | 9.1-9.3 µs | 9.1-9.4 µs |
+| `crowdbench 10`, 16 pilots at the start, tick | 102-106 µs | 97-103 µs |
+
+Every hash is the same: worldbench's states (nest 1239e1800ff8ae42, start
+c7644119037bfb4c), spreadbench's four, crowdbench's wires and states,
+pathbench's paths (ac539c8c47941eeb); the core suite, its goldens and the
+server and net suites pass. Tests: `searchMemo_aSearchAskedAgainIsTheSearch`
+(60 long ways, exact and fast, asked again and from elsewhere in the
+start cell, against a grid without the memo; none searched again) and
+`searchMemo_aChangeToTheGridStartsItAgain` (deposits mined out: a new
+memo, the ways a grid without one finds; a copy taken before keeps the old
+memo and the old ways) and `searchMemo_manyQuestionsStayWithinItsBound`
+(600 different long questions: the same ways as without the memo, never
+past its bound).
+
+It also takes most of the point out of round 18's threads: the nest's
+step, the one heavy region, is a third of what it was.

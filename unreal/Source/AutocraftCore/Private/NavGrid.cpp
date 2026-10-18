@@ -6,10 +6,12 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <limits>
 #include <map>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -161,6 +163,35 @@ void NavGrid::indexRocks() {
     rocksIndexed = rocks.size();
 }
 
+struct NavGrid::SearchMemo {
+    struct Key {
+        int64_t start;
+        uint64_t tx, tz, stopAt;
+        uint8_t jumps, eastward, fast;
+        bool operator==(const Key&) const = default;
+    };
+    struct KeyHash {
+        size_t operator()(const Key& k) const {
+            uint64_t h = 1469598103934665603ull;
+            for (const uint64_t v : {uint64_t(k.start), k.tx, k.tz, k.stopAt, uint64_t(k.jumps) | uint64_t(k.eastward) << 1 | uint64_t(k.fast) << 2})
+                h = (h ^ v) * 1099511628211ull;
+            return size_t(h ^ (h >> 29));
+        }
+    };
+    /// The most searches kept, and the most cells over all of them (512 KB);
+    /// past either the memo starts again, empty.
+    static constexpr size_t most = 256, mostCells = 65536;
+    std::mutex lock;
+    std::unordered_map<Key, std::optional<std::vector<int64_t>>, KeyHash> searches;
+    size_t cellsKept = 0;
+};
+
+std::pair<size_t, size_t> NavGrid::memoHeld() const {
+    if (!searchMemo) return {0, 0};
+    std::lock_guard<std::mutex> g(searchMemo->lock);
+    return {searchMemo->searches.size(), searchMemo->cellsKept};
+}
+
 /// Rebuild `passable` from `ground`, `cliffs` and `dynamic`.
 void NavGrid::indexPassable() {
     const size_t n = static_cast<size_t>(width * height);
@@ -169,6 +200,7 @@ void NavGrid::indexPassable() {
         if (dynamic[i]) continue;
         passable[i] = ground[i] ? 1 : (cliffs[i] ? 2 : 0);
     }
+    searchMemo = std::make_shared<SearchMemo>();
 }
 
 /// `p` is on a cliff face a Comet can jump (and no building covers it).
@@ -735,100 +767,128 @@ std::optional<std::vector<Vec2>> NavGrid::pathSearch(const PathBegin& b, Vec2 fr
     const std::vector<Vec2>& prefix = b.prefix;
     const double reach = stopAt + cell * 0.75;
 
-    // On raw buffers, with nothing captured: a closure over `self`
-    // copies the grid's arrays in and out (retain, release) on every
-    // call, which was most of a search's time. The working arrays are
-    // kept between searches (`Scratch`).
-    const int64_t n = width * height, w = width, hgt = height;
-    std::unique_ptr<Scratch> scratchArrays = scratch().take();
-    Scratch& sc = *scratchArrays;
-    const uint32_t stamp = sc.begin(n);
-    const double ox = origin.x, oz = origin.y;
-    // From cell (x, z)'s centre to the target, as `distance(centre(i), target)`.
-    auto distanceAt = [ox, oz, target](int64_t x, int64_t z) {
-        return distance(Vec2(ox, oz) + Vec2(static_cast<double>(x) + 0.5, static_cast<double>(z) + 0.5) * cell, target);
-    };
     std::vector<int64_t> cells;
-    // `passable`: 1 free, 2 a cliff face a Comet may cross.
-    const uint8_t* pass = passable.data();
-    const uint8_t openMask = jumps ? 3 : 1;
-    Scratch::Cell* cs = sc.cells.data();
-    // `mark`: this search's stamp once a cell has a cost, one more once closed.
-    const uint32_t closedMark = stamp + 1;
-    const float diagonal = 1.0f * 1.41421356f, diagonalCliff = 1.3f * 1.41421356f;
-    // One search per scan order, each with its 8 steps unrolled.
-    // Fast: weighted (`fastWeight`) octile heuristic (the target's cell coordinates, and how much of
-    // the distance the goal's disk takes off: octile / euclid is at most
-    // 1.0824) and the 4-ary heap.
-    const float tcx = static_cast<float>((target.x - ox) / cell), tcz = static_cast<float>((target.y - oz) / cell);
-    const float discount = static_cast<float>(1.0825 * reach / cell);
-    auto search = [&](auto eastward, auto fast) -> int64_t {
-        constexpr const std::array<Step, 8>& dirs = decltype(eastward)::value ? stepsEast : steps;
-        auto& heap = [&]() -> auto& { if constexpr (decltype(fast)::value) return sc.heap4; else return sc.heap; }();
-        auto h = [&](int64_t x, int64_t z) {
-            if constexpr (decltype(fast)::value) {
-                const float fx = std::fabs(static_cast<float>(x) + 0.5f - tcx), fz = std::fabs(static_cast<float>(z) + 0.5f - tcz);
-                const float o = std::max(fx, fz) + 0.41421356f * std::min(fx, fz) - discount;
-                return o > 0 ? o * fastWeight : 0.0f;
-            } else {
-                return static_cast<float>(max(0.0, distanceAt(x, z) - stopAt) / cell);
-            }
+    // The same question over the same `passable`: the same cells.
+    auto bitsOf = [](double v) { uint64_t out; std::memcpy(&out, &v, sizeof out); return out; };
+    const SearchMemo::Key key{start, bitsOf(target.x), bitsOf(target.y), bitsOf(stopAt), uint8_t(jumps), uint8_t(east(from)), uint8_t(fastSearch)};
+    const std::shared_ptr<SearchMemo> memo = searchMemo;
+    bool remembered = false;
+    if (memo) {
+        std::lock_guard<std::mutex> g(memo->lock);
+        const auto it = memo->searches.find(key);
+        if (it != memo->searches.end()) {
+            if (!it->second) return std::nullopt;
+            cells = *it->second;
+            remembered = true;
+        }
+    }
+    if (!remembered) {
+        // On raw buffers, with nothing captured: a closure over `self`
+        // copies the grid's arrays in and out (retain, release) on every
+        // call, which was most of a search's time. The working arrays are
+        // kept between searches (`Scratch`).
+        int64_t closedCells = 0;
+        const int64_t n = width * height, w = width, hgt = height;
+        std::unique_ptr<Scratch> scratchArrays = scratch().take();
+        Scratch& sc = *scratchArrays;
+        const uint32_t stamp = sc.begin(n);
+        const double ox = origin.x, oz = origin.y;
+        // From cell (x, z)'s centre to the target, as `distance(centre(i), target)`.
+        auto distanceAt = [ox, oz, target](int64_t x, int64_t z) {
+            return distance(Vec2(ox, oz) + Vec2(static_cast<double>(x) + 0.5, static_cast<double>(z) + 0.5) * cell, target);
         };
-        cs[start].g = 0;
-        cs[start].mark = stamp;
-        heap.push(h(start % w, start / w), start);
-        int64_t closed = 0;
-        struct Count { int64_t& n; ~Count() { NavGrid::searchesRun.fetch_add(1, std::memory_order_relaxed); NavGrid::cellsClosed.fetch_add(n, std::memory_order_relaxed); } } count{closed};
-        while (!heap.empty()) {
-            const int64_t i = heap.popCell();
-            if (cs[i].mark == closedMark) continue;
-            cs[i].mark = closedMark;
-            closed++;
-            const int64_t x = i % w, z = i / w;
-            if (distanceAt(x, z) <= reach) {
-                int64_t k = i;
-                while (k != start) { cells.push_back(k); k = cs[k].came; }
-                return i;
-            }
-            const float gi = cs[i].g;
-            // Free cells and cliff faces keep three cells off the map's
-            // edge, so only a start cell on the edge needs the bounds test.
-            const bool inner = x > 0 && z > 0 && x < w - 1 && z < hgt - 1;
-            auto visit = [&](auto d) {
-                constexpr int64_t dx = dirs[decltype(d)::value].first, dz = dirs[decltype(d)::value].second;
-                const int64_t nx = x + dx, nz = z + dz;
-                if (!inner && !(nx >= 0 && nz >= 0 && nx < w && nz < hgt)) return;
-                const int64_t j = i + dz * w + dx;
-                const uint8_t pj = pass[j];
-                if (!(pj & openMask)) return;
-                Scratch::Cell& cj = cs[j];
-                if (cj.mark == closedMark) return;
-                float stepCost;
-                if constexpr (dx != 0 && dz != 0) {
-                    if (!(pass[i + dx] & openMask) || !(pass[i + dz * w] & openMask)) return;
-                    stepCost = pj == 1 ? diagonal : diagonalCliff;
+        // `passable`: 1 free, 2 a cliff face a Comet may cross.
+        const uint8_t* pass = passable.data();
+        const uint8_t openMask = jumps ? 3 : 1;
+        Scratch::Cell* cs = sc.cells.data();
+        // `mark`: this search's stamp once a cell has a cost, one more once closed.
+        const uint32_t closedMark = stamp + 1;
+        const float diagonal = 1.0f * 1.41421356f, diagonalCliff = 1.3f * 1.41421356f;
+        // One search per scan order, each with its 8 steps unrolled.
+        // Fast: weighted (`fastWeight`) octile heuristic (the target's cell coordinates, and how much of
+        // the distance the goal's disk takes off: octile / euclid is at most
+        // 1.0824) and the 4-ary heap.
+        const float tcx = static_cast<float>((target.x - ox) / cell), tcz = static_cast<float>((target.y - oz) / cell);
+        const float discount = static_cast<float>(1.0825 * reach / cell);
+        auto search = [&](auto eastward, auto fast) -> int64_t {
+            constexpr const std::array<Step, 8>& dirs = decltype(eastward)::value ? stepsEast : steps;
+            auto& heap = [&]() -> auto& { if constexpr (decltype(fast)::value) return sc.heap4; else return sc.heap; }();
+            auto h = [&](int64_t x, int64_t z) {
+                if constexpr (decltype(fast)::value) {
+                    const float fx = std::fabs(static_cast<float>(x) + 0.5f - tcx), fz = std::fabs(static_cast<float>(z) + 0.5f - tcz);
+                    const float o = std::max(fx, fz) + 0.41421356f * std::min(fx, fz) - discount;
+                    return o > 0 ? o * fastWeight : 0.0f;
                 } else {
-                    stepCost = pj == 1 ? 1.0f : 1.3f;
-                }
-                const float t = gi + stepCost;
-                if (cj.mark < stamp || t < cj.g) {
-                    cj.g = t;
-                    cj.came = static_cast<int32_t>(i);
-                    cj.mark = stamp;
-                    heap.push(t + h(nx, nz), j);
+                    return static_cast<float>(max(0.0, distanceAt(x, z) - stopAt) / cell);
                 }
             };
-            [&]<size_t... d>(std::index_sequence<d...>) {
-                (visit(std::integral_constant<size_t, d>{}), ...);
-            }(std::make_index_sequence<8>{});
+            cs[start].g = 0;
+            cs[start].mark = stamp;
+            heap.push(h(start % w, start / w), start);
+            int64_t closed = 0;
+            struct Count { int64_t& n; ~Count() { NavGrid::searchesRun.fetch_add(1, std::memory_order_relaxed); NavGrid::cellsClosed.fetch_add(n, std::memory_order_relaxed); } } count{closed};
+            while (!heap.empty()) {
+                const int64_t i = heap.popCell();
+                if (cs[i].mark == closedMark) continue;
+                cs[i].mark = closedMark;
+                closed++;
+                const int64_t x = i % w, z = i / w;
+                if (distanceAt(x, z) <= reach) {
+                    int64_t k = i;
+                    while (k != start) { cells.push_back(k); k = cs[k].came; }
+                    closedCells = closed;
+                    return i;
+                }
+                const float gi = cs[i].g;
+                // Free cells and cliff faces keep three cells off the map's
+                // edge, so only a start cell on the edge needs the bounds test.
+                const bool inner = x > 0 && z > 0 && x < w - 1 && z < hgt - 1;
+                auto visit = [&](auto d) {
+                    constexpr int64_t dx = dirs[decltype(d)::value].first, dz = dirs[decltype(d)::value].second;
+                    const int64_t nx = x + dx, nz = z + dz;
+                    if (!inner && !(nx >= 0 && nz >= 0 && nx < w && nz < hgt)) return;
+                    const int64_t j = i + dz * w + dx;
+                    const uint8_t pj = pass[j];
+                    if (!(pj & openMask)) return;
+                    Scratch::Cell& cj = cs[j];
+                    if (cj.mark == closedMark) return;
+                    float stepCost;
+                    if constexpr (dx != 0 && dz != 0) {
+                        if (!(pass[i + dx] & openMask) || !(pass[i + dz * w] & openMask)) return;
+                        stepCost = pj == 1 ? diagonal : diagonalCliff;
+                    } else {
+                        stepCost = pj == 1 ? 1.0f : 1.3f;
+                    }
+                    const float t = gi + stepCost;
+                    if (cj.mark < stamp || t < cj.g) {
+                        cj.g = t;
+                        cj.came = static_cast<int32_t>(i);
+                        cj.mark = stamp;
+                        heap.push(t + h(nx, nz), j);
+                    }
+                };
+                [&]<size_t... d>(std::index_sequence<d...>) {
+                    (visit(std::integral_constant<size_t, d>{}), ...);
+                }(std::make_index_sequence<8>{});
+            }
+            closedCells = closed;
+            return -1;
+        };
+        const int64_t found = fastSearch ? (east(from) ? search(std::true_type{}, std::true_type{}) : search(std::false_type{}, std::true_type{}))
+                                         : (east(from) ? search(std::true_type{}, std::false_type{}) : search(std::false_type{}, std::false_type{}));
+        scratch().give(std::move(scratchArrays));
+        if (found >= 0) std::reverse(cells.begin(), cells.end());
+        if (memo && closedCells >= memoCells && cells.size() <= SearchMemo::mostCells) {
+            std::lock_guard<std::mutex> g(memo->lock);
+            if (memo->searches.size() >= SearchMemo::most || memo->cellsKept + cells.size() > SearchMemo::mostCells) {
+                memo->searches.clear();
+                memo->cellsKept = 0;
+            }
+            if (memo->searches.emplace(key, found >= 0 ? std::optional<std::vector<int64_t>>(cells) : std::nullopt).second)
+                memo->cellsKept += cells.size();
         }
-        return -1;
-    };
-    const int64_t found = fastSearch ? (east(from) ? search(std::true_type{}, std::true_type{}) : search(std::false_type{}, std::true_type{}))
-                                     : (east(from) ? search(std::true_type{}, std::false_type{}) : search(std::false_type{}, std::false_type{}));
-    scratch().give(std::move(scratchArrays));
-    if (!(found >= 0)) return std::nullopt;
-    std::reverse(cells.begin(), cells.end());
+        if (!(found >= 0)) return std::nullopt;
+    }
     // Straighten: from each corner, jump to the farthest cell in sight.
     std::vector<Vec2> points;
     Vec2 at = prefix.empty() ? from : prefix.back();

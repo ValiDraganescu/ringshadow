@@ -413,6 +413,23 @@ struct AUTOCRAFTCORE_API NavGrid {
     };
     static ScratchPool& scratch();
 
+    /// The searches over this grid's `passable` (C++ only): each one's cells,
+    /// start to end (nil: no way), by its question to the bit (start cell,
+    /// target, stop distance, jumps, scan order, `fastSearch`), kept for
+    /// those that closed at least `memoCells` cells. A search reads nothing
+    /// else (`pathSearch`), so a unit asking the same way again (one stepping
+    /// back off its line asks every few steps) gets the same cells without
+    /// the search; the straightening runs again. Made anew whenever
+    /// `passable` is rebuilt (`indexPassable`, its only writer: one that
+    /// writes it elsewhere must renew this too); copies of the grid share it
+    /// until then. At most 256 searches and 65,536 cells (512 KB): past
+    /// either it starts again, empty.
+    struct SearchMemo;
+    std::shared_ptr<SearchMemo> searchMemo;
+    static constexpr int64_t memoCells = 64;
+    /// The searches and cells the memo holds now.
+    std::pair<size_t, size_t> memoHeld() const;
+
 private:
     template <class Inside> void mark(Vec2 lo, Vec2 hi, Inside inside);
     /// Rebuild `passable` from `ground`, `cliffs` and `dynamic`.
