@@ -775,6 +775,7 @@ void WorldMap::step() {
     const auto t0 = std::chrono::steady_clock::now();
     const std::vector<Work> work = world_ ? workBefore() : std::vector<Work>{};
     if (world_) armCitadels();
+    if (world_) installRepairPayers();
     // With `WorldParams::stepThreads`: the regions with a pilot whose last
     // two steps each took longer than a dispatch costs (`StepPool::wakeUs`;
     // with `stepAlways`, every one), on the pool when there are two or more

@@ -1421,6 +1421,10 @@ public:
         net::CitadelMission::Tier missionTier = net::CitadelMission::Tier::easy;
         /// Booked ore not whole yet; trips since its last pump.
         double owed = 0;
+        /// A booked mend's price not whole yet, ore and MH (`Simulation::
+        /// repairCost`; not saved).
+        double mendOre = 0;
+        double mendHydrogen = 0;
         int64_t trips = 0;
         /// Its last think (world clock); its counts.
         double thought = -1e9;
@@ -1885,6 +1889,15 @@ private:
     int64_t giveBlueprint(PilotState& p, StructureKind kind, int64_t n = 1, double xp = 0);
     /// The same for a frontier pilot, into its own wallet.
     static int64_t giveBlueprint(FrontierPilot& f, StructureKind kind, int64_t n = 1);
+    /// Repairs cost materials (docs/balance.md "Repairs"): each world
+    /// region's `Simulation::repairPayer`, installed every step before the
+    /// regions step (so a moved map never leaves one behind). It charges the
+    /// frontier pilot of region `r` whose unit mends, from its own wallet,
+    /// false when it is short; any other unit not a pilot's driven one mends
+    /// free, as before.
+    void installRepairPayers();
+    /// A frontier pilot's wallet holds the next whole unit of `b`'s mend.
+    bool canMend(const FrontierPilot& f, const Structure& b) const;
     /// A one-off into `set` under `id`, paid `xp`, told as `kind`.
     bool oneOff(PilotId pilot, std::set<std::string> ProspectorProgress::*set, const std::string& id, double xp,
                 net::ProgressMessage::NewsKind kind);
