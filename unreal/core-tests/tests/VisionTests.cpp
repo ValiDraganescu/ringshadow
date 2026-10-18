@@ -350,3 +350,46 @@ TEST(vision_sightIntoAUsedSightIsAFreshOne) {
         EXPECT_TRUE(a == b);
     }
 }
+
+// docs/perf.md "Server" round 7: by day a pilot's daylight takes in the whole
+// region, and once a circle on every level has, a look stamps nothing more.
+// `coversGrid` says so exactly when the stamp marks every cell (radii right
+// at the farthest corner's distance, from centres in and off the map), and
+// after such a circle any stamp, on any level, in a cone or not, changes
+// nothing.
+TEST(vision_aCircleOverTheWholeGridLeavesNothingToStamp) {
+    const Simulation sim(GameState::new_(homeMap()), homeMap());
+    const Vision& v = *sim.vision;
+    const size_t cells = static_cast<size_t>(v.width * v.height);
+    SeededRandom dice(7);
+    const double w = static_cast<double>(v.width) * Vision::cell, h = static_cast<double>(v.height) * Vision::cell;
+    int64_t covering = 0, short_ = 0;
+    for (int k = 0; k < 120; ++k) {
+        const Vec2 c = v.origin + Vec2(dice.range(-0.3 * w, 1.3 * w), dice.range(-0.3 * h, 1.3 * h));
+        // The farthest corner cell's centre, and a hair either side.
+        double far = 0;
+        for (const double x : {v.origin.x + 0.5 * Vision::cell, v.origin.x + w - 0.5 * Vision::cell})
+            for (const double y : {v.origin.y + 0.5 * Vision::cell, v.origin.y + h - 0.5 * Vision::cell})
+                far = std::max(far, distance(c, Vec2(x, y)));
+        const double r = far * (1 + (k % 3 - 1) * 1e-15) + (k % 5 == 0 ? -1e-3 : 0);
+        std::vector<uint8_t> seen(cells, 0), near(cells, 0);
+        std::vector<uint64_t> ex((cells + 63) / 64, 0);
+        v.stamp(c, r, std::nullopt, seen, near, ex);
+        const bool all = std::count(near.begin(), near.end(), uint8_t(1)) == static_cast<std::ptrdiff_t>(cells);
+        EXPECT_EQ(v.coversGrid(c, r), all);
+        (all ? covering : short_) += 1;
+        if (!all) continue;
+        const auto seen0 = seen, near0 = near;
+        const auto ex0 = ex;
+        for (int j = 0; j < 20; ++j) {
+            const Vec2 at = v.origin + Vec2(dice.range(0, w), dice.range(0, h));
+            const std::optional<int8_t> level =
+                j % 3 == 0 ? std::nullopt : std::optional<int8_t>(static_cast<int8_t>(dice.random(-1, 4)));
+            const auto cone = j % 4 == 0 ? std::optional<std::pair<double, double>>(std::make_pair(dice.range(0, 6.28), 0.6))
+                                         : std::nullopt;
+            v.stamp(at, dice.range(0.5, 60), level, seen, near, ex, cone);
+        }
+        EXPECT_TRUE(seen == seen0 && near == near0 && ex == ex0);
+    }
+    EXPECT_TRUE(covering > 10 && short_ > 10);
+}

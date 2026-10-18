@@ -5,7 +5,9 @@
 // 20 times a second, acknowledged at once. SECONDS of game time a crowd
 // (default 10) after 3 s. Prints the world's step, and a pilot's snapshot
 // and writing, mean and 99th percentile, and the server's whole tick
-// (step plus all the snapshots) per pilot. Built and run by `make bench`.
+// (step plus all the snapshots) per pilot, and hashes of every byte written
+// and of every unit at the end (equal before and after a change that must
+// keep the wire and the simulation). Built and run by `make bench`.
 
 #include "NetSnapshot.h"
 #include "WorldMap.h"
@@ -14,6 +16,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <map>
 #include <string>
 #include <vector>
@@ -65,6 +68,7 @@ void run(const LoadedWorld& world, int pilots, double seconds) {
         w.step();
     }
     std::vector<double> step, build, write, whole;
+    uint64_t wire = 1469598103934665603ull, state = 1469598103934665603ull;
     double clock = 100;
     const int ticks = int(seconds * 60);
     for (int t = 0; t < ticks; t++) {
@@ -88,9 +92,19 @@ void run(const LoadedWorld& world, int pilots, double seconds) {
                 net::AckMessage ack;
                 ack.received.push_back({out.id, out.messages.size() >= 32 ? ~0u : (uint32_t(1) << out.messages.size()) - 1});
                 writer.ack(ack, clock);
+                for (const auto& m : out.messages)
+                    for (uint8_t b : m) wire = (wire ^ b) * 1099511628211ull;
             }
         whole.push_back(all);
     }
+    for (size_t r = 0; r < w.regionCount(); r++)
+        for (const Unit& u : w.region(r).simulation().state.units)
+            for (const double v : {u.position.x, u.position.y, u.heading, u.hp}) {
+                uint64_t b;
+                std::memcpy(&b, &v, sizeof b);
+                state = (state ^ b) * 1099511628211ull;
+            }
+    std::printf("  %2d pilots: wire %016llx, state %016llx\n", pilots, (unsigned long long)wire, (unsigned long long)state);
     std::printf("  %2d pilots: step %6.1f us (p99 %6.1f), snapshot %5.1f us (p99 %5.1f), write %5.1f us (p99 %5.1f), tick %6.1f us, %5.1f us a pilot\n",
                 pilots, mean(step), at(step, 0.99), mean(build), at(build, 0.99), mean(write), at(write, 0.99), mean(whole),
                 mean(whole) / pilots);

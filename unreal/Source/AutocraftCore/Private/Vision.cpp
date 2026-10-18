@@ -239,6 +239,22 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
     }
 }
 
+/// Its test (the same sums as `stamp`'s) passes at the four corner cells;
+/// it grows with `|dx|` and `|dz|`, whose largest are at the corners.
+bool Vision::coversGrid(Vec2 c, double r) const {
+    if (!(width > 0 && height > 0)) return false;
+    const double r2 = r * r;
+    for (const int64_t z : {int64_t(0), height - 1}) {
+        const double dz = origin.y + (static_cast<double>(z) + 0.5) * cell - c.y;
+        const double dz2 = dz * dz;
+        for (const int64_t x : {int64_t(0), width - 1}) {
+            const double dx = origin.x + (static_cast<double>(x) + 0.5) * cell - c.x;
+            if (!(dx * dx + dz2 <= r2)) return false;
+        }
+    }
+    return true;
+}
+
 /// What player `p` sees in `state` now; what it sees joins `explored`.
 /// `farther` holds the sight radius of units whose leveling picks
 /// change it (Spotter), by id.
@@ -303,7 +319,12 @@ void Vision::sightInto(Sight& s, int64_t p, const GameState& state, std::vector<
         return viewers[a].r > viewers[b].r || (viewers[a].r == viewers[b].r && a < b);
     });
     std::vector<Viewer> drawn;
+    // Once a circle on every level has covered every cell (by day, a pilot's
+    // daylight over the whole region) the grid is all seen, near and
+    // explored: the circles and beams left change nothing.
+    bool whole = false;
     for (size_t k : order) {
+        if (whole) break;
         const Viewer& v = viewers[k];
         bool inside = false;
         for (const auto& d : drawn) {
@@ -312,10 +333,12 @@ void Vision::sightInto(Sight& s, int64_t p, const GameState& state, std::vector<
         if (inside) continue;
         drawn.push_back(v);
         stamp(v.c, v.r, v.level, s.seen, s.near, explored);
+        whole = !v.level && coversGrid(v.c, v.r);
     }
     // The beams last: one inside a drawn circle adds nothing.
     const double half = Rules::headlampCone * pi / 180;
     for (const auto& b : lamps) {
+        if (whole) break;
         bool inside = false;
         for (const auto& d : drawn) {
             if ((!d.level || d.level == b.v.level) && distance(d.c, b.v.c) + b.v.r <= d.r) { inside = true; break; }

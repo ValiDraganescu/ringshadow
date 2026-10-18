@@ -372,3 +372,38 @@ for each.
 The wire is the same (the four scenes' hashes as before). Since round 3 a
 pilot's snapshot writing went from 44-70 µs to 6-13 µs, and 16 pilots in
 one region from 230 µs a tick to 144.
+
+### Round 7: a crowd's daylight, stamped once (2026-10-18)
+
+Time Profiler on `crowdbench`'s step with 16 pilots: the look was 43% of
+it, `Vision::stamp` alone 31%. By day every driver gets a daylight circle
+over the whole region (W5), and the test that skips a circle inside
+another one drawn never fires for circles round different units, so all
+16 were stamped over every cell, on top of the units' own circles.
+
+`Vision::sightInto` stops stamping once a circle on every level has taken
+in every cell: the grid is then all seen, near and explored, and nothing
+left can change it. `Vision::coversGrid` says whether a circle does,
+exactly: `stamp`'s test (the same sums) passing at the four corner cells,
+since it grows with `|dx|` and `|dz|` and those are largest at the
+corners. Test `vision_aCircleOverTheWholeGridLeavesNothingToStamp`:
+`coversGrid` agrees with what `stamp` marks for circles a hair inside and
+outside the farthest corner, from centres in and off the map, and after a
+covering circle no stamp, on any level or in a cone, changes a byte.
+`crowdbench` now hashes every byte written and every unit at the end.
+
+| `crowdbench 10`, in turns, load 7.5 | before µs | after µs |
+|---|---:|---:|
+| 4 pilots, the step | 13.2 (p99 54.5) | 9.8 (p99 34.3) |
+| 16 pilots, the step | 41.5 (p99 173) | 22.8 (p99 53) |
+| 16 pilots, the whole tick | 152.8 | 135.8 |
+
+The wire and state hashes are equal for 1, 4 and 16 pilots, and
+`worldbench`'s state hash (the start and the nest) too.
+
+Left: with several drivers, `boost` (read for each unit's speed every step
+and its sight every look) swaps the other driver's whole context in and
+back for each of its units (`swapDriver`: the `Pilot` copied three times,
+`PilotProgress` and the side's record moved three times), about 2.7 µs a
+tick with 16 drivers. Reading the driver's fields in place would need
+`boost`, `addSkills`, `skilled` and `burst` to take the context; not done.

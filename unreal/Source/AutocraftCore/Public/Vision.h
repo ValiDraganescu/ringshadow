@@ -83,6 +83,8 @@ struct Vision {
     /// within `cone->second` of the heading `cone->first`.
     void stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<uint8_t>& seen, std::vector<uint8_t>& near,
                std::vector<uint64_t>& explored, std::optional<std::pair<double, double>> cone = std::nullopt) const;
+    /// `stamp`'s circle at `c`, `r` round, takes in every cell of the grid.
+    bool coversGrid(Vec2 c, double r) const;
 
     /// What player `p` sees in `state` now; what it sees joins `explored`.
     /// `farther` holds the sight radius of units whose leveling picks
