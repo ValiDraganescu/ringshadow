@@ -2,121 +2,7 @@
 
 Written by `unreal/Tools/Editor/check_models.py` (run it with `hidden_run.py --python` after any model change). For each model: pairs of meshes (part/material) with triangles facing the same way in one plane (normals within 0.5 degrees, planes within 0.5 cm) that overlap where someone can see them (A = B: two solids in one mesh), and meshes that are another mesh's copy. The `_red` entries draw the `_blue` meshes and are left out. Fix by the 2 cm rule (MODELLING.md, "No shared faces").
 
-Checked 100 models; 44 with hits (the ones still waiting for their fix are listed in `art/models/zfight-allow.txt`).
-
-## bastion_blue (building)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| bastion_blue_root/hullMid | bastion_blue_root/team | 8 | 49282 | (-57, -57, 109) |
-
-## sentinel_blue (building)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| sentinel_blue_root/hullMid | sentinel_blue_root/team | 16 | 21104 | (49, 0, 60) |
-| pods_1/hullDark | pods_1/plain_110100 | 72 | 733 | (32, 38, 141) |
-| pods_0/hullDark | pods_0/plain_110100 | 72 | 733 | (32, -38, 141) |
-| head/hullDark | head/hullLight | 4 | 96 | (-24, 1, 88) |
-
-## garrison_blue (building)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| garrison_blue_root/bayGlow | garrison_blue_root/hullDark | 3 | 9072 | (18, 130, 52) |
-| garrison_blue_root/bayGlow | garrison_blue_root/hazard | 3 | 9072 | (-18, 126, 52) |
-| garrison_blue_root/hullDark | garrison_blue_root/ventGlow | 8 | 2432 | (-85, 31, 180) |
-| garrison_blue_root/hazard | garrison_blue_root/hullDark | 2 | 436 | (-14, 144, 20) |
-
-## foundry_blue (building)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| foundry_blue_root/team | foundry_blue_root/team | 5 | 4324 | (89, -89, 126) |
-| foundry_blue_root/hullDark | foundry_blue_root/weldGlow | 32 | 1232 | (-103, 144, 62) |
-| doorLeaves_0/hullDark | doorLeaves_1/hullDark | 9 | 330 | (-0, 130, 49) |
-| doorLeaves_0/hullDark | foundry_blue_root/hull | 3 | 168 | (-45, 128, 17) |
-| doorLeaves_1/hullDark | foundry_blue_root/hull | 2 | 168 | (20, 128, 17) |
-| foundry_blue_root/floodGlow | foundry_blue_root/hull | 4 | 112 | (-63, 140, 93) |
-| foundry_blue_root/bayGlow | foundry_blue_root/hull | 6 | 18 | (-63, 52, 16) |
-
-## spacedock_blue (building)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| spacedock_blue_root/hullDark | spacedock_blue_root/hullLight | 198 | 1965 | (120, 41, 161) |
-| spacedock_blue_root/hazard | spacedock_blue_root/hullDark | 64 | 1632 | (106, 102, 29) |
-| padDoors_0/plain_797979 | padDoors_0/plain_797979 | 15 | 38 | (23, -46, 175) |
-| padDoors_1/plain_797979 | padDoors_1/plain_797979 | 15 | 38 | (27, -14, 175) |
-| spacedock_blue_root/plain_797979 | spacedock_blue_root/plain_797979 | 4 | 8 | (-89, 96, 144) |
-| padDoors_0/plain_797979 | padDoors_1/plain_797979 | 12 | 5 | (25, -46, 175) |
-| queueLamps_3/glow_2399ff | spacedock_blue_root/glow_2399ff | 1 | 0 | (71, 39, 168) |
-
-## derrick_blue (building)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| derrick_blue_root/hullDark | derrick_blue_root/hullDark | 8 | 479 | (-69, -44, 134) |
-| derrick_blue_root/hazard | door/hullMid | 3 | 174 | (2, 149, 47) |
-| valves_1/hullDark | valves_1/hullDark | 24 | 62 | (108, 128, 71) |
-| valves_0/hullDark | valves_0/hullDark | 24 | 62 | (-108, 130, 71) |
-| derrick_blue_root/hull | derrick_blue_root/hull | 4 | 16 | (-32, 50, 205) |
-
-## scaffold_garrison_blue (construction)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| scaffold_garrison_blue_root/hazard | scaffold_garrison_blue_root/hazard | 48 | 486 | (-163, 163, 74) |
-
-## scaffold_bastion_blue (construction)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| scaffold_bastion_blue_root/hazard | scaffold_bastion_blue_root/hazard | 48 | 486 | (-163, 163, 44) |
-
-## scaffold_derrick_blue (construction)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| scaffold_derrick_blue_root/hazard | scaffold_derrick_blue_root/hazard | 48 | 486 | (-163, 163, 76) |
-
-## scaffold_foundry_blue (construction)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| scaffold_foundry_blue_root/hazard | scaffold_foundry_blue_root/hazard | 48 | 486 | (-163, 163, 74) |
-
-## scaffold_spacedock_blue (construction)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| scaffold_spacedock_blue_root/hazard | scaffold_spacedock_blue_root/hazard | 48 | 486 | (-163, 163, 94) |
-
-## scaffold_lab_blue (construction)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| scaffold_lab_blue_root/hazard | scaffold_lab_blue_root/hazard | 48 | 486 | (-113, 113, 58) |
-
-## scaffold_habdome_blue (construction)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| scaffold_habdome_blue_root/hazard | scaffold_habdome_blue_root/hazard | 48 | 486 | (-113, 113, 44) |
-
-## scaffold_sentinel_blue (construction)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| scaffold_sentinel_blue_root/hazard | scaffold_sentinel_blue_root/hazard | 48 | 486 | (-113, 113, 52) |
-
-## lab_blue (building)
-
-| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |
-|---|---|---|---|---|
-| lab_blue_root/hullLight | lab_blue_root/team | 4 | 472 | (82, -28, 33) |
-| dish/chrome | dish/hullDark | 13 | 4 | (-55, -75, 112) |
-| lab_blue_root/hullDark | lab_blue_root/hullDark | 1 | 0 | (46, -9, 68) |
+Checked 100 models; 29 with hits (the ones still waiting for their fix are listed in `art/models/zfight-allow.txt`).
 
 ## longbow_blue (unit)
 
@@ -472,11 +358,6 @@ Checked 100 models; 44 with hits (the ones still waiting for their fix are liste
 | fins_1/hullDark | fins_1/hullLight | 3 | 35 | (-59, 29, 62) |
 | fins_0/hullDark | fins_0/hullLight | 3 | 35 | (-59, -31, 62) |
 | body/hullDark | body/team | 22 | 30 | (29, -5, 63) |
-| missiles_0/hullDark | missiles_0/hullDark | 5 | 1 | (-79, -74, 33) |
-| missiles_1/hullDark | missiles_1/hullDark | 5 | 1 | (-79, -56, 33) |
-| missiles_3/hullDark | missiles_3/hullDark | 5 | 1 | (-79, 74, 33) |
-| missiles_2/hullDark | missiles_2/hullDark | 5 | 1 | (-79, 56, 33) |
-| body/hullDark | body/hullLight | 16 | 0 | (195, 0, 50) |
 
 ## dropship_blue (unit)
 
@@ -531,11 +412,6 @@ Checked 100 models; 44 with hits (the ones still waiting for their fix are liste
 | rig/hullDark | rig/hullMid | 8 | 23 | (-23, -7, -9) |
 | rig/glowBlue | rig/hullDark | 8 | 5 | (23, -9, -9) |
 | rig/hullDark | rig/hullDark | 28 | 3 | (-0, -15, 11) |
-| model_missiles_0/hullDark | model_missiles_0/hullDark | 5 | 1 | (-79, -74, 33) |
-| model_missiles_1/hullDark | model_missiles_1/hullDark | 5 | 1 | (-79, -56, 33) |
-| model_missiles_3/hullDark | model_missiles_3/hullDark | 5 | 1 | (-79, 74, 33) |
-| model_missiles_2/hullDark | model_missiles_2/hullDark | 5 | 1 | (-79, 56, 33) |
-| model_body/hullDark | model_body/hullLight | 16 | 0 | (195, 0, 50) |
 
 ## atlas_blue (unit)
 
@@ -570,7 +446,6 @@ Checked 100 models; 44 with hits (the ones still waiting for their fix are liste
 | pulse1/glow_bcfbbe (hidden) | pulse2/glow_bcfbbe (hidden) | 112 | 666 | (1, 5, -1) |
 | shaft/glow_2cdf49 (hidden) | shaft/glow_bcfbbe (hidden) | 24 | 25 | (-0, -1, 100) |
 | rig/hullDark | rig/screens | 2 | 12 | (23, -39, -6) |
-| rig/hull | rig/team | 2 | 0 | (30, -36, 4) |
 | pulse0/glow_bcfbbe | pulse1/glow_bcfbbe | duplicate: every triangle of A lies on B | | |
 | pulse0/glow_bcfbbe | pulse2/glow_bcfbbe | duplicate: every triangle of A lies on B | | |
 | pulse1/glow_bcfbbe | pulse0/glow_bcfbbe | duplicate: every triangle of A lies on B | | |
@@ -604,8 +479,6 @@ Checked 100 models; 44 with hits (the ones still waiting for their fix are liste
 | fork_tines_0/hullMid | fork_tines_0/team | 4 | 6 | (-40, -110, -31) |
 | fork_root/hullMid | fork_tines_0/hullDark | 3 | 4 | (-40, -95, -43) |
 | fork_root/hullMid | fork_tines_1/hullDark | 3 | 3 | (-24, -90, -43) |
-| fork_tines_1/hullDark | fork_tines_1/hullMid | 2 | 0 | (-16, -114, -28) |
-| fork_tines_0/hullDark | fork_tines_0/hullMid | 2 | 0 | (-33, -120, -36) |
 
 ## prospector_blue (unit)
 
@@ -705,7 +578,6 @@ Checked 100 models; 44 with hits (the ones still waiting for their fix are liste
 | legs_1/ranger_nets_2 | legs_1/ranger_nets_3 | 6 | 3 | (2, 25, 35) |
 | legs_0/ranger_nets_2 | legs_0/ranger_nets_3 | 6 | 3 | (2, -25, 35) |
 | gun/ranger_nets_5 | minigun_root/plain_575757 (hidden) | 5 | 2 | (35, 31, 66) |
-| minigun_barrels/glow_102eff (hidden) | minigun_barrels/hull (hidden) | 2 | 1 | (87, 36, 81) |
 
 ## cockpit_scorpion_blue (cockpit)
 
@@ -720,8 +592,6 @@ Checked 100 models; 44 with hits (the ones still waiting for their fix are liste
 |---|---|---|---|---|
 | launchers_1_node/juggernaut_nets_1 | launchers_1_node/juggernaut_nets_3 | 1148 | 258 | (-17, -46, -12) |
 | launchers_0_node/juggernaut_nets_1 | launchers_0_node/juggernaut_nets_3 | 1145 | 258 | (17, -45, -5) |
-| launchers_0_node/juggernaut_nets_2 | launchers_0_node/juggernaut_nets_3 | 5 | 1 | (20, -35, -4) |
-| launchers_1_node/juggernaut_nets_2 | launchers_1_node/juggernaut_nets_3 | 5 | 1 | (-20, -35, -4) |
 
 ## kestrel_blue (unit)
 
@@ -756,8 +626,6 @@ Checked 100 models; 44 with hits (the ones still waiting for their fix are liste
 | minigun_barrels/hull_2 (hidden) | minigun_blur/plain_565656 (hidden) | 11 | 2 | (14, -71, -11) |
 | minigun_root/hull_2 (hidden) | rifle/ranger_rifle_2 | 2 | 2 | (13, -42, -11) |
 | minigun_root/hull_2 (hidden) | rifle/ranger_rifle | 2 | 2 | (17, -42, -11) |
-| minigun_barrels/glow_102eff (hidden) | minigun_barrels/hull_2 (hidden) | 2 | 0 | (14, -73, -5) |
-| minigun_root/hullDark (hidden) | rifle/ranger_rifle | 2 | 0 | (17, -41, -12) |
 
 ## cockpit_atlas_blue (cockpit)
 
@@ -778,9 +646,6 @@ Checked 100 models; 44 with hits (the ones still waiting for their fix are liste
 | guns_1/comet_nets_2 | guns_1/comet_nets_3 | 12 | 8 | (-0, -20, 75) |
 | guns_0/comet_nets_2 | guns_0/comet_nets_3 | 12 | 8 | (-0, 15, 75) |
 | head/comet_nets_4 | head/plain_000000 | 36 | 5 | (1, 4, 88) |
-| knees_0/comet_nets_2 | legs_0/comet_nets_1 | 8 | 1 | (3, -3, 27) |
-| knees_1/comet_nets_2 | legs_1/comet_nets_1 | 8 | 1 | (3, 12, 27) |
-| head/comet_nets_4 | head/comet_nets_4 | 8 | 1 | (14, 0, 93) |
 
 ## ore_0 (resource)
 

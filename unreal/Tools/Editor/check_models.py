@@ -92,7 +92,7 @@ def _inside_tri(p, t, eps=1e-6):
 
 
 class Tri:
-    __slots__ = ("mesh", "n", "d", "pts", "flat", "lo", "hi")
+    __slots__ = ("mesh", "n", "d", "pts", "flat", "lo", "hi", "vids")
 
 
 def triangles(mesh_id, pts, tris):
@@ -107,6 +107,7 @@ def triangles(mesh_id, pts, tris):
         t = Tri()
         t.mesh, t.n, t.pts = mesh_id, (-cr[0] / ln, -cr[1] / ln, -cr[2] / ln), (a, b, c)
         t.d = _dot(t.n, a)
+        t.vids = (i, j, k)
         out.append(t)
     return out
 
@@ -123,8 +124,9 @@ def _basis(n):
     return u, _cross(n, u)
 
 
-def check(tris):
-    """Returns ({(meshA, meshB): [count, area]}, {meshA: covered triangle count by another mesh, per other mesh})."""
+def check(tris, collect=None):
+    """Returns ({(meshA, meshB): [count, area, ...]}, {meshA: covered triangle count by another mesh, per other mesh}),
+    pairs of less than MIN_AREA in all left out; `collect` (a list) gets every visible overlapping (Tri, Tri, area)."""
     bins = collections.defaultdict(list)
     for t in tris:
         bins[_key(t.n)].append(t)
@@ -173,6 +175,8 @@ def check(tris):
                 near = [f for dd, f in oflat if abs(dd - a.d) <= D_TOL]
                 if near and all(any(_inside_tri(q, f) for f in near) for q in probes):
                     continue
+                if collect is not None:
+                    collect.append((a, b, area))
                 k2 = (a.mesh, b.mesh) if a.mesh < b.mesh else (b.mesh, a.mesh)
                 got = pairs[k2]
                 got[0] += 1
@@ -180,7 +184,7 @@ def check(tris):
                 if area > got[2]:
                     got[2] = area
                     got[3] = tuple(n[i] * a.d + u[i] * cu + v[i] * cv for i in range(3))
-    return pairs, same
+    return {k: v for k, v in pairs.items() if v[1] > MIN_AREA}, same
 
 
 def selftest():

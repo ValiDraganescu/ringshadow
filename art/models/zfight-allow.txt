@@ -2,27 +2,6 @@
 # One catalog name a line; take a model off when its fix lands (the check says when a listed model is clean).
 # A model with hits that is not here fails the check.
 
-# building
-bastion_blue
-derrick_blue
-foundry_blue
-garrison_blue
-lab_blue
-sentinel_blue
-spacedock_blue
-
-# construction
-scaffold_bastion_blue
-scaffold_derrick_blue
-scaffold_foundry_blue
-scaffold_garrison_blue
-scaffold_habdome_blue
-scaffold_lab_blue
-scaffold_sentinel_blue
-scaffold_spacedock_blue
-
-# doodad
-
 # resource
 ore_0
 
