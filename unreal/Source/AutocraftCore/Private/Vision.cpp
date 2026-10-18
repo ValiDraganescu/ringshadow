@@ -161,10 +161,7 @@ int8_t Vision::tierAt(Vec2 p) const {
 /// ground, `near` wherever it is in reach (an air unit there is seen).
 void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<uint8_t>& seen, std::vector<uint8_t>& near,
                    std::vector<uint64_t>& explored, std::optional<std::pair<double, double>> cone) const {
-    const int64_t x0 = max<int64_t>(0, static_cast<int64_t>(std::floor((c.x - r - origin.x) / cell)));
-    const int64_t x1 = min<int64_t>(width - 1, static_cast<int64_t>(std::floor((c.x + r - origin.x) / cell)));
-    const int64_t z0 = max<int64_t>(0, static_cast<int64_t>(std::floor((c.y - r - origin.y) / cell)));
-    const int64_t z1 = min<int64_t>(height - 1, static_cast<int64_t>(std::floor((c.y + r - origin.y) / cell)));
+    const auto [x0, z0, x1, z1] = stampBox(c, r);
     if (!(x0 <= x1 && z0 <= z1)) return;
     const double r2 = r * r;
     const int8_t top = level ? *level : std::numeric_limits<int8_t>::max();
@@ -276,6 +273,13 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
     }
 }
 
+std::array<int64_t, 4> Vision::stampBox(Vec2 c, double r) const {
+    return {max<int64_t>(0, static_cast<int64_t>(std::floor((c.x - r - origin.x) / cell))),
+            max<int64_t>(0, static_cast<int64_t>(std::floor((c.y - r - origin.y) / cell))),
+            min<int64_t>(width - 1, static_cast<int64_t>(std::floor((c.x + r - origin.x) / cell))),
+            min<int64_t>(height - 1, static_cast<int64_t>(std::floor((c.y + r - origin.y) / cell)))};
+}
+
 /// Its test (the same sums as `stamp`'s) passes at the four corner cells;
 /// it grows with `|dx|` and `|dz|`, whose largest are at the corners.
 bool Vision::coversGrid(Vec2 c, double r) const {
@@ -358,8 +362,47 @@ void Vision::sightInto(Sight& s, int64_t p, const GameState& state, std::vector<
     // explored: the circles and beams left change nothing. The widest
     // first doing so leaves on cleared arrays what is written here at once.
     bool whole = !order.empty() && !viewers[order.front()].level && coversGrid(viewers[order.front()].c, viewers[order.front()].r);
-    s.seen.assign(static_cast<size_t>(cells), whole ? 1 : 0);
-    s.near.assign(static_cast<size_t>(cells), whole ? 1 : 0);
+    // Cleared: the rows' spans the last look marked, when it says (every
+    // other cell is 0 still) and they are under half the grid, else all of
+    // it.
+    const size_t n = static_cast<size_t>(cells);
+    bool cleared = false;
+    if (!whole && s.marked && s.markedWidth == width && s.marked->size() == static_cast<size_t>(height) && s.seen.size() == n
+        && s.near.size() == n) {
+        int64_t spans = 0;
+        for (const auto& [lo, hi] : *s.marked) spans += lo <= hi ? hi - lo + 1 : 0;
+        if (spans * 2 <= cells) {
+            for (int64_t z = 0; z < height; ++z) {
+                const auto [lo, hi] = (*s.marked)[static_cast<size_t>(z)];
+                if (lo > hi) continue;
+                const size_t from = static_cast<size_t>(z * width + lo), len = static_cast<size_t>(hi - lo + 1);
+                std::memset(s.seen.data() + from, 0, len);
+                std::memset(s.near.data() + from, 0, len);
+            }
+            cleared = true;
+        }
+    }
+    if (!cleared) {
+        s.seen.assign(n, whole ? 1 : 0);
+        s.near.assign(n, whole ? 1 : 0);
+    }
+    // What this look marks, row by row, for the next one (nil: all of it).
+    if (whole) {
+        s.marked.reset();
+    } else {
+        if (!s.marked) s.marked.emplace();
+        s.marked->assign(static_cast<size_t>(height), {std::numeric_limits<int32_t>::max(), -1});
+        s.markedWidth = width;
+    }
+    auto mark = [&](Vec2 c, double r) {
+        if (!s.marked) return;
+        const auto [bx0, bz0, bx1, bz1] = stampBox(c, r);
+        for (int64_t z = bz0; z <= bz1 && bx0 <= bx1; ++z) {
+            auto& [lo, hi] = (*s.marked)[static_cast<size_t>(z)];
+            lo = std::min(lo, static_cast<int32_t>(bx0));
+            hi = std::max(hi, static_cast<int32_t>(bx1));
+        }
+    };
     if (whole && words > 0) {
         for (size_t w = 0; w + 1 < words; ++w) explored[w] = ~uint64_t(0);
         explored[words - 1] |= cells % 64 == 0 ? ~uint64_t(0) : (uint64_t(1) << static_cast<uint64_t>(cells % 64)) - 1;
@@ -374,8 +417,10 @@ void Vision::sightInto(Sight& s, int64_t p, const GameState& state, std::vector<
         }
         if (inside) continue;
         drawn.push_back(v);
+        mark(v.c, v.r);
         stamp(v.c, v.r, v.level, s.seen, s.near, explored);
         whole = !v.level && coversGrid(v.c, v.r);
+        if (whole) s.marked.reset();
     }
     // The beams last: one inside a drawn circle adds nothing.
     const double half = Rules::headlampCone * pi / 180;
@@ -385,7 +430,9 @@ void Vision::sightInto(Sight& s, int64_t p, const GameState& state, std::vector<
         for (const auto& d : drawn) {
             if ((!d.level || d.level == b.v.level) && distance(d.c, b.v.c) + b.v.r <= d.r) { inside = true; break; }
         }
-        if (!inside) stamp(b.v.c, b.v.r, b.v.level, s.seen, s.near, explored, std::make_pair(b.heading, half));
+        if (inside) continue;
+        mark(b.v.c, b.v.r);
+        stamp(b.v.c, b.v.r, b.v.level, s.seen, s.near, explored, std::make_pair(b.heading, half));
     }
     // What of the others' it sees.
     for (const auto& u : state.units) {

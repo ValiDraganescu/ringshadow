@@ -6,6 +6,7 @@
 #include "SimdMath.h"
 #include "Types.h"
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <map>
@@ -29,6 +30,13 @@ struct Sight {
     std::vector<uint8_t> near;
     /// The others' units and buildings it sees.
     std::set<int64_t> ids;
+    /// Per row, the cells (first, last; none when first > last) the look
+    /// that filled `seen` and `near` may have marked, on a grid
+    /// `markedWidth` wide, all else 0, so the next look clears only those
+    /// (docs/perf.md "Server" round 23); nil: clear it all. Whoever writes
+    /// `seen` or `near` other than `Vision::sightInto` sets it nil.
+    std::optional<std::vector<std::array<int32_t, 2>>> marked;
+    int64_t markedWidth = 0;
 };
 
 /// Fog of war, for every player alike, the humans' team and the AI's:
@@ -85,6 +93,9 @@ struct Vision {
                std::vector<uint64_t>& explored, std::optional<std::pair<double, double>> cone = std::nullopt) const;
     /// `stamp`'s circle at `c`, `r` round, takes in every cell of the grid.
     bool coversGrid(Vec2 c, double r) const;
+    /// The cells `stamp` at `c`, `r` round, may mark: x0, z0, x1, z1 (none
+    /// when x0 > x1 or z0 > z1).
+    std::array<int64_t, 4> stampBox(Vec2 c, double r) const;
 
     /// What player `p` sees in `state` now; what it sees joins `explored`.
     /// `farther` holds the sight radius of units whose leveling picks

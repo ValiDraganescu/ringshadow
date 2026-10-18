@@ -152,6 +152,7 @@ void Mirror::apply(const SnapshotPart& part) {
         Sight& sight = sim_->sights[size_t(side_)];
         sight.seen = s.fog->seen;
         sight.near = s.fog->near;
+        sight.marked = std::nullopt;
         if (!st.intel) st.intel = std::vector<Intel>{};
         if (st.intel->size() < players) st.intel->resize(players);
         Intel& intel = (*st.intel)[size_t(side_)];

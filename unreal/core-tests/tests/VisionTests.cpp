@@ -470,3 +470,47 @@ TEST(vision_daylightOverTheWholeGridIsWrittenAtOnce) {
         EXPECT_TRUE(v.sight(0, s, again, {}, {}, {}, {{centre, r}}, 0.5).ids == used.ids);
     }
 }
+
+// docs/perf.md "Server" round 23: a look clears only what the last one
+// marked. Look after look, with units walking, coming and going, a pilot's
+// headlamp and now and then the whole region by day, the Sight a look fills
+// again is the one a fresh look fills, and the explored cells the same.
+TEST(vision_aLookClearsWhatTheLastMarked) {
+    GameState s = field();
+    const Vec2 home = citadel(s, 0), away = citadel(s, 1);
+    for (int k = 0; k < 12; ++k) add(s, Unit::Kind::ranger, home + Vec2(4 + k, 3 - k % 5), 0);
+    for (int k = 0; k < 6; ++k) add(s, Unit::Kind::ranger, away - Vec2(5 + k, k % 3), 1);
+    const Simulation sim(s, homeMap());
+    const Vision& v = *sim.vision;
+    const double gw = static_cast<double>(v.width) * Vision::cell, gh = static_cast<double>(v.height) * Vision::cell;
+    SeededRandom dice(23);
+    int64_t clearedInPart = 0;
+    for (int64_t p = 0; p < 2; ++p) {
+        Sight used;
+        std::vector<uint64_t> a, b;
+        for (int look = 0; look < 200; ++look) {
+            for (Unit& u : s.units) {
+                u.position = u.position + Vec2(dice.range(-3, 3), dice.range(-3, 3));
+                u.position = Vec2(std::clamp(u.position.x, v.origin.x - 5, v.origin.x + gw + 5), std::clamp(u.position.y, v.origin.y - 5, v.origin.y + gh + 5));
+                u.hp = look % 9 == 0 && u.id % 4 == 0 ? 0 : 50;
+            }
+            std::map<int64_t, double> beams;
+            if (look % 3 == 0) beams[s.units.front().id] = dice.range(-3.2, 3.2);
+            std::vector<std::pair<Vec2, double>> lit;
+            if (look % 17 == 5) lit.emplace_back(v.origin + Vec2(gw / 2, gh / 2), std::hypot(gw, gh));
+            else if (look % 5 == 1) lit.emplace_back(s.units.front().position, dice.range(5, 40));
+            const double night = look % 2 ? 0.5 : 0.2;
+            clearedInPart += used.marked ? 1 : 0;
+            v.sightInto(used, p, s, a, {}, {}, beams, lit, night);
+            const Sight fresh = v.sight(p, s, b, {}, {}, beams, lit, night);
+            EXPECT_TRUE(used.seen == fresh.seen);
+            EXPECT_TRUE(used.near == fresh.near);
+            EXPECT_TRUE(used.ids == fresh.ids);
+            EXPECT_TRUE(a == b);
+        }
+    }
+    // Many looks cleared only the last one's boxes (the side with twelve
+    // Rangers marks most of the grid and clears it all).
+    std::printf("  (%lld of 400 looks cleared in part)\n", (long long)clearedInPart);
+    EXPECT_TRUE(clearedInPart > 120);
+}

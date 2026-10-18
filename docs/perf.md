@@ -474,7 +474,7 @@ deeds, the ledgers, the save, the wire bytes and the simulation's hashes.
 The benches are `make -C unreal/server bench` (-O3); the M4 Max is shared,
 so every number carries the load average it ran under.
 
-Where it stands after round 15 (the first number before round 1, or
+Where it stands after round 23 (the first number before round 1, or
 before the round that first measured it):
 
 | | before | now |
@@ -482,19 +482,22 @@ before the round that first measured it):
 | the server's start (The First, cold) | ~850 ms, 5.5 s CPU | ~300 ms, 2.7 s CPU |
 | the first step after a pilot joins | 12-25 ms | under 1 ms |
 | the world's step, one pilot (`worldbench`) | 0.030 ms | 0.005 ms |
-| the nest's step (`worldbench ... nest`) | 0.054 ms | 0.040 ms |
-| a look by day, a pilot's region (`lookbench`) | 63 µs | 2.2 µs |
-| building and writing a pilot's snapshot (`snapbench`, start, noon) | 3 + 44-70 µs | 1.8 + 6.0 µs |
-| 16 pilots in one region, a tick (`crowdbench`) | 230 µs | ~100 µs |
-| a path search on the nest's grid (`pathbench`) | 10.5 µs | 9.0 µs |
+| the nest's step (`worldbench ... nest`) | 0.054 ms | 0.012-0.013 ms |
+| a look by day, a pilot's region (`lookbench`) | 63 µs | 1.5 µs |
+| a look in the nest by day (`lookbench`) | 26.7 µs | 15.7 µs |
+| building and writing a pilot's snapshot (`snapbench`, start, noon) | 3 + 44-70 µs | 1.9 + 5.3 µs |
+| 16 pilots in one region, a tick (`crowdbench`) | 230 µs | ~90 µs |
+| pilots in 2 and 4 regions, a tick (`spreadbench`) | 42 and 59 µs | 13 and 27 µs |
+| a path search on the nest's grid (`pathbench`, all different) | 10.5 µs | 9.0 µs |
 | the idle call, no pilot on line (`soak-save` days) | 0.073-0.120 ms | 0.007-0.009 ms |
 
 Every change kept the results: the wire's bytes, the save, and the
 simulation's state hashes in the benches are the same before and after.
 Round 3 found and fixed three reads of freed or dead memory in the nest's
 code (the only change of behaviour, where it read garbage). What is left in
-every busy scene is the Brood's path searches (half the nest's step; their
-order cannot change) and the look's clearing of its arrays.
+a busy scene is the look's stamping (the Brood's circles; a third of the
+nest's step), the Brood's fresh path searches, and the snapshot writer's
+per-item compares; each change is a few percent now.
 
 ### Round 1: the first board's walking grids (2026-10-18)
 
@@ -1276,3 +1279,34 @@ The sights hashes are the same in all six scenes; worldbench's and
 spreadbench's state hashes too. Test `vision_stampComparesLevelsOfEveryByte`
 (levels of every byte value, viewers on every level including -128 and
 127, against the cell-by-cell stamp). Core touched (Vision).
+
+### Round 23: a look clears what the last one marked (2026-10-18)
+
+Every look cleared both of a side's grid-sized arrays (`seen`, `near`:
+2 x 55,000 bytes in the start region, twice per look with two sides) before
+stamping, a third of a look. Everything else in them was still 0 from the
+clearing before: the last look marked only inside its stamps' boxes. A
+`Sight` now carries, per row, the span its look may have marked
+(`Sight::marked`, from `Vision::stampBox`, the same box `stamp` writes in,
+on a grid `markedWidth` wide), and the next look clears only those spans
+when they are under half the grid; otherwise, after the whole region by
+day, a new or resized `Sight`, or a grid of another width, it clears all
+of it as before. One span a row, the union's extent: per box, the nest's
+29 overlapping bugs cleared the same rows many times over and lost 7%. The
+client's mirror, which writes a `Sight`'s arrays from the wire, sets the
+marks nil.
+
+| 3 runs each in turns, load 6-7 | before | after |
+|---|---:|---:|
+| `lookbench`, the start at noon / midnight | 2.1 / 4.1-4.3 µs | 1.5 / 3.2-3.3 µs |
+| the nest at noon / midnight | 16.1-16.3 / 13.8-13.9 µs | 15.7-15.8 / 13.0-13.2 µs |
+| Cold Fork at noon / midnight | 1.9-2.0 / 3.9-4.1 µs | 1.5 / 3.2 µs |
+| `worldbench 30` from the nest, mean / p95 | 0.014 / 0.044 ms | 0.012-0.013 / 0.036-0.038 ms |
+| `spreadbench 20`, 1 / 2 / 4 regions | 3.4-3.6 / 14.0-14.3 / 27.2-27.8 µs | 2.1 / 13.0-13.1 / 26.9-27.2 µs |
+
+The sights hashes of all six lookbench scenes, worldbench's and
+spreadbench's state hashes and snapbench's four wires are the same. Test
+`vision_aLookClearsWhatTheLastMarked`: 400 looks with units walking,
+dying, a headlamp and the whole region by day now and then, a used `Sight`
+against a fresh one each time (seen, near, ids, explored). Core touched
+(Vision.h, Vision.cpp); net (NetMirror.cpp, one line).
