@@ -474,7 +474,11 @@ deeds, the ledgers, the save, the wire bytes and the simulation's hashes.
 The benches are `make -C unreal/server bench` (-O3); the M4 Max is shared,
 so every number carries the load average it ran under.
 
-Where it stands after round 24 (the first number before round 1, or
+Paused after round 25 (2026-10-18): the server's performance chapter
+stops here, a place to pick it up from. Everything below is measured; no
+change altered a result.
+
+Where it stands after round 25 (the first number before round 1, or
 before the round that first measured it):
 
 | | before | now |
@@ -486,7 +490,7 @@ before the round that first measured it):
 | a look by day, a pilot's region (`lookbench`) | 63 µs | 1.5 µs |
 | a look in the nest by day (`lookbench`) | 26.7 µs | 15.7 µs |
 | building and writing a pilot's snapshot (`snapbench`, start, noon) | 3 + 44-70 µs | 1.9 + 5.3 µs |
-| 16 pilots in one region, a tick (`crowdbench`) | 230 µs | ~90 µs |
+| 16 pilots in one region, a tick (`crowdbench`) | 230 µs | 73-75 µs |
 | pilots in 2 and 4 regions, a tick (`spreadbench`) | 42 and 59 µs | 13 and 27 µs |
 | a path search on the nest's grid (`pathbench`, all different) | 10.5 µs | 9.0 µs |
 | the idle call, no pilot on line (`soak-save` days) | 0.073-0.120 ms | 0.007-0.009 ms |
@@ -494,10 +498,76 @@ before the round that first measured it):
 Every change kept the results: the wire's bytes, the save, and the
 simulation's state hashes in the benches are the same before and after.
 Round 3 found and fixed three reads of freed or dead memory in the nest's
-code (the only change of behaviour, where it read garbage). What is left in
-a busy scene is the look's stamping (the Brood's circles; a third of the
-nest's step), the Brood's fresh path searches, and the snapshot writer's
-per-item compares; each change is a few percent now.
+code (the only change of behaviour, where it read garbage).
+
+**How it was measured.** Each round: a baseline with the benches below
+(the load average written with every number), a Time Profiler trace
+(`xcrun xctrace`), the biggest measured cost fixed without changing a
+result, then before and after built side by side and run in turns. The
+proof is the hashes the benches print, equal before and after:
+`worldbench` (every unit's state at the end, a region or the nest),
+`spreadbench` (the same, pilots in 1, 2 and 4 regions), `crowdbench` (the
+wire bytes and the state, 1, 4 and 16 pilots), `snapbench` (the wire bytes,
+start and nest, noon and midnight), `pathbench` (every path), `lookbench`
+(every side's sight and explored cells), the terrain and ground hashes of
+all ten region files, and the save's `.dump` (`savebench`); plus the core
+suite with its goldens, and the server and net suites. `loadbench` times
+the start, `savebench` the save, `soak-save` the idle call.
+
+**The sanitizer targets.** `make -C unreal/server test-asan`: the server
+suite under AddressSanitizer and UBSan (build/asan/, -O1; some minutes to
+build and ten to twenty to run; stops at the first finding). `make -C unreal/server
+test-tsan`: the same under ThreadSanitizer with the regions stepped on 4
+threads every step (`AUTOCRAFT_STEP_THREADS=4 AUTOCRAFT_STEP_ALWAYS=1`;
+build/tsan/; about an hour). The core and net suites under ASan and UBSan
+were run from the same flags at each core or net change. The last full
+sweep: ASan+UBSan server, core and net (round 25), TSan server
+(round 18), TSan spreadbench (rounds 19-21): clean.
+
+**The parallel step switch.** `WorldParams::stepThreads` (0, the default:
+off; -1 half the cores, at most 8; N that many), or `AUTOCRAFT_STEP_THREADS`
+when that is 0 (round 18). Off until a world has several crowded regions
+at once: a region goes to another thread only when its last two steps each
+took longer than waking one (8-12 µs here), and The First has no two such
+regions (with a pilot at the nest the whole world steps in 12-13 µs). To
+turn it on: `stepThreads = -1`, then `make -C unreal/server test-tsan` and
+`spreadbench` off, on and with `AUTOCRAFT_STEP_ALWAYS=1` (docs/mmorpg.md
+"The world runs on").
+
+**The rounds.** 1 the first board's walking grids from the load (a 12 ms
+stall on tick 1). 2 the walking grids at the start (polygon runs, open
+land). 3 the fog's look in spans, and three dangling references in the
+nest. 4 the fog on the wire, 8 cells a word. 5 a crowd's fog chunks kept.
+6 the writer's unchanged items without allocation, bit writes in one pass.
+7 a crowd's daylight stamped once. 8 the empty regions' grids. 9 the
+start's fog tiers on every core. 10 the idle call's build spots. 11 a
+driver's bank read in place; the WAL. 12 the path search's heap picks by
+pairs. 13 a side's fog shared between its snapshots. 14 the headlamp's
+wedge without the root. 15 daylight over the whole region written at once.
+16 the save's statements prepared once. 17 the noise's four octaves side by
+side. 18 the regions on threads, off by default, with the gate. 19 the
+walking grid keeps its long searches. 20 the writer's items on one writer.
+21 the stuck and trapped checks read units in place. 22 a ground viewer's
+cells eight at a time. 23 a look clears what the last marked. 24 the
+ground's slope tested last. 25 a snapshot round's bits made once.
+
+**What is left** (measured, each a few percent now). In the nest by day
+the look is the biggest part of a step, most of it the Brood's sight (its
+circles repeat in 25-75% of looks, but an exact skip must keep `explored`
+right). The Brood's fresh path searches (different questions; their order
+cannot change). In a crowd, the writer's per-item compare against each
+pilot's baseline and the snapshot's own building. The start: the
+remaining heights of the ground build (already culled exactly). The step
+loop copies each unit once.
+
+**Tried and left out** (no gain, measured): the step threads on today's
+regions (round 18: on equals off; sending every step costs 3-6 µs);
+`writeBits` inline in the header (round 20); keeping the last round's bits
+so each writer finds its baseline by pointer (after round 25: the extra
+compare per entity costs what it saves, 9.0 -> 9.2 µs a write); the
+heuristic cache, travel's waypoints copy, the unit copy moved back, the
+level path vectorized, `popCell` forced inline, the squared goal test and
+8-byte cells, and the hash's division (earlier rounds).
 
 ### Round 1: the first board's walking grids (2026-10-18)
 
