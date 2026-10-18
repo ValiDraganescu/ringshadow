@@ -201,10 +201,22 @@ camera stops at the first hit less the sphere. Inside the hall the roof slab
 is its ceiling. The "lift to look over a low wall ahead" rule stays for
 slabs lower than 3 cells (scaffolds, small buildings).
 
+As built (`AcPilotWalls.h`): the slabs are each building's
+`Rules::footprint` boxes on the ground at its centre, sunk as the renderer
+sinks a building under construction; a Landing Pad (walkable) is no wall.
+The sphere is swept as a point against each box grown by 0.25 (square
+corners); a box the sphere already touches at the start is swept with the
+point alone, one the start is inside is left out. The pivot (over the
+right shoulder) is first swept from the eye, so a pilot hugging a wall
+never has its boom start inside it. A camera stopped by a low slab rises
+by `0.8 × (1 − t)` as before; a lift never goes up through a slab over it.
+
 `FAcPilotCamera::Follow` (first person) clamps the eye the same way against
 the slabs when the eye's offset from the unit's centre would cross one (the
 lean, a wide unit); the Prospector's eye is over its centre so it rarely
-moves.
+moves. As built: the sweep runs from over the unit's centre (at the eye's
+height) to the eye with a sphere of 0.12 cells (the near plane is 0.04),
+after `Follow`, in the pawn (`AcPilotWalls::ClampEye`).
 
 At a gun the view is **always first person** from `gunEye` (the V key does
 nothing; third person resumes on disengage), the look yaw clamped to the

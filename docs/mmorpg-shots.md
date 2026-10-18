@@ -221,9 +221,13 @@ frame showed only a wall of sand, with no Prospector in view.
 11. **Cosmetic.** Unloading gives almost no feedback: a small, faint "+25"
     over the Citadel, and no flash on the wallet. *Owner: the Deposited event's
     effect (`AcEffects`), `SAcResourceBar`.*
-12. **Cosmetic.** The third-person camera does not back off buildings. It sits
-    inside the scaffold while welding and against the Citadel's wall while
-    unloading. *Owner: the chase camera, `AcPilotChase.h`.*
+12. **Solved, 2026-10-18 (C1).** ~~The third-person camera does not back off
+    buildings. It sits inside the scaffold while welding and against the
+    Citadel's wall while unloading.~~ The chase boom now sweeps a sphere
+    against the buildings' slabs (`Rules::footprint`, `AcPilotWalls.h`) and
+    stops at the first wall, door or roof; the first-person eye is kept out
+    of them the same way (docs/citadel-interior.md §6). Test
+    `Autocraft.Pilot.ChaseStopsAtWalls`.
 13. **Cosmetic.** On resume the view's heading is not the one left (195° →
     098°), so the pilot looks at the dune wall at the region's edge. *Owner:
     the seat on resume in `AcPilotPawn.cpp` (`SyncMmo`).*

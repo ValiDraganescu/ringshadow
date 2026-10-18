@@ -4,6 +4,7 @@
 #include "AcKindTable.h"
 #include "AcSpace.h"
 
+#include "Rules.h"
 #include "TerrainField.h"
 
 #include <cmath>
@@ -103,10 +104,12 @@ namespace AcPose
 
 	double BuildingHeight(const ac::StructureKind Kind)
 	{
-		// GameScene.makeBuilding (GameScene.swift:363); Models.labHeight 1.9.
+		// GameScene.makeBuilding (GameScene.swift:363); Models.labHeight 1.9;
+		// the Citadel the core's (C1: 9.0 with the hall, deck 7 and the
+		// tower over it, docs/citadel-interior.md §1; 4.6 without).
 		switch (Kind)
 		{
-		case ac::StructureKind::citadel: return 4.6;
+		case ac::StructureKind::citadel: return ac::Rules::height(Kind);
 		case ac::StructureKind::habDome: return 1.2;
 		case ac::StructureKind::garrison: return 2.5;
 		case ac::StructureKind::bastion: return 1.4;

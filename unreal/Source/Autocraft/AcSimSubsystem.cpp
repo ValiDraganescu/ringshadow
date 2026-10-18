@@ -369,6 +369,9 @@ void UAcSimSubsystem::StartSimulation(const std::vector<ac::Commander>* KeepComm
 	const bool bPlayground = MapDef->playground.value_or(false);
 	const bool bAI = Sess->ai.value_or(true) && !bPlayground && !FParse::Param(FCommandLine::Get(), TEXT("AcNoAI"));
 	const bool bFog = Sess->fog.value_or(!bPlayground);
+	// C1: the hollow 12x12 Citadel is the MMORPG mode's; the strategy
+	// game keeps its solid 5x5 one (docs/citadel-interior.md §1).
+	ac::Rules::setCitadelHall(Mmo != nullptr);
 	Sim.reset();
 	Sim.emplace(Sess->state, *MapDef, KeepCommanders ? *KeepCommanders : bAI ? ac::Commander::all(*MapDef) : std::vector<ac::Commander>{}, bFog);
 	Stalls = ac::StallWatch();
@@ -844,6 +847,8 @@ void UAcSimSubsystem::StartMmo(const bool bNewWorld)
 	}
 	Mmo->PilotKey = Key;
 	Mmo->SavePath = Save;
+	// C1: the MMORPG world's Citadels have the hall (docs/citadel-interior.md §1).
+	ac::Rules::setCitadelHall(true);
 	Mmo->Start(FPlatformTime::Seconds(), World);
 }
 
@@ -853,6 +858,8 @@ void UAcSimSubsystem::StopMmo()
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: leaving the MMORPG test"));
 	Mmo->Stop();
 	AcSpace::SetOrigin(ac::Vec2(0, 0));
+	// Back to the strategy game's solid Citadel.
+	ac::Rules::setCitadelHall(false);
 	AAcDaylight::SetWorldSky(NullOpt);
 	// Out of the mode before the game rebuilds on the window game.
 	const std::unique_ptr<FAcMmoClient> Old = std::move(Mmo);

@@ -19,6 +19,7 @@
 #include "AcPick.h"
 #include "AcPilotAids.h"
 #include "AcPilotAim.h"
+#include "AcPilotWalls.h"
 #include "AcPointer.h"
 #include "AcPoseAir.h"
 #include "AcRaysWorld.h"
@@ -1106,6 +1107,8 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	{
 		Chase.Reset();
 		Cam.Follow(Root, U, FPlatformTime::Seconds(), At, Rot);
+		// The eye's lean or a wide unit's offset never into a wall.
+		At = AcPilotWalls::ClampEye(GetWorld(), Root.GetTranslation(), At);
 	}
 	// A Quake stomp near the driven unit shakes the view a little (the
 	// pitch and yaw, a degree at most).

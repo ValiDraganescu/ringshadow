@@ -3,6 +3,7 @@
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcPilotCamera.h"
+#include "AcPilotWalls.h"
 #include "AcRays.h"
 #include "AcRaysWorld.h"
 #include "AcSpace.h"
@@ -149,50 +150,44 @@ void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit
 			At = At + (Pivot - At) * FMath::Min(0.9, double(*T) + 0.08);
 		}
 	}
-	// The MMORPG test (docs/mmorpg-shots.md #12): buildings and scaffolds
-	// are not in the rays. A camera that would stand inside one's footprint
-	// comes in along the boom to its edge; one close ahead of the unit (a
-	// wall, a scaffold being welded) lifts the camera to look over it, and
-	// tilts it down by as much, so the unit keeps its place in the glass
-	// instead of sinking behind the dashboard.
+	// The buildings are not in the rays (docs/citadel-interior.md §6,
+	// docs/mmorpg-shots.md #12): the boom sweeps a sphere against their
+	// slabs (AcPilotWalls.h) and stops at the first, the pivot first kept
+	// on the unit's side of a wall it hugs. A low wall close ahead of the
+	// unit (a scaffold being welded, a small building) lifts the camera to
+	// look over it, and tilts it down by as much, so the unit keeps its
+	// place in the glass instead of sinking behind the dashboard.
 	FVector Aim = Look;
-	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(World); Sim && Sim->IsMmo() && Sim->IsRunning())
+	TArray<AcPilotWalls::FSlab> Slabs;
+	AcPilotWalls::Gather(World, U.position, Slabs);
+	if (!Slabs.IsEmpty())
 	{
-		double Raise = 0;
-		const ac::Vec2 Unit = U.position;
-		for (const ac::Structure& B : Sim->Simulation().state.structures)
+		const double Radius = AcSpace::ToCm(AcPilotWalls::ChaseRadius);
+		Pivot = Eye + (Pivot - Eye) * AcPilotWalls::Sweep(Eye, Pivot, Radius, Slabs);
+		bool bLow = false;
+		const double T = AcPilotWalls::Sweep(Pivot, At, Radius, Slabs, &bLow);
+		At = Pivot + (At - Pivot) * T;
+		double Raise = bLow ? 0.8 * (1 - T) : 0.0;
+		const FVector Unit = AcSpace::ToWorld(U.position);
+		for (const AcPilotWalls::FSlab& W : Slabs)
 		{
-			const double Foot = ac::Rules::radius(B.kind) + 0.4;
-			const ac::Vec2 Cam = AcSpace::ToSim(At);
-			const ac::Vec2 FromUnit = B.position - Unit;
-			const double Gap = ac::length(FromUnit) - Foot;
-			if (Gap < 1.6 && (Gap < 0 || (FromUnit.x * Ahead.X + FromUnit.y * Ahead.Y) > 0.3 * ac::length(FromUnit)))
+			if (!W.bLow) continue;
+			const FVector2D Near(FMath::Clamp(Unit.X, W.Box.Min.X, W.Box.Max.X), FMath::Clamp(Unit.Y, W.Box.Min.Y, W.Box.Max.Y));
+			const FVector2D FromUnit = FVector2D(W.Box.GetCenter()) - FVector2D(Unit);
+			const double Gap = AcSpace::ToCells((Near - FVector2D(Unit)).Size());
+			if (Gap < 1.6 && (Gap <= 0 || FVector2D::DotProduct(FromUnit, FVector2D(Ahead)) > 0.3 * FromUnit.Size()))
 			{
 				Raise = FMath::Max(Raise, 1.3 * FMath::Clamp((1.6 - Gap) / 1.6, 0.0, 1.0));
-			}
-			if (Gap > 0 && ac::distance(Cam, B.position) < Foot)
-			{
-				// The first point along the boom (pivot → camera) inside the footprint.
-				const ac::Vec2 P0 = AcSpace::ToSim(Pivot);
-				double Inside = 1;
-				for (int32 K = 1; K <= 24; ++K)
-				{
-					const double T = K / 24.0;
-					if (ac::distance(P0 + (Cam - P0) * T, B.position) < Foot)
-					{
-						Inside = (K - 1) / 24.0;
-						break;
-					}
-				}
-				At = Pivot + (At - Pivot) * FMath::Max(0.3, Inside);
-				Raise = FMath::Max(Raise, 0.8 * (1 - Inside));
 			}
 		}
 		if (Raise > 0)
 		{
 			const FVector Boom = Pivot - At;
-			At.Z += AcSpace::ToCm(Raise);
-			if (Boom.Size() > AcSpace::ToCm(0.5)) Aim = (Boom - FVector(0, 0, AcSpace::ToCm(Raise))).GetSafeNormal();
+			// Lifted, but never into a slab over it (a roof).
+			const FVector Up = At + FVector(0, 0, AcSpace::ToCm(Raise));
+			At = At + (Up - At) * AcPilotWalls::Sweep(At, Up, Radius, Slabs);
+			const double Lifted = At.Z - (Pivot - Boom).Z;
+			if (Boom.Size() > AcSpace::ToCm(0.5)) Aim = (Boom - FVector(0, 0, Lifted)).GetSafeNormal();
 		}
 	}
 	if (const AAcTerrain* Terrain = AAcTerrain::Find(World))
