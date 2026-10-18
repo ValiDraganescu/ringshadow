@@ -300,6 +300,9 @@ private:
 	/// C1: `mmocitadel` (the Citadel's door, hall and corner gun through the
 	/// act key): AcMmoCitadelFlowTest.cpp.
 	void TickMmoCitadelFlow(const FString& Step);
+	/// C2: `mmopractice` (the build wheel, the target dummy, the gun's
+	/// rounds): AcMmoPracticeFlowTest.cpp.
+	void TickMmoPracticeFlow(const FString& Step);
 	/// A key through the flow's key processor, as the player presses it.
 	bool PressFlowKey(const struct FKey& Key);
 	/// U2: `mmosettings` (the Settings page from the home screen and the

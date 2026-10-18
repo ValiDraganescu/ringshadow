@@ -58,6 +58,8 @@
 //   E5  `CockpitMount()` (a child of the camera: x ahead, z up), `Camera()`,
 //       `Eye().SetLean`, `Eye().Turn/Speed`, `OnTookOver`/`OnLeft`.
 //   E6  `OnNote`, `Driven()`, `Sight()`; E8/E9 `OnKey`, `Pointable`, `bPlacing`.
+//   C2  `OnLookTaken` (the build wheel's stick); the act key offers
+//       "confirm" to `OnKey` first (the wheel's pick).
 //
 // Scripted driving (headless; no desktop input):
 //   -AcPilot=KIND        take over the player's first KIND once the game runs
@@ -276,6 +278,9 @@ public:
 	/// Keys offered first (E8 build menu, E9 picks): "esc", "b", "z", "x",
 	/// "1"…"9"; true = used.
 	TFunction<bool(const FString& Key)> OnKey;
+	/// The mouse's motion offered first (raw counts, +y up; C2's build
+	/// wheel takes it while open); true = taken, the view does not turn.
+	TFunction<bool(FVector2D Raw)> OnLookTaken;
 	/// Option frees the pointer only when something wants it (E9's pick cards).
 	TFunction<bool()> Pointable;
 	/// A building is held out to place (E8): the act key places, not acts.

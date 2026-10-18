@@ -80,6 +80,10 @@ public:
 	/// middle points (+ to the right).
 	static double GaugeAngle(double Off) { return 0.5 * UE_DOUBLE_PI - Off; }
 
+	/// C2: the build wheel's ring, inner and outer radius (points).
+	static constexpr double WheelInner = 84;
+	static constexpr double WheelOuter = 210;
+
 	/// Points across the compass tape, and degrees of heading on it.
 	static constexpr double TapeWidth = 420;
 	static constexpr double TapeSpan = 120;
@@ -93,6 +97,8 @@ private:
 	void PaintMenu(FAcPilotPen& P, double H) const;
 	/// C1: the corner gun's live feed (`Info.Feed`) over the view.
 	void PaintFeed(FAcPilotPen& P, double W, double H, double Now) const;
+	/// C2: the radial build wheel (`Info.Wheel`) round the centre `C`.
+	void PaintWheel(FAcPilotPen& P, FVector2D C) const;
 	double ReticleScale(double Now) const;
 
 	bool bPanel = true;

@@ -317,6 +317,7 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	Inputs.Mmo = Sim->MmoClient();
 	FAcPilotInfo Info = AcPilotText::Info(S, *F, Inputs);
 	GunFeed(S, *Pawn, Frame, Info);
+	Info.Wheel = Wheel;
 	if (Inputs.Mmo)
 	{
 		Info.Marks = AcProgressHud::ContractGoals(*Inputs.Mmo, U.position);

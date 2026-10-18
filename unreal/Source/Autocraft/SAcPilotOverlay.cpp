@@ -3,6 +3,7 @@
 #include "AcConsolePaint.h"
 #include "AcHudStyle.h"
 #include "AcHudText.h"
+#include "AcIcons.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "Layout/Clipping.h"
@@ -136,9 +137,9 @@ struct FAcPilotPen
 		FillRounded(R, Radius, Fill);
 		this->Stroke(R, Radius, Stroke, Width);
 	}
-	void Image(const FSlateBrush* Brush, const FAcRect& R)
+	void Image(const FSlateBrush* Brush, const FAcRect& R, const FLinearColor& Tint = FLinearColor::White)
 	{
-		Paint([&](FAcConsolePaint& P) { P.Image(Brush, R); });
+		Paint([&](FAcConsolePaint& P) { P.Image(Brush, R, Tint); });
 	}
 
 	/// Clip what follows to `R` (points, y up) until `PopClip`.
@@ -319,10 +320,12 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 		}
 	}
 	if (Info.Feed) PaintFeed(P, W, H, Now);
-	PaintReticle(P, C, Now);
+	// C2: the build wheel takes the reticle's place while it is open.
+	if (!Info.Wheel) PaintReticle(P, C, Now);
 	PaintSight(P, W, H);
 	PaintMarks(P, C, Now);
 	PaintCompass(P, W, H);
+	if (Info.Wheel) PaintWheel(P, C);
 	if (bPanel)
 	{
 		PaintPanel(P, W);
@@ -566,6 +569,90 @@ void SAcPilotOverlay::PaintMenu(FAcPilotPen& P, const double H) const
 		P.Label(Menu[I].Line, 16, bOk ? FLinearColor::White : White(0.5), O + FVector2D(12, -14 - (I + 1) * RowH), EAcHAlign::Left,
 			EAcVAlign::Baseline, false, true, 1, bOk ? FAcHudStyle::NameAccent() : Alpha(FAcHudStyle::NameAccent(), 0.5));
 	}
+}
+
+void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FVector2D C) const
+{
+	// The ring of buildings round the screen's centre, the first slice at
+	// the top and the rest clockwise; the pick lit and pushed out, its name,
+	// price and state in the hub; the stick's needle on the hub's rim.
+	const FAcBuildWheelInfo& Wh = *Info.Wheel;
+	const int32 N = Wh.Slices.Num();
+	if (N == 0) return;
+	const double In = WheelInner, Out = WheelOuter, Half = UE_DOUBLE_PI / N, Gap = 0.012;
+	auto Dir = [](double A) { return FVector2D(std::sin(A), std::cos(A)); };
+	P.Disc(C, Out + 26, Srgb(0.0, 0.01, 0.02, 0.42));
+	for (int32 I = 0; I < N; ++I)
+	{
+		const FAcWheelSlice& S = Wh.Slices[I];
+		const bool bPick = I == Wh.Pick, bBuild = S.State == FAcWheelSlice::EState::Build;
+		const double Mid = FAcBuildWheel::SliceAngle(I, N), Push = bPick ? 10 : 0;
+		const double R0 = In + Push, R1 = Out + Push, A0 = Mid - Half + Gap, A1 = Mid + Half - Gap;
+		const FLinearColor Fill = bPick ? (bBuild ? Srgb(0.08, 0.32, 0.42, 0.88) : Srgb(0.30, 0.18, 0.04, 0.88))
+			: bBuild ? Srgb(0.02, 0.07, 0.11, 0.80) : Srgb(0.02, 0.04, 0.06, 0.70);
+		// The annular wedge in convex quads.
+		const int32 Steps = FMath::Max(2, int32((A1 - A0) / 0.06));
+		TArray<FVector2D> Rim;
+		for (int32 K = 0; K <= Steps; ++K)
+		{
+			const double A = A0 + (A1 - A0) * K / Steps, B = A0 + (A1 - A0) * (K + 1) / Steps;
+			if (K < Steps) P.Poly({C + Dir(A) * R0, C + Dir(A) * R1, C + Dir(B) * R1, C + Dir(B) * R0}, Fill);
+			Rim.Add(C + Dir(A) * R1);
+		}
+		const FLinearColor Edge = bPick ? (bBuild ? FAcHudStyle::Cyan() : BlockedColor()) : Alpha(PanelStroke(), 0.7);
+		P.Lines(Rim, Edge, bPick ? 3 : 1.2, bPick ? 6 : 0);
+		// Its icon and number key.
+		const FVector2D Ic = C + Dir(Mid) * ((R0 + R1) / 2 + 6);
+		const double Is = bPick ? 54 : 44;
+		const float Dim = bBuild ? 1.f : 0.38f;
+		if (const FSlateBrush* B = FAcIcons::Brush(S.Icon))
+		{
+			P.Image(B, FAcRect(Ic.X - Is / 2, Ic.Y - Is / 2, Is, Is), FLinearColor(Dim, Dim, Dim, bBuild ? 1.f : 0.7f));
+		}
+		else
+		{
+			P.Label(S.Title.Left(2), 18, White(0.9, Dim), Ic, EAcHAlign::Center, EAcVAlign::Center, false, false);
+		}
+		const FVector2D Nk = C + Dir(Mid) * (R0 + 14);
+		if (S.Number > 0) P.Label(FString::FromInt(S.Number), 12, White(0.75, 0.8), Nk, EAcHAlign::Center, EAcVAlign::Center, false, false);
+		if (S.State == FAcWheelSlice::EState::Soon)
+		{
+			P.Label(TEXT("SOON"), 11, White(0.6, 0.8), C + Dir(Mid) * (R1 - 14), EAcHAlign::Center, EAcVAlign::Center, false, false);
+		}
+	}
+	// The hub.
+	P.Disc(C, In - 8, Srgb(0.01, 0.03, 0.05, 0.9));
+	P.Lines(FAcPilotPen::Circle(C, In - 8), Alpha(PanelStroke(), 0.9), 1.2);
+	if (Wh.Pick >= 0 && Wh.Pick < N)
+	{
+		const FAcWheelSlice& S = Wh.Slices[Wh.Pick];
+		const bool bBuild = S.State == FAcWheelSlice::EState::Build;
+		P.Label(S.Title, S.Title.Len() > 11 ? 14 : 17, FLinearColor::White, C + FVector2D(0, 14), EAcHAlign::Center,
+			EAcVAlign::Baseline, true, false);
+		FString Cost = FString::Printf(TEXT("%d ORE"), S.Ore);
+		if (S.Hydrogen > 0) Cost += FString::Printf(TEXT(" · %d MH"), S.Hydrogen);
+		P.Label(Cost, 13, Srgb(0.78, 0.66, 1), C + FVector2D(0, -4), EAcHAlign::Center, EAcVAlign::Baseline, true, false);
+		if (!S.Tag.IsEmpty())
+		{
+			P.Label(S.Tag, 12, bBuild ? FAcHudStyle::Cyan() : BlockedColor(), C + FVector2D(0, -22), EAcHAlign::Center,
+				EAcVAlign::Baseline, true, false);
+		}
+	}
+	else
+	{
+		P.Label(TEXT("BUILD"), 18, White(0.95), C + FVector2D(0, 4), EAcHAlign::Center, EAcVAlign::Baseline, true, false);
+		P.Label(TEXT("move the mouse"), 11, White(0.7), C + FVector2D(0, -14), EAcHAlign::Center, EAcVAlign::Baseline, true, false);
+	}
+	// The stick's needle: a tick on the hub's rim, out as far as it leans.
+	if (const double L = Wh.Stick.Size(); L > 1)
+	{
+		const FVector2D D = Wh.Stick / L;
+		const double Lean = FMath::Clamp(L / FAcBuildWheel::Reach, 0.0, 1.0);
+		const FLinearColor Tone = Wh.Pick >= 0 ? FAcHudStyle::Cyan() : White(0.6, 0.8);
+		P.Lines({C + D * (In - 8), C + D * (In - 8 + 10 * Lean + 2)}, Tone, 3, 3, true);
+	}
+	P.Label(TEXT("CLICK BUILDS  ·  B OR ESC CLOSES  ·  NUMBER KEYS PICK"), 12, White(0.8, 0.9), C - FVector2D(0, Out + 44),
+		EAcHAlign::Center, EAcVAlign::Baseline, true, false);
 }
 
 void SAcPilotOverlay::PaintFeed(FAcPilotPen& P, const double W, const double H, const double Now) const

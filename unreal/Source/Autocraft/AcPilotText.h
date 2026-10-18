@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 
+#include "AcBuildWheel.h"
 #include "AcCab.h"
 #include "AcConsoleInfo.h"
 #include "Pilot.h"
@@ -161,6 +162,8 @@ struct FAcPilotInfo
 	TOptional<double> Cone;
 	/// C1: at a corner gun, its live feed. Unset: not at one.
 	TOptional<FAcTurretFeed> Feed;
+	/// C2: the radial build wheel, while it is open.
+	TOptional<FAcBuildWheelInfo> Wheel;
 };
 
 /// What `GameCore` says about the driven unit this frame (`PilotFrame`).

@@ -397,6 +397,7 @@ void AAcPilotPawn::OnLook(const FInputActionValue& V)
 	// base gain plus up to as much again for a fast flick (a 180 at full
 	// speed is a short flick, a slow pan stays fine).
 	const FVector2D Raw = V.Get<FVector2D>();
+	if (OnLookTaken && OnLookTaken(Raw)) return;
 	const float Dt = FMath::Max(GetWorld() ? GetWorld()->GetDeltaSeconds() : 1.f / 60.f, 1e-3f);
 	const double Flick = FMath::Clamp((Raw.Size() / Dt - 300.0) / 1500.0, 0.0, 1.0);
 	const double Gain = CVarLookScale.GetValueOnGameThread() * FMath::Clamp(UAcSettings::Get().LookSpeed, 0.25f, 3.f)
@@ -708,6 +709,12 @@ void AAcPilotPawn::Press(const bool bDown)
 	bHold = bDown;
 	UAcSimSubsystem* Sim = SimOf(this);
 	if (!bDown || !Driving() || !Sim || !Sim->IsRunning() || !Sim->Simulation().pilot) return;
+	// The build wheel (C2) takes the click while it is open.
+	if (OnKey && OnKey(TEXT("confirm")))
+	{
+		bHold = false;
+		return;
+	}
 	// A building held out (E8) takes the click instead.
 	if (bPlacing)
 	{

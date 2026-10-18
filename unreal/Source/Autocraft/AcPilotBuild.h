@@ -5,7 +5,10 @@
 //
 // Keys come through E2's `AAcPilotPawn::OnKey` (installed in front of
 // whatever handler was there, which still gets the keys this one does not
-// use): B opens and closes the menu, 1-8 pick a building from it
+// use): B opens and closes the menu, C2's radial wheel (AcBuildWheel.h):
+// the mouse's motion moves its stick (`AAcPilotPawn::OnLookTaken`), a
+// click ("confirm") or letting go of a B held over 0.25 s takes the slice
+// under it; 1-9 pick a building from it
 // (`PilotBuild.kinds`; refused with a note when it cannot be afforded), Esc
 // closes the menu or drops the building (else the pawn leaves), "place"
 // (the act key while `bPlacing`) pays and puts it down
@@ -31,12 +34,14 @@
 //       blocked: as build, facing the Citadel; the game pauses 0.1 s later
 //   -AcPilotBuildPlace=S  instead of pausing, press the act key S game
 //       seconds after the staging (places it, the scaffold rises)
-//   ac.PilotKey KEY       a key as the pawn would offer it (b, 1-8, esc, place)
+//   ac.PilotKey KEY       a key as the pawn would offer it (b, 1-8, esc, place, confirm)
+//   ac.PilotWheel DX DY   the mouse moved DX, DY (raw counts, +y up) with the wheel open
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 
+#include "AcBuildWheel.h"
 #include "Types.h"
 
 #include <optional>
@@ -58,8 +63,15 @@ public:
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void Deinitialize() override;
 
-	/// A key while driving (`key`): "b", "1"…"9", "esc", "place". True when used.
+	/// A key while driving (`key`): "b", "1"…"9", "esc", "place", "confirm"
+	/// (the act key, the wheel's pick). True when used.
 	bool Key(const FString& K);
+	/// C2: the mouse moved (raw counts, +y up). True when the open wheel took it.
+	bool MoveStick(FVector2D Delta);
+	/// C2: the wheel's slice under its stick (INDEX_NONE: none or closed),
+	/// and the slices as last drawn.
+	int32 WheelPick() const { return bMenu ? Wheel.Pick(Slices.Num()) : INDEX_NONE; }
+	const TArray<FAcWheelSlice>& WheelSlices() const { return Slices; }
 	/// Close the menu and drop the building held out (`closeBuild`).
 	void Close();
 
@@ -72,6 +84,12 @@ private:
 	void OnFrame(const FAcFrame& Frame);
 	void Hook(AAcPilotPawn* Pawn);
 	void Place();
+	/// Hold kind `Kind` out to place, or note why not (a number key, the wheel).
+	void Choose(ac::StructureKind Kind);
+	/// The wheel's pick: build it, or note why not.
+	void Confirm();
+	/// The wheel's slices for the driven pilot now.
+	void Refresh();
 	void Note(const FString& Text);
 	void Stage(AAcPilotPawn& Pawn);
 
@@ -79,6 +97,12 @@ private:
 	TWeakObjectPtr<AAcPilotPawn> Hooked;
 	bool bMenu = false;
 	TOptional<ac::StructureKind> Held;
+	/// C2: the wheel's stick, its slices, when it opened (real seconds) and
+	/// whether B is still held since.
+	FAcBuildWheel Wheel;
+	TArray<FAcWheelSlice> Slices;
+	double OpenedAt = 0;
+	bool bBHeld = false;
 
 	// Dev staging.
 	FString StageMode;

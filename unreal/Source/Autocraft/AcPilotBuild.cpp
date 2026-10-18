@@ -13,6 +13,8 @@
 #include "AcTerrain.h"
 
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -35,6 +37,16 @@ namespace
 			if (!B || Args.Num() == 0) return;
 			const bool bUsed = B->Key(Args[0].ToLower());
 			UE_LOG(LogAutocraft, Log, TEXT("pilot build: key %s %s"), *Args[0], bUsed ? TEXT("used") : TEXT("not used"));
+		}));
+
+	FAutoConsoleCommandWithWorldAndArgs GPilotWheel(TEXT("ac.PilotWheel"),
+		TEXT("ac.PilotWheel DX DY: the mouse moved DX, DY (raw counts, +y up) with the build wheel open."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+		{
+			UAcPilotBuildSubsystem* B = UAcPilotBuildSubsystem::Get(World);
+			if (!B || Args.Num() < 2) return;
+			const bool bUsed = B->MoveStick(FVector2D(FCString::Atod(*Args[0]), FCString::Atod(*Args[1])));
+			UE_LOG(LogAutocraft, Log, TEXT("pilot build: wheel %s, pick %d"), bUsed ? TEXT("moved") : TEXT("closed"), B->WheelPick());
 		}));
 }
 
@@ -96,6 +108,19 @@ void UAcPilotBuildSubsystem::Hook(AAcPilotPawn* Pawn)
 		if (UAcPilotBuildSubsystem* B = Self.Get(); B && B->Key(K)) return true;
 		return Before ? Before(K) : false;
 	};
+	TFunction<bool(FVector2D)> BeforeLook = MoveTemp(Pawn->OnLookTaken);
+	Pawn->OnLookTaken = [Self, BeforeLook](const FVector2D Raw) -> bool
+	{
+		if (UAcPilotBuildSubsystem* B = Self.Get(); B && B->MoveStick(Raw)) return true;
+		return BeforeLook ? BeforeLook(Raw) : false;
+	};
+}
+
+bool UAcPilotBuildSubsystem::MoveStick(const FVector2D Delta)
+{
+	if (!bMenu) return false;
+	Wheel.Move(Delta);
+	return true;
 }
 
 void UAcPilotBuildSubsystem::Note(const FString& Text)
@@ -106,7 +131,10 @@ void UAcPilotBuildSubsystem::Note(const FString& Text)
 void UAcPilotBuildSubsystem::Close()
 {
 	bMenu = false;
+	bBHeld = false;
+	Wheel.Reset();
 	Held.Reset();
+	if (UAcPilotOverlaySubsystem* O = UAcPilotOverlaySubsystem::Get(this)) O->SetWheel({});
 	if (AAcHologram* H = AAcHologram::Find(GetWorld())) H->Hide();
 	if (AAcPilotPawn* Pawn = Hooked.Get()) Pawn->bPlacing = false;
 }
@@ -149,6 +177,20 @@ bool UAcPilotBuildSubsystem::Key(const FString& K)
 		const bool bOpen = !bMenu;
 		Close();
 		bMenu = bOpen;
+		if (bOpen)
+		{
+			// A B held past `HoldToConfirm` confirms when it is let go.
+			OpenedAt = FPlatformTime::Seconds();
+			const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+			bBHeld = PC && PC->IsInputKeyDown(EKeys::B);
+			Refresh();
+		}
+		return true;
+	}
+	if (K == TEXT("confirm"))
+	{
+		if (!bMenu) return false;
+		Confirm();
 		return true;
 	}
 	if (!bMenu || !K.IsNumeric()) return false;
@@ -156,20 +198,48 @@ bool UAcPilotBuildSubsystem::Key(const FString& K)
 	// The menu's list (the MMORPG test mode's own there).
 	const TArray<ac::StructureKind> Kinds = AcPilotText::BuildKinds(Sim->IsMmo());
 	if (N < 1 || N > Kinds.Num()) return false;
-	const ac::StructureKind Kind = Kinds[N - 1];
+	Choose(Kinds[N - 1]);
+	return true;
+}
+
+void UAcPilotBuildSubsystem::Choose(const ac::StructureKind Kind)
+{
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsRunning()) return;
 	if (const FString Lock = Sim->IsMmo() ? AcProgressHud::BlueprintRefusal(Sim->MmoClient(), Kind) : FString(); !Lock.IsEmpty())
 	{
 		Note(Lock);
-		return true;
+		return;
 	}
-	if (const std::optional<std::string> Why = S.buildRefusal(Kind, ac::Pilot::player))
+	if (const std::optional<std::string> Why = Sim->Simulation().buildRefusal(Kind, ac::Pilot::player))
 	{
 		Note(Utf8(*Why));
-		return true;
+		return;
 	}
 	bMenu = false;
+	bBHeld = false;
+	Wheel.Reset();
+	if (UAcPilotOverlaySubsystem* O = UAcPilotOverlaySubsystem::Get(this)) O->SetWheel({});
 	Held = Kind;
-	return true;
+}
+
+void UAcPilotBuildSubsystem::Confirm()
+{
+	Refresh();
+	const int32 I = Wheel.Pick(Slices.Num());
+	// Inside the dead zone a click does nothing.
+	if (I == INDEX_NONE) return;
+	const FAcWheelSlice& S = Slices[I];
+	UE_LOG(LogAutocraft, Log, TEXT("pilot build: wheel confirms %s (%s)"), *S.Title, *S.Tag);
+	if (S.State == FAcWheelSlice::EState::Build && S.Kind) Choose(*S.Kind);
+	else if (!S.Why.IsEmpty()) Note(S.Why);
+}
+
+void UAcPilotBuildSubsystem::Refresh()
+{
+	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsRunning()) return;
+	Slices = FAcBuildWheel::Slices(Sim->Simulation(), Sim->MmoClient(), Sim->IsMmo());
 }
 
 void UAcPilotBuildSubsystem::Place()
@@ -235,6 +305,27 @@ void UAcPilotBuildSubsystem::OnFrame(const FAcFrame& Frame)
 		UE_LOG(LogAutocraft, Log, TEXT("pilot build: pressing act (placing %s)"), Held ? TEXT("yes") : TEXT("no"));
 		Pawn->Press(true);
 		Pawn->Press(false);
+	}
+
+	if (bMenu)
+	{
+		// C2: a B held since the wheel opened confirms when let go, after
+		// `HoldToConfirm`; a tap leaves the wheel open.
+		const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+		if (bBHeld && !(PC && PC->IsInputKeyDown(EKeys::B)))
+		{
+			bBHeld = false;
+			if (FPlatformTime::Seconds() - OpenedAt > FAcBuildWheel::HoldToConfirm) Confirm();
+		}
+	}
+	if (bMenu)
+	{
+		Refresh();
+		FAcBuildWheelInfo W;
+		W.Slices = Slices;
+		W.Stick = Wheel.Stick;
+		W.Pick = Wheel.Pick(Slices.Num());
+		if (UAcPilotOverlaySubsystem* O = UAcPilotOverlaySubsystem::Get(this)) O->SetWheel(W);
 	}
 
 	Pawn->bPlacing = Held.IsSet();

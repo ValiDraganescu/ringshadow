@@ -63,6 +63,8 @@ public:
 	/// E8: the build menu is open, a building is held out (`placing`) and
 	/// where it would go (`ghostSpot`; unset: no spot, "Face an MH well").
 	void SetBuild(bool bMenu, TOptional<ac::StructureKind> Placing, TOptional<ac::Vec2> Spot, TOptional<FString> Refusal = {});
+	/// C2: the radial build wheel while it is open (unset: closed).
+	void SetWheel(TOptional<FAcBuildWheelInfo> InWheel) { Wheel = MoveTemp(InWheel); }
 	/// E4: the gun marker, off the view's centre in half the view's height
 	/// (+y up); unset: none.
 	TFunction<TOptional<FVector2D>()> GunMarker;
@@ -88,6 +90,7 @@ private:
 	TOptional<FAcPilotInfo> Shown;
 
 	FAcPilotInputs Inputs;
+	TOptional<FAcBuildWheelInfo> Wheel;
 	TOptional<FString> NoteText;
 	double NoteUntil = 0;
 	/// `pilotAim`: the sight's target and one attack's damage on it, before the step.

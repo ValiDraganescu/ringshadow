@@ -38,8 +38,8 @@ Driving the Prospector (mouse captured):
 | R + hold click | Repair (a Derrick too) |
 | V | First or third person (not at a gun: there you always see from the gun) |
 | Wheel | Third person: zoom the camera in (up) or out (down), out to a view over a building site; kept for the next ride |
-| B | Build menu |
-| B, then a number, then click | Hold a building out (1 Citadel, 2 Derrick), then put it down. Esc cancels. |
+| B | The build wheel: a ring of the buildings round the middle of the view, the pointer hidden. Move the mouse toward one (its name, price and what it needs light up) and click to hold it out; or hold B, aim, and let go. Esc or B closes it. |
+| B, then a number, then click | Hold a building out by its number on the wheel (1 Citadel, 2 Landing Pad, 3 Derrick), then put it down. Esc cancels. |
 | Z or X | Pick a level-up card |
 | Hold Option | Free the pointer to click a card |
 | M | World map (open or close) |
@@ -86,7 +86,7 @@ The world goes on while the map is open. Nothing pauses.
    the Prospector welds it up (about 35 s). It must stand on flat open ground,
    off the ore and off the pad's plate. Then walk into it to unload, and the
    ore goes into the wallet.
-3. **Derrick.** Face an MH well (a rock mound with a silver pool), B, 2,
+3. **Derrick.** Face an MH well (a rock mound with a silver pool), B, 3,
    click: 75 ore. The ghost snaps onto the well ahead (the nearest within 4
    cells of a spot 3 cells in front). Weld it up (about 10 s).
 4. **MH.** Walk up to the finished Derrick until the dashboard reads
