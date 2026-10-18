@@ -928,6 +928,29 @@ void AAcPilotPawn::Steer()
 	// view's middle is on (`pilotFacing`).
 	const std::optional<ac::Unit> Me = S.pilotUnit();
 	S.pilot->heading = Me && GunManned == INDEX_NONE ? AcPilotAim::Facing(*Me, PilotYaw, AimPoint()) : PilotYaw;
+	if (Me && GunManned == INDEX_NONE && Cam.bThirdPerson && !ac::Pilot::steers(Me->kind))
+	{
+		// Third person on foot (docs/shooter-feel.md "Third person
+		// (2026-10-18)"): walking, it faces the camera's yaw, and toward the
+		// crosshair's point only with the act key down or a target under the
+		// sight; W is the camera's forward whichever way it faces. Its turn
+		// off the camera's yaw eases between the two (the mouse's turns stay
+		// immediate).
+		const bool bAiming = bHold || (Cross && Cross->Target != INDEX_NONE);
+		const double Want = std::remainder(
+			AcPilotAim::ChaseHeading(*Me, PilotYaw, AimPoint(), !MoveInput.IsZero(), bAiming) - PilotYaw, 2.0 * Pi);
+		const double RealNow = FPlatformTime::Seconds();
+		const double Dt = FacingAt < 0 ? 1.0 : FMath::Clamp(RealNow - FacingAt, 0.0, 1.0);
+		FacingAt = RealNow;
+		FacingOffset += (Want - FacingOffset) * (1.0 - std::exp(-Dt / 0.06));
+		S.pilot->heading = std::remainder(PilotYaw + FacingOffset, 2.0 * Pi);
+		S.pilot->walk = AcPilotAim::ChaseWalk(S.pilot->walk, PilotYaw, S.pilot->heading);
+	}
+	else
+	{
+		FacingAt = -1;
+		FacingOffset = 0;
+	}
 	// C1: the look's pitch (only a gunner's counts: it aims the gun).
 	S.pilot->pitch = Cam.Pitch;
 	if (UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
@@ -1229,8 +1252,10 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	}
 	else if (Cam.bThirdPerson)
 	{
-		// E3: the chase camera over the right shoulder (AcPilotChase.h).
+		// E3: the chase camera over the right shoulder (AcPilotChase.h);
+		// out over the site while a building is held out.
 		const UAcWorldRenderer* R = UAcWorldRenderer::Get(this);
+		Chase.Zoom.Floor = bPlacing ? FAcPilotChase::FZoom::Placing : 0.f;
 		Chase.Follow(GetWorld(), Root, U, R ? R->ModelOf(U.id) : nullptr, Cam.Pitch, Cam.ChaseYaw, FPlatformTime::Seconds(), At, Rot);
 	}
 	else

@@ -15,9 +15,17 @@
 #include "Simulation.h"
 
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
 
 #include <cmath>
 #include <vector>
+
+namespace
+{
+	TAutoConsoleVariable<float> CVarShoulder(TEXT("ac.Chase.Shoulder"), 0.12f,
+		TEXT("Third person: the pivot's offset over the unit's right shoulder, cells at reach 1 (0: centred; 0.85: "
+		     "the boom before 2026-10-18, 0.4 + 0.45 reach), grown with the reach as before."));
+}
 
 float FAcPilotChase::Reach(const FAcModelInfo& Model, const TConstArrayView<bool> Visible, const TConstArrayView<FTransform> Local)
 {
@@ -122,16 +130,17 @@ void FAcPilotChase::FZoom::Set(const float To, const bool bSnap)
 
 double FAcPilotChase::FZoom::Tick(const double RealNow)
 {
+	const double Want = FMath::Max(Target, Floor);
 	if (ShownAt < 0 || RealNow < ShownAt)
 	{
-		Shown = Target;
+		Shown = Want;
 	}
 	else
 	{
 		// 95% of the way in `EaseSeconds`.
 		const double K = 1.0 - std::exp(-3.0 * (RealNow - ShownAt) / EaseSeconds);
-		Shown += (Target - Shown) * K;
-		if (std::abs(Shown - Target) < 1e-4) Shown = Target;
+		Shown += (Want - Shown) * K;
+		if (std::abs(Shown - Want) < 1e-4) Shown = Want;
 	}
 	ShownAt = RealNow;
 	return Shown;
@@ -169,7 +178,10 @@ void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit
 	const FVector Look = Ahead * std::cos(Tilted) + FVector(0, 0, std::sin(Tilted));
 	float Lift = 0.f, Length = 1.f;
 	FAcPilotCamera::Boom(U.kind, Lift, Length);
-	FVector Pivot = Eye + FVector(0, 0, AcSpace::ToCm(0.1 + 0.15 * R + Lift)) + Right * AcSpace::ToCm(0.4 + 0.45 * R);
+	// Nearly centred (docs/shooter-feel.md "Third person (2026-10-18)"): the
+	// unit walks where the view looks, the sight just past its shoulder.
+	const double Shoulder = CVarShoulder.GetValueOnGameThread() * (0.4 + 0.45 * R) / 0.85;
+	FVector Pivot = Eye + FVector(0, 0, AcSpace::ToCm(0.1 + 0.15 * R + Lift)) + Right * AcSpace::ToCm(Shoulder);
 	// The pivot rides the ground's bumps eased, as a machine's eye does.
 	if (PivotZ && RealNow - PivotZ->Value < 0.5)
 	{

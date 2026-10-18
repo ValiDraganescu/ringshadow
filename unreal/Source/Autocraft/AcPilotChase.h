@@ -4,7 +4,10 @@
 //
 // As shooters do it: the camera on a boom that swings round a pivot over the
 // unit's right shoulder, turned by the mouse alone (`ChaseYaw` across the
-// ground, `Pitch` up at the sky or down at its feet). The pivot and the
+// ground, `Pitch` up at the sky or down at its feet). Since 2026-10-18 the
+// shoulder is nearly centred (`ac.Chase.Shoulder`, 0.12 cells at reach 1;
+// 0.85 the old 0.4 + 0.45·reach) and W walks along the camera's forward
+// (`AcPilotAim::ChaseWalk`). The pivot and the
 // shoulder offset grow with how far the model reaches (`Reach`), the boom is
 // `(2.6 + 3.3·reach) × FAcPilotCamera::Boom(kind).length` long. Two of E1's
 // `Blocked` rays shorten it (pivot → camera, then camera → the unit's body),
@@ -49,8 +52,15 @@ public:
 		static constexpr double EaseSeconds = 0.15;
 		/// The far end's tilt down past the mouse pitch, radians (25°).
 		static constexpr double MaxTilt = 25.0 * UE_DOUBLE_PI / 180.0;
+		/// While a building is held out the boom is at least this long (and
+		/// tilted as far): the unit, nearly centred, would hide the ghost
+		/// ahead of it.
+		static constexpr float Placing = 1.8f;
 
 		float Target = 1.f;
+		/// The shown zoom eases to at least this (`Placing` while placing, else 0);
+		/// `Target`, the player's, stays as it is.
+		float Floor = 0.f;
 		double Shown = 1.0;
 		/// `Shown`'s real seconds (< 0: none yet, `Tick` snaps).
 		double ShownAt = -1;
@@ -59,7 +69,7 @@ public:
 		void Notch(float Notches);
 		/// Straight to `Zoom` (clamped): the setting at a new ride, a picture.
 		void Set(float Zoom, bool bSnap);
-		/// The factor this frame, eased toward `Target`.
+		/// The factor this frame, eased toward `Target` (at least `Floor`).
 		double Tick(double RealNow);
 		/// How far the camera tilts down past the mouse pitch at `Zoom`
 		/// (radians, >= 0): none up to 1, `MaxTilt` at `Max`, smoothly.

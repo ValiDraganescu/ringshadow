@@ -96,6 +96,23 @@ double AcPilotAim::Facing(const ac::Unit& U, const double Yaw, const TOptional<F
 	return ac::length(D) > 1.2 ? std::atan2(D.y, D.x) : Yaw;
 }
 
+double AcPilotAim::ChaseHeading(const ac::Unit& U, const double CameraYaw, const TOptional<FVector>& Aim, const bool bWalking,
+	const bool bAiming)
+{
+	return bWalking && !bAiming ? CameraYaw : Facing(U, CameraYaw, Aim);
+}
+
+ac::Vec2 AcPilotAim::ChaseWalk(const ac::Vec2 Keys, const double CameraYaw, const double Heading)
+{
+	// Heading grows toward the right: the keys turned by the camera's yaw
+	// off the unit's.
+	const double D = std::remainder(CameraYaw - Heading, 2.0 * UE_DOUBLE_PI);
+	const double C = std::cos(D), S = std::sin(D);
+	// Backing and stepping sideways are slower: the walk that goes along
+	// that line exactly (`Pilot::walkAlong`).
+	return ac::Pilot::walkAlong(ac::Vec2(Keys.x * C - Keys.y * S, Keys.x * S + Keys.y * C));
+}
+
 TOptional<FAcRangeCue> AcPilotAim::RangeCue(const ac::Simulation& Sim, const ac::Unit& U)
 {
 	if (U.task == ac::Unit::Task::inDerrick) return {};

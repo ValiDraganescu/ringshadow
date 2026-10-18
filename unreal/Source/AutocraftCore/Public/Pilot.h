@@ -7,6 +7,7 @@
 #include "Rules.h"
 #include "Types.h"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -84,7 +85,7 @@ struct Pilot {
     /// The player whose units can be driven (the one the HUD shows).
     static constexpr int64_t player = 0;
 
-    /// A vehicle, driven as in World of Tanks: W/S drive it, A/D turn its
+    /// A vehicle, driven as the classic tank shooter drives one: W/S drive it, A/D turn its
     /// hull (it does not step sideways), and the mouse aims: the turret (a
     /// tank's, a Firefly's tail) traverses after the look (`turretRate`).
     static bool steers(UnitKind k) { return Rules::stats(k).steers; }
@@ -94,6 +95,19 @@ struct Pilot {
     static double hullTurnRate(UnitKind k) {
         const double rate = Rules::stats(k).hullTurnRatePilot;
         return rate > 0 ? rate : 2.0;
+    }
+    /// Backing up and stepping sideways are slower than going ahead
+    /// (`Simulation::pilotWalk`): these shares of the pace.
+    static constexpr double backPace = 0.6;
+    static constexpr double sidePace = 0.8;
+    /// The walk (the unit's own frame, x ahead, y right, at most 1 long)
+    /// whose step goes along `dir` (the same frame), backing and stepping
+    /// sideways counted: a third-person walk along the camera's forward
+    /// while the unit faces elsewhere.
+    static Vec2 walkAlong(Vec2 dir) {
+        Vec2 w(dir.x / (dir.x < 0 ? backPace : 1.0), dir.y / sidePace);
+        const double len = length(w), want = length(dir);
+        return len > 1e-9 ? w * (std::min(want, 1.0) / std::max(len, std::min(want, 1.0))) : Vec2(0, 0);
     }
     /// An anchored Longbow walks on its legs at this share of its pace, driving
     /// and turning.

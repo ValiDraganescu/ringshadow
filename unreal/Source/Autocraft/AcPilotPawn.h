@@ -468,6 +468,10 @@ private:
 	void EndFlight();
 	void SetFade(double Amount);
 	FVector2D MoveInput = FVector2D::ZeroVector;
+	/// Third person on foot: the heading's turn off the camera's yaw, eased
+	/// (`Steer`), and its real seconds (< 0: none).
+	double FacingOffset = 0;
+	double FacingAt = -1;
 	TOptional<FCrosshair> Cross;
 	TOptional<FVector> LastEye;
 	FQuat LastRotation = FQuat::Identity;

@@ -334,11 +334,11 @@ void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
     const Vec2 forward(std::cos(h), std::sin(h));
     const Vec2 right(-std::sin(h), std::cos(h));
     // Backing up and sidestepping are slower than going ahead.
-    const double ahead_ = w.x < 0 ? 0.6 : 1.0;
+    const double ahead_ = w.x < 0 ? Pilot::backPace : 1.0;
     const bool slowed = u.slowUntil.value_or(-1) > state.time;
     const double speed =
         Rules::speed(u.kind) * rate(Stat::Speed{}, u) * pace * (slowed ? u.slowedTo.value_or(0.5) : 1) * dt;
-    const Vec2 dir = forward * (w.x * ahead_) + right * (w.y * 0.8);
+    const Vec2 dir = forward * (w.x * ahead_) + right * (w.y * Pilot::sidePace);
     const Vec2 d = dir * speed;
     if (pilotJumps(u) && pilotJump(u, d)) return;
     const Vec2 from = u.position;

@@ -225,9 +225,20 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 			if (!Settle(10.0)) return;
 		}
 		// -AcMmoShotsTps: third person at each zoom, then a building held out.
-		if (bTps && Hall.Tps < 2 * int32(UE_ARRAY_COUNT(TpsZooms)))
+		if (bTps && Hall.Tps <= 2 * int32(UE_ARRAY_COUNT(TpsZooms)))
 		{
 			constexpr int32 Zooms = int32(UE_ARRAY_COUNT(TpsZooms));
+			if (Hall.Tps == 2 * Zooms)
+			{
+				// The last picture taken (a frame or more later): the view back.
+				if (Now - Hall.TpsAt < 1.0) return;
+				if (Pilot->OnKey) Pilot->OnKey(TEXT("esc"));
+				Pilot->SetChaseZoom(1.f, true);
+				if (Hall.bTpsToggled) Pilot->ToggleView();
+				Hall.Tps += 1;
+				T.PhaseAt = Now;
+				return;
+			}
 			const bool bPlace = Hall.Tps >= Zooms;
 			const float Zoom = TpsZooms[Hall.Tps % Zooms];
 			if (Hall.TpsAt < 0)
@@ -254,14 +265,7 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 				UE_LOG(LogAutocraft, Display, TEXT("flowtest: tps: no building held out (\"%s\")"), Info && Info->Note ? **Info->Note : TEXT(""));
 			}
 			Picture(*FString::Printf(TEXT("tps-%s-%.2g"), bPlace ? TEXT("place") : TEXT("zoom"), Zoom));
-			Hall.TpsAt = -1;
-			if (++Hall.Tps == 2 * Zooms)
-			{
-				if (Pilot->OnKey) Pilot->OnKey(TEXT("esc"));
-				Pilot->SetChaseZoom(1.f, true);
-				if (Hall.bTpsToggled) Pilot->ToggleView();
-				T.PhaseAt = Now;
-			}
+			Hall.TpsAt = ++Hall.Tps == 2 * Zooms ? Now : -1;
 			return;
 		}
 		if (!Hall.bShot)

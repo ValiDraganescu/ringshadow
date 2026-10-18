@@ -15,7 +15,10 @@
 //   the view's centre in half the view's height (+y up), for the overlay
 //   (E6 draws it: `AAcPilotPawn::GunMarker()`).
 // - `Facing` is `pilotFacing`: third person, the unit turns toward what the
-//   view's centre is on.
+//   view's centre is on. `ChaseHeading` and `ChaseWalk` (2026-10-18,
+//   docs/shooter-feel.md "Third person"): walking with nothing aimed at, it
+//   faces the camera's yaw instead, and the walk keys are the camera's
+//   (W its forward across the ground), turned into the unit's own frame.
 // - `RangeCue` is `GameController.rangeCue`: the driven unit's reach on the
 //   ground (drawn by `AAcPilotAids`, AcPilotAids.h); none for a soldier on
 //   foot.
@@ -101,6 +104,17 @@ namespace AcPilotAim
 	/// `pilotFacing`: third person (`Aim` set), toward the crosshair's point
 	/// once it is more than 1.2 cells off; else the mouse's yaw.
 	AUTOCRAFT_API double Facing(const ac::Unit& U, double Yaw, const TOptional<FVector>& Aim);
+
+	/// Third person, a unit on foot: where it faces. Walking (`bWalking`)
+	/// with the act key up and no target under the sight (`bAiming` false):
+	/// the camera's yaw, so it goes where the view looks; else `Facing`.
+	AUTOCRAFT_API double ChaseHeading(const ac::Unit& U, double CameraYaw, const TOptional<FVector>& Aim, bool bWalking, bool bAiming);
+
+	/// Third person, a unit on foot: the walk keys in the camera's frame
+	/// (x ahead along `CameraYaw` across the ground, y to its right) in the
+	/// frame of a unit facing `Heading` (`Pilot::walk`'s), so W walks along
+	/// the camera's forward whichever way the unit faces.
+	AUTOCRAFT_API ac::Vec2 ChaseWalk(ac::Vec2 Keys, double CameraYaw, double Heading);
 
 	/// `rangeCue`: the ring for the driven unit (unset: none).
 	AUTOCRAFT_API TOptional<FAcRangeCue> RangeCue(const ac::Simulation& Sim, const ac::Unit& U);
