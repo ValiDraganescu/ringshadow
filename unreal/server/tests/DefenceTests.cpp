@@ -347,10 +347,83 @@ TEST(defence_a_raid_on_a_defended_hab_dome_is_beaten) {
 // Landing's Citadel may be raided now that it is armed). C1: only with a
 // gunner: the pilot mans the north-east gun from its station in the hall
 // and aims at the bugs (its heading, its crosshair, the act key held). C2:
-// its rounds fly a ballistic arc and the gun can't reach ground nearer than
-// about 26 cells (its pitch stop from the 9-cell mount), so the gunner meets
-// the raid on its way in: the yaw and pitch of the core's solve, led.
+// its rounds fly a ballistic arc; the gunner fires on the core's solve, led,
+// all the way in. The raid charges from about 10 cells out to the walls,
+// and the gun (mounted outboard, its pitch down to -70 degrees) reaches it
+// at their foot: some hit lands within 4 cells of the walls.
 TEST(defence_citadel_turrets_beat_a_raid) {
+    Home s;
+    ASSERT_TRUE(s.citadel.has_value());
+    WorldMap& w = s.w;
+    const Vec2 c = structure(simOf(w, a), *s.citadel)->position;
+    Unit* u = drivenUnit(w, a);
+    u->position = Defence::gunStation(c, 0);
+    u->task = Unit::Task::idle;
+    w.step();
+    ASSERT_TRUE(!w.man(a, 0).has_value());
+    const size_t r = *w.where(a);
+    const auto shard = w.spawnBroodGroup(r, UnitKind::shardling, 6, WorldMap::Poi::building, *s.citadel, c + Vec2(16, 16), false);
+    ASSERT_TRUE(shard.has_value());
+    std::map<int64_t, Vec2> was;
+    const double dt = w.regionOf(a)->description().step;
+    int64_t fired = 0, hits = 0;
+    // How near the walls a round met a bug: the hit's distance outside the
+    // Citadel's square.
+    double nearest = 1e9;
+    const double half = Rules::radius(StructureKind::citadel);
+    for (int i = 0; i < 40 * 60 && aliveIn(w, a, *shard) > 0; i++) {
+        for (const GameEvent& e : w.regionOf(a)->lastEvents()) {
+            if (e.is<GameEvent::Fired>()) fired++;
+            if (const auto* im = e.as<GameEvent::Impact>(); im && im->what == GameEvent::Impact::What::unit) {
+                hits++;
+                nearest = std::min(nearest, std::max(std::abs(im->at.x - c.x), std::abs(im->at.y - c.y)) - half);
+            }
+        }
+        // The nearest bug the gun's solve reaches, led by its last step.
+        const Simulation& sim = simOf(w, a);
+        const Unit* aim = nullptr;
+        std::optional<rig::GunAim> how;
+        for (const Unit& bug : sim.state.units) {
+            if (!bug.bug || bug.bug->group != *shard || bug.hp <= 0) continue;
+            const auto prev = was.find(bug.id);
+            const Vec2 v = prev == was.end() ? Vec2(0, 0) : (bug.position - prev->second) / dt;
+            const auto solve = rig::aimCornerGun(sim, c, 0, bug, v);
+            if (solve && (!aim || distance(bug.position, c) < distance(aim->position, c))) {
+                aim = &bug;
+                how = solve;
+            }
+        }
+        was.clear();
+        for (const Unit& bug : sim.state.units)
+            if (bug.bug && bug.bug->group == *shard) was[bug.id] = bug.position;
+        PilotInput in;
+        in.tick = ++inputTick;
+        in.visit = w.visit(a);
+        if (aim) {
+            in.heading = how->yaw;
+            in.pitch = how->pitch;
+            in.crosshair = Pilot::Crosshair(Pilot::Crosshair::On{aim->id});
+            in.hold = true;
+        }
+        w.input(a, in);
+        w.step();
+    }
+    std::printf("  %lld rounds, %lld on a bug, the nearest %.1f cells from the walls\n", (long long)fired, (long long)hits, nearest);
+    for (const Unit& bug : simOf(w, a).state.units)
+        if (bug.bug && bug.bug->group == *shard && bug.hp > 0)
+            std::printf("  alive: (%.1f, %.1f) from the Citadel, hp %.1f, solves %d%d%d%d\n", bug.position.x - c.x, bug.position.y - c.y, bug.hp,
+                        int(bool(rig::aimCornerGun(simOf(w, a), c, 0, bug))), int(bool(rig::aimCornerGun(simOf(w, a), c, 1, bug))),
+                        int(bool(rig::aimCornerGun(simOf(w, a), c, 2, bug))), int(bool(rig::aimCornerGun(simOf(w, a), c, 3, bug))));
+    EXPECT_EQ(aliveIn(w, a, *shard), int64_t(0));
+    EXPECT_TRUE(nearest <= 4);
+    EXPECT_TRUE(structure(simOf(w, a), *s.citadel)->hp > 0.9 * Rules::hp(StructureKind::citadel));
+    EXPECT_TRUE(drivenUnit(w, a)->task == Unit::Task::atGun);
+}
+
+// The same gun meets a raid from 85 cells on its way in (C2): the gunner
+// holds fire until 45 cells, where the cone (8 mrad) still covers a bug, then
+// fires on the core's solve, led; the raid never reaches the walls.
+TEST(defence_citadel_gun_meets_a_raid_on_its_way_in) {
     Home s;
     ASSERT_TRUE(s.citadel.has_value());
     WorldMap& w = s.w;
@@ -405,8 +478,7 @@ TEST(defence_citadel_turrets_beat_a_raid) {
     std::printf("  %lld rounds, %lld on a bug\n", (long long)fired, (long long)hits);
     for (const Unit& bug : simOf(w, a).state.units)
         if (bug.bug && bug.bug->group == *shard && bug.hp > 0)
-            std::printf("  alive: %.1f cells from the Citadel, hp %.1f, solve %s\n", distance(bug.position, c), bug.hp,
-                        rig::aimCornerGun(simOf(w, a), c, 0, bug) ? "yes" : "no");
+            std::printf("  alive: %.1f cells from the Citadel, hp %.1f\n", distance(bug.position, c), bug.hp);
     EXPECT_EQ(aliveIn(w, a, *shard), int64_t(0));
     EXPECT_TRUE(structure(simOf(w, a), *s.citadel)->hp > 0.9 * Rules::hp(StructureKind::citadel));
     EXPECT_TRUE(drivenUnit(w, a)->task == Unit::Task::atGun);
