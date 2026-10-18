@@ -336,8 +336,9 @@ float3 ember = float3(0.0, 0.0, 0.0);
 if (gt.a > 0.001) {
     float lumC = dot(c, float3(0.3, 0.59, 0.11));
     float detail = clamp(lumC / 0.3, 0.45, 1.6);
-    // A region with its own texture keeps most of the texture's colour.
-    float own = GroundLayer > 0.5 ? LabTint : 1.0;
+    // A region with its own texture keeps most of that texture's colour;
+    // the grass, highland and cliffs over it take the palette whole.
+    float own = GroundLayer > 0.5 ? lerp(1.0, LabTint, (1.0 - kH) * (1.0 - kG) * (1.0 - rockW)) : 1.0;
     float k = gt.a * own * (1.0 - splat.b) * (1.0 - 0.35 * rockW);
     c = lerp(c, gt.rgb * detail, k);
     // Ochre bands: strata by height, strongest on the cliffs.

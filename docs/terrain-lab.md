@@ -218,5 +218,22 @@ When the user says promote, in the worker's worktree, as one commit a round:
 - Which palette shows the lab first besides plain: salt (Brine Pans) and
   slag (Slag Pockets) are the plan; the user may want frost (Cold Fork).
 - Tyre ruts and footprints: a later round, with the sim's Moved events.
+- World sculpting (the user, 2026-10-18: "always surrounded by cliffs";
+  canyons are fine, not everywhere). Not this lab: it is the sim's ground
+  (rule 1), the region files'. Every region today is a bowl: its `border`
+  outline at level 4 all round, two to four openings, plateaus inside. The
+  variety would come from the region files and `TerrainField`: low or
+  sloped edges (open land running on into the next region), rolling ground
+  (ridges and raises with a slope instead of a cliff), a canyon or a mesa as
+  one region's feature, not every region's. A chapter of its own with the
+  region crafting skill; the lab's sheet shows its results too.
+  The user's reference (a painted cockpit view of Prospect Landing): an open
+  desert floor to the horizon, flat to gently rolling, with buttes, mesas and
+  tall spires standing free in it (islands, not walls), more of them hazy in
+  the distance, low rock shelves and scattered stones between; the ground
+  itself rippled sand, darker gravel patches and small rocks (rounds 1 and 4
+  here). So: the regions' walls low or gone where an edge is open land, the
+  high ground as free-standing mesas (`islands`, raise edits with cliffs)
+  rather than a rim, and far mesas past the world's rim for the horizon.
 - Far mountains past the world's rim (the haze hides a flat horizon today):
   not this lab; a note for the world's edge.
