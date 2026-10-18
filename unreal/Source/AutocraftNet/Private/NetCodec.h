@@ -8,6 +8,7 @@
 
 #include "Rules.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -33,6 +34,9 @@ static_assert(kUnitKindCount <= 64, "the driven-kinds mask is one uint64_t");
 constexpr size_t kStructureKindCount = EnumInfo<StructureKind>::names.size();
 constexpr int kStructureKindBits = bitsFor(kStructureKindCount);
 static_assert((size_t(1) << kStructureKindBits) >= kStructureKindCount);
+/// A unit's task takes 5 bits (C1: `atGun` is the 19th).
+constexpr int kTaskBits = 5;
+static_assert(EnumInfo<Unit::Task>::names.size() <= (size_t(1) << kTaskBits));
 
 /// A double as a signed integer of 1/`scale` steps (non-finite: 0).
 int64_t fixed(double v, double scale);
@@ -181,17 +185,41 @@ struct MarksCodec {
     void write(BitWriter& w, const TurretMarks& m) const;
     void read(BitReader& r, TurretMarks& m) const;
 };
-/// An armed Citadel's corner turrets (D1): only where each points; their
-/// targets and reloads stay on the server.
+/// A look's pitch (C1): `q::kPitchBits` over ±90°.
+struct Pitch {
+    void write(BitWriter& w, double v) const { w.writeBits(q::pitch(v), q::kPitchBits); }
+    void read(BitReader& r, double& v) const { v = q::pitch(uint8_t(r.readBits(q::kPitchBits))); }
+};
+/// An armed Citadel's corner turrets (D1): where each points (C1: its yaw,
+/// its pitch) and who mans it; their targets and reloads stay on the server.
 struct GunsCodec {
     void write(BitWriter& w, const std::array<CornerGun, 4>& g) const {
-        for (const CornerGun& x : g) Angle{}.write(w, x.aim);
+        for (const CornerGun& x : g) {
+            Angle{}.write(w, x.aim);
+            Pitch{}.write(w, x.pitch);
+            Opt<Var>{}.write(w, x.gunner);
+        }
     }
     void read(BitReader& r, std::array<CornerGun, 4>& g) const {
         for (CornerGun& x : g) {
             x = CornerGun{};
             Angle{}.read(r, x.aim);
+            Pitch{}.read(r, x.pitch);
+            Opt<Var>{}.read(r, x.gunner);
         }
+    }
+};
+/// A Citadel's door (C1): how far open in 255ths, and the way it moves.
+struct DoorCodec {
+    void write(BitWriter& w, const Door& d) const {
+        const double c = std::isfinite(d.open) ? std::clamp(d.open, 0.0, 1.0) : 0.0;
+        w.writeU8(static_cast<uint8_t>(std::llround(c * 255)));
+        w.writeBool(d.opening);
+    }
+    void read(BitReader& r, Door& d) const {
+        d = Door{};
+        d.open = double(r.readU8()) / 255;
+        d.opening = r.readBool();
     }
 };
 
@@ -203,7 +231,7 @@ template <class V, class X> void unitFields(V& v, X& u) {
     v(Pos{}, u.position);
     v(Health{2 * Rules::hp(u.kind)}, u.hp);
     v(Angle{}, u.heading);
-    v(Enum<Unit::Task, 5>{}, u.task);
+    v(Enum<Unit::Task, kTaskBits>{}, u.task);
     v(Opt<Var>{}, u.patch);
     v(kMs, u.timer);
     v(Var{}, u.carrying);
@@ -270,6 +298,7 @@ template <class V, class X> void structureFields(V& v, X& b) {
     v(Opt<Angle>{}, b.aim);
     v(Opt<MarksCodec>{}, b.marks);
     v(Opt<GunsCodec>{}, b.guns);
+    v(Opt<DoorCodec>{}, b.door);
 }
 template <class V> void fields(V& v, const Structure& x) { structureFields<V, const Structure>(v, x); }
 template <class V> void fields(V& v, Structure& x) { structureFields<V, Structure>(v, x); }

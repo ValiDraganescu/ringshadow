@@ -217,7 +217,9 @@ void WorldMap::nestThink(size_t r) {
     for (const auto& [pilot, p] : pilots_) {
         if (p.flight || p.region != r || !p.unit) continue;
         const auto u = st.unit(*p.unit);
-        if (u && u->hp > 0 && u->task != Unit::Task::aboard && u->task != Unit::Task::inDerrick) near.push_back({pilot, *u});
+        // C1: not one sheltered in a Citadel's hall or at its guns.
+        if (u && u->hp > 0 && u->task != Unit::Task::aboard && u->task != Unit::Task::inDerrick && !sim.sheltered(*u))
+            near.push_back({pilot, *u});
     }
     if (!prey && !raid) {
         double best = reach;

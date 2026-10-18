@@ -253,6 +253,7 @@ WorldSave WorldMap::save() const {
 
 std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     std::vector<std::string> problems;
+    grown_.clear();
     if (!world_) {
         if (!save.regions.empty() || !save.pilots.empty()) problems.push_back("not a world: the save is not used");
         return problems;
@@ -293,6 +294,10 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         }
         for (OreDeposit& d : st.patches) d.miner = std::nullopt;
         adopt(*i, sr);
+        // C1 (schema 27): each Citadel grown in place; a unit in its new
+        // walls is pushed out by refreshNav below. Told apart from the
+        // problems: nothing is lost.
+        for (const std::string& line : adoptCitadels(*i)) grown_.push_back(line);
         st.nextID = next;
         sim.reindex();
         sim.refreshSupply();

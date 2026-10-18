@@ -101,7 +101,9 @@ std::optional<WorldMap::Home> WorldMap::home(const PilotState&, size_t region, V
             const double score = steps * 1e6 + d + double(b.id) * 1e-9;
             if (score < bestScore) {
                 bestScore = score;
-                best = Home{r, b.position, b.kind};
+                // C1: a Citadel's (complete) in its hall, 3 cells back from
+                // the centre, away from the door; a Hab Dome's at its edge.
+                best = Home{r, b.kind == StructureKind::citadel ? b.position + citadelRespawn : b.position, b.kind};
             }
         }
     }

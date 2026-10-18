@@ -94,6 +94,8 @@ int64_t Region::admit(const Unit& u) {
 std::optional<Unit> Region::release(int64_t unit) {
     const auto i = sim_.unitIndex(unit);
     if (!i) return std::nullopt;
+    // C1: off its gun first (it leaves the region as a walker).
+    sim_.unman(unit);
     const Unit out = sim_.state.units[static_cast<size_t>(*i)];
     for (auto& [id, seat] : pilots_)
         if (seat.drives == unit) {
@@ -136,6 +138,8 @@ bool Region::take(PilotId pilot, int64_t unit) {
     if (drivesNow(seat)) {
         keepBank(seat);
         stashLevels(seat);
+        // C1: a unit handed back leaves the gun it manned.
+        sim_.unman(*seat.drives);
         sim_.handBack(*seat.drives);
         seat.drives = std::nullopt;
     }
@@ -155,6 +159,7 @@ bool Region::take(PilotId pilot, int64_t unit) {
     PilotInput& h = seat.held;
     h.walk = Vec2(0, 0);
     h.heading = sim_.pilotFor(unit) ? sim_.pilotFor(unit)->heading : 0.0;
+    h.pitch = 0;
     h.act = h.ability = h.hold = h.mend = false;
     h.crosshair = std::nullopt;
     h.slot = 0;
@@ -167,6 +172,8 @@ void Region::handBack(PilotId pilot) {
     keepBank(it->second);
     if (drivesNow(it->second)) {
         stashLevels(it->second);
+        // C1: a unit handed back leaves the gun it manned.
+        sim_.unman(*it->second.drives);
         sim_.handBack(*it->second.drives);
     }
     it->second.drives = std::nullopt;
@@ -341,6 +348,7 @@ bool Region::input(PilotId pilot, const PilotInput& in) {
     PilotInput clean = in;
     clean.walk = Vec2(clampUnit(in.walk.x), clampUnit(in.walk.y));
     if (!std::isfinite(clean.heading)) clean.heading = seat.held.heading;
+    if (!std::isfinite(clean.pitch)) clean.pitch = seat.held.pitch;
     seat.pending.insert(at, clean);
     // A client far ahead: its oldest inputs are used up now, their presses
     // kept for the next.
@@ -404,6 +412,8 @@ void Region::step() {
         const PilotInput& h = seat.held;
         p.walk = h.walk;
         p.heading = h.heading;
+        // C1: the look's pitch (a gunner's aim; the core reads it at a gun only).
+        p.pitch = h.pitch;
         p.act = h.act;
         p.ability = h.ability;
         p.hold = h.hold;
@@ -427,6 +437,7 @@ void Region::step() {
         if (seat.drives && (!drivesNow(seat) || !sim_.unitIndex(*seat.drives))) {
             keepBank(seat);
             stashLevels(seat);
+            sim_.unman(*seat.drives);
             sim_.handBack(*seat.drives);
             seat.drives = std::nullopt;
         }

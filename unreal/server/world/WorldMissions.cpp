@@ -252,7 +252,7 @@ std::optional<Mission> WorldMap::drawMission(const PilotState& p, std::mt19937_6
             const std::string id = siteId(r, i);
             const bool mine = std::any_of(p.journal.begin(), p.journal.end(), [&](const Mission& m) { return m.target == id; }) ||
                               std::any_of(p.board.begin(), p.board.end(), [&](const Mission& m) { return m.target == id; });
-            if (can && !mine && !p.progress.sites.count(id)) sites.push_back({r, i});
+            if (can && !mine && !p.progress.sites.count(id) && !siteSwallowed(r, i)) sites.push_back({r, i});
         }
     }
     const bool haul = tier != Tier::perilous && (realmFinished(StructureKind::citadel) || realmFinished(StructureKind::habDome));

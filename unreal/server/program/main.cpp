@@ -22,7 +22,8 @@
 //                                           scene: `brood linger|attack|dive|lodeback|raid|clear`, or the Dropship's:
 //                                           `ferry pad [here|REGION]|seen|go REGION|mh N`, or the Citadel
 //                                           board's: `missions here`, or `daylight on|off` (S3: off, the
-//                                           sight before daylight); Server::devControl)
+//                                           sight before daylight), or the Citadel's interior (C1): `citadel
+//                                           here|door open|close|man N|none`; Server::devControl)
 //                    [--brood 0|1]  (the Brood's director spawns bugs; on unless 0)
 //                    [--frontier n]  (frontier pilots the server runs, 0 to 6; 5 unless set)
 //                    [--dev-down s]  (dev, shots: the save counts as written s seconds earlier: the start catches

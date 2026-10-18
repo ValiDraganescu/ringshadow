@@ -696,7 +696,9 @@ void WorldMap::broodThink(size_t r) {
     // The groups: their bugs, their prey, their orders.
     std::vector<const Unit*> prospectors;
     for (const Unit& u : st.units)
-        if (u.owner == Pilot::player && u.hp > 0 && u.task != Unit::Task::aboard && u.task != Unit::Task::inDerrick) prospectors.push_back(&u);
+        // C1: not one sheltered in a Citadel's hall or at its guns.
+        if (u.owner == Pilot::player && u.hp > 0 && u.task != Unit::Task::aboard && u.task != Unit::Task::inDerrick && !sim.sheltered(u))
+            prospectors.push_back(&u);
     std::set<int64_t> gone;
     for (BroodGroup& g : br.groups) {
         std::erase_if(g.bugs, [&](int64_t id) { return !st.unit(id); });
@@ -713,9 +715,9 @@ void WorldMap::broodThink(size_t r) {
             g.lingerUntil = std::max(g.lingerUntil, clock_ + 60);
         }
         if (g.prey) {
-            // Gone, or run past the leash: the group lets it go.
+            // Gone, run past the leash, or sheltered (C1): the group lets it go.
             const auto t = st.unit(*g.prey);
-            if (!t || t->hp <= 0 || distance(t->position, g.site) > g.radius + g.leash) g.prey = std::nullopt;
+            if (!t || t->hp <= 0 || distance(t->position, g.site) > g.radius + g.leash || sim.sheltered(*t)) g.prey = std::nullopt;
         }
         // A defence fallen or out past the leash: the group lets it be.
         if (g.turret) {

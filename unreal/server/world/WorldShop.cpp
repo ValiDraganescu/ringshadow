@@ -99,7 +99,8 @@ std::optional<std::string> WorldMap::use(PilotId pilot, Item item) {
         // while it burns (the client draws them).
         const auto& sites = world_->regions[p->region].built.sites;
         for (size_t i = 0; i < sites.size(); i++)
-            if (distance(u->position, sites[i].at) <= Shop::flareRadius) p->progress.known.insert(siteId(p->region, i));
+            if (distance(u->position, sites[i].at) <= Shop::flareRadius && !siteSwallowed(p->region, i))
+                p->progress.known.insert(siteId(p->region, i));
         p->flare = PilotState::Flare{p->region, u->position, clock_ + x.lasts};
         break;
     }

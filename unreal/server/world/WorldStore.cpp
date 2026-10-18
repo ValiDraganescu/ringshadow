@@ -286,6 +286,15 @@ ALTER TABLE wells ADD COLUMN x REAL;
 ALTER TABLE wells ADD COLUMN y REAL;
 )sql";
 
+/// Schema 27 (C1, docs/citadel-interior.md): the Citadel grows to 12x12
+/// cells with a hall inside. No table changes: a save is the same rows, and
+/// every load grows each Citadel in place (`WorldMap::adoptCitadels`: its
+/// square + 1 cleared of ore and sites). The version keeps a server from
+/// before off a grown world.
+const char* const kV27 = R"sql(
+-- C1: the Citadel's grown footprint, adopted on load (WorldMapSave.cpp).
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 /// A row's place at columns `c` and `c + 1`: nil when either is NULL (a
@@ -299,7 +308,7 @@ std::optional<Vec2> place(const Stmt& s, int c) {
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}, {25, kV25}, {26, kV26}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}, {25, kV25}, {26, kV26}, {27, kV27}};
     return steps;
 }
 

@@ -69,6 +69,7 @@ void writeInput(BitWriter& w, const PilotInput& in) {
     writeSigned(w, std::llround(qi.walk.x * q::kWalkSteps));
     writeSigned(w, std::llround(qi.walk.y * q::kWalkSteps));
     w.writeU16(q::angle(qi.heading));
+    w.writeBits(q::pitch(qi.pitch), q::kPitchBits);
     w.writeBool(in.act);
     w.writeBool(in.ability);
     w.writeBool(in.hold);
@@ -86,6 +87,7 @@ void readInput(BitReader& r, PilotInput& in) {
     in.walk.x = double(readSigned(r)) / q::kWalkSteps;
     in.walk.y = double(readSigned(r)) / q::kWalkSteps;
     in.heading = q::angle(r.readU16());
+    in.pitch = q::pitch(uint8_t(r.readBits(q::kPitchBits)));
     in.act = r.readBool();
     in.ability = r.readBool();
     in.hold = r.readBool();
@@ -271,6 +273,17 @@ uint16_t angle(double radians) {
 
 double angle(uint16_t v) { return double(v) * (kTurn / 65536.0); }
 
+uint8_t pitch(double radians) {
+    if (!std::isfinite(radians)) return uint8_t(kPitchSteps);
+    const double c = std::clamp(radians / (kTurn / 4), -1.0, 1.0);
+    return static_cast<uint8_t>(std::llround(c * double(kPitchSteps)) + kPitchSteps);
+}
+
+double pitch(uint8_t v) {
+    const int64_t steps = std::min<int64_t>(v, 2 * kPitchSteps) - kPitchSteps;
+    return double(steps) / double(kPitchSteps) * (kTurn / 4);
+}
+
 } // namespace q
 
 PilotInput quantised(const PilotInput& in) {
@@ -281,6 +294,7 @@ PilotInput quantised(const PilotInput& in) {
     };
     out.walk = Vec2(axis(in.walk.x), axis(in.walk.y));
     out.heading = q::angle(q::angle(in.heading));
+    out.pitch = q::pitch(q::pitch(in.pitch));
     return out;
 }
 
@@ -801,6 +815,9 @@ bool readMission(BitReader& r, CitadelMission& x) {
 
 } // namespace
 
+// The request's index takes 5 bits.
+static_assert(std::variant_size_v<decltype(RequestMessage::what)> <= 32);
+
 std::vector<uint8_t> encode(const RequestMessage& m) {
     BitWriter w = start(MessageType::request);
     writeVarint(w, m.id);
@@ -856,6 +873,10 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         w.writeBits(uint64_t(p->stat), 2);
     }
     if (const auto* p = std::get_if<RequestMessage::StartProject>(&m.what)) w.writeBits(uint64_t(p->kind), 3);
+    if (const auto* p = std::get_if<RequestMessage::Door>(&m.what)) w.writeBool(p->open);
+    // A gun 0 to 3, or -1 (leave it): 3 bits, the gun + 1.
+    if (const auto* p = std::get_if<RequestMessage::Man>(&m.what))
+        w.writeBits(uint64_t(std::clamp<int>(p->gun, -1, 3) + 1), 3);
     return w.bytes();
 }
 
@@ -1004,6 +1025,13 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         break;
     }
     case 21: m.what = RequestMessage::CallHunt{}; break;
+    case 22: m.what = RequestMessage::Door{r.readBool()}; break;
+    case 23: {
+        const uint64_t g = r.readBits(3);
+        if (g > 4) return false;
+        m.what = RequestMessage::Man{int8_t(int(g) - 1)};
+        break;
+    }
     default: return false;
     }
     return r.ok();

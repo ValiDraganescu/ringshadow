@@ -56,7 +56,8 @@ void WorldMap::scan(PilotState& p, size_t r) {
         if (const auto* s = e.as<SkillEffect::ScannerPulse>()) kinds = s->kinds;
     const auto& sites = world_->regions[r].built.sites;
     for (size_t i = 0; i < sites.size(); i++)
-        if (std::find(kinds.begin(), kinds.end(), sites[i].kind) != kinds.end()) p.progress.known.insert(siteId(r, i));
+        if (std::find(kinds.begin(), kinds.end(), sites[i].kind) != kinds.end() && !siteSwallowed(r, i))
+            p.progress.known.insert(siteId(r, i));
 }
 
 void WorldMap::sites() {
@@ -77,6 +78,8 @@ void WorldMap::sites() {
         std::optional<size_t> near;
         double nearest = std::numeric_limits<double>::infinity();
         for (size_t i = 0; i < sites.size(); i++) {
+            // C1: one under a grown Citadel is gone (schema 27).
+            if (siteSwallowed(p.region, i)) continue;
             const std::string id = siteId(p.region, i);
             const double d = distance(u->position, sites[i].at);
             const double sight = std::max(sites[i].kind == SiteKind::cache ? WorldSites::cacheSeen : WorldSites::seen, surveyor);
@@ -149,7 +152,7 @@ std::optional<std::pair<size_t, size_t>> WorldMap::nearestUnknown(const PilotSta
         const Vec2 at0(double(g.column) * cell.x, double(g.row) * cell.y);
         for (size_t i = 0; i < g.built.sites.size(); i++) {
             const std::string id = siteId(r, i);
-            if (p.progress.known.count(id) || p.progress.sites.count(id)) continue;
+            if (p.progress.known.count(id) || p.progress.sites.count(id) || siteSwallowed(r, i)) continue;
             const double d = distance(origin + me, at0 + g.built.regionAt(g.built.sites[i].at));
             if (d < bestD) {
                 bestD = d;

@@ -232,7 +232,7 @@ Contract WorldMap::drawContract(PilotId, const PilotState& p, std::mt19937_64& d
             const region::SiteReach how = (*siteReach_[r])[i];
             const bool can = how == region::SiteReach::walk || how == region::SiteReach::ramp ||
                              (hop && how == region::SiteReach::cliffHop);
-            if (can && !p.progress.sites.count(siteId(r, i))) sites.push_back({r, i});
+            if (can && !p.progress.sites.count(siteId(r, i)) && !siteSwallowed(r, i)) sites.push_back({r, i});
         }
         if (r != p.region)
             for (size_t i = 0; i < built.pads.size(); i++) pads.push_back({r, i});
@@ -387,7 +387,7 @@ std::optional<size_t> WorldMap::startSite(StructureKind kind) const {
     if (!world_) return std::nullopt;
     const auto& sites = world_->regions[start_].built.sites;
     for (size_t i = 0; i < sites.size(); i++)
-        if (sites[i].blueprint == kind) return i;
+        if (sites[i].blueprint == kind && !siteSwallowed(start_, i)) return i;
     return std::nullopt;
 }
 

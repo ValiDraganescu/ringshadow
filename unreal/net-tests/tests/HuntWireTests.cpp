@@ -52,7 +52,7 @@ TEST(hunt_travels_in_a_message_of_its_own) {
     EXPECT_TRUE(!decode(bytes, s));
     ProgressMessage p;
     EXPECT_TRUE(!decode(bytes, p));
-    EXPECT_EQ(kProtocolVersion, uint16_t(35));
+    EXPECT_TRUE(kProtocolVersion >= uint16_t(35));
 }
 
 TEST(hunt_call_and_a_mercenarys_role_requests) {

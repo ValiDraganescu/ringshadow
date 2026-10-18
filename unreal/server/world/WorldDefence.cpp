@@ -3,7 +3,8 @@
 // from the realm wallet; a placed AA tower (the Sentinel) or gatling gun is
 // a building like any other, from a blueprint, upgraded by any pilot from
 // its own wallet. The guns themselves are the core's (`Defence::weapon`,
-// `Simulation::stepTurret`).
+// `Simulation::stepTurret`); the corner turrets fire only with a gunner at
+// their station (C1, WorldCitadel.cpp, `Simulation::stepCornerGun`).
 
 #include "WorldMap.h"
 
@@ -19,7 +20,11 @@ namespace ac::server {
 void WorldMap::armCitadels() {
     for (auto& r : regions_)
         for (Structure& s : r->simulation().state.structures)
-            if (s.kind == StructureKind::citadel && realm(s)) s.marks = citadelMarks_;
+            if (s.kind == StructureKind::citadel && realm(s)) {
+                s.marks = citadelMarks_;
+                // C1: its door, shut (the core steps it; never saved).
+                if (s.complete() && !s.door) s.door = Door{};
+            }
 }
 
 std::optional<std::string> WorldMap::upgradeCitadel(PilotId pilot, DefenceStat stat) {

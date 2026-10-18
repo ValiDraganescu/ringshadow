@@ -186,7 +186,10 @@ TEST(scarcity_veins_regrow_a_tenth_a_day) {
 TEST(scarcity_an_old_save_adopts_the_new_veins) {
     const std::string path = fresh("e1adopt");
     std::string why;
-    const std::vector<WorldStore::Migration> old(WorldStore::migrations().begin(), WorldStore::migrations().end() - 1);
+    // The steps before E1's (26).
+    std::vector<WorldStore::Migration> old;
+    for (const WorldStore::Migration& m : WorldStore::migrations())
+        if (m.version < 26) old.push_back(m);
     ASSERT_TRUE(old.back().version == int64_t(24) || old.back().version == int64_t(25));
     // Ground cells of the start (144 x 96): region (x, z) less (72, 48).
     const auto g = [](double x, double z) { return Vec2(x - 72, z - 48); };

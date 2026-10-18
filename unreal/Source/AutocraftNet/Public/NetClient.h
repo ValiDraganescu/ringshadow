@@ -102,6 +102,10 @@ public:
     /// D3: placed turret `turret` takes its next mark of `stat`, from the
     /// pilot's wallet (`RequestMessage::UpgradeTurret`).
     uint32_t upgradeTurret(int64_t turret, DefenceStat stat);
+    /// C1: open or close the realm Citadel's door (`RequestMessage::Door`).
+    uint32_t door(bool open);
+    /// C1: man corner gun `gun` (0 to 3), or -1: leave it (`RequestMessage::Man`).
+    uint32_t man(int gun);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

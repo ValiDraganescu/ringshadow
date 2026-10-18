@@ -97,6 +97,9 @@ struct PilotInput {
     int64_t visit = 0;
     Vec2 walk{0, 0};
     double heading = 0;
+    /// The look's pitch, radians (C1: a gunner's aim, `Pilot::pitch`; the
+    /// server ignores a non-gunner's). 8 bits over ±90° (`q::pitch`).
+    double pitch = 0;
     /// Key presses since the client's last tick: applied on this input's
     /// server tick only.
     bool act = false;
@@ -376,6 +379,12 @@ AUTOCRAFTNET_API int64_t centimetres(double v);
 /// Angles: 16 bits a full turn; out comes 0…2π.
 AUTOCRAFTNET_API uint16_t angle(double radians);
 AUTOCRAFTNET_API double angle(uint16_t q);
+/// A look's pitch (C1): 8 bits over −90°…+90°, 0 exact (`kPitchSteps`
+/// steps each way, so the code 0..254).
+inline constexpr int kPitchBits = 8;
+inline constexpr int64_t kPitchSteps = 127;
+AUTOCRAFTNET_API uint8_t pitch(double radians);
+AUTOCRAFTNET_API double pitch(uint8_t q);
 /// Health, shields, energy: 12 bits over 0…`range`, or the exact value
 /// past it (one more bit).
 inline constexpr int kHealthBits = 12;
@@ -383,7 +392,8 @@ inline constexpr int kHealthBits = 12;
 inline constexpr int64_t kWalkSteps = 255;
 } // namespace q
 
-/// What the server applies: the walk and the heading as they go on the wire.
+/// What the server applies: the walk, the heading and the pitch as they go
+/// on the wire.
 AUTOCRAFTNET_API PilotInput quantised(const PilotInput& in);
 
 // MARK: - Messages
@@ -575,14 +585,28 @@ struct RequestMessage {
     struct CallHunt {
         bool operator==(const CallHunt&) const = default;
     };
+    /// C1: open or close the door of the realm's Citadel in the pilot's
+    /// region; open from either side within `Rules::doorReach`, close only
+    /// from inside the hall (docs/citadel-interior.md, section 3).
+    struct Door {
+        bool open = true;
+        bool operator==(const Door&) const = default;
+    };
+    /// C1: man corner gun `gun` (0 to 3) of that Citadel from its station in
+    /// the hall, or -1: leave the gun (docs/citadel-interior.md, section 5).
+    struct Man {
+        int8_t gun = -1;
+        bool operator==(const Man&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
     /// 14, Use 15, MissionAsk 16 (protocol 16), UpgradeCitadel 17 (protocol
     /// 20; kept for it since 18), Merc 18 (protocol 19), UpgradeTurret 19
-    /// (protocol 21), StartProject 20 (protocol 29), CallHunt 21 (protocol 35).
+    /// (protocol 21), StartProject 20 (protocol 29), CallHunt 21 (protocol 35),
+    /// Door 22 and Man 23 (protocol 36); 5 bits hold 32.
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt>
+                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt, Door, Man>
         what;
     bool operator==(const RequestMessage&) const = default;
 };

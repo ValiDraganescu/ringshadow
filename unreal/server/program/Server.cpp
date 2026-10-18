@@ -37,6 +37,7 @@ Server::Server(net::PacketIo& io, const ServerOptions& options)
     // The save in place before the first tick.
     if (options_.saved) {
         for (const std::string& p : world_.restore(*options_.saved)) log("save: " + p);
+        for (const std::string& p : world_.grownCitadels()) log("save: " + p);
         log("save: " + std::to_string(options_.saved->regions.size()) + " regions, " +
             std::to_string(options_.saved->pilots.size()) + " pilots loaded");
         // What each region holds (a world that comes up empty on screen is
@@ -202,6 +203,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
         // The defences' scenes (WorldMap::devDefence): `defence wallet|blueprints|citadel|gatling|aa`.
         if (line.rfind("defence", 0) == 0) {
             said.push_back(world_.devDefence(line));
+            continue;
+        }
+        // The Citadel's interior (WorldMap::devCitadel, C1): `citadel here|door open|close|man N|none`.
+        if (line.rfind("citadel", 0) == 0) {
+            said.push_back(world_.devCitadel(line));
             continue;
         }
         // The Dropship's scenes (WorldMap::devFerry): `ferry pad [here|REGION]|seen|go REGION|mh N`.
@@ -554,6 +560,14 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
         // N4: THE HUNT, free, once a world day realm-wide.
         what = "call the hunt";
         why = world_.callHunt(pilot);
+    } else if (const auto* dr = std::get_if<net::RequestMessage::Door>(&m.what)) {
+        // C1: the realm Citadel's door, opened from either side, closed from inside.
+        what = std::string(dr->open ? "open" : "close") + " the Citadel's door";
+        why = world_.door(pilot, dr->open);
+    } else if (const auto* mn = std::get_if<net::RequestMessage::Man>(&m.what)) {
+        // C1: a corner gun manned from its station in the hall, or left (-1).
+        what = mn->gun < 0 ? std::string("leave the gun") : "man corner gun " + std::to_string(int(mn->gun));
+        why = world_.man(pilot, int(mn->gun));
     } else if (const auto* ut = std::get_if<net::RequestMessage::UpgradeTurret>(&m.what)) {
         what = "upgrade turret " + std::to_string(ut->turret) + "'s " + std::string(rawValue(ut->stat));
         why = world_.upgradeTurret(pilot, ut->turret, ut->stat);

@@ -150,9 +150,9 @@ only the bits a value needs. JSON stays for the saves and the tools.
 | Message | Channel | What |
 |---|---|---|
 | Hello, Answer, Token | handshake | The version, the cookie, the client's public key; then, sealed, the secret or the login. |
-| Input | unreliable | The driven machine's controls for one tick: `ac::Pilot` today (walk, heading, act, hold, ability, mend, the crosshair's target), its tick number, the region visit it was made in (the server drops an earlier visit's, so a walk held into an edge stops at the crossing) and the last few inputs again, so a lost packet costs nothing. |
+| Input | unreliable | The driven machine's controls for one tick: `ac::Pilot` today (walk, heading, the look's pitch (protocol 36, 8 bits over ±90°: a gunner's aim at a Citadel's corner gun), act, hold, ability, mend, the crosshair's target), its tick number, the region visit it was made in (the server drops an earlier visit's, so a walk held into an edge stops at the crossing) and the last few inputs again, so a lost packet costs nothing. |
 | Ack | unreliable | The newest snapshot received: the baseline for the next delta. |
-| Request | reliable | Everything that is not steering: take a machine, hand it back, call the Dropship from a Landing Pad to another (F2), build, pick a level-up card, take a contract. |
+| Request | reliable | Everything that is not steering: take a machine, hand it back, call the Dropship from a Landing Pad to another (F2), build, pick a level-up card, take a contract; at the realm's Citadel (protocol 36, docs/citadel-interior.md) open or close its door (Door, index 22) and man a corner gun or leave it (Man, index 23). The index takes 5 bits (`RequestMessage::what`, NetProtocol.h, lists them all). |
 
 **Server to client:**
 
@@ -162,7 +162,7 @@ only the bits a value needs. JSON stays for the saves and the tools.
 | RegionChange | reliable (bulk when large) | The pilot is in another region now (an edge crossed; the Dropship's approach, with nothing driven until the touch down): its visit number, the region, the driven unit. The client builds a new mirror, or takes the one it made ahead (W4, F2); snapshots carry the visit in `game`'s high 32 bits, and those of a visit not reached yet wait for it. |
 | World | reliable | The world map: the grid's regions (id, name, style, size, pads: the region files' and the realm's Landing Pads), where the pilot is, where it flies to, and aboard the Dropship its `ferry` (protocol 26): the region and pad it boarded at, the target pad, the flight's stages (`ac::Ferry::Plan`) and the seconds since the call, for the client's picture. After the Welcome and after every move. |
 | Region | bulk | The region's static data: its terrain seed, lots, deposits, wells. |
-| Snapshot | unreliable | What the pilot can see now (below), and the number of the last input the server used. |
+| Snapshot | unreliable | What the pilot can see now (below), and the number of the last input the server used. A complete Citadel carries its door (how far open, in 255ths, and the way it moves) and each corner gun's yaw, pitch and gunner (protocol 36). |
 | Event | reliable | What must not be missed: a level-up, a death, a building finished, a lot taken. Today's `ac::GameEvent`s, the ones the pilot is meant to know. |
 | Reply | reliable | The answer to a request: done, or refused and why. |
 

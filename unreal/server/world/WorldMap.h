@@ -967,8 +967,46 @@ public:
     /// is told who paid. The reason when refused (no such turret, not
     /// finished, too far, the wallet short, the last mark).
     std::optional<std::string> upgradeTurret(PilotId pilot, int64_t turret, DefenceStat stat);
+    /// C1: a pilot comes back at a complete Citadel here, from its centre:
+    /// in the hall, away from the door (on the +y face).
+    static constexpr Vec2 citadelRespawn{0, -3};
     /// The bugs building `id` of region `r` has killed (D3: the turret card).
     int64_t turretKills(size_t r, int64_t id) const;
+
+    // MARK: - The Citadel's interior (C1, WorldCitadel.cpp, docs/citadel-interior.md)
+
+    /// The pilot opens (`open`) or closes the door of the realm's complete
+    /// Citadel nearest its Prospector in its region (`Simulation::door`:
+    /// open within `Rules::doorReach` of the door slab, either side; close
+    /// only from the hall, the doorway clear). The reason when refused.
+    std::optional<std::string> door(PilotId pilot, bool open);
+    /// The pilot's Prospector mans corner gun `gun` (0 to 3) of the realm's
+    /// Citadel it is sheltered in (`Simulation::man`: within
+    /// `Defence::stationReach` of the gun's station, the gun free), or
+    /// leaves the gun it mans (-1). The reason when refused.
+    std::optional<std::string> man(PilotId pilot, int gun);
+    /// A complete Citadel of the realm in region `r` whose bounding square
+    /// grown by a cell holds `at` (region cells): what stands there was
+    /// swallowed by the grown Citadel (schema 27). Its id, or nil.
+    std::optional<int64_t> swallowedBy(size_t r, Vec2 at) const;
+    /// Blueprint site `i` of region `r` lies under a complete Citadel
+    /// (`swallowedBy`): never seen, never opened, never a contract's.
+    bool siteSwallowed(size_t r, size_t i) const;
+    /// Schema 27 (`restore`, after the buildings): each Citadel's grown
+    /// footprint, its bounding square + 1, cleared of ore (the deposits
+    /// emptied for good); the sites there are swallowed (`siteSwallowed`),
+    /// the map's doodads there are the core's and the game's (C1, the shared
+    /// predicate); another building overlapping it is left. One line each
+    /// for the log.
+    std::vector<std::string> adoptCitadels(size_t r);
+    /// The last `restore`'s `adoptCitadels` lines, every region's.
+    const std::vector<std::string>& grownCitadels() const { return grown_; }
+    /// Dev and the flow tests (`citadel …` lines), as the seated pilot (`as
+    /// N` for another): `citadel here` (a complete, armed Citadel of the
+    /// realm on clear ground ahead, door shut, the Prospector 4 cells out
+    /// from its door facing it; its id), `citadel door open|close` and
+    /// `citadel man N|none` (the Door and Man requests).
+    std::string devCitadel(const std::string& line);
     /// The share of a kill's XP a defence's builder earns when the defence
     /// hits a bug (docs/creatures.md, "XP and rewards").
     static constexpr double defenceXpShare = 0.5;
@@ -1744,6 +1782,8 @@ private:
     std::array<int64_t, RealmProject::count> projectRuns_{};
     /// The realm's Citadel turrets' marks (D1).
     TurretMarks citadelMarks_;
+    /// C1: what the last `restore` grew the Citadels over (`grownCitadels`).
+    std::vector<std::string> grown_;
     /// The bugs each defence has killed, per region (building id → kills;
     /// D3). Saved with the building, gone with it.
     std::vector<std::map<int64_t, int64_t>> kills_;
@@ -1827,7 +1867,8 @@ private:
     /// (C1), credited to the pilot that paid it.
     void realmTaxes();
     /// Arms every Citadel of the realm with the realm's marks (D1): its
-    /// four corner turrets fire on their own (`Defence::weapon`).
+    /// four corner turrets, which fire only with a gunner (C1,
+    /// `Simulation::stepCornerGun`); a complete one gets its door, shut.
     void armCitadels();
     void regrowWells(double dt);
     /// E1: each region file's deposit below full grows back

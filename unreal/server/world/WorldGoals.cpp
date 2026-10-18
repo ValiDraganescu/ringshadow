@@ -134,7 +134,7 @@ std::optional<std::pair<size_t, size_t>> WorldMap::worldSite(StructureKind kind)
     for (size_t r = 0; r < world_->regions.size(); r++) {
         const auto& sites = world_->regions[r].built.sites;
         for (size_t i = 0; i < sites.size(); i++)
-            if (sites[i].blueprint == kind) return std::pair{r, i};
+            if (sites[i].blueprint == kind && !siteSwallowed(r, i)) return std::pair{r, i};
     }
     return std::nullopt;
 }

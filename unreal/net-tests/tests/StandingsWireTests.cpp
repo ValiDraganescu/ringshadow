@@ -48,7 +48,7 @@ TEST(standings_travel_in_a_message_of_their_own) {
     // Not a Progress.
     ProgressMessage p;
     EXPECT_TRUE(!decode(encode(m), p));
-    EXPECT_EQ(kProtocolVersion, uint16_t(35));
+    EXPECT_TRUE(kProtocolVersion >= uint16_t(35));
 }
 
 TEST(standings_order_and_words) {
