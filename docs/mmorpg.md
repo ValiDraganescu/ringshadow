@@ -251,6 +251,18 @@ my computer is on)." Built in S2 (docs/mmorpg-m8.md).
   automation); only `-AcMmoServerDetached` (the S2 shot set) runs it
   detached, and that set stops it at its end. `hidden_run.py` names a
   world server still running on the run's folder.
+- **Regions on threads: off (2026-10-18).** The world can step its regions
+  with a pilot on several threads (`WorldParams::stepThreads`, or
+  `AUTOCRAFT_STEP_THREADS` when that is 0: -1 half the cores, at most 8;
+  N that many), the world's own work after the steps still on one thread in
+  the same order, the same state to the bit. It stays off: a region goes to
+  another thread only when its last two steps each took longer than waking
+  one costs (8-12 µs), and The First has no two regions that busy at once
+  (with a pilot at the nest the whole world steps in 15 µs; docs/perf.md
+  "Server", rounds 18-19). Turn it
+  on (one line: `stepThreads = -1`) when a world has several crowded
+  regions at once; `make -C unreal/server test-tsan` and spreadbench say
+  whether it still holds.
 
 ## Soak (Q3, 2026-10-15)
 

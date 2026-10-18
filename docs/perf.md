@@ -995,9 +995,17 @@ the same. Every other bench hash is unchanged (the default is off).
 | 2 with 8 pilots each | 35.8-37.3 µs | 36.3-37.4 µs (2-10 of 1,380) | 39.7-40.0 µs |
 
 So with the gate "on" is "off" within the load's noise, and sending every
-step costs 3-6 µs a tick where the regions are light. It stays off; stage 2
-(a soak with it on, a fresh sanitizer sweep) decides whether it is turned
-on. It pays when the world has several crowded regions at once.
+step costs 3-6 µs a tick where the regions are light. It pays when the
+world has several crowded regions at once.
+
+Decided (2026-10-18, with the manager): the default stays off until a world
+has several crowded regions at once (after round 19 the nest's step is a
+third of what it was, so on The First the gate keeps nearly every tick on
+one thread). The switch, the day it is needed: `WorldParams::stepThreads =
+-1` (half the cores, at most 8), or `AUTOCRAFT_STEP_THREADS=-1` in the
+server's environment; then `make -C unreal/server test-tsan` and
+`spreadbench` (off, on, and `AUTOCRAFT_STEP_ALWAYS=1`) before it ships
+(docs/mmorpg.md, "The world runs on").
 
 ### Round 19: the walking grid keeps its searches (2026-10-18)
 
