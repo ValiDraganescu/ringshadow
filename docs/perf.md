@@ -98,6 +98,24 @@ deeds, the ledgers, the save, the wire bytes and the simulation's hashes.
 The benches are `make -C unreal/server bench` (-O3); the M4 Max is shared,
 so every number carries the load average it ran under.
 
+Where it stands after round 10 (the first number before round 1, or
+before the round that first measured it):
+
+| | before | now |
+|---|---:|---:|
+| the server's start (The First, cold) | ~850 ms, 5.5 s CPU | ~300 ms, 2.7 s CPU |
+| the first step after a pilot joins | 12-25 ms | under 1 ms |
+| the world's step, one pilot (`worldbench`) | 0.030 ms | 0.005 ms |
+| a look by day, a pilot's region (`lookbench`) | 63 µs | 9.4 µs |
+| writing a pilot's snapshot (`snapbench`) | 44-70 µs | 6-13 µs |
+| 16 pilots in one region, a tick (`crowdbench`) | 230 µs | ~136 µs |
+| the idle call, no pilot on line (`soak-save` days) | 0.073-0.120 ms | 0.007-0.009 ms |
+
+Every change kept the results: the wire's bytes, the save, and the
+simulation's state hashes in the benches are the same before and after.
+Round 3 found and fixed three reads of freed or dead memory in the nest's
+code (the only change of behaviour, where it read garbage).
+
 ### Round 1: the first board's walking grids (2026-10-18)
 
 `worldbench 30` (The First, one pilot driving, 1,800 ticks) showed a max
@@ -463,3 +481,31 @@ fresh save in `unreal/server/build/soak-r9`, load about 10): resident
 memory flat at 21.3 MB, CPU 2.8 s at the start and 0.03 s a minute after
 it, the WAL 62 KB a minute, the idle call 0.18-0.35 ms mean and 0.74-3.7 ms
 at most (Q3's soak: 0.06-0.55 and up to 4.5).
+
+### Round 10: the idle call's build spots (2026-10-18)
+
+With no pilot on line the world runs on in 0.5 s calls (`WorldMap::idle`).
+`soak-save SAVE 3` idles the soak's world three world days so: the call
+took 0.073-0.120 ms, and Time Profiler put 98% of it in the frontier
+pilots' thinking, `frontierSpot` trying up to 112 spots round an anchor
+(the same spots every think) and `Simulation::placementRefusal` reading
+the terrain's height at up to a hundred points under each footprint.
+
+The terrain never changes in a simulation, so the heights' spread under a
+footprint is a function of the spot and the size alone: `placementRefusal`
+reads the walking grid's cells first (in the same order, so the same
+first refusal) and keeps each spot's spread by the bits of the spot and
+the radius (`Simulation::heightSpreads`, emptied past 65,536 spots).
+
+| `soak-save SAVE 3`, the same world | before | after |
+|---|---:|---:|
+| idle call mean, world day 1 | 0.078 ms | 0.008 ms |
+| day 2 | 0.120 ms | 0.009 ms |
+| day 3 | 0.073 ms | 0.007 ms |
+
+The saves both write after the three days are the same, table by table
+(`sqlite3 .dump`, all but the wall clock's `saved_at`); `worldbench` and
+`crowdbench` hashes equal. Test `frontier_placement_spread_kept_is_the_footprint`:
+in every region of The First, at 1,350 spots, the answer kept, the answer
+of a copy with nothing kept and the footprint read cell by cell as before
+agree.

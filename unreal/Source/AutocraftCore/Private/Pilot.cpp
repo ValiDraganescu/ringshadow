@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 
 namespace ac {
@@ -964,26 +965,44 @@ std::optional<std::string> Simulation::placementRefusal(Structure::Kind kind, Ve
         return std::nullopt;
     }
     // Flat, open ground under the whole footprint.
-    double low = std::numeric_limits<double>::infinity(), high = -std::numeric_limits<double>::infinity();
     // Swift's `stride(from:through:by:)` over Doubles: start + i × step,
     // up to and including the end.
     const double from = -r + 0.25, through = r - 0.25;
-    for (int64_t iz = 0;; ++iz) {
-        const double dz = from + static_cast<double>(iz) * 0.5;
-        if (dz > through) break;
-        for (int64_t ix = 0;; ++ix) {
-            const double dx = from + static_cast<double>(ix) * 0.5;
-            if (dx > through) break;
-            const Vec2 q = p + Vec2(dx, dz);
-            if (nav && (!nav->standable(q) || nav->inRock(q))) return "Can't build there";
-            if (field) {
+    auto footprint = [&](auto&& at) {
+        for (int64_t iz = 0;; ++iz) {
+            const double dz = from + static_cast<double>(iz) * 0.5;
+            if (dz > through) break;
+            for (int64_t ix = 0;; ++ix) {
+                const double dx = from + static_cast<double>(ix) * 0.5;
+                if (dx > through) break;
+                if (!at(p + Vec2(dx, dz))) return false;
+            }
+        }
+        return true;
+    };
+    // The walking grid's cells, then the heights' spread: the terrain's
+    // alone, so kept by spot.
+    if (nav && !footprint([&](Vec2 q) { return nav->standable(q) && !nav->inRock(q); })) return "Can't build there";
+    if (field) {
+        uint64_t bx, by, br;
+        std::memcpy(&bx, &p.x, 8);
+        std::memcpy(&by, &p.y, 8);
+        std::memcpy(&br, &r, 8);
+        const SpreadKey key{bx, by, br};
+        auto it = heightSpreads.find(key);
+        if (it == heightSpreads.end()) {
+            double low = std::numeric_limits<double>::infinity(), high = -std::numeric_limits<double>::infinity();
+            footprint([&](Vec2 q) {
                 const double h = field->height(q);
                 low = min(low, h);
                 high = max(high, h);
-            }
+                return true;
+            });
+            if (heightSpreads.size() >= kHeightSpreads) heightSpreads.clear();
+            it = heightSpreads.emplace(key, high - low).first;
         }
+        if (it->second > 0.2) return "The ground is not level";
     }
-    if (high - low > 0.2) return "The ground is not level";
     for (const Structure& s : state.structures) {
         if (std::abs(s.position.x - p.x) < r + Rules::radius(s.kind)
             && std::abs(s.position.y - p.y) < r + Rules::radius(s.kind)) {

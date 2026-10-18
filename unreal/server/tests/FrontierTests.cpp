@@ -21,6 +21,8 @@
 
 #include <cmath>
 #include <cstdio>
+#include <limits>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -726,4 +728,71 @@ TEST(Frontier_toldToThePilots) {
         for (const net::AwayRow& row : *rows) found = found || (row.kind == net::AwayKind::frontier && (row.who == f.callsign && row.what.find("built a Hab Dome in") != std::string::npos));
         EXPECT_TRUE(found);
     }
+}
+
+namespace {
+
+/// `placementRefusal`'s footprint as it was before docs/perf.md "Server"
+/// round 10: the walking grid's cells and the heights read together, the
+/// first refusal of either.
+std::optional<std::string> footprintRefusal(const Simulation& sim, StructureKind kind, Vec2 p) {
+    const double r = Rules::radius(kind);
+    double low = std::numeric_limits<double>::infinity(), high = -std::numeric_limits<double>::infinity();
+    const double from = -r + 0.25, through = r - 0.25;
+    for (int64_t iz = 0;; ++iz) {
+        const double dz = from + static_cast<double>(iz) * 0.5;
+        if (dz > through) break;
+        for (int64_t ix = 0;; ++ix) {
+            const double dx = from + static_cast<double>(ix) * 0.5;
+            if (dx > through) break;
+            const Vec2 q = p + Vec2(dx, dz);
+            if (sim.nav && (!sim.nav->standable(q) || sim.nav->inRock(q))) return "Can't build there";
+            if (sim.field) {
+                const double h = sim.field->height(q);
+                low = min(low, h);
+                high = max(high, h);
+            }
+        }
+    }
+    if (high - low > 0.2) return "The ground is not level";
+    return std::nullopt;
+}
+
+} // namespace
+
+// perf.md "Server" round 10: a spot's height spread is kept (the frontier
+// pilots ask the same spots at every think). In every region of The First,
+// at spots on and off level ground: the answer kept, the answer of a copy
+// with nothing kept, and the footprint as it was read cell by cell agree.
+TEST(frontier_placement_spread_kept_is_the_footprint) {
+    WorldMap w(first());
+    SeededRandom dice(1010);
+    const StructureKind kinds[] = {StructureKind::citadel, StructureKind::foundry, StructureKind::gatling, StructureKind::habDome};
+    int64_t level = 0, uneven = 0, blocked = 0;
+    bool same = true;
+    for (size_t r = 0; r < w.regionCount(); r++) {
+        const Simulation& sim = w.region(r).simulation();
+        const NavGrid& nav = *sim.nav;
+        for (int k = 0; k < 150; k++) {
+            const StructureKind kind = kinds[k % 4];
+            const Vec2 p = nav.origin + Vec2(dice.range(0, double(nav.width)), dice.range(0, double(nav.height))) * NavGrid::cell;
+            const auto kept = sim.placementRefusal(kind, p);
+            const auto again = sim.placementRefusal(kind, p);
+            Simulation fresh = sim;
+            fresh.heightSpreads.clear();
+            const auto anew = fresh.placementRefusal(kind, p);
+            const auto old = footprintRefusal(sim, kind, p);
+            same = same && kept == again && kept == anew;
+            // The footprint's two refusals as before; past them, none of its.
+            if (old) same = same && kept == old;
+            else same = same && kept != std::optional<std::string>("Can't build there") &&
+                        kept != std::optional<std::string>("The ground is not level");
+            if (old == std::optional<std::string>("The ground is not level")) uneven++;
+            else if (old) blocked++;
+            else level++;
+        }
+    }
+    EXPECT_TRUE(same);
+    // (Of 1,350 spots about 460 level, 870 blocked, 16 on uneven ground.)
+    EXPECT_TRUE(level > 50 && uneven > 8 && blocked > 50);
 }

@@ -47,6 +47,24 @@ public:
     int64_t workersPerPatch = 2;
     std::optional<Router> router;
     std::optional<TerrainField> field;
+    /// `placementRefusal`'s spread of the ground's height under a footprint
+    /// (its radius, at a spot), by their bits. The terrain never changes, so
+    /// a spot's is worked out once (the frontier pilots ask the same spots
+    /// at every think). Emptied past `kHeightSpreads` spots.
+    struct SpreadKey {
+        uint64_t x, y, r;
+        bool operator==(const SpreadKey&) const = default;
+    };
+    struct SpreadHash {
+        size_t operator()(const SpreadKey& k) const {
+            uint64_t h = k.x * 0x9e3779b97f4a7c15ull;
+            h ^= (h >> 29) ^ k.y * 0xbf58476d1ce4e5b9ull;
+            h ^= (h >> 31) ^ k.r * 0x94d049bb133111ebull;
+            return size_t(h ^ (h >> 32));
+        }
+    };
+    static constexpr size_t kHeightSpreads = size_t(1) << 16;
+    mutable std::unordered_map<SpreadKey, double, SpreadHash> heightSpreads;
     /// Walkable ground and paths around cliffs, doodads, resources and
     /// buildings (nil without a map: units walk straight).
     std::optional<NavGrid> nav;
