@@ -7,7 +7,6 @@ bastion_blue
 derrick_blue
 foundry_blue
 garrison_blue
-gatling_blue
 lab_blue
 landingPad_blue
 sentinel_blue

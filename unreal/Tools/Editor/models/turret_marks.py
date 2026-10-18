@@ -20,7 +20,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from ac_modelkit import Model, box, load_catalog, save_catalog  # noqa: E402
+from ac_modelkit import Model, box, prism, load_catalog, save_catalog  # noqa: E402
 
 POSES = ["AcPoseBuildings2.cpp:PoseSentinel", "AcPoseBuildings2.cpp:PoseGatling"]
 PREFIXES = ("markPlate", "marks_")
@@ -36,9 +36,9 @@ COLOURS = {
 STATS = list(COLOURS)
 FACE = 98.0      # the plates' outer face, just inside the footprint's edge
 COL = 21.0       # between two stats' columns
-ROWS = (20.0, 32.0, 44.0)
+ROWS = (18.0, 30.0, 42.0)  # under the rim (48): the top chevron ends at 46.9
 
-m = Model("turretmarks", category="building")
+m = Model("turretmarks", category="building", coplanar_check=True)
 for name in ("hullDark", "hullMid"):
     m.material(name)
 for name, emissive in COLOURS.items():
@@ -54,12 +54,16 @@ def at_face(axis, sign, along, out, z):
     return (out * sign, along, z) if axis == "x" else (along, out * sign, z)
 
 
+# An upward chevron (^), 20 cm wide and bold (N1b: read from the usual camera): the outline of two 11 by 4.2 cm arms at
+# 35 degrees, one solid (two crossing arms shared their faces at the apex: z-fighting, the coplanar check).
+CHEVRON = [(7.501, -4.875), (9.910, -1.435), (0.899, 4.875), (0.0, 3.592), (-0.899, 4.875), (-9.910, -1.435),
+           (-7.501, -4.875), (0.0, 0.377)]
+
+
 def chevron(axis, sign, c, z, out, depth):
-    """An upward chevron (^), 18 cm wide and bold (N1b: read from the usual camera), centred `c` along the face `out`
-    cm from the middle."""
-    yaw = 90 if axis == "x" else 0
-    return [box((11, depth, 4.2), at=at_face(axis, sign, c - 4.2, out, z), rot=(35, yaw, 0)),
-            box((11, depth, 4.2), at=at_face(axis, sign, c + 4.2, out, z), rot=(-35, yaw, 0))]
+    """A chevron centred `c` along the face (axis, sign) at height z, `depth` thick, its middle `out` cm from the
+    model's middle."""
+    return [prism(CHEVRON, depth, "yz" if axis == "x" else "xz", at=at_face(axis, sign, c, out, z))]
 
 
 cols = [(s - 1.5) * COL for s in range(4)]
@@ -73,7 +77,7 @@ for axis, sign in FACES:
     sockets = []
     for c in cols:
         for z in ROWS:
-            sockets += chevron(axis, sign, c, z, FACE + 0.3, 1.2)
+            sockets += chevron(axis, sign, c, z, FACE + 0.3, 1.0)  # 0.2 into the plate, its face at 98.8
     m.mesh(plate, "hullMid", sockets, solid=False)
 for s, mat in enumerate(STATS):
     for k, z in enumerate(ROWS):
@@ -83,7 +87,7 @@ for s, mat in enumerate(STATS):
                                   functions=POSES))
         lit = []
         for axis, sign in FACES:
-            lit += chevron(axis, sign, cols[s], z, FACE + 0.9, 1.4)
+            lit += chevron(axis, sign, cols[s], z, FACE + 1.45, 1.1)  # just in front of its socket: 98.9 to 100
         m.mesh(part, mat, lit, solid=False)
 
 entry = m.write(catalog=False)

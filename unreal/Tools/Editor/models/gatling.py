@@ -21,11 +21,11 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from ac_modelkit import Model, box, cyl, sphere  # noqa: E402
+from ac_modelkit import Model, bar, box, cyl, sphere  # noqa: E402
 
 POSE = "AcPoseBuildings2.cpp:PoseGatling"
 
-m = Model("gatling", category="building", notes=[
+m = Model("gatling", category="building", coplanar_check=True, notes=[
     "D2's gatling gun (docs/mmorpg-m8.md). Pose: PoseGatling: head yaw to the target, barrels spin while firing, "
     "tips and hopper glow with the heat, workGlow slits the working light, flashes_0 per round, beacon.",
     "Under construction the body rises out of the ground like every building. height 1.3"])
@@ -68,59 +68,72 @@ m.mesh(m.root, "workGlow", [box((26, 3, 7), at=(x, 83, 60), base=True) for x in 
        [box((3, 26, 7), at=(83, y, 60), base=True) for y in (-40, 40)], solid=False)
 # the concept's orange heat slits over the fins, front and sides
 m.mesh(m.root, "gatlingFurnace", [box((30, 3, 6), at=(x, s * 84, 64), base=True) for x in (-30, 30) for s in (-1, 1)] +
-       [box((3, 30, 6), at=(84, y, 64), base=True) for y in (-10, 10)], solid=False)
+       [box((3, 30, 6), at=(84, y, 64), base=True) for y in (-17, 17)], solid=False)
 # the heat vent at the back
 m.mesh(m.root, "hullDark", [box((10, 70, 34), at=(-86, 0, 22), base=True)])
-m.mesh(m.root, "gatlingFurnace", [box((3, 56, 4), at=(-91.5, 0, 26 + 7 * k), base=True) for k in range(4)], solid=False)
+m.mesh(m.root, "gatlingFurnace", [box((3, 54, 4), at=(-91.5, 0, 26 + 7 * k), base=True) for k in range(4)], solid=False)
 
 # --- the head: turret ring, yoke, ammunition drums, the furnace hopper -----------------------------------------
 head = m.part("head", at=(0, 0, 78), driver=d("turret aim: yaw toward its target (-aim), an idle sweep with none"))
 m.mesh(head, "hullDark", [cyl(62, 16, at=(0, 0, 78), base=True, sides=24)])
 m.mesh(head, "chrome", [cyl(64, 3, at=(0, 0, 86), base=True, sides=24)], solid=False)
 m.mesh(head, "hullMid", [box((84, 64, 34), at=(-4, 0, 94), base=True)])
-# the yoke's two cheeks and their trunnion drums (the side drums of the concept)
+# the yoke's two cheeks round the trunnion and their drums (the side drums of the concept)
 for s in (-1, 1):
-    m.mesh(head, "hullLight", [box((76, 16, 66), at=(18, s * 42, 94), base=True)])
+    m.mesh(head, "hullLight", [box((40, 16, 66), at=(18, s * 42, 94), base=True)])
     m.mesh(head, "hullDark", [cyl(24, 22, at=(18, s * 50 - 11, 128), axis="y", base=True, sides=20)])
     m.mesh(head, "chrome", [cyl(14, 4, at=(18, s * 61 - 2, 128), axis="y", base=True, sides=16)], solid=False)
-    m.mesh(head, "team", [box((40, 3, 10), at=(18, s * 50.5, 100), base=True)], solid=False)
-# the hopper: a tall square funnel of steel widening upward (the concept's furnace), a heavy rim, the amalgam molten
-# in its mouth and glowing through slits in its faces
-m.mesh(head, "hullDark", [cyl(36, 54, at=(-6, 0, 128), base=True, r1=66, sides=4, rot=(0, 45, 0))])
-m.mesh(head, "hullLight", [box((100, 12, 10), at=(-6, s * 44, 180), base=True) for s in (-1, 1)] +
-       [box((12, 100, 10), at=(-6 + s * 44, 0, 180), base=True) for s in (-1, 1)])
-hopper = m.part("hopper", parent=head, at=(-6, 0, 184), driver=d("the furnace glow: brighter while it fires", ("emission",)))
-m.mesh(hopper, "gatlingMolten", [box((78, 78, 4), at=(-6, 0, 178), base=True)], solid=False)
-m.mesh(hopper, "gatlingFurnace", [box((3, 34, 7), at=(-6 + s * 35, 0, 150), base=True) for s in (-1, 1)] +
-       [box((34, 3, 7), at=(-6, s * 35, 150), base=True) for s in (-1, 1)] +
-       [box((3, 40, 4), at=(-6 + s * 46, 0, 174), base=True) for s in (-1, 1)] +
-       [box((40, 3, 4), at=(-6, s * 46, 174), base=True) for s in (-1, 1)], solid=False)
-beacon = m.part("beacon", parent=head, at=(-40, 30, 190), driver=d("beacon blink (0.25 s of every 1.2 s once built)",
-                                                                      ("visibility",)))
-m.mesh(beacon, "glowRed", sphere(5, at=(-52, 40, 192), steps=8), solid=False)
+    m.mesh(head, "team", [box((36, 3, 10), at=(18, s * 50.5, 100), base=True)], solid=False)
+# the hopper behind the gun: a tall square funnel of steel widening upward (the concept's furnace), a heavy rim (its
+# four bars butted at the corners), the amalgam molten in its mouth 2 cm over the funnel's top, glowing through slits
+HX = -26.0
+m.mesh(head, "hullDark", [cyl(36, 54, at=(HX, 0, 128), base=True, r1=66, sides=4, rot=(0, 45, 0))])
+m.mesh(head, "hullLight", [box((100, 12, 10), at=(HX, s * 44, 180), base=True) for s in (-1, 1)] +
+       [box((12, 76, 10), at=(HX + s * 44, 0, 180), base=True) for s in (-1, 1)])
+hopper = m.part("hopper", parent=head, at=(HX, 0, 184), driver=d("the furnace glow: brighter while it fires", ("emission",)))
+m.mesh(hopper, "gatlingMolten", [box((76, 76, 4), at=(HX, 0, 180), base=True)], solid=False)
+m.mesh(hopper, "gatlingFurnace", [box((3, 34, 7), at=(HX + s * 35, 0, 150), base=True) for s in (-1, 1)] +
+       [box((34, 3, 7), at=(HX, s * 35, 150), base=True) for s in (-1, 1)] +
+       [box((3, 40, 4), at=(HX + s * 46, 0, 174), base=True) for s in (-1, 1)] +
+       [box((40, 3, 4), at=(HX, s * 46, 174), base=True) for s in (-1, 1)], solid=False)
+beacon = m.part("beacon", parent=head, at=(HX - 34, 30, 190), driver=d("beacon blink (0.25 s of every 1.2 s once built)",
+                                                                         ("visibility",)))
+m.mesh(beacon, "glowRed", sphere(5, at=(HX - 46, 40, 192), steps=8), solid=False)
 
-# --- the rotary cannon: the ribbed jacket, six barrels round the axle, their hot tips ---------------------------
+# --- the rotary cannon, the minigun look (docs/guns-and-practice.md section 2, art/models/guns/ref/minigun-reference.png):
+# a stubby rotor housing on the yoke, six long barrels round a spindle held by a mid and a front clamp, a flash hider
+# collar near the muzzle, the barrels' hot ends; an ammunition box on the head's flank feeding the housing by a chute
 AXIS = (30, 0, 128)
+HOUSING = (22.0, 54.0)  # the rotor housing along x; the barrels run on from its front to MUZZLE
+MUZZLE = 150.0
+m.mesh(head, "gunmetal", [cyl(22, HOUSING[1] - HOUSING[0], at=(HOUSING[0], 0, 128), axis="x", base=True, sides=20),
+                          cyl(14, 8, at=(HOUSING[0] - 8, 0, 128), axis="x", base=True, r1=22, sides=20)])
+m.mesh(head, "chrome", [cyl(23, 3, at=(HOUSING[1] - 4, 0, 128), axis="x", base=True, sides=20)], solid=False)
+m.mesh(head, "hullDark", [cyl(23, 3, at=(HOUSING[0] + 6 + 8 * k, 0, 128), axis="x", base=True, sides=20) for k in range(3)],
+       solid=False)  # the housing's ribs
+# the ammunition box on the left flank (+Y, outside the yoke's cheek) and its chute over the cheek into the housing
+m.mesh(head, "hullMid", [box((48, 26, 38), at=(-6, 64, 96), base=True)])
+m.mesh(head, "hazard", [box((50, 2, 8), at=(-6, 78, 122), base=True)], solid=False)
+m.mesh(head, "hullDark", [box((44, 22, 4), at=(-6, 64, 134), base=True)], solid=False)  # its lid
+m.mesh(head, "hullDark", [bar((-4, 62, 136), (12, 46, 172), 11, 4), bar((12, 46, 172), (30, 10, 146), 11, 4)], solid=False)
 barrels = m.part("barrels", parent=head, at=AXIS, driver=d("spins about its axis while it fires"))
-m.mesh(barrels, "gunmetal", [cyl(25, 46, at=(30, 0, 128), axis="x", base=True, sides=18)])
-# the ribbed cooling jacket: deep fins round it, a chrome band at each end
-m.mesh(barrels, "hullDark", [cyl(30, 3.5, at=(36 + 5.5 * k, 0, 128), axis="x", base=True, sides=18) for k in range(7)], solid=False)
-m.mesh(barrels, "chrome", [cyl(28, 4, at=(x, 0, 128), axis="x", base=True, sides=18) for x in (31, 73)], solid=False)
-m.mesh(barrels, "hullMid", [cyl(20, 6, at=(76, 0, 128), axis="x", base=True, sides=18),
-                            cyl(20, 6, at=(112, 0, 128), axis="x", base=True, sides=18)])
 bores = []
 for k in range(6):
     a = k * math.pi / 3
-    bores.append((math.cos(a) * 13, math.sin(a) * 13))
-m.mesh(barrels, "gunmetal", [cyl(5.5, 62, at=(70, y, 128 + z), axis="x", base=True, sides=10) for y, z in bores])
-tips = m.part("tips", parent=barrels, at=(132, 0, 128), driver=d("the barrels' white-hot ends: brighter while it fires",
-                                                                 ("emission",)))
-m.mesh(tips, "gatlingHeat", [cyl(5.8, 6, at=(130, y, 128 + z), axis="x", base=True, sides=10) for y, z in bores],
+    bores.append((math.cos(a) * 11, math.sin(a) * 11))
+m.mesh(barrels, "gunmetal", [cyl(3.8, MUZZLE - HOUSING[1], at=(HOUSING[1], y, 128 + z), axis="x", base=True, sides=10)
+                             for y, z in bores])
+m.mesh(barrels, "hullDark", [cyl(4.5, MUZZLE - HOUSING[1] - 8, at=(HOUSING[1], 0, 128), axis="x", base=True, sides=10)])
+m.mesh(barrels, "hullDark", [cyl(15.5, 6, at=(x, 0, 128), axis="x", base=True, sides=18) for x in (88, 126)])  # clamps
+m.mesh(barrels, "chrome", [cyl(16.5, 6, at=(MUZZLE - 10, 0, 128), axis="x", base=True, sides=18)])  # the flash hider
+tips = m.part("tips", parent=barrels, at=(MUZZLE + 1.5, 0, 128), driver=d("the barrels' white-hot ends: brighter while it fires",
+                                                                          ("emission",)))
+m.mesh(tips, "gatlingHeat", [cyl(3.8, 3, at=(MUZZLE, y, 128 + z), axis="x", base=True, sides=10) for y, z in bores],
        solid=False)
 # where the rounds leave (the effects read it), and the flash there
-m.part("muzzles_0", parent=head, at=(140, 0, 128))
-flash = m.part("flashes_0", parent=head, at=(146, 0, 128), hidden=True,
+m.part("muzzles_0", parent=head, at=(MUZZLE + 8, 0, 128))
+flash = m.part("flashes_0", parent=head, at=(MUZZLE + 14, 0, 128), hidden=True,
                driver=d("muzzle flash: shown a frame per round", ("visibility",)))
-m.mesh(flash, "glowYellow", sphere(14, at=(146, 0, 128), squash=(1.6, 1, 1), steps=8), solid=False)
+m.mesh(flash, "glowYellow", sphere(14, at=(MUZZLE + 14, 0, 128), squash=(1.6, 1, 1), steps=8), solid=False)
 
 m.write()

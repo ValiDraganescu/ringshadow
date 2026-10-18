@@ -2,7 +2,7 @@
 
 Written by `unreal/Tools/Editor/check_models.py` (run it with `hidden_run.py --python` after any model change). For each model: pairs of meshes (part/material) with triangles facing the same way in one plane (normals within 0.5 degrees, planes within 0.5 cm) that overlap where someone can see them (A = B: two solids in one mesh), and meshes that are another mesh's copy. The `_red` entries draw the `_blue` meshes and are left out. Fix by the 2 cm rule (MODELLING.md, "No shared faces").
 
-Checked 99 models; 53 with hits (the ones still waiting for their fix are listed in `art/models/zfight-allow.txt`).
+Checked 99 models; 52 with hits (the ones still waiting for their fix are listed in `art/models/zfight-allow.txt`).
 
 ## bastion_blue (building)
 
@@ -17,32 +17,7 @@ Checked 99 models; 53 with hits (the ones still waiting for their fix are listed
 | sentinel_blue_root/hullMid | sentinel_blue_root/team | 16 | 21104 |
 | pods_1/hullDark | pods_1/plain_110100 | 72 | 733 |
 | pods_0/hullDark | pods_0/plain_110100 | 72 | 733 |
-| markPlate/hullMid | markPlate/hullMid | 128 | 250 |
-| markPlate/hullMid | marks_2/markRate (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_1/markRate (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_11/markAir (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_10/markAir (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_0/markRate (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_9/markAir (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_5/markDamage (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_8/markRange (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_7/markRange (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_4/markDamage (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_3/markDamage (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_6/markRange (hidden) | 96 | 170 |
 | head/hullDark | head/hullLight | 4 | 96 |
-| marks_2/markRate (hidden) | marks_2/markRate (hidden) | 8 | 19 |
-| marks_0/markRate (hidden) | marks_0/markRate (hidden) | 8 | 19 |
-| marks_1/markRate (hidden) | marks_1/markRate (hidden) | 8 | 19 |
-| marks_9/markAir (hidden) | marks_9/markAir (hidden) | 8 | 19 |
-| marks_11/markAir (hidden) | marks_11/markAir (hidden) | 8 | 19 |
-| marks_10/markAir (hidden) | marks_10/markAir (hidden) | 8 | 19 |
-| marks_8/markRange (hidden) | marks_8/markRange (hidden) | 8 | 19 |
-| marks_3/markDamage (hidden) | marks_3/markDamage (hidden) | 8 | 19 |
-| marks_7/markRange (hidden) | marks_7/markRange (hidden) | 8 | 19 |
-| marks_6/markRange (hidden) | marks_6/markRange (hidden) | 8 | 19 |
-| marks_4/markDamage (hidden) | marks_4/markDamage (hidden) | 8 | 19 |
-| marks_5/markDamage (hidden) | marks_5/markDamage (hidden) | 8 | 19 |
 
 ## garrison_blue (building)
 
@@ -52,42 +27,6 @@ Checked 99 models; 53 with hits (the ones still waiting for their fix are listed
 | garrison_blue_root/bayGlow | garrison_blue_root/hazard | 3 | 9072 |
 | garrison_blue_root/hullDark | garrison_blue_root/ventGlow | 8 | 2432 |
 | garrison_blue_root/hazard | garrison_blue_root/hullDark | 2 | 436 |
-
-## gatling_blue (building)
-
-| part/material A | part/material B | triangles | area cm2 |
-|---|---|---|---|
-| head/hullDark | hopper/gatlingMolten | 4 | 6084 |
-| head/hullLight | head/hullLight | 52 | 2112 |
-| head/hullLight | hopper/gatlingFurnace | 4 | 434 |
-| barrels/gunmetal | tips/gatlingHeat | 180 | 408 |
-| markPlate/hullMid | markPlate/hullMid | 128 | 250 |
-| markPlate/hullMid | marks_11/markAir (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_1/markRate (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_2/markRate (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_10/markAir (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_0/markRate (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_9/markAir (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_8/markRange (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_7/markRange (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_6/markRange (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_5/markDamage (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_4/markDamage (hidden) | 96 | 170 |
-| markPlate/hullMid | marks_3/markDamage (hidden) | 96 | 170 |
-| gatling_blue_root/gatlingFurnace | gatling_blue_root/gatlingFurnace | 8 | 115 |
-| gatling_blue_root/gatlingFurnace | gatling_blue_root/hullLight | 16 | 64 |
-| marks_2/markRate (hidden) | marks_2/markRate (hidden) | 8 | 19 |
-| marks_0/markRate (hidden) | marks_0/markRate (hidden) | 8 | 19 |
-| marks_1/markRate (hidden) | marks_1/markRate (hidden) | 8 | 19 |
-| marks_9/markAir (hidden) | marks_9/markAir (hidden) | 8 | 19 |
-| marks_11/markAir (hidden) | marks_11/markAir (hidden) | 8 | 19 |
-| marks_10/markAir (hidden) | marks_10/markAir (hidden) | 8 | 19 |
-| marks_8/markRange (hidden) | marks_8/markRange (hidden) | 8 | 19 |
-| marks_3/markDamage (hidden) | marks_3/markDamage (hidden) | 8 | 19 |
-| marks_7/markRange (hidden) | marks_7/markRange (hidden) | 8 | 19 |
-| marks_6/markRange (hidden) | marks_6/markRange (hidden) | 8 | 19 |
-| marks_4/markDamage (hidden) | marks_4/markDamage (hidden) | 8 | 19 |
-| marks_5/markDamage (hidden) | marks_5/markDamage (hidden) | 8 | 19 |
 
 ## foundry_blue (building)
 

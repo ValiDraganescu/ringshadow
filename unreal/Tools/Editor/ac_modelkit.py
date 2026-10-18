@@ -1107,60 +1107,100 @@ def _inside(prim, p, margin=0.1):
     return math.hypot(l[0], l[1]) < prim.r0 * math.cos(math.pi / prim.sides) - margin and z0 + margin < l[2] < z1 - margin
 
 
+def _convex(poly):
+    """A counter-clockwise polygon is convex."""
+    n = len(poly)
+    return all((poly[(i + 1) % n][0] - poly[i][0]) * (poly[(i + 2) % n][1] - poly[i][1]) -
+               (poly[(i + 1) % n][1] - poly[i][1]) * (poly[(i + 2) % n][0] - poly[i][0]) >= -1e-9 for i in range(n))
+
+
+def _pieces(poly):
+    """A counter-clockwise polygon as convex pieces: itself, or its triangles (ear clipping) when it is concave."""
+    if _convex(poly):
+        return [poly]
+    pts, out = list(poly), []
+    cross = lambda a, b, c: (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    while len(pts) > 3:
+        for i in range(len(pts)):
+            a, b, c = pts[i - 1], pts[i], pts[(i + 1) % len(pts)]
+            if cross(a, b, c) <= 1e-9:
+                continue
+            if any(cross(a, b, q) >= 0 and cross(b, c, q) >= 0 and cross(c, a, q) >= 0
+                   for q in pts if q not in (a, b, c)):
+                continue
+            out.append([a, b, c])
+            del pts[i]
+            break
+        else:
+            break  # degenerate: keep what is left as it is
+    out.append(pts)
+    return out
+
+
 def coplanar_faces(prims, tol=0.5, min_area=1.0):
     """Pairs of flat faces of different prims that face the same way in the same plane (within `tol` cm) and
     overlap by more than `min_area` cm2: z-fighting, the two drawn at one depth. Faces back to back (a box on
     another) face opposite ways and are fine; so are faces that only meet along an edge, and two faces pressed
     against a third solid (the overlap's front side, 1 cm out, inside a box or a straight cylinder: skin plates'
-    backs on a wall), which nobody can see. Returns report lines."""
+    backs on a wall), which nobody can see. A concave face (a prism's chevron) is cut into triangles first.
+    Returns report lines."""
     solids = [pr for pr in prims if isinstance(pr, Box) or (isinstance(pr, Cyl) and abs(pr.r0 - pr.r1) < 1e-6)]
     buckets = {}
     for i, pr in enumerate(prims):
-        for n, pts in pr.faces():
+        for f, (n, pts) in enumerate(pr.faces()):
             n = v_norm(n)
             d = v_dot(n, pts[0])
             key = (round(n[0], 3) + 0.0, round(n[1], 3) + 0.0, round(n[2], 3) + 0.0)
-            buckets.setdefault(key, []).append((d, i, n, pts))
+            buckets.setdefault(key, []).append((d, i, f, pts))
     hits = []
     for key, faces in buckets.items():
         n = v_norm(key)
         a = (1.0, 0.0, 0.0) if abs(n[0]) < 0.9 else (0.0, 1.0, 0.0)
         u = v_norm(v_cross(n, a))
         v = v_cross(n, u)
-        faces.sort(key=lambda f: f[0])
-        flat = [_ccw([(v_dot(p, u), v_dot(p, v)) for p in f[3]]) for f in faces]
-        for x in range(len(faces)):
-            dx, ix = faces[x][0], faces[x][1]
-            for y in range(x + 1, len(faces)):
-                dy, iy = faces[y][0], faces[y][1]
+        pieces = []
+        for d, i, f, pts in faces:
+            for piece in _pieces(_ccw([(v_dot(p, u), v_dot(p, v)) for p in pts])):
+                pieces.append((d, i, f, piece))
+        pieces.sort(key=lambda q: q[0])
+        found = {}  # (prim, face, prim, face) -> [area, d, the largest overlap]
+        for x in range(len(pieces)):
+            dx, ix, fx, px = pieces[x]
+            for y in range(x + 1, len(pieces)):
+                dy, iy, fy, py = pieces[y]
                 if dy - dx > tol:
                     break
                 if ix == iy:
                     continue
-                poly = flat[x]
-                clip = flat[y]
-                for k in range(len(clip)):
-                    poly = _clip(poly, clip[k], clip[(k + 1) % len(clip)])
+                poly = px
+                for k in range(len(py)):
+                    poly = _clip(poly, py[k], py[(k + 1) % len(py)])
                     if len(poly) < 3:
                         break
                 area = abs(_signed_area(poly)) if len(poly) >= 3 else 0.0
-                if area > min_area:
-                    us, vs = [p[0] for p in poly], [p[1] for p in poly]
-                    cu, cv = sum(us) / len(us), sum(vs) / len(vs)
-                    c = v_add(v_add(v_mul(n, dx), v_mul(u, cu)), v_mul(v, cv))
-                    # buried: the overlap's front (its corners pulled 0.5 cm in on both axes, and its middle, 1 cm out) in boxes
-                    probes = [c]
-                    for pu, pv in poly:
-                        pu += math.copysign(min(0.5, abs(cu - pu)), cu - pu)
-                        pv += math.copysign(min(0.5, abs(cv - pv)), cv - pv)
-                        probes.append(v_add(v_add(v_mul(n, dx), v_mul(u, pu)), v_mul(v, pv)))
-                    probes = [v_add(q, n) for q in probes]
-                    if all(any(_inside(b, q) for b in solids if b is not prims[ix] and b is not prims[iy])
-                           for q in probes):
-                        continue
-                    hits.append("%s | %s: facing (%s), %.0f cm2 round (%.1f, %.1f, %.1f)" % (
-                        getattr(prims[ix], "src", "?"), getattr(prims[iy], "src", "?"),
-                        ", ".join("%g" % round(c_, 3) for c_ in n), area, c[0], c[1], c[2]))
+                if area > 1e-6:
+                    got = found.setdefault((ix, fx, iy, fy) if ix < iy else (iy, fy, ix, fx), [0.0, dx, poly])
+                    got[0] += area
+                    if area > abs(_signed_area(got[2])):
+                        got[2] = poly
+        for (ix, fx, iy, fy), (area, dx, poly) in found.items():
+            if area <= min_area:
+                continue
+            us, vs = [p[0] for p in poly], [p[1] for p in poly]
+            cu, cv = sum(us) / len(us), sum(vs) / len(vs)
+            c = v_add(v_add(v_mul(n, dx), v_mul(u, cu)), v_mul(v, cv))
+            # buried: the overlap's front (its corners pulled 0.5 cm in on both axes, and its middle, 1 cm out) in solids
+            probes = [c]
+            for pu, pv in poly:
+                pu += math.copysign(min(0.5, abs(cu - pu)), cu - pu)
+                pv += math.copysign(min(0.5, abs(cv - pv)), cv - pv)
+                probes.append(v_add(v_add(v_mul(n, dx), v_mul(u, pu)), v_mul(v, pv)))
+            probes = [v_add(q, n) for q in probes]
+            if all(any(_inside(b, q) for b in solids if b is not prims[ix] and b is not prims[iy]) for q in probes):
+                continue
+            hits.append("%s | %s: facing (%s), %.0f cm2 round (%.1f, %.1f, %.1f)" % (
+                getattr(prims[ix], "src", "?"), getattr(prims[iy], "src", "?"),
+                ", ".join("%g" % round(c_, 3) for c_ in n), area, c[0], c[1], c[2]))
     return hits
 
 
@@ -1254,7 +1294,10 @@ def coplanar_selftest():
     assert coplanar_faces([a, box((20, 20, 20), at=(0, 0, 100), base=True)]) == []     # stands on top
     assert coplanar_faces([a, box((20, 20, 20), at=(0, 60, 50)), box((10, 30, 10), at=(0, 65, 50))]) == []  # backs on a
     assert len(coplanar_faces([cyl(50, 10, base=True, sides=8), cyl(50, 20, base=True, sides=8)])) == 9     # same ring: 8 sides and a cap
-    log("coplanar_faces: the six cases hold")
+    chev = [(-9, -1.5), (-7.5, -4.9), (0, 0.4), (7.5, -4.9), (9, -1.5), (0, 4.9)]
+    assert coplanar_faces([prism(chev, 2, "xz"), box((2, 2, 2), at=(0, 0, -2.5))]) == []          # in the notch only
+    assert len(coplanar_faces([prism(chev, 2, "xz"), box((2, 2, 2), at=(6, 0, -2.5))])) >= 1    # on an arm
+    log("coplanar_faces: the eight cases hold")
 
 
 if __name__ == "__main__":

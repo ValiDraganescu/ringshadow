@@ -2,7 +2,8 @@
 MODELLING.md "No shared faces"):
 
     uv run unreal/Tools/hidden_run.py --out DIR --python unreal/Tools/Editor/check_models.py
-    AC_CHECK_MODELS=gatling_blue,citadel_blue uv run ...   (only these models; default: every model but the _red copies)
+    AC_CHECK_MODELS=gatling_blue,citadel_blue uv run ...   (only these models, the report left as it is; default:
+                                                       every model but the _red copies)
 
 For every model of ModelCatalog.json (a `_red` entry draws the `_blue` meshes, so it is left out) it reads each part's
 static meshes (Geometry Script, the source model), places them in the model frame at rest (the catalog's part
@@ -303,9 +304,11 @@ def main():
         for a, b in dups:
             lines.append("| %s | %s | duplicate: every triangle of A lies on B | |" % (a, b))
         lines.append("")
-    with open(REPORT, "w") as f:
-        f.write("\n".join(lines))
-    log("report: %s (%d models with hits, %d of them waiting in %s)" % (REPORT, len(rows), len(rows) - len(failing), ALLOW))
+    if not only:  # a run on a few models leaves the whole catalog's report as it is
+        with open(REPORT, "w") as f:
+            f.write("\n".join(lines))
+    log("report: %s (%d models with hits, %d of them waiting in %s)" % (REPORT if not only else "not written (a run on "
+        "a few models)", len(rows), len(rows) - len(failing), ALLOW))
     if clean_listed:
         log("now clean, take them off %s: %s" % (ALLOW, ", ".join(clean_listed)))
     if failing:
