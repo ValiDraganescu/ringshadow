@@ -403,7 +403,9 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 					Best = Yaw;
 				}
 			}
-			Check(BestOff < 2.0, FString::Printf(TEXT("practice: a clear line of fire 20 cells out (%.1f cells off)"), BestOff));
+			// (Aimed 1.1 cells over the ground there, a clear round comes down
+			// a little past it; a ledge in the way takes it cells short.)
+			Check(BestOff < 4.0, FString::Printf(TEXT("practice: a clear line of fire 20 cells out (%.1f cells off)"), BestOff));
 			Pilot->Look(std::remainder(Best - Pilot->Yaw(), 2 * UE_DOUBLE_PI) / 0.0032, 0.0);
 			return;
 		}
