@@ -1,5 +1,7 @@
 #include "AcHologram.h"
 
+#include "AcFind.h"
+
 #include "AcHudStyle.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
@@ -53,9 +55,7 @@ AAcHologram::AAcHologram()
 
 AAcHologram* AAcHologram::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcHologram> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcHologram>(World);
 }
 
 AAcHologram* AAcHologram::SpawnFor(UWorld* World)

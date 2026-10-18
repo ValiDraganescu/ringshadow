@@ -1,6 +1,8 @@
 // The Brood's raids told to the pilot: see AcBrood.h.
 #include "AcBrood.h"
 
+#include "AcFind.h"
+
 #include "AcAudioDirector.h"
 #include "AcEffects.h"
 #include "AcHudStyle.h"
@@ -51,9 +53,7 @@ AAcBrood::AAcBrood()
 
 AAcBrood* AAcBrood::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcBrood> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcBrood>(World);
 }
 
 AAcBrood* AAcBrood::SpawnFor(UWorld* World)

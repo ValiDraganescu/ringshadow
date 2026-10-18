@@ -1,6 +1,8 @@
 // The ringshadow sweep on screen: see AcRingshadow.h.
 #include "AcRingshadow.h"
 
+#include "AcFind.h"
+
 #include "AcDaylight.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
@@ -47,9 +49,7 @@ AAcRingshadow::AAcRingshadow()
 
 AAcRingshadow* AAcRingshadow::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcRingshadow> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcRingshadow>(World);
 }
 
 AAcRingshadow* AAcRingshadow::SpawnFor(UWorld* World)

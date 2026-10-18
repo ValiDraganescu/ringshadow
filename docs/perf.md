@@ -231,6 +231,49 @@ the timed frames.
 console's warp into a render target, the HUD's text measuring) and the
 global distance field's movers at home.
 
+### Round 4: the long tail on the game thread (2026-10-18)
+
+**Where it stands.** At 1920×1080 the MMO client is GPU-bound in every
+scene. The game thread takes 1.9-2.3 ms of a 9-11 ms frame, so no game
+thread change moves the frame. The GPU's own passes are quality settings
+(round 3), so the wins above 2 % of a frame that leave the picture alone
+are taken. These are the long tail, each with its number. A profile of
+the home scene (xctrace, 15 s): Slate 20 % of the game thread (the
+console's warp into its render target 7.7 %, the HUD's labels 5.7 %),
+the frame stages 24 %, the engine's instance updates 7 %, and actor
+iterators 3.1 %, entered from about fifteen places a frame.
+
+**The changes.**
+
+- `AcFindActor<T>` (AcFind.h). Each one-of-a-kind actor's `Find`
+  (AAcTerrain, AAcFog, AAcWeather, the pilot pawn and 11 more) walked
+  the level's actor list on every call. Now the actor found is kept while
+  it is alive and in that world (`ac.FindKeep`, 1). Off the game thread,
+  or with the cvar at 0, the walk is as before. AAcDaylight's `Find` is
+  left as it was, because that file belongs to the clouds' owner.
+- `FAcHudText::Paint` keeps a label's measures per text and font
+  (`ac.HudKeepMeasures`, 1). A kerned label placed each letter at the
+  measured width of the text before it, so a label of n letters measured
+  n prefixes on every paint, twice with its shadow. The measures are
+  filled as they are asked for, so a text that changes every frame costs
+  what it did. The same numbers reach the same draw calls.
+
+| MMO bench, 2 rounds in turns, load 6-15, game thread p50 ms | both off | both on |
+|---|---:|---:|
+| home noon | 2.22 / 2.14 | 2.02 / 2.09 |
+| home midnight | 2.10 / 2.07 | 2.00 / 2.06 |
+| nest at noon | 2.14 / 1.97 | 1.93 / 1.92 |
+| Fork, wave 10 | 2.26 / 2.15 | 2.29 / 2.12 |
+
+It is lower in 7 of 8 pairs, by 0.05-0.2 ms (2-9 %). The tick's p50
+(the game's own frame stages) is 0.51-0.52 ms against 0.53-0.55.
+
+**Next.** Measure where players' pixels are: a Retina window (5120×1378
+and 2880×1800 at the auto screen percentage), where the GPU share grows;
+and the cooked Development build next to the editor binary, for the
+render thread's per-pass overhead (RDG names and checks) that a cooked
+game drops.
+
 ## Server
 
 The MMORPG server (`unreal/server`), its endpoint (`unreal/Source/AutocraftNet`)

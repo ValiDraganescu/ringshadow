@@ -1,5 +1,7 @@
 #include "AcWeather.h"
 
+#include "AcFind.h"
+
 #include "AcDaylight.h"
 #include "AcPilotPawn.h"
 #include "AcLog.h"
@@ -131,9 +133,7 @@ AAcWeather::AAcWeather()
 
 AAcWeather* AAcWeather::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcWeather> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcWeather>(World);
 }
 
 AAcWeather* AAcWeather::SpawnFor(UWorld* World)

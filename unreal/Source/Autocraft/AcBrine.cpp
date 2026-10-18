@@ -1,5 +1,7 @@
 #include "AcBrine.h"
 
+#include "AcFind.h"
+
 #include "AcCanyon.h"
 #include "AcLog.h"
 #include "AcMmo.h"
@@ -44,9 +46,7 @@ AAcBrine::AAcBrine()
 
 AAcBrine* AAcBrine::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcBrine> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcBrine>(World);
 }
 
 AAcBrine* AAcBrine::SpawnFor(UWorld* World)

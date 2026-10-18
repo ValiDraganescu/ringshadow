@@ -1,5 +1,7 @@
 #include "AcBeacons.h"
 
+#include "AcFind.h"
+
 #include "AcBuiltMesh.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
@@ -192,9 +194,7 @@ AAcBeacons::AAcBeacons()
 
 AAcBeacons* AAcBeacons::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcBeacons> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcBeacons>(World);
 }
 
 AAcBeacons* AAcBeacons::SpawnFor(UWorld* World)

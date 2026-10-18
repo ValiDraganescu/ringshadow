@@ -1,5 +1,7 @@
 #include "AcDoodads.h"
 
+#include "AcFind.h"
+
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcSimSubsystem.h"
@@ -48,9 +50,7 @@ AAcDoodads::AAcDoodads()
 
 AAcDoodads* AAcDoodads::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcDoodads> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcDoodads>(World);
 }
 
 AAcDoodads* AAcDoodads::SpawnFor(UWorld* World)

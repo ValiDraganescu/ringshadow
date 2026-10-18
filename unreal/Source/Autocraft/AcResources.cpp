@@ -1,4 +1,6 @@
 #include "AcResources.h"
+
+#include "AcFind.h"
 #include "AcInstancedMesh.h"
 
 #include "AcDaylight.h"
@@ -77,9 +79,7 @@ AAcResources::AAcResources()
 
 AAcResources* AAcResources::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcResources> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcResources>(World);
 }
 
 AAcResources* AAcResources::SpawnFor(UWorld* World)

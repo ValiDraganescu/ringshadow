@@ -2,6 +2,8 @@
 // `GameScene.borderRocks` (GameScene.swift). See AcTerrain.h.
 #include "AcTerrain.h"
 
+#include "AcFind.h"
+
 #include "AcBuiltMesh.h"
 #include "AcLog.h"
 #include "AcShot.h"
@@ -588,9 +590,7 @@ AAcTerrain::AAcTerrain()
 
 AAcTerrain* AAcTerrain::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcTerrain> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcTerrain>(World);
 }
 
 AAcTerrain* AAcTerrain::SpawnFor(UWorld* World)

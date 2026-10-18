@@ -1,5 +1,7 @@
 #include "AcPilotAids.h"
 
+#include "AcFind.h"
+
 #include "AcDaylight.h"
 #include "AcFog.h"
 #include "AcLog.h"
@@ -81,9 +83,7 @@ AAcPilotAids::AAcPilotAids()
 
 AAcPilotAids* AAcPilotAids::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcPilotAids> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcPilotAids>(World);
 }
 
 AAcPilotAids* AAcPilotAids::SpawnFor(UWorld* World)

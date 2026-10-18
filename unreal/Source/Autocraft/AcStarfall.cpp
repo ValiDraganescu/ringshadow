@@ -1,6 +1,8 @@
 // Starfalls on screen: see AcStarfall.h.
 #include "AcStarfall.h"
 
+#include "AcFind.h"
+
 #include "AcEffects.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
@@ -105,9 +107,7 @@ AAcStarfall::AAcStarfall()
 
 AAcStarfall* AAcStarfall::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcStarfall> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcStarfall>(World);
 }
 
 AAcStarfall* AAcStarfall::SpawnFor(UWorld* World)

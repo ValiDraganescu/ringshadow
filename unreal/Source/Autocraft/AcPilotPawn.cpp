@@ -1,4 +1,6 @@
 #include "AcPilotPawn.h"
+
+#include "AcFind.h"
 #include "AcGasGiant.h"
 
 #include "AcHeadless.h"
@@ -148,9 +150,7 @@ AAcPilotPawn* AAcPilotPawn::SpawnFor(UWorld* World)
 AAcPilotPawn* AAcPilotPawn::Find(const UObject* WorldContext)
 {
 	const UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::ReturnNull) : nullptr;
-	if (!World) return nullptr;
-	TActorIterator<AAcPilotPawn> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcPilotPawn>(World);
 }
 
 void AAcPilotPawn::BeginPlay()

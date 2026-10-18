@@ -1,6 +1,8 @@
 // The blueprint sites on the ground: see AcSites.h.
 #include "AcSites.h"
 
+#include "AcFind.h"
+
 #include "AcDaylight.h"
 #include "AcLog.h"
 #include "AcMmo.h"
@@ -65,9 +67,7 @@ AAcSites::AAcSites()
 
 AAcSites* AAcSites::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcSites> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcSites>(World);
 }
 
 AAcSites* AAcSites::SpawnFor(UWorld* World)

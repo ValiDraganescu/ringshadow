@@ -4,6 +4,7 @@
 
 #include "Fonts/FontMeasure.h"
 #include "Framework/Application/SlateApplication.h"
+#include "HAL/IConsoleManager.h"
 #include "Rendering/SlateRenderer.h"
 
 #include "Simulation.h"
@@ -153,6 +154,41 @@ namespace
 	{
 		return FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
 	}
+
+	/// The measures a label is painted with, kept per text and font (docs/
+	/// perf.md, client round 4): a kerned label placed each letter at the
+	/// measured width of the text before it, every paint (n prefixes of a
+	/// text of n letters, twice with the shadow). Filled as asked for, so a
+	/// text that changes every frame (a timer) costs what it did.
+	struct FMeasureKey
+	{
+		FString Text;
+		FSlateFontInfo Font;
+		bool operator==(const FMeasureKey& O) const { return Text.Equals(O.Text, ESearchCase::CaseSensitive) && Font == O.Font; }
+		friend uint32 GetTypeHash(const FMeasureKey& K) { return HashCombine(GetTypeHash(K.Text), GetTypeHash(K.Font)); }
+	};
+	struct FMeasures
+	{
+		/// Prefix widths (`Measure(Text, 0, I)`), the letters' sizes; NaN: not yet.
+		TArray<float> Prefix;
+		TArray<FVector2f> Letter;
+	};
+	TAutoConsoleVariable<int32> CVarKeepMeasures(TEXT("ac.HudKeepMeasures"), 1,
+		TEXT("HUD labels keep their measures per text and font (1), or measure every paint (0, to compare)."));
+
+	FMeasures* MeasuresOf(const FString& Text, const FSlateFontInfo& Font)
+	{
+		if (CVarKeepMeasures.GetValueOnGameThread() == 0 || !IsInGameThread()) return nullptr;
+		static TMap<FMeasureKey, FMeasures> Kept;
+		if (Kept.Num() > 2048) Kept.Reset();
+		FMeasures& M = Kept.FindOrAdd(FMeasureKey{Text, Font});
+		if (M.Prefix.Num() != Text.Len() + 1)
+		{
+			M.Prefix.Init(NAN, Text.Len() + 1);
+			M.Letter.Init(FVector2f(NAN, NAN), Text.Len());
+		}
+		return &M;
+	}
 }
 
 FVector2f FAcHudText::Measure() const
@@ -189,6 +225,14 @@ void FAcHudText::Paint(FSlateWindowElementList& Out, const int32 Layer, const FG
 	else if (HAlign == EAcHAlign::Right) Left -= Size.X;
 	const FVector2f Origin(Left, Baseline - BaselineFromTop);
 
+	FMeasures* Kept = MeasuresOf(Text, Font);
+	auto Prefix = [&](const int32 I) -> float
+	{
+		if (Kept && !FMath::IsNaN(Kept->Prefix[I])) return Kept->Prefix[I];
+		const float W = (float)M->Measure(Text, 0, I, Font, false).X;
+		if (Kept) Kept->Prefix[I] = W;
+		return W;
+	};
 	const bool bMark = Accent.A > 0.0f;
 	const TArray<FAcTextRun> Runs = bMark ? FAcNames::Runs(Text) : TArray<FAcTextRun>{{0, Text.Len(), false}};
 	auto Draw = [&](const FVector2f Offset, const FLinearColor& Plain, const FLinearColor& Name, const int32 L)
@@ -204,15 +248,21 @@ void FAcHudText::Paint(FSlateWindowElementList& Out, const int32 Layer, const FG
 				// before it (pair kerning kept) plus the spacing so far.
 				for (int32 I = R.Start; I < R.Start + R.Len; ++I)
 				{
-					const float X = I > 0 ? (float)M->Measure(Text, 0, I, Font, false).X + Kern * I : 0.0f;
+					const float X = I > 0 ? Prefix(I) + Kern * I : 0.0f;
 					const FString Letter = Text.Mid(I, 1);
+					FVector2f Size = Kept ? Kept->Letter[I] : FVector2f(NAN, NAN);
+					if (FMath::IsNaN(Size.X))
+					{
+						Size = FVector2f(M->Measure(Letter, Font));
+						if (Kept) Kept->Letter[I] = Size;
+					}
 					FSlateDrawElement::MakeText(Out, L,
-						Geometry.ToPaintGeometry(FVector2D(M->Measure(Letter, Font)), FSlateLayoutTransform(FVector2D(Origin + Offset + FVector2f(X, 0)))),
+						Geometry.ToPaintGeometry(FVector2D(Size), FSlateLayoutTransform(FVector2D(Origin + Offset + FVector2f(X, 0)))),
 						Letter, Font, ESlateDrawEffect::None, C);
 				}
 				continue;
 			}
-			const float X = R.Start > 0 ? (float)M->Measure(Text, 0, R.Start, Font, false).X : 0.0f;
+			const float X = R.Start > 0 ? Prefix(R.Start) : 0.0f;
 			const FString Piece = Text.Mid(R.Start, R.Len);
 			const FVector2f PieceSize(M->Measure(Piece, Font));
 			FSlateDrawElement::MakeText(Out, L,

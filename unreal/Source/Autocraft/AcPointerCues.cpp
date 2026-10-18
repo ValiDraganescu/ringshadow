@@ -1,5 +1,7 @@
 #include "AcPointerCues.h"
 
+#include "AcFind.h"
+
 #include "AcBuiltMesh.h"
 #include "AcHudStyle.h"
 #include "AcLog.h"
@@ -217,9 +219,7 @@ AAcPointerCues::AAcPointerCues()
 
 AAcPointerCues* AAcPointerCues::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcPointerCues> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcPointerCues>(World);
 }
 
 AAcPointerCues* AAcPointerCues::SpawnFor(UWorld* World)

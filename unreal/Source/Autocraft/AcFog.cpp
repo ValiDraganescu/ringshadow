@@ -1,4 +1,6 @@
 #include "AcFog.h"
+
+#include "AcFind.h"
 #include "AcSpace.h"
 
 #include "AcLog.h"
@@ -71,9 +73,7 @@ AAcFog::AAcFog()
 
 AAcFog* AAcFog::Find(const UWorld* World)
 {
-	if (!World) return nullptr;
-	TActorIterator<AAcFog> It(const_cast<UWorld*>(World));
-	return It ? *It : nullptr;
+	return AcFindActor<AAcFog>(World);
 }
 
 AAcFog* AAcFog::SpawnFor(UWorld* World)
