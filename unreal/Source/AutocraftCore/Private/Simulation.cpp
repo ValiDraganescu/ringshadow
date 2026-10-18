@@ -2586,7 +2586,9 @@ void Simulation::unstick(std::vector<GameEvent>& events) {
     if (!nav) return;
     std::set<int64_t> seen;
     for (size_t i = 0; i < state.units.size(); i++) {
-        const Unit u = state.units[i];
+        // Read in place (a copy of every unit each step was a third of this);
+        // where it stood is kept for the event, before it is moved.
+        const Unit& u = state.units[i];
         if (!(!u.stats().air && !u.jumpFrom && u.anchor.value_or(0) == 0 && !piloted(u.id)
               && u.task != Unit::Task::inBastion && u.task != Unit::Task::aboard && u.task != Unit::Task::inDerrick
               && (u.goal || (u.waypoints && !u.waypoints->empty())))) continue;
@@ -2597,6 +2599,7 @@ void Simulation::unstick(std::vector<GameEvent>& events) {
             continue;
         }
         if (!(state.time - h->second.time >= stuckTime)) continue;
+        const Vec2 stuckAt = u.position;
         auto to = nav->freeCentre(u.position);
         if (!to) to = nav->nearestFree(u.position, 3);
         if (to && !nav->inRock(*to)) state.units[i].position = *to;
@@ -2604,7 +2607,7 @@ void Simulation::unstick(std::vector<GameEvent>& events) {
         state.units[i].waypoints = std::nullopt;
         headway[u.id] = Headway{state.units[i].position, state.time};
         if (freed.find(u.id) == freed.end()) {
-            events.push_back(GameEvent::Stuck{u.id, u.kind, u.owner, u.position});
+            events.push_back(GameEvent::Stuck{u.id, u.kind, u.owner, stuckAt});
         }
         freed[u.id] = state.units[i].position;
     }
@@ -2634,7 +2637,7 @@ void Simulation::trapped(std::vector<GameEvent>& events) {
     nextTrapCheck = state.time + 1;
     std::set<int64_t> seen;
     for (size_t i = 0; i < state.units.size(); i++) {
-        const Unit u = state.units[i];
+        const Unit& u = state.units[i];
         if (!(u.hp > 0 && !u.stats().air && !u.jumpFrom && !piloted(u.id) && u.task != Task::inBastion)) continue;
         if (u.task == Task::aboard || u.task == Task::inDerrick || u.task == Task::building || u.task == Task::repairing
             || u.task == Task::mining || u.task == Task::waiting || u.task == Task::depositing) continue;

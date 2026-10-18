@@ -1087,3 +1087,24 @@ The wires are the same (crowdbench's three, snapbench's four:
 fd5e5104ff08f662, 467fab1c80dd1394, 35325d9463465925, d4d978dd55fbf064);
 the net, server and core suites pass. Tried and left out: `writeBits`
 inline in the header for up to 56 bits (no difference beyond this).
+
+### Round 21: the stuck and trapped checks read the units in place (2026-10-18)
+
+`Simulation::unstick` (every step) and `Simulation::trapped` (once a
+second) copied every unit before looking at it: its waypoints, cargo and
+the rest, allocated and freed, a third of `unstick`. They read it in
+place now; `unstick` keeps where a stuck unit stood for its event before
+it moves it (the copy's position before), and `trapped` changes only the
+hit points, which its event does not carry. The same events, the same
+state.
+
+| 3 runs each in turns, load 11 | before | after |
+|---|---:|---:|
+| `spreadbench 20`, 4 regions | 32.9-33.1 µs | 30.4-31.6 µs |
+| 2 regions | 15.7-17.1 µs | 15.7-16.2 µs |
+| 2 regions with 8 pilots each | 27.8-28.3 µs | 26.9-27.5 µs |
+| `worldbench 30` from the nest, mean | 0.015-0.016 ms | 0.015-0.016 ms |
+
+Every hash is the same (spreadbench's four, worldbench's nest
+1239e1800ff8ae42, crowdbench's); the core, server and net suites pass.
+Core touched (Simulation). The long tail now: a few percent a change.
