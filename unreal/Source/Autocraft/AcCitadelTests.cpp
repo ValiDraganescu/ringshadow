@@ -117,7 +117,7 @@ bool FAcPilotGunLookTest::RunTest(const FString&)
 		// A turn past the stop holds at the stop, however far.
 		TestTrue(TEXT("held at the right stop"), FMath::IsNearlyEqual(AcCitadelAct::LookYaw(Gun, Mid, 10.0), Mid + Half, 1e-9));
 		TestTrue(TEXT("held at the left stop"), FMath::IsNearlyEqual(AcCitadelAct::LookYaw(Gun, Mid, -10.0), Mid - Half, 1e-9));
-		// No wrap: from a stop, on across the hull's 140 degrees, it stays.
+		// No wrap: from a stop, on across the hull's side (outside the arc), it stays.
 		TestTrue(TEXT("no wrap past the stop"), FMath::IsNearlyEqual(AcCitadelAct::LookYaw(Gun, Mid + Half, 2.6), Mid + Half, 1e-9));
 		TestTrue(TEXT("no wrap the other way"), FMath::IsNearlyEqual(AcCitadelAct::LookYaw(Gun, Mid - Half, -2.6), Mid - Half, 1e-9));
 		// Back off the stop at once (nothing stored up past it).
@@ -128,8 +128,8 @@ bool FAcPilotGunLookTest::RunTest(const FString&)
 		TestTrue(TEXT("brought into the arc"),
 			FMath::Abs(std::remainder(AcCitadelAct::LookYaw(Gun, Mid + 2 * Pi + 0.4, 0.0) - (Mid + 0.4), 2 * Pi)) < 1e-9);
 	}
-	TestEqual(TEXT("pitch's floor"), AcCitadelAct::LookPitch(-2.0), ac::Defence::gunPitchMin);
-	TestEqual(TEXT("pitch's ceiling"), AcCitadelAct::LookPitch(1.5), ac::Defence::gunPitchMax);
+	TestEqual(TEXT("pitch's floor"), AcCitadelAct::LookPitch(ac::Defence::gunPitchMin - 0.2), ac::Defence::gunPitchMin);
+	TestEqual(TEXT("pitch's ceiling"), AcCitadelAct::LookPitch(ac::Defence::gunPitchMax + 0.2), ac::Defence::gunPitchMax);
 	TestEqual(TEXT("pitch inside"), AcCitadelAct::LookPitch(0.2), 0.2);
 	// The guns' names by the HUD's compass (north is -y): +x+y, -x+y, -x-y, +x-y.
 	TestEqual(TEXT("gun 0"), AcCitadelAct::GunName(0), FString(TEXT("1 SE")));

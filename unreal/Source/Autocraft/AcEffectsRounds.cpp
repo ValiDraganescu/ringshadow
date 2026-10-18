@@ -1,21 +1,24 @@
 // The minigun class's rounds (C2, docs/guns-and-practice.md §1, §6): an
 // effects extension (AcEffectsExtension.h) that draws what the core's rounds
 // do. Each `GameEvent::Fired` (a Citadel corner gun's, a gatling gun's)
-// becomes a red-hot streak flown on the core's parabola (`FAcRoundFlight`,
-// AcRounds.h) until its `Impact` or `Rules::roundLife`: a yellow-white core
-// 1.5 cells long in an orange-red halo. Leaving the muzzle it starts at the
+// becomes a red-hot tracer flown on the core's parabola (`FAcRoundFlight`,
+// AcRounds.h) until its `Impact` or `Rules::roundLife`: an orange-red body
+// 1.5 cells long, a yellow-white core in its front part, an additive
+// orange-red halo round it and a dimmer tail 1.5 cells on behind it, all
+// emissive well over daylight. Leaving the muzzle it starts at the
 // model's muzzle (the turret as posed), the offset to the core's muzzle
 // fading out over its first 0.15 s. Each round flashes at the muzzle; every
 // tenth puffs smoke, every fifth throws a spent casing.
 //
-// Impacts by what was struck: the ground, a dust plume, sparks and a small
-// scorch, scaled by the round's speed there; a building or rock, sparks and
-// a flash; a bug, a burst of ichor and chitin and a hit flash; a Target
-// Dummy, a flash (its rings and the HITS count are its pose's and its life
-// bar's).
+// Impacts by what was struck, scaled by the round's speed there: the ground,
+// a big dust plume with an orange flash at its root, hot sparks that arc
+// out and fall, a small scorch; a building or rock, a flash and sparks; a
+// bug, a hit flash and a burst of ichor flecks; a Target Dummy, a flash and
+// sparks (its rings and the HITS count are its pose's and the HUD's).
 //
-// Pools: 256 streak cores and halos (four guns at 30 rounds a second, a
-// second in the air), 64 casings, 96 ichor bits.
+// Pools: 256 tracers of four parts (four guns at 30 rounds a second, a
+// second in the air), 64 impact glows, 256 sparks, 64 casings, 192 ichor
+// flecks.
 #include "AcEffects.h"
 #include "AcEffectsExtension.h"
 #include "AcEffectPool.h"
@@ -35,16 +38,28 @@
 namespace
 {
 	constexpr double Cm = AcSpace::CmPerCell;
-	/// The streak's length, cells, and its core's and halo's thickness.
+	/// The tracer: its body's length (the tail as long again behind it), the
+	/// share of it the white-hot core runs along from the front, and each
+	/// part's thickness, cells.
 	constexpr double StreakLength = 1.5;
-	constexpr double CoreWidth = 0.04;
-	constexpr double HaloWidth = 0.11;
+	constexpr double CoreShare = 0.6;
+	constexpr double CoreWidth = 0.028;
+	constexpr double BodyWidth = 0.065;
+	constexpr double HaloWidth = 0.2;
+	constexpr double TailWidth = 0.09;
 	/// A muzzle this close to the camera (the gun the pilot mans) makes no
 	/// flash, smoke or casing of its own: the turret's model flashes there.
 	constexpr double EyeClear = 3.0;
 	/// The model's muzzle to the core's: faded out over this, seconds.
 	constexpr double OffsetFade = 0.15;
-	/// The bug's ichor (a sickly green-yellow) and a spent casing's brass.
+	/// The tracer's colours: white-hot, red-hot, its glow; an impact's
+	/// orange flash and its sparks; the bug's ichor (a sickly green-yellow);
+	/// a spent casing's brass.
+	const FLinearColor WhiteHot(1.f, 0.9f, 0.62f);
+	const FLinearColor RedHot(1.f, 0.3f, 0.05f);
+	const FLinearColor HotGlow(1.f, 0.2f, 0.03f);
+	const FLinearColor Fire(1.f, 0.45f, 0.08f);
+	const FLinearColor Spark(1.f, 0.72f, 0.28f);
 	const FLinearColor Ichor(0.72f, 0.95f, 0.22f);
 	const FLinearColor Brass(0.62f, 0.45f, 0.16f);
 
@@ -68,15 +83,21 @@ namespace
 		virtual void Begin(UAcEffects& InEffects) override
 		{
 			E = &InEffects;
-			Core = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(FLinearColor(1.f, 0.93f, 0.72f), 14.0), 256, TEXT("AcRoundCore"));
-			Halo = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(FLinearColor(1.f, 0.36f, 0.08f), 3.2, true), 256, TEXT("AcRoundHalo"));
+			Core = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(WhiteHot, 40.0), 256, TEXT("AcRoundCore"));
+			Body = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(RedHot, 18.0), 256, TEXT("AcRoundBody"));
+			Halo = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(HotGlow, 6.0, true), 256, TEXT("AcRoundHalo"));
+			Tail = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(HotGlow, 2.2, true), 256, TEXT("AcRoundTail"));
+			Glows = &E->MakePool(E->SphereMesh(), E->EmissiveMaterial(Fire, 9.0, true), 64, TEXT("AcRoundGlow"));
+			Sparks = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(Spark, 14.0, true), 256, TEXT("AcRoundSpark"));
 			Casings = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(Brass, 0.5), 64, TEXT("AcRoundCasing"));
-			Flecks = &E->MakePool(E->SphereMesh(), E->EmissiveMaterial(Ichor, 2.0, true), 96, TEXT("AcRoundIchor"));
+			Flecks = &E->MakePool(E->SphereMesh(), E->EmissiveMaterial(Ichor, 3.0, true), 192, TEXT("AcRoundIchor"));
 			Flights.SetNum(Core->Num());
 			Live.Init(false, Core->Num());
 			Offsets.Init(FVector::ZeroVector, Core->Num());
 			CasingBits.SetNum(Casings->Num());
 			FleckBits.SetNum(Flecks->Num());
+			SparkBits.SetNum(Sparks->Num());
+			GlowBits.SetNum(Glows->Num());
 		}
 
 		virtual void Consume(const FAcFrame& Frame) override
@@ -101,15 +122,20 @@ namespace
 					EndRound(I);
 					continue;
 				}
-				// Head and tail on the core's path, the model's muzzle offset
-				// fading out as each leaves it.
-				const double TailTime = FMath::Max(R.Born, Time - StreakLength / FMath::Max(R.Speed(Time), 1e-3));
-				const FVector Head = World(R.At(Time)) + Offsets[I] * Fade(Time - R.Born);
-				const FVector Tail = World(R.At(TailTime)) + Offsets[I] * Fade(TailTime - R.Born);
-				Place(I, Tail, Head);
+				// Points on the core's path so many cells back from the head,
+				// the model's muzzle offset fading out as each leaves it.
+				const double Speed = FMath::Max(R.Speed(Time), 1e-3);
+				auto Back = [&](const double Cells)
+				{
+					const double T = FMath::Max(R.Born, Time - Cells / Speed);
+					return World(R.At(T)) + Offsets[I] * Fade(T - R.Born);
+				};
+				Place(I, Back(0), Back(StreakLength * CoreShare), Back(StreakLength), Back(2 * StreakLength));
 			}
-			Fly(*Casings, CasingBits, Time, true);
-			Fly(*Flecks, FleckBits, Time, false);
+			Fly(*Casings, CasingBits, Time, EBit::Casing);
+			Fly(*Flecks, FleckBits, Time, EBit::Fleck);
+			Fly(*Sparks, SparkBits, Time, EBit::Spark);
+			Fly(*Glows, GlowBits, Time, EBit::Glow);
 		}
 
 		virtual void Clear() override
@@ -117,37 +143,44 @@ namespace
 			for (int32 I = 0; I < Live.Num(); ++I)
 				if (Live[I]) EndRound(I);
 			Slots.Reset();
-			for (FBit& B : CasingBits) B.bLive = false;
-			for (FBit& B : FleckBits) B.bLive = false;
-			if (Casings) for (int32 I = 0; I < Casings->Num(); ++I) Casings->Hide(I);
-			if (Flecks) for (int32 I = 0; I < Flecks->Num(); ++I) Flecks->Hide(I);
+			for (TArray<FBit>* Bits : {&CasingBits, &FleckBits, &SparkBits, &GlowBits})
+				for (FBit& B : *Bits) B.bLive = false;
+			for (FAcEffectPool* Pool : {Casings, Flecks, Sparks, Glows})
+				if (Pool) for (int32 I = 0; I < Pool->Num(); ++I) Pool->Hide(I);
 			Fires.Reset();
 		}
 
 	private:
 		static double Fade(const double Age) { return FMath::Clamp(1.0 - Age / OffsetFade, 0.0, 1.0); }
 
-		void Place(const int32 I, const FVector& Tail, const FVector& Head)
+		/// One part of tracer `I` from `From` back to `To` (cm), `Width` cells thick.
+		static void Segment(FAcEffectPool& Pool, const int32 I, const FVector& From, const FVector& To, const double Width)
 		{
-			const FVector D = Head - Tail;
+			const FVector D = From - To;
 			const double Len = D.Size();
 			if (Len < 1.0)
 			{
-				Core->Hide(I);
-				Halo->Hide(I);
+				Pool.Hide(I);
 				return;
 			}
-			const FVector Dir = D / Len, Mid = (Head + Tail) / 2;
-			Core->Set(I, Core->Shape(Mid, FAcEffectPool::Along(Dir), FVector(CoreWidth * Cm, CoreWidth * Cm, Len)));
-			Halo->Set(I, Halo->Shape(Mid, FAcEffectPool::Along(Dir), FVector(HaloWidth * Cm, HaloWidth * Cm, Len * 1.05)));
+			Pool.Set(I, Pool.Shape((From + To) / 2, FAcEffectPool::Along(D / Len), FVector(Width * Cm, Width * Cm, Len)));
+		}
+
+		/// Tracer `I`: the core from its head back to `CoreEnd`, the body
+		/// and its halo to `BodyEnd`, the tail on to `TailEnd`.
+		void Place(const int32 I, const FVector& Head, const FVector& CoreEnd, const FVector& BodyEnd, const FVector& TailEnd)
+		{
+			Segment(*Core, I, Head, CoreEnd, CoreWidth);
+			Segment(*Body, I, Head, BodyEnd, BodyWidth);
+			Segment(*Halo, I, Head, BodyEnd, HaloWidth);
+			Segment(*Tail, I, BodyEnd, TailEnd, TailWidth);
 		}
 
 		void EndRound(const int32 I)
 		{
 			Live[I] = false;
 			Slots.Remove(Flights[I].Round);
-			Core->Hide(I);
-			Halo->Hide(I);
+			for (FAcEffectPool* Pool : {Core, Body, Halo, Tail}) Pool->Hide(I);
 		}
 
 		bool NearEye(const FVector& At) const
@@ -189,7 +222,7 @@ namespace
 			// A muzzle far from the core's (a model not drawn yet, a lag): none.
 			Offsets[I] = bModel && FVector::Dist(Muzzle, CoreMuzzle) < 3 * Cm ? Muzzle - CoreMuzzle : FVector::ZeroVector;
 			if (!bModel) Muzzle = CoreMuzzle;
-			Place(I, Muzzle, Muzzle);
+			Place(I, Muzzle, Muzzle, Muzzle, Muzzle);
 
 			// The muzzle flash every round; smoke every tenth; a casing every fifth.
 			const FVector Along = (World(F.muzzle + F.velocity) - CoreMuzzle).GetSafeNormal(UE_SMALL_NUMBER, FVector::ForwardVector);
@@ -220,26 +253,24 @@ namespace
 			const FVector At = World(I.at);
 			// Harder and bigger the faster it came (a long lob lands soft).
 			const double K = FMath::Clamp(Speed / ac::Rules::roundSpeed, 0.4, 1.0);
+			// Thrown back off the surface: the round's way mirrored by the ground.
+			const FVector Off = Along.IsNearlyZero() ? FVector::UpVector : Along.MirrorByVector(FVector::UpVector);
 			using EWhat = ac::GameEvent::Impact::What;
-			FAcBurstRequest Sparks;
-			Sparks.Kind = EAcBurst::Ricochet;
-			Sparks.At = At;
-			Sparks.Time = Time;
-			Sparks.Duration = 0.08;
-			if (!Along.IsNearlyZero()) Sparks.Along = Along.MirrorByVector(FVector::UpVector);
 			switch (I.what)
 			{
 			case EWhat::ground:
 			{
-				E->DustPuff(At, 0.7 * K, Time);
-				Sparks.Size = 1.2 * K;
-				E->Burst(Sparks);
+				// A big plume with an orange flash at its root, hot sparks
+				// that arc out and fall, a scorch.
+				E->DustPuff(At, 1.4 * K, Time);
+				Glow(At, 0.55 * K, 0.14, Time);
+				SprayOfSparks(At, Off, int32(10 * K) + 2, 4.5 * K, Time);
 				FAcScorchRequest S;
 				S.At = FVector(At.X, At.Y, E->GroundZ(ac::Vec2(I.at.x, I.at.y)) + 1);
-				S.Radius = 0.22 * Cm * K;
+				S.Radius = 0.3 * Cm * K;
 				S.Life = 6;
 				S.Time = Time;
-				S.Darkness = 0.7;
+				S.Darkness = 0.75;
 				E->Scorch(S);
 				break;
 			}
@@ -247,9 +278,9 @@ namespace
 			{
 				const std::optional<ac::Structure> St = State.structure(I.victim);
 				const bool bDummy = St && St->kind == ac::StructureKind::dummy;
-				E->Flash(At, bDummy ? 1.3 : 1.7 * K, Time, 0.07);
-				Sparks.Size = (bDummy ? 1.4 : 2.0) * K;
-				E->Burst(Sparks);
+				E->Flash(At, bDummy ? 1.5 : 1.9 * K, Time, 0.07);
+				Glow(At, 0.35 * K, 0.1, Time);
+				SprayOfSparks(At, Off, bDummy ? 6 : 9, 4.0 * K, Time);
 				break;
 			}
 			case EWhat::unit:
@@ -257,24 +288,42 @@ namespace
 				const std::optional<ac::Unit> U = State.unit(I.victim);
 				if (U && U->bug)
 				{
-					// Chitin and ichor: a hit flash and a spray of green flecks.
-					E->Flash(At, 1.2, Time, 0.06);
-					for (int32 B = 0; B < 6; ++B)
+					// Chitin and ichor: a hit flash and a burst of green flecks.
+					E->Flash(At, 1.6, Time, 0.07);
+					for (int32 B = 0; B < 12; ++B)
 					{
-						const double A = (B + FMath::FRand() * 0.6) * 2 * UE_DOUBLE_PI / 6;
-						const FVector Out = FVector(std::cos(A), std::sin(A), 0.9 + FMath::FRand()) * (1.4 + FMath::FRand()) * Cm
-							+ (Along.IsNearlyZero() ? FVector::ZeroVector : Along * 1.2 * Cm);
-						Throw(*Flecks, FleckBits, At, Out, Time, 0.32, 0.8 + 0.5 * FMath::FRand());
+						const double A = (B + FMath::FRand() * 0.6) * 2 * UE_DOUBLE_PI / 12;
+						const FVector Out = FVector(std::cos(A), std::sin(A), 0.9 + FMath::FRand()) * (2.0 + 1.6 * FMath::FRand()) * Cm
+							+ (Along.IsNearlyZero() ? FVector::ZeroVector : Along * 1.6 * Cm);
+						Throw(*Flecks, FleckBits, At, Out, Time, 0.4, 1.1 + 0.7 * FMath::FRand());
 					}
 				}
 				else
 				{
-					E->Flash(At, 1.4 * K, Time, 0.06);
-					Sparks.Size = 1.5 * K;
-					E->Burst(Sparks);
+					E->Flash(At, 1.6 * K, Time, 0.06);
+					Glow(At, 0.3 * K, 0.1, Time);
+					SprayOfSparks(At, Off, 7, 4.0 * K, Time);
 				}
 				break;
 			}
+			}
+		}
+
+		/// An orange flash at `At`, swelling to `Radius` cells and gone in `Life`.
+		void Glow(const FVector& At, const double Radius, const double Life, const double Time)
+		{
+			Throw(*Glows, GlowBits, At, FVector::ZeroVector, Time, Life, Radius);
+		}
+
+		/// `N` hot sparks thrown round `Off` (a unit vector) at about `Speed`
+		/// cells a second; they arc out under gravity and fall.
+		void SprayOfSparks(const FVector& At, const FVector& Off, const int32 N, const double Speed, const double Time)
+		{
+			for (int32 B = 0; B < N; ++B)
+			{
+				const FVector Spread = FVector(FMath::FRandRange(-1.0, 1.0), FMath::FRandRange(-1.0, 1.0), FMath::FRandRange(0.2, 1.2));
+				const FVector V = (Off * 0.8 + Spread * 0.7).GetSafeNormal() * Speed * FMath::FRandRange(0.6, 1.3) * Cm;
+				Throw(*Sparks, SparkBits, At, V, Time, FMath::FRandRange(0.3, 0.6), FMath::FRandRange(0.7, 1.3));
 			}
 		}
 
@@ -285,9 +334,12 @@ namespace
 			Bits[I] = {At, Velocity, Time, Life, Size, true};
 		}
 
-		/// Bits fly under gravity (cells/s² as the rounds'), tumbling casings
-		/// along their way, flecks shrinking as they go.
-		void Fly(FAcEffectPool& Pool, TArray<FBit>& Bits, const double Time, const bool bCasing)
+		enum class EBit : uint8 { Casing, Fleck, Spark, Glow };
+
+		/// Bits fly under gravity (cells/s² as the rounds'): casings tumble
+		/// along their way, flecks shrink as they go, sparks streak along
+		/// their motion and dim, an impact's glow swells and fades.
+		void Fly(FAcEffectPool& Pool, TArray<FBit>& Bits, const double Time, const EBit Kind)
 		{
 			for (int32 I = 0; I < Bits.Num(); ++I)
 			{
@@ -301,22 +353,44 @@ namespace
 					continue;
 				}
 				const FVector P = B.At + B.Velocity * T + FVector(0, 0, -0.5 * ac::Rules::roundGravity * Cm * T * T);
-				if (bCasing)
+				const double Left = 1.0 - T / B.Life;
+				switch (Kind)
+				{
+				case EBit::Casing:
 				{
 					const FQuat Spin(FVector(B.Velocity.Y, -B.Velocity.X, 0).GetSafeNormal(UE_SMALL_NUMBER, FVector::ForwardVector), T * 25.0);
 					Pool.Set(I, Pool.Shape(P, Spin, FVector(0.035 * Cm, 0.035 * Cm, 0.12 * Cm) * B.Size));
+					break;
 				}
-				else
+				case EBit::Fleck:
+					Pool.Set(I, Pool.Shape(P, FQuat::Identity, FVector(0.08 * Cm * B.Size * Left)));
+					break;
+				case EBit::Spark:
 				{
-					const double D = 0.07 * Cm * B.Size * (1.0 - T / B.Life);
-					Pool.Set(I, Pool.Shape(P, FQuat::Identity, FVector(D)));
+					const FVector V = B.Velocity + FVector(0, 0, -ac::Rules::roundGravity * Cm * T);
+					const double W = 0.022 * Cm * B.Size * (0.4 + 0.6 * Left);
+					Pool.Set(I, Pool.Shape(P, FAcEffectPool::Along(V.GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector)),
+						FVector(W, W, 0.16 * Cm * B.Size * Left + 1.0)));
+					break;
+				}
+				case EBit::Glow:
+				{
+					// Up to its size in the first third, then gone.
+					const double Grow = FMath::Min(1.0, T / (B.Life / 3)) * (T < B.Life / 3 ? 1.0 : Left * 1.5);
+					Pool.Set(I, Pool.Shape(B.At, FQuat::Identity, FVector(2 * B.Size * Cm * FMath::Max(Grow, 0.05))));
+					break;
+				}
 				}
 			}
 		}
 
 		UAcEffects* E = nullptr;
 		FAcEffectPool* Core = nullptr;
+		FAcEffectPool* Body = nullptr;
 		FAcEffectPool* Halo = nullptr;
+		FAcEffectPool* Tail = nullptr;
+		FAcEffectPool* Glows = nullptr;
+		FAcEffectPool* Sparks = nullptr;
 		FAcEffectPool* Casings = nullptr;
 		FAcEffectPool* Flecks = nullptr;
 		TArray<FAcRoundFlight> Flights;
@@ -326,7 +400,7 @@ namespace
 		TMap<int64, int32> Slots;
 		/// Rounds fired by each shooter (the smoke's and the casings' count).
 		TMap<int64, int32> Fires;
-		TArray<FBit> CasingBits, FleckBits;
+		TArray<FBit> CasingBits, FleckBits, SparkBits, GlowBits;
 	};
 
 	FAcEffectsExtensionRegistration RegRounds(TEXT("rounds"), 40, [] { return TUniquePtr<FAcEffectsExtension>(new FAcRoundsExtension); });

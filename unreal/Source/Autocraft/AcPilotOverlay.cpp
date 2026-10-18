@@ -183,7 +183,8 @@ void UAcPilotOverlaySubsystem::GunFeed(const ac::Simulation& S, const AAcPilotPa
 	Info.Feed = AcPilotText::Feed(*C, Gun, Pawn.Yaw(), Pawn.ViewPitch(), GunShots, S.state.time);
 	// The ballistic impact marker: the aim's round flown to its first hit,
 	// on the screen.
-	const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, Gun, Pawn.Yaw(), Pawn.ViewPitch());
+	// (The muzzle over the Citadel's ground, as the core fires it.)
+	const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, Gun, Pawn.Yaw(), Pawn.ViewPitch()) + ac::Vec3(0, 0, S.groundZ(C->position));
 	if (const TOptional<ac::Vec3> Hit = AcPilotText::BallisticImpact(S, Muzzle, ac::Rules::roundVelocity(Pawn.Yaw(), Pawn.ViewPitch()), C->id))
 	{
 		const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;

@@ -393,11 +393,12 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			{
 				const double Yaw = Mid + Off;
 				const ac::Vec2 Spot = Gun + ac::Vec2(std::cos(Yaw), std::sin(Yaw)) * 20.0;
-				const ac::Vec3 Level = ac::Defence::gunMuzzle(C->position, 0, Yaw, 0.0);
+				const ac::Vec3 Base(0, 0, S->groundZ(C->position));
+				const ac::Vec3 Level = ac::Defence::gunMuzzle(C->position, 0, Yaw, 0.0) + Base;
 				const std::optional<double> Pitch = ac::Rules::ballisticPitch(ac::length(Spot - ac::Vec2(Level.x, Level.y)),
 					S->groundZ(Spot) + 1.1 - Level.z);
 				if (!Pitch || *Pitch < ac::Defence::gunPitchMin || *Pitch > ac::Defence::gunPitchMax) continue;
-				const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, 0, Yaw, *Pitch);
+				const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, 0, Yaw, *Pitch) + Base;
 				const TOptional<ac::Vec3> Hit = AcPilotText::BallisticImpact(*S, Muzzle, ac::Rules::roundVelocity(Yaw, *Pitch), C->id);
 				const double Miss = Hit ? ac::distance(ac::Vec2(Hit->x, Hit->y), Spot) : 1e9;
 				if (Miss < BestOff)
@@ -446,11 +447,21 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		const ac::Vec2 To = D->position - Gun;
 		const double Yaw = std::atan2(To.y, To.x);
 		Pilot->Look(std::remainder(Yaw - Pilot->Yaw(), 2 * UE_DOUBLE_PI) / 0.0032, 0.0);
-		const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, 0, Pilot->Yaw(), Pilot->ViewPitch());
+		// (The muzzle over the Citadel's ground, as the core fires it.)
+		const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, 0, Pilot->Yaw(), Pilot->ViewPitch()) + ac::Vec3(0, 0, S->groundZ(C->position));
 		const double Plate = S->groundZ(D->position) + ac::Rules::height(D->kind) * 0.6;
 		const std::optional<double> Pitch = ac::Rules::ballisticPitch(ac::length(D->position - ac::Vec2(Muzzle.x, Muzzle.y)), Plate - Muzzle.z);
 		if (Pitch) Pilot->Look(0.0, (Pilot->ViewPitch() - *Pitch) / 0.0026);
 		if (!Settle(1.0)) return;
+		{
+			const ac::Vec3 Now3 = ac::Defence::gunMuzzle(C->position, 0, Pilot->Yaw(), Pilot->ViewPitch()) + ac::Vec3(0, 0, S->groundZ(C->position));
+			const TOptional<ac::Vec3> Lands =
+				AcPilotText::BallisticImpact(*S, Now3, ac::Rules::roundVelocity(Pilot->Yaw(), Pilot->ViewPitch()), C->id);
+			UE_LOG(LogAutocraft, Display,
+				TEXT("flowtest: practice: aim: muzzle (%.2f, %.2f, %.2f), dummy (%.2f, %.2f) ground %.2f plate %.2f, solve %.4f, view %.4f, gun pitch %.4f, lands (%.2f, %.2f, %.2f)"),
+				Now3.x, Now3.y, Now3.z, D->position.x, D->position.y, S->groundZ(D->position), Plate, Pitch.value_or(-9), Pilot->ViewPitch(),
+				C->guns ? (*C->guns)[0].pitch : -9.0, Lands ? Lands->x : 0, Lands ? Lands->y : 0, Lands ? Lands->z : 0);
+		}
 		Check(Pitch.has_value(), TEXT("practice: the dummy within the rounds' reach"));
 		Check(FMath::Abs(std::remainder(Pilot->Yaw() - Yaw, 2 * UE_DOUBLE_PI)) < 0.02,
 			FString::Printf(TEXT("practice: the gun turned onto the dummy (%.3f off)"), std::remainder(Pilot->Yaw() - Yaw, 2 * UE_DOUBLE_PI)));
