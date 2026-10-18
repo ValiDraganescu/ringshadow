@@ -399,9 +399,12 @@ weather map), `AcDaylight.cpp`:
   multiple scattering (0.67/0.25/0.18) side by side against a sharper
   forward lobe and more, more occluded multiple scattering (g 0.85 / 0.25,
   blend 0.5; 0.8/0.4/0.4, `CloudP`, `CloudM`): the latter gives the brighter
-  rim against the sun and the darker bases, and is the default. The sky
-  light at a cloud's base 0.45 (was 0.6). The sun's lift on the clouds
-  ×1.3 (`ac.Daylight.CloudSun`, was 2.5).
+  rim against the sun and the darker bases, and is the default. Occlusion
+  0.5 and 35 % of the sky light at a cloud's base (was 60 %) give the
+  undersides the grey that made the engine's noon clouds read airy (0.6
+  and 30 % turned 17:30's clouds stormy grey; a sun lift of 1.0, the
+  engine's multiple scattering or density 0.03 barely changed noon). The
+  sun's lift on the clouds ×1.3 (`ac.Daylight.CloudSun`, was 2.5).
 - **Horizon.** Far fair-weather cloud thins out from 8 to 30 km
   (`CloudE.xy`; at 12-45 km single puffs survived as a row of white
   cloudlets on the horizon) and takes the horizon's air (`Haze`, rising as
@@ -418,7 +421,8 @@ weather map), `AcDaylight.cpp`:
   the tracing's end, the ground's bounce on it goes with the gloom (the
   material's ground contribution assumes a sunlit ground, and lit the far
   deck's underside as a white strip), and over the gas giant it thins only a
-  quarter as much (a clear hole in a storm read as a fault). Storm clouds
+  quarter as much (a clear hole in a storm read as a fault). Under a deck
+  the edge erosion bites a third as hard and the fine octave is off. Storm clouds
   are dark blue-grey (albedo 0.30, 0.34, 0.375) and keep a third of the sky
   light at their base, as the engine's sample storm clouds do.
 - **The murk.** Under gloom the first-person haze tone (`Tones.Haze`, which
@@ -430,6 +434,28 @@ weather map), `AcDaylight.cpp`:
 The shots, the engine above ours: `art/sky/clouds/before` (round 0) and
 `art/sky/clouds/final` (MMO region, noon, 17:30 and 18:18, clear, cloudy,
 rain and storm).
+
+### The views and what is left
+
+- The world map (M) shows region pictures baked offline (`AcMapBake`,
+  clouds, fog and atmosphere off, clear weather): no clouds and no cost
+  there. The MMO's top-down view (Esc) sees the clouds as their shadows: a
+  region is 144 m and a cloud several km, so a shadow passes over it as a
+  whole-map dimming. With the cover held at 0.95 the ground is 7 % darker
+  with the shadows than without, and a forced full shadow is 27 % (the
+  ground keeps its sky light and fill); a storm dims the sun ×0.3 through
+  the gloom besides.
+- The storm's far seam: toward a low sun, a band of grey-blue far deck and
+  the sun's glow through the haze over the far ridges stay under the
+  ceiling. A self-shadow reach of 12 km (`ac.Daylight.CloudShadowKm`, 4)
+  and a third of the erosion did not change it; it reads as the light at
+  the edge of a storm, and the 4 km reach is kept (12 costs more).
+- The rain deck's thin patches show a fine cellular grain at 1:1 at 5K:
+  cells of one quarter-resolution traced pixel (6-8 px), mode 0's
+  reconstruction of a busy, half-transparent patch. Full self-shadow steps
+  and 128 view samples keep it; `r.VolumetricRenderTarget.UpsamplingMode 3`
+  removes it but doubles the pan pops (5.2 vs 2.8 at 30 fps, 3.1 vs 0.7 at
+  60) and mode 1 turns it into speckle, so it stays.
 
 ### Cost and time
 
@@ -449,6 +475,7 @@ its harness holds the weather clear):
 | pilot, half resolution (mode 1), the new look | 1.53-1.56 | 2.68-3.08 | 0.74-1.17 | 8-31 |
 | pilot, mode 0 | 1.05 | 1.97 | 0.61 | 9-13 |
 | pilot, mode 0 + step 3 (final) | 0.68 | 1.83 | 0.58 | 7-10 |
+| pilot, with the grey bases and the deck's lighter erosion | | 1.83 | 0.48 | 11-13 |
 | MMO home noon 5120×1378@2, before (bcae75c) | 0.54 | | | 10-19 |
 | MMO home noon, final | 0.25 | | | 7 |
 

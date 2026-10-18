@@ -153,8 +153,11 @@ if (Shadow <= 0.0 && lod < 1.0) {
     float3 dt = Texture3DSampleLevel(DetailTex, DetailTexSampler, (km + float3(A.zw * 2.0, 0.0)) / C.x, 0.0).rgb;
     float dfbm = dt.r * 0.625 + dt.g * 0.25 + dt.b * 0.125;
     // Up close (within Fine.x km) a second octave four times finer:
-    // crisp billows on the masses overhead, not a soft mush.
-    float near = 1.0 - smoothstep(Fine.x * 0.5, Fine.x, dist);
+    // crisp billows on the masses overhead, not a soft mush. Not in a rain
+    // deck, nor most of the edge bite: seen from under it, the detail
+    // noise's cells showed through its thin patches as a cellular grain.
+    float near = (1.0 - smoothstep(Fine.x * 0.5, Fine.x, dist)) * (1.0 - F.deck(B.x));
+    float bite = C.y * lerp(1.0, 0.3, F.deck(B.x));
     if (near > 0.0) {
         float3 df = Texture3DSampleLevel(DetailTex, DetailTexSampler, (km + float3(A.zw * 2.0, 0.0)) * 4.0 / C.x, 0.0).rgb;
         dfbm = lerp(dfbm, dfbm * 0.6 + (df.r * 0.625 + df.g * 0.25 + df.b * 0.125) * 0.4, near);
@@ -163,7 +166,7 @@ if (Shadow <= 0.0 && lod < 1.0) {
     float dm = lerp(dfbm, 1.0 - dfbm, saturate(Hc / max(E.w, 1.0e-3)));
     // Erode the thin edges, not the cores (D.y: how fast the bite fades
     // with density); harder up close (Fine.y).
-    d = saturate(F.remap(d, dm * C.y * (1.0 + Fine.y * near) * (1.0 - lod) * saturate(1.0 - d * D.y), 1.0, 0.0, 1.0));
+    d = saturate(F.remap(d, dm * bite * (1.0 + Fine.y * near) * (1.0 - lod) * saturate(1.0 - d * D.y), 1.0, 0.0, 1.0));
 }
 // A cloud's edge: density grows over D.x into it (a soft rim the sun
 // lights up from behind; at 0.7 a cloud toward the sun read as a cut-out),
@@ -190,7 +193,7 @@ return d * B.y * fade * (1.0 - 0.8 * over);
 # reach (in the layer). CloudFine: the fine erosion's reach (km) and how
 # much harder it bites there, how far fair-weather clouds sit up in the
 # layer (km; none under a deck).
-CLOUD_LOOK = (1.0, 2.0, 0.45, 2.0)
+CLOUD_LOOK = (1.0, 2.0, 0.35, 2.0)
 CLOUD_LOOK_E = (8.0, 30.0, 2.0, 0.15)
 # CloudF: how much of the shape noise's range a cloud keeps between clouds
 # (the carve; the rest is sky), how far bases move up and down (in the
@@ -207,9 +210,11 @@ if os.environ.get("AC_CLOUD_LOOK"):  # trying looks: "x,y,z,w"
 # mild 0.17 lobe for 57.5 % of the light, multiple scattering 0.67/0.25/
 # 0.18; a sharper forward lobe and more, more occluded multiple scattering
 # give a brighter rim against the sun and darker bases (side by side,
-# docs/weather.md "Clouds (2026-10-18)").
+# docs/weather.md "Clouds (2026-10-18)"); occlusion 0.5 and 35 % of the sky
+# light at the base model the undersides at noon (0.6 and 30 % turned
+# 17:30's clouds stormy grey).
 CLOUD_PHASE = (0.85, 0.25, 0.5, 0.0)
-CLOUD_MS = (0.8, 0.4, 0.4, 0.0)
+CLOUD_MS = (0.8, 0.5, 0.4, 0.0)
 
 # The horizon's haze over far cloud: as the sky dome (M_AcSky) mixes its
 # `Haze` in toward the horizon (full at 0°, gone `Haze.a` degrees up), the far
