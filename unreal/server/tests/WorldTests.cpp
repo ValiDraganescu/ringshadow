@@ -178,19 +178,19 @@ TEST(world_load_refuses_each_problem) {
     EXPECT_TRUE(mentions(gridOf(R"([["start.json", "../build/world-tests/broken.json"]])"), "padz"));
     EXPECT_TRUE(mentions(gridOf(R"([["start.json", "../build/world-tests/rocky.json"]])"), "pads[0]"));
     EXPECT_TRUE(mentions(gridOf(R"([["start.json", "../build/world-tests/padless.json"]])"), "no pad"));
-    // Openings that miss each other: the neighbour opens its west edge low.
+    // Openings that miss each other: the neighbour opens its west edge high.
     scratch("missing.json", R"({"id": "missing", "name": "M", "size": "medium", "base": {"style": "openField", "seed": 3},
-        "pads": [{"name": "landing", "at": [72, 48]}], "openings": {"west": [[70, 90]]}})");
+        "pads": [{"name": "landing", "at": [72, 48]}], "openings": {"west": [[12, 26]]}})");
     const WorldLoad miss = gridOf(R"([["start.json", "../build/world-tests/missing.json"]])");
-    EXPECT_TRUE(mentions(miss, "start east opening [41, 55] meets no opening of missing's west edge"));
-    EXPECT_TRUE(mentions(miss, "missing west opening [70, 90] meets no opening of start's east edge"));
+    EXPECT_TRUE(mentions(miss, "start east opening [35.5, 86] meets no opening of missing's west edge"));
+    EXPECT_TRUE(mentions(miss, "missing west opening [12, 26] meets no opening of start's east edge"));
     EXPECT_TRUE(!miss.world.has_value());
     // W4: beside a region with walls, a passage lines up exactly (span and
     // floor level), and the ground meets along the whole shared edge.
     scratch("askew.json", R"({"id": "askew", "name": "A", "size": "medium", "base": {"style": "openField", "seed": 3},
         "pads": [{"name": "landing", "at": [72, 48]}], "openings": {"west": [[44, 58]]}})");
     const WorldLoad askew = gridOf(R"([["start.json", "../build/world-tests/askew.json"]])");
-    EXPECT_TRUE(mentions(askew, "start east opening [41, 55] does not line up with askew's west openings"));
+    EXPECT_TRUE(mentions(askew, "start east opening [35.5, 86] does not line up with askew's west openings"));
     EXPECT_TRUE(mentions(askew, "start east edge and askew's west edge do not meet"));
     EXPECT_TRUE(!askew.world.has_value());
 }
@@ -333,11 +333,11 @@ TEST(world_crossing_keeps_position_and_speed) {
 }
 
 TEST(world_closed_edges_stop_it) {
-    // Start and Glass Flats side by side: Start's north edge is the world's
+    // Start and Tern Ridge side by side: Start's north edge is the world's
     // border (its passage there leads nowhere: the unit stands in it, past the
     // edge by the overhang at most), and its east edge is walled outside its
     // passage (W4: the wall stops it well before the edge).
-    WorldLoad l = gridOf(R"([["start.json", "glass-flats.json"]])");
+    WorldLoad l = gridOf(R"([["start.json", "tern-ridge.json"]])");
     ASSERT_TRUE(l.world.has_value());
     struct Case {
         Edge edge;

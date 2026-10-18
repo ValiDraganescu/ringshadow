@@ -113,6 +113,13 @@ struct Border {
     /// Islands of high rock inside the outline (W4b), walled the same.
     std::vector<std::vector<Vec2>> islands;
     int64_t level = 4;
+    /// The rim's rise past the outline, cells (0: a cliff; S1,
+    /// docs/world-sculpting.md).
+    double slope = 0;
+    /// Each island's own level (0: `level`) and kind (S2), one per island
+    /// (an island written as a bare outline: 0 and a wall).
+    std::vector<int64_t> islandLevels;
+    std::vector<IslandKind> islandKinds;
     bool operator==(const Border&) const = default;
 };
 
@@ -217,6 +224,8 @@ AUTOCRAFTCORE_API RegionFile starter(std::string id, MapStyle style, uint64_t se
 
 /// The highest level a height edit reaches (one level is 2.4 high).
 constexpr int64_t maxLevel = 4;
+/// The highest a free-standing island stands, levels (S2).
+constexpr int64_t maxIslandLevel = 6;
 
 constexpr double padRadius = 3.0;
 /// The nest's mound (N3): rocks and plants within this many cells of it

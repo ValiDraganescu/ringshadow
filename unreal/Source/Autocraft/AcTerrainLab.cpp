@@ -275,17 +275,37 @@ bool UAcTerrainLabShots::ShowRegion(const int32 RegionIndex)
 				const ac::Vec2 P(X, Y);
 				const double H = Spots.H(P);
 				if (H <= Top + 0.05 || !Spots.Inside(P, 8) || Spots.Rough(P, 2) > 0.15) continue;
+				// Not in a rock: a spire's or a boulder's mesh stands over
+				// the field's ground.
+				bool bRock = false;
+				for (const ac::Doodad& Dd : Map.doodads) bRock = bRock || ac::distance(Dd.position, P) < 2.5 + 1.5 * Dd.scale;
+				if (bRock) continue;
 				Top = H;
 				Where = P;
 			}
 		if (Top > -TNumericLimits<double>::Max())
 		{
-			const ac::Vec2 Far[] = {{B.minX, B.minZ}, {B.maxX, B.minZ}, {B.minX, B.maxZ}, {B.maxX, B.maxZ},
-				{(B.minX + B.maxX) / 2, B.minZ}, {(B.minX + B.maxX) / 2, B.maxZ}, {B.minX, (B.minZ + B.maxZ) / 2}, {B.maxX, (B.minZ + B.maxZ) / 2}};
-			ac::Vec2 To = Far[0];
-			for (const ac::Vec2& F : Far)
-				if (ac::length(F - Where) > ac::length(To - Where)) To = F;
-			Pose = Eye(Where, ac::normalize(To - Where), -7);
+			// The way the eye sees furthest over the ground (open land
+			// since the world sculpting: a butte close by would fill the
+			// still), the longer way on a tie.
+			const double Eye0 = Spots.H(Where) + 1.3;
+			ac::Vec2 Way(1, 0);
+			double Best = -1;
+			for (int32 K = 0; K < 32; K++)
+			{
+				const double A = K * 2 * UE_DOUBLE_PI / 32;
+				const ac::Vec2 Dir2(std::cos(A), std::sin(A));
+				double Seen = 0;
+				for (double T = 1; T <= 90; T += 0.5)
+				{
+					const ac::Vec2 Q = Where + Dir2 * T;
+					if (Q.x < B.minX || Q.x > B.maxX || Q.y < B.minZ || Q.y > B.maxZ) break;
+					if (Spots.H(Q) - Eye0 > T * 0.035) break;
+					Seen = T;
+				}
+				if (Seen > Best + 0.5) { Best = Seen; Way = Dir2; }
+			}
+			Pose = Eye(Where, Way, -7);
 		}
 		Note(TEXT("across"), Pose, Where);
 	}

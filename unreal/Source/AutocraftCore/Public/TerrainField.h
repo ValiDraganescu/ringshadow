@@ -135,7 +135,12 @@ struct AUTOCRAFTCORE_API TerrainField {
     /// sides of a shared edge meet exactly), how near an edge it is (1 on an
     /// edge, 0 past the band) and how far past the outline (negative: inside
     /// it). 0 with no walls.
-    struct Wall { double coverage = 0, edge = 0, outside = 0; };
+    /// `rise`: how far up its height the ground has climbed, which is
+    /// `coverage` but over a sloped rim (`RegionEdges::slope`), where the
+    /// ground climbs over the slope while the walking grid still ends a
+    /// cliff's width past the outline. `island`: the island `p` is on, -1
+    /// none.
+    struct Wall { double coverage = 0, edge = 0, outside = 0, rise = 0; int64_t island = -1; };
     Wall wall(Vec2 p) const;
     /// `wall(p)` with its `outside` as `landOutside(p, wallReach())` gives
     /// it: all `walled`, `materials` and the walking grid read of it.
@@ -143,7 +148,9 @@ struct AUTOCRAFTCORE_API TerrainField {
     /// Past this far beyond the outline every smoothstep `walled` takes of
     /// the distance stands at 1 (the deepest terrace's shelf, 10.5 cells,
     /// plus a cliff's width, and a cell to spare).
-    double wallReach() const { return 2.5 + 8.0 + 2 * cliffHalf + 1.0; }
+    double wallReach() const { return 2.5 + 8.0 + max(2 * cliffHalf, map.edges ? map.edges->slope : 0.0) + 1.0; }
+    /// The island `p` is inside, -1 none.
+    int64_t islandAt(Vec2 p) const;
     /// `wall` with `outside` given.
     Wall wallAt(Vec2 p, double outside) const;
     /// On the region's land (inside its outline, out of its islands) and

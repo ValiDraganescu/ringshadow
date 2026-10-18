@@ -926,6 +926,9 @@ template <class IO> void fields(IO& io, RegionEdges& v) {
     io.orZero("islands", v.islands);
     io("level", v.level);
     io("gaps", v.gaps);
+    io.orZero("slope", v.slope);
+    io.orZero("islandLevels", v.islandLevels);
+    io.orZero("islandKinds", v.islandKinds);
 }
 
 template <class IO> void fields(IO& io, RegionEdges::Gap& v) {

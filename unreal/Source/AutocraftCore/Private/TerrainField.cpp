@@ -237,8 +237,13 @@ TerrainField::Wall TerrainField::wallNear(Vec2 p) const {
 
 TerrainField::Wall TerrainField::wallAt(Vec2 p, double outside) const {
     const RegionEdges& e = *map.edges;
-    // A cliff's width past the outline the wall stands full.
-    double cover = smoothstep(0.0, 2 * cliffHalf, outside);
+    // A cliff's width past the outline the wall stands full; a spire's
+    // faces are sheer (S2), a sloped rim's ground climbs over its slope
+    // (S1) while the walking grid still ends at the cliff's width.
+    const int64_t island = outside > 0 ? islandAt(p) : -1;
+    const bool spire = island >= 0 && e.islandKind(static_cast<size_t>(island)) == static_cast<int64_t>(IslandKind::spire);
+    double cover = smoothstep(0.0, spire ? 0.8 : 2 * cliffHalf, outside);
+    double rise = island < 0 && e.slope > 2 * cliffHalf ? smoothstep(0.0, e.slope, outside) : cover;
     // Near an edge the gaps alone say: the same on both sides of it.
     double nearEdge = 0;
     for (int64_t k = 0; k < 4; k++) {
@@ -256,9 +261,19 @@ TerrainField::Wall TerrainField::wallAt(Vec2 p, double outside) const {
             walled = min(walled, 1 - open);
         }
         cover += (walled - cover) * w;
+        rise += (walled - rise) * w;
         nearEdge = max(nearEdge, w);
     }
-    return Wall{cover, nearEdge, outside};
+    return Wall{cover, nearEdge, outside, rise, island};
+}
+
+int64_t TerrainField::islandAt(Vec2 p) const {
+    if (!map.edges) return -1;
+    const RegionEdges& e = *map.edges;
+    for (size_t k = 0; k < e.islands.size(); k++)
+        if (k < islandRuns.size() ? islandRuns[k].inside(p, e.islands[k]) : signedDistance(p, e.islands[k]) < 0)
+            return static_cast<int64_t>(k);
+    return -1;
 }
 
 namespace {
@@ -293,14 +308,40 @@ double seamRise(const RegionEdges& e, const GroundRect& b, int64_t edge, double 
 double TerrainField::walled(Vec2 p, double h) const {
     if (openLand(p)) return h;
     const Wall w = wallNear(p);
-    if (!(w.coverage > 0)) return h;
+    if (!(w.coverage > 0) && !(w.rise > 0)) return h;
     const RegionEdges& e = *map.edges;
-    // The wall's top: its level, up to most of a level more along the way
-    // (a broken skyline), rising another level or two further out, rough;
-    // near an edge, the edge's own profile, the same on both sides of it.
     const Vec2 q = fold(p);
     const double free = 1 - w.edge;
     const double away = smoothstep(0.3, 7, w.outside);
+    const IslandKind kind = w.island < 0 ? IslandKind::wall : static_cast<IslandKind>(e.islandKind(static_cast<size_t>(w.island)));
+    if (kind != IslandKind::wall) {
+        // Free-standing rock (S2, docs/world-sculpting.md): its own level,
+        // a flat top a little rough (a spire's broken, rising to its
+        // middle), sheer craggy faces; a mesa's faces step at a shelf.
+        const double level = static_cast<double>(e.islandLevel(static_cast<size_t>(w.island)));
+        const double cap = kind == IslandKind::spire
+                               ? 0.5 * smoothstep(0.4, 2.5, w.outside) * (0.6 + 0.4 * noise.fbm(q.x * 0.5 + 41, q.y * 0.5 - 13))
+                               : 0.12 * (0.5 + 0.5 * noise.fbm(q.x * 0.6 + 5, q.y * 0.6 - 3)) * away;
+        const double top = (level + cap) * map.levelHeight;
+        double terrace = 0, second = 1;
+        if (kind == IslandKind::mesa) {
+            const double step = noise.fbm(q.x * 0.045 + 19, q.y * 0.045 - 29);
+            const double shelf = 1.5 + 2.5 * max(step, 0.0);
+            terrace = smoothstep(-0.2, 0.1, step);
+            second = smoothstep(shelf, shelf + 2 * cliffHalf, w.outside);
+        }
+        h += max(top - h, 0.0) * w.coverage * (1 - 0.45 * terrace * (1 - second));
+        h = plusNoise(h, 4 * w.coverage * (1 - w.coverage), [&] { return noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9); }, 1.1);
+        return h;
+    }
+    // The wall's top: its level, up to most of a level more along the way
+    // (a broken skyline), rising another level or two further out, rough;
+    // near an edge, the edge's own profile, the same on both sides of it.
+    // A low rim (S1) rises in proportion: its skyline and ridge a quarter
+    // as high at level 1. Near an edge it climbs back to the world's
+    // `edgeLevel`, as its neighbour's does, so the two still meet.
+    const double level = static_cast<double>(e.level);
+    const double scale = min(level, RegionEdges::edgeLevel) / RegionEdges::edgeLevel;
     // Where `away` is 0 the ridge and the roughness are +0 (`away` times
     // what is never negative): their noise is not sampled.
     const double skyline = (0.5 + 0.5 * noise.fbm(q.x * 0.11 + 31, q.y * 0.11 - 17)) * 0.85;
@@ -315,17 +356,21 @@ double TerrainField::walled(Vec2 p, double h) const {
         weights += wk;
     }
     if (weights > 0) seam /= weights;
-    const double top = (static_cast<double>(e.level) + free * (skyline + ridge + rough) + w.edge * seam) * map.levelHeight;
+    const double base = level + (RegionEdges::edgeLevel - level) * w.edge;
+    const double top = (base + free * scale * (skyline + ridge + rough) + w.edge * seam) * map.levelHeight;
     // Terraces (W4b): along stretches of the wall its face steps, a shelf
     // half way up 2.5 to 6 cells wide (never a sliver), then the rest of
-    // the climb.
-    const double step = noise.fbm(q.x * 0.045 + 19, q.y * 0.045 - 29);
+    // the climb. A sloped rim (S1) has none: its slope is the step.
+    const bool sloped = e.slope > 2 * cliffHalf;
+    const double step = sloped ? 0.0 : noise.fbm(q.x * 0.045 + 19, q.y * 0.045 - 29);
     const double shelf = 2.5 + 8.0 * max(step, 0.0);
-    const double terrace = free * smoothstep(0.04, 0.2, step);
+    const double terrace = sloped ? 0.0 : free * smoothstep(0.04, 0.2, step);
     const double second = smoothstep(shelf, shelf + 2 * cliffHalf, w.outside);
-    h += max(top - h, 0.0) * w.coverage * (1 - 0.5 * terrace * (1 - second));
-    // Craggy noise on its faces, more than a plain cliff's.
-    h = plusNoise(h, 4 * w.coverage * (1 - w.coverage) * free, [&] { return noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9); }, 1.1);
+    h += max(top - h, 0.0) * w.rise * (1 - 0.5 * terrace * (1 - second));
+    // Craggy noise on its faces, more than a plain cliff's; a slope's rock
+    // is broken, rougher than its face would be.
+    const double face = sloped ? 0.6 * w.rise * (1 - w.rise) * free : 4 * w.coverage * (1 - w.coverage) * free;
+    h = plusNoise(h, face, [&] { return noise.fbm(q.x * 0.9 + 3.1, q.y * 0.9); }, 1.1);
     h = plusNoise(h, 4 * terrace * second * (1 - second), [&] { return noise.fbm(q.x * 0.9 - 8.3, q.y * 0.9 + 2); }, 0.8);
     return h;
 }

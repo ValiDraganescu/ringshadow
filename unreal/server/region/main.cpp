@@ -162,6 +162,43 @@ int summary(const std::string& path) {
     const int64_t main = nav.mainRegion >= 0 ? nav.regionCells[static_cast<size_t>(nav.mainRegion)] : 0;
     std::printf("open ground: %.0f%% of the region; the main open area %.0f%%\n", 100.0 * static_cast<double>(free) / all,
                 100.0 * static_cast<double>(main) / all);
+    // World sculpting's measures (docs/world-sculpting.md, "Targets").
+    {
+        const Vec2 span = built.extent();
+        int64_t closed = 0, cells = 0;
+        for (int z = 0; z < static_cast<int>(span.y); z++)
+            for (int i = 0; i < static_cast<int>(span.x); i++, cells++) {
+                const Vec2 p = built.ground(Vec2(i + 0.5, z + 0.5));
+                const double dx = field.height(p + Vec2(0.5, 0)) - field.height(p - Vec2(0.5, 0));
+                const double dz = field.height(p + Vec2(0, 0.5)) - field.height(p - Vec2(0, 0.5));
+                const auto cell = nav.index(p);
+                closed += std::sqrt(dx * dx + dz * dz) > NavGrid::maxSlope || !cell || !nav.free(*cell) ? 1 : 0;
+            }
+        std::printf("wall and cliff: %.0f%% of the region\n", 100.0 * static_cast<double>(closed) / static_cast<double>(cells));
+        const auto islands = file->border ? file->border->islandKinds : std::vector<IslandKind>{};
+        const auto standing = std::count_if(islands.begin(), islands.end(), [](IslandKind k) { return k != IslandKind::wall; });
+        std::printf("free-standing rock: %ld\n", static_cast<long>(standing));
+        // From 1.3 cells over each pad, 64 directions: open where nothing
+        // within 60 cells stands over 3 degrees above the eye (a ray that
+        // leaves the region first is open: the neighbour's ground).
+        for (const Place& pad : file->pads) {
+            const Vec2 c = built.ground(pad.at);
+            const double eye = field.height(c) + 1.3;
+            int open = 0;
+            for (int k = 0; k < 64; k++) {
+                const double a = 2 * pi * k / 64;
+                const Vec2 d(std::cos(a), std::sin(a));
+                bool blocked = false;
+                for (double t = 1; t <= 60 && !blocked; t += 0.5) {
+                    const Vec2 q = c + d * t;
+                    if (q.x < m.bounds.minX || q.x > m.bounds.maxX || q.y < m.bounds.minZ || q.y > m.bounds.maxZ) break;
+                    blocked = field.height(q) - eye > t * std::tan(3 * pi / 180);
+                }
+                open += blocked ? 0 : 1;
+            }
+            std::printf("open horizon at pad \"%s\": %.0f%% of 64 directions see 60 cells\n", pad.name.c_str(), 100.0 * open / 64);
+        }
+    }
     const auto problems = validate(*file, built);
     printProblems(path, problems);
     std::printf("%zu problem%s\n", problems.size(), problems.size() == 1 ? "" : "s");

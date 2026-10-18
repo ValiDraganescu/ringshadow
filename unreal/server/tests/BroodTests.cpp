@@ -71,6 +71,10 @@ size_t farDeposit(WorldMap& w) {
     const auto room = [&](Vec2 p) {
         for (const double k : {WorldBrood::siteRadius - 2.5, WorldBrood::siteRadius + 3, 9.0, WorldBrood::siteRadius + WorldBrood::leash + 6})
             if (!sim.nav || !sim.nav->walkable(p + Vec2(0, k))) return false;
+        // A bug put east of it eats from its east side: not in a vein's
+        // ring, where the other mounds nudge it off as it eats.
+        for (const OreDeposit& q : st.patches)
+            if (distance(q.position, p) > 0.1 && distance(q.position, p + Vec2(1.6, 0)) < 3.0) return false;
         return true;
     };
     size_t best = 0;

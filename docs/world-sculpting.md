@@ -1,6 +1,8 @@
 # World sculpting
 
-Status: plan, not started. Nothing here is built until the user gives the word.
+Status, 2026-10-19: S1 and S2 are built, with Prospect Landing as the trial
+region, on the terrain lab's branch only. Nothing is promoted: the user's
+word comes first. S3 (rolling ground) and S4 (far land) are not started.
 
 The user, 2026-10-18: "I hate that I am always surrounded by cliffs, should be a bit more variety, canyons are cool, but not that cool." Their reference is a painted cockpit view of Prospect Landing:
 
@@ -117,8 +119,46 @@ The open horizon is new: `autocraft-region build` casts 64 rays from 1.3 m over 
 
 A first sketch exists only in the scratchpad: Prospect Landing with `border.level` 1 and five buttes and spires as `raise` edits at levels 3 to 4. It validates, open ground is 58%, and the preview shows the low rim and the rock standing free on the floor. It uses today's keys only, so the buttes there have ground on top. S2's islands replace them.
 
+## 7. The trial (Prospect Landing)
+
+Built: `border.slope` and island `level` and `kind` in the core
+(`RegionFile`, `RegionEdges`, `TerrainField::walled`; a level-4 wall with no
+slope draws exactly as before, so the other regions are unchanged);
+`RegionEdges::edgeLevel` 4 along every shared edge, so a low rim still meets
+its neighbour; `autocraft-region build` prints the measures; and
+`uv run unreal/Tools/regions/sculpt.py start` did the rest:
+
+- the land grew 8 cells over the old walls' level ground; the rim is level
+  1 with a 5-cell slope;
+- the gaps widened in both files of each pair where both sides are level
+  0: north 43.5-80 (was 64-80), east 35.5-86 (was 41-55), south 45.5-134
+  (was two gaps of 16); the west stays 41-55 (no level ground on Rust
+  Hollow's side);
+- two buttes (levels 4 and 3), a mesa (2) and two spires (5 and 4), kept
+  30 cells from the pad.
+
+| measure | before | after | target |
+|---|---|---|---|
+| wall and cliff | 41% | 22% | 20% or less |
+| open horizon at the pad | 38% | 73% | 50% or more |
+| free-standing rock | 0 | 5 | 4 to 8 |
+| open ground | 59% | 78% | 70% or more |
+
+Tests: core 561 pass, net 120 pass. Server: the edge tests now pair Start
+with its real east neighbour, and the Lodeback test keeps its bug out of a
+vein's ring (the open ground made it pick a mound in the middle of one).
+One fails and is left for the user: `defence_citadel_turrets_beat_a_raid`.
+The raid now crosses the open south straight to the Citadel, and the
+gunner leaves one of six at 3 hp. Before the rule that keeps rock 30 cells
+from a pad, a butte 23 cells from the Citadel stopped every round
+(139 fired, 0 hit). Open land changes the defence: it may want more time
+for the gunner, a second gun, or a rise left south of the pad.
+
+The satellite maps of the five regions changed are rebaked.
+
 ## Log
 
 | date | step | note |
 |---|---|---|
 | 2026-10-18 | plan | the user's reference; the measures above |
+| 2026-10-19 | S1+S2 trial | Prospect Landing opened (above); four neighbours' gaps widened to match |

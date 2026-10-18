@@ -1,7 +1,10 @@
 # The terrain lab
 
-Status, 2026-10-18: the lab is built (the switch, the sheet, the material
-script); round 1 is in its first iterations. The user's ask: the ground needs to look
+Status, 2026-10-19: rounds 1 to 4 are built in the lab, none promoted.
+Round 3's cliff faces and round 4's clutter (no decals yet) stand over the
+ground as `AAcTerrainLabScenery` while `ac.TerrainLab` is on. The world
+sculpting trial ([world-sculpting.md](world-sculpting.md)) reshaped
+Prospect Landing under them. The user's ask: the ground needs to look
 better, and the work happens in a sandbox first, a test game of its own,
 and only what we like is copied into the game.
 
@@ -190,6 +193,32 @@ seed (every player sees the same pebbles), no collision, culled by distance.
 - Accept when: no hard dark line at a rock's foot in the `feet` and `cliff`
   stills; cost within budget.
 
+### Rounds 3 and 4 as built
+
+- `AcTerrainLabScenery.cpp`: one actor a ground set, kept by
+  `UAcTerrainLabSceneryWorld` while the lab is on. Its plan is made on a
+  worker (70-90 ms a region, the field's own heights) and added 3,000
+  instances a frame, so a region arriving does not hitch.
+- Faces: wherever the ground is steeper than 1.3 times a machine's limit,
+  1.7 cells apart, a stack of slabs (one per 2.6 cells of rise) leaning
+  with the face, set in so its front stands under 0.3 cells out; none
+  within 2.5 cells of a ramp (the base's or a height edit). Talus, two
+  stones a face at its foot. A broken crown on each sculpted spire.
+- Clutter: 0-2 a cell on gentle open ground within 35 m, off pads,
+  deposits and wells: pebbles and dry tufts (on grass) for plain, rust and
+  ochre, crust plates on salt, flakes on ash, shards on glass, clinker on
+  slag, rime on frost.
+- The kit: `Tools/Editor/models/terrain_lab_rocks.py` (48 meshes under
+  `/Game/TerrainLab/Rocks`, no catalog, `art/terrain-lab/rocks.jpg`), one
+  material, `make_terrain_lab_rock_material.py`: the lab's texture arrays
+  on three world planes, light and dark only, coloured per instance with
+  the region's rock as its palette tints it.
+- No distance fields on any of it (rule 4): with them, the night scene
+  cost 6 ms more in distance-field shadows. Clutter casts no shadow.
+- Not done: round 4's decals (ore stain, scorch, cracks).
+- Per region: Prospect Landing 1,335 faces, 335 talus, 10,330 clutter;
+  Brine Pans 1,375, 360, 6,959; Slag Pockets 1,202, 324, 5,906.
+
 ## 5. Budget
 
 GPU busy, `bench.py --mmo`, median of 3 interleaved rounds, load noted, the
@@ -223,6 +252,7 @@ When the user says promote, in the worker's worktree, as one commit a round:
 | 2026-10-18 | plan | this page | 16.2 / 13.5 baseline | – |
 | 2026-10-18 | 1 | nine CC0 sets, hex tiling, near and far scale, recoloured to the game's colours; first cut over budget (base pass +0.8 to +1.7 ms) | +0.9 to +1.7 GPU busy, MMO bench 5120×1378, load 5-9 | – |
 | 2026-10-18 | 1+2 | weak hex cells skipped, far scale colour only, means as constants; parallax within 12 m, the relief bake (occlusion, curvature; 4 ms a region on a worker); no strata bands | +0.1 to +0.5 GPU busy (base pass +0.3 to +0.9), load 4.3 | – |
+| 2026-10-19 | 1-4 | rounds 3 and 4 (above); first cut over budget (the kit in the distance fields: night +5.9 ms; arriving 423 ms on the game thread), then no distance fields, clutter at 35 m, planned on a worker | pilot +0.0 to +0.7, fight +1.3 to +1.4 GPU busy (all four rounds), arrival max 283 ms (base 412), load 3.5-3.8 | – |
 
 ## 8. Open
 

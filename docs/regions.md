@@ -298,7 +298,26 @@ and its edges never show as a line or a fence.
   the wall its face steps: a shelf half way up, a few cells wide, then the
   rest of the climb (W4b).
 - `islands` (optional, W4b): outlines of high rock inside the outline,
-  walled the same way: the land runs round them.
+  walled the same way: the land runs round them. An island may instead be
+  free-standing rock (S2, [world-sculpting.md](world-sculpting.md)):
+  `{"outline": [...], "level": 2-6, "kind": "butte" | "mesa" | "spire"}`,
+  its own height, a flat top (a spire's broken), sheer craggy faces (a
+  spire's sheerer, a mesa's stepping at a shelf), no skyline rising past
+  it. Nothing stands on it either.
+- `slope` (optional, S1): the rim's rise past the outline, cells (0, the
+  default: a cliff). More is a slope of broken rock that climbs to the
+  wall's level over that many cells, no terraces; the walking grid still
+  ends a cliff's width past the outline. A low `level` (1-2) lowers the
+  skyline and ridge past the face in proportion; within 4 cells of a
+  shared edge every wall climbs to level 4 (`RegionEdges::edgeLevel`), so
+  neighbours meet whatever their rims.
+- `uv run unreal/Tools/regions/sculpt.py REGION` opens a region up (S1 and
+  S2): the land grown over the old walls' level ground, the rim lowered and
+  sloped, every shared edge opened wide where both sides are level 0 (both
+  files), and buttes, a mesa and spires placed clear of the pads' field of
+  fire (30 cells), the places, the veins and the passages. It validates
+  every file it writes. `autocraft-region build` prints the measures:
+  wall and cliff, free-standing rock, the open horizon at each pad.
 - Round each opening the outline goes out to the edge: the passage is a gap
   in the walls, its faces 1.5 cells past each end of the span.
 - Within 4 cells of an edge the walls follow the edge's openings alone (a

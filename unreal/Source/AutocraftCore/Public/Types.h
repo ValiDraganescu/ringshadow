@@ -835,6 +835,14 @@ struct HeightEdit {
     bool operator==(const HeightEdit&) const = default;
 };
 
+/// What an island of rock is (docs/world-sculpting.md, S2): a wall like the
+/// border's (W4b), or rock standing free on the floor: a butte (steep,
+/// flat-topped), a mesa (wide, a shelf on its faces) or a spire (narrow, tall).
+enum class IslandKind : int64_t { wall, butte, mesa, spire };
+template <> struct EnumInfo<IslandKind> {
+    static constexpr std::array<std::string_view, 4> names{"wall", "butte", "mesa", "spire"};
+};
+
 /// C++ only: a crafted region's edges (docs/regions.md, "border"; W4): the
 /// walls round its playable land, and the stretches of each edge open to the
 /// neighbour, where a unit walks up to the edge and `overhang` past it (the
@@ -855,6 +863,16 @@ struct AUTOCRAFTCORE_API RegionEdges {
     std::vector<std::vector<Vec2>> islands;
     int64_t level = 0;
     std::vector<Gap> gaps;
+    /// The rim's rise past the outline, cells (docs/world-sculpting.md, S1):
+    /// 0 a cliff, as W4 drew it; more a slope of broken rock.
+    double slope = 0;
+    /// Free-standing rock (S2): each island's own height, levels (0 or
+    /// missing: `level`), and its kind (`IslandKind`; missing: a wall).
+    std::vector<int64_t> islandLevels;
+    std::vector<int64_t> islandKinds;
+    /// Island `k`'s level and kind.
+    int64_t islandLevel(size_t k) const { return k < islandLevels.size() && islandLevels[k] > 0 ? islandLevels[k] : level; }
+    int64_t islandKind(size_t k) const { return k < islandKinds.size() ? islandKinds[k] : 0; }
 
     /// How far past an open edge a unit may stand, cells.
     static constexpr double overhang = 1.0;
@@ -864,6 +882,9 @@ struct AUTOCRAFTCORE_API RegionEdges {
     /// How far past each end of a gap the walls' faces stand, cells (the
     /// gap is the clear width).
     static constexpr double gapMargin = 1.5;
+    /// The walls' level along a shared edge, whatever each region's rim
+    /// (S1): both sides' walls climb to it within `edgeBand`, so they meet.
+    static constexpr double edgeLevel = 4.0;
 
     /// How far `p` lies inside edge `edge` of `b` (negative: past it), and
     /// where along it.

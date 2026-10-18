@@ -604,7 +604,7 @@ Parsed parse(std::string_view text) {
     if (const auto brood = r.integer(root, "brood", "", false, 0, 4)) f.brood = *brood;
     r.list(root, "height", f.height, [&](const json& j, const std::string& w) { return r.edit(j, w); });
     if (const json* border = r.field(root, "border", "", false)) {
-        if (r.object(*border, "border", {"outline", "islands", "level"})) {
+        if (r.object(*border, "border", {"outline", "islands", "level", "slope"})) {
             Border b;
             bool ok = true;
             const json* o = r.field(*border, "outline", "border", true);
@@ -613,6 +613,9 @@ Parsed parse(std::string_view text) {
             if (const json* l = r.field(*border, "level", "border", false)) {
                 (void)l;
                 if (const auto level = r.integer(*border, "level", "border", false, 1, maxLevel)) b.level = *level; else ok = false;
+            }
+            if (r.field(*border, "slope", "border", false)) {
+                if (const auto slope = r.number(*border, "slope", "border", false, 0, 12)) b.slope = *slope; else ok = false;
             }
             if (ps) {
                 // A plain outline: no side crosses another.
@@ -640,7 +643,25 @@ Parsed parse(std::string_view text) {
                 } else {
                     for (size_t i = 0; i < is->size(); i++) {
                         const std::string w = "border.islands[" + std::to_string(i) + "]";
-                        const auto island = r.points((*is)[i], w, 3);
+                        // A bare outline (a wall, W4b), or free-standing rock
+                        // (S2): {"outline", "level", "kind"}.
+                        const json& one = (*is)[i];
+                        int64_t level = 0;
+                        IslandKind kind = IslandKind::wall;
+                        const json* shape = &one;
+                        if (one.is_object()) {
+                            r.object(one, w, {"outline", "level", "kind"});
+                            shape = r.field(one, "outline", w, true);
+                            if (!shape) { ok = false; continue; }
+                            if (r.field(one, "level", w, false)) {
+                                if (const auto l = r.integer(one, "level", w, false, 1, maxIslandLevel)) level = *l; else ok = false;
+                            }
+                            if (const auto k = r.text(one, "kind", w, false)) {
+                                if (const auto named = enumNamed<IslandKind>(*k)) kind = *named;
+                                else { r.add(w + ".kind", "is \"" + *k + "\"; one of " + choices<IslandKind>()); ok = false; }
+                            }
+                        }
+                        const auto island = r.points(*shape, w + (one.is_object() ? ".outline" : ""), 3);
                         if (!island) { ok = false; continue; }
                         for (Vec2 q : *island) {
                             if (ps && !(signedDistance(q, *ps) < 0)) {
@@ -650,6 +671,8 @@ Parsed parse(std::string_view text) {
                             }
                         }
                         b.islands.push_back(*island);
+                        b.islandLevels.push_back(level);
+                        b.islandKinds.push_back(kind);
                     }
                 }
             }
@@ -963,14 +986,21 @@ std::string write(const RegionFile& f) {
         root["border"] = ordered{{"outline", ps}};
         if (!f.border->islands.empty()) {
             ordered is = ordered::array();
-            for (const std::vector<Vec2>& island : f.border->islands) {
+            for (size_t k = 0; k < f.border->islands.size(); k++) {
                 ordered qs = ordered::array();
-                for (Vec2 p : island) qs.push_back(pointNumbers(p));
-                is.push_back(qs);
+                for (Vec2 p : f.border->islands[k]) qs.push_back(pointNumbers(p));
+                const int64_t level = k < f.border->islandLevels.size() ? f.border->islandLevels[k] : 0;
+                const IslandKind kind = k < f.border->islandKinds.size() ? f.border->islandKinds[k] : IslandKind::wall;
+                if (level == 0 && kind == IslandKind::wall) { is.push_back(qs); continue; }
+                ordered one = ordered{{"outline", qs}};
+                if (level > 0) one["level"] = level;
+                if (kind != IslandKind::wall) one["kind"] = std::string(EnumInfo<IslandKind>::names[static_cast<size_t>(kind)]);
+                is.push_back(one);
             }
             root["border"]["islands"] = is;
         }
         root["border"]["level"] = f.border->level;
+        if (f.border->slope > 0) root["border"]["slope"] = number(f.border->slope);
     }
     if (!f.deposits.empty()) {
         ordered list = ordered::array();
@@ -1148,6 +1178,17 @@ Built build(const RegionFile& f) {
                 for (Vec2 p : island) edges.islands.back().push_back(g(p));
             }
             edges.level = f.border->level;
+            edges.slope = f.border->slope;
+            // Only free-standing rock fills these: walls-only regions keep
+            // their edges (and saves) as W4b wrote them.
+            bool free = false;
+            for (size_t k = 0; k < f.border->islands.size(); k++)
+                free = free || (k < f.border->islandLevels.size() && f.border->islandLevels[k] > 0) ||
+                       (k < f.border->islandKinds.size() && f.border->islandKinds[k] != IslandKind::wall);
+            if (free) {
+                for (int64_t l : f.border->islandLevels) edges.islandLevels.push_back(l);
+                for (IslandKind k : f.border->islandKinds) edges.islandKinds.push_back(static_cast<int64_t>(k));
+            }
         }
         for (size_t e = 0; e < 4; e++) {
             for (const Span& s : f.openings[e]) {

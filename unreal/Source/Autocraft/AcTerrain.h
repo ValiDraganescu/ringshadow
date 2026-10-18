@@ -127,6 +127,7 @@ public:
 	uint8 Rim() const { return RimSides; }
 	int64 Region() const { return RegionIndex; }
 	const ac::MapDefinition& Map() const { return *MapDef; }
+	std::shared_ptr<const ac::MapDefinition> MapPtr() const { return MapDef; }
 	const ac::TerrainField& Field() const { return *FieldPtr; }
 	const FAcHeightGrid& Grid() const { return HeightGrid; }
 	UMaterialInstanceDynamic* Material() const { return Mat; }
@@ -290,6 +291,12 @@ public:
 	/// The ground sets (tests, pictures): how many, how many built.
 	int32 NumSets() const;
 	int32 NumSetsComplete() const;
+	/// Each ground set (the terrain lab's scenery lays its kit over them).
+	void ForEachSet(TFunctionRef<void(AAcRegionGround*)> Each) const
+	{
+		for (const TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
+			if (S.Value) Each(S.Value);
+	}
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
