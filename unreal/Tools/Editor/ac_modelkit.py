@@ -763,6 +763,7 @@ class Model:
         line = sys._getframe(1).f_lineno  # the model script's line, for the coplanar check's report
         for pr in prims:
             pr.src = "%s/%s line %d" % (part.name, material, line)
+            pr.part = part.name
         if not solid:
             for pr in prims:
                 pr.decor = True
@@ -1137,6 +1138,14 @@ def _pieces(poly):
     return out
 
 
+def exclusive_parts(a, b):
+    """Two parts never drawn together: a site's `<name>_shut` and `<name>_open` (AcSites.cpp shows one of them)."""
+    for x, y in ((a, b), (b, a)):
+        if x.endswith("_shut") and y.endswith("_open") and x[:-5] == y[:-5]:
+            return True
+    return False
+
+
 def coplanar_faces(prims, tol=0.5, min_area=1.0):
     """Pairs of flat faces of different prims that face the same way in the same plane (within `tol` cm) and
     overlap by more than `min_area` cm2: z-fighting, the two drawn at one depth. Faces back to back (a box on
@@ -1150,18 +1159,23 @@ def coplanar_faces(prims, tol=0.5, min_area=1.0):
         for f, (n, pts) in enumerate(pr.faces()):
             n = v_norm(n)
             d = v_dot(n, pts[0])
-            key = (round(n[0], 3) + 0.0, round(n[1], 3) + 0.0, round(n[2], 3) + 0.0)
-            buckets.setdefault(key, []).append((d, i, f, pts))
+            # (normals within about half a degree share a bucket, as check_models.py's: a slab tilted 0.3 degrees off
+            # its neighbour still fights it)
+            key = (round(n[0] * 50), round(n[1] * 50), round(n[2] * 50))
+            buckets.setdefault(key, []).append((d, i, f, pts, n))
     hits = []
+    cos_tol = math.cos(math.radians(0.5))
     for key, faces in buckets.items():
-        n = v_norm(key)
+        n = v_norm(faces[0][4])
         a = (1.0, 0.0, 0.0) if abs(n[0]) < 0.9 else (0.0, 1.0, 0.0)
         u = v_norm(v_cross(n, a))
         v = v_cross(n, u)
         pieces = []
-        for d, i, f, pts in faces:
+        for d, i, f, pts, nf in faces:
+            if v_dot(nf, n) < cos_tol:
+                continue  # (an edge of the bucket: nothing within half a degree of the first face)
             for piece in _pieces(_ccw([(v_dot(p, u), v_dot(p, v)) for p in pts])):
-                pieces.append((d, i, f, piece))
+                pieces.append((v_dot(n, pts[0]), i, f, piece))
         pieces.sort(key=lambda q: q[0])
         found = {}  # (prim, face, prim, face) -> [area, d, the largest overlap]
         for x in range(len(pieces)):
@@ -1170,7 +1184,7 @@ def coplanar_faces(prims, tol=0.5, min_area=1.0):
                 dy, iy, fy, py = pieces[y]
                 if dy - dx > tol:
                     break
-                if ix == iy:
+                if ix == iy or exclusive_parts(getattr(prims[ix], "part", ""), getattr(prims[iy], "part", "")):
                     continue
                 poly = px
                 for k in range(len(py)):
@@ -1196,7 +1210,10 @@ def coplanar_faces(prims, tol=0.5, min_area=1.0):
                 pv += math.copysign(min(0.5, abs(cv - pv)), cv - pv)
                 probes.append(v_add(v_add(v_mul(n, dx), v_mul(u, pu)), v_mul(v, pv)))
             probes = [v_add(q, n) for q in probes]
-            if all(any(_inside(b, q) for b in solids if b is not prims[ix] and b is not prims[iy]) for q in probes):
+            pa, pb = getattr(prims[ix], "part", ""), getattr(prims[iy], "part", "")
+            cover = [b for b in solids if b is not prims[ix] and b is not prims[iy] and not
+                     exclusive_parts(getattr(b, "part", ""), pa) and not exclusive_parts(getattr(b, "part", ""), pb)]
+            if all(any(_inside(b, q) for b in cover) for q in probes):  # (never by a part drawn instead of one of them)
                 continue
             hits.append("%s | %s: facing (%s), %.0f cm2 round (%.1f, %.1f, %.1f)" % (
                 getattr(prims[ix], "src", "?"), getattr(prims[iy], "src", "?"),

@@ -21,7 +21,7 @@ from ac_modelkit import Model, box, cyl, sphere  # noqa: E402
 
 POSE = "AcPoseBuildings2.cpp:PoseLandingPad"
 
-m = Model("landingPad", category="building", notes=[
+m = Model("landingPad", category="building", coplanar_check=True, notes=[
     "F2's Landing Pad (docs/mmorpg-m8.md). Pose: PoseLandingPad: lamps_0..3 the working light (steady, alternating "
     "while the Dropship is over it), beacon.",
     "Under construction the deck rises out of the ground like every building. height 0.18"])
@@ -39,20 +39,25 @@ m.mesh(m.root, "hullMid", [box((284, 284, 10), at=(0, 0, 8), base=True)])
 lips = [box((300, 14, 6), at=(0, s * 157, 0), base=True) for s in (-1, 1)] + \
        [box((14, 300, 6), at=(s * 157, 0, 0), base=True) for s in (-1, 1)]
 m.mesh(m.root, "hullLight", lips)
-# deck plates: a grid of seams
-m.mesh(m.root, "hullDark", [box((284, 2, 1), at=(0, y, 18), base=True) for y in (-71, 0, 71)] +
-       [box((2, 284, 1), at=(x, 0, 18), base=True) for x in (-71, 0, 71)], solid=False)
+# deck plates: a grid of seams (those along x cut at those along y: crossing seams share their tops)
+SEAMS = (-71, 0, 71)
+cuts = [-142] + [c for a in SEAMS for c in (a - 1, a + 1)] + [142]
+m.mesh(m.root, "hullDark", [box((cuts[2 * i + 1] - cuts[2 * i], 2, 1), at=((cuts[2 * i] + cuts[2 * i + 1]) / 2, y, 18), base=True)
+                            for y in SEAMS for i in range(4)] +
+       [box((2, 284, 1), at=(x, 0, 18), base=True) for x in SEAMS], solid=False)
 # hazard bands along the edges
-m.mesh(m.root, "hazard", [box((250, 10, 1.5), at=(0, s * 134, 18), base=True) for s in (-1, 1)] +
-       [box((10, 250, 1.5), at=(s * 134, 0, 18), base=True) for s in (-1, 1)], solid=False)
+m.mesh(m.root, "hazard", [box((250, 10, 3), at=(0, s * 134, 18), base=True) for s in (-1, 1)] +
+       [box((10, 250, 3), at=(s * 134, 0, 18), base=True) for s in (-1, 1)], solid=False)  # 2 cm over the seams
 # the landing ring and the centre cross, the team's colour
 ring = []
 for k in range(24):
     a0 = k * 2 * math.pi / 24
-    ring.append(box((24, 8, 1.5), at=(math.cos(a0) * 92, math.sin(a0) * 92, 18.5), rot=(0, math.degrees(a0) + 90, 0), base=True))
-m.mesh(m.root, "team", ring + [box((90, 14, 1.5), at=(0, 0, 18.5), base=True), box((14, 90, 1.5), at=(0, 0, 18.5), base=True)],
-       solid=False)
-m.mesh(m.root, "chrome", [cyl(10, 2, at=(0, 0, 18.5), base=True, sides=16)], solid=False)
+    # (20 long, a gap between them: whole segments overlapped at their corners and shared their tops)
+    ring.append(box((20, 8, 1.5), at=(math.cos(a0) * 92, math.sin(a0) * 92, 18.5), rot=(0, math.degrees(a0) + 90, 0), base=True))
+# the cross: one bar whole, the other in two halves butted against it
+m.mesh(m.root, "team", ring + [box((90, 14, 1.5), at=(0, 0, 18.5), base=True)] +
+       [box((14, 38, 1.5), at=(0, s * 26, 18.5), base=True) for s in (-1, 1)], solid=False)
+m.mesh(m.root, "chrome", [cyl(10, 4, at=(0, 0, 18.5), base=True, sides=16)], solid=False)  # 2.5 cm over the cross
 
 # --- the corner posts and their lamps ------------------------------------------------------------------------------
 posts = []

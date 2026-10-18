@@ -128,7 +128,7 @@ def check(tris):
     bins = collections.defaultdict(list)
     for t in tris:
         bins[_key(t.n)].append(t)
-    pairs = collections.defaultdict(lambda: [0, 0.0])
+    pairs = collections.defaultdict(lambda: [0, 0.0, 0.0, None])  # count, area, the largest piece and where it lies
     same = collections.defaultdict(int)  # (mesh, other): triangles of `mesh` lying on a triangle of `other`
     for key, group in bins.items():
         n = group[0].n
@@ -148,7 +148,7 @@ def check(tris):
                 b = group[y]
                 if b.d - a.d > D_TOL:
                     break
-                if _dot(a.n, b.n) < COS_TOL:
+                if _dot(a.n, b.n) < COS_TOL or K.exclusive_parts(a.mesh.split("/")[0], b.mesh.split("/")[0]):
                     continue
                 if b.lo[0] >= a.hi[0] or a.lo[0] >= b.hi[0] or b.lo[1] >= a.hi[1] or a.lo[1] >= b.hi[1]:
                     continue
@@ -174,8 +174,12 @@ def check(tris):
                 if near and all(any(_inside_tri(q, f) for f in near) for q in probes):
                     continue
                 k2 = (a.mesh, b.mesh) if a.mesh < b.mesh else (b.mesh, a.mesh)
-                pairs[k2][0] += 1
-                pairs[k2][1] += area
+                got = pairs[k2]
+                got[0] += 1
+                got[1] += area
+                if area > got[2]:
+                    got[2] = area
+                    got[3] = tuple(n[i] * a.d + u[i] * cu + v[i] * cv for i in range(3))
     return pairs, same
 
 
@@ -297,12 +301,13 @@ def main():
              "`art/models/zfight-allow.txt`)." % (len(models), len(rows)), ""]
     for m, pairs, dups, hid, area in rows:
         lines += ["## %s (%s)" % (m["name"], m["category"]), "",
-                  "| part/material A | part/material B | triangles | area cm2 |", "|---|---|---|---|"]
-        for (a, b), (cnt, ar) in sorted(pairs.items(), key=lambda kv: -kv[1][1]):
+                  "| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |",
+                  "|---|---|---|---|---|"]
+        for (a, b), (cnt, ar, _, at) in sorted(pairs.items(), key=lambda kv: -kv[1][1]):
             mark = lambda s: s + (" (hidden)" if s in hid else "")
-            lines.append("| %s | %s | %d | %.0f |" % (mark(a), mark(b), cnt, ar))
+            lines.append("| %s | %s | %d | %.0f | (%.0f, %.0f, %.0f) |" % (mark(a), mark(b), cnt, ar, *at))
         for a, b in dups:
-            lines.append("| %s | %s | duplicate: every triangle of A lies on B | |" % (a, b))
+            lines.append("| %s | %s | duplicate: every triangle of A lies on B | | |" % (a, b))
         lines.append("")
     if not only:  # a run on a few models leaves the whole catalog's report as it is
         with open(REPORT, "w") as f:

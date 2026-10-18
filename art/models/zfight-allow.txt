@@ -8,7 +8,6 @@ derrick_blue
 foundry_blue
 garrison_blue
 lab_blue
-landingPad_blue
 sentinel_blue
 spacedock_blue
 
@@ -23,13 +22,6 @@ scaffold_sentinel_blue
 scaffold_spacedock_blue
 
 # doodad
-doodad_arch_blue
-doodad_buildSpot_blue
-doodad_derrickRuin_blue
-doodad_sunkHauler_blue
-site_crate_blue
-site_vault_blue
-site_wreck_blue
 
 # resource
 ore_0

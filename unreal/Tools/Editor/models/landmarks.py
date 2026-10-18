@@ -37,7 +37,7 @@ def turned(prims, pitch=0.0, yaw=0.0, roll=0.0, shift=(0.0, 0.0, 0.0)):
 
 # --- arch: a natural sandstone arch, two thick legs, a lane under it along Y -----------------------------------------
 def arch():
-    m = Model("doodad_arch", category="doodad", notes=[
+    m = Model("doodad_arch", category="doodad", coplanar_check=True, notes=[
         "A natural arch of banded sandstone: two thick legs 5.2 cells apart (feet at x = +-2.6, NavGrid::footprint), a "
         "wind-carved span about 5 cells up, strata in three tones, fallen blocks at its feet. A Prospector drives "
         "under it along its own y."])
@@ -56,7 +56,9 @@ def arch():
             w = 172 - 7 * k + rnd.uniform(-8, 8)
             d = 214 - 5 * k + rnd.uniform(-10, 6)
             by[tones[k % 5]].append(box((w, d, h + 2), at=(s * 262 + rnd.uniform(-7, 7) - s * 4 * k, rnd.uniform(-6, 6), z),
-                                        rot=(0, rnd.uniform(-4, 4), rnd.uniform(-2, 2)), base=True))
+                                        rot=(0, rnd.uniform(-1.5, 1.5) + (2.5 if k % 2 else -2.5),
+                                             rnd.uniform(-0.8, 0.8) + (1.2 if k % 2 else -1.2)), base=True))
+            # (neighbours tilted at least 2 degrees apart: two slabs a fraction of a degree apart fought where they meet)
             z += h
     # The span: slabs along a flattened half ellipse from leg to leg, thick at the shoulders.
     cx, cz, rx, rz = 0.0, 280.0, 262.0, 170.0
@@ -65,8 +67,10 @@ def arch():
     for k in range(n):
         a, c = pts[k], pts[k + 1]
         mid = abs(k + 0.5 - n / 2) / (n / 2)       # 0 at the crown, 1 at the shoulders
-        w = 120 + 80 * mid
-        by[tones[(k + 2) % 5]].append(bar((a[0], 0, a[2] - 10), (c[0], 0, c[2] - 10), w, 200 + rnd.uniform(-12, 12)))
+        w = 120 + 80 * mid + (6 if k % 2 else -6)  # (neighbours' widths 12 cm apart: a straight leg's sides met)
+        # (neighbours' depths 16 cm apart: two voussoirs of one depth share their sides where they meet)
+        by[tones[(k + 2) % 5]].append(bar((a[0], 0, a[2] - 10), (c[0], 0, c[2] - 10), w,
+                                          200 + (8 if k % 2 else -8) + rnd.uniform(-2, 2)))
     # A flat cap over the crown, the weathered top, and a ledge.
     by["sandstonePale"].append(box((420, 196, 56), at=(10, 4, 452), rot=(0, 2, 0)))
     by["sandstone"].append(box((300, 180, 40), at=(-30, -6, 492), rot=(0, -3, 1)))
@@ -83,7 +87,7 @@ def arch():
 
 # --- sunk hauler: a dead ore hauler, nose down in the ground, its bed and rear wheels up --------------------------------
 def sunk_hauler():
-    m = Model("doodad_sunkHauler", category="doodad", notes=[
+    m = Model("doodad_sunkHauler", category="doodad", coplanar_check=True, notes=[
         "A dead heavy ore hauler sunk nose first (+X) into the ground: the cab half buried in a drift, the raised ore "
         "bed and the big rear wheels up, yellow paint worn to rust. About 5.3 cells long; its feet are three circles "
         "along x (NavGrid::footprint)."])
@@ -103,12 +107,13 @@ def sunk_hauler():
              box((80, 4, 50), at=(196, 89, 182)), box((80, 4, 50), at=(196, -89, 182)),
              box((6, 150, 60), at=(320, 0, 130))]                                     # grille
     # The ore bed, tipped up at the back as it was dumping when it died.
-    bed = [box((330, 236, 16), at=(-70, 0, 0)),
+    # (the floor between the sides, the front plate 2 cm proud of them: no two faces in one plane)
+    bed = [box((330, 218, 16), at=(-70, 0, 0)),
            box((330, 10, 92), at=(-70, 114, 0), base=True), box((330, 10, 92), at=(-70, -114, 0), base=True),
-           box((12, 236, 120), at=(96, 0, 0), base=True)]
+           box((12, 242, 130), at=(96, 0, -10), base=True)]
     turned(bed, pitch=-14.0, shift=(0, 0, 136))
     yellow += bed
-    rust += turned([box((300, 238, 3), at=(-70, 0, 9))], pitch=-14.0, shift=(0, 0, 136))   # the worn floor
+    rust += turned([box((300, 216, 3), at=(-70, 0, 9))], pitch=-14.0, shift=(0, 0, 136))   # the worn floor
     rust += [box((310, 4, 30), at=(-60, s * 121, 175), rot=(-14, 0, 0)) for s in (-1, 1)]  # rusted rails
     # Wheels: big rear pairs, the front ones going under.
     for x, r in ((-150, 88), (190, 80)):
@@ -133,7 +138,7 @@ def sunk_hauler():
 
 # --- derrick ruin: a bent steel lattice tower, its top section fallen beside it ----------------------------------------
 def derrick_ruin():
-    m = Model("doodad_derrickRuin", category="doodad", notes=[
+    m = Model("doodad_derrickRuin", category="doodad", coplanar_check=True, notes=[
         "The ruin of a drilling derrick: a four-legged steel lattice on a cracked concrete pad, straight to 5.2 m, its "
         "upper part bent over; the snapped top section lies on the ground beside it; a gutted pump housing at its foot. "
         "About 8.5 cells high."])
@@ -152,7 +157,11 @@ def derrick_ruin():
                 out.append(bar((x0 + sx * h0, y0 + sy * h0, z0), (x1 + sx * h1, y1 + sy * h1, z1), 16))
             for k in range(4):
                 (ax, ay), (cx2, cy2) = corners[k], corners[(k + 1) % 4]
-                out.append(bar((x1 + ax * h1, y1 + ay * h1, z1), (x1 + cx2 * h1, y1 + cy2 * h1, z1), rung))
+                # (each rung ends inside its two legs: four rungs meeting in a corner shared their tops)
+                p0, p1 = (x1 + ax * h1, y1 + ay * h1, z1), (x1 + cx2 * h1, y1 + cy2 * h1, z1)
+                ln = math.dist(p0, p1)
+                inset = [(q - p) * 6 / ln for p, q in zip(p0, p1)]
+                out.append(bar(tuple(p + i for p, i in zip(p0, inset)), tuple(q - i for q, i in zip(p1, inset)), rung))
                 # One diagonal a face, alternating.
                 dark.append(bar((x0 + ax * h0, y0 + ay * h0, z0), (x1 + cx2 * h1, y1 + cy2 * h1, z1), brace))
 
@@ -180,7 +189,7 @@ def derrick_ruin():
 
 # --- relay dish: a crashed relay dish on its rim, its mast snapped ------------------------------------------------------
 def relay_dish():
-    m = Model("doodad_relayDish", category="doodad", notes=[
+    m = Model("doodad_relayDish", category="doodad", coplanar_check=True, notes=[
         "A crashed relay dish: a faceted white dish 4 cells across tipped up on its rim, cracked panels, the feed arm "
         "and its dead lamp; its lattice mast snapped and leaning beside it, cables trailing in the dirt."])
     m.material("dishWhite", parent="hull", color=(0.62, 0.61, 0.58), metallic=0.1, roughness=0.55)
@@ -222,7 +231,8 @@ def relay_dish():
             t = k / 6
             z = z0 + (z1 - z0) * t
             x = x0 + (x1 - x0) * t
-            mast.append(box((2 * h0 + 4, 6, 6), at=(x, y0 + h0, z), rot=(0, 0, 0)))
+            # (on the legs' centre at that height, 4 deep: 2.5 cm inside their faces, which it shared)
+            mast.append(box((2 * h0 + 4, 4, 6), at=(x, y0 + h0 + ((y1 + h1) - (y0 + h0)) * t, z), rot=(0, 0, 0)))
     mast_lean = turned(mast, roll=-18.0, shift=(0, 30, 0))
     m.mesh(b, "rustSteel", mast_lean + [box((60, 60, 50), at=(150, -40, 0), rot=(0, 20, 8), base=True)])
     # Cables trailing from the mast to the dish, a mound where the rim dug in.
