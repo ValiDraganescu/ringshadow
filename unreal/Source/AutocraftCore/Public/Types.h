@@ -990,15 +990,30 @@ struct TurretMarks {
     bool operator==(const TurretMarks&) const = default;
 };
 
-/// One of an armed Citadel's four point-defence turrets (D1), at a corner
-/// of its footprint (`Defence::cornerGun`): rapid rotary close-in guns,
-/// each tracking its own target.
+/// One of an armed Citadel's four point-defence turrets (D1), on the roof
+/// deck at a corner (`Defence::cornerGun`): rapid rotary guns that fire
+/// only with a gunner at the gun's station (C1, docs/citadel-interior.md
+/// section 5).
 struct CornerGun {
+    /// What its last shot hit (for the pose); the gun no longer picks one.
     std::optional<int64_t> target;
     double cooldown = 0;
-    /// Where it points, world radians.
+    /// Where it points, world radians, within `Defence::gunArcHalf` of
+    /// `Defence::cornerAngle`.
     double aim = 0;
+    /// Up from level, radians, within `Defence::gunPitchMin` to `gunPitchMax`.
+    double pitch = 0;
+    /// The unit operating it (task `atGun`).
+    std::optional<int64_t> gunner;
     bool operator==(const CornerGun&) const = default;
+};
+
+/// A Citadel's door (C1): 0 shut … 1 open, and the way it moves
+/// (`Rules::doorSeconds` end to end). Passable at `Simulation::doorOpen`.
+struct Door {
+    double open = 0;
+    bool opening = false;
+    bool operator==(const Door&) const = default;
 };
 
 struct AUTOCRAFTCORE_API Structure {
@@ -1040,6 +1055,9 @@ struct AUTOCRAFTCORE_API Structure {
     std::optional<TurretMarks> marks;
     /// An armed Citadel's four corner turrets (set with `marks`).
     std::optional<std::array<CornerGun, 4>> guns;
+    /// A complete Citadel's door (C1; set on completion by the core, and on
+    /// the realm's Citadels by the server). Not saved: a loaded one starts shut.
+    std::optional<Door> door;
 
     /// For decoding; Swift has only the init below.
     Structure() = default;
@@ -1214,6 +1232,9 @@ struct AUTOCRAFTCORE_API Unit {
         /// A Prospector on an errand of its AI's (`mission`): scouting
         /// (`.raid`), or pulled off the ore to fight (`.hunt`).
         errand,
+        /// C1: a pilot at one of the Citadel `structure`'s corner guns,
+        /// standing at its station (`Defence::gunStation`).
+        atGun,
     };
     int64_t id = 0;
     Kind kind = Kind::prospector;
@@ -1812,9 +1833,10 @@ template <> struct EnumInfo<DefenceStat> {
     static constexpr std::array<std::string_view, 4> names{"rate", "damage", "range", "air"};
 };
 template <> struct EnumInfo<Unit::Task> {
-    static constexpr std::array<std::string_view, 18> names{
+    static constexpr std::array<std::string_view, 19> names{
         "idle", "toPatch", "mining", "toBase", "depositing", "waiting", "toBuild", "building", "toRally",
-        "attackMove", "attacking", "toBastion", "inBastion", "repairing", "toDerrick", "inDerrick", "aboard", "errand"};
+        "attackMove", "attacking", "toBastion", "inBastion", "repairing", "toDerrick", "inDerrick", "aboard", "errand",
+        "atGun"};
 };
 template <> struct EnumInfo<Upgrade> {
     static constexpr std::array<std::string_view, 4> names{"minigun", "aegisShield", "novaIgniters", "lifelineReactor"};

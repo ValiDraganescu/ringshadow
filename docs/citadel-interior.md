@@ -29,6 +29,16 @@ The units stay as they are (one cell is 1 m, `AcSpace.h`; a Prospector is
 | Doorway | – | the +y face, x in [-1.5, 1.5], 3.0 wide, 3.0 tall |
 | Corner guns, `Defence::cornerInset` | 2.0 | 5.5 (the mounts at (±5.5, ±5.5), radius 0.5, on the deck at z 7.0) |
 
+The hall is the MMO's: `Rules::setCitadelHall(bool)` / `citadelHall()`
+switch it for the whole process (an atomic, read on every region's
+thread). The MMO's start and the server turn it on, the strategy game's
+start turns it off (its maps, AI layouts and Swift goldens are built round
+the solid 5x5 Citadel); every game start sets it, both ways. `Rules::radius`,
+`Rules::footprint`, `Rules::height` (the body height, 9.0 / 4.6, which
+`BuildingHeight` reads), `Defence::cornerInset()` (5.5 / 2.0) and
+`Defence::stationInset()` all read it, so nothing half-switches. The core
+tests set it per test (`simtest::CitadelHall`).
+
 Everything that reads `Rules::radius` follows (deposit reach, unload reach,
 spawn at the door, placement, the map's footprint). A 12×12 Citadel needs
 flatter ground to place: the core keeps `placementRefusal`'s height-spread
@@ -49,13 +59,15 @@ struct Footprint {
     std::optional<Slab> door;      // solid while the door is not open
     std::optional<Slab> interior;  // the hall: inside it a unit is sheltered
     std::optional<Slab> roof;      // over the interior (the camera's ceiling)
-    bool blocks(Vec2 local, bool doorOpen, double grow) const;  // walls (+ door if closed), each grown by `grow`
+    bool blocks(Vec2 local, bool doorOpen, double grow) const;  // walls on the ground (+ door if closed), each grown by `grow`
     bool inside(Vec2 local) const;                               // in `interior`
 };
 ```
 
-Every kind but the Citadel: one wall slab ±radius, z 0 to its body height, no
-door, no interior. The Citadel:
+Every kind but the Citadel (and the Citadel without the hall): one wall slab
+±radius, z 0 to its body height, no door, no interior. The Citadel with the
+hall (`blocks` leaves out a wall that starts above the ground, the lintel, so
+the open doorway is walkable):
 
 | Slab | x | y | z |
 |---|---|---|---|

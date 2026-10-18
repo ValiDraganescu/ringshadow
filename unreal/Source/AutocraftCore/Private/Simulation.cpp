@@ -3146,6 +3146,11 @@ void Simulation::stepUnit(Unit& u, double dt, std::vector<GameEvent>& events) {
     case Task::errand:
         u.task = Task::idle;
         break;
+    case Task::atGun:
+        // No one drives it now: it steps away (its gun is freed next step).
+        u.task = Task::idle;
+        u.structure = std::nullopt;
+        break;
     }
 }
 

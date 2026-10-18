@@ -2,6 +2,7 @@
 
 #include "Defence.h"
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 
@@ -9,12 +10,28 @@ namespace ac {
 
 Vec2 Defence::cornerGun(Vec2 citadel, int i) {
     const double sx = (i == 0 || i == 3) ? 1 : -1, sy = i < 2 ? 1 : -1;
-    return {citadel.x + sx * cornerInset, citadel.y + sy * cornerInset};
+    return {citadel.x + sx * cornerInset(), citadel.y + sy * cornerInset()};
 }
 
 double Defence::cornerAngle(int i) {
     const double sx = (i == 0 || i == 3) ? 1 : -1, sy = i < 2 ? 1 : -1;
     return std::atan2(sy, sx);
+}
+
+Vec2 Defence::gunStation(Vec2 citadel, int i) {
+    const double sx = (i == 0 || i == 3) ? 1 : -1, sy = i < 2 ? 1 : -1;
+    return {citadel.x + sx * stationInset(), citadel.y + sy * stationInset()};
+}
+
+Vec3 Defence::gunEye(Vec2 citadel, int i, double aim) {
+    const Vec2 m = cornerGun(citadel, i) - Vec2(std::cos(aim), std::sin(aim)) * 0.6;
+    return {m.x, m.y, deckHeight + 0.9};
+}
+
+double Defence::clampAim(int i, double aim) {
+    const double rest = cornerAngle(i);
+    const double off = std::remainder(aim - rest, 2 * pi);
+    return std::remainder(rest + std::clamp(off, -gunArcHalf, gunArcHalf), 2 * pi);
 }
 
 UnitStats Defence::apply(UnitStats w, const TurretMarks& m) {

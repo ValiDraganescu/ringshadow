@@ -21,6 +21,16 @@ namespace simtest {
 
 using namespace ac;
 
+/// Sets the Citadel's hall (`Rules::setCitadelHall`) for a test's scope and
+/// puts back what it was.
+struct CitadelHall {
+    bool was;
+    explicit CitadelHall(bool on) : was(Rules::citadelHall()) { Rules::setCitadelHall(on); }
+    ~CitadelHall() { Rules::setCitadelHall(was); }
+    CitadelHall(const CitadelHall&) = delete;
+    CitadelHall& operator=(const CitadelHall&) = delete;
+};
+
 /// The handcrafted map for the machine it was drawn for (`map()` of
 /// GameCoreTests.swift), made once.
 inline const MapDefinition& homeMap() {

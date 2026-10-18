@@ -48,12 +48,39 @@ struct AUTOCRAFTCORE_API Defence {
                                                     int64_t ore, int64_t hydrogen);
 
     /// An armed Citadel's corner turret `i` (0 to 3: +x+y, -x+y, -x-y,
-    /// +x-y): where it stands, its mount's radius, and the way it faces at
-    /// rest (out from the corner).
-    static constexpr double cornerInset = 2.0;
+    /// +x-y): where it stands (on the roof deck's pylons, C1), its mount's
+    /// radius, and the way it faces at rest (out from the corner).
+    /// 5.5 cells from the centre along each axis with the hall (the
+    /// pylons at the deck's corners, `Rules::citadelHall`), 2 without.
+    static double cornerInset() { return Rules::citadelHall() ? 5.5 : 2.0; }
     static constexpr double cornerRadius = 0.5;
     static Vec2 cornerGun(Vec2 citadel, int i);
     static double cornerAngle(int i);
+
+    /// C1 (docs/citadel-interior.md section 5): a corner gun fires only with
+    /// a gunner at its station. It points within `gunArcHalf` either side of
+    /// `cornerAngle(i)` (220 degrees in all: the hull lies in the other 140,
+    /// so the barrels never cross it) and `gunPitchMin` to `gunPitchMax` up
+    /// from level.
+    static constexpr double gunArcHalf = 110.0 * pi / 180.0;
+    static constexpr double gunPitchMin = -20.0 * pi / 180.0;
+    static constexpr double gunPitchMax = 50.0 * pi / 180.0;
+    /// The roof deck the mounts stand on, cells up from the Citadel's ground.
+    static constexpr double deckHeight = 7.0;
+    /// Where gun `i`'s gunner stands, in the hall: 4 cells from the centre
+    /// along each axis, in the gun's quadrant. Without the hall there is no
+    /// station (inside the solid Citadel: `man` refuses, nothing is sheltered).
+    static double stationInset() { return Rules::citadelHall() ? 4.0 : 1.5; }
+    static Vec2 gunStation(Vec2 citadel, int i);
+    /// A pilot within this many cells of a station mans its gun.
+    static constexpr double stationReach = 1.5;
+    /// Gun `i`'s camera (the game's view at a gun): over the mount by 0.9
+    /// cells (z from the Citadel's ground), 0.6 cells back from the mount
+    /// along `aim`.
+    static Vec3 gunEye(Vec2 citadel, int i, double aim);
+    /// `aim` (world radians) held within gun `i`'s arc, at its hard stops
+    /// (no wrap: past a stop it stays at that stop).
+    static double clampAim(int i, double aim);
 
     /// `w` with `m` applied.
     static UnitStats apply(UnitStats w, const TurretMarks& m);

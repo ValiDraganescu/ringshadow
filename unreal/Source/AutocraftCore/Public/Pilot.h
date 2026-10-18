@@ -42,6 +42,9 @@ struct Pilot {
     Vec2 walk{0, 0};
     /// Where it faces, world radians (0 = +X, π/2 = +Z), from the mouse.
     double heading = 0;
+    /// C1: how far up it looks, radians (0 level). Only a gunner's counts:
+    /// it aims its gun (`CornerGun::pitch`).
+    double pitch = 0;
     /// The action key went down since the last step (enter a Derrick,
     /// pick up a paused building, place one).
     bool act = false;

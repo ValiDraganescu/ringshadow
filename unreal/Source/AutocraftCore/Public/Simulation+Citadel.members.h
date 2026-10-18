@@ -1,0 +1,45 @@
+// Members of `class Simulation` for the Citadel's interior (C1,
+// docs/citadel-interior.md): the door, the shelter, the manned corner guns.
+// Included inside the class body by Simulation.h. Bodies in
+// Private/Simulation+Citadel.cpp. (No include guard: it is a fragment of a
+// class body.)
+
+public:
+    /// `u` is safe from everything: at a corner gun (`atGun`), or standing
+    /// in the hall (`Footprint::inside`) of a complete Citadel of its side.
+    /// The doorway is outside. Nothing targets a sheltered unit, and a hit
+    /// on it does nothing.
+    bool sheltered(const Unit& u) const;
+    /// A Citadel's door is open enough to walk through (`Door::open` 0.95).
+    static bool doorOpen(const Structure& s);
+    /// Why unit `u` can't open (`open`) or close the door of `s` now, or nil:
+    /// `s` a complete Citadel; to open, `u` within `Rules::doorReach` of the
+    /// door slab (either side); to close, `u` in the hall and no unit in the
+    /// doorway (the door slab grown by each unit's radius). The server checks
+    /// the rest (the unit complete, the Citadel the realm's).
+    std::optional<std::string> doorRefusal(const Structure& s, bool open, const Unit& u) const;
+    /// Unit `unit` opens or closes the door of building `structure`; the
+    /// refusal (`doorRefusal`, or no such unit or building), or nil once
+    /// the door is on its way.
+    std::optional<std::string> door(int64_t unit, int64_t structure, bool open);
+    /// Unit `unit` takes corner gun `gun` (0 to 3) of the Citadel
+    /// `structure`: it must be sheltered, within `Defence::stationReach` of
+    /// the gun's station, and the gun free. It then stands at the station
+    /// with task `atGun`. The refusal, or nil.
+    std::optional<std::string> man(int64_t unit, int64_t structure, int gun);
+    /// Unit `unit` leaves the gun it mans (nothing when it mans none).
+    void unman(int64_t unit);
+    /// The gun unit `u` mans (its Citadel's index into `state.structures`
+    /// and the gun), if any.
+    std::optional<std::pair<size_t, int>> mannedGun(const Unit& u) const;
+
+    /// Each step: every door moves toward its way (`Rules::doorSeconds`
+    /// end to end); a gun whose gunner is dead, gone or no longer at it is
+    /// freed; a Citadel just finished gets its door.
+    void stepCitadels(double dt);
+    /// One corner gun `i` of `s` with weapon `w` (C1): no gunner, it turns
+    /// back to rest and never fires; with one, it aims where the gunner
+    /// looks (within its arc and pitch) and fires on the act or hold key at
+    /// the gunner's crosshair foe within range and 0.25 rad of the aim, or a
+    /// miss along the aim.
+    void stepCornerGun(Structure& s, int i, const UnitStats& w, double dt, std::vector<GameEvent>& events);

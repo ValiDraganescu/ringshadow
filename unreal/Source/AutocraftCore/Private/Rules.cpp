@@ -2,6 +2,7 @@
 #include "Rules.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 
 namespace ac {
@@ -56,14 +57,87 @@ int64_t Rules::supply(StructureKind k) {
     }
 }
 
-/// Half the footprint side: 5x5 Citadel; 3x3 Garrison, Bastion,
-/// Derrick, Foundry, Spacedock and Landing Pad; 2x2 Hab Dome, Lab and Sentinel.
+namespace {
+// Read on every region's thread, written only at a game's start.
+std::atomic<bool> hall{false};
+} // namespace
+
+void Rules::setCitadelHall(bool on) { hall.store(on, std::memory_order_relaxed); }
+bool Rules::citadelHall() { return hall.load(std::memory_order_relaxed); }
+
+/// Half the footprint side: 12x12 Citadel with the hall (5x5 without);
+/// 3x3 Garrison, Bastion, Derrick, Foundry, Spacedock and Landing Pad; 2x2
+/// Hab Dome, Lab and Sentinel.
 double Rules::radius(StructureKind k) {
     switch (k) {
-    case StructureKind::citadel: return 2.5;
+    case StructureKind::citadel: return citadelHall() ? 6.0 : 2.5;
     case StructureKind::habDome: case StructureKind::lab: case StructureKind::sentinel: case StructureKind::gatling: return 1;
     default: return 1.5;
     }
+}
+
+double Rules::height(StructureKind k) {
+    // GameScene.makeBuilding (GameScene.swift:363); Models.labHeight 1.9.
+    switch (k) {
+    case StructureKind::citadel: return citadelHall() ? 9.0 : 4.6;
+    case StructureKind::habDome: return 1.2;
+    case StructureKind::garrison: return 2.5;
+    case StructureKind::bastion: return 1.4;
+    case StructureKind::derrick: return 2.5;
+    case StructureKind::foundry: return 2.4;
+    case StructureKind::spacedock: return 3.2;
+    case StructureKind::lab: return 1.9;
+    case StructureKind::sentinel: return 1.7;
+    case StructureKind::gatling: return 1.3;
+    case StructureKind::landingPad: return 0.18;
+    }
+    return 2.0;
+}
+
+bool Footprint::blocks(Vec2 local, bool doorOpen, double grow) const {
+    for (const Slab& w : walls) {
+        // A slab off the ground (the lintel over the door) is overhead.
+        if (w.z0 <= 0 && w.contains(local, grow)) return true;
+    }
+    return door && !doorOpen && door->contains(local, grow);
+}
+
+bool Footprint::inside(Vec2 local) const { return interior && interior->contains(local); }
+
+const Footprint& Rules::footprint(StructureKind k) {
+    // docs/citadel-interior.md section 2. With the hall, the Citadel's walls
+    // 1 thick round a 10x10 hall 6 high, the roof slab 6 to 7, the doorway
+    // in the +y face 3 wide and 3 tall under a lintel. Every other kind (and
+    // the Citadel without the hall): its whole square, as tall as its body.
+    using Table = std::array<Footprint, size_t(StructureKind::landingPad) + 1>;
+    auto make = [](bool withHall) {
+        Table t;
+        for (size_t i = 0; i < t.size(); i++) {
+            const StructureKind kind = StructureKind(i);
+            Footprint& f = t[i];
+            if (kind != StructureKind::citadel || !withHall) {
+                f.radius = kind == StructureKind::citadel ? 2.5 : radius(kind);
+                const double z1 = kind == StructureKind::citadel ? 4.6 : height(kind);
+                f.walls = {Slab{{-f.radius, -f.radius}, {f.radius, f.radius}, 0, z1}};
+                continue;
+            }
+            f.radius = 6.0;
+            f.walls = {
+                Slab{{-6, 5}, {-1.5, 6}, 0, 7},  // +y, left of the door
+                Slab{{1.5, 5}, {6, 6}, 0, 7},    // +y, right of the door
+                Slab{{-1.5, 5}, {1.5, 6}, 3, 7}, // the lintel
+                Slab{{-6, -6}, {6, -5}, 0, 7},   // -y
+                Slab{{-6, -5}, {-5, 5}, 0, 7},   // -x
+                Slab{{5, -5}, {6, 5}, 0, 7},     // +x
+            };
+            f.door = Slab{{-1.5, 5}, {1.5, 6}, 0, 3};
+            f.interior = Slab{{-5, -5}, {5, 5}, 0, 6};
+            f.roof = Slab{{-5, -5}, {5, 5}, 6, 7};
+        }
+        return t;
+    };
+    static const Table withHall = make(true), without = make(false);
+    return (citadelHall() ? withHall : without)[size_t(k)];
 }
 
 /// A building needs one of these finished first (the tech tree).

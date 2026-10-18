@@ -119,6 +119,17 @@ level order, every perk name starts with its kind's raw name. `balance()` and
 `signature()` must produce the same golden (`core-tests/golden/leveling.json` does not
 change).
 
+### Core: the Citadel's hall switch (C1)
+
+One rule is per mode, not per kind: `Rules::setCitadelHall(bool)` makes the
+Citadel the MMO's 12x12 hall (on) or the strategy game's solid 5x5 (off),
+for the whole process. Every reader of the Citadel's size goes through it:
+`Rules::radius`, `Rules::footprint`, `Rules::height`,
+`Defence::cornerInset()`, `Defence::stationInset()`. Each game start sets
+it (the MMO's and the server's on, the strategy game's off); never read a
+Citadel number from anywhere else ([citadel-interior.md](citadel-interior.md)
+section 1).
+
 ### Net: widths from the count
 
 `kKindBits = bitsFor(EnumInfo<UnitKind>::count)` (4 today), `Enum<UnitKind, kKindBits>`,

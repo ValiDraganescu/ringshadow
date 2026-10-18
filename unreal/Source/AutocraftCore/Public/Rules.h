@@ -192,6 +192,42 @@ struct UnitStats {
     bool operator==(const UnitStats&) const = default;
 };
 
+/// An axis-aligned box of a building's solid parts (C1,
+/// docs/citadel-interior.md section 2), cells in the building's own frame
+/// (relative to `Structure::position`), `z0` to `z1` up from its ground.
+struct Slab {
+    Vec2 min, max;
+    double z0 = 0, z1 = 0;
+    /// `local` is on it seen from above, the slab grown by `grow` on every side.
+    bool contains(Vec2 local, double grow = 0) const {
+        return local.x > min.x - grow && local.x < max.x + grow && local.y > min.y - grow && local.y < max.y + grow;
+    }
+    bool operator==(const Slab&) const = default;
+};
+
+/// A kind's solid parts (`Rules::footprint`): one truth for the pilot's
+/// walk, the cameras' sweep and the shelter. Every kind but the Citadel is
+/// one wall slab of its whole square; the Citadel is a hollow hall with a
+/// door in its +y face.
+struct AUTOCRAFTCORE_API Footprint {
+    /// The bounding half side (= `Rules::radius`).
+    double radius = 0;
+    /// Solid, always.
+    std::vector<Slab> walls;
+    /// Solid while the door is not open (`Simulation::doorOpen`).
+    std::optional<Slab> door;
+    /// The hall: inside it a unit is sheltered.
+    std::optional<Slab> interior;
+    /// Over the interior (the cameras' ceiling).
+    std::optional<Slab> roof;
+    /// `local` is on a wall standing on the ground (the lintel is overhead),
+    /// or on the door while it is shut, each grown by `grow`: where a
+    /// walker can't stand.
+    bool blocks(Vec2 local, bool doorOpen, double grow) const;
+    /// `local` is in the interior (the doorway is not).
+    bool inside(Vec2 local) const;
+};
+
 /// The game's numbers, in real seconds.
 struct AUTOCRAFTCORE_API Rules {
     /// Prospector move speed, cells per second.
@@ -332,9 +368,29 @@ struct AUTOCRAFTCORE_API Rules {
     static int64_t hydrogenCost(StructureKind k);
     static double buildTime(StructureKind k);
     static int64_t supply(StructureKind k);
-    /// Half the footprint side: 5x5 Citadel; 3x3 Garrison, Bastion,
-    /// Derrick, Foundry, Spacedock and Landing Pad; 2x2 Hab Dome, Lab, Sentinel and gatling gun.
+    /// The Citadel's hall (C1, docs/citadel-interior.md section 1): on, a
+    /// Citadel is 12x12 cells, hollow, with a door and manned corner guns
+    /// (the MMO); off, the strategy game's solid 5x5 one. One switch for the
+    /// process, set at every game start: the MMO's start and the server turn
+    /// it on, the strategy game's start turns it off. `radius`, `footprint`,
+    /// `height`, `Defence::cornerInset` and the gun stations all read it.
+    static void setCitadelHall(bool on);
+    static bool citadelHall();
+    /// Half the footprint side: 12x12 Citadel with the hall (5x5 without);
+    /// 3x3 Garrison, Bastion, Derrick, Foundry, Spacedock and Landing Pad;
+    /// 2x2 Hab Dome, Lab, Sentinel and gatling gun.
     static double radius(StructureKind k);
+    /// Its solid parts: walls, the door, the hall, the roof (C1).
+    static const Footprint& footprint(StructureKind k);
+    /// How tall its body stands, cells (the game's model and pose; a hall
+    /// Citadel's deck is at `Defence::deckHeight`, its pylons, tower, dish
+    /// and beacon above).
+    static double height(StructureKind k);
+    /// A Citadel's door runs from shut to open (and back) in this long.
+    static constexpr double doorSeconds = 2.5;
+    /// A pilot opens the door standing within this many cells of the door
+    /// slab, on either side.
+    static constexpr double doorReach = 2.0;
     /// Units walk over it (F2: a Landing Pad is a deck on the ground, the
     /// Prospector stands on it to call the Dropship and steps out onto it).
     static bool walkable(StructureKind k) { return k == StructureKind::landingPad; }
