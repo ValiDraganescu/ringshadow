@@ -120,8 +120,15 @@ struct Heap4 {
                 const size_t f = 4 * c + 1;
                 if (f >= n) break;
                 size_t m = f;
-                const size_t end = f + 4 < n ? f + 4 : n;
-                for (size_t k = f + 1; k < end; k++) if (a[k].first < a[m].first) m = k;
+                if (f + 4 <= n) {
+                    // All four: the first of the least, by pairs (the same
+                    // pick as the scan below, without its chain).
+                    const size_t m01 = a[f + 1].first < a[f].first ? f + 1 : f;
+                    const size_t m23 = a[f + 3].first < a[f + 2].first ? f + 3 : f + 2;
+                    m = a[m23].first < a[m01].first ? m23 : m01;
+                } else {
+                    for (size_t k = f + 1; k < n; k++) if (a[k].first < a[m].first) m = k;
+                }
                 if (!(a[m].first < last.first)) break;
                 a[c] = a[m];
                 c = m;

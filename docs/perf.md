@@ -538,3 +538,27 @@ is SQLite's page granularity. The rows are small (the frontier's state
 4 KB, the pilot's row about 6 KB, 79 deposits, a few units), and a save
 touches some 14 pages of 4 KB across the tables and their B-trees. Writing
 fewer would mean another layout of the file: left.
+
+### Round 12: the search's heap picks its child by pairs (2026-10-18)
+
+The Brood's path searches are half of every busy MMO step (the nest, a
+raid, a canyon wave). Their order cannot change: among equal costs the
+cell reached first wins (`came`), so another queue would give other paths
+of the same length. The 4-ary heap (`Heap4`) stays, with the same picks:
+`popCell` chose the first least of a node's four children with a chain of
+three dependent compares, mispredicted half the time; with all four there
+it now takes the first least of each pair, then of the two winners, the
+earlier on a tie: the same child, every time.
+
+| 3-4 runs each in turns, load 8 | before | after |
+|---|---:|---:|
+| `pathbench` (20,000 searches on the nest's grid), a search | 10.35-10.50 µs (p99 181-183) | 8.96-9.05 µs (p99 154-155) |
+| `worldbench 60 worlds/first.json nest`, the step | 0.046-0.047 ms (p95 0.134-0.138) | 0.040-0.041 ms (p95 0.116-0.118) |
+
+The same paths (`pathbench`'s hash), and every state and wire hash of
+`worldbench`, `crowdbench` and `snapbench` the same.
+
+Measured, not changed: the snapshot's build per pilot (3-5 µs) is 70% the
+copy of the region's fog into it (two 55 KB arrays and a large allocation
+a snapshot); sharing them would change `net::Snapshot`'s type, which the
+client reads too.
