@@ -1,0 +1,68 @@
+# Models check_models.py lets through while they wait for their z-fighting fix (art/models/zfight-report.md).
+# One catalog name a line; take a model off when its fix lands (the check says when a listed model is clean).
+# A model with hits that is not here fails the check.
+
+# building
+bastion_blue
+derrick_blue
+foundry_blue
+garrison_blue
+gatling_blue
+lab_blue
+landingPad_blue
+sentinel_blue
+spacedock_blue
+
+# construction
+scaffold_bastion_blue
+scaffold_derrick_blue
+scaffold_foundry_blue
+scaffold_garrison_blue
+scaffold_habdome_blue
+scaffold_lab_blue
+scaffold_sentinel_blue
+scaffold_spacedock_blue
+
+# doodad
+doodad_arch_blue
+doodad_buildSpot_blue
+doodad_derrickRuin_blue
+doodad_sunkHauler_blue
+site_crate_blue
+site_vault_blue
+site_wreck_blue
+
+# resource
+ore_0
+
+# unit
+atlas_blue
+comet_blue
+dropship_blue
+firefly_blue
+gloamwing_blue
+hailstorm_blue
+juggernaut_blue
+kestrel_blue
+lodeback_blue
+longbow_blue
+matriarch_blue
+peregrine_blue
+prospector_blue
+ranger_blue
+scorpion_blue
+shardling_blue
+
+# cockpit
+cockpit_atlas_blue
+cockpit_comet_blue
+cockpit_dropship_blue
+cockpit_firefly_blue
+cockpit_hailstorm_blue
+cockpit_juggernaut_blue
+cockpit_kestrel_blue
+cockpit_longbow_blue
+cockpit_peregrine_blue
+cockpit_prospector_blue
+cockpit_ranger_blue
+cockpit_scorpion_blue

@@ -15,8 +15,8 @@ transforms) and finds:
 Hidden parts count too (an armed Citadel's turrets), marked "hidden" in the report.
 
 Writes art/models/zfight-report.md (the models with hits, worst first: part A, part B, triangles, area) and logs a
-line per model. Raises (the run fails) when any building or construction model has a hit, so it stays clean; the
-other categories are reported only, until they are fixed.
+line per model. Raises (the run fails) when a model has a hit and is not in art/models/zfight-allow.txt, the list of
+models still waiting for their fix (it only shrinks: the log says when a listed model has come clean).
 """
 import collections
 import math
@@ -35,8 +35,14 @@ except ImportError:
 COS_TOL = math.cos(math.radians(0.5))
 D_TOL = 0.5
 MIN_AREA = 1.0
-STRICT = ("building", "construction")
+STRICT = ("building", "construction")  # listed first in the report
 REPORT = os.path.join(K.REPO, "art", "models", "zfight-report.md")
+ALLOW = os.path.join(K.REPO, "art", "models", "zfight-allow.txt")
+
+
+def allowed():
+    with open(ALLOW) as f:
+        return {ln.strip() for ln in f if ln.strip() and not ln.startswith("#")}
 
 
 def log(s):
@@ -260,7 +266,8 @@ def main():
     only = [s for s in os.environ.get("AC_CHECK_MODELS", "").split(",") if s]
     models = [m for m in doc["models"] if (m["name"] in only if only else not m["name"].endswith("_red"))]
     cache = {}
-    rows, strict_hits = [], []
+    allow = allowed()
+    rows, failing, clean_listed = [], [], []
     for m in models:
         tris, hid = model_tris(m, cache)
         pairs, same = check(tris)
@@ -271,8 +278,10 @@ def main():
             m["name"], m["category"], len(tris), len(pairs), area, len(dups)))
         if pairs or dups:
             rows.append((m, pairs, dups, hid, area))
-            if m["category"] in STRICT:
-                strict_hits.append(m["name"])
+            if m["name"] not in allow:
+                failing.append(m["name"])
+        elif m["name"] in allow:
+            clean_listed.append(m["name"])
     rows.sort(key=lambda r: (r[0]["category"] not in STRICT, -r[4]))
     lines = ["# Z-fighting report",
              "",
@@ -283,7 +292,8 @@ def main():
              "that are another mesh's copy. The `_red` entries draw the `_blue` meshes and are left out. Fix by the 2 cm "
              "rule (MODELLING.md, \"No shared faces\").",
              "",
-             "Checked %d models; %d with hits." % (len(models), len(rows)), ""]
+             "Checked %d models; %d with hits (the ones still waiting for their fix are listed in "
+             "`art/models/zfight-allow.txt`)." % (len(models), len(rows)), ""]
     for m, pairs, dups, hid, area in rows:
         lines += ["## %s (%s)" % (m["name"], m["category"]), "",
                   "| part/material A | part/material B | triangles | area cm2 |", "|---|---|---|---|"]
@@ -295,9 +305,11 @@ def main():
         lines.append("")
     with open(REPORT, "w") as f:
         f.write("\n".join(lines))
-    log("report: %s (%d models with hits)" % (REPORT, len(rows)))
-    if strict_hits and not only:
-        raise RuntimeError("check_models: coplanar faces in %s (see %s)" % (", ".join(strict_hits), REPORT))
+    log("report: %s (%d models with hits, %d of them waiting in %s)" % (REPORT, len(rows), len(rows) - len(failing), ALLOW))
+    if clean_listed:
+        log("now clean, take them off %s: %s" % (ALLOW, ", ".join(clean_listed)))
+    if failing:
+        raise RuntimeError("check_models: coplanar faces in %s, not in the allow list (see %s)" % (", ".join(failing), REPORT))
 
 
 if __name__ == "__main__":

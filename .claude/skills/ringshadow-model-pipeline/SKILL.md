@@ -79,7 +79,7 @@ Run the model script (hidden run, below). It writes the static meshes, the mater
 
 Done when `/Game/Models/<model>/` holds one `SM_<part>__<material>` per catalog mesh, the catalog parses (the game starts and `AAcModelRow` shows the model) and the blue and red teams both draw.
 
-Then check for z-fighting, every time a model changes: `uv run unreal/Tools/hidden_run.py --out DIR --python unreal/Tools/Editor/check_models.py` (`AC_CHECK_MODELS=<name>_blue,...` for a few models). It finds triangles of the catalog's meshes that share a plane where someone can see them, and duplicated parts, writes `art/models/zfight-report.md`, and fails while any building or scaffold has a hit. Fix by the 2 cm rule (MODELLING.md, "No shared faces"); a Geometry Script model also gets `coplanar_check=True`.
+Then check for z-fighting, every time a model changes: `uv run unreal/Tools/hidden_run.py --out DIR --python unreal/Tools/Editor/check_models.py` (`AC_CHECK_MODELS=<name>_blue,...` for a few models). It finds triangles of the catalog's meshes that share a plane where someone can see them, and duplicated parts, writes `art/models/zfight-report.md`, and fails on a model with hits that is not in `art/models/zfight-allow.txt` (the models still waiting for their fix; take yours off when it is clean). Fix by the 2 cm rule (MODELLING.md, "No shared faces"); a Geometry Script model also gets `coplanar_check=True`.
 
 ### 7. Review renders
 
