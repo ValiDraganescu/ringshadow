@@ -99,9 +99,9 @@ double AcCitadelAct::LookPitch(const double Pitch)
 	return FMath::Clamp(Pitch, ac::Defence::gunPitchMin, ac::Defence::gunPitchMax);
 }
 
-FVector AcCitadelAct::Eye(const ac::Structure& Citadel, const double GroundCells, const int32 Gun, const double Yaw)
+FVector AcCitadelAct::Eye(const ac::Structure& Citadel, const double GroundCells, const int32 Gun, const double Yaw, const double Pitch)
 {
-	const ac::Vec3 E = ac::Defence::gunEye(Citadel.position, FMath::Clamp(Gun, 0, 3), Yaw);
+	const ac::Vec3 E = ac::Defence::gunEye(Citadel.position, FMath::Clamp(Gun, 0, 3), Yaw, LookPitch(Pitch));
 	return AcSpace::ToWorld(ac::Vec2(E.x, E.y), GroundCells + E.z);
 }
 

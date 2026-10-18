@@ -140,8 +140,8 @@ bool FAcPilotGunLookTest::RunTest(const FString&)
 	const ac::Vec2 Was = AcSpace::Origin();
 	AcSpace::SetOrigin(ac::Vec2(0, 0));
 	const ac::Structure S = Citadel();
-	const ac::Vec3 E = ac::Defence::gunEye(S.position, 0, 0.5);
-	const FVector Eye = AcCitadelAct::Eye(S, 2.0, 0, 0.5);
+	const ac::Vec3 E = ac::Defence::gunEye(S.position, 0, 0.5, 0.3);
+	const FVector Eye = AcCitadelAct::Eye(S, 2.0, 0, 0.5, 0.3);
 	TestTrue(TEXT("the eye over the deck"), Eye.Equals(FVector(E.x * 100, E.y * 100, (2.0 + E.z) * 100), 0.01));
 	TestTrue(TEXT("the eye up on the roof"), E.z > ac::Defence::deckHeight);
 	AcSpace::SetOrigin(Was);
@@ -287,7 +287,9 @@ bool FAcPoseCitadelRampTest::RunTest(const FString&)
 	P = Scene.Pose(Site);
 	TestTrue(TEXT("building: hall dark"), FMath::IsNearlyEqual(P.Emission[Scene.Part(TEXT("hallLamps_0"))], 0.05f, 0.001f));
 	TestFalse(TEXT("building: no turrets"), P.Visible[Scene.Part(TEXT("turrets_0"))]);
-	TestTrue(TEXT("building: the Citadel is 9 cells"), FMath::IsNearlyEqual(AcPose::BuildingHeight(ac::StructureKind::citadel), 9.0, 1e-9));
+	TestTrue(TEXT("the Citadel stands as tall as the core says"),
+		FMath::IsNearlyEqual(AcPose::BuildingHeight(ac::StructureKind::citadel), ac::Rules::height(ac::StructureKind::citadel), 1e-9)
+			&& AcPose::BuildingHeight(ac::StructureKind::citadel) > ac::Defence::deckHeight);
 	return true;
 }
 

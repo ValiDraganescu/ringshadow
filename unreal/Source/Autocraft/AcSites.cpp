@@ -212,6 +212,7 @@ void AAcSites::Place(const FAcMmoClient& Mmo, const FString& Region)
 		S.Id = P.Id;
 		S.Staged = Staged;
 		S.Seed = GetTypeHash(P.Id);
+		S.Ground = G;
 		// A crashed lander lies half in the ground.
 		S.At = AcSpace::ToWorld(G, Ground - (P.Kind == ac::SiteKind::wreck ? 0.22 : 0.0));
 		S.Tall = FMath::Clamp(Info->Bounds.IsValid ? Info->Bounds.Max.Z : 100.0, 80.0, 300.0);
@@ -312,8 +313,25 @@ void AAcSites::Tick(const float DeltaSeconds)
 	const FVector Camera = PC && PC->PlayerCameraManager ? PC->PlayerCameraManager->GetCameraLocation() : FVector::ZeroVector;
 	const AAcDaylight* Day = AAcDaylight::Find(GetWorld());
 	const double Dark = Day ? FMath::Clamp(double(Day->GetDark()), 0.0, 1.0) : 0.0;
+	const ac::Simulation* Mirror = Mmo->Mirror() ? &Mmo->Mirror()->simulation() : nullptr;
 	for (FSite& S : Sites)
 	{
+		// C1: swallowed by a complete Citadel: every part, column and light out.
+		const bool bSwallowed = Mirror && !S.Staged && Mirror->swallowedByCitadel(S.Ground);
+		if (bSwallowed != S.bSwallowed)
+		{
+			S.bSwallowed = bSwallowed;
+			S.bOpened = -1;
+			S.bLampOn = -1;
+			for (int32 Part = 0; Part < S.Model.Parts.Num(); ++Part) Batches.SetVisible(S.Model, Part, !bSwallowed);
+		}
+		if (S.bSwallowed)
+		{
+			if (S.Beam) S.Beam->SetVisibility(false);
+			if (S.Halo) S.Halo->SetVisibility(false);
+			if (S.Light) S.Light->SetVisibility(false);
+			continue;
+		}
 		const std::string Id = TCHAR_TO_UTF8(*S.Id);
 		const bool bOpened = S.Staged ? S.Staged->bOpened : P && P->sitesFound.count(Id) > 0;
 		const bool bKnown = S.Staged ? S.Staged->bKnown : P && P->sitesKnown.count(Id) > 0;

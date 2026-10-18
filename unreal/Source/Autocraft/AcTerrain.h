@@ -134,6 +134,11 @@ public:
 		const FVector* At = FirstOfKind.Find(uint8(Kind));
 		return At ? TOptional<FVector>(*At) : TOptional<FVector>();
 	}
+	/// C1: the map's doodads a complete Citadel's grown square takes
+	/// (`Swallowed`: `Simulation::swallowedByCitadel`, the server's rule)
+	/// hidden, the rest shown; redone only when `Key` (the Citadels as they
+	/// stand) or the doodads drawn change. Returns how many are hidden.
+	int32 Swallow(uint32 Key, TFunctionRef<bool(ac::Vec2)> Swallowed);
 	/// The world-grid cells of Unreal's origin (the session's first region's
 	/// centre: the material's `Origin`).
 	void SetOrigin(ac::Vec2 Origin);
@@ -183,6 +188,12 @@ private:
 	FAcSceneryBatches DoodadBatches;
 	FAcSceneryBatches RockBatches;
 	TArray<FAcSceneryModel> DoodadModels;
+	/// Where each of `DoodadModels` stands (the map's cells), and what
+	/// `Swallow` last did with them.
+	TArray<ac::Vec2> DoodadAt;
+	TArray<bool> DoodadSwallowed;
+	uint32 SwallowKey = 0;
+	int32 SwallowSeen = -1;
 	TMap<uint8, FVector> FirstOfKind;
 };
 

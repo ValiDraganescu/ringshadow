@@ -1078,7 +1078,7 @@ bool AAcPilotPawn::GunView(const ac::Simulation& S, FVector& OutLocation, FQuat&
 {
 	const std::optional<ac::Structure> C = S.state.structure(GunCitadelId);
 	if (!C || GunManned == INDEX_NONE) return false;
-	OutLocation = AcCitadelAct::Eye(*C, GroundAt(GetWorld(), C->position), GunManned, PilotYaw);
+	OutLocation = AcCitadelAct::Eye(*C, GroundAt(GetWorld(), C->position), GunManned, PilotYaw, Cam.Pitch);
 	OutRotation = FRotator(float(FMath::RadiansToDegrees(Cam.Pitch)), float(FMath::RadiansToDegrees(PilotYaw)), 0.f).Quaternion();
 	return true;
 }

@@ -60,8 +60,9 @@ namespace AcCitadelAct
 	/// The look's pitch held to the gun's limits (`gunPitchMin`, `gunPitchMax`).
 	AUTOCRAFT_API double LookPitch(double Pitch);
 	/// Where gun `Gun` of `Citadel` (standing on ground `GroundCells`) looks
-	/// from (`Defence::gunEye`) along `Yaw`, in the world (cm).
-	AUTOCRAFT_API FVector Eye(const ac::Structure& Citadel, double GroundCells, int32 Gun, double Yaw);
+	/// from along `Yaw` and `Pitch` (`Defence::gunEye`: the eye rides the
+	/// gun's cradle, its barrels in the lower middle), in the world (cm).
+	AUTOCRAFT_API FVector Eye(const ac::Structure& Citadel, double GroundCells, int32 Gun, double Yaw, double Pitch);
 
 	/// The door panel lit for the pose (0 outside, 1 inside) of Citadel
 	/// `Citadel`, or INDEX_NONE. The pawn sets it each frame on the game

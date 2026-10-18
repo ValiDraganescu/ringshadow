@@ -81,6 +81,10 @@ private:
 		TArray<int32> Shut, Open, Lamps, Seams;
 		/// What is shown now (-1: not yet applied).
 		int8 bOpened = -1;
+		/// C1: under a complete Citadel (`Simulation::swallowedByCitadel`):
+		/// not drawn (the server drops it too).
+		bool bSwallowed = false;
+		ac::Vec2 Ground{0, 0};
 		int8 bLampOn = -1;
 		/// Staged: its state stays as staged.
 		TOptional<FStaged> Staged;

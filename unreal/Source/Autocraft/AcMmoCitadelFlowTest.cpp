@@ -195,6 +195,13 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	{
 	case 2:
 		// The door shut, a picture of it, then to the doorstep.
+		// Pictures: facing the door, the new Citadel and the ground streamed in first.
+		if (!Hall.bShot && FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) && Since() < 10.0)
+		{
+			const ac::Vec2 D = C->position + ac::Vec2(0, 5.5) - U->position;
+			Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x));
+			return;
+		}
 		if (!Hall.bShot)
 		{
 			Check(C->door->open == 0 && !C->door->opening, FString::Printf(TEXT("Citadel #%lld put down, its door shut"), (long long)C->id));
@@ -228,19 +235,19 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	case 4:
 		// Into the hall, through the doorway.
 		if (Since() < 1.0) return;
-		if (WalkTo(ac::Vec2(0, 5.5), 0.6) && WalkTo(InsideDoor, 0.5))
+		// (Straight in along x 0, through the doorway's middle.)
+		if (WalkTo(InsideDoor, 0.5))
 		{
 			if (!Settle(0.8)) return;
 			Check(F.inside(Local) && S->sheltered(*U), FString::Printf(TEXT("in the hall, sheltered (%.1f, %.1f)"), Local.x, Local.y));
 			Check(Prompt == TEXT("E · CLOSE"), FString::Printf(TEXT("inside by the open door: \"%s\""), *Prompt));
 			Advance();
 		}
-		else if (F.inside(Local) || Local.y > 5.4)
+		else
 		{
-			WalkTo(InsideDoor, 0.5);
-			Waited(TEXT("in the hall"), WalkSeconds);
+			Waited(FString::Printf(TEXT("in the hall (at %.2f, %.2f, the door %.2f%s)"), Local.x, Local.y, C->door->open,
+				C->door->opening ? TEXT(" opening") : TEXT(" shutting")), WalkSeconds);
 		}
-		else Waited(TEXT("through the doorway"), WalkSeconds);
 		return;
 	case 5:
 		// Shut behind it, from inside.
@@ -278,7 +285,7 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		Check(Cs && Cs->guns && (*Cs->guns)[0].gunner == U->id, TEXT("gun 1 manned by the pilot"));
 		// The view: first person from the gun's eye, the cockpit and the unit hidden.
 		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
-		const FVector Eye = AcCitadelAct::Eye(*C, Terrain ? Terrain->FieldHeight(C->position) : 0.0, 0, Pilot->Yaw());
+		const FVector Eye = AcCitadelAct::Eye(*C, Terrain ? Terrain->FieldHeight(C->position) : 0.0, 0, Pilot->Yaw(), Pilot->ViewPitch());
 		const double Off = Pilot->Camera() ? AcSpace::ToCells(FVector::Dist(Pilot->Camera()->GetComponentLocation(), Eye)) : 1e9;
 		Check(Off < 0.3, FString::Printf(TEXT("the view at the gun's eye (%.2f cells off)"), Off));
 		Check(Info && Info->Feed && Info->Feed->Gun == 0, TEXT("the feed is up: TURRET 1 · NE"));
@@ -341,17 +348,13 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		return;
 	case 11:
 		// ...and out.
-		if (WalkTo(ac::Vec2(0, 5.5), 0.6) && WalkTo(ac::Vec2(0, 9.0), 0.6))
+		if (WalkTo(ac::Vec2(0, 9.0), 0.6))
 		{
 			if (!Settle(0.5)) return;
 			Check(!F.inside(Local) && !S->sheltered(*U), FString::Printf(TEXT("out of the Citadel (%.1f, %.1f)"), Local.x, Local.y));
 			Finish();
 		}
-		else
-		{
-			if (Local.y > 5.4) WalkTo(ac::Vec2(0, 9.0), 0.6);
-			Waited(TEXT("out of the Citadel"), WalkSeconds);
-		}
+		else Waited(FString::Printf(TEXT("out of the Citadel (at %.2f, %.2f)"), Local.x, Local.y), WalkSeconds);
 		return;
 	default:
 		Finish();

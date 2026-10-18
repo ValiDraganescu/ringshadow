@@ -542,6 +542,7 @@ bool AAcRegionGround::Step(const double BudgetMs)
 				T.AddToTranslation(At - AcSpace::OriginCm());
 				if (!FirstOfKind.Contains(uint8(D.Key.kind))) FirstOfKind.Add(uint8(D.Key.kind), T.GetTranslation());
 				Chunk.Add(DoodadBatches.AddModel(*M, T));
+				DoodadAt.Add(D.Key.position);
 			}
 			TArray<FAcSceneryModel*> Ptrs;
 			for (FAcSceneryModel& M : Chunk) Ptrs.Add(&M);
@@ -728,6 +729,19 @@ void AAcTerrain::SyncAround()
 	const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	const FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
 	if (!Mmo || !Current) return;
+	// C1: the doodads a complete Citadel's grown square takes, hidden (the
+	// server keeps the same rule; docs/citadel-interior.md §9).
+	if (Current->IsComplete() && Sim->IsRunning())
+	{
+		const ac::Simulation& S = Sim->Simulation();
+		uint32 Key = 1;
+		for (const ac::Structure& B : S.state.structures)
+		{
+			if (B.kind != ac::StructureKind::citadel || !B.complete()) continue;
+			Key = HashCombine(Key, HashCombine(GetTypeHash(B.id), HashCombine(GetTypeHash(B.position.x), GetTypeHash(B.position.y))));
+		}
+		Current->Swallow(Key, [&S](const ac::Vec2 P) { return S.swallowedByCitadel(P); });
+	}
 	TSet<FString> Keep;
 	Keep.Add(Current->Key());
 	for (const FAcRegionAround& A : Mmo->Around())
@@ -764,6 +778,31 @@ void AAcTerrain::SyncAround()
 		S.Value->Step(4.0);
 		break;
 	}
+}
+
+int32 AAcRegionGround::Swallow(const uint32 Key, TFunctionRef<bool(ac::Vec2)> Swallowed)
+{
+	if (Key == SwallowKey && SwallowSeen == DoodadModels.Num())
+	{
+		int32 N = 0;
+		for (const bool B : DoodadSwallowed) N += B ? 1 : 0;
+		return N;
+	}
+	SwallowKey = Key;
+	SwallowSeen = DoodadModels.Num();
+	DoodadSwallowed.SetNum(DoodadModels.Num());
+	int32 Hidden = 0;
+	for (int32 I = 0; I < DoodadModels.Num() && I < DoodadAt.Num(); ++I)
+	{
+		const bool bGone = Swallowed(DoodadAt[I]);
+		Hidden += bGone ? 1 : 0;
+		if (bGone == DoodadSwallowed[I]) continue;
+		DoodadSwallowed[I] = bGone;
+		for (int32 Part = 0; Part < DoodadModels[I].Parts.Num(); ++Part) DoodadBatches.SetVisible(DoodadModels[I], Part, !bGone);
+	}
+	DoodadBatches.Commit();
+	if (Hidden > 0) UE_LOG(LogAutocraft, Log, TEXT("terrain: %d doodads under a Citadel hidden in %s"), Hidden, *MapKey);
+	return Hidden;
 }
 
 void AAcTerrain::ForEachMaterial(TFunctionRef<void(UMaterialInstanceDynamic*, int64 Region)> Each) const
