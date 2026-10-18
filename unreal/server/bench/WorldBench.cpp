@@ -1,9 +1,12 @@
-// `worldbench [SECONDS] [WORLD]`: the world's tick, timed (mmorpg-m2.md P5:
-// every region steps every tick). The first world (worlds/first.json) by
-// default; one pilot drives its Prospector round in a slow circle from the
-// start pad, the world steps SECONDS of game time (default 30) at 60 Hz and
+// `worldbench [SECONDS] [WORLD] [REGION]`: the world's tick, timed
+// (mmorpg-m2.md P5: every region steps every tick). The first world
+// (worlds/first.json) by default; one pilot drives its Prospector round in a
+// slow circle from the start pad (with REGION, a region id or `nest`: from
+// that region's first pad, after 3 s there), the world steps SECONDS of game time (default 30) at 60 Hz and
 // builds the pilot's snapshot every third tick. Prints the spread of the
-// whole step (all regions) and each region's mean. Built and run by
+// whole step (all regions), each region's mean, and a hash of every unit's
+// position, heading and hp in every region at the end (equal before and
+// after a change that must keep the simulation bit for bit). Built and run by
 // `make bench` (-O3).
 
 #include "WorldMap.h"
@@ -12,6 +15,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -40,6 +44,15 @@ int main(int argc, char** argv) {
     WorldMap w(*load.world);
     const PilotId pilot = 1;
     w.join(pilot);
+    if (argc > 3) {
+        const std::string id = argv[3];
+        const std::optional<size_t> r = id == "nest" ? w.nestRegion() : w.regionNamed(id);
+        if (!r || (*r != w.where(pilot) && !w.devTransfer(pilot, *r, w.region(*r).places()->pads[0].at))) {
+            std::fprintf(stderr, "%s: no region\n", id.c_str());
+            return 1;
+        }
+        for (int i = 0; i < 180; i++) w.step();
+    }
     const int ticks = int(seconds * 60);
     std::vector<double> step, snap;
     std::vector<double> regionSum(w.regionCount(), 0);
@@ -76,6 +89,20 @@ int main(int argc, char** argv) {
     std::sort(slow.begin(), slow.end(), [&](size_t a, size_t b) { return step[a] > step[b]; });
     std::printf("  slowest steps:");
     for (size_t i = 0; i < std::min<size_t>(5, slow.size()); i++) std::printf(" tick %zu %.3f ms%s", slow[i] + 1, step[slow[i]], i < 4 ? "," : "\n");
+    uint64_t hash = 1469598103934665603ull;
+    auto mix = [&](double v) {
+        uint64_t b;
+        std::memcpy(&b, &v, sizeof b);
+        hash = (hash ^ b) * 1099511628211ull;
+    };
+    for (size_t r = 0; r < w.regionCount(); r++)
+        for (const Unit& u : w.region(r).simulation().state.units) {
+            mix(u.position.x);
+            mix(u.position.y);
+            mix(u.heading);
+            mix(u.hp);
+        }
+    std::printf("  state hash %016llx\n", (unsigned long long)hash);
     const double samples = double((ticks + 59) / 60);
     for (size_t r = 0; r < w.regionCount(); r++)
         std::printf("  %-14s %.3f ms a step%s\n", load.world->regions[r].file.id.c_str(), regionSum[r] / samples,

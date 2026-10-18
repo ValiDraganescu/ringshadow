@@ -112,17 +112,18 @@ build/tests/main.o: $(CORE_TESTS)/main.cpp
 # build/daybench (bench/DayBench.cpp), build/balancebench
 # (bench/BalanceBench.cpp), build/savebench (bench/SaveBench.cpp),
 # build/loadbench (bench/LoadBench.cpp), build/lookbench
-# (bench/LookBench.cpp) and build/snapbench (bench/SnapBench.cpp),
-# everything at -O3.
+# (bench/LookBench.cpp), build/snapbench (bench/SnapBench.cpp),
+# build/pathbench (bench/PathBench.cpp) and build/crowdbench
+# (bench/CrowdBench.cpp), everything at -O3.
 BENCH_FLAGS := $(subst -O2,-O3,$(CXXFLAGS)) -I../core-tests/bench
 BENCH_LIB := $(patsubst $(CORE)/Private/%.cpp,build/bench/core/%.o,$(CORE_SRC)) \
 	$(patsubst $(NET)/Private/%.cpp,build/bench/net/%.o,$(NET_SRC)) build/bench/net/monocypher.o \
 	$(patsubst world/%.cpp,build/bench/world/%.o,$(WORLD_SRC))
 BENCH_OBJ := $(BENCH_LIB) build/bench/program/Server.o \
 	$(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/RegionBench.o build/bench/NetBench.o \
-	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o build/bench/SaveBench.o build/bench/LoadBench.o build/bench/LookBench.o build/bench/SnapBench.o
+	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o build/bench/SaveBench.o build/bench/LoadBench.o build/bench/LookBench.o build/bench/SnapBench.o build/bench/PathBench.o build/bench/CrowdBench.o
 
-bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench build/savebench build/loadbench build/lookbench build/snapbench
+bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench build/savebench build/loadbench build/lookbench build/snapbench build/pathbench build/crowdbench
 	./build/regionbench 30 ../core-tests/fixtures/rally-jam.json
 	./build/netbench 20
 	./build/worldbench 30
@@ -132,6 +133,14 @@ bench: build/regionbench build/netbench build/worldbench build/daybench build/ba
 	./build/loadbench 5
 	./build/lookbench 2000
 	./build/snapbench 20
+	./build/pathbench 20000
+	./build/crowdbench 10
+
+build/crowdbench: $(BENCH_LIB) build/bench/CrowdBench.o
+	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
+
+build/pathbench: $(BENCH_LIB) build/bench/PathBench.o
+	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
 
 build/snapbench: $(BENCH_LIB) build/bench/SnapBench.o
 	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)

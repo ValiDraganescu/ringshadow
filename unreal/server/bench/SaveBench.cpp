@@ -119,16 +119,31 @@ int main(int argc, char** argv) {
     double save0 = 0, write0 = 0;
     WorldStore::Written n0;
     saveOnce(save0, write0, n0);
-    std::vector<double> saveMs, writeMs, total, changed;
+    std::vector<double> saveMs, writeMs, total, changed, walKb;
+    auto walSize = [&] {
+        struct stat st {};
+        return stat((path + "-wal").c_str(), &st) == 0 ? double(st.st_size) / 1024 : 0.0;
+    };
     for (int k = 0; k < saves; k++) {
         drive(5 * 60);
         double s = 0, wr = 0;
         WorldStore::Written n;
+        walKb.push_back(walSize());
         saveOnce(s, wr, n);
         saveMs.push_back(s);
         writeMs.push_back(wr);
         total.push_back(s + wr);
         changed.push_back(double(n.changed + n.removed));
+    }
+    std::vector<size_t> slow(writeMs.size());
+    for (size_t i = 0; i < slow.size(); i++) slow[i] = i;
+    std::sort(slow.begin(), slow.end(), [&](size_t a, size_t b) { return writeMs[a] > writeMs[b]; });
+    std::string slowest;
+    for (size_t i = 0; i < std::min<size_t>(3, slow.size()); i++) {
+        char line[96];
+        std::snprintf(line, sizeof line, "%s save %zu %.3f ms (WAL %.0f KB before, %.0f KB after)", i ? "," : "", slow[i] + 1,
+                      writeMs[slow[i]], walKb[slow[i]], slow[i] + 1 < walKb.size() ? walKb[slow[i] + 1] : walSize());
+        slowest += line;
     }
     store.reset();
     const double l0 = now();
@@ -145,6 +160,7 @@ int main(int argc, char** argv) {
                 saves, mean(saveMs), at(saveMs, 1), mean(writeMs), at(writeMs, 0.5), at(writeMs, 1));
     std::printf("  whole save mean %.3f ms, max %.3f ms; rows changed a save mean %.1f (max %.0f)\n", mean(total), at(total, 1),
                 mean(changed), at(changed, 1));
+    std::printf("  slowest writes:%s\n", slowest.c_str());
     std::printf("  load: %.3f ms (%s), file %lld KB\n", loadMs, loaded ? "ok" : why.c_str(), (long long)(st.st_size / 1024));
     return 0;
 }

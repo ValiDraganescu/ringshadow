@@ -288,3 +288,54 @@ equal before and after (`fd5e5104ff08f662`, `467fab1c80dd1394`,
 1 to 4,613 cells with any byte values, short `near` and `explored` arrays,
 whole and as deltas, come back as the fog quantised. A pilot's snapshots
 cost the server 0.4 ms a second instead of 0.9.
+
+### Round 5: a crowd's fog, kept (2026-10-18)
+
+The new `crowdbench` puts 1, 4 and 16 pilots in the start region at noon,
+each driving, and builds and writes every pilot's snapshot 20 times a
+second: with 16 the writing was the cost (29 µs a pilot a snapshot, the
+world's step 46 µs). The fog is still most of a write, and it changes only
+when the region looks (every 0.1 s, every other snapshot) and where it
+looks; each writer built all 27 chunks every time and threw away the ones
+equal to their baselines.
+
+`SnapshotWriter` keeps each fog chunk it built with what it was built
+from (the three arrays' sizes and their stretches over the chunk): the
+same inputs give the same bits, so a chunk is built again only when its
+cells changed, and a baseline that is the very chunk kept needs no
+comparing. Test `protocol_fog_chunks_of_any_bytes_and_sizes_round_trip`
+adds a fog of another size through the same writer.
+
+| 2 runs each in turns, load 3 | before µs | after µs |
+|---|---:|---:|
+| `snapbench`: start, noon, writing | 18.6-20.2 | 11.7-11.8 |
+| start, midnight | 14.0-15.3 | 7.8-8.0 |
+| nest, noon | 27.3-28.3 | 19.5-20.3 |
+| nest, midnight | 15.1-15.9 | 8.0-8.1 |
+| `crowdbench`: 1 pilot, the whole tick | 15.7 | 11.2-13.1 |
+| 16 pilots, a pilot's writing | 29.1-29.3 | 21.5-22.0 |
+| 16 pilots, the whole tick | 230-231 | 188-193 |
+
+The wire is the same (the four scenes' hashes as in round 4).
+
+Measured, not changed:
+
+- `pathbench` (new): 20,000 searches on the nest's grid, 5 to 40 cells,
+  10.6 µs and 228 cells closed a search, every path hashed. The nest's
+  bugs make about 100 searches a second (541 cells each), half its step.
+  Keeping each cell's heuristic for the search (it was worked out again at
+  every push) gave the same paths and no time back: the cost is the
+  neighbour visits and the 4-ary heap, already unrolled and kept between
+  searches.
+- `travel` copied a walking unit's whole route every step; editing it in
+  place kept `worldbench`'s state hash and moved nothing measurable in the
+  nest (0.054 against 0.055 ms), so it stays as it was.
+- The save: `savebench 300` (it now prints its slowest writes with the
+  WAL's size) has the WAL growing about 55 KB a save for some 22 rows, and
+  SQLite's checkpoint at 4 MB (every 70 saves, 6 minutes with pilots on
+  line) makes that save 3-6 ms instead of 0.23. Inside one 16.7 ms tick of
+  about 0.05 ms that is no hitch; left for now.
+
+`worldbench` takes a region (`worldbench 30 worlds/first.json nest`) and
+prints a hash of every unit's position, heading and hp at the end, the
+check that a core change leaves the world's simulation bit for bit.

@@ -1087,10 +1087,11 @@ TEST(mirror_builds_a_region_file) {
     EXPECT_TRUE(!Mirror(region).matches());
 }
 
-// docs/perf.md "Server" round 4: the writer builds a fog chunk eight cells
-// to a word. Any byte not 0 is a cell seen (or near), a ragged last chunk
-// and arrays shorter than the cells are read as before: what comes back is
-// the fog quantised, whole and as a delta.
+// docs/perf.md "Server" rounds 4 and 5: the writer builds a fog chunk eight
+// cells to a word, and keeps the chunks it built for the same inputs. Any
+// byte not 0 is a cell seen (or near), a ragged last chunk and arrays
+// shorter than the cells are read as before: what comes back is the fog
+// quantised, whole, as a delta and after the fog's size changed.
 TEST(protocol_fog_chunks_of_any_bytes_and_sizes_round_trip) {
     SeededRandom dice(4242);
     for (const size_t cells : {size_t(1), size_t(63), size_t(2048), size_t(4099), size_t(2 * 2048 + 517)}) {
@@ -1131,6 +1132,17 @@ TEST(protocol_fog_chunks_of_any_bytes_and_sizes_round_trip) {
                 for (size_t k = 0; k < 40; k++) fog.seen[size_t(dice.random(0, int64_t(cells)))] ^= 1;
                 s.fog = fog;
             }
+            // Another region's fog, through the same writer: no chunk is
+            // taken for the last one's (perf.md round 5 keeps built chunks).
+            fog.seen.resize(cells + 1500);
+            fog.near.resize(fog.near.size() + 1500);
+            fog.explored.resize((fog.seen.size() + 63) / 64);
+            shuffle();
+            s.fog = fog;
+            for (const SnapshotPart& p : roundTrip(w, r, s, 9.0))
+                if (p.snapshot.fog) got = p.snapshot.fog;
+            ASSERT_TRUE(got.has_value());
+            EXPECT_TRUE(*got == quantised(fog));
         }
     }
 }

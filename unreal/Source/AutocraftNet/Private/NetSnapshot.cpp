@@ -481,6 +481,42 @@ struct SnapshotWriter::State {
     int64_t game = -1;
     int64_t fullResets = 0;
 
+    /// Each fog chunk as last built, with what it was built from: the
+    /// three arrays' sizes and their stretches over the chunk. The same
+    /// inputs give the same bits, so a chunk the look did not change (a
+    /// look comes every other snapshot) is not built again.
+    struct FogBuilt {
+        std::shared_ptr<const ItemBits> bits;
+        size_t seenSize = 0, nearSize = 0, exploredSize = 0;
+        std::vector<uint8_t> seen, near;
+        std::vector<uint64_t> explored;
+    };
+    std::vector<FogBuilt> fogBuilt;
+
+    std::shared_ptr<const ItemBits> fogChunkOf(const FogView& f, size_t chunk) {
+        if (fogBuilt.size() <= chunk) fogBuilt.resize(chunk + 1);
+        FogBuilt& b = fogBuilt[chunk];
+        const size_t from = chunk * kFogChunkCells, to = std::min(f.seen.size(), from + kFogChunkCells);
+        auto stretch = [](const auto& v, size_t lo, size_t hi) {
+            return std::make_pair(v.begin() + std::ptrdiff_t(std::min(lo, v.size())), v.begin() + std::ptrdiff_t(std::min(hi, v.size())));
+        };
+        const auto [s0, s1] = stretch(f.seen, from, to);
+        const auto [n0, n1] = stretch(f.near, from, to);
+        const auto [e0, e1] = stretch(f.explored, from / 64, (to + 63) / 64);
+        if (b.bits && b.seenSize == f.seen.size() && b.nearSize == f.near.size() && b.exploredSize == f.explored.size() &&
+            std::equal(s0, s1, b.seen.begin(), b.seen.end()) && std::equal(n0, n1, b.near.begin(), b.near.end()) &&
+            std::equal(e0, e1, b.explored.begin(), b.explored.end()))
+            return b.bits;
+        b.bits = fogChunk(f, chunk);
+        b.seenSize = f.seen.size();
+        b.nearSize = f.near.size();
+        b.exploredSize = f.explored.size();
+        b.seen.assign(s0, s1);
+        b.near.assign(n0, n1);
+        b.explored.assign(e0, e1);
+        return b.bits;
+    }
+
     void forgetAll() {
         known.clear();
         pendingRemoved.clear();
@@ -561,7 +597,7 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
         auto [it, fresh] = st.known.try_emplace(key);
         State::Known& k = it->second;
         if (fresh) k.generation = ++st.generation;
-        if (k.base && k.lastSentId == k.baseId && *k.base == *bits) {
+        if (k.base && k.lastSentId == k.baseId && (k.base == bits || *k.base == *bits)) {
             out.unchanged += 1;
             return Placed::unchanged;
         }
@@ -625,7 +661,7 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
     for (const WellView& v : snap.wells) consider(Kind::well, uint64_t(v.index), canon(v.well));
     if (snap.fog) {
         const size_t chunks = (cells + kFogChunkCells - 1) / kFogChunkCells;
-        for (size_t c = 0; c < chunks; c++) consider(Kind::fogChunk, c, fogChunk(*snap.fog, c));
+        for (size_t c = 0; c < chunks; c++) consider(Kind::fogChunk, c, st.fogChunkOf(*snap.fog, c));
         for (size_t i = 0; i < sites; i++) consider(Kind::site, i, canon(SiteTime{snap.fog->sites[i]}));
     }
     for (const EntityState& e : snap.entities)
