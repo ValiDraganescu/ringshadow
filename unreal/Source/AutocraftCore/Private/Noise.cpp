@@ -26,6 +26,22 @@ double Noise::value(double x, double y) const {
 
 /// Fractal noise in roughly [-1, 1].
 double Noise::fbm(double x, double y, int64_t octaves) const {
+    if (octaves == 4) {
+        // The four octaves side by side (each its own; the loop below has
+        // them one after another): the same values, summed in the same
+        // order.
+        const double f1 = 1.0 * 2.03, f2 = f1 * 2.03, f3 = f2 * 2.03;
+        const double v0 = value(x * 1.0 + 0.0 * 17.3, y * 1.0 - 0.0 * 9.1);
+        const double v1 = value(x * f1 + 1.0 * 17.3, y * f1 - 1.0 * 9.1);
+        const double v2 = value(x * f2 + 2.0 * 17.3, y * f2 - 2.0 * 9.1);
+        const double v3 = value(x * f3 + 3.0 * 17.3, y * f3 - 3.0 * 9.1);
+        double sum = 0.0;
+        sum += (v0 * 2 - 1) * 0.5;
+        sum += (v1 * 2 - 1) * 0.25;
+        sum += (v2 * 2 - 1) * 0.125;
+        sum += (v3 * 2 - 1) * 0.0625;
+        return sum / (((0.0 + 0.5) + 0.25) + 0.125 + 0.0625);
+    }
     double sum = 0.0, amp = 0.5, f = 1.0, norm = 0.0;
     for (int64_t o = 0; o < octaves; o++) {
         sum += (value(x * f + static_cast<double>(o) * 17.3, y * f - static_cast<double>(o) * 9.1) * 2 - 1) * amp;

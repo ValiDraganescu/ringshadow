@@ -743,3 +743,22 @@ when done. The same SQL with the same values: the same rows.
 The files both write are the same (`sqlite3 .dump`, byte for byte:
 savebench's clock is its own, so `saved_at` too). A small win: 0.06 ms
 every 5 s.
+
+### Round 17: the noise's four octaves side by side (2026-10-18)
+
+`Noise::fbm` (a third of the start, and every height the client samples)
+took its octaves in a loop with a count known only at run time, so each
+octave's value waited on the last. For the four every caller asks, it now
+works the four values out side by side and adds them in the same order,
+with the same factors (2.03 multiplied up as the loop does): the same
+noise to the bit.
+
+| `loadbench 2`, 3 runs each in turns, load 9 | before | after |
+|---|---:|---:|
+| first `loadWorld`, CPU | 3.16-3.39 s | 2.82-3.03 s |
+| its wall | 364-398 ms | 344-353 ms |
+| first `WorldMap`, CPU | 177-179 ms | 154-170 ms |
+
+The terrain hashes of all 10 region files (heights, walls, materials,
+border heights, the walking grids) are the same, the terrain goldens pass,
+and every bench hash is equal.
