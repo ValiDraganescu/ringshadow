@@ -23,7 +23,7 @@ namespace
 
 const TCHAR* AcCitadelAct::Compass(const int32 Gun)
 {
-	static const TCHAR* Names[4] = {TEXT("NE"), TEXT("NW"), TEXT("SW"), TEXT("SE")};
+	static const TCHAR* Names[4] = {TEXT("SE"), TEXT("SW"), TEXT("NW"), TEXT("NE")};
 	return Names[FMath::Clamp(Gun, 0, 3)];
 }
 

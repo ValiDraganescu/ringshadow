@@ -1,7 +1,7 @@
 // `AcCitadelAct`: what the act key does in and at a Citadel (C1,
 // docs/citadel-interior.md §7) when nothing else takes it (the drill, a
 // strike, a repair, a Derrick, a building held out come first): a free gun
-// station within `Defence::stationReach` ("E · TAKE GUN 1 NE"), else the
+// station within `Defence::stationReach` ("E · TAKE GUN 1 SE"), else the
 // door within `Rules::doorReach` of its slab ("E · OPEN" on either side,
 // "E · CLOSE" inside while it opens). The pawn sends the MMORPG client's
 // Door and Man requests on it; the cockpit shows its prompt; `PoseCitadel`
@@ -17,9 +17,9 @@
 namespace AcCitadelAct
 {
 	/// Gun `Gun`'s name on the compass, in the core's order (+x+y, -x+y,
-	/// -x-y, +x-y; +y is north): "NE", "NW", "SW", "SE".
+	/// -x-y, +x-y; north is -y, as on the HUD's compass): "SE", "SW", "NW", "NE".
 	AUTOCRAFT_API const TCHAR* Compass(int32 Gun);
-	/// "TURRET 1 · NE" style: the gun's number (1 to 4) and its compass.
+	/// "TURRET 1 · SE" style: the gun's number (1 to 4) and its compass.
 	AUTOCRAFT_API FString GunName(int32 Gun);
 
 	struct FAct
@@ -41,7 +41,7 @@ namespace AcCitadelAct
 		/// prompt says it and the key sends nothing.
 		TOptional<FString> Why;
 
-		/// "E · TAKE GUN 1 NE", "E · OPEN", "E · CLOSE", or `Why`.
+		/// "E · TAKE GUN 1 SE", "E · OPEN", "E · CLOSE", or `Why`.
 		AUTOCRAFT_API FString Prompt() const;
 	};
 

@@ -163,6 +163,10 @@ Respawn at a Citadel (server) puts the Prospector in the hall at
 
 ## 5. Manual turrets (core, server, net, game)
 
+The guns' names follow the HUD's compass, where +y is the compass's south:
+gun 0 (+x+y) SE, 1 (−x+y) SW, 2 (−x−y) NW, 3 (+x−y) NE; the door (+y face)
+is on the Citadel's south side.
+
 The four corner guns exist as today (`Structure::guns`, armed by the server
 with the realm's marks) but **never fire by themselves**, hall or not.
 `Simulation::stepCornerGun` for a corner gun with no gunner only turns the
@@ -262,7 +266,7 @@ client and again by the server. The cockpit is hidden; the unit is hidden.
 
 - The act key (E, click, Space) in order: the existing targets (drill,
   strike, repair, enter the Derrick, place a building), else a **gun
-  station** within `stationReach` (prompt "E · TAKE GUN 1 NE"), else the
+  station** within `stationReach` (prompt "E · TAKE GUN 1 SE"), else the
   **door panel** within `doorReach` (prompt "E · OPEN" outside and inside,
   "E · CLOSE" inside when open). Prompts sit where the Derrick's prompt sits.
   Panels: a part on each side of the doorway (`doorPanels_0` outside,
@@ -271,7 +275,7 @@ client and again by the server. The cockpit is hidden; the unit is hidden.
   fires at the weapon's rate); Esc or F disengages (not leave the
   Prospector); V ignored.
 - The feed: `SAcPilotOverlay` paints over the normal reticle a monitor frame
-  (dark corner brackets, a thin scanline tint, a "LIVE" pip), "TURRET 1 · NE
+  (dark corner brackets, a thin scanline tint, a "LIVE" pip), "TURRET 1 · SE
   · CITADEL" top left, an **arc gauge** bottom centre (the 220° arc as a
   band, the hard stops marked, the aim as a needle), the heat/cooldown pips,
   the gun's marks, and "ESC · DISENGAGE". The unit's own HP stays. The

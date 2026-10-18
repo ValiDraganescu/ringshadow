@@ -596,8 +596,9 @@ void SAcPilotOverlay::PaintFeed(FAcPilotPen& P, const double W, const double H, 
 		P.Lines(Corner, Dark, 7);
 		P.Lines(Corner, Edge, 1.2);
 	}
-	// LIVE, its pip blinking once a second, top right; the gun top left.
-	const double Top = R.MaxY() - In - 26;
+	// LIVE, its pip blinking once a second, top right; the gun top left;
+	// both under the HUD's top bars (the region box, the wallet).
+	const double Top = R.MaxY() - In - 92;
 	if (std::fmod(Now, 1.0) < 0.6) P.Disc(FVector2D(R.MaxX() - In - 66, Top + 6), 5, EnemyColor());
 	P.Label(TEXT("LIVE"), 16, White(0.95), FVector2D(R.MaxX() - In - 54, Top), EAcHAlign::Left);
 	P.Label(F.Title, 20, White(0.95), FVector2D(R.MinX() + In + 14, Top), EAcHAlign::Left, EAcVAlign::Baseline, true, false);

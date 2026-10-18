@@ -7,7 +7,7 @@
 //             Citadel ahead of the pilot, its door shut; the pilot walks to
 //             the door ("E · OPEN"), opens it on the act key, walks into the
 //             hall (sheltered), closes it from inside ("E · CLOSE"), walks to
-//             gun 1's station ("E · TAKE GUN 1 NE") and takes it: the view
+//             gun 1's station ("E · TAKE GUN 1 SE") and takes it: the view
 //             first person at the gun's eye, the look held at the arc's hard
 //             stop, the feed up; fires (the Citadel's shots or misses come,
 //             the feed heats); Esc disengages; opens the door again and walks
@@ -254,6 +254,14 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		if (!Hall.bPressed) Press();
 		if (C->door->open <= 0.01 && !C->door->opening)
 		{
+			// The picture looks into the hall, its stations and lamps.
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")))
+			{
+				const ac::Vec2 D = C->position + ac::Vec2(0, -4) - U->position;
+				Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x));
+				if (Hall.Settled < 0) Hall.Settled = Now;
+				if (Now - Hall.Settled < 1.5) return;
+			}
 			Check(true, TEXT("the door closed from inside"));
 			Picture(TEXT("c1-hall"));
 			Advance();
@@ -267,7 +275,7 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		const ac::Vec2 Station = ac::Defence::gunStation(C->position, 0) - C->position;
 		if (WalkTo(Station, 0.7) && Settle(0.6))
 		{
-			Check(Prompt == TEXT("E · TAKE GUN 1 NE"), FString::Printf(TEXT("at the station: \"%s\""), *Prompt));
+			Check(Prompt == TEXT("E · TAKE GUN 1 SE"), FString::Printf(TEXT("at the station: \"%s\""), *Prompt));
 			Advance();
 		}
 		else Waited(TEXT("at gun 1's station"), WalkSeconds);
@@ -288,7 +296,7 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		const FVector Eye = AcCitadelAct::Eye(*C, Terrain ? Terrain->FieldHeight(C->position) : 0.0, 0, Pilot->Yaw(), Pilot->ViewPitch());
 		const double Off = Pilot->Camera() ? AcSpace::ToCells(FVector::Dist(Pilot->Camera()->GetComponentLocation(), Eye)) : 1e9;
 		Check(Off < 0.3, FString::Printf(TEXT("the view at the gun's eye (%.2f cells off)"), Off));
-		Check(Info && Info->Feed && Info->Feed->Gun == 0, TEXT("the feed is up: TURRET 1 · NE"));
+		Check(Info && Info->Feed && Info->Feed->Gun == 0, TEXT("the feed is up: TURRET 1 · SE"));
 		// The look: a long turn right holds at the hard stop, then back in.
 		Pilot->Look(5000.0, 0.0);
 		const double Mid = ac::Defence::cornerAngle(0);

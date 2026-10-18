@@ -91,7 +91,7 @@ struct FAcPilotMenuLine
 /// pilot mans, over the view (`SAcPilotOverlay`).
 struct FAcTurretFeed
 {
-	/// The gun, 0 to 3 ("TURRET 1 · NE · CITADEL").
+	/// The gun, 0 to 3 ("TURRET 1 · SE · CITADEL").
 	int32 Gun = 0;
 	FString Title;
 	/// The aim from the arc's middle and the arc's half (radians; + is

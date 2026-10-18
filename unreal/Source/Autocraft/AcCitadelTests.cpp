@@ -131,11 +131,11 @@ bool FAcPilotGunLookTest::RunTest(const FString&)
 	TestEqual(TEXT("pitch's floor"), AcCitadelAct::LookPitch(-1.0), ac::Defence::gunPitchMin);
 	TestEqual(TEXT("pitch's ceiling"), AcCitadelAct::LookPitch(1.5), ac::Defence::gunPitchMax);
 	TestEqual(TEXT("pitch inside"), AcCitadelAct::LookPitch(0.2), 0.2);
-	// The guns' names, +y north: +x+y, -x+y, -x-y, +x-y.
-	TestEqual(TEXT("gun 0"), AcCitadelAct::GunName(0), FString(TEXT("1 NE")));
-	TestEqual(TEXT("gun 1"), AcCitadelAct::GunName(1), FString(TEXT("2 NW")));
-	TestEqual(TEXT("gun 2"), AcCitadelAct::GunName(2), FString(TEXT("3 SW")));
-	TestEqual(TEXT("gun 3"), AcCitadelAct::GunName(3), FString(TEXT("4 SE")));
+	// The guns' names by the HUD's compass (north is -y): +x+y, -x+y, -x-y, +x-y.
+	TestEqual(TEXT("gun 0"), AcCitadelAct::GunName(0), FString(TEXT("1 SE")));
+	TestEqual(TEXT("gun 1"), AcCitadelAct::GunName(1), FString(TEXT("2 SW")));
+	TestEqual(TEXT("gun 2"), AcCitadelAct::GunName(2), FString(TEXT("3 NW")));
+	TestEqual(TEXT("gun 3"), AcCitadelAct::GunName(3), FString(TEXT("4 NE")));
 	// The eye: the gun's (Defence::gunEye) over the Citadel's ground.
 	const ac::Vec2 Was = AcSpace::Origin();
 	AcSpace::SetOrigin(ac::Vec2(0, 0));
@@ -160,7 +160,7 @@ bool FAcHudTurretFeedTest::RunTest(const FString&)
 
 	// Cold and ready: no shots.
 	FAcTurretFeed F = AcPilotText::Feed(S, 0, Mid + 0.4, 0.1, {}, 100.0);
-	TestEqual(TEXT("its name"), F.Title, FString(TEXT("TURRET 1 · NE · CITADEL")));
+	TestEqual(TEXT("its name"), F.Title, FString(TEXT("TURRET 1 · SE · CITADEL")));
 	TestTrue(TEXT("the aim off the middle"), FMath::IsNearlyEqual(F.Off, 0.4, 1e-9));
 	TestEqual(TEXT("cold"), F.Heat, 0);
 	TestEqual(TEXT("ready"), F.Ready, 1.0);
