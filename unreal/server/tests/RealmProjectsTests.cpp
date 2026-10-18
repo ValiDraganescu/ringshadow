@@ -9,6 +9,8 @@
 
 #include "test.h"
 
+#include "CitadelSpot.h"
+
 #include "Defence.h"
 #include "Flight.h"
 #include "RealmProjects.h"
@@ -94,7 +96,7 @@ struct Home {
         Simulation& sim = simOf(w, a);
         Unit* u = drivenUnit(w, a);
         u->task = Unit::Task::idle;
-        u->position = w.regionOf(a)->places()->ground(Vec2(72, 48));
+        u->position = rig::citadelStand(w, a, w.regionOf(a)->places()->ground(Vec2(72, 48)));
         u->heading = pi;
         const auto spot = sim.snap(StructureKind::citadel, u->position + Vec2(-1, 0) * Region::buildReach(StructureKind::citadel));
         const int64_t id = sim.state.nextID;

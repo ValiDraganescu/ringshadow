@@ -7,6 +7,8 @@
 
 #include "test.h"
 
+#include "CitadelSpot.h"
+
 #include "WorldMap.h"
 
 #include <cmath>
@@ -90,7 +92,7 @@ TEST(hydrogen_derrick_pumped_and_unloaded_fills_the_wallet) {
 
     // The Citadel, east of the ore (as the build tests), welded to the end.
     Unit* u = unit();
-    u->position = w.regionOf(me)->places()->ground(Vec2(72, 48));
+    u->position = rig::citadelStand(w, me, w.regionOf(me)->places()->ground(Vec2(72, 48)));  // C1: where the 12x12 places
     u->heading = west;
     u->task = Unit::Task::idle;
     const Vec2 home =

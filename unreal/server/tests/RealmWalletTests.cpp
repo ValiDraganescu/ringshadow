@@ -9,6 +9,8 @@
 
 #include "test.h"
 
+#include "CitadelSpot.h"
+
 #include "Rules.h"
 #include "WorldMap.h"
 #include "WorldStore.h"
@@ -136,7 +138,7 @@ struct Home {
         w.setProgress(a, at(10));
         fill(w, a, 3000, 500);
         const Vec2 east = w.regionOf(a)->places()->ground(Vec2(72, 48));
-        citadel = weld(w, a, StructureKind::citadel, east);
+        citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, east));
         dome = weld(w, a, StructureKind::habDome, east + Vec2(0, 9));
     }
     WorldMap w;

@@ -392,10 +392,18 @@ TEST(hunt_assault_her_fall_and_the_pay) {
 TEST(hunt_fails_on_the_clock_or_with_the_party_down) {
     {
         WorldMap w(first(), params());
-        ASSERT_TRUE(atTernCitadel(w, a, keyA) > 0);
+        const int64_t citadel = atTernCitadel(w, a, keyA);
+        ASSERT_TRUE(citadel > 0);
         ASSERT_TRUE(!w.callHunt(a).has_value());
         w.takeNews(a);
-        stepFor(w, WorldHunt::lasts - 5);
+        // C1: the corner guns no longer fire alone, so she would fell the
+        // Citadel over the ten minutes; it is kept whole here (the clock is
+        // what this tests).
+        for (double t = 0; t < WorldHunt::lasts - 5; t += 1) {
+            for (Structure& s : w.region(*w.regionNamed("tern-ridge")).simulation().state.structures)
+                if (s.id == citadel) s.hp = Rules::hp(StructureKind::citadel);
+            stepFor(w, 1);
+        }
         EXPECT_TRUE(w.hunt().state == State::gathering);
         stepFor(w, 6);
         EXPECT_TRUE(w.hunt().state == State::failed);

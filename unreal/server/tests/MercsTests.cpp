@@ -9,6 +9,8 @@
 
 #include "test.h"
 
+#include "CitadelSpot.h"
+
 #include "Rules.h"
 #include "WorldMap.h"
 #include "WorldStore.h"
@@ -128,7 +130,7 @@ struct Mercs1 {
         g.giveBlueprint(StructureKind::citadel);
         w.setProgress(a, g);
         fill(w, a, 20000, 3000);
-        citadel = weld(w, a, StructureKind::citadel, w.regionOf(a)->places()->ground(Vec2(72, 48)));
+        citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, w.regionOf(a)->places()->ground(Vec2(72, 48))));
         if (citadel) besides(w, a, *citadel);
     }
     WorldMap w;

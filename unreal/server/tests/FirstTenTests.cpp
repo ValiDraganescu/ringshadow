@@ -8,6 +8,8 @@
 
 #include "test.h"
 
+#include "CitadelSpot.h"
+
 #include "Rules.h"
 #include "WorldMap.h"
 #include "WorldStore.h"
@@ -102,7 +104,7 @@ const Structure* own(const Simulation& sim, StructureKind kind) {
 bool citadel(WorldMap& w) {
     Simulation& sim = w.regionOf(me)->simulation();
     Unit* u = driven(w, me);
-    u->position = w.regionOf(me)->places()->ground(Vec2(72, 48));
+    u->position = rig::citadelStand(w, me, w.regionOf(me)->places()->ground(Vec2(72, 48)));  // C1: where the 12x12 places
     u->heading = pi;
     u->task = Unit::Task::idle;
     const Vec2 home = *sim.snap(StructureKind::citadel, u->position + Vec2(-1, 0) * Region::buildReach(StructureKind::citadel));

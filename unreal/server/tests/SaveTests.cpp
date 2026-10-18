@@ -6,6 +6,8 @@
 
 #include "test.h"
 
+#include "CitadelSpot.h"
+
 #include "HeadlessClient.h"
 #include "Server.h"
 #include "Leveling.h"
@@ -128,7 +130,8 @@ const Structure* citadelOf(const Simulation& sim) {
 void played(WorldMap& w, PilotId me) {
     ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
     Unit* u = driven(w, me);
-    u->position = w.regionOf(me)->places()->ground(Vec2(72, 48));
+    // C1: where the 12x12 Citadel places nearest the old spot, west of the stand.
+    u->position = rig::citadelStand(w, me, w.regionOf(me)->places()->ground(Vec2(72, 48)));
     u->heading = 3.141592653589793;
     u->task = Unit::Task::idle;
     const Vec2 ahead(std::cos(u->heading), std::sin(u->heading));
@@ -383,6 +386,7 @@ TEST(save_restart_restores_the_region_exactly) {
     WorldMap w(firstWorld(), blueprinted());
     played(w, me);
     const Simulation& sim = w.regionOf(me)->simulation();
+    ASSERT_TRUE(citadelOf(sim) != nullptr);
     const Structure c = *citadelOf(sim);
     EXPECT_TRUE(!c.complete());
     const std::string path = fresh("region");

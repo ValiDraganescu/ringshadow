@@ -10,6 +10,8 @@
 
 #include "test.h"
 
+#include "CitadelSpot.h"
+
 #include "Brood.h"
 #include "Defence.h"
 #include "Pilot.h"
@@ -134,7 +136,7 @@ struct Home {
         w.setProgress(a, at(10));
         fill(w, a, 3000, 500);
         east = w.regionOf(a)->places()->ground(Vec2(72, 48));
-        citadel = weld(w, a, StructureKind::citadel, east);
+        citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, east));
     }
     WorldMap w;
     Vec2 east;
@@ -338,20 +340,46 @@ TEST(defence_a_raid_on_a_defended_hab_dome_is_beaten) {
 }
 
 // The Citadel's corner turrets beat a raid on the Citadel itself (Prospect
-// Landing's Citadel may be raided now that it is armed).
+// Landing's Citadel may be raided now that it is armed). C1: only with a
+// gunner: the pilot mans the north-east gun from its station in the hall
+// and aims at the bugs (its heading, its crosshair, the act key held).
 TEST(defence_citadel_turrets_beat_a_raid) {
     Home s;
     ASSERT_TRUE(s.citadel.has_value());
     WorldMap& w = s.w;
     const Vec2 c = structure(simOf(w, a), *s.citadel)->position;
-    drivenUnit(w, a)->position = c + Vec2(-25, -10);
+    Unit* u = drivenUnit(w, a);
+    u->position = Defence::gunStation(c, 0);
+    u->task = Unit::Task::idle;
     w.step();
+    ASSERT_TRUE(!w.man(a, 0).has_value());
     const size_t r = *w.where(a);
-    const auto shard = w.spawnBroodGroup(r, UnitKind::shardling, 6, WorldMap::Poi::building, *s.citadel, c + Vec2(0, 16), false);
+    const Vec2 mount = Defence::cornerGun(c, 0);
+    const auto shard = w.spawnBroodGroup(r, UnitKind::shardling, 6, WorldMap::Poi::building, *s.citadel, c + Vec2(14, 14), false);
     ASSERT_TRUE(shard.has_value());
-    for (int i = 0; i < 40 * 60 && aliveIn(w, a, *shard) > 0; i++) w.step();
+    for (int i = 0; i < 40 * 60 && aliveIn(w, a, *shard) > 0; i++) {
+        // The nearest bug the gun can turn to.
+        const Unit* aim = nullptr;
+        for (const Unit& bug : simOf(w, a).state.units) {
+            if (!bug.bug || bug.bug->group != *shard || bug.hp <= 0) continue;
+            const double yaw = std::atan2(bug.position.y - mount.y, bug.position.x - mount.x);
+            if (std::abs(std::remainder(Defence::clampAim(0, yaw) - yaw, 2 * pi)) > 1e-6) continue;
+            if (!aim || distance(bug.position, mount) < distance(aim->position, mount)) aim = &bug;
+        }
+        PilotInput in;
+        in.tick = ++inputTick;
+        in.visit = w.visit(a);
+        if (aim) {
+            in.heading = std::atan2(aim->position.y - mount.y, aim->position.x - mount.x);
+            in.crosshair = Pilot::Crosshair(Pilot::Crosshair::On{aim->id});
+            in.hold = true;
+        }
+        w.input(a, in);
+        w.step();
+    }
     EXPECT_EQ(aliveIn(w, a, *shard), int64_t(0));
     EXPECT_TRUE(structure(simOf(w, a), *s.citadel)->hp > 0.9 * Rules::hp(StructureKind::citadel));
+    EXPECT_TRUE(drivenUnit(w, a)->task == Unit::Task::atGun);
 }
 
 // The shots' dev scenes (`defence gatling`, `defence aa`): a turret ahead

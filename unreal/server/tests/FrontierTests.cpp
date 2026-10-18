@@ -414,10 +414,12 @@ TEST(Frontier_wandererDecides) {
     EXPECT_TRUE(plan.act == Act::walk && plan.region != r);
     // At the realm's Citadel: a survey from the board.
     const int64_t citadel = place(w, r, StructureKind::citadel, Vec2(72, 48));
+    const Structure c = *structure(w, r, citadel);
+    // Away from it (C1: the Citadel is 12x12 now, and it stood 4 cells off).
+    f.at = c.position + Vec2(Rules::radius(StructureKind::citadel) + 8, 0);
     plan = w.frontierDecide(f);
     ASSERT_TRUE(plan.act == Act::mission);
     EXPECT_TRUE(w.frontierMission(f.id, plan.region).has_value());  // not at the Citadel yet
-    const Structure c = *structure(w, r, citadel);
     f.at = c.position + Vec2(Rules::radius(StructureKind::citadel) + 0.5, 0);
     EXPECT_TRUE(!(w.frontierMission(f.id, plan.region).has_value()));
     ASSERT_TRUE(f.missionRegion.has_value());
@@ -754,7 +756,8 @@ std::optional<std::string> footprintRefusal(const Simulation& sim, StructureKind
             }
         }
     }
-    if (high - low > 0.2) return "The ground is not level";
+    // C1: the tolerance grows with the footprint past the 5x5 Citadel's.
+    if (high - low > 0.2 * std::max(1.0, (2 * r - 0.5) / 4.5)) return "The ground is not level";
     return std::nullopt;
 }
 

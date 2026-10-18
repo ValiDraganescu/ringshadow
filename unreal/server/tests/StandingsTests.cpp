@@ -8,6 +8,8 @@
 
 #include "test.h"
 
+#include "CitadelSpot.h"
+
 #include "HeadlessClient.h"
 #include "Progression.h"
 #include "Rules.h"
@@ -188,7 +190,7 @@ TEST(standings_count_a_humans_ore_buildings_and_mercenaries) {
     simOf(w, a).state.players[0].ore = 20000;
     simOf(w, a).state.players[0].hydrogen = 3000;
     w.step();
-    const auto citadel = weld(w, a, StructureKind::citadel, w.regionOf(a)->places()->ground(Vec2(72, 48)));
+    const auto citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, w.regionOf(a)->places()->ground(Vec2(72, 48))));
     ASSERT_TRUE(citadel.has_value());
     besides(w, a, *citadel);
     EXPECT_EQ(of(w, keyA).built, int64_t(1));

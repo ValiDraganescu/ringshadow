@@ -187,6 +187,9 @@ std::string absolutePath(const std::string& path) {
 
 int main(int argc, char** argv) {
     if (argc == 3 && std::string(argv[1]) == "--stop") return stopCommand(argv[2]);
+    // C1 (docs/citadel-interior.md): the server's Citadels are the MMO's,
+    // 12x12 with a hall inside.
+    Rules::setCitadelHall(true);
     std::optional<MapStyle> style;
     std::optional<MapSize> size;
     int64_t starts = 2;

@@ -477,7 +477,8 @@ TEST(e2e_save_kill_9_mid_play_loses_at_most_5_s) {
     // Off the pad east onto open ground, then a Citadel ahead, whichever way fits.
     hc.steer.heading = 0;
     hc.steer.walk = Vec2(1, 0);
-    c.until([] { return false; }, 1.5);
+    // (C1: farther, for the 12x12 Citadel to clear the pad's plate.)
+    c.until([] { return false; }, 3.5);
     hc.steer.walk = Vec2(0, 0);
     c.until([] { return false; }, 0.5);
     bool built = false;
