@@ -1431,7 +1431,9 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	// ahead and down as every other's.
 	if (UAcLampPool* Lamps = UAcLampPool::Get(this))
 	{
-		if (U.kind == ac::UnitKind::prospector && !InDive())
+		// (C2: not at a corner gun: the helmet lamp would pool on the
+		// gun's aim, a white disc over its impacts.)
+		if (U.kind == ac::UnitKind::prospector && !InDive() && GunManned == INDEX_NONE)
 		{
 			UAcLampPool::FPilotLamp L;
 			L.Unit = DrivenId;

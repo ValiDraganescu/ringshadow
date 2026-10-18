@@ -270,8 +270,10 @@ confirm` clicks.
 ## 6. The gun feel (game)
 
 - **Tracers** (an effects extension, `AcEffectsRounds.cpp`): every `Fired`
-  is a red-hot streak, a yellow-white core 0.04 cells thick in an orange-red
-  halo 0.11 thick, 1.5 cells long, flown on the core's own parabola
+  is a red-hot tracer: an orange-red emissive body 1.5 cells long and 0.045
+  thick, a yellow-white core 0.02 thick along its front 60%, an additive
+  orange-red halo 0.12 thick round the body and a dimmer tail 1.5 cells on
+  behind it, all emissive well over daylight; flown on the core's own parabola
   (`FAcRoundFlight`, AcRounds.h, calls `Rules::roundAt`: one integrator,
   no constant copied) until its `Impact` or `roundLife`. It leaves the
   model's muzzle (the turret as posed), the offset to the core's muzzle
@@ -280,11 +282,16 @@ confirm` clicks.
   s; pools of 256 streaks, 64 casings). A muzzle within 3 cells of the
   camera (the gun the pilot mans) makes no flash, smoke or casing of its
   own: the turret's `turretFlashes_k` show there.
-- **Impacts** by `what`: ground: a dust puff, ricochet sparks thrown off
-  the mirror of its line and a small scorch, scaled by the round's speed at
-  impact; a building or rock: a flash and sparks; a bug: a hit flash and six
-  flecks of green ichor; a Target Dummy: a flash and sparks, its rings
-  lighting in turn (its pose) and "HITS n" over its bar.
+- **Impacts** by `what`, scaled by the round's speed there: ground: an
+  orange flash swelling at its root, hot sparks thrown off the mirror of the
+  round's line that streak along their motion, arc and fall, a scorch, and a
+  dust plume for one strike in five (a stream's sunlit puffs pile up into a
+  white cloud that hides the impacts: each flash, spark and plume is faint
+  on its own for the same reason); a building or rock: a flash, a glow and
+  sparks; a bug: a hit flash and twelve flecks of green ichor; a Target
+  Dummy: a flash and sparks, its rings lighting in turn (its pose) and
+  "HITS n" over its bar. The Prospector's helmet lamp is off at a gun (it
+  pooled on the aim).
 - **Poses:** the corner guns' and the gatling's barrels spin with the
   core's `spin` (30 rad/s at full rate), the tips (and the gatling's hopper)
   glow with its `heat`, the muzzle flash shows every other frame while it
@@ -326,7 +333,7 @@ confirm` clicks.
 | net | `Fired`, `Impact`, `DummyDown`, `Learn`, `Structure::hits/downUntil/heat`, `CornerGun::heat` round trips; widths (as built: `net-tests/tests/GunsWireTests.cpp`, with the learned kinds, overheat and spin) |
 | server | `learn_consumesACopyOnce`; `shop_sellsABlueprintOncePerPilot`; `site_givesOreForAKnownBlueprint`; `load_schema28LearnsWhatWasBoughtOrBuilt`; `build_dummyNeedsNoBlueprint`; `rounds_reachEveryClientThatMayKnow`; `citadel_mannedGunHitsAtThirtyCells` (the user's case) (as built: `LearnTests.cpp`, `ShopTests.cpp`, `CitadelTests.cpp`; also `frontier_buildsAfterSchema28`, `dev_dummyHereAheadOfTheGun`, and `defence_citadel_turrets_beat_a_raid` with a led ballistic aim) |
 | game | `Autocraft.Effects.RoundFliesTheSamePathAsTheCore`; `Autocraft.Hud.BuildWheelPicksBySector`; `Autocraft.Hud.FeedImpactMarker`; `Autocraft.Pose.MinigunSpinsUp` |
-| flow | `-AcFlowTest=mmopractice`: dev rig, open the wheel, build a dummy 20 cells from the Citadel, enter, man the gun facing it, fire until it falls, it stands again, hits counted; pictures (`-AcMmoShotsC2`: the wheel, the tracers in flight, an impact, the dummy down) |
+| flow | `-AcFlowTest=mmopractice` (AcMmoPracticeFlowTest.cpp): dev rig; the wheel leaned onto the Target Dummy, a click holds it out, the act key puts it down off the pad; `citadel here`, the door opened on the act key, into the hall to gun 1's station, the gun taken; the gun turned where the round's path 15 cells out is clear, `dummy here 15`; a burst into the ground short of it; the look onto its plate by `Rules::ballisticPitch`, fire until it falls (hits counted, DOWN over its bar), it stands again with its hits cleared; pictures (`-AcMmoShotsC2`: c2-wheel, c2-ground, c2-tracers, c2-impact, c2-dummy-down, all from gun 1's feed) |
 
 ## 8. Who owns what
 

@@ -11,8 +11,8 @@
 // tenth puffs smoke, every fifth throws a spent casing.
 //
 // Impacts by what was struck, scaled by the round's speed there: the ground,
-// a big dust plume with an orange flash at its root, hot sparks that arc
-// out and fall, a small scorch; a building or rock, a flash and sparks; a
+// an orange flash, hot sparks that arc out and fall, a scorch and now and
+// then a dust plume; a building or rock, a flash and sparks; a
 // bug, a hit flash and a burst of ichor flecks; a Target Dummy, a flash and
 // sparks (its rings and the HITS count are its pose's and the HUD's).
 //
@@ -43,10 +43,10 @@ namespace
 	/// part's thickness, cells.
 	constexpr double StreakLength = 1.5;
 	constexpr double CoreShare = 0.6;
-	constexpr double CoreWidth = 0.028;
-	constexpr double BodyWidth = 0.065;
-	constexpr double HaloWidth = 0.2;
-	constexpr double TailWidth = 0.09;
+	constexpr double CoreWidth = 0.02;
+	constexpr double BodyWidth = 0.045;
+	constexpr double HaloWidth = 0.12;
+	constexpr double TailWidth = 0.06;
 	/// A muzzle this close to the camera (the gun the pilot mans) makes no
 	/// flash, smoke or casing of its own: the turret's model flashes there.
 	constexpr double EyeClear = 3.0;
@@ -58,7 +58,7 @@ namespace
 	const FLinearColor WhiteHot(1.f, 0.9f, 0.62f);
 	const FLinearColor RedHot(1.f, 0.3f, 0.05f);
 	const FLinearColor HotGlow(1.f, 0.2f, 0.03f);
-	const FLinearColor Fire(1.f, 0.45f, 0.08f);
+	const FLinearColor Fire(1.f, 0.32f, 0.04f);
 	const FLinearColor Spark(1.f, 0.72f, 0.28f);
 	const FLinearColor Ichor(0.72f, 0.95f, 0.22f);
 	const FLinearColor Brass(0.62f, 0.45f, 0.16f);
@@ -87,8 +87,8 @@ namespace
 			Body = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(RedHot, 18.0), 256, TEXT("AcRoundBody"));
 			Halo = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(HotGlow, 6.0, true), 256, TEXT("AcRoundHalo"));
 			Tail = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(HotGlow, 2.2, true), 256, TEXT("AcRoundTail"));
-			Glows = &E->MakePool(E->SphereMesh(), E->EmissiveMaterial(Fire, 9.0, true), 64, TEXT("AcRoundGlow"));
-			Sparks = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(Spark, 14.0, true), 256, TEXT("AcRoundSpark"));
+			Glows = &E->MakePool(E->SphereMesh(), E->EmissiveMaterial(Fire, 0.9, true), 64, TEXT("AcRoundGlow"));
+			Sparks = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(Spark, 3.5, true), 256, TEXT("AcRoundSpark"));
 			Casings = &E->MakePool(E->CylinderMesh(), E->EmissiveMaterial(Brass, 0.5), 64, TEXT("AcRoundCasing"));
 			Flecks = &E->MakePool(E->SphereMesh(), E->EmissiveMaterial(Ichor, 3.0, true), 192, TEXT("AcRoundIchor"));
 			Flights.SetNum(Core->Num());
@@ -260,11 +260,17 @@ namespace
 			{
 			case EWhat::ground:
 			{
-				// A big plume with an orange flash at its root, hot sparks
-				// that arc out and fall, a scorch.
-				E->DustPuff(At, 1.4 * K, Time);
-				Glow(At, 0.55 * K, 0.14, Time);
-				SprayOfSparks(At, Off, int32(10 * K) + 2, 4.5 * K, Time);
+				// An orange flash at its root, hot sparks that arc out and
+				// fall, a scorch, and a dust plume for one strike in five (a
+				// stream's sunlit puffs pile up into one white cloud: a
+				// plume each, or bigger ones, hid the impacts).
+				if (++GroundStrikes % 5 == 0) E->DustPuff(At, 0.8 * K, Time);
+				// (Four or five overlap at 30 rounds a second: each faint, or
+				// they add up to white.)
+				Glow(At, 0.3 * K, 0.1, Time);
+				// (Few and faint each: a stream's sparks overlap, and a hundred
+				// bright ones bloom into one white ball.)
+				SprayOfSparks(At, Off, int32(3 * K) + 1, 6.5 * K, Time);
 				FAcScorchRequest S;
 				S.At = FVector(At.X, At.Y, E->GroundZ(ac::Vec2(I.at.x, I.at.y)) + 1);
 				S.Radius = 0.3 * Cm * K;
@@ -279,8 +285,8 @@ namespace
 				const std::optional<ac::Structure> St = State.structure(I.victim);
 				const bool bDummy = St && St->kind == ac::StructureKind::dummy;
 				E->Flash(At, bDummy ? 1.5 : 1.9 * K, Time, 0.07);
-				Glow(At, 0.35 * K, 0.1, Time);
-				SprayOfSparks(At, Off, bDummy ? 6 : 9, 4.0 * K, Time);
+				Glow(At, 0.22 * K, 0.1, Time);
+				SprayOfSparks(At, Off, bDummy ? 3 : 4, 6.0 * K, Time);
 				break;
 			}
 			case EWhat::unit:
@@ -301,8 +307,8 @@ namespace
 				else
 				{
 					E->Flash(At, 1.6 * K, Time, 0.06);
-					Glow(At, 0.3 * K, 0.1, Time);
-					SprayOfSparks(At, Off, 7, 4.0 * K, Time);
+					Glow(At, 0.2 * K, 0.1, Time);
+					SprayOfSparks(At, Off, 3, 6.0 * K, Time);
 				}
 				break;
 			}
@@ -398,8 +404,10 @@ namespace
 		TArray<FVector> Offsets;
 		/// The round's id → its slot, while it flies.
 		TMap<int64, int32> Slots;
-		/// Rounds fired by each shooter (the smoke's and the casings' count).
+		/// Rounds fired by each shooter (the smoke's and the casings' count),
+		/// and rounds that struck the ground (the plumes' count).
 		TMap<int64, int32> Fires;
+		int32 GroundStrikes = 0;
 		TArray<FBit> CasingBits, FleckBits, SparkBits, GlowBits;
 	};
 

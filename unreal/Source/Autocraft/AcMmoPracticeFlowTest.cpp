@@ -11,8 +11,9 @@
 //             builds it: no blueprint, 10 ore). Then the gun: the server's
 //             dev line puts a complete Citadel ahead (`citadel here`); the
 //             pilot opens its door (the act key at the doorstep), walks into
-//             the hall to gun 1's station and takes it (the act key); `dummy here` stands a
-//             Target Dummy 20 cells out along the gun's aim. The look turned
+//             the hall to gun 1's station and takes it (the act key); `dummy here 15` stands a
+//             Target Dummy 15 cells out along the gun's aim. A short burst
+//             into the ground in front of it first; then the look turned
 //             onto it, pitched by the core's ballistic solve
 //             (`Rules::ballisticPitch`), the trigger held: rounds fly
 //             (`Fired`), strike the dummy, it counts its hits and falls; let
@@ -20,9 +21,10 @@
 //             the pawn's own hooks (`OnKey`, `OnLookTaken`, the act key, the
 //             look, the move keys).
 //             With -AcMmoShots=DIR -AcMmoShotsC2: a PNG of the wheel open on
-//             the dummy (c2-wheel.png), the rounds in flight (c2-tracers.png),
-//             their impacts on the plate (c2-impact.png) and the dummy down
-//             (c2-dummy-down.png).
+//             the dummy (c2-wheel.png), the burst into the ground
+//             (c2-ground.png), the rounds in flight (c2-tracers.png), their
+//             impacts on the plate (c2-impact.png) and the dummy down
+//             (c2-dummy-down.png), all from gun 1's feed.
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmopractice
@@ -59,6 +61,8 @@ namespace
 	constexpr double WalkSeconds = 25;
 	/// Rounds at 1 a round on 150 hp, spun up: about six seconds.
 	constexpr double FallSeconds = 20;
+	/// How far out the dummy stands (close enough for the feed's pictures).
+	constexpr double DummyCells = 15;
 
 	/// The step's own memory.
 	struct FPractice
@@ -79,6 +83,10 @@ namespace
 		double FiringSince = -1;
 		/// The way the pilot walks off the pad to put the dummy down.
 		double Heading = 0;
+		/// The burst into the ground before the dummy: 0 aiming, 1 firing,
+		/// 2 spinning down, 3 done; and when its stage began.
+		int32 Ground = 0;
+		double GroundAt = -1;
 		/// The pictures taken while firing.
 		bool bTracers = false;
 		bool bImpact = false;
@@ -374,8 +382,8 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		return;
 	case 10:
 	{
-		// A Target Dummy 20 cells out along the gun's aim (dev), the gun
-		// first turned where the rounds' path to 20 cells is clear of the
+		// A Target Dummy `DummyCells` out along the gun's aim (dev), the gun
+		// first turned where the rounds' path that far out is clear of the
 		// ground (a ledge between would take them all).
 		const ac::Structure* C = Structure(Practice.Citadel);
 		if (!C)
@@ -389,10 +397,12 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			Practice.bPressed = true;
 			double Best = Pilot->Yaw(), BestOff = 1e9;
 			const double Mid = ac::Defence::cornerAngle(0);
-			for (double Off = -ac::Defence::gunArcHalf + 0.15; Off <= ac::Defence::gunArcHalf - 0.15; Off += 0.1)
+			// Well inside the arc (the dummy may stand up to 0.2 rad aside of
+			// where it is asked), the middle preferred.
+			for (double Off = -ac::Defence::gunArcHalf + 0.45; Off <= ac::Defence::gunArcHalf - 0.45; Off += 0.1)
 			{
 				const double Yaw = Mid + Off;
-				const ac::Vec2 Spot = Gun + ac::Vec2(std::cos(Yaw), std::sin(Yaw)) * 20.0;
+				const ac::Vec2 Spot = Gun + ac::Vec2(std::cos(Yaw), std::sin(Yaw)) * DummyCells;
 				const ac::Vec3 Base(0, 0, S->groundZ(C->position));
 				const ac::Vec3 Level = ac::Defence::gunMuzzle(C->position, 0, Yaw, 0.0) + Base;
 				const std::optional<double> Pitch = ac::Rules::ballisticPitch(ac::length(Spot - ac::Vec2(Level.x, Level.y)),
@@ -401,7 +411,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 				const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, 0, Yaw, *Pitch) + Base;
 				const TOptional<ac::Vec3> Hit = AcPilotText::BallisticImpact(*S, Muzzle, ac::Rules::roundVelocity(Yaw, *Pitch), C->id);
 				const double Miss = Hit ? ac::distance(ac::Vec2(Hit->x, Hit->y), Spot) : 1e9;
-				if (Miss < BestOff)
+				if (Miss + 0.3 * std::abs(Off) < BestOff + 0.3 * std::abs(std::remainder(Best - Mid, 2 * UE_DOUBLE_PI)))
 				{
 					BestOff = Miss;
 					Best = Yaw;
@@ -409,7 +419,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			}
 			// (Aimed 1.1 cells over the ground there, a clear round comes down
 			// a little past it; a ledge in the way takes it cells short.)
-			Check(BestOff < 4.0, FString::Printf(TEXT("practice: a clear line of fire 20 cells out (%.1f cells off)"), BestOff));
+			Check(BestOff < 4.0, FString::Printf(TEXT("practice: a clear line of fire %.0f cells out (%.1f cells off)"), DummyCells, BestOff));
 			Pilot->Look(std::remainder(Best - Pilot->Yaw(), 2 * UE_DOUBLE_PI) / 0.0032, 0.0);
 			return;
 		}
@@ -417,7 +427,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		{
 			if (!Settle(1.0)) return;
 			Practice.bAsked = true;
-			Check(Mmo->DevClock(TEXT("dummy here")), TEXT("practice: a Target Dummy asked for along the gun's aim (dev)"));
+			Check(Mmo->DevClock(FString::Printf(TEXT("dummy here %.0f"), DummyCells)), TEXT("practice: a Target Dummy asked for along the gun's aim (dev)"));
 			return;
 		}
 		for (const ac::Structure& B : S->state.structures)
@@ -425,11 +435,11 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			if (B.kind == ac::StructureKind::dummy && B.id != Practice.Built && B.complete() && B.hp > 0 && !B.downUntil)
 			{
 				const double Dist = ac::distance(B.position, Gun);
-				if (Dist > 12 && Dist < 30) Practice.Dummy = B.id;
+				if (Dist > DummyCells * 0.6 && Dist < DummyCells * 1.5) Practice.Dummy = B.id;
 			}
 		}
 		if (Practice.Dummy >= 0) Advance();
-		else Waited(TEXT("practice: a standing Target Dummy 20 cells out"), AskSeconds);
+		else Waited(FString::Printf(TEXT("practice: a standing Target Dummy %.0f cells out"), DummyCells), AskSeconds);
 		return;
 	}
 	case 11:
@@ -447,6 +457,37 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		const ac::Vec2 To = D->position - Gun;
 		const double Yaw = std::atan2(To.y, To.x);
 		Pilot->Look(std::remainder(Yaw - Pilot->Yaw(), 2 * UE_DOUBLE_PI) / 0.0032, 0.0);
+		// First a burst into the ground 2.5 cells short of the dummy: the
+		// impacts' plume, flash and sparks (c2-ground).
+		if (Practice.Ground < 3)
+		{
+			const ac::Vec2 Short = D->position - ac::normalize(To) * 2.5;
+			const ac::Vec3 From = ac::Defence::gunMuzzle(C->position, 0, Pilot->Yaw(), Pilot->ViewPitch()) + ac::Vec3(0, 0, S->groundZ(C->position));
+			if (const std::optional<double> Down = ac::Rules::ballisticPitch(ac::length(Short - ac::Vec2(From.x, From.y)), S->groundZ(Short) - From.z))
+			{
+				Pilot->Look(0.0, (Pilot->ViewPitch() - *Down) / 0.0026);
+			}
+			if (Practice.Ground == 0)
+			{
+				if (!Settle(1.0)) return;
+				Pilot->Press(true);
+				Practice.Ground = 1;
+				Practice.GroundAt = Now;
+			}
+			else if (Practice.Ground == 1 && Now - Practice.GroundAt > 1.6)
+			{
+				Picture(TEXT("c2-ground"));
+				Pilot->Press(false);
+				Practice.Ground = 2;
+				Practice.GroundAt = Now;
+			}
+			else if (Practice.Ground == 2 && Now - Practice.GroundAt > 1.2)
+			{
+				Practice.Ground = 3;
+				Practice.Settled = -1;
+			}
+			return;
+		}
 		// (The muzzle over the Citadel's ground, as the core fires it.)
 		const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, 0, Pilot->Yaw(), Pilot->ViewPitch()) + ac::Vec3(0, 0, S->groundZ(C->position));
 		const double Plate = S->groundZ(D->position) + ac::Rules::height(D->kind) * 0.6;
