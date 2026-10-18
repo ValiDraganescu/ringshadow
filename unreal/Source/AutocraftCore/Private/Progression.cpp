@@ -546,6 +546,8 @@ int64_t Progression::buildingLimit(StructureKind k) {
     case StructureKind::gatling: return 6;
     // F2: per region, not per realm (the server counts the region's).
     case StructureKind::landingPad: return Progression::landingPadsPerRegion;
+    // C2: per region (`perRegion`).
+    case StructureKind::dummy: return 12;
     default: return 0;
     }
 }
@@ -782,9 +784,11 @@ double PilotProgress::chipChance() const {
 
 std::optional<std::string> PilotProgress::buildRefusal(StructureKind k, int64_t owned) const {
     const std::string name = Simulation::title(k);
-    if (Progression::blueprintFloor(k) <= 0) return "No " + name + " blueprint in this world";
-    if (copies(k) <= 0) return std::string("No blueprint: buy one at a Citadel (H)");
-    if (level() < floor(k)) return "The " + name + " opens at level " + std::to_string(floor(k));
+    if (!Rules::freeBuild(k)) {
+        if (Progression::blueprintFloor(k) <= 0) return "No " + name + " blueprint in this world";
+        if (!knows(k) && copies(k) <= 0) return std::string("No blueprint: buy one at a Citadel (H)");
+        if (level() < floor(k)) return "The " + name + " opens at level " + std::to_string(floor(k));
+    }
     if (owned >= limit(k)) {
         if (k == StructureKind::landingPad) return "Landing Pad limit reached: " + std::to_string(limit(k)) + " in a region";
         if (k == StructureKind::citadel) return std::string("This region has its Citadel: one a region");
@@ -792,6 +796,21 @@ std::optional<std::string> PilotProgress::buildRefusal(StructureKind k, int64_t 
         return name + " limit reached: " + std::to_string(limit(k)) + (more ? " (Overbuild allows more)" : "");
     }
     return std::nullopt;
+}
+
+bool PilotProgress::knows(StructureKind k) const { return Rules::freeBuild(k) || learned.count(k) > 0; }
+
+std::optional<std::string> PilotProgress::learnRefusal(StructureKind k) const {
+    if (knows(k)) return "You know the " + Simulation::title(k);
+    if (copies(k) <= 0) return "No " + Simulation::title(k) + " blueprint to learn from";
+    return std::nullopt;
+}
+
+bool PilotProgress::learn(StructureKind k) {
+    if (learnRefusal(k)) return false;
+    useBlueprint(k);
+    learned.insert(k);
+    return true;
 }
 
 int64_t PilotProgress::copies(StructureKind k) const {

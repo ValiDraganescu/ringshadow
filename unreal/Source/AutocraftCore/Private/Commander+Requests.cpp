@@ -90,8 +90,9 @@ Commander::Requests Commander::requests(const Simulation& sim, int64_t& money, i
         case Structure::Kind::habDome:
         // The MMO's gatling gun: the strategy game's AI never asks for one.
         case Structure::Kind::gatling:
-        // The MMO's Landing Pad (F2): never asked for either.
+        // The MMO's Landing Pad (F2) and Target Dummy (C2): never asked for either.
         case Structure::Kind::landingPad:
+        case Structure::Kind::dummy:
             for (const auto& c : done) { if ((spot = habDomeSpot(s, c, sim.navGrid()))) { break; } }
             break;
         case Structure::Kind::sentinel:

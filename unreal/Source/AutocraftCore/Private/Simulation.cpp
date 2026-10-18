@@ -1304,9 +1304,9 @@ double Simulation::roll(int64_t id, uint64_t salt) const {
     return static_cast<double>(x >> 11) * 0x1.0p-53;
 }
 
-Simulation::Round Simulation::aimRound(Unit& u, const UnitStats& w, const Target& t, double moving) {
+Simulation::Aimed Simulation::aimRound(Unit& u, const UnitStats& w, const Target& t, double moving) {
     const double reach = range(w.range, u.position, t.position);
-    Round r;
+    Aimed r;
     r.at = t.position;
     r.share = falloffShare(w, gap(u, t), reach);
     // A flame, a cutter or a sting reaches what it reaches.
@@ -1686,7 +1686,7 @@ bool Simulation::fire(Unit& u, int64_t id, const Target& t, double dt, std::vect
     if (!(ready && cooldownFor(u, t.air) <= 0)) return false;
     reload(u, w);
     if (u.kind == Unit::Kind::scorpion) u.lockTarget = std::nullopt;
-    const Round r = aimRound(u, w, t, moving);
+    const Aimed r = aimRound(u, w, t, moving);
     if (r.hit) {
         strike(u, id, t, r.share);
         events.push_back(GameEvent::Shot{u.id, id, t.owner, t.position});

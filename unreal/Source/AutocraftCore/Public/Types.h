@@ -1005,6 +1005,15 @@ struct CornerGun {
     double pitch = 0;
     /// The unit operating it (task `atGun`).
     std::optional<int64_t> gunner;
+    /// C2 (docs/guns-and-practice.md section 1): 0 cold … 1 hot; at 1 it is
+    /// `overheated` and holds fire until it has cooled to
+    /// `Rules::gunHeatResume`. `spin`: the barrels, 0 still … 1 at full
+    /// rate (`Rules::gunSpinUp`). `bloom`: the cone's growth from firing,
+    /// radians (`UnitStats::coneFire` a round, fading over `coneRecovery`).
+    double heat = 0;
+    bool overheated = false;
+    double spin = 0;
+    double bloom = 0;
     bool operator==(const CornerGun&) const = default;
 };
 
@@ -1058,6 +1067,15 @@ struct AUTOCRAFTCORE_API Structure {
     /// A complete Citadel's door (C1; set on completion by the core, and on
     /// the realm's Citadels by the server). Not saved: a loaded one starts shut.
     std::optional<Door> door;
+    /// A gatling gun's heat, barrels and cone (C2; as `CornerGun`'s).
+    double heat = 0;
+    bool overheated = false;
+    double spin = 0;
+    double bloom = 0;
+    /// A Target Dummy (C2): the rounds that struck it since it last stood,
+    /// and while it lies down (it fell at 0 hp), when it stands again.
+    int64_t hits = 0;
+    std::optional<double> downUntil;
 
     /// For decoding; Swift has only the init below.
     Structure() = default;
@@ -1077,6 +1095,26 @@ struct AUTOCRAFTCORE_API Structure {
     double progress() const;
 
     bool operator==(const Structure&) const = default;
+};
+
+/// A round of the minigun class in flight (C2, docs/guns-and-practice.md
+/// section 1): fired by a Citadel's corner gun or a gatling gun, flown by
+/// `Simulation::stepRounds` under `Rules::roundGravity` until it hits a
+/// unit, a building or the ground, leaves the region or is
+/// `Rules::roundLife` old. Its damage lands at the impact.
+struct Round {
+    int64_t id = 0;
+    /// The structure (or unit) that fired it, and its side.
+    int64_t shooter = 0;
+    int64_t owner = 0;
+    /// Cells; `z` above the ground datum.
+    Vec3 position;
+    /// Cells a second.
+    Vec3 velocity;
+    double damage = 0;
+    /// `GameState::time` when it left the muzzle.
+    double born = 0;
+    bool operator==(const Round&) const = default;
 };
 
 /// Where a Prospector is headed to build.
@@ -1629,6 +1667,10 @@ struct AUTOCRAFTCORE_API GameState {
     /// (`Rules::sightScale`). Not saved: the game layer sets them each frame.
     double dayLength = 600.0;
     std::optional<double> heldHour;
+    /// Rounds in flight (C2), and the next round's id (their own count, so
+    /// firing never moves the units' and buildings' ids). Not saved.
+    std::vector<Round> rounds;
+    int64_t nextRound = 0;
 
     /// Player `p`'s team: `Player.team`, else its own index (also for an
     /// index that is no player), so with no teams set `hostile(a, b)` is
@@ -1740,8 +1782,29 @@ struct GameEvent {
     /// the enemies on it within `radius` (the unit's reach, with Aftershock).
     struct Stomp { int64_t unit; Vec2 at; double radius; bool operator==(const Stomp&) const = default; };
 
+    /// C2 (docs/guns-and-practice.md section 1): a round left `shooter`'s
+    /// muzzle at `muzzle` with `velocity`, cells and cells a second
+    /// (`Rules::roundAt` flies it). Replaces `Shot`/`Missed` for the
+    /// Citadel's corner guns and the gatling gun.
+    struct Fired { int64_t shooter; int64_t round; Vec3 muzzle; Vec3 velocity; bool operator==(const Fired&) const = default; };
+    /// Round `round` struck `what` at `at`: the ground, or unit or building
+    /// `victim` (0 for the ground). A round that dies of age or leaves the
+    /// region sends nothing; the client ends it at `Rules::roundLife`.
+    struct Impact {
+        enum class What : uint8_t { ground, unit, structure };
+        int64_t round;
+        Vec3 at;
+        What what;
+        int64_t victim;
+        bool operator==(const Impact&) const = default;
+    };
+    /// Target Dummy `id` fell after `hits` rounds; it stands again in
+    /// `Rules::dummyDownTime`.
+    struct DummyDown { int64_t id; int64_t hits; bool operator==(const DummyDown&) const = default; };
+
     AC_CASES(GameEvent, Deposited, PatchDepleted, PatchRegrown, Trained, ConstructionStarted, Constructed, Shot, Missed,
-             Landed, Died, Destroyed, Victory, Researched, Stuck, Trapped, LeveledUp, Blast, Stomp)
+             Landed, Died, Destroyed, Victory, Researched, Stuck, Trapped, LeveledUp, Blast, Stomp, Fired, Impact,
+             DummyDown)
     bool operator==(const GameEvent&) const = default;
 };
 
@@ -1825,9 +1888,9 @@ struct Command {
 
 // `EnumInfo<UnitKind>` is in Rules.h, beside the kind table it sizes.
 template <> struct EnumInfo<StructureKind> {
-    static constexpr std::array<std::string_view, 11> names{
+    static constexpr std::array<std::string_view, 12> names{
         "citadel", "habDome", "garrison", "bastion", "derrick", "foundry", "spacedock", "lab", "sentinel", "gatling",
-        "landingPad"};
+        "landingPad", "dummy"};
 };
 template <> struct EnumInfo<DefenceStat> {
     static constexpr std::array<std::string_view, 4> names{"rate", "damage", "range", "air"};

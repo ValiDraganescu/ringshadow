@@ -273,11 +273,11 @@ struct PilotBuild {
         StructureKind::citadel, StructureKind::foundry, StructureKind::spacedock, StructureKind::sentinel};
     /// In a world (MMORPG mode) the Prospector also puts up a Lab, standing
     /// on its own (docs/prospector-progression.md, "Buildings in the MMO"),
-    /// a gatling gun (D2) and a Landing Pad (F2).
-    static constexpr std::array<StructureKind, 11> worldKinds{
+    /// a gatling gun (D2), a Landing Pad (F2) and a Target Dummy (C2).
+    static constexpr std::array<StructureKind, 12> worldKinds{
         StructureKind::habDome, StructureKind::garrison, StructureKind::derrick, StructureKind::bastion,
         StructureKind::citadel, StructureKind::foundry, StructureKind::spacedock, StructureKind::sentinel,
-        StructureKind::lab, StructureKind::gatling, StructureKind::landingPad};
+        StructureKind::lab, StructureKind::gatling, StructureKind::landingPad, StructureKind::dummy};
     /// The driven kinds that can put buildings up.
     static bool builds(UnitKind k) { return Rules::stats(k).builds; }
 };

@@ -266,7 +266,10 @@ struct AUTOCRAFTCORE_API Progression {
     static int64_t buildingLimit(StructureKind k);
     /// Counted in a region, not across the realm: the Landing Pad (F2) and,
     /// since R3 (2026-10-15), the Citadel: one a region, each a full home.
-    static bool perRegion(StructureKind k) { return k == StructureKind::landingPad || k == StructureKind::citadel; }
+    /// And the Target Dummy (C2): `buildingLimit` a region.
+    static bool perRegion(StructureKind k) {
+        return k == StructureKind::landingPad || k == StructureKind::citadel || k == StructureKind::dummy;
+    }
     /// Landing Pads a region may have (F2).
     static constexpr int64_t landingPadsPerRegion = 2;
     /// What a building costs in a world, ore and MH, before the skills
@@ -464,12 +467,16 @@ struct AUTOCRAFTCORE_API PilotProgress {
     bool freeRespec = false;
     /// Points spent in the last `Progression::undoWindow` seconds, oldest first.
     std::vector<SkillSpend> recent;
-    /// Blueprint copies held (C2): building uses one up. A kind with none
-    /// has no entry.
+    /// Blueprint copies held and not yet learned from (C2): `learn` uses one
+    /// up. A kind with none has no entry.
     std::map<StructureKind, int64_t> blueprints;
-    /// Blueprint copies bought at the Citadel, per kind, ever: the next
-    /// copy's price (`Shop::blueprintPrice`).
+    /// Blueprint copies bought at the Citadel, per kind, ever. Going (C2,
+    /// docs/guns-and-practice.md section 4: the shop sells each once); kept
+    /// until the server and the game no longer read it.
     std::map<StructureKind, int64_t> bought;
+    /// The buildings the pilot has learned from a blueprint (C2): built for
+    /// their ore from then on, no copy used.
+    std::set<StructureKind> learned;
     /// Consumables held (C2). An item with none has no entry.
     std::map<Item, int64_t> items;
     /// Sites found, regions and pads visited, feats done (ids the server
@@ -541,6 +548,14 @@ struct AUTOCRAFTCORE_API PilotProgress {
     /// Why the pilot can't put up a `k` now, owning `owned` of them in the
     /// world: no blueprint copy, under its floor, or at its limit. Nil: it may.
     std::optional<std::string> buildRefusal(StructureKind k, int64_t owned) const;
+
+    /// The pilot builds `k` without a copy: learned, or a free kind
+    /// (`Rules::freeBuild`).
+    bool knows(StructureKind k) const;
+    /// Why the pilot can't learn `k` now (it knows it, or holds no copy), or nil.
+    std::optional<std::string> learnRefusal(StructureKind k) const;
+    /// Learn `k`, using up one copy. False, unchanged: refused.
+    bool learn(StructureKind k);
 
     /// Blueprint copies of `k` held, and consumables of `i` held.
     int64_t copies(StructureKind k) const;

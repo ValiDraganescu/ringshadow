@@ -48,7 +48,9 @@ enum class StructureKind : uint8_t {
     // the name, the wire the index (4 bits).
     gatling,
     // F2: the Landing Pad, where the Dropship sets down (docs/mmorpg-m8.md).
-    landingPad
+    landingPad,
+    // C2: the Target Dummy, to practise on (docs/guns-and-practice.md section 3).
+    dummy
 };
 
 /// One unit type's numbers (in real seconds; ranges edge to edge).
@@ -374,6 +376,10 @@ struct AUTOCRAFTCORE_API Rules {
 
     static int64_t cost(StructureKind k);
     static int64_t hydrogenCost(StructureKind k);
+    /// Built with no blueprint, at no level, by anyone (C2): the Target
+    /// Dummy only (`PilotProgress::buildRefusal` skips the blueprint and the
+    /// floor for it).
+    static bool freeBuild(StructureKind k) { return k == StructureKind::dummy; }
     static double buildTime(StructureKind k);
     static int64_t supply(StructureKind k);
     /// The Citadel's hall (C1, docs/citadel-interior.md section 1): on, a
@@ -505,6 +511,47 @@ struct AUTOCRAFTCORE_API Rules {
     /// formation place about `escortGap` cells beside it.
     static constexpr double escortReach = 7.0;
     static constexpr double escortGap = 1.6;
+
+    // Rounds (C2, docs/guns-and-practice.md section 1): the minigun class's
+    // real projectiles (`Round`, `Simulation::stepRounds`). Tuned by feel.
+    /// Muzzle speed, cells a second: at 30 cells a round takes 0.33 s and
+    /// drops 0.55 cells.
+    static constexpr double roundSpeed = 90.0;
+    /// Its fall, cells a second squared.
+    static constexpr double roundGravity = 9.8;
+    /// Seconds a round flies before it is gone.
+    static constexpr double roundLife = 3.0;
+    /// The hit sweep's thickness, cells.
+    static constexpr double roundRadius = 0.08;
+    /// A round passes through its own shooter's building this long after it
+    /// left the muzzle.
+    static constexpr double roundSelfGrace = 0.2;
+    /// Where a round is `t` seconds after it left `muzzle` at `velocity`: the
+    /// parabola under `roundGravity`. The core steps rounds by this same
+    /// closed form, so the client's streak flies the core's path at any
+    /// frame rate.
+    static Vec3 roundAt(Vec3 muzzle, Vec3 velocity, double t) {
+        return {muzzle.x + velocity.x * t, muzzle.y + velocity.y * t,
+                muzzle.z + velocity.z * t - 0.5 * roundGravity * t * t};
+    }
+    /// A round's velocity leaving along `yaw` (world radians) and `pitch`
+    /// (up from level): `roundSpeed` along that way.
+    static Vec3 roundVelocity(double yaw, double pitch);
+    /// The low-arc pitch that lands a round at `roundSpeed` on a point
+    /// `ahead` cells away along the ground and `rise` cells up from the
+    /// muzzle; nil when it is out of the round's reach.
+    static std::optional<double> ballisticPitch(double ahead, double rise);
+    /// The minigun class's barrels and heat (a Citadel's corner gun, a
+    /// gatling gun): from the trigger to full rate in `gunSpinUp` s (the rate
+    /// ramps linearly with the barrels' spin); each round heats the gun by
+    /// `gunHeatPerRound`, it cools `gunCooling` a second, and at 1 it stops
+    /// (OVERHEAT) until it has cooled to `gunHeatResume`.
+    static constexpr double gunSpinUp = 0.4;
+    static constexpr double gunHeatPerRound = 0.012;
+    static constexpr double gunCooling = 0.35;
+    static constexpr double gunHeatResume = 0.4;
+    /// A Target Dummy at 0 hp lies down this long, then stands with full hp.
+    static constexpr double dummyDownTime = 3.0;
 };
 
 inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byKind{{

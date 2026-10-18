@@ -426,6 +426,7 @@ bool get(const json& j, ProspectorProgress& v) {
     }
     std::erase_if(v.blueprints, [](const auto& e) { return e.second <= 0; });
     r.orDefault("bought", v.bought);
+    r.orDefault("learned", v.learned);
     r.orDefault("items", v.items);
     std::erase_if(v.items, [](const auto& e) { return e.second <= 0; });
     r.orDefault("sites", v.sites);
@@ -579,6 +580,8 @@ json put(const ProspectorProgress& v) {
     w("recent", v.recent);
     w("blueprints", v.blueprints);
     w("bought", v.bought);
+    // Only once one is learned: older blobs stay as they were.
+    if (!v.learned.empty()) w("learned", v.learned);
     w("items", v.items);
     w("sites", v.sites);
     w("regions", v.regions);

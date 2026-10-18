@@ -344,11 +344,11 @@ public:
     double roll(int64_t id, uint64_t salt) const;
     /// One round of `u` at `t`: a hit, with the share of its damage it keeps,
     /// or a miss, with how far off the sight it flew and where it comes down.
-    struct Round { bool hit = true; double share = 1; double yaw = 0, pitch = 0; Vec2 at{0, 0}; };
+    struct Aimed { bool hit = true; double share = 1; double yaw = 0, pitch = 0; Vec2 at{0, 0}; };
     /// Rolls a round of weapon `w` inside its cone (`moving` as for `cone`)
     /// and adds the round's spread. A weapon that stops at its range never
     /// misses.
-    Round aimRound(Unit& u, const UnitStats& w, const Target& t, double moving);
+    Aimed aimRound(Unit& u, const UnitStats& w, const Target& t, double moving);
     /// The driven unit's speed in its last step, as a share of its full pace
     /// (`pilotWalk`), for its cone.
     double pilotPace = 0;

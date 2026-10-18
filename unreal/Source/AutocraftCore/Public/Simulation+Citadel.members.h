@@ -54,3 +54,17 @@ public:
     /// the gunner's crosshair foe within range and 0.25 rad of the aim, or a
     /// miss along the aim.
     void stepCornerGun(Structure& s, int i, const UnitStats& w, double dt, std::vector<GameEvent>& events);
+
+    // Rounds and practice (C2, docs/guns-and-practice.md sections 1 and 3).
+    /// Each step, before the units: every round in `state.rounds` flies on
+    /// along its parabola (`Rules::roundAt`); the segment it flew is swept
+    /// against the units, the buildings and the ground, and the first thing
+    /// on it takes the round's damage (`hit`, as a gun hit) with an
+    /// `Impact`. A round past `Rules::roundLife` or out of the region is gone.
+    void stepRounds(double dt, std::vector<GameEvent>& events);
+    /// `side` may aim at it: hostile to `side`, or a complete Target Dummy
+    /// that is up (its own side's too). The crosshair, the driven unit's
+    /// foe and sight, and the corner guns use it; the auto turrets keep
+    /// their hostile-only scan.
+    bool targetable(const Unit& u, int64_t side) const;
+    bool targetable(const Structure& s, int64_t side) const;

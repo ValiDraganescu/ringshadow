@@ -26,6 +26,7 @@ int64_t Rules::cost(StructureKind k) {
     case StructureKind::derrick: return 75; case StructureKind::foundry: case StructureKind::spacedock: return 150;
     case StructureKind::lab: return 50; case StructureKind::sentinel: return 100;
     case StructureKind::gatling: return 100; case StructureKind::landingPad: return 50;
+    case StructureKind::dummy: return 10;
     }
     return 0;
 }
@@ -45,8 +46,23 @@ double Rules::buildTime(StructureKind k) {
     case StructureKind::derrick: return 21; case StructureKind::foundry: return 43;
     case StructureKind::spacedock: return 36; case StructureKind::lab: return 18; case StructureKind::sentinel: return 18;
     case StructureKind::gatling: return 18; case StructureKind::landingPad: return 15;
+    case StructureKind::dummy: return 2;
     }
     return 0;
+}
+
+Vec3 Rules::roundVelocity(double yaw, double pitch) {
+    const double c = std::cos(pitch);
+    return {std::cos(yaw) * c * roundSpeed, std::sin(yaw) * c * roundSpeed, std::sin(pitch) * roundSpeed};
+}
+
+std::optional<double> Rules::ballisticPitch(double ahead, double rise) {
+    // tan θ = (v² − √(v⁴ − g(g x² + 2 y v²))) / (g x), the lower root.
+    const double v2 = roundSpeed * roundSpeed, g = roundGravity;
+    if (!(ahead > 1e-9)) return rise >= 0 ? pi / 2 : -pi / 2;
+    const double disc = v2 * v2 - g * (g * ahead * ahead + 2 * rise * v2);
+    if (disc < 0) return std::nullopt;
+    return std::atan((v2 - std::sqrt(disc)) / (g * ahead));
 }
 
 int64_t Rules::supply(StructureKind k) {
@@ -67,10 +83,11 @@ bool Rules::citadelHall() { return hall.load(std::memory_order_relaxed); }
 
 /// Half the footprint side: 12x12 Citadel with the hall (5x5 without);
 /// 3x3 Garrison, Bastion, Derrick, Foundry, Spacedock and Landing Pad; 2x2
-/// Hab Dome, Lab and Sentinel.
+/// Hab Dome, Lab and Sentinel; 1x1 Target Dummy.
 double Rules::radius(StructureKind k) {
     switch (k) {
     case StructureKind::citadel: return citadelHall() ? 6.0 : 2.5;
+    case StructureKind::dummy: return 0.5;
     case StructureKind::habDome: case StructureKind::lab: case StructureKind::sentinel: case StructureKind::gatling: return 1;
     default: return 1.5;
     }
@@ -91,6 +108,8 @@ double Rules::height(StructureKind k) {
     case StructureKind::sentinel: return 1.7;
     case StructureKind::gatling: return 1.3;
     case StructureKind::landingPad: return 0.18;
+    // The post and its plate (dummy.py).
+    case StructureKind::dummy: return 1.8;
     }
     return 2.0;
 }
@@ -110,7 +129,7 @@ const Footprint& Rules::footprint(StructureKind k) {
     // 1 thick round a 10x10 hall 6 high, the roof slab 6 to 7, the doorway
     // in the +y face 3 wide and 3 tall under a lintel. Every other kind (and
     // the Citadel without the hall): its whole square, as tall as its body.
-    using Table = std::array<Footprint, size_t(StructureKind::landingPad) + 1>;
+    using Table = std::array<Footprint, size_t(StructureKind::dummy) + 1>;
     auto make = [](bool withHall) {
         Table t;
         for (size_t i = 0; i < t.size(); i++) {
@@ -181,6 +200,7 @@ double Rules::hp(StructureKind k) {
     case StructureKind::derrick: return 500; case StructureKind::foundry: return 1250;
     case StructureKind::spacedock: return 1300; case StructureKind::lab: return 400; case StructureKind::sentinel: return 250;
     case StructureKind::gatling: return 300; case StructureKind::landingPad: return 400;
+    case StructureKind::dummy: return 150;
     }
     return 0;
 }
@@ -239,6 +259,8 @@ double Rules::vision(StructureKind k) {
     switch (k) {
     case StructureKind::citadel: case StructureKind::sentinel: return 11;
     case StructureKind::bastion: return 10;
+    // A practice target sees nothing.
+    case StructureKind::dummy: return 0;
     default: return 9;
     }
 }

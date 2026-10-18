@@ -579,7 +579,7 @@ void Simulation::pilotAct(Unit& u, const PilotTarget& target_, bool pressed, dou
         const UnitStats w = weapon(u, t->air);
         reload(u, w);
         if (u.kind == Unit::Kind::scorpion) u.lockTarget = std::nullopt;
-        const Round r = aimRound(u, w, *t, pilotPace);
+        const Aimed r = aimRound(u, w, *t, pilotPace);
         if (r.hit) {
             strike(u, id, *t, r.share);
             events.push_back(GameEvent::Shot{u.id, id, t->owner, t->position});
@@ -1144,6 +1144,7 @@ std::string Simulation::title(Structure::Kind k) {
     case Structure::Kind::sentinel: return "Sentinel";
     case Structure::Kind::gatling: return "Gatling Gun";
     case Structure::Kind::landingPad: return "Landing Pad";
+    case Structure::Kind::dummy: return "Target Dummy";
     }
     return "";
 }

@@ -161,6 +161,15 @@ void Simulation::stepCitadels(double dt) {
     }
 }
 
+bool Simulation::targetable(const Unit& u, int64_t side) const { return state.hostile(u.owner, side); }
+
+bool Simulation::targetable(const Structure& s, int64_t side) const {
+    if (s.kind == StructureKind::dummy) return s.complete() && !s.downUntil && s.hp > 0;
+    return state.hostile(s.owner, side);
+}
+
+void Simulation::stepRounds(double, std::vector<GameEvent>&) {}
+
 void Simulation::stepCornerGun(Structure& s, int i, const UnitStats& w, double dt, std::vector<GameEvent>& events) {
     CornerGun& g = (*s.guns)[size_t(i)];
     g.cooldown = ac::max(0.0, g.cooldown - dt);

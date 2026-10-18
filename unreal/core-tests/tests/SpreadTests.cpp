@@ -89,7 +89,7 @@ TEST(spread_aMissFliesOffTheSight) {
         u.spread = std::nullopt;
         const auto t = sim.target(them);
         const double c = sim.cone(u, sim.weapon(u), 1);
-        const Simulation::Round r = sim.aimRound(u, sim.weapon(u), *t, 1);
+        const Simulation::Aimed r = sim.aimRound(u, sim.weapon(u), *t, 1);
         if (r.hit) continue;
         misses++;
         EXPECT_TRUE(std::hypot(r.yaw, r.pitch) <= c + 1e-12);
