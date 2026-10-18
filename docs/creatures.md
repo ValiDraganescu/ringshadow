@@ -251,14 +251,20 @@ Prospector that hits them.
   10 minutes, and only 3 or 4 Shardlings).
 - Which building: weighted by its cost; in Prospect Landing the Citadel
   itself (its corner turrets answer, D1) or buildings at least 25 cells
-  from it.
+  from it. C1 (docs/citadel-interior.md section 4): the corner turrets fire
+  only with a gunner, so a Citadel is a raid's building only while a human
+  pilot is on the ground in its region, there to man them
+  (`WorldMap::humanIn`); with nobody there it is not a candidate (as before
+  D1). The Matriarch's raid pick (WorldNest.cpp) keeps the same rule.
 - Warning: 20 s before a raid reaches its building, every pilot in the
   region and the ones next to it hears the swarm coming (`broodswarm`) and
   gets a banner at the top: "BROOD SWARM · heading for the Hab Dome · 140 m
   NE" (the one banner slot, U1).
 - A building that falls is destroyed (N2 decides what remains: a wreck the
   pilot can rebuild at a discount is the suggestion). Bugs never eat
-  buildings or carry anything off.
+  buildings or carry anything off. A Citadel never falls to bugs: their
+  hits stop at `Rules::citadelBugFloor` (10%) of its hp (C1), so the worst a
+  raid does is a wreck to repair; only what is not a bug can destroy it.
 
 ### The ringshadow sweep
 
@@ -350,7 +356,9 @@ The defences are the core's buildings with a weapon (`Defence.h`,
   (`BroodGroup::turret`), before its raid's building. A defence's builder
   earns half the XP of the damage it does (`WorldMap::defenceXpShare`).
 - **Prospect Landing's Citadel can be raided now** that it defends itself;
-  its other buildings still only beyond 25 cells of it.
+  its other buildings still only beyond 25 cells of it. Since C1 only while
+  a human pilot is in the region (the guns need a gunner), and never below
+  the 10% floor.
 - **Dev and shots**: `defence wallet|purse|blueprints|citadel|gatling|aa|air|flyers`
   (`WorldMap::devDefence`); `-AcMmoShotsD` makes the five pictures,
   `-AcMmoShotsD3` the four of the turret upgrades.

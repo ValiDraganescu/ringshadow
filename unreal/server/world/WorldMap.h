@@ -985,12 +985,13 @@ public:
     /// `Defence::stationReach` of the gun's station, the gun free), or
     /// leaves the gun it mans (-1). The reason when refused.
     std::optional<std::string> man(PilotId pilot, int gun);
-    /// A complete Citadel of the realm in region `r` whose bounding square
-    /// grown by a cell holds `at` (region cells): what stands there was
-    /// swallowed by the grown Citadel (schema 27). Its id, or nil.
-    std::optional<int64_t> swallowedBy(size_t r, Vec2 at) const;
+    /// A human pilot is on line in region `r`, on the ground (not in
+    /// flight): C1, the Brood raids a Citadel only then (its guns need a
+    /// gunner; nobody there, it is not a raid's target).
+    bool humanIn(size_t r) const;
     /// Blueprint site `i` of region `r` lies under a complete Citadel
-    /// (`swallowedBy`): never seen, never opened, never a contract's.
+    /// (`Simulation::swallowedByCitadel`, the predicate the game hides its
+    /// crate by): never seen, never opened, never a contract's.
     bool siteSwallowed(size_t r, size_t i) const;
     /// Schema 27 (`restore`, after the buildings): each Citadel's grown
     /// footprint, its bounding square + 1, cleared of ore (the deposits

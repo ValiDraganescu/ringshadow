@@ -155,8 +155,23 @@ doorway is not sheltered). Never with the hall off.
 Applied in: `Simulation::target()` (so bugs, turrets and soldiers never pick
 it), `hit()` (nothing happens: no damage, no `hitAt`), `slamStrikes` (the Matriarch), and
 on the server the prey lists in `WorldBrood.cpp` and `WorldNest.cpp`. The
-Brood can still attack the Citadel itself (its HP as today) and anything
-outside. The Brood never paths inside (section 2).
+Brood can still attack the Citadel itself and anything outside. The Brood
+never paths inside (section 2).
+
+An unattended Citadel (the manager's ruling, 2026-10-18): the guns need a
+gunner, so a home must not be lost while nobody is there to man them.
+
+- The director's raids and the Matriarch take a Citadel as a raid's
+  building only while a human pilot is on the ground in its region
+  (`WorldMap::humanIn`), manned or not; with nobody there it is not a
+  candidate, as before D1 (docs/creatures.md, "Raids on buildings").
+- A floor: bugs never take a Citadel below `Rules::citadelBugFloor` (10%)
+  of its hp (the core's `Simulation::hit`, a bug the shooter), so the worst
+  case is a wreck to repair; the destroyed path stays only for what is not
+  a bug. A pilot sheltered in the hall stays sheltered.
+- Tests: `raid_skipsTheCitadelWithNobodyInTheRegion`,
+  `citadel_neverFallsBelowTheFloorToBugs` (server, HuntTests.cpp, the
+  Matriarch at Tern Ridge's Citadel).
 
 The floor (the manager's ruling, 2026-10-18): the Brood never takes a
 Citadel below `Rules::citadelBugFloor` (10%) of its hit points; one already
@@ -426,17 +441,43 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
 
 ## 9. Wire and save (net, server)
 
-- Protocol **36**: `RequestMessage::Door` (22), `Man` (23);
-  `structureFields` appends `door` (`Opt<Door>`: `open` 8 bits, `opening`
-  1 bit); `GunsCodec` adds `pitch` (8 bits) and `gunner` (`Opt<id>`);
-  `PilotInput` and `Pilot` gain `pitch`; `Unit::Task` gains `atGun`.
-- Save schema **27**: on load every Citadel's new footprint (bounding
-  square + 1) is cleared of deposits, mounds, doodads and sites; a unit in
-  it is pushed out by `refreshNav`; another structure overlapping it is
-  logged and left. The user's saved world comes back with its Citadel grown
-  in place.
-- Dev control (`Server::devControl`): `citadel door open|close`, `citadel
-  man N|none` (as the seated pilot), for the flow tests.
+- Protocol **36**: `RequestMessage::Door{open}` (22, 1 bit) and
+  `Man{gun}` (23, 3 bits: the gun + 1, so -1 leaves the gun; a wild gun is
+  clamped to -1..3); the index stays 5 bits (24 of 32 used).
+  `structureFields` appends `door` (`Opt<Door>`: `open` in 255ths, 8 bits,
+  `opening` 1 bit); `GunsCodec` adds each gun's `pitch` (8 bits) and
+  `gunner` (`Opt<id>`): the client gets a gun's aim, pitch and gunner, never
+  its target or reload. `PilotInput::pitch` is 8 bits over ±90°
+  (`q::pitch`: 127 steps each way, 0 and ±90° exact); the server copies it
+  onto the driver's `Pilot::pitch` (`Region::step`). `Unit::Task` gains
+  `atGun` (19 tasks, still 5 bits, `codec::kTaskBits`).
+- The server (`WorldCitadel.cpp`): `WorldMap::door` and `WorldMap::man` act
+  on the realm's complete Citadel nearest the pilot's Prospector through
+  the core's `Simulation::door`, `man` and `unman`; they are links of
+  `Server::skillTree`'s chain, logged `refuse … by pilot N: why`. A unit
+  leaves its gun when its pilot hands it back, goes off line or it leaves
+  the region (`Region`); the core frees a gun whose gunner died.
+  `Rules::setCitadelHall(true)` is the first line of the server's `main`
+  (and of the server tests, `tests/HallOn.cpp`).
+- Save schema **27** (a marker step, no new rows): on load every Citadel's
+  footprint grown to its bounding square + 1 is adopted
+  (`WorldMap::adoptCitadels`): its ore deposits are emptied for good (kept
+  in the list, as the deposits go by index); the region file's blueprint
+  sites in it are swallowed (`siteSwallowed`: never seen, opened, handed
+  out by a contract, a mission, a goal or a survey chip); the map's doodads
+  in it stay in the region file, which both ends build from, so the core
+  lets a driven unit through them and the game hides them and the
+  swallowed sites' crates (the shared predicate, the core's
+  `swallowedByCitadel`); a unit in its walls is pushed out by `refreshNav`;
+  another structure overlapping it is left. Each is a line of
+  `grownCitadels()`, logged `save: schema 27: …` apart from the restore's
+  problems. The user's saved world comes back with its Citadel grown in
+  place.
+- Dev control (`Server::devControl`, as the seated pilot, `as N` for
+  another): `citadel here` (a complete, armed Citadel of the realm on clear
+  ground ahead, its door shut, the Prospector 4 cells out from its door
+  facing it; it answers with the Citadel's id), `citadel door open|close`
+  and `citadel man N|none`, for the flow tests.
 
 ## 10. Tests
 
@@ -444,7 +485,7 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
 |---|---|
 | core | `CitadelTests.cpp`: `footprint_citadelHallIsHollow` (the slabs, `blocks`, `inside`, both switch positions); `pilot_walksInThroughTheOpenDoorOnly`; `pilot_isPushedNowhereInsideTheHall`; `pilot_walksOverADoodadSwallowedByTheCitadel`; `pilot_unloadsInTheHallAndAtItsWalls`; `brood_neverEntersAndNeverTargetsASheltered` (A* blocked, `target()` nil, `hit()` 0, the slam); `door_closesOnlyWhenTheDoorwayIsClear`; `gun_aimClampsAtTheArcsHardStops`; `gun_restsWithoutAGunnerAndNeverFires`; `gun_aimClampedToTheArcAndPitch`; `gun_firesAtTheCrosshairFoeInRange`; `gun_eyeRidesTheCradle`; `citadel_bugsNeverTakeItBelowTheFloor`; `brood_strikesTheCitadelFromEveryFace`; `placement_citadelPlacesOnTodaysGround` (the start region). `DefenceTests.cpp`: `Defence_citadelTurretsNeverFireAlone` (was `…HitGroundAndAir`), `Defence_citadelRangeMarks` (a gunner's reach) |
 | net | round trips of `Door`, `Man`, `PilotInput::pitch`, `Structure::door`, `CornerGun::pitch/gunner`; the width tests |
-| server | `door_openFromOutsideCloseOnlyInside`; `man_takesAFreeGunWithinReach`; `man_freedWhenTheGunnerDies`; `brood_raidIgnoresThePilotInTheHall` (a group with prey set on a sheltered pilot drops it; the Citadel still takes hits); `citadel_noAutoFireWithoutAGunner`; `load_schema27ClearsTheGrownFootprint`; `respawn_insideACompleteCitadel` |
+| server | `door_openFromOutsideCloseOnlyInside`; `man_takesAFreeGunWithinReach`; `man_freedWhenTheGunnerDies`; `brood_raidIgnoresThePilotInTheHall` (a group with prey set on a sheltered pilot drops it; the Citadel still takes hits); `citadel_noAutoFireWithoutAGunner`; `load_schema27ClearsTheGrownFootprint`; `respawn_insideACompleteCitadel`; `raid_skipsTheCitadelWithNobodyInTheRegion`; `citadel_neverFallsBelowTheFloorToBugs` |
 | game | `Autocraft.Pilot.ChaseStopsAtWalls` (the sweep against the slabs); `Autocraft.Pilot.GunLookClamps`; `Autocraft.Hud.TurretFeedPaints`; `Autocraft.Pose.CitadelRamp` |
 | flow | `-AcFlowTest=mmocitadel`: dev rig, walk to the door, open, enter, close, man gun 0, fire, disengage, leave; headless, then the shots (`-AcMmoShotsC1`: at the door, in the hall, the feed) |
 

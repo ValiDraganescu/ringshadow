@@ -467,6 +467,9 @@ bool WorldMap::spawnGroup(size_t r) {
         if (raidReady && kind != UnitKind::lodeback)
             for (const Structure& b : st.structures) {
                 if (!realm(b) || !b.complete() || held(Poi::building, b.id)) continue;
+                // C1: its guns fire only with a gunner, so the Citadel is
+                // raided only while a pilot is here to man them.
+                if (b.kind == StructureKind::citadel && !humanIn(r)) continue;
                 // Near the Citadel its corner turrets answer (D1): the Citadel
                 // itself may be raided, the rest only farther off.
                 if (level == 1 && b.kind != StructureKind::citadel && citadel &&

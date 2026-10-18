@@ -392,18 +392,10 @@ TEST(hunt_assault_her_fall_and_the_pay) {
 TEST(hunt_fails_on_the_clock_or_with_the_party_down) {
     {
         WorldMap w(first(), params());
-        const int64_t citadel = atTernCitadel(w, a, keyA);
-        ASSERT_TRUE(citadel > 0);
+        ASSERT_TRUE(atTernCitadel(w, a, keyA) > 0);
         ASSERT_TRUE(!w.callHunt(a).has_value());
         w.takeNews(a);
-        // C1: the corner guns no longer fire alone, so she would fell the
-        // Citadel over the ten minutes; it is kept whole here (the clock is
-        // what this tests).
-        for (double t = 0; t < WorldHunt::lasts - 5; t += 1) {
-            for (Structure& s : w.region(*w.regionNamed("tern-ridge")).simulation().state.structures)
-                if (s.id == citadel) s.hp = Rules::hp(StructureKind::citadel);
-            stepFor(w, 1);
-        }
+        stepFor(w, WorldHunt::lasts - 5);
         EXPECT_TRUE(w.hunt().state == State::gathering);
         stepFor(w, 6);
         EXPECT_TRUE(w.hunt().state == State::failed);
@@ -474,4 +466,89 @@ TEST(hunt_saved_and_loaded) {
     WorldMap u(first(), p);
     EXPECT_TRUE(u.restore(old).empty());
     EXPECT_TRUE(u.hunt().state == State::none && !u.huntRefusal(keyA).has_value());
+}
+
+// MARK: - C1: a Citadel with nobody to man its guns
+
+namespace {
+
+/// The Citadel's hp in region `r` (-1: gone).
+double citadelHp(WorldMap& w, size_t r, int64_t id) {
+    const Structure* s = structure(w.region(r).simulation(), id);
+    return s ? s->hp : -1;
+}
+
+/// A neighbour of region `r` with a pad, and that pad's point.
+std::optional<std::pair<size_t, Vec2>> nextDoor(WorldMap& w, size_t r) {
+    const auto& all = w.loaded()->regions;
+    for (size_t n = 0; n < all.size(); n++)
+        if (std::llabs(all[n].column - all[r].column) + std::llabs(all[n].row - all[r].row) == 1 && !all[n].built.pads.empty())
+            return std::pair{n, all[n].built.pads[0].at};
+    return std::nullopt;
+}
+
+} // namespace
+
+// The manager's ruling (docs/citadel-interior.md section 4): the Brood takes
+// a Citadel for a raid only while a human pilot is in its region, there to
+// man the guns. The Matriarch beside Tern Ridge's Citadel leaves it alone
+// while its pilot is a region away, and no raid of the director's sets on
+// it; back in the region, she takes it again.
+TEST(raid_skipsTheCitadelWithNobodyInTheRegion) {
+    WorldMap w(first(), params());
+    const int64_t citadel = atTernCitadel(w, a, keyA);
+    ASSERT_TRUE(citadel > 0);
+    const size_t r = *w.regionNamed("tern-ridge");
+    for (int i = 0; i < 60 && !w.matriarch(); i++) stepFor(w, 1);
+    ASSERT_TRUE(w.matriarch().has_value());
+    EXPECT_TRUE(w.humanIn(r));
+    const auto away = nextDoor(w, r);
+    ASSERT_TRUE(away.has_value());
+    ASSERT_TRUE(w.devTransfer(a, away->first, away->second));
+    w.step();
+    EXPECT_TRUE(!w.humanIn(r));
+    const double full = Rules::hp(StructureKind::citadel);
+    bool raided = false;
+    for (int t = 0; t < 240; t++) {
+        stepFor(w, 1);
+        for (const auto& g : w.broodGroups(r)) raided = raided || (g.poi == WorldMap::Poi::building && g.key == citadel);
+    }
+    EXPECT_TRUE(!raided);
+    EXPECT_EQ(citadelHp(w, r, citadel), full);
+    // Back beside it: she comes for it again.
+    ASSERT_TRUE(w.devTransfer(a, r, structure(w.region(r).simulation(), citadel)->position + Vec2(8, 0)));
+    w.step();
+    EXPECT_TRUE(w.humanIn(r));
+    for (int t = 0; t < 240 && citadelHp(w, r, citadel) >= full; t++) stepFor(w, 1);
+    EXPECT_TRUE(citadelHp(w, r, citadel) < full);
+}
+
+// The floor (the manager's ruling): bugs never take a Citadel below
+// `Rules::citadelBugFloor` of its hp. The Matriarch beside Tern Ridge's
+// Citadel, its pilot sheltered in the hall the whole time and nobody at a
+// gun, wears it down to the floor in ten minutes and no lower: a wreck to
+// repair, the home kept, the pilot in it unhurt.
+TEST(citadel_neverFallsBelowTheFloorToBugs) {
+    WorldMap w(first(), params());
+    const int64_t citadel = atTernCitadel(w, a, keyA);
+    ASSERT_TRUE(citadel > 0);
+    const size_t r = *w.regionNamed("tern-ridge");
+    const Vec2 hall = structure(w.region(r).simulation(), citadel)->position + Vec2(0, -2);
+    const double full = Rules::hp(StructureKind::citadel), floor = Rules::citadelBugFloor * full;
+    double lowest = full;
+    for (int t = 0; t < 600; t++) {
+        if (Unit* u = drivenUnit(w, a)) {
+            u->position = hall;
+            u->task = Unit::Task::idle;
+        }
+        stepFor(w, 1);
+        const double hp = citadelHp(w, r, citadel);
+        ASSERT_TRUE(hp > 0);
+        lowest = std::min(lowest, hp);
+    }
+    std::printf("  lowest %.0f of %.0f (floor %.0f)\n", lowest, full, floor);
+    EXPECT_TRUE(lowest >= floor - 1e-9);
+    EXPECT_TRUE(lowest < 0.5 * full);
+    ASSERT_TRUE(drivenUnit(w, a) != nullptr);
+    EXPECT_EQ(drivenUnit(w, a)->hp, Rules::hp(UnitKind::prospector));
 }

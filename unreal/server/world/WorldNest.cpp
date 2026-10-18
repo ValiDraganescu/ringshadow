@@ -232,7 +232,8 @@ void WorldMap::nestThink(size_t r) {
     if (!prey && !raid) {
         double best = kFar;
         for (const Structure& s : st.structures)
-            if (realm(s) && s.hp > 0 && distance(s.position, home) <= reach + Rules::radius(s.kind) && distance(s.position, q.position) < best) {
+            if (realm(s) && s.hp > 0 && (s.kind != StructureKind::citadel || humanIn(r)) &&
+                distance(s.position, home) <= reach + Rules::radius(s.kind) && distance(s.position, q.position) < best) {
                 best = distance(s.position, q.position);
                 raid = s.id;
             }

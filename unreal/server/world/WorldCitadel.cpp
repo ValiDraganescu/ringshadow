@@ -57,19 +57,16 @@ std::optional<std::string> WorldMap::man(PilotId pilot, int gun) {
     return sim.man(me->id, c->id, gun);
 }
 
-std::optional<int64_t> WorldMap::swallowedBy(size_t r, Vec2 at) const {
-    if (r >= regions_.size()) return std::nullopt;
-    const double half = Rules::radius(StructureKind::citadel) + 1;
-    for (const Structure& s : regions_[r]->simulation().state.structures)
-        if (s.kind == StructureKind::citadel && s.complete() && realm(s) && std::abs(at.x - s.position.x) < half &&
-            std::abs(at.y - s.position.y) < half)
-            return s.id;
-    return std::nullopt;
+bool WorldMap::humanIn(size_t r) const {
+    for (const auto& [id, p] : pilots_)
+        if (!p.flight && p.region == r && p.unit) return true;
+    return false;
 }
 
 bool WorldMap::siteSwallowed(size_t r, size_t i) const {
-    if (!world_ || r >= world_->regions.size() || i >= world_->regions[r].built.sites.size()) return false;
-    return swallowedBy(r, world_->regions[r].built.sites[i].at).has_value();
+    if (!world_ || r >= world_->regions.size() || r >= regions_.size() || i >= world_->regions[r].built.sites.size()) return false;
+    // The core's predicate, the one the game hides the crate by.
+    return regions_[r]->simulation().swallowedByCitadel(world_->regions[r].built.sites[i].at);
 }
 
 std::vector<std::string> WorldMap::adoptCitadels(size_t r) {
