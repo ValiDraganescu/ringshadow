@@ -24,7 +24,7 @@ The units stay as they are (one cell is 1 m, `AcSpace.h`; a Prospector is
 | Footprint, `Rules::radius(citadel)` | 2.5 (5×5 cells) | **6.0 (12×12 cells)** |
 | Walls | solid block | 1.0 cell thick, the hall inside 10×10 |
 | Hall height (floor to ceiling) | – | 6.0 cells |
-| Roof slab | – | 6.0 to 7.0; the roof deck at 7.0 carries the four turret pylons |
+| Roof slab | – | 6.0 to 7.0; the roof deck at 7.0, the four corner towers rise past it to the turret mounts |
 | Body height, `BuildingHeight(citadel)` (`AcPose.cpp`) = `Rules::height` | 4.6 | 12.3 (deck 7.0, the corner towers' mounts at 9.0, crowns 8.3-8.7, the central tower's beacon top 12.3) |
 | Doorway | – | the +y face, x in [-1.5, 1.5], 3.0 wide, 3.0 tall |
 | Corner guns, `Defence::cornerInset()` | 2.0 | 5.5 (the mounts at (±5.5, ±5.5), radius 0.5, on the corner towers at z 9.0, `Defence::mountHeight()`) |
@@ -319,32 +319,84 @@ As built (the game):
 
 ## 8. The model (model worker)
 
-A Geometry Script model, `unreal/Tools/Editor/models/citadel.py`, replacing
-the SceneKit export (the `citadel_blue`/`citadel_red` catalog entries), per
-the `ringshadow-model-pipeline` and `ringshadow-building-visuals` skills.
-Frame: UE cm, front +Y, Z up, 100 cm a cell.
+As built (2026-10-18): a Geometry Script model,
+`unreal/Tools/Editor/models/citadel.py`, replacing the SceneKit export (the
+`citadel_blue` entry, `citadel_red` written as its copy), then
+`citadel_turrets.py` (run it after `citadel.py`, every time: it splices the
+turrets into both entries). Frame: UE cm, front +Y, Z up, 100 cm a cell;
+the ground at z 0 is the ground's height at the centre. Renders:
+`art/models/citadel/c1/` (`before-3q`, `look-*`: outside, the door, the
+door from the ground looking up, the hall, the hall to the door, the
+scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
 
-- Hull per section 1: four walls 1 cell thick, 7 tall; the roof slab; a
-  floor slab inside (hides the slope); the doorway 3 wide × 3 tall on +Y
-  with a lintel; the `ramp` part, a 3 × 3 × 0.3 slab hinged at the doorway's
-  outer bottom edge (pivot there; the pose rotates it); `doorPanels_0` and
-  `_1`; four `gunStations_0..3` consoles at (±4.0, ±4.0) facing their corner,
-  each with a `gunScreens_k` emissive; `hallLamps_0..7` yellow lamps along
-  the walls; the four corner pylons on the deck at (±5.5, ±5.5) carrying the
-  turrets; the tower, dish and beacon as today above the deck centre.
-- Keep every part name `PoseCitadel` drives: `progressLamps_0..3`,
-  `queueLamps_0..4`, `doorSegments_0..5` (the hangar strip, now along the
-  lintel), `dish`, `beacon`, `light_2`, and the materials' roles
-  (`hullDark/Mid/Light`, `chrome`, `team`, the glow parts).
-- `citadel_turrets.py`: `CORNER = 550`, `TOP = 700 + pylon height`; the
-  parts as today; the barrels must clear the hull everywhere in the arc
-  (section 5) at pitch -20°: check it in the script (a geometric assert).
-- `scaffold_citadel` regenerated to the new size. The catalog bounds follow.
-- Inside: the walls' inner faces and the floor and ceiling must be real
-  faces (solid boxes, not open shells); a Lumen interior lit by the lamps
-  and the open door. Materials inside: `hullMid` walls, `hullDark` floor.
-- Renders: the model row (`AcModelRow`), an MMO shot at the door, inside the
-  hall, from a gun; before/after under `art/models/citadel/`.
+- **Hull, exactly the slabs of section 2**: the walls' boxes are the wall
+  slabs (their outer face at 5.85, the skin standing on it), sunk 1.0 into
+  the ground to hide a slope; the roof slab; the hall floor (top at 0.05)
+  and the doorway's threshold. Everything inside the hall, doorway or roof
+  slabs is decoration above head height or flat on the floor. No solid
+  part of the model lies outside ±6.0; the skin (panels, ribs, bands,
+  slits, markers, coping) stands up to 0.08 out, the side pipe 0.12, the
+  floodlights over the door 0.18 (at z 4.0, over any unit's head). Outside the
+  footprint only flat ground pieces: the open ramp and the apron plate
+  before it (x ±2.6, to y 10.2, 0.02 high, no ray piece).
+- **Corner towers**: the wall corners, clad 2 cells wide on both outer
+  faces, carried up past the deck (over the roof they widen inward to
+  [4.0, 6.0]²) to a dark crown at 8.3 to 8.7 with a hazard band, and a
+  pedestal to the turret mount at 9.0 on (±5.5, ±5.5). Three `floodGlow`
+  slits per outer face in the shaft (4.3) and over the deck (7.5), a
+  `markerGlow` at each crown's corner, stepped anchor feet at the base.
+- **Walls**: buttress ribs every 2 cells (±2.9 on the front, either side of
+  the door), light panels in the bays, a service band at 3.0 with a pipe
+  on the sides and back, `ventGlow` vents in the lower bays, the blue team
+  band at 5.9, the coping round the deck's edge.
+- **Front**: the doorway 3 × 3 with a hazard frame and lintel; the
+  `doorSegments_0..5` strip over it (z 3.4) and two floodlights (`floodGlow`,
+  z 4.0; the night pool of `AcLamps` follows them); `doorPanels_0` outside
+  and `_1` inside, right of the doorway at x 2.25, z 1.0 to 1.4
+  (`panelGlow`, Emission 1.0 lit); `light_2` at (0, 7.0, 2.5); the apron.
+- **The ramp**: the door standing in the doorway (y 5.7 to 6.0, z 0 to
+  2.96), pivot at the doorway's outer bottom edge (0, 600, 0) UE cm, at
+  rest closed. Open = 90° about its X axis, top outward (UE roll +90, SK
+  euler x +π/2; `Autocraft.Pose.CitadelRamp`). Treads on its outer face.
+- **Deck**: plating with seams, a railed walkway along the edges between
+  the towers (z 7.0 to 7.2), two tanks, a crane, the steam stack
+  (`emitter_1` at its mouth) and the `dish` on a braced mast (pivot at 9.8).
+- **Central tower** (the old keep's): an octagon from the deck to 9.0 with
+  the four `progressLamps` windows on its faces toward the camera (z 7.8 to
+  8.2), a chrome ring, a narrower octagon to 10.6, the window drum with the
+  five `queueLamps` (z 10.7 to 10.9), a dome, the `beacon` at 12.2 (the
+  top, 12.31).
+- **Inside**: `hullMid` walls and ceiling, `hullDark` floor; baseboards,
+  ceiling beams, cable trays; a railed catwalk along the back and both sides
+  at 4.0 (0.9 deep: brackets, a ladder on the back wall); a hoist on the
+  middle beam whose hook stops 2.5 over the floor; `hallLamps_0..1` on the
+  front wall (z 4.3), `hallLamps_2..7` under the catwalk's edge looking
+  down (z 3.6) (`hallGlow`, Emission 1.0 steady); the team disc on the
+  floor. Lumen lights the hall from the lamps and the open door.
+- **Gun stations** `gunStations_0..3` (corner order 0 (+x,+y), 1 (−x,+y),
+  2 (−x,−y), 3 (+x,−y)): a console 0.6 corner-ward of the gunner's point
+  (±4.0, ±4.0), its screen `gunScreens_k` (`glow_2399ff`, as the progress
+  lamps: 1.9 lit, 0.04 dark) toward that point, a conduit up to the
+  ceiling, a fold-down seat on its flank; the gunner's point itself stays
+  clear (a floor ring).
+- **Turrets** (`citadel_turrets.py`, `CORNER = 550`, `TOP = 900`): the
+  parts as before plus `turretCradles_k` between `turrets_k` (yaw: SK euler
+  (0, −aim, 0)) and `turretBarrels_k` (spin about X): the pitch, SK euler
+  (0, 0, +pitch), pivot on the barrel axis at the trunnion, 0.144 along the
+  aim and 0.396 over the mount; the muzzles, flashes and the muzzle ring
+  ride on it. The housing's back and cheeks are low so the gun's eye sees
+  the barrels. The script asserts that the barrels and the ring keep 3 cm
+  off every solid of `citadel_blue` (its ray pieces) at every yaw of the
+  220° arc at pitch −20° (worst 11.9 cm); at −45° it fails.
+- **The gun's eye** for these numbers: on the cradle, mount + R_yaw(aim) ·
+  [T + R_pitch(pitch) · E], T = (0.144 along the aim, 0.396 up), E = (−0.40
+  along the barrels, +0.55 up): the barrels and the glowing ring sit in the
+  lower middle of the frame at every pitch (`cradle-eye-gun0*.png`).
+- `scaffold_citadel`: poles, rails and braces round the walls at 6.25,
+  9.2 high, the doorway's bays left open.
+- About 12k triangles (the SceneKit model had 56k).
+  `Content/Shatter/citadel_blue.bin` is baked again by any editor game run
+  (a headless `-AcFlowTest=newgame` does it): commit it with the model.
 
 ## 9. Wire and save (net, server)
 

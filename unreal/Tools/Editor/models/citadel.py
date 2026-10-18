@@ -445,11 +445,12 @@ entry = m.write()
 
 # --- the scaffold: poles round the walls, rails, braces ------------------------------------------------------------
 s = Model("scaffold_citadel", category="construction", notes=[
-    "Construction scaffold for the citadel (C1), radius 6.3, height 7.6; shown until the building is complete."])
+    "Construction scaffold for the citadel (C1), radius 6.3, height 9.2 (the corner towers' mounts at 9.0); shown "
+    "until the building is complete."])
 for name in ("chrome", "hazard"):
     s.material(name)
 R = H + 25.0
-TOPZ = 760.0
+TOPZ = 920.0
 poles, rails, bands = [], [], []
 ticks = [-R + k * (2 * R / 6) for k in range(7)]
 pts = sorted({(round(x, 3), round(sy * R, 3)) for x in ticks for sy in (-1, 1)} |
@@ -457,7 +458,7 @@ pts = sorted({(round(x, 3), round(sy * R, 3)) for x in ticks for sy in (-1, 1)} 
 for x, y in pts:
     poles.append(cyl(6, TOPZ, at=(x, y, 0), base=True, sides=6))
     bands.append(cyl(9, 30, at=(x, y, 0), base=True, sides=6))
-for z in (150.0, 300.0, 450.0, 600.0, TOPZ - 6):
+for z in (150.0, 300.0, 450.0, 600.0, 750.0, TOPZ - 6):
     for sy in (-1, 1):
         rails.append(box((2 * R + 12, 8, 8), at=(0, sy * R, z), base=True))
     for sx in (-1, 1):
@@ -465,7 +466,7 @@ for z in (150.0, 300.0, 450.0, 600.0, TOPZ - 6):
 braces = []
 for i in range(6):
     a, b = ticks[i], ticks[i + 1]
-    for lo, hi in ((0.0, 300.0), (300.0, 600.0)):
+    for lo, hi in ((0.0, 300.0), (300.0, 600.0), (600.0, 900.0)):
         for sy in (-1, 1):
             if sy > 0 and abs((a + b) / 2) < DOOR + 60:
                 continue  # leave the doorway clear

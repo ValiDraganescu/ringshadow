@@ -67,9 +67,11 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
                         ("rotation", "visibility")))
     m.mesh(t, "hullDark", [cyl(26 * S, 8 * S, at=at(0, 0, 0), base=True, sides=20)])
     m.mesh(t, "chrome", [cyl(27 * S, 2 * S, at=at(0, 0, 6), base=True, sides=20)], solid=False)
-    m.mesh(t, "hullMid", [box((34 * S, 30 * S, 20 * S), at=at(-2, 0, 8), base=True)])
+    # C1: the housing's back and the cheeks low (top at 24 and 27 of D1's 28 and 34), so the gun's eye
+    # (Defence::gunEye, 1.2 over the mount, 0.4 behind it) sees the barrels and the muzzle ring over them
+    m.mesh(t, "hullMid", [box((34 * S, 30 * S, 16 * S), at=at(-2, 0, 8), base=True)])
     for s in (-1, 1):
-        m.mesh(t, "hullLight", [box((28 * S, 6 * S, 26 * S), at=at(6, s * 17, 8), base=True)])
+        m.mesh(t, "hullLight", [box((28 * S, 6 * S, 19 * S), at=at(6, s * 17, 8), base=True)])
     m.mesh(t, "team", [box((20 * S, 2 * S, 6 * S), at=at(-2, 15.5, 16), base=True)], solid=False)
     axis = at(12, 0, 22)
     cr = m.part("turretCradles_%d" % k, parent=t, at=at(8, 0, 22), hidden=True,
