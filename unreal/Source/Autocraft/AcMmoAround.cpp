@@ -197,7 +197,14 @@ void FAcMmoClient::PrepareAround()
 	const TMap<FString, FString>& All = RegionTexts();
 	const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, {});
 	TArray<FAcRegionAround> Now;
-	const int64 Target = W->ferry && W->flyingTo ? *W->flyingTo : INDEX_NONE;
+	int64 Target = W->ferry && W->flyingTo ? *W->flyingTo : INDEX_NONE;
+	// Fallen (P6): the region the pilot comes back in, made ahead the same
+	// way while the respawn screen counts down (a home two regions from the
+	// fall was else built on the game thread at the arrival: ~0.6 s).
+	if (Target == INDEX_NONE)
+		if (const ac::net::ProgressMessage* P = Progress(); P && P->respawn && P->respawn->region != R.id)
+			for (int64 QI = 0; QI < int64(W->regions.size()); ++QI)
+				if (W->regions[size_t(QI)].id == P->respawn->region) Target = QI;
 	for (int64 QI = 0; QI < int64(W->regions.size()); ++QI)
 	{
 		const ac::net::WorldMessage::Region& Q = W->regions[size_t(QI)];

@@ -297,6 +297,9 @@
 //   mmo-home-night   the same at midnight: the lamps and the headlamp
 //   mmo-nest-noon    Slag Pockets at noon, 55 cells from the nest, her horde told
 //   mmo-fork-wave    Cold Fork at noon, wave 10 down The Fork, facing the nearest bug
+// and the two arrivals, the frames from the server's teleport until the
+// next scene's timing begins (the ground built, the models loaded):
+//   mmo-arrive-nest  into Slag Pockets    mmo-arrive-fork  into Cold Fork
 // The weather is the world's (-AcMmoWeather=clear for the standard runs).
 // -AcMmoBenchHour=H puts the first scene at hour H (a dawn clip with
 // -AcMmoShotsClip -AcMmoShotsOnly=mmo-home-noon -AcMmoShotsClipDwell=S).
@@ -668,6 +671,10 @@ namespace
 	/// -AcMmoShotsBench: the scene's meter, its step (0 its lines, 1 settling,
 	/// 2 timed, 3 the stats shown, 4 hidden again) and when the step began.
 	FAcBenchMeter BenchMeter;
+	/// -AcMmoShotsBench: an arrival's frames, from the server's teleport until
+	/// the next scene's timing begins (its ground, its models, its first looks).
+	FAcBenchMeter ArriveMeter;
+	bool bArriving = false;
 	int32 BenchStep = 0;
 	double BenchAt = 0;
 	// -AcMmoShotsL1: when the skill points' goal was seen done.
@@ -6445,10 +6452,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 4003:
 		Check(Mmo->DevClock(TEXT("hour 12\nmatriarch here 55")), TEXT("bench: noon, the server takes the pilot to the Matriarch's nest"));
+		ArriveMeter.Begin();
+		bArriving = true;
 		Advance();
 		return;
 	case 4004:
 	{
+		if (bArriving) ArriveMeter.Frame();
 		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
 		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
 		if (Here == TEXT("slag-pockets") && U && S && NearestBug(*S, U->position, ac::UnitKind::matriarch) && Sets > 0 && Ready == Sets && Since() > 3.0)
@@ -6462,10 +6472,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 4006:
 		Check(Mmo->DevClock(TEXT("hour 12\nferry go cold-fork")), TEXT("bench: the pilot taken to Cold Fork"));
+		ArriveMeter.Begin();
+		bArriving = true;
 		Advance();
 		return;
 	case 4007:
 	{
+		if (bArriving) ArriveMeter.Frame();
 		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
 		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
 		if (Here == TEXT("cold-fork") && U && Sets > 0 && Ready == Sets && Since() > 3.0)
@@ -6511,7 +6524,19 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			T.PhaseAt = Now;
 			return;
 		case 1:
+			if (bArriving) ArriveMeter.Frame();
 			if (Since() < Settle) return;
+			if (bArriving)
+			{
+				// The arrival ends where the scene's timing begins.
+				ArriveMeter.End();
+				bArriving = false;
+				const FString Arrive = T.Phase == 4005 ? TEXT("mmo-arrive-nest") : TEXT("mmo-arrive-fork");
+				UE_LOG(LogAutocraft, Display, TEXT("bench-result %s"), *ArriveMeter.Json(Arrive, this, [&](FJsonObject& J) {
+					J.SetStringField(TEXT("region"), Here);
+					J.SetNumberField(TEXT("seconds"), ArriveMeter.Seconds());
+				}));
+			}
 			BenchMeter.Begin();
 			BenchStep = 2;
 			return;
@@ -6520,6 +6545,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (Since() < Settle + Seconds) return;
 			BenchMeter.End();
 			FAcBenchMeter::ShowStats(GetWorld(), true, bGpu);
+			// With -AcBenchGpu, one frame's pass tree to the log too (never the profiler window).
+			if (bGpu) FAcBenchMeter::ProfileGpu(GetWorld());
 			BenchStep = 3;
 			BenchAt = Now;
 			return;

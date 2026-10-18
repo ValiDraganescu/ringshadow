@@ -162,6 +162,75 @@ only change the shader cache's key.
 probes (2.0 ms) are now the largest passes. A `ProfileGPU` tree per scene
 in the MMO bench will show what is inside them.
 
+### Round 3: parts sent only when they move; arrivals (2026-10-18)
+
+**Inside the GPU frame.** With `--gpu` the MMO bench also logs one
+`ProfileGPU` tree per scene. At home at noon after round 2 (11.6 ms):
+
+- Lumen screen probes 2.1 ms (the radiance cache 0.8, the filter 1.2)
+- TSR 1.1, base pass 0.9, Lumen scene lighting 0.6
+- shadow depths 1.4
+- the sun's projection 0.75 (distance-field shadows 0.37, the virtual
+  shadow map 0.36)
+- the global distance field's update of movable objects 0.28, at home
+  only
+
+Those are quality settings, so they stay.
+
+**The change.** When an object moved, `UAcWorldRenderer::WriteObject` sent
+every part of it again. For a building whose lamp or barrel moves (the
+Citadel), that meant its whole hull every frame. The engine then
+invalidated each re-sent instance's virtual shadow pages and redrew them.
+Now a part is sent only when its transform differs bit for bit from what
+its instance holds (`ac.RenderSendChangedOnly`, 1; 0 sends every part, as
+before). An object coming back into view is still written whole. The
+instances end up with the same transforms either way.
+
+| MMO bench, 2 rounds in turns, load 7-10, every part / changed only | GPU p50 | shadow depths | game p50 |
+|---|---:|---:|---:|
+| home noon | 10.8 / 10.4 | 1.35 / 0.98 | 2.4 / 2.1 |
+| home midnight | 11.6 / 11.2 | 1.31 / 0.90 | 2.4 / 2.1 |
+| nest at noon | 9.1 / 9.1 | 1.11 / 1.04 | 2.0 / 2.0 |
+| Fork, wave 10 | 9.4 / 9.6 | 0.84 / 1.01 | 2.2 / 2.2 |
+
+The change saves about 0.4 ms of GPU (3.5 %) where a Citadel is in view
+and nothing elsewhere; the GPU p95 is equal or lower in every run. The
+global distance field's update stays at 0.17 ms at home, so something
+there really moves.
+
+**Arrivals.** The bench gains two scenes, `mmo-arrive-nest` and
+`mmo-arrive-fork`. Each one times the frames from the server's teleport to
+the start of the next scene's timing. An Insights trace
+(`-trace=cpu,gpu,frame,bookmark`, exported with UnrealInsightsBG)
+explains the Fork's 650-690 ms frame. On the region change the client
+built Cold Fork's ground (357 ms) and baked its minimap (218 ms) on the
+game thread, because that region had not been built ahead. Only the dev
+teleport (`ferry go`) arrives like that. The player's paths come in
+built ahead:
+
+- **Dropship.** It makes its target ahead.
+  `-AcMmoShotsF2 -AcMmoShotsF2CallAt=5`: worst frame from the call to
+  the landing 17.5 ms, p99 13.0, 1,681 frames.
+- **Walking.** It enters only neighbours, which are built ahead.
+  `-AcMmoShotsW4`: 13.0 ms at most around the change, against a 9.9 ms
+  median.
+- **Respawn.** One path could still come in unbuilt: a respawn at a home
+  two regions from the fall. In this 3×3 world the start pad is at the
+  centre, so it can't happen today, but Citadels can stand in any
+  region. `FAcMmoClient::PrepareAround` now treats the pending respawn's
+  region (`ProgressMessage::respawn`) as a target, the way it treats the
+  Dropship's, and builds it ahead (map, mirror, ground, minimap) while
+  the respawn screen counts down. No shot set stages a fall that far
+  from home, so that path is not measured yet.
+
+The earlier "many 300-500 ms stalls" on arrival came from the measuring:
+xctrace attached, and the `stat gpu` / ProfileGPU windows. Neither runs in
+the timed frames.
+
+**Next.** The game thread (2.0-2.4 ms; Slate about a fifth of it, the
+console's warp into a render target, the HUD's text measuring) and the
+global distance field's movers at home.
+
 ## Server
 
 The MMORPG server (`unreal/server`), its endpoint (`unreal/Source/AutocraftNet`)

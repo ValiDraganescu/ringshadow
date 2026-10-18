@@ -59,6 +59,8 @@ namespace
 		TEXT("The outline pass (a buried Scorpion's outline, AcOutline.h): 1 on, 0 off. The pass costs nothing while no object has an outline."));
 	TAutoConsoleVariable<int32> CVarCheckPrev(TEXT("ac.RenderCheckPrev"), 0,
 		TEXT("Dev: log when an instance's previous transform (its motion vector) was another object's (a slot handed over)."));
+	TAutoConsoleVariable<int32> CVarSendChangedOnly(TEXT("ac.RenderSendChangedOnly"), 1,
+		TEXT("An object that moved sends only its parts whose transforms changed (1), or every part (0, to compare). A building whose lamp or barrel moves no longer re-sends its hull, which made the engine refresh the hull's distance fields and shadow pages each frame."));
 	TAutoConsoleVariable<float> CVarStats(TEXT("ac.RenderStats"), 0.f,
 		TEXT("Log a `render:` line (objects, instances, sync ms) every N seconds; 0 off."));
 
@@ -94,6 +96,12 @@ namespace
 		}
 #endif
 		return -1;
+	}
+
+	/// Bit for bit the same (what the instance already holds).
+	bool SameExactly(const FTransform& A, const FTransform& B)
+	{
+		return A.GetTranslation() == B.GetTranslation() && A.GetRotation() == B.GetRotation() && A.GetScale3D() == B.GetScale3D();
 	}
 
 	bool SameTransform(const FTransform& A, const FTransform& B)
@@ -440,12 +448,17 @@ void UAcWorldRenderer::WriteObject(FObject& O)
 	const bool bHidden = O.Pose.bHidden;
 	if (O.bChanged && !(bHidden && O.bDrawnHidden))
 	{
+		const bool bChangedOnly = CVarSendChangedOnly.GetValueOnGameThread() != 0 && !O.bWriteAll;
+		O.bWriteAll = false;
 		for (int32 K = 0; K < L.Batch.Num(); ++K)
 		{
 			const int32 P = L.Part[K];
 			FBatch& B = Batches[L.Batch[K]];
 			const int32 S = O.Slots[K];
-			B.Xf[S] = (bHidden || !O.Pose.Visible[P]) ? Gone() : O.World[P];
+			const FTransform& Now = (bHidden || !O.Pose.Visible[P]) ? Gone() : O.World[P];
+			// The instance holds it already: not sent again.
+			if (bChangedOnly && SameExactly(B.Xf[S], Now)) continue;
+			B.Xf[S] = Now;
 			B.Dirty(S);
 		}
 		O.bDrawnHidden = bHidden;
@@ -941,6 +954,7 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 					TArray<FTransform>& Was = Batches[O->Layout->Batch[K]].Shown;
 					if (O->Slots[K] < Was.Num()) Was[O->Slots[K]] = Gone();
 				}
+				O->bWriteAll = true;
 			}
 			WriteObject(*O);
 		}

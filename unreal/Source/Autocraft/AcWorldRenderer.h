@@ -232,6 +232,8 @@ private:
 		bool bWantScaffold = false;
 		/// Off screen (P2, `ac.RenderCull`): posed, but nothing written.
 		bool bCulled = false;
+		/// Back in view: every part written, the same as before or not.
+		bool bWriteAll = false;
 		/// A remembered enemy building out of sight (fog): posed at the moment it left sight, unlit.
 		bool bFrozen = false, bFrozenDrawn = false;
 		double FrozenAt = 0.0;

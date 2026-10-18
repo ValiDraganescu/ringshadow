@@ -11,6 +11,7 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformProcess.h"
 #include "RenderCore.h"
 #include "RHI.h"
@@ -53,6 +54,13 @@ void FAcBenchMeter::Frame()
 	}
 }
 
+double FAcBenchMeter::Seconds() const
+{
+	double S = 0;
+	for (const double W : Wall) S += W;
+	return S / 1000.0;
+}
+
 void FAcBenchMeter::End()
 {
 	FPlatformProcess::Sleep(0.1f);
@@ -72,6 +80,15 @@ void FAcBenchMeter::ShowStats(UWorld* World, const bool bOn, const bool bGpu)
 	PC->ConsoleCommand(TEXT("stat rhi"));
 	PC->ConsoleCommand(TEXT("stat scenerendering"));
 	if (bGpu) PC->ConsoleCommand(TEXT("stat gpu"));
+}
+
+void FAcBenchMeter::ProfileGpu(UWorld* World)
+{
+	APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+	if (!PC) return;
+	if (IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ProfileGPU.ShowUI"))) V->Set(false);
+	if (IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ProfileGPU.UnicodeOutput"))) V->Set(false);
+	PC->ConsoleCommand(TEXT("ProfileGPU"));
 }
 
 void FAcBenchMeter::ReadStats(const bool bGpu)

@@ -68,7 +68,7 @@ LATE = UNREAL / "bench/late.json"
 SHOTS = ["fight", "fight-night", "base", "wide", "pilot", "pilot-night", "third", "army", "army-night", "late", "late8", "late8-base"]
 HOURS = {"fight-night": 23, "pilot-night": 23, "army-night": 23}
 PARTS = ["sim", "events", "scene", "hud", "audio", "save"]
-MMO_SHOTS = ["mmo-home-noon", "mmo-home-night", "mmo-nest-noon", "mmo-fork-wave"]
+MMO_SHOTS = ["mmo-home-noon", "mmo-home-night", "mmo-arrive-nest", "mmo-nest-noon", "mmo-arrive-fork", "mmo-fork-wave"]
 HIDDEN_RUN = UNREAL / "Tools/hidden_run.py"
 
 

@@ -21,9 +21,13 @@ struct AUTOCRAFT_API FAcBenchMeter
 	/// Timing ends: the driver's count and the memory.
 	void End();
 	int32 Num() const { return Wall.Num(); }
+	/// The timed frames' wall seconds.
+	double Seconds() const;
 
 	/// `stat rhi` and `stat scenerendering` (and `stat gpu`) shown, or every stat hidden.
 	static void ShowStats(UWorld* World, bool bOn, bool bGpu);
+	/// One frame's GPU pass tree (`ProfileGPU`) to the log, never its window.
+	static void ProfileGpu(UWorld* World);
 	/// While the stats show: the draws and, with `stat gpu`, the passes.
 	void ReadStats(bool bGpu);
 
