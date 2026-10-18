@@ -7,14 +7,15 @@
 Two stages, both rerunnable:
 
 1. prepare (plain Python, no Unreal): every WAV under
-   unreal/Resources/Sounds/{sfx,ads,missions,kstr} becomes a mono 16-bit WAV in
-   unreal/Content-src/sounds/{sfx,ads,missions,kstr}/, downmixed and peak-normalised to 0.8
+   unreal/Resources/Sounds/{sfx,guns,ads,missions,kstr} becomes a mono 16-bit WAV in
+   unreal/Content-src/sounds/{sfx,guns,ads,missions,kstr}/, downmixed and peak-normalised to 0.8
    as the Swift game does at load (AudioDirector.loadMono + Synth.normalize).
    The sample rate is kept (24/44.1/48 kHz; Unreal resamples). A format the
    `wave` module cannot read is converted with afconvert first. Files whose
    source has not changed are skipped (stamps in .prepared.json).
 2. import (inside the editor): each prepared file becomes a SoundWave at
-   /Game/Audio/Sfx/<name>/SW_<name>_<n> (variants grouped per folder) or
+   /Game/Audio/Sfx/<name>/SW_<name>_<n> (variants grouped per folder; the
+   minigun class's sounds of guns/, C2, are effects as sfx/'s are) or
    /Game/Audio/Ads/SW_<id> or /Game/Audio/Missions/SW_<key> (a Citadel
    mission's narration, K2: <key>.wav), and the table Sounds.json is written to
    unreal/Content-src/sounds/ and unreal/Content/Audio/ (read at runtime).
@@ -142,7 +143,7 @@ def prepare():
         with open(STAMPS) as f:
             stamps = json.load(f)
     done, made = {}, 0
-    for group in ("sfx", "ads", "missions", "kstr"):
+    for group in ("sfx", "guns", "ads", "missions", "kstr"):
         src_dir = os.path.join(SOUNDS, group)
         if not os.path.isdir(src_dir):
             done[group] = []
@@ -231,7 +232,7 @@ def mission_asset(key):
 
 def build_table(prepared):
     sounds = {}
-    for e in prepared["sfx"]:
+    for group, e in [("sfx", e) for e in prepared["sfx"]] + [("guns", e) for e in prepared.get("guns", [])]:
         m = VARIANT.match(e["file"])
         if not m:
             log("skipping %s: not <name>_<n>.wav" % e["file"])
@@ -239,7 +240,7 @@ def build_table(prepared):
         name, n = m.groups()
         path = sfx_asset(name, n)
         s = sounds.setdefault(name, {"variants": []})
-        s["variants"].append({"asset": path + "." + path.rsplit("/", 1)[1], "source": "sfx/" + e["file"],
+        s["variants"].append({"asset": path + "." + path.rsplit("/", 1)[1], "source": group + "/" + e["file"],
                               "prepared": e["prepared"], "seconds": e["seconds"], "rate": e["rate"]})
     for s in sounds.values():
         s["variants"].sort(key=lambda v: int(re.search(r"_(\d+)\.", v["source"]).group(1)))

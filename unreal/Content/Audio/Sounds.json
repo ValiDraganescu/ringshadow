@@ -2596,6 +2596,119 @@
     764
    ]
   },
+  "rotaryfire": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rotaryfire/SW_rotaryfire_1.SW_rotaryfire_1",
+     "source": "guns/rotaryfire_1.wav",
+     "prepared": "Content-src/sounds/guns/rotaryfire_1.wav",
+     "seconds": 2.25,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "rotaryspindown": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rotaryspindown/SW_rotaryspindown_1.SW_rotaryspindown_1",
+     "source": "guns/rotaryspindown_1.wav",
+     "prepared": "Content-src/sounds/guns/rotaryspindown_1.wav",
+     "seconds": 1.2,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/rotaryspindown/SW_rotaryspindown_2.SW_rotaryspindown_2",
+     "source": "guns/rotaryspindown_2.wav",
+     "prepared": "Content-src/sounds/guns/rotaryspindown_2.wav",
+     "seconds": 1.2,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "rotaryspinup": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/rotaryspinup/SW_rotaryspinup_1.SW_rotaryspinup_1",
+     "source": "guns/rotaryspinup_1.wav",
+     "prepared": "Content-src/sounds/guns/rotaryspinup_1.wav",
+     "seconds": 0.6,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/rotaryspinup/SW_rotaryspinup_2.SW_rotaryspinup_2",
+     "source": "guns/rotaryspinup_2.wav",
+     "prepared": "Content-src/sounds/guns/rotaryspinup_2.wav",
+     "seconds": 0.6,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "roundchitin": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/roundchitin/SW_roundchitin_1.SW_roundchitin_1",
+     "source": "guns/roundchitin_1.wav",
+     "prepared": "Content-src/sounds/guns/roundchitin_1.wav",
+     "seconds": 0.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/roundchitin/SW_roundchitin_2.SW_roundchitin_2",
+     "source": "guns/roundchitin_2.wav",
+     "prepared": "Content-src/sounds/guns/roundchitin_2.wav",
+     "seconds": 0.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "roundground": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/roundground/SW_roundground_1.SW_roundground_1",
+     "source": "guns/roundground_1.wav",
+     "prepared": "Content-src/sounds/guns/roundground_1.wav",
+     "seconds": 0.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/roundground/SW_roundground_2.SW_roundground_2",
+     "source": "guns/roundground_2.wav",
+     "prepared": "Content-src/sounds/guns/roundground_2.wav",
+     "seconds": 0.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "roundmetal": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/roundmetal/SW_roundmetal_1.SW_roundmetal_1",
+     "source": "guns/roundmetal_1.wav",
+     "prepared": "Content-src/sounds/guns/roundmetal_1.wav",
+     "seconds": 0.48,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/roundmetal/SW_roundmetal_2.SW_roundmetal_2",
+     "source": "guns/roundmetal_2.wav",
+     "prepared": "Content-src/sounds/guns/roundmetal_2.wav",
+     "seconds": 0.48,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "rsbed": {
    "variants": [
     {
@@ -4249,6 +4362,12 @@
   "rain",
   "rankup",
   "research",
+  "rotaryfire",
+  "rotaryspindown",
+  "rotaryspinup",
+  "roundchitin",
+  "roundground",
+  "roundmetal",
   "rsbed",
   "rsdrone",
   "rspass",
