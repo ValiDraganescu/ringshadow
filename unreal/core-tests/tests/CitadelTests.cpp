@@ -531,3 +531,37 @@ TEST(gun_eyeRidesTheCradle) {
         }
     }
 }
+
+TEST(citadel_bugsNeverTakeItBelowTheFloor) {
+    const CitadelHall on(true);
+    Hall h = hallScene(kAt + Vec2(0, 12));
+    const double full = Rules::hp(StructureKind::citadel), floor = Rules::citadelBugFloor * full;
+    // A Shardling biting the wall, and the Matriarch's slam: never below 10%.
+    const int64_t bug = bugAt(h.sim, Unit::Kind::shardling, kAt + Vec2(7, 0));
+    const Unit biter = unitOf(h.sim, bug);
+    h.sim.hit(h.citadel, full * 0.5, false, &biter);
+    EXPECT_EQ(structureOf(h.sim, h.citadel).hp, full * 0.5);
+    h.sim.hit(h.citadel, full, false, &biter);
+    EXPECT_EQ(structureOf(h.sim, h.citadel).hp, floor);
+    const int64_t queen = bugAt(h.sim, Unit::Kind::matriarch, kAt + Vec2(0, -10));
+    const Unit slam = unitOf(h.sim, queen);
+    h.sim.hit(h.citadel, 400, false, &slam);
+    EXPECT_EQ(structureOf(h.sim, h.citadel).hp, floor);
+    // Steps of a real raid change nothing: it stands, at the floor.
+    steps(h.sim, 2);
+    EXPECT_TRUE(h.sim.state.structure(h.citadel).has_value());
+    EXPECT_EQ(structureOf(h.sim, h.citadel).hp, floor);
+    // One already lower takes nothing more from bugs.
+    structureOf(h.sim, h.citadel).hp = floor / 2;
+    h.sim.hit(h.citadel, 50, false, &biter);
+    EXPECT_EQ(structureOf(h.sim, h.citadel).hp, floor / 2);
+    // Anything but a bug still destroys it.
+    const Unit raider(9999, Unit::Kind::ranger, 1, kAt + Vec2(8, 0), 0, Unit::Task::idle);
+    h.sim.hit(h.citadel, full, false, &raider);
+    EXPECT_TRUE(structureOf(h.sim, h.citadel).hp <= 0);
+    // Another building of the pilots' falls to bugs as before.
+    const int64_t dome = h.sim.state.nextID++;
+    h.sim.state.structures.push_back(Structure(dome, StructureKind::habDome, 0, kAt + Vec2(14, 0)));
+    h.sim.hit(dome, Rules::hp(StructureKind::habDome) + 1, false, &biter);
+    EXPECT_TRUE(structureOf(h.sim, dome).hp <= 0);
+}

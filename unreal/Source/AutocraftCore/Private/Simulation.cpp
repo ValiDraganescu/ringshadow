@@ -2457,6 +2457,13 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
         const Structure st = state.structures[i];
         // Hardened works: the pilot's own buildings take less.
         if (ownBuilding(st)) damage_ *= skillBoost(SkillStat::ownBuildingDamageTaken).rate();
+        // The Brood never takes a Citadel below its floor (a wreck to
+        // repair, never a lost home); one already lower takes nothing more
+        // from it. Anything else still destroys it.
+        if (shooter && shooter->brood() && st.kind == StructureKind::citadel) {
+            const double floor = ac::min(st.hp, Rules::citadelBugFloor * Rules::hp(st.kind));
+            damage_ = ac::max(0.0, ac::min(damage_, st.hp - floor));
+        }
         if (pilot && shooter && state.hostile(shooter->owner, st.owner)) {
             const Unit s = *shooter;
             earnHit(s, Leveling::worth(st.kind), ac::min(damage_, ac::max(0.0, st.hp)), Rules::hp(st.kind), true);

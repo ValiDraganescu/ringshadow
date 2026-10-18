@@ -158,6 +158,15 @@ on the server the prey lists in `WorldBrood.cpp` and `WorldNest.cpp`. The
 Brood can still attack the Citadel itself (its HP as today) and anything
 outside. The Brood never paths inside (section 2).
 
+The floor (the manager's ruling, 2026-10-18): the Brood never takes a
+Citadel below `Rules::citadelBugFloor` (10%) of its hit points; one already
+lower takes nothing more from it (`Simulation::hit`, the shooter a Brood
+unit; every bug's damage to a building comes through there: bites, spits,
+the Matriarch's slam and spit). The worst a raid leaves is a wreck to
+repair. Anything that is not a bug still destroys it. The server's half
+(raids pick a Citadel only while a human pilot is in its region) is in
+`WorldBrood.cpp` / `WorldNest.cpp`.
+
 Respawn at a Citadel (server) puts the Prospector in the hall at
 `position + (0, -3)` when the Citadel is complete, else at the door as today.
 
@@ -429,7 +438,7 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
 
 | Layer | Tests |
 |---|---|
-| core | `CitadelTests.cpp`: `footprint_citadelHallIsHollow` (the slabs, `blocks`, `inside`, both switch positions); `pilot_walksInThroughTheOpenDoorOnly`; `pilot_isPushedNowhereInsideTheHall`; `pilot_walksOverADoodadSwallowedByTheCitadel`; `pilot_unloadsInTheHallAndAtItsWalls`; `brood_neverEntersAndNeverTargetsASheltered` (A* blocked, `target()` nil, `hit()` 0, the slam); `door_closesOnlyWhenTheDoorwayIsClear`; `gun_aimClampsAtTheArcsHardStops`; `gun_restsWithoutAGunnerAndNeverFires`; `gun_aimClampedToTheArcAndPitch`; `gun_firesAtTheCrosshairFoeInRange`; `placement_citadelPlacesOnTodaysGround` (the start region). `DefenceTests.cpp`: `Defence_citadelTurretsNeverFireAlone` (was `…HitGroundAndAir`), `Defence_citadelRangeMarks` (a gunner's reach) |
+| core | `CitadelTests.cpp`: `footprint_citadelHallIsHollow` (the slabs, `blocks`, `inside`, both switch positions); `pilot_walksInThroughTheOpenDoorOnly`; `pilot_isPushedNowhereInsideTheHall`; `pilot_walksOverADoodadSwallowedByTheCitadel`; `pilot_unloadsInTheHallAndAtItsWalls`; `brood_neverEntersAndNeverTargetsASheltered` (A* blocked, `target()` nil, `hit()` 0, the slam); `door_closesOnlyWhenTheDoorwayIsClear`; `gun_aimClampsAtTheArcsHardStops`; `gun_restsWithoutAGunnerAndNeverFires`; `gun_aimClampedToTheArcAndPitch`; `gun_firesAtTheCrosshairFoeInRange`; `gun_eyeRidesTheCradle`; `citadel_bugsNeverTakeItBelowTheFloor`; `placement_citadelPlacesOnTodaysGround` (the start region). `DefenceTests.cpp`: `Defence_citadelTurretsNeverFireAlone` (was `…HitGroundAndAir`), `Defence_citadelRangeMarks` (a gunner's reach) |
 | net | round trips of `Door`, `Man`, `PilotInput::pitch`, `Structure::door`, `CornerGun::pitch/gunner`; the width tests |
 | server | `door_openFromOutsideCloseOnlyInside`; `man_takesAFreeGunWithinReach`; `man_freedWhenTheGunnerDies`; `brood_raidIgnoresThePilotInTheHall` (a group with prey set on a sheltered pilot drops it; the Citadel still takes hits); `citadel_noAutoFireWithoutAGunner`; `load_schema27ClearsTheGrownFootprint`; `respawn_insideACompleteCitadel` |
 | game | `Autocraft.Pilot.ChaseStopsAtWalls` (the sweep against the slabs); `Autocraft.Pilot.GunLookClamps`; `Autocraft.Hud.TurretFeedPaints`; `Autocraft.Pose.CitadelRamp` |

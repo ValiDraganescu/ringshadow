@@ -395,6 +395,9 @@ struct AUTOCRAFTCORE_API Rules {
     /// corner towers' mounts at `Defence::mountHeight` 9, the central tower's
     /// beacon at 12.3).
     static double height(StructureKind k);
+    /// The Brood never takes a Citadel below this share of its hit points
+    /// (`Simulation::hit`): the worst a raid leaves is a wreck to repair.
+    static constexpr double citadelBugFloor = 0.10;
     /// A Citadel's door runs from shut to open (and back) in this long.
     static constexpr double doorSeconds = 2.5;
     /// A pilot opens the door standing within this many cells of the door
