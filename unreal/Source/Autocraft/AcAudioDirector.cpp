@@ -2,6 +2,8 @@
 // SoundBoard.swift, GameController.swift:320-410, GameController+Ears.swift.
 #include "AcAudioDirector.h"
 
+#include "Defence.h"
+
 #include "AcWeather.h"
 
 #include "AcDaylight.h"
@@ -73,7 +75,7 @@ float AcSound::Carry(const FName Sound)
 	// The blasts, the towers' guns, the far weapons and the player kinds' deaths.
 	static const TSet<FName> Far = []
 	{
-		TSet<FName> F = {"boom", "blast", "anchorhit", "missile", "gatlingburst", "turretburst", "flakhit", "stomp"};
+		TSet<FName> F = {"boom", "blast", "anchorhit", "missile", "rotaryfire", "rotaryspinup", "rotaryspindown", "flakhit", "stomp"};
 		for (const ac::UnitKind K : ac::allCases<ac::UnitKind>())
 		{
 			const FAcKindLook& L = AcKinds::Look(K);
@@ -145,7 +147,7 @@ namespace
 	}
 
 	/// The loops' keys: what they belong to, times 8, plus which loop.
-	enum ELoopSlot : int64 { ToolSlot = 0, MinigunSlot = 1, HumSlot = 2 };
+	enum ELoopSlot : int64 { ToolSlot = 0, MinigunSlot = 1, HumSlot = 2, RotarySlot = 3 /* … 6: a Citadel's four guns */ };
 	constexpr int64 HealKey = -1;
 	constexpr int64 WindKeys[2] = {-2, -3};
 	constexpr int64 RainKeys[2] = {-4, -5};
@@ -166,7 +168,7 @@ namespace
 	/// The names of the waves that loop.
 	bool IsLoop(FName Name)
 	{
-		static const FName Loops[] = {"wind", "drill", "weld", "hum", "minigun", "heal", "rain", "downpour", "rsdrone", "rsbed", "shimmer",
+		static const FName Loops[] = {"wind", "drill", "weld", "hum", "minigun", "rotaryfire", "heal", "rain", "downpour", "rsdrone", "rsbed", "shimmer",
 			"sfcrater", "gloamwingidle", "lodebackchew", "matriarchidle"};
 		for (const FName& L : Loops)
 		{
@@ -183,8 +185,8 @@ namespace
 FAcAudioRules::FWeapon FAcAudioRules::WeaponOf(std::optional<ac::UnitKind> Kind, bool bAnchored, bool bTower,
 	std::optional<ac::StructureKind> TowerKind)
 {
-	if (bTower && TowerKind == ac::StructureKind::gatling) return {"gatlingburst", AcSound::GatlingGain, 2};
-	if (bTower && TowerKind == ac::StructureKind::citadel) return {"turretburst", AcSound::TurretGain, 3};
+	// C2: the gatling gun and the Citadel's corner guns fire rounds (`Fired`:
+	// the rotary roar), never shots.
 	if (bTower) return {"missile", AcSound::MissileGain, 5};
 	if (!Kind) return {"gun", 0.32f, 9};
 	// `bAnchored` doubles as "the alternate weapon": a Kestrel firing its rail gun at a flier.
@@ -254,6 +256,7 @@ void FAcAudioRules::Reset()
 {
 	Tools.Reset();
 	Miniguns.Reset();
+	Rotaries.Reset();
 	Hums.Reset();
 	HealFade = 0.f;
 	bHealing = false;
@@ -391,6 +394,49 @@ void FAcAudioRules::DirtHit(ac::Vec2 At)
 	if (Allow("dirthit", 8)) OneShot("dirthit", At, AcSound::DirtHitGain, EAcSoundPool::Combat);
 }
 
+void FAcAudioRules::Fired(const ac::Simulation& Sim, const ac::GameEvent::Fired& F)
+{
+	// Which gun: a gatling gun's one, a Citadel's corner gun nearest the muzzle.
+	const ac::Structure* St = FindStructure(Sim.state, F.shooter);
+	if (!St) return;
+	const ac::Vec2 Muzzle(F.muzzle.x, F.muzzle.y);
+	int32 Gun = 0;
+	ac::Vec2 At = St->position;
+	if (St->kind == ac::StructureKind::citadel)
+	{
+		double Best = 1e18;
+		for (int32 K = 0; K < 4; ++K)
+		{
+			const ac::Vec2 C = ac::Defence::cornerGun(St->position, K);
+			if (const double D = ac::distance(C, Muzzle); D < Best)
+			{
+				Best = D;
+				Gun = K;
+				At = C;
+			}
+		}
+	}
+	FRotary& R = Rotaries.FindOrAdd(F.shooter * 8 + RotarySlot + Gun);
+	R.At = At;
+	// The barrels' motor winding up with the first round of a burst.
+	if (!R.bFiring && Allow("rotaryspinup", 4)) OneShot("rotaryspinup", At, AcSound::RotarySpinGain, EAcSoundPool::Combat);
+	R.bFiring = true;
+	R.Last = Now;
+}
+
+void FAcAudioRules::RoundHit(const ac::Simulation& Sim, const ac::GameEvent::Impact& I)
+{
+	using EWhat = ac::GameEvent::Impact::What;
+	FName Sound = "roundground";
+	if (I.what == EWhat::structure) Sound = "roundmetal";
+	else if (I.what == EWhat::unit)
+	{
+		const ac::Unit* U = FindUnit(Sim, I.victim);
+		Sound = U && U->bug ? FName("roundchitin") : FName("roundmetal");
+	}
+	if (Allow(Sound, 10)) OneShot(Sound, ac::Vec2(I.at.x, I.at.y), AcSound::RoundHitGain, EAcSoundPool::Combat);
+}
+
 void FAcAudioRules::Step()
 {
 	if (Allow("step", 6)) OneShot("step", {}, AcSound::StepGain, EAcSoundPool::InEar);
@@ -460,6 +506,14 @@ void FAcAudioRules::Consume(const std::vector<ac::GameEvent>& Events, const ac::
 			DirtHit(M->unit == Driven && PilotSpent ? *PilotSpent : M->at);
 			Shot(Shooter ? std::optional<ac::UnitKind>(Shooter->kind) : std::nullopt, Shooter && Shooter->anchor.value_or(0) >= 1,
 				Shooter ? std::optional<ac::Vec2>(Shooter->position) : std::nullopt, M->at, -1, false, Shooter && Minigun(Sim, *Shooter));
+		}
+		else if (const auto* F = E.as<ac::GameEvent::Fired>())
+		{
+			Fired(Sim, *F);
+		}
+		else if (const auto* I = E.as<ac::GameEvent::Impact>())
+		{
+			RoundHit(Sim, *I);
 		}
 		else if (const auto* L = E.as<ac::GameEvent::Landed>())
 		{
@@ -870,6 +924,44 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 		W.Volume = It.Value().Gain * AcSound::MinigunGain * Reach(U->position, AcSound::Carry("minigun"));
 		W.At = U->position;
 		Out.push_back(W);
+	}
+	// C2: the minigun class: a roar from a gun's first round to its last
+	// (in 0.03 s, out 0.08 s), the nearest `RotariesAtOnce`; the barrels'
+	// motor winding down when it stops.
+	{
+		std::vector<std::pair<int64, float>> Firing;
+		for (auto It = Rotaries.CreateIterator(); It; ++It)
+		{
+			FRotary& R = It.Value();
+			if (R.bFiring && Now - R.Last > AcSound::RotaryBeat)
+			{
+				R.bFiring = false;
+				if (Allow("rotaryspindown", 4)) OneShot("rotaryspindown", R.At, AcSound::RotarySpinGain, EAcSoundPool::Combat);
+			}
+			if (R.bFiring) Firing.push_back({It.Key(), Reach(R.At, AcSound::Carry("rotaryfire"))});
+		}
+		std::stable_sort(Firing.begin(), Firing.end(), [](const auto& A, const auto& B) { return A.second > B.second; });
+		TSet<int64> Heard;
+		for (size_t I = 0; I < Firing.size() && I < (size_t)AcSound::RotariesAtOnce; ++I)
+			if (Firing[I].second > AcSound::Audible) Heard.Add(Firing[I].first);
+		for (auto It = Rotaries.CreateIterator(); It; ++It)
+		{
+			FRotary& R = It.Value();
+			const float Target = Heard.Contains(It.Key()) ? 1.f : 0.f;
+			Fade(R.Gain, Target, 0.03f, 0.08f);
+			if (!(R.Gain > 0 || Target > 0))
+			{
+				if (!R.bFiring && Now - R.Last > 5.0) It.RemoveCurrent();
+				continue;
+			}
+			FAcLoopWant W;
+			W.Key = It.Key();
+			W.Name = "rotaryfire";
+			W.Volume = R.Gain * AcSound::RotaryGain * Reach(R.At, AcSound::Carry("rotaryfire"));
+			W.At = R.At;
+			W.Lift = 2.0f;
+			Out.push_back(W);
+		}
 	}
 	// The Citadels' hum, once built.
 	TSet<int64> Citadels;

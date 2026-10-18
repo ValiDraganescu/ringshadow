@@ -1256,6 +1256,19 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	if (Gun && GunView(S, At, Rot))
 	{
 		Chase.Reset();
+		// C2: a short shake while the gun fires (about 0.6 px of a 1080-line
+		// view, alternating at 60 Hz): the trigger held, the barrels spun up.
+		if (const std::optional<ac::Structure> C = S.state.structure(GunCitadelId); C && C->guns && bHold)
+		{
+			const ac::CornerGun& G = (*C->guns)[GunManned];
+			if (G.spin > 0.2 && !G.overheated)
+			{
+				constexpr double Kick = 0.6 / 540.0 * 0.75;
+				const int64 Beat = int64(FPlatformTime::Seconds() * 60.0);
+				const double Yaw = (Beat % 2 ? Kick : -Kick) * G.spin, Pitch = ((Beat / 2) % 2 ? Kick : -Kick) * G.spin;
+				Rot = Rot * FQuat(FRotator(FMath::RadiansToDegrees(Pitch), FMath::RadiansToDegrees(Yaw), 0.0));
+			}
+		}
 	}
 	else if (Cam.bThirdPerson)
 	{

@@ -261,29 +261,53 @@ confirm` clicks.
 
 ## 6. The gun feel (game)
 
-- **Tracers:** every round is a red-hot streak (the amalgam pool, recoloured
-  hot orange-red with a yellow-white core and a halo), 1.5 cells long,
-  flown by the client along the same ballistic path from `Fired` (one
-  integrator shared with the core's constants) until its `Impact` or
-  `roundLife`. Muzzle flash every round (visible every second round), a
-  puff of smoke every tenth, spent casings every fifth from the chute
-  (small, short-lived, pooled).
-- **Impacts:** ground: a dust plume with sparks and a scorch burst, scaled
-  by the round's speed at impact; metal and rock: sparks and a flash; a
-  bug: a chitin burst (the Brood's hurt colour) and a hit flash; a dummy:
-  a ring lights and the "HITS" count on its bar ticks.
-- **Sound:** a minigun loop with spin-up whine and spin-down, from the
-  `orc-elevenlabs` skill's sound effects (or the ElevenLabs CLI), looped
-  seamlessly; impact sounds for ground, metal and chitin, pooled, with
-  distance falloff; the existing `turretburst` and `gatlingburst` cues retired
-  for these guns.
-- **The feed (C1):** the arc gauge stays; the heat bar becomes real heat
-  with an OVERHEAT state (red, the trigger ignored); a **ballistic impact
-  marker**: the client integrates the aim's trajectory to its first hit
-  (terrain, building) and draws a small ring there with the distance
-  ("34 c"); the marks line reads "30/s · 1.0 · V0 90"; a short camera shake
-  (0.6 px at 60 Hz) while firing. The driven Prospector's HUD shows its
-  cutter's reach in cells where the weapon line is.
+- **Tracers** (an effects extension, `AcEffectsRounds.cpp`): every `Fired`
+  is a red-hot streak, a yellow-white core 0.04 cells thick in an orange-red
+  halo 0.11 thick, 1.5 cells long, flown on the core's own parabola
+  (`FAcRoundFlight`, AcRounds.h, calls `Rules::roundAt`: one integrator,
+  no constant copied) until its `Impact` or `roundLife`. It leaves the
+  model's muzzle (the turret as posed), the offset to the core's muzzle
+  fading out over 0.15 s. A muzzle flash every round, a puff of smoke every
+  tenth, a spent brass casing every fifth (thrown sideways, tumbling, 0.7
+  s; pools of 256 streaks, 64 casings). A muzzle within 3 cells of the
+  camera (the gun the pilot mans) makes no flash, smoke or casing of its
+  own: the turret's `turretFlashes_k` show there.
+- **Impacts** by `what`: ground: a dust puff, ricochet sparks thrown off
+  the mirror of its line and a small scorch, scaled by the round's speed at
+  impact; a building or rock: a flash and sparks; a bug: a hit flash and six
+  flecks of green ichor; a Target Dummy: a flash and sparks, its rings
+  lighting in turn (its pose) and "HITS n" over its bar.
+- **Poses:** the corner guns' and the gatling's barrels spin with the
+  core's `spin` (30 rad/s at full rate), the tips (and the gatling's hopper)
+  glow with its `heat`, the muzzle flash shows every other frame while it
+  fires (spun up or winding up, not overheated). The Target Dummy's `plate`
+  falls back on its hinge in 0.14 s at `downUntil` and swings up in about
+  0.55 s; each strike lights the next of `rings_0..2`, fading over 0.5 s;
+  the `beacon` blinks, red and quick while down. The Citadel's
+  `consoleLamps_k` are lit once it is complete.
+- **Sound** (AudioDirector rules): `rotaryfire`, a seamless loop per gun
+  (key: the shooter and the corner gun nearest the muzzle), in 0.03 s with
+  its first round, out 0.08 s after its last (no round for 0.12 s), the
+  nearest 6 heard; `rotaryspinup` with a burst's first round,
+  `rotaryspindown` when it stops; `roundground`, `roundmetal` (a building, or
+  a unit that is not a bug), `roundchitin` (a bug) at each impact, 10 a
+  second at most. Made with ElevenLabs sound effects
+  (Tools/AudioGen/guns.manifest.json, picks levelled by guns_pick.py into
+  unreal/Resources/Sounds/guns/). The `turretburst` and `gatlingburst` cues
+  and the amalgam streaks are retired for these guns (they send no `Shot`).
+- **The feed (C1):** the heat pips are the gun's own heat
+  (`CornerGun::heat`); at OVERHEAT every pip blinks red with the word under
+  them, the trigger ignored. The cooldown bar runs from its rounds' times.
+  The **ballistic impact marker**: `AcPilotText::BallisticImpact` flies the
+  aim's round (the gun's muzzle, `Rules::roundVelocity(yaw, pitch)`) at 240
+  Hz to its first hit (the ground, a standing building's box; its own
+  Citadel passed for `roundSelfGrace`), bisects the crossing, and the feed
+  draws an orange ring there with the distance ("34 c"). The marks line
+  reads "30/s · 1.0 · V0 90" (rounds a second, damage a round, muzzle
+  speed). A shake while firing: the view turned by about 0.6 px of a
+  1080-line view, alternating at 60 Hz, while the trigger is held with the
+  barrels spun up. The driven Prospector's Strike line gives the cutter's
+  damage and reach in cells (its weapon's, "5 damage, reach N cells").
 - **Camera:** the gun view keeps the barrels in frame (C1).
 
 ## 7. Tests

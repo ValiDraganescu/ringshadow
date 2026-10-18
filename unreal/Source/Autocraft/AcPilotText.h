@@ -103,16 +103,36 @@ struct FAcTurretFeed
 	double Pitch = 0;
 	double PitchMin = -0.35;
 	double PitchMax = 0.87;
-	/// The barrels' heat: pips lit of `HeatPips` (its shots of the last
-	/// `HeatSeconds` against what it fires flat out in them).
+	/// The barrels' heat (C2: the gun's own, `CornerGun::heat`): pips lit
+	/// of `HeatPips`, and the level 0…1; `bOverheat` while it holds fire
+	/// until it cools (the trigger ignored, OVERHEAT).
 	static constexpr int32 HeatPips = 6;
-	static constexpr double HeatSeconds = 1.5;
 	int32 Heat = 0;
-	/// 0 just after a shot … 1 ready to fire again (the cooldown).
+	double HeatLevel = 0;
+	bool bOverheat = false;
+	/// The barrels' spin, 0 still … 1 at full rate.
+	double Spin = 0;
+	/// 0 just after a round … 1 ready to fire again (the cooldown).
 	double Ready = 1;
-	/// The gun's marks ("RATE 2 · DAMAGE 1 · RANGE 0"; empty: none).
+	/// The gun's numbers: rounds a second, damage a round, muzzle speed
+	/// ("30/s · 1.0 · V0 90").
 	FString Marks;
+	/// C2: where the aim's round would land (the ballistic impact marker):
+	/// off the view's centre in half the view's height (+y up), and how far
+	/// off in cells ("34 c"). Unset: off the view, or it flies out of reach.
+	TOptional<FVector2D> Impact;
+	double ImpactCells = 0;
 	bool operator==(const FAcTurretFeed&) const = default;
+};
+
+/// C2: a Target Dummy's tag over its life bar ("HITS 37"), on the screen:
+/// off the view's centre in half the view's height (+y up).
+struct FAcDummyTag
+{
+	FVector2D At = FVector2D::ZeroVector;
+	int64 Hits = 0;
+	bool bDown = false;
+	bool operator==(const FAcDummyTag&) const = default;
 };
 
 /// `PilotInfo`: what the cockpit shows for the driven unit this frame.
@@ -164,6 +184,8 @@ struct FAcPilotInfo
 	TOptional<FAcTurretFeed> Feed;
 	/// C2: the radial build wheel, while it is open.
 	TOptional<FAcBuildWheelInfo> Wheel;
+	/// C2: the Target Dummies in view, their hits.
+	TArray<FAcDummyTag> Dummies;
 };
 
 /// What `GameCore` says about the driven unit this frame (`PilotFrame`).
@@ -255,7 +277,14 @@ struct AUTOCRAFT_API AcPilotText
 	/// `status(_:)`: the dashboard's status line.
 	static FString Status(const FAcPilotFrame& F);
 	/// C1: the feed of gun `Gun` of `Citadel`, its look at `Yaw` and `Pitch`
-	/// (radians), the game times of its shots `Shots` (any order), now `Now`.
+	/// (radians), the game times of its rounds `Shots` (any order; the
+	/// cooldown), now `Now`. The heat is the gun's (C2).
 	static FAcTurretFeed Feed(const ac::Structure& Citadel, int32 Gun, double Yaw, double Pitch, TConstArrayView<double> Shots,
 		double Now);
+	/// C2: where a round leaving `Muzzle` at `Velocity` (cells, cells a
+	/// second) first strikes the ground or a building (the core's parabola,
+	/// `Rules::roundAt`, stepped at 240 Hz and the crossing bisected; the
+	/// shooter `Skip`'s own building passed for its first
+	/// `Rules::roundSelfGrace`); unset when it flies past `Rules::roundLife`.
+	static TOptional<ac::Vec3> BallisticImpact(const ac::Simulation& Sim, ac::Vec3 Muzzle, ac::Vec3 Velocity, int64 Skip);
 };

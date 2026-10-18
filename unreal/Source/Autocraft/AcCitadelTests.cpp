@@ -164,21 +164,29 @@ bool FAcHudTurretFeedTest::RunTest(const FString&)
 	TestTrue(TEXT("the aim off the middle"), FMath::IsNearlyEqual(F.Off, 0.4, 1e-9));
 	TestEqual(TEXT("cold"), F.Heat, 0);
 	TestEqual(TEXT("ready"), F.Ready, 1.0);
-	TestEqual(TEXT("its marks"), F.Marks, FString(TEXT("RATE 2 · DAMAGE 1 · RANGE 0")));
+	const std::optional<ac::UnitStats> Wm = ac::Defence::weapon(S);
+	TestEqual(TEXT("its numbers: rounds a second, damage, muzzle speed"), F.Marks,
+		FString::Printf(TEXT("%lld/s · %.1f · V0 90"), (long long)FMath::RoundToDouble(1.0 / Wm->cooldown), Wm->damage));
 	// At the stop the needle sits on it.
 	F = AcPilotText::Feed(S, 0, Mid + 3.0, 0.0, {}, 100.0);
 	TestTrue(TEXT("held at the stop"), FMath::IsNearlyEqual(F.Off, F.ArcHalf, 1e-9));
 	TestTrue(TEXT("the dial's middle straight up"), FMath::IsNearlyEqual(SAcPilotOverlay::GaugeAngle(0), 0.5 * Pi, 1e-9));
 	TestTrue(TEXT("right is clockwise on the dial"), SAcPilotOverlay::GaugeAngle(0.5) < 0.5 * Pi);
-	// Flat out for the heat window: every pip; just fired: not ready.
-	TArray<double> Shots;
-	for (double T = 100.0 - FAcTurretFeed::HeatSeconds + Cool * 0.5; T <= 100.0; T += Cool) Shots.Add(T);
+	// C2: the gun's own heat: half hot, half the pips; at 1 OVERHEAT and
+	// every pip; just fired: not ready.
+	(*S.guns)[0].heat = 0.5;
+	F = AcPilotText::Feed(S, 0, Mid, 0.0, {}, 100.0);
+	TestEqual(TEXT("half hot: half the pips"), F.Heat, FAcTurretFeed::HeatPips / 2);
+	TestFalse(TEXT("half hot: not overheated"), F.bOverheat);
+	(*S.guns)[0].heat = 1.0;
+	(*S.guns)[0].overheated = true;
+	TArray<double> Shots = {100.0 - Cool * 0.5};
 	F = AcPilotText::Feed(S, 0, Mid, 0.0, Shots, 100.0);
-	TestEqual(TEXT("flat out: hot"), F.Heat, FAcTurretFeed::HeatPips);
+	TestEqual(TEXT("overheated: every pip"), F.Heat, FAcTurretFeed::HeatPips);
+	TestTrue(TEXT("overheated: OVERHEAT"), F.bOverheat);
 	TestTrue(TEXT("just fired: cooling"), F.Ready < 1.0);
 	F = AcPilotText::Feed(S, 0, Mid, 0.0, {100.0 - 3 * Cool}, 100.0);
-	TestEqual(TEXT("one shot a while ago: ready"), F.Ready, 1.0);
-	TestTrue(TEXT("one shot: a pip at most"), F.Heat <= 1);
+	TestEqual(TEXT("a round a while ago: ready"), F.Ready, 1.0);
 
 	// The overlay paints the feed over the view: more than without it.
 	if (!FSlateApplication::IsInitialized() || !FSlateApplication::Get().GetRenderer())

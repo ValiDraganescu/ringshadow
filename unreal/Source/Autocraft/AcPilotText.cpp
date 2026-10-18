@@ -629,22 +629,57 @@ FAcTurretFeed AcPilotText::Feed(const ac::Structure& Citadel, const int32 Gun, c
 	const std::optional<ac::UnitStats> W = ac::Defence::weapon(Citadel);
 	const double Cooldown = FMath::Max(W ? W->cooldown : ac::UnitStats::citadelGuns.cooldown, 1e-3);
 	double Last = -1e9;
-	int32 Recent = 0;
 	for (const double T : Shots)
-	{
-		if (T > Now) continue;
-		Last = FMath::Max(Last, T);
-		if (Now - T <= FAcTurretFeed::HeatSeconds) ++Recent;
-	}
-	const double FlatOut = FMath::Max(1.0, FAcTurretFeed::HeatSeconds / Cooldown);
-	Out.Heat = FMath::Clamp(FMath::CeilToInt32(FAcTurretFeed::HeatPips * double(Recent) / FlatOut), 0, FAcTurretFeed::HeatPips);
+		if (T <= Now) Last = FMath::Max(Last, T);
 	Out.Ready = FMath::Clamp((Now - Last) / Cooldown, 0.0, 1.0);
-	if (Citadel.marks)
+	// C2: the gun's own heat, overheat and spin.
+	if (Citadel.guns)
 	{
-		Out.Marks = FString::Printf(TEXT("RATE %lld · DAMAGE %lld · RANGE %lld"), (long long)Citadel.marks->rate,
-			(long long)Citadel.marks->damage, (long long)Citadel.marks->range);
+		const ac::CornerGun& G = (*Citadel.guns)[Out.Gun];
+		Out.HeatLevel = FMath::Clamp(G.heat, 0.0, 1.0);
+		Out.bOverheat = G.overheated;
+		Out.Spin = FMath::Clamp(G.spin, 0.0, 1.0);
 	}
+	Out.Heat = Out.bOverheat ? FAcTurretFeed::HeatPips
+		: FMath::Clamp(FMath::CeilToInt32(FAcTurretFeed::HeatPips * Out.HeatLevel - 1e-9), 0, FAcTurretFeed::HeatPips);
+	const double Damage = W ? W->damage : ac::UnitStats::citadelGuns.damage;
+	Out.Marks = FString::Printf(TEXT("%lld/s · %.1f · V0 %lld"), (long long)FMath::RoundToDouble(1.0 / Cooldown), Damage,
+		(long long)FMath::RoundToDouble(ac::Rules::roundSpeed));
 	return Out;
+}
+
+TOptional<ac::Vec3> AcPilotText::BallisticImpact(const ac::Simulation& Sim, const ac::Vec3 Muzzle, const ac::Vec3 Velocity, const int64 Skip)
+{
+	// The first thing at `P`: the ground under it, or a standing building's
+	// box (its footprint's radius, its height).
+	auto Inside = [&](const ac::Vec3 P, const double T)
+	{
+		if (P.z < Sim.groundZ(ac::Vec2(P.x, P.y))) return true;
+		for (const ac::Structure& B : Sim.state.structures)
+		{
+			if (!(B.hp > 0) || B.downUntil || (B.id == Skip && T < ac::Rules::roundSelfGrace)) continue;
+			const double R = ac::Rules::radius(B.kind), G = Sim.groundZ(B.position);
+			if (std::abs(P.x - B.position.x) <= R && std::abs(P.y - B.position.y) <= R && P.z >= G
+				&& P.z <= G + ac::Rules::height(B.kind) * FMath::Max(0.1, B.progress()))
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	constexpr double Dt = 1.0 / 240.0;
+	for (double T = Dt; T <= ac::Rules::roundLife; T += Dt)
+	{
+		if (!Inside(ac::Rules::roundAt(Muzzle, Velocity, T), T)) continue;
+		double Lo = T - Dt, Hi = T;
+		for (int32 K = 0; K < 10; ++K)
+		{
+			const double M = (Lo + Hi) / 2;
+			(Inside(ac::Rules::roundAt(Muzzle, Velocity, M), M) ? Hi : Lo) = M;
+		}
+		return ac::Rules::roundAt(Muzzle, Velocity, Hi);
+	}
+	return {};
 }
 
 FString AcPilotText::Status(const FAcPilotFrame& F)
