@@ -45,3 +45,5 @@ video/
 .mcp.json
 art/fog/
 .claude/*.lock
+# ElevenLabs raw generations (the sounds the game ships are under unreal/Resources/Sounds): a local cache, never committed.
+Tools/AudioGen/raw/
