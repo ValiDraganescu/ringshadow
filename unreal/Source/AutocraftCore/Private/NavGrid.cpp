@@ -336,24 +336,28 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
 bool NavGrid::setDynamic(const GameState& s) {
     static const std::vector<Doodad> none;
     const std::vector<Doodad>& placed = s.doodads ? *s.doodads : none;
+    const size_t firstWell = s.wells ? static_cast<size_t>(std::min<int64_t>(mapWells, static_cast<int64_t>(s.wells->size()))) : 0;
+    const size_t extraWells = s.wells ? s.wells->size() - firstWell : 0;
+    // The key: the buildings, the deposits with ore, the doodads and wells
+    // put down. Read against the last one as it goes (a step's usual answer
+    // is "the same"), and written out only when it changed.
+    auto key = [&](auto&& put) {
+        for (const Structure& st : s.structures)
+            if (!put(st.id)) return false;
+        if (!put(-1)) return false;
+        for (size_t i = 0; i < s.patches.size(); i++)
+            if (s.patches[i].remaining > 0 && !put(static_cast<int64_t>(i))) return false;
+        return put(-2) && put(static_cast<int64_t>(placed.size())) && put(static_cast<int64_t>(extraWells));
+    };
+    size_t at = 0;
+    if (key([&](int64_t v) { return at < dynamicKey.size() && dynamicKey[at++] == v; }) && at == dynamicKey.size()) return false;
+    dynamicKey.clear();
+    key([&](int64_t v) {
+        dynamicKey.push_back(v);
+        return true;
+    });
     std::vector<Vec2> wells;
-    if (s.wells) {
-        for (size_t i = static_cast<size_t>(std::min<int64_t>(mapWells, static_cast<int64_t>(s.wells->size())));
-             i < s.wells->size(); i++) {
-            wells.push_back((*s.wells)[i].position);
-        }
-    }
-    std::vector<int64_t> key;
-    for (const Structure& st : s.structures) key.push_back(st.id);
-    key.push_back(-1);
-    for (size_t i = 0; i < s.patches.size(); i++) {
-        if (s.patches[i].remaining > 0) key.push_back(static_cast<int64_t>(i));
-    }
-    key.push_back(-2);
-    key.push_back(static_cast<int64_t>(placed.size()));
-    key.push_back(static_cast<int64_t>(wells.size()));
-    if (key == dynamicKey) return false;
-    dynamicKey = key;
+    for (size_t i = firstWell; i < extraWells + firstWell; i++) wells.push_back((*s.wells)[i].position);
     std::vector<uint8_t> before;
     if (fastSearch) before = std::move(dynamic);
     dynamic = std::vector<uint8_t>(static_cast<size_t>(width * height), 0);

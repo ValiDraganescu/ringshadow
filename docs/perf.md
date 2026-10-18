@@ -407,3 +407,24 @@ back for each of its units (`swapDriver`: the `Pilot` copied three times,
 `PilotProgress` and the side's record moved three times), about 2.7 µs a
 tick with 16 drivers. Reading the driver's fields in place would need
 `boost`, `addSkills`, `skilled` and `burst` to take the context; not done.
+
+### Round 8: the empty regions (2026-10-18)
+
+Every region steps every tick (P5), pilot or none. Stepped alone, an empty
+region of The First cost 0.42-0.45 µs a step; Time Profiler put a third of
+it in `NavGrid::setDynamic`, which built its key (the buildings, the
+deposits with ore, the doodads and wells put down) into a new vector every
+step only to find it equal to the last. The key is now read against the
+last one as it goes and written out only when it changed: the same answer,
+no allocation. (Half of the rest is the look zeroing its arrays; other
+code may write into them between looks, so they stay zeroed.)
+
+| in turns, load 11 | before | after |
+|---|---:|---:|
+| an empty region's step (8 regions, 20,000 steps) | 0.415-0.445 µs | 0.261-0.271 µs |
+| `worldbench 30` (one pilot, all 9 regions): mean | 0.007 ms | 0.005-0.006 ms |
+| p50 | 0.003 ms | 0.001 ms |
+
+The state hashes of `worldbench` (start, nest) and the wire and state
+hashes of `crowdbench` (1, 4, 16 pilots) are equal. After round 1 this
+world's step was 0.030-0.034 ms: the rounds since took it to 0.005.
