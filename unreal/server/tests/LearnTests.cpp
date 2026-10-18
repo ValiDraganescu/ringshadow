@@ -231,12 +231,14 @@ TEST(load_schema28LearnsWhatWasBoughtOrBuilt) {
         ProspectorProgress was;
         was.xp = Progression::xp(20);
         was.blueprints = {{StructureKind::derrick, 2}, {StructureKind::habDome, 1}};
-        was.bought = {{StructureKind::gatling, 1}, {StructureKind::derrick, 2}};
+        // Its copies bought per kind, as a schema 27 blob kept them.
+        std::string blob = SessionStore::encode(was, false);
+        blob.insert(1, "\"bought\":{\"gatling\":1,\"derrick\":2},");
         ASSERT_TRUE(store->exec("INSERT INTO regions (region, time, next_id) VALUES ('start', 80, 9)", &why));
         ASSERT_TRUE(store->exec("INSERT INTO buildings (region, id, kind, x, y, built_by, build_left, hp) VALUES "
                                 "('start', 4, 'lab', 60, 40, '" + key + "', NULL, 400)", &why));
         ASSERT_TRUE(store->exec("INSERT INTO pilots (id, ore, hydrogen, region, unit, levels, progress, gated, stacked) VALUES ('" + key +
-                                "', 40, 7, 'start', NULL, '', '" + SessionStore::encode(was, false) + "', 1, 1)", &why));
+                                "', 40, 7, 'start', NULL, '', '" + blob + "', 1, 1)", &why));
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
@@ -255,7 +257,6 @@ TEST(load_schema28LearnsWhatWasBoughtOrBuilt) {
     EXPECT_TRUE((g.learned == std::set<StructureKind>{StructureKind::derrick, StructureKind::habDome, StructureKind::gatling,
                                                      StructureKind::lab}));
     EXPECT_TRUE(g.blueprints.empty());
-    EXPECT_TRUE(g.bought.empty());
     EXPECT_NEAR(g.xp, Progression::xp(20), 1e-9);
     // Written learned; a copy given now stays a copy through a save.
     ProspectorProgress more = g;

@@ -252,9 +252,9 @@ WorldSave WorldMap::save() const {
 }
 
 std::optional<std::string> WorldMap::adoptLearned(ProspectorProgress& g, const std::set<StructureKind>& built, const std::string& who) {
+    // The kinds it bought are learned already: the core reads an old
+    // blob's `bought` straight into `learned`.
     std::set<StructureKind> learn = built;
-    for (const auto& [k, n] : g.bought)
-        if (n > 0) learn.insert(k);
     for (const auto& [k, n] : g.blueprints)
         if (n > 0) learn.insert(k);
     std::string said;
@@ -272,7 +272,6 @@ std::optional<std::string> WorldMap::adoptLearned(ProspectorProgress& g, const s
             ++it;
         }
     }
-    g.bought.clear();
     if (said.empty() && dropped == 0) return std::nullopt;
     return who + ": schema 28: learned " + (said.empty() ? std::string("nothing new") : said) + "; " + std::to_string(dropped) +
            " blueprint cop" + (dropped == 1 ? "y" : "ies") + " used up";

@@ -14,6 +14,7 @@
 #include "WorldMap.h"
 #include "WorldStore.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -559,4 +560,61 @@ TEST(Canyon_savedAndLoaded) {
     EXPECT_TRUE(o.restore(old).empty());
     EXPECT_TRUE(theFork(o).state == State::waiting && theFork(o).wave == 1);
     EXPECT_TRUE(std::abs(theFork(o).next - (s.clock + WorldCanyon::firstWait)) < 1e-6);
+}
+
+/// C2: a wave whose time runs out with no bug on the prize (the last one
+/// held off it, where no round reaches) is beaten: the prize held, the
+/// survivor leaves the wave, the game runs on.
+TEST(Canyon_aWaveOutOfTimeOffThePrizeIsBeaten) {
+    WorldMap w(first(), params());
+    seatIn(w, a, keyA);
+    const size_t r = coldFork(w);
+    ASSERT_TRUE(w.canyonSend(r, fork, 1));
+    w.step();
+    ASSERT_TRUE(theFork(w).out);
+    const int64_t full = prizeOre(w);
+    Simulation& sim = w.region(r).simulation();
+    // Every bug of the wave dead but one, held 40 cells off the prize.
+    int64_t last = 0;
+    for (Unit& u : sim.state.units)
+        if (theFork(w).bugs.count(u.id)) {
+            if (!last) last = u.id;
+            else u.hp = 0;
+        }
+    ASSERT_TRUE(last != 0);
+    // Away from the pilot's Prospector, which would fight it.
+    Vec2 me = theFork(w).middle;
+    if (const auto id = w.region(r).driving(a))
+        if (const auto u = sim.state.unit(*id)) me = u->position;
+    const Vec2 away = normalize(theFork(w).middle - me);
+    std::optional<Vec2> at;
+    for (const double turn : {0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5})
+        for (const double d : {30.0, 25.0, 20.0, 15.0})
+            if (!at) {
+                const double h = std::atan2(away.y, away.x) + turn;
+                const Vec2 q = theFork(w).middle + Vec2(std::cos(h), std::sin(h)) * d;
+                if (sim.nav->walkable(q) && !sim.nav->inRock(q)) at = q;
+            }
+    ASSERT_TRUE(at.has_value());
+    const Vec2 off = *at;
+    const double ends = theFork(w).ends;
+    const double done = stepUntil(w, ends - w.clock() + 10, [&] {
+        for (Unit& u : sim.state.units)
+            if (u.id == last && theFork(w).out) u.position = off;
+        return !theFork(w).out;
+    });
+    std::printf("  out of time %.1f s after the wave's end\n", w.clock() - ends);
+    // It left alive: the wave was beaten by its time, not its deaths.
+    const auto still = sim.state.unit(last);
+    EXPECT_TRUE(still && still->hp > 0);
+    ASSERT_TRUE(done > 0);
+    EXPECT_TRUE(w.clock() >= ends - 0.3);
+    EXPECT_TRUE(theFork(w).state == State::running);
+    EXPECT_EQ(theFork(w).wave, int64_t(2));
+    EXPECT_EQ(prizeOre(w), full);
+    // The survivor is on its way: nothing keeps it lingering.
+    bool lingering = false;
+    for (const WorldMap::BroodGroup& g : w.broodGroups(r))
+        if (std::find(g.bugs.begin(), g.bugs.end(), last) != g.bugs.end()) lingering = g.lingerUntil > w.clock() + 1;
+    EXPECT_TRUE(!lingering);
 }

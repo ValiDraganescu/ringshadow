@@ -1211,11 +1211,6 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         writeSigned(w, p->hydrogen);
     }
     writeSigned(w, m.taxPercent);
-    writeVarint(w, m.bought.size());
-    for (const auto& [k, n] : m.bought) {
-        w.writeBits(uint64_t(k), codec::kStructureKindBits);
-        writeSigned(w, n);
-    }
     // C2: the kinds learned, one bit each.
     for (size_t k = 0; k < codec::kStructureKindCount; k++) w.writeBool(m.learned.count(static_cast<StructureKind>(k)) > 0);
     writeVarint(w, m.items.size());
@@ -1445,13 +1440,6 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         p->hydrogen = readSigned(r);
     }
     m.taxPercent = readSigned(r);
-    const uint64_t bought = readVarint(r);
-    if (bought > r.bitsLeft()) return false;
-    for (uint64_t i = 0; i < bought; i++) {
-        const uint64_t k = r.readBits(codec::kStructureKindBits);
-        if (k >= uint64_t(allCases<StructureKind>().size())) return false;
-        m.bought[static_cast<StructureKind>(k)] = readSigned(r);
-    }
     for (size_t k = 0; k < codec::kStructureKindCount; k++)
         if (r.readBool()) m.learned.insert(static_cast<StructureKind>(k));
     auto readItem = [&](Item& item) {

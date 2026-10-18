@@ -805,8 +805,9 @@ TEST(frontier_placement_spread_kept_is_the_footprint) {
 }
 
 // C2 (schema 28): a frontier pilot saved before blueprints were learned (its
-// JSON without `learned`) learns on load what it bought and holds, the
-// copies used up, and still builds for ore.
+// JSON without `learned`) learns on load what it holds (what it bought comes
+// learned from the core's decode), the copies used up, and still builds for
+// ore.
 TEST(frontier_buildsAfterSchema28) {
     WorldMap w(first(), params());
     seat(w);
@@ -815,7 +816,6 @@ TEST(frontier_buildsAfterSchema28) {
     FrontierPilot& f = come(w, Habit::builder, r, Vec2(100, 70), 5000, 500, 12);
     const uint32_t id = f.id;
     f.progress.giveBlueprint(StructureKind::habDome, 2);
-    f.progress.bought[StructureKind::gatling] = 1;
     WorldSave save = w.save();
     const std::string mark = "\"learned\":true,";
     const size_t at = save.frontier.find(mark);
@@ -832,9 +832,7 @@ TEST(frontier_buildsAfterSchema28) {
         if (x.id == id) g = &x;
     ASSERT_TRUE(g != nullptr);
     EXPECT_TRUE(g->progress.knows(StructureKind::habDome));
-    EXPECT_TRUE(g->progress.knows(StructureKind::gatling));
     EXPECT_EQ(g->progress.copies(StructureKind::habDome), int64_t(0));
-    EXPECT_TRUE(g->progress.bought.empty());
     // It builds a Hab Dome at its feet for the world's price, no copy.
     const int64_t before = g->wallet.ore;
     const auto spot = back.region(r).simulation().snap(StructureKind::habDome, g->at + Vec2(Region::buildReach(StructureKind::habDome), 0));

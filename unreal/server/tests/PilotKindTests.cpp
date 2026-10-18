@@ -84,10 +84,14 @@ TEST(pilotKind_an_old_blob_is_a_prospectors_and_keeps_its_keys) {
     EXPECT_TRUE(g.kind == UnitKind::prospector);
     EXPECT_NEAR(g.xp, 900, 1e-9);
     EXPECT_EQ(g.rank(Skill::quickDrill), int64_t(1));
-    // Written again: byte for byte the blob it was, no "kind" key.
+    // Written again: byte for byte the blob it was, no "kind" key, and (C2)
+    // no "bought" key: the copies bought are learned kinds now.
+    std::string want = oldBlob;
+    const std::string bought = "\"bought\":{},";
+    if (const size_t at = want.find(bought); at != std::string::npos) want.erase(at, bought.size());
     const std::string again = SessionStore::encode(g, false);
-    if (again != oldBlob) std::printf("  was %s\n  now %s\n", oldBlob.c_str(), again.c_str());
-    EXPECT_TRUE(again == oldBlob);
+    if (again != want) std::printf("  was %s\n  now %s\n", want.c_str(), again.c_str());
+    EXPECT_TRUE(again == want);
 }
 
 TEST(pilotKind_a_ranger_pilot_spawns_a_ranger) {

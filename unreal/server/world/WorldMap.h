@@ -1003,9 +1003,9 @@ public:
     /// The last `restore`'s `adoptCitadels` lines, every region's.
     const std::vector<std::string>& grownCitadels() const { return grown_; }
     /// Schema 28 (C2, `restore`): a pilot saved before blueprints were
-    /// learned learns every kind it bought (`bought`), built (`builtBy_`
-    /// under `key`) or holds a copy of; the copies of the kinds it knows
-    /// are dropped. One line for the log, or nothing when there was nothing
+    /// learned learns every kind it built (`built`) or holds a copy of (the
+    /// kinds it bought come learned from the core's decode of the old
+    /// `bought`); the copies of the kinds it knows are dropped. One line for the log, or nothing when there was nothing
     /// to learn. Idempotent.
     static std::optional<std::string> adoptLearned(ProspectorProgress& g, const std::set<StructureKind>& built, const std::string& who);
     /// The last `restore`'s `adoptLearned` lines, the frontier's included.

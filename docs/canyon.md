@@ -73,7 +73,9 @@ groups never leave on their own. Its Lodebacks eat until their sacs are full
 and then carry the ore away out of sight.
 
 **Beaten** when every bug of the wave is dead (by turrets or units) and it has
-taken less than the mark.
+taken less than the mark; or (C2, the guns' rounds fly real arcs) when its
+time is out with no bug of it on the prize: the survivors (a Gloamwing
+hovering where no round reaches it) leave, and the prize held.
 
 **Broken through** on either of:
 - **the ore it takes**, 300 of the prize (`WorldCanyon::failOre`). That counts:

@@ -1,7 +1,8 @@
 // Guns and practice on the wire (C2, protocol 37,
 // docs/guns-and-practice.md): the Fired, Impact and DummyDown events and
 // their widths, the Learn request, the Progress message's learned kinds, a
-// structure's hits, downUntil, heat, overheat and spin, the corner guns'
+// structure's hits, downUntil, heat, overheat, spin and (the gatling's)
+// barrels' pitch, the corner guns'
 // heat, overheat and spin, the Target Dummy's kind.
 
 #include "test.h"
@@ -196,6 +197,16 @@ TEST(guns_dummy_and_gatling_fields_in_the_snapshot) {
         EXPECT_EQ(back->bloom, 0.0);
         EXPECT_TRUE(*back == quantised(g));
     }
+    // The barrels' pitch: 8 bits over ±90° (the gatling's −60…+70° fits), level exact.
+    for (const double pitch : {0.0, -1.0471975511965976, 1.2217304763960306, -0.25, 0.4}) {
+        g.pitch = pitch;
+        back = roundTrip(g);
+        ASSERT_TRUE(back.has_value());
+        EXPECT_NEAR(back->pitch, pitch, 3.141592653589793 / 2 / q::kPitchSteps / 2 + 1e-12);
+        EXPECT_TRUE(*back == quantised(g));
+    }
+    g.pitch = 0;
+    EXPECT_EQ(roundTrip(g)->pitch, 0.0);
     g.heat = 1;
     EXPECT_EQ(roundTrip(g)->heat, 1.0);
     g.heat = 0.4;

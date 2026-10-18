@@ -791,9 +791,10 @@ TEST(protocol_progress_round_trips) {
     ASSERT_TRUE(decode(encode(m), back));
     EXPECT_TRUE(back == m);
     EXPECT_TRUE(kProtocolVersion >= uint16_t(13));
-    // The Citadel shop (C2, v14): copies bought, consumables held, their
-    // cooldowns, a shield running, a flare burning.
-    m.bought = {{StructureKind::habDome, 2}, {StructureKind::sentinel, 1}};
+    // The Citadel shop (C2, v14): consumables held, their cooldowns, a
+    // shield running, a flare burning (v38: the copies bought gone, the
+    // kinds learned).
+    m.learned = {StructureKind::habDome, StructureKind::sentinel};
     m.items = {{Item::repairKit, 5}, {Item::surveyFlare, 1}};
     m.itemReady = {{Item::shieldCharge, 4021.5}};
     m.shieldUntil = 4005.25;

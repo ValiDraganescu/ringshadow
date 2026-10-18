@@ -327,12 +327,14 @@ template <class V, class X> void structureFields(V& v, X& b) {
     v(Opt<GunsCodec>{}, b.guns);
     v(Opt<DoorCodec>{}, b.door);
     // C2: a dummy's hits since it stood and when it stands again; a
-    // gatling's heat, overheat and spin (its spread stays on the server).
+    // gatling's heat, overheat and spin (its spread stays on the server),
+    // and its barrels' pitch.
     v(Var{}, b.hits);
     v(Opt<Fixed>{kMs}, b.downUntil);
     v(Share{}, b.heat);
     v(Bool{}, b.overheated);
     v(Share{}, b.spin);
+    v(Pitch{}, b.pitch);
 }
 template <class V> void fields(V& v, const Structure& x) { structureFields<V, const Structure>(v, x); }
 template <class V> void fields(V& v, Structure& x) { structureFields<V, Structure>(v, x); }

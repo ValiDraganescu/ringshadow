@@ -49,20 +49,38 @@ constexpr double kFar = 1e18;
 /// of the lanes: along each path every 3 cells from the prize out, 6 to 7.5
 /// cells to either side of it (the rims), else 3 to 4.5 (the floor's edge),
 /// level and free under the ordinary
-/// build rules, in the zone's outline, off the pads' plates; the paths taken
-/// in turn, so guns spread over every arm.
+/// build rules, in the zone's outline, off the pads' plates; a gatling's
+/// spots whose arc reaches the path first (C2); the paths taken in turn, so
+/// guns spread over every arm.
 std::vector<Vec2> gunPlaces(const Simulation& sim, const region::Zone& z, const std::vector<region::Place>& pads, StructureKind kind) {
     std::vector<std::vector<Vec2>> per(z.paths.size());
-    auto lane = [&](Vec2 q) {
+    // The nearest point of the paths to `q`.
+    auto nearest = [&](Vec2 q) {
         double d = kFar;
+        Vec2 best = q;
         for (const region::Zone::Path& p : z.paths)
             for (size_t k = 0; k + 1 < p.points.size(); k++) {
                 const Vec2 a = p.points[k], e = p.points[k + 1] - a;
                 const double len2 = dot(e, e);
                 const double t = len2 > 0 ? std::clamp(dot(q - a, e) / len2, 0.0, 1.0) : 0.0;
-                d = std::min(d, distance(q, a + e * t));
+                if (distance(q, a + e * t) < d) {
+                    d = distance(q, a + e * t);
+                    best = a + e * t;
+                }
             }
-        return d;
+        return best;
+    };
+    auto lane = [&](Vec2 q) { return distance(q, nearest(q)); };
+    // C2: a gatling's rounds fly an arc; a spot whose arc can't reach the
+    // path's nearest point over the ground (a ledge above it, behind its
+    // lip) comes after the spots that can, in its path's turn.
+    auto reaches = [&](Vec2 at) {
+        if (kind != StructureKind::gatling) return true;
+        const Vec2 to = nearest(at);
+        Structure probe(0, kind, Pilot::player, at);
+        probe.aim = std::atan2(to.y - at.y, to.x - at.x);
+        const UnitStats& bug = Rules::stats(UnitKind::shardling);
+        return sim.gatlingPitch(probe, to, sim.groundZ(to) + (bug.height > 0 ? bug.height : 1.5) / 2, bug.radius).has_value();
     };
     for (size_t i = 0; i < z.paths.size(); i++) {
         const std::vector<Vec2>& pts = z.paths[i].points;
@@ -80,6 +98,7 @@ std::vector<Vec2> gunPlaces(const Simulation& sim, const region::Zone& z, const 
                     per[i].push_back(*at);
                 }
         }
+        std::stable_partition(per[i].begin(), per[i].end(), reaches);
     }
     std::vector<Vec2> out;
     for (size_t k = 0;; k++) {
@@ -379,8 +398,19 @@ void WorldMap::canyonThink(Canyon& c, double dt) {
     }
     for (const int64_t id : gone) c.bugs.erase(id);
     c.left = alive;
-    if (c.taken() >= WorldCanyon::failOre || (clock_ >= c.ends && onPrize > 0)) waveFailed(c);
-    else if (alive == 0) waveBeaten(c);
+    if (c.taken() >= WorldCanyon::failOre || (clock_ >= c.ends && onPrize > 0)) {
+        waveFailed(c);
+    } else if (alive == 0) {
+        waveBeaten(c);
+    } else if (clock_ >= c.ends) {
+        // C2: its time is out with nothing on the prize (a flyer hovering
+        // where no round reaches it): the prize held, the survivors leave
+        // and the wave counts as beaten.
+        for (BroodGroup& g : brood_[c.region].groups)
+            if (std::any_of(g.bugs.begin(), g.bugs.end(), [&](int64_t b) { return c.bugs.count(b) > 0; }))
+                g.lingerUntil = std::min(g.lingerUntil, clock_);
+        waveBeaten(c);
+    }
 }
 
 // MARK: - Waves

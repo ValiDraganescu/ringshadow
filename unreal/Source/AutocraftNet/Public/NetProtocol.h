@@ -943,11 +943,10 @@ struct ProgressMessage {
     int64_t taxPercent = 0;
     Purse taxed;
     Purse donated;
-    /// C2, the Citadel shop: blueprint copies bought by kind (the next
-    /// one's price, `Shop::blueprintPrice`), consumables held, when each
-    /// used one is ready again (world time, `Sky::time`), and a shield
-    /// charge running until (world time; 0: none).
-    std::map<StructureKind, int64_t> bought;
+    /// C2, the Citadel shop: consumables held, when each used one is ready
+    /// again (world time, `Sky::time`), and a shield charge running until
+    /// (world time; 0: none). (The copies bought per kind went with the
+    /// learned blueprints: each is sold once, `learned`.)
     std::map<Item, int64_t> items;
     std::map<Item, double> itemReady;
     double shieldUntil = 0;
