@@ -365,9 +365,12 @@ double Simulation::aimHeight(int64_t id) const {
 std::optional<double> Simulation::gatlingPitch(const Structure& s, Vec2 at, double z, double radius) const {
     const double base = groundZ(s.position);
     const double yaw = std::atan2(at.y - s.position.y, at.x - s.position.x);
-    const Vec3 level = Defence::gatlingMuzzle(s.position, yaw, 0);
-    auto p = Rules::ballisticPitch(distance(Vec2(level.x, level.y), at), z - (base + level.z));
-    if (!p) return std::nullopt;
+    // Solved from the barrels' pivot: the muzzle lies on the barrels' line
+    // through it, so a bug at the gun's foot (nearer than the muzzle's
+    // reach) is aimed at as well as one far out.
+    const Vec2 pivot = s.position + Vec2(std::cos(yaw), std::sin(yaw)) * Defence::gatlingTrunnion;
+    auto p = Rules::ballisticPitch(distance(pivot, at), z - (base + Defence::gatlingPivot));
+    if (!p || *p < Defence::gatlingPitchMin || *p > Defence::gatlingPitchMax) return std::nullopt;
     // The arc must clear the ground up to the target's edge: a gun on a
     // ledge does not fire into its own lip at what is below it.
     Vec3 m = Defence::gatlingMuzzle(s.position, yaw, *p);

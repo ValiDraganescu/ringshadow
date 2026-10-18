@@ -96,6 +96,10 @@ struct AUTOCRAFTCORE_API Defence {
     /// pivot `gatlingPivot` up and `gatlingTrunnion` along the aim, the
     /// muzzle `gatlingBarrel` past the pivot; z from its ground.
     static constexpr double gatlingPivot = 1.28, gatlingTrunnion = 0.3, gatlingBarrel = 1.1;
+    /// How far its barrels dip and rise (radians from level): steep enough
+    /// down to strike a bug biting at its foot.
+    static constexpr double gatlingPitchMin = -60.0 * pi / 180.0;
+    static constexpr double gatlingPitchMax = 70.0 * pi / 180.0;
     static Vec3 gatlingMuzzle(Vec2 at, double aim, double pitch);
     /// `aim` (world radians) held within gun `i`'s arc, at its hard stops
     /// (no wrap: past a stop it stays at that stop).

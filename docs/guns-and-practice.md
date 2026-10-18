@@ -58,7 +58,7 @@ Constants (`Rules.h`), tuned by feel later:
 | `roundGravity` | 9.8 cells/s² | |
 | `roundLife` | 3.0 s | then it is gone |
 | `roundRadius` | 0.08 cells | the hit sweep's thickness |
-| `roundSelfGrace` | 0.2 s | the shooter's own building is passed through this long |
+| `roundSelfGrace` | 0.3 s | the shooter's own building, and the ground under its footprint, are passed through this long |
 
 `Rules::roundAt(muzzle, velocity, t)` is the parabola, the one integrator:
 the core steps every round by the same closed form, so the client's streak
@@ -77,7 +77,8 @@ units aboard, in a Bastion or Derrick, at a gun or sheltered in the hall
 are never struck), structures (a complete hall Citadel's slabs: walls,
 the door while shut, the roof; any other its bounding square by its body
 height, a scaffold by what has risen; a Target Dummy lying down is passed
-over; the shooter's own building passed for `roundSelfGrace`), the
+over; the shooter's own building and its ground passed for
+`roundSelfGrace`), the
 terrain (sampled every 0.5 cells along the path, the crossing bisected;
 skipped while the path is above `Simulation::groundTop`, the highest
 ground of its 4-cell tiles plus 1.5, worked out the first time a round
@@ -103,8 +104,9 @@ Firing (`Simulation::fireRound`): `GameEvent::Fired{shooter, round id,
 muzzle (Vec3), velocity (Vec3)}` replaces `Shot`/`Missed` for these guns.
 The muzzle is the barrels' end: `Defence::gunMuzzle(citadel, i, aim,
 pitch)`, `muzzleAlong` 1.3 from the trunnion along the barrels, and
-`Defence::gatlingMuzzle(at, aim, pitch)`, the head's pivot 0.9 up and the
-barrels 0.8 long; z on the ground's height. The velocity is the aim (yaw,
+`Defence::gatlingMuzzle(at, aim, pitch)` from the model's catalog (the
+barrels pivot 1.28 up and 0.3 along the aim, the muzzle 1.1 past the
+pivot: 1.4 out level); z on the ground's height. The velocity is the aim (yaw,
 pitch) turned by the cone roll (uniform over the cone's disc,
 `Simulation::roll` seeded by the shooter, the step's time and the round, so
 a scene replays the same) times `roundSpeed`. Nothing per tick goes on the
@@ -121,7 +123,7 @@ Rate, spin-up and heat on a corner gun and a gatling:
 | spin-up `Rules::gunSpinUp` (`spin` 0…1 on the gun) | 0.4 s from trigger to full rate (the rate ramps linearly with the spin; it runs down as fast with the trigger up) | 0.4 s |
 | spread `coneStand` | 8 mrad, `coneFire` +0.3 mrad a round (`bloom`), fading by 90% every 0.4 s (`coneRecovery`) | same |
 | heat (`CornerGun::heat`, `Structure::heat` for the gatling) | `Rules::gunHeatPerRound` +0.014 a round, `gunCooling` 0.20/s at all times; at 1.0 the gun stops (`overheated`, "OVERHEAT") until it cools to `gunHeatResume` 0.4. It overheats after about 4.5 s of fire and cools from 1 to 0.4 in 3 s | the same numbers: about 6.5 s of fire |
-| range | none: the round flies until it hits or dies | the AI picks targets within 20 cells (`UnitStats::gatling.range`; the air within 4.5), leads them (its speed along its heading × the flight) and fires on the ballistic solve once it points within 0.05 rad (`Simulation::gatlingAimGate`) |
+| range | none: the round flies until it hits or dies | the AI picks targets within 20 cells (`UnitStats::gatling.range`; the air within 4.5), leads them (its speed along its heading × the flight) and fires on the ballistic solve (from the barrels' pivot, −60° to +70°, `Defence::gatlingPitchMin/Max`) once it points within 0.05 rad (`Simulation::gatlingAimGate`). It keeps or picks only a target whose arc clears the ground to the target's edge (`Simulation::gatlingPitch`, sampled every 0.5 cells): a gun on a ledge holds fire at a bug its lip hides |
 | on the wire (protocol 37) | the heat and the barrels' `spin` (0…1 in 255ths, 8 bits each) and `overheated` (1 bit: the latch, since heat between 0.4 and 1.0 alone can't say OVERHEAT) in each gun of `GunsCodec`; the spread (`bloom`) and the `cooldown` stay on the server | the same three in the structure's fields |
 
 `Simulation::minigun` steps a gun's barrels and heat; its `cooldown` is the
