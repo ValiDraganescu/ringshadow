@@ -665,6 +665,18 @@ byte; the next carries the fog the look left.
 The wire is the same (`snapbench`'s four hashes, `crowdbench`'s three), and
 the simulation too (`worldbench`'s and `crowdbench`'s state hashes).
 
+Why the look's number is enough (checked by grep over the core, the net
+code, the server and the game): on the server only `Simulation::look()`
+writes a simulation's `sights` and its sides' intel (`explored`, `sites`).
+`Vision::sightInto` and `stamp` run only inside it (or on a fresh `Sight`
+that `Vision::sight` returns); a `GameState` with intel enters a server
+region's simulation only through its constructor, which looks (and
+`newGame` builds a new one); nothing in `unreal/server` calls `lookNow`.
+A shot or a hit, a Dropship landing, a crossing and a pilot's blueprint
+sites change units and progress that the next look reads, not the sights.
+The client's `NetMirror` writes the sights and intel of its own mirror
+simulation from snapshots, never a server region's.
+
 ### Round 14: the headlamp's wedge without the root behind it (2026-10-18)
 
 At night a driven Prospector's headlamp adds a wedge 22.5° either side of
@@ -683,3 +695,28 @@ already holds: those cells skip the root, the same answer.
 `vision_stampSpansAsEveryCell` now stamps wedges too, narrow and wider
 than a half turn (where `edge` is negative and the shortcut does not
 apply), against the cell-by-cell loop: the same bytes. Every hash the same.
+
+### Round 15: daylight over the whole region written at once (2026-10-18)
+
+By day a pilot's daylight takes in its whole region, and it is the widest
+viewer of its side: the look cleared both arrays, stamped every cell with
+1, and gathered 55,000 "not seen yet" bits, every one set since the arrays
+had just been cleared. When the widest viewer is on every level and covers
+the grid (`coversGrid`, round 7), `Vision::sightInto` now writes that result
+at once: both arrays all 1, every explored bit of the grid's cells set (the
+bits past the last cell as they were), and nothing more is stamped (round
+7). Test `vision_daylightOverTheWholeGridIsWrittenAtOnce`: into a used
+Sight, over explored bits already set and stray ones past the last cell,
+the same as stamping that circle on cleared arrays, and the same ids seen.
+
+| 3 runs each in turns, load 10-11 | before µs | after µs |
+|---|---:|---:|
+| `lookbench`, noon: the start region | 9.7 | 2.2-2.3 |
+| the nest | 26.6-26.8 | 18.5-19.2 |
+| Cold Fork | 9.4-9.5 | 2.0-2.1 |
+| `crowdbench 20`, the step: 1 pilot | 4.9-5.0 | 3.8 |
+| 4 pilots | 7.5-7.8 | 6.1-6.2 |
+| 16 pilots | 18.1-18.4 | 16.7-18.0 |
+
+Every hash the same. A pilot's region looks by day in 2.2 µs: 63 µs before
+round 3.

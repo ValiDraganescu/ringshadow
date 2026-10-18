@@ -288,8 +288,6 @@ void Vision::sightInto(Sight& s, int64_t p, const GameState& state, std::vector<
                        double nightShare) const {
     const int64_t cells = width * height;
     s.ids.clear();
-    s.seen.assign(static_cast<size_t>(cells), 0);
-    s.near.assign(static_cast<size_t>(cells), 0);
     const size_t words = static_cast<size_t>((cells + 63) / 64);
     if (explored.size() != words) explored.assign(words, 0);
     // Every viewer: where, how far, from what level (nil: the air). At
@@ -333,11 +331,18 @@ void Vision::sightInto(Sight& s, int64_t p, const GameState& state, std::vector<
     std::sort(order.begin(), order.end(), [&viewers](size_t a, size_t b) {
         return viewers[a].r > viewers[b].r || (viewers[a].r == viewers[b].r && a < b);
     });
-    std::vector<Viewer> drawn;
     // Once a circle on every level has covered every cell (by day, a pilot's
     // daylight over the whole region) the grid is all seen, near and
-    // explored: the circles and beams left change nothing.
-    bool whole = false;
+    // explored: the circles and beams left change nothing. The widest
+    // first doing so leaves on cleared arrays what is written here at once.
+    bool whole = !order.empty() && !viewers[order.front()].level && coversGrid(viewers[order.front()].c, viewers[order.front()].r);
+    s.seen.assign(static_cast<size_t>(cells), whole ? 1 : 0);
+    s.near.assign(static_cast<size_t>(cells), whole ? 1 : 0);
+    if (whole && words > 0) {
+        for (size_t w = 0; w + 1 < words; ++w) explored[w] = ~uint64_t(0);
+        explored[words - 1] |= cells % 64 == 0 ? ~uint64_t(0) : (uint64_t(1) << static_cast<uint64_t>(cells % 64)) - 1;
+    }
+    std::vector<Viewer> drawn;
     for (size_t k : order) {
         if (whole) break;
         const Viewer& v = viewers[k];

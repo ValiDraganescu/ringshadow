@@ -402,3 +402,41 @@ TEST(vision_aCircleOverTheWholeGridLeavesNothingToStamp) {
     }
     EXPECT_TRUE(covering > 10 && short_ > 10);
 }
+
+// docs/perf.md "Server" round 15: when the widest viewer, on every level,
+// takes in the whole grid (by day, a world region's daylight), a sight is
+// written at once: what stamping that circle on cleared arrays leaves, into
+// a used Sight, over explored bits already set (stray ones past the last
+// cell too).
+TEST(vision_daylightOverTheWholeGridIsWrittenAtOnce) {
+    GameState s = field();
+    add(s, Unit::Kind::prospector, citadel(s, 0) + Vec2(6, 0), 0);
+    add(s, Unit::Kind::ranger, citadel(s, 1) - Vec2(9, 2), 1);
+    const Simulation sim(s, homeMap());
+    const Vision& v = *sim.vision;
+    const size_t cells = static_cast<size_t>(v.width * v.height), words = (cells + 63) / 64;
+    const double w = static_cast<double>(v.width) * Vision::cell, h = static_cast<double>(v.height) * Vision::cell;
+    const Vec2 centre = v.origin + Vec2(0.37 * w, 0.61 * h);
+    const double r = std::hypot(w, h);
+    ASSERT_TRUE(v.coversGrid(centre, r));
+    SeededRandom dice(15);
+    for (int round = 0; round < 3; ++round) {
+        std::vector<uint64_t> got(words, 0);
+        for (auto& x : got)
+            if (round > 0) x = dice.next();
+        std::vector<uint64_t> want = got;
+        Sight used;
+        used.seen.assign(cells / 3, 9);
+        used.near.assign(cells + 5, 1);
+        used.ids = {42};
+        v.sightInto(used, 0, s, got, {}, {}, {}, {{centre, r}}, 0.5);
+        std::vector<uint8_t> seen(cells, 0), near(cells, 0);
+        v.stamp(centre, r, std::nullopt, seen, near, want);
+        EXPECT_TRUE(used.seen == seen);
+        EXPECT_TRUE(used.near == near);
+        EXPECT_TRUE(got == want);
+        // What it sees of the other side, from the same arrays.
+        std::vector<uint64_t> again(words, 0);
+        EXPECT_TRUE(v.sight(0, s, again, {}, {}, {}, {{centre, r}}, 0.5).ids == used.ids);
+    }
+}
