@@ -420,6 +420,52 @@ moves between runs, 3.6-5.3 either way.
 **Next.** The radiance cache's atlases (~170 MB) and the Metal heaps'
 slack, which only a smaller set of big allocations can shrink.
 
+### Round 7: hitches in steady play, and the first minute (2026-10-18)
+
+No code this round: what a player feels between the frame times.
+
+**Steady play is smooth.** The cooked game, 60 s a scene (an Insights
+trace on, `-trace=cpu,frame,bookmark`), 1920×1080:
+
+- nest at noon: 0 of 6,437 frames over 33 ms, the worst 18 ms
+- the Fork with wave 10 down: 1 of 6,127 (34 ms)
+- home at midnight: 2 of 5,285 (34-35 ms)
+
+**Startup.** The cooked game is seated 2.3-3.2 s after its process
+starts (10 runs; K3 left it at 3.0-4.2 s). The editor binary takes
+13-16 s.
+
+**The first minute, not settled.** One traced cooked run had a storm 17-40
+s into the home scene: 329 frames over 33 ms and 217 over 50, the worst
+688 ms. In the trace:
+
+- The game thread waits at `FFrameEndSync` on the render thread.
+- The render thread waits on engine tasks: visibility 438 ms, an RHI fence
+  444 ms.
+- The engine's two foreground and two background workers spend those
+  seconds in background tasks with no trace scopes (5.5 s of 12) and in
+  oversubscription waits.
+- The game's own long jobs run on their own pool (AcWork, K3), not there.
+
+Across all of this round's 77 bench runs, 15-60 s after seating, most have
+1-2 stalls: the bench's own moments (the stats windows, the memory report,
+the teleport to the nest). Five have a storm of 7-33. Four of those five
+ran while the Mac's load jumped (to 29-36: other workers' builds), and an
+xctrace run of the same scene, without the trace, had none. A storm is
+not shown to be the game's. If one turns up on a quiet machine, the next
+step is a sampling profile of the cooked game's workers in that minute
+(xctrace on the background workers).
+
+**Where the client stands** on the M4 Max: the GPU sets the frame. What is
+left on it is quality settings (deferred lighting, Lumen's screen probes,
+TSR, post). The game thread is a fifth of the frame and its rest is long
+tail (the console's warp 0.17 ms, the pilot's follow 0.08 ms, the rays 0.05
+ms a frame). Memory's rest is the Metal heaps' slack, the engine's. The
+next big win for players is on smaller Macs. A base M-series GPU has a
+quarter to a fifth of this one's cores, so the same frame takes 40-55 ms
+there: a quality level per Mac (device profiles by GPU), which the game
+does not have.
+
 ## Server
 
 The MMORPG server (`unreal/server`), its endpoint (`unreal/Source/AutocraftNet`)
