@@ -16,6 +16,12 @@
 //             With -AcMmoShots=DIR -AcMmoShotsC1: a PNG of the door shut
 //             (c1-door-shut.png) and open (c1-door-open.png) from 7 cells
 //             out, in the hall (c1-hall.png) and at the gun (c1-feed.png).
+//             With -AcMmoShots=DIR -AcMmoShotsTps: before the door opens, the
+//             third-person view from 7 cells out at the wheel's zoom 0.45, 1
+//             and 2.6 (tps-zoom-0.45.png ...), then the same with the build
+//             menu's first building held out (tps-place-0.45.png ...; a
+//             refusal noted in the log instead); then first person again.
+//             At the gun the wheel must leave the zoom alone.
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmocitadel
@@ -23,6 +29,7 @@
 
 #include "AcCitadelAct.h"
 #include "AcLog.h"
+#include "AcPilotBuild.h"
 #include "AcPilotOverlay.h"
 #include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
@@ -61,14 +68,21 @@ namespace
 		double Settled = -1;
 		int32 ShotsSeen = 0;
 		bool bShot = false;
+		/// -AcMmoShotsTps: the next of the third-person pictures, and when it began.
+		int32 Tps = 0;
+		double TpsAt = -1;
+		bool bTpsToggled = false;
 	};
+	/// -AcMmoShotsTps: the wheel's zoom of each picture (then again, placing).
+	constexpr float TpsZooms[] = {0.45f, 1.f, 2.6f};
 	FHall Hall;
 
 	/// -AcMmoShots=DIR with -AcMmoShotsC1: a PNG of the moment `Name` there.
 	bool Picture(const TCHAR* Name)
 	{
 		FString Dir;
-		if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty())
+		const bool bWanted = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"));
+		if (!bWanted || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty())
 		{
 			return false;
 		}
@@ -191,7 +205,8 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		Hall.bPressed = true;
 	};
 	const ac::Vec2 Doorstep(0, 7.0), InsideDoor(0, 3.8), Apron(0, 13.0);
-	const bool bPictures = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"));
+	const bool bTps = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"));
+	const bool bPictures = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || bTps;
 	auto Pictures = [bPictures] { return bPictures; };
 	auto FaceDoor = [&] {
 		const ac::Vec2 D = C->position + ac::Vec2(0, 5.0) - U->position;
@@ -208,6 +223,46 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 			if (!WalkTo(Apron, 0.5)) return;
 			FaceDoor();
 			if (!Settle(10.0)) return;
+		}
+		// -AcMmoShotsTps: third person at each zoom, then a building held out.
+		if (bTps && Hall.Tps < 2 * int32(UE_ARRAY_COUNT(TpsZooms)))
+		{
+			constexpr int32 Zooms = int32(UE_ARRAY_COUNT(TpsZooms));
+			const bool bPlace = Hall.Tps >= Zooms;
+			const float Zoom = TpsZooms[Hall.Tps % Zooms];
+			if (Hall.TpsAt < 0)
+			{
+				if (!Pilot->Eye().bThirdPerson)
+				{
+					Pilot->ToggleView();
+					Hall.bTpsToggled = true;
+				}
+				if (Hall.Tps == Zooms && Pilot->OnKey)
+				{
+					// The menu's first building the pilot may put down.
+					Pilot->OnKey(TEXT("b"));
+					const UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
+					for (int32 K = 1; K <= 9 && Build && !Build->Placing(); ++K) Pilot->OnKey(FString::FromInt(K));
+				}
+				Pilot->SetChaseZoom(Zoom, true);
+				Hall.TpsAt = Now;
+				return;
+			}
+			if (Now - Hall.TpsAt < 1.5) return;
+			if (const UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this); bPlace && (!Build || !Build->Placing()))
+			{
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: tps: no building held out (\"%s\")"), Info && Info->Note ? **Info->Note : TEXT(""));
+			}
+			Picture(*FString::Printf(TEXT("tps-%s-%.2g"), bPlace ? TEXT("place") : TEXT("zoom"), Zoom));
+			Hall.TpsAt = -1;
+			if (++Hall.Tps == 2 * Zooms)
+			{
+				if (Pilot->OnKey) Pilot->OnKey(TEXT("esc"));
+				Pilot->SetChaseZoom(1.f, true);
+				if (Hall.bTpsToggled) Pilot->ToggleView();
+				T.PhaseAt = Now;
+			}
+			return;
 		}
 		if (!Hall.bShot)
 		{
@@ -316,6 +371,10 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		const FVector Eye = AcCitadelAct::Eye(*C, Terrain ? Terrain->FieldHeight(C->position) : 0.0, 0, Pilot->Yaw(), Pilot->ViewPitch());
 		const double Off = Pilot->Camera() ? AcSpace::ToCells(FVector::Dist(Pilot->Camera()->GetComponentLocation(), Eye)) : 1e9;
 		Check(Off < 0.3, FString::Printf(TEXT("the view at the gun's eye (%.2f cells off)"), Off));
+		// The wheel is the chase camera's: at a gun it does nothing.
+		const float Zoomed = Pilot->ChaseZoom();
+		Pilot->ZoomNotch(-1.f);
+		Check(Pilot->ChaseZoom() == Zoomed, TEXT("the wheel leaves the zoom alone at a gun"));
 		Check(Info && Info->Feed && Info->Feed->Gun == 0, TEXT("the feed is up: TURRET 1 · SE"));
 		// The look: a long turn right holds at the hard stop, then back in.
 		Pilot->Look(5000.0, 0.0);

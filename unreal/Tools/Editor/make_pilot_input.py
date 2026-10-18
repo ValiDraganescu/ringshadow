@@ -10,6 +10,7 @@ Outputs, under /Game/Input (read by AAcPilotPawn, AcPilotPawn.h):
   IA_PilotLeave    Bool    Esc, F
   IA_PilotKey      Axis1D  B = -1, Z = -2, X = -3, 1-9 = 1-9 (pressed): build menu and picks (E8, E9)
   IA_PilotFree     Bool    either Option key (the pointer out for the HUD)
+  IA_PilotZoom     Axis1D  the mouse wheel (up +): the third-person camera's zoom
   IMC_Pilot        the mappings above (added while driving, IMC_Rts removed)
 
 Rerunnable: makes what is missing, then rebuilds the mappings of THESE
@@ -56,7 +57,8 @@ nxt = action("IA_PilotNext", Value.BOOLEAN, "Driving: the nearest other unit of 
 leave = action("IA_PilotLeave", Value.BOOLEAN, "Driving: back to the top-down camera (after closing a menu)")
 keys = action("IA_PilotKey", Value.AXIS1D, "Driving: B (-1), Z (-2), X (-3), digits (1-9)")
 free = action("IA_PilotFree", Value.BOOLEAN, "Driving: Option held frees the pointer for the HUD")
-mine = [move, look, act, ability, view, nxt, leave, keys, free]
+zoom = action("IA_PilotZoom", Value.AXIS1D, "Driving: the wheel zooms the third-person camera (up: in)")
+mine = [move, look, act, ability, view, nxt, leave, keys, free, zoom]
 
 imc = asset("IMC_Pilot", unreal.InputMappingContext, unreal.InputMappingContext_Factory())
 imc.set_editor_property("context_description", "Driving a unit (AAcPilotPawn, chunks E2-E9)")
@@ -112,6 +114,7 @@ for i, k in enumerate(["One", "Two", "Three", "Four", "Five", "Six", "Seven", "E
     bind(keys, k, [scalar(float(i + 1))], [PRESSED])
 for k in ("LeftAlt", "RightAlt"):
     bind(free, k)
+bind(zoom, "MouseWheelAxis")
 
 dkm = imc.get_editor_property("default_key_mappings")
 dkm.set_editor_property("mappings", list(dkm.get_editor_property("mappings")) + built)

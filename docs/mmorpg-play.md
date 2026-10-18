@@ -37,6 +37,7 @@ Driving the Prospector (mouse captured):
 | Esc or F at a gun | Leave the gun (you stay in the Prospector) |
 | R + hold click | Repair (a Derrick too) |
 | V | First or third person (not at a gun: there you always see from the gun) |
+| Wheel | Third person: zoom the camera in (up) or out (down), out to a view over a building site; kept for the next ride |
 | B | Build menu |
 | B, then a number, then click | Hold a building out (1 Citadel, 2 Derrick), then put it down. Esc cancels. |
 | Z or X | Pick a level-up card |

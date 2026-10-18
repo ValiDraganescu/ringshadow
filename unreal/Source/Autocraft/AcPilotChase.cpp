@@ -108,10 +108,45 @@ float FAcPilotChase::AtEase(UWorld* World, const ac::Unit& U, const FAcModelInfo
 	return Reach(Model, Pose.Visible, Pose.Local);
 }
 
+void FAcPilotChase::FZoom::Notch(const float Notches)
+{
+	// A trackpad's flick sends a few at once: at most three notches an event.
+	Target = FMath::Clamp(Target * std::pow(Step, -FMath::Clamp(Notches, -3.f, 3.f)), Min, Max);
+}
+
+void FAcPilotChase::FZoom::Set(const float To, const bool bSnap)
+{
+	Target = FMath::Clamp(To, Min, Max);
+	if (bSnap) ShownAt = -1;
+}
+
+double FAcPilotChase::FZoom::Tick(const double RealNow)
+{
+	if (ShownAt < 0 || RealNow < ShownAt)
+	{
+		Shown = Target;
+	}
+	else
+	{
+		// 95% of the way in `EaseSeconds`.
+		const double K = 1.0 - std::exp(-3.0 * (RealNow - ShownAt) / EaseSeconds);
+		Shown += (Target - Shown) * K;
+		if (std::abs(Shown - Target) < 1e-4) Shown = Target;
+	}
+	ShownAt = RealNow;
+	return Shown;
+}
+
+double FAcPilotChase::FZoom::Tilt(const double Z)
+{
+	return MaxTilt * FMath::SmoothStep(1.0, double(Max), Z);
+}
+
 void FAcPilotChase::Reset()
 {
 	PivotZ.Reset();
 	ChaseEye.Reset();
+	Zoom.ShownAt = -1;
 }
 
 void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit& U, const FAcModelInfo* Model, const double Pitch,
@@ -128,7 +163,10 @@ void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit
 	const FVector Ahead(std::cos(Yaw), std::sin(Yaw), 0.0);
 	// The unit's right across the ground (heading grows toward it).
 	const FVector Right(-std::sin(Yaw), std::cos(Yaw), 0.0);
-	const FVector Look = Ahead * std::cos(Pitch) + FVector(0, 0, std::sin(Pitch));
+	// The wheel's zoom: the boom's length, and far out a tilt over the site.
+	const double Z = Zoom.Tick(RealNow);
+	const double Tilted = FMath::Min(Pitch, FMath::Max(Pitch - FZoom::Tilt(Z), -1.4));
+	const FVector Look = Ahead * std::cos(Tilted) + FVector(0, 0, std::sin(Tilted));
 	float Lift = 0.f, Length = 1.f;
 	FAcPilotCamera::Boom(U.kind, Lift, Length);
 	FVector Pivot = Eye + FVector(0, 0, AcSpace::ToCm(0.1 + 0.15 * R + Lift)) + Right * AcSpace::ToCm(0.4 + 0.45 * R);
@@ -138,7 +176,7 @@ void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit
 		Pivot.Z = PivotZ->Key + (Pivot.Z - PivotZ->Key) * FMath::Min(1.0, (RealNow - PivotZ->Value) * 9.0);
 	}
 	PivotZ = TPair<double, double>(Pivot.Z, RealNow);
-	FVector At = Pivot - Look * AcSpace::ToCm((2.6 + 3.3 * R) * Length);
+	FVector At = Pivot - Look * AcSpace::ToCm((2.6 + 3.3 * R) * Length * Z);
 	if (UAcRaysSubsystem* Rays = UAcRaysSubsystem::Get(World))
 	{
 		// The boom comes in where a building or a rock is behind the unit...

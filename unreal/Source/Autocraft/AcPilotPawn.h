@@ -34,6 +34,9 @@
 //   IA_PilotKey   Axis1D  B (-1), Z (-2), X (-3), 1-9 (1-9): `OnKey` (E8, E9)
 //   IA_PilotFree  Bool    Option held: the pointer out for the HUD while
 //                         `Pointable()` says there is something to point at
+//   IA_PilotZoom  Axis1D  the mouse wheel (up +): third person, the chase
+//                         camera's zoom (`FAcPilotChase::FZoom`), kept in
+//                         `UAcSettings::ChaseZoom`; nothing in first person
 //
 // Each frame, at the sim frame's `Hud` stage (after the renderer posed the
 // frame): the eye onto the unit, the sky skirt, the hooks of the other
@@ -226,6 +229,12 @@ public:
 	int64 GunCitadel() const { return GunCitadelId; }
 	/// The look's pitch (radians; at a gun, its aim's).
 	double ViewPitch() const { return Cam.Pitch; }
+	/// Third person: the chase camera's zoom wanted (`FAcPilotChase::FZoom`,
+	/// 1 the old boom). `SetChaseZoom` clamps it; `bSnap`: no easing (pictures).
+	float ChaseZoom() const { return Chase.Zoom.Target; }
+	void SetChaseZoom(float Zoom, bool bSnap = false);
+	/// The wheel turned by `Notches` (+ in): third person only.
+	void ZoomNotch(float Notches);
 
 	/// The camera is still flying down into the unit (the dive): the unit
 	/// drawn, no cockpit.
@@ -330,6 +339,10 @@ private:
 	void OnKeyAction(const FInputActionValue& V);
 	void OnFreeStart(const FInputActionValue& V);
 	void OnFreeEnd(const FInputActionValue& V);
+	void OnZoom(const FInputActionValue& V);
+	/// The zoom into `UAcSettings` once the ride ends, if the wheel moved it.
+	void StoreZoom();
+	bool bZoomDirty = false;
 
 	// The scripted drive.
 	void Script(double Dt);

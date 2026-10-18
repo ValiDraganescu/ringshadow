@@ -80,7 +80,7 @@ namespace
 
 	const TCHAR* const ActionNames[] = {TEXT("IA_PilotMove"), TEXT("IA_PilotLook"), TEXT("IA_PilotAct"),
 		TEXT("IA_PilotAbility"), TEXT("IA_PilotView"), TEXT("IA_PilotNext"), TEXT("IA_PilotLeave"),
-		TEXT("IA_PilotKey"), TEXT("IA_PilotFree")};
+		TEXT("IA_PilotKey"), TEXT("IA_PilotFree"), TEXT("IA_PilotZoom")};
 
 	UAcSimSubsystem* SimOf(const UObject* O) { return UAcSimSubsystem::Get(O); }
 
@@ -180,7 +180,13 @@ void AAcPilotPawn::BeginPlay()
 	// The view chosen last (V), kept across launches (`UAcSettings`; not in
 	// agents' headless runs); -AcPilotThird: third person
 	// (`windowshot --pilot ... --third`).
-	if (UAcSettings::Remembers()) bThird = UAcSettings::Get().bThirdPerson;
+	if (UAcSettings::Remembers())
+	{
+		bThird = UAcSettings::Get().bThirdPerson;
+		Chase.Zoom.Set(UAcSettings::Get().ChaseZoom, true);
+	}
+	// -AcPilotZoom=Z: the chase camera's zoom at the start (pictures).
+	if (float Z = 1.f; FParse::Value(Cmd, TEXT("AcPilotZoom="), Z)) Chase.Zoom.Set(Z, true);
 	if (FParse::Param(Cmd, TEXT("AcPilotThird"))) bThird = true;
 	if (UAcPointer* Pointer = UAcPointer::Get(this)) Pointer->SetThirdPerson(bThird);
 	if (float DiveSeconds = 0; FParse::Value(Cmd, TEXT("AcPilotDive="), DiveSeconds)) CVarDive->Set(DiveSeconds, ECVF_SetByCommandline);
@@ -234,6 +240,7 @@ void AAcPilotPawn::EndPlay(const EEndPlayReason::Type Reason)
 		Audio->SetEars({});
 		Audio->Blocked = nullptr;
 	}
+	StoreZoom();
 	Super::EndPlay(Reason);
 }
 
@@ -344,6 +351,38 @@ void AAcPilotPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	Bind(TEXT("IA_PilotKey"), ETriggerEvent::Started, &AAcPilotPawn::OnKeyAction);
 	Bind(TEXT("IA_PilotFree"), ETriggerEvent::Started, &AAcPilotPawn::OnFreeStart);
 	Bind(TEXT("IA_PilotFree"), ETriggerEvent::Completed, &AAcPilotPawn::OnFreeEnd);
+	Bind(TEXT("IA_PilotZoom"), ETriggerEvent::Triggered, &AAcPilotPawn::OnZoom);
+}
+
+void AAcPilotPawn::OnZoom(const FInputActionValue& V)
+{
+	// With the pointer out (Option held, a screen such as the world map
+	// open) the wheel is the HUD's.
+	if (bPointing || bScreenOpen || !bCaptured) return;
+	ZoomNotch(V.Get<float>());
+}
+
+void AAcPilotPawn::ZoomNotch(const float Notches)
+{
+	// First person and at a gun the wheel does nothing.
+	if (!Driving() || !Cam.bThirdPerson || GunManned != INDEX_NONE || Notches == 0.f) return;
+	Chase.Zoom.Notch(Notches);
+	bZoomDirty = true;
+}
+
+void AAcPilotPawn::SetChaseZoom(const float Zoom, const bool bSnap)
+{
+	Chase.Zoom.Set(Zoom, bSnap);
+	bZoomDirty = true;
+}
+
+void AAcPilotPawn::StoreZoom()
+{
+	if (!bZoomDirty) return;
+	bZoomDirty = false;
+	if (!UAcSettings::Remembers()) return;
+	UAcSettings::Get().ChaseZoom = Chase.Zoom.Target;
+	UAcSettings::Store();
 }
 
 void AAcPilotPawn::OnMove(const FInputActionValue& V) { MoveInput = V.Get<FVector2D>(); }
@@ -550,6 +589,7 @@ void AAcPilotPawn::Leave(const bool bHandBack)
 {
 	bLeaveWanted = false;
 	if (!Driving()) return;
+	StoreZoom();
 	UAcSimSubsystem* Sim = SimOf(this);
 	std::optional<ac::Vec2> At;
 	if (Sim && Sim->IsRunning())

@@ -14,6 +14,8 @@
 //   bShowPerfMmo            the same for `ac.PerfPanelMmo`: the MMORPG
 //                           mode's panel, off until a developer turns it on.
 //   bThirdPerson            for E3 (Swift's remembered 1st/3rd view).
+//   ChaseZoom               the third-person camera's wheel zoom (0.45-2.6,
+//                           `FAcPilotChase::FZoom`), kept across rides.
 //   MasterVolume, bMusic, MusicVolume  for C7/C8 (Swift `--volume`, `--music`).
 //   VoiceVolume             U2: the spoken words (KSTR's radio lines, the
 //                           narrations), under the master volume.
@@ -83,6 +85,8 @@ public:
 	bool bShowPerfMmo = false;
 	UPROPERTY(config)
 	bool bThirdPerson = false;
+	UPROPERTY(config)
+	float ChaseZoom = 1.0f;
 	UPROPERTY(config)
 	float MasterVolume = float(ac::PlayerSettings::defaultMaster);
 	UPROPERTY(config)

@@ -78,7 +78,8 @@ public:
 	virtual bool HandleMouseWheelOrGestureEvent(FSlateApplication&, const FPointerEvent& Wheel, const FPointerEvent* Gesture) override
 	{
 		AAcRtsPawn* P = Pawn.Get();
-		if (!Gesture || !P) return false;
+		// Driving a unit: the scroll is the pilot's (its wheel zooms the chase camera).
+		if (!Gesture || !P || !P->IsPlayerControlled()) return false;
 		FVector2D At;
 		if (!P->ScreenToView(FVector2D(Gesture->GetScreenSpacePosition()), At)) return false;
 		const FModifierKeysState& Keys = Gesture->GetModifierKeys();

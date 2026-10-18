@@ -37,7 +37,38 @@ public:
 	/// `Reach` of the unit's model posed at ease (as Swift first meets it).
 	static float AtEase(UWorld* World, const ac::Unit& U, const FAcModelInfo& Model);
 
-	/// A new ride or a switch of view: nothing eased yet.
+	/// The wheel's zoom on the boom: the factor wanted (`Target`) and the
+	/// one shown (`Shown`), eased toward it.
+	struct AUTOCRAFT_API FZoom
+	{
+		static constexpr float Min = 0.45f;
+		static constexpr float Max = 2.6f;
+		/// Each notch scales the boom by this much (wheel down: out).
+		static constexpr float Step = 1.12f;
+		/// About this long from one notch's start to its end, real seconds.
+		static constexpr double EaseSeconds = 0.15;
+		/// The far end's tilt down past the mouse pitch, radians (25°).
+		static constexpr double MaxTilt = 25.0 * UE_DOUBLE_PI / 180.0;
+
+		float Target = 1.f;
+		double Shown = 1.0;
+		/// `Shown`'s real seconds (< 0: none yet, `Tick` snaps).
+		double ShownAt = -1;
+
+		/// `Notches` of the wheel: + in (the boom shorter), - out.
+		void Notch(float Notches);
+		/// Straight to `Zoom` (clamped): the setting at a new ride, a picture.
+		void Set(float Zoom, bool bSnap);
+		/// The factor this frame, eased toward `Target`.
+		double Tick(double RealNow);
+		/// How far the camera tilts down past the mouse pitch at `Zoom`
+		/// (radians, >= 0): none up to 1, `MaxTilt` at `Max`, smoothly.
+		static double Tilt(double Zoom);
+	};
+	FZoom Zoom;
+
+	/// A new ride or a switch of view: nothing eased yet (the zoom shown
+	/// snaps to the wanted one).
 	void Reset();
 
 	/// The camera behind the unit (`chase`). `Root`: the model root's world
