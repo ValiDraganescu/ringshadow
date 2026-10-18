@@ -297,6 +297,13 @@ public:
 	/// half the view's height (+x right, +y up; `gunMarker`), for the
 	/// overlay (E6). Unset: not a vehicle, or behind the camera.
 	const TOptional<FVector2D>& GunMarker() const { return GunMark; }
+	/// The right-drag look-around (third person): the crosshair, where the
+	/// aim is, off the view's centre as `GunMarker` (unset: at the centre).
+	/// `bReticleHidden`: the aim is off the view, no crosshair.
+	const TOptional<FVector2D>& ReticleMarker() const { return ReticleMark; }
+	bool ReticleHidden() const { return bReticleHidden; }
+	/// The camera swung off the aim by the right button (or easing back).
+	bool LookingAround() const { return Cam.bThirdPerson && Chase.Orbit.Off(); }
 	/// E3: third person, the unit's own eye (world cm; its shots start
 	/// there: `chaseEye`). Unset in first person.
 	TOptional<FVector> ChaseEye() const { return Cam.bThirdPerson ? Chase.Eye() : TOptional<FVector>(); }
@@ -396,6 +403,8 @@ private:
 	/// E3: the third-person camera.
 	FAcPilotChase Chase;
 	TOptional<FVector2D> GunMark;
+	TOptional<FVector2D> ReticleMark;
+	bool bReticleHidden = false;
 	int64 DrivenId = INDEX_NONE;
 	double PilotYaw = 0.0;
 	/// C1: `AtGun`, `GunCitadel` as the last `Follow` saw them.

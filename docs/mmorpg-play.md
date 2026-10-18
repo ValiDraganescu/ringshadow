@@ -37,6 +37,7 @@ Driving the Prospector (mouse captured):
 | Esc or F at a gun | Leave the gun (you stay in the Prospector) |
 | R + hold click | Repair (a Derrick too) |
 | V | First or third person (not at a gun: there you always see from the gun) |
+| Hold right button + mouse | Third person: look round the unit; the crosshair stays where you aim and W still walks that way. Let go and the camera swings back behind the unit |
 | Wheel | Third person: zoom the camera in (up) or out (down), out to a view over a building site; kept for the next ride |
 | B | The build wheel: a ring of the buildings round the middle of the view, the pointer hidden. Move the mouse toward one (its name, price and what it needs light up) and click to hold it out; or hold B, aim, and let go. Esc or B closes it. |
 | B, then a number, then click | Hold a building out by its number on the wheel (1 Citadel, 2 Landing Pad, 3 Derrick), then put it down. Esc cancels. |

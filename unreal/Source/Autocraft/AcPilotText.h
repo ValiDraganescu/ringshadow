@@ -177,6 +177,11 @@ struct FAcPilotInfo
 	/// A vehicle's gun marker: off the view's centre in half the view's
 	/// height (+y up). Unset: none (E4 fills it).
 	TOptional<FVector2D> Gun;
+	/// Third person, looking round with the right button: the crosshair
+	/// where the aim is, off the view's centre as `Gun` (unset: at the
+	/// centre). `bReticleHidden`: the aim is off the view, no crosshair.
+	TOptional<FVector2D> Reticle;
+	bool bReticleHidden = false;
 	/// A soldier's spread cone (`Simulation::cone`) in half the view's
 	/// height: the reticle's brackets open by it. Unset: none.
 	TOptional<double> Cone;

@@ -352,16 +352,24 @@ void SAcPilotOverlay::PaintReticle(FAcPilotPen& P, const FVector2D C, const doub
 	const double S = ReticleScale(Now);
 	const FLinearColor Tone = ToneColor(Info.Tone);
 	auto At = [&](double X, double Y) { return C + FVector2D(X, Y) * S; };
+	// Looking round (the right button, third person): the brackets where
+	// the aim is, none when it is off the view; the ring and the prompt
+	// stay in the middle.
+	const double Hh = P.H / 2;
+	const FVector2D Mark = Info.Reticle ? FVector2D(C.X + Info.Reticle->X * Hh, Hh + Info.Reticle->Y * Hh) : C;
+	const bool bMark = !Info.bReticleHidden && Mark.X >= 0 && Mark.X <= 2 * C.X && Mark.Y >= 0 && Mark.Y <= P.H;
+	auto MarkAt = [&](double X, double Y) { return Mark + FVector2D(X, Y) * S; };
 	// Four corner brackets and a centre pip; a soldier's open with its
 	// cone (its edge, past the brackets' inner 6).
 	const double Open = Info.Cone ? FMath::Max(0.0, *Info.Cone * P.H / 2 / S - 6) : 0;
 	for (const FVector2D Sign : {FVector2D(-1, 1), FVector2D(1, 1), FVector2D(1, -1), FVector2D(-1, -1)})
 	{
-		P.Lines({At(Sign.X * (14 + Open), Sign.Y * (6 + Open)), At(Sign.X * (14 + Open), Sign.Y * (14 + Open)),
-					At(Sign.X * (6 + Open), Sign.Y * (14 + Open))},
+		if (!bMark) break;
+		P.Lines({MarkAt(Sign.X * (14 + Open), Sign.Y * (6 + Open)), MarkAt(Sign.X * (14 + Open), Sign.Y * (14 + Open)),
+					MarkAt(Sign.X * (6 + Open), Sign.Y * (14 + Open))},
 			Tone, 1.6 * S, 1.2 * S);
 	}
-	P.Disc(C, 1.6 * S, LineColor());
+	if (bMark) P.Disc(Mark, 1.6 * S, LineColor());
 	// The work ring: from the top, clockwise.
 	if (Info.Progress)
 	{
@@ -391,7 +399,6 @@ void SAcPilotOverlay::PaintReticle(FAcPilotPen& P, const FVector2D C, const doub
 	// A vehicle's gun marker: where its weapon really points.
 	if (Info.Gun)
 	{
-		const double Hh = P.H / 2;
 		const FVector2D G(C.X + Info.Gun->X * Hh, Hh + Info.Gun->Y * Hh);
 		P.Lines(FAcPilotPen::Circle(G, 9, 40), Alpha(Tone, 0.9), 1.6, 1);
 		P.Disc(G, 1.6, Tone);

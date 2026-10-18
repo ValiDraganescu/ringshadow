@@ -369,6 +369,8 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	}
 	if (GunMarker) Info.Gun = GunMarker();
 	else Info.Gun = Pawn->GunMarker(); // E4's marker, computed by the pawn each frame
+	Info.Reticle = Pawn->ReticleMarker();
+	Info.bReticleHidden = Pawn->ReticleHidden();
 	// A soldier's gun: the brackets open with its cone, moving and firing
 	// (docs/shooter-feel.md).
 	if (S.pilotShoots(U) && ac::Rules::stats(U.kind).bio)
