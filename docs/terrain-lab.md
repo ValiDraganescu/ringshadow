@@ -1,6 +1,7 @@
 # The terrain lab
 
-Status, 2026-10-18: planned. The user's ask: the ground needs to look
+Status, 2026-10-18: the lab is built (the switch, the sheet, the material
+script); round 1 is in its first iterations. The user's ask: the ground needs to look
 better, and the work happens in a sandbox first, a test game of its own,
 and only what we like is copied into the game.
 
@@ -42,8 +43,13 @@ this page is corrected.
    `Tools/terrain_lab_textures.py`), beside the game's. The game's
    `M_Terrain`, `AAcDoodads` and their scripts are read, not edited.
 3. **One switch.** `ac.TerrainLab 0|1` (and `-AcTerrainLab` on the command
-   line) picks the lab's material and the lab's scenery actor over the
-   game's, so an A/B is one shot each, in the same build. Off by default.
+   line) picks the lab's material (`/Game/TerrainLab/M_TerrainLab`, swapped
+   in place on the ground already built: `AAcRegionGround::Rematerial`) and,
+   from round 3, the lab's scenery actor over the game's, so an A/B is one
+   shot each, in the same build. Off by default. The palettes tell the lab
+   which of its textures is a region's own (`AcGroundLook`'s `Layer`, the
+   `GroundLayer` and `NbLayer` parameters; M_Terrain has neither and is
+   unchanged).
 4. **Only what the game can ship.** No Landscape, no Nanite, no distance
    fields, no editor-baked meshes of a region: they need the editor's
    builders and our maps are built at load. Lumen sees the ground by screen
@@ -52,7 +58,11 @@ this page is corrected.
    (both CC0) or are made here (Grok Imagine, `mcp__orchestrator__grok_image`,
    then the Sobel step for normals). Each set is listed with its source in
    `unreal/Resources/Textures/lab/SOURCES.md`. Nothing from Fab or Megascans.
-   2K in git; 4K stays out.
+   2K; 4K stays out. While a round is tried, the lab's assets
+   (`unreal/Content/TerrainLab/`, about 380 MB of texture arrays) stay out of
+   git: `uv run unreal/Tools/terrain_lab_textures.py` downloads and packs the
+   sets, the material script makes them again. A promoted round's textures
+   go in with it.
 6. **Every round is measured.** `unreal/Tools/bench/bench.py --mmo` before
    and after, the cockpit scene and the fight scene; see section 5.
 7. The worker's own worktree (the `ringshadow-dev-agent` skill), branch
@@ -61,23 +71,40 @@ this page is corrected.
 
 ## 3. The lab run
 
-`-AcTerrainLab=DIR` is a flow like `-AcMmoShots` (`AcMmoShots.cpp`): it
-loads a region file (`-AcMap=` as today; the default `start`, then
-`brine-pans` for salt and `slag-pockets` for slag), builds the ground with
-the lab on, and saves a sheet of stills into DIR, then the same sheet with
-the lab off (`-AcTerrainLabAB`). Materials change through the headless
-editor script (`hidden_run.py --python`), so a texture or material round
-needs no C++ build and no editor restart: edit, script, shot, look.
+`-AcTerrainLabShots=DIR` (`AcTerrainLab.cpp`, a world subsystem like
+`-AcCloudShots`) runs the sheet: for each region of
+`-AcTerrainLabRegions=` (default `start`; `brine-pans` for salt and
+`slag-pockets` for slag) it builds the ground as a client builds it, from
+the region file with no server (`ac::net::Mirror`, as the map bake does),
+with the region's own palette, stands a Prospector on the ramp nearest the
+pad, and saves every still with the lab on, then with it off when asked
+(`-AcTerrainLabAB`, or `-AcTerrainLabLooks=lab,game`). Materials change
+through the headless editor script (`hidden_run.py --python`), so a texture
+or material round needs no C++ build and no editor restart: edit, script,
+shot, look.
 
-The sheet, each still `NN-<view>-<hour>-<weather>.png` at 1280×720:
+```sh
+uv run unreal/Tools/hidden_run.py --python unreal/Tools/Editor/make_terrain_lab_material.py --out unreal/Saved/TerrainLab/mat
+uv run unreal/Tools/hidden_run.py --out unreal/Saved/TerrainLab/r1 --res 1280x720 -- \
+  -AcMap=highlands-small -AcNoAI -AcTerrainLabShots={out} -AcTerrainLabAB \
+  -AcTerrainLabRegions=start,brine-pans,slag-pockets
+```
+
+`-AcTerrainLabViews=`, `-AcTerrainLabHours=`, `-AcTerrainLabWeathers=` and
+`-AcTerrainLabFrames=` (90) narrow or change the sheet. The stills land in
+`DIR/<region>/<look>/`, and `DIR/<region>/views.txt` says where each view
+stood.
+
+The sheet, each still `NN-<view>-<hour>-<weather>.png` at 1280×720, NN
+the same in both looks:
 
 | view | where | why |
 |---|---|---|
-| `feet` | cockpit, eye 1.3 m up, looking 20° down at flat ground 2 m ahead | tiling, parallax, clutter at arm's length |
-| `cliff` | cockpit at a cliff's foot, looking up the face | rock faces, strata, occlusion |
-| `across` | cockpit on high ground looking over the region to the far wall | mid and far scale, the haze, repetition at distance |
-| `third` | the third-person camera behind a Prospector on a ramp | the ground under a unit, shadows |
-| `top` | the RTS camera at the game's zoom over the well | the map read: nothing the lab adds may muddy it |
+| `feet` | cockpit (62° vertical), eye 1.3 m up, looking 20° down at the nearest flat, clear ground out past the pad, facing away from it | tiling, parallax, clutter at arm's length |
+| `cliff` | cockpit at the foot of the cliff nearest the pad, looking 18° up the face | rock faces, strata, occlusion |
+| `across` | cockpit on the region's highest flat ground, looking 7° down toward its far side | mid and far scale, the haze, repetition at distance |
+| `third` | the third-person boom behind a Prospector half way up the ramp nearest the pad (a ramp edit of the region file) | the ground under a unit, shadows |
+| `top` | the RTS camera at the game's zoom (`DefaultCover`) over the well nearest the pad | the map read: nothing the lab adds may muddy it |
 
 Hours 9, 17 and 23 (`-AcHour`), weather clear and rain (`-AcWeather`), so
 one region makes 30 stills; the 23 h stills show the lamps and the slag's

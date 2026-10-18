@@ -50,3 +50,7 @@ Tools/AudioGen/raw/
 # The editor auto-imports the loose cursor and splash images (which the game reads as files) into textures it never uses.
 unreal/Content/UI/Cursors/*.uasset
 unreal/Content/Splash/*.uasset
+# The terrain lab's assets (docs/terrain-lab.md): 2K texture arrays, ~380 MB,
+# made again by unreal/Tools/terrain_lab_textures.py and
+# Tools/Editor/make_terrain_lab_material.py; a round's own go in on promotion.
+unreal/Content/TerrainLab/

@@ -169,6 +169,11 @@ namespace
 	}
 
 
+	TAutoConsoleVariable<int32> CVarTerrainLab(
+		TEXT("ac.TerrainLab"), 0,
+		TEXT("1: the ground draws with the terrain lab's material (docs/terrain-lab.md); 0: the game's M_Terrain. ")
+		TEXT("Also -AcTerrainLab on the command line."));
+
 	TAutoConsoleVariable<int32> CVarBorderShadow(
 		TEXT("ac.TerrainBorderShadow"), 0,
 		TEXT("1: the border scenery casts shadows (Swift: never). Takes effect on the next build."));
@@ -177,6 +182,17 @@ namespace
 double AAcTerrain::BorderWidth(const ac::GroundRect& B)
 {
 	return FMath::Max(60.0, 0.45 * FMath::Max(B.width(), B.depth()));
+}
+
+bool AAcTerrain::LabOn()
+{
+	// -AcTerrainLab: on from the start (the console may turn it off again).
+	static const bool bFlag = [] {
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcTerrainLab"))) CVarTerrainLab->Set(1, ECVF_SetByCommandline);
+		return true;
+	}();
+	(void)bFlag;
+	return CVarTerrainLab.GetValueOnGameThread() != 0;
 }
 
 FString AAcTerrain::KeyOf(const ac::MapDefinition& Map)
@@ -447,26 +463,39 @@ void AAcRegionGround::MakeMaterial()
 	Mip.BulkData.Unlock();
 	SplatTex->UpdateResource();
 	Prepared->SplatBytes.Empty();
-	if (Mat)
-	{
-		const ac::GroundRect B = MapDef->bounds;
-		Mat->SetTextureParameterValue(TEXT("Splat"), SplatTex);
-		Mat->SetVectorParameterValue(TEXT("Origin"), FLinearColor(float(GridOrigin.x), float(GridOrigin.y), 0.f, 0.f));
-		// In world-grid cells (the material samples by them: `Origin`).
-		Mat->SetVectorParameterValue(TEXT("Bounds"), FLinearColor(float(B.minX + GridCentre.x), float(B.minZ + GridCentre.y), float(B.width()), float(B.depth())));
-		const FLinearColor H = AAcTerrain::Haze();
-		Mat->SetVectorParameterValue(TEXT("Haze"), FLinearColor(H.R, H.G, H.B, float(AAcTerrain::BorderWidth(B))));
-		// Which sides have a region beyond (N, E, S, W), until the palette's
-		// own sets it (AcGroundLook): the dark seam only at the world's rim.
-		Mat->SetVectorParameterValue(TEXT("Neighbours"), FLinearColor((RimSides & 1) ? 0.f : 1.f, (RimSides & 2) ? 0.f : 1.f,
-			(RimSides & 4) ? 0.f : 1.f, (RimSides & 8) ? 0.f : 1.f));
-		// The walls' tops (W4b): one rock for the whole world above this
-		// height, not the region's palette, so the high ground between the
-		// regions reads as one land and no cell shows by its colour.
-		if (MapDef->edges && !MapDef->edges->outline.empty())
-			Mat->SetScalarParameterValue(TEXT("WallZ"), float(double(MapDef->edges->level) * MapDef->levelHeight - 0.5));
-	}
+	SetParameters();
 	bMaterial = true;
+}
+
+void AAcRegionGround::SetParameters()
+{
+	if (!Mat) return;
+	const ac::GroundRect B = MapDef->bounds;
+	Mat->SetTextureParameterValue(TEXT("Splat"), SplatTex);
+	Mat->SetVectorParameterValue(TEXT("Origin"), FLinearColor(float(GridOrigin.x), float(GridOrigin.y), 0.f, 0.f));
+	// In world-grid cells (the material samples by them: `Origin`).
+	Mat->SetVectorParameterValue(TEXT("Bounds"), FLinearColor(float(B.minX + GridCentre.x), float(B.minZ + GridCentre.y), float(B.width()), float(B.depth())));
+	const FLinearColor H = AAcTerrain::Haze();
+	Mat->SetVectorParameterValue(TEXT("Haze"), FLinearColor(H.R, H.G, H.B, float(AAcTerrain::BorderWidth(B))));
+	// Which sides have a region beyond (N, E, S, W), until the palette's
+	// own sets it (AcGroundLook): the dark seam only at the world's rim.
+	Mat->SetVectorParameterValue(TEXT("Neighbours"), FLinearColor((RimSides & 1) ? 0.f : 1.f, (RimSides & 2) ? 0.f : 1.f,
+		(RimSides & 4) ? 0.f : 1.f, (RimSides & 8) ? 0.f : 1.f));
+	// The walls' tops (W4b): one rock for the whole world above this
+	// height, not the region's palette, so the high ground between the
+	// regions reads as one land and no cell shows by its colour.
+	if (MapDef->edges && !MapDef->edges->outline.empty())
+		Mat->SetScalarParameterValue(TEXT("WallZ"), float(double(MapDef->edges->level) * MapDef->levelHeight - 0.5));
+}
+
+void AAcRegionGround::Rematerial(UMaterialInterface* Base)
+{
+	if (!bMaterial || !Base || BaseMaterial == Base) return;
+	BaseMaterial = Base;
+	Mat = UMaterialInstanceDynamic::Create(BaseMaterial, this, MakeUniqueObjectName(this, UMaterialInstanceDynamic::StaticClass(), TEXT("TerrainMaterial")));
+	SetParameters();
+	for (UStaticMeshComponent* C : Pieces)
+		if (C) C->SetMaterial(0, Mat);
 }
 
 void AAcRegionGround::SetOrigin(const ac::Vec2 Origin)
@@ -587,6 +616,39 @@ AAcTerrain::AAcTerrain()
 	Root->SetMobility(EComponentMobility::Static);
 	RootComponent = Root;
 	TerrainMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/Terrain/M_Terrain.M_Terrain")));
+	LabMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/TerrainLab/M_TerrainLab.M_TerrainLab")));
+}
+
+UMaterialInterface* AAcTerrain::BaseMaterial()
+{
+	if (LabOn())
+	{
+		if (UMaterialInterface* Lab = LabMaterial.LoadSynchronous()) return Lab;
+		static bool bSaid = false;
+		if (!bSaid) UE_LOG(LogAutocraft, Error, TEXT("terrain lab: %s is missing (run Tools/Editor/make_terrain_lab_material.py); the game's ground instead"), *LabMaterial.ToString());
+		bSaid = true;
+	}
+	UMaterialInterface* Base = TerrainMaterial.LoadSynchronous();
+	if (!Base)
+	{
+		UE_LOG(LogAutocraft, Error, TEXT("terrain: %s is missing (run Tools/Editor/make_terrain_material.py)"), *TerrainMaterial.ToString());
+	}
+	return Base;
+}
+
+void AAcTerrain::SyncLab()
+{
+	const int32 On = LabOn() ? 1 : 0;
+	if (On == LabDrawn) return;
+	const bool bFirst = LabDrawn < 0;
+	LabDrawn = On;
+	if (bFirst && !On) return;
+	UMaterialInterface* Base = BaseMaterial();
+	for (TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
+		if (S.Value) S.Value->Rematerial(Base);
+	// The sky and the palette set theirs on the new instances (AAcDaylight).
+	Version += 1;
+	UE_LOG(LogAutocraft, Log, TEXT("terrain lab: %s, %d sets"), On ? TEXT("on") : TEXT("off"), Sets.Num());
 }
 
 AAcTerrain* AAcTerrain::Find(const UWorld* World)
@@ -640,11 +702,7 @@ void AAcTerrain::OnGameStarted(UAcSimSubsystem& Sim)
 AAcRegionGround* AAcTerrain::Spawn(std::shared_ptr<const ac::MapDefinition> Map, const FString& Key, const ac::Vec2 Centre, const uint8 Rim,
 	const int64 Region)
 {
-	UMaterialInterface* Base = TerrainMaterial.LoadSynchronous();
-	if (!Base)
-	{
-		UE_LOG(LogAutocraft, Error, TEXT("terrain: %s is missing (run Tools/Editor/make_terrain_material.py)"), *TerrainMaterial.ToString());
-	}
+	UMaterialInterface* Base = BaseMaterial();
 	// At its place in the world frame (AcSpace.h `Origin`): its centre on
 	// the grid less the session's first region's. It never moves.
 	FActorSpawnParameters Params;
@@ -721,6 +779,7 @@ ac::Vec2 AAcTerrain::SessionCentre() const
 void AAcTerrain::Tick(const float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	SyncLab();
 	SyncAround();
 }
 

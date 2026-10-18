@@ -46,6 +46,12 @@
 // it builds from `UAcSimSubsystem::Map()` and rebuilds when a game on
 // another map starts. Or `Build(Map)` directly.
 //
+// The terrain lab (docs/terrain-lab.md): `ac.TerrainLab 1` (or
+// `-AcTerrainLab`) draws every ground set with the lab's material
+// (`/Game/TerrainLab/M_TerrainLab`, Tools/Editor/make_terrain_lab_material.py)
+// instead of `M_Terrain`, swapped in place on the sets already built, so an
+// A/B is one console line. The sim's ground is the same either way.
+//
 // `-AcTerrainView[=POINTS_PER_CELL]` (with `-AcShot`): frames the Swift
 // game's default top-down view (over blue's main base, 40 points per cell,
 // pitch 56°, vertical FOV 30°, `ac::FreeView`) and, when the level has no
@@ -144,11 +150,17 @@ public:
 	void SetOrigin(ac::Vec2 Origin);
 	/// Seconds spent building on the game's thread, all steps.
 	double BuildSeconds() const { return Spent; }
+	/// The terrain lab's switch: a new material instance of `Base` with the
+	/// set's parameters, on every piece (the old one's are let go).
+	void Rematerial(UMaterialInterface* Base);
 
 private:
 	struct FPrepared;
 	void PrepareCpu();
 	void MakeMaterial();
+	/// The set's own parameters on `Mat`: its splat, bounds, origin, rim
+	/// and walls (the sky's and the palette's are AAcDaylight's).
+	void SetParameters();
 	void AddPiece(UStaticMesh* Mesh, const TCHAR* Name, bool bCastShadow);
 
 	UPROPERTY(VisibleAnywhere)
@@ -216,6 +228,8 @@ public:
 	static double BorderWidth(const ac::GroundRect& B);
 	/// A map's ground set's key: its name, version and seed.
 	static FString KeyOf(const ac::MapDefinition& Map);
+	/// The terrain lab is on (`ac.TerrainLab`, `-AcTerrainLab`).
+	static bool LabOn();
 
 	AAcTerrain();
 
@@ -289,6 +303,11 @@ private:
 	ac::Vec2 SessionCentre() const;
 	/// -AcTerrainView: frame the Swift default view (see the file comment).
 	void StageViewIfAsked();
+	/// The material a set draws with: the lab's when the lab is on (and
+	/// made), else `M_Terrain`.
+	UMaterialInterface* BaseMaterial();
+	/// The lab's switch flipped: every set's material swapped.
+	void SyncLab();
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> Root;
@@ -300,6 +319,11 @@ private:
 	/// The material the ground draws with (made by make_terrain_material.py).
 	UPROPERTY(EditAnywhere, Category = "Terrain")
 	TSoftObjectPtr<UMaterialInterface> TerrainMaterial;
+	/// The terrain lab's (docs/terrain-lab.md), drawn with `ac.TerrainLab 1`.
+	UPROPERTY(EditAnywhere, Category = "Terrain")
+	TSoftObjectPtr<UMaterialInterface> LabMaterial;
+	/// What the sets were last drawn with (-1: not yet looked).
+	int32 LabDrawn = -1;
 
 	FDelegateHandle GameStartedHandle;
 	bool bViewStaged = false;

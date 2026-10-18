@@ -20,19 +20,26 @@ namespace AcGroundLook
 		case G::salt:
 			P.Tint = FLinearColor(0.60f, 0.58f, 0.53f, 0.9f);
 			P.Fx = FLinearColor(1, 0, 0, 0);
+			P.Layer = 4;
 			break;
-		case G::ash: P.Tint = FLinearColor(0.16f, 0.16f, 0.165f, 0.9f); break;
+		case G::ash:
+			P.Tint = FLinearColor(0.16f, 0.16f, 0.165f, 0.9f);
+			P.Layer = 5;
+			break;
 		case G::glass:
 			P.Tint = FLinearColor(0.045f, 0.05f, 0.06f, 0.92f);
 			P.Fx = FLinearColor(0, 1, 0, 0);
+			P.Layer = 6;
 			break;
 		case G::slag:
 			P.Tint = FLinearColor(0.034f, 0.03f, 0.028f, 0.95f);
 			P.Fx = FLinearColor(0, 0, 1, 0);
+			P.Layer = 7;
 			break;
 		case G::frost:
 			P.Tint = FLinearColor(0.15f, 0.17f, 0.2f, 0.8f);
 			P.Frost = 1.0f;
+			P.Layer = 8;
 			break;
 		case G::ochre:
 			P.Tint = FLinearColor(0.36f, 0.22f, 0.09f, 0.85f);
@@ -69,7 +76,7 @@ namespace AcGroundLook
 
 		bool Same(const FPalette& A, const FPalette& B)
 		{
-			return A.Tint.Equals(B.Tint, 1e-4f) && A.Fx.Equals(B.Fx, 1e-4f) && FMath::IsNearlyEqual(A.Frost, B.Frost, 1e-4f);
+			return A.Tint.Equals(B.Tint, 1e-4f) && A.Fx.Equals(B.Fx, 1e-4f) && FMath::IsNearlyEqual(A.Frost, B.Frost, 1e-4f) && A.Layer == B.Layer;
 		}
 	}
 
@@ -145,14 +152,21 @@ namespace AcGroundLook
 		{
 			Material->SetVectorParameterValue(TEXT("GroundTint"), Own.Tint);
 			Material->SetVectorParameterValue(TEXT("GroundFx"), Own.Fx);
+			Material->SetScalarParameterValue(TEXT("GroundLayer"), Own.Layer);
 		}
 		static const TCHAR* const TintNames[4] = {TEXT("NbTintN"), TEXT("NbTintE"), TEXT("NbTintS"), TEXT("NbTintW")};
 		static const TCHAR* const FxNames[4] = {TEXT("NbFxN"), TEXT("NbFxE"), TEXT("NbFxS"), TEXT("NbFxW")};
+		bool bLayers = bNew;
 		for (int32 E = 0; E < 4; E++)
 		{
+			bLayers |= S.Near[E].Layer != Near[E].Layer;
 			if (!bNew && Same(S.Near[E], Near[E])) continue;
 			Material->SetVectorParameterValue(TintNames[E], Near[E].Tint);
 			Material->SetVectorParameterValue(FxNames[E], Near[E].Fx);
+		}
+		if (bLayers)
+		{
+			Material->SetVectorParameterValue(TEXT("NbLayer"), FLinearColor(Near[0].Layer, Near[1].Layer, Near[2].Layer, Near[3].Layer));
 		}
 		if (bNew || !S.Neighbours.Equals(Neighbours)) Material->SetVectorParameterValue(TEXT("Neighbours"), Neighbours);
 		if (bNew || FMath::Abs(S.Frost - Frost) > 1.0f / 256) Material->SetScalarParameterValue(TEXT("Frost"), Frost);
