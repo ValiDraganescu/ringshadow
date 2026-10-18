@@ -38,6 +38,7 @@ Server::Server(net::PacketIo& io, const ServerOptions& options)
     if (options_.saved) {
         for (const std::string& p : world_.restore(*options_.saved)) log("save: " + p);
         for (const std::string& p : world_.grownCitadels()) log("save: " + p);
+        for (const std::string& p : world_.learnedOnLoad()) log("save: " + p);
         log("save: " + std::to_string(options_.saved->regions.size()) + " regions, " +
             std::to_string(options_.saved->pilots.size()) + " pilots loaded");
         // What each region holds (a world that comes up empty on screen is
@@ -208,6 +209,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
         // The Citadel's interior (WorldMap::devCitadel, C1): `citadel here|door open|close|man N|none`.
         if (line.rfind("citadel", 0) == 0) {
             said.push_back(world_.devCitadel(line));
+            continue;
+        }
+        // Practice (WorldMap::devDummy, C2): `dummy here`.
+        if (line.rfind("dummy", 0) == 0) {
+            said.push_back(world_.devDummy(line));
             continue;
         }
         // The Dropship's scenes (WorldMap::devFerry): `ferry pad [here|REGION]|seen|go REGION|mh N`.

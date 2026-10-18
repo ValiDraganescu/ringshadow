@@ -251,9 +251,37 @@ WorldSave WorldMap::save() const {
     return out;
 }
 
+std::optional<std::string> WorldMap::adoptLearned(ProspectorProgress& g, const std::set<StructureKind>& built, const std::string& who) {
+    std::set<StructureKind> learn = built;
+    for (const auto& [k, n] : g.bought)
+        if (n > 0) learn.insert(k);
+    for (const auto& [k, n] : g.blueprints)
+        if (n > 0) learn.insert(k);
+    std::string said;
+    int64_t dropped = 0;
+    for (const StructureKind k : learn) {
+        // A kind with no blueprint (the Garrison) or a free one: nothing to learn.
+        if (Progression::blueprintFloor(k) <= 0 || Rules::freeBuild(k)) continue;
+        if (g.learned.insert(k).second) said += (said.empty() ? "" : ", ") + Simulation::title(k);
+    }
+    for (auto it = g.blueprints.begin(); it != g.blueprints.end();) {
+        if (g.learned.count(it->first)) {
+            dropped += it->second;
+            it = g.blueprints.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    g.bought.clear();
+    if (said.empty() && dropped == 0) return std::nullopt;
+    return who + ": schema 28: learned " + (said.empty() ? std::string("nothing new") : said) + "; " + std::to_string(dropped) +
+           " blueprint cop" + (dropped == 1 ? "y" : "ies") + " used up";
+}
+
 std::vector<std::string> WorldMap::restore(const WorldSave& save) {
     std::vector<std::string> problems;
     grown_.clear();
+    learnedOnLoad_.clear();
     if (!world_) {
         if (!save.regions.empty() || !save.pilots.empty()) problems.push_back("not a world: the save is not used");
         return problems;
@@ -356,6 +384,15 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         if (!sp.stacked)
             for (auto& [kind, n] : p.progress.blueprints)
                 n = std::max<int64_t>(1, p.progress.limit(kind) - realmCount(kind));
+        // Saved before blueprints were learned (C2, schema 28): what it
+        // bought, built or holds, learned; those copies gone.
+        if (!sp.learned) {
+            std::set<StructureKind> built;
+            for (const SavedRegion& r : save.regions)
+                for (const SavedBuilding& b : r.buildings)
+                    if (b.builtBy == sp.id) built.insert(b.kind);
+            if (auto line = adoptLearned(p.progress, built, "pilot " + sp.id.substr(0, 8))) learnedOnLoad_.push_back(*line);
+        }
         // F2: Homing beacon is retired. Its points come back to spend
         // again (out of the slots too), and a Landing Pad blueprint takes
         // its place. Idempotent: a pilot without its ranks is left as it is.

@@ -1,8 +1,8 @@
 // Frontier pilots (WorldMap.h `WorldFrontier`, P1; docs/frontier.md): the
 // pilots the server runs so a world with one human reads as inhabited. Each
 // is a pilot of the world by the pilot's rules: its own wallet, XP and
-// level, skill points spent by its habit's build, blueprint copies bought at
-// the realm's Citadel at the shop's price, the world's building prices and
+// level, skill points spent by its habit's build, blueprints bought once at
+// the realm's Citadel at the shop's price and learned (C2), the world's building prices and
 // limits, the Citadel's tax on every unload, the Dropship's fare. None of
 // them come before the first human finished the opening chain, and none
 // touch the chain's places while a human is on it.
@@ -481,10 +481,10 @@ std::optional<FrontierPlan> WorldMap::buildPlan(const FrontierPilot& f, Structur
     FrontierPlan p;
     p.kind = kind;
     p.why = why;
-    if (f.progress.copies(kind) <= 0) {
-        // Its blueprint first, at the realm's Citadel here, when the wallet
-        // holds both it and the building.
-        const ShopPrice price = f.progress.blueprintPrice(kind);
+    if (!f.progress.knows(kind) && f.progress.copies(kind) <= 0) {
+        // Its blueprint first (C2: once, learned at once), at the realm's
+        // Citadel here, when the wallet holds both it and the building.
+        const ShopPrice price = Shop::blueprintPrice(kind, 0);
         if (price.ore + ore + WorldFrontier::reserveOre > f.wallet.ore ||
             price.hydrogen + mh + WorldFrontier::reserveHydrogen > f.wallet.hydrogen)
             return std::nullopt;
@@ -616,7 +616,7 @@ FrontierPlan WorldMap::defenderPlan(const FrontierPilot& f) const {
         if (auto m = minePlan(f)) return *m;
     // A building of the realm hurt: mend it.
     for (const Structure& b : st.structures)
-        if (realm(b) && b.complete() && b.hp < Rules::hp(b.kind) * 0.9 && !keptOff(r, b.position)) {
+        if (realm(b) && b.complete() && b.kind != StructureKind::dummy && b.hp < Rules::hp(b.kind) * 0.9 && !keptOff(r, b.position)) {
             p.act = Act::repair;
             p.target = b.id;
             p.at = b.position;
@@ -627,7 +627,7 @@ FrontierPlan WorldMap::defenderPlan(const FrontierPilot& f) const {
     // each; half the day it drills by them for its keep.
     std::vector<const Structure*> beat;
     for (const Structure& b : st.structures)
-        if (realm(b) && b.complete() && !keptOff(r, b.position)) beat.push_back(&b);
+        if (realm(b) && b.complete() && b.kind != StructureKind::dummy && !keptOff(r, b.position)) beat.push_back(&b);
     const int64_t minute = int64_t(std::floor(clock_ / 60));
     if (!beat.empty() && minute % 2 == 0) {
         const Structure& b = *beat[size_t(minute / 2) % beat.size()];
@@ -738,17 +738,19 @@ std::optional<std::string> WorldMap::frontierBuy(uint32_t id, StructureKind kind
     FrontierPilot* f = frontierPilot(id);
     if (!f || !f->arrived || f->travelTo) return "Not here";
     if (Progression::blueprintFloor(kind) <= 0) return "No " + Simulation::title(kind) + " blueprint in this world";
+    // C2: once, learned at once, as a pilot would.
+    if (f->progress.knows(kind)) return "You know the " + Simulation::title(kind);
     const auto citadel = realmCitadel();
     if (!citadel || citadel->first != f->region || !frontierBeside(*f, citadel->second))
         return std::string("Buy at the realm's Citadel: stand where you unload");
-    const ShopPrice price = f->progress.blueprintPrice(kind);
+    const ShopPrice price = Shop::blueprintPrice(kind, 0);
     if (price.ore > f->wallet.ore) return "Not enough ore: " + std::to_string(price.ore) + ", you have " + std::to_string(f->wallet.ore);
     if (price.hydrogen > f->wallet.hydrogen)
         return "Not enough MH: " + std::to_string(price.hydrogen) + ", you have " + std::to_string(f->wallet.hydrogen);
     f->wallet.ore -= price.ore;
     f->wallet.hydrogen -= price.hydrogen;
     f->progress.giveBlueprint(kind);
-    f->progress.bought[kind] += 1;
+    f->progress.learn(kind);
     return std::nullopt;
 }
 
@@ -756,7 +758,9 @@ std::optional<std::string> WorldMap::frontierBuild(uint32_t id, StructureKind ki
     FrontierPilot* f = frontierPilot(id);
     if (!f || !f->arrived || f->travelTo || clock_ < f->downUntil) return "Not here";
     const size_t r = f->region;
-    // As a pilot: its blueprint, its floor, the realm's limit.
+    // As a pilot: a copy found is learned first (C2), then its blueprint,
+    // its floor, the realm's limit.
+    if (!f->progress.knows(kind) && f->progress.copies(kind) > 0) f->progress.learn(kind);
     if (auto why = f->progress.buildRefusal(kind, limitCount(kind, r))) return why;
     Simulation& sim = regions_[r]->simulation();
     const auto spot = sim.snap(kind, at);
@@ -771,7 +775,6 @@ std::optional<std::string> WorldMap::frontierBuild(uint32_t id, StructureKind ki
     if (mh > f->wallet.hydrogen) return "Not enough MH: " + std::to_string(mh) + ", you have " + std::to_string(f->wallet.hydrogen);
     f->wallet.ore -= ore;
     f->wallet.hydrogen -= mh;
-    f->progress.useBlueprint(kind);
     Structure s(sim.state.nextID, kind, Pilot::player, *spot, Rules::buildTime(kind), f->unit.value_or(-1));
     sim.state.nextID += 1;
     s.hp = Rules::hp(kind) * 0.1;
@@ -1185,7 +1188,7 @@ void WorldMap::frontierAct(FrontierPilot& f, double dt) {
         // Opened: its blueprint copy, its XP, as a pilot's find.
         f.opening = std::nullopt;
         if (!f.progress.sites.insert(siteId(r, size_t(p.target))).second) break;
-        f.progress.giveBlueprint(s.blueprint);
+        giveBlueprint(f, s.blueprint);
         frontierEarn(f, WorldXp::blueprintPerFloor * double(Progression::blueprintFloor(s.blueprint)));
         frontierDeed(f, f.callsign + " opened the " + s.name + " in " + world_->regions[r].file.name);
         break;
@@ -1463,7 +1466,8 @@ std::string WorldMap::encodeFrontier() const {
         }
         list.push_back(j);
     }
-    return json{{"pilots", list}, {"radio", radioAt_}, {"chatter", chatterAt_}}.dump();
+    // C2 (schema 28): their blueprints are learned once.
+    return json{{"pilots", list}, {"radio", radioAt_}, {"chatter", chatterAt_}, {"learned", true}}.dump();
 }
 
 bool WorldMap::decodeFrontier(const std::string& text) {
@@ -1507,6 +1511,16 @@ bool WorldMap::decodeFrontier(const std::string& text) {
     }
     radioAt_ = root.value("radio", -1e9);
     chatterAt_ = root.value("chatter", -1e9);
+    // Saved before blueprints were learned (C2, schema 28): what each bought,
+    // built or holds, learned (the buildings are restored before them).
+    if (!root.value("learned", false))
+        for (FrontierPilot& f : frontier_) {
+            std::set<StructureKind> built;
+            for (size_t r = 0; r < regions_.size(); r++)
+                for (const Structure& b : regions_[r]->simulation().state.structures)
+                    if (const auto by = builtBy_[r].find(b.id); by != builtBy_[r].end() && by->second == f.key) built.insert(b.kind);
+            if (auto said = adoptLearned(f.progress, built, "frontier " + f.callsign)) learnedOnLoad_.push_back(*said);
+        }
     return true;
 }
 
@@ -1577,7 +1591,7 @@ std::string WorldMap::devFrontier(const std::string& line) {
         if (!kind) return "frontier: no such building";
         FrontierPilot* f = nearest(std::nullopt);
         if (!f || f->region != first->region) return "frontier: none here (frontier here builder first)";
-        f->progress.giveBlueprint(*kind);
+        f->progress.learned.insert(*kind);
         if (f->progress.level() < f->progress.floor(*kind)) f->progress.xp = Progression::xp(f->progress.floor(*kind));
         f->wallet.ore += Progression::worldOre(*kind);
         f->wallet.hydrogen += Progression::worldHydrogen(*kind);

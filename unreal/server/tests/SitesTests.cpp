@@ -338,7 +338,7 @@ TEST(sites_builds_refused_without_blueprint_under_floor_past_limit) {
     ASSERT_TRUE(why.has_value());
     EXPECT_TRUE(*why == "No Garrison blueprint in this world");
     ProspectorProgress g = at(1);
-    g.blueprints = {{StructureKind::citadel, 2}, {StructureKind::derrick, 1}, {StructureKind::habDome, 1}};
+    g.learned = {StructureKind::citadel, StructureKind::derrick, StructureKind::habDome};
     w.setProgress(me, g);
     why = w.build(me, StructureKind::derrick, drivenUnit(w, me)->position);
     ASSERT_TRUE(why.has_value());
@@ -370,7 +370,7 @@ TEST(sites_builds_refused_without_blueprint_under_floor_past_limit) {
     EXPECT_EQ(o.limit(StructureKind::sentinel), int64_t(6));
     EXPECT_EQ(o.limit(StructureKind::foundry), int64_t(1));
     o.xp = Progression::xp(60);
-    o.blueprints = {{StructureKind::habDome, 1}};
+    o.learned = {StructureKind::habDome};
     EXPECT_TRUE(!o.buildRefusal(StructureKind::habDome, 4));
     EXPECT_TRUE(*o.buildRefusal(StructureKind::habDome, 5) == "Hab Dome limit reached: 5 (Overbuild allows more)");
 }
@@ -532,10 +532,9 @@ TEST(sites_v3_pilot_keeps_the_blueprints_of_its_buildings) {
     WorldMap w(first());
     EXPECT_TRUE(w.restore(*loaded).empty());
     ASSERT_TRUE(w.seat(me, key) == WorldMap::Seated::restored);
-    // Copies (schema 10): as many as the realm may still build, at least
-    // 1: Derricks 4 - 1, Hab Domes 3 - 1.
-    EXPECT_TRUE((w.progress(me)->blueprints ==
-                 std::map<StructureKind, int64_t>{{StructureKind::derrick, 3}, {StructureKind::habDome, 2}}));
+    // Learned (schema 28): what it built and held, the copies used up.
+    EXPECT_TRUE(w.progress(me)->blueprints.empty());
+    EXPECT_TRUE((w.progress(me)->learned == std::set<StructureKind>{StructureKind::derrick, StructureKind::habDome}));
     EXPECT_EQ(w.realmCount(StructureKind::habDome), int64_t(1));
     ASSERT_TRUE(store->write(w.save(), &why).has_value());
     EXPECT_TRUE(store->rows("SELECT gated FROM pilots")[0][0] == "1");

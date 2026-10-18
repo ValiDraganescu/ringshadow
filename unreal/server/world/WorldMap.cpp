@@ -487,9 +487,13 @@ bool WorldMap::join(PilotId pilot) {
     p.wallet = Wallet{params_.startOre, params_.startHydrogen};
     // A new pilot: the first ten minutes (docs/contracts.md).
     p.firstStep = std::clamp(params_.firstStep, 0, WorldContracts::firstSteps);
-    // Dev: every blueprint, a stack of each.
+    // Dev: every blueprint, a stack of each (C2: learned, the stack to
+    // learn again with).
     if (params_.devBlueprints)
-        for (const StructureKind k : Progression::blueprintKinds()) p.progress.giveBlueprint(k, WorldParams::devCopies);
+        for (const StructureKind k : Progression::blueprintKinds()) {
+            p.progress.learned.insert(k);
+            p.progress.giveBlueprint(k, WorldParams::devCopies);
+        }
     // Dev: regions been to.
     for (const std::string& id : params_.devSeen) p.progress.regions.insert(id);
     const Region& r = start();
@@ -624,8 +628,8 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     if (it == pilots_.end()) return "Not joined";
     PilotState& p = it->second;
     if (p.flight) return "In flight";
-    // A world builds from the pilot's blueprints, at its level floor, within
-    // its building limits (docs/prospector-progression.md, "Buildings in the
+    // A world builds what the pilot has learned (C2: no copy used up), at its
+    // level floor, within its building limits (docs/prospector-progression.md, "Buildings in the
     // MMO").
     if (world_)
         if (auto why = p.progress.buildRefusal(kind, limitCount(kind, p.region))) return why;
@@ -638,8 +642,6 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     const int64_t id = regions_[p.region]->simulation().state.nextID;
     if (auto why = regions_[p.region]->build(pilot, kind, at)) return why;
     builtBy_[p.region][id] = p.key;
-    // C2: placing it uses up one blueprint copy.
-    if (world_) p.progress.useBlueprint(kind);
     // Paid from the side's bank: the wallet follows at once. Its skills
     // reach the new building.
     if (world_) {

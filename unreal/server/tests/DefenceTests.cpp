@@ -57,7 +57,7 @@ WorldParams params() {
 ProspectorProgress at(int64_t level) {
     ProspectorProgress g;
     g.xp = Progression::xp(level);
-    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
+    for (const StructureKind k : Progression::blueprintKinds()) g.learned.insert(k);
     return g;
 }
 
@@ -278,7 +278,8 @@ TEST(defence_turrets_blueprints_floors_and_limits) {
     const auto gun = weld(w, a, StructureKind::gatling, s.east + Vec2(0, 10));
     const auto tower = weld(w, a, StructureKind::sentinel, s.east + Vec2(0, 16));
     ASSERT_TRUE(gun.has_value() && tower.has_value());
-    EXPECT_EQ(w.progress(a)->copies(StructureKind::gatling), copies - 1);
+    // C2: building uses no copy.
+    EXPECT_EQ(w.progress(a)->copies(StructureKind::gatling), copies);
     EXPECT_EQ(w.realmCount(StructureKind::gatling), int64_t(1));
     EXPECT_EQ(w.realmCount(StructureKind::sentinel), int64_t(1));
 }

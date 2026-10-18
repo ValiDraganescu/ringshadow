@@ -438,7 +438,7 @@ TEST(Frontier_wandererDecides) {
 }
 
 /// The rules, as for a pilot: a blueprint at the shop's price only at the
-/// realm's Citadel, from its own wallet, the next copy dearer; a building
+/// realm's Citadel, from its own wallet, once, learned at once (C2); a building
 /// only with its blueprint, at its floor, within the caps, off the pads'
 /// plates, within its reach, at the world's price; a flight only from a
 /// Landing Pad to one, at the Dropship's fare; the Citadel's tax on its
@@ -454,15 +454,18 @@ TEST(Frontier_keepThePilotsRules) {
     EXPECT_TRUE(w.frontierBuy(id, StructureKind::habDome).has_value());
     const Structure c = *structure(w, r, citadel);
     f.at = c.position + Vec2(Rules::radius(StructureKind::citadel) + 0.5, 0);
-    const ShopPrice price = f.progress.blueprintPrice(StructureKind::habDome);
+    const ShopPrice price = Shop::blueprintPrice(StructureKind::habDome, 0);
     EXPECT_TRUE(!(w.frontierBuy(id, StructureKind::habDome).has_value()));
     EXPECT_EQ(f.wallet.ore, int64_t(1000) - price.ore);
     EXPECT_EQ(f.wallet.hydrogen, int64_t(200) - price.hydrogen);
-    EXPECT_EQ(f.progress.copies(StructureKind::habDome), int64_t(1));
-    EXPECT_TRUE(f.progress.blueprintPrice(StructureKind::habDome).ore > price.ore);
+    EXPECT_EQ(f.progress.copies(StructureKind::habDome), int64_t(0));
+    EXPECT_TRUE(f.progress.knows(StructureKind::habDome));
+    // Once: a known kind is refused, nothing taken.
+    EXPECT_TRUE(w.frontierBuy(id, StructureKind::habDome).has_value());
+    EXPECT_EQ(f.wallet.ore, int64_t(1000) - price.ore);
     // Short: refused, nothing taken.
     f.wallet = WorldMap::Wallet{10, 0};
-    EXPECT_TRUE(w.frontierBuy(id, StructureKind::habDome).has_value());
+    EXPECT_TRUE(w.frontierBuy(id, StructureKind::derrick).has_value());
     EXPECT_EQ(f.wallet.ore, int64_t(10));
     // A building: without its blueprint, refused; under its floor, refused.
     f.wallet = WorldMap::Wallet{5000, 500};
@@ -472,8 +475,8 @@ TEST(Frontier_keepThePilotsRules) {
     EXPECT_TRUE(w.frontierBuild(id, StructureKind::foundry, f.at + Vec2(3, 0)).has_value());
     // Too far from its Prospector: refused.
     EXPECT_TRUE(w.frontierBuild(id, StructureKind::habDome, f.at + Vec2(20, 0)).has_value());
-    // At its feet: built, the world's price paid, the blueprint used up, the
-    // building the realm's, its builder the frontier pilot.
+    // At its feet: built, the world's price paid, no copy used (it knows
+    // the Hab Dome), the building the realm's, its builder the frontier pilot.
     const int64_t before = f.wallet.ore;
     const auto spot = w.region(r).simulation().snap(StructureKind::habDome, f.at + Vec2(Region::buildReach(StructureKind::habDome), 0));
     ASSERT_TRUE(spot.has_value());
@@ -482,6 +485,7 @@ TEST(Frontier_keepThePilotsRules) {
     ASSERT_TRUE(!(why.has_value()));
     EXPECT_EQ(f.wallet.ore, before - Progression::worldOre(StructureKind::habDome));
     EXPECT_EQ(f.progress.copies(StructureKind::habDome), int64_t(0));
+    EXPECT_TRUE(f.progress.knows(StructureKind::habDome));
     ASSERT_TRUE(f.building.has_value());
     EXPECT_EQ(w.builder(r, *f.building), f.callsign);
     // The cap: a second Hab Dome of the frontier's, refused anywhere.
@@ -798,4 +802,47 @@ TEST(frontier_placement_spread_kept_is_the_footprint) {
     EXPECT_TRUE(same);
     // (Of 1,350 spots about 460 level, 870 blocked, 16 on uneven ground.)
     EXPECT_TRUE(level > 50 && uneven > 8 && blocked > 50);
+}
+
+// C2 (schema 28): a frontier pilot saved before blueprints were learned (its
+// JSON without `learned`) learns on load what it bought and holds, the
+// copies used up, and still builds for ore.
+TEST(frontier_buildsAfterSchema28) {
+    WorldMap w(first(), params());
+    seat(w);
+    const size_t r = named(w, "rust-hollow");
+    place(w, r, StructureKind::citadel, Vec2(72, 48));
+    FrontierPilot& f = come(w, Habit::builder, r, Vec2(100, 70), 5000, 500, 12);
+    const uint32_t id = f.id;
+    f.progress.giveBlueprint(StructureKind::habDome, 2);
+    f.progress.bought[StructureKind::gatling] = 1;
+    WorldSave save = w.save();
+    const std::string mark = "\"learned\":true,";
+    const size_t at = save.frontier.find(mark);
+    ASSERT_TRUE(at != std::string::npos);
+    save.frontier.erase(at, mark.size());
+
+    WorldMap back(first(), params());
+    EXPECT_TRUE(back.restore(save).empty());
+    bool told = false;
+    for (const std::string& line : back.learnedOnLoad()) told = told || line.rfind("frontier ", 0) == 0;
+    EXPECT_TRUE(told);
+    FrontierPilot* g = nullptr;
+    for (FrontierPilot& x : back.frontier())
+        if (x.id == id) g = &x;
+    ASSERT_TRUE(g != nullptr);
+    EXPECT_TRUE(g->progress.knows(StructureKind::habDome));
+    EXPECT_TRUE(g->progress.knows(StructureKind::gatling));
+    EXPECT_EQ(g->progress.copies(StructureKind::habDome), int64_t(0));
+    EXPECT_TRUE(g->progress.bought.empty());
+    // It builds a Hab Dome at its feet for the world's price, no copy.
+    const int64_t before = g->wallet.ore;
+    const auto spot = back.region(r).simulation().snap(StructureKind::habDome, g->at + Vec2(Region::buildReach(StructureKind::habDome), 0));
+    ASSERT_TRUE(spot.has_value());
+    const auto why = back.frontierBuild(id, StructureKind::habDome, *spot);
+    if (why) std::printf("  refused: %s\n", why->c_str());
+    EXPECT_TRUE(!why.has_value());
+    EXPECT_EQ(g->wallet.ore, before - Progression::worldOre(StructureKind::habDome));
+    // Saved again: the key is there, nothing is learned twice.
+    EXPECT_TRUE(back.save().frontier.find(mark) != std::string::npos);
 }

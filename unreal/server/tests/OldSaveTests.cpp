@@ -85,9 +85,10 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
     // Its progression kept, the blueprints of what it built given.
     const ProspectorProgress g = *w.progress(me);
     EXPECT_NEAR(g.xp, 900, 1e-9);
-    // C2 (schema 10): copies, as many as the realm may still build, at
-    // least 1: the Citadel 1 (it stands, at least 1), Derricks 4 - 1.
-    EXPECT_TRUE((g.blueprints == std::map<StructureKind, int64_t>{{StructureKind::citadel, 1}, {StructureKind::derrick, 3}}));
+    // C2 (schema 10, then 28): the copies it was given for what it built
+    // are learned on load, and used up.
+    EXPECT_TRUE(g.blueprints.empty());
+    EXPECT_TRUE((g.learned == std::set<StructureKind>{StructureKind::citadel, StructureKind::derrick}));
     // Its contracts are drawn on the next step.
     w.step();
     EXPECT_TRUE(!w.contracts(me).empty());

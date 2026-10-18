@@ -473,7 +473,7 @@ void WorldMap::waveBeaten(Canyon& c) {
         std::string id = "wave/" + std::to_string(c.wave) + "/" + std::to_string(mh);
         if (last && !rare.empty()) {
             const StructureKind bp = rare[size_t(broodDice_() % rare.size())];
-            p->progress.giveBlueprint(bp, 1);
+            giveBlueprint(*p, bp, 1);
             id += "/" + std::string(rawValue(bp));
         }
         p->news.push_back(News{NewsKind::canyon, id, xp, ore, c.name});
@@ -488,7 +488,7 @@ void WorldMap::waveBeaten(Canyon& c) {
         f->wallet.ore += std::llround(double(WorldCanyon::ore(c.wave)) * bonus * share);
         f->wallet.hydrogen += std::llround(double(WorldCanyon::hydrogen(c.wave)) * bonus * share);
         frontierEarn(*f, std::round(WorldCanyon::xp(c.wave) * bonus * share));
-        if (last && !rare.empty()) f->progress.giveBlueprint(rare[size_t(broodDice_() % rare.size())], 1);
+        if (last && !rare.empty()) giveBlueprint(*f, rare[size_t(broodDice_() % rare.size())], 1);
     }
     c.out = false;
     c.bugs.clear();

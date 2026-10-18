@@ -185,7 +185,7 @@ TEST(standings_count_a_humans_ore_buildings_and_mercenaries) {
     ASSERT_TRUE(w.seat(a, keyA) == WorldMap::Seated::fresh);
     ProspectorProgress g;
     g.xp = Progression::xp(10);
-    g.giveBlueprint(StructureKind::citadel);
+    g.learned.insert(StructureKind::citadel);
     w.setProgress(a, g);
     simOf(w, a).state.players[0].ore = 20000;
     simOf(w, a).state.players[0].hydrogen = 3000;
@@ -224,7 +224,7 @@ TEST(standings_count_waves_held_and_bugs_felled) {
     ASSERT_TRUE(w.seat(a, keyA) == WorldMap::Seated::fresh);
     ProspectorProgress g;
     g.xp = Progression::xp(20);
-    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
+    for (const StructureKind k : Progression::blueprintKinds()) g.learned.insert(k);
     w.setProgress(a, g);
     w.step();
     const size_t r = *w.regionNamed("cold-fork");

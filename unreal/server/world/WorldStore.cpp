@@ -295,6 +295,16 @@ const char* const kV27 = R"sql(
 -- C1: the Citadel's grown footprint, adopted on load (WorldMapSave.cpp).
 )sql";
 
+/// Schema 28 (C2, docs/guns-and-practice.md section 4): a blueprint is
+/// learned once and its building is built for ore after. The learned kinds
+/// live in the progress JSON; a pilot saved before (`learned` 0) learns on
+/// load every kind it bought, built or holds a copy of, and loses those
+/// copies (WorldMapSave.cpp). The frontier pilots' JSON says the same with
+/// its own `learned` key.
+const char* const kV28 = R"sql(
+ALTER TABLE pilots ADD COLUMN learned INTEGER NOT NULL DEFAULT 0;
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 /// A row's place at columns `c` and `c + 1`: nil when either is NULL (a
@@ -308,7 +318,7 @@ std::optional<Vec2> place(const Stmt& s, int c) {
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}, {25, kV25}, {26, kV26}, {27, kV27}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}, {25, kV25}, {26, kV26}, {27, kV27}, {28, kV28}};
     return steps;
 }
 
@@ -478,12 +488,13 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
     }
     {
         Stmt s(db_, "SELECT id, ore, hydrogen, region, unit, levels, progress, gated, contracts, rig, taxed_ore, taxed_hydrogen, "
-                    "donated_ore, donated_hydrogen, stacked, missions, mercs, goals, away FROM pilots ORDER BY id");
+                    "donated_ore, donated_hydrogen, stacked, missions, mercs, goals, away, learned FROM pilots ORDER BY id");
         while (s.row())
             out.pilots.push_back(SavedPilot{s.colText(0), s.colInteger(1), s.colInteger(2), s.colText(3), s.optInteger(4),
                                             s.colText(5), s.colText(6), s.colInteger(7) != 0, s.colText(8), s.colText(9),
                                             s.colInteger(10), s.colInteger(11), s.colInteger(12), s.colInteger(13),
-                                            s.colInteger(14) != 0, s.colText(15), s.colText(16), s.colText(17), s.colText(18)});
+                                            s.colInteger(14) != 0, s.colText(15), s.colText(16), s.colText(17), s.colText(18),
+                                            s.colInteger(19) != 0});
         if (s.failed(error)) return std::nullopt;
     }
     {
@@ -781,8 +792,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
         const auto before = pilots_.find(p.id);
         if (before != pilots_.end() && before->second == p) continue;
         run(std::move(Stmt(db_, cached("INSERT OR REPLACE INTO pilots (id, ore, hydrogen, region, unit, levels, progress, gated, contracts, rig, "
-                                "taxed_ore, taxed_hydrogen, donated_ore, donated_hydrogen, stacked, missions, mercs, goals, away) "
-                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+                                "taxed_ore, taxed_hydrogen, donated_ore, donated_hydrogen, stacked, missions, mercs, goals, away, learned) "
+                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
                           .text(p.id)
                           .integer(p.ore)
                           .integer(p.hydrogen)
@@ -801,7 +812,8 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                           .text(p.missions)
                           .text(p.mercs)
                           .text(p.goals)
-                          .text(p.away)));
+                          .text(p.away)
+                          .integer(p.learned ? 1 : 0)));
         n.changed += 1;
     }
     if (!ok || !exec("COMMIT", &why)) {

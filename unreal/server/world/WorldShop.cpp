@@ -1,6 +1,7 @@
 // The Citadel shop (WorldMap.h, C2; docs/prospector-progression.md "The
-// Citadel shop"): blueprint copies and consumables bought from the pilot's
-// own wallet at a Citadel, and the consumables used in the field.
+// Citadel shop"): blueprints (each once a pilot, learned once) and
+// consumables bought from the pilot's own wallet at a Citadel, the
+// consumables used in the field, and learning a blueprint held.
 // The prices and the items are the core's (`Shop`), so the client shows
 // the same numbers.
 
@@ -30,7 +31,11 @@ std::optional<std::string> WorldMap::buy(PilotId pilot, std::optional<StructureK
     if (blueprint) {
         if (Progression::blueprintFloor(*blueprint) <= 0)
             return "No " + Simulation::title(*blueprint) + " blueprint in this world";
-        price = p->progress.blueprintPrice(*blueprint);
+        // C2: each blueprint once a pilot, at its first copy's price.
+        if (p->progress.knows(*blueprint)) return "You know the " + Simulation::title(*blueprint);
+        if (p->progress.copies(*blueprint) > 0)
+            return "You hold a " + Simulation::title(*blueprint) + " blueprint: learn it (B)";
+        price = Shop::blueprintPrice(*blueprint, 0);
     } else {
         const ItemInfo& x = Shop::item(item);
         if (p->progress.held(item) >= x.stack)
@@ -49,7 +54,6 @@ std::optional<std::string> WorldMap::buy(PilotId pilot, std::optional<StructureK
     bankIn(*p, p->region);
     if (blueprint) {
         p->progress.giveBlueprint(*blueprint);
-        p->progress.bought[*blueprint] += 1;
     } else {
         p->progress.items[item] += 1;
     }

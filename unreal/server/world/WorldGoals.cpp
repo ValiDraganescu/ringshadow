@@ -155,7 +155,7 @@ bool WorldMap::goalMet(const PilotState& p, const WorldGoals::Entry& e) const {
     if (key == "derrick") return p.goalsDid.count("pumped") || builtFinished(p, StructureKind::derrick);
     if (key == "skills") return g.unspent() <= 0;
     if (key == "mission") return p.goalsDid.count("mission") || !p.journal.empty();
-    if (key == "shop") return p.goalsDid.count("shop") || !g.items.empty() || !g.bought.empty();
+    if (key == "shop") return p.goalsDid.count("shop") || !g.items.empty();
     if (key == "gatling") return builtOrFull(StructureKind::gatling);
     if (key == "merc") return p.goalsDid.count("merc") || !p.mercs.empty();
     if (key == "dome") {
@@ -169,7 +169,7 @@ bool WorldMap::goalMet(const PilotState& p, const WorldGoals::Entry& e) const {
     if (key == "active") return std::any_of(g.slots.begin(), g.slots.end(), [](const auto& s) { return s.has_value(); });
     if (key == "sentinel") return builtOrFull(StructureKind::sentinel);
     if (key == "foundryPlans") {
-        if (g.blueprints.count(StructureKind::foundry) || realmFinished(StructureKind::foundry)) return true;
+        if (g.blueprints.count(StructureKind::foundry) || g.knows(StructureKind::foundry) || realmFinished(StructureKind::foundry)) return true;
         const auto site = worldSite(StructureKind::foundry);
         return site && g.sites.count(siteId(site->first, site->second));
     }

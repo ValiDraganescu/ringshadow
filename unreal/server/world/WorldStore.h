@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16); the frontier pilots (schema 21); the week's standings (schema 24); the hunt (schema 25); where each deposit and well lies (schema 26); the Citadel grown on load (schema 27, no rows). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16); the frontier pilots (schema 21); the week's standings (schema 24); the hunt (schema 25); where each deposit and well lies (schema 26); the Citadel grown on load (schema 27, no rows); blueprints learned once (schema 28). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -140,6 +140,10 @@ struct SavedPilot {
     /// left, the realm wallet then, and what happened since. Empty: on line,
     /// or never left.
     std::string away{};
+    /// Saved since blueprints are learned once (C2, schema 28). False: an
+    /// older pilot, which learns on load every kind it bought, built or
+    /// holds a copy of, and loses those copies (WorldMapSave.cpp).
+    bool learned = true;
     bool operator==(const SavedPilot&) const = default;
 };
 
@@ -239,7 +243,8 @@ public:
     /// 17: the Matriarch's nests; 18: KSTR's next goal; 20: the canyons' games;
     /// 21: the frontier pilots; 22: the realm's projects; 23: a pilot's away ledger;
     /// 24: the realm week's standings; 25: the realm's hunt; 26: deposits
-    /// and wells with their places, E1's adoption of new veins).
+    /// and wells with their places, E1's adoption of new veins; 27: the
+    /// Citadel grown on load; 28: blueprints learned once).
     static const std::vector<Migration>& migrations();
     static int64_t version() { return migrations().back().version; }
 

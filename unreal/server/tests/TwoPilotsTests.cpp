@@ -214,7 +214,7 @@ TEST(two_pilots_keep_their_own_wallets) {
     // B (the other driver, not the active one) builds: B pays.
     ProspectorProgress pb = *w.progress(b);
     pb.xp = Progression::xp(20);
-    pb.giveBlueprint(StructureKind::habDome);
+    pb.learned.insert(StructureKind::habDome);
     w.setProgress(b, pb);
     r.setBank(b, 2000, 500);
     w.step();
@@ -301,7 +301,7 @@ TEST(two_pilots_each_weld_their_own_building) {
     for (const PilotId who : {a, b}) {
         ProspectorProgress pr = *w.progress(who);
         pr.xp = Progression::xp(20);
-        pr.giveBlueprint(StructureKind::habDome);
+        pr.learned.insert(StructureKind::habDome);
         w.setProgress(who, pr);
         r.setBank(who, 3000, 500);
         Unit* u = driven(w, who);

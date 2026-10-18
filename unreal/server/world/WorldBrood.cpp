@@ -123,7 +123,9 @@ bool WorldMap::inSight(size_t r, Vec2 at) const {
     for (const Unit& u : st.units)
         if (u.owner == Pilot::player && u.hp > 0 && distance(u.position, at) < WorldBrood::sightProspector) return true;
     for (const Structure& b : st.structures)
-        if (realm(b) && distance(b.position, at) < WorldBrood::sightBuilding + Rules::radius(b.kind)) return true;
+        // C2: a Target Dummy has no eyes.
+        if (realm(b) && b.kind != StructureKind::dummy && distance(b.position, at) < WorldBrood::sightBuilding + Rules::radius(b.kind))
+            return true;
     return false;
 }
 
@@ -426,7 +428,9 @@ bool WorldMap::spawnGroup(size_t r) {
     };
     auto unprotected = [&](Vec2 at) {
         for (const Structure& b : st.structures)
-            if (realm(b) && b.complete() && distance(b.position, at) < WorldBrood::guardBuilding + Rules::radius(b.kind)) return false;
+            if (realm(b) && b.complete() && b.kind != StructureKind::dummy &&
+                distance(b.position, at) < WorldBrood::guardBuilding + Rules::radius(b.kind))
+                return false;
         for (const Unit& u : st.units)
             if (u.owner == Pilot::player && u.kind == UnitKind::prospector && distance(u.position, at) < WorldBrood::guardProspector) return false;
         return true;
@@ -466,7 +470,8 @@ bool WorldMap::spawnGroup(size_t r) {
                 cs.push_back({Poi::pad, int64_t(i), places.pads[i].at, WorldBrood::siteRadius, w.pad});
         if (raidReady && kind != UnitKind::lodeback)
             for (const Structure& b : st.structures) {
-                if (!realm(b) || !b.complete() || held(Poi::building, b.id)) continue;
+                // C2: a Target Dummy is never raided.
+                if (!realm(b) || !b.complete() || b.kind == StructureKind::dummy || held(Poi::building, b.id)) continue;
                 // C1: its guns fire only with a gunner, so the Citadel is
                 // raided only while a pilot is here to man them.
                 if (b.kind == StructureKind::citadel && !humanIn(r)) continue;

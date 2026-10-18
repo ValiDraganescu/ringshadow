@@ -460,7 +460,7 @@ void WorldMap::payMission(PilotId pilot, PilotState& p, Mission& m) {
     p.wallet.ore += m.ore;
     p.wallet.hydrogen += m.hydrogen;
     if (!p.flight) bankIn(p, p.region);
-    if (m.blueprint) p.progress.giveBlueprint(*m.blueprint, m.count);
+    if (m.blueprint) giveBlueprint(p, *m.blueprint, m.count);
     // Supplies up to the stack (`ItemInfo::stack`).
     if (m.item) {
         const int64_t now = p.progress.held(*m.item);

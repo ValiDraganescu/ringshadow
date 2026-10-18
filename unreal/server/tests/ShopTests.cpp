@@ -1,8 +1,9 @@
 // The Citadel shop (C2, docs/prospector-progression.md "The Citadel shop"):
-// blueprint copies and consumables bought from the pilot's own wallet at the
-// realm's Citadel, each copy dearer than the last; building uses a copy up;
-// the four consumables used in the field, their stacks and cooldowns; the
-// stacks saved. Isolated scenes of a few seconds on The First Reach; files
+// blueprints and consumables bought from the pilot's own wallet at the
+// realm's Citadel, each blueprint once a pilot at its first copy's price
+// and learned once (docs/guns-and-practice.md section 4); building uses no
+// copy; the four consumables used in the field, their stacks and
+// cooldowns; the stacks saved. Isolated scenes of a few seconds on The First Reach; files
 // in build/save-tests. Run from unreal/server.
 
 #include "test.h"
@@ -110,14 +111,14 @@ void besides(WorldMap& w, PilotId p, int64_t building) {
     w.step();
 }
 
-/// Pilot A at level 10 with one Citadel copy, its Citadel welded east of
+/// Pilot A at level 10 knowing the Citadel, its Citadel welded east of
 /// the start region's ore, a full wallet, and A standing where it unloads.
 struct Shop1 {
     explicit Shop1(WorldParams p = params()) : w(first(), p) {
         w.seat(a, keyA);
         ProspectorProgress g;
         g.xp = Progression::xp(10);
-        g.giveBlueprint(StructureKind::citadel);
+        g.learned.insert(StructureKind::citadel);
         w.setProgress(a, g);
         fill(w, a, 20000, 3000);
         citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, w.regionOf(a)->places()->ground(Vec2(72, 48))));
@@ -139,37 +140,49 @@ std::string savePath(const std::string& name) {
 
 } // namespace
 
-// A blueprint bought at the Citadel: the wallet pays the core's price, the
-// pilot holds a copy, and the next copy costs more; the build used the
-// Citadel copy up.
-TEST(shop_buys_blueprints_at_rising_prices) {
+// A blueprint bought at the Citadel: the wallet pays the first copy's
+// price, the pilot holds a copy; a second is refused while it holds one and
+// once it has learned it, at the same price as ever; the Citadel it knows
+// is refused outright.
+TEST(shop_sellsABlueprintOncePerPilot) {
     Shop1 s;
     ASSERT_TRUE(s.citadel.has_value());
     WorldMap& w = s.w;
     EXPECT_EQ(w.progress(a)->copies(StructureKind::citadel), int64_t(0));
     const auto before = *w.wallet(a);
-    const ShopPrice first1 = Shop::blueprintPrice(StructureKind::habDome, 0);
+    const ShopPrice price = Shop::blueprintPrice(StructureKind::habDome, 0);
     EXPECT_TRUE(!w.buy(a, StructureKind::habDome, Item::repairKit).has_value());
-    auto after = *w.wallet(a);
-    EXPECT_EQ(before.ore - after.ore, first1.ore);
-    EXPECT_EQ(before.hydrogen - after.hydrogen, first1.hydrogen);
+    const auto after = *w.wallet(a);
+    EXPECT_EQ(before.ore - after.ore, price.ore);
+    EXPECT_EQ(before.hydrogen - after.hydrogen, price.hydrogen);
     EXPECT_EQ(w.progress(a)->copies(StructureKind::habDome), int64_t(1));
-    EXPECT_EQ(w.progress(a)->bought.at(StructureKind::habDome), int64_t(1));
-    const ShopPrice second = w.progress(a)->blueprintPrice(StructureKind::habDome);
-    EXPECT_TRUE(second == Shop::blueprintPrice(StructureKind::habDome, 1));
-    EXPECT_TRUE(second.ore > first1.ore && second.hydrogen > first1.hydrogen);
-    EXPECT_TRUE(!w.buy(a, StructureKind::habDome, Item::repairKit).has_value());
-    EXPECT_EQ(before.ore - w.wallet(a)->ore, first1.ore + second.ore);
-    EXPECT_EQ(w.progress(a)->copies(StructureKind::habDome), int64_t(2));
-    // Below its floor it sells too: the Sentinel opens at 55.
+    // A copy held: learn it first; nothing taken.
+    auto why = w.buy(a, StructureKind::habDome, Item::repairKit);
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(*why == "You hold a Hab Dome blueprint: learn it (B)");
+    EXPECT_TRUE(*w.wallet(a) == after);
+    // Learned: never sold again.
+    EXPECT_TRUE(!w.learn(a, StructureKind::habDome).has_value());
+    why = w.buy(a, StructureKind::habDome, Item::repairKit);
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(*why == "You know the Hab Dome");
+    EXPECT_TRUE(*w.wallet(a) == after);
+    EXPECT_EQ(w.progress(a)->copies(StructureKind::habDome), int64_t(0));
+    why = w.buy(a, StructureKind::citadel, Item::repairKit);
+    ASSERT_TRUE(why.has_value());
+    EXPECT_TRUE(*why == "You know the Citadel");
+    // Below its floor it sells too, at the first copy's price: the Sentinel.
+    const auto beforeSentinel = *w.wallet(a);
     EXPECT_TRUE(!w.buy(a, StructureKind::sentinel, Item::repairKit).has_value());
+    EXPECT_EQ(beforeSentinel.ore - w.wallet(a)->ore, Shop::blueprintPrice(StructureKind::sentinel, 0).ore);
     EXPECT_EQ(w.progress(a)->copies(StructureKind::sentinel), int64_t(1));
     // The tax does not apply: the realm wallet is untouched.
     EXPECT_EQ(w.realmWallet().ore, int64_t(0));
-    // The client is told: copies, bought.
+    // The client is told: copies, learned.
     const auto m = *w.progressMessage(a);
-    EXPECT_EQ(m.blueprints.at(StructureKind::habDome), int64_t(2));
-    EXPECT_EQ(m.bought.at(StructureKind::habDome), int64_t(2));
+    EXPECT_EQ(m.blueprints.at(StructureKind::sentinel), int64_t(1));
+    EXPECT_TRUE(!m.blueprints.count(StructureKind::habDome));
+    EXPECT_TRUE(m.learned.count(StructureKind::habDome) && m.learned.count(StructureKind::citadel));
 }
 
 // Refused: away from the Citadel, the wallet short, the Garrison, a full
@@ -197,7 +210,6 @@ TEST(shop_refusals) {
     ASSERT_TRUE(why.has_value());
     EXPECT_TRUE(*why == "Not enough MH: 40, you have 10");
     EXPECT_EQ(w.progress(a)->copies(StructureKind::habDome), int64_t(0));
-    EXPECT_TRUE(!w.progress(a)->bought.count(StructureKind::habDome));
     EXPECT_TRUE(*w.wallet(a) == (WorldMap::Wallet{5000, 10}));
     // Away from the Citadel.
     drivenUnit(w, a)->position = drivenUnit(w, a)->position + Vec2(12, 0);
@@ -208,8 +220,9 @@ TEST(shop_refusals) {
     EXPECT_EQ(w.progress(a)->held(Item::surveyFlare), int64_t(0));
 }
 
-// Building uses a copy up: two copies, two Hab Domes, then "No blueprint".
-TEST(shop_building_uses_a_copy) {
+// Building uses no copy (C2): a Hab Dome learned, two built for their ore,
+// no copy held; a Derrick never bought: "No blueprint".
+TEST(shop_building_uses_no_copy) {
     Shop1 s;
     ASSERT_TRUE(s.citadel.has_value());
     WorldMap& w = s.w;
@@ -217,13 +230,13 @@ TEST(shop_building_uses_a_copy) {
     g.xp = Progression::xp(8);
     w.setProgress(a, g);
     ASSERT_TRUE(!w.buy(a, StructureKind::habDome, Item::repairKit).has_value());
-    ASSERT_TRUE(!w.buy(a, StructureKind::habDome, Item::repairKit).has_value());
+    ASSERT_TRUE(!w.learn(a, StructureKind::habDome).has_value());
     const Vec2 east = w.regionOf(a)->places()->ground(Vec2(72, 48));
     EXPECT_TRUE(weld(w, a, StructureKind::habDome, east + Vec2(0, 9)).has_value());
-    EXPECT_EQ(w.progress(a)->copies(StructureKind::habDome), int64_t(1));
     EXPECT_TRUE(weld(w, a, StructureKind::habDome, east + Vec2(0, 18)).has_value());
     EXPECT_EQ(w.progress(a)->copies(StructureKind::habDome), int64_t(0));
-    const auto why = w.build(a, StructureKind::habDome, drivenUnit(w, a)->position + Vec2(0, -8));
+    EXPECT_TRUE(w.progress(a)->knows(StructureKind::habDome));
+    const auto why = w.build(a, StructureKind::derrick, drivenUnit(w, a)->position + Vec2(0, -8));
     ASSERT_TRUE(why.has_value());
     EXPECT_TRUE(*why == "No blueprint: buy one at a Citadel (H)");
 }
@@ -283,7 +296,7 @@ TEST(shop_consumables_use_stacks_and_cooldowns) {
     EXPECT_TRUE((w.progress(a)->items == std::map<Item, int64_t>{{Item::repairKit, 1}}));
 }
 
-// The stacks and the copies bought are kept by the save.
+// The stacks, the copies held and the kinds learned are kept by the save.
 TEST(shop_stacks_saved_and_loaded) {
     const std::string path = savePath("shop");
     std::string why;
@@ -293,13 +306,15 @@ TEST(shop_stacks_saved_and_loaded) {
         ASSERT_TRUE(s.citadel.has_value());
         WorldMap& w = s.w;
         ASSERT_TRUE(!w.buy(a, StructureKind::derrick, Item::repairKit).has_value());
+        ASSERT_TRUE(!w.buy(a, StructureKind::habDome, Item::repairKit).has_value());
+        ASSERT_TRUE(!w.learn(a, StructureKind::habDome).has_value());
         ASSERT_TRUE(!w.buy(a, std::nullopt, Item::shieldCharge).has_value());
         ASSERT_TRUE(!w.buy(a, std::nullopt, Item::shieldCharge).has_value());
         kept = *w.progress(a);
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
         ASSERT_TRUE(store->write(w.save(), &why).has_value());
-        EXPECT_TRUE(store->rows("SELECT stacked FROM pilots")[0][0] == "1");
+        EXPECT_TRUE(store->rows("SELECT stacked, learned FROM pilots")[0] == (std::vector<std::string>{"1", "1"}));
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
@@ -309,8 +324,11 @@ TEST(shop_stacks_saved_and_loaded) {
     EXPECT_TRUE(w.restore(*loaded).empty());
     ASSERT_TRUE(w.seat(a, keyA) == WorldMap::Seated::restored);
     const ProspectorProgress g = *w.progress(a);
+    // A copy bought and not learned stays a copy across the save (schema 28
+    // adopts only older pilots).
     EXPECT_EQ(g.copies(StructureKind::derrick), int64_t(1));
-    EXPECT_EQ(g.bought.at(StructureKind::derrick), int64_t(1));
+    EXPECT_TRUE(!g.knows(StructureKind::derrick));
+    EXPECT_TRUE(g.knows(StructureKind::habDome));
     EXPECT_EQ(g.held(Item::shieldCharge), int64_t(2));
-    EXPECT_TRUE(g.blueprints == kept.blueprints && g.items == kept.items && g.bought == kept.bought);
+    EXPECT_TRUE(g.blueprints == kept.blueprints && g.items == kept.items && g.learned == kept.learned);
 }

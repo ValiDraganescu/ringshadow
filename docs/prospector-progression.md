@@ -503,51 +503,65 @@ Foundry 1.95 h, Lab 4.6 h, Spacedock 9.1 h, Bastion 15.6 h, Sentinel 24.4 h.
 
 Decided by the user (2026-10-14, docs/mmorpg-m8.md): "I can buy the items
 from the citadel (items are consumables)." "I can unlock and buy any
-blueprint from the citadel shop. There must be a price progression. A
-blueprint can be used once so blueprints are stackable and consumable."
+blueprint from the citadel shop." Changed by the user on 2026-10-18
+(docs/guns-and-practice.md, section 4): a copy used up per building, dearer
+each copy, was wrong. A blueprint is bought or found and used **once** to
+learn the building; after that the building is built for its ore.
 
-- **Blueprints are copies.** A pilot holds a stack of copies per building
-  kind (`ProspectorProgress::blueprints`, kind → copies). Placing a building
-  uses one up (`WorldMap::build`); with none the build is refused "No
-  blueprint: buy one at the Citadel (H)". The level floor still holds: a
-  copy bought or found below it waits ("opens at level N").
+- **Learned, not used up.** A pilot knows a set of building kinds
+  (`ProspectorProgress::learned`) and holds copies it has not learned from
+  yet (`blueprints`, kind → copies). The Learn request (B's wheel: LEARN on
+  a kind with a copy) uses one copy and learns the kind, anywhere:
+  `WorldMap::learn`, refused "You know the Derrick" or "No Derrick blueprint
+  to learn from". Placing a building uses no copy (`WorldMap::build`): a
+  learned kind builds, within its level floor and limits; a copy held but
+  not learned refuses "Learn it first (B)"; neither, "No blueprint: buy one
+  at a Citadel (H)". The Target Dummy needs no blueprint at all.
 - **The shop** is the Citadel screen's **SHOP** tab (H, at the realm's
   Citadel, standing where it unloads; Tab switches REALM and SHOP). It is
   paid from the pilot's own wallet; the tax does not apply to purchases.
   Every building kind the MMO has is in it (the Garrison stays held back).
-- **Sites still pay**: opening a site gives one copy of its blueprint, held
-  already or not, with the find's XP (50 × its floor); a blueprint survey
-  chip gives one copy too. The old "known already: 100 ore and 20 MH" rule
-  is gone. The opening chain (O1) is unchanged: the Landing crate gives the
-  Citadel copy that step 2 builds, the Lander wreck the Derrick copy step 5
-  builds.
+  It sells each blueprint **once a pilot**, at the price below, and refuses
+  a kind the pilot knows ("You know the Hab Dome") or holds a copy of ("You
+  hold a Hab Dome blueprint: learn it (B)").
+- **Sites, chips, missions, the Matriarch and the canyon waves** give a
+  copy of a kind the pilot doesn't know. Of a kind it knows they give the
+  blueprint's **ore price** instead, into the wallet, told as the blueprint
+  news with "known" and the ore ("YOU KNOW THE DERRICK: +130 ORE"); a site's
+  find still pays its XP (50 × its floor). A survey chip's blueprint is
+  drawn only from the kinds the pilot neither knows nor holds. The opening
+  chain (O1) is unchanged: the Landing crate gives the Citadel copy, the
+  Lander wreck the Derrick copy, each learned before step 2 and step 5
+  build them.
+- **Frontier pilots** keep the same rules: a frontier pilot buys a
+  blueprint once and learns it at once, learns a copy it found before it
+  builds, and builds for ore; a known kind found pays its ore into its own
+  wallet.
 
-**The price** of the next copy of a blueprint grows with the building's
-level floor F and with the copies n this pilot has bought of that kind
-before (`Shop::blueprintPrice`, `ProspectorProgress::bought`):
+**The price** of a blueprint is the building's level floor F's
+(`Shop::blueprintPrice(kind, 0)`):
 
-    ore = (50 + 25 × F) × 1.5^n      MH = 5 × F × 1.5^n
+    ore = 50 + 25 × F      MH = 5 × F
 
-each rounded to 10; the Citadel and the Derrick cost ore only, so the first
-loop still costs no MH. Copies found at sites don't count as bought.
+each rounded to 10; the Citadel, the Derrick and the Landing Pad cost ore
+only, so the first loop still costs no MH.
 
-| Blueprint | Floor | 1st | 2nd | 3rd | 5th | 8th |
-|---|---|---|---|---|---|---|
-| Citadel | 1 | 80 | 110 | 170 | 380 | 1,280 |
-| Derrick | 3 | 130 | 190 | 280 | 630 | 2,140 |
-| Gatling gun | 5 | 180 + 30 | 260 + 40 | 390 + 60 | 890 + 130 | 2,990 + 430 |
-| Hab Dome | 8 | 250 + 40 | 380 + 60 | 560 + 90 | 1,270 + 200 | 4,270 + 680 |
-| Sentinel | 10 | 300 + 50 | 450 + 80 | 680 + 110 | 1,520 + 250 | 5,130 + 850 |
-| Foundry | 15 | 430 + 80 | 640 + 110 | 960 + 170 | 2,150 + 380 | 7,260 + 1,280 |
-| Lab | 25 | 680 + 130 | 1,010 + 190 | 1,520 + 280 | 3,420 + 630 | 11,530 + 2,140 |
-| Spacedock | 35 | 930 + 180 | 1,390 + 260 | 2,080 + 390 | 4,680 + 890 | 15,800 + 2,990 |
-| Bastion | 45 | 1,180 + 230 | 1,760 + 340 | 2,640 + 510 | 5,950 + 1,140 | 20,080 + 3,840 |
+| Blueprint | Floor | Price |
+|---|---|---|
+| Citadel | 1 | 80 |
+| Derrick | 3 | 130 |
+| Gatling gun | 5 | 180 + 30 |
+| Hab Dome | 8 | 250 + 40 |
+| Sentinel | 10 | 300 + 50 |
+| Foundry | 15 | 430 + 80 |
+| Lab | 25 | 680 + 130 |
+| Spacedock | 35 | 930 + 180 |
+| Bastion | 45 | 1,180 + 230 |
 
-(ore + MH.) The first Hab Dome copy, 250 ore and 40 MH, with the dome's own
-150 + 50, is a few minutes of mining at level 8, where it opens. Copies stay
-a sink: the realm's limits cap what stands, but buildings fall once the bugs
-come (N2), and every rebuild takes a dearer copy; by the fifth Hab Dome copy
-the price is 1,270 + 200, by the eighth 4,270 + 680.
+(ore + MH.) The first Hab Dome, 250 ore and 40 MH, with the dome's own
+150 + 50, is a few minutes of mining at level 8, where it opens. Once
+learned, the realm's limits cap what stands and every rebuild after the
+bugs (N2) costs the building's ore alone.
 
 **The consumables** (`Shop::items`, `Item`), a first set of four, each held
 in a stack and used from the field with a key (1-4 were free while driving;
@@ -568,8 +582,10 @@ crosses regions with it.
 
 Refusals (the reply's text): "Buy at the realm's Citadel: stand where you
 unload", "Not enough ore: 250, you have 100", "Not enough MH: 40, you have
-10", "No Garrison blueprint in this world", "Repair kit: you hold 5, the
-most"; using: "No repair kits: buy them at the Citadel (H)", "Shield charge
+10", "No Garrison blueprint in this world", "You know the Hab Dome", "You
+hold a Hab Dome blueprint: learn it (B)", "Repair kit: you hold 5, the
+most"; learning: "You know the Derrick", "No Derrick blueprint to learn
+from"; using: "No repair kits: buy them at the Citadel (H)", "Shield charge
 ready in 31 s", "Your Prospector is not hurt", "In flight", "Your Prospector
 is down", "Drive your Prospector first".
 
@@ -580,28 +596,36 @@ so D1's request comes next, at 17.
 `ProgressMessage::blueprints` carries copies (kind → count), and `bought`,
 `items`, `itemReady` (world time), `shieldUntil` (world time) and `flare`
 (region, centre, radius, until) are new. `net::Client::buyBlueprint`,
-`buyItem`, `use`.
+`buyItem`, `use`. Protocol 37 (C2, the learned model): `RequestMessage::Learn{kind}`
+(index 24, `net::Client::learn`), `ProgressMessage::learned` (one bit a
+kind); `bought` is no longer filled and goes.
 
 On screen:
 
 - **SHOP** (`SAcCitadelScreen`, Tab from REALM): BLUEPRINTS, a row per
-  building (keys 1-8): the copies held (×N), "opens at level N" below the
-  floor, the next copy's price, BUY (dark when the wallet is short); and
+  building (keys 1-8): KNOWN, or the copy held, "opens at level N" below
+  the floor, the price, BUY (dark when the wallet is short or the kind is
+  known or held); and
   SUPPLIES: each consumable with its key, what it does, held of the stack,
   its price, BUY. The foot says "Bought: Hab Dome blueprint." or why not.
-- **The build menu** (B) shows the copies by each building's name ("Hab
-  Dome ×2"); with none, it is greyed "NO BLUEPRINT".
+- **The build wheel** (B, docs/guns-and-practice.md section 5) shows each
+  kind's state: buildable, LEARN (a copy held: selecting it learns), LV N,
+  NO BLUEPRINT, REALM LIMIT.
 - **The HUD**: four small cells right of the Q/C/G slots, their key caps 1
   2 3 4, the count (×N), the cooldown's seconds, gold while a shield or a
   flare runs. The keys line: "1 2 3 4  supplies".
 - The skill screen's BLUEPRINTS tab counts copies held ("×2 READY · B
   BUILDS IT", "NONE HELD") and points to the shop.
 
-Tests: `core-tests/tests/ProgressionTests.cpp` (`blueprintPriceRises`,
-`blueprintCopiesAndItems`, the old list read as copies),
-`server/tests/ShopTests.cpp` (buying at rising prices, the refusals,
-building uses a copy, the consumables' use, stacks and cooldowns, the stacks
-saved), `server/tests/SitesTests.cpp` (a site gives a copy),
+Tests: `core-tests/tests/ProgressionTests.cpp` (`blueprintCopiesAndItems`,
+the old list read as copies, `blueprint_learnedOnceThenBuildsForOre`),
+`server/tests/ShopTests.cpp` (`shop_sellsABlueprintOncePerPilot`, the
+refusals, building uses no copy, the consumables' use, stacks and
+cooldowns, the stacks saved), `server/tests/LearnTests.cpp`
+(`learn_consumesACopyOnce`, `site_givesOreForAKnownBlueprint`,
+`build_dummyNeedsNoBlueprint`, `load_schema28LearnsWhatWasBoughtOrBuilt`),
+`server/tests/FrontierTests.cpp` (`frontier_buildsAfterSchema28`),
+`server/tests/SitesTests.cpp` (a site gives a copy),
 `server/tests/FirstTenTests.cpp` (the opening chain), the old-save tests
 (the migration below), `net-tests/tests/ProtocolTests.cpp`. Pictures:
 `-AcMmoShotsC2`.
@@ -1046,6 +1070,25 @@ every price starts at the first copy's. Saved again, the pilot is
 `stacked` 1. Tests: `server/tests/SitesTests.cpp`
 (`sites_v3_pilot_keeps_the_blueprints_of_its_buildings`),
 `OldSaveTests.cpp`, `SaveTests.cpp`.
+
+### The learned blueprints migration (schema v28, C2)
+
+Schema **v28** marks the pilots saved since blueprints are learned once:
+
+    ALTER TABLE pilots ADD COLUMN learned INTEGER NOT NULL DEFAULT 0
+
+The learned kinds live in the progress JSON (`learned`). A pilot saved
+before (`learned` 0) **learns every kind it ever bought** (`bought`),
+**owns a building of** (`built_by`) **or holds a copy of**; the copies of
+the kinds it learned are removed and `bought` is emptied
+(`WorldMap::adoptLearned`, logged `save: pilot 1a2b3c4d: schema 28: learned
+Citadel, Derrick; 4 blueprint copies used up`). Saved again, the pilot is
+`learned` 1, so a copy bought after stays a copy to learn from. The frontier
+pilots' JSON carries `"learned": true` the same way; one without it learns
+on load as a pilot does. Tests: `server/tests/LearnTests.cpp`
+(`load_schema28LearnsWhatWasBoughtOrBuilt`), `FrontierTests.cpp`
+(`frontier_buildsAfterSchema28`), `OldSaveTests.cpp`, `SaveTests.cpp`,
+`SitesTests.cpp`.
 
 ### The Citadel missions migration (schema v12, K2)
 

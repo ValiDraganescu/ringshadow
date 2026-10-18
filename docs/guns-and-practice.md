@@ -215,8 +215,22 @@ The build wheel offers it with no tag; placement as any building.
   chips, missions, the Matriarch:** a blueprint of a learned kind gives the
   blueprint's ore price instead (the message says so).
 - Schema 28: on load, a pilot learns every kind it ever bought, owns a
-  building of, or holds a copy of; the copies of learned kinds are removed.
-  Frontier pilots: unchanged (they never build).
+  building of, or holds a copy of; the copies of learned kinds are removed
+  (a `learned` column on the pilots, 0 for a row from before;
+  `WorldMap::adoptLearned`, a log line per pilot).
+- Frontier pilots do buy and build (the doc said otherwise): they follow
+  the same model. A frontier pilot buys a blueprint once at the first
+  copy's price and learns it at once, learns a copy it found before it
+  builds, builds for ore, and a known kind found pays its ore into its own
+  wallet; schema 28 learns their bought, built and held kinds too (their
+  JSON's `"learned": true` key).
+- As built (server, net): `WorldMap::learn` (WorldShop.cpp) in the request
+  chain; `WorldMap::giveBlueprint` for every find (sites, chips, missions,
+  the Matriarch, canyon waves): a copy, or the ore price of a known kind,
+  told as the blueprint news with `by` "known" and `value` the ore; the
+  dev lines that gave copies (`--dev-blueprints`, `defence blueprints`, the
+  rig's) learn instead; `ProgressMessage::learned`; `bought` is no longer
+  written or read by the server.
 - docs/prospector-progression.md "The Citadel shop" rewritten to this.
 
 ## 5. The radial build wheel (game)

@@ -1002,12 +1002,25 @@ public:
     std::vector<std::string> adoptCitadels(size_t r);
     /// The last `restore`'s `adoptCitadels` lines, every region's.
     const std::vector<std::string>& grownCitadels() const { return grown_; }
+    /// Schema 28 (C2, `restore`): a pilot saved before blueprints were
+    /// learned learns every kind it bought (`bought`), built (`builtBy_`
+    /// under `key`) or holds a copy of; the copies of the kinds it knows
+    /// are dropped. One line for the log, or nothing when there was nothing
+    /// to learn. Idempotent.
+    static std::optional<std::string> adoptLearned(ProspectorProgress& g, const std::set<StructureKind>& built, const std::string& who);
+    /// The last `restore`'s `adoptLearned` lines, the frontier's included.
+    const std::vector<std::string>& learnedOnLoad() const { return learnedOnLoad_; }
     /// Dev and the flow tests (`citadel …` lines), as the seated pilot (`as
     /// N` for another): `citadel here` (a complete, armed Citadel of the
     /// realm on clear ground ahead, door shut, the Prospector 4 cells out
     /// from its door facing it; its id), `citadel door open|close` and
     /// `citadel man N|none` (the Door and Man requests).
     std::string devCitadel(const std::string& line);
+    /// Dev and the flow tests (C2, `dummy here`, as the seated pilot): a
+    /// complete Target Dummy of the realm 20 cells ahead of the pilot's
+    /// unit (along its gun's aim when it mans one), on the nearest clear
+    /// ground to that; its id.
+    std::string devDummy(const std::string& line);
     /// The share of a kill's XP a defence's builder earns when the defence
     /// hits a bug (docs/creatures.md, "XP and rewards").
     static constexpr double defenceXpShare = 0.5;
@@ -1790,6 +1803,8 @@ private:
     TurretMarks citadelMarks_;
     /// C1: what the last `restore` grew the Citadels over (`grownCitadels`).
     std::vector<std::string> grown_;
+    /// C2: what the last `restore` taught the pilots (`learnedOnLoad`).
+    std::vector<std::string> learnedOnLoad_;
     /// The bugs each defence has killed, per region (building id → kills;
     /// D3). Saved with the building, gone with it.
     std::vector<std::map<int64_t, int64_t>> kills_;
@@ -1861,6 +1876,14 @@ private:
     /// The progression into the pilot's region's simulation.
     void pushProgress(PilotId pilot);
     void earn(PilotState& p, double xp);
+    /// C2: `n` blueprints of `kind` for a pilot (a site, a chip, a mission,
+    /// the Matriarch, a canyon wave): copies to learn from, or, of a kind it
+    /// knows, the blueprint's ore price each into its wallet, told as a
+    /// blueprint news with `by` "known" and the ore (`xp` on that news).
+    /// The ore paid (0: copies given).
+    int64_t giveBlueprint(PilotState& p, StructureKind kind, int64_t n = 1, double xp = 0);
+    /// The same for a frontier pilot, into its own wallet.
+    static int64_t giveBlueprint(FrontierPilot& f, StructureKind kind, int64_t n = 1);
     /// A one-off into `set` under `id`, paid `xp`, told as `kind`.
     bool oneOff(PilotId pilot, std::set<std::string> ProspectorProgress::*set, const std::string& id, double xp,
                 net::ProgressMessage::NewsKind kind);

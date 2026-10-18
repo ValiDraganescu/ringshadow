@@ -104,9 +104,11 @@ std::string WorldMap::devDefence(const std::string& line) {
         return "dev: defence: the pilot's wallet holds " + std::to_string(p.wallet.ore) + " ore, " + std::to_string(p.wallet.hydrogen) + " MH";
     }
     if (what == "blueprints") {
-        p.progress.giveBlueprint(StructureKind::gatling, 2);
-        p.progress.giveBlueprint(StructureKind::sentinel, 2);
-        return "dev: defence: two gatling gun and two AA tower blueprints";
+        // C2: learned (built for ore after).
+        p.progress.learned.insert(StructureKind::gatling);
+        p.progress.learned.insert(StructureKind::sentinel);
+        pushProgress(pilot);
+        return "dev: defence: the gatling gun and the AA tower learned";
     }
     const size_t r = p.region;
     Simulation& sim = regions_[r]->simulation();

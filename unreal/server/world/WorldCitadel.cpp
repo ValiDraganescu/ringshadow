@@ -1,6 +1,7 @@
 // The Citadel's interior in a world (WorldMap.h, C1; docs/citadel-interior.md):
 // the door and the corner guns asked for by a pilot, the realm's Citadels
-// grown in place on load (schema 27), and the dev lines for the flow tests.
+// grown in place on load (schema 27), and the dev lines for the flow tests
+// (C2: a Target Dummy ahead).
 // The door, the shelter and the guns themselves are the core's
 // (Simulation+Citadel.members.h).
 
@@ -180,6 +181,49 @@ std::string WorldMap::devCitadel(const std::string& line) {
         return why ? "dev: citadel man " + arg + ": refused: " + *why : "dev: citadel man " + arg;
     }
     return "dev: citadel: '" + what + (arg.empty() ? "" : " " + arg) + "' is not here, door open|close or man N|none";
+}
+
+std::string WorldMap::devDummy(const std::string& line) {
+    std::istringstream in(line);
+    std::string word, what;
+    in >> word >> what;
+    if (!world_ || pilots_.empty()) return "dev: dummy: no world, or no pilot";
+    if (what != "here") return "dev: dummy: '" + what + "' is not here";
+    auto& [pilot, p] = *devPilot();
+    if (p.flight) return "dev: dummy here: in flight";
+    const size_t r = p.region;
+    Simulation& sim = regions_[r]->simulation();
+    GameState& st = sim.state;
+    const auto me = p.unit ? sim.unitIndex(*p.unit) : std::nullopt;
+    if (!me) return "dev: dummy here: the pilot drives nothing";
+    const Unit& u = st.units[size_t(*me)];
+    // Ahead: the gun's aim when the unit mans one, else its heading.
+    double heading = u.heading;
+    for (const Structure& b : st.structures)
+        if (b.guns)
+            for (const CornerGun& g : *b.guns)
+                if (g.gunner == u.id) heading = g.aim;
+    const Vec2 at = u.position;
+    constexpr double ahead = 20;
+    for (double d = 0; d <= 6; d += 0.5)
+        for (const double sign : {1.0, -1.0})
+            for (const double turn : {0.0, 0.1, -0.1, 0.2, -0.2}) {
+                const double reach = ahead + sign * d;
+                const auto spot = sim.snap(StructureKind::dummy, at + Vec2(std::cos(heading + turn), std::sin(heading + turn)) * reach);
+                if (!spot || sim.placementRefusal(StructureKind::dummy, *spot)) continue;
+                Structure dummy(st.nextID++, StructureKind::dummy, Pilot::player, *spot);
+                dummy.hp = Rules::hp(StructureKind::dummy);
+                st.structures.push_back(dummy);
+                builtBy_[r][dummy.id] = p.key;
+                sim.reindex();
+                sim.refreshNav();
+                const Vec2 g = regions_[r]->places()->regionAt(*spot);
+                char out[192];
+                std::snprintf(out, sizeof out, "dev: dummy here: dummy %lld at (%.1f, %.1f) in %s, %.1f cells out", (long long)dummy.id, g.x,
+                              g.y, world_->regions[r].file.id.c_str(), distance(*spot, at));
+                return out;
+            }
+    return "dev: dummy here: no clear ground 20 cells ahead";
 }
 
 } // namespace ac::server

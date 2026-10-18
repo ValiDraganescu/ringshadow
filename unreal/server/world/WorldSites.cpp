@@ -171,7 +171,7 @@ void WorldMap::findChip(PilotId pilot) {
     // One in 20: a blueprint the pilot lacks, not far above its level.
     std::vector<StructureKind> lacking;
     for (const StructureKind k : Progression::blueprintKinds())
-        if (!p->progress.blueprints.count(k) &&
+        if (!p->progress.blueprints.count(k) && !p->progress.knows(k) &&
             Progression::blueprintFloor(k) <= p->progress.level() + WorldSites::chipBlueprintReach)
             lacking.push_back(k);
     const bool blueprint =

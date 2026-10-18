@@ -108,6 +108,8 @@ bool citadel(WorldMap& w) {
     u->heading = pi;
     u->task = Unit::Task::idle;
     const Vec2 home = *sim.snap(StructureKind::citadel, u->position + Vec2(-1, 0) * Region::buildReach(StructureKind::citadel));
+    // C2: the crate's copy learned first, as the build wheel's LEARN does.
+    if (!w.progress(me)->knows(StructureKind::citadel)) w.learn(me, StructureKind::citadel);
     if (const auto why = w.build(me, StructureKind::citadel, home)) {
         std::printf("  Citadel refused: %s\n", why->c_str());
         return false;
@@ -150,6 +152,7 @@ bool derrickPumped(WorldMap& w) {
     }
     const auto snapped = sim.snap(StructureKind::derrick, u->position + Vec2(std::cos(u->heading), std::sin(u->heading)) * 3.0);
     if (!snapped) return false;
+    if (!w.progress(me)->knows(StructureKind::derrick)) w.learn(me, StructureKind::derrick);
     if (const auto why = w.build(me, StructureKind::derrick, *snapped)) {
         std::printf("  Derrick refused: %s\n", why->c_str());
         return false;

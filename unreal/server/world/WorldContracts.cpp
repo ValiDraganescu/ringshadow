@@ -471,7 +471,7 @@ void WorldMap::firstTen(PilotId pilot, PilotState& p) {
         }
         if (c.state == State::open) {
             auto opened = [&](StructureKind kind) {
-                return p.progress.blueprints.count(kind) || (!c.target.empty() && p.progress.sites.count(c.target));
+                return p.progress.blueprints.count(kind) || p.progress.knows(kind) || (!c.target.empty() && p.progress.sites.count(c.target));
             };
             bool now = false;
             switch (c.step) {

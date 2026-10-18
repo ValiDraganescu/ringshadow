@@ -232,7 +232,7 @@ void WorldMap::nestThink(size_t r) {
     if (!prey && !raid) {
         double best = kFar;
         for (const Structure& s : st.structures)
-            if (realm(s) && s.hp > 0 && (s.kind != StructureKind::citadel || humanIn(r)) &&
+            if (realm(s) && s.hp > 0 && s.kind != StructureKind::dummy && (s.kind != StructureKind::citadel || humanIn(r)) &&
                 distance(s.position, home) <= reach + Rules::radius(s.kind) && distance(s.position, q.position) < best) {
                 best = distance(s.position, q.position);
                 raid = s.id;
@@ -369,7 +369,7 @@ void WorldMap::queenDown(size_t r) {
         p->wallet.ore += ore;
         p->wallet.hydrogen += mh;
         if (!p->flight) bankIn(*p, p->region);
-        p->progress.giveBlueprint(bp, 1);
+        giveBlueprint(*p, bp, 1);
         p->news.push_back(News{NewsKind::matriarch, "share/" + std::to_string(mh) + "/" + std::string(rawValue(bp)), 0, ore, ""});
         goalDid(*p, "matriarch");
         // A hunt counts her for every pilot who fought her (K2).

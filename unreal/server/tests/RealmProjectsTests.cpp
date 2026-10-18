@@ -88,7 +88,7 @@ struct Home {
         w.seat(a, keyA);
         ProspectorProgress g;
         g.xp = Progression::xp(10);
-        for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
+        for (const StructureKind k : Progression::blueprintKinds()) g.learned.insert(k);
         w.setProgress(a, g);
         simOf(w, a).state.players[0].ore = 3000;
         simOf(w, a).state.players[0].hydrogen = 500;

@@ -46,7 +46,7 @@ ProspectorProgress at(int64_t level, const std::map<Skill, int64_t>& ranks = {})
     ProspectorProgress g;
     g.xp = Progression::xp(level);
     g.ranks = ranks;
-    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
+    for (const StructureKind k : Progression::blueprintKinds()) g.learned.insert(k);
     return g;
 }
 
@@ -687,7 +687,7 @@ TEST(roles_a_citadel_a_region_each_a_home) {
     u->position = fork.position + Vec2(Rules::radius(StructureKind::citadel) + 0.4, 0);
     u->task = Unit::Task::idle;
     fill(w, me, 2000, 200);
-    EXPECT_TRUE(!w.buy(me, StructureKind::habDome, Item::repairKit).has_value());
+    EXPECT_TRUE(!w.buy(me, std::nullopt, Item::repairKit).has_value());
 
     // The tax at the second Citadel: an unload there feeds the realm wallet.
     const int64_t realmBefore = w.realmWallet().ore;

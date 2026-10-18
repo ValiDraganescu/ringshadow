@@ -47,7 +47,7 @@ ProspectorProgress at(int64_t level, const std::map<Skill, int64_t>& ranks = {})
     ProspectorProgress g;
     g.xp = Progression::xp(level);
     g.ranks = ranks;
-    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
+    for (const StructureKind k : Progression::blueprintKinds()) g.learned.insert(k);
     return g;
 }
 

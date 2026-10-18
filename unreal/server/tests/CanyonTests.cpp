@@ -67,7 +67,7 @@ void seatIn(WorldMap& w, PilotId p, const std::string& key, Vec2 cell = Vec2(100
     ASSERT_TRUE(w.seat(p, key) == WorldMap::Seated::fresh);
     ProspectorProgress g;
     g.xp = Progression::xp(20);
-    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
+    for (const StructureKind k : Progression::blueprintKinds()) g.learned.insert(k);
     w.setProgress(p, g);
     w.step();
     const size_t r = coldFork(w);

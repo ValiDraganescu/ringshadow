@@ -147,14 +147,39 @@ bool WorldMap::feat(PilotId pilot, const std::string& id) {
 bool WorldMap::findBlueprint(PilotId pilot, StructureKind kind, int64_t floor) {
     PilotState* p = pilotState(pilot);
     if (!p) return false;
-    // C2: a copy, one use; every find pays (each site opens once a pilot).
-    p->progress.giveBlueprint(kind);
+    // C2: a copy to learn from, or its ore for a known kind; every find
+    // pays XP (each site opens once a pilot).
     const double xp = WorldXp::blueprintPerFloor * double(std::max<int64_t>(1, floor));
     // The level it opens at for this pilot (Blueprint savant).
-    p->news.push_back(News{NewsKind::blueprint, std::string(rawValue(kind)), xp, p->progress.floor(kind), ""});
+    if (!giveBlueprint(*p, kind, 1, xp)) p->news.push_back(News{NewsKind::blueprint, std::string(rawValue(kind)), xp, p->progress.floor(kind), ""});
     earn(*p, xp);
     pushProgress(pilot);
     return true;
+}
+
+int64_t WorldMap::giveBlueprint(PilotState& p, StructureKind kind, int64_t n, double xp) {
+    if (n <= 0) return 0;
+    if (!p.progress.knows(kind)) {
+        p.progress.giveBlueprint(kind, n);
+        return 0;
+    }
+    const int64_t ore = Shop::blueprintPrice(kind, 0).ore * n;
+    if (!p.flight) bankOut(p, p.region);
+    p.wallet.ore += ore;
+    if (!p.flight) bankIn(p, p.region);
+    p.news.push_back(News{NewsKind::blueprint, std::string(rawValue(kind)), xp, ore, "known"});
+    return ore;
+}
+
+int64_t WorldMap::giveBlueprint(FrontierPilot& f, StructureKind kind, int64_t n) {
+    if (n <= 0) return 0;
+    if (!f.progress.knows(kind)) {
+        f.progress.giveBlueprint(kind, n);
+        return 0;
+    }
+    const int64_t ore = Shop::blueprintPrice(kind, 0).ore * n;
+    f.wallet.ore += ore;
+    return ore;
 }
 
 // MARK: - The skill tree's requests
@@ -270,7 +295,6 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.taxed = {it->second.taxed.ore, it->second.taxed.hydrogen};
     m.donated = {it->second.donated.ore, it->second.donated.hydrogen};
     // C2: the shop's stacks, what is cooling down, a shield, a flare.
-    m.bought = g.bought;
     m.items = g.items;
     for (const auto& [item, at] : it->second.itemReady)
         if (at > clock_) m.itemReady[item] = at;

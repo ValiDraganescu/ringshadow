@@ -125,7 +125,7 @@ bool hasNews(const std::vector<net::ProgressMessage::News>& news, NewsKind kind,
 ProspectorProgress at(int64_t level) {
     ProspectorProgress g;
     g.xp = Progression::xp(level);
-    for (const StructureKind k : Progression::blueprintKinds()) g.giveBlueprint(k, 9);
+    for (const StructureKind k : Progression::blueprintKinds()) g.learned.insert(k);
     return g;
 }
 

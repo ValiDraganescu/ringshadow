@@ -132,9 +132,8 @@ void WorldMap::rigs() {
 void WorldMap::devRig(PilotId pilot) {
     PilotState* p = pilotState(pilot);
     if (!p || p->flight || !world_) return;
-    // The blueprints and the level the Lab's floor asks for.
-    for (const StructureKind k : {StructureKind::citadel, StructureKind::foundry, StructureKind::lab})
-        if (!p->progress.copies(k)) p->progress.giveBlueprint(k);
+    // The blueprints (C2: learned) and the level the Lab's floor asks for.
+    for (const StructureKind k : {StructureKind::citadel, StructureKind::foundry, StructureKind::lab}) p->progress.learned.insert(k);
     const int64_t floor = std::max(Progression::blueprintFloor(StructureKind::foundry), Progression::blueprintFloor(StructureKind::lab));
     if (p->progress.level() < floor) earn(pilot, Progression::xp(floor) - p->progress.xp);
     // Enough for the three and some to spend at the Foundry and the Lab.

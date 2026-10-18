@@ -184,7 +184,7 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
         EXPECT_EQ(store->schemaVersion(), WorldStore::version());
-        EXPECT_EQ(WorldStore::version(), int64_t(27));
+        EXPECT_EQ(WorldStore::version(), int64_t(28));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock', 'starfalls', "
                               "'realm_wallet', 'nests', 'canyons', 'frontier', 'standings', 'hunt')")[0][0],
@@ -291,9 +291,10 @@ TEST(save_v2_level_5_prospector_loads_as_level_10_with_its_blueprints) {
     EXPECT_EQ(g.unspent(), int64_t(9));
     EXPECT_TRUE(g.ranks.empty());
     EXPECT_TRUE(g.respecIsFree());
-    // C2 (schema 10): copies, as many as the realm may still build, at
-    // least 1: the Citadel 1 (it stands), Derricks 4 - 1 (one going up).
-    EXPECT_TRUE((g.blueprints == std::map<StructureKind, int64_t>{{StructureKind::citadel, 1}, {StructureKind::derrick, 3}}));
+    // C2 (schema 10, then 28): what it built is learned on load, the
+    // copies used up.
+    EXPECT_TRUE(g.blueprints.empty());
+    EXPECT_TRUE((g.learned == std::set<StructureKind>{StructureKind::citadel, StructureKind::derrick}));
     EXPECT_TRUE((g.feats == std::set<std::string>{WorldXp::built(StructureKind::citadel)}));
     // The strategy game's record is not a world's any more.
     EXPECT_TRUE(!w.levels(me) || w.levels(me)->picks(UnitKind::prospector).empty());

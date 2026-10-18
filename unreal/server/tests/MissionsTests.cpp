@@ -123,7 +123,7 @@ struct Board1 {
         w.seat(a, keyA);
         ProspectorProgress g;
         g.xp = Progression::xp(10);
-        g.giveBlueprint(StructureKind::citadel);
+        g.learned.insert(StructureKind::citadel);
         w.setProgress(a, g);
         fill(w, a, 5000, 500);
         citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, w.regionOf(a)->places()->ground(Vec2(72, 48))));
