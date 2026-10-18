@@ -339,3 +339,36 @@ Measured, not changed:
 `worldbench` takes a region (`worldbench 30 worlds/first.json nest`) and
 prints a hash of every unit's position, heading and hp at the end, the
 check that a core change leaves the world's simulation bit for bit.
+
+### Round 6: the writer's items, no allocation for the unchanged (2026-10-18)
+
+Counted in `crowdbench`, a snapshot has about 60 items (the fog's chunks,
+the sites, deposits and wells, the players, the units near), and about 42
+of them come out the same as their baselines. Each one was written to a new
+`shared_ptr<ItemBits>` (three allocations) only to be found equal and
+thrown away, and the bit writer went a byte at a time with a `push_back`
+for each.
+
+- `canonInto` writes an item's bits into a scratch the writer keeps; the
+  scratch is compared with the baseline, and the shared copy is made only
+  for an item that is written.
+- `BitWriter::writeBits` ORs a value's bytes in one pass after one
+  resize (the bytes past the end are always zero: only these writes add
+  to them); `BitReader::readBits` gathers them the same way; `appendBits`
+  copies 56 bits at a time, reading only the bytes they lie in. Test
+  `bitStream_wordWritesAreTheBitsOneByOne`: values of every width at every
+  bit offset, and stretches appended anywhere, the same bytes as a writer
+  of one bit at a time, read back the same.
+
+| 2 runs each in turns, load 7 | before µs | after µs |
+|---|---:|---:|
+| `snapbench`: start, noon, writing | 9.9 | 7.2-7.8 |
+| start, midnight | 6.7-6.8 | 5.6-5.7 |
+| nest, noon | 17.0-17.2 | 12.4-12.7 |
+| nest, midnight | 6.8-6.9 | 6.1 |
+| `crowdbench`: 16 pilots, a pilot's writing | 18.2-18.7 | 14.8 |
+| 16 pilots, the whole tick | 160-166 | 144 |
+
+The wire is the same (the four scenes' hashes as before). Since round 3 a
+pilot's snapshot writing went from 44-70 µs to 6-13 µs, and 16 pilots in
+one region from 230 µs a tick to 144.

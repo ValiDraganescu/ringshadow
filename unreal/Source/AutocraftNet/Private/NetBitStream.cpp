@@ -45,17 +45,23 @@ uint16_t quantizeAngle(float radians) {
 float dequantizeAngle(uint16_t quantized) { return static_cast<float>(quantized * (kTurn / 65536.0)); }
 
 void BitWriter::writeBits(uint64_t value, int bits) {
-    value &= lowBits(bits);
-    while (bits > 0) {
-        const size_t index = bits_ / 8;
-        const int offset = static_cast<int>(bits_ % 8);
-        if (index == bytes_.size()) bytes_.push_back(0);
-        const int n = std::min(8 - offset, bits);
-        bytes_[index] = static_cast<uint8_t>(bytes_[index] | ((value & lowBits(n)) << offset));
-        value >>= n;
-        bits_ += static_cast<size_t>(n);
-        bits -= n;
+    if (bits <= 0) return;
+    if (bits > 64) {
+        // Past 64 the value has no more bits: zeros.
+        writeBits(value, 64);
+        writeBits(0, bits - 64);
+        return;
     }
+    value &= lowBits(bits);
+    // The bytes past `bits_` are zero (only these writes add to them): the
+    // value's bytes ORed in, the first at the bit offset, in one pass.
+    const size_t end = bits_ + static_cast<size_t>(bits);
+    bytes_.resize((end + 7) / 8, 0);
+    uint8_t* b = bytes_.data() + bits_ / 8;
+    const int offset = static_cast<int>(bits_ % 8);
+    *b |= static_cast<uint8_t>(value << offset);
+    for (int done = 8 - offset; done < bits; done += 8) *++b |= static_cast<uint8_t>(value >> done);
+    bits_ = end;
 }
 
 void BitWriter::writeBytes(const uint8_t* data, size_t size) {
@@ -86,17 +92,13 @@ uint64_t BitReader::readBits(int bits) {
         bit_ = size_ * 8;
         return 0;
     }
-    uint64_t value = 0;
-    int done = 0;
-    while (done < bits) {
-        const size_t index = bit_ / 8;
-        const int offset = static_cast<int>(bit_ % 8);
-        const int n = std::min(8 - offset, bits - done);
-        value |= ((static_cast<uint64_t>(data_[index]) >> offset) & lowBits(n)) << done;
-        bit_ += static_cast<size_t>(n);
-        done += n;
-    }
-    return value;
+    // The bytes the bits lie in, no further, low bits first.
+    const uint8_t* b = data_ + bit_ / 8;
+    const int offset = static_cast<int>(bit_ % 8);
+    uint64_t value = static_cast<uint64_t>(*b) >> offset;
+    for (int done = 8 - offset; done < bits; done += 8) value |= static_cast<uint64_t>(*++b) << done;
+    bit_ += static_cast<size_t>(bits);
+    return value & lowBits(bits);
 }
 
 bool BitReader::readBytes(uint8_t* out, size_t size) {

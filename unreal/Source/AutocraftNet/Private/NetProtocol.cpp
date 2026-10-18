@@ -234,13 +234,16 @@ int64_t readSigned(BitReader& r) {
 }
 
 void appendBits(BitWriter& w, const uint8_t* src, size_t from, size_t bits) {
-    // Byte by byte from the source's bit offset.
+    // Up to 56 bits at a time from the source's bit offset, reading only the
+    // bytes they lie in.
     size_t at = from;
     while (bits > 0) {
+        const int n = static_cast<int>(std::min<size_t>(bits, 56));
         const size_t index = at / 8;
         const int offset = static_cast<int>(at % 8);
-        const int n = static_cast<int>(std::min<size_t>(bits, size_t(8 - offset)));
-        w.writeBits(uint64_t(src[index] >> offset), n);
+        uint64_t v = 0;
+        for (int k = 0; k < (offset + n + 7) / 8; k++) v |= uint64_t(src[index + size_t(k)]) << (8 * k);
+        w.writeBits(v >> offset, n);
         at += size_t(n);
         bits -= size_t(n);
     }

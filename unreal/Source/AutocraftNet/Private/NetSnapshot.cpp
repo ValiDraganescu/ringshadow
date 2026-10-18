@@ -128,6 +128,21 @@ template <class T> std::shared_ptr<const ItemBits> canon(const T& x) {
     return b;
 }
 
+/// `canon` into `out`, its arrays' room kept from the last time (the
+/// writer's items that come out the same as their baselines are never
+/// allocated).
+template <class T> void canonInto(ItemBits& out, Canon& c, const T& x) {
+    c.w.clear();
+    c.offsets.clear();
+    c.positions = 0;
+    fields(c, x);
+    out.offsets.assign(c.offsets.begin(), c.offsets.end());
+    out.offsets.push_back(static_cast<uint32_t>(c.w.bitCount()));
+    out.bits = c.w.bitCount();
+    out.bytes.assign(c.w.bytes().begin(), c.w.bytes().end());
+    out.positions = c.positions;
+}
+
 void writeWhole(BitWriter& w, const ItemBits& cur) { appendBits(w, cur.bytes.data(), 0, cur.bits); }
 
 /// The fields that changed, in groups of eight: a bit for the group, then
@@ -492,6 +507,10 @@ struct SnapshotWriter::State {
         std::vector<uint64_t> explored;
     };
     std::vector<FogBuilt> fogBuilt;
+    /// An item's bits as `canonInto` writes them, before it is known to
+    /// differ from its baseline.
+    ItemBits scratch;
+    Canon canonScratch;
 
     std::shared_ptr<const ItemBits> fogChunkOf(const FogView& f, size_t chunk) {
         if (fogBuilt.size() <= chunk) fogBuilt.resize(chunk + 1);
@@ -591,16 +610,20 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
     if (!openPart()) return out;
 
     enum class Placed { written, unchanged, noRoom };
-    auto consider = [&](Kind kind, uint64_t keyValue, const std::shared_ptr<const ItemBits>& bits,
+    // `cand`: the item's bits; `owned`, the same bits shared (a fog chunk's)
+    // or none yet (made only if it is written).
+    auto consider = [&](Kind kind, uint64_t keyValue, const ItemBits& cand, std::shared_ptr<const ItemBits> owned,
                         std::optional<bool> remembered = std::nullopt) -> Placed {
         const uint64_t key = keyOf(kind, keyValue);
         auto [it, fresh] = st.known.try_emplace(key);
         State::Known& k = it->second;
         if (fresh) k.generation = ++st.generation;
-        if (k.base && k.lastSentId == k.baseId && (k.base == bits || *k.base == *bits)) {
+        if (k.base && k.lastSentId == k.baseId && (k.base.get() == &cand || *k.base == cand)) {
             out.unchanged += 1;
             return Placed::unchanged;
         }
+        if (!owned) owned = std::make_shared<const ItemBits>(cand);
+        const std::shared_ptr<const ItemBits>& bits = owned;
         BitWriter item;
         item.writeBool(true);
         item.writeBits(static_cast<uint64_t>(kind), kKindBits);
@@ -618,10 +641,14 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
         (delta ? out.deltas : out.whole) += 1;
         return Placed::written;
     };
+    auto canonItem = [&](Kind kind, uint64_t keyValue, const auto& x, std::optional<bool> remembered = std::nullopt) -> Placed {
+        canonInto(st.scratch, st.canonScratch, x);
+        return consider(kind, keyValue, st.scratch, nullptr, remembered);
+    };
     auto entity = [&](const EntityState& e) {
         Placed p;
-        if (const Unit* u = e.unit()) p = consider(Kind::unit, uint64_t(u->id), canon(*u), e.remembered);
-        else p = consider(Kind::structure, uint64_t(e.id()), canon(*e.structure()), e.remembered);
+        if (const Unit* u = e.unit()) p = canonItem(Kind::unit, uint64_t(u->id), *u, e.remembered);
+        else p = canonItem(Kind::structure, uint64_t(e.id()), *e.structure(), e.remembered);
         if (p == Placed::noRoom) out.deferred.push_back(e.id());
     };
 
@@ -649,20 +676,23 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
     }
     for (size_t p = 0; p < snap.players.size(); p++) {
         const Player& pl = snap.players[p];
-        consider(Kind::playerCore, p, canon(coreOf(pl)));
+        canonItem(Kind::playerCore, p, coreOf(pl));
         if (!pl.pilot) continue;
         for (const auto& [k, rec] : pl.pilot->kinds) {
-            consider(Kind::playerKind, kindKey(int64_t(p), k), canon(kindOf(rec)));
+            canonItem(Kind::playerKind, kindKey(int64_t(p), k), kindOf(rec));
             for (size_t i = 0; i < rec.stamps.size() && i < 16; i++)
-                consider(Kind::stamp, stampKey(int64_t(p), k, i), canon(rec.stamps[i]));
+                canonItem(Kind::stamp, stampKey(int64_t(p), k, i), rec.stamps[i]);
         }
     }
-    for (const PatchView& v : snap.patches) consider(Kind::patch, uint64_t(v.index), canon(v.patch));
-    for (const WellView& v : snap.wells) consider(Kind::well, uint64_t(v.index), canon(v.well));
+    for (const PatchView& v : snap.patches) canonItem(Kind::patch, uint64_t(v.index), v.patch);
+    for (const WellView& v : snap.wells) canonItem(Kind::well, uint64_t(v.index), v.well);
     if (snap.fog) {
         const size_t chunks = (cells + kFogChunkCells - 1) / kFogChunkCells;
-        for (size_t c = 0; c < chunks; c++) consider(Kind::fogChunk, c, st.fogChunkOf(*snap.fog, c));
-        for (size_t i = 0; i < sites; i++) consider(Kind::site, i, canon(SiteTime{snap.fog->sites[i]}));
+        for (size_t c = 0; c < chunks; c++) {
+            const std::shared_ptr<const ItemBits> b = st.fogChunkOf(*snap.fog, c);
+            consider(Kind::fogChunk, c, *b, b);
+        }
+        for (size_t i = 0; i < sites; i++) canonItem(Kind::site, i, SiteTime{snap.fog->sites[i]});
     }
     for (const EntityState& e : snap.entities)
         if (e.rank == Rank::nearby) entity(e);

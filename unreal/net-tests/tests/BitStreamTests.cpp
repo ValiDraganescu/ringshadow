@@ -2,8 +2,11 @@
 #include "test.h"
 
 #include "NetBitStream.h"
+#include "NetProtocol.h"
 
 #include <cmath>
+#include <cstdint>
+#include <vector>
 
 using namespace ac::net;
 
@@ -116,4 +119,52 @@ TEST(bitStream_anglesSixteenBitsATurn) {
     BitWriter w;
     w.writeAngle(1.5f);
     EXPECT_EQ(w.bitCount(), size_t(16));
+}
+
+// docs/perf.md "Server" round 6: the writer puts a value's bytes in one
+// pass, the reader takes them so, and `appendBits` copies up to 56 bits at
+// a time. Against a writer of one bit at a time: the same bytes for values
+// of every width (0 to 64) at every bit offset, read back the same, and
+// any stretch of them appended anywhere the same as its bits one by one.
+TEST(bitStream_wordWritesAreTheBitsOneByOne) {
+    uint64_t seed = 0x9e3779b97f4a7c15ull;
+    auto next = [&] {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        return seed;
+    };
+    for (int round = 0; round < 200; round++) {
+        BitWriter w;
+        std::vector<uint8_t> ref;
+        size_t refBits = 0;
+        auto refBit = [&](bool b) {
+            if (refBits % 8 == 0) ref.push_back(0);
+            if (b) ref.back() = static_cast<uint8_t>(ref.back() | (1u << (refBits % 8)));
+            refBits++;
+        };
+        std::vector<std::pair<uint64_t, int>> written;
+        for (int k = 0; k < 60; k++) {
+            const int bits = static_cast<int>(next() % 65);
+            const uint64_t value = next();
+            w.writeBits(value, bits);
+            for (int b = 0; b < bits; b++) refBit((value >> b) & 1);
+            written.push_back({bits >= 64 ? value : value & ((uint64_t(1) << bits) - 1), bits});
+        }
+        EXPECT_EQ(w.bitCount(), refBits);
+        EXPECT_TRUE(w.bytes() == ref);
+        BitReader r(w.bytes().data(), w.bytes().size());
+        bool same = true;
+        for (const auto& [value, bits] : written) same = same && r.readBits(bits) == value;
+        EXPECT_TRUE(same && r.ok());
+        // A stretch appended after a few odd bits.
+        const size_t from = next() % (refBits + 1), count = next() % (refBits - from + 1);
+        const int lead = static_cast<int>(next() % 8);
+        BitWriter a, b;
+        a.writeBits(0x5a, lead);
+        b.writeBits(0x5a, lead);
+        appendBits(a, w.bytes().data(), from, count);
+        for (size_t i = from; i < from + count; i++) b.writeBool((ref[i / 8] >> (i % 8)) & 1);
+        EXPECT_TRUE(a.bytes() == b.bytes() && a.bitCount() == b.bitCount());
+    }
 }
