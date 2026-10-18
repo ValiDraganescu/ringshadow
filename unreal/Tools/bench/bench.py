@@ -50,6 +50,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -174,6 +175,13 @@ def mmo_run(w: int, h: int, a: argparse.Namespace, out: Path, variant: tuple[str
     code = run(cmd, out / "logs" / f"mmo-{tag}.stdout", timeout=3600)
     log = run_dir / "run.log"
     text = log.read_text(errors="replace") if log.exists() else ""
+    # The pools' tripwires (DefaultEngine.ini, docs/perf.md round 6): Lumen's
+    # surface cache, logged by -AcBenchMemReport runs.
+    for m in re.finditer(r"Allocated (\d+) physical pages out of (\d+)", text):
+        print(f"  mmo {tag}: Lumen surface cache {m.group(1)} of {m.group(2)} pages", file=sys.stderr)
+    for m in re.finditer(r"Dropped res levels: (\d+)", text):
+        if int(m.group(1)) > 0:
+            print(f"  mmo {tag}: WARNING Lumen surface cache dropped {m.group(1)} resolution levels: its atlas is too small", file=sys.stderr)
     found: dict[str, dict] = {}
     for line in text.splitlines():
         at = line.find("bench-result ")

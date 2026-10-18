@@ -399,6 +399,17 @@ The cooked game gives back less than the editor: 124-387 MB against
 512 MB blocks that stay while anything else lives in them (the 1.26 GB
 of slack above).
 
+**When the pins become wrong.** The shadow pool's dynamic resolution
+starts at 85 % of its pages
+(`r.Shadow.Virtual.DynamicRes.MaxPagePoolLoadFactor`), so at about 1,740
+requested pages; today's busiest scene asks for 636. The bench's
+pictures with `-dpcvars=r.Shadow.Virtual.Stats.Visible=1` show
+"Requested" and a "Global Resolution Bias" above 0 once it does. The
+surface cache drops resolution once its 256 pages are full: "Dropped res
+levels" above 0 in `r.LumenScene.DumpStats`. `bench.py --mmo` prints the
+cache's pages and that warning from any `-AcBenchMemReport` run. Re-run
+both checks when a scene grows (more buildings, more lights at night).
+
 The GPU frame is 0.24-0.41 ms shorter too (less to clear and keep). The
 pictures' difference across the change (the mean |RGB| % over the 3-D view
 at a quarter scale) is the same as between two runs of the same build: at
