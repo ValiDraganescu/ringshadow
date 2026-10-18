@@ -634,9 +634,9 @@ TEST(rounds_reachEveryClientThatMayKnow) {
     }
 }
 
-// The dev line `dummy here` (C2, for the game's flow test): a complete
-// Target Dummy of the realm about 20 cells ahead of the seated pilot, along
-// its gun's aim when it mans one.
+// The dev line `dummy here [CELLS]` (C2, for the game's flow test): a
+// complete Target Dummy of the realm about 20 cells (or CELLS) ahead of the
+// seated pilot, along its gun's aim when it mans one.
 TEST(dev_dummyHereAheadOfTheGun) {
     Hall h;
     ASSERT_TRUE(h.citadel.has_value());
@@ -659,4 +659,15 @@ TEST(dev_dummyHereAheadOfTheGun) {
     const double bearing = std::atan2(d->position.y - from.y, d->position.x - from.x);
     EXPECT_TRUE(std::abs(std::remainder(bearing - gunAim, 2 * pi)) <= 0.25);
     EXPECT_TRUE(w.devDummy("dummy there").find("is not here") != std::string::npos);
+    // A distance: 15 cells out, the same way.
+    const std::string near = w.devDummy("dummy here 15");
+    std::printf("  %s\n", near.c_str());
+    ASSERT_TRUE(near.rfind(head, 0) == 0);
+    const Structure* d15 = structure(simOf(w, a), std::atoll(near.c_str() + head.size()));
+    ASSERT_TRUE(d15 != nullptr);
+    EXPECT_TRUE(std::abs(distance(d15->position, from) - 15) <= 4.5);
+    const double b15 = std::atan2(d15->position.y - from.y, d15->position.x - from.x);
+    EXPECT_TRUE(std::abs(std::remainder(b15 - gunAim, 2 * pi)) <= 0.25);
+    EXPECT_TRUE(w.devDummy("dummy here 1").find("is not a distance") != std::string::npos);
+    EXPECT_TRUE(w.devDummy("dummy here far").find("is not a distance") != std::string::npos);
 }

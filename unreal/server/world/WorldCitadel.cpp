@@ -185,10 +185,18 @@ std::string WorldMap::devCitadel(const std::string& line) {
 
 std::string WorldMap::devDummy(const std::string& line) {
     std::istringstream in(line);
-    std::string word, what;
-    in >> word >> what;
+    std::string word, what, arg;
+    in >> word >> what >> arg;
     if (!world_ || pilots_.empty()) return "dev: dummy: no world, or no pilot";
     if (what != "here") return "dev: dummy: '" + what + "' is not here";
+    // How far ahead: 20 cells, or the line's number (2 to 80).
+    double ahead = 20;
+    if (!arg.empty()) {
+        char* end = nullptr;
+        const double d = std::strtod(arg.c_str(), &end);
+        if (!end || *end != '\0' || !(d >= 2 && d <= 80)) return "dev: dummy here: '" + arg + "' is not a distance from 2 to 80 cells";
+        ahead = d;
+    }
     auto& [pilot, p] = *devPilot();
     if (p.flight) return "dev: dummy here: in flight";
     const size_t r = p.region;
@@ -204,8 +212,8 @@ std::string WorldMap::devDummy(const std::string& line) {
             for (const CornerGun& g : *b.guns)
                 if (g.gunner == u.id) heading = g.aim;
     const Vec2 at = u.position;
-    constexpr double ahead = 20;
-    for (double d = 0; d <= 6; d += 0.5)
+    const double slack = std::min(6.0, ahead * 0.3);
+    for (double d = 0; d <= slack; d += 0.5)
         for (const double sign : {1.0, -1.0})
             for (const double turn : {0.0, 0.1, -0.1, 0.2, -0.2}) {
                 const double reach = ahead + sign * d;
@@ -223,7 +231,9 @@ std::string WorldMap::devDummy(const std::string& line) {
                               g.y, world_->regions[r].file.id.c_str(), distance(*spot, at));
                 return out;
             }
-    return "dev: dummy here: no clear ground 20 cells ahead";
+    char none[96];
+    std::snprintf(none, sizeof none, "dev: dummy here: no clear ground %.0f cells ahead", ahead);
+    return none;
 }
 
 } // namespace ac::server

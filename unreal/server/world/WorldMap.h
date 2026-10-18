@@ -1016,10 +1016,11 @@ public:
     /// from its door facing it; its id), `citadel door open|close` and
     /// `citadel man N|none` (the Door and Man requests).
     std::string devCitadel(const std::string& line);
-    /// Dev and the flow tests (C2, `dummy here`, as the seated pilot): a
-    /// complete Target Dummy of the realm 20 cells ahead of the pilot's
-    /// unit (along its gun's aim when it mans one), on the nearest clear
-    /// ground to that; its id.
+    /// Dev and the flow tests (C2, `dummy here [D]`, as the seated pilot): a
+    /// complete Target Dummy of the realm D cells (20; 2 to 80) ahead of
+    /// the pilot's unit (along its gun's aim when it mans one), on the
+    /// nearest clear ground to that (within 30% of D, at most 6 cells); its
+    /// id.
     std::string devDummy(const std::string& line);
     /// The share of a kill's XP a defence's builder earns when the defence
     /// hits a bug (docs/creatures.md, "XP and rewards").
