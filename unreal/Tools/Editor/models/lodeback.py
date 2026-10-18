@@ -22,7 +22,7 @@ from brood_kit import materials, painted, flecks, scatter  # noqa: E402
 
 POSE = "AcPoseBrood.cpp:PoseLodeback"
 
-m = Model("lodeback", category="unit", notes=[
+m = Model("lodeback", category="unit", coplanar_check=True, notes=[
     "The Brood's ore eater, car-sized (docs/creatures.md). Pose: PoseLodeback (N2): slow four-leg walk, the claws and "
     "jaw digging while it eats, the sac scaled 0.55..1.0 and lit by its fill, a bite when cornered, the sac bursting on "
     "death. No team colour: gold glow fixed.",
@@ -49,7 +49,9 @@ Z = 72.0
 body = m.part("body", at=(0, 0, Z), driver=d("body: heavy sway of the walk, sinks on death", ("position", "rotation")))
 SEC = [(70, 40, 18), (52, 66, 28), (24, 80, 32), (-10, 82, 32), (-44, 70, 27), (-66, 44, 18), (-74, 18, 9)]  # x, half width, half height
 m.mesh(body, "chitin", loft([ring_box(x, w, h, 0, Z, 16, 2.4) for x, w, h in SEC]))
-m.mesh(body, "chitinUnder", loft([ring_box(x, w * 0.85, h * 0.5, 0, Z - h * 0.55, 12, 2.2) for x, w, h in SEC[:-1]]), solid=False)
+# (the belly's front ring 2 cm behind the body's: their front caps shared a plane)
+m.mesh(body, "chitinUnder", loft([ring_box(x - (2 if i == 0 else 0), w * 0.85, h * 0.5, 0, Z - h * 0.55, 12, 2.2)
+                                  for i, (x, w, h) in enumerate(SEC[:-1])]), solid=False)
 # the carapace's crust: raised plates and lumps, and gold seams between them
 for x, y, sx, sy in ((40, -34, 34, 30), (40, 34, 34, 30), (6, -48, 40, 30), (6, 48, 40, 30), (-30, -40, 36, 30), (-30, 40, 36, 30)):
     m.mesh(body, "chitinMid", sphere(1, at=(x, y, Z + 22), squash=(sx * 0.5, sy * 0.5, 9)), solid=False)

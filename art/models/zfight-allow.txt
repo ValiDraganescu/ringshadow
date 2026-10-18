@@ -10,18 +10,13 @@ atlas_blue
 comet_blue
 dropship_blue
 firefly_blue
-gloamwing_blue
 hailstorm_blue
 juggernaut_blue
 kestrel_blue
-lodeback_blue
 longbow_blue
-matriarch_blue
 peregrine_blue
-prospector_blue
 ranger_blue
 scorpion_blue
-shardling_blue
 
 # cockpit
 cockpit_atlas_blue
@@ -33,6 +28,5 @@ cockpit_juggernaut_blue
 cockpit_kestrel_blue
 cockpit_longbow_blue
 cockpit_peregrine_blue
-cockpit_prospector_blue
 cockpit_ranger_blue
 cockpit_scorpion_blue

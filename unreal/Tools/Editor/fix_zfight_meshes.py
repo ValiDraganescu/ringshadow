@@ -8,6 +8,10 @@ For each model it finds what check_models.py finds (triangles of two meshes, or 
 same way in one plane and overlapping where someone can see them) and, for each such pair, moves the smaller of the
 two solids' face in that plane 2 cm outward along its normal, with every vertex of that solid at the same positions,
 so the solid grows 2 cm (a band then stands 2 cm proud of the hull it lay flush with; nothing that showed is hidden).
+The faces of a skin (a plate, a band, a visor round a dome: all its moved faces facing one way) move as an offset
+surface: each vertex along its moved faces' normals together, so every one of them ends 2 cm out. A solid flush with
+another on opposite faces (a joint: a toe plate in a sole) would swell that way, so it shrinks 1 cm a side about its
+middle instead.
 A solid is a connected piece of one mesh (its vertices welded by position). It saves the meshes it changed and checks
 again, up to three rounds, and logs what it moved. The model scripts' models are fixed in their scripts instead.
 """
@@ -24,6 +28,7 @@ import ac_modelkit as K  # noqa: E402
 import check_models as C  # noqa: E402
 
 OUT = 2.0  # cm
+INSET = 1.0  # cm: a solid flush with another on opposite faces (a joint) shrinks this much on every side instead
 
 
 def log(s):
@@ -166,13 +171,37 @@ def fix_model(model):
         for (mid, root), planes in moves.items():
             m = meshes[mid]
             roots, key = info[mid]
+            normals = [n for n, _ in planes.values()]
+            if any(C._dot(a, b) < -0.5 for a in normals for b in normals):
+                # a joint (a piece flush with another on opposite sides: a toe plate in a sole): growing it there would
+                # swell it, so the smaller piece shrinks about its middle, every side INSET in
+                vs = [v for v in range(len(key)) if roots[v] == root]
+                lo = [min(m["placed"][v][i] for v in vs) for i in range(3)]
+                hi = [max(m["placed"][v][i] for v in vs) for i in range(3)]
+                mid3 = [(a + b) / 2 for a, b in zip(lo, hi)]
+                half = [(b - a) / 2 for a, b in zip(lo, hi)]
+                for v in vs:
+                    changed[mid][v] = tuple((mid3[i] - m["placed"][v][i]) * (INSET / half[i] if half[i] > 2 * INSET else 0.0)
+                                            for i in range(3))
+                moved_total.append("%s solid %d: shrunk %g cm a side (a joint, %d planes)" % (mid, root, INSET, len(planes)))
+                continue
+            # a skin (a plate, a band, a visor round a dome: its faces all one way): an offset surface, each vertex along
+            # its moved faces' normals together, far enough that every one of those faces stands OUT out
+            on = collections.defaultdict(list)  # position -> the normals of its moved planes
             for n, d in planes.values():
-                # the solid's vertices on that plane, every copy of each position
-                on = {key[v] for v in range(len(key)) if roots[v] == root and abs(C._dot(n, m["placed"][v]) - d) < C.D_TOL}
                 for v in range(len(key)):
-                    if roots[v] == root and key[v] in on:
-                        prev = changed[mid].get(v, (0.0, 0.0, 0.0))
-                        changed[mid][v] = tuple(prev[i] + n[i] * OUT for i in range(3))
+                    if roots[v] == root and abs(C._dot(n, m["placed"][v]) - d) < C.D_TOL and n not in on[key[v]]:
+                        on[key[v]].append(n)
+            for v in range(len(key)):
+                ns = on.get(key[v]) if roots[v] == root else None
+                if not ns:
+                    continue
+                sm = [sum(n[i] for n in ns) for i in range(3)]
+                ln = math.sqrt(sum(c * c for c in sm))
+                dirn = [c / ln for c in sm]
+                mag = OUT / max(0.25, min(C._dot(n, dirn) for n in ns))
+                prev = changed[mid].get(v, (0.0, 0.0, 0.0))
+                changed[mid][v] = tuple(prev[i] + dirn[i] * mag for i in range(3))
             moved_total.append("%s solid %d: %d plane(s)" % (mid, root, len(planes)))
         for mid, disp in changed.items():
             write(meshes[mid], disp)
