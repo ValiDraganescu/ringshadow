@@ -77,10 +77,16 @@ struct AUTOCRAFTCORE_API Defence {
     static Vec2 gunStation(Vec2 citadel, int i);
     /// A pilot within this many cells of a station mans its gun.
     static constexpr double stationReach = 1.5;
-    /// Gun `i`'s camera (the game's view at a gun): 1.2 cells over the
-    /// mount's base (`mountHeight`; z from the Citadel's ground), 0.4 cells
-    /// back from the mount along `aim`: over the housing, the barrels in view.
-    static Vec3 gunEye(Vec2 citadel, int i, double aim);
+    /// Gun `i`'s camera (the game's view at a gun), riding the cradle so the
+    /// barrels stay in frame from `gunPitchMin` to `gunPitchMax`: the mount
+    /// (its top at `mountHeight`) + R_yaw(aim) · [trunnion + R_pitch(pitch) ·
+    /// eye], the trunnion (the cradle's pivot) `trunnionAlong` along the aim
+    /// and `trunnionUp` up, the eye `eyeAlong` along the barrels (behind
+    /// them) and `eyeUp` over them. x, y on the ground; z from the Citadel's
+    /// ground. It looks along `aim` and `pitch`.
+    static constexpr double trunnionAlong = 0.144, trunnionUp = 0.396;
+    static constexpr double eyeAlong = -0.40, eyeUp = 0.55;
+    static Vec3 gunEye(Vec2 citadel, int i, double aim, double pitch = 0);
     /// `aim` (world radians) held within gun `i`'s arc, at its hard stops
     /// (no wrap: past a stop it stays at that stop).
     static double clampAim(int i, double aim);

@@ -187,7 +187,7 @@ Constants (`Defence.h`):
 | `gunStation(citadel, i)` | `position + (±4.0, ±4.0)` in corner i's quadrant | where the gunner stands, in the hall |
 | `stationReach` | 1.5 | a pilot within it of the station mans the gun |
 | `mountHeight()` | 9.0 (4.6 without the hall) | the turret base's z on the corner towers (the deck stays `deckHeight` 7.0) |
-| `gunEye(citadel, i, aim)` | the mount 0.4 back along the aim, z `mountHeight + 1.2` (10.2) | the gun's camera (game): over the housing, the barrels in view |
+| `gunEye(citadel, i, aim, pitch = 0)` | mount + R_yaw(aim) · [T + R_pitch(pitch) · E], T = (0.144 along the aim, 0.396 up) the trunnion, E = (−0.40 along the barrels, +0.55 up); x, y on the ground, z from the Citadel's ground (level: 0.256 back, 9.946) | the gun's camera (game), riding the cradle: the barrels stay in frame from −20° to +50°; it looks along the aim and pitch |
 | `clampAim(i, aim)` | | the aim held in the arc at its hard stops (no wrap) |
 
 Manning: `RequestMessage::Man { int8_t gun; }` (protocol 36, index 23; `gun`

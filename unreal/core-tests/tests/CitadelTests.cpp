@@ -105,11 +105,13 @@ TEST(footprint_citadelHallIsHollow) {
         EXPECT_EQ(f.door->z1, 3.0);
         EXPECT_EQ(Defence::cornerGun({0, 0}, 0), Vec2(5.5, 5.5));
         EXPECT_EQ(Defence::gunStation({10, 10}, 2), Vec2(6, 6));
-        // The gun's eye over the corner tower's mount, a little back along the aim.
+        // The gun's eye rides the cradle: level, it stands 0.256 back along
+        // the aim and 0.946 over the mount's top.
         const Vec3 eye = Defence::gunEye({0, 0}, 0, 0);
-        EXPECT_NEAR(eye.x, 5.1, 1e-12);
+        EXPECT_NEAR(eye.x, 5.5 - 0.256, 1e-12);
         EXPECT_NEAR(eye.y, 5.5, 1e-12);
-        EXPECT_NEAR(eye.z, 10.2, 1e-12);
+        EXPECT_NEAR(eye.z, Defence::mountHeight() + 0.946, 1e-12);
+        EXPECT_EQ(Defence::mountHeight(), 9.0);
         EXPECT_EQ(Rules::height(StructureKind::citadel), 12.3);
         // Every other kind is its whole square, no hall.
         const Footprint& d = Rules::footprint(StructureKind::derrick);
@@ -498,4 +500,34 @@ TEST(pilot_unloadsInTheHallAndAtItsWalls) {
     const Unit fresh = h.sim.spawnProspector(structureOf(h.sim, h.citadel));
     EXPECT_NEAR(distance(fresh.position, kAt), 6.5, 1e-9);
     EXPECT_TRUE(!h.sim.sheltered(fresh));
+}
+
+TEST(gun_eyeRidesTheCradle) {
+    const CitadelHall on(true);
+    // At level, the lowest and the highest pitch, at any yaw of the arc:
+    // the eye stays over the mount's top and behind the barrels (0.40 back
+    // from the trunnion along them, 0.55 over them).
+    const Vec2 at{30, -10};
+    for (int i = 0; i < 4; i++) {
+        const Vec2 mount = Defence::cornerGun(at, i);
+        for (const double off : {-Defence::gunArcHalf, 0.0, 0.7, Defence::gunArcHalf}) {
+            const double aim = Defence::cornerAngle(i) + off;
+            const Vec2 f(std::cos(aim), std::sin(aim));
+            for (const double pitch : {0.0, Defence::gunPitchMin, Defence::gunPitchMax}) {
+                const Vec3 e = Defence::gunEye(at, i, aim, pitch);
+                EXPECT_TRUE(e.z > Defence::mountHeight());
+                // On the line of the aim, seen from above.
+                const Vec2 d = Vec2(e.x, e.y) - mount;
+                EXPECT_NEAR(d.x * f.y - d.y * f.x, 0.0, 1e-12);
+                // In the cradle's frame: behind the trunnion along the barrels, over them.
+                const double along = dot(d, f) - Defence::trunnionAlong;
+                const double up = e.z - Defence::mountHeight() - Defence::trunnionUp;
+                const double back = along * std::cos(pitch) + up * std::sin(pitch);
+                const double over = -along * std::sin(pitch) + up * std::cos(pitch);
+                EXPECT_NEAR(back, Defence::eyeAlong, 1e-12);
+                EXPECT_NEAR(over, Defence::eyeUp, 1e-12);
+                EXPECT_TRUE(back < 0);
+            }
+        }
+    }
 }

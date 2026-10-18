@@ -23,9 +23,14 @@ Vec2 Defence::gunStation(Vec2 citadel, int i) {
     return {citadel.x + sx * stationInset(), citadel.y + sy * stationInset()};
 }
 
-Vec3 Defence::gunEye(Vec2 citadel, int i, double aim) {
-    const Vec2 m = cornerGun(citadel, i) - Vec2(std::cos(aim), std::sin(aim)) * 0.4;
-    return {m.x, m.y, mountHeight() + 1.2};
+Vec3 Defence::gunEye(Vec2 citadel, int i, double aim, double pitch) {
+    // In the gun's own plane (along the aim, up), the eye turned by the pitch
+    // about the trunnion.
+    const double c = std::cos(pitch), s = std::sin(pitch);
+    const double along = trunnionAlong + eyeAlong * c - eyeUp * s;
+    const double up = trunnionUp + eyeAlong * s + eyeUp * c;
+    const Vec2 m = cornerGun(citadel, i) + Vec2(std::cos(aim), std::sin(aim)) * along;
+    return {m.x, m.y, mountHeight() + up};
 }
 
 double Defence::clampAim(int i, double aim) {
