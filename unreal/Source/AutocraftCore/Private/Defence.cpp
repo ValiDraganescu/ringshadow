@@ -24,8 +24,8 @@ Vec2 Defence::gunStation(Vec2 citadel, int i) {
 }
 
 Vec3 Defence::gunEye(Vec2 citadel, int i, double aim) {
-    const Vec2 m = cornerGun(citadel, i) - Vec2(std::cos(aim), std::sin(aim)) * 0.6;
-    return {m.x, m.y, mountHeight() + 0.9};
+    const Vec2 m = cornerGun(citadel, i) - Vec2(std::cos(aim), std::sin(aim)) * 0.4;
+    return {m.x, m.y, mountHeight() + 1.2};
 }
 
 double Defence::clampAim(int i, double aim) {

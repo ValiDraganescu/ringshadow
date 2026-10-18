@@ -79,7 +79,8 @@ double Rules::radius(StructureKind k) {
 double Rules::height(StructureKind k) {
     // GameScene.makeBuilding (GameScene.swift:363); Models.labHeight 1.9.
     switch (k) {
-    case StructureKind::citadel: return citadelHall() ? 9.0 : 4.6;
+    // The hall's: the central tower's beacon top (c1-model, citadel.py).
+    case StructureKind::citadel: return citadelHall() ? 12.3 : 4.6;
     case StructureKind::habDome: return 1.2;
     case StructureKind::garrison: return 2.5;
     case StructureKind::bastion: return 1.4;

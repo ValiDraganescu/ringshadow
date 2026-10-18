@@ -105,6 +105,12 @@ TEST(footprint_citadelHallIsHollow) {
         EXPECT_EQ(f.door->z1, 3.0);
         EXPECT_EQ(Defence::cornerGun({0, 0}, 0), Vec2(5.5, 5.5));
         EXPECT_EQ(Defence::gunStation({10, 10}, 2), Vec2(6, 6));
+        // The gun's eye over the corner tower's mount, a little back along the aim.
+        const Vec3 eye = Defence::gunEye({0, 0}, 0, 0);
+        EXPECT_NEAR(eye.x, 5.1, 1e-12);
+        EXPECT_NEAR(eye.y, 5.5, 1e-12);
+        EXPECT_NEAR(eye.z, 10.2, 1e-12);
+        EXPECT_EQ(Rules::height(StructureKind::citadel), 12.3);
         // Every other kind is its whole square, no hall.
         const Footprint& d = Rules::footprint(StructureKind::derrick);
         EXPECT_TRUE(d.blocks({0, 0}, true, 0) && !d.door && !d.inside({0, 0}));

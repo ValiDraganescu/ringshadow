@@ -25,16 +25,16 @@ The units stay as they are (one cell is 1 m, `AcSpace.h`; a Prospector is
 | Walls | solid block | 1.0 cell thick, the hall inside 10×10 |
 | Hall height (floor to ceiling) | – | 6.0 cells |
 | Roof slab | – | 6.0 to 7.0; the roof deck at 7.0 carries the four turret pylons |
-| Body height, `BuildingHeight(citadel)` (`AcPose.cpp`) | 4.6 | 9.0 (deck 7.0, the pylons and the old tower, dish and beacon above) |
+| Body height, `BuildingHeight(citadel)` (`AcPose.cpp`) = `Rules::height` | 4.6 | 12.3 (deck 7.0, the corner towers' mounts at 9.0, crowns 8.3-8.7, the central tower's beacon top 12.3) |
 | Doorway | – | the +y face, x in [-1.5, 1.5], 3.0 wide, 3.0 tall |
-| Corner guns, `Defence::cornerInset` | 2.0 | 5.5 (the mounts at (±5.5, ±5.5), radius 0.5, on the deck at z 7.0) |
+| Corner guns, `Defence::cornerInset()` | 2.0 | 5.5 (the mounts at (±5.5, ±5.5), radius 0.5, on the corner towers at z 9.0, `Defence::mountHeight()`) |
 
 The hall is the MMO's: `Rules::setCitadelHall(bool)` / `citadelHall()`
 switch it for the whole process (an atomic, read on every region's
 thread). The MMO's start and the server turn it on, the strategy game's
 start turns it off (its maps, AI layouts and Swift goldens are built round
 the solid 5x5 Citadel); every game start sets it, both ways. `Rules::radius`,
-`Rules::footprint`, `Rules::height` (the body height, 9.0 / 4.6, which
+`Rules::footprint`, `Rules::height` (the body height, 12.3 / 4.6, which
 `BuildingHeight` reads), `Defence::cornerInset()` (5.5 / 2.0) and
 `Defence::stationInset()`, `Defence::mountHeight()` (9.0 / 4.6) and
 `Rules::depositRange()` (the edge + 0.5: 6.5 / 3.0) all read it, so nothing
@@ -187,7 +187,7 @@ Constants (`Defence.h`):
 | `gunStation(citadel, i)` | `position + (±4.0, ±4.0)` in corner i's quadrant | where the gunner stands, in the hall |
 | `stationReach` | 1.5 | a pilot within it of the station mans the gun |
 | `mountHeight()` | 9.0 (4.6 without the hall) | the turret base's z on the corner towers (the deck stays `deckHeight` 7.0) |
-| `gunEye(citadel, i, aim)` | the mount 0.6 back along the aim, z `mountHeight + 0.9` | the gun's camera (game) |
+| `gunEye(citadel, i, aim)` | the mount 0.4 back along the aim, z `mountHeight + 1.2` (10.2) | the gun's camera (game): over the housing, the barrels in view |
 | `clampAim(i, aim)` | | the aim held in the arc at its hard stops (no wrap) |
 
 Manning: `RequestMessage::Man { int8_t gun; }` (protocol 36, index 23; `gun`

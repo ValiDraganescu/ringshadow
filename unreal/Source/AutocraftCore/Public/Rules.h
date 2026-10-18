@@ -390,9 +390,10 @@ struct AUTOCRAFTCORE_API Rules {
     static double radius(StructureKind k);
     /// Its solid parts: walls, the door, the hall, the roof (C1).
     static const Footprint& footprint(StructureKind k);
-    /// How tall its body stands, cells (the game's model and pose; a hall
-    /// Citadel's deck is at `Defence::deckHeight`, its pylons, tower, dish
-    /// and beacon above).
+    /// How tall its body stands, cells, its highest point (the game's model
+    /// and pose; a hall Citadel's deck is at `Defence::deckHeight` 7, its
+    /// corner towers' mounts at `Defence::mountHeight` 9, the central tower's
+    /// beacon at 12.3).
     static double height(StructureKind k);
     /// A Citadel's door runs from shut to open (and back) in this long.
     static constexpr double doorSeconds = 2.5;
