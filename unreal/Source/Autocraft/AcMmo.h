@@ -211,6 +211,11 @@ public:
 	/// paid from the wallet; the scaffold comes with the snapshots. False:
 	/// not connected. The server's refusals: `TakeBuildRefusals`.
 	bool Build(ac::StructureKind Kind, ac::Vec2 At);
+	/// C2: learn the building `Kind` from a blueprint copy held (the Learn
+	/// request). Refused: a note as a build's (`TakeBuildRefusals`); done:
+	/// the kind in `TakeLearned` (the wheel's toast).
+	bool Learn(ac::StructureKind Kind);
+	TArray<ac::StructureKind> TakeLearned();
 	/// The server's reasons for builds refused since the last call ("Not
 	/// enough ore"), for the pilot's screen as the game's own refusals.
 	TArray<FString> TakeBuildRefusals();
@@ -609,6 +614,9 @@ private:
 	/// Builds asked for (request ids), and the refusals not taken yet.
 	TSet<uint32> BuildsAsked;
 	TArray<FString> BuildRefusals;
+	/// C2: learns asked for (request id → kind), and the kinds learned not taken yet.
+	TMap<uint32, ac::StructureKind> LearnsAsked;
+	TArray<ac::StructureKind> Learned;
 	/// Picks asked for (request ids), the last refusal, the ones kept.
 	TSet<uint32> PicksAsked;
 	FString LastPickRefusal;

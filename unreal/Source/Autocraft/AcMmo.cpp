@@ -268,6 +268,8 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	Asked.Reset();
 	BuildsAsked.Reset();
 	BuildRefusals.Reset();
+	LearnsAsked.Reset();
+	Learned.Reset();
 	PicksAsked.Reset();
 	LastPickRefusal.Reset();
 	PicksDone = 0;
@@ -887,6 +889,15 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (ac::StructureKind Kind; LearnsAsked.RemoveAndCopyValue(R.request, Kind))
+		{
+			if (R.done) Learned.Add(Kind);
+			else BuildRefusals.Add(Text(R.reason));
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: learn %u %s%s"), R.request, R.done ? TEXT("done") : TEXT("refused: "),
+				R.done ? TEXT("") : *Text(R.reason));
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (PicksAsked.Remove(R.request) > 0)
 		{
 			if (R.done)
@@ -1067,6 +1078,20 @@ bool FAcMmoClient::Build(const ac::StructureKind Kind, const ac::Vec2 At)
 	BuildsAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: build %u asked: %s at %.2f,%.2f"), Id, *Text(std::string(ac::rawValue(Kind))), At.x, At.y);
 	return true;
+}
+
+bool FAcMmoClient::Learn(const ac::StructureKind Kind)
+{
+	if (!Net || !Net->welcome()) return false;
+	const uint32 Id = Net->learn(Kind);
+	LearnsAsked.Add(Id, Kind);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: learn %u asked: %s"), Id, *Text(std::string(ac::rawValue(Kind))));
+	return true;
+}
+
+TArray<ac::StructureKind> FAcMmoClient::TakeLearned()
+{
+	return MoveTemp(Learned);
 }
 
 TArray<FString> FAcMmoClient::TakeBuildRefusals()

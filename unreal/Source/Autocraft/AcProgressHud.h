@@ -199,10 +199,13 @@ struct AUTOCRAFT_API AcProgressHud
 	/// "blueprint not found · level 15", "level 15". No progress yet: the
 	/// world's first two (`net::kWorldBuildKinds`) only.
 	static FString BlueprintRefusal(const FAcMmoClient* Mmo, ac::StructureKind Kind);
-	/// That refusal in a word or two: "NO BLUEPRINT", "LV 15", "REALM LIMIT".
-	/// Blueprint copies of `Kind` the pilot holds (C2; 0: none or not known).
+	/// Blueprint copies of `Kind` the pilot holds, not learned from yet (C2;
+	/// 0: none or not known).
 	static int64 Copies(const FAcMmoClient* Mmo, ac::StructureKind Kind);
+	/// That refusal in a word or two: "LEARN", "NO BLUEPRINT", "LV 15", "REALM LIMIT".
 	static FString BlueprintTag(const FAcMmoClient* Mmo, ac::StructureKind Kind);
+	/// C2: the pilot holds a copy of `Kind` it has not learned (the wheel's LEARN).
+	static bool CanLearn(const FAcMmoClient* Mmo, ac::StructureKind Kind);
 	/// Who built building `Id` of the pilot's region (R1): "you", another
 	/// pilot's callsign ("Pilot 045B"), or empty when not told.
 	static FString BuiltBy(const FAcMmoClient* Mmo, int64 Id);

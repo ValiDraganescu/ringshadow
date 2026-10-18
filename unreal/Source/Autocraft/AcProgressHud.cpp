@@ -534,9 +534,20 @@ FString AcProgressHud::BlueprintTag(const FAcMmoClient* Mmo, const ac::Structure
 {
 	const std::optional<ac::ProspectorProgress> G = Mmo ? Progress(*Mmo) : std::nullopt;
 	if (!G || BlueprintRefusal(Mmo, Kind).IsEmpty()) return FString();
-	if (G->copies(Kind) <= 0) return TEXT("NO BLUEPRINT");
-	if (G->level() < G->floor(Kind)) return FString::Printf(TEXT("LV %lld"), (long long)G->floor(Kind));
+	// C2: a blueprint is learned once; a free kind (the Target Dummy) only
+	// meets its limit.
+	if (!ac::Rules::freeBuild(Kind))
+	{
+		if (!G->knows(Kind)) return G->copies(Kind) > 0 ? TEXT("LEARN") : TEXT("NO BLUEPRINT");
+		if (G->level() < G->floor(Kind)) return FString::Printf(TEXT("LV %lld"), (long long)G->floor(Kind));
+	}
 	return TEXT("REALM LIMIT");
+}
+
+bool AcProgressHud::CanLearn(const FAcMmoClient* Mmo, const ac::StructureKind Kind)
+{
+	const std::optional<ac::ProspectorProgress> G = Mmo ? Progress(*Mmo) : std::nullopt;
+	return G && !G->learnRefusal(Kind);
 }
 
 TOptional<SAcProgressHud::FBoss> AcProgressHud::Boss(const FAcMmoClient& Mmo)
@@ -581,6 +592,7 @@ std::optional<ac::ProspectorProgress> AcProgressHud::Progress(const FAcMmoClient
 	G.ranks = P->ranks;
 	G.slots = P->slots;
 	G.blueprints = P->blueprints;
+	G.learned = P->learned;
 	G.sites = P->sitesFound;
 	G.rig = P->rig;
 	return G;

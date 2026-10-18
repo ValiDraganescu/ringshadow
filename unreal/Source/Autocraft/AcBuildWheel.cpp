@@ -46,7 +46,14 @@ TArray<FAcWheelSlice> FAcBuildWheel::Slices(const ac::Simulation& Sim, const FAc
 		// The blueprint first (none, under its floor, the realm's limit),
 		// then the core's own refusal (the price short, a Hab Dome needed).
 		const FString Lock = bMmo ? AcProgressHud::BlueprintRefusal(Mmo, K) : FString();
-		if (!Lock.IsEmpty())
+		if (!Lock.IsEmpty() && AcProgressHud::CanLearn(Mmo, K))
+		{
+			S.State = FAcWheelSlice::EState::Learn;
+			S.Why = Lock;
+			const int64 N = AcProgressHud::Copies(Mmo, K);
+			S.Tag = FString::Printf(TEXT("LEARN  ·  ×%lld %s"), (long long)N, N == 1 ? TEXT("COPY") : TEXT("COPIES"));
+		}
+		else if (!Lock.IsEmpty())
 		{
 			S.State = FAcWheelSlice::EState::Locked;
 			S.Why = Lock;
@@ -61,24 +68,7 @@ TArray<FAcWheelSlice> FAcBuildWheel::Slices(const ac::Simulation& Sim, const FAc
 			if (Me.hydrogen < S.Hydrogen) Short.Add(FString::Printf(TEXT("%d MH"), S.Hydrogen));
 			S.Tag = Short.IsEmpty() ? S.Why.ToUpper() : TEXT("NEEDS ") + FString::Join(Short, TEXT(" AND "));
 		}
-		else if (bMmo)
-		{
-			const int64 N = AcProgressHud::Copies(Mmo, K);
-			S.Tag = FString::Printf(TEXT("×%lld %s"), (long long)N, N == 1 ? TEXT("COPY") : TEXT("COPIES"));
-		}
 		Out.Add(S);
-	}
-	// The Target Dummy last (no number key), until the core has the kind.
-	if (bMmo)
-	{
-		FAcWheelSlice D;
-		D.Title = TEXT("TARGET DUMMY");
-		D.Icon = TEXT("act.strike");
-		D.Ore = 10;
-		D.State = FAcWheelSlice::EState::Soon;
-		D.Tag = TEXT("SOON");
-		D.Why = TEXT("The Target Dummy comes soon");
-		Out.Add(D);
 	}
 	return Out;
 }

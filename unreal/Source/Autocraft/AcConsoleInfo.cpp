@@ -44,7 +44,7 @@ FString FAcConsoleInfo::IconName(const int32 UnitKind)
 FString FAcConsoleInfo::StructureIconName(const int32 StructureKind)
 {
 	static const TCHAR* Names[] = {TEXT("citadel"), TEXT("habdome"), TEXT("garrison"), TEXT("bastion"), TEXT("derrick"),
-		TEXT("foundry"), TEXT("spacedock"), TEXT("lab"), TEXT("sentinel"), TEXT("gatling"), TEXT("landingpad")};
+		TEXT("foundry"), TEXT("spacedock"), TEXT("lab"), TEXT("sentinel"), TEXT("gatling"), TEXT("landingpad"), TEXT("act.strike")};
 	return StructureKind >= 0 && StructureKind < (int32)UE_ARRAY_COUNT(Names) ? Names[StructureKind] : TEXT("");
 }
 

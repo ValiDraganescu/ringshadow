@@ -592,10 +592,13 @@ void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FAcRect& Glass) const
 	{
 		const FAcWheelSlice& S = Wh.Slices[I];
 		const bool bPick = I == Wh.Pick, bBuild = S.State == FAcWheelSlice::EState::Build;
+		const bool bLearn = S.State == FAcWheelSlice::EState::Learn;
 		const double Mid = FAcBuildWheel::SliceAngle(I, N), Push = bPick ? 10 : 0;
 		const double R0 = In + Push, R1 = Out + Push, A0 = Mid - Half + Gap, A1 = Mid + Half - Gap;
-		const FLinearColor Fill = bPick ? (bBuild ? Srgb(0.08, 0.32, 0.42, 0.88) : Srgb(0.30, 0.18, 0.04, 0.88))
-			: bBuild ? Srgb(0.05, 0.13, 0.19, 0.80) : Srgb(0.03, 0.05, 0.07, 0.72);
+		// Buildable cyan, a blueprint to learn gold, locked dark (amber when picked).
+		const FLinearColor Fill = bPick ? (bBuild ? Srgb(0.08, 0.32, 0.42, 0.88) : bLearn ? Srgb(0.36, 0.27, 0.05, 0.90)
+														   : Srgb(0.30, 0.18, 0.04, 0.88))
+			: bBuild ? Srgb(0.05, 0.13, 0.19, 0.80) : bLearn ? Srgb(0.16, 0.12, 0.04, 0.80) : Srgb(0.03, 0.05, 0.07, 0.72);
 		// The annular wedge in convex quads.
 		const int32 Steps = FMath::Max(2, int32((A1 - A0) / 0.06));
 		TArray<FVector2D> Rim;
@@ -605,15 +608,16 @@ void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FAcRect& Glass) const
 			if (K < Steps) P.Poly({C + Dir(A) * R0, C + Dir(A) * R1, C + Dir(B) * R1, C + Dir(B) * R0}, Fill);
 			Rim.Add(C + Dir(A) * R1);
 		}
-		const FLinearColor Edge = bPick ? (bBuild ? FAcHudStyle::Cyan() : BlockedColor()) : Alpha(PanelStroke(), 0.7);
+		const FLinearColor Edge = bPick ? (bBuild ? FAcHudStyle::Cyan() : bLearn ? FAcHudStyle::LevelGold() : BlockedColor())
+										: Alpha(PanelStroke(), 0.7);
 		P.Lines(Rim, Edge, bPick ? 3 : 1.2, bPick ? 6 : 0);
 		// Its icon and number key.
 		const FVector2D Ic = C + Dir(Mid) * ((R0 + R1) / 2 + 6);
 		const double Is = bPick ? 54 : 44;
-		const float Dim = bBuild ? 1.f : 0.38f;
+		const float Dim = bBuild ? 1.f : bLearn ? 0.75f : 0.38f;
 		if (const FSlateBrush* B = FAcIcons::Brush(S.Icon))
 		{
-			P.Image(B, FAcRect(Ic.X - Is / 2, Ic.Y - Is / 2, Is, Is), FLinearColor(Dim, Dim, Dim, bBuild ? 1.f : 0.7f));
+			P.Image(B, FAcRect(Ic.X - Is / 2, Ic.Y - Is / 2, Is, Is), FLinearColor(Dim, Dim, Dim, bBuild || bLearn ? 1.f : 0.7f));
 		}
 		else
 		{
@@ -621,9 +625,10 @@ void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FAcRect& Glass) const
 		}
 		const FVector2D Nk = C + Dir(Mid) * (R0 + 14);
 		if (S.Number > 0) P.Label(FString::FromInt(S.Number), 12, White(0.75, 0.8), Nk, EAcHAlign::Center, EAcVAlign::Center, false, false);
-		if (S.State == FAcWheelSlice::EState::Soon)
+		if (bLearn)
 		{
-			P.Label(TEXT("SOON"), 11, White(0.6, 0.8), C + Dir(Mid) * (R1 - 14), EAcHAlign::Center, EAcVAlign::Center, false, false);
+			P.Label(TEXT("LEARN"), 11, FAcHudStyle::LevelGold(), C + Dir(Mid) * (R1 - 14), EAcHAlign::Center, EAcVAlign::Center, false,
+				false);
 		}
 	}
 	// The hub.
@@ -640,7 +645,9 @@ void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FAcRect& Glass) const
 		P.Label(Cost, 13, Srgb(0.78, 0.66, 1), C + FVector2D(0, -4), EAcHAlign::Center, EAcVAlign::Baseline, true, false);
 		if (!S.Tag.IsEmpty())
 		{
-			P.Label(S.Tag, 12, bBuild ? FAcHudStyle::Cyan() : BlockedColor(), C + FVector2D(0, -22), EAcHAlign::Center,
+			const FLinearColor Tone = bBuild ? FAcHudStyle::Cyan()
+				: S.State == FAcWheelSlice::EState::Learn ? FAcHudStyle::LevelGold() : BlockedColor();
+			P.Label(S.Tag, 12, Tone, C + FVector2D(0, -22), EAcHAlign::Center,
 				EAcVAlign::Baseline, true, false);
 		}
 	}
@@ -658,12 +665,13 @@ void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FAcRect& Glass) const
 		P.Lines({C + D * (In - 8), C + D * (In - 8 + 10 * Lean + 2)}, Tone, 3, 3, true);
 	}
 	// A locked pick's reason in full ("This region has its Citadel: one a region").
-	if (Wh.Pick >= 0 && Wh.Pick < N && Wh.Slices[Wh.Pick].State != FAcWheelSlice::EState::Build && !Wh.Slices[Wh.Pick].Why.IsEmpty())
+	if (Wh.Pick >= 0 && Wh.Pick < N && Wh.Slices[Wh.Pick].State == FAcWheelSlice::EState::Locked && !Wh.Slices[Wh.Pick].Why.IsEmpty())
 	{
 		P.Label(Wh.Slices[Wh.Pick].Why, 15, BlockedColor(), C - FVector2D(0, Out + 40), EAcHAlign::Center, EAcVAlign::Baseline, true,
 			false);
 	}
-	P.Label(TEXT("CLICK BUILDS  ·  B OR ESC CLOSES  ·  NUMBER KEYS PICK"), 12, White(0.8, 0.9), C - FVector2D(0, Out + 60),
+	const bool bLearnPick = Wh.Pick >= 0 && Wh.Pick < N && Wh.Slices[Wh.Pick].State == FAcWheelSlice::EState::Learn;
+	P.Label(bLearnPick ? TEXT("CLICK LEARNS THE BLUEPRINT  ·  B OR ESC CLOSES") : TEXT("CLICK BUILDS  ·  B OR ESC CLOSES  ·  NUMBER KEYS PICK"), 12, White(0.8, 0.9), C - FVector2D(0, Out + 60),
 		EAcHAlign::Center, EAcVAlign::Baseline, true, false);
 }
 

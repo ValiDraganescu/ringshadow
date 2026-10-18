@@ -69,6 +69,7 @@ namespace AcLifeBars
 		case ac::StructureKind::habDome:
 		case ac::StructureKind::sentinel:
 		case ac::StructureKind::gatling: return 1.0;
+		case ac::StructureKind::dummy: return ac::Rules::radius(Kind);
 		default: return 1.5;
 		}
 	}

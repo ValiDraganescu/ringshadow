@@ -1619,22 +1619,22 @@ void UAcGameFlowSubsystem::TickCitadelScreen()
 			Info.Hydrogen = St.players[ac::Pilot::player].hydrogen;
 		}
 	}
-	// C2, the shop: every blueprint (copies held, the next copy's price, its
-	// floor) and the four consumables (stacks, prices, keys in the field).
+	// C2, the shop: every blueprint (known, or a copy held to learn, the
+	// price: each sold once at its first copy's, its floor) and the four
+	// consumables (stacks, prices, keys in the field).
 	if (const ac::net::ProgressMessage* P = Mmo->Progress())
 	{
 		const std::optional<ac::ProspectorProgress> G = AcProgressHud::Progress(*Mmo);
-		ac::ProspectorProgress Bought;
-		Bought.bought = P->bought;
 		for (const ac::StructureKind K : ac::Progression::blueprintKinds())
 		{
 			FAcShopLine X;
 			X.Name = UTF8_TO_TCHAR(ac::Simulation::title(K).c_str());
 			const auto Held = P->blueprints.find(K);
 			X.Held = Held == P->blueprints.end() ? 0 : Held->second;
-			const ac::ShopPrice Price = Bought.blueprintPrice(K);
+			const ac::ShopPrice Price = ac::Shop::blueprintPrice(K, 0);
 			X.Ore = Price.ore;
 			X.Hydrogen = Price.hydrogen;
+			X.bKnown = P->learned.count(K) > 0;
 			if (G && G->level() < G->floor(K)) X.OpensAt = G->floor(K);
 			Info.Blueprints.Add(X);
 		}

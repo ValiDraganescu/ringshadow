@@ -98,6 +98,7 @@ namespace AcPose
 		case ac::StructureKind::sentinel: return TEXT("sentinel");
 		case ac::StructureKind::gatling: return TEXT("gatling");
 		case ac::StructureKind::landingPad: return TEXT("landingPad");
+		case ac::StructureKind::dummy: return TEXT("dummy");
 		}
 		return TEXT("citadel");
 	}
@@ -120,6 +121,8 @@ namespace AcPose
 		case ac::StructureKind::sentinel: return 1.7;
 		case ac::StructureKind::gatling: return 1.3;
 		case ac::StructureKind::landingPad: return 0.18;
+		// C2: the Target Dummy, its post and plate (the core's height).
+		case ac::StructureKind::dummy: return ac::Rules::height(Kind);
 		}
 		return 2.0;
 	}

@@ -146,7 +146,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		Check(!Slices.IsEmpty(), TEXT("practice: the wheel has slices"));
 		for (int32 I = 0; I < Slices.Num() && Practice.Slice == INDEX_NONE; ++I)
 		{
-			if (Slices[I].State == FAcWheelSlice::EState::Build && Slices[I].Kind) Practice.Slice = I;
+			if (Slices[I].State == FAcWheelSlice::EState::Build) Practice.Slice = I;
 		}
 		Check(Practice.Slice != INDEX_NONE, TEXT("practice: a slice the rig's pilot may build"));
 		if (Practice.Slice == INDEX_NONE)
@@ -184,7 +184,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 	case 4:
 	{
 		// A click: the kind held out, the wheel gone.
-		const TOptional<ac::StructureKind> Want = Build->WheelSlices()[Practice.Slice].Kind;
+		const ac::StructureKind Want = Build->WheelSlices()[Practice.Slice].Kind;
 		Pilot->Press(true);
 		Pilot->Press(false);
 		Check(!Build->MenuOpen() && Build->Placing() == Want, TEXT("practice: a click holds the picked kind out to place"));

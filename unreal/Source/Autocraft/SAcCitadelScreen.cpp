@@ -227,6 +227,9 @@ FString SAcCitadelScreen::BuyWhyNot(const bool bItem, const int32 Index) const
 	if (!Lines.IsValidIndex(Index)) return TEXT("Nothing there");
 	if (!Info.ShopWhyNot.IsEmpty()) return Info.ShopWhyNot;
 	const FAcShopLine& X = Lines[Index];
+	// C2: a blueprint is learned once; the shop sells it once.
+	if (!bItem && X.bKnown) return FString::Printf(TEXT("You know the %s"), *X.Name);
+	if (!bItem && X.Held > 0) return FString::Printf(TEXT("You hold a %s blueprint: learn it on the build wheel (B)"), *X.Name);
 	if (X.Stack > 0 && X.Held >= X.Stack) return FString::Printf(TEXT("%s: you hold %lld, the most"), *X.Name, (long long)X.Stack);
 	if (X.Ore > Info.Ore) return FString::Printf(TEXT("Not enough ore: %s, you have %s"), *Grouped(X.Ore), *Grouped(Info.Ore));
 	if (X.Hydrogen > Info.Hydrogen) return FString::Printf(TEXT("Not enough MH: %s, you have %s"), *Grouped(X.Hydrogen), *Grouped(Info.Hydrogen));
@@ -1144,7 +1147,8 @@ void SAcCitadelScreen::PaintShop(FSlateWindowElementList& Out, const int32 L, co
 		return Targets.FindByPredicate([&](const FTarget& T) { return T.Row == Row && T.Index == Index; });
 	};
 
-	// Blueprints: every building's, the copies held, the floor, the next copy's price.
+	// Blueprints: every building's, KNOWN or the copy held to learn, the
+	// floor, the price (C2: each sold once).
 	const FBox2f B = BlueprintBox;
 	Plate(B, TEXT("BLUEPRINTS"));
 	Label(FString::Printf(TEXT("YOUR WALLET   ORE %s  ·  MH %s"), *Grouped(Info.Ore), *Grouped(Info.Hydrogen)), 12, FAcHudStyle::Soft(),
@@ -1159,9 +1163,10 @@ void SAcCitadelScreen::PaintShop(FSlateWindowElementList& Out, const int32 L, co
 			.Paint(Out, L + 2, P, FVector2f(B.Min.X + 18, Mid));
 		Label(X.Name, 16, FAcHudStyle::Text(), EAcHAlign::Left, EAcVAlign::Center, EAcFontWeight::Bold)
 			.Paint(Out, L + 2, P, FVector2f(B.Min.X + 34, Mid));
-		Label(FString::Printf(TEXT("×%lld"), (long long)X.Held), 16, X.Held > 0 ? Ready() : Faint(), EAcHAlign::Left, EAcVAlign::Center,
-			EAcFontWeight::Bold).Paint(Out, L + 2, P, FVector2f(B.Min.X + 180, Mid));
-		if (X.OpensAt > 0)
+		const FString Tag = X.bKnown ? FString(TEXT("KNOWN")) : X.Held > 0 ? FString(TEXT("LEARN (B)")) : FString(TEXT("—"));
+		Label(Tag, X.bKnown || X.Held > 0 ? 14 : 16, X.bKnown ? Ready() : X.Held > 0 ? FAcHudStyle::LevelGold() : Faint(), EAcHAlign::Left,
+			EAcVAlign::Center, EAcFontWeight::Bold).Paint(Out, L + 2, P, FVector2f(B.Min.X + 180, Mid));
+		if (X.OpensAt > 0 && !X.bKnown)
 		{
 			Label(FString::Printf(TEXT("opens at level %lld"), (long long)X.OpensAt), 13, FAcHudStyle::Amber(), EAcHAlign::Left, EAcVAlign::Center,
 				EAcFontWeight::SemiBold).Paint(Out, L + 2, P, FVector2f(B.Min.X + 230, Mid));
@@ -1443,7 +1448,7 @@ void SAcCitadelScreen::PaintFoot(FSlateWindowElementList& Out, const int32 L, co
 	}
 	else if (CurrentTab == ETab::Shop)
 	{
-		State = TEXT("Paid from your own wallet, no tax. A blueprint builds once; each copy costs more.");
+		State = TEXT("Paid from your own wallet, no tax. A blueprint is learned once (B, LEARN); then the building costs only its ore.");
 	}
 	else if (!MercAsked.IsEmpty())
 	{

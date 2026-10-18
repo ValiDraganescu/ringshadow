@@ -4,7 +4,8 @@
 // the mouse's motion since B moves a virtual stick, and past a dead zone the
 // slice under the stick's direction is the pick, drawn lit with its name,
 // its cost and its state. A click (or letting go of a B held over 0.25 s)
-// confirms; Esc or B closes; the number keys still pick.
+// confirms (a kind with a blueprint not learned yet: learns it, the wheel
+// open); Esc or B closes; the number keys still pick.
 //
 // `FAcBuildWheel` is the stick and the sectors (no engine, tested by
 // Autocraft.Hud.BuildWheelPicksBySector); `Slices` reads what each kind's
@@ -27,13 +28,13 @@ struct FAcWheelSlice
 	{
 		/// Picked, it goes to placement.
 		Build,
-		/// Not yet: it shows why (`State`) and does nothing.
+		/// Not yet: it shows why (`Tag`, `Why`) and does nothing.
 		Locked,
-		/// A kind the game does not have yet (shown, never picked).
-		Soon,
+		/// A blueprint copy held and not learned: picked, it asks to learn
+		/// the kind and the wheel stays open (C2 §4).
+		Learn,
 	};
-	/// Unset: a placeholder slice (`Soon`).
-	TOptional<ac::StructureKind> Kind;
+	ac::StructureKind Kind = ac::StructureKind::citadel;
 	/// Its number key (1…9), 0: none.
 	int32 Number = 0;
 	FString Title;
@@ -42,7 +43,7 @@ struct FAcWheelSlice
 	int32 Ore = 0;
 	int32 Hydrogen = 0;
 	EState State = EState::Build;
-	/// Under the name: "×2 COPIES", "NO BLUEPRINT", "LV 8", "REALM LIMIT",
+	/// Under the name: "LEARN", "NO BLUEPRINT", "LV 8", "REALM LIMIT",
 	/// "NEEDS 100 ORE"; empty: nothing to say.
 	FString Tag;
 	/// The refusal in full, for the note a locked pick shows.
@@ -87,7 +88,7 @@ struct AUTOCRAFT_API FAcBuildWheel
 	FVector2D Stick = FVector2D::ZeroVector;
 
 	/// The wheel's slices for the driven pilot: the buildings of the build
-	/// menu (`AcPilotText::BuildKinds`) and the Target Dummy, each with its
+	/// menu (`AcPilotText::BuildKinds`, the Target Dummy last), each with its
 	/// price and what stands in its way.
 	static TArray<FAcWheelSlice> Slices(const ac::Simulation& Sim, const FAcMmoClient* Mmo, bool bMmo);
 };

@@ -158,6 +158,7 @@ namespace
 		case ac::StructureKind::lab:
 		case ac::StructureKind::sentinel:
 		case ac::StructureKind::gatling: return 1.0;
+		case ac::StructureKind::dummy: return ac::Rules::radius(K);
 		default: return 1.5;
 		}
 	}

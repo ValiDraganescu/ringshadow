@@ -81,6 +81,8 @@ struct FAcShopLine
 	int64 OpensAt = 0;
 	/// A consumable's key in the field ("1").
 	FString Key;
+	/// C2: a blueprint the pilot has learned (the shop sells each once).
+	bool bKnown = false;
 
 	bool operator==(const FAcShopLine&) const = default;
 };

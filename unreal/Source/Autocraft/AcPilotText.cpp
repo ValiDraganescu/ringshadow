@@ -332,7 +332,12 @@ TArray<ac::StructureKind> AcPilotText::BuildKinds(const bool bMmo)
 	// The MMORPG mode: every blueprint's building, in a fixed order; those the
 	// pilot lacks or is under the floor of greyed (`AcProgressHud::BlueprintRefusal`).
 	TArray<ac::StructureKind> Out;
-	if (bMmo) for (const ac::StructureKind K : ac::Progression::blueprintKinds()) Out.Add(K);
+	// C2: the Target Dummy last (free: no blueprint, no number key).
+	if (bMmo)
+	{
+		for (const ac::StructureKind K : ac::Progression::blueprintKinds()) Out.Add(K);
+		Out.Add(ac::StructureKind::dummy);
+	}
 	else for (const ac::StructureKind K : ac::PilotBuild::kinds) Out.Add(K);
 	return Out;
 }

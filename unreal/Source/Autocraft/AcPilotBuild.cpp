@@ -2,6 +2,7 @@
 
 #include "AcConsoleInfo.h"
 #include "AcHologram.h"
+#include "AcHudStyle.h"
 #include "AcIcons.h"
 #include "AcLog.h"
 #include "AcMmo.h"
@@ -212,6 +213,13 @@ void UAcPilotBuildSubsystem::Choose(const ac::StructureKind Kind)
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	if (!Sim || !Sim->IsRunning()) return;
+	// C2: a blueprint held and not learned: learn it, the wheel open on it
+	// to build once the server says so ("DERRICK LEARNED", `OnFrame`).
+	if (FAcMmoClient* Mmo = Sim->MmoClient(); Mmo && AcProgressHud::CanLearn(Mmo, Kind))
+	{
+		if (!Mmo->Learn(Kind)) Note(TEXT("Not connected to the local server"));
+		return;
+	}
 	if (const FString Lock = Sim->IsMmo() ? AcProgressHud::BlueprintRefusal(Sim->MmoClient(), Kind) : FString(); !Lock.IsEmpty())
 	{
 		Note(Lock);
@@ -237,8 +245,8 @@ void UAcPilotBuildSubsystem::Confirm()
 	if (I == INDEX_NONE) return;
 	const FAcWheelSlice& S = Slices[I];
 	UE_LOG(LogAutocraft, Log, TEXT("pilot build: wheel confirms %s (%s)"), *S.Title, *S.Tag);
-	if (S.State == FAcWheelSlice::EState::Build && S.Kind) Choose(*S.Kind);
-	else if (!S.Why.IsEmpty()) Note(S.Why);
+	if (S.State == FAcWheelSlice::EState::Locked) Note(S.Why);
+	else Choose(S.Kind);
 }
 
 void UAcPilotBuildSubsystem::Refresh()
@@ -288,6 +296,17 @@ void UAcPilotBuildSubsystem::OnFrame(const FAcFrame& Frame)
 	if (FAcMmoClient* Mmo = Sim->MmoClient())
 	{
 		for (const FString& Why : Mmo->TakeBuildRefusals()) Note(Why);
+		// C2: a blueprint learned: the toast.
+		for (const ac::StructureKind K : Mmo->TakeLearned())
+		{
+			const FString Name = AcPilotText::Title(K).ToUpper();
+			if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && Hud->Widget())
+			{
+				Hud->Widget()->Toast(Name + TEXT(" LEARNED"), FString::Printf(TEXT("Built for its ore from now on  ·  B to build")),
+					FAcHudStyle::LevelGold(), FPlatformTime::Seconds());
+			}
+			UE_LOG(LogAutocraft, Log, TEXT("pilot build: %s learned"), *Name);
+		}
 	}
 	ac::Simulation& S = Sim->Simulation();
 	const std::optional<ac::Unit> U = Pawn && Pawn->Driving() ? S.pilotUnit() : std::nullopt;

@@ -172,9 +172,10 @@
 //
 // -AcMmoShotsC2 (it adds -AcMmoDevRig: the realm's Citadel to stand at and a
 // full wallet): the Citadel shop (docs/mmorpg-m8.md C2), DIR/c2-NN-moment.png:
-//   01 the SHOP tab after buying a Hab Dome blueprint and a shield charge
-//      (and a repair kit): copies, prices up, stacks, the foot's "Bought"
-//   02 the build menu (B): every blueprint with its copies (×N)
+//   01 the SHOP tab after buying a blueprint the pilot neither knows nor
+//      holds (none when it knows them all) and a shield charge (and a
+//      repair kit): KNOWN and LEARN tags, stacks, the foot's "Bought"
+//   02 the build wheel (B): every blueprint, the bought one to LEARN
 //   03 the shield charge used in the field (key 3): its stack lit and
 //      counting down by the Q/C/G slots
 //
@@ -585,7 +586,9 @@ namespace
 	/// the copies before, the items used before.
 	int64 C2Hydrogen = 0;
 	ac::ShopPrice C2Price;
-	int64 C2Copies = 0;
+	/// -AcMmoShotsC2: the blueprint bought (one the pilot neither knows nor
+	/// holds; unset: it knows them all, nothing to buy).
+	TOptional<ac::StructureKind> C2Kind;
 	int32 C2Used = 0;
 	/// -AcMmoShotsK2: the offer taken (its index on the board, its number and
 	/// template), and the Citadel's kept asks before it.
@@ -4013,16 +4016,30 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Check(I.ShopWhyNot.IsEmpty(), TEXT("c2: the shop sells here"));
 		Shots.OreBefore = Ore;
 		C2Hydrogen = Hydrogen;
-		C2Price = ac::Shop::blueprintPrice(ac::StructureKind::habDome, P->bought.count(ac::StructureKind::habDome) ? P->bought.at(ac::StructureKind::habDome) : 0);
-		const auto Copies = P->blueprints.find(ac::StructureKind::habDome);
-		C2Copies = Copies == P->blueprints.end() ? 0 : Copies->second;
-		// The Hab Dome's blueprint (its key on the SHOP tab: its line's
-		// number, which moves as blueprints join), a repair kit, a shield charge.
+		// C2 (docs/guns-and-practice.md §4): the shop sells each blueprint
+		// once, at its first copy's price, and none the pilot knows or holds.
+		C2Kind.Reset();
+		const TArray<ac::StructureKind> Kinds(ac::Progression::blueprintKinds().data(), int32(ac::Progression::blueprintKinds().size()));
+		for (int32 X = 0; X < Kinds.Num() && !C2Kind; ++X)
+			if (!P->learned.count(Kinds[X]) && !P->blueprints.count(Kinds[X])) C2Kind = Kinds[X];
+		for (int32 X = 0; X < Kinds.Num(); ++X)
+		{
+			if (!P->learned.count(Kinds[X])) continue;
+			Check(I.Blueprints[X].bKnown && W->BuyWhyNot(false, X).StartsWith(TEXT("You know the")),
+				FString::Printf(TEXT("c2: the shop won't sell a known %s (\"%s\")"), *I.Blueprints[X].Name, *W->BuyWhyNot(false, X)));
+			break;
+		}
+		C2Price = C2Kind ? ac::Shop::blueprintPrice(*C2Kind, 0) : ac::ShopPrice();
+		// That blueprint (its key on the SHOP tab: its line's number), a
+		// repair kit, a shield charge.
 		static const FKey Digits[] = {EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight};
-		int32 Dome = INDEX_NONE;
-		for (int32 X = 0; X < W->GetInfo().Blueprints.Num() && X < 8; ++X)
-			if (W->GetInfo().Blueprints[X].Name == TEXT("Hab Dome")) Dome = X;
-		Check(Dome != INDEX_NONE && W->Key(Digits[Dome]), FString::Printf(TEXT("c2: key %d buys a Hab Dome blueprint"), Dome + 1));
+		if (C2Kind)
+		{
+			const int32 Line = Kinds.IndexOfByKey(*C2Kind);
+			if (Line < 8) Check(W->Key(Digits[Line]), FString::Printf(TEXT("c2: key %d buys a %s blueprint"), Line + 1, *I.Blueprints[Line].Name));
+			else W->Buy(false, Line);
+		}
+		else UE_LOG(LogAutocraft, Display, TEXT("flowtest: c2: the pilot knows every blueprint: none bought"));
 		Mmo->BuyItem(ac::Item::repairKit);
 		W->Buy(true, int32(ac::Item::shieldCharge));
 		Advance();
@@ -4032,8 +4049,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	{
 		const ac::net::ProgressMessage* P = Mmo->Progress();
 		auto Has = [&](ac::Item I) { return P && P->items.count(I) && P->items.at(I) > 0; };
-		if (P && Has(ac::Item::repairKit) && Has(ac::Item::shieldCharge) && P->blueprints.count(ac::StructureKind::habDome)
-			&& P->blueprints.at(ac::StructureKind::habDome) == C2Copies + 1 && Mmo->CitadelKept() >= 3 && Since() > 1.0)
+		const bool bBlueprint = !C2Kind || (P && P->blueprints.count(*C2Kind) && P->blueprints.at(*C2Kind) == 1);
+		if (P && Has(ac::Item::repairKit) && Has(ac::Item::shieldCharge) && bBlueprint && Mmo->CitadelKept() >= (C2Kind ? 3 : 2)
+			&& Since() > 1.0)
 		{
 			const ac::ItemInfo& Kit = ac::Shop::item(ac::Item::repairKit);
 			const ac::ItemInfo& Shield = ac::Shop::item(ac::Item::shieldCharge);
@@ -4041,9 +4059,13 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				FString::Printf(TEXT("c2: the wallet paid in ore: %lld -> %lld"), (long long)Shots.OreBefore, (long long)Ore));
 			Check(Hydrogen == C2Hydrogen - C2Price.hydrogen - Kit.hydrogen - Shield.hydrogen,
 				FString::Printf(TEXT("c2: the wallet paid in MH: %lld -> %lld"), (long long)C2Hydrogen, (long long)Hydrogen));
-			const ac::ShopPrice Next = ac::Shop::blueprintPrice(ac::StructureKind::habDome, P->bought.at(ac::StructureKind::habDome));
-			Check(Next.ore > C2Price.ore, FString::Printf(TEXT("c2: the next Hab Dome copy costs more: %lld -> %lld ore"), (long long)C2Price.ore,
-				(long long)Next.ore));
+			if (const TSharedPtr<SAcCitadelScreen> W = CitadelScreenWidget(); W && C2Kind)
+			{
+				const auto& Kinds = ac::Progression::blueprintKinds();
+				const int32 Line = int32(std::find(Kinds.begin(), Kinds.end(), *C2Kind) - Kinds.begin());
+				Check(W->BuyWhyNot(false, Line).StartsWith(TEXT("You hold a")),
+					FString::Printf(TEXT("c2: the shop won't sell a second copy (\"%s\")"), *W->BuyWhyNot(false, Line)));
+			}
 			Check(CitadelScreenWidget() && !CitadelScreenWidget()->KeptText().IsEmpty(), TEXT("c2: the foot says what was bought"));
 			Shoot(TEXT("c2-01-shop"), TEXT("the SHOP tab after buying a Hab Dome blueprint, a repair kit and a shield charge"));
 			return;
@@ -4062,13 +4084,16 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		CloseCitadelScreen();
 		UAcPilotBuildSubsystem* Build = UAcPilotBuildSubsystem::Get(this);
 		Check(Build && Build->Key(TEXT("b")) && Build->MenuOpen(), TEXT("c2: B opens the build menu"));
-		Check(AcProgressHud::Copies(Mmo, ac::StructureKind::habDome) == C2Copies + 1,
-			FString::Printf(TEXT("c2: the build menu counts %lld Hab Dome copies"), (long long)AcProgressHud::Copies(Mmo, ac::StructureKind::habDome)));
+		if (C2Kind)
+		{
+			Check(AcProgressHud::CanLearn(Mmo, *C2Kind),
+				FString::Printf(TEXT("c2: the wheel offers the bought %s to learn"), *AcPilotText::Title(*C2Kind)));
+		}
 		Advance();
 		return;
 	}
 	case 1104:
-		if (Since() > 1.0) Shoot(TEXT("c2-02-build-menu"), TEXT("the build menu: every blueprint with its copies"));
+		if (Since() > 1.0) Shoot(TEXT("c2-02-build-menu"), TEXT("the build wheel: every blueprint, the bought one to LEARN"));
 		return;
 	case 1105:
 	{

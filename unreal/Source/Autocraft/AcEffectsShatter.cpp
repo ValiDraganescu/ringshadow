@@ -60,6 +60,7 @@ namespace AcEffectsShatter
 		case ac::StructureKind::habDome:
 		case ac::StructureKind::sentinel:
 		case ac::StructureKind::gatling: S.Radius = 1; break;
+		case ac::StructureKind::dummy: S.Radius = ac::Rules::radius(Kind); break;
 		default: S.Radius = 1.5; break;
 		}
 		S.Chunks = int32(10 + S.Radius * 7);
