@@ -235,7 +235,7 @@ TEST(snapshot_fog_never_shows_hidden_enemies) {
         }
         sawNear = sawNear || has(s, near);
         for (const PatchView& p : s.patches) EXPECT_TRUE(r.simulation().sees(0, p.patch.position));
-        ASSERT_TRUE(s.fog.has_value());
+        ASSERT_TRUE(s.fog != nullptr);
         EXPECT_EQ(s.fog->seen.size(), r.simulation().sights[0].seen.size());
         // The other side's money is not told.
         EXPECT_EQ(s.players[1].ore, Player().ore);
@@ -245,6 +245,38 @@ TEST(snapshot_fog_never_shows_hidden_enemies) {
     // Its death far away is not told either; ours is.
     EXPECT_TRUE(!mayKnow(r.simulation(), 0, GameEvent::Died{far, Unit::Kind::ranger, 1, citadelOf(sim, 1)}));
     EXPECT_TRUE(mayKnow(r.simulation(), 0, GameEvent::Died{123456, Unit::Kind::ranger, 0, citadelOf(sim, 1)}));
+}
+
+// docs/perf.md "Server" round 13: the side's fog is made once a look and
+// shared by its snapshots. Two snapshots between looks share one; one held
+// across the next look still reads the fog it had, byte for byte, while the
+// next is the fog the look left.
+TEST(snapshot_fog_held_across_a_look_keeps_its_fog) {
+    Region r(scene(false, true));
+    r.join(me);
+    Simulation& sim = r.simulation();
+    const int64_t id = firstProspector(sim, 0);
+    ASSERT_TRUE(r.take(me, id));
+    for (int k = 0; k < 12; ++k) r.step();
+    const Snapshot held = r.snapshot(me);
+    ASSERT_TRUE(held.fog != nullptr);
+    const Snapshot twin = r.snapshot(me);
+    EXPECT_TRUE(twin.fog.get() == held.fog.get());
+    const std::vector<uint8_t> seen = held.fog->seen, near = held.fog->near;
+    const std::vector<uint64_t> explored = held.fog->explored;
+    // The unit carried across the map, and a look there.
+    Unit* u = &sim.state.units[*sim.unitIndex(id)];
+    u->position = citadelOf(sim, 1) + Vec2(-6, 0);
+    const uint64_t look = sim.lookId;
+    for (int k = 0; k < 12 && sim.lookId == look; ++k) r.step();
+    ASSERT_TRUE(sim.lookId != look);
+    const Snapshot next = r.snapshot(me);
+    ASSERT_TRUE(next.fog != nullptr);
+    EXPECT_TRUE(next.fog.get() != held.fog.get());
+    EXPECT_TRUE(held.fog->seen == seen && held.fog->near == near && held.fog->explored == explored);
+    EXPECT_TRUE(next.fog->seen == sim.sights[0].seen && next.fog->near == sim.sights[0].near);
+    EXPECT_TRUE(next.fog->explored == (*sim.state.intel)[0].explored);
+    EXPECT_TRUE(next.fog->seen != seen);
 }
 
 TEST(snapshot_enemy_plans_left_out) {

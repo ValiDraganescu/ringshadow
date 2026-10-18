@@ -9,6 +9,7 @@
 #include "TerrainField.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -510,6 +511,8 @@ void Simulation::lookNow() {
 
 /// Work out what every player sees, and update what each knows.
 void Simulation::look() {
+    static std::atomic<uint64_t> looks{0};
+    lookId = ++looks;
     if (!vision) { sights.clear(); return; }
     // What each knows, taken (not copied) and put back at the end: nothing
     // in between reads `state.intel`.

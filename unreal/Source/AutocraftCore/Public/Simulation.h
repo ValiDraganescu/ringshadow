@@ -74,6 +74,11 @@ public:
     std::optional<Vision> vision;
     std::vector<Sight> sights;
     double nextLook = 0.0;
+    /// The last look's number, one no other look in the process had: the
+    /// sights and what each knows are as that look left them while it holds
+    /// (a world region shares one copy of a side's fog between its pilots'
+    /// snapshots until the next).
+    uint64_t lookId = 0;
     std::optional<MapDefinition> map;
     /// Base site index of each patch (all 0 without a map; a patch put
     /// down in the playground gets its own, `placePatch`).

@@ -387,7 +387,7 @@ TEST(snapshot_round_trips_every_item) {
         if ((i / 53) % 2) fog.explored[i / 64] |= uint64_t(1) << (i % 64);
     }
     fog.sites = {-std::numeric_limits<double>::infinity(), 3.25, 7.5};
-    s.fog = fog;
+    s.fog = std::make_shared<const FogView>(fog);
 
     SnapshotWriter w;
     SnapshotReader r;
@@ -408,7 +408,7 @@ TEST(snapshot_round_trips_every_item) {
         for (const EntityState& e : p.snapshot.entities) got[e.id()] = e;
         removed.insert(removed.end(), p.snapshot.removed.begin(), p.snapshot.removed.end());
         if (!p.snapshot.players.empty()) players = p.snapshot.players;
-        if (p.snapshot.fog) fogGot = p.snapshot.fog;
+        if (p.snapshot.fog) fogGot = *p.snapshot.fog;
         patches.insert(patches.end(), p.snapshot.patches.begin(), p.snapshot.patches.end());
         wells.insert(wells.end(), p.snapshot.wells.begin(), p.snapshot.wells.end());
     }
@@ -870,7 +870,7 @@ TEST(mirror_takes_snapshots_into_its_simulation) {
     fog.near.assign(cells, 0);
     fog.explored.assign((cells + 63) / 64, 0);
     fog.seen[7] = 1;
-    s.fog = fog;
+    s.fog = std::make_shared<const FogView>(fog);
     SnapshotWriter w;
     SnapshotReader r;
     Sky sky;
@@ -1118,19 +1118,19 @@ TEST(protocol_fog_chunks_of_any_bytes_and_sizes_round_trip) {
                 for (auto& w : fog.explored) w = dice.random(0, 2) ? 0 : ~uint64_t(0) << dice.random(0, 64);
             };
             shuffle();
-            s.fog = fog;
+            s.fog = std::make_shared<const FogView>(fog);
             SnapshotWriter w;
             SnapshotReader r;
             // A snapshot whose fog did not change carries none: the last stands.
             std::optional<FogView> got;
             for (int round = 0; round < 3; round++) {
                 for (const SnapshotPart& p : roundTrip(w, r, s, 1.0 + round))
-                    if (p.snapshot.fog) got = p.snapshot.fog;
+                    if (p.snapshot.fog) got = *p.snapshot.fog;
                 ASSERT_TRUE(got.has_value());
                 EXPECT_TRUE(*got == quantised(fog));
                 // Some cells change: the next is a delta.
                 for (size_t k = 0; k < 40; k++) fog.seen[size_t(dice.random(0, int64_t(cells)))] ^= 1;
-                s.fog = fog;
+                s.fog = std::make_shared<const FogView>(fog);
             }
             // Another region's fog, through the same writer: no chunk is
             // taken for the last one's (perf.md round 5 keeps built chunks).
@@ -1138,9 +1138,9 @@ TEST(protocol_fog_chunks_of_any_bytes_and_sizes_round_trip) {
             fog.near.resize(fog.near.size() + 1500);
             fog.explored.resize((fog.seen.size() + 63) / 64);
             shuffle();
-            s.fog = fog;
+            s.fog = std::make_shared<const FogView>(fog);
             for (const SnapshotPart& p : roundTrip(w, r, s, 9.0))
-                if (p.snapshot.fog) got = p.snapshot.fog;
+                if (p.snapshot.fog) got = *p.snapshot.fog;
             ASSERT_TRUE(got.has_value());
             EXPECT_TRUE(*got == quantised(fog));
         }

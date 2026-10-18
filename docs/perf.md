@@ -634,3 +634,33 @@ Measured, not changed: the snapshot's build per pilot (3-5 µs) is 70% the
 copy of the region's fog into it (two 55 KB arrays and a large allocation
 a snapshot); sharing them would change `net::Snapshot`'s type, which the
 client reads too.
+
+### Round 13: a side's fog shared between its snapshots (2026-10-18)
+
+The manager's go-ahead, with its conditions: a snapshot never changes once
+made, the wire stays the same, and the client changes only as far as the
+type forces it (it forced nothing: the client reads the fog through
+`NetMirror`, whose `s.fog->seen` reads the same).
+
+`net::Snapshot::fog` is a `shared_ptr<const FogView>`. A region makes its
+side's fog once a look (`Simulation::lookId`, a number no other look in the
+process had; only a look changes the sights and what the side knows) as a
+fresh copy, and every snapshot of that side's pilots until the next look
+shares it: a snapshot held across a look keeps the fog it had. The writer
+holds the fog it last built its chunks from; given that very fog again
+(every other snapshot, a look being every 0.1 s and a snapshot every
+0.05 s), it takes the chunks as built without comparing them. Test
+`snapshot_fog_held_across_a_look_keeps_its_fog`: two snapshots between
+looks share one fog; one held across the next look reads its fog byte for
+byte; the next carries the fog the look left.
+
+| 3 runs each in turns, load 19 | before µs | after µs |
+|---|---:|---:|
+| `crowdbench`: 1 pilot, snapshot / writing / tick | 3.2 / 7.8-8.0 / 8.5-8.8 | 1.7-1.9 / 6.4-6.6 / 7.4-7.7 |
+| 4 pilots | 3.6 / 9.1-9.2 / 24.3-24.5 | 1.2 / 7.6-7.7 / 18.9-19.4 |
+| 16 pilots | 4.7-4.8 / 15.0-15.1 / 122.6-124.2 | 2.1 / 13.6-13.7 / 101.5-102.5 |
+| `snapbench`: start, noon, snapshot / writing | 3.0-3.2 / 7.1-7.5 | 1.7-1.8 / 6.0 |
+| nest, noon | 6.4-6.6 / 12.1-12.5 | 5.4-5.6 / 11.4-11.6 |
+
+The wire is the same (`snapbench`'s four hashes, `crowdbench`'s three), and
+the simulation too (`worldbench`'s and `crowdbench`'s state hashes).

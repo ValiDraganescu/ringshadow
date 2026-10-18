@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <deque>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -261,6 +262,13 @@ private:
     /// The map's own deposits; those after them (a starfall's, told to
     /// every pilot) go to every pilot here, seen or not.
     size_t ownPatches_ = 0;
+    /// Each side's fog as its pilots' snapshots carry it, and the look it
+    /// is of (`Simulation::lookId`): one copy between two looks, shared.
+    struct FogShare {
+        uint64_t look = 0;
+        std::shared_ptr<const FogView> fog;
+    };
+    std::map<int64_t, FogShare> fogShares_;
 
     Vec2 focus(const Seat& seat, int64_t side) const;
     /// The seat drives the simulation's pilot now.

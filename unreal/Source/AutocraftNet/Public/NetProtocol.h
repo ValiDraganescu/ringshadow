@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -343,8 +344,9 @@ struct Snapshot {
     std::vector<Player> players;
     std::vector<PatchView> patches;
     std::vector<WellView> wells;
-    /// Nil: a region without fog.
-    std::optional<FogView> fog;
+    /// Nil: a region without fog. Shared, never changed once made: a region
+    /// gives its side's pilots one between two looks.
+    std::shared_ptr<const FogView> fog;
     /// What happened since the pilot's last snapshot that its side may know.
     std::vector<GameEvent> events;
     /// The world's clock and weather (nil: a region of no world, M1: the

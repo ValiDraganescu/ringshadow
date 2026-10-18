@@ -389,7 +389,7 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
     }
     Opt<Fixed>{kMs}.write(w, s.xp);
     writeVarint(w, s.players.size());
-    w.writeBool(s.fog.has_value());
+    w.writeBool(s.fog != nullptr);
     if (s.fog) {
         writeVarint(w, cells);
         writeVarint(w, sites);
@@ -507,14 +507,19 @@ struct SnapshotWriter::State {
         std::vector<uint64_t> explored;
     };
     std::vector<FogBuilt> fogBuilt;
+    /// The fog the chunks were last built from: the very same (shared, so
+    /// it cannot have changed nor its place been taken) builds them all the
+    /// same.
+    std::shared_ptr<const FogView> fogFrom;
     /// An item's bits as `canonInto` writes them, before it is known to
     /// differ from its baseline.
     ItemBits scratch;
     Canon canonScratch;
 
-    std::shared_ptr<const ItemBits> fogChunkOf(const FogView& f, size_t chunk) {
+    std::shared_ptr<const ItemBits> fogChunkOf(const FogView& f, size_t chunk, bool same) {
         if (fogBuilt.size() <= chunk) fogBuilt.resize(chunk + 1);
         FogBuilt& b = fogBuilt[chunk];
+        if (same && b.bits) return b.bits;
         const size_t from = chunk * kFogChunkCells, to = std::min(f.seen.size(), from + kFogChunkCells);
         auto stretch = [](const auto& v, size_t lo, size_t hi) {
             return std::make_pair(v.begin() + std::ptrdiff_t(std::min(lo, v.size())), v.begin() + std::ptrdiff_t(std::min(hi, v.size())));
@@ -688,10 +693,12 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
     for (const WellView& v : snap.wells) canonItem(Kind::well, uint64_t(v.index), v.well);
     if (snap.fog) {
         const size_t chunks = (cells + kFogChunkCells - 1) / kFogChunkCells;
+        const bool same = st.fogFrom == snap.fog;
         for (size_t c = 0; c < chunks; c++) {
-            const std::shared_ptr<const ItemBits> b = st.fogChunkOf(*snap.fog, c);
+            const std::shared_ptr<const ItemBits> b = st.fogChunkOf(*snap.fog, c, same);
             consider(Kind::fogChunk, c, *b, b);
         }
+        st.fogFrom = snap.fog;
         for (size_t i = 0; i < sites; i++) canonItem(Kind::site, i, SiteTime{snap.fog->sites[i]});
     }
     for (const EntityState& e : snap.entities)
@@ -1066,7 +1073,7 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
     }
     if (!r.ok()) return std::nullopt;
     if (playersChanged) s.players = st.players(size_t(playerCount));
-    if (fogChanged) s.fog = st.fogNow;
+    if (fogChanged) s.fog = std::make_shared<const FogView>(st.fogNow);
 
     // The parts read, newest snapshots first.
     auto it = std::find_if(st.received.begin(), st.received.end(),

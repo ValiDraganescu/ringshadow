@@ -178,14 +178,22 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
         for (size_t i = 0; i < s.wells->size(); ++i)
             if (sim_.sees(me, (*s.wells)[i].position)) out.wells.push_back(WellView{static_cast<int64_t>(i), (*s.wells)[i]});
     if (sim_.vision && me < static_cast<int64_t>(sim_.sights.size())) {
-        FogView fog;
-        fog.seen = sim_.sights[static_cast<size_t>(me)].seen;
-        fog.near = sim_.sights[static_cast<size_t>(me)].near;
-        if (s.intel && me < static_cast<int64_t>(s.intel->size())) {
-            fog.explored = (*s.intel)[static_cast<size_t>(me)].explored;
-            fog.sites = (*s.intel)[static_cast<size_t>(me)].sites;
+        // The side's fog as the last look left it (only a look changes the
+        // sights and what the side knows): made once a look, a fresh copy,
+        // so a snapshot made before keeps the fog it had.
+        FogShare& share = fogShares_[me];
+        if (!share.fog || share.look != sim_.lookId) {
+            auto fog = std::make_shared<FogView>();
+            fog->seen = sim_.sights[static_cast<size_t>(me)].seen;
+            fog->near = sim_.sights[static_cast<size_t>(me)].near;
+            if (s.intel && me < static_cast<int64_t>(s.intel->size())) {
+                fog->explored = (*s.intel)[static_cast<size_t>(me)].explored;
+                fog->sites = (*s.intel)[static_cast<size_t>(me)].sites;
+            }
+            share.fog = std::move(fog);
+            share.look = sim_.lookId;
         }
-        out.fog = std::move(fog);
+        out.fog = share.fog;
     }
     out.events = std::move(seat.events);
     seat.events.clear();
