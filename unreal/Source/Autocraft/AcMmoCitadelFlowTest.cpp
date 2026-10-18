@@ -13,9 +13,9 @@
 //             the feed heats); Esc disengages; opens the door again and walks
 //             out (no longer sheltered). Every move through the real act key,
 //             the move keys and the mouse's yaw, the Door and Man requests.
-//             With -AcMmoShots=DIR -AcMmoShotsC1: a PNG at the door shut
-//             (c1-door-shut.png) and open (c1-door-open.png), in the hall
-//             (c1-hall.png) and at the gun (c1-feed.png).
+//             With -AcMmoShots=DIR -AcMmoShotsC1: a PNG of the door shut
+//             (c1-door-shut.png) and open (c1-door-open.png) from 7 cells
+//             out, in the hall (c1-hall.png) and at the gun (c1-feed.png).
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmocitadel
@@ -190,28 +190,35 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		Pilot->Press(false);
 		Hall.bPressed = true;
 	};
-	const ac::Vec2 Doorstep(0, 7.0), InsideDoor(0, 3.8);
+	const ac::Vec2 Doorstep(0, 7.0), InsideDoor(0, 3.8), Apron(0, 13.0);
+	const bool bPictures = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1"));
+	auto Pictures = [bPictures] { return bPictures; };
+	auto FaceDoor = [&] {
+		const ac::Vec2 D = C->position + ac::Vec2(0, 5.0) - U->position;
+		Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x));
+	};
 	switch (T.Phase)
 	{
 	case 2:
-		// The door shut, a picture of it, then to the doorstep.
-		// Pictures: facing the door, the new Citadel and the ground streamed in first.
-		if (!Hall.bShot && FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) && Since() < 10.0)
+		// The door shut, a picture of it from out on the field, then to the doorstep.
+		if (!Hall.bShot && Pictures())
 		{
-			const ac::Vec2 D = C->position + ac::Vec2(0, 5.5) - U->position;
-			Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x));
-			return;
+			// A few cells before the apron (the open ramp reaches 3 out),
+			// facing the door; the new Citadel and the ground streamed in.
+			if (!WalkTo(Apron, 0.5)) return;
+			FaceDoor();
+			if (!Settle(10.0)) return;
 		}
 		if (!Hall.bShot)
 		{
 			Check(C->door->open == 0 && !C->door->opening, FString::Printf(TEXT("Citadel #%lld put down, its door shut"), (long long)C->id));
+			Hall.bShot = true;
+			Hall.Settled = -1;
 			if (Picture(TEXT("c1-door-shut")))
 			{
-				Hall.bShot = true;
 				T.PhaseAt = Now;
 				return;
 			}
-			Hall.bShot = true;
 		}
 		if (Since() < 1.0) return;
 		if (WalkTo(Doorstep, 0.6) && Settle(0.6))
@@ -226,8 +233,21 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		if (!Hall.bPressed) Press();
 		if (S->doorOpen(*C))
 		{
-			Check(Mmo->HallRefusal().IsEmpty(), TEXT("the door opened on the act key"));
-			Picture(TEXT("c1-door-open"));
+			if (!Hall.bShot)
+			{
+				Check(Mmo->HallRefusal().IsEmpty(), TEXT("the door opened on the act key"));
+				Hall.bShot = true;
+				Hall.Settled = -1;
+			}
+			// The picture from where the shut one was: the ramp down, the
+			// hall through the opening.
+			if (Pictures())
+			{
+				if (!WalkTo(Apron, 0.5)) return;
+				FaceDoor();
+				if (!Settle(1.5)) return;
+				Picture(TEXT("c1-door-open"));
+			}
 			Advance();
 		}
 		else Waited(FString::Printf(TEXT("the door open (%.2f, %s)"), C->door->open, *Mmo->HallRefusal()), AskSeconds);

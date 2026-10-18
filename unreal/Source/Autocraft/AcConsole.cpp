@@ -205,6 +205,13 @@ bool UAcConsoleSubsystem::Attach()
 	return true;
 }
 
+void UAcConsoleSubsystem::SetDashboardHidden(const bool bHidden)
+{
+	if (!ConsoleWidget || bHidden == bDashboardHidden) return;
+	bDashboardHidden = bHidden;
+	ConsoleWidget->SetVisibility(bHidden ? EVisibility::Collapsed : EVisibility::Visible);
+}
+
 void UAcConsoleSubsystem::UpdateMinimapSize(const UAcSimSubsystem& Sim)
 {
 	if (!ConsoleWidget) return;

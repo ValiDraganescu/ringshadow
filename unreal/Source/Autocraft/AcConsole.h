@@ -76,6 +76,9 @@ public:
 	/// The cockpit's info (E-chunks): while set, the console shows this
 	/// instead of the selection.
 	void SetPilotInfo(TOptional<FAcCardInfo> Info) { PilotInfo = MoveTemp(Info); }
+	/// C1: at a corner gun the dashboard is down (the gun's feed has the
+	/// lower frame, its barrels; docs/citadel-interior.md section 7).
+	void SetDashboardHidden(bool bHidden);
 
 private:
 	void OnFrame(const FAcFrame& Frame);
@@ -98,4 +101,5 @@ private:
 	EAcConsoleStyle LookStyle = EAcConsoleStyle::Rts;
 	EAcCabLamps LookLamps = EAcCabLamps::Idle;
 	bool bLookViewFrame = true;
+	bool bDashboardHidden = false;
 };

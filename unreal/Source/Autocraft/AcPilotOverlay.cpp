@@ -205,6 +205,8 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	// A pad flight (AcPilotFlight.h): the HUD comes back at the touch down.
 	if (!F || F->Unit.id != Pawn->Driven() || Pawn->PulledOut() || Pawn->InFlight())
 	{
+		// (Off a gun the dashboard is up again, C1.)
+		if (UAcConsoleSubsystem* Console = UAcConsoleSubsystem::Get(this)) Console->SetDashboardHidden(false);
 		if (DrivenId != INDEX_NONE)
 		{
 			DrivenId = INDEX_NONE;
@@ -353,7 +355,8 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 			const double Low = FMath::Max(L.Brow[0].Y, L.Brow[3].Y);
 			View = FAcRect(0, Low, L.Size.X, L.Size.Y - Low);
 		}
-		Widget->SetView(View);
+		// C1: at a corner gun the dashboard is down; the feed has the whole view.
+		Widget->SetView(Pawn->AtGun() != INDEX_NONE ? FAcRect() : View);
 		Widget->Show(Info, Now);
 	}
 
@@ -363,6 +366,7 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 		// frame round the view only from behind.
 		Console->SetLook(Info.bCab ? EAcConsoleStyle::Cab : EAcConsoleStyle::Cockpit, Info.Lamps, Info.bThirdPerson);
 		Console->SetPilotInfo(Info.Console);
+		Console->SetDashboardHidden(Pawn->AtGun() != INDEX_NONE);
 	}
 	Shown = MoveTemp(Info);
 }

@@ -307,6 +307,15 @@ As built (the game):
   them (as the pose does): six pips over the last 1.5 s against the
   weapon's rate flat out, and a cooldown bar under them. A short pitch
   scale stands right of the arc gauge. Slate paint only.
+- At a gun the dashboard is down (`UAcConsoleSubsystem::SetDashboardHidden`:
+  the minimap, the unit's panel; the skill slots and item stacks are not
+  drawn); the top bars, the compass, the wallet and the step card stay. In
+  its place a slim strip at the bottom edge: the unit's hit points and
+  "Click · FIRE   Esc · DISENGAGE". The arc gauge and the heat sit lower
+  left, the gun's name, marks and LIVE at the top; the lower middle stays
+  clear down to the strip, where the gun's barrels and muzzle ring show
+  (at the game's 62-degree view a little lower in the frame than the
+  model's renders).
 - Pose numbers: `gunScreens_k` 1.9 lit / 0.04 dark (exported 0.04),
   `hallLamps_k` (`hallGlow`) 1.0 / 0.05 under construction, `doorPanels_k`
   (`panelGlow`) 1.0 on the pilot's side while in reach (the pawn sets

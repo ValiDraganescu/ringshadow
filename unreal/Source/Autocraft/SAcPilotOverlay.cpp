@@ -608,10 +608,29 @@ void SAcPilotOverlay::PaintFeed(FAcPilotPen& P, const double W, const double H, 
 			true, false);
 	}
 
-	// The arc gauge: the gun's 220 degrees as a band (the hull's 140 below
-	// it dark), the hard stops in red, the aim as a needle.
+	// At the bottom edge a slim strip (the dashboard is down at a gun): the
+	// unit's hit points and the keys. The lower middle of the frame stays
+	// clear down to it: the gun's barrels and muzzle ring are there.
+	const double StripH = 40;
+	P.Fill(FAcRect(R.MinX(), R.MinY(), R.W, StripH), Srgb(0.01, 0.03, 0.05, 0.78));
+	P.Fill(FAcRect(R.MinX(), R.MinY() + StripH - 1, R.W, 1), Edge);
+	const double HpF = FMath::Clamp(Info.Hp / FMath::Max(Info.MaxHp, 1.0), 0.0, 1.0);
+	const FAcRect HpBar(R.MinX() + In + 14, R.MinY() + 14, 200, 12);
+	P.Plate(HpBar, 2, FLinearColor(0, 0, 0, 0.5f), PanelStroke(), 1);
+	P.Fill(FAcRect(HpBar.MinX(), HpBar.MinY(), HpBar.W * HpF, HpBar.H), HpF > 0.5 ? Srgb(0.3, 0.9, 0.4) : HpF > 0.25 ? BlockedColor() : EnemyColor());
+	P.Label(FString::Printf(TEXT("%s  %lld / %lld"), *Info.Name, (long long)FMath::RoundToDouble(Info.Hp), (long long)Info.MaxHp), 13, White(0.9),
+		FVector2D(HpBar.MaxX() + 12, HpBar.MinY() + 1), EAcHAlign::Left, EAcVAlign::Baseline, true, false);
+	P.Label(TEXT("Click · FIRE      Esc · DISENGAGE"), 15, White(0.95), FVector2D(R.MaxX() - In - 14, R.MinY() + 14), EAcHAlign::Right,
+		EAcVAlign::Baseline, true, false);
+
+	// The arc gauge, lower left beside the heat: the gun's 220 degrees as a
+	// band (the hull's 140 below it dark), the hard stops in red, the aim as
+	// a needle.
 	const double Rad = 58;
-	const FVector2D G(R.MinX() + R.W / 2, R.MinY() + In + 34 + Rad * 0.35);
+	const double PipW = 9, PipH = 16, Gap = 4;
+	const double BarW = FAcTurretFeed::HeatPips * (PipW + Gap) - Gap;
+	const double PipsX = R.MinX() + In + 14;
+	const FVector2D G(PipsX + BarW + 40 + Rad, R.MinY() + StripH + 26 + Rad);
 	auto Arc = [&](const double From, const double To, const double Radius)
 	{
 		TArray<FVector2D> A;
@@ -644,19 +663,13 @@ void SAcPilotOverlay::PaintFeed(FAcPilotPen& P, const double W, const double H, 
 	const double PitchY = FMath::Lerp(PitchLo, PitchHi, FMath::Clamp(Pt, 0.0, 1.0));
 	P.Lines({FVector2D(PitchX - 7, PitchY), FVector2D(PitchX + 7, PitchY)}, ReadyColor(), 2.4, 1.2);
 	// Heat pips left of the dial, the cooldown under them.
-	const double PipW = 9, PipH = 16, Gap = 4;
-	const double PipsX = G.X - Rad - 30 - FAcTurretFeed::HeatPips * (PipW + Gap);
 	for (int32 K = 0; K < FAcTurretFeed::HeatPips; ++K)
 	{
 		const bool bLit = K < F.Heat;
 		const FLinearColor Hot = K >= FAcTurretFeed::HeatPips - 2 ? EnemyColor() : BlockedColor();
 		P.Plate(FAcRect(PipsX + K * (PipW + Gap), G.Y, PipW, PipH), 1.5, bLit ? Hot : FLinearColor(0, 0, 0, 0.45f), Alpha(Hot, 0.6), 0.8);
 	}
-	const double BarW = FAcTurretFeed::HeatPips * (PipW + Gap) - Gap;
 	P.Plate(FAcRect(PipsX, G.Y - 10, BarW, 4), 1, FLinearColor(0, 0, 0, 0.5f), White(1, 0.2), 0.6);
 	P.Fill(FAcRect(PipsX, G.Y - 10, BarW * F.Ready, 4), F.Ready >= 1 ? ReadyColor() : BlockedColor());
 	P.Label(TEXT("HEAT"), 11, White(0.75), FVector2D(PipsX, G.Y + PipH + 6), EAcHAlign::Left, EAcVAlign::Baseline, true, false);
-	// How to get off it, bottom right.
-	P.Label(TEXT("ESC · DISENGAGE"), 15, White(0.9), FVector2D(R.MaxX() - In - 14, R.MinY() + In + 14), EAcHAlign::Right,
-		EAcVAlign::Baseline, true, false);
 }
