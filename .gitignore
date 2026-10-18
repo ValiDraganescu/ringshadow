@@ -47,3 +47,6 @@ art/fog/
 .claude/*.lock
 # ElevenLabs raw generations (the sounds the game ships are under unreal/Resources/Sounds): a local cache, never committed.
 Tools/AudioGen/raw/
+# The editor auto-imports the loose cursor and splash images (which the game reads as files) into textures it never uses.
+unreal/Content/UI/Cursors/*.uasset
+unreal/Content/Splash/*.uasset
