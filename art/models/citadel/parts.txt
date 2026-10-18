@@ -1,7 +1,7 @@
 # Parts of citadel, written by unreal/Tools/Editor/ac_modelkit.py from models/citadel.py (do not edit).
 # name, parent, pivot in the model frame (UE cm: x forward, y right, z up), what moves it, materials.
 # `_0` is the unit's left (UE -Y), `_1` its right.
-citadel_blue_root -              pivot (   0.0,    0.0,    0.0)  the unit or building transform: position on the ground, heading (yaw = -heading for units) | hullMid(27),hullDark(171),hullLight(36),chrome(110),team(9),ventGlow(37),hazard(31),floodGlow(50),markerGlow(8),glow_2399ff(1)
+citadel_blue_root -              pivot (   0.0,    0.0,    0.0)  the unit or building transform: position on the ground, heading (yaw = -heading for units) | hullMid(31),hullDark(175),hullLight(36),chrome(110),team(9),ventGlow(37),hazard(31),floodGlow(50),markerGlow(8),glow_2399ff(1)
 doorSegments_0 citadel_blue_root pivot (-125.0,  603.0,  352.0)  the door strip over the doorway: chases toward the door while training | doorGlow(1)
 doorSegments_1 citadel_blue_root pivot ( -75.0,  603.0,  352.0)  the door strip over the doorway: chases toward the door while training | doorGlow(1)
 doorSegments_2 citadel_blue_root pivot ( -25.0,  603.0,  352.0)  the door strip over the doorway: chases toward the door while training | doorGlow(1)

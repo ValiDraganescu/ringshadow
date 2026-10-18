@@ -400,8 +400,13 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
   before it (x ±2.6, to y 10.2, 0.02 high, no ray piece).
 - **Corner towers**: the wall corners, clad 2 cells wide on both outer
   faces, carried up past the deck (over the roof they widen inward to
-  [4.0, 6.0]²) to a dark crown at 8.3 to 8.7 with a hazard band, and a
-  pedestal to the turret mount at 9.0 on (±5.5, ±5.5). Three `floodGlow`
+  [4.0, 6.0]²) to a dark crown at 8.3 to 8.7 with a hazard band (C2: their
+  outer faces at 6.02, the dark corner edge stopping at 8.06, so a gun lying
+  along its wall pitched down clears them), and a bartizan (C2): a beam off
+  the crown's corner along the diagonal carrying a slim post (radius 0.09)
+  to the turret mount at 9.0 on (±6.2, ±6.2), braced under, nothing below
+  8.0; the barrels sweep the space round the post, so only the 90° toward
+  the tower carry anything. Three `floodGlow`
   slits per outer face in the shaft (4.3) and over the deck (7.5), a
   `markerGlow` at each crown's corner, stepped anchor feet at the base.
 - **Walls**: buttress ribs every 2 cells (±2.9 on the front, either side of
@@ -451,15 +456,20 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
   monitor, a cable loom behind it, and a warm lamp hood over the desk on
   an arm, its lamp `consoleLamps_k` (`consoleLamp`, with an omni light
   of 2 cells' reach the pose cues, as `light_2`).
-- **Turrets** (`citadel_turrets.py`, `CORNER = 550`, `TOP = 900`): the
+- **Turrets** (`citadel_turrets.py`, `CORNER = 620`, `TOP = 900`): the
   parts as before plus `turretCradles_k` between `turrets_k` (yaw: SK euler
   (0, −aim, 0)) and `turretBarrels_k` (spin about X): the pitch, SK euler
   (0, 0, +pitch), pivot on the barrel axis at the trunnion, 0.144 along the
   aim and 0.396 over the mount; the muzzles, flashes and the muzzle ring
-  ride on it. The housing's back and cheeks are low so the gun's eye sees
-  the barrels. The script asserts that the barrels and the ring keep 3 cm
-  off every solid of `citadel_blue` (its ray pieces) at every yaw of the
-  220° arc at pitch −20° (worst 11.9 cm; 15.1 cm with C2's minigun look, docs/guns-and-practice.md section 2); at −45° it fails.
+  ride on it. C2, a pintle (the minigun reference, docs/guns-and-practice.md
+  section 2): a slim bearing (radius 0.09) on the post, a low body and the
+  ammunition box behind and beside the trunnion, two yoke arms beside the
+  housing, so the gun pitches from −70° to +50°. The script asserts that
+  the barrels, housing and ring keep 3 cm off every solid of `citadel_blue`
+  (its ray pieces) over the whole 270° arc (cornerAngle ± 135°, every 5°)
+  at every pitch from −70° to +50° (every 10°), and 3 cm off the gun's own
+  yaw part at every pitch (every 2°); worst against the hull 5.4 cm, a gun
+  along its wall at −70°.
 - **The gun's eye** for these numbers: on the cradle, mount + R_yaw(aim) ·
   [T + R_pitch(pitch) · E], T = (0.144 along the aim, 0.396 up), E = (−0.40
   along the barrels, +0.55 up): the barrels and the glowing ring sit in the

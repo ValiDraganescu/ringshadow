@@ -38,7 +38,7 @@ DOOR = 150.0       # the doorway's half width
 DOOR_TOP = 300.0
 SINK = 100.0       # walls and floor reach this far below the ground, to hide a slope
 FLOOR = 5.0        # the hall floor's top
-CORNER = 550.0     # the pylons (Defence::cornerInset 5.5)
+CORNER = 620.0     # the guns' mounts on the bartizans (Defence::cornerInset 6.2: the trunnion outside the walls)
 PYLON_TOP = 900.0  # the turrets' mounts (Defence::mountHeight 9.0, citadel_turrets.py TOP)
 STATION = 400.0    # the gunner's point (Defence::gunStation)
 
@@ -172,11 +172,14 @@ for sx in (-1, 1):
         # below the deck: a skin on both outer faces of the corner, 2 cells wide, on the feet, butted against a dark
         # corner edge that stands 2 cm prouder (no two solids share a face: the coplanar check, art/models/citadel/c1/zfight/)
         tw_mid += [ctr(sx, sy, TOWER, H - 30, SKIN, H + 8, 52, DECK), ctr(sx, sy, SKIN, H + 8, TOWER, H - 30, 52, DECK)]
-        tw_dark += [ctr(sx, sy, H - 30, H + 10, H - 30, H + 10, 52, CROWN - 52)]  # the corner edge, up to the hazard band
+        # the corner edge, up to 8.06 (C2: under the barrel tips' reach when a gun lies along its wall at -70 degrees)
+        tw_dark += [ctr(sx, sy, H - 30, H + 10, H - 30, H + 10, 52, 806)]
         # above the deck: the tower's block over the roof, its crown, the mount's pedestal
         tw_mid.append(ctr(sx, sy, TOWER, H, TOWER, H, DECK, CROWN - 40))
-        tw_dark.append(ctr(sx, sy, TOWER - 10, H + 8, TOWER - 10, H + 8, CROWN - 40, CROWN))
-        tw_haz.append(ctr(sx, sy, TOWER - 12, H + 8, TOWER - 12, H + 8, CROWN - 52, CROWN - 40))
+        # (C2: the crown and its hazard band 2 cm proud of the walls' line, 8 cm in from before, so a gun lying along its
+        # wall pitched down clears them)
+        tw_dark.append(ctr(sx, sy, TOWER - 10, H + 2, TOWER - 10, H + 2, CROWN - 40, CROWN))
+        tw_haz.append(ctr(sx, sy, TOWER - 12, H + 2, TOWER - 12, H + 2, CROWN - 52, CROWN - 40))
         # the anchor feet (the old landing pads): a stepped L round each corner, outside the walls (sunk 2 cm into
         # them; a square block filled the hall's corner under the gun station), its two arms butted
         for i0, z0, z1 in ((TOWER - 20, -22, 34), (TOWER, 34, 52)):
@@ -187,11 +190,20 @@ for sx in (-1, 1):
         for a in (450, 490, 530):
             for z0 in (430, 750):
                 out = H + 8 if z0 < DECK else H
-                tw_slit.append(ctr(sx, sy, a - 6, a + 6, out, out + 2, z0, z0 + 70))
-                tw_slit.append(ctr(sx, sy, out, out + 2, a - 6, a + 6, z0, z0 + 70))
-        tw_mark.append(ctr(sx, sy, H - 4, H + 10, H - 4, H + 10, CROWN - 12, CROWN - 2))
-        m.mesh(root, "hullDark", [cyl(56, MOUNT - CROWN - 4, at=(sx * CORNER, sy * CORNER, CROWN), base=True, sides=16)])
-        m.mesh(root, "chrome", [cyl(58, 5, at=(sx * CORNER, sy * CORNER, MOUNT - 5), base=True, sides=16)], solid=False)
+                z1 = z0 + 70 if z0 < DECK else CROWN - 54  # (over the deck: up to just under the hazard band)
+                tw_slit.append(ctr(sx, sy, a - 6, a + 6, out, out + 2, z0, z1))
+                tw_slit.append(ctr(sx, sy, out, out + 2, a - 6, a + 6, z0, z1))
+        # C2, the bartizan: a beam off the crown's corner along the diagonal carrying the gun's mount, a slim post (the
+        # barrels, pitched down to -70 degrees anywhere in the gun's 270 degree arc, sweep the space round it: only the
+        # 90 degrees toward the tower stay free, so the beam and its brace run along the diagonal), braced under;
+        # nothing solid below 8.0 (the cameras' tower slabs)
+        diag = math.degrees(math.atan2(sy, sx))
+        m.mesh(root, "hullDark", [box((52, 12, 30), at=(sx * 598, sy * 598, CROWN - 34), rot=(0, diag, 0), base=True)])
+        m.mesh(root, "hullDark", [cyl(9, MOUNT - 5 - (CROWN - 38), at=(sx * CORNER, sy * CORNER, CROWN - 38), base=True,
+                                      sides=12)])
+        m.mesh(root, "chrome", [cyl(11, 5, at=(sx * CORNER, sy * CORNER, MOUNT - 5), base=True, sides=12)], solid=False)
+        m.mesh(root, "hullMid", [bar((sx * (H - 2), sy * (H - 2), 802), (sx * (CORNER - 6), sy * (CORNER - 6), CROWN - 38), 10)])
+        tw_mark.append(ctr(sx, sy, H - 4, H + 4, H - 4, H + 4, CROWN - 12, CROWN - 2))  # the crown's corner lamp
 m.mesh(root, "hullMid", tw_mid)
 m.mesh(root, "hullDark", tw_dark)
 m.mesh(root, "hazard", tw_haz, solid=False)

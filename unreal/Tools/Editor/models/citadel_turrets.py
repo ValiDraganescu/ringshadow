@@ -32,10 +32,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from ac_modelkit import Box, Cyl, Model, bar, box, cyl, m_apply, sphere, load_catalog, save_catalog, sk_point  # noqa: E402
 
 POSE = "AcPoseBuildings.cpp:PoseCitadel"
-CORNER = 550.0  # Defence::cornerInset 5.5
+CORNER = 620.0  # Defence::cornerInset 6.2: on the bartizans, the trunnion outside the walls
 TOP = 900.0     # citadel.py PYLON_TOP (Defence::mountHeight 9.0)
-ARC_HALF = 110.0  # Defence::gunArcHalf
-PITCH_MIN = -20.0  # Defence::gunPitchMin
+ARC_HALF = 135.0  # Defence::gunArcHalf (C2: each gun covers both its walls to the foot)
+PITCH_MIN = -70.0  # Defence::gunPitchMin (C2: the walls' foot)
+PITCH_MAX = 50.0   # Defence::gunPitchMax
 CLEAR = 3.0     # cm the barrels keep off every solid
 PREFIXES = ("turrets_", "turretCradles_", "turretBarrels_", "turretTips_", "turretMuzzles_", "turretFlashes_")
 
@@ -65,32 +66,32 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     t = m.part("turrets_%d" % k, at=(x, y, TOP), hidden=True,
                driver=d("corner turret %d: yaw toward its target (-aim); shown only on an armed Citadel" % k,
                         ("rotation", "visibility")))
-    m.mesh(t, "hullDark", [cyl(26 * S, 8 * S, at=at(0, 0, 0), base=True, sides=20)])
-    # (the bands and rings stand 2 cm off the faces they would share: the coplanar check of ac_modelkit)
-    m.mesh(t, "chrome", [cyl(27 * S, 2 * S, at=at(0, 0, 4.8), base=True, sides=20)], solid=False)
-    # C1: the housing's back and the cheeks low (top at 24 and 27 of D1's 28 and 34), so the gun's eye
-    # (Defence::gunEye, 1.2 over the mount, 0.4 behind it) sees the barrels and the muzzle ring over them
-    m.mesh(t, "hullMid", [box((34 * S, 30 * S, 16 * S), at=at(-2, 0, 8), base=True)])
-    for s in (-1, 1):
-        m.mesh(t, "hullLight", [box((28 * S, 6 * S, 19 * S), at=at(6, s * 17, 8), base=True)])
-    m.mesh(t, "team", [box((20 * S, 2 * S, 6 * S), at=at(-2, 15.5, 16), base=True)], solid=False)
-    # C2, the minigun look (docs/guns-and-practice.md section 2, art/models/guns/ref/minigun-reference.png): the
-    # ammunition box on the mount's left flank, outside the cheek, with a hazard stripe
-    m.mesh(t, "hullMid", [box((22 * S, 9 * S, 12 * S), at=at(-1, 25, 8), base=True)])
-    m.mesh(t, "hazard", [box((18 * S, 1.2 * S, 3 * S), at=at(-1, 30.1, 15), base=True)], solid=False)
+    # C2, the pintle (the user's minigun reference): pitched down to -70 degrees the barrels sweep the space before
+    # and under the trunnion, so the yaw part is a slim bearing on the bracket's post, a low body behind the trunnion,
+    # two yoke arms beside the housing and the ammunition box beside the body (self_clear() checks it over the pitch
+    # range); the feed enters through the left arm's journal
+    m.mesh(t, "hullDark", [cyl(5 * S, 4 * S, at=at(0, 0, 0), base=True, sides=14)])
+    m.mesh(t, "chrome", [cyl(5.8 * S, 1.2 * S, at=at(0, 0, 1.4), base=True, sides=14)], solid=False)
+    m.mesh(t, "hullMid", [box((19 * S, 27 * S, 8 * S), at=at(-12.5, 0, 4), base=True)])  # the body: x -22..-3
+    m.mesh(t, "hullDark", [box((24 * S, 33 * S, 3 * S), at=at(-8, 0, 3), base=True)] +   # the yoke's foot plate, behind the barrels' sweep
+           [box((12 * S, 3 * S, 24 * S), at=at(8, s * 13.3, 4), base=True) for s in (-1, 1)])  # its arms, 3 cm off the housing
+    m.mesh(t, "chrome", [cyl(3.4 * S, 1.2 * S, at=at(8, s * 14.8 + (0 if s > 0 else -1.2), 22), axis="y", base=True,
+                             sides=12) for s in (-1, 1)], solid=False)  # the trunnion's journals
+    m.mesh(t, "team", [box((15 * S, 1.2 * S, 4 * S), at=at(-12.5, -14.1, 6), base=True)], solid=False)
+    m.mesh(t, "hullMid", [box((18 * S, 9 * S, 12 * S), at=at(-12, 19, 4), base=True)])  # the ammunition box
+    m.mesh(t, "hazard", [box((16 * S, 1.2 * S, 3 * S), at=at(-12, 24.1, 11), base=True)], solid=False)
+    m.mesh(t, "hullDark", [bar(at(-6, 20, 16), at(4, 17, 26), 4 * S, 1.5 * S), bar(at(4, 17, 26), at(8, 15.4, 22), 4 * S, 1.5 * S)],
+           solid=False)  # the feed chute into the left journal
     axis = at(12, 0, 22)
     cr = m.part("turretCradles_%d" % k, parent=t, at=at(8, 0, 22), hidden=True,
                 driver=d("corner turret %d's guns: pitch about the trunnion (C1: the gunner's pitch)" % k,
                          ("rotation", "visibility")))
-    # on the cradle: the stubby rotor housing (a rear cone, two ribs, a chrome band at its front), the feed chute from
-    # the box (it leaves the box on the trunnion's line, which the pitch does not move) into the housing
+    # on the cradle: the stubby rotor housing (a rear cone, two ribs, a chrome band at its front)
     m.mesh(cr, "gunmetal", [cyl(9 * S, 12 * S, at=at(4, 0, 22), axis="x", base=True, sides=14),
                             cyl(6 * S, 4 * S, at=at(0, 0, 22), axis="x", base=True, r1=9 * S, sides=14)])
     m.mesh(cr, "hullDark", [cyl(9.6 * S, 1.2 * S, at=at(xr, 0, 22), axis="x", base=True, sides=14) for xr in (6.5, 9.5)],
            solid=False)
     m.mesh(cr, "chrome", [cyl(9.6 * S, 1.2 * S, at=at(12.6, 0, 22), axis="x", base=True, sides=14)], solid=False)
-    m.mesh(cr, "hullDark", [bar(at(8, 24, 21), at(9, 17, 33), 4 * S, 1.5 * S), bar(at(9, 17, 33), at(13, 6, 28), 4 * S, 1.5 * S)],
-           solid=False)
     b = m.part("turretBarrels_%d" % k, parent=cr, at=axis, hidden=True,
                driver=d("corner turret %d's barrels: spin about their axis while it fires" % k, ("rotation", "visibility")))
     # six long barrels round a spindle, a mid and a front clamp (they spin together)
@@ -110,7 +111,8 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     f = m.part("turretFlashes_%d" % k, parent=cr, at=at(tip_x + 8, 0, 22), hidden=True,
                driver=d("corner turret %d's muzzle flash: a frame per round" % k, ("visibility",)))
     m.mesh(f, "glowYellow", sphere(8 * S, at=at(tip_x + 8, 0, 22), squash=(1.6, 1, 1), steps=8), solid=False)
-    cradles.append((k, (x, y), cr.at, [pr for part in (cr, b, tips) for prims in part.meshes.values() for pr in prims]))
+    cradles.append((k, (x, y), cr.at, [pr for part in (cr, b, tips) for prims in part.meshes.values() for pr in prims],
+                    [pr for prims in t.meshes.values() for pr in prims if not getattr(pr, "decor", False)]))
 
 
 # --- the arc check: the barrels clear the hull at every yaw of the arc, at the lowest pitch --------------------------
@@ -175,16 +177,15 @@ def piece_dist(piece, p):
 def check_arc(pieces):
     worst = (1e9, None)
     margin = CLEAR / 100.0
-    for k, (tx, ty), (cx, cy, cz), prims in cradles:
+    for k, (tx, ty), (cx, cy, cz), prims, _ in cradles:
         pts = [p for pr in prims for p in dense(pr)]
         # only the pieces the barrels can reach: those within their longest reach of the turret's foot
         reach = max(math.dist((p[0], p[1], p[2]), (tx, ty, cz)) for p in pts) / 100.0 + margin
         foot = sk_point((tx, ty, cz))
         near = [pc for pc in pieces if piece_dist(pc, foot) < reach]
         rest = math.degrees(math.atan2(ty, tx))  # Defence::cornerAngle(k)
-        pitch = math.radians(PITCH_MIN)
-        for step in range(int(2 * ARC_HALF) + 1):
-            yaw = math.radians(rest - ARC_HALF + step)
+        combos = [(math.radians(p_), math.radians(rest - ARC_HALF + y_)) for p_ in PITCHES for y_ in YAWS]
+        for pitch, yaw in combos:
             for (px, py, pz) in pts:
                 # pitch about the trunnion (the cradle's pivot, across the barrels: model Y at rest), then yaw about
                 # the turret's foot
@@ -206,15 +207,40 @@ def check_arc(pieces):
                     else:
                         gap = max(max(lo[i] - l[i], l[i] - hi[i]) for i in range(3))
                     if gap < worst[0]:
-                        worst = (gap, (k, round(math.degrees(yaw) - rest, 1), round(wx, 1), round(wy, 1), round(qz, 1)))
+                        worst = (gap, (k, round(math.degrees(yaw) - rest, 1), round(math.degrees(pitch)), round(wx, 1),
+                                       round(wy, 1), round(qz, 1)))
                     if gap < margin:
                         raise AssertionError("citadel_turrets: turret %d's barrels hit the hull at %.0f degrees from its "
                                              "corner, pitch %.0f: (%.1f, %.1f, %.1f) cm" % (
-                                                 k, math.degrees(yaw) - rest, PITCH_MIN, wx, wy, qz))
+                                                 k, math.degrees(yaw) - rest, math.degrees(pitch), wx, wy, qz))
     print("citadel_turrets: arc check passed: the barrels keep %.1f cm off the hull at worst (turret, yaw off the "
-          "corner, x, y, z): %s" % (worst[0] * 100.0, worst[1]))
+          "corner, pitch, x, y, z): %s" % (worst[0] * 100.0, worst[1]))
 
 
+def self_clear():
+    """The pitching parts (cradle, barrels, tips) keep CLEAR cm off the gun's own yaw part's solids at every pitch (the
+    yaw turns both together: the pitch alone matters)."""
+    from ac_modelkit import _inside
+    worst = (1e9, None)
+    for k, (tx, ty), (cx, cy, cz), prims, own in cradles:
+        pts = [p for pr in prims for p in dense(pr)]
+        for p_ in range(int(PITCH_MIN), int(PITCH_MAX) + 1, 2):
+            pitch = math.radians(p_)
+            for (px, py, pz) in pts:
+                dx, dz = px - cx, pz - cz
+                q = (cx + dx * math.cos(pitch) - dz * math.sin(pitch), py, cz + dx * math.sin(pitch) + dz * math.cos(pitch))
+                for solid in own:
+                    if _inside(solid, q, -CLEAR):
+                        raise AssertionError("citadel_turrets: turret %d's gun hits its own mount at pitch %d: (%.1f, %.1f, "
+                                             "%.1f) cm" % (k, p_, q[0], q[1], q[2]))
+    print("citadel_turrets: the gun keeps %.0f cm off its own mount at every pitch from %d to %d" % (CLEAR, PITCH_MIN,
+                                                                                                     PITCH_MAX))
+
+
+# the arc: every 10 degrees of pitch over the range, every 5 degrees of yaw over the arc and its ends
+PITCHES = list(range(int(PITCH_MIN), int(PITCH_MAX) + 1, 10))
+YAWS = sorted(set(list(range(0, int(2 * ARC_HALF) + 1, 5)) + [int(2 * ARC_HALF)]))
+self_clear()
 check_arc(hull_pieces())
 
 entry = m.write(catalog=False)
