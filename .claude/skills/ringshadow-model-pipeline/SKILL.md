@@ -18,7 +18,7 @@ Steps 0 to 4, 6, 7 and 8 run today; step 5 is by hand. Build a helper when a ste
 To build:
 - Paint onto UE meshes (skin projection and nets): parked, see [NETS.md](NETS.md).
 
-Exists: `mocap/` (step 8), `model.sh stencil`, `stencil.py` and `-AcModelView` / `-AcModelPaint` in `AAcModelRow` (with `make_stencil_material.py`), `unreal/Tools/Editor/ac_modelkit.py` (parts, materials, rays, catalog merge, checked by `check_modelkit.py`; the coplanar-face check, `python3 ac_modelkit.py coplanar models/<model>.py`, MODELLING.md "No shared faces"), `models/peregrine.py`, `atlas.py`, `scorpion.py` (blockouts), the catalog merge (`ac_modelkit.merge_entry`; `import_models.py` still rewrites the whole catalog, never run it), `import_models.py` and `ac_models.py` (Swift-export path, `Content-src/models`, which will be gone), `make_materials.py` (the master materials and one `MI_<name>_<key>` per material), `make_model_row.py` and `AAcModelRow` (`/Game/Maps/ModelRow`), `-AcShot`, `-AcShotScenes`, `AcPlayground`, `AcPoseSheet` (`unreal/SHOTS.md`), `model.sh prompt|split|decal` and the Python tools in this folder.
+Exists: `mocap/` (step 8), `model.sh stencil`, `stencil.py` and `-AcModelView` / `-AcModelPaint` in `AAcModelRow` (with `make_stencil_material.py`), `unreal/Tools/Editor/ac_modelkit.py` (parts, materials, rays, catalog merge, checked by `check_modelkit.py`; the coplanar-face check, `python3 ac_modelkit.py coplanar models/<model>.py`, MODELLING.md "No shared faces"), `check_models.py` (the same at the mesh level over the whole catalog, step 6), `models/peregrine.py`, `atlas.py`, `scorpion.py` (blockouts), the catalog merge (`ac_modelkit.merge_entry`; `import_models.py` still rewrites the whole catalog, never run it), `import_models.py` and `ac_models.py` (Swift-export path, `Content-src/models`, which will be gone), `make_materials.py` (the master materials and one `MI_<name>_<key>` per material), `make_model_row.py` and `AAcModelRow` (`/Game/Maps/ModelRow`), `-AcShot`, `-AcShotScenes`, `AcPlayground`, `AcPoseSheet` (`unreal/SHOTS.md`), `model.sh prompt|split|decal` and the Python tools in this folder.
 
 ## Steps
 
@@ -78,6 +78,8 @@ Done when the model script reproduces the painting's silhouette in every view (r
 Run the model script (hidden run, below). It writes the static meshes, the material instances it needs and its catalog entry. The pose function for the unit's kind (`AcPose*.cpp`), the cockpit (`AcCockpitKinds`, model `cockpit_<kind>`) and the effects are game code; new kinds are listed in `docs/new-units.md`, "Where it lands in the code".
 
 Done when `/Game/Models/<model>/` holds one `SM_<part>__<material>` per catalog mesh, the catalog parses (the game starts and `AAcModelRow` shows the model) and the blue and red teams both draw.
+
+Then check for z-fighting, every time a model changes: `uv run unreal/Tools/hidden_run.py --out DIR --python unreal/Tools/Editor/check_models.py` (`AC_CHECK_MODELS=<name>_blue,...` for a few models). It finds triangles of the catalog's meshes that share a plane where someone can see them, and duplicated parts, writes `art/models/zfight-report.md`, and fails while any building or scaffold has a hit. Fix by the 2 cm rule (MODELLING.md, "No shared faces"); a Geometry Script model also gets `coplanar_check=True`.
 
 ### 7. Review renders
 
