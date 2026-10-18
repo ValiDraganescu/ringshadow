@@ -269,7 +269,8 @@ namespace {
 /// `Vision::stamp` as it was before docs/perf.md "Server" round 3: every
 /// cell of the circle's box tested on its own.
 void stampPerCell(const Vision& v, Vec2 c, double r, std::optional<int8_t> level, std::vector<uint8_t>& seen,
-                  std::vector<uint8_t>& near, std::vector<uint64_t>& explored) {
+                  std::vector<uint8_t>& near, std::vector<uint64_t>& explored,
+                  std::optional<std::pair<double, double>> cone = std::nullopt) {
     const double cell = Vision::cell;
     const int64_t x0 = max<int64_t>(0, static_cast<int64_t>(std::floor((c.x - r - v.origin.x) / cell)));
     const int64_t x1 = min<int64_t>(v.width - 1, static_cast<int64_t>(std::floor((c.x + r - v.origin.x) / cell)));
@@ -278,6 +279,8 @@ void stampPerCell(const Vision& v, Vec2 c, double r, std::optional<int8_t> level
     if (!(x0 <= x1 && z0 <= z1)) return;
     const double r2 = r * r;
     const int8_t top = level ? *level : std::numeric_limits<int8_t>::max();
+    const Vec2 ahead = cone ? Vec2(std::cos(cone->first), std::sin(cone->first)) : Vec2::zero;
+    const double edge = cone ? std::cos(cone->second) : 0.0;
     for (int64_t z = z0; z <= z1; ++z) {
         const double dz = v.origin.y + (static_cast<double>(z) + 0.5) * cell - c.y;
         const double dz2 = dz * dz;
@@ -285,6 +288,7 @@ void stampPerCell(const Vision& v, Vec2 c, double r, std::optional<int8_t> level
         for (int64_t x = x0; x <= x1; ++x) {
             const double dx = v.origin.x + (static_cast<double>(x) + 0.5) * cell - c.x;
             if (!(dx * dx + dz2 <= r2)) continue;
+            if (cone && dx * ahead.x + dz * ahead.y < edge * std::sqrt(dx * dx + dz2)) continue;
             const size_t i = static_cast<size_t>(z * v.width + x);
             near[i] = 1;
             if (v.tier[i] <= top && !seen[i]) {
@@ -297,9 +301,10 @@ void stampPerCell(const Vision& v, Vec2 c, double r, std::optional<int8_t> level
 
 } // namespace
 
-// The stamp fills each row's span of the circle at once; it marks what the
-// cell-by-cell test marked, byte for byte, for circles of every size, in
-// and off the map, on every level and in the air, stamped over each other.
+// The stamp fills each row's span of the circle at once (a headlamp's wedge
+// skips the root behind the lamp); it marks what the cell-by-cell test
+// marked, byte for byte, for circles and wedges of every size, in and off
+// the map, on every level and in the air, stamped over each other.
 TEST(vision_stampSpansAsEveryCell) {
     const Simulation sim(GameState::new_(homeMap()), homeMap());
     const Vision& v = *sim.vision;
@@ -317,8 +322,12 @@ TEST(vision_stampSpansAsEveryCell) {
             const Vec2 at = k % 4 == 0 ? Vec2(std::round(c.x * 4) / 4, std::round(c.y * 4) / 4) : c;
             const std::optional<int8_t> level =
                 k % 3 == 0 ? std::nullopt : std::optional<int8_t>(static_cast<int8_t>(dice.random(-1, 4)));
-            v.stamp(at, r, level, seenA, nearA, exA);
-            stampPerCell(v, at, r, level, seenB, nearB, exB);
+            // Headlamp wedges too, narrow and wider than a half turn.
+            const auto cone = k % 6 == 1 ? std::optional<std::pair<double, double>>(
+                                               std::make_pair(dice.range(-7, 7), k % 12 == 1 ? 0.3927 : dice.range(0.05, 3.0)))
+                                         : std::nullopt;
+            v.stamp(at, r, level, seenA, nearA, exA, cone);
+            stampPerCell(v, at, r, level, seenB, nearB, exB, cone);
         }
         EXPECT_TRUE(seenA == seenB);
         EXPECT_TRUE(nearA == nearB);

@@ -184,7 +184,11 @@ void Vision::stamp(Vec2 c, double r, std::optional<int8_t> level, std::vector<ui
             for (int64_t x = x0; x <= x1; ++x) {
                 const double dx = origin.x + (static_cast<double>(x) + 0.5) * cell - c.x;
                 if (!(dx * dx + dz2 <= r2)) continue;
-                if (dx * ahead.x + dz * ahead.y < edge * std::sqrt(dx * dx + dz2)) continue;
+                // Behind the lamp the test holds without the root (a wedge
+                // narrower than a half turn: `edge` is not negative).
+                const double along = dx * ahead.x + dz * ahead.y;
+                if (along < 0 && edge >= 0) continue;
+                if (along < edge * std::sqrt(dx * dx + dz2)) continue;
                 const int64_t i = row + x;
                 n[i] = 1;
                 if (t[i] <= top && !s[i]) {

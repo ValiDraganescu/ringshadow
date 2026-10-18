@@ -664,3 +664,22 @@ byte; the next carries the fog the look left.
 
 The wire is the same (`snapbench`'s four hashes, `crowdbench`'s three), and
 the simulation too (`worldbench`'s and `crowdbench`'s state hashes).
+
+### Round 14: the headlamp's wedge without the root behind it (2026-10-18)
+
+At night a driven Prospector's headlamp adds a wedge 22.5° either side of
+its heading (`Vision::stamp` with a cone). Each cell in its circle took a
+square root for the test `along < edge * sqrt(d²)`, `along` being the cell's
+distance ahead of the lamp. With a wedge narrower than a half turn `edge`
+is not negative, so wherever `along` is negative (behind the lamp) the test
+already holds: those cells skip the root, the same answer.
+
+| `lookbench 4000`, midnight, 3 runs each in turns, load 21-22 | before µs | after µs |
+|---|---:|---:|
+| the start region (one pilot) | 5.1-5.2 | 4.4-4.6 |
+| the nest | 16.0-16.5 | 15.0-15.2 |
+| Cold Fork | 5.1-5.3 | 4.3-4.4 |
+
+`vision_stampSpansAsEveryCell` now stamps wedges too, narrow and wider
+than a half turn (where `edge` is negative and the shortcut does not
+apply), against the cell-by-cell loop: the same bytes. Every hash the same.
