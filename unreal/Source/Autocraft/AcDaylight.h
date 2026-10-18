@@ -204,6 +204,12 @@ private:
 	/// The clouds' wind, cover and colour at `Time` (Update's tail).
 	void UpdateClouds(double Time, const FVector& SunDir);
 	bool bCloudShadowsOn = false;
+	/// `ac.Daylight.CloudReference` as last applied (empty: ours).
+	void ApplyCloudReference(const FString& Reference);
+	FString AppliedCloudReference;
+	/// `ac.Daylight.CloudParam`: the look tuning set over the frame's own.
+	void ApplyCloudParams();
+	TSet<FName> CloudParamsSet;
 
 	double Hour = StartHour;
 	double Dark = 0;

@@ -10,33 +10,38 @@ Inputs: the baked noise in unreal/Content-src/sky (Tools/Editor/bake_clouds.py):
   cloud_detail.png  -> VT_AcCloudDetail (32^3, from an 8 x 4 slice atlas)
 
 The cloud (a Volume-domain material the VolumetricCloud component traces),
-the real-time cloudscape recipe:
-- the weather map (`WeatherKm` across, drifting with the wind) says where
-  clouds are (R, cut by `Coverage`; past 0.85 cover a layer fills the gaps:
-  rain cloud) and what kind (G: flat layer, cumulus,
-  towering), which picks a height profile over the layer (rounded bottoms,
-  anvil-less tops);
-- the shape noise builds the bodies: Perlin-Worley eroded by its own Worley
-  fbm, times the profile, then cut by the coverage;
-- the detail noise eats the edges: billows at the top, wisps at the bottom.
-  Shadow rays skip it (`ShadowSampleDistance` > 0), half the cost;
-- Swift's horizon fade on the extinction (`smoothstep(0.05, 0.3, d.y)` of the
-  view ray's height): no flat cut where the tracing ends;
-- lighting through the Volumetric Advanced Output: two-lobe phase (the bright
-  rim round a cloud over the sun), 2 multiple-scattering octaves (bright cores,
-  soft undersides), ray-marched self-shadow, the ground's bounce lighting the
-  cloud bases; `ConservativeDensity` from the weather map alone lets the
-  tracer skip empty sky.
-Parameters (AAcDaylight sets them every frame): `CloudA` (weather offset km
-xy, shape offset km xy), `CloudB` (Coverage, Density (extinction per metre at
-full density), WeatherKm, ShapeKm), `CloudC` (DetailKm, Erosion, TypeBias,
-storm: the sky light left at a cloud's base falls from CloudD.z to 0.33),
-`Albedo`, `Glow` (a lightning strike's light at full density, linear) and
-`Bolt` (where it is: world km xyz, radius km): the cloud lights up from inside
-round the strike, a bright core in a soft halo, not the whole sky at once.
-`Giant` (toward the gas giant xyz, the cosine of its angular radius): the
-clouds beyond 1.5-4.5 km thin out in front of it, so the planet stays in sight
-(docs/mmorpg-m6.md V2).
+the real-time cloudscape recipe (docs/weather.md, "Clouds (2026-10-18)"):
+- the weather map (`WeatherKm` across, read along the wind and stretched
+  `CloudW.z` times along it, drifting with it) says where clouds are (R, cut
+  by `Coverage`), what kind (G: flat layer, cumulus, towering: a height
+  profile over the layer), where a rain deck is thick (B) and where a
+  cloud's base sits (A);
+- `body()` (the cloud's and its shadow's): the shape noise, Perlin-Worley
+  eroded by its own Worley fbm, times the profile, cut by the coverage; a
+  rain deck never below the shape itself (no holes to the sky); fair
+  weather sits `CloudFine.z` km up in the layer;
+- the detail noise eats the edges: billows at the top, wisps at the bottom,
+  a finer octave within `CloudFine.x` km. Shadow rays skip it;
+- a soft rim and denser cores (`CloudD.x`, `CloudE.z`), density 0.04 per
+  metre (`CloudB.y`); far fair-weather cloud thins out (`CloudE.xy` km) and
+  takes the horizon's air (`Haze`, `CloudF.zw`);
+- lighting through the Volumetric Advanced Output: two-lobe phase and 2
+  multiple-scattering octaves wired from `CloudP` and `CloudM` (so
+  `ac.Daylight.CloudParam` can try others live), ray-marched self-shadow,
+  the ground's bounce on the bases; `ConservativeDensity` from the weather
+  map and the height profile lets the tracer skip empty air.
+Parameters AAcDaylight sets every frame: `CloudA` (weather offset along the
+wind km, -, shape offset km xy), `CloudB` (Coverage, Density (extinction per
+metre at full density), WeatherKm, ShapeKm), `CloudC` (DetailKm, Erosion,
+TypeBias, storm: the sky light left at a cloud's base falls from CloudD.z to
+0.33), `CloudW` (the wind's direction xy, the stretch, the layer's height
+km), `Haze`, `Albedo`, `Glow` (a lightning strike's light at full density,
+linear) and `Bolt` (where it is: world km xyz, radius km): the cloud lights
+up from inside round the strike, a bright core in a soft halo, not the whole
+sky at once. `Giant` (toward the gas giant xyz, the cosine of its angular
+radius): the clouds beyond 1.5-4.5 km thin out in front of it, so the planet
+stays in sight (docs/mmorpg-m6.md V2). The look (defaults here, not set at
+run time): `CloudD`, `CloudE`, `CloudF`, `CloudFine`, `CloudP`, `CloudM`.
 
 The shadow (a LightFunction-domain material) is cast by those clouds: from
 the lit pixel toward the light, four samples up through the lower layer
@@ -67,23 +72,64 @@ struct AcCloudFns {
     float remap(float x, float a, float b, float c, float d) { return c + (x - a) / (b - a) * (d - c); }
     // How much the sky is one deck (rain, storm) rather than clouds apart.
     float deck(float cover) { return smoothstep(0.7, 0.95, cover); }
-    // The shape noise 2.5 times per ShapeKm: billows a few hundred metres
-    // across, so a cloud is lumps on lumps, not one smooth slab. A deck
-    // keeps the wide shape: small lumps let the sun through in white patches.
-    float shapeScale(float cover) { return lerp(2.5, 1.0, deck(cover)); }
+    // The weather map's cover at a place (its R cut by the sky's cover);
+    // past 0.85 cover a layer fills the gaps: rain cloud, thick and dark
+    // where the fine clumps (B) are, thin rifts the light comes through
+    // between them.
+    float cover(float4 w, float c) {
+        return max(saturate(remap(w.r, 1.0 - c, 1.0, 0.0, 1.0)), smoothstep(0.85, 1.0, c) * 0.55 * lerp(0.25, 1.0, w.b));
+    }
     // How much of the shape a weather map's cover lets through: only its
     // densest part (0.55) while there is sky between clouds, so even a
     // wide cloud is carved into billows; all of it (1) under a full deck,
     // which must not tear open.
-    float carve(float cover) { return lerp(0.55, 1.0, deck(cover)); }
+    float carve(float cover, float c) { return lerp(c, 1.0, deck(cover)); }
+    // Where on the weather map: along the wind its patterns are stretched
+    // (W.z: streets of cloud, not round blots) and move (A.x, km, wrapped at
+    // a whole stretched tile, so it never jumps); W.xy the wind's direction.
+    float2 weatherUv(float2 xy, float4 A, float4 B, float4 W) {
+        float2 dir = normalize(W.xy + 1.0e-5);
+        return float2((dot(xy, dir) - A.x) / W.z, dot(xy, float2(-dir.y, dir.x))) / B.z;
+    }
+    // How far fair-weather clouds sit up in the layer (in the layer's
+    // height): Fine.z km over its bottom while there is sky between them,
+    // none under a rain deck, whose ragged base hangs low (the bolts come
+    // down from the layer's bottom). W.w: the layer's height, km.
+    float lift(float cover, float4 Fine, float4 W) { return Fine.z / max(W.w, 0.1) * (1.0 - deck(cover)); }
     // Height profile over the layer (0 bottom, 1 top) for a cloud type
-    // (0 a flat layer low down, 0.5 cumulus, 1 towering).
+    // (0 a flat layer low down, 0.5 cumulus, 1 towering). A cumulus base
+    // rises over its first 270 m (flat, not a knife edge: at 150 m a field
+    // of far bases read as one straight cut), its top rounds off.
     float profile(float h, float t) {
         float layer = saturate(remap(h, 0.0, 0.05, 0.0, 1.0)) * saturate(remap(h, 0.1, 0.22, 1.0, 0.0));
         // Cumulus about as tall as wide (to ~1.4 km); towers are the storm's.
-        float cumulus = saturate(remap(h, 0.0, 0.04, 0.0, 1.0)) * saturate(remap(h, 0.22, 0.42, 1.0, 0.0));
-        float tower = saturate(remap(h, 0.0, 0.08, 0.0, 1.0)) * saturate(remap(h, 0.7, 1.0, 1.0, 0.0));
+        float cumulus = saturate(remap(h, 0.0, 0.08, 0.0, 1.0)) * saturate(remap(h, 0.18, 0.42, 1.0, 0.0));
+        float tower = saturate(remap(h, 0.0, 0.08, 0.0, 1.0)) * saturate(remap(h, 0.6, 1.0, 1.0, 0.0));
         return t < 0.5 ? lerp(layer, cumulus, t * 2.0) : lerp(cumulus, tower, t * 2.0 - 1.0);
+    }
+    // The cloud's body without its edge detail, 0-1 (the cloud and its
+    // shadow share it). `km` world km, `H` height in the layer, `rep` the
+    // shape noise's repeats per ShapeKm, `mip` the shape noise's mip.
+    float body(float3 km, float H, float4 A, float4 B, float4 C, float4 W, float4 Fl, float rep, float mip,
+               Texture2D WT, SamplerState WS, Texture3D ST, SamplerState SS) {
+        float4 w = Texture2DSampleLevel(WT, WS, weatherUv(km.xy, A, B, W), 0.0);
+        float cov = cover(w, B.x);
+        if (cov <= 0.0) return 0.0;
+        // The base up or down by Fl.y of the layer (A: where it sits); a
+        // deck's base ragged too, by the fine clumps (400 m).
+        float g = profile(H - (w.a - 0.5) * Fl.y - (w.b - 0.5) * 0.12 * deck(B.x), saturate(w.g + C.z));
+        if (g <= 0.0) return 0.0;
+        // Clouds lean downwind with height. `rep` whole repeats per ShapeKm,
+        // so the offset's wrap at ShapeKm lands on the same noise.
+        float3 sp = (km + float3(A.zw, 0.0) + float3(normalize(W.xy + 1.0e-5) * H * 0.4, 0.0)) / B.w * rep;
+        float4 s = Texture3DSampleLevel(ST, SS, sp, mip);
+        float fbm = s.g * 0.625 + s.b * 0.25 + s.a * 0.125;
+        float base = saturate(remap(s.r, fbm - 1.0, 1.0, 0.0, 1.0)) * g;
+        float d = saturate(remap(base, 1.0 - cov * carve(B.x, Fl.x), 1.0, 0.0, 1.0)) * cov;
+        // Under a rain deck no holes to the sky (seen edge on, the rifts'
+        // holes lined up into a clear band along the horizon): at least the
+        // shape itself, thick where the fine clumps are, thin between.
+        return max(d, base * smoothstep(0.85, 1.0, B.x) * lerp(0.2, 0.6, w.b));
     }
 };
 AcCloudFns F;
@@ -91,52 +137,93 @@ AcCloudFns F;
 
 CLOUD_HLSL = CLOUD_FNS + r"""
 float3 km = P * 1.0e-5;
-// Level of detail with distance: past ~6 km the fine billows and the
+float dist = length(P - Cam) * 1.0e-5;
+// Level of detail with distance: past ~8 km the fine billows and the
 // erosion are smaller than a traced pixel and only shimmer, so far cloud
-// goes back to the wide shape without erosion (0 near, 1 by 20 km).
-float lod = smoothstep(6.0, 20.0, length(P - Cam) * 1.0e-5);
-float4 w = Texture2DSampleLevel(WeatherTex, WeatherTexSampler, (km.xy + A.xy) / B.z, 0.0);
-float cov = saturate(F.remap(w.r, 1.0 - B.x, 1.0, 0.0, 1.0));
-// Rain cloud: past 0.85 cover a layer fills the weather map's gaps.
-cov = max(cov, smoothstep(0.85, 1.0, B.x) * 0.55);
-if (cov <= 0.0) return 0.0;
-float g = F.profile(H, saturate(w.g + C.z));
-if (g <= 0.0) return 0.0;
-// Clouds lean downwind with height.
-float3 sp = (km + float3(A.zw, 0.0) + float3(normalize(A.zw + 1.0e-4) * H * 0.4, 0.0)) / B.w * lerp(F.shapeScale(B.x), 1.0, lod);
-float4 s = Texture3DSampleLevel(ShapeTex, ShapeTexSampler, sp, 0.0);
-float fbm = s.g * 0.625 + s.b * 0.25 + s.a * 0.125;
-float base = saturate(F.remap(s.r, fbm - 1.0, 1.0, 0.0, 1.0)) * g;
-float d = saturate(F.remap(base, 1.0 - cov * F.carve(B.x), 1.0, 0.0, 1.0)) * cov;
+// goes back to the wide shape without erosion (0 near, 1 by 25 km).
+float lod = smoothstep(8.0, 25.0, dist);
+// Whole repeats only (a deck and far cloud 1, near D.w): a fraction would
+// jump when the wind's offset wraps.
+float rep = round(lerp(lerp(D.w, 1.0, F.deck(B.x)), 1.0, lod));
+// The height over the cloud's own base level (fair weather sits higher).
+float Hc = H - F.lift(B.x, Fine, W);
+float d = F.body(km, Hc, A, B, C, W, Fl, rep, 0.0, WeatherTex, WeatherTexSampler, ShapeTex, ShapeTexSampler);
 if (d <= 0.0) return 0.0;
 if (Shadow <= 0.0 && lod < 1.0) {
     float3 dt = Texture3DSampleLevel(DetailTex, DetailTexSampler, (km + float3(A.zw * 2.0, 0.0)) / C.x, 0.0).rgb;
     float dfbm = dt.r * 0.625 + dt.g * 0.25 + dt.b * 0.125;
-    float dm = lerp(dfbm, 1.0 - dfbm, saturate(H * 6.0));
+    // Up close (within Fine.x km) a second octave four times finer:
+    // crisp billows on the masses overhead, not a soft mush.
+    float near = 1.0 - smoothstep(Fine.x * 0.5, Fine.x, dist);
+    if (near > 0.0) {
+        float3 df = Texture3DSampleLevel(DetailTex, DetailTexSampler, (km + float3(A.zw * 2.0, 0.0)) * 4.0 / C.x, 0.0).rgb;
+        dfbm = lerp(dfbm, dfbm * 0.6 + (df.r * 0.625 + df.g * 0.25 + df.b * 0.125) * 0.4, near);
+    }
+    // Billows on the top, wisps at the base (E.w: how far up the wisps go).
+    float dm = lerp(dfbm, 1.0 - dfbm, saturate(Hc / max(E.w, 1.0e-3)));
     // Erode the thin edges, not the cores (D.y: how fast the bite fades
-    // with density), so a cloud keeps crisp billows instead of a fuzz.
-    d = saturate(F.remap(d, dm * C.y * (1.0 - lod) * saturate(1.0 - d * D.y), 1.0, 0.0, 1.0));
+    // with density); harder up close (Fine.y).
+    d = saturate(F.remap(d, dm * C.y * (1.0 + Fine.y * near) * (1.0 - lod) * saturate(1.0 - d * D.y), 1.0, 0.0, 1.0));
 }
-// A cloud's edge: full density D.x into it, not a long soft ramp. A full
-// deck keeps its soft, thin layer (sharpened, it lit up in white patches).
-d = saturate(d / lerp(D.x, 1.0, F.deck(B.x)));
-// Swift's sky has no clouds at the horizon (CameraVector points to the eye).
-float fade = smoothstep(0.05, 0.3, -V.z);
+// A cloud's edge: density grows over D.x into it (a soft rim the sun
+// lights up from behind; at 0.7 a cloud toward the sun read as a cut-out),
+// and on to E.z times that in the core.
+d = saturate(d / lerp(D.x, 1.0, F.deck(B.x))) * lerp(1.0, E.z, saturate(d * 2.0 - 1.0));
+// Far cloud thins out (E.x to E.y km) into the haze, so the far band is
+// not a stacked line of white cloudlets (at 12-45 km single puffs survived
+// at the horizon). A rain deck stays whole all the way: thinned
+// (or cut where the tracing ends), it opened onto the bright horizon behind
+// it, a white strip under the dark deck.
+float fade = 1.0 - smoothstep(E.x, E.y, dist) * (1.0 - F.deck(B.x));
 // Over the gas giant the far clouds thin out, so it stays in sight
-// (`Giant`: toward it, the cosine of its angular radius; AAcDaylight).
+// (`Giant`: toward it, the cosine of its angular radius; AAcDaylight);
+// a rain deck mostly not (a clear hole in a storm read as a fault).
 float over = smoothstep(Giant.w - 0.05, Giant.w + 0.07, dot(normalize(P - Cam), Giant.xyz))
-    * smoothstep(1.5, 4.5, length(P - Cam) * 1.0e-5);
+    * smoothstep(1.5, 4.5, dist) * (1.0 - 0.75 * F.deck(B.x));
 return d * B.y * fade * (1.0 - 0.8 * over);
 """
 
-# CloudD: the edge's depth to full density 0.3, erosion gone by a third of
-# full density (3), 60 % of the sky light at a cloud's base.
-CLOUD_LOOK = (0.3, 3.0, 0.6, 0.0)
+# CloudD: the edge's depth to full density, erosion gone by 1/y of full
+# density, the sky light left at a cloud's base, the shape noise's repeats
+# per ShapeKm. CloudE: the far thinning (km from, to; a rain deck's from 40
+# to 49), the core's density over the edge's, the height the base's wisps
+# reach (in the layer). CloudFine: the fine erosion's reach (km) and how
+# much harder it bites there, how far fair-weather clouds sit up in the
+# layer (km; none under a deck).
+CLOUD_LOOK = (1.0, 2.0, 0.45, 2.0)
+CLOUD_LOOK_E = (8.0, 30.0, 2.0, 0.15)
+# CloudF: how much of the shape noise's range a cloud keeps between clouds
+# (the carve; the rest is sky), how far bases move up and down (in the
+# layer), how much of the horizon's haze far cloud takes, and over how many
+# km it grows to that.
+CLOUD_LOOK_F = (0.65, 0.15, 0.7, 25.0)
+CLOUD_FINE = (4.0, 1.0, 0.9, 0.0)
 if os.environ.get("AC_CLOUD_LOOK"):  # trying looks: "x,y,z,w"
     CLOUD_LOOK = tuple(float(v) for v in os.environ["AC_CLOUD_LOOK"].split(","))
+# The light (the Volumetric Advanced Output, wired from parameters so
+# `ac.Daylight.CloudParam` can try others live): CloudP the phase (g, g2,
+# blend toward g2, -), CloudM the multiple scattering (contribution,
+# occlusion, eccentricity, -). The engine's sample clouds take g 0.8, a
+# mild 0.17 lobe for 57.5 % of the light, multiple scattering 0.67/0.25/
+# 0.18; a sharper forward lobe and more, more occluded multiple scattering
+# give a brighter rim against the sun and darker bases (side by side,
+# docs/weather.md "Clouds (2026-10-18)").
+CLOUD_PHASE = (0.85, 0.25, 0.5, 0.0)
+CLOUD_MS = (0.8, 0.4, 0.4, 0.0)
 
-AO_HLSL = r"""
-return lerp(lerp(D.z, 0.33, C.w), 1.0, smoothstep(0.0, 0.3, H));
+# The horizon's haze over far cloud: as the sky dome (M_AcSky) mixes its
+# `Haze` in toward the horizon (full at 0°, gone `Haze.a` degrees up), the far
+# clouds take it too, by Fl.z, growing over the first Fl.w km: they melt into
+# the horizon's band instead of standing white against it.
+HAZE_HLSL = r"""
+float3 v = normalize(P - Cam);
+float e = asin(clamp(v.z, -1.0, 1.0)) * 57.29578;
+float rise = pow(1.0 - smoothstep(0.0, max(Haze.a, 1.0), e), 1.6);
+return saturate(rise * Fl.z * smoothstep(0.0, max(Fl.w, 1.0e-3), length(P - Cam) * 1.0e-5));
+"""
+
+AO_HLSL = CLOUD_FNS + r"""
+return lerp(lerp(D.z, 0.33, C.w), 1.0, smoothstep(0.0, 0.3, H - F.lift(B.x, Fine, W)));
 """
 
 # A strike's light inside the cloud: a core a fifth of the radius across and
@@ -147,13 +234,14 @@ return 4.0 * exp(-r * r * 25.0) + exp(-r * 3.0);
 """
 
 # The tracer's empty-space skip: matter is possible where the weather map
-# has cover and the height profile is not zero.
-CONSERVATIVE_HLSL = r"""
+# has cover and the height profile there is not zero (the same base and
+# raggedness as body(); fair weather's empty air under its lifted clouds is
+# skipped, not marched through at full cost).
+CONSERVATIVE_HLSL = CLOUD_FNS + r"""
 float3 km = P * 1.0e-5;
-float4 w = Texture2DSampleLevel(WeatherTex, WeatherTexSampler, (km.xy + A.xy) / B.z, 0.0);
-float cov = saturate((w.r - (1.0 - B.x)) / max(B.x, 1.0e-3));
-cov = max(cov, smoothstep(0.85, 1.0, B.x) * 0.55);
-return float3(cov > 0.0 && H > 0.0 && H < 1.0 ? 1.0 : 0.0, 0.0, 0.0);
+float4 w = Texture2DSampleLevel(WeatherTex, WeatherTexSampler, F.weatherUv(km.xy, A, B, W), 0.0);
+float Hc = H - F.lift(B.x, Fine, W) - (w.a - 0.5) * Fl.y - (w.b - 0.5) * 0.12 * F.deck(B.x);
+return float3(F.cover(w, B.x) > 0.0 && F.profile(Hc, saturate(w.g + C.z)) > 0.0 ? 1.0 : 0.0, 0.0, 0.0);
 """
 
 SHADOW_HLSL = CLOUD_FNS + r"""
@@ -161,21 +249,11 @@ float3 p = P * 1.0e-5;
 float3 L = SL.xyz / max(length(SL.xyz), 1.0e-4);
 float sum = 0.0;
 [unroll] for (int i = 0; i < 4; i++) {
-    // The lower 60 % of the layer, where the clouds have their mass.
+    // The lower 60 % of the clouds' heights, where they have their mass.
     float H = (float(i) + 0.5) * 0.15;
-    float3 q = p + L * ((SC.x + H * SC.y - p.z) / max(L.z, 0.1));
-    float4 w = Texture2DSampleLevel(WeatherTex, WeatherTexSampler, (q.xy + A.xy) / B.z, 0.0);
-    float cov = saturate(F.remap(w.r, 1.0 - B.x, 1.0, 0.0, 1.0));
-    cov = max(cov, smoothstep(0.85, 1.0, B.x) * 0.55);
-    // No cover: skip (the last remap would divide by zero, and one NaN
-    // lights the whole map).
-    if (cov <= 0.0) continue;
-    float g = F.profile(H, saturate(w.g + C.z));
-    float3 sp = (q + float3(A.zw, 0.0) + float3(normalize(A.zw + 1.0e-4) * H * 0.4, 0.0)) / B.w * F.shapeScale(B.x);
-    float4 s = Texture3DSampleLevel(ShapeTex, ShapeTexSampler, sp, 1.0);
-    float fbm = s.g * 0.625 + s.b * 0.25 + s.a * 0.125;
-    float base = saturate(F.remap(s.r, fbm - 1.0, 1.0, 0.0, 1.0)) * g;
-    sum += saturate(F.remap(base, 1.0 - cov * F.carve(B.x), 1.0, 0.0, 1.0)) * cov;
+    float3 q = p + L * ((SC.x + (H + F.lift(B.x, Fine, W)) * SC.y - p.z) / max(L.z, 0.1));
+    // The cloud's own body (no cover: zero, never a NaN that lights the map).
+    sum += F.body(q, H, A, B, C, W, Fl, round(lerp(D.w, 1.0, F.deck(B.x))), 1.0, WeatherTex, WeatherTexSampler, ShapeTex, ShapeTexSampler);
 }
 float shade = 1.0 - exp(-sum * SC.z);
 return 1.0 - SL.w * shade;
@@ -297,7 +375,6 @@ def build_cloud(weather, shape, detail):
     g = Graph(mat)
     pos = world_position(g, -1600, 0)
     attr = g.node(unreal.MaterialExpressionCloudSampleAttribute, -1600, 150)
-    cam = g.node(unreal.MaterialExpressionCameraVectorWS, -1600, 300)
     a = g.vec("CloudA", (0, 0, 0, 0), -1600, 450)
     b = g.vec("CloudB", (0.6, 0.15, 12.0, 4.0), -1600, 600)
     c = g.vec("CloudC", (0.8, 0.35, 0.0, 0.0), -1600, 750)
@@ -305,6 +382,12 @@ def build_cloud(weather, shape, detail):
     # y how fast erosion fades into the core, z the sky light left at a
     # cloud's base (its top keeps all of it).
     d = g.vec("CloudD", CLOUD_LOOK, -1600, 1500)
+    e = g.vec("CloudE", CLOUD_LOOK_E, -1600, 2100)
+    fl = g.vec("CloudF", CLOUD_LOOK_F, -1600, 2250)
+    fine = g.vec("CloudFine", CLOUD_FINE, -1600, 2700)
+    # The wind's direction (xy), the weather map's stretch along it (z) and
+    # the layer's height, km (w): AAcDaylight's.
+    wind = g.vec("CloudW", (0.944, 0.330, 2.0, 3.4), -1600, 2400)
     # Off by default (a cosine past 1 is never reached).
     giant = g.vec("Giant", (0, 0, 1, 2), -1600, 1950)
     wt = g.tex("WeatherTex", weather, -1600, 900)
@@ -313,14 +396,36 @@ def build_cloud(weather, shape, detail):
     eye = g.node(unreal.MaterialExpressionCameraPositionWS, -1600, 1800)
     dens = g.custom(CLOUD_HLSL, "Cloud density", unreal.CustomMaterialOutputType.CMOT_FLOAT1,
                     [("P", pos, ""), ("Cam", eye, ""), ("H", attr, "NormAltitudeInLayer"), ("Shadow", attr, "ShadowSampleDistance"),
-                     ("V", cam, ""), ("A", a, ""), ("B", b, ""), ("C", c, ""), ("D", d, ""), ("Giant", giant, ""),
+                     ("A", a, ""), ("B", b, ""), ("C", c, ""), ("D", d, ""), ("E", e, ""), ("Fl", fl, ""), ("W", wind, ""),
+                     ("Fine", fine, ""), ("Giant", giant, ""),
                      ("WeatherTex", wt, ""), ("ShapeTex", st, ""), ("DetailTex", dt, "")], -900, 300)
     cons = g.custom(CONSERVATIVE_HLSL, "Cloud conservative density", unreal.CustomMaterialOutputType.CMOT_FLOAT3,
-                    [("P", pos, ""), ("H", attr, "NormAltitudeInLayer"), ("A", a, ""), ("B", b, ""),
-                     ("WeatherTex", wt, "")], -900, 800)
+                    [("P", pos, ""), ("H", attr, "NormAltitudeInLayer"), ("A", a, ""), ("B", b, ""), ("C", c, ""),
+                     ("W", wind, ""), ("Fl", fl, ""), ("Fine", fine, ""), ("WeatherTex", wt, "")], -900, 800)
 
     albedo = g.vec("Albedo", (0.95, 0.95, 0.95, 1), -600, 0, alpha=False)
-    g.out(albedo, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    # The far cloud's own light gives way to the haze's (an emissive per
+    # unit of extinction: a thick far cloud shows the haze's colour).
+    haze_p = g.node(unreal.MaterialExpressionVectorParameter, -1600, 2550)
+    haze_p.set_editor_property("parameter_name", "Haze")
+    haze_p.set_editor_property("default_value", unreal.LinearColor(0.5, 0.55, 0.65, 12.0))
+    haze4 = g.node(unreal.MaterialExpressionAppendVector, -1400, 2550)
+    g.link(haze_p, "", haze4, "A")
+    g.link(haze_p, "A", haze4, "B")
+    hz = g.custom(HAZE_HLSL, "Cloud haze", unreal.CustomMaterialOutputType.CMOT_FLOAT1,
+                  [("P", pos, ""), ("Cam", eye, ""), ("Haze", haze4, ""), ("Fl", fl, "")], -900, 0)
+    keep = g.node(unreal.MaterialExpressionOneMinus, -700, 0)
+    g.link(hz, "", keep, "")
+    lit_albedo = g.node(unreal.MaterialExpressionMultiply, -450, 0)
+    g.link(albedo, "", lit_albedo, "A")
+    g.link(keep, "", lit_albedo, "B")
+    g.out(lit_albedo, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    haze_dens = g.node(unreal.MaterialExpressionMultiply, -600, 250)
+    g.link(dens, "", haze_dens, "A")
+    g.link(hz, "", haze_dens, "B")
+    haze_emit = g.node(unreal.MaterialExpressionMultiply, -450, 250)
+    g.link(haze_p, "", haze_emit, "A")
+    g.link(haze_dens, "", haze_emit, "B")
     g.out(dens, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
     glow = g.vec("Glow", (0, 0, 0, 1), -600, 150, alpha=False)
     bolt = g.vec("Bolt", (0, 0, 0, 1), -1600, 1650)
@@ -332,21 +437,28 @@ def build_cloud(weather, shape, detail):
     emit = g.node(unreal.MaterialExpressionMultiply, -300, 150)
     g.link(glow, "", emit, "A")
     g.link(lit, "", emit, "B")
-    g.out(emit, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    emit_all = g.node(unreal.MaterialExpressionAdd, -150, 200)
+    g.link(emit, "", emit_all, "A")
+    g.link(haze_emit, "", emit_all, "B")
+    g.out(emit_all, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
     # Sky light occluded toward a cloud's base: dark undersides, bright tops.
     ao = g.custom(AO_HLSL, "Cloud sky occlusion", unreal.CustomMaterialOutputType.CMOT_FLOAT1,
-                  [("H", attr, "NormAltitudeInLayer"), ("D", d, ""), ("C", c, "")], -600, 450)
+                  [("H", attr, "NormAltitudeInLayer"), ("B", b, ""), ("D", d, ""), ("C", c, ""), ("Fine", fine, ""),
+                   ("W", wind, "")], -600, 450)
     g.out(ao, "", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
 
     adv = g.node(unreal.MaterialExpressionVolumetricAdvancedMaterialOutput, -300, 600)
-    for prop, v in (("const_phase_g", 0.75), ("const_phase_g2", -0.25), ("const_phase_blend", 0.35),
-                    ("multi_scattering_approximation_octave_count", 2),
-                    ("const_multi_scattering_contribution", 0.55), ("const_multi_scattering_occlusion", 0.4),
-                    ("const_multi_scattering_eccentricity", 0.5),
+    for prop, v in (("multi_scattering_approximation_octave_count", 2),
                     ("ground_contribution", os.environ.get("AC_CLOUD_GROUND", "1") == "1"),
                     ("ray_march_volume_shadow", os.environ.get("AC_CLOUD_RMSHADOW", "1") == "1")):
         adv.set_editor_property(prop, v)
+    phase = g.vec("CloudP", CLOUD_PHASE, -900, 1100, alpha=False)
+    ms = g.vec("CloudM", CLOUD_MS, -900, 1300, alpha=False)
+    for pin, src, comp in (("PhaseG", phase, "R"), ("PhaseG2", phase, "G"), ("PhaseBlend", phase, "B"),
+                           ("MultiScatteringContribution", ms, "R"), ("MultiScatteringOcclusion", ms, "G"),
+                           ("MultiScatteringEccentricity", ms, "B")):
+        g.link(src, comp, adv, pin)
     g.link(cons, "", adv, "ConservativeDensity")
     mel.recompile_material(mat)
     assets.save_asset(mat.get_path_name(), only_if_is_dirty=False)
@@ -367,10 +479,14 @@ def build_shadow(weather, shape):
     c = g.vec("CloudC", (2.0, 0.35, 0.0, 0.0), -1200, 450)
     sl = g.vec("ShadowL", (0.3, 0.2, 0.9, 0.5), -1200, 600)
     sc = g.vec("ShadowC", (1.6, 3.4, 2.5, 0.0), -1200, 750)
+    d = g.vec("CloudD", CLOUD_LOOK, -1200, 1300)
+    fl = g.vec("CloudF", CLOUD_LOOK_F, -1200, 1450)
+    wind = g.vec("CloudW", (0.944, 0.330, 2.0, 3.4), -1200, 1600)
+    fine = g.vec("CloudFine", CLOUD_FINE, -1200, 1750)
     wt = g.tex("WeatherTex", weather, -1200, 900)
     st = g.tex("ShapeTex", shape, -1200, 1100, param=False)
     sh = g.custom(SHADOW_HLSL, "Cloud shadow", unreal.CustomMaterialOutputType.CMOT_FLOAT1,
-                  [("P", pos, ""), ("A", a, ""), ("B", b, ""), ("C", c, ""), ("SL", sl, ""), ("SC", sc, ""),
+                  [("P", pos, ""), ("A", a, ""), ("B", b, ""), ("C", c, ""), ("D", d, ""), ("Fl", fl, ""), ("W", wind, ""), ("Fine", fine, ""), ("SL", sl, ""), ("SC", sc, ""),
                    ("WeatherTex", wt, ""), ("ShapeTex", st, "")], -600, 150)
     g.out(sh, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     mel.recompile_material(mat)

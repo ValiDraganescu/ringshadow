@@ -313,28 +313,174 @@ light function. `bench.py --gpu` measures it (see the GAME-LAYER.md row
 A view ray's 96 samples are spread over 2 km
 (`r.VolumetricCloud.DistanceToSampleMaxCount=2`; the default 15 made a
 step ~156 m, and the cloud edges a salt-and-pepper fuzz), at no
-measurable cost. The clouds are traced at quarter resolution and rebuilt
-over frames (`r.VolumetricRenderTarget.Mode=0`, the engine's default). The
-engine moves each ray's start every frame, and mode 1 (half resolution,
-no rebuild) showed that as pixels popping on bright edges: 56 per 10,000
-cloud pixels a frame against 8 (hidden 30 fps clips). In the pilot bench
-the cloud pass is 1.3 ms cloudy and 1.0 in a storm.
+measurable cost. The clouds are traced at half resolution with no rebuild
+over frames (`r.VolumetricRenderTarget.Mode=1`, `DefaultEngine.ini`, since
+docs/mmorpg-m6.md V2: the default mode 0's quarter resolution left every
+cloud edge stair-stepped in the pilot's view). The cloud pass's cost and
+the look are in "Clouds (2026-10-18)" below.
 
-The look (`Tools/Editor/make_cloud_material.py`, `AcDaylight.cpp`): the
-shape noise 2.5 times per tile and only its densest part let through
-between clouds, so a cloud is billows on billows, not one cotton slab; a
-short edge into full density; erosion only on thin edges; less sky light
-at a cloud's base; and the high sun's light on the clouds ×2.5
-(`ac.Daylight.CloudSun`, the light's cloud scattering only, the sky
-unchanged), which brings out sunlit tops. A low sun gets ×0.6 (dusk went
-neon), the moon ×1, and under gloom both go to ×0.4. A rain or storm
-deck keeps the wide shape and soft edge: small dense lumps let the sun
-through in white patches. Past 6 km the fine billows and the erosion fade out (gone by
-20 km): from the cockpit the far clouds near the horizon were billows
-smaller than a traced pixel, which only shimmered (pops 2.4 per 10,000
-cloud pixels a frame, 0 with the fade). A storm's clouds go dark blue-grey (albedo
-0.30, 0.34, 0.375) and keep a third of the sky light at their base, as
-Epic's sample storm clouds do.
+## Clouds (2026-10-18)
+
+The user's verdict on the clouds before this pass: far behind the clouds of
+the engine's own sample level, the one the editor opens on (the project sets
+no startup map, so it is `/Engine/Maps/Templates/OpenWorld`: the engine's
+`m_SimpleVolumetricCloud` on a 5-15 km layer under a 6 lux atmosphere sun,
+the same strength as our `SkySun`). The target: cumulus with sunlit tops and
+dark bases, soft eroded edges with no grain or popping, a silver lining
+against the sun, depth to the horizon, a storm that reads as a storm, at no
+more than today's cloud pass plus 0.3 ms.
+
+### Side by side
+
+`ac.Daylight.CloudReference engine` swaps the OpenWorld template's clouds
+(material, layer, the component's defaults, no lift on the sun) into our
+sky, so both are drawn under the same sun, atmosphere, camera and exposure;
+`ac.Daylight.CloudReference /Path/To.Material[;bottom;height]` takes any
+other cloud material. `-AcCloudShots=DIR` (`AcCloudShots.h`) renders every
+pairing of hour, weather, view and look in one hidden run, about 2 s a
+picture at 5120×1378, in the RTS game or (`-AcMmo -AcMmoNewWorld
+-AcMmoHour=H -AcMmoWeather=W -AcCloudShotsDelay=60`: the world's sky
+arrives with its snapshots, so an MMO run waits) in an MMO region; with
+`-AcCloudShotsPan` it records a turning camera instead. A look can also set
+console variables for its picture only, which is how every value below was
+chosen: `ac.Daylight.CloudParam "CloudE=12:45;CloudM=:0.4"` sets the
+material's vector parameters over the frame's own.
+
+The Volumetrics plugin's sample clouds (`-EnablePlugins=Volumetrics`,
+hidden runs only) were tried as a second bar; `CF_Midday` and `ED_Storm`
+draw nothing under our setup (their maps drive them from Blueprints), so
+they are not a reference.
+
+### Why the engine's looked better (round 0)
+
+- **Density.** Ours had an extinction of 0.15 per metre, the engine's about
+  0.008-0.04. Every view step through ours was opaque: hard cut-out edges,
+  blue-grey speckle where a step landed inside a cloud and the next outside,
+  grey opaque clouds against the sun with no light through them, and dark
+  brown clouds at dusk where the engine's glow orange.
+- **Edges.** The density reached full within 30 % of the cloud's own range,
+  so a cloud was a solid body with a knife edge.
+- **Shape language.** Small vertical puffs evenly scattered (popcorn); the
+  engine's are broad, flattened, wind-stretched bodies with a few fragments
+  round them.
+- **Horizon.** A fade carried over from the Swift sky removed every cloud
+  below ~17° of elevation, so there was no depth to the horizon.
+- **Storm.** One flat featureless dark sheet.
+- **Light.** The high sun's light on the clouds was lifted ×2.5 to make the
+  dense clouds' tops stand out; thin clouds do not need it.
+- **Two pops in time.** The shape noise repeated 2.5 times per tile and its
+  wind offset wrapped every 4 km, so every ~4.6 minutes (at 15 m/s) the
+  shape jumped half a tile; and the clouds' lean downwind took its direction
+  from the wrapped offset, which flipped when one axis wrapped.
+
+### What changed
+
+`Tools/Editor/make_cloud_material.py` (the graph), `bake_clouds.py` (the
+weather map), `AcDaylight.cpp`:
+
+- **Density 0.04 per metre** (`CloudDensity`), a soft rim (density grows
+  over the cloud's whole range, `CloudD.x`; at 0.7 a cloud toward the sun
+  still read as a cut-out) and denser cores (×2, `CloudE.z`).
+- **The body** (`body()`, shared by the clouds and their shadows): the
+  weather map is read along the wind and stretched 2× along it
+  (`CloudW`, `CloudStretch`), so clouds come in streets and broad bodies;
+  its cover is now a few big Perlin bodies with Perlin-Worley clumps round
+  their edges (`bake_clouds.py`), its alpha says where each cloud's base
+  sits (±255 m, `CloudF.y`); the shape noise repeats a whole number of
+  times per tile (2 near, 1 far and in a deck), and the lean follows the
+  wind's direction.
+- **Fair weather sits higher.** The layer stays 1.6-5 km (a rain deck's
+  base, where the bolts come from, to the storm's tops), but clouds with sky
+  between them sit 0.9 km up in it (`CloudFine.z`), from 2.5 km: at 1.6 km
+  the pilot's sky felt like a low ceiling.
+- **Detail.** The edge erosion has a second octave four times finer within
+  4 km (`CloudFine.xy`): crisp billows on the masses overhead.
+- **Light.** The engine's sample phase (g 0.8 with a 0.17 lobe) and
+  multiple scattering (0.67/0.25/0.18) side by side against a sharper
+  forward lobe and more, more occluded multiple scattering (g 0.85 / 0.25,
+  blend 0.5; 0.8/0.4/0.4, `CloudP`, `CloudM`): the latter gives the brighter
+  rim against the sun and the darker bases, and is the default. The sky
+  light at a cloud's base 0.45 (was 0.6). The sun's lift on the clouds
+  ×1.3 (`ac.Daylight.CloudSun`, was 2.5).
+- **Horizon.** Far fair-weather cloud thins out from 8 to 30 km
+  (`CloudE.xy`; at 12-45 km single puffs survived as a row of white
+  cloudlets on the horizon) and takes the horizon's air (`Haze`, rising as
+  the sky dome's does): the pilot's horizon tone at half its light
+  (`CloudHazeGain`). The dome's own haze tone was brighter than the horizon
+  reads and stacked the far clouds into a white wall. Past 8 km the fine
+  billows and the erosion fade out (gone by 25 km): smaller than a traced
+  pixel, they only shimmer.
+- **Rain and storm.** A deck has no holes: at least the shape noise itself,
+  thick where the weather map's fine clumps are and thin between (darker
+  masses, lighter patches). With the coverage cut alone its rifts were holes
+  to the sky, and seen edge on they lined up into a clear band along the
+  horizon. Its base is ragged by the same clumps (±200 m), it stays whole to
+  the tracing's end, the ground's bounce on it goes with the gloom (the
+  material's ground contribution assumes a sunlit ground, and lit the far
+  deck's underside as a white strip), and over the gas giant it thins only a
+  quarter as much (a clear hole in a storm read as a fault). Storm clouds
+  are dark blue-grey (albedo 0.30, 0.34, 0.375) and keep a third of the sky
+  light at their base, as the engine's sample storm clouds do.
+- **The murk.** Under gloom the first-person haze tone (`Tones.Haze`, which
+  the sky dome's horizon and the pilot's veil over the far ground take) goes
+  darker and greyer and rises to 32°: the far land is lost in the storm's
+  grey. With the fair sky's haze the veil painted the far ridges under the
+  deck clear-sky blue, a bright strip that read as the deck ending.
+
+The shots, the engine above ours: `art/sky/clouds/before` (round 0) and
+`art/sky/clouds/final` (MMO region, noon, 17:30 and 18:18, clear, cloudy,
+rain and storm).
+
+### Cost and time
+
+The clouds are traced at quarter resolution and rebuilt over frames
+(`r.VolumetricRenderTarget.Mode=0`), and a ray steps three times as far
+through air the height profile marks empty
+(`r.VolumetricCloud.StepSizeOnZeroConservativeDensity=3`), both in
+`DefaultEngine.ini`.
+
+The `VolumetricCloud` pass, ms a frame (mean of 2 rounds, `bench.py
+--gpu`; the pilot shot looks at the sky, the MMO home view barely does and
+its harness holds the weather clear):
+
+| | clear | cloudy | storm | load |
+|---|---|---|---|---|
+| pilot 5120×1378@2, before (d28e66e) | 1.45 | 2.14 | 1.96 | 9-13 |
+| pilot, half resolution (mode 1), the new look | 1.53-1.56 | 2.68-3.08 | 0.74-1.17 | 8-31 |
+| pilot, mode 0 | 1.05 | 1.97 | 0.61 | 9-13 |
+| pilot, mode 0 + step 3 (final) | 0.68 | 1.83 | 0.58 | 7-10 |
+| MMO home noon 5120×1378@2, before (bcae75c) | 0.54 | | | 10-19 |
+| MMO home noon, final | 0.25 | | | 7 |
+
+Priced on the way (pilot, cloudy): the fine erosion octave 0.08 ms; 72
+view samples -0.64 ms but 2.5× the pops in mode 1; 128 samples no change
+in mode 0; self-shadow steps ×0.6 -0.33 ms but more pops; the engine's
+`EmptySpaceSkipping` no gain.
+
+**Time.** `-AcCloudShotsPan=3 -AcCloudShotsSeconds=3` at a fixed 30 and
+60 fps (MMO, 17:30, cloudy, toward the sun) and `flicker.py`-style counting:
+a pop is a pixel more than 10/255 off both neighbouring frames in the same
+direction, per 10,000 cloud pixels a frame, on the sky (the top quarter of
+the frame; lower, the mesa ridgelines' own edges dominate). Each MMO world
+is new, so its clouds differ from run to run (identical settings varied
+2×); only the engine and ours in the same run compare:
+
+| | pan 30 fps | pan 60 fps | still 30 fps | still 60 fps |
+|---|---|---|---|---|
+| ours, mode 1 | 7.1 | | | |
+| ours, mode 0 | 1.9-3.6 | 0.8-0.9 | 0.01 | 0.01 |
+| the engine's clouds | 0.95-1.3 | 0.36 | 0.00 | 0.00 |
+
+Still, the clouds are as steady as the engine's (no flicker, no popping as
+they drift); under a turning camera ours resample about twice as many
+pixels per frame, their sharper billows (the engine's are soft blobs),
+about 0.02-0.03 % of the cloud a frame. The reprojection's box constraint
+(`r.VolumetricRenderTarget.ReprojectionBoxConstraint 1`) made the still
+camera worse. The bar was 1.5× the engine's pan rate; it was not chased
+further because what is left is detail, not instability (the still camera
+is as steady as the engine's), and the only lever left is less edge detail,
+which is the look this pass was for. Re-open it only with a measure that
+tells resampled detail from flicker.
 
 ## Console and flags
 
@@ -347,4 +493,8 @@ Epic's sample storm clouds do.
   `ac.Weather.Wet` (wet ground), `ac.Weather.Lightning` (0/1).
 - The clouds' own: `ac.Daylight.Clouds`, `ac.Daylight.CloudShadows`,
   `ac.Daylight.CloudDensity`; `ac.Daylight.CloudCover` overrides the
-  weather's cover.
+  weather's cover; `ac.Daylight.CloudBottom` and `CloudHeight` the layer
+  (km); `ac.Daylight.CloudSun` the sun's lift on them;
+  `ac.Daylight.CloudReference` another cloud setup side by side and
+  `ac.Daylight.CloudParam` the material's look parameters ("Clouds
+  (2026-10-18)"); `-AcCloudShots=DIR` (`AcCloudShots.h`) the pictures.

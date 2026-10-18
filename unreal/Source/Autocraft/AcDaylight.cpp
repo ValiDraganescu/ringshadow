@@ -84,8 +84,22 @@ namespace
 		TEXT("ac.Daylight.CloudShadowKm"), 4.0f,
 		TEXT("How far (km) each cloud sample marches toward the sun for its shadow."));
 	TAutoConsoleVariable<float> CVarCloudSun(
-		TEXT("ac.Daylight.CloudSun"), 2.5f,
+		TEXT("ac.Daylight.CloudSun"), 1.3f,
 		TEXT("Scale on the high sun's light the clouds scatter (not the sky's): sunlit tops against shaded bases."));
+	TAutoConsoleVariable<FString> CVarCloudReference(
+		TEXT("ac.Daylight.CloudReference"), TEXT(""),
+		TEXT("Another cloud setup under the same sun and sky, for side-by-side shots (docs/weather.md): empty ours; ")
+		TEXT("engine (the OpenWorld template's); or a cloud material's path [;bottom km;height km]."));
+	TAutoConsoleVariable<float> CVarCloudBottom(
+		TEXT("ac.Daylight.CloudBottom"), 1.6f,
+		TEXT("Where the cloud layer starts, km over the ground (a rain deck's base; fair-weather clouds sit 0.9 km higher)."));
+	TAutoConsoleVariable<float> CVarCloudHeight(
+		TEXT("ac.Daylight.CloudHeight"), 3.4f,
+		TEXT("How thick the cloud layer is, km (a storm's towers reach its top)."));
+	TAutoConsoleVariable<FString> CVarCloudParam(
+		TEXT("ac.Daylight.CloudParam"), TEXT(""),
+		TEXT("Cloud look tuning: vector parameters set on M_AcCloud and M_AcCloudShadow over the frame's own, ")
+		TEXT("\"CloudE=0.04:1:0.5:0;CloudD=...\" (x:y:z:w; missing components keep the default). Empty: the material's defaults."));
 	TAutoConsoleVariable<int32> CVarVolumetricFog(
 		TEXT("ac.Daylight.VolumetricFog"), 1,
 		TEXT("Volumetric fog in the haze (1) or plain height fog (0)."));
@@ -144,9 +158,6 @@ namespace
 	const TCHAR* AcCloudMaterialPath = TEXT("/Game/Sky/MI_AcCloud.MI_AcCloud");
 	const TCHAR* AcCloudShadowMaterialPath = TEXT("/Game/Sky/MI_AcCloudShadow.MI_AcCloudShadow");
 
-	/// The cloud layer (km): fair-weather bases at 1.6 km, towers to 5 km.
-	constexpr float CloudBottomKm = 1.6f;
-	constexpr float CloudHeightKm = 3.4f;
 	/// Weather map and noise tiles across (km): clumps ~2 km, bodies ~1 km,
 	/// edge detail 250 m-1 km (finer is under a pixel and reads as grain).
 	/// Sized with the wind for the map's sake: the shadows are the clouds'
@@ -155,11 +166,16 @@ namespace
 	/// and 1.5 km bodies left it in sun for up to 20 min).
 	constexpr double WeatherKm = 12.0, ShapeKm = 4.0, DetailKm = 2.0;
 	/// Extinction per metre at full density, and the edge erosion.
-	constexpr double CloudDensity = 0.15, CloudErosion = 0.35;
+	constexpr double CloudDensity = 0.04, CloudErosion = 0.35;
 	/// The wind's direction, toward +X a little +Y (Unreal axes); its speed
 	/// and the distance moved are the weather's (`windKm`, 15 m/s clear: a
 	/// cloud's shadow edge crosses the RTS view in ~1.5 s).
 	const FVector2D CloudWind = FVector2D(1.0, 0.35).GetSafeNormal();
+	/// How much longer the weather map's patterns are along the wind than
+	/// across it: streets of cloud, not round blots.
+	constexpr double CloudStretch = 2.0;
+	/// The far clouds' haze: the horizon tone's light times this.
+	constexpr double CloudHazeGain = 0.5;
 	/// How much of the light a thick cloud takes away, and how much summed
 	/// density (four samples up the light's ray) makes full shade.
 	constexpr double CloudShadowStrength = 0.7, CloudShadowSoftness = 2.5;
@@ -168,6 +184,9 @@ namespace
 	/// the sky, 0.6 already turned the frame white.
 	constexpr double CloudFlashGlow = 0.2;
 	constexpr double CloudFlashKm = 2.5;
+	/// The warm ground's bounce on the cloud bases, and the sky light left there.
+	const FColor CloudGroundAlbedo(150, 128, 105);
+	constexpr float CloudBottomOcclusion = 0.6f;
 
 	double Smoothstep(double A, double B, double X)
 	{
@@ -361,16 +380,19 @@ AAcDaylight::AAcDaylight()
 
 	Clouds = CreateDefaultSubobject<UVolumetricCloudComponent>(TEXT("Clouds"));
 	Clouds->SetupAttachment(Root);
-	Clouds->LayerBottomAltitude = CloudBottomKm;
-	Clouds->LayerHeight = CloudHeightKm;
+	// The cloud layer (km): from a rain deck's base at 1.6 km to the storm's
+	// tops at 5 km; fair-weather clouds sit 0.9 km up in it (M_AcCloud's
+	// `CloudFine.z`: at 1.6 the pilot's sky felt like a low ceiling).
+	Clouds->LayerBottomAltitude = CVarCloudBottom.GetValueOnAnyThread();
+	Clouds->LayerHeight = CVarCloudHeight.GetValueOnAnyThread();
 	// The light reddens across the layer at dusk, not once for all of it.
 	Clouds->bUsePerSampleAtmosphericLightTransmittance = true;
 	// Self-shadow rays need not cross the whole layer.
 	Clouds->ShadowTracingDistance = 4.0f;
 	// The bases take the warm ground's bounce (the material's
 	// GroundContribution) and less of the sky's light.
-	Clouds->GroundAlbedo = FColor(150, 128, 105);
-	Clouds->SkyLightCloudBottomOcclusion = 0.6f;
+	Clouds->GroundAlbedo = CloudGroundAlbedo;
+	Clouds->SkyLightCloudBottomOcclusion = CloudBottomOcclusion;
 
 	Dome = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Dome"));
 	Dome->SetupAttachment(Root);
@@ -638,9 +660,11 @@ void AAcDaylight::Update(const double Time)
 	// Only a high sun: a low one's red light (lifted for the sky, see
 	// LowLightLift) turned dusk clouds neon, so the clouds take less of it;
 	// and the moon's lifted made night clouds read as day's.
+	// A reference's clouds take the sky's light as it is.
+	const bool bReference = !CVarCloudReference.GetValueOnGameThread().IsEmpty();
 	const double Lifted = FMath::Lerp(0.6, double(CVarCloudSun.GetValueOnGameThread()), Smoothstep(8, 30, Deg));
-	const float CloudSun = float(FMath::Lerp(Lifted, 0.4, Smoothstep(0, 0.5, Gloom)));
-	const float CloudMoon = float(FMath::Lerp(1.0, 0.4, Smoothstep(0, 0.5, Gloom)));
+	const float CloudSun = bReference ? 1.0f : float(FMath::Lerp(Lifted, 0.4, Smoothstep(0, 0.5, Gloom)));
+	const float CloudMoon = bReference ? 1.0f : float(FMath::Lerp(1.0, 0.4, Smoothstep(0, 0.5, Gloom)));
 	if (!FMath::IsNearlyEqual(SkySun->CloudScatteredLuminanceScale.R, CloudSun, 0.01f) ||
 		!FMath::IsNearlyEqual(SkyMoon->CloudScatteredLuminanceScale.R, CloudMoon, 0.01f))
 	{
@@ -736,14 +760,19 @@ void AAcDaylight::Update(const double Time)
 	Tones.Top = Tone(Rgb(0.07, 0.15, 0.34), Rgb(0.008, 0.012, 0.035), Rgb(0.08, 0.1, 0.26));
 	Tones.High = Tone(Rgb(0.2, 0.34, 0.6), Rgb(0.015, 0.025, 0.06), Rgb(0.3, 0.28, 0.45));
 	Tones.Horizon = Tone(Rgb(0.52, 0.6, 0.72), Rgb(0.05, 0.06, 0.11), Rgb(0.95, 0.5, 0.28));
-	Tones.Haze = Grey(Tone(Rgb(0.62, 0.6, 0.58), Rgb(0.07, 0.09, 0.16), Rgb(0.62, 0.4, 0.3)), Gloom * 0.7) * float(FMath::Lerp(1.0, 0.75, Gloom));
+	// Under a rain deck the haze is the murk under it, dark and grey, and it
+	// rises high (below): the sky dome's horizon and the pilot's veil over the
+	// far ground take it, so the far land is lost in the storm's grey. With
+	// the fair sky's haze the far ridges under the deck read as a clear blue
+	// strip (side by side, docs/weather.md "Clouds (2026-10-18)").
+	Tones.Haze = Grey(Tone(Rgb(0.62, 0.6, 0.58), Rgb(0.07, 0.09, 0.16), Rgb(0.62, 0.4, 0.3)), Gloom * 0.85) * float(FMath::Lerp(1.0, 0.5, Gloom));
 	// Full cover hides the sunset.
 	Tones.Glow = Rgb(0.9, 0.38, 0.16) * float(Glow * (1.0 - 0.85 * Smoothstep(0.6, 0.97, Weather.cover)));
 	Tones.Cloud = Tone(Rgb(0.96, 0.95, 0.93), Rgb(0.07, 0.08, 0.12), Rgb(1, 0.66, 0.5));
 	Tones.Shade = Tone(Rgb(0.66, 0.69, 0.76), Rgb(0.035, 0.04, 0.065), Rgb(0.5, 0.36, 0.42));
 	Tones.Sun = SunDir;
 	Tones.Stars = 1 - Smoothstep(-14, -3, Deg);
-	Tones.Rise = 24 + (12 - 24) * Light;
+	Tones.Rise = FMath::Lerp(24 + (12 - 24) * Light, 32.0, Gloom);
 	// Night closes in round the driven unit: the ground clear to a quarter
 	// of it (6.5 cells) and lost by 26 (`ac.NightReach`) in the night's blue
 	// haze, so the land near the pilot reads in the ringlight (V2: at 10
@@ -766,6 +795,40 @@ void AAcDaylight::Update(const double Time)
 	}
 }
 
+void AAcDaylight::ApplyCloudReference(const FString& Reference)
+{
+	AppliedCloudReference = Reference;
+	UMaterialInterface* Material = CloudMaterial.Get();
+	// The component's defaults: the engine's sample layer, 5 km up, 10 thick.
+	float Bottom = 5, Height = 10;
+	if (!Reference.IsEmpty())
+	{
+		TArray<FString> Parts;
+		Reference.ParseIntoArray(Parts, TEXT(";"));
+		const FString Path = Reference == TEXT("engine") ? FString(CloudMaterialPath) : Parts[0];
+		if (Parts.Num() >= 3)
+		{
+			Bottom = FCString::Atof(*Parts[1]);
+			Height = FCString::Atof(*Parts[2]);
+		}
+		if (UMaterialInterface* Other = LoadObject<UMaterialInterface>(nullptr, *Path)) Material = Other;
+		else UE_LOG(LogAutocraft, Error, TEXT("daylight: no cloud material %s; our clouds"), *Path);
+	}
+	const bool bOurs = Material == CloudMaterial.Get();
+	if (!Material) return;
+	Clouds->SetMaterial(Material);
+	Clouds->SetLayerBottomAltitude(bOurs ? CVarCloudBottom.GetValueOnGameThread() : Bottom);
+	Clouds->SetLayerHeight(bOurs ? CVarCloudHeight.GetValueOnGameThread() : Height);
+	Clouds->SetbUsePerSampleAtmosphericLightTransmittance(bOurs);
+	Clouds->SetGroundAlbedo(bOurs ? CloudGroundAlbedo : FColor(170, 170, 170));
+	Clouds->SetSkyLightCloudBottomOcclusion(bOurs ? CloudBottomOcclusion : 0.5f);
+	Clouds->SetShadowTracingDistance(bOurs ? CVarCloudShadowKm.GetValueOnGameThread() : 15.0f);
+	Clouds->SetViewSampleCountScale(1.0f);
+	Clouds->SetShadowViewSampleCountScale(1.0f);
+	UE_LOG(LogAutocraft, Log, TEXT("daylight: clouds %s (%s, layer %.1f + %.1f km)"), bOurs ? TEXT("ours") : *Reference,
+		*Material->GetPathName(), Clouds->LayerBottomAltitude, Clouds->LayerHeight);
+}
+
 void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
 {
 	const bool bClouds = CVarClouds.GetValueOnGameThread() != 0;
@@ -775,6 +838,23 @@ void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
 	// its grey hides the grain fewer samples leave, which bright cumulus
 	// edges show: half the view and shadow samples under a full deck (rain
 	// and storm alike: by cover, not gloom).
+	// A reference's clouds (`ac.Daylight.CloudReference`, docs/weather.md
+	// "Clouds (2026-10-18)") under the same sun, sky and camera: its own
+	// material and layer, no cloud shadows on the ground.
+	if (const FString Reference = CVarCloudReference.GetValueOnGameThread(); Reference != AppliedCloudReference)
+	{
+		ApplyCloudReference(Reference);
+	}
+	if (!AppliedCloudReference.IsEmpty())
+	{
+		if (bCloudShadowsOn)
+		{
+			bCloudShadowsOn = false;
+			Sun->SetLightFunctionMaterial(nullptr);
+			Moon->SetLightFunctionMaterial(nullptr);
+		}
+		return;
+	}
 	const float Samples = float(FMath::Lerp(1.0, 0.5, Smoothstep(0.8, 0.96, Weather.cover)));
 	const float ShadowSamples = Samples * CVarCloudShadowSteps.GetValueOnGameThread();
 	if (!FMath::IsNearlyEqual(Clouds->ViewSampleCountScale, Samples, 0.01f) ||
@@ -783,6 +863,10 @@ void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
 		Clouds->SetViewSampleCountScale(Samples);
 		Clouds->SetShadowViewSampleCountScale(ShadowSamples);
 	}
+	// The layer (`ac.Daylight.CloudBottom`, `CloudHeight`).
+	const float LayerBottom = CVarCloudBottom.GetValueOnGameThread(), LayerHeight = CVarCloudHeight.GetValueOnGameThread();
+	if (!FMath::IsNearlyEqual(Clouds->LayerBottomAltitude, LayerBottom, 0.001f)) Clouds->SetLayerBottomAltitude(LayerBottom);
+	if (!FMath::IsNearlyEqual(Clouds->LayerHeight, LayerHeight, 0.001f)) Clouds->SetLayerHeight(LayerHeight);
 	const float ShadowKm = CVarCloudShadowKm.GetValueOnGameThread();
 	if (!FMath::IsNearlyEqual(Clouds->ShadowTracingDistance, ShadowKm, 0.01f))
 	{
@@ -799,13 +883,22 @@ void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
 	// The coverage moves with the wind; the bodies a little faster, so they
 	// boil as they go instead of sliding by as one picture. The shadow
 	// material takes the same three vectors: it marches the same clouds.
-	const FVector2D W = CloudWind * Weather.windKm;
-	const FVector2D S = W * 1.15;
-	const FLinearColor A(float(-FMath::Fmod(W.X, WeatherKm)), float(-FMath::Fmod(W.Y, WeatherKm)),
+	// The weather map runs along the wind, stretched CloudStretch times
+	// (M_AcCloud's `CloudW`): its offset is the distance blown, wrapped at a
+	// whole stretched tile.
+	const FVector2D S = CloudWind * Weather.windKm * 1.15;
+	const FLinearColor A(float(FMath::Fmod(Weather.windKm, WeatherKm * CloudStretch)), 0.0f,
 		float(-FMath::Fmod(S.X, ShapeKm)), float(-FMath::Fmod(S.Y, ShapeKm)));
+	const FLinearColor Wind(float(CloudWind.X), float(CloudWind.Y), float(CloudStretch), CVarCloudHeight.GetValueOnGameThread());
 	// A storm's clouds: denser (darker undersides).
 	const double Density = CloudDensity * CVarCloudDensity.GetValueOnGameThread() * FMath::Lerp(1.0, 1.8, Weather.storm);
 	const FLinearColor B{float(Cover), float(Density), float(WeatherKm), float(ShapeKm)};
+	// The ground's bounce on the cloud bases (the material's ground
+	// contribution) assumes a sunlit ground; under a rain deck the ground is
+	// in its shade, and the bounce lit the far deck's underside, seen edge
+	// on, as a white strip along the horizon.
+	const FColor GroundAlbedo = Mix(FLinearColor(CloudGroundAlbedo), FLinearColor::Black, Smoothstep(0.0, 0.6, Weather.gloom)).ToFColor(true);
+	if (GroundAlbedo != Clouds->GroundAlbedo) Clouds->SetGroundAlbedo(GroundAlbedo);
 	// The cloud type follows the weather: flat fair-weather cumulus when
 	// clear, cumulus when cloudy (tall thin towers side-on read as curtains),
 	// towers only in a storm.
@@ -819,6 +912,14 @@ void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
 		CloudMaterial->SetVectorParameterValue(TEXT("CloudA"), A);
 		CloudMaterial->SetVectorParameterValue(TEXT("CloudB"), B);
 		CloudMaterial->SetVectorParameterValue(TEXT("CloudC"), C);
+		CloudMaterial->SetVectorParameterValue(TEXT("CloudW"), Wind);
+		// The horizon's air over the far clouds (M_AcCloud's `Haze`, rising
+		// as the sky dome's haze does): the first-person horizon tone at half
+		// its light, darker under a rain deck. The dome's own haze tone was
+		// brighter than the horizon reads and turned the far clouds into a
+		// white wall (side by side, docs/weather.md).
+		const FLinearColor CloudHaze = Lin(Tones.Horizon) * float(CloudHazeGain * FMath::Lerp(1.0, 0.4, Weather.gloom));
+		CloudMaterial->SetVectorParameterValue(TEXT("Haze"), FLinearColor(CloudHaze.R, CloudHaze.G, CloudHaze.B, float(Tones.Rise)));
 		// The far clouds thin out in front of the gas giant (M_AcCloud's `Giant`).
 		const FVector G = FAcGasGiant::Direction();
 		CloudMaterial->SetVectorParameterValue(TEXT("Giant"), FLinearColor(float(G.X), float(G.Y), float(G.Z),
@@ -844,7 +945,7 @@ void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
 			}
 			const double Az = WeatherActor ? WeatherActor->LastStrikeAzimuth() : 0.0, Km = WeatherActor ? WeatherActor->LastStrikeKm() : 5.0;
 			const FVector2D At = FVector2D(Cam.X, Cam.Y) * 1.0e-5 + FVector2D(FMath::Cos(Az), FMath::Sin(Az)) * Km;
-			CloudMaterial->SetVectorParameterValue(TEXT("Bolt"), FLinearColor(float(At.X), float(At.Y), CloudBottomKm + 0.8f, float(CloudFlashKm)));
+			CloudMaterial->SetVectorParameterValue(TEXT("Bolt"), FLinearColor(float(At.X), float(At.Y), LayerBottom + 0.8f, float(CloudFlashKm)));
 		}
 	}
 
@@ -863,8 +964,51 @@ void AAcDaylight::UpdateClouds(const double Time, const FVector& SunDir)
 		CloudShadowMaterial->SetVectorParameterValue(TEXT("CloudA"), A);
 		CloudShadowMaterial->SetVectorParameterValue(TEXT("CloudB"), B);
 		CloudShadowMaterial->SetVectorParameterValue(TEXT("CloudC"), C);
+		CloudShadowMaterial->SetVectorParameterValue(TEXT("CloudW"), Wind);
 		CloudShadowMaterial->SetVectorParameterValue(TEXT("ShadowL"), FLinearColor(float(Toward.X), float(Toward.Y), float(Toward.Z),
 			float(FMath::Clamp(CloudShadowStrength * ShadowGain, 0.0, 1.0))));
-		CloudShadowMaterial->SetVectorParameterValue(TEXT("ShadowC"), FLinearColor(CloudBottomKm, CloudHeightKm, float(CloudShadowSoftness), 0.0f));
+		CloudShadowMaterial->SetVectorParameterValue(TEXT("ShadowC"), FLinearColor(LayerBottom, LayerHeight, float(CloudShadowSoftness), 0.0f));
 	}
+	ApplyCloudParams();
+}
+
+void AAcDaylight::ApplyCloudParams()
+{
+	const FString Spec = CVarCloudParam.GetValueOnGameThread();
+	if (Spec.IsEmpty() && CloudParamsSet.IsEmpty()) return;
+	TArray<FString> Items;
+	Spec.ParseIntoArray(Items, TEXT(";"));
+	TSet<FName> Applied;
+	for (UMaterialInstanceDynamic* M : {CloudMaterial.Get(), CloudShadowMaterial.Get()})
+	{
+		if (!M || !M->Parent) continue;
+		auto Default = [&](const FName Name) {
+			FLinearColor V(0, 0, 0, 0);
+			M->Parent->GetVectorParameterValue(FHashedMaterialParameterInfo(Name), V);
+			return V;
+		};
+		TSet<FName> Now;
+		for (const FString& Item : Items)
+		{
+			FString Name, Value;
+			if (!Item.Split(TEXT("="), &Name, &Value)) continue;
+			const FName Param(*Name.TrimStartAndEnd());
+			FLinearColor V = Default(Param);
+			TArray<FString> Parts;
+			Value.ParseIntoArray(Parts, TEXT(":"), /*InCullEmpty*/ false);
+			for (int32 I = 0; I < FMath::Min(4, Parts.Num()); ++I)
+			{
+				if (!Parts[I].TrimStartAndEnd().IsEmpty()) V.Component(I) = FCString::Atof(*Parts[I]);
+			}
+			M->SetVectorParameterValue(Param, V);
+			Now.Add(Param);
+		}
+		// A name dropped from the list goes back to the material's default.
+		for (const FName Old : CloudParamsSet)
+		{
+			if (!Now.Contains(Old)) M->SetVectorParameterValue(Old, Default(Old));
+		}
+		Applied.Append(Now);
+	}
+	CloudParamsSet = MoveTemp(Applied);
 }

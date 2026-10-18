@@ -9,8 +9,8 @@
 Writes (rerunnable, deterministic, every texture tiles):
   unreal/Content-src/sky/cloud_weather.png  512 x 512 weather map, linear:
       R coverage (Perlin-Worley fbm: banks and clear gaps), G cloud type
-      (0 flat layer, 0.5 cumulus, 1 towering), B a finer coverage field the
-      ground shadows mix in, A unused (1).
+      (0 flat layer, 0.5 cumulus, 1 towering), B a finer coverage field,
+      A where the cloud base sits (0.5 the layer's bottom).
   unreal/Content-src/sky/cloud_shape.png    128^3 shape noise as a 16 x 8 atlas
       of 128 x 128 slices (2048 x 1024): R Perlin-Worley, G/B/A Worley fbm
       at 4, 8 and 16 cells. The cloud's body.
@@ -129,14 +129,21 @@ def stretch(x, lo_pct, hi_pct):
 
 def weather():
     c = grid(512, 2)
-    # The Perlin-Worley clumps, a little thinner where the low-frequency
-    # banks are low: strong banks gave 15 km clear zones, and the map (its
-    # shadows are the clouds') sat in sun for 20 minutes.
-    banks = stretch(perlin_fbm(c, 2, 20, 3), 5, 95)
-    cover = stretch(perlin_worley(c, 6, 10) * (0.7 + 0.3 * banks), 20, 97)
+    # A few big bodies (Perlin fbm, 3 cells: ~4 km across, stretched along
+    # the wind in the material) with their edges broken by Perlin-Worley
+    # clumps, so the small fragments sit round the big ones, not evenly
+    # scattered. Strong banks once gave 15 km clear zones and the map (its
+    # shadows are the clouds') sat in sun for 20 minutes: the clumps keep
+    # every part of the map getting some cloud.
+    big = perlin_fbm(c, 3, 20, 5)
+    clumps = perlin_worley(c, 8, 10)
+    cover = stretch(0.7 * big + 0.3 * clumps, 15, 97)
     kind = stretch(perlin_fbm(c, 2, 30, 3), 15, 85)
     fine = stretch(perlin_worley(c, 16, 40), 10, 97)
-    img = np.stack([cover, kind, fine, np.ones_like(cover)], -1)
+    # Where a cloud's base sits (0.5 the layer's bottom): bases a few
+    # hundred metres up or down, no flat line across the sky.
+    base = stretch(perlin_fbm(c, 4, 50, 3), 5, 95)
+    img = np.stack([cover, kind, fine, base], -1)
     # numpy rows run along the first axis: x down, y across; the material
     # reads u from world X, v from world Y, so put x across.
     return to8(img.transpose(1, 0, 2))
