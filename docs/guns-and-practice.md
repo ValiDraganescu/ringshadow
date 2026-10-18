@@ -287,8 +287,8 @@ confirm` clicks.
 | Layer | |
 |---|---|
 | core | `round_fliesOnABallisticArcAndDies`; `round_hitsTheFirstThingOnItsPath` (a unit, a building, the ground); `round_damageLandsAtImpactNotAtFire`; `gun_spinsUpAndOverheats`; `gun_firesAlongItsAimWithNoRangeGate`; `gatling_aiLeadsAndFiresRounds`; `dummy_isTargetableByItsOwnSideAndStandsAgain`; `dummy_buildsForTenOreWithNoBlueprint`; `blueprint_learnedOnceThenBuildsForOre`; `round_replayIsDeterministic` |
-| net | `Fired`, `Impact`, `DummyDown`, `Learn`, `Structure::hits/downUntil/heat`, `CornerGun::heat` round trips; widths |
-| server | `learn_consumesACopyOnce`; `shop_sellsABlueprintOncePerPilot`; `site_givesOreForAKnownBlueprint`; `load_schema28LearnsWhatWasBoughtOrBuilt`; `build_dummyNeedsNoBlueprint`; `rounds_reachEveryClientThatMayKnow`; `citadel_mannedGunHitsAtThirtyCells` (the user's case) |
+| net | `Fired`, `Impact`, `DummyDown`, `Learn`, `Structure::hits/downUntil/heat`, `CornerGun::heat` round trips; widths (as built: `net-tests/tests/GunsWireTests.cpp`, with the learned kinds, overheat and spin) |
+| server | `learn_consumesACopyOnce`; `shop_sellsABlueprintOncePerPilot`; `site_givesOreForAKnownBlueprint`; `load_schema28LearnsWhatWasBoughtOrBuilt`; `build_dummyNeedsNoBlueprint`; `rounds_reachEveryClientThatMayKnow`; `citadel_mannedGunHitsAtThirtyCells` (the user's case) (as built: `LearnTests.cpp`, `ShopTests.cpp`, `CitadelTests.cpp`; also `frontier_buildsAfterSchema28`, `dev_dummyHereAheadOfTheGun`, and `defence_citadel_turrets_beat_a_raid` with a led ballistic aim) |
 | game | `Autocraft.Effects.RoundFliesTheSamePathAsTheCore`; `Autocraft.Hud.BuildWheelPicksBySector`; `Autocraft.Hud.FeedImpactMarker`; `Autocraft.Pose.MinigunSpinsUp` |
 | flow | `-AcFlowTest=mmopractice`: dev rig, open the wheel, build a dummy 20 cells from the Citadel, enter, man the gun facing it, fire until it falls, it stands again, hits counted; pictures (`-AcMmoShotsC2`: the wheel, the tracers in flight, an impact, the dummy down) |
 

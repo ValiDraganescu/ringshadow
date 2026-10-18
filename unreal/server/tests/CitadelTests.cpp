@@ -4,10 +4,14 @@
 // station, freed when its gunner dies or is handed back; the Brood blind to
 // a pilot in the hall; the guns silent without a gunner; a saved world's
 // Citadel grown in place on load (schema 27); a pilot back in the hall
-// after a fall; the dev lines. Isolated scenes of a few seconds, never a
-// game; run from unreal/server.
+// after a fall; the dev lines. C2 (docs/guns-and-practice.md section 7): a
+// manned gun's round hits a bug 30 cells out within 2 s, the rounds reach
+// every client that may know them, a Target Dummy put up by the dev line.
+// Isolated scenes of a few seconds, never a game; run from unreal/server.
 
 #include "test.h"
+
+#include "GunAim.h"
 
 #include "Brood.h"
 #include "Defence.h"
@@ -17,9 +21,11 @@
 #include "WorldStore.h"
 
 #include <algorithm>
+#include <map>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <set>
 #include <string>
 #include <sys/stat.h>
 
@@ -119,14 +125,35 @@ struct Hall {
     Vec2 inHall() const { return centre + Vec2(0, -2); }
 };
 
-/// Shots and misses by building `id` in the pilot's region on the last step.
+/// Shots, misses and (C2) rounds fired by building `id` in the pilot's
+/// region on the last step.
 int64_t shotsBy(WorldMap& w, PilotId p, int64_t id) {
     int64_t n = 0;
     for (const GameEvent& e : w.regionOf(p)->lastEvents()) {
         if (const auto* s = e.as<GameEvent::Shot>(); s && s->unit == id) n += 1;
         if (const auto* m = e.as<GameEvent::Missed>(); m && m->unit == id) n += 1;
+        if (const auto* f = e.as<GameEvent::Fired>(); f && f->shooter == id) n += 1;
     }
     return n;
+}
+
+/// A clear spot on the ground `ahead` cells from corner gun `gun`'s mount
+/// within its arc, a bug's walk; nil when none.
+std::optional<Vec2> openGroundFromGun(const Simulation& sim, Vec2 citadel, int gun, double ahead) {
+    const Vec2 mount = Defence::cornerGun(citadel, gun);
+    for (const double turn : {0.0, 0.2, -0.2, 0.4, -0.4, 0.6, -0.6, 0.8, -0.8}) {
+        const double yaw = Defence::cornerAngle(gun) + turn;
+        const Vec2 at = mount + Vec2(std::cos(yaw), std::sin(yaw)) * ahead;
+        if (sim.nav && sim.nav->walkable(at) && !sim.nav->inRock(at)) return at;
+    }
+    return std::nullopt;
+}
+
+/// Every event pilot `p`'s snapshot carries this step (a snapshot drains
+/// them), appended to `into`.
+void collect(WorldMap& w, PilotId p, std::vector<GameEvent>& into) {
+    const Snapshot s = w.snapshot(p);
+    into.insert(into.end(), s.events.begin(), s.events.end());
 }
 
 /// Bugs of a group alive (not gone, not a body).
@@ -454,4 +481,182 @@ TEST(respawn_insideACompleteCitadel) {
     std::printf("  back at (%.2f, %.2f) from the centre\n", u->position.x - c.x, u->position.y - c.y);
     EXPECT_TRUE(distance(u->position, c + WorldMap::citadelRespawn) < 0.6);
     EXPECT_TRUE(simOf(w, a).sheltered(*u));
+}
+
+// The user's case (C2): a seated pilot mans a corner gun and fires at a bug
+// standing 30 cells out on open ground with the right pitch (the core's
+// ballistic solve from the gun's muzzle): a round hits it within 2 s of the
+// first round, its hit points drop, and nothing stops the gun for range.
+TEST(citadel_mannedGunHitsAtThirtyCells) {
+    Hall h;
+    ASSERT_TRUE(h.citadel.has_value());
+    WorldMap& w = h.w;
+    standAt(w, a, Defence::gunStation(h.centre, 0));
+    ASSERT_TRUE(!w.man(a, 0).has_value());
+    Simulation& sim = simOf(w, a);
+    const auto spot = openGroundFromGun(sim, h.centre, 0, 30);
+    ASSERT_TRUE(spot.has_value());
+    const size_t r = *w.where(a);
+    const auto group = w.spawnBroodGroup(r, UnitKind::shardling, 1, WorldMap::Poi::building, *h.citadel, *spot, true);
+    ASSERT_TRUE(group.has_value());
+    int64_t bugId = 0;
+    for (const Unit& u : sim.state.units)
+        if (u.bug && u.bug->group == *group) bugId = u.id;
+    ASSERT_TRUE(bugId != 0);
+    const double hp0 = sim.state.unit(bugId)->hp;
+    const double dt = w.regionOf(a)->description().step;
+    std::optional<double> firstFired, firstHit;
+    double pitch = 0;
+    for (int i = 0; i < int(3.0 / dt) && !firstHit; i++) {
+        // The bug held on its spot: a target standing on open ground.
+        for (Unit& u : sim.state.units)
+            if (u.id == bugId) {
+                u.position = *spot;
+                u.goal = std::nullopt;
+                u.waypoints = std::nullopt;
+            }
+        const auto bug = sim.state.unit(bugId);
+        ASSERT_TRUE(bug.has_value());
+        const auto aim = rig::aimCornerGun(sim, h.centre, 0, *bug);
+        ASSERT_TRUE(aim.has_value());
+        pitch = aim->pitch;
+        PilotInput in;
+        in.tick = ++inputTick;
+        in.visit = w.visit(a);
+        in.heading = aim->yaw;
+        in.pitch = aim->pitch;
+        in.crosshair = Pilot::Crosshair(Pilot::Crosshair::On{bugId});
+        in.hold = true;
+        w.input(a, in);
+        w.step();
+        for (const GameEvent& e : w.regionOf(a)->lastEvents()) {
+            if (const auto* f = e.as<GameEvent::Fired>(); f && f->shooter == *h.citadel && !firstFired) firstFired = sim.state.time;
+            if (const auto* im = e.as<GameEvent::Impact>(); im && im->what == GameEvent::Impact::What::unit && im->victim == bugId)
+                firstHit = sim.state.time;
+        }
+    }
+    std::printf("  30 cells: pitch %.2f deg, first round at %.3f s, first hit %.3f s after\n", pitch * 180 / pi,
+                firstFired.value_or(-1), firstHit && firstFired ? *firstHit - *firstFired : -1.0);
+    ASSERT_TRUE(firstFired.has_value());
+    ASSERT_TRUE(firstHit.has_value());
+    EXPECT_TRUE(*firstHit - *firstFired <= 2.0);
+    // The quantised pitch the client sends (8 bits) is enough: the solve
+    // aims down from the 9-cell mount.
+    EXPECT_TRUE(pitch < 0 && pitch > Defence::gunPitchMin);
+    const auto bug = sim.state.unit(bugId);
+    EXPECT_TRUE(!bug || bug->hp < hp0);
+}
+
+// The rounds on the wire (C2): a manned gun's Fired and its Impacts reach
+// both pilots of the realm in the region, the second one far from where the
+// rounds land (it may know the shooter, the realm's Citadel); a pilot in
+// another region gets none. `mayKnow` itself: an Impact on ground nobody of
+// the side sees goes only with its shooter known.
+TEST(rounds_reachEveryClientThatMayKnow) {
+    Hall h;
+    ASSERT_TRUE(h.citadel.has_value());
+    WorldMap& w = h.w;
+    standAt(w, a, Defence::gunStation(h.centre, 0));
+    ASSERT_TRUE(!w.man(a, 0).has_value());
+    ASSERT_TRUE(w.seat(b, keyB) == WorldMap::Seated::fresh);
+    ASSERT_TRUE(w.where(b) == w.where(a));
+    constexpr PilotId c = 83;
+    const std::string keyC = "e0e1e2e3e4e5e6e7e8e9eaebecedeeef";
+    ASSERT_TRUE(w.seat(c, keyC) == WorldMap::Seated::fresh);
+    const size_t elsewhere = *w.regionNamed("cold-fork");
+    ASSERT_TRUE(w.devTransfer(c, elsewhere, w.region(elsewhere).places()->pads[0].at));
+    w.step();
+    ASSERT_TRUE(w.where(c) == elsewhere);
+    // B far off on the other side of the Citadel.
+    standAt(w, b, h.centre + Vec2(-30, -30));
+    std::vector<GameEvent> ea, eb, ec;
+    collect(w, a, ea);
+    collect(w, b, eb);
+    collect(w, c, ec);
+    ea.clear();
+    eb.clear();
+    ec.clear();
+    std::vector<GameEvent> all;
+    for (int i = 0; i < 90; i++) {
+        PilotInput in;
+        in.tick = ++inputTick;
+        in.visit = w.visit(a);
+        in.heading = Defence::cornerAngle(0);
+        in.pitch = -0.2;
+        in.hold = true;
+        w.input(a, in);
+        w.step();
+        const auto& last = w.regionOf(a)->lastEvents();
+        all.insert(all.end(), last.begin(), last.end());
+        collect(w, a, ea);
+        collect(w, b, eb);
+        collect(w, c, ec);
+    }
+    auto count = [](const std::vector<GameEvent>& v, bool fired) {
+        int64_t n = 0;
+        for (const GameEvent& e : v) n += fired ? e.is<GameEvent::Fired>() : e.is<GameEvent::Impact>();
+        return n;
+    };
+    const int64_t fired = count(all, true), impacts = count(all, false);
+    std::printf("  %lld rounds fired, %lld impacts; A got %lld + %lld, B %lld + %lld, elsewhere %lld\n", (long long)fired,
+                (long long)impacts, (long long)count(ea, true), (long long)count(ea, false), (long long)count(eb, true),
+                (long long)count(eb, false), (long long)(count(ec, true) + count(ec, false)));
+    ASSERT_TRUE(fired > 0 && impacts > 0);
+    EXPECT_EQ(count(ea, true), fired);
+    EXPECT_EQ(count(ea, false), impacts);
+    EXPECT_EQ(count(eb, true), fired);
+    EXPECT_EQ(count(eb, false), impacts);
+    EXPECT_EQ(count(ec, true) + count(ec, false), int64_t(0));
+    // The wire carries them: every Impact of A's names a round A was told
+    // fired.
+    std::set<int64_t> told;
+    for (const GameEvent& e : ea)
+        if (const auto* f = e.as<GameEvent::Fired>()) told.insert(f->round);
+    for (const GameEvent& e : ea)
+        if (const auto* im = e.as<GameEvent::Impact>()) EXPECT_TRUE(told.count(im->round) == 1);
+
+    // mayKnow: an Impact on ground the side doesn't see, nobody hit.
+    const Simulation& sim = simOf(w, a);
+    std::optional<Vec2> dark;
+    for (int x = 0; x < 64 && !dark; x++)
+        for (int y = 0; y < 64 && !dark; y++) {
+            const Vec2 p = h.centre + Vec2(double(x) * 6 - 192, double(y) * 6 - 192);
+            if (!sim.sees(0, p)) dark = p;
+        }
+    if (dark) {
+        const GameEvent impact(GameEvent::Impact{999999, Vec3(dark->x, dark->y, 0), GameEvent::Impact::What::ground, 0});
+        EXPECT_TRUE(!mayKnow(sim, 0, impact));
+        EXPECT_TRUE(mayKnow(sim, 0, impact, *h.citadel));
+        const GameEvent seen(GameEvent::Fired{777777, 999998, Vec3(dark->x, dark->y, 1), Vec3(90, 0, 0)});
+        EXPECT_TRUE(!mayKnow(sim, 0, seen));
+    } else {
+        std::printf("  no fog here: every point is seen\n");
+    }
+}
+
+// The dev line `dummy here` (C2, for the game's flow test): a complete
+// Target Dummy of the realm about 20 cells ahead of the seated pilot, along
+// its gun's aim when it mans one.
+TEST(dev_dummyHereAheadOfTheGun) {
+    Hall h;
+    ASSERT_TRUE(h.citadel.has_value());
+    WorldMap& w = h.w;
+    standAt(w, a, Defence::gunStation(h.centre, 0));
+    ASSERT_TRUE(!w.man(a, 0).has_value());
+    const std::string said = w.devDummy("dummy here");
+    std::printf("  %s\n", said.c_str());
+    const std::string head = "dev: dummy here: dummy ";
+    ASSERT_TRUE(said.rfind(head, 0) == 0);
+    const int64_t id = std::atoll(said.c_str() + head.size());
+    const Structure* d = structure(simOf(w, a), id);
+    ASSERT_TRUE(d != nullptr);
+    EXPECT_TRUE(d->kind == StructureKind::dummy && d->complete());
+    EXPECT_EQ(d->hp, Rules::hp(StructureKind::dummy));
+    EXPECT_TRUE(simOf(w, a).targetable(*d, Pilot::player));
+    const double gunAim = (*structure(simOf(w, a), *h.citadel)->guns)[0].aim;
+    const Vec2 from = drivenUnit(w, a)->position;
+    EXPECT_TRUE(std::abs(distance(d->position, from) - 20) <= 6.5);
+    const double bearing = std::atan2(d->position.y - from.y, d->position.x - from.x);
+    EXPECT_TRUE(std::abs(std::remainder(bearing - gunAim, 2 * pi)) <= 0.25);
+    EXPECT_TRUE(w.devDummy("dummy there").find("is not here") != std::string::npos);
 }

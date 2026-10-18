@@ -10,6 +10,8 @@
 
 #include "test.h"
 
+#include "GunAim.h"
+
 #include "CitadelSpot.h"
 
 #include "Brood.h"
@@ -20,6 +22,7 @@
 #include "WorldStore.h"
 
 #include <cmath>
+#include <map>
 #include <cstdio>
 #include <string>
 #include <sys/stat.h>
@@ -343,7 +346,10 @@ TEST(defence_a_raid_on_a_defended_hab_dome_is_beaten) {
 // The Citadel's corner turrets beat a raid on the Citadel itself (Prospect
 // Landing's Citadel may be raided now that it is armed). C1: only with a
 // gunner: the pilot mans the north-east gun from its station in the hall
-// and aims at the bugs (its heading, its crosshair, the act key held).
+// and aims at the bugs (its heading, its crosshair, the act key held). C2:
+// its rounds fly a ballistic arc and the gun can't reach ground nearer than
+// about 26 cells (its pitch stop from the 9-cell mount), so the gunner meets
+// the raid on its way in: the yaw and pitch of the core's solve, led.
 TEST(defence_citadel_turrets_beat_a_raid) {
     Home s;
     ASSERT_TRUE(s.citadel.has_value());
@@ -355,29 +361,52 @@ TEST(defence_citadel_turrets_beat_a_raid) {
     w.step();
     ASSERT_TRUE(!w.man(a, 0).has_value());
     const size_t r = *w.where(a);
-    const Vec2 mount = Defence::cornerGun(c, 0);
-    const auto shard = w.spawnBroodGroup(r, UnitKind::shardling, 6, WorldMap::Poi::building, *s.citadel, c + Vec2(14, 14), false);
+    const auto shard = w.spawnBroodGroup(r, UnitKind::shardling, 6, WorldMap::Poi::building, *s.citadel, c + Vec2(60, 60), false);
     ASSERT_TRUE(shard.has_value());
+    std::map<int64_t, Vec2> was;
+    const double dt = w.regionOf(a)->description().step;
+    int64_t fired = 0, hits = 0;
     for (int i = 0; i < 40 * 60 && aliveIn(w, a, *shard) > 0; i++) {
-        // The nearest bug the gun can turn to.
-        const Unit* aim = nullptr;
-        for (const Unit& bug : simOf(w, a).state.units) {
-            if (!bug.bug || bug.bug->group != *shard || bug.hp <= 0) continue;
-            const double yaw = std::atan2(bug.position.y - mount.y, bug.position.x - mount.x);
-            if (std::abs(std::remainder(Defence::clampAim(0, yaw) - yaw, 2 * pi)) > 1e-6) continue;
-            if (!aim || distance(bug.position, mount) < distance(aim->position, mount)) aim = &bug;
+        for (const GameEvent& e : w.regionOf(a)->lastEvents()) {
+            if (e.is<GameEvent::Fired>()) fired++;
+            if (const auto* im = e.as<GameEvent::Impact>(); im && im->what == GameEvent::Impact::What::unit) hits++;
         }
+        // The nearest bug the gun's solve reaches, led by its last step.
+        const Simulation& sim = simOf(w, a);
+        const Unit* aim = nullptr;
+        std::optional<rig::GunAim> how;
+        for (const Unit& bug : sim.state.units) {
+            if (!bug.bug || bug.bug->group != *shard || bug.hp <= 0) continue;
+            const auto prev = was.find(bug.id);
+            const Vec2 v = prev == was.end() ? Vec2(0, 0) : (bug.position - prev->second) / dt;
+            const auto solve = rig::aimCornerGun(sim, c, 0, bug, v);
+            // Held until 45 cells, where the cone (8 mrad) still covers a bug.
+            if (solve && distance(bug.position, Defence::cornerGun(c, 0)) <= 45 &&
+                (!aim || distance(bug.position, c) < distance(aim->position, c))) {
+                aim = &bug;
+                how = solve;
+            }
+        }
+        was.clear();
+        for (const Unit& bug : sim.state.units)
+            if (bug.bug && bug.bug->group == *shard) was[bug.id] = bug.position;
         PilotInput in;
         in.tick = ++inputTick;
         in.visit = w.visit(a);
         if (aim) {
-            in.heading = std::atan2(aim->position.y - mount.y, aim->position.x - mount.x);
+            in.heading = how->yaw;
+            in.pitch = how->pitch;
             in.crosshair = Pilot::Crosshair(Pilot::Crosshair::On{aim->id});
             in.hold = true;
         }
         w.input(a, in);
         w.step();
     }
+    std::printf("  %lld rounds, %lld on a bug\n", (long long)fired, (long long)hits);
+    for (const Unit& bug : simOf(w, a).state.units)
+        if (bug.bug && bug.bug->group == *shard && bug.hp > 0)
+            std::printf("  alive: %.1f cells from the Citadel, hp %.1f, solve %s\n", distance(bug.position, c), bug.hp,
+                        rig::aimCornerGun(simOf(w, a), c, 0, bug) ? "yes" : "no");
     EXPECT_EQ(aliveIn(w, a, *shard), int64_t(0));
     EXPECT_TRUE(structure(simOf(w, a), *s.citadel)->hp > 0.9 * Rules::hp(StructureKind::citadel));
     EXPECT_TRUE(drivenUnit(w, a)->task == Unit::Task::atGun);
