@@ -806,7 +806,9 @@ void Simulation::stepTurret(Structure& s, const UnitStats& w, double dt, std::ve
 }
 
 std::optional<int64_t> Simulation::gunTarget(const Structure& s, Vec2 at, double edge, const UnitStats& w,
-                                             std::optional<int64_t> target) const {
+                                             std::optional<int64_t> target,
+                                             const std::function<bool(const Target&, int64_t)>* usable) const {
+    auto ok = [&](const Target& t, int64_t id) { return !usable || (*usable)(t, id); };
     auto reach = [&](const Target& t) -> std::optional<double> {
         if (!(state.hostile(t.owner, s.owner) && (t.air ? w.hitsAir : w.hitsGround))) return std::nullopt;
         const double d = distance(at, t.position) - t.radius - edge;
@@ -815,7 +817,7 @@ std::optional<int64_t> Simulation::gunTarget(const Structure& s, Vec2 at, double
     };
     bool keep = false;
     if (target) {
-        if (auto t = foe(*target, s.owner); t && reach(*t)) keep = true;
+        if (auto t = foe(*target, s.owner); t && reach(*t) && ok(*t, *target)) keep = true;
     }
     if (!keep) {
         struct Best { int64_t id; int64_t p; double d; };
@@ -829,7 +831,7 @@ std::optional<int64_t> Simulation::gunTarget(const Structure& s, Vec2 at, double
             auto d = reach(*t);
             if (!d) continue;
             const int64_t p = priority(*t);
-            if (!best || p > best->p || (p == best->p && *d < best->d)) best = Best{v.id, p, *d};
+            if ((!best || p > best->p || (p == best->p && *d < best->d)) && ok(*t, v.id)) best = Best{v.id, p, *d};
         }
         if (w.hitsGround) {
             for (const auto& o : state.structures) {
@@ -839,7 +841,7 @@ std::optional<int64_t> Simulation::gunTarget(const Structure& s, Vec2 at, double
                 auto d = reach(*t);
                 if (!d) continue;
                 const int64_t p = priority(*t);
-                if (!best || p > best->p || (p == best->p && *d < best->d)) best = Best{o.id, p, *d};
+                if ((!best || p > best->p || (p == best->p && *d < best->d)) && ok(*t, o.id)) best = Best{o.id, p, *d};
             }
         }
         target = best ? std::optional<int64_t>(best->id) : std::nullopt;

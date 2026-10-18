@@ -387,6 +387,76 @@ TEST(gatling_aiLeadsAndFiresRounds) {
     EXPECT_EQ(fired(run(m, 1), gun2), int64_t(0));
 }
 
+TEST(gatling_onALedgeHitsBugsBelow) {
+    // c2-netserver's case (2026-10-18): a gatling gun up on a ledge fired
+    // every round into its own lip at bugs below it. On the home map's
+    // plateau: a bug on the low ground below whose line from the muzzle
+    // runs under the plateau's edge is held fire at; one farther out below,
+    // in the gun's view, is hit; and no round strikes the ground at the gun.
+    Open o = open();
+    Simulation probe(o.s, homeMap(), false);
+    const TerrainField& f = *probe.field;
+    auto hidden = [&](Vec2 p, Vec2 q) {
+        const Vec3 m(p.x, p.y, f.height(p) + Defence::gatlingPivot);
+        const Vec3 b(q.x, q.y, f.height(q) + 0.75);
+        for (double t = 0.05; t < 0.95; t += 0.01) {
+            const Vec3 x = m + (b - m) * t;
+            if (x.z < f.height(Vec2(x.x, x.y)) - 0.2) return true;
+        }
+        return false;
+    };
+    // A gun on the plateau with a hidden spot below it, and a seen one.
+    std::optional<std::pair<Vec2, Vec2>> pair;
+    std::optional<Vec2> seen;
+    for (double apart : {4.0, 5.0, 6.0}) {
+        pair = cliffPair(homeMap(), f, *probe.navGrid(), apart, hidden);
+        if (!pair) continue;
+        seen = std::nullopt;
+        for (int k = 0; k < 64 && !seen; k++) {
+            const double a = 2 * pi * k / 64;
+            for (double r = 9; r <= 17 && !seen; r += 1) {
+                const Vec2 q = pair->first + Vec2(std::cos(a), std::sin(a)) * r;
+                if (f.level(q) == 0 && probe.navGrid()->walkable(q) && f.height(pair->first) - f.height(q) > 1 && !hidden(pair->first, q)) seen = q;
+            }
+        }
+        if (seen) break;
+    }
+    ASSERT_TRUE(pair.has_value() && seen.has_value());
+    auto scene = [&](Vec2 bugAt_) {
+        GameState s = o.s;
+        addStructure(s, Structure::Kind::gatling, pair->first, 0);
+        addUnit(s, Unit::Kind::lodeback, bugAt_, 1);
+        s.units.back().bug = Bug{};
+        s.units.back().bug->site = bugAt_;
+        s.units.back().bug->coming = false;
+        s.units.back().bug->wanderAt = 1e9;
+        Simulation m(s, homeMap(), false);
+        m.broodSide = 1;
+        return m;
+    };
+    {
+        Simulation m = scene(pair->second);
+        const int64_t gun = m.state.structures.back().id, bug = m.state.units.back().id;
+        const auto events = run(m, 2);
+        EXPECT_EQ(fired(events, gun), int64_t(0));
+        EXPECT_EQ(hp(m, bug), Rules::hp(Unit::Kind::lodeback));
+    }
+    {
+        Simulation m = scene(*seen);
+        const int64_t gun = m.state.structures.back().id, bug = m.state.units.back().id;
+        const auto events = run(m, 2);
+        EXPECT_TRUE(fired(events, gun) > 10);
+        EXPECT_TRUE(hp(m, bug) < Rules::hp(Unit::Kind::lodeback));
+        int64_t onBug = 0, atGun = 0;
+        for (const auto& i : all<GameEvent::Impact>(events)) {
+            onBug += i.victim == bug;
+            atGun += i.what == GameEvent::Impact::What::ground && distance(Vec2(i.at.x, i.at.y), pair->first) < 3;
+        }
+        EXPECT_TRUE(onBug > 5);
+        EXPECT_EQ(atGun, int64_t(0));
+    }
+}
+
 TEST(dummy_isTargetableByItsOwnSideAndStandsAgain) {
     const CitadelHall on(true);
     Hall h = hallScene(kAt);

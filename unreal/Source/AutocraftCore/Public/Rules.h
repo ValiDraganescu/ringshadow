@@ -531,9 +531,9 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr double roundLife = 3.0;
     /// The hit sweep's thickness, cells.
     static constexpr double roundRadius = 0.08;
-    /// A round passes through its own shooter's building this long after it
-    /// left the muzzle.
-    static constexpr double roundSelfGrace = 0.2;
+    /// A round passes through its own shooter's building, and the ground
+    /// under its footprint, this long after it left the muzzle.
+    static constexpr double roundSelfGrace = 0.3;
     /// Where a round is `t` seconds after it left `muzzle` at `velocity`: the
     /// parabola under `roundGravity`. The core steps rounds by this same
     /// closed form, so the client's streak flies the core's path at any

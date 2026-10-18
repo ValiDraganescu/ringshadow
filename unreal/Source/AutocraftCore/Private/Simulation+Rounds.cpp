@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
+#include <unordered_map>
 #include <limits>
 
 namespace ac {
@@ -208,6 +210,14 @@ void Simulation::stepRounds(double dt, std::vector<GameEvent>& events) {
     std::vector<uint32_t> seen(bodies.size(), 0);
     uint32_t stamp = 0;
 
+    // The shooters' buildings, by id, for the grace over their own ground.
+    std::unordered_map<int64_t, size_t> own;
+    for (const Round& r : state.rounds)
+        if (state.time - dt - r.born < Rules::roundSelfGrace) own.emplace(r.shooter, SIZE_MAX);
+    if (!own.empty())
+        for (size_t i = 0; i < state.structures.size(); i++)
+            if (auto it = own.find(state.structures[i].id); it != own.end()) it->second = i;
+
     std::vector<Round> kept;
     kept.reserve(state.rounds.size());
     for (Round r : state.rounds) {
@@ -224,29 +234,38 @@ void Simulation::stepRounds(double dt, std::vector<GameEvent>& events) {
         GameEvent::Impact::What what = GameEvent::Impact::What::ground;
         std::optional<size_t> victim;
         bool structure = false;
+        const bool grace = t0 - r.born < Rules::roundSelfGrace;
+        // In its grace, the ground under the shooter's own footprint lets it by.
+        std::optional<std::pair<Vec2, double>> home;
+        if (grace)
+            if (auto it = own.find(r.shooter); it != own.end() && it->second != SIZE_MAX) {
+                const Structure& o = state.structures[it->second];
+                home = std::pair{o.position, Rules::radius(o.kind)};
+            }
+        auto under = [&](Vec3 q) {
+            if (home && std::abs(q.x - home->first.x) <= home->second && std::abs(q.y - home->first.y) <= home->second) return false;
+            return q.z < groundZ(Vec2(q.x, q.y));
+        };
         if (ac::min(p0.z, p1.z) <= groundTop(Vec2(ac::min(p0.x, p1.x), ac::min(p0.y, p1.y)), Vec2(ac::max(p0.x, p1.x), ac::max(p0.y, p1.y)))) {
             const double along = std::sqrt(d.x * d.x + d.y * d.y);
             const int n = ac::max(1, int(std::ceil(along / kGroundStep)));
-            if (p0.z < groundZ(Vec2(p0.x, p0.y))) {
+            if (under(p0)) {
                 best = 0;
             } else {
                 for (int k = 1; k <= n; k++) {
                     const double s = double(k) / n;
-                    const Vec3 q = p0 + d * s;
-                    if (q.z >= groundZ(Vec2(q.x, q.y))) continue;
+                    if (!under(p0 + d * s)) continue;
                     // Between the last sample above and this one below.
                     double lo = double(k - 1) / n, hi = s;
                     for (int b = 0; b < 8; b++) {
                         const double m = (lo + hi) / 2;
-                        const Vec3 e = p0 + d * m;
-                        (e.z < groundZ(Vec2(e.x, e.y)) ? hi : lo) = m;
+                        (under(p0 + d * m) ? hi : lo) = m;
                     }
                     best = hi;
                     break;
                 }
             }
         }
-        const bool grace = t0 - r.born < Rules::roundSelfGrace;
         const double rr = Rules::roundRadius;
         stamp++;
         for (int64_t y = row(ac::min(p0.y, p1.y) - rr); y <= row(ac::max(p0.y, p1.y) + rr); y++)
@@ -333,9 +352,43 @@ void Simulation::strike(const Round& r, int64_t id) {
     }
 }
 
+double Simulation::aimHeight(int64_t id) const {
+    if (const auto u = state.unit(id)) {
+        const UnitStats& st = u->stats();
+        const double h = st.height > 0 ? st.height : 1.5;
+        return groundZ(u->position) + (u->airborne() ? (u->bug ? u->bug->height : st.hover) : h / 2);
+    }
+    if (const auto o = state.structure(id)) return groundZ(o->position) + Rules::height(o->kind) / 2;
+    return 0;
+}
+
+std::optional<double> Simulation::gatlingPitch(const Structure& s, Vec2 at, double z, double radius) const {
+    const double base = groundZ(s.position);
+    const double yaw = std::atan2(at.y - s.position.y, at.x - s.position.x);
+    const Vec3 level = Defence::gatlingMuzzle(s.position, yaw, 0);
+    auto p = Rules::ballisticPitch(distance(Vec2(level.x, level.y), at), z - (base + level.z));
+    if (!p) return std::nullopt;
+    // The arc must clear the ground up to the target's edge: a gun on a
+    // ledge does not fire into its own lip at what is below it.
+    Vec3 m = Defence::gatlingMuzzle(s.position, yaw, *p);
+    m.z += base;
+    const Vec3 v = Rules::roundVelocity(yaw, *p);
+    const double along = std::sqrt(v.x * v.x + v.y * v.y);
+    const double ahead = distance(Vec2(m.x, m.y), at) - radius;
+    for (double d = kGroundStep; d < ahead; d += kGroundStep) {
+        const Vec3 q = Rules::roundAt(m, v, d / along);
+        if (q.z < groundZ(Vec2(q.x, q.y)) + Rules::roundRadius) return std::nullopt;
+    }
+    return p;
+}
+
 void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::vector<GameEvent>& events) {
     const double edge = Rules::radius(s.kind);
-    std::optional<int64_t> target = gunTarget(s, s.position, edge, w, s.target);
+    // Only a target its rounds can reach over the ground between.
+    const std::function<bool(const Target&, int64_t)> clear = [&](const Target& t, int64_t id) {
+        return gatlingPitch(s, t.position, aimHeight(id), t.radius).has_value();
+    };
+    std::optional<int64_t> target = gunTarget(s, s.position, edge, w, s.target, &clear);
     s.target = target;
     double aim = s.aim.value_or(pi / 2);
     double cooldown = s.cooldown.value_or(0);
@@ -347,14 +400,9 @@ void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::v
             // Lead: where the target will be when a round gets there (twice
             // round: the flight time from the led point).
             Vec2 v{0, 0};
-            double z = groundZ(t->position);
+            const double z = aimHeight(*target);
             if (const auto u = state.unit(*target)) {
-                const UnitStats& st = u->stats();
                 if (u->moving) v = Vec2(std::cos(u->heading), std::sin(u->heading)) * (Rules::speed(u->kind) * (u->bug ? u->bug->pace : 1));
-                const double h = st.height > 0 ? st.height : 1.5;
-                z += u->airborne() ? (u->bug ? u->bug->height : st.hover) : h / 2;
-            } else if (const auto o = state.structure(*target)) {
-                z += Rules::height(o->kind) / 2;
             }
             Vec2 at = t->position;
             for (int k = 0; k < 2; k++) {
@@ -365,8 +413,7 @@ void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::v
             const double diff = std::remainder(want - aim, 2 * pi);
             const double turn_ = turretTurnRate * dt;
             aim = std::remainder(aim + ac::max(-turn_, ac::min(turn_, diff)), 2 * pi);
-            const Vec3 m = Defence::gatlingMuzzle(s.position, aim, 0);
-            if (const auto p = Rules::ballisticPitch(distance(Vec2(m.x, m.y), at), z - (base + m.z))) {
+            if (const auto p = gatlingPitch(s, at, z, t->radius)) {
                 pitch = *p;
                 trigger = std::abs(std::remainder(want - aim, 2 * pi)) < gatlingAimGate;
             }

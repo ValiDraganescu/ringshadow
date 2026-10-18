@@ -98,10 +98,19 @@ public:
     /// (`hit`), a bug's hit told to the director (`bugHits`).
     void strike(const Round& r, int64_t id);
     /// A gatling gun (C2): it keeps or picks a target within its reach
-    /// (`gunTarget`), turns after where the target will be when a round
+    /// that its arc can reach over the ground (`gunTarget`, `gatlingPitch`),
+    /// turns after where the target will be when a round
     /// gets there, and fires rounds on the ballistic pitch (`Rules::
     /// ballisticPitch`) once it points within `gatlingAimGate`.
     void stepGatling(Structure& s, const UnitStats& w, double dt, std::vector<GameEvent>& events);
+    /// The pitch a gatling gun `s` fires at to land on `at`, `z` up (the
+    /// low arc), if its arc clears the ground all the way to the target's
+    /// edge `radius` short of it; nil when out of reach or the ground is in
+    /// the way (a gun on a ledge, a bug below its lip).
+    std::optional<double> gatlingPitch(const Structure& s, Vec2 at, double z, double radius) const;
+    /// The height a round aims at on unit or building `id`: a ground body's
+    /// middle, a flyer's height, a building's half height.
+    double aimHeight(int64_t id) const;
     static constexpr double gatlingAimGate = 0.05;
     /// A Target Dummy whose time down is over stands again with full hp and
     /// no hits counted.
