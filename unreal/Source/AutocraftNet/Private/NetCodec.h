@@ -34,6 +34,8 @@ static_assert(kUnitKindCount <= 64, "the driven-kinds mask is one uint64_t");
 constexpr size_t kStructureKindCount = EnumInfo<StructureKind>::names.size();
 constexpr int kStructureKindBits = bitsFor(kStructureKindCount);
 static_assert((size_t(1) << kStructureKindBits) >= kStructureKindCount);
+/// C2: the Target Dummy is the 12th kind; the wire's 4 bits hold 16.
+static_assert(kStructureKindBits == 4 && kStructureKindCount >= 12);
 /// A unit's task takes 5 bits (C1: `atGun` is the 19th).
 constexpr int kTaskBits = 5;
 static_assert(EnumInfo<Unit::Task>::names.size() <= (size_t(1) << kTaskBits));
@@ -58,6 +60,23 @@ struct Pos {
     static constexpr bool position = true;
     void write(BitWriter& w, Vec2 v) const;
     void read(BitReader& r, Vec2& v) const;
+};
+/// A round's point (C2): `q::kPointSteps` a cell, x and y in
+/// `q::kPointBits`, z in `q::kPointHeightBits`.
+struct Point {
+    void write(BitWriter& w, Vec3 v) const;
+    void read(BitReader& r, Vec3& v) const;
+};
+/// A round's velocity (C2): `q::kVelocitySteps` a cell/s, `q::kVelocityBits`
+/// an axis.
+struct Velocity {
+    void write(BitWriter& w, Vec3 v) const;
+    void read(BitReader& r, Vec3& v) const;
+};
+/// 0…1 in 255ths (C2: a gun's heat, its barrels' spin).
+struct Share {
+    void write(BitWriter& w, double v) const;
+    void read(BitReader& r, double& v) const;
 };
 struct Angle {
     void write(BitWriter& w, double v) const { w.writeU16(q::angle(v)); }
@@ -191,13 +210,18 @@ struct Pitch {
     void read(BitReader& r, double& v) const { v = q::pitch(uint8_t(r.readBits(q::kPitchBits))); }
 };
 /// An armed Citadel's corner turrets (D1): where each points (C1: its yaw,
-/// its pitch) and who mans it; their targets and reloads stay on the server.
+/// its pitch) and who mans it, and (C2) its heat, whether it is overheated
+/// and its barrels' spin; their targets, reloads and spread stay on the
+/// server.
 struct GunsCodec {
     void write(BitWriter& w, const std::array<CornerGun, 4>& g) const {
         for (const CornerGun& x : g) {
             Angle{}.write(w, x.aim);
             Pitch{}.write(w, x.pitch);
             Opt<Var>{}.write(w, x.gunner);
+            Share{}.write(w, x.heat);
+            w.writeBool(x.overheated);
+            Share{}.write(w, x.spin);
         }
     }
     void read(BitReader& r, std::array<CornerGun, 4>& g) const {
@@ -206,6 +230,9 @@ struct GunsCodec {
             Angle{}.read(r, x.aim);
             Pitch{}.read(r, x.pitch);
             Opt<Var>{}.read(r, x.gunner);
+            Share{}.read(r, x.heat);
+            x.overheated = r.readBool();
+            Share{}.read(r, x.spin);
         }
     }
 };
@@ -299,6 +326,13 @@ template <class V, class X> void structureFields(V& v, X& b) {
     v(Opt<MarksCodec>{}, b.marks);
     v(Opt<GunsCodec>{}, b.guns);
     v(Opt<DoorCodec>{}, b.door);
+    // C2: a dummy's hits since it stood and when it stands again; a
+    // gatling's heat, overheat and spin (its spread stays on the server).
+    v(Var{}, b.hits);
+    v(Opt<Fixed>{kMs}, b.downUntil);
+    v(Share{}, b.heat);
+    v(Bool{}, b.overheated);
+    v(Share{}, b.spin);
 }
 template <class V> void fields(V& v, const Structure& x) { structureFields<V, const Structure>(v, x); }
 template <class V> void fields(V& v, Structure& x) { structureFields<V, Structure>(v, x); }

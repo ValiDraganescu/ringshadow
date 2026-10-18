@@ -302,6 +302,9 @@ TEST(protocol_events_round_trip_every_kind) {
         G(G::LeveledUp{UnitKind::ranger, 4}),
         G(G::Blast{16, at, 2.5}),
         G(G::Stomp{17, at, 3.25}),
+        G(G::Fired{18, 4, Vec3(10.25, -20.5, 1.5), Vec3(89.875, 0.125, 4.5)}),
+        G(G::Impact{4, Vec3(39.5, -20.5, 0.75), G::Impact::What::unit, 19}),
+        G(G::DummyDown{20, 37}),
     };
     EXPECT_EQ(all.size(), std::variant_size_v<GameEvent::Value>);
     const auto messages = encodeEvents(77, all);

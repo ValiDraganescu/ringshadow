@@ -272,6 +272,10 @@ private:
     std::map<PilotId, Seat> pilots_;
     bool daylight_ = true;
     std::vector<GameEvent> lastEvents_;
+    /// C2: the rounds in flight, by id: who fired each and when (`Fired`),
+    /// so its `Impact` reaches whoever may know the shooter. Dropped at the
+    /// impact, or past `Rules::roundLife`.
+    std::unordered_map<int64_t, std::pair<int64_t, double>> rounds_;
     /// The map's own deposits; those after them (a starfall's, told to
     /// every pilot) go to every pilot here, seen or not.
     size_t ownPatches_ = 0;
@@ -303,8 +307,9 @@ private:
 };
 
 /// Whether the side `side` may know of an event (the fog: nothing hidden
-/// leaves the server). Read right after the step that made it.
-bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& event);
+/// leaves the server). Read right after the step that made it. `shooter`:
+/// for an `Impact`, who fired the round (C2: its Fired told the shooter).
+bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& event, std::optional<int64_t> shooter = std::nullopt);
 
 /// A unit of another side as that side may show it: its plans left out.
 Unit scrubbed(const Unit& u);

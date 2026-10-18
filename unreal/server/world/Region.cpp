@@ -431,6 +431,9 @@ void Region::step() {
     std::vector<GameEvent> events = sim_.step(description_.step);
     lastEvents_ = events;
     tick_ += 1;
+    // C2: who fired each round in flight, for its impact's reach.
+    for (const GameEvent& e : events)
+        if (const auto* f = e.as<GameEvent::Fired>()) rounds_[f->round] = {f->shooter, sim_.state.time};
     for (auto& [id, seat] : pilots_) {
         // The driven unit died, or got where it cannot be driven from: its
         // levels kept, its driver's context handed back (W5).
@@ -444,11 +447,17 @@ void Region::step() {
         for (const GameEvent& e : events) {
             // A level up is the driver's own, not every pilot's of the side.
             if (e.is<GameEvent::LeveledUp>() && driver != id) continue;
-            if (mayKnow(sim_, side(id), e)) seat.events.push_back(e);
+            std::optional<int64_t> shooter;
+            if (const auto* i = e.as<GameEvent::Impact>())
+                if (const auto r = rounds_.find(i->round); r != rounds_.end()) shooter = r->second.first;
+            if (mayKnow(sim_, side(id), e, shooter)) seat.events.push_back(e);
         }
         if (seat.events.size() > maxEvents)
             seat.events.erase(seat.events.begin(), seat.events.begin() + static_cast<long>(seat.events.size() - maxEvents));
     }
+    for (const GameEvent& e : events)
+        if (const auto* i = e.as<GameEvent::Impact>()) rounds_.erase(i->round);
+    std::erase_if(rounds_, [&](const auto& r) { return sim_.state.time - r.second.second > Rules::roundLife + 1; });
     // The victory lap, then the next game on the same map.
     if (sim_.state.endedAt && sim_.state.time - *sim_.state.endedAt >= Rules::victoryLap) {
         // The pilots' levels are their own: kept into the next game.
@@ -456,6 +465,7 @@ void Region::step() {
             if (drivesNow(seat)) stashLevels(seat);
         sim_.newGame();
         game_ += 1;
+        rounds_.clear();
         for (auto& [id, seat] : pilots_) {
             seat.drives = std::nullopt;
             seat.waiting.clear();
@@ -467,7 +477,7 @@ void Region::step() {
 
 // MARK: - What a side may know
 
-bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& e) {
+bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& e, std::optional<int64_t> shooter) {
     const GameState& s = sim.state;
     auto at = [&](Vec2 p) { return sim.sees(side, p); };
     auto id = [&](int64_t i) { return sim.sees(side, i); };
@@ -499,6 +509,13 @@ bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& e) {
     if (e.is<GameEvent::LeveledUp>()) return ours(Pilot::player);
     if (const auto* b = e.as<GameEvent::Blast>()) return ourUnit(b->unit) || id(b->unit) || at(b->at);
     if (const auto* st = e.as<GameEvent::Stomp>()) return ourUnit(st->unit) || id(st->unit) || at(st->at);
+    // C2: a round's flight and its end go to whoever may know the shooter
+    // (a pilot's own guns: anywhere in the region) or sees where it is.
+    auto at3 = [&](Vec3 p) { return at(Vec2(p.x, p.y)); };
+    if (const auto* f = e.as<GameEvent::Fired>()) return id(f->shooter) || at3(f->muzzle);
+    if (const auto* i = e.as<GameEvent::Impact>())
+        return (shooter && id(*shooter)) || (i->what != GameEvent::Impact::What::ground && id(i->victim)) || at3(i->at);
+    if (const auto* d = e.as<GameEvent::DummyDown>()) return id(d->id);
     return false;
 }
 

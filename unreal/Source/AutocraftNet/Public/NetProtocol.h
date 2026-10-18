@@ -390,6 +390,17 @@ AUTOCRAFTNET_API double pitch(uint8_t q);
 inline constexpr int kHealthBits = 12;
 /// A walk axis, −1…1: in 255ths, so 0 and ±1 are exact.
 inline constexpr int64_t kWalkSteps = 255;
+/// A round's points (C2, `Fired::muzzle`, `Impact::at`): 1/64 cell, x and
+/// y 22 bits each (±32768 cells), z 16 bits (±512 cells), two's complement.
+inline constexpr int64_t kPointSteps = 64;
+inline constexpr int kPointBits = 22;
+inline constexpr int kPointHeightBits = 16;
+/// A round's velocity (`Fired::velocity`): 1/8 cell/s, 12 bits an axis
+/// (±256 cells/s; the muzzle speed is `Rules::roundSpeed`, 90).
+inline constexpr int64_t kVelocitySteps = 8;
+inline constexpr int kVelocityBits = 12;
+/// A gun's heat and its barrels' spin (C2): 0…1 in 255ths, 8 bits.
+inline constexpr int kShareBits = 8;
 } // namespace q
 
 /// What the server applies: the walk, the heading and the pitch as they go
@@ -598,15 +609,21 @@ struct RequestMessage {
         int8_t gun = -1;
         bool operator==(const Man&) const = default;
     };
+    /// C2: learn the building `kind` from a blueprint copy the pilot holds,
+    /// anywhere; the copy is used up (docs/guns-and-practice.md, section 4).
+    struct Learn {
+        StructureKind kind = StructureKind::citadel;
+        bool operator==(const Learn&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
     /// 14, Use 15, MissionAsk 16 (protocol 16), UpgradeCitadel 17 (protocol
     /// 20; kept for it since 18), Merc 18 (protocol 19), UpgradeTurret 19
     /// (protocol 21), StartProject 20 (protocol 29), CallHunt 21 (protocol 35),
-    /// Door 22 and Man 23 (protocol 36); 5 bits hold 32.
+    /// Door 22 and Man 23 (protocol 36), Learn 24 (protocol 37); 5 bits hold 32.
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt, Door, Man>
+                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt, Door, Man, Learn>
         what;
     bool operator==(const RequestMessage&) const = default;
 };
@@ -854,8 +871,11 @@ struct ProgressMessage {
     /// MH the next respec costs, and whether it is free.
     int64_t respecPrice = 0;
     bool respecFree = true;
-    /// Blueprint copies held, by kind (C2: building uses one up).
+    /// Blueprint copies held, by kind: each is learned once (`Learn`).
     std::map<StructureKind, int64_t> blueprints;
+    /// The buildings the pilot has learned (C2, protocol 37): it builds
+    /// them for their ore.
+    std::set<StructureKind> learned;
     /// Blueprint sites the pilot knows of, and has opened (ids; P4):
     /// "<region id>/<site name>", the region file's `sites`.
     std::set<std::string> sitesKnown;

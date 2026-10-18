@@ -320,6 +320,45 @@ void Pos::read(BitReader& r, Vec2& v) const {
     v = Vec2(double(x) / 100, double(y) / 100);
 }
 
+namespace {
+
+/// `v` in 1/`steps`, clamped to `bits` signed bits.
+void writeClamped(BitWriter& w, double v, int64_t steps, int bits) {
+    const int64_t lim = (int64_t(1) << (bits - 1)) - 1;
+    w.writeBits(static_cast<uint64_t>(std::clamp(fixed(v, double(steps)), -lim, lim)), bits);
+}
+
+double readClamped(BitReader& r, int64_t steps, int bits) { return double(signExtend(r.readBits(bits), bits)) / double(steps); }
+
+} // namespace
+
+void Point::write(BitWriter& w, Vec3 v) const {
+    writeClamped(w, v.x, q::kPointSteps, q::kPointBits);
+    writeClamped(w, v.y, q::kPointSteps, q::kPointBits);
+    writeClamped(w, v.z, q::kPointSteps, q::kPointHeightBits);
+}
+
+void Point::read(BitReader& r, Vec3& v) const {
+    v.x = readClamped(r, q::kPointSteps, q::kPointBits);
+    v.y = readClamped(r, q::kPointSteps, q::kPointBits);
+    v.z = readClamped(r, q::kPointSteps, q::kPointHeightBits);
+}
+
+void Velocity::write(BitWriter& w, Vec3 v) const {
+    for (int i = 0; i < 3; i++) writeClamped(w, v[i], q::kVelocitySteps, q::kVelocityBits);
+}
+
+void Velocity::read(BitReader& r, Vec3& v) const {
+    for (int i = 0; i < 3; i++) v[i] = readClamped(r, q::kVelocitySteps, q::kVelocityBits);
+}
+
+void Share::write(BitWriter& w, double v) const {
+    const double c = std::isfinite(v) ? std::clamp(v, 0.0, 1.0) : 0.0;
+    w.writeBits(static_cast<uint64_t>(std::llround(c * 255)), q::kShareBits);
+}
+
+void Share::read(BitReader& r, double& v) const { v = double(r.readBits(q::kShareBits)) / 255; }
+
 void Time::write(BitWriter& w, double v) const {
     // 0: −∞, 1: +∞, else the milliseconds after 2.
     if (std::isinf(v)) {
@@ -454,6 +493,8 @@ void RequestWhat::read(BitReader& r, Request::What& x) const {
 void writeEvent(BitWriter& w, const GameEvent& e) {
     using codec::Pos;
     const Pos pos;
+    const codec::Point point;
+    const codec::Velocity velocity;
     auto id = [&](int64_t v) { writeSigned(w, v); };
     w.writeBits(e.index(), 5);
     std::visit(
@@ -475,6 +516,9 @@ void writeEvent(BitWriter& w, const GameEvent& e) {
             else if constexpr (std::is_same_v<E, G::Researched>) { w.writeBits(uint64_t(x.upgrade), 2); id(x.owner); pos.write(w, x.at); }
             else if constexpr (std::is_same_v<E, G::LeveledUp>) { unitKind(x.kind); id(x.level); }
             else if constexpr (std::is_same_v<E, G::Blast> || std::is_same_v<E, G::Stomp>) { id(x.unit); pos.write(w, x.at); codec::kCm.write(w, x.radius); }
+            else if constexpr (std::is_same_v<E, G::Fired>) { id(x.shooter); id(x.round); point.write(w, x.muzzle); velocity.write(w, x.velocity); }
+            else if constexpr (std::is_same_v<E, G::Impact>) { id(x.round); point.write(w, x.at); w.writeBits(uint64_t(x.what), 2); id(x.victim); }
+            else if constexpr (std::is_same_v<E, G::DummyDown>) { id(x.id); id(x.hits); }
             else static_assert(sizeof(E) == 0, "every event has its encoding");
         },
         e.value);
@@ -483,6 +527,7 @@ void writeEvent(BitWriter& w, const GameEvent& e) {
 bool readEvent(BitReader& r, GameEvent& e) {
     using codec::Pos;
     const Pos pos;
+    auto point = [&] { Vec3 v; codec::Point{}.read(r, v); return v; };
     auto id = [&] { return readSigned(r); };
     auto at = [&] { Vec2 v; pos.read(r, v); return v; };
     auto unitKind = [&] { return static_cast<UnitKind>(r.readBits(codec::kUnitKindBits)); };
@@ -514,6 +559,24 @@ bool readEvent(BitReader& r, GameEvent& e) {
     case 15: { auto k = unitKind(); auto l = id(); e = GameEvent(GameEvent::LeveledUp{k, l}); break; }
     case 16: { auto u = id(); auto a = at(); e = GameEvent(GameEvent::Blast{u, a, radius()}); break; }
     case 17: { auto u = id(); auto a = at(); e = GameEvent(GameEvent::Stomp{u, a, radius()}); break; }
+    case 18: {
+        auto s = id();
+        auto n = id();
+        auto m = point();
+        Vec3 v;
+        codec::Velocity{}.read(r, v);
+        e = GameEvent(GameEvent::Fired{s, n, m, v});
+        break;
+    }
+    case 19: {
+        auto n = id();
+        auto a = point();
+        const uint64_t what = r.readBits(2);
+        if (what > uint64_t(GameEvent::Impact::What::structure)) return false;
+        e = GameEvent(GameEvent::Impact{n, a, static_cast<GameEvent::Impact::What>(what), id()});
+        break;
+    }
+    case 20: { auto d = id(); e = GameEvent(GameEvent::DummyDown{d, id()}); break; }
     default: return false;
     }
     return r.ok();
@@ -877,6 +940,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
     // A gun 0 to 3, or -1 (leave it): 3 bits, the gun + 1.
     if (const auto* p = std::get_if<RequestMessage::Man>(&m.what))
         w.writeBits(uint64_t(std::clamp<int>(p->gun, -1, 3) + 1), 3);
+    if (const auto* p = std::get_if<RequestMessage::Learn>(&m.what)) w.writeBits(uint64_t(p->kind), codec::kStructureKindBits);
     return w.bytes();
 }
 
@@ -1032,6 +1096,12 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         m.what = RequestMessage::Man{int8_t(int(g) - 1)};
         break;
     }
+    case 24: {
+        const uint64_t kind = r.readBits(codec::kStructureKindBits);
+        if (kind >= codec::kStructureKindCount) return false;
+        m.what = RequestMessage::Learn{static_cast<StructureKind>(kind)};
+        break;
+    }
     default: return false;
     }
     return r.ok();
@@ -1146,6 +1216,8 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
         w.writeBits(uint64_t(k), codec::kStructureKindBits);
         writeSigned(w, n);
     }
+    // C2: the kinds learned, one bit each.
+    for (size_t k = 0; k < codec::kStructureKindCount; k++) w.writeBool(m.learned.count(static_cast<StructureKind>(k)) > 0);
     writeVarint(w, m.items.size());
     for (const auto& [i, n] : m.items) {
         w.writeBits(uint64_t(i), 3);
@@ -1380,6 +1452,8 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
         if (k >= uint64_t(allCases<StructureKind>().size())) return false;
         m.bought[static_cast<StructureKind>(k)] = readSigned(r);
     }
+    for (size_t k = 0; k < codec::kStructureKindCount; k++)
+        if (r.readBool()) m.learned.insert(static_cast<StructureKind>(k));
     auto readItem = [&](Item& item) {
         const uint64_t i = r.readBits(3);
         if (i >= uint64_t(allCases<Item>().size())) return false;

@@ -58,6 +58,15 @@ std::optional<std::string> WorldMap::buy(PilotId pilot, std::optional<StructureK
     return std::nullopt;
 }
 
+std::optional<std::string> WorldMap::learn(PilotId pilot, StructureKind kind) {
+    PilotState* p = pilotState(pilot);
+    if (!p) return "Not in a world";
+    if (auto why = p->progress.learnRefusal(kind)) return why;
+    p->progress.learn(kind);
+    pushProgress(pilot);
+    return std::nullopt;
+}
+
 std::optional<double> WorldMap::itemReady(PilotId pilot, Item item) const {
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end()) return std::nullopt;

@@ -1029,6 +1029,11 @@ public:
     /// stands. The reason when refused (none held, cooling down, in flight
     /// or down, a repair kit on a Prospector not hurt).
     std::optional<std::string> use(PilotId pilot, Item item);
+    /// C2: learns the building `kind` from a blueprint copy the pilot
+    /// holds, anywhere, using the copy up (docs/guns-and-practice.md,
+    /// section 4). The reason when refused (it knows the kind, or holds no
+    /// copy).
+    std::optional<std::string> learn(PilotId pilot, StructureKind kind);
     /// The world's clock when the pilot's `item` is ready again (nil: now).
     std::optional<double> itemReady(PilotId pilot, Item item) const;
 

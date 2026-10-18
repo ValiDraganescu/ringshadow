@@ -568,6 +568,10 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
         // C1: a corner gun manned from its station in the hall, or left (-1).
         what = mn->gun < 0 ? std::string("leave the gun") : "man corner gun " + std::to_string(int(mn->gun));
         why = world_.man(pilot, int(mn->gun));
+    } else if (const auto* ln = std::get_if<net::RequestMessage::Learn>(&m.what)) {
+        // C2: a building learned from a blueprint copy held, once.
+        what = "learn the " + Simulation::title(ln->kind);
+        why = world_.learn(pilot, ln->kind);
     } else if (const auto* ut = std::get_if<net::RequestMessage::UpgradeTurret>(&m.what)) {
         what = "upgrade turret " + std::to_string(ut->turret) + "'s " + std::string(rawValue(ut->stat));
         why = world_.upgradeTurret(pilot, ut->turret, ut->stat);

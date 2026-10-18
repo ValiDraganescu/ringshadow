@@ -229,6 +229,7 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.respecFree = g.respecIsFree();
     m.respecPrice = g.respecCost();
     m.blueprints = g.blueprints;
+    m.learned = g.learned;
     m.sitesFound = g.sites;
     m.sitesKnown = g.known;
     m.regionsSeen = g.regions;

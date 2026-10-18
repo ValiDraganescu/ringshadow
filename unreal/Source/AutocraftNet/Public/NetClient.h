@@ -106,6 +106,9 @@ public:
     uint32_t door(bool open);
     /// C1: man corner gun `gun` (0 to 3), or -1: leave it (`RequestMessage::Man`).
     uint32_t man(int gun);
+    /// C2: learn the building `kind` from a blueprint copy held
+    /// (`RequestMessage::Learn`).
+    uint32_t learn(StructureKind kind);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

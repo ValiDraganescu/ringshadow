@@ -122,6 +122,7 @@ Rate, spin-up and heat on a corner gun and a gatling:
 | spread `coneStand` | 8 mrad, `coneFire` +0.3 mrad a round (`bloom`), fading by 90% every 0.4 s (`coneRecovery`) | same |
 | heat (`CornerGun::heat`, `Structure::heat` for the gatling) | `Rules::gunHeatPerRound` +0.014 a round, `gunCooling` 0.20/s at all times; at 1.0 the gun stops (`overheated`, "OVERHEAT") until it cools to `gunHeatResume` 0.4. It overheats after about 4.5 s of fire and cools from 1 to 0.4 in 3 s | the same numbers: about 6.5 s of fire |
 | range | none: the round flies until it hits or dies | the AI picks targets within 20 cells (`UnitStats::gatling.range`; the air within 4.5), leads them (its speed along its heading × the flight) and fires on the ballistic solve once it points within 0.05 rad (`Simulation::gatlingAimGate`) |
+| on the wire (protocol 37) | the heat and the barrels' `spin` (0…1 in 255ths, 8 bits each) and `overheated` (1 bit: the latch, since heat between 0.4 and 1.0 alone can't say OVERHEAT) in each gun of `GunsCodec`; the spread (`bloom`) and the `cooldown` stay on the server | the same three in the structure's fields |
 
 `Simulation::minigun` steps a gun's barrels and heat; its `cooldown` is the
 share of a round still due before the next leaves (0: the next pull fires
@@ -180,7 +181,11 @@ down it is not targetable, takes nothing and rounds pass over it (the plate
 lies back); at `downUntil` it stands with full hp and `hits` 0
 (`Simulation::stepDummies`). `Structure::hits` counts the hits since it
 last stood, a round's or any other weapon's (sent in the snapshot; the life
-bar shows "HITS 37"). An unfinished dummy is destroyed like any building.
+bar shows "HITS 37"). An unfinished dummy is destroyed like any building. On the wire
+`downUntil` goes as the absolute game time in milliseconds (`Opt<ms>`, as
+the unit's `hitAt` goes; nil while up): the snapshot's fields have no clock,
+and an absolute time changes twice a fall where seconds left would change
+every tick.
 
 The build wheel offers it with no tag; placement as any building.
 
