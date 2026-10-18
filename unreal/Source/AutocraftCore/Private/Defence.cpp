@@ -33,6 +33,18 @@ Vec3 Defence::gunEye(Vec2 citadel, int i, double aim, double pitch) {
     return {m.x, m.y, mountHeight() + up};
 }
 
+Vec3 Defence::gunMuzzle(Vec2 citadel, int i, double aim, double pitch) {
+    const double along = trunnionAlong + muzzleAlong * std::cos(pitch);
+    const double up = trunnionUp + muzzleAlong * std::sin(pitch);
+    const Vec2 m = cornerGun(citadel, i) + Vec2(std::cos(aim), std::sin(aim)) * along;
+    return {m.x, m.y, mountHeight() + up};
+}
+
+Vec3 Defence::gatlingMuzzle(Vec2 at, double aim, double pitch) {
+    const Vec2 m = at + Vec2(std::cos(aim), std::sin(aim)) * (gatlingBarrel * std::cos(pitch));
+    return {m.x, m.y, gatlingPivot + gatlingBarrel * std::sin(pitch)};
+}
+
 double Defence::clampAim(int i, double aim) {
     const double rest = cornerAngle(i);
     const double off = std::remainder(aim - rest, 2 * pi);

@@ -310,7 +310,8 @@ bool Simulation::bugOnPath(Unit& u, double dt) {
             if (k && !nav->reachable(*k, to, Brood::pathReach, false)) {
                 double best = std::numeric_limits<double>::infinity();
                 for (const Structure& s : state.structures)
-                    if (s.hp > 0 && state.hostile(s.owner, u.owner) && distance(s.position, u.position) < best) {
+                    if (s.hp > 0 && state.hostile(s.owner, u.owner) && s.kind != StructureKind::dummy
+                        && distance(s.position, u.position) < best) {
                         best = distance(s.position, u.position);
                         b.breach = s.id;
                     }

@@ -786,7 +786,8 @@ std::optional<std::string> PilotProgress::buildRefusal(StructureKind k, int64_t 
     const std::string name = Simulation::title(k);
     if (!Rules::freeBuild(k)) {
         if (Progression::blueprintFloor(k) <= 0) return "No " + name + " blueprint in this world";
-        if (!knows(k) && copies(k) <= 0) return std::string("No blueprint: buy one at a Citadel (H)");
+        // C2: a blueprint is learned once (`learn`), then built for its ore.
+        if (!knows(k)) return std::string(copies(k) > 0 ? "Learn it first (B)" : "No blueprint: buy one at a Citadel (H)");
         if (level() < floor(k)) return "The " + name + " opens at level " + std::to_string(floor(k));
     }
     if (owned >= limit(k)) {

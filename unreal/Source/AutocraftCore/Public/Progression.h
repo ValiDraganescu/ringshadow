@@ -546,7 +546,9 @@ struct AUTOCRAFTCORE_API PilotProgress {
     /// An ore load's chance of a survey chip (Core sampler, Lucky strike).
     double chipChance() const;
     /// Why the pilot can't put up a `k` now, owning `owned` of them in the
-    /// world: no blueprint copy, under its floor, or at its limit. Nil: it may.
+    /// world (C2): a free kind (`Rules::freeBuild`) needs no blueprint and
+    /// no level; any other must be learned (no copy: buy one; a copy held:
+    /// learn it first), then its floor, then its limit. Nil: it may.
     std::optional<std::string> buildRefusal(StructureKind k, int64_t owned) const;
 
     /// The pilot builds `k` without a copy: learned, or a free kind

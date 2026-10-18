@@ -448,7 +448,8 @@ std::optional<int64_t> Simulation::pilotFoe(const Unit& u) const {
         if (g <= reach && (best ? g < best->second : true)) best = std::make_pair(v.id, g);
     }
     for (const Structure& s : state.structures) {
-        if (!(state.hostile(s.owner, u.owner))) continue;
+        // An enemy's, or a Target Dummy standing (C2).
+        if (!targetable(s, u.owner)) continue;
         const auto t = foe(s.id, u.owner);
         if (!t || !w.hitsGround) continue;
         const double g = max(std::abs(u.position.x - s.position.x), std::abs(u.position.y - s.position.y))
@@ -500,7 +501,7 @@ std::optional<PilotSight> Simulation::pilotSight(const Unit& u) const {
         consider(v.id, *t, t->radius);
     }
     for (const Structure& s : state.structures) {
-        if (!(state.hostile(s.owner, u.owner) && w.hitsGround)) continue;
+        if (!(targetable(s, u.owner) && w.hitsGround)) continue;
         const auto t = foe(s.id, u.owner);
         if (!t) continue;
         consider(s.id, *t, t->radius);
@@ -516,7 +517,14 @@ std::optional<PilotSight> Simulation::crosshairSight(const Unit& u, const Pilot:
     if (!on) return std::nullopt;
     const int64_t id = on->_0;
     const auto t = foe(id, u.owner);
-    if (!t || !state.hostile(t->owner, u.owner) || !canHit(u, *t)) return std::nullopt;
+    if (!t || !canHit(u, *t)) return std::nullopt;
+    // An enemy, or a Target Dummy standing (C2).
+    if (t->structure) {
+        const auto s = state.structure(id);
+        if (!s || !targetable(*s, u.owner)) return std::nullopt;
+    } else if (!state.hostile(t->owner, u.owner)) {
+        return std::nullopt;
+    }
     const UnitStats w = weapon(u, t->air);
     const double g = max(0.0, gap(u, *t));
     // A round that flies on reaches whatever the view shows; a flame or a

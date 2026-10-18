@@ -161,66 +161,39 @@ void Simulation::stepCitadels(double dt) {
     }
 }
 
-bool Simulation::targetable(const Unit& u, int64_t side) const { return state.hostile(u.owner, side); }
-
-bool Simulation::targetable(const Structure& s, int64_t side) const {
-    if (s.kind == StructureKind::dummy) return s.complete() && !s.downUntil && s.hp > 0;
-    return state.hostile(s.owner, side);
-}
-
-void Simulation::stepRounds(double, std::vector<GameEvent>&) {}
-
 void Simulation::stepCornerGun(Structure& s, int i, const UnitStats& w, double dt, std::vector<GameEvent>& events) {
     CornerGun& g = (*s.guns)[size_t(i)];
-    g.cooldown = ac::max(0.0, g.cooldown - dt);
-    const Vec2 at = Defence::cornerGun(s.position, i);
     const Pilot* p = g.gunner ? pilotFor(*g.gunner) : nullptr;
+    std::vector<double> late;
     if (!p) {
-        // No gunner: back to rest, never a shot.
+        // No gunner: back to rest, never a shot; the barrels run down.
         const double turn_ = turretTurnRate * dt;
         const double diff = std::remainder(Defence::cornerAngle(i) - g.aim, 2 * pi);
         g.aim = std::remainder(g.aim + ac::max(-turn_, ac::min(turn_, diff)), 2 * pi);
         g.pitch = g.pitch > 0 ? ac::max(0.0, g.pitch - turn_) : ac::min(0.0, g.pitch + turn_);
+        minigun(g.cooldown, g.heat, g.overheated, g.spin, g.bloom, w, false, dt, late);
         return;
     }
     g.aim = Defence::clampAim(i, p->heading);
     g.pitch = ac::max(Defence::gunPitchMin, ac::min(Defence::gunPitchMax, p->pitch));
-    if (!((p->act || p->hold) && g.cooldown <= 0)) return;
-    g.cooldown = w.cooldown;
-    std::optional<int64_t> id;
-    std::optional<Target> t;
+    // C2: no range gate. It fires along its aim whenever the trigger is down
+    // and it is not overheated; what the crosshair is on is for the pose.
+    g.target = std::nullopt;
     if (p->crosshair) {
         if (const auto on = p->crosshair->as<Pilot::Crosshair::On>()) {
-            if (auto f = foe(on->_0, s.owner); f && state.hostile(f->owner, s.owner) && (f->air ? w.hitsAir : w.hitsGround)) {
-                const double d = distance(at, f->position) - f->radius - Defence::cornerRadius;
-                const double off = std::remainder(std::atan2(f->position.y - at.y, f->position.x - at.x) - g.aim, 2 * pi);
-                if (d <= range(f->air && w.airRange > 0 ? w.airRange : w.range, at, f->position) && std::abs(off) < 0.25) {
-                    id = on->_0;
-                    t = f;
-                }
-            }
+            const auto u = state.unit(on->_0);
+            const auto o = u ? std::nullopt : state.structure(on->_0);
+            if ((u && targetable(*u, s.owner)) || (o && targetable(*o, s.owner))) g.target = on->_0;
         }
     }
-    if (!id) {
-        // A miss along the aim, from the mount (the game draws the tracer).
-        const Vec2 f(std::cos(g.aim), std::sin(g.aim));
-        events.push_back(GameEvent::Missed{s.id, at + f * (w.range + Defence::cornerRadius), 0, g.pitch});
-        return;
+    minigun(g.cooldown, g.heat, g.overheated, g.spin, g.bloom, w, p->act || p->hold, dt, late);
+    if (late.empty()) return;
+    Vec3 m = Defence::gunMuzzle(s.position, i, g.aim, g.pitch);
+    m.z += groundZ(s.position);
+    for (double l : late) {
+        fireRound(s, m, g.aim, g.pitch, w.coneStand + g.bloom, w.damage, l, events);
+        g.bloom += w.coneFire;
     }
-    g.target = id;
-    const auto bug = state.unit(*id);
-    const double had = bug && bug->bug ? bug->hp : 0;
-    hit(*id, Rules::damage(w, t->armored, t->light, t->armor));
-    if (bug && bug->bug) {
-        // The director pays the gunner's side and turns the group on the Citadel.
-        if (const auto after = state.unit(*id)) {
-            bugHits.push_back({s.id, *id, bug->kind, ac::max(0.0, had - ac::max(0.0, after->hp)), had > 0 && after->hp <= 0});
-            if (auto it = unitIndexByID.find(*id); it != unitIndexByID.end()) {
-                if (auto& b = state.units[size_t(it->second)].bug) b->hitBy = s.id;
-            }
-        }
-    }
-    events.push_back(GameEvent::Shot{s.id, *id, t->owner, t->position});
 }
 
 } // namespace ac

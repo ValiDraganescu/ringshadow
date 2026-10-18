@@ -163,6 +163,11 @@ struct UnitStats {
     /// (`Commander`'s training chain), for a kind with no hand-written
     /// place there yet. False for every kind the chain names.
     bool aiTrains = false;
+    /// C2, for the rounds' sweep (`Simulation::stepRounds`): how tall its
+    /// body stands (0: 1.5 cells), and a flyer's height over the ground
+    /// (the game's hover; a Gloamwing's is `Bug::height`).
+    double height = 0;
+    double hover = 0;
 
     /// `table` in `Unit.Kind.allCases` order, read by `Unit.Kind.ordinal`:
     /// a dictionary keyed by the kind hashes its name on every look-up, and
@@ -181,14 +186,17 @@ struct UnitStats {
     /// every 3.2 s, range 8. About 11 (+4) a second against the Hailstorm's 12
     /// (+8) and the Sentinel's 24 a second, but a Kestrel is one gun, not a battery.
     static const UnitStats railgun;
-    /// D2, a gatling gun's amalgam rounds: 4 every 0.25 s (16 a second) at
-    /// ground targets in range 6, and at the air within 4.5 cells (it
-    /// outreaches a Gloamwing's spit, 4).
+    /// D2, a gatling gun: since C2 a minigun firing rounds
+    /// (docs/guns-and-practice.md section 1), 0.8 a round, 25 a second at
+    /// full spin, its cone 8 mrad growing 0.3 a round. Its AI aims at ground
+    /// targets within 20 cells, at the air within 4.5 (it outreaches a
+    /// Gloamwing's spit, 4), with a ballistic solve.
     static const UnitStats gatling;
     /// D1, one of a Citadel's four corner turrets in a world (a Citadel
-    /// fires only when the server arms it, `Structure::marks`): rapid rotary
-    /// close-in guns, 2.5 every 0.25 s (10 a second each) at ground and air
-    /// in range 7.5 from the turret, before the marks.
+    /// fires only when the server arms it, `Structure::marks`), fired by a
+    /// gunner (C1): since C2 a minigun firing rounds, 1.0 a round, 30 a
+    /// second at full spin, along its aim with no range gate, its cone as
+    /// the gatling's.
     static const UnitStats citadelGuns;
 
     bool operator==(const UnitStats&) const = default;
@@ -543,12 +551,15 @@ struct AUTOCRAFTCORE_API Rules {
     static std::optional<double> ballisticPitch(double ahead, double rise);
     /// The minigun class's barrels and heat (a Citadel's corner gun, a
     /// gatling gun): from the trigger to full rate in `gunSpinUp` s (the rate
-    /// ramps linearly with the barrels' spin); each round heats the gun by
-    /// `gunHeatPerRound`, it cools `gunCooling` a second, and at 1 it stops
-    /// (OVERHEAT) until it has cooled to `gunHeatResume`.
+    /// ramps linearly with the barrels' spin, and falls back as fast when it
+    /// stops); each round heats the gun by `gunHeatPerRound`, it cools
+    /// `gunCooling` a second at all times, and at 1 it stops (OVERHEAT)
+    /// until it has cooled to `gunHeatResume`: a corner gun overheats after
+    /// about 4.5 s of fire, a gatling after about 6.5 s, and both cool from 1
+    /// to 0.4 in 3 s.
     static constexpr double gunSpinUp = 0.4;
-    static constexpr double gunHeatPerRound = 0.012;
-    static constexpr double gunCooling = 0.35;
+    static constexpr double gunHeatPerRound = 0.014;
+    static constexpr double gunCooling = 0.20;
     static constexpr double gunHeatResume = 0.4;
     /// A Target Dummy at 0 hp lies down this long, then stands with full hp.
     static constexpr double dummyDownTime = 3.0;
@@ -581,7 +592,7 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
                       .title = "Juggernaut", .boards = true, .drivable = true, .cargoSlots = 2, .needsLab = true, .trainedBy = StructureKind::garrison, .vision = 14, .shotFlightBase = 0.15, .shotSpeed = 14},
     /* dropship */ {.hp = 150, .armor = 1, .speed = 3.5, .radius = 0.75, .supply = 2, .ore = 100, .hydrogen = 100,
                     .trainTime = 30, .armored = true, .air = true,
-                    .title = "Dropship", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15},
+                    .title = "Dropship", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15, .hover = 2.4},
     // Tank mode; `anchor` holds the anchored numbers.
     /* longbow */ {.hp = 175, .armor = 1, .speed = 3.15, .radius = 0.875, .supply = 3, .ore = 150, .hydrogen = 125,
                    .trainTime = 32, .damage = 15, .bonusVsArmored = 10, .cooldown = 1.04, .range = 7, .armored = true,
@@ -593,7 +604,7 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
     /* kestrel */ {.hp = 140, .speed = 3.85, .radius = 0.625, .supply = 3, .ore = 150, .hydrogen = 100, .trainTime = 43,
                    .damage = 12, .hits = 2, .cooldown = 1.25, .range = 6, .armored = true, .air = true, .hitsGround = true,
                    .hitsAir = true,
-                   .title = "Kestrel", .machine = true, .drivable = true, .needsLab = true, .trainedBy = StructureKind::spacedock, .vision = 14, .shotFlightBase = 0.12, .shotSpeed = 22},
+                   .title = "Kestrel", .machine = true, .drivable = true, .needsLab = true, .trainedBy = StructureKind::spacedock, .vision = 14, .shotFlightBase = 0.12, .shotSpeed = 22, .hover = 2.1},
     // Flak, 12 (+8 armoured), at the air only, splashing enemy flyers
     // round its target (`Rules.flakSplash`).
     /* hailstorm */ {.hp = 135, .armor = 1, .speed = 3.15, .radius = 0.75, .supply = 2, .ore = 125, .hydrogen = 50,
@@ -604,7 +615,7 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
     /* peregrine */ {.hp = 80, .speed = 5.6, .radius = 0.5, .supply = 2, .ore = 100, .hydrogen = 75, .trainTime = 28,
                      .damage = 10, .hits = 2, .bonusVsArmored = 6, .cooldown = 1.25, .range = 7, .light = true, .air = true,
                      .hitsAir = true,
-                     .title = "Peregrine", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15, .shotFlightBase = 0.1, .shotSpeed = 30},
+                     .title = "Peregrine", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15, .shotFlightBase = 0.1, .shotSpeed = 30, .hover = 1.9},
     // Twin siege cannons, 25 ×2 (+15 armoured), at the ground only, with
     // splash (`Rules::atlasSplash`); the Quake stomp is `Rules::stomp*`.
     /* atlas */ {.hp = 500, .armor = 2, .speed = 2.2, .radius = 1.25, .supply = 6, .ore = 300, .hydrogen = 200,
@@ -636,7 +647,7 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
     // The Matriarch's slam: 40 to the ground in front of her, every 4 s (N3).
     /* matriarch */ {.hp = 6000, .armor = 3, .speed = 0.8, .radius = 3.5, .damage = 40, .cooldown = 4.0, .range = 3,
                      .armored = true, .bio = true, .hitsGround = true, .hitsAir = true, .falloff = 0,
-                     .title = "the Matriarch", .brood = true, .boards = true, .vision = 25},
+                     .title = "the Matriarch", .brood = true, .boards = true, .vision = 25, .height = 5},
 }};
 
 inline constexpr UnitStats UnitStats::minigun{.hp = 45, .speed = 3.15, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 18,
@@ -653,9 +664,11 @@ inline constexpr UnitStats UnitStats::railgun{.hp = 140, .speed = 3.85, .radius 
 inline constexpr UnitStats UnitStats::sentinel{.hp = 250, .armor = 1, .speed = 0, .radius = 1, .supply = 0, .ore = 100, .trainTime = 18,
                                                .damage = 12, .hits = 2, .cooldown = 1.0, .range = 7, .armored = true, .hitsAir = true};
 inline constexpr UnitStats UnitStats::gatling{.hp = 300, .armor = 1, .speed = 0, .radius = 1, .supply = 0, .ore = 100, .trainTime = 18,
-                                              .damage = 4, .cooldown = 0.25, .range = 6, .armored = true, .hitsGround = true,
-                                              .hitsAir = true, .airRange = 4.5};
-inline constexpr UnitStats UnitStats::citadelGuns{.hp = 1500, .armor = 1, .speed = 0, .radius = 0.5, .damage = 2.5, .cooldown = 0.25,
-                                                  .range = 7.5, .armored = true, .hitsGround = true, .hitsAir = true};
+                                              .damage = 0.8, .cooldown = 1.0 / 25, .range = 20, .armored = true, .hitsGround = true,
+                                              .hitsAir = true, .coneStand = 0.008, .coneMove = 0, .coneFire = 0.0003,
+                                              .coneRecovery = 0.4, .airRange = 4.5};
+inline constexpr UnitStats UnitStats::citadelGuns{.hp = 1500, .armor = 1, .speed = 0, .radius = 0.5, .damage = 1.0, .cooldown = 1.0 / 30,
+                                                  .range = 7.5, .armored = true, .hitsGround = true, .hitsAir = true,
+                                                  .coneStand = 0.008, .coneMove = 0, .coneFire = 0.0003, .coneRecovery = 0.4};
 
 } // namespace ac

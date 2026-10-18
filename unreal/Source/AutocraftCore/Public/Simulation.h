@@ -259,6 +259,11 @@ public:
     /// turns and fires.
     void stepGun(const Structure& s, Vec2 at, double edge, const UnitStats& w, std::optional<int64_t>& target,
                  double& cooldown, double& aim, double dt, std::vector<GameEvent>& events);
+    /// The target such a gun keeps (`target`, still in reach) or picks: the
+    /// hostile unit or building in reach it can hit, highest `priority`
+    /// first, then closest. Nil: none.
+    std::optional<int64_t> gunTarget(const Structure& s, Vec2 at, double edge, const UnitStats& w,
+                                     std::optional<int64_t> target) const;
     /// How fast a Sentinel's launcher swings round, radians a second.
     static constexpr double turretTurnRate = 6.0;
     /// A new Prospector at the Citadel's edge facing its ore line.

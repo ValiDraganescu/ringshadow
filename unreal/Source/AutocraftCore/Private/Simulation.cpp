@@ -193,7 +193,11 @@ std::vector<GameEvent> Simulation::step(double dt) {
         }
     }
     stepCitadels(dt);
+    stepDummies();
     stepStructures(dt, events);
+    // The rounds fly (those just fired from their moment in the step) and
+    // strike, before the units act.
+    stepRounds(dt, events);
     refreshNav();
     if (state.time >= nextRally) {
         nextRally = state.time + 1;
@@ -787,6 +791,11 @@ void Simulation::stepTurret(Structure& s, const UnitStats& w, double dt, std::ve
         for (int i = 0; i < 4; i++) stepCornerGun(s, i, w, dt, events);
         return;
     }
+    // C2: the gatling gun fires rounds.
+    if (s.kind == StructureKind::gatling) {
+        stepGatling(s, w, dt, events);
+        return;
+    }
     std::optional<int64_t> target = s.target;
     double cooldown = s.cooldown.value_or(0);
     double aim = s.aim.value_or(pi / 2);
@@ -796,9 +805,8 @@ void Simulation::stepTurret(Structure& s, const UnitStats& w, double dt, std::ve
     s.aim = aim;
 }
 
-void Simulation::stepGun(const Structure& s, Vec2 at, double edge, const UnitStats& w, std::optional<int64_t>& target,
-                         double& cooldown, double& aim, double dt, std::vector<GameEvent>& events) {
-    cooldown = ac::max(0.0, cooldown - dt);
+std::optional<int64_t> Simulation::gunTarget(const Structure& s, Vec2 at, double edge, const UnitStats& w,
+                                             std::optional<int64_t> target) const {
     auto reach = [&](const Target& t) -> std::optional<double> {
         if (!(state.hostile(t.owner, s.owner) && (t.air ? w.hitsAir : w.hitsGround))) return std::nullopt;
         const double d = distance(at, t.position) - t.radius - edge;
@@ -836,6 +844,13 @@ void Simulation::stepGun(const Structure& s, Vec2 at, double edge, const UnitSta
         }
         target = best ? std::optional<int64_t>(best->id) : std::nullopt;
     }
+    return target;
+}
+
+void Simulation::stepGun(const Structure& s, Vec2 at, double edge, const UnitStats& w, std::optional<int64_t>& target,
+                         double& cooldown, double& aim, double dt, std::vector<GameEvent>& events) {
+    cooldown = ac::max(0.0, cooldown - dt);
+    target = gunTarget(s, at, edge, w, target);
     if (!target) return;
     const int64_t id = *target;
     auto t = foe(id, s.owner);
@@ -1191,6 +1206,8 @@ std::optional<Simulation::Target> Simulation::target(int64_t id) const {
         t.structure = true;
         t.owner = s.owner;
         t.armed = s.crew && !s.crew->empty();
+        // A Target Dummy has no armour: every round counts in full (C2).
+        if (s.kind == StructureKind::dummy) t.armor = 0;
         return t;
     }
     return std::nullopt;
@@ -1403,6 +1420,8 @@ std::optional<int64_t> Simulation::acquire(const Unit& u, bool inRange) const {
     }
     for (const auto& s : state.structures) {
         if (!(state.hostile(s.owner, u.owner) && s.hp > 0)) continue;
+        // The Brood never goes for a Target Dummy (C2).
+        if (s.kind == StructureKind::dummy && u.brood()) continue;
         if (!(std::abs(s.position.x - u.position.x) < reach + 3 && std::abs(s.position.y - u.position.y) < reach + 3)) continue;
         auto t = foe(s.id, u.owner);
         if (!t) continue;
@@ -2455,6 +2474,11 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
     for (size_t i = 0; i < state.structures.size(); i++) {
         if (state.structures[i].id != id) continue;
         const Structure st = state.structures[i];
+        // A Target Dummy lying down takes nothing; standing, it counts the hit (C2).
+        if (st.kind == StructureKind::dummy && st.complete()) {
+            if (st.downUntil) return;
+            state.structures[i].hits += 1;
+        }
         // Hardened works: the pilot's own buildings take less.
         if (ownBuilding(st)) damage_ *= skillBoost(SkillStat::ownBuildingDamageTaken).rate();
         // The Brood never takes a Citadel below its floor (a wreck to
@@ -2720,10 +2744,19 @@ void Simulation::bury(std::vector<GameEvent>& events) {
     std::erase_if(state.units, [&](const Unit& u) {
         return u.hp <= 0 && !(body(u) && state.time - u.bug->diedAt < Brood::bodyStays);
     });
-    if (!any(state.structures, [](const Structure& s) { return s.hp <= 0; })) return;
+    // A finished Target Dummy at 0 hp lies down instead (C2), and stands
+    // again `Rules::dummyDownTime` later (`stepDummies`).
+    auto lies = [](const Structure& s) { return s.kind == StructureKind::dummy && s.complete(); };
+    for (Structure& s : state.structures) {
+        if (!(lies(s) && s.hp <= 0) || s.downUntil) continue;
+        s.hp = 0;
+        s.downUntil = state.time + Rules::dummyDownTime;
+        events.push_back(GameEvent::DummyDown{s.id, s.hits});
+    }
+    if (!any(state.structures, [&](const Structure& s) { return s.hp <= 0 && !lies(s); })) return;
     const std::vector<Structure> structures = state.structures;
     for (const auto& s : structures) {
-        if (!(s.hp <= 0)) continue;
+        if (!(s.hp <= 0) || lies(s)) continue;
         // Prospectors inside a fallen Derrick come out; a fallen Lab
         // leaves its building bare.
         for (auto& v : state.units) {
@@ -2754,7 +2787,7 @@ void Simulation::bury(std::vector<GameEvent>& events) {
         }
         events.push_back(GameEvent::Destroyed{s.id, s.kind, s.owner, s.position});
     }
-    std::erase_if(state.structures, [](const Structure& s) { return s.hp <= 0; });
+    std::erase_if(state.structures, [&](const Structure& s) { return s.hp <= 0 && !lies(s); });
     // No one wins in the playground: its sides come and go by hand.
     // Nor in a world with the Brood: the bugs hold no ground to lose.
     if (state.winner || state.endedAt || !(state.players.size() > 1) || (map && map->playground == true) || broodSide) return;

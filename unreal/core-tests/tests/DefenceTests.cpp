@@ -76,18 +76,20 @@ TEST(Defence_citadelTurretsNeverFireAlone) {
     }
 }
 
-/// A manned corner gun reaches a bug its range marks bring in reach, not
-/// one past them.
-TEST(Defence_citadelRangeMarks) {
+/// A manned corner gun's reach is its rounds' (C2, docs/guns-and-practice.md
+/// section 1): with no marks it hits a bug 35 cells out, far past the old
+/// 7.5 + 3 marks, on the home map's ground; its range marks are nothing to it.
+TEST(Defence_citadelGunsReachWithoutRangeMarks) {
     const CitadelHall hall(true);
     auto [s, at] = scene();
     const int64_t c = addStructure(s, Structure::Kind::citadel, at, 0);
     s.structures.back().marks = TurretMarks{};
     const int64_t pilot = addUnit(s, Unit::Kind::prospector, Defence::gunStation(at, 0), 0);
     const Vec2 mount = Defence::cornerGun(at, 0);
-    const Vec2 out(std::cos(Defence::cornerAngle(0)), std::sin(Defence::cornerAngle(0)));
-    // Its edge 9.5 cells from the mount's: past 7.5, inside 7.5 + 3 marks.
-    const int64_t far = bug(s, Unit::Kind::shardling, mount + out * (9.5 + 0.5 + Rules::radius(Unit::Kind::shardling)));
+    const double rest = Defence::cornerAngle(0);
+    const Vec2 out(std::cos(rest), std::sin(rest));
+    const Vec2 spot = mount + out * 35;
+    const int64_t far = bug(s, Unit::Kind::lodeback, spot);
     // No fog: the bug stands past the side's sight (a world region by day
     // sees it, `daylightAt`).
     Simulation m(s, homeMap(), false);
@@ -95,13 +97,18 @@ TEST(Defence_citadelRangeMarks) {
     ASSERT_TRUE(m.take(pilot));
     m.step(1.0 / 30);
     ASSERT_TRUE(!m.man(pilot, c, 0));
-    m.pilot->heading = Defence::cornerAngle(0);
+    // The pitch that lands on it, from the muzzle over this ground.
+    const double base = m.field->height(at), aim = m.field->height(spot) + 0.75;
+    double pitch = 0;
+    for (int k = 0; k < 4; k++) {
+        const Vec3 q = Defence::gunMuzzle(at, 0, rest, pitch);
+        pitch = Rules::ballisticPitch(distance(Vec2(q.x, q.y), spot), aim - (base + q.z)).value_or(0);
+    }
+    m.pilot->heading = rest;
+    m.pilot->pitch = pitch;
     m.pilot->hold = true;
     m.pilot->crosshair = Pilot::Crosshair{Pilot::Crosshair::On{far}};
-    run(m, 2);
-    EXPECT_TRUE(!hurt(m, far));
-    for (Structure& st : m.state.structures) if (st.id == c) st.marks = TurretMarks{.range = 3};
-    run(m, 2);
+    run(m, 1.5);
     EXPECT_TRUE(hurt(m, far));
 }
 
@@ -122,7 +129,7 @@ TEST(Defence_sentinelHitsOnlyAir) {
 
 }
 
-/// The gatling gun hits the ground in range 6, and the air only within 4.5:
+/// The gatling gun hits the ground in reach (20 since C2), and the air only within 4.5:
 /// a Gloamwing at 5.5 from its edge is safe, one at 3.5 is shot.
 TEST(Defence_gatlingGroundAndCloseAir) {
     auto [s, at] = scene();
@@ -145,25 +152,26 @@ TEST(Defence_gatlingGroundAndCloseAir) {
 /// Marks: each adds a fifth to the fire rate, a quarter to the damage and a
 /// cell to the range; a gatling gun's air marks half a cell each to its air
 /// reach (4.5 to 6, short of the AA tower's 7), which range marks leave be.
+/// (C2: the gatling a minigun, 25 rounds a second of 0.8, its AI's reach 20.)
 TEST(Defence_marksApply) {
     const UnitStats w = Defence::apply(UnitStats::gatling, TurretMarks{.rate = 1, .damage = 2, .range = 3});
-    EXPECT_NEAR(w.cooldown, 0.25 / 1.2, 1e-9);
-    EXPECT_NEAR(w.damage, 4 * 1.5, 1e-9);
-    EXPECT_NEAR(w.range, 9, 1e-9);
+    EXPECT_NEAR(w.cooldown, (1.0 / 25) / 1.2, 1e-9);
+    EXPECT_NEAR(w.damage, 0.8 * 1.5, 1e-9);
+    EXPECT_NEAR(w.range, 23, 1e-9);
     EXPECT_NEAR(w.airRange, 4.5, 1e-9);
     const UnitStats air = Defence::apply(UnitStats::gatling, TurretMarks{.air = 3});
     EXPECT_NEAR(air.airRange, 6, 1e-9);
     EXPECT_TRUE(air.airRange < UnitStats::sentinel.range);
-    EXPECT_NEAR(air.range, 6, 1e-9);
+    EXPECT_NEAR(air.range, 20, 1e-9);
     // The AA tower's range marks are its air reach.
     const UnitStats aa = Defence::apply(UnitStats::sentinel, TurretMarks{.rate = 3, .range = 2});
     EXPECT_NEAR(aa.range, 9, 1e-9);
     EXPECT_NEAR(aa.cooldown, UnitStats::sentinel.cooldown / 1.6, 1e-9);
     // A placed turret's weapon carries its marks.
     Structure g(3, StructureKind::gatling, 0, Vec2(0, 0));
-    EXPECT_NEAR(Defence::weapon(g)->damage, 4, 1e-9);
+    EXPECT_NEAR(Defence::weapon(g)->damage, 0.8, 1e-9);
     g.marks = TurretMarks{.damage = 3};
-    EXPECT_NEAR(Defence::weapon(g)->damage, 4 * 1.75, 1e-9);
+    EXPECT_NEAR(Defence::weapon(g)->damage, 0.8 * 1.75, 1e-9);
     Structure c(1, StructureKind::citadel, 0, Vec2(0, 0));
     EXPECT_TRUE(!Defence::weapon(c).has_value());
     c.marks = TurretMarks{};

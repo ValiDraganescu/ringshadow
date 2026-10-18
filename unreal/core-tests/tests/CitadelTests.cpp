@@ -4,6 +4,7 @@
 #include "Brood.h"
 #include "RegionFile.h"
 #include "Defence.h"
+#include "HallScene.h"
 #include "SimHelpers.h"
 
 #include <cstdio>
@@ -17,47 +18,6 @@ using namespace simtest;
 
 namespace {
 
-/// A complete Citadel of blue's at `at` (the hall on), with no map under it,
-/// blue's Prospector at `pilotAt` driven by hand; player 1 is the Brood.
-struct Hall {
-    Simulation sim;
-    int64_t citadel;
-    int64_t pilot;
-};
-
-constexpr Vec2 kAt{50, 50};
-
-Hall hallScene(Vec2 pilotAt, std::optional<MapDefinition> map = std::nullopt, Vec2 at = kAt) {
-    GameState s = bare(2, 0, {}, {}, 1);
-    const int64_t c = addStructure(s, Structure::Kind::citadel, at, 0);
-    const int64_t p = addUnit(s, Unit::Kind::prospector, pilotAt, 0);
-    Simulation sim(s, map);
-    sim.broodSide = 1;
-    EXPECT_TRUE(sim.take(p));
-    sim.step(1.0 / 30);
-    return Hall{sim, c, p};
-}
-
-Unit& unitOf(Simulation& sim, int64_t id) { return sim.state.units[size_t(*sim.unitIndex(id))]; }
-
-Structure& structureOf(Simulation& sim, int64_t id) {
-    for (Structure& s : sim.state.structures) if (s.id == id) return s;
-    return sim.state.structures.front();
-}
-
-/// A bug of the Brood's at `p` that stays where it is.
-int64_t bugAt(Simulation& sim, Unit::Kind kind, Vec2 p) {
-    const int64_t id = sim.state.nextID++;
-    Unit u(id, kind, 1, p, 0, Unit::Task::idle);
-    u.bug = Bug{};
-    u.bug->site = p;
-    u.bug->coming = false;
-    u.bug->wanderAt = 1e9;
-    sim.state.units.push_back(u);
-    sim.reindex();
-    return id;
-}
-
 /// The MMO's start region, built.
 const MapDefinition& startRegion() {
     static const MapDefinition m = [] {
@@ -67,18 +27,6 @@ const MapDefinition& startRegion() {
         return parsed.file ? region::build(*parsed.file).map : MapDefinition{};
     }();
     return m;
-}
-
-/// Steps of 1/30 s with the pilot's keys as they are.
-std::vector<GameEvent> steps(Simulation& sim, double seconds) { return run(sim, seconds); }
-
-/// Arms the Citadel and puts the pilot on gun `gun` (it walks to the
-/// station first: it stands there).
-void manGun(Hall& h, int gun) {
-    structureOf(h.sim, h.citadel).marks = TurretMarks{};
-    h.sim.step(1.0 / 30);
-    unitOf(h.sim, h.pilot).position = Defence::gunStation(kAt, gun);
-    EXPECT_TRUE(!h.sim.man(h.pilot, h.citadel, gun));
 }
 
 } // namespace
@@ -303,7 +251,7 @@ TEST(gun_restsWithoutAGunnerAndNeverFires) {
     (*structureOf(h.sim, h.citadel).guns)[0].pitch = 0.5;
     const auto events = steps(h.sim, 4);
     EXPECT_EQ(shots(events, h.citadel), int64_t(0));
-    for (const auto& e : events) EXPECT_TRUE(!e.is<GameEvent::Missed>());
+    for (const auto& e : events) EXPECT_TRUE(!e.is<GameEvent::Missed>() && !e.is<GameEvent::Fired>());
     EXPECT_EQ(hp(h.sim, ground), Rules::hp(Unit::Kind::shardling));
     EXPECT_EQ(hp(h.sim, air), Rules::hp(Unit::Kind::gloamwing));
     for (int i = 0; i < 4; i++) {
@@ -369,54 +317,6 @@ TEST(gun_aimClampedToTheArcAndPitch) {
     unitOf(h.sim, h.pilot).hp = 0;
     steps(h.sim, 0.1);
     EXPECT_TRUE(!(*structureOf(h.sim, h.citadel).guns)[1].gunner);
-}
-
-TEST(gun_firesAtTheCrosshairFoeInRange) {
-    const CitadelHall on(true);
-    Hall h = hallScene(kAt);
-    manGun(h, 0);
-    const Vec2 mount = Defence::cornerGun(kAt, 0);
-    const double rest = Defence::cornerAngle(0);
-    const Vec2 out(std::cos(rest), std::sin(rest));
-    const int64_t near = bugAt(h.sim, Unit::Kind::shardling, mount + out * 5);
-    const int64_t far = bugAt(h.sim, Unit::Kind::shardling, mount + out * 14);
-    // On the crosshair, in range, along the aim: the trigger held fires.
-    h.sim.pilot->heading = rest;
-    h.sim.pilot->hold = true;
-    h.sim.pilot->crosshair = Pilot::Crosshair{Pilot::Crosshair::On{near}};
-    auto events = steps(h.sim, 0.5);
-    EXPECT_TRUE(shots(events, h.citadel) >= 2);
-    EXPECT_TRUE(hp(h.sim, near) < Rules::hp(Unit::Kind::shardling));
-    EXPECT_EQ((*structureOf(h.sim, h.citadel).guns)[0].target, std::optional<int64_t>(near));
-    bool told = false;
-    for (const auto& b : h.sim.bugHits) told = told || (b.shooter == h.citadel && b.bug == near);
-    EXPECT_TRUE(told);
-    // Out of range: misses along the aim, from the mount.
-    h.sim.pilot->crosshair = Pilot::Crosshair{Pilot::Crosshair::On{far}};
-    events = steps(h.sim, 0.5);
-    EXPECT_EQ(shots(events, h.citadel), int64_t(0));
-    int64_t missed = 0;
-    for (const auto& e : events) {
-        if (auto m = e.as<GameEvent::Missed>(); m && m->unit == h.citadel) {
-            missed++;
-            EXPECT_NEAR(std::atan2(m->at.y - mount.y, m->at.x - mount.x), rest, 1e-9);
-        }
-    }
-    EXPECT_TRUE(missed >= 2);
-    EXPECT_EQ(hp(h.sim, far), Rules::hp(Unit::Kind::shardling));
-    // In range but well off the aim: a miss too.
-    const double had = hp(h.sim, near);
-    h.sim.pilot->crosshair = Pilot::Crosshair{Pilot::Crosshair::On{near}};
-    h.sim.pilot->heading = rest + 1.0;
-    events = steps(h.sim, 0.5);
-    EXPECT_EQ(shots(events, h.citadel), int64_t(0));
-    EXPECT_EQ(hp(h.sim, near), had);
-    // The trigger up: nothing.
-    h.sim.pilot->heading = rest;
-    h.sim.pilot->hold = false;
-    h.sim.pilot->act = false;
-    events = steps(h.sim, 0.5);
-    EXPECT_EQ(shots(events, h.citadel), int64_t(0));
 }
 
 TEST(placement_citadelPlacesOnTodaysGround) {

@@ -1,7 +1,8 @@
 # Guns and practice (C2)
 
 Status, 2026-10-18: designed; in work by four workers (core, net+server,
-game, model). This page is the contract between them, as
+game, model); the core of sections 1, 3 and 4 built
+(`core-tests/tests/GunsTests.cpp`). This page is the contract between them, as
 [citadel-interior.md](citadel-interior.md) was for C1: names, numbers,
 owners. Where the code had to differ, the owning worker corrects this page.
 
@@ -44,7 +45,10 @@ struct Round {
     bool operator==(const Round&) const = default;
 };
 std::vector<Round> GameState::rounds;
+int64_t GameState::nextRound;   // round ids, apart from nextID
 ```
+
+Not saved, nothing per tick on the wire.
 
 Constants (`Rules.h`), tuned by feel later:
 
@@ -54,37 +58,74 @@ Constants (`Rules.h`), tuned by feel later:
 | `roundGravity` | 9.8 cells/s² | |
 | `roundLife` | 3.0 s | then it is gone |
 | `roundRadius` | 0.08 cells | the hit sweep's thickness |
+| `roundSelfGrace` | 0.2 s | the shooter's own building is passed through this long |
 
-Stepping (`Simulation::stepRounds`, before the units each tick): for every
-round, `velocity.z -= g·dt`, the segment from the old to the new position
-is swept against: units (a vertical capsule of the kind's radius and its
-model height, 1.5 for ground units unless the kind table says otherwise;
-flyers at their altitude), structures (the footprint's slabs for a hall
-Citadel, else the bounding square by the body height; the shooter's own
-structure excluded for the first 0.2 s), the terrain (the height field:
-the segment's end under the ground is an impact), the region's bounds
-(gone). The first thing hit takes `hit(victim, damage, false, shooter)`
-exactly as a gun hit does today (bug aggro through `bugHits`, kill
-credit), or nothing for the ground. Then `GameEvent::Impact`.
+`Rules::roundAt(muzzle, velocity, t)` is the parabola, the one integrator:
+the core steps every round by the same closed form, so the client's streak
+flies the core's path at any frame rate. `Rules::roundVelocity(yaw, pitch)`
+and `Rules::ballisticPitch(ahead, rise)` (the low arc at `roundSpeed`, nil
+out of reach, about 826 cells level) go with it.
 
-Firing: `GameEvent::Fired{shooter, round id, muzzle (Vec3), velocity
-(Vec3)}` replaces `Shot`/`Missed` for these guns. The velocity is the aim
-(yaw, pitch) turned by the cone roll (`Simulation::roll`, seeded, so a
-scene replays the same) times `roundSpeed`. Nothing per tick goes on the
+Stepping (`Simulation::stepRounds`, after the buildings fire and before
+the units act; a round fired inside the step flies from its own moment):
+every round flies to the step's end on `roundAt`, and the segment it flew
+is swept against: units (an upright cylinder of the kind's radius and
+`UnitStats::height`, 1.5 unless the row says otherwise: the Matriarch 5;
+a flyer's centred on its height over the ground, `UnitStats::hover`:
+Dropship 2.4, Kestrel 2.1, Peregrine 1.9, a Gloamwing's `Bug::height`;
+units aboard, in a Bastion or Derrick, at a gun or sheltered in the hall
+are never struck), structures (a complete hall Citadel's slabs: walls,
+the door while shut, the roof; any other its bounding square by its body
+height, a scaffold by what has risen; a Target Dummy lying down is passed
+over; the shooter's own building passed for `roundSelfGrace`), the
+terrain (sampled every 0.5 cells along the path, the crossing bisected;
+skipped while the path is above `Simulation::groundTop`, the highest
+ground of its 4-cell tiles plus 1.5, worked out the first time a round
+flies over a tile), the region's bounds (gone, no event). Candidates come
+from 4-cell buckets of the units and buildings, built once a step while
+rounds fly; the cylinder or box test only for those.
+
+The first thing hit stops the round, whoever's it is. It is hurt only when
+it is `targetable` by the shooter's side (an enemy, or a Target Dummy
+standing): `hit(victim, max(0.5, damage − armour))` at the impact, a bug's
+hit told to the director (`bugHits`, the building as the shooter) as the
+corner guns did; no pilot kill credit (the shooter is a building, as in
+C1). A friend's unit or building stops it unhurt: no friendly fire. Then
+`GameEvent::Impact`, for the ground too.
+
+Cost (`rounds_benchSixGuns`, core-tests with `AUTOCRAFT_ROUNDS_BENCH=1`;
+540 rounds in flight over 200 Shardlings on the home map, the Mac at load
+20): 72 µs a step (0.13 µs a round), 32 µs of it the bodies' sweep; the
+first step over unknown ground 0.55 ms while its tiles are worked out.
+Without the tiles the terrain's samples (64 ns each) made it 230 µs.
+
+Firing (`Simulation::fireRound`): `GameEvent::Fired{shooter, round id,
+muzzle (Vec3), velocity (Vec3)}` replaces `Shot`/`Missed` for these guns.
+The muzzle is the barrels' end: `Defence::gunMuzzle(citadel, i, aim,
+pitch)`, `muzzleAlong` 1.3 from the trunnion along the barrels, and
+`Defence::gatlingMuzzle(at, aim, pitch)`, the head's pivot 0.9 up and the
+barrels 0.8 long; z on the ground's height. The velocity is the aim (yaw,
+pitch) turned by the cone roll (uniform over the cone's disc,
+`Simulation::roll` seeded by the shooter, the step's time and the round, so
+a scene replays the same) times `roundSpeed`. Nothing per tick goes on the
 wire for a round: the client integrates the same equations from `Fired`
 and ends the streak at `Impact{round id, at, what: ground | unit |
-structure, victim}` or at `roundLife`. Protocol 37.
+structure, victim (0 for the ground)}` or at `roundLife`. Protocol 37.
 
 Rate, spin-up and heat on a corner gun and a gatling:
 
 | | Citadel corner gun | Gatling gun |
 |---|---|---|
-| rounds a second (`cooldown`) | 30 (1/30) | 25 |
+| rounds a second (`UnitStats::citadelGuns` / `gatling` `cooldown`) | 30 (1/30) | 25 (1/25) |
 | damage a round | 1.0 | 0.8 |
-| spin-up `spinUp` | 0.4 s from trigger to full rate (the rate ramps linearly; the barrels spin up) | 0.4 s |
-| spread `coneStand` | 8 mrad, `coneFire` +0.3 mrad a round, recovery 0.4 s | same |
-| heat (`CornerGun::heat`, `Structure::heat` for the gatling) | +0.012 a round, cools 0.35/s; at 1.0 the gun stops ("OVERHEAT") until it cools to 0.4 | same |
-| range | none: the round flies until it hits or dies | the AI aims a ballistic solve at targets within 20 cells |
+| spin-up `Rules::gunSpinUp` (`spin` 0…1 on the gun) | 0.4 s from trigger to full rate (the rate ramps linearly with the spin; it runs down as fast with the trigger up) | 0.4 s |
+| spread `coneStand` | 8 mrad, `coneFire` +0.3 mrad a round (`bloom`), fading by 90% every 0.4 s (`coneRecovery`) | same |
+| heat (`CornerGun::heat`, `Structure::heat` for the gatling) | `Rules::gunHeatPerRound` +0.014 a round, `gunCooling` 0.20/s at all times; at 1.0 the gun stops (`overheated`, "OVERHEAT") until it cools to `gunHeatResume` 0.4. It overheats after about 4.5 s of fire and cools from 1 to 0.4 in 3 s | the same numbers: about 6.5 s of fire |
+| range | none: the round flies until it hits or dies | the AI picks targets within 20 cells (`UnitStats::gatling.range`; the air within 4.5), leads them (its speed along its heading × the flight) and fires on the ballistic solve once it points within 0.05 rad (`Simulation::gatlingAimGate`) |
+
+`Simulation::minigun` steps a gun's barrels and heat; its `cooldown` is the
+share of a round still due before the next leaves (0: the next pull fires
+at once), not seconds (the Sentinel keeps seconds).
 
 The realm's marks keep their meaning: rate marks scale rounds a second,
 damage marks the damage, range marks the gatling's AI reach (+1 cell each)
@@ -92,7 +133,10 @@ and the corner gun's nothing (the user sees the drop instead).
 
 The manned corner gun (C1) loses its range gate: it fires along its aim
 whenever the trigger is down and the gun is not overheated; the crosshair's
-target is only the HUD's business.
+target is only the HUD's business (and `CornerGun::target`, the pose's,
+when it is `targetable`). C1's pitch stops hold: from the 9-cell mount at
+−20° the rounds meet flat ground no nearer than about 26 cells, so a bug
+closer in is under the gun.
 
 ## 2. The minigun look (model)
 
@@ -116,40 +160,51 @@ hits), `beacon`.
 ## 3. The target dummy (core, server, game, model)
 
 `StructureKind::dummy` ("Target Dummy"), the 12th kind (`kStructureKindBits`
-still 4). Rules: cost 10 ore, 0 MH; `buildTime` 2 s; radius 0.5 (1×1);
-hp 150; `height` 1.8; no blueprint (`Rules::freeBuild(kind)` true, the only
-one; `buildRefusal` skips the blueprint and floor for it); limit 12 a
-region; not a turret; walkable no; the Brood ignores it (`priority` 0,
-never a raid target); no vision.
+still 4). Rules: cost 10 ore, 0 MH (`Progression::worldOre` the same);
+`buildTime` 2 s; radius 0.5 (1×1); hp 150, no armour (every round counts
+in full: 150 corner-gun rounds, 5 s at full rate); `height` 1.8; no
+blueprint (`Rules::freeBuild(kind)` true, the only one; `buildRefusal`
+skips the blueprint and floor for it); limit 12 a region
+(`Progression::perRegion`); not a turret; walkable no; the Brood ignores
+it (a bug's `acquire` and its breach skip it); no vision
+(`Rules::vision` 0). In `PilotBuild::worldKinds`.
 
 **Targetable by its own side:** `Simulation::targetable(const Unit* or
 Structure*, side)` = hostile, or a complete dummy that is up. Used in
 `crosshairSight`, `pilotFoe`'s and `pilotSight`'s structure loops, and the
 corner gun. Auto turrets keep their hostile-only scan.
 
-**Down and up:** a dummy at 0 hp is not destroyed: `Structure::downUntil =
-time + 3 s`, `GameEvent::DummyDown{id, hits}`; while down it is not
-targetable and rounds pass through it (the plate lies back); at `downUntil`
-it stands with full hp. `Structure::hits` counts impacts since it last
-stood (sent in the snapshot; the life bar shows "HITS 37").
+**Down and up:** a finished dummy at 0 hp is not destroyed: `Structure::downUntil =
+time + Rules::dummyDownTime` (3 s), `GameEvent::DummyDown{id, hits}`; while
+down it is not targetable, takes nothing and rounds pass over it (the plate
+lies back); at `downUntil` it stands with full hp and `hits` 0
+(`Simulation::stepDummies`). `Structure::hits` counts the hits since it
+last stood, a round's or any other weapon's (sent in the snapshot; the life
+bar shows "HITS 37"). An unfinished dummy is destroyed like any building.
 
 The build wheel offers it with no tag; placement as any building.
 
 ## 4. Blueprints learned once (core, server, game)
 
-- `PilotProgress::learned` (a set of `StructureKind`) replaces the per-build
-  copy. `blueprints` (the copies held) stays as the inventory of unused
-  blueprints; `bought` and the "dearer each copy" price go.
+- `PilotProgress::learned` (a set of `StructureKind`, saved as `learned` in
+  the progress JSON once one is learned) replaces the per-build copy, with
+  `knows(kind)` (learned, or free), `learnRefusal(kind)` ("You know the
+  Derrick", "No Derrick blueprint to learn from") and `learn(kind)` (one
+  copy used, the kind learned). `blueprints` (the copies held) stays as the
+  inventory of unused blueprints; `bought` and the "dearer each copy" price
+  go (both, and `useBlueprint`, stay in the core until the server and the
+  game no longer read them).
 - **Learning:** `RequestMessage::Learn{StructureKind}` (protocol 37, index
   24): the pilot holds a copy, is not learning what it knows ("You know the
   Derrick"), the copy is consumed, the kind is learned, a toast "DERRICK
   LEARNED". The build wheel shows an unlearned kind with copies as LEARN
   (selecting it learns, then the wheel stays open on it to build); keys 1–4
   stay items.
-- **Building:** `buildRefusal`: free kinds always; else learned, else "No
-  blueprint: buy one at a Citadel (H)" if no copy, "Learn it first (B)" if a
-  copy is held; then the level and the limits as today. No copy is consumed
-  by a build.
+- **Building:** `buildRefusal`: free kinds skip the blueprint and the
+  level; else a kind with no blueprint in the world as today, then
+  learned, else "No blueprint: buy one at a Citadel (H)" if no copy,
+  "Learn it first (B)" if a copy is held; then the level and the limits as
+  today (the dummy's too). No copy is consumed by a build.
 - **The shop:** sells each blueprint once per pilot at its first-copy price
   (`Shop::blueprintPrice(kind, 0)`), refuses "You know the X". **Sites,
   chips, missions, the Matriarch:** a blueprint of a learned kind gives the

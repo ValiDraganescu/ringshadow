@@ -458,13 +458,14 @@ TEST(progression_blueprintPriceRises) {
     EXPECT_TRUE(p.blueprintPrice(StructureKind::habDome) == Shop::blueprintPrice(StructureKind::habDome, 1));
 }
 
-// Copies and stacks: given, used up one at a time, gone at none.
+// Copies and stacks: given, used up one at a time, gone at none. (C2: a
+// copy held is learned before it builds: GunsTests' blueprint test.)
 TEST(progression_blueprintCopiesAndItems) {
     ProspectorProgress p = atLevel(10);
     EXPECT_TRUE(p.buildRefusal(StructureKind::citadel, 0) == std::string("No blueprint: buy one at a Citadel (H)"));
     p.giveBlueprint(StructureKind::citadel, 2);
     EXPECT_EQ(p.copies(StructureKind::citadel), int64_t(2));
-    EXPECT_TRUE(!p.buildRefusal(StructureKind::citadel, 0));
+    EXPECT_TRUE(p.buildRefusal(StructureKind::citadel, 0) == std::string("Learn it first (B)"));
     EXPECT_TRUE(p.useBlueprint(StructureKind::citadel));
     EXPECT_TRUE(p.useBlueprint(StructureKind::citadel));
     EXPECT_TRUE(!p.useBlueprint(StructureKind::citadel));
