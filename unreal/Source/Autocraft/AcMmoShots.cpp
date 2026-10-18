@@ -301,6 +301,7 @@
 // next scene's timing begins (the ground built, the models loaded):
 //   mmo-arrive-nest  into Slag Pockets    mmo-arrive-fork  into Cold Fork
 // The weather is the world's (-AcMmoWeather=clear for the standard runs).
+// -AcBenchMemReport: `memreport -full` after each scene's timed frames.
 // -AcMmoBenchHour=H puts the first scene at hour H (a dawn clip with
 // -AcMmoShotsClip -AcMmoShotsOnly=mmo-home-noon -AcMmoShotsClipDwell=S).
 //
@@ -6547,6 +6548,14 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			FAcBenchMeter::ShowStats(GetWorld(), true, bGpu);
 			// With -AcBenchGpu, one frame's pass tree to the log too (never the profiler window).
 			if (bGpu) FAcBenchMeter::ProfileGpu(GetWorld());
+			// -AcBenchMemReport: where the memory is (Saved/Profiling/MemReports, the -UserDir's in a package).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcBenchMemReport")))
+				if (APlayerController* MemPC = GetWorld()->GetFirstPlayerController())
+				{
+					MemPC->ConsoleCommand(TEXT("memreport -full"));
+					// Lumen's surface cache: its pages used (to the log).
+					MemPC->ConsoleCommand(TEXT("r.LumenScene.DumpStats 1"));
+				}
 			BenchStep = 3;
 			BenchAt = Now;
 			return;

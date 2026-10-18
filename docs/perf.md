@@ -23,6 +23,9 @@ measure; MMO bench, 2 rounds each in turns, load 6-17, ms and MB):
 | nest at noon | 9.0 / 9.2 | 12.7 / 12.7 | 1.7 / 2.4 | 7,736 / 10,411 |
 | Fork, wave 10 | 9.4 / 9.4 | 13.0 / 13.0 | 2.1 / 2.1 | 7,836 / 10,512 |
 
+After round 6, the cooked game at 1920×1080 holds 7.5-7.8 GB (124-387 MB
+less) and its GPU frame is 0.15-0.25 ms shorter (round 6's table).
+
 The frame is the GPU's in both builds and at both sizes: the render
 thread waits on it, and the game thread takes about a fifth of it. The
 cooked game's GPU frame is 0-0.3 ms shorter (the editor's own sky pass,
@@ -333,6 +336,78 @@ or 16 GB. A `memreport -full` of the cooked game per scene will show
 where it goes (the texture pool, the virtual shadow map pool, Lumen,
 Nanite's streaming pool, our ISM buffers, the world's ground sets kept
 ahead) before any change.
+
+### Round 6: memory, two pools sized to the game (2026-10-18)
+
+**Where it goes.** `bench.py --mmo -AcBenchMemReport` runs `memreport -full`
+after each scene's timed frames. In a package it lands in the run's
+`user/Saved/Profiling/MemReports`. It also logs `r.LumenScene.DumpStats`.
+The cooked client at home at noon, 1920×1080, holds 7.76 GB:
+
+- the CPU allocator: 0.86 GB
+- Metal heaps: 5.18 GB, of them 1.26 GB unused. The heaps are 512 MB
+  blocks (`METALHEAP_DEFAULT_BLOCKSIZE`, a constant), and
+  `rhi.Metal.HeapBufferBytesToCompact` is read but never used in UE 5.8,
+  so that slack cannot be tuned without changing the engine.
+- the render target pool, 1.9 GB, listed by name
+  (`r.DumpRenderTargetPoolMemory`):
+  - the virtual shadow maps' physical page pool, 512 MB (4,096 pages × 2:
+    static and dynamic since round 2 made the cache work) and its HZB, 85 MB
+  - Lumen's surface cache at 4096² (albedo, normal, depth, emissive,
+    direct, final, radiosity), about 600 MB
+  - the radiance cache's atlases, about 170 MB
+  - the global distance field, about 95 MB
+  - TSR, about 80 MB
+- the texture streaming pool: a 1,000 MB budget, 244 MB used
+
+LLM (`-llm`) leaves the GPU's memory untagged on Metal, and the RHI's
+per-resource dump is empty there. The render target pool's own list is
+the one that names the owners.
+
+**What the scenes use.** The virtual shadow maps' stats
+(`r.Shadow.Virtual.Stats.Visible 1`, drawn into the bench's pictures):
+459-535 pages requested at home, 636 at the nest and in the Fork at
+5120×1378, of 4,096. Lumen's surface cache: 39 of 1,024 pages at home (3 %)
+at both sizes, 20 at the nest, no resolution dropped.
+
+**The change** (`DefaultEngine.ini` `[SystemSettings]`, where the project
+already sets its quality; the game has no quality menu):
+
+- `r.Shadow.Virtual.MaxPhysicalPages=2048`, the engine's "high" setting.
+  The busiest scene's 636 pages are 31 % of it, so the pool's dynamic
+  resolution never starts.
+- `r.LumenScene.SurfaceCache.AtlasSize=2048` (256 pages): 6.5 times the 39
+  the busiest scene uses. A card's resolution comes from its texel density
+  and drops only when the atlas is full.
+
+| MMO bench, editor, 2 rounds in turns, MB | 1920×1080, before / after | 5120×1378, before / after |
+|---|---:|---:|
+| home noon | 10,543 / 9,898 | 11,320 / 10,136 |
+| home midnight | 10,846 / 9,958 | 11,137 / 10,251 |
+| nest at noon | 10,743 / 9,879 | 11,404 / 10,393 |
+| Fork, wave 10 | 10,794 / 10,080 | 11,605 / 10,356 |
+
+| the cooked game, 2 rounds in turns against round 5's package, 1920×1080, load 8-9 | memory, before / after (MB) | GPU p50, before / after (ms) |
+|---|---:|---:|
+| home noon | 8,051 / 7,664 | 9.84 / 9.59 |
+| home midnight | 7,948 / 7,824 | 10.36 / 10.12 |
+| nest at noon | 7,977 / 7,725 | 9.00 / 8.81 |
+| Fork, wave 10 | 7,922 / 7,547 | 9.23 / 9.08 |
+
+The cooked game gives back less than the editor: 124-387 MB against
+645-888. The pools' memory is freed, but the Metal heaps it sat in are
+512 MB blocks that stay while anything else lives in them (the 1.26 GB
+of slack above).
+
+The GPU frame is 0.24-0.41 ms shorter too (less to clear and keep). The
+pictures' difference across the change (the mean |RGB| % over the 3-D view
+at a quarter scale) is the same as between two runs of the same build: at
+home at noon 0.65 against 0.69, at midnight 0.70 against 0.73, at the nest
+0.49 against 0.55, and at 5K 0.34-0.68 against 0.38-0.97. The Fork's wave
+moves between runs, 3.6-5.3 either way.
+
+**Next.** The radiance cache's atlases (~170 MB) and the Metal heaps'
+slack, which only a smaller set of big allocations can shrink.
 
 ## Server
 
