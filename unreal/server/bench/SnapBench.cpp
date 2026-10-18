@@ -64,7 +64,9 @@ void run(const LoadedWorld& world, const char* region, double hour, double secon
         clock += 1.0 / 60;
         if (t % 3) continue;
         const double t0 = now();
+        w.beginSnapshots();
         const net::Snapshot s = w.snapshot(me);
+        w.endSnapshots();
         const double t1 = now();
         const net::SnapshotWriter::Output out = writer.write(s, clock, 1 << 20);
         const double t2 = now();

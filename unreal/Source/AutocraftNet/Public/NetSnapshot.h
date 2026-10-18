@@ -46,6 +46,10 @@ AUTOCRAFTNET_API Well quantised(const Well& w);
 AUTOCRAFTNET_API FogView quantised(const FogView& f);
 AUTOCRAFTNET_API double quantisedTime(double t);
 
+/// An entity's bits as the writer puts them on the wire, for
+/// `EntityState::canon`.
+AUTOCRAFTNET_API std::shared_ptr<const ItemBits> canonBits(const EntityState& e);
+
 class AUTOCRAFTNET_API SnapshotWriter {
 public:
     struct Output {

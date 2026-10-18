@@ -1334,3 +1334,40 @@ The ground, cliff and terrain hashes of all 10 region files are the same
 nest 1239e1800ff8ae42) and spreadbench's are the same; the core suite with
 its terrain goldens, the server and net suites pass. Core touched
 (NavGrid).
+
+### Round 25: a snapshot round's bits made once (2026-10-18)
+
+With 16 pilots in one region a pilot's snapshot writing is still most of
+the tick, and half of each write is making every entity's wire bits
+(`canonInto`: each field quantised and packed) before comparing them with
+what the pilot was last sent. Every pilot of a side is sent the same value
+for a unit (the unit itself to its own side, `scrubbed` to the others), so
+16 pilots made the same bits 16 times.
+
+`Server::sendSnapshots` now runs a round (`WorldMap::beginSnapshots`,
+`endSnapshots`): between the two, no step, input or command runs (they
+come before, in `Server::tick`), and nothing called in it (the pilots'
+snapshots, progress, standings, hunt, the writers) changes a unit or a
+building. In a round, a region with two pilots or more makes each
+entity's bits once per value (`net::canonBits`, by id, unit or building,
+own or scrubbed) and hangs them on the snapshot's `EntityState::canon`;
+the writer uses them in place of its own (and keeps them as the baseline
+it was going to copy). The same value, the same function: the same bits.
+Remembered buildings (each side's own memory) and a lone pilot's
+snapshots are made by the writer, as before.
+
+| 3 runs each in turns, load 9-12 | before | after |
+|---|---:|---:|
+| `crowdbench 10`, 16 pilots: a pilot's write | 11.7-11.9 µs | 8.1-8.4 µs |
+| its snapshot (now with the bits) | 2.1-2.2 µs | 2.6-2.7 µs |
+| the tick (step and all the snapshots) | 89-91 µs | 73-75 µs |
+| 4 pilots: the tick | 15.7-16.4 µs | 15.3-15.8 µs |
+| 1 pilot: the tick (no round needed) | 4.9-5.1 µs | 4.8-5.2 µs |
+
+Every wire is the same (crowdbench's three, snapbench's four). Test
+`snapshotRound_everyPilotIsSentTheBytesItIsSentWithout`: two worlds side by
+side, six pilots at the start and in the nest (the bugs sent scrubbed), one
+driving off; the one in rounds sends every pilot the bytes the other does,
+1,800 snapshots. Net touched (NetProtocol.h: `EntityState::canon`,
+NetSnapshot.h/.cpp: `canonBits`); the server's loop and both benches run
+rounds.

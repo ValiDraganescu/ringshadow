@@ -124,6 +124,10 @@ enum class Rank : uint8_t {
 /// A unit or a building as the pilot's side may know it: the core's own
 /// types, so a client writes it back into its `GameState`. An enemy unit's
 /// plans (where it walks, its errand, its build order) are left out.
+/// An item's bits as the snapshot writer puts them on the wire
+/// (NetSnapshot.cpp; `canonBits`).
+struct ItemBits;
+
 struct EntityState {
     std::variant<Unit, Structure> value;
     /// An enemy building as the side last saw it (`Intel`), not in sight now.
@@ -133,6 +137,10 @@ struct EntityState {
     Rank rank = Rank::nearby;
     /// Cells from the pilot's focus; not sent.
     double distance = 0;
+    /// `canonBits` of `value`, made once for every pilot that is sent the
+    /// same value in a snapshot round (`Region::snapshot`); not sent. Nil:
+    /// the writer makes them itself. Set it only from this very value.
+    std::shared_ptr<const ItemBits> canon = nullptr;
 
     int64_t id() const { return std::visit([](const auto& v) { return v.id; }, value); }
     const Unit* unit() const { return std::get_if<Unit>(&value); }

@@ -79,7 +79,11 @@ void run(const LoadedWorld& world, int pilots, double seconds) {
         const double t1 = now();
         step.push_back(t1 - t0);
         double all = t1 - t0;
-        if (t % 3 == 0)
+        if (t % 3 == 0) {
+            // One round, as the server's `sendSnapshots`.
+            const double r0 = now();
+            w.beginSnapshots();
+            all += now() - r0;
             for (auto& [id, writer] : writers) {
                 const double s0 = now();
                 const net::Snapshot s = w.snapshot(id);
@@ -95,6 +99,10 @@ void run(const LoadedWorld& world, int pilots, double seconds) {
                 for (const auto& m : out.messages)
                     for (uint8_t b : m) wire = (wire ^ b) * 1099511628211ull;
             }
+            const double r1 = now();
+            w.endSnapshots();
+            all += now() - r1;
+        }
         whole.push_back(all);
     }
     for (size_t r = 0; r < w.regionCount(); r++)

@@ -1087,6 +1087,14 @@ std::vector<net::Sky::Starfall> WorldMap::fallsFor(size_t region) const {
     return out;
 }
 
+void WorldMap::beginSnapshots() {
+    for (auto& r : regions_) r->beginSnapshots();
+}
+
+void WorldMap::endSnapshots() {
+    for (auto& r : regions_) r->endSnapshots();
+}
+
 void WorldMap::deferred(PilotId pilot, const std::vector<int64_t>& ids) {
     if (Region* r = regionOf(pilot)) r->deferred(pilot, ids);
 }

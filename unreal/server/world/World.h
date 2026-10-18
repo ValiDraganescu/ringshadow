@@ -216,6 +216,12 @@ public:
 
     /// What the pilot is told now (call it at the snapshot rate).
     Snapshot snapshot(PilotId pilot, const InterestParams& params = {});
+    /// A snapshot round: between `beginSnapshots` and `endSnapshots` (no
+    /// step, input or command between them changes a unit or a building)
+    /// the entities' wire bits are made once for every pilot sent the same
+    /// value (`EntityState::canon`).
+    void beginSnapshots();
+    void endSnapshots();
     /// Entities of the last snapshot that were not sent after all (the
     /// byte budget ran out): due again at the next, having waited one more.
     void deferred(PilotId pilot, const std::vector<int64_t>& ids);
@@ -276,6 +282,10 @@ private:
         std::shared_ptr<const FogView> fog;
     };
     std::map<int64_t, FogShare> fogShares_;
+    /// In a snapshot round: the entities' bits made so far, by id, kind and
+    /// whether scrubbed (the same value for every pilot of either kind).
+    bool round_ = false;
+    std::unordered_map<uint64_t, std::shared_ptr<const net::ItemBits>> roundBits_;
 
     Vec2 focus(const Seat& seat, int64_t side) const;
     /// The seat drives the simulation's pilot now.

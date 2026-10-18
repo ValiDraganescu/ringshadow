@@ -654,6 +654,9 @@ void Server::join(net::ConnectionId c, Client& client, const std::vector<uint8_t
 }
 
 void Server::sendSnapshots(double now) {
+    // One round: nothing between the pilots' snapshots changes a unit or a
+    // building, so each entity's bits are made once (`WorldMap::beginSnapshots`).
+    world_.beginSnapshots();
     for (auto& [c, client] : clients_) {
         if (!client.seated) continue;
         sendProgress(c, client);
@@ -670,6 +673,7 @@ void Server::sendSnapshots(double now) {
         client.snapshotMessages += int64_t(out.messages.size());
         client.deferred += int64_t(out.deferred.size());
     }
+    world_.endSnapshots();
 }
 
 std::vector<Server::ClientStats> Server::clientStats() const {

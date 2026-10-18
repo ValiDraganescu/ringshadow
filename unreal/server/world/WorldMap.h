@@ -817,6 +817,11 @@ public:
     /// What the pilot is told now (its region's snapshot, the game stamped
     /// with its visit).
     Snapshot snapshot(PilotId pilot, const InterestParams& params = {});
+    /// A snapshot round over every region (`Region::beginSnapshots`): call
+    /// `snapshot` for each pilot between them, with no step, input or
+    /// command in between.
+    void beginSnapshots();
+    void endSnapshots();
     void deferred(PilotId pilot, const std::vector<int64_t>& ids);
     /// Queues the pilot's input in its region (`Region::input`); in a world,
     /// one of an earlier visit than the pilot's (`PilotInput::visit`) is

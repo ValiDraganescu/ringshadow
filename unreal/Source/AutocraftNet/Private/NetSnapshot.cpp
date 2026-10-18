@@ -95,6 +95,8 @@ bool rangeEqual(const std::vector<uint8_t>& a, size_t af, const std::vector<uint
 
 template <class C> constexpr bool isPos = requires { C::position; };
 
+} // namespace
+
 /// An item's state on the wire: its fields written whole, one after the
 /// other, and where each starts. A fog chunk: its cells, a byte each.
 struct ItemBits {
@@ -104,6 +106,8 @@ struct ItemBits {
     uint64_t positions = 0;
     bool operator==(const ItemBits& o) const { return bits == o.bits && bytes == o.bytes; }
 };
+
+namespace {
 
 struct Canon {
     BitWriter w;
@@ -548,6 +552,11 @@ struct SnapshotWriter::State {
     }
 };
 
+std::shared_ptr<const ItemBits> canonBits(const EntityState& e) {
+    if (const Unit* u = e.unit()) return canon(*u);
+    return canon(*e.structure());
+}
+
 SnapshotWriter::SnapshotWriter() : s_(std::make_unique<State>()) {}
 SnapshotWriter::~SnapshotWriter() = default;
 SnapshotWriter::SnapshotWriter(SnapshotWriter&&) noexcept = default;
@@ -656,7 +665,11 @@ SnapshotWriter::Output SnapshotWriter::write(const Snapshot& snap, double now, i
     };
     auto entity = [&](const EntityState& e) {
         Placed p;
-        if (const Unit* u = e.unit()) p = canonItem(Kind::unit, uint64_t(u->id), *u, e.remembered);
+        const Kind kind = e.unit() ? Kind::unit : Kind::structure;
+        // Its bits made once for the round's pilots (the same bits: made
+        // from the same value), or here.
+        if (e.canon) p = consider(kind, uint64_t(e.id()), *e.canon, e.canon, e.remembered);
+        else if (const Unit* u = e.unit()) p = canonItem(Kind::unit, uint64_t(u->id), *u, e.remembered);
         else p = canonItem(Kind::structure, uint64_t(e.id()), *e.structure(), e.remembered);
         if (p == Placed::noRoom) out.deferred.push_back(e.id());
     };

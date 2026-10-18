@@ -3,7 +3,9 @@
 // where waiting raises an entity's priority (docs/networking.md, "Interest").
 
 #include "World.h"
+
 #include "Brood.h"
+#include "NetSnapshot.h"
 
 #include <algorithm>
 #include <cmath>
@@ -73,6 +75,12 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
     // Everything the side knows of now.
     std::vector<EntityState> all;
     all.reserve(s.units.size() + s.structures.size());
+    // In a round with two pilots here or more, each entity's key for its
+    // bits (0: made by the writer; with one pilot the writer's own are as
+    // cheap and need no allocation).
+    const bool shared = round_ && pilots_.size() >= 2;
+    std::vector<uint64_t> bitsKey;
+    if (shared) bitsKey.reserve(all.capacity());
     for (const Unit& u : s.units) {
         const bool own = s.allied(u.owner, me);
         // The Matriarch is seen from far, in sight or not (N3).
@@ -82,16 +90,19 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
         // turns on it, closing in or not.
         const bool at = driven >= 0 && (u.target == driven || u.lockTarget == driven || (u.bug && u.bug->prey == driven));
         all.push_back(EntityState{own ? u : scrubbed(u), false, rankOf(u.id, at), distance(u.position, from)});
+        if (shared) bitsKey.push_back(uint64_t(u.id) << 2 | (own ? 0 : 1));
     }
     for (const Structure& b : s.structures) {
         if (!s.allied(b.owner, me) && !sim_.sees(me, b.id)) continue;
         const bool at = driven >= 0 && b.target == driven;
         all.push_back(EntityState{b, false, rankOf(b.id, at), distance(b.position, from)});
+        if (shared) bitsKey.push_back(uint64_t(b.id) << 2 | 2);
     }
     if (sim_.vision && s.intel && me < static_cast<int64_t>(s.intel->size())) {
         for (const Structure& b : (*s.intel)[static_cast<size_t>(me)].buildings) {
             if (sim_.sees(me, b.id)) continue;
             all.push_back(EntityState{b, true, Rank::nearby, distance(b.position, from)});
+            if (shared) bitsKey.push_back(0);
         }
     }
 
@@ -150,6 +161,11 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
     out.entities.reserve(due.size());
     for (const Due& d : due) {
         seat.known.insert(all[d.i].id());
+        if (shared && bitsKey[d.i] != 0) {
+            std::shared_ptr<const net::ItemBits>& bits = roundBits_[bitsKey[d.i]];
+            if (!bits) bits = net::canonBits(all[d.i]);
+            all[d.i].canon = bits;
+        }
         out.entities.push_back(std::move(all[d.i]));
     }
 
@@ -198,6 +214,16 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
     out.events = std::move(seat.events);
     seat.events.clear();
     return out;
+}
+
+void Region::beginSnapshots() {
+    round_ = true;
+    roundBits_.clear();
+}
+
+void Region::endSnapshots() {
+    round_ = false;
+    roundBits_.clear();
 }
 
 void Region::deferred(PilotId pilot, const std::vector<int64_t>& ids) {
