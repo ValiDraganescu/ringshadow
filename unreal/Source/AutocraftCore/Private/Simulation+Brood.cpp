@@ -60,6 +60,12 @@ namespace {
 
 double paceFor(const Unit& u, double speed) { return std::clamp(speed / std::max(0.01, Rules::speed(u.kind)), 0.05, 1.0); }
 
+/// The point of a building's square (half side `r` about `c`) nearest `p`
+/// (`p` itself inside it).
+Vec2 nearestOnSquare(Vec2 p, Vec2 c, double r) {
+    return c + Vec2(std::clamp(p.x - c.x, -r, r), std::clamp(p.y - c.y, -r, r));
+}
+
 } // namespace
 
 Vec2 Simulation::bugWanderSpot(const Unit& u) const {
@@ -92,7 +98,18 @@ bool Simulation::bugAttack(Unit& u, int64_t id, double dt) {
     u.target = id;
     const bool spitter = u.kind == Unit::Kind::gloamwing;
     const double reach = w.range;
-    const double d = gap(u, *t);
+    // A Citadel with the hall (C1): edge to its square's nearest face, and
+    // the biter goes to the middle of that face. Measured as a circle, a
+    // biter along a 12x12 wall off its axes stood up to 0.9 short, and the
+    // grid holds a walker off its corners out of a bite's reach. Every other
+    // building as before (a circle of its half side).
+    const bool walls = t->structure && Rules::footprint(StructureKind::citadel).interior && [&] {
+        for (const Structure& s : state.structures) if (s.id == id) return s.kind == StructureKind::citadel;
+        return false;
+    }();
+    const double d = walls
+        ? std::max(0.0, distance(u.position, nearestOnSquare(u.position, t->position, t->radius)) - w.radius)
+        : gap(u, *t);
     // The dive (docs/creatures.md, "Gloamwing"): at a unit it swoops low
     // for the windup, spits, and stays low a moment before it climbs.
     if (spitter && b.diveFrom) {
@@ -118,7 +135,15 @@ bool Simulation::bugAttack(Unit& u, int64_t id, double dt) {
             // To its edge: a building's or a deposit's middle is solid ground.
             Vec2 off = u.position - t->position;
             if (!(length(off) > 1e-6)) off = Vec2(1, 0);
-            travel(u, t->position + normalize(off) * (t->radius + w.radius + reach * 0.5), 0.1, dt);
+            Vec2 edge = t->position + normalize(off) * (t->radius + w.radius + reach * 0.5);
+            if (walls) {
+                // Off its square's nearest face, clear of the corners.
+                const double r = t->radius, along = std::max(0.0, r - w.radius - 0.5), out = r + w.radius + reach * 0.5;
+                edge = std::abs(off.x) >= std::abs(off.y)
+                    ? t->position + Vec2(off.x < 0 ? -out : out, std::clamp(off.y, -along, along))
+                    : t->position + Vec2(std::clamp(off.x, -along, along), off.y < 0 ? -out : out);
+            }
+            travel(u, edge, 0.1, dt);
         }
         return true;
     }

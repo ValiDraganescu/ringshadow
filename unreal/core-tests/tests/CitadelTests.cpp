@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <string>
 
 using namespace ac;
@@ -55,6 +56,17 @@ int64_t bugAt(Simulation& sim, Unit::Kind kind, Vec2 p) {
     sim.state.units.push_back(u);
     sim.reindex();
     return id;
+}
+
+/// The MMO's start region, built.
+const MapDefinition& startRegion() {
+    static const MapDefinition m = [] {
+        std::ifstream in(std::string(AC_REPO_ROOT) + "/unreal/server/regions/start.json");
+        const std::string json((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        const region::Parsed parsed = region::parse(json);
+        return parsed.file ? region::build(*parsed.file).map : MapDefinition{};
+    }();
+    return m;
 }
 
 /// Steps of 1/30 s with the pilot's keys as they are.
@@ -564,4 +576,55 @@ TEST(citadel_bugsNeverTakeItBelowTheFloor) {
     h.sim.state.structures.push_back(Structure(dome, StructureKind::habDome, 0, kAt + Vec2(14, 0)));
     h.sim.hit(dome, Rules::hp(StructureKind::habDome) + 1, false, &biter);
     EXPECT_TRUE(structureOf(h.sim, dome).hp <= 0);
+}
+
+TEST(brood_strikesTheCitadelFromEveryFace) {
+    const CitadelHall on(true);
+    // Shardlings raiding a 12x12 Citadel on open ground (the nav grid holds
+    // them off its square) from +x, -x, +y, -y and two corners all reach a
+    // face and bite, the pilot far off.
+    const MapDefinition& map = startRegion();
+    Simulation probe(bare(2, 0, {}, {}, 1), map);
+    ASSERT_TRUE(probe.nav.has_value());
+    // Open ground 6 cells round the Citadel's square.
+    std::optional<Vec2> spot;
+    for (double x = map.bounds.minX + 20; x < map.bounds.maxX - 20 && !spot; x += 2) {
+        for (double z = map.bounds.minZ + 20; z < map.bounds.maxZ - 20 && !spot; z += 2) {
+            bool open = true;
+            for (double dx = -12; dx <= 12 && open; dx += 0.5)
+                for (double dz = -12; dz <= 12 && open; dz += 0.5)
+                    open = probe.nav->walkable(Vec2(x + dx, z + dz)) && !probe.nav->inRock(Vec2(x + dx, z + dz));
+            if (open) spot = Vec2(x, z);
+        }
+    }
+    ASSERT_TRUE(spot.has_value());
+    const Vec2 at = *spot;
+    Hall h = hallScene(at + Vec2(0, 15), map, at);
+    std::vector<int64_t> bugs;
+    for (const Vec2 from : {Vec2(11, 3), Vec2(-11, 8), Vec2(4, -11), Vec2(10, 10), Vec2(-10, -10), Vec2(3, 11)}) {
+        const int64_t id = bugAt(h.sim, Unit::Kind::shardling, at + from);
+        unitOf(h.sim, id).bug->raid = h.citadel;
+        unitOf(h.sim, id).bug->siteRadius = 40;
+        bugs.push_back(id);
+    }
+    std::map<int64_t, int64_t> bites;
+    std::map<int64_t, int64_t> was;
+    for (int k = 0; k < 20 * 30; k++) {
+        h.sim.step(1.0 / 30);
+        for (const int64_t id : bugs) {
+            const auto b = h.sim.state.unit(id);
+            if (!b) continue;
+            if (b->bug->strikes != was[id]) bites[id]++;
+            was[id] = b->bug->strikes;
+        }
+    }
+    EXPECT_TRUE(structureOf(h.sim, h.citadel).hp < Rules::hp(StructureKind::citadel));
+    for (const int64_t id : bugs) {
+        EXPECT_TRUE(bites[id] >= 5);
+        if (bites[id] < 5) {
+            const Unit b = *h.sim.state.unit(id);
+            std::printf("    bug %lld at (%.2f, %.2f) state %d, %lld bites\n", (long long)id, b.position.x - at.x,
+                        b.position.y - at.y, int(b.bug->state), (long long)bites[id]);
+        }
+    }
 }
