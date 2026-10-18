@@ -2,10 +2,11 @@
 # name, parent, pivot in the model frame (UE cm: x forward, y right, z up), what moves it, materials.
 # `_0` is the unit's left (UE -Y), `_1` its right.
 gatling_blue_root -              pivot (   0.0,    0.0,    0.0)  the unit or building transform: position on the ground, heading (yaw = -heading for units) | hullDark(7),hazard(4),hullMid(1),hullLight(16),chrome(4),team(4),workGlow(4),gatlingFurnace(10)
-head           gatling_blue_root pivot (   0.0,    0.0,   78.0)  turret aim: yaw toward its target (-aim), an idle sweep with none | hullDark(10),chrome(4),hullMid(2),hullLight(6),team(2),gunmetal(2),hazard(1)
+head           gatling_blue_root pivot (   0.0,    0.0,   78.0)  turret aim: yaw toward its target (-aim), an idle sweep with none | hullDark(6),chrome(3),hullMid(2),hullLight(6),team(2),hazard(1)
 hopper         head           pivot ( -26.0,    0.0,  184.0)  the furnace glow: brighter while it fires | gatlingMolten(1),gatlingFurnace(8)
 beacon         head           pivot ( -60.0,   30.0,  190.0)  beacon blink (0.25 s of every 1.2 s once built) | glowRed(1)
-barrels        head           pivot (  30.0,    0.0,  128.0)  spins about its axis while it fires | gunmetal(6),hullDark(3),chrome(1)
+cradle         head           pivot (  30.0,    0.0,  128.0)  the gun's pitch about the barrel axis, 0.3 along and 1.28 up from the gun's middle (the AI's ballistic solve), as the corner guns' turretCradles_k | gunmetal(2),chrome(1),hullDark(3)
+barrels        cradle         pivot (  30.0,    0.0,  128.0)  spins about its axis while it fires | gunmetal(6),hullDark(3),chrome(1)
 tips           barrels        pivot ( 151.5,    0.0,  128.0)  the barrels' white-hot ends: brighter while it fires | gatlingHeat(6)
-muzzles_0      head           pivot ( 158.0,    0.0,  128.0)  rigid with its parent | no mesh
-flashes_0      head           pivot ( 164.0,    0.0,  128.0)  muzzle flash: shown a frame per round [hidden at rest] | glowYellow(1)
+muzzles_0      cradle         pivot ( 158.0,    0.0,  128.0)  rigid with its parent | no mesh
+flashes_0      cradle         pivot ( 164.0,    0.0,  128.0)  muzzle flash: shown a frame per round [hidden at rest] | glowYellow(1)

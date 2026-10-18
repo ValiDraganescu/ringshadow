@@ -95,17 +95,17 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
                driver=d("corner turret %d's barrels: spin about their axis while it fires" % k, ("rotation", "visibility")))
     # six long barrels round a spindle, a mid and a front clamp (they spin together)
     bores = [(math.cos(a) * 4.6, math.sin(a) * 4.6) for a in (j * math.pi / 3 for j in range(6))]
-    tip_x = 62.0
+    tip_x = 76.2  # the muzzle (tip_x + 4) 1.3 cells along from the trunnion: Defence::muzzleAlong, where the rounds leave
     m.mesh(b, "gunmetal", [cyl(1.6 * S, (tip_x - 16) * S, at=at(16, by, 22 + bz), axis="x", base=True, sides=8)
                            for by, bz in bores])
-    m.mesh(b, "hullDark", [cyl(1.9 * S, 40 * S, at=at(16, 0, 22), axis="x", base=True, sides=8)] +
-           [cyl(6.4 * S, 1.6 * S, at=at(xc, 0, 22), axis="x", base=True, sides=14) for xc in (32, 46)])
+    m.mesh(b, "hullDark", [cyl(1.9 * S, 54 * S, at=at(16, 0, 22), axis="x", base=True, sides=8)] +
+           [cyl(6.4 * S, 1.6 * S, at=at(xc, 0, 22), axis="x", base=True, sides=14) for xc in (36, 56)])
     tips = m.part("turretTips_%d" % k, parent=b, at=at(tip_x, 0, 22), hidden=True,
                   driver=d("corner turret %d's hot barrel ends: brighter while it fires" % k, ("emission", "visibility")))
     m.mesh(tips, "gatlingHeat", [cyl(1.6 * S, 2 * S, at=at(tip_x, by, 22 + bz), axis="x", base=True, sides=8)
                                  for by, bz in bores], solid=False)  # butted on the barrels' ends
     # the lit flash hider collar near the muzzle (on the cradle: steady while the barrels spin inside it)
-    m.mesh(cr, "muzzleRing", [cyl(7 * S, 2.5 * S, at=at(54.5, 0, 22), axis="x", base=True, sides=16)], solid=False)
+    m.mesh(cr, "muzzleRing", [cyl(7 * S, 2.5 * S, at=at(68.7, 0, 22), axis="x", base=True, sides=16)], solid=False)
     m.part("turretMuzzles_%d" % k, parent=cr, at=at(tip_x + 4, 0, 22))
     f = m.part("turretFlashes_%d" % k, parent=cr, at=at(tip_x + 8, 0, 22), hidden=True,
                driver=d("corner turret %d's muzzle flash: a frame per round" % k, ("visibility",)))

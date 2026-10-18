@@ -11,7 +11,8 @@ Writes /Game/Models/gatling/SM_<part>__<material> and the catalog entry `gatling
 
 UE cm, a building: its front (+Y) toward the game camera, Z up, the pad on Z = 0, a 2 by 2 footprint (200 cm a
 side) like the Hab Dome and the Sentinel, about 1.3 cells high at the hopper. The gun points along +X at rest: the
-pose turns `head` to the target (yaw = -aim, as the Sentinel's), spins `barrels` about their axis while it fires,
+pose turns `head` to the target (yaw = -aim, as the Sentinel's), pitches `cradle` (C2: on the barrel axis 0.3 along
+and 1.28 up, SceneKit euler (0, 0, +pitch) as the corner guns'), spins `barrels` about their axis while it fires,
 and drives the glows: `tips` (the barrels' hot ends) and `hopper` (the furnace) brighten while firing and cool
 after; `workGlow` slits are the building's yellow working light; `flashes_0` shows a frame per round at
 `muzzles_0`; `beacon` blinks red once built.
@@ -106,17 +107,24 @@ m.mesh(beacon, "glowRed", sphere(5, at=(HX - 46, 40, 192), steps=8), solid=False
 AXIS = (30, 0, 128)
 HOUSING = (22.0, 54.0)  # the rotor housing along x; the barrels run on from its front to MUZZLE
 MUZZLE = 150.0
-m.mesh(head, "gunmetal", [cyl(22, HOUSING[1] - HOUSING[0], at=(HOUSING[0], 0, 128), axis="x", base=True, sides=20),
+# C2: the gun pitches (the AI's ballistic solve) on `cradle`, its pivot on the barrel axis 0.3 along and 1.28 up from
+# the gun's middle, where the core's gatling pitches from (the muzzle 1.28 past it: 1.58 out when level); as the corner
+# guns' turretCradles_k: SceneKit euler (0, 0, +pitch)
+cradle = m.part("cradle", parent=head, at=AXIS, driver=d(
+    "the gun's pitch about the barrel axis, 0.3 along and 1.28 up from the gun's middle (the AI's ballistic solve), as "
+    "the corner guns' turretCradles_k"))
+m.mesh(cradle, "gunmetal", [cyl(22, HOUSING[1] - HOUSING[0], at=(HOUSING[0], 0, 128), axis="x", base=True, sides=20),
                           cyl(14, 8, at=(HOUSING[0] - 8, 0, 128), axis="x", base=True, r1=22, sides=20)])
-m.mesh(head, "chrome", [cyl(23, 3, at=(HOUSING[1] - 4, 0, 128), axis="x", base=True, sides=20)], solid=False)
-m.mesh(head, "hullDark", [cyl(23, 3, at=(HOUSING[0] + 6 + 8 * k, 0, 128), axis="x", base=True, sides=20) for k in range(3)],
+m.mesh(cradle, "chrome", [cyl(23, 3, at=(HOUSING[1] - 4, 0, 128), axis="x", base=True, sides=20)], solid=False)
+m.mesh(cradle, "hullDark", [cyl(23, 3, at=(HOUSING[0] + 6 + 8 * k, 0, 128), axis="x", base=True, sides=20) for k in range(3)],
        solid=False)  # the housing's ribs
-# the ammunition box on the left flank (+Y, outside the yoke's cheek) and its chute over the cheek into the housing
+# the ammunition box on the left flank (+Y, outside the yoke's cheek) and its chute into the yoke's drum (the feed goes
+# on inside the trunnion, which the pitch does not move)
 m.mesh(head, "hullMid", [box((48, 26, 38), at=(-6, 64, 96), base=True)])
 m.mesh(head, "hazard", [box((50, 2, 8), at=(-6, 78, 122), base=True)], solid=False)
 m.mesh(head, "hullDark", [box((44, 22, 4), at=(-6, 64, 134), base=True)], solid=False)  # its lid
-m.mesh(head, "hullDark", [bar((-4, 62, 136), (12, 46, 172), 11, 4), bar((12, 46, 172), (30, 10, 146), 11, 4)], solid=False)
-barrels = m.part("barrels", parent=head, at=AXIS, driver=d("spins about its axis while it fires"))
+m.mesh(head, "hullDark", [bar((-4, 62, 136), (16, 50, 140), 11, 4)], solid=False)
+barrels = m.part("barrels", parent=cradle, at=AXIS, driver=d("spins about its axis while it fires"))
 bores = []
 for k in range(6):
     a = k * math.pi / 3
@@ -131,8 +139,8 @@ tips = m.part("tips", parent=barrels, at=(MUZZLE + 1.5, 0, 128), driver=d("the b
 m.mesh(tips, "gatlingHeat", [cyl(3.8, 3, at=(MUZZLE, y, 128 + z), axis="x", base=True, sides=10) for y, z in bores],
        solid=False)
 # where the rounds leave (the effects read it), and the flash there
-m.part("muzzles_0", parent=head, at=(MUZZLE + 8, 0, 128))
-flash = m.part("flashes_0", parent=head, at=(MUZZLE + 14, 0, 128), hidden=True,
+m.part("muzzles_0", parent=cradle, at=(MUZZLE + 8, 0, 128))
+flash = m.part("flashes_0", parent=cradle, at=(MUZZLE + 14, 0, 128), hidden=True,
                driver=d("muzzle flash: shown a frame per round", ("visibility",)))
 m.mesh(flash, "glowYellow", sphere(14, at=(MUZZLE + 14, 0, 128), squash=(1.6, 1, 1), steps=8), solid=False)
 

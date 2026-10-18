@@ -335,6 +335,8 @@ CONSOLE = 97.0      # the console's middle from the gunner's point, along the co
 m.material("gunScreen", parent="emissive", color=(0, 0, 0), emissive=(0.026, 0.026, 0.026),
            emissive_texture="unreal/Resources/Textures/citadel_gun_screen.png")  # the pose lights it 47.5 times
 TILT = 15.0         # the monitor leans back
+# the console's warm lamp over the desk (the corners are out of the hall lamps' reach)
+m.material("consoleLamp", parent="emissive", color=(0.6, 0.45, 0.2), emissive=(10.0, 7.0, 2.6))
 BUTTONS = [("glowRed", -6, -12), ("glowGreen", -6, -22), ("glowYellow", -6, -32), ("glowBlue", 3, -14),
            ("glowRed", 3, -24), ("glowOrange", 3, -34), ("glowGreen", 12, -18), ("glowBlue", 12, -28)]
 for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
@@ -356,11 +358,16 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     # the plinth, its hazard band and lit strips at the front, the armoured body, the desk top and the control deck
     m.mesh(st, "hullDark", [B((84, 104, 10), 0, 0, FLOOR), B((84, 104, 6), 0, 0, FLOOR + 67)])
     m.mesh(st, "hullMid", [B((80, 100, 57), 0, 0, FLOOR + 10), B((40, 92, 10), 20, 0, FLOOR + 73)])
-    m.mesh(st, "hazard", [B((2, 104, 10), 43, 0, FLOOR)], solid=False)
-    m.mesh(st, "floodGlow", [B((2, 26, 3), 45, y, FLOOR + 3.5) for y in (-36, 0, 36)], solid=False)
+    # hazard bands round the plinth (front and flanks, butted at the corners), the lit yellow strip along them
+    m.mesh(st, "hazard", [B((2, 104, 10), 43, 0, FLOOR)] + [B((84, 2, 10), 0, s * 53, FLOOR) for s in (-1, 1)],
+           solid=False)
+    m.mesh(st, "floodGlow", [B((2, 96, 3), 45, 0, FLOOR + 3.5)] + [B((76, 2, 3), 0, s * 55, FLOOR + 3.5) for s in (-1, 1)],
+           solid=False)
     m.mesh(st, "hullDark", [B((2, 70, 40), 41, 0, FLOOR + 17)] +                       # the front's armour plate
-           [B((6, 6, 57), 41, s * 48, FLOOR + 10) for s in (-1, 1)] +                 # its corner rails
            [B((2, 60, 3), 43, 0, FLOOR + 17 + 9 * j) for j in range(1, 4)], solid=False)  # and the plate's ribs
+    # the armoured body's bevelled vertical edges
+    m.mesh(st, "hullDark", [box((10, 10, 57), at=L(ex * 40, ey * 50, FLOOR + 10), rot=(0, yaw + 45, 0), base=True)
+                            for ex in (-1, 1) for ey in (-1, 1)])
     m.mesh(st, "team", [B((2, 30, 6), 41, 0, FLOOR + 61)], solid=False)
     # the joystick on the gunner's left, the buttons on the right
     J = (20.0, 24.0)
@@ -385,6 +392,37 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     m.mesh(scr, "gunScreen", [panel((2, 86, 52), at=L(sx_, 0, sz_), rot=(TILT, yaw, 0), base=True)], solid=False)
     m.mesh(st, "hullDark", [bar(L(-24, s * 53, FLOOR + 70), L(-40, s * 56, FLOOR), 5, shape="cyl", sides=8)
                             for s in (-1, 1)], solid=False)
+
+    def MH(ox, oy, oz):
+        """A point in the monitor housing's frame (out of the screen, across, up the leaning face from its bottom
+        edge) in the model frame."""
+        return L(hx + ox * math.cos(t) - oz * math.sin(t), oy, hz + ox * math.sin(t) + oz * math.cos(t))
+
+    def MB(size, ox, oy, oz):
+        return box(size, at=MH(ox, oy, oz), rot=(TILT, yaw, 0), base=True)
+    # the frame round the screen, 2 cm proud of it (its bars butted: the sides between the top and the bottom)
+    m.mesh(st, "hullDark", [MB((4, 96, 5), 7, 0, 1), MB((4, 96, 5), 7, 0, 58)] +
+           [MB((4, 5, 52), 7, s * 45.5, 6) for s in (-1, 1)], solid=False)
+    # the cable loom from the monitor's back down behind the console
+    m.mesh(st, "hullDark", [bar(MH(-5, y, 46), L(-50, y * 1.3, FLOOR + 40), 3.6, shape="cyl", sides=8)
+                            for y in (-20, -10, 10, 20)] +
+           [bar(L(-50, y * 1.3, FLOOR + 40), L(-52, y * 1.3, FLOOR), 3.6, shape="cyl", sides=8) for y in (-20, -10, 10, 20)],
+           solid=False)
+    # the warm lamp over the desk: a hood on an arm from the monitor's top, its lamp under it (the gunner sees the
+    # desk; the corners are out of the hall lamps' reach)
+    m.mesh(st, "hullDark", [bar(MH(0, 0, 63), L(-4, 0, FLOOR + 170), 4, 3), B((24, 40, 3), 8, 0, FLOOR + 167, -15)],
+           solid=False)
+    # (its light, like light_2's, shines when the pose cues it: warm, 2 cells' reach, over the desk)
+    lamp = m.part("consoleLamps_%d" % k, parent=st, at=L(8, 0, FLOOR + 166), handles=["consoleLamp"],
+                  light={"attenuationEnd": "2.0", "color": "SIMD4<Float>(1.0, 0.78, 0.45, 1.0)", "handles": "consoleLamp",
+                         "intensity": "0.0", "type": "omni"},
+                  driver=d("gun station %d's desk lamp: the gunner's warm working light, steady once built" % k,
+                           ("emission", "light")))
+    m.mesh(lamp, "consoleLamp", [B((18, 32, 1), 8, 0, FLOOR + 166, -15)], solid=False)
+    # the lamp's lens on the hood's front edge, 2 cm proud of it, toward the gunner
+    p15 = math.radians(15)
+    m.mesh(lamp, "consoleLamp", [B((2, 34, 2), 8 + 13 * math.cos(p15) + 0.5 * math.sin(p15), 0,
+                                   FLOOR + 167 - 13 * math.sin(p15) + 0.5 * math.cos(p15), -15)], solid=False)
     # the conduit out of the back of the monitor's top (behind the leaning screen), up to the gun over the corner
     m.mesh(st, "hullDark", [cyl(6, CEIL - FLOOR - 150, at=L(-42, 0, FLOOR + 150), base=True, sides=10)], solid=False)
     m.mesh(st, "chrome", [cyl(8, 4, at=L(-42, 0, z), base=True, sides=10) for z in (200, 320, 440, 560)], solid=False)

@@ -446,7 +446,11 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
   (`unreal/Resources/Textures/citadel_gun_screen.png`, made by
   `models/citadel_screen.py`) in the `gunScreen` material, lit by the pose
   as before (1.9 lit, 0.04 dark). A hazard ring of radius 0.48 marks the
-  gunner's spot. No seats.
+  gunner's spot. No seats. The console pass (C2): bevelled vertical
+  edges, hazard bands and a lit strip round the plinth, a frame round the
+  monitor, a cable loom behind it, and a warm lamp hood over the desk on
+  an arm, its lamp `consoleLamps_k` (`consoleLamp`, with an omni light
+  of 2 cells' reach the pose cues, as `light_2`).
 - **Turrets** (`citadel_turrets.py`, `CORNER = 550`, `TOP = 900`): the
   parts as before plus `turretCradles_k` between `turrets_k` (yaw: SK euler
   (0, −aim, 0)) and `turretBarrels_k` (spin about X): the pitch, SK euler
