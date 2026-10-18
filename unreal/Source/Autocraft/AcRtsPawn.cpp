@@ -4,6 +4,8 @@
 #include "AcHeadless.h"
 
 #include "AcLog.h"
+#include "AcPilotPawn.h"
+#include "AcPointer.h"
 #include "AcShot.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
@@ -451,7 +453,9 @@ void AAcRtsPawn::Apply()
 	// target on the ground plane, pitched down 56°.
 	const ac::CanvasProjection P = FreeView->projection();
 	const ac::Vec3 Eye = FreeView->cameraPosition();
-	SetActorLocationAndRotation(AcSpace::WorldFromSceneKit(Eye.x, Eye.y, Eye.z), FRotator(-P.pitchDegrees, -90.0, 0.0));
+	// Turned by the view's yaw: unturned it looks toward SceneKit's -z, Unreal's -y.
+	SetActorLocationAndRotation(AcSpace::WorldFromSceneKit(Eye.x, Eye.y, Eye.z),
+		FRotator(-P.pitchDegrees, -90.0 + FMath::RadiansToDegrees(FreeView->yaw), 0.0));
 	// SceneKit's field of view is vertical (`projectionDirection = .vertical`);
 	// Unreal's is horizontal: the same 30° up and down at this aspect.
 	const double Aspect = Size.X / FMath::Max(Size.Y, 1.0);
@@ -484,6 +488,7 @@ void AAcRtsPawn::Tick(float DeltaSeconds)
 	}
 	if (!bCommandLinePending && CamPath.Num() > 0) FollowCamPath();
 
+	UpdateOrbit(DeltaSeconds);
 	if (!bInputBlocked)
 	{
 		// The left button: a drag once it has moved 4 points (`GameView.mouseDragged`).
@@ -512,7 +517,8 @@ void AAcRtsPawn::Tick(float DeltaSeconds)
 		{
 			const double Speed = FreeView->visibleCells() * 0.8 * DeltaSeconds;
 			const FVector2D N = D / FMath::Max(D.Size(), 1.0);
-			FreeView->target = FreeView->target + ac::Vec2(N.X, N.Y * 1.2) * Speed;
+			// Along the view's own right and down, however it is turned.
+			FreeView->target = FreeView->target + FreeView->toWorld(ac::Vec2(N.X, N.Y * 1.2)) * Speed;
 			FreeView->clamp();
 			bDirty = true;
 		}
@@ -651,6 +657,75 @@ void AAcRtsPawn::OnDragEnd(const FInputActionValue&)
 {
 	bPressed = false;
 	bDragged = false;
+}
+
+// MARK: - The right-drag turn
+
+double AAcRtsPawn::OrbitTurn(const FVector2D Raw, const float Dt)
+{
+	return Raw.X * AAcPilotPawn::LookGain(Raw, Dt) * AAcPilotPawn::YawPerPoint;
+}
+
+bool AAcRtsPawn::CanOrbit() const
+{
+	if (!FreeView || bInputBlocked) return false;
+	FVector2D C;
+	if (!CursorPoint(C)) return false;
+	// A selection keeps the right button for itself; so does the
+	// playground's palette (a right click lets go of what it holds).
+	const UAcPointer* Pointer = UAcPointer::Get(this);
+	if (!Pointer) return true;
+	if (Pointer->Selected()) return false;
+	if (Pointer->HoverSuppressed && Pointer->HoverSuppressed()) return false;
+	return !Pointer->IsCovered(C);
+}
+
+void AAcRtsPawn::UpdateOrbit(const float DeltaSeconds)
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!bOrbiting)
+	{
+		if (!PC || !PC->WasInputKeyJustPressed(EKeys::RightMouseButton) || !CanOrbit()) return;
+		bOrbiting = true;
+		if (FSlateApplication::IsInitialized()) OrbitCursor = FSlateApplication::Get().GetCursorPos();
+		// Hidden and pinned, so the mouse only turns the view (as the
+		// pilot's capture). Headless runs never touch the user's mouse.
+		if (!AcHeadless::Is())
+		{
+			PC->SetShowMouseCursor(false);
+			FInputModeGameOnly Mode;
+			Mode.SetConsumeCaptureMouseDown(true);
+			PC->SetInputMode(Mode);
+		}
+		return;
+	}
+	if (!PC || !PC->IsInputKeyDown(EKeys::RightMouseButton) || bInputBlocked || !FreeView)
+	{
+		EndOrbit();
+		return;
+	}
+	float Dx = 0, Dy = 0;
+	PC->GetInputMouseDelta(Dx, Dy);
+	if (Dx != 0)
+	{
+		FreeView->orbit(OrbitTurn(FVector2D(Dx, Dy), DeltaSeconds));
+		bDirty = true;
+	}
+}
+
+void AAcRtsPawn::EndOrbit()
+{
+	if (!bOrbiting) return;
+	bOrbiting = false;
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || AcHeadless::Is()) return;
+	// The pointer back, where it was when the turn began.
+	PC->SetShowMouseCursor(true);
+	FInputModeGameAndUI Mode;
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	Mode.SetHideCursorDuringCapture(false);
+	PC->SetInputMode(Mode);
+	if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetCursorPos(OrbitCursor);
 }
 
 void AAcRtsPawn::OnGoToBase(const FInputActionValue& Value)

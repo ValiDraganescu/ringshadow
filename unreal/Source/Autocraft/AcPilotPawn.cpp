@@ -398,12 +398,15 @@ void AAcPilotPawn::OnLook(const FInputActionValue& V)
 	// speed is a short flick, a slow pan stays fine).
 	const FVector2D Raw = V.Get<FVector2D>();
 	if (OnLookTaken && OnLookTaken(Raw)) return;
-	const float Dt = FMath::Max(GetWorld() ? GetWorld()->GetDeltaSeconds() : 1.f / 60.f, 1e-3f);
-	const double Flick = FMath::Clamp((Raw.Size() / Dt - 300.0) / 1500.0, 0.0, 1.0);
-	const double Gain = CVarLookScale.GetValueOnGameThread() * FMath::Clamp(UAcSettings::Get().LookSpeed, 0.25f, 3.f)
-		* CVarLookBase.GetValueOnGameThread() * (1.0 + Flick);
-	const FVector2D D = Raw * Gain;
+	const FVector2D D = Raw * LookGain(Raw, GetWorld() ? GetWorld()->GetDeltaSeconds() : 1.f / 60.f);
 	Look(D.X, -D.Y);
+}
+
+double AAcPilotPawn::LookGain(const FVector2D Raw, const float Dt)
+{
+	const double Flick = FMath::Clamp((Raw.Size() / FMath::Max(Dt, 1e-3f) - 300.0) / 1500.0, 0.0, 1.0);
+	return CVarLookScale.GetValueOnGameThread() * FMath::Clamp(UAcSettings::Get().LookSpeed, 0.25f, 3.f)
+		* CVarLookBase.GetValueOnGameThread() * (1.0 + Flick);
 }
 
 void AAcPilotPawn::OnActStart(const FInputActionValue&)

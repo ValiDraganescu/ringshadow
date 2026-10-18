@@ -202,6 +202,11 @@ public:
 	void Next();
 	/// The mouse turned the view by (DX right, DY down) points (`look`).
 	void Look(double DX, double DY);
+	/// The look's gain on the mouse's raw counts over a frame of `Dt`
+	/// seconds: points for `Look`, 0.0032 rad each across (the top-down
+	/// view's right-drag turn uses it too).
+	static double LookGain(FVector2D Raw, float Dt);
+	static constexpr double YawPerPoint = 0.0032, PitchPerPoint = 0.0026;
 	/// The act key went down or up (`pilotPress`).
 	void Press(bool bDown);
 	/// R (`pilotAbilityPress`).

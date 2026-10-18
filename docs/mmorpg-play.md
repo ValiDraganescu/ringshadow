@@ -48,7 +48,10 @@ Driving the Prospector (mouse captured):
 | Esc or F | Leave the Prospector for the top-down view (Esc closes the build menu first) |
 
 In the top-down view, click your Prospector to drive it again. Esc there opens
-the pause menu (RESUME, SETTINGS, QUIT TO HOME).
+the pause menu (RESUME, SETTINGS, QUIT TO HOME). With nothing selected, hold
+the right button and move the mouse left or right to turn the camera round
+the ground at the middle of the view (the pointer hides while you turn and
+comes back where it was); 0 shows the whole map, unturned.
 
 The world map is the world seen from above: every region you have been to
 as a satellite picture of its real ground, side by side as they lie, the
