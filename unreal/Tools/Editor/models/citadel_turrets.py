@@ -29,7 +29,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from ac_modelkit import Box, Cyl, Model, box, cyl, m_apply, sphere, load_catalog, save_catalog, sk_point  # noqa: E402
+from ac_modelkit import Box, Cyl, Model, bar, box, cyl, m_apply, sphere, load_catalog, save_catalog, sk_point  # noqa: E402
 
 POSE = "AcPoseBuildings.cpp:PoseCitadel"
 CORNER = 550.0  # Defence::cornerInset 5.5
@@ -74,25 +74,38 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     for s in (-1, 1):
         m.mesh(t, "hullLight", [box((28 * S, 6 * S, 19 * S), at=at(6, s * 17, 8), base=True)])
     m.mesh(t, "team", [box((20 * S, 2 * S, 6 * S), at=at(-2, 15.5, 16), base=True)], solid=False)
+    # C2, the minigun look (docs/guns-and-practice.md section 2, art/models/guns/ref/minigun-reference.png): the
+    # ammunition box on the mount's left flank, outside the cheek, with a hazard stripe
+    m.mesh(t, "hullMid", [box((22 * S, 9 * S, 12 * S), at=at(-1, 25, 8), base=True)])
+    m.mesh(t, "hazard", [box((18 * S, 1.2 * S, 3 * S), at=at(-1, 30.1, 15), base=True)], solid=False)
     axis = at(12, 0, 22)
     cr = m.part("turretCradles_%d" % k, parent=t, at=at(8, 0, 22), hidden=True,
                 driver=d("corner turret %d's guns: pitch about the trunnion (C1: the gunner's pitch)" % k,
                          ("rotation", "visibility")))
+    # on the cradle: the stubby rotor housing (a rear cone, two ribs, a chrome band at its front), the feed chute from
+    # the box (it leaves the box on the trunnion's line, which the pitch does not move) into the housing
+    m.mesh(cr, "gunmetal", [cyl(9 * S, 12 * S, at=at(4, 0, 22), axis="x", base=True, sides=14),
+                            cyl(6 * S, 4 * S, at=at(0, 0, 22), axis="x", base=True, r1=9 * S, sides=14)])
+    m.mesh(cr, "hullDark", [cyl(9.6 * S, 1.2 * S, at=at(xr, 0, 22), axis="x", base=True, sides=14) for xr in (6.5, 9.5)],
+           solid=False)
+    m.mesh(cr, "chrome", [cyl(9.6 * S, 1.2 * S, at=at(12.6, 0, 22), axis="x", base=True, sides=14)], solid=False)
+    m.mesh(cr, "hullDark", [bar(at(8, 24, 21), at(9, 17, 33), 4 * S, 1.5 * S), bar(at(9, 17, 33), at(13, 6, 28), 4 * S, 1.5 * S)],
+           solid=False)
     b = m.part("turretBarrels_%d" % k, parent=cr, at=axis, hidden=True,
                driver=d("corner turret %d's barrels: spin about their axis while it fires" % k, ("rotation", "visibility")))
-    m.mesh(b, "gunmetal", [cyl(10 * S, 18 * S, at=axis, axis="x", base=True, sides=14)])
-    m.mesh(b, "hullDark", [cyl(12 * S, 2 * S, at=at(14 + 3.5 * j, 0, 22), axis="x", base=True, sides=14) for j in range(4)],
-           solid=False)  # the ribbed jacket
-    m.mesh(b, "chrome", [cyl(11 * S, 2.5 * S, at=at(13.2, 0, 22), axis="x", base=True, sides=14)], solid=False)
-    bores = [(math.cos(a) * 5.5, math.sin(a) * 5.5) for a in (j * math.pi / 3 for j in range(6))]
-    m.mesh(b, "gunmetal", [cyl(2.4 * S, 30 * S, at=at(28, by, 22 + bz), axis="x", base=True, sides=8) for by, bz in bores])
-    tip_x = 12 + 46
+    # six long barrels round a spindle, a mid and a front clamp (they spin together)
+    bores = [(math.cos(a) * 4.6, math.sin(a) * 4.6) for a in (j * math.pi / 3 for j in range(6))]
+    tip_x = 62.0
+    m.mesh(b, "gunmetal", [cyl(1.6 * S, (tip_x - 16) * S, at=at(16, by, 22 + bz), axis="x", base=True, sides=8)
+                           for by, bz in bores])
+    m.mesh(b, "hullDark", [cyl(1.9 * S, 40 * S, at=at(16, 0, 22), axis="x", base=True, sides=8)] +
+           [cyl(6.4 * S, 1.6 * S, at=at(xc, 0, 22), axis="x", base=True, sides=14) for xc in (32, 46)])
     tips = m.part("turretTips_%d" % k, parent=b, at=at(tip_x, 0, 22), hidden=True,
                   driver=d("corner turret %d's hot barrel ends: brighter while it fires" % k, ("emission", "visibility")))
-    m.mesh(tips, "gatlingHeat", [cyl(2.6 * S, 3 * S, at=at(tip_x, by, 22 + bz), axis="x", base=True, sides=8)
-                                 for by, bz in bores], solid=False)
-    # the lit muzzle ring round the cluster's end (on the turret: steady while the barrels spin inside it)
-    m.mesh(cr, "muzzleRing", [cyl(9.5 * S, 2 * S, at=at(tip_x - 6, 0, 22), axis="x", base=True, sides=16)], solid=False)
+    m.mesh(tips, "gatlingHeat", [cyl(1.6 * S, 2 * S, at=at(tip_x, by, 22 + bz), axis="x", base=True, sides=8)
+                                 for by, bz in bores], solid=False)  # butted on the barrels' ends
+    # the lit flash hider collar near the muzzle (on the cradle: steady while the barrels spin inside it)
+    m.mesh(cr, "muzzleRing", [cyl(7 * S, 2.5 * S, at=at(54.5, 0, 22), axis="x", base=True, sides=16)], solid=False)
     m.part("turretMuzzles_%d" % k, parent=cr, at=at(tip_x + 4, 0, 22))
     f = m.part("turretFlashes_%d" % k, parent=cr, at=at(tip_x + 8, 0, 22), hidden=True,
                driver=d("corner turret %d's muzzle flash: a frame per round" % k, ("visibility",)))

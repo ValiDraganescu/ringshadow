@@ -56838,6 +56838,36 @@
       },
       {
        "hi": [
+        0.198,
+        0.108,
+        0.081
+       ],
+       "lo": [
+        -0.198,
+        -0.108,
+        -0.081
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.018,
+        0.252,
+        0.45,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.252,
         0.171,
         0.054
@@ -56926,7 +56956,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 12
+       "triangles": 24
       },
       {
        "material": "hullLight",
@@ -56948,6 +56978,16 @@
        "team": [
         "TeamTint"
        ],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "turrets_0__hazard",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__hazard.SM_turrets_0__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
        "triangles": 12
       }
      ]
@@ -57003,7 +57043,105 @@
        "AcPoseBuildings.cpp:PoseCitadel"
       ]
      },
+     "rays": [
+      {
+       "hi": [
+        0.162,
+        0.108,
+        0.162
+       ],
+       "lo": [
+        -0.162,
+        -0.108,
+        -0.162
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.036,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.162,
+       "half": 0.108,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.135,
+        0.036,
+        0.135
+       ],
+       "lo": [
+        -0.135,
+        -0.036,
+        -0.135
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.108,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.135,
+       "half": 0.036,
+       "round": "cylinder"
+      }
+     ],
      "meshes": [
+      {
+       "material": "gunmetal",
+       "prim": "turretCradles_0__gunmetal",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_0__gunmetal.SM_turretCradles_0__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "hullDark",
+       "prim": "turretCradles_0__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_0__hullDark.SM_turretCradles_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 136
+      },
+      {
+       "material": "chrome",
+       "prim": "turretCradles_0__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_0__chrome.SM_turretCradles_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 56
+      },
       {
        "material": "muzzleRing",
        "prim": "turretCradles_0__muzzleRing",
@@ -57070,14 +57208,14 @@
      "rays": [
       {
        "hi": [
-        0.18,
-        0.162,
-        0.18
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.18,
-        -0.162,
-        -0.18
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57092,25 +57230,25 @@
         0.0,
         1,
         0.0,
-        0.162,
+        0.486,
         0.0,
-        0.0,
+        0.0828,
         1
        ],
-       "radius": 0.18,
-       "half": 0.162,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57125,25 +57263,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        0.099,
+        0.486,
+        0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57158,25 +57296,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        0.0495,
+        0.486,
+        0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57191,25 +57329,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        -0.0495,
+        0.486,
+        0.0,
+        -0.0828,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57224,25 +57362,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        -0.099,
+        0.486,
+        -0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57257,25 +57395,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        -0.0495,
+        0.486,
+        -0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0342,
+        0.36,
+        0.0342
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0342,
+        -0.36,
+        -0.0342
        ],
        "transform": [
         0.0,
@@ -57290,13 +57428,79 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        0.0495,
+        0.432,
+        0.0,
+        0.0,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0342,
+       "half": 0.36,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3744,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6264,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
        "round": "cylinder"
       }
      ],
@@ -57309,7 +57513,7 @@
        "materialKey": "b3e974eff6cd",
        "blend": "opaque",
        "team": [],
-       "triangles": 248
+       "triangles": 192
       },
       {
        "material": "hullDark",
@@ -57319,17 +57523,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 224
-      },
-      {
-       "material": "chrome",
-       "prim": "turretBarrels_0__chrome",
-       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_0__chrome.SM_turretBarrels_0__chrome",
-       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
-       "materialKey": "1741605754dc",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 56
+       "triangles": 144
       }
      ]
     },
@@ -57349,13 +57543,13 @@
       0.0,
       1,
       0.0,
-      0.828,
+      0.9,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.828,
+      0.9,
       0.0,
       0.0
      ],
@@ -57413,13 +57607,13 @@
       0.0,
       1,
       0.0,
-      0.972,
+      1.044,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.972,
+      1.044,
       0.0,
       0.0
      ],
@@ -57456,13 +57650,13 @@
       0.0,
       1,
       0.0,
-      1.044,
+      1.116,
       0.0,
       0.0,
       1
      ],
      "position": [
-      1.044,
+      1.116,
       0.0,
       0.0
      ],
@@ -57620,6 +57814,36 @@
       },
       {
        "hi": [
+        0.198,
+        0.108,
+        0.081
+       ],
+       "lo": [
+        -0.198,
+        -0.108,
+        -0.081
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.018,
+        0.252,
+        0.45,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.252,
         0.171,
         0.054
@@ -57708,7 +57932,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 12
+       "triangles": 24
       },
       {
        "material": "hullLight",
@@ -57730,6 +57954,16 @@
        "team": [
         "TeamTint"
        ],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "turrets_1__hazard",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__hazard.SM_turrets_1__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
        "triangles": 12
       }
      ]
@@ -57785,7 +58019,105 @@
        "AcPoseBuildings.cpp:PoseCitadel"
       ]
      },
+     "rays": [
+      {
+       "hi": [
+        0.162,
+        0.108,
+        0.162
+       ],
+       "lo": [
+        -0.162,
+        -0.108,
+        -0.162
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.036,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.162,
+       "half": 0.108,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.135,
+        0.036,
+        0.135
+       ],
+       "lo": [
+        -0.135,
+        -0.036,
+        -0.135
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.108,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.135,
+       "half": 0.036,
+       "round": "cylinder"
+      }
+     ],
      "meshes": [
+      {
+       "material": "gunmetal",
+       "prim": "turretCradles_1__gunmetal",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_1__gunmetal.SM_turretCradles_1__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "hullDark",
+       "prim": "turretCradles_1__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_1__hullDark.SM_turretCradles_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 136
+      },
+      {
+       "material": "chrome",
+       "prim": "turretCradles_1__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_1__chrome.SM_turretCradles_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 56
+      },
       {
        "material": "muzzleRing",
        "prim": "turretCradles_1__muzzleRing",
@@ -57852,14 +58184,14 @@
      "rays": [
       {
        "hi": [
-        0.18,
-        0.162,
-        0.18
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.18,
-        -0.162,
-        -0.18
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57874,25 +58206,25 @@
         0.0,
         1,
         0.0,
-        0.162,
+        0.486,
         0.0,
-        0.0,
+        0.0828,
         1
        ],
-       "radius": 0.18,
-       "half": 0.162,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57907,25 +58239,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        0.099,
+        0.486,
+        0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57940,25 +58272,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        0.0495,
+        0.486,
+        0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -57973,25 +58305,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        -0.0495,
+        0.486,
+        0.0,
+        -0.0828,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -58006,25 +58338,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        -0.099,
+        0.486,
+        -0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -58039,25 +58371,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        -0.0495,
+        0.486,
+        -0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0342,
+        0.36,
+        0.0342
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0342,
+        -0.36,
+        -0.0342
        ],
        "transform": [
         0.0,
@@ -58072,13 +58404,79 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        0.0495,
+        0.432,
+        0.0,
+        0.0,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0342,
+       "half": 0.36,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3744,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6264,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
        "round": "cylinder"
       }
      ],
@@ -58091,7 +58489,7 @@
        "materialKey": "b3e974eff6cd",
        "blend": "opaque",
        "team": [],
-       "triangles": 248
+       "triangles": 192
       },
       {
        "material": "hullDark",
@@ -58101,17 +58499,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 224
-      },
-      {
-       "material": "chrome",
-       "prim": "turretBarrels_1__chrome",
-       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_1__chrome.SM_turretBarrels_1__chrome",
-       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
-       "materialKey": "1741605754dc",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 56
+       "triangles": 144
       }
      ]
     },
@@ -58131,13 +58519,13 @@
       0.0,
       1,
       0.0,
-      0.828,
+      0.9,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.828,
+      0.9,
       0.0,
       0.0
      ],
@@ -58195,13 +58583,13 @@
       0.0,
       1,
       0.0,
-      0.972,
+      1.044,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.972,
+      1.044,
       0.0,
       0.0
      ],
@@ -58238,13 +58626,13 @@
       0.0,
       1,
       0.0,
-      1.044,
+      1.116,
       0.0,
       0.0,
       1
      ],
      "position": [
-      1.044,
+      1.116,
       0.0,
       0.0
      ],
@@ -58402,6 +58790,36 @@
       },
       {
        "hi": [
+        0.198,
+        0.108,
+        0.081
+       ],
+       "lo": [
+        -0.198,
+        -0.108,
+        -0.081
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.018,
+        0.252,
+        0.45,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.252,
         0.171,
         0.054
@@ -58490,7 +58908,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 12
+       "triangles": 24
       },
       {
        "material": "hullLight",
@@ -58512,6 +58930,16 @@
        "team": [
         "TeamTint"
        ],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "turrets_2__hazard",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__hazard.SM_turrets_2__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
        "triangles": 12
       }
      ]
@@ -58567,7 +58995,105 @@
        "AcPoseBuildings.cpp:PoseCitadel"
       ]
      },
+     "rays": [
+      {
+       "hi": [
+        0.162,
+        0.108,
+        0.162
+       ],
+       "lo": [
+        -0.162,
+        -0.108,
+        -0.162
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.036,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.162,
+       "half": 0.108,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.135,
+        0.036,
+        0.135
+       ],
+       "lo": [
+        -0.135,
+        -0.036,
+        -0.135
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.108,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.135,
+       "half": 0.036,
+       "round": "cylinder"
+      }
+     ],
      "meshes": [
+      {
+       "material": "gunmetal",
+       "prim": "turretCradles_2__gunmetal",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_2__gunmetal.SM_turretCradles_2__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "hullDark",
+       "prim": "turretCradles_2__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_2__hullDark.SM_turretCradles_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 136
+      },
+      {
+       "material": "chrome",
+       "prim": "turretCradles_2__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_2__chrome.SM_turretCradles_2__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 56
+      },
       {
        "material": "muzzleRing",
        "prim": "turretCradles_2__muzzleRing",
@@ -58634,14 +59160,14 @@
      "rays": [
       {
        "hi": [
-        0.18,
-        0.162,
-        0.18
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.18,
-        -0.162,
-        -0.18
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -58656,25 +59182,25 @@
         0.0,
         1,
         0.0,
-        0.162,
+        0.486,
         0.0,
-        0.0,
+        0.0828,
         1
        ],
-       "radius": 0.18,
-       "half": 0.162,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -58689,25 +59215,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        0.099,
+        0.486,
+        0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -58722,25 +59248,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        0.0495,
+        0.486,
+        0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -58755,25 +59281,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        -0.0495,
+        0.486,
+        0.0,
+        -0.0828,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -58788,25 +59314,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        -0.099,
+        0.486,
+        -0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -58821,25 +59347,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        -0.0495,
+        0.486,
+        -0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0342,
+        0.36,
+        0.0342
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0342,
+        -0.36,
+        -0.0342
        ],
        "transform": [
         0.0,
@@ -58854,13 +59380,79 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        0.0495,
+        0.432,
+        0.0,
+        0.0,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0342,
+       "half": 0.36,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3744,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6264,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
        "round": "cylinder"
       }
      ],
@@ -58873,7 +59465,7 @@
        "materialKey": "b3e974eff6cd",
        "blend": "opaque",
        "team": [],
-       "triangles": 248
+       "triangles": 192
       },
       {
        "material": "hullDark",
@@ -58883,17 +59475,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 224
-      },
-      {
-       "material": "chrome",
-       "prim": "turretBarrels_2__chrome",
-       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_2__chrome.SM_turretBarrels_2__chrome",
-       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
-       "materialKey": "1741605754dc",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 56
+       "triangles": 144
       }
      ]
     },
@@ -58913,13 +59495,13 @@
       0.0,
       1,
       0.0,
-      0.828,
+      0.9,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.828,
+      0.9,
       0.0,
       0.0
      ],
@@ -58977,13 +59559,13 @@
       0.0,
       1,
       0.0,
-      0.972,
+      1.044,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.972,
+      1.044,
       0.0,
       0.0
      ],
@@ -59020,13 +59602,13 @@
       0.0,
       1,
       0.0,
-      1.044,
+      1.116,
       0.0,
       0.0,
       1
      ],
      "position": [
-      1.044,
+      1.116,
       0.0,
       0.0
      ],
@@ -59184,6 +59766,36 @@
       },
       {
        "hi": [
+        0.198,
+        0.108,
+        0.081
+       ],
+       "lo": [
+        -0.198,
+        -0.108,
+        -0.081
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.018,
+        0.252,
+        0.45,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.252,
         0.171,
         0.054
@@ -59272,7 +59884,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 12
+       "triangles": 24
       },
       {
        "material": "hullLight",
@@ -59294,6 +59906,16 @@
        "team": [
         "TeamTint"
        ],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "turrets_3__hazard",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__hazard.SM_turrets_3__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
        "triangles": 12
       }
      ]
@@ -59349,7 +59971,105 @@
        "AcPoseBuildings.cpp:PoseCitadel"
       ]
      },
+     "rays": [
+      {
+       "hi": [
+        0.162,
+        0.108,
+        0.162
+       ],
+       "lo": [
+        -0.162,
+        -0.108,
+        -0.162
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.036,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.162,
+       "half": 0.108,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.135,
+        0.036,
+        0.135
+       ],
+       "lo": [
+        -0.135,
+        -0.036,
+        -0.135
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.108,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.135,
+       "half": 0.036,
+       "round": "cylinder"
+      }
+     ],
      "meshes": [
+      {
+       "material": "gunmetal",
+       "prim": "turretCradles_3__gunmetal",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_3__gunmetal.SM_turretCradles_3__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "hullDark",
+       "prim": "turretCradles_3__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_3__hullDark.SM_turretCradles_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 136
+      },
+      {
+       "material": "chrome",
+       "prim": "turretCradles_3__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_3__chrome.SM_turretCradles_3__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 56
+      },
       {
        "material": "muzzleRing",
        "prim": "turretCradles_3__muzzleRing",
@@ -59416,14 +60136,14 @@
      "rays": [
       {
        "hi": [
-        0.18,
-        0.162,
-        0.18
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.18,
-        -0.162,
-        -0.18
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -59438,25 +60158,25 @@
         0.0,
         1,
         0.0,
-        0.162,
+        0.486,
         0.0,
-        0.0,
+        0.0828,
         1
        ],
-       "radius": 0.18,
-       "half": 0.162,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -59471,25 +60191,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        0.099,
+        0.486,
+        0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -59504,25 +60224,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        0.0495,
+        0.486,
+        0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -59537,25 +60257,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        -0.0495,
+        0.486,
+        0.0,
+        -0.0828,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -59570,25 +60290,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        -0.099,
+        0.486,
+        -0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -59603,25 +60323,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        -0.0495,
+        0.486,
+        -0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0342,
+        0.36,
+        0.0342
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0342,
+        -0.36,
+        -0.0342
        ],
        "transform": [
         0.0,
@@ -59636,13 +60356,79 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        0.0495,
+        0.432,
+        0.0,
+        0.0,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0342,
+       "half": 0.36,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3744,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6264,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
        "round": "cylinder"
       }
      ],
@@ -59655,7 +60441,7 @@
        "materialKey": "b3e974eff6cd",
        "blend": "opaque",
        "team": [],
-       "triangles": 248
+       "triangles": 192
       },
       {
        "material": "hullDark",
@@ -59665,17 +60451,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 224
-      },
-      {
-       "material": "chrome",
-       "prim": "turretBarrels_3__chrome",
-       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_3__chrome.SM_turretBarrels_3__chrome",
-       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
-       "materialKey": "1741605754dc",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 56
+       "triangles": 144
       }
      ]
     },
@@ -59695,13 +60471,13 @@
       0.0,
       1,
       0.0,
-      0.828,
+      0.9,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.828,
+      0.9,
       0.0,
       0.0
      ],
@@ -59759,13 +60535,13 @@
       0.0,
       1,
       0.0,
-      0.972,
+      1.044,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.972,
+      1.044,
       0.0,
       0.0
      ],
@@ -59802,13 +60578,13 @@
       0.0,
       1,
       0.0,
-      1.044,
+      1.116,
       0.0,
       0.0,
       1
      ],
      "position": [
-      1.044,
+      1.116,
       0.0,
       0.0
      ],
@@ -180089,6 +180865,36 @@
       },
       {
        "hi": [
+        0.198,
+        0.108,
+        0.081
+       ],
+       "lo": [
+        -0.198,
+        -0.108,
+        -0.081
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.018,
+        0.252,
+        0.45,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.252,
         0.171,
         0.054
@@ -180177,7 +180983,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 12
+       "triangles": 24
       },
       {
        "material": "hullLight",
@@ -180199,6 +181005,16 @@
        "team": [
         "TeamTint"
        ],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "turrets_0__hazard",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_0__hazard.SM_turrets_0__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
        "triangles": 12
       }
      ]
@@ -180254,7 +181070,105 @@
        "AcPoseBuildings.cpp:PoseCitadel"
       ]
      },
+     "rays": [
+      {
+       "hi": [
+        0.162,
+        0.108,
+        0.162
+       ],
+       "lo": [
+        -0.162,
+        -0.108,
+        -0.162
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.036,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.162,
+       "half": 0.108,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.135,
+        0.036,
+        0.135
+       ],
+       "lo": [
+        -0.135,
+        -0.036,
+        -0.135
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.108,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.135,
+       "half": 0.036,
+       "round": "cylinder"
+      }
+     ],
      "meshes": [
+      {
+       "material": "gunmetal",
+       "prim": "turretCradles_0__gunmetal",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_0__gunmetal.SM_turretCradles_0__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "hullDark",
+       "prim": "turretCradles_0__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_0__hullDark.SM_turretCradles_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 136
+      },
+      {
+       "material": "chrome",
+       "prim": "turretCradles_0__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_0__chrome.SM_turretCradles_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 56
+      },
       {
        "material": "muzzleRing",
        "prim": "turretCradles_0__muzzleRing",
@@ -180321,14 +181235,14 @@
      "rays": [
       {
        "hi": [
-        0.18,
-        0.162,
-        0.18
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.18,
-        -0.162,
-        -0.18
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -180343,25 +181257,25 @@
         0.0,
         1,
         0.0,
-        0.162,
+        0.486,
         0.0,
-        0.0,
+        0.0828,
         1
        ],
-       "radius": 0.18,
-       "half": 0.162,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -180376,25 +181290,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        0.099,
+        0.486,
+        0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -180409,25 +181323,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        0.0495,
+        0.486,
+        0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -180442,25 +181356,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        -0.0495,
+        0.486,
+        0.0,
+        -0.0828,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -180475,25 +181389,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        -0.099,
+        0.486,
+        -0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -180508,25 +181422,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        -0.0495,
+        0.486,
+        -0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0342,
+        0.36,
+        0.0342
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0342,
+        -0.36,
+        -0.0342
        ],
        "transform": [
         0.0,
@@ -180541,13 +181455,79 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        0.0495,
+        0.432,
+        0.0,
+        0.0,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0342,
+       "half": 0.36,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3744,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6264,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
        "round": "cylinder"
       }
      ],
@@ -180560,7 +181540,7 @@
        "materialKey": "b3e974eff6cd",
        "blend": "opaque",
        "team": [],
-       "triangles": 248
+       "triangles": 192
       },
       {
        "material": "hullDark",
@@ -180570,17 +181550,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 224
-      },
-      {
-       "material": "chrome",
-       "prim": "turretBarrels_0__chrome",
-       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_0__chrome.SM_turretBarrels_0__chrome",
-       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
-       "materialKey": "1741605754dc",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 56
+       "triangles": 144
       }
      ]
     },
@@ -180600,13 +181570,13 @@
       0.0,
       1,
       0.0,
-      0.828,
+      0.9,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.828,
+      0.9,
       0.0,
       0.0
      ],
@@ -180664,13 +181634,13 @@
       0.0,
       1,
       0.0,
-      0.972,
+      1.044,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.972,
+      1.044,
       0.0,
       0.0
      ],
@@ -180707,13 +181677,13 @@
       0.0,
       1,
       0.0,
-      1.044,
+      1.116,
       0.0,
       0.0,
       1
      ],
      "position": [
-      1.044,
+      1.116,
       0.0,
       0.0
      ],
@@ -180871,6 +181841,36 @@
       },
       {
        "hi": [
+        0.198,
+        0.108,
+        0.081
+       ],
+       "lo": [
+        -0.198,
+        -0.108,
+        -0.081
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.018,
+        0.252,
+        0.45,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.252,
         0.171,
         0.054
@@ -180959,7 +181959,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 12
+       "triangles": 24
       },
       {
        "material": "hullLight",
@@ -180981,6 +181981,16 @@
        "team": [
         "TeamTint"
        ],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "turrets_1__hazard",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_1__hazard.SM_turrets_1__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
        "triangles": 12
       }
      ]
@@ -181036,7 +182046,105 @@
        "AcPoseBuildings.cpp:PoseCitadel"
       ]
      },
+     "rays": [
+      {
+       "hi": [
+        0.162,
+        0.108,
+        0.162
+       ],
+       "lo": [
+        -0.162,
+        -0.108,
+        -0.162
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.036,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.162,
+       "half": 0.108,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.135,
+        0.036,
+        0.135
+       ],
+       "lo": [
+        -0.135,
+        -0.036,
+        -0.135
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.108,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.135,
+       "half": 0.036,
+       "round": "cylinder"
+      }
+     ],
      "meshes": [
+      {
+       "material": "gunmetal",
+       "prim": "turretCradles_1__gunmetal",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_1__gunmetal.SM_turretCradles_1__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "hullDark",
+       "prim": "turretCradles_1__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_1__hullDark.SM_turretCradles_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 136
+      },
+      {
+       "material": "chrome",
+       "prim": "turretCradles_1__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_1__chrome.SM_turretCradles_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 56
+      },
       {
        "material": "muzzleRing",
        "prim": "turretCradles_1__muzzleRing",
@@ -181103,14 +182211,14 @@
      "rays": [
       {
        "hi": [
-        0.18,
-        0.162,
-        0.18
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.18,
-        -0.162,
-        -0.18
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181125,25 +182233,25 @@
         0.0,
         1,
         0.0,
-        0.162,
+        0.486,
         0.0,
-        0.0,
+        0.0828,
         1
        ],
-       "radius": 0.18,
-       "half": 0.162,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181158,25 +182266,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        0.099,
+        0.486,
+        0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181191,25 +182299,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        0.0495,
+        0.486,
+        0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181224,25 +182332,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        -0.0495,
+        0.486,
+        0.0,
+        -0.0828,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181257,25 +182365,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        -0.099,
+        0.486,
+        -0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181290,25 +182398,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        -0.0495,
+        0.486,
+        -0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0342,
+        0.36,
+        0.0342
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0342,
+        -0.36,
+        -0.0342
        ],
        "transform": [
         0.0,
@@ -181323,13 +182431,79 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        0.0495,
+        0.432,
+        0.0,
+        0.0,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0342,
+       "half": 0.36,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3744,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6264,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
        "round": "cylinder"
       }
      ],
@@ -181342,7 +182516,7 @@
        "materialKey": "b3e974eff6cd",
        "blend": "opaque",
        "team": [],
-       "triangles": 248
+       "triangles": 192
       },
       {
        "material": "hullDark",
@@ -181352,17 +182526,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 224
-      },
-      {
-       "material": "chrome",
-       "prim": "turretBarrels_1__chrome",
-       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_1__chrome.SM_turretBarrels_1__chrome",
-       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
-       "materialKey": "1741605754dc",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 56
+       "triangles": 144
       }
      ]
     },
@@ -181382,13 +182546,13 @@
       0.0,
       1,
       0.0,
-      0.828,
+      0.9,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.828,
+      0.9,
       0.0,
       0.0
      ],
@@ -181446,13 +182610,13 @@
       0.0,
       1,
       0.0,
-      0.972,
+      1.044,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.972,
+      1.044,
       0.0,
       0.0
      ],
@@ -181489,13 +182653,13 @@
       0.0,
       1,
       0.0,
-      1.044,
+      1.116,
       0.0,
       0.0,
       1
      ],
      "position": [
-      1.044,
+      1.116,
       0.0,
       0.0
      ],
@@ -181653,6 +182817,36 @@
       },
       {
        "hi": [
+        0.198,
+        0.108,
+        0.081
+       ],
+       "lo": [
+        -0.198,
+        -0.108,
+        -0.081
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.018,
+        0.252,
+        0.45,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.252,
         0.171,
         0.054
@@ -181741,7 +182935,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 12
+       "triangles": 24
       },
       {
        "material": "hullLight",
@@ -181763,6 +182957,16 @@
        "team": [
         "TeamTint"
        ],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "turrets_2__hazard",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_2__hazard.SM_turrets_2__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
        "triangles": 12
       }
      ]
@@ -181818,7 +183022,105 @@
        "AcPoseBuildings.cpp:PoseCitadel"
       ]
      },
+     "rays": [
+      {
+       "hi": [
+        0.162,
+        0.108,
+        0.162
+       ],
+       "lo": [
+        -0.162,
+        -0.108,
+        -0.162
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.036,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.162,
+       "half": 0.108,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.135,
+        0.036,
+        0.135
+       ],
+       "lo": [
+        -0.135,
+        -0.036,
+        -0.135
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.108,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.135,
+       "half": 0.036,
+       "round": "cylinder"
+      }
+     ],
      "meshes": [
+      {
+       "material": "gunmetal",
+       "prim": "turretCradles_2__gunmetal",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_2__gunmetal.SM_turretCradles_2__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "hullDark",
+       "prim": "turretCradles_2__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_2__hullDark.SM_turretCradles_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 136
+      },
+      {
+       "material": "chrome",
+       "prim": "turretCradles_2__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_2__chrome.SM_turretCradles_2__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 56
+      },
       {
        "material": "muzzleRing",
        "prim": "turretCradles_2__muzzleRing",
@@ -181885,14 +183187,14 @@
      "rays": [
       {
        "hi": [
-        0.18,
-        0.162,
-        0.18
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.18,
-        -0.162,
-        -0.18
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181907,25 +183209,25 @@
         0.0,
         1,
         0.0,
-        0.162,
+        0.486,
         0.0,
-        0.0,
+        0.0828,
         1
        ],
-       "radius": 0.18,
-       "half": 0.162,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181940,25 +183242,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        0.099,
+        0.486,
+        0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -181973,25 +183275,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        0.0495,
+        0.486,
+        0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182006,25 +183308,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        -0.0495,
+        0.486,
+        0.0,
+        -0.0828,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182039,25 +183341,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        -0.099,
+        0.486,
+        -0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182072,25 +183374,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        -0.0495,
+        0.486,
+        -0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0342,
+        0.36,
+        0.0342
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0342,
+        -0.36,
+        -0.0342
        ],
        "transform": [
         0.0,
@@ -182105,13 +183407,79 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        0.0495,
+        0.432,
+        0.0,
+        0.0,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0342,
+       "half": 0.36,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3744,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6264,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
        "round": "cylinder"
       }
      ],
@@ -182124,7 +183492,7 @@
        "materialKey": "b3e974eff6cd",
        "blend": "opaque",
        "team": [],
-       "triangles": 248
+       "triangles": 192
       },
       {
        "material": "hullDark",
@@ -182134,17 +183502,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 224
-      },
-      {
-       "material": "chrome",
-       "prim": "turretBarrels_2__chrome",
-       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_2__chrome.SM_turretBarrels_2__chrome",
-       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
-       "materialKey": "1741605754dc",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 56
+       "triangles": 144
       }
      ]
     },
@@ -182164,13 +183522,13 @@
       0.0,
       1,
       0.0,
-      0.828,
+      0.9,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.828,
+      0.9,
       0.0,
       0.0
      ],
@@ -182228,13 +183586,13 @@
       0.0,
       1,
       0.0,
-      0.972,
+      1.044,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.972,
+      1.044,
       0.0,
       0.0
      ],
@@ -182271,13 +183629,13 @@
       0.0,
       1,
       0.0,
-      1.044,
+      1.116,
       0.0,
       0.0,
       1
      ],
      "position": [
-      1.044,
+      1.116,
       0.0,
       0.0
      ],
@@ -182435,6 +183793,36 @@
       },
       {
        "hi": [
+        0.198,
+        0.108,
+        0.081
+       ],
+       "lo": [
+        -0.198,
+        -0.108,
+        -0.081
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.018,
+        0.252,
+        0.45,
+        1
+       ]
+      },
+      {
+       "hi": [
         0.252,
         0.171,
         0.054
@@ -182523,7 +183911,7 @@
        "materialKey": "b82fe54aa5ec",
        "blend": "opaque",
        "team": [],
-       "triangles": 12
+       "triangles": 24
       },
       {
        "material": "hullLight",
@@ -182545,6 +183933,16 @@
        "team": [
         "TeamTint"
        ],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "turrets_3__hazard",
+       "mesh": "/Game/Models/citadelguns/SM_turrets_3__hazard.SM_turrets_3__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
        "triangles": 12
       }
      ]
@@ -182600,7 +183998,105 @@
        "AcPoseBuildings.cpp:PoseCitadel"
       ]
      },
+     "rays": [
+      {
+       "hi": [
+        0.162,
+        0.108,
+        0.162
+       ],
+       "lo": [
+        -0.162,
+        -0.108,
+        -0.162
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.036,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.162,
+       "half": 0.108,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.135,
+        0.036,
+        0.135
+       ],
+       "lo": [
+        -0.135,
+        -0.036,
+        -0.135
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.108,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.135,
+       "half": 0.036,
+       "round": "cylinder"
+      }
+     ],
      "meshes": [
+      {
+       "material": "gunmetal",
+       "prim": "turretCradles_3__gunmetal",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_3__gunmetal.SM_turretCradles_3__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 140
+      },
+      {
+       "material": "hullDark",
+       "prim": "turretCradles_3__hullDark",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_3__hullDark.SM_turretCradles_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 136
+      },
+      {
+       "material": "chrome",
+       "prim": "turretCradles_3__chrome",
+       "mesh": "/Game/Models/citadelguns/SM_turretCradles_3__chrome.SM_turretCradles_3__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 56
+      },
       {
        "material": "muzzleRing",
        "prim": "turretCradles_3__muzzleRing",
@@ -182667,14 +184163,14 @@
      "rays": [
       {
        "hi": [
-        0.18,
-        0.162,
-        0.18
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.18,
-        -0.162,
-        -0.18
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182689,25 +184185,25 @@
         0.0,
         1,
         0.0,
-        0.162,
+        0.486,
         0.0,
-        0.0,
+        0.0828,
         1
        ],
-       "radius": 0.18,
-       "half": 0.162,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182722,25 +184218,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        0.099,
+        0.486,
+        0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182755,25 +184251,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        0.0495,
+        0.486,
+        0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182788,25 +184284,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.085737,
-        -0.0495,
+        0.486,
+        0.0,
+        -0.0828,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182821,25 +184317,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        0.0,
-        -0.099,
+        0.486,
+        -0.071707,
+        -0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0288,
+        0.414,
+        0.0288
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0288,
+        -0.414,
+        -0.0288
        ],
        "transform": [
         0.0,
@@ -182854,25 +184350,25 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        -0.0495,
+        0.486,
+        -0.071707,
+        0.0414,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0288,
+       "half": 0.414,
        "round": "cylinder"
       },
       {
        "hi": [
-        0.0432,
-        0.27,
-        0.0432
+        0.0342,
+        0.36,
+        0.0342
        ],
        "lo": [
-        -0.0432,
-        -0.27,
-        -0.0432
+        -0.0342,
+        -0.36,
+        -0.0342
        ],
        "transform": [
         0.0,
@@ -182887,13 +184383,79 @@
         0.0,
         1,
         0.0,
-        0.558,
-        -0.085737,
-        0.0495,
+        0.432,
+        0.0,
+        0.0,
         1
        ],
-       "radius": 0.0432,
-       "half": 0.27,
+       "radius": 0.0342,
+       "half": 0.36,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.3744,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.1152,
+        0.0144,
+        0.1152
+       ],
+       "lo": [
+        -0.1152,
+        -0.0144,
+        -0.1152
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.6264,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.1152,
+       "half": 0.0144,
        "round": "cylinder"
       }
      ],
@@ -182906,7 +184468,7 @@
        "materialKey": "b3e974eff6cd",
        "blend": "opaque",
        "team": [],
-       "triangles": 248
+       "triangles": 192
       },
       {
        "material": "hullDark",
@@ -182916,17 +184478,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 224
-      },
-      {
-       "material": "chrome",
-       "prim": "turretBarrels_3__chrome",
-       "mesh": "/Game/Models/citadelguns/SM_turretBarrels_3__chrome.SM_turretBarrels_3__chrome",
-       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
-       "materialKey": "1741605754dc",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 56
+       "triangles": 144
       }
      ]
     },
@@ -182946,13 +184498,13 @@
       0.0,
       1,
       0.0,
-      0.828,
+      0.9,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.828,
+      0.9,
       0.0,
       0.0
      ],
@@ -183010,13 +184562,13 @@
       0.0,
       1,
       0.0,
-      0.972,
+      1.044,
       0.0,
       0.0,
       1
      ],
      "position": [
-      0.972,
+      1.044,
       0.0,
       0.0
      ],
@@ -183053,13 +184605,13 @@
       0.0,
       1,
       0.0,
-      1.044,
+      1.116,
       0.0,
       0.0,
       1
      ],
      "position": [
-      1.044,
+      1.116,
       0.0,
       0.0
      ],

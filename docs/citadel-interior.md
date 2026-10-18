@@ -439,7 +439,7 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
   ride on it. The housing's back and cheeks are low so the gun's eye sees
   the barrels. The script asserts that the barrels and the ring keep 3 cm
   off every solid of `citadel_blue` (its ray pieces) at every yaw of the
-  220° arc at pitch −20° (worst 11.9 cm); at −45° it fails.
+  220° arc at pitch −20° (worst 11.9 cm; 15.1 cm with C2's minigun look, docs/guns-and-practice.md section 2); at −45° it fails.
 - **The gun's eye** for these numbers: on the cradle, mount + R_yaw(aim) ·
   [T + R_pitch(pitch) · E], T = (0.144 along the aim, 0.396 up), E = (−0.40
   along the barrels, +0.55 up): the barrels and the glowing ring sit in the
