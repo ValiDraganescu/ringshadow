@@ -143,8 +143,10 @@ seed (every player sees the same pebbles), no collision, culled by distance.
   the CPU, 4 px a cell like the minimap's bake (`AcMinimapBake::Terrain`),
   as a second texture to the material: cliff feet, gullies and the inside of
   craters darken, crests lighten; cavity darkens the cliff's cracks.
-- Strata on the cliff rock: bands by world height in the triplanar faces, a
-  darker band at the plateau's lip.
+- No strata bands on the cliffs (the user, 2026-10-18: today's horizontal
+  bands repeat too much; round 1's cliffs have none and stay so). Depth on
+  the rock comes from its own height map and the cavity bake, and a darker
+  lip at the plateau's edge only where the bake finds one.
 - Accept when: the `cliff` and `feet` stills have depth at noon, nothing
   pops when the parallax cuts out.
 
