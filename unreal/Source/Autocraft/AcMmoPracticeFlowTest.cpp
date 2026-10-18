@@ -44,6 +44,7 @@
 #include "GameFramework/PlayerController.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformTime.h"
+#include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
@@ -252,15 +253,17 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			return;
 		}
 		// Off the start pad's plate: a short walk on, a stop, the act key;
-		// again until a spot takes it.
+		// again, turning a little each time (round a rock, away from a
+		// building), until a spot takes it.
 		if (Build->Placing())
 		{
 			const double Leg = std::fmod(Since(), 2.0);
-			Pilot->SetTestInput(Leg < 1.2 ? FVector2D(0, -1) : FVector2D::ZeroVector, Practice.Heading);
+			const double Way = Practice.Heading + 0.9 * std::floor(Since() / 2.0);
+			Pilot->SetTestInput(Leg < 1.2 ? FVector2D(0, -1) : FVector2D::ZeroVector, Way);
 			if (Leg < 1.7) Practice.bPressed = false;
 			else if (!Practice.bPressed) Press();
 		}
-		else Pilot->SetTestInput(FVector2D::ZeroVector, Practice.Heading);
+		else Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
 		bool bBuilt = false;
 		for (const ac::Structure& B : S->state.structures)
 		{
@@ -501,8 +504,12 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		Check(Practice.Rounds > 30, FString::Printf(TEXT("practice: the gun fired rounds (%d)"), Practice.Rounds));
 		Check(Practice.Struck > 0 && Practice.Hits > 0,
 			FString::Printf(TEXT("practice: rounds struck the dummy (%d impacts, %lld hits counted)"), Practice.Struck, (long long)Practice.Hits));
-		Check(Info && Info->Dummies.ContainsByPredicate([](const FAcDummyTag& X) { return X.bDown; }),
-			TEXT("practice: its tag reads DOWN on the screen"));
+		// (Headless there is no screen to put the tag on.)
+		if (FApp::CanEverRender())
+		{
+			Check(Info && Info->Dummies.ContainsByPredicate([](const FAcDummyTag& X) { return X.bDown; }),
+				TEXT("practice: its tag reads DOWN on the screen"));
+		}
 		Check(true, TEXT("practice: the dummy fell"));
 		Advance();
 		return;
