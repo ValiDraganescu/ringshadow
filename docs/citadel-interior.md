@@ -27,7 +27,7 @@ The units stay as they are (one cell is 1 m, `AcSpace.h`; a Prospector is
 | Roof slab | – | 6.0 to 7.0; the roof deck at 7.0, the four corner towers rise past it to the turret mounts |
 | Body height, `BuildingHeight(citadel)` (`AcPose.cpp`) = `Rules::height` | 4.6 | 12.3 (deck 7.0, the corner towers' mounts at 9.0, crowns 8.3-8.7, the central tower's beacon top 12.3) |
 | Doorway | – | the +y face, x in [-1.5, 1.5], 3.0 wide, 3.0 tall |
-| Corner guns, `Defence::cornerInset()` | 2.0 | 5.5 (the mounts at (±5.5, ±5.5), radius 0.5, on the corner towers at z 9.0, `Defence::mountHeight()`) |
+| Corner guns, `Defence::cornerInset()` | 2.0 | 6.2 since C2 (the mounts at (±6.2, ±6.2) on brackets over the corner towers, radius 0.5, at z 9.0, `Defence::mountHeight()`; 5.5 in C1) |
 
 The hall is the MMO's: `Rules::setCitadelHall(bool)` / `citadelHall()`
 switch it for the whole process (an atomic, read on every region's
@@ -35,7 +35,7 @@ thread). The MMO's start and the server turn it on, the strategy game's
 start turns it off (its maps, AI layouts and Swift goldens are built round
 the solid 5x5 Citadel); every game start sets it, both ways. `Rules::radius`,
 `Rules::footprint`, `Rules::height` (the body height, 12.3 / 4.6, which
-`BuildingHeight` reads), `Defence::cornerInset()` (5.5 / 2.0) and
+`BuildingHeight` reads), `Defence::cornerInset()` (6.2 / 2.0) and
 `Defence::stationInset()`, `Defence::mountHeight()` (9.0 / 4.6) and
 `Rules::depositRange()` (the edge + 0.5: 6.5 / 3.0) all read it, so nothing
 half-switches. It is on by default (any MMO path that forgets it still gets
@@ -230,8 +230,8 @@ Constants (`Defence.h`):
 
 | | Value | Meaning |
 |---|---|---|
-| `gunArcHalf` | 110° (1.92 rad) | the yaw arc about `cornerAngle(i)` a gun may point in; the hull lies in the other 140°, so the barrels never cross it |
-| `gunPitchMin`, `gunPitchMax` | -20°, +50° | |
+| `gunArcHalf` | 135° (2.36 rad; 110° in C1) | the yaw arc about `cornerAngle(i)` a gun may point in: since C2 along both its walls, from the outboard bracket outside their faces; the hull lies in the other 90°, so the barrels never cross it |
+| `gunPitchMin`, `gunPitchMax` | -70°, +50° | -20° in C1; C2 (docs/guns-and-practice.md section 1) lets the barrels reach the wall's foot |
 | `gunStation(citadel, i)` | `position + (±4.0, ±4.0)` in corner i's quadrant | where the gunner stands, in the hall |
 | `stationReach` | 1.5 | a pilot within it of the station mans the gun |
 | `mountHeight()` | 9.0 (4.6 without the hall) | the turret base's z on the corner towers (the deck stays `deckHeight` 7.0) |

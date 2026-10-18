@@ -339,6 +339,56 @@ TEST(gun_firesAlongItsAimWithNoRangeGate) {
     EXPECT_EQ(fired(steps(h.sim, 0.5), h.citadel), int64_t(0));
 }
 
+TEST(gun_reachesTheFootOfItsWall) {
+    // The manager's raid hole (2026-10-18): at −20° from the 9-cell mount a
+    // corner gun met no ground nearer than about 26 cells, so a raid at the
+    // walls was under every gun. On its bracket at 6.2 and down to −70°, its
+    // rounds land within 4 cells of the wall's foot and strike a bug there.
+    const CitadelHall on(true);
+    Hall h = hallScene(kAt);
+    manGun(h, 0);
+    const double rest = Defence::cornerAngle(0);
+    h.sim.pilot->heading = rest;
+    h.sim.pilot->pitch = Defence::gunPitchMin;
+    h.sim.pilot->hold = true;
+    const auto first = all<GameEvent::Impact>(steps(h.sim, 0.5));
+    ASSERT_TRUE(!first.empty());
+    // The wall's foot: the outer faces at 6 from the centre (no map: z 0).
+    const auto& i = first.front();
+    EXPECT_TRUE(i.what == GameEvent::Impact::What::ground);
+    EXPECT_NEAR(i.at.z, 0, 0.01);
+    const double out = ac::max(std::abs(i.at.x - kAt.x), std::abs(i.at.y - kAt.y)) - Rules::radius(StructureKind::citadel);
+    EXPECT_TRUE(out > 0 && out < 4);
+    // A bug there is hit.
+    h.sim.pilot->hold = false;
+    steps(h.sim, 1);
+    const int64_t bug = bugAt(h.sim, Unit::Kind::lodeback, Vec2(i.at.x, i.at.y));
+    h.sim.pilot->hold = true;
+    const auto events = steps(h.sim, 1);
+    int64_t onBug = 0;
+    for (const auto& x : all<GameEvent::Impact>(events)) onBug += x.victim == bug;
+    EXPECT_TRUE(onBug > 5);
+    EXPECT_TRUE(hp(h.sim, bug) < Rules::hp(Unit::Kind::lodeback));
+    // c2-netserver's blind strip: a bug 0.7 off the east wall's middle, at
+    // (6.7, 1.5) from the centre, 129° round from the gun's rest: in its arc
+    // and its pitch now, and hit.
+    h.sim.pilot->hold = false;
+    steps(h.sim, 1);
+    const Vec2 mid = kAt + Vec2(6.7, 1.5);
+    const int64_t side = bugAt(h.sim, Unit::Kind::lodeback, mid);
+    const Vec2 mount = Defence::cornerGun(kAt, 0);
+    const double toward = std::atan2(mid.y - mount.y, mid.x - mount.x);
+    EXPECT_TRUE(std::abs(std::remainder(toward - rest, 2 * pi)) < Defence::gunArcHalf);
+    h.sim.pilot->heading = toward;
+    h.sim.pilot->pitch = pitchOnto(0, toward, Vec3(mid.x, mid.y, 0.75));
+    EXPECT_TRUE(h.sim.pilot->pitch > Defence::gunPitchMin);
+    h.sim.pilot->hold = true;
+    const auto along = steps(h.sim, 1);
+    int64_t onSide = 0;
+    for (const auto& x : all<GameEvent::Impact>(along)) onSide += x.victim == side;
+    EXPECT_TRUE(onSide > 5);
+}
+
 TEST(gatling_aiLeadsAndFiresRounds) {
     // A Lodeback walking across the gatling gun's line 15 cells out, its
     // walk scripted (+y at its full 3 cells a second): the gun leads it by

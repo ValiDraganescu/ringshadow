@@ -139,9 +139,17 @@ and the corner gun's nothing (the user sees the drop instead).
 The manned corner gun (C1) loses its range gate: it fires along its aim
 whenever the trigger is down and the gun is not overheated; the crosshair's
 target is only the HUD's business (and `CornerGun::target`, the pose's,
-when it is `targetable`). C1's pitch stops hold: from the 9-cell mount at
-−20° the rounds meet flat ground no nearer than about 26 cells, so a bug
-closer in is under the gun.
+when it is `targetable`). C1's −20° stop left the ground nearer than about
+26 cells under every gun, a raid at the walls out of reach. So the mounts
+move outboard onto cantilevered brackets over the corners
+(`Defence::cornerInset()` 6.2: the trunnion 0.2 outside the walls' outer
+faces on the diagonal, the barrel clearing the tower's top edge pointed
+down), the barrels dip to `gunPitchMin` −70° (`gunPitchMax` +50° as
+before) and each gun turns `gunArcHalf` 135° either side of its corner
+(C1's 110° stopped it 25° short of pointing along its walls, a strip along
+each face's middle blind): the rounds meet flat ground about 3 cells out
+from the wall's foot, along both its walls (test
+`gun_reachesTheFootOfItsWall`).
 
 ## 2. The minigun look (model)
 

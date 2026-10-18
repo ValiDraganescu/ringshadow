@@ -50,20 +50,27 @@ struct AUTOCRAFTCORE_API Defence {
     /// An armed Citadel's corner turret `i` (0 to 3: +x+y, -x+y, -x-y,
     /// +x-y): where it stands (on the roof deck's pylons, C1), its mount's
     /// radius, and the way it faces at rest (out from the corner).
-    /// 5.5 cells from the centre along each axis with the hall (the
-    /// pylons at the deck's corners, `Rules::citadelHall`), 2 without.
-    static double cornerInset() { return Rules::citadelHall() ? 5.5 : 2.0; }
+    /// 6.2 cells from the centre along each axis with the hall
+    /// (`Rules::citadelHall`; C2: on a cantilevered bracket over the corner,
+    /// the trunnion 0.2 outside the walls' outer faces, so a barrel pointed
+    /// down clears the tower's top edge and reaches the wall's foot), 2
+    /// without.
+    static double cornerInset() { return Rules::citadelHall() ? 6.2 : 2.0; }
     static constexpr double cornerRadius = 0.5;
     static Vec2 cornerGun(Vec2 citadel, int i);
     static double cornerAngle(int i);
 
     /// C1 (docs/citadel-interior.md section 5): a corner gun fires only with
     /// a gunner at its station. It points within `gunArcHalf` either side of
-    /// `cornerAngle(i)` (220 degrees in all: the hull lies in the other 140,
-    /// so the barrels never cross it) and `gunPitchMin` to `gunPitchMax` up
-    /// from level.
-    static constexpr double gunArcHalf = 110.0 * pi / 180.0;
-    static constexpr double gunPitchMin = -20.0 * pi / 180.0;
+    /// `cornerAngle(i)` and `gunPitchMin` to `gunPitchMax` up from level.
+    /// C2: 270 degrees in all (C1's 220 left a strip along each face's
+    /// middle blind): on its outboard bracket a barrel pointing along either
+    /// of its walls runs outside the wall's face, so the hull lies in the
+    /// other 90 and the barrels never cross it; down to −70°, its rounds
+    /// meet the ground about 3 cells out from the wall's foot (−20° left
+    /// nothing nearer than about 26 cells).
+    static constexpr double gunArcHalf = 135.0 * pi / 180.0;
+    static constexpr double gunPitchMin = -70.0 * pi / 180.0;
     static constexpr double gunPitchMax = 50.0 * pi / 180.0;
     /// The roof deck, cells up from the Citadel's ground.
     static constexpr double deckHeight = 7.0;
