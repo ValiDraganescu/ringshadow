@@ -128,7 +128,7 @@ bool FAcPilotGunLookTest::RunTest(const FString&)
 		TestTrue(TEXT("brought into the arc"),
 			FMath::Abs(std::remainder(AcCitadelAct::LookYaw(Gun, Mid + 2 * Pi + 0.4, 0.0) - (Mid + 0.4), 2 * Pi)) < 1e-9);
 	}
-	TestEqual(TEXT("pitch's floor"), AcCitadelAct::LookPitch(-1.0), ac::Defence::gunPitchMin);
+	TestEqual(TEXT("pitch's floor"), AcCitadelAct::LookPitch(-2.0), ac::Defence::gunPitchMin);
 	TestEqual(TEXT("pitch's ceiling"), AcCitadelAct::LookPitch(1.5), ac::Defence::gunPitchMax);
 	TestEqual(TEXT("pitch inside"), AcCitadelAct::LookPitch(0.2), 0.2);
 	// The guns' names by the HUD's compass (north is -y): +x+y, -x+y, -x-y, +x-y.

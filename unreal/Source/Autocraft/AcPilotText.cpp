@@ -464,10 +464,21 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 			Info.Prompt = FString(TEXT("Click  carry on building"));
 			Info.Tone = EAcTone::Ready;
 		}
-		else if (Target->is<ac::PilotTarget::Repair>())
+		else if (const ac::PilotTarget::Repair* R = Target->as<ac::PilotTarget::Repair>())
 		{
-			Info.Prompt = FString(TEXT("Hold click  repair"));
-			Info.Tone = EAcTone::Ready;
+			// It costs materials: the price, or why it can't go on.
+			const std::optional<ac::Structure> B = Sim.state.structure(R->_0);
+			if (const std::optional<std::string> Why = B ? Sim.repairRefusal(U, *B) : std::nullopt)
+			{
+				Info.Prompt = FString(UTF8_TO_TCHAR(Why->c_str()));
+				Info.Tone = EAcTone::Blocked;
+			}
+			else
+			{
+				const TOptional<FString> Price = AcPilotText::RepairPrice(Sim, U, R->_0);
+				Info.Prompt = Price ? FString::Printf(TEXT("Hold click  repair   ·   %s"), **Price) : FString(TEXT("Hold click  repair"));
+				Info.Tone = EAcTone::Ready;
+			}
 		}
 		else if (const ac::PilotTarget::Derrick* D = Target->as<ac::PilotTarget::Derrick>())
 		{
@@ -484,7 +495,13 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		if (Target && (Target->is<ac::PilotTarget::Derrick>() || Target->is<ac::PilotTarget::Patch>() || Target->is<ac::PilotTarget::Full>())
 			&& Sim.pilotRepair(U) && Info.Prompt)
 		{
-			Info.Prompt = *Info.Prompt + TEXT("   ·   R + hold click  repair");
+			const ac::PilotTarget Mend = *Sim.pilotRepair(U);
+			const ac::PilotTarget::Repair* R = Mend.as<ac::PilotTarget::Repair>();
+			const std::optional<ac::Structure> B = R ? Sim.state.structure(R->_0) : std::nullopt;
+			const std::optional<std::string> Why = B ? Sim.repairRefusal(U, *B) : std::nullopt;
+			const TOptional<FString> Price = R ? AcPilotText::RepairPrice(Sim, U, R->_0) : TOptional<FString>();
+			Info.Prompt = *Info.Prompt + (Why ? FString::Printf(TEXT("   ·   R: %s"), UTF8_TO_TCHAR(Why->c_str()))
+				: Price ? FString::Printf(TEXT("   ·   R + hold click  repair (%s)"), **Price) : FString(TEXT("   ·   R + hold click  repair")));
 		}
 	}
 	// Walked into a cliff with too little MH for the jet pack (F1b): why,
@@ -862,4 +879,18 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 			TEXT("Open the buildings")),
 	};
 	return Info;
+}
+
+TOptional<FString> AcPilotText::RepairPrice(const ac::Simulation& Sim, const ac::Unit& U, const int64 Id)
+{
+	const std::optional<ac::Structure> B = Sim.state.structure(Id);
+	if (!B) return {};
+	const auto [Ore, Hydrogen] = ac::Simulation::repairCost(B->kind, 100, Sim.skilled(U), Sim.fullHP(*B));
+	// Whole units from 10 up, a tenth under (the debt is paid in whole units).
+	auto Amount = [](const double V) { return V >= 10 ? FString::Printf(TEXT("%.0f"), V) : FormatG(FMath::RoundToDouble(V * 10) / 10); };
+	TArray<FString> Parts;
+	if (Ore > 0) Parts.Add(Amount(Ore) + TEXT(" ore"));
+	if (Hydrogen > 0) Parts.Add(Amount(Hydrogen) + TEXT(" MH"));
+	if (Parts.IsEmpty()) return {};
+	return FString::Join(Parts, TEXT(" ")) + TEXT(" / 100 HP");
 }

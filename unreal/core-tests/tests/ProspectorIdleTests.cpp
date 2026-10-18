@@ -36,16 +36,25 @@ int64_t idleCount(const Simulation& sim, const std::vector<int64_t>& ids) {
 
 } // namespace
 
-/// A repair costs nothing and ends by itself; the repairers go back to
-/// the ore with no money banked.
+/// A repair costs materials (docs/balance.md "Repairs"): with no money
+/// banked it is refused and the Prospectors mine; with the ore for it, it
+/// ends by itself and they go back to the ore.
 TEST(prospectorIdle_repairWithoutOreEndsInMining) {
     Scene sc = scene();
     Simulation sim(sc.state, homeMap());
-    for (int64_t id : sc.workers) EXPECT_TRUE(sim.issue(Command::Repair{id, sc.citadel.id}));
+    for (int64_t id : sc.workers) EXPECT_TRUE(!sim.issue(Command::Repair{id, sc.citadel.id}));
     run(sim, 20);
-    EXPECT_EQ(sim.state.structure(sc.citadel.id)->hp, Rules::hp(sc.citadel.kind));
     EXPECT_EQ(idleCount(sim, sc.workers), 0);
     EXPECT_TRUE(sim.state.totalMined() > 0);
+
+    Scene paid = scene();
+    paid.state.players[0].ore = 1000;
+    Simulation rich(paid.state, homeMap());
+    for (int64_t id : paid.workers) EXPECT_TRUE(rich.issue(Command::Repair{id, paid.citadel.id}));
+    run(rich, 20);
+    EXPECT_EQ(rich.state.structure(paid.citadel.id)->hp, Rules::hp(paid.citadel.kind));
+    EXPECT_EQ(idleCount(rich, paid.workers), 0);
+    EXPECT_TRUE(rich.state.totalMined() > 0);
 }
 
 /// Every patch of the Citadel's base mined out and no ore for a new

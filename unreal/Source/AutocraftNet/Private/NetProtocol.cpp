@@ -519,6 +519,7 @@ void writeEvent(BitWriter& w, const GameEvent& e) {
             else if constexpr (std::is_same_v<E, G::Fired>) { id(x.shooter); id(x.round); point.write(w, x.muzzle); velocity.write(w, x.velocity); }
             else if constexpr (std::is_same_v<E, G::Impact>) { id(x.round); point.write(w, x.at); w.writeBits(uint64_t(x.what), 2); id(x.victim); }
             else if constexpr (std::is_same_v<E, G::DummyDown>) { id(x.id); id(x.hits); }
+            else if constexpr (std::is_same_v<E, G::Repaired>) { id(x.structure); id(x.by); id(x.ore); id(x.hydrogen); }
             else static_assert(sizeof(E) == 0, "every event has its encoding");
         },
         e.value);
@@ -577,6 +578,13 @@ bool readEvent(BitReader& r, GameEvent& e) {
         break;
     }
     case 20: { auto d = id(); e = GameEvent(GameEvent::DummyDown{d, id()}); break; }
+    case 21: {
+        const auto s = id();
+        const auto by = id();
+        const auto ore = id();
+        e = GameEvent(GameEvent::Repaired{s, by, ore, id()});
+        break;
+    }
     default: return false;
     }
     return r.ok();

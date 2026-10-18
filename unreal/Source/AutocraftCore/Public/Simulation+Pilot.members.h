@@ -129,6 +129,30 @@ public:
     /// own, close and ahead. Nil: nothing to repair there.
     std::optional<PilotTarget> pilotRepair(const Unit& u) const;
 
+    // MARK: - Repairs cost materials (docs/balance.md "Repairs")
+
+    /// What mending `mended` hp of a `kind` costs, ore and MH, fractional:
+    /// mended / its full bar × `Rules::repairShare` × its build price (the
+    /// world's prices with `world`). Its full bar is `full` (0: `Rules::hp`).
+    static std::pair<double, double> repairCost(StructureKind kind, double mended, bool world, double full = 0);
+    /// A world's region: the server levels it slower (`xpScale` < 1,
+    /// World.h `kWorldXpScale`), the one mark of it the core has.
+    bool inWorld() const { return xpScale < 1.0; }
+    /// Why `by` cannot go on mending `s`: its bank (the side's; in a world
+    /// the driven pilot's own, swapped in) has no whole ore or MH for the
+    /// next unit the repair will owe. Nil: it can, or someone else pays.
+    std::optional<std::string> repairRefusal(const Unit& by, const Structure& s) const;
+    /// Unit `by` mended building `structures[i]` by `mended` hp of `full`:
+    /// the debt grows by `repairCost`, and each whole unit it crosses is
+    /// paid (`GameEvent::Repaired`). Driven units and the strategy game pay
+    /// from `state.players[by.owner]` (the repairer's bank, not the
+    /// building owner's); a world's other repairers through `repairPayer`,
+    /// free when none is installed. False: it could not pay, nothing changed.
+    bool payRepair(const Unit& by, size_t i, double mended, double full, std::vector<GameEvent>& events);
+    /// The server's: charges the frontier pilot whose unit `by` mends `s`
+    /// `ore` and `hydrogen` whole units; false when it cannot pay.
+    std::function<bool(const Unit& by, const Structure& s, int64_t ore, int64_t hydrogen)> repairPayer;
+
     /// Field welder: a hurt machine of its side, close and ahead.
     std::optional<int64_t> hurtMachine(const Unit& u) const;
 

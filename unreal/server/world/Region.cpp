@@ -516,6 +516,8 @@ bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& e, std::optio
     if (const auto* i = e.as<GameEvent::Impact>())
         return (shooter && id(*shooter)) || (i->what != GameEvent::Impact::What::ground && id(i->victim)) || at3(i->at);
     if (const auto* d = e.as<GameEvent::DummyDown>()) return id(d->id);
+    // A repair paid: to the repairer's side, and whoever sees the building.
+    if (const auto* r = e.as<GameEvent::Repaired>()) return id(r->by) || id(r->structure);
     return false;
 }
 

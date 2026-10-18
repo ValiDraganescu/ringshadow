@@ -35,7 +35,7 @@ Driving the Prospector (mouse captured):
 | E (or click, Space) at a gun station in the hall | Take that corner gun ("E · TAKE GUN 1 SE"): you see from the gun, the mouse aims it within its arc |
 | Click (or E, Space) at a gun | Fire; hold to fire at the gun's rate |
 | Esc or F at a gun | Leave the gun (you stay in the Prospector) |
-| R + hold click | Repair (a Derrick too) |
+| R + hold click | Repair (a Derrick too). It costs materials from your wallet: half a building's bar costs a quarter of its build price, and the line shows the price ("13 ore / 100 HP"). With no ore (or MH) left it says "No ore to repair" and stops |
 | V | First or third person (not at a gun: there you always see from the gun) |
 | Hold right button + mouse | Third person: look round the unit; the crosshair stays where you aim and W still walks that way. Let go and the camera swings back behind the unit |
 | Wheel | Third person: zoom the camera in (up) or out (down), out to a view over a building site; kept for the next ride |

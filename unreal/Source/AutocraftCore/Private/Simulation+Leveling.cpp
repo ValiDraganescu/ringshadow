@@ -8,6 +8,7 @@
 #include "Simulation.h"
 
 #include "Commander.h"
+#include "Progression.h"
 
 #include <algorithm>
 #include <cmath>
@@ -278,6 +279,64 @@ Price Simulation::buildCost(StructureKind kind, int64_t owner) const {
     // A world's pilot pays the world's prices.
     if (skilled(*d)) return Price{b.apply(Progression::worldOre(kind)), h.apply(Progression::worldHydrogen(kind))};
     return Price{b.apply(Rules::cost(kind)), h.apply(Rules::hydrogenCost(kind))};
+}
+
+// MARK: - Repairs cost materials
+
+std::pair<double, double> Simulation::repairCost(StructureKind kind, double mended, bool world, double full) {
+    const double bar = full > 0 ? full : Rules::hp(kind);
+    if (!(bar > 0) || !(mended > 0)) return {0, 0};
+    const double ore = double(world ? Progression::worldOre(kind) : Rules::cost(kind));
+    const double hydrogen = double(world ? Progression::worldHydrogen(kind) : Rules::hydrogenCost(kind));
+    const double share = mended / bar * Rules::repairShare;
+    return {share * ore, share * hydrogen};
+}
+
+namespace {
+
+/// A debt's whole units (a hair under counts: the sums of many small steps).
+int64_t wholeUnits(double owed) { return static_cast<int64_t>(std::floor(owed + 1e-9)); }
+
+} // namespace
+
+std::optional<std::string> Simulation::repairRefusal(const Unit& by, const Structure& s) const {
+    const bool driven = piloted(by.id);
+    // A world's other repairers pay through the server, or not at all.
+    if (!driven && inWorld()) return std::nullopt;
+    if (by.owner < 0 || by.owner >= static_cast<int64_t>(state.players.size())) return std::nullopt;
+    const Player& bank = state.players[static_cast<size_t>(by.owner)];
+    const auto [ore, hydrogen] = repairCost(s.kind, 1, driven && skilled(by), 1);
+    // The next whole unit the debt will cross must be there to pay.
+    if (ore > 0 && bank.ore < 1) return "No ore to repair";
+    if (hydrogen > 0 && bank.hydrogen < 1) return "No MH to repair";
+    return std::nullopt;
+}
+
+bool Simulation::payRepair(const Unit& by, size_t i, double mended, double full, std::vector<GameEvent>& events) {
+    if (!(mended > 0)) return true;
+    Structure& s = state.structures[i];
+    const bool driven = piloted(by.id);
+    const bool payer = !driven && inWorld();
+    if (payer && !repairPayer) return true;  // free until the server pays (no human's bank)
+    const auto [ore, hydrogen] = repairCost(s.kind, mended, (driven && skilled(by)) || payer, full);
+    const Structure::Owed owed{s.repairOwed.ore + ore, s.repairOwed.hydrogen + hydrogen};
+    const int64_t dueOre = wholeUnits(owed.ore), dueHydrogen = wholeUnits(owed.hydrogen);
+    if (dueOre > 0 || dueHydrogen > 0) {
+        if (payer) {
+            if (!repairPayer(by, s, dueOre, dueHydrogen)) return false;
+        } else {
+            // The repairer's own bank: in a world the driven pilot's,
+            // swapped in for its step (`swapDriver`), whoever owns the building.
+            if (by.owner < 0 || by.owner >= static_cast<int64_t>(state.players.size())) return false;
+            Player& bank = state.players[static_cast<size_t>(by.owner)];
+            if (bank.ore < dueOre || bank.hydrogen < dueHydrogen) return false;
+            bank.ore -= dueOre;
+            bank.hydrogen -= dueHydrogen;
+        }
+        events.push_back(GameEvent::Repaired{s.id, by.id, dueOre, dueHydrogen});
+    }
+    s.repairOwed = Structure::Owed{owed.ore - double(dueOre), owed.hydrogen - double(dueHydrogen)};
+    return true;
 }
 
 /// Supply a Hab Dome of player `owner` gives now (Supply chief).

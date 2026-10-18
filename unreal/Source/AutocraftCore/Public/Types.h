@@ -1079,6 +1079,14 @@ struct AUTOCRAFTCORE_API Structure {
     /// and while it lies down (it fell at 0 hp), when it stands again.
     int64_t hits = 0;
     std::optional<double> downUntil;
+    /// What its repairs owe and have not paid yet: under one whole ore and
+    /// one whole MH (`Simulation::payRepair`).
+    struct Owed {
+        double ore = 0;
+        double hydrogen = 0;
+        bool operator==(const Owed&) const = default;
+    };
+    Owed repairOwed;
 
     /// For decoding; Swift has only the init below.
     Structure() = default;
@@ -1804,10 +1812,13 @@ struct GameEvent {
     /// Target Dummy `id` fell after `hits` rounds; it stands again in
     /// `Rules::dummyDownTime`.
     struct DummyDown { int64_t id; int64_t hits; bool operator==(const DummyDown&) const = default; };
+    /// Unit `by` mending building `structure` paid for it: `ore` and
+    /// `hydrogen` whole units this step (`Simulation::payRepair`).
+    struct Repaired { int64_t structure; int64_t by; int64_t ore; int64_t hydrogen; bool operator==(const Repaired&) const = default; };
 
     AC_CASES(GameEvent, Deposited, PatchDepleted, PatchRegrown, Trained, ConstructionStarted, Constructed, Shot, Missed,
              Landed, Died, Destroyed, Victory, Researched, Stuck, Trapped, LeveledUp, Blast, Stomp, Fired, Impact,
-             DummyDown)
+             DummyDown, Repaired)
     bool operator==(const GameEvent&) const = default;
 };
 

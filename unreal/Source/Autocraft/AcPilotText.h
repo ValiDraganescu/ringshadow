@@ -238,6 +238,10 @@ struct AUTOCRAFT_API AcPilotText
 	static FString Title(ac::StructureKind Kind);
 	/// `String(format: "%g")`: 5 → "5", 6.5 → "6.5".
 	static FString FormatG(double V);
+	/// What mending building `Id` costs the driven `U` (docs/balance.md
+	/// "Repairs"): "13 ore / 100 HP", "4 ore 3 MH / 100 HP". Unset: not a
+	/// building, or free.
+	static TOptional<FString> RepairPrice(const ac::Simulation& Sim, const ac::Unit& U, int64 Id);
 
 	/// `pilotHelp`: the help lines, bottom first (drawn upward), joined by "\n".
 	static FString Help(const ac::Unit& U);

@@ -416,6 +416,10 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr int64_t heroCarry = 25;
     static constexpr int64_t heroHydrogenCarry = 20;
     static constexpr double heroWork = 2.0;
+    /// Repairs cost materials (docs/balance.md "Repairs"): mending a
+    /// building's whole bar costs this share of its build price, ore and MH
+    /// (half the bar, a quarter), paid in whole units as the debt crosses them.
+    static constexpr double repairShare = 0.5;
     /// What a Dropship takes aboard: the infantry (bio units), and the
     /// Scorpion, which the harass AI carries to the enemy's ore lines. An
     /// Atlas would need more slots than any Dropship has.
