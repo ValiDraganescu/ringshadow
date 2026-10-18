@@ -23,6 +23,8 @@
 #include "Simulation.h"
 #include "Types.h"
 
+extern int64 GAcShadowSteps;
+
 void FAcBenchMeter::Begin()
 {
 	*this = FAcBenchMeter();
@@ -41,6 +43,7 @@ void FAcBenchMeter::Frame()
 	Render.Add(FPlatformTime::ToMilliseconds(GRenderThreadTime));
 	Rhi.Add(FPlatformTime::ToMilliseconds(GRHIThreadTime));
 	Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+	Steps.Add(GAcShadowSteps);
 	const FAcPerf& Perf = FAcPerf::Get();
 	Ticks.Add(Perf.LastTickMs());
 	for (int32 I = 0; I < (int32)EAcTickPart::Count; ++I)
@@ -151,12 +154,20 @@ FString FAcBenchMeter::Json(const FString& Name, const UObject* Context, const T
 		++Lights;
 		if (L->Intensity > 0) ++Lit;
 	}
-	// Hitches: frames over 33 and 50 ms.
+	// Hitches: frames over 33 and 50 ms, and the first of them: when in the
+	// run (s), the frame and the GPU's (ms).
 	int32 Over33 = 0, Over50 = 0;
-	for (const double W : Wall)
+	TArray<TSharedPtr<FJsonValue>> Slow;
+	double At = 0;
+	for (int32 I = 0; I < Wall.Num(); ++I)
 	{
-		Over33 += W > 33.3 ? 1 : 0;
-		Over50 += W > 50.0 ? 1 : 0;
+		At += Wall[I] / 1000.0;
+		Over33 += Wall[I] > 33.3 ? 1 : 0;
+		Over50 += Wall[I] > 50.0 ? 1 : 0;
+		if (Wall[I] > 33.3 && Slow.Num() < 24)
+		{
+			Slow.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%.2f s: %.0f ms, gpu %.0f"), At, Wall[I], Gpu.IsValidIndex(I) ? Gpu[I] : 0.0)));
+		}
 	}
 	const UAcWorldRenderer* Renderer = Context ? UAcWorldRenderer::Get(Context) : nullptr;
 	UAcSimSubsystem* Sim = Context ? UAcSimSubsystem::Get(Context) : nullptr;
@@ -179,6 +190,29 @@ FString FAcBenchMeter::Json(const FString& Name, const UObject* Context, const T
 	J->SetNumberField(TEXT("frameMean"), Mean(Wall));
 	J->SetNumberField(TEXT("over33"), Over33);
 	J->SetNumberField(TEXT("over50"), Over50);
+	J->SetArrayField(TEXT("slow"), Slow);
+	// Around the shadow lights' steps: the mean GPU frame at each offset
+	// (frame k turned the light; the GPU's time comes a frame or two late).
+	{
+		TArray<int32> StepAt;
+		for (int32 I = 1; I < Steps.Num(); ++I)
+			if (Steps[I] != Steps[I - 1]) StepAt.Add(I);
+		J->SetNumberField(TEXT("shadowSteps"), StepAt.Num());
+		TArray<TSharedPtr<FJsonValue>> Around;
+		for (int32 Off = -1; Off <= 8; ++Off)
+		{
+			double Sum = 0;
+			int32 N = 0;
+			for (const int32 I : StepAt)
+				if (Gpu.IsValidIndex(I + Off))
+				{
+					Sum += Gpu[I + Off];
+					++N;
+				}
+			Around.Add(MakeShared<FJsonValueNumber>(N ? Sum / N : 0.0));
+		}
+		J->SetArrayField(TEXT("gpuAroundStep"), Around);
+	}
 	J->SetNumberField(TEXT("fps"), 1000.0 / FMath::Max(Mean(Wall), 1e-3));
 	J->SetNumberField(TEXT("gameP50"), P(Game, 0.5));
 	J->SetNumberField(TEXT("gameP95"), P(Game, 0.95));

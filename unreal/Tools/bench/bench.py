@@ -362,7 +362,7 @@ def main() -> int:
     ap.add_argument("--png", action="store_true", help="save each shot's last frame")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--gpu", action="store_true", help="Unreal: `stat gpu` per pass after the timed frames (-AcBenchGpu)")
-    ap.add_argument("--mmo", action="store_true", help="the MMO bench: -AcMmoShotsBench's scenes, one world client a run")
+    ap.add_argument("--mmo", action="store_true", help="the MMO bench: -AcMmoShotsBench's scenes, one world client a run; each run takes the slot through hidden_run.py itself, so never wrap this in hidden_run.py --raw (it would wait on its own slot)")
     ap.add_argument("--seconds", type=float, default=10, help="--mmo: timed seconds a scene")
     ap.add_argument("--variant", action="append", default=[],
                     help="Unreal: NAME=ARGS, extra command-line args (e.g. '-dpcvars=r.ScreenPercentage=67'); "

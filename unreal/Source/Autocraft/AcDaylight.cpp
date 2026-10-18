@@ -43,6 +43,16 @@ namespace
 	TAutoConsoleVariable<float> CVarNightReach(
 		TEXT("ac.NightReach"), 26.0f,
 		TEXT("How far a driven unit's eye sees at night, cells (110 by day): the ground is clear to a quarter of it and lost by it."));
+	TAutoConsoleVariable<float> CVarShadowStep(
+		TEXT("ac.Daylight.ShadowStepDeg"), 0.5f,
+		TEXT("The shadow-casting lights (the sun, the ringlight) turn in steps of at most this many degrees, fewer near the horizon ")
+		TEXT("(ac.Daylight.ShadowStepMetres), so the virtual shadow maps stay cached between steps (docs/perf.md); 0: every frame."));
+	TAutoConsoleVariable<float> CVarShadowStepMetres(
+		TEXT("ac.Daylight.ShadowStepMetres"), 20.0f,
+		TEXT("The sun steps so little that the shadow tip of an object this tall moves under 0.1 m a step (20: a Citadel's mast); 0: the sun every frame."));
+	TAutoConsoleVariable<float> CVarShadowStepMetresMoon(
+		TEXT("ac.Daylight.ShadowStepMetresMoon"), 5.0f,
+		TEXT("The same for the ringlight, whose night shadows are faint (5: a unit's height; its steps come about 4 times rarer); 0: every frame."));
 	TAutoConsoleVariable<int32> CVarClouds(
 		TEXT("ac.Daylight.Clouds"), 1,
 		TEXT("Volumetric clouds and their shadows over the map (1) or none (0)."));
@@ -175,6 +185,40 @@ namespace
 	/// A Swift colour (sRGB, as `NSColor(calibratedRed:...)` takes it) in
 	/// linear light, as Unreal's light colours want it.
 	FLinearColor Lin(const FLinearColor& C) { return FLinearColor::FromSRGBColor(C.ToFColor(false)); }
+}
+
+/// The shadow lights' steps so far (the MMO bench reads it: FAcBenchMeter).
+int64 GAcShadowSteps = 0;
+
+namespace
+{
+	/// Turns a shadow-casting light toward `Forward` (where its light goes)
+	/// only once that is a step away from where it points (docs/perf.md,
+	/// client round 2). The virtual shadow maps cache a light's pages only
+	/// while it holds still: turned a little every frame with the clock, the
+	/// sun's shadows were drawn whole every frame. A step: at most
+	/// `ac.Daylight.ShadowStepDeg`, and at most what moves the tip of an
+	/// object `Metres` tall's shadow 0.1 m: the sun's 20 m (a Citadel's mast;
+	/// a 5 m bound let its long dawn shadow tick visibly), the ringlight's 5
+	/// m (its shadows are faint). That tip moves h / sin²(e) per radian at
+	/// elevation e (along the shadow; across it h / sin(e), less), so the
+	/// step is 0.1 / h · sin²(e) rad (the sun: 0.18° at 53°, the bench's
+	/// noon; 0.034° at 20°; 0.015° at 13°) or the cap, the smaller.
+	void TurnShadowLight(UDirectionalLightComponent* Light, const FVector& Forward, const double Metres)
+	{
+		const FVector To = Forward.GetSafeNormal();
+		const double Cap = CVarShadowStep.GetValueOnGameThread();
+		if (Cap > 0 && Metres > 0)
+		{
+			const FVector Was = Light->GetComponentRotation().Vector();
+			const double SinE = To.Z;
+			const double Step = FMath::Min(Cap, FMath::RadiansToDegrees(0.1 / Metres * SinE * SinE));
+			const double Off = FMath::RadiansToDegrees(FMath::Atan2(FVector::CrossProduct(Was, To).Size(), FVector::DotProduct(Was, To)));
+			if (Off <= Step) return;
+		}
+		Light->SetWorldRotation(To.Rotation());
+		if (Light->CastShadows) ++GAcShadowSteps;
+	}
 }
 
 double AAcDaylight::DayLength() { return FMath::Max(1.0, double(CVarDayLength.GetValueOnGameThread())); }
@@ -550,14 +594,14 @@ void AAcDaylight::Update(const double Time)
 	// The sun, warmer as it sinks; the moon opposite. Shadows fade as the
 	// light nears the horizon (they grow very long and sweep fast there).
 	const double Fade = Smoothstep(0, 12, Abs);
-	Sun->SetWorldRotation((-SunDir).Rotation());
+	TurnShadowLight(Sun, -SunDir, CVarShadowStepMetres.GetValueOnGameThread());
 	// The ringlight (docs/mmorpg-m6.md V2): the night's key comes from
 	// between the sun's antipode and the gas giant, whose lit face throws
 	// it, stronger the fuller the giant.
 	const FVector Giant = FAcGasGiant::Direction();
 	const FVector RingFrom = (-SunDir + Giant).GetSafeNormal();
 	const double GiantLit = FAcGasGiant::Lit(SunDir);
-	Moon->SetWorldRotation((-RingFrom).Rotation());
+	TurnShadowLight(Moon, -RingFrom, CVarShadowStepMetresMoon.GetValueOnGameThread());
 	SkySun->SetWorldRotation((-SunDir).Rotation());
 	SkyMoon->SetWorldRotation(SunDir.Rotation());
 	const int32 Isolate = CVarIsolate.GetValueOnGameThread();

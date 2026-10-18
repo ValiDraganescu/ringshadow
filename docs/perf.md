@@ -62,7 +62,10 @@ the ore, the effect pools, the particles) overrides
 keeps the descriptor. It works it out again when the mesh, the override
 materials or the shader platform change, and every
 `ac.RenderMaterialDescFrames` (64) updates in case a shader finished
-compiling. 0 is the engine's path, every update, for A/B. Conservative
+compiling. 0 is the engine's path, every update, for A/B. The override
+copies the engine's body as UE 5.8 has it: after an engine update, compare
+it with `UInstancedStaticMeshComponent::BuildComponentInstanceData` again
+(0 is the way out meanwhile). Conservative
 bounds are never on for these components, so the engine's other branch
 never runs.
 
@@ -89,6 +92,75 @@ throws away the whole shadow cache. With the sun held still, shadow depths
 drop from 3.65 to 1.31 ms at home and from 2.81 to 0.95 ms at the nest, so
 the GPU frame at home goes from 13.1 to 10.8 ms. `r.Shadow.Virtual.Cache=0`
 measures the same as today. Round 2 turns the shadow lights in small steps.
+
+### Round 2: the shadow lights turned in steps (2026-10-18)
+
+**The cost.** The virtual shadow maps keep a light's pages from frame to
+frame only while the light holds still: the engine keys its cache on the
+light's exact rotation (`VirtualShadowMapCacheManager`, UE 5.8). AcDaylight
+set the sun's rotation and the ringlight's (the "Moon", which casts the
+night's shadows) every frame as the world's clock turns (a 2,400 s day,
+about 0.15° a second), so every page was drawn again every frame.
+`r.Shadow.Virtual.Cache=0` measured the same as the game did.
+
+**The change.** `TurnShadowLight` (AcDaylight.cpp) turns a shadow-casting
+light only once its true direction is a step away from where it points. A
+step is at most `ac.Daylight.ShadowStepDeg` (0.5°), and at most what moves
+the shadow tip of an object h metres tall by 0.1 m. That tip moves
+h / sin²(e) per radian of elevation e, so the step is 0.1 / h · sin²(e)
+radians. For the sun h is 20 m (`ac.Daylight.ShadowStepMetres`, a
+Citadel's mast), which gives 0.18° at the bench's noon (53° up), 0.034° at
+20° and 0.015° at 13°. For the ringlight h is 5 m
+(`ac.Daylight.ShadowStepMetresMoon`), because its shadows are faint
+(0.75 × the fade). The sky's own pair (SkySun, SkyMoon: the disk, the
+atmosphere, the clouds' light) stays continuous. `ac.Daylight.ShadowStepDeg
+0` (or a light's metres at 0) turns the lights every frame, as before.
+
+| MMO bench, round 2 of 2 in turns, load 6-9, ms | GPU p50 | GPU p95 | shadow depths | the frame after a step |
+|---|---:|---:|---:|---:|
+| home noon: every frame / stepped | 13.2 / 10.8 | 13.5 / 11.2 | 3.63 / 1.32 | 13.2 / 14.5 |
+| home midnight | 15.3 / 11.6 | 16.0 / 12.1 | 5.00 / 1.37 | 15.3 / 17.6 |
+| nest at noon | 10.8 / 9.1 | 11.2 / 9.5 | 2.65 / 1.12 | 10.9 / 11.5 |
+| Fork, wave 10 | 11.4 / 9.5 | 11.7 / 10.2 | 2.77 / 0.96 | 11.4 / 12.2 |
+
+The average and the p95 GPU frame drop by about 20 % (16-24 %). One frame
+per step costs more than today's frame. The engine draws the step's frame
+uncached, at today's cost, and the next frame refills every page as it
+goes back to caching, which costs 0.6-2.4 ms more than today's frame. The
+meter's `gpuAroundStep` shows this as the mean GPU time at each offset
+from a step; the GPU timer lags four frames. No engine setting skips that
+refill. There are about 5 steps in 10 s at noon. At midnight there were
+17 steps in 10 s while the ringlight had the sun's 20 m bound, and its
+17.7 ms frame missed one 60 Hz vsync per step at 1920×1080 on this GPU.
+With the ringlight's 5 m bound there are 4 steps in 10 s: the bump is still
+17.6 ms, but about every 2.5 s. No frame from the game thread shows GPU
+slack to time a step into: the sky light captures one face every frame and
+Lumen updates every frame, so steps go when they fall due.
+
+**The look.** Hidden clips at 1280×720 of the bench's home scene
+(`-AcMmoShotsBench -AcMmoBenchHour=H -AcMmoShotsClip`, raw frames through
+FFmpeg), stepped and continuous, at dawn (hour 6.7, sun about 13° up) and at
+midnight, 15 s each. For each frame they count the changed pixels among
+the clip's static ones (pixels that change in under 2 % of frames). A step
+that shows moves edges in static places all at once. With a 5 m bound for
+the sun, the Citadel's long dawn shadow jumped about a pixel at each step
+(16 isolated rises against 4 in the continuous clip, the largest 6,140
+pixels). That is why the sun has the 20 m bound. With it the stepped dawn
+clip equals the continuous one: 5 isolated rises against 4, and a largest
+spike of 2,682 against 2,627 pixels, made by a walking unit. The midnight
+clip's spikes are all units and headlamps switching on, with no shadow
+edges. compare.py cannot grade this, because its references come from the
+Swift game, which left the repo.
+
+**Not a lever.** `r.Shaders.BoundsChecking` and `ZeroInitialise`, which
+the engine's Mac device profile turns on for the editor and for a cooked
+game alike, change nothing in Metal SM6 code. The shader converter reads
+the flags and never uses them (MetalCompileShaderMSC.cpp, UE 5.8), so they
+only change the shader cache's key.
+
+**Next.** Deferred lighting (3.5 ms at home noon) and the Lumen screen
+probes (2.0 ms) are now the largest passes. A `ProfileGPU` tree per scene
+in the MMO bench will show what is inside them.
 
 ## Server
 

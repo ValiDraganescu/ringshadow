@@ -298,6 +298,8 @@
 //   mmo-nest-noon    Slag Pockets at noon, 55 cells from the nest, her horde told
 //   mmo-fork-wave    Cold Fork at noon, wave 10 down The Fork, facing the nearest bug
 // The weather is the world's (-AcMmoWeather=clear for the standard runs).
+// -AcMmoBenchHour=H puts the first scene at hour H (a dawn clip with
+// -AcMmoShotsClip -AcMmoShotsOnly=mmo-home-noon -AcMmoShotsClipDwell=S).
 //
 // -AcMmoShotsR2 (with -AcMmoDevRig): realm projects (docs/mmorpg-play.md
 // "Realm projects"), DIR/r2-NN-moment.png:
@@ -6430,11 +6432,15 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
 		if (Seated() && S && Mmo->Progress() && CitadelOf(*S) && Sets > 0 && Ready == Sets && Since() > 3.0)
 		{
-			Check(Mmo->DevClock(TEXT("hour 12")), TEXT("bench: noon at home"));
+			// -AcMmoBenchHour=H: the first scene at another hour (a dawn clip).
+			double Hour = 12;
+			FParse::Value(FCommandLine::Get(), TEXT("AcMmoBenchHour="), Hour);
+			Check(Mmo->DevClock(FString::Printf(TEXT("hour %g"), Hour)), FString::Printf(TEXT("bench: hour %g at home"), Hour));
 			Advance();
 			return;
 		}
-		TimedOut(TEXT("bench: seated at home by the Citadel, the ground built"));
+		TimedOut(*FString::Printf(TEXT("bench: seated at home by the Citadel (%s), the ground built (%d of %d sets)"),
+			S && CitadelOf(*S) ? TEXT("there") : TEXT("none"), Ready, Sets), 120);
 		return;
 	}
 	case 4003:
@@ -6533,6 +6539,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				if (S)
 					for (const ac::Unit& X : S->units) Bugs += X.bug && X.hp > 0 ? 1 : 0;
 				J.SetNumberField(TEXT("bugs"), Bugs);
+				if (const AAcDaylight* D = AAcDaylight::Find(GetWorld())) J.SetNumberField(TEXT("sunElevation"), D->GetSunElevation());
 			}));
 			BenchStep = 0;
 			Shoot(Name, FString::Printf(TEXT("the MMO bench's %s"), Name));

@@ -61,8 +61,9 @@ void UAcInstancedMesh::BuildComponentInstanceData(const EShaderPlatform InShader
 		Super::BuildComponentInstanceData(InShaderPlatform, OutData);
 		return;
 	}
-	// The engine's (UInstancedStaticMeshComponent::BuildComponentInstanceData)
-	// line for line, but the descriptor: only when the mesh, the materials or
+	// The engine's (UInstancedStaticMeshComponent::BuildComponentInstanceData,
+	// UE 5.8: compare it again after an engine update; the cvar at 0 is the
+	// engine's own) line for line, but the descriptor: only when the mesh, the materials or
 	// the platform changed, or `Frames` updates on. Conservative bounds are
 	// never turned on here, so the engine's other branch never runs.
 	const UStaticMesh* Mesh = GetStaticMesh();

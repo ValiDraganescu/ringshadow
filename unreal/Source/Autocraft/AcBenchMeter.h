@@ -42,6 +42,8 @@ private:
 	double GpuStartNs = -1, GpuEndNs = -1;
 	double FootprintMB = 0, GraphicsMB = 0, PeakMB = 0;
 	TArray<double> Wall, Game, Render, Rhi, Gpu, Ticks;
+	/// The shadow lights' steps (AcDaylight.cpp) before each timed frame.
+	TArray<int64> Steps;
 	double Parts[8] = {};
 	double PartsMax[8] = {};
 	int32 Draws = -1, Primitives = -1, MeshDraws = -1;
