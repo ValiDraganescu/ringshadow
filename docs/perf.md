@@ -428,3 +428,38 @@ code may write into them between looks, so they stay zeroed.)
 The state hashes of `worldbench` (start, nest) and the wire and state
 hashes of `crowdbench` (1, 4, 16 pilots) are equal. After round 1 this
 world's step was 0.030-0.034 ms: the rounds since took it to 0.005.
+
+### Round 9: the start's fog tiers on every core (2026-10-18)
+
+After round 2 the world's start was `loadWorld` (about 300 ms, the walking
+grids already spread over the cores) and `WorldMap` (126-133 ms on one
+core): each region's `Vision` samples the terrain's height at every cell's
+centre for its tiers (a cell's level), 55,000 cells a region. Each cell is
+its own, as in `NavGrid::buildGround`, which already gives each thread its
+own rows; `Vision` now does the same.
+
+| `loadbench 3`, 3 runs each in turns, load 10 | before | after |
+|---|---:|---:|
+| first `WorldMap`, wall | 125.2-133.4 ms | 20.9-21.7 ms |
+| its CPU (all threads) | 125-133 ms | 156-157 ms |
+| first `loadWorld`, wall | 271-279 ms | 281-326 ms (the same work; load) |
+
+The tiers are the same (the vision goldens, every core test; `worldbench`
+and `crowdbench` hashes equal). The server's start is now about 300 ms of
+which 280 are the walking grids' ground.
+
+Tried and left out: two exact changes to the path search, the goal test's
+root replaced by the largest square whose root is still within reach, and
+the search's per-cell state cut from 12 to 8 bytes (where a cell came
+from kept apart). The same paths (`pathbench`'s hash), and no time back
+beyond the noise (10.5-12.9 µs against 11.0-13.0 at load 26).
+
+The Makefile rebuilt `build/bench/SoakSave.o` on no header change (its
+dependency file was not included), so since round 1 changed `WorldRegion`
+a stale one made `soak-save` crash; it is included now.
+
+The short soak after this round (`soak.py run --minutes 6 --every 60`, a
+fresh save in `unreal/server/build/soak-r9`, load about 10): resident
+memory flat at 21.3 MB, CPU 2.8 s at the start and 0.03 s a minute after
+it, the WAL 62 KB a minute, the idle call 0.18-0.35 ms mean and 0.74-3.7 ms
+at most (Q3's soak: 0.06-0.55 and up to 4.5).

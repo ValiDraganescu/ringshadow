@@ -2,8 +2,6 @@
 // (`Simulation+Vision.members.h`).
 #include "Vision.h"
 
-#include <cstring>
-
 #include "Commander.h"
 #include "NavGrid.h"
 #include "Rules.h"
@@ -14,10 +12,12 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <limits>
 #include <mutex>
 #include <numeric>
 #include <string>
+#include <thread>
 #include <utility>
 
 namespace ac {
@@ -112,13 +112,23 @@ Vision::Vision(const MapDefinition& map, const TerrainField& field, const NavGri
         const Vec2 o = origin;
         const int64_t w = width, h = height;
         const double lh = map.levelHeight;
-        // (Swift spreads the rows over the cores; each cell is its own.)
-        for (int64_t z = 0; z < h; ++z) {
+        // Rows over the cores, as Swift has it and as `NavGrid::buildGround`
+        // does: each cell is its own, each thread writes its own rows.
+        int8_t* out = t.data();
+        auto row = [&](int64_t z) {
             for (int64_t x = 0; x < w; ++x) {
                 const Vec2 p = o + Vec2(static_cast<double>(x) + 0.5, static_cast<double>(z) + 0.5) * cell;
-                t[static_cast<size_t>(z * w + x)] = clampedInt8(rounded(field.height(p) / lh));
+                out[static_cast<size_t>(z * w + x)] = clampedInt8(rounded(field.height(p) / lh));
             }
-        }
+        };
+        const int64_t threads = std::max<int64_t>(1, std::min<int64_t>(static_cast<int64_t>(std::thread::hardware_concurrency()), h));
+        std::vector<std::thread> pool;
+        for (int64_t k = 1; k < threads; k++)
+            pool.emplace_back([&row, k, threads, h] {
+                for (int64_t z = k; z < h; z += threads) row(z);
+            });
+        for (int64_t z = 0; z < h; z += threads) row(z);
+        for (std::thread& th : pool) th.join();
         tier = t;
         visionCache().set(key, t);
     }

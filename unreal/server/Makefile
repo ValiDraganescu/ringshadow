@@ -252,4 +252,5 @@ clean:
 
 -include $(ASAN_OBJ:.o=.d)
 -include $(CORE_OBJ:.o=.d) $(NET_OBJ:.o=.d) $(WORLD_OBJ:.o=.d) $(SERVER_OBJ:.o=.d) $(CLIENT_OBJ:.o=.d) \
-	$(TEST_OBJ:.o=.d) $(BENCH_OBJ:.o=.d) build/program/main.d $(REGION_OBJ:.o=.d) build/region/main.d
+	$(TEST_OBJ:.o=.d) $(BENCH_OBJ:.o=.d) build/program/main.d $(REGION_OBJ:.o=.d) build/region/main.d \
+	build/bench/SoakSave.d
