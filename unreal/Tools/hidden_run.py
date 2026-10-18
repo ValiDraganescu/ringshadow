@@ -132,15 +132,17 @@ def command(a, out: Path, flags: list[str]) -> list[str]:
     flags = [f.replace("{out}", str(out)) for f in flags]
     if a.raw:
         return flags
+    # --sound-offline: an audio device on the offline mixer (nothing reaches the speakers).
+    hidden = [("-deterministicaudio" if f == "-nosound" else f) for f in HIDDEN] if a.sound_offline else HIDDEN
     log = f"-abslog={out / 'run.log'}"
     if a.python:
         return [str(EDITOR_CMD), str(UPROJECT), "-run=pythonscript",
-                f"-script={Path(a.python).resolve()}", "-nullrhi", *HIDDEN, log, *flags]
+                f"-script={Path(a.python).resolve()}", "-nullrhi", *hidden, log, *flags]
     # The MMO world server ends with the run unless the run asks otherwise.
     if not any(f.startswith("-AcMmoServerDetached") for f in flags):
         flags = ["-AcMmoServerAttached", *flags]
     if a.tests:
-        return [str(EDITOR_BG), str(UPROJECT), "-nullrhi", *HIDDEN, log,
+        return [str(EDITOR_BG), str(UPROJECT), "-nullrhi", *hidden, log,
                 f"-ExecCmds=Automation RunTests {a.tests}; Quit",
                 "-TestExit=Automation Test Queue Empty", *flags]
     if a.app:
@@ -153,7 +155,7 @@ def command(a, out: Path, flags: list[str]) -> list[str]:
     else:
         w, h = a.res.split("x")
         cmd += ["-RenderOffscreen", "-windowed", "-ForceRes", f"-ResX={w}", f"-ResY={h}"]
-    cmd += [*HIDDEN, log]
+    cmd += [*hidden, log]
     if not any(f.startswith("-AcSaveDir") for f in flags):
         cmd.append(f"-AcSaveDir={out / 'save'}")
     # A packaged game keeps its config (GameUserSettings.ini) in the user's
@@ -301,6 +303,8 @@ def main() -> None:
     p.add_argument("--level", default="/Game/Maps/Battlefield")
     p.add_argument("--res", default="1600x1000")
     p.add_argument("--timeout", type=float, default=15, help="minutes")
+    p.add_argument("--sound-offline", action="store_true",
+                   help="-deterministicaudio instead of -nosound: an audio device on the offline mixer, silent")
     p.add_argument("flags", nargs=argparse.REMAINDER)
     a = p.parse_args()
     flags = a.flags[1:] if a.flags[:1] == ["--"] else a.flags

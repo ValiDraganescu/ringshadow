@@ -14,6 +14,8 @@
 #include "AcTerrain.h"
 
 #include "AudioDevice.h"
+#include "AudioDeviceManager.h"
+#include "AudioThread.h"
 #include "Components/AudioComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -240,6 +242,23 @@ void UAcPilotAudio::Deinitialize()
 	{
 		Sim->RemoveFrameListener(EAcFrameStage::Other, FrameHandle);
 	}
+	// The device roots a submix it registers (USoundSubmixBase's load count)
+	// until it is unregistered, on the audio thread: handed back and waited
+	// for here, so nothing of this world is left rooted when it is torn down.
+	if (Hall)
+	{
+		FAudioDeviceManager* Devices = FAudioDeviceManager::Get();
+		if (FAudioDevice* Device = Devices ? Devices->GetAudioDeviceRaw(HallDevice) : nullptr)
+		{
+			Device->UnregisterSoundSubmix(Hall, false);
+			FAudioCommandFence Fence;
+			Fence.BeginFence();
+			Fence.Wait();
+		}
+		UE_LOG(LogAutocraft, Log, TEXT("pilot audio: hall handed back (%s)"), Hall->IsRooted() ? TEXT("still rooted") : TEXT("unrooted"));
+		Hall = nullptr;
+		HallReverb = nullptr;
+	}
 	Super::Deinitialize();
 }
 
@@ -275,7 +294,11 @@ void UAcPilotAudio::MakeHall()
 	// which arrives here at `SendScale`. The decay and wet level are
 	// estimates (ac.PilotHallDecay, ac.PilotHallWet): the offline mixer runs
 	// no submix effects, so they could not be measured (AcPilotAudio.h).
-	HallReverb = NewObject<USubmixEffectReverbPreset>(this);
+	// Outside the world (the transient package): the audio device roots the
+	// submix it registers, and a rooted object under the world fails its
+	// teardown (`!IsRooted()` as the editor stops Play). Owned by this
+	// subsystem's UPROPERTYs, handed back in Deinitialize.
+	HallReverb = NewObject<USubmixEffectReverbPreset>(GetTransientPackage());
 	FSubmixEffectReverbSettings R;
 	float Decay = CVarAcPilotHallDecay.GetValueOnGameThread(), Wet = CVarAcPilotHallWet.GetValueOnGameThread();
 	// Calibration runs: -AcPilotHallDecay=S -AcPilotHallWet=W (the cvars are read before -ExecCmds runs).
@@ -296,7 +319,7 @@ void UAcPilotAudio::MakeHall()
 	R.DryLevel = 0.f;
 	HallReverb->SetSettings(R);
 	UE_LOG(LogAutocraft, Log, TEXT("pilot audio: hall decay %.2f, wet %.2f"), R.DecayTime, R.WetLevel);
-	Hall = NewObject<USoundSubmix>(this, TEXT("AcPilotHall"));
+	Hall = NewObject<USoundSubmix>(GetTransientPackage(), MakeUniqueObjectName(GetTransientPackage(), USoundSubmix::StaticClass(), TEXT("AcPilotHall")));
 	Hall->SubmixEffectChain.Add(HallReverb);
 	// A reverb's tail is quiet: never let the mixer cut it as "silent".
 	Hall->bAutoDisable = false;
@@ -310,6 +333,7 @@ void UAcPilotAudio::MakeHall()
 	if (FAudioDevice* Device = GetWorld() ? GetWorld()->GetAudioDeviceRaw() : nullptr)
 	{
 		Device->RegisterSoundSubmix(Hall, true);
+		HallDevice = Device->DeviceID;
 	}
 }
 

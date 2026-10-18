@@ -39,7 +39,8 @@
 // UE's plain panner).
 //
 // Reverb: one submix, `AcPilotHall` (a `USubmixEffectReverbPreset`, wet only,
-// parented to the main submix), fed per voice by `SetSubmixSend` with the
+// parented to the main submix, in the transient package: the device roots it
+// until Deinitialize hands it back), fed per voice by `SetSubmixSend` with the
 // blend's share. Obstruction: the voice's volume × 0.818 and its low-pass at
 // 3 kHz (the hall's send is raised by as much, so the reverb stays).
 //
@@ -214,6 +215,8 @@ private:
 	TObjectPtr<USoundSubmix> Hall;
 	UPROPERTY(Transient)
 	TObjectPtr<USubmixEffectReverbPreset> HallReverb;
+	/// The device the hall is registered with (INDEX_NONE: none).
+	uint32 HallDevice = uint32(INDEX_NONE);
 	bool bWasDriving = false;
 	double Hearing = 0;
 	static constexpr double HearingPerSight = 1.5;

@@ -24,6 +24,7 @@ Every Unreal process runs hidden, silent and focus-free: see [Hidden runs](#hidd
 | Menu, pause, save, new game, import | build, then the flow test | build time plus a game start |
 | Rendering or look | `uv run unreal/Tools/shots/compare.py SCENE` (see `unreal/SHOTS.md`) | one scene a few minutes; all scenes about 25 min |
 | Audio | offline to WAV with `-deterministicaudio`, then check the file; the rule tests are `Autocraft.Audio.*` | – |
+| What a world owns or roots (subsystems, objects made with the world or an actor as outer, the audio device's submixes) | `hidden_run.py --tests Autocraft.Editor.PieCycle --sound-offline`: the editor's Play and Stop twice in the playground; a rooted object under the PIE world fails Stop's `check(!IsRooted())`. `--sound-offline` swaps `-nosound` for `-deterministicaudio`, so the run has an audio device and stays silent | an editor start plus 30 s |
 | Only assets, materials or Python tools | no test; look at a render | – |
 | The MMO server (`unreal/server`) or the net code | `make -C unreal/server test`, `make -C unreal/net-tests` | about a minute |
 | Pointers or references into vectors and optionals, a result that changes from run to run of one binary, a perf change that must stay bit for bit | `make -C unreal/server test-asan` (AddressSanitizer and UBSan, stops at the first finding) | a few minutes to build, half a minute to run |

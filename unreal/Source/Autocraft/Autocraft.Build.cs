@@ -42,6 +42,10 @@ public class Autocraft : ModuleRules
 				RuntimeDependencies.Add("$(ProjectDir)/" + Path, StagedFileType.NonUFS);
 			}
 		}
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("UnrealEd");  // Autocraft.Editor.PieCycle starts and stops Play
+		}
 		if (Target.Platform == UnrealTargetPlatform.Mac)
 		{
 			PublicFrameworks.Add("IOKit");  // FAcPerf: the GPU's per-process time (AcPerfMac.cpp)
