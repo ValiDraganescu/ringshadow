@@ -1138,11 +1138,22 @@ def _pieces(poly):
     return out
 
 
+EITHER_OR = [("rifle", "minigun_")]  # the Ranger (and its cockpit): the rifle, or the minigun (every minigun_ part) once upgraded
+
+
 def exclusive_parts(a, b):
-    """Two parts never drawn together: a site's `<name>_shut` and `<name>_open` (AcSites.cpp shows one of them)."""
+    """Two parts never drawn together: a site's `<name>_shut` and `<name>_open` (AcSites.cpp shows one of them); two
+    frames of one tread, `treads_<side>_<frame>` (AcPoseArtillery.cpp shows one frame a side); the pairs of EITHER_OR.
+    A cockpit's copies (`model_<part>`) count as their parts."""
+    a, b = a[6:] if a.startswith("model_") else a, b[6:] if b.startswith("model_") else b
     for x, y in ((a, b), (b, a)):
         if x.endswith("_shut") and y.endswith("_open") and x[:-5] == y[:-5]:
             return True
+        if any(x == e and y.startswith(f) for e, f in EITHER_OR):
+            return True
+    ta, tb = a.split("_"), b.split("_")
+    if len(ta) == 3 == len(tb) and ta[0] == tb[0] == "treads" and ta[1] == tb[1] and ta[2] != tb[2]:
+        return True
     return False
 
 

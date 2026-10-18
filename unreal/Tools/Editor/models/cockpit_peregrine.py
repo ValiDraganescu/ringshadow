@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from ac_cockpitkit import make, copy_parts, need_parents, cam  # noqa: E402
-from ac_modelkit import box, bar  # noqa: E402
+from ac_modelkit import box, bar, loft, v_add, v_cross, v_mul, v_norm, v_sub  # noqa: E402
 
 Z0 = 50.0
 cm, u, rig, root = make("peregrine", "peregrine", [
@@ -30,7 +30,7 @@ def in_canopy(name, mat, p):
     """The unit's canopy glass, its ribs, base plate and spine: the eye sits in them."""
     if name != "body":
         return True
-    if mat == "team" and p.kind == "box" and abs(p.at[1]) < 1 and p.at[0] in (46.0, 72.0):
+    if mat == "team" and p.kind == "box" and abs(p.at[1]) < 1 and p.at[0] in (45.7, 72.0):
         return False
     pts = p.points()
     return not (all(q[2] > Z0 + 13.5 for q in pts) and all(-16 < q[0] < 44 for q in pts) and all(abs(q[1]) < 12 for q in pts)) \
@@ -51,13 +51,23 @@ def arc(a, rw, up0, up1, n=8):
     return [cam(a, -rw * math.cos(math.pi * k / n), up0 + (up1 - up0) * math.sin(math.pi * k / n)) for k in range(n + 1)]
 
 
-bows = [arc(14, 17, -9, 12), arc(4, 27, -9, 17)]
-for pts in bows:
-    for p, q in zip(pts, pts[1:]):
-        cm.mesh(rig, "hullDark", bar(p, q, 1.6, 2.2), solid=False)
+def bow(pts, w=1.6, d=2.2):
+    """one tube along the arc, w along the view and d across the arc (a bar a segment shared side planes at each joint)"""
+    f = (0.0, -1.0, 0.0)  # ahead, in the camera frame
+    rings = []
+    for i, p in enumerate(pts):
+        a, b = pts[max(i - 1, 0)], pts[min(i + 1, len(pts) - 1)]
+        t = v_norm(v_sub(b, a))
+        n = v_cross(t, f)
+        rings.append([v_add(p, v_add(v_mul(f, sf * w / 2), v_mul(n, sn * d / 2))) for sf, sn in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
+    return loft(rings)
+
+
+for pts in (arc(14, 17, -9, 12), arc(4, 27, -9, 17)):
+    cm.mesh(rig, "hullDark", bow(pts), solid=False)
 for s in (-1, 1):
     cm.mesh(rig, "hullDark", bar(cam(3, s * 28, -9.5), cam(14, s * 17, -9.5), 1.6, 2.2), solid=False)          # side rails
-    cm.mesh(rig, "hullMid", bar(cam(4, s * 27, -8.6), cam(14, s * 16.5, -8.6), 0.8, 0.8), solid=False)         # steel edge
+    cm.mesh(rig, "hullMid", bar(cam(4, s * 27, -8.0), cam(14, s * 16.5, -8.0), 0.8, 0.8), solid=False)         # steel edge (on the rail)
     cm.mesh(rig, "team", box((7, 18, 1.6), at=cam(9, s * 24, -10.4)), solid=False)                            # sill
-cm.mesh(rig, "glowBlue", [box((6, 0.8, 0.6), at=cam(9, s * 22, -9.4)) for s in (-1, 1)], solid=False)
+cm.mesh(rig, "glowBlue", [box((6, 0.8, 0.6), at=cam(9, s * 30.5, -9.2)) for s in (-1, 1)], solid=False)  # (on the sill, clear of the rail)
 cm.write()

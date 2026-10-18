@@ -44,10 +44,12 @@ cm.mesh(rig, "hullDark", [box((130, 3, 40), at=cam(D, 0, UP + 20)),             
                           box((40, 3, UP + DN), at=cam(D, SD + 20, (UP - DN) / 2)),
                           box((40, 3, UP + DN), at=cam(D, -SD - 20, (UP - DN) / 2))], solid=False)
 # a heavy lip under the brow, a steel edge round the window, a blue stripe on the brow, a lit strip on the sill
-cm.mesh(rig, "hullMid", [box((2 * SD + 4, 3.0, 2.6), at=cam(D - 2.4, 0, UP + 1.3)),
-                         box((2 * SD + 4, 3.0, 1.6), at=cam(D - 2.2, 0, -DN - 0.8)),
-                         box((1.6, 3.0, UP + DN), at=cam(D - 2.2, SD + 0.9, (UP - DN) / 2)),
-                         box((1.6, 3.0, UP + DN), at=cam(D - 2.2, -SD - 0.9, (UP - DN) / 2))], solid=False)
+# (the lips 0.7 past the brow's underside and the sill's top and butted on the posts, the posts 0.7 past both and
+# 0.8 off the side panels: they shared those planes)
+cm.mesh(rig, "hullMid", [box((2 * SD + 1.6, 3.0, 2.6), at=cam(D - 2.4, 0, UP + 0.6)),
+                         box((2 * SD + 1.6, 3.0, 1.6), at=cam(D - 2.2, 0, -DN - 0.1)),
+                         box((1.6, 3.0, UP + DN + 1.4), at=cam(D - 2.2, SD + 1.6, (UP - DN) / 2)),
+                         box((1.6, 3.0, UP + DN + 1.4), at=cam(D - 2.2, -SD - 1.6, (UP - DN) / 2))], solid=False)
 cm.mesh(rig, "team", [box((90, 1.2, 4.5), at=cam(D - 1.8, 0, UP + 7.5))], solid=False)
 cm.mesh(rig, "hud", [box((40, 1.0, 0.9), at=cam(D - 1.6, 0, -DN - 3.0))], solid=False)
 cm.mesh(rig, "chrome", [sphere(0.9, at=cam(D - 1.8, x, UP + 14), steps=6) for x in range(-40, 41, 10)] +

@@ -2,31 +2,4 @@
 # One catalog name a line; take a model off when its fix lands (the check says when a listed model is clean).
 # A model with hits that is not here fails the check.
 
-# resource
-ore_0
-
-# unit
-atlas_blue
-comet_blue
-dropship_blue
-firefly_blue
-hailstorm_blue
-juggernaut_blue
-kestrel_blue
-longbow_blue
-peregrine_blue
-ranger_blue
-scorpion_blue
-
-# cockpit
-cockpit_atlas_blue
-cockpit_comet_blue
-cockpit_dropship_blue
-cockpit_firefly_blue
-cockpit_hailstorm_blue
-cockpit_juggernaut_blue
-cockpit_kestrel_blue
-cockpit_longbow_blue
-cockpit_peregrine_blue
-cockpit_ranger_blue
-cockpit_scorpion_blue
+# (none: every model passed on 2026-10-19)

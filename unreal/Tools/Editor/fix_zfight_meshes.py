@@ -12,8 +12,10 @@ The faces of a skin (a plate, a band, a visor round a dome: all its moved faces 
 surface: each vertex along its moved faces' normals together, so every one of them ends 2 cm out. A solid flush with
 another on opposite faces (a joint: a toe plate in a sole) would swell that way, so it shrinks 1 cm a side about its
 middle instead.
+A unit or a cockpit (a small model seen close) moves 0.7 cm, not 2, and grows at a joint too: a hazard band flush with
+its mast on every side shrank inside it and vanished, and 2 cm steps turned the Dropship's flat emblem into blocks.
 A solid is a connected piece of one mesh (its vertices welded by position). It saves the meshes it changed and checks
-again, up to three rounds, and logs what it moved. The model scripts' models are fixed in their scripts instead.
+again, up to three rounds (five for a unit), and logs what it moved. The model scripts' models are fixed in their scripts instead.
 """
 import collections
 import math
@@ -29,6 +31,8 @@ import check_models as C  # noqa: E402
 
 OUT = 2.0  # cm
 INSET = 1.0  # cm: a solid flush with another on opposite faces (a joint) shrinks this much on every side instead
+SMALL = ("unit", "cockpit")  # these move SMALL_OUT and never shrink
+SMALL_OUT = 0.7  # cm
 
 
 def log(s):
@@ -134,7 +138,9 @@ def area(t):
 
 def fix_model(model):
     moved_total = []
-    for rnd in range(3):
+    small = model.get("category") in SMALL
+    out = SMALL_OUT if small else OUT
+    for rnd in range(5 if small else 3):
         meshes, tris = load(model)
         found = []
         C.check(tris, collect=found)
@@ -144,8 +150,13 @@ def fix_model(model):
         size = collections.Counter()
         for t in tris:
             size[(t.mesh, info[t.mesh][0][t.vids[0]])] += area(t)
-        # for each pair, the smaller solid's plane moves out: {(mesh, solid): {(plane key): normal}}
+        # for each pair, the smaller solid's plane moves out: {(mesh, solid): {(plane key): (normal, d, steps)}}. Layers
+        # stacked in one plane (an emblem: a white cross inlaid in a blue plate, a red one in the white) step out in one
+        # round, each a step above the larger one it lies on: moved one step each, they caught up and climbed again
         moves, patch_moves = {}, collections.defaultdict(dict)
+        smaller = collections.defaultdict(lambda: collections.defaultdict(set))  # plane -> solid -> the larger solids
+        plane_of = {}  # (plane, solid) -> the solid's own (normal, d) there
+        picked = []
         patches = None
         for a, b, _ in found:
             sa, sb = (a.mesh, info[a.mesh][0][a.vids[0]]), (b.mesh, info[b.mesh][0][b.vids[0]])
@@ -158,12 +169,28 @@ def fix_model(model):
                 pick = a if pa[1] <= pb[1] else b
                 for v in (patches[id(pick)][2]):
                     prev = patch_moves[pick.mesh].get(v, (0.0, 0.0, 0.0))
-                    patch_moves[pick.mesh][v] = tuple(prev[i] + pick.n[i] * OUT for i in range(3)) if v not in \
+                    patch_moves[pick.mesh][v] = tuple(prev[i] + pick.n[i] * out for i in range(3)) if v not in \
                         patch_moves[pick.mesh] else prev
                 continue
-            pick = a if size[sa] <= size[sb] else b
-            s = sa if pick is a else sb
-            moves.setdefault(s, {})[(round(pick.n[0], 2), round(pick.n[1], 2), round(pick.n[2], 2), round(pick.d))] = (pick.n, pick.d)
+            pick = a if (size[sa], sa) <= (size[sb], sb) else b
+            s, big = (sa, sb) if pick is a else (sb, sa)
+            picked.append(((round(pick.n[0], 2), round(pick.n[1], 2), round(pick.n[2], 2)), pick.d, s, big, pick.n))
+        # one plane: the same normal, d chained within 1 cm (planes 0.37 apart rounded to two keys and chased each other)
+        picked.sort(key=lambda e: (e[0], e[1]))
+        cid, prev = 0, None
+        for nk, d, s, big, n in picked:
+            if prev is None or prev[0] != nk or d - prev[1] > 1.0:
+                cid += 1
+            prev = (nk, d)
+            smaller[cid][s].add(big)
+            plane_of.setdefault((cid, s), (n, d))
+        for pk, under in smaller.items():
+            steps = {}
+            for s in sorted({x for v in under.values() for x in v} | set(under), key=lambda x: (size[x], x), reverse=True):
+                steps[s] = 1 + max(steps[b] for b in under[s]) if s in under else 0  # (the larger ones come first)
+            for s, k in steps.items():
+                if k:
+                    moves.setdefault(s, {})[pk] = plane_of[(pk, s)] + (k,)
         changed = collections.defaultdict(dict)  # mesh -> {vertex: displacement (model frame)}
         for mid, disp in patch_moves.items():
             changed[mid].update(disp)
@@ -171,8 +198,8 @@ def fix_model(model):
         for (mid, root), planes in moves.items():
             m = meshes[mid]
             roots, key = info[mid]
-            normals = [n for n, _ in planes.values()]
-            if any(C._dot(a, b) < -0.5 for a in normals for b in normals):
+            normals = [n for n, _, _ in planes.values()]
+            if not small and any(C._dot(a, b) < -0.5 for a in normals for b in normals):
                 # a joint (a piece flush with another on opposite sides: a toe plate in a sole): growing it there would
                 # swell it, so the smaller piece shrinks about its middle, every side INSET in
                 vs = [v for v in range(len(key)) if roots[v] == root]
@@ -188,10 +215,12 @@ def fix_model(model):
             # a skin (a plate, a band, a visor round a dome: its faces all one way): an offset surface, each vertex along
             # its moved faces' normals together, far enough that every one of those faces stands OUT out
             on = collections.defaultdict(list)  # position -> the normals of its moved planes
-            for n, d in planes.values():
+            far = collections.Counter()  # position -> the most steps out of its planes
+            for n, d, k in planes.values():
                 for v in range(len(key)):
                     if roots[v] == root and abs(C._dot(n, m["placed"][v]) - d) < C.D_TOL and n not in on[key[v]]:
                         on[key[v]].append(n)
+                        far[key[v]] = max(far[key[v]], k)
             for v in range(len(key)):
                 ns = on.get(key[v]) if roots[v] == root else None
                 if not ns:
@@ -199,12 +228,12 @@ def fix_model(model):
                 sm = [sum(n[i] for n in ns) for i in range(3)]
                 ln = math.sqrt(sum(c * c for c in sm))
                 dirn = [c / ln for c in sm]
-                mag = OUT / max(0.25, min(C._dot(n, dirn) for n in ns))
+                mag = far[key[v]] * out / max(0.25, min(C._dot(n, dirn) for n in ns))
                 prev = changed[mid].get(v, (0.0, 0.0, 0.0))
                 changed[mid][v] = tuple(prev[i] + dirn[i] * mag for i in range(3))
             moved_total.append("%s solid %d: %d plane(s)" % (mid, root, len(planes)))
         for mid, disp in changed.items():
-            write(meshes[mid], disp)
+            write(meshes[mid], disp, out)
         log("%s, round %d: %d overlapping triangle pairs, moved %d solid planes in %d meshes" % (
             model["name"], rnd + 1, len(found), sum(len(p) for p in moves.values()), len(changed)))
     meshes, tris = load(model)
@@ -213,7 +242,7 @@ def fix_model(model):
     return pairs
 
 
-def write(mesh, disp):
+def write(mesh, disp, out=OUT):
     """Move the vertices by their model-frame displacements and save the static mesh."""
     sm = unreal.load_asset(mesh["path"])
     dm = unreal.DynamicMesh()
@@ -234,7 +263,7 @@ def write(mesh, disp):
     _, outcome = unreal.GeometryScript_AssetUtils.copy_mesh_to_static_mesh(dm, sm, opts, unreal.GeometryScriptMeshWriteLOD())
     if outcome != unreal.GeometryScriptOutcomePins.SUCCESS:
         raise RuntimeError("cannot update " + mesh["path"])
-    unreal.EditorAssetLibrary.set_metadata_tag(sm, "AcZFight", "moved %d vertices 2 cm out (fix_zfight_meshes.py)" % len(disp))
+    unreal.EditorAssetLibrary.set_metadata_tag(sm, "AcZFight", "moved %d vertices %g cm out (fix_zfight_meshes.py)" % (len(disp), out))
     unreal.EditorAssetLibrary.save_loaded_asset(sm)
 
 

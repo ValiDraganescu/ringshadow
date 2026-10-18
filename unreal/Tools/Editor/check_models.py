@@ -38,6 +38,15 @@ D_TOL = 0.5
 MIN_AREA = 1.0
 STRICT = ("building", "construction")  # listed first in the report
 REPORT = os.path.join(K.REPO, "art", "models", "zfight-report.md")
+# Parts the pose always keeps apart though they share a place at rest: pairs between two parts with one of these name
+# prefixes are not counted (each with why).
+POSED_APART = {
+    "pulse": "the Dropship's heal-beam pulses run along the beam a third of a cycle apart (AcPoseAir.cpp, PoseDropship)",
+}
+
+
+def posed_apart(a, b):
+    return any(a.startswith(k) and b.startswith(k) and a != b for k in POSED_APART)
 ALLOW = os.path.join(K.REPO, "art", "models", "zfight-allow.txt")
 
 
@@ -112,6 +121,12 @@ def triangles(mesh_id, pts, tris):
     return out
 
 
+def _corners(t):
+    """A triangle's corners welded by position (0.01 cm), as fix_zfight_meshes welds a solid: a face split per
+    triangle for its flat normals still shares the corner it was fanned from."""
+    return {tuple(round(c, 2) for c in p) for p in t.pts}
+
+
 def _key(n):
     return (round(n[0] * 50), round(n[1] * 50), round(n[2] * 50))
 
@@ -150,8 +165,11 @@ def check(tris, collect=None):
                 b = group[y]
                 if b.d - a.d > D_TOL:
                     break
-                if _dot(a.n, b.n) < COS_TOL or K.exclusive_parts(a.mesh.split("/")[0], b.mesh.split("/")[0]):
+                pa, pb = a.mesh.split("/")[0], b.mesh.split("/")[0]
+                if _dot(a.n, b.n) < COS_TOL or K.exclusive_parts(pa, pb) or posed_apart(pa, pb):
                     continue
+                if a.mesh == b.mesh and _corners(a) & _corners(b):
+                    continue  # a fold in one face (a concave cap fanned from one corner): one surface, not two
                 if b.lo[0] >= a.hi[0] or a.lo[0] >= b.hi[0] or b.lo[1] >= a.hi[1] or a.lo[1] >= b.hi[1]:
                     continue
                 poly = a.flat
@@ -188,6 +206,8 @@ def check(tris, collect=None):
 
 
 def selftest():
+    ids = iter(range(10 ** 6))  # each corner its own vertex
+
     def quad(mesh, z, x0, x1, y0, y1, up=True):
         a, b, c, d = (x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)
         # outward +z: (b - a) x (c - a) must point down (into the solid)
@@ -195,6 +215,7 @@ def selftest():
         out = []
         for p, q, r in tris:
             out += triangles(mesh, [p, q, r], [(0, 1, 2)])
+            out[-1].vids = (next(ids), next(ids), next(ids))
         return out
     t = quad("A", 0, 0, 10, 0, 10) + quad("B", 0.2, 5, 15, 0, 10)
     pairs, _ = check(t)
@@ -208,7 +229,12 @@ def selftest():
     assert not check(t)[0], check(t)[0]
     _, same = check(quad("A", 0, 0, 10, 0, 10) + quad("B", 0, 0, 10, 0, 10))
     assert same[("A", "B")] == 2 and same[("B", "A")] == 2, same
-    log("selftest: the six cases hold")
+    # a fold: two triangles of one face fanned from one corner, overlapping (the corner one vertex, or two at one place)
+    fold = triangles("A", [(0, 0, 0), (0, 10, 0), (10, 10, 0), (10, 0, 0)], [(0, 2, 1), (0, 3, 1)])
+    assert not check(fold)[0], check(fold)[0]
+    fold = triangles("A", [(0, 0, 0), (0, 10, 0), (10, 10, 0), (10, 0, 0), (0, 0, 0)], [(0, 2, 1), (4, 3, 1)])
+    assert not check(fold)[0], check(fold)[0]
+    log("selftest: the eight cases hold")
 
 
 # --- the catalog, in the editor ------------------------------------------------------------------------------------
@@ -313,8 +339,9 @@ def main():
         for a, b in dups:
             lines.append("| %s | %s | duplicate: every triangle of A lies on B | | |" % (a, b))
         lines.append("")
-    if not only:  # a run on a few models leaves the whole catalog's report as it is
-        with open(REPORT, "w") as f:
+    out = REPORT if not only else os.environ.get("AC_CHECK_REPORT")  # (a run on a few models: its own file, if named)
+    if out:
+        with open(out, "w") as f:
             f.write("\n".join(lines))
     log("report: %s (%d models with hits, %d of them waiting in %s)" % (REPORT if not only else "not written (a run on "
         "a few models)", len(rows), len(rows) - len(failing), ALLOW))

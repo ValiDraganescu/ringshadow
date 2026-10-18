@@ -24,7 +24,7 @@ from ac_modelkit import Model, box, cyl, cone, sphere, bar, loft, ring_box  # no
 
 WALK = "AcPoseVehicles.cpp:PoseAtlas"
 
-m = Model("atlas", category="unit", notes=[
+m = Model("atlas", category="unit", coplanar_check=True, notes=[
     "Heavy walker, about 285 cm to the stack tops. Pose: PoseAtlas (to write): walk cycle from distance walked, torso yaw, "
     "cannon pitch and recoil, vents glow after each volley, quake stomp on one leg.",
     "Parts as in docs/new-units.md, 'Looks' (hips, knees, ankles, feet, torso, cannons, vents, searchlight, kneeLamps); smoke_0/1 are the stacks' particle sockets."])
@@ -74,8 +74,9 @@ m.mesh(torso, "hazard", [box((34, 40, 2.5), at=(-14, -34, 252.5)), box((34, 40, 
 m.mesh(torso, "hazard", [box((30, 4, 2.4), at=(-44, 0, 249.2))], solid=False)
 # cockpit slit: smoked glass in a heavy gunmetal brow and sill
 m.mesh(torso, "canopy", box((2.5, 50, 7), at=(66.8, 0, 226)), solid=False)
-m.mesh(torso, "hullDark", [box((9, 62, 6), at=(64, 0, 232.5)), box((7, 60, 3.5), at=(63.5, 0, 220)),
-                           box((7, 4, 14), at=(64, -29, 226)), box((7, 4, 14), at=(64, 29, 226))], solid=False)
+# (the sill 0.7 out of the slit's face, the side posts between the brow and the sill: no faces shared)
+m.mesh(torso, "hullDark", [box((9, 62, 6), at=(64, 0, 232.5)), box((8.4, 60, 3.5), at=(63.5, 0, 220)),
+                           box((7, 4, 7.75), at=(64, -29, 225.625)), box((7, 4, 7.75), at=(64, 29, 225.625))], solid=False)
 # riveted bands round the boiler: two ring bands and a row of rivets on each
 for bx in (36, -22):
     w, h, p = trunk_at(bx)
@@ -104,9 +105,9 @@ vents = m.part("vents", parent=torso, at=(-58, 0, 222),
                driver=d("heat vents: glow after each volley", ("emission",)))
 # two framed vents on the back: glowing slats in a dark frame
 m.mesh(torso, "hullDark", [box((3.2, 38, 33), at=(-59.2, s * 26, 224)) for s in (-1, 1)] +
-       [box((3.2, 4, 33), at=(-59.2, s * 26 + o, 224)) for s in (-1, 1) for o in (-17, 17)], solid=False)
+       [box((6.4, 5.4, 34.4), at=(-59.2, s * 26 + o, 224)) for s in (-1, 1) for o in (-17, 17)], solid=False)  # (posts proud of the frame)
 m.mesh(vents, "ventGlow", [box((3, 30, 3), at=(-60.2, s * 26, 212.4 + 5.2 * k)) for s in (-1, 1) for k in range(6)] +
-       [box((14, 3, 18), at=(30, s * 67, 214)) for s in (-1, 1)], solid=False)
+       [box((14, 3, 18), at=(30, s * 67.6, 214)) for s in (-1, 1)], solid=False)  # (out of its frame's face)
 m.mesh(torso, "hullDark", [box((18, 2.5, 22), at=(30, s * 66.4, 214)) for s in (-1, 1)], solid=False)
 # stacks' smoke sockets
 for i, s in enumerate((-1, 1)):
@@ -117,8 +118,8 @@ for i, s in enumerate((-1, 1)):
 
 lamp = m.part("searchlight", parent=torso, at=(60, 0, 202),
               driver=d("searchlight: on at night, swings with the torso", ("emission", "rotation")))
-m.mesh(lamp, "hullDark", [cyl(14, 6, at=(60, 0, 202), axis="x"), cyl(15.6, 3, at=(58.5, 0, 202), axis="x")])
-m.mesh(lamp, "chrome", cyl(12.2, 1.2, at=(63.2, 0, 202), axis="x"), solid=False)
+m.mesh(lamp, "hullDark", [cyl(14, 6, at=(60, 0, 202), axis="x"), cyl(15.6, 3, at=(59.2, 0, 202), axis="x")])  # (their backs 0.7 apart)
+m.mesh(lamp, "chrome", cyl(12.2, 1.2, at=(64.6, 0, 202), axis="x"), solid=False)  # (in front of the armour plate)
 m.mesh(lamp, "floodGlow", cyl(10.5, 4, at=(64, 0, 202), axis="x"))
 
 # --- cannons: housing and barrel pitch together about the trunnion --------------------------------------------
@@ -134,7 +135,7 @@ for i, s in enumerate((-1, 1)):
     m.mesh(c, "hullMid", [cyl(9.0, 4, at=(x, s * 42, 270), axis="x") for x in (62, 84, 106)], solid=False)
     m.mesh(c, "hullMid", [box((16, 1.6, 1.4), at=(8 + 0 * k, s * 42 + (k - 2) * 5.4, 286)) for k in range(5)] +
            [box((20, 1.2, 1.6), at=(10, s * 42 + 16.2 * t, 270 + o)) for t in (-1, 1) for o in (-6, 0, 6)], solid=False)
-    m.mesh(c, "hullDark", [box((8, 30, 3), at=(-28, s * 42, 282)), cyl(5.4, 0.7, at=(150.8, s * 42, 270), axis="x")], solid=False)
+    m.mesh(c, "hullDark", [box((8, 30, 3), at=(-28, s * 42, 282)), cyl(5.4, 0.7, at=(151.35, s * 42, 270), axis="x")], solid=False)
     m.mesh(c, "chrome", cyl(10.4, 2.4, at=(139, s * 42, 270), axis="x"), solid=False)
 
 # --- legs: hip, knee (forward bend), ankle, foot ----------------------------------------------------------------
@@ -152,7 +153,7 @@ for i, s in enumerate((-1, 1)):
     knee = m.part("knees_%d" % i, parent=hip, at=(KNEE[0], y, KNEE[1]), driver=d("knee bend of the walk cycle"))
     m.mesh(knee, "hullDark", cyl(15, 32, at=(KNEE[0], y, KNEE[1]), axis="y"))
     m.mesh(knee, "hullLight", bar((KNEE[0], y, KNEE[1]), (ANKLE[0], y, ANKLE[1] + 4), 26, 22))
-    m.mesh(knee, "team", [box((14, 32, 22), at=(KNEE[0] + 14, y, KNEE[1] + 2)),       # knee guard
+    m.mesh(knee, "team", [box((14, 33.4, 22), at=(KNEE[0] + 14, y, KNEE[1] + 2)),     # knee guard (wider than the joint)
                           box((8, 30, 38), at=(KNEE[0] + 8, y, 56), rot=(18, 0, 0))])   # shin plate
     m.mesh(knee, "hullDark", bar((12, y, 80), (-4, y, 46), 6.0, shape="cyl"), solid=False)
     m.mesh(knee, "chrome", bar((-4, y, 46), (-8, y, 37), 3.2, shape="cyl"), solid=False)
@@ -168,13 +169,16 @@ for i, s in enumerate((-1, 1)):
 
     foot = m.part("feet_%d" % i, parent=ankle, at=(ANKLE[0], y, 14), driver=d("foot lift and plant of the walk cycle"))
     m.mesh(foot, "hullMid", [box((26, 36, 12), at=(-13, y, 6))])        # heel
-    m.mesh(foot, "hullDark", [box((7, 12, 8), at=(-28.5, y, 4)), box((16, 40, 3), at=(-14, y, 12.8))], solid=False)   # the heel toe, ankle plate
-    toes = []
+    m.mesh(foot, "hullDark", [box((7, 12, 8), at=(-29.5, y, 4)), box((16, 40, 3), at=(-14, y, 12.8))], solid=False)   # the heel toe, ankle plate
+    # (the middle toe taller than the side ones and each cap 0.7 over its toe: they overlap at the root)
+    toes, caps = [], []
     for yaw in (-24, 0, 24):
         cx, cy = 8 + 24 * math.cos(math.radians(yaw)), y + 24 * math.sin(math.radians(yaw))
-        toes.append(box((48, 16, 10), at=(cx, cy, 5), rot=(0, yaw, 0)))
+        z0, h = {0: (0.0, 11.4), -24: (0.7, 10.0), 24: (1.4, 10.7)}[yaw]
+        toes.append(box((48, 16, h), at=(cx, cy, z0), rot=(0, yaw, 0), base=True))
+        caps.append(box((10, 14, h), at=(8 + 50 * math.cos(math.radians(yaw)), y + 50 * math.sin(math.radians(yaw)), z0 + 0.7),
+                        rot=(0, yaw, 0), base=True))
     m.mesh(foot, "hullMid", toes)
-    m.mesh(foot, "hullDark", [box((10, 14, 10), at=(8 + 50 * math.cos(math.radians(yaw)), y + 50 * math.sin(math.radians(yaw)), 5),
-                                  rot=(0, yaw, 0)) for yaw in (-24, 0, 24)])
+    m.mesh(foot, "hullDark", caps)
 
 m.write()

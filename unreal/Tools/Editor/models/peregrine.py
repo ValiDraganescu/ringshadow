@@ -22,7 +22,7 @@ from ac_modelkit import Model, box, cyl, cone, sphere, prism, loft, ring_box, ri
 Z0 = 50.0
 POSE = "AcPoseAir.cpp:PosePeregrine"
 
-m = Model("peregrine", category="unit", notes=[
+m = Model("peregrine", category="unit", coplanar_check=True, notes=[
     "Light flyer, about 320 cm long with the needle nose; the pose function is PosePeregrine (to write).",
     "Parts: flaps_0/1, fins_0/1, engines_0/1 (+ glow, glow_2 and emitter_1/2 sockets), missiles_0..3, beacon_0/1."])
 for name in ("hullLight", "hullMid", "hullDark", "team", "chrome", "glowCold", "glowRed", "glowBlue"):
@@ -62,14 +62,16 @@ m.mesh(body, "hullDark", [prism([(CX + CHL * 0.98 * math.cos(2 * math.pi * k / 2
 # dark intakes on the flanks with a steel lip, a cyan light strip under each
 for s in (-1, 1):
     m.mesh(body, "hullDark", box((30, 9, 11), at=(-14, s * 24, Z0 + 2)))
-    m.mesh(body, "hullMid", [box((34, 12, 2.2), at=(-14, s * 24, Z0 + 8.2)), box((34, 12, 2.2), at=(-14, s * 24, Z0 - 4.2)),
-                             box((2.4, 12, 14), at=(-30.5, s * 24, Z0 + 2))], solid=False)
-    m.mesh(body, "glowBlue", [box((32, 1.3, 2.0), at=(-14, s * 29.6, Z0 - 6.8)),
+    # (the plates end inside the lip, the lip wider and taller than them and between the nacelle's planes: the cockpit,
+    # which leaves the intake out, shows what the unit hid)
+    m.mesh(body, "hullMid", [box((33.3, 12, 2.2), at=(-13.65, s * 24, Z0 + 8.2)), box((33.3, 12, 2.2), at=(-13.65, s * 24, Z0 - 4.2)),
+                             box((1.7, 13.4, 15.9), at=(-30.45, s * 24, Z0 + 2.05))], solid=False)
+    m.mesh(body, "glowBlue", [box((32, 1.3, 2.0), at=(-14, s * 29.6, Z0 - 7.6)),
                               box((22, 1.3, 1.6), at=(54, s * 13.2, Z0 - 3.5))], solid=False)
     m.mesh(body, "hullDark", [box((10, 6, 1.0), at=(40, s * 12, Z0 + 11.2))], solid=False)
 # panel steps on the upper fuselage: deep blue deck plates, a second one stepped up, vent slots
 m.mesh(body, "team", [box((46, 38, 2.4), at=(-62, 0, Z0 + 16.3)), box((26, 24, 2.4), at=(-76, 0, Z0 + 18.6)),
-                      box((24, 11, 2.0), at=(72, 0, Z0 + 9.4)), box((34, 15, 2.0), at=(46, 0, Z0 + 13.2))], solid=False)
+                      box((24, 11, 2.0), at=(72, 0, Z0 + 9.4)), box((34.6, 15, 2.0), at=(45.7, 0, Z0 + 12.6))], solid=False)
 m.mesh(body, "hullDark", [box((1.3, 14, 0.8), at=(-66 - 5 * k, 0, Z0 + 20.1)) for k in range(4)] +
        [box((1.3, 10, 0.8), at=(-50, s * 12, Z0 + 17.7)) for s in (-1, 1)], solid=False)
 # the keel: a dark gunmetal blade underneath
@@ -79,33 +81,36 @@ m.mesh(body, "hullDark", [box((84, 14, 5), at=(-40, 0, Z0 - 13.5)), box((30, 10,
 for s in (-1, 1):
     wing = [(10, 12), (-55, 112), (-100, 112), (-100, 85), (-78, 85), (-78, 35), (-100, 35), (-100, 12)]
     m.mesh(body, "team", prism([(x, s * y) for x, y in wing], 5, "xy", at=(0, 0, Z0 - 4)))
-    edge = [(10, 12), (-55, 112), (-66, 112), (-3, 12)]
-    m.mesh(body, "hullLight", prism([(x, s * y) for x, y in edge], 5.8, "xy", at=(0, 0, Z0 - 4)))
+    # (0.7 out of the wing's front line and off its root and tip: they shared those faces)
+    edge = [(10.59, 13.08), (-54.41, 113.08), (-66, 112.7), (-3, 12.7)]
+    # (each layer at least 0.7 cm off the next: the coplanar check; at this scale 2 cm would show)
+    m.mesh(body, "hullLight", prism([(x, s * y) for x, y in edge], 7.6, "xy", at=(0, 0, Z0 - 4)))
     # panel lines on the wing top: thin dark strips along the chord and across it
-    m.mesh(body, "hullDark", [box((52, 0.9, 0.5), at=(-40, s * 60, Z0 - 1.3)), box((0.9, 58, 0.5), at=(-60, s * 62, Z0 - 1.3))], solid=False)
+    m.mesh(body, "hullDark", [box((52, 0.9, 0.5), at=(-40, s * 60, Z0 - 1.15)), box((0.9, 58, 0.5), at=(-60, s * 62, Z0 - 1.15))], solid=False)
     # wing-tip pod with its pointed nose, and the rail with its pylons under the wing
     m.mesh(body, "hullMid", [cyl(4.5, 36, at=(-72, s * 112, Z0 - 4), axis="x"),
                              cone(4.5, 0.8, 18, at=(-54, s * 112, Z0 - 4), axis="x", base=True)])
-    m.mesh(body, "hullDark", [box((26, 5.4, 11), at=(-84, s * 112, Z0 - 3)), box((12, 5.8, 2.5), at=(-96, s * 112, Z0 + 3.5)),
+    m.mesh(body, "hullDark", [box((26, 5.4, 11), at=(-84, s * 112, Z0 - 3)), box((12, 6.8, 2.5), at=(-96, s * 112, Z0 + 3.5)),
                               box((62, 3, 3), at=(-52, s * 65, Z0 - 9)),
-                              box((6, 3, 7), at=(-30, s * 65, Z0 - 8)), box((6, 3, 7), at=(-72, s * 65, Z0 - 8)),
-                              box((3, 22, 3), at=(-21, s * 65, Z0 - 9)), box((4, 22, 3), at=(-83, s * 65, Z0 - 9))])
+                              box((6, 4.6, 7), at=(-30, s * 65, Z0 - 8)), box((6, 4.6, 7), at=(-72, s * 65, Z0 - 8)),
+                              box((3, 22, 3), at=(-21, s * 65, Z0 - 10.2)), box((4, 22, 3), at=(-83, s * 65, Z0 - 10.2))])
 
 # --- flaps: the notch in each wing's trailing edge; pivot on the hinge line ------------------------
 for i, s in enumerate((-1, 1)):
     f = m.part("flaps_%d" % i, parent=body, at=(-78, s * 60, Z0 - 4),
                driver=d("wing flap: pitch with the bank and the turn"))
     m.mesh(f, "team", prism([(-22, s * -24), (0, s * -24), (0, s * 24), (-22, s * 24)], 4, "xy", at=(-78, s * 60, Z0 - 4)))
-    m.mesh(f, "hullLight", box((2, 48, 4.6), at=(-99, s * 60, Z0 - 4)), solid=False)
-    m.mesh(f, "hullDark", box((2.4, 48, 4.4), at=(-78.8, s * 60, Z0 - 4)), solid=False)
+    m.mesh(f, "hullLight", box((2, 49.4, 5.4), at=(-99.8, s * 60, Z0 - 4)), solid=False)
+    m.mesh(f, "hullDark", box((2.4, 49.4, 6.4), at=(-78.5, s * 60, Z0 - 4)), solid=False)
 
 # --- fins: tall, canted outward, hinged at the root --------------------------------------------------
 for i, s in enumerate((-1, 1)):
     f = m.part("fins_%d" % i, parent=body, at=(-78, s * 30, Z0 + 12),
                driver=d("tail fin: rudder swing with the turn"))
     m.mesh(f, "team", prism([(22, 0), (-38, 0), (-54, 66), (-28, 66)], 3.5, "xz", at=(-78, s * 30, Z0 + 12), rot=(0, 0, s * 20)))
-    m.mesh(f, "hullLight", prism([(22, 0), (-28, 66), (-35, 66), (14, 0)], 4.4, "xz", at=(-78, s * 30, Z0 + 12), rot=(0, 0, s * 20)))
-    m.mesh(f, "hullDark", prism([(24, 0), (-38, 0), (-40.5, 11), (13.5, 11)], 5.6, "xz", at=(-78, s * 30, Z0 + 12), rot=(0, 0, s * 20)))
+    # (the edge 0.7 out of the fin's outline and thicker, the root block 0.7 under both and thicker still)
+    m.mesh(f, "hullLight", prism([(22.9, -0.7), (-27.1, 66.7), (-35, 66.7), (14, -0.7)], 5.0, "xz", at=(-78, s * 30, Z0 + 12), rot=(0, 0, s * 20)))
+    m.mesh(f, "hullDark", prism([(24, -1.4), (-38.7, -1.4), (-40.5, 11), (13.5, 11)], 6.4, "xz", at=(-78, s * 30, Z0 + 12), rot=(0, 0, s * 20)))
 
 # --- engines: two nacelles side by side, a cold exhaust disc each -----------------------------------
 for i, s in enumerate((-1, 1)):
@@ -116,7 +121,7 @@ for i, s in enumerate((-1, 1)):
     m.mesh(e, "hullDark", cyl(14.5, 10, at=(-27, s * 22, Z0), axis="x"))
     m.mesh(e, "chrome", cyl(15, 3, at=(-118, s * 22, Z0), axis="x"))
     m.mesh(e, "hullLight", [cyl(17.8, 3, at=(x, s * 22, Z0), axis="x") for x in (-44, -66, -92)], solid=False)
-    m.mesh(e, "hullDark", [cyl(13.6, 5, at=(-115.5, s * 22, Z0), axis="x"), cyl(17.4, 1.5, at=(-55, s * 22, Z0), axis="x")], solid=False)
+    m.mesh(e, "hullDark", [cyl(13.6, 5, at=(-115.5, s * 22, Z0), axis="x"), cyl(17.7, 1.5, at=(-55, s * 22, Z0), axis="x")], solid=False)
     glow = m.part("glow" if i == 0 else "glow_2", parent=e, at=(-129, s * 22, Z0),
                   driver=dict(what="exhaust glow: scale and brightness with speed", channels=["scale", "emission"],
                               functions=[POSE]))
@@ -131,12 +136,13 @@ for i, y in enumerate((-74, -56, 56, 74)):
                 driver=d("seeker missile: hides on launch, returns when reloaded", ["visibility", "position"]))
     m.mesh(ms, "hullLight", [cyl(3.2, 44, at=(-57, y, Z0 - 17), axis="x"),
                              cone(3.2, 1.6, 11, at=(-29.5, y, Z0 - 17), axis="x")])
-    m.mesh(ms, "hullDark", [cyl(3.3, 4, at=(-79, y, Z0 - 17), axis="x"), cone(1.6, 0.35, 4.6, at=(-21.7, y, Z0 - 17), axis="x"),
-                            cyl(3.35, 1.6, at=(-46, y, Z0 - 17), axis="x"),
-                            prism([(-74, 0), (-79, 6.5), (-79, 0)], 0.8, "xy", at=(0, y, Z0 - 17)),
-                            prism([(-74, 0), (-79, 0), (-79, -6.5)], 0.8, "xy", at=(0, y, Z0 - 17)),
-                            prism([(-74, 0), (-79, 6.5), (-79, 0)], 0.8, "xz", at=(0, y, Z0 - 17)),
-                            prism([(-74, 0), (-79, 0), (-79, -2.8)], 0.8, "xz", at=(0, y, Z0 - 17))], solid=False)
+    m.mesh(ms, "hullDark", [cyl(3.8, 4, at=(-79, y, Z0 - 17), axis="x"), cone(1.6, 0.35, 4.6, at=(-21.7, y, Z0 - 17), axis="x"),
+                            cyl(3.8, 1.6, at=(-46, y, Z0 - 17), axis="x"),
+                            # (the fins' back edges 0.7 behind the body's end)
+                            prism([(-74, 0), (-79.7, 6.5), (-79.7, 0)], 0.8, "xy", at=(0, y, Z0 - 17)),
+                            prism([(-74, 0), (-79.7, 0), (-79.7, -6.5)], 0.8, "xy", at=(0, y, Z0 - 17)),
+                            prism([(-74, 0), (-79.7, 6.5), (-79.7, 0)], 0.8, "xz", at=(0, y, Z0 - 17)),
+                            prism([(-74, 0), (-79.7, 0), (-79.7, -2.8)], 0.8, "xz", at=(0, y, Z0 - 17))], solid=False)
 
 # --- wing-tip beacons (red, blink) -----------------------------------------------------------------------
 for i, s in enumerate((-1, 1)):
