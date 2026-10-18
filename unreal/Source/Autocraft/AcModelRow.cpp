@@ -81,6 +81,7 @@ USceneComponent* AAcModelRow::AddModel(const FAcModelInfo& Model, const FVector&
 		Part->SetRelativeTransform(P.Rest);
 		Part->RegisterComponent();
 		PartComponents[I] = Part;
+		PartsByName.Add(P.Name, Part);
 		Built.Add(Part);
 		for (const FAcModelMesh& X : P.Meshes)
 		{
@@ -106,7 +107,9 @@ USceneComponent* AAcModelRow::AddModel(const FAcModelInfo& Model, const FVector&
 	{
 		for (int32 I = 0; I < Model.Parts.Num(); ++I)
 		{
-			if (Model.Parts[I].bHidden) PartComponents[I]->SetVisibility(false, true);
+			const FString PartName = Model.Parts[I].Name.ToString();
+			const bool bShow = ShowPrefixes.ContainsByPredicate([&](const FString& Prefix) { return PartName.StartsWith(Prefix); });
+			if (Model.Parts[I].bHidden && !bShow) PartComponents[I]->SetVisibility(false, true);
 		}
 	}
 	Placed.Add({Model.Name, Holder});
@@ -122,6 +125,7 @@ void AAcModelRow::Build()
 	Built.Reset();
 	Placed.Reset();
 	PlacedMeshes.Reset();
+	PartsByName.Reset();
 
 	const FAcModelCatalog& Catalog = FAcModelCatalog::Get();
 	TSet<FString> Only;
@@ -216,6 +220,8 @@ void AAcModelRow::Focus(const FName Name, int32 Team)
 	}
 	Models = Name.ToString();
 	bPaletteRow = false;
+	FString Show;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AcModelShow="), Show, false)) Show.ParseIntoArray(ShowPrefixes, TEXT(","));
 	Build();
 	if (Placed.IsEmpty()) return;
 	USceneComponent* Holder = Placed[0].Holder;
@@ -248,13 +254,45 @@ void AAcModelRow::Focus(const FName Name, int32 Team)
 	FParse::Value(FCommandLine::Get(), TEXT("AcModelDistance="), DistanceScale);
 	const double D = Radius * 3.6 * DistanceScale;
 	const FVector Sk = AcSpace::ToSceneKit(Center);
-	const FVector CamPos = AcSpace::FromSceneKit(Sk.X, Sk.Y + 0.55 * D, Sk.Z + D);
+	FVector CamPos = AcSpace::FromSceneKit(Sk.X, Sk.Y + 0.55 * D, Sk.Z + D);
+	FVector LookAt = Center;
 	const FVector SunPos = AcSpace::FromSceneKit(-4.0, 8.0, 6.0);
+	auto ParseVec = [](const TCHAR* Key, FVector& Out)
+	{
+		FString Text;
+		TArray<FString> V;
+		if (!FParse::Value(FCommandLine::Get(), Key, Text, false) || Text.ParseIntoArray(V, TEXT(",")) != 3) return false;
+		Out = FVector(FCString::Atod(*V[0]), FCString::Atod(*V[1]), FCString::Atod(*V[2]));
+		return true;
+	};
+	// The model at the origin, not turned: model-frame cm are world cm.
+	if (ParseVec(TEXT("AcModelEye="), CamPos)) ParseVec(TEXT("AcModelLook="), LookAt);
+	// -AcModelPose=part:pitch,yaw,roll;...: parts turned from their rest.
+	FString PoseText;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AcModelPose="), PoseText, false))
+	{
+		TArray<FString> Turns;
+		PoseText.ParseIntoArray(Turns, TEXT(";"));
+		for (const FString& Turn : Turns)
+		{
+			FString PartName, Angles;
+			TArray<FString> A;
+			if (!Turn.Split(TEXT(":"), &PartName, &Angles) || Angles.ParseIntoArray(A, TEXT(",")) != 3) continue;
+			const TWeakObjectPtr<USceneComponent>* Part = PartsByName.Find(FName(*PartName));
+			if (!Part || !Part->IsValid())
+			{
+				UE_LOG(LogAutocraft, Error, TEXT("models: -AcModelPose: no part %s"), *PartName);
+				continue;
+			}
+			(*Part)->AddLocalRotation(FRotator(FCString::Atod(*A[0]), FCString::Atod(*A[1]), FCString::Atod(*A[2])));
+		}
+	}
 
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	FocusCamera = GetWorld()->SpawnActor<ACameraActor>(CamPos, (Center - CamPos).Rotation(), Params);
+	FocusCamera = GetWorld()->SpawnActor<ACameraActor>(CamPos, (LookAt - CamPos).Rotation(), Params);
 	FocusVerticalFov = 30.0;  // SceneKit's FOV is vertical; Tick turns it horizontal
+	FParse::Value(FCommandLine::Get(), TEXT("AcModelFov="), FocusVerticalFov);
 	FocusCamera->GetCameraComponent()->SetConstraintAspectRatio(false);
 	// The compare render has no ground.
 	for (TActorIterator<AActor> It(GetWorld()); It; ++It)

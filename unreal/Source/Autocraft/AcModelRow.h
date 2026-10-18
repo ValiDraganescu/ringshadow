@@ -20,6 +20,13 @@
 //   -AcModelTeam=N      draw the focused model in player N's colour.
 //   -AcModelDistance=F  move the camera F times as far.
 //   -AcModelFloor       keep the floor.
+//   -AcModelShow=A,B    show the parts that start hidden whose names start with A or B (an armed Citadel's
+//                       turrets: -AcModelShow=turrets,turretCradles,turretBarrels,turretTips).
+//   -AcModelEye=X,Y,Z   put the focus camera there instead, in the model's frame (UE cm, the model at the origin,
+//   -AcModelLook=X,Y,Z  not turned), looking at -AcModelLook (default the bounds' centre); -AcModelFov=V its
+//                       vertical FOV (default 30). For views from a doorway or inside a hall.
+//   -AcModelPose=P:PITCH,YAW,ROLL[;P:...]  turn part P from its rest about its pivot (UE degrees, in the
+//                       part's frame), e.g. a ramp open: -AcModelPose=ramp:0,0,-90.
 //   -AcModelView=V      front|right|back|left|top|3q: a camera on the focused model for the stencil sheet
 //                       (pipeline skill step 2). front|right|back|left|top are orthographic, all at one scale
 //                       and one centre (the bounds' centre; 1.2 x the longest side fits a 512 px panel); 3q is a
@@ -102,6 +109,12 @@ private:
 		FName Blend;
 	};
 	TArray<FPlacedMesh> PlacedMeshes;
+
+	/// The last model's part components by name (-AcModelPose).
+	TMap<FName, TWeakObjectPtr<USceneComponent>> PartsByName;
+
+	/// -AcModelShow: name prefixes of hidden parts to show anyway.
+	TArray<FString> ShowPrefixes;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<USceneComponent>> Built;
