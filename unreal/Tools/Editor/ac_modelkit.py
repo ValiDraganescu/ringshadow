@@ -251,6 +251,14 @@ class Prim:
     def add_to(self, dm):
         raise NotImplementedError
 
+    def faces(self):
+        """The flat faces in the model frame, [(outward normal, [points in order])]; none for a round or
+        hand-made prim (spheres, lofts), which the coplanar check leaves out."""
+        return []
+
+    def _world_faces(self, local):
+        return [(m_apply(n, self.R), [m_apply(p, self.R, self.at) for p in pts]) for n, pts in local]
+
     def _spec_head(self):
         return [self.kind, [r6(x) for x in self.at], [[r6(x) for x in row] for row in self.R]]
 
@@ -288,9 +296,57 @@ class Box(Prim):
         return [{"hi": [r6(hx / CM), r6(hz / CM), r6(hy / CM)], "lo": [r6(-hx / CM), r6(-hz / CM), r6(-hy / CM)],
                  "transform": [r6(x) for x in self._sk_matrix(off)]}]
 
+    def faces(self):
+        return self._world_faces(self._local_faces())
+
+    def _local_faces(self):
+        hx, hy = self.size[0] / 2, self.size[1] / 2
+        z0, z1 = self._zrange()
+        c = {(i, j, k): (sx, sy, z) for i, sx in enumerate((-hx, hx)) for j, sy in enumerate((-hy, hy))
+             for k, z in enumerate((z0, z1))}
+        quads = [((1, 0, 0), [c[1, 0, 0], c[1, 1, 0], c[1, 1, 1], c[1, 0, 1]]),
+                 ((-1, 0, 0), [c[0, 0, 0], c[0, 1, 0], c[0, 1, 1], c[0, 0, 1]]),
+                 ((0, 1, 0), [c[0, 1, 0], c[1, 1, 0], c[1, 1, 1], c[0, 1, 1]]),
+                 ((0, -1, 0), [c[0, 0, 0], c[1, 0, 0], c[1, 0, 1], c[0, 0, 1]]),
+                 ((0, 0, 1), [c[0, 0, 1], c[1, 0, 1], c[1, 1, 1], c[0, 1, 1]]),
+                 ((0, 0, -1), [c[0, 0, 0], c[1, 0, 0], c[1, 1, 0], c[0, 1, 0]])]
+        return quads
+
     def add_to(self, dm):
         unreal.GeometryScript_Primitives.append_box(dm, _opts(), self._transform(), self.size[0], self.size[1],
                                                     self.size[2], 0, 0, 0, _origin(self.base))
+
+
+class Panel(Box):
+    """A box whose local +X face shows a whole picture (UV 0 to 1, upright to a viewer looking at that face, its
+    top at local +Z); the other faces take the picture's corner (UV 0, 0). Screens: give it a material with
+    `emissive_texture`. Hand-made triangles, flat shaded, wound as the kit's boxes."""
+
+    kind = "panel"
+
+    def add_to(self, dm):
+        hy = self.size[1] / 2
+        z0, z1 = self._zrange()
+        verts, norms, uvs, tris = [], [], [], []
+        for n, q in self._local_faces():
+            nw = m_apply(n, self.R)
+            for a, b, c in ((q[0], q[1], q[2]), (q[0], q[2], q[3])):
+                if v_dot(v_cross(v_sub(b, a), v_sub(c, a)), n) > 0:  # the rule: (b - a) x (c - a) into the solid
+                    b, c = c, b
+                base = len(verts)
+                for p in (a, b, c):
+                    verts.append(unreal.Vector(*m_apply(p, self.R, self.at)))
+                    norms.append(unreal.Vector(*nw))
+                    # a viewer facing the +X face has local -Y on the right
+                    uvs.append(unreal.Vector2D((hy - p[1]) / (2 * hy), (z1 - p[2]) / (z1 - z0)) if n[0] > 0.5
+                               else unreal.Vector2D(0.0, 0.0))
+                tris.append(unreal.IntVector(base, base + 1, base + 2))
+        buf = unreal.GeometryScriptSimpleMeshBuffers()
+        buf.set_editor_property("vertices", verts)
+        buf.set_editor_property("normals", norms)
+        buf.set_editor_property("uv0", uvs)
+        buf.set_editor_property("triangles", tris)
+        unreal.GeometryScript_MeshEdits.append_buffers_to_mesh(dm, buf, 0)
 
 
 class Cyl(Prim):
@@ -320,6 +376,21 @@ class Cyl(Prim):
         return [{"hi": [r6(r / CM), r6(self.h / 2 / CM), r6(r / CM)], "lo": [r6(-r / CM), r6(-self.h / 2 / CM), r6(-r / CM)],
                  "transform": [r6(x) for x in self._sk_matrix(off)], "radius": r6(r / CM), "half": r6(self.h / 2 / CM),
                  "round": "cylinder"}]
+
+    def faces(self):
+        # Geometry Script's ring starts at local +X and turns toward +Y (check_modelkit.py checks it)
+        z0, z1 = (0.0, self.h) if self.base else (-self.h / 2, self.h / 2)
+        ring = [(math.cos(2 * math.pi * k / self.sides), math.sin(2 * math.pi * k / self.sides)) for k in range(self.sides)]
+        lo = [(self.r0 * c, self.r0 * s, z0) for c, s in ring]
+        hi = [(self.r1 * c, self.r1 * s, z1) for c, s in ring]
+        out = [((0, 0, -1), lo)] if self.r0 > 0.01 else []
+        if self.r1 > 0.01:
+            out.append(((0, 0, 1), hi))
+        for k in range(self.sides):
+            q = [lo[k], lo[(k + 1) % self.sides], hi[(k + 1) % self.sides], hi[k]]
+            n = v_cross(v_sub(q[1], q[0]), v_sub(q[3], q[0]))
+            out.append((v_norm(n), q))
+        return self._world_faces(out)
 
     def add_to(self, dm):
         P = unreal.GeometryScript_Primitives
@@ -395,6 +466,16 @@ class Prism(Prim):
         h = self.thick / 2
         return [{"hi": [r6(max(xs) / CM), r6(h / CM), r6(max(ys) / CM)], "lo": [r6(min(xs) / CM), r6(-h / CM), r6(min(ys) / CM)],
                  "transform": [r6(x) for x in self._sk_matrix()]}]
+
+    def faces(self):
+        h = self.thick / 2
+        lo, hi = [(x, y, -h) for x, y in self.pts], [(x, y, h) for x, y in self.pts]
+        out = [((0, 0, -1), lo), ((0, 0, 1), hi)]
+        n = len(self.pts)
+        for k in range(n):  # the polygon winds counter-clockwise, so (dy, -dx) points out
+            (xa, ya), (xb, yb) = self.pts[k], self.pts[(k + 1) % n]
+            out.append((v_norm((yb - ya, xa - xb, 0.0)), [lo[k], lo[(k + 1) % n], hi[(k + 1) % n], hi[k]]))
+        return self._world_faces(out)
 
     def add_to(self, dm):
         verts = [unreal.Vector2D(x, y) for x, y in self.pts]
@@ -500,6 +581,11 @@ def box(size, at=(0, 0, 0), rot=(0, 0, 0), base=False):
     return Box(size, at, rot3(*rot), base)
 
 
+def panel(size, at=(0, 0, 0), rot=(0, 0, 0), base=False):
+    """A box (dx, dy, dz) like box(), its local +X face carrying a whole picture (Panel)."""
+    return Panel(size, at, rot3(*rot), base)
+
+
 def cyl(r, h, at=(0, 0, 0), axis="z", rot=(0, 0, 0), base=False, r1=None, sides=16):
     """A cylinder of radius r, height h along `axis` (its local Z), centred on
     `at`, or starting at it with base=True. r1 makes it a cone frustum, r at
@@ -589,6 +675,8 @@ def load_catalog():
 
 def save_catalog(doc):
     """Write the catalog as import_models.py does (indent 1, no trailing newline), atomically."""
+    if DRY:
+        return
     tmp = A.CATALOG_FILE + ".tmp"
     with open(tmp, "w") as f:
         json.dump(doc, f, indent=1)
@@ -638,8 +726,10 @@ class Part:
 
 
 class Model:
-    def __init__(self, base, category="unit", facing=None, notes=None):
+    def __init__(self, base, category="unit", facing=None, notes=None, coplanar_check=False):
+        """coplanar_check=True: write() refuses a model in which two solids share a face (coplanar_faces())."""
         self.base = base
+        self.coplanar_check = coplanar_check
         self.canonical = base + "_blue"
         self.category = category
         self.facing = facing or ("+X forward, +Y up, +Z its right side (heading 0 in the simulation)" if category != "building"
@@ -670,6 +760,9 @@ class Model:
         solid=False marks decoration (rivets, rings, light strips, slats): drawn, but no ray piece."""
         if isinstance(prims, Prim):
             prims = [prims]
+        line = sys._getframe(1).f_lineno  # the model script's line, for the coplanar check's report
+        for pr in prims:
+            pr.src = "%s/%s line %d" % (part.name, material, line)
         if not solid:
             for pr in prims:
                 pr.decor = True
@@ -682,14 +775,16 @@ class Model:
         return _catalog_materials(self._doc)
 
     def material(self, name, parent=None, color=None, metallic=0.0, roughness=0.5, emissive=None, team=(),
-                 blend="opaque", opacity=None, double_sided=False, params=None):
+                 blend="opaque", opacity=None, double_sided=False, params=None, emissive_texture=None):
         """Declare a material. With no `parent` it is a name that already exists in the catalog (hullLight,
         hullMid, hullDark, hazard, team, chrome, glowCold, glowRed, ...), reused as it is. With `parent`
         ('hull' lit, 'emissive' unlit lamp, 'additive') a new instance is made on first write: color is the
         base colour (linear rgb), emissive the lamp colour (linear, may be above 1), team the flags
         (TeamTint, TeamGlow). The brood's painted masters are parents too ('broodEgg', 'broodOpal', 'broodGlass':
         make_brood_materials.py); `params` sets their own parameters ({name: rgb tuple or scalar}). The key is a hash of the description, so the same description is one
-        instance in every model."""
+        instance in every model. `emissive_texture` (a picture's path from the repo root, with a grey `emissive`: its
+        strength) lights the picture instead of a flat colour, clamped at its edges (a screen on a `panel`); the
+        key hashes the picture's bytes, so a new picture is a new instance."""
         if parent is None:
             known = self._known()
             if name not in known:
@@ -702,6 +797,9 @@ class Model:
                 "blend": blend, "opacity": opacity, "doubleSided": double_sided}
         if params:
             spec["params"] = {k: list(v) if isinstance(v, (tuple, list)) else v for k, v in params.items()}
+        if emissive_texture:
+            with open(os.path.join(REPO, emissive_texture), "rb") as f:
+                spec["emissiveTexture"] = [emissive_texture, hashlib.md5(f.read()).hexdigest()[:12]]
         key = hashlib.md5(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:12]
         path = A.mi_asset_path({"name": name, "key": key})
         self._materials[name] = Material(name, key, A.object_path(path), blend, sorted(team), spec)
@@ -714,7 +812,20 @@ class Model:
 
     # -- writing
     def write(self, with_assets=True, catalog=True):
-        """Build the assets and merge the catalog entry. Returns the entry."""
+        """Build the assets and merge the catalog entry. Returns the entry. Under `python3 ac_modelkit.py
+        coplanar <script>` (DRY) it only runs the coplanar check."""
+        if self.coplanar_check or DRY:
+            hits = self.coplanar()
+            for h in hits:
+                log("coplanar: " + h)
+            log("coplanar: %s, %d pairs of faces share a plane" % (self.base, len(hits)))
+            if hits:
+                if DRY:
+                    DRY_HITS.extend(hits)
+                else:
+                    raise RuntimeError("%s: %d pairs of coplanar faces (z-fighting), see the log" % (self.base, len(hits)))
+        if DRY:
+            with_assets, catalog = False, False
         for p in self.parts:
             for mat in p.meshes:
                 self._material(mat)
@@ -727,8 +838,14 @@ class Model:
             how = merge_entry(doc, entry)
             save_catalog(doc)
             log("catalog: %s %s (%d models)" % (how, entry["name"], len(doc["models"])))
-        self._parts_txt()
+        if not DRY:
+            self._parts_txt()
         return entry
+
+    def coplanar(self, others=()):
+        """coplanar_faces() over every prim of every part at rest (hidden parts too), plus `others` (prims of
+        a model this one stands on)."""
+        return coplanar_faces([pr for p in self.parts for prims in p.meshes.values() for pr in prims] + list(others))
 
     def _part_prims(self, part, material):
         Rw, tw = part.R, part.at
@@ -857,6 +974,10 @@ def make_material_instance(mat, masters, make_materials):
         desc["opacity"] = s["opacity"]
     if s["doubleSided"]:
         desc["doubleSided"] = True
+    if s.get("emissiveTexture"):
+        desc["emissiveTexture"] = os.path.join(REPO, s["emissiveTexture"][0])  # absolute: os.path.join keeps it
+        desc["emissiveIntensity"] = max(s["emissive"] or (1.0,))
+        desc["wrap"] = "clamp"
     mi = make_materials.make_instance(desc, set(s["team"]), masters)
     if s["parent"] in BROOD_PARENTS:
         import make_brood_materials
@@ -949,6 +1070,99 @@ def write_mesh(path, prims, mi, blend):
 
 # --- checks (plain Python; and in the editor with the unreal part) ----------------------
 
+DRY = False      # `python3 ac_modelkit.py coplanar <script>`: no assets, no catalog writes
+DRY_HITS = []
+
+
+def _clip(poly, a, b):
+    """The part of a convex 2D polygon on the left of the line a -> b."""
+    out = []
+    side = lambda p: (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+    for i in range(len(poly)):
+        p, q = poly[i], poly[(i + 1) % len(poly)]
+        sp, sq = side(p), side(q)
+        if sp >= 0:
+            out.append(p)
+        if (sp >= 0) != (sq >= 0):
+            t = sp / (sp - sq)
+            out.append((p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t))
+    return out
+
+
+def _ccw(poly):
+    return poly if _signed_area(poly) >= 0 else list(reversed(poly))
+
+
+def _inside(prim, p, margin=0.1):
+    """Point p (model frame) lies inside the box or straight cylinder `prim` by at least `margin` cm (a
+    cylinder: inside the circle its flat sides touch)."""
+    R = prim.R
+    d = v_sub(p, prim.at)
+    l = (v_dot(d, R[0]), v_dot(d, R[1]), v_dot(d, R[2]))  # rows are orthonormal: the inverse is the transpose
+    if isinstance(prim, Box):
+        z0, z1 = prim._zrange()
+        return (abs(l[0]) < prim.size[0] / 2 - margin and abs(l[1]) < prim.size[1] / 2 - margin
+                and z0 + margin < l[2] < z1 - margin)
+    z0, z1 = (0.0, prim.h) if prim.base else (-prim.h / 2, prim.h / 2)
+    return math.hypot(l[0], l[1]) < prim.r0 * math.cos(math.pi / prim.sides) - margin and z0 + margin < l[2] < z1 - margin
+
+
+def coplanar_faces(prims, tol=0.5, min_area=1.0):
+    """Pairs of flat faces of different prims that face the same way in the same plane (within `tol` cm) and
+    overlap by more than `min_area` cm2: z-fighting, the two drawn at one depth. Faces back to back (a box on
+    another) face opposite ways and are fine; so are faces that only meet along an edge, and two faces pressed
+    against a third solid (the overlap's front side, 1 cm out, inside a box or a straight cylinder: skin plates'
+    backs on a wall), which nobody can see. Returns report lines."""
+    solids = [pr for pr in prims if isinstance(pr, Box) or (isinstance(pr, Cyl) and abs(pr.r0 - pr.r1) < 1e-6)]
+    buckets = {}
+    for i, pr in enumerate(prims):
+        for n, pts in pr.faces():
+            n = v_norm(n)
+            d = v_dot(n, pts[0])
+            key = (round(n[0], 3) + 0.0, round(n[1], 3) + 0.0, round(n[2], 3) + 0.0)
+            buckets.setdefault(key, []).append((d, i, n, pts))
+    hits = []
+    for key, faces in buckets.items():
+        n = v_norm(key)
+        a = (1.0, 0.0, 0.0) if abs(n[0]) < 0.9 else (0.0, 1.0, 0.0)
+        u = v_norm(v_cross(n, a))
+        v = v_cross(n, u)
+        faces.sort(key=lambda f: f[0])
+        flat = [_ccw([(v_dot(p, u), v_dot(p, v)) for p in f[3]]) for f in faces]
+        for x in range(len(faces)):
+            dx, ix = faces[x][0], faces[x][1]
+            for y in range(x + 1, len(faces)):
+                dy, iy = faces[y][0], faces[y][1]
+                if dy - dx > tol:
+                    break
+                if ix == iy:
+                    continue
+                poly = flat[x]
+                clip = flat[y]
+                for k in range(len(clip)):
+                    poly = _clip(poly, clip[k], clip[(k + 1) % len(clip)])
+                    if len(poly) < 3:
+                        break
+                area = abs(_signed_area(poly)) if len(poly) >= 3 else 0.0
+                if area > min_area:
+                    us, vs = [p[0] for p in poly], [p[1] for p in poly]
+                    cu, cv = sum(us) / len(us), sum(vs) / len(vs)
+                    c = v_add(v_add(v_mul(n, dx), v_mul(u, cu)), v_mul(v, cv))
+                    # buried: the overlap's front (its corners pulled 0.5 cm in on both axes, and its middle, 1 cm out) in boxes
+                    probes = [c]
+                    for pu, pv in poly:
+                        pu += math.copysign(min(0.5, abs(cu - pu)), cu - pu)
+                        pv += math.copysign(min(0.5, abs(cv - pv)), cv - pv)
+                        probes.append(v_add(v_add(v_mul(n, dx), v_mul(u, pu)), v_mul(v, pv)))
+                    probes = [v_add(q, n) for q in probes]
+                    if all(any(_inside(b, q) for b in solids if b is not prims[ix] and b is not prims[iy])
+                           for q in probes):
+                        continue
+                    hits.append("%s | %s: facing (%s), %.0f cm2 round (%.1f, %.1f, %.1f)" % (
+                        getattr(prims[ix], "src", "?"), getattr(prims[iy], "src", "?"),
+                        ", ".join("%g" % round(c_, 3) for c_ in n), area, c[0], c[1], c[2]))
+    return hits
+
 
 def selftest(verbose=True):
     """The round trip the skill asks for, on the Longbow's `hull` entry, plus the maths.
@@ -1031,5 +1245,30 @@ def selftest(verbose=True):
     return out
 
 
+def coplanar_selftest():
+    """Two boxes side by side with flush fronts are a hit; one set back 2 cm, or one on top of the other, is not."""
+    a = box((100, 100, 100), at=(0, 0, 0), base=True)
+    assert coplanar_faces([a, box((50, 100, 100), at=(75, 0, 0), base=True)]) == []  # meet along an edge only
+    assert len(coplanar_faces([a, box((20, 20, 20), at=(0, 40, 50))])) == 1           # a plate flush with a face
+    assert coplanar_faces([a, box((20, 20, 20), at=(0, 38, 50))]) == []               # sunk 2 cm
+    assert coplanar_faces([a, box((20, 20, 20), at=(0, 0, 100), base=True)]) == []     # stands on top
+    assert coplanar_faces([a, box((20, 20, 20), at=(0, 60, 50)), box((10, 30, 10), at=(0, 65, 50))]) == []  # backs on a
+    assert len(coplanar_faces([cyl(50, 10, base=True, sides=8), cyl(50, 20, base=True, sides=8)])) == 9     # same ring: 8 sides and a cap
+    log("coplanar_faces: the six cases hold")
+
+
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["coplanar"]:
+        # python3 ac_modelkit.py coplanar models/citadel.py [...]: run model scripts with no editor, report every
+        # pair of coplanar faces of every model they write, exit 1 on any
+        import runpy
+        import ac_modelkit as K  # the module the model scripts import (this file runs as __main__)
+        K.DRY = True
+        K.coplanar_selftest()
+        for script in sys.argv[2:]:
+            sys.argv = [script]
+            runpy.run_path(script, run_name="__main__")
+        K.log("coplanar: %d pairs in all" % len(K.DRY_HITS))
+        sys.exit(1 if K.DRY_HITS else 0)
     selftest()
+    coplanar_selftest()

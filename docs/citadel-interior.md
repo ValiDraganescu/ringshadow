@@ -376,7 +376,9 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
   and the doorway's threshold. Everything inside the hall, doorway or roof
   slabs is decoration above head height or flat on the floor. No solid
   part of the model lies outside ±6.0; the skin (panels, ribs, bands,
-  slits, markers, coping) stands up to 0.08 out, the side pipe 0.12, the
+  slits, markers, coping) stands up to 0.10 out (the corner edges and the
+  ribs' feet; 2026-10-18, no two solids share a face: each layer stands
+  2 cm off the one under it, `coplanar_check` in citadel.py), the side pipe 0.12, the
   floodlights over the door 0.18 (at z 4.0, over any unit's head). Outside the
   footprint only flat ground pieces: the open ramp and the apron plate
   before it (x ±2.6, to y 10.2, 0.02 high, no ray piece).
@@ -415,11 +417,20 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
   down (z 3.6) (`hallGlow`, Emission 1.0 steady); the team disc on the
   floor. Lumen lights the hall from the lamps and the open door.
 - **Gun stations** `gunStations_0..3` (corner order 0 (+x,+y), 1 (−x,+y),
-  2 (−x,−y), 3 (+x,−y)): a console 0.6 corner-ward of the gunner's point
-  (±4.0, ±4.0), its screen `gunScreens_k` (`glow_2399ff`, as the progress
-  lamps: 1.9 lit, 0.04 dark) toward that point, a conduit up to the
-  ceiling, a fold-down seat on its flank; the gunner's point itself stays
-  clear (a floor ring).
+  2 (−x,−y), 3 (+x,−y)), after the user's reference
+  (`art/models/citadel/ref/console-reference.jpg`, 2026-10-18): a squat
+  armoured console 1.0 wide, 0.8 deep, 0.9 tall on a hazard plinth with
+  lit yellow strips, a control deck with a joystick (the gunner's left)
+  and coloured buttons, a monitor leaning back on a stand to 1.7, cables,
+  a conduit up to the gun. It stands on the corner's diagonal facing the
+  gunner's point (±4.0, ±4.0), its middle 0.97 from it: every solid of it
+  is at least 0.51 from the point, and its back corners sink 0.35 into
+  the walls (built into the corner). The monitor's screen `gunScreens_k`
+  shows the gun's view, a baked horizon
+  (`unreal/Resources/Textures/citadel_gun_screen.png`, made by
+  `models/citadel_screen.py`) in the `gunScreen` material, lit by the pose
+  as before (1.9 lit, 0.04 dark). A hazard ring of radius 0.48 marks the
+  gunner's spot. No seats.
 - **Turrets** (`citadel_turrets.py`, `CORNER = 550`, `TOP = 900`): the
   parts as before plus `turretCradles_k` between `turrets_k` (yaw: SK euler
   (0, −aim, 0)) and `turretBarrels_k` (spin about X): the pitch, SK euler

@@ -39,7 +39,7 @@ PITCH_MIN = -20.0  # Defence::gunPitchMin
 CLEAR = 3.0     # cm the barrels keep off every solid
 PREFIXES = ("turrets_", "turretCradles_", "turretBarrels_", "turretTips_", "turretMuzzles_", "turretFlashes_")
 
-m = Model("citadelguns", category="building")
+m = Model("citadelguns", category="building", coplanar_check=True)
 for name in ("hullLight", "hullMid", "hullDark", "team", "chrome", "glowYellow"):
     m.material(name)
 # N1b: the base colour the hue (a white base washed the heat to white); a steady lit ring round each muzzle.
@@ -66,7 +66,8 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
                driver=d("corner turret %d: yaw toward its target (-aim); shown only on an armed Citadel" % k,
                         ("rotation", "visibility")))
     m.mesh(t, "hullDark", [cyl(26 * S, 8 * S, at=at(0, 0, 0), base=True, sides=20)])
-    m.mesh(t, "chrome", [cyl(27 * S, 2 * S, at=at(0, 0, 6), base=True, sides=20)], solid=False)
+    # (the bands and rings stand 2 cm off the faces they would share: the coplanar check of ac_modelkit)
+    m.mesh(t, "chrome", [cyl(27 * S, 2 * S, at=at(0, 0, 4.8), base=True, sides=20)], solid=False)
     # C1: the housing's back and the cheeks low (top at 24 and 27 of D1's 28 and 34), so the gun's eye
     # (Defence::gunEye, 1.2 over the mount, 0.4 behind it) sees the barrels and the muzzle ring over them
     m.mesh(t, "hullMid", [box((34 * S, 30 * S, 16 * S), at=at(-2, 0, 8), base=True)])
@@ -82,13 +83,13 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     m.mesh(b, "gunmetal", [cyl(10 * S, 18 * S, at=axis, axis="x", base=True, sides=14)])
     m.mesh(b, "hullDark", [cyl(12 * S, 2 * S, at=at(14 + 3.5 * j, 0, 22), axis="x", base=True, sides=14) for j in range(4)],
            solid=False)  # the ribbed jacket
-    m.mesh(b, "chrome", [cyl(11 * S, 2.5 * S, at=at(12, 0, 22), axis="x", base=True, sides=14)], solid=False)
+    m.mesh(b, "chrome", [cyl(11 * S, 2.5 * S, at=at(13.2, 0, 22), axis="x", base=True, sides=14)], solid=False)
     bores = [(math.cos(a) * 5.5, math.sin(a) * 5.5) for a in (j * math.pi / 3 for j in range(6))]
     m.mesh(b, "gunmetal", [cyl(2.4 * S, 30 * S, at=at(28, by, 22 + bz), axis="x", base=True, sides=8) for by, bz in bores])
     tip_x = 12 + 46
     tips = m.part("turretTips_%d" % k, parent=b, at=at(tip_x, 0, 22), hidden=True,
                   driver=d("corner turret %d's hot barrel ends: brighter while it fires" % k, ("emission", "visibility")))
-    m.mesh(tips, "gatlingHeat", [cyl(2.6 * S, 3 * S, at=at(tip_x - 1, by, 22 + bz), axis="x", base=True, sides=8)
+    m.mesh(tips, "gatlingHeat", [cyl(2.6 * S, 3 * S, at=at(tip_x, by, 22 + bz), axis="x", base=True, sides=8)
                                  for by, bz in bores], solid=False)
     # the lit muzzle ring round the cluster's end (on the turret: steady while the barrels spin inside it)
     m.mesh(cr, "muzzleRing", [cyl(9.5 * S, 2 * S, at=at(tip_x - 6, 0, 22), axis="x", base=True, sides=16)], solid=False)

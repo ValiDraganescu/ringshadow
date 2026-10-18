@@ -27,7 +27,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from ac_modelkit import Model, bar, box, cyl, sphere, load_catalog, save_catalog, merge_entry, log  # noqa: E402
+from ac_modelkit import Model, bar, box, cyl, panel, sphere, load_catalog, save_catalog, merge_entry, log  # noqa: E402
 
 POSE = "AcPoseBuildings.cpp:PoseCitadel"
 H = 600.0          # the footprint's half side
@@ -66,7 +66,7 @@ SKIN = 585.0       # the walls' own outer face; the skin (panels, ribs, bands, t
 TOWER = 400.0      # the corner towers' inner edge along each face (they are the wall corners: solid inside +-600)
 
 
-m = Model("citadel", category="building", notes=[
+m = Model("citadel", category="building", coplanar_check=True, notes=[
     "C1's Citadel (docs/citadel-interior.md): 12 by 12 cells, walls 1 thick and 7 high, the hall 10 by 10 by 6 inside, "
     "the doorway 3 by 3 on the front closed by the ramp, the roof deck at 7, four corner towers carrying the turrets at "
     "9.0, the central tower and beacon to 12.3.",
@@ -104,9 +104,9 @@ m.mesh(root, "hullMid", [
     slab(IN, SKIN, -IN, IN, -SINK, DECK),            # right wall
     slab(-IN, IN, -IN, IN, CEIL, DECK),              # the roof slab
 ])
-m.mesh(root, "hullDark", [slab(-DOOR, DOOR, SKIN, H, DOOR_TOP, DECK - 40)])  # the lintel's face out to the door's plane
+m.mesh(root, "hullDark", [slab(-DOOR, DOOR, SKIN, H, DOOR_TOP + 30, DECK - 40)])  # the lintel's face out to the door's plane
 # the hall floor and the doorway's threshold
-m.mesh(root, "hullDark", [slab(-IN, IN, -IN, IN, -SINK, FLOOR), slab(-DOOR, DOOR, IN, H, -SINK, FLOOR)])
+m.mesh(root, "hullDark", [slab(-IN, IN, -IN, IN, -SINK, FLOOR), slab(-DOOR, DOOR, IN, H + 4, -SINK, FLOOR)])
 
 # --- the skin: buttress ribs every 2 cells, light panels in the bays, the service band, the team band, coping -----
 RIBS = {"y1": (-290, 290), "y-1": (-200, 0, 200), "x1": (-200, 0, 200), "x-1": (-200, 0, 200)}
@@ -127,8 +127,8 @@ for axis, sign in FACES:
         panels.append(face(axis, sign, a0, a1, 30, 290, SKIN, SKIN + 11))
         panels.append(face(axis, sign, a0, a1, 345, 572, SKIN, SKIN + 11))
     for c in cuts:
-        ribs.append(face(axis, sign, c - 20, c + 20, -20, DECK - 30, SKIN, H + 8))
-        ribs.append(face(axis, sign, c - 26, c + 26, -20, 30, SKIN, H + 8))  # the rib's foot
+        ribs.append(face(axis, sign, c - 20, c + 20, -20, DECK - 32, SKIN, H + 8))
+        ribs.append(face(axis, sign, c - 26, c + 26, -22, 30, SKIN, H + 10))  # the rib's foot
     if key == "y1":
         service += [face(axis, sign, -TOWER, -DOOR - 30, 295, 337, SKIN, H + 4), face(axis, sign, DOOR + 30, TOWER, 295, 337, SKIN, H + 4)]
     else:
@@ -143,9 +143,9 @@ for axis, sign in FACES[1:]:
                      axis="x" if axis == "y" else "y", sides=10))
 m.mesh(root, "chrome", pipes, solid=False)
 m.mesh(root, "team", [face(axis, sign, -TOWER, TOWER, 588, 628, SKIN, H + 5) for axis, sign in FACES], solid=False)
-m.mesh(root, "hullMid", [face(axis, sign, -TOWER, TOWER, 572, 700, SKIN, H) for axis, sign in FACES], solid=False)
-m.mesh(root, "hullDark", [face(axis, sign, -H - 8, H + 8, DECK - 32, DECK + 6, H - 16, H + 8) for axis, sign in FACES],
-       solid=False)  # the coping round the deck's edge
+m.mesh(root, "hullMid", [face(axis, sign, -TOWER, TOWER, 572, 700, SKIN, H - 2) for axis, sign in FACES], solid=False)
+m.mesh(root, "hullDark", [face(axis, sign, -TOWER, TOWER, DECK - 32, DECK + 6, H - 16, H + 6) for axis, sign in FACES],
+       solid=False)  # the coping round the deck's edge, between the towers
 # vents (ventGlow) in the lower bays of the sides and the back
 vents_dark, vents_glow = [], []
 for axis, sign in FACES[1:]:
@@ -169,21 +169,26 @@ CROWN = MOUNT - 30.0
 tw_mid, tw_dark, tw_haz, tw_slit, tw_mark = [], [], [], [], []
 for sx in (-1, 1):
     for sy in (-1, 1):
-        # below the deck: a skin on both outer faces of the corner, 2 cells wide, with dark corner edges
-        tw_mid += [ctr(sx, sy, TOWER, H + 8, SKIN, H + 8, -20, DECK), ctr(sx, sy, SKIN, H + 8, TOWER, H + 8, -20, DECK)]
-        tw_dark += [ctr(sx, sy, H - 30, H + 8, H - 30, H + 8, -20, CROWN)]  # the corner edge, up to the crown
+        # below the deck: a skin on both outer faces of the corner, 2 cells wide, on the feet, butted against a dark
+        # corner edge that stands 2 cm prouder (no two solids share a face: the coplanar check, art/models/citadel/c1/zfight/)
+        tw_mid += [ctr(sx, sy, TOWER, H - 30, SKIN, H + 8, 52, DECK), ctr(sx, sy, SKIN, H + 8, TOWER, H - 30, 52, DECK)]
+        tw_dark += [ctr(sx, sy, H - 30, H + 10, H - 30, H + 10, 52, CROWN - 52)]  # the corner edge, up to the hazard band
         # above the deck: the tower's block over the roof, its crown, the mount's pedestal
         tw_mid.append(ctr(sx, sy, TOWER, H, TOWER, H, DECK, CROWN - 40))
         tw_dark.append(ctr(sx, sy, TOWER - 10, H + 8, TOWER - 10, H + 8, CROWN - 40, CROWN))
         tw_haz.append(ctr(sx, sy, TOWER - 12, H + 8, TOWER - 12, H + 8, CROWN - 52, CROWN - 40))
-        # the anchor feet (the old landing pads): a stepped block on each corner
-        tw_dark += [ctr(sx, sy, TOWER - 20, H + 8, TOWER - 20, H + 8, -20, 34), ctr(sx, sy, TOWER, H + 8, TOWER, H + 8, 34, 52)]
-        tw_haz += [ctr(sx, sy, TOWER - 20, TOWER + 20, H, H + 8, 2, 30), ctr(sx, sy, H, H + 8, TOWER - 20, TOWER + 20, 2, 30)]
-        # yellow working slits (floodGlow) on the two outer faces: three in the shaft, three over the deck
+        # the anchor feet (the old landing pads): a stepped L round each corner, outside the walls (sunk 2 cm into
+        # them; a square block filled the hall's corner under the gun station), its two arms butted
+        for i0, z0, z1 in ((TOWER - 20, -22, 34), (TOWER, 34, 52)):
+            tw_dark += [ctr(sx, sy, i0, H + 8, SKIN - 2, H + 8, z0, z1), ctr(sx, sy, SKIN - 2, H + 8, i0, SKIN - 2, z0, z1)]
+        tw_haz += [ctr(sx, sy, TOWER - 22, TOWER + 20, H + 8, H + 10, 2, 30), ctr(sx, sy, H + 8, H + 10, TOWER - 22, TOWER + 20, 2, 30)]
+        # yellow working slits (floodGlow) on the two outer faces: three in the shaft, three over the deck (on the
+        # tower's block there, its face at H)
         for a in (450, 490, 530):
             for z0 in (430, 750):
-                tw_slit.append(ctr(sx, sy, a - 6, a + 6, H + 8, H + 10, z0, z0 + 70))
-                tw_slit.append(ctr(sx, sy, H + 8, H + 10, a - 6, a + 6, z0, z0 + 70))
+                out = H + 8 if z0 < DECK else H
+                tw_slit.append(ctr(sx, sy, a - 6, a + 6, out, out + 2, z0, z0 + 70))
+                tw_slit.append(ctr(sx, sy, out, out + 2, a - 6, a + 6, z0, z0 + 70))
         tw_mark.append(ctr(sx, sy, H - 4, H + 10, H - 4, H + 10, CROWN - 12, CROWN - 2))
         m.mesh(root, "hullDark", [cyl(56, MOUNT - CROWN - 4, at=(sx * CORNER, sy * CORNER, CROWN), base=True, sides=16)])
         m.mesh(root, "chrome", [cyl(58, 5, at=(sx * CORNER, sy * CORNER, MOUNT - 5), base=True, sides=16)], solid=False)
@@ -194,11 +199,11 @@ m.mesh(root, "floodGlow", tw_slit, solid=False)
 m.mesh(root, "markerGlow", tw_mark, solid=False)
 
 # --- the front: the doorway's hazard frame, the door strip on the lintel, floodlights, markers, door panels, apron ----
-m.mesh(root, "hazard", [slab(sx * DOOR - (30 if sx < 0 else 0), sx * DOOR + (30 if sx > 0 else 0), SKIN, H + 6, 0, DOOR_TOP + 30)
+m.mesh(root, "hazard", [slab(sx * DOOR - (30 if sx < 0 else 0), sx * DOOR + (30 if sx > 0 else 0), SKIN, H + 6, 0, DOOR_TOP)
                         for sx in (-1, 1)] + [slab(-DOOR - 30, DOOR + 30, SKIN, H + 6, DOOR_TOP, DOOR_TOP + 30)])
 # the doorway's reveal lined dark, hazard strips on its jambs inside
 m.mesh(root, "hullDark", [slab(sx * DOOR - (4 if sx > 0 else 0), sx * DOOR + (4 if sx < 0 else 0), IN, SKIN, 0, DOOR_TOP)
-                          for sx in (-1, 1)] + [slab(-DOOR, DOOR, IN, SKIN, DOOR_TOP - 4, DOOR_TOP)], solid=False)
+                          for sx in (-1, 1)] + [slab(-DOOR + 4, DOOR - 4, IN, SKIN, DOOR_TOP - 4, DOOR_TOP)], solid=False)
 m.mesh(root, "hazard", [slab(sx * DOOR - 30 * (sx < 0), sx * DOOR + 30 * (sx > 0), IN - 5, IN, 0, DOOR_TOP + 30)
                         for sx in (-1, 1)], solid=False)
 SEG_W = 42.0
@@ -206,13 +211,13 @@ for i in range(6):
     x = -125.0 + 50.0 * i
     seg = m.part("doorSegments_%d" % i, at=(x, H + 3, 352),
                  driver=d("the door strip over the doorway: chases toward the door while training", ("emission", "visibility")))
-    m.mesh(seg, "doorGlow", [box((SEG_W, 5, 18), at=(x, H + 2.5, 343), base=True)], solid=False)
-m.mesh(root, "hullDark", [box((300, 8, 34), at=(0, H + 4, 335), base=True)], solid=False)  # the strip's backing
+    m.mesh(seg, "doorGlow", [box((SEG_W, 3, 18), at=(x, H + 5.5, 343), base=True)], solid=False)
+m.mesh(root, "hullDark", [box((300, 4, 34), at=(0, H + 2, 335), base=True)], solid=False)  # the strip's backing
 # two floodlights on the lintel, over the strip, looking down on the apron
 for sx in (-1, 1):
     m.mesh(root, "hullDark", [box((70, 16, 30), at=(sx * 95, H + 8, 400), base=True)], solid=False)
     m.mesh(root, "floodGlow", [box((60, 3, 16), at=(sx * 95, H + 16.5, 404), base=True)], solid=False)
-m.mesh(root, "markerGlow", [box((12, 4, 12), at=(sx * 236, H + 2, 300), base=True) for sx in (-1, 1)], solid=False)
+m.mesh(root, "markerGlow", [box((12, 3, 12), at=(sx * 236, H + 5.5, 300), base=True) for sx in (-1, 1)], solid=False)
 # the door panels: a dark frame right of the doorway, outside and inside, the lit face the pose drives
 PANEL_X, PANEL_Z = 225.0, 120.0
 for k, (y, s) in enumerate(((H, 1), (IN, -1))):
@@ -220,7 +225,7 @@ for k, (y, s) in enumerate(((H, 1), (IN, -1))):
                                   base=True)], solid=False)
     p = m.part("doorPanels_%d" % k, at=(PANEL_X, y + s * 7, PANEL_Z),
                driver=d("the door panel %s: lit while a pilot is in reach of the door" % ("outside" if k == 0 else "inside")))
-    m.mesh(p, "panelGlow", [box((32, 2, 40), at=(PANEL_X, y + s * (4 if k == 0 else 7), PANEL_Z - 20), base=True)], solid=False)
+    m.mesh(p, "panelGlow", [box((32, 2, 40), at=(PANEL_X, y + s * (5 if k == 0 else 7), PANEL_Z - 20), base=True)], solid=False)
 m.part("light_2", at=(0, H + 100, 250), handles=["doorLight"],
        light={"attenuationEnd": "6.0", "color": "SIMD4<Float>(1.0, 0.6600805, 0.19007224, 1.0)", "handles": "doorLight",
               "intensity": "0.0", "type": "omni"},
@@ -228,7 +233,7 @@ m.part("light_2", at=(0, H + 100, 250), handles=["doorLight"],
 # the apron before the door, on the ground (the open ramp lies on it)
 APRON = (260.0, 1020.0)
 m.mesh(root, "hullDark", [slab(-APRON[0], APRON[0], H, APRON[1], -15, 2)], solid=False)
-m.mesh(root, "hazard", [slab(sx * APRON[0] - 16 * (sx > 0), sx * APRON[0] + 16 * (sx < 0), H + 10, APRON[1], 2, 3)
+m.mesh(root, "hazard", [slab(sx * APRON[0] - 16 * (sx > 0), sx * APRON[0] + 16 * (sx < 0), H + 10, APRON[1] - 16, 2, 3)
                         for sx in (-1, 1)] + [slab(-APRON[0], APRON[0], APRON[1] - 16, APRON[1], 2, 3)], solid=False)
 m.mesh(root, "markerGlow", [box((10, 10, 6), at=(sx * (APRON[0] - 30), APRON[1] - 30, 2), base=True) for sx in (-1, 1)],
        solid=False)
@@ -244,23 +249,23 @@ m.mesh(ramp, "hazard", [slab(-DOOR + 4, DOOR - 4, H, H + 2, 0, 18), slab(-DOOR +
        solid=False)
 
 # --- inside: baseboards, ceiling beams and cable trays, floor markings ---------------------------------------------
-m.mesh(root, "hullDark", [slab(-IN, -DOOR, IN - 4, IN, FLOOR, 60), slab(DOOR, IN, IN - 4, IN, FLOOR, 60),
-                          slab(-IN, IN, -IN, -IN + 4, FLOOR, 60), slab(-IN, -IN + 4, -IN, IN, FLOOR, 60),
-                          slab(IN - 4, IN, -IN, IN, FLOOR, 60)], solid=False)
+m.mesh(root, "hullDark", [slab(-IN, -DOOR - 30, IN - 4, IN, FLOOR, 60), slab(DOOR + 30, IN, IN - 4, IN, FLOOR, 60),
+                          slab(-IN, IN, -IN, -IN + 4, FLOOR, 60), slab(-IN, -IN + 4, -IN + 4, IN - 4, FLOOR, 60),
+                          slab(IN - 4, IN, -IN + 4, IN - 4, FLOOR, 60)], solid=False)
 m.mesh(root, "hullDark", [slab(-IN, IN, y - 20, y + 20, CEIL - 45, CEIL) for y in (-250, 0, 250)] +
        [slab(x - 15, x + 15, -IN, IN, CEIL - 30, CEIL) for x in (-250, 250)], solid=False)
-trays = [slab(-IN + 10, IN - 10, -IN + 25, -IN + 55, CEIL - 62, CEIL - 54)] + \
+trays = [slab(-IN + 55, IN - 55, -IN + 25, -IN + 55, CEIL - 62, CEIL - 54)] + \
         [slab(*sorted((sx * (IN - 55), sx * (IN - 25))), -IN + 25, IN - 10, CEIL - 62, CEIL - 54) for sx in (-1, 1)]
-m.mesh(root, "hullDark", trays + [slab(x - 4, x + 4, -IN + 20, -IN + 60, CEIL - 62, CEIL - 45) for x in range(-400, 401, 200)],
+m.mesh(root, "hullDark", trays + [slab(x - 4, x + 4, -IN + 20, -IN + 60, CEIL - 64, CEIL - 45) for x in range(-400, 401, 200)],
        solid=False)
 m.mesh(root, "chrome", [cyl(5, 2 * IN - 30, at=(-IN + 15, -IN + 40, CEIL - 50), axis="x", base=True, sides=8)] +
-       [cyl(5, 2 * IN - 40, at=(sx * (IN - 40), -IN + 30, CEIL - 50), axis="y", base=True, sides=8) for sx in (-1, 1)],
+       [cyl(5, 2 * IN - 44, at=(sx * (IN - 40), -IN + 30, CEIL - 50), axis="y", base=True, sides=8) for sx in (-1, 1)],
        solid=False)
-m.mesh(root, "team", [cyl(4, 2 * IN - 30, at=(-IN + 15, -IN + 32, CEIL - 50), axis="x", base=True, sides=8)], solid=False)
+m.mesh(root, "team", [cyl(4, 2 * IN - 34, at=(-IN + 17, -IN + 32, CEIL - 50), axis="x", base=True, sides=8)], solid=False)
 m.mesh(root, "hazard", [slab(sx * (DOOR - 10) - 6, sx * (DOOR - 10) + 6, 0, IN, FLOOR, FLOOR + 1) for sx in (-1, 1)],
        solid=False)  # the walk in from the door
 m.mesh(root, "team", [cyl(130, 1, at=(0, -60, FLOOR), base=True, sides=32)], solid=False)
-m.mesh(root, "hullDark", [cyl(105, 1.5, at=(0, -60, FLOOR), base=True, sides=32)], solid=False)
+m.mesh(root, "hullDark", [cyl(105, 3, at=(0, -60, FLOOR), base=True, sides=32)], solid=False)
 
 # --- the catwalk along the back and the two sides at 4 cells, its railing, brackets and a ladder -------------------
 CAT_Z, CAT_W = 400.0, 90.0
@@ -272,11 +277,11 @@ m.mesh(root, "hullDark", cat)
 posts, rails, brackets = [], [], []
 EDGE = IN - CAT_W
 for x in range(-375, 376, 125):
-    posts.append(cyl(3, 95, at=(x, -EDGE, CAT_Z), base=True, sides=6))
+    posts.append(cyl(3.5, 95, at=(x, -EDGE, CAT_Z), base=True, sides=6))
     brackets.append(slab(x - 5, x + 5, -IN, -EDGE, CAT_Z - 38, CAT_Z - 8))
 for sx in (-1, 1):
     for y in range(-375, 501, 125):
-        posts.append(cyl(3, 95, at=(sx * EDGE, min(y, IN - 10), CAT_Z), base=True, sides=6))
+        posts.append(cyl(3.5, 95, at=(sx * EDGE, min(y, IN - 10), CAT_Z), base=True, sides=6))
         xs = sorted((sx * IN, sx * EDGE))
         brackets.append(slab(xs[0], xs[1], min(y, IN - 10) - 5, min(y, IN - 10) + 5, CAT_Z - 38, CAT_Z - 8))
 for z in (CAT_Z + 45, CAT_Z + 90):
@@ -285,9 +290,9 @@ for z in (CAT_Z + 45, CAT_Z + 90):
         rails.append(cyl(2.5, IN + EDGE, at=(sx * EDGE, -EDGE, z), axis="y", base=True, sides=6))
 m.mesh(root, "chrome", posts + rails, solid=False)
 m.mesh(root, "hullDark", brackets, solid=False)
-m.mesh(root, "hazard", [slab(-EDGE, EDGE, -EDGE - 4, -EDGE, CAT_Z - 8, CAT_Z)] +
-       [slab(min(sx * EDGE, sx * (EDGE + 4)), max(sx * EDGE, sx * (EDGE + 4)), -EDGE, IN, CAT_Z - 8, CAT_Z) for sx in (-1, 1)],
-       solid=False)  # its edge
+m.mesh(root, "hazard", [slab(-EDGE, EDGE, -EDGE, -EDGE + 2, CAT_Z - 8, CAT_Z)] +
+       [slab(min(sx * EDGE, sx * (EDGE - 2)), max(sx * EDGE, sx * (EDGE - 2)), -EDGE + 2, IN, CAT_Z - 8, CAT_Z) for sx in (-1, 1)],
+       solid=False)  # its edge, a lip on the inner face
 LADDER_X = 120.0
 m.mesh(root, "chrome", [cyl(3, CAT_Z + 90, at=(LADDER_X + dx, -IN + 14, FLOOR), base=True, sides=6) for dx in (-22, 22)] +
        [cyl(2, 44, at=(LADDER_X - 22, -IN + 14, z), axis="x", base=True, sides=6) for z in range(35, int(CAT_Z), 30)],
@@ -320,40 +325,79 @@ for k, ((x, y), axis, inward, z) in enumerate(HALL_LAMPS):
     lamp = m.part("hallLamps_%d" % k, at=strip.at, driver=d("hall lamp %d: the yellow working light, steady once built" % k))
     m.mesh(lamp, "hallGlow", [strip], solid=False)
 
-# --- the gun stations: a console under each corner gun, its screen toward the gunner's point, a fold-down seat ------
+# --- the gun stations: a console in each corner under its gun, after the user's reference
+# (art/models/citadel/ref/console-reference.jpg): a squat armoured box on a hazard plinth with lit yellow strips, a
+# control deck with a joystick (the gunner's left) and a cluster of coloured buttons, a tilted monitor on a stand
+# showing the gun's view (citadel_screen.py's picture; `gunScreens_k`, lit while the gun is manned), cables, the
+# conduit up to the gun. 1.0 wide, 0.8 deep, 0.9 tall, the monitor to 1.7; turned on the corner's diagonal toward the
+# gunner's point, every solid of it 0.5 cells from that point at least, so its back corners sink into the walls.
+CONSOLE = 97.0      # the console's middle from the gunner's point, along the corner's diagonal (its front: 46 out)
+m.material("gunScreen", parent="emissive", color=(0, 0, 0), emissive=(0.026, 0.026, 0.026),
+           emissive_texture="unreal/Resources/Textures/citadel_gun_screen.png")  # the pose lights it 47.5 times
+TILT = 15.0         # the monitor leans back
+BUTTONS = [("glowRed", -6, -12), ("glowGreen", -6, -22), ("glowYellow", -6, -32), ("glowBlue", 3, -14),
+           ("glowRed", 3, -24), ("glowOrange", 3, -34), ("glowGreen", 12, -18), ("glowBlue", 12, -28)]
 for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     diag = (sx / math.sqrt(2), sy / math.sqrt(2))
-    c = (sx * STATION + diag[0] * 60, sy * STATION + diag[1] * 60)
+    c = (sx * STATION + diag[0] * CONSOLE, sy * STATION + diag[1] * CONSOLE)
     yaw = math.degrees(math.atan2(-sy, -sx))  # local +X toward the gunner (the hall's middle)
     cy_, sy_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
 
     def L(lx, ly, lz):
+        """A point in the console's frame (x toward the gunner, y to the gunner's right... of the console: the
+        gunner's left, z up from the ground) in the model frame."""
         return (c[0] + lx * cy_ - ly * sy_, c[1] + lx * sy_ + ly * cy_, lz)
+
+    def B(size, lx, ly, z, pitch=0.0):
+        return box(size, at=L(lx, ly, z), rot=(pitch, yaw, 0), base=True)
 
     st = m.part("gunStations_%d" % k, at=(c[0], c[1], FLOOR),
                 driver=d("gun station %d's console (corner %d's gun): still" % (k, k), ()))
-    m.mesh(st, "hullDark", [box((44, 80, 92), at=L(-6, 0, FLOOR), rot=(0, yaw, 0), base=True)])
-    m.mesh(st, "hullMid", [box((62, 96, 10), at=L(4, 0, FLOOR + 92), rot=(-8, yaw, 0), base=True),
-                           box((10, 90, 64), at=L(-22, 0, FLOOR + 100), rot=(14, yaw, 0), base=True)])
-    m.mesh(st, "team", [box((2, 60, 10), at=L(16.5, 0, FLOOR + 60), rot=(0, yaw, 0), base=True)], solid=False)
-    # the conduit up to the gun over the corner
-    m.mesh(st, "hullDark", [cyl(7, CEIL - FLOOR - 120, at=L(-24, 0, FLOOR + 120), base=True, sides=10)], solid=False)
-    m.mesh(st, "chrome", [cyl(9, 4, at=L(-24, 0, z), base=True, sides=10) for z in (200, 320, 440, 560)], solid=False)
-    m.mesh(st, "hazard", [cyl(70, 1, at=(sx * STATION, sy * STATION, FLOOR), base=True, sides=24)], solid=False)
-    m.mesh(st, "hullDark", [cyl(60, 1.5, at=(sx * STATION, sy * STATION, FLOOR), base=True, sides=24)], solid=False)
-    # the fold-down seat on the console's flank (the gunner's own spot stays clear)
-    m.mesh(st, "hullDark", [box((6, 6, 50), at=L(4, 56, FLOOR), rot=(0, yaw, 0), base=True),
-                            box((36, 34, 6), at=L(14, 72, FLOOR + 50), rot=(0, yaw, 0), base=True)], solid=False)
-    m.mesh(st, "hullMid", [box((6, 34, 40), at=L(-6, 72, FLOOR + 56), rot=(0, yaw, 0), base=True)], solid=False)
-    sc_at = L(-16, 0, FLOOR + 132)
-    scr = m.part("gunScreens_%d" % k, parent=st, at=sc_at,
-                 driver=d("gun station %d's screen: blue, lit while the gun is manned" % k))
-    m.mesh(scr, "glow_2399ff", [box((2, 76, 46), at=L(-16, 0, FLOOR + 109), rot=(14, yaw, 0), base=True)], solid=False)
+    # the plinth, its hazard band and lit strips at the front, the armoured body, the desk top and the control deck
+    m.mesh(st, "hullDark", [B((84, 104, 10), 0, 0, FLOOR), B((84, 104, 6), 0, 0, FLOOR + 67)])
+    m.mesh(st, "hullMid", [B((80, 100, 57), 0, 0, FLOOR + 10), B((40, 92, 10), 20, 0, FLOOR + 73)])
+    m.mesh(st, "hazard", [B((2, 104, 10), 43, 0, FLOOR)], solid=False)
+    m.mesh(st, "floodGlow", [B((2, 26, 3), 45, y, FLOOR + 3.5) for y in (-36, 0, 36)], solid=False)
+    m.mesh(st, "hullDark", [B((2, 70, 40), 41, 0, FLOOR + 17)] +                       # the front's armour plate
+           [B((6, 6, 57), 41, s * 48, FLOOR + 10) for s in (-1, 1)] +                 # its corner rails
+           [B((2, 60, 3), 43, 0, FLOOR + 17 + 9 * j) for j in range(1, 4)], solid=False)  # and the plate's ribs
+    m.mesh(st, "team", [B((2, 30, 6), 41, 0, FLOOR + 61)], solid=False)
+    # the joystick on the gunner's left, the buttons on the right
+    J = (20.0, 24.0)
+    m.mesh(st, "hullDark", [cyl(7, 3, at=L(J[0], J[1], FLOOR + 83), base=True, sides=12),
+                            cyl(5, 3, at=L(J[0], J[1], FLOOR + 86), base=True, r1=2.5, sides=12),
+                            cyl(3, 10, at=L(J[0], J[1], FLOOR + 102), base=True, sides=10)], solid=False)
+    m.mesh(st, "chrome", [cyl(1.6, 14, at=L(J[0], J[1], FLOOR + 89), base=True, sides=8)], solid=False)
+    m.mesh(st, "glowRed", [sphere(2, at=L(J[0] + 1, J[1], FLOOR + 112.5), steps=8)], solid=False)
+    m.mesh(st, "hullDark", [B((30, 34, 2), 20, -23, FLOOR + 83)], solid=False)
+    for mat, bx, by in BUTTONS:
+        m.mesh(st, mat, [cyl(2.6, 2, at=L(20 + bx, by, FLOOR + 85), base=True, sides=10)], solid=False)
+    # the monitor's stand, its housing leaning back, the screen on its face; cables to the floor; the conduit
+    m.mesh(st, "hullDark", [B((12, 24, 30), -22, 0, FLOOR + 73)])
+    t = math.radians(TILT)
+    hx, hz = -22.0, FLOOR + 100.0  # the housing's bottom middle (console frame, along x and up)
+    m.mesh(st, "hullMid", [B((10, 96, 64), hx, 0, hz, TILT)])
+    # the screen: 2 cm proud of the housing's face, 6 cm over its bottom edge (along the leaning face)
+    sx_, sz_ = hx + 6 * math.cos(t) - 6 * math.sin(t), hz + 6 * math.sin(t) + 6 * math.cos(t)
+    scr_mid = L(sx_ - 26 * math.sin(t), 0, sz_ + 26 * math.cos(t))
+    scr = m.part("gunScreens_%d" % k, parent=st, at=scr_mid,
+                 driver=d("gun station %d's monitor: the gun's view, lit while the gun is manned" % k))
+    m.mesh(scr, "gunScreen", [panel((2, 86, 52), at=L(sx_, 0, sz_), rot=(TILT, yaw, 0), base=True)], solid=False)
+    m.mesh(st, "hullDark", [bar(L(-24, s * 53, FLOOR + 70), L(-40, s * 56, FLOOR), 5, shape="cyl", sides=8)
+                            for s in (-1, 1)], solid=False)
+    # the conduit out of the back of the monitor's top (behind the leaning screen), up to the gun over the corner
+    m.mesh(st, "hullDark", [cyl(6, CEIL - FLOOR - 150, at=L(-42, 0, FLOOR + 150), base=True, sides=10)], solid=False)
+    m.mesh(st, "chrome", [cyl(8, 4, at=L(-42, 0, z), base=True, sides=10) for z in (200, 320, 440, 560)], solid=False)
+    # the gunner's spot on the floor: a hazard ring on the 0.5 cell the console keeps clear
+    m.mesh(st, "hazard", [cyl(48, 1, at=(sx * STATION, sy * STATION, FLOOR), base=True, sides=24)], solid=False)
+    m.mesh(st, "hullDark", [cyl(40, 3, at=(sx * STATION, sy * STATION, FLOOR), base=True, sides=24)], solid=False)
 
 # --- the roof deck: plating, the walkway between the towers, tanks, a crane, the dish, the steam stack ------------
 m.mesh(root, "hullMid", [slab(-H + 16, H - 16, -H + 16, H - 16, DECK, DECK + 3)])
-m.mesh(root, "hullDark", [slab(-H + 16, H - 16, a - 3, a + 3, DECK + 3, DECK + 4) for a in (-300, 0, 300)] +
-       [slab(a - 3, a + 3, -H + 16, H - 16, DECK + 3, DECK + 4) for a in (-300, 0, 300)], solid=False)  # seams
+SEAMS = (-300, 0, 300)
+cuts = [-H + 16] + [c for a in SEAMS for c in (a - 3, a + 3)] + [H - 16]
+m.mesh(root, "hullDark", [slab(cuts[2 * i], cuts[2 * i + 1], a - 3, a + 3, DECK + 3, DECK + 4) for a in SEAMS for i in range(4)] +
+       [slab(a - 3, a + 3, -H + 16, H - 16, DECK + 3, DECK + 4) for a in SEAMS], solid=False)  # seams
 WALK = (450.0, 580.0)   # the walkway's inner and outer edge from the middle
 walk, walk_haz, walk_posts, walk_rails = [], [], [], []
 for axis, sign in FACES:
@@ -361,7 +405,7 @@ for axis, sign in FACES:
     walk_haz.append(face(axis, sign, -TOWER, TOWER, DECK + 22, DECK + 23, WALK[0], WALK[0] + 8))
     for a in range(-350, 351, 100):
         p = (a, sign * WALK[0]) if axis == "y" else (sign * WALK[0], a)
-        walk_posts.append(cyl(2.5, 80, at=(p[0], p[1], DECK + 22), base=True, sides=6))
+        walk_posts.append(cyl(3.5, 83, at=(p[0], p[1], DECK + 22), base=True, sides=6))
     for z in (DECK + 62, DECK + 100):
         walk_rails.append(cyl(2.5, 2 * TOWER, at=(-TOWER, sign * WALK[0], z) if axis == "y" else (sign * WALK[0], -TOWER, z),
                               axis="x" if axis == "y" else "y", base=True, sides=6))
@@ -395,7 +439,7 @@ m.mesh(root, "chrome", [cyl(TR + 8, 8, at=(0, 0, T1), base=True, **OCT)])
 U0, U1, UR = T1 + 8, 1060.0, 170.0
 m.mesh(root, "hullLight", [cyl(UR, U1 - U0, at=(0, 0, U0), base=True, **OCT)])
 m.mesh(root, "hullDark", [cyl(UR + 3, 10, at=(0, 0, 1000), base=True, **OCT),
-                          cyl(UR + 6, 6, at=(0, 0, U1 - 6), base=True, **OCT)], solid=False)
+                          cyl(UR + 6, 6, at=(0, 0, U1 - 8), base=True, **OCT)], solid=False)
 DRUM, D0 = 150.0, U1
 m.mesh(root, "hullMid", [cyl(DRUM, 60, at=(0, 0, D0), base=True, sides=32)])
 m.mesh(root, "glow_2399ff", [cyl(DRUM + 1, 18, at=(0, 0, D0 + 15), base=True, sides=32)], solid=False)  # dark glass
@@ -430,7 +474,8 @@ m.mesh(root, "chrome", [bar((DISH_AT[0] + dx, DISH_AT[1] + dy, DECK + 24), (DISH
                             shape="cyl", sides=6) for dx, dy in ((30, 0), (-15, 26), (-15, -26))], solid=False)
 dish = m.part("dish", at=DISH_AT, driver=d("the dish: turns slowly once built", ("rotation",)))
 m.mesh(dish, "chrome", [cyl(12, 26, at=DISH_AT, rot=(30, 0, 0), base=True, r1=80, sides=20, axis="x"),
-                        cyl(3, 70, at=DISH_AT, rot=(30, 0, 0), base=True, sides=6, axis="x")], solid=False)
+                        cyl(3, 68, at=(DISH_AT[0] + 2 * math.cos(math.radians(30)), DISH_AT[1], DISH_AT[2] + 1.0),
+                            rot=(30, 0, 0), base=True, sides=6, axis="x")], solid=False)
 m.mesh(dish, "hullDark", [box((20, 24, 24), at=(DISH_AT[0] - 10, DISH_AT[1], DISH_AT[2] - 12), base=True)], solid=False)
 # the steam stack, back left: emitter_1 at its mouth
 STACK = (-330.0, -300.0)
@@ -444,7 +489,7 @@ entry = m.write()
 
 
 # --- the scaffold: poles round the walls, rails, braces ------------------------------------------------------------
-s = Model("scaffold_citadel", category="construction", notes=[
+s = Model("scaffold_citadel", category="construction", coplanar_check=True, notes=[
     "Construction scaffold for the citadel (C1), radius 6.3, height 9.2 (the corner towers' mounts at 9.0); shown "
     "until the building is complete."])
 for name in ("chrome", "hazard"):
@@ -457,12 +502,12 @@ pts = sorted({(round(x, 3), round(sy * R, 3)) for x in ticks for sy in (-1, 1)} 
              {(round(sx * R, 3), round(y, 3)) for y in ticks for sx in (-1, 1)})
 for x, y in pts:
     poles.append(cyl(6, TOPZ, at=(x, y, 0), base=True, sides=6))
-    bands.append(cyl(9, 30, at=(x, y, 0), base=True, sides=6))
+    bands.append(cyl(9, 32, at=(x, y, -2), base=True, sides=6))
 for z in (150.0, 300.0, 450.0, 600.0, 750.0, TOPZ - 6):
     for sy in (-1, 1):
         rails.append(box((2 * R + 12, 8, 8), at=(0, sy * R, z), base=True))
     for sx in (-1, 1):
-        rails.append(box((8, 2 * R + 12, 8), at=(sx * R, 0, z), base=True))
+        rails.append(box((8, 2 * R + 12, 8), at=(sx * R, 0, z + 3), base=True))
 braces = []
 for i in range(6):
     a, b = ticks[i], ticks[i + 1]

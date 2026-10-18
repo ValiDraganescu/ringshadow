@@ -7,7 +7,9 @@
    the kit assumes ((b - a) x (c - a) into the solid);
 2. unreal.Transform's matrix equals ac_modelkit.ue_matrix for the same rotation;
 3. the Longbow's `hull`: its SceneKit ray pieces, converted with sk_to_ue, bound the hull's static meshes
-   (the round trip of MODELLING.md).
+   (the round trip of MODELLING.md);
+4. each flat prim's faces() (the coplanar check's faces) have their corners on the mesh's vertices: Geometry Script's
+   cylinder ring starts at local +X.
 Raises (and so exits non-zero) on a failure.
 """
 import os
@@ -43,6 +45,7 @@ def main():
     prims = {
         "box": K.box((40, 20, 10), at=(30, -10, 5), rot=(10, 35, 20)),
         "box base": K.box((40, 20, 10), at=(30, -10, 5), rot=(0, 90, 0), base=True),
+        "panel": K.panel((4, 60, 40), at=(5, 5, 5), rot=(15, 30, 0), base=True),
         "cyl z": K.cyl(8, 50, at=(0, 5, 10)),
         "cyl x": K.cyl(8, 50, at=(10, 5, 10), axis="x"),
         "cyl y base": K.cyl(8, 50, at=(10, 5, 10), axis="y", base=True),
@@ -75,6 +78,13 @@ def main():
         log("%-12s tris %4d  bounds err %.3f cm  volume %.0f %s" % (name, len(tris), err, vol, "ok" if ok else "FAIL"))
         if not ok:
             bad.append(name)
+        # the flat faces the coplanar check reads (Prim.faces): their corners are the mesh's vertices
+        corners = [q for _, poly in pr.faces() for q in poly]
+        if corners:
+            far = max(min(K.v_len(K.v_sub(q, p)) for p in model_pts) for q in corners)  # (a cap's centre is no corner)
+            log("%-12s faces(): every corner on a mesh vertex, %.3f cm off at most %s" % (name, far, "ok" if far < 0.05 else "FAIL"))
+            if far >= 0.05:
+                bad.append(name + " faces")
     # 2. the matrix
     for rpy in [(20, 30, 10), (-40, 120, -70), (0, 0, 90)]:
         t = unreal.Transform(unreal.Vector(1, 2, 3), unreal.Rotator(roll=rpy[2], pitch=rpy[0], yaw=rpy[1]), unreal.Vector(1, 1, 1))
