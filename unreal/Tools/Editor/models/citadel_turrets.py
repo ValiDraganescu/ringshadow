@@ -14,7 +14,7 @@ replaces the parts it added.
 
 UE cm in the Citadel's model frame (front +Y, Z up). Turret `k` stands on the pylon at corner k of the core's order:
 0 (+x, +y), 1 (-x, +y), 2 (-x, -y), 3 (+x, -y), at the pylons' top. C1 (docs/citadel-interior.md): the Citadel is
-12 by 12 cells, the pylons at (+-550, +-550) on the roof deck (700), their top at 730 (citadel.py PYLON_TOP). Parts
+12 by 12 cells, the mounts at (+-550, +-550) on the corner towers, their top at 900 (citadel.py PYLON_TOP). Parts
 per turret: `turrets_k` (yaw: -aim), `turretCradles_k` (C1: the pitch, about the trunnion across the barrels),
 `turretBarrels_k` (spins about its axis while firing), `turretTips_k` (heat glow), `turretMuzzles_k` (where the
 rounds leave), `turretFlashes_k` (a frame per round). The muzzles, flashes and the muzzle ring ride on the cradle.
@@ -33,7 +33,7 @@ from ac_modelkit import Box, Cyl, Model, box, cyl, m_apply, sphere, load_catalog
 
 POSE = "AcPoseBuildings.cpp:PoseCitadel"
 CORNER = 550.0  # Defence::cornerInset 5.5
-TOP = 730.0     # citadel.py PYLON_TOP
+TOP = 900.0     # citadel.py PYLON_TOP (Defence::mountHeight 9.0)
 ARC_HALF = 110.0  # Defence::gunArcHalf
 PITCH_MIN = -20.0  # Defence::gunPitchMin
 CLEAR = 3.0     # cm the barrels keep off every solid
@@ -148,11 +148,23 @@ def dense(prim):
     return pts
 
 
+def piece_dist(piece, p):
+    """How far point p (SceneKit cells) lies outside a piece's box, at most (0 inside)."""
+    inv, lo, hi = piece[0], piece[1], piece[2]
+    l = [p[0] * inv[0] + p[1] * inv[4] + p[2] * inv[8] + inv[12], p[0] * inv[1] + p[1] * inv[5] + p[2] * inv[9] + inv[13],
+         p[0] * inv[2] + p[1] * inv[6] + p[2] * inv[10] + inv[14]]
+    return math.sqrt(sum(max(lo[i] - l[i], 0.0, l[i] - hi[i]) ** 2 for i in range(3)))
+
+
 def check_arc(pieces):
     worst = (1e9, None)
     margin = CLEAR / 100.0
     for k, (tx, ty), (cx, cy, cz), prims in cradles:
         pts = [p for pr in prims for p in dense(pr)]
+        # only the pieces the barrels can reach: those within their longest reach of the turret's foot
+        reach = max(math.dist((p[0], p[1], p[2]), (tx, ty, cz)) for p in pts) / 100.0 + margin
+        foot = sk_point((tx, ty, cz))
+        near = [pc for pc in pieces if piece_dist(pc, foot) < reach]
         rest = math.degrees(math.atan2(ty, tx))  # Defence::cornerAngle(k)
         pitch = math.radians(PITCH_MIN)
         for step in range(int(2 * ARC_HALF) + 1):
@@ -167,7 +179,7 @@ def check_arc(pieces):
                 wx = tx + ox * math.cos(yaw) - oy * math.sin(yaw)
                 wy = ty + ox * math.sin(yaw) + oy * math.cos(yaw)
                 s = sk_point((wx, wy, qz))
-                for inv, lo, hi, round_, radius in pieces:
+                for inv, lo, hi, round_, radius in near:
                     l = [s[0] * inv[0] + s[1] * inv[4] + s[2] * inv[8] + inv[12],
                          s[0] * inv[1] + s[1] * inv[5] + s[2] * inv[9] + inv[13],
                          s[0] * inv[2] + s[1] * inv[6] + s[2] * inv[10] + inv[14]]
