@@ -43,6 +43,8 @@ namespace
 	{
 		int32 Slice = INDEX_NONE;
 		bool bShot = false;
+		/// The command line before the dev rig was added (put back after).
+		FString CommandLineWas;
 		double ShotAt = -1;
 	};
 	FPractice Practice;
@@ -85,6 +87,8 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 	auto Finish = [&] {
 		if (Pilot && Pilot->OnKey && Build && (Build->MenuOpen() || Build->Placing())) Pilot->OnKey(TEXT("esc"));
 		StopMmo();
+		// The steps after this one go without the dev rig.
+		if (!Practice.CommandLineWas.IsEmpty()) FCommandLine::Set(*Practice.CommandLineWas);
 		NextStep();
 	};
 	auto Waited = [&](const FString& What, const double Seconds) {
@@ -108,7 +112,11 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		if (Sim && Sim->IsMmo()) StopMmo();
 		Practice = FPractice();
 		// The dev rig: a finished Citadel, level 25, a full wallet.
-		if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig"))) FCommandLine::Append(TEXT(" -AcMmoDevRig"));
+		if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
+		{
+			Practice.CommandLineWas = FCommandLine::Get();
+			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
+		}
 		StartMmo(true);
 		Advance();
 		return;
@@ -170,6 +178,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		}
 		if (Now - Practice.ShotAt < 1.0) return;
 		Check(true, TEXT("practice: the overlay shows the wheel lit on the pick"));
+		Check(!(Info->Console && Info->Console->bBuildList), TEXT("practice: no build list on the console beside the wheel"));
 		Advance();
 		return;
 	case 4:

@@ -739,7 +739,9 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 		}
 		return Info;
 	}
-	if (In.bBuildMenu || In.Placing)
+	// The MMORPG mode: the build wheel (C2) replaces the list: the card
+	// keeps the Prospector's own buttons.
+	if ((In.bBuildMenu || In.Placing) && !In.bMmo)
 	{
 		int32 I = 0;
 		for (const ac::StructureKind K : BuildKinds(In.bMmo))
@@ -805,6 +807,9 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 		B.Detail = FString(Detail);
 		return B;
 	};
+	// C2: the cutter's reach in cells, edge to edge (its weapon line).
+	const FString Strike = FString::Printf(TEXT("Hold click at an enemy: %s damage, reach %s cells"),
+		*FormatG(Sim.weapon(U).damage), *FormatG(Sim.weapon(U).range));
 	Info.Buttons = {
 		Button(0, TEXT("hold"), TEXT("Drill ore"), TEXT("ore"), (T && T->is<ac::PilotTarget::Patch>()) || U.task == ETask::mining,
 			TEXT("Hold click at an ore deposit")),
@@ -812,8 +817,7 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 			TEXT("Click at your Derrick")),
 		Button(2, TEXT("hold"), TEXT("Repair"), TEXT("act.repair"), (T && T->is<ac::PilotTarget::Repair>()) || U.task == ETask::repairing,
 			TEXT("Hold click at a damaged building (hold R too at a Derrick)")),
-		Button(3, TEXT("hold"), TEXT("Strike"), TEXT("act.strike"), T && T->is<ac::PilotTarget::Enemy>(),
-			TEXT("Hold click at an enemy: 5 damage")),
+		Button(3, TEXT("hold"), TEXT("Strike"), TEXT("act.strike"), T && T->is<ac::PilotTarget::Enemy>(), *Strike),
 		Button(10, TEXT("B"), TEXT("Build"), TEXT("act.build"), (T && T->is<ac::PilotTarget::Scaffold>()) || U.task == ETask::building,
 			TEXT("Open the buildings")),
 	};

@@ -657,7 +657,13 @@ void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FAcRect& Glass) const
 		const FLinearColor Tone = Wh.Pick >= 0 ? FAcHudStyle::Cyan() : White(0.6, 0.8);
 		P.Lines({C + D * (In - 8), C + D * (In - 8 + 10 * Lean + 2)}, Tone, 3, 3, true);
 	}
-	P.Label(TEXT("CLICK BUILDS  ·  B OR ESC CLOSES  ·  NUMBER KEYS PICK"), 12, White(0.8, 0.9), C - FVector2D(0, Out + 42),
+	// A locked pick's reason in full ("This region has its Citadel: one a region").
+	if (Wh.Pick >= 0 && Wh.Pick < N && Wh.Slices[Wh.Pick].State != FAcWheelSlice::EState::Build && !Wh.Slices[Wh.Pick].Why.IsEmpty())
+	{
+		P.Label(Wh.Slices[Wh.Pick].Why, 15, BlockedColor(), C - FVector2D(0, Out + 40), EAcHAlign::Center, EAcVAlign::Baseline, true,
+			false);
+	}
+	P.Label(TEXT("CLICK BUILDS  ·  B OR ESC CLOSES  ·  NUMBER KEYS PICK"), 12, White(0.8, 0.9), C - FVector2D(0, Out + 60),
 		EAcHAlign::Center, EAcVAlign::Baseline, true, false);
 }
 
