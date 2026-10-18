@@ -330,6 +330,16 @@ dark bases, soft eroded edges with no grain or popping, a silver lining
 against the sun, depth to the horizon, a storm that reads as a storm, at no
 more than today's cloud pass plus 0.3 ms.
 
+### In one place
+
+| | before (d28e66e) | after (0c5fdb5) |
+|---|---|---|
+| The look | 20× the engine's density: hard cut-outs, speckle grain, grey against the sun, brown at dusk; popcorn puffs; no clouds below ~17°; a flat storm sheet; two pops in time | soft cumulus in wind-stretched bodies with grey bases, a silver lining and orange dusk, far clouds dissolving into the horizon's air, a ragged storm deck with the far land lost in its murk |
+| Cloud pass, pilot 5120×1378@2 (clear / cloudy / storm) | 1.45 / 2.14 / 1.96 ms | 0.68 / 1.83 / 0.48 ms |
+| Cloud pass, MMO home noon | 0.54 ms | 0.25 ms |
+| Pops, 3°/s pan at 30 / 60 fps, still (per 10k sky cloud px) | 7.1 / – / – | 1.9-3.6 / 0.7-0.9 / 0.01 (the engine's 0.9-1.3 / 0.3-0.4 / 0.00) |
+| Left | | a 1:1 cellular grain in a rain deck's thin patches, ~2× the engine's resampling under a pan (both below) |
+
 ### Side by side
 
 `ac.Daylight.CloudReference engine` swaps the OpenWorld template's clouds
