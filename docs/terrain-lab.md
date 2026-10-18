@@ -161,6 +161,13 @@ seed (every player sees the same pebbles), no collision, culled by distance.
 - The faces lean out over the ground at most 0.3 cells: the sim's cliff is
   still where the ray says, a unit at the foot still stands where it stood.
 - Ramps get no faces (their sides are drivable slopes).
+- The meshes are a rock kit, not a unit: no concept sheet and no Grok
+  turnaround. A Geometry Script file like the doodads'
+  (`unreal/Tools/Editor/models/terrain_lab_rocks.py`, through
+  `ac_modelkit`) writes 6-8 slabs, 4-6 talus stones and, for the
+  sculpting chapter's buttes, 3-4 spire tops, each a box or a prism with
+  layered, noise-cut sides, to `/Game/TerrainLab/Rocks/`. Hiccups go into
+  the model pipeline skill as usual.
 - Accept when: the `cliff` still shows a rock wall, not a lump; the `top`
   still keeps the cliff's line; units on a ramp pass with no face in the way.
 
@@ -223,21 +230,9 @@ When the user says promote, in the worker's worktree, as one commit a round:
   slag (Slag Pockets) are the plan; the user may want frost (Cold Fork).
 - Tyre ruts and footprints: a later round, with the sim's Moved events.
 - World sculpting (the user, 2026-10-18: "always surrounded by cliffs";
-  canyons are fine, not everywhere). Not this lab: it is the sim's ground
-  (rule 1), the region files'. Every region today is a bowl: its `border`
-  outline at level 4 all round, two to four openings, plateaus inside. The
-  variety would come from the region files and `TerrainField`: low or
-  sloped edges (open land running on into the next region), rolling ground
-  (ridges and raises with a slope instead of a cliff), a canyon or a mesa as
-  one region's feature, not every region's. A chapter of its own with the
-  region crafting skill; the lab's sheet shows its results too.
-  The user's reference (a painted cockpit view of Prospect Landing): an open
-  desert floor to the horizon, flat to gently rolling, with buttes, mesas and
-  tall spires standing free in it (islands, not walls), more of them hazy in
-  the distance, low rock shelves and scattered stones between; the ground
-  itself rippled sand, darker gravel patches and small rocks (rounds 1 and 4
-  here). So: the regions' walls low or gone where an edge is open land, the
-  high ground as free-standing mesas (`islands`, raise edits with cliffs)
-  rather than a rim, and far mesas past the world's rim for the horizon.
+  canyons are fine, not everywhere): not this lab, since it changes the sim's
+  ground (rule 1). Its own chapter: [world-sculpting.md](world-sculpting.md),
+  low rims, free-standing buttes and spires, rolling ground, far land. It
+  comes before round 3, whose faces follow the cliffs wherever they end up.
 - Far mountains past the world's rim (the haze hides a flat horizon today):
   not this lab; a note for the world's edge.
