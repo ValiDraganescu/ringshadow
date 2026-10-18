@@ -1,6 +1,8 @@
 #include "AcPilotBuild.h"
 
+#include "AcConsoleInfo.h"
 #include "AcHologram.h"
+#include "AcIcons.h"
 #include "AcLog.h"
 #include "AcMmo.h"
 #include "AcPilotOverlay.h"
@@ -82,6 +84,10 @@ void UAcPilotBuildSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		}
 	}
 	FParse::Value(Cmd, TEXT("AcPilotBuildPlace="), PlaceAfter);
+	// The wheel's icons loaded now: a texture loaded on the frame it is first
+	// drawn shows nothing until it streams in.
+	for (int32 K = 0; K < int32(ac::EnumInfo<ac::StructureKind>::names.size()); ++K) FAcIcons::Brush(FAcConsoleInfo::StructureIconName(K));
+	FAcIcons::Brush(TEXT("act.strike"));
 	if (UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this))
 	{
 		FrameHandle = Sim->AddFrameListener(EAcFrameStage::Effects,

@@ -325,7 +325,7 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 	PaintSight(P, W, H);
 	PaintMarks(P, C, Now);
 	PaintCompass(P, W, H);
-	if (Info.Wheel) PaintWheel(P, C);
+	if (Info.Wheel) PaintWheel(P, View.IsEmpty() ? FAcRect(0, 0, W, H) : View);
 	if (bPanel)
 	{
 		PaintPanel(P, W);
@@ -571,17 +571,23 @@ void SAcPilotOverlay::PaintMenu(FAcPilotPen& P, const double H) const
 	}
 }
 
-void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FVector2D C) const
+void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FAcRect& Glass) const
 {
-	// The ring of buildings round the screen's centre, the first slice at
+	// The ring of buildings round the glass's middle, the first slice at
 	// the top and the rest clockwise; the pick lit and pushed out, its name,
 	// price and state in the hub; the stick's needle on the hub's rim.
 	const FAcBuildWheelInfo& Wh = *Info.Wheel;
 	const int32 N = Wh.Slices.Num();
 	if (N == 0) return;
-	const double In = WheelInner, Out = WheelOuter, Half = UE_DOUBLE_PI / N, Gap = 0.012;
+	// A little under the glass's middle: the banners hang from its top.
+	const FVector2D C(Glass.X + Glass.W / 2, Glass.Y + Glass.H / 2 - 14);
+	// Sized to the glass (its hint line under it).
+	const double Out = FMath::Clamp(Glass.H / 2 - 92, 120.0, WheelOuter), In = Out * WheelInner / WheelOuter;
+
+	const double Half = UE_DOUBLE_PI / N, Gap = 0.012;
 	auto Dir = [](double A) { return FVector2D(std::sin(A), std::cos(A)); };
-	P.Disc(C, Out + 26, Srgb(0.0, 0.01, 0.02, 0.42));
+	P.Disc(C, Out + 22, Srgb(0.0, 0.01, 0.02, 0.30));
+	P.Lines(FAcPilotPen::Circle(C, Out + 22), Alpha(PanelStroke(), 0.45), 1);
 	for (int32 I = 0; I < N; ++I)
 	{
 		const FAcWheelSlice& S = Wh.Slices[I];
@@ -589,7 +595,7 @@ void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FVector2D C) const
 		const double Mid = FAcBuildWheel::SliceAngle(I, N), Push = bPick ? 10 : 0;
 		const double R0 = In + Push, R1 = Out + Push, A0 = Mid - Half + Gap, A1 = Mid + Half - Gap;
 		const FLinearColor Fill = bPick ? (bBuild ? Srgb(0.08, 0.32, 0.42, 0.88) : Srgb(0.30, 0.18, 0.04, 0.88))
-			: bBuild ? Srgb(0.02, 0.07, 0.11, 0.80) : Srgb(0.02, 0.04, 0.06, 0.70);
+			: bBuild ? Srgb(0.05, 0.13, 0.19, 0.80) : Srgb(0.03, 0.05, 0.07, 0.72);
 		// The annular wedge in convex quads.
 		const int32 Steps = FMath::Max(2, int32((A1 - A0) / 0.06));
 		TArray<FVector2D> Rim;
@@ -651,7 +657,7 @@ void SAcPilotOverlay::PaintWheel(FAcPilotPen& P, const FVector2D C) const
 		const FLinearColor Tone = Wh.Pick >= 0 ? FAcHudStyle::Cyan() : White(0.6, 0.8);
 		P.Lines({C + D * (In - 8), C + D * (In - 8 + 10 * Lean + 2)}, Tone, 3, 3, true);
 	}
-	P.Label(TEXT("CLICK BUILDS  ·  B OR ESC CLOSES  ·  NUMBER KEYS PICK"), 12, White(0.8, 0.9), C - FVector2D(0, Out + 44),
+	P.Label(TEXT("CLICK BUILDS  ·  B OR ESC CLOSES  ·  NUMBER KEYS PICK"), 12, White(0.8, 0.9), C - FVector2D(0, Out + 42),
 		EAcHAlign::Center, EAcVAlign::Baseline, true, false);
 }
 

@@ -161,18 +161,25 @@ The build wheel offers it with no tag; placement as any building.
 
 ## 5. The radial build wheel (game)
 
-B opens a wheel at the screen's centre: one slice per kind of
-`blueprintKinds()` plus the dummy, in floor order starting at the top and
-going clockwise (Citadel, Derrick, Target Dummy, Landing Pad, Gatling,
-…). The pointer stays hidden and captured: the mouse's motion since B
-moves a virtual stick; past a dead zone of 40 px the slice under its
-direction is the pick, drawn lit with the kind's name, cost, and its state
-under it (LEARN, LV 8, NO BLUEPRINT, REALM LIMIT, ×N copies). Click (or
-releasing B when it was held over 0.25 s) confirms: a buildable kind goes to
-placement as today; LEARN sends `Learn` and keeps the wheel open; a locked
-slice does nothing but show why. Esc or B closes. The number keys still
-pick directly. The wheel is Slate, in the pilot overlay's layer; no new
-input assets beyond what the pointer capture needs.
+B opens a wheel round the middle of the view's glass (`SAcPilotOverlay::PaintWheel`,
+sized to fit it): one slice per kind of `AcPilotText::BuildKinds` (the order
+of `blueprintKinds()`: Citadel, Landing Pad, Derrick, Gatling Gun, Hab Dome,
+Sentinel, Foundry, Lab, Spacedock, Bastion), the first at the top and the
+rest clockwise, then the Target Dummy last. The first nine carry their number
+key; the dummy has none. The pointer stays hidden and captured: the mouse's
+motion since B moves a virtual stick (`FAcBuildWheel`, AcBuildWheel.h; the
+pawn offers its motion to `OnLookTaken` first), held inside a reach of 120
+points so a turn of the hand swings it round at once; past a dead zone of 40
+points the slice under its direction is the pick, drawn lit and pushed out,
+with the kind's name, cost, and its state in the hub (LEARN, LV 8, NO
+BLUEPRINT, REALM LIMIT, NEEDS 100 ORE, ×N COPIES). The reticle gives way to
+the wheel while it is open. Click (the act key offers "confirm" to `OnKey`
+first), or releasing B when it was held over 0.25 s, confirms: a buildable
+kind goes to placement as today; LEARN sends `Learn` and keeps the wheel
+open; a locked slice does nothing but note why. Esc or B closes. The number
+keys still pick directly. The wheel is Slate, in the pilot overlay's layer;
+no new input assets. Dev: `ac.PilotWheel DX DY` moves the stick, `ac.PilotKey
+confirm` clicks.
 
 ## 6. The gun feel (game)
 

@@ -115,7 +115,9 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 	}
 	if (T.Phase == 1)
 	{
-		if (Seated() && Mmo->Here() && Mmo->Progress() && Build && Since() > 1.0) Advance();
+		// With pictures, the world streamed in first.
+		const double Settle = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")) ? 8.0 : 1.0;
+		if (Seated() && Mmo->Here() && Mmo->Progress() && Build && Since() > Settle) Advance();
 		else Waited(TEXT("seated"), SeatSeconds);
 		return;
 	}
