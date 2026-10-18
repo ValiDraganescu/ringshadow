@@ -429,7 +429,8 @@ struct ShopPrice {
 /// own wallet (the tax does not apply).
 struct AUTOCRAFTCORE_API Shop {
     /// A blueprint's price rises this much with each copy the pilot has
-    /// bought of that kind before.
+    /// bought of that kind before. (C2: the shop sells each kind once, at
+    /// `bought` 0.)
     static constexpr double blueprintGrowth = 1.5;
     /// The `bought`th copy's price (0: the first) of `k`'s blueprint: ore
     /// `(50 + 25 × floor) × 1.5^bought`, MH `5 × floor × 1.5^bought` (the
@@ -470,12 +471,9 @@ struct AUTOCRAFTCORE_API PilotProgress {
     /// Blueprint copies held and not yet learned from (C2): `learn` uses one
     /// up. A kind with none has no entry.
     std::map<StructureKind, int64_t> blueprints;
-    /// Blueprint copies bought at the Citadel, per kind, ever. Going (C2,
-    /// docs/guns-and-practice.md section 4: the shop sells each once); kept
-    /// until the server and the game no longer read it.
-    std::map<StructureKind, int64_t> bought;
     /// The buildings the pilot has learned from a blueprint (C2): built for
-    /// their ore from then on, no copy used.
+    /// their ore from then on, no copy used. (An older blob's "bought", the
+    /// copies bought per kind, is read into it: schema 28's rule.)
     std::set<StructureKind> learned;
     /// Consumables held (C2). An item with none has no entry.
     std::map<Item, int64_t> items;
@@ -564,10 +562,8 @@ struct AUTOCRAFTCORE_API PilotProgress {
     int64_t held(Item i) const;
     /// `n` more copies of `k` (a site, a chip, a purchase).
     void giveBlueprint(StructureKind k, int64_t n = 1);
-    /// One copy of `k` used up (a building placed). False: none held.
+    /// One copy of `k` used up (`learn`). False: none held.
     bool useBlueprint(StructureKind k);
-    /// What the next copy of `k` costs this pilot.
-    ShopPrice blueprintPrice(StructureKind k) const;
     /// One consumable of `i` used up. False: none held.
     bool useItem(Item i);
 

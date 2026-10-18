@@ -200,9 +200,9 @@ The build wheel offers it with no tag; placement as any building.
   `knows(kind)` (learned, or free), `learnRefusal(kind)` ("You know the
   Derrick", "No Derrick blueprint to learn from") and `learn(kind)` (one
   copy used, the kind learned). `blueprints` (the copies held) stays as the
-  inventory of unused blueprints; `bought` and the "dearer each copy" price
-  go (both, and `useBlueprint`, stay in the core until the server and the
-  game no longer read them).
+  inventory of unused blueprints; `bought` is gone (an older blob's
+  "bought" is read into `learned`), and the shop prices each kind at its
+  first copy (`Shop::blueprintPrice(kind, 0)`).
 - **Learning:** `RequestMessage::Learn{StructureKind}` (protocol 37, index
   24): the pilot holds a copy, is not learning what it knows ("You know the
   Derrick"), the copy is consumed, the kind is learned, a toast "DERRICK

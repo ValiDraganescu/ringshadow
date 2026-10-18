@@ -425,8 +425,14 @@ bool get(const json& j, ProspectorProgress& v) {
         r.orDefault("blueprints", v.blueprints);
     }
     std::erase_if(v.blueprints, [](const auto& e) { return e.second <= 0; });
-    r.orDefault("bought", v.bought);
     r.orDefault("learned", v.learned);
+    // C2: a blob from before learning kept the copies bought per kind; a
+    // kind bought is learned (schema 28's rule), but a free one or one with
+    // no blueprint.
+    std::map<StructureKind, int64_t> bought;
+    r.orDefault("bought", bought);
+    for (const auto& [k, n] : bought)
+        if (n > 0 && Progression::blueprintFloor(k) > 0 && !Rules::freeBuild(k)) v.learned.insert(k);
     r.orDefault("items", v.items);
     std::erase_if(v.items, [](const auto& e) { return e.second <= 0; });
     r.orDefault("sites", v.sites);
@@ -579,7 +585,6 @@ json put(const ProspectorProgress& v) {
     w("freeRespec", v.freeRespec);
     w("recent", v.recent);
     w("blueprints", v.blueprints);
-    w("bought", v.bought);
     // Only once one is learned: older blobs stay as they were.
     if (!v.learned.empty()) w("learned", v.learned);
     w("items", v.items);

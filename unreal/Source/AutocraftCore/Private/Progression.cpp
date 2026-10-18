@@ -835,11 +835,6 @@ bool PilotProgress::useBlueprint(StructureKind k) {
     return true;
 }
 
-ShopPrice PilotProgress::blueprintPrice(StructureKind k) const {
-    const auto it = bought.find(k);
-    return Shop::blueprintPrice(k, it == bought.end() ? 0 : it->second);
-}
-
 bool PilotProgress::useItem(Item i) {
     const auto it = items.find(i);
     if (it == items.end() || it->second <= 0) return false;

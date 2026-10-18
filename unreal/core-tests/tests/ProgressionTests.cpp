@@ -325,7 +325,7 @@ TEST(progression_progressJsonRoundTrip) {
     ASSERT_TRUE(p.slot(1, Skill::overcharge));
     p.respecs = 2;
     p.blueprints = {{StructureKind::citadel, 1}, {StructureKind::derrick, 3}};
-    p.bought = {{StructureKind::derrick, 2}};
+    p.learned = {StructureKind::derrick, StructureKind::gatling};
     p.items = {{Item::repairKit, 4}, {Item::surveyFlare, 1}};
     p.sites = {"prospect-landing/lander-wreck"};
     p.regions = {"rust-hollow"};
@@ -352,7 +352,7 @@ TEST(progression_progressJsonRoundTrip) {
     EXPECT_EQ(found->copies(StructureKind::citadel), int64_t(1));
     EXPECT_EQ(found->copies(StructureKind::habDome), int64_t(1));
     EXPECT_EQ(found->copies(StructureKind::derrick), int64_t(0));
-    EXPECT_TRUE(found->bought.empty() && found->items.empty());
+    EXPECT_TRUE(found->learned.empty() && found->items.empty());
 }
 
 // The tree per kind (docs/kind-registry.md, "MMORPG: the pilot's kind"): the
@@ -453,9 +453,17 @@ TEST(progression_blueprintPriceRises) {
     const auto& kinds = Progression::blueprintKinds();
     for (size_t i = 1; i < kinds.size(); i++)
         EXPECT_TRUE(Shop::blueprintPrice(kinds[i], 0).ore >= Shop::blueprintPrice(kinds[i - 1], 0).ore);
-    ProspectorProgress p;
-    p.bought[StructureKind::habDome] = 1;
-    EXPECT_TRUE(p.blueprintPrice(StructureKind::habDome) == Shop::blueprintPrice(StructureKind::habDome, 1));
+}
+
+// C2: an older blob's copies bought per kind are read as learned (schema
+// 28's rule), but a kind with no blueprint; nothing writes "bought" again.
+TEST(progression_boughtReadsAsLearned) {
+    const std::string old = R"({"xp": 0, "bought": {"derrick": 2, "habDome": 1, "garrison": 1}, "blueprints": {"sentinel": 1}})";
+    const auto p = SessionStore::decode<ProspectorProgress>(old);
+    ASSERT_TRUE(p.has_value());
+    EXPECT_TRUE(p->learned == (std::set<StructureKind>{StructureKind::derrick, StructureKind::habDome}));
+    EXPECT_EQ(p->copies(StructureKind::sentinel), int64_t(1));
+    EXPECT_TRUE(SessionStore::encode(*p).find("bought") == std::string::npos);
 }
 
 // Copies and stacks: given, used up one at a time, gone at none. (C2: a
