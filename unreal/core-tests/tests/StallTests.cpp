@@ -122,6 +122,7 @@ TEST(stall_tanksTurningBesideAnObstacleDriveOff) {
 /// tanks pack up), is at its places by 12 s, and nobody is stuck again
 /// in the 22 s after the reshuffle.
 TEST(stall_armySettlesAtItsRallyAroundAnchoredTanks) {
+    const simtest::CitadelHall hall(false);
     auto [sim, m] = saved("rally-jam");
     ASSERT_TRUE(sim.has_value());
     sim->commanders = Commander::all(m);

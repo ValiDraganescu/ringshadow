@@ -3,6 +3,7 @@
 // main, the record set by hand where the XP does not matter. The curve and
 // catalogue tests are in GoldenLevelingTests.cpp.
 #include "LevelingScene.h"
+#include "CitadelHall.h"
 #include "Session.h"
 #ifndef JSON_NOEXCEPTION
 #define JSON_NOEXCEPTION 1
@@ -36,6 +37,7 @@ std::vector<GameEvent> leveledUps(const std::vector<GameEvent>& events) {
 /// 1 XP an ore and 1.25 an MH dropped off by the driven Prospector; a
 /// Prospector the AI runs earns nothing.
 TEST(Leveling_aDropOffEarnsItsXP) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     unitRef(sim, prospector).carrying = 25;
     run(sim, 1.0 / 30);
@@ -57,6 +59,7 @@ TEST(Leveling_aDropOffEarnsItsXP) {
 /// Each level crossed raises its event; unpicked offers wait, one per
 /// level, lowest first.
 TEST(Leveling_levelUpsRaiseEventsAndOffersStack) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     EXPECT_EQ(sim.levels().level(UnitKind::prospector), int64_t(1));
     EXPECT_TRUE((sim.levels().driven() == std::vector<UnitKind>{UnitKind::prospector})); // taking it over records the kind
@@ -209,6 +212,7 @@ TEST(Leveling_aNearbyAIProspectorDrillsFaster) {
 /// Rich vein: every third ore trip of the driven Prospector carries
 /// double.
 TEST(Leveling_richVeinDoublesEveryThirdTrip) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     give(sim, UnitKind::prospector, 7,
          {Perk::prospectorQuickDrill, Perk::prospectorRigMaster, Perk::prospectorBigHaul, Perk::prospectorFieldWelder,
@@ -235,6 +239,7 @@ TEST(Leveling_richVeinDoublesEveryThirdTrip) {
 /// The level and the picks belong to the pilot: they go with it onto
 /// another Prospector and leave the one it got out of.
 TEST(Leveling_theLevelFollowsThePilotOntoAnotherProspector) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     unitRef(sim, prospector).carrying = 200;
     run(sim, 1.0 / 30);
@@ -386,6 +391,7 @@ TEST(Leveling_groupRepairMendsMachinesAround) {
 /// Shield: it fills over 10 s, takes hits first, and starts refilling
 /// 7 s after the last hit; it goes when the pilot gets out.
 TEST(Leveling_theShieldTakesHitsFirstAndRefills) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     give(sim, UnitKind::prospector,
          {Perk::prospectorQuickDrill, Perk::prospectorRigMaster, Perk::prospectorBigHaul, Perk::prospectorFieldWelder,

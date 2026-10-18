@@ -41,6 +41,7 @@ TEST(playground_startsEmptyWithTwoSidesAndNoOneWins) {
 /// A Prospector put down by a Citadel mines ore put down after the
 /// game began.
 TEST(playground_placedOreIsMinedIntoAPlacedCitadel) {
+    const simtest::CitadelHall hall(false);
     Simulation sim = fresh();
     sim.placeStructure(Structure::Kind::citadel, 0, Vec2(-10, 0));
     EXPECT_TRUE(sim.propRefusal(Vec2(-10, 0), 1.1) == std::optional<std::string>("Something is in the way"));
@@ -58,6 +59,7 @@ TEST(playground_placedOreIsMinedIntoAPlacedCitadel) {
 /// Doodads and wells put down block the way like the map's, and go
 /// again when taken away; a Derrick goes on a placed well.
 TEST(playground_placedDoodadsAndWellsBlockTheWay) {
+    const simtest::CitadelHall hall(false);
     Simulation sim = fresh();
     const Vec2 rock(5, 5), well(-5, -5);
     EXPECT_TRUE(sim.nav->walkable(rock));

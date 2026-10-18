@@ -4,6 +4,7 @@
 // from, and a forward one at heavy air. Hand-built scenes, one `orders` call
 // each, never a game.
 #include "test.h"
+#include "CitadelHall.h"
 
 #include "Commander.h"
 #include "MapLibrary.h"
@@ -170,6 +171,7 @@ TEST(aiDefence_forwardSentinelFacesTheEnemyAir) {
 /// Heavy enemy air (9 supply of Kestrels): the AI orders its ore-line
 /// Sentinel first, then a second, forward one.
 TEST(aiDefence_heavyAirGetsASecondForwardSentinel) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap();
     GameState s = basesUp(m);
     const Commander c(m, 0);

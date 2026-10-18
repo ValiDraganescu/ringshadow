@@ -140,6 +140,8 @@ void Simulation::refreshNav() {
         auto& u = state.units[i];
         if (!(u.task != Unit::Task::inBastion && u.task != Unit::Task::aboard && u.task != Unit::Task::inDerrick
               && !u.stats().air && !u.jumpFrom)) continue;
+        // In a Citadel's hall or its doorway, or at a gun (C1): it stays.
+        if (standsInHall(u)) continue;
         bool pushed = false;
         if (NavGrid::solid(u.position, state)) {
             if (auto out = nav->nearestFree(u.position)) { u.position = *out; pushed = true; }
@@ -190,6 +192,7 @@ std::vector<GameEvent> Simulation::step(double dt) {
             stepTimes.thinkMax = ac::max(stepTimes.thinkMax, one);
         }
     }
+    stepCitadels(dt);
     stepStructures(dt, events);
     refreshNav();
     if (state.time >= nextRally) {
@@ -766,7 +769,8 @@ void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
 }
 
 /// A finished building with a weapon of its own (a Sentinel, a gatling
-/// gun, an armed Citadel: `Defence::weapon`): it keeps to the target it
+/// gun; an armed Citadel's corner guns fire only with a gunner,
+/// `stepCornerGun`): it keeps to the target it
 /// has while that stays in reach, else takes the best enemy in reach it
 /// can hit (`priority`, then closest); it turns its launcher there and
 /// fires when it points at it. Range is from its edge, longer from high
@@ -775,15 +779,12 @@ void Simulation::stepStructures(double dt, std::vector<GameEvent>& events) {
 /// (`bugHits`, the building as the shooter).
 void Simulation::stepTurret(Structure& s, const UnitStats& w, double dt, std::vector<GameEvent>& events) {
     if (s.kind == StructureKind::citadel) {
-        // Its four corner turrets, each on its own target.
+        // Its four corner turrets, each fired by its gunner (C1).
         if (!s.guns) {
             s.guns = std::array<CornerGun, 4>{};
             for (int i = 0; i < 4; i++) (*s.guns)[size_t(i)].aim = Defence::cornerAngle(i);
         }
-        for (int i = 0; i < 4; i++) {
-            CornerGun& g = (*s.guns)[size_t(i)];
-            stepGun(s, Defence::cornerGun(s.position, i), Defence::cornerRadius, w, g.target, g.cooldown, g.aim, dt, events);
-        }
+        for (int i = 0; i < 4; i++) stepCornerGun(s, i, w, dt, events);
         return;
     }
     std::optional<int64_t> target = s.target;
@@ -878,7 +879,7 @@ Unit Simulation::spawnProspector(const Structure& citadel) {
     const double spread = static_cast<double>(made(citadel.owner) % 5 - 2) * 0.35 * handed(citadel.position);
     const double a = std::atan2(line.y - citadel.position.y, line.x - citadel.position.x) + spread;
     const Vec2 dir(std::cos(a), std::sin(a));
-    const Vec2 at = citadel.position + dir * Rules::depositRange;
+    const Vec2 at = citadel.position + dir * Rules::depositRange();
     std::optional<Vec2> out;
     if (NavGrid::solid(at, state) && nav) out = nav->nearestFree(at);
     Unit u(state.nextID, Unit::Kind::prospector, citadel.owner, out.value_or(at), a, Unit::Task::idle);
@@ -1163,7 +1164,8 @@ std::optional<Simulation::Target> Simulation::target(int64_t id) const {
         && it->second < static_cast<int64_t>(state.units.size()) && state.units[size_t(it->second)].id == id) {
         const Unit& u = state.units[size_t(it->second)];
         const UnitStats& st = u.stats();
-        if (!(u.hp > 0 && u.task != Unit::Task::inBastion && u.task != Unit::Task::aboard && u.task != Unit::Task::inDerrick)) {
+        if (!(u.hp > 0 && u.task != Unit::Task::inBastion && u.task != Unit::Task::aboard && u.task != Unit::Task::inDerrick)
+            || sheltered(u)) {
             return std::nullopt;
         }
         const double armor = !pilot ? st.armor : st.armor + boost(Stat::Armor{}, u).plus;
@@ -2323,6 +2325,7 @@ bool Simulation::board(int64_t mid, std::optional<int64_t> id) {
     const Unit& v = state.units[size_t(*i)];
     const Unit& m = state.units[size_t(*mi)];
     if (!(v.owner == m.owner && Rules::boards(v.kind) && v.task != Unit::Task::inBastion && v.task != Unit::Task::aboard
+          && v.task != Unit::Task::atGun
           && distance(v.position, m.position) < 6)) return false;
     if (!(slotsUsed(m) + Rules::slots(v.kind) <= cargoSlots(m))) return false;
     auto cargo = state.units[size_t(*mi)].cargo.value_or(std::vector<int64_t>{});
@@ -2415,6 +2418,8 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
     if (auto it = unitIndexByID.find(id); it != unitIndexByID.end() && it->second >= 0
         && it->second < static_cast<int64_t>(state.units.size()) && state.units[size_t(it->second)].id == id) {
         const size_t i = size_t(it->second);
+        // Sheltered in the Citadel (C1): nothing reaches it.
+        if (sheltered(state.units[i])) return;
         double amount = damage_;
         if (pilot) {
             const Unit v = state.units[i];
@@ -2641,7 +2646,7 @@ void Simulation::trapped(std::vector<GameEvent>& events) {
         if (!(u.hp > 0 && !u.stats().air && !u.jumpFrom && !piloted(u.id) && u.task != Task::inBastion)) continue;
         if (u.task == Task::aboard || u.task == Task::inDerrick || u.task == Task::building || u.task == Task::repairing
             || u.task == Task::mining || u.task == Task::waiting || u.task == Task::depositing) continue;
-        if (!nav->boxedIn(u.position, pocketArea, u.kind == Unit::Kind::comet)) continue;
+        if (!nav->boxedIn(u.position, pocketArea, u.kind == Unit::Kind::comet) || standsInHall(u)) continue;
         seen.insert(u.id);
         auto b = boxedSince.find(u.id);
         const double since = b != boxedSince.end() ? b->second : state.time;
@@ -2996,7 +3001,7 @@ void Simulation::stepUnit(Unit& u, double dt, std::vector<GameEvent>& events) {
         }
         const auto citadel = current ? current : base(u.position, u.owner);
         if (!citadel) { u.task = Task::idle; return; }
-        if (travel(u, citadel->position, Rules::depositRange, dt)) {
+        if (travel(u, citadel->position, Rules::depositRange(), dt)) {
             auto& pl = state.players[size_t(u.owner)];
             const bool hydrogen = u.hydrogen == true;
             if (hydrogen) {

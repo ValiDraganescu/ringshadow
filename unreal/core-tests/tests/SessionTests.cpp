@@ -3,6 +3,7 @@
 // BaseSite::standard match Swift (golden/states.json), and the tolerant
 // decoders give Swift's defaults.
 #include "golden.h"
+#include "CitadelHall.h"
 #include "test.h"
 
 #include "Leveling.h"
@@ -94,6 +95,7 @@ TEST(session_with_every_field_round_trips) {
 }
 
 TEST(game_state_new_matches_swift) {
+    const simtest::CitadelHall hall(false);
     const json g = golden::load(golden::path("states.json"));
     ASSERT_TRUE(!g.is_discarded());
     const auto map = ac::SessionStore::decode<ac::MapDefinition>(g["map"].dump());

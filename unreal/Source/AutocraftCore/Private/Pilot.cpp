@@ -369,10 +369,23 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
         if (!in) return false;
         p = *in;
     }
-    if (nav && (!nav->standable(p) || nav->inRock(p))) return false;
+    // A map doodad a complete Citadel swallowed (a saved world's Citadel
+    // grown over its rocks, C1) is not there: the game hides it.
+    if (nav) {
+        const bool swallowed = swallowedByCitadel(p);
+        if (!nav->standable(p) && !(swallowed && swallowedDoodadCell(p))) return false;
+        if (!swallowed && nav->inRock(p)) return false;
+    }
     const double r = Rules::radius(u.kind) * 0.8;
-    if (std::any_of(state.structures.begin(), state.structures.end(),
-                    [&](const Structure& s) { return !Rules::walkable(s.kind) && NavGrid::insideStructure(p, s, r); })) {
+    // A complete Citadel with the hall blocks by its walls and its shut door
+    // (C1): the pilot walks in through the open door. Anything else, its
+    // whole square.
+    if (std::any_of(state.structures.begin(), state.structures.end(), [&](const Structure& s) {
+            if (Rules::walkable(s.kind) || !NavGrid::insideStructure(p, s, r)) return false;
+            const Footprint& f = Rules::footprint(s.kind);
+            if (!f.interior || !s.complete()) return true;
+            return f.blocks(p - s.position, doorOpen(s), r);
+        })) {
         return false;
     }
     if (std::any_of(state.patches.begin(), state.patches.end(), [&](const OreDeposit& m) {
@@ -387,6 +400,13 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
 /// a Prospector drilling, inside a Derrick, welding or mending). True while
 /// it is.
 bool Simulation::pilotBusy(Unit& u, const Pilot& p, double dt, std::vector<GameEvent>& events) {
+    // At a corner gun (C1): it stands at the station, its gun aims and fires
+    // (`stepCornerGun`); the walk keys do nothing.
+    if (u.task == Unit::Task::atGun) {
+        if (mannedGun(u)) return true;
+        u.task = Unit::Task::idle;
+        u.structure = std::nullopt;
+    }
     if (u.jumpFrom) {
         pilotFace(u, p, dt);
         pilotFly(u, dt);
@@ -535,7 +555,7 @@ std::optional<double> Simulation::strikeDamage(const Unit& u, int64_t id) const 
 /// What the action key would do for `u` where it stands and faces.
 std::optional<PilotTarget> Simulation::pilotTarget(const Unit& u) const {
     if (mending(u)) {
-        if (u.task == Unit::Task::mining || u.task == Unit::Task::inDerrick) return std::nullopt;
+        if (u.task == Unit::Task::mining || u.task == Unit::Task::inDerrick || u.task == Unit::Task::atGun) return std::nullopt;
         return pilotRepair(u);
     }
     if (const auto f = pilotFoe(u)) return PilotTarget(PilotTarget::Enemy{*f});
@@ -600,7 +620,7 @@ void Simulation::pilotAct(Unit& u, const PilotTarget& target_, bool pressed, dou
 // MARK: - Prospector
 
 std::optional<PilotTarget> Simulation::prospectorTarget(const Unit& u) const {
-    if (u.task == Unit::Task::mining || u.task == Unit::Task::inDerrick) return std::nullopt;
+    if (u.task == Unit::Task::mining || u.task == Unit::Task::inDerrick || u.task == Unit::Task::atGun) return std::nullopt;
     // Its own finished Derrick, on a well with MH left.
     std::optional<Structure> derrick;
     for (const Structure& s : state.structures) {
@@ -1022,7 +1042,11 @@ std::optional<std::string> Simulation::placementRefusal(Structure::Kind kind, Ve
             if (heightSpreads.size() >= kHeightSpreads) heightSpreads.clear();
             it = heightSpreads.emplace(key, high - low).first;
         }
-        if (it->second > 0.2) return "The ground is not level";
+        // 0.2 over a footprint up to the strategy game's Citadel's (its
+        // samples 4.5 cells apart), then in proportion to the samples' span:
+        // the same slope that takes a 5x5 Citadel takes the 12x12 one (C1;
+        // its hall's floor slab hides the rest).
+        if (it->second > 0.2 * max(1.0, (2 * r - 0.5) / 4.5)) return "The ground is not level";
     }
     for (const Structure& s : state.structures) {
         if (std::abs(s.position.x - p.x) < r + Rules::radius(s.kind)
@@ -1058,11 +1082,13 @@ std::optional<std::string> Simulation::placementRefusal(Structure::Kind kind, Ve
             }
         }
     }
+    // A Citadel keeps 3 cells from its edge to the ore and 3.5 to a well
+    // (5.5 and 6 from the 5x5's centre; the 12x12's follow its side, C1).
     if (kind == Structure::Kind::citadel
         && (std::any_of(state.patches.begin(), state.patches.end(),
-                        [&](const OreDeposit& m) { return m.remaining > 0 && distance(m.position, p) < 5.5; })
+                        [&](const OreDeposit& m) { return m.remaining > 0 && distance(m.position, p) < r + 3; })
             || (state.wells && std::any_of(state.wells->begin(), state.wells->end(),
-                                           [&](const Well& w) { return distance(w.position, p) < 6; })))) {
+                                           [&](const Well& w) { return distance(w.position, p) < r + 3.5; })))) {
         return "Too close to resources";
     }
     return std::nullopt;

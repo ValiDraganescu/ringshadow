@@ -326,7 +326,7 @@ GameState GameState::new_(const MapDefinition& map, const std::optional<std::vec
         const Vec2 oreCenter = sum / static_cast<double>(max(static_cast<int64_t>(start.ore.size()), int64_t(1)));
         const Vec2 toward = normalize(oreCenter - start.center);
         units.push_back(Unit(id, UnitKind::prospector, static_cast<int64_t>(owner),
-                             start.center + toward * Rules::depositRange, std::atan2(toward.y, toward.x),
+                             start.center + toward * Rules::depositRange(), std::atan2(toward.y, toward.x),
                              Unit::Task::idle));
         id += 1;
         Player p{.aggression = rng.unit()};

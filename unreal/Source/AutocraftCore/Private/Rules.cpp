@@ -59,7 +59,7 @@ int64_t Rules::supply(StructureKind k) {
 
 namespace {
 // Read on every region's thread, written only at a game's start.
-std::atomic<bool> hall{false};
+std::atomic<bool> hall{true};
 } // namespace
 
 void Rules::setCitadelHall(bool on) { hall.store(on, std::memory_order_relaxed); }

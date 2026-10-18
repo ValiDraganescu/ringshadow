@@ -3,6 +3,7 @@
 // frame every second compared with golden/simulation.json (units' places,
 // headings, hp and tasks, buildings' hp, the banks, the events by case).
 #include "SimHelpers.h"
+#include "CitadelHall.h"
 #include "golden.h"
 
 #include "WindowMaps.h"
@@ -162,7 +163,9 @@ std::vector<json> playground() {
     return record(sim, 25);
 }
 
-void compare(const char* name, const std::vector<json>& frames) {
+void compare(const char* name, std::vector<json> (*make)()) {
+    const simtest::CitadelHall hall(false);
+    const std::vector<json> frames = make();
     static const json g = golden::load(golden::path("simulation.json"));
     ASSERT_TRUE(!g.is_discarded() && g.contains(name));
     const json& want = g[name];
@@ -180,7 +183,7 @@ void compare(const char* name, const std::vector<json>& frames) {
 
 } // namespace
 
-TEST(simulationGolden_duel) { compare("duel", duel()); }
-TEST(simulationGolden_mining) { compare("mining", mining()); }
-TEST(simulationGolden_skirmish) { compare("skirmish", skirmish()); }
-TEST(simulationGolden_playground) { compare("playground", playground()); }
+TEST(simulationGolden_duel) { compare("duel", duel); }
+TEST(simulationGolden_mining) { compare("mining", mining); }
+TEST(simulationGolden_skirmish) { compare("skirmish", skirmish); }
+TEST(simulationGolden_playground) { compare("playground", playground); }

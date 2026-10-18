@@ -49,6 +49,7 @@ bool same(const Simulation& a, const Simulation& b) {
 } // namespace
 
 TEST(pathAheadStepsTheSameGame) {
+    const simtest::CitadelHall hall(false);
     std::optional<Simulation> plain = benchGame();
     ASSERT_TRUE(plain.has_value());
     Simulation ahead = *plain;

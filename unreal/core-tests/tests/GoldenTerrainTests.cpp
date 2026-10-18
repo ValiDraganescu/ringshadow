@@ -3,6 +3,7 @@
 // Tests/GameCoreTests/GoldenTerrainTests.swift. Doubles are compared bit for
 // bit (the golden holds their bit patterns in hex).
 #include "test.h"
+#include "CitadelHall.h"
 
 #ifndef JSON_NOEXCEPTION
 #define JSON_NOEXCEPTION 1
@@ -435,6 +436,7 @@ TEST(GoldenNav_pathsAndQueriesMatchSwift) {
 }
 
 TEST(GoldenNav_buildingsOreAndPlacedThingsMatchSwift) {
+    const simtest::CitadelHall hall(false);
     ASSERT_TRUE(!navGolden().is_discarded());
     Mismatches t{"dynamic"};
     const json& maps = navGolden()["maps"];

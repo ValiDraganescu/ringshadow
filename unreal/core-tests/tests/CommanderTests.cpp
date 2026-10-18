@@ -3,6 +3,7 @@
 // few seconds of simulation) each, never a game. And the Commander golden
 // (`GoldenCommanderTests.swift`).
 #include "test.h"
+#include "CitadelHall.h"
 #include "golden.h"
 
 #include "Commander.h"
@@ -493,6 +494,7 @@ TEST(commanderAProspectorScoutsTheEnemyStart) {
 /// pulls Prospectors, who fight them; once they are gone the
 /// Prospectors go back to work. A big attack is left to the army.
 TEST(commanderProspectorsFightOffASmallRush) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap();
     GameState s = GameState::new_(m);
     const Commander c(m);
@@ -590,6 +592,7 @@ TEST(commanderFirefliesRunIntoAOreLineAndPullOutWhenHurt) {
 /// A Dropship at the rally takes two Juggernauts and four Rangers aboard,
 /// flies them to red's ore line and sets them down raiding.
 TEST(commanderDropshipDropsASquadOnAOreLine) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap();
     GameState s = GameState::new_(m);
     s.players[0].drops = true;
@@ -838,6 +841,7 @@ void compareDump(const GameState& state, const MapDefinition& m, const nlohmann:
 /// The Swift game's orders and spots on the bench fixture, a fresh game and
 /// a teched one (`GoldenCommanderTests.swift`).
 TEST(commanderGolden) {
+    const simtest::CitadelHall hall(false);
     const auto json = golden::load(golden::path("commander.json"));
     ASSERT_TRUE(!json.is_discarded());
     std::string error;

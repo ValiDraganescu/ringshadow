@@ -3,6 +3,7 @@
 // the other kinds, a second or two of sim). Isolated scenarios only.
 
 #include "test.h"
+#include "CitadelHall.h"
 
 #include "Commander.h"
 #include "Flight.h"
@@ -184,6 +185,7 @@ TEST(PilotTests_onlyThePlayersDrivableUnitsCanBeTaken) {
 /// Forward is where it faces, at Prospector speed; a building stops it and it
 /// slides along the wall instead of passing through.
 TEST(PilotTests_walksWhereItFacesAndNotThroughBuildings) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     // Out on the open side, away from the ore line.
     const Vec2 out = openSide(sim, citadel);
@@ -208,6 +210,7 @@ TEST(PilotTests_walksWhereItFacesAndNotThroughBuildings) {
 /// Holding the action key at a field drills it; the load comes after
 /// the mining time, and walking into the Citadel banks it.
 TEST(PilotTests_drillsAFieldAndUnloadsAtTheCitadel) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     const int64_t pi_ = nearestPatch(sim, citadel);
     standAt(sim, prospector, pi_, 0.5);
@@ -275,6 +278,7 @@ TEST(PilotTests_takesAFieldFromAnAIProspector) {
 /// Into its own finished Derrick for a load of MH, which it banks at
 /// the Citadel like ore.
 TEST(PilotTests_takesHydrogenFromADerrick) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     const int64_t g = nearestWell(sim, citadel);
     const Vec2 at = (*sim.state.wells)[static_cast<size_t>(g)].position;
@@ -564,6 +568,7 @@ TEST(PilotTests_theAILeavesTheDrivenRangerAlone) {
 /// A building put up by hand: paid on the spot, welded while the Prospector
 /// stays, left standing when it walks off, and picked up again.
 TEST(PilotTests_buildsByHandPausesAndResumes) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     sim.state.players[0].ore = 500;
     const Vec2 out = openSide(sim, citadel);
@@ -604,6 +609,7 @@ TEST(PilotTests_buildsByHandPausesAndResumes) {
 /// What a building cannot be put on: money, tech, the ore, another
 /// building, off a well.
 TEST(PilotTests_placementRefusals) {
+    const simtest::CitadelHall hall(false);
     const auto [sim, prospector, citadel] = driven();
     (void)prospector;
     Simulation rich = sim;
@@ -1008,6 +1014,7 @@ TEST(PilotTests_juggernautGrenadeSlows) {
 /// and R again packs it up. Anchored, it walks: W drives it and A/D turn
 /// it at `Pilot.anchoredPace` of its tank-mode pace.
 TEST(PilotTests_tankAnchorsOnRAndCreepsAnchored) {
+    const simtest::CitadelHall hall(false);
     auto [sim, me, at, out] = drivenUnit(Unit::Kind::longbow);
     enemy(sim, 990, at + out * 9);
     sim.pilot->ability = true;
@@ -1210,6 +1217,7 @@ Mission raid(Vec2 at) { return Mission::Raid{at}; }
 /// Held, it heals the hurt Ranger under it and spends a third of an
 /// energy point per hit point; let go, the beam stops.
 TEST(PilotTests_dropshipHealsTheRangerUnderIt) {
+    const simtest::CitadelHall hall(false);
     auto [sim, me, ranger] = dropshipOverRanger(20);
     const auto s = sim.pilotSight(unit(sim, me));
     EXPECT_TRUE(s && s->target == ranger);

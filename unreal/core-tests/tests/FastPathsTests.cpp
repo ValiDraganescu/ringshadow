@@ -92,6 +92,7 @@ TEST(fastPaths_routesAreValidAndNotMuchLonger) {
 }
 
 TEST(fastPaths_unitsArriveThroughTheBudget) {
+    const simtest::CitadelHall hall(false);
     std::optional<Simulation> game = fastGame(false);
     ASSERT_TRUE(game.has_value());
     Simulation sim = *game;
@@ -160,6 +161,7 @@ TEST(fastPaths_sameGameRunToRunAndUnderPathAhead) {
 }
 
 TEST(fastPaths_aBuildingSendsOnlyTheUnitsItCrossesToFindAWay) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap();
     GameState state = blueOnly(GameState::new_(m));
     const Structure citadel = state.structures[0];

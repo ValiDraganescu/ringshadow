@@ -11,7 +11,8 @@ namespace ac {
 
 bool Simulation::sheltered(const Unit& u) const {
     if (u.task == Unit::Task::atGun) return true;
-    if (u.airborne()) return false;
+    // The strategy game's Citadel has no hall (and `target` asks this often).
+    if (!Rules::citadelHall() || u.airborne()) return false;
     const double r = Rules::radius(StructureKind::citadel);
     for (const Structure& s : state.structures) {
         if (s.kind != StructureKind::citadel || !s.complete() || !(s.hp > 0)) continue;
@@ -25,12 +26,53 @@ bool Simulation::sheltered(const Unit& u) const {
 
 bool Simulation::doorOpen(const Structure& s) { return s.door && s.door->open >= 0.95; }
 
+bool Simulation::swallowedByCitadel(Vec2 at) const {
+    if (!Rules::citadelHall()) return false;
+    const double r = Rules::radius(StructureKind::citadel) + 1;
+    for (const Structure& s : state.structures) {
+        if (s.kind == StructureKind::citadel && s.complete() && s.hp > 0 && std::abs(at.x - s.position.x) < r
+            && std::abs(at.y - s.position.y) < r) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Simulation::swallowedDoodadCell(Vec2 p) const {
+    if (!nav || !map) return false;
+    // The grid leaves a cell out for a doodad within its circle grown by the
+    // clearance (`NavGrid::buildGround`), measured from the cell's centre.
+    const auto i = nav->index(p);
+    if (!i || nav->cliffs[size_t(*i)]) return false;
+    const Vec2 c = nav->centre(*i);
+    for (const Doodad& d : map->doodads) {
+        if (distance(d.position, c) > 12 * ac::max(1.0, d.scale)) continue;
+        for (const NavGrid::Circle& k : NavGrid::circles(d)) {
+            if (distance(k.first, c) < k.second + NavGrid::clearance) return true;
+        }
+    }
+    return false;
+}
+
+bool Simulation::standsInHall(const Unit& u) const {
+    if (u.task == Unit::Task::atGun) return true;
+    if (u.airborne()) return false;
+    for (const Structure& s : state.structures) {
+        if (s.kind != StructureKind::citadel || !s.complete()) continue;
+        const Footprint& f = Rules::footprint(s.kind);
+        if (!f.interior || !NavGrid::insideStructure(u.position, s, 0)) continue;
+        // In the hall or the doorway; on a wall it is pushed out as ever.
+        return !f.blocks(u.position - s.position, true, 0);
+    }
+    return false;
+}
+
 std::optional<std::string> Simulation::doorRefusal(const Structure& s, bool open, const Unit& u) const {
     const Footprint& f = Rules::footprint(s.kind);
     if (!f.door || !s.complete() || !s.door) return std::string("No door to work here");
     const Vec2 local = u.position - s.position;
     if (open) {
-        if (!f.door->contains(local, Rules::doorReach)) return std::string("Too far from the door");
+        if (f.door->distance(local) > Rules::doorReach) return std::string("Too far from the door");
         return std::nullopt;
     }
     if (!f.inside(local)) return std::string("Close it from inside");
@@ -103,10 +145,12 @@ void Simulation::unman(int64_t unit) {
 void Simulation::stepCitadels(double dt) {
     for (Structure& s : state.structures) {
         if (s.kind != StructureKind::citadel || !s.complete()) continue;
-        if (!s.door) s.door = Door{};
-        Door& d = *s.door;
-        const double step = dt / Rules::doorSeconds;
-        d.open = d.opening ? ac::min(1.0, d.open + step) : ac::max(0.0, d.open - step);
+        if (Rules::footprint(s.kind).door) {
+            if (!s.door) s.door = Door{};
+            Door& d = *s.door;
+            const double step = dt / Rules::doorSeconds;
+            d.open = d.opening ? ac::min(1.0, d.open + step) : ac::max(0.0, d.open - step);
+        }
         if (!s.guns) continue;
         for (CornerGun& g : *s.guns) {
             if (!g.gunner) continue;

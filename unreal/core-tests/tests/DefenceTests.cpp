@@ -51,51 +51,56 @@ bool hurt(const Simulation& m, int64_t id) {
 
 } // namespace
 
-/// An armed Citadel's four corner turrets fire on a Shardling and a
-/// Gloamwing in reach, each on its own target; an unarmed one (the strategy
-/// game's) never fires.
-TEST(Defence_citadelTurretsHitGroundAndAir) {
+/// C1: an armed Citadel's four corner turrets never fire by themselves, at
+/// a Shardling or a Gloamwing in reach, with the hall (the MMO's) or
+/// without (the strategy game's): only a gunner fires them
+/// (CitadelTests, gun_*).
+TEST(Defence_citadelTurretsNeverFireAlone) {
+    for (const bool hall : {true, false}) {
+        const CitadelHall h(hall);
+        auto [s, at] = scene();
+        const int64_t c = addStructure(s, Structure::Kind::citadel, at, 0);
+        s.structures.back().marks = TurretMarks{.rate = 3, .damage = 3, .range = 3};
+        const double r = Rules::radius(StructureKind::citadel);
+        const int64_t ground = bug(s, Unit::Kind::shardling, at + Vec2(r + 3, 0));
+        const int64_t air = bug(s, Unit::Kind::gloamwing, at + Vec2(-r - 3, 0));
+        Simulation m = sim(s);
+        const auto events = run(m, 4);
+        EXPECT_EQ(shots(events, c), int64_t(0));
+        EXPECT_TRUE(!hurt(m, ground));
+        EXPECT_TRUE(!hurt(m, air));
+        const std::optional<Structure> citadel = m.state.structure(c);
+        ASSERT_TRUE(citadel->guns.has_value());
+        for (const CornerGun& g : *citadel->guns) EXPECT_TRUE(!g.target && !g.gunner);
+        EXPECT_TRUE(m.bugHits.empty());
+    }
+}
+
+/// A manned corner gun reaches a bug its range marks bring in reach, not
+/// one past them.
+TEST(Defence_citadelRangeMarks) {
+    const CitadelHall hall(true);
     auto [s, at] = scene();
     const int64_t c = addStructure(s, Structure::Kind::citadel, at, 0);
     s.structures.back().marks = TurretMarks{};
-    const int64_t ground = bug(s, Unit::Kind::shardling, at + Vec2(9, 0));
-    const int64_t air = bug(s, Unit::Kind::gloamwing, at + Vec2(-9, 0));
-    Simulation m = sim(s);
-    run(m, 0.6);
-    EXPECT_TRUE(hurt(m, ground));
-    EXPECT_TRUE(hurt(m, air));
-    const std::optional<Structure> citadel = m.state.structure(c);
-    const auto& guns = citadel->guns;
-    ASSERT_TRUE(guns.has_value());
-    int64_t targets = 0;
-    for (const CornerGun& g : *guns) targets += g.target ? 1 : 0;
-    EXPECT_TRUE(targets >= 2);
-    // A Shardling dies to the turrets in a few seconds.
-    run(m, 4);
-    EXPECT_TRUE(!m.state.unit(ground) || m.state.unit(ground)->hp <= 0);
-    // Hits on bugs go to the director with the Citadel as the shooter.
-    bool told = false;
-    for (const auto& h : m.bugHits) told = told || (h.shooter == c && h.bug == ground);
-    EXPECT_TRUE(told);
-
-    auto [s2, at2] = scene();
-    addStructure(s2, Structure::Kind::citadel, at2, 0);
-    const int64_t calm = bug(s2, Unit::Kind::shardling, at2 + Vec2(6, 0));
-    Simulation m2 = sim(s2);
-    run(m2, 3);
-    EXPECT_TRUE(!hurt(m2, calm));
-}
-
-/// Out of reach the turrets hold; with range marks they reach farther.
-TEST(Defence_citadelRangeMarks) {
-    auto [s, at] = scene();
-    addStructure(s, Structure::Kind::citadel, at, 0);
-    s.structures.back().marks = TurretMarks{};
-    const int64_t far = bug(s, Unit::Kind::shardling, at + Vec2(10.5, 0));
-    Simulation m = sim(s);
+    const int64_t pilot = addUnit(s, Unit::Kind::prospector, Defence::gunStation(at, 0), 0);
+    const Vec2 mount = Defence::cornerGun(at, 0);
+    const Vec2 out(std::cos(Defence::cornerAngle(0)), std::sin(Defence::cornerAngle(0)));
+    // Its edge 9.5 cells from the mount's: past 7.5, inside 7.5 + 3 marks.
+    const int64_t far = bug(s, Unit::Kind::shardling, mount + out * (9.5 + 0.5 + Rules::radius(Unit::Kind::shardling)));
+    // No fog: the bug stands past the side's sight (a world region by day
+    // sees it, `daylightAt`).
+    Simulation m(s, homeMap(), false);
+    m.broodSide = 1;
+    ASSERT_TRUE(m.take(pilot));
+    m.step(1.0 / 30);
+    ASSERT_TRUE(!m.man(pilot, c, 0));
+    m.pilot->heading = Defence::cornerAngle(0);
+    m.pilot->hold = true;
+    m.pilot->crosshair = Pilot::Crosshair{Pilot::Crosshair::On{far}};
     run(m, 2);
     EXPECT_TRUE(!hurt(m, far));
-    m.state.structures.back().marks = TurretMarks{.range = 3};
+    for (Structure& st : m.state.structures) if (st.id == c) st.marks = TurretMarks{.range = 3};
     run(m, 2);
     EXPECT_TRUE(hurt(m, far));
 }

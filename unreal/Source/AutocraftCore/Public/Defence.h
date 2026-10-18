@@ -65,8 +65,11 @@ struct AUTOCRAFTCORE_API Defence {
     static constexpr double gunArcHalf = 110.0 * pi / 180.0;
     static constexpr double gunPitchMin = -20.0 * pi / 180.0;
     static constexpr double gunPitchMax = 50.0 * pi / 180.0;
-    /// The roof deck the mounts stand on, cells up from the Citadel's ground.
+    /// The roof deck, cells up from the Citadel's ground.
     static constexpr double deckHeight = 7.0;
+    /// The turret mounts' base, on the corner towers that rise from the
+    /// deck (with the hall; the 5x5's guns stand on its deck, 4.6).
+    static double mountHeight() { return Rules::citadelHall() ? 9.0 : 4.6; }
     /// Where gun `i`'s gunner stands, in the hall: 4 cells from the centre
     /// along each axis, in the gun's quadrant. Without the hall there is no
     /// station (inside the solid Citadel: `man` refuses, nothing is sheltered).
@@ -74,9 +77,9 @@ struct AUTOCRAFTCORE_API Defence {
     static Vec2 gunStation(Vec2 citadel, int i);
     /// A pilot within this many cells of a station mans its gun.
     static constexpr double stationReach = 1.5;
-    /// Gun `i`'s camera (the game's view at a gun): over the mount by 0.9
-    /// cells (z from the Citadel's ground), 0.6 cells back from the mount
-    /// along `aim`.
+    /// Gun `i`'s camera (the game's view at a gun): 0.9 cells over the
+    /// mount's base (`mountHeight`; z from the Citadel's ground), 0.6 cells
+    /// back from the mount along `aim`.
     static Vec3 gunEye(Vec2 citadel, int i, double aim);
     /// `aim` (world radians) held within gun `i`'s arc, at its hard stops
     /// (no wrap: past a stop it stays at that stop).

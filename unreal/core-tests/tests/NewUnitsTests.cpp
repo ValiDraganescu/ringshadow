@@ -883,6 +883,7 @@ TEST(newUnits_aMechFoundryBuildsAnAtlasAtFortySupply) {
 /// Idle Scorpions get posted two to an ore line, each at its own spot;
 /// a Peregrine holds over the base while it has nothing to escort.
 TEST(newUnits_theAIPostsScorpionsAtItsOreLineAndPeregrinesOverhead) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap_();
     Base b = base(m);
     const Vec2 home = b.citadel.position;
@@ -1243,6 +1244,7 @@ bool anyNear(const std::vector<Vec2>& v, Vec2 p, double within) {
 /// to the two at the ore line; none at the other end of the ramp, nor at the
 /// ramp on the enemy's side.
 TEST(newUnits_theAIBuriesAScorpionAtTheFootOfItsRamp) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap_();
     Base b = base(m);
     const Vec2 home = b.citadel.position;
@@ -1267,6 +1269,7 @@ TEST(newUnits_theAIBuriesAScorpionAtTheFootOfItsRamp) {
 /// One is buried at each point its squads hold (a `hold` objective), and
 /// not for an objective that is still an attack.
 TEST(newUnits_theAIBuriesAScorpionAtItsHoldPoints) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap_();
     Base b = base(m);
     const Vec2 hold = b.citadel.position + Vec2(10, 12);
@@ -1327,6 +1330,7 @@ TEST(newUnits_aFollowerNeverJoinsAGroundPush) {
 /// them down there and they bury themselves. Other styles with no drops do
 /// not.
 TEST(newUnits_aHarassAIDropsScorpionsAtTheEnemyOreLine) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap_();
     GameState s = GameState::new_(m);
     s.players[0].style = Player::Style::harass;

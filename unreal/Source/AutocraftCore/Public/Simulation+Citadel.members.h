@@ -12,6 +12,17 @@ public:
     bool sheltered(const Unit& u) const;
     /// A Citadel's door is open enough to walk through (`Door::open` 0.95).
     static bool doorOpen(const Structure& s);
+    /// `at` (a map doodad's position, a crate's) lies within a complete
+    /// Citadel's bounding square grown by 1, with the hall on: a saved
+    /// world's Citadel grown over it swallowed it. Such a doodad blocks no
+    /// driven unit, and the game hides it.
+    bool swallowedByCitadel(Vec2 at) const;
+    /// The grid left the cell at `p` out for a map doodad (not a cliff).
+    bool swallowedDoodadCell(Vec2 p) const;
+    /// `u` stands in a complete Citadel's hall or its doorway, or at a gun:
+    /// `refreshNav` leaves it where it is and it is never trapped there,
+    /// though the grid blocks the whole square for everyone else.
+    bool standsInHall(const Unit& u) const;
     /// Why unit `u` can't open (`open`) or close the door of `s` now, or nil:
     /// `s` a complete Citadel; to open, `u` within `Rules::doorReach` of the
     /// door slab (either side); to close, `u` in the hall and no unit in the

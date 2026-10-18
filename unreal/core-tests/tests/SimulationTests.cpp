@@ -140,6 +140,7 @@ TEST(simulation_garrisonNeedsAHabDomeAndRangersRallyInsteadOfMining) {
 }
 
 TEST(simulation_unitsWalkAroundBuildingsAndStepOutOfNewOnes) {
+    const simtest::CitadelHall hall(false);
     const MapDefinition& m = homeMap();
     GameState state = blueOnly(GameState::new_(m));
     const Structure citadel = state.structures[0];
@@ -180,6 +181,7 @@ TEST(simulation_unitsWalkAroundBuildingsAndStepOutOfNewOnes) {
 }
 
 TEST(simulation_onlyOneProspectorDrillsAPatchAtATime) {
+    const simtest::CitadelHall hall(false);
     GameState state = blueOnly(GameState::new_(homeMap()));
     Unit second = state.units[0];
     second.id = state.nextID; state.nextID += 1;

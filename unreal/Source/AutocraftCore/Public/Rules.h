@@ -202,6 +202,12 @@ struct Slab {
     bool contains(Vec2 local, double grow = 0) const {
         return local.x > min.x - grow && local.x < max.x + grow && local.y > min.y - grow && local.y < max.y + grow;
     }
+    /// How far `local` is from it seen from above (0 on it).
+    double distance(Vec2 local) const {
+        const double dx = local.x < min.x ? min.x - local.x : local.x > max.x ? local.x - max.x : 0;
+        const double dy = local.y < min.y ? min.y - local.y : local.y > max.y ? local.y - max.y : 0;
+        return std::sqrt(dx * dx + dy * dy);
+    }
     bool operator==(const Slab&) const = default;
 };
 
@@ -240,8 +246,10 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr double miningTime = 6.0;
     /// Ore per trip.
     static constexpr int64_t carry = 5;
-    /// Citadel footprint radius the Prospector stops at when returning.
-    static constexpr double depositRange = 3.0;
+    /// How far from a Citadel's centre a returning Prospector stops, and a
+    /// new one starts: half a cell past its edge (3 for the 5x5; C1, the
+    /// 12x12's follows its side).
+    static double depositRange() { return radius(StructureKind::citadel) + 0.5; }
     /// Distance from a patch centre at which a Prospector mines it.
     static constexpr double mineRange = 1.2;
     static constexpr int64_t startingOre = 50;

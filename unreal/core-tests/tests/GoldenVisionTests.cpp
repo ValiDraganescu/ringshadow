@@ -6,6 +6,7 @@
 // with a watchtower put down by Blue, and each player's Intel after the
 // simulation's first look. All exact.
 #include "golden.h"
+#include "CitadelHall.h"
 #include "test.h"
 
 #include "NavGrid.h"
@@ -60,6 +61,7 @@ void expectSame(const json& want, const json& got, const char* what) {
 } // namespace
 
 TEST(goldenVision_badlandsBench) {
+    const simtest::CitadelHall hall(false);
     const json want = golden::load(golden::path("vision.json"));
     ASSERT_TRUE(!want.is_discarded());
     std::string error;

@@ -4,6 +4,7 @@
 // signature test is in GoldenLevelingTests.cpp; the rows, the store and
 // its views (Database, Tracking*) come with the SQLite port.
 #include "LevelingScene.h"
+#include "CitadelHall.h"
 #include "Session.h"
 
 using namespace ac;
@@ -49,6 +50,7 @@ TEST(Tracking_aDrivenRangerCountsItsDamageItsKillAndWhatItTakes) {
 /// The loads the driven Prospector drops off count, ore and MH apart;
 /// once handed back, its loads don't.
 TEST(Tracking_aProspectorCountsTheLoadsItDropsOff) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     unitRef(sim, prospector).carrying = 25;
     run(sim, 1.0 / 30);
@@ -69,6 +71,7 @@ TEST(Tracking_aProspectorCountsTheLoadsItDropsOff) {
 /// A building the driven Prospector puts up counts its hp by the share
 /// welded; a repair counts the hp mended.
 TEST(Tracking_aProspectorCountsWhatItBuildsAndRepairs) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     sim.state.players[0].ore = 500;
     const Vec2 out = openSide(sim, citadel);
@@ -119,6 +122,7 @@ TEST(Tracking_secondsDrivenAndTakeOvers) {
 /// driven before and every player's standing; a pick stamps its level
 /// with the time it was made.
 TEST(Tracking_aLevelUpAndAPickAreStamped) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     run(sim, 1);
     const Player before = sim.state.players[0];
@@ -215,6 +219,7 @@ TEST(Tracking_withNoPilotNothingIsCounted) {
 /// The tally and the stamps go round the session file; a record from
 /// before tracking still decodes.
 TEST(Tracking_oldRecordsStillDecode) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     unitRef(sim, prospector).carrying = 70;
     run(sim, 1.0 / 30);

@@ -4,6 +4,7 @@
 // teched game on Badlands large, with objectives and a queue given by hand.
 // One call each, never a game played.
 #include "test.h"
+#include "CitadelHall.h"
 #include "golden.h"
 
 #include "Commander.h"
@@ -192,6 +193,7 @@ void compare(const golden::json& got, const golden::json& want, const std::strin
 } // namespace
 
 TEST(squadsGolden) {
+    const simtest::CitadelHall hall(false);
     const auto json = golden::load(golden::path("squads.json"));
     ASSERT_TRUE(!json.is_discarded());
     const auto session = SessionStore::load(golden::repo("bench/badlands-large.json"));

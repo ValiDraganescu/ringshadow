@@ -208,7 +208,7 @@ std::vector<Unit> Simulation::patients(const Unit& m) const {
     for (const Unit& v : state.units) {
         if (v.owner == m.owner && v.id != m.id && (healable(m, v) || Rules::boards(v.kind))
             && v.hp > 0 && v.task != Unit::Task::aboard && v.task != Unit::Task::inBastion
-            && v.task != Unit::Task::inDerrick) {
+            && v.task != Unit::Task::inDerrick && v.task != Unit::Task::atGun) {
             out.push_back(v);
         }
     }

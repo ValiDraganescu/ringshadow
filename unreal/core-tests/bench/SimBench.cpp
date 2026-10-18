@@ -123,6 +123,8 @@ double quantile(std::vector<double> v, double q) {
 }  // namespace
 
 int main(int argc, char** argv) {
+    // The strategy game's games: the solid 5x5 Citadel (C1).
+    Rules::setCitadelHall(false);
     // --stage-late8 OUT: stage a late 4v4 on Badlands · Large · 8 (LateStage.h)
     // and save it as a fixture; nothing is stepped.
     if (argc == 3 && std::strcmp(argv[1], "--stage-late8") == 0) {

@@ -3,6 +3,7 @@
 // main with a ProspectorProgress set by hand, one per building block. No
 // progress set: the old numbers.
 #include "LevelingScene.h"
+#include "CitadelHall.h"
 #include "Progression.h"
 
 using namespace ac;
@@ -115,6 +116,7 @@ TEST(ProgressionEffects_noProgressIsTheOldNumbers) {
 /// (Deep Vein whole: 25 × 1.3 + 9 + 15 = 56.5, 57 a trip; Quicksilver
 /// whole: 20 + 9 + 20 = 49).
 TEST(ProgressionEffects_quickDrillAndTheReusedStats) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     learn(sim, {{Skill::quickDrill, 3}});
     EXPECT_NEAR(sim.rate(Stat::Drill{}, unit(sim, prospector)), 1.18, 1e-12);
@@ -136,6 +138,7 @@ TEST(ProgressionEffects_quickDrillAndTheReusedStats) {
 
 /// Rich vein rank 2: every 4th ore trip carries double.
 TEST(ProgressionEffects_richVeinRankTwoDoublesEveryFourthTrip) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     learn(sim, {{Skill::richVein, 2}});
     atPatch(sim, prospector, citadel);
@@ -208,6 +211,7 @@ TEST(ProgressionEffects_theBurstChannels) {
 
 /// Shield, then Ironclad on it: 30 hp over 10 s; with Ironclad 70 hp over 5 s.
 TEST(ProgressionEffects_shieldAndIronclad) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     learn(sim, {{Skill::shield, 3}});
     run(sim, 10.1);
@@ -267,6 +271,7 @@ TEST(ProgressionEffects_torchRhythmDoublesEveryThirdStrike) {
 /// Clean cut: a load takes 15% less from the deposit; Motherlode (tried at
 /// a sure chance): the load is triple.
 TEST(ProgressionEffects_depositYieldAndTripleLoads) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     learn(sim, {{Skill::cleanCut, 3}});
     const size_t dep = atPatch(sim, prospector, citadel);
@@ -301,6 +306,7 @@ TEST(ProgressionEffects_quickRegrowth) {
 /// Stardust heart and Silver tide: a load dropped off counts 20% more in
 /// the wallet (and the XP); the realm's tax (C1) is a cut of the bigger load.
 TEST(ProgressionEffects_unloadYield) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     learn(sim, {{Skill::stardustHeart, 1}, {Skill::silverTide, 1}});
     const int64_t ore = sim.state.players[0].ore, mh = sim.state.players[0].hydrogen;
@@ -335,6 +341,7 @@ TEST(ProgressionEffects_realmTaxRounding) {
 /// the cut, the event tells both, XP counts the whole load; with no world
 /// (no progress) nothing is taken.
 TEST(ProgressionEffects_realmTaxOnUnload) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     const int64_t ore = sim.state.players[0].ore;
     unitRef(sim, prospector).carrying = 25;
@@ -461,6 +468,7 @@ TEST(ProgressionEffects_emergencyWeld) {
 /// Seismic charge: the cargo fills from a deposit within 3 cells; away
 /// from ore, or full, the key is refused.
 TEST(ProgressionEffects_seismicCharge) {
+    const simtest::CitadelHall hall(false);
     auto [sim, prospector, citadel] = driven();
     learn(sim, {{Skill::seismicCharge, 1}}, Slots{Skill::seismicCharge});
     outside(sim, prospector, citadel);

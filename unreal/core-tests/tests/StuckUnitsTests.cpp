@@ -66,6 +66,7 @@ TEST(stuck_theUsersBuildingsWallTheOreLineIn) {
 /// `NavGrid::cuts` sees the Dome that closes the wall (and not one that
 /// leaves a way round).
 TEST(stuck_navGridSeesTheDomeThatClosesTheWall) {
+    const simtest::CitadelHall hall(false);
     GameState s = blueMain();
     addWall(s);
     std::erase_if(s.structures, [](const Structure& b) { return b.position == Vec2(-66, -10); });
@@ -80,6 +81,7 @@ TEST(stuck_navGridSeesTheDomeThatClosesTheWall) {
 /// ten more Domes and three Garrisons, each where the Commander puts it,
 /// with the user's buildings already standing.
 TEST(stuck_commanderBuildingsKeepTheOreLineOpen) {
+    const simtest::CitadelHall hall(false);
     GameState s = blueMain();
     addWall(s);
     std::erase_if(s.structures, [](const Structure& b) { return b.position == Vec2(-66, -10); });
@@ -132,6 +134,7 @@ TEST(stuck_prospectorNeverMinesAPatchItCannotReach) {
 /// Citadel (the user's Scorpions 516 and 538: the one behind stood there for
 /// good). Every other patch of the line mined out, as in the save.
 TEST(stuck_scorpionWalksOverABuriedOne) {
+    const simtest::CitadelHall hall(false);
     auto scene = [](bool passable) {
         GameState s = blueMain();
         s.units.clear();

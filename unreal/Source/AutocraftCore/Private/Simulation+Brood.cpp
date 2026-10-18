@@ -157,6 +157,8 @@ std::vector<int64_t> Simulation::slamStrikes(const Unit& u) const {
     for (const Unit& o : state.units) {
         if (o.id == u.id || !(o.hp > 0) || o.airborne() || !state.hostile(o.owner, u.owner)) continue;
         if (o.task == Unit::Task::aboard || o.task == Unit::Task::inBastion || o.task == Unit::Task::inDerrick) continue;
+        // Sheltered in the Citadel (C1): she strikes the Citadel, not it.
+        if (sheltered(o)) continue;
         if (inFront(o.position, Rules::radius(o.kind))) out.push_back(o.id);
     }
     for (const Structure& s : state.structures)

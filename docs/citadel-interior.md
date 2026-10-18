@@ -36,15 +36,25 @@ start turns it off (its maps, AI layouts and Swift goldens are built round
 the solid 5x5 Citadel); every game start sets it, both ways. `Rules::radius`,
 `Rules::footprint`, `Rules::height` (the body height, 9.0 / 4.6, which
 `BuildingHeight` reads), `Defence::cornerInset()` (5.5 / 2.0) and
-`Defence::stationInset()` all read it, so nothing half-switches. The core
-tests set it per test (`simtest::CitadelHall`).
+`Defence::stationInset()`, `Defence::mountHeight()` (9.0 / 4.6) and
+`Rules::depositRange()` (the edge + 0.5: 6.5 / 3.0) all read it, so nothing
+half-switches. It is on by default (any MMO path that forgets it still gets
+the hall); the core tests on the strategy game's maps (window maps, the home
+map, the Swift goldens) turn it off per test (`simtest::CitadelHall`,
+`core-tests/tests/CitadelHall.h`), and `simbench` turns it off at its start.
 
 Everything that reads `Rules::radius` follows (deposit reach, unload reach,
 spawn at the door, placement, the map's footprint). A 12×12 Citadel needs
-flatter ground to place: the core keeps `placementRefusal`'s height-spread
-tolerance proportional to the footprint's side so a Citadel places where
-today's does on the same ground (the hall floor is the ground's height at
-the centre; the model's floor slab hides the slope).
+flatter ground to place: `placementRefusal`'s height-spread tolerance is 0.2
+up to the 5x5's footprint (its samples 4.5 cells apart) and grows with the
+samples' span beyond (0.2 × (2r − 0.5) / 4.5, 0.51 for the 12x12), so the
+same slope that takes a 5x5 takes the 12x12 (the hall floor is the
+ground's height at the centre; the model's floor slab hides the slope).
+On the start region, of 289 spots that take the 5x5 every 4 cells, 144 take
+the 12x12: the rest have a rock, a cliff or a deposit under the bigger
+square (3 a ridge's bend). The "Too close to resources" band keeps 3 cells
+from the Citadel's edge to the ore and 3.5 to a well (`r + 3`, `r + 3.5`:
+5.5 and 6 for the 5x5 as before).
 
 ## 2. The footprint has a shape (core)
 
@@ -85,13 +95,19 @@ Who uses it:
 
 - `Simulation::pilotCanStand` (`Pilot.cpp`): a **human-driven** unit is
   refused where `footprint.blocks(p - s.position, doorOpen(s), radius·0.8)`
-  for any non-walkable structure (today: the whole square). So a pilot walks
-  through the open door and around the hall; the slide along x then y stays.
+  for a complete Citadel with the hall, the whole square for anything else
+  (a Citadel's scaffold too). So a pilot walks through the open door and
+  around the hall; the slide along x then y stays. A map doodad inside a
+  complete Citadel's bounding square + 1 (`Simulation::swallowedByCitadel(Vec2)`,
+  a saved world's Citadel grown over its rocks) blocks no pilot: its rock
+  circles and the cells the grid left out for it (`swallowedDoodadCell`) are
+  walkable; the game hides those doodads by the same predicate.
 - `NavGrid::setDynamic`, `NavGrid::solid`, `Simulation::refreshNav`: **unchanged
   in meaning**, the whole bounding square blocks: AI units, mercenaries and
-  the Brood never enter. `refreshNav` must not push a unit standing in the
-  interior out: a unit that `footprint.inside()` a complete Citadel (or has
-  task `atGun`) is exempt, as `inBastion` is.
+  the Brood never enter. `refreshNav` does not push out a unit standing in
+  a complete Citadel's hall or its doorway, or at a gun
+  (`Simulation::standsInHall`; one on a wall is pushed out as ever), and
+  `trapped` never kills one there.
 - `NavGrid::insideStructure(p, st, grow)` keeps meaning "within the bounding
   square grown by `grow`", so "at the Citadel" checks (unload, the H screen,
   `AtRealmCitadel`) hold inside the hall too.
@@ -109,7 +125,9 @@ std::optional<Door> Structure::door;   // set on every complete Citadel (the ser
 ```
 
 - Speed: `Rules::doorSeconds = 2.5` closed to open. The core steps it every
-  tick toward `opening ? 1 : 0`.
+  tick toward `opening ? 1 : 0` (`Simulation::stepCitadels`, before the
+  buildings' step), and gives every complete Citadel with the hall its
+  `Door` there (shut).
 - Passable to pilots when `open >= 0.95` (`Simulation::doorOpen(s)`).
 - A pilot opens it from either side and closes it **only from inside**:
   `RequestMessage::Door { bool open; }` (protocol 36, index 22). The server
@@ -117,7 +135,11 @@ std::optional<Door> Structure::door;   // set on every complete Citadel (the ser
   unit is complete; a complete realm Citadel is in its region; to open, the
   unit stands within `Rules::doorReach = 2.0` of the door slab (either side);
   to close, the unit is `footprint.inside()`; to close, no unit stands in the
-  door slab grown by its radius ("Someone is in the doorway").
+  door slab grown by its radius ("Someone is in the doorway"). The core's
+  half: `Simulation::doorRefusal(s, open, unit)` ("No door to work here",
+  "Too far from the door" past 2.0 cells from the slab seen from above,
+  "Close it from inside", "Someone is in the doorway") and
+  `Simulation::door(unit, structure, open)`, which applies it.
 - The game sends it on the act key (E / click / Space) with the door panel
   under the crosshair or within `doorReach` and nothing else to act on
   (section 7).
@@ -126,11 +148,12 @@ std::optional<Door> Structure::door;   // set on every complete Citadel (the ser
 ## 4. Shelter (core, server)
 
 `bool Simulation::sheltered(const Unit& u) const`: `u.task == atGun`, or
-`u` stands `footprint.inside()` a complete Citadel of its side (position
-test; the doorway slab is outside, so a unit in the doorway is not sheltered).
+`u`, on the ground, stands `footprint.inside()` a complete Citadel not
+hostile to it (position test; the doorway slab is outside, so a unit in the
+doorway is not sheltered). Never with the hall off.
 
 Applied in: `Simulation::target()` (so bugs, turrets and soldiers never pick
-it), `hit()` (damage 0, like `shielded`), `slamStrikes` (the Matriarch), and
+it), `hit()` (nothing happens: no damage, no `hitAt`), `slamStrikes` (the Matriarch), and
 on the server the prey lists in `WorldBrood.cpp` and `WorldNest.cpp`. The
 Brood can still attack the Citadel itself (its HP as today) and anything
 outside. The Brood never paths inside (section 2).
@@ -141,9 +164,9 @@ Respawn at a Citadel (server) puts the Prospector in the hall at
 ## 5. Manual turrets (core, server, net, game)
 
 The four corner guns exist as today (`Structure::guns`, armed by the server
-with the realm's marks) but **never fire by themselves**. `stepGun` for a
-corner gun with no gunner only turns the aim back to rest
-(`Defence::cornerAngle(i)`, pitch 0) at `turretTurnRate`.
+with the realm's marks) but **never fire by themselves**, hall or not.
+`Simulation::stepCornerGun` for a corner gun with no gunner only turns the
+aim back to rest (`Defence::cornerAngle(i)`, pitch 0) at `turretTurnRate`.
 
 ```cpp
 struct CornerGun {
@@ -163,7 +186,9 @@ Constants (`Defence.h`):
 | `gunPitchMin`, `gunPitchMax` | -20°, +50° | |
 | `gunStation(citadel, i)` | `position + (±4.0, ±4.0)` in corner i's quadrant | where the gunner stands, in the hall |
 | `stationReach` | 1.5 | a pilot within it of the station mans the gun |
-| `gunEye(citadel, i)` | the mount + (0, 0, 0.9) cells, 0.6 behind the barrels along the aim | the gun's camera (game) |
+| `mountHeight()` | 9.0 (4.6 without the hall) | the turret base's z on the corner towers (the deck stays `deckHeight` 7.0) |
+| `gunEye(citadel, i, aim)` | the mount 0.6 back along the aim, z `mountHeight + 0.9` | the gun's camera (game) |
+| `clampAim(i, aim)` | | the aim held in the arc at its hard stops (no wrap) |
 
 Manning: `RequestMessage::Man { int8_t gun; }` (protocol 36, index 23; `gun`
 -1 disengages). The server (`WorldMap::man(pilot, gun)`) refuses unless the
@@ -171,23 +196,33 @@ pilot's unit is complete, `sheltered`, within `stationReach` of
 `gunStation(s, gun)`, and the gun has no gunner. Then `u.task = atGun`,
 `u.structure = s.id`, `u.position = gunStation`, `guns[gun].gunner = u.id`.
 Disengage (the request with -1, the Esc/F key in the game, the unit dying,
-leaving the region or being handed back) clears both. The server frees a gun
-whose gunner is gone each world step.
+leaving the region or being handed back) clears both. The core's half:
+`Simulation::man(unit, structure, gun)` (refusals "Only a finished Citadel
+has guns", "The Citadel's guns are not armed", "Already at a gun", "Get
+inside the Citadel first", "Too far from the gun's station", "Someone is at
+that gun"), `unman(unit)` and `mannedGun(u)`. `stepCitadels` frees a gun
+whose gunner is dead, gone or no longer `atGun` at it every step; a unit
+`atGun` that no one drives steps away (idle).
 
 `Unit::Task::atGun` is the 19th task (`EnumInfo<Unit::Task>`, still 5 bits on
-the wire). `prospectorBusy` holds the unit at its station like `inDerrick`
-(walk ignored). The renderer shows the unit standing at the console (not
+the wire). `pilotBusy` holds a unit of any kind at its station like
+`inDerrick` (walk ignored); `atGun` is never a target of the act key's
+`pilotTarget` (the key fires the gun), never boarded by a Dropship nor a
+driven Dropship's patient. The renderer shows the unit standing at the console (not
 hidden); the game's first-person view hides it as it hides the driven unit.
 
-Aim and fire, each tick, in `stepGun` when the gun has a gunner: the gun's
+Aim and fire, each tick, in `stepCornerGun` when the gun has a gunner (its
+input is the gunner's own `Pilot`, `pilotFor(gunner)`): the gun's
 `aim` is the gunner's `Pilot::heading` clamped into the arc and its `pitch`
 the gunner's `Pilot::pitch` clamped (new field, also on `PilotInput`,
 quantised to 8 bits over ±90°; a non-gunner's pitch is ignored). Fire while
 `act || hold` and `cooldown <= 0`: the target is the gunner's
-`Pilot::Crosshair::On{target}` when it is a foe within the weapon's range of
-the mount's edge and within 0.25 rad of the aim; a hit as today
-(`hit`, `bugHits`, `GameEvent::Shot{s.id, …}`), else a miss tracer along the
-aim (`GameEvent::Missed` as `pilotMiss` does, from the mount). The weapon is
+`Pilot::Crosshair::On{target}` when it is a foe the Citadel's side sees
+(`foe`), within the weapon's range of the mount's edge and within 0.25 rad
+of the aim; a hit as today (`hit`, `bugHits`, `GameEvent::Shot{s.id, …}`,
+`CornerGun::target` set to it), else a miss tracer along the aim:
+`GameEvent::Missed{s.id, mount + aim × (range + 0.5), 0, pitch}` (the game
+finds the gun by its aim, as for `Shot`). The weapon is
 `Defence::weapon(s)` with the realm's marks as today.
 
 ## 6. Cameras never pass through walls (game)
@@ -329,7 +364,7 @@ Frame: UE cm, front +Y, Z up, 100 cm a cell.
 
 | Layer | Tests |
 |---|---|
-| core | `footprint_citadelHallIsHollow` (the slabs, `blocks`, `inside`); `pilot_walksInThroughTheOpenDoorOnly`; `pilot_isPushedNowhereInsideTheHall`; `brood_neverEntersAndNeverTargetsASheltered` (A* blocked, `target()` nil, `hit()` 0); `door_closesOnlyWhenTheDoorwayIsClear`; `gun_restsWithoutAGunnerAndNeverFires`; `gun_aimClampedToTheArcAndPitch`; `gun_firesAtTheCrosshairFoeInRange`; `placement_citadelPlacesOnTodaysGround` |
+| core | `CitadelTests.cpp`: `footprint_citadelHallIsHollow` (the slabs, `blocks`, `inside`, both switch positions); `pilot_walksInThroughTheOpenDoorOnly`; `pilot_isPushedNowhereInsideTheHall`; `pilot_walksOverADoodadSwallowedByTheCitadel`; `pilot_unloadsInTheHallAndAtItsWalls`; `brood_neverEntersAndNeverTargetsASheltered` (A* blocked, `target()` nil, `hit()` 0, the slam); `door_closesOnlyWhenTheDoorwayIsClear`; `gun_aimClampsAtTheArcsHardStops`; `gun_restsWithoutAGunnerAndNeverFires`; `gun_aimClampedToTheArcAndPitch`; `gun_firesAtTheCrosshairFoeInRange`; `placement_citadelPlacesOnTodaysGround` (the start region). `DefenceTests.cpp`: `Defence_citadelTurretsNeverFireAlone` (was `…HitGroundAndAir`), `Defence_citadelRangeMarks` (a gunner's reach) |
 | net | round trips of `Door`, `Man`, `PilotInput::pitch`, `Structure::door`, `CornerGun::pitch/gunner`; the width tests |
 | server | `door_openFromOutsideCloseOnlyInside`; `man_takesAFreeGunWithinReach`; `man_freedWhenTheGunnerDies`; `brood_raidIgnoresThePilotInTheHall` (a group with prey set on a sheltered pilot drops it; the Citadel still takes hits); `citadel_noAutoFireWithoutAGunner`; `load_schema27ClearsTheGrownFootprint`; `respawn_insideACompleteCitadel` |
 | game | `Autocraft.Pilot.ChaseStopsAtWalls` (the sweep against the slabs); `Autocraft.Pilot.GunLookClamps`; `Autocraft.Hud.TurretFeedPaints`; `Autocraft.Pose.CitadelRamp` |
