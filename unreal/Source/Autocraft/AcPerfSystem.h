@@ -22,4 +22,6 @@ namespace AcPerfSystem
 	double LoadAverage();
 	/// "Apple M4 Max (Mac16,5), GPU 40 cores, CPU 12P+4E, 128 GB, macOS 26.3".
 	FString Machine();
+	/// The GPU's core count (IOKit's gpu-core-count on Apple silicon); 0 when unknown.
+	int32 GpuCores();
 }

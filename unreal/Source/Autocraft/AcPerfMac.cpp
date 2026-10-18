@@ -178,19 +178,25 @@ double AcPerfSystem::ChipGpuUtilization()
 	return Result;
 }
 
-FString AcPerfSystem::Machine()
+int32 AcPerfSystem::GpuCores()
 {
-	int32 GpuCores = 0;
+	int32 Cores = 0;
 	Accelerators([&](io_registry_entry_t E)
 	{
 		CFTypeRef N = IORegistryEntryCreateCFProperty(E, CFSTR("gpu-core-count"), kCFAllocatorDefault, 0);
 		double V = 0;
-		if (N && Number(N, V)) GpuCores = (int32)V;
+		if (N && Number(N, V)) Cores = (int32)V;
 		if (N) CFRelease(N);
 	});
+	return Cores;
+}
+
+FString AcPerfSystem::Machine()
+{
+	const int32 Cores = AcPerfSystem::GpuCores();
 	const FPlatformMemoryConstants& Mem = FPlatformMemory::GetConstants();
 	return FString::Printf(TEXT("%s (%s), GPU %s cores, CPU %dP+%dE, %.0f GB, macOS %s"), *Sysctl("machdep.cpu.brand_string"),
-		*Sysctl("hw.model"), GpuCores > 0 ? *FString::FromInt(GpuCores) : TEXT("?"), SysctlInt("hw.perflevel0.physicalcpu"),
+		*Sysctl("hw.model"), Cores > 0 ? *FString::FromInt(Cores) : TEXT("?"), SysctlInt("hw.perflevel0.physicalcpu"),
 		SysctlInt("hw.perflevel1.physicalcpu"), Mem.TotalPhysical / 1073741824.0, *Sysctl("kern.osproductversion"));
 }
 
@@ -206,6 +212,7 @@ void AcPerfSystem::Memory(double& Footprint, double& Graphics, double& Peak)
 
 double AcPerfSystem::AppGpuNanoseconds() { return -1.0; }
 double AcPerfSystem::ChipGpuUtilization() { return -1.0; }
+int32 AcPerfSystem::GpuCores() { return 0; }
 
 FString AcPerfSystem::Machine()
 {

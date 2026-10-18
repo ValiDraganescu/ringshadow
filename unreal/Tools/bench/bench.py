@@ -171,6 +171,12 @@ def mmo_run(w: int, h: int, a: argparse.Namespace, out: Path, variant: tuple[str
         cmd += ["-AcBenchGpu"]
     if scale > 1:
         cmd += [f"-AcHudScale={scale}"]  # a Retina window's backing scale (offscreen has none)
+    if not a.app:
+        # Its own settings: a run that lowers the scalability levels (a tier,
+        # a variant) would else save them into the editor's GameUserSettings,
+        # and every later run would start with them. (A package's run has its
+        # own -UserDir from hidden_run.py.)
+        cmd += [f"-UserDir={run_dir / 'user'}"]
     cmd += variant[1]
     code = run(cmd, out / "logs" / f"mmo-{tag}.stdout", timeout=3600)
     log = run_dir / "run.log"

@@ -12,6 +12,23 @@ the core as the client runs it, the renderer settings). What the player
 sees stays the same, and the core stays bit for bit. Only the MMO counts
 (the RTS mode is legacy).
 
+**Status at the pause** (2026-10-18, rounds 1-8):
+
+| round | what changed | measured (MMO bench) |
+|---|---|---|
+| 1 | the MMO bench; the ISM materials' descriptor kept | game thread p95 -10-18 % |
+| 2 | the shadow lights turned in steps (the VSM cache works) | GPU p50 -16-24 %; one frame per step +0.6-2.4 ms |
+| 3 | parts sent only when they move; arrivals measured | -0.4 ms GPU by a Citadel; the player's arrivals smooth |
+| 4 | actors kept once found; label measures kept | game thread -2-9 % |
+| 5 | Retina sizes; the cooked build beside the editor | the lead table below |
+| 6 | the shadow page pool and Lumen's surface cache sized to the game | cooked -124-387 MB, editor -0.65-1.25 GB |
+| 7 | (findings) steady play, startup, the first minute | smooth; seated in 2.3-3.2 s |
+| 8 | quality tiers: the mechanism, no sets yet | the sets measured, not settled |
+
+Open: the tier sets and the floor's decision (round 8, "Left"); the first
+minute's hitch storm, if it shows on a quiet machine (round 7); the Metal
+heaps' slack (round 6, the engine's).
+
 **Where players stand** (2026-10-18, after round 4; the cooked
 Development build players get, beside the editor binary the rounds
 measure; MMO bench, 2 rounds each in turns, load 6-17, ms and MB):
@@ -465,6 +482,106 @@ next big win for players is on smaller Macs. A base M-series GPU has a
 quarter to a fifth of this one's cores, so the same frame takes 40-55 ms
 there: a quality level per Mac (device profiles by GPU), which the game
 does not have.
+
+### Round 8: quality tiers, the mechanism (2026-10-18; the chapter paused here)
+
+**Why.** The MMO bench's numbers are the M4 Max's (40 GPU cores). A base
+M-series GPU has a fifth to a seventh of that. The game window renders at
+the panel's point size: the user's 16" MacBook Pro logs "viewport 1728x1117
+px, 1.00 px per point", because `bAllowHighDPIInGameMode` is the engine's
+default, off, and macOS scales the picture up. So a base M1 Air renders
+about 1440×900 (the 2560×1600 panel at its default scale). At today's
+settings that frame would take a base M1 roughly 40-50 ms.
+
+**The mechanism** (`AcQualityTier.h/.cpp`, called at the game module's
+start; the editor's own viewport is left alone):
+
+- The GPU's name ("Apple M2 Pro") gives its generation. IOKit's
+  `gpu-core-count` (`AcPerfSystem::GpuCores`) gives its cores.
+- Score = cores × the generation's factor. The M4 Max is 40 × 1.35 = 54.
+- Tiers: top ≥ 35, high ≥ 18, mid ≥ 9.5, floor below.
+- Without a core count it goes by the name: Max and Ultra top, Pro high,
+  else mid.
+- The engine's device-profile matching sees only the GPU's name, which
+  cannot tell an 8-core M4 from a 10-core one, so the choice is made in C++.
+- A lower tier's settings are a `[Ac_<Tier> DeviceProfileFragment]`
+  section of `DefaultDeviceProfiles.ini`, set at device-profile priority.
+  The top tier sets nothing.
+- `-AcTier=top|high|mid|floor`, or `Tier=` under `[AcQuality]` in
+  Engine.ini, forces a tier.
+- Logged once: `quality: tier top (Apple M4 Max, 40 GPU cores, score 54.0
+  of the M4 Max's 54), 0 settings`. Readable as `ac.QualityTier`, and in
+  every `bench-result` as `tier`.
+- A tier never touches the HUD's scale.
+- Test: `Autocraft.Quality.Tiers` (the table below).
+
+**Shipped: no tier settings.** No `[Ac_*]` section exists yet. Every Mac
+draws exactly as today, and only the tier's name is chosen and logged. The
+sets are measured below but not settled. The chapter paused before quiet,
+interleaved rounds at each tier's point size could fix them.
+
+| GPU (cores) | generation factor | score | tier | measured here? |
+|---|---:|---:|---|---|
+| M4 Max (40 / 32) | 1.35 | 54 / 43.2 | top | 40: yes (every round); 32: predicted |
+| M3 Max (40 / 30) | 1.25 | 50 / 37.5 | top | predicted |
+| M2 Max (38 / 30) | 1.12 | 42.6 / 33.6 | top / high | predicted |
+| M1 Ultra (48), M1 Max (32 / 24) | 1.0 | 48 / 32 / 24 | top / high / high | predicted |
+| M4 Pro (20 / 16) | 1.35 | 27 / 21.6 | high | predicted |
+| M3 Pro (18 / 14) | 1.25 | 22.5 / 17.5 | high / mid | predicted |
+| M2 Pro (19 / 16) | 1.12 | 21.3 / 17.9 | high / mid | predicted |
+| M1 Pro (16 / 14) | 1.0 | 16 / 14 | mid | predicted |
+| M4 (10 / 8), M3 (10 / 8) | 1.35 / 1.25 | 13.5-10 | mid | predicted |
+| M2 (10 / 8) | 1.12 | 11.2 / 9.0 | mid / floor | predicted |
+| M1 (8 / 7) | 1.0 | 8 / 7 | floor | predicted |
+
+The generation factors are per-core throughput relative to the M1 (clock
+and architecture). They and the GPU's frame scaling with the score are
+the prediction's assumptions. Only the M4 Max was measured.
+
+**Measured toward the sets** (MMO bench, one round each, editor; GPU p50 ms
+unless marked):
+
+- At 2560×1600, today 10.0-11.6. The engine's High levels (`sg.Shadow`,
+  `GlobalIllumination`, `Reflection`, `PostProcess`, `AntiAliasing` = 2)
+  give 9.2-10.5: Lumen's screen probes 2.3 → 1.5, deferred lighting
+  4.0 → 3.2.
+- With a cap on rendered pixels (`r.ScreenPercentage.MaxResolution`): 720
+  gives 8.0-9.1, 540 gives 7.5-8.2.
+- Medium (`= 1`; Lumen stays on with its cheaper irradiance-field gather):
+  with 720, 7.2-7.6; with 540, 6.5-6.9.
+- The clouds at 48 ray samples: -0.1 to -0.3. Passes that follow the
+  output size (TSR, post) and shadow depths (~0.9) do not shrink with the
+  cap.
+- **Engine bug (UE 5.8).** `r.ScreenPercentage.Auto.PixelCountMultiplier`
+  does nothing in the auto screen-percentage mode the game uses:
+  `PullRunTimeRenderingSettings` reads it only when a manual percentage is
+  set. The cap is the lever that works.
+- At 1440×900 (an M1 Air's point size), the driver's GPU busy time: today
+  6.2-7.3 ms; High 6.3-7.0; Medium + 540 6.0-6.8. The capped runs hit the
+  game's 120 fps limit, and another editor shared the GPU in the first two,
+  so these numbers vary ±1.5 ms and settle nothing.
+- The pictures of the candidate sets at 1440×900 (today, High, High + 720,
+  Medium + 720, Medium + 540, and the Lumen-off alternative: Medium + 540
+  with `r.DynamicGlobalIlluminationMethod=0`) are in
+  `art/perf/tiers/candidates/<set>/`, one per scene.
+
+**Left.**
+
+- **The sets.** Quiet, interleaved rounds per candidate at each tier's
+  point size (1512×982 high, 1470×956 mid, 1440×900 floor), with the frame
+  limit lifted, reading the driver's busy time.
+- **The budgets** on this Mac are 16.7 ms × score / 54: high ≤ 6.2 ms, mid
+  ≤ 3.1, floor ≤ 2.2 at 60 fps or ≤ 4.3 at 30.
+- **The floor decision** belongs to the user.
+  - (ii) The default the manager set: Lumen kept, a 30 fps target on a base
+    M1.
+  - (i) Lumen off for 60 fps. Its picture is in the candidates.
+  - (i) in its candidate set (Medium + 540, Lumen off) measured 5.5-6.2 ms
+    GPU p50 here (one round, load 4.4), darker and flatter where Lumen's
+    bounce light was.
+  - Medium + 540 at 6.0-6.8 ms busy here is above even the 30 fps budget
+    (4.3), so a base M1 likely needs more than these steps either way.
+- **Proof on a real low Mac** would replace the prediction's assumptions.
 
 ## Server
 

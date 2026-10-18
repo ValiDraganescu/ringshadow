@@ -2,6 +2,7 @@
 
 #include "AcPerf.h"
 #include "AcPerfSystem.h"
+#include "AcQualityTier.h"
 #include "AcSimSubsystem.h"
 #include "AcWorldRenderer.h"
 
@@ -255,6 +256,7 @@ FString FAcBenchMeter::Json(const FString& Name, const UObject* Context, const T
 	J->SetNumberField(TEXT("lights"), Lights);
 	J->SetNumberField(TEXT("litLights"), Lit);
 	J->SetNumberField(TEXT("load"), AcPerfSystem::LoadAverage());
+	J->SetStringField(TEXT("tier"), AcQualityTier::Name(AcQualityTier::Current()));
 	TArray<TSharedPtr<FJsonValue>> PartRows;
 	for (int32 I = 0; I < (int32)EAcTickPart::Count; ++I)
 	{
