@@ -474,12 +474,12 @@ deeds, the ledgers, the save, the wire bytes and the simulation's hashes.
 The benches are `make -C unreal/server bench` (-O3); the M4 Max is shared,
 so every number carries the load average it ran under.
 
-Where it stands after round 23 (the first number before round 1, or
+Where it stands after round 24 (the first number before round 1, or
 before the round that first measured it):
 
 | | before | now |
 |---|---:|---:|
-| the server's start (The First, cold) | ~850 ms, 5.5 s CPU | ~300 ms, 2.7 s CPU |
+| the server's start (The First, cold) | ~850 ms, 5.5 s CPU | ~180 ms, 1.2 s CPU |
 | the first step after a pilot joins | 12-25 ms | under 1 ms |
 | the world's step, one pilot (`worldbench`) | 0.030 ms | 0.005 ms |
 | the nest's step (`worldbench ... nest`) | 0.054 ms | 0.012-0.013 ms |
@@ -1310,3 +1310,27 @@ spreadbench's state hashes and snapbench's four wires are the same. Test
 dying, a headlamp and the whole region by day now and then, a used `Sight`
 against a fresh one each time (seen, near, ids, explored). Core touched
 (Vision.h, Vision.cpp); net (NetMirror.cpp, one line).
+
+### Round 24: the ground's slope tested last (2026-10-18)
+
+The server's start is the walking grids' ground (`NavGrid::buildGround`,
+87% of its CPU), and half of that is heights inside the region walls
+(`TerrainField::walled`). For every cell the build tested the slope first,
+twenty heights round the cell, and only then the cheap reasons to leave the
+cell out (a doodad, a well, out of play, a wall). A wall's cells are left
+out, so their twenty heights, the dearest of all, were thrown away. The
+slope test comes last now, for the cells nothing else left out. It has no
+other effect (heights are pure; the field's lazy caches keep their values),
+so the same cells come out ground or cliff.
+
+| `loadbench 2`, 3 runs each in turns, load 11 | before | after |
+|---|---:|---:|
+| the first `loadWorld`: wall | 252-257 ms | 154-159 ms |
+| its CPU (all threads) | 2.31-2.33 s | 1.08-1.09 s |
+| the first `WorldMap`: wall | 21.8-22.1 ms | 20.8-22.1 ms |
+
+The ground, cliff and terrain hashes of all 10 region files are the same
+(and the same as round 17's); worldbench's states (start c7644119037bfb4c,
+nest 1239e1800ff8ae42) and spreadbench's are the same; the core suite with
+its terrain goldens, the server and net suites pass. Core touched
+(NavGrid).

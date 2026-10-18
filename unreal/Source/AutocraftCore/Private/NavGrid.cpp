@@ -323,14 +323,6 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
                 }();
                 if (!open) continue;
             }
-            // Cliff: steep somewhere within the unit's reach.
-            bool steep = false;
-            for (Vec2 q : {p, p + Vec2(c, 0), p - Vec2(c, 0), p + Vec2(0, c), p - Vec2(0, c)}) {
-                if (steep) continue;
-                const double dx = (field.height(q + Vec2(e, 0)) - field.height(q - Vec2(e, 0))) / cell;
-                const double dz = (field.height(q + Vec2(0, e)) - field.height(q - Vec2(0, e))) / cell;
-                steep = std::sqrt(dx * dx + dz * dz) > maxSlope;
-            }
             bool blocked = false;
             for (const Circle& k : doodads) {
                 if (distance(k.first, p) < k.second + c) { blocked = true; break; }
@@ -345,6 +337,16 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
             // A region's walls (W4) are no ground: nothing walks on them,
             // nothing jumps onto them.
             if (walls && !field.openLand(p) && field.wallNear(p).coverage > 0.5) continue;
+            // Cliff: steep somewhere within the unit's reach. Last, as it
+            // samples twenty heights (a wall's the dearest), and only for a
+            // cell none of the above left out.
+            bool steep = false;
+            for (Vec2 q : {p, p + Vec2(c, 0), p - Vec2(c, 0), p + Vec2(0, c), p - Vec2(0, c)}) {
+                if (steep) continue;
+                const double dx = (field.height(q + Vec2(e, 0)) - field.height(q - Vec2(e, 0))) / cell;
+                const double dz = (field.height(q + Vec2(0, e)) - field.height(q - Vec2(0, e))) / cell;
+                steep = std::sqrt(dx * dx + dz * dz) > maxSlope;
+            }
             if (steep) cptr[z * width_ + x] = 1; else ptr[z * width_ + x] = 1;
         }
     };
