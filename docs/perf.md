@@ -934,3 +934,67 @@ noise to the bit.
 The terrain hashes of all 10 region files (heights, walls, materials,
 border heights, the walking grids) are the same, the terrain goldens pass,
 and every bench hash is equal.
+
+### Round 18: the regions with a pilot on threads, stage 1, off by default (2026-10-18)
+
+`WorldMap::step` steps every region, one after another, then does the
+world's own work. `WorldParams::stepThreads` (0, the default: as before;
+-1: half the cores, at most 8; more: that many; with 0 the
+`AUTOCRAFT_STEP_THREADS` environment variable sets it) makes a pool of
+threads at the start (`StepPool`, the caller among them, no more threads
+than regions) and steps regions with a pilot on it; the regions without
+one, and the world's work after the steps, stay on the caller in today's
+order. A dispatch wakes as many workers as there are jobs past the
+caller's; the caller steps jobs too (the one that took longest first) and
+returns only when every worker that took a place is through. Between
+dispatches the workers sleep on a condition: with no pilot on line nothing
+is dispatched or woken, and with the default nothing is timed either.
+
+The gate. The pool times one dispatch when it is made: one worker woken
+after 2 ms asleep and heard back from, on two empty jobs, the mean of 16
+(the slow wakes count; 40 ms at the start): `wakeUs`, 8-12 µs on this Mac at load 11. A
+region goes to the pool only when its last two steps each took longer than
+that, and only when two or more do; otherwise every region steps on the
+caller, as off. Two steps, not one: a region's step is bursty (the start
+region 5-7 µs most ticks and 55-65 µs every sixth, the nest 5-130 µs), and
+the last step alone sent the light tick after each burst to the pool.
+`stepAlways` (`AUTOCRAFT_STEP_ALWAYS=1`) sends every region with a pilot,
+for the tests.
+
+The break-even, measured with every region with a pilot sent (the start
+and the nest, 1,200 ticks, load 9): the region steps take 29.4 µs on one
+thread (5.2 + 24.2), and 40.9 µs on two. A dispatch costs its wake, the
+woken core runs its region 1.4 times slower (5.2 -> 7.4 µs: its caches
+and clock cold after 16 ms asleep), and the caller's own region runs 15%
+slower beside it (24.2 -> 27.9 µs). So moving a region pays only when the
+smaller of the two takes well over the wake, every tick: two regions each
+steadily above 10-15 µs. The First has none such today (one heavy region,
+the nest, and bursts), so the gate keeps nearly every tick on the caller.
+
+Audit, of everything a region's step reaches that is not its own: the
+walking grid's ground cache and search scratch pool, and the fog tiers'
+cache, are behind mutexes (filled when a region is made, not in a step);
+the search counters and `Simulation::lookId` are atomics (a look's number
+is compared only within its own region); every other static in the core is
+a constant set up once (thread-safe in C++); the world's regions run no
+AI. A region's step reads and writes its own simulation and seats alone.
+
+Checked: `spreadbench` (new: pilots in 1, 2 and 4 regions, the nest and
+Cold Fork's canyon wave among them, and 8 on each of two) gives the same
+four state hashes off as on 2, 4 and 8 threads with every step sent, 21
+runs, none different; the server suite passes, and passes under
+ThreadSanitizer on 4 threads with every step sent (`make -C unreal/server
+test-tsan`, new: 360 tests, no race); spreadbench under ThreadSanitizer
+the same. Every other bench hash is unchanged (the default is off).
+
+| `spreadbench 20`, 3 runs each in turns, load 11-12 | off | on (`-1`, gated) | every step sent |
+|---|---:|---:|---:|
+| 1 region with a pilot | 3.6-3.9 µs | 4.0 µs (0 sent) | 3.8-3.9 µs |
+| 2 (the start and the nest) | 41.8-42.2 µs | 41.5-41.9 µs (0 of 1,380 sent) | 47.1-47.4 µs |
+| 4 (with the canyon wave) | 58.0-59.0 µs | 59.5-62.6 µs (4-122 of 1,440) | 59.6-60.1 µs (p95 134-138 against 165-169) |
+| 2 with 8 pilots each | 35.8-37.3 µs | 36.3-37.4 µs (2-10 of 1,380) | 39.7-40.0 µs |
+
+So with the gate "on" is "off" within the load's noise, and sending every
+step costs 3-6 µs a tick where the regions are light. It stays off; stage 2
+(a soak with it on, a fresh sanitizer sweep) decides whether it is turned
+on. It pays when the world has several crowded regions at once.

@@ -348,6 +348,18 @@ struct WorldParams {
     /// and its dice (0: seeded by the world's id).
     bool brood = true;
     uint64_t broodSeed = 0;
+    /// Threads the regions with a pilot step on, the calling thread among
+    /// them (docs/perf.md "Server"): 0, the caller alone, region after
+    /// region; -1, half the cores and at most 8; more, that many. The
+    /// regions without a pilot and the world's own work after the steps
+    /// stay on the caller, in today's order. With 0 the
+    /// `AUTOCRAFT_STEP_THREADS` environment variable sets it. A region goes
+    /// to the other threads only when its last two steps each took longer
+    /// than waking one costs (timed at the start), and two or more do;
+    /// `stepAlways` (or `AUTOCRAFT_STEP_ALWAYS=1`) sends every region with a
+    /// pilot, for the tests that the threads change nothing.
+    int64_t stepThreads = 0;
+    bool stepAlways = false;
     /// The canyon game (Z2, WorldCanyon.cpp) in every canyon zone (`--canyons
     /// 0` turns it off); it runs whether the director spawns or not.
     bool canyons = true;
@@ -654,6 +666,9 @@ struct Moved {
 /// The running world: its regions (all stepped every tick), its pilots.
 /// A world of one generated region with its AI (the M1 server, `--map`) has
 /// no places: pilots join it and take units as before.
+/// The threads a world steps its regions with a pilot on (WorldMap.cpp).
+struct StepPool;
+
 class WorldMap {
 public:
     /// One generated region (M1).
@@ -1517,6 +1532,11 @@ public:
 
     /// Wall-clock ms the last `step` took over all the regions.
     double lastStepMs() const { return lastStepMs_; }
+    /// With `WorldParams::stepThreads`: what one dispatch to the pool costs,
+    /// microseconds, timed when the pool was made (0: no pool), and how many
+    /// steps went to it.
+    double stepWakeUs() const;
+    size_t pooledSteps() const { return pooledSteps_; }
 
 private:
     /// A pilot unit's skill clocks on the way to another region: when its
@@ -1689,6 +1709,14 @@ private:
     std::optional<LoadedWorld> world_;
     WorldParams params_;
     std::vector<std::unique_ptr<Region>> regions_;
+    /// `WorldParams::stepThreads` as worked out (0: off), the pool (made at
+    /// the start with up to that many threads, one a region, the caller's
+    /// among them) and a step's jobs.
+    size_t stepThreads_ = 0;
+    bool stepAlways_ = false;
+    std::shared_ptr<StepPool> stepPool_;
+    std::vector<Region*> stepJobs_;
+    size_t pooledSteps_ = 0;
     size_t start_ = 0;
     std::map<PilotId, PilotState> pilots_;
     /// When each pilot on line joined (a count; connection ids are random).

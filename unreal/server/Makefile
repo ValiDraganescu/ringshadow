@@ -9,6 +9,8 @@
 #   make -C unreal/server bench        the region bench and the network bench, at -O3
 #   make -C unreal/server test-asan    the tests built with AddressSanitizer and UBSan
 #                                      (build/asan/, -O1; stops at the first finding)
+#   make -C unreal/server test-tsan    the tests built with ThreadSanitizer, the regions
+#                                      stepped on 4 threads, every step (build/tsan/, -O1)
 #
 # Objects go to build/. The tests use core-tests' tiny framework (test.h, main.cpp)
 # and net-tests' in-memory network (rig.h).
@@ -41,7 +43,7 @@ LIB_OBJ := $(CORE_OBJ) $(NET_OBJ) $(WORLD_OBJ) $(SERVER_OBJ)
 PROGRAM := build/autocraft-server
 BIN := build/server-tests
 
-.PHONY: all test test-asan bench clean
+.PHONY: all test test-asan test-tsan bench clean
 all: $(PROGRAM) $(REGION_TOOL)
 
 # The end-to-end tests start build/autocraft-server.
@@ -113,17 +115,18 @@ build/tests/main.o: $(CORE_TESTS)/main.cpp
 # (bench/BalanceBench.cpp), build/savebench (bench/SaveBench.cpp),
 # build/loadbench (bench/LoadBench.cpp), build/lookbench
 # (bench/LookBench.cpp), build/snapbench (bench/SnapBench.cpp),
-# build/pathbench (bench/PathBench.cpp) and build/crowdbench
-# (bench/CrowdBench.cpp), everything at -O3.
+# build/pathbench (bench/PathBench.cpp), build/crowdbench
+# (bench/CrowdBench.cpp) and build/spreadbench (bench/SpreadBench.cpp),
+# everything at -O3.
 BENCH_FLAGS := $(subst -O2,-O3,$(CXXFLAGS)) -I../core-tests/bench
 BENCH_LIB := $(patsubst $(CORE)/Private/%.cpp,build/bench/core/%.o,$(CORE_SRC)) \
 	$(patsubst $(NET)/Private/%.cpp,build/bench/net/%.o,$(NET_SRC)) build/bench/net/monocypher.o \
 	$(patsubst world/%.cpp,build/bench/world/%.o,$(WORLD_SRC))
 BENCH_OBJ := $(BENCH_LIB) build/bench/program/Server.o \
 	$(patsubst client/%.cpp,build/bench/client/%.o,$(CLIENT_SRC)) build/bench/RegionBench.o build/bench/NetBench.o \
-	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o build/bench/SaveBench.o build/bench/LoadBench.o build/bench/LookBench.o build/bench/SnapBench.o build/bench/PathBench.o build/bench/CrowdBench.o
+	build/bench/WorldBench.o build/bench/DayBench.o build/bench/BalanceBench.o build/bench/SaveBench.o build/bench/LoadBench.o build/bench/LookBench.o build/bench/SnapBench.o build/bench/PathBench.o build/bench/CrowdBench.o build/bench/SpreadBench.o
 
-bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench build/savebench build/loadbench build/lookbench build/snapbench build/pathbench build/crowdbench
+bench: build/regionbench build/netbench build/worldbench build/daybench build/balancebench build/savebench build/loadbench build/lookbench build/snapbench build/pathbench build/crowdbench build/spreadbench
 	./build/regionbench 30 ../core-tests/fixtures/rally-jam.json
 	./build/netbench 20
 	./build/worldbench 30
@@ -135,6 +138,10 @@ bench: build/regionbench build/netbench build/worldbench build/daybench build/ba
 	./build/snapbench 20
 	./build/pathbench 20000
 	./build/crowdbench 10
+	./build/spreadbench 20
+
+build/spreadbench: $(BENCH_LIB) build/bench/SpreadBench.o
+	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
 
 build/crowdbench: $(BENCH_LIB) build/bench/CrowdBench.o
 	$(CXX) $(BENCH_FLAGS) -o $@ $^ $(LDLIBS)
@@ -247,10 +254,60 @@ build/asan/tests/main.o: $(CORE_TESTS)/main.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(ASAN_FLAGS) -c $< -o $@
 
+# `make test-tsan`: the same tests with ThreadSanitizer (-O1 -g), the
+# world's regions with a pilot stepped on 4 threads every step
+# (AUTOCRAFT_STEP_THREADS and AUTOCRAFT_STEP_ALWAYS, WorldParams::stepThreads),
+# objects in build/tsan/. Halts at the first race. A few minutes to build,
+# about an hour to run.
+TSAN_FLAGS := $(subst -O2,-O1 -g -fsanitize=thread -fno-omit-frame-pointer,$(CXXFLAGS))
+TSAN_OBJ := $(patsubst build/asan/%,build/tsan/%,$(ASAN_OBJ))
+
+test-tsan: build/tsan/server-tests $(PROGRAM) $(REGION_TOOL)
+	AUTOCRAFT_STEP_THREADS=4 AUTOCRAFT_STEP_ALWAYS=1 TSAN_OPTIONS=halt_on_error=1 ./build/tsan/server-tests $(FILTER)
+
+build/tsan/server-tests: $(TSAN_OBJ)
+	$(CXX) $(TSAN_FLAGS) -o $@ $^ $(LDLIBS)
+
+build/tsan/core/%.o: $(CORE)/Private/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TSAN_FLAGS) -c $< -o $@
+
+build/tsan/net/%.o: $(NET)/Private/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TSAN_FLAGS) -c $< -o $@
+
+build/tsan/net/monocypher.o: $(MONOCYPHER) $(NET)/ThirdParty/monocypher/monocypher.h
+	@mkdir -p $(dir $@)
+	clang -std=c99 -O1 -g -fsanitize=thread -c $< -o $@
+
+build/tsan/world/%.o: world/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TSAN_FLAGS) -c $< -o $@
+
+build/tsan/program/%.o: program/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TSAN_FLAGS) -c $< -o $@
+
+build/tsan/client/%.o: client/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TSAN_FLAGS) -c $< -o $@
+
+build/tsan/region/%.o: region/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TSAN_FLAGS) -c $< -o $@
+
+build/tsan/tests/%.o: tests/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TSAN_FLAGS) -c $< -o $@
+
+build/tsan/tests/main.o: $(CORE_TESTS)/main.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TSAN_FLAGS) -c $< -o $@
+
 clean:
 	rm -rf build
 
--include $(ASAN_OBJ:.o=.d)
+-include $(ASAN_OBJ:.o=.d) $(TSAN_OBJ:.o=.d)
 -include $(CORE_OBJ:.o=.d) $(NET_OBJ:.o=.d) $(WORLD_OBJ:.o=.d) $(SERVER_OBJ:.o=.d) $(CLIENT_OBJ:.o=.d) \
 	$(TEST_OBJ:.o=.d) $(BENCH_OBJ:.o=.d) build/program/main.d $(REGION_OBJ:.o=.d) build/region/main.d \
 	build/bench/SoakSave.d

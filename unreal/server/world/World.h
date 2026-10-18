@@ -125,6 +125,13 @@ public:
     /// `levels` first to keep them.
     void leave(PilotId pilot);
     bool joined(PilotId pilot) const { return pilots_.count(pilot) > 0; }
+    /// Any pilot in the region (seated, driving or aboard).
+    bool seated() const { return !pilots_.empty(); }
+    /// How long its last step and the one before took, microseconds, timed
+    /// while the world steps its regions on threads
+    /// (`WorldParams::stepThreads`): which go to the pool, and the longest
+    /// first. Nothing else reads them.
+    double stepCost = 0, stepCostBefore = 0;
     /// The side the pilot plays (`Pilot::player`).
     int64_t side(PilotId) const { return Pilot::player; }
 

@@ -12,11 +12,17 @@
 #include "json.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdio>
+#include <cstdlib>
+#include <functional>
 #include <limits>
+#include <mutex>
 #include <set>
+#include <thread>
 
 namespace ac::server {
 
@@ -245,6 +251,16 @@ WorldMap::WorldMap(const LoadedWorld& world, const WorldParams& params, const Re
     builtBy_.resize(regions_.size());
     kills_.resize(regions_.size());
     owed_.resize(regions_.size());
+    // The threads the regions with a pilot step on (`WorldParams::stepThreads`).
+    int64_t threads = params_.stepThreads;
+    if (threads == 0)
+        if (const char* env = std::getenv("AUTOCRAFT_STEP_THREADS")) threads = std::atoll(env);
+    const int64_t cores = std::max<int64_t>(1, int64_t(std::thread::hardware_concurrency()));
+    if (threads < 0) threads = std::min<int64_t>(8, std::max<int64_t>(1, cores / 2));
+    stepThreads_ = size_t(std::min<int64_t>(threads, cores));
+    stepAlways_ = params_.stepAlways;
+    if (const char* env = std::getenv("AUTOCRAFT_STEP_ALWAYS")) stepAlways_ = stepAlways_ || std::atoi(env) != 0;
+    if (stepThreads_ > 1 && regions_.size() >= 2) stepPool_ = std::make_shared<StepPool>(std::min(stepThreads_, regions_.size()) - 1);
     // The sites' reach from the load: a pilot's first board or contract
     // would build each region's walking grid for it in a tick (12 ms).
     siteReach_.resize(regions_.size());
@@ -643,11 +659,149 @@ std::optional<size_t> WorldMap::neighbour(size_t r, Edge e) const {
     return std::nullopt;
 }
 
+/// The workers a world steps its busy regions on, made once. A dispatch
+/// wakes as many workers as there are jobs past the caller's; each that
+/// claims a place takes jobs by index, and the caller returns only when all
+/// that claimed one are through (so the job is never run after it changes).
+/// A worker that wakes without a place goes back to sleep without running
+/// anything. Between dispatches the workers sleep on a condition. What one
+/// dispatch costs is timed once, when the pool is made: two empty jobs (one
+/// worker woken and heard back from) after the workers slept 2 ms, the
+/// mean of 16 after 4 (a tick's wake: the slow ones count): `wakeUs`.
+struct StepPool {
+    explicit StepPool(size_t workers) {
+        for (size_t k = 0; k < workers; k++) threads_.emplace_back([this] { work(); });
+        const std::function<void(size_t)> nothing = [](size_t) {};
+        double took = 0;
+        for (int k = 0; k < 20; k++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            const auto t0 = std::chrono::steady_clock::now();
+            run(2, nothing);
+            if (k >= 4) took += std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count();
+        }
+        wakeUs = took / 16;
+    }
+    ~StepPool() {
+        {
+            std::lock_guard<std::mutex> g(lock_);
+            quit_ = true;
+        }
+        wake_.notify_all();
+        for (std::thread& t : threads_) t.join();
+    }
+    StepPool(const StepPool&) = delete;
+    StepPool& operator=(const StepPool&) = delete;
+
+    /// Runs `job(0)` to `job(count - 1)` once each, on the workers and the
+    /// caller.
+    void run(size_t count, const std::function<void(size_t)>& job) {
+        if (count == 0) return;
+        const size_t wanted = std::min(threads_.size(), count - 1);
+        {
+            std::lock_guard<std::mutex> g(lock_);
+            job_ = &job;
+            count_ = count;
+            next_.store(0);
+            wanted_ = wanted;
+            claimed_ = 0;
+            acked_ = 0;
+            generation_ += 1;
+        }
+        for (size_t k = 0; k < wanted; k++) wake_.notify_one();
+        take(job, count);
+        std::unique_lock<std::mutex> g(lock_);
+        // Every place handed out is claimed and acknowledged (a worker busy
+        // when notified sees the new generation as it comes back to wait).
+        done_.wait(g, [&] { return acked_ == wanted_; });
+        job_ = nullptr;
+    }
+
+    /// One dispatch's cost, microseconds (the break-even of a region's step).
+    double wakeUs = 0;
+
+private:
+    void take(const std::function<void(size_t)>& job, size_t count) {
+        for (size_t i = next_.fetch_add(1); i < count; i = next_.fetch_add(1)) job(i);
+    }
+    void work() {
+        uint64_t seen = 0;
+        for (;;) {
+            const std::function<void(size_t)>* job = nullptr;
+            size_t count = 0;
+            {
+                std::unique_lock<std::mutex> g(lock_);
+                wake_.wait(g, [&] { return quit_ || generation_ != seen; });
+                if (quit_) return;
+                seen = generation_;
+                if (claimed_ >= wanted_) continue;
+                claimed_ += 1;
+                job = job_;
+                count = count_;
+            }
+            take(*job, count);
+            std::lock_guard<std::mutex> g(lock_);
+            if (++acked_ == wanted_) done_.notify_one();
+        }
+    }
+
+    std::vector<std::thread> threads_;
+    std::mutex lock_;
+    std::condition_variable wake_, done_;
+    const std::function<void(size_t)>* job_ = nullptr;
+    size_t count_ = 0;
+    std::atomic<size_t> next_{0};
+    size_t wanted_ = 0, claimed_ = 0, acked_ = 0;
+    uint64_t generation_ = 0;
+    bool quit_ = false;
+};
+
+namespace {
+
+/// Steps `r`, keeping how long it took (`Region::stepCost`).
+void timedStep(Region& r) {
+    const auto t0 = std::chrono::steady_clock::now();
+    r.step();
+    r.stepCostBefore = r.stepCost;
+    r.stepCost = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count();
+}
+
+} // namespace
+
+double WorldMap::stepWakeUs() const { return stepPool_ ? stepPool_->wakeUs : 0; }
+
 void WorldMap::step() {
     const auto t0 = std::chrono::steady_clock::now();
     const std::vector<Work> work = world_ ? workBefore() : std::vector<Work>{};
     if (world_) armCitadels();
-    for (auto& r : regions_) r->step();
+    // With `WorldParams::stepThreads`: the regions with a pilot whose last
+    // two steps each took longer than a dispatch costs (`StepPool::wakeUs`;
+    // with `stepAlways`, every one), on the pool when there are two or more
+    // (each touches only its own simulation, so the order does not matter;
+    // the longest first, for the caller, already awake); every other region
+    // here, as before.
+    if (stepPool_) {
+        stepJobs_.clear();
+        for (auto& r : regions_)
+            if (r->seated() && (stepAlways_ || std::min(r->stepCost, r->stepCostBefore) > stepPool_->wakeUs)) stepJobs_.push_back(r.get());
+        if (stepJobs_.size() >= 2) {
+            std::stable_sort(stepJobs_.begin(), stepJobs_.end(), [](const Region* a, const Region* b) { return a->stepCost > b->stepCost; });
+            const std::function<void(size_t)> job = [this](size_t i) { timedStep(*stepJobs_[i]); };
+            stepPool_->run(stepJobs_.size(), job);
+            pooledSteps_ += 1;
+            for (auto& r : regions_)
+                if (std::find(stepJobs_.begin(), stepJobs_.end(), r.get()) == stepJobs_.end()) {
+                    if (r->seated()) timedStep(*r);
+                    else r->step();
+                }
+        } else {
+            for (auto& r : regions_) {
+                if (r->seated()) timedStep(*r);
+                else r->step();
+            }
+        }
+    } else {
+        for (auto& r : regions_) r->step();
+    }
     lastStepMs_ = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     tick_ += 1;
     if (!world_) return;
