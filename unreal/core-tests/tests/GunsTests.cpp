@@ -454,6 +454,8 @@ TEST(gatling_onALedgeHitsBugsBelow) {
         }
         EXPECT_TRUE(onBug > 5);
         EXPECT_EQ(atGun, int64_t(0));
+        // The barrels dip to the solve (the pose's cradle follows it).
+        EXPECT_TRUE(m.state.structure(gun)->pitch < -0.02);
     }
 }
 

@@ -396,7 +396,9 @@ void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::v
     double aim = s.aim.value_or(pi / 2);
     double cooldown = s.cooldown.value_or(0);
     bool trigger = false;
-    double pitch = 0;
+    // Nothing to shoot: the barrels come back to level.
+    const double turn_ = turretTurnRate * dt;
+    double pitch = s.pitch > 0 ? ac::max(0.0, s.pitch - turn_) : ac::min(0.0, s.pitch + turn_);
     const double base = groundZ(s.position);
     if (target) {
         if (const auto t = foe(*target, s.owner)) {
@@ -414,7 +416,6 @@ void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::v
             }
             const double want = std::atan2(at.y - s.position.y, at.x - s.position.x);
             const double diff = std::remainder(want - aim, 2 * pi);
-            const double turn_ = turretTurnRate * dt;
             aim = std::remainder(aim + ac::max(-turn_, ac::min(turn_, diff)), 2 * pi);
             if (const auto p = gatlingPitch(s, at, z, t->radius)) {
                 pitch = *p;
@@ -433,6 +434,7 @@ void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::v
         }
     }
     s.aim = aim;
+    s.pitch = pitch;
     s.cooldown = cooldown;
 }
 

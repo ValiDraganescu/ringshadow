@@ -1067,6 +1067,9 @@ struct AUTOCRAFTCORE_API Structure {
     /// A complete Citadel's door (C1; set on completion by the core, and on
     /// the realm's Citadels by the server). Not saved: a loaded one starts shut.
     std::optional<Door> door;
+    /// A gatling gun's barrels' pitch, radians up from level (C2: the AI's
+    /// ballistic solve each step; back to level with nothing to shoot).
+    double pitch = 0;
     /// A gatling gun's heat, barrels and cone (C2; as `CornerGun`'s).
     double heat = 0;
     bool overheated = false;

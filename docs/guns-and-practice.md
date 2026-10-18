@@ -105,8 +105,10 @@ muzzle (Vec3), velocity (Vec3)}` replaces `Shot`/`Missed` for these guns.
 The muzzle is the barrels' end: `Defence::gunMuzzle(citadel, i, aim,
 pitch)`, `muzzleAlong` 1.3 from the trunnion along the barrels, and
 `Defence::gatlingMuzzle(at, aim, pitch)` from the model's catalog (the
-barrels pivot 1.28 up and 0.3 along the aim, the muzzle 1.1 past the
-pivot: 1.4 out level); z on the ground's height. The velocity is the aim (yaw,
+barrels' cradle pivots 1.28 up and 0.3 along the aim, the muzzle 1.28
+past the pivot: 1.58 out level); z on the ground's height. The gatling's
+solve is `Structure::pitch` (back to level with nothing to shoot), for the
+pose's cradle and the wire. The velocity is the aim (yaw,
 pitch) turned by the cone roll (uniform over the cone's disc,
 `Simulation::roll` seeded by the shooter, the step's time and the round, so
 a scene replays the same) times `roundSpeed`. Nothing per tick goes on the

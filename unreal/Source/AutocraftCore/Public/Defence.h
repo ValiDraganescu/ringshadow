@@ -91,11 +91,11 @@ struct AUTOCRAFTCORE_API Defence {
     /// from the trunnion along the barrels; z from the Citadel's ground.
     static constexpr double muzzleAlong = 1.3;
     static Vec3 gunMuzzle(Vec2 citadel, int i, double aim, double pitch);
-    /// A gatling gun's muzzle (C2), from the model (ModelCatalog: the head at
-    /// 0.78, its barrels' axis 0.5 over it, the muzzle 1.4 out): the barrels
-    /// pivot `gatlingPivot` up and `gatlingTrunnion` along the aim, the
-    /// muzzle `gatlingBarrel` past the pivot; z from its ground.
-    static constexpr double gatlingPivot = 1.28, gatlingTrunnion = 0.3, gatlingBarrel = 1.1;
+    /// A gatling gun's muzzle (C2), from the model (its barrels' axis 1.28
+    /// up, the muzzle 1.58 from its centre when level): the barrels pivot
+    /// (the cradle) `gatlingPivot` up and `gatlingTrunnion` along the aim,
+    /// the muzzle `gatlingBarrel` past the pivot; z from its ground.
+    static constexpr double gatlingPivot = 1.28, gatlingTrunnion = 0.3, gatlingBarrel = 1.28;
     /// How far its barrels dip and rise (radians from level): steep enough
     /// down to strike a bug biting at its foot.
     static constexpr double gatlingPitchMin = -60.0 * pi / 180.0;
