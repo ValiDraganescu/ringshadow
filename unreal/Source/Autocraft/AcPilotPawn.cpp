@@ -6,6 +6,7 @@
 #include "AcHeadless.h"
 
 #include "AcAudioDirector.h"
+#include "AcCitadelAct.h"
 #include "AcConsole.h"
 #include "AcPilotAudio.h"
 #include "AcEffects.h"
@@ -49,6 +50,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 
+#include "Defence.h"
 #include "Pilot.h"
 #include "Rules.h"
 #include "Simulation.h"
@@ -388,6 +390,8 @@ void AAcPilotPawn::OnAbilityStart(const FInputActionValue&)
 void AAcPilotPawn::OnAbilityEnd(const FInputActionValue&) { bAbilityHeld = false; }
 void AAcPilotPawn::OnView(const FInputActionValue&)
 {
+	// C1: at a gun the view is always the gun's (third person resumes after).
+	if (GunManned != INDEX_NONE) return;
 	if (!OnKey || !OnKey(TEXT("v"))) ToggleView();
 }
 void AAcPilotPawn::OnNext(const FInputActionValue&) { Next(); }
@@ -397,7 +401,17 @@ void AAcPilotPawn::OnLeave(const FInputActionValue&)
 	// drive ends after the pointer's tick (F also drives in the top-down
 	// view: it must not see this press again).
 	if (OnKey && OnKey(TEXT("esc"))) return;
+	// C1: at a gun, Esc and F leave the gun, not the unit.
+	if (Disengage()) return;
 	bLeaveWanted = true;
+}
+
+bool AAcPilotPawn::Disengage()
+{
+	if (GunManned == INDEX_NONE) return false;
+	if (UAcSimSubsystem* Sim = SimOf(this))
+		if (FAcMmoClient* Mmo = Sim->MmoClient()) Mmo->Man(INDEX_NONE);
+	return true;
 }
 void AAcPilotPawn::OnKeyAction(const FInputActionValue& V)
 {
@@ -559,6 +573,9 @@ void AAcPilotPawn::Leave(const bool bHandBack)
 	}
 	const int64 Was = DrivenId;
 	DrivenId = INDEX_NONE;
+	GunManned = INDEX_NONE;
+	GunCitadelId = 0;
+	AcCitadelAct::SetPanel(0, INDEX_NONE);
 	Dive.Reset();
 	PullOut.Reset();
 	EndFlight();
@@ -628,6 +645,13 @@ void AAcPilotPawn::Next()
 void AAcPilotPawn::Look(const double DX, const double DY)
 {
 	if (!Driving()) return;
+	if (GunManned != INDEX_NONE)
+	{
+		// C1: at a gun, held in its arc and pitch with hard stops.
+		PilotYaw = AcCitadelAct::LookYaw(GunManned, PilotYaw, DX * 0.0032);
+		Cam.Pitch = AcCitadelAct::LookPitch(Cam.Pitch - DY * 0.0026);
+		return;
+	}
 	// Right turns right (heading grows toward the unit's right side).
 	PilotYaw = std::remainder(PilotYaw + DX * 0.0032, 2.0 * Pi);
 	double Lo = -1.2, Hi = 0.9;
@@ -650,6 +674,23 @@ void AAcPilotPawn::Press(const bool bDown)
 		bHold = false;
 		if (OnKey) OnKey(TEXT("place"));
 		return;
+	}
+	// C1: nothing else to act on: a gun station, else the Citadel's door
+	// (AcCitadelAct.h), asked of the server. At a gun the key fires.
+	if (FAcMmoClient* Mmo = Sim->MmoClient(); Mmo && GunManned == INDEX_NONE)
+	{
+		const ac::Simulation& S = Sim->Simulation();
+		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && !S.pilotTarget(*U))
+		{
+			if (const TOptional<AcCitadelAct::FAct> A = AcCitadelAct::Find(S, *U))
+			{
+				bHold = false;
+				if (A->Why) OnNote.Broadcast(*A->Why);
+				else if (A->Kind == AcCitadelAct::FAct::EKind::Man) Mmo->Man(A->Gun);
+				else Mmo->Door(A->bOpen);
+				return;
+			}
+		}
 	}
 	Sim->Simulation().pilot->act = true;
 }
@@ -691,7 +732,7 @@ void AAcPilotPawn::ToggleView()
 void AAcPilotPawn::ApplyView()
 {
 	// (A flight's landing: the ship drawn in the unit's place.)
-	const int64 Hidden = Driving() && (InFlight() || (!Cam.bThirdPerson && !InDive())) ? DrivenId : INDEX_NONE;
+	const int64 Hidden = Driving() && (InFlight() || GunManned != INDEX_NONE || (!Cam.bThirdPerson && !InDive())) ? DrivenId : INDEX_NONE;
 	if (UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
 	{
 		R->SetDrivenUnit(DrivenId);
@@ -846,7 +887,9 @@ void AAcPilotPawn::Steer()
 	// First person: where the mouse says; third person (E3): toward what the
 	// view's middle is on (`pilotFacing`).
 	const std::optional<ac::Unit> Me = S.pilotUnit();
-	S.pilot->heading = Me ? AcPilotAim::Facing(*Me, PilotYaw, AimPoint()) : PilotYaw;
+	S.pilot->heading = Me && GunManned == INDEX_NONE ? AcPilotAim::Facing(*Me, PilotYaw, AimPoint()) : PilotYaw;
+	// C1: the look's pitch (only a gunner's counts: it aims the gun).
+	S.pilot->pitch = Cam.Pitch;
 	if (UAcWorldRenderer* R = UAcWorldRenderer::Get(this))
 	{
 		// The driven unit's held guns on the crosshair (E4, `world.pilotAim`).
@@ -1031,6 +1074,15 @@ void AAcPilotPawn::SyncMmo()
 	}
 }
 
+bool AAcPilotPawn::GunView(const ac::Simulation& S, FVector& OutLocation, FQuat& OutRotation) const
+{
+	const std::optional<ac::Structure> C = S.state.structure(GunCitadelId);
+	if (!C || GunManned == INDEX_NONE) return false;
+	OutLocation = AcCitadelAct::Eye(*C, GroundAt(GetWorld(), C->position), GunManned, PilotYaw);
+	OutRotation = FRotator(float(FMath::RadiansToDegrees(Cam.Pitch)), float(FMath::RadiansToDegrees(PilotYaw)), 0.f).Quaternion();
+	return true;
+}
+
 void AAcPilotPawn::Follow(const FAcFrame& Frame)
 {
 	if (!Driving()) return;
@@ -1094,10 +1146,48 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 		VC->GetViewportSize(Size);
 		if (Size.X > 0 && Size.Y > 0) CameraComponent->SetFieldOfView(float(FAcPilotCamera::HorizontalFov(Size.X / Size.Y)));
 	}
+	// C1: at a corner gun (or just off one): the view and the look follow.
+	const TOptional<TPair<int64, int32>> Gun = AcCitadelAct::Manned(S, U);
+	if (const int32 Now = Gun ? Gun->Value : INDEX_NONE; Now != GunManned || (Gun && Gun->Key != GunCitadelId))
+	{
+		GunManned = Now;
+		GunCitadelId = Gun ? Gun->Key : 0;
+		Cam.Reset();
+		Chase.Reset();
+		if (Gun)
+		{
+			// Out from the corner, level.
+			PilotYaw = ac::Defence::cornerAngle(Now);
+			Cam.Pitch = 0;
+			if (const std::optional<ac::Structure> C = S.state.structure(Gun->Key); C && C->guns)
+			{
+				PilotYaw = AcCitadelAct::LookYaw(Now, (*C->guns)[Now].aim, 0.0);
+			}
+		}
+		else
+		{
+			Cam.Pitch = FAcPilotCamera::StartPitch(U.kind);
+		}
+		ApplyView();
+		UE_LOG(LogAutocraft, Log, TEXT("pilot: %s"), Gun ? *FString::Printf(TEXT("at gun %s"), *AcCitadelAct::GunName(Now)) : TEXT("off the gun"));
+	}
+	if (const TOptional<AcCitadelAct::FAct> A = Gun ? TOptional<AcCitadelAct::FAct>() : AcCitadelAct::Find(S, U);
+		A && A->Kind == AcCitadelAct::FAct::EKind::Door)
+	{
+		AcCitadelAct::SetPanel(A->Citadel, A->bInside ? 1 : 0);
+	}
+	else
+	{
+		AcCitadelAct::SetPanel(0, INDEX_NONE);
+	}
 	FVector At;
 	FQuat Rot;
 	const FTransform Root = RootOf(U);
-	if (Cam.bThirdPerson)
+	if (Gun && GunView(S, At, Rot))
+	{
+		Chase.Reset();
+	}
+	else if (Cam.bThirdPerson)
 	{
 		// E3: the chase camera over the right shoulder (AcPilotChase.h).
 		const UAcWorldRenderer* R = UAcWorldRenderer::Get(this);
@@ -1152,6 +1242,15 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	LastViewPitch = Cam.Pitch;
 	LastPivot = Root.GetTranslation();
 	bViewOnMouse = Cam.bThirdPerson || (ac::Pilot::steers(U.kind) ? ac::Pilot::turretRate(U.kind).has_value() : bFollowsMouse);
+	if (Gun)
+	{
+		// C1: at a gun the view turns with the mouse about the gun's mount.
+		bViewOnMouse = true;
+		if (const std::optional<ac::Structure> C = S.state.structure(GunCitadelId))
+		{
+			LastPivot = AcSpace::ToWorld(ac::Defence::cornerGun(C->position, GunManned), AcSpace::HeightToSim(At));
+		}
+	}
 	// The crosshair again from this frame's eye: the cockpit (posed after
 	// this) aims its guns through it.
 	CastCrosshair();

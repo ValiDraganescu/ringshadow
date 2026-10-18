@@ -393,6 +393,14 @@ public:
 	/// comes back as a note; `ItemsUsed` counts the kept ones.
 	bool UseItem(ac::Item Item, FString* Why = nullptr);
 	int32 ItemsUsed() const { return ItemDone; }
+	/// C1 (docs/citadel-interior.md §3, §5): open or close the realm
+	/// Citadel's door; man corner gun `Gun` (0 to 3) from its station, or
+	/// leave it (-1). The server's refusal comes back as a note and
+	/// `HallRefusal`; `HallKept` counts the kept asks.
+	bool Door(bool bOpen, FString* Why = nullptr);
+	bool Man(int32 Gun, FString* Why = nullptr);
+	const FString& HallRefusal() const { return LastHallRefusal; }
+	int32 HallKept() const { return HallDone; }
 	/// K2, Citadel missions (docs/missions.md): sign up for an offer on the
 	/// board (at the realm's Citadel), drop one from the Journal. A refused
 	/// sign-up is answered as the Citadel's asks (`CitadelRefusal`); a
@@ -626,6 +634,10 @@ private:
 	/// Consumable uses asked (request ids), and the ones kept.
 	TSet<uint32> ItemAsked;
 	int32 ItemDone = 0;
+	/// C1: the door and gun asks, the last refusal, the kept ones.
+	TSet<uint32> HallAsked;
+	FString LastHallRefusal;
+	int32 HallDone = 0;
 	/// Mission asks (request id → mission, and whether a sign-up), and the
 	/// sign-ups kept, not handed over yet.
 	TMap<uint32, TPair<uint32, bool>> MissionAsked;

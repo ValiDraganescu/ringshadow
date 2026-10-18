@@ -248,6 +248,40 @@ client and again by the server. The cockpit is hidden; the unit is hidden.
   (not only when `marks` is set), aimed by `aim` and `pitch`, barrels spinning
   while the gun fired within 0.3 s.
 
+As built (the game):
+
+- `AcCitadelAct` (`AcCitadelAct.h`) finds the act: in the MMORPG mode, with
+  no `pilotTarget`, a free gun's station within `stationReach` while
+  `sheltered`, else the door within `doorReach` of its slab (outside only
+  while it is shut or shutting: it opens; inside it closes while opening and
+  opens while shutting). When the core would refuse it (`doorRefusal`:
+  "Someone is in the doorway") the prompt is the reason in the blocked tone
+  and the key sends nothing. The pawn sends `FAcMmoClient::Door`/`Man`; a
+  refusal from the server comes back as a note (`HallRefusal`).
+- At a gun the prompt reads "Click  fire   ·   Esc  disengage"; the
+  console's status "At a corner gun". The look is held by
+  `AcCitadelAct::LookYaw` (measured from the arc's middle, clamped, never
+  wrapped) and `LookPitch`; `Pilot::pitch` is the look's pitch, sent on
+  every input. The view turns about the gun's mount between frames.
+- The feed's heat: the wire carries no cooldown, so the overlay counts the
+  Citadel's `Shot` and `Missed` events put down to the gun aimed nearest
+  them (as the pose does): six pips over the last 1.5 s against the
+  weapon's rate flat out, and a cooldown bar under them. A short pitch
+  scale stands right of the arc gauge. Slate paint only.
+- Pose numbers: `gunScreens_k` 1.9 lit / 0.04 dark (exported 0.04),
+  `hallLamps_k` (`hallGlow`) 1.0 / 0.05 under construction, `doorPanels_k`
+  (`panelGlow`) 1.0 on the pilot's side while in reach (the pawn sets
+  `AcCitadelAct::SetPanel` each frame) / 0.05. The pitch turns
+  `turretCradles_k` (the model's part between the turret and its barrels);
+  the barrels keep their spin. Without the hall (the strategy game) the
+  turrets show only on an armed Citadel, as before.
+- The map's doodads and the sites' crates under a complete Citadel's grown
+  square (`Simulation::swallowedByCitadel`) are not drawn
+  (`AAcRegionGround::Swallow`, `AAcSites`).
+- The pictures: `-AcFlowTest=mmocitadel -AcMmoShots=DIR -AcMmoShotsC1`
+  (the step itself takes them: `c1-door-shut`, `c1-door-open`, `c1-hall`,
+  `c1-feed`).
+
 ## 8. The model (model worker)
 
 A Geometry Script model, `unreal/Tools/Editor/models/citadel.py`, replacing

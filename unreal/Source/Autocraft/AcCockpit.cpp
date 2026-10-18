@@ -359,7 +359,8 @@ void UAcCockpitSubsystem::OnFrame(const FAcFrame& F)
 	P.Muzzles.Reset();
 	P.Bite.Reset();
 	P.Lean = FAcViewLean();
-	P.bHidden = CVarCockpit.GetValueOnGameThread() == 0 || Pawn->Eye().bThirdPerson || Pawn->InDive() || U.task == ac::Unit::Task::inDerrick;
+	P.bHidden = CVarCockpit.GetValueOnGameThread() == 0 || Pawn->Eye().bThirdPerson || Pawn->InDive() || U.task == ac::Unit::Task::inDerrick
+		|| Pawn->AtGun() != INDEX_NONE;
 
 	const FTransform FrameWorld = Frame ? Frame->GetComponentTransform() : FTransform::Identity;
 	UAcWorldRenderer* R = UAcWorldRenderer::Get(this);

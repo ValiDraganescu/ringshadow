@@ -283,6 +283,9 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	CitadelDone = 0;
 	ItemAsked.Reset();
 	ItemDone = 0;
+	HallAsked.Reset();
+	LastHallRefusal.Reset();
+	HallDone = 0;
 	MissionAsked.Reset();
 	MissionsAccepted.Reset();
 	FlightsAsked.Reset();
@@ -730,6 +733,7 @@ void FAcMmoClient::SendInputs(const double Now)
 			ac::Pilot& P = *S->pilot;
 			In.walk = P.walk;
 			In.heading = P.heading;
+			In.pitch = P.pitch;
 			In.act = P.act;
 			In.ability = P.ability;
 			In.hold = P.hold;
@@ -985,6 +989,18 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (HallAsked.Remove(R.request) > 0)
+		{
+			if (R.done) HallDone += 1;
+			else
+			{
+				LastHallRefusal = Text(R.reason);
+				Notes.Add(LastHallRefusal);
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: hall ask %u refused: %s"), R.request, *LastHallRefusal);
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (FlightsAsked.Remove(R.request) > 0)
 		{
 			if (!R.done)
@@ -1234,6 +1250,34 @@ bool FAcMmoClient::UseItem(const ac::Item Item, FString* Why)
 	const uint32 Id = Net->use(Item);
 	ItemAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: item use %u: %s"), Id, *Text(std::string(ac::rawValue(Item))));
+	return true;
+}
+
+bool FAcMmoClient::Door(const bool bOpen, FString* Why)
+{
+	if (!Net || !Net->welcome())
+	{
+		if (Why) *Why = TEXT("Not connected to the local server");
+		return false;
+	}
+	const uint32 Id = Net->door(bOpen);
+	LastHallRefusal.Reset();
+	HallAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: hall ask %u: door %s"), Id, bOpen ? TEXT("open") : TEXT("close"));
+	return true;
+}
+
+bool FAcMmoClient::Man(const int32 Gun, FString* Why)
+{
+	if (!Net || !Net->welcome())
+	{
+		if (Why) *Why = TEXT("Not connected to the local server");
+		return false;
+	}
+	const uint32 Id = Net->man(Gun);
+	LastHallRefusal.Reset();
+	HallAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: hall ask %u: man %d"), Id, Gun);
 	return true;
 }
 

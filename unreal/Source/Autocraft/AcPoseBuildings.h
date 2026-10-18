@@ -170,6 +170,10 @@ namespace AcBuildingPose
 		double Shots[5] = {-10, -10, -10, -10, -10};
 		int32 Room = 4;
 	};
+	/// C1: a Citadel's `ramp` about its hinge (SceneKit euler X, radians):
+	/// 0 shut (standing in the doorway) to 90° outward open (`door.open`).
+	inline double CitadelRampAngle(const ac::Structure& S) { return (S.door ? S.door->open : 0.0) * 0.5 * UE_DOUBLE_PI; }
+
 	/// The slits' angles (radians round Y, 0 = +Z the front; `Models.bastion`
 	/// :509-531): faces 0, 1, 2, 6, 7 of 8, in that order.
 	inline double BastionSlitAngle(const int32 K)

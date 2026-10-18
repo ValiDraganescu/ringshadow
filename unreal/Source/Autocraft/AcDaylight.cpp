@@ -49,7 +49,7 @@ namespace
 		TEXT("(ac.Daylight.ShadowStepMetres), so the virtual shadow maps stay cached between steps (docs/perf.md); 0: every frame."));
 	TAutoConsoleVariable<float> CVarShadowStepMetres(
 		TEXT("ac.Daylight.ShadowStepMetres"), 20.0f,
-		TEXT("The sun steps so little that the shadow tip of an object this tall moves under 0.1 m a step (20: a Citadel's mast); 0: the sun every frame."));
+		TEXT("The sun steps so little that the shadow tip of an object this tall moves under 0.1 m a step (20: twice the C1 Citadel's 9.6 m beacon); 0: the sun every frame."));
 	TAutoConsoleVariable<float> CVarShadowStepMetresMoon(
 		TEXT("ac.Daylight.ShadowStepMetresMoon"), 5.0f,
 		TEXT("The same for the ringlight, whose night shadows are faint (5: a unit's height; its steps come about 4 times rarer); 0: every frame."));
@@ -217,8 +217,9 @@ namespace
 	/// while it holds still: turned a little every frame with the clock, the
 	/// sun's shadows were drawn whole every frame. A step: at most
 	/// `ac.Daylight.ShadowStepDeg`, and at most what moves the tip of an
-	/// object `Metres` tall's shadow 0.1 m: the sun's 20 m (a Citadel's mast;
-	/// a 5 m bound let its long dawn shadow tick visibly), the ringlight's 5
+	/// object `Metres` tall's shadow 0.1 m: the sun's 20 m (the old Citadel's mast;
+	/// the C1 Citadel tops out at 9.6 m; a 5 m bound let the mast's long
+	/// dawn shadow tick visibly), the ringlight's 5
 	/// m (its shadows are faint). That tip moves h / sin²(e) per radian at
 	/// elevation e (along the shadow; across it h / sin(e), less), so the
 	/// step is 0.1 / h · sin²(e) rad (the sun: 0.18° at 53°, the bench's

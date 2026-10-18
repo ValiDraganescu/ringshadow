@@ -216,6 +216,17 @@ public:
 		PilotYaw = Yaw;
 	}
 
+	/// C1: the corner gun the driven unit mans (0 to 3), else INDEX_NONE.
+	/// At a gun the view is always first person from the gun's eye, the
+	/// look held in its arc; V does nothing; Esc or F disengages.
+	int32 AtGun() const { return GunManned; }
+	/// Esc or F at a gun: leave it (the server's Man -1); false when not at one.
+	bool Disengage();
+	/// The gun's Citadel while at one (0: none).
+	int64 GunCitadel() const { return GunCitadelId; }
+	/// The look's pitch (radians; at a gun, its aim's).
+	double ViewPitch() const { return Cam.Pitch; }
+
 	/// The camera is still flying down into the unit (the dive): the unit
 	/// drawn, no cockpit.
 	bool InDive() const { return (Dive.IsSet() && !Dive->bInside) || PulledOut() || InFlight(); }
@@ -364,6 +375,11 @@ private:
 	TOptional<FVector2D> GunMark;
 	int64 DrivenId = INDEX_NONE;
 	double PilotYaw = 0.0;
+	/// C1: `AtGun`, `GunCitadel` as the last `Follow` saw them.
+	int32 GunManned = INDEX_NONE;
+	int64 GunCitadelId = 0;
+	/// C1: the view from gun `GunManned`'s eye (`Defence::gunEye`).
+	bool GunView(const ac::Simulation& S, FVector& OutLocation, FQuat& OutRotation) const;
 	bool bHold = false;
 	bool bAbilityHeld = false;
 	bool bThird = false;

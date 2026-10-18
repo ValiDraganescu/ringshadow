@@ -1,5 +1,6 @@
 #include "AcPilotText.h"
 
+#include "AcCitadelAct.h"
 #include "AcKindTable.h"
 #include "AcProgressHud.h"
 #include "Defence.h"
@@ -421,7 +422,19 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 	else
 	{
 		const std::optional<ac::PilotTarget>& Target = F.Target;
-		if (!Target)
+		// C1: nothing else to act on: a gun station or the Citadel's door.
+		const TOptional<AcCitadelAct::FAct> AtCitadel = !Target && In.bMmo ? AcCitadelAct::Find(Sim, U) : TOptional<AcCitadelAct::FAct>();
+		if (U.task == ETask::atGun)
+		{
+			Info.Prompt = FString(TEXT("Click  fire   ·   Esc  disengage"));
+			Info.Tone = F.Sight && F.Sight->inRange ? EAcTone::Enemy : EAcTone::Ready;
+		}
+		else if (AtCitadel)
+		{
+			Info.Prompt = AtCitadel->Prompt();
+			Info.Tone = AtCitadel->Why ? EAcTone::Blocked : EAcTone::Ready;
+		}
+		else if (!Target)
 		{
 			if (Sim.pilot && Sim.pilot->mend && U.kind == ac::UnitKind::prospector) Info.Prompt = FString(TEXT("Nothing to repair ahead"));
 			else if (U.carrying > 0) Info.Prompt = FString::Printf(TEXT("Walk into %s to unload"), *DepotWords(Sim, U.owner));
@@ -597,6 +610,38 @@ FAcLevelInfo AcPilotText::Level(const ac::Simulation& Sim, const ac::UnitKind Ki
 	return L;
 }
 
+FAcTurretFeed AcPilotText::Feed(const ac::Structure& Citadel, const int32 Gun, const double Yaw, const double Pitch,
+	const TConstArrayView<double> Shots, const double Now)
+{
+	FAcTurretFeed Out;
+	Out.Gun = FMath::Clamp(Gun, 0, 3);
+	Out.Title = FString::Printf(TEXT("TURRET %d · %s · CITADEL"), Out.Gun + 1, AcCitadelAct::Compass(Out.Gun));
+	Out.ArcHalf = ac::Defence::gunArcHalf;
+	Out.Off = FMath::Clamp(std::remainder(Yaw - ac::Defence::cornerAngle(Out.Gun), 2.0 * UE_DOUBLE_PI), -Out.ArcHalf, Out.ArcHalf);
+	Out.PitchMin = ac::Defence::gunPitchMin;
+	Out.PitchMax = ac::Defence::gunPitchMax;
+	Out.Pitch = FMath::Clamp(Pitch, Out.PitchMin, Out.PitchMax);
+	const std::optional<ac::UnitStats> W = ac::Defence::weapon(Citadel);
+	const double Cooldown = FMath::Max(W ? W->cooldown : ac::UnitStats::citadelGuns.cooldown, 1e-3);
+	double Last = -1e9;
+	int32 Recent = 0;
+	for (const double T : Shots)
+	{
+		if (T > Now) continue;
+		Last = FMath::Max(Last, T);
+		if (Now - T <= FAcTurretFeed::HeatSeconds) ++Recent;
+	}
+	const double FlatOut = FMath::Max(1.0, FAcTurretFeed::HeatSeconds / Cooldown);
+	Out.Heat = FMath::Clamp(FMath::CeilToInt32(FAcTurretFeed::HeatPips * double(Recent) / FlatOut), 0, FAcTurretFeed::HeatPips);
+	Out.Ready = FMath::Clamp((Now - Last) / Cooldown, 0.0, 1.0);
+	if (Citadel.marks)
+	{
+		Out.Marks = FString::Printf(TEXT("RATE %lld · DAMAGE %lld · RANGE %lld"), (long long)Citadel.marks->rate,
+			(long long)Citadel.marks->damage, (long long)Citadel.marks->range);
+	}
+	return Out;
+}
+
 FString AcPilotText::Status(const FAcPilotFrame& F)
 {
 	const ac::Unit& U = F.Unit;
@@ -607,6 +652,7 @@ FString AcPilotText::Status(const FAcPilotFrame& F)
 	case ETask::inDerrick: return TEXT("Inside the Derrick");
 	case ETask::building: return TEXT("Building");
 	case ETask::repairing: return TEXT("Repairing");
+	case ETask::atGun: return TEXT("At a corner gun");
 	default: break;
 	}
 	if (U.jumpFrom) return TEXT("Jet pack");

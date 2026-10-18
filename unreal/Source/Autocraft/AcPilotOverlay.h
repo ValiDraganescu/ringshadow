@@ -75,6 +75,8 @@ public:
 
 private:
 	void OnFrame(const FAcFrame& Frame);
+	/// C1: the manned gun's feed into `Info` (none off a gun).
+	void GunFeed(const ac::Simulation& S, const class AAcPilotPawn& Pawn, const FAcFrame& Frame, FAcPilotInfo& Info);
 	void Attach(bool bPanel);
 	void Detach();
 
@@ -94,6 +96,10 @@ private:
 	/// Deposited event does not say, and the unit has dropped its load (and
 	/// the MH mark) by the time it comes.
 	bool bLoadWasHydrogen = false;
+	/// C1: the game times of the manned gun's shots (its feed's heat and
+	/// cooldown; the wire carries no cooldown), and which gun they are of.
+	TArray<double> GunShots;
+	TPair<int64, int32> GunShotsOf{0, INDEX_NONE};
 
 	// Dev holds.
 	TOptional<FAcHitMark> HeldMark;

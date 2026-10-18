@@ -22,6 +22,7 @@
 #include "AcWorldRenderer.h"
 
 #include "Brood.h"
+#include "Defence.h"
 #include "Rules.h"
 #include "Simulation.h"
 #include "Types.h"
@@ -39,7 +40,8 @@ namespace
 	{
 		switch (K)
 		{
-		case ac::StructureKind::citadel: return 2.5;
+		// C1: the Citadel's footprint grew (docs/citadel-interior.md §1).
+		case ac::StructureKind::citadel: return ac::Rules::radius(ac::StructureKind::citadel);
 		case ac::StructureKind::garrison:
 		case ac::StructureKind::bastion:
 		case ac::StructureKind::derrick:
@@ -205,19 +207,7 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 			}
 			else
 			{
-				int32 Best = 0;
-				double BestOff = 1e9;
-				for (int32 K = 0; K < 4; ++K)
-				{
-					const ac::Vec2 C(St->position.x + ((K == 0 || K == 3) ? 2.0 : -2.0), St->position.y + (K < 2 ? 2.0 : -2.0));
-					const double Off = std::abs(std::remainder(std::atan2(At.y - C.y, At.x - C.x) - (*St->guns)[K].aim, 2 * UE_DOUBLE_PI));
-					if (Off < BestOff)
-					{
-						BestOff = Off;
-						Best = K;
-					}
-				}
-				bFrom = PartLocation(Unit, FName(*FString::Printf(TEXT("turretMuzzles_%d"), Best)), From);
+				bFrom = CitadelMuzzle(*St, At, From);
 				Length = 2.2;
 			}
 			if (bFrom) AmalgamRound(From, To, Time, Length);
@@ -341,11 +331,35 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 	Fire(S, To, At, Height, Time, MoveTemp(Track));
 }
 
+bool UAcEffects::CitadelMuzzle(const ac::Structure& St, const ac::Vec2 At, FVector& Out) const
+{
+	if (!St.guns) return false;
+	int32 Best = 0;
+	double BestOff = 1e9;
+	for (int32 K = 0; K < 4; ++K)
+	{
+		const ac::Vec2 C = ac::Defence::cornerGun(St.position, K);
+		const double Off = std::abs(std::remainder(std::atan2(At.y - C.y, At.x - C.x) - (*St.guns)[K].aim, 2 * UE_DOUBLE_PI));
+		if (Off < BestOff)
+		{
+			BestOff = Off;
+			Best = K;
+		}
+	}
+	return PartLocation(St.id, FName(*FString::Printf(TEXT("turretMuzzles_%d"), Best)), Out);
+}
+
 void UAcEffects::Missed(const int64 Unit, const FVector& To, const double Time)
 {
 	UAcWorldRenderer* R = Renderer();
 	const ac::GameState* State = StateOf(Frame, Sim());
 	if (!R || !State || !R->ModelOf(Unit)) return;
+	// C1: a manned corner gun's miss, along its aim from the turret.
+	if (const std::optional<ac::Structure> St = State->structure(Unit); St && St->kind == ac::StructureKind::citadel)
+	{
+		if (FVector From; CitadelMuzzle(*St, AcSpace::ToSim(To), From)) AmalgamRound(From, To, Time, 2.2);
+		return;
+	}
 	const std::optional<ac::Unit> U = State->unit(Unit);
 	if (!U) return;
 	FShooter S;

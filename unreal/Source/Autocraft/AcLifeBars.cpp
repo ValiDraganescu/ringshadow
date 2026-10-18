@@ -64,7 +64,7 @@ namespace AcLifeBars
 		// GameScene.makeBuilding (GameScene.swift:376-420).
 		switch (Kind)
 		{
-		case ac::StructureKind::citadel: return 2.5;
+		case ac::StructureKind::citadel: return ac::Rules::radius(Kind);
 		case ac::StructureKind::lab:
 		case ac::StructureKind::habDome:
 		case ac::StructureKind::sentinel:

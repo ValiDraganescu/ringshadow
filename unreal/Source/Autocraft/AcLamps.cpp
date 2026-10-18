@@ -297,7 +297,8 @@ const UAcLampPool::FSockets& UAcLampPool::SocketsOf(const FAcModelInfo& M)
 			double Exported;
 		};
 		static const FPoolSpec Specs[] = {
-			{TEXT("citadel"), 0, 2.2, 3.2, 5, TEXT("floodGlow"), 2.0},
+			// C1: on the lintel over the 12-cell Citadel's doorway.
+			{TEXT("citadel"), 0, 4.0, 6.1, 8, TEXT("floodGlow"), 2.0},
 			{TEXT("garrison"), 0, 1.5, 2.1, 3.4, TEXT("floodGlow"), 2.0},
 			{TEXT("foundry"), 0, 1.4, 2.2, 3.4, TEXT("floodGlow"), 2.0},
 			{TEXT("derrick"), 0, 1.6, 2.1, 3.2, TEXT("floodGlow"), 2.0},

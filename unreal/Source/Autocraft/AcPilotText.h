@@ -87,6 +87,33 @@ struct FAcPilotMenuLine
 	bool operator==(const FAcPilotMenuLine&) const = default;
 };
 
+/// C1 (docs/citadel-interior.md §7): the live feed of the corner gun the
+/// pilot mans, over the view (`SAcPilotOverlay`).
+struct FAcTurretFeed
+{
+	/// The gun, 0 to 3 ("TURRET 1 · NE · CITADEL").
+	int32 Gun = 0;
+	FString Title;
+	/// The aim from the arc's middle and the arc's half (radians; + is
+	/// toward the stop on the right).
+	double Off = 0;
+	double ArcHalf = 1;
+	/// The aim's pitch and its limits (radians).
+	double Pitch = 0;
+	double PitchMin = -0.35;
+	double PitchMax = 0.87;
+	/// The barrels' heat: pips lit of `HeatPips` (its shots of the last
+	/// `HeatSeconds` against what it fires flat out in them).
+	static constexpr int32 HeatPips = 6;
+	static constexpr double HeatSeconds = 1.5;
+	int32 Heat = 0;
+	/// 0 just after a shot … 1 ready to fire again (the cooldown).
+	double Ready = 1;
+	/// The gun's marks ("RATE 2 · DAMAGE 1 · RANGE 0"; empty: none).
+	FString Marks;
+	bool operator==(const FAcTurretFeed&) const = default;
+};
+
 /// `PilotInfo`: what the cockpit shows for the driven unit this frame.
 struct FAcPilotInfo
 {
@@ -132,6 +159,8 @@ struct FAcPilotInfo
 	/// A soldier's spread cone (`Simulation::cone`) in half the view's
 	/// height: the reticle's brackets open by it. Unset: none.
 	TOptional<double> Cone;
+	/// C1: at a corner gun, its live feed. Unset: not at one.
+	TOptional<FAcTurretFeed> Feed;
 };
 
 /// What `GameCore` says about the driven unit this frame (`PilotFrame`).
@@ -222,4 +251,8 @@ struct AUTOCRAFT_API AcPilotText
 	static FAcLevelInfo Level(const ac::Simulation& Sim, ac::UnitKind Kind);
 	/// `status(_:)`: the dashboard's status line.
 	static FString Status(const FAcPilotFrame& F);
+	/// C1: the feed of gun `Gun` of `Citadel`, its look at `Yaw` and `Pitch`
+	/// (radians), the game times of its shots `Shots` (any order), now `Now`.
+	static FAcTurretFeed Feed(const ac::Structure& Citadel, int32 Gun, double Yaw, double Pitch, TConstArrayView<double> Shots,
+		double Now);
 };

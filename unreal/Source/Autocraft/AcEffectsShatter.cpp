@@ -55,7 +55,7 @@ namespace AcEffectsShatter
 		// GameScene.makeBuilding's radius.
 		switch (Kind)
 		{
-		case ac::StructureKind::citadel: S.Radius = 2.5; break;
+		case ac::StructureKind::citadel: S.Radius = ac::Rules::radius(Kind); break;
 		case ac::StructureKind::lab:
 		case ac::StructureKind::habDome:
 		case ac::StructureKind::sentinel:

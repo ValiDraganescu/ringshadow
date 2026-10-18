@@ -31,8 +31,12 @@ Driving the Prospector (mouse captured):
 | Mouse | Look and turn |
 | Hold click (or E, Space) | Drill ore at a deposit, strike, repair |
 | Click (or E, Space) | Enter your Derrick (pump MH), pick up an unfinished building, place a building |
+| E (or click, Space) at the Citadel's door | Open the door (from either side, "E · OPEN"); close it from inside the hall ("E · CLOSE"). Inside the hall you are safe from the Brood. |
+| E (or click, Space) at a gun station in the hall | Take that corner gun ("E · TAKE GUN 1 NE"): you see from the gun, the mouse aims it within its arc |
+| Click (or E, Space) at a gun | Fire; hold to fire at the gun's rate |
+| Esc or F at a gun | Leave the gun (you stay in the Prospector) |
 | R + hold click | Repair (a Derrick too) |
-| V | First or third person |
+| V | First or third person (not at a gun: there you always see from the gun) |
 | B | Build menu |
 | B, then a number, then click | Hold a building out (1 Citadel, 2 Derrick), then put it down. Esc cancels. |
 | Z or X | Pick a level-up card |

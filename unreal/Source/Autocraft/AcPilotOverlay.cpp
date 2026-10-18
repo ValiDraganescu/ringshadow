@@ -18,6 +18,7 @@
 #include "HAL/PlatformTime.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Defence.h"
 #include "Rules.h"
 #include "Simulation.h"
 #include "Types.h"
@@ -142,6 +143,51 @@ void UAcPilotOverlaySubsystem::Detach()
 	}
 }
 
+void UAcPilotOverlaySubsystem::GunFeed(const ac::Simulation& S, const AAcPilotPawn& Pawn, const FAcFrame& Frame, FAcPilotInfo& Info)
+{
+	const int32 Gun = Pawn.AtGun();
+	const std::optional<ac::Structure> C = Gun != INDEX_NONE ? S.state.structure(Pawn.GunCitadel()) : std::nullopt;
+	if (!C)
+	{
+		GunShots.Reset();
+		GunShotsOf = {0, INDEX_NONE};
+		return;
+	}
+	if (GunShotsOf != TPair<int64, int32>(C->id, Gun))
+	{
+		GunShots.Reset();
+		GunShotsOf = {C->id, Gun};
+	}
+	// The Citadel's shots and misses, each put down to the gun pointing
+	// nearest it (as its pose does).
+	auto Nearest = [&C](const ac::Vec2 To)
+	{
+		int32 Best = 0;
+		double BestOff = 1e9;
+		for (int32 K = 0; K < 4; ++K)
+		{
+			const ac::Vec2 From = ac::Defence::cornerGun(C->position, K);
+			const double Aim = C->guns ? (*C->guns)[K].aim : ac::Defence::cornerAngle(K);
+			const double Off = std::abs(std::remainder(std::atan2(To.y - From.y, To.x - From.x) - Aim, 2 * UE_DOUBLE_PI));
+			if (Off < BestOff)
+			{
+				BestOff = Off;
+				Best = K;
+			}
+		}
+		return Best;
+	};
+	for (const ac::GameEvent& E : Frame.AllEvents)
+	{
+		TOptional<ac::Vec2> At;
+		if (const ac::GameEvent::Shot* Sh = E.as<ac::GameEvent::Shot>(); Sh && Sh->unit == C->id) At = Sh->at;
+		else if (const ac::GameEvent::Missed* M = E.as<ac::GameEvent::Missed>(); M && M->unit == C->id) At = M->at;
+		if (At && Nearest(*At) == Gun) GunShots.Add(S.state.time);
+	}
+	GunShots.RemoveAll([&S](const double T) { return S.state.time - T > 5.0; });
+	Info.Feed = AcPilotText::Feed(*C, Gun, Pawn.Yaw(), Pawn.ViewPitch(), GunShots, S.state.time);
+}
+
 void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
@@ -263,10 +309,12 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 		NoteText.Reset();
 		Inputs.Note.Reset();
 	}
-	Inputs.bThirdPerson = Pawn->Eye().bThirdPerson;
+	// C1: at a gun the view is the gun's, first person.
+	Inputs.bThirdPerson = Pawn->Eye().bThirdPerson && Pawn->AtGun() == INDEX_NONE;
 	Inputs.bMmo = Sim->IsMmo();
 	Inputs.Mmo = Sim->MmoClient();
 	FAcPilotInfo Info = AcPilotText::Info(S, *F, Inputs);
+	GunFeed(S, *Pawn, Frame, Info);
 	if (Inputs.Mmo)
 	{
 		Info.Marks = AcProgressHud::ContractGoals(*Inputs.Mmo, U.position);

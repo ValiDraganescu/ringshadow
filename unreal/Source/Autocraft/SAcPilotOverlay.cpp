@@ -318,6 +318,7 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 				true, A);
 		}
 	}
+	if (Info.Feed) PaintFeed(P, W, H, Now);
 	PaintReticle(P, C, Now);
 	PaintSight(P, W, H);
 	PaintMarks(P, C, Now);
@@ -565,4 +566,96 @@ void SAcPilotOverlay::PaintMenu(FAcPilotPen& P, const double H) const
 		P.Label(Menu[I].Line, 16, bOk ? FLinearColor::White : White(0.5), O + FVector2D(12, -14 - (I + 1) * RowH), EAcHAlign::Left,
 			EAcVAlign::Baseline, false, true, 1, bOk ? FAcHudStyle::NameAccent() : Alpha(FAcHudStyle::NameAccent(), 0.5));
 	}
+}
+
+void SAcPilotOverlay::PaintFeed(FAcPilotPen& P, const double W, const double H, const double Now) const
+{
+	// The gun's camera as a monitor shows it: the glass the world shows
+	// through, a cold tint and scanlines over it, dark brackets at its
+	// corners, a LIVE pip; its name top left, the arc gauge bottom centre.
+	const FAcTurretFeed& F = *Info.Feed;
+	const FAcRect R = View.IsEmpty() ? FAcRect(0, 0, W, H) : View;
+	P.Fill(R, Srgb(0.05, 0.22, 0.26, 0.10));
+	// The scanlines: one serpentine line (its turns under the frame's sides).
+	TArray<FVector2D> Scan;
+	int32 Row = 0;
+	for (double Y = R.MaxY() - 2; Y > R.MinY(); Y -= 3, ++Row)
+	{
+		const bool bRight = Row % 2 == 0;
+		Scan.Add(FVector2D(bRight ? R.MinX() : R.MaxX(), Y));
+		Scan.Add(FVector2D(bRight ? R.MaxX() : R.MinX(), Y));
+	}
+	P.Lines(Scan, Srgb(0.0, 0.05, 0.06, 0.16), 1);
+	// The corner brackets.
+	const double In = 22, Len = 54;
+	const FLinearColor Dark = Srgb(0.01, 0.02, 0.03, 0.85), Edge = Alpha(LineColor(), 0.55);
+	for (const FVector2D Sign : {FVector2D(-1, 1), FVector2D(1, 1), FVector2D(1, -1), FVector2D(-1, -1)})
+	{
+		const FVector2D K(Sign.X < 0 ? R.MinX() + In : R.MaxX() - In, Sign.Y < 0 ? R.MinY() + In : R.MaxY() - In);
+		const TArray<FVector2D> Corner = {K - FVector2D(0, Sign.Y * Len), K, K - FVector2D(Sign.X * Len, 0)};
+		P.Lines(Corner, Dark, 7);
+		P.Lines(Corner, Edge, 1.2);
+	}
+	// LIVE, its pip blinking once a second, top right; the gun top left.
+	const double Top = R.MaxY() - In - 26;
+	if (std::fmod(Now, 1.0) < 0.6) P.Disc(FVector2D(R.MaxX() - In - 66, Top + 6), 5, EnemyColor());
+	P.Label(TEXT("LIVE"), 16, White(0.95), FVector2D(R.MaxX() - In - 54, Top), EAcHAlign::Left);
+	P.Label(F.Title, 20, White(0.95), FVector2D(R.MinX() + In + 14, Top), EAcHAlign::Left, EAcVAlign::Baseline, true, false);
+	if (!F.Marks.IsEmpty())
+	{
+		P.Label(F.Marks, 13, Alpha(LineColor(), 0.95), FVector2D(R.MinX() + In + 14, Top - 20), EAcHAlign::Left, EAcVAlign::Baseline,
+			true, false);
+	}
+
+	// The arc gauge: the gun's 220 degrees as a band (the hull's 140 below
+	// it dark), the hard stops in red, the aim as a needle.
+	const double Rad = 58;
+	const FVector2D G(R.MinX() + R.W / 2, R.MinY() + In + 34 + Rad * 0.35);
+	auto Arc = [&](const double From, const double To, const double Radius)
+	{
+		TArray<FVector2D> A;
+		const int32 N = FMath::Max(2, int32(FMath::Abs(To - From) / 0.06));
+		for (int32 K = 0; K <= N; ++K)
+		{
+			const double T = From + (To - From) * K / N;
+			A.Add(G + FVector2D(FMath::Cos(T), FMath::Sin(T)) * Radius);
+		}
+		return A;
+	};
+	const double Lo = GaugeAngle(F.ArcHalf), Hi = GaugeAngle(-F.ArcHalf);
+	P.Lines(Arc(Lo, Hi - 2 * UE_DOUBLE_PI, Rad), Srgb(0.2, 0.08, 0.06, 0.55), 6);
+	P.Lines(Arc(Lo, Hi, Rad), Srgb(0.02, 0.05, 0.07, 0.7), 10);
+	P.Lines(Arc(Lo, Hi, Rad), Alpha(LineColor(), 0.75), 2, 1);
+	for (const double Stop : {Lo, Hi})
+	{
+		const FVector2D D(FMath::Cos(Stop), FMath::Sin(Stop));
+		P.Lines({G + D * (Rad - 9), G + D * (Rad + 9)}, EnemyColor(), 3, 1.5);
+	}
+	const bool bAtStop = FMath::Abs(F.Off) >= F.ArcHalf - 1e-3;
+	const double Needle = GaugeAngle(F.Off);
+	const FVector2D N(FMath::Cos(Needle), FMath::Sin(Needle));
+	P.Lines({G + N * 10, G + N * (Rad + 4)}, bAtStop ? EnemyColor() : ReadyColor(), 2.4, 1.4, true);
+	P.Disc(G, 3.5, LineColor());
+	// The pitch: a short scale right of the dial, its limits at the ends.
+	const double PitchX = G.X + Rad + 30, PitchLo = G.Y - Rad * 0.55, PitchHi = G.Y + Rad * 0.75;
+	P.Lines({FVector2D(PitchX, PitchLo), FVector2D(PitchX, PitchHi)}, Alpha(LineColor(), 0.75), 2);
+	const double Pt = (F.Pitch - F.PitchMin) / FMath::Max(F.PitchMax - F.PitchMin, 1e-3);
+	const double PitchY = FMath::Lerp(PitchLo, PitchHi, FMath::Clamp(Pt, 0.0, 1.0));
+	P.Lines({FVector2D(PitchX - 7, PitchY), FVector2D(PitchX + 7, PitchY)}, ReadyColor(), 2.4, 1.2);
+	// Heat pips left of the dial, the cooldown under them.
+	const double PipW = 9, PipH = 16, Gap = 4;
+	const double PipsX = G.X - Rad - 30 - FAcTurretFeed::HeatPips * (PipW + Gap);
+	for (int32 K = 0; K < FAcTurretFeed::HeatPips; ++K)
+	{
+		const bool bLit = K < F.Heat;
+		const FLinearColor Hot = K >= FAcTurretFeed::HeatPips - 2 ? EnemyColor() : BlockedColor();
+		P.Plate(FAcRect(PipsX + K * (PipW + Gap), G.Y, PipW, PipH), 1.5, bLit ? Hot : FLinearColor(0, 0, 0, 0.45f), Alpha(Hot, 0.6), 0.8);
+	}
+	const double BarW = FAcTurretFeed::HeatPips * (PipW + Gap) - Gap;
+	P.Plate(FAcRect(PipsX, G.Y - 10, BarW, 4), 1, FLinearColor(0, 0, 0, 0.5f), White(1, 0.2), 0.6);
+	P.Fill(FAcRect(PipsX, G.Y - 10, BarW * F.Ready, 4), F.Ready >= 1 ? ReadyColor() : BlockedColor());
+	P.Label(TEXT("HEAT"), 11, White(0.75), FVector2D(PipsX, G.Y + PipH + 6), EAcHAlign::Left, EAcVAlign::Baseline, true, false);
+	// How to get off it, bottom right.
+	P.Label(TEXT("ESC · DISENGAGE"), 15, White(0.9), FVector2D(R.MaxX() - In - 14, R.MinY() + In + 14), EAcHAlign::Right,
+		EAcVAlign::Baseline, true, false);
 }

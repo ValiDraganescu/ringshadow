@@ -2165,6 +2165,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 		TickMmoHudFlow(Step);
 		return;
 	}
+	if (Step == TEXT("mmocitadel"))
+	{
+		TickMmoCitadelFlow(Step);
+		return;
+	}
 	if (Step == TEXT("mmoshots"))
 	{
 		TickMmoShots();

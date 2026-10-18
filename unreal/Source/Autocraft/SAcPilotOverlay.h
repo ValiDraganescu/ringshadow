@@ -7,7 +7,9 @@
 // RANGER  3.8" and a health bar); the hit marker and the damage floating
 // off it (KILLED for a kill); a vehicle's gun marker; the note over the
 // reticle; the hurt flash round the view; the green shade inside a Derrick;
-// the build menu (E8 fills it). Without a console (`bPanel`): the prompt
+// the build menu (E8 fills it); at a corner gun (C1), the gun's live feed
+// round the view (a monitor frame, scanlines, LIVE, the arc gauge, heat).
+// Without a console (`bPanel`): the prompt
 // under the reticle, the keys bottom left and the unit's panel (name, hit
 // points, cargo bay) at the bottom; with one, its screen says those.
 //
@@ -73,6 +75,11 @@ public:
 	static FLinearColor PanelStroke();
 	static FLinearColor ToneColor(EAcTone Tone);
 
+	/// C1: the turret feed's arc gauge: where on its dial (radians from +x,
+	/// y up; the arc's middle straight up) an aim `Off` from the arc's
+	/// middle points (+ to the right).
+	static double GaugeAngle(double Off) { return 0.5 * UE_DOUBLE_PI - Off; }
+
 	/// Points across the compass tape, and degrees of heading on it.
 	static constexpr double TapeWidth = 420;
 	static constexpr double TapeSpan = 120;
@@ -84,6 +91,8 @@ private:
 	void PaintMarks(FAcPilotPen& P, FVector2D C, double Now) const;
 	void PaintPanel(FAcPilotPen& P, double W) const;
 	void PaintMenu(FAcPilotPen& P, double H) const;
+	/// C1: the corner gun's live feed (`Info.Feed`) over the view.
+	void PaintFeed(FAcPilotPen& P, double W, double H, double Now) const;
 	double ReticleScale(double Now) const;
 
 	bool bPanel = true;

@@ -54,6 +54,7 @@ struct FAcPoseCue;
 namespace ac
 {
 	struct GameState;
+	struct Structure;
 	struct TerrainField;
 	struct Unit;
 }
@@ -232,6 +233,9 @@ public:
 	/// Where a drawn part is now (its pivot), cm, in the world; false if the
 	/// unit or the part is not drawn.
 	bool PartLocation(int64 Id, FName Part, FVector& Out) const;
+	/// D1, C1: the muzzle of Citadel `St`'s corner turret pointing nearest
+	/// `At` (its shots and misses come from the building, not the gun).
+	bool CitadelMuzzle(const ac::Structure& St, ac::Vec2 At, FVector& Out) const;
 	/// A part's muzzle: its pivot, and the way its meshes reach forward (a
 	/// cannon's barrel, a launcher), cm, in the world.
 	bool PartMuzzle(int64 Id, FName Part, FVector& Out) const;
