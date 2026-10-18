@@ -169,6 +169,10 @@ uv run unreal/Tools/hidden_run.py --out unreal/server/build/k3/runs/app-call5-1 
   -AcMmoShots={out} -AcMmoShotsOnly=none -AcMmoShotsF2 -AcMmoHour=12 -AcMmoShotsF2CallAt=5
 ```
 
+The MMO bench runs the same way on a package:
+`uv run unreal/Tools/bench/bench.py --mmo --app unreal/Saved/Releases/V/mac/Ringshadow.app`
+([perf.md](perf.md) "Client": its scenes, cooked beside the editor).
+
 `--app` runs `Ringshadow-hidden.app` beside it (`LSUIElement` set, signed
 ad hoc, made again when the app changes): no Dock icon, offscreen,
 `-nosound`, its own save and its own world server, one run at a time with

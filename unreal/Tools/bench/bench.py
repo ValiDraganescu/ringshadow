@@ -155,15 +155,21 @@ def ue_shot(shot: str, w: int, h: int, scale: int, a: argparse.Namespace, out: P
     return None
 
 
-def mmo_run(w: int, h: int, a: argparse.Namespace, out: Path, variant: tuple[str, list[str]], rnd: int) -> dict[str, dict]:
+def mmo_run(w: int, h: int, a: argparse.Namespace, out: Path, variant: tuple[str, list[str]], rnd: int,
+            scale: int = 1) -> dict[str, dict]:
     """One MMO bench run (every scene): {scene: result}."""
     tag = f"{variant[0] or 'base'}-{rnd}-{w}x{h}"
     run_dir = out / "runs" / tag
-    cmd = ["uv", "run", str(HIDDEN_RUN), "--out", str(run_dir), "--res", f"{w}x{h}", "--timeout", "20", "--",
+    cmd = ["uv", "run", str(HIDDEN_RUN), "--out", str(run_dir), "--res", f"{w}x{h}", "--timeout", "20"]
+    if a.app:
+        cmd += ["--app", str(a.app)]  # a packaged game (docs/builds.md "Measuring packaged")
+    cmd += ["--",
            "-AcMap=highlands-small", "-AcFlowTest=mmoshots", f"-AcMmoShots={run_dir / 'png'}", "-AcMmoShotsBench",
            "-AcMmoWeather=clear", f"-AcMmoBenchSeconds={a.seconds}"]
     if a.gpu:
         cmd += ["-AcBenchGpu"]
+    if scale > 1:
+        cmd += [f"-AcHudScale={scale}"]  # a Retina window's backing scale (offscreen has none)
     cmd += variant[1]
     code = run(cmd, out / "logs" / f"mmo-{tag}.stdout", timeout=3600)
     log = run_dir / "run.log"
@@ -364,6 +370,7 @@ def main() -> int:
     ap.add_argument("--gpu", action="store_true", help="Unreal: `stat gpu` per pass after the timed frames (-AcBenchGpu)")
     ap.add_argument("--mmo", action="store_true", help="the MMO bench: -AcMmoShotsBench's scenes, one world client a run; each run takes the slot through hidden_run.py itself, so never wrap this in hidden_run.py --raw (it would wait on its own slot)")
     ap.add_argument("--seconds", type=float, default=10, help="--mmo: timed seconds a scene")
+    ap.add_argument("--app", type=Path, help="--mmo: a packaged Mac game (a Development build: Shipping logs nothing) instead of the editor")
     ap.add_argument("--variant", action="append", default=[],
                     help="Unreal: NAME=ARGS, extra command-line args (e.g. '-dpcvars=r.ScreenPercentage=67'); "
                          "repeatable, run interleaved shot by shot; `base=` for none")
@@ -397,7 +404,7 @@ def main() -> int:
                 for variant in variants:
                     before, who = load_now(), busiest()
                     t0 = time.time()
-                    found = mmo_run(w, h, a, out, variant, rnd)
+                    found = mmo_run(w, h, a, out, variant, rnd, scale)
                     after = load_now()
                     for shot in shots:
                         r = found.get(shot)

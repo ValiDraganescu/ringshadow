@@ -12,6 +12,24 @@ the core as the client runs it, the renderer settings). What the player
 sees stays the same, and the core stays bit for bit. Only the MMO counts
 (the RTS mode is legacy).
 
+**Where players stand** (2026-10-18, after round 4; the cooked
+Development build players get, beside the editor binary the rounds
+measure; MMO bench, 2 rounds each in turns, load 6-17, ms and MB):
+
+| scene | 1920×1080 GPU p50, cooked / editor | 5120×1378 GPU p50, cooked / editor | game thread p50, cooked / editor | memory, cooked / editor |
+|---|---:|---:|---:|---:|
+| home noon | 9.9 / 10.1 | 13.9 / 14.1 | 1.8 / 2.0 | 7,675 / 10,226 |
+| home midnight | 10.5 / 10.7 | 14.7 / 14.9 | 1.7 / 2.0 | 7,707 / 10,346 |
+| nest at noon | 9.0 / 9.2 | 12.7 / 12.7 | 1.7 / 2.4 | 7,736 / 10,411 |
+| Fork, wave 10 | 9.4 / 9.4 | 13.0 / 13.0 | 2.1 / 2.1 | 7,836 / 10,512 |
+
+The frame is the GPU's in both builds and at both sizes: the render
+thread waits on it, and the game thread takes about a fifth of it. The
+cooked game's GPU frame is 0-0.3 ms shorter (the editor's own sky pass,
+0.1-0.15 ms, is gone). The rounds' editor numbers stand for players' to
+within that. The footprint (`task_info`, the GPU's memory included on the
+M4 Max's unified memory) is 7.7-8.8 GB cooked.
+
 **The MMO bench** is the standard: `uv run unreal/Tools/bench/bench.py
 --mmo [--rounds N] [--gpu] [--variant NAME=FLAGS ...]`. Each run is one
 world client through `hidden_run.py` (its own slot, so A/B variants take
@@ -273,6 +291,48 @@ and 2880×1800 at the auto screen percentage), where the GPU share grows;
 and the cooked Development build next to the editor binary, for the
 render thread's per-pass overhead (RDG names and checks) that a cooked
 game drops.
+
+### Round 5: where players' pixels are, and the cooked game (2026-10-18)
+
+**Retina sizes.** The MMO bench at 2880×1800 and 5120×1378, both at a
+backing scale of 2 (`--size WxH@2` now passes `-AcHudScale`). One round,
+load 7-13, GPU p50 in ms:
+
+| scene | 1920×1080 | 2880×1800 | 5120×1378 |
+|---|---:|---:|---:|
+| home noon | 10.1 | 12.2 | 14.1 |
+| home midnight | 10.7 | 12.9 | 15.0 |
+| nest at noon | 9.2 | 11.0 | 12.8 |
+| Fork, wave 10 | 9.4 | 11.7 | 13.1 |
+
+The passes that grow with the pixels, from 1920×1080 to 5120×1378 at home
+at noon:
+
+- deferred lighting 3.5 → 4.8 ms
+- TSR 1.1 → 2.1
+- the rest of post 0.3 → 0.8
+- Lumen screen probes 2.0 → 2.7
+- base pass 0.9 → 1.4
+
+All of these are quality settings. At 5K the client still holds 66-78 fps
+on the M4 Max.
+
+**The cooked game.** `build_release.sh mac --config Development --ad-hoc`
+(the cook was warm, 2.5 min). `bench.py --mmo --app APP` runs the same
+scenes in the package through `hidden_run.py --app`. The table at the top
+of this section is the result. The cooked game drops the editor's sky pass
+and about 0.2-0.3 ms of game thread, and holds 2.5 GB less memory. Its RHI
+thread is 0.3-0.5 ms busier (1.8-2.1 against 1.4-1.6 ms), with the frame
+still the GPU's. The other numbers match.
+
+**Also.** AcFindActor keeps one actor per world (PIE beside the editor's
+world was a re-walk on every alternating call).
+
+**Next.** Memory: 7.7 GB in the cooked client is a lot for a Mac with 8
+or 16 GB. A `memreport -full` of the cooked game per scene will show
+where it goes (the texture pool, the virtual shadow map pool, Lumen,
+Nanite's streaming pool, our ISM buffers, the world's ground sets kept
+ahead) before any change.
 
 ## Server
 
