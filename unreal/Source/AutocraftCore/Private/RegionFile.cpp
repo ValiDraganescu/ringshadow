@@ -480,9 +480,19 @@ std::optional<OreRange> oreRange(int64_t brood) {
     return OreRange{15000, 20000};
 }
 
-std::vector<std::vector<size_t>> veins(const std::vector<Deposit>& deposits) {
+std::vector<std::vector<size_t>> veins(const std::vector<Deposit>& deposits, const std::vector<WellSite>& wells) {
     std::vector<int64_t> vein(deposits.size(), -1);
     std::vector<std::vector<size_t>> out;
+    // A well's ring first (at least a vein's fewest mounds round it): one
+    // vein through the well.
+    for (const WellSite& w : wells) {
+        std::vector<size_t> ring;
+        for (size_t i = 0; i < deposits.size(); i++)
+            if (vein[i] < 0 && distance(deposits[i].at, w.at) <= ringReach) ring.push_back(i);
+        if (int64_t(ring.size()) < moundsFewest) continue;
+        for (const size_t i : ring) vein[i] = int64_t(out.size());
+        out.push_back(ring);
+    }
     for (size_t i = 0; i < deposits.size(); i++) {
         if (vein[i] >= 0) continue;
         vein[i] = int64_t(out.size());
@@ -1321,7 +1331,9 @@ Built build(const RegionFile& given) {
     std::vector<Vec2> deposits, wells, pads, spawns, sites;
     for (const OreSpec& d : m.deposits) deposits.push_back(d.position);
     for (const WellSpec& w : m.wells) wells.push_back(w.position);
+    std::vector<Vec2> aprons;
     for (const Place& p : b.pads) pads.push_back(p.at);
+    for (const Place& p : b.pads) aprons.push_back(p.at + Vec2(0, padRadius + padApron / 2));
     for (const Place& p : b.spawns) spawns.push_back(p.at);
     for (const Site& t : b.sites) sites.push_back(t.at);
     const auto inLane = [&](Vec2 groundPoint, double r) {
@@ -1341,7 +1353,8 @@ Built build(const RegionFile& given) {
         for (const NavGrid::Circle& c : NavGrid::circles(d)) {
             const double r = c.second + NavGrid::clearance;
             clear = clear || near(c.first, deposits, r + 1.5) || near(c.first, wells, r + 2) ||
-                    near(c.first, pads, r + padRadius + 0.5) || near(c.first, spawns, r + 1) ||
+                    near(c.first, pads, r + padRadius + 0.5) || near(c.first, aprons, r + padApronHalf + 0.5) ||
+                    near(c.first, spawns, r + 1) ||
                     near(c.first, sites, r + siteRadius) || inLane(c.first, r) ||
                     (b.nest && distance(c.first, *b.nest) < r + nestMound);
         }
@@ -1582,16 +1595,22 @@ std::vector<Problem> validate(const RegionFile& given, const Built& b, std::vect
         const Vec2 c = b.pads[i].at;
         std::optional<Vec2> cliff;
         double lo = std::numeric_limits<double>::infinity(), hi = -lo;
+        const auto sample = [&](Vec2 p) {
+            if (!cliff && steep(p)) cliff = p;
+            const double h = field.height(p);
+            lo = min(lo, h);
+            hi = max(hi, h);
+        };
         for (double x = -padRadius; x <= padRadius; x += 0.5) {
             for (double z = -padRadius; z <= padRadius; z += 0.5) {
                 if (x * x + z * z > padRadius * padRadius) continue;
-                const Vec2 p = c + Vec2(x, z);
-                if (!cliff && steep(p)) cliff = p;
-                const double h = field.height(p);
-                lo = min(lo, h);
-                hi = max(hi, h);
+                sample(c + Vec2(x, z));
             }
         }
+        // The ramp's apron in front of the +y edge (C5).
+        for (double x = -padApronHalf; x <= padApronHalf; x += 0.4)
+            for (double z = padRadius; z <= padRadius + padApron; z += 0.5) sample(c + Vec2(x, z));
+        const Vec2 apron = c + Vec2(0, padRadius + padApron / 2);
         if (cliff) {
             add(where, "on a cliff: steep at " + pointText(b.regionAt(*cliff)) + "; a pad needs flat ground " +
                            num(padRadius) + " cells round it", c);
@@ -1599,6 +1618,8 @@ std::vector<Problem> validate(const RegionFile& given, const Built& b, std::vect
             add(where, "on uneven ground (heights " + num(lo) + "…" + num(hi) + "): flatten it", c);
         } else if (const auto r = rock(c, padRadius)) {
             add(where, rockText(*r), c);
+        } else if (const auto ra = rock(apron, padApronHalf)) {
+            add(where, "its ramp's apron (+y) " + rockText(*ra), apron);
         } else if (const auto k = crowded(c, "", padRadius + 1.5, padRadius + 2)) {
             add(where, *k, c);
         } else {
@@ -1615,6 +1636,9 @@ std::vector<Problem> validate(const RegionFile& given, const Built& b, std::vect
         if (steepNear(p)) add(where, "on a cliff face", p);
         else if (const auto r = rock(p, NavGrid::clearance)) add(where, rockText(*r), p);
         else if (const auto c = crowded(p, "", 1.0 + NavGrid::clearance, 1.5 + NavGrid::clearance)) add(where, *c, p);
+        else if (const auto pad = nearestPad(b.pads, p); pad && pad->distance < padReach + 1)
+            add(where, "on pad \"" + pad->name + "\"'s plate, where the Dropship lands: keep a spawn " + num(padReach + 1) +
+                           " cells from a pad's centre", p);
         else if (!(cell && nav.free(*cell))) add(where, "blocked ground (the map's edge?)", p);
         else if (nav.regions[static_cast<size_t>(*cell)] != main) add(where, "cut off from the region's open ground", p);
     }
@@ -1814,22 +1838,29 @@ std::vector<Problem> validate(const RegionFile& given, const Built& b, std::vect
     // Scarcity (E1): a world region's veins, wells and ore in all.
     if (const auto range = oreRange(f.brood)) {
         if (!f.dropResources) out.push_back(Problem{"base.drop", "a region of brood level 1 or more drops the base's ore and wells (\"resources\")", std::nullopt});
-        const auto vs = veins(f.deposits);
+        const auto vs = veins(f.deposits, f.wells);
         if (int64_t(vs.size()) > veinsMost)
             out.push_back(Problem{"deposits", std::to_string(vs.size()) + " veins; a region holds at most " + std::to_string(veinsMost), std::nullopt});
         for (const auto& v : vs) {
             Vec2 middle(0, 0);
             for (const size_t i : v) middle = middle + f.deposits[i].at / double(v.size());
+            // A well's ring: its middle the well, its reach `ringReach`.
+            double within = veinReach;
+            for (const WellSite& w : f.wells)
+                if (std::all_of(v.begin(), v.end(), [&](size_t i) { return distance(f.deposits[i].at, w.at) <= ringReach; })) {
+                    middle = w.at;
+                    within = ringReach;
+                }
             const std::string first = "deposits[" + std::to_string(v.front()) + "]";
             if (int64_t(v.size()) < moundsFewest || int64_t(v.size()) > moundsMost)
                 out.push_back(Problem{first, "a vein of " + std::to_string(v.size()) + " mounds; a vein holds " + std::to_string(moundsFewest) +
                                                  " to " + std::to_string(moundsMost),
                                       middle});
             for (const size_t i : v)
-                if (distance(f.deposits[i].at, middle) > veinReach)
+                if (distance(f.deposits[i].at, middle) > within)
                     out.push_back(Problem{"deposits[" + std::to_string(i) + "]",
                                           num(distance(f.deposits[i].at, middle)) + " cells from its vein's middle " + pointText(middle) +
-                                              "; a vein's mounds lie within " + num(veinReach),
+                                              "; a vein's mounds lie within " + num(within),
                                           f.deposits[i].at});
         }
         if (int64_t(f.wells.size()) > wellsMost)

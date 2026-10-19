@@ -1266,8 +1266,8 @@ std::optional<std::string> Simulation::placementRefusal(Structure::Kind kind, Ve
               && !s.addon)) {
             continue;
         }
-        const Vec2 lab = s.position + Rules::addonOffset;
-        if (std::abs(lab.x - p.x) < r + 1 && std::abs(lab.y - p.y) < r + 1) return "Leave room for the Lab";
+        const Vec2 lab = s.position + Rules::addonOffset();
+        if (std::abs(lab.x - p.x) < r + Rules::radius(Structure::Kind::lab) && std::abs(lab.y - p.y) < r + Rules::radius(Structure::Kind::lab)) return "Leave room for the Lab";
     }
     for (const OreDeposit& m : state.patches) {
         if (!(m.remaining > 0)) continue;

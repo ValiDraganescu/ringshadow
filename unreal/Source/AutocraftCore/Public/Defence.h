@@ -81,6 +81,11 @@ struct AUTOCRAFTCORE_API Defence {
     /// along each axis, in the gun's quadrant. Without the hall there is no
     /// station (inside the solid Citadel: `man` refuses, nothing is sheltered).
     static double stationInset() { return Rules::citadelHall() ? 4.0 : 1.5; }
+    /// How big the gatling gun's and the Sentinel's models stand against
+    /// the strategy game's (C5): `Rules::gatlingScale` and `sentinelScale`
+    /// with the hall, 1 without.
+    static double gatlingScale() { return Rules::citadelHall() ? Rules::gatlingScale : 1.0; }
+    static double sentinelScale() { return Rules::citadelHall() ? Rules::sentinelScale : 1.0; }
     static Vec2 gunStation(Vec2 citadel, int i);
     /// Gun `i`'s camera (the game's view at a gun), riding the cradle so the
     /// barrels stay in frame from `gunPitchMin` to `gunPitchMax`: the mount
@@ -99,18 +104,24 @@ struct AUTOCRAFTCORE_API Defence {
     /// A gatling gun's muzzle (C2), from the model (its barrels' axis 1.28
     /// up, the muzzle 1.58 from its centre when level): the barrels pivot
     /// (the cradle) `gatlingPivot` up and `gatlingTrunnion` along the aim,
-    /// the muzzle `gatlingBarrel` past the pivot; z from its ground.
-    static constexpr double gatlingPivot = 1.28, gatlingTrunnion = 0.3, gatlingBarrel = 1.28;
+    /// the muzzle `gatlingBarrel` past the pivot; z from its ground. With
+    /// the hall (the MMO's sizes, C5) the model stands `gatlingScale()`
+    /// times as big, and so do these.
+    static double gatlingPivot() { return 1.28 * gatlingScale(); }
+    static double gatlingTrunnion() { return 0.3 * gatlingScale(); }
+    static double gatlingBarrel() { return 1.28 * gatlingScale(); }
     /// How far its barrels dip and rise (radians from level): steep enough
     /// down to strike a bug biting at its foot.
     static constexpr double gatlingPitchMin = -60.0 * pi / 180.0;
     static constexpr double gatlingPitchMax = 70.0 * pi / 180.0;
     static Vec3 gatlingMuzzle(Vec2 at, double aim, double pitch);
     /// A Sentinel's missile pods (the model's `pods_k`): they pitch about
-    /// `sentinelPivot` over its ground, `sentinelRest` up while it watches
-    /// the sky. `sentinelPitch`: radians up from level onto a body `up` over
-    /// its ground and `along` away (`Simulation::aimHeight`).
-    static constexpr double sentinelPivot = 1.17, sentinelRest = 0.3;
+    /// `sentinelPivot` over its ground (x `sentinelScale()` with the MMO's
+    /// sizes, C5), `sentinelRest` (radians) up while it watches the
+    /// sky. `sentinelPitch`: radians up from level onto a body `up` over its
+    /// ground and `along` away (`Simulation::aimHeight`).
+    static double sentinelPivot() { return 1.17 * sentinelScale(); }
+    static constexpr double sentinelRest = 0.3;
     static double sentinelPitch(double along, double up);
     /// `aim` (world radians) held within gun `i`'s arc, at its hard stops
     /// (no wrap: past a stop it stays at that stop).

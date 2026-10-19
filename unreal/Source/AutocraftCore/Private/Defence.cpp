@@ -41,11 +41,11 @@ Vec3 Defence::gunMuzzle(Vec2 citadel, int i, double aim, double pitch) {
 }
 
 Vec3 Defence::gatlingMuzzle(Vec2 at, double aim, double pitch) {
-    const Vec2 m = at + Vec2(std::cos(aim), std::sin(aim)) * (gatlingTrunnion + gatlingBarrel * std::cos(pitch));
-    return {m.x, m.y, gatlingPivot + gatlingBarrel * std::sin(pitch)};
+    const Vec2 m = at + Vec2(std::cos(aim), std::sin(aim)) * (gatlingTrunnion() + gatlingBarrel() * std::cos(pitch));
+    return {m.x, m.y, gatlingPivot() + gatlingBarrel() * std::sin(pitch)};
 }
 
-double Defence::sentinelPitch(double along, double up) { return std::atan2(up - sentinelPivot, ac::max(0.0, along)); }
+double Defence::sentinelPitch(double along, double up) { return std::atan2(up - sentinelPivot(), ac::max(0.0, along)); }
 
 double Defence::clampAim(int i, double aim) {
     const double rest = cornerAngle(i);

@@ -309,7 +309,7 @@ std::optional<std::string> Region::pick(PilotId pilot, UnitKind kind, Perk perk)
 }
 
 double Region::buildReach(StructureKind kind) {
-    return kind == StructureKind::derrick ? 3.0 : Rules::radius(kind) + 2.2;
+    return Rules::buildReach(kind);
 }
 
 std::optional<std::string> Region::build(PilotId pilot, StructureKind kind, Vec2 at) {

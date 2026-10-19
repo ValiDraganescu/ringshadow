@@ -132,10 +132,12 @@ TEST(Defence_sentinelHitsOnlyAir) {
 /// The gatling gun hits the ground in reach (20 since C2), and the air only within 4.5:
 /// a Gloamwing at 5.5 from its edge is safe, one at 3.5 is shot.
 TEST(Defence_gatlingGroundAndCloseAir) {
+    // Ranges are from its edge (C5: the 5x5 gun's 2.5 from its centre).
+    const double edge = Rules::radius(Structure::Kind::gatling);
     auto [s, at] = scene();
     addStructure(s, Structure::Kind::gatling, at, 0);
-    const int64_t ground = bug(s, Unit::Kind::shardling, at + Vec2(7, 0));
-    const int64_t high = bug(s, Unit::Kind::gloamwing, at + Vec2(0, 7));
+    const int64_t ground = bug(s, Unit::Kind::shardling, at + Vec2(edge + 6, 0));
+    const int64_t high = bug(s, Unit::Kind::gloamwing, at + Vec2(0, edge + 6));
     Simulation m = sim(s);
     run(m, 3);
     EXPECT_TRUE(!m.state.unit(ground) || m.state.unit(ground)->hp <= 0);
@@ -143,7 +145,7 @@ TEST(Defence_gatlingGroundAndCloseAir) {
 
     auto [s2, at2] = scene();
     addStructure(s2, Structure::Kind::gatling, at2, 0);
-    const int64_t close = bug(s2, Unit::Kind::gloamwing, at2 + Vec2(0, 5));
+    const int64_t close = bug(s2, Unit::Kind::gloamwing, at2 + Vec2(0, edge + 4));
     Simulation m2 = sim(s2);
     run(m2, 1);
     EXPECT_TRUE(hurt(m2, close));

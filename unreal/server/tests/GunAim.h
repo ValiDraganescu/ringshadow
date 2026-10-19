@@ -7,6 +7,7 @@
 #include "Defence.h"
 #include "RegionFile.h"
 #include "Rules.h"
+#include "NavGrid.h"
 #include "Simulation.h"
 
 #include <cmath>
@@ -56,6 +57,19 @@ inline std::optional<GunAim> aimCornerGun(const Simulation& sim, Vec2 citadel, i
 /// (`canyon turrets`) is a sample of the rims that need not see the floor
 /// (2026-10-19: the sculpted Cold Fork's cliffs are sheer where the old
 /// ground had shelves). Nil: none reaches it.
+/// A gatling gun at `at` stands back from its ground's lip: on the walking
+/// grid a footprint blocks the ground under it whatever its height, so a
+/// gun hanging over a rim's edge pinches the arm's floor below and walkers
+/// jam there, under its barrels. Its square, grown by the walk's clearance
+/// and half a cell, all at its own height.
+inline bool offTheLip(const Simulation& sim, Vec2 at) {
+    const double g = Rules::radius(StructureKind::gatling) + NavGrid::clearance + 0.5;
+    for (double dx = -g; dx <= g; dx += 0.25)
+        for (double dy = -g; dy <= g; dy += 0.25)
+            if (!(sim.groundZ(at + Vec2(dx, dy)) > sim.groundZ(at) - 0.5)) return false;
+    return true;
+}
+
 inline std::optional<Vec2> rimGunSpot(const Simulation& sim, const region::Zone& z, const std::vector<region::Place>& pads,
                                       const std::string& from) {
     std::vector<Vec2> path;
@@ -80,10 +94,13 @@ inline std::optional<Vec2> rimGunSpot(const Simulation& sim, const region::Zone&
     for (double y = std::floor(lo.y) - 12; y <= hi.y + 12; y += 1)
         for (double x = std::floor(lo.x) - 12; x <= hi.x + 12; x += 1) {
             const auto at = sim.snap(StructureKind::gatling, Vec2(x, y));
-            if (!at || std::hypot(at->x - x, at->y - y) > 0.5 || signedDistance(*at, z.outline) > 0) continue;
+            // Within a cell's half diagonal: a 5x5 gun (C5) snaps to cell
+            // centres, a 2x2 one to corners.
+            if (!at || std::hypot(at->x - x, at->y - y) > 0.75 || signedDistance(*at, z.outline) > 0) continue;
             if (sim.placementRefusal(StructureKind::gatling, *at) ||
                 region::touchesPadPlate(pads, *at, Rules::radius(StructureKind::gatling)))
                 continue;
+            if (!offTheLip(sim, *at)) continue;
             int hits = 0;
             double near = 1e18;
             for (const Vec2 q : path) {

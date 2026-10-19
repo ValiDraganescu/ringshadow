@@ -185,7 +185,7 @@ public:
     /// spot may be, in cells: the unit moves on while the request travels.
     static constexpr double buildSlack = 3.0;
     /// Where the game holds a `kind` out ahead of the Prospector: its
-    /// radius and 2.2 cells, a Derrick 3 (AcPilotBuild's `Spot`).
+    /// `Rules::buildReach` (AcPilotBuild's `Spot`).
     static double buildReach(StructureKind kind);
 
     /// A unit brought in from another region (a world): a new id here, its

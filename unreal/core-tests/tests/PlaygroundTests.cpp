@@ -94,7 +94,7 @@ TEST(playground_placedDoodadsAndWellsBlockTheWay) {
 TEST(playground_labGoesOnItsHost) {
     Simulation sim = fresh();
     const int64_t g = sim.placeStructure(Structure::Kind::garrison, 0, Vec2(0, 0));
-    const Vec2 spot = Vec2(0, 0) + Rules::addonOffset;
+    const Vec2 spot = Vec2(0, 0) + Rules::addonOffset();
     const auto host = sim.labHost(spot, 0);
     EXPECT_TRUE(host && host->id == g);
     EXPECT_TRUE(!sim.labHost(spot, 1).has_value()); // not the other side's

@@ -405,7 +405,7 @@ TEST(progression_rankText) {
     EXPECT_TRUE(Progression::rankText(Skill::longArm, 3) == "Weld and repair from 1.5 cells farther");
     EXPECT_TRUE(Progression::rankText(Skill::bulwark, 2) == "Damage taken −10%");
     EXPECT_TRUE(Progression::rankText(Skill::overbuild, 2) == "+2 Hab Dome, Derrick and Sentinel allowed");
-    EXPECT_TRUE(Progression::rankText(Skill::padLink, 2) == "Call the Dropship from within 12 cells of a Landing Pad");
+    EXPECT_TRUE(Progression::rankText(Skill::padLink, 2) == "Call the Dropship from 12 cells past a Landing Pad's edge");
     EXPECT_TRUE(Progression::rankText(Skill::ringwalker, 1) == "Flights cost no MH, from any Landing Pad, and the Dropship comes 30% faster.");
     EXPECT_TRUE(Progression::rankText(Skill::scannerPulse, 3) == "Arriving marks a region's wrecks, caches and vaults");
     EXPECT_TRUE(Progression::rankText(Skill::overcharge, 1) == Progression::node(Skill::overcharge).text);

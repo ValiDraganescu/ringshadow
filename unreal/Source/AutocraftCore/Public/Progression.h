@@ -135,8 +135,8 @@ struct SkillEffect {
     struct Wellspring { double perMinute; auto operator<=>(const Wellspring&) const = default; };
     /// Pump straight from a well without a Derrick, at `share` of a Derrick's rate.
     struct FieldPump { double share; auto operator<=>(const FieldPump&) const = default; };
-    /// Call the Dropship from within `radius` cells of a Landing Pad's
-    /// centre (4 without it).
+    /// Call the Dropship from `radius` cells past a Landing Pad's edge (2
+    /// without it; C5: from its edge, the pad grew past its centre's 8).
     struct PadLink { double radius; auto operator<=>(const PadLink&) const = default; };
     /// F2: flights cost no MH, and the Dropship flies `faster` (0.3: 30%)
     /// faster.

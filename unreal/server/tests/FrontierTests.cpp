@@ -13,6 +13,7 @@
 // Run from unreal/server.
 
 #include "test.h"
+#include "CitadelSpot.h"
 
 #include "Progression.h"
 #include "Rules.h"
@@ -479,8 +480,11 @@ TEST(Frontier_keepThePilotsRules) {
     // At its feet: built, the world's price paid, no copy used (it knows
     // the Hab Dome), the building the realm's, its builder the frontier pilot.
     const int64_t before = f.wallet.ore;
-    const auto spot = w.region(r).simulation().snap(StructureKind::habDome, f.at + Vec2(Region::buildReach(StructureKind::habDome), 0));
+    // Its feet by open ground (C5: the 5x5 Hab Dome).
+    const auto spot = rig::placeableNear(w.region(r).simulation(), first().regions[r].built.pads,
+                                         f.at + Vec2(Region::buildReach(StructureKind::habDome), 0), StructureKind::habDome);
     ASSERT_TRUE(spot.has_value());
+    f.at = rig::weldStand(StructureKind::habDome, *spot);
     const auto why = w.frontierBuild(id, StructureKind::habDome, *spot);
     if (why) std::printf("  refused: %s\n", why->c_str());
     ASSERT_TRUE(!(why.has_value()));
@@ -885,8 +889,10 @@ TEST(frontier_buildsAfterSchema28) {
     EXPECT_EQ(g->progress.copies(StructureKind::habDome), int64_t(0));
     // It builds a Hab Dome at its feet for the world's price, no copy.
     const int64_t before = g->wallet.ore;
-    const auto spot = back.region(r).simulation().snap(StructureKind::habDome, g->at + Vec2(Region::buildReach(StructureKind::habDome), 0));
+    const auto spot = rig::placeableNear(back.region(r).simulation(), first().regions[r].built.pads,
+                                         g->at + Vec2(Region::buildReach(StructureKind::habDome), 0), StructureKind::habDome);
     ASSERT_TRUE(spot.has_value());
+    g->at = rig::weldStand(StructureKind::habDome, *spot);
     const auto why = back.frontierBuild(id, StructureKind::habDome, *spot);
     if (why) std::printf("  refused: %s\n", why->c_str());
     EXPECT_TRUE(!why.has_value());

@@ -313,6 +313,10 @@ TEST(mule_rollsOutOfTheFoundryDoor) {
     EXPECT_TRUE(m.kind == UnitKind::mule && m.haul == Haul{} && m.hp == 300);
     EXPECT_EQ(m.position, Mule::door(kAt + Vec2(20, 0)));
     EXPECT_EQ(m.heading, Mule::doorHeading);
+    // Clear of the 7x7 Foundry (C5): its whole body out past the +y face.
+    EXPECT_NEAR(Rules::radius(StructureKind::foundry), 3.5, 1e-12);
+    EXPECT_TRUE(m.position.y - Mule::length / 2 > kAt.y + Rules::radius(StructureKind::foundry));
+    EXPECT_TRUE(!NavGrid::insideStructure(m.position, structureOf(h.sim, foundry), Rules::radius(UnitKind::mule)));
     bool trained = false;
     for (const GameEvent& e : steps(h.sim, 1.0 / 30))
         if (const auto* t = e.as<GameEvent::Trained>(); t && t->unit == *id) trained = true;

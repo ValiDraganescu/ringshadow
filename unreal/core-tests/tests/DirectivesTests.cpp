@@ -2,6 +2,7 @@
 // their team's AI (`Directives`): one `orders` call or a few seconds of
 // simulation from a hand-built position each, never a game.
 // (`testBoxedInTankIsDestroyed` is the simulation's: NavGrid and Simulation.)
+#include "CitadelHall.h"
 #include "SquadHelpers.h"
 
 using namespace ac;
@@ -79,6 +80,7 @@ TEST(directivesQueuedUpgradeHoldsTheBankThenResearches) {
 /// A queued Longbow with only a Garrison: a Foundry first (one,
 /// though the AI wanted one too), then its Lab, then the tank.
 TEST(directivesQueuedTankPutsUpWhatItNeedsFirst) {
+    const simtest::CitadelHall hall(false); // the strategy game's sizes (C5)
     const MapDefinition& m = homeMap();
     auto [s, garrison] = blueTech(m);
     (void)garrison;
@@ -110,6 +112,7 @@ TEST(directivesQueuedTankPutsUpWhatItNeedsFirst) {
 
 /// A building request: the AI picks the spot and sends a Prospector.
 TEST(directivesQueuedBuildingIsPlacedByTheAI) {
+    const simtest::CitadelHall hall(false); // the strategy game's sizes (C5)
     const MapDefinition& m = homeMap();
     auto [s, garrison] = blueTech(m);
     (void)garrison;

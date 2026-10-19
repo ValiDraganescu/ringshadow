@@ -513,7 +513,7 @@ void UAcBuildingFx::Stage(UAcSimSubsystem& Sim)
 	{
 		ac::Structure* Parent = Find(ParentId);
 		if (!Parent) return;
-		const Vec2 P = Parent->position + ac::Rules::addonOffset;
+		const Vec2 P = Parent->position + ac::Rules::addonOffset();
 		ac::Structure& Lab = AddBuilding(ac::StructureKind::lab, P, bBuilt);
 		Lab.parent = ParentId;
 		Find(ParentId)->addon = Lab.id;

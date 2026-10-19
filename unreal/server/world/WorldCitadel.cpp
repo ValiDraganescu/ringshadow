@@ -162,12 +162,26 @@ std::string WorldMap::devCitadel(const std::string& line) {
         const Vec2 at = st.units[size_t(*me)].position;
         const double heading = st.units[size_t(*me)].heading;
         const double half = Rules::radius(StructureKind::citadel);
+        // Ahead first, then round to the sides and behind (C5: the bigger
+        // buildings an earlier staging left crowd the start).
         for (double d = half + 3; d <= half + 40; d += 1)
-            for (const double turn : {0.0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2}) {
+            for (const double turn : {0.0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.6, -1.6, 2.0, -2.0, 2.4, -2.4, 2.8, -2.8, pi}) {
                 const auto spot = sim.snap(StructureKind::citadel, at + Vec2(std::cos(heading + turn), std::sin(heading + turn)) * d);
-                if (!spot || sim.placementRefusal(StructureKind::citadel, *spot)) continue;
+                // Off the pads' plates, as a pilot's build.
+                if (!spot || sim.placementRefusal(StructureKind::citadel, *spot) ||
+                    region::touchesPadPlate(world_->regions[r].built.pads, *spot, half))
+                    continue;
                 const Vec2 stand = *spot + Vec2(0, half + 4);
                 if (!sim.nav || !sim.nav->walkable(stand) || sim.nav->inRock(stand)) continue;
+                // The way to its door clear of buildings, a Mule's length
+                // past the stand (C5: a 7x7 Foundry put up first may stand
+                // across it).
+                bool clear = true;
+                for (double y = half; y <= half + 12 && clear; y += 0.5)
+                    for (double x = -2; x <= 2 && clear; x += 0.5)
+                        for (const Structure& b : st.structures)
+                            if (!Rules::walkable(b.kind) && NavGrid::insideStructure(*spot + Vec2(x, y), b, 0.5)) clear = false;
+                if (!clear) continue;
                 Structure c(st.nextID++, StructureKind::citadel, Pilot::player, *spot);
                 c.hp = Rules::hp(StructureKind::citadel);
                 st.structures.push_back(c);
@@ -241,7 +255,9 @@ std::string WorldMap::devDummy(const std::string& line) {
             for (const double turn : {0.0, 0.1, -0.1, 0.2, -0.2}) {
                 const double reach = ahead + sign * d;
                 const auto spot = sim.snap(StructureKind::dummy, at + Vec2(std::cos(heading + turn), std::sin(heading + turn)) * reach);
-                if (!spot || sim.placementRefusal(StructureKind::dummy, *spot)) continue;
+                if (!spot || sim.placementRefusal(StructureKind::dummy, *spot) ||
+                    region::touchesPadPlate(world_->regions[r].built.pads, *spot, Rules::radius(StructureKind::dummy)))
+                    continue;
                 Structure dummy(st.nextID++, StructureKind::dummy, Pilot::player, *spot);
                 dummy.hp = Rules::hp(StructureKind::dummy);
                 st.structures.push_back(dummy);

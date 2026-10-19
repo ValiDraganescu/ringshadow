@@ -108,7 +108,7 @@ bool has(const std::vector<std::string>& lines, const std::string& word) {
 TEST(scarcity_world_regions_hold_their_veins) {
     for (const WorldRegion& g : first().regions) {
         const region::RegionFile& f = g.file;
-        const auto veins = region::veins(f.deposits);
+        const auto veins = region::veins(f.deposits, f.wells);
         int64_t ore = 0;
         for (const region::Deposit& d : f.deposits) ore += d.amount;
         std::printf("  %-14s brood %lld: %zu veins, %zu mounds, %lld ore, %zu well\n", f.id.c_str(), (long long)f.brood, veins.size(),

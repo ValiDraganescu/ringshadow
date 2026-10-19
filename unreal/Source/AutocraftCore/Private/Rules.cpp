@@ -1,5 +1,6 @@
 // Port of `Rules` of Sources/GameCore/State.swift and Vision.swift.
 #include "Rules.h"
+#include "Shuttle.h"
 
 #include <algorithm>
 #include <atomic>
@@ -81,37 +82,66 @@ std::atomic<bool> hall{true};
 void Rules::setCitadelHall(bool on) { hall.store(on, std::memory_order_relaxed); }
 bool Rules::citadelHall() { return hall.load(std::memory_order_relaxed); }
 
-/// Half the footprint side: 12x12 Citadel with the hall (5x5 without);
-/// 3x3 Garrison, Bastion, Derrick, Foundry, Spacedock and Landing Pad; 2x2
-/// Hab Dome, Lab and Sentinel; 1x1 Target Dummy.
-double Rules::radius(StructureKind k) {
+/// Half the footprint side. With the hall (the MMO, C5,
+/// docs/building-sizes.md): the 12x12 Citadel; the Landing Pad as big as
+/// the walk-in Dropship landed on it (`ShuttleBay::padHalfSide`); 7x7
+/// Garrison, Bastion, Derrick, Foundry and Spacedock; 5x5 Hab Dome and Lab;
+/// the Sentinel and the gatling gun by their own scale. Without (the
+/// strategy game): 5x5 Citadel; 3x3 Garrison, Bastion, Derrick, Foundry,
+/// Spacedock and Landing Pad; 2x2 Hab Dome, Lab, Sentinel and gatling gun.
+/// 1x1 Target Dummy in both.
+namespace {
+double gunScale(StructureKind k, bool big) {
+    if (!big) return 1.0;
+    return k == StructureKind::gatling ? Rules::gatlingScale : Rules::sentinelScale;
+}
+
+double radiusOf(StructureKind k, bool big) {
     switch (k) {
-    case StructureKind::citadel: return citadelHall() ? 6.0 : 2.5;
+    // A 2x2 gun's side times its scale, to the nearest cell.
+    case StructureKind::sentinel: case StructureKind::gatling: return std::round(2 * gunScale(k, big)) / 2;
+    case StructureKind::citadel: return big ? 6.0 : 2.5;
     case StructureKind::dummy: return 0.5;
-    case StructureKind::habDome: case StructureKind::lab: case StructureKind::sentinel: case StructureKind::gatling: return 1;
-    default: return 1.5;
+    // The smallest odd square that holds the Dropship landed on it.
+    case StructureKind::landingPad: return big ? ShuttleBay::padHalfSide() : 1.5;
+    case StructureKind::habDome: case StructureKind::lab: return big ? 2.5 : 1;
+    default: return big ? 3.5 : 1.5;
     }
 }
 
-double Rules::height(StructureKind k) {
+double heightOf(StructureKind k, bool big) {
     // GameScene.makeBuilding (GameScene.swift:363); Models.labHeight 1.9.
+    // With the hall every body but the Citadel's, the pad's plate and the
+    // Target Dummy stands 2.4 times as tall (C5, the Citadel's growth).
+    const double scale = big ? Rules::buildingScale : 1.0;
     switch (k) {
     // The hall's: the central tower's beacon top (c1-model, citadel.py).
-    case StructureKind::citadel: return citadelHall() ? 12.3 : 4.6;
-    case StructureKind::habDome: return 1.2;
-    case StructureKind::garrison: return 2.5;
-    case StructureKind::bastion: return 1.4;
-    case StructureKind::derrick: return 2.5;
-    case StructureKind::foundry: return 2.4;
-    case StructureKind::spacedock: return 3.2;
-    case StructureKind::lab: return 1.9;
-    case StructureKind::sentinel: return 1.7;
-    case StructureKind::gatling: return 1.3;
+    case StructureKind::citadel: return big ? 12.3 : 4.6;
+    case StructureKind::habDome: return 1.2 * scale;
+    case StructureKind::garrison: return 2.5 * scale;
+    case StructureKind::bastion: return 1.4 * scale;
+    case StructureKind::derrick: return 2.5 * scale;
+    case StructureKind::foundry: return 2.4 * scale;
+    case StructureKind::spacedock: return 3.2 * scale;
+    case StructureKind::lab: return 1.9 * scale;
+    case StructureKind::sentinel: return 1.7 * gunScale(k, big);
+    case StructureKind::gatling: return 1.3 * gunScale(k, big);
     case StructureKind::landingPad: return 0.18;
     // The post and its plate (dummy.py).
     case StructureKind::dummy: return 1.8;
     }
     return 2.0;
+}
+} // namespace
+
+double Rules::radius(StructureKind k) { return radiusOf(k, citadelHall()); }
+double Rules::height(StructureKind k) { return heightOf(k, citadelHall()); }
+
+Vec2 Rules::addonOffset() {
+    // Flush on the host's +x side and its +y edge: (1.5 + 1, 1.5 - 1) for a
+    // 3x3 host and a 2x2 Lab, (3.5 + 2.5, 3.5 - 2.5) for the C5 sizes.
+    const double host = radius(StructureKind::garrison), lab = radius(StructureKind::lab);
+    return {host + lab, host - lab};
 }
 
 bool Footprint::blocks(Vec2 local, bool doorOpen, double grow) const {
@@ -140,8 +170,8 @@ const Footprint& Rules::footprint(StructureKind k) {
             const StructureKind kind = StructureKind(i);
             Footprint& f = t[i];
             if (kind != StructureKind::citadel || !withHall) {
-                f.radius = kind == StructureKind::citadel ? 2.5 : radius(kind);
-                const double z1 = kind == StructureKind::citadel ? 4.6 : height(kind);
+                f.radius = radiusOf(kind, withHall);
+                const double z1 = heightOf(kind, withHall);
                 f.walls = {Slab{{-f.radius, -f.radius}, {f.radius, f.radius}, 0, z1}};
                 continue;
             }

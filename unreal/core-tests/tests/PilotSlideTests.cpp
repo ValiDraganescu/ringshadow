@@ -151,12 +151,13 @@ TEST(pilot_roundsACorner) {
     ASSERT_TRUE(w2.has_value());
     Simulation& s2 = w2->sim;
     Unit& v = unitOf(s2, w2->id);
-    const Vec2 a = v.position + Vec2(3, 0), b = a + Vec2(-2, 2);
+    const double h = Rules::radius(Structure::Kind::habDome);
+    const Vec2 a = v.position + Vec2(h + 2, 0), b = a + Vec2(-2 * h, 2 * h);
     s2.state.structures.push_back(Structure(s2.state.nextID++, Structure::Kind::habDome, 0, a));
     s2.state.structures.push_back(Structure(s2.state.nextID++, Structure::Kind::habDome, 0, b));
-    // Into the inside corner at (a.x - 1, a.y + 1), along the diagonal.
+    // Into the inside corner at (a.x - h, a.y + h), along the diagonal.
     v.heading = std::atan2(1, 1);
-    v.position = a + Vec2(-1, 1) - normalize(Vec2(1, 1)) * 2;
+    v.position = a + Vec2(-h, h) - normalize(Vec2(1, 1)) * 2;
     Vec2 last = v.position;
     double back = 0;
     for (int k = 0; k < 60; k++) {

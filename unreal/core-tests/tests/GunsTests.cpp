@@ -446,8 +446,17 @@ TEST(gatling_onALedgeHitsBugsBelow) {
     Open o = open();
     Simulation probe(o.s, homeMap(), false);
     const TerrainField& f = *probe.field;
+    // From the muzzle on the straight line's pitch (C5: the 5x5 gun's
+    // barrels reach past its own edge), the gun's square on the plateau.
     auto hidden = [&](Vec2 p, Vec2 q) {
-        const Vec3 m(p.x, p.y, f.height(p) + Defence::gatlingPivot);
+        const double r = Rules::radius(Structure::Kind::gatling);
+        for (Vec2 c : {Vec2(-r, -r), Vec2(r, -r), Vec2(-r, r), Vec2(r, r)})
+            if (f.level(p + c * 0.95) != 1) return false;
+        const double yaw = std::atan2(q.y - p.y, q.x - p.x);
+        const Vec2 pivot = p + Vec2(std::cos(yaw), std::sin(yaw)) * Defence::gatlingTrunnion();
+        const double pitch = std::atan2(f.height(q) + 0.75 - (f.height(p) + Defence::gatlingPivot()), distance(pivot, q));
+        Vec3 m = Defence::gatlingMuzzle(p, yaw, pitch);
+        m.z += f.height(p);
         const Vec3 b(q.x, q.y, f.height(q) + 0.75);
         for (double t = 0.05; t < 0.95; t += 0.01) {
             const Vec3 x = m + (b - m) * t;
@@ -458,7 +467,7 @@ TEST(gatling_onALedgeHitsBugsBelow) {
     // A gun on the plateau with a hidden spot below it, and a seen one.
     std::optional<std::pair<Vec2, Vec2>> pair;
     std::optional<Vec2> seen;
-    for (double apart : {4.0, 5.0, 6.0}) {
+    for (double apart : {4.0, 5.0, 6.0, 7.0, 8.0}) {
         pair = cliffPair(homeMap(), f, *probe.navGrid(), apart, hidden);
         if (!pair) continue;
         seen = std::nullopt;
@@ -487,7 +496,14 @@ TEST(gatling_onALedgeHitsBugsBelow) {
     {
         Simulation m = scene(pair->second);
         const int64_t gun = m.state.structures.back().id, bug = m.state.units.back().id;
-        const auto events = run(m, 2);
+        // Held where it is hidden (C5: the 5x5 gun is near enough that
+        // the bug walks round to it, into the gun's view).
+        std::vector<GameEvent> events;
+        for (int k = 0; k < 60; k++) {
+            const auto e = m.step(1.0 / 30);
+            events.insert(events.end(), e.begin(), e.end());
+            for (Unit& u : m.state.units) if (u.id == bug) u.position = pair->second;
+        }
         EXPECT_EQ(fired(events, gun), int64_t(0));
         EXPECT_EQ(hp(m, bug), Rules::hp(Unit::Kind::lodeback));
     }

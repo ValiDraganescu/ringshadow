@@ -84,10 +84,14 @@ Line wall(WorldMap& w, size_t r, double gap, Vec2 fromCell = Vec2(82, 28), Vec2 
     while (hi < 12 && sim.nav->walkable(mid + side * (hi + 0.5))) hi += 0.5;
     const double r_ = Rules::radius(StructureKind::gatling), reachIn = 4;
     Line line{mid, along, {}};
-    const int count = int(std::ceil((hi - lo + 2 * reachIn) / (2 * r_))) + 1;
-    const int open = count / 2;
-    for (int k = 0; k < count; k++) {
-        const double off = lo - reachIn + r_ + 2 * r_ * k + (k >= open ? gap : 0);
+    // The gap in the floor's middle, its edges whole cells from `lo` (C5:
+    // with 5-cell guns, guns laid from one side put it on a slope); guns out
+    // from it both ways into the walls.
+    const double from = lo + std::round(((hi - lo) - gap) / 2), to = from + gap;
+    std::vector<double> offs;
+    for (double e = from; e > lo - reachIn; e -= 2 * r_) offs.push_back(e - r_);
+    for (double e = to; e < hi + reachIn; e += 2 * r_) offs.push_back(e + r_);
+    for (const double off : offs) {
         Structure s(sim.state.nextID++, StructureKind::gatling, Pilot::player, mid + side * off, Rules::buildTime(StructureKind::gatling));
         s.hp = Rules::hp(StructureKind::gatling);
         sim.state.structures.push_back(s);
@@ -183,30 +187,52 @@ TEST(Z4_aGapAndTheWalkersFileThrough) {
 
 /// Packed: Gatling Guns side by side on The Fork's floor, footprints
 /// touching, all taken by the ordinary rules (no spacing, no build spots).
+/// C5: a 5x5 gun nearly fills an arm's floor (cut 5 to 6 wide), so the
+/// first goes where the arm's floor takes one, the next touching it along
+/// whichever axis the floor runs.
 TEST(Z4_packedOnTheFloor) {
     WorldMap w(first(), params());
     const size_t r = seatIn(w, "cold-fork", Vec2(100, 52));
     Simulation& sim = w.region(r).simulation();
     const region::Zone& z = w.region(r).places()->zones[0];
-    // On the North arm's floor, near its end.
-    const Vec2 at = z.paths[0].points[z.paths[0].points.size() - 2];
-    const auto first = sim.snap(StructureKind::gatling, at);
-    ASSERT_TRUE(first.has_value());
-    int placed = 0;
-    for (const Vec2 off : {Vec2(0, 0), Vec2(2, 0), Vec2(0, 2), Vec2(2, 2)}) {
-        const auto spot = sim.snap(StructureKind::gatling, *first + off);
-        if (!spot || sim.placementRefusal(StructureKind::gatling, *spot)) continue;
-        Structure s(sim.state.nextID++, StructureKind::gatling, Pilot::player, *spot);
+    const double side = 2 * Rules::radius(StructureKind::gatling);
+    auto put = [&](Vec2 at) {
+        Structure s(sim.state.nextID++, StructureKind::gatling, Pilot::player, at);
         s.hp = Rules::hp(StructureKind::gatling);
         sim.state.structures.push_back(s);
         sim.reindex();
         sim.refreshNav();
-        placed++;
-    }
-    std::printf("  %d of 4 placed touching\n", placed);
-    EXPECT_TRUE(placed >= 3);
+    };
+    // Along the North arm's floor from its end: the first spot that takes
+    // one with a neighbour touching it.
+    int placed = 0;
+    std::optional<Vec2> first_;
+    const auto& line = z.paths[0].points;
+    for (size_t k = line.size() - 1; k > 0 && !first_; k--)
+        for (double t = 0; t < 1 && !first_; t += 0.1) {
+            const auto at = sim.snap(StructureKind::gatling, line[k] + (line[k - 1] - line[k]) * t);
+            if (!at || sim.placementRefusal(StructureKind::gatling, *at)) continue;
+            for (const Vec2 off : {Vec2(side, 0), Vec2(-side, 0), Vec2(0, side), Vec2(0, -side)}) {
+                if (first_) break;
+                const auto next = sim.snap(StructureKind::gatling, *at + off);
+                if (!next || sim.placementRefusal(StructureKind::gatling, *next)) continue;
+                put(*at);
+                if (!sim.placementRefusal(StructureKind::gatling, *next)) {
+                    put(*next);
+                    placed = 2;
+                    first_ = at;
+                } else {
+                    sim.state.structures.pop_back();
+                    sim.reindex();
+                    sim.refreshNav();
+                }
+            }
+        }
+    std::printf("  %d placed touching\n", placed);
+    ASSERT_TRUE(first_.has_value());
+    EXPECT_EQ(placed, 2);
     // One more on top of the first is refused (the footprint rule, no other).
-    EXPECT_TRUE(sim.placementRefusal(StructureKind::gatling, *first).has_value());
+    EXPECT_TRUE(sim.placementRefusal(StructureKind::gatling, *first_).has_value());
 }
 
 /// B2's straggler: a wave's Lodeback, hit, fled with its sac toward the

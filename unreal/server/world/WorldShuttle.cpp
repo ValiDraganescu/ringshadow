@@ -93,15 +93,16 @@ std::optional<std::string> WorldMap::callShuttle(PilotId pilot) {
     const auto unit = here.driving(pilot);
     const auto u = unit ? sim.state.unit(*unit) : std::nullopt;
     if (!u || !(u->hp > 0)) return "Nothing driven";
-    // On a Landing Pad here: within Pad link's reach of its centre (a
-    // Spacedock: also within its edge and `buildingPadReach`), as F2.
-    const double reach = padReach(*p);
+    // On a Landing Pad here: within its edge and `buildingPadReach`, or Pad
+    // link's cells past its edge (C5: from the edge, the pad grew past the
+    // ranks' reach from its centre); a Spacedock the same.
+    const double link = std::max(WorldRoles::buildingPadReach, padLink(*p));
     std::optional<LandingPad> pad;
     double best = std::numeric_limits<double>::infinity();
     for (const LandingPad& o : landingPads()) {
         if (o.region != p->region) continue;
         const double d = distance(o.at, u->position);
-        const double within = o.kind == StructureKind::spacedock ? std::max(reach, Rules::radius(o.kind) + WorldRoles::buildingPadReach) : reach;
+        const double within = Rules::radius(o.kind) + link;
         // C5: a realm Landing Pad also at its call post (Act.h), which
         // stands off its corner.
         const auto building = o.kind == StructureKind::landingPad && o.building ? sim.state.structure(o.building) : std::nullopt;

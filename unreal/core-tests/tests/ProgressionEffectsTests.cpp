@@ -38,6 +38,22 @@ std::pair<Vec2, Vec2> outside(Simulation& sim, int64_t prospector, const Structu
     return {at, out};
 }
 
+/// The first spot a `kind` takes out from `me`: straight along `out`, then
+/// turning off it either way (C5: a 5x5 building needs more open ground
+/// than the main's straight line out gives).
+std::optional<Vec2> openSpot(const Simulation& sim, StructureKind kind, Vec2 me, Vec2 out) {
+    for (double turn = 0; turn <= pi / 2; turn += pi / 16) {
+        for (const double side : {1.0, -1.0}) {
+            const double a = std::atan2(out.y, out.x) + side * turn;
+            for (double d = 3; d <= 16; d += 0.5) {
+                const auto p = sim.snap(kind, me + Vec2(std::cos(a), std::sin(a)) * d);
+                if (p && !sim.placementRefusal(kind, *p)) return p;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 /// Beside the deposit nearest the Citadel, facing it; its index.
 size_t atPatch(Simulation& sim, int64_t prospector, const Structure& citadel) {
     size_t dep = 0;
@@ -436,10 +452,7 @@ TEST(ProgressionEffects_placingAndBuildingCost) {
     sim.state.players[0].hydrogen = 100;
     // The first open spot out from the Prospector.
     std::optional<Vec2> at;
-    for (double d = 3; d <= 12 && !at; d += 0.5) {
-        const auto p = sim.snap(StructureKind::habDome, me + out * d);
-        if (p && !sim.placementRefusal(StructureKind::habDome, *p)) at = p;
-    }
+    at = openSpot(sim, StructureKind::habDome, me, out);
     ASSERT_TRUE(at.has_value());
     const auto why = sim.pilotBuild(StructureKind::habDome, *at);
     EXPECT_TRUE(!why.has_value());
@@ -639,10 +652,7 @@ TEST(ProgressionEffects_labStandsAlone) {
     sim.state.players[0].ore = 1000;
     sim.state.players[0].hydrogen = 1000;
     std::optional<Vec2> at;
-    for (double d = 3; d <= 12 && !at; d += 0.5) {
-        const auto p = sim.snap(StructureKind::lab, me + out * d);
-        if (p && !sim.placementRefusal(StructureKind::lab, *p)) at = p;
-    }
+    at = openSpot(sim, StructureKind::lab, me, out);
     ASSERT_TRUE(at.has_value());
     EXPECT_TRUE(!sim.pilotBuild(StructureKind::lab, *at).has_value());
     EXPECT_EQ(sim.state.players[0].ore, int64_t(800));

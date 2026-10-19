@@ -470,11 +470,13 @@ TEST(Canyon_rewardsByDamage) {
     GameState& st = sim.state;
     const Vec2 gunAt = st.structures.back().position;
     std::optional<Vec2> beside;
-    for (double rad = 2; rad <= 4 && !beside; rad += 0.5)
+    // Footprints side by side (C5: 5 cells across).
+    const double side = 2 * Rules::radius(StructureKind::gatling);
+    for (double rad = side; rad <= side + 2 && !beside; rad += 0.5)
         for (int k = 0; k < 16 && !beside; k++) {
             const double t = k * 2 * pi / 16;
             const auto q = sim.snap(StructureKind::gatling, gunAt + Vec2(std::cos(t), std::sin(t)) * rad);
-            if (q && !sim.placementRefusal(StructureKind::gatling, *q)) beside = q;
+            if (q && !sim.placementRefusal(StructureKind::gatling, *q) && rig::offTheLip(sim, *q)) beside = q;
         }
     ASSERT_TRUE(beside.has_value());
     st.structures.push_back(Structure(st.nextID++, StructureKind::gatling, Pilot::player, *beside));

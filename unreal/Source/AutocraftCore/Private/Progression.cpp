@@ -232,7 +232,7 @@ std::vector<SkillNode> table() {
                          "Jump a cell farther, a rank. At rank 3 a jump burns 1 MH."));
         t.push_back(ranked(S::padLink, b, 3,
                            {{SkillEffect::PadLink{8}}, {SkillEffect::PadLink{12}}, {SkillEffect::PadLink{16}}},
-                           "Pad link", "Call the Dropship from within 8 cells of a Landing Pad, up from 4; then 12, then 16."));
+                           "Pad link", "Call the Dropship from 8 cells past a Landing Pad's edge, up from 2; then 12, then 16."));
         // F2: Homing beacon is gone (the Dropship lands only on Landing
         // Pads). Its place stays, with no ranks, for the table's order and
         // old saves (`retired`); `nodes()` leaves it out.
@@ -453,7 +453,7 @@ std::string effectWords(const SkillEffect& e) {
         return "Derricks fill a " + number(t->tank) + " MH tank, " + number(t->perMinute) + " MH a minute";
     if (auto w = e.as<SkillEffect::Wellspring>()) return "Wells under your Derricks grow back " + number(w->perMinute) + " MH a minute";
     if (auto f = e.as<SkillEffect::FieldPump>()) return "Pump straight from a well at " + percent(f->share) + " of a Derrick's rate";
-    if (auto p = e.as<SkillEffect::PadLink>()) return "Call the Dropship from within " + number(p->radius) + " cells of a Landing Pad";
+    if (auto p = e.as<SkillEffect::PadLink>()) return "Call the Dropship from " + number(p->radius) + " cells past a Landing Pad's edge";
     if (auto r = e.as<SkillEffect::Ringwalker>())
         return "Flights cost no MH, and the Dropship comes " + percent(r->faster) + " faster";
     if (auto s = e.as<SkillEffect::Surveyor>()) return "Sites show on the compass within " + number(s->radius) + " cells";

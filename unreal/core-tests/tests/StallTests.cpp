@@ -3,6 +3,7 @@
 // settling at its rally, and the watchdog. Each a few seconds of
 // simulation from a saved position (Tests/Fixtures), never a game. (The
 // economy and army scenarios of that file are the Commander's.)
+#include "CitadelHall.h"
 #include "SimHelpers.h"
 
 #include "Session.h"
@@ -50,6 +51,7 @@ const std::vector<int64_t> blueProspectors{39, 166, 260};
 /// even across a corner: 4000 random legs among the saved game's
 /// buildings and ore, each checked every 0.01.
 TEST(stall_clearLegsNeverCrossABlockedCell) {
+    const simtest::CitadelHall hall(false); // the strategy game's sizes (C5)
     auto [sim, m] = stalemate();
     ASSERT_TRUE(sim.has_value());
     const NavGrid& nav = *sim->nav;

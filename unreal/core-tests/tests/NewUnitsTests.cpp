@@ -764,7 +764,7 @@ int64_t add(GameState& s, Structure::Kind kind, Vec2 p, int64_t owner) { return 
 void addLab(GameState& s, int64_t id) {
     size_t i = 0;
     while (s.structures[i].id != id) i++;
-    Structure lab(s.nextID, Structure::Kind::lab, s.structures[i].owner, s.structures[i].position + Rules::addonOffset);
+    Structure lab(s.nextID, Structure::Kind::lab, s.structures[i].owner, s.structures[i].position + Rules::addonOffset());
     lab.parent = id;
     s.structures[i].addon = lab.id;
     s.structures.push_back(lab);

@@ -218,7 +218,9 @@ TEST(RegionSites_firstReach) {
     }
     ASSERT_TRUE(crate && wreck);
     EXPECT_TRUE(crate->kind == SiteKind::crate);
-    EXPECT_TRUE(distance(crate->at, pad) < 10);
+    // By the pad, off its plate (C5: the plate 8.5 round).
+    EXPECT_TRUE(distance(crate->at, pad) < region::padReach + 7);
+    EXPECT_TRUE(distance(crate->at, pad) >= region::padReach + 1);
     EXPECT_TRUE(wreck->kind == SiteKind::wreck);
     EXPECT_TRUE(distance(wreck->at, pad) < 32);
     double nearestWell = 1e9;

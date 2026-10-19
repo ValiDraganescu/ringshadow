@@ -3,6 +3,7 @@
 // walking, a short duel. Each from a hand-built position, never a game.
 // (The routes, the mirror, the session store and the projection tests of
 // that file belong to Router, MapLibrary, Session and Projection.)
+#include "CitadelHall.h"
 #include "SimHelpers.h"
 
 #include <map>
@@ -89,6 +90,7 @@ TEST(simulation_queueHoldsFivePaidUpFrontAndTrainsThemInTurn) {
 }
 
 TEST(simulation_garrisonNeedsAHabDomeAndRangersRallyInsteadOfMining) {
+    const simtest::CitadelHall hall(false); // the strategy game's sizes (C5)
     const MapDefinition& m = homeMap();
     GameState state = blueOnly(GameState::new_(m));
     state.ore() = 1000;

@@ -52,8 +52,8 @@ std::optional<Structure> Simulation::labHost(Vec2 p, int64_t owner_) const {
     for (const auto& s : state.structures) {
         if (!((s.kind == Structure::Kind::garrison || s.kind == Structure::Kind::foundry || s.kind == Structure::Kind::spacedock)
               && s.owner == owner_ && s.complete())) continue;
-        if (!(distance(s.position + Rules::addonOffset, p) < 2.5 || NavGrid::insideStructure(p, s, 0))) continue;
-        if (!best || distance(s.position + Rules::addonOffset, p) < distance(best->position + Rules::addonOffset, p)) best = s;
+        if (!(distance(s.position + Rules::addonOffset(), p) < 2.5 || NavGrid::insideStructure(p, s, 0))) continue;
+        if (!best || distance(s.position + Rules::addonOffset(), p) < distance(best->position + Rules::addonOffset(), p)) best = s;
     }
     return best;
 }
@@ -61,10 +61,10 @@ std::optional<Structure> Simulation::labHost(Vec2 p, int64_t owner_) const {
 /// Why no Lab can go on `host` (its add-on spot taken), or nil.
 std::optional<std::string> Simulation::labRefusal(const Structure& host) const {
     if (host.addon) return "It has a Lab";
-    const Vec2 at = host.position + Rules::addonOffset;
+    const Vec2 at = host.position + Rules::addonOffset();
     for (const auto& s : state.structures) {
-        if (s.id != host.id && std::abs(s.position.x - at.x) < Rules::radius(s.kind) + 1
-            && std::abs(s.position.y - at.y) < Rules::radius(s.kind) + 1) {
+        if (s.id != host.id && std::abs(s.position.x - at.x) < Rules::radius(s.kind) + Rules::radius(Structure::Kind::lab)
+            && std::abs(s.position.y - at.y) < Rules::radius(s.kind) + Rules::radius(Structure::Kind::lab)) {
             return "Something is in the way";
         }
     }
@@ -77,7 +77,7 @@ std::optional<int64_t> Simulation::placeLab(int64_t host) {
     std::optional<size_t> i;
     for (size_t k = 0; k < state.structures.size(); k++) if (state.structures[k].id == host) { i = k; break; }
     if (!i || labRefusal(state.structures[*i])) return std::nullopt;
-    Structure lab(state.nextID, Structure::Kind::lab, state.structures[*i].owner, state.structures[*i].position + Rules::addonOffset);
+    Structure lab(state.nextID, Structure::Kind::lab, state.structures[*i].owner, state.structures[*i].position + Rules::addonOffset());
     lab.parent = host;
     state.nextID += 1;
     state.structures[*i].addon = lab.id;

@@ -51,4 +51,16 @@ inline Vec2 citadelStand(WorldMap& w, PilotId p, Vec2 near) {
     return spot ? weldStand(StructureKind::citadel, *spot) : near;
 }
 
+/// The same for any `kind` (C5: every building of the MMO 2.4 times the
+/// strategy game's, docs/building-sizes.md; the rigs' old fixed spots
+/// overlap): the stand for its nearest spot to where the rig's stand
+/// `stand` would have put it.
+inline Vec2 standFor(WorldMap& w, PilotId p, StructureKind kind, Vec2 stand, double reach = 40) {
+    const Region* r = w.regionOf(p);
+    if (!r || !w.loaded() || !w.where(p)) return stand;
+    const auto spot = placeableNear(r->simulation(), w.loaded()->regions[*w.where(p)].built.pads,
+                                    stand - Vec2(Region::buildReach(kind), 0), kind, reach);
+    return spot ? weldStand(kind, *spot) : stand;
+}
+
 } // namespace ac::server::rig

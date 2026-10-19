@@ -2079,7 +2079,7 @@ std::optional<Vec2> Commander::openSpot(std::vector<std::pair<Vec2, double>> spo
     }
     for (const auto& [p, score] : spots) {
         std::vector<NavGrid::Box> boxes{{p, half}};
-        if (lab) boxes.emplace_back(p + Rules::addonOffset, 1.0);
+        if (lab) boxes.emplace_back(p + Rules::addonOffset(), 1.0);
         if (!nav->cuts(boxes, pending)) return p;
     }
     return std::nullopt;
@@ -2118,7 +2118,7 @@ std::optional<Vec2> Commander::garrisonSpot(const GameState& s, const Structure&
                 const Vec2 p = origin + Vec2(static_cast<double>(dx), static_cast<double>(dz));
                 const double d = distance(p, citadel.position);
                 if (!(d >= 6 && dot(normalize(p - citadel.position), line) < 0)) continue;
-                const std::vector<Vec2> labs = mirrored ? labSpots(p) : std::vector<Vec2>{p + Rules::addonOffset};
+                const std::vector<Vec2> labs = mirrored ? labSpots(p) : std::vector<Vec2>{p + Rules::addonOffset()};
                 if (!clear(p, 1.5, s, wells, level, height)) continue;
                 if (!clear(p + Vec2(0, 2.6), 0.8, s, wells, level, height)) continue;
                 bool labsFit = true;
@@ -2144,17 +2144,17 @@ const std::set<Structure::Kind>& Commander::labHolders() {
 /// Where the Lab of a building at `p` goes (`Rules.addonOffset`),
 /// and its mirror image on the other side.
 std::vector<Vec2> Commander::labSpots(Vec2 p) {
-    const Vec2 o = Rules::addonOffset;
+    const Vec2 o = Rules::addonOffset();
     return {p + o, p + Vec2(-o.x, o.y)};
 }
 
 /// The simulation's own test for a Lab: no building overlaps its
 /// 2x2 footprint.
 bool Commander::labFits(const Structure& b, const GameState& s) const {
-    const Vec2 at = b.position + Rules::addonOffset;
+    const Vec2 at = b.position + Rules::addonOffset();
     return !any(s.structures, [&](const Structure& x) {
-        return x.id != b.id && std::abs(x.position.x - at.x) < Rules::radius(x.kind) + 1
-            && std::abs(x.position.y - at.y) < Rules::radius(x.kind) + 1;
+        return x.id != b.id && std::abs(x.position.x - at.x) < Rules::radius(x.kind) + Rules::radius(Structure::Kind::lab)
+            && std::abs(x.position.y - at.y) < Rules::radius(x.kind) + Rules::radius(Structure::Kind::lab);
     });
 }
 

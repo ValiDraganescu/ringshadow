@@ -545,7 +545,7 @@ UAcPlaygroundSubsystem::FSpot UAcPlaygroundSubsystem::SpotFor(const FAcPaletteIt
 		{
 			const std::optional<ac::Structure> Host = S.labHost(G, PaletteTeam);
 			if (!Host) return {G, std::string("A Lab goes on the side of a Garrison, Foundry or Spacedock")};
-			return {Host->position + ac::Rules::addonOffset, S.labRefusal(*Host)};
+			return {Host->position + ac::Rules::addonOffset(), S.labRefusal(*Host)};
 		}
 		if (const std::optional<ac::Vec2> At = S.snap(Item.Structure, G)) return {*At, S.placementRefusal(Item.Structure, *At)};
 		return {G, std::string("A Derrick goes on an MH well")};

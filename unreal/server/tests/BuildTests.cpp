@@ -228,14 +228,17 @@ TEST(build_world_from_blueprints_only) {
 // `padReach` round the pad): a Citadel whose footprint touches it is refused
 // with the reason the client's ghost shows; one just outside goes up.
 TEST(build_refused_touching_a_pad_plate) {
-    // The rule: a square footprint against the disc, corners included.
+    // The rule: a square footprint against the disc, corners included
+    // (`padReach` since C5 the Landing Pad's half side).
     const std::vector<region::Place> pads{region::Place{"p", Vec2(0, 0)}};
-    EXPECT_TRUE(region::touchesPadPlate(pads, Vec2(6.4, 0), 2.5));
-    EXPECT_TRUE(!region::touchesPadPlate(pads, Vec2(6.5, 0), 2.5));
-    // Diagonally the footprint's corner counts: 2.7 cells off on both axes is
-    // 3.8 from the centre (touching), 3 on both 4.2 (clear).
-    EXPECT_TRUE(region::touchesPadPlate(pads, Vec2(5.2, 5.2), 2.5));
-    EXPECT_TRUE(!region::touchesPadPlate(pads, Vec2(5.5, 5.5), 2.5));
+    const double R = region::padReach;
+    EXPECT_TRUE(region::touchesPadPlate(pads, Vec2(R + 2.4, 0), 2.5));
+    EXPECT_TRUE(!region::touchesPadPlate(pads, Vec2(R + 2.5, 0), 2.5));
+    // Diagonally the footprint's corner counts: its corner 0.2 inside the
+    // disc touches, 0.2 outside is clear.
+    const double in = (R - 0.2) / std::sqrt(2.0) + 2.5, out = (R + 0.2) / std::sqrt(2.0) + 2.5;
+    EXPECT_TRUE(region::touchesPadPlate(pads, Vec2(in, in), 2.5));
+    EXPECT_TRUE(!region::touchesPadPlate(pads, Vec2(out, out), 2.5));
 
     WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.join(me));
@@ -247,7 +250,7 @@ TEST(build_refused_touching_a_pad_plate) {
     // The nearest snapped spot east that touches the plate, and the first clear one.
     std::optional<Vec2> touching, clear;
     // (C1: the Citadel is 12x12, so the spots run farther out.)
-    for (double d = 4.0; d < 16.0; d += 0.25) {
+    for (double d = 4.0; d < region::padReach + 12; d += 0.25) {
         const Vec2 at = *sim.snap(StructureKind::citadel, pad + Vec2(d, 0));
         const double edge = std::abs(at.x - pad.x) - Rules::radius(StructureKind::citadel);
         if (edge < region::padReach) touching = at;

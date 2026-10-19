@@ -134,7 +134,7 @@ struct TwoPilots {
         fill(w, a, 3000, 500);
         const Vec2 east = w.regionOf(a)->places()->ground(Vec2(72, 48));
         citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, east));
-        dome = weld(w, a, StructureKind::habDome, east + Vec2(0, 9));
+        dome = weld(w, a, StructureKind::habDome, rig::standFor(w, a, StructureKind::habDome, east + Vec2(0, 9)));
     }
     WorldMap w;
     std::optional<int64_t> citadel;
@@ -180,15 +180,17 @@ TEST(realm_second_pilot_uses_the_first_pilots_hab_dome_and_citadel) {
     EXPECT_EQ(w.realmCount(StructureKind::citadel), int64_t(1));
     EXPECT_EQ(w.wallet(b)->ore, ore);
 
-    // A's Hab Dome is B's depot.
+    // A's Hab Dome takes no load (C4; this passed before C5 only because
+    // the small dome stood within the Citadel's unload reach).
     besides(w, b, dome);
     drivenUnit(w, b)->carrying = 25;
     drivenUnit(w, b)->hydrogen = false;
     wait(w, b, 10);
-    // Less the realm's tax (C1): 3 of 25, 3 of 30.
-    EXPECT_EQ(w.wallet(b)->ore, ore + 22);
-    // And A's Citadel: its depot, and where it respecs.
+    EXPECT_EQ(w.wallet(b)->ore, ore);
+    // A's Citadel: B's depot, less the realm's tax (C1): the 25 it still
+    // held (3 of 25) and 30 more (3 of 30); and where it respecs.
     besides(w, b, citadel);
+    EXPECT_EQ(w.wallet(b)->ore, ore + 22);
     drivenUnit(w, b)->carrying = 30;
     drivenUnit(w, b)->hydrogen = false;
     wait(w, b, 10);

@@ -638,7 +638,7 @@ TEST(PilotTests_aegisShieldGivesRangers55) {
     sim.take(std::nullopt);
     const Vec2 out = openSide(sim, citadel);
     const Structure garrison(950, Structure::Kind::garrison, 0, citadel.position + out * 9);
-    Structure lab(951, Structure::Kind::lab, 0, garrison.position + Rules::addonOffset);
+    Structure lab(951, Structure::Kind::lab, 0, garrison.position + Rules::addonOffset());
     lab.parent = 950;
     Structure garrison2 = garrison;
     garrison2.addon = 951;
@@ -674,7 +674,7 @@ TEST(PilotTests_minigunResearchArmsRangers) {
     sim.take(std::nullopt);
     const Vec2 out = openSide(sim, citadel);
     Structure garrison(950, Structure::Kind::garrison, 0, citadel.position + out * 9);
-    Structure lab(951, Structure::Kind::lab, 0, garrison.position + Rules::addonOffset);
+    Structure lab(951, Structure::Kind::lab, 0, garrison.position + Rules::addonOffset());
     lab.parent = 950;
     garrison.addon = 951;
     sim.state.structures.push_back(garrison);

@@ -362,8 +362,8 @@ std::optional<double> Simulation::gatlingPitch(const Structure& s, Vec2 at, doub
     // Solved from the barrels' pivot: the muzzle lies on the barrels' line
     // through it, so a bug at the gun's foot (nearer than the muzzle's
     // reach) is aimed at as well as one far out.
-    const Vec2 pivot = s.position + Vec2(std::cos(yaw), std::sin(yaw)) * Defence::gatlingTrunnion;
-    auto p = Rules::ballisticPitch(distance(pivot, at), z - (base + Defence::gatlingPivot));
+    const Vec2 pivot = s.position + Vec2(std::cos(yaw), std::sin(yaw)) * Defence::gatlingTrunnion();
+    auto p = Rules::ballisticPitch(distance(pivot, at), z - (base + Defence::gatlingPivot()));
     if (!p || *p < Defence::gatlingPitchMin || *p > Defence::gatlingPitchMax) return std::nullopt;
     // The arc must clear the ground up to the target's edge: a gun on a
     // ledge does not fire into its own lip at what is below it.
@@ -397,7 +397,9 @@ void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::v
     if (target) {
         if (const auto t = foe(*target, s.owner)) {
             // Lead: where the target will be when a round gets there (twice
-            // round: the flight time from the led point).
+            // round: the flight time from the led point, from the muzzle out
+            // along the barrels, C5: 3.8 cells past the 5x5 gun's centre).
+            const double barrels = Defence::gatlingTrunnion() + Defence::gatlingBarrel();
             Vec2 v{0, 0};
             const double z = aimHeight(*target);
             if (const auto u = state.unit(*target)) {
@@ -405,7 +407,7 @@ void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::v
             }
             Vec2 at = t->position;
             for (int k = 0; k < 2; k++) {
-                const double flight = distance(s.position, at) / Rules::roundSpeed;
+                const double flight = ac::max(0.0, distance(s.position, at) - barrels) / Rules::roundSpeed;
                 at = t->position + v * flight;
             }
             const double want = std::atan2(at.y - s.position.y, at.x - s.position.x);

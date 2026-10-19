@@ -6,6 +6,7 @@
 // Reach; run from unreal/server.
 
 #include "test.h"
+#include "CitadelSpot.h"
 
 #include "Rules.h"
 #include "Session.h"
@@ -87,9 +88,21 @@ void fill(WorldMap& w, PilotId p, int64_t ore, int64_t mh) {
 /// plates, and finished at once by hand. Nil: no spot, or refused.
 std::optional<int64_t> put(WorldMap& w, PilotId p, StructureKind kind, std::string* why = nullptr) {
     Simulation& sim = simOf(w, p);
-    const Unit u = *drivenUnit(w, p);
     const auto& pads = first().regions[*w.where(p)].built.pads;
     const double reach = Region::buildReach(kind);
+    // No room round it (C5: the 7x7s): beside the nearest open ground.
+    bool room = false;
+    for (int k = 0; k < 16 && !room; k++) {
+        const Vec2 at = drivenUnit(w, p)->position + Vec2(std::cos(k * 2 * pi / 16), std::sin(k * 2 * pi / 16)) * reach;
+        const auto spot = sim.snap(kind, at);
+        room = spot && !sim.placementRefusal(kind, *spot) && !region::touchesPadPlate(pads, *spot, Rules::radius(kind));
+    }
+    if (!room)
+        if (const auto spot = rig::placeableNear(sim, pads, drivenUnit(w, p)->position, kind)) {
+            drivenUnit(w, p)->position = rig::weldStand(kind, *spot);
+            w.step();
+        }
+    const Unit u = *drivenUnit(w, p);
     for (double d = reach; d <= reach + Region::buildSlack; d += 0.5)
         for (int k = 0; k < 16; k++) {
             const double h = k * 2 * pi / 16;

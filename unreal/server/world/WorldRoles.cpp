@@ -40,11 +40,16 @@ std::vector<LandingPad> WorldMap::landingPads() const {
     return out;
 }
 
-double WorldMap::padReach(const PilotState& p) const {
-    double reach = params_.padReach;
+double WorldMap::padLink(const PilotState& p) const {
+    double link = 0;
     for (const SkillEffect& e : Progression::effects(Skill::padLink, p.progress.rank(Skill::padLink)))
-        if (const auto* l = e.as<SkillEffect::PadLink>()) reach = std::max(reach, l->radius);
-    return reach;
+        if (const auto* l = e.as<SkillEffect::PadLink>()) link = std::max(link, l->radius);
+    return link;
+}
+
+double WorldMap::padReach(const PilotState& p) const {
+    // Pad link from the plate's edge (C5: the plate grew past its ranks).
+    return params_.padReach + padLink(p);
 }
 
 double WorldMap::padReach(PilotId pilot) const {

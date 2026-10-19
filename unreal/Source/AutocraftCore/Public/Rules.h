@@ -475,17 +475,38 @@ struct AUTOCRAFTCORE_API Rules {
     static double buildTime(StructureKind k);
     static int64_t supply(StructureKind k);
     /// The Citadel's hall (C1, docs/citadel-interior.md section 1): on, a
-    /// Citadel is 12x12 cells, hollow, with a door and manned corner guns
-    /// (the MMO); off, the strategy game's solid 5x5 one. One switch for the
+    /// Citadel is 12x12 cells, hollow, with a door and manned corner guns,
+    /// and every other building takes the MMO's sizes (C5,
+    /// docs/building-sizes.md); off, the strategy game's solid 5x5 one and
+    /// its small buildings. One switch for the
     /// process, set at every game start: the MMO's start and the server turn
     /// it on, the strategy game's start turns it off. `radius`, `footprint`,
     /// `height`, `Defence::cornerInset` and the gun stations all read it.
     static void setCitadelHall(bool on);
     static bool citadelHall();
-    /// Half the footprint side: 12x12 Citadel with the hall (5x5 without);
-    /// 3x3 Garrison, Bastion, Derrick, Foundry, Spacedock and Landing Pad;
-    /// 2x2 Hab Dome, Lab, Sentinel and gatling gun.
+    /// How much bigger the MMO's buildings are than the strategy game's
+    /// (C5, docs/building-sizes.md): the Citadel's growth, 5x5 to 12x12.
+    /// Every kind's side x this, to the nearest cell (the Landing Pad 9x9 so
+    /// the walk-in Dropship fits; the Target Dummy as it was), its body
+    /// height x this.
+    static constexpr double buildingScale = 2.4;
+    /// The MMO's guns by their own scale (C5): their side x this to the
+    /// nearest cell, their height and their models' numbers x this. Waiting
+    /// on the user's ruling (docs/building-sizes.md, "The guns"): the
+    /// canyons were cut for 2x2 guns. 1: as the strategy game's.
+    static constexpr double gatlingScale = 1.0;
+    static constexpr double sentinelScale = 1.0;
+    /// Half the footprint side. With the hall (the MMO): 12x12 Citadel, 9x9
+    /// Landing Pad, 7x7 Garrison, Bastion, Derrick, Foundry and Spacedock,
+    /// 5x5 Hab Dome, Lab, Sentinel and gatling gun. Without (the strategy
+    /// game): 5x5 Citadel; 3x3 Garrison, Bastion, Derrick, Foundry,
+    /// Spacedock and Landing Pad; 2x2 Hab Dome, Lab, Sentinel and gatling
+    /// gun. 1x1 Target Dummy.
     static double radius(StructureKind k);
+    /// How far ahead of the Prospector a `kind` is held out to place: its
+    /// edge and 2.2 cells, a Derrick's edge and 1.5 (3 from the strategy
+    /// game's 3x3 one's centre; the game's ghost and the server's check).
+    static double buildReach(StructureKind k) { return radius(k) + (k == StructureKind::derrick ? 1.5 : 2.2); }
     /// Its solid parts: walls, the door, the hall, the roof (C1).
     static const Footprint& footprint(StructureKind k);
     /// How tall its body stands, cells, its highest point (the game's model
@@ -510,8 +531,9 @@ struct AUTOCRAFTCORE_API Rules {
     static std::optional<UnitKind> produces(StructureKind k);
     /// Units that need a Lab on their building (an add-on).
     static bool needsLab(UnitKind k) { return stats(k).needsLab; }
-    /// Where an add-on stands: on the building's +X side, toward the camera.
-    static constexpr Vec2 addonOffset{2.5, 0.5};
+    /// Where an add-on stands: on the building's +X side, toward the camera,
+    /// flush with its +Y edge ((2.5, 0.5); (6, 1) for the C5 sizes).
+    static Vec2 addonOffset();
     /// MH a well holds, taken 4 per trip, 3 Prospectors per Derrick.
     static constexpr int64_t wellHydrogen = 2250;
     static constexpr int64_t hydrogenCarry = 4;

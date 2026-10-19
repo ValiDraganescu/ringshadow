@@ -76,7 +76,7 @@ inline Unit* unitRef(GameState& s, int64_t id) {
 /// Give a building a finished Lab.
 inline void addLab(GameState& s, int64_t id) {
     Structure& host = *structureRef(s, id);
-    Structure lab(s.nextID, Structure::Kind::lab, host.owner, host.position + Rules::addonOffset);
+    Structure lab(s.nextID, Structure::Kind::lab, host.owner, host.position + Rules::addonOffset());
     lab.parent = id;
     host.addon = lab.id;
     s.structures.push_back(lab);

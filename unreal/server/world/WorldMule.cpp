@@ -194,7 +194,10 @@ std::string WorldMap::devMule(const std::string& line) {
         for (double d = half + 4; d <= half + 40; d += 1)
             for (const double turn : {0.0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2}) {
                 const auto spot = sim.snap(StructureKind::foundry, at + Vec2(std::cos(heading + turn), std::sin(heading + turn)) * d);
-                if (!spot || sim.placementRefusal(StructureKind::foundry, *spot)) continue;
+                // Off the pads' plates, as a pilot's build (C5: the plates grew).
+                if (!spot || sim.placementRefusal(StructureKind::foundry, *spot) ||
+                    region::touchesPadPlate(world_->regions[r].built.pads, *spot, half))
+                    continue;
                 const Vec2 stand = *spot + Act::foundryPostAt(half) + Vec2(0.6, 1.0);
                 if (!sim.nav || !sim.nav->walkable(stand) || sim.nav->inRock(stand) || !sim.nav->walkable(Mule::door(*spot))) continue;
                 Structure f(st.nextID++, StructureKind::foundry, Pilot::player, *spot);

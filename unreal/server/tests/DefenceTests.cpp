@@ -134,7 +134,7 @@ void besides(WorldMap& w, PilotId p, int64_t building) {
 
 /// The pilot's Citadel on the start region, east of the ore.
 struct Home {
-    Home() : w(first(), params()) {
+    explicit Home(WorldParams p = params()) : w(first(), p) {
         w.seat(a, keyA);
         w.setProgress(a, at(10));
         fill(w, a, 3000, 500);
@@ -290,7 +290,11 @@ TEST(defence_turrets_blueprints_floors_and_limits) {
 // A defence's hits pay its builder a share of the kill's XP, wherever the
 // builder is; the gatling gun shreds a Shardling pack at it.
 TEST(defence_builder_earns_from_its_gatling) {
-    Home s;
+    // No frontier pilots: one of theirs passing by shoots too (C5: the
+    // bigger buildings move the fight onto its way).
+    WorldParams quiet = params();
+    quiet.frontier = 0;
+    Home s(quiet);
     ASSERT_TRUE(s.citadel.has_value());
     WorldMap& w = s.w;
     const auto gun = weld(w, a, StructureKind::gatling, s.east + Vec2(0, 14));
@@ -301,7 +305,9 @@ TEST(defence_builder_earns_from_its_gatling) {
     w.step();
     const double xp = w.progress(a)->xp;
     const size_t r = *w.where(a);
-    const auto group = w.spawnBroodGroup(r, UnitKind::shardling, 4, WorldMap::Poi::building, *gun, g + Vec2(5, 0), true);
+    // 4 cells off its edge (C5: the gun 5 across).
+    const auto group = w.spawnBroodGroup(r, UnitKind::shardling, 4, WorldMap::Poi::building, *gun,
+                                         g + Vec2(Rules::radius(StructureKind::gatling) + 4, 0), true);
     ASSERT_TRUE(group.has_value());
     for (int i = 0; i < 20 * 60 && aliveIn(w, a, *group) > 0; i++) w.step();
     EXPECT_EQ(aliveIn(w, a, *group), int64_t(0));
@@ -320,14 +326,35 @@ TEST(defence_a_raid_on_a_defended_hab_dome_is_beaten) {
     const auto dome = weld(w, a, StructureKind::habDome, s.east + Vec2(0, 30));
     ASSERT_TRUE(dome.has_value());
     const Vec2 d = structure(simOf(w, a), *dome)->position;
-    const auto gun = weld(w, a, StructureKind::gatling, d + Vec2(3.5, 0) + Vec2(1, 0) * Region::buildReach(StructureKind::gatling));
-    const auto tower = weld(w, a, StructureKind::sentinel, d + Vec2(-3.5, 0) + Vec2(1, 0) * Region::buildReach(StructureKind::sentinel));
+    // Beside it, 1.5 apart: east and west, or the first sides round it
+    // whose ground takes them (C5: the 5x5s need level ground).
+    const double side = Rules::radius(StructureKind::habDome) + Rules::radius(StructureKind::gatling) + 1.5;
+    std::vector<Vec2> taken;
+    auto beside = [&](StructureKind kind) {
+        Simulation& sim = simOf(w, a);
+        const auto& pads = w.loaded()->regions[*w.where(a)].built.pads;
+        for (const Vec2 dir : {Vec2(1, 0), Vec2(-1, 0), Vec2(0, -1), Vec2(0, 1), Vec2(0.7071, -0.7071), Vec2(-0.7071, -0.7071),
+                               Vec2(0.7071, 0.7071), Vec2(-0.7071, 0.7071)}) {
+            const auto spot = sim.snap(kind, d + dir * side);
+            if (!spot || sim.placementRefusal(kind, *spot) || region::touchesPadPlate(pads, *spot, Rules::radius(kind))) continue;
+            bool near = false;
+            for (const Vec2 t : taken) near = near || distance(t, *spot) < 2 * Rules::radius(kind) + 1;
+            if (near) continue;
+            taken.push_back(*spot);
+            return rig::weldStand(kind, *spot);
+        }
+        return d;
+    };
+    const auto gun = weld(w, a, StructureKind::gatling, beside(StructureKind::gatling));
+    const auto tower = weld(w, a, StructureKind::sentinel, beside(StructureKind::sentinel));
     ASSERT_TRUE(gun.has_value() && tower.has_value());
     drivenUnit(w, a)->position = s.east + Vec2(-25, -10);
     w.step();
     const size_t r = *w.where(a);
-    const auto shard = w.spawnBroodGroup(r, UnitKind::shardling, 8, WorldMap::Poi::building, *dome, d + Vec2(0, 14), false);
-    const auto wings = w.spawnBroodGroup(r, UnitKind::gloamwing, 3, WorldMap::Poi::building, *dome, d + Vec2(0, -14), false);
+    // 13 cells off its edges (C5: the dome 5 across).
+    const double off = Rules::radius(StructureKind::habDome) + 13;
+    const auto shard = w.spawnBroodGroup(r, UnitKind::shardling, 8, WorldMap::Poi::building, *dome, d + Vec2(0, off), false);
+    const auto wings = w.spawnBroodGroup(r, UnitKind::gloamwing, 3, WorldMap::Poi::building, *dome, d + Vec2(0, -off), false);
     ASSERT_TRUE(shard.has_value() && wings.has_value());
     // Shot, a group turns on the defence that shot it.
     bool turned = false;

@@ -108,8 +108,10 @@ TEST(aim_sentinelPitchesOntoAFlyersBody) {
     Simulation sim = field(s);
     const int64_t wing = wingAt(sim, Vec2(35, 30));
     flyFor(sim, wing, kHover, 1);
+    // Well off its ground point (C5: a scaled-up Sentinel's pods may stand
+    // over a hover and dip onto it).
     const double want = Defence::sentinelPitch(5, Brood::hoverHeight);
-    EXPECT_TRUE(want > 0.25);
+    EXPECT_TRUE(want - Defence::sentinelPitch(5, 0) > 0.25);
     const auto events = flyFor(sim, wing, kHover, 2);
     EXPECT_NEAR(sim.state.structure(sentinel)->pitch, want, 1e-9);
     int64_t shots = 0;

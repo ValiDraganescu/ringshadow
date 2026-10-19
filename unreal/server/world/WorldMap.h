@@ -539,8 +539,8 @@ struct WorldCanyon {
 /// "Buildings in the MMO"; WorldRoles.cpp): where a fallen Prospector comes
 /// back, and the realm's Landing Pads (F2) the Dropship flies between.
 struct WorldRoles {
-    /// A Spacedock counts as a Landing Pad within this many cells of its
-    /// edge (at least the pilot's pad reach from its centre).
+    /// A Spacedock or a Landing Pad counts as one within this many cells of
+    /// its edge (at least the pilot's pad reach from its centre).
     static constexpr double buildingPadReach = 2.0;
 };
 
@@ -769,8 +769,9 @@ public:
     /// the ramp shut. The reason when refused.
     std::optional<std::string> fly(PilotId pilot, std::string_view region, std::string_view pad);
     /// C4: call the walk-in Dropship down onto the realm Landing Pad the
-    /// driven unit stands on (within `padReach`, Pad link's reach; a
-    /// Spacedock's edge too), its ramp toward the caller. No destination and
+    /// driven unit stands on (within its edge and `buildingPadReach`, or
+    /// Pad link's cells past its edge; a Spacedock's too), its ramp toward
+    /// the caller. No destination and
     /// no fare yet. The reason when refused.
     std::optional<std::string> callShuttle(PilotId pilot);
     /// C4: the ramp button of the Dropship the driven unit is in
@@ -2104,7 +2105,10 @@ private:
     /// message again when the pilot's own pads change.
     void respawns();
     void landingPadsChanged();
+    /// The pilot's pad reach: a region pad's plate and Pad link's cells past
+    /// its edge (C5); `padLink` the cells past it alone (0 without it).
     double padReach(const PilotState& p) const;
+    double padLink(const PilotState& p) const;
     Ferry::Plan ferryPlan(const PilotState& p, size_t to) const;
     /// Has the pilot been to region `r` (its region, the start region, or
     /// one it visited)?

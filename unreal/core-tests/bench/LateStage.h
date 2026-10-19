@@ -134,7 +134,7 @@ inline GameState stageLate(const MapDefinition& map, const std::vector<int64_t>&
             if (!holder) return;
             const auto b = s.structure(*holder);
             if (!b || !c.labFits(*b, s)) return;
-            const int64_t id = put(SK::lab, pl, b->position + Rules::addonOffset).id;
+            const int64_t id = put(SK::lab, pl, b->position + Rules::addonOffset()).id;
             for (auto& x : s.structures) {
                 if (x.id == *holder) x.addon = id;
                 if (x.id == id) x.parent = *holder;

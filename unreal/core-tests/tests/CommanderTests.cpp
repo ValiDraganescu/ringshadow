@@ -73,7 +73,7 @@ size_t indexOf(const GameState& s, int64_t structureID) {
 /// Give a building a finished Lab.
 void addLab(GameState& s, int64_t id) {
     const size_t i = indexOf(s, id);
-    Structure lab(s.nextID, Structure::Kind::lab, s.structures[i].owner, s.structures[i].position + Rules::addonOffset);
+    Structure lab(s.nextID, Structure::Kind::lab, s.structures[i].owner, s.structures[i].position + Rules::addonOffset());
     lab.parent = id;
     s.structures[i].addon = lab.id;
     s.structures.push_back(lab);
@@ -159,6 +159,7 @@ template <class M> bool missionIs(const Command& c, std::optional<int64_t> unit 
 /// With a Garrison up and MH in the bank the AI orders a Foundry, at a
 /// spot where its Lab then fits on the base's level.
 TEST(commanderFoundryGoesWhereItsLabFits) {
+    const simtest::CitadelHall hall(false); // the strategy game's sizes (C5)
     const MapDefinition& m = homeMap();
     const GameState s = blueTech(m).state;
     const Simulation sim(s, m);
@@ -182,6 +183,7 @@ TEST(commanderFoundryGoesWhereItsLabFits) {
 /// Garrison on the main, as many as fit (three with lab room on both
 /// sides; more go to the next base), all keep room for a lab.
 TEST(commanderEveryGarrisonSpotLeavesRoomForALab) {
+    const simtest::CitadelHall hall(false); // the strategy game's sizes (C5)
     const MapDefinition& m = homeMap();
     GameState s = blueOnly(GameState::new_(m));
     const Commander c(m);
@@ -537,6 +539,7 @@ TEST(commanderProspectorsFightOffASmallRush) {
 /// Once the spots with room for a Lab on both sides are gone, a base
 /// still takes more production buildings (room on the Lab's side).
 TEST(commanderFullBaseStillFindsGarrisonSpots) {
+    const simtest::CitadelHall hall(false); // the strategy game's sizes (C5)
     const MapDefinition& m = homeMap();
     GameState s = blueOnly(GameState::new_(m));
     const Commander c(m);
@@ -702,6 +705,7 @@ TEST(commanderProspectorsRunFromFireflies) {
 /// each builds the same things at mirrored spots, and Labs (on +X
 /// on both halves) still count as twins.
 TEST(commanderMirroredBasesGetMirroredTechOrders) {
+    const simtest::CitadelHall hall(false); // the strategy game's sizes (C5)
     const MapDefinition& m = homeMap();
     ASSERT_TRUE(m.mirrorX.has_value()); // the handcrafted map is mirrored
     const double axis = *m.mirrorX;

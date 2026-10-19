@@ -1649,8 +1649,8 @@ std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
 	const ac::Unit* U = M->unit(*M->driven());
 	if (!U) return std::nullopt;
 	// The server's rule: the realm's Landing Pads (and Spacedock) on this
-	// map's ground within Pad link's reach, the Spacedock within its radius
-	// + 2 too. A region file's pad is no Landing Pad (F2).
+	// map's ground within its edge and 2, or Pad link's cells past its edge
+	// (C5). A region file's pad is no Landing Pad (F2).
 	const std::vector<ac::region::Place> Ground = ac::net::padsOnGround(*R, M->simulation().map->bounds);
 	const double Reach = PadReachNow();
 	std::optional<FPadNear> Best;
@@ -1658,7 +1658,7 @@ std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
 	{
 		if (!R->pads[I].building) continue;
 		FPadNear P{Text(Ground[I].name), ac::distance(Ground[I].at, U->position), Reach, *R->pads[I].building};
-		if (P.Building == ac::StructureKind::spacedock) P.Reach = FMath::Max(Reach, ac::Rules::radius(P.Building) + 2.0);
+		P.Reach = ac::Rules::radius(P.Building) + FMath::Max(2.0, Reach - PadReach);
 		// One it can call the Dropship at first, then the nearest.
 		if (!Best || (P.Within() && !Best->Within()) || (P.Within() == Best->Within() && P.Distance < Best->Distance)) Best = P;
 	}
@@ -1667,16 +1667,18 @@ std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
 
 double FAcMmoClient::PadReachNow() const
 {
-	double Reach = PadReach;
+	// A region pad's plate and Pad link's cells past its edge (C5), as the
+	// server's `WorldMap::padReach`.
+	double Link = 0;
 	if (const ac::net::ProgressMessage* P = Progress())
 	{
 		const auto It = P->ranks.find(ac::Skill::padLink);
 		for (const ac::SkillEffect& E : ac::Progression::effects(ac::Skill::padLink, It == P->ranks.end() ? 0 : It->second))
 		{
-			if (const auto* L = E.as<ac::SkillEffect::PadLink>()) Reach = FMath::Max(Reach, L->radius);
+			if (const auto* L = E.as<ac::SkillEffect::PadLink>()) Link = FMath::Max(Link, L->radius);
 		}
 	}
-	return Reach;
+	return PadReach + Link;
 }
 
 bool FAcMmoClient::Ringwalker() const

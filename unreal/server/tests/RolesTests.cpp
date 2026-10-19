@@ -7,6 +7,7 @@
 // The First Reach; run from unreal/server.
 
 #include "test.h"
+#include "CitadelSpot.h"
 
 #include "Rules.h"
 #include "ShuttleBoard.h"
@@ -307,6 +308,10 @@ TEST(roles_mh_costs) {
     for (const auto& [kind, price] : table) {
         fill(w, me, 5000, 1000);
         why.clear();
+        // Beside open ground for it (C5: the 7x7s no longer all fit round
+        // one stand).
+        if (const auto spot = rig::placeableNear(simOf(w, me), first().regions[*w.where(me)].built.pads, drivenUnit(w, me)->position, kind))
+            moveTo(w, me, rig::weldStand(kind, *spot));
         const auto id = put(w, me, kind, &why);
         if (!id) std::printf("  %s: %s\n", Simulation::title(kind).c_str(), why.empty() ? "no spot" : why.c_str());
         ASSERT_TRUE(id.has_value());
@@ -452,10 +457,14 @@ TEST(roles_flight_refusals) {
     fill(w, me, 2000, 0);
     moveTo(w, me, startPad() + Vec2(0, 10));
     const Vec2 here = landingPad(w, me);
-    moveTo(w, me, here + Vec2(0, w.padReach(me) + 0.5));
+    // Past its edge and `buildingPadReach` (C5: the pad's square reaches
+    // past the pilot's pad reach from its centre).
+    const double edge = Rules::radius(StructureKind::landingPad);
+    moveTo(w, me, here + Vec2(0, edge + WorldRoles::buildingPadReach + 0.5));
     EXPECT_EQ(w.callShuttle(me).value_or(""), std::string("Not at a Landing Pad: stand on one to call the Dropship"));
     EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 1").value_or(""), std::string("Board the Dropship first: call it at a Landing Pad"));
-    moveTo(w, me, here + Vec2(0, 2));
+    // On the pad by its edge: called.
+    moveTo(w, me, here + Vec2(0, edge - 0.5));
     ASSERT_TRUE(!w.callShuttle(me));
     EXPECT_EQ(w.callShuttle(me).value_or(""), std::string("The Dropship is on its way"));
     shuttletest::run(w, Ferry::descend + ShuttleBay::rampSeconds + 0.2);
@@ -632,13 +641,13 @@ TEST(roles_ringwalker_free_and_faster) {
     EXPECT_EQ(first().regions[*w.where(me)].file.id, std::string("cold-fork"));
 }
 
-// Pad link: rank 3 calls the Dropship from 16 cells of a Landing Pad's
-// centre, not 17. Short hop: rank 3 takes 60% off the dash, only.
+// Pad link: rank 3 calls the Dropship from 16 cells past a Landing Pad's
+// edge, not 17 (C5). Short hop: rank 3 takes 60% off the dash, only.
 TEST(roles_pad_link_and_short_hop) {
     WorldMap w(first(), params());
     w.seat(me, key);
     w.setProgress(me, at(40, {{Skill::padLink, 3}, {Skill::shortHop, 3}}));
-    EXPECT_NEAR(w.padReach(me), 16, 1e-9);
+    EXPECT_NEAR(w.padReach(me), region::padReach + 16, 1e-9);
     const Ferry::Plan plan = w.ferryPlan(me, *w.regionNamed("cold-fork"));
     EXPECT_NEAR(plan.dash, Ferry::plan(1).dash * 0.4, 1e-9);
     EXPECT_NEAR(plan.lift, Ferry::lift, 1e-9);
@@ -650,9 +659,10 @@ TEST(roles_pad_link_and_short_hop) {
     fill(w, me, 2000, 100);
     moveTo(w, me, startPad() + Vec2(0, 20));
     const Vec2 pad = landingPad(w, me);
-    moveTo(w, me, pad + Vec2(17, 0));
+    const double edge = Rules::radius(StructureKind::landingPad);
+    moveTo(w, me, pad + Vec2(edge + 17, 0));
     EXPECT_TRUE(w.callShuttle(me).has_value());
-    moveTo(w, me, pad + Vec2(15.5, 0));
+    moveTo(w, me, pad + Vec2(edge + 15.5, 0));
     EXPECT_TRUE(!w.callShuttle(me));
 }
 

@@ -466,7 +466,9 @@ std::optional<Vec2> WorldMap::frontierSpot(const FrontierPilot& f, StructureKind
         return spot;
     };
     if (kind == StructureKind::derrick) return fits(near);
-    for (double rad = 4; rad <= 16; rad += 2)
+    // Out to 16 cells past its own side (C5: a 7x7 or 5x5 building needs the
+    // room the 3x3 found within 16).
+    for (double rad = 4; rad <= 16 + 2 * Rules::radius(kind); rad += 2)
         for (int k = 0; k < 16; k++) {
             const double a = k * 6.283185307179586 / 16;
             if (const auto s = fits(near + Vec2(std::cos(a), std::sin(a)) * rad)) return s;

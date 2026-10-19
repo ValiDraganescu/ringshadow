@@ -232,8 +232,8 @@ TEST(shop_building_uses_no_copy) {
     ASSERT_TRUE(!w.buy(a, StructureKind::habDome, Item::repairKit).has_value());
     ASSERT_TRUE(!w.learn(a, StructureKind::habDome).has_value());
     const Vec2 east = w.regionOf(a)->places()->ground(Vec2(72, 48));
-    EXPECT_TRUE(weld(w, a, StructureKind::habDome, east + Vec2(0, 9)).has_value());
-    EXPECT_TRUE(weld(w, a, StructureKind::habDome, east + Vec2(0, 18)).has_value());
+    EXPECT_TRUE(weld(w, a, StructureKind::habDome, rig::standFor(w, a, StructureKind::habDome, east + Vec2(0, 9))).has_value());
+    EXPECT_TRUE(weld(w, a, StructureKind::habDome, rig::standFor(w, a, StructureKind::habDome, east + Vec2(0, 18))).has_value());
     EXPECT_EQ(w.progress(a)->copies(StructureKind::habDome), int64_t(0));
     EXPECT_TRUE(w.progress(a)->knows(StructureKind::habDome));
     const auto why = w.build(a, StructureKind::derrick, drivenUnit(w, a)->position + Vec2(0, -8));

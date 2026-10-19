@@ -159,7 +159,7 @@ TOptional<ac::Vec2> UAcPilotBuildSubsystem::Spot(const ac::StructureKind Kind) c
 	const std::optional<ac::Unit> U = S.pilotUnit();
 	if (!U) return {};
 	const ac::Vec2 Ahead(std::cos(U->heading), std::sin(U->heading));
-	const double Reach = Kind == ac::StructureKind::derrick ? 3.0 : ac::Rules::radius(Kind) + 2.2;
+	const double Reach = ac::Rules::buildReach(Kind);
 	const std::optional<ac::Vec2> P = S.snap(Kind, U->position + Ahead * Reach);
 	return P ? TOptional<ac::Vec2>(*P) : TOptional<ac::Vec2>();
 }

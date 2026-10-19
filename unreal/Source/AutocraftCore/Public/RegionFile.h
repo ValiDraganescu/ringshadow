@@ -8,6 +8,7 @@
 #include "AutocraftCoreApi.h"
 
 #include "Progression.h"
+#include "Shuttle.h"
 #include "SimdMath.h"
 #include "Types.h"
 #include "WindowMaps.h"
@@ -317,7 +318,14 @@ constexpr int64_t maxLevel = 4;
 /// The highest a free-standing island stands, levels (S2).
 constexpr int64_t maxIslandLevel = 6;
 
-constexpr double padRadius = 3.0;
+/// A pad needs flat, clear ground over its whole plate (C5: the Dropship
+/// lands aligned and centred on it, `ShuttleBay::padHalfSide`).
+constexpr double padRadius = ShuttleBay::padHalfSide();
+/// And in front of its +y edge's middle, where the landed Dropship's ramp
+/// comes down (it lands aligned, ramp to +y): this deep, `padApronHalf`
+/// to each side.
+constexpr double padApron = 2.5;
+constexpr double padApronHalf = 1.6;
 /// The nest's mound (N3): rocks and plants within this many cells of it
 /// give way; no pad within `nestClear` of it (the horde's ring).
 constexpr double nestMound = 6.0;
@@ -329,8 +337,9 @@ constexpr double prizeReach = 8.0;
 constexpr double mouthReach = 4.0;
 /// A flight leaves from within this many cells of a pad's centre: the
 /// foundation plate drawn on each pad is this wide a disc (the server's and
-/// the client's one rule, `nearestPad`).
-constexpr double padReach = 4.0;
+/// the client's one rule, `nearestPad`). Since C5 the Landing Pad's half
+/// side (`ShuttleBay::padHalfSide`): a region's pad as big as a realm one.
+constexpr double padReach = ShuttleBay::padHalfSide();
 /// How deep into the region an opening's lane is checked, cells.
 constexpr double laneDepth = 2.0;
 /// An opening with a level: its passage's floor is flat at that level this
@@ -352,6 +361,11 @@ constexpr int64_t moundsMost = 5;
 constexpr int64_t wellsMost = 1;
 constexpr double veinLink = 5.5;
 constexpr double veinReach = 4.5;
+/// A ring round the region's well (a canyon's prize) is one vein whatever
+/// its mounds' spacing: every mound within this of a well (at least
+/// `moundsFewest` of them), its reach measured from the well (C5: the ring
+/// round a 7x7 Derrick, 6 out).
+constexpr double ringReach = 6.5;
 /// A deposit grows back this share of its full ore a world day, up to full
 /// (the server's regions, on the world's clock: `WorldMap::regrowVeins`).
 constexpr double regrowPerDay = 0.1;
@@ -363,8 +377,9 @@ struct OreRange {
 };
 AUTOCRAFTCORE_API std::optional<OreRange> oreRange(int64_t brood);
 /// The deposits in veins (indices into `deposits`), each vein in the order
-/// of its first deposit.
-AUTOCRAFTCORE_API std::vector<std::vector<size_t>> veins(const std::vector<Deposit>& deposits);
+/// of its first deposit. The mounds within `ringReach` of one of `wells`
+/// (three or more) are that well's ring, one vein.
+AUTOCRAFTCORE_API std::vector<std::vector<size_t>> veins(const std::vector<Deposit>& deposits, const std::vector<WellSite>& wells = {});
 
 /// The region built: its map (ground coordinates, centred) and its places.
 struct AUTOCRAFTCORE_API Built {

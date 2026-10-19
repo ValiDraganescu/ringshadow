@@ -139,7 +139,7 @@ struct Home {
         fill(w, a, 3000, 500);
         const Vec2 east = w.regionOf(a)->places()->ground(Vec2(72, 48));
         citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, east));
-        dome = weld(w, a, StructureKind::habDome, east + Vec2(0, 9));
+        dome = weld(w, a, StructureKind::habDome, rig::standFor(w, a, StructureKind::habDome, east + Vec2(0, 9)));
     }
     WorldMap w;
     std::optional<int64_t> citadel;

@@ -809,9 +809,11 @@ TEST(world_plates_are_the_pads) {
 
 // "At a pad" is one rule on both ends: the client's distance (the World
 // message's pads on its mirror's ground) is the server's, and the Dropship
-// is called on a Landing Pad's centre and 3.9 cells out, not at 4.1.
+// is called on a Landing Pad's centre and just inside its reach (its edge
+// and 2 since C5, past the pad reach of 4), not just outside it.
 TEST(world_pad_distance_is_the_same_on_client_and_server) {
-    for (const double off : {0.0, 3.9, 4.1}) {
+    const double reach = std::max(region::padReach, Rules::radius(StructureKind::landingPad) + WorldRoles::buildingPadReach);
+    for (const double off : {0.0, reach - 0.1, reach + 0.1}) {
         WorldParams fuel;
         fuel.startHydrogen = 100;  // a flight costs MH (F1)
         fuel.devSeen = {"cold-fork"};
@@ -833,6 +835,6 @@ TEST(world_pad_distance_is_the_same_on_client_and_server) {
         EXPECT_NEAR(client->distance, off, 1e-9);
         EXPECT_NEAR(distance(mine, drivenUnit(w, me)->position), client->distance, 1e-9);
         const auto refused = w.callShuttle(me);
-        EXPECT_TRUE(refused.has_value() == (off > region::padReach));
+        EXPECT_TRUE(refused.has_value() == (off > reach));
     }
 }

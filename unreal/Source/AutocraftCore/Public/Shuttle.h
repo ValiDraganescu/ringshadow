@@ -64,6 +64,17 @@ struct AUTOCRAFTCORE_API ShuttleBay {
     static constexpr double leaveSeconds = 5.0;
     static constexpr double waitSeconds = 60.0;
     static constexpr double departSeconds = 6.0;
+    /// The Landing Pad (C5, docs/building-sizes.md): the ship lands aligned
+    /// with it, its hull centred, so the pad is the smallest odd square
+    /// holding the hull's length and width with `padMargin` round it. Half
+    /// its side: a realm Landing Pad's `Rules::radius` (the MMO's sizes) and
+    /// a region file pad's plate (`region::padReach`).
+    static constexpr double padMargin = 0.25;
+    static constexpr double padHalfSide() {
+        const double need = std::max((hullFront - hullRear) / 2, hullHalfWide) + padMargin - 0.5;
+        const double whole = double(int64_t(need));
+        return (whole < need ? whole + 1 : whole) + 0.5;
+    }
 
     /// Region point `p` in the frame of `s`, and back.
     static Vec2 local(const Shuttle& s, Vec2 p);

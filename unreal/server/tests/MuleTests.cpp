@@ -265,6 +265,30 @@ TEST(mule_fillsAndBooksInTheHall) {
     EXPECT_EQ(w.taxed(a)->ore, taxOre);
 }
 
+/// The mmomule flow's whole staging on the start region (C5: the Foundry is
+/// 7x7): the Foundry ahead, the Mule bought and out of its door, the pilot
+/// turned away, a Citadel ahead with its door's way clear, the Mule at its
+/// door.
+TEST(mule_flowStagingAtTheBiggerFoundry) {
+    WorldMap w(first(), params());
+    w.seat(a, keyA);
+    w.step();
+    const auto foundry = said(w.devMule("mule foundry"), "dev: mule foundry: foundry ");
+    ASSERT_TRUE(foundry.has_value());
+    fill(w, a, 1000, 300);
+    ASSERT_TRUE(!w.buyMule(a, *foundry));
+    drive(w, a, Mule::rollOut() + 0.2);
+    ASSERT_TRUE(w.mule(a).has_value());
+    const int64_t prospector = *w.regionOf(a)->driving(a);
+    unitOf(w, a, prospector)->heading = pi / 2;
+    w.step();
+    const std::string citadel = w.devCitadel("citadel here");
+    const std::string door = w.devMule("mule door");
+    std::printf("  %s\n  %s\n", citadel.c_str(), door.c_str());
+    EXPECT_TRUE(citadel.rfind("dev: citadel here: citadel ", 0) == 0);
+    EXPECT_TRUE(door.rfind("dev: mule door: mule ", 0) == 0);
+}
+
 /// The flow's staging (`mule door`): the Mule out of the Citadel's door
 /// facing in, the Prospector on foot within reach of its hopper; driven
 /// straight ahead it goes in through the open door.

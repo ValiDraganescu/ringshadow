@@ -468,10 +468,10 @@ bool Simulation::issue(const Command& command, std::vector<GameEvent>& events) {
         const int64_t p = st.owner;
         if (!(state.players[size_t(p)].ore >= Rules::cost(Structure::Kind::lab)
               && state.players[size_t(p)].hydrogen >= Rules::hydrogenCost(Structure::Kind::lab))) return false;
-        const Vec2 at = st.position + Rules::addonOffset;
+        const Vec2 at = st.position + Rules::addonOffset();
         if (any(state.structures, [&](const Structure& s) {
-                return s.id != sid && std::abs(s.position.x - at.x) < Rules::radius(s.kind) + 1
-                    && std::abs(s.position.y - at.y) < Rules::radius(s.kind) + 1;
+                return s.id != sid && std::abs(s.position.x - at.x) < Rules::radius(s.kind) + Rules::radius(Structure::Kind::lab)
+                    && std::abs(s.position.y - at.y) < Rules::radius(s.kind) + Rules::radius(Structure::Kind::lab);
             })) return false;
         state.players[size_t(p)].ore -= Rules::cost(Structure::Kind::lab);
         state.players[size_t(p)].hydrogen -= Rules::hydrogenCost(Structure::Kind::lab);
