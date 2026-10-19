@@ -584,7 +584,9 @@ not make sense to pass through is not passed through.
   (`bodyPushPace`, `bodyPush`, at the start of `pilotWalk`, standing still
   too), straight out or turned up to 90° onto ground it can stand on.
 - **The AI's units.** `Simulation::separate` (the AI's push apart after
-  each step) now takes the Brood too, in a world (`inWorld`) the AI's
+  each step) now takes the Brood too (apart from the others; a swarm still
+  crawls over itself: held apart, five Shardlings jammed in a gap of Cold
+  Fork's prize mound ring, `Zone_aGroupWalksItsPathToThePrize`), in a world (`inWorld`) the AI's
   Prospectors (the frontier pilots') too, and no longer the driven unit: its
   own walk keeps it out of the others, and the others are held off it.
   After it, `holdOff`: the bodies the AI never moves (a driven unit, a Mule
@@ -610,7 +612,8 @@ not make sense to pass through is not passed through.
   Prospector, a Prospector at a Ranger and a Shardling; flyers, a buried
   Scorpion and a rider no bodies; pushed out of a Mule, a Mule rolled out
   onto the pilot, a Mule driven out of another; the Mule's nose at a wall;
-  an AI Ranger held off the pilot, two bugs apart; the Dropship's hull from
+  an AI Ranger held off the pilot, a bug apart from a Ranger, two bugs over
+  one another; the Dropship's hull from
   outside; the AI's Prospectors apart in a world, not in the strategy game); `MuleTests_mule_boardRideAndLeave` now puts its second
   Prospector beside the perch, not inside the Mule.
 

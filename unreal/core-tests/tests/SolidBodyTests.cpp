@@ -236,7 +236,8 @@ TEST(solid_mulesNoseStopsAtAWall) {
 }
 
 /// An AI Ranger sent through where the pilot stands is held off it every
-/// step, and two bugs set down in one another step apart.
+/// step; a bug set down in a Ranger steps apart from it, two bugs crawl over
+/// one another.
 TEST(solid_aiHeldOffThePilotAndTheBroodApart) {
     Field f = field(kField);
     const int64_t ranger = put(f.sim, UnitKind::ranger, kField + Vec2(-4, 0.05));
@@ -251,11 +252,13 @@ TEST(solid_aiHeldOffThePilotAndTheBroodApart) {
     EXPECT_TRUE(nearest >= touch - 1e-6);
     EXPECT_TRUE(nearest < touch + 0.3);
     EXPECT_EQ(unitOf(f.sim, f.pilot).position, kField);
-    // Two Shardlings in one another.
     const int64_t a = bugAt(f.sim, UnitKind::shardling, kField + Vec2(0, 8));
     const int64_t b = bugAt(f.sim, UnitKind::shardling, kField + Vec2(0.1, 8));
+    const int64_t c = put(f.sim, UnitKind::ranger, kField + Vec2(0.05, 12), 0, 0);
+    const int64_t d = bugAt(f.sim, UnitKind::shardling, kField + Vec2(0, 12));
     steps(f.sim, 1);
-    EXPECT_TRUE(distance(unitOf(f.sim, a).position, unitOf(f.sim, b).position) > 0.5);
+    EXPECT_NEAR(distance(unitOf(f.sim, a).position, unitOf(f.sim, b).position), 0.1, 1e-9);
+    EXPECT_TRUE(distance(unitOf(f.sim, c).position, unitOf(f.sim, d).position) > 0.5);
 }
 
 /// A landed Dropship's hull is solid from outside: a walker into its flank

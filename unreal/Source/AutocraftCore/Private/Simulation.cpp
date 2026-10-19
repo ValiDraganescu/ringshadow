@@ -2523,7 +2523,8 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
     }
 }
 
-/// Ground soldiers and the Brood (C5) never stand inside each other:
+/// Ground soldiers and the Brood (C5; bugs crawl over one another) never
+/// stand inside each other:
 /// overlapping pairs step apart onto walkable ground (an anchored Longbow
 /// stands firm and the others step around it). In a world (`inWorld`, C5)
 /// the Prospectors too, the frontier pilots'; the strategy game's
@@ -2619,6 +2620,9 @@ void Simulation::separate() {
             if (fixedI && fixedJ) continue;
             // Over a buried Scorpion (C++ only, `buriedPassable`).
             if (buriedPassable && (state.units[i].burrowed() || state.units[j].burrowed())) continue;
+            // A swarm crawls over itself (C5: held apart, the bugs jammed in
+            // a canyon prize's mound ring).
+            if (state.units[i].brood() && state.units[j].brood()) continue;
             const double share = fixedI || fixedJ ? 0.5 : 0.25;
             const Vec2 push = dir * ((r - dist) * share);
             const std::tuple<size_t, double, bool> sides[] = {{i, -1.0, fixedI}, {j, 1.0, fixedJ}};
