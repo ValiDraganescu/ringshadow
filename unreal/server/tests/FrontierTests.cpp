@@ -844,3 +844,77 @@ TEST(frontier_buildsAfterSchema28) {
     // Saved again: the key is there, nothing is learned twice.
     EXPECT_TRUE(back.save().frontier.find(mark) != std::string::npos);
 }
+
+// Repairs cost materials (docs/balance.md "Repairs"): a frontier pilot mends
+// from its own wallet. Booked (no human in its region): at a welder's pace,
+// paid as `Simulation::repairCost` prices it, whole units. Live (a human
+// there): its unit mends through the core, which bills it through the
+// world's `repairPayer`: every Repaired event of its unit is taken from its
+// wallet. Short: it doesn't take the mend, and it stops one it is on.
+TEST(frontier_mendPaysFromItsOwnWallet) {
+    WorldMap w(first(), params());
+    seat(w);
+    // The pilot in Glass Flats, the far corner from Dust Terraces: the
+    // frontier pilot there works booked.
+    const size_t r = named(w, "dust-terraces");
+    const size_t far = named(w, "glass-flats");
+    ASSERT_TRUE(w.devTransfer(a, far, w.region(far).places()->pads[0].at));
+    w.step();
+    const int64_t citadel = place(w, r, StructureKind::citadel, Vec2(72, 48));
+    FrontierPilot& f = come(w, Habit::defender, r, Vec2(80, 48), 300, 20, 10);
+    Simulation& sim = w.region(r).simulation();
+    const double full = Rules::hp(StructureKind::citadel);
+    for (Structure& s : sim.state.structures)
+        if (s.id == citadel) s.hp = full * 0.5;
+    w.setClock(120);
+    EXPECT_TRUE(w.frontierDecide(f).act == Act::repair);
+
+    // Booked: nobody of the realm near Dust Terraces.
+    const auto before = f.wallet;
+    stepFor(w, 20);
+    ASSERT_TRUE(!f.unit.has_value());
+    const double gained = structure(w, r, citadel)->hp - full * 0.5;
+    const auto [ore, mh] = Simulation::repairCost(StructureKind::citadel, gained, true, full);
+    std::printf("  booked: %.0f hp mended for %lld ore %lld MH (priced %.2f + %.2f)\n", gained, (long long)(before.ore - f.wallet.ore),
+                (long long)(before.hydrogen - f.wallet.hydrogen), ore, mh);
+    ASSERT_TRUE(gained > 0);
+    EXPECT_NEAR(double(before.ore - f.wallet.ore) + f.mendOre, ore, 1e-6);
+    EXPECT_NEAR(double(before.hydrogen - f.wallet.hydrogen) + f.mendHydrogen, mh, 1e-6);
+    EXPECT_TRUE(before.ore - f.wallet.ore > 0);
+
+    // Short: the mend isn't taken, and the building stays as it is.
+    f.wallet = WorldMap::Wallet{0, 0};
+    f.mendOre = 0;
+    f.mendHydrogen = 0;
+    f.plan = {};
+    f.thought = -1e9;
+    EXPECT_TRUE(w.frontierDecide(f).act != Act::repair);
+    const double held = structure(w, r, citadel)->hp;
+    stepFor(w, 5);
+    EXPECT_NEAR(structure(w, r, citadel)->hp, held, 1e-9);
+
+    // Live: the pilot comes to Dust Terraces; the frontier pilot's unit mends,
+    // and the core's Repaired events are its wallet's.
+    f.wallet = WorldMap::Wallet{300, 20};
+    f.thought = -1e9;
+    ASSERT_TRUE(w.devTransfer(a, r, w.region(r).places()->ground(Vec2(90, 48))));
+    int64_t billedOre = 0, billedMh = 0, events = 0;
+    const auto live = f.wallet;
+    for (int i = 0; i < 60 * 40; i++) {
+        w.step();
+        if (!f.unit) continue;
+        for (const GameEvent& e : w.region(r).lastEvents())
+            if (const auto* rep = e.as<GameEvent::Repaired>(); rep && rep->by == *f.unit) {
+                billedOre += rep->ore;
+                billedMh += rep->hydrogen;
+                events += 1;
+            }
+        if (events >= 3) break;
+    }
+    std::printf("  live: unit %s, %lld Repaired events, %lld ore %lld MH billed, wallet %lld -> %lld ore\n", f.unit ? "yes" : "no",
+                (long long)events, (long long)billedOre, (long long)billedMh, (long long)live.ore, (long long)f.wallet.ore);
+    ASSERT_TRUE(f.unit.has_value());
+    ASSERT_TRUE(events > 0);
+    EXPECT_EQ(live.ore - f.wallet.ore, billedOre);
+    EXPECT_EQ(live.hydrogen - f.wallet.hydrogen, billedMh);
+}

@@ -38,6 +38,15 @@ D_TOL = 0.5
 MIN_AREA = 1.0
 STRICT = ("building", "construction")  # listed first in the report
 REPORT = os.path.join(K.REPO, "art", "models", "zfight-report.md")
+# Parts the pose always keeps apart though they share a place at rest: pairs between two parts with one of these name
+# prefixes are not counted (each with why).
+POSED_APART = {
+    "pulse": "the Dropship's heal-beam pulses run along the beam a third of a cycle apart (AcPoseAir.cpp, PoseDropship)",
+}
+
+
+def posed_apart(a, b):
+    return any(a.startswith(k) and b.startswith(k) and a != b for k in POSED_APART)
 ALLOW = os.path.join(K.REPO, "art", "models", "zfight-allow.txt")
 
 
@@ -92,7 +101,7 @@ def _inside_tri(p, t, eps=1e-6):
 
 
 class Tri:
-    __slots__ = ("mesh", "n", "d", "pts", "flat", "lo", "hi")
+    __slots__ = ("mesh", "n", "d", "pts", "flat", "lo", "hi", "vids")
 
 
 def triangles(mesh_id, pts, tris):
@@ -107,8 +116,15 @@ def triangles(mesh_id, pts, tris):
         t = Tri()
         t.mesh, t.n, t.pts = mesh_id, (-cr[0] / ln, -cr[1] / ln, -cr[2] / ln), (a, b, c)
         t.d = _dot(t.n, a)
+        t.vids = (i, j, k)
         out.append(t)
     return out
+
+
+def _corners(t):
+    """A triangle's corners welded by position (0.01 cm), as fix_zfight_meshes welds a solid: a face split per
+    triangle for its flat normals still shares the corner it was fanned from."""
+    return {tuple(round(c, 2) for c in p) for p in t.pts}
 
 
 def _key(n):
@@ -123,12 +139,13 @@ def _basis(n):
     return u, _cross(n, u)
 
 
-def check(tris):
-    """Returns ({(meshA, meshB): [count, area]}, {meshA: covered triangle count by another mesh, per other mesh})."""
+def check(tris, collect=None):
+    """Returns ({(meshA, meshB): [count, area, ...]}, {meshA: covered triangle count by another mesh, per other mesh}),
+    pairs of less than MIN_AREA in all left out; `collect` (a list) gets every visible overlapping (Tri, Tri, area)."""
     bins = collections.defaultdict(list)
     for t in tris:
         bins[_key(t.n)].append(t)
-    pairs = collections.defaultdict(lambda: [0, 0.0])
+    pairs = collections.defaultdict(lambda: [0, 0.0, 0.0, None])  # count, area, the largest piece and where it lies
     same = collections.defaultdict(int)  # (mesh, other): triangles of `mesh` lying on a triangle of `other`
     for key, group in bins.items():
         n = group[0].n
@@ -148,8 +165,11 @@ def check(tris):
                 b = group[y]
                 if b.d - a.d > D_TOL:
                     break
-                if _dot(a.n, b.n) < COS_TOL:
+                pa, pb = a.mesh.split("/")[0], b.mesh.split("/")[0]
+                if _dot(a.n, b.n) < COS_TOL or K.exclusive_parts(pa, pb) or posed_apart(pa, pb):
                     continue
+                if a.mesh == b.mesh and _corners(a) & _corners(b):
+                    continue  # a fold in one face (a concave cap fanned from one corner): one surface, not two
                 if b.lo[0] >= a.hi[0] or a.lo[0] >= b.hi[0] or b.lo[1] >= a.hi[1] or a.lo[1] >= b.hi[1]:
                     continue
                 poly = a.flat
@@ -173,13 +193,21 @@ def check(tris):
                 near = [f for dd, f in oflat if abs(dd - a.d) <= D_TOL]
                 if near and all(any(_inside_tri(q, f) for f in near) for q in probes):
                     continue
+                if collect is not None:
+                    collect.append((a, b, area))
                 k2 = (a.mesh, b.mesh) if a.mesh < b.mesh else (b.mesh, a.mesh)
-                pairs[k2][0] += 1
-                pairs[k2][1] += area
-    return pairs, same
+                got = pairs[k2]
+                got[0] += 1
+                got[1] += area
+                if area > got[2]:
+                    got[2] = area
+                    got[3] = tuple(n[i] * a.d + u[i] * cu + v[i] * cv for i in range(3))
+    return {k: v for k, v in pairs.items() if v[1] > MIN_AREA}, same
 
 
 def selftest():
+    ids = iter(range(10 ** 6))  # each corner its own vertex
+
     def quad(mesh, z, x0, x1, y0, y1, up=True):
         a, b, c, d = (x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)
         # outward +z: (b - a) x (c - a) must point down (into the solid)
@@ -187,6 +215,7 @@ def selftest():
         out = []
         for p, q, r in tris:
             out += triangles(mesh, [p, q, r], [(0, 1, 2)])
+            out[-1].vids = (next(ids), next(ids), next(ids))
         return out
     t = quad("A", 0, 0, 10, 0, 10) + quad("B", 0.2, 5, 15, 0, 10)
     pairs, _ = check(t)
@@ -200,7 +229,12 @@ def selftest():
     assert not check(t)[0], check(t)[0]
     _, same = check(quad("A", 0, 0, 10, 0, 10) + quad("B", 0, 0, 10, 0, 10))
     assert same[("A", "B")] == 2 and same[("B", "A")] == 2, same
-    log("selftest: the six cases hold")
+    # a fold: two triangles of one face fanned from one corner, overlapping (the corner one vertex, or two at one place)
+    fold = triangles("A", [(0, 0, 0), (0, 10, 0), (10, 10, 0), (10, 0, 0)], [(0, 2, 1), (0, 3, 1)])
+    assert not check(fold)[0], check(fold)[0]
+    fold = triangles("A", [(0, 0, 0), (0, 10, 0), (10, 10, 0), (10, 0, 0), (0, 0, 0)], [(0, 2, 1), (4, 3, 1)])
+    assert not check(fold)[0], check(fold)[0]
+    log("selftest: the eight cases hold")
 
 
 # --- the catalog, in the editor ------------------------------------------------------------------------------------
@@ -297,15 +331,17 @@ def main():
              "`art/models/zfight-allow.txt`)." % (len(models), len(rows)), ""]
     for m, pairs, dups, hid, area in rows:
         lines += ["## %s (%s)" % (m["name"], m["category"]), "",
-                  "| part/material A | part/material B | triangles | area cm2 |", "|---|---|---|---|"]
-        for (a, b), (cnt, ar) in sorted(pairs.items(), key=lambda kv: -kv[1][1]):
+                  "| part/material A | part/material B | triangles | area cm2 | the largest piece round (model cm) |",
+                  "|---|---|---|---|---|"]
+        for (a, b), (cnt, ar, _, at) in sorted(pairs.items(), key=lambda kv: -kv[1][1]):
             mark = lambda s: s + (" (hidden)" if s in hid else "")
-            lines.append("| %s | %s | %d | %.0f |" % (mark(a), mark(b), cnt, ar))
+            lines.append("| %s | %s | %d | %.0f | (%.0f, %.0f, %.0f) |" % (mark(a), mark(b), cnt, ar, *at))
         for a, b in dups:
-            lines.append("| %s | %s | duplicate: every triangle of A lies on B | |" % (a, b))
+            lines.append("| %s | %s | duplicate: every triangle of A lies on B | | |" % (a, b))
         lines.append("")
-    if not only:  # a run on a few models leaves the whole catalog's report as it is
-        with open(REPORT, "w") as f:
+    out = REPORT if not only else os.environ.get("AC_CHECK_REPORT")  # (a run on a few models: its own file, if named)
+    if out:
+        with open(out, "w") as f:
             f.write("\n".join(lines))
     log("report: %s (%d models with hits, %d of them waiting in %s)" % (REPORT if not only else "not written (a run on "
         "a few models)", len(rows), len(rows) - len(failing), ALLOW))

@@ -9,11 +9,13 @@
 #include "AcPilotPawn.h"
 #include "AcProgressHud.h"
 #include "AcSimSubsystem.h"
+#include "AcSpace.h"
 #include "SAcConsole.h"
 #include "SAcPilotOverlay.h"
 #include "SAcRoot.h"
 
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/CommandLine.h"
@@ -158,34 +160,66 @@ void UAcPilotOverlaySubsystem::GunFeed(const ac::Simulation& S, const AAcPilotPa
 		GunShots.Reset();
 		GunShotsOf = {C->id, Gun};
 	}
-	// The Citadel's shots and misses, each put down to the gun pointing
-	// nearest it (as its pose does).
-	auto Nearest = [&C](const ac::Vec2 To)
+	// C2: its rounds (`Fired`), each put down to the corner gun nearest
+	// its muzzle.
+	for (const ac::GameEvent& E : Frame.AllEvents)
 	{
+		const ac::GameEvent::Fired* Fi = E.as<ac::GameEvent::Fired>();
+		if (!Fi || Fi->shooter != C->id) continue;
 		int32 Best = 0;
-		double BestOff = 1e9;
+		double BestD = 1e18;
 		for (int32 K = 0; K < 4; ++K)
 		{
-			const ac::Vec2 From = ac::Defence::cornerGun(C->position, K);
-			const double Aim = C->guns ? (*C->guns)[K].aim : ac::Defence::cornerAngle(K);
-			const double Off = std::abs(std::remainder(std::atan2(To.y - From.y, To.x - From.x) - Aim, 2 * UE_DOUBLE_PI));
-			if (Off < BestOff)
+			const double D = ac::distance(ac::Defence::cornerGun(C->position, K), ac::Vec2(Fi->muzzle.x, Fi->muzzle.y));
+			if (D < BestD)
 			{
-				BestOff = Off;
+				BestD = D;
 				Best = K;
 			}
 		}
-		return Best;
-	};
-	for (const ac::GameEvent& E : Frame.AllEvents)
-	{
-		TOptional<ac::Vec2> At;
-		if (const ac::GameEvent::Shot* Sh = E.as<ac::GameEvent::Shot>(); Sh && Sh->unit == C->id) At = Sh->at;
-		else if (const ac::GameEvent::Missed* M = E.as<ac::GameEvent::Missed>(); M && M->unit == C->id) At = M->at;
-		if (At && Nearest(*At) == Gun) GunShots.Add(S.state.time);
+		if (Best == Gun) GunShots.Add(S.state.time);
 	}
 	GunShots.RemoveAll([&S](const double T) { return S.state.time - T > 5.0; });
 	Info.Feed = AcPilotText::Feed(*C, Gun, Pawn.Yaw(), Pawn.ViewPitch(), GunShots, S.state.time);
+	// The ballistic impact marker: the aim's round flown to its first hit,
+	// on the screen.
+	// (The muzzle over the Citadel's ground, as the core fires it.)
+	const ac::Vec3 Muzzle = ac::Defence::gunMuzzle(C->position, Gun, Pawn.Yaw(), Pawn.ViewPitch()) + ac::Vec3(0, 0, S.groundZ(C->position));
+	if (const TOptional<ac::Vec3> Hit = AcPilotText::BallisticImpact(S, Muzzle, ac::Rules::roundVelocity(Pawn.Yaw(), Pawn.ViewPitch()), C->id))
+	{
+		const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+		FVector2D Px;
+		int32 Vw = 0, Vh = 0;
+		if (PC) PC->GetViewportSize(Vw, Vh);
+		if (PC && Vh > 0 && PC->ProjectWorldLocationToScreen(AcSpace::ToWorld(ac::Vec2(Hit->x, Hit->y), Hit->z), Px, false))
+		{
+			Info.Feed->Impact = FVector2D((Px.X - Vw * 0.5) / (Vh * 0.5), -(Px.Y - Vh * 0.5) / (Vh * 0.5));
+			const ac::Vec3 D = *Hit - Muzzle;
+			Info.Feed->ImpactCells = std::sqrt(D.x * D.x + D.y * D.y + D.z * D.z);
+		}
+	}
+}
+
+void UAcPilotOverlaySubsystem::DummyTags(const ac::Simulation& S, FAcPilotInfo& Info) const
+{
+	const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	int32 Vw = 0, Vh = 0;
+	if (PC) PC->GetViewportSize(Vw, Vh);
+	if (!PC || Vh <= 0) return;
+	for (const ac::Structure& B : S.state.structures)
+	{
+		if (B.kind != ac::StructureKind::dummy || !B.complete() || ac::distance(B.position, Info.Position) > 60) continue;
+		// Over the post's top, where its bar stands.
+		const double Top = S.groundZ(B.position) + ac::Rules::height(B.kind) + 0.75;
+		FVector2D Px;
+		if (!PC->ProjectWorldLocationToScreen(AcSpace::ToWorld(B.position, Top), Px, false)) continue;
+		if (Px.X < 0 || Px.Y < 0 || Px.X > Vw || Px.Y > Vh) continue;
+		FAcDummyTag T;
+		T.At = FVector2D((Px.X - Vw * 0.5) / (Vh * 0.5), -(Px.Y - Vh * 0.5) / (Vh * 0.5));
+		T.Hits = B.hits;
+		T.bDown = B.downUntil.has_value();
+		Info.Dummies.Add(T);
+	}
 }
 
 void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
@@ -318,6 +352,7 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	FAcPilotInfo Info = AcPilotText::Info(S, *F, Inputs);
 	GunFeed(S, *Pawn, Frame, Info);
 	Info.Wheel = Wheel;
+	DummyTags(S, Info);
 	if (Inputs.Mmo)
 	{
 		Info.Marks = AcProgressHud::ContractGoals(*Inputs.Mmo, U.position);
@@ -335,6 +370,8 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	}
 	if (GunMarker) Info.Gun = GunMarker();
 	else Info.Gun = Pawn->GunMarker(); // E4's marker, computed by the pawn each frame
+	Info.Reticle = Pawn->ReticleMarker();
+	Info.bReticleHidden = Pawn->ReticleHidden();
 	// A soldier's gun: the brackets open with its cone, moving and firing
 	// (docs/shooter-feel.md).
 	if (S.pilotShoots(U) && ac::Rules::stats(U.kind).bio)

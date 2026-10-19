@@ -133,6 +133,32 @@ From level 10 the board and the canyon fill the 45 minutes of work, so
 mining shows nothing. The canyon's XP is the best cycle the bench's guns
 reached (waves 1–9). Wave 10 never paid, so this is a low mark.
 
+## Repairs
+
+The user: "It should cost materials to repair buildings: repairing 50% HP
+should cost 25% of the build materials." Mending a building's whole bar costs
+`Rules::repairShare` (0.5) of its build price, ore and MH: `mended / full ×
+0.5 × price` (`Simulation::repairCost`). The price is the strategy game's
+(`Rules::cost`, `Rules::hydrogenCost`), or a world's for a world's pilot
+(`Progression::worldOre`, `worldHydrogen`), before any discount on building.
+A Citadel (400 ore, 1,500 HP) costs 13.3 ore a 100 HP, 100 ore for half its
+bar; a Foundry (150 ore, 100 MH) 37.5 ore and 25 MH for half.
+
+The cost builds up on the building as a fractional debt
+(`Structure::repairOwed`, ore and MH) and is paid a whole unit at a time as
+the debt crosses it (`Simulation::payRepair`), each payment a
+`GameEvent::Repaired` (the building, the repairer, the units). The repairer's
+bank pays, not the building owner's: the side's in the strategy game; in a
+world the driven pilot's own wallet (swapped into the side for its step, as
+a build pays it), so a second pilot mending the realm's Citadel pays from
+its own. With no whole ore (or MH, where the building takes MH) for the next
+unit the repair stops: "No ore to repair", "No MH to repair"
+(`Simulation::repairRefusal`); a repair order is refused as a build is. A
+world's repairer no human drives (a frontier pilot's Prospector) pays through
+the server's `Simulation::repairPayer`, from its own wallet; without one it
+mends free, never from a human's bank. Mending a machine (the Field
+welder's pick) stays free.
+
 ## Seen, not changed
 
 - **The guns alone don't hold The Fork.** With 12 Gatling Guns and 5 AA

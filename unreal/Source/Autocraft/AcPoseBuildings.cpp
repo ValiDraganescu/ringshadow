@@ -188,15 +188,14 @@ namespace
 	/// D1, C1: the Citadel's four corner turrets on the roof deck
 	/// (Tools/Editor/models/citadel_turrets.py): shown once it is complete
 	/// (with the hall; without it, once armed);
-	/// each follows its gun's aim (`turrets_k`) and pitch (`turretCradles_k`),
-	/// spins its barrels and heats its tips while it fires (within 0.3 s of
-	/// a shot). The renderer remembers only the last shot of the building,
-	/// so each shot is put down to the turret pointing nearest its target.
+	/// each follows its gun's aim (`turrets_k`) and pitch (`turretCradles_k`).
+	/// C2: its barrels spin with the gun's own spin-up (`CornerGun::spin`,
+	/// 30 rad/s at full rate), its tips glow with its heat, and while it
+	/// fires (the barrels at speed or winding up, not overheated) the muzzle
+	/// flash shows every other frame.
 	struct FCitadelState : FAcPoseState
 	{
-		double Last = -10;
-		double FiredAt[4] = {-10, -10, -10, -10};
-		double Spin[4] = {0, 0, 0, 0}, Angle[4] = {0, 0, 0, 0}, Heat[4] = {0, 0, 0, 0};
+		double Angle[4] = {0, 0, 0, 0}, LastSpin[4] = {0, 0, 0, 0};
 	};
 
 	void CitadelTurrets(const FAcPoseContext& C, FAcPose& P, const bool bLive)
@@ -212,39 +211,21 @@ namespace
 				if (const int32 I = (*Set)(M, K); I != INDEX_NONE) P.Visible[I] = bArmed;
 		if (!bArmed) return;
 		FCitadelState& Mem = C.Memory.State<FCitadelState>();
-		const double Last = C.Memory.LastShot.Get(-10.0);
-		if (Last > Mem.Last && C.Memory.LastShotAt.IsSet() && S.guns)
-		{
-			Mem.Last = Last;
-			const ac::Vec2 To = C.Memory.LastShotAt.GetValue();
-			int32 Best = 0;
-			double BestOff = 1e9;
-			for (int32 K = 0; K < 4; ++K)
-			{
-				const ac::Vec2 From = ac::Defence::cornerGun(S.position, K);
-				const double Off = std::abs(std::remainder(std::atan2(To.y - From.y, To.x - From.x) - (*S.guns)[K].aim, 2 * UE_DOUBLE_PI));
-				if (Off < BestOff)
-				{
-					BestOff = Off;
-					Best = K;
-				}
-			}
-			Mem.FiredAt[Best] = Last;
-		}
+		const bool bOdd = int64(C.Time * 60.0) % 2 != 0;
 		for (int32 K = 0; K < 4; ++K)
 		{
-			const double Since = C.Time - Mem.FiredAt[K];
-			const bool bFiring = bLive && Since < 0.3;
-			Mem.Spin[K] = AcBuildingPose::Ease(Mem.Spin[K], bFiring ? 30.0 : 0.0, bFiring ? 1.5 : 0.35, C.Dt);
-			Mem.Angle[K] = std::fmod(Mem.Angle[K] + Mem.Spin[K] * C.Dt, 2 * UE_DOUBLE_PI);
-			Mem.Heat[K] = AcBuildingPose::Ease(Mem.Heat[K], bFiring ? 1.0 : 0.0, bFiring ? 0.05 : 0.006, C.Dt);
-			const double Aim = S.guns ? (*S.guns)[K].aim : ac::Defence::cornerAngle(K);
-			const double Pitch = S.guns ? (*S.guns)[K].pitch : 0.0;
+			const ac::CornerGun* G = S.guns ? &(*S.guns)[K] : nullptr;
+			const double Spin = bLive && G ? FMath::Clamp(G->spin, 0.0, 1.0) : 0.0;
+			const bool bFiring = MinigunFiring(Spin, Mem.LastSpin[K], G && G->overheated);
+			Mem.LastSpin[K] = Spin;
+			Mem.Angle[K] = std::fmod(Mem.Angle[K] + MinigunSpin * Spin * C.Dt, 2 * UE_DOUBLE_PI);
+			const double Aim = G ? G->aim : ac::Defence::cornerAngle(K);
+			const double Pitch = G ? G->pitch : 0.0;
 			SetEuler(M, P, Turrets(M, K), 0, -Aim, 0);
 			SetEuler(M, P, Cradles(M, K), 0, 0, Pitch);
 			SetEuler(M, P, Barrels(M, K), Mem.Angle[K], 0, 0);
-			if (const int32 T = Tips(M, K); T != INDEX_NONE) P.Emission[T] = float(0.15 + 1.6 * Mem.Heat[K]);
-			if (const int32 F = Flashes(M, K); F != INDEX_NONE) P.Visible[F] = bLive && Since >= 0.0 && Since < 0.05;
+			if (const int32 T = Tips(M, K); T != INDEX_NONE) P.Emission[T] = float(0.15 + 1.6 * (G ? FMath::Clamp(G->heat, 0.0, 1.0) : 0.0));
+			if (const int32 F = Flashes(M, K); F != INDEX_NONE) P.Visible[F] = bFiring && bOdd;
 		}
 	}
 
@@ -259,7 +240,8 @@ namespace
 		const ac::Structure& S = *C.Structure;
 		const FAcModelInfo& M = C.Model;
 		static const FPart Ramp(TEXT("ramp"));
-		static const FParts Screens(TEXT("gunScreens"), 4), HallLamps(TEXT("hallLamps"), 8), Panels(TEXT("doorPanels"), 2);
+		static const FParts Screens(TEXT("gunScreens"), 4), HallLamps(TEXT("hallLamps"), 8), Panels(TEXT("doorPanels"), 2),
+			ConsoleLamps(TEXT("consoleLamps"), 4);
 		SetEuler(M, P, Ramp.Get(M), CitadelRampAngle(S), 0, 0);
 		for (int32 K = 0; K < 4; ++K)
 		{
@@ -267,6 +249,8 @@ namespace
 			Lamp(P, Screens(M, K), bManned ? 1.9 : 0.04, 0.04);
 		}
 		for (int32 K = 0; K < 8; ++K) Lamp(P, HallLamps(M, K), bLive ? 1.0 : 0.05, 1.0);
+		// C2: each gun station's hood lamp over its desk, lit once complete.
+		for (int32 K = 0; K < 4; ++K) Lamp(P, ConsoleLamps(M, K), bLive ? 1.0 : 0.05, 1.0);
 		const int32 Lit = bLive ? AcCitadelAct::Panel(S.id) : INDEX_NONE;
 		for (int32 K = 0; K < 2; ++K) Lamp(P, Panels(M, K), K == Lit ? 1.0 : 0.05, 1.0);
 	}

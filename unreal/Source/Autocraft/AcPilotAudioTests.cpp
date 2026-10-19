@@ -123,17 +123,19 @@ bool FAcPilotAudioBlockedTest::RunTest(const FString&)
 	// Up to 1.2 cells along the ground nothing counts.
 	TestFalse(TEXT("close"), AcPilotAudio::SoundBlocked(FVector(0, 0, 150), FVector(110, 0, 70), Ridge, None));
 	// A Citadel in between, below its roof: blocked; the Citadel a sound
-	// comes from does not count.
+	// comes from does not count. (Laid out by its radius: the hall's 12x12
+	// Citadel since C1.)
+	const double R = ac::Rules::radius(ac::StructureKind::citadel);
 	ac::Structure Citadel;
 	Citadel.kind = ac::StructureKind::citadel;
-	Citadel.position = ac::Vec2(5, 0);
+	Citadel.position = ac::Vec2(2 * R + 3, 0);
 	std::vector<ac::Structure> One{Citadel};
-	TestTrue(TEXT("through a building"), AcPilotAudio::SoundBlocked(FVector(0, 0, 150), FVector(1000, 0, 70), Flat, One));
-	TestFalse(TEXT("from the building"), AcPilotAudio::SoundBlocked(FVector(-500, 0, 150), FVector(500, 0, 70), Flat, One));
+	const double Far = (4 * R + 6) * 100, Inside = (2 * R + 3 + R / 2) * 100;
+	TestTrue(TEXT("through a building"), AcPilotAudio::SoundBlocked(FVector(0, 0, 150), FVector(Far, 0, 70), Flat, One));
+	TestFalse(TEXT("from the building"), AcPilotAudio::SoundBlocked(FVector(0, 0, 150), FVector(Inside, 0, 70), Flat, One));
 	// High over the roof: clear.
-	const double Roof = std::max(1.2, ac::Rules::radius(ac::StructureKind::citadel) * 1.5);
-	TestFalse(TEXT("over the roof"),
-		AcPilotAudio::SoundBlocked(FVector(0, 0, (Roof + 1) * 100), FVector(1000, 0, (Roof + 1) * 100), Flat, One));
+	const double Roof = std::max(1.2, R * 1.5);
+	TestFalse(TEXT("over the roof"), AcPilotAudio::SoundBlocked(FVector(0, 0, (Roof + 1) * 100), FVector(Far, 0, (Roof + 1) * 100), Flat, One));
 	return true;
 }
 

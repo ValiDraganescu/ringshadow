@@ -15,14 +15,37 @@ FreeView::FreeView(GroundRect bounds_, std::optional<Vec2> target_, double point
     clamp();
 }
 
+namespace {
+
+/// `v` turned by `a` radians in the ground plane (x toward z).
+Vec2 turned(Vec2 v, double a) {
+    if (a == 0) return v;
+    const double c = std::cos(a), s = std::sin(a);
+    return Vec2(v.x * c - v.y * s, v.x * s + v.y * c);
+}
+Vec3 turned(Vec3 v, double a) {
+    const Vec2 g = turned(Vec2(v.x, v.z), a);
+    return Vec3(g.x, v.y, g.y);
+}
+
+} // namespace
+
 /// The camera for the current view size, centred on the world origin;
 /// `target` shifts everything by a ground offset.
 CanvasProjection FreeView::projection() const {
     return CanvasProjection(max(size.x, 1.0), max(size.y, 1.0), pointsPerCell);
 }
 
+void FreeView::orbit(double by) {
+    yaw = std::remainder(yaw + by, 2 * pi);
+    clamp();
+}
+
+Vec2 FreeView::toWorld(Vec2 v) const { return turned(v, yaw); }
+Vec2 FreeView::toView(Vec2 v) const { return turned(v, -yaw); }
+
 /// Camera position in the world.
-Vec3 FreeView::cameraPosition() const { return projection().cameraPosition() + Vec3(target.x, 0, target.y); }
+Vec3 FreeView::cameraPosition() const { return turned(projection().cameraPosition(), yaw) + Vec3(target.x, 0, target.y); }
 
 /// Least zoom: the whole map in the open view (above `cover`, perspective
 /// included, so the near edge is what limits it), but never past a floor.
@@ -36,6 +59,7 @@ double FreeView::minPointsPerCell() const {
     for (int i = 0; i < 60; i++) {
         if (!(ppc > 1)) continue;
         FreeView v = *this;
+        v.yaw = 0;  // the same range at every turn
         v.pointsPerCell = ppc;
         v.target = mid;
         v.clamp();
@@ -51,13 +75,13 @@ double FreeView::minPointsPerCell() const {
 }
 
 /// View point (y down) of a world position.
-Vec2 FreeView::canvas(Vec3 w) const { return projection().canvas(w - Vec3(target.x, 0, target.y)); }
+Vec2 FreeView::canvas(Vec3 w) const { return projection().canvas(turned(w - Vec3(target.x, 0, target.y), -yaw)); }
 
 /// The ray through a view point.
-FreeView::Ray FreeView::ray(Vec2 c) const { return Ray{cameraPosition(), projection().ray(c)}; }
+FreeView::Ray FreeView::ray(Vec2 c) const { return Ray{cameraPosition(), turned(projection().ray(c), yaw)}; }
 
 /// Where the ray through a view point meets the ground plane (height 0).
-Vec2 FreeView::ground(Vec2 c) const { return projection().ground(c) + target; }
+Vec2 FreeView::ground(Vec2 c) const { return toWorld(projection().ground(c)) + target; }
 
 /// Drag the ground: what was under `from` ends up under `to`.
 void FreeView::drag(Vec2 from, Vec2 to) {
@@ -75,6 +99,7 @@ void FreeView::zoom(double factor, Vec2 c) {
 
 /// Show the whole map.
 void FreeView::fit() {
+    yaw = 0;  // the map's edges along the view's again
     pointsPerCell = minPointsPerCell();
     target = Vec2((bounds.minX + bounds.maxX) / 2, (bounds.minZ + bounds.maxZ) / 2);
     clamp();
@@ -101,6 +126,13 @@ void FreeView::resize(Vec2 s, std::optional<double> c) {
 /// top and its near edge just above `cover`. Along an axis where the map
 /// is smaller than the view, the map is centred in it.
 void FreeView::clamp() {
+    // Turned, the map's edges no longer run along the view's: the focus
+    // stays on the map. (The unturned range below lies inside the map, so
+    // a first turn never moves the focus.)
+    if (yaw != 0) {
+        target = Vec2(min(max(target.x, bounds.minX), bounds.maxX), min(max(target.y, bounds.minZ), bounds.maxZ));
+        return;
+    }
     const CanvasProjection p = projection();
     const double open = max(size.y - cover, 1.0);
     // Ground under view points, from the focus. (Swift's `far` and `near`:

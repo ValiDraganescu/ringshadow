@@ -319,6 +319,13 @@ int32 SAcPilotOverlay::OnPaint(const FPaintArgs& Args, const FGeometry& Geometry
 				true, A);
 		}
 	}
+	// C2: a Target Dummy's hits over its bar.
+	for (const FAcDummyTag& T : Info.Dummies)
+	{
+		const FVector2D At(W / 2 + T.At.X * H / 2, H / 2 + T.At.Y * H / 2);
+		P.Label(T.bDown ? FString::Printf(TEXT("DOWN  ·  HITS %lld"), (long long)T.Hits) : FString::Printf(TEXT("HITS %lld"), (long long)T.Hits),
+			13, T.bDown ? EnemyColor() : Srgb(1.0, 0.85, 0.35), At, EAcHAlign::Center, EAcVAlign::Baseline, true, false);
+	}
 	if (Info.Feed) PaintFeed(P, W, H, Now);
 	// C2: the build wheel takes the reticle's place while it is open.
 	if (!Info.Wheel) PaintReticle(P, C, Now);
@@ -345,16 +352,24 @@ void SAcPilotOverlay::PaintReticle(FAcPilotPen& P, const FVector2D C, const doub
 	const double S = ReticleScale(Now);
 	const FLinearColor Tone = ToneColor(Info.Tone);
 	auto At = [&](double X, double Y) { return C + FVector2D(X, Y) * S; };
+	// Looking round (the right button, third person): the brackets where
+	// the aim is, none when it is off the view; the ring and the prompt
+	// stay in the middle.
+	const double Hh = P.H / 2;
+	const FVector2D Mark = Info.Reticle ? FVector2D(C.X + Info.Reticle->X * Hh, Hh + Info.Reticle->Y * Hh) : C;
+	const bool bMark = !Info.bReticleHidden && Mark.X >= 0 && Mark.X <= 2 * C.X && Mark.Y >= 0 && Mark.Y <= P.H;
+	auto MarkAt = [&](double X, double Y) { return Mark + FVector2D(X, Y) * S; };
 	// Four corner brackets and a centre pip; a soldier's open with its
 	// cone (its edge, past the brackets' inner 6).
 	const double Open = Info.Cone ? FMath::Max(0.0, *Info.Cone * P.H / 2 / S - 6) : 0;
 	for (const FVector2D Sign : {FVector2D(-1, 1), FVector2D(1, 1), FVector2D(1, -1), FVector2D(-1, -1)})
 	{
-		P.Lines({At(Sign.X * (14 + Open), Sign.Y * (6 + Open)), At(Sign.X * (14 + Open), Sign.Y * (14 + Open)),
-					At(Sign.X * (6 + Open), Sign.Y * (14 + Open))},
+		if (!bMark) break;
+		P.Lines({MarkAt(Sign.X * (14 + Open), Sign.Y * (6 + Open)), MarkAt(Sign.X * (14 + Open), Sign.Y * (14 + Open)),
+					MarkAt(Sign.X * (6 + Open), Sign.Y * (14 + Open))},
 			Tone, 1.6 * S, 1.2 * S);
 	}
-	P.Disc(C, 1.6 * S, LineColor());
+	if (bMark) P.Disc(Mark, 1.6 * S, LineColor());
 	// The work ring: from the top, clockwise.
 	if (Info.Progress)
 	{
@@ -384,7 +399,6 @@ void SAcPilotOverlay::PaintReticle(FAcPilotPen& P, const FVector2D C, const doub
 	// A vehicle's gun marker: where its weapon really points.
 	if (Info.Gun)
 	{
-		const double Hh = P.H / 2;
 		const FVector2D G(C.X + Info.Gun->X * Hh, Hh + Info.Gun->Y * Hh);
 		P.Lines(FAcPilotPen::Circle(G, 9, 40), Alpha(Tone, 0.9), 1.6, 1);
 		P.Disc(G, 1.6, Tone);
@@ -769,14 +783,42 @@ void SAcPilotOverlay::PaintFeed(FAcPilotPen& P, const double W, const double H, 
 	const double Pt = (F.Pitch - F.PitchMin) / FMath::Max(F.PitchMax - F.PitchMin, 1e-3);
 	const double PitchY = FMath::Lerp(PitchLo, PitchHi, FMath::Clamp(Pt, 0.0, 1.0));
 	P.Lines({FVector2D(PitchX - 7, PitchY), FVector2D(PitchX + 7, PitchY)}, ReadyColor(), 2.4, 1.2);
-	// Heat pips left of the dial, the cooldown under them.
+	// Heat pips left of the dial (the gun's own heat, C2), the cooldown
+	// under them; overheated: every pip red, blinking OVERHEAT, the trigger
+	// ignored until it cools.
+	const bool bBlink = std::fmod(Now, 0.5) < 0.3;
 	for (int32 K = 0; K < FAcTurretFeed::HeatPips; ++K)
 	{
-		const bool bLit = K < F.Heat;
-		const FLinearColor Hot = K >= FAcTurretFeed::HeatPips - 2 ? EnemyColor() : BlockedColor();
+		const bool bLit = K < F.Heat && (!F.bOverheat || bBlink);
+		const FLinearColor Hot = F.bOverheat || K >= FAcTurretFeed::HeatPips - 2 ? EnemyColor() : BlockedColor();
 		P.Plate(FAcRect(PipsX + K * (PipW + Gap), G.Y, PipW, PipH), 1.5, bLit ? Hot : FLinearColor(0, 0, 0, 0.45f), Alpha(Hot, 0.6), 0.8);
 	}
 	P.Plate(FAcRect(PipsX, G.Y - 10, BarW, 4), 1, FLinearColor(0, 0, 0, 0.5f), White(1, 0.2), 0.6);
 	P.Fill(FAcRect(PipsX, G.Y - 10, BarW * F.Ready, 4), F.Ready >= 1 ? ReadyColor() : BlockedColor());
-	P.Label(TEXT("HEAT"), 11, White(0.75), FVector2D(PipsX, G.Y + PipH + 6), EAcHAlign::Left, EAcVAlign::Baseline, true, false);
+	if (F.bOverheat)
+	{
+		P.Label(TEXT("OVERHEAT"), 13, bBlink ? EnemyColor() : Alpha(EnemyColor(), 0.45), FVector2D(PipsX, G.Y + PipH + 6), EAcHAlign::Left,
+			EAcVAlign::Baseline, true, false);
+	}
+	else
+	{
+		P.Label(TEXT("HEAT"), 11, White(0.75), FVector2D(PipsX, G.Y + PipH + 6), EAcHAlign::Left, EAcVAlign::Baseline, true, false);
+	}
+
+	// The ballistic impact marker: where the aim's round lands, a ring and
+	// the distance ("34 c"), over the world.
+	if (F.Impact)
+	{
+		const double Hh = P.H / 2;
+		const FVector2D M(W / 2 + F.Impact->X * Hh, Hh + F.Impact->Y * Hh);
+		if (R.Inset(8, 8).Contains(M))
+		{
+			const FLinearColor Ring = F.bOverheat ? Alpha(EnemyColor(), 0.8) : Srgb(1.0, 0.62, 0.25, 0.95);
+			P.Lines(FAcPilotPen::Circle(M, 7, 32), Ring, 1.6, 1.2);
+			P.Lines({M + FVector2D(-11, 0), M + FVector2D(-7, 0)}, Ring, 1.4);
+			P.Lines({M + FVector2D(7, 0), M + FVector2D(11, 0)}, Ring, 1.4);
+			P.Label(FString::Printf(TEXT("%lld c"), (long long)FMath::RoundToDouble(F.ImpactCells)), 12, Ring, M + FVector2D(14, -4),
+				EAcHAlign::Left, EAcVAlign::Baseline, true, false);
+		}
+	}
 }

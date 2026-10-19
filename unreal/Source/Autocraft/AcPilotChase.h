@@ -77,8 +77,42 @@ public:
 	};
 	FZoom Zoom;
 
+	/// The right-drag look-around (docs/shooter-feel.md "Look around"):
+	/// while the right button is held the mouse swings the camera round the
+	/// unit by this much over the aim's yaw and pitch, and nothing else: the
+	/// unit's heading, its aim and the crosshair's ray, and the walk's frame
+	/// stay the aim's. Let go, it eases back behind the unit.
+	struct AUTOCRAFT_API FOrbit
+	{
+		/// From let go to back behind the unit, real seconds.
+		static constexpr double EaseSeconds = 0.25;
+		/// The mouse's pitch counts this much of the look's...
+		static constexpr double PitchShare = 0.5;
+		/// ...and swings no farther than this up or down, radians (20°).
+		static constexpr double MaxPitch = 20.0 * UE_DOUBLE_PI / 180.0;
+
+		/// Off the aim's view now, radians (yaw as `heading`, pitch up).
+		double Yaw = 0, Pitch = 0;
+		bool bHeld = false;
+
+		/// The right button held (or not) at `RealNow`; let go starts the
+		/// ease back from where it is.
+		void Hold(bool bDown, double RealNow);
+		/// The mouse's turn while held, radians as the look's (`DPitch` up).
+		void Turn(double DYaw, double DPitch);
+		/// Eased back toward none after the release.
+		void Tick(double RealNow);
+		/// Swung off the aim (held, or on the way back).
+		bool Off() const { return bHeld || Yaw != 0 || Pitch != 0; }
+		void Reset() { *this = FOrbit(); }
+
+	private:
+		double ReleasedAt = -1, FromYaw = 0, FromPitch = 0;
+	};
+	FOrbit Orbit;
+
 	/// A new ride or a switch of view: nothing eased yet (the zoom shown
-	/// snaps to the wanted one).
+	/// snaps to the wanted one, the look-around is let go at once).
 	void Reset();
 
 	/// The camera behind the unit (`chase`). `Root`: the model root's world

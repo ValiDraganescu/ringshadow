@@ -94,6 +94,8 @@ public:
 	void DriveAt(FVector2D ViewPoint);
 	/// The unit or building under a view point.
 	TOptional<FAcHover> PickAt(FVector2D ViewPoint) const;
+	/// A HUD widget covers this view point (a click there is not the world's).
+	bool IsCovered(FVector2D ViewPoint) const { return Covered(ViewPoint); }
 
 	/// E2 takes over a unit (unbound: logged only).
 	FAcTakeOver OnTakeOver;

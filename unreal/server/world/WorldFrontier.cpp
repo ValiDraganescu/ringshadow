@@ -614,9 +614,11 @@ FrontierPlan WorldMap::defenderPlan(const FrontierPilot& f) const {
     }
     if (f.cargo > 0)
         if (auto m = minePlan(f)) return *m;
-    // A building of the realm hurt: mend it.
+    // A building of the realm hurt: mend it, when its wallet holds the next
+    // unit of the price (repairs cost materials).
     for (const Structure& b : st.structures)
-        if (realm(b) && b.complete() && b.kind != StructureKind::dummy && b.hp < Rules::hp(b.kind) * 0.9 && !keptOff(r, b.position)) {
+        if (realm(b) && b.complete() && b.kind != StructureKind::dummy && b.hp < Rules::hp(b.kind) * 0.9 && !keptOff(r, b.position) &&
+            canMend(f, b)) {
             p.act = Act::repair;
             p.target = b.id;
             p.at = b.position;
@@ -1152,8 +1154,28 @@ void WorldMap::frontierAct(FrontierPilot& f, double dt) {
                 u->structure = p.target;
             }
         } else if (moveTo(p.at, 4)) {
-            for (Structure& s : st.structures)
-                if (s.id == p.target) s.hp = std::min(Rules::hp(s.kind), s.hp + Rules::hp(s.kind) / Rules::buildTime(s.kind) * dt);
+            // Booked: at a welder's pace, paid as the core pays a live mend
+            // (`Simulation::repairCost`, whole units from its own wallet).
+            for (Structure& s : st.structures) {
+                if (s.id != p.target) continue;
+                const double full = Rules::hp(s.kind);
+                const double mended = std::min(full - s.hp, full / Rules::buildTime(s.kind) * dt);
+                if (!(mended > 0)) break;
+                const auto [ore, mh] = Simulation::repairCost(s.kind, mended, true, full);
+                const double owedOre = f.mendOre + ore, owedMh = f.mendHydrogen + mh;
+                const int64_t payOre = int64_t(std::floor(owedOre)), payMh = int64_t(std::floor(owedMh));
+                if (payOre > f.wallet.ore || payMh > f.wallet.hydrogen) {
+                    // Short: it stops, and thinks again.
+                    f.plan = {};
+                    f.thought = -1e9;
+                    break;
+                }
+                f.wallet.ore -= payOre;
+                f.wallet.hydrogen -= payMh;
+                f.mendOre = owedOre - double(payOre);
+                f.mendHydrogen = owedMh - double(payMh);
+                s.hp += mended;
+            }
         }
         break;
     case Act::fight:
@@ -1430,6 +1452,31 @@ std::vector<net::Sky::Frontier> WorldMap::skyFrontier() const {
 void WorldMap::frontierTold(net::ProgressMessage& m) const {
     for (const FrontierPilot& f : frontier_)
         if (f.arrived) m.frontier.push_back(net::ProgressMessage::FrontierPilot{f.id, f.callsign, f.habit, f.paint});
+}
+
+// MARK: - Repairs cost materials
+
+bool WorldMap::canMend(const FrontierPilot& f, const Structure& b) const {
+    // The next whole unit of the price: an ore, and an MH when the kind
+    // costs MH.
+    const auto [ore, mh] = Simulation::repairCost(b.kind, Rules::hp(b.kind), true);
+    return f.wallet.ore >= (ore > 0 ? 1 : 0) && f.wallet.hydrogen >= (mh > 0 ? 1 : 0);
+}
+
+void WorldMap::installRepairPayers() {
+    for (size_t r = 0; r < regions_.size(); r++)
+        regions_[r]->simulation().repairPayer = [this, r](const Unit& by, const Structure&, int64_t ore, int64_t hydrogen) {
+            // Unit ids are a region's own: the frontier pilot here whose
+            // unit it is. Each region's step touches only its own pilots.
+            for (FrontierPilot& f : frontier_) {
+                if (f.region != r || f.travelTo || f.unit != by.id) continue;
+                if (ore > f.wallet.ore || hydrogen > f.wallet.hydrogen) return false;
+                f.wallet.ore -= ore;
+                f.wallet.hydrogen -= hydrogen;
+                return true;
+            }
+            return true;
+        };
 }
 
 // MARK: - Saved

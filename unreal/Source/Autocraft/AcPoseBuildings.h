@@ -56,6 +56,15 @@ namespace AcBuildingPose
 		return 0.05 + 2.6 * B * B;
 	}
 
+	/// C2: the minigun class's barrels at full rate, rad/s, and whether one
+	/// fires now: spun up (or winding up) and not overheated. The barrels
+	/// run down after the trigger is let go: a falling spin is not firing.
+	inline constexpr double MinigunSpin = 30.0;
+	inline bool MinigunFiring(const double Spin, const double LastSpin, const bool bOverheated)
+	{
+		return !bOverheated && Spin > 0.05 && (Spin >= 0.999 || Spin > LastSpin + 1e-6);
+	}
+
 	/// The red beacon: shown 0.25 s of every 1.2 s once complete.
 	inline bool Beacon(const double Time, const bool bLive) { return bLive && std::fmod(Time, 1.2) <= 0.25; }
 

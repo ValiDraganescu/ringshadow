@@ -36,7 +36,8 @@ def load_unit(name):
 def make(unit, kind, notes):
     """(cockpit Model, unit Model, rig, model_root); the unit's materials are shared."""
     u = load_unit(unit)
-    cm = Model("cockpit_" + kind, category="cockpit", facing="camera space: x right, y up, -Z ahead", notes=notes)
+    cm = Model("cockpit_" + kind, category="cockpit", facing="camera space: x right, y up, -Z ahead", notes=notes,
+               coplanar_check=True)  # (a cockpit shows faces its unit hid: parts under the eye are left out)
     cm._materials.update(u._materials)
     zero = dict(what="the view frame", channels=["rotation", "position"], functions=[])
     rig = cm.part("rig", driver=dict(zero, what="parts under rig turn with the view and sway with the stride"))

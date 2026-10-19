@@ -156,6 +156,43 @@ void FAcPilotChase::Reset()
 	PivotZ.Reset();
 	ChaseEye.Reset();
 	Zoom.ShownAt = -1;
+	Orbit.Reset();
+}
+
+void FAcPilotChase::FOrbit::Hold(const bool bDown, const double RealNow)
+{
+	if (bDown == bHeld) return;
+	bHeld = bDown;
+	if (bDown)
+	{
+		ReleasedAt = -1;
+		return;
+	}
+	ReleasedAt = RealNow;
+	FromYaw = Yaw;
+	FromPitch = Pitch;
+}
+
+void FAcPilotChase::FOrbit::Turn(const double DYaw, const double DPitch)
+{
+	if (!bHeld) return;
+	Yaw = std::remainder(Yaw + DYaw, 2.0 * UE_DOUBLE_PI);
+	Pitch = FMath::Clamp(Pitch + DPitch * PitchShare, -MaxPitch, MaxPitch);
+}
+
+void FAcPilotChase::FOrbit::Tick(const double RealNow)
+{
+	if (bHeld || ReleasedAt < 0) return;
+	// Eased in and out, the short way round.
+	const double T = FMath::Clamp((RealNow - ReleasedAt) / EaseSeconds, 0.0, 1.0);
+	const double K = 1.0 - FMath::SmoothStep(0.0, 1.0, T);
+	Yaw = FromYaw * K;
+	Pitch = FromPitch * K;
+	if (T >= 1.0)
+	{
+		Yaw = Pitch = 0;
+		ReleasedAt = -1;
+	}
 }
 
 void FAcPilotChase::Follow(UWorld* World, const FTransform& Root, const ac::Unit& U, const FAcModelInfo* Model, const double Pitch,

@@ -443,6 +443,8 @@ bool Simulation::issue(const Command& command, std::vector<GameEvent>& events) {
             || state.units[*i].task == Task::building) return false;
         auto s = state.structure(c->structure);
         if (!s || !s->complete() || s->owner != state.units[*i].owner) return false;
+        // Refused as a build is when the side cannot pay.
+        if (repairRefusal(state.units[*i], *s)) return false;
         Unit u = state.units[*i];
         leavePatch(u);
         u.structure = c->structure;
@@ -3131,11 +3133,20 @@ void Simulation::stepUnit(Unit& u, double dt, std::vector<GameEvent>& events) {
             u.structure = std::nullopt; u.task = Task::idle; u.timer = 0; return;
         }
         const Structure s = state.structures[*i];
+        // It costs materials (`payRepair`): the side short of the next
+        // unit, the repair stops.
+        if (repairRefusal(u, s)) {
+            u.structure = std::nullopt; u.task = Task::idle; u.timer = 0; return;
+        }
         if (travel(u, s.position, Rules::radius(s.kind) + 0.5, dt)) {
             turn(u, s.position, dt);
             // A full repair takes as long as building it.
             state.structures[*i].hp = ac::min(Rules::hp(s.kind), s.hp + Rules::hp(s.kind) / Rules::buildTime(s.kind) * dt
                                                                       * rate(Stat::Repair{}, u));
+            if (!payRepair(u, *i, state.structures[*i].hp - s.hp, Rules::hp(s.kind), events)) {
+                state.structures[*i].hp = s.hp;
+                u.structure = std::nullopt; u.task = Task::idle; u.timer = 0; return;
+            }
         }
         break;
     }

@@ -193,27 +193,8 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 				});
 			}
 		}
-		else if (St && (St->kind == ac::StructureKind::gatling || (St->kind == ac::StructureKind::citadel && St->guns)))
-		{
-			// D1, D2: red-hot amalgam rounds, a gatling gun's from its
-			// muzzle, a Citadel's from the corner turret pointing nearest
-			// its target (long streams).
-			const bool bAir = State->unit(Target) && State->unit(Target)->airborne();
-			const FVector To = AirBody(Target).Get(AcSpace::ToWorld(At, GroundZ(At) / Cm + (bAir ? 2.0 : 0.35)));
-			FVector From;
-			bool bFrom = false;
-			double Length = 1.2;
-			if (St->kind == ac::StructureKind::gatling)
-			{
-				bFrom = PartLocation(Unit, FName(TEXT("muzzles_0")), From);
-			}
-			else
-			{
-				bFrom = CitadelMuzzle(*St, At, From);
-				Length = 2.2;
-			}
-			if (bFrom) AmalgamRound(From, To, Time, Length);
-		}
+		// C2: a gatling gun's and a Citadel corner gun's rounds are real
+		// projectiles (`Fired`, AcEffectsRounds.cpp), not shots.
 		return;
 	}
 	if (U->kind == ac::UnitKind::prospector)
@@ -356,12 +337,8 @@ void UAcEffects::Missed(const int64 Unit, const FVector& To, const double Time)
 	UAcWorldRenderer* R = Renderer();
 	const ac::GameState* State = StateOf(Frame, Sim());
 	if (!R || !State || !R->ModelOf(Unit)) return;
-	// C1: a manned corner gun's miss, along its aim from the turret.
-	if (const std::optional<ac::Structure> St = State->structure(Unit); St && St->kind == ac::StructureKind::citadel)
-	{
-		if (FVector From; CitadelMuzzle(*St, AcSpace::ToSim(To), From)) AmalgamRound(From, To, Time, 2.2);
-		return;
-	}
+	// C2: a corner gun never misses as a shot: its rounds fly (`Fired`).
+	if (State->structure(Unit)) return;
 	const std::optional<ac::Unit> U = State->unit(Unit);
 	if (!U) return;
 	FShooter S;

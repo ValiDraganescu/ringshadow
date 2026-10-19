@@ -2,6 +2,7 @@
 // docs/shooter-feel.md "Third person (2026-10-18)"). Run headless:
 //   uv run unreal/Tools/hidden_run.py --out DIR --tests Autocraft.Pilot
 #include "AcPilotAim.h"
+#include "AcPilotCamera.h"
 #include "AcPilotChase.h"
 #include "AcSpace.h"
 
@@ -145,6 +146,78 @@ bool FAcPilotWalkCameraTest::RunTest(const FString&)
 	TestTrue(TEXT("faster facing the way it walks"), ac::length(U.position - Start) > ac::length(Moved) + 1e-6);
 	// Standing: toward what the sight is on, as before.
 	TestTrue(TEXT("standing, it faces the sight's point"), FMath::IsNearlyEqual(AcPilotAim::ChaseHeading(U, Yaw, AcSpace::ToWorld(U.position + ac::Vec2(0, 5)), false, false), UE_DOUBLE_PI / 2, 1e-9));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcPilotLookAroundTest, "Autocraft.Pilot.LookAroundKeepsTheAim", Flags)
+bool FAcPilotLookAroundTest::RunTest(const FString&)
+{
+	using FOrbit = FAcPilotChase::FOrbit;
+	// The mouse turns it only while the right button is held.
+	FOrbit O;
+	O.Turn(0.5, 0.2);
+	TestFalse(TEXT("not held: the mouse is the look's"), O.Off());
+	O.Hold(true, 10.0);
+	O.Turn(0.8, 0.3);
+	TestTrue(TEXT("held: swung round by the mouse"), FMath::IsNearlyEqual(O.Yaw, 0.8, 1e-12));
+	TestTrue(TEXT("a little pitch: half the look's"), FMath::IsNearlyEqual(O.Pitch, 0.15, 1e-12));
+	O.Turn(0, 5.0);
+	TestEqual(TEXT("the pitch held to 20 degrees"), O.Pitch, FOrbit::MaxPitch);
+	O.Turn(-0.4, -5.0 - 2 * FOrbit::MaxPitch / FOrbit::PitchShare);
+	TestEqual(TEXT("down no farther either"), O.Pitch, -FOrbit::MaxPitch);
+	O.Tick(11.0);
+	TestTrue(TEXT("held, it stays where the mouse left it"), FMath::IsNearlyEqual(O.Yaw, 0.4, 1e-12));
+	// Let go: back behind the unit over 0.25 s, eased.
+	O.Hold(false, 12.0);
+	O.Tick(12.125);
+	TestTrue(TEXT("half way back at half the time"), FMath::IsNearlyEqual(O.Yaw, 0.2, 1e-9) && FMath::IsNearlyEqual(O.Pitch, -FOrbit::MaxPitch / 2, 1e-9));
+	O.Tick(12.25);
+	TestFalse(TEXT("behind the unit after 0.25 s"), O.Off());
+	TestEqual(TEXT("exactly behind"), O.Yaw, 0.0);
+	// The short way round: swung past the back, it comes back the near way.
+	O.Hold(true, 20.0);
+	O.Turn(3.0, 0);
+	O.Turn(0.5, 0);
+	TestTrue(TEXT("past the back reads as the other side"), O.Yaw < 0);
+	O.Hold(false, 21.0);
+	O.Tick(21.1);
+	TestTrue(TEXT("and eases back that way"), O.Yaw < 0 && O.Yaw > -2.8);
+
+	// The views: a Prospector on open ground, no world (no walls, no rays).
+	ac::Unit U;
+	U.kind = ac::UnitKind::prospector;
+	U.position = ac::Vec2(10, 10);
+	U.heading = 0.3;
+	const FTransform Root(AcSpace::QuatFromHeading(U.heading), AcSpace::ToWorld(U.position, 0.0));
+	FAcPilotChase Chase;
+	const double Yaw = 0.3, Pitch = -0.15;
+	FVector AimAt, ShownAt;
+	FQuat AimRot, ShownRot;
+	// The aim's view (what the crosshair is cast from), then the one shown
+	// while looking round: 0.9 rad across.
+	Chase.Follow(nullptr, Root, U, nullptr, Pitch, Yaw, 1.0, AimAt, AimRot);
+	Chase.Follow(nullptr, Root, U, nullptr, Pitch, Yaw + 0.9, 1.0, ShownAt, ShownRot);
+	const FVector Aim = AimAt + AimRot.GetForwardVector() * AcSpace::ToCm(20.0);
+	const TOptional<FVector2D> OnAim = AcPilotAim::ScreenOffset(AimAt, AimRot, FAcPilotCamera::FovDegrees, Aim);
+	TestTrue(TEXT("the aim's view: the crosshair in the middle"), OnAim && OnAim->IsNearlyZero(1e-6));
+	// The camera went round the unit: as far from its eye, elsewhere.
+	TestTrue(TEXT("round the unit, as far"), FMath::IsNearlyEqual((ShownAt - *Chase.Eye()).Size(), (AimAt - *Chase.Eye()).Size(), 1.0));
+	TestTrue(TEXT("and somewhere else"), FVector::Dist(ShownAt, AimAt) > AcSpace::ToCm(1.0));
+	// Seen from there the crosshair is where the aim is: off the middle,
+	// to the left (the camera swung right), still on the view.
+	const TOptional<FVector2D> Off = AcPilotAim::ScreenOffset(ShownAt, ShownRot, FAcPilotCamera::FovDegrees, Aim);
+	TestTrue(TEXT("looking round: the crosshair off the middle, left"), Off && Off->X < -0.2);
+	// The heading and the walk are the aim's: neither reads the swing.
+	const double Heading = AcPilotAim::Facing(U, Yaw, Aim);
+	TestTrue(TEXT("the unit faces the aim's point"), FMath::IsNearlyEqual(Heading, Yaw, 0.02));
+	const ac::Vec2 Walk = AcPilotAim::ChaseWalk(ac::Vec2(1, 0), Yaw, Heading);
+	// (The step `pilotWalk` takes: backing and sideways at their shares.)
+	const ac::Vec2 Step(Walk.x * (Walk.x < 0 ? ac::Pilot::backPace : 1.0), Walk.y * ac::Pilot::sidePace);
+	const double Along = std::atan2(Step.y, Step.x) + Heading;
+	TestTrue(TEXT("W walks along the aim's forward"), FMath::Abs(std::remainder(Along - Yaw, 2.0 * UE_DOUBLE_PI)) < 1e-6);
+	// Swung right round, the aim is behind the camera: no crosshair.
+	Chase.Follow(nullptr, Root, U, nullptr, Pitch, Yaw + UE_DOUBLE_PI, 1.0, ShownAt, ShownRot);
+	TestFalse(TEXT("turned round: the aim off the view"), AcPilotAim::ScreenOffset(ShownAt, ShownRot, FAcPilotCamera::FovDegrees, Aim).IsSet());
 	return true;
 }
 

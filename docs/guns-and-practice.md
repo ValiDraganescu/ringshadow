@@ -139,9 +139,17 @@ and the corner gun's nothing (the user sees the drop instead).
 The manned corner gun (C1) loses its range gate: it fires along its aim
 whenever the trigger is down and the gun is not overheated; the crosshair's
 target is only the HUD's business (and `CornerGun::target`, the pose's,
-when it is `targetable`). C1's pitch stops hold: from the 9-cell mount at
-−20° the rounds meet flat ground no nearer than about 26 cells, so a bug
-closer in is under the gun.
+when it is `targetable`). C1's −20° stop left the ground nearer than about
+26 cells under every gun, a raid at the walls out of reach. So the mounts
+move outboard onto cantilevered brackets over the corners
+(`Defence::cornerInset()` 6.2: the trunnion 0.2 outside the walls' outer
+faces on the diagonal, the barrel clearing the tower's top edge pointed
+down), the barrels dip to `gunPitchMin` −70° (`gunPitchMax` +50° as
+before) and each gun turns `gunArcHalf` 135° either side of its corner
+(C1's 110° stopped it 25° short of pointing along its walls, a strip along
+each face's middle blind): the rounds meet flat ground about 3 cells out
+from the wall's foot, along both its walls (test
+`gun_reachesTheFootOfItsWall`).
 
 ## 2. The minigun look (model)
 
@@ -261,29 +269,60 @@ confirm` clicks.
 
 ## 6. The gun feel (game)
 
-- **Tracers:** every round is a red-hot streak (the amalgam pool, recoloured
-  hot orange-red with a yellow-white core and a halo), 1.5 cells long,
-  flown by the client along the same ballistic path from `Fired` (one
-  integrator shared with the core's constants) until its `Impact` or
-  `roundLife`. Muzzle flash every round (visible every second round), a
-  puff of smoke every tenth, spent casings every fifth from the chute
-  (small, short-lived, pooled).
-- **Impacts:** ground: a dust plume with sparks and a scorch burst, scaled
-  by the round's speed at impact; metal and rock: sparks and a flash; a
-  bug: a chitin burst (the Brood's hurt colour) and a hit flash; a dummy:
-  a ring lights and the "HITS" count on its bar ticks.
-- **Sound:** a minigun loop with spin-up whine and spin-down, from the
-  `orc-elevenlabs` skill's sound effects (or the ElevenLabs CLI), looped
-  seamlessly; impact sounds for ground, metal and chitin, pooled, with
-  distance falloff; the existing `turretburst` and `gatlingburst` cues retired
-  for these guns.
-- **The feed (C1):** the arc gauge stays; the heat bar becomes real heat
-  with an OVERHEAT state (red, the trigger ignored); a **ballistic impact
-  marker**: the client integrates the aim's trajectory to its first hit
-  (terrain, building) and draws a small ring there with the distance
-  ("34 c"); the marks line reads "30/s · 1.0 · V0 90"; a short camera shake
-  (0.6 px at 60 Hz) while firing. The driven Prospector's HUD shows its
-  cutter's reach in cells where the weapon line is.
+- **Tracers** (an effects extension, `AcEffectsRounds.cpp`): every `Fired`
+  is a red-hot tracer: an orange-red emissive body 1.5 cells long and 0.045
+  thick, a yellow-white core 0.02 thick along its front 60%, an additive
+  orange-red halo 0.12 thick round the body and a dimmer tail 1.5 cells on
+  behind it, all emissive well over daylight; flown on the core's own parabola
+  (`FAcRoundFlight`, AcRounds.h, calls `Rules::roundAt`: one integrator,
+  no constant copied) until its `Impact` or `roundLife`. It leaves the
+  model's muzzle (the turret as posed), the offset to the core's muzzle
+  fading out over 0.15 s. A muzzle flash every round, a puff of smoke every
+  tenth, a spent brass casing every fifth (thrown sideways, tumbling, 0.7
+  s; pools of 256 streaks, 64 casings). A muzzle within 3 cells of the
+  camera (the gun the pilot mans) makes no flash, smoke or casing of its
+  own: the turret's `turretFlashes_k` show there.
+- **Impacts** by `what`, scaled by the round's speed there: ground: an
+  orange flash swelling at its root, hot sparks thrown off the mirror of the
+  round's line that streak along their motion, arc and fall, a scorch, and a
+  dust plume for one strike in five (a stream's sunlit puffs pile up into a
+  white cloud that hides the impacts: each flash, spark and plume is faint
+  on its own for the same reason); a building or rock: a flash, a glow and
+  sparks; a bug: a hit flash and twelve flecks of green ichor; a Target
+  Dummy: a flash and sparks, its rings lighting in turn (its pose) and
+  "HITS n" over its bar. The Prospector's helmet lamp is off at a gun (it
+  pooled on the aim).
+- **Poses:** the corner guns' and the gatling's barrels spin with the
+  core's `spin` (30 rad/s at full rate), the tips (and the gatling's hopper)
+  glow with its `heat`, the muzzle flash shows every other frame while it
+  fires (spun up or winding up, not overheated). The Target Dummy's `plate`
+  falls back on its hinge in 0.14 s at `downUntil` and swings up in about
+  0.55 s; each strike lights the next of `rings_0..2`, fading over 0.5 s;
+  the `beacon` blinks, red and quick while down. The Citadel's
+  `consoleLamps_k` are lit once it is complete.
+- **Sound** (AudioDirector rules): `rotaryfire`, a seamless loop per gun
+  (key: the shooter and the corner gun nearest the muzzle), in 0.03 s with
+  its first round, out 0.08 s after its last (no round for 0.12 s), the
+  nearest 6 heard; `rotaryspinup` with a burst's first round,
+  `rotaryspindown` when it stops; `roundground`, `roundmetal` (a building, or
+  a unit that is not a bug), `roundchitin` (a bug) at each impact, 10 a
+  second at most. Made with ElevenLabs sound effects
+  (Tools/AudioGen/guns.manifest.json, picks levelled by guns_pick.py into
+  unreal/Resources/Sounds/guns/). The `turretburst` and `gatlingburst` cues
+  and the amalgam streaks are retired for these guns (they send no `Shot`).
+- **The feed (C1):** the heat pips are the gun's own heat
+  (`CornerGun::heat`); at OVERHEAT every pip blinks red with the word under
+  them, the trigger ignored. The cooldown bar runs from its rounds' times.
+  The **ballistic impact marker**: `AcPilotText::BallisticImpact` flies the
+  aim's round (the gun's muzzle, `Rules::roundVelocity(yaw, pitch)`) at 240
+  Hz to its first hit (the ground, a standing building's box; its own
+  Citadel passed for `roundSelfGrace`), bisects the crossing, and the feed
+  draws an orange ring there with the distance ("34 c"). The marks line
+  reads "30/s · 1.0 · V0 90" (rounds a second, damage a round, muzzle
+  speed). A shake while firing: the view turned by about 0.6 px of a
+  1080-line view, alternating at 60 Hz, while the trigger is held with the
+  barrels spun up. The driven Prospector's Strike line gives the cutter's
+  damage and reach in cells (its weapon's, "5 damage, reach N cells").
 - **Camera:** the gun view keeps the barrels in frame (C1).
 
 ## 7. Tests
@@ -294,7 +333,7 @@ confirm` clicks.
 | net | `Fired`, `Impact`, `DummyDown`, `Learn`, `Structure::hits/downUntil/heat`, `CornerGun::heat` round trips; widths (as built: `net-tests/tests/GunsWireTests.cpp`, with the learned kinds, overheat and spin) |
 | server | `learn_consumesACopyOnce`; `shop_sellsABlueprintOncePerPilot`; `site_givesOreForAKnownBlueprint`; `load_schema28LearnsWhatWasBoughtOrBuilt`; `build_dummyNeedsNoBlueprint`; `rounds_reachEveryClientThatMayKnow`; `citadel_mannedGunHitsAtThirtyCells` (the user's case) (as built: `LearnTests.cpp`, `ShopTests.cpp`, `CitadelTests.cpp`; also `frontier_buildsAfterSchema28`, `dev_dummyHereAheadOfTheGun`, and `defence_citadel_turrets_beat_a_raid` with a led ballistic aim) |
 | game | `Autocraft.Effects.RoundFliesTheSamePathAsTheCore`; `Autocraft.Hud.BuildWheelPicksBySector`; `Autocraft.Hud.FeedImpactMarker`; `Autocraft.Pose.MinigunSpinsUp` |
-| flow | `-AcFlowTest=mmopractice`: dev rig, open the wheel, build a dummy 20 cells from the Citadel, enter, man the gun facing it, fire until it falls, it stands again, hits counted; pictures (`-AcMmoShotsC2`: the wheel, the tracers in flight, an impact, the dummy down) |
+| flow | `-AcFlowTest=mmopractice` (AcMmoPracticeFlowTest.cpp): dev rig; the wheel leaned onto the Target Dummy, a click holds it out, the act key puts it down off the pad; `citadel here`, the door opened on the act key, into the hall to gun 1's station, the gun taken; the gun turned where the round's path 15 cells out is clear, `dummy here 15`; a burst into the ground short of it; the look onto its plate by `Rules::ballisticPitch`, fire until it falls (hits counted, DOWN over its bar), it stands again with its hits cleared; pictures (`-AcMmoShotsC2`: c2-wheel, c2-ground, c2-tracers, c2-impact, c2-dummy-down, all from gun 1's feed) |
 
 ## 8. Who owns what
 

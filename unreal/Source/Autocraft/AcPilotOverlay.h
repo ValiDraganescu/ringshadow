@@ -79,6 +79,9 @@ private:
 	void OnFrame(const FAcFrame& Frame);
 	/// C1: the manned gun's feed into `Info` (none off a gun).
 	void GunFeed(const ac::Simulation& S, const class AAcPilotPawn& Pawn, const FAcFrame& Frame, FAcPilotInfo& Info);
+	/// C2: the Target Dummies within 60 cells that are on the screen, their
+	/// hits over their life bars.
+	void DummyTags(const ac::Simulation& S, FAcPilotInfo& Info) const;
 	void Attach(bool bPanel);
 	void Detach();
 

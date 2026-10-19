@@ -38,7 +38,7 @@ DOOR = 150.0       # the doorway's half width
 DOOR_TOP = 300.0
 SINK = 100.0       # walls and floor reach this far below the ground, to hide a slope
 FLOOR = 5.0        # the hall floor's top
-CORNER = 550.0     # the pylons (Defence::cornerInset 5.5)
+CORNER = 620.0     # the guns' mounts on the bartizans (Defence::cornerInset 6.2: the trunnion outside the walls)
 PYLON_TOP = 900.0  # the turrets' mounts (Defence::mountHeight 9.0, citadel_turrets.py TOP)
 STATION = 400.0    # the gunner's point (Defence::gunStation)
 
@@ -172,11 +172,14 @@ for sx in (-1, 1):
         # below the deck: a skin on both outer faces of the corner, 2 cells wide, on the feet, butted against a dark
         # corner edge that stands 2 cm prouder (no two solids share a face: the coplanar check, art/models/citadel/c1/zfight/)
         tw_mid += [ctr(sx, sy, TOWER, H - 30, SKIN, H + 8, 52, DECK), ctr(sx, sy, SKIN, H + 8, TOWER, H - 30, 52, DECK)]
-        tw_dark += [ctr(sx, sy, H - 30, H + 10, H - 30, H + 10, 52, CROWN - 52)]  # the corner edge, up to the hazard band
+        # the corner edge, up to 8.06 (C2: under the barrel tips' reach when a gun lies along its wall at -70 degrees)
+        tw_dark += [ctr(sx, sy, H - 30, H + 10, H - 30, H + 10, 52, 806)]
         # above the deck: the tower's block over the roof, its crown, the mount's pedestal
         tw_mid.append(ctr(sx, sy, TOWER, H, TOWER, H, DECK, CROWN - 40))
-        tw_dark.append(ctr(sx, sy, TOWER - 10, H + 8, TOWER - 10, H + 8, CROWN - 40, CROWN))
-        tw_haz.append(ctr(sx, sy, TOWER - 12, H + 8, TOWER - 12, H + 8, CROWN - 52, CROWN - 40))
+        # (C2: the crown and its hazard band 2 cm proud of the walls' line, 8 cm in from before, so a gun lying along its
+        # wall pitched down clears them)
+        tw_dark.append(ctr(sx, sy, TOWER - 10, H + 2, TOWER - 10, H + 2, CROWN - 40, CROWN))
+        tw_haz.append(ctr(sx, sy, TOWER - 12, H + 2, TOWER - 12, H + 2, CROWN - 52, CROWN - 40))
         # the anchor feet (the old landing pads): a stepped L round each corner, outside the walls (sunk 2 cm into
         # them; a square block filled the hall's corner under the gun station), its two arms butted
         for i0, z0, z1 in ((TOWER - 20, -22, 34), (TOWER, 34, 52)):
@@ -187,11 +190,20 @@ for sx in (-1, 1):
         for a in (450, 490, 530):
             for z0 in (430, 750):
                 out = H + 8 if z0 < DECK else H
-                tw_slit.append(ctr(sx, sy, a - 6, a + 6, out, out + 2, z0, z0 + 70))
-                tw_slit.append(ctr(sx, sy, out, out + 2, a - 6, a + 6, z0, z0 + 70))
-        tw_mark.append(ctr(sx, sy, H - 4, H + 10, H - 4, H + 10, CROWN - 12, CROWN - 2))
-        m.mesh(root, "hullDark", [cyl(56, MOUNT - CROWN - 4, at=(sx * CORNER, sy * CORNER, CROWN), base=True, sides=16)])
-        m.mesh(root, "chrome", [cyl(58, 5, at=(sx * CORNER, sy * CORNER, MOUNT - 5), base=True, sides=16)], solid=False)
+                z1 = z0 + 70 if z0 < DECK else CROWN - 54  # (over the deck: up to just under the hazard band)
+                tw_slit.append(ctr(sx, sy, a - 6, a + 6, out, out + 2, z0, z1))
+                tw_slit.append(ctr(sx, sy, out, out + 2, a - 6, a + 6, z0, z1))
+        # C2, the bartizan: a beam off the crown's corner along the diagonal carrying the gun's mount, a slim post (the
+        # barrels, pitched down to -70 degrees anywhere in the gun's 270 degree arc, sweep the space round it: only the
+        # 90 degrees toward the tower stay free, so the beam and its brace run along the diagonal), braced under;
+        # nothing solid below 8.0 (the cameras' tower slabs)
+        diag = math.degrees(math.atan2(sy, sx))
+        m.mesh(root, "hullDark", [box((52, 12, 30), at=(sx * 598, sy * 598, CROWN - 34), rot=(0, diag, 0), base=True)])
+        m.mesh(root, "hullDark", [cyl(9, MOUNT - 5 - (CROWN - 38), at=(sx * CORNER, sy * CORNER, CROWN - 38), base=True,
+                                      sides=12)])
+        m.mesh(root, "chrome", [cyl(11, 5, at=(sx * CORNER, sy * CORNER, MOUNT - 5), base=True, sides=12)], solid=False)
+        m.mesh(root, "hullMid", [bar((sx * (H - 2), sy * (H - 2), 802), (sx * (CORNER - 6), sy * (CORNER - 6), CROWN - 38), 10)])
+        tw_mark.append(ctr(sx, sy, H - 4, H + 4, H - 4, H + 4, CROWN - 12, CROWN - 2))  # the crown's corner lamp
 m.mesh(root, "hullMid", tw_mid)
 m.mesh(root, "hullDark", tw_dark)
 m.mesh(root, "hazard", tw_haz, solid=False)
@@ -335,6 +347,8 @@ CONSOLE = 97.0      # the console's middle from the gunner's point, along the co
 m.material("gunScreen", parent="emissive", color=(0, 0, 0), emissive=(0.026, 0.026, 0.026),
            emissive_texture="unreal/Resources/Textures/citadel_gun_screen.png")  # the pose lights it 47.5 times
 TILT = 15.0         # the monitor leans back
+# the console's warm lamp over the desk (the corners are out of the hall lamps' reach)
+m.material("consoleLamp", parent="emissive", color=(0.6, 0.45, 0.2), emissive=(10.0, 7.0, 2.6))
 BUTTONS = [("glowRed", -6, -12), ("glowGreen", -6, -22), ("glowYellow", -6, -32), ("glowBlue", 3, -14),
            ("glowRed", 3, -24), ("glowOrange", 3, -34), ("glowGreen", 12, -18), ("glowBlue", 12, -28)]
 for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
@@ -356,11 +370,16 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     # the plinth, its hazard band and lit strips at the front, the armoured body, the desk top and the control deck
     m.mesh(st, "hullDark", [B((84, 104, 10), 0, 0, FLOOR), B((84, 104, 6), 0, 0, FLOOR + 67)])
     m.mesh(st, "hullMid", [B((80, 100, 57), 0, 0, FLOOR + 10), B((40, 92, 10), 20, 0, FLOOR + 73)])
-    m.mesh(st, "hazard", [B((2, 104, 10), 43, 0, FLOOR)], solid=False)
-    m.mesh(st, "floodGlow", [B((2, 26, 3), 45, y, FLOOR + 3.5) for y in (-36, 0, 36)], solid=False)
+    # hazard bands round the plinth (front and flanks, butted at the corners), the lit yellow strip along them
+    m.mesh(st, "hazard", [B((2, 104, 10), 43, 0, FLOOR)] + [B((84, 2, 10), 0, s * 53, FLOOR) for s in (-1, 1)],
+           solid=False)
+    m.mesh(st, "floodGlow", [B((2, 96, 3), 45, 0, FLOOR + 3.5)] + [B((76, 2, 3), 0, s * 55, FLOOR + 3.5) for s in (-1, 1)],
+           solid=False)
     m.mesh(st, "hullDark", [B((2, 70, 40), 41, 0, FLOOR + 17)] +                       # the front's armour plate
-           [B((6, 6, 57), 41, s * 48, FLOOR + 10) for s in (-1, 1)] +                 # its corner rails
            [B((2, 60, 3), 43, 0, FLOOR + 17 + 9 * j) for j in range(1, 4)], solid=False)  # and the plate's ribs
+    # the armoured body's bevelled vertical edges
+    m.mesh(st, "hullDark", [box((10, 10, 57), at=L(ex * 40, ey * 50, FLOOR + 10), rot=(0, yaw + 45, 0), base=True)
+                            for ex in (-1, 1) for ey in (-1, 1)])
     m.mesh(st, "team", [B((2, 30, 6), 41, 0, FLOOR + 61)], solid=False)
     # the joystick on the gunner's left, the buttons on the right
     J = (20.0, 24.0)
@@ -385,6 +404,37 @@ for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
     m.mesh(scr, "gunScreen", [panel((2, 86, 52), at=L(sx_, 0, sz_), rot=(TILT, yaw, 0), base=True)], solid=False)
     m.mesh(st, "hullDark", [bar(L(-24, s * 53, FLOOR + 70), L(-40, s * 56, FLOOR), 5, shape="cyl", sides=8)
                             for s in (-1, 1)], solid=False)
+
+    def MH(ox, oy, oz):
+        """A point in the monitor housing's frame (out of the screen, across, up the leaning face from its bottom
+        edge) in the model frame."""
+        return L(hx + ox * math.cos(t) - oz * math.sin(t), oy, hz + ox * math.sin(t) + oz * math.cos(t))
+
+    def MB(size, ox, oy, oz):
+        return box(size, at=MH(ox, oy, oz), rot=(TILT, yaw, 0), base=True)
+    # the frame round the screen, 2 cm proud of it (its bars butted: the sides between the top and the bottom)
+    m.mesh(st, "hullDark", [MB((4, 96, 5), 7, 0, 1), MB((4, 96, 5), 7, 0, 58)] +
+           [MB((4, 5, 52), 7, s * 45.5, 6) for s in (-1, 1)], solid=False)
+    # the cable loom from the monitor's back down behind the console
+    m.mesh(st, "hullDark", [bar(MH(-5, y, 46), L(-50, y * 1.3, FLOOR + 40), 3.6, shape="cyl", sides=8)
+                            for y in (-20, -10, 10, 20)] +
+           [bar(L(-50, y * 1.3, FLOOR + 40), L(-52, y * 1.3, FLOOR), 3.6, shape="cyl", sides=8) for y in (-20, -10, 10, 20)],
+           solid=False)
+    # the warm lamp over the desk: a hood on an arm from the monitor's top, its lamp under it (the gunner sees the
+    # desk; the corners are out of the hall lamps' reach)
+    m.mesh(st, "hullDark", [bar(MH(0, 0, 63), L(-4, 0, FLOOR + 170), 4, 3), B((24, 40, 3), 8, 0, FLOOR + 167, -15)],
+           solid=False)
+    # (its light, like light_2's, shines when the pose cues it: warm, 2 cells' reach, over the desk)
+    lamp = m.part("consoleLamps_%d" % k, parent=st, at=L(8, 0, FLOOR + 166), handles=["consoleLamp"],
+                  light={"attenuationEnd": "2.0", "color": "SIMD4<Float>(1.0, 0.78, 0.45, 1.0)", "handles": "consoleLamp",
+                         "intensity": "0.0", "type": "omni"},
+                  driver=d("gun station %d's desk lamp: the gunner's warm working light, steady once built" % k,
+                           ("emission", "light")))
+    m.mesh(lamp, "consoleLamp", [B((18, 32, 1), 8, 0, FLOOR + 166, -15)], solid=False)
+    # the lamp's lens on the hood's front edge, 2 cm proud of it, toward the gunner
+    p15 = math.radians(15)
+    m.mesh(lamp, "consoleLamp", [B((2, 34, 2), 8 + 13 * math.cos(p15) + 0.5 * math.sin(p15), 0,
+                                   FLOOR + 167 - 13 * math.sin(p15) + 0.5 * math.cos(p15), -15)], solid=False)
     # the conduit out of the back of the monitor's top (behind the leaning screen), up to the gun over the corner
     m.mesh(st, "hullDark", [cyl(6, CEIL - FLOOR - 150, at=L(-42, 0, FLOOR + 150), base=True, sides=10)], solid=False)
     m.mesh(st, "chrome", [cyl(8, 4, at=L(-42, 0, z), base=True, sides=10) for z in (200, 320, 440, 560)], solid=False)

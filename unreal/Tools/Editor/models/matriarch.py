@@ -22,7 +22,7 @@ from brood_kit import materials, painted, flecks, scatter  # noqa: E402
 
 POSE = "AcPoseBrood.cpp:PoseMatriarch"
 
-m = Model("matriarch", category="unit", notes=[
+m = Model("matriarch", category="unit", coplanar_check=True, notes=[
     "The Brood's giant queen (docs/creatures.md), never leaves her nest. Pose: PoseMatriarch (N3): slow breath (body "
     "and egg sac swell 3%), turning to her target, forelimb slam, spit lunge, the roar (rears 1 cell, crown fans open, "
     "jaw gapes), death (sinks, crown folds, glow dies). No team colour: violet glow fixed.",
@@ -42,7 +42,9 @@ def d(what, channels=("rotation",)):
 body = m.part("body", at=(0, 0, 220), driver=d("body: slow breath, turns to its target, rears up 1 cell on the roar, sinks on death", ("position", "rotation", "scale")))
 TRUNK = [(190, 90, 70), (120, 140, 95), (30, 160, 105), (-60, 150, 100), (-140, 120, 85), (-190, 80, 60)]
 m.mesh(body, "chitin", loft([ring_box(x, w, h, 0, 220, 16, 2.6) for x, w, h in TRUNK]))
-m.mesh(body, "chitinUnder", loft([ring_box(x, w * 0.85, h * 0.5, 0, 220 - h * 0.55, 12, 2.2) for x, w, h in TRUNK]), solid=False)
+# (the belly's end rings 2 cm inside the body's: their caps shared a plane)
+m.mesh(body, "chitinUnder", loft([ring_box(x - (2 if i == 0 else 0) + (2 if i == len(TRUNK) - 1 else 0), w * 0.85, h * 0.5, 0,
+                                           220 - h * 0.55, 12, 2.2) for i, (x, w, h) in enumerate(TRUNK)]), solid=False)
 # the raised torso: segments stacked up and forward, each a little narrower
 TORSO = [(200, 300, 120, 95), (235, 390, 112, 88), (262, 470, 102, 80), (280, 545, 90, 72)]  # x, z, half width, half depth
 for i, (x, z, w, dp) in enumerate(TORSO):
@@ -62,8 +64,8 @@ abdomen = m.part("abdomen", parent=body, at=(-190, 0, 240), driver=d("egg sac: s
 m.mesh(abdomen, EGG, sphere(200, at=(-370, 0, 250), squash=(1.2, 0.95, 0.95), steps=28))
 m.mesh(abdomen, "chitin", [cyl(r, 14, at=(-370 + dx, 0, 250), axis="x") for dx, r in ((-170, 116), (-75, 186), (35, 180), (125, 118))], solid=False)
 # the plated underside the sac rests on (the veins are the egg material's own)
-m.mesh(abdomen, "chitinMid", [box((90, 70, 30), at=(-370 + 110 * math.cos(a), 150 * math.sin(a), 95), rot=(0, math.degrees(a), 0))
-                              for a in [k * 2 * math.pi / 10 for k in range(10)]], solid=False)
+m.mesh(abdomen, "chitinMid", [box((90, 70, 30), at=(-370 + 110 * math.cos(a), 150 * math.sin(a), 95 - 2 * (k % 2)), rot=(0, math.degrees(a), 0))
+                              for k, a in enumerate([k * 2 * math.pi / 10 for k in range(10)])], solid=False)  # (neighbours 2 cm apart)
 
 # --- head, eyes, jaw -----------------------------------------------------------------------------------------------------
 head = m.part("head", parent=body, at=(300, 0, 600), driver=d("head: turns to its target, lunges on the spit, lifts on the roar"))
@@ -75,7 +77,7 @@ jaw = m.part("jaw", parent=head, at=(380, 0, 575), driver=d("jaw: gapes on the r
 m.mesh(jaw, "chitinMid", box((80, 110, 28), at=(410, 0, 560), rot=(0, 12, 0)))
 for s in (-1, 1):
     m.mesh(jaw, "chitin", [bar((420, s * 46, 560), (470, s * 66, 520), 26, 22, taper=0.6), bar((470, s * 66, 520), (500, s * 26, 480), 20, 16, taper=0.15)])
-m.mesh(jaw, DIM, box((30, 70, 12), at=(440, 0, 568)), solid=False)                                   # the glowing throat
+m.mesh(jaw, DIM, box((30, 70, 16), at=(440, 0, 568)), solid=False)  # (2 cm over the jaw's top)                                   # the glowing throat
 
 # --- the crown: a fan of glowing spines behind the head ------------------------------------------------------------
 crown = m.part("crown", parent=head, at=(300, 0, 660), driver=d("crown: breathes with the body's glow; fans open (spreads and scales out) on the roar, folds on death", ("rotation", "scale", "emission")))

@@ -444,12 +444,11 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		return;
 	}
 	case 8:
-		// Held: it fires at the weapon's rate (misses along the aim, or hits).
+		// Held: it fires rounds at the weapon's rate (C2: `Fired`, flying
+		// until they strike something).
 		for (const ac::GameEvent& E : Sim->LastFrame().AllEvents)
 		{
-			const ac::GameEvent::Shot* Sh = E.as<ac::GameEvent::Shot>();
-			const ac::GameEvent::Missed* Mi = E.as<ac::GameEvent::Missed>();
-			if ((Sh && Sh->unit == C->id) || (Mi && Mi->unit == C->id)) Hall.ShotsSeen += 1;
+			if (const ac::GameEvent::Fired* Fi = E.as<ac::GameEvent::Fired>(); Fi && Fi->shooter == C->id) Hall.ShotsSeen += 1;
 		}
 		if (Hall.ShotsSeen >= 3 && Info && Info->Feed && Info->Feed->Heat > 0 && Since() > 1.0)
 		{

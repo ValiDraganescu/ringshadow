@@ -59,20 +59,21 @@ def body(m):
 
 # --- crate: a dropped supply crate on open ground, a blinking beacon, a little scuffed -------------------------------
 def crate():
-    m = Model("site_crate", category="doodad", notes=[
+    m = Model("site_crate", category="doodad", coplanar_check=True, notes=[
         "A supply crate dropped on open ground: skids, hazard bands, a beacon mast. Lid on while shut; opened, the lid "
         "leans on its side and the dark hold shows."])
     materials(m)
     b = body(m)
     W, H = 128, 96
     # skids, then the box on them
-    m.mesh(b, "hullDark", [box((W + 10, 16, 12), at=(0, y, 0), base=True) for y in (-46, 46)])
+    m.mesh(b, "hullDark", [box((W + 14, 16, 12), at=(0, y, 0), base=True) for y in (-46, 46)])  # 2 cm past the posts
     m.mesh(b, "hullMid", box((W, W, H), at=(0, 0, 12), base=True))
     # corner posts and the rim the lid sits on
-    m.mesh(b, "hullDark", [box((14, 14, H + 4), at=(sx * (W / 2 - 4), sy * (W / 2 - 4), 10), base=True)
+    # (the posts 2 cm proud of the rim, the rim's bars butted at the corners: no two faces in one plane)
+    m.mesh(b, "hullDark", [box((18, 18, H + 4), at=(sx * (W / 2 - 4), sy * (W / 2 - 4), 10), base=True)
                            for sx in (-1, 1) for sy in (-1, 1)])
     m.mesh(b, "hullDark", [box((W + 6, 8, 8), at=(0, sy * (W / 2 - 1), 12 + H - 4)) for sy in (-1, 1)] +
-           [box((8, W + 6, 8), at=(sx * (W / 2 - 1), 0, 12 + H - 4)) for sx in (-1, 1)], solid=False)
+           [box((8, W - 10, 8), at=(sx * (W / 2 - 1), 0, 12 + H - 4)) for sx in (-1, 1)], solid=False)
     # hazard bands across the front and the sides, and the stencilled panel
     m.mesh(b, "hazard", [box((W - 20, 1.5, 12), at=(0, W / 2 + 0.6, 12 + 20)), box((1.5, W - 20, 12), at=(W / 2 + 0.6, 0, 12 + 20)),
                          box((1.5, W - 20, 12), at=(-W / 2 - 0.6, 0, 12 + 20))], solid=False)
@@ -82,28 +83,28 @@ def crate():
     m.mesh(b, "soot", [box((40, 1.2, 16), at=(-34, W / 2 + 1.4, 18), rot=(0, 0, 12)), box((1.2, 30, 10), at=(-W / 2 - 1.4, 30, 16)),
                        box((26, 1.2, 8), at=(40, -W / 2 - 1.4, 22), rot=(0, 0, -8))], solid=False)
     # the beacon mast on the back left corner
-    m.mesh(b, "hullDark", [cyl(3, 70, at=(-W / 2 + 4, -W / 2 + 4, 12 + H), base=True), cyl(7, 6, at=(-W / 2 + 4, -W / 2 + 4, 12 + H + 64),
+    m.mesh(b, "hullDark", [cyl(3, 66, at=(-W / 2 + 4, -W / 2 + 4, 12 + H), base=True), cyl(7, 6, at=(-W / 2 + 4, -W / 2 + 4, 12 + H + 64),
                                                                                           base=True)])
     lamp(m, (-W / 2 + 4, -W / 2 + 4, 12 + H + 78), 8)
     # the lid, on
     lid = shut(m, "lid", (0, 0, 12 + H))
     m.mesh(lid, "hullLight", box((W + 8, W + 8, 12), at=(0, 0, 12 + H), base=True))
-    m.mesh(lid, "hullDark", [box((W - 30, 8, 6), at=(0, 0, 12 + H + 12), base=True), box((8, W - 30, 6), at=(0, 0, 12 + H + 12), base=True)],
-           solid=False)
-    m.mesh(lid, "hazard", box((W + 9, W + 9, 3), at=(0, 0, 12 + H + 3)), solid=False)
+    m.mesh(lid, "hullDark", [box((W - 30, 8, 6), at=(0, 0, 12 + H + 12), base=True)] +
+           [box((8, (W - 38) / 2, 6), at=(0, s * ((W - 38) / 4 + 4), 12 + H + 12), base=True) for s in (-1, 1)], solid=False)
+    m.mesh(lid, "hazard", box((W + 12, W + 12, 3), at=(0, 0, 12 + H + 3)), solid=False)  # 2 cm proud of the lid's sides
     # opened: the hold dark, the lid leaning on the right side
     hold = opened(m, "lid", (0, 0, 12 + H))
     m.mesh(hold, "soot", box((W - 16, W - 16, 2), at=(0, 0, 12 + H - 0.4)), solid=False)
     # the lid flung down in front, to the left (-X), propped on a skid
     m.mesh(hold, "hullLight", box((W + 8, W + 8, 12), at=(-W / 2 - 52, W / 2 + 18, 6), rot=(0, 24, 7), base=True))
-    m.mesh(hold, "hazard", box((W + 9, W + 9, 3), at=(-W / 2 - 52, W / 2 + 18, 15), rot=(0, 24, 7), base=True), solid=False)
+    m.mesh(hold, "hazard", box((W + 12, W + 12, 3), at=(-W / 2 - 52, W / 2 + 18, 7.5), rot=(0, 24, 7), base=True), solid=False)
     m.mesh(hold, "hullDark", box((W - 30, 8, 6), at=(-W / 2 - 52, W / 2 + 18, 19), rot=(0, 24, 7), base=True), solid=False)
     return m
 
 
 # --- wreck: a crashed lander half-buried, torn panels, a cold engine --------------------------------------------------
 def wreck():
-    m = Model("site_wreck", category="doodad", notes=[
+    m = Model("site_wreck", category="doodad", coplanar_check=True, notes=[
         "A small lander crashed nose first: hull half in the ground, torn panels, a snapped leg, a cold engine bell, a dirt "
         "berm at the nose. The side hatch is shut, or hanging open with the dark inside showing."])
     materials(m)
@@ -124,13 +125,14 @@ def wreck():
         prism([(0, 0), (46, 0), (30, 28), (6, 22)], 3, plane="xy", at=(-10, -20, 124), rot=(14, 0, 0)),
     ])
     m.mesh(b, "soot", [box((60, 2, 28), at=(70, 64, 40), rot=(0, 0, 8)), box((40, 2, 22), at=(-110, -68, 66)),
-                       box((80, 50, 2), at=(-70, 0, 126.5))], solid=False)
+                       box((44, 50, 2), at=(-88, 0, 126.5)), box((24, 50, 2), at=(-42, 0, 126.5))],
+           solid=False)  # (the spine's soot in two, round the band at x -60: they shared its top)
     m.mesh(b, "hazard", [box((24, 2, 8), at=(-150, s * 66, 84)) for s in (-1, 1)], solid=False)
     # the cockpit glass, cracked dark
     m.mesh(b, "hullDark", box((30, 70, 14), at=(112, 0, 52), rot=(-30, 0, 0)), solid=False)
     # engine block and the cold bell at the tail, a stub fin
     m.mesh(b, "hullDark", [cyl(46, 26, at=(-172, 0, 72), axis="x"), cone(40, 58, 46, at=(-182, 0, 74), axis="x", rot=(0, 180, 0), base=True)])
-    m.mesh(b, "soot", cone(36, 52, 2, at=(-226, 0, 74), axis="x", rot=(0, 180, 0), base=True), solid=False)
+    m.mesh(b, "soot", cone(36, 52, 2, at=(-228, 0, 74), axis="x", rot=(0, 180, 0), base=True), solid=False)  # 2 cm out of the mouth
     m.mesh(b, "hullMid", prism([(0, 0), (60, 0), (40, 54), (14, 54)], 8, plane="xz", at=(-160, 0, 120)))
     # legs: one standing bent, one snapped off beside it
     m.mesh(b, "hullDark", [bar((-110, 70, 40), (-150, 130, -4), 12), bar((-100, -76, 34), (-118, -110, 10), 12),
@@ -146,18 +148,18 @@ def wreck():
     # the side hatch (front, +Y): shut, or hanging open with the dark inside
     hatch = shut(m, "hatch", (-40, 90, 50))
     m.mesh(hatch, "hullLight", box((60, 6, 54), at=(-40, 90, 54)))
-    m.mesh(hatch, "hazard", box((62, 7, 4), at=(-40, 90, 80)), solid=False)
+    m.mesh(hatch, "hazard", box((62, 10, 4), at=(-40, 90, 80)), solid=False)  # 2 cm proud of the hatch
     m.mesh(hatch, "chrome", box((10, 8, 4), at=(-22, 92, 54)), solid=False)
     gap = opened(m, "hatch", (-40, 90, 50))
     m.mesh(gap, "soot", box((54, 4, 48), at=(-40, 89, 54)), solid=False)
     m.mesh(gap, "hullLight", box((60, 54, 6), at=(-40, 118, 26), rot=(0, 0, 0)))
-    m.mesh(gap, "hazard", box((62, 4, 7), at=(-40, 144, 27)), solid=False)
+    m.mesh(gap, "hazard", box((62, 4, 12), at=(-40, 144, 27)), solid=False)
     return m
 
 
 # --- cache: a buried prospector's stash under a tarp and rocks, a faint signal light ----------------------------------
 def cache():
-    m = Model("site_cache", category="doodad", notes=[
+    m = Model("site_cache", category="doodad", coplanar_check=True, notes=[
         "A prospector's stash: a low mound under a weighted tarp, a ring of rocks, a whip antenna with a faint light. "
         "Opened, the tarp is thrown back and the dug-out stash box shows, its lid off."])
     materials(m)
@@ -188,7 +190,7 @@ def cache():
 
 # --- vault: a sealed armoured door set into the rock, ancient and heavy, a lit seam ------------------------------------
 def vault():
-    m = Model("site_vault", category="doodad", notes=[
+    m = Model("site_vault", category="doodad", coplanar_check=True, notes=[
         "An ancient vault: a heavy armoured door in a bevelled frame set into a rock outcrop, a lit gold seam round it "
         "and down its middle, two pylons with lamps. Opened, the two leaves stand slid apart into the frame and the dark "
         "passage shows; the seam and the lamps are out."])
@@ -204,14 +206,15 @@ def vault():
     m.mesh(b, "rock_2", [sphere(90, at=(0, -60, 250), squash=(1.8, 1.1, 0.5), steps=10)])
     # the frame: a deep bevelled portal standing out of the rock
     D = 40   # depth of the frame
-    m.mesh(b, "vaultMetal", [box((300, D, 34), at=(0, 20, 252)), box((300, D, 20), at=(0, 20, 0), base=True),
-                             box((44, D, 260), at=(-128, 20, 0), base=True), box((44, D, 260), at=(128, 20, 0), base=True)])
-    m.mesh(b, "hullDark", [box((24, D + 6, 274), at=(s * 160, 20, 0), base=True) for s in (-1, 1)] +
-           [box((340, D + 6, 18), at=(0, 20, 270))])
+    # (the jambs between the sill and the lintel, the posts under the top bar: butted, no two faces in one plane)
+    m.mesh(b, "vaultMetal", [box((300, D, 34), at=(0, 20, 252)), box((296, D, 20), at=(0, 20, 0), base=True),
+                             box((44, D, 215), at=(-128, 20, 20), base=True), box((44, D, 215), at=(128, 20, 20), base=True)])
+    m.mesh(b, "hullDark", [box((24, D + 6, 261), at=(s * 160, 20, 0), base=True) for s in (-1, 1)] +
+           [box((344, D + 6, 18), at=(0, 20, 270))])
     # rivets on the lintel, a worn glyph band
     m.mesh(b, "chrome", [sphere(4, at=(x, 42, 262), steps=5) for x in range(-130, 131, 26)], solid=False)
     m.mesh(b, "hazard", box((180, 2, 8), at=(0, 41, 238)), solid=False)
-    m.mesh(b, "soot", [box((70, 2, 40), at=(-110, 41.5, 30)), box((40, 2, 70), at=(118, 41.5, 160))], solid=False)
+    m.mesh(b, "soot", [box((70, 2, 40), at=(-110, 41, 30)), box((40, 2, 70), at=(118, 41, 160))], solid=False)
     # two pylons beside the door with their lamps
     for s in (-1, 1):
         m.mesh(b, "vaultMetal", [box((26, 26, 150), at=(s * 196, 40, 0), base=True), box((34, 34, 10), at=(s * 196, 40, 150), base=True)])
@@ -224,18 +227,18 @@ def vault():
     door = shut(m, "door", (0, 20, 136))
     for s in (-1, 1):
         m.mesh(door, "vaultMetal", box((105, 22, 232), at=(s * 53.5, 14, 20), base=True))
-        m.mesh(door, "hullDark", [box((70, 3, 20), at=(s * 53.5, 26, 20 + z), base=True) for z in (40, 106, 172)], solid=False)
-        m.mesh(door, "chrome", [cyl(9, 5, at=(s * 26, 27, z), axis="y") for z in (70, 136, 202)], solid=False)
+        m.mesh(door, "hullDark", [box((70, 4, 20), at=(s * 53.5, 26, 20 + z), base=True) for z in (40, 106, 172)], solid=False)
+        m.mesh(door, "chrome", [cyl(9, 5, at=(s * 26, 27.5, z), axis="y") for z in (70, 136, 202)], solid=False)
     seam = m.part("seam", at=(0, 26, 136), driver=dict(what="the vault's lit seam: steady while shut, out once opened",
                                                          channels=["visibility"], functions=[DRIVER]))
-    m.mesh(seam, "siteSeam", [box((3, 3, 232), at=(0, 26, 20), base=True), box((214, 3, 3), at=(0, 26, 253)),
-                              box((214, 3, 3), at=(0, 26, 19)), box((3, 3, 232), at=(-107, 26, 20), base=True),
-                              box((3, 3, 232), at=(107, 26, 20), base=True)], solid=False)
+    # (the bottom bar on the sill, the sides just inside the jambs' faces, the uprights between the bars)
+    m.mesh(seam, "siteSeam", [box((214, 3, 3), at=(0, 26.5, 253)), box((214, 3, 3), at=(0, 26.5, 20), base=True)] +
+           [box((3, 3, 228.5), at=(x, 26.5, 23), base=True) for x in (-104.5, 0, 104.5)], solid=False)  # (on the leaves' face)
     # opened: the leaves slid sideways into the frame, the passage open
     gone = opened(m, "door", (0, 20, 136))
     for s in (-1, 1):
-        m.mesh(gone, "vaultMetal", box((60, 22, 232), at=(s * 122, 32, 20), base=True))
-        m.mesh(gone, "hullDark", [box((40, 3, 20), at=(s * 122, 44, 20 + z), base=True) for z in (40, 106, 172)], solid=False)
+        m.mesh(gone, "vaultMetal", box((60, 22, 230), at=(s * 122, 30, 22), base=True))  # 2 cm behind the posts, over the sill
+        m.mesh(gone, "hullDark", [box((40, 4, 20), at=(s * 122, 43, 20 + z), base=True) for z in (40, 106, 172)], solid=False)
     return m
 
 

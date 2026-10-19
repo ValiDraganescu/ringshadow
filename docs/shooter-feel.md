@@ -338,7 +338,24 @@ the circle: art/perf/tps-feel/tps-rock.jpg.
 The hall's gun consoles block the walk and the cameras too
 (`Footprint::furniture`, docs/citadel-interior.md section 2).
 
+**Look around.** The user: holding the right button should turn the camera
+the way it does in the top-down view, "just like a look around", without
+moving the crosshair. In third person, with the mouse taken and not at a
+gun, the right button held swings the chase camera round the unit by the
+mouse (`FAcPilotChase::FOrbit`): across at the look's gain, up and down at
+half of it, held to ±20° and to the unit's pitch limits. Nothing else moves:
+the pawn still follows the aim's view (the camera's yaw and pitch from before
+the drag, `PilotYaw` and `Cam.Pitch`), casts the crosshair's ray from it,
+faces the unit by it and turns W into its frame. The swung view is a second
+`FAcPilotChase::Follow` at the swung yaw and pitch, and it is the one shown.
+The crosshair is drawn where the aim's point falls in it (`ScreenOffset`, as
+the gun marker), and hidden when that point is off the view; the prompt and
+the work ring stay in the middle. Let go, the swing eases back to none over
+0.25 s (a smoothstep, the short way round). Before this the right button did
+nothing while driving: the pilot's context binds no right button.
+
 Tests: `Autocraft.Pilot.ChaseZoomClamps`, `Autocraft.Pilot.WalkFollowsTheCamera`,
+`Autocraft.Pilot.LookAroundKeepsTheAim`,
 `Autocraft.Pilot.ChaseStopsAtWalls` (the console); core `pilot_slidesAlongARock`,
 `pilot_roundsACorner`, `pilot_standsAtEveryStationButNotInTheConsole`,
 `pilot_handedBackBesideARockStepsOntoTheGrid`.

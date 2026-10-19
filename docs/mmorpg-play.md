@@ -35,18 +35,24 @@ Driving the Prospector (mouse captured):
 | E (or click, Space) at a gun station in the hall | Take that corner gun ("E · TAKE GUN 1 SE"): you see from the gun, the mouse aims it within its arc |
 | Click (or E, Space) at a gun | Fire; hold to fire at the gun's rate |
 | Esc or F at a gun | Leave the gun (you stay in the Prospector) |
-| R + hold click | Repair (a Derrick too) |
+| R + hold click | Repair (a Derrick too). It costs materials from your wallet: half a building's bar costs a quarter of its build price, and the line shows the price ("13 ore / 100 HP"). With no ore (or MH) left it says "No ore to repair" and stops |
 | V | First or third person (not at a gun: there you always see from the gun) |
+| Hold right button + mouse | Third person: look round the unit; the crosshair stays where you aim and W still walks that way. Let go and the camera swings back behind the unit |
 | Wheel | Third person: zoom the camera in (up) or out (down), out to a view over a building site; kept for the next ride |
 | B | The build wheel: a ring of the buildings round the middle of the view, the pointer hidden. Move the mouse toward one (its name, price and what it needs light up) and click to hold it out; or hold B, aim, and let go. Esc or B closes it. |
 | B, then a number, then click | Hold a building out by its number on the wheel (1 Citadel, 2 Landing Pad, 3 Derrick), then put it down. Esc cancels. |
+| B, a gold LEARN slice, click | Learn a blueprint you hold (once: from then on that building costs only its ore). The wheel stays open on it; "DERRICK LEARNED" comes up. |
+| B, TARGET DUMMY, click | A practice target: 10 ore, no blueprint. Shoot it (a Citadel's corner gun is good): it counts its hits ("HITS 37"), falls at 0 and stands again 3 s later. |
 | Z or X | Pick a level-up card |
 | Hold Option | Free the pointer to click a card |
 | M | World map (open or close) |
 | Esc or F | Leave the Prospector for the top-down view (Esc closes the build menu first) |
 
 In the top-down view, click your Prospector to drive it again. Esc there opens
-the pause menu (RESUME, SETTINGS, QUIT TO HOME).
+the pause menu (RESUME, SETTINGS, QUIT TO HOME). With nothing selected, hold
+the right button and move the mouse left or right to turn the camera round
+the ground at the middle of the view (the pointer hides while you turn and
+comes back where it was); 0 shows the whole map, unturned.
 
 The world map is the world seen from above: every region you have been to
 as a satellite picture of its real ground, side by side as they lie, the
@@ -210,8 +216,8 @@ takes the pictures.
 ## The Citadels
 
 Since R3 (2026-10-15) every region may have one Citadel, built like the
-first (B, 1, click) from a Citadel blueprint, sold at any Citadel's shop
-(dearer each copy). A second in the same region is refused: "This region has
+first (B, 1, click) once you have learned the Citadel from its blueprint
+(sold once at any Citadel's shop, learned on the build wheel). A second in the same region is refused: "This region has
 its Citadel: one a region". Every Citadel is a full home:
 
 - unload there: the wallet gets the load, the realm the tax;

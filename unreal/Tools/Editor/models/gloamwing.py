@@ -20,7 +20,7 @@ from brood_kit import materials, painted, flecks, scatter  # noqa: E402
 
 POSE = "AcPoseBrood.cpp:PoseGloamwing"
 
-m = Model("gloamwing", category="unit", notes=[
+m = Model("gloamwing", category="unit", coplanar_check=True, notes=[
     "The Brood's flyer, person-sized (docs/creatures.md). Pose: PoseGloamwing (N2): thorax lifted to its hover height "
     "and bobbing, wings flapping (two pairs out of phase), abdomen swaying, nose-down on the move, the dive and spit, "
     "falling on death. No team colour: violet glow fixed.",
@@ -63,7 +63,7 @@ m.mesh(abdomen, "chitin", sphere(7, at=(-50, 0, Z - 58), steps=8))              
 # --- four wings: long blades, translucent violet, glowing veins ----------------------------------------------------
 WINGS = [(-1, 6, 92, 22, 14), (-1, -8, 76, 18, -8), (1, 6, 92, 22, 14), (1, -8, 76, 18, -8)]  # side, x, length, chord, sweep
 for i, (s, x, ln, ch, sweep) in enumerate(WINGS):
-    root = (x, s * 9, Z + 16)
+    root = (x, s * 9, Z + 16 if x > 0 else Z + 13.5)  # (the hind wing 2.5 cm lower: a pair lay in one plane)
     w = m.part("wing_%d" % i, parent=thorax, at=root, driver=d("wing: flaps fast (about 18 Hz), the pairs out of phase; folds a little in the dive"))
     blade = [(0, 0), (ch * 0.5, s * ln * 0.25), (ch * 0.35 - sweep * 0.5, s * ln * 0.8), (-sweep, s * ln), (-ch * 0.6 - sweep, s * ln * 0.75), (-ch * 0.55, s * ln * 0.2)]
     m.mesh(w, "gloamWing", prism([(px, py) for px, py in blade], 1.2, plane="xy", at=root, rot=(0, 0, -s * 18)), solid=False)

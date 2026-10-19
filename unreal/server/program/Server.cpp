@@ -211,7 +211,7 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devCitadel(line));
             continue;
         }
-        // Practice (WorldMap::devDummy, C2): `dummy here`.
+        // Practice (WorldMap::devDummy, C2): `dummy here [CELLS]`.
         if (line.rfind("dummy", 0) == 0) {
             said.push_back(world_.devDummy(line));
             continue;

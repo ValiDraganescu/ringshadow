@@ -341,9 +341,13 @@ namespace
 
 	// MARK: Gatling gun (D2, docs/mmorpg-m8.md; Tools/Editor/models/gatling.py)
 
+	/// C2: the barrels spin with the gun's own spin-up (`Structure::spin`),
+	/// the tips and the hopper glow with its heat, the muzzle flash every
+	/// other frame while it fires; the cradle pitches the barrels by the
+	/// gun's ballistic solve (`Structure::pitch`).
 	struct FGatlingState : FAcPoseState
 	{
-		double Spin = 0, Angle = 0, Heat = 0;
+		double Angle = 0, LastSpin = 0;
 	};
 
 	void PoseGatling(const FAcPoseContext& C, FAcPose& P)
@@ -352,28 +356,28 @@ namespace
 		const FAcModelInfo& M = C.Model;
 		const bool bLive = CommonPose(C, P, Welding(C));
 		const double Ph = Phase(C);
-		static const FPart Head(TEXT("head")), Barrels(TEXT("barrels")), Tips(TEXT("tips")), Hopper(TEXT("hopper"));
+		static const FPart Head(TEXT("head")), Cradle(TEXT("cradle")), Barrels(TEXT("barrels")), Tips(TEXT("tips")), Hopper(TEXT("hopper"));
 		static const FParts Flashes(TEXT("flashes"), 1);
-		const double Last = C.Memory.LastShot.Get(-10.0);
-		const double Since = C.Time - Last;
-		const bool bFiring = bLive && Since < 0.4;
 		FGatlingState& Mem = C.Memory.State<FGatlingState>();
-		// The barrels spin up while it fires and run down after; the
-		// amalgam's heat builds in the tips and the hopper and cools slowly.
-		Mem.Spin = Ease(Mem.Spin, bFiring ? 28.0 : 0.0, bFiring ? 1.5 : 0.35, C.Dt);
-		Mem.Angle = std::fmod(Mem.Angle + Mem.Spin * C.Dt, 2 * UE_DOUBLE_PI);
-		Mem.Heat = Ease(Mem.Heat, bFiring ? 1.0 : 0.0, bFiring ? 0.05 : 0.006, C.Dt);
+		const double Spin = bLive ? FMath::Clamp(S.spin, 0.0, 1.0) : 0.0;
+		const double Heat = bLive ? FMath::Clamp(S.heat, 0.0, 1.0) : 0.0;
+		const bool bFiring = MinigunFiring(Spin, Mem.LastSpin, S.overheated);
+		Mem.LastSpin = Spin;
+		Mem.Angle = std::fmod(Mem.Angle + MinigunSpin * Spin * C.Dt, 2 * UE_DOUBLE_PI);
 		GlowGroup(M, P, WorkGlow, !bLive ? 0.05 : bFiring || S.target ? Glow(Ph, 0) : 1.2, 2.0);
 		if (bLive)
 		{
 			// The head follows its target (`aim`, world radians), sweeping slowly with none.
 			const double Aim = S.target ? S.aim.value_or(UE_DOUBLE_HALF_PI) : UE_DOUBLE_HALF_PI + 0.7 * std::sin(Ph * 0.3);
 			SetEuler(M, P, Head.Get(M), 0, -Aim, 0);
+			// C2: the barrels pitched by the gun's ballistic solve, about the
+			// cradle's trunnion (as the corner guns' `turretCradles_k`).
+			SetEuler(M, P, Cradle.Get(M), 0, 0, S.pitch);
 		}
 		SetEuler(M, P, Barrels.Get(M), Mem.Angle, 0, 0);
-		if (const int32 T = Tips.Get(M); T != INDEX_NONE) P.Emission[T] = float(bLive ? 0.15 + 1.6 * Mem.Heat : 0.05);
-		if (const int32 H = Hopper.Get(M); H != INDEX_NONE) P.Emission[H] = float(bLive ? 0.55 + 0.9 * Mem.Heat : 0.08);
-		if (const int32 F = Flashes(M, 0); F != INDEX_NONE) P.Visible[F] = bLive && Since >= 0.0 && Since < 0.05;
+		if (const int32 T = Tips.Get(M); T != INDEX_NONE) P.Emission[T] = float(bLive ? 0.15 + 1.6 * Heat : 0.05);
+		if (const int32 H = Hopper.Get(M); H != INDEX_NONE) P.Emission[H] = float(bLive ? 0.55 + 0.9 * Heat : 0.08);
+		if (const int32 F = Flashes(M, 0); F != INDEX_NONE) P.Visible[F] = bFiring && int64(C.Time * 60.0) % 2 != 0;
 		PoseMarks(C, P, bLive);
 	}
 
@@ -396,6 +400,55 @@ namespace
 		}
 	}
 
+	// MARK: Target Dummy (C2, docs/guns-and-practice.md §3; Tools/Editor/models/dummy.py)
+
+	/// The plate falls back on its hinge (about its local X, its top going
+	/// back) when the dummy goes down at 0 hp and swings up again when it
+	/// stands (`Structure::downUntil`); each round that strikes it lights
+	/// the next ring from the inside out, fading over half a second; the
+	/// beacon blinks, red and quick while it is down.
+	struct FDummyState : FAcPoseState
+	{
+		double Down = 0;
+		int64 Hits = 0;
+		int32 Ring = 0;
+		double RingAt[3] = {-10, -10, -10};
+	};
+
+	void PoseDummy(const FAcPoseContext& C, FAcPose& P)
+	{
+		const ac::Structure& S = *C.Structure;
+		const FAcModelInfo& M = C.Model;
+		const bool bLive = CommonPose(C, P, Welding(C));
+		static const FPart Plate(TEXT("plate")), Beacon(TEXT("beacon"));
+		static const FParts Rings(TEXT("rings"), 3);
+		FDummyState& Mem = C.Memory.State<FDummyState>();
+		const bool bDown = bLive && S.downUntil.has_value();
+		// It falls fast and stands slower.
+		Mem.Down = Ease(Mem.Down, bDown ? 1.0 : 0.0, bDown ? 0.12 : 0.03, C.Dt);
+		SetEuler(M, P, Plate.Get(M), Mem.Down * UE_DOUBLE_HALF_PI, 0, 0);
+		if (S.hits > Mem.Hits)
+		{
+			for (int64 K = Mem.Hits; K < S.hits && K < Mem.Hits + 3; ++K)
+			{
+				Mem.RingAt[Mem.Ring] = C.Time;
+				Mem.Ring = (Mem.Ring + 1) % 3;
+			}
+		}
+		Mem.Hits = S.hits;
+		for (int32 K = 0; K < 3; ++K)
+		{
+			const double Age = C.Time - Mem.RingAt[K];
+			const double Flash = Age >= 0 && Age < 0.5 ? 1.0 - Age / 0.5 : 0.0;
+			if (const int32 R = Rings(M, K); R != INDEX_NONE) P.Emission[R] = float(!bLive ? 0.02 : 0.25 + 3.0 * Flash);
+		}
+		if (const int32 B = Beacon.Get(M); B != INDEX_NONE)
+		{
+			P.Visible[B] = bDown ? std::fmod(C.Time, 0.4) < 0.2 : AcBuildingPose::Beacon(C.Time, bLive);
+		}
+	}
+
+	FAcPoseRegistration RegDummy(ac::StructureKind::dummy, &PoseDummy);
 	FAcPoseRegistration RegLandingPad(ac::StructureKind::landingPad, &PoseLandingPad);
 	FAcPoseRegistration RegGatling(ac::StructureKind::gatling, &PoseGatling);
 	FAcPoseRegistration RegFoundry(ac::StructureKind::foundry, &PoseFoundry);

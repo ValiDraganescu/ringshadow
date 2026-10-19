@@ -20,7 +20,7 @@ from brood_kit import materials, painted, flecks, scatter  # noqa: E402
 
 POSE = "AcPoseBrood.cpp:PoseShardling"
 
-m = Model("shardling", category="unit", notes=[
+m = Model("shardling", category="unit", coplanar_check=True, notes=[
     "The Brood's ground swarmer, dog-sized (docs/creatures.md). Pose: PoseShardling (N2): tripod gait, body bob, "
     "lunge and mandible snap on each attack, flinch, death roll. No team colour: teal glow fixed.",
     "Parts: body, head, mandible_0/1, leg_0..5."])
@@ -40,11 +40,13 @@ Z = 36.0  # the body axis
 body = m.part("body", at=(0, 0, Z), driver=d("body: bob of the gait, lunge forward on a bite, roll on death", ("position", "rotation")))
 SEG = [(40, 17, 11), (24, 22, 14), (6, 25, 16), (-14, 24, 15), (-32, 20, 13), (-48, 13, 9), (-58, 6, 5)]  # x, half width, half height
 m.mesh(body, "chitin", loft([ring_box(x, w, h, 0, Z + 2, 14, 2.6) for x, w, h in SEG]))
-m.mesh(body, "chitinUnder", loft([ring_box(x, w * 0.8, h * 0.55, 0, Z - h * 0.45, 12, 2.4) for x, w, h in SEG[:-1]]), solid=False)
+# (the belly's front ring 2 cm behind the body's: their front caps shared a plane)
+m.mesh(body, "chitinUnder", loft([ring_box(x - (2 if i == 0 else 0), w * 0.8, h * 0.55, 0, Z - h * 0.45, 12, 2.4)
+                                  for i, (x, w, h) in enumerate(SEG[:-1])]), solid=False)
 # plate ridges: a lip at the back of each segment, a glow seam under it on the flanks
 for x, w, h in SEG[1:-1]:
     m.mesh(body, "chitinMid", box((4, w * 2.05, h * 1.1), at=(x + 6, 0, Z + 4)), solid=False)
-    m.mesh(body, DIM, [box((6, 2, 3), at=(x + 2, s * (w - 0.5), Z - 2)) for s in (-1, 1)], solid=False)
+    m.mesh(body, DIM, [box((6, 2, 3), at=(x - 1, s * (w - 0.5), Z - 2)) for s in (-1, 1)], solid=False)  # (clear of the lip)
 m.mesh(body, GLOW, [box((70, 3, 2.5), at=(-6, s * 17, Z - 9)) for s in (-1, 1)], solid=False)   # the teal fringe along the belly
 # the quills: a ridge of opal crystal shards, two rows, leaning back, glowing teal at their roots
 QUILLS = [(30, 0, 22, 8), (18, -9, 26, 9), (16, 9, 24, 9), (4, 0, 34, 11), (-6, -11, 28, 9), (-8, 11, 30, 10),

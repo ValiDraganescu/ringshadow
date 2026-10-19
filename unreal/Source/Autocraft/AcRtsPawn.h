@@ -15,6 +15,12 @@
 //   IA_ZoomStep  + and -: ×1.25 about the centre
 //   IA_Fit       0: the whole map
 //   IA_GoToBase  ⌘1…⌘8: centre on that player's start base (value = player+1)
+// The right button held over the view with nothing selected turns the
+// camera about its focus (`ac::FreeView::orbit`) by the mouse's motion
+// across, at the pilot's look gain, the pointer hidden and pinned until it
+// is let go (polled in `Tick`: no action, so `IMC_Rts` is unchanged). With a
+// building selected, or the playground's palette held, the right button is
+// left alone. 0 (`Fit`) turns the camera back.
 // The trackpad bypasses Enhanced Input (it has no keys for these): a Slate
 // input pre-processor takes the scroll gesture (two fingers pan; with ⌘ or
 // ctrl they zoom, `exp(dy·0.01)`) and the pinch (`1 + magnification`), as
@@ -101,6 +107,11 @@ public:
 	/// True while the left button is down and has moved far enough to be a
 	/// drag (a click handler should then not take the release as a click).
 	bool IsDragging() const { return bDragged; }
+	/// True while the right button turns the camera.
+	bool IsOrbiting() const { return bOrbiting; }
+	/// The turn (radians) for a frame's mouse motion (raw counts, x right)
+	/// over `Dt` seconds: the pilot's look, across only.
+	static double OrbitTurn(FVector2D Raw, float Dt);
 
 	/// The cursor in view points (y down), or false when it is off the view.
 	bool CursorPoint(FVector2D& Out) const;
@@ -178,6 +189,15 @@ private:
 	bool bCamPathRead = false;
 	void ReadCamPath();
 	void FollowCamPath();
+
+	/// The right-drag turn: start it (right button down over the open
+	/// view, nothing selected), follow the mouse, end it on release.
+	void UpdateOrbit(float DeltaSeconds);
+	bool CanOrbit() const;
+	void EndOrbit();
+	bool bOrbiting = false;
+	/// Where the pointer was when the turn began (Slate screen points).
+	FVector2D OrbitCursor = FVector2D::ZeroVector;
 
 	FVector2D PanInput = FVector2D::ZeroVector;
 	bool bPressed = false;

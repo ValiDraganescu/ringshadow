@@ -913,11 +913,24 @@ bool Simulation::prospectorBusy(Unit& u, const Pilot& p, double dt, std::vector<
         }
         const Structure s = state.structures[*i];
         turn(u, s.position, dt);
+        // It costs materials (`payRepair`): with nothing in the bank for
+        // the next unit, the repair stops.
+        if (repairRefusal(u, s)) {
+            u.task = Unit::Task::idle;
+            u.structure = std::nullopt;
+            return false;
+        }
         // A full repair takes as long as building it; the driven
         // Prospector mends `Rules.heroWork` times as fast (or as its picks say).
         const double full = fullHP(s);
         state.structures[*i].hp = min(full, s.hp + full / Rules::buildTime(s.kind) * rate(Stat::Repair{}, u) * dt);
         const double mended = state.structures[*i].hp - s.hp;
+        if (!payRepair(u, *i, mended, full, events)) {
+            state.structures[*i].hp = s.hp;
+            u.task = Unit::Task::idle;
+            u.structure = std::nullopt;
+            return false;
+        }
         earn(Leveling::worth(s.kind) * mended / full * Leveling::mendXP, u);
         tally(u, [&](Tally& t) { t.repaired += mended; });
         return true;

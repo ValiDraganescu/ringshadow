@@ -37,7 +37,7 @@ def arc(n, rx, rz, a0=8.0, a1=172.0):
 
 # --- the Brood's tunnel: a black hollow in the canyon wall, framed by rock and chitin, a faint glow at its throat ------
 def tunnel():
-    m = Model("doodad_broodTunnel", category="doodad", notes=[
+    m = Model("doodad_broodTunnel", category="doodad", coplanar_check=True, notes=[
         "A Brood tunnel's mouth at the foot of a canyon wall (Z1): a hollow 5 cells across and 3.6 high going black "
         "into the rock, its frame of dark boulders crusted with chitin plates and resin, opal flecks in the crust, a "
         "faint violet glow in its throat and in the seams round its rim, the rubble the bugs dug out spilled in front. "
@@ -89,7 +89,7 @@ def tunnel():
 
 # --- the build spot: a survey marker where a turret goes ---------------------------------------------------------------
 def build_spot():
-    m = Model("doodad_buildSpot", category="doodad", notes=[
+    m = Model("doodad_buildSpot", category="doodad", coplanar_check=True, notes=[
         "A build spot on a canyon's rim (Z1): a turret's 2 by 2 cells of levelled gravel in a painted amber ring, four "
         "survey stakes at its corners with lit amber caps, so pilots see where a turret overlooks the Brood's paths, "
         "from the rim, from the canyon floor and on the map."])
@@ -101,7 +101,8 @@ def build_spot():
     ring = []
     for k in range(24):
         a = 2 * math.pi * k / 24
-        ring.append(box((30, 14, 4), at=(math.cos(a) * 112, math.sin(a) * 112, 6), rot=(0, math.degrees(a) + 90, 0), base=True))
+        # (26 long on a 29.3 cm pitch: longer segments overlapped and shared their tops)
+        ring.append(box((26, 14, 4), at=(math.cos(a) * 112, math.sin(a) * 112, 6), rot=(0, math.degrees(a) + 90, 0), base=True))
     ticks = [box((44, 10, 4), at=(x, y, 6), rot=(0, r, 0), base=True)
              for x, y, r in ((80, 0, 0), (-80, 0, 0), (0, 80, 90), (0, -80, 90))]
     stakes, caps = [], []

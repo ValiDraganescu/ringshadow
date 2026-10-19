@@ -704,6 +704,8 @@ template <class IO> void fields(IO& io, Structure& v) {
     io("target", v.target);
     io("cooldown", v.cooldown);
     io("aim", v.aim);
+    io.orZero("repairOwedOre", v.repairOwed.ore);
+    io.orZero("repairOwedHydrogen", v.repairOwed.hydrogen);
 }
 
 template <class IO> void fields(IO& io, BuildOrder& v) {

@@ -464,10 +464,21 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 			Info.Prompt = FString(TEXT("Click  carry on building"));
 			Info.Tone = EAcTone::Ready;
 		}
-		else if (Target->is<ac::PilotTarget::Repair>())
+		else if (const ac::PilotTarget::Repair* R = Target->as<ac::PilotTarget::Repair>())
 		{
-			Info.Prompt = FString(TEXT("Hold click  repair"));
-			Info.Tone = EAcTone::Ready;
+			// It costs materials: the price, or why it can't go on.
+			const std::optional<ac::Structure> B = Sim.state.structure(R->_0);
+			if (const std::optional<std::string> Why = B ? Sim.repairRefusal(U, *B) : std::nullopt)
+			{
+				Info.Prompt = FString(UTF8_TO_TCHAR(Why->c_str()));
+				Info.Tone = EAcTone::Blocked;
+			}
+			else
+			{
+				const TOptional<FString> Price = AcPilotText::RepairPrice(Sim, U, R->_0);
+				Info.Prompt = Price ? FString::Printf(TEXT("Hold click  repair   ·   %s"), **Price) : FString(TEXT("Hold click  repair"));
+				Info.Tone = EAcTone::Ready;
+			}
 		}
 		else if (const ac::PilotTarget::Derrick* D = Target->as<ac::PilotTarget::Derrick>())
 		{
@@ -484,7 +495,13 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		if (Target && (Target->is<ac::PilotTarget::Derrick>() || Target->is<ac::PilotTarget::Patch>() || Target->is<ac::PilotTarget::Full>())
 			&& Sim.pilotRepair(U) && Info.Prompt)
 		{
-			Info.Prompt = *Info.Prompt + TEXT("   ·   R + hold click  repair");
+			const ac::PilotTarget Mend = *Sim.pilotRepair(U);
+			const ac::PilotTarget::Repair* R = Mend.as<ac::PilotTarget::Repair>();
+			const std::optional<ac::Structure> B = R ? Sim.state.structure(R->_0) : std::nullopt;
+			const std::optional<std::string> Why = B ? Sim.repairRefusal(U, *B) : std::nullopt;
+			const TOptional<FString> Price = R ? AcPilotText::RepairPrice(Sim, U, R->_0) : TOptional<FString>();
+			Info.Prompt = *Info.Prompt + (Why ? FString::Printf(TEXT("   ·   R: %s"), UTF8_TO_TCHAR(Why->c_str()))
+				: Price ? FString::Printf(TEXT("   ·   R + hold click  repair (%s)"), **Price) : FString(TEXT("   ·   R + hold click  repair")));
 		}
 	}
 	// Walked into a cliff with too little MH for the jet pack (F1b): why,
@@ -629,22 +646,57 @@ FAcTurretFeed AcPilotText::Feed(const ac::Structure& Citadel, const int32 Gun, c
 	const std::optional<ac::UnitStats> W = ac::Defence::weapon(Citadel);
 	const double Cooldown = FMath::Max(W ? W->cooldown : ac::UnitStats::citadelGuns.cooldown, 1e-3);
 	double Last = -1e9;
-	int32 Recent = 0;
 	for (const double T : Shots)
-	{
-		if (T > Now) continue;
-		Last = FMath::Max(Last, T);
-		if (Now - T <= FAcTurretFeed::HeatSeconds) ++Recent;
-	}
-	const double FlatOut = FMath::Max(1.0, FAcTurretFeed::HeatSeconds / Cooldown);
-	Out.Heat = FMath::Clamp(FMath::CeilToInt32(FAcTurretFeed::HeatPips * double(Recent) / FlatOut), 0, FAcTurretFeed::HeatPips);
+		if (T <= Now) Last = FMath::Max(Last, T);
 	Out.Ready = FMath::Clamp((Now - Last) / Cooldown, 0.0, 1.0);
-	if (Citadel.marks)
+	// C2: the gun's own heat, overheat and spin.
+	if (Citadel.guns)
 	{
-		Out.Marks = FString::Printf(TEXT("RATE %lld · DAMAGE %lld · RANGE %lld"), (long long)Citadel.marks->rate,
-			(long long)Citadel.marks->damage, (long long)Citadel.marks->range);
+		const ac::CornerGun& G = (*Citadel.guns)[Out.Gun];
+		Out.HeatLevel = FMath::Clamp(G.heat, 0.0, 1.0);
+		Out.bOverheat = G.overheated;
+		Out.Spin = FMath::Clamp(G.spin, 0.0, 1.0);
 	}
+	Out.Heat = Out.bOverheat ? FAcTurretFeed::HeatPips
+		: FMath::Clamp(FMath::CeilToInt32(FAcTurretFeed::HeatPips * Out.HeatLevel - 1e-9), 0, FAcTurretFeed::HeatPips);
+	const double Damage = W ? W->damage : ac::UnitStats::citadelGuns.damage;
+	Out.Marks = FString::Printf(TEXT("%lld/s · %.1f · V0 %lld"), (long long)FMath::RoundToDouble(1.0 / Cooldown), Damage,
+		(long long)FMath::RoundToDouble(ac::Rules::roundSpeed));
 	return Out;
+}
+
+TOptional<ac::Vec3> AcPilotText::BallisticImpact(const ac::Simulation& Sim, const ac::Vec3 Muzzle, const ac::Vec3 Velocity, const int64 Skip)
+{
+	// The first thing at `P`: the ground under it, or a standing building's
+	// box (its footprint's radius, its height).
+	auto Inside = [&](const ac::Vec3 P, const double T)
+	{
+		if (P.z < Sim.groundZ(ac::Vec2(P.x, P.y))) return true;
+		for (const ac::Structure& B : Sim.state.structures)
+		{
+			if (!(B.hp > 0) || B.downUntil || (B.id == Skip && T < ac::Rules::roundSelfGrace)) continue;
+			const double R = ac::Rules::radius(B.kind), G = Sim.groundZ(B.position);
+			if (std::abs(P.x - B.position.x) <= R && std::abs(P.y - B.position.y) <= R && P.z >= G
+				&& P.z <= G + ac::Rules::height(B.kind) * FMath::Max(0.1, B.progress()))
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	constexpr double Dt = 1.0 / 240.0;
+	for (double T = Dt; T <= ac::Rules::roundLife; T += Dt)
+	{
+		if (!Inside(ac::Rules::roundAt(Muzzle, Velocity, T), T)) continue;
+		double Lo = T - Dt, Hi = T;
+		for (int32 K = 0; K < 10; ++K)
+		{
+			const double M = (Lo + Hi) / 2;
+			(Inside(ac::Rules::roundAt(Muzzle, Velocity, M), M) ? Hi : Lo) = M;
+		}
+		return ac::Rules::roundAt(Muzzle, Velocity, Hi);
+	}
+	return {};
 }
 
 FString AcPilotText::Status(const FAcPilotFrame& F)
@@ -827,4 +879,18 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 			TEXT("Open the buildings")),
 	};
 	return Info;
+}
+
+TOptional<FString> AcPilotText::RepairPrice(const ac::Simulation& Sim, const ac::Unit& U, const int64 Id)
+{
+	const std::optional<ac::Structure> B = Sim.state.structure(Id);
+	if (!B) return {};
+	const auto [Ore, Hydrogen] = ac::Simulation::repairCost(B->kind, 100, Sim.skilled(U), Sim.fullHP(*B));
+	// Whole units from 10 up, a tenth under (the debt is paid in whole units).
+	auto Amount = [](const double V) { return V >= 10 ? FString::Printf(TEXT("%.0f"), V) : FormatG(FMath::RoundToDouble(V * 10) / 10); };
+	TArray<FString> Parts;
+	if (Ore > 0) Parts.Add(Amount(Ore) + TEXT(" ore"));
+	if (Hydrogen > 0) Parts.Add(Amount(Hydrogen) + TEXT(" MH"));
+	if (Parts.IsEmpty()) return {};
+	return FString::Join(Parts, TEXT(" ")) + TEXT(" / 100 HP");
 }

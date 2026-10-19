@@ -63,13 +63,14 @@ TEST(footprint_citadelHallIsHollow) {
         EXPECT_EQ(f.roof->z0, 6.0);
         EXPECT_EQ(f.roof->z1, 7.0);
         EXPECT_EQ(f.door->z1, 3.0);
-        EXPECT_EQ(Defence::cornerGun({0, 0}, 0), Vec2(5.5, 5.5));
+        // C2: the mounts on brackets over the corners, 0.2 outside the walls.
+        EXPECT_EQ(Defence::cornerGun({0, 0}, 0), Vec2(6.2, 6.2));
         EXPECT_EQ(Defence::gunStation({10, 10}, 2), Vec2(6, 6));
         // The gun's eye rides the cradle: level, it stands 0.256 back along
         // the aim and 0.946 over the mount's top.
         const Vec3 eye = Defence::gunEye({0, 0}, 0, 0);
-        EXPECT_NEAR(eye.x, 5.5 - 0.256, 1e-12);
-        EXPECT_NEAR(eye.y, 5.5, 1e-12);
+        EXPECT_NEAR(eye.x, 6.2 - 0.256, 1e-12);
+        EXPECT_NEAR(eye.y, 6.2, 1e-12);
         EXPECT_NEAR(eye.z, Defence::mountHeight() + 0.946, 1e-12);
         EXPECT_EQ(Defence::mountHeight(), 9.0);
         EXPECT_EQ(Rules::height(StructureKind::citadel), 12.3);
@@ -293,6 +294,13 @@ TEST(gun_aimClampedToTheArcAndPitch) {
     g = (*structureOf(h.sim, h.citadel).guns)[0];
     EXPECT_NEAR(g.aim, std::remainder(rest - Defence::gunArcHalf, 2 * pi), 1e-9);
     EXPECT_EQ(g.pitch, Defence::gunPitchMin);
+    EXPECT_NEAR(Defence::gunPitchMin, -70.0 * pi / 180.0, 1e-12);
+    // C2: 135° either side, along both its walls.
+    EXPECT_NEAR(Defence::gunArcHalf, 135.0 * pi / 180.0, 1e-12);
+    // C2: steeply down (−57°, under the old −20° stop) it follows the look.
+    h.sim.pilot->pitch = -1.0;
+    steps(h.sim, 0.1);
+    EXPECT_EQ((*structureOf(h.sim, h.citadel).guns)[0].pitch, -1.0);
     // Within the arc it follows the look exactly.
     h.sim.pilot->heading = rest + 0.7;
     h.sim.pilot->pitch = 0.2;

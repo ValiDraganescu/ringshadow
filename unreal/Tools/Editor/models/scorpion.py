@@ -23,7 +23,7 @@ from ac_modelkit import Model, box, cyl, cone, sphere, bar, loft, ring_box, pris
 
 POSE = "AcPoseVehicles.cpp:PoseScorpion"
 
-m = Model("scorpion", category="unit", notes=[
+m = Model("scorpion", category="unit", coplanar_check=True, notes=[
     "Burrowing mine, Prospector-sized. Pose: PoseScorpion (to write): insect gait three legs at a time, burying (body sinks, "
     "plates slide, mound shows), tail curls up to aim and snaps to fire, tail lamp blinks while reloading.",
     "Parts: legs_0..5 + shins_0..5, tail_0..3 + launcher + tailLamp, plates_0..4, pincers_0/1, eyes, mound (hidden)."])
@@ -58,7 +58,9 @@ for i, (x, w, ln) in enumerate(PLATES):
     # a curved shell: rounded in section, thinner at the edges, the rear edge lifted over the next plate
     m.mesh(p, "team", loft([ring_box(x + ln / 2, w * 0.9, 3.4, 0, Z + 11.6, 12, 2.4), ring_box(x + ln * 0.15, w * 0.99, 4.4, 0, Z + 12.4, 12, 2.4),
                             ring_box(x - ln / 2, w, 3.4, 0, Z + 12.6, 12, 2.4)]))
-    m.mesh(p, "hullLight", box((2.6, w - 6, 7.2), at=(x - ln / 2 + 0.6, 0, Z + 12.2)))
+    # the lip under the rear edge, its front face 0.9 behind the next plate's front (0.1 off, it fought it)
+    lip = x - ln / 2 - 0.2 if i + 1 == len(PLATES) else min(x - ln / 2 - 0.2, PLATES[i + 1][0] + PLATES[i + 1][2] / 2 - 2.2)
+    m.mesh(p, "hullLight", box((2.6, w - 6, 7.2), at=(lip, 0, Z + 12.2)))
     m.mesh(p, "glowBlue", box((1.7, w * 0.72, 1.2), at=(x + ln * 0.18, 0, Z + 16.9)), solid=False)
 
 eyes = m.part("eyes", parent=body, at=(76, 0, Z + 4), driver=d("sensor eyes: red, brighter when it hunts", ("emission",)))
@@ -78,7 +80,10 @@ for k in range(6):
     m.mesh(leg, "chrome", sphere(9, at=hip, steps=10))
     sh = m.part("shins_%d" % k, parent=leg, at=knee, driver=d("lower leg: knee bend of the gait"))
     m.mesh(sh, "chrome", sphere(8.5, at=knee, steps=10))
-    m.mesh(sh, "hullDark", bar(knee, (knee[0] + (foot[0] - knee[0]) * 0.22, knee[1] + (foot[1] - knee[1]) * 0.22, knee[2] * 0.78), 14, 12))
+    # (the sleeve wider than the shin and starting 1 cm behind the knee: they shared the start and the sides)
+    ln_ = math.dist(knee, foot)
+    back = tuple(k_ - (f_ - k_) / ln_ for k_, f_ in zip(knee, foot))
+    m.mesh(sh, "hullDark", bar(back, (knee[0] + (foot[0] - knee[0]) * 0.22, knee[1] + (foot[1] - knee[1]) * 0.22, knee[2] * 0.78), 15.4, 13.4))
     m.mesh(sh, "hullMid", bar(knee, foot, 13.5, 11, taper=0.3))
 
 # --- pincers: arm and claw ----------------------------------------------------------------------------------------------

@@ -96,9 +96,16 @@ namespace AcSound
 	inline constexpr float FlakGain = 0.85f;
 	inline constexpr float FlakHitGain = 0.7f;
 	inline constexpr float MissileGain = 0.35f;
-	/// D1, D2: a gatling gun's burst and a Citadel corner turret's.
-	inline constexpr float GatlingGain = 0.45f;
-	inline constexpr float TurretGain = 0.35f;
+	/// C2: the minigun class (a Citadel corner gun, a gatling gun): its
+	/// roar while it fires (`rotaryfire`), the barrels' motor before and
+	/// after, each round's impact (ground, metal, chitin); the nearest
+	/// `RotariesAtOnce` heard; a gun stops firing when no round came for
+	/// `RotaryBeat` s.
+	inline constexpr float RotaryGain = 0.4f;
+	inline constexpr float RotarySpinGain = 0.3f;
+	inline constexpr float RoundHitGain = 0.3f;
+	inline constexpr int32 RotariesAtOnce = 6;
+	inline constexpr double RotaryBeat = 0.12;
 	inline constexpr float SentinelTrackGain = 0.3f;
 	inline constexpr float HealGain = 0.35f;
 	inline constexpr float TankCannonGain = 0.7f;
@@ -458,6 +465,12 @@ private:
 	struct FTool { FName Sound; int32 Variant = 0; float Gain = 0.f; };
 	TMap<int64, FTool> Tools;
 	TMap<int64, FTool> Miniguns;
+	/// C2: the minigun class's guns heard, by `shooter * 8 + 3 + gun`:
+	/// where, the last round's time, firing or not, the roar's fade.
+	struct FRotary { ac::Vec2 At; double Last = -10.0; bool bFiring = false; float Gain = 0.f; };
+	TMap<int64, FRotary> Rotaries;
+	void Fired(const ac::Simulation& Sim, const ac::GameEvent::Fired& F);
+	void RoundHit(const ac::Simulation& Sim, const ac::GameEvent::Impact& I);
 	TSet<int64> Hums;
 	float HealFade = 0.f;
 	bool bHealing = false;

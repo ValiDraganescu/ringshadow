@@ -1452,10 +1452,22 @@ void UAcProgressHudSubsystem::NewsItem(FAcMmoClient& Mmo, const ac::net::Progres
 	{
 		const std::optional<ac::StructureKind> Kind = ac::parse<ac::StructureKind>(N.id);
 		const FString Name = Kind ? Upper(ac::Simulation::title(*Kind)) : Text(N.id).ToUpper();
-		const int64 Level = P ? ac::Progression::level(P->xp) : 1;
-		const FString Sub = N.value > Level ? FString::Printf(TEXT("Opens at level %lld"), (long long)N.value) : FString(TEXT("Ready: B builds it"));
-		Hud->Toast(FString::Printf(TEXT("BLUEPRINT FOUND: %s"), *Name), Xp.IsEmpty() ? Sub : Sub + TEXT("  ·  ") + Xp,
-			FAcHudStyle::LevelGold(), Now);
+		// C2: a blueprint of a kind the pilot knows pays its ore instead
+		// (`by` "known", `value` the ore); a new one is learned on the wheel.
+		if (N.by == "known")
+		{
+			const FString Sub = FString::Printf(TEXT("+%lld ORE for the blueprint"), (long long)N.value);
+			Hud->Toast(FString::Printf(TEXT("YOU KNOW THE %s"), *Name), Xp.IsEmpty() ? Sub : Sub + TEXT("  ·  ") + Xp, FAcHudStyle::LevelGold(),
+				Now);
+		}
+		else
+		{
+			const int64 Level = P ? ac::Progression::level(P->xp) : 1;
+			const FString Sub = N.value > Level ? FString::Printf(TEXT("Opens at level %lld  ·  learn it on the wheel (B)"), (long long)N.value)
+												: FString(TEXT("Learn it on the build wheel (B)"));
+			Hud->Toast(FString::Printf(TEXT("BLUEPRINT FOUND: %s"), *Name), Xp.IsEmpty() ? Sub : Sub + TEXT("  ·  ") + Xp,
+				FAcHudStyle::LevelGold(), Now);
+		}
 		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this)) Audio->Rules().News(FAcAudioRules::ENews::Blueprint);
 		break;
 	}

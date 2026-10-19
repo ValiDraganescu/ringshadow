@@ -27,7 +27,7 @@ The units stay as they are (one cell is 1 m, `AcSpace.h`; a Prospector is
 | Roof slab | – | 6.0 to 7.0; the roof deck at 7.0, the four corner towers rise past it to the turret mounts |
 | Body height, `BuildingHeight(citadel)` (`AcPose.cpp`) = `Rules::height` | 4.6 | 12.3 (deck 7.0, the corner towers' mounts at 9.0, crowns 8.3-8.7, the central tower's beacon top 12.3) |
 | Doorway | – | the +y face, x in [-1.5, 1.5], 3.0 wide, 3.0 tall |
-| Corner guns, `Defence::cornerInset()` | 2.0 | 5.5 (the mounts at (±5.5, ±5.5), radius 0.5, on the corner towers at z 9.0, `Defence::mountHeight()`) |
+| Corner guns, `Defence::cornerInset()` | 2.0 | 6.2 since C2 (the mounts at (±6.2, ±6.2) on brackets over the corner towers, radius 0.5, at z 9.0, `Defence::mountHeight()`; 5.5 in C1) |
 
 The hall is the MMO's: `Rules::setCitadelHall(bool)` / `citadelHall()`
 switch it for the whole process (an atomic, read on every region's
@@ -35,7 +35,7 @@ thread). The MMO's start and the server turn it on, the strategy game's
 start turns it off (its maps, AI layouts and Swift goldens are built round
 the solid 5x5 Citadel); every game start sets it, both ways. `Rules::radius`,
 `Rules::footprint`, `Rules::height` (the body height, 12.3 / 4.6, which
-`BuildingHeight` reads), `Defence::cornerInset()` (5.5 / 2.0) and
+`BuildingHeight` reads), `Defence::cornerInset()` (6.2 / 2.0) and
 `Defence::stationInset()`, `Defence::mountHeight()` (9.0 / 4.6) and
 `Rules::depositRange()` (the edge + 0.5: 6.5 / 3.0) all read it, so nothing
 half-switches. It is on by default (any MMO path that forgets it still gets
@@ -230,8 +230,8 @@ Constants (`Defence.h`):
 
 | | Value | Meaning |
 |---|---|---|
-| `gunArcHalf` | 110° (1.92 rad) | the yaw arc about `cornerAngle(i)` a gun may point in; the hull lies in the other 140°, so the barrels never cross it |
-| `gunPitchMin`, `gunPitchMax` | -20°, +50° | |
+| `gunArcHalf` | 135° (2.36 rad; 110° in C1) | the yaw arc about `cornerAngle(i)` a gun may point in: since C2 along both its walls, from the outboard bracket outside their faces; the hull lies in the other 90°, so the barrels never cross it |
+| `gunPitchMin`, `gunPitchMax` | -70°, +50° | -20° in C1; C2 (docs/guns-and-practice.md section 1) lets the barrels reach the wall's foot |
 | `gunStation(citadel, i)` | `position + (±4.0, ±4.0)` in corner i's quadrant | where the gunner stands, in the hall |
 | `stationReach` | 1.5 | a pilot within it of the station mans the gun |
 | `mountHeight()` | 9.0 (4.6 without the hall) | the turret base's z on the corner towers (the deck stays `deckHeight` 7.0) |
@@ -400,8 +400,13 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
   before it (x ±2.6, to y 10.2, 0.02 high, no ray piece).
 - **Corner towers**: the wall corners, clad 2 cells wide on both outer
   faces, carried up past the deck (over the roof they widen inward to
-  [4.0, 6.0]²) to a dark crown at 8.3 to 8.7 with a hazard band, and a
-  pedestal to the turret mount at 9.0 on (±5.5, ±5.5). Three `floodGlow`
+  [4.0, 6.0]²) to a dark crown at 8.3 to 8.7 with a hazard band (C2: their
+  outer faces at 6.02, the dark corner edge stopping at 8.06, so a gun lying
+  along its wall pitched down clears them), and a bartizan (C2): a beam off
+  the crown's corner along the diagonal carrying a slim post (radius 0.09)
+  to the turret mount at 9.0 on (±6.2, ±6.2), braced under, nothing below
+  8.0; the barrels sweep the space round the post, so only the 90° toward
+  the tower carry anything. Three `floodGlow`
   slits per outer face in the shaft (4.3) and over the deck (7.5), a
   `markerGlow` at each crown's corner, stepped anchor feet at the base.
 - **Walls**: buttress ribs every 2 cells (±2.9 on the front, either side of
@@ -446,16 +451,25 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
   (`unreal/Resources/Textures/citadel_gun_screen.png`, made by
   `models/citadel_screen.py`) in the `gunScreen` material, lit by the pose
   as before (1.9 lit, 0.04 dark). A hazard ring of radius 0.48 marks the
-  gunner's spot. No seats.
-- **Turrets** (`citadel_turrets.py`, `CORNER = 550`, `TOP = 900`): the
+  gunner's spot. No seats. The console pass (C2): bevelled vertical
+  edges, hazard bands and a lit strip round the plinth, a frame round the
+  monitor, a cable loom behind it, and a warm lamp hood over the desk on
+  an arm, its lamp `consoleLamps_k` (`consoleLamp`, with an omni light
+  of 2 cells' reach the pose cues, as `light_2`).
+- **Turrets** (`citadel_turrets.py`, `CORNER = 620`, `TOP = 900`): the
   parts as before plus `turretCradles_k` between `turrets_k` (yaw: SK euler
   (0, −aim, 0)) and `turretBarrels_k` (spin about X): the pitch, SK euler
   (0, 0, +pitch), pivot on the barrel axis at the trunnion, 0.144 along the
   aim and 0.396 over the mount; the muzzles, flashes and the muzzle ring
-  ride on it. The housing's back and cheeks are low so the gun's eye sees
-  the barrels. The script asserts that the barrels and the ring keep 3 cm
-  off every solid of `citadel_blue` (its ray pieces) at every yaw of the
-  220° arc at pitch −20° (worst 11.9 cm; 15.1 cm with C2's minigun look, docs/guns-and-practice.md section 2); at −45° it fails.
+  ride on it. C2, a pintle (the minigun reference, docs/guns-and-practice.md
+  section 2): a slim bearing (radius 0.09) on the post, a low body and the
+  ammunition box behind and beside the trunnion, two yoke arms beside the
+  housing, so the gun pitches from −70° to +50°. The script asserts that
+  the barrels, housing and ring keep 3 cm off every solid of `citadel_blue`
+  (its ray pieces) over the whole 270° arc (cornerAngle ± 135°, every 5°)
+  at every pitch from −70° to +50° (every 10°), and 3 cm off the gun's own
+  yaw part at every pitch (every 2°); worst against the hull 5.4 cm, a gun
+  along its wall at −70°.
 - **The gun's eye** for these numbers: on the cradle, mount + R_yaw(aim) ·
   [T + R_pitch(pitch) · E], T = (0.144 along the aim, 0.396 up), E = (−0.40
   along the barrels, +0.55 up): the barrels and the glowing ring sit in the
