@@ -205,8 +205,11 @@ namespace
 		static const FParts Turrets(TEXT("turrets"), 4), Cradles(TEXT("turretCradles"), 4), Barrels(TEXT("turretBarrels"), 4),
 			Tips(TEXT("turretTips"), 4), Flashes(TEXT("turretFlashes"), 4);
 		// (The strategy game's solid Citadel keeps them for an armed one.)
+		// Every part of a gun that starts hidden, the cradles too: the
+		// renderer hides a part under a hidden parent, and the cradles carry
+		// the barrels, tips, muzzle ring and flashes.
 		const bool bArmed = S.complete() && (ac::Rules::citadelHall() || S.marks.has_value());
-		for (const FParts* Set : {&Turrets, &Barrels, &Tips})
+		for (const FParts* Set : {&Turrets, &Cradles, &Barrels, &Tips})
 			for (int32 K = 0; K < 4; ++K)
 				if (const int32 I = (*Set)(M, K); I != INDEX_NONE) P.Visible[I] = bArmed;
 		if (!bArmed) return;

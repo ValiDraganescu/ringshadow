@@ -4,7 +4,7 @@
 // Citadel's pose (the ramp, the stations, the hall lamps, the door panels,
 // the turrets). Run headless:
 //   UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
-//     -ExecCmds="Automation RunTests Autocraft.Pilot.GunLookClamps+Autocraft.Hud.TurretFeedPaints+Autocraft.Pose.CitadelRamp; Quit"
+//     -ExecCmds="Automation RunTests Autocraft.Pilot.GunLookClamps+Autocraft.Hud.TurretFeedPaints+Autocraft.Pose.CitadelRamp+Autocraft.Pose.CitadelTurretsShown; Quit"
 //     -TestExit="Automation Test Queue Empty"
 #include "AcCitadelAct.h"
 #include "AcModelCatalog.h"
@@ -89,18 +89,29 @@ namespace
 		FAcUnitMemory Memory;
 		FAcModelInfo Model = HallModel();
 
-		FAcPose Pose(const ac::Structure& S)
+		FAcPose Pose(const ac::Structure& S, const double Time = 10.0)
 		{
-			State.time = 10.0;
+			State.time = Time;
 			State.structures = {S};
 			FAcPose P;
-			FAcPoseContext C{State, nullptr, &State.structures[0], Model, Field, Memory, 10.0, 1.0 / 60, false, 0};
+			FAcPoseContext C{State, nullptr, &State.structures[0], Model, Field, Memory, Time, 1.0 / 60, false, 0};
 			AcPose::RestStructure(C, P);
 			if (const FAcPoseFn Fn = AcPose::Find(S.kind)) Fn(C, P);
 			return P;
 		}
 		int32 Part(const TCHAR* Name) const { return Model.PartIndex.FindChecked(FName(Name)); }
 	};
+
+	/// Whether the world renderer draws part `I` of a posed model: it and
+	/// every part above it visible (AcWorldRenderer.cpp, the pose's walk).
+	bool Drawn(const FAcModelInfo& M, const FAcPose& P, int32 I)
+	{
+		for (; I != INDEX_NONE; I = M.Parts[I].Parent)
+		{
+			if (!P.Visible[I]) return false;
+		}
+		return true;
+	}
 
 	/// Where a part's rotation takes UE up (the ramp's top).
 	FVector UpOf(const FAcPose& P, const int32 Part) { return P.Local[Part].GetRotation().RotateVector(FVector::UpVector); }
@@ -298,6 +309,69 @@ bool FAcPoseCitadelRampTest::RunTest(const FString&)
 	TestTrue(TEXT("the Citadel stands as tall as the core says"),
 		FMath::IsNearlyEqual(AcPose::BuildingHeight(ac::StructureKind::citadel), ac::Rules::height(ac::StructureKind::citadel), 1e-9)
 			&& AcPose::BuildingHeight(ac::StructureKind::citadel) > ac::Defence::deckHeight);
+	return true;
+}
+
+// C3 (the user: "gatling guns on top ... either invisible or no model"):
+// the real citadel_blue's corner guns on an armed hall Citadel are drawn,
+// every part of each (housing, cradle, barrels, tips, muzzle) but the
+// flashes, which show only while firing. The world renderer hides a part
+// under a hidden parent, so a part the pose shows must have its parents
+// shown too: C1's cradles, hidden at rest and never shown, took the
+// barrels, tips, muzzle ring and flashes down with them.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcPoseCitadelTurretsShownTest, "Autocraft.Pose.CitadelTurretsShown", Flags)
+bool FAcPoseCitadelTurretsShownTest::RunTest(const FString&)
+{
+	const FHallOn Hall;
+	const FAcModelInfo* Real = FAcModelCatalog::Get().Find(FName(TEXT("citadel_blue")));
+	if (!Real)
+	{
+		AddError(TEXT("no citadel_blue in the catalog"));
+		return false;
+	}
+	FHallScene Scene;
+	Scene.Model = *Real;
+	const FAcModelInfo& M = Scene.Model;
+	ac::Structure S = Citadel();
+
+	// At rest: every turret part drawn but the flashes; six prefixes on four guns.
+	FAcPose P = Scene.Pose(S);
+	int32 Turret = 0;
+	for (int32 I = 0; I < M.Parts.Num(); ++I)
+	{
+		const FString Name = M.Parts[I].Name.ToString();
+		if (!Name.StartsWith(TEXT("turret"))) continue;
+		Turret += 1;
+		const bool bFlash = Name.StartsWith(TEXT("turretFlashes"));
+		TestEqual(FString::Printf(TEXT("at rest: %s drawn"), *Name), Drawn(M, P, I), !bFlash);
+	}
+	TestEqual(TEXT("24 turret parts"), Turret, 24);
+	// No part the pose shows is hidden by a hidden parent.
+	for (int32 I = 0; I < M.Parts.Num(); ++I)
+	{
+		if (P.Visible[I] && M.Parts[I].Meshes.Num() > 0)
+		{
+			TestTrue(FString::Printf(TEXT("%s shown and drawn"), *M.Parts[I].Name.ToString()), Drawn(M, P, I));
+		}
+	}
+
+	// Firing (spun up, on an odd frame): the flash drawn at the barrels' end.
+	(*S.guns)[2].spin = 1.0;
+	P = Scene.Pose(S, 10.525);
+	TestTrue(TEXT("firing: gun 3's flash drawn"), Drawn(M, P, Scene.Part(TEXT("turretFlashes_2"))));
+	TestTrue(TEXT("firing: its barrels drawn"), Drawn(M, P, Scene.Part(TEXT("turretBarrels_2"))));
+	TestFalse(TEXT("gun 1's flash not"), Drawn(M, P, Scene.Part(TEXT("turretFlashes_0"))));
+
+	// Under construction: none of them.
+	const ac::Structure Site(8, ac::StructureKind::citadel, 0, ac::Vec2(20, 20), 30.0);
+	P = Scene.Pose(Site);
+	for (int32 I = 0; I < M.Parts.Num(); ++I)
+	{
+		if (M.Parts[I].Name.ToString().StartsWith(TEXT("turret")) && M.Parts[I].Meshes.Num() > 0)
+		{
+			TestFalse(FString::Printf(TEXT("building: %s not drawn"), *M.Parts[I].Name.ToString()), Drawn(M, P, I));
+		}
+	}
 	return true;
 }
 

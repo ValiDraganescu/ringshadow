@@ -366,13 +366,23 @@ As built (the game):
   `AcCitadelAct::SetPanel` each frame) / 0.05. The pitch turns
   `turretCradles_k` (the model's part between the turret and its barrels);
   the barrels keep their spin. Without the hall (the strategy game) the
-  turrets show only on an armed Citadel, as before.
+  turrets show only on an armed Citadel, as before. The pose shows every
+  part of a gun that starts hidden, `turrets_k`, `turretCradles_k`,
+  `turretBarrels_k` and `turretTips_k` (the flashes while firing): the
+  world renderer draws a part only while every part above it is shown, so
+  a hidden cradle hides the barrels, tips, muzzle ring and flashes it
+  carries. Until C3 the cradles stayed hidden and only the housings showed
+  on the bartizans (`Autocraft.Pose.CitadelTurretsShown`;
+  art/models/citadel/c3-guns/before and after).
 - The map's doodads and the sites' crates under a complete Citadel's grown
   square (`Simulation::swallowedByCitadel`) are not drawn
   (`AAcRegionGround::Swallow`, `AAcSites`).
 - The pictures: `-AcFlowTest=mmocitadel -AcMmoShots=DIR -AcMmoShotsC1`
   (the step itself takes them: `c1-door-shut`, `c1-door-open`, `c1-hall`,
-  `c1-feed`).
+  `c1-feed`); `-AcMmoShotsC3` instead: gun 1's bartizan from a camera beside
+  it at rest and while firing (`c3-bartizan-rest`, `c3-bartizan-firing`,
+  `c3-bartizan-firing-2`) and the feed while firing at pitch 0, -20 and +50
+  (`c3-feed-0`, `c3-feed-low`, `c3-feed-high`).
 
 ## 8. The model (model worker)
 

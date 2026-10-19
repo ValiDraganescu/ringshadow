@@ -906,6 +906,11 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 			if (Parent != INDEX_NONE)
 			{
 				O.World[P] = O.Pose.Local[P] * O.World[Parent];
+				// A part is drawn only while it and every part above it are
+				// visible: a pose that shows a part starting hidden must show
+				// its hidden parents too (the Citadel's turretCradles_k carry
+				// the barrels, tips, muzzle ring and flashes;
+				// Autocraft.Pose.CitadelTurretsShown).
 				O.Pose.Visible[P] = O.Pose.Visible[P] && O.Pose.Visible[Parent];
 			}
 			else
