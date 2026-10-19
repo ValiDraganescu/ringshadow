@@ -75712,6 +75712,255 @@
        "triangles": 1104
       }
      ]
+    },
+    {
+     "name": "callPost",
+     "path": "/foundry_blue/callPost",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "foundry_blue_root",
+     "handles": [
+      "callPost"
+     ],
+     "driver": {
+      "what": "the call post: moved to the building's post point (Act::padPostAt / foundryPostAt), its size kept",
+      "channels": [
+       "position",
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:CallPost"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.16,
+        0.02,
+        0.16
+       ],
+       "lo": [
+        -0.16,
+        -0.02,
+        -0.16
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.02,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.15,
+        0.09,
+        0.15
+       ],
+       "lo": [
+        -0.15,
+        -0.09,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        1.13,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.12,
+        0.5,
+        0.12
+       ],
+       "lo": [
+        -0.12,
+        -0.5,
+        -0.12
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.54,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "callPost__hullDark",
+       "mesh": "/Game/Models/callpost/SM_callPost__hullDark.SM_callPost__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hullMid",
+       "prim": "callPost__hullMid",
+       "mesh": "/Game/Models/callpost/SM_callPost__hullMid.SM_callPost__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hazard",
+       "prim": "callPost__hazard",
+       "mesh": "/Game/Models/callpost/SM_callPost__hazard.SM_callPost__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "chrome",
+       "prim": "callPost__chrome",
+       "mesh": "/Game/Models/callpost/SM_callPost__chrome.SM_callPost__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 76
+      }
+     ]
+    },
+    {
+     "name": "callButton",
+     "path": "/foundry_blue/callPost/callButton",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.13,
+      0.2,
+      1
+     ],
+     "position": [
+      0.0,
+      1.13,
+      0.2
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "callPost",
+     "handles": [
+      "callButton"
+     ],
+     "driver": {
+      "what": "the call button: lit green once the building stands, brighter while the pilot's crosshair is on it",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:CallPost"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "callGlow",
+       "prim": "callButton__callGlow",
+       "mesh": "/Game/Models/callpost/SM_callButton__callGlow.SM_callButton__callGlow",
+       "materialInstance": "/Game/Models/Materials/MI_callGlow_ea3513495aa8.MI_callGlow_ea3513495aa8",
+       "materialKey": "ea3513495aa8",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      }
+     ]
     }
    ]
   },
@@ -200823,6 +201072,255 @@
        "triangles": 1104
       }
      ]
+    },
+    {
+     "name": "callPost",
+     "path": "/foundry_red/callPost",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "foundry_red_root",
+     "handles": [
+      "callPost"
+     ],
+     "driver": {
+      "what": "the call post: moved to the building's post point (Act::padPostAt / foundryPostAt), its size kept",
+      "channels": [
+       "position",
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:CallPost"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.16,
+        0.02,
+        0.16
+       ],
+       "lo": [
+        -0.16,
+        -0.02,
+        -0.16
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.02,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.15,
+        0.09,
+        0.15
+       ],
+       "lo": [
+        -0.15,
+        -0.09,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        1.13,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.12,
+        0.5,
+        0.12
+       ],
+       "lo": [
+        -0.12,
+        -0.5,
+        -0.12
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.54,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "callPost__hullDark",
+       "mesh": "/Game/Models/callpost/SM_callPost__hullDark.SM_callPost__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hullMid",
+       "prim": "callPost__hullMid",
+       "mesh": "/Game/Models/callpost/SM_callPost__hullMid.SM_callPost__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hazard",
+       "prim": "callPost__hazard",
+       "mesh": "/Game/Models/callpost/SM_callPost__hazard.SM_callPost__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "chrome",
+       "prim": "callPost__chrome",
+       "mesh": "/Game/Models/callpost/SM_callPost__chrome.SM_callPost__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 76
+      }
+     ]
+    },
+    {
+     "name": "callButton",
+     "path": "/foundry_red/callPost/callButton",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.13,
+      0.2,
+      1
+     ],
+     "position": [
+      0.0,
+      1.13,
+      0.2
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "callPost",
+     "handles": [
+      "callButton"
+     ],
+     "driver": {
+      "what": "the call button: lit green once the building stands, brighter while the pilot's crosshair is on it",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:CallPost"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "callGlow",
+       "prim": "callButton__callGlow",
+       "mesh": "/Game/Models/callpost/SM_callButton__callGlow.SM_callButton__callGlow",
+       "materialInstance": "/Game/Models/Materials/MI_callGlow_ea3513495aa8.MI_callGlow_ea3513495aa8",
+       "materialKey": "ea3513495aa8",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      }
+     ]
     }
    ]
   },
@@ -304833,6 +305331,255 @@
        "blend": "opaque",
        "team": [],
        "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "callPost",
+     "path": "/landingPad_blue/callPost",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "callPost"
+     ],
+     "driver": {
+      "what": "the call post: moved to the building's post point (Act::padPostAt / foundryPostAt), its size kept",
+      "channels": [
+       "position",
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:CallPost"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.16,
+        0.02,
+        0.16
+       ],
+       "lo": [
+        -0.16,
+        -0.02,
+        -0.16
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.02,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.15,
+        0.09,
+        0.15
+       ],
+       "lo": [
+        -0.15,
+        -0.09,
+        -0.15
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        1.13,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.12,
+        0.5,
+        0.12
+       ],
+       "lo": [
+        -0.12,
+        -0.5,
+        -0.12
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.54,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "callPost__hullDark",
+       "mesh": "/Game/Models/callpost/SM_callPost__hullDark.SM_callPost__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hullMid",
+       "prim": "callPost__hullMid",
+       "mesh": "/Game/Models/callpost/SM_callPost__hullMid.SM_callPost__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "hazard",
+       "prim": "callPost__hazard",
+       "mesh": "/Game/Models/callpost/SM_callPost__hazard.SM_callPost__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "chrome",
+       "prim": "callPost__chrome",
+       "mesh": "/Game/Models/callpost/SM_callPost__chrome.SM_callPost__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 76
+      }
+     ]
+    },
+    {
+     "name": "callButton",
+     "path": "/landingPad_blue/callPost/callButton",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      1.13,
+      0.2,
+      1
+     ],
+     "position": [
+      0.0,
+      1.13,
+      0.2
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "callPost",
+     "handles": [
+      "callButton"
+     ],
+     "driver": {
+      "what": "the call button: lit green once the building stands, brighter while the pilot's crosshair is on it",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings.cpp:CallPost"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "callGlow",
+       "prim": "callButton__callGlow",
+       "mesh": "/Game/Models/callpost/SM_callButton__callGlow.SM_callButton__callGlow",
+       "materialInstance": "/Game/Models/Materials/MI_callGlow_ea3513495aa8.MI_callGlow_ea3513495aa8",
+       "materialKey": "ea3513495aa8",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
       }
      ]
     }

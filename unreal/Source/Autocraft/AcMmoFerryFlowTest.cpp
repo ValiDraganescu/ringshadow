@@ -285,6 +285,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		{
 			Check(Prompt == TEXT("E · CALL THE DROPSHIP"), FString::Printf(TEXT("ferry: at the call post the prompt calls the Dropship (\"%s\")"), *Prompt));
 			FirstPerson(false);
+			Picture(TEXT("ferry-0-call-post"));
 			Press();
 			Advance();
 		}
