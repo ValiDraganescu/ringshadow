@@ -1,8 +1,10 @@
 # World sculpting
 
-Status, 2026-10-19: S1 and S2 are built, with Prospect Landing as the trial
-region, on the terrain lab's branch only. Nothing is promoted: the user's
-word comes first. S3 (rolling ground) and S4 (far land) are not started.
+Status, 2026-10-19: the First Reach is re-made (section 9): all nine
+regions said in landforms, every rim low and sloped, the passages wide.
+The user: "let's integrate all this in the game and let's recreate our
+worlds. I don't care about my current game, we can start fresh." S4 (far
+land) is not started.
 
 The user, 2026-10-18: "I hate that I am always surrounded by cliffs, should be a bit more variety, canyons are cool, but not that cool." Their reference is a painted cockpit view of Prospect Landing:
 
@@ -243,9 +245,49 @@ cluster and the `open-desert` style. The hand-drawn raises, ridges, ramps
 and the 50 rocks set one by one are gone. Kept: the pad's flat circle and
 the lander wreck's mound.
 
+## 9. The First Reach re-made
+
+All nine regions, 2026-10-19:
+
+1. `sculpt.py` on every region: the land grown over the old walls' level
+   ground, the rim level 1 with a 5-cell slope, every shared edge open
+   wherever both sides are level 0 (both files of each pair). Shared edges'
+   walls stand at `RegionEdges::edgeLevel` 2 (it was 4).
+2. Each region's ground re-said as landforms by three workers, each region
+   its own style and character, looked at on the critic sheet beside the
+   user's reference. Removed everywhere: hand-drawn raises, ridges and
+   circles, every rock set by hand (some 250). Kept: the canyon zones'
+   edits, the pads' flats, landmarks. Four regions moved to the `openField`
+   base (its generated plateaus were cliff-ringed tables).
+3. `sculpt.py --grow 14 --no-widen` again where the old outlines still hugged
+   the land.
+
+| region | style | own forms | wall and cliff (before) | free rock | straight runs | horizon at pad (before) |
+|---|---|---|---|---|---|---|
+| start | open-desert | 9 | 15% (41%) | 6 | 0 | 77% (38%) |
+| rust-hollow | badlands | 5 | 25% | 6 | 0 | 73% |
+| ashen-shelf | mesa-country | 4 | 29% | 6 | 0 | 62% |
+| tern-ridge | badlands | 4 | 19% (46%) | 5 | 0 | 80% (36%) |
+| cold-fork | mesa-country | 5 | 21% (46%) | 9 | 5 (The Fork's) | 77% (38%) |
+| glass-flats | open-desert | 3 | 18% (52%) | 9 | 0 | 59% (14%) |
+| brine-pans | open-desert | 5 | 20% | 5 | 9 (The Drowned Cut's) | 45% |
+| dust-terraces | badlands | 3 | 33% | 1 | 9 (The Roost's) | 50% |
+| slag-pockets | badlands | 7 | 18% | 6 | 0 | 67% |
+
+Left as they are, for the user:
+- Dust Terraces keeps a hand-written gentle rise north of The Roost, since
+  no landform fits there and the zone's ramps need it. Its old rock island
+  is now a level-3 mesa.
+- The canyon zones keep their straight-edged cuts.
+- The border's wall rocks stand in rows along some walls (Dust Terraces,
+  Slag Pockets' south-east): the border scenery's own placement, in C++.
+- Old saves don't match the new land: start a new world (NEW WORLD).
+
 ## Log
 
 | date | step | note |
 |---|---|---|
 | 2026-10-18 | plan | the user's reference; the measures above |
 | 2026-10-19 | S1+S2 trial | Prospect Landing opened (above); four neighbours' gaps widened to match |
+| 2026-10-19 | S6 | landforms, styles, rules, eyes (section 8) |
+| 2026-10-19 | re-made | the First Reach in landforms (section 9); the lab's rounds 1-4 promoted with it |

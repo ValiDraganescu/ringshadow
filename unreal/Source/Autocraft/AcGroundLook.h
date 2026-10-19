@@ -30,9 +30,8 @@ namespace AcGroundLook
 		FLinearColor Fx = FLinearColor(0, 0, 0, 0);
 		/// Frost on it from night to mid-morning (0-1), the region's own only.
 		float Frost = 0.0f;
-		/// The terrain lab's own texture for the ground (docs/terrain-lab.md:
-		/// a slice of its arrays; 0 the dirt, which rust and ochre tint).
-		/// M_Terrain has no such parameter and ignores it.
+		/// The ground's own texture (M_Terrain's arrays' slice; 0 the dirt,
+		/// which rust and ochre tint).
 		float Layer = 0.0f;
 	};
 

@@ -10,6 +10,7 @@
 #include "test.h"
 
 #include "Brood.h"
+#include "GunAim.h"
 #include "Progression.h"
 #include "WorldMap.h"
 #include "WorldStore.h"
@@ -454,11 +455,18 @@ TEST(Canyon_rewardsByDamage) {
     ASSERT_TRUE(w.seat(b, keyB) == WorldMap::Seated::fresh);
     w.step();
     const size_t r = coldFork(w);
-    // A's gun at the first free place by the north arm's end (the dev
-    // line's), B's beside it, as close as the footprints let it (Z4: anywhere
-    // standable), both over the arm wave 2 comes down; B's is handed to B.
-    turrets(w, 1, 0, 0);
+    // A's gun on the north arm's rim where its arc reaches the arm the most
+    // (`rig::rimGunSpot`), B's beside it, as close as the footprints let it
+    // (Z4: anywhere standable), both over the arm wave 2 comes down; B's is
+    // handed to B.
     Simulation& sim = w.region(r).simulation();
+    {
+        const auto& places = *w.region(r).places();
+        const auto rim = rig::rimGunSpot(sim, places.zones.front(), places.pads, "North tunnel");
+        ASSERT_TRUE(rim.has_value());
+        const Vec2 at = places.regionAt(*rim);
+        std::printf("  %s\n", w.devCanyon("canyon place gatling " + std::to_string(at.x) + " " + std::to_string(at.y)).c_str());
+    }
     GameState& st = sim.state;
     const Vec2 gunAt = st.structures.back().position;
     std::optional<Vec2> beside;

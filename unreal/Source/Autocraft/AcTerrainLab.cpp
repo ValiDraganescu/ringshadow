@@ -138,8 +138,8 @@ void UAcTerrainLabShots::Initialize(FSubsystemCollectionBase& Collection)
 		}
 		Regions.Add(MoveTemp(R));
 	}
-	const TCHAR* DefaultLooks = FParse::Param(Cmd, TEXT("AcTerrainLabAB")) ? TEXT("lab,game") : TEXT("lab");
-	const TArray<FString> Looks = List(TEXT("AcTerrainLabLooks="), DefaultLooks);
+	// One look since the lab was promoted (2026-10-19): the game's.
+	const TArray<FString> Looks = {TEXT("game")};
 	const TArray<FString> Views = List(TEXT("AcTerrainLabViews="), TEXT("feet,cliff,across,third,top"));
 	const TArray<FString> Hours = List(TEXT("AcTerrainLabHours="), TEXT("9,17,23"));
 	const TArray<FString> WeatherNames = List(TEXT("AcTerrainLabWeathers="), TEXT("clear,rain"));
@@ -382,7 +382,6 @@ void UAcTerrainLabShots::Stage(const FShot& Shot)
 	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
 	// A file left from an earlier run must not pass for this one's.
 	IFileManager::Get().Delete(*Path, false, true, true);
-	SetCVar(TEXT("ac.TerrainLab"), Shot.Look == TEXT("game") ? TEXT("0") : TEXT("1"));
 	SetCVar(TEXT("ac.Hour"), FString::SanitizeFloat(Shot.Hour));
 	SetCVar(TEXT("ac.Weather"), FString::SanitizeFloat(Shot.Weather));
 	UWorld* World = GetWorld();

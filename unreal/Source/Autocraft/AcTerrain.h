@@ -46,11 +46,10 @@
 // it builds from `UAcSimSubsystem::Map()` and rebuilds when a game on
 // another map starts. Or `Build(Map)` directly.
 //
-// The terrain lab (docs/terrain-lab.md): `ac.TerrainLab 1` (or
-// `-AcTerrainLab`) draws every ground set with the lab's material
-// (`/Game/TerrainLab/M_TerrainLab`, Tools/Editor/make_terrain_lab_material.py)
-// instead of `M_Terrain`, swapped in place on the sets already built, so an
-// A/B is one console line. The sim's ground is the same either way.
+// The ground's look came out of the terrain lab (docs/terrain-lab.md,
+// rounds 1-4 promoted 2026-10-19): `M_Terrain` (Tools/Editor/
+// make_terrain_material.py) and the rock faces and clutter over it
+// (AcTerrainScenery.h).
 //
 // `-AcTerrainView[=POINTS_PER_CELL]` (with `-AcShot`): frames the Swift
 // game's default top-down view (over blue's main base, 40 points per cell,
@@ -151,9 +150,6 @@ public:
 	void SetOrigin(ac::Vec2 Origin);
 	/// Seconds spent building on the game's thread, all steps.
 	double BuildSeconds() const { return Spent; }
-	/// The terrain lab's switch: a new material instance of `Base` with the
-	/// set's parameters, on every piece (the old one's are let go).
-	void Rematerial(UMaterialInterface* Base);
 
 private:
 	struct FPrepared;
@@ -172,7 +168,7 @@ private:
 	TObjectPtr<UMaterialInstanceDynamic> Mat;
 	UPROPERTY(Transient)
 	TObjectPtr<UTexture2D> SplatTex;
-	/// The terrain lab's relief bake (occlusion, curvature), the splat's size.
+	/// The relief bake (occlusion, curvature), the splat's size.
 	UPROPERTY(Transient)
 	TObjectPtr<UTexture2D> ReliefTex;
 	UPROPERTY(Transient)
@@ -232,8 +228,6 @@ public:
 	static double BorderWidth(const ac::GroundRect& B);
 	/// A map's ground set's key: its name, version and seed.
 	static FString KeyOf(const ac::MapDefinition& Map);
-	/// The terrain lab is on (`ac.TerrainLab`, `-AcTerrainLab`).
-	static bool LabOn();
 
 	AAcTerrain();
 
@@ -291,7 +285,7 @@ public:
 	/// The ground sets (tests, pictures): how many, how many built.
 	int32 NumSets() const;
 	int32 NumSetsComplete() const;
-	/// Each ground set (the terrain lab's scenery lays its kit over them).
+	/// Each ground set (AAcTerrainScenery lays its rock kit over them).
 	void ForEachSet(TFunctionRef<void(AAcRegionGround*)> Each) const
 	{
 		for (const TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
@@ -316,8 +310,6 @@ private:
 	/// The material a set draws with: the lab's when the lab is on (and
 	/// made), else `M_Terrain`.
 	UMaterialInterface* BaseMaterial();
-	/// The lab's switch flipped: every set's material swapped.
-	void SyncLab();
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> Root;
@@ -329,11 +321,6 @@ private:
 	/// The material the ground draws with (made by make_terrain_material.py).
 	UPROPERTY(EditAnywhere, Category = "Terrain")
 	TSoftObjectPtr<UMaterialInterface> TerrainMaterial;
-	/// The terrain lab's (docs/terrain-lab.md), drawn with `ac.TerrainLab 1`.
-	UPROPERTY(EditAnywhere, Category = "Terrain")
-	TSoftObjectPtr<UMaterialInterface> LabMaterial;
-	/// What the sets were last drawn with (-1: not yet looked).
-	int32 LabDrawn = -1;
 
 	FDelegateHandle GameStartedHandle;
 	bool bViewStaged = false;

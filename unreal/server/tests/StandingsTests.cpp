@@ -9,6 +9,7 @@
 #include "test.h"
 
 #include "CitadelSpot.h"
+#include "GunAim.h"
 
 #include "HeadlessClient.h"
 #include "Progression.h"
@@ -230,7 +231,13 @@ TEST(standings_count_waves_held_and_bugs_felled) {
     const size_t r = *w.regionNamed("cold-fork");
     ASSERT_TRUE(w.devTransfer(a, r, w.region(r).places()->ground(Vec2(100, 52))));
     w.step();
-    std::printf("  %s\n", w.devCanyon("canyon turrets 1 0 0").c_str());
+    // The gun on the North arm's rim where its arc reaches the arm the most
+    // (wave 2 comes down it), placed by the dev line.
+    const auto& places = *w.region(r).places();
+    const auto rim = rig::rimGunSpot(w.region(r).simulation(), places.zones.front(), places.pads, "North tunnel");
+    ASSERT_TRUE(rim.has_value());
+    const Vec2 at = places.regionAt(*rim);
+    std::printf("  %s\n", w.devCanyon("canyon place gatling " + std::to_string(at.x) + " " + std::to_string(at.y)).c_str());
     int64_t gun = 0;
     for (const Structure& s : w.region(r).simulation().state.structures)
         if (s.kind == StructureKind::gatling) gun = s.id;

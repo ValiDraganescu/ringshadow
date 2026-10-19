@@ -5,11 +5,14 @@
 #pragma once
 
 #include "Defence.h"
+#include "RegionFile.h"
 #include "Rules.h"
 #include "Simulation.h"
 
 #include <cmath>
 #include <optional>
+#include <string>
+#include <vector>
 
 namespace ac::server::rig {
 
@@ -42,6 +45,62 @@ inline std::optional<GunAim> aimCornerGun(const Simulation& sim, Vec2 citadel, i
     if (std::abs(std::remainder(Defence::clampAim(gun, a.yaw) - a.yaw, 2 * pi)) > 1e-6) return std::nullopt;
     if (a.pitch < Defence::gunPitchMin || a.pitch > Defence::gunPitchMax) return std::nullopt;
     return a;
+}
+
+/// A gatling's place on a canyon's rim over path `from` of zone `z` (ground
+/// cells): placeable now (snapped, `placementRefusal`, off the pads'
+/// plates), in the zone, a level above the path, and of those the one whose
+/// arc (`Simulation::gatlingPitch`) reaches the most points of the path,
+/// half a cell apart, within 12 cells; the nearest the path on a tie. The
+/// tests ask the rule, not a spot: the dev line's first place
+/// (`canyon turrets`) is a sample of the rims that need not see the floor
+/// (2026-10-19: the sculpted Cold Fork's cliffs are sheer where the old
+/// ground had shelves). Nil: none reaches it.
+inline std::optional<Vec2> rimGunSpot(const Simulation& sim, const region::Zone& z, const std::vector<region::Place>& pads,
+                                      const std::string& from) {
+    std::vector<Vec2> path;
+    for (const region::Zone::Path& p : z.paths)
+        if (p.from == from)
+            for (size_t k = 0; k + 1 < p.points.size(); k++) {
+                const Vec2 a = p.points[k], e = p.points[k + 1] - a;
+                const double len = std::hypot(e.x, e.y);
+                for (double t = 0; t < len; t += 0.5) path.push_back(a + e * (t / len));
+            }
+    if (path.empty()) return std::nullopt;
+    Vec2 lo = path[0], hi = path[0];
+    for (const Vec2 q : path) {
+        lo = Vec2(std::min(lo.x, q.x), std::min(lo.y, q.y));
+        hi = Vec2(std::max(hi.x, q.x), std::max(hi.y, q.y));
+    }
+    const UnitStats& bug = Rules::stats(UnitKind::shardling);
+    const double bugMiddle = (bug.height > 0 ? bug.height : 1.5) / 2;
+    std::optional<Vec2> best;
+    int bestHits = 0;
+    double bestNear = 1e18;
+    for (double y = std::floor(lo.y) - 12; y <= hi.y + 12; y += 1)
+        for (double x = std::floor(lo.x) - 12; x <= hi.x + 12; x += 1) {
+            const auto at = sim.snap(StructureKind::gatling, Vec2(x, y));
+            if (!at || std::hypot(at->x - x, at->y - y) > 0.5 || signedDistance(*at, z.outline) > 0) continue;
+            if (sim.placementRefusal(StructureKind::gatling, *at) ||
+                region::touchesPadPlate(pads, *at, Rules::radius(StructureKind::gatling)))
+                continue;
+            int hits = 0;
+            double near = 1e18;
+            for (const Vec2 q : path) {
+                const double d = std::hypot(q.x - at->x, q.y - at->y);
+                near = std::min(near, d);
+                if (d > 12 || sim.groundZ(*at) < sim.groundZ(q) + 1) continue;
+                Structure probe(0, StructureKind::gatling, Pilot::player, *at);
+                probe.aim = std::atan2(q.y - at->y, q.x - at->x);
+                if (sim.gatlingPitch(probe, q, sim.groundZ(q) + bugMiddle, bug.radius)) hits++;
+            }
+            if (hits > bestHits || (hits == bestHits && hits > 0 && near < bestNear)) {
+                best = *at;
+                bestHits = hits;
+                bestNear = near;
+            }
+        }
+    return best;
 }
 
 } // namespace ac::server::rig

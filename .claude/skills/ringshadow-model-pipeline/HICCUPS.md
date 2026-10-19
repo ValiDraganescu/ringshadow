@@ -64,8 +64,8 @@ Results per painting are in the table in [PROMPTS.md](PROMPTS.md); the lessons:
 
 ## Terrain lab rock kit (2026-10-19)
 
-`unreal/Tools/Editor/models/terrain_lab_rocks.py` writes plain meshes to `/Game/TerrainLab/Rocks/` without the catalog: it builds Geometry Script buffers itself instead of going through `Model.write()`, because `Model.write()` always writes under `/Game/Models` and merges the catalog.
+`unreal/Tools/Editor/models/terrain_rocks.py` writes plain meshes to `/Game/Terrain/Rocks/` without the catalog: it builds Geometry Script buffers itself instead of going through `Model.write()`, because `Model.write()` always writes under `/Game/Models` and merges the catalog.
 - A named material slot: create the asset with `create_new_static_mesh_asset_from_mesh`, then `copy_mesh_to_static_mesh` with `replace_materials`, `new_materials` and `new_material_slot_names` (`["rock"]`). The slot name holds (read back from `static_materials`).
 - A cap fanned from the mean of its ring's points flips on a long, thin outline (a slab's bed: 11 front points and 2 back points pull the mean to the front). Ear-clip the cap in plan instead.
 - A jagged top cut deeper than its bed is thick turns the bed inside out: its bottom bevel ends up above its top, and the faces show back sides. Clamp the bite to half the bed, and clamp the bevels to the bed's height.
-- The script also runs as `uv run ... --preview art/terrain-lab/rocks.jpg` (numpy and Pillow, no editor), a software render that paints back faces red. It found both bugs above in seconds, with no hidden-run slot.
+- The script also runs as `uv run ... --preview art/terrain/rocks.jpg` (numpy and Pillow, no editor), a software render that paints back faces red. It found both bugs above in seconds, with no hidden-run slot.

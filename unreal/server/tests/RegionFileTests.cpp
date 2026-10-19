@@ -356,7 +356,10 @@ TEST(RegionFile_borderWallsAndPassages) {
     // (Near the outline a terrace may step the face half way up; by the
     // edge it stands full.)
     EXPECT_TRUE(field.height(b.ground(Vec2(72, 4))) >= 2 * H - 1e-9);
-    EXPECT_TRUE(field.height(b.ground(Vec2(72, 1))) >= 4 * H - 1e-9);
+    // By the edge the walls stand at the world's edge level (S1: 2 since
+    // the First Reach was opened up), whatever the region's own.
+    const double E = RegionEdges::edgeLevel;
+    EXPECT_TRUE(field.height(b.ground(Vec2(72, 1))) >= E * H - 1e-9);
     EXPECT_TRUE(field.height(b.ground(Vec2(72, 48))) < 0.5 * H);
     // An island of rock: walled like the border.
     EXPECT_TRUE(field.height(b.ground(Vec2(37, 67))) >= 4 * H - 1e-9);
@@ -364,9 +367,9 @@ TEST(RegionFile_borderWallsAndPassages) {
     // On a walled stretch of the edge: the wall's level, and the edge's own
     // profile over it (W4b), the same in a neighbour whose west edge has
     // the same gap; its level exactly near the corners.
-    EXPECT_TRUE(field.height(b.ground(Vec2(144, 20))) >= 4 * H - 1e-9);
-    EXPECT_TRUE(field.height(b.ground(Vec2(144, 20))) < 6 * H);
-    EXPECT_NEAR(field.height(b.ground(Vec2(144, 1))), 4 * H, 1e-9);
+    EXPECT_TRUE(field.height(b.ground(Vec2(144, 20))) >= E * H - 1e-9);
+    EXPECT_TRUE(field.height(b.ground(Vec2(144, 20))) < (E + 2) * H);
+    EXPECT_NEAR(field.height(b.ground(Vec2(144, 1))), E * H, 1e-9);
     {
         const RegionFile g = parsed(flat(R"("border": {"outline": [[10, 10], [134, 10], [134, 86], [10, 86], [10, 56], [0, 56], [0, 40], [10, 40]], "level": 4},
         "pads": [{"name": "landing", "at": [72, 48]}],
@@ -377,7 +380,7 @@ TEST(RegionFile_borderWallsAndPassages) {
         for (double z = 1; z < 95; z += 0.5) {
             const double here = field.height(b.ground(Vec2(144, z))), there = west.height(c.ground(Vec2(0, z)));
             worst = std::max(worst, std::fabs(here - there));
-            rise = std::max(rise, here - 4 * H);
+            rise = std::max(rise, here - E * H);
         }
         EXPECT_TRUE(worst < 0.01);
         EXPECT_TRUE(rise > 0.5 * H);

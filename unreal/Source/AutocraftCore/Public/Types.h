@@ -884,7 +884,8 @@ struct AUTOCRAFTCORE_API RegionEdges {
     static constexpr double gapMargin = 1.5;
     /// The walls' level along a shared edge, whatever each region's rim
     /// (S1): both sides' walls climb to it within `edgeBand`, so they meet.
-    static constexpr double edgeLevel = 4.0;
+    /// Two since the First Reach was opened up (every rim low).
+    static constexpr double edgeLevel = 2.0;
 
     /// How far `p` lies inside edge `edge` of `b` (negative: past it), and
     /// where along it.

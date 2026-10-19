@@ -5,11 +5,11 @@
 // look, view, hour and weather is saved as a PNG, then the run quits:
 //
 //   uv run unreal/Tools/hidden_run.py --out DIR --res 1280x720 --
-//     -AcMap=highlands-small -AcTerrainLabShots={out} -AcTerrainLabAB
+//     -AcMap=highlands-small -AcTerrainLabShots={out}
 //
 // DIR/<region>/<look>/NN-<view>-<hour>-<weather>.png, NN counting the
 // sheet's stills in the order of the views, then the hours, then the
-// weathers (the same NN in each look, so lab and game pair up).
+// weathers (the same NN in every run, so two runs pair up).
 //
 // The views (each found on the region's own ground, the same each run):
 //   feet    the cockpit's eye 1.3 cells up, 20° down at flat ground near
@@ -20,9 +20,7 @@
 //   top     the RTS camera at the game's zoom over a well (else the pad)
 //
 // -AcTerrainLabRegions=start,brine-pans   region ids (server/regions; start)
-// -AcTerrainLabLooks=lab,game             `lab` (ac.TerrainLab 1), `game` (0);
-//                                         -AcTerrainLabAB is `lab,game`,
-//                                         the default `lab`
+// (one look: the game's; the lab's own was promoted into it, 2026-10-19)
 // -AcTerrainLabViews=feet,cliff,across,third,top
 // -AcTerrainLabHours=9,17,23   -AcTerrainLabWeathers=clear,rain
 // -AcTerrainLabFrames=90       frames each still settles

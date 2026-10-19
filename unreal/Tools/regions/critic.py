@@ -10,7 +10,7 @@ On one JPEG, each picture labelled: the top-down preview
 south and west (`autocraft-region view`), two pilot's-eye views from the
 first pad toward its two most open directions, the reference image if one is
 given, and the terrain lab's in-game stills of the region if a shots folder
-is given (DIR/<region>/lab/*.png, as `-AcTerrainLabShots` writes them; this
+is given (DIR/<region>/game/*.png, as `-AcTerrainLabShots` writes them; this
 script never starts the game). Under them, the text of
 `autocraft-region build` (its measures and problems).
 
@@ -112,7 +112,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("region")
     ap.add_argument("--ref", help="the brief's reference image")
-    ap.add_argument("--shots", help="a -AcTerrainLabShots folder: its <region>/lab/*.png go on the sheet")
+    ap.add_argument("--shots", help="a -AcTerrainLabShots folder: its <region>/game/*.png go on the sheet")
     ap.add_argument("-o", "--out", required=True, help="the sheet (.jpg)")
     a = ap.parse_args()
 
@@ -142,14 +142,14 @@ def main():
         tiles.append(("reference: " + Path(a.ref).name, Path(a.ref), 1, f"cannot read {a.ref}"))
     shots_note = ""
     if a.shots:
-        shots = sorted((Path(a.shots) / rid / "lab").glob("*.png"))
+        shots = sorted((Path(a.shots) / rid / "game").glob("*.png"))
         if not shots:
-            shots_note = f"no in-game stills in {Path(a.shots) / rid / 'lab'}"
+            shots_note = f"no in-game stills in {Path(a.shots) / rid / 'game'}"
         if len(shots) > MAX_SHOTS:
-            shots_note = f"{len(shots) - MAX_SHOTS} more in-game stills in {Path(a.shots) / rid / 'lab'} not shown"
+            shots_note = f"{len(shots) - MAX_SHOTS} more in-game stills in {Path(a.shots) / rid / 'game'} not shown"
             shots = shots[:MAX_SHOTS]
         for s in shots:
-            tiles.append(("in game (lab): " + s.stem, s, 1, ""))
+            tiles.append(("in game: " + s.stem, s, 1, ""))
 
     # Lay the tiles on a grid of COLUMNS, the preview taking 2 by 2.
     taken, places, row = set(), [], 0

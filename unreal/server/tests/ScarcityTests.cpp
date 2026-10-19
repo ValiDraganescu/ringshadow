@@ -15,6 +15,7 @@
 #include "WorldStore.h"
 
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <sys/stat.h>
 
@@ -69,6 +70,30 @@ region::RegionFile startFile() {
     return {};
 }
 
+/// Open ground for a lone mound in `f`: more than 12 cells from every mound
+/// and well (a vein of its own) and taking no landform's room (sculpt: a
+/// vein keeps the forms 7 cells off it), so it adds no problem but its
+/// vein's to validate. Found by the rule, not written: the regions are
+/// re-sculpted from time to time. Nil: none.
+std::optional<Vec2> openGround(const region::RegionFile& f) {
+    region::RegionFile zero = f;
+    zero.brood = 0;
+    const size_t before = region::validate(zero, region::build(zero)).size();
+    const Vec2 ext = f.extent();
+    for (double y = 12; y < ext.y - 12; y += 6)
+        for (double x = 12; x < ext.x - 12; x += 6) {
+            const Vec2 q(x, y);
+            bool far = true;
+            for (const region::Deposit& d : f.deposits) far = far && distance(d.at, q) > 12;
+            for (const region::WellSite& w : f.wells) far = far && distance(w.at, q) > 12;
+            if (!far) continue;
+            region::RegionFile g = zero;
+            g.deposits.push_back(region::Deposit{q, 10, 0});
+            if (region::validate(g, region::build(g)).size() == before) return q;
+        }
+    return std::nullopt;
+}
+
 bool has(const std::vector<std::string>& lines, const std::string& word) {
     for (const std::string& l : lines)
         if (l.find(word) != std::string::npos) return true;
@@ -103,11 +128,12 @@ TEST(scarcity_world_regions_hold_their_veins) {
 TEST(scarcity_validate_refuses_plenty) {
     const region::RegionFile ok = startFile();
     ASSERT_TRUE(scarcity(ok).empty());
+    const auto open = openGround(ok);
+    ASSERT_TRUE(open.has_value());
     {
         // A third vein: a mound far from both.
         region::RegionFile f = ok;
-        // Open ground clear of the landforms (a vein keeps them off it).
-        f.deposits.push_back(region::Deposit{Vec2(60, 72), 10, 0});
+        f.deposits.push_back(region::Deposit{*open, 10, 0});
         const auto p = scarcity(f);
         EXPECT_TRUE(has(p, "3 veins"));
         EXPECT_TRUE(has(p, "a vein of 1 mounds"));
@@ -138,8 +164,7 @@ TEST(scarcity_validate_refuses_plenty) {
         // Brood 0 (the example file, a generated region): no limit.
         region::RegionFile f = ok;
         f.brood = 0;
-        // Open ground clear of the landforms (a vein keeps them off it).
-        f.deposits.push_back(region::Deposit{Vec2(60, 72), 10, 0});
+        f.deposits.push_back(region::Deposit{*open, 10, 0});
         EXPECT_TRUE(scarcity(f).empty());
     }
 }

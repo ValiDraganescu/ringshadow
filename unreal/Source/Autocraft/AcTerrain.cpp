@@ -169,11 +169,6 @@ namespace
 	}
 
 
-	TAutoConsoleVariable<int32> CVarTerrainLab(
-		TEXT("ac.TerrainLab"), 0,
-		TEXT("1: the ground draws with the terrain lab's material (docs/terrain-lab.md); 0: the game's M_Terrain. ")
-		TEXT("Also -AcTerrainLab on the command line."));
-
 	TAutoConsoleVariable<int32> CVarBorderShadow(
 		TEXT("ac.TerrainBorderShadow"), 0,
 		TEXT("1: the border scenery casts shadows (Swift: never). Takes effect on the next build."));
@@ -182,17 +177,6 @@ namespace
 double AAcTerrain::BorderWidth(const ac::GroundRect& B)
 {
 	return FMath::Max(60.0, 0.45 * FMath::Max(B.width(), B.depth()));
-}
-
-bool AAcTerrain::LabOn()
-{
-	// -AcTerrainLab: on from the start (the console may turn it off again).
-	static const bool bFlag = [] {
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcTerrainLab"))) CVarTerrainLab->Set(1, ECVF_SetByCommandline);
-		return true;
-	}();
-	(void)bFlag;
-	return CVarTerrainLab.GetValueOnGameThread() != 0;
 }
 
 FString AAcTerrain::KeyOf(const ac::MapDefinition& Map)
@@ -211,7 +195,7 @@ struct AAcRegionGround::FPrepared
 	FAcHeightGrid Grid;
 	TArray<uint8> SplatBytes;
 	int32 SplatW = 0, SplatH = 0;
-	/// The terrain lab's relief bake (round 2), the splat's size: R the
+	/// The relief bake (round 2), the splat's size: R the
 	/// ground's occlusion by the land round it, G its curvature (0.5 flat,
 	/// more a hollow, less a crest).
 	TArray<uint8> ReliefBytes;
@@ -267,11 +251,11 @@ namespace
 			}
 		});
 
-		// The terrain lab's relief (docs/terrain-lab.md round 2), at the
+		// The relief (docs/terrain-lab.md round 2), at the
 		// splat's texels from the drawn grid: the occlusion as a horizon
 		// search in 8 directions out to 8 cells (cliff feet, gullies and
 		// craters darken), the curvature as the ground a cell round against
-		// the texel's own. M_Terrain does not read it.
+		// the texel's own.
 		{
 			const double BakeStart = FPlatformTime::Seconds();
 			const FAcHeightGrid& G = P.Grid;
@@ -552,16 +536,6 @@ void AAcRegionGround::SetParameters()
 		Mat->SetScalarParameterValue(TEXT("WallZ"), float(double(MapDef->edges->level) * MapDef->levelHeight - 0.5));
 }
 
-void AAcRegionGround::Rematerial(UMaterialInterface* Base)
-{
-	if (!bMaterial || !Base || BaseMaterial == Base) return;
-	BaseMaterial = Base;
-	Mat = UMaterialInstanceDynamic::Create(BaseMaterial, this, MakeUniqueObjectName(this, UMaterialInstanceDynamic::StaticClass(), TEXT("TerrainMaterial")));
-	SetParameters();
-	for (UStaticMeshComponent* C : Pieces)
-		if (C) C->SetMaterial(0, Mat);
-}
-
 void AAcRegionGround::SetOrigin(const ac::Vec2 Origin)
 {
 	GridOrigin = Origin;
@@ -680,39 +654,16 @@ AAcTerrain::AAcTerrain()
 	Root->SetMobility(EComponentMobility::Static);
 	RootComponent = Root;
 	TerrainMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/Terrain/M_Terrain.M_Terrain")));
-	LabMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/TerrainLab/M_TerrainLab.M_TerrainLab")));
 }
 
 UMaterialInterface* AAcTerrain::BaseMaterial()
 {
-	if (LabOn())
-	{
-		if (UMaterialInterface* Lab = LabMaterial.LoadSynchronous()) return Lab;
-		static bool bSaid = false;
-		if (!bSaid) UE_LOG(LogAutocraft, Error, TEXT("terrain lab: %s is missing (run Tools/Editor/make_terrain_lab_material.py); the game's ground instead"), *LabMaterial.ToString());
-		bSaid = true;
-	}
 	UMaterialInterface* Base = TerrainMaterial.LoadSynchronous();
 	if (!Base)
 	{
 		UE_LOG(LogAutocraft, Error, TEXT("terrain: %s is missing (run Tools/Editor/make_terrain_material.py)"), *TerrainMaterial.ToString());
 	}
 	return Base;
-}
-
-void AAcTerrain::SyncLab()
-{
-	const int32 On = LabOn() ? 1 : 0;
-	if (On == LabDrawn) return;
-	const bool bFirst = LabDrawn < 0;
-	LabDrawn = On;
-	if (bFirst && !On) return;
-	UMaterialInterface* Base = BaseMaterial();
-	for (TPair<FString, TObjectPtr<AAcRegionGround>>& S : Sets)
-		if (S.Value) S.Value->Rematerial(Base);
-	// The sky and the palette set theirs on the new instances (AAcDaylight).
-	Version += 1;
-	UE_LOG(LogAutocraft, Log, TEXT("terrain lab: %s, %d sets"), On ? TEXT("on") : TEXT("off"), Sets.Num());
 }
 
 AAcTerrain* AAcTerrain::Find(const UWorld* World)
@@ -843,7 +794,6 @@ ac::Vec2 AAcTerrain::SessionCentre() const
 void AAcTerrain::Tick(const float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	SyncLab();
 	SyncAround();
 }
 

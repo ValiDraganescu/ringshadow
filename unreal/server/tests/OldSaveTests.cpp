@@ -9,7 +9,9 @@
 #include "WorldMap.h"
 #include "WorldStore.h"
 
+#include <cmath>
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <sys/stat.h>
 
@@ -104,16 +106,36 @@ TEST(save_v3_pilot_keeps_its_buildings_and_gets_their_blueprints) {
 }
 
 // W4: a world saved before the regions had walls. A pilot's Prospector saved
-// where Prospect Landing's west wall now stands is put on the nearest open
-// ground on load, and walks from there.
+// where Prospect Landing's ground is now a wall or a landform is put on the
+// nearest open ground on load, and walks from there.
 TEST(save_from_before_the_walls_puts_the_prospector_on_open_ground) {
+    // Where it was saved: the ground nearest region (4, 20), by the west
+    // edge, that a Prospector can't stand on now (the rule, not a spot: the
+    // regions are re-sculpted, and since 2026-10-19 the rims are low and
+    // sloped there), asked of a fresh Prospector in a world of its own.
+    std::optional<Vec2> wall;
+    {
+        WorldMap probe(firstWorld());
+        ASSERT_TRUE(probe.seat(4, "ffeeddccbbaa99887766554433221100") == WorldMap::Seated::fresh);
+        const Simulation& sim = probe.start().simulation();
+        const Unit* p = nullptr;
+        for (const Unit& v : sim.state.units)
+            if (v.kind == UnitKind::prospector) p = &v;
+        ASSERT_TRUE(p != nullptr);
+        for (double rad = 0; rad <= 30 && !wall; rad += 0.5)
+            for (int k = 0; k < 64 && !wall; k++) {
+                const double t = k * 2 * pi / 64;
+                const Vec2 q = Vec2(4 - 72, 20 - 48) + Vec2(std::cos(t), std::sin(t)) * rad;
+                if (!sim.pilotCanStand(*p, q)) wall = q;
+            }
+    }
+    ASSERT_TRUE(wall.has_value());
     WorldSave s;
     SavedRegion r;
     r.id = "start";
     r.time = 10;
     r.nextId = 20;
-    // Region (4, 20): a wall now, 4 cells in from the west edge.
-    r.units.push_back(SavedUnit{7, UnitKind::prospector, Vec2(4 - 72, 20 - 48), 0, 60, 0, false, key});
+    r.units.push_back(SavedUnit{7, UnitKind::prospector, *wall, 0, 60, 0, false, key});
     s.regions.push_back(r);
     s.pilots.push_back(SavedPilot{key, 100, 0, "start", 7, "", ""});
     WorldMap w(firstWorld());
@@ -125,7 +147,7 @@ TEST(save_from_before_the_walls_puts_the_prospector_on_open_ground) {
     for (const Unit& v : sim.state.units)
         if (v.id == 7) u = &v;
     ASSERT_TRUE(u != nullptr);
-    const Vec2 was(4 - 72, 20 - 48);
+    const Vec2 was = *wall;
     std::printf("  saved at %.1f,%.1f (a wall now); stands at %.1f,%.1f, %.1f cells off\n", was.x, was.y, u->position.x,
                 u->position.y, distance(u->position, was));
     EXPECT_TRUE(!sim.pilotCanStand(*u, was));
