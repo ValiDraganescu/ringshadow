@@ -180,6 +180,13 @@ void SAcConsole::SetLamps(const EAcCabLamps InLamps)
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SAcConsole::SetWipers(const TOptional<uint8> Mode)
+{
+	if (Wipers == Mode) return;
+	Wipers = Mode;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void SAcConsole::SetMinimapSize(const FVector2D Size)
 {
 	if (Size.Equals(MinimapSize, 0.01) || Size.X <= 0 || Size.Y <= 0) return;
@@ -1282,6 +1289,30 @@ void SAcConsole::PaintOver(FPaint& P) const
 			P.Text(Names[K], 12, bOn ? FLinearColor::White : Gray(0.6), FVector2D(Seg.MidX(), Seg.MidY() - 4.5), EAcHAlign::Center);
 		}
 		P.Text(TEXT("V"), 12, FAcHudStyle::KeyYellow(), FVector2D(R.MaxX() - 12, R.MidY() - 4.5), EAcHAlign::Center);
+	}
+
+	// "WIPERS ▮ INT": the visor wiper's lamp, left of the view switch, lit
+	// amber with its mode while it runs.
+	if (Wipers && bLaidOut && Look != EAcConsoleStyle::Rts)
+	{
+		const FAcRect R(Lay.ViewSwitch.MinX() - 8 - 118, Lay.ViewSwitch.MinY(), 118, Lay.ViewSwitch.H);
+		P.FillRounded(R, 5, Rgb(0.02, 0.06, 0.1, 0.82));
+		P.Stroke(R, 5, Alpha(Acc, 0.55), 1);
+		P.Text(TEXT("WIPERS"), 11, Alpha(Acc, 0.8), FVector2D(R.MinX() + 8, R.MidY() - 4));
+		const bool bOn = *Wipers != 0;
+		const FAcRect Lamp(R.MinX() + 64, R.MidY() - 7, 6, 14);
+		if (bOn)
+		{
+			// As the cab's lamps: the halo, then the lens.
+			P.Stroke(Lamp, 3, LampColor(), 0.01, 5);
+			P.FillRounded(Lamp, 3, LampColor());
+		}
+		else
+		{
+			P.FillRounded(Lamp, 3, Gray(0.25));
+		}
+		static const TCHAR* Modes[4] = {TEXT("OFF"), TEXT("INT"), TEXT("ON"), TEXT("FAST")};
+		P.Text(Modes[FMath::Min<int32>(*Wipers, 3)], 12, bOn ? FLinearColor::White : Gray(0.5), FVector2D(R.MinX() + 76, R.MidY() - 4.5));
 	}
 
 	// The tooltip over the card: name, cost and time, and why not yet.

@@ -65,6 +65,10 @@ public:
 	void HoldNote(bool bHold) { bHoldNote = bHold; }
 	/// Which view the switch shows lit (`setView(third:)`).
 	void SetView(bool bThird);
+	/// The visor wiper's lamp beside the view switch (docs/weather.md):
+	/// `ac::WiperMode` as a number (0 off, 1 INT, 2 ON, 3 FAST); unset: no
+	/// lamp (no glass in view, or the top-down view).
+	void SetWipers(TOptional<uint8> Mode);
 	/// What a click on the view switch does (the pilot's V, E3).
 	void SetOnViewSwitch(FAcOnViewSwitch Handler) { OnViewSwitch = MoveTemp(Handler); }
 	/// The minimap's own size in points (sets the map well's width).
@@ -209,6 +213,7 @@ private:
 	TOptional<FAcContractsInfo> Contracts;
 	EAcCabLamps Lamps = EAcCabLamps::Idle;
 	double LampsSince = 0;
+	TOptional<uint8> Wipers;
 
 	TSharedPtr<class SAcConsoleFaces> Strip;
 	TSharedPtr<class FAcConsoleWarp> Warp;

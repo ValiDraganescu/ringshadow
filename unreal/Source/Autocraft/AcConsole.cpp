@@ -8,6 +8,7 @@
 #include "AcProgressHud.h"
 #include "AcRtsPawn.h"
 #include "AcSimSubsystem.h"
+#include "AcWeather.h"
 #include "SAcConsole.h"
 #include "SAcRoot.h"
 
@@ -290,6 +291,13 @@ void UAcConsoleSubsystem::OnFrame(const FAcFrame& Frame)
 	{
 		SelectByName(PendingSelect);
 		PendingSelect.Reset();
+	}
+
+	// The visor wiper's lamp while its glass is in view.
+	if (ConsoleWidget)
+	{
+		const AAcWeather* Weather = AAcWeather::Find(GetWorld());
+		ConsoleWidget->SetWipers(Weather && Weather->GlassShown() ? TOptional<uint8>(uint8(Weather->Wipers().mode())) : TOptional<uint8>());
 	}
 
 	// GameController.updateSelection: drop a building that died or changed hands.
