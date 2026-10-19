@@ -234,6 +234,8 @@ TEST(wipers_waterHistory) {
     EXPECT_TRUE(p.waterSinceWipe(0) < Wipers::landing(1.0) * 0.9);
     run(p, tp, 0.0, 70);
     EXPECT_NEAR(p.waterSinceWipe(0), 0, 1e-6);
+    EXPECT_NEAR(p.waterSinceStart(p.latest()), 0, 1e-9);
+    EXPECT_NEAR(p.waterSinceEnd(p.previous()), 0, 1e-9);
     EXPECT_NEAR(p.waterSinceWipe(1.2), 0, 1e-6);
     EXPECT_TRUE(p.all() > 10);
     // Rain again: on the parked glass it builds as it lands.

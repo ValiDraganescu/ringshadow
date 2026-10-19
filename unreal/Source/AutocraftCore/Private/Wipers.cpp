@@ -88,7 +88,7 @@ void Wipers::update(double now, double rate) {
     for (WiperSweep& s : sweeps_) {
         if (s.number >= 0 && s.allAtEnd < 0 && now_ >= s.end()) {
             // Ended within this step: what landed since its end is a share of the step's.
-            s.allAtEnd = all_ - lands * (now_ - s.end());
+            s.allAtEnd = (all_ - lands * (now_ - s.end())) * std::exp((now_ - s.end()) / DrySeconds);
         }
     }
 
@@ -126,7 +126,8 @@ void Wipers::startSweep(const double at, const double each) {
     s.start = at;
     s.each = each;
     s.dry = rate_ < DryRain && water(1.0) < DryRecent && coverage() < DryCover;
-    s.allAtStart = all_ - rate_ * landing(rate_) * (now_ - at);
+    // The whole as it was at `at` (this step's landing and drying undone).
+    s.allAtStart = (all_ - rate_ * landing(rate_) * (now_ - at)) * std::exp((now_ - at) / DrySeconds);
     sweeps_[1] = sweeps_[0];
     sweeps_[0] = s;
 }
