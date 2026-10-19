@@ -233,6 +233,31 @@ std::string WorldMap::devMule(const std::string& line) {
         mulesStep();
         return p.mule && p.mule->unit ? "dev: mule ready: mule " + std::to_string(*p.mule->unit) : "dev: mule ready: not out";
     }
+    if (what == "door") {
+        // Out of the realm's Citadel here, on its door's axis facing in,
+        // its centre 9.5 cells from the hall's middle; the Prospector on
+        // foot beside its hopper (1.5 cells off the axis).
+        if (!p.mule || !p.mule->unit || p.mule->region != r) return "dev: mule door: no Mule out here";
+        const Structure* c = nullptr;
+        for (const Structure& b : st.structures)
+            if (b.kind == StructureKind::citadel && b.complete() && realm(b)) c = &b;
+        if (!c) return "dev: mule door: no Citadel here";
+        const auto mi = sim.unitIndex(*p.mule->unit);
+        if (!mi) return "dev: mule door: no Mule out here";
+        if (drivesMule(pilot, p)) take(pilot, *p.unit);
+        Unit& m = st.units[size_t(*mi)];
+        m.position = c->position + Vec2(0, 9.5);
+        m.heading = -pi / 2;
+        if (const auto me2 = p.unit ? sim.unitIndex(*p.unit) : std::nullopt) {
+            Unit& u = st.units[size_t(*me2)];
+            u.position = Mule::hopper(m) + Vec2(1.5, 0);
+            u.heading = pi;
+            u.task = Unit::Task::idle;
+            if (Pilot* driver = sim.pilotFor(u.id)) driver->heading = u.heading;
+        }
+        sim.reindex();
+        return "dev: mule door: mule " + std::to_string(m.id) + " at the door of citadel " + std::to_string(c->id);
+    }
     if (what == "load") {
         int64_t ore = 0, mh = 0;
         in >> ore >> mh;
@@ -242,7 +267,7 @@ std::string WorldMap::devMule(const std::string& line) {
         regions_[p.mule->region]->simulation().state.units[size_t(*i)].haul = Haul{ore, mh};
         return "dev: mule load: " + std::to_string(ore) + " ore, " + std::to_string(mh) + " MH";
     }
-    return "dev: mule: '" + what + "' is not foundry, here, ready or load N [MH]";
+    return "dev: mule: '" + what + "' is not foundry, here, ready, door or load N [MH]";
 }
 
 void WorldMap::muleTold(const PilotState& p, net::ProgressMessage& m) const {

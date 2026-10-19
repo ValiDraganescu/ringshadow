@@ -216,7 +216,7 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devCarry(line));
             continue;
         }
-        // The Mule (WorldMap::devMule, C4): `mule foundry|here|ready|load N [MH]`.
+        // The Mule (WorldMap::devMule, C4): `mule foundry|here|ready|door|load N [MH]`.
         if (line.rfind("mule", 0) == 0) {
             said.push_back(world_.devMule(line));
             continue;

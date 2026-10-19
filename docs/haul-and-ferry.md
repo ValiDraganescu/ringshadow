@@ -133,7 +133,9 @@ The manager's rulings on the gaps (Q1 to Q6) and what the code settled:
   the Dropship's are 42 (requests from 28, events from 24).
 - **Dev lines** (`WorldMap::devMule`): `mule foundry` (a complete Foundry
   ahead, the Prospector by its door), `mule here` (the Mule out at once
-  beside the Prospector), `mule ready`, `mule load N [MH]`.
+  beside the Prospector), `mule ready`, `mule door` (the Mule outside the
+  realm Citadel's door facing in, the Prospector by its hopper), `mule load
+  N [MH]`.
 - **Tests.** Core `MuleTests.cpp` (fill, full, overfill, board and ride and
   leave, speed, book in the hall not the doorway, the cut and Stardust
   heart, the Prospector's own unload, destroyed, repair, the Brood, the

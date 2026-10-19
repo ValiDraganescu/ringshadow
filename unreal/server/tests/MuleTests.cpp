@@ -257,6 +257,26 @@ TEST(mule_fillsAndBooksInTheHall) {
     EXPECT_EQ(w.taxed(a)->ore, taxOre);
 }
 
+/// The flow's staging (`mule door`): the Mule out of the Citadel's door
+/// facing in, the Prospector on foot within reach of its hopper; driven
+/// straight ahead it goes in through the open door.
+TEST(mule_doorLineStagesTheDrive) {
+    Yard y;
+    ASSERT_TRUE(y.mule && y.citadel);
+    WorldMap& w = y.w;
+    const int64_t prospector = *w.regionOf(a)->driving(a);
+    EXPECT_TRUE(w.devMule("mule door").rfind("dev: mule door: mule ", 0) == 0);
+    const Unit* m = unitOf(w, a, *y.mule);
+    EXPECT_TRUE(distance(m->position, y.centre + Vec2(0, 9.5)) < 1e-9);
+    EXPECT_TRUE(distance(unitOf(w, a, prospector)->position, Mule::hopper(*m)) < Mule::reach);
+    unitOf(w, a, prospector)->position = Mule::perch(*m) + Vec2(1.0, 0);
+    ASSERT_TRUE(!w.take(a, *y.mule));
+    w.devMule("mule load 50 0");
+    drive(w, a, 8, Vec2(1, 0), -pi / 2);
+    EXPECT_TRUE(Rules::footprint(StructureKind::citadel).inside(unitOf(w, a, *y.mule)->position - y.centre));
+    EXPECT_TRUE(unitOf(w, a, *y.mule)->haul == Haul{});
+}
+
 /// At or over 1000 nothing more goes in.
 TEST(mule_fullRefuses) {
     Yard y;
