@@ -24,6 +24,14 @@
 //             nearest rock, seen from the side (tps-rock.png, the gap from
 //             its footprint circle logged); then first person again.
 //             At the gun the wheel must leave the zoom alone.
+//             With -AcMmoShots=DIR -AcMmoShotsC3: the corner guns on screen
+//             (docs/citadel-interior.md §5): gun 1's bartizan from a camera
+//             beside it, at rest once the Citadel stands (c3-bartizan-rest.png)
+//             and while the pilot fires it (c3-bartizan-firing.png and
+//             c3-bartizan-firing-2.png, a frame apart or more: the flash
+//             shows every other frame), and the gun's feed while firing at
+//             pitch 0, -20 and +50 degrees
+//             (c3-feed-0.png, c3-feed-low.png, c3-feed-high.png).
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmocitadel
@@ -42,6 +50,7 @@
 #include "Rules.h"
 #include "Simulation.h"
 
+#include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/FileManager.h"
@@ -74,7 +83,23 @@ namespace
 		int32 Tps = 0;
 		double TpsAt = -1;
 		bool bTpsToggled = false;
+		/// -AcMmoShotsC3: the next of its pictures, when it began, its camera.
+		int32 C3 = 0;
+		double C3At = -1;
+		TWeakObjectPtr<ACameraActor> C3Cam;
 	};
+	/// -AcMmoShotsC3 at the gun: each picture's pitch (degrees), name, and
+	/// whether it is seen from the camera beside the bartizan.
+	struct FC3Shot
+	{
+		double Pitch;
+		const TCHAR* Name;
+		bool bOutside;
+	};
+	/// The bartizan first, before the gun overheats (about 4.7 s of fire);
+	/// twice, the flash showing every other frame.
+	constexpr FC3Shot C3Firing[] = {{0, TEXT("c3-bartizan-firing"), true}, {0, TEXT("c3-bartizan-firing-2"), true},
+		{0, TEXT("c3-feed-0"), false}, {-20, TEXT("c3-feed-low"), false}, {50, TEXT("c3-feed-high"), false}};
 	/// -AcMmoShotsTps: the wheel's zoom of each picture (then again, placing).
 	constexpr float TpsZooms[] = {0.45f, 1.f, 2.6f};
 	FHall Hall;
@@ -83,7 +108,8 @@ namespace
 	bool Picture(const TCHAR* Name)
 	{
 		FString Dir;
-		const bool bWanted = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"));
+		const bool bWanted = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3"));
 		if (!bWanted || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty())
 		{
 			return false;
@@ -208,11 +234,44 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	};
 	const ac::Vec2 Doorstep(0, 7.0), InsideDoor(0, 3.8), Apron(0, 13.0);
 	const bool bTps = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"));
-	const bool bPictures = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || bTps;
+	const bool bC3 = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3"));
+	const bool bPictures = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || bTps || bC3;
 	auto Pictures = [bPictures] { return bPictures; };
 	auto FaceDoor = [&] {
 		const ac::Vec2 D = C->position + ac::Vec2(0, 5.0) - U->position;
 		Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x));
+	};
+	// -AcMmoShotsC3: a camera beside gun 1's bartizan, off the side of its
+	// barrels at rest and a little above, looking at the mount; the view
+	// handed to it (true) or back to the pilot (false).
+	auto Bartizan = [&](const bool bOn) {
+		APlayerController* Pc = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+		if (!Pc) return;
+		if (!bOn)
+		{
+			if (Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+			if (Hall.C3Cam.IsValid()) Hall.C3Cam->Destroy();
+			Hall.C3Cam = nullptr;
+			return;
+		}
+		if (!Hall.C3Cam.IsValid())
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			Hall.C3Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+			Hall.C3Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+			Hall.C3Cam->GetCameraComponent()->SetFieldOfView(50.f);
+		}
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const double Ground = Terrain ? Terrain->FieldHeight(C->position) : 0.0;
+		const ac::Vec2 Mount = ac::Defence::cornerGun(C->position, 0);
+		const double A = ac::Defence::cornerAngle(0);
+		const ac::Vec2 Along(std::cos(A), std::sin(A)), Side(-std::sin(A), std::cos(A));
+		const double Top = Ground + ac::Defence::mountHeight();
+		const FVector Eye = AcSpace::ToWorld(Mount + Along * 1.2 + Side * 5.5, Top + 2.2);
+		const FVector At = AcSpace::ToWorld(Mount + Along * 0.7, Top + 0.4);
+		Hall.C3Cam->SetActorLocationAndRotation(Eye, (At - Eye).Rotation());
+		if (Pc->GetViewTarget() != Hall.C3Cam.Get()) Pc->SetViewTarget(Hall.C3Cam.Get());
 	};
 	switch (T.Phase)
 	{
@@ -318,6 +377,25 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 			Picture(*FString::Printf(TEXT("tps-%s-%.2g"), bPlace ? TEXT("place") : TEXT("zoom"), Zoom));
 			Hall.TpsAt = ++Hall.Tps == 2 * Zooms ? Now : -1;
 			return;
+		}
+		// -AcMmoShotsC3: gun 1 at rest on its bartizan, from beside it.
+		if (bC3 && Hall.C3 == 0)
+		{
+			if (Hall.C3At < 0) Hall.C3At = Now;
+			Bartizan(true);
+			if (Now - Hall.C3At < 1.5) return;
+			Picture(TEXT("c3-bartizan-rest"));
+			Hall.C3 = 1;
+			Hall.C3At = Now;
+			return;
+		}
+		if (bC3 && Hall.C3 == 1)
+		{
+			// The picture taken (a frame or more later): the view back.
+			if (Now - Hall.C3At < 0.5) return;
+			Bartizan(false);
+			Hall.C3 = 2;
+			Hall.C3At = -1;
 		}
 		if (!Hall.bShot)
 		{
@@ -452,6 +530,33 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		}
 		if (Hall.ShotsSeen >= 3 && Info && Info->Feed && Info->Feed->Heat > 0 && Since() > 1.0)
 		{
+			// -AcMmoShotsC3: still firing, the bartizan from beside it, then
+			// the feed at each pitch (the cradle's pitch caught up from the
+			// server before each picture).
+			if (bC3 && Hall.C3 >= 2 && Hall.C3 < 2 + 2 * int32(UE_ARRAY_COUNT(C3Firing)))
+			{
+				const int32 K = (Hall.C3 - 2) / 2;
+				const FC3Shot& Shot = C3Firing[K];
+				if (Hall.C3At < 0)
+				{
+					Hall.C3At = Now;
+					Pilot->Look(0.0, (Pilot->ViewPitch() - FMath::DegreesToRadians(Shot.Pitch)) / AAcPilotPawn::PitchPerPoint);
+					Bartizan(Shot.bOutside);
+				}
+				if ((Hall.C3 - 2) % 2 == 0)
+				{
+					if (Now - Hall.C3At < (Shot.bOutside ? 0.4 : 1.2)) return;
+					Picture(Shot.Name);
+					Hall.C3 += 1;
+					Hall.C3At = Now;
+					return;
+				}
+				if (Now - Hall.C3At < 0.5) return;
+				Bartizan(false);
+				Hall.C3 += 1;
+				Hall.C3At = -1;
+				return;
+			}
 			if (!Hall.bShot)
 			{
 				Hall.bShot = true;
