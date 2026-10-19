@@ -723,6 +723,78 @@ is as steady as the engine's), and the only lever left is less edge detail,
 which is the look this pass was for. Re-open it only with a measure that
 tells resampled detail from flicker.
 
+## The night's reach and the far haze
+
+The user's night (2026-10-19, `art/terrain/ref/night-horizon-blend-2026-10-19.png`):
+a Citadel 35 cells off was a flat black cut-out, the rocks beyond it too, and
+the land past about 25 cells was one dark band with a hard edge against the
+giant-lit sky; the Dropship flying off with its Prospectors faded out in it.
+The pilot's veil (`M_AcPilotVeil`, `AAcPilotAids`) did it: past 26 cells it
+painted everything all the way into a haze dimmed to 0.45 of the sky's own
+(`ac.PilotNightVeil`), so the far land was a darker blue than the sky dome's
+horizon right above it, and lamps and ships went into it like rock. By day
+the same at 110 cells: a flat cream strip with a hard top edge.
+
+Now (`AAcDaylight::ReachAt`, `HazeCap`, `HazeLights`, `VeilFar`):
+
+- **The reach.** Clear to a quarter of it, as deep in the haze as it goes by
+  it. By night `ac.NightReach` (70) times the ringlight's strength, which
+  follows the giant's lit face: 70 cells through the evening (the giant 0.9
+  lit, 21:00-23:00), 67 at midnight, 44 before dawn (the giant 0.29 lit at
+  05:00); 110 by day; × 0.45 in the rain. The near ground reads as before
+  (clear to 6.5 cells then, 17.5 now).
+- **The cap.** The veil takes a surface at most 0.88 of the way to the haze
+  (`ac.HazeCap`), by night and by day, on the ground, the buildings, the
+  rocks, the neighbour regions' land beyond the rim and the air units alike:
+  every far thing keeps a silhouette with some of its shading.
+- **The far tone.** The sky dome's own haze rising from the horizon
+  (`GetHazeRise`, the same parameter M_AcSky takes; at the horizon the dome
+  is all haze), so the land meets the sky without a seam. `ac.PilotNightVeil`
+  is 1 now (0.45 was the band).
+- **Lights pierce the haze.** In the veil pass, not the height fog (Unreal's
+  height fog has no emissive bias for opaque materials): what a pixel emits
+  takes half the veil (`ac.HazeLights` 0.5). An unlit pixel (the GBuffer's
+  shading model 0: every `emissive` part of the models, the lamps, windows,
+  beacons and the Dropship's running lights) is all emission; a lit one emits
+  what it shows over its base colour under the most light a lit surface gets
+  this frame (the sun, the ringlight and the fill head on plus the sky light,
+  × 3: `FAcSkyTones::Lit`), which takes the ore's glow and the lamp pools on
+  the ground. A far building at night is a dark mass with its lamps.
+
+The far mesa ring past the world's rim (world-sculpting.md S4) is not built
+yet; what shows past the rim now is the neighbour regions' land, under the
+same veil.
+
+Pictures (`-AcMmoShotsNightHaze`, third person 34 cells from the realm's
+Citadel looking at it toward the giant, bearing 279°; "before" is the old
+veil set by the console variables, the same frame), `art/sky/night-haze/`:
+`nh-01-night-before`, `nh-02-night-after` (23:00, the giant 0.89 lit, reach
+26 and 69 cells), `nh-03-day-before`, `nh-04-day-after` (12:00); a Dropship
+100 cells off at its cruise height (40 cells up, its engines lit), 20° right
+of the look in front of the giant (`nh-05`/`nh-06` by night, `nh-07`/`nh-08`
+by day, zooms `nh-05-06-ship-giant-zoom`, `nh-07-08-ship-day-zoom`), 35°
+right over the open night sky (`nh-10`/`nh-11`, zoom
+`nh-10-11-ship-sky-zoom`), and from the top-down view (`nh-09`, where there
+is no veil). Over the open sky the ship was gone before; now it is a cluster
+of lights, the engines amber, the running lights red and green, the hull
+faint.
+
+What is left: above the horizon the veil's far tone is the atmosphere toward
+the pixel, not the dome, which also draws the giant; a post-process cannot
+read the dome (`SkyLightEnvMapSample` gives 0 outside the base pass). So a
+far air unit in front of the giant is a flat blue cut-out with its lights,
+before and after alike: seen, but not the giant's tone.
+
+Cost (the night framing at 1600 × 1000, GPU frame time p50 over 4 s, the
+veil off and on in turn six times in one run, the median of the six
+differences; whole-frame GPU time, not a `stat gpu` pass breakdown): the old
+veil pass +0.055 ms (10.46 off, 10.53 on), the new one +0.09 ms (10.37,
+10.45); the 0.03 ms between them is under the pairs' own spread (−0.06 to
++0.24 ms). No measurable increase.
+
+Tests: `Autocraft.NightHaze.Tones` (the reach by night and by day, the cap,
+the lights, the far tone the dome's horizon).
+
 ## Console and flags
 
 - `ac.Weather` (-1 the schedule; 0 Clear, 1 Cloudy, 2 Rain, 3 Storm hold
@@ -741,3 +813,7 @@ tells resampled detail from flicker.
   `ac.Daylight.CloudReference` another cloud setup side by side and
   `ac.Daylight.CloudParam` the material's look parameters ("Clouds
   (2026-10-18)"); `-AcCloudShots=DIR` (`AcCloudShots.h`) the pictures.
+- The far haze round a driven unit: `ac.NightReach` (70 cells under the
+  evening's ringlight), `ac.HazeCap` (0.88), `ac.HazeLights` (0.5),
+  `ac.PilotNightVeil` (1), `ac.PilotVeil 0` the veil off ("The night's reach
+  and the far haze"); `-AcMmoShotsNightHaze` the pictures.
