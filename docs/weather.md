@@ -264,10 +264,22 @@ under a minigun.
 **The HUD**: a small "WIPERS" plate left of the view switch on the
 dashboard, its amber lamp lit with the mode (INT, ON, FAST), unlit at OFF.
 
-**Cost**: GPU_COST_TBD.
+**Cost**: one post-process pass, no extra draw. Measured with the glass
+drawn and not (`ac.Weather.Lens`) in turns of 3 s, about 900 frames each,
+in a hidden run at 1600 × 1000 (the `mmovisor` flow, 2026-10-19): 0.25 ms of
+the GPU frame in a storm (10.47 against 10.22 ms), 0.18 ms in rain. The
+material hashes with integers: a sine hash of large arguments came out
+differently on the game's Metal path, which thinned the beads and lost the
+rivulets.
 
-**Pictures**: `art/weather/wipers/` (the `mmovisor` flow:
-`-AcFlowTest=mmovisor -AcMmoWeather=rain|storm -AcMmoShots=DIR`).
+**Pictures**: `art/weather/wipers/`, from the `mmovisor` flow
+(`AcMmoVisorFlowTest.cpp`; `-AcFlowTest=mmovisor -AcMmoWeather=rain|storm
+-AcMmoShots=DIR`), for each weather: `0-bare` (the glass off), `1-sweep`
+(the blade straight up on its way out), `2-clean` (on its way back, the
+glass right behind it clear), `3-half`, `4-full` (the middle half way to
+its next wipe, and just before it), `5-nowipe` (the blade held parked for
+10 s), `6-wiping` (its first sweep through that water), `7-cleared`. The
+flow logs the material's parameters at each picture.
 
 ## Ringshadow sweep
 
