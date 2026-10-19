@@ -29,7 +29,7 @@ load() {
 shot() {
   local name=$1; shift
   echo "== $name"
-  R --out "$RUNS/$name" --level /Game/Maps/ModelRow --res 1600x900 -- -AcNoSave -AcNoAI -AcPaused \
+  R --out "$RUNS/$name" --level /Game/Maps/ModelRow --res "${RES:-1600x900}" -- -AcNoSave -AcNoAI -AcPaused \
     -AcModelFocus=mule_blue "-AcShot=$OUT/$name.png" "$@" || echo "!! $name failed"
 }
 
@@ -47,5 +47,8 @@ all() { [[ ${#NAMES[@]} -eq 0 ]]; }
   (all || want screen) && shot screen -AcModelEye=-84,190,100 -AcModelLook=-84,0,99 -AcModelFov=20 $(load 380 120)
   (all || want screen-left) && shot screen-left -AcModelEye=-84,-190,100 -AcModelLook=-84,0,99 -AcModelFov=20 $(load 380 120)
   (all || want front) && shot front -AcModelEye=520,140,150 -AcModelLook=0,0,70 -AcModelFov=30 $(load 860 170)
+  # the icon (unreal/Content-src/icons/mule.png, made by art/models/mule/icon.py): lit, and its mask
+  (all || want icon-lit) && RES=512x512 shot icon-lit -AcModelView=3q -AcModelPaint=lit $(load 860 170)
+  (all || want icon-mask) && RES=512x512 shot icon-mask -AcModelView=3q -AcModelPaint=parts $(load 860 170)
   (all || want top) && shot top -AcModelEye=-200,260,520 -AcModelLook=-30,0,60 -AcModelFov=30 $(load 860 170)
 }
