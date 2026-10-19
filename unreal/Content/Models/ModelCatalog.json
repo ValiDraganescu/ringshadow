@@ -305478,6 +305478,5518 @@
      ]
     }
    ]
+  },
+  {
+   "name": "mule_blue",
+   "file": "",
+   "category": "unit",
+   "facing": "+X forward, +Y up, +Z its right side (heading 0 in the simulation)",
+   "boundsMin": [
+    -1.5,
+    -0.000161,
+    -0.791
+   ],
+   "boundsMax": [
+    1.49,
+    1.785,
+    0.791
+   ],
+   "triangles": 9360,
+   "team": "blue",
+   "base": "mule",
+   "canonical": "mule_blue",
+   "notes": [
+    "C4's Mule (docs/haul-and-ferry.md): the hauler a Prospector drives standing on the perch. Pose: PoseMule (wheels roll and the front pair steers, the levers move with the drive, the heap grows with the load, the MH gauges, the screens' readouts, the beacon turns while it drives).",
+    "Parts: steers_0/1 > wheels_0/1, wheels_2..5, levers_0/1, heap (hidden while empty), mhLevel_0/1, needles_0/1, beacon, headlamps, screens, roomDigits_0/1, roomBar_0/1, oreDigits_0/1, mhDigits_0/1, perch, exhaust, dust_0/1."
+   ],
+   "parts": [
+    {
+     "name": "mule_blue_root",
+     "path": "/mule_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "rays": [
+      {
+       "hi": [
+        0.88,
+        0.1,
+        0.4
+       ],
+       "lo": [
+        -0.88,
+        -0.1,
+        -0.4
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.58,
+        0.36,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.48,
+        0.06,
+        0.4
+       ],
+       "lo": [
+        -0.48,
+        -0.06,
+        -0.4
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.78,
+        0.24,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.34,
+        0.22,
+        0.015
+       ],
+       "lo": [
+        -0.34,
+        -0.22,
+        -0.015
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.84,
+        0.93,
+        -0.715,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.34,
+        0.22,
+        0.015
+       ],
+       "lo": [
+        -0.34,
+        -0.22,
+        -0.015
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.84,
+        0.93,
+        0.715,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.06,
+        0.13,
+        0.37
+       ],
+       "lo": [
+        -0.06,
+        -0.13,
+        -0.37
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.24,
+        0.48,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.07,
+        0.17,
+        0.62
+       ],
+       "lo": [
+        -0.07,
+        -0.17,
+        -0.62
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.37,
+        0.43,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.034,
+        0.02,
+        0.034
+       ],
+       "lo": [
+        -0.034,
+        -0.02,
+        -0.034
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.269441,
+        0.56,
+        -0.75176,
+        1
+       ],
+       "radius": 0.034,
+       "half": 0.02,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.034,
+        0.02,
+        0.034
+       ],
+       "lo": [
+        -0.034,
+        -0.02,
+        -0.034
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.269441,
+        1.14,
+        -0.75176,
+        1
+       ],
+       "radius": 0.034,
+       "half": 0.02,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.034,
+        0.02,
+        0.034
+       ],
+       "lo": [
+        -0.034,
+        -0.02,
+        -0.034
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.269441,
+        0.56,
+        0.75176,
+        1
+       ],
+       "radius": 0.034,
+       "half": 0.02,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.034,
+        0.02,
+        0.034
+       ],
+       "lo": [
+        -0.034,
+        -0.02,
+        -0.034
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.269441,
+        1.14,
+        0.75176,
+        1
+       ],
+       "radius": 0.034,
+       "half": 0.02,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.04,
+        0.17,
+        0.04
+       ],
+       "lo": [
+        -0.04,
+        -0.17,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.12,
+        1.43,
+        0.64,
+        1
+       ],
+       "radius": 0.04,
+       "half": 0.17,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.02,
+        0.15,
+        0.02
+       ],
+       "lo": [
+        -0.02,
+        -0.15,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.12,
+        1.5,
+        -0.64,
+        1
+       ],
+       "radius": 0.02,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.065,
+        0.015,
+        0.065
+       ],
+       "lo": [
+        -0.065,
+        -0.015,
+        -0.065
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.12,
+        1.665,
+        -0.64,
+        1
+       ],
+       "radius": 0.065,
+       "half": 0.015,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.025,
+        0.08,
+        0.7
+       ],
+       "lo": [
+        -0.025,
+        -0.08,
+        -0.7
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.475,
+        0.32,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.06,
+        0.75
+       ],
+       "lo": [
+        -0.025,
+        -0.06,
+        -0.75
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.465,
+        0.22,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.75,
+        0.02,
+        0.119
+       ],
+       "lo": [
+        -0.75,
+        -0.02,
+        -0.119
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.73,
+        0.7,
+        -0.659,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.4,
+        0.02,
+        0.119
+       ],
+       "lo": [
+        -0.4,
+        -0.02,
+        -0.119
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.9,
+        0.72,
+        -0.659,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.75,
+        0.02,
+        0.119
+       ],
+       "lo": [
+        -0.75,
+        -0.02,
+        -0.119
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.73,
+        0.7,
+        0.659,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.4,
+        0.02,
+        0.119
+       ],
+       "lo": [
+        -0.4,
+        -0.02,
+        -0.119
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.9,
+        0.72,
+        0.659,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.83,
+        0.02,
+        0.7
+       ],
+       "lo": [
+        -0.83,
+        -0.02,
+        -0.7
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.63,
+        0.74,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.03,
+        0.025,
+        0.72
+       ],
+       "lo": [
+        -0.03,
+        -0.025,
+        -0.72
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.44,
+        1.325,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.03,
+        0.025,
+        0.72
+       ],
+       "lo": [
+        -0.03,
+        -0.025,
+        -0.72
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.18,
+        1.325,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.77,
+        0.025,
+        0.03
+       ],
+       "lo": [
+        -0.77,
+        -0.025,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.63,
+        1.325,
+        -0.69,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.77,
+        0.025,
+        0.03
+       ],
+       "lo": [
+        -0.77,
+        -0.025,
+        -0.03
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.63,
+        1.325,
+        0.69,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.36,
+        0.96,
+        -0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.18,
+        0.96,
+        -0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.5,
+        0.96,
+        -0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.2,
+        0.96,
+        -0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.1,
+        0.96,
+        -0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.36,
+        0.96,
+        0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.18,
+        0.96,
+        0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.5,
+        0.96,
+        0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.2,
+        0.96,
+        0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.025,
+        0.2,
+        0.01
+       ],
+       "lo": [
+        -0.025,
+        -0.2,
+        -0.01
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.1,
+        0.96,
+        0.71,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.01,
+        0.25,
+        0.025
+       ],
+       "lo": [
+        -0.01,
+        -0.25,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.47,
+        1.01,
+        -0.42,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.01,
+        0.25,
+        0.025
+       ],
+       "lo": [
+        -0.01,
+        -0.25,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.47,
+        1.01,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.01,
+        0.25,
+        0.025
+       ],
+       "lo": [
+        -0.01,
+        -0.25,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.47,
+        1.01,
+        0.42,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.01,
+        0.25,
+        0.025
+       ],
+       "lo": [
+        -0.01,
+        -0.25,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.21,
+        1.01,
+        -0.42,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.01,
+        0.25,
+        0.025
+       ],
+       "lo": [
+        -0.01,
+        -0.25,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.21,
+        1.01,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.01,
+        0.25,
+        0.025
+       ],
+       "lo": [
+        -0.01,
+        -0.25,
+        -0.025
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.21,
+        1.01,
+        0.42,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.45,
+        0.025,
+        0.53
+       ],
+       "lo": [
+        -0.45,
+        -0.025,
+        -0.53
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.8,
+        0.325,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.79,
+        0.27,
+        0.02
+       ],
+       "lo": [
+        -0.79,
+        -0.27,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.63,
+        1.03,
+        -0.68,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.79,
+        0.27,
+        0.02
+       ],
+       "lo": [
+        -0.79,
+        -0.27,
+        -0.02
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.63,
+        1.03,
+        0.68,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.02,
+        0.27,
+        0.7
+       ],
+       "lo": [
+        -0.02,
+        -0.27,
+        -0.7
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -1.44,
+        1.03,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.02,
+        0.27,
+        0.7
+       ],
+       "lo": [
+        -0.02,
+        -0.27,
+        -0.7
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.18,
+        1.03,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.015,
+        0.07433,
+        0.77
+       ],
+       "lo": [
+        -0.015,
+        -0.07433,
+        -0.77
+       ],
+       "transform": [
+        0.0,
+        -0.336336,
+        -0.941742,
+        0.0,
+        0.0,
+        0.941742,
+        -0.336336,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        -0.63,
+        1.23,
+        -0.74,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.015,
+        0.07433,
+        0.77
+       ],
+       "lo": [
+        -0.015,
+        -0.07433,
+        -0.77
+       ],
+       "transform": [
+        0.0,
+        0.336336,
+        -0.941742,
+        0.0,
+        0.0,
+        0.941742,
+        0.336336,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        -0.63,
+        1.23,
+        0.74,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.022,
+        0.15,
+        0.022
+       ],
+       "lo": [
+        -0.022,
+        -0.15,
+        -0.022
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.46,
+        0.89,
+        -0.6,
+        1
+       ],
+       "radius": 0.022,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.022,
+        0.15,
+        0.022
+       ],
+       "lo": [
+        -0.022,
+        -0.15,
+        -0.022
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.46,
+        0.89,
+        0.6,
+        1
+       ],
+       "radius": 0.022,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.022,
+        0.15,
+        0.022
+       ],
+       "lo": [
+        -0.022,
+        -0.15,
+        -0.022
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.28,
+        0.89,
+        -0.6,
+        1
+       ],
+       "radius": 0.022,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.022,
+        0.15,
+        0.022
+       ],
+       "lo": [
+        -0.022,
+        -0.15,
+        -0.022
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1.28,
+        0.89,
+        0.6,
+        1
+       ],
+       "radius": 0.022,
+       "half": 0.15,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.018,
+        0.41,
+        0.018
+       ],
+       "lo": [
+        -0.018,
+        -0.41,
+        -0.018
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.87,
+        1.04,
+        -0.6,
+        1
+       ],
+       "radius": 0.018,
+       "half": 0.41,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.018,
+        0.41,
+        0.018
+       ],
+       "lo": [
+        -0.018,
+        -0.41,
+        -0.018
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.87,
+        1.04,
+        0.6,
+        1
+       ],
+       "radius": 0.018,
+       "half": 0.41,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.015,
+        0.41,
+        0.015
+       ],
+       "lo": [
+        -0.015,
+        -0.41,
+        -0.015
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.87,
+        0.89,
+        -0.6,
+        1
+       ],
+       "radius": 0.015,
+       "half": 0.41,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.015,
+        0.41,
+        0.015
+       ],
+       "lo": [
+        -0.015,
+        -0.41,
+        -0.015
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.87,
+        0.89,
+        0.6,
+        1
+       ],
+       "radius": 0.015,
+       "half": 0.41,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.018,
+        0.6,
+        0.018
+       ],
+       "lo": [
+        -0.018,
+        -0.6,
+        -0.018
+       ],
+       "transform": [
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        1.28,
+        1.04,
+        0.0,
+        1
+       ],
+       "radius": 0.018,
+       "half": 0.6,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.14,
+        0.41,
+        0.14
+       ],
+       "lo": [
+        -0.14,
+        -0.41,
+        -0.14
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.38,
+        0.83,
+        -0.62,
+        1
+       ],
+       "radius": 0.14,
+       "half": 0.41,
+       "round": "cylinder"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.38,
+        1.24,
+        -0.62,
+        1
+       ],
+       "hi": [
+        0.14,
+        0.077,
+        0.14
+       ],
+       "lo": [
+        -0.14,
+        -0.077,
+        -0.14
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.38,
+        0.42,
+        -0.62,
+        1
+       ],
+       "hi": [
+        0.14,
+        0.063,
+        0.14
+       ],
+       "lo": [
+        -0.14,
+        -0.063,
+        -0.14
+       ]
+      },
+      {
+       "hi": [
+        0.14,
+        0.41,
+        0.14
+       ],
+       "lo": [
+        -0.14,
+        -0.41,
+        -0.14
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.38,
+        0.83,
+        0.62,
+        1
+       ],
+       "radius": 0.14,
+       "half": 0.41,
+       "round": "cylinder"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.38,
+        1.24,
+        0.62,
+        1
+       ],
+       "hi": [
+        0.14,
+        0.077,
+        0.14
+       ],
+       "lo": [
+        -0.14,
+        -0.077,
+        -0.14
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.38,
+        0.42,
+        0.62,
+        1
+       ],
+       "hi": [
+        0.14,
+        0.063,
+        0.14
+       ],
+       "lo": [
+        -0.14,
+        -0.063,
+        -0.14
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "mule_blue_root__hullDark",
+       "mesh": "/Game/Models/mule/SM_mule_blue_root__hullDark.SM_mule_blue_root__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 720
+      },
+      {
+       "material": "hullMid",
+       "prim": "mule_blue_root__hullMid",
+       "mesh": "/Game/Models/mule/SM_mule_blue_root__hullMid.SM_mule_blue_root__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 356
+      },
+      {
+       "material": "hazard",
+       "prim": "mule_blue_root__hazard",
+       "mesh": "/Game/Models/mule/SM_mule_blue_root__hazard.SM_mule_blue_root__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 208
+      },
+      {
+       "material": "glowRed",
+       "prim": "mule_blue_root__glowRed",
+       "mesh": "/Game/Models/mule/SM_mule_blue_root__glowRed.SM_mule_blue_root__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "gunmetal",
+       "prim": "mule_blue_root__gunmetal",
+       "mesh": "/Game/Models/mule/SM_mule_blue_root__gunmetal.SM_mule_blue_root__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 376
+      },
+      {
+       "material": "team",
+       "prim": "mule_blue_root__team",
+       "mesh": "/Game/Models/mule/SM_mule_blue_root__team.SM_mule_blue_root__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 96
+      },
+      {
+       "material": "chrome",
+       "prim": "mule_blue_root__chrome",
+       "mesh": "/Game/Models/mule/SM_mule_blue_root__chrome.SM_mule_blue_root__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 1904
+      },
+      {
+       "material": "glowOrange",
+       "prim": "mule_blue_root__glowOrange",
+       "mesh": "/Game/Models/mule/SM_mule_blue_root__glowOrange.SM_mule_blue_root__glowOrange",
+       "materialInstance": "/Game/Models/Materials/MI_glowOrange_38050949d516.MI_glowOrange_38050949d516",
+       "materialKey": "38050949d516",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "steers_0",
+     "path": "/mule_blue/steers_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.9,
+      0.34,
+      -0.66,
+      1
+     ],
+     "position": [
+      0.9,
+      0.34,
+      -0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "steers_0"
+     ],
+     "driver": {
+      "what": "the front left wheel's steering (yaw with the turn)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "wheels_0",
+     "path": "/mule_blue/steers_0/wheels_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "steers_0",
+     "handles": [
+      "wheels_0"
+     ],
+     "driver": {
+      "what": "front left wheel: rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.31,
+        0.11,
+        0.31
+       ],
+       "lo": [
+        -0.31,
+        -0.11,
+        -0.31
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.31,
+       "half": 0.11,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "wheels_0__tyre",
+       "mesh": "/Game/Models/mule/SM_wheels_0__tyre.SM_wheels_0__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "wheels_0__hullDark",
+       "mesh": "/Game/Models/mule/SM_wheels_0__hullDark.SM_wheels_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "wheels_0__chrome",
+       "mesh": "/Game/Models/mule/SM_wheels_0__chrome.SM_wheels_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "wheels_0__hullMid",
+       "mesh": "/Game/Models/mule/SM_wheels_0__hullMid.SM_wheels_0__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "steers_1",
+     "path": "/mule_blue/steers_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.9,
+      0.34,
+      0.66,
+      1
+     ],
+     "position": [
+      0.9,
+      0.34,
+      0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "steers_1"
+     ],
+     "driver": {
+      "what": "the front right wheel's steering (yaw with the turn)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "wheels_1",
+     "path": "/mule_blue/steers_1/wheels_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "steers_1",
+     "handles": [
+      "wheels_1"
+     ],
+     "driver": {
+      "what": "front right wheel: rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.31,
+        0.11,
+        0.31
+       ],
+       "lo": [
+        -0.31,
+        -0.11,
+        -0.31
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.31,
+       "half": 0.11,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "wheels_1__tyre",
+       "mesh": "/Game/Models/mule/SM_wheels_1__tyre.SM_wheels_1__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "wheels_1__hullDark",
+       "mesh": "/Game/Models/mule/SM_wheels_1__hullDark.SM_wheels_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "wheels_1__chrome",
+       "mesh": "/Game/Models/mule/SM_wheels_1__chrome.SM_wheels_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "wheels_1__hullMid",
+       "mesh": "/Game/Models/mule/SM_wheels_1__hullMid.SM_wheels_1__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "wheels_2",
+     "path": "/mule_blue/wheels_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.4,
+      0.34,
+      -0.66,
+      1
+     ],
+     "position": [
+      -0.4,
+      0.34,
+      -0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "wheels_2"
+     ],
+     "driver": {
+      "what": "rear wheel (middle axle, left): rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.31,
+        0.11,
+        0.31
+       ],
+       "lo": [
+        -0.31,
+        -0.11,
+        -0.31
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.31,
+       "half": 0.11,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "wheels_2__tyre",
+       "mesh": "/Game/Models/mule/SM_wheels_2__tyre.SM_wheels_2__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "wheels_2__hullDark",
+       "mesh": "/Game/Models/mule/SM_wheels_2__hullDark.SM_wheels_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "wheels_2__chrome",
+       "mesh": "/Game/Models/mule/SM_wheels_2__chrome.SM_wheels_2__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "wheels_2__hullMid",
+       "mesh": "/Game/Models/mule/SM_wheels_2__hullMid.SM_wheels_2__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "wheels_3",
+     "path": "/mule_blue/wheels_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.4,
+      0.34,
+      0.66,
+      1
+     ],
+     "position": [
+      -0.4,
+      0.34,
+      0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "wheels_3"
+     ],
+     "driver": {
+      "what": "rear wheel (middle axle, right): rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.31,
+        0.11,
+        0.31
+       ],
+       "lo": [
+        -0.31,
+        -0.11,
+        -0.31
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.31,
+       "half": 0.11,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "wheels_3__tyre",
+       "mesh": "/Game/Models/mule/SM_wheels_3__tyre.SM_wheels_3__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "wheels_3__hullDark",
+       "mesh": "/Game/Models/mule/SM_wheels_3__hullDark.SM_wheels_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "wheels_3__chrome",
+       "mesh": "/Game/Models/mule/SM_wheels_3__chrome.SM_wheels_3__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "wheels_3__hullMid",
+       "mesh": "/Game/Models/mule/SM_wheels_3__hullMid.SM_wheels_3__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "wheels_4",
+     "path": "/mule_blue/wheels_4",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.1,
+      0.34,
+      -0.66,
+      1
+     ],
+     "position": [
+      -1.1,
+      0.34,
+      -0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "wheels_4"
+     ],
+     "driver": {
+      "what": "rear wheel (back axle, left): rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.31,
+        0.11,
+        0.31
+       ],
+       "lo": [
+        -0.31,
+        -0.11,
+        -0.31
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.31,
+       "half": 0.11,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "wheels_4__tyre",
+       "mesh": "/Game/Models/mule/SM_wheels_4__tyre.SM_wheels_4__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "wheels_4__hullDark",
+       "mesh": "/Game/Models/mule/SM_wheels_4__hullDark.SM_wheels_4__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "wheels_4__chrome",
+       "mesh": "/Game/Models/mule/SM_wheels_4__chrome.SM_wheels_4__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "wheels_4__hullMid",
+       "mesh": "/Game/Models/mule/SM_wheels_4__hullMid.SM_wheels_4__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "wheels_5",
+     "path": "/mule_blue/wheels_5",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.1,
+      0.34,
+      0.66,
+      1
+     ],
+     "position": [
+      -1.1,
+      0.34,
+      0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "wheels_5"
+     ],
+     "driver": {
+      "what": "rear wheel (back axle, right): rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.31,
+        0.11,
+        0.31
+       ],
+       "lo": [
+        -0.31,
+        -0.11,
+        -0.31
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1
+       ],
+       "radius": 0.31,
+       "half": 0.11,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "wheels_5__tyre",
+       "mesh": "/Game/Models/mule/SM_wheels_5__tyre.SM_wheels_5__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "wheels_5__hullDark",
+       "mesh": "/Game/Models/mule/SM_wheels_5__hullDark.SM_wheels_5__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "wheels_5__chrome",
+       "mesh": "/Game/Models/mule/SM_wheels_5__chrome.SM_wheels_5__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "wheels_5__hullMid",
+       "mesh": "/Game/Models/mule/SM_wheels_5__hullMid.SM_wheels_5__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "screens",
+     "path": "/mule_blue/screens",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.84,
+      0.93,
+      0.0,
+      1
+     ],
+     "position": [
+      -0.84,
+      0.93,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "screens"
+     ],
+     "driver": {
+      "what": "the screens' fixed face: emission its brightness (dim while parked, lit while driven or near)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "muleScreen",
+       "prim": "screens__muleScreen",
+       "mesh": "/Game/Models/mule/SM_screens__muleScreen.SM_screens__muleScreen",
+       "materialInstance": "/Game/Models/Materials/MI_muleScreen_e934b481c548.MI_muleScreen_e934b481c548",
+       "materialKey": "e934b481c548",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "roomDigits_0",
+     "path": "/mule_blue/roomDigits_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.735,
+      0.9732,
+      -0.73,
+      1
+     ],
+     "position": [
+      -0.735,
+      0.9732,
+      -0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "roomDigits_0"
+     ],
+     "driver": {
+      "what": "roomDigits readout, left flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_roomDigits",
+       "prim": "roomDigits_0__readout_roomDigits",
+       "mesh": "/Game/Models/mule/SM_roomDigits_0__readout_roomDigits.SM_roomDigits_0__readout_roomDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_roomDigits_7868876f0515.MI_readout_roomDigits_7868876f0515",
+       "materialKey": "7868876f0515",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "roomDigits_1",
+     "path": "/mule_blue/roomDigits_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.945,
+      0.9732,
+      0.73,
+      1
+     ],
+     "position": [
+      -0.945,
+      0.9732,
+      0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "roomDigits_1"
+     ],
+     "driver": {
+      "what": "roomDigits readout, right flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_roomDigits",
+       "prim": "roomDigits_1__readout_roomDigits",
+       "mesh": "/Game/Models/mule/SM_roomDigits_1__readout_roomDigits.SM_roomDigits_1__readout_roomDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_roomDigits_7868876f0515.MI_readout_roomDigits_7868876f0515",
+       "materialKey": "7868876f0515",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "roomBar_0",
+     "path": "/mule_blue/roomBar_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.84,
+      0.8688,
+      -0.73,
+      1
+     ],
+     "position": [
+      -0.84,
+      0.8688,
+      -0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "roomBar_0"
+     ],
+     "driver": {
+      "what": "roomBar readout, left flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_roomBar",
+       "prim": "roomBar_0__readout_roomBar",
+       "mesh": "/Game/Models/mule/SM_roomBar_0__readout_roomBar.SM_roomBar_0__readout_roomBar",
+       "materialInstance": "/Game/Models/Materials/MI_readout_roomBar_ff0b1c825249.MI_readout_roomBar_ff0b1c825249",
+       "materialKey": "ff0b1c825249",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "roomBar_1",
+     "path": "/mule_blue/roomBar_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.84,
+      0.8688,
+      0.73,
+      1
+     ],
+     "position": [
+      -0.84,
+      0.8688,
+      0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "roomBar_1"
+     ],
+     "driver": {
+      "what": "roomBar readout, right flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_roomBar",
+       "prim": "roomBar_1__readout_roomBar",
+       "mesh": "/Game/Models/mule/SM_roomBar_1__readout_roomBar.SM_roomBar_1__readout_roomBar",
+       "materialInstance": "/Game/Models/Materials/MI_readout_roomBar_ff0b1c825249.MI_readout_roomBar_ff0b1c825249",
+       "materialKey": "ff0b1c825249",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "oreDigits_0",
+     "path": "/mule_blue/oreDigits_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.732,
+      0.7968,
+      -0.73,
+      1
+     ],
+     "position": [
+      -0.732,
+      0.7968,
+      -0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "oreDigits_0"
+     ],
+     "driver": {
+      "what": "oreDigits readout, left flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_oreDigits",
+       "prim": "oreDigits_0__readout_oreDigits",
+       "mesh": "/Game/Models/mule/SM_oreDigits_0__readout_oreDigits.SM_oreDigits_0__readout_oreDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_oreDigits_34d9afcc0e9e.MI_readout_oreDigits_34d9afcc0e9e",
+       "materialKey": "34d9afcc0e9e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "oreDigits_1",
+     "path": "/mule_blue/oreDigits_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.948,
+      0.7968,
+      0.73,
+      1
+     ],
+     "position": [
+      -0.948,
+      0.7968,
+      0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "oreDigits_1"
+     ],
+     "driver": {
+      "what": "oreDigits readout, right flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_oreDigits",
+       "prim": "oreDigits_1__readout_oreDigits",
+       "mesh": "/Game/Models/mule/SM_oreDigits_1__readout_oreDigits.SM_oreDigits_1__readout_oreDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_oreDigits_34d9afcc0e9e.MI_readout_oreDigits_34d9afcc0e9e",
+       "materialKey": "34d9afcc0e9e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "mhDigits_0",
+     "path": "/mule_blue/mhDigits_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.008,
+      0.7968,
+      -0.73,
+      1
+     ],
+     "position": [
+      -1.008,
+      0.7968,
+      -0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "mhDigits_0"
+     ],
+     "driver": {
+      "what": "mhDigits readout, left flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_mhDigits",
+       "prim": "mhDigits_0__readout_mhDigits",
+       "mesh": "/Game/Models/mule/SM_mhDigits_0__readout_mhDigits.SM_mhDigits_0__readout_mhDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_mhDigits_1a90b80d3450.MI_readout_mhDigits_1a90b80d3450",
+       "materialKey": "1a90b80d3450",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "mhDigits_1",
+     "path": "/mule_blue/mhDigits_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.672,
+      0.7968,
+      0.73,
+      1
+     ],
+     "position": [
+      -0.672,
+      0.7968,
+      0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "mhDigits_1"
+     ],
+     "driver": {
+      "what": "mhDigits readout, right flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_mhDigits",
+       "prim": "mhDigits_1__readout_mhDigits",
+       "mesh": "/Game/Models/mule/SM_mhDigits_1__readout_mhDigits.SM_mhDigits_1__readout_mhDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_mhDigits_1a90b80d3450.MI_readout_mhDigits_1a90b80d3450",
+       "materialKey": "1a90b80d3450",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "heap",
+     "path": "/mule_blue/heap",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.63,
+      0.76,
+      0.0,
+      1
+     ],
+     "position": [
+      -0.63,
+      0.76,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "mule_blue_root",
+     "handles": [
+      "heap"
+     ],
+     "driver": {
+      "what": "the ore in the hopper: shown with any load, scaled up from the floor (Z by the load's share of 1000, X and Y a little)",
+      "channels": [
+       "visibility",
+       "scale"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.76,
+        0.2,
+        0.63
+       ],
+       "lo": [
+        -0.76,
+        -0.2,
+        -0.63
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.2,
+        0.0,
+        1
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.325189,
+        0.439541,
+        -0.380961,
+        1
+       ],
+       "hi": [
+        0.223448,
+        0.095763,
+        0.191527
+       ],
+       "lo": [
+        -0.223448,
+        -0.095763,
+        -0.191527
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.425074,
+        0.408224,
+        -0.416146,
+        1
+       ],
+       "hi": [
+        0.224223,
+        0.096095,
+        0.192191
+       ],
+       "lo": [
+        -0.224223,
+        -0.096095,
+        -0.192191
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.514921,
+        0.397641,
+        0.288434,
+        1
+       ],
+       "hi": [
+        0.275123,
+        0.11791,
+        0.23582
+       ],
+       "lo": [
+        -0.275123,
+        -0.11791,
+        -0.23582
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.342584,
+        0.510692,
+        0.035213,
+        1
+       ],
+       "hi": [
+        0.206736,
+        0.088601,
+        0.177202
+       ],
+       "lo": [
+        -0.206736,
+        -0.088601,
+        -0.177202
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.403277,
+        0.435599,
+        -0.378064,
+        1
+       ],
+       "hi": [
+        0.198016,
+        0.084864,
+        0.169728
+       ],
+       "lo": [
+        -0.198016,
+        -0.084864,
+        -0.169728
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.52665,
+        0.38627,
+        0.315763,
+        1
+       ],
+       "hi": [
+        0.280931,
+        0.120399,
+        0.240798
+       ],
+       "lo": [
+        -0.280931,
+        -0.120399,
+        -0.240798
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.370152,
+        0.462475,
+        -0.294302,
+        1
+       ],
+       "hi": [
+        0.211379,
+        0.090591,
+        0.181182
+       ],
+       "lo": [
+        -0.211379,
+        -0.090591,
+        -0.181182
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.156434,
+        0.489248,
+        0.222619,
+        1
+       ],
+       "hi": [
+        0.287651,
+        0.123279,
+        0.246558
+       ],
+       "lo": [
+        -0.287651,
+        -0.123279,
+        -0.246558
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.468223,
+        0.393806,
+        -0.39675,
+        1
+       ],
+       "hi": [
+        0.252819,
+        0.108351,
+        0.216702
+       ],
+       "lo": [
+        -0.252819,
+        -0.108351,
+        -0.216702
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.211536,
+        0.54609,
+        0.005716,
+        1
+       ],
+       "hi": [
+        0.192891,
+        0.082667,
+        0.165335
+       ],
+       "lo": [
+        -0.192891,
+        -0.082667,
+        -0.165335
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.03254,
+        0.431268,
+        -0.394228,
+        1
+       ],
+       "hi": [
+        0.298842,
+        0.128075,
+        0.256151
+       ],
+       "lo": [
+        -0.298842,
+        -0.128075,
+        -0.256151
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.450276,
+        0.474609,
+        0.045733,
+        1
+       ],
+       "hi": [
+        0.210034,
+        0.090015,
+        0.180029
+       ],
+       "lo": [
+        -0.210034,
+        -0.090015,
+        -0.180029
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.503728,
+        0.421143,
+        0.069472,
+        1
+       ],
+       "hi": [
+        0.291524,
+        0.124939,
+        0.249878
+       ],
+       "lo": [
+        -0.291524,
+        -0.124939,
+        -0.249878
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.42879,
+        0.476782,
+        0.008037,
+        1
+       ],
+       "hi": [
+        0.225952,
+        0.096837,
+        0.193674
+       ],
+       "lo": [
+        -0.225952,
+        -0.096837,
+        -0.193674
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.12186,
+        0.556613,
+        -0.066199,
+        1
+       ],
+       "hi": [
+        0.190585,
+        0.081679,
+        0.163358
+       ],
+       "lo": [
+        -0.190585,
+        -0.081679,
+        -0.163358
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.240103,
+        0.500651,
+        0.300089,
+        1
+       ],
+       "hi": [
+        0.174053,
+        0.074594,
+        0.149189
+       ],
+       "lo": [
+        -0.174053,
+        -0.074594,
+        -0.149189
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.558931,
+        0.42804,
+        0.121297,
+        1
+       ],
+       "hi": [
+        0.207261,
+        0.088826,
+        0.177652
+       ],
+       "lo": [
+        -0.207261,
+        -0.088826,
+        -0.177652
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.042654,
+        0.553962,
+        -0.02761,
+        1
+       ],
+       "hi": [
+        0.215998,
+        0.092571,
+        0.185141
+       ],
+       "lo": [
+        -0.215998,
+        -0.092571,
+        -0.185141
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.612648,
+        0.381,
+        -0.292249,
+        1
+       ],
+       "hi": [
+        0.225791,
+        0.096768,
+        0.193535
+       ],
+       "lo": [
+        -0.225791,
+        -0.096768,
+        -0.193535
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.36631,
+        0.497134,
+        0.127358,
+        1
+       ],
+       "hi": [
+        0.206683,
+        0.088578,
+        0.177157
+       ],
+       "lo": [
+        -0.206683,
+        -0.088578,
+        -0.177157
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.177617,
+        0.512416,
+        0.237065,
+        1
+       ],
+       "hi": [
+        0.212894,
+        0.09124,
+        0.18248
+       ],
+       "lo": [
+        -0.212894,
+        -0.09124,
+        -0.18248
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.072108,
+        0.478841,
+        0.388142,
+        1
+       ],
+       "hi": [
+        0.182137,
+        0.078059,
+        0.156118
+       ],
+       "lo": [
+        -0.182137,
+        -0.078059,
+        -0.156118
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.540096,
+        0.393671,
+        -0.260285,
+        1
+       ],
+       "hi": [
+        0.275123,
+        0.11791,
+        0.235819
+       ],
+       "lo": [
+        -0.275123,
+        -0.11791,
+        -0.235819
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.142212,
+        0.511642,
+        -0.25208,
+        1
+       ],
+       "hi": [
+        0.214349,
+        0.091864,
+        0.183728
+       ],
+       "lo": [
+        -0.214349,
+        -0.091864,
+        -0.183728
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.397271,
+        0.507094,
+        -0.039342,
+        1
+       ],
+       "hi": [
+        0.173994,
+        0.074569,
+        0.149137
+       ],
+       "lo": [
+        -0.173994,
+        -0.074569,
+        -0.149137
+       ]
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.243064,
+        0.42136,
+        0.380091,
+        1
+       ],
+       "hi": [
+        0.301663,
+        0.129284,
+        0.258569
+       ],
+       "lo": [
+        -0.301663,
+        -0.129284,
+        -0.258569
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "oreRock",
+       "prim": "heap__oreRock",
+       "mesh": "/Game/Models/mule/SM_heap__oreRock.SM_heap__oreRock",
+       "materialInstance": "/Game/Models/Materials/MI_oreRock_d023a52550f9.MI_oreRock_d023a52550f9",
+       "materialKey": "d023a52550f9",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 844
+      },
+      {
+       "material": "muleCrystal",
+       "prim": "heap__muleCrystal",
+       "mesh": "/Game/Models/mule/SM_heap__muleCrystal.SM_heap__muleCrystal",
+       "materialInstance": "/Game/Models/Materials/MI_muleCrystal_8077b51670f6.MI_muleCrystal_8077b51670f6",
+       "materialKey": "8077b51670f6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 828
+      }
+     ]
+    },
+    {
+     "name": "perch",
+     "path": "/mule_blue/perch",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.74,
+      0.35,
+      0.0,
+      1
+     ],
+     "position": [
+      0.74,
+      0.35,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "perch"
+     ],
+     "driver": {
+      "what": "the driver's place: the rider (a Prospector) stands here, its feet on the deck, facing +X",
+      "channels": [
+       "position"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "levers_0",
+     "path": "/mule_blue/levers_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.18,
+      0.49,
+      -0.5,
+      1
+     ],
+     "position": [
+      1.18,
+      0.49,
+      -0.5
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "levers_0"
+     ],
+     "driver": {
+      "what": "the left lever: pitched forward with that side's drive (forward speed and the turn)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.05,
+        0.07,
+        0.04
+       ],
+       "lo": [
+        -0.05,
+        -0.07,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.07,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.016,
+        0.231948,
+        0.016
+       ],
+       "lo": [
+        -0.016,
+        -0.231948,
+        -0.016
+       ],
+       "transform": [
+        0.9916,
+        0.129339,
+        0.0,
+        0.0,
+        -0.129339,
+        0.9916,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.03,
+        0.23,
+        0.0,
+        1
+       ],
+       "radius": 0.016,
+       "half": 0.231948,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "levers_0__hullDark",
+       "mesh": "/Game/Models/mule/SM_levers_0__hullDark.SM_levers_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chrome",
+       "prim": "levers_0__chrome",
+       "mesh": "/Game/Models/mule/SM_levers_0__chrome.SM_levers_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowRed",
+       "prim": "levers_0__glowRed",
+       "mesh": "/Game/Models/mule/SM_levers_0__glowRed.SM_levers_0__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "levers_1",
+     "path": "/mule_blue/levers_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.18,
+      0.49,
+      0.5,
+      1
+     ],
+     "position": [
+      1.18,
+      0.49,
+      0.5
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "levers_1"
+     ],
+     "driver": {
+      "what": "the right lever: pitched forward with that side's drive (forward speed and the turn)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.05,
+        0.07,
+        0.04
+       ],
+       "lo": [
+        -0.05,
+        -0.07,
+        -0.04
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        -0.07,
+        0.0,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.016,
+        0.231948,
+        0.016
+       ],
+       "lo": [
+        -0.016,
+        -0.231948,
+        -0.016
+       ],
+       "transform": [
+        0.9916,
+        0.129339,
+        0.0,
+        0.0,
+        -0.129339,
+        0.9916,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.03,
+        0.23,
+        0.0,
+        1
+       ],
+       "radius": 0.016,
+       "half": 0.231948,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "levers_1__hullDark",
+       "mesh": "/Game/Models/mule/SM_levers_1__hullDark.SM_levers_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chrome",
+       "prim": "levers_1__chrome",
+       "mesh": "/Game/Models/mule/SM_levers_1__chrome.SM_levers_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowRed",
+       "prim": "levers_1__glowRed",
+       "mesh": "/Game/Models/mule/SM_levers_1__glowRed.SM_levers_1__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "headlamps",
+     "path": "/mule_blue/headlamps",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.45,
+      0.48,
+      0.0,
+      1
+     ],
+     "position": [
+      1.45,
+      0.48,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "headlamps"
+     ],
+     "driver": {
+      "what": "headlamps: lit while driven, dim parked",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.05,
+        0.005,
+        0.05
+       ],
+       "lo": [
+        -0.05,
+        -0.005,
+        -0.05
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.019,
+        0.0,
+        -0.48,
+        1
+       ],
+       "radius": 0.05,
+       "half": 0.005,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.05,
+        0.005,
+        0.05
+       ],
+       "lo": [
+        -0.05,
+        -0.005,
+        -0.05
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.019,
+        0.0,
+        -0.32,
+        1
+       ],
+       "radius": 0.05,
+       "half": 0.005,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.05,
+        0.005,
+        0.05
+       ],
+       "lo": [
+        -0.05,
+        -0.005,
+        -0.05
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.019,
+        0.0,
+        0.32,
+        1
+       ],
+       "radius": 0.05,
+       "half": 0.005,
+       "round": "cylinder"
+      },
+      {
+       "hi": [
+        0.05,
+        0.005,
+        0.05
+       ],
+       "lo": [
+        -0.05,
+        -0.005,
+        -0.05
+       ],
+       "transform": [
+        0.0,
+        -1,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.019,
+        0.0,
+        0.48,
+        1
+       ],
+       "radius": 0.05,
+       "half": 0.005,
+       "round": "cylinder"
+      }
+     ],
+     "meshes": [
+      {
+       "material": "chrome",
+       "prim": "headlamps__chrome",
+       "mesh": "/Game/Models/mule/SM_headlamps__chrome.SM_headlamps__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      },
+      {
+       "material": "floodGlow",
+       "prim": "headlamps__floodGlow",
+       "mesh": "/Game/Models/mule/SM_headlamps__floodGlow.SM_headlamps__floodGlow",
+       "materialInstance": "/Game/Models/Materials/MI_floodGlow_9308b75cc67a.MI_floodGlow_9308b75cc67a",
+       "materialKey": "9308b75cc67a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      },
+      {
+       "material": "glowOrange",
+       "prim": "headlamps__glowOrange",
+       "mesh": "/Game/Models/mule/SM_headlamps__glowOrange.SM_headlamps__glowOrange",
+       "materialInstance": "/Game/Models/Materials/MI_glowOrange_38050949d516.MI_glowOrange_38050949d516",
+       "materialKey": "38050949d516",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "mhLevel_0",
+     "path": "/mule_blue/mhLevel_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.269441,
+      0.58,
+      -0.75176,
+      1
+     ],
+     "position": [
+      0.269441,
+      0.58,
+      -0.75176
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "mhLevel_0"
+     ],
+     "driver": {
+      "what": "the MH in the left tank's sight glass: scaled up from its foot by the MH's share of 1000",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "muleMercury",
+       "prim": "mhLevel_0__muleMercury",
+       "mesh": "/Game/Models/mule/SM_mhLevel_0__muleMercury.SM_mhLevel_0__muleMercury",
+       "materialInstance": "/Game/Models/Materials/MI_muleMercury_c5a23a70fee9.MI_muleMercury_c5a23a70fee9",
+       "materialKey": "c5a23a70fee9",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "needles_0",
+     "path": "/mule_blue/needles_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.38,
+      0.88,
+      -0.786,
+      1
+     ],
+     "position": [
+      0.38,
+      0.88,
+      -0.786
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "needles_0"
+     ],
+     "driver": {
+      "what": "the left tank's dial needle: turned with the MH held",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowRed",
+       "prim": "needles_0__glowRed",
+       "mesh": "/Game/Models/mule/SM_needles_0__glowRed.SM_needles_0__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "mhLevel_1",
+     "path": "/mule_blue/mhLevel_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.269441,
+      0.58,
+      0.75176,
+      1
+     ],
+     "position": [
+      0.269441,
+      0.58,
+      0.75176
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "mhLevel_1"
+     ],
+     "driver": {
+      "what": "the MH in the right tank's sight glass: scaled up from its foot by the MH's share of 1000",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "muleMercury",
+       "prim": "mhLevel_1__muleMercury",
+       "mesh": "/Game/Models/mule/SM_mhLevel_1__muleMercury.SM_mhLevel_1__muleMercury",
+       "materialInstance": "/Game/Models/Materials/MI_muleMercury_c5a23a70fee9.MI_muleMercury_c5a23a70fee9",
+       "materialKey": "c5a23a70fee9",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "needles_1",
+     "path": "/mule_blue/needles_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.38,
+      0.88,
+      0.786,
+      1
+     ],
+     "position": [
+      0.38,
+      0.88,
+      0.786
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "needles_1"
+     ],
+     "driver": {
+      "what": "the right tank's dial needle: turned with the MH held",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowRed",
+       "prim": "needles_1__glowRed",
+       "mesh": "/Game/Models/mule/SM_needles_1__glowRed.SM_needles_1__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "exhaust",
+     "path": "/mule_blue/exhaust",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      1.64,
+      0.64,
+      1
+     ],
+     "position": [
+      0.12,
+      1.64,
+      0.64
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "exhaust"
+     ],
+     "driver": {
+      "what": "the stack's top: exhaust smoke while it drives",
+      "channels": [
+       "particles"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "beacon",
+     "path": "/mule_blue/beacon",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      1.68,
+      -0.64,
+      1
+     ],
+     "position": [
+      0.12,
+      1.68,
+      -0.64
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "beacon"
+     ],
+     "driver": {
+      "what": "the orange beacon: turns and pulses while it drives, steady dim parked",
+      "channels": [
+       "rotation",
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.05,
+        0.04,
+        0.05
+       ],
+       "lo": [
+        -0.05,
+        -0.04,
+        -0.05
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        1
+       ],
+       "radius": 0.05,
+       "half": 0.04,
+       "round": "cylinder"
+      },
+      {
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.08,
+        0.0,
+        1
+       ],
+       "hi": [
+        0.05,
+        0.025,
+        0.05
+       ],
+       "lo": [
+        -0.05,
+        -0.025,
+        -0.05
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "glowOrange",
+       "prim": "beacon__glowOrange",
+       "mesh": "/Game/Models/mule/SM_beacon__glowOrange.SM_beacon__glowOrange",
+       "materialInstance": "/Game/Models/Materials/MI_glowOrange_38050949d516.MI_glowOrange_38050949d516",
+       "materialKey": "38050949d516",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullDark",
+       "prim": "beacon__hullDark",
+       "mesh": "/Game/Models/mule/SM_beacon__hullDark.SM_beacon__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "dust_0",
+     "path": "/mule_blue/dust_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.4,
+      0.04,
+      -0.66,
+      1
+     ],
+     "position": [
+      -1.4,
+      0.04,
+      -0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "dust_0"
+     ],
+     "driver": {
+      "what": "dust thrown up behind the left back wheel while it drives",
+      "channels": [
+       "particles"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "dust_1",
+     "path": "/mule_blue/dust_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.4,
+      0.04,
+      0.66,
+      1
+     ],
+     "position": [
+      -1.4,
+      0.04,
+      0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "mule_blue_root",
+     "handles": [
+      "dust_1"
+     ],
+     "driver": {
+      "what": "dust thrown up behind the right back wheel while it drives",
+      "channels": [
+       "particles"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    }
+   ]
   }
  ]
 }

@@ -956,6 +956,8 @@ def log(msg):
 
 
 BROOD_PARENTS = ("broodEgg", "broodOpal", "broodGlass")
+# Other masters a model's material may take as its parent: name -> the script that makes it (its ensure() and MASTERS).
+MASTER_SCRIPTS = dict({n: "make_brood_materials" for n in BROOD_PARENTS}, readout="make_readout_material")
 
 
 def make_material_instance(mat, masters, make_materials):
@@ -980,9 +982,10 @@ def make_material_instance(mat, masters, make_materials):
         desc["emissiveIntensity"] = max(s["emissive"] or (1.0,))
         desc["wrap"] = "clamp"
     mi = make_materials.make_instance(desc, set(s["team"]), masters)
-    if s["parent"] in BROOD_PARENTS:
-        import make_brood_materials
-        master = make_brood_materials.ensure()[make_brood_materials.MASTERS[s["parent"]]]
+    if s["parent"] in MASTER_SCRIPTS:
+        import importlib
+        maker = importlib.import_module(MASTER_SCRIPTS[s["parent"]])
+        master = maker.ensure()[maker.MASTERS[s["parent"]]]
         MEL = unreal.MaterialEditingLibrary
         MEL.set_material_instance_parent(mi, master)
         # The values again on the new parent (the overrides of a parameter it lacks are dropped).

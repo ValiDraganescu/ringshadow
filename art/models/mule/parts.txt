@@ -1,0 +1,34 @@
+# Parts of mule, written by unreal/Tools/Editor/ac_modelkit.py from models/mule.py (do not edit).
+# name, parent, pivot in the model frame (UE cm: x forward, y right, z up), what moves it, materials.
+# `_0` is the unit's left (UE -Y), `_1` its right.
+mule_blue_root -              pivot (   0.0,    0.0,    0.0)  the unit or building transform: position on the ground, heading (yaw = -heading for units) | hullDark(19),hullMid(18),hazard(12),glowRed(2),gunmetal(28),team(8),chrome(73),glowOrange(2)
+steers_0       mule_blue_root pivot (  90.0,  -66.0,   34.0)  the front left wheel's steering (yaw with the turn) | no mesh
+wheels_0       steers_0       pivot (  90.0,  -66.0,   34.0)  front left wheel: rolls with the distance driven | tyre(19),hullDark(1),chrome(1),hullMid(5)
+steers_1       mule_blue_root pivot (  90.0,   66.0,   34.0)  the front right wheel's steering (yaw with the turn) | no mesh
+wheels_1       steers_1       pivot (  90.0,   66.0,   34.0)  front right wheel: rolls with the distance driven | tyre(19),hullDark(1),chrome(1),hullMid(5)
+wheels_2       mule_blue_root pivot ( -40.0,  -66.0,   34.0)  rear wheel (middle axle, left): rolls with the distance driven | tyre(19),hullDark(1),chrome(1),hullMid(5)
+wheels_3       mule_blue_root pivot ( -40.0,   66.0,   34.0)  rear wheel (middle axle, right): rolls with the distance driven | tyre(19),hullDark(1),chrome(1),hullMid(5)
+wheels_4       mule_blue_root pivot (-110.0,  -66.0,   34.0)  rear wheel (back axle, left): rolls with the distance driven | tyre(19),hullDark(1),chrome(1),hullMid(5)
+wheels_5       mule_blue_root pivot (-110.0,   66.0,   34.0)  rear wheel (back axle, right): rolls with the distance driven | tyre(19),hullDark(1),chrome(1),hullMid(5)
+screens        mule_blue_root pivot ( -84.0,    0.0,   93.0)  the screens' fixed face: emission its brightness (dim while parked, lit while driven or near) | muleScreen(2)
+roomDigits_0   mule_blue_root pivot ( -73.5,  -73.0,   97.3)  roomDigits readout, left flank: the part's emission is the number shown (make_readout_material.py) | readout_roomDigits(1)
+roomDigits_1   mule_blue_root pivot ( -94.5,   73.0,   97.3)  roomDigits readout, right flank: the part's emission is the number shown (make_readout_material.py) | readout_roomDigits(1)
+roomBar_0      mule_blue_root pivot ( -84.0,  -73.0,   86.9)  roomBar readout, left flank: the part's emission is the number shown (make_readout_material.py) | readout_roomBar(1)
+roomBar_1      mule_blue_root pivot ( -84.0,   73.0,   86.9)  roomBar readout, right flank: the part's emission is the number shown (make_readout_material.py) | readout_roomBar(1)
+oreDigits_0    mule_blue_root pivot ( -73.2,  -73.0,   79.7)  oreDigits readout, left flank: the part's emission is the number shown (make_readout_material.py) | readout_oreDigits(1)
+oreDigits_1    mule_blue_root pivot ( -94.8,   73.0,   79.7)  oreDigits readout, right flank: the part's emission is the number shown (make_readout_material.py) | readout_oreDigits(1)
+mhDigits_0     mule_blue_root pivot (-100.8,  -73.0,   79.7)  mhDigits readout, left flank: the part's emission is the number shown (make_readout_material.py) | readout_mhDigits(1)
+mhDigits_1     mule_blue_root pivot ( -67.2,   73.0,   79.7)  mhDigits readout, right flank: the part's emission is the number shown (make_readout_material.py) | readout_mhDigits(1)
+heap           mule_blue_root pivot ( -63.0,    0.0,   76.0)  the ore in the hopper: shown with any load, scaled up from the floor (Z by the load's share of 1000, X and Y a little) [hidden at rest] | oreRock(27),muleCrystal(23)
+perch          mule_blue_root pivot (  74.0,    0.0,   35.0)  the driver's place: the rider (a Prospector) stands here, its feet on the deck, facing +X | no mesh
+levers_0       mule_blue_root pivot ( 118.0,  -50.0,   49.0)  the left lever: pitched forward with that side's drive (forward speed and the turn) | hullDark(1),chrome(1),glowRed(1)
+levers_1       mule_blue_root pivot ( 118.0,   50.0,   49.0)  the right lever: pitched forward with that side's drive (forward speed and the turn) | hullDark(1),chrome(1),glowRed(1)
+headlamps      mule_blue_root pivot ( 145.0,    0.0,   48.0)  headlamps: lit while driven, dim parked | chrome(4),floodGlow(4),glowOrange(2)
+mhLevel_0      mule_blue_root pivot (  26.9,  -75.2,   58.0)  the MH in the left tank's sight glass: scaled up from its foot by the MH's share of 1000 | muleMercury(1)
+needles_0      mule_blue_root pivot (  38.0,  -78.6,   88.0)  the left tank's dial needle: turned with the MH held | glowRed(1)
+mhLevel_1      mule_blue_root pivot (  26.9,   75.2,   58.0)  the MH in the right tank's sight glass: scaled up from its foot by the MH's share of 1000 | muleMercury(1)
+needles_1      mule_blue_root pivot (  38.0,   78.6,   88.0)  the right tank's dial needle: turned with the MH held | glowRed(1)
+exhaust        mule_blue_root pivot (  12.0,   64.0,  164.0)  the stack's top: exhaust smoke while it drives | no mesh
+beacon         mule_blue_root pivot (  12.0,  -64.0,  168.0)  the orange beacon: turns and pulses while it drives, steady dim parked | glowOrange(2),hullDark(1)
+dust_0         mule_blue_root pivot (-140.0,  -66.0,    4.0)  dust thrown up behind the left back wheel while it drives | no mesh
+dust_1         mule_blue_root pivot (-140.0,   66.0,    4.0)  dust thrown up behind the right back wheel while it drives | no mesh

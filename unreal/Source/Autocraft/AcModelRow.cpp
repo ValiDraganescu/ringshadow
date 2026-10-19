@@ -266,7 +266,11 @@ void AAcModelRow::Focus(const FName Name, int32 Team)
 		return true;
 	};
 	// The model at the origin, not turned: model-frame cm are world cm.
-	if (ParseVec(TEXT("AcModelEye="), CamPos)) ParseVec(TEXT("AcModelLook="), LookAt);
+	if (ParseVec(TEXT("AcModelEye="), CamPos))
+	{
+		ParseVec(TEXT("AcModelLook="), LookAt);
+		Holder->SetRelativeRotation(FRotator::ZeroRotator);  // a unit too (the compare turn is for the default eye)
+	}
 	// -AcModelPose=part:pitch,yaw,roll;...: parts turned from their rest.
 	FString PoseText;
 	if (FParse::Value(FCommandLine::Get(), TEXT("AcModelPose="), PoseText, false))
@@ -287,6 +291,44 @@ void AAcModelRow::Focus(const FName Name, int32 Team)
 			(*Part)->AddLocalRotation(FRotator(FCString::Atod(*A[0]), FCString::Atod(*A[1]), FCString::Atod(*A[2])));
 		}
 	}
+	// -AcModelEmission=part:value;...: a part's emission (custom data 1: a
+	// lamp's strength, a readout's number); -AcModelScale=part:x,y,z;...: a
+	// part scaled from its pivot (the Mule's heap and sight glasses at a load).
+	auto PartItems = [&](const TCHAR* Key, TFunctionRef<void(int32, const FString&)> Each)
+	{
+		FString Text;
+		if (!FParse::Value(FCommandLine::Get(), Key, Text, false)) return;
+		TArray<FString> Items;
+		Text.ParseIntoArray(Items, TEXT(";"));
+		for (const FString& Item : Items)
+		{
+			FString PartName, Value;
+			if (!Item.Split(TEXT(":"), &PartName, &Value)) continue;
+			const int32 Index = M->Parts.IndexOfByPredicate([&](const FAcModelPart& P) { return P.Name == FName(*PartName); });
+			if (Index == INDEX_NONE)
+			{
+				UE_LOG(LogAutocraft, Error, TEXT("models: %s: no part %s"), Key, *PartName);
+				continue;
+			}
+			Each(Index, Value);
+		}
+	};
+	PartItems(TEXT("AcModelEmission="), [&](const int32 Index, const FString& Value)
+	{
+		for (const FPlacedMesh& X : PlacedMeshes)
+		{
+			if (X.Part == Index && X.Component.IsValid()) X.Component->SetCustomPrimitiveDataFloat(AcModelData::EmissionScale, FCString::Atof(*Value));
+		}
+	});
+	PartItems(TEXT("AcModelScale="), [&](const int32 Index, const FString& Value)
+	{
+		TArray<FString> A;
+		const TWeakObjectPtr<USceneComponent>* Part = PartsByName.Find(M->Parts[Index].Name);
+		if (Value.ParseIntoArray(A, TEXT(",")) == 3 && Part && Part->IsValid())
+		{
+			(*Part)->SetRelativeScale3D(FVector(FCString::Atod(*A[0]), FCString::Atod(*A[1]), FCString::Atod(*A[2])));
+		}
+	});
 
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
