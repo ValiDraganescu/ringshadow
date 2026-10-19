@@ -310990,6 +310990,2403 @@
      "meshes": []
     }
    ]
+  },
+  {
+   "name": "cockpit_mule_blue",
+   "file": "",
+   "category": "cockpit",
+   "facing": "camera space: x right, y up, -Z ahead",
+   "boundsMin": [
+    -1.5,
+    -0.000161,
+    -0.791
+   ],
+   "boundsMax": [
+    1.49,
+    1.785,
+    0.791
+   ],
+   "triangles": 9360,
+   "team": "blue",
+   "base": "cockpit_mule",
+   "canonical": "cockpit_mule_blue",
+   "notes": [
+    "First-person view model hung off the camera while the Mule is driven: the whole Mule under the eye (model_*), posed by PoseMule; no muzzle (it has no gun)."
+   ],
+   "parts": [
+    {
+     "name": "cockpit_mule_blue_root",
+     "path": "/cockpit_mule_blue",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "handles": [
+      "root"
+     ],
+     "driver": {
+      "what": "the unit or building transform: position on the ground, heading (yaw = -heading for units)",
+      "channels": [
+       "position",
+       "rotation"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "rig",
+     "path": "/cockpit_mule_blue/rig",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "cockpit_mule_blue_root",
+     "handles": [
+      "rig"
+     ],
+     "driver": {
+      "what": "parts under rig turn with the view and sway with the stride",
+      "channels": [
+       "rotation",
+       "position"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "level",
+     "path": "/cockpit_mule_blue/rig/level",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "rig",
+     "handles": [
+      "level"
+     ],
+     "driver": {
+      "what": "the view's pitch taken off again (the machine stays level)",
+      "channels": [
+       "rotation",
+       "position"
+      ],
+      "functions": []
+     },
+     "meshes": []
+    },
+    {
+     "name": "model_root",
+     "path": "/cockpit_mule_blue/rig/level/model_root",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "level",
+     "handles": [
+      "model_root"
+     ],
+     "driver": {
+      "what": "the unit's model, placed under the eye by the pose code",
+      "channels": [
+       "rotation",
+       "position"
+      ],
+      "functions": []
+     },
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "model_root__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_root__hullDark.SM_model_root__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 720
+      },
+      {
+       "material": "hullMid",
+       "prim": "model_root__hullMid",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_root__hullMid.SM_model_root__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 356
+      },
+      {
+       "material": "hazard",
+       "prim": "model_root__hazard",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_root__hazard.SM_model_root__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 208
+      },
+      {
+       "material": "glowRed",
+       "prim": "model_root__glowRed",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_root__glowRed.SM_model_root__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      },
+      {
+       "material": "gunmetal",
+       "prim": "model_root__gunmetal",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_root__gunmetal.SM_model_root__gunmetal",
+       "materialInstance": "/Game/Models/Materials/MI_gunmetal_b3e974eff6cd.MI_gunmetal_b3e974eff6cd",
+       "materialKey": "b3e974eff6cd",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 376
+      },
+      {
+       "material": "team",
+       "prim": "model_root__team",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_root__team.SM_model_root__team",
+       "materialInstance": "/Game/Models/Materials/MI_team_8b16a6ac2b3c.MI_team_8b16a6ac2b3c",
+       "materialKey": "8b16a6ac2b3c",
+       "blend": "opaque",
+       "team": [
+        "TeamTint"
+       ],
+       "triangles": 96
+      },
+      {
+       "material": "chrome",
+       "prim": "model_root__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_root__chrome.SM_model_root__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 1904
+      },
+      {
+       "material": "glowOrange",
+       "prim": "model_root__glowOrange",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_root__glowOrange.SM_model_root__glowOrange",
+       "materialInstance": "/Game/Models/Materials/MI_glowOrange_38050949d516.MI_glowOrange_38050949d516",
+       "materialKey": "38050949d516",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "model_steers_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_steers_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.9,
+      0.34,
+      -0.66,
+      1
+     ],
+     "position": [
+      0.9,
+      0.34,
+      -0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_steers_0"
+     ],
+     "driver": {
+      "what": "the front left wheel's steering (yaw with the turn)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "model_wheels_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_steers_0/model_wheels_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_steers_0",
+     "handles": [
+      "model_wheels_0"
+     ],
+     "driver": {
+      "what": "front left wheel: rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "model_wheels_0__tyre",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_0__tyre.SM_model_wheels_0__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "model_wheels_0__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_0__hullDark.SM_model_wheels_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "model_wheels_0__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_0__chrome.SM_model_wheels_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "model_wheels_0__hullMid",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_0__hullMid.SM_model_wheels_0__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "model_steers_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_steers_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.9,
+      0.34,
+      0.66,
+      1
+     ],
+     "position": [
+      0.9,
+      0.34,
+      0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_steers_1"
+     ],
+     "driver": {
+      "what": "the front right wheel's steering (yaw with the turn)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "model_wheels_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_steers_1/model_wheels_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_steers_1",
+     "handles": [
+      "model_wheels_1"
+     ],
+     "driver": {
+      "what": "front right wheel: rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "model_wheels_1__tyre",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_1__tyre.SM_model_wheels_1__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "model_wheels_1__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_1__hullDark.SM_model_wheels_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "model_wheels_1__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_1__chrome.SM_model_wheels_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "model_wheels_1__hullMid",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_1__hullMid.SM_model_wheels_1__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "model_wheels_2",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_wheels_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.4,
+      0.34,
+      -0.66,
+      1
+     ],
+     "position": [
+      -0.4,
+      0.34,
+      -0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_wheels_2"
+     ],
+     "driver": {
+      "what": "rear wheel (middle axle, left): rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "model_wheels_2__tyre",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_2__tyre.SM_model_wheels_2__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "model_wheels_2__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_2__hullDark.SM_model_wheels_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "model_wheels_2__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_2__chrome.SM_model_wheels_2__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "model_wheels_2__hullMid",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_2__hullMid.SM_model_wheels_2__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "model_wheels_3",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_wheels_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.4,
+      0.34,
+      0.66,
+      1
+     ],
+     "position": [
+      -0.4,
+      0.34,
+      0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_wheels_3"
+     ],
+     "driver": {
+      "what": "rear wheel (middle axle, right): rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "model_wheels_3__tyre",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_3__tyre.SM_model_wheels_3__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "model_wheels_3__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_3__hullDark.SM_model_wheels_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "model_wheels_3__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_3__chrome.SM_model_wheels_3__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "model_wheels_3__hullMid",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_3__hullMid.SM_model_wheels_3__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "model_wheels_4",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_wheels_4",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.1,
+      0.34,
+      -0.66,
+      1
+     ],
+     "position": [
+      -1.1,
+      0.34,
+      -0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_wheels_4"
+     ],
+     "driver": {
+      "what": "rear wheel (back axle, left): rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "model_wheels_4__tyre",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_4__tyre.SM_model_wheels_4__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "model_wheels_4__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_4__hullDark.SM_model_wheels_4__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "model_wheels_4__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_4__chrome.SM_model_wheels_4__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "model_wheels_4__hullMid",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_4__hullMid.SM_model_wheels_4__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "model_wheels_5",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_wheels_5",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.1,
+      0.34,
+      0.66,
+      1
+     ],
+     "position": [
+      -1.1,
+      0.34,
+      0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_wheels_5"
+     ],
+     "driver": {
+      "what": "rear wheel (back axle, right): rolls with the distance driven",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "tyre",
+       "prim": "model_wheels_5__tyre",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_5__tyre.SM_model_wheels_5__tyre",
+       "materialInstance": "/Game/Models/Materials/MI_tyre_35f4f88fc855.MI_tyre_35f4f88fc855",
+       "materialKey": "35f4f88fc855",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 296
+      },
+      {
+       "material": "hullDark",
+       "prim": "model_wheels_5__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_5__hullDark.SM_model_wheels_5__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 64
+      },
+      {
+       "material": "chrome",
+       "prim": "model_wheels_5__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_5__chrome.SM_model_wheels_5__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 40
+      },
+      {
+       "material": "hullMid",
+       "prim": "model_wheels_5__hullMid",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_wheels_5__hullMid.SM_model_wheels_5__hullMid",
+       "materialInstance": "/Game/Models/Materials/MI_hullMid_b82fe54aa5ec.MI_hullMid_b82fe54aa5ec",
+       "materialKey": "b82fe54aa5ec",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 120
+      }
+     ]
+    },
+    {
+     "name": "model_screens",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_screens",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.84,
+      0.93,
+      0.0,
+      1
+     ],
+     "position": [
+      -0.84,
+      0.93,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_screens"
+     ],
+     "driver": {
+      "what": "the screens' fixed face: emission its brightness (dim while parked, lit while driven or near)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "muleScreen",
+       "prim": "model_screens__muleScreen",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_screens__muleScreen.SM_model_screens__muleScreen",
+       "materialInstance": "/Game/Models/Materials/MI_muleScreen_e934b481c548.MI_muleScreen_e934b481c548",
+       "materialKey": "e934b481c548",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "model_roomDigits_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_roomDigits_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.735,
+      0.9732,
+      -0.73,
+      1
+     ],
+     "position": [
+      -0.735,
+      0.9732,
+      -0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_roomDigits_0"
+     ],
+     "driver": {
+      "what": "roomDigits readout, left flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_roomDigits",
+       "prim": "model_roomDigits_0__readout_roomDigits",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_roomDigits_0__readout_roomDigits.SM_model_roomDigits_0__readout_roomDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_roomDigits_7868876f0515.MI_readout_roomDigits_7868876f0515",
+       "materialKey": "7868876f0515",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_roomDigits_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_roomDigits_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.945,
+      0.9732,
+      0.73,
+      1
+     ],
+     "position": [
+      -0.945,
+      0.9732,
+      0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_roomDigits_1"
+     ],
+     "driver": {
+      "what": "roomDigits readout, right flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_roomDigits",
+       "prim": "model_roomDigits_1__readout_roomDigits",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_roomDigits_1__readout_roomDigits.SM_model_roomDigits_1__readout_roomDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_roomDigits_7868876f0515.MI_readout_roomDigits_7868876f0515",
+       "materialKey": "7868876f0515",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_roomBar_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_roomBar_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.84,
+      0.8688,
+      -0.73,
+      1
+     ],
+     "position": [
+      -0.84,
+      0.8688,
+      -0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_roomBar_0"
+     ],
+     "driver": {
+      "what": "roomBar readout, left flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_roomBar",
+       "prim": "model_roomBar_0__readout_roomBar",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_roomBar_0__readout_roomBar.SM_model_roomBar_0__readout_roomBar",
+       "materialInstance": "/Game/Models/Materials/MI_readout_roomBar_ff0b1c825249.MI_readout_roomBar_ff0b1c825249",
+       "materialKey": "ff0b1c825249",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_roomBar_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_roomBar_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.84,
+      0.8688,
+      0.73,
+      1
+     ],
+     "position": [
+      -0.84,
+      0.8688,
+      0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_roomBar_1"
+     ],
+     "driver": {
+      "what": "roomBar readout, right flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_roomBar",
+       "prim": "model_roomBar_1__readout_roomBar",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_roomBar_1__readout_roomBar.SM_model_roomBar_1__readout_roomBar",
+       "materialInstance": "/Game/Models/Materials/MI_readout_roomBar_ff0b1c825249.MI_readout_roomBar_ff0b1c825249",
+       "materialKey": "ff0b1c825249",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_oreDigits_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_oreDigits_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.732,
+      0.7968,
+      -0.73,
+      1
+     ],
+     "position": [
+      -0.732,
+      0.7968,
+      -0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_oreDigits_0"
+     ],
+     "driver": {
+      "what": "oreDigits readout, left flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_oreDigits",
+       "prim": "model_oreDigits_0__readout_oreDigits",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_oreDigits_0__readout_oreDigits.SM_model_oreDigits_0__readout_oreDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_oreDigits_34d9afcc0e9e.MI_readout_oreDigits_34d9afcc0e9e",
+       "materialKey": "34d9afcc0e9e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_oreDigits_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_oreDigits_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.948,
+      0.7968,
+      0.73,
+      1
+     ],
+     "position": [
+      -0.948,
+      0.7968,
+      0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_oreDigits_1"
+     ],
+     "driver": {
+      "what": "oreDigits readout, right flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_oreDigits",
+       "prim": "model_oreDigits_1__readout_oreDigits",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_oreDigits_1__readout_oreDigits.SM_model_oreDigits_1__readout_oreDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_oreDigits_34d9afcc0e9e.MI_readout_oreDigits_34d9afcc0e9e",
+       "materialKey": "34d9afcc0e9e",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_mhDigits_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_mhDigits_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.008,
+      0.7968,
+      -0.73,
+      1
+     ],
+     "position": [
+      -1.008,
+      0.7968,
+      -0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_mhDigits_0"
+     ],
+     "driver": {
+      "what": "mhDigits readout, left flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_mhDigits",
+       "prim": "model_mhDigits_0__readout_mhDigits",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_mhDigits_0__readout_mhDigits.SM_model_mhDigits_0__readout_mhDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_mhDigits_1a90b80d3450.MI_readout_mhDigits_1a90b80d3450",
+       "materialKey": "1a90b80d3450",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_mhDigits_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_mhDigits_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.672,
+      0.7968,
+      0.73,
+      1
+     ],
+     "position": [
+      -0.672,
+      0.7968,
+      0.73
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_mhDigits_1"
+     ],
+     "driver": {
+      "what": "mhDigits readout, right flank: the part's emission is the number shown (make_readout_material.py)",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "readout_mhDigits",
+       "prim": "model_mhDigits_1__readout_mhDigits",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_mhDigits_1__readout_mhDigits.SM_model_mhDigits_1__readout_mhDigits",
+       "materialInstance": "/Game/Models/Materials/MI_readout_mhDigits_1a90b80d3450.MI_readout_mhDigits_1a90b80d3450",
+       "materialKey": "1a90b80d3450",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_heap",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_heap",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.63,
+      0.76,
+      0.0,
+      1
+     ],
+     "position": [
+      -0.63,
+      0.76,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": true,
+     "parent": "model_root",
+     "handles": [
+      "model_heap"
+     ],
+     "driver": {
+      "what": "the ore in the hopper: shown with any load, scaled up from the floor (Z by the load's share of 1000, X and Y a little)",
+      "channels": [
+       "visibility",
+       "scale"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "oreRock",
+       "prim": "model_heap__oreRock",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_heap__oreRock.SM_model_heap__oreRock",
+       "materialInstance": "/Game/Models/Materials/MI_oreRock_d023a52550f9.MI_oreRock_d023a52550f9",
+       "materialKey": "d023a52550f9",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 844
+      },
+      {
+       "material": "muleCrystal",
+       "prim": "model_heap__muleCrystal",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_heap__muleCrystal.SM_model_heap__muleCrystal",
+       "materialInstance": "/Game/Models/Materials/MI_muleCrystal_8077b51670f6.MI_muleCrystal_8077b51670f6",
+       "materialKey": "8077b51670f6",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 828
+      }
+     ]
+    },
+    {
+     "name": "model_perch",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_perch",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.74,
+      0.35,
+      0.0,
+      1
+     ],
+     "position": [
+      0.74,
+      0.35,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_perch"
+     ],
+     "driver": {
+      "what": "the driver's place: the rider (a Prospector) stands here, its feet on the deck, facing +X",
+      "channels": [
+       "position"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "model_levers_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_levers_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.18,
+      0.49,
+      -0.5,
+      1
+     ],
+     "position": [
+      1.18,
+      0.49,
+      -0.5
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_levers_0"
+     ],
+     "driver": {
+      "what": "the left lever: pitched forward with that side's drive (forward speed and the turn)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "model_levers_0__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_levers_0__hullDark.SM_model_levers_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chrome",
+       "prim": "model_levers_0__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_levers_0__chrome.SM_model_levers_0__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowRed",
+       "prim": "model_levers_0__glowRed",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_levers_0__glowRed.SM_model_levers_0__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "model_levers_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_levers_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.18,
+      0.49,
+      0.5,
+      1
+     ],
+     "position": [
+      1.18,
+      0.49,
+      0.5
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_levers_1"
+     ],
+     "driver": {
+      "what": "the right lever: pitched forward with that side's drive (forward speed and the turn)",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "hullDark",
+       "prim": "model_levers_1__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_levers_1__hullDark.SM_model_levers_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "chrome",
+       "prim": "model_levers_1__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_levers_1__chrome.SM_model_levers_1__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      },
+      {
+       "material": "glowRed",
+       "prim": "model_levers_1__glowRed",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_levers_1__glowRed.SM_model_levers_1__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "model_headlamps",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_headlamps",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      1.45,
+      0.48,
+      0.0,
+      1
+     ],
+     "position": [
+      1.45,
+      0.48,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_headlamps"
+     ],
+     "driver": {
+      "what": "headlamps: lit while driven, dim parked",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "chrome",
+       "prim": "model_headlamps__chrome",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_headlamps__chrome.SM_model_headlamps__chrome",
+       "materialInstance": "/Game/Models/Materials/MI_chrome_1741605754dc.MI_chrome_1741605754dc",
+       "materialKey": "1741605754dc",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      },
+      {
+       "material": "floodGlow",
+       "prim": "model_headlamps__floodGlow",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_headlamps__floodGlow.SM_model_headlamps__floodGlow",
+       "materialInstance": "/Game/Models/Materials/MI_floodGlow_9308b75cc67a.MI_floodGlow_9308b75cc67a",
+       "materialKey": "9308b75cc67a",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 192
+      },
+      {
+       "material": "glowOrange",
+       "prim": "model_headlamps__glowOrange",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_headlamps__glowOrange.SM_model_headlamps__glowOrange",
+       "materialInstance": "/Game/Models/Materials/MI_glowOrange_38050949d516.MI_glowOrange_38050949d516",
+       "materialKey": "38050949d516",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 24
+      }
+     ]
+    },
+    {
+     "name": "model_mhLevel_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_mhLevel_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.269441,
+      0.58,
+      -0.75176,
+      1
+     ],
+     "position": [
+      0.269441,
+      0.58,
+      -0.75176
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_mhLevel_0"
+     ],
+     "driver": {
+      "what": "the MH in the left tank's sight glass: scaled up from its foot by the MH's share of 1000",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "muleMercury",
+       "prim": "model_mhLevel_0__muleMercury",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_mhLevel_0__muleMercury.SM_model_mhLevel_0__muleMercury",
+       "materialInstance": "/Game/Models/Materials/MI_muleMercury_c5a23a70fee9.MI_muleMercury_c5a23a70fee9",
+       "materialKey": "c5a23a70fee9",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "model_needles_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_needles_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.38,
+      0.88,
+      -0.786,
+      1
+     ],
+     "position": [
+      0.38,
+      0.88,
+      -0.786
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_needles_0"
+     ],
+     "driver": {
+      "what": "the left tank's dial needle: turned with the MH held",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowRed",
+       "prim": "model_needles_0__glowRed",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_needles_0__glowRed.SM_model_needles_0__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_mhLevel_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_mhLevel_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.269441,
+      0.58,
+      0.75176,
+      1
+     ],
+     "position": [
+      0.269441,
+      0.58,
+      0.75176
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_mhLevel_1"
+     ],
+     "driver": {
+      "what": "the MH in the right tank's sight glass: scaled up from its foot by the MH's share of 1000",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "muleMercury",
+       "prim": "model_mhLevel_1__muleMercury",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_mhLevel_1__muleMercury.SM_model_mhLevel_1__muleMercury",
+       "materialInstance": "/Game/Models/Materials/MI_muleMercury_c5a23a70fee9.MI_muleMercury_c5a23a70fee9",
+       "materialKey": "c5a23a70fee9",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "model_needles_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_needles_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.38,
+      0.88,
+      0.786,
+      1
+     ],
+     "position": [
+      0.38,
+      0.88,
+      0.786
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_needles_1"
+     ],
+     "driver": {
+      "what": "the right tank's dial needle: turned with the MH held",
+      "channels": [
+       "rotation"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowRed",
+       "prim": "model_needles_1__glowRed",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_needles_1__glowRed.SM_model_needles_1__glowRed",
+       "materialInstance": "/Game/Models/Materials/MI_glowRed_209e9675ec47.MI_glowRed_209e9675ec47",
+       "materialKey": "209e9675ec47",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_exhaust",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_exhaust",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      1.64,
+      0.64,
+      1
+     ],
+     "position": [
+      0.12,
+      1.64,
+      0.64
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_exhaust"
+     ],
+     "driver": {
+      "what": "the stack's top: exhaust smoke while it drives",
+      "channels": [
+       "particles"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "model_beacon",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_beacon",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      1.68,
+      -0.64,
+      1
+     ],
+     "position": [
+      0.12,
+      1.68,
+      -0.64
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_beacon"
+     ],
+     "driver": {
+      "what": "the orange beacon: turns and pulses while it drives, steady dim parked",
+      "channels": [
+       "rotation",
+       "emission"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "glowOrange",
+       "prim": "model_beacon__glowOrange",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_beacon__glowOrange.SM_model_beacon__glowOrange",
+       "materialInstance": "/Game/Models/Materials/MI_glowOrange_38050949d516.MI_glowOrange_38050949d516",
+       "materialKey": "38050949d516",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 80
+      },
+      {
+       "material": "hullDark",
+       "prim": "model_beacon__hullDark",
+       "mesh": "/Game/Models/cockpit_mule/SM_model_beacon__hullDark.SM_model_beacon__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "model_dust_0",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_dust_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.4,
+      0.04,
+      -0.66,
+      1
+     ],
+     "position": [
+      -1.4,
+      0.04,
+      -0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_dust_0"
+     ],
+     "driver": {
+      "what": "dust thrown up behind the left back wheel while it drives",
+      "channels": [
+       "particles"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    },
+    {
+     "name": "model_dust_1",
+     "path": "/cockpit_mule_blue/rig/level/model_root/model_dust_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -1.4,
+      0.04,
+      0.66,
+      1
+     ],
+     "position": [
+      -1.4,
+      0.04,
+      0.66
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "model_root",
+     "handles": [
+      "model_dust_1"
+     ],
+     "driver": {
+      "what": "dust thrown up behind the right back wheel while it drives",
+      "channels": [
+       "particles"
+      ],
+      "functions": [
+       "AcPoseVehicles.cpp:PoseMule"
+      ]
+     },
+     "meshes": []
+    }
+   ]
   }
  ]
 }

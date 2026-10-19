@@ -53,6 +53,7 @@ namespace
 	const FName CueDrill(TEXT("AcDrill")), CueCrystalBite(TEXT("AcCrystalBite"));
 	const FName PartEmitter1(TEXT("emitter_1")), PartEmitter2(TEXT("emitter_2"));
 	const FName PartMuzzle0(TEXT("muzzles_0")), PartMuzzle1(TEXT("muzzles_1")), PartFlameEnd(TEXT("flameEnd"));
+	const FName PartDust0(TEXT("dust_0")), PartDust1(TEXT("dust_1")), PartExhaust(TEXT("exhaust"));
 
 	class FAcBursts;
 	TMap<const UAcEffects*, FAcBursts*>& Live()
@@ -269,6 +270,20 @@ namespace
 					const double Rate = Look.BurstRate[Moving];
 					if (const FTransform* P = Part(PartEmitter1)) Particles.Stream(EAcParticle::Plume, FAcParticles::KeyOf(Id, 1), *P, Rate, Time, Dt, E);
 					if (const FTransform* P = Part(PartEmitter2)) Particles.Stream(EAcParticle::Plume, FAcParticles::KeyOf(Id, 2), *P, Rate, Time, Dt, E);
+					return;
+				}
+				if (Look.Burst == EAcKindBurst::MuleDust)
+				{
+					// C4, the Mule rolling: a low trail of dust behind its back
+					// wheels, a thin smoke from its stack.
+					const ac::Unit* const* U = Units.Find(Id);
+					if (!U || !(*U)->walking()) return;
+					FAcEmit E;
+					E.Speed = 0.7;
+					E.Size = 0.42;
+					if (const FTransform* P = Part(PartDust0)) Particles.Stream(EAcParticle::Dust, FAcParticles::KeyOf(Id, 1), *P, 26, Time, Dt, E);
+					if (const FTransform* P = Part(PartDust1)) Particles.Stream(EAcParticle::Dust, FAcParticles::KeyOf(Id, 2), *P, 26, Time, Dt, E);
+					if (const FTransform* P = Part(PartExhaust)) Particles.Stream(EAcParticle::FireflyExhaust, FAcParticles::KeyOf(Id, 3), *P, 10, Time, Dt);
 					return;
 				}
 				const bool bComet = Look.Burst == EAcKindBurst::CometJets, bJuggernaut = Look.Burst == EAcKindBurst::MuzzleSmoke;

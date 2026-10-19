@@ -412,6 +412,21 @@ public:
 	int32 DemolishKept() const { return DemolishDone; }
 	const FString& HallRefusal() const { return LastHallRefusal; }
 	int32 HallKept() const { return HallDone; }
+	/// C4, the Mule (docs/haul-and-ferry.md section 2): buy one at the realm
+	/// Foundry `Foundry` (the BuyMule request; it rolls out of the door in
+	/// `ac::Mule::rollOut` s), tip the driven Prospector's load into Mule
+	/// `Mule`'s hopper (MuleFill). Board and leave are takes (`Want`). The
+	/// server's refusal comes back as a note and `MuleRefusal`; `MuleKept`
+	/// counts the kept asks; the refusals since the last call (the game's
+	/// toasts) in `TakeMuleRefusals`.
+	bool BuyMule(int64 Foundry, FString* Why = nullptr);
+	TArray<FString> TakeMuleRefusals();
+	bool MuleFill(int64 Mule, FString* Why = nullptr);
+	const FString& MuleRefusal() const { return LastMuleRefusal; }
+	int32 MuleKept() const { return MuleDone; }
+	/// The pilot's own Mule's unit in this region (the Progress message's
+	/// `mule`); unset: none, rolling out, or in another region.
+	TOptional<int64> OwnMule() const;
 	/// K2, Citadel missions (docs/missions.md): sign up for an offer on the
 	/// board (at the realm's Citadel), drop one from the Journal. A refused
 	/// sign-up is answered as the Citadel's asks (`CitadelRefusal`); a
@@ -652,6 +667,11 @@ private:
 	TSet<uint32> HallAsked;
 	FString LastHallRefusal;
 	int32 HallDone = 0;
+	/// C4: the Mule's asks (buy, fill), the last refusal, the kept ones.
+	TSet<uint32> MuleAsked;
+	FString LastMuleRefusal;
+	TArray<FString> MuleNotes;
+	int32 MuleDone = 0;
 	/// C3: the demolish asks, the last refusal, the kept ones.
 	TSet<uint32> DemolishAsked;
 	FString LastDemolishRefusal;

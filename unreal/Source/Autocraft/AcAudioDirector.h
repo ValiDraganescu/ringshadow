@@ -181,6 +181,15 @@ namespace AcSound
 	inline constexpr float ScorpionDigGain = 0.6f;
 	inline constexpr float ScorpionLockGain = 0.5f;
 	inline constexpr float ScorpionEngineGain = 1.0f;
+	/// C4, the Mule (Tools/AudioGen/mule.manifest.json): its engine as it
+	/// pulls away (driven, in the ear); its slow drive loop while it rolls
+	/// (a murmur parked with its driver aboard); a lever's clunk as it
+	/// starts or stops; the clatter of a load tipped into its hopper.
+	inline constexpr float MuleEngineGain = 0.3f;
+	inline constexpr float MuleDriveGain = 0.22f;
+	inline constexpr float MuleIdleShare = 0.3f;
+	inline constexpr float MuleGearGain = 0.4f;
+	inline constexpr float MuleFillGain = 0.45f;
 	inline constexpr float JetGain = 0.4f;
 	/// A pad flight and the Prospector's jet pack (F1b; Tools/AudioGen/
 	/// flight.manifest.json), in the ear: set from each take's loudness
@@ -489,6 +498,10 @@ private:
 
 	struct FTool { FName Sound; int32 Variant = 0; float Gain = 0.f; };
 	TMap<int64, FTool> Tools;
+	/// C4: each Mule heard: its drive loop's take and fade, whether it rolled
+	/// and what it held last frame (a start, a stop, a load tipped in).
+	struct FMuleHeard { int32 Variant = 0; float Gain = 0.f; bool bMoving = false; int64 Load = 0; };
+	TMap<int64, FMuleHeard> Mules;
 	TMap<int64, FTool> Miniguns;
 	/// C2: the minigun class's guns heard, by `shooter * 8 + 3 + gun`:
 	/// where, the last round's time, firing or not, the roar's fade.

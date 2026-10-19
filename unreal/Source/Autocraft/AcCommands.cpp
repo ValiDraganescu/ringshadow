@@ -3,6 +3,7 @@
 #include "AcConsole.h"
 #include "AcLog.h"
 #include "AcMmo.h"
+#include "AcMuleAct.h"
 #include "AcPointer.h"
 #include "AcSimSubsystem.h"
 #include "SAcConsole.h"
@@ -14,10 +15,14 @@
 #include "InputCoreTypes.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Mule.h"
 #include "Simulation.h"
 
 namespace
 {
+	/// C4: the MMO card of a finished Foundry offers the Mule.
+	bool MuleButton(const ac::Structure& St) { return St.kind == ac::StructureKind::foundry && St.complete(); }
+
 	FAutoConsoleCommandWithWorldAndArgs GCardPress(TEXT("ac.CardPress"),
 		TEXT("Press the selected building's card button N (1-based, as its hotkey); add shift and/or option."),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
@@ -113,9 +118,27 @@ TOptional<FAcCardInfo> UAcCommandsSubsystem::MakeInfo(const UAcSimSubsystem& Sim
 	{
 		// The MMORPG mode: a building takes no orders (the server has no such
 		// request), so no hotkeys that would only be refused; its one button
-		// is DEMOLISH (C3), held for `Rules::demolishHold`.
+		// is DEMOLISH (C3), held for `Rules::demolishHold`. A finished
+		// Foundry's first is MULE (C4): buy the pilot's Mule.
 		Info.Buttons.Reset();
 		Card.Actions.Reset();
+		if (MuleButton(*St))
+		{
+			FAcCardButton B;
+			B.Slot = 0;
+			B.Title = TEXT("MULE");
+			B.Icon = TEXT("mule");
+			B.Ore = int32(ac::Mule::ore());
+			B.Hydrogen = int32(ac::Mule::hydrogen());
+			B.Time = ac::Mule::rollOut();
+			B.Detail = FString(TEXT("Your hauler: it rolls out of the door"));
+			if (const TOptional<FString> Why = AcMuleAct::BuyRefusal(AcMuleAct::OwnOf(Sim.MmoClient())))
+			{
+				B.bEnabled = false;
+				B.Why = *Why;
+			}
+			Info.Buttons.Add(B);
+		}
 		FAcCardButton D;
 		D.Slot = 14;
 		D.Key = TEXT("HOLD");
@@ -165,9 +188,18 @@ void UAcCommandsSubsystem::Press(const int32 Index, TOptional<FAcCardMods> Mods)
 	// C3: the MMO's one button, DEMOLISH: pressed, its hold starts.
 	if (Sim && Sim->IsRunning() && Id && Sim->IsMmo())
 	{
-		if (Index == 0)
+		const std::optional<ac::Structure> St = Sim->Simulation().state.structure(*Id);
+		const bool bMule = St && MuleButton(*St);
+		if (bMule && Index == 0)
 		{
-			const std::optional<ac::Structure> St = Sim->Simulation().state.structure(*Id);
+			if (FAcMmoClient* Mmo = Sim->MmoClient())
+			{
+				if (const TOptional<FString> Why = AcMuleAct::BuyRefusal(AcMuleAct::OwnOf(Mmo))) AcMuleAct::Toast(this, *Why);
+				else Mmo->BuyMule(St->id);
+			}
+		}
+		else if (Index == (bMule ? 1 : 0))
+		{
 			if (St && !Sim->Simulation().demolishRefusal(*St)) HoldDemolish(true);
 		}
 		return;

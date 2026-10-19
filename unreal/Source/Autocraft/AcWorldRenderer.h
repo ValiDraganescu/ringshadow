@@ -257,6 +257,8 @@ private:
 	TMap<TTuple<const FAcModelInfo*, uint8>, TUniquePtr<FLayout>> Layouts;
 	TArray<TUniquePtr<FObject>> Objects;
 	TMap<int64, int32> ObjectIndex;
+	/// C4: this frame's Mules by id (their riders are drawn on their perches).
+	TMap<int64, const ac::Unit*> Mules;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UInstancedStaticMeshComponent>> Components;

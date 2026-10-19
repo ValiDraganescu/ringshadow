@@ -10,6 +10,10 @@
 //               (wheel roll held to 0.35 lug a frame, tyre smear, steering,
 //               suspension, the tail turning like a turret, pilot light, the
 //               jet of flame, the splash ball, the flare)
+//   Mule        C4 (docs/haul-and-ferry.md section 4, models/mule.py): six
+//               wheels rolled like the Firefly's, the front pair steering,
+//               the levers with the drive, the heap and the MH gauges with
+//               the load, the screens' live readouts, the beacon and lamps
 // with the game's default skins (the beetle Comet, the gorilla Juggernaut,
 // the scorpion Firefly), as exported.
 //
@@ -31,6 +35,7 @@
 #include "Rules.h"
 
 struct FAcUnitMemory;
+namespace ac { struct Unit; }
 
 /// What a B3 unit's emitters and light do this frame (the Swift pose sets
 /// these on its `SCNParticleSystem`s and `SCNLight`). Rates are particles a
@@ -71,4 +76,14 @@ namespace AcPoseVehicles
 	inline constexpr int32 FireflyLugs = 16;
 	/// How long one burst of the Firefly's flame burns, seconds.
 	inline constexpr double FireflyBurn = 0.45;
+
+	/// C4, the Mule (models/mule.py): its tyres' radius over the lugs and
+	/// their lugs; where its driver stands on the perch, ahead of its middle
+	/// (DRIVER_X), on the deck (`ac::Mule::deck`), cells.
+	inline constexpr double MuleWheelRadius = 0.34;
+	inline constexpr int32 MuleLugs = 18;
+	inline constexpr double MuleDriverAhead = 0.74;
+	/// Its rider drawn on the perch: the Mule's placement (`ground` its
+	/// ground height, cells) moved to the driver's feet, facing the Mule's way.
+	AUTOCRAFT_API FTransform MuleRiderPlacement(const ac::Unit& Mule, double Ground);
 }

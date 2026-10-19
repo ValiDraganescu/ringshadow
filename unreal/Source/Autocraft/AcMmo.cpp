@@ -1016,6 +1016,18 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (MuleAsked.Remove(R.request) > 0)
+		{
+			if (R.done) MuleDone += 1;
+			else
+			{
+				LastMuleRefusal = Text(R.reason);
+				MuleNotes.Add(LastMuleRefusal);
+				UE_LOG(LogAutocraft, Log, TEXT("mmo: mule ask %u refused: %s"), R.request, *LastMuleRefusal);
+			}
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (HallAsked.Remove(R.request) > 0)
 		{
 			if (R.done) HallDone += 1;
@@ -1306,6 +1318,49 @@ bool FAcMmoClient::Door(const bool bOpen, FString* Why)
 	HallAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: hall ask %u: door %s"), Id, bOpen ? TEXT("open") : TEXT("close"));
 	return true;
+}
+
+bool FAcMmoClient::BuyMule(const int64 Foundry, FString* Why)
+{
+	if (!Net || !Net->welcome())
+	{
+		if (Why) *Why = TEXT("Not connected to the local server");
+		return false;
+	}
+	const uint32 Id = Net->buyMule(Foundry);
+	LastMuleRefusal.Reset();
+	MuleAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: mule ask %u: buy at #%lld"), Id, (long long)Foundry);
+	return true;
+}
+
+bool FAcMmoClient::MuleFill(const int64 Mule, FString* Why)
+{
+	if (!Net || !Net->welcome())
+	{
+		if (Why) *Why = TEXT("Not connected to the local server");
+		return false;
+	}
+	const uint32 Id = Net->muleFill(Mule);
+	LastMuleRefusal.Reset();
+	MuleAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: mule ask %u: fill #%lld"), Id, (long long)Mule);
+	return true;
+}
+
+TArray<FString> FAcMmoClient::TakeMuleRefusals() { return MoveTemp(MuleNotes); }
+
+TOptional<int64> FAcMmoClient::OwnMule() const
+{
+	const ac::net::ProgressMessage* P = Progress();
+	if (!P || !P->mule || P->mule->unit == 0) return {};
+	const ac::net::Mirror* M = Mirror();
+	if (!M) return {};
+	// (Another region's ids may meet this one's: the unit there must be a Mule.)
+	const ac::Simulation& S = M->simulation();
+	const std::optional<int64_t> I = S.unitIndex(P->mule->unit);
+	if (!I || S.state.units[size_t(*I)].kind != ac::UnitKind::mule) return {};
+	return P->mule->unit;
 }
 
 bool FAcMmoClient::Demolish(const int64 Structure)

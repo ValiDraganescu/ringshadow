@@ -770,6 +770,7 @@ void UAcEffects::Fire(const FShooter& S, const FVector& To, const ac::Vec2 At, c
 		break;
 	case ac::UnitKind::dropship:
 	case ac::UnitKind::prospector:
+	case ac::UnitKind::mule:
 		break;
 	}
 }

@@ -1,6 +1,9 @@
 #include "AcPilotBuild.h"
 
+#include "Mule.h"
+
 #include "AcDemolish.h"
+#include "AcMuleAct.h"
 
 #include "AcConsoleInfo.h"
 #include "AcHologram.h"
@@ -324,6 +327,22 @@ void UAcPilotBuildSubsystem::OnFrame(const FAcFrame& Frame)
 				Hud->Widget()->Toast(Line, TEXT("Half its price back to your wallet"), FAcHudStyle::LevelGold(), FPlatformTime::Seconds());
 			UE_LOG(LogAutocraft, Log, TEXT("pilot build: %s"), *Line);
 		}
+		// C4: the pilot's own Mule booked its load in a Citadel's hall (every
+		// pilot of the region hears of it: only the owner's toast).
+		const TOptional<int64> OwnMule = Mmo->OwnMule();
+		for (const ac::GameEvent& E : Frame.AllEvents)
+		{
+			const ac::GameEvent::Booked* B = E.as<ac::GameEvent::Booked>();
+			if (!B || !OwnMule || B->unit != *OwnMule) continue;
+			const FString Line = UTF8_TO_TCHAR(ac::Mule::bookedToast(B->ore, B->hydrogen).c_str());
+			const FString Sub = B->taxOre + B->taxHydrogen > 0
+				? FString::Printf(TEXT("Into your wallet  ·  the realm's cut %lld ore, %lld MH"), (long long)B->taxOre, (long long)B->taxHydrogen)
+				: FString(TEXT("Into your wallet"));
+			if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && Hud->Widget())
+				Hud->Widget()->Toast(Line, Sub, FAcHudStyle::LevelGold(), FPlatformTime::Seconds());
+			UE_LOG(LogAutocraft, Log, TEXT("pilot: mule %s"), *Line);
+		}
+		for (const FString& Why : Mmo->TakeMuleRefusals()) AcMuleAct::Toast(this, Why);
 	}
 	ac::Simulation& S = Sim->Simulation();
 	const std::optional<ac::Unit> U = Pawn && Pawn->Driving() ? S.pilotUnit() : std::nullopt;

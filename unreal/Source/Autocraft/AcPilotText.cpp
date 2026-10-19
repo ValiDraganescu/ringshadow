@@ -1,6 +1,7 @@
 #include "AcPilotText.h"
 
 #include "AcCitadelAct.h"
+#include "AcMuleAct.h"
 #include "AcKindTable.h"
 #include "AcProgressHud.h"
 #include "Defence.h"
@@ -396,6 +397,10 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 	Info.Heading = U.look();
 	Info.Position = U.position;
 	Info.Help = Help(U);
+	// C4: what the Mule holds, driving it or near one's own (the HUD's line).
+	const AcMuleAct::FOwn MuleOwn = In.bMmo ? AcMuleAct::OwnOf(In.Mmo) : AcMuleAct::FOwn();
+	if (U.kind == ac::UnitKind::mule) Info.MuleLoad = AcMuleAct::LoadLine(U);
+	else if (const ac::Unit* Near = In.bMmo ? AcMuleAct::Shown(Sim, U, MuleOwn) : nullptr) Info.MuleLoad = AcMuleAct::LoadLine(*Near);
 	// The jet pack's MH (F1b): what a jump burns, where the keys are told.
 	if (const int64 Jet = Sim.pilotJumpHydrogen(U); Jet > 0 && Sim.pilotJumps(U))
 	{
@@ -429,10 +434,17 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		const std::optional<ac::PilotTarget>& Target = F.Target;
 		// C1: nothing else to act on: a gun station or the Citadel's door.
 		const TOptional<AcCitadelAct::FAct> AtCitadel = !Target && In.bMmo ? AcCitadelAct::Find(Sim, U) : TOptional<AcCitadelAct::FAct>();
+		// C4, before the Citadel's: the Mule's perch and hopper, the Foundry's Mule.
+		const TOptional<AcMuleAct::FAct> AtMule = !Target && In.bMmo ? AcMuleAct::Find(Sim, U, MuleOwn) : TOptional<AcMuleAct::FAct>();
 		if (U.task == ETask::atGun)
 		{
 			Info.Prompt = FString(TEXT("Click  fire   ·   Esc  disengage"));
 			Info.Tone = F.Sight && F.Sight->inRange ? EAcTone::Enemy : EAcTone::Ready;
+		}
+		else if (AtMule)
+		{
+			Info.Prompt = AtMule->Prompt();
+			Info.Tone = AtMule->Why ? EAcTone::Blocked : EAcTone::Ready;
 		}
 		else if (AtCitadel)
 		{
@@ -442,6 +454,7 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		else if (!Target)
 		{
 			if (Sim.pilot && Sim.pilot->mend && U.kind == ac::UnitKind::prospector) Info.Prompt = FString(TEXT("Nothing to repair ahead"));
+			else if (U.carrying > 0 && MuleOwn.Mule) Info.Prompt = FString::Printf(TEXT("Tip it into your Mule's hopper, or walk into %s"), *DepotWords(Sim, U.owner));
 			else if (U.carrying > 0) Info.Prompt = FString::Printf(TEXT("Walk into %s to unload"), *DepotWords(Sim, U.owner));
 		}
 		else if (Target->is<ac::PilotTarget::Enemy>())

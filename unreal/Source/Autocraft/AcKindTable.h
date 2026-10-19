@@ -80,6 +80,9 @@ enum class EAcKindBurst : uint8
 	MuzzleSmoke,
 	/// The Firefly's flame, embers, smoke and exhaust.
 	FireflyFire,
+	/// C4, the Mule: dust thrown up behind its back wheels (`dust_0/1`) and
+	/// its stack's smoke (`exhaust`) while it rolls.
+	MuleDust,
 };
 
 enum class EAcKindMinimap : uint8

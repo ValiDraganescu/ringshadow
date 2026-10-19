@@ -164,7 +164,7 @@ bool FAcKindsNamesTest::RunTest(const FString&)
 		TestEqual(TEXT("ModelBase reads the row"), FString(AcPose::ModelBase(K)), L.Base);
 		Player += AcKinds::IsBrood(K) ? 0 : 1;
 	}
-	TestEqual(TEXT("twelve player kinds"), Player, 12);
+	TestEqual(TEXT("thirteen player kinds (C4: the Mule)"), Player, 13);
 	TestFalse(TEXT("an unknown name"), AcKinds::Named(TEXT("ranger_blue")).IsSet());
 	TestEqual(TEXT("a Ranger's icon"), FAcConsoleInfo::IconName((int32)ac::UnitKind::ranger), FString(TEXT("ranger")));
 	TestEqual(TEXT("a bug has none"), FAcConsoleInfo::IconName((int32)ac::UnitKind::shardling), FString());

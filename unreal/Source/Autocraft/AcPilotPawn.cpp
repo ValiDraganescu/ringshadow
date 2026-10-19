@@ -7,6 +7,7 @@
 
 #include "AcAudioDirector.h"
 #include "AcCitadelAct.h"
+#include "AcMuleAct.h"
 #include "AcConsole.h"
 #include "AcPilotAudio.h"
 #include "AcEffects.h"
@@ -740,6 +741,23 @@ void AAcPilotPawn::Press(const bool bDown, const bool bKeyE)
 	if (FAcMmoClient* Mmo = Sim->MmoClient(); Mmo && GunManned == INDEX_NONE)
 	{
 		const ac::Simulation& S = Sim->Simulation();
+		// C4, first: the Mule (climb on and off, fill it) and the Foundry's
+		// Mule to buy (AcMuleAct.h).
+		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && !S.pilotTarget(*U))
+		{
+			if (const TOptional<AcMuleAct::FAct> A = AcMuleAct::Find(S, *U, AcMuleAct::OwnOf(Mmo)))
+			{
+				bHold = false;
+				using EKind = AcMuleAct::FAct::EKind;
+				if (A->Why) AcMuleAct::Toast(this, *A->Why);
+				else if (A->Kind == EKind::Board) Mmo->Want(A->Target);
+				else if (A->Kind == EKind::Leave) Mmo->Want(A->Rider);
+				else if (A->Kind == EKind::Fill) Mmo->MuleFill(A->Target);
+				else Mmo->BuyMule(A->Target);
+				UE_LOG(LogAutocraft, Log, TEXT("pilot: mule act %s"), *A->Prompt());
+				return;
+			}
+		}
 		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && !S.pilotTarget(*U))
 		{
 			if (const TOptional<AcCitadelAct::FAct> A = AcCitadelAct::Find(S, *U))

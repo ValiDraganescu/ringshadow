@@ -1,0 +1,25 @@
+{
+ "about": "The Mule's sounds (C4, docs/haul-and-ferry.md section 4): the six-wheeled hauler a Prospector drives standing at two levers. Its voice is the Prospector's (its driver), over the helmet comm like the Prospector's own lines. Ids match the game's sound names (sfx/<name>_<n>): vmule = reports in (a pilot climbs on), muledeath = the driver's cry as the Mule is wrecked (the blast plays with it), mulemove = the Mule's engine as it pulls away (at most every 2 s, in your ear), muleengine = the slow diesel-and-gear drive loop while it rolls, mulegear = a lever thrown into gear (it starts or stops), mulefill = a load tipped into the hopper. Takes are made into unreal/server/build/mule/takes and copied to unreal/Resources/Sounds/sfx/ by Tools/AudioGen/mule_pick.py; checked offline, never played aloud.",
+ "voices": {
+  "prospector": "RngE95w4IGrKGquZmKQS"
+ },
+ "entries": [
+  {"id": "vmule_1", "kind": "say", "voice": "prospector", "text": "[crisp, over a helmet radio] Mule's hitched. Let's haul.", "fx": "comm"},
+  {"id": "vmule_2", "kind": "say", "voice": "prospector", "text": "[dry, unhurried] Levers in hand. She's slow, but she carries.", "fx": "comm"},
+  {"id": "vmule_3", "kind": "say", "voice": "prospector", "text": "[matter-of-fact] On the perch. Point me at the Citadel.", "fx": "comm"},
+  {"id": "vmule_4", "kind": "say", "voice": "prospector", "text": "[quick, a little sardonic] Hopper's waiting. Fill her up.", "fx": "comm"},
+  {"id": "muledeath_1", "kind": "say", "voice": "prospector", "text": "[quick pained shout] The Mule's gone!", "fx": "comm"},
+  {"id": "muledeath_2", "kind": "say", "voice": "prospector", "text": "[short sharp cry] Lost the load!", "fx": "comm"},
+  {"id": "muledeath_3", "kind": "say", "voice": "prospector", "text": "[pained, clipped] She's wrecked—!", "fx": "comm"},
+  {"id": "mulemove_1", "kind": "sfx", "prompt": "heavy six-wheeled industrial hauler pulls away slowly: a low chugging diesel engine revs up, a clunk of gears engaging, big knobbly tyres crunching on gravel, close up, no voices, no music", "seconds": 2.2, "influence": 0.5},
+  {"id": "mulemove_2", "kind": "sfx", "prompt": "heavy six-wheeled industrial hauler pulls away slowly: a low chugging diesel engine revs up, a clunk of gears engaging, big knobbly tyres crunching on gravel, close up, no voices, no music", "seconds": 2.2, "influence": 0.5},
+  {"id": "mulemove_3", "kind": "sfx", "prompt": "slow mining cart truck lurches forward: deep rumbling engine rising, metal gearbox grinding into gear, chains and a loaded steel hopper rattling, gravel under the wheels, no voices, no music", "seconds": 2.2, "influence": 0.5},
+  {"id": "muleengine_1", "kind": "sfx", "prompt": "a slow heavy six-wheeled hauler rolling steadily over rough dirt: a low even chugging diesel engine, a whining gearbox, a loaded steel hopper rattling softly, tyres crunching gravel, seamless, no voices, no music", "seconds": 6, "influence": 0.55, "loop": true},
+  {"id": "muleengine_2", "kind": "sfx", "prompt": "a slow heavy six-wheeled hauler rolling steadily over rough dirt: a low even chugging diesel engine, a whining gearbox, a loaded steel hopper rattling softly, tyres crunching gravel, seamless, no voices, no music", "seconds": 6, "influence": 0.55, "loop": true},
+  {"id": "mulegear_1", "kind": "sfx", "prompt": "a heavy steel lever thrown into gear on an industrial vehicle: a solid mechanical clunk and a short gearbox grind, close up, no voices, no music", "seconds": 0.6, "influence": 0.6},
+  {"id": "mulegear_2", "kind": "sfx", "prompt": "a heavy steel lever thrown into gear on an industrial vehicle: a solid mechanical clunk and a short gearbox grind, close up, no voices, no music", "seconds": 0.6, "influence": 0.6},
+  {"id": "mulegear_3", "kind": "sfx", "prompt": "a big mechanical gear lever pulled back to neutral: a heavy ratchet clack and a brake hiss, close up, no voices, no music", "seconds": 0.6, "influence": 0.6},
+  {"id": "mulefill_1", "kind": "sfx", "prompt": "a load of hard glassy crystal ore tipped into an empty steel hopper: rocks clattering and tumbling onto metal, a ringing thud, short, no voices, no music", "seconds": 1.2, "influence": 0.55},
+  {"id": "mulefill_2", "kind": "sfx", "prompt": "a load of hard glassy crystal ore tipped into an empty steel hopper: rocks clattering and tumbling onto metal, a ringing thud, short, no voices, no music", "seconds": 1.2, "influence": 0.55}
+ ]
+}

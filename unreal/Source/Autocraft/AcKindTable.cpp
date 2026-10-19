@@ -244,6 +244,27 @@ namespace
 			Wreck(L, 8, 0.7, 12, {TEXT("mound")});
 			L.bOutlineBuried = true;
 			break;
+		case K::mule:
+			// C4 (docs/haul-and-ferry.md): the hauler, driven standing at the
+			// levers on its perch. No gun: the table's shot is the weld's, never
+			// played. Its driver's voice is the Prospector's (vmule, muledeath).
+			L.Weapon = {"weld", 0.3f, 6};
+			L.bNoMuzzle = true;
+			Engine(L, AcSound::MuleEngineGain);
+			L.ChestHeight = 0.9;
+			// The driver's eyes on the perch (models/mule.py DRIVER_X 0.74, the
+			// deck 0.35, a Prospector's eyes 1.2 over its feet).
+			L.Eye = FVector(0.74, 1.55, 0);
+			L.StartPitch = -0.26;
+			// Third person: the boom over the hopper, a little longer (3 long).
+			L.BoomLift = 0.3f;
+			L.BoomLength = 1.25f;
+			L.Rig = EAcKindCockpitRig::UnitModel;
+			Minimap(L, 2.2);
+			// The load and the readouts are not a wreck.
+			Wreck(L, 12, 1.1, 14, {TEXT("heap"), TEXT("roomDigits_"), TEXT("roomBar_"), TEXT("oreDigits_"), TEXT("mhDigits_")});
+			L.Burst = EAcKindBurst::MuleDust;
+			break;
 		// The Brood (docs/creatures.md): no icon, no voice, no cockpit; they
 		// bite (no muzzle) and die in their own poses.
 		case K::shardling:

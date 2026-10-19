@@ -1010,6 +1010,24 @@ namespace
 		}
 	}
 
+	/// C4, the Mule (`cockpit_mule_blue`, models/cockpit_mule.py): the whole
+	/// Mule under the driver's eyes on the perch, posed by PoseMule (the
+	/// levers, the wheels, the heap, the readouts); the view looks along the
+	/// hull. It rocks on its six wheels as it rolls, and a little with the
+	/// engine standing.
+	void PoseMuleCockpit(FState& S, const FAcCockpitContext& C, FAcCockpitPose& P)
+	{
+		const ac::Unit& U = C.Unit;
+		Unpitch(S, C, P);
+		PoseUnitModel(S, C, P, ModelRootNode(S, UnitKind::mule, 0.0));
+		const bool bMoving = U.moving.value_or(false);
+		const double T = C.Cues.Time;
+		const double Rock = bMoving ? 1.0 : 0.25;
+		P.Lean.Lift = float(Rock * (0.008 * std::sin(T * 7.3) + 0.005 * std::sin(T * 11.1 + 1)));
+		P.Lean.Roll = float(Rock * 0.006 * std::sin(T * 2.9));
+		P.Lean.Shake = FVector2f(float(Rock * 0.0015 * std::sin(T * 23)), 0.f);
+	}
+
 	// --- Dropship ------------------------------------------------------------------
 
 	void PoseDropship(FState& S, const FAcCockpitContext& C, FAcCockpitPose& P)
@@ -1148,5 +1166,6 @@ void AcCockpitKinds::Pose(UAcCockpitSubsystem::FState& S, const FAcCockpitContex
 	case UnitKind::peregrine: PosePeregrineCockpit(S, C, P); break;
 	case UnitKind::atlas: PoseAtlasCockpit(S, C, P); break;
 	case UnitKind::scorpion: PoseScorpionCockpit(S, C, P); break;
+	case UnitKind::mule: PoseMuleCockpit(S, C, P); break;
 	}
 }

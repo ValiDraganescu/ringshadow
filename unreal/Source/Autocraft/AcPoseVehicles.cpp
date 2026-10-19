@@ -5,6 +5,8 @@
 #include "AcPose.h"
 #include "AcSpace.h"
 
+#include "Mule.h"
+
 #include "Misc/ScopeRWLock.h"
 
 #include <cmath>
@@ -703,13 +705,154 @@ namespace
 		}
 	}
 
+	// MARK: Mule ----------------------------------------------------------
+
+	struct FMuleState : FVehicleState
+	{
+		/// The wheels' drawn roll, the levers' throw (eased), carried frame to frame.
+		double Roll = 0.0;
+		double Lever[2] = {0.0, 0.0};
+		TOptional<double> Stride;
+		TOptional<ac::Vec2> Position;
+	};
+
+	/// C4 (docs/haul-and-ferry.md section 4; models/mule.py has the parts).
+	void PoseMule(const FAcPoseContext& C, FAcPose& P)
+	{
+		static const FAcPartIndex Wheels[6] = {FAcPartIndex(TEXT("wheels_0")), FAcPartIndex(TEXT("wheels_1")),
+			FAcPartIndex(TEXT("wheels_2")), FAcPartIndex(TEXT("wheels_3")), FAcPartIndex(TEXT("wheels_4")),
+			FAcPartIndex(TEXT("wheels_5"))};
+		static const FAcPartIndex Steers[2] = {FAcPartIndex(TEXT("steers_0")), FAcPartIndex(TEXT("steers_1"))};
+		static const FAcPartIndex Levers[2] = {FAcPartIndex(TEXT("levers_0")), FAcPartIndex(TEXT("levers_1"))};
+		static const FAcPartIndex Levels[2] = {FAcPartIndex(TEXT("mhLevel_0")), FAcPartIndex(TEXT("mhLevel_1"))};
+		static const FAcPartIndex Needles[2] = {FAcPartIndex(TEXT("needles_0")), FAcPartIndex(TEXT("needles_1"))};
+		static const FAcPartIndex Room[2] = {FAcPartIndex(TEXT("roomDigits_0")), FAcPartIndex(TEXT("roomDigits_1"))};
+		static const FAcPartIndex Bar[2] = {FAcPartIndex(TEXT("roomBar_0")), FAcPartIndex(TEXT("roomBar_1"))};
+		static const FAcPartIndex Ore[2] = {FAcPartIndex(TEXT("oreDigits_0")), FAcPartIndex(TEXT("oreDigits_1"))};
+		static const FAcPartIndex Mh[2] = {FAcPartIndex(TEXT("mhDigits_0")), FAcPartIndex(TEXT("mhDigits_1"))};
+		static const FAcPartIndex Heap(TEXT("heap")), Screens(TEXT("screens")), Beacon(TEXT("beacon")), Headlamps(TEXT("headlamps"));
+
+		const FAcModelInfo& M = C.Model;
+		const ac::Unit& U = *C.Unit;
+		FMuleState& S = C.Memory.State<FMuleState>();
+		P.bAnimated = true;
+		const double T = C.Time + double(U.id % 97) * 1.618;
+
+		// The wheels roll with the distance driven (back while it reverses),
+		// held to 0.35 of a lug a frame as the Firefly's; the front pair steers.
+		double Moved = S.Stride ? U.stride - *S.Stride : 0.0;
+		const bool bBack = S.Position && ac::dot(U.position - *S.Position, ac::Vec2(std::cos(U.heading), std::sin(U.heading))) < -1e-4;
+		if (bBack) Moved = -Moved;
+		S.Stride = U.stride;
+		S.Position = U.position;
+		const double Lug = 0.35 * 2 * Pi / double(AcPoseVehicles::MuleLugs);
+		S.Roll = Rem2Pi(S.Roll - FMath::Clamp(Moved / AcPoseVehicles::MuleWheelRadius, -Lug, Lug));
+		for (const FAcPartIndex& W : Wheels)
+		{
+			if (const int32 I = W.Get(M); I != INDEX_NONE)
+			{
+				FSkNode N = Rest(M, I);
+				N.Euler.Z = S.Roll;
+				Apply(M, P, I, N);
+			}
+		}
+		// The turn as a share of the pilot's hull turn (a heading rising turns it right).
+		const double TurnRate = ac::Rules::stats(ac::UnitKind::mule).hullTurnRatePilot;
+		const double Turn = FMath::Clamp(AcPose::Turning(C) / FMath::Max(TurnRate, 0.1), -1.0, 1.0);
+		for (const FAcPartIndex& St : Steers)
+		{
+			if (const int32 I = St.Get(M); I != INDEX_NONE)
+			{
+				FSkNode N = Rest(M, I);
+				N.Euler.Y = -Turn * 0.5;
+				Apply(M, P, I, N);
+			}
+		}
+		// The levers: both thrown forward to drive (back to reverse), the
+		// left one further to turn right, eased (a hand on each).
+		const bool bMoving = U.walking();
+		const double Drive = bMoving ? (bBack ? -1.0 : 1.0) : 0.0;
+		for (int32 K = 0; K < 2; ++K)
+		{
+			const double Want = FMath::Clamp(Drive + (K == 0 ? 0.5 : -0.5) * Turn, -1.0, 1.0);
+			S.Lever[K] += (Want - S.Lever[K]) * FMath::Min(1.0, C.Dt * 8.0);
+			if (const int32 I = Levers[K].Get(M); I != INDEX_NONE)
+			{
+				FSkNode N = Rest(M, I);
+				N.Euler.Z = -0.4 * S.Lever[K];
+				Apply(M, P, I, N);
+			}
+		}
+
+		// The load: the heap grows from the hopper's floor, the MH in the
+		// sight glasses and on the dials, the screens' numbers.
+		const int64 OreN = U.haul ? U.haul->ore : 0, MhN = U.haul ? U.haul->hydrogen : 0;
+		const double Cap = double(ac::Mule::capacity);
+		const double Fill = FMath::Clamp(double(OreN + MhN) / Cap, 0.0, 1.0);
+		const double MhShare = FMath::Clamp(double(MhN) / Cap, 0.0, 1.0);
+		if (const int32 I = Heap.Get(M); I != INDEX_NONE)
+		{
+			SetVisible(P, I, OreN + MhN > 0);
+			FSkNode N = Rest(M, I);
+			N.Scale = FVector(0.9 + 0.1 * Fill, FMath::Max(0.08, Fill), 0.9 + 0.1 * Fill);
+			Apply(M, P, I, N);
+		}
+		for (int32 K = 0; K < 2; ++K)
+		{
+			if (const int32 I = Levels[K].Get(M); I != INDEX_NONE)
+			{
+				SetVisible(P, I, MhN > 0);
+				FSkNode N = Rest(M, I);
+				N.Scale = FVector(1, FMath::Max(0.02, MhShare), 1);
+				Apply(M, P, I, N);
+			}
+			if (const int32 I = Needles[K].Get(M); I != INDEX_NONE)
+			{
+				FSkNode N = Rest(M, I);
+				// From its rest at empty round to 2.4 rad at a tank of 1000, clockwise to each side's eye.
+				N.Euler.Z = (K == 0 ? 2.4 : -2.4) * MhShare;
+				Apply(M, P, I, N);
+			}
+			// The readouts' material shows the part's emission as its number
+			// (make_readout_material.py): room left, its bar of ten, ore, MH.
+			const int64 RoomLeft = ac::Mule::room(U);
+			SetEmission(P, Room[K].Get(M), double(RoomLeft));
+			SetEmission(P, Bar[K].Get(M), std::ceil(double(RoomLeft) / 100.0));
+			SetEmission(P, Ore[K].Get(M), double(OreN));
+			SetEmission(P, Mh[K].Get(M), double(MhN));
+		}
+
+		// The lamps (the building lamps' language): headlamps and screens lit
+		// with a driver aboard; the orange beacon steady then, turning and
+		// glowing on and off while it rolls; all dim when no one rides it.
+		const bool bRidden = U.cargo && !U.cargo->empty();
+		SetEmission(P, Headlamps.Get(M), bRidden ? 1.2 : 0.12);
+		SetEmission(P, Screens.Get(M), bRidden ? 1.0 : 0.6);
+		if (const int32 I = Beacon.Get(M); I != INDEX_NONE)
+		{
+			const double B = 0.5 + 0.5 * std::sin(T * 2.0 * Pi / 1.3);
+			SetEmission(P, I, !bRidden ? 0.15 : bMoving ? 0.05 + 2.6 * B * B : 1.2);
+			FSkNode N = Rest(M, I);
+			if (bRidden && bMoving) N.Euler.Y = Rem2Pi(T * 5.0);
+			Apply(M, P, I, N);
+		}
+	}
+
 	FAcPoseRegistration CometPose(ac::UnitKind::comet, &PoseComet);
 	FAcPoseRegistration JuggernautPose(ac::UnitKind::juggernaut, &PoseJuggernaut);
 	FAcPoseRegistration FireflyPose(ac::UnitKind::firefly, &PoseFirefly);
+	FAcPoseRegistration MulePose(ac::UnitKind::mule, &PoseMule);
 }
 
 namespace AcPoseVehicles
 {
+	FTransform MuleRiderPlacement(const ac::Unit& Mule, const double Ground)
+	{
+		const ac::Vec2 Ahead(std::cos(Mule.heading), std::sin(Mule.heading));
+		return FTransform(AcSpace::QuatFromHeading(Mule.heading),
+			AcSpace::ToWorld(Mule.position + Ahead * MuleDriverAhead, Ground + ac::Mule::deck));
+	}
+
 	const FAcVehicleFx* Fx(const ac::UnitKind Kind, const FAcUnitMemory& Memory)
 	{
 		if (Kind != ac::UnitKind::comet && Kind != ac::UnitKind::juggernaut && Kind != ac::UnitKind::firefly) return nullptr;

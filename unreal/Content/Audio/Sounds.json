@@ -2273,6 +2273,113 @@
    "board": [],
    "audioSwiftLines": []
   },
+  "muledeath": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/muledeath/SW_muledeath_1.SW_muledeath_1",
+     "source": "sfx/muledeath_1.wav",
+     "prepared": "Content-src/sounds/sfx/muledeath_1.wav",
+     "seconds": 1.665,
+     "rate": 24000
+    },
+    {
+     "asset": "/Game/Audio/Sfx/muledeath/SW_muledeath_2.SW_muledeath_2",
+     "source": "sfx/muledeath_2.wav",
+     "prepared": "Content-src/sounds/sfx/muledeath_2.wav",
+     "seconds": 1.985,
+     "rate": 24000
+    },
+    {
+     "asset": "/Game/Audio/Sfx/muledeath/SW_muledeath_3.SW_muledeath_3",
+     "source": "sfx/muledeath_3.wav",
+     "prepared": "Content-src/sounds/sfx/muledeath_3.wav",
+     "seconds": 1.825,
+     "rate": 24000
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "muleengine": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/muleengine/SW_muleengine_1.SW_muleengine_1",
+     "source": "sfx/muleengine_1.wav",
+     "prepared": "Content-src/sounds/sfx/muleengine_1.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/muleengine/SW_muleengine_2.SW_muleengine_2",
+     "source": "sfx/muleengine_2.wav",
+     "prepared": "Content-src/sounds/sfx/muleengine_2.wav",
+     "seconds": 6.0,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "mulefill": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/mulefill/SW_mulefill_1.SW_mulefill_1",
+     "source": "sfx/mulefill_1.wav",
+     "prepared": "Content-src/sounds/sfx/mulefill_1.wav",
+     "seconds": 1.2,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "mulegear": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/mulegear/SW_mulegear_1.SW_mulegear_1",
+     "source": "sfx/mulegear_1.wav",
+     "prepared": "Content-src/sounds/sfx/mulegear_1.wav",
+     "seconds": 0.6,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/mulegear/SW_mulegear_2.SW_mulegear_2",
+     "source": "sfx/mulegear_2.wav",
+     "prepared": "Content-src/sounds/sfx/mulegear_2.wav",
+     "seconds": 0.6,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/mulegear/SW_mulegear_3.SW_mulegear_3",
+     "source": "sfx/mulegear_3.wav",
+     "prepared": "Content-src/sounds/sfx/mulegear_3.wav",
+     "seconds": 0.6,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "mulemove": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/mulemove/SW_mulemove_1.SW_mulemove_1",
+     "source": "sfx/mulemove_1.wav",
+     "prepared": "Content-src/sounds/sfx/mulemove_1.wav",
+     "seconds": 2.2,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/mulemove/SW_mulemove_2.SW_mulemove_2",
+     "source": "sfx/mulemove_2.wav",
+     "prepared": "Content-src/sounds/sfx/mulemove_2.wav",
+     "seconds": 2.2,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "paid": {
    "variants": [
     {
@@ -3596,6 +3703,40 @@
     762
    ]
   },
+  "vmule": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/vmule/SW_vmule_1.SW_vmule_1",
+     "source": "sfx/vmule_1.wav",
+     "prepared": "Content-src/sounds/sfx/vmule_1.wav",
+     "seconds": 2.385,
+     "rate": 24000
+    },
+    {
+     "asset": "/Game/Audio/Sfx/vmule/SW_vmule_2.SW_vmule_2",
+     "source": "sfx/vmule_2.wav",
+     "prepared": "Content-src/sounds/sfx/vmule_2.wav",
+     "seconds": 4.065,
+     "rate": 24000
+    },
+    {
+     "asset": "/Game/Audio/Sfx/vmule/SW_vmule_3.SW_vmule_3",
+     "source": "sfx/vmule_3.wav",
+     "prepared": "Content-src/sounds/sfx/vmule_3.wav",
+     "seconds": 2.705,
+     "rate": 24000
+    },
+    {
+     "asset": "/Game/Audio/Sfx/vmule/SW_vmule_4.SW_vmule_4",
+     "source": "sfx/vmule_4.wav",
+     "prepared": "Content-src/sounds/sfx/vmule_4.wav",
+     "seconds": 2.145,
+     "rate": 24000
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
   "vperegrine": {
    "variants": [
     {
@@ -4403,6 +4544,11 @@
   "matriarchslam",
   "matriarchspit",
   "missionaccept",
+  "muledeath",
+  "muleengine",
+  "mulefill",
+  "mulegear",
+  "mulemove",
   "paid",
   "peregrinedeath",
   "peregrinepass",
@@ -4441,6 +4587,7 @@
   "thunder",
   "turretburst",
   "vatlas",
+  "vmule",
   "vperegrine",
   "vscorpion",
   "wiper",

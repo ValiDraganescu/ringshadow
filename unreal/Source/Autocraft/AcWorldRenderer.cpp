@@ -8,6 +8,7 @@
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcOutline.h"
+#include "AcPoseVehicles.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 
@@ -761,8 +762,10 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 		O->Unit = nullptr;
 		O->SeenFrame = FrameNumber;
 	}
+	Mules.Reset();
 	for (const ac::Unit& U : Shown.units)
 	{
+		if (U.kind == ac::UnitKind::mule) Mules.Add(U.id, &U);
 		static const FAcModelInfo* Cache[ac::allCases<ac::UnitKind>().size()] = {};
 		const FAcModelInfo*& M = Cache[(int32)U.kind];
 		if (!M) M = ModelNamed(FString::Printf(TEXT("%s_blue"), AcPose::ModelBase(U.kind)));
@@ -869,8 +872,12 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 			AcPose::RestUnit(C, O.Pose);
 			const ac::Unit& U = *O.Unit;
 			// Inside a Bastion, a Dropship or a Derrick; driven in first person.
-			O.Pose.bHidden = U.task == ac::Unit::Task::inBastion || U.task == ac::Unit::Task::aboard
-				|| U.task == ac::Unit::Task::inDerrick || U.id == HiddenUnit;
+			// Aboard a Mule (C4) it stands on the perch, out of sight with the
+			// Mule driven in first person.
+			const ac::Unit* const* RiddenMule = U.task == ac::Unit::Task::aboard && U.structure ? Mules.Find(*U.structure) : nullptr;
+			O.Pose.bHidden = U.task == ac::Unit::Task::inBastion || (U.task == ac::Unit::Task::aboard && !RiddenMule)
+				|| U.task == ac::Unit::Task::inDerrick || U.id == HiddenUnit || (RiddenMule && (*RiddenMule)->id == HiddenUnit);
+			if (RiddenMule) O.Pose.Placement = AcPoseVehicles::MuleRiderPlacement(**RiddenMule, C.Ground((*RiddenMule)->position));
 			Fn = AcPose::Find(U.kind);
 		}
 		else

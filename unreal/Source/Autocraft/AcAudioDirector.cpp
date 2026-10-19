@@ -45,6 +45,7 @@
 #include "Sound/SoundClass.h"
 
 #include "Brood.h"
+#include "Mule.h"
 #include "Ringshadow.h"
 #include "Rules.h"
 #include "NetProtocol.h"
@@ -148,7 +149,7 @@ namespace
 	}
 
 	/// The loops' keys: what they belong to, times 8, plus which loop.
-	enum ELoopSlot : int64 { ToolSlot = 0, MinigunSlot = 1, HumSlot = 2, RotarySlot = 3 /* … 6: a Citadel's four guns */ };
+	enum ELoopSlot : int64 { ToolSlot = 0, MinigunSlot = 1, HumSlot = 2, RotarySlot = 3 /* … 6: a Citadel's four guns */, EngineSlot = 7 };
 	constexpr int64 HealKey = -1;
 	constexpr int64 WindKeys[2] = {-2, -3};
 	constexpr int64 RainKeys[2] = {-4, -5};
@@ -170,7 +171,7 @@ namespace
 	bool IsLoop(FName Name)
 	{
 		static const FName Loops[] = {"wind", "drill", "weld", "hum", "minigun", "rotaryfire", "heal", "rain", "downpour", "rsdrone", "rsbed", "shimmer",
-			"sfcrater", "gloamwingidle", "lodebackchew", "matriarchidle"};
+			"sfcrater", "gloamwingidle", "lodebackchew", "matriarchidle", "muleengine"};
 		for (const FName& L : Loops)
 		{
 			if (L == Name) return true;
@@ -481,6 +482,11 @@ void FAcAudioRules::Consume(const std::vector<ac::GameEvent>& Events, const ac::
 		if (const auto* D = E.as<ac::GameEvent::Deposited>())
 		{
 			Deposited(D->at);
+		}
+		else if (const auto* Bk = E.as<ac::GameEvent::Booked>())
+		{
+			// C4: a Mule's load booked in a Citadel's hall rings like an unload.
+			Deposited(Bk->at);
 		}
 		else if (const auto* T = E.as<ac::GameEvent::Trained>())
 		{
@@ -899,6 +905,41 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 	for (auto It = Tools.CreateIterator(); It; ++It)
 	{
 		if (!Prospectors.Contains(It.Key())) It.RemoveCurrent();
+	}
+	// C4, each Mule: its drive loop while it rolls (a murmur parked with its
+	// driver aboard), a lever's clunk as it starts or stops, the clatter of a
+	// load tipped into its hopper.
+	TSet<int64> MulesHeard;
+	for (const ac::Unit& U : Shown.units)
+	{
+		if (U.kind != ac::UnitKind::mule) continue;
+		MulesHeard.Add(U.id);
+		const bool bMoving = U.moving.value_or(false);
+		const int64 Load = U.haul ? U.haul->total() : 0;
+		FMuleHeard* M = Mules.Find(U.id);
+		if (!M)
+		{
+			const int32 N = Variants("muleengine");
+			M = &Mules.Add(U.id, FMuleHeard{N > 0 ? static_cast<int32>(U.id % N) : 0, 0.f, bMoving, Load});
+		}
+		if (bMoving != M->bMoving && Allow("mulegear", 3)) OneShot("mulegear", U.position, AcSound::MuleGearGain, EAcSoundPool::Combat);
+		if (Load > M->Load && Allow("mulefill", 3)) OneShot("mulefill", ac::Mule::hopper(U), AcSound::MuleFillGain, EAcSoundPool::Combat);
+		M->bMoving = bMoving;
+		M->Load = Load;
+		const bool bRidden = U.cargo && !U.cargo->empty();
+		Fade(M->Gain, bMoving ? 1.f : bRidden ? AcSound::MuleIdleShare : 0.f, 0.3f, 0.8f);
+		if (M->Gain < 0.001f || Variants("muleengine") <= 0) continue;
+		FAcLoopWant W;
+		W.Key = U.id * 8 + EngineSlot;
+		W.Name = "muleengine";
+		W.Variant = M->Variant;
+		W.Volume = M->Gain * AcSound::MuleDriveGain * Reach(U.position, AcSound::Carry("muleengine"));
+		W.At = U.position;
+		Out.push_back(W);
+	}
+	for (auto It = Mules.CreateIterator(); It; ++It)
+	{
+		if (!MulesHeard.Contains(It.Key())) It.RemoveCurrent();
 	}
 	// The mini guns: one roar a Ranger from its burst's first round to its
 	// last; the nearest `MinigunsAtOnce` of those firing.

@@ -197,6 +197,9 @@ struct FAcPilotInfo
 	TOptional<FString> Demolish;
 	bool bDemolishBlocked = false;
 	TOptional<double> DemolishFill;
+	/// C4: "In the Mule: 380 ore, 120 MH" while it drives the Mule or stands
+	/// within `AcMuleAct::NearCells` of its own (AcMuleAct::LoadLine).
+	TOptional<FString> MuleLoad;
 };
 
 /// What `GameCore` says about the driven unit this frame (`PilotFrame`).

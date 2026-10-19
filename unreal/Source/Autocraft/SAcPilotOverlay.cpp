@@ -421,6 +421,15 @@ void SAcPilotOverlay::PaintReticle(FAcPilotPen& P, const FVector2D C, const doub
 		P.Plate(Plate, 5 * S, FLinearColor(0, 0, 0, 0.55f), White(1, 0.12), 0.8 * S);
 		P.Label(*Info.Prompt, Size, Tone, Pc, EAcHAlign::Center, EAcVAlign::Center);
 	}
+	// C4: what the Mule holds, driving it or near one's own, under the reticle.
+	if (Info.MuleLoad)
+	{
+		const double Size = 15 * S;
+		const double Wd = FAcConsolePaint::TextWidth(*Info.MuleLoad, Size) + 20 * S;
+		const FVector2D Pc = At(0, 96);
+		P.Plate(FAcRect(Pc.X - Wd / 2, Pc.Y - 11 * S, Wd, 22 * S), 5 * S, FLinearColor(0, 0, 0, 0.5f), White(1, 0.12), 0.8 * S);
+		P.Label(*Info.MuleLoad, Size, Srgb(0.78, 0.66, 1), Pc, EAcHAlign::Center, EAcVAlign::Center);
+	}
 	// A vehicle's gun marker: where its weapon really points.
 	if (Info.Gun)
 	{
