@@ -2,6 +2,7 @@
 
 #include "AcGasGiant.h"
 #include "AcGroundLook.h"
+#include "AcShelter.h"
 #include "AcSkyFx.h"
 #include "AcLog.h"
 #include "AcSimSubsystem.h"
@@ -751,6 +752,14 @@ void AAcDaylight::Update(const double Time)
 	Fog->SetVolumetricFogAlbedo(Tone(Rgb(0.95, 0.9, 0.85), Rgb(0.6, 0.7, 1.0), Rgb(1.0, 0.8, 0.7)).ToFColor(false));
 	Fog->SetFogDensity(FogDensity * CVarFog.GetValueOnGameThread() * float(1.0 + 2.0 * Weather.rain + 0.6 * Gloom));
 	Fog->SetVolumetricFog(CVarVolumetricFog.GetValueOnGameThread() != 0);
+	// Nothing outside gets inside a closed space (C5): from in a walk-in
+	// Dropship's bay the volumetric fog starts past its walls, so the rain's
+	// thick air never hangs in the bay (it is seen through the glass).
+	{
+		const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+		const double Clear = PC && PC->PlayerCameraManager ? AcShelter::FogClearCm(PC->PlayerCameraManager->GetCameraLocation()) : 0.0;
+		if (!FMath::IsNearlyEqual(Fog->VolumetricFogStartDistance, float(Clear), 1.0f)) Fog->SetVolumetricFogStartDistance(float(Clear));
+	}
 
 	if (const UWorld* World = GetWorld())
 	{

@@ -472,14 +472,15 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			Picture(TEXT("ferry-6-dash"));
 		}
 		// Out of the side pane a moment into the dash.
-		if (Ship->stage == EStage::dash && Run.bDashShot && Ship->clock > 2.2 && Ship->clock < 2.6) Face(0.75);
+		if (Ship->stage == EStage::dash && Run.bDashShot && Ship->clock > 1.3 && Ship->clock < 1.8) Face(0.75);
 		// Then back down the bay, the vapour flung past outside: nothing of
-		// it (nor the rain, nor any dust) inside the closed bay.
-		if (Ship->stage == EStage::dash && Run.bDashShot && Ship->clock > 2.6 && Ship->clock < 3.6)
+		// it (nor the rain, nor any dust) inside the closed bay (a one-step
+		// dash lasts 3 s).
+		if (Ship->stage == EStage::dash && Run.bDashShot && Ship->clock > 1.8)
 		{
 			Face(UE_DOUBLE_PI);
 			Pitch(-0.1);
-			if (Ship->clock > 3.3 && !Run.bCabinShot)
+			if (Ship->clock > 2.4 && !Run.bCabinShot)
 			{
 				Run.bCabinShot = true;
 				FString Where;
@@ -494,7 +495,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		}
 		if (Run.bFlew && Ship->grounded())
 		{
-			Check(Run.bLiftShot && Run.bDashShot && Run.bApproachShot, TEXT("ferry: the lift, the dash and the approach seen"));
+			Check(Run.bLiftShot && Run.bDashShot && Run.bCabinShot && Run.bApproachShot, TEXT("ferry: the lift, the dash, the bay in the dash and the approach seen"));
 			Run.bApproachShot = false;
 			Advance();
 			return;

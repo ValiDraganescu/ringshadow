@@ -106,6 +106,25 @@ AcShelter::FShipBox AcShelter::BayOf(const FTransform& Placement)
 	return Box;
 }
 
+double AcShelter::FogClearCm(const FShipBox& Bay, const FVector& Camera)
+{
+	if (Bay.Half.IsNearlyZero() || !Bay.Contains(Camera)) return 0.0;
+	double Far = 0.0;
+	for (int32 K = 0; K < 8; ++K)
+	{
+		const FVector Corner = Bay.Centre + Bay.X * ((K & 1) ? Bay.Half.X : -Bay.Half.X) + Bay.Y * ((K & 2) ? Bay.Half.Y : -Bay.Half.Y)
+			+ Bay.Z * ((K & 4) ? Bay.Half.Z : -Bay.Half.Z);
+		Far = FMath::Max(Far, FVector::Dist(Corner, Camera));
+	}
+	return Far;
+}
+
+double AcShelter::FogClearCm(const FVector& Camera)
+{
+	const TOptional<FShipBox> Bay = NearestBay(Camera);
+	return Bay ? FogClearCm(*Bay, Camera) : 0.0;
+}
+
 TOptional<AcShelter::FShipBox> AcShelter::NearestBay(const FVector& Camera)
 {
 	if (!On()) return {};

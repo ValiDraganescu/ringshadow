@@ -1498,8 +1498,12 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 
 	// E4: the range ring and the fog veil round the unit; the gun marker.
 	// (The unit as the sim has it: its turret where it really points, not
-	// where the view follows the mouse.)
-	if (AAcPilotAids* Aids = AAcPilotAids::SpawnFor(GetWorld())) Aids->Update(PulledOut() ? TOptional<FAcRangeCue>() : AcPilotAim::RangeCue(S, *Found), Root.GetTranslation());
+	// where the view follows the mouse.) Aboard a Dropship the veil is round
+	// the unit where it is drawn, carried up with the ship (C5): round its
+	// frame on the pad it veiled the whole bay in flight, the rain's short
+	// reach far below the camera.
+	const FVector VeilAt = Ship ? (Root * Ship->Carrier).GetTranslation() : Root.GetTranslation();
+	if (AAcPilotAids* Aids = AAcPilotAids::SpawnFor(GetWorld())) Aids->Update(PulledOut() ? TOptional<FAcRangeCue>() : AcPilotAim::RangeCue(S, *Found), VeilAt);
 	GunMark = AcPilotAim::GunMarker(S, *Found, Shown ? Shown->Key : At, Shown ? Shown->Value : Rot, FAcPilotCamera::FovDegrees,
 		Chase.Eye() ? *Chase.Eye() : At, AimPoint());
 

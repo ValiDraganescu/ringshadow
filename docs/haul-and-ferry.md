@@ -365,7 +365,14 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
     reaches under the swept glass, 30 cm short of its foot
     (`AcShelter::BayOf`, `Autocraft.Weather.Shelter.ShipBay`), so the
     cockpit's air is dry too; `mmoferry` takes `ferry-6-bay-in-dash`, down
-    the bay in the dash.
+    the bay in the dash. The grey murk that filled the bay in flight was
+    the pilot's fog veil (`AAcPilotAids`, the far ground lost in the haze
+    past a quarter of the eye's reach, which the rain halves): it was
+    centred on the rider's place in the ship's frame on the pad, far below
+    the camera, so the whole bay lay "far". It is centred on the rider where
+    it is drawn now, carried up with the ship (`AAcPilotPawn`). From in a
+    bay the volumetric fog starts past its farthest corner
+    (`AcShelter::FogClearCm`, `AAcDaylight`).
   - **The pose** (`AcPoseFerry.h`, tested in `Autocraft.Pose.Ferry.*`):
     the ramp on its hinge, the buttons pushed in 1.5 and 2 cm for a
     quarter second on each press, the lamps, the wipers turning in the

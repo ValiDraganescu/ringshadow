@@ -107,6 +107,11 @@ bool FAcShelterShipBayTest::RunTest(const FString&)
 	TestFalse(TEXT("behind the opening"), Box.Contains(At(B::rear - 0.5, 0, 1.5)));
 	TestFalse(TEXT("over the roof"), Box.Contains(At(0, 0, B::roofTop + 0.3)));
 	TestFalse(TEXT("ahead of the glass"), Box.Contains(At(AcSpace::ToCells(AcShuttleShip::GlassBottomX) + 0.3, 0, 1.5)));
+	// From the bay's middle the volumetric fog starts past its farthest
+	// corner (over 6 cells off); from outside, at the camera.
+	const double Clear = AcShelter::FogClearCm(Box, At(0, 0, B::deck + 1.5));
+	TestTrue(FString::Printf(TEXT("the fog starts past the bay (%.0f cm)"), Clear), Clear > AcSpace::ToCm(6.5) && Clear < AcSpace::ToCm(12.0));
+	TestEqual(TEXT("outside, no change"), AcShelter::FogClearCm(Box, At(0, 4.0, 1.5)), 0.0);
 	return true;
 }
 

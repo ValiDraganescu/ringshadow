@@ -82,6 +82,12 @@ namespace AcShelter
 	/// unset: none.
 	inline constexpr double ShipRange = 8000.0;
 	AUTOCRAFT_API TOptional<FShipBox> NearestBay(const FVector& Camera);
+	/// No fog inside a closed space (C5, the user's rule): with `Camera` in
+	/// `Bay`, how far the volumetric fog starts (cm): out to the bay's
+	/// farthest corner, so none of it hangs in the bay; 0 outside it.
+	AUTOCRAFT_API double FogClearCm(const FShipBox& Bay, const FVector& Camera);
+	/// The same for the nearest drawn ship's bay (0: none, or not in it).
+	AUTOCRAFT_API double FogClearCm(const FVector& Camera);
 
 	/// The driven unit (the pilot's) stands sheltered in the hall, or in a
 	/// walk-in Dropship's bay (riding one in flight, or in a landed one's
