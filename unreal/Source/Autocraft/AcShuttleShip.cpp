@@ -2,6 +2,11 @@
 
 #include "AcAudioDirector.h"
 #include "AcDaylight.h"
+#include "AcEffects.h"
+#include "AcEffectsBursts.h"
+#include "AcEffectsExtension.h"
+#include "AcParticles.h"
+#include "AcSpace.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
 #include "AcPilotPawn.h"
@@ -40,6 +45,72 @@ namespace
 	/// The ship the driven unit is in this frame (0: none).
 	int64 GEarsIn = 0;
 
+	double Cells(const double C) { return AcSpace::ToCm(C); }
+
+	/// The lift jets under the nacelles (the ship's root `Root` where it is
+	/// drawn), `Thrust` 0..1: two flames pushed down, a hot core in each, pale
+	/// heat rising round them; `Dt` the effects' seconds since the last frame
+	/// (moved from F2's flight show).
+	void Jets(UAcEffects& Fx, const FTransform& Root, const double Thrust, const double Dt, const int64 Key)
+	{
+		if (Thrust <= 0.01) return;
+		FAcParticles* P = Dt > 0 ? AcEffectsBursts::ParticlesOf(&Fx) : nullptr;
+		for (int32 I = 0; I < 2; ++I)
+		{
+			const FVector Nozzle = Root.TransformPosition(FVector(-122.0, I == 0 ? 198.0 : -198.0, 170.0));
+			Fx.Flash(Nozzle - FVector::UpVector * Cells(0.1), 0.5 + 0.9 * Thrust, Fx.Now(), 0.05);
+			if (!P) continue;
+			FAcEmit Plume;
+			Plume.Speed = 3.0 + 5.0 * Thrust;
+			Plume.Size = 0.3 + 0.2 * Thrust;
+			P->Stream(EAcParticle::Plume, FAcParticles::KeyOf(-32, int32(Key * 8 + 1 + I)), FTransform(FRotator(90, 0, 0), Nozzle), 60 + 140 * Thrust,
+				Fx.Now(), Dt, Plume);
+			FAcEmit Core;
+			Core.Speed = 4.0 + 4.0 * Thrust;
+			Core.Size = 0.16 + 0.1 * Thrust;
+			P->Stream(EAcParticle::CometJet, FAcParticles::KeyOf(-32, int32(Key * 8 + 3 + I)), FTransform(FQuat::Identity, Nozzle), 50 + 110 * Thrust,
+				Fx.Now(), Dt, Core);
+			FAcEmit Heat;
+			Heat.Size = 0.2;
+			P->Stream(EAcParticle::FireflyExhaust, FAcParticles::KeyOf(-32, int32(Key * 8 + 5 + I)), FTransform(FQuat::Identity, Nozzle), 22 * Thrust,
+				Fx.Now(), Dt, Heat);
+		}
+	}
+
+	/// The dust the jets blow off the ground `Height` cells under them: a
+	/// ring of it racing out from `Ground` (`Radius` cells), thinner higher.
+	void DustRing(UAcEffects& Fx, const FVector& Ground, const double Radius, const double Height)
+	{
+		const int32 N = 14;
+		const double Size = FMath::Lerp(1.0, 0.4, FMath::Clamp(Height / 4.0, 0.0, 1.0));
+		const double Turn = FMath::FRand() * UE_TWO_PI;
+		for (int32 I = 0; I < N; ++I)
+		{
+			const double A = Turn + UE_TWO_PI * I / N;
+			FAcBurstRequest R;
+			R.Kind = EAcBurst::Dust;
+			R.At = Ground + FVector(FMath::Cos(A), FMath::Sin(A), 0) * Cells(Radius) + FVector::UpVector * Cells(0.1);
+			R.Size = Size;
+			R.Time = Fx.Now();
+			Fx.Burst(R);
+		}
+	}
+
+	/// The ring of a jet's blast over the ground.
+	void Shock(UAcEffects& Fx, const FVector& Ground, const double Radius, const double Bright)
+	{
+		FAcShockRingRequest Ring;
+		Ring.At = Ground + FVector::UpVector * Cells(0.05);
+		Ring.Radius = Cells(Radius);
+		Ring.Life = 0.45;
+		Ring.Time = Fx.Now();
+		Ring.Bright = Bright;
+		Fx.ShockRing(Ring);
+	}
+
+	/// The Landing Pads a Dropship is over this frame.
+	TArray<FVector> GBusyPads;
+
 	FVector GlassPoint(const double U, const double V)
 	{
 		using namespace AcShuttleShip;
@@ -74,6 +145,78 @@ const ac::Wipers* AcShuttleShip::AboardWipers(UWorld* World)
 		if (It->ShipId == GEarsIn) return &It->Wiper;
 	}
 	return nullptr;
+}
+
+bool AcShuttleShip::PadBusy(const FVector& At)
+{
+	for (const FVector& P : GBusyPads)
+	{
+		if (FVector::DistSquaredXY(P, At) < 200.0 * 200.0) return true;
+	}
+	return false;
+}
+
+void AAcShuttleShip::Effects(const ac::Shuttle& S, const FTransform& Placement, const double Thrust, const double Now, const double Dt)
+{
+	UAcEffects* Fx = UAcEffects::Get(this);
+	using EStage = ac::Shuttle::Stage;
+	const FVector Pad = AcSpace::ToWorld(S.position, S.ground);
+	const bool bFlying = S.stage != EStage::ground;
+	if (Fx && bFlying) Jets(*Fx, Placement, Thrust, Dt, ShipId);
+	// The moments: the lift-off's blast and scorch, the touch down's dust.
+	if (Fx && LastStage >= 0 && LastStage != int32(S.stage))
+	{
+		if (S.stage == EStage::lift)
+		{
+			Shock(*Fx, Pad, 4.5, 0.5);
+			FAcScorchRequest Burn;
+			Burn.At = Pad;
+			Burn.Radius = Cells(2.2);
+			Burn.Life = 30;
+			Burn.Time = Fx->Now();
+			Burn.Darkness = 0.6;
+			Fx->Scorch(Burn);
+		}
+		if (S.stage == EStage::ground)
+		{
+			Shock(*Fx, Pad, 4.5, 0.6);
+			DustRing(*Fx, Pad, 2.4, 0);
+			Fx->DustPuff(Pad, 1.6, Fx->Now());
+		}
+	}
+	LastStage = int32(S.stage);
+	// The dust under the jets near the ground.
+	const double Low = AcSpace::ToCells(Placement.GetLocation().Z) - S.ground;
+	if (Fx && bFlying && Thrust > 0.3 && Low < 7.0 && Now - LastRing > 0.17)
+	{
+		LastRing = Now;
+		DustRing(*Fx, FVector(Placement.GetLocation().X, Placement.GetLocation().Y, Pad.Z), 1.6 + 0.9 * (7.0 - Low), Low);
+	}
+	// The dash: puffs of pale vapour flung past the ship, the speed seen.
+	if (Fx && S.stage == EStage::dash && Now - LastCloud > 0.05)
+	{
+		LastCloud = Now;
+		if (FAcParticles* P = AcEffectsBursts::ParticlesOf(Fx))
+		{
+			const FQuat Q = Placement.GetRotation();
+			for (int32 K = 0; K < 3; ++K)
+			{
+				const FVector Off = Q.GetForwardVector() * Cells(FMath::FRandRange(14.0, 40.0)) + Q.GetRightVector() * Cells(FMath::FRandRange(-12.0, 12.0))
+					+ FVector::UpVector * Cells(FMath::FRandRange(-6.0, 7.0));
+				FAcEmit Puff;
+				Puff.Size = FMath::FRandRange(2.5, 5.0);
+				Puff.Speed = 0.3;
+				Puff.Rate = 40;
+				Puff.Duration = 0.05;
+				P->Burst(EAcParticle::MuzzleSmoke, FTransform(Placement.GetLocation() + Off), Fx->Now(), Puff);
+			}
+		}
+	}
+	// The pad's lamps alternate while it comes down, stands and lifts.
+	if (S.stage == EStage::descend || S.stage == EStage::ground || S.stage == EStage::lift || S.stage == EStage::approach || S.stage == EStage::depart)
+	{
+		GBusyPads.Add(S.stage == EStage::approach ? AcSpace::ToWorld(ac::Vec2(S.to.x, S.to.y), S.to.z) : Pad);
+	}
 }
 
 void AcShuttleShip::Pressed(const int64 Ship, const bool bTakeOff, const double At)
@@ -218,6 +361,8 @@ void AcShuttleShip::Tick(UWorld* World)
 	const FVector Cam = PC && PC->PlayerCameraManager ? PC->PlayerCameraManager->GetCameraLocation() : FVector::ZeroVector;
 	AAcShuttleShip* Nearest = nullptr;
 	double NearestD = AcShuttleShip::GlassRange;
+	GBusyPads.Reset();
+	const double Dt = World->GetDeltaSeconds();
 	// The ship the ears ride in (the driven unit in its bay, or riding it in flight).
 	int64 EarsIn = 0;
 	if (const AAcPilotPawn* Pilot = AAcPilotPawn::Find(World); Pilot && Pilot->Driving() && bLive)
@@ -284,6 +429,7 @@ void AcShuttleShip::Tick(UWorld* World)
 			L.WiperAngle = A->Wiper.angle();
 			L.Thrust = AcShuttleShip::Thrust(uint8(S.stage), F.Clock, ac::shuttleStageSeconds(S, S.stage));
 			A->Apply(F.Placement, L);
+			A->Effects(S, F.Placement, L.Thrust, Now, Dt);
 			FAcAudioRules::FShipHear H;
 			H.Id = S.id;
 			H.At = ac::Vec2(F.Pose.at.x, F.Pose.at.y);

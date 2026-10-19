@@ -2,7 +2,7 @@
 // Sentinel; the gatling gun (D2). See AcPoseBuildings.h.
 #include "AcPoseBuildings.h"
 
-#include "AcPilotFlight.h"
+#include "AcShuttleShip.h"
 #include "AcSpace.h"
 
 #include "Defence.h"
@@ -387,7 +387,7 @@ namespace
 
 	/// F2's Landing Pad: the corner lamps the working light, steady; on and
 	/// off in turn (front pair, then back) while the Dropship is over it
-	/// (`AcPilotFlight::PadBusy`).
+	/// (`AcShuttleShip::PadBusy`).
 	void PoseLandingPad(const FAcPoseContext& C, FAcPose& P)
 	{
 		const ac::Structure& S = *C.Structure;
@@ -395,7 +395,7 @@ namespace
 		const bool bLive = CommonPose(C, P, Welding(C));
 		const double Ph = Phase(C);
 		static const FParts Lamps(TEXT("lamps"), 4);
-		const bool bBusy = bLive && AcPilotFlight::PadBusy(AcSpace::ToWorld(S.position));
+		const bool bBusy = bLive && AcShuttleShip::PadBusy(AcSpace::ToWorld(S.position));
 		for (int32 K = 0; K < 4; ++K)
 		{
 			const int32 L = Lamps(M, K);

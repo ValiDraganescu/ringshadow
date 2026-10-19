@@ -258,6 +258,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		else Waited(TEXT("the Dropship down with its ramp lowered"), LandSeconds);
 		return;
 	case 4:
+	{
 		// Round to the ramp's foot, up it, into the bay.
 		if (!Ship) break;
 		{
@@ -300,6 +301,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		}
 		else Waited(TEXT("up the ramp into the bay"), WalkSeconds);
 		return;
+	}
 	case 5:
 		// At the console with the ramp down: refused.
 		if (!Ship) break;

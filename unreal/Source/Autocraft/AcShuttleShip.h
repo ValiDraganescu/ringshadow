@@ -11,6 +11,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
+#include "Types.h"
 #include "Wipers.h"
 
 #include "AcShuttleShip.generated.h"
@@ -40,6 +41,9 @@ namespace AcShuttleShip
 
 	/// Every ship drawn, made and unmade with the shown state's (game thread).
 	AUTOCRAFT_API void Tick(UWorld* World);
+	/// A Dropship is over the Landing Pad at `At` (coming down, standing,
+	/// lifting): the pad's lamps alternate (`PoseLandingPad`).
+	AUTOCRAFT_API bool PadBusy(const FVector& At);
 	/// The wipers of the ship the driven unit is in (its bay, or riding it),
 	/// for the dashboard's WIPERS plate; null: none.
 	AUTOCRAFT_API const ac::Wipers* AboardWipers(UWorld* World);
@@ -67,8 +71,16 @@ public:
 	/// bottom edges (outward).
 	void Glass(FVector& Origin, FVector& Across, FVector& Up, FVector& Right, FVector& Left) const;
 
+	/// Its flight's effects this frame: the lift jets, the lift-off's blast
+	/// and scorch, the touch down's dust, the dust under it near the ground,
+	/// the cloud streaks in the dash, the pad's lamps.
+	void Effects(const ac::Shuttle& S, const FTransform& Placement, double Thrust, double Now, double Dt);
+
 	/// The ship's own wipers (presentation, like the visor's).
 	ac::Wipers Wiper;
+	/// The stage last frame (-1: none yet), the last dust ring and cloud puff (real s).
+	int32 LastStage = -1;
+	double LastRing = -1, LastCloud = -1;
 	/// The real times of the last presses.
 	double RampPressAt = -1e9, TakeoffPressAt = -1e9;
 	/// The ramp's way last frame (for the hydraulics' sound), and the wiper's passes heard.
