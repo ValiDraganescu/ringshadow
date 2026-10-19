@@ -325,6 +325,8 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
                 if (Progression::node(skill).active)
                     if (const auto at = r.simulation().activeReady(*unit, skill)) m.ready[skill] = *at;
     }
+    // C4: its Mule.
+    muleTold(it->second, m);
     return m;
 }
 
@@ -403,6 +405,21 @@ void WorldMap::workAfter(const std::vector<Work>& before) {
                 missionWork(w.pilot, *p, net::CitadelMission::Kind::haul, w.hydrogen ? "hydrogen" : "ore", d->amount);
                 // S4: the week's ore.
                 if (!w.hydrogen) standNote(p->key, &Standing::ore, d->amount);
+            }
+            // C4: a Mule's load booked in a Citadel's hall: an unload's XP,
+            // feats, contracts, missions and week, ore and MH each.
+            if (const auto* b = e.as<GameEvent::Booked>(); b && b->unit == w.unit) {
+                xp += double(b->ore) * WorldXp::ore + double(b->hydrogen) * WorldXp::hydrogen;
+                if (b->hydrogen > 0) feats.push_back(WorldXp::hydrogenFeat);
+                if (b->ore > 0) {
+                    contractWork(w.pilot, *p, net::Contract::Kind::deliverOre, "", b->ore);
+                    missionWork(w.pilot, *p, net::CitadelMission::Kind::haul, "ore", b->ore);
+                    standNote(p->key, &Standing::ore, b->ore);
+                }
+                if (b->hydrogen > 0) {
+                    contractWork(w.pilot, *p, net::Contract::Kind::deliverHydrogen, "", b->hydrogen);
+                    missionWork(w.pilot, *p, net::CitadelMission::Kind::haul, "hydrogen", b->hydrogen);
+                }
             }
             if (const auto* c = e.as<GameEvent::Constructed>(); c && built(*p, w.region, c->structure)) {
                 feats.push_back(WorldXp::built(c->kind));

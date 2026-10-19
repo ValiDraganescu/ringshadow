@@ -129,7 +129,10 @@ std::optional<std::string> Simulation::muleFill(int64_t prospector, int64_t mule
 std::optional<int64_t> Simulation::rollOut(int64_t foundry, int64_t owner) {
     const auto b = state.structure(foundry);
     if (!b) return std::nullopt;
-    const Vec2 door = Mule::door(b->position);
+    return rollOutAt(Mule::door(b->position), owner);
+}
+
+int64_t Simulation::rollOutAt(Vec2 door, int64_t owner) {
     Vec2 at = door;
     if (nav) at = nav->nearestFree(door).value_or(door);
     Unit u = freshUnit(UnitKind::mule, state.nextID, owner, at, Mule::doorHeading, Unit::Task::idle);

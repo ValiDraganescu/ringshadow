@@ -14,8 +14,8 @@ WorldMap.h). Tests: `unreal/server/tests/FrontierTests.cpp`,
 
 | # | Habit | What it does |
 |---|---|---|
-| 1, 5 | Miner | Drills and hauls. Puts a Derrick on the well by its field and pumps a tank every fourth trip. Builds a Hab Dome by a field more than 24 cells from any depot. |
-| 2, 6 | Builder | Builds realm buildings where they help: a Gatling Gun by a field the Brood lingered at in the last 15 world minutes (when no turret guards it), a Landing Pad in a region with a Citadel or a canyon and no pad, a Hab Dome where the haul is long. Otherwise it drills to earn its keep. |
+| 1, 5 | Miner | Drills and hauls to the realm's Citadel. Puts a Derrick on the well by its field and pumps a tank every fourth trip. (Until C4 it built a Hab Dome by a far field; a Hab Dome takes no loads since.) |
+| 2, 6 | Builder | Builds realm buildings where they help: a Gatling Gun by a field the Brood lingered at in the last 15 world minutes (when no turret guards it), a Landing Pad in a region with a Citadel or a canyon and no pad. Otherwise it drills to earn its keep. (No Hab Dome where the haul is long since C4: it takes no loads.) |
 | 3 | Defender | Answers THE HUNT first (N4): to its place on the ring round the Matriarch's nest, walking through the openings or flying the Dropship when both regions have a Landing Pad and the fare leaves 10 MH; it holds there, fighting the bugs that come at it, and goes in with the party at the charge. Joins a canyon wave whenever a human is in that canyon's region. Fights bugs within 16 cells of the realm's buildings, mends a building below 90% hp, and patrols from one realm building to the next, a minute each. Every other minute it drills. |
 | 4 | Wanderer | Opens the region's sites it has not opened (a vault only at its floor). At the realm's Citadel it takes a survey of a region next door. Otherwise it moves on to a region it has not seen, on foot through the openings or by Dropship when both regions have a Landing Pad and the fare leaves 10 MH. |
 
@@ -74,7 +74,7 @@ opening chain (O1, the first ten minutes).
   - to a deposit, home with a load, into a Derrick, mending;
   - an errand to a point, a hunt.
 
-  A load hauled to a Citadel leaves the region's bank and goes into the frontier pilot's own wallet, as a mercenary's does. A Hab Dome unload is booked by the server, since the core's Prospector hauls only to Citadels.
+  A load hauled to a Citadel leaves the region's bank and goes into the frontier pilot's own wallet, as a mercenary's does. Their depot is the realm's Citadel alone (C4, [haul-and-ferry.md](haul-and-ferry.md) section 2): a Hab Dome takes no loads, so the server's Hab Dome booking is gone.
 - **Booked.** Everywhere else their work runs on the world's clock, also with nobody on line (S2's idle):
   - a walk is a straight line at a Prospector's speed;
   - drilling gives `Rules::carry` ore over the drill time and a 12-cell walk each way (0.41 ore a second), taken from a real deposit and taxed;

@@ -2,7 +2,7 @@
 // SQLite file per world, written by the server alone. Per region the pilots'
 // buildings and units, what is left in each deposit and well, the region's
 // clock; the world's clock (schema 2); per pilot its id, wallet, region, driven unit and
-// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16); the frontier pilots (schema 21); the week's standings (schema 24); the hunt (schema 25); where each deposit and well lies (schema 26); the Citadel grown on load (schema 27, no rows); blueprints learned once (schema 28). The
+// progression (schema 3; its old levels before), gated by blueprints (schema 4), its contracts (schema 5), its rig (schema 7); the starfalls (schema 6); the realm wallet and what each pilot gave it (schema 9); its blueprint copies (schema 10); its Citadel missions (schema 12; 11 is the Brood's); its mercenaries (schema 14; 13 was kept for D1); the Citadel's marks (schema 15); a placed turret's marks and kills (schema 16); the frontier pilots (schema 21); the week's standings (schema 24); the hunt (schema 25); where each deposit and well lies (schema 26); the Citadel grown on load (schema 27, no rows); blueprints learned once (schema 28); a Mule's load (schema 29). The
 // schema is versioned: each migration is a step from one version to the
 // next, run in order in its own transaction when the file is opened.
 //
@@ -45,7 +45,7 @@ struct SavedBuilding {
     bool operator==(const SavedBuilding&) const = default;
 };
 
-/// A pilot's unit (the Prospector) as saved.
+/// A pilot's unit (the Prospector; C4, its Mule) as saved.
 struct SavedUnit {
     int64_t id = 0;
     UnitKind kind = UnitKind::prospector;
@@ -56,6 +56,9 @@ struct SavedUnit {
     int64_t cargo = 0;
     bool hydrogen = false;
     std::string owner;
+    /// C4: a Mule's load, ore and MH (schema 29; none before).
+    int64_t haulOre = 0;
+    int64_t haulHydrogen = 0;
     bool operator==(const SavedUnit&) const = default;
 };
 

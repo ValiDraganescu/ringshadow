@@ -292,8 +292,8 @@ TEST(realm_second_pilots_citadel_step_reaches_the_realms) {
 
 // A save from before the realm (schema 7: buildings with an owner) loads:
 // migrated to 8, its buildings stand as the realm's, their builder kept for
-// credit; a new pilot unloads at the old pilot's Hab Dome; saved again, the
-// builder is written in `built_by`.
+// credit; a new pilot unloads at the old pilot's Citadel (C4: a Hab Dome
+// takes no loads); saved again, the builder is written in `built_by`.
 TEST(realm_old_save_buildings_become_the_realms) {
     const std::string path = freshFile("v7realm");
     std::string why;
@@ -326,7 +326,7 @@ TEST(realm_old_save_buildings_become_the_realms) {
     const Simulation& sim = simOf(w, b);
     ASSERT_TRUE(structure(sim, 5) != nullptr);
     const int64_t ore = w.wallet(b)->ore;
-    besides(w, b, *structure(sim, 5));
+    besides(w, b, *structure(sim, 4));
     drivenUnit(w, b)->carrying = 25;
     drivenUnit(w, b)->hydrogen = false;
     wait(w, b, 10);

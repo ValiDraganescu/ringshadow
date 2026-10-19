@@ -11,6 +11,18 @@ namespace ac::server {
 void WorldMap::realmTaxes() {
     for (size_t r = 0; r < regions_.size(); r++)
         for (const GameEvent& e : regions_[r]->lastEvents()) {
+            // C4: a Mule's booking pays the same cut (`Simulation::stepMules`).
+            if (const auto* b = e.as<GameEvent::Booked>(); b && (b->taxOre > 0 || b->taxHydrogen > 0)) {
+                realm_.ore += b->taxOre;
+                realm_.hydrogen += b->taxHydrogen;
+                for (auto& [id, p] : pilots_)
+                    if (!p.flight && p.region == r && p.mule && p.mule->unit == b->unit) {
+                        p.taxed.ore += b->taxOre;
+                        p.taxed.hydrogen += b->taxHydrogen;
+                        break;
+                    }
+                continue;
+            }
             const auto* d = e.as<GameEvent::Deposited>();
             if (!d || d->tax <= 0) continue;
             (d->hydrogen ? realm_.hydrogen : realm_.ore) += d->tax;

@@ -1,6 +1,6 @@
 // The Citadel's tax and the realm wallet (C1, docs/prospector-progression.md
 // "The realm's tax"): every unload into a pilot's wallet, at the realm's
-// Citadel or a Hab Dome, pays the realm its cut; the XP and the deliver
+// Citadel (C4: a Hab Dome takes none), pays the realm its cut; the XP and the deliver
 // contracts count the whole load; pilots donate at the Citadel; two pilots'
 // taxes add up; the realm wallet and what each pilot gave are saved, and a
 // save from before (schema 8) starts with an empty realm wallet. Isolated
@@ -157,11 +157,11 @@ std::string freshFile(const std::string& name) {
 
 } // namespace
 
-// The tax at the Citadel and at a Hab Dome, ore and MH, a small load too:
-// the wallet gets the load less the cut, the realm wallet the cut, the
-// pilot's tally what it paid; the XP and a deliver contract count the whole
-// load; the progress message tells it all.
-TEST(realm_tax_on_unload_at_the_citadel_and_a_hab_dome) {
+// The tax at the Citadel, ore and MH, a small load too: the wallet gets the
+// load less the cut, the realm wallet the cut, the pilot's tally what it
+// paid; the XP and a deliver contract count the whole load; the progress
+// message tells it all. C4: the Hab Dome takes no load.
+TEST(realm_tax_on_unload_at_the_citadel_not_a_hab_dome) {
     Home s;
     ASSERT_TRUE(s.citadel.has_value() && s.dome.has_value());
     WorldMap& w = s.w;
@@ -178,13 +178,28 @@ TEST(realm_tax_on_unload_at_the_citadel_and_a_hab_dome) {
     EXPECT_NEAR(w.progress(a)->xp - xp, 25 * WorldXp::ore, 1e-9);
     EXPECT_EQ(w.contracts(a)[0].have, int64_t(25));
 
-    // 20 MH at the Hab Dome: 2 to the realm.
-    unload(w, a, *s.dome, 20, true);
+    // 20 MH at the Hab Dome's far side from the Citadel: it stays held.
+    {
+        const Structure d = *structure(simOf(w, a), *s.dome);
+        const Structure c = *structure(simOf(w, a), *s.citadel);
+        Unit* u = drivenUnit(w, a);
+        u->position = d.position + normalize(d.position - c.position) * (Rules::radius(d.kind) + 0.4);
+        u->task = Unit::Task::idle;
+        u->carrying = 20;
+        u->hydrogen = true;
+        wait(w, a, 10);
+        EXPECT_EQ(drivenUnit(w, a)->carrying, int64_t(20));
+        EXPECT_EQ(w.wallet(a)->hydrogen, int64_t(100));
+        drivenUnit(w, a)->carrying = 0;
+        drivenUnit(w, a)->hydrogen = std::nullopt;
+    }
+    // 20 MH at the Citadel: 2 to the realm.
+    unload(w, a, *s.citadel, 20, true);
     EXPECT_EQ(w.wallet(a)->hydrogen, int64_t(100 + 18));
     EXPECT_TRUE(w.realmWallet() == (WorldMap::Wallet{3, 2}));
 
     // A small load still pays: 1 of 4; a load of 1 pays nothing.
-    unload(w, a, *s.dome, 4, false);
+    unload(w, a, *s.citadel, 4, false);
     EXPECT_EQ(w.wallet(a)->ore, int64_t(1000 + 22 + 3));
     unload(w, a, *s.citadel, 1, false);
     EXPECT_EQ(w.wallet(a)->ore, int64_t(1000 + 22 + 3 + 1));
@@ -201,8 +216,8 @@ TEST(realm_tax_on_unload_at_the_citadel_and_a_hab_dome) {
 }
 
 // Donating: at the Citadel, from the wallet into the realm's; refused away
-// from it, for more than the pilot has, and for nothing. A Hab Dome is a
-// depot, not where one donates.
+// from it, for more than the pilot has, and for nothing. A Hab Dome is not
+// where one donates.
 TEST(realm_donate_at_the_citadel) {
     Home s;
     ASSERT_TRUE(s.citadel.has_value() && s.dome.has_value());

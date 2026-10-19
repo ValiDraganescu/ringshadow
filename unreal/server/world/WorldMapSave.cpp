@@ -9,6 +9,7 @@
 #include "Brood.h"
 
 #include "Defence.h"
+#include "Mule.h"
 #include "Session.h"
 
 #include <algorithm>
@@ -27,6 +28,10 @@ SavedUnit savedUnit(const Unit& u, const std::string& owner) {
     s.cargo = u.carrying;
     s.hydrogen = u.hydrogen.value_or(false);
     s.owner = owner;
+    if (u.haul) {
+        s.haulOre = u.haul->ore;
+        s.haulHydrogen = u.haul->hydrogen;
+    }
     return s;
 }
 
@@ -158,6 +163,18 @@ WorldSave WorldMap::save() const {
         // Its mercenaries' units (H2), as its own.
         for (const PilotState::Merc& m : p.mercs)
             if (m.unit) owned[mercIn(m)][*m.unit] = p.key;
+        // C4: its Mule, as its own; one still rolling out is saved out of
+        // its door (no money lost), under the next id of its region.
+        if (p.mule && p.mule->unit) {
+            owned[p.mule->region][*p.mule->unit] = p.key;
+        } else if (p.mule) {
+            const size_t mr = p.mule->region;
+            const Simulation& sim = regions_[mr]->simulation();
+            const auto b = sim.state.structure(p.mule->foundry);
+            Unit m = sim.freshUnit(UnitKind::mule, sim.state.nextID + extra[mr]++, Pilot::player,
+                                   b ? Mule::door(b->position) : p.mule->door, Mule::doorHeading);
+            landing[mr].push_back(savedUnit(m, p.key));
+        }
         s.region = world_->regions[r].file.id;
         s.unit = unit;
         // Its progression; the strategy game's levels are not a world's
@@ -212,7 +229,13 @@ WorldSave WorldMap::save() const {
         }
         for (const Unit& u : st.units) {
             const auto by = owned[i].find(u.id);
-            if (by != owned[i].end()) r.units.push_back(savedUnit(u, by->second));
+            if (by == owned[i].end()) continue;
+            SavedUnit su = savedUnit(u, by->second);
+            // C4: a Mule's rider is saved on its feet beside the perch.
+            if (const auto m = regions_[i]->simulation().ridden(u))
+                if (const auto mu = st.unit(*m))
+                    su.at = Mule::point(*mu, Vec2(Mule::perchLocal.x, Mule::width / 2 + Rules::radius(u.kind) + 0.15));
+            r.units.push_back(su);
         }
         r.units.insert(r.units.end(), landing[i].begin(), landing[i].end());
         std::sort(r.buildings.begin(), r.buildings.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
@@ -316,6 +339,8 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
             v.hp = u.hp;
             v.carrying = u.cargo;
             v.hydrogen = u.hydrogen ? std::optional<bool>(true) : std::nullopt;
+            // C4: a Mule's load.
+            if (v.haul) v.haul = Haul{u.haulOre, u.haulHydrogen};
             st.units.push_back(v);
             next = std::max(next, u.id + 1);
         }
@@ -405,6 +430,18 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
         }
         away_[sp.id] = p;
     }
+    // C4: each pilot's Mule, its own unit of that kind.
+    for (const SavedRegion& sr : save.regions)
+        for (const SavedUnit& u : sr.units) {
+            if (u.kind != UnitKind::mule || u.owner.empty()) continue;
+            const auto i = regionNamed(sr.id);
+            const auto owner = away_.find(u.owner);
+            if (!i || owner == away_.end() || owner->second.mule) continue;
+            PilotState::OwnMule m;
+            m.region = *i;
+            m.unit = u.id;
+            owner->second.mule = m;
+        }
     // Starfalls coming and craters with their deposits: the deposits back
     // after the region file's own, with their ids and the ore left.
     falls_.clear();

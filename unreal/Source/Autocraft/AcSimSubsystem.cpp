@@ -781,7 +781,7 @@ const TCHAR* UAcSimSubsystem::EventName(const ac::GameEvent& Event)
 	static const TCHAR* const Names[] = {TEXT("Deposited"), TEXT("PatchDepleted"), TEXT("PatchRegrown"), TEXT("Trained"),
 		TEXT("ConstructionStarted"), TEXT("Constructed"), TEXT("Shot"), TEXT("Missed"), TEXT("Landed"), TEXT("Died"),
 		TEXT("Destroyed"), TEXT("Victory"), TEXT("Researched"), TEXT("Stuck"), TEXT("Trapped"), TEXT("LeveledUp"), TEXT("Blast"), TEXT("Stomp"),
-		TEXT("Fired"), TEXT("Impact"), TEXT("DummyDown"), TEXT("Repaired"), TEXT("Demolished")};
+		TEXT("Fired"), TEXT("Impact"), TEXT("DummyDown"), TEXT("Repaired"), TEXT("Demolished"), TEXT("Booked")};
 	static_assert(UE_ARRAY_COUNT(Names) == std::variant_size_v<decltype(ac::GameEvent::value)>, "a GameEvent case has no name");
 	return Names[Event.value.index()];
 }

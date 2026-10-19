@@ -601,9 +601,6 @@ struct WorldFrontier {
     static constexpr double turretField = 12;
     static constexpr int64_t buildingsInAll = 8;
     static constexpr double apart = 6;
-    /// A Hab Dome goes up by a field only when the nearest depot is farther
-    /// than this.
-    static constexpr double depotFar = 24;
     /// A field was raided when a group of the Brood lingered at one of its
     /// deposits within this many world seconds.
     static constexpr double raidMemory = 900;
@@ -1052,6 +1049,43 @@ public:
     /// section 4). The reason when refused (it knows the kind, or holds no
     /// copy).
     std::optional<std::string> learn(PilotId pilot, StructureKind kind);
+
+    // MARK: The Mule (C4, docs/haul-and-ferry.md section 2; WorldMule.cpp)
+
+    /// The pilot buys the Mule at finished realm Foundry `foundry` of its
+    /// region, paid from its wallet (`Mule::ore`, `Mule::hydrogen`); it rolls
+    /// out of the Foundry's door `Mule::rollOut` s later (the world's clock,
+    /// on line or not). One a pilot: refused while it has one (rolling out
+    /// or out); a destroyed one frees the slot.
+    std::optional<std::string> buyMule(PilotId pilot, int64_t foundry);
+    /// The pilot's Prospector, on foot with a load, puts it all into its own
+    /// Mule `mule` (`Simulation::muleFill`: within `Mule::reach` of the
+    /// hopper, refused at `Mule::capacity`). No XP, no wallet: the Mule books
+    /// it when driven into a Citadel's hall (`Simulation::stepMules`; the XP
+    /// and the rest in `workAfter`, the realm's cut in `realmTaxes`).
+    std::optional<std::string> muleFill(PilotId pilot, int64_t mule);
+    /// The Take request (the server's, every mode): in a world, Take on the
+    /// pilot's own Mule climbs aboard it at its perch (`Simulation::
+    /// muleBoard`) and drives it; Take on its own Prospector while driving
+    /// the Mule climbs off. Another's Mule: refused. Anything else as
+    /// `Region::take`. The reason when refused.
+    std::optional<std::string> take(PilotId pilot, int64_t unit);
+    /// The HandBack request: off the Mule while driving it (a world), else
+    /// the driven unit back to its AI. The reason when refused.
+    std::optional<std::string> handBack(PilotId pilot);
+    /// The pilot's Mule: its region and its unit there (nil: none, or still
+    /// rolling out).
+    std::optional<std::pair<size_t, int64_t>> mule(PilotId pilot) const;
+    /// It drives its Mule now.
+    bool drivesMule(PilotId pilot) const;
+    /// Dev and the flow tests (`mule …` lines, as the seated pilot; `as N`
+    /// for another): `mule foundry` (a complete Foundry of the realm on
+    /// clear ground ahead, the Prospector 3 cells out from its door facing
+    /// it; its id), `mule here` (the pilot's Mule out at once beside its
+    /// Prospector, free; refused while it has one), `mule ready` (the one
+    /// rolling out is out now), `mule load N [MH]` (its Mule holds N ore and
+    /// MH MH).
+    std::string devMule(const std::string& line);
     /// C3: the pilot demolishes building `structure` of the realm in its
     /// region (WorldDemolish.cpp, docs/guns-and-practice.md "Limits per
     /// region and demolish"), finished or a scaffold: driving, within the
@@ -1778,6 +1812,17 @@ private:
         std::string goal;
         std::set<std::string> goalsPassed;
         std::set<std::string> goalsDid;
+        /// C4: its Mule (saved as a unit of its own): the region it is in,
+        /// its unit there (nil while it rolls out), and while it rolls out
+        /// the Foundry, its door (region cells) and the world clock it is out.
+        struct OwnMule {
+            size_t region = 0;
+            std::optional<int64_t> unit;
+            int64_t foundry = 0;
+            Vec2 door{0, 0};
+            double readyAt = 0;
+        };
+        std::optional<OwnMule> mule;
     };
     /// What the driven unit was doing before a step (the work XP).
     struct Work {
@@ -1874,6 +1919,17 @@ private:
     /// (or the nearest open spot), driving it unless another pilot drives
     /// there (false). `lastInput`: its inputs carry on from there.
     bool arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Vec2 at, int64_t lastInput);
+    /// C4 (WorldMule.cpp): the pilot's driven Mule `mule` and its rider
+    /// `rider` (taken out of their region) into region `to` at region
+    /// position `at`, the rider on the Mule again, the pilot driving it.
+    void arriveMule(PilotId pilot, PilotState& p, size_t to, const Unit& mule, const Unit& rider, Vec2 at, int64_t lastInput);
+    /// `p` drives its own Mule in its region now (`pilot` its id).
+    bool drivesMule(PilotId pilot, const PilotState& p) const;
+    /// After a step: the Mules rolled out at their time, a destroyed one
+    /// forgotten (its rider driven again).
+    void mulesStep();
+    /// The pilot's Mule into its Progress message.
+    void muleTold(const PilotState& p, net::ProgressMessage& m) const;
     void bankIn(const PilotState& p, size_t r);
     void bankOut(PilotState& p, size_t r);
     void crossings();
@@ -2249,8 +2305,8 @@ private:
     const Unit* frontierUnitOf(const FrontierPilot& f) const;
     /// Where it is: its unit's ground point, else `f.at`.
     Vec2 frontierAt(const FrontierPilot& f) const;
-    /// The realm depot (a finished Citadel or Hab Dome) nearest ground point
-    /// `at` of region `r`: its id.
+    /// The realm depot (a finished Citadel; C4: a Hab Dome takes no loads)
+    /// nearest ground point `at` of region `r`: its id.
     std::optional<int64_t> frontierDepot(size_t r, Vec2 at) const;
     /// Its unit (or booked place) where it unloads at a finished realm building
     /// `building`.

@@ -67,6 +67,81 @@ manager's, for the user to tune by feel.
   BuyMule, MuleFill (or the generic act); events Booked. Protocol bumps.
   Save: the Mule and its load persist with the pilot's units.
 
+### As built (c4-mule-sim, 2026-10-19)
+
+The manager's rulings on the gaps (Q1 to Q6) and what the code settled:
+
+- **The kind.** `UnitKind::mule` (raw `mule`, title "Mule"), appended after
+  the Matriarch: 17 kinds, so a kind takes 5 bits on the wire. A new kind
+  table flag `hauler`: not Brood, trained by no building (no RTS card, no
+  AI), no leveling picks, not a soldier, still while nobody drives it.
+  Drivable, `steers` with no turret (W/S drive, A/D turn the hull at 1.6
+  rad/s), a machine; hp 300, armour 1; 1.182 cells/s (0.3 ×
+  `Rules::prospectorSpeed`), the driven hero's speed not added. Radius 0.8
+  (half its width). Its numbers and points are `Mule.h`: capacity 1000,
+  reach 2.0, body 3.0 long × 1.6 wide × 1.4 tall, the perch deck 0.35 up
+  (the driver's top 1.85), the perch at (+1.0, 0) and the hopper's middle at
+  (−0.55, 0) in its own frame (x ahead), price 600 ore + 150 MH, roll-out
+  20 s, the toast `Mule::bookedToast` ("Booked · +300 ore, +40 MH").
+- **The load.** `Unit::haul` (`Haul{ore, hydrogen}`), set on every Mule.
+- **The rider.** Aboard, the pilot's Prospector has task `aboard` with
+  `structure` = the Mule, rides on it (its position kept on the Mule's) and
+  is out of reach of everything (as a Dropship's passenger); the Mule's
+  `cargo` is {the rider}. Handing the Mule back (leaving it, going off line,
+  the Mule switched for anything) sets the rider down beside the perch, on
+  foot. Boarding needs the Prospector on foot within 2.0 of the perch and
+  the seat free.
+- **Fill.** `MuleFill{mule}`: the pilot's own Prospector, on foot with a
+  load, within 2.0 of the hopper, its own Mule only ("Not your Mule");
+  refused "Nothing to put in", "Get to the Mule's hopper", "The Mule is
+  full" (at 1000 or more; the load that crosses 1000 goes in whole).
+- **Book** (Q1). Each step, a driven Mule with a load whose centre is in a
+  complete Citadel's hall (`Footprint::inside`: not the doorway) books it
+  all to its driver's bank: Stardust heart and Silver tide count it, the
+  realm's 10% is cut from ore and MH each (as today's unload), and
+  `GameEvent::Booked{unit, ore, hydrogen, at, taxOre, taxHydrogen}` goes to
+  everyone who may know (the game shows the toast to the Mule's owner).
+  The server pays the unload's XP (1 an ore, 2 an MH), the first-MH feat,
+  the deliver contracts, the haul missions and the week's ore.
+- **Board and leave.** No new request: `Take{mule}` climbs aboard (its owner
+  only, "Not your Mule"); `Take{own Prospector}` or `HandBack` while driving
+  it climbs off.
+- **Buy.** `BuyMule{foundry}` at a finished realm Foundry in the pilot's
+  region (from anywhere in it, like the Foundry's modules), from the
+  pilot's wallet; it rolls out 20 s later (the world's clock, on line or
+  not) at the Foundry's door (+y), facing out, with a `Trained` event. One
+  a pilot: "Your Mule is rolling out", "You have a Mule already"; a
+  destroyed one frees the slot. The Progress message's `mule` tells the
+  pilot its Mule: region, unit (0 rolling out), Foundry, `readyAt`.
+- **Edges** (Q2). Driven over a region edge, the Mule crosses with its
+  rider and load (`WorldMap::arriveMule`; the Dropship's bay can reuse it).
+- **Destroyed** (Q3). Its load is lost, its rider set down unhurt, the
+  pilot drives the Prospector again.
+- **Off line** (Q4). The rider climbs off; the Mule stays where it stands,
+  the Brood may hit it. Saved as a unit of the pilot's with its load
+  (schema 29: `units.haul_ore`, `haul_hydrogen`); one still rolling out is
+  saved out of the door; a rider is saved on its feet beside the perch.
+- **Repair** (Q6). The driven Prospector mends it as a building: the key
+  held at it within its work reach, a whole bar in 20 s at the hero's ×2
+  (10 s), costing `Rules::repairShare` of 600 + 150 in whole units as it
+  goes (`Repaired{mule, by, ore, hydrogen}`).
+- **Hab Domes** take no loads: the core's unload, the frontier pilots'
+  depot (their "Hab Dome by a far field" plans are gone), the deliver
+  contracts and haul missions now need a Citadel. Hab Domes keep their
+  supply, modules and respawn.
+- **Wire** (protocol 41): requests BuyMule 26, MuleFill 27; event Booked 23;
+  the Dropship's are 42 (requests from 28, events from 24).
+- **Dev lines** (`WorldMap::devMule`): `mule foundry` (a complete Foundry
+  ahead, the Prospector by its door), `mule here` (the Mule out at once
+  beside the Prospector), `mule ready`, `mule load N [MH]`.
+- **Tests.** Core `MuleTests.cpp` (fill, full, overfill, board and ride and
+  leave, speed, book in the hall not the doorway, the cut and Stardust
+  heart, the Prospector's own unload, destroyed, repair, the Brood, the
+  roll-out), `ProgressionEffects_habDomeTakesNoLoad`; net
+  `MuleWireTests.cpp`; server `MuleTests.cpp` (buy and roll-out, owner
+  only, fill and book with XP and the cut, full, an edge crossing,
+  destroyed, saved and loaded, rolling out saved).
+
 ## 3. The Dropship (core, net, server)
 
 The flight becomes the player's, in steps:

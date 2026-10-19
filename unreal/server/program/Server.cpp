@@ -216,6 +216,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devCarry(line));
             continue;
         }
+        // The Mule (WorldMap::devMule, C4): `mule foundry|here|ready|load N [MH]`.
+        if (line.rfind("mule", 0) == 0) {
+            said.push_back(world_.devMule(line));
+            continue;
+        }
         // Practice (WorldMap::devDummy, C2): `dummy here [CELLS]`.
         if (line.rfind("dummy", 0) == 0) {
             said.push_back(world_.devDummy(line));
@@ -460,9 +465,8 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
         if (!region) return;
         if (const auto* take = std::get_if<net::RequestMessage::Take>(&m.what)) {
             // W5: another human driving here takes nothing from this one
-            // (Region::take refuses its unit).
-            if (world_.flying(client.pilot)) reply.reason = "in flight";
-            else if (!region->take(client.pilot, take->unit)) reply.reason = "that unit cannot be driven";
+            // (Region::take refuses its unit). C4: on and off the Mule.
+            if (const auto why = world_.take(client.pilot, take->unit)) reply.reason = *why;
             else reply.done = true;
             if (!reply.done)
                 log("refuse take " + std::to_string(take->unit) + " by pilot " + std::to_string(client.pilot) + ": " + reply.reason);
@@ -499,12 +503,9 @@ void Server::message(net::ConnectionId c, Client& client, const std::vector<uint
             reply.reason = why->value_or("");
             reply.done = !why->has_value();
         } else {
-            if (region->driving(client.pilot)) {
-                region->handBack(client.pilot);
-                reply.done = true;
-            } else {
-                reply.reason = "nothing driven";
-            }
+            // HandBack (C4: off the Mule while driving it).
+            if (const auto off = world_.handBack(client.pilot)) reply.reason = *off;
+            else reply.done = true;
         }
         const std::vector<uint8_t> bytes = net::encode(reply);
         endpoint_.send(c, net::Channel::reliable, bytes.data(), bytes.size());
@@ -583,6 +584,14 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
         // C2: a building learned from a blueprint copy held, once.
         what = "learn the " + Simulation::title(ln->kind);
         why = world_.learn(pilot, ln->kind);
+    } else if (const auto* bm = std::get_if<net::RequestMessage::BuyMule>(&m.what)) {
+        // C4: the Mule bought at a realm Foundry.
+        what = "buy the Mule at building " + std::to_string(bm->foundry);
+        why = world_.buyMule(pilot, bm->foundry);
+    } else if (const auto* mf = std::get_if<net::RequestMessage::MuleFill>(&m.what)) {
+        // C4: the Prospector's load into its Mule's hopper.
+        what = "fill Mule " + std::to_string(mf->mule);
+        why = world_.muleFill(pilot, mf->mule);
     } else if (const auto* dm = std::get_if<net::RequestMessage::Demolish>(&m.what)) {
         // C3: a realm building in the pilot's region taken down, half its price back.
         what = "demolish building " + std::to_string(dm->structure);

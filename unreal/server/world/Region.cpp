@@ -531,6 +531,8 @@ bool mayKnow(const Simulation& sim, int64_t side, const GameEvent& e, std::optio
     if (const auto* d = e.as<GameEvent::DummyDown>()) return id(d->id);
     // A repair paid: to the repairer's side, and whoever sees the building.
     if (const auto* r = e.as<GameEvent::Repaired>()) return id(r->by) || id(r->structure);
+    // C4: a Mule's booking, as an unload.
+    if (const auto* b = e.as<GameEvent::Booked>()) return ourUnit(b->unit) || at(b->at);
     return false;
 }
 

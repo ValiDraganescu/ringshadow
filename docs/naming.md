@@ -59,10 +59,13 @@ liquid metal, like mercury.
 | Peregrine  | Air-superiority fighter                      | `peregrine`  |
 | Atlas      | Heavy assault walker                         | `atlas`      |
 | Scorpion   | Burrowing mine                               | `scorpion`   |
+| Mule       | The MMO's hauler the pilot drives (C4)       | `mule`       |
 
 The Longbow **anchors** into artillery mode: `anchor`, `anchored`,
 `unanchor`, `anchorTime`, and so on. [new-units.md](new-units.md) designs
-the Peregrine, the Atlas and the Scorpion.
+the Peregrine, the Atlas and the Scorpion. The Mule ([haul-and-ferry.md](haul-and-ferry.md))
+carries a **load** (`haul`) in its **hopper**; the pilot stands on its
+**perch**; driven into a Citadel's hall it **books** the load (`Booked`).
 
 ## Creatures
 

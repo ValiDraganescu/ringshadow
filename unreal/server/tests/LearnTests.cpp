@@ -242,7 +242,7 @@ TEST(load_schema28LearnsWhatWasBoughtOrBuilt) {
     }
     auto store = WorldStore::open(path, "first", &why);
     ASSERT_TRUE(store != nullptr);
-    EXPECT_EQ(store->schemaVersion(), int64_t(28));
+    EXPECT_EQ(store->schemaVersion(), int64_t(29));
     const auto loaded = store->load(&why);
     ASSERT_TRUE(loaded.has_value());
     ASSERT_TRUE(loaded->pilots.size() == 1);

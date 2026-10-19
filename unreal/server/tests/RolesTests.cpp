@@ -257,9 +257,10 @@ TEST(roles_seated_again_after_a_fall_comes_home) {
     EXPECT_TRUE(!w.respawning(me).has_value());
 }
 
-// The Hab Dome is a field depot: ore and MH walked up to it go into the
-// wallet with their XP, as at the Citadel. The respec is refused there.
-TEST(roles_hab_dome_depot) {
+// C4 (docs/haul-and-ferry.md section 2): the Hab Dome takes no loads any
+// more (the Mule hauls them to a Citadel): ore and MH walked up to it stay
+// in the gripper, no wallet, no XP. The respec is refused there.
+TEST(roles_hab_dome_takes_no_load) {
     WorldMap w(first(), params());
     w.seat(me, key);
     w.setProgress(me, at(10));
@@ -277,13 +278,14 @@ TEST(roles_hab_dome_depot) {
     const double xp = w.progress(me)->xp;
     drivenUnit(w, me)->carrying = 25;
     w.step();
-    // 25 less the realm's tax of 3 (C1); the XP on all 25.
-    EXPECT_EQ(w.wallet(me)->ore, int64_t(872));
-    EXPECT_NEAR(w.progress(me)->xp - xp, 25 * WorldXp::ore, 1e-9);
+    EXPECT_EQ(w.wallet(me)->ore, int64_t(850));
+    EXPECT_NEAR(w.progress(me)->xp - xp, 0, 1e-9);
+    EXPECT_EQ(drivenUnit(w, me)->carrying, int64_t(25));
     drivenUnit(w, me)->carrying = 20;
     drivenUnit(w, me)->hydrogen = true;
     w.step();
-    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(68));
+    EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(50));
+    EXPECT_EQ(drivenUnit(w, me)->carrying, int64_t(20));
 }
 
 // The world's prices: the MH part refused when the wallet can't pay it;

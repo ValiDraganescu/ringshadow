@@ -66,6 +66,8 @@ WorldSave sample() {
     r.buildings.push_back(SavedBuilding{9, StructureKind::habDome, Vec2(14, 2), keyB, 12.5, 40.75});
     r.units.push_back(SavedUnit{3, UnitKind::prospector, Vec2(1.5, 2.5), 0.75, 45.5, 5, true, keyA});
     r.units.push_back(SavedUnit{12, UnitKind::prospector, Vec2(-4, 8), 3.0, 60, 0, false, keyB});
+    // C4: a Mule with its load (schema 29).
+    r.units.push_back(SavedUnit{14, UnitKind::mule, Vec2(6, -2), 1.5, 280, 0, false, keyA, 640, 85});
     // The start's first two mounds and its well, where they lie (schema 26).
     r.deposits.push_back(SavedDeposit{0, 1500, std::nullopt, Vec2(55.7 - 72, 50.1 - 48)});
     r.deposits.push_back(SavedDeposit{1, 0, 99.5, Vec2(53.5 - 72, 53.2 - 48)});
@@ -184,7 +186,7 @@ TEST(save_migrations_v0_to_v9_and_a_future_step) {
         auto store = WorldStore::open(path, "first", &why);
         ASSERT_TRUE(store != nullptr);
         EXPECT_EQ(store->schemaVersion(), WorldStore::version());
-        EXPECT_EQ(WorldStore::version(), int64_t(28));
+        EXPECT_EQ(WorldStore::version(), int64_t(29));
         EXPECT_EQ(store->rows("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN "
                               "('meta', 'regions', 'buildings', 'units', 'deposits', 'wells', 'pilots', 'world_clock', 'starfalls', "
                               "'realm_wallet', 'nests', 'canyons', 'frontier', 'standings', 'hunt')")[0][0],
@@ -321,9 +323,9 @@ TEST(save_writes_only_the_rows_that_changed) {
     WorldSave s = sample();
     auto n = store->write(s, &why);
     ASSERT_TRUE(n.has_value());
-    // 2 regions, 2 buildings, 2 units, 2 deposits, 1 well, 2 pilots, the
-    // clock, the realm wallet.
-    EXPECT_EQ(n->changed, int64_t(13));
+    // 2 regions, 2 buildings, 3 units (C4: one a Mule), 2 deposits, 1
+    // well, 2 pilots, the clock, the realm wallet.
+    EXPECT_EQ(n->changed, int64_t(14));
     n = store->write(s, &why);
     ASSERT_TRUE(n.has_value());
     EXPECT_EQ(n->changed, int64_t(0));

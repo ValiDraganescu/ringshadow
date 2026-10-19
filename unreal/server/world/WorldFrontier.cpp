@@ -265,7 +265,8 @@ std::optional<int64_t> WorldMap::frontierDepot(size_t r, Vec2 at) const {
     std::optional<int64_t> best;
     double d = 1e18;
     for (const Structure& b : regions_[r]->simulation().state.structures) {
-        if ((b.kind != StructureKind::citadel && b.kind != StructureKind::habDome) || !b.complete() || !realm(b)) continue;
+        // C4: the Citadel alone takes loads (a Hab Dome no more).
+        if (b.kind != StructureKind::citadel || !b.complete() || !realm(b)) continue;
         if (distance(b.position, at) < d) {
             d = distance(b.position, at);
             best = b.id;
@@ -506,8 +507,8 @@ FrontierPlan WorldMap::minerPlan(const FrontierPilot& f) const {
     const Vec2 at = frontierAt(f);
     const GameState& st = regions_[r]->simulation().state;
     if (f.cargo == 0) {
-        // A Derrick on a well by its field; a Hab Dome by a field far from
-        // every depot.
+        // A Derrick on a well by its field. (C4: no Hab Dome by a far field
+        // any more: it takes no loads.)
         if (st.wells) {
             std::optional<Vec2> well;
             for (const auto& w : *st.wells) {
@@ -518,11 +519,6 @@ FrontierPlan WorldMap::minerPlan(const FrontierPilot& f) const {
             }
             if (well)
                 if (auto p = buildPlan(f, StructureKind::derrick, *well, "a Derrick on the well by its field")) return *p;
-        }
-        if (const auto m = minePlan(f)) {
-            const auto d = frontierDepot(r, m->at);
-            if (d && distance(st.structure(*d)->position, m->at) > WorldFrontier::depotFar)
-                if (auto p = buildPlan(f, StructureKind::habDome, m->at, "a Hab Dome by its field")) return *p;
         }
     }
     if (auto m = minePlan(f)) return *m;
@@ -550,11 +546,6 @@ FrontierPlan WorldMap::builderPlan(const FrontierPilot& f) const {
             Vec2 near = frontierAt(f);
             if (const auto c = realmCitadel(); c && c->first == r) near = st.structure(c->second)->position;
             if (auto p = buildPlan(f, StructureKind::landingPad, near, "a Landing Pad for the Dropship")) return *p;
-        }
-        if (const auto m = minePlan(f)) {
-            const auto d = frontierDepot(r, m->at);
-            if (d && distance(st.structure(*d)->position, m->at) > WorldFrontier::depotFar)
-                if (auto p = buildPlan(f, StructureKind::habDome, m->at, "a Hab Dome where the haul is long")) return *p;
         }
     }
     if (auto m = minePlan(f)) return *m;
@@ -1087,7 +1078,7 @@ void WorldMap::frontierAct(FrontierPilot& f, double dt) {
             }
             break;
         }
-        // A Hab Dome (the core's Prospector hauls to Citadels only), or booked.
+        // Booked (no unit): beside the Citadel.
         const Vec2 out = normalize(pos - b->position);
         if (!moveTo(b->position + (out == Vec2(0, 0) ? Vec2(1, 0) : out) * (Rules::radius(b->kind) + 0.6), 0.8)) break;
         if (!frontierBeside(f, b->id)) break;

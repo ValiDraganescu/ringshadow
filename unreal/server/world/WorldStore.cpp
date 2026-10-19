@@ -305,6 +305,13 @@ const char* const kV28 = R"sql(
 ALTER TABLE pilots ADD COLUMN learned INTEGER NOT NULL DEFAULT 0;
 )sql";
 
+/// Schema 29 (C4, docs/haul-and-ferry.md section 2): a Mule's load on its
+/// unit row, ore and MH. A save from before has no Mules.
+const char* const kV29 = R"sql(
+ALTER TABLE units ADD COLUMN haul_ore INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE units ADD COLUMN haul_hydrogen INTEGER NOT NULL DEFAULT 0;
+)sql";
+
 using Key = std::pair<std::string, int64_t>;
 
 /// A row's place at columns `c` and `c + 1`: nil when either is NULL (a
@@ -318,7 +325,7 @@ std::optional<Vec2> place(const Stmt& s, int c) {
 
 const std::vector<WorldStore::Migration>& WorldStore::migrations() {
     // A later version adds its step here: {6, "ALTER TABLE ... ADD COLUMN ..."}.
-    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}, {25, kV25}, {26, kV26}, {27, kV27}, {28, kV28}};
+    static const std::vector<Migration> steps = {{1, kV1}, {2, kV2}, {3, kV3}, {4, kV4}, {5, kV5}, {6, kV6}, {7, kV7}, {8, kV8}, {9, kV9}, {10, kV10}, {12, kV12}, {14, kV14}, {15, kV15}, {16, kV16}, {17, kV17}, {18, kV18}, {20, kV20}, {21, kV21}, {22, kV22}, {23, kV23}, {24, kV24}, {25, kV25}, {26, kV26}, {27, kV27}, {28, kV28}, {29, kV29}};
     return steps;
 }
 
@@ -463,7 +470,7 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
         if (s.failed(error)) return std::nullopt;
     }
     {
-        Stmt s(db_, "SELECT region, id, kind, x, y, heading, hp, cargo, hydrogen, owner FROM units ORDER BY region, id");
+        Stmt s(db_, "SELECT region, id, kind, x, y, heading, hp, cargo, hydrogen, owner, haul_ore, haul_hydrogen FROM units ORDER BY region, id");
         while (s.row()) {
             const auto kind = parse<UnitKind>(s.colText(2));
             if (!kind) {
@@ -471,7 +478,8 @@ std::optional<WorldSave> WorldStore::load(std::string* error) {
                 return std::nullopt;
             }
             region(s.colText(0)).units.push_back(SavedUnit{s.colInteger(1), *kind, Vec2(s.colReal(3), s.colReal(4)), s.colReal(5), s.colReal(6),
-                                                        s.colInteger(7), s.colInteger(8) != 0, s.colText(9)});
+                                                        s.colInteger(7), s.colInteger(8) != 0, s.colText(9), s.colInteger(10),
+                                                        s.colInteger(11)});
         }
         if (s.failed(error)) return std::nullopt;
     }
@@ -658,7 +666,7 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
         rowsOf(r.id, r.units, units_, [](const SavedUnit& u) { return u.id; },
                [&](const SavedUnit& u) {
                    run(std::move(Stmt(db_, cached("INSERT OR REPLACE INTO units (region, id, kind, x, y, heading, hp, cargo, hydrogen, "
-                                           "owner) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+                                           "owner, haul_ore, haul_hydrogen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
                                      .text(r.id)
                                      .integer(u.id)
                                      .text(std::string(rawValue(u.kind)))
@@ -668,7 +676,9 @@ std::optional<WorldStore::Written> WorldStore::write(const WorldSave& save, std:
                                      .real(u.hp)
                                      .integer(u.cargo)
                                      .integer(int64_t(u.hydrogen))
-                                     .text(u.owner)));
+                                     .text(u.owner)
+                                     .integer(u.haulOre)
+                                     .integer(u.haulHydrogen)));
                },
                "units", "id");
         rowsOf(r.id, r.deposits, deposits_, [](const SavedDeposit& d) { return d.index; },

@@ -101,7 +101,7 @@ walking, flying, sitting in a building, the skill screen.
 
 | Source | XP | Notes |
 |---|---|---|
-| Ore unloaded at your Citadel or a Hab Dome of yours | 1 an ore | As today. |
+| Ore unloaded at your Citadel, or booked by your Mule in its hall (C4) | 1 an ore | As today. A Hab Dome takes no loads since C4. |
 | MH unloaded | 2 an MH | Up from 1.25, so pumping earns near mining's rate: a 20 MH trip of about 35 s is 40 XP, about 70 a minute against mining's 100. |
 | Welding a building of yours | ½ × its cost (ore + MH) × the share welded | A Citadel is 200 XP. Half of the strategy game's rate, since the ore it cost already earned XP when it was mined. |
 | Repairing a building of yours | ¼ × its cost × the share of hp mended | Only hp lost to something else. Nothing damages buildings in the MMO yet, so this is 0 today. |
@@ -362,7 +362,7 @@ floor**. A copy held below the floor is kept and shows "opens at level N".
 | Citadel | Home: unload point (the realm's tax), respawn point, where the respec is made, the Citadel screen (H); four corner turrets | 1 | 1 a region (R3) | 400 | on the server (P6, R3) |
 | Derrick | Pumps MH on a well (as today) | 3 | 4 | 75 | as today |
 | Gatling gun | A rotary cannon firing red-hot ore and MH amalgam rounds: ground targets in range 6, air within 4.5 (D2); marks from the pilot's wallet at the turret (U, D3; [creatures.md](creatures.md) "As built (D3)") | 5 | 6 | 125 + 25 | on the server (D2, D3) |
-| Hab Dome | A field depot: unload ore and MH into the wallet away from home, and a respawn point | 8 | 3 | 150 + 50 | on the server (P6) |
+| Hab Dome | A respawn point, supply, modules fitted (C4: no longer a depot: the Mule hauls loads to a Citadel, [haul-and-ferry.md](haul-and-ferry.md)) | 8 | 3 | 150 + 50 | on the server (P6) |
 | Foundry | Makes rig modules: drill head, cargo pod, plate, torch tip, survey lens ("Foundry and Lab") | 15 | 1 | 300 + 150 | on the server (P7) |
 | Lab | Researches better module marks (Mk II, Mk III) for MH and time | 25 | 1 | 200 + 200 | on the server (P7), standing alone |
 | Landing Pad | Where the Dropship sets down (F2): a walkable 3 by 3 deck; flights only between Landing Pads, in regions the pilot has been to. The limit is per region | 1 | 2 a region | 60 | on the server (F2) |
@@ -435,7 +435,7 @@ of every unload into a realm wallet; pilots may donate too; the realm wallet
 pays for the Citadel's upgrades (D1).
 
 - **The tax.** Every load a pilot unloads into its wallet, ore or MH, at the
-  realm's Citadel or at a Hab Dome (a depot is the realm's too), pays the
+  realm's Citadel or booked by its Mule in the Citadel's hall (C4), pays the
   realm `Progression::realmTaxPercent`, **10%**, one tunable constant. The
   wallet gets the rest; the realm wallet gets the cut.
 - **The rounding rule.** The cut is 10% of the load to the nearest whole
@@ -493,9 +493,9 @@ On screen:
   Citadel, says "H  at the Citadel: the realm's wallet, donate, the shop".
 
 Tests: `core-tests/tests/ProgressionEffectsTests.cpp`
-(`realmTaxRounding`, `realmTaxOnUnload`, the Hab Dome depot),
-`server/tests/RealmWalletTests.cpp` (the tax at the Citadel and a Hab
-Dome, small loads, XP and contracts on the whole load; donations in and out
+(`realmTaxRounding`, `realmTaxOnUnload`, `habDomeTakesNoLoad`),
+`server/tests/RealmWalletTests.cpp` (the tax at the Citadel, none at a Hab
+Dome since C4, small loads, XP and contracts on the whole load; donations in and out
 of range and over the wallet; two pilots' taxes adding up; the wallet saved,
 loaded and migrated). Pictures: `-AcMmoShotsC1`.
 
@@ -682,8 +682,7 @@ progress in background even if I quit the game." Built in H2
   `WorldMercs::names`, none twice for one pilot). It starts beside the
   realm's Citadel, walks to its field, drills, and hauls each load to the
   realm's Citadel in that region, as the strategy game's Prospector hauls
-  (the core's `bases`: a Citadel; a Hab Dome is a depot for the pilot's own
-  Prospector only). Bugs treat it as any Prospector: prey, and a guard
+  (the core's `bases`: a Citadel; since C4 a Hab Dome is no depot). Bugs treat it as any Prospector: prey, and a guard
   against a Lodeback within 8 cells of it. Other pilots see it too.
 - **Its field.** A region file's deposits within 8 cells of each other are
   one field (`WorldMap::fields`; starfall deposits are not). It starts at
@@ -753,9 +752,10 @@ in `core-tests/tests/ProgressionEffectsTests.cpp`.
   joins again.
 - **Respec** only at the realm's Citadel, in its unload range (since
   P3). A Hab Dome is not enough.
-- **Hab Dome depot.** Ore and MH walked up to any finished Hab Dome of the
-  realm go into the wallet, with their XP and contract credit, as at the
-  Citadel.
+- **No Hab Dome depot** (C4, [haul-and-ferry.md](haul-and-ferry.md)
+  section 2). Until C4 ore and MH walked up to a finished Hab Dome went into
+  the wallet; now the Citadel alone takes a load: the Prospector walks it
+  there, or puts it in its Mule, which books it in the Citadel's hall.
 - **Landing Pads and the Spacedock** (F2). The realm's finished Landing
   Pads and its Spacedock are the Dropship's pads, named in their region
   "Landing Pad 1", "Landing Pad 2" (by building id) and "Spacedock"; they

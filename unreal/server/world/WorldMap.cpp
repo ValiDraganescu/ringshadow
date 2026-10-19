@@ -813,6 +813,7 @@ void WorldMap::step() {
     updateSky();
     workAfter(work);
     realmTaxes();
+    mulesStep();
     mercsStep(dt);
     frontierStep(dt);
     realmNews();
@@ -947,7 +948,10 @@ void WorldMap::crossings() {
             if (!to) continue;
             const region::Built& there = *regions_[*to]->places();
             if (!inSpan(there.openings[size_t(opposite(e))], along)) continue;
-            const auto clocks = takeClocks(p.region, *unit);
+            // C4: its Mule crosses with its rider (the Prospector's clocks go along).
+            const bool mule = drivesMule(pilot, p) && p.unit;
+            const auto clocks = takeClocks(p.region, mule ? *p.unit : *unit);
+            const std::optional<Unit> rider = mule ? here.release(*p.unit) : std::nullopt;
             const Unit leaving = *here.release(*unit);
             const int64_t lastInput = here.lastInputTick(pilot);
             const std::optional<Region::Inputs> inputs = here.inputs(pilot);
@@ -957,7 +961,8 @@ void WorldMap::crossings() {
             // Its inputs carry on from where they were: seamless, the ones
             // waiting and the one in use too, at the same point of the world.
             const Vec2 in = seamless ? there.edgePoint(opposite(e), along, -gap) : there.edgePoint(opposite(e), along, params_.arriveDepth);
-            arrive(pilot, p, *to, leaving, in, lastInput);
+            if (rider) arriveMule(pilot, p, *to, leaving, *rider, in, lastInput);
+            else arrive(pilot, p, *to, leaving, in, lastInput);
             p.walkedIn = seamless;
             if (seamless && inputs) regions_[*to]->carryOn(pilot, *inputs);
             giveClocks(*to, *p.unit, clocks);

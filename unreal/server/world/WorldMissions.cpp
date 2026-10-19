@@ -255,7 +255,8 @@ std::optional<Mission> WorldMap::drawMission(const PilotState& p, std::mt19937_6
             if (can && !mine && !p.progress.sites.count(id) && !siteSwallowed(r, i)) sites.push_back({r, i});
         }
     }
-    const bool haul = tier != Tier::perilous && (realmFinished(StructureKind::citadel) || realmFinished(StructureKind::habDome));
+    // C4: loads are delivered at a Citadel alone (a Hab Dome takes none).
+    const bool haul = tier != Tier::perilous && realmFinished(StructureKind::citadel);
 
     struct Option {
         Kind kind;

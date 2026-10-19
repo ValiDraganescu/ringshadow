@@ -300,8 +300,9 @@ TEST(Frontier_minerDecides) {
     f.progress.giveBlueprint(StructureKind::derrick);
     p = w.frontierDecide(f);
     EXPECT_TRUE(p.act == Act::build && p.kind == StructureKind::derrick && distance(p.at, *well) < 2);
-    // At level 8 with a field far from every depot: a Hab Dome by it (the
-    // wells dry, so no Derrick comes first).
+    // C4: at level 8 with a field far from the Citadel: no Hab Dome by it
+    // (it takes no loads); it drills (the wells dry, so no Derrick comes
+    // first).
     for (auto& x : *sim.state.wells) x.remaining = 0;
     f.progress.blueprints.clear();
     f.progress.giveBlueprint(StructureKind::habDome);
@@ -316,8 +317,7 @@ TEST(Frontier_minerDecides) {
     p = w.frontierDecide(f);
     std::printf("  far field %.0f cells out: %s\n", distance(st.patches[*far].position, structure(w, r, citadel)->position),
                 p.why.c_str());
-    if (distance(st.patches[*far].position, structure(w, r, citadel)->position) > WorldFrontier::depotFar + 6)
-        EXPECT_TRUE(p.act == Act::build && p.kind == StructureKind::habDome);
+    EXPECT_TRUE(!(p.act == Act::build && p.kind == StructureKind::habDome));
 }
 
 /// A builder: a Gatling Gun by a field the Brood lingered at (none by a

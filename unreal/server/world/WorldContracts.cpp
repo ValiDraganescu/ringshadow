@@ -249,7 +249,8 @@ Contract WorldMap::drawContract(PilotId, const PilotState& p, std::mt19937_64& d
         int weight;
     };
     std::vector<Option> options;
-    if (realmFinished(StructureKind::citadel) || realmFinished(StructureKind::habDome)) {
+    // C4: delivered at a Citadel alone (a Hab Dome takes no loads).
+    if (realmFinished(StructureKind::citadel)) {
         options.push_back({Kind::deliverOre, 3});
         if (realmFinished(StructureKind::derrick)) options.push_back({Kind::deliverHydrogen, 2});
     }

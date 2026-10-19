@@ -33,6 +33,9 @@ public:
     /// (`Mule::door`, the nearest free ground there): a new unit, its
     /// `Trained` with the next step's events. Its id; nil: no such building.
     std::optional<int64_t> rollOut(int64_t foundry, int64_t owner);
+    /// The same at door point `door` (`Mule::door`; the Foundry gone since
+    /// it was bought): its id.
+    int64_t rollOutAt(Vec2 door, int64_t owner);
     /// Each step after the units: every rider kept on its Mule; a Mule a
     /// human drives with a load, its centre in the hall
     /// (`Footprint::inside`) of a complete Citadel of its side, books the
