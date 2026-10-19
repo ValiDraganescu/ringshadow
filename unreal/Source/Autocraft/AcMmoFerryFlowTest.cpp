@@ -73,7 +73,7 @@ namespace
 		bool bPressed = false;
 		double Settled = -1;
 		/// The stages seen in flight (pictures taken once each).
-		bool bLiftShot = false, bDashShot = false, bApproachShot = false;
+		bool bLiftShot = false, bDashShot = false, bApproachShot = false, bCabinShot = false;
 		/// The call post pictured (first person).
 		bool bPostShot = false;
 		/// The target pad's region, seen in flight.
@@ -188,7 +188,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 	const ac::Shuttle* Ship = nullptr;
 	for (const ac::Shuttle& Q : S->state.shuttles)
 	{
-		if (Run.Ship >= 0 ? Q.id == Run.Ship : ac::distance(Q.position, U->position) < 12) Ship = &Q;
+		if (Run.Ship >= 0 ? Q.id == Run.Ship : ac::distance(Q.position, U->position) < 20) Ship = &Q;
 	}
 	const ac::Vec2 Local = Ship ? ac::ShuttleBay::local(*Ship, U->position) : ac::Vec2();
 	// Walk to a point in the ship's frame (or the region's, with no ship
@@ -338,7 +338,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		// Pushed off the pad by the landing: out to its side, back along the
 		// side, to the ramp's foot, up it (each leg once, in turn).
 		if (Run.Leg == 0 && (Local.x < ac::ShuttleBay::rampFoot() - 0.5 || ac::ShuttleBay::onRamp(Local) || ac::ShuttleBay::inBay(Local))) Run.Leg = 2;
-		const double Side = Local.y >= 0 ? 3.3 : -3.3;
+		const double Side = (Local.y >= 0 ? 1.0 : -1.0) * (ac::ShuttleBay::hullHalfWide + 0.7);
 		if (Run.Leg == 0)
 		{
 			if (FMath::Abs(Local.y) >= 3.0 || WalkTo(ac::Vec2(Local.x, Side), 0.3)) Run.Leg = 1;
@@ -354,7 +354,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			if (ac::ShuttleBay::onRamp(Local) || ac::ShuttleBay::inBay(Local) || WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 0.8, 0.0), 0.3)) Run.Leg = 3;
 			Waited(FString::Printf(TEXT("to the ramp's foot (at %.2f, %.2f)"), Local.x, Local.y), WalkSeconds);
 		}
-		else if (WalkTo(ac::Vec2(-1.0, 0.0), 0.3))
+		else if (WalkTo(ac::Vec2(ac::ShuttleBay::rear + 3.0, 0.0), 0.3))
 		{
 			FString Where;
 			if (Settle(1.0))
@@ -445,7 +445,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 	case 8:
 	{
 		// The flight, a step back from the console, looking out of the windshield.
-		WalkTo(ac::Vec2(1.25, 0.0), 0.15);
+		WalkTo(ac::ShuttleBay::helmStand - ac::Vec2(0.65, 0.0), 0.15);
 		Face(0.0);
 		// High in the dash, a little down onto the land going by.
 		Pitch(Ship && Ship->stage == ac::Shuttle::Stage::dash ? -0.22 : -0.08);
@@ -473,6 +473,20 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		}
 		// Out of the side pane a moment into the dash.
 		if (Ship->stage == EStage::dash && Run.bDashShot && Ship->clock > 2.2 && Ship->clock < 2.6) Face(0.75);
+		// Then back down the bay, the vapour flung past outside: nothing of
+		// it (nor the rain, nor any dust) inside the closed bay.
+		if (Ship->stage == EStage::dash && Run.bDashShot && Ship->clock > 2.6 && Ship->clock < 3.6)
+		{
+			Face(UE_DOUBLE_PI);
+			Pitch(-0.1);
+			if (Ship->clock > 3.3 && !Run.bCabinShot)
+			{
+				Run.bCabinShot = true;
+				FString Where;
+				Check(CameraInBay(Where), FString::Printf(TEXT("ferry: in the dash, the view in the bay (%s)"), *Where));
+				Picture(TEXT("ferry-6-bay-in-dash"));
+			}
+		}
 		if (Ship->stage == EStage::approach && !Run.bApproachShot && Ship->clock > 1.0)
 		{
 			Run.bApproachShot = true;
@@ -545,7 +559,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			Mmo->Want(*Own);
 			Run.bFlew = true;
 		}
-		if (Ship && U->kind == ac::UnitKind::mule && Local.x < ac::ShuttleBay::rampFoot() - 2.0 && FMath::Abs(Local.y) < 0.3)
+		if (Ship && U->kind == ac::UnitKind::mule && Local.x < ac::ShuttleBay::rampFoot() - 1.5 && FMath::Abs(Local.y) < 0.3)
 		{
 			Run.Leg = 3;
 			Advance();
@@ -625,7 +639,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			return;
 		}
 		// Straight up the ramp, chasing a point 3 cells ahead on the axis.
-		const bool bBehind = Local.x < Foot - 3.0;
+		const bool bBehind = Local.x < Foot - 1.5;
 		const bool bAxis = Run.Leg >= 3 || ac::ShuttleBay::onRamp(Local) || ac::ShuttleBay::inBay(Local);
 		// The legs only go forward (a turning vehicle crosses their bounds).
 		if (bAxis) Run.Leg = 3;
@@ -635,7 +649,9 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (Run.Leg == 0) Drive(ac::Vec2(Local.x - 2.0, Side), 0.0);
 		else if (Run.Leg == 1) Drive(ac::Vec2(Foot - 5.0, Side), 0.0);
 		else if (Run.Leg == 2 && (FMath::Abs(Local.y) > 0.25 || Local.x < Foot - 1.0)) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot - 3.5), 0.0), 0.0);
-		else if (Local.x < -0.5) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot), 0.0), 0.0), Run.Leg = 3;
+		// In once its tail is past the opening, short of where the ramp post
+		// falls out of reach.
+		else if (Local.x < ac::ShuttleBay::rear + 2.0) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot), 0.0), 0.0), Run.Leg = 3;
 		else bIn = true;
 		if (bIn)
 		{

@@ -36,7 +36,9 @@ What it makes (all in /Game/Effects):
   the ground (depth fade, `SoftCm`). Unused for now: every Swift system keeps
   SceneKit's default blend, `.additive`, smoke and dust included.
 
-Both are unlit, like the Swift particles (`isLightingEnabled = false`).
+Both are unlit, like the Swift particles (`isLightingEnabled = false`). Both
+are cut inside the walk-in Dropship's bay nearest the camera (MPC_AcWorld's
+`ShelterShip` box, AcShelter.h): nothing from outside gets inside it.
 
 Per instance (custom data, written by AcParticles.cpp):
   0 birth time (s, the MPC's clock), 1 life (s), 2-4 velocity (cm/s,
@@ -182,6 +184,13 @@ float4 k = float4(AC_RAMP(float4(C0.r, C1.r, C2.r, C3.r), Tm, a), AC_RAMP(float4
                   AC_RAMP(float4(C0.b, C1.b, C2.b, C3.b), Tm, a), AC_RAMP(float4(C0.a, C1.a, C2.a, C3.a), Tm, a));
 float3 rgb = float3(R, G, B) * k.rgb;
 float alpha = saturate(Alpha * k.a * Tex.a);
+// Nothing from outside inside a walk-in Dropship's bay (the dash's vapour
+// flung past it, dust, smoke): cut where the pixel is in the bay nearest the
+// camera (MPC_AcWorld's ShelterShip box, AcShelter.h; half sizes 0: none).
+float3 sd = P - ShelterShip.xyz;
+if (abs(dot(sd, ShelterShipX.xyz)) < ShelterShipX.w && abs(dot(sd, ShelterShipY.xyz)) < ShelterShipY.w
+    && abs(dot(sd, ShelterShipZ.xyz)) < ShelterShipZ.w)
+    alpha = 0.0;
 Opacity = alpha;
 return Add > 0.5 ? rgb * alpha * Boost : rgb;
 """
@@ -196,7 +205,7 @@ def vec4(g, name, value):
                   default_value=unreal.LinearColor(*value), group="Ac")
 
 
-def build(path, additive, mpc):
+def build(path, additive, mpc, world):
     blend = unreal.BlendMode.BLEND_ADDITIVE if additive else unreal.BlendMode.BLEND_TRANSLUCENT
     mat, g = RM.new_master(path, unreal.MaterialShadingModel.MSM_UNLIT, blend)
     mat.set_editor_property("two_sided", True)
@@ -249,7 +258,9 @@ def build(path, additive, mpc):
         # make_materials.make_mpc gives the collection new ids on each run.
         ("Boost", g.scalar("Boost", 1.0), ""),
         ("Add", g.node(unreal.MaterialExpressionConstant, r=1.0 if additive else 0.0), ""),
-    ], outputs=[("Opacity", F1)])
+        ("P", g.node(unreal.MaterialExpressionWorldPosition), ""),
+    ] + [(name, g.mpc(world, name), "") for name in ("ShelterShip", "ShelterShipX", "ShelterShipY", "ShelterShipZ")],
+        outputs=[("Opacity", F1)])
     if additive:
         # Soft where it meets the ground too (SceneKit cut it off hard).
         fade = g.node(unreal.MaterialExpressionDepthFade)
@@ -278,8 +289,9 @@ def main():
     MM.ensure_dir(DIR)
     make_quad()
     mpc = make_mpc()
-    build(M_ADD, True, mpc)
-    build(M_SMOKE, False, mpc)
+    world = RM.make_world_mpc()
+    build(M_ADD, True, mpc, world)
+    build(M_SMOKE, False, mpc, world)
 
 
 if __name__ == "__main__":

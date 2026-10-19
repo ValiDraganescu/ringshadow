@@ -41,8 +41,8 @@ namespace AcPoseFerry
 	inline const TCHAR* Model = TEXT("ferry_blue");
 
 	/// The ramp's hinge (the deck's back edge) and its open angle: it lies
-	/// from the deck (0.5 up) down to the ground 2.0 away, 90° + asin(0.25).
-	inline constexpr double RampOpenDeg = 104.47751218592992;
+	/// from the deck (0.6 up) down to the ground 2.6 away, 90° + asin(0.6 / 2.6).
+	inline constexpr double RampOpenDeg = 103.34236379708824;
 	/// A button's press: in for `PressIn`, back out by `PressOut` (s).
 	inline constexpr double PressIn = 0.08;
 	inline constexpr double PressOut = 0.25;

@@ -2,9 +2,11 @@
 // no rain indoors"): the Citadels' boxes and the lens drying. Run headless:
 //   uv run unreal/Tools/hidden_run.py --out DIR --tests Autocraft.Weather.Shelter
 #include "AcShelter.h"
+#include "AcShuttleShip.h"
 #include "AcSpace.h"
 
 #include "Rules.h"
+#include "Shuttle.h"
 
 #include "Misc/AutomationTest.h"
 
@@ -84,6 +86,27 @@ bool FAcShelterLensTest::RunTest(const FString&)
 	TestTrue(TEXT("back out: the rain's rate"), FMath::IsNearlyEqual(Wet, Rain));
 	// No rain: nothing to ease.
 	TestEqual(TEXT("dry weather: dry glass"), AcShelter::EaseLens(Wet, 0.f, 0.f, Dt), 0.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcShelterShipBayTest, "Autocraft.Weather.Shelter.ShipBay", Flags)
+bool FAcShelterShipBayTest::RunTest(const FString&)
+{
+	// C5: the walk-in Dropship's dry box, the ship turned and banked: the
+	// whole bay and the cockpit's air under the swept windshield, nothing
+	// outside the hull's sides, behind the opening or over the roof.
+	const FTransform Placement(FRotator(8.0, 30.0, -20.0), FVector(1000.0, -500.0, 3000.0));
+	const AcShelter::FShipBox Box = AcShelter::BayOf(Placement);
+	using B = ac::ShuttleBay;
+	auto At = [&](const double X, const double Y, const double Z) { return Placement.TransformPosition(FVector(AcSpace::ToCm(X), AcSpace::ToCm(Y), AcSpace::ToCm(Z))); };
+	TestTrue(TEXT("the bay's middle"), Box.Contains(At(0, 0, B::deck + 1.0)));
+	TestTrue(TEXT("the back corner by the opening"), Box.Contains(At(B::rear + 0.1, B::halfWide - 0.1, B::ceiling - 0.1)));
+	TestTrue(TEXT("over the deck at the ramp post"), Box.Contains(At(B::rampButton.x, B::rampButton.y, B::rampButton.z)));
+	TestTrue(TEXT("the cockpit's air under the windshield"), Box.Contains(At(7.6, 0, 1.5)));
+	TestFalse(TEXT("outside the flank"), Box.Contains(At(0, B::hullHalfWide + 0.3, 1.5)));
+	TestFalse(TEXT("behind the opening"), Box.Contains(At(B::rear - 0.5, 0, 1.5)));
+	TestFalse(TEXT("over the roof"), Box.Contains(At(0, 0, B::roofTop + 0.3)));
+	TestFalse(TEXT("ahead of the glass"), Box.Contains(At(AcSpace::ToCells(AcShuttleShip::GlassBottomX) + 0.3, 0, 1.5)));
 	return true;
 }
 

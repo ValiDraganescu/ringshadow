@@ -58,7 +58,7 @@ namespace
 		FAcParticles* P = Dt > 0 ? AcEffectsBursts::ParticlesOf(&Fx) : nullptr;
 		for (int32 I = 0; I < 2; ++I)
 		{
-			const FVector Nozzle = Root.TransformPosition(FVector(-122.0, I == 0 ? 198.0 : -198.0, 170.0));
+			const FVector Nozzle = Root.TransformPosition(FVector(-480.0, I == 0 ? 355.0 : -355.0, 235.0));
 			Fx.Flash(Nozzle - FVector::UpVector * Cells(0.1), 0.5 + 0.9 * Thrust, Fx.Now(), 0.05);
 			if (!P) continue;
 			FAcEmit Plume;
@@ -169,10 +169,10 @@ void AAcShuttleShip::Effects(const ac::Shuttle& S, const FTransform& Placement, 
 	{
 		if (S.stage == EStage::lift)
 		{
-			Shock(*Fx, Pad, 4.5, 0.5);
+			Shock(*Fx, Pad, 9.0, 0.5);
 			FAcScorchRequest Burn;
 			Burn.At = Pad;
-			Burn.Radius = Cells(2.2);
+			Burn.Radius = Cells(4.5);
 			Burn.Life = 30;
 			Burn.Time = Fx->Now();
 			Burn.Darkness = 0.6;
@@ -180,20 +180,24 @@ void AAcShuttleShip::Effects(const ac::Shuttle& S, const FTransform& Placement, 
 		}
 		if (S.stage == EStage::ground)
 		{
-			Shock(*Fx, Pad, 4.5, 0.6);
-			DustRing(*Fx, Pad, 2.4, 0);
-			Fx->DustPuff(Pad, 1.6, Fx->Now());
+			Shock(*Fx, Pad, 9.0, 0.6);
+			DustRing(*Fx, Pad, 5.0, 0);
+			Fx->DustPuff(Pad, 3.2, Fx->Now());
 		}
 	}
 	LastStage = int32(S.stage);
 	// The dust under the jets near the ground.
 	const double Low = AcSpace::ToCells(Placement.GetLocation().Z) - S.ground;
-	if (Fx && bFlying && Thrust > 0.3 && Low < 7.0 && Now - LastRing > 0.17)
+	if (Fx && bFlying && Thrust > 0.3 && Low < 10.0 && Now - LastRing > 0.17)
 	{
 		LastRing = Now;
-		DustRing(*Fx, FVector(Placement.GetLocation().X, Placement.GetLocation().Y, Pad.Z), 1.6 + 0.9 * (7.0 - Low), Low);
+		DustRing(*Fx, FVector(Placement.GetLocation().X, Placement.GetLocation().Y, Pad.Z), 3.4 + 1.0 * (10.0 - Low), Low);
 	}
-	// The dash: puffs of pale vapour flung past the ship, the speed seen.
+	// The dash: puffs of pale vapour flung past the ship, the speed seen. They
+	// stand in the air ahead and the ship flies by them, so they are put out
+	// to its sides, clear of the hull and the nacelles by their own size:
+	// none sweeps through the bay (nothing outside gets inside; the particle
+	// materials cut whatever still would, AcShelter's bay box).
 	if (Fx && S.stage == EStage::dash && Now - LastCloud > 0.05)
 	{
 		LastCloud = Now;
@@ -202,7 +206,8 @@ void AAcShuttleShip::Effects(const ac::Shuttle& S, const FTransform& Placement, 
 			const FQuat Q = Placement.GetRotation();
 			for (int32 K = 0; K < 3; ++K)
 			{
-				const FVector Off = Q.GetForwardVector() * Cells(FMath::FRandRange(14.0, 40.0)) + Q.GetRightVector() * Cells(FMath::FRandRange(-12.0, 12.0))
+				const double Side = (FMath::RandBool() ? 1.0 : -1.0) * FMath::FRandRange(ac::ShuttleBay::nacelleHalfWide + 5.5, 16.0);
+				const FVector Off = Q.GetForwardVector() * Cells(FMath::FRandRange(14.0, 40.0)) + Q.GetRightVector() * Cells(Side)
 					+ FVector::UpVector * Cells(FMath::FRandRange(-6.0, 7.0));
 				FAcEmit Puff;
 				Puff.Size = FMath::FRandRange(2.5, 5.0);

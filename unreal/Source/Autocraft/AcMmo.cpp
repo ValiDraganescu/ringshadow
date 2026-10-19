@@ -15,6 +15,7 @@
 #include "Progression.h"
 #include "WorldAtlas.h"
 #include "Rules.h"
+#include "Shuttle.h"
 
 #include <algorithm>
 #include <string>
@@ -1653,11 +1654,18 @@ std::optional<FAcMmoClient::FPadNear> FAcMmoClient::NearestPad() const
 	// (C5). A region file's pad is no Landing Pad (F2).
 	const std::vector<ac::region::Place> Ground = ac::net::padsOnGround(*R, M->simulation().map->bounds);
 	const double Reach = PadReachNow();
+	// Aboard a walk-in Dropship (C5): from the middle of the pad it stands
+	// on (its hull centred there), wherever in its long bay the pilot is.
+	ac::Vec2 From = U->position;
+	if (const ac::Shuttle* Ship = M->simulation().aboard(*U); Ship && Ship->grounded())
+	{
+		From = ac::ShuttleBay::world(*Ship, ac::Vec2(ac::ShuttleBay::hullMiddle(), 0.0));
+	}
 	std::optional<FPadNear> Best;
 	for (size_t I = 0; I < Ground.size() && I < R->pads.size(); ++I)
 	{
 		if (!R->pads[I].building) continue;
-		FPadNear P{Text(Ground[I].name), ac::distance(Ground[I].at, U->position), Reach, *R->pads[I].building};
+		FPadNear P{Text(Ground[I].name), ac::distance(Ground[I].at, From), Reach, *R->pads[I].building};
 		P.Reach = ac::Rules::radius(P.Building) + FMath::Max(2.0, Reach - PadReach);
 		// One it can call the Dropship at first, then the nearest.
 		if (!Best || (P.Within() && !Best->Within()) || (P.Within() == Best->Within() && P.Distance < Best->Distance)) Best = P;

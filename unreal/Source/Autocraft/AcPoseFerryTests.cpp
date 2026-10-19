@@ -48,19 +48,19 @@ bool FAcPoseFerryRampTest::RunTest(const FString&)
 	if (!TestNotNull(TEXT("the ferry_blue model"), S.M)) return false;
 	const int32 Ramp = S.Part(TEXT("ramp"));
 	if (!TestTrue(TEXT("a ramp part"), Ramp != INDEX_NONE)) return false;
-	// The ramp's top edge at rest: over the hinge (x -250, z 50), 2 cells up.
-	const FVector Top(-250.0, 0.0, 250.0);
+	// The ramp's top edge at rest: over the hinge (x -680, z 60), 2.6 cells up.
+	const FVector Top(-680.0, 0.0, 320.0);
 	const FTransform Rest = ToModel(S.Pose({}), *S.M, Ramp);
 	const FVector TopLocal = Rest.InverseTransformPosition(Top);
 	FAcFerryLook Open;
 	Open.RampOpen = 1.0;
 	const FVector Down = ToModel(S.Pose(Open), *S.M, Ramp).TransformPosition(TopLocal);
-	// Open: the top lies on the ground 2.0 behind the hinge's foot (x -443.6).
+	// Open: the top lies on the ground 2.6 behind the hinge's foot (x -933.0).
 	TestTrue(FString::Printf(TEXT("open: the top on the ground behind the ship (%s)"), *Down.ToString()),
-		FMath::IsNearlyEqual(Down.Z, 0.0, 1.0) && FMath::IsNearlyEqual(Down.X, -443.6, 1.5));
+		FMath::IsNearlyEqual(Down.Z, 0.0, 1.0) && FMath::IsNearlyEqual(Down.X, -933.0, 1.5));
 	Open.RampOpen = 0.5;
 	const FVector Half = ToModel(S.Pose(Open), *S.M, Ramp).TransformPosition(TopLocal);
-	TestTrue(FString::Printf(TEXT("half open: out the back and over the deck (%s)"), *Half.ToString()), Half.X < -300.0 && Half.Z > 150.0);
+	TestTrue(FString::Printf(TEXT("half open: out the back and over the deck (%s)"), *Half.ToString()), Half.X < -750.0 && Half.Z > 180.0);
 	return true;
 }
 

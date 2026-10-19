@@ -1,6 +1,7 @@
 #include "AcShelter.h"
 
 #include "AcPilotPawn.h"
+#include "AcShuttleShip.h"
 #include "AcShuttleView.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
@@ -87,12 +88,14 @@ bool AcShelter::DrivenSheltered(const UObject* WorldContext)
 
 AcShelter::FShipBox AcShelter::BayOf(const FTransform& Placement)
 {
-	// The bay's corners in the ship's frame (cm): from the opening to the
-	// console's back, between the walls' inner faces, from the deck slab to
-	// the ceiling panels (ShuttleBay, Tools/Editor/models/ferry.py).
+	// The bay's corners in the ship's frame (cm): from the opening to under
+	// the swept windshield (the cockpit's air over the nose block, up to
+	// 30 cm short of the glass's foot: a thin wedge outside the glass's top
+	// is dry too), between the walls' inner faces, from the deck slab to the
+	// ceiling panels (ShuttleBay, Tools/Editor/models/ferry.py).
 	using B = ac::ShuttleBay;
-	const FVector Lo(AcSpace::ToCm(B::rear), -AcSpace::ToCm(B::halfWide) - 6.0, AcSpace::ToCm(0.25));
-	const FVector Hi(AcSpace::ToCm(B::noseFrom) + 20.0, AcSpace::ToCm(B::halfWide) + 6.0, AcSpace::ToCm(B::ceiling) + 8.0);
+	const FVector Lo(AcSpace::ToCm(B::rear), -AcSpace::ToCm(B::halfWide) - 6.0, AcSpace::ToCm(B::deck - 0.25));
+	const FVector Hi(AcShuttleShip::GlassBottomX - 30.0, AcSpace::ToCm(B::halfWide) + 6.0, AcSpace::ToCm(B::ceiling) + 8.0);
 	FShipBox Box;
 	Box.Centre = Placement.TransformPosition((Lo + Hi) * 0.5);
 	const FQuat Q = Placement.GetRotation();

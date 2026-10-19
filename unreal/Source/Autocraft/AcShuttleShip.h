@@ -29,9 +29,9 @@ namespace AcShuttleShip
 	/// back from upright, the centre pane's half width, where the side panes
 	/// start across and how far back their outer edges stand, the wipers'
 	/// pivots across and their reach.
-	inline constexpr double GlassBottomX = 334.0, GlassBottomZ = 120.0, GlassTopX = 262.0, GlassTopZ = 248.0;
-	inline constexpr double PaneHalf = 56.0, SideFrom = 62.0, SideBack = 40.0, SideOut = 116.0;
-	inline constexpr double WiperLeftU = -24.0, WiperRightU = 30.0, WiperPivotV = 3.0, WiperReach = 70.0;
+	inline constexpr double GlassBottomX = 820.0, GlassBottomZ = 130.0, GlassTopX = 675.0, GlassTopZ = 315.0;
+	inline constexpr double PaneHalf = 101.0, SideFrom = 107.0, SideBack = 124.0, SideOut = 236.0;
+	inline constexpr double WiperLeftU = -45.0, WiperRightU = 55.0, WiperPivotV = 4.0, WiperReach = 120.0;
 	/// The windshield's rain is drawn for the ship nearest the camera within this (cm).
 	inline constexpr double GlassRange = 2500.0;
 
