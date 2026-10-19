@@ -109,6 +109,8 @@ namespace
 		double GroundAt = -1;
 		/// The pictures taken while firing.
 		bool bTracers = false;
+		/// The region's buildings listed once, as the scene starts.
+		bool bListed = false;
 		bool bImpact = false;
 		/// The command line before the dev rig was added (put back after).
 		FString CommandLineWas;
@@ -222,6 +224,13 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 	{
 		Waited(TEXT("still driving"), 4);
 		return;
+	}
+	if (!Practice.bListed)
+	{
+		Practice.bListed = true;
+		for (const ac::Structure& B : S->state.structures)
+			UE_LOG(LogAutocraft, Display, TEXT("flowtest: practice: standing at the start: %s #%lld at (%.2f, %.2f), the pilot at (%.2f, %.2f)"),
+				UTF8_TO_TCHAR(ac::Simulation::title(B.kind).c_str()), (long long)B.id, B.position.x, B.position.y, U->position.x, U->position.y);
 	}
 	const TOptional<FAcPilotInfo>& Info = Overlay ? Overlay->LastInfo() : TOptional<FAcPilotInfo>();
 	const FString Prompt = Info && Info->Prompt ? *Info->Prompt : FString();
@@ -733,6 +742,23 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 				TEXT("flowtest: practice: aim: muzzle (%.2f, %.2f, %.2f), dummy (%.2f, %.2f) ground %.2f plate %.2f, solve %.4f, view %.4f, gun pitch %.4f, lands (%.2f, %.2f, %.2f)"),
 				Now3.x, Now3.y, Now3.z, D->position.x, D->position.y, S->groundZ(D->position), Plate, Pitch.value_or(-9), Pilot->ViewPitch(),
 				C->guns ? (*C->guns)[0].pitch : -9.0, Lands ? Lands->x : 0, Lands ? Lands->y : 0, Lands ? Lands->z : 0);
+			// What it lands in: a building's box, or the ground.
+			if (Lands)
+			{
+				FString In = FString::Printf(TEXT("the ground (%.2f)"), S->groundZ(ac::Vec2(Lands->x, Lands->y)));
+				for (const ac::Structure& B : S->state.structures)
+				{
+					const double R = ac::Rules::radius(B.kind) + 0.05;
+					if (std::abs(Lands->x - B.position.x) <= R && std::abs(Lands->y - B.position.y) <= R)
+						In = FString::Printf(TEXT("%s #%lld at (%.2f, %.2f), %.2f tall"), UTF8_TO_TCHAR(ac::Simulation::title(B.kind).c_str()),
+							(long long)B.id, B.position.x, B.position.y, ac::Rules::height(B.kind));
+				}
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: practice: aim: the round lands in %s"), *In);
+				for (const ac::Structure& B : S->state.structures)
+					UE_LOG(LogAutocraft, Display, TEXT("flowtest: practice: aim: standing: %s #%lld owner %lld at (%.2f, %.2f) built by %lld"),
+						UTF8_TO_TCHAR(ac::Simulation::title(B.kind).c_str()), (long long)B.id, (long long)B.owner, B.position.x, B.position.y,
+						(long long)B.builder.value_or(-1));
+			}
 		}
 		Check(Pitch.has_value(), TEXT("practice: the dummy within the rounds' reach"));
 		Check(FMath::Abs(std::remainder(Pilot->Yaw() - Yaw, 2 * UE_DOUBLE_PI)) < 0.02,

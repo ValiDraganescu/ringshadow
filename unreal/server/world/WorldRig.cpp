@@ -149,33 +149,62 @@ void WorldMap::devRig(PilotId pilot) {
         const auto i = id ? sim.unitIndex(*id) : std::nullopt;
         return i ? &sim.state.units[size_t(*i)] : nullptr;
     };
-    // Each put up round the Prospector, off the pads' plates, and finished.
+    // The Citadel put up round the Prospector, off the pads' plates, and
+    // finished; the Foundry and the Lab on the Citadel's far side, away from
+    // the pad where the flows play (C5: 7x7 and 5x5, round the Prospector
+    // they crowd it), the Prospector stepped over to weld each.
+    const Unit* first = driven();
+    if (!first) return;
+    const Vec2 start = first->position;
     std::optional<int64_t> citadel;
+    std::optional<Vec2> citadelAt;
     for (const StructureKind kind : {StructureKind::citadel, StructureKind::foundry, StructureKind::lab}) {
-        const Unit* u = driven();
-        if (!u) return;
-        const Vec2 from = u->position;
+        if (!driven()) return;
         const double reach = Region::buildReach(kind);
+        // Where to look: round the Prospector for the Citadel; out beyond
+        // the Citadel, the far side first, for the others.
+        std::vector<Vec2> spots;
+        if (kind == StructureKind::citadel || !citadelAt) {
+            for (double d = reach; d <= reach + Region::buildSlack; d += 0.5)
+                for (int k = 0; k < 24; k++) spots.push_back(start + Vec2(std::cos(k * 2 * pi / 24), std::sin(k * 2 * pi / 24)) * d);
+        } else {
+            const Vec2 away = length(*citadelAt - start) > 1e-6 ? normalize(*citadelAt - start) : Vec2(1, 0);
+            const double base = std::atan2(away.y, away.x);
+            const double out = Rules::radius(StructureKind::citadel) + Rules::radius(kind) + 1.5;
+            for (double d = out; d <= out + 8; d += 1)
+                for (int k = 0; k < 24; k++) {
+                    const double h = base + (k % 2 ? 1 : -1) * double((k + 1) / 2) * 2 * pi / 24;
+                    spots.push_back(*citadelAt + Vec2(std::cos(h), std::sin(h)) * d);
+                }
+        }
         bool done = false;
-        for (double d = reach; d <= reach + Region::buildSlack && !done; d += 0.5)
-            for (int k = 0; k < 24 && !done; k++) {
-                const double h = k * 2 * pi / 24;
-                const auto spot = sim.snap(kind, from + Vec2(std::cos(h), std::sin(h)) * d);
-                if (!spot || distance(*spot, from) > reach + Region::buildSlack || sim.placementRefusal(kind, *spot) ||
-                    region::touchesPadPlate(pads, *spot, Rules::radius(kind)))
-                    continue;
-                const int64_t id = sim.state.nextID;
-                if (build(pilot, kind, *spot)) continue;
-                for (Structure& b : sim.state.structures)
-                    if (b.id == id) {
-                        b.buildLeft = std::nullopt;
-                        b.hp = sim.fullHP(b);
-                    }
-                if (kind == StructureKind::citadel) citadel = id;
-                done = true;
+        for (const Vec2 q : spots) {
+            if (done) break;
+            const auto spot = sim.snap(kind, q);
+            if (!spot || sim.placementRefusal(kind, *spot) || region::touchesPadPlate(pads, *spot, Rules::radius(kind))) continue;
+            if (kind != StructureKind::citadel && citadelAt) {
+                // Stepped over to weld it: its build reach off its far side.
+                const Vec2 off = length(*spot - *citadelAt) > 1e-6 ? normalize(*spot - *citadelAt) : Vec2(1, 0);
+                if (Unit* u = driven()) u->position = *spot + off * reach;
+            } else if (distance(*spot, start) > reach + Region::buildSlack) {
+                continue;
             }
+            const int64_t id = sim.state.nextID;
+            if (build(pilot, kind, *spot)) continue;
+            for (Structure& b : sim.state.structures)
+                if (b.id == id) {
+                    b.buildLeft = std::nullopt;
+                    b.hp = sim.fullHP(b);
+                }
+            if (kind == StructureKind::citadel) {
+                citadel = id;
+                citadelAt = *spot;
+            }
+            done = true;
+        }
     }
-    // The Prospector where it unloads at the Citadel.
+    // The Prospector where it unloads at the Citadel, on the side it stood.
+    if (Unit* u = driven()) u->position = start;
     if (citadel)
         for (const Structure& b : sim.state.structures)
             if (b.id == *citadel)

@@ -455,6 +455,23 @@ TEST(rig_dev_flag_gives_a_home_and_a_stocked_rig) {
     EXPECT_TRUE(w.realmFinished(StructureKind::citadel));
     EXPECT_TRUE(w.realmFinished(StructureKind::foundry));
     EXPECT_TRUE(w.realmFinished(StructureKind::lab));
+    // C5: the Foundry and the Lab beyond the Citadel, away from the pad the
+    // Prospector stands by; it at the Citadel's edge.
+    {
+        const Simulation& sim = simOf(w, me);
+        const Vec2 at = drivenUnit(w, me)->position;
+        double citadel = 0, foundry = 0, lab = 0;
+        for (const Structure& b : sim.state.structures) {
+            const double d = distance(b.position, at);
+            if (b.kind == StructureKind::citadel) {
+                citadel = d;
+                EXPECT_NEAR(d - Rules::radius(b.kind), 0.5, 0.75);
+            }
+            if (b.kind == StructureKind::foundry) foundry = d;
+            if (b.kind == StructureKind::lab) lab = d;
+        }
+        EXPECT_TRUE(foundry > citadel && lab > citadel);
+    }
     const auto m = w.progressMessage(me);
     ASSERT_TRUE(m.has_value());
     EXPECT_TRUE(m->foundry && m->lab);
