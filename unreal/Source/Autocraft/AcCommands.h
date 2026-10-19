@@ -27,6 +27,7 @@
 #include "Subsystems/WorldSubsystem.h"
 
 #include "AcCommandCard.h"
+#include "AcDemolish.h"
 
 #include "AcCommands.generated.h"
 
@@ -54,6 +55,14 @@ public:
 	const FAcCardState& State() const { return Card; }
 	/// The command map is open: no hotkeys.
 	void SetBlocked(bool bInBlocked) { bBlocked = bInBlocked; }
+	/// C3, the MMO's top-down view: the selected building's DEMOLISH button
+	/// held down (its only button) or let go (AcDemolish.h). Held for
+	/// `Rules::demolishHold` on the same selection, it asks the server; let
+	/// go sooner, or another selection, and nothing happens. The mouse's
+	/// press holds it until the button comes up; `bScripted` (a flow test)
+	/// until `HoldDemolish(false)`.
+	void HoldDemolish(bool bDown, bool bScripted = false);
+	TOptional<double> DemolishFill() const;
 
 	FAcCommanderChanged OnCommanderChanged;
 
@@ -71,6 +80,9 @@ private:
 	TWeakPtr<class SAcConsole> BoundConsole;
 	TWeakObjectPtr<class UAcPointer> BoundPointer;
 	bool bBlocked = false;
+
+	AcDemolish::FHold DemolishHold;
+	bool bDemolishScripted = false;
 
 	/// -AcPress: the presses still to make.
 	TArray<TPair<int32, FAcCardMods>> Scripted;

@@ -69,6 +69,7 @@ uint32_t Client::upgradeTurret(int64_t turret, DefenceStat stat) { return reques
 uint32_t Client::door(bool open) { return request(RequestMessage::Door{open}); }
 uint32_t Client::man(int gun) { return request(RequestMessage::Man{int8_t(std::clamp(gun, -1, 3))}); }
 uint32_t Client::learn(StructureKind kind) { return request(RequestMessage::Learn{kind}); }
+uint32_t Client::demolish(int64_t structure) { return request(RequestMessage::Demolish{structure}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;

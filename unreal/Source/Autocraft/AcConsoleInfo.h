@@ -42,6 +42,8 @@ struct FAcCardButton
 	TOptional<FString> Detail;
 	/// Pressing it queues it for the team's AI commander: an amber frame.
 	bool bQueues = false;
+	/// C3: held down (the MMO's DEMOLISH): how far through its hold, 0 to 1.
+	TOptional<double> Fill;
 
 	bool operator==(const FAcCardButton&) const = default;
 };

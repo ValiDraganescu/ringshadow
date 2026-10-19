@@ -288,6 +288,9 @@ bool FAcMmoClient::Start(const double Now, const FString& World)
 	HallAsked.Reset();
 	LastHallRefusal.Reset();
 	HallDone = 0;
+	DemolishAsked.Reset();
+	LastDemolishRefusal.Reset();
+	DemolishDone = 0;
 	MissionAsked.Reset();
 	MissionsAccepted.Reset();
 	FlightsAsked.Reset();
@@ -1000,6 +1003,19 @@ void FAcMmoClient::ReadReplies()
 			It = Net->replies.erase(It);
 			continue;
 		}
+		if (DemolishAsked.Remove(R.request) > 0)
+		{
+			if (R.done) DemolishDone += 1;
+			else
+			{
+				LastDemolishRefusal = Text(R.reason);
+				Notes.Add(LastDemolishRefusal);
+			}
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: demolish %u %s%s"), R.request, R.done ? TEXT("done") : TEXT("refused: "),
+				R.done ? TEXT("") : *Text(R.reason));
+			It = Net->replies.erase(It);
+			continue;
+		}
 		if (HallAsked.Remove(R.request) > 0)
 		{
 			if (R.done) HallDone += 1;
@@ -1289,6 +1305,16 @@ bool FAcMmoClient::Door(const bool bOpen, FString* Why)
 	LastHallRefusal.Reset();
 	HallAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: hall ask %u: door %s"), Id, bOpen ? TEXT("open") : TEXT("close"));
+	return true;
+}
+
+bool FAcMmoClient::Demolish(const int64 Structure)
+{
+	if (!Net || !Net->welcome()) return false;
+	const uint32 Id = Net->demolish(Structure);
+	LastDemolishRefusal.Reset();
+	DemolishAsked.Add(Id);
+	UE_LOG(LogAutocraft, Log, TEXT("mmo: demolish %u asked: #%lld"), Id, (long long)Structure);
 	return true;
 }
 

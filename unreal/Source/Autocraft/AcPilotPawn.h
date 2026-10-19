@@ -139,6 +139,7 @@
 
 #include "AcPilotCamera.h"
 #include "AcPilotChase.h"
+#include "AcDemolish.h"
 #include "AcPilotFlight.h"
 #include "Types.h"
 
@@ -207,8 +208,14 @@ public:
 	/// view's right-drag turn uses it too).
 	static double LookGain(FVector2D Raw, float Dt);
 	static constexpr double YawPerPoint = 0.0032, PitchPerPoint = 0.0026;
-	/// The act key went down or up (`pilotPress`).
-	void Press(bool bDown);
+	/// The act key went down or up (`pilotPress`). `bKeyE`: it was E, which
+	/// on a realm building in reach starts the demolish hold instead of
+	/// acting (C3, AcDemolish.h); the click and Space always act.
+	void Press(bool bDown, bool bKeyE = false);
+	/// C3: the building E would demolish now (INDEX_NONE: none), and the
+	/// hold's fill while E is held on it (unset: not held).
+	int64 DemolishTarget() const;
+	TOptional<double> DemolishFill() const;
 	/// R (`pilotAbilityPress`).
 	void AbilityPress();
 	/// V: first or third person, kept for the next ride (needs E3).
@@ -413,6 +420,8 @@ private:
 	/// C1: the view from gun `GunManned`'s eye (`Defence::gunEye`).
 	bool GunView(const ac::Simulation& S, FVector& OutLocation, FQuat& OutRotation) const;
 	bool bHold = false;
+	/// C3: E held on a building to demolish it.
+	AcDemolish::FHold DemolishHold;
 	bool bAbilityHeld = false;
 	bool bThird = false;
 	/// The console whose view switch is bound to `ToggleView`.

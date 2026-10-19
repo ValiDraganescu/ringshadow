@@ -2,6 +2,7 @@
 
 #include "AcConsole.h"
 #include "AcLog.h"
+#include "AcMmo.h"
 #include "AcPointer.h"
 #include "AcSimSubsystem.h"
 #include "SAcConsole.h"
@@ -110,10 +111,23 @@ TOptional<FAcCardInfo> UAcCommandsSubsystem::MakeInfo(const UAcSimSubsystem& Sim
 	FAcCardInfo Info = FAcCommandCard::Card(S, *St, FAcCommandCard::Commanded(S, Sim.LocalPlayer()), Card, Now());
 	if (Sim.IsMmo())
 	{
-		// The MMORPG test: a building takes no orders yet (the server has no
-		// such request), so no buttons and no hotkeys that would only be refused.
+		// The MMORPG mode: a building takes no orders (the server has no such
+		// request), so no hotkeys that would only be refused; its one button
+		// is DEMOLISH (C3), held for `Rules::demolishHold`.
 		Info.Buttons.Reset();
 		Card.Actions.Reset();
+		FAcCardButton D;
+		D.Slot = 14;
+		D.Key = TEXT("HOLD");
+		D.Title = TEXT("DEMOLISH");
+		D.Detail = AcDemolish::Prompt(St->kind, TEXT("Hold 1.5 s: "));
+		if (const std::optional<std::string> Why = S.demolishRefusal(*St))
+		{
+			D.bEnabled = false;
+			D.Why = UTF8_TO_TCHAR(Why->c_str());
+		}
+		D.Fill = DemolishFill();
+		Info.Buttons.Add(D);
 	}
 	return Info;
 }
@@ -125,10 +139,39 @@ void UAcCommandsSubsystem::OnSelectionChanged()
 	Card.Note.Reset();
 }
 
+void UAcCommandsSubsystem::HoldDemolish(const bool bDown, const bool bScripted)
+{
+	const TOptional<int64> Id = SelectedId();
+	if (!bDown || !Id)
+	{
+		DemolishHold.Cancel();
+		bDemolishScripted = false;
+		return;
+	}
+	DemolishHold.Start(*Id, Now());
+	bDemolishScripted = bScripted;
+	UE_LOG(LogAutocraft, Log, TEXT("card: demolish hold on #%lld"), (long long)*Id);
+}
+
+TOptional<double> UAcCommandsSubsystem::DemolishFill() const
+{
+	return DemolishHold.Active() ? TOptional<double>(DemolishHold.Fill(Now())) : TOptional<double>();
+}
+
 void UAcCommandsSubsystem::Press(const int32 Index, TOptional<FAcCardMods> Mods)
 {
 	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
 	const TOptional<int64> Id = SelectedId();
+	// C3: the MMO's one button, DEMOLISH: pressed, its hold starts.
+	if (Sim && Sim->IsRunning() && Id && Sim->IsMmo())
+	{
+		if (Index == 0)
+		{
+			const std::optional<ac::Structure> St = Sim->Simulation().state.structure(*Id);
+			if (St && !Sim->Simulation().demolishRefusal(*St)) HoldDemolish(true);
+		}
+		return;
+	}
 	if (!Sim || !Sim->IsRunning() || !Id || Sim->IsMmo()) return;
 	const ac::Simulation& S = Sim->Simulation();
 	const std::optional<ac::Structure> St = S.state.structure(*Id);
@@ -167,6 +210,25 @@ void UAcCommandsSubsystem::OnFrame(const FAcFrame& Frame)
 		if (UAcPointer* Old = BoundPointer.Get()) Old->OnSelectionChanged.Remove(SelectionHandle);
 		SelectionHandle = P->OnSelectionChanged.AddUObject(this, &UAcCommandsSubsystem::OnSelectionChanged);
 		BoundPointer = P;
+	}
+	// C3: the DEMOLISH hold, while the mouse (or a script) holds it on the
+	// same selection.
+	if (DemolishHold.Active())
+	{
+		const UWorld* World = GetWorld();
+		const APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+		if (!bDemolishScripted && !(PC && PC->IsInputKeyDown(EKeys::LeftMouseButton)))
+		{
+			HoldDemolish(false);
+			UE_LOG(LogAutocraft, Log, TEXT("card: demolish hold let go"));
+		}
+		else if (const TOptional<int64> Done = DemolishHold.Tick(SelectedId().Get(INDEX_NONE), Now()))
+		{
+			bDemolishScripted = false;
+			UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+			FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+			if (!Mmo || !Mmo->Demolish(*Done)) UE_LOG(LogAutocraft, Log, TEXT("card: demolish: not connected"));
+		}
 	}
 	if (!Scripted.IsEmpty())
 	{

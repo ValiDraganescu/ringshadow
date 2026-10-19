@@ -1,5 +1,7 @@
 #include "AcPilotBuild.h"
 
+#include "AcDemolish.h"
+
 #include "AcConsoleInfo.h"
 #include "AcHologram.h"
 #include "AcHudStyle.h"
@@ -306,6 +308,21 @@ void UAcPilotBuildSubsystem::OnFrame(const FAcFrame& Frame)
 					FAcHudStyle::LevelGold(), FPlatformTime::Seconds());
 			}
 			UE_LOG(LogAutocraft, Log, TEXT("pilot build: %s learned"), *Name);
+		}
+		// C3: a building this pilot demolished (the server sends it to the
+		// demolisher alone): the toast, named by its Destroyed beside it.
+		for (const ac::GameEvent& E : Frame.AllEvents)
+		{
+			const ac::GameEvent::Demolished* D = E.as<ac::GameEvent::Demolished>();
+			if (!D) continue;
+			std::optional<ac::StructureKind> Kind;
+			for (const ac::GameEvent& G : Frame.AllEvents)
+				if (const auto* B = G.as<ac::GameEvent::Destroyed>(); B && B->structure == D->structure) Kind = B->kind;
+			const FString Line = Kind ? AcDemolish::Toast(*Kind, D->ore, D->hydrogen)
+			                          : FString::Printf(TEXT("Demolished · +%lld ore"), (long long)D->ore);
+			if (UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this); Hud && Hud->Widget())
+				Hud->Widget()->Toast(Line, TEXT("Half its price back to your wallet"), FAcHudStyle::LevelGold(), FPlatformTime::Seconds());
+			UE_LOG(LogAutocraft, Log, TEXT("pilot build: %s"), *Line);
 		}
 	}
 	ac::Simulation& S = Sim->Simulation();

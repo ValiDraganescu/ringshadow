@@ -1235,6 +1235,8 @@ void SAcConsole::PaintCard(FPaint& P) const
 			: B.bQueues ? Alpha(FAcHudStyle::QueueAmber(), 0.85)
 			: B.bEnabled ? Alpha(bRts ? Cyan : Accent(), 0.9) : Gray(0.3);
 		P.Stroke(R.Inset(0.5, 0.5), Radius, Rim, B.bLit ? 2 : 1.3, B.bLit ? 3 : !B.bEnabled ? 0 : bRts ? 1.6 : 0.8);
+		// C3: a hold under way (DEMOLISH): a bar filling along its foot.
+		if (B.Fill) P.FillRounded(FAcRect(R.MinX() + 3, R.MinY() + 3, (R.W - 6) * FMath::Clamp(*B.Fill, 0.0, 1.0), 4), 1, Rgb(1.0, 0.55, 0.2));
 		if (!bRts)
 		{
 			P.FillRounded(FAcRect(R.MinX() + 2, R.MidY() + 4, R.W - 4, R.H / 2 - 6), 2, Gray(1, 0.05));

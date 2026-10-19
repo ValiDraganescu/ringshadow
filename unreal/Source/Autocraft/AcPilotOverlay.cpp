@@ -1,5 +1,8 @@
 #include "AcPilotOverlay.h"
 
+#include "AcCitadelAct.h"
+#include "AcDemolish.h"
+
 #include "AcMissions.h"
 
 #include "AcConsole.h"
@@ -353,6 +356,18 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	GunFeed(S, *Pawn, Frame, Info);
 	Info.Wheel = Wheel;
 	DummyTags(S, Info);
+	// C3: the demolish prompt and ring, where the Citadel's own E act
+	// (door, gun station) does not take the key.
+	if (const int64 Down = Pawn->DemolishTarget(); Down != INDEX_NONE && !AcCitadelAct::Find(S, U))
+	{
+		if (const std::optional<ac::Structure> B = S.state.structure(Down))
+		{
+			const std::optional<std::string> Why = S.demolishRefusal(*B);
+			Info.Demolish = Why ? UTF8_TO_TCHAR(Why->c_str()) : AcDemolish::Prompt(B->kind);
+			Info.bDemolishBlocked = Why.has_value();
+			Info.DemolishFill = Pawn->DemolishFill();
+		}
+	}
 	if (Inputs.Mmo)
 	{
 		Info.Marks = AcProgressHud::ContractGoals(*Inputs.Mmo, U.position);

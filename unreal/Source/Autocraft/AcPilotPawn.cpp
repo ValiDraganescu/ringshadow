@@ -429,7 +429,8 @@ void AAcPilotPawn::OnActStart(const FInputActionValue&)
 		if (!bPointing && !bScreenOpen && Driving()) SetCapture(true);
 		return;
 	}
-	Press(true);
+	// C3: E alone (not the click, not Space) may start a demolish hold.
+	Press(true, PC && PC->IsInputKeyDown(EKeys::E) && !PC->IsInputKeyDown(EKeys::LeftMouseButton) && !PC->IsInputKeyDown(EKeys::SpaceBar));
 }
 void AAcPilotPawn::OnActEnd(const FInputActionValue&) { Press(false); }
 void AAcPilotPawn::OnAbilityStart(const FInputActionValue&)
@@ -714,9 +715,11 @@ void AAcPilotPawn::Look(const double DX, const double DY)
 	Cam.Pitch = FMath::Clamp(Cam.Pitch - DY * 0.0026, Lo, Hi);
 }
 
-void AAcPilotPawn::Press(const bool bDown)
+void AAcPilotPawn::Press(const bool bDown, const bool bKeyE)
 {
 	bHold = bDown;
+	// C3: letting go of the key ends a demolish hold, nothing done.
+	if (!bDown) DemolishHold.Cancel();
 	UAcSimSubsystem* Sim = SimOf(this);
 	if (!bDown || !Driving() || !Sim || !Sim->IsRunning() || !Sim->Simulation().pilot) return;
 	// The build wheel (C2) takes the click while it is open.
@@ -748,8 +751,34 @@ void AAcPilotPawn::Press(const bool bDown)
 				return;
 			}
 		}
+		// C3: E on a realm building in reach holds to demolish it; it does
+		// not act (the click and Space still fire, weld, mend and enter).
+		if (const std::optional<ac::Unit> U = S.pilotUnit(); bKeyE && U && Cross)
+		{
+			if (const TOptional<int64> T = AcDemolish::Target(S, *U, Cross->Target))
+			{
+				bHold = false;
+				DemolishHold.Start(*T, FPlatformTime::Seconds());
+				UE_LOG(LogAutocraft, Log, TEXT("pilot: demolish hold on #%lld"), (long long)*T);
+				return;
+			}
+		}
 	}
 	Sim->Simulation().pilot->act = true;
+}
+
+int64 AAcPilotPawn::DemolishTarget() const
+{
+	const UAcSimSubsystem* Sim = SimOf(this);
+	if (!Driving() || !Sim || !Sim->IsRunning() || !Sim->IsMmo() || !Cross || GunManned != INDEX_NONE) return INDEX_NONE;
+	const ac::Simulation& S = Sim->Simulation();
+	const std::optional<ac::Unit> U = S.pilotUnit();
+	return U ? AcDemolish::Target(S, *U, Cross->Target).Get(INDEX_NONE) : INDEX_NONE;
+}
+
+TOptional<double> AAcPilotPawn::DemolishFill() const
+{
+	return DemolishHold.Active() ? TOptional<double>(DemolishHold.Fill(FPlatformTime::Seconds())) : TOptional<double>();
 }
 
 void AAcPilotPawn::AbilityPress()
@@ -932,6 +961,15 @@ void AAcPilotPawn::Steer()
 		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && U->anchored == true) OnNote.Broadcast(TEXT("Anchored: R for tank mode"));
 	}
 	CastCrosshair();
+	// C3: the demolish hold, while E stays down on the same building.
+	if (DemolishHold.Active())
+	{
+		if (const TOptional<int64> Done = DemolishHold.Tick(DemolishTarget(), FPlatformTime::Seconds()))
+		{
+			if (FAcMmoClient* Mmo = Sim->MmoClient(); !Mmo || !Mmo->Demolish(*Done)) OnNote.Broadcast(TEXT("Not connected to the local server"));
+		}
+		else if (!DemolishHold.Active()) UE_LOG(LogAutocraft, Log, TEXT("pilot: demolish hold cancelled (looked off it)"));
+	}
 	if (Cross)
 	{
 		S.pilot->crosshair = Cross->Target != INDEX_NONE ? ac::Pilot::Crosshair(ac::Pilot::Crosshair::On{Cross->Target})

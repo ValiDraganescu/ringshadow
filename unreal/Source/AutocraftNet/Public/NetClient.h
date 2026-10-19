@@ -109,6 +109,9 @@ public:
     /// C2: learn the building `kind` from a blueprint copy held
     /// (`RequestMessage::Learn`).
     uint32_t learn(StructureKind kind);
+    /// C3: demolish a realm building in the pilot's region
+    /// (`RequestMessage::Demolish`).
+    uint32_t demolish(int64_t structure);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

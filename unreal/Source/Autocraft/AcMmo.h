@@ -404,6 +404,12 @@ public:
 	/// `HallRefusal`; `HallKept` counts the kept asks.
 	bool Door(bool bOpen, FString* Why = nullptr);
 	bool Man(int32 Gun, FString* Why = nullptr);
+	/// C3: demolish building `Structure` of the realm here (the Demolish
+	/// request; AcDemolish.h). The server's refusal comes back as a note
+	/// and `DemolishRefusal`; `DemolishKept` counts the kept asks.
+	bool Demolish(int64 Structure);
+	const FString& DemolishRefusal() const { return LastDemolishRefusal; }
+	int32 DemolishKept() const { return DemolishDone; }
 	const FString& HallRefusal() const { return LastHallRefusal; }
 	int32 HallKept() const { return HallDone; }
 	/// K2, Citadel missions (docs/missions.md): sign up for an offer on the
@@ -646,6 +652,10 @@ private:
 	TSet<uint32> HallAsked;
 	FString LastHallRefusal;
 	int32 HallDone = 0;
+	/// C3: the demolish asks, the last refusal, the kept ones.
+	TSet<uint32> DemolishAsked;
+	FString LastDemolishRefusal;
+	int32 DemolishDone = 0;
 	/// Mission asks (request id → mission, and whether a sign-up), and the
 	/// sign-ups kept, not handed over yet.
 	TMap<uint32, TPair<uint32, bool>> MissionAsked;

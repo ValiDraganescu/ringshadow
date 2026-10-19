@@ -386,6 +386,31 @@ void SAcPilotOverlay::PaintReticle(FAcPilotPen& P, const FVector2D C, const doub
 		P.Label(FString::Printf(TEXT("%s  %d%%"), *Info.ProgressLabel, (int32)(Pr * 100)), 17 * S, ReadyColor(), At(0, 46),
 			EAcHAlign::Center, EAcVAlign::Center);
 	}
+	// C3: the demolish prompt over the act's, and its ring while E is held:
+	// from the top, clockwise, in the warning orange (with or without a console).
+	if (Info.Demolish)
+	{
+		const FLinearColor Warn = Info.bDemolishBlocked ? BlockedColor() : Srgb(1.0, 0.55, 0.2);
+		if (Info.DemolishFill)
+		{
+			const double Pr = FMath::Clamp(*Info.DemolishFill, 0.0, 1.0);
+			P.Lines(FAcPilotPen::Circle(C, 38 * S, 64), White(1, 0.12), 4 * S);
+			TArray<FVector2D> Ring;
+			const int32 N = FMath::Max(2, (int32)FMath::CeilToInt(64 * Pr));
+			for (int32 K = 0; K <= N; ++K)
+			{
+				const double A = PI / 2 - Pr * 2 * PI * K / N;
+				Ring.Add(C + FVector2D(FMath::Cos(A), FMath::Sin(A)) * 38 * S);
+			}
+			if (Pr > 0) P.Lines(Ring, Warn, 4 * S, 2 * S, true);
+		}
+		const double Size = 17 * S;
+		const double Wd = FAcConsolePaint::TextWidth(*Info.Demolish, Size) + 22 * S;
+		const FVector2D Pc = At(0, -86);
+		const FAcRect Plate(Pc.X - Wd / 2, Pc.Y - 12 * S, Wd, 24 * S);
+		P.Plate(Plate, 5 * S, FLinearColor(0, 0, 0, 0.55f), Alpha(Warn, 0.5), 0.8 * S);
+		P.Label(*Info.Demolish, Size, Warn, Pc, EAcHAlign::Center, EAcVAlign::Center);
+	}
 	// The prompt under it, on a dark plate (only without a console).
 	if (bPanel && Info.Prompt)
 	{

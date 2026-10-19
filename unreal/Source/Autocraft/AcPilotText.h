@@ -191,6 +191,12 @@ struct FAcPilotInfo
 	TOptional<FAcBuildWheelInfo> Wheel;
 	/// C2: the Target Dummies in view, their hits.
 	TArray<FAcDummyTag> Dummies;
+	/// C3: E would demolish the building under the sight (AcDemolish.h):
+	/// "HOLD E · DEMOLISH GATLING GUN · +62 ORE +12 MH", or why it can't;
+	/// while E is held, the ring's fill (0 to 1).
+	TOptional<FString> Demolish;
+	bool bDemolishBlocked = false;
+	TOptional<double> DemolishFill;
 };
 
 /// What `GameCore` says about the driven unit this frame (`PilotFrame`).
