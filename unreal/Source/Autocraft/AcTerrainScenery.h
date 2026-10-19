@@ -54,6 +54,8 @@ public:
 		FTransform T;
 		FLinearColor C;
 		float Slice = 3;
+		/// Clutter (pebbles, tufts...): kept off the buildings' footprints.
+		bool bClutter = false;
 	};
 	struct FPlan
 	{
@@ -64,6 +66,24 @@ public:
 
 private:
 	UHierarchicalInstancedStaticMeshComponent* Batch(int32 Mesh);
+	/// C5: the clutter under a building's footprint hidden (a Landing Pad's
+	/// low deck, a grown footprint), shown again once it is gone; looked at
+	/// when the shown buildings change.
+	void ClearUnderBuildings();
+
+	/// A clutter instance laid: its batch, index, rest transform and where
+	/// it stands (world cm, across the ground).
+	struct FClutter
+	{
+		TWeakObjectPtr<UHierarchicalInstancedStaticMeshComponent> Batch;
+		int32 Index = 0;
+		FTransform T;
+		FVector2D At = FVector2D::ZeroVector;
+		bool bHidden = false;
+	};
+	TArray<FClutter> Laid;
+	uint32 BuildingsKey = 0;
+	double NextClear = 0;
 
 	/// The kit's meshes by index (`Names`), loaded on the game thread.
 	TArray<FString> Names;

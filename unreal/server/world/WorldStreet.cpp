@@ -83,51 +83,91 @@ std::string WorldMap::devStreet(const std::string& line) {
     char out[256];
 
     if (what == "all") {
-        // The row: every kind beside the realm's Citadel nearest the pilot,
-        // along the first of its sides with room, 2 cells apart, the
-        // Prospector before the Citadel's door looking down the row.
+        // The street: a Citadel of the realm on open ground near the pilot
+        // and every kind 2 cells apart down both sides of a road 8 cells
+        // wide out of its door (+y), each on the side with the shorter row
+        // so far; the Prospector before the door looking down the street.
         const Vec2 at = st.units[size_t(*me)].position;
-        std::optional<Structure> c;
-        for (const Structure& b : st.structures)
-            if (b.owner == Pilot::player && b.complete() && b.kind == StructureKind::citadel && (!c || distance(b.position, at) < distance(c->position, at)))
-                c = b;
-        if (!c) return "dev: street all: no Citadel of the realm here";
         const double cr = Rules::radius(StructureKind::citadel);
-        // Each kind on the side of the Citadel with the shorter row so far
-        // (both sides, so the street stays in one picture).
-        int placed = 0;
-        std::string missed;
-        double cursor[2] = {cr + 2, cr + 2};
-        for (const auto& [name, kind] : streetKinds()) {
-            if (kind == StructureKind::derrick) continue;
-            const double kr = Rules::radius(kind);
-            bool done = false;
-            for (int pass = 0; pass < 2 && !done; pass++) {
-                const int side = (cursor[0] <= cursor[1]) == (pass == 0) ? 0 : 1;
-                const Vec2 along = side == 0 ? Vec2(1, 0) : Vec2(-1, 0);
-                for (double k = cursor[side] + kr; k <= cursor[side] + kr + 30 && !done; k += 1)
-                    // The row's buildings line up on their fronts with the Citadel's.
-                    for (const double off : {0.0, -1.0, 1.0, -2.0, 2.0, -4.0, 4.0}) {
-                        const auto spot = sim.snap(kind, c->position + along * k + Vec2(0, cr - kr + off));
-                        if (!spot || !fits(kind, *spot)) continue;
-                        put(kind, *spot);
-                        cursor[side] = std::abs(spot->x - c->position.x) + kr + 2;
-                        placed += 1;
-                        done = true;
-                        break;
-                    }
+        constexpr double road = 4;
+        // Where each kind goes down the street from a Citadel at `c` (none
+        // placed): `tight` keeps them 2 to 4 cells apart, else up to 30.
+        auto layout = [&](Vec2 c, bool tight) {
+            std::vector<std::pair<StructureKind, Vec2>> spots;
+            double cursor[2] = {cr + 3, cr + 3};
+            for (const auto& [name, kind] : streetKinds()) {
+                if (kind == StructureKind::derrick) continue;
+                const double kr = Rules::radius(kind);
+                bool done = false;
+                for (int pass = 0; pass < 2 && !done; pass++) {
+                    const int side = (cursor[0] <= cursor[1]) == (pass == 0) ? 0 : 1;
+                    const double sign = side == 0 ? 1 : -1;
+                    for (double k = cursor[side] + kr; k <= cursor[side] + kr + (tight ? 2 : 30) && !done; k += 1)
+                        for (const double off : {0.0, 1.0, 2.0, 4.0}) {
+                            const auto spot = sim.snap(kind, c + Vec2(sign * (road + kr + off), k));
+                            if (!spot || !fits(kind, *spot)) continue;
+                            spots.emplace_back(kind, *spot);
+                            cursor[side] = spot->y - c.y + kr + 2;
+                            done = true;
+                            break;
+                        }
+                }
             }
-            if (!done) missed += " " + name;
+            return spots;
+        };
+        // Open ground near the pilot that takes the Citadel and the whole
+        // street, the street shortest (both sides of the road filled).
+        const size_t want = streetKinds().size() - 1;
+        std::optional<Vec2> best;
+        size_t bestCount = 0;
+        double bestFar = 1e9;
+        int tried = 0;
+        const GroundRect bounds = sim.map ? sim.map->bounds : GroundRect{};
+        std::vector<Vec2> candidates;
+        for (double x = bounds.minX + cr + 2; x <= bounds.maxX - cr - 2; x += 4)
+            for (double y = bounds.minZ + cr + 2; y <= bounds.maxZ - cr - 2; y += 4)
+                if (distance(Vec2(x, y), at) < 120) candidates.push_back(Vec2(x, y));
+        std::sort(candidates.begin(), candidates.end(), [&](Vec2 a, Vec2 b) { return distance(a, at) < distance(b, at); });
+        for (const Vec2 q : candidates) {
+            const auto c = sim.snap(StructureKind::citadel, q);
+            if (!c || !fits(StructureKind::citadel, *c) || !walkable(*c + Vec2(2.5, cr + 3))) continue;
+            const auto spots = layout(*c, true);
+            double far = 0;
+            for (const auto& [kind, spot] : spots) far = std::max(far, spot.y - c->y + Rules::radius(kind));
+            if (spots.size() > bestCount || (spots.size() == bestCount && far < bestFar)) {
+                bestCount = spots.size();
+                bestFar = far;
+                best = c;
+            }
+            // The nearest 1500 spots that take it all (a second or two).
+            if (bestCount >= want && ++tried >= 1500) break;
         }
-        if (const auto w = freeWell(c->position); w && distance(*w, c->position) < 60) {
+        if (!best) return "dev: street all: no open ground for a Citadel near the pilot";
+        const Structure& citadel = put(StructureKind::citadel, *best);
+        const int64_t cid = citadel.id;
+        const Vec2 c = *best;
+        armCitadels();
+        int placed = 0;
+        std::string where;
+        for (const auto& [kind, spot] : layout(c, bestCount >= want)) {
+            put(kind, spot);
+            placed += 1;
+            for (const auto& [name, k] : streetKinds())
+                if (k == kind) {
+                    char spotAt[64];
+                    std::snprintf(spotAt, sizeof spotAt, " %s (%.1f, %.1f)", name.c_str(), spot.x - c.x, spot.y - c.y);
+                    where += spotAt;
+                }
+        }
+        if (const auto w = freeWell(c); w && distance(*w, c) < 60) {
             put(StructureKind::derrick, *w);
             placed += 1;
         }
-        const Vec2 stand = c->position + Vec2(2.5, cr + 3);
-        if (walkable(stand)) standAt(stand, pi / 2);
-        std::snprintf(out, sizeof out, "dev: street all: %d placed beside citadel %lld%s%s", placed, (long long)c->id,
-                      missed.empty() ? "" : "; no room for", missed.c_str());
-        return out;
+        standAt(c + Vec2(2.5, cr + 3), pi / 2);
+        const Vec2 g = regions_[r]->places()->regionAt(c);
+        std::snprintf(out, sizeof out, "dev: street all: %d placed beside citadel %lld at (%.1f, %.1f); from its middle:", placed,
+                      (long long)cid, g.x, g.y);
+        return out + where;
     }
 
     // One kind: ahead of the pilot on clear ground (a Derrick on the

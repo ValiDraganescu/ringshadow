@@ -3,19 +3,21 @@
 // unreal/server). It starts a new world and waits to be seated in the
 // Prospector on the start pad.
 //
-//   mmosize   the server's dev line `citadel here` puts a Citadel of the
-//             realm ahead; then `street KIND` for each kind a pilot builds
-//             (the Foundry first), one finished ahead of the pilot with its
-//             Prospector at the building's front corner. With
+//   mmosize   the server's dev line `street all` sets out the street
+//             (below) and its Citadel is pictured; then `street KIND` for each kind a pilot builds (the Foundry
+//             first), one finished ahead of the pilot with its Prospector
+//             at the building's front corner. With
 //             -AcMmoShots=DIR, PNGs from a free camera before its front
 //             corner, framed for the MMO's size (so the same picture taken
 //             at the strategy game's sizes shows how much it grew): DIR/
 //             citadel.png, foundry.png, habdome.png, garrison.png,
 //             bastion.png, spacedock.png, lab.png, sentinel.png,
-//             gatling.png, pad.png, derrick.png. Then `street all` (one of
-//             each in a row beside the Citadel): DIR/street.png from before
-//             the row and DIR/street-tps.png from the pilot's chase camera
-//             at the Citadel's door. Checks: each kind placed and drawn.
+//             gatling.png, pad.png, derrick.png; and for `street all` (a
+//             Citadel on open ground near the start pad and one of each
+//             down both sides of a road out of its door):
+//             DIR/street.png from over the street's far end looking back
+//             at the Citadel and DIR/street-tps.png from the pilot's chase
+//             camera at the door. Checks: each kind placed and drawn.
 //
 // Run hidden in a game process, by day (ringshadow-testing, "Flow tests"):
 //   uv run unreal/Tools/hidden_run.py --out DIR -- -AcFlowTest=mmosize -AcMmoShots={out} -AcMmoClockHour=11
@@ -46,7 +48,7 @@
 
 namespace
 {
-	constexpr double SeatSeconds = 20;
+	constexpr double SeatSeconds = 60;
 	constexpr double AskSeconds = 10;
 	/// How long each picture's moment is held before it is taken, and after.
 	constexpr double HoldSeconds = 2.0;
@@ -76,7 +78,8 @@ namespace
 
 	struct FSizeShots
 	{
-		/// The kind being pictured (`Kinds`), then `NumKinds` for the street.
+		/// The step (the Citadel, the street, its chase view, then each other
+		/// kind of `Kinds`).
 		int32 Kind = 0;
 		bool bAsked = false;
 		double AskedAt = -1;
@@ -210,14 +213,30 @@ void UAcGameFlowSubsystem::TickMmoSizeShots(const FString& Step)
 		Staged.AskedAt = Now;
 	};
 
-	if (Staged.Kind < NumKinds)
+	// The steps: the street (from over its far end, then the chase camera),
+	// its Citadel, then each other kind, the Foundry first. The street goes
+	// first so its search for open ground starts from the start pad; each
+	// `street` line takes the last one's away.
+	const int32 At = Staged.Kind;
+	const int32 KindAt = At >= 2 && At - 2 < NumKinds ? At - 2 : INDEX_NONE;
+	if (KindAt != INDEX_NONE)
 	{
-		const FSizeKind& K = Kinds[Staged.Kind];
+		const FSizeKind& K = Kinds[KindAt];
 		if (!Staged.bAsked)
 		{
 			ViewPilot();
 			ThirdPerson();
-			Ask(K.Kind == ac::StructureKind::citadel ? FString(TEXT("citadel here")) : FString::Printf(TEXT("street %s"), K.Name));
+			if (K.Kind == ac::StructureKind::citadel)
+			{
+				// The street's, the Prospector at its door.
+				Staged.Before = 0;
+				Staged.bAsked = true;
+				Staged.AskedAt = Now;
+			}
+			else
+			{
+				Ask(FString::Printf(TEXT("street %s"), K.Name));
+			}
 			return;
 		}
 		const ac::Structure* B = Newest(K.Kind);
@@ -247,8 +266,8 @@ void UAcGameFlowSubsystem::TickMmoSizeShots(const FString& Step)
 		return;
 	}
 
-	// The street: one of each in a row beside the Citadel.
-	if (Staged.Kind == NumKinds)
+	// The street: a Citadel and one of each down a road out of its door.
+	if (At == 0)
 	{
 		if (!Staged.bAsked)
 		{
@@ -256,16 +275,17 @@ void UAcGameFlowSubsystem::TickMmoSizeShots(const FString& Step)
 			Ask(TEXT("street all"));
 			return;
 		}
+		// The street runs down from the Citadel's door (+y): how far it goes.
 		int32 Placed = 0;
-		ac::Vec2 Lo(1e9, 1e9), Hi(-1e9, -1e9);
+		const ac::Structure* Citadel = nullptr;
+		for (const ac::Structure& B : S->state.structures)
+			if (B.kind == ac::StructureKind::citadel && B.complete()) Citadel = &B;
+		double Far = 0;
 		for (const ac::Structure& B : S->state.structures)
 		{
-			if (!(B.id > Staged.Before || B.kind == ac::StructureKind::citadel) || !B.complete()) continue;
-			if (B.kind == ac::StructureKind::derrick) continue;  // on its well, maybe off the row
-			if (B.kind != ac::StructureKind::citadel) Placed += 1;
-			const double Rad = ac::Rules::radius(B.kind);
-			Lo = ac::Vec2(FMath::Min(Lo.x, B.position.x - Rad), FMath::Min(Lo.y, B.position.y - Rad));
-			Hi = ac::Vec2(FMath::Max(Hi.x, B.position.x + Rad), FMath::Max(Hi.y, B.position.y + Rad));
+			if (!Citadel || B.id <= Staged.Before || !B.complete() || B.kind == ac::StructureKind::derrick) continue;
+			Placed += 1;
+			Far = FMath::Max(Far, B.position.y - Citadel->position.y + ac::Rules::radius(B.kind));
 		}
 		if (Placed < 3)
 		{
@@ -276,9 +296,9 @@ void UAcGameFlowSubsystem::TickMmoSizeShots(const FString& Step)
 			}
 			return;
 		}
-		const ac::Vec2 Mid = (Lo + Hi) * 0.5;
-		const double Span = FMath::Max(Hi.x - Lo.x, Hi.y - Lo.y);
-		Camera(Mid + ac::Vec2(0.15 * Span, 0.75 * Span + 6.0), 0.3 * Span + 4.0, Mid, 2.0, 55.f);
+		// From over the street's far end, looking back up it at the Citadel.
+		const ac::Vec2 C = Citadel->position;
+		Camera(C + ac::Vec2(0, Far + 12.0), 10.0 + 0.2 * Far, C + ac::Vec2(0, 0.3 * Far), 3.0, 60.f);
 		if (Shot(TEXT("street")))
 		{
 			Check(true, FString::Printf(TEXT("size: the street, %d buildings beside the Citadel"), Placed));
@@ -290,11 +310,13 @@ void UAcGameFlowSubsystem::TickMmoSizeShots(const FString& Step)
 	}
 
 	// The same from the pilot's chase camera at the Citadel's door.
-	ViewPilot();
-	ThirdPerson();
-	if (Shot(TEXT("street-tps")))
+	if (At == 1)
 	{
-		Check(true, TEXT("the buildings' sizes pictured"));
-		Finish();
+		ViewPilot();
+		ThirdPerson();
+		if (Shot(TEXT("street-tps"))) NextKind();
+		return;
 	}
+	Check(true, TEXT("the buildings' sizes pictured"));
+	Finish();
 }

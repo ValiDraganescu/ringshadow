@@ -1046,8 +1046,10 @@ public:
     /// line taken away first. `street KIND` (habdome, garrison, bastion,
     /// foundry, spacedock, lab, sentinel, gatling, pad, derrick): one ahead
     /// of the pilot on clear ground (a Derrick on the nearest free well), its
-    /// Prospector at its front corner; its id. `street all`: one of each in
-    /// a row beside the realm's Citadel, a Derrick on a well near it.
+    /// Prospector at its front corner; its id. `street all`: a Citadel of the
+    /// realm on the nearest open ground that takes it and one of each kind
+    /// down both sides of a road 8 cells wide out of its door, a Derrick on
+    /// a well near it, the Prospector at the door; where each went.
     std::string devStreet(const std::string& line);
     /// The share of a kill's XP a defence's builder earns when the defence
     /// hits a bug (docs/creatures.md, "XP and rewards").
