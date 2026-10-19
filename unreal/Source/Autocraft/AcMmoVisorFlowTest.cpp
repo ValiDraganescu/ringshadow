@@ -26,6 +26,7 @@
 #include "AcMmo.h"
 #include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
+#include "AcVisor.h"
 #include "AcWeather.h"
 
 #include "GameFramework/PlayerController.h"
@@ -187,11 +188,37 @@ void UAcGameFlowSubsystem::TickMmoVisorFlow(const FString& Step)
 		Picture(FString::Printf(TEXT("visor-%s-%d-%s"), *Tag, Visor.Shot + 1, Moment));
 		UE_LOG(LogAutocraft, Display, TEXT("flowtest: visor %s: mode %d, rate %.2f, blade %.2f (%d), middle wiped %.2f s ago, %.2f covered"),
 			Moment, int32(W.mode()), W.rate(), A, M, Mid, W.coverage());
+		const FAcVisorParams P = AcVisor::Params(W, 0.0, 0.0, 1.0);
+		UE_LOG(LogAutocraft, Display, TEXT("flowtest: visor %s params: rain %.2f A %s B %s seed %s blade %s hist %s air %s"), Moment, P.Rain,
+			*P.A.ToString(), *P.B.ToString(), *P.Seed.ToString(), *P.Blade.ToString(), *P.Hist.ToString(), *P.Air.ToString());
 		Visor.Shot += 1;
 		Visor.ShotAt = Now;
 		T.PhaseAt = Now;
 	};
 	if (Visor.ShotAt >= 0 && Now - Visor.ShotAt < 0.5) return;
+	// First the view without the glass (for comparing, and as the offline
+	// tuning harness's background).
+	if (Visor.HeldAt == -1)
+	{
+		SetLens(false);
+		Visor.HeldAt = -2;
+		Visor.ShotAt = Now;
+		return;
+	}
+	if (Visor.HeldAt == -2)
+	{
+		Picture(FString::Printf(TEXT("visor-%s-0-bare"), *Tag));
+		Visor.HeldAt = -3;
+		Visor.ShotAt = Now;
+		return;
+	}
+	if (Visor.HeldAt == -3)
+	{
+		SetLens(true);
+		Visor.HeldAt = -4;
+		Visor.ShotAt = Now;
+		return;
+	}
 	switch (Visor.Shot)
 	{
 	case 0:
@@ -209,7 +236,7 @@ void UAcGameFlowSubsystem::TickMmoVisorFlow(const FString& Step)
 	case 4:
 		if (Visor.HeldAt < 0)
 		{
-			// Held parked: let the running sweep end first.
+			// Held parked: the running sweep ends first.
 			SetWipers(false);
 			Visor.HeldAt = Now;
 		}
@@ -217,10 +244,12 @@ void UAcGameFlowSubsystem::TickMmoVisorFlow(const FString& Step)
 		{
 			Check(W.parked(), TEXT("held parked"));
 			Shoot(TEXT("nowipe"));
-			SetWipers(true);
 		}
 		break;
 	case 5:
+		// Let go only now (after the picture's pause), so this is its first
+		// sweep through the water piled up.
+		SetWipers(true);
 		if (M == 1 && FMath::Abs(A) < 0.1) Shoot(TEXT("wiping"));
 		break;
 	case 6:
