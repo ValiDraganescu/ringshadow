@@ -7,10 +7,12 @@
 
 #include "test.h"
 
+#include "Mule.h"
 #include "ShuttleBoard.h"
 #include "WorldMap.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 
 namespace {
@@ -148,4 +150,58 @@ TEST(shuttle_ramp_build_and_world_message) {
     run(w, flightSeconds(plan) + 0.2);
     EXPECT_TRUE(!w.flying(a));
     EXPECT_TRUE(!w.worldMessage(a)->flyingTo.has_value());
+}
+
+/// A Prospector driving its Mule rides with it (C4): the Mule driven up the
+/// ramp, the ramp shut and the take-off pressed from the Mule; in Cold Fork
+/// the Mule is still its own, driven, its rider on it and its haul in it,
+/// both where they stood in the bay.
+TEST(shuttle_mule_rides_with_its_driver) {
+    WorldMap w(first(), params());
+    rig(w);
+    const auto said = w.devMule("mule here");
+    ASSERT_TRUE(said.rfind("dev: mule here: mule ", 0) == 0);
+    const int64_t mule = std::atoll(said.c_str() + std::string("dev: mule here: mule ").size());
+    const int64_t prospector = *w.regionOf(a)->driving(a);
+    ASSERT_TRUE(!w.callShuttle(a));
+    run(w, Ferry::descend + ShuttleBay::rampSeconds + 0.2);
+    Shuttle* s = nearestShip(w, a);
+    ASSERT_TRUE(s != nullptr);
+    Simulation& sim = w.regionOf(a)->simulation();
+    auto unit = [&](int64_t id) { return &sim.state.units[size_t(*sim.unitIndex(id))]; };
+    // On the Mule in the bay by the ramp button, the ramp shut from it.
+    unit(mule)->position = ShuttleBay::world(*s, Vec2(-1.1, -0.2));
+    unit(mule)->heading = s->heading;
+    unit(mule)->haul = Haul{300, 12};
+    unit(prospector)->position = Mule::perch(*unit(mule));
+    ASSERT_TRUE(!w.take(a, mule));
+    w.step();
+    ASSERT_TRUE(w.drivesMule(a));
+    ASSERT_TRUE(!w.shuttleRamp(a, false));
+    run(w, ShuttleBay::rampSeconds + 0.2);
+    // Up to the console on it, and off.
+    s = nearestShip(w, a);
+    unit(mule)->position = ShuttleBay::world(*s, Vec2(1.6, 0));
+    unit(prospector)->position = Mule::perch(*unit(mule));
+    w.step();
+    ASSERT_TRUE(!w.fly(a, "cold-fork", "Landing Pad 1"));
+    s = nearestShip(w, a);
+    ASSERT_TRUE(s->rides(mule) && s->rides(prospector));
+    const Vec2 was = ShuttleBay::local(*s, unit(mule)->position);
+    run(w, flightSeconds(s->plan) + 0.3);
+    const size_t fork = *w.regionNamed("cold-fork");
+    ASSERT_TRUE(*w.where(a) == fork && w.drivesMule(a));
+    const auto mine = w.mule(a);
+    ASSERT_TRUE(mine && mine->first == fork);
+    Simulation& there = w.region(fork).simulation();
+    const auto m = there.state.unit(mine->second);
+    ASSERT_TRUE(m.has_value());
+    EXPECT_TRUE(m->haul == (Haul{300, 12}));
+    const auto rider = there.muleRider(mine->second);
+    ASSERT_TRUE(rider.has_value());
+    EXPECT_TRUE(there.state.unit(*rider)->task == Unit::Task::aboard);
+    const Shuttle& down = there.state.shuttles.front();
+    EXPECT_TRUE(down.grounded());
+    EXPECT_TRUE(distance(ShuttleBay::local(down, m->position), was) < 0.1);
+    EXPECT_TRUE(w.region(first().start).simulation().state.unit(mule) == std::nullopt);
 }

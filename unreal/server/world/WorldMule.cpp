@@ -116,7 +116,7 @@ std::optional<std::string> WorldMap::handBack(PilotId pilot) {
 }
 
 void WorldMap::arriveMule(PilotId pilot, PilotState& p, size_t to, const Unit& mule, const Unit& rider, Vec2 at,
-                          int64_t lastInput) {
+                          int64_t lastInput, bool exact) {
     Region& r = *regions_[to];
     r.join(pilot, lastInput);
     p.region = to;
@@ -128,7 +128,7 @@ void WorldMap::arriveMule(PilotId pilot, PilotState& p, size_t to, const Unit& m
     const region::Built& places = *r.places();
     Unit m = mule;
     m.cargo = std::vector<int64_t>{};
-    m.position = openGround(sim, m, places.ground(at), 6);
+    m.position = exact ? at : openGround(sim, m, places.ground(at), 6);
     const int64_t mid = r.admit(m);
     Unit w = rider;
     w.position = m.position;

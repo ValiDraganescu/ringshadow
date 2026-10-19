@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <set>
 
 namespace ac::server {
 
@@ -202,7 +203,12 @@ void WorldMap::shuttleSwitch(ShuttleTrip& t) {
     there.riders.clear();
     sb.state.shuttles.push_back(there);
     const double turn = there.heading - ship.heading;
+    // A Mule's rider goes with its Mule (`arriveMule`), not on its own.
+    std::set<int64_t> onMules;
+    for (const auto& [pid, q] : pilots_)
+        if (!q.flight && q.region == from && q.unit && drivesMule(pid, q)) onMules.insert(*q.unit);
     for (const int64_t id : ship.riders) {
+        if (onMules.count(id)) continue;
         const auto u = a.simulation().state.unit(id);
         if (!u) continue;
         const Vec2 at = ShuttleBay::world(there, ShuttleBay::local(ship, u->position));
@@ -210,20 +216,30 @@ void WorldMap::shuttleSwitch(ShuttleTrip& t) {
         // A human's: the pilot goes with it, its inputs walking on.
         for (auto& [pid, q] : pilots_) {
             if (q.flight || q.region != from || a.driving(pid) != id) continue;
-            const auto clocks = takeClocks(from, id);
+            // Driving its Mule: the Mule and its rider together (the
+            // Prospector's clocks go along), as at an edge.
+            const bool mule = drivesMule(pid, q) && q.unit;
+            const auto clocks = takeClocks(from, mule ? *q.unit : id);
+            std::optional<Unit> rider = mule ? a.release(*q.unit) : std::nullopt;
             Unit leaving = *a.release(id);
             leaving.heading += turn;
+            if (rider) rider->heading += turn;
             const int64_t lastInput = a.lastInputTick(pid);
             const std::optional<Region::Inputs> inputs = a.inputs(pid);
             q.record = a.levels(pid);
             a.leave(pid);
             if (a.pilots().empty()) bankIn(PilotState{}, from);
-            arrive(pid, q, to, leaving, at, lastInput, true);
+            if (rider) {
+                arriveMule(pid, q, to, leaving, *rider, at, lastInput, true);
+                if (Shuttle* s = sb.shuttle(there.id); s && q.unit) s->riders.push_back(*q.unit);
+            } else {
+                arrive(pid, q, to, leaving, at, lastInput, true);
+            }
             q.walkedIn = true;
             if (inputs) b.carryOn(pid, *inputs);
             if (q.unit) giveClocks(to, *q.unit, clocks);
             regionChanged(pid, q, to);
-            now = q.unit;
+            now = rider && q.mule ? q.mule->unit : q.unit;
             break;
         }
         // A frontier pilot's: its pilot into the region with it.
@@ -251,6 +267,15 @@ void WorldMap::shuttleSwitch(ShuttleTrip& t) {
                     q.region = to;
                     q.unit = now;
                 }
+            // A parked Mule stays its owner's.
+            auto own = [&](PilotState& q) {
+                if (q.mule && q.mule->region == from && q.mule->unit == id) {
+                    q.mule->region = to;
+                    q.mule->unit = now;
+                }
+            };
+            for (auto& [pid, q] : pilots_) own(q);
+            for (auto& [key, q] : away_) own(q);
         }
         if (Shuttle* s = sb.shuttle(there.id)) s->riders.push_back(*now);
     }

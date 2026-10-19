@@ -2002,7 +2002,9 @@ private:
     /// C4 (WorldMule.cpp): the pilot's driven Mule `mule` and its rider
     /// `rider` (taken out of their region) into region `to` at region
     /// position `at`, the rider on the Mule again, the pilot driving it.
-    void arriveMule(PilotId pilot, PilotState& p, size_t to, const Unit& mule, const Unit& rider, Vec2 at, int64_t lastInput);
+    /// `exact` (a Dropship's rider): `at` is a ground point, taken as it is.
+    void arriveMule(PilotId pilot, PilotState& p, size_t to, const Unit& mule, const Unit& rider, Vec2 at, int64_t lastInput,
+                    bool exact = false);
     /// `p` drives its own Mule in its region now (`pilot` its id).
     bool drivesMule(PilotId pilot, const PilotState& p) const;
     /// After a step: the Mules rolled out at their time, a destroyed one

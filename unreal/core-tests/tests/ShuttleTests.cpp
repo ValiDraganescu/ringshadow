@@ -315,3 +315,22 @@ TEST(shuttle_gridKeepsTheAiOutAndThePilotIn) {
     EXPECT_TRUE(ShuttleBay::inBay(localOf(b, b.pilot)));
     EXPECT_NEAR(localOf(b, b.pilot).x, -1.0, 1e-6);
 }
+
+TEST(mule_drivesUpTheRampIntoTheBay) {
+    // A Mule (C4, 1.6 wide) behind the ship, driven up the ramp: in the bay,
+    // between its walls, short of the console.
+    GameState s = bare(2, 0, {}, {}, 1);
+    const int64_t m = addUnit(s, Unit::Kind::mule, kPad + Vec2(-7, 0), 0);
+    Simulation sim(s, std::nullopt);
+    ASSERT_TRUE(sim.take(m));
+    const int64_t id = sim.callShuttle(kPad, 0);
+    sim.shuttle(id)->stage = Shuttle::Stage::ground;
+    sim.shuttle(id)->ramp = Door{1, true};
+    sim.pilot->heading = 0;
+    sim.pilot->walk = Vec2(1, 0);
+    steps(sim, 12);
+    const Vec2 l = ShuttleBay::local(*sim.shuttle(id), unitOf(sim, m).position);
+    EXPECT_TRUE(ShuttleBay::inBay(l));
+    EXPECT_TRUE(l.x < ShuttleBay::front - Rules::radius(Unit::Kind::mule) * 0.8 + 0.01);
+    EXPECT_TRUE(sim.aboard(unitOf(sim, m)) != nullptr);
+}
