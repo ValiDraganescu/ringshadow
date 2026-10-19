@@ -63,4 +63,26 @@ bool FAcBuildingsRegisteredTest::RunTest(const FString&)
 	return true;
 }
 
+// C5: a part kept at its size on a building stretched to its footprint
+// (`KeepSize`): its pivot moves out with the stretch, its own size stays,
+// on the axes asked only.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcBuildingsKeepSizeTest, "Autocraft.Buildings.KeepSize", Flags)
+bool FAcBuildingsKeepSizeTest::RunTest(const FString&)
+{
+	FAcPose P;
+	P.Placement = FTransform(FQuat::Identity, FVector(1000, 0, 0), FVector(2.5, 2.5, 1.0));
+	P.Local = {FTransform::Identity, FTransform(FVector(100, 40, 0)), FTransform(FVector(0, 50, 0))};
+	AcBuildingPose::KeepSize(P, 1, true, true, true);
+	AcBuildingPose::KeepSize(P, 2, false, true, true);
+	AcBuildingPose::KeepSize(P, INDEX_NONE, true, true, true);
+	const FTransform Post = P.Local[1] * P.Local[0] * P.Placement, Edge = P.Local[2] * P.Local[0] * P.Placement;
+	TestTrue(TEXT("the post's pivot moved out"), Post.GetTranslation().Equals(FVector(1250, 100, 0), 1e-6));
+	TestTrue(TEXT("the post at its size"), Post.GetScale3D().Equals(FVector::OneVector, 1e-9));
+	TestTrue(TEXT("the edge stretched along x only"), Edge.GetScale3D().Equals(FVector(2.5, 1.0, 1.0), 1e-9));
+	// A grandchild 12 cm off the post stays 12 cm off it.
+	const FTransform Lamp = FTransform(FVector(-12, 0, 46)) * Post;
+	TestTrue(TEXT("the lamp a post's width off it"), Lamp.GetTranslation().Equals(FVector(1238, 100, 46), 1e-6));
+	return true;
+}
+
 #endif

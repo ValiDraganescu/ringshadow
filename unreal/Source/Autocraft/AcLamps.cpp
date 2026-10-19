@@ -343,6 +343,9 @@ void UAcLampPool::Gather(const double Time, const double Dark, TArray<FWant>& Wa
 							 TConstArrayView<FTransform> World) {
 			if (P.bHidden || P.bFrozen || World.Num() == 0) return;  // fogged buildings: no lights
 			const FSockets& S = SocketsOf(M);
+			// A building grown in the MMO (C5, `AcPose::BuildingScale`): its
+			// lamps reach as far over it as at its old size.
+			const double Grown = bUnit ? 1.0 : FMath::Max(1.0, (M.Parts[0].Rest.Inverse() * World[0]).GetScale3D().X);
 			if (Dark > 0.001)
 			{
 				for (const FSocket& L : S.Lamps)
@@ -354,7 +357,7 @@ void UAcLampPool::Gather(const double Time, const double Dark, TArray<FWant>& Wa
 					W.Colour = Pr.Colour;
 					W.Intensity = Pr.Intensity * Dark;
 					if (L.Kind == Beacon) W.Intensity *= CVarBeaconGain.GetValueOnGameThread();
-					W.Reach = Pr.Reach;
+					W.Reach = Pr.Reach * Grown;
 					if (L.Kind == Headlamp && PilotLamp && PilotLamp->Unit == Id)
 					{
 						// Third person: the driven one's on the crosshair
@@ -391,7 +394,8 @@ void UAcLampPool::Gather(const double Time, const double Dark, TArray<FWant>& Wa
 						W.At = Placement.TransformPosition(S.PoolAt);
 						W.Colour = PoolColour();
 						W.Intensity = I;
-						W.Reach = S.PoolReach;
+						// A building grown in the MMO (C5) lights its grown apron.
+						W.Reach = S.PoolReach * FMath::Max(1.0, Placement.GetScale3D().X);
 						Want.Add(W);
 						if (CVarStats.GetValueOnGameThread() < 0)
 							UE_LOG(LogAutocraft, Log, TEXT("lamps: pool %lld %s glow %.2f at %s (root %s)"), Id, *M.Base.ToString(), Glow,

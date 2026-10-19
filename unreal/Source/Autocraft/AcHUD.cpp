@@ -5,6 +5,7 @@
 #include "AcLog.h"
 #include "AcMmo.h"
 #include "AcPilotPawn.h"
+#include "AcPose.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
@@ -264,7 +265,8 @@ void AAcHUD::OnFrame(const FAcFrame& Frame)
 		{
 			const FAcModelInfo* Model = Renderer->ModelOf(B.id);
 			const double Base = Terrain ? Terrain->FieldHeight(B.position) : 0.0;
-			const double Top = Model && Model->Bounds.IsValid ? AcSpace::ToCells(Model->Bounds.Max.Z) : 2.0;
+			// Its model stretched to its footprint (C5, `AcPose::BuildingScale`).
+			const double Top = Model && Model->Bounds.IsValid ? AcSpace::ToCells(Model->Bounds.Max.Z) * AcPose::BuildingScale(B.kind).Z : 2.0;
 			Blocks.push_back({B.position, ac::Rules::radius(B.kind) * 0.85, Base, Base + Top});
 		}
 	FVector EyeW = FVector::ZeroVector;

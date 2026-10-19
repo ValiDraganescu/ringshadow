@@ -93,8 +93,8 @@ namespace AcPoseAir
 
 	TOptional<double> LaunchDrop(const double Age, const double Hover)
 	{
-		// Models.Spacedock.spawnPoint.y.
-		constexpr double SpawnY = 1.59;
+		// Models.Spacedock.spawnPoint.y, on the Spacedock as drawn (C5).
+		const double SpawnY = 1.59 * AcPose::BuildingScale(ac::StructureKind::spacedock).Z;
 		const double A = Age / 1.4;
 		if (A >= 1.0) return {};
 		return (Hover - SpawnY) * (1.0 - Smoothstep(0.0, 1.0, A));

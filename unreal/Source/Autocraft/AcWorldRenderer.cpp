@@ -498,7 +498,9 @@ void UAcWorldRenderer::WriteObject(FObject& O)
 		W.SetNum(M.Parts.Num());
 		for (int32 P = 0; P < M.Parts.Num(); ++P)
 		{
-			const FTransform Parent = M.Parts[P].Parent == INDEX_NONE ? FTransform(Site) : W[M.Parts[P].Parent];
+			// Stretched with its building (C5, `AcPose::BuildingScale`).
+			const FTransform Parent = M.Parts[P].Parent == INDEX_NONE ? FTransform(FQuat::Identity, Site, O.Pose.Placement.GetScale3D())
+																	   : W[M.Parts[P].Parent];
 			W[P] = M.Parts[P].Rest * Parent;
 		}
 		for (int32 K = 0; K < O.Scaffold->Batch.Num(); ++K)

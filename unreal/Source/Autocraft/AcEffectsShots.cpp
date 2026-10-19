@@ -36,26 +36,8 @@ namespace
 	constexpr double Cm = AcSpace::CmPerCell;
 
 	/// `GameScene.Building.radius` (`makeBuilding`, GameScene.swift:370-420).
-	double BuildingRadius(const ac::StructureKind K)
-	{
-		switch (K)
-		{
-		// C1: the Citadel's footprint grew (docs/citadel-interior.md §1).
-		case ac::StructureKind::citadel: return ac::Rules::radius(ac::StructureKind::citadel);
-		case ac::StructureKind::garrison:
-		case ac::StructureKind::bastion:
-		case ac::StructureKind::derrick:
-		case ac::StructureKind::foundry:
-		case ac::StructureKind::spacedock: return 1.5;
-		case ac::StructureKind::lab:
-		case ac::StructureKind::habDome:
-		case ac::StructureKind::sentinel:
-		case ac::StructureKind::gatling: return 1.0;
-		case ac::StructureKind::dummy: return ac::Rules::radius(K);
-		default: break;
-		}
-		return 1.0;
-	}
+	/// C1, C5: every footprint grew in the MMO (docs/building-sizes.md).
+	double BuildingRadius(const ac::StructureKind K) { return ac::Rules::radius(K); }
 
 	/// `Trooper.muzzles` (GameScene.swift:1646) as exported part names: the
 	/// kind row's (AcKindTable.h).

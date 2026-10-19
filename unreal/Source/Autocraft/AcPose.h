@@ -236,8 +236,15 @@ namespace AcPose
 	AUTOCRAFT_API const TCHAR* ModelBase(ac::StructureKind Kind);
 
 	/// How tall a building's body is (`GameScene.makeBuilding`'s `height`),
-	/// cells.
+	/// cells: the core's `Rules::height` (C5: x2.4 in the MMO).
 	AUTOCRAFT_API double BuildingHeight(ac::StructureKind Kind);
+	/// C5 (docs/building-sizes.md): how much a building's model is stretched
+	/// to stand on its footprint, Unreal axes (x, y across, z up): the
+	/// footprint `Rules::radius` over the radius the model was made for,
+	/// and `Rules::height` over the height it was made for. One in the
+	/// strategy game; 7/3, 7/3, 2.4 for a 3x3 kind grown to 7x7 in the MMO.
+	/// A Citadel or a Target Dummy is made at its size (one).
+	AUTOCRAFT_API FVector BuildingScale(ac::StructureKind Kind);
 	/// How far a building's body is under the ground while it is built
 	/// (`-(1 - progress)·height·0.92`), cells (≤ 0).
 	AUTOCRAFT_API double ConstructionSink(const ac::Structure& S);

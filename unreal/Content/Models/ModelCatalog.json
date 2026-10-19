@@ -304466,16 +304466,16 @@
    "category": "building",
    "facing": "+Z forward, +Y up",
    "boundsMin": [
-    -1.64,
+    -5.64,
     0.0,
-    -1.64
+    -5.64
    ],
    "boundsMax": [
-    1.64,
+    5.64,
     0.63,
-    1.64
+    5.64
    ],
-   "triangles": 864,
+   "triangles": 2160,
    "team": "blue",
    "base": "landingPad",
    "canonical": "landingPad_blue",
@@ -304535,14 +304535,14 @@
      "rays": [
       {
        "hi": [
-        1.5,
+        5.5,
         0.04,
-        1.5
+        5.5
        ],
        "lo": [
-        -1.5,
+        -5.5,
         -0.04,
-        -1.5
+        -5.5
        ],
        "transform": [
         1,
@@ -304565,134 +304565,14 @@
       },
       {
        "hi": [
-        0.1,
-        0.02,
-        0.1
-       ],
-       "lo": [
-        -0.1,
-        -0.02,
-        -0.1
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        -1.38,
-        0.44,
-        -1.38,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.1,
-        0.02,
-        0.1
-       ],
-       "lo": [
-        -0.1,
-        -0.02,
-        -0.1
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        -1.38,
-        0.44,
-        1.38,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.1,
-        0.02,
-        0.1
-       ],
-       "lo": [
-        -0.1,
-        -0.02,
-        -0.1
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        1.38,
-        0.44,
-        -1.38,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.1,
-        0.02,
-        0.1
-       ],
-       "lo": [
-        -0.1,
-        -0.02,
-        -0.1
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        1.38,
-        0.44,
-        1.38,
-        1
-       ]
-      },
-      {
-       "hi": [
-        1.42,
+        5.42,
         0.05,
-        1.42
+        5.42
        ],
        "lo": [
-        -1.42,
+        -5.42,
         -0.05,
-        -1.42
+        -5.42
        ],
        "transform": [
         1,
@@ -304712,246 +304592,6 @@
         0.0,
         1
        ]
-      },
-      {
-       "hi": [
-        1.5,
-        0.03,
-        0.07
-       ],
-       "lo": [
-        -1.5,
-        -0.03,
-        -0.07
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.03,
-        -1.57,
-        1
-       ]
-      },
-      {
-       "hi": [
-        1.5,
-        0.03,
-        0.07
-       ],
-       "lo": [
-        -1.5,
-        -0.03,
-        -0.07
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.03,
-        1.57,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.07,
-        0.03,
-        1.5
-       ],
-       "lo": [
-        -0.07,
-        -0.03,
-        -1.5
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        -1.57,
-        0.03,
-        0.0,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.07,
-        0.03,
-        1.5
-       ],
-       "lo": [
-        -0.07,
-        -0.03,
-        -1.5
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        1.57,
-        0.03,
-        0.0,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.08,
-        0.17,
-        0.08
-       ],
-       "lo": [
-        -0.08,
-        -0.17,
-        -0.08
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        -1.38,
-        0.25,
-        -1.38,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.08,
-        0.17,
-        0.08
-       ],
-       "lo": [
-        -0.08,
-        -0.17,
-        -0.08
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        -1.38,
-        0.25,
-        1.38,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.08,
-        0.17,
-        0.08
-       ],
-       "lo": [
-        -0.08,
-        -0.17,
-        -0.08
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        1.38,
-        0.25,
-        -1.38,
-        1
-       ]
-      },
-      {
-       "hi": [
-        0.08,
-        0.17,
-        0.08
-       ],
-       "lo": [
-        -0.08,
-        -0.17,
-        -0.08
-       ],
-       "transform": [
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1,
-        0.0,
-        1.38,
-        0.25,
-        1.38,
-        1
-       ]
       }
      ],
      "meshes": [
@@ -304963,7 +304603,7 @@
        "materialKey": "1fd19f4dae6f",
        "blend": "opaque",
        "team": [],
-       "triangles": 240
+       "triangles": 1200
       },
       {
        "material": "hullMid",
@@ -304976,26 +304616,6 @@
        "triangles": 12
       },
       {
-       "material": "hullLight",
-       "prim": "landingPad_blue_root__hullLight",
-       "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__hullLight.SM_landingPad_blue_root__hullLight",
-       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
-       "materialKey": "04080b20f109",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 96
-      },
-      {
-       "material": "hazard",
-       "prim": "landingPad_blue_root__hazard",
-       "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__hazard.SM_landingPad_blue_root__hazard",
-       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
-       "materialKey": "9abda01febd0",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 48
-      },
-      {
        "material": "team",
        "prim": "landingPad_blue_root__team",
        "mesh": "/Game/Models/landingPad/SM_landingPad_blue_root__team.SM_landingPad_blue_root__team",
@@ -305005,7 +304625,7 @@
        "team": [
         "TeamTint"
        ],
-       "triangles": 324
+       "triangles": 612
       },
       {
        "material": "chrome",
@@ -305020,8 +304640,8 @@
      ]
     },
     {
-     "name": "lamps_0",
-     "path": "/landingPad_blue/lamps_0",
+     "name": "edge_0",
+     "path": "/landingPad_blue/edge_0",
      "localTransform": [
       1,
       0.0,
@@ -305035,15 +304655,15 @@
       0.0,
       1,
       0.0,
-      -1.38,
-      0.46,
-      1.38,
+      0.0,
+      0.0,
+      5.5,
       1
      ],
      "position": [
-      -1.38,
-      0.46,
-      1.38
+      0.0,
+      0.0,
+      5.5
      ],
      "eulerAngles": [
       0.0,
@@ -305057,6 +304677,561 @@
      ],
      "hidden": false,
      "parent": "landingPad_blue_root",
+     "handles": [
+      "edge_0"
+     ],
+     "driver": {
+      "what": "edge 0: kept a Prospector's size across the side",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        5.5,
+        0.03,
+        0.07
+       ],
+       "lo": [
+        -5.5,
+        -0.03,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.03,
+        0.07,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "edge_0__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_edge_0__hullLight.SM_edge_0__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "edge_0__hazard",
+       "mesh": "/Game/Models/landingPad/SM_edge_0__hazard.SM_edge_0__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "edge_1",
+     "path": "/landingPad_blue/edge_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      -5.5,
+      1
+     ],
+     "position": [
+      0.0,
+      0.0,
+      -5.5
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "edge_1"
+     ],
+     "driver": {
+      "what": "edge 1: kept a Prospector's size across the side",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        5.5,
+        0.03,
+        0.07
+       ],
+       "lo": [
+        -5.5,
+        -0.03,
+        -0.07
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.03,
+        -0.07,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "edge_1__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_edge_1__hullLight.SM_edge_1__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "edge_1__hazard",
+       "mesh": "/Game/Models/landingPad/SM_edge_1__hazard.SM_edge_1__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "edge_2",
+     "path": "/landingPad_blue/edge_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -5.5,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      -5.5,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "edge_2"
+     ],
+     "driver": {
+      "what": "edge 2: kept a Prospector's size across the side",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.07,
+        0.03,
+        5.5
+       ],
+       "lo": [
+        -0.07,
+        -0.03,
+        -5.5
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.07,
+        0.03,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "edge_2__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_edge_2__hullLight.SM_edge_2__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "edge_2__hazard",
+       "mesh": "/Game/Models/landingPad/SM_edge_2__hazard.SM_edge_2__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "edge_3",
+     "path": "/landingPad_blue/edge_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      5.5,
+      0.0,
+      0.0,
+      1
+     ],
+     "position": [
+      5.5,
+      0.0,
+      0.0
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "edge_3"
+     ],
+     "driver": {
+      "what": "edge 3: kept a Prospector's size across the side",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.07,
+        0.03,
+        5.5
+       ],
+       "lo": [
+        -0.07,
+        -0.03,
+        -5.5
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.07,
+        0.03,
+        0.0,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "edge_3__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_edge_3__hullLight.SM_edge_3__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hazard",
+       "prim": "edge_3__hazard",
+       "mesh": "/Game/Models/landingPad/SM_edge_3__hazard.SM_edge_3__hazard",
+       "materialInstance": "/Game/Models/Materials/MI_hazard_9abda01febd0.MI_hazard_9abda01febd0",
+       "materialKey": "9abda01febd0",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "post_0",
+     "path": "/landingPad_blue/post_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -5.5,
+      0.0,
+      5.5,
+      1
+     ],
+     "position": [
+      -5.5,
+      0.0,
+      5.5
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "post_0"
+     ],
+     "driver": {
+      "what": "corner post 0: kept a Prospector's size",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.08,
+        0.17,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.17,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.12,
+        0.25,
+        -0.12,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.1,
+        0.02,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.02,
+        -0.1
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.12,
+        0.44,
+        -0.12,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "post_0__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_post_0__hullLight.SM_post_0__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullDark",
+       "prim": "post_0__hullDark",
+       "mesh": "/Game/Models/landingPad/SM_post_0__hullDark.SM_post_0__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "lamps_0",
+     "path": "/landingPad_blue/post_0/lamps_0",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.46,
+      -0.12,
+      1
+     ],
+     "position": [
+      0.12,
+      0.46,
+      -0.12
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "post_0",
      "handles": [
       "lamps_0"
      ],
@@ -305083,8 +305258,8 @@
      ]
     },
     {
-     "name": "lamps_1",
-     "path": "/landingPad_blue/lamps_1",
+     "name": "post_1",
+     "path": "/landingPad_blue/post_1",
      "localTransform": [
       1,
       0.0,
@@ -305098,15 +305273,15 @@
       0.0,
       1,
       0.0,
-      1.38,
-      0.46,
-      1.38,
+      5.5,
+      0.0,
+      5.5,
       1
      ],
      "position": [
-      1.38,
-      0.46,
-      1.38
+      5.5,
+      0.0,
+      5.5
      ],
      "eulerAngles": [
       0.0,
@@ -305120,6 +305295,141 @@
      ],
      "hidden": false,
      "parent": "landingPad_blue_root",
+     "handles": [
+      "post_1"
+     ],
+     "driver": {
+      "what": "corner post 1: kept a Prospector's size",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.08,
+        0.17,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.17,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.12,
+        0.25,
+        -0.12,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.1,
+        0.02,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.02,
+        -0.1
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.12,
+        0.44,
+        -0.12,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "post_1__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_post_1__hullLight.SM_post_1__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullDark",
+       "prim": "post_1__hullDark",
+       "mesh": "/Game/Models/landingPad/SM_post_1__hullDark.SM_post_1__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "lamps_1",
+     "path": "/landingPad_blue/post_1/lamps_1",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.12,
+      0.46,
+      -0.12,
+      1
+     ],
+     "position": [
+      -0.12,
+      0.46,
+      -0.12
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "post_1",
      "handles": [
       "lamps_1"
      ],
@@ -305146,8 +305456,8 @@
      ]
     },
     {
-     "name": "lamps_2",
-     "path": "/landingPad_blue/lamps_2",
+     "name": "post_2",
+     "path": "/landingPad_blue/post_2",
      "localTransform": [
       1,
       0.0,
@@ -305161,15 +305471,15 @@
       0.0,
       1,
       0.0,
-      -1.38,
-      0.46,
-      -1.38,
+      -5.5,
+      0.0,
+      -5.5,
       1
      ],
      "position": [
-      -1.38,
-      0.46,
-      -1.38
+      -5.5,
+      0.0,
+      -5.5
      ],
      "eulerAngles": [
       0.0,
@@ -305183,6 +305493,141 @@
      ],
      "hidden": false,
      "parent": "landingPad_blue_root",
+     "handles": [
+      "post_2"
+     ],
+     "driver": {
+      "what": "corner post 2: kept a Prospector's size",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.08,
+        0.17,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.17,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.12,
+        0.25,
+        0.12,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.1,
+        0.02,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.02,
+        -0.1
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.12,
+        0.44,
+        0.12,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "post_2__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_post_2__hullLight.SM_post_2__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullDark",
+       "prim": "post_2__hullDark",
+       "mesh": "/Game/Models/landingPad/SM_post_2__hullDark.SM_post_2__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "lamps_2",
+     "path": "/landingPad_blue/post_2/lamps_2",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.12,
+      0.46,
+      0.12,
+      1
+     ],
+     "position": [
+      0.12,
+      0.46,
+      0.12
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "post_2",
      "handles": [
       "lamps_2"
      ],
@@ -305209,71 +305654,8 @@
      ]
     },
     {
-     "name": "lamps_3",
-     "path": "/landingPad_blue/lamps_3",
-     "localTransform": [
-      1,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      1,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      1,
-      0.0,
-      1.38,
-      0.46,
-      -1.38,
-      1
-     ],
-     "position": [
-      1.38,
-      0.46,
-      -1.38
-     ],
-     "eulerAngles": [
-      0.0,
-      0.0,
-      0.0
-     ],
-     "scale": [
-      1,
-      1,
-      1
-     ],
-     "hidden": false,
-     "parent": "landingPad_blue_root",
-     "handles": [
-      "lamps_3"
-     ],
-     "driver": {
-      "what": "corner lamp 3: the working light",
-      "channels": [
-       "emission"
-      ],
-      "functions": [
-       "AcPoseBuildings2.cpp:PoseLandingPad"
-      ]
-     },
-     "meshes": [
-      {
-       "material": "workGlow",
-       "prim": "lamps_3__workGlow",
-       "mesh": "/Game/Models/landingPad/SM_lamps_3__workGlow.SM_lamps_3__workGlow",
-       "materialInstance": "/Game/Models/Materials/MI_workGlow_8df957c5962b.MI_workGlow_8df957c5962b",
-       "materialKey": "8df957c5962b",
-       "blend": "opaque",
-       "team": [],
-       "triangles": 12
-      }
-     ]
-    },
-    {
      "name": "beacon",
-     "path": "/landingPad_blue/beacon",
+     "path": "/landingPad_blue/post_2/beacon",
      "localTransform": [
       1,
       0.0,
@@ -305287,15 +305669,15 @@
       0.0,
       1,
       0.0,
-      -1.38,
+      0.12,
       0.56,
-      -1.38,
+      0.12,
       1
      ],
      "position": [
-      -1.38,
+      0.12,
       0.56,
-      -1.38
+      0.12
      ],
      "eulerAngles": [
       0.0,
@@ -305308,7 +305690,7 @@
       1
      ],
      "hidden": false,
-     "parent": "landingPad_blue_root",
+     "parent": "post_2",
      "handles": [
       "beacon"
      ],
@@ -305331,6 +305713,204 @@
        "blend": "opaque",
        "team": [],
        "triangles": 32
+      }
+     ]
+    },
+    {
+     "name": "post_3",
+     "path": "/landingPad_blue/post_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      5.5,
+      0.0,
+      -5.5,
+      1
+     ],
+     "position": [
+      5.5,
+      0.0,
+      -5.5
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "landingPad_blue_root",
+     "handles": [
+      "post_3"
+     ],
+     "driver": {
+      "what": "corner post 3: kept a Prospector's size",
+      "channels": [
+       "scale"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "rays": [
+      {
+       "hi": [
+        0.08,
+        0.17,
+        0.08
+       ],
+       "lo": [
+        -0.08,
+        -0.17,
+        -0.08
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.12,
+        0.25,
+        0.12,
+        1
+       ]
+      },
+      {
+       "hi": [
+        0.1,
+        0.02,
+        0.1
+       ],
+       "lo": [
+        -0.1,
+        -0.02,
+        -0.1
+       ],
+       "transform": [
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1,
+        0.0,
+        -0.12,
+        0.44,
+        0.12,
+        1
+       ]
+      }
+     ],
+     "meshes": [
+      {
+       "material": "hullLight",
+       "prim": "post_3__hullLight",
+       "mesh": "/Game/Models/landingPad/SM_post_3__hullLight.SM_post_3__hullLight",
+       "materialInstance": "/Game/Models/Materials/MI_hullLight_04080b20f109.MI_hullLight_04080b20f109",
+       "materialKey": "04080b20f109",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      },
+      {
+       "material": "hullDark",
+       "prim": "post_3__hullDark",
+       "mesh": "/Game/Models/landingPad/SM_post_3__hullDark.SM_post_3__hullDark",
+       "materialInstance": "/Game/Models/Materials/MI_hullDark_1fd19f4dae6f.MI_hullDark_1fd19f4dae6f",
+       "materialKey": "1fd19f4dae6f",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
+      }
+     ]
+    },
+    {
+     "name": "lamps_3",
+     "path": "/landingPad_blue/post_3/lamps_3",
+     "localTransform": [
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1,
+      0.0,
+      -0.12,
+      0.46,
+      0.12,
+      1
+     ],
+     "position": [
+      -0.12,
+      0.46,
+      0.12
+     ],
+     "eulerAngles": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "scale": [
+      1,
+      1,
+      1
+     ],
+     "hidden": false,
+     "parent": "post_3",
+     "handles": [
+      "lamps_3"
+     ],
+     "driver": {
+      "what": "corner lamp 3: the working light",
+      "channels": [
+       "emission"
+      ],
+      "functions": [
+       "AcPoseBuildings2.cpp:PoseLandingPad"
+      ]
+     },
+     "meshes": [
+      {
+       "material": "workGlow",
+       "prim": "lamps_3__workGlow",
+       "mesh": "/Game/Models/landingPad/SM_lamps_3__workGlow.SM_lamps_3__workGlow",
+       "materialInstance": "/Game/Models/Materials/MI_workGlow_8df957c5962b.MI_workGlow_8df957c5962b",
+       "materialKey": "8df957c5962b",
+       "blend": "opaque",
+       "team": [],
+       "triangles": 12
       }
      ]
     },

@@ -630,7 +630,8 @@ void UAcPlaygroundSubsystem::UpdateGhost(const double Time)
 	switch (Item.Type)
 	{
 	case FAcPaletteItem::EType::Structure:
-		G->Show(FName(Item.CatalogName() + TEXT("_blue")), At, 0.0, ac::Rules::radius(Item.Structure), bOk, Time);
+		G->Show(FName(Item.CatalogName() + TEXT("_blue")), At, 0.0, ac::Rules::radius(Item.Structure), bOk, Time,
+			AcPose::BuildingScale(Item.Structure));
 		break;
 	case FAcPaletteItem::EType::Unit:
 		G->Show(FName(FString(AcPose::ModelBase(Item.Unit)) + TEXT("_blue")), At, Yaw(-PaletteTurn),

@@ -71,6 +71,17 @@ namespace AcBuildingPose
 		if (Part != INDEX_NONE) P.Local[Part].SetScale3D(AcSpace::AxesFromSceneKit(X, Y, Z));
 	}
 
+	void KeepSize(FAcPose& P, const int32 Part, const bool bX, const bool bY, const bool bZ)
+	{
+		if (Part == INDEX_NONE) return;
+		const FVector S = P.Placement.GetScale3D();
+		FVector L = P.Local[Part].GetScale3D();
+		if (bX && S.X > 0) L.X /= S.X;
+		if (bY && S.Y > 0) L.Y /= S.Y;
+		if (bZ && S.Z > 0) L.Z /= S.Z;
+		P.Local[Part].SetScale3D(L);
+	}
+
 	void GlowGroup(const FAcModelInfo& Model, FAcPose& P, const FName Material, const double Intensity, const double Exported)
 	{
 		const float V = float(Intensity / Exported);
@@ -169,19 +180,8 @@ namespace
 	const FName Steam(TEXT("AcSteam"));
 
 	/// The radius `GameScene.makeBuilding` gives the weld (:363-420).
-	double WeldRadius(const ac::StructureKind K)
-	{
-		switch (K)
-		{
-		case ac::StructureKind::citadel: return ac::Rules::radius(K);
-		case ac::StructureKind::habDome:
-		case ac::StructureKind::lab:
-		case ac::StructureKind::sentinel:
-		case ac::StructureKind::gatling: return 1.0;
-		case ac::StructureKind::dummy: return ac::Rules::radius(K);
-		default: return 1.5;
-		}
-	}
+	/// The footprint's (C5: grown in the MMO).
+	double WeldRadius(const ac::StructureKind K) { return ac::Rules::radius(K); }
 
 	bool Near(const ac::Vec2 A, const ac::Vec2 B, const double R)
 	{

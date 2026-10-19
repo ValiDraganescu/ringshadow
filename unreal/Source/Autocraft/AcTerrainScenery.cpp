@@ -17,6 +17,7 @@
 #include "GroundBlend.h"
 #include "NavGrid.h"
 #include "RegionFile.h"
+#include "Rules.h"
 #include "TerrainField.h"
 
 #include <cmath>
@@ -209,8 +210,8 @@ void AAcTerrainScenery::Build(AAcRegionGround* Set)
 				if (W[size_t(K)] > 0.0f) C += Of[K] * W[size_t(K)];
 			return C;
 		};
-		const auto Add = [&Pl](const int32 Mesh, const FTransform& T, const FLinearColor C, const float Slice) {
-			Pl.Items.Add(FItem{Mesh, T, C, Slice});
+		const auto Add = [&Pl](const int32 Mesh, const FTransform& T, const FLinearColor C, const float Slice, const bool bClutter = false) {
+			Pl.Items.Add(FItem{Mesh, T, C, Slice, bClutter});
 		};
 		const auto Cm = [](const ac::Vec2 P, const double H) { return FVector(AcSpace::ToCm(P.x), AcSpace::ToCm(P.y), AcSpace::ToCm(H)); };
 		const auto H = [&Field](const ac::Vec2 P) { return Field.height(P); };
@@ -369,7 +370,7 @@ void AAcTerrainScenery::Build(AAcRegionGround* Set)
 					{
 						const double Sc = Rng.Range(0.7, 1.4);
 						Add(Tuft0 + Rng.Pick(4), FTransform(FRotator(Rng.Range(-8, 8), Rng.Range(0, 360), Rng.Range(-8, 8)), Cm(P, H(P) - 0.02), FVector(Sc)),
-							Tufts[Slot] * float(Rng.Range(0.8, 1.2)), 1.0f);
+							Tufts[Slot] * float(Rng.Range(0.8, 1.2)), 1.0f, true);
 						Pl.Clutter++;
 						continue;
 					}
@@ -377,7 +378,7 @@ void AAcTerrainScenery::Build(AAcRegionGround* Set)
 					const double Sc = Rng.Range(Kd.Lo, Kd.Hi);
 					Add(KitAt(Kd.Name) + Rng.Pick(Kd.Count),
 						FTransform(FRotator(Rng.Range(-10, 10), Rng.Range(0, 360), Rng.Range(-10, 10)), Cm(P, H(P) - 0.015 * Sc), FVector(Sc)),
-						Kd.C * float(Rng.Range(0.8, 1.2)), Kd.Slice);
+						Kd.C * float(Rng.Range(0.8, 1.2)), Kd.Slice, true);
 					Pl.Clutter++;
 				}
 			}
@@ -399,7 +400,11 @@ void AAcTerrainScenery::Tick(float DeltaSeconds)
 		Crowns = Plan->Crowns;
 		Clutter = Plan->Clutter;
 	}
-	if (Next >= Plan->Items.Num()) return;
+	if (Next >= Plan->Items.Num())
+	{
+		ClearUnderBuildings();
+		return;
+	}
 	const double Start = FPlatformTime::Seconds();
 	const int32 End = FMath::Min(Next + PerFrame, Plan->Items.Num());
 	TSet<UHierarchicalInstancedStaticMeshComponent*> Touched;
@@ -411,12 +416,61 @@ void AAcTerrainScenery::Tick(float DeltaSeconds)
 		const int32 I = C->AddInstance(It.T, false);
 		const float Data[4] = {It.C.R, It.C.G, It.C.B, It.Slice};
 		C->SetCustomData(I, MakeArrayView(Data, 4), false);
+		if (It.bClutter)
+		{
+			const FVector W = C->GetComponentTransform().TransformPosition(It.T.GetLocation());
+			Laid.Add({C, I, It.T, FVector2D(W.X, W.Y)});
+		}
 		Touched.Add(C);
 	}
 	for (UHierarchicalInstancedStaticMeshComponent* C : Touched) C->MarkRenderStateDirty();
 	if (Next >= Plan->Items.Num())
 		UE_LOG(LogAutocraft, Log, TEXT("terrain scenery: %s: %d faces, %d talus, %d crowns, %d clutter; planned in %.1f ms on a worker, last step %.1f ms"),
 			*SetKey, Faces, Talus, Crowns, Clutter, Plan->Ms, (FPlatformTime::Seconds() - Start) * 1000.0);
+}
+
+void AAcTerrainScenery::ClearUnderBuildings()
+{
+	const UWorld* World = GetWorld();
+	if (Laid.Num() == 0 || !World || World->GetTimeSeconds() < NextClear) return;
+	NextClear = World->GetTimeSeconds() + 0.5;
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	if (!Sim || !Sim->IsRunning()) return;
+	// Each building's footprint, world cm, a little grown (a tuft's leaves).
+	TArray<FBox2D> Under;
+	uint32 Key = 0;
+	for (const ac::Structure& S : Sim->Shown().structures)
+	{
+		const FVector At = AcSpace::ToWorld(S.position, 0.0);
+		const double Half = AcSpace::ToCm(ac::Rules::radius(S.kind) + 0.15);
+		Under.Add(FBox2D(FVector2D(At.X - Half, At.Y - Half), FVector2D(At.X + Half, At.Y + Half)));
+		Key = HashCombine(Key, HashCombine(GetTypeHash(int64(S.id)), GetTypeHash(Half)));
+	}
+	if (Key == BuildingsKey) return;
+	BuildingsKey = Key;
+	TSet<UHierarchicalInstancedStaticMeshComponent*> Touched;
+	int32 Hidden = 0;
+	for (FClutter& L : Laid)
+	{
+		UHierarchicalInstancedStaticMeshComponent* C = L.Batch.Get();
+		if (!C) continue;
+		bool bIn = false;
+		for (const FBox2D& B : Under)
+			if (B.IsInside(L.At))
+			{
+				bIn = true;
+				break;
+			}
+		Hidden += bIn ? 1 : 0;
+		if (bIn == L.bHidden) continue;
+		L.bHidden = bIn;
+		FTransform T = L.T;
+		if (bIn) T.SetScale3D(FVector::ZeroVector);
+		C->UpdateInstanceTransform(L.Index, T, /*bWorldSpace*/ false, /*bMarkRenderStateDirty*/ false, /*bTeleport*/ true);
+		Touched.Add(C);
+	}
+	for (UHierarchicalInstancedStaticMeshComponent* C : Touched) C->MarkRenderStateDirty();
+	if (Touched.Num()) UE_LOG(LogAutocraft, Log, TEXT("terrain scenery: %s: %d clutter under %d buildings"), *SetKey, Hidden, Under.Num());
 }
 
 bool UAcTerrainSceneryWorld::ShouldCreateSubsystem(UObject* Outer) const

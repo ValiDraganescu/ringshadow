@@ -412,7 +412,7 @@ void UAcPilotBuildSubsystem::OnFrame(const FAcFrame& Frame)
 	if (AAcHologram* H = AAcHologram::SpawnFor(GetWorld()))
 	{
 		H->Show(FName(FString::Printf(TEXT("%s_blue"), AcPose::ModelBase(*Held))), AcSpace::ToWorld(*At, Y), 0.0,
-			ac::Rules::radius(*Held), !Why, Sim->GameTime());
+			ac::Rules::radius(*Held), !Why, Sim->GameTime(), AcPose::BuildingScale(*Held));
 	}
 }
 

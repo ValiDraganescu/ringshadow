@@ -395,7 +395,16 @@ namespace
 		const FAcModelInfo& M = C.Model;
 		const bool bLive = CommonPose(C, P, Welding(C));
 		const double Ph = Phase(C);
-		static const FParts Lamps(TEXT("lamps"), 4);
+		static const FParts Lamps(TEXT("lamps"), 4), Posts(TEXT("post"), 4), Edges(TEXT("edge"), 4);
+		// C5: stretched to its footprint, which follows the Dropship; the
+		// posts (their lamps, the beacon) and the edges' lips and hazard
+		// bands keep a Prospector's scale (landing_pad.py): the edges along
+		// the side only (front and back stretch along x, the sides along y).
+		for (int32 K = 0; K < 4; ++K)
+		{
+			KeepSize(P, Posts(M, K), true, true, true);
+			KeepSize(P, Edges(M, K), K >= 2, K < 2, true);
+		}
 		const bool bBusy = bLive && AcShuttleShip::PadBusy(AcSpace::ToWorld(S.position));
 		for (int32 K = 0; K < 4; ++K)
 		{

@@ -59,20 +59,9 @@ namespace AcLifeBars
 	double Width(const ac::UnitKind Kind) { return FMath::Max(0.8, ac::Rules::radius(Kind) * 2.2); }
 	double Width(const ac::StructureKind Kind) { return ac::Rules::radius(Kind) * 1.7; }
 
-	double BuildingRadius(const ac::StructureKind Kind)
-	{
-		// GameScene.makeBuilding (GameScene.swift:376-420).
-		switch (Kind)
-		{
-		case ac::StructureKind::citadel: return ac::Rules::radius(Kind);
-		case ac::StructureKind::lab:
-		case ac::StructureKind::habDome:
-		case ac::StructureKind::sentinel:
-		case ac::StructureKind::gatling: return 1.0;
-		case ac::StructureKind::dummy: return ac::Rules::radius(Kind);
-		default: return 1.5;
-		}
-	}
+	// GameScene.makeBuilding (GameScene.swift:376-420): the footprint's
+	// (C5: grown in the MMO).
+	double BuildingRadius(const ac::StructureKind Kind) { return ac::Rules::radius(Kind); }
 
 	double BarScale(const double PointsPerCell)
 	{
