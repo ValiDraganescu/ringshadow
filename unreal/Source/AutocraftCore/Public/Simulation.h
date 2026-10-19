@@ -551,6 +551,7 @@ public:
 #include "Simulation+Brood.members.h"
 #include "Simulation+Citadel.members.h"
 #include "Simulation+Mule.members.h"
+#include "Simulation+Shuttle.members.h"
 };
 
 } // namespace ac

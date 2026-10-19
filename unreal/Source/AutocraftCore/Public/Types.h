@@ -8,6 +8,7 @@
 #pragma once
 
 #include "AutocraftCoreApi.h"
+#include "Ferry.h"
 
 #include "MapView.h"
 #include "SimdMath.h"
@@ -1047,6 +1048,60 @@ struct Door {
     bool operator==(const Door&) const = default;
 };
 
+/// The walk-in Dropship (C4, docs/haul-and-ferry.md section 3): called down
+/// onto a Landing Pad, walked into up its ramp, closed and launched from
+/// inside, carrying everyone in its bay to another pad. Its shape, its pose
+/// and its walk are in Shuttle.h (`ShuttleBay`, `shuttlePose`).
+struct Shuttle {
+    /// `descend`: coming down onto the pad (nothing touches it yet).
+    /// `ground`: on the pad, the ramp moving at the buttons. `lift`, `turns`,
+    /// `dash`, `approach`: the flight (`Ferry::Plan`'s stages), the riders
+    /// aboard; the server moves it into the target region at the approach.
+    /// `depart`: lifting away empty, then gone.
+    enum class Stage : uint8_t { descend, ground, lift, turns, dash, approach, depart };
+    /// Its own number in the region (not a unit's or a building's).
+    int64_t id = 0;
+    /// Its frame: the point on the pad under its middle and where its nose
+    /// points (radians, 0 = +x, toward +y). The bay's walls stand there,
+    /// also in flight (the riders walk there); the frame moves to the
+    /// target pad with the region switch. `ground`: the pad's height.
+    Vec2 position;
+    double heading = 0;
+    double ground = 0;
+    Stage stage = Stage::descend;
+    /// Seconds into `stage`.
+    double clock = 0;
+    /// The ramp: 0 shut (standing in the opening) … 1 down on the ground,
+    /// and the way it moves (`ShuttleBay::rampSeconds` end to end).
+    /// Walkable at `ShuttleBay::rampDown`.
+    Door ramp;
+    /// The flight's stages, and its two pads (ground points, z their
+    /// height) in this region's frame: the boarding pad's and the target's.
+    /// `fromHeading`: its heading on the boarding pad (the flight's turns
+    /// start along it). `hop`: the target pad is in this region (the
+    /// simulation moves the frame there itself; else the server, with the
+    /// region switch).
+    Ferry::Plan plan;
+    Vec3 from, to;
+    double fromHeading = 0;
+    bool hop = false;
+    /// The units aboard, from the lift to the touch down: they walk only in
+    /// the bay and nothing touches them.
+    std::vector<int64_t> riders;
+    /// Seconds nobody has been in the bay or on the ramp (it leaves at
+    /// `ShuttleBay::leaveSeconds`, or `waitSeconds` when nobody has come
+    /// aboard since it landed), and whether anyone has.
+    double idle = 0;
+    bool boarded = false;
+    /// It is closing its ramp to leave (it opens again when someone comes).
+    bool leaving = false;
+
+    bool flying() const { return stage >= Stage::lift && stage <= Stage::approach; }
+    bool grounded() const { return stage == Stage::ground; }
+    bool rides(int64_t unit) const { return std::find(riders.begin(), riders.end(), unit) != riders.end(); }
+    bool operator==(const Shuttle&) const = default;
+};
+
 struct AUTOCRAFTCORE_API Structure {
     using Kind = StructureKind;
     int64_t id = 0;
@@ -1722,6 +1777,10 @@ struct AUTOCRAFTCORE_API GameState {
     /// firing never moves the units' and buildings' ids). Not saved.
     std::vector<Round> rounds;
     int64_t nextRound = 0;
+    /// The walk-in Dropships here (C4), and the next one's id (their own
+    /// count). Not saved: a saved region has none.
+    std::vector<Shuttle> shuttles;
+    int64_t nextShuttle = 1;
 
     /// Player `p`'s team: `Player.team`, else its own index (also for an
     /// index that is no player), so with no teams set `hostile(a, b)` is

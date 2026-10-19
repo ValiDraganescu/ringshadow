@@ -194,6 +194,7 @@ std::vector<GameEvent> Simulation::step(double dt) {
         }
     }
     stepCitadels(dt);
+    stepShuttles(dt);
     stepDummies();
     stepStructures(dt, events);
     // The rounds fly (those just fired from their moment in the step) and

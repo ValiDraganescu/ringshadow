@@ -407,6 +407,7 @@ std::optional<Vec2> Simulation::pilotContact(const Unit& u, Vec2 from, Vec2 to) 
     };
     const double r = Rules::radius(u.kind) * 0.8;
     if (!u.stats().air) {
+        if (const auto wall = shuttleContact(u, from, to, r)) return away(*wall);
         if (nav && !swallowedByCitadel(to)) {
             if (const auto rock = nav->rockAt(to, NavGrid::clearance)) return away(rock->first);
         }
@@ -451,6 +452,14 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
         const GroundRect b = map->bounds;
         return p.x > b.minX && p.x < b.maxX && p.y > b.minZ && p.y < b.maxZ;
     }
+    const double r = Rules::radius(u.kind) * 0.8;
+    // A Dropship's walls, its shut ramp and what stands in its bay (C4);
+    // on its deck or its ramp the ground under it does not matter.
+    if (!state.shuttles.empty()) {
+        const ShuttleWalk walk = shuttleWalk(u, p, r);
+        if (walk == ShuttleWalk::blocked) return false;
+        if (walk == ShuttleWalk::deck) return true;
+    }
     // Past a region's open edge (W4): it stands on the ground just inside.
     if (map && map->edges) {
         const std::optional<Vec2> in = map->edges->standIn(map->bounds, p);
@@ -468,7 +477,6 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
         if (!nav->standable(p) && !nav->rockyCell(p) && !(swallowed && swallowedDoodadCell(p))) return false;
         if (!swallowed && nav->rockAt(p, NavGrid::clearance)) return false;
     }
-    const double r = Rules::radius(u.kind) * 0.8;
     // A complete Citadel with the hall blocks by its walls and its shut door
     // (C1): the pilot walks in through the open door. Anything else, its
     // whole square.

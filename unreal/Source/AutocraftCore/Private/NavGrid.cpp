@@ -2,6 +2,7 @@
 #include "NavGrid.h"
 
 #include "Rules.h"
+#include "Shuttle.h"
 
 #include <algorithm>
 #include <cmath>
@@ -288,6 +289,10 @@ bool NavGrid::solid(Vec2 p, const GameState& s) {
     for (const Structure& st : s.structures) {
         if (!Rules::walkable(st.kind) && insideStructure(p, st, -0.05)) return true;
     }
+    // A Dropship on its pad (C4): its hull, ramp and bay, as a building's square.
+    for (const Shuttle& sh : s.shuttles) {
+        if (sh.grounded() && ShuttleBay::covers(ShuttleBay::local(sh, p), -0.05)) return true;
+    }
     for (const OreDeposit& m : s.patches) {
         if (m.remaining > 0 && insidePatch(p, m, -0.05)) return true;
     }
@@ -399,6 +404,9 @@ bool NavGrid::setDynamic(const GameState& s) {
         for (const Structure& st : s.structures)
             if (!put(st.id)) return false;
         if (!put(-1)) return false;
+        for (const Shuttle& sh : s.shuttles)
+            if (sh.grounded() && !put(sh.id)) return false;
+        if (!put(-3)) return false;
         for (size_t i = 0; i < s.patches.size(); i++)
             if (s.patches[i].remaining > 0 && !put(static_cast<int64_t>(i))) return false;
         return put(-2) && put(static_cast<int64_t>(placed.size())) && put(static_cast<int64_t>(extraWells));
@@ -435,6 +443,13 @@ bool NavGrid::setDynamic(const GameState& s) {
         if (Rules::walkable(st.kind)) continue;
         const double r = Rules::radius(st.kind) + c;
         mark(st.position - Vec2(r, r), st.position + Vec2(r, r), [&st, c](Vec2 q) { return insideStructure(q, st, c); });
+    }
+    // The grounded Dropships (C4): the AI, the mercenaries and the Brood
+    // never walk into a bay; the pilots walk in by its slabs.
+    for (const Shuttle& sh : s.shuttles) {
+        if (!sh.grounded()) continue;
+        const double r = ShuttleBay::footprint().radius + 2 + c;
+        mark(sh.position - Vec2(r, r), sh.position + Vec2(r, r), [&sh, c](Vec2 q) { return ShuttleBay::covers(ShuttleBay::local(sh, q), c); });
     }
     for (const OreDeposit& m : s.patches) {
         if (!(m.remaining > 0)) continue;

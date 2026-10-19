@@ -11,6 +11,9 @@ namespace ac {
 
 bool Simulation::sheltered(const Unit& u) const {
     if (u.task == Unit::Task::atGun) return true;
+    // Aboard a Dropship in flight (C4): untouchable.
+    if (!state.shuttles.empty())
+        if (const Shuttle* s = aboard(u); s && s->flying()) return true;
     // The strategy game's Citadel has no hall (and `target` asks this often).
     if (!Rules::citadelHall() || u.airborne()) return false;
     const double r = Rules::radius(StructureKind::citadel);
@@ -56,6 +59,8 @@ bool Simulation::swallowedDoodadCell(Vec2 p) const {
 
 bool Simulation::standsInHall(const Unit& u) const {
     if (u.task == Unit::Task::atGun) return true;
+    // In a Dropship's bay or on its ramp (C4), in flight too.
+    if (!state.shuttles.empty() && aboard(u)) return true;
     if (u.airborne()) return false;
     for (const Structure& s : state.structures) {
         if (s.kind != StructureKind::citadel || !s.complete()) continue;
