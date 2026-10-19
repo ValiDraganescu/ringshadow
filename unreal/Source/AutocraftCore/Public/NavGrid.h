@@ -169,6 +169,15 @@ struct AUTOCRAFTCORE_API NavGrid {
     /// Cliff faces a Comet can jump: too steep to walk, but clear of
     /// doodads and wells and in play.
     std::vector<uint8_t> cliffs;
+    /// C4: ground too steep for a vehicle to climb (`Rules::climb`), per
+    /// cell: `steepWheels` past the wheels' limit, `steepTracks` past the
+    /// tracks' too (the slope at the cell's centre, over 1.5 cells). Searches
+    /// for a vehicle leave it out (`steepFor`); `passable` carries the bits.
+    std::vector<uint8_t> steep;
+    static constexpr uint8_t steepWheels = 4, steepTracks = 8;
+    /// The `passable` bits a search for kind `k` leaves out: its gear's
+    /// steep ground (0 for legs and the air).
+    static uint8_t steepFor(UnitKind k);
     /// Cells `ground` leaves out only for the map's doodads (their circles
     /// grown by `clearance`, measured from the cell's centre): a driven unit
     /// tests the rocks' circles there instead (`Simulation::pilotCanStand`),
@@ -198,7 +207,8 @@ struct AUTOCRAFTCORE_API NavGrid {
     /// The largest region: the open map.
     int32_t mainRegion = -1;
     /// Per cell: 1 free (`free`), 2 a cliff face a Comet can jump (not
-    /// covered). Rebuilt with `dynamic`; what a search tests per step.
+    /// covered), and on a free cell the `steep` bits. Rebuilt with
+    /// `dynamic`; what a search tests per step.
     std::vector<uint8_t> passable;
     /// `rocks` by square buckets of `rockBucket` (from `origin`), for
     /// `inRock`: bucket `b` holds `rockList[rockStart[b] ..< rockStart[b + 1]]`,
@@ -299,7 +309,7 @@ struct AUTOCRAFTCORE_API NavGrid {
 
     /// `(ground: [Bool], cliffs: [Bool])`, and the cells left out only for
     /// doodads (`rocky`).
-    struct Layers { std::vector<uint8_t> ground, cliffs, rocky; };
+    struct Layers { std::vector<uint8_t> ground, cliffs, rocky, steep; };
     static Layers buildGround(const MapDefinition& map, const TerrainField& field, Vec2 origin_, int64_t width_,
                               int64_t height_);
 
@@ -362,8 +372,10 @@ struct AUTOCRAFTCORE_API NavGrid {
     /// around every obstacle, straightened; nil when there is no way. The
     /// last waypoint is where the unit stops short of the target.
     /// With `jumps` (a Comet) it may cross cliff faces, at a little extra
-    /// cost so it still takes the plain way when that is as short.
-    std::optional<std::vector<Vec2>> path(Vec2 from, Vec2 target, double stopAt, bool jumps = false) const;
+    /// cost so it still takes the plain way when that is as short. A
+    /// vehicle's `steep` (`steepFor`) leaves its too steep ground out (C4).
+    std::optional<std::vector<Vec2>> path(Vec2 from, Vec2 target, double stopAt, bool jumps = false,
+                                          uint8_t steep = 0) const;
 
     /// `path` in two halves (C++ only), so the search can run on another
     /// thread (`PathAhead`): `pathBegin` makes the cheap checks and either
@@ -378,7 +390,7 @@ struct AUTOCRAFTCORE_API NavGrid {
     };
     PathBegin pathBegin(Vec2 from, Vec2 target, double stopAt, bool jumps = false) const;
     std::optional<std::vector<Vec2>> pathSearch(const PathBegin& begin, Vec2 from, Vec2 target, double stopAt,
-                                                bool jumps = false) const;
+                                                bool jumps = false, uint8_t steep = 0) const;
 
     using Step = std::pair<int64_t, int64_t>;
     static constexpr std::array<Step, 8> steps{{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}};
@@ -394,7 +406,7 @@ struct AUTOCRAFTCORE_API NavGrid {
     /// or a unit walking it steps into that corner and is sent back, again
     /// and again. Where it crosses a cell corner exactly, both cells beside
     /// the corner must be open.
-    bool clear(Vec2 a, Vec2 b, bool jumps = false) const;
+    bool clear(Vec2 a, Vec2 b, bool jumps = false, uint8_t steep = 0) const;
 
     // MARK: - Cache
 

@@ -88,7 +88,8 @@ double oldHullAi(UK k) {
     return k == UK::longbow ? 5 : k == UK::hailstorm ? 6 : k == UK::firefly ? 9
         : k == UK::atlas ? Rules::atlasBodyRate : Rules::prospectorTurnRate;
 }
-double oldHullPilot(UK k) { return k == UK::firefly ? 3.0 : k == UK::atlas ? Rules::atlasBodyRate : k == UK::mule ? 1.6 : 2.0; }
+// C4: the Mule's 1.6 went with the drive: wheels turn by `turnRadius` as they roll.
+double oldHullPilot(UK k) { return k == UK::firefly ? 3.0 : k == UK::atlas ? Rules::atlasBodyRate : 2.0; }
 bool oldAnchors(UK k) { return k == UK::longbow || k == UK::scorpion; }
 bool oldBoards(UK k) { return Rules::stats(k).bio || k == UK::scorpion; }
 

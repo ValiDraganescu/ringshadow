@@ -91,6 +91,13 @@ struct Pilot {
     static bool steers(UnitKind k) { return Rules::stats(k).steers; }
     /// It can step sideways (wheels and treads cannot).
     static bool strafes(UnitKind k) { return !steers(k); }
+    /// C4: on wheels (`RunningGear::wheels`) A/D steer, and the hull turns
+    /// only while it rolls: by the distance rolled over `turnRadius` at full
+    /// lock (backing up, the other way, as a car). Tracks and the rest
+    /// turn on the spot at `hullTurnRate`.
+    static bool wheeled(UnitKind k) { return Rules::stats(k).gear == RunningGear::wheels; }
+    /// A wheeled kind's tightest arc, cells.
+    static double turnRadius(UnitKind k) { return Rules::stats(k).turnRadius; }
     /// How fast A/D turn a vehicle's hull, radians a second.
     static double hullTurnRate(UnitKind k) {
         const double rate = Rules::stats(k).hullTurnRatePilot;

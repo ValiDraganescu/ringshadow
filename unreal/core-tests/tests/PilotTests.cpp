@@ -963,10 +963,10 @@ TEST(PilotTests_fireflyFlameHitsTheLineOnly) {
     EXPECT_NEAR(unit(sim, 992).hp, Rules::hp(Unit::Kind::ranger), 1e-9);
 }
 
-/// Wheels do not sidestep: D alone turns a Firefly's hull right at
-/// 3 rad/s where it stands. The mouse aims its tail like a turret, at
-/// 3.5 rad/s, and the hull never follows it.
-TEST(PilotTests_fireflyTurnsOnADInPlace) {
+/// Wheels do not sidestep, and (C4) a Firefly on its wheels does not turn
+/// where it stands: D alone leaves its hull as it was. The mouse aims its
+/// tail like a turret, at 3.5 rad/s, and the hull never follows it.
+TEST(PilotTests_fireflySteersOnlyWhileRolling) {
     auto [sim, me, at, out] = drivenUnit(Unit::Kind::firefly);
     (void)out;
     const double h = unit(sim, me).heading;
@@ -976,7 +976,7 @@ TEST(PilotTests_fireflyTurnsOnADInPlace) {
     EXPECT_NEAR(std::remainder(unit(sim, me).look() - h, 2 * pi), -0.65, 0.06);  // the tail on its way
     run(sim, 0.3, Vec2(0, 1));
     EXPECT_NEAR(distance(unit(sim, me).position, at), 0, 1e-9);
-    EXPECT_NEAR(std::remainder(unit(sim, me).heading - h, 2 * pi), 1.5, 0.05);
+    EXPECT_NEAR(std::remainder(unit(sim, me).heading - h, 2 * pi), 0, 1e-12);
     EXPECT_NEAR(std::remainder(unit(sim, me).look() - h, 2 * pi), -1, 1e-9);  // the tail on the mouse
 }
 

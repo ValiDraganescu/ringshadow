@@ -334,7 +334,9 @@ void Simulation::pilotMiss(Unit& u, std::vector<GameEvent>& events) {
 
 /// Walk in the unit's own frame; blocked, it slides along what blocks it
 /// (`pilotSlide`; a jumper takes off at a cliff face instead). Wheels
-/// and treads do not sidestep; an anchored Longbow creeps (`Pilot.pace`).
+/// and treads do not sidestep; wheels steer on an arc (C4); an anchored
+/// Longbow creeps (`Pilot.pace`). A vehicle climbs no steeper than its
+/// gear lets it (`climbRefused`).
 void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
     const double pace = Pilot::pace(u);
     if (!(pace > 0)) return;
@@ -351,16 +353,42 @@ void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
     // C4: a hauler drives at its own pace, hero or not.
     const double boosted = u.stats().hauler ? 1.0 : rate(Stat::Speed{}, u);
     const double speed = Rules::speed(u.kind) * boosted * pace * (slowed ? u.slowedTo.value_or(0.5) : 1) * dt;
-    const Vec2 dir = forward * (w.x * ahead_) + right * (w.y * Pilot::sidePace);
+    Vec2 dir = forward * (w.x * ahead_) + right * (w.y * Pilot::sidePace);
+    // On wheels (C4): A/D steer, and the step goes along the arc they set,
+    // its chord turned by half the arc's turn (`turnRadius` at full lock).
+    const double curve = Pilot::wheeled(u.kind) ? max(-1.0, min(1.0, walk.y)) / Pilot::turnRadius(u.kind) : 0.0;
+    const double roll = w.x * ahead_ * speed, half = 0.5 * roll * curve;
+    const Vec2 chord(std::cos(h + half), std::sin(h + half));
+    if (curve != 0) dir = chord * (w.x * ahead_ * (std::abs(half) > 1e-9 ? std::sin(half) / half : 1.0));
     const Vec2 d = dir * speed;
     if (pilotJumps(u) && pilotJump(u, d)) return;
     const Vec2 from = u.position;
-    if (pilotCanStand(u, from + d)) u.position += d;
+    // Too steep a climb for its gear: refused, it stands (wheels and tracks
+    // do not crab sideways up a hill; turned across the slope, it goes).
+    if (climbRefused(u, from, from + d)) pilotSteep = state.time;
+    else if (pilotCanStand(u, from + d)) u.position += d;
     else if (const std::optional<Vec2> step = pilotSlide(u, d)) u.position += *step;
     u.stride += distance(from, u.position);
+    // The hull turns by how far it rolled along the arc: blocked, not at all.
+    if (curve != 0) u.heading = std::remainder(h + dot(u.position - from, chord) * curve, 2 * pi);
     // How fast it went, for its gun's cone.
     const double full = Rules::speed(u.kind) * dt;
     pilotPace = full > 0 ? distance(from, u.position) / full : 0;
+}
+
+bool Simulation::climbRefused(const Unit& u, Vec2 from, Vec2 to) const {
+    const std::optional<double> limit = Rules::climb(u.kind);
+    if (!limit || !field) return false;
+    const Vec2 d = to - from;
+    const double len = length(d);
+    if (!(len > 1e-9)) return false;
+    return groundPitch(u, to, d / len) > std::tan(*limit);
+}
+
+double Simulation::groundPitch(const Unit& u, Vec2 p, Vec2 dir) const {
+    if (!field) return 0;
+    const double half = 0.5 * max(u.stats().wheelbase, 2 * Rules::radius(u.kind));
+    return (field->height(p + dir * half) - field->height(p - dir * half)) / (2 * half);
 }
 
 /// The full step `d` is blocked: a step along what blocks it instead
@@ -372,7 +400,9 @@ void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
 /// on: in a concave corner it stands. Nil: no way.
 std::optional<Vec2> Simulation::pilotSlide(const Unit& u, Vec2 d) const {
     const Vec2 from = u.position;
-    auto open = [&](Vec2 s) { return length(s) > 1e-9 && dot(s, d) >= 0 && pilotCanStand(u, from + s); };
+    auto open = [&](Vec2 s) {
+        return length(s) > 1e-9 && dot(s, d) >= 0 && !climbRefused(u, from, from + s) && pilotCanStand(u, from + s);
+    };
     const std::optional<Vec2> n = pilotContact(u, from, from + d);
     if (n) {
         Vec2 t(-n->y, n->x);

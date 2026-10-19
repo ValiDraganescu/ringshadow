@@ -364,6 +364,9 @@ public:
     /// When the driven unit last walked into a cliff it could jump but not
     /// pay for (`pilotJump`), sim seconds: the HUD's refusal and dry click.
     std::optional<double> pilotJumpDry;
+    /// C4: when the driven vehicle last tried to climb ground too steep for
+    /// its gear (`climbRefused`), sim seconds: the HUD's refusal.
+    std::optional<double> pilotSteep;
     /// Set while `stepPiloted` walks the driven unit: a jump burns its MH
     /// then, not when the client's prediction walks a copy (`pilotWalk`).
     bool pilotPays = false;
@@ -527,7 +530,7 @@ public:
     /// arrival within `stopAt`.
     bool travel(Unit& u, Vec2 target, double stopAt, double dt);
     /// `nav->path`, or through `pathAhead` while it runs the step.
-    std::optional<std::vector<Vec2>> findPath(Vec2 from, Vec2 target, double stopAt, bool jumps = false);
+    std::optional<std::vector<Vec2>> findPath(Vec2 from, Vec2 target, double stopAt, bool jumps = false, uint8_t steep = 0);
     /// A ground step from open ground into a blocked cell or a rock.
     bool offCourse(const Unit& u, Vec2 from) const;
     /// A Comet stepping onto a cliff face jumps it.
@@ -540,6 +543,9 @@ public:
     bool turn(Unit& u, Vec2 target, double dt, double rate = Rules::prospectorTurnRate) const;
     /// Walk toward `target` until within `stopAt`; true on arrival.
     bool move(Unit& u, Vec2 target, double stopAt, double dt) const;
+    /// C4: `move` on wheels: arcs, and a three-point turn for a target
+    /// inside its tightest circle.
+    bool roll(Unit& u, Vec2 target, double stopAt, double dt) const;
 
     // The extensions' members.
 #include "Simulation+Leveling.members.h"

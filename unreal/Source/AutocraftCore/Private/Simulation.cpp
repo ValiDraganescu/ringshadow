@@ -3392,9 +3392,10 @@ void Simulation::arrive(Unit& u, int64_t pi_) {
     }
 }
 
-std::optional<std::vector<Vec2>> Simulation::findPath(Vec2 from, Vec2 target, double stopAt, bool jumps) {
-    if (!pathAhead) return nav->path(from, target, stopAt, jumps);
-    return probing ? pathAhead->guess(*nav, from, target, stopAt, jumps) : pathAhead->find(*nav, from, target, stopAt, jumps);
+std::optional<std::vector<Vec2>> Simulation::findPath(Vec2 from, Vec2 target, double stopAt, bool jumps, uint8_t steep) {
+    if (!pathAhead) return nav->path(from, target, stopAt, jumps, steep);
+    return probing ? pathAhead->guess(*nav, from, target, stopAt, jumps, steep)
+                   : pathAhead->find(*nav, from, target, stopAt, jumps, steep);
 }
 
 /// Walk toward `target` along ramps when it is on another level; true on
@@ -3427,10 +3428,11 @@ bool Simulation::travel(Unit& u, Vec2 target_, double stopAt, double dt) {
         // by buildings), to the nearest spot it can reach; never through
         // anything. Straight between ramps only without a nav grid.
         if (nav) {
-            if (auto path = findPath(u.position, target_, stopAt, u.kind == Unit::Kind::comet)) {
+            const uint8_t steep = NavGrid::steepFor(u.kind);
+            if (auto path = findPath(u.position, target_, stopAt, u.kind == Unit::Kind::comet, steep)) {
                 u.waypoints = *path;
             } else if (auto near = nav->closestReachable(target_, u.position)) {
-                if (auto path2 = findPath(u.position, *near, 0.1)) {
+                if (auto path2 = findPath(u.position, *near, 0.1, false, steep)) {
                     auto way = *path2;
                     way.push_back(*near);
                     u.waypoints = way;
@@ -3451,7 +3453,10 @@ bool Simulation::travel(Unit& u, Vec2 target_, double stopAt, double dt) {
         std::vector<Vec2> ahead = *u.waypoints;
         const Vec2 next = ahead.front();
         const Vec2 from = u.position;
-        if (move(u, next, 0.15, dt)) {
+        // Wheels (C4) cut a corner by a share of their turning circle rather
+        // than back and fill to touch it.
+        const double pass = Pilot::wheeled(u.kind) ? min(0.4 * Pilot::turnRadius(u.kind), 1.2) : 0.15;
+        if (move(u, next, pass, dt)) {
             ahead.erase(ahead.begin());
             u.waypoints = ahead;
         }
@@ -3523,11 +3528,13 @@ std::optional<Vec2> Simulation::landing(Vec2 p, Vec2 next, const Unit* driven) c
     return std::nullopt;
 }
 
-/// Turn toward `target`; true when facing it within a small angle.
+/// Turn toward `target`; true when facing it within a small angle. Wheels
+/// do not turn on the spot (C4): they turn only as they roll (`roll`).
 bool Simulation::turn(Unit& u, Vec2 target_, double dt, double turnRate) const {
     const Vec2 d = target_ - u.position;
     if (!(length(d) > 1e-6)) return true;
     const double want = std::atan2(d.y, d.x);
+    if (Pilot::wheeled(u.kind)) return std::abs(std::remainder(want - u.heading, 2 * pi)) < 0.6;
     double diff = std::remainder(want - u.heading, 2 * pi);
     const double maxTurn = turnRate * dt;
     diff = ac::max(-maxTurn, ac::min(maxTurn, diff));
@@ -3541,6 +3548,7 @@ bool Simulation::move(Unit& u, Vec2 target_, double stopAt, double dt) const {
     const double dist = length(d);
     if (dist <= stopAt + 1e-6) return true;
     if (u.planted()) return false;
+    if (Pilot::wheeled(u.kind)) return roll(u, target_, stopAt, dt);
     const double hull = u.stats().hullTurnRateAi;
     const bool facing = turn(u, target_, dt, hull > 0 ? hull : Rules::prospectorTurnRate);
     const bool slowed = u.slowUntil.value_or(-1) > state.time;
@@ -3559,6 +3567,55 @@ bool Simulation::move(Unit& u, Vec2 target_, double stopAt, double dt) const {
         if (u.stats().air || (nav ? nav->walkable(q) && !nav->inRock(q) : true)) dir = ahead;
     }
     u.position += dir * stepLen;
+    u.stride += stepLen;
+    return distance(u.position, target_) <= stopAt + 1e-3;
+}
+
+/// C4: a wheeled kind's way to `target`, as a car drives it (docs/haul-and-
+/// ferry.md "The drive"): it turns only as it rolls, on arcs no tighter than
+/// its `turnRadius`. Ahead, it steers onto the arc through the target (full
+/// lock when that is tighter, or the target is behind); a target inside its
+/// tightest circle on that side, which no forward arc reaches, it backs
+/// away from on the other lock, the nose swinging toward it (a three-point
+/// turn), until the target is outside. A step into something solid goes
+/// straight at the target instead, as `move`'s does. True on arrival.
+bool Simulation::roll(Unit& u, Vec2 target_, double stopAt, double dt) const {
+    const Vec2 d = target_ - u.position;
+    const double dist = length(d);
+    if (dist <= stopAt + 1e-6) return true;
+    const double radius = Pilot::turnRadius(u.kind);
+    const double h = u.heading;
+    const Vec2 ahead(std::cos(h), std::sin(h)), right(-std::sin(h), std::cos(h));
+    const double along = dot(d, ahead), side = dot(d, right);
+    // The side it turns to: the target's (dead behind: the right).
+    const double toward = side < 0 ? -1.0 : 1.0;
+    const Vec2 centre = u.position + right * (toward * radius);
+    const bool inside = distance(target_, centre) < radius;
+    double curve;
+    double way = 1;
+    if (inside) {
+        way = -1;
+        curve = -toward / radius;
+    } else if (along <= 0) {
+        curve = toward / radius;
+    } else {
+        // The arc tangent to its heading through the target.
+        curve = max(-1.0 / radius, min(1.0 / radius, 2 * side / (dist * dist)));
+    }
+    const bool slowed = u.slowUntil.value_or(-1) > state.time;
+    const double speed = Rules::speed(u.kind) * rate(Stat::Speed{}, u) * (way < 0 ? Pilot::backPace : 1.0)
+                         * (slowed ? u.slowedTo.value_or(0.5) : 1);
+    const double stepLen = ac::min(speed * dt, max(dist - stopAt, 0.0) + (way < 0 ? speed * dt : 0.0));
+    const double rolled = way * stepLen, half = 0.5 * rolled * curve;
+    const Vec2 chord(std::cos(h + half), std::sin(h + half));
+    const Vec2 step = chord * (rolled * (std::abs(half) > 1e-9 ? std::sin(half) / half : 1.0));
+    const Vec2 q = u.position + step;
+    if (u.stats().air || (nav ? nav->walkable(q) && !nav->inRock(q) && !climbRefused(u, u.position, q) : true)) {
+        u.position = q;
+        u.heading = std::remainder(h + rolled * curve, 2 * pi);
+    } else {
+        u.position += d / dist * ac::min(stepLen, dist - stopAt);
+    }
     u.stride += stepLen;
     return distance(u.position, target_) <= stopAt + 1e-3;
 }

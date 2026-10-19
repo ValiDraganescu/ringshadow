@@ -57,6 +57,12 @@ enum class StructureKind : uint8_t {
     dummy
 };
 
+/// C4 (docs/haul-and-ferry.md "The drive"): what a kind runs on, which
+/// says how it turns and how steep it climbs. Wheels turn only while they
+/// roll, on an arc no tighter than the kind's `turnRadius` (a car); tracks
+/// turn on the spot (a tank); legs and the air keep their own handling.
+enum class RunningGear : uint8_t { legs, wheels, tracks, air };
+
 /// One unit type's numbers (in real seconds; ranges edge to edge).
 struct UnitStats {
     double hp = 0;
@@ -160,6 +166,14 @@ struct UnitStats {
     /// player turns it (`Pilot::hullTurnRate`; 0: 2).
     double hullTurnRateAi = 0;
     double hullTurnRatePilot = 0;
+    /// What it runs on (`RunningGear`).
+    RunningGear gear = RunningGear::legs;
+    /// Wheels: the tightest arc its middle drives, cells (`Pilot::turnRadius`).
+    double turnRadius = 0;
+    /// A vehicle: from its front contact with the ground (its front wheels,
+    /// the front of its tracks) to its back one, cells: the span over which
+    /// it pitches on a slope (`Simulation::climbRefused`).
+    double wheelbase = 0;
     /// It anchors (a Longbow) or buries (a Scorpion, which `burrows` too)
     /// in place (`Unit::planted`); a Comet `jumps` cliffs; a Prospector
     /// `builds`.
@@ -298,6 +312,16 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr double prospectorSpeed = 3.94;
     /// Prospector turn rate, radians per second.
     static constexpr double prospectorTurnRate = 14.0;
+    /// C4, the drive (docs/haul-and-ferry.md "The drive"): the wheeled
+    /// kinds' tightest arcs, about 1.5 times their length (the Mule 3.0
+    /// long, the Firefly 1.8, the Hailstorm 2.1), the user's to tune by feel.
+    static constexpr double muleTurnRadius = 4.5;
+    static constexpr double fireflyTurnRadius = 2.7;
+    static constexpr double hailstormTurnRadius = 3.2;
+    /// The steepest ground a vehicle climbs, radians: its pitch along the
+    /// way it goes (`Simulation::climbRefused`). Down or across it always goes.
+    static constexpr double wheelsClimb = 25.0 * 3.14159265358979323846 / 180.0;
+    static constexpr double tracksClimb = 35.0 * 3.14159265358979323846 / 180.0;
     /// Time a Prospector drills a patch before it carries a load away, three
     /// times a brisk 2 s: the wallpaper lingers on the drilling, so trips take
     /// longer and the stockpile grows about half as fast.
@@ -508,6 +532,15 @@ struct AUTOCRAFTCORE_API Rules {
     static double hp(UnitKind k) { return stats(k).hp; }
     static int64_t supply(UnitKind k) { return stats(k).supply; }
     static double radius(UnitKind k) { return stats(k).radius; }
+    /// The steepest pitch `k` climbs (`wheelsClimb`, `tracksClimb`); nil for
+    /// legs and the air, which climb whatever they can stand on.
+    static std::optional<double> climb(UnitKind k) {
+        switch (stats(k).gear) {
+        case RunningGear::wheels: return wheelsClimb;
+        case RunningGear::tracks: return tracksClimb;
+        default: return std::nullopt;
+        }
+    }
     static double hp(StructureKind k);
     /// Hp as a card or a bar's label writes it: whole, never past `max`
     /// (the snapshot's quantised hp can come a hair over), and never 0 while
@@ -650,7 +683,8 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
     // Flamethrower, 8 (+6 light) to everything in a line.
     /* firefly */ {.hp = 90, .speed = 5.95, .radius = 0.625, .supply = 2, .ore = 100, .trainTime = 21,
                    .damage = 8, .bonusVsLight = 6, .cooldown = 1.79, .range = 5, .light = true, .hitsGround = true, .falloff = 0,
-                   .title = "Firefly", .machine = true, .drivable = true, .trainedBy = StructureKind::foundry, .vision = 14, .shotFlightBase = 0.09, .turret = true, .turretRateAi = 6, .turretRatePilot = 3.5, .steers = true, .hullTurnRateAi = 9, .hullTurnRatePilot = 3},
+                   .title = "Firefly", .machine = true, .drivable = true, .trainedBy = StructureKind::foundry, .vision = 14, .shotFlightBase = 0.09, .turret = true, .turretRateAi = 6, .turretRatePilot = 3.5, .steers = true, .hullTurnRateAi = 9, .hullTurnRatePilot = 3,
+                   .gear = RunningGear::wheels, .turnRadius = Rules::fireflyTurnRadius, .wheelbase = 1.04},
     // Breacher grenades, 10 (+10 armoured); each hit slows.
     /* juggernaut */ {.hp = 125, .armor = 1, .speed = 3.15, .radius = 0.5625, .supply = 2, .ore = 100, .hydrogen = 25,
                       .trainTime = 21, .damage = 10, .bonusVsArmored = 10, .cooldown = 1.07, .range = 6, .armored = true,
@@ -658,30 +692,31 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
                       .title = "Juggernaut", .boards = true, .drivable = true, .cargoSlots = 2, .needsLab = true, .trainedBy = StructureKind::garrison, .vision = 14, .shotFlightBase = 0.15, .shotSpeed = 14},
     /* dropship */ {.hp = 150, .armor = 1, .speed = 3.5, .radius = 0.75, .supply = 2, .ore = 100, .hydrogen = 100,
                     .trainTime = 30, .armored = true, .air = true,
-                    .title = "Dropship", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15, .hover = 2.4},
+                    .title = "Dropship", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15, .gear = RunningGear::air, .hover = 2.4},
     // Tank mode; `anchor` holds the anchored numbers.
     /* longbow */ {.hp = 175, .armor = 1, .speed = 3.15, .radius = 0.875, .supply = 3, .ore = 150, .hydrogen = 125,
                    .trainTime = 32, .damage = 15, .bonusVsArmored = 10, .cooldown = 1.04, .range = 7, .armored = true,
                    .hitsGround = true,
-                   .title = "Longbow", .machine = true, .drivable = true, .cargoSlots = 4, .needsLab = true, .trainedBy = StructureKind::foundry, .vision = 15, .turret = true, .turretRateAi = 4, .turretRatePilot = 2.4, .steers = true, .hullTurnRateAi = 5, .anchors = true},
+                   .title = "Longbow", .machine = true, .drivable = true, .cargoSlots = 4, .needsLab = true, .trainedBy = StructureKind::foundry, .vision = 15, .turret = true, .turretRateAi = 4, .turretRatePilot = 2.4, .steers = true, .hullTurnRateAi = 5, .gear = RunningGear::tracks, .wheelbase = 1.6, .anchors = true},
     // Twin rockets, 12 ×2, at the ground (`hitsGround`), and a rail gun at
     // the air (`UnitStats::railgun`, picked by `Simulation::weapon(u, air)`);
     // it flies over cliffs like the Dropship.
     /* kestrel */ {.hp = 140, .speed = 3.85, .radius = 0.625, .supply = 3, .ore = 150, .hydrogen = 100, .trainTime = 43,
                    .damage = 12, .hits = 2, .cooldown = 1.25, .range = 6, .armored = true, .air = true, .hitsGround = true,
                    .hitsAir = true,
-                   .title = "Kestrel", .machine = true, .drivable = true, .needsLab = true, .trainedBy = StructureKind::spacedock, .vision = 14, .shotFlightBase = 0.12, .shotSpeed = 22, .hover = 2.1},
+                   .title = "Kestrel", .machine = true, .drivable = true, .needsLab = true, .trainedBy = StructureKind::spacedock, .vision = 14, .shotFlightBase = 0.12, .shotSpeed = 22, .gear = RunningGear::air, .hover = 2.1},
     // Flak, 12 (+8 armoured), at the air only, splashing enemy flyers
     // round its target (`Rules.flakSplash`).
     /* hailstorm */ {.hp = 135, .armor = 1, .speed = 3.15, .radius = 0.75, .supply = 2, .ore = 125, .hydrogen = 50,
                      .trainTime = 30, .damage = 12, .bonusVsArmored = 8, .cooldown = 1.0, .range = 7, .armored = true,
                      .hitsAir = true,
-                     .title = "Hailstorm", .machine = true, .drivable = true, .trainedBy = StructureKind::foundry, .vision = 15, .shotFlightBase = 0.1, .shotSpeed = 28, .turret = true, .turretRateAi = 5, .turretRatePilot = 3.2, .steers = true, .hullTurnRateAi = 6},
+                     .title = "Hailstorm", .machine = true, .drivable = true, .trainedBy = StructureKind::foundry, .vision = 15, .shotFlightBase = 0.1, .shotSpeed = 28, .turret = true, .turretRateAi = 5, .turretRatePilot = 3.2, .steers = true, .hullTurnRateAi = 6,
+                     .gear = RunningGear::wheels, .turnRadius = Rules::hailstormTurnRadius, .wheelbase = 1.3},
     // Seeker missiles, 10 ×2 (+6 armoured), at the air only; a light flyer.
     /* peregrine */ {.hp = 80, .speed = 5.6, .radius = 0.5, .supply = 2, .ore = 100, .hydrogen = 75, .trainTime = 28,
                      .damage = 10, .hits = 2, .bonusVsArmored = 6, .cooldown = 1.25, .range = 7, .light = true, .air = true,
                      .hitsAir = true,
-                     .title = "Peregrine", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15, .shotFlightBase = 0.1, .shotSpeed = 30, .hover = 1.9},
+                     .title = "Peregrine", .machine = true, .drivable = true, .trainedBy = StructureKind::spacedock, .vision = 15, .shotFlightBase = 0.1, .shotSpeed = 30, .gear = RunningGear::air, .hover = 1.9},
     // Twin siege cannons, 25 ×2 (+15 armoured), at the ground only, with
     // splash (`Rules::atlasSplash`); the Quake stomp is `Rules::stomp*`.
     /* atlas */ {.hp = 500, .armor = 2, .speed = 2.2, .radius = 1.25, .supply = 6, .ore = 300, .hydrogen = 200,
@@ -705,7 +740,7 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
     // air but for its dive (`Unit::airborne`).
     /* gloamwing */ {.hp = 30, .speed = 5.0, .radius = 0.5, .damage = 3, .cooldown = 1.6, .range = 4, .light = true,
                      .bio = true, .air = true, .hitsGround = true, .falloff = 0,
-                     .title = "Gloamwing", .brood = true, .boards = true, .vision = 8},
+                     .title = "Gloamwing", .brood = true, .boards = true, .vision = 8, .gear = RunningGear::air},
     // A Lodeback's bite, only when cornered: 8 every 2 s.
     /* lodeback */ {.hp = 120, .armor = 1, .speed = 3.0, .radius = 1.0, .damage = 8, .cooldown = 2.0, .range = 0.4,
                     .bio = true, .hitsGround = true, .falloff = 0,
@@ -723,7 +758,7 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
     /* mule */ {.hp = 300, .armor = 1, .speed = 0.3 * Rules::prospectorSpeed, .radius = 0.8, .ore = 600, .hydrogen = 150,
                 .trainTime = 20, .armored = true,
                 .title = "Mule", .hauler = true, .machine = true, .drivable = true, .vision = 12, .steers = true,
-                .hullTurnRatePilot = 1.6, .height = 1.4},
+                .gear = RunningGear::wheels, .turnRadius = Rules::muleTurnRadius, .wheelbase = 2.0, .height = 1.4},
 }};
 
 inline constexpr UnitStats UnitStats::minigun{.hp = 45, .speed = 3.15, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 18,

@@ -73,9 +73,9 @@ public:
 
     // Called from `Simulation` (travel, step) during `step`.
     /// The real step's search.
-    std::optional<std::vector<Vec2>> find(const NavGrid& nav, Vec2 from, Vec2 target, double stopAt, bool jumps);
+    std::optional<std::vector<Vec2>> find(const NavGrid& nav, Vec2 from, Vec2 target, double stopAt, bool jumps, uint8_t steep = 0);
     /// The probe's: queue the search, answer with a straight walk.
-    std::optional<std::vector<Vec2>> guess(const NavGrid& nav, Vec2 from, Vec2 target, double stopAt, bool jumps);
+    std::optional<std::vector<Vec2>> guess(const NavGrid& nav, Vec2 from, Vec2 target, double stopAt, bool jumps, uint8_t steep = 0);
     /// The probe reached its units: its grid is final for the step.
     void probeAtUnits();
     /// The real step is over: the probe stops (between units).
@@ -85,6 +85,7 @@ private:
     struct Key {
         uint64_t fx, fy, tx, ty, stop;
         bool jumps;
+        uint8_t steep;
         bool operator==(const Key&) const = default;
     };
     struct KeyHash {
@@ -99,7 +100,7 @@ private:
         State state = State::queued;
         std::optional<std::vector<Vec2>> result;
     };
-    static Key keyOf(Vec2 from, Vec2 target, double stopAt, bool jumps);
+    static Key keyOf(Vec2 from, Vec2 target, double stopAt, bool jumps, uint8_t steep);
     /// One step's probe and searches. Kept alive by the workers still on
     /// one of its searches when the next step begins (no step waits for
     /// searches it no longer needs).

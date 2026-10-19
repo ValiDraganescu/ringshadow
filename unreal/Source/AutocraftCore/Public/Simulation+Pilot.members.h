@@ -50,8 +50,19 @@ public:
 
     /// Walk in the unit's own frame; blocked, it slides along what blocks it
     /// (`pilotSlide`; a jumper takes off at a cliff face instead). Wheels
-    /// and treads do not sidestep; an anchored Longbow creeps (`Pilot.pace`).
+    /// and treads do not sidestep; wheels steer on an arc (C4); an anchored
+    /// Longbow creeps (`Pilot.pace`).
     void pilotWalk(Unit& u, Vec2 walk, double dt);
+
+    /// C4: a step from `from` to `to` climbs steeper than `u`'s gear lets it
+    /// (`Rules::climb`): at `to`, the ground under its front contact rises
+    /// over its back one (`UnitStats::wheelbase` apart, along the step) by
+    /// more than the limit's pitch. Down or across is never refused, nor
+    /// legs and the air, nor anything without a terrain.
+    bool climbRefused(const Unit& u, Vec2 from, Vec2 to) const;
+    /// The ground's pitch under `u` standing at `p` along `dir` (a unit
+    /// vector): rise over its contacts' span, as a slope (tan of the angle).
+    double groundPitch(const Unit& u, Vec2 p, Vec2 dir) const;
 
     /// The full step `d` is blocked: a step along what blocks it instead
     /// (the step on the blocker's tangent, then the world axes, then the

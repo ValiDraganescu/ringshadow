@@ -61,18 +61,22 @@ NavGrid::NavGrid(const MapDefinition& map, const TerrainField& field) {
     auto cached = cache().get(key);
     auto c = cache().get(key + "|cliffs");
     auto r = cache().get(key + "|rocky");
-    if (cached && c && r) {
+    auto st = cache().get(key + "|steep");
+    if (cached && c && r && st) {
         ground = std::move(*cached);
         cliffs = std::move(*c);
         rocky = std::move(*r);
+        steep = std::move(*st);
     } else {
         Layers built = buildGround(map, field, origin, width, height);
         ground = std::move(built.ground);
         cliffs = std::move(built.cliffs);
         rocky = std::move(built.rocky);
+        steep = std::move(built.steep);
         cache().set(key, ground);
         cache().set(key + "|cliffs", cliffs);
         cache().set(key + "|rocky", rocky);
+        cache().set(key + "|steep", steep);
     }
     for (const Doodad& d : map.doodads) {
         for (const Circle& k : circles(d)) rocks.push_back(k);
@@ -178,13 +182,13 @@ struct NavGrid::SearchMemo {
     struct Key {
         int64_t start;
         uint64_t tx, tz, stopAt;
-        uint8_t jumps, eastward, fast;
+        uint8_t jumps, eastward, fast, steep;
         bool operator==(const Key&) const = default;
     };
     struct KeyHash {
         size_t operator()(const Key& k) const {
             uint64_t h = 1469598103934665603ull;
-            for (const uint64_t v : {uint64_t(k.start), k.tx, k.tz, k.stopAt, uint64_t(k.jumps) | uint64_t(k.eastward) << 1 | uint64_t(k.fast) << 2})
+            for (const uint64_t v : {uint64_t(k.start), k.tx, k.tz, k.stopAt, uint64_t(k.jumps) | uint64_t(k.eastward) << 1 | uint64_t(k.fast) << 2 | uint64_t(k.steep) << 3})
                 h = (h ^ v) * 1099511628211ull;
             return size_t(h ^ (h >> 29));
         }
@@ -203,15 +207,23 @@ std::pair<size_t, size_t> NavGrid::memoHeld() const {
     return {searchMemo->searches.size(), searchMemo->cellsKept};
 }
 
-/// Rebuild `passable` from `ground`, `cliffs` and `dynamic`.
+/// Rebuild `passable` from `ground`, `cliffs`, `steep` and `dynamic`.
 void NavGrid::indexPassable() {
     const size_t n = static_cast<size_t>(width * height);
     passable.assign(n, 0);
     for (size_t i = 0; i < n; i++) {
         if (dynamic[i]) continue;
-        passable[i] = ground[i] ? 1 : (cliffs[i] ? 2 : 0);
+        passable[i] = ground[i] ? uint8_t(1 | steep[i]) : (cliffs[i] ? 2 : 0);
     }
     searchMemo = std::make_shared<SearchMemo>();
+}
+
+uint8_t NavGrid::steepFor(UnitKind k) {
+    switch (Rules::stats(k).gear) {
+    case RunningGear::wheels: return steepWheels;
+    case RunningGear::tracks: return steepTracks;
+    default: return 0;
+    }
 }
 
 /// `p` is on a cliff face a Comet can jump (and no building covers it).
@@ -311,7 +323,10 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
     std::vector<uint8_t> out(static_cast<size_t>(width_ * height_), 0);
     std::vector<uint8_t> cliff(static_cast<size_t>(width_ * height_), 0);
     std::vector<uint8_t> rocky(static_cast<size_t>(width_ * height_), 0);
+    std::vector<uint8_t> steepness(static_cast<size_t>(width_ * height_), 0);
     const double c = clearance, e = cell / 2;
+    // C4: a vehicle's climb, as tangents (`Rules::climb`).
+    const double wheels = std::tan(Rules::wheelsClimb), tracks = std::tan(Rules::tracksClimb);
     std::vector<Circle> doodads;
     for (const Doodad& d : map.doodads) {
         for (const Circle& k : circles(d)) doodads.push_back(k);
@@ -322,6 +337,7 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
     uint8_t* ptr = out.data();
     uint8_t* cptr = cliff.data();
     uint8_t* rptr = rocky.data();
+    uint8_t* sptr = steepness.data();
     const std::function<double(Vec2)> heightAt = [&field](Vec2 q) { return field.height(q); };
     const bool walls = map.edges && !map.edges->outline.empty();
     auto row = [&](int64_t z) {
@@ -372,6 +388,11 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
                 cptr[z * width_ + x] = 1;
             } else {
                 ptr[z * width_ + x] = 1;
+                // Over 1.5 cells, about a vehicle's span (`UnitStats::wheelbase`).
+                const double sx = (field.height(p + Vec2(0.75, 0)) - field.height(p - Vec2(0.75, 0))) / 1.5;
+                const double sz = (field.height(p + Vec2(0, 0.75)) - field.height(p - Vec2(0, 0.75))) / 1.5;
+                const double slope = std::sqrt(sx * sx + sz * sz);
+                sptr[z * width_ + x] = uint8_t((slope > wheels ? steepWheels : 0) | (slope > tracks ? steepTracks : 0));
             }
         }
     };
@@ -386,7 +407,7 @@ NavGrid::Layers NavGrid::buildGround(const MapDefinition& map, const TerrainFiel
     }
     for (int64_t z = 0; z < height_; z += threads) row(z);
     for (std::thread& th : pool) th.join();
-    return Layers{std::move(out), std::move(cliff), std::move(rocky)};
+    return Layers{std::move(out), std::move(cliff), std::move(rocky), std::move(steepness)};
 }
 
 /// Rebuild the building and ore layer when either changed (or a
@@ -763,10 +784,10 @@ NavGrid::Neighbours NavGrid::neighbours(int64_t i, bool flip) const {
 /// last waypoint is where the unit stops short of the target.
 /// With `jumps` (a Comet) it may cross cliff faces, at a little extra
 /// cost so it still takes the plain way when that is as short.
-std::optional<std::vector<Vec2>> NavGrid::path(Vec2 from, Vec2 target, double stopAt, bool jumps) const {
+std::optional<std::vector<Vec2>> NavGrid::path(Vec2 from, Vec2 target, double stopAt, bool jumps, uint8_t steep_) const {
     PathBegin b = pathBegin(from, target, stopAt, jumps);
     if (b.done) return std::move(b.result);
-    return pathSearch(b, from, target, stopAt, jumps);
+    return pathSearch(b, from, target, stopAt, jumps, steep_);
 }
 
 NavGrid::PathBegin NavGrid::pathBegin(Vec2 from, Vec2 target, double stopAt, bool jumps) const {
@@ -799,7 +820,8 @@ NavGrid::PathBegin NavGrid::pathBegin(Vec2 from, Vec2 target, double stopAt, boo
     return b;
 }
 
-std::optional<std::vector<Vec2>> NavGrid::pathSearch(const PathBegin& b, Vec2 from, Vec2 target, double stopAt, bool jumps) const {
+std::optional<std::vector<Vec2>> NavGrid::pathSearch(const PathBegin& b, Vec2 from, Vec2 target, double stopAt, bool jumps,
+                                                     uint8_t steep_) const {
     const int64_t start = b.start;
     const std::vector<Vec2>& prefix = b.prefix;
     const double reach = stopAt + cell * 0.75;
@@ -807,7 +829,7 @@ std::optional<std::vector<Vec2>> NavGrid::pathSearch(const PathBegin& b, Vec2 fr
     std::vector<int64_t> cells;
     // The same question over the same `passable`: the same cells.
     auto bitsOf = [](double v) { uint64_t out; std::memcpy(&out, &v, sizeof out); return out; };
-    const SearchMemo::Key key{start, bitsOf(target.x), bitsOf(target.y), bitsOf(stopAt), uint8_t(jumps), uint8_t(east(from)), uint8_t(fastSearch)};
+    const SearchMemo::Key key{start, bitsOf(target.x), bitsOf(target.y), bitsOf(stopAt), uint8_t(jumps), uint8_t(east(from)), uint8_t(fastSearch), steep_};
     const std::shared_ptr<SearchMemo> memo = searchMemo;
     bool remembered = false;
     if (memo) {
@@ -834,9 +856,11 @@ std::optional<std::vector<Vec2>> NavGrid::pathSearch(const PathBegin& b, Vec2 fr
         auto distanceAt = [ox, oz, target](int64_t x, int64_t z) {
             return distance(Vec2(ox, oz) + Vec2(static_cast<double>(x) + 0.5, static_cast<double>(z) + 0.5) * cell, target);
         };
-        // `passable`: 1 free, 2 a cliff face a Comet may cross.
+        // `passable`: 1 free, 2 a cliff face a Comet may cross; a vehicle's
+        // `steep_` bits leave its too steep ground out.
         const uint8_t* pass = passable.data();
         const uint8_t openMask = jumps ? 3 : 1;
+        auto open = [openMask, steep_](uint8_t p) { return (p & openMask) && !(p & steep_); };
         Scratch::Cell* cs = sc.cells.data();
         // `mark`: this search's stamp once a cell has a cost, one more once closed.
         const uint32_t closedMark = stamp + 1;
@@ -886,15 +910,15 @@ std::optional<std::vector<Vec2>> NavGrid::pathSearch(const PathBegin& b, Vec2 fr
                     if (!inner && !(nx >= 0 && nz >= 0 && nx < w && nz < hgt)) return;
                     const int64_t j = i + dz * w + dx;
                     const uint8_t pj = pass[j];
-                    if (!(pj & openMask)) return;
+                    if (!open(pj)) return;
                     Scratch::Cell& cj = cs[j];
                     if (cj.mark == closedMark) return;
                     float stepCost;
                     if constexpr (dx != 0 && dz != 0) {
-                        if (!(pass[i + dx] & openMask) || !(pass[i + dz * w] & openMask)) return;
-                        stepCost = pj == 1 ? diagonal : diagonalCliff;
+                        if (!open(pass[i + dx]) || !open(pass[i + dz * w])) return;
+                        stepCost = pj & 1 ? diagonal : diagonalCliff;
                     } else {
-                        stepCost = pj == 1 ? 1.0f : 1.3f;
+                        stepCost = pj & 1 ? 1.0f : 1.3f;
                     }
                     const float t = gi + stepCost;
                     if (cj.mark < stamp || t < cj.g) {
@@ -933,7 +957,7 @@ std::optional<std::vector<Vec2>> NavGrid::pathSearch(const PathBegin& b, Vec2 fr
     while (k < cells.size()) {
         size_t far = k;
         for (size_t m = cells.size() - 1; m > k; m--) {
-            if (clear(at, centre(cells[m]), jumps)) { far = m; break; }
+            if (clear(at, centre(cells[m]), jumps, steep_)) { far = m; break; }
         }
         at = centre(cells[far]);
         points.push_back(at);
@@ -951,14 +975,15 @@ std::optional<std::vector<Vec2>> NavGrid::pathSearch(const PathBegin& b, Vec2 fr
 /// or a unit walking it steps into that corner and is sent back, again
 /// and again. Where it crosses a cell corner exactly, both cells beside
 /// the corner must be open.
-bool NavGrid::clear(Vec2 a, Vec2 b, bool jumps) const {
+bool NavGrid::clear(Vec2 a, Vec2 b, bool jumps, uint8_t steep_) const {
     const auto firstIndex = index(a);
     if (!firstIndex || !index(b)) return false;
     const int64_t first = *firstIndex;
-    auto open = [this, first, jumps](int64_t x, int64_t z) {
+    auto open = [this, first, jumps, steep_](int64_t x, int64_t z) {
         if (!(x >= 0 && z >= 0 && x < width && z < height)) return false;
         const int64_t i = z * width + x;
-        return i == first || free(i) || (jumps && cliffs[static_cast<size_t>(i)] && !dynamic[static_cast<size_t>(i)]);
+        return i == first || (free(i) && !(steep[static_cast<size_t>(i)] & steep_))
+               || (jumps && cliffs[static_cast<size_t>(i)] && !dynamic[static_cast<size_t>(i)]);
     };
     const Vec2 pa = (a - origin) / cell, d = (b - a) / cell;
     int64_t x = static_cast<int64_t>(std::floor(pa.x)), z = static_cast<int64_t>(std::floor(pa.y));

@@ -21,16 +21,20 @@ namespace ac {
 // MARK: - Facing
 
 /// Face where the mouse says. A vehicle's hull turns on A/D instead
-/// (slowly anchored, not while changing mode), and its turret, if it has
-/// one, traverses toward where the mouse looks at its own rate.
+/// (slowly anchored, not while changing mode; on wheels only as it rolls,
+/// in `pilotWalk`), and its turret, if it has one, traverses toward where
+/// the mouse looks at its own rate.
 void Simulation::pilotFace(Unit& u, const Pilot& p, double dt) const {
     const double h = std::remainder(p.heading, 2 * pi);
     if (!Pilot::steers(u.kind)) {
         u.heading = h;
         return;
     }
-    const double turn_ = max(-1.0, min(1.0, p.walk.y));
-    u.heading = std::remainder(u.heading + turn_ * Pilot::hullTurnRate(u.kind) * Pilot::pace(u) * dt, 2 * pi);
+    // Wheels turn only as they roll (`pilotWalk`).
+    if (!Pilot::wheeled(u.kind)) {
+        const double turn_ = max(-1.0, min(1.0, p.walk.y));
+        u.heading = std::remainder(u.heading + turn_ * Pilot::hullTurnRate(u.kind) * Pilot::pace(u) * dt, 2 * pi);
+    }
     if (const auto rate_ = Pilot::turretRate(u.kind)) {
         const double from = u.aim ? *u.aim : u.heading;
         const double diff = std::remainder(h - from, 2 * pi);

@@ -32,14 +32,14 @@ bool sameGrid(const NavGrid& a, const NavGrid& b) {
 
 size_t PathAhead::KeyHash::operator()(const Key& k) const {
     uint64_t h = 1469598103934665603ull;
-    for (uint64_t v : {k.fx, k.fy, k.tx, k.ty, k.stop, uint64_t(k.jumps)}) {
+    for (uint64_t v : {k.fx, k.fy, k.tx, k.ty, k.stop, uint64_t(k.jumps) | uint64_t(k.steep) << 1}) {
         h ^= v + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
     }
     return size_t(h);
 }
 
-PathAhead::Key PathAhead::keyOf(Vec2 from, Vec2 target, double stopAt, bool jumps) {
-    return Key{bits(from.x), bits(from.y), bits(target.x), bits(target.y), bits(stopAt), jumps};
+PathAhead::Key PathAhead::keyOf(Vec2 from, Vec2 target, double stopAt, bool jumps, uint8_t steep) {
+    return Key{bits(from.x), bits(from.y), bits(target.x), bits(target.y), bits(stopAt), jumps, steep};
 }
 
 PathAhead::PathAhead(int threads) {
@@ -181,7 +181,7 @@ void PathAhead::work() {
         }
         // The probe's grid: final while it is on its units, and the probe
         // lives as long as `round`.
-        std::optional<std::vector<Vec2>> r = round->probe->nav->pathSearch(e->begin, e->from, e->target, e->stopAt, e->key.jumps);
+        std::optional<std::vector<Vec2>> r = round->probe->nav->pathSearch(e->begin, e->from, e->target, e->stopAt, e->key.jumps, e->key.steep);
         {
             std::lock_guard<std::mutex> g(lock);
             e->result = std::move(r);
@@ -192,7 +192,7 @@ void PathAhead::work() {
     }
 }
 
-std::optional<std::vector<Vec2>> PathAhead::guess(const NavGrid& nav, Vec2 from, Vec2 target, double stopAt, bool jumps) {
+std::optional<std::vector<Vec2>> PathAhead::guess(const NavGrid& nav, Vec2 from, Vec2 target, double stopAt, bool jumps, uint8_t steep) {
     NavGrid::PathBegin b = nav.pathBegin(from, target, stopAt, jumps);
     if (b.done) return std::move(b.result);
     bool queued = false;
@@ -200,7 +200,7 @@ std::optional<std::vector<Vec2>> PathAhead::guess(const NavGrid& nav, Vec2 from,
         std::lock_guard<std::mutex> g(lock);
         Round* round = probing.get();
         if (round && round->active && &nav == &*round->probe->nav) {
-            const Key k = keyOf(from, target, stopAt, jumps);
+            const Key k = keyOf(from, target, stopAt, jumps, steep);
             if (round->table.find(k) == round->table.end()) {
                 Entry& e = round->entries.emplace_back();
                 e.key = k;
@@ -220,14 +220,14 @@ std::optional<std::vector<Vec2>> PathAhead::guess(const NavGrid& nav, Vec2 from,
     return std::vector<Vec2>{target};
 }
 
-std::optional<std::vector<Vec2>> PathAhead::find(const NavGrid& nav, Vec2 from, Vec2 target, double stopAt, bool jumps) {
+std::optional<std::vector<Vec2>> PathAhead::find(const NavGrid& nav, Vec2 from, Vec2 target, double stopAt, bool jumps, uint8_t steep) {
     NavGrid::PathBegin b = nav.pathBegin(from, target, stopAt, jumps);
     if (b.done) return std::move(b.result);
     std::unique_lock<std::mutex> g(lock);
     const std::shared_ptr<Round> round = current;
     if (!round || &nav != round->realNav) {
         g.unlock();
-        return nav.pathSearch(b, from, target, stopAt, jumps);
+        return nav.pathSearch(b, from, target, stopAt, jumps, steep);
     }
     stats.asked += 1;
     if (!round->gridChecked) {
@@ -237,11 +237,11 @@ std::optional<std::vector<Vec2>> PathAhead::find(const NavGrid& nav, Vec2 from, 
         round->gridSame = round->atUnits && round->probe->nav && sameGrid(*round->probe->nav, nav);
         stats.gridDiffered = !round->gridSame;
     }
-    auto it = round->gridSame ? round->table.find(keyOf(from, target, stopAt, jumps)) : round->table.end();
+    auto it = round->gridSame ? round->table.find(keyOf(from, target, stopAt, jumps, steep)) : round->table.end();
     if (it == round->table.end()) {
         stats.missed += 1;
         g.unlock();
-        return nav.pathSearch(b, from, target, stopAt, jumps);
+        return nav.pathSearch(b, from, target, stopAt, jumps, steep);
     }
     Entry& e = *it->second;
     if (e.state == State::queued) {
@@ -249,7 +249,7 @@ std::optional<std::vector<Vec2>> PathAhead::find(const NavGrid& nav, Vec2 from, 
         e.state = State::running;
         stats.claimed += 1;
         g.unlock();
-        std::optional<std::vector<Vec2>> r = nav.pathSearch(b, from, target, stopAt, jumps);
+        std::optional<std::vector<Vec2>> r = nav.pathSearch(b, from, target, stopAt, jumps, steep);
         g.lock();
         e.result = r;
         e.state = State::done;
