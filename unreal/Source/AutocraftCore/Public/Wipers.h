@@ -76,9 +76,12 @@ public:
     static constexpr double SweepEarlyAt = 0.5;
     /// The last sweeps when the rain stops.
     static constexpr int FinalSweeps = 2;
-    /// A sweep squeaks (dry) when, as it begins, the rain landing is under
-    /// `DryRain` and the glass under `DryCover` covered.
+    /// A sweep squeaks (dry) when, as it begins, the rain is under
+    /// `DryRain`, under `DryRecent` landed in the last second (no running
+    /// film left) and the glass under `DryCover` covered: the last sweeps
+    /// once the rain has stopped.
     static constexpr double DryRain = 0.05;
+    static constexpr double DryRecent = 0.05;
     static constexpr double DryCover = 0.1;
     /// The thin smear the blade leaves behind dries in this long (s).
     static constexpr double SmearSeconds = 0.4;
@@ -107,6 +110,11 @@ public:
     /// Advance to `now` with the rain rate fed to the glass (0 when it is
     /// sheltered). Time never runs backwards; a first call only starts.
     void update(double now, double rate);
+
+    /// Held off (`false`): no new sweep starts, the mode reads off; the
+    /// water still lands. For pictures of the glass unwiped.
+    void enable(bool on) { enabled_ = on; }
+    bool enabled() const { return enabled_; }
 
     WiperMode mode() const { return mode_; }
     /// The blade's angle now (`ParkAngle` when parked).
@@ -161,6 +169,7 @@ private:
     double now_ = 0;
     double rate_ = 0;
     bool started_ = false;
+    bool enabled_ = true;
     WiperMode mode_ = WiperMode::off;
     std::array<WiperSweep, 2> sweeps_{};
     int64_t count_ = 0;

@@ -58,6 +58,14 @@ TEST(wipers_cadenceOfEachMode) {
         EXPECT_NEAR(w.latest().each, c.each, 1e-9);
         EXPECT_NEAR(static_cast<double>(starts.size()), std::floor(30 / c.every) + 1, 1.0);
     }
+    // Held off: no sweep in a storm, however covered the glass.
+    Wipers held;
+    held.enable(false);
+    double th = 0;
+    EXPECT_EQ(run(held, th, 1.0, 30).size(), size_t(0));
+    EXPECT_TRUE(held.mode() == WiperMode::off && held.coverage() > 0.9);
+    held.enable(true);
+    EXPECT_EQ(run(held, th, 1.0, 1).size(), size_t(2));
     // Off: no sweep in a dry minute.
     Wipers dry;
     double t = 0;
@@ -109,6 +117,7 @@ TEST(wipers_parkWhenTheRainStops) {
         EXPECT_NEAR(finals[1] - finals[0], 2 * Wipers::SlowEach, Dt);
         EXPECT_NEAR(w.latest().each, Wipers::SlowEach, 1e-9);
         EXPECT_TRUE(w.latest().dry);
+        EXPECT_TRUE(!w.previous().dry);
     }
     // Parked for good while it stays dry.
     EXPECT_EQ(run(w, t, 0.0, 60).size(), size_t(0));

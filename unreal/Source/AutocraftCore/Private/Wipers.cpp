@@ -93,12 +93,13 @@ void Wipers::update(double now, double rate) {
     }
 
     // The mode, and the last sweeps when it turns off.
-    const WiperMode want = modeFor(rate);
+    const WiperMode want = enabled_ ? modeFor(rate) : WiperMode::off;
     if (want != WiperMode::off) finals_ = 0;
     else if (mode_ != WiperMode::off) finals_ = FinalSweeps;
     mode_ = want;
 
-    if (!sweeping()) {
+    if (!enabled_) finals_ = 0;
+    if (enabled_ && !sweeping()) {
         double next = std::numeric_limits<double>::infinity();
         const WiperSweep& last = sweeps_[0];
         if (finals_ > 0) {
@@ -124,7 +125,7 @@ void Wipers::startSweep(const double at, const double each) {
     s.number = count_++;
     s.start = at;
     s.each = each;
-    s.dry = rate_ < DryRain && coverage() < DryCover;
+    s.dry = rate_ < DryRain && water(1.0) < DryRecent && coverage() < DryCover;
     s.allAtStart = all_ - rate_ * landing(rate_) * (now_ - at);
     sweeps_[1] = sweeps_[0];
     sweeps_[0] = s;
