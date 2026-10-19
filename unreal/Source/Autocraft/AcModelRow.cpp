@@ -401,6 +401,9 @@ void AAcModelRow::ApplyView(const FAcModelInfo& M, const FString& ViewKey, const
 		return;
 	}
 	const bool bParts = Paint.Equals(TEXT("parts"), ESearchCase::IgnoreCase);
+	// `lit`: the model's own materials under the clay's lights (an icon's picture; `parts` from the same
+	// camera gives its mask).
+	const bool bLit = Paint.Equals(TEXT("lit"), ESearchCase::IgnoreCase);
 	USceneComponent* Holder = Placed[0].Holder;
 	Holder->SetRelativeLocation(FVector::ZeroVector);
 	Holder->SetRelativeRotation(FRotator::ZeroRotator);
@@ -411,7 +414,7 @@ void AAcModelRow::ApplyView(const FAcModelInfo& M, const FString& ViewKey, const
 	for (const FPlacedMesh& P : PlacedMeshes)
 	{
 		UStaticMeshComponent* C = P.Component.Get();
-		if (!C) continue;
+		if (!C || bLit) continue;
 		if (P.Blend != TEXT("opaque")) { C->SetVisibility(false); continue; }  // halos and glass stay out of the clay
 		if (!Base) continue;
 		UMaterialInstanceDynamic* Mid = UMaterialInstanceDynamic::Create(Base, this);

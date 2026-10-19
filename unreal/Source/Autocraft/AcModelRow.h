@@ -33,6 +33,8 @@
 //                       perspective view from the sheet's 3/4 direction. The model is drawn in grey clay
 //                       (-AcModelPaint=clay, lit by a fixed light) or in one flat colour per part
 //                       (-AcModelPaint=parts); hidden parts and translucent or additive meshes stay out.
+//                       -AcModelPaint=lit keeps its own materials under those lights (an icon, its mask
+//                       from `parts`).
 //                       Meant for -ResX=512 -ResY=512. Writes the camera numbers next to the shot, as
 //                       <shot>.json (the format of one panel of stencil.json). The sheet is composed by
 //                       .claude/skills/ringshadow-model-pipeline/stencil.py.
