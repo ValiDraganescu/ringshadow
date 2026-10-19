@@ -10,6 +10,7 @@
 #include "AcOutline.h"
 #include "AcPoseVehicles.h"
 #include "AcSimSubsystem.h"
+#include "AcShuttleView.h"
 #include "AcSpace.h"
 
 #include "Async/ParallelFor.h"
@@ -698,6 +699,9 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 	Stats = FStats();
 	++FrameNumber;
 	const ac::GameState& Shown = CVarShowAll.GetValueOnGameThread() != 0 ? Sim->State() : Sim->Shown();
+	// The walk-in Dropships where they are now (C4): their riders are posed
+	// in the ship's frame on the pad and carried up to it (AcShuttleView.h).
+	AcShuttleView::Update(Shown, FPlatformTime::Seconds());
 	// The render clock (Swift `world.sync(time: clock)`): runs on while paused.
 	const double Time = Frame.Clock;
 	const double Dt = FMath::Max(0.0, Time - LastSync.Get(Time));
@@ -868,10 +872,12 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 		C.Dark = Dark;
 		C.Sweep = Sweep;
 		FAcPoseFn Fn;
+		bool bAboard = false;
 		if (O.bUnit)
 		{
 			AcPose::RestUnit(C, O.Pose);
 			const ac::Unit& U = *O.Unit;
+			bAboard = AcShuttleView::Stand(*C.Unit, O.Pose.Placement);
 			// Inside a Bastion, a Dropship or a Derrick; driven in first person.
 			// Aboard a Mule (C4) it stands on the perch, out of sight with the
 			// Mule driven in first person.
@@ -889,6 +895,7 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 			Fn = AcPose::Find(O.Structure->kind);
 		}
 		if (Fn && !O.Pose.bHidden) Fn(C, O.Pose);
+		if (bAboard) AcShuttleView::Lift(*C.Unit, O.Pose.Placement);
 		if (bFrozen)
 		{
 			// No lamps, glow, working effects or animation: the shell as last seen.

@@ -1,5 +1,7 @@
 #include "AcPilotWalls.h"
 
+#include "AcShuttleView.h"
+
 #include "AcPose.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
@@ -67,6 +69,13 @@ void AcPilotWalls::Gather(UWorld* World, const ac::Vec2 Near, TArray<FSlab>& Out
 		if (ac::distance(S.position, Near) - ac::Rules::radius(S.kind) > Range) continue;
 		SlabsOf(S, Terrain ? Terrain->FieldHeight(S.position) : 0.0, Out);
 	}
+	// The walk-in Dropships' bays, in their frames on the pads (a ship in
+	// flight too: the pilot's view is worked out there and carried up).
+	for (const ac::Shuttle& S : Sim->Simulation().state.shuttles)
+	{
+		if (ac::distance(S.position, Near) - ac::ShuttleBay::footprint().radius > Range) continue;
+		AcShuttleView::Slabs(S, Out);
+	}
 }
 
 double AcPilotWalls::Sweep(const FVector& From, const FVector& To, const double RadiusCm, const TConstArrayView<FSlab> Slabs,
@@ -77,13 +86,17 @@ double AcPilotWalls::Sweep(const FVector& From, const FVector& To, const double 
 	bool bLow = false;
 	for (const FSlab& S : Slabs)
 	{
-		if (S.Box.IsInsideOrOn(From)) continue;
+		// A turned box: the ray in its frame (a rigid turn keeps the ray's fraction).
+		const bool bTurned = !S.Frame.Equals(FTransform::Identity, 1e-6);
+		const FVector F0 = bTurned ? S.Frame.InverseTransformPosition(From) : From;
+		const FVector D0 = bTurned ? S.Frame.InverseTransformVector(D) : D;
+		if (S.Box.IsInsideOrOn(F0)) continue;
 		// The sphere against the box grown by its radius (the corners
 		// square, a little wide of round: never through).
 		FBox B = S.Box.ExpandBy(RadiusCm);
-		if (B.IsInsideOrOn(From)) B = S.Box;
+		if (B.IsInsideOrOn(F0)) B = S.Box;
 		double T = 1;
-		if (Enters(From, D, B, T) && T < Best)
+		if (Enters(F0, D0, B, T) && T < Best)
 		{
 			Best = T;
 			bLow = S.bLow;

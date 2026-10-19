@@ -39,14 +39,18 @@ namespace AcPilotWalls
 		FBox Box;
 		/// Under `LowWall` tall.
 		bool bLow = false;
+		/// The box's own frame in the world (a walk-in Dropship's bay, C4,
+		/// turned to its heading: AcShuttleView.h); identity: the box is the
+		/// world's.
+		FTransform Frame = FTransform::Identity;
 	};
 
 	/// The solid slabs of `S` standing on ground `GroundCells` (its centre's
 	/// height), sunk as the renderer sinks a building under construction:
 	/// its walls, its door while not open, its roof.
 	AUTOCRAFT_API void SlabsOf(const ac::Structure& S, double GroundCells, TArray<FSlab>& Out);
-	/// The slabs of every structure within `Range` cells of `Near` in the
-	/// running game (none out of the MMORPG mode).
+	/// The slabs of every structure and walk-in Dropship within `Range`
+	/// cells of `Near` in the running game (none out of the MMORPG mode).
 	AUTOCRAFT_API void Gather(UWorld* World, ac::Vec2 Near, TArray<FSlab>& Out);
 
 	/// How far along `From` → `To` (0 to 1) a sphere of `RadiusCm` goes

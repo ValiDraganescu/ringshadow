@@ -28,6 +28,7 @@
 #include "AcRtsPawn.h"
 #include "AcSettings.h"
 #include "AcShot.h"
+#include "AcShuttleView.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
@@ -1119,6 +1120,8 @@ FTransform AAcPilotPawn::RootOf(const ac::Unit& U) const
 	{
 		Root = FTransform(AcSpace::QuatFromHeading(U.heading), AcSpace::ToWorld(U.position, GroundAt(GetWorld(), U.position)));
 		bRootHidden = true;
+		// Aboard a walk-in Dropship: on its deck, where the ship is (as the renderer carries it).
+		if (AcShuttleView::Stand(U, *Root)) AcShuttleView::Lift(U, *Root);
 	}
 	// A hidden unit is not posed: put back what its pose lifts the root by
 	// (the Comet's jump arc and run bob), as the Swift root has it.
@@ -1318,7 +1321,13 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	}
 	FVector At;
 	FQuat Rot;
-	const FTransform Root = RootOf(U);
+	// Aboard a walk-in Dropship (C4) the view is worked out in the ship's
+	// frame on the pad, against its bay's walls, and carried up to where
+	// the ship is (AcShuttleView.h): the bay stays still round the pilot
+	// as the ship banks and turns.
+	AcShuttleView::Update(GetWorld());
+	const AcShuttleView::FShip* Ship = AcShuttleView::Aboard(U);
+	const FTransform Root = Ship ? RootOf(U) * Ship->Carrier.Inverse() : RootOf(U);
 	// The view shown, when it is not the aim's (the look-around).
 	TOptional<TPair<FVector, FQuat>> Shown;
 	if (Gun && GunView(S, At, Rot))
@@ -1371,6 +1380,17 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 		Cam.Follow(Root, U, FPlatformTime::Seconds(), At, Rot);
 		// The eye's lean or a wide unit's offset never into a wall.
 		At = AcPilotWalls::ClampEye(GetWorld(), Root.GetTranslation(), At);
+	}
+	if (Ship)
+	{
+		const FTransform& C = Ship->Carrier;
+		At = C.TransformPosition(At);
+		Rot = C.GetRotation() * Rot;
+		if (Shown)
+		{
+			Shown->Key = C.TransformPosition(Shown->Key);
+			Shown->Value = C.GetRotation() * Shown->Value;
+		}
 	}
 	// A Quake stomp near the driven unit shakes the view a little (the
 	// pitch and yaw, a degree at most).

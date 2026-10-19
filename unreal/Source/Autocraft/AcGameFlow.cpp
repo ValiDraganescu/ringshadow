@@ -1,6 +1,7 @@
 #include "AcGameFlow.h"
 
 #include "AcPilotFlight.h"
+#include "AcShuttleShip.h"
 #include "AcMusicPlayer.h"
 
 #include "AcAudioDirector.h"
@@ -460,6 +461,8 @@ void UAcGameFlowSubsystem::Tick(const float DeltaTime)
 	TickMmo();
 	// W5: the other pilots' Dropships in flight.
 	AcPilotFlight::TickWatched(GetWorld());
+	// The walk-in Dropships (C4): drawn, posed, their windshields' rain.
+	AcShuttleShip::Tick(GetWorld());
 	if (bHomeWhenReady)
 	{
 		const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);

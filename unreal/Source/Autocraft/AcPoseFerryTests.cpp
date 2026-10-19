@@ -27,7 +27,7 @@ namespace
 		return T;
 	}
 
-	struct FScene
+	struct FFerryScene
 	{
 		const FAcModelInfo* M = FAcModelCatalog::Get().Find(FName(AcPoseFerry::Model));
 		int32 Part(const TCHAR* Name) const { return M ? FAcPartIndex(FName(Name)).Get(*M) : INDEX_NONE; }
@@ -44,7 +44,7 @@ namespace
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcPoseFerryRampTest, "Autocraft.Pose.Ferry.Ramp", Flags)
 bool FAcPoseFerryRampTest::RunTest(const FString&)
 {
-	const FScene S;
+	const FFerryScene S;
 	if (!TestNotNull(TEXT("the ferry_blue model"), S.M)) return false;
 	const int32 Ramp = S.Part(TEXT("ramp"));
 	if (!TestTrue(TEXT("a ramp part"), Ramp != INDEX_NONE)) return false;
@@ -67,7 +67,7 @@ bool FAcPoseFerryRampTest::RunTest(const FString&)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcPoseFerryWipersTest, "Autocraft.Pose.Ferry.Wipers", Flags)
 bool FAcPoseFerryWipersTest::RunTest(const FString&)
 {
-	const FScene S;
+	const FFerryScene S;
 	if (!TestNotNull(TEXT("the ferry_blue model"), S.M)) return false;
 	for (const TCHAR* Name : {TEXT("wipers_0"), TEXT("wipers_1")})
 	{
@@ -93,7 +93,7 @@ bool FAcPoseFerryWipersTest::RunTest(const FString&)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcPoseFerryButtonsTest, "Autocraft.Pose.Ferry.Buttons", Flags)
 bool FAcPoseFerryButtonsTest::RunTest(const FString&)
 {
-	const FScene S;
+	const FFerryScene S;
 	if (!TestNotNull(TEXT("the ferry_blue model"), S.M)) return false;
 	const int32 Ramp = S.Part(TEXT("rampButton")), Take = S.Part(TEXT("takeoffButton"));
 	const int32 Open = S.Part(TEXT("rampLamps_0")), Shut = S.Part(TEXT("rampLamps_1"));
