@@ -281,7 +281,9 @@ bool AAcShuttleShip::Build(const int32 Team)
 		}
 	}
 	// The windshield's rain: a post-process for the ship nearest the camera.
-	static UMaterialInterface* Glass = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Weather/M_AcWindshield.M_AcWindshield"));
+	// (Loaded each time, never kept in a static: a world torn down frees what
+	// nothing holds, and the next world's ship would read it freed.)
+	UMaterialInterface* Glass = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Weather/M_AcWindshield.M_AcWindshield"));
 	if (Glass)
 	{
 		Rain = NewObject<UPostProcessComponent>(this, TEXT("WindshieldRain"), RF_Transient);
