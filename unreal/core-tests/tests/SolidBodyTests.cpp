@@ -182,20 +182,21 @@ TEST(solid_vehiclesWalkersAndTheBroodBlock) {
 /// on it (the Mule is one).
 TEST(solid_flyersBuriedAndRidersAreNoBodies) {
     Field f = field(kField);
-    const Unit& u = unitOf(f.sim, f.pilot);
+    // (Looked up each time: adding units moves them.)
+    auto u = [&]() -> const Unit& { return unitOf(f.sim, f.pilot); };
     const int64_t kestrel = put(f.sim, UnitKind::kestrel, kField + Vec2(2, 0));
     const int64_t scorpion = put(f.sim, UnitKind::scorpion, kField + Vec2(4, 0));
     unitOf(f.sim, scorpion).anchor = 1;
     unitOf(f.sim, scorpion).anchored = true;
-    EXPECT_TRUE(!f.sim.bodyBlocks(u, unitOf(f.sim, kestrel)));
-    EXPECT_TRUE(!f.sim.bodyBlocks(u, unitOf(f.sim, scorpion)));
-    EXPECT_TRUE(f.sim.pilotCanStand(u, unitOf(f.sim, kestrel).position));
-    EXPECT_TRUE(f.sim.pilotCanStand(u, unitOf(f.sim, scorpion).position));
+    EXPECT_TRUE(!f.sim.bodyBlocks(u(), unitOf(f.sim, kestrel)));
+    EXPECT_TRUE(!f.sim.bodyBlocks(u(), unitOf(f.sim, scorpion)));
+    EXPECT_TRUE(f.sim.pilotCanStand(u(), unitOf(f.sim, kestrel).position));
+    EXPECT_TRUE(f.sim.pilotCanStand(u(), unitOf(f.sim, scorpion).position));
     const int64_t mule = put(f.sim, UnitKind::mule, kField + Vec2(0, 6), 0);
     const int64_t rider = put(f.sim, UnitKind::prospector, Mule::perch(unitOf(f.sim, mule)) + Vec2(0, 1.2));
     EXPECT_TRUE(!f.sim.muleBoard(rider, mule));
-    EXPECT_TRUE(!f.sim.bodyBlocks(u, unitOf(f.sim, rider)));
-    EXPECT_TRUE(f.sim.bodyBlocks(u, unitOf(f.sim, mule)));
+    EXPECT_TRUE(!f.sim.bodyBlocks(u(), unitOf(f.sim, rider)));
+    EXPECT_TRUE(f.sim.bodyBlocks(u(), unitOf(f.sim, mule)));
 }
 
 /// Put inside a parked Mule (spawned, a Mule rolled out onto it), a
