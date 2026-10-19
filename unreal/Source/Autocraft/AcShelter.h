@@ -59,8 +59,33 @@ namespace AcShelter
 	/// `LensWetSeconds`, both at `Full`'s pace.
 	AUTOCRAFT_API float EaseLens(float Rate, float Target, float Full, float Dt);
 
-	/// The driven unit (the pilot's) stands sheltered in the hall; false
-	/// when no unit is driven.
+	/// A walk-in Dropship's bay (C4, AcShuttleView.h): a box turned with
+	/// the ship (it banks and pitches in flight), world cm: its centre, its
+	/// unit axes and its half sizes along them. Half sizes 0: none.
+	struct FShipBox
+	{
+		FVector Centre = FVector::ZeroVector;
+		FVector X = FVector::ForwardVector, Y = FVector::RightVector, Z = FVector::UpVector;
+		FVector Half = FVector::ZeroVector;
+		bool Contains(const FVector& P) const
+		{
+			const FVector D = P - Centre;
+			return FMath::Abs(D | X) < Half.X && FMath::Abs(D | Y) < Half.Y && FMath::Abs(D | Z) < Half.Z;
+		}
+		bool operator==(const FShipBox&) const = default;
+	};
+	/// The bay (the cockpit nook too) of the ship placed at `Placement` (its
+	/// root where it is drawn), from the deck slab to the ceiling, grown by
+	/// `FaceCm`.
+	AUTOCRAFT_API FShipBox BayOf(const FTransform& Placement);
+	/// The bay of the drawn ship nearest `Camera` within `ShipRange` (cm);
+	/// unset: none.
+	inline constexpr double ShipRange = 8000.0;
+	AUTOCRAFT_API TOptional<FShipBox> NearestBay(const FVector& Camera);
+
+	/// The driven unit (the pilot's) stands sheltered in the hall, or in a
+	/// walk-in Dropship's bay (riding one in flight, or in a landed one's
+	/// bay, not on its ramp); false when no unit is driven.
 	AUTOCRAFT_API bool DrivenSheltered(const UObject* WorldContext);
 
 	/// The shelter is on (`ac.Weather.Shelter` 1, the default). Off

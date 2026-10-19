@@ -201,6 +201,16 @@ namespace AcSound
 	inline constexpr float FlightRetroGain = 0.25f;
 	inline constexpr float FlightTouchGain = 0.35f;
 	inline constexpr float JetPuffGain = 0.3f;
+	/// The walk-in Dropship (C4; Tools/AudioGen/shuttle.manifest.json): its
+	/// engines (the cruise loop: quieter idling on the pad, low-passed in
+	/// your ear aboard, as the rain through the Citadel's walls), the ramp's
+	/// hydraulics, the buttons' clunk, the lift-off and touchdown heard from
+	/// inside at this share, its wipers heard aboard.
+	inline constexpr float ShipIdle = 0.25f;
+	inline constexpr float ShipAboardGain = 0.6f;
+	inline constexpr float RampMoveGain = 0.45f;
+	inline constexpr float ButtonClunkGain = 0.5f;
+	inline constexpr float ShipWiperGain = 0.22f;
 	inline constexpr float JetDryGain = 0.6f;
 	/// The MMORPG's moments (docs/mmorpg-m7.md J1; Tools/AudioGen/
 	/// moments.manifest.json). Set from each take's loudness after the
@@ -445,6 +455,29 @@ public:
 	void Flight(EFlight Moment);
 	/// The cruise's wind and engine loop, while the ship is up.
 	void Cruise(bool bOn) { bCruising = bOn; }
+	/// C4: the walk-in Dropships heard this frame (AcShuttleShip.h): each
+	/// one's ground point, its height over it (cells), its engines' thrust
+	/// (0-1), its ramp's way (1 down, -1 up, 0 still), its stage
+	/// (`ac::Shuttle::Stage`), whether the ears ride in it, its wipers'
+	/// passes and the latest one dry. Its engines loop (low-passed in your
+	/// ear aboard), the ramp's hydraulics as it starts to move, the lift-off's
+	/// roar and the touchdown's thud, the wipers in your ear aboard.
+	struct FShipHear
+	{
+		int64 Id = 0;
+		ac::Vec2 At;
+		float Lift = 0.f;
+		float Thrust = 0.f;
+		int32 RampWay = 0;
+		uint8 Stage = 0;
+		bool bAboard = false;
+		int64 WiperPasses = -1;
+		bool bWiperDry = false;
+	};
+	void Shuttles(const std::vector<FShipHear>& Ships);
+	/// A Dropship's button pressed (its ramp post's, its take-off button):
+	/// a clunk in your ear.
+	void ButtonClunk();
 	/// The jet pack walked into a cliff with no MH to burn, at sim second
 	/// `When` (`Simulation::pilotJumpDry`): a dry click, at most every 0.8 s.
 	void JetDry(double When);
@@ -530,6 +563,8 @@ private:
 	/// The flight's cruise loop and its fade; the last dry click's sim time.
 	bool bCruising = false;
 	float CruiseFade = 0.f;
+	/// C4: the Dropships heard this frame and the last.
+	std::vector<FShipHear> Ships, ShipsWere;
 	double DryHeard = -1e9;
 	TSet<int64> Anchoring;
 	TSet<int64> Burrowing, Locking;

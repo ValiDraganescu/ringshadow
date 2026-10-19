@@ -1,6 +1,7 @@
 #include "AcPilotPawn.h"
 
 #include "AcFind.h"
+#include "AcGameFlow.h"
 #include "AcGasGiant.h"
 
 #include "AcHeadless.h"
@@ -28,6 +29,8 @@
 #include "AcRtsPawn.h"
 #include "AcSettings.h"
 #include "AcShot.h"
+#include "AcShuttleAct.h"
+#include "AcShuttleShip.h"
 #include "AcShuttleView.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
@@ -761,6 +764,24 @@ void AAcPilotPawn::Press(const bool bDown, const bool bKeyE)
 		}
 		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && !S.pilotTarget(*U))
 		{
+			// C4: the walk-in Dropship (AcShuttleAct.h): a call from a pad,
+			// its ramp post, its take-off button (the flight menu).
+			if (const TOptional<AcShuttleAct::FAct> A = AcShuttleAct::Find(S, *U))
+			{
+				bHold = false;
+				const double Now = FPlatformTime::Seconds();
+				if (A->Kind != AcShuttleAct::FAct::EKind::Call) AcShuttleShip::Pressed(A->Ship, A->Kind == AcShuttleAct::FAct::EKind::TakeOff, Now);
+				if (A->Why) OnNote.Broadcast(*A->Why);
+				else if (A->Kind == AcShuttleAct::FAct::EKind::Call) Mmo->CallShuttle();
+				else if (A->Kind == AcShuttleAct::FAct::EKind::Ramp) Mmo->Ramp(A->bOpen);
+				else if (UAcGameFlowSubsystem* Flow = UAcGameFlowSubsystem::Get(this)) Flow->OpenWorldMap();
+				if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this); Audio && A->Kind != AcShuttleAct::FAct::EKind::Call)
+				{
+					Audio->Rules().ButtonClunk();
+				}
+				UE_LOG(LogAutocraft, Log, TEXT("pilot: dropship %s%s"), *A->Prompt(), A->Why ? TEXT(" (refused here)") : TEXT(""));
+				return;
+			}
 			if (const TOptional<AcCitadelAct::FAct> A = AcCitadelAct::Find(S, *U))
 			{
 				bHold = false;

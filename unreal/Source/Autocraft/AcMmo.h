@@ -427,6 +427,15 @@ public:
 	/// The pilot's own Mule's unit in this region (the Progress message's
 	/// `mule`); unset: none, rolling out, or in another region.
 	TOptional<int64> OwnMule() const;
+	/// C4 (docs/haul-and-ferry.md section 3): call the walk-in Dropship down
+	/// onto the Landing Pad the pilot stands on; open or close the ramp of the
+	/// one it is in. The server's refusal comes back as a note and
+	/// `ShuttleRefusal`; `ShuttleKept` counts the kept asks. Take-off is
+	/// `Fly` from the console's flight menu.
+	bool CallShuttle(FString* Why = nullptr);
+	bool Ramp(bool bOpen, FString* Why = nullptr);
+	const FString& ShuttleRefusal() const { return LastShuttleRefusal; }
+	int32 ShuttleKept() const { return ShuttleDone; }
 	/// K2, Citadel missions (docs/missions.md): sign up for an offer on the
 	/// board (at the realm's Citadel), drop one from the Journal. A refused
 	/// sign-up is answered as the Citadel's asks (`CitadelRefusal`); a
@@ -672,6 +681,10 @@ private:
 	FString LastMuleRefusal;
 	TArray<FString> MuleNotes;
 	int32 MuleDone = 0;
+	/// C4: the Dropship's call and ramp asks, the last refusal, the kept ones.
+	TSet<uint32> ShuttleAsked;
+	FString LastShuttleRefusal;
+	int32 ShuttleDone = 0;
 	/// C3: the demolish asks, the last refusal, the kept ones.
 	TSet<uint32> DemolishAsked;
 	FString LastDemolishRefusal;

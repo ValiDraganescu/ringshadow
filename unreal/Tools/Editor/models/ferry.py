@@ -243,11 +243,15 @@ for k, s in enumerate((1, -1)):
                                    NAC[2] - 8, NAC[2] + 8)], solid=False)  # a rail on the cowling's flank
     # the pylon to the hull
     m.mesh(root, "hullMid", [slab(nac_back + 20, nac_front - 40, *sorted((s * (SKIN - 8), s * (NAC[1] - NAC_R + 10))), NAC[2] - 30, NAC[2] + 16)])
-    # the jet: a dark nozzle and its glow
-    m.mesh(root, "hullDark", [cyl(NAC_R - 10, 18, at=(nac_back - 9, y, NAC[2]), axis="x", r1=NAC_R - 16, sides=8)])
-    jet = m.part("engineGlow_%d" % k, at=(nac_back - 18, y, NAC[2]), handles=["engineGlow"],
-                 driver=d("engine %d's jet: brighter with the thrust" % k))
-    m.mesh(jet, "glow_ff6b14", [cyl(NAC_R - 20, 2, at=(nac_back - 19, y, NAC[2]), axis="x", sides=8)], solid=False)
+    # the jet: open like the intake, a chrome octagonal rim round the dark nozzle, vanes across it, a small warm glow
+    # deep in its middle (brighter with the thrust)
+    m.mesh(root, "chrome", [cyl(NAC_R + 6, 18, at=(nac_back + 5, y, NAC[2]), axis="x", sides=8)])
+    m.mesh(root, "hullDark", [cyl(NAC_R - 6, 4, at=(nac_back - 4, y, NAC[2]), axis="x", sides=8)])
+    m.mesh(root, "hullDark", [box((2, 7, (NAC_R - 10) * 2), at=(nac_back - 10.5 - 2.5 * j, y, NAC[2]), rot=(0, 0, 60 * j))
+                              for j in range(3)], solid=False)
+    jet = m.part("engineGlow_%d" % k, at=(nac_back - 7.5, y, NAC[2]), handles=["engineGlow"],
+                 driver=d("engine %d's jet: a faint glow deep in the nozzle, brighter with the thrust" % k))
+    m.mesh(jet, "glow_ff6b14", [cyl(18, 1.2, at=(nac_back - 7.5, y, NAC[2]), axis="x", sides=8)], solid=False)
     m.part("emitter_%d" % k, parent=jet, at=(nac_back - 30, y, NAC[2]), particles={"handles": "jet"})
     # the fan in the intake
     fan = m.part("fans_%d" % k, at=(nac_front + 9, y, NAC[2]), driver=d("intake fan %d: spins with the thrust" % k,

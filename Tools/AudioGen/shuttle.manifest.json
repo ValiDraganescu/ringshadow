@@ -1,0 +1,46 @@
+{
+  "about": "The walk-in Dropship (docs/haul-and-ferry.md, C4): rampmove = the rear cargo ramp lowering or rising on its hydraulics, a pump's whine and hiss under the hinge's groan, seated with a clunk (the ramp takes 3 s end to end, so cut to 3 s, trim.py; the model will not hold the motion for 3 s: in the kept takes it runs about 2.3 s (rampmove_1) and 1.3 s (rampmove_2), then settles); buttonclunk = a big push button pressed on the cockpit console, a heavy clunk with a relay click (cut to 0.5 s). Dusty frontier under a gas giant, used industrial machines, sci-fi: no voices, no music; mixed to sit under the music. Ids match the game's sound names (sfx/<name>_<n>).",
+  "voices": {},
+  "entries": [
+    {
+      "id": "rampmove_1",
+      "kind": "sfx",
+      "prompt": "heavy steel cargo ramp of a small industrial spaceship moving slowly on hydraulics for three seconds, a continuous hydraulic pump whine and pressure hiss with a slow creaking groan of the hinge the whole time, and only at the very end a solid metal clunk as the ramp seats, used dusty machinery, sci-fi, no voices, no music",
+      "seconds": 3.0,
+      "influence": 0.6,
+      "fx": "trim 3.0 40"
+    },
+    {
+      "id": "rampmove_2",
+      "kind": "sfx",
+      "prompt": "an old spaceship's rear loading ramp slowly rising on hydraulic rams: two and a half seconds of even hydraulic motor whine, hissing valves and a low metal groan from the hinge, steady with no hits, and then right at the end one heavy clunk as the ramp locks shut, sci-fi, dry, no voices, no music",
+      "seconds": 3.0,
+      "influence": 0.75,
+      "fx": "trim 3.0 40"
+    },
+    {
+      "id": "buttonclunk_1",
+      "kind": "sfx",
+      "prompt": "a big chunky industrial push button pressed on a spaceship console, one heavy mechanical clunk with a short relay click, close and dry, single press, no voices, no music",
+      "seconds": 0.6,
+      "influence": 0.65,
+      "fx": "trim 0.5 60"
+    },
+    {
+      "id": "buttonclunk_2",
+      "kind": "sfx",
+      "prompt": "single press of a heavy metal toggle button on an old industrial control panel, solid clunk and a quick electrical relay tick behind it, close, dry, no voices, no music",
+      "seconds": 0.6,
+      "influence": 0.65,
+      "fx": "trim 0.5 60"
+    },
+    {
+      "id": "buttonclunk_3",
+      "kind": "sfx",
+      "prompt": "one large rugged push button pressed hard on a cockpit console of a used spaceship, the sound starts instantly: a deep mechanical thunk with a crisp relay clack, close up, dry room, no voices, no music",
+      "seconds": 0.6,
+      "influence": 0.65,
+      "fx": "trim 0.5 60"
+    }
+  ]
+}

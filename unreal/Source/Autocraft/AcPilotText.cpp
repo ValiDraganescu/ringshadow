@@ -3,6 +3,7 @@
 #include "AcCitadelAct.h"
 #include "AcMuleAct.h"
 #include "Mule.h"
+#include "AcShuttleAct.h"
 #include "AcKindTable.h"
 #include "AcProgressHud.h"
 #include "Defence.h"
@@ -437,10 +438,17 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 		const TOptional<AcCitadelAct::FAct> AtCitadel = !Target && In.bMmo ? AcCitadelAct::Find(Sim, U) : TOptional<AcCitadelAct::FAct>();
 		// C4, before the Citadel's: the Mule's perch and hopper, the Foundry's Mule.
 		const TOptional<AcMuleAct::FAct> AtMule = !Target && In.bMmo ? AcMuleAct::Find(Sim, U, MuleOwn) : TOptional<AcMuleAct::FAct>();
+		// C4: the walk-in Dropship's buttons, or a call from a Landing Pad.
+		const TOptional<AcShuttleAct::FAct> AtShip = !Target && In.bMmo ? AcShuttleAct::Find(Sim, U) : TOptional<AcShuttleAct::FAct>();
 		if (U.task == ETask::atGun)
 		{
 			Info.Prompt = FString(TEXT("Click  fire   ·   Esc  disengage"));
 			Info.Tone = F.Sight && F.Sight->inRange ? EAcTone::Enemy : EAcTone::Ready;
+		}
+		else if (AtShip)
+		{
+			Info.Prompt = AtShip->Prompt();
+			Info.Tone = AtShip->Why ? EAcTone::Blocked : EAcTone::Ready;
 		}
 		else if (AtMule)
 		{

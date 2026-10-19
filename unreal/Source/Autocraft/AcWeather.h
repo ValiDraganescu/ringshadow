@@ -129,6 +129,8 @@ private:
 	/// The shelter boxes written to the MPC (none yet: `bSheltersWritten`).
 	TArray<AcShelter::FBox> ShelterBoxes;
 	bool bSheltersWritten = false;
+	/// The walk-in Dropship's bay last written (C4).
+	AcShelter::FShipBox ShipShelter;
 	float LensNow = 0.0f;
 
 	/// A strike's drawn bolt: its channel and branches (world cm), how bright.

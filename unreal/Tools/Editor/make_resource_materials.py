@@ -131,7 +131,10 @@ def make_world_mpc():
     return mpc
 
 
-SHELTER_VECTORS = ("Shelter0", "Shelter1", "Shelter2", "Shelter3", "ShelterLow", "ShelterHigh")
+# Then the walk-in Dropship's bay nearest the camera (C4, AcShelter.h `FShipBox`): a turned box, its centre (xyz) and
+# its three axes (xyz) each with its half size (w), cm; half sizes 0: none.
+SHELTER_VECTORS = ("Shelter0", "Shelter1", "Shelter2", "Shelter3", "ShelterLow", "ShelterHigh",
+                   "ShelterShip", "ShelterShipX", "ShelterShipY", "ShelterShipZ")
 
 
 def shelter_inputs(g, mpc):
@@ -142,11 +145,14 @@ def shelter_inputs(g, mpc):
 
 def shelter_hlsl(p, out="shelter"):
     """HLSL setting `out` to 1 where the world position `p` (cm) is in a
-    Citadel's hall (a shelter box: AcShelter.h), else 0. The Custom node
+    Citadel's hall or a walk-in Dropship's bay (a shelter box: AcShelter.h), else 0. The Custom node
     needs `shelter_inputs`; an unused box has half sides 0 and holds
     nothing."""
     terms = ["(all(abs(%s.xy - Shelter%d.xy) < Shelter%d.zw) && %s.z > ShelterLow.%s && %s.z < ShelterHigh.%s)"
              % (p, k, k, p, c, p, c) for k, c in enumerate("xyzw")]
+    terms.append("(abs(dot(%s - ShelterShip.xyz, ShelterShipX.xyz)) < ShelterShipX.w && abs(dot(%s - ShelterShip.xyz, "
+                 "ShelterShipY.xyz)) < ShelterShipY.w && abs(dot(%s - ShelterShip.xyz, ShelterShipZ.xyz)) < ShelterShipZ.w)"
+                 % (p, p, p))
     return "float %s = (%s) ? 1.0 : 0.0;\n" % (out, "\n    || ".join(terms))
 
 

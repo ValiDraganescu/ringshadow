@@ -552,6 +552,19 @@ void AAcWeather::UpdateShelters(const FVector& Cam)
 		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
 		Boxes = AcShelter::Boxes(Sim->Simulation().state.structures, [Terrain](const ac::Vec2 P) { return Terrain ? Terrain->FieldHeight(P) : 0.0; }, Cam);
 	}
+	// The walk-in Dropship's bay nearest the camera (C4): a turned box that
+	// moves with the ship, written whenever it changes.
+	const TOptional<AcShelter::FShipBox> Bay = AcShelter::NearestBay(Cam);
+	const AcShelter::FShipBox Ship = Bay.Get(AcShelter::FShipBox());
+	if (!bSheltersWritten || !(Ship == ShipShelter))
+	{
+		ShipShelter = Ship;
+		auto Axis = [](const FVector& A, const double Half) { return FLinearColor(float(A.X), float(A.Y), float(A.Z), float(Half)); };
+		UKismetMaterialLibrary::SetVectorParameterValue(this, WeatherMpc, TEXT("ShelterShip"), Axis(Ship.Centre, 0.0));
+		UKismetMaterialLibrary::SetVectorParameterValue(this, WeatherMpc, TEXT("ShelterShipX"), Axis(Ship.X, Ship.Half.X));
+		UKismetMaterialLibrary::SetVectorParameterValue(this, WeatherMpc, TEXT("ShelterShipY"), Axis(Ship.Y, Ship.Half.Y));
+		UKismetMaterialLibrary::SetVectorParameterValue(this, WeatherMpc, TEXT("ShelterShipZ"), Axis(Ship.Z, Ship.Half.Z));
+	}
 	if (bSheltersWritten && Boxes == ShelterBoxes) return;
 	bSheltersWritten = true;
 	ShelterBoxes = Boxes;

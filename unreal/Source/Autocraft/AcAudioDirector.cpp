@@ -159,6 +159,8 @@ namespace
 	constexpr int64 DroneKey = -8, ShadowBedKey = -9, ShimmerKey = -10, CraterKeys = -100;
 	/// A pad flight's cruise (F1b).
 	constexpr int64 CruiseKey = -11;
+	/// C4: the walk-in Dropships' engines, one key each below this.
+	constexpr int64 ShipKeys = -1000000;
 
 	/// A starfall's gain at `Distance` cells: all of it close, `FarGain` of
 	/// it from `FarCells` off.
@@ -739,6 +741,42 @@ void FAcAudioRules::Flight(const EFlight Moment)
 	if (Allow(Sound, 1)) OneShot(Sound, {}, Gain, EAcSoundPool::InEar);
 }
 
+void FAcAudioRules::Shuttles(const std::vector<FShipHear>& Heard)
+{
+	ShipsWere = Ships;
+	Ships = Heard;
+	for (const FShipHear& S : Ships)
+	{
+		const FShipHear* Was = nullptr;
+		for (const FShipHear& W : ShipsWere)
+		{
+			if (W.Id == S.Id) Was = &W;
+		}
+		const EAcSoundPool Pool = S.bAboard ? EAcSoundPool::InEar : EAcSoundPool::Combat;
+		const float Inside = S.bAboard ? AcSound::ShipAboardGain : 1.f;
+		// The ramp starts to move: its hydraulics, to the end.
+		if (S.RampWay != 0 && (!Was || Was->RampWay == 0)) OneShot("rampmove", S.At, AcSound::RampMoveGain, Pool);
+		if (Was && Was->Stage != S.Stage)
+		{
+			using EStage = ac::Shuttle::Stage;
+			const EStage From = EStage(Was->Stage), To = EStage(S.Stage);
+			if (To == EStage::lift) OneShot("flroar", S.At, AcSound::FlightRoarGain * Inside, Pool);
+			if (To == EStage::approach) OneShot("flretro", S.At, AcSound::FlightRetroGain * Inside, Pool);
+			if (To == EStage::ground && (From == EStage::descend || From == EStage::approach))
+				OneShot("fltouch", S.At, AcSound::FlightTouchGain * Inside, Pool);
+			if (To == EStage::depart) OneShot("flroar", S.At, AcSound::FlightRoarGain, EAcSoundPool::Combat);
+		}
+		// Its wipers, heard from inside.
+		if (S.bAboard && Was && Was->WiperPasses >= 0 && S.WiperPasses > Was->WiperPasses)
+			OneShot(S.bWiperDry ? FName("wiperdry") : FName("wiper"), {}, AcSound::ShipWiperGain, EAcSoundPool::InEar);
+	}
+}
+
+void FAcAudioRules::ButtonClunk()
+{
+	if (Allow("buttonclunk", 4)) OneShot("buttonclunk", {}, AcSound::ButtonClunkGain, EAcSoundPool::InEar);
+}
+
 void FAcAudioRules::JetDry(const double When)
 {
 	if (When < DryHeard + 0.8 && When >= DryHeard) return;
@@ -1055,6 +1093,32 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 		W.Volume = CruiseFade * AcSound::FlightCruiseGain;
 		W.bInEar = true;
 		Out.push_back(W);
+	}
+	// C4: each walk-in Dropship's engines, a loop at the ship; in your ear
+	// and dull aboard (as the rain through the Citadel's walls).
+	if (Variants("flcruise") > 0)
+	{
+		for (const FShipHear& S : Ships)
+		{
+			FAcLoopWant W;
+			W.Key = ShipKeys - S.Id;
+			W.Name = "flcruise";
+			W.Volume = AcSound::FlightCruiseGain * (AcSound::ShipIdle + (1.f - AcSound::ShipIdle) * FMath::Clamp(S.Thrust, 0.f, 1.f));
+			W.At = S.At;
+			W.Lift = S.Lift;
+			if (S.bAboard)
+			{
+				W.bInEar = true;
+				W.Volume *= AcSound::ShipAboardGain;
+				W.LowPassHz = AcSound::ShelterLowPassHz;
+			}
+			else
+			{
+				W.Volume *= Reach(S.At, AcSound::Carry("flcruise"));
+				if (!(W.Volume > AcSound::Audible)) continue;
+			}
+			Out.push_back(W);
+		}
 	}
 	// The driven Dropship's heal beam, in your ear.
 	Fade(HealFade, bHealing ? 1.f : 0.f, 0.15f, 0.4f);

@@ -1,8 +1,10 @@
 #include "AcShuttleShip.h"
 
+#include "AcAudioDirector.h"
 #include "AcDaylight.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
+#include "AcPilotPawn.h"
 #include "AcPose.h"
 #include "AcPoseFerry.h"
 #include "AcShuttleView.h"
@@ -22,6 +24,7 @@
 #include "UObject/ConstructorHelpers.h"
 
 #include "Shuttle.h"
+#include "Simulation.h"
 #include "Types.h"
 
 namespace
@@ -202,6 +205,21 @@ void AcShuttleShip::Tick(UWorld* World)
 	const FVector Cam = PC && PC->PlayerCameraManager ? PC->PlayerCameraManager->GetCameraLocation() : FVector::ZeroVector;
 	AAcShuttleShip* Nearest = nullptr;
 	double NearestD = AcShuttleShip::GlassRange;
+	// The ship the ears ride in (the driven unit in its bay, or riding it in flight).
+	int64 EarsIn = 0;
+	if (const AAcPilotPawn* Pilot = AAcPilotPawn::Find(World); Pilot && Pilot->Driving() && bLive)
+	{
+		const ac::Simulation& Sm = Sim->Simulation();
+		if (const std::optional<int64_t> I = Sm.unitIndex(Pilot->Driven()))
+		{
+			const ac::Unit& U = Sm.state.units[size_t(*I)];
+			if (const AcShuttleView::FShip* F = AcShuttleView::Aboard(U))
+			{
+				if (F->Ship.flying() || ac::ShuttleBay::inBay(ac::ShuttleBay::local(F->Ship, U.position))) EarsIn = F->Ship.id;
+			}
+		}
+	}
+	std::vector<FAcAudioRules::FShipHear> Heard;
 
 	if (bLive)
 	{
@@ -242,6 +260,17 @@ void AcShuttleShip::Tick(UWorld* World)
 			L.WiperAngle = A->Wiper.angle();
 			L.Thrust = AcShuttleShip::Thrust(uint8(S.stage), F.Clock, ac::shuttleStageSeconds(S, S.stage));
 			A->Apply(F.Placement, L);
+			FAcAudioRules::FShipHear H;
+			H.Id = S.id;
+			H.At = ac::Vec2(F.Pose.at.x, F.Pose.at.y);
+			H.Lift = float(FMath::Max(0.0, F.Pose.at.z - S.ground) + 1.0);
+			H.Thrust = float(L.Thrust);
+			H.RampWay = L.RampWay;
+			H.Stage = uint8(S.stage);
+			H.bAboard = S.id == EarsIn;
+			H.WiperPasses = A->Wiper.passes();
+			H.bWiperDry = A->Wiper.dry();
+			Heard.push_back(H);
 			const double D = FVector::Dist(Cam, F.Placement.GetLocation());
 			if (D < NearestD)
 			{
@@ -250,6 +279,7 @@ void AcShuttleShip::Tick(UWorld* World)
 			}
 		}
 	}
+	if (UAcAudioDirector* Audio = UAcAudioDirector::Get(World)) Audio->Rules().Shuttles(Heard);
 	for (const TPair<int64, AAcShuttleShip*>& Gone : Have)
 	{
 		UE_LOG(LogAutocraft, Log, TEXT("shuttle %lld: gone"), (long long)Gone.Key);

@@ -330,6 +330,30 @@ void AAcModelRow::Focus(const FName Name, int32 Team)
 		}
 	});
 
+	// -AcModelWith=model@x,y,z,yaw;...: more models beside the focused one, in its frame (UE cm, degrees), as they
+	// stand (a Prospector for scale, a vehicle in a bay); after -AcModelPose, which turns the focused model's parts.
+	FString WithText;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AcModelWith="), WithText, false))
+	{
+		TArray<FString> Withs;
+		WithText.ParseIntoArray(Withs, TEXT(";"));
+		for (const FString& With : Withs)
+		{
+			FString WithName, Where;
+			TArray<FString> A;
+			const FAcModelInfo* Other = With.Split(TEXT("@"), &WithName, &Where) ? FAcModelCatalog::Get().Find(FName(*WithName)) : nullptr;
+			if (!Other || Where.ParseIntoArray(A, TEXT(",")) != 4)
+			{
+				UE_LOG(LogAutocraft, Error, TEXT("models: -AcModelWith: %s is not model@x,y,z,yaw of a known model"), *With);
+				continue;
+			}
+			if (USceneComponent* H = AddModel(*Other, FVector(FCString::Atod(*A[0]), FCString::Atod(*A[1]), FCString::Atod(*A[2])), 0))
+			{
+				H->SetRelativeRotation(FRotator(0.0, FCString::Atod(*A[3]), 0.0));
+			}
+		}
+	}
+
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	FocusCamera = GetWorld()->SpawnActor<ACameraActor>(CamPos, (LookAt - CamPos).Rotation(), Params);

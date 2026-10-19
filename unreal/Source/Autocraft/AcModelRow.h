@@ -25,6 +25,8 @@
 //   -AcModelEye=X,Y,Z   put the focus camera there instead, in the model's frame (UE cm, the model at the origin,
 //   -AcModelLook=X,Y,Z  not turned), looking at -AcModelLook (default the bounds' centre); -AcModelFov=V its
 //                       vertical FOV (default 30). For views from a doorway or inside a hall.
+//   -AcModelWith=M@X,Y,Z,YAW[;...]  more models beside the focused one, at X,Y,Z in its frame (UE cm) turned YAW
+//                       degrees (a Prospector for scale, a vehicle in a bay).
 //   -AcModelPose=P:PITCH,YAW,ROLL[;P:...]  turn part P from its rest about its pivot (UE degrees, in the
 //                       part's frame), e.g. a ramp open: -AcModelPose=ramp:0,0,-90.
 //   -AcModelEmission=P:V[;P:V...]  part P's emission (custom data 1) set to V: a lamp's strength, a

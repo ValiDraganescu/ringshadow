@@ -1,10 +1,12 @@
 #include "AcShelter.h"
 
 #include "AcPilotPawn.h"
+#include "AcShuttleView.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 
 #include "Rules.h"
+#include "Shuttle.h"
 #include "Simulation.h"
 
 #include "HAL/IConsoleManager.h"
@@ -72,5 +74,49 @@ bool AcShelter::DrivenSheltered(const UObject* WorldContext)
 	if (!On() || !Pilot || !Pilot->Driving() || !Sim || !Sim->IsRunning()) return false;
 	const ac::Simulation& S = Sim->Simulation();
 	const std::optional<int64_t> I = S.unitIndex(Pilot->Driven());
-	return I && S.sheltered(S.state.units[size_t(*I)]);
+	if (!I) return false;
+	const ac::Unit& U = S.state.units[size_t(*I)];
+	if (S.sheltered(U)) return true;
+	// In a walk-in Dropship's bay (the ramp is open sky).
+	if (const ac::Shuttle* Ship = S.aboard(U))
+	{
+		return Ship->flying() || ac::ShuttleBay::inBay(ac::ShuttleBay::local(*Ship, U.position));
+	}
+	return false;
+}
+
+AcShelter::FShipBox AcShelter::BayOf(const FTransform& Placement)
+{
+	// The bay's corners in the ship's frame (cm): from the opening to the
+	// console's back, between the walls' inner faces, from the deck slab to
+	// the ceiling panels (ShuttleBay, Tools/Editor/models/ferry.py).
+	using B = ac::ShuttleBay;
+	const FVector Lo(AcSpace::ToCm(B::rear), -AcSpace::ToCm(B::halfWide) - 6.0, AcSpace::ToCm(0.25));
+	const FVector Hi(AcSpace::ToCm(B::noseFrom) + 20.0, AcSpace::ToCm(B::halfWide) + 6.0, AcSpace::ToCm(B::ceiling) + 8.0);
+	FShipBox Box;
+	Box.Centre = Placement.TransformPosition((Lo + Hi) * 0.5);
+	const FQuat Q = Placement.GetRotation();
+	Box.X = Q.GetAxisX();
+	Box.Y = Q.GetAxisY();
+	Box.Z = Q.GetAxisZ();
+	Box.Half = (Hi - Lo) * 0.5 + FVector(FaceCm);
+	return Box;
+}
+
+TOptional<AcShelter::FShipBox> AcShelter::NearestBay(const FVector& Camera)
+{
+	if (!On()) return {};
+	const AcShuttleView::FShip* Best = nullptr;
+	double BestD = ShipRange;
+	for (const AcShuttleView::FShip& F : AcShuttleView::Ships())
+	{
+		const double D = FVector::Dist(F.Placement.GetLocation(), Camera);
+		if (D < BestD)
+		{
+			BestD = D;
+			Best = &F;
+		}
+	}
+	if (!Best) return {};
+	return BayOf(Best->Placement);
 }
