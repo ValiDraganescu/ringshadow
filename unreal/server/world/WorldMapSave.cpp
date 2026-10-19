@@ -379,10 +379,11 @@ std::vector<std::string> WorldMap::restore(const WorldSave& save) {
                         p.progress.giveBlueprint(b.kind);
         // Saved before blueprints stacked (C2, schema 10): each blueprint it
         // had becomes as many copies as the realm may still build of that
-        // kind under its limit (the pilot's, with Overbuild), at least 1.
+        // kind under its limit (the pilot's, with Overbuild) in the pilot's
+        // region (C3: every limit is a region's), at least 1.
         if (!sp.stacked)
             for (auto& [kind, n] : p.progress.blueprints)
-                n = std::max<int64_t>(1, p.progress.limit(kind) - realmCount(kind));
+                n = std::max<int64_t>(1, p.progress.limit(kind) - limitCount(kind, p.region));
         // Saved before blueprints were learned (C2, schema 28): what it
         // bought, built or holds, learned; those copies gone.
         if (!sp.learned) {

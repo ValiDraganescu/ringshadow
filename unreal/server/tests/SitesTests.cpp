@@ -372,7 +372,7 @@ TEST(sites_builds_refused_without_blueprint_under_floor_past_limit) {
     o.xp = Progression::xp(60);
     o.learned = {StructureKind::habDome};
     EXPECT_TRUE(!o.buildRefusal(StructureKind::habDome, 4));
-    EXPECT_TRUE(*o.buildRefusal(StructureKind::habDome, 5) == "Hab Dome limit reached: 5 (Overbuild allows more)");
+    EXPECT_TRUE(*o.buildRefusal(StructureKind::habDome, 5) == "Hab Dome limit reached: 5 in this region (Overbuild allows more)");
 }
 
 // `--dev-blueprints`: a new pilot has every blueprint (shots and tests).

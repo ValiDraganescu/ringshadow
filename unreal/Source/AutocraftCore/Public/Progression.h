@@ -260,16 +260,17 @@ struct AUTOCRAFTCORE_API Progression {
     /// The level a building's blueprint opens at (its floor); 0: no
     /// blueprint (the Garrison).
     static int64_t blueprintFloor(StructureKind k);
-    /// How many of a building a pilot may have across the world (0: none,
+    /// How many of a building the realm may have in one region (0: none,
     /// the Garrison). Overbuild raises the Hab Dome, Derrick and Sentinel.
-    /// The Landing Pad's is per region (F2: the server counts the region's).
+    /// Every limit is a region's since C3 (`perRegion`).
     static int64_t buildingLimit(StructureKind k);
-    /// Counted in a region, not across the realm: the Landing Pad (F2) and,
-    /// since R3 (2026-10-15), the Citadel: one a region, each a full home.
-    /// And the Target Dummy (C2): `buildingLimit` a region.
-    static bool perRegion(StructureKind k) {
-        return k == StructureKind::landingPad || k == StructureKind::citadel || k == StructureKind::dummy;
-    }
+    /// Counted in a region, not across the realm. The Landing Pad (F2), the
+    /// Citadel (R3, 2026-10-15: one a region, each a full home) and the
+    /// Target Dummy (C2) came first; since C3 (2026-10-19) every kind, so
+    /// a realm at its limit in one region builds on in the next
+    /// (docs/guns-and-practice.md, "Limits per region and demolish"). Kept
+    /// as a function so a kind could be counted across the realm again.
+    static bool perRegion(StructureKind) { return true; }
     /// Landing Pads a region may have (F2).
     static constexpr int64_t landingPadsPerRegion = 2;
     /// What a building costs in a world, ore and MH, before the skills

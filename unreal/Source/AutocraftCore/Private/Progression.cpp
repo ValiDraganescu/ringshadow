@@ -534,7 +534,7 @@ int64_t Progression::blueprintFloor(StructureKind k) {
 
 int64_t Progression::buildingLimit(StructureKind k) {
     switch (k) {
-    // R3: one a region (`perRegion`).
+    // Every limit counts a region's (`perRegion`, C3); R3: one Citadel.
     case StructureKind::citadel: return 1;
     case StructureKind::derrick: return 4;
     case StructureKind::habDome: return 3;
@@ -544,9 +544,9 @@ int64_t Progression::buildingLimit(StructureKind k) {
     case StructureKind::bastion: return 2;
     case StructureKind::sentinel: return 4;
     case StructureKind::gatling: return 6;
-    // F2: per region, not per realm (the server counts the region's).
+    // F2: the Landing Pad's number.
     case StructureKind::landingPad: return Progression::landingPadsPerRegion;
-    // C2: per region (`perRegion`).
+    // C2.
     case StructureKind::dummy: return 12;
     default: return 0;
     }
@@ -791,10 +791,10 @@ std::optional<std::string> PilotProgress::buildRefusal(StructureKind k, int64_t 
         if (level() < floor(k)) return "The " + name + " opens at level " + std::to_string(floor(k));
     }
     if (owned >= limit(k)) {
-        if (k == StructureKind::landingPad) return "Landing Pad limit reached: " + std::to_string(limit(k)) + " in a region";
         if (k == StructureKind::citadel) return std::string("This region has its Citadel: one a region");
+        // C3: every limit is the region's (`Progression::perRegion`).
         const bool more = k == StructureKind::habDome || k == StructureKind::derrick || k == StructureKind::sentinel;
-        return name + " limit reached: " + std::to_string(limit(k)) + (more ? " (Overbuild allows more)" : "");
+        return name + " limit reached: " + std::to_string(limit(k)) + " in this region" + (more ? " (Overbuild allows more)" : "");
     }
     return std::nullopt;
 }

@@ -502,14 +502,13 @@ FString AcProgressHud::BlueprintRefusal(const FAcMmoClient* Mmo, const ac::Struc
 	const std::optional<ac::ProspectorProgress> G = Mmo ? Progress(*Mmo) : std::nullopt;
 	if (!G) return FString();
 	// The server's own rule and words (`ProspectorProgress::buildRefusal`),
-	// counting the realm's buildings of that kind across the world (R1: the
-	// limits are the realm's).
+	// counting the realm's buildings of that kind in the pilot's region
+	// (C3: every limit is a region's, `Progression::perRegion`).
 	int64 Owned = 0;
 	if (ac::Progression::perRegion(Kind))
 	{
-		// Counted in the region (the Landing Pad, the Citadel since R3): the
-		// mirror's, the region the pilot stands in now (the Progress message
-		// is not sent again on a region change).
+		// Counted in the region: the mirror's, the region the pilot stands
+		// in now (the Progress message is not sent again on a region change).
 		if (const ac::net::Mirror* M = Mmo->Mirror())
 			for (const ac::Structure& B : M->simulation().state.structures)
 				Owned += B.kind == Kind && B.owner == ac::Pilot::player ? 1 : 0;

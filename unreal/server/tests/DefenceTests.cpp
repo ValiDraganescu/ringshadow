@@ -259,7 +259,7 @@ TEST(defence_turrets_blueprints_floors_and_limits) {
     EXPECT_TRUE(g.buildRefusal(StructureKind::gatling, 0).value_or("") == "The Gatling Gun opens at level 5");
     g = at(5);
     EXPECT_TRUE(!g.buildRefusal(StructureKind::gatling, 5).has_value());
-    EXPECT_TRUE(g.buildRefusal(StructureKind::gatling, 6).value_or("") == "Gatling Gun limit reached: 6");
+    EXPECT_TRUE(g.buildRefusal(StructureKind::gatling, 6).value_or("") == "Gatling Gun limit reached: 6 in this region");
     EXPECT_TRUE(g.buildRefusal(StructureKind::sentinel, 0).value_or("") == "The Sentinel opens at level 10");
     g = at(10);
     EXPECT_TRUE(g.buildRefusal(StructureKind::sentinel, 4).value_or("").rfind("Sentinel limit reached: 4", 0) == 0);

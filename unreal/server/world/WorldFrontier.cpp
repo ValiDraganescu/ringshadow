@@ -438,7 +438,7 @@ std::optional<std::string> WorldMap::frontierCap(size_t r, StructureKind kind, V
         break;
     default: return std::string("The frontier builds no ") + Simulation::title(kind);
     }
-    // One always left for a human under the realm's limit.
+    // One always left for a human under the region's limit (C3).
     if (limitCount(kind, r) + 2 > Progression::buildingLimit(kind)) return std::string("Left for the realm's pilots");
     const Simulation& sim = regions_[r]->simulation();
     for (const Structure& b : sim.state.structures) {

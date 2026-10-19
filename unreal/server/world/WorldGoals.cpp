@@ -142,15 +142,10 @@ std::optional<std::pair<size_t, size_t>> WorldMap::worldSite(StructureKind kind)
 bool WorldMap::goalMet(const PilotState& p, const WorldGoals::Entry& e) const {
     const std::string key = e.key;
     const ProspectorProgress& g = p.progress;
-    // The realm's count of a kind, finished or not: at the pilot's limit
-    // the goal can't be done, so it counts as met (never blocks).
-    auto full = [&](StructureKind k) {
-        int64_t n = 0;
-        for (const auto& r : regions_)
-            for (const Structure& b : r->simulation().state.structures)
-                if (b.kind == k && realm(b)) n += 1;
-        return n >= g.limit(k);
-    };
+    // The realm's count of a kind where the pilot is, finished or not
+    // (C3: the limits are a region's): at the pilot's limit the goal can't
+    // be done here, so it counts as met (never blocks).
+    auto full = [&](StructureKind k) { return limitCount(k, p.region) >= g.limit(k); };
     auto builtOrFull = [&](StructureKind k) { return builtFinished(p, k) || full(k); };
     if (key == "derrick") return p.goalsDid.count("pumped") || builtFinished(p, StructureKind::derrick);
     if (key == "skills") return g.unspent() <= 0;

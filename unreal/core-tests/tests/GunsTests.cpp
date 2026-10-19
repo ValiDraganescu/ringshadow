@@ -578,7 +578,7 @@ TEST(dummy_buildsForTenOreWithNoBlueprint) {
     EXPECT_TRUE(p.knows(StructureKind::dummy));
     EXPECT_TRUE(!p.buildRefusal(StructureKind::dummy, 0));
     EXPECT_TRUE(!p.buildRefusal(StructureKind::dummy, 11));
-    EXPECT_EQ(p.buildRefusal(StructureKind::dummy, 12), std::optional<std::string>("Target Dummy limit reached: 12"));
+    EXPECT_EQ(p.buildRefusal(StructureKind::dummy, 12), std::optional<std::string>("Target Dummy limit reached: 12 in this region"));
     EXPECT_TRUE(p.learnRefusal(StructureKind::dummy).has_value());
     // A Prospector puts one up for 10 ore, and it rises in 2 s.
     GameState s = bare(1, 0, {}, {}, 1);
@@ -593,6 +593,26 @@ TEST(dummy_buildsForTenOreWithNoBlueprint) {
     bool built = false;
     for (const auto& st : sim.state.structures) built = built || (st.kind == StructureKind::dummy && st.complete());
     EXPECT_TRUE(built);
+}
+
+// C3: every limit is counted in a region, with today's numbers; the
+// refusal says so.
+TEST(limits_areARegions) {
+    for (const StructureKind k : Progression::blueprintKinds()) EXPECT_TRUE(Progression::perRegion(k));
+    EXPECT_TRUE(Progression::perRegion(StructureKind::dummy));
+    EXPECT_EQ(Progression::buildingLimit(StructureKind::gatling), int64_t(6));
+    EXPECT_EQ(Progression::buildingLimit(StructureKind::derrick), int64_t(4));
+    EXPECT_EQ(Progression::buildingLimit(StructureKind::habDome), int64_t(3));
+    EXPECT_EQ(Progression::buildingLimit(StructureKind::sentinel), int64_t(4));
+    EXPECT_EQ(Progression::buildingLimit(StructureKind::bastion), int64_t(2));
+    EXPECT_EQ(Progression::buildingLimit(StructureKind::foundry), int64_t(1));
+    PilotProgress p;
+    p.xp = Progression::xp(10);
+    p.learned = {StructureKind::gatling, StructureKind::sentinel, StructureKind::landingPad};
+    EXPECT_EQ(p.buildRefusal(StructureKind::gatling, 6), std::optional<std::string>("Gatling Gun limit reached: 6 in this region"));
+    EXPECT_EQ(p.buildRefusal(StructureKind::sentinel, 4),
+              std::optional<std::string>("Sentinel limit reached: 4 in this region (Overbuild allows more)"));
+    EXPECT_EQ(p.buildRefusal(StructureKind::landingPad, 2), std::optional<std::string>("Landing Pad limit reached: 2 in this region"));
 }
 
 TEST(blueprint_learnedOnceThenBuildsForOre) {

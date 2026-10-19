@@ -268,8 +268,7 @@ std::optional<net::ProgressMessage> WorldMap::progressMessage(PilotId pilot) con
     m.foundry = realmFinished(StructureKind::foundry);
     m.lab = realmFinished(StructureKind::lab);
     // R1: the realm's buildings (its limits), who built those here; the
-    // kinds limited a region (the Landing Pad, the Citadel since R3): the
-    // pilot's region's.
+    // kinds limited a region (every kind since C3): the pilot's region's.
     for (size_t r = 0; r < regions_.size(); r++)
         for (const Structure& b : regions_[r]->simulation().state.structures)
             if (realm(b) && (!Progression::perRegion(b.kind) || r == it->second.region)) m.realm[b.kind] += 1;

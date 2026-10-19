@@ -367,6 +367,43 @@ bool anywhere(WorldMap& w, int64_t kindCount) {
 
 } // namespace
 
+// C3: every limit is a region's. Six Gatling Guns of the realm in the start
+// region: a seventh there is refused ("in this region"); in Cold Fork the
+// same pilot builds one; the World message counts the region's.
+TEST(roles_limits_are_a_regions) {
+    WorldMap w(first(), params());
+    w.seat(me, key);
+    w.setProgress(me, at(5));
+    fill(w, me, 5000, 500);
+    Simulation& sim = simOf(w, me);
+    const Vec2 from = startPad() + Vec2(0, 24);
+    int64_t placed = 0;
+    for (int k = 0; k < 96 && placed < 6; k++) {
+        const auto s = sim.snap(StructureKind::gatling, from + Vec2(std::cos(k * 0.9), std::sin(k * 0.9)) * (6 + k / 2.0));
+        if (!s || sim.placementRefusal(StructureKind::gatling, *s)) continue;
+        Structure g(sim.state.nextID++, StructureKind::gatling, Pilot::player, *s);
+        g.hp = Rules::hp(StructureKind::gatling);
+        sim.state.structures.push_back(g);
+        sim.reindex();
+        placed++;
+    }
+    ASSERT_TRUE(placed == 6);
+    w.step();
+    EXPECT_EQ(w.limitCount(StructureKind::gatling, first().start), int64_t(6));
+    EXPECT_EQ(w.progressMessage(me)->realm.at(StructureKind::gatling), int64_t(6));
+    moveTo(w, me, startPad() + Vec2(0, 10));
+    std::string why;
+    EXPECT_TRUE(!put(w, me, StructureKind::gatling, &why).has_value());
+    EXPECT_EQ(why, std::string("Gatling Gun limit reached: 6 in this region"));
+    goTo(w, me, "cold-fork");
+    fill(w, me, 5000, 500);
+    moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));
+    ASSERT_TRUE(put(w, me, StructureKind::gatling).has_value());
+    EXPECT_EQ(w.realmCount(StructureKind::gatling), int64_t(7));
+    EXPECT_EQ(w.limitCount(StructureKind::gatling, *w.regionNamed("cold-fork")), int64_t(1));
+    EXPECT_EQ(w.progressMessage(me)->realm.at(StructureKind::gatling), int64_t(1));
+}
+
 // A Landing Pad: level 1, ore only, two in a region (a third refused), more
 // in another region; the realm's, in every pilot's World message, numbered
 // across the world; a region file's pad is not one.
@@ -382,7 +419,7 @@ TEST(roles_landing_pad_built_and_limited) {
     moveTo(w, me, startPad() + Vec2(-10, 10));
     std::string why;
     EXPECT_TRUE(!put(w, me, StructureKind::landingPad, &why).has_value());
-    EXPECT_EQ(why, std::string("Landing Pad limit reached: 2 in a region"));
+    EXPECT_EQ(why, std::string("Landing Pad limit reached: 2 in this region"));
     goTo(w, me, "cold-fork");
     fill(w, me, 2000, 0);
     moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));

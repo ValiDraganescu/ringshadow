@@ -880,11 +880,11 @@ public:
     /// rolls for a survey chip (`ProspectorProgress::chipChance`, at most one
     /// every `WorldSites::chipEvery`). True when a chip came.
     bool oreLoad(PilotId pilot);
-    /// The realm's buildings of a kind across the world, finished or not
-    /// (R1: the limits are the realm's).
+    /// The realm's buildings of a kind across the world, finished or not.
     int64_t realmCount(StructureKind kind) const;
     /// What a kind's limit counts for a pilot in region `region`: the
-    /// realm's (`realmCount`), the region's own for a Landing Pad (F2).
+    /// realm's buildings of it in that region, finished or not (C3: every
+    /// limit is a region's, `Progression::perRegion`; else `realmCount`).
     int64_t limitCount(StructureKind kind, size_t region) const;
     /// A site's id, "<region id>/<site name>".
     std::string siteId(size_t region, size_t site) const;
