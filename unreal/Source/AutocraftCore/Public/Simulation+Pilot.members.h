@@ -68,16 +68,46 @@ public:
     /// The full step `d` is blocked: a step along what blocks it instead
     /// (the step on the blocker's tangent, then the world axes, then the
     /// step turned 25° and 50°), never back against `d`. Nil: no way.
-    std::optional<Vec2> pilotSlide(const Unit& u, Vec2 d) const;
+    /// On wheels, a step `s` turns the hull by `dot(s, chord) * curve`
+    /// (`pilotWalk`'s arc), and the body is tested turned so.
+    std::optional<Vec2> pilotSlide(const Unit& u, Vec2 d, Vec2 chord = Vec2(0, 0), double curve = 0) const;
 
     /// What keeps the unit out of `to`, seen from `from`: the blocker's
     /// outward normal at its point nearest `from`; for ground the grid
     /// leaves out, the way the open ground round `from` lies.
     std::optional<Vec2> pilotContact(const Unit& u, Vec2 from, Vec2 to) const;
 
-    /// Nothing solid at `p` for the unit: open ground, clear of buildings
-    /// and live ore deposits (a flyer goes anywhere on the map).
+    /// Nothing solid at `p` for the unit: open ground, clear of buildings,
+    /// live ore deposits and the bodies of other units (`bodyHeld`), its
+    /// body turned to `heading` (its own when not given). A Mule's nose and
+    /// tail meet them too (C5). A flyer goes anywhere on the map.
     bool pilotCanStand(const Unit& u, Vec2 p) const;
+    bool pilotCanStand(const Unit& u, Vec2 p, double heading) const;
+
+    /// C5 (docs/haul-and-ferry.md "Solid bodies"): unit `v`'s body is solid
+    /// to `u` on the ground: walkers, vehicles and the Brood alike. The
+    /// dead, flyers, anyone aboard (a Mule's rider), in a Derrick or a
+    /// Bastion, mid-jump, and a buried Scorpion are no bodies.
+    bool bodyBlocks(const Unit& u, const Unit& v) const;
+    /// The body of `u` at `p` turned to `heading` reaches into a body solid
+    /// to it deeper than where it stands now (`u.position`, its heading):
+    /// one it already overlaps (spawned, rolled out onto it) holds only a
+    /// step that goes deeper, so nothing is ever stuck in another.
+    bool bodyHeld(const Unit& u, Vec2 p, double heading) const;
+    /// For `pilotContact`: the outward normal, seen from `from`, of the body
+    /// that holds `u` out of `to` (`bodyHeld`); nil: none does.
+    std::optional<Vec2> bodyContact(const Unit& u, Vec2 from, Vec2 to) const;
+    /// The step out of the deepest body `u` overlaps, at most `most` long
+    /// (nil: it overlaps none, or no way out is open).
+    std::optional<Vec2> bodyPush(const Unit& u, double most) const;
+    /// A driven unit inside another's body is pushed out of it at this
+    /// pace, cells a second (`pilotWalk`).
+    static constexpr double bodyPushPace = 3.0;
+    /// C5, after the AI's push (`separate`): the bodies it never moves (a
+    /// driven unit, a Mule, parked or driven) hold every other ground unit
+    /// off, one inside put out at their surface onto walkable ground (a
+    /// landed Dropship is solid on the AI's grid already).
+    void holdOff();
 
     /// Something the unit is busy with that holds it in place (mid-jump,
     /// a Prospector drilling, inside a Derrick, welding or mending). True while

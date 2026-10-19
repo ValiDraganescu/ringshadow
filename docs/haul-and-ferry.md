@@ -548,6 +548,69 @@ the user's to tune by feel.
   Fireflies and Hailstorm drive on wheels now (`duel` and `mining` are as
   they were).
 
+## Solid bodies (c5-solid, 2026-10-20)
+
+The user, playing: "my prospector can pass right through the mule, this
+should not be possible", and the rule for the project: anything that does
+not make sense to pass through is not passed through.
+
+- **Bodies.** Every unit on the ground is solid to every other one on the
+  ground: walkers (Prospector, Ranger, Comet, Juggernaut), vehicles
+  (Firefly, Hailstorm, Longbow, Atlas, Scorpion, Mule) and the Brood
+  (Shardling, Lodeback, the Matriarch). The Mule's body is its box,
+  `Mule::length` × `Mule::width` (3.0 × 1.6) turned with its heading;
+  everyone else's is the circle the walk already gives it,
+  `Rules::radius` × 0.8. No bodies: the dead, flyers (the Dropship, the
+  Kestrel, the Peregrine, a Gloamwing), anyone aboard (a Mule's rider on its
+  perch, a Dropship's carried), in a Derrick or a Bastion, a Comet mid-jump,
+  a buried Scorpion (under the ground). `Simulation::bodyBlocks`.
+- **The pilot's walk and drive** (`Pilot+Bodies.cpp`; `pilotCanStand`, so
+  the server and the client's prediction agree). A step that takes the
+  driven unit's body into another's is refused, and it slides along it as
+  along a rock or a wall (`pilotContact` gives the body's normal): a walker
+  square into the Mule stops at its surface, aslant it slides along it and
+  round its end; a driven Mule stops at a Prospector, a Ranger, a bug or
+  another Mule. On wheels the body is tested turned as the arc turns it.
+- **The Mule's ends** (the manager's Q3). Against buildings, rocks, ore and
+  the ground's edges its nose and tail count as its middle does (three
+  circles along it, as the Dropship's bay already tested): its nose stops at
+  a wall, not its middle 1.5 cells back. An end already in something where
+  it stands (set down against a wall) holds it no longer, so it drives out.
+- **Never stuck.** A body it already overlaps (spawned on it, a Mule rolled
+  out onto it) holds only a step that goes deeper. A driven unit inside
+  another's body is pushed out of the deepest one at 3 cells a second
+  (`bodyPushPace`, `bodyPush`, at the start of `pilotWalk`, standing still
+  too), straight out or turned up to 90° onto ground it can stand on.
+- **The AI's units.** `Simulation::separate` (the AI's push apart after
+  each step) now takes the Brood too, and no longer the driven unit: its
+  own walk keeps it out of the others, and the others are held off it.
+  After it, `holdOff`: the bodies the AI never moves (a driven unit, a Mule
+  parked or driven) put any other ground unit inside them out at their
+  surface, onto walkable ground, every step: an AI Ranger sent through the
+  pilot goes round it, a swarm stands round it, nobody jams. A landed
+  Dropship is solid on the AI's grid already (C4).
+- **Kept possible.** E at the perch from beside the Mule (2.0 reach; its
+  flank is 0.8 off its middle), filling at the hopper from beside or
+  behind, the rider on the perch (aboard, no body), climbing off beside the
+  perch (1.33 off its axis, clear of the box), the Mule rolling out of the
+  Foundry's door (0.2 clear of the wall; anyone there is pushed out), the
+  Mule up the ramp into the bay.
+- **Left passable.** AI Prospectors pass each other and the AI's soldiers
+  as before (the classic RTS worker crowd at the ore; the RTS mode's
+  economy and goldens hang on it); flyers over everything; a buried
+  Scorpion; the Brood's nest mound and tunnel mouths and the build spots'
+  markers (walked over by design). The Dropship's bay is 2.0 wide: a walker
+  cannot pass a Mule parked in it (c5-ship widens it).
+- **Tests**: core `SolidBodyTests.cpp` (square into the Mule from every
+  side; aslant along it; climb on and fill from beside, off and away; a
+  driven Mule stopped at a Prospector and at another Mule; a Firefly at a
+  Prospector, a Prospector at a Ranger and a Shardling; flyers, a buried
+  Scorpion and a rider no bodies; pushed out of a Mule, a Mule rolled out
+  onto the pilot, a Mule driven out of another; the Mule's nose at a wall;
+  an AI Ranger held off the pilot, two bugs apart; the Dropship's hull from
+  outside); `MuleTests_mule_boardRideAndLeave` now puts its second
+  Prospector beside the perch, not inside the Mule.
+
 ## 5. Workers
 
 | Worker | Scope |
@@ -558,3 +621,4 @@ the user's to tune by feel.
 | c4-ship-sim | Section 3: core, net, server, the frontier pilots, tests |
 | c4-ship-look | Section 4's Dropship: the model, the bay, the buttons, the windshield and wipers, the camera aboard, the view out in flight |
 | c4-drive | "The drive": wheels drive as cars, tracks as tanks; the climb limit; the tilt on the ground |
+| c5-solid | "Solid bodies": nothing on the ground walks or drives through another; the Mule's ends against walls |

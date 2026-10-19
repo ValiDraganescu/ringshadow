@@ -130,8 +130,8 @@ TEST(mule_boardRideAndLeave) {
     EXPECT_TRUE(h.sim.muleRider(mule) == h.pilot);
     EXPECT_TRUE(h.sim.ridden(unitOf(h.sim, h.pilot)) == mule);
     EXPECT_TRUE(h.sim.piloted(mule) && !h.sim.piloted(h.pilot));
-    // A second Prospector finds the seat taken.
-    const int64_t other = addUnit(h.sim.state, UnitKind::prospector, Mule::perch(unitOf(h.sim, mule)), 0);
+    // A second Prospector beside the perch finds the seat taken.
+    const int64_t other = addUnit(h.sim.state, UnitKind::prospector, Mule::perch(unitOf(h.sim, mule)) + Vec2(0, 1.3), 0);
     h.sim.reindex();
     EXPECT_TRUE(h.sim.muleBoard(other, mule).value_or("") == "Someone drives it already");
     // Driving ahead, the rider rides along.

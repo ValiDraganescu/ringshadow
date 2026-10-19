@@ -6,6 +6,7 @@
 // for all; what the action key does depends on the kind (`pilotTarget`,
 // `pilotAct`), as does anything the unit is busy with (`pilotBusy`).
 
+#include "Mule.h"
 #include "Simulation.h"
 
 #include "Act.h"
@@ -338,8 +339,10 @@ void Simulation::pilotMiss(Unit& u, std::vector<GameEvent>& events) {
 /// (`pilotSlide`; a jumper takes off at a cliff face instead). Wheels
 /// and treads do not sidestep; wheels steer on an arc (C4); an anchored
 /// Longbow creeps (`Pilot.pace`). A vehicle climbs no steeper than its
-/// gear lets it (`climbRefused`).
+/// gear lets it (`climbRefused`). Inside another's body (C5: spawned, or
+/// a Mule rolled out onto it) it is pushed out first (`bodyPush`).
 void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
+    if (const std::optional<Vec2> out = bodyPush(u, bodyPushPace * dt)) u.position += *out;
     const double pace = Pilot::pace(u);
     if (!(pace > 0)) return;
     Vec2 w = Pilot::strafes(u.kind) ? walk : Vec2(walk.x, 0);
@@ -368,8 +371,8 @@ void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
     // Too steep a climb for its gear: refused, it stands (wheels and tracks
     // do not crab sideways up a hill; turned across the slope, it goes).
     if (climbRefused(u, from, from + d)) pilotSteep = state.time;
-    else if (pilotCanStand(u, from + d)) u.position += d;
-    else if (const std::optional<Vec2> step = pilotSlide(u, d)) u.position += *step;
+    else if (pilotCanStand(u, from + d, h + dot(d, chord) * curve)) u.position += d;
+    else if (const std::optional<Vec2> step = pilotSlide(u, d, chord, curve)) u.position += *step;
     u.stride += distance(from, u.position);
     // The hull turns by how far it rolled along the arc: blocked, not at all.
     if (curve != 0) u.heading = std::remainder(h + dot(u.position - from, chord) * curve, 2 * pi);
@@ -402,10 +405,11 @@ double Simulation::groundPitch(const Unit& u, Vec2 p, Vec2 dir) const {
 /// 25° and 50° to either side, the side away from the blocker first. Never
 /// a step back against the one wanted, and only onto ground it can stand
 /// on: in a concave corner it stands. Nil: no way.
-std::optional<Vec2> Simulation::pilotSlide(const Unit& u, Vec2 d) const {
+std::optional<Vec2> Simulation::pilotSlide(const Unit& u, Vec2 d, Vec2 chord, double curve) const {
     const Vec2 from = u.position;
     auto open = [&](Vec2 s) {
-        return length(s) > 1e-9 && dot(s, d) >= 0 && !climbRefused(u, from, from + s) && pilotCanStand(u, from + s);
+        return length(s) > 1e-9 && dot(s, d) >= 0 && !climbRefused(u, from, from + s)
+               && pilotCanStand(u, from + s, u.heading + dot(s, chord) * curve);
     };
     const std::optional<Vec2> n = pilotContact(u, from, from + d);
     if (n) {
@@ -429,45 +433,60 @@ std::optional<Vec2> Simulation::pilotSlide(const Unit& u, Vec2 d) const {
 }
 
 /// What keeps the unit out of `to`, seen from `from`: the outward normal of
-/// the blocker at the point of it nearest `from` (a rock's circle, a
-/// building's slab or furniture, an ore deposit's box). For ground the grid
+/// the blocker at the point of it nearest `from` (another unit's body, a
+/// rock's circle, a building's slab or furniture, an ore deposit's box; for
+/// a Mule, at its middle, its nose or its tail). For ground the grid
 /// leaves out (a cliff, a well, a region's wall or edge), the way the open
 /// ground round `from` lies. Nil: nothing blocks, or no way is open.
 std::optional<Vec2> Simulation::pilotContact(const Unit& u, Vec2 from, Vec2 to) const {
-    auto away = [&](Vec2 near) -> std::optional<Vec2> {
-        const Vec2 n = from - near;
+    const double r = Rules::radius(u.kind) * 0.8;
+    // The way from the point `near` of a blocker to `seen`.
+    auto away = [](Vec2 seen, Vec2 near) -> std::optional<Vec2> {
+        const Vec2 n = seen - near;
         const double len = length(n);
         return len > 1e-9 ? std::optional<Vec2>(n / len) : std::nullopt;
     };
-    const double r = Rules::radius(u.kind) * 0.8;
-    if (!u.stats().air) {
-        if (const auto wall = shuttleContact(u, from, to, r)) return away(*wall);
-        if (nav && !swallowedByCitadel(to)) {
-            if (const auto rock = nav->rockAt(to, NavGrid::clearance)) return away(rock->first);
+    // What the circle stepping from `f` to `t` meets.
+    auto meets = [&](Vec2 f, Vec2 t) -> std::optional<std::optional<Vec2>> {
+        if (nav && !swallowedByCitadel(t)) {
+            if (const auto rock = nav->rockAt(t, NavGrid::clearance)) return away(f, rock->first);
         }
         for (const Structure& s : state.structures) {
-            if (Rules::walkable(s.kind) || !NavGrid::insideStructure(to, s, r)) continue;
-            const Footprint& f = Rules::footprint(s.kind);
-            const Vec2 at = to - s.position, seen = from - s.position;
+            if (Rules::walkable(s.kind) || !NavGrid::insideStructure(t, s, r)) continue;
+            const Footprint& fp = Rules::footprint(s.kind);
+            const Vec2 at = t - s.position, seen = f - s.position;
             auto nearestOf = [&](const Slab& w) {
                 return s.position + Vec2(std::max(w.min.x, std::min(w.max.x, seen.x)), std::max(w.min.y, std::min(w.max.y, seen.y)));
             };
-            if (!f.interior || !s.complete()) return away(nearestOf(Slab{{-f.radius, -f.radius}, {f.radius, f.radius}}));
-            for (const Slab& w : f.walls) {
-                if (w.z0 <= 0 && w.contains(at, r)) return away(nearestOf(w));
+            if (!fp.interior || !s.complete()) return away(f, nearestOf(Slab{{-fp.radius, -fp.radius}, {fp.radius, fp.radius}}));
+            for (const Slab& w : fp.walls) {
+                if (w.z0 <= 0 && w.contains(at, r)) return away(f, nearestOf(w));
             }
-            if (f.door && !doorOpen(s) && f.door->contains(at, r)) return away(nearestOf(*f.door));
-            for (const Block& b : f.furniture) {
-                if (b.z0 <= 0.1 && b.contains(at, r)) return away(s.position + b.nearest(seen));
+            if (fp.door && !doorOpen(s) && fp.door->contains(at, r)) return away(f, nearestOf(*fp.door));
+            for (const Block& b : fp.furniture) {
+                if (b.z0 <= 0.1 && b.contains(at, r)) return away(f, s.position + b.nearest(seen));
             }
         }
         for (const Structure& s : state.structures) {
-            if (const auto post = Act::postFoot(s); post && post->contains(to, r)) return away(post->nearest(from));
+            if (const auto post = Act::postFoot(s); post && post->contains(t, r)) return away(f, post->nearest(f));
         }
         for (const OreDeposit& m : state.patches) {
-            if (!(m.remaining > 0 && NavGrid::insidePatch(to, m, r - 0.1))) continue;
+            if (!(m.remaining > 0 && NavGrid::insidePatch(t, m, r - 0.1))) continue;
             const Block box{m.position, Vec2(1, 0.5), -m.angle};
-            return away(box.nearest(from));
+            return away(f, box.nearest(f));
+        }
+        return std::nullopt;
+    };
+    if (!u.stats().air) {
+        if (const auto body = bodyContact(u, from, to)) return body;
+        if (const auto wall = shuttleContact(u, from, to, r)) return away(from, *wall);
+        if (const auto n = meets(from, to)) return *n;
+        // A Mule's nose and tail meet them as its middle does (C5).
+        if (u.stats().hauler) {
+            const Vec2 ahead = Vec2(std::cos(u.heading), std::sin(u.heading)) * ac::max(0.0, Mule::length / 2 - r);
+            for (const Vec2 end : {ahead, -ahead}) {
+                if (const auto n = meets(from + end, to + end)) return *n;
+            }
         }
     }
     // The grid's ground (or the map's bounds for a flyer): the open
@@ -481,63 +500,82 @@ std::optional<Vec2> Simulation::pilotContact(const Unit& u, Vec2 from, Vec2 to) 
     return len > 1e-6 ? std::optional<Vec2>(sum / len) : std::nullopt;
 }
 
-/// Nothing solid at `p` for the unit: open ground, clear of buildings
-/// and live ore deposits (a flyer goes anywhere on the map).
-bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
+/// Nothing solid at `p` for the unit: open ground, clear of buildings,
+/// live ore deposits and other units' bodies (a flyer goes anywhere on the
+/// map).
+bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const { return pilotCanStand(u, p, u.heading); }
+
+bool Simulation::pilotCanStand(const Unit& u, Vec2 p, double heading) const {
     if (u.stats().air) {
         if (!map) return true;
         const GroundRect b = map->bounds;
         return p.x > b.minX && p.x < b.maxX && p.y > b.minZ && p.y < b.maxZ;
     }
     const double r = Rules::radius(u.kind) * 0.8;
+    // The ground, the rocks, the buildings and the ore for a circle of
+    // radius `r` at `q`.
+    auto clear = [&](Vec2 q) {
+        // Past a region's open edge (W4): it stands on the ground just inside.
+        if (map && map->edges) {
+            const std::optional<Vec2> in = map->edges->standIn(map->bounds, q);
+            if (!in) return false;
+            q = *in;
+        }
+        // A map doodad a complete Citadel swallowed (a saved world's Citadel
+        // grown over its rocks, C1) is not there: the game hides it.
+        // The map's rocks are their circles grown by the grid's clearance, not
+        // the grid's cells round them (a staircase up to 0.35 cells deeper,
+        // which caught a walker sliding along a rock): their cells are
+        // `rocky`, and the circles decide.
+        if (nav) {
+            const bool swallowed = swallowedByCitadel(q);
+            if (!nav->standable(q) && !nav->rockyCell(q) && !(swallowed && swallowedDoodadCell(q))) return false;
+            if (!swallowed && nav->rockAt(q, NavGrid::clearance)) return false;
+        }
+        // A complete Citadel with the hall blocks by its walls and its shut door
+        // (C1): the pilot walks in through the open door. Anything else, its
+        // whole square.
+        if (std::any_of(state.structures.begin(), state.structures.end(), [&](const Structure& s) {
+                if (Rules::walkable(s.kind) || !NavGrid::insideStructure(q, s, r)) return false;
+                const Footprint& f = Rules::footprint(s.kind);
+                if (!f.interior || !s.complete()) return true;
+                return f.blocks(q - s.position, doorOpen(s), r) || f.furnished(q - s.position, r);
+            })) {
+            return false;
+        }
+        // The call posts beside a Landing Pad and a Foundry (C5, Act.h).
+        if (std::any_of(state.structures.begin(), state.structures.end(), [&](const Structure& s) {
+                const auto post = Act::postFoot(s);
+                return post && post->contains(q, r);
+            })) {
+            return false;
+        }
+        return std::none_of(state.patches.begin(), state.patches.end(), [&](const OreDeposit& m) {
+            return m.remaining > 0 && NavGrid::insidePatch(q, m, r - 0.1);
+        });
+    };
     // A Dropship's walls, its shut ramp and what stands in its bay (C4);
     // on its deck or its ramp the ground under it does not matter.
+    bool deck = false;
     if (!state.shuttles.empty()) {
         const ShuttleWalk walk = shuttleWalk(u, p, r);
         if (walk == ShuttleWalk::blocked) return false;
-        if (walk == ShuttleWalk::deck) return true;
+        deck = walk == ShuttleWalk::deck;
     }
-    // Past a region's open edge (W4): it stands on the ground just inside.
-    if (map && map->edges) {
-        const std::optional<Vec2> in = map->edges->standIn(map->bounds, p);
-        if (!in) return false;
-        p = *in;
+    if (!deck) {
+        if (!clear(p)) return false;
+        // A Mule's nose and tail meet them as its middle does (C5); an end
+        // already in something where it stands now (rolled out against a
+        // wall) holds it no longer, so it drives out.
+        if (u.stats().hauler) {
+            const double off = ac::max(0.0, Mule::length / 2 - r);
+            const Vec2 to = Vec2(std::cos(heading), std::sin(heading)) * off;
+            const Vec2 now = Vec2(std::cos(u.heading), std::sin(u.heading)) * off;
+            if ((!clear(p + to) && clear(u.position + now)) || (!clear(p - to) && clear(u.position - now))) return false;
+        }
     }
-    // A map doodad a complete Citadel swallowed (a saved world's Citadel
-    // grown over its rocks, C1) is not there: the game hides it.
-    // The map's rocks are their circles grown by the grid's clearance, not
-    // the grid's cells round them (a staircase up to 0.35 cells deeper,
-    // which caught a walker sliding along a rock): their cells are
-    // `rocky`, and the circles decide.
-    if (nav) {
-        const bool swallowed = swallowedByCitadel(p);
-        if (!nav->standable(p) && !nav->rockyCell(p) && !(swallowed && swallowedDoodadCell(p))) return false;
-        if (!swallowed && nav->rockAt(p, NavGrid::clearance)) return false;
-    }
-    // A complete Citadel with the hall blocks by its walls and its shut door
-    // (C1): the pilot walks in through the open door. Anything else, its
-    // whole square.
-    if (std::any_of(state.structures.begin(), state.structures.end(), [&](const Structure& s) {
-            if (Rules::walkable(s.kind) || !NavGrid::insideStructure(p, s, r)) return false;
-            const Footprint& f = Rules::footprint(s.kind);
-            if (!f.interior || !s.complete()) return true;
-            return f.blocks(p - s.position, doorOpen(s), r) || f.furnished(p - s.position, r);
-        })) {
-        return false;
-    }
-    if (std::any_of(state.patches.begin(), state.patches.end(), [&](const OreDeposit& m) {
-            return m.remaining > 0 && NavGrid::insidePatch(p, m, r - 0.1);
-        })) {
-        return false;
-    }
-    // The call posts beside a Landing Pad and a Foundry (C5, Act.h).
-    if (std::any_of(state.structures.begin(), state.structures.end(), [&](const Structure& s) {
-            const auto post = Act::postFoot(s);
-            return post && post->contains(p, r);
-        })) {
-        return false;
-    }
-    return true;
+    // Another unit's body (C5).
+    return !bodyHeld(u, p, heading);
 }
 
 /// Something the unit is busy with that holds it in place (mid-jump,
