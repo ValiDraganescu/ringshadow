@@ -6,10 +6,14 @@
 //   faces    slabs of layered rock on every cliff face (stacked up a tall
 //            one, leaning with it, no more than 0.3 cells out of it), talus
 //            at the feet, a broken crown on each spire; none beside a ramp
-//   clutter  by the region's palette within 35 m of the camera: pebbles
-//            and dry tufts (plain, rust, ochre), crust plates (salt),
-//            flakes (ash), shards (glass), clinker (slag), rime (frost);
-//            never on a pad, a deposit or a well
+//   clutter  by the palette within 35 m of the camera: pebbles and dry
+//            tufts (plain, rust, ochre), crust plates (salt), flakes (ash),
+//            shards (glass), clinker (slag), rime (frost); never on a pad, a
+//            deposit or a well
+//
+// Where palettes meet (ac::groundblend, the ground's own field) each thing
+// is the palette's whose ground it lies on and each face is tinted by the
+// palettes there, so the clutter's boundary wanders with the ground's.
 //
 // Each set gets one AAcTerrainScenery, made from its field, the same every
 // time (seeded by the set's key), and dropped when the set goes. No

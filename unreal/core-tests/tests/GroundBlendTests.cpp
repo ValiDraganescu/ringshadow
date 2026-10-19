@@ -155,7 +155,7 @@ TEST(groundblend_bounded_wander) {
 
 /// Across the band the neighbour's share follows the place in it (the
 /// patches' noise is near even): half in the middle, none at its near end,
-/// all at its far end, rising evenly between the soft rims' reach
+/// all at its far end, rising near evenly between the soft rims' reach
 /// (`(place - soft) / (1 - 2 soft)`).
 TEST(groundblend_patches_follow_the_band) {
     Points p;
@@ -167,12 +167,20 @@ TEST(groundblend_patches_follow_the_band) {
         hist[std::min(9, int(m * 10))]++;
     }
     for (int k = 0; k < 10; k++) EXPECT_TRUE(hist[k] > N / 25 && hist[k] < N / 6);
-    for (const float place : {0.0f, 0.25f, 0.5f, 0.75f, 1.0f}) {
+    // The share at each tenth of the band: rising, half in the middle, the
+    // same from either end, near the even line (the rims smooth it a little).
+    double shares[11];
+    for (int j = 0; j <= 10; j++) {
+        const float place = float(j) / 10;
         double share = 0;
         for (int k = 0; k < 1000; k++) share += plusOf((place - 0.5f) * bandCells, 0, (float(k) + 0.5f) / 1000);
+        shares[j] = share / 1000;
         const float even = std::clamp((place - patchSoft) / (1.0f - 2.0f * patchSoft), 0.0f, 1.0f);
-        EXPECT_NEAR(share / 1000, even, 0.01);
+        EXPECT_NEAR(shares[j], even, 0.07);
+        if (j > 0) EXPECT_TRUE(shares[j] >= shares[j - 1]);
     }
+    EXPECT_NEAR(shares[5], 0.5, 1e-3);
+    for (int j = 0; j <= 10; j++) EXPECT_NEAR(shares[j] + shares[10 - j], 1.0, 1e-3);
     EXPECT_EQ(plusOf(-bandCells * 0.5f, 0, 0), 0.0f);
     EXPECT_EQ(plusOf(bandCells * 0.5f, 0, 1), 1.0f);
 }

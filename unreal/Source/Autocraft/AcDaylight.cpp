@@ -747,7 +747,7 @@ void AAcDaylight::Update(const double Time)
 				}
 				// Its region's ground palette, blended toward the neighbours' at the edges.
 				if (const TOptional<AAcTerrain::FGroundOverride>& Over = Terrain->GetGroundOverride(); Over && M == Terrain->GetMaterial())
-					AcGroundLook::ApplyGround(M, Over->Own, Over->Around, Hour, Dark);
+					AcGroundLook::ApplyAround(M, *Over, Hour, Dark);
 				else if (Region != INDEX_NONE || M == Terrain->GetMaterial()) AcGroundLook::Apply(M, Sim, Region, Hour, Dark);
 			});
 		}

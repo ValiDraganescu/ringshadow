@@ -5,9 +5,11 @@
 // Two regions' palettes meet across their shared edge in a band 34 cells
 // wide whose middle wanders up to 10 cells off the edge line (low noise,
 // wavelength 56 cells). Across the band the far palette shows as patches (a
-// finer noise, 6 cells, thresholded by the place in the band): pockets of
-// the neighbour's ground in this one's, tongues of this one in the
-// neighbour's. Past the band (27 cells from the edge) nothing changes.
+// finer noise, 6 cells, bent by a warp, stretched along a prevailing wind
+// and roughened by a fine octave, thresholded by the place in the band):
+// pockets of the neighbour's ground in this one's, tongues of this one in
+// the neighbour's, drifted. Past the band (27 cells from the edge) nothing
+// changes.
 //
 // One truth: the field is a function of the world-grid point and of the
 // grid line's two regions' ids, so both regions' materials (each draws only
@@ -39,24 +41,32 @@ namespace ac::groundblend {
 // groundblend-table begin
 /// The boundary's furthest wander off the edge line, cells.
 inline constexpr float wanderCells = 10.0f;
-/// The wander's first octave's wavelength, cells (three octaves).
+/// The wander's first octave's wavelength, cells (two octaves).
 inline constexpr float wanderWave = 56.0f;
 /// The band across the wandering line in which the patches mix, cells.
 inline constexpr float bandCells = 34.0f;
-/// The patches' first octave's wavelength, cells (two octaves).
+/// The patches' first octave's wavelength, cells (two octaves and a fine one).
 inline constexpr float patchWave = 6.0f;
 /// The patches stretched along the prevailing wind, times.
 inline constexpr float patchStretch = 1.7f;
-/// The warp that curls them: its wavelength and how far it moves them, cells.
+/// The warp that bends them across the wind: its wavelength and how far it
+/// moves them, cells.
 inline constexpr float warpWave = 18.0f;
 inline constexpr float warpCells = 5.0f;
+/// The patches' fine octave's weight (at an eighth of their wavelength).
+inline constexpr float patchRough = 0.35f;
 /// How far the patch noise is stretched round its middle (its spread made
 /// near even, so the patches' share follows the place in the band).
-inline constexpr float patchContrast = 2.2f;
+inline constexpr float patchContrast = 2.6f;
 /// A patch's soft rim, in the band's 0-1.
-inline constexpr float patchSoft = 0.1f;
+inline constexpr float patchSoft = 0.12f;
 /// Half the cross-fade of a grid line's two segments' seeds at a corner, cells.
 inline constexpr float seamCells = 12.0f;
+/// The shader's own (not the field's: the scenery never sees them): the
+/// palettes' colour weights sharpened round the ground texture's height
+/// where they mix, so a patch's rim is grainy like soil, not a soft blur.
+inline constexpr float grainSharp = 2.2f;
+inline constexpr float grainGain = 0.7f;
 /// The lattice hash (an integer mix, the same on the CPU and the GPU).
 inline constexpr uint32_t hashX = 0x8da6b343u;
 inline constexpr uint32_t hashY = 0xd8163841u;
@@ -77,13 +87,15 @@ AUTOCRAFTCORE_API uint32_t seed(std::string_view minus, std::string_view plus);
 
 /// Smooth value noise on the integer lattice, 0-1.
 AUTOCRAFTCORE_API float value(float x, float y, uint32_t seed);
-/// The wander's noise at a point, -1 to 1 (three octaves).
+/// The wander's noise at a point, -1 to 1 (two octaves).
 AUTOCRAFTCORE_API float wander(float x, float y, uint32_t seed);
 /// The patches' noise at a point, 0-1 (two octaves, stretched).
 AUTOCRAFTCORE_API float patch(float x, float y, uint32_t seed);
 /// The plus side's weight at `d` cells from the edge line toward it, with
 /// the wander's and the patches' noise there (`w` -1 to 1, `m` 0-1).
 AUTOCRAFTCORE_API float plusOf(float d, float w, float m);
+/// The place in the band at `d` with the wander `w`: 0 its near end, 1 its far.
+AUTOCRAFTCORE_API float bandAt(float d, float w);
 
 /// One grid line's field at point (x, y): the plus side's weight (east of a
 /// vertical line, south of a horizontal one). `d`: cells from the line
@@ -128,7 +140,7 @@ struct Field {
     float aheadWeight() const { return (1.0f - a) * b; }
     float diagonalWeight() const { return a * b; }
     /// Every slot's weight.
-    std::array<float, 9> weights() const;
+    AUTOCRAFTCORE_API std::array<float, 9> weights() const;
 };
 AUTOCRAFTCORE_API Field field(const Frame& f, float x, float y);
 

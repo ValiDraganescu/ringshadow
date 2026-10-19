@@ -86,3 +86,100 @@ ground's four rounds together cost +0.0-0.7 ms GPU busy piloting and
 +1.3-1.4 ms in the fight at 5120 × 1378 (budget 2.5 ms in all); the
 arrival hitch stays at the base's (283 vs 412 ms max). `ac.TerrainScenery 0`
 as a variant isolates the faces and clutter.
+
+## Where palettes meet
+
+Since 2026-10-19 (the user: the biomes met in straight lines and read as
+artificial). Each region's palette bleeds into its neighbours': over a band
+34 cells wide whose middle wanders up to 10 cells off the edge line, the
+neighbour's ground shows as drifted patches, pockets of it in this one and
+tongues of this one in it. 27 cells from every edge nothing changes.
+
+**One field, one truth.** `ac::groundblend` (AutocraftCore `GroundBlend.h`,
+`.cpp`) is the field: a function of the world-grid point and the grid
+line's two regions' ids (24-bit seeds, `seed(west|north, east|south)`), so
+both sides of an edge (each region's material draws only its own ground)
+and both regions' scenery plans get the same weights at a point. A corner
+is the nearer vertical line's field `a` and the nearer horizontal one's `b`
+together: own (1-a)(1-b), side a(1-b), ahead (1-a)b, diagonal ab, so the
+diagonal region takes part and nothing crosses; a line's two segments'
+seeds cross-fade over 12 cells either side of the corner. The material
+gets all eight neighbours' palettes (`NbTint/NbFx` N … NW, `NbLayer`,
+`NbLayerD`), the seeds (`BleedEdge`, `BleedV`, `BleedH`) and `Neighbours`
+from `AcGroundLook` (`FAround`); the map bake shows a region at the grid's
+0, so it passes its place on the grid (`BleedShift`).
+
+| number | value | what |
+|---|---|---|
+| `wanderCells` | 10 | the boundary's furthest wander off the edge line |
+| `wanderWave` | 56 | the wander's first octave (two, the second turned and twice as fine) |
+| `bandCells` | 34 | the band across the wandering line where patches mix |
+| `patchWave` | 6 | the patches' first octave (two, and a fine one at 0.75 cells) |
+| `patchStretch` | 1.7 | the patches stretched along the prevailing wind (0.8, 0.6) |
+| `warpWave`, `warpCells` | 18, 5 | the warp that bends them across the wind |
+| `patchRough` | 0.35 | the fine octave's weight: rough rims |
+| `patchContrast` | 2.6 | the patch noise stretched to a near-even spread |
+| `patchSoft` | 0.12 | a patch's soft rim, in the band's 0-1 |
+| `seamCells` | 12 | half the corners' seed cross-fade |
+| `grainSharp`, `grainGain` | 2.2, 0.7 | the shader's only: the colours' weights sharpened round the texture's height at a rim, so it is grainy like soil |
+
+The numbers live in one table in `GroundBlend.h` (between its
+`groundblend-table` markers); `make_terrain_material.py` reads it into the
+shader as `#define GB_<name>`, and its `GB_HLSL` is `GroundBlend.cpp`'s
+functions in HLSL, the same float operations in the same order. Change a
+number or a function in both, then regenerate M_Terrain.
+
+**In the shader.** Everything a palette decides follows the weights, so
+both sides of an edge draw the same pixel: the tint (pre-multiplied by its
+strength: plain next to rust is rust at half strength), the fx, the frost
+(the frost ground's layer, 8, wherever it bleeds; `Frost` is the hour's
+only), the ripples and how much of a texture's own colour shows. The
+texture layers: one weight a layer (two palettes may share one), the two
+heaviest read (chosen by the weights alone, the same on every side; the
+lower-numbered first, the other over it by height, `Lab::Over`), the
+lighter dropped: only where three textured palettes meet at a corner's
+soft rims. Reading all four cost 0.1-0.2 ms more at 1600 × 1000 for their
+registers alone. The parallax marches the heaviest. The field is read
+before the parallax, on the unshifted point.
+
+**In the scenery.** `AAcTerrainScenery` draws each clutter thing's palette
+by the field's weights at its spot (`groundblend::pick`, its draw from the
+spot's hash, so the plan's random sequence and every thing's place stay as
+they were) and tints each face by the palettes' weights there: an ash flake
+lies in a tongue of ash in Rust Hollow.
+
+**The sky and haze** do not change by region (the hour and the weather
+only), so nothing eases at a crossing.
+
+**Tests.** `make -C unreal/core-tests FILTER=groundblend`: nothing far
+inside, the whole neighbour far past, one truth across edges and corners
+(60,000 points of the First Reach, under 1e-6), bounded wander, the
+patches' share follows the band, deterministic by seed, none at the rim,
+the scenery's pick follows the weights. `Autocraft.Ground.Blend.Shader`
+draws `/Game/Terrain/M_GroundBlendProbe` (the field alone, made by the same
+script from the same HLSL) into a float render target over four
+rectangles where palettes meet and reads it back against the C++ field. It
+needs the GPU, so it runs in the game (under `--tests`, -nullrhi, it says
+so and passes):
+
+```
+uv run unreal/Tools/hidden_run.py --out unreal/Saved/Bleed/test --res 640x400 -- -AcMap=highlands-small \
+  '-ExecCmds=Automation RunTests Autocraft.Ground.Blend; Quit' '-TestExit=Automation Test Queue Empty'
+```
+
+Its worst pixel was 5e-5 of 36,864.
+
+**Shots.** `-AcMmoShotsB4` (AcMmoShots.cpp): the passages rust | ash, salt
+| slag, frost | glass, plain | salt at a pilot's eye and from 14 cells up,
+and Prospect Landing's north-west, south-west and south-east corners from
+130 cells up; `-AcMmoShotsB4Perf=S` then times each view with the bleed
+and without (`ac.GroundBleed 0`), back to back:
+
+```
+uv run unreal/Tools/hidden_run.py --out unreal/Saved/Bleed/after --res 1600x1000 -- -AcMap=highlands-small \
+  -AcFlowTest=mmoshots -AcMmoShots={out} -AcMmoShotsB4 [-AcMmoShotsB4Perf=5]
+```
+
+Before and after in `art/terrain/bleed/` (`before/`, `after/`), and the
+field alone over the First Reach and at a corner (`field-*.png`, a scratch
+render of the C++ field).

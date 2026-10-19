@@ -226,9 +226,15 @@ brown dirt.
 | `frost` | cool blue-grey stone, frost on it from night to mid-morning | Cold Fork |
 | `ochre` | ochre in bands by height, the cliffs banded like strata | Dust Terraces |
 
-The game blends the last 16 cells to each edge halfway toward the
-neighbour's palette (from the World message), so both sides of an edge meet
-in the same colour, and the scenery past the edge is the neighbour's.
+Palettes bleed into each other where regions meet (from the World
+message): over a band 30-40 cells wide (34) whose middle wanders up to 10
+cells off the edge line, the neighbour's ground shows as drifted patches,
+pockets of it in this one and tongues of this one in it, the texture, the
+tint, the effects, the frost and the clutter alike; at a corner the
+diagonal region's too. Both sides of an edge draw the same ground; 27 cells
+from every edge nothing changes. The field and its numbers:
+`ac::groundblend` (GroundBlend.h) and the world-building skill's
+GROUND-LOOK.md, "Where palettes meet".
 
 ## Landmarks
 

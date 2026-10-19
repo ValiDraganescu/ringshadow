@@ -62,27 +62,30 @@ float wander(float x, float y, uint32_t s) {
     // Each octave the last's lattice turned (0.8, 0.6), twice as fine, moved.
     const float px = x / wanderWave, py = y / wanderWave;
     const float qx = (0.8f * px - 0.6f * py) * 2.0f + 37.1f, qy = (0.6f * px + 0.8f * py) * 2.0f + 11.7f;
-    const float rx = (0.8f * qx - 0.6f * qy) * 2.0f + 5.3f, ry = (0.6f * qx + 0.8f * qy) * 2.0f + 23.9f;
-    const float n0 = value(px, py, s), n1 = value(qx, qy, s), n2 = value(rx, ry, s);
-    return ((n0 - 0.5f) + (n1 - 0.5f) * 0.5f + (n2 - 0.5f) * 0.25f) * (2.0f / 1.75f);
+    const float n0 = value(px, py, s), n1 = value(qx, qy, s);
+    return ((n0 - 0.5f) + (n1 - 0.5f) * 0.5f) * (2.0f / 1.5f);
 }
 
 float patch(float x, float y, uint32_t s) {
     const uint32_t ps = s ^ patchSalt;
-    // Drift: the lattice warped by a coarser noise, then stretched along
-    // the prevailing wind (0.8, 0.6), so the pockets and tongues lie in
-    // streaks and curl rather than dot the band evenly.
-    const float wx = value(x / warpWave, y / warpWave, ps + 1u) - 0.5f;
-    const float wy = value(x / warpWave + 31.7f, y / warpWave + 17.3f, ps + 2u) - 0.5f;
-    const float ux = x + wx * (2.0f * warpCells), uy = y + wy * (2.0f * warpCells);
+    // Drift: the lattice warped across the prevailing wind (0.8, 0.6) by a
+    // coarser noise, then stretched along it, so the pockets and tongues
+    // lie in streaks that wander rather than dot the band evenly.
+    const float wv = (value(x / warpWave, y / warpWave, ps + 1u) - 0.5f) * (2.0f * warpCells);
+    const float ux = x - 0.6f * wv, uy = y + 0.8f * wv;
     const float px = (0.8f * ux + 0.6f * uy) / (patchWave * patchStretch), py = (0.8f * uy - 0.6f * ux) / patchWave;
     const float qx = (0.8f * px - 0.6f * py) * 2.0f + 19.3f, qy = (0.6f * px + 0.8f * py) * 2.0f + 7.1f;
-    const float raw = (value(px, py, ps) + value(qx, qy, ps) * 0.5f) * (1.0f / 1.5f);
+    // A fine octave, four times finer again: the rims rough, as soil is.
+    const float rx = (0.8f * qx - 0.6f * qy) * 2.0f + 3.7f, ry = (0.6f * qx + 0.8f * qy) * 2.0f + 29.3f;
+    const float rx2 = (0.8f * rx - 0.6f * ry) * 2.0f + 13.1f, ry2 = (0.6f * rx + 0.8f * ry) * 2.0f + 2.9f;
+    const float raw = (value(px, py, ps) + value(qx, qy, ps) * 0.5f + value(rx2, ry2, ps) * patchRough) * (1.0f / (1.5f + patchRough));
     return saturate((raw - 0.5f) * patchContrast + 0.5f);
 }
 
+float bandAt(float d, float w) { return saturate((d + w * wanderCells) / bandCells + 0.5f); }
+
 float plusOf(float d, float w, float m) {
-    const float b = saturate((d + w * wanderCells) / bandCells + 0.5f);
+    const float b = bandAt(d, w);
     const float mm = patchSoft + (1.0f - 2.0f * patchSoft) * m;
     return smooth(mm - patchSoft, mm + patchSoft, b);
 }
@@ -91,15 +94,15 @@ float line(float d, float x, float y, float t, float t0, uint32_t minus, uint32_
     if (d <= -reach()) return 0.0f;
     if (d >= reach()) return 1.0f;
     const float k = smooth(-seamCells, seamCells, t - t0);
+    // The wander first: past the band's ends the patches are not read.
     float w = 0.0f, m = 0.0f;
-    if (k < 1.0f) {
-        w = wander(x, y, minus) * (1.0f - k);
-        m = patch(x, y, minus) * (1.0f - k);
-    }
-    if (k > 0.0f) {
-        w = w + wander(x, y, plus) * k;
-        m = m + patch(x, y, plus) * k;
-    }
+    if (k < 1.0f) w = wander(x, y, minus) * (1.0f - k);
+    if (k > 0.0f) w = w + wander(x, y, plus) * k;
+    const float b = bandAt(d, w);
+    if (b <= 0.0f) return 0.0f;
+    if (b >= 1.0f) return 1.0f;
+    if (k < 1.0f) m = patch(x, y, minus) * (1.0f - k);
+    if (k > 0.0f) m = m + patch(x, y, plus) * k;
     return plusOf(d, w, m);
 }
 
@@ -132,16 +135,18 @@ Field field(const Frame& f, float x, float y) {
     const bool e = x >= midX, s = y >= midY;
     const float x0 = e ? f.maxX : f.minX, y0 = s ? f.maxY : f.minY;
     // The vertical line at x0: its segments north and south of the corner at y0.
+    // A line with no region beyond it has no field (the world's rim).
+    const bool hasV = f.has[e ? 1 : 3], hasH = f.has[s ? 2 : 0];
     const uint32_t vOwn = e ? f.edge[1] : f.edge[3];
     const uint32_t vBeyond = e ? (s ? f.beyondV[1] : f.beyondV[0]) : (s ? f.beyondV[2] : f.beyondV[3]);
-    const float pv = line(x - x0, x, y, y, y0, s ? vOwn : vBeyond, s ? vBeyond : vOwn);
+    const float pv = hasV ? line(x - x0, x, y, y, y0, s ? vOwn : vBeyond, s ? vBeyond : vOwn) : 0.0f;
     // The horizontal line at y0: its segments west and east of the corner at x0.
     const uint32_t hOwn = s ? f.edge[2] : f.edge[0];
     const uint32_t hBeyond = s ? (e ? f.beyondH[1] : f.beyondH[2]) : (e ? f.beyondH[0] : f.beyondH[3]);
-    const float ph = line(y - y0, x, y, x, x0, e ? hOwn : hBeyond, e ? hBeyond : hOwn);
+    const float ph = hasH ? line(y - y0, x, y, x, x0, e ? hOwn : hBeyond, e ? hBeyond : hOwn) : 0.0f;
     Field out;
-    out.a = f.has[e ? 1 : 3] ? (e ? pv : 1.0f - pv) : 0.0f;
-    out.b = f.has[s ? 2 : 0] ? (s ? ph : 1.0f - ph) : 0.0f;
+    out.a = hasV ? (e ? pv : 1.0f - pv) : 0.0f;
+    out.b = hasH ? (s ? ph : 1.0f - ph) : 0.0f;
     out.side = e ? east : west;
     out.ahead = s ? south : north;
     out.diagonal = e ? (s ? southEast : northEast) : (s ? southWest : northWest);

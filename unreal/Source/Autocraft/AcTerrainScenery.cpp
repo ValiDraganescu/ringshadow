@@ -1,6 +1,8 @@
 #include "AcTerrainScenery.h"
 
+#include "AcGroundLook.h"
 #include "AcLog.h"
+#include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
 #include "AcWork.h"
@@ -12,6 +14,7 @@
 #include "HAL/PlatformTime.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
+#include "GroundBlend.h"
 #include "NavGrid.h"
 #include "RegionFile.h"
 #include "TerrainField.h"
@@ -62,12 +65,6 @@ namespace
 	{
 		FLinearColor V = Default;
 		if (M) M->GetVectorParameterValue(FHashedMaterialParameterInfo(FName(Name)), V);
-		return V;
-	}
-	float Scalar(UMaterialInstanceDynamic* M, const TCHAR* Name, float Default)
-	{
-		float V = Default;
-		if (M) M->GetScalarParameterValue(FHashedMaterialParameterInfo(FName(Name)), V);
 		return V;
 	}
 }
@@ -153,18 +150,34 @@ void AAcTerrainScenery::Build(AAcRegionGround* Set)
 			Sizes.Add(SM ? SM->GetBoundingBox().GetSize() : FVector(100));
 		}
 
-	// The colours, as the set's material has them (AcGroundLook set the
-	// palette on it): the rock the ground's cliffs take, tinted as they are.
+	// The colours, as the set's material has them: the rock the ground's
+	// cliffs take, tinted as they are; the palettes, the set's own and the
+	// eight round it (AcGroundLook), where they meet by the ground's field
+	// (`ac::groundblend`): a pebble in a tongue of ash is an ash flake.
 	UMaterialInstanceDynamic* M = Set->Material();
-	const FLinearColor Tint = Param(M, TEXT("GroundTint"), FLinearColor(0.2f, 0.15f, 0.1f, 0.0f));
+	AcGroundLook::FAround Around;
+	const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+	if (Terrain && Terrain->GetGroundOverride() && Terrain->GetMaterial() == M) Around = *Terrain->GetGroundOverride();
+	else if (const TOptional<AcGroundLook::FAround> In = AcGroundLook::AroundOf(UAcSimSubsystem::Get(this), Set->Region())) Around = *In;
+	FLinearColor Tints[9];
+	int32 Layers[9];
+	for (int32 K = 0; K < 9; K++)
+	{
+		const AcGroundLook::FPalette P = AcGroundLook::Of(Around.At(K));
+		Tints[K] = P.Tint;
+		Layers[K] = FMath::RoundToInt(P.Layer);
+	}
+	const ac::groundblend::Frame Frame = Around.Frame(Set->Map().bounds, Set->Centre());
+	const ac::Vec2 OnGrid = Set->Centre() + Around.Shift;
 	const FLinearColor RockC = Param(M, TEXT("RockColour"), FLinearColor(0.1f, 0.078f, 0.052f));
 	const FLinearColor DirtC = Param(M, TEXT("DirtColour"), FLinearColor(0.275f, 0.099f, 0.026f));
 	const FLinearColor GrassC = Param(M, TEXT("GrassColour"), FLinearColor(0.102f, 0.116f, 0.016f));
-	const int32 Layer = FMath::RoundToInt(Scalar(M, TEXT("GroundLayer"), 0.0f));
 	const uint64 Seed = GetTypeHash(SetKey);
 	std::shared_ptr<const ac::MapDefinition> MapPtr = Set->MapPtr();
 
-	Planning = AcWork::Run([MapPtr, Sizes, Tint, RockC, DirtC, GrassC, Layer, Seed]() -> TSharedPtr<FPlan> {
+	TArray<FLinearColor> TintList(Tints, 9);
+	TArray<int32> LayerList(Layers, 9);
+	Planning = AcWork::Run([MapPtr, Sizes, TintList, LayerList, Frame, OnGrid, RockC, DirtC, GrassC, Seed]() -> TSharedPtr<FPlan> {
 		const double Start = FPlatformTime::Seconds();
 		TSharedPtr<FPlan> Result = MakeShared<FPlan>();
 		FPlan& Pl = *Result;
@@ -173,13 +186,29 @@ void AAcTerrainScenery::Build(AAcRegionGround* Set)
 		const ac::GroundRect& B = Map.bounds;
 		const double LH = Map.levelHeight;
 		FRng Rng(Seed);
-		const auto Tinted = [&Tint](const FLinearColor C, const float K) {
+		const auto Tinted = [](const FLinearColor C, const FLinearColor Tint, const float K) {
 			return FLinearColor::LerpUsingHSV(C, FLinearColor(Tint.R, Tint.G, Tint.B), FMath::Clamp(Tint.A * K, 0.0f, 1.0f));
 		};
 		// The cliffs' faces take the palette as the ground's do (walls a
-		// little less: their tops are the world's one rock, W4b).
-		const FLinearColor WallRock = Tinted(RockC * 1.2f, 0.85f);
-		const FLinearColor OwnRock = Tinted(RockC * 1.2f, 1.0f);
+		// little less: their tops are the world's one rock, W4b), each
+		// palette's where it lies.
+		FLinearColor WallRocks[9], OwnRocks[9];
+		for (int32 K = 0; K < 9; K++)
+		{
+			WallRocks[K] = Tinted(RockC * 1.2f, TintList[K], 0.85f);
+			OwnRocks[K] = Tinted(RockC * 1.2f, TintList[K], 1.0f);
+		}
+		// The ground's field at a point of the map: each palette's weight.
+		const auto Weights = [&Frame, OnGrid](const ac::Vec2 P) {
+			return ac::groundblend::field(Frame, float(P.x + OnGrid.x), float(P.y + OnGrid.y)).weights();
+		};
+		const auto Blend = [&Weights](const ac::Vec2 P, const FLinearColor (&Of)[9]) {
+			const std::array<float, 9> W = Weights(P);
+			FLinearColor C(0, 0, 0, 0);
+			for (int32 K = 0; K < 9; K++)
+				if (W[size_t(K)] > 0.0f) C += Of[K] * W[size_t(K)];
+			return C;
+		};
 		const auto Add = [&Pl](const int32 Mesh, const FTransform& T, const FLinearColor C, const float Slice) {
 			Pl.Items.Add(FItem{Mesh, T, C, Slice});
 		};
@@ -241,7 +270,7 @@ void AAcTerrainScenery::Build(AAcRegionGround* Set)
 				const int32 N = FMath::Clamp(FMath::RoundToInt(Rise / 2.6), 1, 5);
 				const double Yaw = FMath::RadiansToDegrees(std::atan2(Out.y, Out.x));
 				const double Lean = 90.0 - FMath::RadiansToDegrees(Angle);
-				const FLinearColor C = (OnWall(P) ? WallRock : OwnRock) * float(Rng.Range(0.85, 1.12));
+				const FLinearColor C = Blend(P, OnWall(P) ? WallRocks : OwnRocks) * float(Rng.Range(0.85, 1.12));
 				for (int32 I = 0; I < N; I++)
 				{
 					// The slab's foot on the face, a share of the way up it, set
@@ -283,25 +312,37 @@ void AAcTerrainScenery::Build(AAcRegionGround* Set)
 				Rad /= double(Is.size());
 				const int32 Which = Spire0 + Rng.Pick(4);
 				const double Sc = AcSpace::ToCm(Rad * 1.5) / FMath::Max(Sizes[Which].X, 100.0);
-				Add(Which, FTransform(FRotator(0, Rng.Range(0, 360), 0), Cm(Mid, H(Mid) - 0.6), FVector(Sc)), OwnRock, 3.0f);
+				Add(Which, FTransform(FRotator(0, Rng.Range(0, 360), 0), Cm(Mid, H(Mid) - 0.6), FVector(Sc)), Blend(Mid, OwnRocks), 3.0f);
 				Pl.Crowns++;
 			}
 
 		// Round 4: clutter by palette, on open, gentle ground, off the pads,
-		// deposits and wells.
+		// deposits and wells; each thing the palette's whose ground it lies on.
 		struct FKind { const TCHAR* Name; int32 Count; float Lo, Hi; float Slice; FLinearColor C; };
-		TArray<FKind> Kinds;
-		const FLinearColor Ground = Tinted(DirtC, 0.6f);
-		switch (Layer)
+		TArray<FKind> Kinds[9];
+		FLinearColor Tufts[9];
+		for (int32 Slot = 0; Slot < 9; Slot++)
 		{
-		case 4: Kinds = {{TEXT("crust"), 4, 0.7f, 1.4f, 4, FLinearColor(0.42f, 0.39f, 0.34f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 4, Ground * 0.8f}}; break;
-		case 5: Kinds = {{TEXT("flake"), 4, 0.8f, 2.0f, 5, FLinearColor(0.05f, 0.05f, 0.05f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 5, FLinearColor(0.09f, 0.085f, 0.08f)}}; break;
-		case 6: Kinds = {{TEXT("shard"), 4, 0.3f, 0.7f, 6, FLinearColor(0.02f, 0.035f, 0.045f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 6, FLinearColor(0.05f, 0.05f, 0.055f)}}; break;
-		case 7: Kinds = {{TEXT("clinker"), 4, 0.7f, 1.6f, 7, FLinearColor(0.07f, 0.065f, 0.06f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 7, FLinearColor(0.08f, 0.07f, 0.06f)}}; break;
-		case 8: Kinds = {{TEXT("rime"), 4, 0.6f, 1.4f, 8, FLinearColor(0.55f, 0.56f, 0.58f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 3, OwnRock}}; break;
-		default: Kinds = {{TEXT("pebble"), 6, 0.8f, 2.5f, 0, Ground * 1.25f}, {TEXT("talus"), 6, 0.25f, 0.5f, 3, OwnRock}}; break;
+			const FLinearColor Ground = Tinted(DirtC, TintList[Slot], 0.6f);
+			const FLinearColor OwnRock = OwnRocks[Slot];
+			switch (LayerList[Slot])
+			{
+			case 4: Kinds[Slot] = {{TEXT("crust"), 4, 0.7f, 1.4f, 4, FLinearColor(0.42f, 0.39f, 0.34f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 4, Ground * 0.8f}}; break;
+			case 5: Kinds[Slot] = {{TEXT("flake"), 4, 0.8f, 2.0f, 5, FLinearColor(0.05f, 0.05f, 0.05f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 5, FLinearColor(0.09f, 0.085f, 0.08f)}}; break;
+			case 6: Kinds[Slot] = {{TEXT("shard"), 4, 0.3f, 0.7f, 6, FLinearColor(0.02f, 0.035f, 0.045f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 6, FLinearColor(0.05f, 0.05f, 0.055f)}}; break;
+			case 7: Kinds[Slot] = {{TEXT("clinker"), 4, 0.7f, 1.6f, 7, FLinearColor(0.07f, 0.065f, 0.06f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 7, FLinearColor(0.08f, 0.07f, 0.06f)}}; break;
+			case 8: Kinds[Slot] = {{TEXT("rime"), 4, 0.6f, 1.4f, 8, FLinearColor(0.55f, 0.56f, 0.58f)}, {TEXT("pebble"), 6, 0.8f, 2.0f, 3, OwnRock}}; break;
+			default: Kinds[Slot] = {{TEXT("pebble"), 6, 0.8f, 2.5f, 0, Ground * 1.25f}, {TEXT("talus"), 6, 0.25f, 0.5f, 3, OwnRock}}; break;
+			}
+			Tufts[Slot] = Tinted(GrassC * 1.6f + FLinearColor(0.08f, 0.06f, 0.02f), TintList[Slot], 0.3f);
 		}
-		const FLinearColor Tuft = Tinted(GrassC * 1.6f + FLinearColor(0.08f, 0.06f, 0.02f), 0.3f);
+		// The palette a thing at P takes: drawn by the field's weights there
+		// with a draw of its own (the place's hash), so the plan's random
+		// sequence, and every thing's place, stays what it was.
+		const auto PaletteAt = [&Frame, OnGrid](const ac::Vec2 P) {
+			const double U = double(HashCombineFast(GetTypeHash(P.x), GetTypeHash(P.y)) & 0xffffff) / double(1 << 24);
+			return ac::groundblend::pick(Frame, float(P.x + OnGrid.x), float(P.y + OnGrid.y), U);
+		};
 		const int32 Tuft0 = KitAt(TEXT("tuft"));
 		TArray<ac::Vec2> Keep;
 		for (const ac::Vec2& Q : Map.plates) Keep.Add(Q);
@@ -323,15 +364,16 @@ void AAcTerrainScenery::Build(AAcRegionGround* Set)
 					const ac::TerrainField::Materials Mt = Field.materials(P);
 					if (Mt.z > 0.2) continue;  // plating
 					// Dry tufts where the ground is grassy, stones elsewhere.
-					if (Layer == 0 && Mt.x > 0.35 && Rng.Unit() < 0.7)
+					const int32 Slot = PaletteAt(P);
+					if (LayerList[Slot] == 0 && Mt.x > 0.35 && Rng.Unit() < 0.7)
 					{
 						const double Sc = Rng.Range(0.7, 1.4);
 						Add(Tuft0 + Rng.Pick(4), FTransform(FRotator(Rng.Range(-8, 8), Rng.Range(0, 360), Rng.Range(-8, 8)), Cm(P, H(P) - 0.02), FVector(Sc)),
-							Tuft * float(Rng.Range(0.8, 1.2)), 1.0f);
+							Tufts[Slot] * float(Rng.Range(0.8, 1.2)), 1.0f);
 						Pl.Clutter++;
 						continue;
 					}
-					const FKind& Kd = Kinds[Rng.Unit() < 0.6 ? 0 : 1];
+					const FKind& Kd = Kinds[Slot][Rng.Unit() < 0.6 ? 0 : 1];
 					const double Sc = Rng.Range(Kd.Lo, Kd.Hi);
 					Add(KitAt(Kd.Name) + Rng.Pick(Kd.Count),
 						FTransform(FRotator(Rng.Range(-10, 10), Rng.Range(0, 360), Rng.Range(-10, 10)), Cm(P, H(P) - 0.015 * Sc), FVector(Sc)),

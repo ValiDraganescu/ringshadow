@@ -63,6 +63,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
+#include "AcGroundLook.h"
 #include "AcHeightGrid.h"
 #include "AcScenery.h"
 #include "RegionFile.h"
@@ -266,13 +267,10 @@ public:
 	/// region's index in the World message, for what the sky sets on all
 	/// of them (`AAcDaylight`); `MaterialsVersion` changes when the list does.
 	void ForEachMaterial(TFunctionRef<void(UMaterialInstanceDynamic*, int64 Region)> Each) const;
-	/// The map bake (AcMapBake.h, out of a world): the current ground's
-	/// palette from its region file (nil: plain, or the World message's).
-	struct FGroundOverride
-	{
-		ac::region::Ground Own = ac::region::Ground::plain;
-		TOptional<ac::region::Ground> Around[4];
-	};
+	/// The map bake (AcMapBake.h, out of a world) and the terrain lab: the
+	/// current ground's palette from its region file, and what is round it
+	/// (nil: plain, or the World message's).
+	using FGroundOverride = AcGroundLook::FAround;
 	void SetGroundOverride(TOptional<FGroundOverride> Ground) { GroundOverride = MoveTemp(Ground); }
 	const TOptional<FGroundOverride>& GetGroundOverride() const { return GroundOverride; }
 	int32 MaterialsVersion() const { return Version; }

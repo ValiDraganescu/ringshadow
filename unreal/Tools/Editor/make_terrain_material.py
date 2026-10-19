@@ -14,6 +14,10 @@ unreal/Resources/Textures/terrain/SOURCES.md), 1024 px:
 Outputs:
   /Game/Terrain/Textures/T_TerrainCH, T_TerrainNR  the arrays
   /Game/Terrain/M_Terrain
+  /Game/Terrain/M_GroundBlendProbe  the palettes' blend field alone (a test's)
+
+Where palettes meet (GroundBlend.h): the field's functions are C++'s, ported
+to HLSL (GB_HLSL), their numbers read from GroundBlend.h's table.
 
 The layers, in the arrays' order (AcGroundLook.cpp's `Layer` picks a
 region's own): 0 Dirt (plain, and rust and ochre by their tint), 1 Grass,
@@ -38,6 +42,7 @@ Run it headless through the one hidden-run slot:
 """
 import json
 import os
+import re
 import sys
 
 import unreal
@@ -119,13 +124,121 @@ def make_array(name, slices, srgb):
     return arr
 
 
+# Where palettes meet: GroundBlend.cpp's functions in HLSL, members of the
+# shaders' `Lab` struct (M_Terrain's and M_GroundBlendProbe's: one text).
+GB_HLSL = r"""
+    // Where palettes meet (AutocraftCore GroundBlend.h/.cpp): its twin, the
+    // same operations in the same order, so the GPU's field is the CPU's
+    // (the scenery's) to a rounding; Autocraft.Ground.Blend.Shader checks it.
+    static uint GbHash(int x, int y, uint s)
+    {
+        uint v = ((uint)x * GB_hashX) ^ ((uint)y * GB_hashY) ^ (s * GB_hashS);
+        v ^= v >> 16;
+        v *= GB_mixA;
+        v ^= v >> 15;
+        v *= GB_mixB;
+        v ^= v >> 16;
+        return v;
+    }
+    static float GbUnit(uint v) { return (float)(v >> 8) * (1.0 / 16777216.0); }
+    static float GbSmooth(float e0, float e1, float v)
+    {
+        float t = saturate((v - e0) / (e1 - e0));
+        return t * t * (3.0 - 2.0 * t);
+    }
+    static float GbValue(float x, float y, uint s)
+    {
+        float fx = floor(x), fy = floor(y);
+        int ix = (int)fx, iy = (int)fy;
+        float tx = x - fx, ty = y - fy;
+        tx = tx * tx * (3.0 - 2.0 * tx);
+        ty = ty * ty * (3.0 - 2.0 * ty);
+        float h00 = GbUnit(GbHash(ix, iy, s)), h10 = GbUnit(GbHash(ix + 1, iy, s));
+        float h01 = GbUnit(GbHash(ix, iy + 1, s)), h11 = GbUnit(GbHash(ix + 1, iy + 1, s));
+        float top = h00 + (h10 - h00) * tx;
+        float bottom = h01 + (h11 - h01) * tx;
+        return top + (bottom - top) * ty;
+    }
+    static float GbWander(float x, float y, uint s)
+    {
+        float px = x / GB_wanderWave, py = y / GB_wanderWave;
+        float qx = (0.8 * px - 0.6 * py) * 2.0 + 37.1, qy = (0.6 * px + 0.8 * py) * 2.0 + 11.7;
+        float n0 = GbValue(px, py, s), n1 = GbValue(qx, qy, s);
+        return ((n0 - 0.5) + (n1 - 0.5) * 0.5) * (2.0 / 1.5);
+    }
+    static float GbPatch(float x, float y, uint s)
+    {
+        uint ps = s ^ GB_patchSalt;
+        float wv = (GbValue(x / GB_warpWave, y / GB_warpWave, ps + 1u) - 0.5) * (2.0 * GB_warpCells);
+        float ux = x - 0.6 * wv, uy = y + 0.8 * wv;
+        float px = (0.8 * ux + 0.6 * uy) / (GB_patchWave * GB_patchStretch), py = (0.8 * uy - 0.6 * ux) / GB_patchWave;
+        float qx = (0.8 * px - 0.6 * py) * 2.0 + 19.3, qy = (0.6 * px + 0.8 * py) * 2.0 + 7.1;
+        float rx = (0.8 * qx - 0.6 * qy) * 2.0 + 3.7, ry = (0.6 * qx + 0.8 * qy) * 2.0 + 29.3;
+        float rx2 = (0.8 * rx - 0.6 * ry) * 2.0 + 13.1, ry2 = (0.6 * rx + 0.8 * ry) * 2.0 + 2.9;
+        float raw = (GbValue(px, py, ps) + GbValue(qx, qy, ps) * 0.5 + GbValue(rx2, ry2, ps) * GB_patchRough) * (1.0 / (1.5 + GB_patchRough));
+        return saturate((raw - 0.5) * GB_patchContrast + 0.5);
+    }
+    static float GbBand(float d, float w) { return saturate((d + w * GB_wanderCells) / GB_bandCells + 0.5); }
+    static float GbPlus(float d, float w, float m)
+    {
+        float b = GbBand(d, w);
+        float mm = GB_patchSoft + (1.0 - 2.0 * GB_patchSoft) * m;
+        return GbSmooth(mm - GB_patchSoft, mm + GB_patchSoft, b);
+    }
+    // One grid line's field: the plus side's weight (east, south) at d
+    // cells toward it; its two segments' seeds cross-faded at the corner t0.
+    static float GbLine(float d, float x, float y, float t, float t0, uint minus, uint plus)
+    {
+        float reach = GB_wanderCells + GB_bandCells * 0.5;
+        if (d <= -reach) return 0.0;
+        if (d >= reach) return 1.0;
+        float k = GbSmooth(-GB_seamCells, GB_seamCells, t - t0);
+        // The wander first: past the band's ends the patches are not read.
+        float w = 0.0, m = 0.0;
+        [branch] if (k < 1.0) w = GbWander(x, y, minus) * (1.0 - k);
+        [branch] if (k > 0.0) w = w + GbWander(x, y, plus) * k;
+        float b = GbBand(d, w);
+        if (b <= 0.0) return 0.0;
+        if (b >= 1.0) return 1.0;
+        [branch] if (k < 1.0) m = GbPatch(x, y, minus) * (1.0 - k);
+        [branch] if (k > 0.0) m = m + GbPatch(x, y, plus) * k;
+        return GbPlus(d, w, m);
+    }
+    // The field in a region's frame (groundblend::field): across the nearer
+    // vertical line (x, toward the side away from the region) and the nearer
+    // horizontal one (y). `has`: a region beyond N, E, S, W; `edge`: the
+    // seeds across them; `beyondV`, `beyondH`: past the corners NE, SE, SW, NW.
+    static float2 GbField(float x, float y, float2 lo, float2 hi, float4 has, float4 edge, float4 beyondV, float4 beyondH)
+    {
+        float midX = (lo.x + hi.x) * 0.5, midY = (lo.y + hi.y) * 0.5;
+        bool e = x >= midX, s = y >= midY;
+        float x0 = e ? hi.x : lo.x, y0 = s ? hi.y : lo.y;
+        // A line with no region beyond it has no field (the world's rim).
+        bool hasV = (e ? has.y : has.w) > 0.5, hasH = (s ? has.z : has.x) > 0.5;
+        uint vOwn = (uint)(e ? edge.y : edge.w);
+        uint vBeyond = (uint)(e ? (s ? beyondV.y : beyondV.x) : (s ? beyondV.z : beyondV.w));
+        float pv = 0.0;
+        [branch] if (hasV) pv = GbLine(x - x0, x, y, y, y0, s ? vOwn : vBeyond, s ? vBeyond : vOwn);
+        uint hOwn = (uint)(s ? edge.z : edge.x);
+        uint hBeyond = (uint)(s ? (e ? beyondH.y : beyondH.z) : (e ? beyondH.x : beyondH.w));
+        float ph = 0.0;
+        [branch] if (hasH) ph = GbLine(y - y0, x, y, x, x0, e ? hOwn : hBeyond, e ? hBeyond : hOwn);
+        float a = hasV ? (e ? pv : 1.0 - pv) : 0.0;
+        float b = hasH ? (s ? ph : 1.0 - ph) : 0.0;
+        return float2(a, b);
+    }
+"""
+
+
 # M_Terrain's shader (make_terrain_material.py) with round 1 on it. Unreal's
 # axes, in cells (1 m): the ground plane is (X, Y), the height Z.
 HLSL = r"""
+%GROUNDBLEND%
 // The lab's samplers, as functions (a Custom node's code is one function's
 // body; a struct's static functions are the way to have more).
 struct Lab
 {
+%GBFUNCS%
     static float2 Hash2(float2 p)
     {
         float2 r = float2(dot(p, float2(127.1, 311.7)), dot(p, float2(269.5, 183.3)));
@@ -264,6 +377,48 @@ float contrast = HexContrast;
 float slope = 1.0 - wn.z;
 float rockW = smoothstep(0.22, 0.45, slope);
 
+float2 lo = Bounds.xy, hi = Bounds.xy + Bounds.zw;
+
+// Where palettes meet (docs/regions.md, "ground"; GroundBlend.h; AcGroundLook
+// sets the parameters): the field across the nearer vertical edge line (a)
+// and horizontal one (b), on the world's grid (BleedShift: the map bake's
+// place for a region shown alone), and the four palettes it weighs: own
+// (1-a)(1-b), the side neighbour's a(1-b), the one ahead (1-a)b, the
+// diagonal one ab. Every material round a point gets the same weights, and
+// everything below that a palette decides (its tint, fx, texture, frost,
+// ripples) follows them, so both sides of an edge draw the same ground.
+float2 gb = g + BleedShift.xy;
+float2 gbAB = Lab::GbField(gb.x, gb.y, lo + BleedShift.xy, hi + BleedShift.xy, Neighbours, BleedEdge, BleedV, BleedH);
+bool gbE = gb.x >= (lo.x + hi.x) * 0.5 + BleedShift.x, gbS = gb.y >= (lo.y + hi.y) * 0.5 + BleedShift.y;
+float4 pw = float4((1.0 - gbAB.x) * (1.0 - gbAB.y), gbAB.x * (1.0 - gbAB.y), (1.0 - gbAB.x) * gbAB.y, gbAB.x * gbAB.y);
+float4 tintS = gbE ? NbTintE : NbTintW, fxS = gbE ? NbFxE : NbFxW;
+float4 tintA = gbS ? NbTintS : NbTintN, fxA = gbS ? NbFxS : NbFxN;
+float4 tintD = gbE ? (gbS ? NbTintSE : NbTintNE) : (gbS ? NbTintSW : NbTintNW);
+float4 fxD = gbE ? (gbS ? NbFxSE : NbFxNE) : (gbS ? NbFxSW : NbFxNW);
+float4 pLayers = float4(GroundLayer, gbE ? NbLayer.y : NbLayer.w, gbS ? NbLayer.z : NbLayer.x,
+                        gbE ? (gbS ? NbLayerD.y : NbLayerD.x) : (gbS ? NbLayerD.z : NbLayerD.w));
+// The tint, the fx and the frost follow the field too, grained once the
+// layers are read (below).
+float4 gt, gf;
+float frostW;
+// The texture layers: one weight a layer (two palettes may share one), and
+// the two heaviest read (as many as the old edge blend read: four cost
+// 0.1-0.2 ms more at 1600 x 1000 for their registers, wherever they were not
+// read), the lighter dropped (a corner's soft rims where three textured
+// palettes meet). Chosen by the weights alone, the same on every side.
+float4 lw = pw, ll = pLayers;
+[unroll] for (int li = 1; li < 4; li++)
+    [unroll] for (int lj = 0; lj < li; lj++)
+        if (abs(ll[li] - ll[lj]) < 0.5 && lw[li] > 0.0) { lw[lj] += lw[li]; lw[li] = 0.0; }
+float wA = lw.x, lA = ll.x, wB = 0.0, lB = ll.x;
+[unroll] for (int pi = 1; pi < 4; pi++)
+{
+    if (lw[pi] > wA || (lw[pi] == wA && ll[pi] < lA)) { wB = wA; lB = lA; wA = lw[pi]; lA = ll[pi]; }
+    else if (lw[pi] > wB || (lw[pi] == wB && lw[pi] > 0.0 && ll[pi] < lB)) { wB = lw[pi]; lB = ll[pi]; }
+}
+// The parallax marches the heaviest.
+float pLayer = lA;
+
 // Round 2: parallax occlusion on the ground within ParallaxRange (start,
 // end of its fade, m): the base layer's height marched along the view, the
 // ground's every layer then read where the ray met it. Fades out to nothing
@@ -285,14 +440,14 @@ float rockW = smoothstep(0.22, 0.45, slope);
         float2 off = 0;
         float level = 1.0;
         float2 dx = gdx / NearTile, dy = gdy / NearTile;
-        float hNow = Lab::HexHeight(LabCH, LabCHSampler, g / NearTile, dx, dy, GroundLayer, contrast);
+        float hNow = Lab::HexHeight(LabCH, LabCHSampler, g / NearTile, dx, dy, pLayer, contrast);
         float hBefore = hNow, levelBefore = level;
         [loop] for (int i = 0; i < 16 && hNow < level; i++)
         {
             hBefore = hNow; levelBefore = level;
             off += stepG;
             level -= 1.0 / steps;
-            hNow = Lab::HexHeight(LabCH, LabCHSampler, (g + off) / NearTile, dx, dy, GroundLayer, contrast);
+            hNow = Lab::HexHeight(LabCH, LabCHSampler, (g + off) / NearTile, dx, dy, pLayer, contrast);
         }
         // Between the last two steps, where the ray crossed the height.
         float a = hNow - level, b = hBefore - levelBefore;
@@ -302,42 +457,47 @@ float rockW = smoothstep(0.22, 0.45, slope);
 }
 
 float lo2 = 0.0;
-float2 lo = Bounds.xy, hi = Bounds.xy + Bounds.zw;
 
-// The region's ground palette (docs/regions.md, "ground"; AcGroundLook.cpp
-// sets the parameters), blended halfway to each neighbour's over the last
-// 16 cells to an edge and wholly past it (as M_Terrain).
-float4 gt = GroundTint;
-float4 gf = GroundFx;
-float nbW = 0.0, nbLayer = GroundLayer;
-{
-    float4 ds = float4(g.y - lo.y, hi.x - g.x, hi.y - g.y, g.x - lo.x);
-    float4 inner = 0.5 * (1.0 - smoothstep(0.0, 16.0, ds));
-    float4 outer = 0.5 + 0.5 * smoothstep(0.0, 10.0, -ds);
-    float4 w = Neighbours * (ds > 0.0 ? inner : outer);
-    gt = lerp(gt, NbTintN, w.x); gf = lerp(gf, NbFxN, w.x);
-    gt = lerp(gt, NbTintE, w.y); gf = lerp(gf, NbFxE, w.y);
-    gt = lerp(gt, NbTintS, w.z); gf = lerp(gf, NbFxS, w.z);
-    gt = lerp(gt, NbTintW, w.w); gf = lerp(gf, NbFxW, w.w);
-    // The lab's texture: the strongest neighbour's layer toward its edge.
-    nbW = max(max(w.x, w.y), max(w.z, w.w));
-    nbLayer = w.x >= nbW ? NbLayer.x : (w.y >= nbW ? NbLayer.y : (w.z >= nbW ? NbLayer.z : NbLayer.w));
-}
-
-// The ground's own layer (the region's: GroundLayer), the neighbour's toward
-// an edge, grass and highland by the splat, height-blended.
+// The ground's layers: the lower-numbered of the two first (the same order
+// on every side), the other over it by height (the higher grain wins where
+// they meet: `Lab::Over`); the plain dirt recoloured to the game's colour as
+// it is read; `texB`: how much of what shows is a palette's own texture.
+bool twoL = wB > 0.01;
+float l1 = twoL ? min(lA, lB) : lA, l2 = max(lA, lB);
+float w1 = twoL ? (lA <= lB ? wA : wB) : wA, w2 = lA <= lB ? wB : wA;
 float4 chB, nrB;
-Lab::Layer(LabCH, LabCHSampler, LabNR, LabNRSampler, g, gdx, gdy, GroundLayer, NearTile, FarTile, nearW, contrast, chB, nrB);
-if (nbW > 0.01 && abs(nbLayer - GroundLayer) > 0.5)
+Lab::Layer(LabCH, LabCHSampler, LabNR, LabNRSampler, g, gdx, gdy, l1, NearTile, FarTile, nearW, contrast, chB, nrB);
+if (l1 < 0.5) chB.rgb = Lab::Recolour(MeanDirt.rgb, chB.rgb, DirtColour, LayerDetail.x);
+float texB = l1 > 0.5 ? 1.0 : 0.0;
+[branch] if (twoL)
 {
-    float4 chN, nrN;
-    Lab::Layer(LabCH, LabCHSampler, LabNR, LabNRSampler, g, gdx, gdy, nbLayer, NearTile, FarTile, nearW, contrast, chN, nrN);
-    float k = Lab::Over(chB.a, chN.a, nbW, 3.0);
-    chB = lerp(chB, chN, k); nrB = lerp(nrB, nrN, k);
+    float4 chL, nrL;
+    Lab::Layer(LabCH, LabCHSampler, LabNR, LabNRSampler, g, gdx, gdy, l2, NearTile, FarTile, nearW, contrast, chL, nrL);
+    if (l2 < 0.5) chL.rgb = Lab::Recolour(MeanDirt.rgb, chL.rgb, DirtColour, LayerDetail.x);
+    float k = Lab::Over(chB.a, chL.a, w2 / (w1 + w2), 3.0);
+    chB = lerp(chB, chL, k); nrB = lerp(nrB, nrL, k);
+    texB = lerp(texB, l2 > 0.5 ? 1.0 : 0.0, k);
 }
-// The plain dirt in the game's colour; a region's own texture as it is
-// (near an edge the neighbour's, mixed in above, is recoloured as much).
-float3 dirt = GroundLayer < 0.5 ? Lab::Recolour(MeanDirt.rgb, chB.rgb, DirtColour, LayerDetail.x) : chB.rgb;
+float3 dirt = chB.rgb;
+// The colours where palettes mix: each line's plus side's weight sharpened
+// round the ground's texture height there (the same on both sides: the
+// layers are read in one order), so a patch's rim is grainy like soil.
+{
+    float2 plusAB = float2(gbE ? gbAB.x : 1.0 - gbAB.x, gbS ? gbAB.y : 1.0 - gbAB.y);
+    float2 grained = saturate((plusAB - 0.5) * GB_grainSharp + 0.5 + (chB.a - 0.5) * GB_grainGain);
+    plusAB = (plusAB > 0.0 && plusAB < 1.0) ? grained : plusAB;
+    float2 ab = float2((gbE ? Neighbours.y : Neighbours.w) > 0.5 ? (gbE ? plusAB.x : 1.0 - plusAB.x) : 0.0,
+                       (gbS ? Neighbours.z : Neighbours.x) > 0.5 ? (gbS ? plusAB.y : 1.0 - plusAB.y) : 0.0);
+    float4 cw = float4((1.0 - ab.x) * (1.0 - ab.y), ab.x * (1.0 - ab.y), (1.0 - ab.x) * ab.y, ab.x * ab.y);
+    // The tint pre-multiplied by its strength (plain ground has none: next
+    // to rust it is rust at half strength, not rust halfway to a brown).
+    float4 ctw = cw * float4(GroundTint.a, tintS.a, tintA.a, tintD.a);
+    float ctSum = dot(ctw, 1.0);
+    gt = float4((GroundTint.rgb * ctw.x + tintS.rgb * ctw.y + tintA.rgb * ctw.z + tintD.rgb * ctw.w) / max(ctSum, 1e-4), ctSum);
+    gf = GroundFx * cw.x + fxS * cw.y + fxA * cw.z + fxD * cw.w;
+    // Frost is the frost ground's (its layer, 8), wherever it bleeds.
+    frostW = dot(cw, step(7.5, pLayers));
+}
 float4 chG = 0, nrG = 0, chH = 0, nrH = 0;
 if (splat.r > 0.001)
     Lab::Layer(LabCH, LabCHSampler, LabNR, LabNRSampler, g, gdx, gdy, 1.0, NearTile * 0.8, FarTile * 0.8, nearW, contrast, chG, nrG);
@@ -426,7 +586,7 @@ if (gt.a > 0.001) {
     float detail = clamp(lumC / 0.3, 0.45, 1.6);
     // A region with its own texture keeps most of that texture's colour;
     // the grass, highland and cliffs over it take the palette whole.
-    float own = GroundLayer > 0.5 ? lerp(1.0, LabTint, (1.0 - kH) * (1.0 - kG) * (1.0 - rockW)) : 1.0;
+    float own = lerp(1.0, LabTint, texB * (1.0 - kH) * (1.0 - kG) * (1.0 - rockW));
     float k = gt.a * own * (1.0 - splat.b) * (1.0 - 0.35 * rockW);
     c = lerp(c, gt.rgb * detail, k);
     // Ochre bands: strata by height, strongest on the cliffs.
@@ -468,9 +628,10 @@ if (gt.a > 0.001) {
     }
     // Frost (Cold Fork, from night to mid-morning): rime on flat ground
     // and the tops of rocks, in patches.
-    if (Frost > 0.001) {
+    float frostK = Frost * frostW;
+    if (frostK > 0.001) {
         float fz = Lab::Noise(g / 3.0 + 0.71) * 0.6 + Lab::Noise(g / 1.1) * 0.4;
-        float rime = smoothstep(0.35, 0.6, fz + (wn.z - 0.8)) * Frost;
+        float rime = smoothstep(0.35, 0.6, fz + (wn.z - 0.8)) * frostK;
         c = lerp(c, float3(0.62, 0.68, 0.76), rime * 0.8);
     }
 }
@@ -479,7 +640,7 @@ if (gt.a > 0.001) {
 // (tangent +X, bitangent +Y), blended as the colours are; sand ripples on
 // the dirt across the region's x, more on slopes, near the eye only.
 float2 dn = lerp(nr.xy, float2(0, 0), splat.b);
-float ripW = RippleGain * (GroundLayer < 0.5 ? 1.0 : 0.0) * (1.0 - kG) * (1.0 - kH) * (1.0 - splat.b) * (1.0 - rockW)
+float ripW = RippleGain * (1.0 - texB) * (1.0 - kG) * (1.0 - kH) * (1.0 - splat.b) * (1.0 - rockW)
            * lerp(0.35, 1.0, smoothstep(0.03, 0.2, slope)) * (1.0 - smoothstep(25.0, 45.0, dist));
 if (ripW > 0.001)
 {
@@ -545,6 +706,29 @@ return c * (1.0 - fade);
 """
 
 
+# Where palettes meet: the field's numbers live in one table, C++'s
+# (GroundBlend.h); the shader takes them from it.
+GROUND_BLEND_H = os.path.join(ROOT, "Source", "AutocraftCore", "Public", "GroundBlend.h")
+
+
+def ground_blend_defines():
+    """GroundBlend.h's table (between its markers) as `#define GB_name value`."""
+    text = open(GROUND_BLEND_H).read()
+    try:
+        table = text.split("// groundblend-table begin", 1)[1].split("// groundblend-table end", 1)[0]
+    except IndexError:
+        raise RuntimeError(f"no groundblend table in {GROUND_BLEND_H}")
+    lines = []
+    for kind, name, value in re.findall(r"inline constexpr (float|uint32_t) (\w+) = ([^;]+);", table):
+        value = value.strip()
+        if kind == "float":
+            value = value.rstrip("f")
+        lines.append(f"#define GB_{name} {value}")
+    if len(lines) < 19:
+        raise RuntimeError(f"groundblend table: {len(lines)} numbers in {GROUND_BLEND_H}, expected 19")
+    return "// Where palettes meet: GroundBlend.h's numbers.\n" + "\n".join(lines)
+
+
 def build_material(arrays, means):
     path = f"{LAB_DIR}/{MAT_NAME}"
     # Made fresh each time: a material rebuilt in place keeps its old
@@ -561,7 +745,7 @@ def build_material(arrays, means):
         return mel.create_material_expression(mat, cls, x, y)
 
     custom = node(unreal.MaterialExpressionCustom, -300, 0)
-    custom.set_editor_property("code", HLSL.replace("%SHELTER%", RM.shelter_hlsl("WP")))
+    custom.set_editor_property("code", HLSL.replace("%SHELTER%", RM.shelter_hlsl("WP")).replace("%GROUNDBLEND%", ground_blend_defines()).replace("%GBFUNCS%", GB_HLSL))
     custom.set_editor_property("description", "Terrain lab ground shader")
     custom.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
     outputs = []
@@ -636,13 +820,23 @@ def build_material(arrays, means):
     sources.append(("WallZ", scalar_param("WallZ", 100000.0)))
     sources.append(("Neighbours", vec_param("Neighbours", (0.0, 0.0, 0.0, 0.0))))
     sources.append(("Origin", vec_param("Origin", (0.0, 0.0, 0.0, 0.0))))
-    for e in "NESW":
+    # The palettes round it (AcGroundLook): the edges' N, E, S, W and the
+    # corners' NE, SE, SW, NW.
+    for e in ("N", "E", "S", "W", "NE", "SE", "SW", "NW"):
         sources.append((f"NbTint{e}", vec_param(f"NbTint{e}", (0.2, 0.15, 0.1, 0.0))))
         sources.append((f"NbFx{e}", vec_param(f"NbFx{e}", (0.0, 0.0, 0.0, 0.0))))
-    # The lab's own (round 1). The layers: AcGroundLook sets GroundLayer and
-    # NbLayer (N, E, S, W); the rest are the round's knobs, tuned by eye.
+    # Where they meet (GroundBlend.h, `Frame`): the seeds across the edges
+    # (N, E, S, W) and past the corners on the vertical and horizontal lines
+    # (NE, SE, SW, NW); the map bake's place on the world's grid.
+    sources.append(("BleedEdge", vec_param("BleedEdge", (0.0, 0.0, 0.0, 0.0))))
+    sources.append(("BleedV", vec_param("BleedV", (0.0, 0.0, 0.0, 0.0))))
+    sources.append(("BleedH", vec_param("BleedH", (0.0, 0.0, 0.0, 0.0))))
+    sources.append(("BleedShift", vec_param("BleedShift", (0.0, 0.0, 0.0, 0.0))))
+    # The lab's own (round 1). The layers: AcGroundLook sets GroundLayer,
+    # NbLayer (N, E, S, W) and NbLayerD (NE, SE, SW, NW); the rest are the round's knobs, tuned by eye.
     sources.append(("GroundLayer", scalar_param("GroundLayer", 0.0)))
     sources.append(("NbLayer", vec_param("NbLayer", (0.0, 0.0, 0.0, 0.0))))
+    sources.append(("NbLayerD", vec_param("NbLayerD", (0.0, 0.0, 0.0, 0.0))))
     sources.append(("NearTile", scalar_param("NearTile", 2.5)))
     sources.append(("FarTile", scalar_param("FarTile", 11.0)))
     sources.append(("RockTile", scalar_param("RockTile", 6.0)))
@@ -695,6 +889,60 @@ def build_material(arrays, means):
     return mat
 
 
+PROBE_NAME = "M_GroundBlendProbe"
+
+# The probe: the field alone, unlit, at a rectangle of world-grid points
+# across its UVs (rg: a and b, `Lab::GbField`), for Autocraft.Ground.Blend.Shader
+# to draw into a render target and read back against the C++ field.
+PROBE_HLSL = r"""
+%GROUNDBLEND%
+struct Lab
+{
+%GBFUNCS%
+};
+float2 p = ProbeRect.xy + UV * ProbeRect.zw;
+float2 lo = Bounds.xy, hi = Bounds.xy + Bounds.zw;
+return float3(Lab::GbField(p.x, p.y, lo, hi, Neighbours, BleedEdge, BleedV, BleedH), 1.0);
+"""
+
+
+def build_probe():
+    path = f"{LAB_DIR}/{PROBE_NAME}"
+    if assets.does_asset_exist(path):
+        assets.delete_asset(path)
+    mat = tools.create_asset(PROBE_NAME, LAB_DIR, unreal.Material, unreal.MaterialFactoryNew())
+    mel.delete_all_material_expressions(mat)
+    mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    custom = mel.create_material_expression(mat, unreal.MaterialExpressionCustom, -300, 0)
+    custom.set_editor_property("code", PROBE_HLSL.replace("%GROUNDBLEND%", ground_blend_defines()).replace("%GBFUNCS%", GB_HLSL))
+    custom.set_editor_property("description", "Ground blend probe")
+    custom.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+    sources = [("UV", mel.create_material_expression(mat, unreal.MaterialExpressionTextureCoordinate, -900, -100))]
+    y = 0
+    for name, value in (("ProbeRect", (0.0, 0.0, 1.0, 1.0)), ("Bounds", (-100.0, -64.0, 200.0, 128.0)), ("Neighbours", (0.0, 0.0, 0.0, 0.0)),
+                        ("BleedEdge", (0.0, 0.0, 0.0, 0.0)), ("BleedV", (0.0, 0.0, 0.0, 0.0)), ("BleedH", (0.0, 0.0, 0.0, 0.0))):
+        v = mel.create_material_expression(mat, unreal.MaterialExpressionVectorParameter, -900, y)
+        y += 70
+        v.set_editor_property("parameter_name", name)
+        v.set_editor_property("default_value", unreal.LinearColor(*value))
+        sources.append((name, v))
+    inputs = []
+    for name, _ in sources:
+        ci = unreal.CustomInput()
+        ci.set_editor_property("input_name", name)
+        inputs.append(ci)
+    custom.set_editor_property("inputs", inputs)
+    for name, src in sources:
+        out = "RGBA" if isinstance(src, unreal.MaterialExpressionVectorParameter) else ""
+        if not mel.connect_material_expressions(src, out, custom, name):
+            raise RuntimeError(f"could not connect probe {name}")
+    if not mel.connect_material_property(custom, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR):
+        raise RuntimeError("could not connect the probe's emissive")
+    mel.recompile_material(mat)
+    assets.save_asset(path, only_if_is_dirty=False)
+    return mat
+
+
 MEANS = (("MeanDirt", "Dirt"), ("MeanGrass", "Grass"), ("MeanHigh", "Highland"), ("MeanRock", "Rock"))
 
 
@@ -717,7 +965,7 @@ def main():
         arrays = {"CH": unreal.load_asset(f"{TEX_DIR}/T_TerrainCH"), "NR": unreal.load_asset(f"{TEX_DIR}/T_TerrainNR")}
         unreal.log(f"make_terrain_material: no sources in {SRC}: the texture arrays kept, means {means}")
         mat = build_material(arrays, means)
-        unreal.log(f"make_terrain_material: built {mat.get_path_name()}")
+        unreal.log(f"make_terrain_material: built {mat.get_path_name()}, {build_probe().get_path_name()}")
         return
     means = json.load(open(os.path.join(SRC, "means.json")))
     slices = import_slices()
@@ -732,7 +980,7 @@ def main():
         assets.save_loaded_asset(arr, only_if_is_dirty=False)
     assets.delete_directory(SLICE_DIR)
     mat = build_material(arrays, means)
-    unreal.log(f"make_terrain_material: built {mat.get_path_name()}")
+    unreal.log(f"make_terrain_material: built {mat.get_path_name()}, {build_probe().get_path_name()}")
 
 
 main()

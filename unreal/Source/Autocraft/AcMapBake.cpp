@@ -21,6 +21,7 @@
 
 #include "RegionFile.h"
 #include "TerrainField.h"
+#include "WindowMaps.h"
 
 namespace
 {
@@ -165,12 +166,34 @@ void UAcMapBakeSubsystem::Show(const int32 Index)
 	// Its own palette, and its neighbours' toward the edges.
 	if (AAcTerrain* Terrain = AAcTerrain::Find(GetWorld()))
 	{
+		const FRegion& Here = Regions[Index];
 		AAcTerrain::FGroundOverride Over;
-		Over.Own = Regions[Index].Ground;
-		const int32 Step[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
-		for (int32 E = 0; E < 4; E++)
+		Over.Own = Here.Ground;
+		Over.Ids[0] = TCHAR_TO_UTF8(*Here.Id);
+		// N, E, S, W, NE, SE, SW, NW.
+		const int32 Step[8][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1, 1}, {-1, -1}};
+		for (int32 E = 0; E < 8; E++)
 			for (const FRegion& O : All)
-				if (O.Column == Regions[Index].Column + Step[E][0] && O.Row == Regions[Index].Row + Step[E][1]) Over.Around[E] = O.Ground;
+				if (O.Column == Here.Column + Step[E][0] && O.Row == Here.Row + Step[E][1])
+				{
+					Over.Around[E] = O.Ground;
+					Over.Ids[E + 1] = TCHAR_TO_UTF8(*O.Id);
+				}
+		// Its place on the world's grid (as the atlas lays it: each column as
+		// wide as its widest region, each row as deep as its deepest), so its
+		// edges bleed as they do in the game and as its neighbours' pictures.
+		TMap<int32, double> Widths, Depths;
+		for (const FRegion& O : All)
+		{
+			const ac::MapCells C = ac::cells(O.Choice.size);
+			Widths.FindOrAdd(O.Column) = FMath::Max(Widths.FindRef(O.Column), C.width);
+			Depths.FindOrAdd(O.Row) = FMath::Max(Depths.FindRef(O.Row), C.depth);
+		}
+		ac::Vec2 Corner(0, 0);
+		for (int32 C = 0; C < Here.Column; C++) Corner.x += Widths.FindRef(C);
+		for (int32 R = 0; R < Here.Row; R++) Corner.y += Depths.FindRef(R);
+		const ac::MapCells Size = ac::cells(Here.Choice.size);
+		Over.Shift = Corner + ac::Vec2(Size.width / 2, Size.depth / 2);
 		Terrain->SetGroundOverride(Over);
 	}
 	UE_LOG(LogAutocraft, Log, TEXT("mapbake: showing %s"), *Regions[Index].Id);

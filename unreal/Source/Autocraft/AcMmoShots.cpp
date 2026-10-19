@@ -299,7 +299,8 @@
 //      (plain, frost, rust, ash)   10 its south-west (plain, rust, ochre,
 //      salt)   11 its south-east (plain, plain, salt, slag)
 // With -AcMmoShotsB4Perf=S, then each view again, the GPU timed over S s
-// (stats shown, no pictures), logged as `b4 perf:`.
+// with the bleed and S s without (ac.GroundBleed 0), stats shown, no
+// pictures, logged as `b4 perf:`.
 //
 // -AcMmoShotsS3 (with -AcMmoDevRig): daylight sight (docs/creatures.md S3),
 // by day the pilot's whole region seen and told, DIR/s3-NN-moment.png, and
@@ -675,8 +676,11 @@ namespace
 		double Game = 0, Render = 0, Gpu = 0;
 	};
 	TArray<FW4Sample> W4Walk;
-	/// -AcMmoShotsB4Perf: the GPU's frame times at a view, ms.
-	TArray<double> B4Gpu;
+	/// -AcMmoShotsB4Perf: the GPU's frame times at a view, ms (with the
+	/// bleed: `B4On`), and the base pass with and without it.
+	TArray<double> B4Gpu, B4On;
+	double B4Base[2] = {-1, -1};
+	bool B4OffShot = false;
 	double W4LastAt = -1;
 	double W4ShotAt = -1;
 	int32 W4Frames = 0;
@@ -5330,18 +5334,50 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
 		if (bPerf)
 		{
-			// Settled 3 s, then the GPU's frame a frame for S s, and `stat
-			// gpu`'s base pass (the ground's shader is drawn in it).
-			if (Now - W4ShotAt > 3.0) B4Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
-			if (Now - W4ShotAt < 3.0 + PerfFor) return;
-			double Base = -1;
+			// With the bleed, then without it (`ac.GroundBleed 0`: each
+			// palette stops at its edges), back to back so the Mac's load
+			// falls on both alike: each settled 3 s, then the GPU's frame a
+			// frame for S s and `stat gpu`'s base pass (the ground's shader
+			// is drawn in it).
+			IConsoleVariable* Bleed = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GroundBleed"));
+			const double Into = Now - W4ShotAt;
+			if (Into < 3.0 + PerfFor)
+			{
+				if (Bleed) Bleed->Set(1, ECVF_SetByCode);
+				if (Into > 3.0) B4Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+				return;
+			}
+			if (B4Base[0] < 0)
+			{
+				// The switch: the bleed's numbers taken, then off.
+				for (const TPair<FString, double>& Pass : FAcBenchMeter::GpuStatPasses())
+					if (Pass.Key.Contains(TEXT("BasePass"))) B4Base[0] = FMath::Max(B4Base[0], Pass.Value);
+				B4On = MoveTemp(B4Gpu);
+				B4Gpu.Reset();
+				if (Bleed) Bleed->Set(0, ECVF_SetByCode);
+				return;
+			}
+			if (Into > 6.0 + PerfFor && Into < 6.0 + 2 * PerfFor) B4Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+			if (Into < 6.0 + 2 * PerfFor) return;
 			for (const TPair<FString, double>& Pass : FAcBenchMeter::GpuStatPasses())
-				if (Pass.Key.Contains(TEXT("BasePass"))) Base = FMath::Max(Base, Pass.Value);
-			B4Gpu.Sort();
-			const auto Pct = [this](const double P) { return B4Gpu.Num() ? B4Gpu[FMath::Clamp(int32(P * B4Gpu.Num()), 0, B4Gpu.Num() - 1)] : 0.0; };
-			UE_LOG(LogAutocraft, Log, TEXT("b4 perf: %s: %d frames over %.0f s: gpu p50 %.2f p95 %.2f ms, base pass %.2f ms"), V.Name, B4Gpu.Num(), PerfFor,
-				Pct(0.5), Pct(0.95), Base);
+				if (Pass.Key.Contains(TEXT("BasePass"))) B4Base[1] = FMath::Max(B4Base[1], Pass.Value);
+			const auto P50 = [](TArray<double> G) { G.Sort(); return G.Num() ? G[G.Num() / 2] : 0.0; };
+			UE_LOG(LogAutocraft, Log, TEXT("b4 perf: %s: bleed on %d frames, gpu p50 %.2f ms, base pass %.2f ms; off %d frames, gpu p50 %.2f ms, base pass %.2f ms; the bleed %+.2f ms base pass"),
+				V.Name, B4On.Num(), P50(B4On), B4Base[0], B4Gpu.Num(), P50(B4Gpu), B4Base[1], B4Base[0] - B4Base[1]);
+			// The corner without the bleed, once (stats hidden for it): that
+			// the switch took.
+			if (W4Next == 8 && !B4OffShot)
+			{
+				B4OffShot = true;
+				FAcBenchMeter::ShowStats(GetWorld(), false, true);
+				ShootClean(TEXT("b4-12-top-start-nw-off"), TEXT("the north-west corner with ac.GroundBleed 0: each palette stops at its edges"));
+				FAcBenchMeter::ShowStats(GetWorld(), true, true);
+				T.Phase = 3803;
+			}
+			if (Bleed) Bleed->Set(1, ECVF_SetByCode);
 			B4Gpu.Reset();
+			B4On.Reset();
+			B4Base[0] = B4Base[1] = -1;
 			W4Next += 1;
 			W4Set = false;
 			return;
@@ -5355,7 +5391,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	}
 	case 3802:
 		if (W4Cam.IsValid()) W4Cam->Destroy();
-		Check(Shots.Saved + Shots.Skipped == 11, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Check(Shots.Saved + Shots.Skipped == (B4OffShot ? 12 : 11), FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsZ1

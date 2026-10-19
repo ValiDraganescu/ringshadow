@@ -3,9 +3,12 @@
 #include "AcMmo.h"
 #include "AcSimSubsystem.h"
 
+#include "HAL/IConsoleManager.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ObjectKey.h"
 #include "UObject/WeakObjectPtrTemplates.h"
+
+#include "NetProtocol.h"
 
 namespace AcGroundLook
 {
@@ -38,7 +41,6 @@ namespace AcGroundLook
 			break;
 		case G::frost:
 			P.Tint = FLinearColor(0.15f, 0.17f, 0.2f, 0.8f);
-			P.Frost = 1.0f;
 			P.Layer = 8;
 			break;
 		case G::ochre:
@@ -60,28 +62,54 @@ namespace AcGroundLook
 		return float(0.6 * FMath::SmoothStep(19.0, 24.0, H));
 	}
 
+	ac::groundblend::Frame FAround::Frame(const ac::GroundRect& B, const ac::Vec2 Centre) const
+	{
+		std::array<std::string_view, 9> V;
+		for (int32 K = 0; K < 9; K++) V[size_t(K)] = Ids[K];
+		const ac::Vec2 At = Centre + Shift;
+		return ac::groundblend::frame(float(B.minX + At.x), float(B.minZ + At.y), float(B.maxX + At.x), float(B.maxZ + At.y), V);
+	}
+
+	/// The grid steps to the eight round a region: N, E, S, W, NE, SE, SW, NW
+	/// (the grid's rows run north to south).
+	static const int64 Steps[8][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1, 1}, {-1, -1}};
+
+	TOptional<FAround> AroundOf(const UAcSimSubsystem* Sim, const int64 Region)
+	{
+		const FAcMmoClient* Mmo = Sim && Sim->IsMmo() ? Sim->MmoClient() : nullptr;
+		const ac::net::WorldMessage* World = Mmo ? Mmo->World() : nullptr;
+		if (!World || Region < 0 || Region >= int64(World->regions.size())) return {};
+		const ac::net::WorldMessage::Region& Here = World->regions[size_t(Region)];
+		FAround Out;
+		Out.Own = Here.ground;
+		Out.Ids[0] = Here.id;
+		for (const ac::net::WorldMessage::Region& R : World->regions)
+			for (int32 E = 0; E < 8; E++)
+			{
+				if (R.column != Here.column + Steps[E][0] || R.row != Here.row + Steps[E][1]) continue;
+				Out.Around[E] = R.ground;
+				Out.Ids[E + 1] = R.id;
+			}
+		return Out;
+	}
+
 	namespace
 	{
+		TAutoConsoleVariable<int32> CVarBleed(TEXT("ac.GroundBleed"), 1,
+			TEXT("Palettes bleed into each other where regions meet (1), or each region's stops at its edges (0: for measuring)."));
+
 		struct FState
 		{
 			TWeakObjectPtr<UMaterialInstanceDynamic> Material;
-			FPalette Own;
-			FPalette Near[4];
-			FLinearColor Neighbours = FLinearColor(0, 0, 0, 0);
+			TMap<FName, FLinearColor> Vectors;
 			float Frost = -1.0f;
 			float Embers = -1.0f;
 		};
 		/// Each material's last parameters (only what changed is set).
 		TMap<TObjectKey<UMaterialInstanceDynamic>, FState> GStates;
-
-		bool Same(const FPalette& A, const FPalette& B)
-		{
-			return A.Tint.Equals(B.Tint, 1e-4f) && A.Fx.Equals(B.Fx, 1e-4f) && FMath::IsNearlyEqual(A.Frost, B.Frost, 1e-4f) && A.Layer == B.Layer;
-		}
 	}
 
-	static void Set(UMaterialInstanceDynamic* Material, const FPalette& Own, const FPalette (&Near)[4], const FLinearColor& Neighbours,
-		double Hour, double Dark);
+	static void Set(UMaterialInstanceDynamic* Material, const FAround& Around, double Hour, double Dark);
 
 	void Apply(UMaterialInstanceDynamic* Material, const UAcSimSubsystem* Sim, const double Hour, const double Dark)
 	{
@@ -93,52 +121,20 @@ namespace AcGroundLook
 	void Apply(UMaterialInstanceDynamic* Material, const UAcSimSubsystem* Sim, const int64 Region, const double Hour, const double Dark)
 	{
 		if (!Material) return;
-		FPalette Own;
-		FPalette Near[4];
-		FLinearColor Neighbours(0, 0, 0, 0);
-		const FAcMmoClient* Mmo = Sim && Sim->IsMmo() ? Sim->MmoClient() : nullptr;
-		const ac::net::WorldMessage* World = Mmo ? Mmo->World() : nullptr;
-		const ac::net::WorldMessage::Region* Here =
-			World && Region >= 0 && Region < int64(World->regions.size()) ? &World->regions[size_t(Region)] : nullptr;
-		if (Here)
-		{
-			Own = Of(Here->ground);
-			// North, east, south, west: the grid's rows run north to south.
-			const int64 Step[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
-			for (const ac::net::WorldMessage::Region& R : World->regions)
-			{
-				for (int32 E = 0; E < 4; E++)
-				{
-					if (R.column != Here->column + Step[E][0] || R.row != Here->row + Step[E][1]) continue;
-					Near[E] = Of(R.ground);
-					Near[E].Frost = 0.0f;
-					Neighbours.Component(E) = 1.0f;
-				}
-			}
-		}
-		Set(Material, Own, Near, Neighbours, Hour, Dark);
+		const TOptional<FAround> Around = AroundOf(Sim, Region);
+		Set(Material, Around ? *Around : FAround(), Hour, Dark);
 	}
 
-	void ApplyGround(UMaterialInstanceDynamic* Material, const ac::region::Ground Ground, const TOptional<ac::region::Ground> (&Around)[4],
-		const double Hour, const double Dark)
+	void ApplyAround(UMaterialInstanceDynamic* Material, const FAround& Around, const double Hour, const double Dark)
 	{
-		if (!Material) return;
-		FPalette Near[4];
-		FLinearColor Neighbours(0, 0, 0, 0);
-		for (int32 E = 0; E < 4; E++)
-		{
-			if (!Around[E]) continue;
-			Near[E] = Of(*Around[E]);
-			Near[E].Frost = 0.0f;
-			Neighbours.Component(E) = 1.0f;
-		}
-		Set(Material, Of(Ground), Near, Neighbours, Hour, Dark);
+		if (Material) Set(Material, Around, Hour, Dark);
 	}
 
-	static void Set(UMaterialInstanceDynamic* Material, const FPalette& Own, const FPalette (&Near)[4], const FLinearColor& Neighbours, const double Hour,
-		const double Dark)
+	static void Set(UMaterialInstanceDynamic* Material, const FAround& Around, const double Hour, const double Dark)
 	{
-		const float Frost = Own.Frost * FrostAt(Hour);
+		// Frost's hour (the frost ground's own: the shader puts it wherever
+		// that ground bleeds); the slag's embers by the dark.
+		const float Frost = FrostAt(Hour);
 		const float Embers = float(FMath::Lerp(0.6, 1.5, FMath::Clamp(Dark, 0.0, 1.0)));
 
 		if (GStates.Num() > 64)
@@ -148,33 +144,52 @@ namespace AcGroundLook
 		}
 		FState& S = GStates.FindOrAdd(TObjectKey<UMaterialInstanceDynamic>(Material));
 		const bool bNew = S.Material.Get() != Material;
-		if (bNew || !Same(S.Own, Own))
+		if (bNew) S.Vectors.Reset();
+		const auto Vector = [&](const FName Name, const FLinearColor V) {
+			if (const FLinearColor* Was = S.Vectors.Find(Name); Was && Was->Equals(V, 1e-4f)) return;
+			Material->SetVectorParameterValue(Name, V);
+			S.Vectors.Add(Name, V);
+		};
+
+		static const FName TintName(TEXT("GroundTint")), FxName(TEXT("GroundFx")), LayerName(TEXT("GroundLayer"));
+		static const FName TintNames[8] = {TEXT("NbTintN"), TEXT("NbTintE"), TEXT("NbTintS"), TEXT("NbTintW"), TEXT("NbTintNE"), TEXT("NbTintSE"),
+			TEXT("NbTintSW"), TEXT("NbTintNW")};
+		static const FName FxNames[8] = {TEXT("NbFxN"), TEXT("NbFxE"), TEXT("NbFxS"), TEXT("NbFxW"), TEXT("NbFxNE"), TEXT("NbFxSE"), TEXT("NbFxSW"),
+			TEXT("NbFxNW")};
+		static const FName NbLayerName(TEXT("NbLayer")), NbLayerDName(TEXT("NbLayerD")), NeighboursName(TEXT("Neighbours"));
+		static const FName EdgeName(TEXT("BleedEdge")), VName(TEXT("BleedV")), HName(TEXT("BleedH")), ShiftName(TEXT("BleedShift"));
+
+		const FPalette Own = Of(Around.Own);
+		Vector(TintName, Own.Tint);
+		Vector(FxName, Own.Fx);
+		if (const FLinearColor* Was = S.Vectors.Find(LayerName); !Was || Was->R != Own.Layer)
 		{
-			Material->SetVectorParameterValue(TEXT("GroundTint"), Own.Tint);
-			Material->SetVectorParameterValue(TEXT("GroundFx"), Own.Fx);
-			Material->SetScalarParameterValue(TEXT("GroundLayer"), Own.Layer);
+			Material->SetScalarParameterValue(LayerName, Own.Layer);
+			S.Vectors.Add(LayerName, FLinearColor(Own.Layer, 0, 0, 0));
 		}
-		static const TCHAR* const TintNames[4] = {TEXT("NbTintN"), TEXT("NbTintE"), TEXT("NbTintS"), TEXT("NbTintW")};
-		static const TCHAR* const FxNames[4] = {TEXT("NbFxN"), TEXT("NbFxE"), TEXT("NbFxS"), TEXT("NbFxW")};
-		bool bLayers = bNew;
-		for (int32 E = 0; E < 4; E++)
+		float Layers[8];
+		for (int32 E = 0; E < 8; E++)
 		{
-			bLayers |= S.Near[E].Layer != Near[E].Layer;
-			if (!bNew && Same(S.Near[E], Near[E])) continue;
-			Material->SetVectorParameterValue(TintNames[E], Near[E].Tint);
-			Material->SetVectorParameterValue(FxNames[E], Near[E].Fx);
+			const FPalette P = Around.Around[E] ? Of(*Around.Around[E]) : FPalette();
+			Vector(TintNames[E], P.Tint);
+			Vector(FxNames[E], P.Fx);
+			Layers[E] = P.Layer;
 		}
-		if (bLayers)
-		{
-			Material->SetVectorParameterValue(TEXT("NbLayer"), FLinearColor(Near[0].Layer, Near[1].Layer, Near[2].Layer, Near[3].Layer));
-		}
-		if (bNew || !S.Neighbours.Equals(Neighbours)) Material->SetVectorParameterValue(TEXT("Neighbours"), Neighbours);
+		Vector(NbLayerName, FLinearColor(Layers[0], Layers[1], Layers[2], Layers[3]));
+		Vector(NbLayerDName, FLinearColor(Layers[4], Layers[5], Layers[6], Layers[7]));
+		// Where they meet: the seeds (24 bits, exact in a float), and which
+		// edges have a region beyond (the dark seam only at the world's rim).
+		const ac::groundblend::Frame F = Around.Frame(ac::GroundRect{}, ac::Vec2(0, 0));
+		const auto Seeds = [](const std::array<uint32_t, 4>& A) { return FLinearColor(float(A[0]), float(A[1]), float(A[2]), float(A[3])); };
+		Vector(EdgeName, Seeds(F.edge));
+		Vector(VName, Seeds(F.beyondV));
+		Vector(HName, Seeds(F.beyondH));
+		const float On = CVarBleed.GetValueOnGameThread() != 0 ? 1.f : 0.f;
+		Vector(NeighboursName, FLinearColor(F.has[0] ? On : 0.f, F.has[1] ? On : 0.f, F.has[2] ? On : 0.f, F.has[3] ? On : 0.f));
+		Vector(ShiftName, FLinearColor(float(Around.Shift.x), float(Around.Shift.y), 0, 0));
 		if (bNew || FMath::Abs(S.Frost - Frost) > 1.0f / 256) Material->SetScalarParameterValue(TEXT("Frost"), Frost);
 		if (bNew || FMath::Abs(S.Embers - Embers) > 1.0f / 256) Material->SetScalarParameterValue(TEXT("EmberGain"), Embers);
 		S.Material = Material;
-		S.Own = Own;
-		for (int32 E = 0; E < 4; E++) S.Near[E] = Near[E];
-		S.Neighbours = Neighbours;
 		S.Frost = Frost;
 		S.Embers = Embers;
 	}
