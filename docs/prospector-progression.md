@@ -254,7 +254,7 @@ Theme: moving, surveying, finding the sites.
 | 2 | Scanner pulse | 3 | arriving in a region shows its sites on the world map: wrecks; then caches; then vaults | all three | new |
 | 2 | **Cliff hop** | 1 | jump up and down cliffs (passive), 2 MH a jump | | `CliffJump` |
 | 3 | Jump jets | 3 | jump reach +1 cell; at rank 3 a jump burns 1 MH | +3 | `Stat::JumpReach` |
-| 3 | Pad link | 3 | call the Dropship from within 8 / 12 / 16 cells of a Landing Pad's centre, up from 4 | 16 | new |
+| 3 | Pad link | 3 | call the Dropship from 8 / 12 / 16 cells past a Landing Pad's edge, up from 2 (from its centre, up from 4, before C5) | 16 | new |
 | 3 | ~~Homing beacon~~ | | retired by F2 (the Dropship lands only on Landing Pads): old saves get its points back and a Landing Pad blueprint | | |
 | 4 | Lucky strike | 5 | survey chips come 10% more often | +50% | new: chip chance |
 | 4 | **Sprint** (active) | 1 | 6 s of walk +60%; cooldown 30 s | | `Burst` |

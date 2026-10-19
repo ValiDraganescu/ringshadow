@@ -107,7 +107,8 @@ The muzzle is the barrels' end: `Defence::gunMuzzle(citadel, i, aim,
 pitch)`, `muzzleAlong` 1.3 from the trunnion along the barrels, and
 `Defence::gatlingMuzzle(at, aim, pitch)` from the model's catalog (the
 barrels' cradle pivots 1.28 up and 0.3 along the aim, the muzzle 1.28
-past the pivot: 1.58 out level); z on the ground's height. The gatling's
+past the pivot: 1.58 out level; each x `Rules::gatlingScale` in the MMO
+since C5, [building-sizes.md](building-sizes.md)); z on the ground's height. The gatling's
 solve is `Structure::pitch` (back to level with nothing to shoot), for the
 pose's cradle and the wire. The velocity is the aim (yaw,
 pitch) turned by the cone roll (uniform over the cone's disc,

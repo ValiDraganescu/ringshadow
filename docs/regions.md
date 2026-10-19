@@ -170,13 +170,17 @@ world (brood level 1 or more) holds:
 - none of the base's own ore and wells (`base.drop` has `resources`).
 
 A canyon's prize is its region's well and a rich vein in a ring round it
-(4 cells out); the region's other vein lies outside the canyon, smaller.
+(6 cells out since C5, clear of the 7x7 Derrick on the well,
+[building-sizes.md](building-sizes.md)); the region's other vein lies
+outside the canyon, smaller. A ring round a well is one vein by rule
+whatever its mounds' spacing (three or more mounds within `ringReach` 6.5
+of the well, their reach measured from the well).
 
 `validate` refuses a third vein, a vein of fewer than 3 or more than 5
 mounds, a mound off its vein's middle, a second well, ore outside the
 level's range, and the base's ore (brood 0, the example file, has no
 limit). The numbers are `region::veinsMost`, `moundsFewest`, `moundsMost`,
-`wellsMost`, `veinLink`, `veinReach` and `oreRange` in `RegionFile.h`.
+`wellsMost`, `veinLink`, `veinReach`, `ringReach` and `oreRange` in `RegionFile.h`.
 
 | region | id | brood | ore | veins (mounds × ore, middle) | well (at, MH) |
 |---|---|---|---|---|---|
@@ -265,10 +269,16 @@ noon and at dusk, and the start region's south edge looking into Brine Pans.
 
 ## Places
 
-- `pads`: named landing pads, radius 3: flat (heights within 0.6), no
-  cliff, rock, ore or well on them, joined to the open ground.
+- `pads`: named landing pads. Since C5 ([building-sizes.md](building-sizes.md))
+  a pad is as big as a realm Landing Pad, the walk-in Dropship landed on it
+  aligned (ramp to +y): its plate a disc `padReach` round its centre, half
+  the Landing Pad's side (`ShuttleBay::padHalfSide`, 8.5 for the C5
+  ship). The whole plate flat (heights within 0.6), no cliff, rock, ore
+  or well on it, and the ramp's apron in front of its +y edge (2.5 deep,
+  1.6 to each side of the middle) as flat and clear; joined to the open
+  ground. The build clears base rocks off the plate and the apron.
 - `spawns`: named points where a pilot appears: open ground joined to the
-  rest.
+  rest, off every pad's plate (`padReach` + 1 from its centre).
 
 ## sites
 
@@ -282,7 +292,7 @@ it for themselves.
   `citadel`, `derrick`, `habDome`, `foundry`, `lab`, `spacedock`, `bastion`,
   `sentinel`. The Garrison is held back, so it has no blueprint.
 - A site stands on open ground. It must not be on a cliff face, in rock, on
-  ore or a well, on a pad's plate (keep it 5 cells from a pad's centre) or on
+  ore or a well, on a pad's plate (keep it `padReach` + 1 cells from a pad's centre) or on
   another site. It must be joined to the region's open ground. Base rocks
   within 2 cells give way to it.
 - A `vault` stands on high ground (level 1 or 2). It may be cut off from the

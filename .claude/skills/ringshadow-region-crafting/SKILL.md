@@ -114,7 +114,8 @@ build turrets on the rims ([docs/regions.md](../../../docs/regions.md),
   `validate` names each breach. Lay a vein as a ring round an open middle
   (2.6–3.2 cells out, each mound's `angle` along its radius) so a Prospector
   never gets boxed in between mounds; a canyon's prize is the region's well
-  with a ring 4 cells round it. The numbers per region are in
+  with a ring 6 cells round it (clear of the 7x7 Derrick, C5; one vein by
+  rule). The numbers per region are in
   docs/regions.md, "Scarcity"; changing a region's veins means rebaking its
   satellite map (`bake_map.py --only ID`).
 - Positions are cells from the **north-west corner**, z grows **south**
@@ -126,8 +127,11 @@ build turrets on the rims ([docs/regions.md](../../../docs/regions.md),
   cells of length a level. Its ends are checked 1.5 cells past each end:
   start it a little out on the low ground and end it on the top.
 - `slope` under about 4 cells a level is still a cliff to a machine.
-- Flatten a pad's ground first (`flatten` with a circle of radius 5+) when it
-  sits on rolling or base ground; a pad needs heights within 0.6.
+- Flatten a pad's ground first (`flatten` with a circle of radius 10+) when it
+  sits on rolling or base ground; a pad needs heights within 0.6 over its
+  whole plate (8.5 round since C5: the Dropship lands on it aligned) and
+  its ramp's apron 2.5 cells in front of its +y edge. Keep spawns and sites
+  off the plate.
 - An opening needs open ground 2 cells in along the whole span, joined to the
   main area: keep cliffs, ore and crafted rocks out of that lane and give
   the lane a way into the region.

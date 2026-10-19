@@ -88,10 +88,10 @@
     {"name": "landing", "at": [76, 48]}
   ],
   "spawns": [
-    {"name": "start", "at": [80, 53]}
+    {"name": "start", "at": [82, 59]}
   ],
   "sites": [
-    {"name": "Landing crate", "kind": "crate", "at": [70, 42], "blueprint": "citadel"},
+    {"name": "Landing crate", "kind": "crate", "at": [68, 40], "blueprint": "citadel"},
     {"name": "Lander wreck", "kind": "wreck", "at": [50, 30], "blueprint": "derrick"}
   ],
   "openings": {

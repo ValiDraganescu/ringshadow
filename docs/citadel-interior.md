@@ -43,6 +43,9 @@ the hall); the core tests on the strategy game's maps (window maps, the home
 map, the Swift goldens) turn it off per test (`simtest::CitadelHall`,
 `core-tests/tests/CitadelHall.h`), and `simbench` turns it off at its start.
 
+Since C5 every other building of the MMO grows by the same factor, 2.4,
+on the same switch ([building-sizes.md](building-sizes.md)).
+
 Everything that reads `Rules::radius` follows (deposit reach, unload reach,
 spawn at the door, placement, the map's footprint). A 12×12 Citadel needs
 flatter ground to place: `placementRefusal`'s height-spread tolerance is 0.2
