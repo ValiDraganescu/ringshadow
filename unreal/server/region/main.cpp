@@ -195,21 +195,13 @@ int summary(const std::string& path) {
             std::printf("landforms: %zu the file's own\n", file->sculpt->forms.size());
             for (const std::string& n : notes) std::printf("  style: %s\n", n.c_str());
         }
-        // A hand-drawn tell: a cliff that runs straight for 8 cells or more
-        // (the cliff-sided raises, lowers and flats, the islands).
+        // A hand-drawn tell: an edge straight for `straightRun` cells or
+        // more (the cliffs, the cuts, the rim; region/RegionFile.h).
         {
-            int64_t straight = 0;
-            const auto runs = [&straight](const std::vector<Vec2>& poly) {
-                for (size_t i = 0; i < poly.size(); i++)
-                    if (distance(poly[i], poly[(i + 1) % poly.size()]) >= 8) straight++;
-            };
-            for (const Edit& e : ex.height)
-                if ((e.op == HeightEdit::Kind::raise || e.op == HeightEdit::Kind::lower || e.op == HeightEdit::Kind::flatten) && e.slope < 2 &&
-                    e.area.shape == Area::Shape::polygon)
-                    runs(e.area.points);
-            if (ex.border)
-                for (const auto& is : ex.border->islands) runs(is);
-            std::printf("straight cliff runs (8 cells or more): %lld\n", static_cast<long long>(straight));
+            const auto runs = straightRuns(ex);
+            std::printf("straight runs (%g cells or more): %zu\n", straightRun, runs.size());
+            for (const StraightRun& r : runs)
+                std::printf("  straight: %s from %s to %s\n", r.what.c_str(), point(r.from).c_str(), point(r.to).c_str());
         }
         // The raid's way in: a walker's path from each passage and the nest
         // to each pad, and the time at a shardling's march.

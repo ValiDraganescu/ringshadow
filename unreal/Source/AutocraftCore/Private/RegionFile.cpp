@@ -2,6 +2,7 @@
 #include "RegionFile.h"
 
 #include "NavGrid.h"
+#include "Noise.h"
 #include "ScreenConfig.h"
 #include "TerrainField.h"
 
@@ -1379,24 +1380,60 @@ Built build(const RegionFile& given) {
             m.doodads.push_back(d);
         }
     }
-    // The walls' rocks: boulders, rocks and spires strewn over them, on a
-    // jittered grid, past the outline by more than a cliff's width.
+    // The walls' rocks: boulders, rocks and spires strewn over them past
+    // the outline by more than a cliff's width, in clusters of one to four,
+    // most at the rim's foot and thinning up the wall, with gaps where the
+    // noise says, never three in a row (`inRow`). About one every
+    // `wallRockSpacing` cells each way, as the grid they replace.
     if (f.border) {
         const Border& border = *f.border;
+        SeededRandom rng(fnv1a64(f.id + "|wall"));
+        const Noise gaps(fnv1a64(f.id + "|wall-gaps"));
+        // The file's own rocks (a canyon's fallen blocks, a landform's talus)
+        // count for the rows.
+        std::vector<Vec2> rocks, clusters;
+        for (const Prop& p : f.doodads)
+            if (p.kind == Doodad::Kind::rock || p.kind == Doodad::Kind::boulder || p.kind == Doodad::Kind::rockSpire) rocks.push_back(p.at);
+        const int64_t tries = static_cast<int64_t>(ext.x * ext.y / (wallRockSpacing * wallRockSpacing) * 6.0);
         int64_t k = 0;
-        for (double z = wallRockSpacing / 2; z < ext.y; z += wallRockSpacing) {
-            for (double x = wallRockSpacing / 2; x < ext.x; x += wallRockSpacing) {
+        for (int64_t t = 0; t < tries; t++) {
+            const Vec2 c(rng.range(0.6, ext.x - 0.6), rng.range(0.6, ext.y - 0.6));
+            const double out = landOutside(c, border.outline, border.islands);
+            if (!(out > 2.2)) continue;
+            // Most at the foot, fewer up the wall; gaps along the rim.
+            if (rng.unit() > 0.8 * (0.3 + 0.7 * std::exp(-(out - 2.2) / 5)) || gaps.fbm(c.x * 0.07, c.y * 0.07, 2) < -0.3) continue;
+            if (std::any_of(clusters.begin(), clusters.end(), [&](Vec2 q) { return distance(q, c) < 3.0; })) continue;
+            clusters.push_back(c);
+            const double n = rng.unit();
+            const int count = n < 0.25 ? 1 : n < 0.6 ? 2 : n < 0.88 ? 3 : 4;
+            for (int r = 0; r < count; r++) {
+                const double a = rng.range(0, 2 * pi);
+                const Vec2 p = r == 0 ? c : c + Vec2(std::cos(a), std::sin(a)) * rng.range(1.0, 2.4);
+                if (p.x < 0.3 || p.y < 0.3 || p.x > ext.x - 0.3 || p.y > ext.y - 0.3) continue;
+                if (!(landOutside(p, border.outline, border.islands) > 2.0)) continue;
+                if (std::any_of(rocks.begin(), rocks.end(), [&](Vec2 q) { return distance(q, p) < 0.9; }) || inRow(rocks, p)) continue;
                 const uint64_t hash = fnv1a64(f.id + "|wall|" + std::to_string(k++));
-                const auto unit = [hash](int shift) { return static_cast<double>((hash >> shift) & 0xffff) / 65535.0; };
-                const Vec2 p(x + (unit(0) - 0.5) * wallRockSpacing * 1.3, z + (unit(16) - 0.5) * wallRockSpacing * 1.3);
-                if (!(landOutside(p, border.outline, border.islands) > 2.0) || unit(32) < 0.3) continue;
-                const double pick = unit(48);
+                const double pick = rng.unit();
                 Doodad d;
-                d.kind = pick < 0.45 ? Doodad::Kind::boulder : pick < 0.85 ? Doodad::Kind::rock : Doodad::Kind::rockSpire;
+                d.kind = r == 0 ? (pick < 0.15 ? Doodad::Kind::rockSpire : Doodad::Kind::boulder)
+                                : (pick < 0.75 ? Doodad::Kind::rock : Doodad::Kind::boulder);
                 d.position = g(p);
-                d.rotation = unit(8) * 2 * pi;
-                d.scale = d.kind == Doodad::Kind::rockSpire ? 0.9 + unit(24) * 1.0 : 1.2 + unit(24) * 1.8;
+                d.rotation = rng.range(0, 2 * pi);
+                // Mixed sizes: the cluster's first the biggest.
+                d.scale = d.kind == Doodad::Kind::rockSpire ? rng.range(0.9, 1.9) : r == 0 ? rng.range(1.8, 3.0) : rng.range(0.8, 2.0);
                 d.variant = static_cast<uint32_t>(hash >> 7);
+                // All of it on the wall, none in the ground units walk (the
+                // walking grid ends a cliff's width past the outline): a rock
+                // too big for its spot is a smaller one.
+                const auto onWall = [&] {
+                    for (const NavGrid::Circle& foot : NavGrid::circles(d))
+                        if (!(landOutside(b.regionAt(foot.first), border.outline, border.islands) - foot.second - NavGrid::clearance > 1.3))
+                            return false;
+                    return true;
+                };
+                while (!onWall() && d.scale > 0.6) d.scale *= 0.75;
+                if (!onWall()) continue;
+                rocks.push_back(p);
                 m.doodads.push_back(d);
             }
         }

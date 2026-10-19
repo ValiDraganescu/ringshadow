@@ -2,8 +2,9 @@
 // words — a butte here, an escarpment along there, the open-desert style —
 // drawn into the file's plain layers (height edits, border islands, rocks)
 // by `expand`. Every outline is bent by noise and bitten by erosion, so no
-// edge runs straight; rocks gather where real ones would, at a cliff's foot
-// and round a spire. The same seed draws the same land.
+// edge runs straight (the rim and the hand-written ground too: Erosion.cpp);
+// rocks gather where real ones would, at a cliff's foot and round a spire.
+// The same seed draws the same land.
 #include "RegionFile.h"
 
 #include "Noise.h"
@@ -490,6 +491,8 @@ RegionFile expand(const RegionFile& f, std::vector<std::string>* notes) {
             notes->push_back(kindName(w.kind) + " (" + std::string(EnumInfo<LandformSize>::names[static_cast<size_t>(w.size)]) + "): " +
                              std::to_string(placed) + " of " + std::to_string(w.count) + (placed < w.count ? ", no room for the rest" : ""));
     }
+    // Last, the rim and the hand-written ground worn: no edge runs straight.
+    erode(out, f);
     return out;
 }
 

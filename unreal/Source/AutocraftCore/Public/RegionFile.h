@@ -280,6 +280,35 @@ AUTOCRAFTCORE_API RegionFile expand(const RegionFile& file, std::vector<std::str
 /// a place, a vein, a well, the nest, a passage's lane, a ramp's end or a
 /// canyon zone, or out of the land.
 AUTOCRAFTCORE_API std::vector<Problem> sculptProblems(const RegionFile& file);
+/// Wears a sculpted file's rim and hand-written ground (docs/world-sculpting.md,
+/// "No straight edge"): `expand`'s last step, into `out` (the file's own
+/// edits first in its `height`, as `file` has them).
+AUTOCRAFTCORE_API void erode(RegionFile& out, const RegionFile& file);
+
+/// A hand-drawn tell (docs/world-sculpting.md, "No straight edge"): an edge
+/// that keeps within `straightTolerance` of one straight line for
+/// `straightRun` cells or more. Counted on the cliffs (the cliff-sided
+/// raises, lowers and flats, the islands), the cliff-walled cuts and ridges,
+/// and the border's outline (not where it lies along the region's edge).
+constexpr double straightRun = 8.0;
+constexpr double straightTolerance = 0.25;
+struct StraightRun {
+    /// "height[3]", "border.islands[2]", "border.outline".
+    std::string what;
+    Vec2 from, to;
+};
+/// Every straight run of an expanded file (`expand`).
+AUTOCRAFTCORE_API std::vector<StraightRun> straightRuns(const RegionFile& expanded);
+
+/// Rocks standing in a row: `m` within `rowTolerance` of the line from `a`
+/// to `b` and between them, a third of the way or more from each end, `a`
+/// and `b` at most `rowReach` apart (spaced evenly enough to read as set
+/// down by hand). `inRow`: `p` makes such a row with two of `rocks`.
+constexpr double rowTolerance = 0.6;
+constexpr double rowReach = 14.0;
+AUTOCRAFTCORE_API bool row(Vec2 a, Vec2 m, Vec2 b);
+AUTOCRAFTCORE_API bool inRow(const std::vector<Vec2>& rocks, Vec2 p);
+
 /// The rules' clearances, cells past a landform's own size.
 constexpr double fieldOfFire = 30.0;
 
@@ -308,7 +337,8 @@ constexpr double laneDepth = 2.0;
 /// deep in from the edge, then joins the ground over `mouthSlope` (W4).
 constexpr double mouthDepth = 5.0;
 constexpr double mouthSlope = 5.0;
-/// The walls' rocks: about one every this many cells each way (W4).
+/// The walls' rocks: about one every this many cells each way (W4),
+/// gathered in clusters at the rim's foot, never three in a row.
 constexpr double wallRockSpacing = 3.4;
 
 /// Scarcity (E1; docs/regions.md, "Scarcity"): a region of a world (brood
