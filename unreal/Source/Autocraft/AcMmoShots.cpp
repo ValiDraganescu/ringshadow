@@ -105,10 +105,11 @@
 //
 // -AcMmoShotsRingshadowAlign: the ring's arc on the sun and its shadow on
 // the land, each sweep, DIR/ra-HHMM-moment.png (docs/weather.md "Ringshadow
-// sweep"): ra-1130-eye, ra-1600-eye the pilot's eye 2.5 cells inside the
-// band's leading edge, the sun and the edge's line on the ground in one
-// frame; ra-1130-top, ra-1600-top from straight above the region's middle,
-// north up, half way through. The clock jumps to each moment.
+// sweep"): ra-1130-eye, ra-1600-eye the pilot's eye 8 cells inside the
+// band's leading edge, without the HUD and 120° across, the sun and the
+// edge's line on the ground in one frame; ra-1130-top, ra-1600-top from straight above the region's middle,
+// north up, half way through. The clock jumps to each moment. Add
+// -AcWeather=clear for a cloudless sun.
 //
 // -AcMmoShotsStarfall (it adds -AcMmoStarfall=10 -AcMmoClockHour=17 unless
 // the run gives them: a starfall near the pilot 10 s after it comes, late in
@@ -3107,8 +3108,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Finish();
 		return;
 	// MARK: -AcMmoShotsRingshadowAlign
-	// Each sweep (11:30, 16:00) twice: from the pilot's eye just inside the
-	// band's leading edge, looking between the sun and the way the edge runs
+	// Each sweep (11:30, 16:00) twice: from the pilot's eye 8 cells inside the
+	// band's leading edge (no HUD), looking between the sun and the way the edge runs
 	// on the ground, so the arc's edge on the sun and the band's edge on the
 	// land are in one frame (the shadow's edge plane holds the eye and the
 	// sun: in the picture the two lie on one line); and from straight above
@@ -3121,7 +3122,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 331:
 	{
-		// The sweep's two moments: the leading edge 2.5 cells past the pilot,
+		// The sweep's two moments: the leading edge 8 cells past the pilot,
 		// and the band's middle over the region's middle (half way through).
 		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
 		if (!Sky || !M || !U) return;
@@ -3133,7 +3134,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		for (double Tm = Sw.start; Tm < Sw.end && Eye < 0; Tm += 0.02)
 		{
 			const std::optional<ac::Ringshadow::Band> B = ac::Ringshadow::band(Tm, Bounds, Sky->DayLength);
-			if (B && B->lead - ac::dot(U->position, B->dir) >= 2.5) Eye = Tm;
+			if (B && B->lead - ac::dot(U->position, B->dir) >= 8.0) Eye = Tm;
 		}
 		const double Top = 0.5 * (Sw.start + Sw.end);
 		Check(Eye > 0, TEXT("ra: the band's edge reaches the pilot"));
@@ -3178,11 +3179,14 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			const ac::Vec2 Mid(0.5 * (Bounds.minX + Bounds.maxX), 0.5 * (Bounds.minZ + Bounds.maxZ));
 			// Straight down, north (-Y) at the top of the picture.
 			RaCam->SetActorLocationAndRotation(AcSpace::ToWorld(Mid, 130), FRotator(-90.f, -90.f, 0.f));
+			if (Pc->PlayerCameraManager) Pc->PlayerCameraManager->UnlockFOV();
 			if (Pc->GetViewTarget() != RaCam.Get()) Pc->SetViewTarget(RaCam.Get());
 		}
 		else
 		{
 			if (Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+			// A wide eye (120° across): the sun high at 11:30 and the land under it.
+			if (Pc->PlayerCameraManager) Pc->PlayerCameraManager->SetFOV(120.f);
 			const std::optional<ac::Ringshadow::Band> B = ac::Ringshadow::band(Sky->Time, Bounds, Sky->DayLength);
 			const FVector Sun = AAcDaylight::SunToward(AAcDaylight::HourAt(Sky->Time));
 			if (B)
@@ -3197,11 +3201,17 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				Pc->GetViewportSize(VX, VY);
 				const double HalfH = FMath::DegreesToRadians(0.5 * (Pc->PlayerCameraManager ? Pc->PlayerCameraManager->GetFOVAngle() : 90.f));
 				const double HalfV = VX > 0 ? std::atan(std::tan(HalfH) * VY / VX) : 0.5;
-				// The sun a little under the top of the picture.
-				Pilot->Eye().Pitch = FMath::Clamp(std::asin(Sun.Z) - (HalfV - 0.12), -0.3, 0.9);
+				// The sun just under the top of the picture, the most land under
+				// it: steered by where the sun lands on the screen.
+				FVector2D Px;
+				const FVector From = Pc->PlayerCameraManager ? Pc->PlayerCameraManager->GetCameraLocation() : FVector::ZeroVector;
+				if (VY > 0 && Pc->ProjectWorldLocationToScreen(From + Sun * 1.0e6, Px, true) && Px.Y > -VY && Px.Y < 2 * VY)
+					Pilot->Eye().Pitch = FMath::Clamp(Pilot->Eye().Pitch + 0.5 * (0.07 - Px.Y / VY) * 2.0 * HalfV, -0.3, 0.9);
+				else
+					Pilot->Eye().Pitch = FMath::Clamp(std::asin(Sun.Z) - (HalfV - 0.05), -0.3, 0.9);
 			}
 		}
-		if (Sky->Time >= RaAt[RaStep] && Since() > 1.0)
+		if (Sky->Time >= RaAt[RaStep] && Since() > 1.5)
 		{
 			const std::optional<ac::Ringshadow::Band> B = ac::Ringshadow::band(Sky->Time, Bounds, Sky->DayLength);
 			const double Bearing = B ? FMath::Fmod(FMath::RadiansToDegrees(std::atan2(B->dir.x, -B->dir.y)) + 360.0, 360.0) : -1;
@@ -3209,7 +3219,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				ShootClean(*FString::Printf(TEXT("ra-%s-top"), *Hhmm),
 					FString::Printf(TEXT("%s: the band from above, north up, moving toward %.1f°"), *Hhmm, Bearing));
 			else
-				Shoot(*FString::Printf(TEXT("ra-%s-eye"), *Hhmm),
+				ShootClean(*FString::Printf(TEXT("ra-%s-eye"), *Hhmm),
 					FString::Printf(TEXT("%s: the pilot's eye %.1f cells inside the band's leading edge, the arc on the sun (band toward %.1f°)"),
 						*Hhmm, B ? B->lead - ac::dot(U->position, B->dir) : -1.0, Bearing));
 			return;
@@ -3226,7 +3236,11 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 335:
 	{
-		if (APlayerController* Pc = GetWorld()->GetFirstPlayerController(); Pc && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+		if (APlayerController* Pc = GetWorld()->GetFirstPlayerController())
+		{
+			if (Pc->PlayerCameraManager) Pc->PlayerCameraManager->UnlockFOV();
+			if (Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+		}
 		Check(Shots.Saved + Shots.Skipped == 4, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
 		Finish();
