@@ -57,7 +57,7 @@ struct AUTOCRAFTCORE_API ShuttleBay {
     /// The orange ramp post inside by the opening, and the green take-off
     /// button on the console under the windshield (its top, z up).
     static constexpr Vec3 rampButton{-2.26, -0.84, 1.13};
-    static constexpr Vec3 takeOffButton{2.50, 0, 1.44};
+    static constexpr Vec3 takeOffButton{2.50, 0, 1.20};
     /// How near (seen from above, cells) a unit presses either (*assumed*).
     static constexpr double reach = 1.5;
     /// It leaves once nobody has been in the bay or on the ramp this long

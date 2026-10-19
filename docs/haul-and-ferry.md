@@ -192,11 +192,11 @@ left, z up from the ground under the landed ship; c4-ship-look's model's
 numbers): the deck at z 0.5; inside x −2.5 … 2.36 (the bay 4 long and the
 cockpit nook up to the console's face), y −1 … 1, 2 tall; the hull from the
 jambs at x −2.72 to the nose tip at 4.1, the nacelles out to ±2.48; the nose
-block from x 2.62; the console x 2.36 … 2.68, |y| < 0.96; the ramp post in
+block from x 2.62; the console x 2.36 … 2.68, |y| < 0.96, its desk up to z 1.08 under the lowered windshield; the ramp post in
 its niche x −2.42 … −2.10, y −1.10 … −0.88; the ramp hinged at x −2.5,
 z 0.5, 2 long, its foot on the ground at x −4.44, shut as a slab
 x −2.70 … −2.50. The ramp button at (−2.26, −0.84, 1.13), the take-off
-button at (2.50, 0, 1.44). `ShuttleBay::footprint()` gives the cameras the
+button at (2.50, 0, 1.20). `ShuttleBay::footprint()` gives the cameras the
 same slabs; `ShuttleBay::floor` the deck's and the ramp's height to stand a
 rider on.
 

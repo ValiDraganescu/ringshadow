@@ -143,7 +143,7 @@ const std::array<Block, 6>& solids() {
         box(B::hullRear, B::hullFront, -B::hullHalfWide, -B::halfWide, 0, B::roofTop),
         box(B::noseFrom, B::hullFront, -B::halfWide, B::halfWide, 0, B::roofTop),
         // The console under the windshield, the ramp post in its niche.
-        box(B::front, 2.68, -0.96, 0.96, B::deck, 1.44),
+        box(B::front, 2.68, -0.96, 0.96, B::deck, 1.08),
         box(-2.42, -2.10, -1.10, -0.88, B::deck, 1.78),
         // The ramp shut in the opening.
         box(-2.70, B::rear, -B::halfWide, B::halfWide, 0, B::ceiling),
