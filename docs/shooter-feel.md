@@ -290,6 +290,18 @@ is held out the boom eases out to at least 1.8 (12.5° of tilt), because the
 centred unit hid the ghost right ahead of it at 0.45; the player's zoom comes
 back once the building is placed or dropped.
 
+**The boom across regions (2026-10-19).** The user, riding the Mule after a
+flight: V to third person put the camera far overhead, the Mule a dot, and
+the wheel could not zoom in. The boom is `(2.6 + 3.3·reach)` cells, the reach
+measured once per model, the first time it is chased. The measure read the
+parts' local transforms through `AcRaySpace::Matrix`, which takes the
+seamless world frame's origin off (right for a world transform, wrong for a
+part's local), so a model first chased after a region change reached as far
+as the frame had moved: the Mule 346 cells after the flight (+144, +96), a
+Prospector 382 after walking across regions. Locals now go through
+`AcRaySpace::LocalMatrix` (the chase's reach, the ray shapes' rest reach), and
+the reach is the same in every region.
+
 **Centred, and the walk follows the camera.** The boom's pivot sat
 0.4 + 0.45·reach cells right of the unit (0.85 for a Prospector). The unit
 faces what the sight falls on, so at close range its forward was the line
@@ -355,7 +367,8 @@ the work ring stay in the middle. Let go, the swing eases back to none over
 nothing while driving: the pilot's context binds no right button.
 
 Tests: `Autocraft.Pilot.ChaseZoomClamps`, `Autocraft.Pilot.WalkFollowsTheCamera`,
-`Autocraft.Pilot.LookAroundKeepsTheAim`,
+`Autocraft.Pilot.LookAroundKeepsTheAim`, `Autocraft.Pilot.ChaseBoomAfterARegionChange`
+(and `mmoferry` out on Cold Fork's pad),
 `Autocraft.Pilot.ChaseStopsAtWalls` (the console); core `pilot_slidesAlongARock`,
 `pilot_roundsACorner`, `pilot_standsAtEveryStationButNotInTheConsole`,
 `pilot_handedBackBesideARockStepsOntoTheGrid`.

@@ -10,7 +10,9 @@
 //             console E opens the flight menu, Cold Fork's pad is flown to;
 //             the lift, the dash and the approach seen through the
 //             windshield in first person; landed, E at the post lowers the
-//             ramp and the pilot walks out onto the pad.
+//             ramp and the pilot walks out onto the pad, the third-person
+//             camera at its boom's distance as at home (the region's frame
+//             moved: the boom's reach measured there as at home).
 //   mmoferrymule  the same rig; the Dropship called and down, the pilot's
 //             Mule put on the ship's axis behind its ramp, the pilot at its
 //             perch (`ferry mule`), onto it, driven up the ramp into the bay: the
@@ -27,12 +29,15 @@
 
 #include "AcLog.h"
 #include "AcMmo.h"
+#include "AcPilotCamera.h"
+#include "AcPilotChase.h"
 #include "AcPilotOverlay.h"
 #include "AcPilotPawn.h"
 #include "AcShuttleAct.h"
 #include "AcShuttleView.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
+#include "AcWorldRenderer.h"
 #include "SAcWorldMap.h"
 
 #include "Mule.h"
@@ -220,6 +225,33 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		const double Back = Ship->ramp.open > 0.0 ? AcSpace::ToCm(B::hullRear) - 30 : AcSpace::ToCm(B::rear) - 5;
 		return L.X > Back && L.X < AcSpace::ToCm(B::noseFrom) + 60 && FMath::Abs(L.Y) < AcSpace::ToCm(B::halfWide) + 6
 			&& L.Z > AcSpace::ToCm(B::deck) && L.Z < AcSpace::ToCm(B::ceiling) + 8;
+	};
+	// 2026-10-19: a unit first chased in third person after the flight
+	// reached as far as the world frame's origin had moved (the camera
+	// hundreds of cells up, the wheel unable to zoom in). In the new region:
+	// the reach measured here as at home, the camera at the boom's distance.
+	auto CheckBoomAfterFlight = [&](const ac::Unit& U) {
+		const UAcWorldRenderer* R = UAcWorldRenderer::Get(this);
+		const FAcModelInfo* Model = R ? R->ModelOf(U.id) : nullptr;
+		const TOptional<FVector> Eye = Pilot->ChaseEye();
+		if (!Model || !Eye || !PC || !PC->PlayerCameraManager)
+		{
+			Check(false, TEXT("ferry: the pilot's model and third-person camera after the flight"));
+			return;
+		}
+		const ac::Vec2 Here = AcSpace::Origin();
+		Check(ac::length(Here) > 1.0, FString::Printf(TEXT("ferry: the world frame moved with the flight (%.0f, %.0f)"), Here.x, Here.y));
+		const float There = FAcPilotChase::Measure(*Model);
+		AcSpace::SetOrigin(ac::Vec2(0, 0));
+		const float Home = FAcPilotChase::Measure(*Model);
+		AcSpace::SetOrigin(Here);
+		Check(FMath::IsNearlyEqual(There, Home, 1e-3f) && There < 4.f,
+			FString::Printf(TEXT("ferry: the boom's reach in the new region as at home (%.2f, %.2f cells)"), There, Home));
+		float Lift = 0.f, Length = 1.f;
+		FAcPilotCamera::Boom(U.kind, Lift, Length);
+		const double Boom = (2.6 + 3.3 * FAcPilotChase::Reach(*Model)) * Length * Pilot->ChaseZoom();
+		const double Off = AcSpace::ToCells(FVector::Dist(PC->PlayerCameraManager->GetCameraLocation(), *Eye));
+		Check(Off < Boom + 1.0, FString::Printf(TEXT("ferry: out on the pad the camera %.2f cells off the pilot's eye (its boom %.2f)"), Off, Boom));
 	};
 
 	switch (T.Phase)
@@ -461,6 +493,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			if (Settle(1.5) && !Run.bApproachShot)
 			{
 				Check(!S->aboard(*U), TEXT("ferry: walked out of the Dropship"));
+				CheckBoomAfterFlight(*U);
 				Picture(TEXT("ferry-9-out"));
 				Run.bApproachShot = true;
 			}

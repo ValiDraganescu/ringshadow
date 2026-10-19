@@ -37,6 +37,13 @@ public:
 	/// the pieces of the parts shown, posed as `Local` and `Visible` (empty:
 	/// the rest pose); measured once per model, the first time.
 	static float Reach(const FAcModelInfo& Model, TConstArrayView<bool> Visible = {}, TConstArrayView<FTransform> Local = {});
+	/// `Reach` measured now, not kept: in the parts' own frames, so the same
+	/// in every region of a seamless session (the world frame's origin
+	/// never counts; before 2026-10-19 a model first chased after a region
+	/// change reached as far as the origin had moved, hundreds of cells).
+	/// Also the far part's index.
+	static float Measure(const FAcModelInfo& Model, TConstArrayView<bool> Visible = {}, TConstArrayView<FTransform> Local = {},
+		int32* OutFarPart = nullptr);
 	/// `Reach` of the unit's model posed at ease (as Swift first meets it).
 	static float AtEase(UWorld* World, const ac::Unit& U, const FAcModelInfo& Model);
 

@@ -70,8 +70,13 @@ namespace AcRaySpace
 	AUTOCRAFT_API FAcF3 Point(const FVector& UnrealCm);
 	AUTOCRAFT_API FVector ToUnreal(FAcF3 SceneKit);
 	/// An Unreal transform (a part's world, cm) as the SceneKit matrix of the
-	/// same placement: swap Y and Z on both sides, translation in cells.
+	/// same placement: swap Y and Z on both sides, translation in cells, the
+	/// world frame's origin taken off (W4).
 	AUTOCRAFT_API FAcMat4 Matrix(const FTransform& UnrealCm);
+	/// The same for a transform relative to a parent (a part's local or
+	/// rest, cm): no origin taken off, so it reads the same in every region
+	/// of a seamless session.
+	AUTOCRAFT_API FAcMat4 LocalMatrix(const FTransform& UnrealCm);
 }
 
 /// Every catalog model's ray shape, built on first use.

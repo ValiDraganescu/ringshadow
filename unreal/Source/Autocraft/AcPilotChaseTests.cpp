@@ -1,9 +1,11 @@
 // Automation tests for the third-person camera's feel (`FAcPilotChase`,
 // docs/shooter-feel.md "Third person (2026-10-18)"). Run headless:
 //   uv run unreal/Tools/hidden_run.py --out DIR --tests Autocraft.Pilot
+#include "AcModelCatalog.h"
 #include "AcPilotAim.h"
 #include "AcPilotCamera.h"
 #include "AcPilotChase.h"
+#include "AcRaysWorld.h"
 #include "AcSpace.h"
 
 #include "Simulation.h"
@@ -218,6 +220,85 @@ bool FAcPilotLookAroundTest::RunTest(const FString&)
 	// Swung right round, the aim is behind the camera: no crosshair.
 	Chase.Follow(nullptr, Root, U, nullptr, Pitch, Yaw + UE_DOUBLE_PI, 1.0, ShownAt, ShownRot);
 	TestFalse(TEXT("turned round: the aim off the view"), AcPilotAim::ScreenOffset(ShownAt, ShownRot, FAcPilotCamera::FovDegrees, Aim).IsSet());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcPilotChaseBoomAfterRegionTest, "Autocraft.Pilot.ChaseBoomAfterARegionChange", Flags)
+bool FAcPilotChaseBoomAfterRegionTest::RunTest(const FString&)
+{
+	// 2026-10-19: in the user's game a Mule first ridden in third person after
+	// a flight to another region reached 346 cells (the camera a region away,
+	// the wheel unable to zoom in): its parts were measured with the seamless
+	// world frame's origin taken off their local transforms.
+	const FAcModelCatalog& Catalog = FAcModelCatalog::Get();
+	if (!TestTrue(TEXT("the model catalog loads"), Catalog.IsLoaded())) return false;
+	const ac::Vec2 Was = AcSpace::Origin();
+
+	// A part's local reads the same wherever the world frame is.
+	const FTransform Part(FRotator(0, 90, 0), FVector(100, 200, 300), FVector(1, 2, 3));
+	AcSpace::SetOrigin(ac::Vec2(0, 0));
+	const FAcF3 Home = AcRaySpace::LocalMatrix(Part).Point({0, 0, 0});
+	AcSpace::SetOrigin(ac::Vec2(144, 96));
+	const FAcF3 Away = AcRaySpace::LocalMatrix(Part).Point({0, 0, 0});
+	const FAcF3 World = AcRaySpace::Matrix(Part).Point({0, 0, 0});
+	TestTrue(TEXT("a local: no origin"), Home.x == Away.x && Home.y == Away.y && Home.z == Away.z);
+	TestTrue(TEXT("a world transform: the origin taken off"), FMath::IsNearlyEqual(World.x, Home.x - 144.f, 1e-3f)
+		&& FMath::IsNearlyEqual(World.z, Home.z - 96.f, 1e-3f));
+
+	// Every unit a pilot drives reaches as far in a region away as at home,
+	// a few cells at most.
+	const TCHAR* Kinds[] = {TEXT("mule_blue"), TEXT("prospector_blue"), TEXT("ranger_blue"), TEXT("firefly_blue"), TEXT("hailstorm_blue"),
+		TEXT("longbow_blue"), TEXT("comet_blue"), TEXT("juggernaut_blue"), TEXT("kestrel_blue")};
+	for (const TCHAR* Name : Kinds)
+	{
+		const FAcModelInfo* Model = Catalog.Find(FName(Name));
+		if (!TestNotNull(*FString::Printf(TEXT("%s in the catalog"), Name), Model)) continue;
+		TArray<FTransform> Local;
+		TArray<bool> Visible;
+		for (const FAcModelPart& P : Model->Parts)
+		{
+			Local.Add(P.Rest);
+			Visible.Add(!P.bHidden);
+		}
+		AcSpace::SetOrigin(ac::Vec2(0, 0));
+		const float AtHome = FAcPilotChase::Measure(*Model, Visible, Local);
+		for (const ac::Vec2 O : {ac::Vec2(144, 96), ac::Vec2(-288, 0), ac::Vec2(0, -192)})
+		{
+			AcSpace::SetOrigin(O);
+			const float There = FAcPilotChase::Measure(*Model, Visible, Local);
+			TestTrue(*FString::Printf(TEXT("%s reaches as far with the frame at (%.0f, %.0f): %.2f, at home %.2f"), Name, O.x, O.y, There, AtHome),
+				FMath::IsNearlyEqual(There, AtHome, 1e-3f));
+		}
+		TestTrue(*FString::Printf(TEXT("%s reaches a few cells (%.2f)"), Name, AtHome), AtHome > 0.3f && AtHome < 6.f);
+	}
+
+	// The Mule's boom a region away: the camera at its normal distance,
+	// and the wheel's whole range in and out.
+	if (const FAcModelInfo* Mule = Catalog.Find(TEXT("mule_blue")))
+	{
+		AcSpace::SetOrigin(ac::Vec2(144, 96));
+		ac::Unit U;
+		U.kind = ac::UnitKind::mule;
+		U.position = ac::Vec2(10, 10);
+		const FTransform Root(AcSpace::QuatFromHeading(U.heading), AcSpace::ToWorld(U.position, 0.0));
+		float Lift = 0.f, Length = 1.f;
+		FAcPilotCamera::Boom(U.kind, Lift, Length);
+		const double Reach = FAcPilotChase::Measure(*Mule);
+		auto Boom = [&](const float Zoom) {
+			FAcPilotChase Chase;
+			Chase.Zoom.Set(Zoom, true);
+			FVector At;
+			FQuat Rot;
+			Chase.Follow(nullptr, Root, U, Mule, -0.2, 0.0, 1.0, At, Rot);
+			return AcSpace::ToCells((At - *Chase.Eye()).Size());
+		};
+		const double Normal = Boom(1.f), In = Boom(FAcPilotChase::FZoom::Min), Out = Boom(FAcPilotChase::FZoom::Max);
+		const double Want = (2.6 + 3.3 * Reach) * Length;
+		TestTrue(FString::Printf(TEXT("the Mule's boom a region away: %.2f cells (the boom's own %.2f)"), Normal, Want),
+			Normal < Want * 1.05 + 0.5 && Normal < 12.0);
+		TestTrue(FString::Printf(TEXT("zoomed in: %.2f, out: %.2f cells"), In, Out), In < Normal * 0.6 && Out > Normal * 1.5 && Out < 30.0);
+	}
+	AcSpace::SetOrigin(Was);
 	return true;
 }
 

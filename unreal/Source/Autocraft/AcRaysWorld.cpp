@@ -35,12 +35,17 @@ FVector AcRaySpace::ToUnreal(const FAcF3 S)
 
 FAcMat4 AcRaySpace::Matrix(const FTransform& T)
 {
+	FTransform InSim = T;
+	InSim.AddToTranslation(-AcSpace::OriginCm());
+	return LocalMatrix(InSim);
+}
+
+FAcMat4 AcRaySpace::LocalMatrix(const FTransform& T)
+{
 	// Unreal's matrix is row-vector (p' = p·M, row i the image of axis i);
 	// as a column-major matrix A(r, c) = M[c][r]. SceneKit's = swap·A·swap
 	// (Y↔Z on both sides; the cm cancel), translation swapped and in cells.
-	FTransform InSim = T;
-	InSim.AddToTranslation(-AcSpace::OriginCm());
-	const FMatrix M = InSim.ToMatrixWithScale();
+	const FMatrix M = T.ToMatrixWithScale();
 	static constexpr int Swap[3] = {0, 2, 1};
 	FAcMat4 Out;
 	for (int C = 0; C < 3; C++)
@@ -101,7 +106,7 @@ FAcRayShape FAcRayShapes::Build(const FAcModelInfo& Model)
 		const FAcModelPart& Part = Model.Parts[P];
 		Shape.Parent[size_t(P)] = Part.Parent;
 		if (Part.Parent == INDEX_NONE) Shape.Root = P;
-		Rest[size_t(P)] = AcRaySpace::Matrix(Part.Rest);
+		Rest[size_t(P)] = AcRaySpace::LocalMatrix(Part.Rest);
 		for (const TSharedPtr<FJsonValue>& V : Part.Rays)
 		{
 			FAcRayShape::FPiece Piece;

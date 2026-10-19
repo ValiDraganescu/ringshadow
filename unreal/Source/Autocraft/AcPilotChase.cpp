@@ -32,7 +32,17 @@ float FAcPilotChase::Reach(const FAcModelInfo& Model, const TConstArrayView<bool
 	// Game thread only (the pilot's camera).
 	static TMap<const FAcModelInfo*, float> Measured;
 	if (const float* Known = Measured.Find(&Model)) return *Known;
+	int32 FarPart = INDEX_NONE;
+	const float Reach = Measure(Model, Visible, Local, &FarPart);
+	Measured.Add(&Model, Reach);
+	UE_LOG(LogAutocraft, Log, TEXT("pilot: %s reaches %.2f cells (third-person boom; farthest: %s)"), *Model.Name.ToString(), Reach,
+		Model.Parts.IsValidIndex(FarPart) ? *Model.Parts[FarPart].Name.ToString() : TEXT("-"));
+	return Reach;
+}
 
+float FAcPilotChase::Measure(const FAcModelInfo& Model, const TConstArrayView<bool> Visible, const TConstArrayView<FTransform> Local,
+	int32* const OutFarPart)
+{
 	const int32 N = Model.Parts.Num();
 	int32 Root = 0;
 	for (int32 P = 0; P < N; ++P)
@@ -51,7 +61,7 @@ float FAcPilotChase::Reach(const FAcModelInfo& Model, const TConstArrayView<bool
 		for (int32 P = 0; P < N; ++P)
 		{
 			const int32 Up = Model.Parts[P].Parent;
-			const FAcMat4 Rest = AcRaySpace::Matrix(Local.IsValidIndex(P) ? Local[P] : Model.Parts[P].Rest);
+			const FAcMat4 Rest = AcRaySpace::LocalMatrix(Local.IsValidIndex(P) ? Local[P] : Model.Parts[P].Rest);
 			if (P == Root || Up == INDEX_NONE) ToRoot[size_t(P)] = FAcMat4();
 			else if (Up == Root) ToRoot[size_t(P)] = Rest;
 			else ToRoot[size_t(P)] = ToRoot[size_t(Up)] * Rest;
@@ -83,11 +93,8 @@ float FAcPilotChase::Reach(const FAcModelInfo& Model, const TConstArrayView<bool
 			Far = FMath::Max(Far, float(AcSpace::ToCells(FVector2D(X, Y).Size())));
 		}
 	}
-	const float Reach = Far > 0.f ? Far * float(RootScale) : 1.f;
-	Measured.Add(&Model, Reach);
-	UE_LOG(LogAutocraft, Log, TEXT("pilot: %s reaches %.2f cells (third-person boom; farthest: %s)"), *Model.Name.ToString(), Reach,
-		Model.Parts.IsValidIndex(FarPart) ? *Model.Parts[FarPart].Name.ToString() : TEXT("-"));
-	return Reach;
+	if (OutFarPart) *OutFarPart = FarPart;
+	return Far > 0.f ? Far * float(RootScale) : 1.f;
 }
 
 float FAcPilotChase::AtEase(UWorld* World, const ac::Unit& U, const FAcModelInfo& Model)
