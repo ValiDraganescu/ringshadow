@@ -17,8 +17,11 @@
 //   ground at the strike's distance and side, with two or three branches,
 //   seeded from the strike; a camera-facing ribbon (`M_AcBolt`) rebuilt
 //   each frame of the second it flickers (`ac::Weather::flicker`).
-// - Rain on the glass while driving a unit in first person in the rain: a
-//   post-process (`M_AcLensRain`) of drops that refract the view.
+// - Rain on the visor while driving a unit in first person (and on a
+//   Citadel gun's feed): a post-process (`M_AcLensRain`) of beads, rivulets
+//   and sheets of water that refract the view, and the visor's wiper
+//   (`ac::Wipers`, its numbers through `AcVisor::Params`), automatic on the
+//   rain the glass gets.
 // - Wet hulls: `MPC_AcWorld.Wetness`, which M_Hull reads (darker,
 //   glossier, top faces most), as wet as the ground.
 // - No rain indoors (AcShelter.h): the Citadels' shelter boxes in
@@ -28,6 +31,7 @@
 // Console: `ac.Weather` (-1 the schedule; 0 clear, 1 cloudy, 2 rain,
 // 3 storm; fractions blend), `ac.Weather.Rain`, `ac.Weather.Lightning`.
 // Flags: `-AcWeather=clear|cloudy|rain|storm` (or a number),
+// `ac.Wipers` (1 automatic, 0 held parked), `-AcWipersOff`,
 // `-AcWeatherSeed=N` (else the seed is the game's id, so a saved
 // game keeps its weather), `-AcWeatherT=S` (sample at S seconds of game time
 // instead of the game's, for shots of a moment of the schedule),
@@ -41,6 +45,7 @@
 #include "AcShelter.h"
 
 #include "Weather.h"
+#include "Wipers.h"
 
 #include "AcWeather.generated.h"
 
@@ -83,13 +88,17 @@ public:
 	float LensRate() const { return LensNow; }
 	/// The shelter boxes last written to MPC_AcWorld, nearest the camera first.
 	const TArray<AcShelter::FBox>& Shelters() const { return ShelterBoxes; }
+	/// The visor's wiper (docs/weather.md, "Rain on the visor and the wipers").
+	const ac::Wipers& Wipers() const { return Wiper; }
+	/// The glass is in view: driving in first person, or at a Citadel gun.
+	bool GlassShown() const { return bGlassShown; }
 
 private:
 	void BuildRain();
 	void UpdateRain(double Time, float Light);
 	void UpdateFlash();
 	void UpdateBolts(double T, const FVector& Cam);
-	void UpdateLens();
+	void UpdateLens(float Light);
 	void UpdateShelters(const FVector& Cam);
 	void ApplyHold();
 
@@ -109,6 +118,10 @@ private:
 	TObjectPtr<UPostProcessComponent> Lens;
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> LensMaterial;
+	ac::Wipers Wiper;
+	bool bGlassShown = false;
+	/// The wind across the view, eased (m/s, positive to the right).
+	double WindAcross = 0;
 	/// MPC_AcWorld (its `Wetness`, read by M_Hull) and what it was last set to.
 	UPROPERTY(Transient)
 	TObjectPtr<class UMaterialParameterCollection> WeatherMpc;

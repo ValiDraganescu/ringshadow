@@ -4,6 +4,7 @@
 
 #include "AcDaylight.h"
 #include "AcPilotPawn.h"
+#include "AcVisor.h"
 #include "AcLog.h"
 #include "AcSimSubsystem.h"
 #include "AcTerrain.h"
@@ -33,6 +34,12 @@ namespace
 	TAutoConsoleVariable<float> CVarRain(
 		TEXT("ac.Weather.Rain"), 1.0f,
 		TEXT("Scale on the rain streaks (0: none)."));
+	TAutoConsoleVariable<int32> CVarWipers(
+		TEXT("ac.Wipers"), 1,
+		TEXT("The visor's wiper: 1 automatic on the rain, 0 held parked (the water builds up). Also -AcWipersOff."));
+	TAutoConsoleVariable<int32> CVarLens(
+		TEXT("ac.Weather.Lens"), 1,
+		TEXT("Draw the visor's glass (1) or not (0: to measure what it costs; the wiper still runs)."));
 	TAutoConsoleVariable<int32> CVarLightning(
 		TEXT("ac.Weather.Lightning"), 1,
 		TEXT("Lightning flashes (1) or none (0)."));
@@ -53,6 +60,9 @@ namespace
 	constexpr double FallCmPerS = 700;
 	/// How far ahead of the camera the box's centre sits (cm).
 	constexpr double RainAhead = 1400;
+	/// The wind's way over the ground (AcDaylight's CloudWind): the rain
+	/// and the water on the visor go with it.
+	const FVector2D WindDir = FVector2D(1.0, 0.35).GetSafeNormal();
 	/// A streak's length (cm) and width (cm per cm of distance: ~1.5 px at 1600 wide, 62°).
 	constexpr float StreakCm = 45.0f, WidthPerCm = 0.0012f;
 	/// The lightning's light on the ground at a close full strike (lux, EV 0).
@@ -319,7 +329,7 @@ void AAcWeather::Tick(const float DeltaSeconds)
 		Cam = PC->PlayerCameraManager->GetCameraLocation();
 	}
 	UpdateBolts(WeatherTime(Time), Cam);
-	UpdateLens();
+	UpdateLens(Light);
 	UpdateShelters(Cam);
 	// Wet hulls (M_Hull reads MPC_AcWorld.Wetness), as wet as the ground.
 	if (WeatherMpc)
@@ -351,7 +361,6 @@ void AAcWeather::UpdateRain(const double Time, const float Light)
 	}
 	// The wind blows the rain along the clouds' wind (AcDaylight's
 	// CloudWind), a fraction of its speed at the ground.
-	const FVector2D WindDir = FVector2D(1.0, 0.35).GetSafeNormal();
 	const double Gust = Current.wind * 100.0 * 0.25;
 	const FVector Vel(WindDir.X * Gust, WindDir.Y * Gust, -FallCmPerS * (1.0 + 0.3 * Current.storm));
 	// The fall so far, wrapped per axis (doubles here, so the material's
@@ -488,19 +497,47 @@ void AAcWeather::UpdateBolts(const double T, const FVector& Cam)
 	bBoltsShown = true;
 }
 
-void AAcWeather::UpdateLens()
+void AAcWeather::UpdateLens(const float Light)
 {
-	// Only in the cockpit: the glass is the driven unit's, not the RTS
-	// camera's or the chase camera's.
+	// The glass is the driven unit's in first person (the cockpit, or a
+	// Citadel gun's feed: the gun's eye is first person whatever the view
+	// was), not the RTS camera's or the chase camera's.
 	const AAcPilotPawn* Pilot = AAcPilotPawn::Find(this);
 	const float Rate = float(FMath::Clamp(Current.rain * CVarRain.GetValueOnGameThread(), 0.0, 1.0));
-	const bool bOn = LensMaterial && Rate > 0.02f && Pilot && Pilot->Driving() && !Pilot->ChaseEye().IsSet();
-	// In the hall (the driven unit sheltered, AcShelter.h) the glass dries in 1.5 s; back out it wets in 0.5 s.
-	// At a corner gun the glass is the feed camera's, outdoors: it stays wet.
+	bGlassShown = Pilot && Pilot->Driving() && (Pilot->AtGun() != INDEX_NONE || !Pilot->ChaseEye().IsSet());
+	// The rain the glass gets, and the wiper on it (it runs out of sight
+	// too, so the glass is as wet as it should be when it comes back).
+	// In the hall (the driven unit sheltered, AcShelter.h) the glass gets no
+	// rain within 1.5 s; back out it gets it again in 0.5 s. At a corner gun
+	// the glass is the feed camera's, outdoors: it stays in the rain.
 	const bool bDry = AcShelter::DrivenSheltered(this) && Pilot->AtGun() == INDEX_NONE;
 	LensNow = Pilot && Pilot->Driving() ? AcShelter::EaseLens(LensNow, bDry ? 0.0f : Rate, Rate, GetWorld()->GetDeltaSeconds()) : Rate;
+	const float Fed = LensNow;
+	static const bool bWipersOff = FParse::Param(FCommandLine::Get(), TEXT("AcWipersOff"));
+	Wiper.enable(CVarWipers.GetValueOnGameThread() != 0 && !bWipersOff);
+	const double Now = GetWorld()->GetTimeSeconds();
+	const double Dt = FMath::Clamp(Now - Wiper.now(), 0.0, 0.25);
+	Wiper.update(Now, Fed);
+	// The wind across the view pushes the running water sideways.
+	double Across = 0;
+	if (const APlayerController* PC = GetWorld()->GetFirstPlayerController(); PC && PC->PlayerCameraManager)
+	{
+		const FVector Right = FRotationMatrix(PC->PlayerCameraManager->GetCameraRotation()).GetUnitAxis(EAxis::Y);
+		Across = (WindDir.X * Right.X + WindDir.Y * Right.Y) * Current.wind * 0.6;
+	}
+	WindAcross = FMath::FInterpTo(WindAcross, Across, Dt, 1.0);
+	const FAcVisorParams P = AcVisor::Params(Wiper, WindAcross, Current.flash, Light * (1.0 - 0.3 * Current.gloom));
+	const bool bOn = LensMaterial && bGlassShown && P.bWet && CVarLens.GetValueOnGameThread() != 0;
 	if (Lens->bEnabled != bOn) Lens->bEnabled = bOn;
-	if (bOn) LensMaterial->SetScalarParameterValue(TEXT("LensRain"), LensNow);
+	if (!bOn) return;
+	LensMaterial->SetScalarParameterValue(TEXT("LensRain"), P.Rain);
+	LensMaterial->SetVectorParameterValue(TEXT("GlassA"), P.A);
+	LensMaterial->SetVectorParameterValue(TEXT("GlassB"), P.B);
+	LensMaterial->SetVectorParameterValue(TEXT("GlassSeed"), P.Seed);
+	LensMaterial->SetVectorParameterValue(TEXT("GlassArc"), P.Arc);
+	LensMaterial->SetVectorParameterValue(TEXT("GlassBlade"), P.Blade);
+	LensMaterial->SetVectorParameterValue(TEXT("GlassHist"), P.Hist);
+	LensMaterial->SetVectorParameterValue(TEXT("GlassAir"), P.Air);
 }
 
 void AAcWeather::UpdateShelters(const FVector& Cam)
