@@ -300,6 +300,10 @@ private:
 	/// C1: `mmocitadel` (the Citadel's door, hall and corner gun through the
 	/// act key): AcMmoCitadelFlowTest.cpp.
 	void TickMmoCitadelFlow(const FString& Step);
+	/// C4: `mmomuleshots` (the Mule's pictures in the game: beside a
+	/// Prospector, its screen, the driver aboard, first and third person,
+	/// its dust, the Citadel's doorway, the booking): AcMmoMuleShots.cpp.
+	void TickMmoMuleShots(const FString& Step);
 	/// `mmovisor` (the visor's rain and its wiper, first person in the
 	/// rain): AcMmoVisorFlowTest.cpp.
 	void TickMmoVisorFlow(const FString& Step);

@@ -253,9 +253,11 @@ namespace
 			Engine(L, AcSound::MuleEngineGain);
 			L.ChestHeight = 0.9;
 			// The driver's eyes on the perch (models/mule.py DRIVER_X 0.74, the
-			// deck 0.35, a Prospector's eyes 1.2 over its feet).
-			L.Eye = FVector(0.74, 1.55, 0);
-			L.StartPitch = -0.26;
+			// deck 0.35, a Prospector's eyes 1.2 over its feet), a little back
+			// and looking down, so the levers, the rail and the nose are at the
+			// bottom of the view.
+			L.Eye = FVector(0.55, 1.5, 0);
+			L.StartPitch = -0.42;
 			// Third person: the boom over the hopper, a little longer (3 long).
 			L.BoomLift = 0.3f;
 			L.BoomLength = 1.25f;

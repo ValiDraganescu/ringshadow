@@ -2,6 +2,7 @@
 
 #include "AcCitadelAct.h"
 #include "AcMuleAct.h"
+#include "Mule.h"
 #include "AcKindTable.h"
 #include "AcProgressHud.h"
 #include "Defence.h"
@@ -753,7 +754,14 @@ FAcCardInfo AcPilotText::Console(const ac::Simulation& Sim, const FAcPilotFrame&
 									: FString(TEXT("empty"));
 		if (U.carrying > 0) Info.CargoIcon = FString(bMh ? TEXT("well") : TEXT("ore"));
 	}
-	if (U.cargo)
+	if (U.kind == ac::UnitKind::mule)
+	{
+		// C4: its cargo is its rider; the bay shows its load, out of its room.
+		const ac::Haul H = U.haul.value_or(ac::Haul{});
+		Info.Cargo = FString::Printf(TEXT("%lld ore  %lld MH  ·  %lld left"), (long long)H.ore, (long long)H.hydrogen, (long long)ac::Mule::room(U));
+		Info.CargoIcon = FString(TEXT("ore"));
+	}
+	else if (U.cargo)
 	{
 		Info.Cargo = FString::Printf(TEXT("%lld / %lld"), (long long)Sim.slotsUsed(U), (long long)Sim.cargoSlots(U));
 		if (!U.cargo->empty())
