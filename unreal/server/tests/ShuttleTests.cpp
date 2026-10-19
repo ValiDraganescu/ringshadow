@@ -232,13 +232,10 @@ TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
     EXPECT_NEAR(l.x, ShuttleBay::rampFoot() - 2.0, 1e-6);
     EXPECT_NEAR(l.y, 0, 1e-6);
     // Straight on, up the ramp, until its tail is in (its middle past
-    // the opening by half its length; the ramp button is in reach until its
-    // middle passes `button`: its tail within reach across the gap to the post).
+    // the opening by half its length), the ramp post still in reach.
     const int64_t mule = *w.regionOf(a)->driving(a);
     const double heading = s->heading;
     const double tailIn = ShuttleBay::rear + Mule::length / 2 + 0.05;
-    const double dy = std::abs(ShuttleBay::rampButton.y) - Mule::width / 2;
-    const double button = ShuttleBay::rampButton.x + std::sqrt(ShuttleBay::reach * ShuttleBay::reach - dy * dy) + Mule::length / 2;
     for (int i = 0; i < 60 * 12 && ShuttleBay::local(*nearestShip(w, a), drivenBy(w, a)->position).x < tailIn; i++) {
         PilotInput in;
         in.tick = w.regionOf(a)->lastInputTick(a) + 1;
@@ -259,6 +256,7 @@ TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
     ASSERT_TRUE(*w.regionOf(a)->driving(a) == mule);
     const Vec2 in = ShuttleBay::local(*nearestShip(w, a), drivenBy(w, a)->position);
     std::printf("  stopped at %.2f %.2f\n", in.x, in.y);
-    EXPECT_TRUE(ShuttleBay::inBay(in) && in.x > tailIn - 0.05 && in.x < button);
+    EXPECT_TRUE(ShuttleBay::inBay(in) && in.x > tailIn - 0.05);
+    EXPECT_TRUE(Act::gap(*drivenBy(w, a), Act::rampPost(*nearestShip(w, a))) <= Act::serverReach);
     EXPECT_TRUE(!w.shuttleRamp(a, false));
 }
