@@ -1235,6 +1235,9 @@ void WorldMap::frontierAct(FrontierPilot& f, double dt) {
             if (l.region == r && (!from || distance(l.at, pos) < distance(from->at, pos))) from = l;
         if (!from) break;
         if (!moveTo(from->at, params_.padReach - 0.5)) break;
+        // C4: where a human sees it, it calls the walk-in Dropship and flies
+        // it by hand (the server presses its buttons); else booked.
+        if (frontierLive(f) && frontierCall(f, *from, p.region)) break;
         frontierFly(f.id, p.region);
         break;
     }
@@ -1338,6 +1341,8 @@ void WorldMap::frontierStep(double dt) {
             f.doing = Doing::resting;
             f.hp = 0;
         }
+        // C4: aboard or on its way aboard the Dropship: the ride steps it.
+        if (f.ride && frontierRide(f, dt)) continue;
         frontierUnit(f, frontierLive(f));
         frontierEvents(f);
         if (clock_ < f.downUntil) continue;

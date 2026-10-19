@@ -16,6 +16,7 @@
 
 #include "Progression.h"
 #include "Rules.h"
+#include "Shuttle.h"
 #include "WorldMap.h"
 #include "WorldStore.h"
 
@@ -528,6 +529,55 @@ TEST(Frontier_keepThePilotsRules) {
     std::printf("  realm +%lld, miner +%lld\n", (long long)(w.realmWallet().ore - realm), (long long)m.wallet.ore);
     EXPECT_EQ(w.realmWallet().ore - realm, Progression::realmTax(100));
     EXPECT_EQ(m.wallet.ore, int64_t(100) - Progression::realmTax(100));
+}
+
+/// C4 (docs/frontier.md, "Dropship"): where a human sees it, a frontier pilot
+/// flies the walk-in Dropship by hand: called at the pad it stands on, it
+/// walks in up the ramp, the server shuts the ramp and presses take-off for
+/// it (its fare paid), it rides into the target region with the ship, and
+/// walks out down the ramp on the target pad; the empty ship leaves.
+TEST(Frontier_fliesTheWalkInDropshipWhereSeen) {
+    WorldMap w(first(), params());
+    seat(w);
+    const size_t r = named(w, "rust-hollow"), home = named(w, "start");
+    FrontierPilot& f = come(w, Habit::wanderer, r, Vec2(40, 44), 600, 200, 12);
+    const auto here = w.devLandingPad(r, w.region(r).places()->ground(Vec2(40, 40)));
+    const auto there = w.devLandingPad(home, w.region(home).places()->ground(Vec2(90, 70)));
+    ASSERT_TRUE(here && there);
+    stepFor(w, 0.5);
+    ASSERT_TRUE(w.frontierLive(f) && f.unit.has_value());
+    std::optional<LandingPad> from;
+    for (const LandingPad& l : w.landingPads())
+        if (l.region == r && l.building == *here) from = l;
+    ASSERT_TRUE(from.has_value());
+    ASSERT_TRUE(w.frontierCall(f, *from, home));
+    const int64_t fare = f.ride->price;
+    EXPECT_EQ(fare, ac::Flight::price(1, false, false));
+    // The ship comes down; it walks in; the ramp shuts; it lifts.
+    bool lifted = false, flewInto = false;
+    for (int i = 0; i < 80 * 10 && f.ride; i++) {
+        stepFor(w, 0.1);
+        if (!lifted && f.ride && f.ride->step == FrontierPilot::Ride::Step::flying) {
+            lifted = true;
+            EXPECT_EQ(f.wallet.hydrogen, int64_t(200) - fare);
+            const Shuttle* s = w.region(r).simulation().shuttle(f.ride->ship);
+            ASSERT_TRUE(s && s->flying() && f.unit && s->rides(*f.unit));
+            EXPECT_TRUE(w.region(r).simulation().sheltered(*w.region(r).simulation().state.unit(*f.unit)));
+        }
+        flewInto = flewInto || f.region == home;
+    }
+    EXPECT_TRUE(lifted && flewInto);
+    // Out on the target pad, on its own feet again, the ship emptying.
+    ASSERT_TRUE(!f.ride.has_value());
+    EXPECT_EQ(f.region, home);
+    ASSERT_TRUE(f.unit.has_value());
+    const auto u = w.region(home).simulation().state.unit(*f.unit);
+    ASSERT_TRUE(u.has_value());
+    EXPECT_TRUE(!w.region(home).simulation().aboard(*u));
+    EXPECT_TRUE(distance(u->position, structure(w, home, *there)->position) < 8);
+    EXPECT_TRUE(f.progress.regions.count(w.loaded()->regions[home].file.id) == 1);
+    stepFor(w, ShuttleBay::leaveSeconds + ShuttleBay::rampSeconds + ShuttleBay::departSeconds + 1);
+    EXPECT_TRUE(w.region(home).simulation().state.shuttles.empty());
 }
 
 /// Live where a human can see it, booked elsewhere: its Prospector is in

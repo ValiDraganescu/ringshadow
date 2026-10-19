@@ -157,6 +157,32 @@ std::optional<std::string> WorldMap::shuttleRamp(PilotId pilot, bool open) {
     return sim.ramp(u->id, s->id, open);
 }
 
+std::optional<std::string> WorldMap::launch(ShuttleTrip& t, int64_t unit, const LandingPad& target, const Ferry::Plan& plan) {
+    Region& here = *regions_[t.region];
+    Simulation& sim = here.simulation();
+    // The target pad on this region's ground (the world's grid), its height
+    // its own ground's.
+    const Vec2 there = groundIn(target.region, target.at, t.region);
+    const double z = regions_[target.region]->simulation().groundZ(target.at);
+    if (auto why = sim.takeOff(unit, t.id, plan, Vec3(there.x, there.y, z), target.region == t.region)) return why;
+    t.to = target.region;
+    t.toPad = target.name;
+    t.toBuilding = target.building;
+    t.toAt = target.at;
+    t.switched = target.region == t.region;
+    t.flying = true;
+    t.humans.clear();
+    const Shuttle* lifted = sim.shuttle(t.id);
+    for (const auto& [id, q] : pilots_)
+        if (lifted && q.region == t.region && !q.flight)
+            if (const auto d = here.driving(id); d && lifted->rides(*d)) {
+                t.humans.push_back(id);
+                // Its World message again: where it flies.
+                moves_.push_back(Moved{id, std::nullopt});
+            }
+    return std::nullopt;
+}
+
 void WorldMap::shuttleSwitch(ShuttleTrip& t) {
     const size_t from = t.region, to = *t.to;
     Region& a = *regions_[from];
@@ -269,6 +295,137 @@ void WorldMap::shuttlesStep() {
         }
         i++;
     }
+}
+
+// MARK: - The frontier pilots fly it (docs/frontier.md, "Dropship")
+
+bool WorldMap::frontierCall(FrontierPilot& f, const LandingPad& from, size_t to) {
+    std::optional<LandingPad> there;
+    for (const LandingPad& l : landingPads())
+        if (l.region == to && !there) there = l;
+    if (!there || to == f.region) return false;
+    const int64_t steps = ::ac::Flight::steps(world_->regions[f.region].column, world_->regions[f.region].row, world_->regions[to].column,
+                                              world_->regions[to].row);
+    const int64_t price = ::ac::Flight::price(steps, from.kind == StructureKind::spacedock, false, projectOn(RealmProject::Kind::beacon));
+    if (::ac::Flight::refusal(price, f.wallet.hydrogen)) return false;
+    const Unit* u = frontierUnitOf(f);
+    if (!u) return false;
+    Simulation& sim = regions_[f.region]->simulation();
+    std::optional<int64_t> ship = shuttleAt(f.region, from.building);
+    if (!ship) {
+        const Vec2 d = from.at - u->position;
+        ShuttleTrip t;
+        t.region = f.region;
+        t.id = sim.callShuttle(from.at, length(d) > 0.5 ? std::atan2(d.y, d.x) : u->heading + pi);
+        t.pad = from.building;
+        t.padKind = from.kind;
+        t.padName = from.name;
+        trips_.push_back(t);
+        ship = t.id;
+    }
+    f.ride = FrontierPilot::Ride{*ship, *there, price, FrontierPilot::Ride::Step::called, 0};
+    f.doing = WorldFrontier::Doing::walking;
+    return true;
+}
+
+bool WorldMap::frontierRide(FrontierPilot& f, double dt) {
+    using Step = FrontierPilot::Ride::Step;
+    using B = ShuttleBay;
+    FrontierPilot::Ride& r = *f.ride;
+    Simulation& sim = regions_[f.region]->simulation();
+    Unit* u = frontierUnitOf(f);
+    // In flight the ship is the one it rides (its id changes with the
+    // region switch); else the one it called or landed in.
+    const Shuttle* s = !u ? nullptr : r.step == Step::flying ? sim.aboard(*u) : sim.shuttle(r.ship);
+    r.since += dt;
+    if (!u || !s || (r.step < Step::flying && r.since > 60)) {
+        f.ride = std::nullopt;
+        return false;
+    }
+    r.ship = s->id;
+    // The server's hand on it: none of its own errands meanwhile.
+    u->task = Unit::Task::idle;
+    u->goal = std::nullopt;
+    u->waypoints = std::nullopt;
+    u->mission = std::nullopt;
+    u->order = std::nullopt;
+    f.doing = r.step == Step::flying ? WorldFrontier::Doing::flying : WorldFrontier::Doing::walking;
+    // A walk straight to `local` in the ship's frame at a Prospector's
+    // pace: true when there.
+    auto walkTo = [&](Vec2 local) {
+        const Vec2 goal = B::world(*s, local);
+        const Vec2 d = goal - u->position;
+        const double left = length(d), stride = Rules::prospectorSpeed * dt;
+        if (left <= stride) {
+            u->position = goal;
+            return true;
+        }
+        u->position += d / left * stride;
+        u->heading = std::atan2(d.y, d.x);
+        return false;
+    };
+    auto next = [&](Step step) {
+        r.step = step;
+        r.since = 0;
+    };
+    // Where it stands to press each (in the bay, clear of the opening).
+    const Vec2 rampButton(-1.7, -0.4), console(B::takeOffButton.x - 0.9, 0);
+    switch (r.step) {
+    case Step::called:
+        if (s->grounded() && s->ramp.open >= B::rampDown) next(Step::walkIn);
+        break;
+    case Step::walkIn: {
+        // Round the hull to behind the ramp's foot, up it, to the ramp
+        // button.
+        const Vec2 l = B::local(*s, u->position);
+        const double foot = B::rampFoot() - 1.2;
+        if (B::inBay(l) || B::onRamp(l)) {
+            if (walkTo(rampButton)) next(Step::shut);
+        } else if (l.x > foot) {
+            walkTo(Vec2(foot, (l.y < 0 ? -1 : 1) * (B::hullHalfWide + 1)));
+        } else {
+            walkTo(Vec2(foot, 0));
+        }
+        break;
+    }
+    case Step::shut:
+        // Pressed until nobody stands on the ramp, then to the console.
+        if (s->ramp.opening) sim.ramp(u->id, s->id, false);
+        else if (s->ramp.open <= 0) next(Step::console);
+        break;
+    case Step::console: {
+        if (!walkTo(console)) break;
+        const auto trip = std::find_if(trips_.begin(), trips_.end(), [&](const ShuttleTrip& t) { return t.region == f.region && t.id == s->id; });
+        if (trip == trips_.end() || ::ac::Flight::refusal(r.price, f.wallet.hydrogen)) {
+            f.ride = std::nullopt;
+            return false;
+        }
+        const int64_t steps = ::ac::Flight::steps(world_->regions[f.region].column, world_->regions[f.region].row,
+                                                  world_->regions[r.target.region].column, world_->regions[r.target.region].row);
+        if (launch(*trip, u->id, r.target, Ferry::plan(steps))) break;
+        f.wallet.hydrogen -= r.price;
+        next(Step::flying);
+        break;
+    }
+    case Step::flying:
+        // The switch moved it (`shuttleSwitch`); down on the target pad, out.
+        if (s->grounded()) next(Step::open);
+        break;
+    case Step::open:
+        if (!walkTo(rampButton)) break;
+        if (!s->ramp.opening) sim.ramp(u->id, s->id, true);
+        if (s->ramp.open >= B::rampDown) next(Step::walkOut);
+        break;
+    case Step::walkOut:
+        if (!walkTo(Vec2(B::rampFoot() - 2, 0))) break;
+        f.ride = std::nullopt;
+        f.at = u->position;
+        f.progress.regions.insert(world_->regions[f.region].file.id);
+        f.doing = WorldFrontier::Doing::coming;
+        f.thought = -1e9;
+        return false;
+    }
+    return true;
 }
 
 } // namespace ac::server

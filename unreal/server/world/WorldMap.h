@@ -1473,6 +1473,20 @@ public:
         int64_t cargo = 0;
         bool hydrogen = false;
         WorldFrontier::Doing doing = WorldFrontier::Doing::coming;
+        /// C4: its walk-in Dropship flight while live (WorldShuttle.cpp,
+        /// `frontierRide`): the ship (its id in `region`), the target pad,
+        /// the fare, and the step it is at: the ship called, walking in,
+        /// shutting, at the console, in flight, opening, walking out.
+        struct Ride {
+            enum class Step : uint8_t { called, walkIn, shut, console, flying, open, walkOut };
+            int64_t ship = 0;
+            LandingPad target;
+            int64_t price = 0;
+            Step step = Step::called;
+            /// Seconds at this step (a ship that never comes is given up).
+            double since = 0;
+        };
+        std::optional<Ride> ride;
         FrontierPlan plan;
         /// Down (its Prospector fell): back at world clock `downUntil`.
         double downUntil = 0;
@@ -1543,6 +1557,14 @@ public:
     std::optional<std::string> frontierBuy(uint32_t id, StructureKind kind);
     std::optional<std::string> frontierBuild(uint32_t id, StructureKind kind, Vec2 at);
     std::optional<std::string> frontierFly(uint32_t id, size_t to);
+    /// C4: one step of `f`'s walk-in Dropship flight (`FrontierPilot::Ride`):
+    /// it walks, the server presses the buttons for it. False: the ride is
+    /// over (or given up: it was booked, or the ship left).
+    bool frontierRide(FrontierPilot& f, double dt);
+    /// C4: `f`, live, standing at Landing Pad `from`, calls the Dropship
+    /// there for a flight to region `to`'s first Landing Pad (`f.ride`).
+    /// False: no pad there, or the fare is short (it flies booked instead).
+    bool frontierCall(FrontierPilot& f, const LandingPad& from, size_t to);
     std::optional<std::string> frontierMission(uint32_t id, size_t to);
     /// Why it may not build a `kind` at ground point `at` of region `r` by
     /// the frontier's caps (none: it may).
@@ -1926,6 +1948,10 @@ private:
     Shuttle* shipOf(const ShuttleTrip& t);
     /// The flight `p`'s Prospector rides (nil: none in flight).
     const ShuttleTrip* riderTrip(const PilotState& p) const;
+    /// The take-off of `t`'s ship by unit `unit` for Landing Pad `target`
+    /// (`plan`), its trip's bookkeeping (the humans aboard told): the
+    /// core's refusal, or nil. The fare is the caller's.
+    std::optional<std::string> launch(ShuttleTrip& t, int64_t unit, const LandingPad& target, const Ferry::Plan& plan);
     /// Ship `t` and its riders into its target region, the frame on the
     /// target pad.
     void shuttleSwitch(ShuttleTrip& t);

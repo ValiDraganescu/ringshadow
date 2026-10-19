@@ -11,7 +11,7 @@ namespace ac::server {
 std::optional<std::string> WorldMap::demolish(PilotId pilot, int64_t structure) {
     PilotState* p = pilotState(pilot);
     if (!p || !world_) return "Not in a world";
-    if (p->flight) return "In flight";
+    if (p->flight || riding(pilot)) return "In flight";
     const size_t r = p->region;
     Region& region = *regions_[r];
     Simulation& sim = region.simulation();

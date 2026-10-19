@@ -590,27 +590,13 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     if (auto why = ac::Flight::refusal(price, p.wallet.hydrogen)) return why;
     p.wallet.hydrogen -= price;
     bankIn(p, p.region);
-    // The target pad on this region's ground (the world's grid), its height
-    // its own ground's.
-    const Vec2 there = groundIn(*to, target->at, p.region);
-    const double z = regions_[*to]->simulation().groundZ(target->at);
-    if (auto why = sim.takeOff(*unit, ship->id, ferryPlan(p, *to), Vec3(there.x, there.y, z), *to == p.region)) return why;
-    ShuttleTrip& t = *trip;
-    t.to = *to;
-    t.toPad = target->name;
-    t.toBuilding = target->building;
-    t.toAt = target->at;
-    t.switched = *to == p.region;
-    t.flying = true;
-    t.humans.clear();
-    const Shuttle* lifted = sim.shuttle(t.id);
-    for (const auto& [id, q] : pilots_)
-        if (lifted && q.region == p.region && !q.flight)
-            if (const auto d = here.driving(id); d && lifted->rides(*d)) {
-                t.humans.push_back(id);
-                // Its World message again: where it flies.
-                moves_.push_back(Moved{id, std::nullopt});
-            }
+    if (auto why = launch(*trip, *unit, *target, ferryPlan(p, *to))) {
+        // Not lifted after all: the fare back.
+        bankOut(p, p.region);
+        p.wallet.hydrogen += price;
+        bankIn(p, p.region);
+        return why;
+    }
     feat(pilot, WorldXp::flightFeat);
     return std::nullopt;
 }
@@ -619,7 +605,7 @@ std::optional<std::string> WorldMap::build(PilotId pilot, StructureKind kind, Ve
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end()) return "Not joined";
     PilotState& p = it->second;
-    if (p.flight) return "In flight";
+    if (p.flight || riding(pilot)) return "In flight";
     // A world builds what the pilot has learned (C2: no copy used up), at its
     // level floor, within its building limits (docs/prospector-progression.md, "Buildings in the
     // MMO").
