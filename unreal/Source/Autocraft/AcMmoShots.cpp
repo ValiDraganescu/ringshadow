@@ -99,7 +99,7 @@
 //   03 its edge at the pilot, looking up: the ring's edge on the sun, god rays
 //   04 under the band    05 under it, looking up: the sun through the ring
 //   06 under it, first person at the nearest ore (the veins flaring)
-//   07 after: the band gone east   08 looking east at it
+//   07 after: the band gone by   08 looking the way it went
 // The giant's comet impacts are off meanwhile (ac.GasGiant.Events 0). The clock
 // jumps to just before each moment (S1), about 40 s in all.
 //
@@ -2919,8 +2919,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Finish();
 		return;
 	// MARK: -AcMmoShotsRingshadow
-	// The sweep from the start pad: the band comes out of the giant's side
-	// of the sky (bearing 280°) and runs east over the pilot; the ring's arc
+	// The sweep from the start pad: the band, the shadow of the ring's arc,
+	// runs over the pilot (toward 186° at 11:30, 169° at 16:00); the arc
 	// crosses the sun (late morning: 17° above the giant's limb).
 	case 300:
 	case 305:
@@ -3052,7 +3052,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			}
 			if (T.Phase == 312 && B->trail - At > 6 && B->trail - At < 20 && Since() > 1.0)
 			{
-				Shoot(TEXT("rs-07-after"), FString::Printf(TEXT("after: the band %.0f cells past, east"), B->trail - At));
+				Shoot(TEXT("rs-07-after"), FString::Printf(TEXT("after: the band %.0f cells past"), B->trail - At));
 				return;
 			}
 		}
@@ -3092,14 +3092,17 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		return;
 	case 313:
 	{
-		const FVector G = FAcGasGiant::Direction();
-		Stop(std::atan2(G.Y, G.X) + UE_DOUBLE_PI);
+		// The way the last sweep went.
+		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
+		const double Day = Sky ? Sky->DayLength : ac::WorldClock::dayLength;
+		const ac::Vec2 Way = ac::Ringshadow::direction(ac::Ringshadow::next((Sky ? Sky->Time : 0.0) - ac::Ringshadow::duration, Day).index);
+		Stop(std::atan2(Way.y, Way.x));
 		Pilot->Eye().Pitch = -0.1;
 		Advance();
 		return;
 	}
 	case 314:
-		if (Since() > 1.5) Shoot(TEXT("rs-08-after-east"), TEXT("after, looking east: the band going away"));
+		if (Since() > 1.5) Shoot(TEXT("rs-08-after-east"), TEXT("after, looking the way it went: the band going away"));
 		return;
 	case 315:
 		Check(Shots.Saved + Shots.Skipped == 9, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));

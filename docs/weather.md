@@ -298,8 +298,8 @@ the band from it, so the two agree with nothing new on the wire.
 |---|---|
 | When | at 11:30 and 16:00 world time, both in daylight. A new world (it starts at 8:00) sees the first one about 8 minutes in (485 s), the second at 1,108 s; then every 40-minute day |
 | How long | 120 s, from the band's leading edge 25 cells short of the region to its trailing edge 25 cells past it |
-| Which way | toward bearing 100° (east, a little south), out of the giant's side of the sky (it hangs at 280°) |
-| Width | 110 cells across, each edge fading over 16 cells. On a medium region (144 × 96) it moves about 2.7 cells a second, slower than a walking Prospector (3.9), and a point is in the shadow about 35 s, 29 of them at full dark |
+| Which way | the way the shadow of the ring's arc moves as the arc crosses the sun: at 11:30 toward bearing 186° (south, a little west), at 16:00 toward 169° (south, a little east). Its edges lie along the arc's line on the ground: 96°-276° at 11:30, 79°-259° at 16:00 (below) |
+| Width | 110 cells across, each edge fading over 16 cells. On a medium region (144 × 96) it moves about 2.3 cells a second, slower than a walking Prospector (3.9), and a point is in the shadow about 41 s, 34 of them at full dark |
 | Reward | an ore load drilled at a deposit at least half in the shadow carries ×1.5 ore (25 → 38), so its unload pays ×1.5 ore and ×1.5 XP. MH is not affected |
 | Warning | 60 s before, the KSTR radio's toast: "KSTR: RINGSHADOW IN 60 · Hold your ground · ore drilled under the band pays half again" |
 
@@ -325,7 +325,8 @@ On screen (`AAcRingshadow`, `unreal/Source/Autocraft/AcRingshadow.cpp`):
   makes up for that outside the band, so the band reads the same from
   inside as from outside.
 - **The sky.** The ring's arc, 12° wide, runs along the great circle
-  through the giant and the sun. At 11:30 the sun stands 17° above the
+  through the giant and the sun, and the band on the ground is its shadow
+  (below, "The band is the arc's shadow"). At 11:30 the sun stands 17° above the
   giant's limb, so the arc climbs from the giant across it; the giant never
   passes in front of the sun during a sweep. The arc is drawn on the sky
   dome (`M_AcSky`, `Tools/Editor/make_sky_material.py`; `MPC_AcWorld`'s
@@ -336,6 +337,38 @@ On screen (`AAcRingshadow`, `unreal/Source/Autocraft/AcRingshadow.cpp`):
   bloom, and the arc's edges are fine bright lines near the sun. Its offset
   from the sun follows the camera's place in the band, so the arc's edge
   crosses the sun as the band's edge crosses the camera.
+- **The band is the arc's shadow.** With s the way to the sun as the
+  sweep starts and t the great circle's tangent at the sun, the arc's edge
+  where it crosses the sun lies in the plane of s and t, so its shadow on
+  the ground runs along e = normalize((s × t) × up), and the band moves
+  across e (`ac::Ringshadow::direction`). The sky draws the arc sliding over
+  the sun along the circle's normal (s × t, the shader's `cross(G, S)` in
+  Unreal's axes) as the band runs on, and the band moves the same way on
+  the ground: an eye further along the band's way sees the arc further
+  toward the normal's far side, as a far ring would by parallax. The sun's
+  path is the core's (`Rules::sunToward`, which `AAcDaylight` draws) and
+  the giant's place is `Ringshadow::giantBearing`/`giantElevation` (280°,
+  12° up, which `FAcGasGiant` draws), so the server casts the same band;
+  `Autocraft.Ringshadow.Sky` checks the sky's sun and giant against the
+  core within 0.5°.
+
+  | Sweep | Sun (bearing, up) | The band moves toward | Its edges along |
+  |---|---|---|---|
+  | 11:30 | 301°, 53° | 186° | 96°-276° |
+  | 16:00 | 20°, 27° | 169° | 79°-259° |
+
+  Seen from the band's edge, the arc's edge on the sun and the band's edge
+  on the land lie on one line in the picture: the edge's plane holds the
+  eye and the sun. The arc's 12° and the band's 110 cells match by the
+  offset rule (the arc's whole width over the band's), which is a ring
+  about 500 cells off at 11:30 and 270 at 16:00 (110 × the level share of
+  the normal / 12° in radians); the ring is drawn at infinity, so that
+  distance shows nowhere. The direction is the sweep's start: the sun moves
+  on through the 120 s (about 0.9 hours of the world's day), and the live
+  arc turns 3° by the end of the 11:30 sweep and 6° by the end of the
+  16:00 one. Pictures: `art/sky/ringshadow/` (before: the band toward 100°
+  both times), from `-AcMmoShots=DIR -AcMmoShotsRingshadowAlign
+  -AcWeather=clear`.
 - **God rays.** As the arc's edge crosses the sun, the post-process pass
   smears the bright sky toward the sun: the sun's disc, the glowing gaps
   and the lit cloud edges. Only sky pixels feed the rays, so the ring's
