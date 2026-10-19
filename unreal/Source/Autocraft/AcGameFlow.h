@@ -307,6 +307,9 @@ private:
 	/// `mmovisor` (the visor's rain and its wiper, first person in the
 	/// rain): AcMmoVisorFlowTest.cpp.
 	void TickMmoVisorFlow(const FString& Step);
+	/// C4: `mmoferry` (the walk-in Dropship: call, walk in, close, take off,
+	/// land, walk out, all through the act key): AcMmoFerryFlowTest.cpp.
+	void TickMmoFerryFlow(const FString& Step);
 	/// C2: `mmopractice` (the build wheel, the target dummy, the gun's
 	/// rounds): AcMmoPracticeFlowTest.cpp.
 	void TickMmoPracticeFlow(const FString& Step);

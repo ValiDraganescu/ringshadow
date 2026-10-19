@@ -183,9 +183,10 @@ void FAcMmoClient::PrepareAround()
 				}));
 		}
 	}
-	// Aboard the Dropship (F2): the target region is made ahead too, map and
-	// mirror, wherever it lies; the ground round the pilot's region stays.
-	if (!W || !M || (W->flyingTo && !W->ferry)) return;
+	// Aboard the walk-in Dropship (C4): the target region (`flyingTo`, set
+	// from the lift to the touch down) is made ahead too, map and mirror,
+	// wherever it lies; the ground round the pilot's region stays.
+	if (!W || !M) return;
 	// The Welcome's region: `here` until the first RegionChange names one.
 	if (MirrorRegion.empty() && W->here >= 0 && W->here < int64(W->regions.size()) && M->snapshotId() > 0)
 		MirrorRegion = W->regions[size_t(W->here)].id;
@@ -197,7 +198,7 @@ void FAcMmoClient::PrepareAround()
 	const TMap<FString, FString>& All = RegionTexts();
 	const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, {});
 	TArray<FAcRegionAround> Now;
-	int64 Target = W->ferry && W->flyingTo ? *W->flyingTo : INDEX_NONE;
+	int64 Target = W->flyingTo ? *W->flyingTo : INDEX_NONE;
 	// Fallen (P6): the region the pilot comes back in, made ahead the same
 	// way while the respawn screen counts down (a home two regions from the
 	// fall was else built on the game thread at the arrival: ~0.6 s).

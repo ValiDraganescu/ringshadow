@@ -1,0 +1,390 @@
+// -AcFlowTest's walk-in Dropship step (C4, docs/haul-and-ferry.md sections 3
+// and 4), over the local server on the first world (build it first: make -C
+// unreal/server). The pilot does it all with its own walk and act key:
+//   mmoferry  the dev lines put a Landing Pad under the seated Prospector
+//             and one in Cold Fork and fill the MH; on the pad E calls the
+//             Dropship; it comes down, its ramp lowers; up the ramp into the
+//             bay (the third-person camera stays inside its walls); at the
+//             console with the ramp open the take-off button says "Close
+//             the ramp first"; at the ramp post E closes the ramp; at the
+//             console E opens the flight menu, Cold Fork's pad is flown to;
+//             the lift, the dash and the approach seen through the
+//             windshield in first person; landed, E at the post lowers the
+//             ramp and the pilot walks out onto the pad.
+// With -AcMmoShots=DIR -AcMmoShotsFerry, PNGs of its moments (ferry-N-*.png).
+// -AcMmoWeather=rain|storm for the windshield's rain and wipers.
+//
+// Run hidden in a game process (ringshadow-testing, "Flow tests"):
+//   uv run unreal/Tools/hidden_run.py --out DIR -- -AcFlowTest=mmoferry
+//       [-AcMmoShots={out} -AcMmoShotsFerry -AcMmoWeather=rain]
+#include "AcGameFlow.h"
+
+#include "AcLog.h"
+#include "AcMmo.h"
+#include "AcPilotOverlay.h"
+#include "AcPilotPawn.h"
+#include "AcShuttleAct.h"
+#include "AcShuttleView.h"
+#include "AcSimSubsystem.h"
+#include "AcSpace.h"
+#include "SAcWorldMap.h"
+
+#include "Shuttle.h"
+#include "Simulation.h"
+
+#include "Camera/PlayerCameraManager.h"
+#include "GameFramework/PlayerController.h"
+#include "HAL/FileManager.h"
+#include "HAL/PlatformTime.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "UnrealClient.h"
+
+#include <cmath>
+
+namespace
+{
+	constexpr double SeatSeconds = 20;
+	constexpr double WalkSeconds = 25;
+	constexpr double AskSeconds = 8;
+	/// The Dropship's call to its ramp down (descend 3 s, the ramp 3 s), with room.
+	constexpr double LandSeconds = 30;
+
+	struct FFerryRun
+	{
+		int64 Ship = -1;
+		bool bPressed = false;
+		double Settled = -1;
+		/// The stages seen in flight (pictures taken once each).
+		bool bLiftShot = false, bDashShot = false, bApproachShot = false;
+		/// The target pad's region, seen in flight.
+		bool bFlew = false;
+	};
+	FFerryRun Run;
+
+	/// -AcMmoShots=DIR with -AcMmoShotsFerry: a PNG of the moment `Name`.
+	void Picture(const TCHAR* Name)
+	{
+		FString Dir;
+		if (!FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsFerry")) || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir)
+			|| Dir.IsEmpty())
+		{
+			return;
+		}
+		Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir);
+		IFileManager::Get().MakeDirectory(*Dir, true);
+		const FString Path = FPaths::Combine(Dir, FString(Name) + TEXT(".png"));
+		FScreenshotRequest::RequestScreenshot(Path, /*bShowUI*/ true, /*bAddFilenameSuffix*/ false);
+		UE_LOG(LogAutocraft, Display, TEXT("flowtest: shot %s"), *Path);
+	}
+}
+
+void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
+{
+	FFlowTest& T = *Test;
+	const double Now = FPlatformTime::Seconds();
+	auto Since = [&] { return Now - T.PhaseAt; };
+	auto Advance = [&] {
+		T.Phase += 1;
+		T.PhaseAt = Now;
+		Run.bPressed = false;
+		Run.Settled = -1;
+	};
+	UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this);
+	FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
+	AAcPilotPawn* Pilot = AAcPilotPawn::Find(this);
+	const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	const UAcPilotOverlaySubsystem* Overlay = UAcPilotOverlaySubsystem::Get(this);
+	auto Finish = [&] {
+		if (Pilot)
+		{
+			Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
+			Pilot->Press(false);
+		}
+		CloseWorldMap();
+		StopMmo();
+		NextStep();
+	};
+	auto Waited = [&](const FString& What, const double Seconds) {
+		if (Since() <= Seconds) return false;
+		Check(false, FString::Printf(TEXT("%s within %.0f s (%s)"), *What, Seconds, Mmo ? *Mmo->Message() : TEXT("no client")));
+		Finish();
+		return true;
+	};
+	auto Seated = [&] {
+		return Mmo && Pilot && Mmo->Driven() && Pilot->Driving() && Pilot->Driven() == *Mmo->Driven() && PC && PC->GetPawn() == Pilot;
+	};
+	if (Step != TEXT("mmoferry"))
+	{
+		Check(false, FString::Printf(TEXT("no ferry step %s (mmoferry)"), *Step));
+		NextStep();
+		return;
+	}
+	if (T.Phase == 0)
+	{
+		if (Sim && Sim->IsMmo()) StopMmo();
+		Run = FFerryRun();
+		StartMmo(true);
+		Advance();
+		return;
+	}
+	if (T.Phase == 1)
+	{
+		if (Seated() && !Mmo->Travelling() && Mmo->Here() && Since() > 1.0)
+		{
+			// A Landing Pad under the pilot, one in Cold Fork (seen), MH to fly.
+			Check(Mmo->DevClock(TEXT("ferry pad here\nferry pad cold-fork\nferry mh 200")),
+				TEXT("ferry: the server puts up two Landing Pads and fills the MH (dev)"));
+			Advance();
+		}
+		else Waited(TEXT("seated"), SeatSeconds);
+		return;
+	}
+
+	const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr;
+	const ac::Simulation* S = M ? &M->simulation() : nullptr;
+	const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+	if (!Seated() || !S || !U)
+	{
+		// The region switch in flight: a moment with nothing driven.
+		Waited(TEXT("still driving"), 6);
+		return;
+	}
+	const TOptional<FAcPilotInfo>& Info = Overlay ? Overlay->LastInfo() : TOptional<FAcPilotInfo>();
+	const FString Prompt = Info && Info->Prompt ? *Info->Prompt : FString();
+	const TOptional<AcShuttleAct::FAct> Act = AcShuttleAct::Find(*S, *U);
+	const ac::Shuttle* Ship = nullptr;
+	for (const ac::Shuttle& Q : S->state.shuttles)
+	{
+		if (Run.Ship >= 0 ? Q.id == Run.Ship : ac::distance(Q.position, U->position) < 12) Ship = &Q;
+	}
+	const ac::Vec2 Local = Ship ? ac::ShuttleBay::local(*Ship, U->position) : ac::Vec2();
+	// Walk to a point in the ship's frame (or the region's, with no ship
+	// yet): the move keys forward, the mouse's yaw onto it.
+	auto WalkTo = [&](const ac::Vec2 To, const double Near) {
+		const ac::Vec2 Goal = Ship ? ac::ShuttleBay::world(*Ship, To) : To;
+		const ac::Vec2 D = Goal - U->position;
+		const double Yaw = std::atan2(D.y, D.x);
+		if (ac::length(D) <= Near)
+		{
+			Pilot->SetTestInput(FVector2D::ZeroVector, Yaw);
+			return true;
+		}
+		Pilot->SetTestInput(FVector2D(0, -1), Yaw);
+		return false;
+	};
+	auto Face = [&](const double LocalYaw) { Pilot->SetTestInput(FVector2D::ZeroVector, (Ship ? Ship->heading : 0.0) + LocalYaw); };
+	auto Settle = [&](const double Seconds) {
+		if (Run.Settled < 0) Run.Settled = Now;
+		return Now - Run.Settled >= Seconds;
+	};
+	auto Press = [&] {
+		Pilot->Press(true);
+		Pilot->Press(false);
+		Run.bPressed = true;
+	};
+	auto FirstPerson = [&](const bool bFirst) {
+		if (Pilot->ChaseEye().IsSet() == bFirst) Pilot->ToggleView();
+	};
+	// The camera in the ship's frame (cm): inside its bay's walls and under its ceiling.
+	auto CameraInBay = [&](FString& Where) {
+		const AcShuttleView::FShip* F = Ship ? AcShuttleView::Find(Ship->id) : nullptr;
+		if (!F || !PC || !PC->PlayerCameraManager) return false;
+		const FVector L = F->Placement.InverseTransformPosition(PC->PlayerCameraManager->GetCameraLocation());
+		Where = L.ToCompactString();
+		using B = ac::ShuttleBay;
+		return L.X > AcSpace::ToCm(B::rear) - 5 && L.X < AcSpace::ToCm(B::noseFrom) + 60 && FMath::Abs(L.Y) < AcSpace::ToCm(B::halfWide) + 6
+			&& L.Z > AcSpace::ToCm(B::deck) && L.Z < AcSpace::ToCm(B::ceiling) + 8;
+	};
+
+	switch (T.Phase)
+	{
+	case 2:
+		// On the pad: the call.
+		if (Act && Act->Kind == AcShuttleAct::FAct::EKind::Call && !Act->Why && Mmo->HydrogenNow().value_or(0) >= 100 && Settle(1.0))
+		{
+			Check(Prompt == TEXT("E · CALL THE DROPSHIP"), FString::Printf(TEXT("ferry: on the pad the prompt calls the Dropship (\"%s\")"), *Prompt));
+			FirstPerson(false);
+			Press();
+			Advance();
+		}
+		else Waited(TEXT("on a Landing Pad, the call offered"), AskSeconds);
+		return;
+	case 3:
+		// It comes down and lowers its ramp.
+		if (Ship && Ship->grounded() && Ship->ramp.open >= ac::ShuttleBay::rampDown)
+		{
+			Run.Ship = Ship->id;
+			Check(Mmo->ShuttleRefusal().IsEmpty(), FString::Printf(TEXT("ferry: the call kept (%s)"), *Mmo->ShuttleRefusal()));
+			Face(UE_DOUBLE_PI);
+			if (Settle(1.5))
+			{
+				Picture(TEXT("ferry-1-landed"));
+				Advance();
+			}
+		}
+		else Waited(TEXT("the Dropship down with its ramp lowered"), LandSeconds);
+		return;
+	case 4:
+		// Round to the ramp's foot, up it, into the bay.
+		if (!Ship) break;
+		if (Local.x > ac::ShuttleBay::rampFoot() - 0.6 && !ac::ShuttleBay::inBay(Local) && !ac::ShuttleBay::onRamp(Local))
+		{
+			// Beside or ahead of the ship: round its side to the back.
+			WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 1.2, Local.y > 0 ? 3.0 : -3.0), 0.4);
+		}
+		else if (Local.x < ac::ShuttleBay::rampFoot() - 0.2 && !ac::ShuttleBay::onRamp(Local))
+		{
+			WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 0.8, 0.0), 0.3);
+		}
+		else if (WalkTo(ac::Vec2(-1.0, 0.0), 0.3))
+		{
+			FString Where;
+			Check(ac::ShuttleBay::inBay(Local), FString::Printf(TEXT("ferry: walked up the ramp into the bay (%.2f, %.2f)"), Local.x, Local.y));
+			if (Settle(1.0))
+			{
+				Check(CameraInBay(Where), FString::Printf(TEXT("ferry: the third-person camera inside the bay's walls (%s)"), *Where));
+				Picture(TEXT("ferry-2-bay"));
+				Advance();
+			}
+		}
+		else Waited(TEXT("up the ramp into the bay"), WalkSeconds);
+		return;
+	case 5:
+		// At the console with the ramp down: refused.
+		if (!Ship) break;
+		if (WalkTo(ac::Vec2(1.9, 0.0), 0.25) && Settle(1.0))
+		{
+			Face(0.0);
+			Check(Act && Act->Kind == AcShuttleAct::FAct::EKind::TakeOff && Act->Why && *Act->Why == TEXT("Close the ramp first"),
+				FString::Printf(TEXT("ferry: with the ramp down the take-off button says close it first (\"%s\")"), *Prompt));
+			Advance();
+		}
+		else Waited(TEXT("at the console"), WalkSeconds);
+		return;
+	case 6:
+		// At the ramp post: close it.
+		if (!Ship) break;
+		if (!Run.bPressed)
+		{
+			if (WalkTo(ac::Vec2(-1.8, -0.35), 0.25) && Settle(1.0))
+			{
+				Check(Prompt == TEXT("E · CLOSE THE RAMP"), FString::Printf(TEXT("ferry: at the post the prompt closes the ramp (\"%s\")"), *Prompt));
+				Press();
+			}
+			else Waited(TEXT("at the ramp post"), WalkSeconds);
+		}
+		else if (Ship->ramp.open <= 0.0 && !Ship->ramp.opening)
+		{
+			Check(Mmo->ShuttleRefusal().IsEmpty(), FString::Printf(TEXT("ferry: the ramp closed (%s)"), *Mmo->ShuttleRefusal()));
+			Face(UE_DOUBLE_PI);
+			Picture(TEXT("ferry-3-ramp-shut"));
+			Advance();
+		}
+		else Waited(FString::Printf(TEXT("the ramp shut (%.2f, %s)"), Ship->ramp.open, *Mmo->ShuttleRefusal()), AskSeconds);
+		return;
+	case 7:
+		// At the console: E opens the flight menu; Cold Fork's pad.
+		if (!Ship) break;
+		if (!Run.bPressed)
+		{
+			if (WalkTo(ac::Vec2(1.9, 0.0), 0.25) && Settle(1.0))
+			{
+				Face(0.0);
+				FirstPerson(true);
+				Check(Prompt == TEXT("E · TAKE OFF"), FString::Printf(TEXT("ferry: at the console the prompt takes off (\"%s\")"), *Prompt));
+				Picture(TEXT("ferry-4-console"));
+				Press();
+			}
+			else Waited(TEXT("back at the console"), WalkSeconds);
+		}
+		else if (WorldMapWidget().IsValid() && Since() > 1.0)
+		{
+			Check(true, TEXT("ferry: the take-off button opened the flight menu"));
+			FlyFromMap(TEXT("cold-fork"), TEXT("Landing Pad 1"));
+			Advance();
+		}
+		else Waited(TEXT("the flight menu"), AskSeconds);
+		return;
+	case 8:
+	{
+		// The flight, looking out of the windshield.
+		Face(0.0);
+		if (!Ship)
+		{
+			Waited(TEXT("the Dropship through the region switch"), 10);
+			return;
+		}
+		using EStage = ac::Shuttle::Stage;
+		const AcShuttleView::FShip* F = AcShuttleView::Find(Ship->id);
+		if (Ship->flying()) Run.bFlew = true;
+		if (Ship->stage == EStage::lift && !Run.bLiftShot && Ship->clock > 1.5)
+		{
+			Run.bLiftShot = true;
+			FString Where;
+			Check(CameraInBay(Where), FString::Printf(TEXT("ferry: lifting off, the view still in the bay (%s)"), *Where));
+			Picture(TEXT("ferry-5-lift"));
+		}
+		if (Ship->stage == EStage::dash && !Run.bDashShot && Ship->clock > 1.0)
+		{
+			Run.bDashShot = true;
+			const double Up = F ? AcSpace::ToCells(F->Placement.GetLocation().Z) - Ship->ground : 0.0;
+			Check(Up > 10.0, FString::Printf(TEXT("ferry: in the dash the ship high over the land (%.1f cells)"), Up));
+			Picture(TEXT("ferry-6-dash"));
+		}
+		if (Ship->stage == EStage::approach && !Run.bApproachShot && Ship->clock > 1.0)
+		{
+			Run.bApproachShot = true;
+			Picture(TEXT("ferry-7-approach"));
+		}
+		if (Run.bFlew && Ship->grounded())
+		{
+			Check(Run.bLiftShot && Run.bDashShot && Run.bApproachShot, TEXT("ferry: the lift, the dash and the approach seen"));
+			Advance();
+			return;
+		}
+		Waited(TEXT("the flight to Cold Fork's pad"), Ship->plan.total() + 60);
+		return;
+	}
+	case 9:
+		// Landed: the ramp down from the post.
+		if (!Ship) break;
+		if (!Run.bPressed)
+		{
+			if (WalkTo(ac::Vec2(-1.8, -0.35), 0.25) && Settle(1.0))
+			{
+				Check(Prompt == TEXT("E · OPEN THE RAMP"), FString::Printf(TEXT("ferry: landed, the post opens the ramp (\"%s\")"), *Prompt));
+				Press();
+			}
+			else Waited(TEXT("at the ramp post after the landing"), WalkSeconds);
+		}
+		else if (Ship->ramp.open >= ac::ShuttleBay::rampDown)
+		{
+			Face(UE_DOUBLE_PI);
+			Picture(TEXT("ferry-8-ramp-down"));
+			Advance();
+		}
+		else Waited(FString::Printf(TEXT("the ramp down (%.2f, %s)"), Ship->ramp.open, *Mmo->ShuttleRefusal()), AskSeconds + 3);
+		return;
+	case 10:
+		// Down the ramp onto the pad.
+		if (!Ship) break;
+		if (WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 1.0, 0.0), 0.35))
+		{
+			FirstPerson(false);
+			Check(!S->aboard(*U), TEXT("ferry: walked out of the Dropship"));
+			if (Settle(1.5))
+			{
+				Picture(TEXT("ferry-9-out"));
+				Finish();
+			}
+		}
+		else Waited(TEXT("down the ramp"), WalkSeconds);
+		return;
+	default:
+		Finish();
+		return;
+	}
+	Waited(TEXT("the Dropship in the shown state"), AskSeconds);
+}

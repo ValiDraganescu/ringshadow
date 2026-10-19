@@ -1377,10 +1377,6 @@ TOptional<int64> FAcMmoClient::OwnMule() const
 	return P->mule->unit;
 }
 
-// WIP until c4-ship-sim's wire lands (Client::callShuttle, Client::ramp).
-#define AC_SHUTTLE_WIRE_CALL 0u
-#define AC_SHUTTLE_WIRE_RAMP(Open) ((void)(Open), 0u)
-
 bool FAcMmoClient::CallShuttle(FString* Why)
 {
 	if (!Net || !Net->welcome())
@@ -1388,7 +1384,7 @@ bool FAcMmoClient::CallShuttle(FString* Why)
 		if (Why) *Why = TEXT("Not connected to the local server");
 		return false;
 	}
-	const uint32 Id = AC_SHUTTLE_WIRE_CALL;
+	const uint32 Id = Net->callShuttle();
 	LastShuttleRefusal.Reset();
 	ShuttleAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: dropship ask %u: call"), Id);
@@ -1402,7 +1398,7 @@ bool FAcMmoClient::Ramp(const bool bOpen, FString* Why)
 		if (Why) *Why = TEXT("Not connected to the local server");
 		return false;
 	}
-	const uint32 Id = AC_SHUTTLE_WIRE_RAMP(bOpen);
+	const uint32 Id = Net->ramp(bOpen);
 	LastShuttleRefusal.Reset();
 	ShuttleAsked.Add(Id);
 	UE_LOG(LogAutocraft, Log, TEXT("mmo: dropship ask %u: ramp %s"), Id, bOpen ? TEXT("open") : TEXT("close"));
