@@ -157,8 +157,6 @@ namespace
 	/// The moments' loops: the ringshadow's drone, bed and flaring ore, and
 	/// the hot craters (one key each, down from `CraterKeys`).
 	constexpr int64 DroneKey = -8, ShadowBedKey = -9, ShimmerKey = -10, CraterKeys = -100;
-	/// A pad flight's cruise (F1b).
-	constexpr int64 CruiseKey = -11;
 	/// C4: the walk-in Dropships' engines, one key each below this.
 	constexpr int64 ShipKeys = -1000000;
 
@@ -278,8 +276,6 @@ void FAcAudioRules::Reset()
 	Streaked.Reset();
 	Boomed.Reset();
 	Craters.clear();
-	bCruising = false;
-	CruiseFade = 0.f;
 	DryHeard = -1e9;
 	bShelterWanted = false;
 	Indoors = 0.f;
@@ -727,20 +723,6 @@ void FAcAudioRules::News(const ENews N)
 	if (Allow(Sound, 2)) OneShot(Sound, {}, AcSound::NewsGain, EAcSoundPool::InEar);
 }
 
-void FAcAudioRules::Flight(const EFlight Moment)
-{
-	FName Sound;
-	float Gain = 0.f;
-	switch (Moment)
-	{
-	case EFlight::Spool: Sound = "flspool"; Gain = AcSound::FlightSpoolGain; break;
-	case EFlight::LiftOff: Sound = "flroar"; Gain = AcSound::FlightRoarGain; break;
-	case EFlight::Retro: Sound = "flretro"; Gain = AcSound::FlightRetroGain; break;
-	case EFlight::Touchdown: Sound = "fltouch"; Gain = AcSound::FlightTouchGain; break;
-	}
-	if (Allow(Sound, 1)) OneShot(Sound, {}, Gain, EAcSoundPool::InEar);
-}
-
 void FAcAudioRules::Shuttles(const std::vector<FShipHear>& Heard)
 {
 	ShipsWere = Ships;
@@ -1081,18 +1063,6 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 	for (auto It = Hums.CreateIterator(); It; ++It)
 	{
 		if (!Citadels.Contains(*It)) It.RemoveCurrent();
-	}
-	// A pad flight's cruise, in your ear: in over a second as the ship
-	// climbs away, out as it comes down.
-	Fade(CruiseFade, bCruising ? 1.f : 0.f, 1.0f, 0.8f);
-	if (CruiseFade > 0.f && Variants("flcruise") > 0)
-	{
-		FAcLoopWant W;
-		W.Key = CruiseKey;
-		W.Name = "flcruise";
-		W.Volume = CruiseFade * AcSound::FlightCruiseGain;
-		W.bInEar = true;
-		Out.push_back(W);
 	}
 	// C4: each walk-in Dropship's engines, a loop at the ship; in your ear
 	// and dull aboard (as the rain through the Citadel's walls).

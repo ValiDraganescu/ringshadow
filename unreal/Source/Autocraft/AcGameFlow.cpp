@@ -1,6 +1,5 @@
 #include "AcGameFlow.h"
 
-#include "AcPilotFlight.h"
 #include "AcShuttleShip.h"
 #include "AcMusicPlayer.h"
 
@@ -459,8 +458,6 @@ void UAcGameFlowSubsystem::Tick(const float DeltaTime)
 		}
 	}
 	TickMmo();
-	// W5: the other pilots' Dropships in flight.
-	AcPilotFlight::TickWatched(GetWorld());
 	// The walk-in Dropships (C4): drawn, posed, their windshields' rain.
 	AcShuttleShip::Tick(GetWorld());
 	if (bHomeWhenReady)
@@ -950,9 +947,8 @@ void UAcGameFlowSubsystem::TickMmo()
 			}
 		// Arrived in a region (the start, a landing once the ship is down,
 		// an edge crossing): its title over the view, once per arrival.
-		const AAcPilotPawn* Pawn = AAcPilotPawn::Find(this);
 		if (const ac::net::WorldMessage::Region* Here = Mmo->Here(); Here && Mmo->Phase() == FAcMmoClient::EPhase::Playing
-			&& !Mmo->Travelling() && !(Pawn && Pawn->InFlight()) && Mmo->Visit() != MmoTitledVisit)
+			&& !Mmo->Travelling() && Mmo->Visit() != MmoTitledVisit)
 		{
 			MmoTitledVisit = Mmo->Visit();
 			// The one banner slot (U1): it waits its turn behind a level or a raid.

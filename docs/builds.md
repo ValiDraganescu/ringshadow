@@ -164,9 +164,8 @@ it), copy the app into the ignored `unreal/server/build/k3/`, and run it
 with `hidden_run.py --app`:
 
 ```sh
-uv run unreal/Tools/hidden_run.py --out unreal/server/build/k3/runs/app-call5-1 --res 1728x1084 \
-  --app unreal/server/build/k3/Ringshadow.app -- -AcMap=highlands-small -AcFlowTest=mmoshots \
-  -AcMmoShots={out} -AcMmoShotsOnly=none -AcMmoShotsF2 -AcMmoHour=12 -AcMmoShotsF2CallAt=5
+uv run unreal/Tools/hidden_run.py --out unreal/server/build/k3/runs/app-ferry-1 --res 1728x1084 \
+  --app unreal/server/build/k3/Ringshadow.app -- -AcMap=highlands-small -AcFlowTest=mmoferry
 ```
 
 The MMO bench runs the same way on a package:
@@ -182,9 +181,9 @@ under `-nullrhi` when it builds a mesh at run time ("RenderData should not
 initialize resources in headless cooked runs"), and this game builds the
 ground and more at run time. Every MMO run logs `k3: seated N s after
 the process started` (the startup: process start to the first frame the
-pilot drives); `-AcMmoShotsF2CallAt=S` calls the Dropship S s after
-seating and logs `worst frame since the call`; `-AcMmoShotsS3` logs the
-canyon (wave 10 out) and the nest at noon as `s3 perf:`. A trace: add
+pilot drives); the Dropship's flow is `-AcFlowTest=mmoferry`;
+`-AcMmoShotsS3` logs the canyon (wave 10 out) and the nest at noon as
+`s3 perf:`. A trace: add
 `-trace=default,gpu,loadtime,task -statnamedevents -tracefile={out}/x.utrace`
 and export it with `UnrealInsightsBG` (unreal/Tools/README.md). A traced
 packaged run crashes on exit, after its log and the trace are closed (exit

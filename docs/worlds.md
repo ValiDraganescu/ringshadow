@@ -163,12 +163,12 @@ log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
   Prospector walks off where the server put it while the camera settles
   into the pilot's view; control is back then, and the ship lifts away by
   itself. Never a fade. The Landing Pads' lamps flash while it is over
-  them. `-AcMmoFlightShots=DIR` with `mmofly` saves a picture of four
-  stages; `-AcMmoShotsF2` is the picture set and the frame times
-  (`f2 perf:` in the log).
+  them. The walk-in Dropship replaced this flight (C4,
+  [haul-and-ferry.md](haul-and-ferry.md)); its flow is
+  `-AcFlowTest=mmoferry` (`AcMmoFerryFlowTest.cpp`).
 - A flight's sound (F1b; `Tools/AudioGen/flight.manifest.json`, ElevenLabs
-  sound effects in `unreal/Resources/Sounds/sfx/`; `FAcAudioRules::Flight`
-  and `Cruise`, tested in `Autocraft.Audio.Rules.Flight`), all in the ear:
+  sound effects in `unreal/Resources/Sounds/sfx/`; since C4 the walk-in
+  Dropship's, `FAcAudioRules::Shuttles`), all in the ear:
   the engines' whine spooling up on the pad (`flspool`), the roar as the
   jets take hold (`flroar`, after the 0.7 s spool), the wind and engine
   drone of the cruise (`flcruise`, a loop that fades in as the ship climbs
@@ -177,6 +177,7 @@ log on the banner. Tests keep their own key and save: `-AcMmoDir=PATH`, or
 - Automation tests (hidden): `Autocraft.Mmo.CrossEdgeEast` (drive east over
   the start region's edge into Tern Ridge) and `Autocraft.Mmo.FlyToPad`
   (the Dropship to Cold Fork's Landing Pad), in `AcMmoTests.cpp`. Through the pilot pawn and
-  the world map, in a hidden game run: `-AcFlowTest=mmoresume,mmocross,mmofly,mmohandback`
+  the world map, in a hidden game run: `-AcFlowTest=mmoresume,mmocross,mmohandback`
   (`AcMmoFlowTest.cpp`; the network read only every 0.2 s while travelling,
-  so a RegionChange and its first snapshot land in the same frame).
+  so a RegionChange and its first snapshot land in the same frame); the
+  Dropship's flow is `-AcFlowTest=mmoferry` (`AcMmoFerryFlowTest.cpp`).

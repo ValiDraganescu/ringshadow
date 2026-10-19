@@ -448,13 +448,6 @@ public:
 	/// The progression's news (`UAcProgressHudSubsystem::NewsItem`).
 	enum class ENews : uint8 { Blueprint, Paid, Made, Researched };
 	void News(ENews N);
-	/// A pad flight's moments (F1b; `AAcPilotPawn::FlightView`): the
-	/// engines spooling up on the pad, the lift-off's roar, the retro
-	/// thrust coming down, the touchdown's thud and dust.
-	enum class EFlight : uint8 { Spool, LiftOff, Retro, Touchdown };
-	void Flight(EFlight Moment);
-	/// The cruise's wind and engine loop, while the ship is up.
-	void Cruise(bool bOn) { bCruising = bOn; }
 	/// C4: the walk-in Dropships heard this frame (AcShuttleShip.h): each
 	/// one's ground point, its height over it (cells), its engines' thrust
 	/// (0-1), its ramp's way (1 down, -1 up, 0 still), its stage
@@ -560,11 +553,9 @@ private:
 	TSet<uint32> Streaked, Boomed;
 	std::vector<FStarHear> Craters;
 	TSet<int64> Jumping;
-	/// The flight's cruise loop and its fade; the last dry click's sim time.
-	bool bCruising = false;
-	float CruiseFade = 0.f;
 	/// C4: the Dropships heard this frame and the last.
 	std::vector<FShipHear> Ships, ShipsWere;
+	/// The last dry click's sim time.
 	double DryHeard = -1e9;
 	TSet<int64> Anchoring;
 	TSet<int64> Burrowing, Locking;

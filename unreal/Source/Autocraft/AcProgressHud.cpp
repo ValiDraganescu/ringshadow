@@ -1213,7 +1213,7 @@ void UAcProgressHudSubsystem::OnFrame(const FAcFrame& Frame)
 	const AAcPilotPawn* Pawn = AAcPilotPawn::Find(this);
 	const ac::net::ProgressMessage* P = Mmo->Progress();
 	// (Not at a corner gun: the dashboard is down, C1.)
-	if (P && Pawn && Pawn->Driving() && !Pawn->InFlight() && !Mmo->Travelling() && Pawn->AtGun() == INDEX_NONE)
+	if (P && Pawn && Pawn->Driving() && !Mmo->Travelling() && Pawn->AtGun() == INDEX_NONE)
 	{
 		const int64 Level = ac::Progression::level(Mmo->Xp().value_or(P->xp));
 		std::array<FAcSlotView, 3> Slots;

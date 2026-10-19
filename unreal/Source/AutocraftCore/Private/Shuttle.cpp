@@ -35,7 +35,7 @@ double wrap(double a) {
     return a;
 }
 
-/// The flight's way (F2's `FPath`, AcPilotFlight.h, in cells with z up):
+/// The flight's way (as F2's cinematic flight drew it, in cells with z up):
 /// from the boarding pad `a` (the ship's heading `g` there) to the target
 /// pad `b`. `t`: seconds since the lift began.
 struct Way {

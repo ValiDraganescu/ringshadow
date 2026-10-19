@@ -239,8 +239,7 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	const ac::Simulation& S = Sim->Simulation();
 	const TOptional<FAcPilotFrame> F = Pawn && Pawn->Driving() ? FAcPilotFrame::Of(S) : TOptional<FAcPilotFrame>();
 	// -AcPilotPullOut: the camera has left the unit; the HUD goes with it.
-	// A pad flight (AcPilotFlight.h): the HUD comes back at the touch down.
-	if (!F || F->Unit.id != Pawn->Driven() || Pawn->PulledOut() || Pawn->InFlight())
+	if (!F || F->Unit.id != Pawn->Driven() || Pawn->PulledOut())
 	{
 		// (Off a gun the dashboard is up again, C1.)
 		if (UAcConsoleSubsystem* Console = UAcConsoleSubsystem::Get(this)) Console->SetDashboardHidden(false);

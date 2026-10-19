@@ -108,8 +108,8 @@ struct ShuttlePose {
 /// own clock between two snapshots). Coming down onto the pad from high
 /// behind it; on the pad; up off it, through two banking turns from its
 /// heading onto the way to the target pad, the dash across the sky, the
-/// approach over the target pad (the way the client drew it since F2,
-/// `AcPilotFlight.h`); lifting away.
+/// approach over the target pad (the way F2's cinematic flight drew it);
+/// lifting away.
 AUTOCRAFTCORE_API ShuttlePose shuttlePose(const Shuttle& s);
 AUTOCRAFTCORE_API ShuttlePose shuttlePose(const Shuttle& s, Shuttle::Stage stage, double clock);
 /// The heading it lands with at the target pad: along the way from `from`

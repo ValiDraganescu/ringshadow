@@ -9,6 +9,7 @@
 #include "AcSpace.h"
 #include "AcLog.h"
 #include "AcModelCatalog.h"
+#include "AcMusicPlayer.h"
 #include "AcPilotPawn.h"
 #include "AcPose.h"
 #include "AcPoseFerry.h"
@@ -429,6 +430,28 @@ void AcShuttleShip::Tick(UWorld* World)
 			L.WiperAngle = A->Wiper.angle();
 			L.Thrust = AcShuttleShip::Thrust(uint8(S.stage), F.Clock, ac::shuttleStageSeconds(S, S.stage));
 			A->Apply(F.Placement, L);
+			// The flight's moments on the music's cue timeline (the radio
+			// ducks under them; the siege's shots read them), for the ship
+			// the pilot rides.
+			if (S.id == EarsIn && A->CuedStage >= 0 && A->CuedStage != int32(S.stage))
+			{
+				if (UAcMusicPlayer* M = UAcMusicPlayer::Get(World))
+				{
+					using EStage = ac::Shuttle::Stage;
+					if (S.stage == EStage::lift)
+					{
+						M->Cue(TEXT("flight"), TEXT("flroar"), AcSound::FlightRoarGain);
+						M->Cue(TEXT("flight"), TEXT("flcruise on"), AcSound::FlightCruiseGain);
+					}
+					if (S.stage == EStage::approach) M->Cue(TEXT("flight"), TEXT("flretro"), AcSound::FlightRetroGain);
+					if (S.stage == EStage::ground)
+					{
+						M->Cue(TEXT("flight"), TEXT("flcruise off"), 0.0);
+						M->Cue(TEXT("flight"), TEXT("fltouch"), AcSound::FlightTouchGain);
+					}
+				}
+			}
+			A->CuedStage = S.id == EarsIn ? int32(S.stage) : -1;
 			A->Effects(S, F.Placement, L.Thrust, Now, Dt);
 			FAcAudioRules::FShipHear H;
 			H.Id = S.id;

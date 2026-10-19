@@ -158,21 +158,7 @@
 //   05 the Foundry's job done: the stores up, the Foundry idle
 //   06 a Cargo pod Mk II asked for: the Foundry's new countdown
 //
-// -AcMmoShotsF2 (or -AcMmoShotsFlight; F2, AcPilotFlight.h): the Dropship
-// from a Landing Pad by the start pad to one in Cold Fork (the `ferry` dev
-// lines put them up), each moment on the flight's clock, DIR/f2-NN-moment.png
-// (-AcMmoHour=12 for noon, 19 for dusk); the frame times aboard logged as
-// `f2 perf:` (-AcMmoShotsOnly=none: the flight with no picture taken;
-// -AcMmoShotsF2Twice: a second flight back; -AcMmoShotsF2Settled: the call
-// only once every ground set round the region is built, Q2's measure;
-// -AcMmoShotsF2CallAt=S: the call S s after seating, K3's measure, with the
-// worst frame since the call logged as `f2 perf (flight 1): worst frame`;
-// every run logs `k3: seated N s after the process started`):
-//   01 the flight menu: only Landing Pads in regions been to
-//   02 the Dropship coming down onto the pad   03 the Prospector boarding
-//   04 the lift-off         05 a banking turn, the giant in view
-//   06 the speed burst, clouds streaking       07 the approach, wide
-//   08 stepping out at the target pad          09 down, the view back
+// The walk-in Dropship's flow is `-AcFlowTest=mmoferry` (AcMmoFerryFlowTest.cpp).
 //
 // -AcMmoShotsB1 (it adds -AcMmoDevRig: a Citadel to unload at): the drill's
 // sparks stopping and the AI's walk (docs/mmorpg-m8.md B1),
@@ -544,6 +530,7 @@
 #include "Ringshadow.h"
 #include "Rules.h"
 #include "Starfall.h"
+#include "Shuttle.h"
 #include "Simulation.h"
 
 #include "AcTerrain.h"
@@ -757,26 +744,8 @@ namespace
 	double L1DoneAt = 0;
 	// -AcMmoShotsU1: when her roar began; the staged gun's id.
 	double U1RoarAt = -1;
-	/// -AcMmoShotsF2: the frame and GPU times aboard, each frame's stage, the
-	/// frame the region change came in.
-	TArray<double> F2Frames;
-	TArray<double> F2Gpu;
-	TArray<uint8> F2Stages;
-	double F2Last = -1;
-	int32 F2Switch = -1;
-	/// -AcMmoShotsF2Settled: since when every ground set round the region is built.
-	double F2SettledAt = -1;
-	/// -AcMmoShotsF2Twice: 1 on the second flight.
-	int32 F2Round = 0;
-	/// When the pilot was first seated (K3: the startup time, and
-	/// -AcMmoShotsF2CallAt's clock).
+	/// When the pilot was first seated (K3: the startup time).
 	double SeatedAt = -1;
-	/// K3: every frame from the call on, aboard or not yet: the worst one and
-	/// which it was (the first call's stall).
-	double F2Prev = -1;
-	double F2CallWorst = 0;
-	int32 F2CallFrame = 0;
-	int32 F2CallWorstAt = -1;
 	/// The phase whose scene was staged (its first frame done).
 	int32 U1Staged = -1;
 	struct FB1Sample
@@ -1359,8 +1328,6 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsO1"))) T.Phase = 800;
 			// -AcMmoShotsRig: only the rig screen (500-513).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRig"))) T.Phase = 500;
-			// -AcMmoShotsF2 (or -AcMmoShotsFlight): only the Dropship's flight (2400-2413).
-			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsF2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsFlight"))) T.Phase = 2400;
 			// -AcMmoShotsB1: only the drill's sparks and the AI's walk (900-919).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB1"))) T.Phase = 900;
 			// -AcMmoShotsC1: only the Citadel's tax and the realm wallet (1000-1012).
@@ -3557,234 +3524,6 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Finish();
 		return;
 	}
-	// MARK: -AcMmoShotsF2 (and -AcMmoShotsFlight)
-	// The Dropship from a Landing Pad by the start pad to one in Cold Fork,
-	// its moments on the flight's clock; the frame times through it.
-	case 2400:
-	{
-		// -AcMmoShotsF2Settled (Q2, the first call's stall): the call only
-		// once every ground set round the region is built and drawn 3 s.
-		bool bSettled = true;
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsF2Settled")))
-		{
-			const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
-			const bool bBuilt = Terrain && Terrain->NumSets() >= 9 && Terrain->NumSetsComplete() == Terrain->NumSets();
-			if (!bBuilt) F2SettledAt = -1;
-			else if (F2SettledAt < 0) F2SettledAt = Now;
-			bSettled = F2SettledAt > 0 && Now - F2SettledAt > 3.0;
-			if (!bSettled && Since() > 60.0) TimedOut(TEXT("f2: the ground round the region built"), 60);
-		}
-		// -AcMmoShotsF2CallAt=S: the call S s after seating (K3: 5 and 30),
-		// the steps before it at once.
-		double CallAt = -1;
-		FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsF2CallAt="), CallAt);
-		if (bSettled && Since() > (CallAt >= 0 ? 0.0 : 2.0))
-		{
-			// A Landing Pad under the pilot, one in Cold Fork (seen), one in
-			// Slag Pockets (not seen: the menu leaves it out), MH to fly.
-			Check(Mmo->DevClock(TEXT("ferry pad here\nferry pad cold-fork\nferry pad slag-pockets unseen\nferry mh 200")),
-				TEXT("f2: the server puts up three Landing Pads and fills the MH"));
-			Advance();
-		}
-		return;
-	}
-	case 2401:
-	{
-		const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
-		bool bThere = false;
-		if (const ac::net::WorldMessage* W = Mmo->World())
-			for (const ac::net::WorldMessage::Region& G : W->regions)
-				if (G.id == "cold-fork")
-					for (const ac::net::WorldMessage::Pad& Q : G.pads) bThere |= Q.building == ac::StructureKind::landingPad;
-		if (Near && Near->Within() && bThere && Mmo->HydrogenNow().value_or(0) >= 100 && Since() > 1.0)
-		{
-			Stop(Pilot->Yaw());
-			Check(OpenWorldMap(), TEXT("f2: M opened the flight menu on the Landing Pad"));
-			Advance();
-			return;
-		}
-		TimedOut(TEXT("f2: on a Landing Pad, one in Cold Fork"), 15);
-		return;
-	}
-	case 2402:
-		if (Since() > 1.0)
-		{
-			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
-			Check(Map && !Map->PickPad(TEXT("cold-fork"), TEXT("landing")), TEXT("f2: a region file's pad is not flown to"));
-			Check(Map && !Map->PickPad(TEXT("slag-pockets"), TEXT("Landing Pad 1")), TEXT("f2: a Landing Pad in a region not seen is not flown to"));
-			Check(Map && Map->PickPad(TEXT("cold-fork"), TEXT("Landing Pad 1")), TEXT("f2: picked Cold Fork's Landing Pad"));
-			if (Map) Map->ShowWorld();
-			Advance();
-		}
-		return;
-	case 2403:
-		if (Since() > 1.2) Shoot(TEXT("f2-01-menu"), TEXT("the flight menu: only the Landing Pads in regions been to, Cold Fork picked"));
-		return;
-	case 2404:
-		if (double CallAt = -1; FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsF2CallAt="), CallAt) && Now - SeatedAt < CallAt)
-		{
-			TimedOut(TEXT("f2: the call's moment"), CallAt + 30);
-			return;
-		}
-		if (const TSharedPtr<SAcWorldMap> Map = WorldMapWidget())
-		{
-			UE_LOG(LogAutocraft, Log, TEXT("k3: the Dropship called %.2f s after seating"), Now - SeatedAt);
-			F2Frames.Reset();
-			F2Gpu.Reset();
-			F2Stages.Reset();
-			F2Last = -1;
-			F2Switch = -1;
-			F2Prev = Now;
-			F2CallWorst = 0;
-			F2CallFrame = 0;
-			F2CallWorstAt = -1;
-			Map->Fly();
-			Advance();
-			return;
-		}
-		Check(false, TEXT("f2: the flight menu still open for FLY"));
-		Finish();
-		return;
-	case 2405:
-	case 2406:
-	case 2407:
-	case 2408:
-	case 2409:
-	case 2410:
-	case 2411:
-	{
-		// Every frame since the call (K3), then the frame times aboard (and
-		// the step out).
-		if (F2Prev > 0)
-		{
-			++F2CallFrame;
-			if (Now - F2Prev > F2CallWorst)
-			{
-				F2CallWorst = Now - F2Prev;
-				F2CallWorstAt = F2CallFrame;
-			}
-		}
-		F2Prev = Now;
-		if (Pilot->InFlight())
-		{
-			if (F2Last > 0)
-			{
-				F2Frames.Add((Now - F2Last) * 1000.0);
-				F2Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
-				F2Stages.Add(uint8(Pilot->FlightStage()));
-				if (F2Switch < 0 && Mmo->Ferry() && Mmo->MirrorIndex() == Mmo->Ferry()->ToIndex) F2Switch = F2Frames.Num() - 1;
-			}
-			F2Last = Now;
-		}
-		if (!Mmo->FlightRefusal().IsEmpty())
-		{
-			Check(false, FString::Printf(TEXT("f2: flight refused: %s"), *Mmo->FlightRefusal()));
-			Finish();
-			return;
-		}
-		const ac::Ferry::Plan* Pl = Pilot->FlightPlan();
-		const double Ft = Pilot->FlightSeconds();
-		if (!Pl)
-		{
-			TimedOut(TEXT("f2: the Dropship called"), 10);
-			return;
-		}
-		switch (T.Phase)
-		{
-		case 2405:
-			if (Ft >= Pl->descend * 0.62) Shoot(TEXT("f2-02-descend"), TEXT("the Dropship coming down onto the Landing Pad, the giant beyond"));
-			break;
-		case 2406:
-			if (Ft >= Pl->boardAt() + Pl->board * 0.45) Shoot(TEXT("f2-03-board"), TEXT("the Prospector walking up the ramp"));
-			break;
-		case 2407:
-			if (Ft >= Pl->liftAt() + Pl->lift * 0.75) Shoot(TEXT("f2-04-liftoff"), TEXT("the lift-off, dust racing out under it"));
-			break;
-		case 2408:
-			if (Ft >= Pl->turnsAt() + Pl->turns * 0.3) Shoot(TEXT("f2-05-turn"), TEXT("a banking turn, the ringed giant in view"));
-			break;
-		case 2409:
-			if (Ft >= Pl->dashAt() + Pl->dash * 0.45) Shoot(TEXT("f2-06-dash"), TEXT("the speed burst across the sky, clouds streaking"));
-			break;
-		case 2410:
-			if (Ft >= Pl->approachAt() + Pl->approach * 0.55 && Pilot->FlightStage() == EAcFlightStage::Approach)
-				Shoot(TEXT("f2-07-approach"), TEXT("the approach: slowing, coming down onto Cold Fork's Landing Pad"));
-			else if (Pilot->FlightStage() == EAcFlightStage::StepOut) Check(false, TEXT("f2: the approach passed before its picture"));
-			break;
-		default:
-			if (Pilot->FlightStage() == EAcFlightStage::StepOut && Ft >= Pl->total() + ac::Ferry::stepOut * 0.5)
-				Shoot(TEXT("f2-08-step-out"), TEXT("stepping out at the target pad"));
-			break;
-		}
-		TimedOut(TEXT("f2: the flight's moment"), 40);
-		return;
-	}
-	case 2412:
-		if (!Pilot->InFlight() && Seated() && Since() > 0.8)
-		{
-			// (-AcMmoShotsF2Twice: the second flight, back to the start's pad.)
-			const TCHAR* Into = F2Round == 0 ? TEXT("cold-fork") : TEXT("start");
-			Check(Here == Into, FString::Printf(TEXT("f2: down in %s"), *Where()));
-			Check(Sim->SeamlessChanges() >= 1 && Mmo->LastWasSeamless(), TEXT("f2: the approach's region change was seamless"));
-			Check(Mmo->LastTookPrepared(), TEXT("f2: the target region's mirror was made ahead"));
-			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
-			Check(Near && Near->Within(), TEXT("f2: standing on the target Landing Pad"));
-			// The frame times: the flight's and the region change's.
-			auto Pct = [](TArray<double> V, const double P) { V.Sort(); return V.Num() ? V[FMath::Clamp(int32(P * V.Num()), 0, V.Num() - 1)] : 0.0; };
-			double Sum = 0, Worst = 0, NearSwitch = 0;
-			for (const double F : F2Frames)
-			{
-				Sum += F;
-				Worst = FMath::Max(Worst, F);
-			}
-			if (F2Switch >= 0)
-				for (int32 I = FMath::Max(0, F2Switch - 5); I < FMath::Min(F2Frames.Num(), F2Switch + 6); ++I) NearSwitch = FMath::Max(NearSwitch, F2Frames[I]);
-			UE_LOG(LogAutocraft, Log, TEXT("f2 perf (flight %d): %d frames aboard: frame mean %.2f p50 %.2f p95 %.2f p99 %.2f max %.2f ms; round the region change (frame %d) max %.2f ms; gpu p50 %.2f p95 %.2f ms"),
-				F2Round + 1, F2Frames.Num(), F2Frames.Num() ? Sum / F2Frames.Num() : 0.0, Pct(F2Frames, 0.5), Pct(F2Frames, 0.95), Pct(F2Frames, 0.99), Worst, F2Switch,
-				NearSwitch, Pct(F2Gpu, 0.5), Pct(F2Gpu, 0.95));
-			UE_LOG(LogAutocraft, Log, TEXT("f2 perf (flight %d): worst frame since the call %.2f ms (frame %d of %d)"), F2Round + 1, F2CallWorst * 1000.0,
-				F2CallWorstAt, F2CallFrame);
-			for (int32 St = 1; St <= int32(EAcFlightStage::StepOut); ++St)
-			{
-				TArray<double> In;
-				for (int32 I = 0; I < F2Frames.Num(); ++I)
-					if (F2Stages[I] == St) In.Add(F2Frames[I]);
-				double Max = 0;
-				for (const double F : In) Max = FMath::Max(Max, F);
-				UE_LOG(LogAutocraft, Log, TEXT("f2 perf (flight %d): stage %d: %d frames, p50 %.2f p95 %.2f max %.2f ms"), F2Round + 1, St, In.Num(),
-					Pct(In, 0.5), Pct(In, 0.95), Max);
-			}
-			if (F2Round == 0) Shoot(TEXT("f2-09-landed"), TEXT("down on Cold Fork's Landing Pad, the pilot's view back, the Dropship lifting away"));
-			else Advance();
-		}
-		else TimedOut(TEXT("f2: down on Cold Fork's Landing Pad"), 15);
-		return;
-	case 2413:
-		// -AcMmoShotsF2Twice: the same flight's frame times again, back to the
-		// start's pad (what the first draw of the ship and its effects cost).
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsF2Twice")) && F2Round == 0)
-		{
-			if (Since() < 2.0) return;
-			F2Round = 1;
-			F2Frames.Reset();
-			F2Gpu.Reset();
-			F2Stages.Reset();
-			F2Last = -1;
-			F2Switch = -1;
-			F2Prev = Now;
-			F2CallWorst = 0;
-			F2CallFrame = 0;
-			F2CallWorstAt = -1;
-			FString Why;
-			Check(Mmo->Fly(TEXT("start"), TEXT("Landing Pad 1"), &Why), FString::Printf(TEXT("f2: the second flight asked for (%s)"), *Why));
-			T.Phase = 2405;
-			T.PhaseAt = Now;
-			return;
-		}
-		Check(Shots.Saved + Shots.Skipped == (F2Round ? 16 : 9),
-			FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
-		Finish();
-		return;
 	// MARK: -AcMmoShotsRig
 	// The rig screen on --dev-rig's home: each ask through the screen.
 	case 500:
@@ -6373,15 +6112,26 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			}, 30);
 			return;
 		case 2909:
-			// The Dropship: pads here and at Prospect Landing, then fly.
-			Stage(TEXT("ferry pad here\nferry pad start\nferry mh 200"), TEXT("a2: Landing Pads here and at Prospect Landing"),
+			// The Dropship: pads here and at Prospect Landing, the walk-in
+			// Dropship on this one with the pilot at its take-off button
+			// (C4, `ferry board`), then fly from its console.
+			Stage(TEXT("ferry pad here\nferry pad start\nferry mh 200\nferry board"), TEXT("a2: Landing Pads here and at Prospect Landing, aboard"),
 				[&] { return Since() > 2.0; }, 10);
 			return;
 		case 2910:
-			if (Since() < 1.0) return;
-			Check(OpenWorldMap(), TEXT("a2: the world map opened"));
+		{
+			const ac::net::Mirror* Mir = Mmo->Mirror();
+			const ac::Unit* Rider = Mir && Mir->driven() ? Mir->unit(*Mir->driven()) : nullptr;
+			const ac::Shuttle* Ship = Rider ? Mir->simulation().aboard(*Rider) : nullptr;
+			if (Since() < 1.0 || !Ship || !Ship->grounded())
+			{
+				TimedOut(TEXT("a2: aboard the Dropship on the pad"), 20);
+				return;
+			}
+			Check(OpenWorldMap(), TEXT("a2: the flight menu opened at the console"));
 			Advance();
 			return;
+		}
 		case 2911:
 		{
 			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();

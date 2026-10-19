@@ -724,38 +724,12 @@ bool FAcAudioMomentsTest::RunTest(const FString&)
 	return true;
 }
 
-/// A pad flight and the jet pack (F1b): each moment's sound in the ear, the
-/// cruise loop fading with the flight, the MMORPG Prospector's jet puff (the
-/// strategy game's jumpers keep theirs) and the dry click, at most every 0.8 s.
+/// The jet pack (F1b): the MMORPG Prospector's jet puff (the strategy game's
+/// jumpers keep theirs) and the dry click, at most every 0.8 s.
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcAudioFlightTest, "Autocraft.Audio.Rules.Flight", Flags)
 bool FAcAudioFlightTest::RunTest(const FString&)
 {
 	FAcAudioRules R;
-	R.Flight(FAcAudioRules::EFlight::Spool);
-	R.Flight(FAcAudioRules::EFlight::LiftOff);
-	R.Flight(FAcAudioRules::EFlight::Retro);
-	R.Flight(FAcAudioRules::EFlight::Touchdown);
-	std::vector<FAcSoundCue> Cues = R.TakeCues();
-	for (const char* N : {"flspool", "flroar", "flretro", "fltouch"})
-	{
-		TestEqual(FString::Printf(TEXT("flight: %s"), UTF8_TO_TCHAR(N)), Count(Cues, N), 1);
-		if (const FAcSoundCue* C = First(Cues, N)) TestTrue(TEXT("in the ear"), C->Pool == EAcSoundPool::InEar);
-	}
-	ac::GameState Shown;
-	std::vector<FAcLoopWant> Ls;
-	R.Cruise(true);
-	R.Loops(Shown, 0.5, Ls);
-	const FAcLoopWant* Wind = Loop(Ls, "flcruise");
-	TestTrue(TEXT("the cruise fades in"), Wind && Wind->Volume > 0.f && Wind->Volume < AcSound::FlightCruiseGain);
-	Ls.clear();
-	R.Loops(Shown, 1.0, Ls);
-	Wind = Loop(Ls, "flcruise");
-	TestTrue(TEXT("then plays whole"), Wind && FMath::IsNearlyEqual(Wind->Volume, AcSound::FlightCruiseGain));
-	R.Cruise(false);
-	Ls.clear();
-	R.Loops(Shown, 1.0, Ls);
-	TestTrue(TEXT("and goes when the ship comes down"), Loop(Ls, "flcruise") == nullptr);
-
 	// The jet pack: a puff for the MMORPG's Prospector, a jet for a Comet.
 	ac::GameState S;
 	S.players.resize(1);
@@ -766,7 +740,7 @@ bool FAcAudioFlightTest::RunTest(const FString&)
 	S.units[0].jumpFrom = ac::Vec2(1, 1);
 	S.units[1].jumpFrom = ac::Vec2(2, 2);
 	R.Watch(S);
-	Cues = R.TakeCues();
+	const std::vector<FAcSoundCue> Cues = R.TakeCues();
 	TestEqual(TEXT("the Prospector's puff"), Count(Cues, "jetpuff"), 1);
 	TestEqual(TEXT("the Comet's jet"), Count(Cues, "jetup"), 1);
 	R.JetDry(10.0);

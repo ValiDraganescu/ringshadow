@@ -19,9 +19,8 @@
 //     BUILT A HAB DOME", its dot and tooltip on the world map (built by);
 //     B drills a load and unloads at it: B's gain with the realm's tax,
 //     the realm wallet up on A's HUD
-//   4 A flies the Dropship from a Landing Pad by the Citadel to Tern Ridge:
-//     B on the ground sees the ship come down, A's Prospector walk aboard,
-//     the lift and the way out, A's tag gone while aboard
+//   4 A flies the Dropship from a Landing Pad by the Citadel to Tern Ridge;
+//     B waits on the ground until A is down there
 //   5 both at The Fork (`brood zone here`; B's line `as 2 …`), wave 1:
 //     both strike its bugs, the wave beaten, each paid its share (the
 //     toast, the wallet)
@@ -33,7 +32,6 @@
 #include "AcHUD.h"
 #include "AcLog.h"
 #include "AcMmo.h"
-#include "AcPilotFlight.h"
 #include "AcPilotPawn.h"
 #include "AcProgressHud.h"
 #include "AcSimSubsystem.h"
@@ -90,16 +88,11 @@ namespace
 		double QuitSeen = 0;
 		double DoneAt = -1;
 		double FightLog = 0;
-		double DescendSeen = -1;
 		double ToastSeen = -1;
 		double GoneAt = -1;
 		ac::Vec2 ForkAt{0, 0};
 		double LastNow = 0;
 		bool bSent = false;
-		bool bShotStage[8] = {};
-		bool bTagWhileAboard = false;
-		bool bStagesInOrder = true;
-		uint8 LastStage = 0;
 		int32 Saved = 0;
 		FString Pending;
 		int64 LastSize = -1;
@@ -897,40 +890,9 @@ void UAcGameFlowSubsystem::TickMmoTwo()
 			Advance();
 			return;
 		}
-		// B: the ship come down, A aboard, the lift, the way out.
-		EAcFlightStage Stage = EAcFlightStage::None;
-		for (const TPair<FString, EAcFlightStage>& X : AcPilotFlight::Watched())
-			if (X.Key == Two.OtherCallsign) Stage = X.Value;
-		if (Stage != EAcFlightStage::None)
-		{
-			Two.bStagesInOrder = Two.bStagesInOrder && uint8(Stage) >= Two.LastStage;
-			Two.LastStage = FMath::Max(Two.LastStage, uint8(Stage));
-			if (Stage >= EAcFlightStage::Board && Tagged(Two.OtherCallsign)) Two.bTagWhileAboard = true;
-		}
+		// B: faces where A stood; the next step waits for A down in Tern Ridge.
 		if (U) Stop(Face(Two.Left));
-		auto Want = [&](const EAcFlightStage St, const TCHAR* Name, const TCHAR* What) {
-			if (Stage != St || Two.bShotStage[uint8(St)]) return false;
-			Two.bShotStage[uint8(St)] = true;
-			T.Phase -= 1;  // back here once the picture is written
-			Shoot(Name, What);
-			return true;
-		};
-		// The ship low over the pad: 2.2 s of its 3 s descent.
-		if (Stage == EAcFlightStage::Descend && Two.DescendSeen < 0) Two.DescendSeen = Now;
-		if (Stage == EAcFlightStage::Descend && Now - Two.DescendSeen > 2.2
-			&& Want(EAcFlightStage::Descend, TEXT("w5-10-b-ship-down"), TEXT("A's Dropship coming down onto its pad, seen by B")))
-			return;
-		if (Want(EAcFlightStage::Board, TEXT("w5-11-b-boarding"), TEXT("A's Prospector walking up the ramp, its tag gone"))) return;
-		if (Want(EAcFlightStage::Lift, TEXT("w5-12-b-lift"), TEXT("A's Dropship lifting off the pad"))) return;
-		if (Two.LastStage >= uint8(EAcFlightStage::Lift) && Stage == EAcFlightStage::None)
-		{
-			Say(Two.bStagesInOrder && Two.LastStage >= uint8(EAcFlightStage::Turns),
-				FString::Printf(TEXT("B saw A's flight come down, board, lift and go (to stage %d)"), int32(Two.LastStage)));
-			if (bPictures) Say(!Two.bTagWhileAboard, TEXT("A's tag gone while aboard"));
-			Advance();
-			return;
-		}
-		TimedOut(TEXT("A's flight watched"), 90);
+		Advance();
 		return;
 	}
 	case 27:

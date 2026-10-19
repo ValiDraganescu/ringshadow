@@ -194,7 +194,8 @@ void UAcGameFlowSubsystem::TickMmoHudFlow(const FString& Step)
 			Check(!Open->PickPad(TEXT("glass-flats"), TEXT("Landing Pad 1")), TEXT("no Landing Pad in Glass Flats: nothing to pick"));
 			Check(Open->PickPad(TEXT("slag-pockets"), TEXT("Landing Pad 1")) && PressFlowKey(EKeys::Up) && Open->PickedRegion() == TEXT("tern-ridge"),
 				TEXT("a clicked pick moves with the keys (Slag Pockets, Up: Tern Ridge)"));
-			// Slow frames from here, as mmofly.
+			// Slow frames from here: the RegionChange and the new region's
+			// first snapshot are read in the same frame.
 			Mmo->TestReadEvery = 0.2;
 			PressFlowKey(EKeys::Enter);
 			Check(!WorldMapWidget().IsValid(), TEXT("Return asked for the flight and closed the map"));

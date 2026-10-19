@@ -80,6 +80,8 @@ public:
 	ac::Wipers Wiper;
 	/// The stage last frame (-1: none yet), the last dust ring and cloud puff (real s).
 	int32 LastStage = -1;
+	/// The stage last put on the music's cue timeline (-1: not ridden).
+	int32 CuedStage = -1;
 	double LastRing = -1, LastCloud = -1;
 	/// The real times of the last presses.
 	double RampPressAt = -1e9, TakeoffPressAt = -1e9;

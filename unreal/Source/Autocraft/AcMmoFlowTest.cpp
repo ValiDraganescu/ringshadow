@@ -8,15 +8,9 @@
 //
 //   mmocross  drive east (the move keys and the mouse's yaw, as the input
 //             actions set them) over the start region's edge into Tern Ridge
-//             (here and in mmofly: the wallet shown never dips over the
-//             travel and no gain flashes)
-//   mmofly    F2's Dropship: Landing Pads under the pilot and in Cold Fork
-//             (the `ferry` dev lines), M's flight menu (the region file's pad
-//             not pickable), Cold Fork's Landing Pad picked and FLY pressed;
-//             the flight shown (AcPilotFlight.h): descend, board, lift,
-//             turns, dash, approach and step out in turn, never a fade, the
-//             approach's region change seamless, control back on Cold Fork's
-//             Landing Pad (-AcMmoFlightShots=DIR: a PNG of four stages)
+//             (the wallet shown never dips over the travel and no gain
+//             flashes)
+//   (The Dropship's flow is now `mmoferry`, AcMmoFerryFlowTest.cpp.)
 //   mmohandback  Esc (a hand back) then a take again: the pawn never dives
 //             back in on an old snapshot, nor drops a unit just taken
 //   mmoreenter the world saved in -AcMmoDir entered from the home screen
@@ -37,7 +31,7 @@
 // -AcMmoDir, or -AcSaveDir's `mmo` folder), never the player's.
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
-//   ... -game -RenderOffscreen ... -AcFlowTest=mmocross,mmofly
+//   ... -game -RenderOffscreen ... -AcFlowTest=mmocross,mmohandback
 #include "AcGameFlow.h"
 
 #include "AcHUD.h"
@@ -55,12 +49,6 @@
 #include "Simulation.h"
 
 #include "Camera/CameraComponent.h"
-#include "Camera/PlayerCameraManager.h"
-#include "HAL/FileManager.h"
-#include "Misc/CommandLine.h"
-#include "Misc/Parse.h"
-#include "Misc/Paths.h"
-#include "UnrealClient.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/PlatformTime.h"
@@ -84,24 +72,7 @@ namespace
 		return nullptr;
 	}
 
-	/// mmofly: the flight as the pilot pawn showed it (AcPilotFlight.h).
-	struct FFlightSeen
-	{
-		/// When each stage was first seen (seconds; < 0: never), by
-		/// `EAcFlightStage`.
-		double Seen[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
-		/// The most the picture was faded aboard (F2: never).
-		double MostFade = 0;
-		/// Seamless region changes before FLY.
-		int32 SeamlessBefore = 0;
-		/// The Landing Pads asked of the server.
-		bool bPadsAsked = false;
-		/// -AcMmoFlightShots=DIR: the pictures taken.
-		bool bShot[8] = {};
-	};
-	FFlightSeen FlightSeen;
-
-	/// mmocross, mmofly: the wallet the HUD showed over the travel
+	/// mmocross: the wallet the HUD showed over the travel
 	/// (docs/mmorpg-m5.md, E3): never below the stock it set out with, and
 	/// no gain flashed (no income on the way).
 	struct FWalletSeen
@@ -116,18 +87,6 @@ namespace
 	{
 		const AAcHUD* Hud = AAcHUD::Get(Ctx);
 		return Hud && Hud->Root() ? Hud->Root()->ResourceBar().Get() : nullptr;
-	}
-
-	void FlightShot(bool& bTaken, const TCHAR* Name)
-	{
-		FString Dir;
-		if (bTaken || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoFlightShots="), Dir) || Dir.IsEmpty()) return;
-		bTaken = true;
-		Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir);
-		IFileManager::Get().MakeDirectory(*Dir, true);
-		const FString Path = FPaths::Combine(Dir, FString(Name) + TEXT(".png"));
-		FScreenshotRequest::RequestScreenshot(Path, /*bShowUI*/ true, /*bAddFilenameSuffix*/ false);
-		UE_LOG(LogAutocraft, Display, TEXT("flowtest: flight shot %s"), *Path);
 	}
 
 	FString KeyOf(const FAcMmoClient* Mmo)
@@ -175,8 +134,7 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 	FAcMmoClient* Mmo = Sim ? Sim->MmoClient() : nullptr;
 	AAcPilotPawn* Pilot = AAcPilotPawn::Find(this);
 	const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
-	const bool bFly = Step == TEXT("mmofly");
-	const FString Into = bFly ? TEXT("cold-fork") : TEXT("tern-ridge");
+	const FString Into = TEXT("tern-ridge");
 	auto Finish = [&] {
 		if (Mmo) Mmo->TestReadEvery = 0;
 		if (Pilot) Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
@@ -186,9 +144,9 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 	const bool bHand = Step == TEXT("mmohandback");
 	const bool bResume = Step == TEXT("mmoresume");
 	const bool bReenter = Step == TEXT("mmoreenter");
-	if (Step != TEXT("mmocross") && Step != TEXT("mmofly") && !bHand && !bResume && !bReenter)
+	if (Step != TEXT("mmocross") && !bHand && !bResume && !bReenter)
 	{
-		Check(false, FString::Printf(TEXT("no MMORPG step %s (mmocross, mmofly, mmohandback, mmoresume, mmoreenter)"), *Step));
+		Check(false, FString::Printf(TEXT("no MMORPG step %s (mmocross, mmohandback, mmoresume, mmoreenter)"), *Step));
 		NextStep();
 		return;
 	}
@@ -464,19 +422,6 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		}
 	}
 
-	if (bFly && Pilot && (T.Phase == 3 || T.Phase == 4))
-	{
-		// The flight as shown: each stage first seen, the fade, a picture of
-		// four stages with -AcMmoFlightShots=DIR.
-		FFlightSeen& F = FlightSeen;
-		const int32 St = int32(Pilot->FlightStage());
-		if (St > 0 && St < 8 && F.Seen[St] < 0) F.Seen[St] = Now;
-		if (const APlayerCameraManager* Manager = PC ? PC->PlayerCameraManager.Get() : nullptr; Manager && Manager->bEnableFading)
-			F.MostFade = FMath::Max(F.MostFade, double(Manager->FadeAmount));
-		static const TCHAR* Names[8] = {nullptr, TEXT("1-descend"), nullptr, TEXT("2-lift"), nullptr, TEXT("3-dash"), TEXT("4-approach"), nullptr};
-		if (St > 0 && St < 8 && Names[St] && Now - F.Seen[St] > 0.8) FlightShot(F.bShot[St], Names[St]);
-	}
-
 	switch (T.Phase)
 	{
 	case 0:
@@ -511,54 +456,6 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		}
 		return;
 	case 2:
-		if (bFly)
-		{
-			// The dive into the unit over first: the flight leaves the pilot's view.
-			if (Pilot && Pilot->InDive() && Since() < ArriveSeconds) return;
-			// A Landing Pad under the pilot and one in Cold Fork (F2: the
-			// realm's buildings; the dev lines put them up finished).
-			if (!FlightSeen.bPadsAsked)
-			{
-				FlightSeen = FFlightSeen();
-				FlightSeen.bPadsAsked = true;
-				Check(Mmo->DevClock(TEXT("ferry pad here\nferry pad cold-fork")), TEXT("Landing Pads here and in Cold Fork asked for"));
-				return;
-			}
-			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
-			bool bThere = false;
-			if (const ac::net::WorldMessage* W = Mmo->World())
-				for (const ac::net::WorldMessage::Region& G : W->regions)
-					if (Utf(G.id) == Into)
-						for (const ac::net::WorldMessage::Pad& Q : G.pads) bThere |= Q.building.has_value();
-			if (!(Near && Near->Within() && bThere))
-			{
-				if (Since() > 10)
-				{
-					Check(false, TEXT("on a Landing Pad, one in Cold Fork, within 10 s"));
-					Finish();
-				}
-				return;
-			}
-			// M, a Landing Pad picked, FLY: as the player does it.
-			ToggleWorldMap();
-			const TSharedPtr<SAcWorldMap> Map = WorldMapWidget();
-			Check(Map.IsValid(), TEXT("M opened the world map"));
-			if (!Map)
-			{
-				Finish();
-				return;
-			}
-			Check(!Map->PickPad(Into, TEXT("landing")), TEXT("the region file's pad is not flown to"));
-			Check(Map->PickPad(Into, TEXT("Landing Pad 1")), TEXT("picked Cold Fork's Landing Pad"));
-			// Slow frames from here: the RegionChange and the new region's
-			// first snapshot are read in the same frame (the hand check's case).
-			Mmo->TestReadEvery = 0.2;
-			FlightSeen.SeamlessBefore = Sim->SeamlessChanges();
-			Map->Fly();
-			Check(!WorldMapWidget().IsValid(), TEXT("FLY asked for the flight and closed the map"));
-			Advance();
-			return;
-		}
 		// East along the pad's row, round the well at (128, 50) on its north
 		// side, to the east edge's passage (41–55, W4): region cells.
 		if (const ac::net::Mirror* M = Mmo ? Mmo->Mirror() : nullptr; M && M->driven() && Pilot)
@@ -569,7 +466,9 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 				const double X = U->position.x - B.minX;
 				const ac::Vec2 To = X < 117 ? ac::Vec2(118, 48) : X < 123 ? ac::Vec2(124, 44) : ac::Vec2(B.maxX - B.minX + 4, 44);
 				Pilot->SetTestInput(FVector2D(0, -1), std::atan2(B.minZ + To.y - U->position.y, B.minX + To.x - U->position.x));
-				// Slow frames near the edge (see mmofly).
+				// Slow frames near the edge: the RegionChange and the new
+				// region's first snapshot are read in the same frame (the hand
+				// check's case).
 				if (U->position.x > B.maxX - 8) Mmo->TestReadEvery = 0.2;
 			}
 		}
@@ -585,30 +484,17 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		}
 		return;
 	case 3:
-		// The flight: lift-off, then the landing's RegionChange.
-		if (bFly && Mmo && Mmo->FlyingTo())
-		{
-			Check(Utf(Mmo->FlyingTo()->id) == Into, FString::Printf(TEXT("flying to %s"), *Utf(Mmo->FlyingTo()->id)));
-			Advance();
-			return;
-		}
-		if (!bFly || Since() > 5)
-		{
-			if (bFly) Check(false, TEXT("lifted off within 5 s"));
-			Advance();
-		}
+		Advance();
 		return;
 	case 4:
-		if (bFly && Mmo && Mmo->Visit() <= MmoVisitWas && Since() < TravelSeconds) return;
 		// Arrived: seated again, the view on the new unit (a moment to settle).
 		if (Mmo && !Mmo->Travelling()) Mmo->TestReadEvery = 0;
-		// (A flight: once it stepped out, control back.)
-		if (Seated() && Since() > 0.5 && ViewOff() < 12.0 && !(bFly && Pilot->InFlight()))
+		if (Seated() && Since() > 0.5 && ViewOff() < 12.0)
 		{
 			Advance();
 			return;
 		}
-		if (Since() > (bFly ? TravelSeconds : ArriveSeconds))
+		if (Since() > ArriveSeconds)
 		{
 			const AAcRtsPawn* Rts = AAcRtsPawn::Get(this);
 			Check(false, FString::Printf(TEXT("seated in the new region within %.0f s (pilot %s #%lld, server #%lld, travelling %d, pawn %s, view %.1f cells off)"),
@@ -665,26 +551,6 @@ void UAcGameFlowSubsystem::TickMmoFlow(const FString& Step)
 		else
 		{
 			Check(false, TEXT("a HUD"));
-		}
-		if (bFly)
-		{
-			const std::optional<FAcMmoClient::FPadNear> Near = Mmo->NearestPad();
-			Check(Near && Near->Within(), TEXT("on Cold Fork's Landing Pad"));
-			// The flight shown (AcPilotFlight.h): every stage, in order.
-			const FFlightSeen& F = FlightSeen;
-			FString Stages;
-			bool bAll = true, bOrder = true;
-			for (int32 St = 1; St <= int32(EAcFlightStage::StepOut); ++St)
-			{
-				bAll &= F.Seen[St] >= 0;
-				if (St > 1) bOrder &= F.Seen[St] >= F.Seen[St - 1];
-				Stages += FString::Printf(TEXT(" %d:%s"), St, F.Seen[St] >= 0 ? TEXT("seen") : TEXT("missed"));
-			}
-			Check(bAll, FString::Printf(TEXT("the flight shown, every stage:%s"), *Stages));
-			Check(bOrder, TEXT("descend, board, lift, turns, dash, approach, step out: in that order"));
-			Check(F.MostFade <= 0.001, FString::Printf(TEXT("never a fade aboard (the most %.2f)"), F.MostFade));
-			Check(Sim->SeamlessChanges() > F.SeamlessBefore && Mmo->LastWasSeamless(), TEXT("the approach's region change was seamless"));
-			Check(!Pilot->InFlight() && Pilot->FlightStage() == EAcFlightStage::None, TEXT("stepped out: control back"));
 		}
 		Finish();
 		return;

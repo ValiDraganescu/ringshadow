@@ -712,9 +712,7 @@ void FAcMmoClient::Tick(const double Now)
 	}
 	// The driven unit put right by what the server said.
 	if (ac::net::Mirror* Mm = Net->mirror()) Predictor.reconcile(*Mm);
-	// The regions round the pilot's, made ahead (W4); the Dropship's flight
-	// and its target region (F2).
-	FollowFerry(Now);
+	// The regions round the pilot's, made ahead (W4).
 	PrepareAround();
 	ReadReplies();
 	for (ac::GameEvent& E : Net->events) Events.push_back(std::move(E));
@@ -1525,12 +1523,13 @@ void FAcMmoClient::OnRegionChange(const ac::net::RegionChange& Change)
 			}
 		}
 	}
-	// F2: the Dropship's approach into the target region: seamless too. Its
-	// map and mirror were made ahead (`PrepareAround`); the world frame moves
-	// by the regions' distance, the ship flies on in Unreal space; nothing is
-	// driven until the touch down (the first snapshot that shows the
-	// Prospector: adopted, `bAdopt`).
-	if (W && W->ferry && Net->mirror())
+	// C4: riding the walk-in Dropship into the target region (`flyingTo`,
+	// set from the lift to the touch down): seamless too. Its map and mirror
+	// were made ahead (`PrepareAround`); the world frame moves by the
+	// regions' distance, the ship flies on in Unreal space (AcShuttleView
+	// carries it over the seam) with the pilot still driving its rider, now
+	// in the ship's frame on the target pad.
+	if (W && W->flyingTo && Net->mirror())
 	{
 		const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(*W, {});
 		const ac::net::atlas::Place* From = ac::net::atlas::placeOf(Places, MirrorIndex());
@@ -1540,9 +1539,9 @@ void FAcMmoClient::OnRegionChange(const ac::net::RegionChange& Change)
 			Interp.reset();
 			Predictor.reset();
 			LastBlend = 0;
-			WantedUnit = std::nullopt;
+			WantedUnit = Change.driven;
 			bAutoTaken = true;
-			bAdopt = true;
+			bAdopt = false;
 			AdoptOld = std::nullopt;
 			bArriving = true;
 			SeenMirror = Net->mirror();
@@ -1551,7 +1550,7 @@ void FAcMmoClient::OnRegionChange(const ac::net::RegionChange& Change)
 			SeamlessShift = To->centre() - From->centre();
 			bLastSeamless = true;
 			MirrorRegion = Change.regionId;
-			UE_LOG(LogAutocraft, Log, TEXT("mmo: region change %lld: the Dropship comes in over %s (%s), seamless (%+.0f, %+.0f cells, mirror %s)"),
+			UE_LOG(LogAutocraft, Log, TEXT("mmo: region change %lld: the Dropship flies into %s (%s), seamless (%+.0f, %+.0f cells, mirror %s)"),
 				(long long)Change.visit, *Text(Change.regionId), *Text(Change.region.mapName), SeamlessShift->x, SeamlessShift->y,
 				Net->tookPrepared() ? TEXT("made ahead") : TEXT("built now"));
 			return;

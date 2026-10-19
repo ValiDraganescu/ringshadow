@@ -3,7 +3,6 @@
 #include "AcHUD.h"
 #include "AcLog.h"
 #include "AcMmo.h"
-#include "AcPilotPawn.h"
 #include "AcPilotText.h"
 #include "AcProgressHud.h"
 #include "AcRtsPawn.h"
@@ -91,7 +90,7 @@ namespace
 	/// (docs/mmorpg-shots.md #6): the region, the pilot's Prospector (its
 	/// level, health and load) and what the region holds; in flight, where
 	/// to. The card well's lines go with it (`SetMmoKeys`).
-	TOptional<FAcCardInfo> MmoSummary(const UAcSimSubsystem& Sim, const AAcPilotPawn* Pawn, FString& OutHeader, TArray<FString>& OutLines)
+	TOptional<FAcCardInfo> MmoSummary(const UAcSimSubsystem& Sim, FString& OutHeader, TArray<FString>& OutLines)
 	{
 		const FAcMmoClient* Mmo = Sim.MmoClient();
 		const ac::net::WorldMessage::Region* Here = Mmo ? Mmo->Here() : nullptr;
@@ -102,12 +101,12 @@ namespace
 		Info.Icon = FAcConsoleInfo::IconName((int32)ac::UnitKind::prospector);
 		Info.Level = AcPilotText::Level(S, ac::UnitKind::prospector);
 		const ac::net::WorldMessage::Region* To = Mmo->FlyingTo();
-		if (To || (Pawn && Pawn->InFlight()))
+		if (To)
 		{
 			// In flight: nothing to click or drive until it is down.
-			const ac::net::WorldMessage::Region* Where = To ? To : Here;
+			const ac::net::WorldMessage::Region* Where = To;
 			Info.Title = FString::Printf(TEXT("Aboard the Dropship to %s"), *Utf(Where->name));
-			Info.Status = To ? Utf(ac::title(Where->style)) : FString(TEXT("Coming down on the Landing Pad"));
+			Info.Status = Utf(ac::title(Where->style));
 			Info.Hp = Info.MaxHp = ac::Rules::hp(ac::UnitKind::prospector);
 			OutHeader = TEXT("IN FLIGHT");
 			OutLines = {FString::Printf(TEXT("To %s"), *Utf(Where->name)), TEXT("The Dropship carries the Prospector"), TEXT("Its controls come back at the pad")};
@@ -329,7 +328,7 @@ void UAcConsoleSubsystem::OnFrame(const FAcFrame& Frame)
 	// pilot's Prospector; in flight, the flight.
 	FString MmoHeader;
 	TArray<FString> MmoLines;
-	if (!Info && Sim->IsMmo()) Info = MmoSummary(*Sim, AAcPilotPawn::Find(this), MmoHeader, MmoLines);
+	if (!Info && Sim->IsMmo()) Info = MmoSummary(*Sim, MmoHeader, MmoLines);
 	// The MMORPG mode: the level is the Prospector's progression (the server's).
 	if (Info && Info->Level && Sim->IsMmo() && Sim->MmoClient())
 	{

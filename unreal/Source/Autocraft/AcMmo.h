@@ -500,22 +500,6 @@ public:
 	/// Spacedock, nothing with Ringwalker; the server's price). Unset: no
 	/// world yet, or no such region.
 	std::optional<int64> FlightPrice(const FString& RegionId) const;
-	/// F2: the Dropship's flight while the pilot is aboard (from the World
-	/// message's ferry): the real-seconds clock at the call (`StartWall`,
-	/// `FPlatformTime::Seconds`), its stages, the boarding pad and the target
-	/// pad in Unreal space (the session's frame, AcSpace.h; on the ground,
-	/// heights left to the drawing), the target region. Unset: on the ground.
-	struct FFerry
-	{
-		double StartWall = 0;
-		ac::Ferry::Plan Plan;
-		FVector From = FVector::ZeroVector;
-		TOptional<FVector> To;
-		int64 ToIndex = INDEX_NONE;
-		FString ToRegion;
-		FString Pad;
-	};
-	const TOptional<FFerry>& Ferry() const { return FerryNow; }
 	/// The Unreal point (session frame, z 0) of region cells `At` of region
 	/// `Index` of the World message: its built map's ground (unset: that
 	/// map is not built yet, and not the mirror's).
@@ -633,10 +617,6 @@ private:
 	/// landing) as the one wanted, once, if it is not `AdoptOld`.
 	bool bAdopt = false;
 	std::optional<int64> AdoptOld;
-	/// F2: the Dropship's flight (`Ferry`), followed from the World messages.
-	TOptional<FFerry> FerryNow;
-	double FerryElapsedSeen = -1;
-	void FollowFerry(double Now);
 	double LastRead = 0;
 	/// The requests in flight: id → the unit asked for (none: a hand back).
 	TMap<uint32, std::optional<int64>> Asked;
