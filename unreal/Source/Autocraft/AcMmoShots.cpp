@@ -287,6 +287,20 @@
 //   05-NN walking back west through it, a frame every 0.4 s, chase camera
 //   then the world map: 20 the world, 21 Prospect Landing filling it
 //
+// -AcMmoShotsB4 (at 11:00, clear weather, every region been to): where the
+// palettes meet (GROUND-LOOK.md "Where palettes meet"), a free camera over
+// the nine regions' ground, the pilot at Prospect Landing, DIR/b4-NN-moment.png:
+//   01/02 Rust Hollow's north passage into Ashen Shelf (rust | ash), at a
+//         pilot's eye (2 cells up) and from 14 cells up behind it
+//   03/04 Brine Pans' east passage into Slag Pockets (salt | slag)
+//   05/06 Cold Fork's east passage into Glass Flats (frost | glass)
+//   07/08 Prospect Landing's south passage into Brine Pans (plain | salt)
+//   09 Prospect Landing's north-west corner from 130 cells straight up
+//      (plain, frost, rust, ash)   10 its south-west (plain, rust, ochre,
+//      salt)   11 its south-east (plain, plain, salt, slag)
+// With -AcMmoShotsB4Perf=S, then each view again, the GPU timed over S s
+// (stats shown, no pictures), logged as `b4 perf:`.
+//
 // -AcMmoShotsS3 (with -AcMmoDevRig): daylight sight (docs/creatures.md S3),
 // by day the pilot's whole region seen and told, DIR/s3-NN-moment.png, and
 // the frame and GPU times over -AcMmoShotsS3Perf=S s (8) each, logged as
@@ -661,6 +675,8 @@ namespace
 		double Game = 0, Render = 0, Gpu = 0;
 	};
 	TArray<FW4Sample> W4Walk;
+	/// -AcMmoShotsB4Perf: the GPU's frame times at a view, ms.
+	TArray<double> B4Gpu;
 	double W4LastAt = -1;
 	double W4ShotAt = -1;
 	int32 W4Frames = 0;
@@ -1224,8 +1240,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
 			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen)) FCommandLine::Append(TEXT(" -AcMmoDevSeen=start"));
 		}
-		// -AcMmoShotsW4: late morning, clear, every region been to (the map).
-		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4")))
+		// -AcMmoShotsW4 and B4: late morning, clear, every region been to (the map).
+		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB4")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -1334,6 +1350,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))) T.Phase = 1900;
 			// -AcMmoShotsW4: seamless regions (2000-2026).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4"))) T.Phase = 2000;
+			// -AcMmoShotsB4: where the palettes meet (3800-3803).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB4"))) T.Phase = 3800;
 			// -AcMmoShotsL1: KSTR's next goal (2100-2112).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsL1"))) T.Phase = 2100;
 			// -AcMmoShotsU1: the HUD decluttered (2200-2216).
@@ -5172,6 +5190,172 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		ToggleWorldMap();
 		if (W4Cam.IsValid()) W4Cam->Destroy();
 		Check(Shots.Saved + Shots.Skipped >= 9 + 6 + 6 + 2, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsB4
+	case 3800:
+	{
+		// Every ground set round Prospect Landing built and its scenery laid
+		// (a few seconds after: planned on a worker, added a step a frame).
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (!(U && Mmo->World() && Sets >= 9 && Ready == Sets && Since() > 12.0))
+		{
+			TimedOut(TEXT("b4: the nine regions' ground built"), 150);
+			return;
+		}
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(0, ECVF_SetByCode);
+		if (!W4Cam.IsValid())
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+			W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+			W4Cam->GetCameraComponent()->SetFieldOfView(70.f);
+		}
+		W4Next = 0;
+		W4Set = false;
+		Advance();
+		return;
+	}
+	case 3801:
+	case 3803:
+	{
+		// The views, each from its region's file: a passage (the widest
+		// opening of an edge, its middle) or a corner of Prospect Landing.
+		// 3801 pictures them; 3803 (-AcMmoShotsB4Perf=S) times the GPU at each.
+		struct FView
+		{
+			const TCHAR* Name;
+			const TCHAR* What;
+			const char* Region;
+			int32 Edge;      // 0 N, 1 E, 2 S, 3 W; -1 a corner
+			int32 Corner;    // 0 NE, 1 SE, 2 SW, 3 NW
+			bool bHigh;
+		};
+		static const FView Views[] = {
+			{TEXT("b4-01-eye-rust-ash"), TEXT("Rust Hollow's north passage into Ashen Shelf at a pilot's eye: rust meets ash"), "rust-hollow", 0, 0, false},
+			{TEXT("b4-02-high-rust-ash"), TEXT("the same from 14 cells up: the band across the passage"), "rust-hollow", 0, 0, true},
+			{TEXT("b4-03-eye-salt-slag"), TEXT("Brine Pans' east passage into Slag Pockets at a pilot's eye: salt meets slag"), "brine-pans", 1, 0, false},
+			{TEXT("b4-04-high-salt-slag"), TEXT("the same from 14 cells up"), "brine-pans", 1, 0, true},
+			{TEXT("b4-05-eye-frost-glass"), TEXT("Cold Fork's east passage into Glass Flats at a pilot's eye: frost meets glass"), "cold-fork", 1, 0, false},
+			{TEXT("b4-06-high-frost-glass"), TEXT("the same from 14 cells up"), "cold-fork", 1, 0, true},
+			{TEXT("b4-07-eye-plain-salt"), TEXT("Prospect Landing's south passage into Brine Pans at a pilot's eye: plain meets salt"), "start", 2, 0, false},
+			{TEXT("b4-08-high-plain-salt"), TEXT("the same from 14 cells up"), "start", 2, 0, true},
+			{TEXT("b4-09-top-start-nw"), TEXT("Prospect Landing's north-west corner from above: plain, frost, rust and ash meet"), "start", -1, 3, false},
+			{TEXT("b4-10-top-start-sw"), TEXT("its south-west corner from above: plain, rust, ochre and salt"), "start", -1, 2, false},
+			{TEXT("b4-11-top-start-se"), TEXT("its south-east corner from above: plain, plain, salt and slag"), "start", -1, 1, false},
+		};
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		if (!Pc || !Terrain || !W4Cam.IsValid()) return;
+		const bool bPerf = T.Phase == 3803;
+		double PerfFor = 0;
+		FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsB4Perf="), PerfFor);
+		if (W4Next >= int32(UE_ARRAY_COUNT(Views)))
+		{
+			// Pictured: time them (stats on: not in the pictures), or done.
+			W4Next = 0;
+			W4Set = false;
+			T.Phase = !bPerf && PerfFor > 0 ? 3803 : 3802;
+			T.PhaseAt = Now;
+			FAcBenchMeter::ShowStats(GetWorld(), T.Phase == 3803, true);
+			return;
+		}
+		const FView& V = Views[W4Next];
+		if (!W4Set)
+		{
+			const ac::net::WorldMessage& W = *Mmo->World();
+			const std::vector<ac::net::atlas::Place> Places = ac::net::atlas::layout(W, {});
+			const ac::net::atlas::Place* There = nullptr;
+			for (const ac::net::atlas::Place& P : Places)
+				if (P.id == V.Region) There = &P;
+			if (!There)
+			{
+				Check(false, FString::Printf(TEXT("b4: %hs in the world"), V.Region));
+				W4Next += 1;
+				return;
+			}
+			// The ground's height at a world-grid point: the set that holds it.
+			const auto Height = [Terrain](const ac::Vec2 At) {
+				double H = 0;
+				Terrain->ForEachSet([&](AAcRegionGround* Set) {
+					const ac::GroundRect& B = Set->Map().bounds;
+					const ac::Vec2 L = At - Set->Centre();
+					if (Set->IsComplete() && L.x >= B.minX && L.x <= B.maxX && L.y >= B.minZ && L.y <= B.maxZ) H = Set->Field().height(L);
+				});
+				return H;
+			};
+			ac::Vec2 EyeAt, LookAt;
+			double EyeH = 0, LookH = 0;
+			if (V.Edge >= 0)
+			{
+				// The edge's widest opening, its middle on the edge line.
+				double From = 0, To = 0;
+				FString Text;
+				if (FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectDir(), FString::Printf(TEXT("server/regions/%hs.json"), V.Region))))
+				{
+					const ac::region::Parsed P = ac::region::parse(TCHAR_TO_UTF8(*Text));
+					if (P.file)
+						for (const ac::region::Span& Sp : P.file->openings[size_t(V.Edge)])
+							if (Sp.to - Sp.from > To - From) From = Sp.from, To = Sp.to;
+				}
+				Check(To > From, FString::Printf(TEXT("b4: %hs has an opening on edge %d"), V.Region, V.Edge));
+				const double Mid = (From + To) / 2;
+				const ac::Vec2 Corner = There->corner();
+				const ac::Vec2 OnEdge = Corner + (V.Edge == 0 ? ac::Vec2(Mid, 0) : V.Edge == 1 ? ac::Vec2(There->width, Mid)
+					: V.Edge == 2 ? ac::Vec2(Mid, There->depth) : ac::Vec2(0, Mid));
+				const ac::Vec2 In = V.Edge == 0 ? ac::Vec2(0, 1) : V.Edge == 1 ? ac::Vec2(-1, 0) : V.Edge == 2 ? ac::Vec2(0, -1) : ac::Vec2(1, 0);
+				EyeAt = OnEdge + In * (V.bHigh ? 34.0 : 20.0);
+				LookAt = OnEdge - In * (V.bHigh ? 16.0 : 14.0);
+				EyeH = Height(EyeAt) + (V.bHigh ? 14.0 : 2.0);
+				LookH = Height(LookAt);
+			}
+			else
+			{
+				const ac::Vec2 C = There->corner() + ac::Vec2(V.Corner == 0 || V.Corner == 1 ? There->width : 0.0,
+					V.Corner == 1 || V.Corner == 2 ? There->depth : 0.0);
+				EyeAt = C + ac::Vec2(0, 0.5);
+				LookAt = C;
+				EyeH = 130.0;
+				LookH = 0.0;
+			}
+			const ac::Vec2 Origin = Terrain->CurrentCentre();
+			const FVector Eye = AcSpace::ToWorld(EyeAt - Origin, EyeH);
+			const FVector At = AcSpace::ToWorld(LookAt - Origin, LookH);
+			W4Cam->SetActorLocationAndRotation(Eye, (At - Eye).Rotation());
+			W4Set = true;
+			W4ShotAt = Now;
+		}
+		if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		if (bPerf)
+		{
+			// Settled 3 s, then the GPU's frame a frame for S s, and `stat
+			// gpu`'s base pass (the ground's shader is drawn in it).
+			if (Now - W4ShotAt > 3.0) B4Gpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+			if (Now - W4ShotAt < 3.0 + PerfFor) return;
+			double Base = -1;
+			for (const TPair<FString, double>& Pass : FAcBenchMeter::GpuStatPasses())
+				if (Pass.Key.Contains(TEXT("BasePass"))) Base = FMath::Max(Base, Pass.Value);
+			B4Gpu.Sort();
+			const auto Pct = [this](const double P) { return B4Gpu.Num() ? B4Gpu[FMath::Clamp(int32(P * B4Gpu.Num()), 0, B4Gpu.Num() - 1)] : 0.0; };
+			UE_LOG(LogAutocraft, Log, TEXT("b4 perf: %s: %d frames over %.0f s: gpu p50 %.2f p95 %.2f ms, base pass %.2f ms"), V.Name, B4Gpu.Num(), PerfFor,
+				Pct(0.5), Pct(0.95), Base);
+			B4Gpu.Reset();
+			W4Next += 1;
+			W4Set = false;
+			return;
+		}
+		if (Now - W4ShotAt < 2.0) return;
+		W4Next += 1;
+		W4Set = false;
+		ShootClean(V.Name, V.What);
+		T.Phase = 3801;
+		return;
+	}
+	case 3802:
+		if (W4Cam.IsValid()) W4Cam->Destroy();
+		Check(Shots.Saved + Shots.Skipped == 11, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsZ1
