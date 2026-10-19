@@ -70,3 +70,15 @@ moment something surprises you: date, region, what happened, the fix.
   face costs 1-2.5 points of wall (a slope is wider than a cliff) and,
   near a pad, horizon; in a pad's field of fire set it back by the whole
   slope.
+- 2026-10-19, Cold Fork: bending The Fork's north arm (1.2 cells, a cell
+  wider) took the rim gun's ledge 5 cells from the path; the test gun found
+  no ground and the wave got through (`Canyon_rewardsByDamage`, the
+  standings test's turret kills). Narrowing the arm instead hid the floor from the gun. Fix:
+  a lane the walkers walk keeps its written line; only its straight runs get
+  a 0.5 bow. `CanyonWallTests`' gun line is not snapped to whole cells, so
+  half a cell of floor flips whether its gap lets walkers through: check it
+  after any change to the Salt arm.
+- 2026-10-19, `Autocraft.Mmo.BuildCitadel` failed once with the server
+  refusing a spot the client allowed: a stale `unreal/server/build/autocraft-server`.
+  `make -C unreal/server build/autocraft-server` before automation tests
+  that start the local server.
