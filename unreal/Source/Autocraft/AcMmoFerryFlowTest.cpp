@@ -12,8 +12,8 @@
 //             windshield in first person; landed, E at the post lowers the
 //             ramp and the pilot walks out onto the pad.
 //   mmoferrymule  the same rig; the Dropship called and down, the pilot's
-//             Mule put on the ship's axis behind its ramp with the pilot on
-//             its perch (`ferry mule`), driven up the ramp into the bay: the
+//             Mule put on the ship's axis behind its ramp, the pilot at its
+//             perch (`ferry mule`), onto it, driven up the ramp into the bay: the
 //             Mule fits (inside the bay's walls, its rider aboard); from the
 //             perch, the crosshair on the ramp post, E closes the ramp (still
 //             driving); the crosshair off the buttons, E would climb off.
@@ -478,6 +478,12 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			Run.bPressed = true;
 			T.PhaseAt = Now;
 			return;
+		}
+		// On foot at its perch: onto it (a take, as E at the perch).
+		if (const TOptional<int64> Own = Mmo->OwnMule(); Own && U->kind == ac::UnitKind::prospector && !Run.bFlew && Since() > 1.0)
+		{
+			Mmo->Want(*Own);
+			Run.bFlew = true;
 		}
 		if (Ship && U->kind == ac::UnitKind::mule && Local.x < ac::ShuttleBay::rampFoot() - 2.0 && FMath::Abs(Local.y) < 0.3)
 		{

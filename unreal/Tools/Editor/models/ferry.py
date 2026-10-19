@@ -43,7 +43,7 @@ NOSE_X = 262.0     # the nose block's back (behind the console)
 
 # The windshield: the bottom line at GLASS_B (x, z), the top at GLASS_T; the centre pane +-PANE, the side panes from
 # +-SIDE0 sweeping back to the walls.
-GLASS_B = (320.0, 148.0)
+GLASS_B = (334.0, 120.0)   # low, so the ground ahead shows through it (the manager, 2026-10-19)
 GLASS_T = (262.0, 248.0)
 PANE = 50.0
 SIDE0 = 62.0
@@ -165,10 +165,10 @@ m.mesh(root, "crossWhite", [slab(16, 44, -38, 38, 328, 330), slab(-8, 16, -12, 1
 m.mesh(root, "hullDark", [slab(-200, -120, -26, 26, 326, 340), slab(110, 170, -60, -30, 326, 332), slab(110, 170, 30, 60, 326, 332)])
 
 # the nose: a rounded loft forward of the nose block, the team's blue cap on its front (the old Dropship's oval)
-rings = [ring_box(GLASS_B[0] - 4, 118, 59, cz=86, n=16), ring_box(352, 100, 54, cz=88, n=16),
-         ring_box(384, 70, 40, cz=86, n=16), ring_box(398, 40, 24, cz=86, n=16)]
+rings = [ring_box(GLASS_B[0] - 4, 118, 46, cz=70, n=16), ring_box(362, 100, 42, cz=68, n=16),
+         ring_box(390, 70, 32, cz=66, n=16), ring_box(404, 40, 18, cz=66, n=16)]
 m.mesh(root, "hullLight", [loft(rings)])
-m.mesh(root, "team", [sphere(40, at=(398, 0, 86), squash=(0.32, 1.05, 0.62), steps=16)])
+m.mesh(root, "team", [sphere(40, at=(404, 0, 66), squash=(0.3, 1.05, 0.5), steps=16)])
 m.mesh(root, "hazard", [slab(330, 372, -70, 70, 24, 30)], solid=False)  # the chin's hazard plate
 
 # --- the windshield's frame, pillars and glass ------------------------------------------------------------------------
@@ -213,7 +213,7 @@ m.mesh(glass, "windshield", panes, solid=False)
 
 # --- the wipers: two blades on the centre pane, parked lying left along the sill, turning in the glass's plane -------
 WIPER_U = (-24.0, 30.0)   # their pivots across the centre pane
-WIPER_L = 58.0            # the blade's reach from the pivot
+WIPER_L = 70.0            # the blade's reach from the pivot
 for k, u in enumerate(WIPER_U):
     piv = G(u, 3, 5)
     w = m.part("wipers_%d" % k, at=piv, rot=(TILT, 0, 0), driver=d(
@@ -370,7 +370,7 @@ m.mesh(lamp_shut, "rampShutGlow", [slab(POST[0] - 5, POST[0] + 5, post_face + 8,
 
 # --- the console under the glass: three panels, the big green take-off button, screens ----------------------------------
 CON = (COCK_X, NOSE_X + 6)    # its front and back (x)
-CON_TOP = 112.0
+CON_TOP = 96.0
 m.mesh(root, "hullMid", [slab(CON[0], CON[1], -96, 96, DECK, CON_TOP)])
 m.mesh(root, "hullDark", [slab(CON[0] - 2, CON[0], -80, 80, DECK + 10, CON_TOP - 30)], solid=False)  # the knee panel
 # the sloped desk: up toward the glass
@@ -400,20 +400,25 @@ m.mesh(root, "chrome", knobs, solid=False)
 for k, y in enumerate((-60.0, 60.0)):
     scr = m.part("consoleScreens_%d" % k, at=desk(CON[1] - 6, y, 6), driver=d(
         "console screen %d: lit while someone is aboard; brighter in flight" % k))
-    c = desk(CON[1] - 6, y, 18)
-    sx = (math.cos(math.radians(-28)), 0.0, math.sin(math.radians(-28)))  # the housing's local X: its face is -X
-    m.mesh(root, "hullDark", [box((4, 34, 26), at=c, rot=(-28, 0, 0))])
-    m.mesh(scr, "screenGlow", [box((1, 28, 20), at=tuple(c[i] - 4 * sx[i] for i in range(3)), rot=(-28, 0, 0))], solid=False)
-# the take-off button: a big green mushroom on a hazard-ringed housing in the centre panel
-BTN = desk((CON[0] + CON[1]) / 2, 0, 6)
-m.mesh(root, "hazard", [cyl(12, 3, at=BTN, axis="z", rot=(DESK_ANG, 0, 0), base=True, sides=16)], solid=False)
-m.mesh(root, "chrome", [cyl(9, 5, at=desk((CON[0] + CON[1]) / 2, 0, 9), axis="z", rot=(DESK_ANG, 0, 0), base=True,
-                            sides=16)], solid=False)
-tob = m.part("takeoffButton", at=desk((CON[0] + CON[1]) / 2, 0, 14), rot=(DESK_ANG, 0, 0), driver=d(
-    "the take-off button: lit green while the ship can take off (landed, the ramp shut), dim otherwise; pushed in "
-    "2 cm along its axis for 0.25 s on each press", ("emission", "position")))
-m.mesh(tob, "takeoffGlow", [cyl(7.5, 6, at=desk((CON[0] + CON[1]) / 2, 0, 14), axis="z", rot=(DESK_ANG, 0, 0), base=True,
-                                sides=16, r1=6.5)], solid=False)
+    c = desk(CON[1] - 6, y, 13)
+    sx = (math.cos(math.radians(-40)), 0.0, math.sin(math.radians(-40)))  # the housing's local X: its face is -X
+    m.mesh(root, "hullDark", [box((4, 30, 20), at=c, rot=(-40, 0, 0))])
+    m.mesh(scr, "screenGlow", [box((1, 25, 15), at=tuple(c[i] - 4 * sx[i] for i in range(3)), rot=(-40, 0, 0))], solid=False)
+# the take-off button: a green dome in a dark bezel on a chrome housing, a hazard collar round it, in the centre panel
+BX = (CON[0] + CON[1]) / 2
+BTN = desk(BX, 0, 6)
+m.material("domeGreen", parent="hull", color=(0.05, 0.42, 0.1), roughness=0.18, metallic=0.0)
+m.mesh(root, "hazard", [cyl(12, 2, at=BTN, axis="z", rot=(DESK_ANG, 0, 0), base=True, sides=16)], solid=False)
+m.mesh(root, "chrome", [cyl(9.5, 4, at=desk(BX, 0, 8), axis="z", rot=(DESK_ANG, 0, 0), base=True, sides=16)], solid=False)
+m.mesh(root, "hullDark", [cyl(8.2, 2, at=desk(BX, 0, 12), axis="z", rot=(DESK_ANG, 0, 0), base=True, sides=16, r1=7.6)],
+       solid=False)
+tob = m.part("takeoffButton", at=desk(BX, 0, 14), rot=(DESK_ANG, 0, 0), driver=d(
+    "the take-off button: its core lit green while the ship can take off (landed, the ramp shut), dim otherwise; "
+    "pushed in 2 cm along its axis for 0.25 s on each press", ("emission", "position")))
+# the dome (lit, glossy) with the lamp's core glowing through its top: the light falls off toward its rim
+m.mesh(tob, "domeGreen", [sphere(6.6, at=desk(BX, 0, 14), rot=(DESK_ANG, 0, 0), squash=(1, 1, 0.62), steps=14)], solid=False)
+m.mesh(tob, "takeoffGlow", [sphere(4.2, at=desk(BX, 0, 15.6), rot=(DESK_ANG, 0, 0), squash=(1, 1, 0.55), steps=12)],
+       solid=False)
 
 m.write()
 log("ferry: tilt %.1f deg, glass %.0f cm high, the take-off button at %s" % (TILT, GLASS_H, tuple(round(c) for c in BTN)))
