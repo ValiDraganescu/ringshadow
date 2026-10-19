@@ -40,8 +40,8 @@ moment something surprises you: date, region, what happened, the fix.
 - 2026-10-19, Dust Terraces: removing its old plateau left The Roost's ramps
   starting at the wrong level; the prize and the vault were cut off. Fix: a
   gentle hand-written rise (slope 5) north of the zone.
-- 2026-10-19, Brine Pans, Dust Terraces: the canyon zones' cuts are the 9
-  straight cliff runs each; leave them.
+- 2026-10-19, Brine Pans, Dust Terraces: the canyon zones' cuts were the 9
+  straight cliff runs each. Since erosion (section 10) they are worn too.
 - 2026-10-19, Start: widened spans reaching a corner left their strips
   disconnected; "the border's outline closes the passage". Fix: trim the
   span in both files.
@@ -52,6 +52,21 @@ moment something surprises you: date, region, what happened, the fix.
   the material (GROUND-LOOK.md).
 - 2026-10-19, zsh: `R="uv run …"; $R …` fails ("no such file"): zsh does
   not split a variable into words. Put chains in a bash script.
-- 2026-10-19, still open: the border's wall rocks stand in rows along some
-  walls (Dust Terraces, Slag Pockets' south-east), placed by the border
-  scenery in C++; a wash on level-0 ground barely shows from above.
+- 2026-10-19, still open: a wash on level-0 ground barely shows from above.
+- 2026-10-19, every region: the rims ran straight along the edges (the
+  outline kept 3 cells in) and the wall rocks, on a jittered grid, stood in
+  rows where the wall was a strip. The user: "too straight … so
+  artificial". Fix: erosion in `expand` and clustered wall rocks never in a
+  row (docs/world-sculpting.md, section 10).
+- 2026-10-19, erosion: a wave clipped at its limit (the rim 1.6 cells from
+  the edge) runs flat along it: a new straight run. Fix: fold it back in.
+- 2026-10-19, Brine Pans: a plateau's slope falls outward and closed the
+  Salt tunnel's mouth, which opened out of the face. Fix: a cut whose end
+  lay past the old face runs on through the slope.
+- 2026-10-19, Dust Terraces: an offset segment carved after the file's ramps
+  bit a ramp's side ("too steep to drive here"). Fix: segments and notches
+  keep clear of ramps; the face never moves within 2 cells of a ramp's top.
+- 2026-10-19, measuring a change in a canyon region: the plateau's sloped
+  face costs 1-2.5 points of wall (a slope is wider than a cliff) and,
+  near a pad, horizon; in a pad's field of fire set it back by the whole
+  slope.

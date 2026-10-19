@@ -77,6 +77,12 @@ uv run unreal/Tools/hidden_run.py --out unreal/Saved/Terrain/world --res 1280x72
   -AcTerrainLabViews=feet,across,third
 ```
 
+Named poses for before-and-after stills of one spot:
+`-AcTerrainLabPoses="cold-fork:forktop@106,18,rts;cold-fork:forkwest@84,24,1,-0.1,-3"`
+(`REGION:NAME@X,Z,rts`: the RTS camera over region cell X,Z;
+`REGION:NAME@X,Z,DX,DZ,PITCH`: the eye there looking along DX,DZ), each
+NAME listed in `-AcTerrainLabViews`.
+
 Writes `DIR/<region>/game/NN-<view>-<HH>-<weather>.png` and
 `DIR/<region>/views.txt` (where each view stood). Views, found on each
 region's own ground (`unreal/Source/Autocraft/AcTerrainLab.cpp`):
@@ -108,6 +114,8 @@ after any region's ground changes. Its import re-saves every map texture;
   - `openGround(f)` (ScarcityTests): a spot > 12 cells from every mound
     and well that adds no validate problem;
   - `nav->nearestFree`, `nav->walkable`, `sim.pilotCanStand`.
+  `RimTests` checks every region of the world for straight runs, rows of
+  wall rocks, and the canyon paths on open floor.
   Region-shaped facts in tests: `WorldTests` names Start's east span in
   two messages (update the text when the span changes) and pairs Start
   with its real east neighbour for the walled-edge cases;

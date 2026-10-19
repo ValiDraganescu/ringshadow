@@ -1,7 +1,8 @@
 # World sculpting
 
 Status, 2026-10-19: the First Reach is re-made (section 9): all nine
-regions said in landforms, every rim low and sloped, the passages wide.
+regions said in landforms, every rim low and sloped, the passages wide; no
+edge runs straight (section 10).
 The user: "let's integrate all this in the game and let's recreate our
 worlds. I don't care about my current game, we can start fresh." S4 (far
 land) is not started.
@@ -222,7 +223,7 @@ names each breach and the build of a style's forms skips it):
 - the land itself: inside the border's outline by the form's reach.
 
 The build's measures say whether the land works: wall and cliff, the open
-horizon at each pad, free-standing rock, straight cliff runs (a hand-drawn
+horizon at each pad, free-standing rock, straight runs (a hand-drawn
 tell), and the raid's way in: how far a walker goes from each passage and
 the nest to each pad, and how long that takes.
 
@@ -278,10 +279,116 @@ Left as they are, for the user:
 - Dust Terraces keeps a hand-written gentle rise north of The Roost, since
   no landform fits there and the zone's ramps need it. Its old rock island
   is now a level-3 mesa.
-- The canyon zones keep their straight-edged cuts.
-- The border's wall rocks stand in rows along some walls (Dust Terraces,
-  Slag Pockets' south-east): the border scenery's own placement, in C++.
 - Old saves don't match the new land: start a new world (NEW WORLD).
+
+## 10. No straight edge
+
+The user, 2026-10-19, on a top-down view of The Fork
+(`art/terrain/ref/straight-rim-the-fork-2026-10-19.png`): "the landscape
+delimiting regions is again too straight, I could survive without it than
+having it look so artificial." Three things still ran straight after
+section 9: every region's rim (`sculpt.py` keeps the outline 3 cells in from
+each edge, so it ran along the edges in long straight lines), the canyon
+zones' hand-written plateaus and cuts, and the walls' rocks, set on a
+jittered grid that left them in rows wherever the wall was a strip.
+
+`expand` now ends with **erosion** (`Erosion.cpp`, `erode`), for every
+sculpted region, on the server and the client alike:
+
+- **The rim** wanders along its run: two waves (12-18 cells and 4.5-6.5
+  cells long) and noise move each point of the outline up to 1.8 cells out
+  and 3.6 in. It stays 1.6 cells inside the region, still in a passage's
+  lane (its span and 3 cells past each end, tapering over 6 more), and
+  clear of pads (16), spawns, sites, veins, wells, landmarks, ramps, the
+  nest and the canyons' tunnels and paths. Where the wave meets the limit
+  it folds back in, so it never runs flat along it.
+- **A canyon plateau's outer faces** (the raise that holds a zone's paths)
+  take the rims' rule: a rough slope, 2.5 cells a level they fall, 3 to 5
+  cells. The face is set back by half the slope (in a pad's field of fire,
+  the whole slope: the guns see as far as before) and wanders 0-3.5 cells
+  more. It stays 4 cells clear of the cuts' walls, 9.5 of the paths (the
+  rims the guns stand on) and 2 cells round a ramp's top. A cut that ran out
+  through the old face runs on through the slope, so its mouth stays open.
+  Fallen blocks (a boulder and up to two rocks) lie at its foot every 9-16
+  cells.
+- **The lanes** (the cliff-walled cuts) keep their cliffs. A lane the
+  walkers walk (a zone's path runs in it) keeps its line and width: the
+  rims' guns are placed and aimed by that wall (a gun on The Fork's north
+  arm found no ground once the wall moved a cell). A straight run of it gets
+  one bow, 0.5 cells deep at its middle, to either side in turn. Elsewhere
+  (a gorge, a basin) a cut bends 1.2 cells either side of its line, held 3
+  cells at each end. Every 7-12 cells a stretch of wall 3-6 cells long
+  steps 0.8-1.8 cells out (offset segments), never more than 2.8 cells from
+  a path (the wall stands 2.5 from it). Where the wall is two levels deep
+  or more and 8 cells from any path, a notch is bitten into its top beside
+  it, half as deep. Neither comes near a ramp.
+- **Any other hand-written raise** wanders the same way (Dust Terraces'
+  rise and the bridge to its vault).
+- **Last, anything still straight is bent**: a landform's long side, a
+  stretch of rim held still. A 9-cell wave, 0.8 cells deep, goes across
+  every run left (only inward on the rim and on islands).
+
+**The walls' rocks** (`build`) gather in clusters of one to four, a
+boulder or spire first and smaller rocks round it. Most stand at the rim's
+foot and fewer up the wall, with gaps where noise says, and never three in a
+row (`inRow`: one within 0.6 cells of the line between two others, a third
+of the way or more from each, those two at most 14 cells apart; the file's
+own rocks count). None reaches into the ground units walk: a rock too big
+for its spot is made smaller. 430 in the First Reach, where the old grid
+set 494 (some of those stood in the walkable ground at the foot).
+
+**The measure** (`straightRuns`, `autocraft-region build`'s "straight
+runs") is stricter. A run is any stretch of an edge that stays within 0.25
+cells of one straight line for 8 cells or more (`straightRun`), however many
+points it has. It now counts the rim's outline (not where it lies along the
+region's edge) and the cliff-walled cuts, as well as the cliffs and
+islands.
+
+Per wall:
+
+| canyon | wall | done |
+|---|---|---|
+| The Fork (Cold Fork) | the plateau's west and south faces (the user's screenshot) | the rims' rule: a 5-cell slope, worn, set back; fallen blocks at the foot |
+| The Fork | its north and east faces | under the region's rim at the edge, unchanged (nothing shows) |
+| The Fork | the north and east arms | walked lanes: cliffs on their line (the rims' guns), the east arm's straight run bowed; offset segments only away from the paths |
+| The Fork | the south gorge (no path) | a cliff, bent, offset segments, notches |
+| The Drowned Cut (Brine Pans) | the plateau's long north face, west, east and south faces | the rims' rule, a 5-cell slope; the Salt tunnel's mouth carved on through it, so the walkers still find the way out round the mesa |
+| The Drowned Cut | the Salt and Gull arms | walked lanes: cliffs on their line, the Salt arm's three straight runs bowed |
+| The Drowned Cut | the gorge (no path) | a cliff, bent, offset segments, notches |
+| The Roost (Dust Terraces) | the plateau's faces | the rims' rule, a 3-cell slope (it stands a level over the rise) |
+| The Roost | the bridge to the Dust vault | a cliff, worn (it holds the vault up) |
+| The Roost | the Ochre and Dust arms | walked lanes: cliffs on their line |
+| The Roost | the cut north toward the vault (no path) | a cliff, bent, offset segments (one level deep: no notches) |
+
+Measured with `autocraft-region build`. Before: the old code, its
+straight runs counted by the new measure. B: the plateaus' outer faces worn
+as cliffs instead (the other choice, one line in `Erosion.cpp`).
+
+| region | wall and cliff before | after | (B) | straight runs before | after | horizon at the pad before | after | (B) |
+|---|---|---|---|---|---|---|---|---|
+| start | 15.5% | 15.4% | | 7 | 0 | 76.6% | 76.6% | |
+| rust-hollow | 24.8% | 24.8% | | 9 | 0 | 73.4% | 73.4% | |
+| ashen-shelf | 29.0% | 28.8% | | 8 | 0 | 62.5% | 62.5% | |
+| tern-ridge | 19.2% | 19.1% | | 9 | 0 | 79.7% | 79.7% | |
+| cold-fork | 21.1% | 22.2% | 21.4% | 14 | 0 | 48.4% | 48.4% | 48.4% |
+| glass-flats | 18.0% | 18.0% | | 8 | 0 | 59.4% | 59.4% | |
+| brine-pans | 19.9% | 22.2% | 20.2% | 18 | 0 | 45.3% | 42.2% | 45.3% |
+| dust-terraces | 33.0% | 34.0% | 33.5% | 23 | 0 | 50.0% | 50.0% | 50.0% |
+| slag-pockets | 18.5% | 18.3% | | 9 | 0 | 67.2% | 67.2% | |
+
+Open ground, free-standing rock and every raid line are as before (each
+raid line has its way). The six regions without a canyon measure as they
+did or a little better. The canyon regions pay 1 to 2.3 points of wall for
+their sloped faces (a slope is wider than a cliff; plain worn cliffs, B,
+cost 0.3 to 0.5, since a bent face is longer than a straight one). Brine Pans' pad loses one
+of its 64 directions to the slope of the plateau's corner, 12 cells off.
+All are within the targets (wall ≤ 25%, a canyon region ≤ 35%).
+
+Stills, before and after, at the same spots (`-AcTerrainLabPoses`): The
+Fork from above and its west face from the open floor, its north arm,
+The Drowned Cut from above and its north face, Dust Terraces' wall rocks
+(`art/terrain/rims/*-before.jpg`, `*-after.jpg`). The satellite maps are rebaked. A world saved on the
+old land does not match: start a new world (NEW WORLD).
 
 ## Log
 
@@ -291,3 +398,4 @@ Left as they are, for the user:
 | 2026-10-19 | S1+S2 trial | Prospect Landing opened (above); four neighbours' gaps widened to match |
 | 2026-10-19 | S6 | landforms, styles, rules, eyes (section 8) |
 | 2026-10-19 | re-made | the First Reach in landforms (section 9); the lab's rounds 1-4 promoted with it |
+| 2026-10-19 | no straight edge | the user: the rims and The Fork's cut "too straight". Erosion (section 10): the rims wander, the canyon plateaus' outer faces take the rims' slope (A; the user may ask for B, worn cliffs), lanes worn, wall rocks in clusters never in rows; straight runs 7-23 a region → 0. Wall: Cold Fork 21.1 → 22.2% (B 21.4%), Brine Pans 19.9 → 22.2% (B 20.2%), Dust Terraces 33.0 → 34.0% (B 33.5%), the others as before or lower; Brine Pans' pad horizon 45.3 → 42.2% (B 45.3%). Start a new world |

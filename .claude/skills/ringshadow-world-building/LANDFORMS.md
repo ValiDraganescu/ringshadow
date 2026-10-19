@@ -117,6 +117,30 @@ What a form is for:
 - Islands, rims and canyon walls get the ground's rock faces in game
   (GROUND-LOOK.md, "Rock faces").
 
+## Erosion (`Erosion.cpp`, `erode`)
+
+`expand`'s last step, for every sculpted file (docs/world-sculpting.md,
+section 10). Positions every 2 cells along an outline, each moved along its
+inward normal (smoothed over 2 points either side), softened over 5 points,
+never past what each point allows; the whole retried at 0.7 and 0.45 when
+an edge would cross another.
+
+| what | moves | limits |
+|---|---|---|
+| the rim (`border.outline`) | `0.9 + 1.6 × w(s)` → 1.8 out to 3.6 in; w = sin(s / 12-18 cells) + 0.4 sin(s / 4.5-6.5) + 0.3 noise | ≥ 1.6 cells inside the region; 0 in a passage's lane (span ± 3, 20 cells in), back to full over 6 cells; clear of pads 16, spawns 3.5, sites 4.5, veins 3.5, wells 4, nest 9, landmarks 3.5, ramps width/2 + 3, tunnels 5, canyon paths 4; at the outward limit it folds back in (0.6 of the excess) |
+| a canyon plateau (a cliff raise holding a zone's paths) | `1.8 + back × slope + 1.7 × w(s)` in (w: 10-20 cells); `back` 0.5, 1.1 within 30 + slope of a pad | 0 within 3 cells of the region's edge; 4 cells past every cut's wall and 9.5 from every path, never nearer; 2 cells round a ramp's top |
+| its slope (the rims' rule) | `slope` = 2.5 × the least levels the face falls, 3 to 5 | a cut whose end lay past the old face (its width reached out) runs on `slope + 1.5` cells, not past the region |
+| its fallen blocks | every 9-16 cells along the foot, `slope + 0.4-2.2` out: a boulder (1.4-2.4) and 0-2 rocks (0.6-1.4) within 2.2 | clear of the rules above, cuts by 2.5, lanes; never three in a row |
+| a cliff-walled cut (width ≥ 4, ≥ 6 long) | walked (a zone's path within width/2 + 1): its line and width as written; else its line bent 1.2 × w(s) (11-17 cells), held over 3 cells at each end | – |
+| its offset segments | every 7-12 cells a cut 3 wide along 3-6 cells of wall, its outer edge 0.8-1.8 past the wall; sides alternate 70% | ≤ 2.8 cells from a path (`laneReach`; dropped under 0.4); not within width/2 + 3.5 of a ramp |
+| its notches | after 60% of the segments, where the wall is ≥ 2 levels: a cut 1.6-2.4 wide, 2-3.4 cells into the top, half the depth | its inner end > 8 cells from every path; off ramps |
+| any other hand-written raise or lower polygon | as a plateau's, without the slope | – |
+| what still runs straight | a wave 9 cells long, 0.8 deep (inward only on the rim and islands) across each run; on a walked lane one bow 0.5 deep, its side alternating by pass | 5 passes |
+| the walls' rocks (`build`) | clusters of 1-4 (a boulder 1.8-3.0 or a spire first, then rocks 0.8-2.0 within 1-2.4) at random spots > 2.2 past the outline, 3 apart, kept with 0.8 × (0.3 + 0.7 e^-(out - 2.2)/5), none where noise < -0.3 | never three in a row with any rock (`inRow`); every footprint 1.3 past the outline plus clearance (shrunk by 0.75 until it fits, else dropped) |
+
+The order in `height`: the file's own edits (worn in place), then the
+cut-throughs, offset segments and notches, then the landforms' edits.
+
 ## The rules
 
 `sculptProblems` names each breach of the file's own forms as
@@ -181,20 +205,22 @@ Shelf), use another style or add `keep` discs along the rim.
 | `wall and cliff` | cells steeper than a machine climbs (`NavGrid::maxSlope` 0.9) or not free | ≤ 25% (canyon region ≤ 35%) |
 | `free-standing rock` | islands with a kind, after `expand` | 4-10 |
 | `landforms` / `style: …` | the file's own count; each style line placed N of M | – |
-| `straight cliff runs (8 cells or more)` | edges ≥ 8 cells of cliff-sided raise/lower/flatten polygons and islands: a hand-drawn tell | 0 (canyon zones' own cuts excepted) |
+| `straight runs (8 cells or more)` | stretches of an edge within 0.25 cells (`straightTolerance`) of one line for 8 cells or more (`straightRun`), however many points: cliff-sided raise/lower/flatten polygons, islands, cliff-walled cuts and ridges (not a wash), the rim's outline (not along the region's edge); each listed as `straight: WHAT from (x, z) to (x, z)` | 0 |
 | `raid: X passage to pad "P": N cells, S s` | a walker's path from 3 cells in at each passage's middle (and the nest) to each pad, at a shardling's march | every line has a way; know the shortest (15 s is the First Reach's) |
 | `open horizon at pad "P"` | of 64 directions from 1.3 cells over the pad, those where nothing within 60 cells stands over 3° above the eye (a ray leaving the region counts open) | ≥ 50% |
 
 Before the re-make the First Reach measured 41-52% wall and cliff and
 14-38% open horizon; after, 15-33% and 45-80% (docs/world-sculpting.md,
-section 9).
+section 9); after erosion, 15-34% and 42-80%, straight runs 0 (section 10).
 
 ## Hand-written ground that stays
 
 - Each pad's `flatten` circle (radius 16, level 0, slope 5): a raised pad
   (level 1) on an `openField` base became a mound no Citadel fits beside.
 - Canyon zones' `raise`/`cut`/`ramp` edits (The Fork, The Drowned Cut, The
-  Roost): their cut walls' shelves are seeded by the base's noise, so
+  Roost), written as straight lines and worn by erosion (above): write a
+  plateau's outer face where the cliff should stand, its slope falls
+  outward. Their cut walls' shelves are seeded by the base's noise, so
   changing a canyon region's `base.style` moves where its rim guns can shoot
   from: re-check its gun cover (TOOLS.md, "Tests that read the ground").
 - A gentle `raise` (slope ≥ 5) when a zone's ramps need ground at a level
