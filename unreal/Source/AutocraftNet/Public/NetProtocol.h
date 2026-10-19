@@ -597,8 +597,8 @@ struct RequestMessage {
         bool operator==(const CallHunt&) const = default;
     };
     /// C1: open or close the door of the realm's Citadel in the pilot's
-    /// region; open from either side within `Rules::doorReach`, close only
-    /// from inside the hall (docs/citadel-interior.md, section 3).
+    /// region, from either side within `Rules::doorReach` (C4: it closes
+    /// from outside too; docs/citadel-interior.md, section 3).
     struct Door {
         bool open = true;
         bool operator==(const Door&) const = default;

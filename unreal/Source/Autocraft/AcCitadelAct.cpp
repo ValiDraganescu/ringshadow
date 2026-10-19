@@ -36,47 +36,84 @@ FString AcCitadelAct::FAct::Prompt() const
 	return bOpen ? FString(TEXT("E · OPEN")) : FString(TEXT("E · CLOSE"));
 }
 
+bool AcCitadelAct::AimedAtDoorway(const ac::Footprint& F, const ac::Vec2 Local, const double Look)
+{
+	if (!F.door) return false;
+	// The doorway with its panels beside the jambs (0.75 out from each side).
+	const ac::Slab& D = *F.door;
+	const ac::Vec2 Lo = D.min - ac::Vec2(1.0, 0.5), Hi = D.max + ac::Vec2(1.0, 0.5);
+	const ac::Vec2 Dir(std::cos(Look), std::sin(Look));
+	// The look's ray against that box seen from above (slab clipping).
+	double T0 = 0.0, T1 = ac::Rules::doorReach + 2.0;
+	for (int32 K = 0; K < 2; ++K)
+	{
+		const double O = K == 0 ? Local.x : Local.y, V = K == 0 ? Dir.x : Dir.y;
+		const double Min = K == 0 ? Lo.x : Lo.y, Max = K == 0 ? Hi.x : Hi.y;
+		if (std::abs(V) < 1e-9)
+		{
+			if (O < Min || O > Max) return false;
+			continue;
+		}
+		double A = (Min - O) / V, B = (Max - O) / V;
+		if (A > B) std::swap(A, B);
+		T0 = FMath::Max(T0, A);
+		T1 = FMath::Min(T1, B);
+		if (T0 > T1) return false;
+	}
+	return true;
+}
+
 TOptional<AcCitadelAct::FAct> AcCitadelAct::Find(const ac::Simulation& Sim, const ac::Unit& U)
 {
 	if (U.task == ac::Unit::Task::atGun) return {};
 	const bool bSheltered = Sim.sheltered(U);
-	TOptional<FAct> Door;
+	TOptional<FAct> Best;
 	for (const ac::Structure& S : Sim.state.structures)
 	{
 		if (S.kind != ac::StructureKind::citadel || !S.complete()) continue;
 		if (ac::distance(S.position, U.position) > ac::Rules::radius(S.kind) + ac::Rules::doorReach + 1) continue;
-		// A free gun station within reach (from the hall).
+		const ac::Footprint& F = ac::Rules::footprint(S.kind);
+		const ac::Vec2 Local = U.position - S.position;
+		// The nearest free gun station within reach (from the hall).
+		TOptional<FAct> Gun;
+		double GunOff = 0.0;
 		if (bSheltered && S.guns)
 		{
 			for (int32 K = 0; K < 4; ++K)
 			{
 				if ((*S.guns)[K].gunner) continue;
-				if (ac::distance(U.position, ac::Defence::gunStation(S.position, K)) > ac::Defence::stationReach) continue;
+				const double D = ac::distance(U.position, ac::Defence::gunStation(S.position, K));
+				if (D > ac::Defence::stationReach || (Gun && D >= GunOff)) continue;
 				FAct A;
 				A.Kind = FAct::EKind::Man;
 				A.Citadel = S.id;
 				A.Gun = K;
 				A.bInside = true;
-				return A;
+				Gun = A;
+				GunOff = D;
 			}
 		}
-		// The door within reach of its slab, on either side.
-		const ac::Footprint& F = ac::Rules::footprint(S.kind);
-		if (Door || !S.door || !F.door) continue;
-		const ac::Vec2 Local = U.position - S.position;
-		if (Off(*F.door, Local) > ac::Rules::doorReach) continue;
-		const bool bInside = F.inside(Local);
-		// Outside it only opens; inside it closes while it opens.
-		if (!bInside && S.door->opening) continue;
-		FAct A;
-		A.Kind = FAct::EKind::Door;
-		A.Citadel = S.id;
-		A.bInside = bInside;
-		A.bOpen = !(bInside && S.door->opening);
-		if (const std::optional<std::string> Why = Sim.doorRefusal(S, A.bOpen, U)) A.Why = FString(UTF8_TO_TCHAR(Why->c_str()));
-		Door = A;
+		// The door within reach of its slab, on either side: it closes
+		// while it opens and opens while it shuts (C4: outside too).
+		TOptional<FAct> Door;
+		const double DoorOff = S.door && F.door ? Off(*F.door, Local) : 1e9;
+		if (DoorOff <= ac::Rules::doorReach)
+		{
+			FAct A;
+			A.Kind = FAct::EKind::Door;
+			A.Citadel = S.id;
+			A.bInside = F.inside(Local);
+			A.bOpen = !S.door->opening;
+			if (const std::optional<std::string> Why = Sim.doorRefusal(S, A.bOpen, U)) A.Why = FString(UTF8_TO_TCHAR(Why->c_str()));
+			Door = A;
+		}
+		// Both in reach: the door when the look is on the doorway or its
+		// panels, or the pilot is nearer the door than the station.
+		TOptional<FAct> Here = Gun;
+		if (Door && (!Gun || AimedAtDoorway(F, Local, U.look()) || DoorOff < GunOff)) Here = Door;
+		if (Here && (!Best || Here->Kind == FAct::EKind::Man)) Best = Here;
 	}
-	return Door;
+	return Best;
 }
 
 TOptional<TPair<int64, int32>> AcCitadelAct::Manned(const ac::Simulation& Sim, const ac::Unit& U)

@@ -1,9 +1,11 @@
 // `AcCitadelAct`: what the act key does in and at a Citadel (C1,
 // docs/citadel-interior.md §7) when nothing else takes it (the drill, a
 // strike, a repair, a Derrick, a building held out come first): a free gun
-// station within `Defence::stationReach` ("E · TAKE GUN 1 SE"), else the
-// door within `Rules::doorReach` of its slab ("E · OPEN" on either side,
-// "E · CLOSE" inside while it opens). The pawn sends the MMORPG client's
+// station within `Defence::stationReach` ("E · TAKE GUN 1 SE"), or the door
+// within `Rules::doorReach` of its slab ("E · OPEN" while it shuts, "E ·
+// CLOSE" while it opens, on either side since C4); with both in reach the
+// door wins when the look is on the doorway or the pilot is nearer the door
+// than the station. The pawn sends the MMORPG client's
 // Door and Man requests on it; the cockpit shows its prompt; `PoseCitadel`
 // lights the door panel on the pilot's side while it is in reach.
 //
@@ -48,6 +50,10 @@ namespace AcCitadelAct
 	/// The act at a Citadel for unit `U`, or unset (also while it mans a
 	/// gun). The caller checks first that nothing else takes the key.
 	AUTOCRAFT_API TOptional<FAct> Find(const ac::Simulation& Sim, const ac::Unit& U);
+	/// The look `Look` (world radians) from `Local` (in the Citadel's frame)
+	/// meets the doorway or the door panels beside it within reach, seen
+	/// from above.
+	AUTOCRAFT_API bool AimedAtDoorway(const ac::Footprint& F, ac::Vec2 Local, double Look);
 
 	/// The gun `U` mans: its Citadel's id and the gun; unset: none.
 	AUTOCRAFT_API TOptional<TPair<int64, int32>> Manned(const ac::Simulation& Sim, const ac::Unit& U);

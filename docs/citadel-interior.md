@@ -145,17 +145,25 @@ std::optional<Door> Structure::door;   // set on every complete Citadel (the ser
   buildings' step), and gives every complete Citadel with the hall its
   `Door` there (shut).
 - Passable to pilots when `open >= 0.95` (`Simulation::doorOpen(s)`).
-- A pilot opens it from either side and closes it **only from inside**:
+- A pilot opens it and closes it **from either side** (C4, the manager's
+  ruling on the user's report that the gate, once lowered, closed from
+  neither side; until C4 it closed only from inside):
   `RequestMessage::Door { bool open; }` (protocol 36, index 22). The server
   (`WorldMap::door(pilot, open)`) refuses with a reason unless: the pilot's
-  unit is complete; a complete realm Citadel is in its region; to open, the
-  unit stands within `Rules::doorReach = 2.0` of the door slab (either side);
-  to close, the unit is `footprint.inside()`; to close, no unit stands in the
-  door slab grown by its radius ("Someone is in the doorway"). The core's
-  half: `Simulation::doorRefusal(s, open, unit)` ("No door to work here",
-  "Too far from the door" past 2.0 cells from the slab seen from above,
-  "Close it from inside", "Someone is in the doorway") and
-  `Simulation::door(unit, structure, open)`, which applies it.
+  unit is complete; a complete realm Citadel is in its region; the unit
+  stands within `Rules::doorReach = 3.0` of the door slab (either side: from
+  the foot of the open ramp outside, from the hall's front third inside; 2.0
+  until C4); to close, no unit stands in the door slab grown by its radius
+  ("Someone is in the doorway"). The core's half:
+  `Simulation::doorRefusal(s, open, unit)` ("No door to work here", "Too far
+  from the door" past 3.0 cells from the slab seen from above, "Someone is in
+  the doorway") and `Simulation::door(unit, structure, open)`, which applies it.
+- Why it could not close (C4): outside, the game offered no CLOSE at all (the
+  C1 rule), so E fell through to the other acts; inside, the reach of 2.0
+  left a band 2 cells deep behind the door, and the free gun stations of the
+  two corners by the door (SE, SW, 1.5 reach) took the prompt first wherever
+  they overlapped it. The user's logs show the open request and the guns
+  manned, never a close request.
 - The game sends it on the act key (E / click / Space) with the door panel
   under the crosshair or within `doorReach` and nothing else to act on
   (section 7).
@@ -314,8 +322,12 @@ client and again by the server. The cockpit is hidden; the unit is hidden.
 - The act key (E, click, Space) in order: the existing targets (drill,
   strike, repair, enter the Derrick, place a building), else a **gun
   station** within `stationReach` (prompt "E · TAKE GUN 1 SE"), else the
-  **door panel** within `doorReach` (prompt "E · OPEN" outside and inside,
-  "E · CLOSE" inside when open). Prompts sit where the Derrick's prompt sits.
+  **door panel** within `doorReach` (prompt "E · OPEN" while it is shut or
+  shutting, "E · CLOSE" while it is open or opening, outside and inside
+  alike since C4). With a gun station and the door both in reach the door
+  wins when the look meets the doorway or its panels (`AcCitadelAct::
+  AimedAtDoorway`), or the pilot stands nearer the door slab than the
+  station; else the gun. Prompts sit where the Derrick's prompt sits.
   Panels: a part on each side of the doorway (`doorPanels_0` outside,
   `doorPanels_1` inside) that lights when in reach.
 - At a gun: mouse aims within the arc; click or E or Space fires (held
@@ -337,10 +349,10 @@ client and again by the server. The cockpit is hidden; the unit is hidden.
 As built (the game):
 
 - `AcCitadelAct` (`AcCitadelAct.h`) finds the act: in the MMORPG mode, with
-  no `pilotTarget`, a free gun's station within `stationReach` while
-  `sheltered`, else the door within `doorReach` of its slab (outside only
-  while it is shut or shutting: it opens; inside it closes while opening and
-  opens while shutting). When the core would refuse it (`doorRefusal`:
+  no `pilotTarget`, the nearest free gun's station within `stationReach`
+  while `sheltered`, or the door within `doorReach` of its slab (on either
+  side it closes while opening and opens while shutting; C4), the door first
+  as above. When the core would refuse it (`doorRefusal`:
   "Someone is in the doorway") the prompt is the reason in the blocked tone
   and the key sends nothing. The pawn sends `FAcMmoClient::Door`/`Man`; a
   refusal from the server comes back as a note (`HallRefusal`).
@@ -537,11 +549,11 @@ scaffold; `cradle-eye-gun0*`: the gun's eye at pitch 0, -20, +50).
 
 | Layer | Tests |
 |---|---|
-| core | `CitadelTests.cpp`: `footprint_citadelHallIsHollow` (the slabs, `blocks`, `inside`, both switch positions); `pilot_walksInThroughTheOpenDoorOnly`; `pilot_isPushedNowhereInsideTheHall`; `pilot_walksOverADoodadSwallowedByTheCitadel`; `pilot_unloadsInTheHallAndAtItsWalls`; `brood_neverEntersAndNeverTargetsASheltered` (A* blocked, `target()` nil, `hit()` 0, the slam); `door_closesOnlyWhenTheDoorwayIsClear`; `gun_aimClampsAtTheArcsHardStops`; `gun_restsWithoutAGunnerAndNeverFires`; `gun_aimClampedToTheArcAndPitch`; `gun_firesAtTheCrosshairFoeInRange`; `gun_eyeRidesTheCradle`; `citadel_bugsNeverTakeItBelowTheFloor`; `brood_strikesTheCitadelFromEveryFace`; `placement_citadelPlacesOnTodaysGround` (the start region). `DefenceTests.cpp`: `Defence_citadelTurretsNeverFireAlone` (was `…HitGroundAndAir`), `Defence_citadelRangeMarks` (a gunner's reach) |
+| core | `CitadelTests.cpp`: `footprint_citadelHallIsHollow` (the slabs, `blocks`, `inside`, both switch positions); `pilot_walksInThroughTheOpenDoorOnly`; `pilot_isPushedNowhereInsideTheHall`; `pilot_walksOverADoodadSwallowedByTheCitadel`; `pilot_unloadsInTheHallAndAtItsWalls`; `brood_neverEntersAndNeverTargetsASheltered` (A* blocked, `target()` nil, `hit()` 0, the slam); `door_closesOnlyWhenTheDoorwayIsClear`; `door_opensAndClosesFromEitherSide` (C4); `gun_aimClampsAtTheArcsHardStops`; `gun_restsWithoutAGunnerAndNeverFires`; `gun_aimClampedToTheArcAndPitch`; `gun_firesAtTheCrosshairFoeInRange`; `gun_eyeRidesTheCradle`; `citadel_bugsNeverTakeItBelowTheFloor`; `brood_strikesTheCitadelFromEveryFace`; `placement_citadelPlacesOnTodaysGround` (the start region). `DefenceTests.cpp`: `Defence_citadelTurretsNeverFireAlone` (was `…HitGroundAndAir`), `Defence_citadelRangeMarks` (a gunner's reach) |
 | net | round trips of `Door`, `Man`, `PilotInput::pitch`, `Structure::door`, `CornerGun::pitch/gunner`; the width tests |
-| server | `door_openFromOutsideCloseOnlyInside`; `man_takesAFreeGunWithinReach`; `man_freedWhenTheGunnerDies`; `brood_raidIgnoresThePilotInTheHall` (a group with prey set on a sheltered pilot drops it; the Citadel still takes hits); `citadel_noAutoFireWithoutAGunner`; `load_schema27ClearsTheGrownFootprint`; `respawn_insideACompleteCitadel`; `raid_skipsTheCitadelWithNobodyInTheRegion`; `citadel_neverFallsBelowTheFloorToBugs` |
-| game | `Autocraft.Pilot.ChaseStopsAtWalls` (the sweep against the slabs); `Autocraft.Pilot.GunLookClamps`; `Autocraft.Hud.TurretFeedPaints`; `Autocraft.Pose.CitadelRamp` |
-| flow | `-AcFlowTest=mmocitadel`: dev rig, walk to the door, open, enter, close, man gun 0, fire, disengage, leave; headless, then the shots (`-AcMmoShotsC1`: at the door, in the hall, the feed) |
+| server | `door_opensAndClosesFromEitherSide` (C4; was `door_openFromOutsideCloseOnlyInside`); `man_takesAFreeGunWithinReach`; `man_freedWhenTheGunnerDies`; `brood_raidIgnoresThePilotInTheHall` (a group with prey set on a sheltered pilot drops it; the Citadel still takes hits); `citadel_noAutoFireWithoutAGunner`; `load_schema27ClearsTheGrownFootprint`; `respawn_insideACompleteCitadel`; `raid_skipsTheCitadelWithNobodyInTheRegion`; `citadel_neverFallsBelowTheFloorToBugs` |
+| game | `Autocraft.Pilot.ChaseStopsAtWalls` (the sweep against the slabs); `Autocraft.Pilot.GunLookClamps`; `Autocraft.Pilot.CitadelDoorPrompt` (C4: CLOSE and OPEN on both sides, the door over a gun station); `Autocraft.Hud.TurretFeedPaints`; `Autocraft.Pose.CitadelRamp` |
+| flow | `-AcFlowTest=mmocitadel`: dev rig, walk to the door, open, close from outside, open again (C4), enter, close from inside, man gun 0, fire, disengage, leave; headless, then the shots (`-AcMmoShotsC1`: at the door, in the hall, the feed) |
 
 ## 11. Who owns what
 

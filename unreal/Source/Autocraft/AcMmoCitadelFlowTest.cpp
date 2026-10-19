@@ -5,7 +5,8 @@
 //
 //   mmocitadel  the server's dev line `citadel here` puts a complete realm
 //             Citadel ahead of the pilot, its door shut; the pilot walks to
-//             the door ("E · OPEN"), opens it on the act key, walks into the
+//             the door ("E · OPEN"), opens it on the act key, closes it
+//             from outside ("E · CLOSE", C4), opens it again, walks into the
 //             hall (sheltered), closes it from inside ("E · CLOSE"), walks to
 //             gun 1's station ("E · TAKE GUN 1 SE") and takes it: the view
 //             first person at the gun's eye, the look held at the arc's hard
@@ -89,6 +90,9 @@ namespace
 		bool bAsked = false;
 		bool bPressed = false;
 		double Settled = -1;
+		/// C4, at the door outside (phase 3): 0 opening it, 1 closing it,
+		/// 2 opening it again, 3 open.
+		int32 Gate = 0;
 		int32 ShotsSeen = 0;
 		bool bShot = false;
 		/// -AcMmoShotsTps: the next of the third-person pictures, and when it began.
@@ -443,13 +447,44 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		else Waited(TEXT("at the doorstep"), WalkSeconds);
 		return;
 	case 3:
-		// The act key opens it.
-		if (!Hall.bPressed) Press();
-		if (S->doorOpen(*C))
+		// The act key opens it; C4: it closes again from outside, and opens again.
+		if (Hall.Gate == 1 || Hall.Gate == 2)
+		{
+			const bool bClosing = Hall.Gate == 1;
+			const bool bDone = bClosing ? C->door->open <= 0.01 && !C->door->opening : S->doorOpen(*C);
+			if (!Hall.bPressed)
+			{
+				if (!Settle(0.6)) return;
+				Check(Prompt == (bClosing ? TEXT("E · CLOSE") : TEXT("E · OPEN")),
+					FString::Printf(TEXT("outside, the door %s: \"%s\""), bClosing ? TEXT("open") : TEXT("shut"), *Prompt));
+				Press();
+			}
+			else if (bDone)
+			{
+				Check(Mmo->HallRefusal().IsEmpty(), bClosing ? TEXT("the door closed from outside") : TEXT("the door opened again from outside"));
+				Hall.Gate += 1;
+				Hall.bPressed = false;
+				Hall.Settled = -1;
+				T.PhaseAt = Now;
+			}
+			else Waited(FString::Printf(TEXT("the door %s from outside (%.2f, %s)"), bClosing ? TEXT("shut") : TEXT("open"), C->door->open,
+				*Mmo->HallRefusal()), AskSeconds);
+			return;
+		}
+		if (Hall.Gate == 0 && !Hall.bPressed) Press();
+		if (Hall.Gate == 0 && S->doorOpen(*C))
+		{
+			Check(Mmo->HallRefusal().IsEmpty(), TEXT("the door opened on the act key"));
+			Hall.Gate = 1;
+			Hall.bPressed = false;
+			Hall.Settled = -1;
+			T.PhaseAt = Now;
+			return;
+		}
+		if (Hall.Gate == 3 && S->doorOpen(*C))
 		{
 			if (!Hall.bShot)
 			{
-				Check(Mmo->HallRefusal().IsEmpty(), TEXT("the door opened on the act key"));
 				Hall.bShot = true;
 				Hall.Settled = -1;
 			}

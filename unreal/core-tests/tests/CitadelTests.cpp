@@ -217,9 +217,9 @@ TEST(door_closesOnlyWhenTheDoorwayIsClear) {
     h.sim.state.units.push_back(Unit(other, Unit::Kind::ranger, 0, kAt + Vec2(0.5, 5.5), 0, Unit::Task::idle));
     h.sim.reindex();
     structureOf(h.sim, h.citadel).door = Door{1, true};
-    // Not from outside; not with someone in the doorway.
+    // Not with someone in the doorway, from either side (C4: outside too).
     const Unit outside(999, Unit::Kind::prospector, 0, kAt + Vec2(0, 7.5), 0, Unit::Task::idle);
-    EXPECT_EQ(h.sim.doorRefusal(structureOf(h.sim, h.citadel), false, outside), std::optional<std::string>("Close it from inside"));
+    EXPECT_EQ(h.sim.doorRefusal(structureOf(h.sim, h.citadel), false, outside), std::optional<std::string>("Someone is in the doorway"));
     EXPECT_EQ(h.sim.door(h.pilot, h.citadel, false), std::optional<std::string>("Someone is in the doorway"));
     // One grown by its radius into the doorway still counts.
     unitOf(h.sim, other).position = kAt + Vec2(0, 6.3);
@@ -233,9 +233,51 @@ TEST(door_closesOnlyWhenTheDoorwayIsClear) {
     EXPECT_EQ(structureOf(h.sim, h.citadel).door->open, 0.0);
     // Opening: from either side within reach, not from afar.
     EXPECT_TRUE(!h.sim.doorRefusal(structureOf(h.sim, h.citadel), true, outside));
-    const Unit far(998, Unit::Kind::prospector, 0, kAt + Vec2(0, 9), 0, Unit::Task::idle);
+    const Unit far(998, Unit::Kind::prospector, 0, kAt + Vec2(0, 9.2), 0, Unit::Task::idle);
     EXPECT_EQ(h.sim.doorRefusal(structureOf(h.sim, h.citadel), true, far), std::optional<std::string>("Too far from the door"));
+    EXPECT_EQ(h.sim.doorRefusal(structureOf(h.sim, h.citadel), false, far), std::optional<std::string>("Too far from the door"));
     EXPECT_TRUE(!h.sim.door(h.pilot, h.citadel, true));
+}
+
+// C4: the door opens and closes from either side within `doorReach` (the
+// foot of the ramp outside, the hall's front third inside), never from
+// deep in the hall or far out on the apron.
+TEST(door_opensAndClosesFromEitherSide) {
+    const CitadelHall on(true);
+    Hall h = hallScene(kAt + Vec2(0, 3));
+    EXPECT_EQ(Rules::doorReach, 3.0);
+    auto refusal = [&](Vec2 local, bool open) {
+        const Unit u(997, Unit::Kind::prospector, 0, kAt + local, 0, Unit::Task::idle);
+        return h.sim.doorRefusal(structureOf(h.sim, h.citadel), open, u);
+    };
+    for (const Vec2 at : {Vec2(0, 7.2), Vec2(0, 8.9), Vec2(-2.5, 7), Vec2(0, 3), Vec2(0, 2.1), Vec2(-2.5, 3.5)}) {
+        EXPECT_TRUE(!refusal(at, true));
+        EXPECT_TRUE(!refusal(at, false));
+    }
+    for (const Vec2 at : {Vec2(0, 9.2), Vec2(0, 1.8), Vec2(0, -2), Vec2(-4.9, 4)}) {
+        EXPECT_EQ(refusal(at, true), std::optional<std::string>("Too far from the door"));
+        EXPECT_EQ(refusal(at, false), std::optional<std::string>("Too far from the door"));
+    }
+    // The pilot walks it through: open, close, open from outside; in, close from inside.
+    auto stand = [&](Vec2 local) { unitOf(h.sim, h.pilot).position = kAt + local; };
+    auto settle = [&] { steps(h.sim, Rules::doorSeconds + 0.1); };
+    stand(Vec2(0, 7.5));
+    EXPECT_TRUE(!h.sim.door(h.pilot, h.citadel, true));
+    settle();
+    EXPECT_TRUE(Simulation::doorOpen(structureOf(h.sim, h.citadel)));
+    EXPECT_TRUE(!h.sim.door(h.pilot, h.citadel, false));
+    settle();
+    EXPECT_EQ(structureOf(h.sim, h.citadel).door->open, 0.0);
+    EXPECT_TRUE(!h.sim.door(h.pilot, h.citadel, true));
+    settle();
+    EXPECT_TRUE(Simulation::doorOpen(structureOf(h.sim, h.citadel)));
+    stand(Vec2(0, 3));
+    EXPECT_TRUE(!h.sim.door(h.pilot, h.citadel, false));
+    settle();
+    EXPECT_EQ(structureOf(h.sim, h.citadel).door->open, 0.0);
+    EXPECT_TRUE(!h.sim.door(h.pilot, h.citadel, true));
+    settle();
+    EXPECT_TRUE(Simulation::doorOpen(structureOf(h.sim, h.citadel)));
 }
 
 TEST(gun_restsWithoutAGunnerAndNeverFires) {

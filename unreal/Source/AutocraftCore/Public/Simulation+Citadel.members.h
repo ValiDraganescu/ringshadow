@@ -24,9 +24,9 @@ public:
     /// though the grid blocks the whole square for everyone else.
     bool standsInHall(const Unit& u) const;
     /// Why unit `u` can't open (`open`) or close the door of `s` now, or nil:
-    /// `s` a complete Citadel; to open, `u` within `Rules::doorReach` of the
-    /// door slab (either side); to close, `u` in the hall and no unit in the
-    /// doorway (the door slab grown by each unit's radius). The server checks
+    /// `s` a complete Citadel; `u` within `Rules::doorReach` of the door slab
+    /// (either side: C4, it closes from outside too); to close, no unit in
+    /// the doorway (the door slab grown by each unit's radius). The server checks
     /// the rest (the unit complete, the Citadel the realm's).
     std::optional<std::string> doorRefusal(const Structure& s, bool open, const Unit& u) const;
     /// Unit `unit` opens or closes the door of building `structure`; the

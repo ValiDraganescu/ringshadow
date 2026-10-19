@@ -71,11 +71,8 @@ std::optional<std::string> Simulation::doorRefusal(const Structure& s, bool open
     const Footprint& f = Rules::footprint(s.kind);
     if (!f.door || !s.complete() || !s.door) return std::string("No door to work here");
     const Vec2 local = u.position - s.position;
-    if (open) {
-        if (f.door->distance(local) > Rules::doorReach) return std::string("Too far from the door");
-        return std::nullopt;
-    }
-    if (!f.inside(local)) return std::string("Close it from inside");
+    if (f.door->distance(local) > Rules::doorReach) return std::string("Too far from the door");
+    if (open) return std::nullopt;
     for (const Unit& v : state.units) {
         if (!(v.hp > 0) || v.airborne() || v.task == Unit::Task::aboard) continue;
         if (f.door->contains(v.position - s.position, Rules::radius(v.kind))) return std::string("Someone is in the doorway");

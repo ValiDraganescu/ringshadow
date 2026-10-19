@@ -977,8 +977,8 @@ public:
 
     /// The pilot opens (`open`) or closes the door of the realm's complete
     /// Citadel nearest its Prospector in its region (`Simulation::door`:
-    /// open within `Rules::doorReach` of the door slab, either side; close
-    /// only from the hall, the doorway clear). The reason when refused.
+    /// within `Rules::doorReach` of the door slab, either side; to close,
+    /// the doorway clear). The reason when refused.
     std::optional<std::string> door(PilotId pilot, bool open);
     /// The pilot's Prospector mans corner gun `gun` (0 to 3) of the realm's
     /// Citadel it is sheltered in (`Simulation::man`: within

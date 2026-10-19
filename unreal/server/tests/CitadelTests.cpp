@@ -166,10 +166,10 @@ int64_t aliveIn(WorldMap& w, PilotId p, int64_t group) {
 
 } // namespace
 
-// The door: opened from outside within reach, refused too far; closed only
-// from inside, refused while someone stands in the doorway; it takes
-// `Rules::doorSeconds` to open.
-TEST(door_openFromOutsideCloseOnlyInside) {
+// The door (C4): opened and closed from either side within reach, refused
+// too far; closing refused while someone stands in the doorway; it takes
+// `Rules::doorSeconds` either way.
+TEST(door_opensAndClosesFromEitherSide) {
     Hall h;
     ASSERT_TRUE(h.citadel.has_value());
     WorldMap& w = h.w;
@@ -177,38 +177,61 @@ TEST(door_openFromOutsideCloseOnlyInside) {
     ASSERT_TRUE(c && c->door.has_value());
     EXPECT_EQ(c->door->open, 0.0);
     EXPECT_TRUE(!c->door->opening);
+    auto settle = [&] {
+        drive(w, a, int(Rules::doorSeconds * 60) + 2);
+        c = structure(simOf(w, a), *h.citadel);
+    };
 
     standAt(w, a, h.centre + Vec2(0, 6 + 8));
     EXPECT_TRUE(w.door(a, true).value_or("") == "Too far from the door");
+    // Outside: opens, then closes again from the same spot.
     standAt(w, a, h.atDoor());
-    // Not from outside.
-    EXPECT_TRUE(w.door(a, false).value_or("") == "Close it from inside");
     ASSERT_TRUE(!w.door(a, true).has_value());
-    drive(w, a, int(Rules::doorSeconds * 60) + 2);
-    c = structure(simOf(w, a), *h.citadel);
+    settle();
     EXPECT_TRUE(c->door->opening);
     EXPECT_TRUE(Simulation::doorOpen(*c));
+    ASSERT_TRUE(!w.door(a, false).has_value());
+    settle();
+    EXPECT_EQ(c->door->open, 0.0);
+    // From the foot of the ramp (3 out from the slab) too.
+    standAt(w, a, h.centre + Vec2(0, 6 + 2.9));
+    ASSERT_TRUE(!w.door(a, true).has_value());
+    settle();
+    EXPECT_TRUE(Simulation::doorOpen(*c));
+    ASSERT_TRUE(!w.door(a, false).has_value());
+    settle();
+    EXPECT_EQ(c->door->open, 0.0);
 
-    // Inside, far from the door: closes.
-    standAt(w, a, h.inHall());
-    // Someone in the doorway first: refused.
+    // Inside by the door: opens, and closes, though not with someone in the doorway.
+    standAt(w, a, h.centre + Vec2(0, 3));
+    ASSERT_TRUE(!w.door(a, true).has_value());
+    settle();
+    EXPECT_TRUE(Simulation::doorOpen(*c));
     Simulation& sim = simOf(w, a);
     Unit other = sim.freshUnit(UnitKind::prospector, sim.state.nextID++, Pilot::player, h.centre + Vec2(0, 5.5), 0);
     sim.state.units.push_back(other);
     sim.reindex();
     EXPECT_TRUE(w.door(a, false).value_or("") == "Someone is in the doorway");
+    // From outside the same.
+    standAt(w, a, h.atDoor());
+    EXPECT_TRUE(w.door(a, false).value_or("") == "Someone is in the doorway");
     std::erase_if(sim.state.units, [&](const Unit& u) { return u.id == other.id; });
     sim.reindex();
+    standAt(w, a, h.centre + Vec2(0, 3));
     ASSERT_TRUE(!w.door(a, false).has_value());
-    drive(w, a, int(Rules::doorSeconds * 60) + 2);
-    c = structure(simOf(w, a), *h.citadel);
+    settle();
     EXPECT_EQ(c->door->open, 0.0);
     EXPECT_TRUE(!Simulation::doorOpen(*c));
-    // Opened from inside too, at the door; the request's dev line says the same.
+    // Deep in the hall it is out of reach.
+    standAt(w, a, h.inHall());
+    EXPECT_TRUE(w.door(a, true).value_or("") == "Too far from the door");
+    // The request's dev line says the same.
     standAt(w, a, h.centre + Vec2(0, 4));
     EXPECT_TRUE(w.devCitadel("citadel door open") == "dev: citadel door open");
+    standAt(w, a, h.atDoor());
+    EXPECT_TRUE(w.devCitadel("citadel door close") == "dev: citadel door close");
     standAt(w, a, h.centre + Vec2(0, 30));
-    EXPECT_TRUE(w.devCitadel("citadel door close") == "dev: citadel door close: refused: Close it from inside");
+    EXPECT_TRUE(w.devCitadel("citadel door open") == "dev: citadel door open: refused: Too far from the door");
 }
 
 // A gun: taken from its station in the hall when free; refused outside, too
