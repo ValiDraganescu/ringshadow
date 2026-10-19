@@ -261,11 +261,18 @@ float rockW = smoothstep(0.22, 0.45, slope);
 // before the range's end, so nothing pops; off on cliffs and plating.
 {
     float3 V = normalize(Cam / 100.0 - wp);
-    float depth = ParallaxDepth * (1.0 - smoothstep(ParallaxRange.x, ParallaxRange.y, dist)) * (1.0 - rockW) * (1.0 - splat.b);
-    if (depth > 1e-4 && V.z > 0.08 && nearW > 0.001)
+    // At a grazing look (a cockpit's eye 1.3 m up sees the ground at 5-20
+    // degrees) the march would stretch over a metre and show its steps as
+    // stacked slices that swim with the camera's height: the depth fades
+    // out below 30 degrees and the march never reaches past 6 cm.
+    float graze = smoothstep(0.3, 0.6, V.z);
+    float depth = ParallaxDepth * graze * (1.0 - smoothstep(ParallaxRange.x, ParallaxRange.y, dist)) * (1.0 - rockW) * (1.0 - splat.b);
+    if (depth > 1e-4 && nearW > 0.001)
     {
-        float steps = lerp(16.0, 8.0, V.z);
-        float2 stepG = -V.xy / V.z * depth / steps;
+        float steps = 16.0;
+        float2 reach = -V.xy / V.z * depth;
+        reach *= min(1.0, 0.06 / max(length(reach), 1e-5));
+        float2 stepG = reach / steps;
         float2 off = 0;
         float level = 1.0;
         float2 dx = gdx / NearTile, dy = gdy / NearTile;
