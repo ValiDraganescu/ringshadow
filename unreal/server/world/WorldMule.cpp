@@ -183,7 +183,7 @@ std::string WorldMap::devMule(const std::string& line) {
     const size_t r = p.region;
     Simulation& sim = regions_[r]->simulation();
     GameState& st = sim.state;
-    const auto me = p.unit ? sim.unitIndex(*p.unit) : std::nullopt;
+    const std::optional<int64_t> me = p.unit ? sim.unitIndex(*p.unit) : std::nullopt;
     if (what == "foundry") {
         // A complete Foundry ahead, its door (+y) toward the pilot, the
         // pilot by its call post (C5, Act.h), clear of the Mule's way out.
@@ -254,13 +254,21 @@ std::string WorldMap::devMule(const std::string& line) {
         if (!c) return "dev: mule door: no Citadel here";
         const auto mi = sim.unitIndex(*p.mule->unit);
         if (!mi) return "dev: mule door: no Mule out here";
-        // Its way in: open ground from there to the hall's middle.
+        // Its way in: open ground from there to the hall's middle, the Mule
+        // facing in, the Prospector already where it will stand (C5: it is
+        // solid to the Mule).
         {
             Unit probe = st.units[size_t(*mi)];
+            probe.heading = -pi / 2;
+            probe.position = c->position + Vec2(0, 9.5);
+            const std::optional<int64_t> walker = p.unit ? sim.unitIndex(*p.unit) : std::nullopt;
+            const std::optional<Vec2> stood = walker ? std::optional<Vec2>(st.units[size_t(*walker)].position) : std::nullopt;
+            if (walker) st.units[size_t(*walker)].position = Mule::hopper(probe) + Vec2(1.5, 0);
             const Structure shut = *c;
             c->door = Door{1, true};
             for (double y = 9.5; y >= 0; y -= 0.25)
                 if (!sim.pilotCanStand(probe, c->position + Vec2(0, y))) {
+                    if (walker) st.units[size_t(*walker)].position = *stood;
                     c->door = shut.door;
                     char out[120];
                     std::snprintf(out, sizeof out, "dev: mule door: the way in is blocked %.2f cells out", y);
