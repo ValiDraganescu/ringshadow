@@ -1418,13 +1418,24 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 			{
 				const ac::Footprint& F = ac::Rules::footprint(C.kind);
 				if (C.kind != ac::StructureKind::citadel || !C.complete() || !F.door || ac::distance(C.position, U.position) > 20.0) continue;
-				// The door's slab and its panels beside it, grown a little.
+				// The door while it stands (shut or moving), and the panels
+				// beside the doorway (outside and in, citadel.py's
+				// `doorPanels_k`); an open door lies on the ground, so a look
+				// through the doorway is not on it.
 				const double G = GroundAt(GetWorld(), C.position);
-				const FBox Door(AcSpace::ToWorld(C.position + F.door->min, G + F.door->z0) - FVector(80, 80, 0),
-					AcSpace::ToWorld(C.position + F.door->max, G + F.door->z1) + FVector(80, 80, 0));
 				FVector Hit, Normal;
 				float Time = 0.f;
-				Aim.bDoor |= FMath::LineExtentBoxIntersection(Door, At, At + Dir * 900.0, FVector::ZeroVector, Hit, Normal, Time);
+				auto On = [&](const FBox& Box) { return FMath::LineExtentBoxIntersection(Box, At, At + Dir * 900.0, FVector::ZeroVector, Hit, Normal, Time); };
+				if (!(C.door && C.door->open >= 0.95))
+				{
+					Aim.bDoor |= On(FBox(AcSpace::ToWorld(C.position + F.door->min, G + F.door->z0) - FVector(20, 20, 0),
+						AcSpace::ToWorld(C.position + F.door->max, G + F.door->z1) + FVector(20, 20, 0)));
+				}
+				for (const double Y : {F.door->max.y + 0.07, F.door->min.y - 0.07})
+				{
+					const FVector P = AcSpace::ToWorld(C.position + ac::Vec2(2.25, Y), G + 1.2);
+					Aim.bDoor |= On(FBox(P - FVector(45, 45, 45), P + FVector(45, 45, 45)));
+				}
 			}
 		}
 		AcShuttleAct::SetDriverAim(Aim);
