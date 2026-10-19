@@ -111,6 +111,21 @@
 // north up, half way through. The clock jumps to each moment. Add
 // -AcWeather=clear for a cloudless sun.
 //
+// -AcMmoShotsNightHaze (it adds -AcMmoDevRig and -AcMmoWeather=clear unless
+// the run gives it; docs/weather.md "The night's reach and the far haze"):
+// third person about 35 cells from the realm's Citadel, looking at it toward
+// the giant, the rocks beyond; each moment before (the haze as it was: 26
+// cells into an opaque, dimmed haze, ac.NightReach 26 ac.PilotNightVeil
+// 0.45 ac.HazeCap 1 ac.HazeLights 1) and after (the run's settings),
+// DIR/nh-NN-moment-before|after.png; the clock jumps to each hour:
+//   01-02 night (23:00)          03-04 day (12:00)
+//   05-06 a Dropship 100 cells off at its cruise height (40 cells up), night
+//   07-08 the same by day
+//   10-11 the night's Dropship 35° right of the look, over the open sky
+//   09 the night's Dropship from the top-down view (last: it leaves the unit)
+// and the frame and GPU times at the night framing with the veil off and on
+// (ac.PilotVeil), six times each in turn, logged as `nh perf:` (4 s each).
+//
 // -AcMmoShotsStarfall (it adds -AcMmoStarfall=10 -AcMmoClockHour=17 unless
 // the run gives them: a starfall near the pilot 10 s after it comes, late in
 // the afternoon; docs/weather.md "Starfall"): third person on the start pad
@@ -509,7 +524,9 @@
 #include "AcMmo.h"
 #include "Flight.h"
 #include "AcPilotBuild.h"
+#include "AcPilotFlight.h"
 #include "AcPilotPawn.h"
+#include "AcRtsPawn.h"
 #include "AcPilotText.h"
 #include "AcProgressHud.h"
 #include "AcBenchMeter.h"
@@ -692,6 +709,18 @@ namespace
 	double RaAt[2] = {0, 0};
 	bool RaTop[2] = {false, true};
 	TWeakObjectPtr<ACameraActor> RaCam;
+	/// -AcMmoShotsNightHaze: the realm's Citadel and the spot about 35 cells
+	/// from it away from the giant; the moment being shot; the haze's
+	/// console variables as the run had them (the "after"); the frame and
+	/// GPU times of the moment being measured.
+	ac::Vec2 NhCitadel, NhSpot;
+	int32 NhStep = 0;
+	double NhAskedAt = -10;
+	/// When the clock last stood off the moment's hour (the light settles from then).
+	double NhHourAt = 0;
+	float NhAfter[4] = {70.f, 1.f, 0.88f, 0.5f};
+	TArray<double> NhFrames, NhGpu;
+	double NhFrameAt = -1;
 	/// -AcMmoShotsZ1: Cold Fork's file (its zone).
 	TOptional<ac::region::RegionFile> Z1File;
 	/// -AcMmoShotsZ2: the zone's turrets standing when the wave broke through.
@@ -1222,7 +1251,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsU1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))
 				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsX2")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4"))
-				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsBench")))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsBench"))
+				|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsNightHaze")))
 			&& !FParse::Param(FCommandLine::Get(), TEXT("AcMmoDevRig")))
 		{
 			FCommandLine::Append(TEXT(" -AcMmoDevRig"));
@@ -1244,6 +1274,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
 			if (FString Seen; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoDevSeen="), Seen)) FCommandLine::Append(TEXT(" -AcMmoDevSeen=start"));
 		}
+		// -AcMmoShotsNightHaze: a clear sky, the giant in view.
+		if (FString W; FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsNightHaze")) && !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W))
+			FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
 		// -AcMmoShotsW4 and B4: late morning, clear, every region been to (the map).
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB4")))
 		{
@@ -1390,6 +1423,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1"))) T.Phase = 2600;
 			// -AcMmoShotsS3: daylight sight (2700-2714).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS3"))) T.Phase = 2700;
+			// -AcMmoShotsNightHaze: the night's reach and the far haze (3900-3905).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsNightHaze"))) T.Phase = 3900;
 			// -AcMmoShotsBench: the MMO bench (4000-4009).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsBench"))) T.Phase = 4000;
 		}
@@ -3268,6 +3303,257 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		}
 		Check(Shots.Saved + Shots.Skipped == 4, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
+		Finish();
+		return;
+	}
+	// MARK: -AcMmoShotsNightHaze
+	// The user's night (2026-10-19): a Citadel 35 cells off and the rocks
+	// beyond were one flat dark band with a hard edge against the giant-lit
+	// sky, and the Dropship flying off vanished into it. Third person about
+	// 35 cells from the realm's Citadel on the side away from the giant,
+	// looking at it; each moment with the haze as it was and as it is.
+	case 3900:
+	{
+		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(0);
+		if (!Pilot->ChaseEye()) Pilot->ToggleView();
+		// A few seconds for the first frames' model cutting to pass.
+		if (Since() < 5.0) return;
+		const ac::Structure* C = S ? CitadelOf(*S) : nullptr;
+		if (!C || !U || !M)
+		{
+			TimedOut(TEXT("nh: the dev rig's Citadel"));
+			return;
+		}
+		const TCHAR* Names[4] = {TEXT("ac.NightReach"), TEXT("ac.PilotNightVeil"), TEXT("ac.HazeCap"), TEXT("ac.HazeLights")};
+		for (int32 I = 0; I < 4; ++I)
+			if (IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(Names[I])) NhAfter[I] = V->GetFloat();
+		NhCitadel = C->position;
+		// Away from the giant, 35 cells (or near it), where the Prospector stands.
+		const FVector G = FAcGasGiant::Direction();
+		const double Toward = std::atan2(G.Y, G.X);
+		const ac::Simulation& Ms = M->simulation();
+		TOptional<ac::Vec2> Spot;
+		for (const double D : {35.0, 33.0, 37.0, 31.0, 39.0, 29.0})
+			for (const double Turn : {0.0, 0.15, -0.15, 0.3, -0.3, 0.45, -0.45, 0.6, -0.6})
+			{
+				const ac::Vec2 P = NhCitadel - ac::Vec2(std::cos(Toward + Turn), std::sin(Toward + Turn)) * D;
+				if (!Spot && Ms.pilotCanStand(*U, P) && (!Ms.nav || Ms.nav->path(U->position, P, 0.5))) Spot = P;
+			}
+		Check(Spot.IsSet(), TEXT("nh: a spot about 35 cells from the Citadel, away from the giant"));
+		if (!Spot)
+		{
+			Finish();
+			return;
+		}
+		NhSpot = *Spot;
+		// Round the Citadel first, as B1 (the dev rig's Prospector unloads
+		// against its west wall); the walking grid when that wedges.
+		RouteRound(NhSpot);
+		K2Unsticks = 0;
+		K2BackUntil = 0;
+		UE_LOG(LogAutocraft, Log, TEXT("nh: the Citadel at (%.1f, %.1f), the spot (%.1f, %.1f), %.1f cells from it"), NhCitadel.x, NhCitadel.y,
+			NhSpot.x, NhSpot.y, ac::distance(NhSpot, NhCitadel));
+		Advance();
+		return;
+	}
+	case 3901:
+	{
+		if (!U || !M) return;
+		const bool bThere = ac::distance(U->position, NhSpot) < 1.5;
+		const bool bStuck = !bThere && Now - Shots.StallSince > 4.0 && K2Unsticks >= 2 && Now >= K2BackUntil;
+		if (!bThere && !bStuck)
+		{
+			if (K2Unstick()) return;
+			if (Drive() == 1)
+			{
+				// Along the walking grid from where it stands.
+				TArray<FVector2D> Way;
+				if (const ac::Simulation& Ms = M->simulation(); Ms.nav)
+					if (const auto P = Ms.nav->path(U->position, NhSpot, 0.5))
+						for (const ac::Vec2 Q : *P) Way.Add(FVector2D(Q.x, Q.y));
+				if (Way.IsEmpty()) Way.Add(FVector2D(NhSpot.x, NhSpot.y));
+				Drivable(Way);
+				Shots.Route = Way;
+				Shots.RouteAt = 0;
+				Shots.StallAt = FVector2D(U->position.x, U->position.y);
+				Shots.StallSince = Now;
+				FString Legs;
+				for (const FVector2D& W : Way) Legs += FString::Printf(TEXT(" (%.1f, %.1f)"), W.X, W.Y);
+				UE_LOG(LogAutocraft, Log, TEXT("nh: from (%.1f, %.1f) along%s"), U->position.x, U->position.y, *Legs);
+			}
+			if (Since() < 90.0) return;
+		}
+		Check(ac::distance(U->position, NhCitadel) > 25.0,
+			FString::Printf(TEXT("nh: 25 cells or more from the Citadel (%.1f; %.1f from the spot)"), ac::distance(U->position, NhCitadel), ac::distance(U->position, NhSpot)));
+		Stop(Face(NhCitadel));
+		UE_LOG(LogAutocraft, Log, TEXT("nh: standing %.1f cells from the Citadel, looking at it (bearing %.0f)"), ac::distance(U->position, NhCitadel),
+			FMath::Fmod(FMath::RadiansToDegrees(std::atan2(NhCitadel.x - U->position.x, -(NhCitadel.y - U->position.y))) + 360.0, 360.0));
+		NhStep = 0;
+		Advance();
+		return;
+	}
+	case 3902:
+	case 3903:
+	{
+		// The moments: the hour, the haze before or after, the Dropship,
+		// the view; a picture, or the frame times.
+		struct FMoment
+		{
+			double Hour;
+			bool bBefore, bShip, bTop;
+			const TCHAR* Name;
+			/// The ship this far right of the look, radians (in front of the giant; 0.6 over the open sky).
+			double ShipSide = 0.35;
+		};
+		static const FMoment Moments[] = {
+			{23, true, false, false, TEXT("nh-01-night-before")},
+			{23, false, false, false, TEXT("nh-02-night-after")},
+			{23, false, false, false, TEXT("perf-off")},
+			{23, false, false, false, TEXT("perf-on")},
+			{23, false, false, false, TEXT("perf-off")},
+			{23, false, false, false, TEXT("perf-on")},
+			{23, false, false, false, TEXT("perf-off")},
+			{23, false, false, false, TEXT("perf-on")},
+			{23, false, false, false, TEXT("perf-off")},
+			{23, false, false, false, TEXT("perf-on")},
+			{23, false, false, false, TEXT("perf-off")},
+			{23, false, false, false, TEXT("perf-on")},
+			{23, false, false, false, TEXT("perf-off")},
+			{23, false, false, false, TEXT("perf-on")},
+			{12, true, false, false, TEXT("nh-03-day-before")},
+			{12, false, false, false, TEXT("nh-04-day-after")},
+			{23, true, true, false, TEXT("nh-05-ship-night-before")},
+			{23, false, true, false, TEXT("nh-06-ship-night-after")},
+			{12, true, true, false, TEXT("nh-07-ship-day-before")},
+			{12, false, true, false, TEXT("nh-08-ship-day-after")},
+			{23, true, true, false, TEXT("nh-10-ship-sky-night-before"), 0.6},
+			{23, false, true, false, TEXT("nh-11-ship-sky-night-after"), 0.6},
+			// (Last: the pilot leaves the unit for it.)
+			{23, false, true, true, TEXT("nh-09-ship-night-top")},
+		};
+		constexpr int32 Count = UE_ARRAY_COUNT(Moments);
+		if (T.Phase == 3903)
+		{
+			// (The picture written: the next moment.)
+			if (++NhStep >= Count)
+			{
+				T.Phase = 3904;
+				T.PhaseAt = Now;
+				return;
+			}
+			T.Phase = 3902;
+			T.PhaseAt = Now;
+			return;
+		}
+		const FMoment& Mo = Moments[NhStep];
+		// A moment passed over (-AcMmoShotsOnly) is not staged at all.
+		if (FCString::Strncmp(Mo.Name, TEXT("perf"), 4) != 0 && !Wanted(Mo.Name))
+		{
+			Shots.Skipped += 1;
+			Advance();
+			return;
+		}
+		const AAcDaylight* Day = AAcDaylight::Find(GetWorld());
+		if (!Day || !Mmo) return;
+		// Where the Prospector stands (top-down it is driven no more).
+		const ac::Vec2 Stand = U ? U->position : NhSpot;
+		// The hour: the server's clock set to it (back or on, `clock`: `hour`
+		// would go to the next one, a day on) when it stands 0.3 h off, at
+		// most once in 3 s.
+		// (The world's own hour: the daylight's follows it a frame or more late.)
+		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
+		if (!Sky) return;
+		const double Off = FMath::Fmod(ac::WorldClock::hourAt(Sky->Time, Sky->DayLength) - Mo.Hour + 36.0, 24.0) - 12.0;
+		if (FMath::Abs(Off) > 0.3 && Now - NhAskedAt > 3.0)
+		{
+			// The nearest time at that hour, behind or ahead (the night's
+			// hours are shorter than the day's).
+			const double To = ac::WorldClock::timeOf(Mo.Hour, FMath::Max(0.0, Sky->Time - 0.5 * Sky->DayLength), Sky->DayLength);
+			Mmo->DevClock(FString::Printf(TEXT("clock %.1f"), To));
+			NhAskedAt = Now;
+		}
+		if (FMath::Abs(Off) > 0.3 || FMath::Abs(FMath::Fmod(Day->GetHour() - Mo.Hour + 36.0, 24.0) - 12.0) > 0.3)
+		{
+			NhHourAt = Now;
+			TimedOut(TEXT("nh: the clock at the moment's hour"), 20);
+			return;
+		}
+		// The haze before (2026-10-19's: 26 cells under any giant, into an
+		// opaque haze at 0.45 of the sky's) or after (the run's settings).
+		const float Before[4] = {float(26.0 / AAcDaylight::RingAt(FAcGasGiant::Lit(AAcDaylight::SunToward(Day->GetHour())))), 0.45f, 1.f, 1.f};
+		const TCHAR* Names[4] = {TEXT("ac.NightReach"), TEXT("ac.PilotNightVeil"), TEXT("ac.HazeCap"), TEXT("ac.HazeLights")};
+		for (int32 I = 0; I < 4; ++I)
+			if (IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(Names[I])) V->Set(Mo.bBefore ? Before[I] : NhAfter[I], ECVF_SetByCode);
+		// The Dropship 100 cells off, 20° right of the look, 40 cells up (the
+		// flight's cruise height over a pad), crossing the view, its engines lit.
+		const double Look = std::atan2(NhCitadel.y - Stand.y, NhCitadel.x - Stand.x);
+		const ac::Vec2 ShipAt = Stand + ac::Vec2(std::cos(Look + Mo.ShipSide), std::sin(Look + Mo.ShipSide)) * 100.0;
+		const UAcEffects* Fx = UAcEffects::Get(this);
+		const double GroundCm = Fx && FMath::IsFinite(Fx->GroundZ(Stand)) ? Fx->GroundZ(Stand) : 0.0;
+		if (AAcFlightShip* Ship = AAcFlightShip::SpawnFor(GetWorld(), TEXT("AcNightHazeShip")))
+		{
+			if (Mo.bShip)
+			{
+				FVector Body = AcSpace::ToWorld(ShipAt, 0);
+				Body.Z = GroundCm + AcSpace::ToCm(AcPilotFlight::ApproachHigh);
+				const FQuat Rot = FRotator(0, FMath::RadiansToDegrees(Look + 0.5 * PI), 0).Quaternion();
+				Ship->SetScale(AcPilotFlight::ShipScale);
+				Ship->Show(TEXT("dropship_blue"), 0, FTransform(Rot, Body), AcSpace::ToCm(0.1 - 1.9 * AcPilotFlight::ShipScale));
+				Ship->SetGlow(3.5);
+			}
+			else if (Ship->IsShown()) Ship->Hide();
+		}
+		if (Mo.bTop)
+		{
+			if (Pilot->Driving()) Pilot->Leave();
+			if (AAcRtsPawn* Rts = AAcRtsPawn::Get(this)) Rts->ShowAround(ShipAt, 60.0);
+		}
+		else
+		{
+			Stop(Look);
+			// A little up: the giant and the ship in the frame with the land.
+			Pilot->Eye().Pitch = 0.1;
+		}
+		// The frame cost of the veil: with it (perf-on) and without (perf-off).
+		const bool bPerf = FCString::Strncmp(Mo.Name, TEXT("perf"), 4) == 0;
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil")))
+			Veil->Set(bPerf && FCString::Strcmp(Mo.Name, TEXT("perf-off")) == 0 ? 0 : 1, ECVF_SetByCode);
+		if (bPerf)
+		{
+			if (Since() > 2.0 && Now - NhHourAt > 2.0)
+			{
+				if (NhFrameAt > 0)
+				{
+					NhFrames.Add((Now - NhFrameAt) * 1000.0);
+					NhGpu.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+				}
+				NhFrameAt = Now;
+			}
+			if (NhFrames.Num() < 2 || Now - FMath::Max(T.PhaseAt, NhHourAt) < 6.0) return;
+			auto Pct = [](TArray<double> V, const double P) { V.Sort(); return V.Num() ? V[FMath::Clamp(int32(P * V.Num()), 0, V.Num() - 1)] : 0.0; };
+			UE_LOG(LogAutocraft, Log, TEXT("nh perf: night framing, the veil %s: %d frames over 4 s: frame p50 %.2f p95 %.2f ms, gpu p50 %.2f p95 %.2f ms"),
+				FCString::Strcmp(Mo.Name, TEXT("perf-off")) == 0 ? TEXT("off") : TEXT("on"), NhFrames.Num(), Pct(NhFrames, 0.5), Pct(NhFrames, 0.95), Pct(NhGpu, 0.5), Pct(NhGpu, 0.95));
+			NhFrames.Reset();
+			NhGpu.Reset();
+			NhFrameAt = -1;
+			Advance();
+			return;
+		}
+		if (Since() < (Mo.bTop ? 3.0 : 2.0) || Now - NhHourAt < 2.0) return;
+		UE_LOG(LogAutocraft, Log, TEXT("nh: %s at %.2f h: reach %.1f cells, cap %.2f, the giant %.2f lit"), Mo.Name, Day->GetHour(), Day->GetSkyTones().Reach,
+			Day->GetSkyTones().Cap, FAcGasGiant::Lit(AAcDaylight::SunToward(Day->GetHour())));
+		ShootClean(Mo.Name, FString::Printf(TEXT("%s, the haze %s%s"), Mo.Hour < 18 ? TEXT("noon") : TEXT("23:00"), Mo.bBefore ? TEXT("before") : TEXT("after"),
+			Mo.bShip ? (Mo.bTop ? TEXT(", the Dropship 100 cells off from above") : TEXT(", a Dropship 100 cells off, 40 up")) : TEXT("")));
+		return;
+	}
+	case 3904:
+	{
+		const TCHAR* Names[4] = {TEXT("ac.NightReach"), TEXT("ac.PilotNightVeil"), TEXT("ac.HazeCap"), TEXT("ac.HazeLights")};
+		for (int32 I = 0; I < 4; ++I)
+			if (IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(Names[I])) V->Set(NhAfter[I], ECVF_SetByCode);
+		if (AAcFlightShip* Ship = AAcFlightShip::SpawnFor(GetWorld(), TEXT("AcNightHazeShip"))) Ship->Hide();
+		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
+		Check(Shots.Saved + Shots.Skipped == 11, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	}
