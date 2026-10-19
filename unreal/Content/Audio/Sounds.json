@@ -3824,6 +3824,53 @@
     735,
     780
    ]
+  },
+  "wiper": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/wiper/SW_wiper_1.SW_wiper_1",
+     "source": "sfx/wiper_1.wav",
+     "prepared": "Content-src/sounds/sfx/wiper_1.wav",
+     "seconds": 0.75,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/wiper/SW_wiper_2.SW_wiper_2",
+     "source": "sfx/wiper_2.wav",
+     "prepared": "Content-src/sounds/sfx/wiper_2.wav",
+     "seconds": 0.75,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/wiper/SW_wiper_3.SW_wiper_3",
+     "source": "sfx/wiper_3.wav",
+     "prepared": "Content-src/sounds/sfx/wiper_3.wav",
+     "seconds": 0.75,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
+  },
+  "wiperdry": {
+   "variants": [
+    {
+     "asset": "/Game/Audio/Sfx/wiperdry/SW_wiperdry_1.SW_wiperdry_1",
+     "source": "sfx/wiperdry_1.wav",
+     "prepared": "Content-src/sounds/sfx/wiperdry_1.wav",
+     "seconds": 0.75,
+     "rate": 44100
+    },
+    {
+     "asset": "/Game/Audio/Sfx/wiperdry/SW_wiperdry_2.SW_wiperdry_2",
+     "source": "sfx/wiperdry_2.wav",
+     "prepared": "Content-src/sounds/sfx/wiperdry_2.wav",
+     "seconds": 0.75,
+     "rate": 44100
+    }
+   ],
+   "board": [],
+   "audioSwiftLines": []
   }
  },
  "ads": {
@@ -4395,6 +4442,8 @@
   "turretburst",
   "vatlas",
   "vperegrine",
-  "vscorpion"
+  "vscorpion",
+  "wiper",
+  "wiperdry"
  ]
 }

@@ -134,6 +134,14 @@ namespace AcSound
 	inline constexpr float ShelterFadeSeconds = 0.5f;
 	/// A strike's thunder: a close one's crack, a far one's roll.
 	inline constexpr float ThunderGain = 1.1f;
+	/// The visor's wiper (docs/weather.md): a pass of rubber over wet
+	/// glass, over the rain beds and under the guns; the squeak of a pass
+	/// over a nearly dry glass (the last sweeps when the rain stops).
+	/// (2026-10-19: a pass's loudest 100 ms about 5 dB over the downpour's
+	/// two layers and 1-4 dB under a minigun's, measured after the import's
+	/// peak normalisation.)
+	inline constexpr float WiperGain = 0.3f;
+	inline constexpr float WiperDryGain = 0.3f;
 	inline constexpr float BoomGain = 1.0f;
 	inline constexpr float HabDomeBoomGain = 0.7f;
 	inline constexpr float HitMarkGain = 0.5f;
@@ -379,6 +387,11 @@ public:
 	/// A lightning strike's thunder reaching the ears now: a crack within
 	/// 2 km, a roll further out, quieter with distance.
 	void Thunder(double DistanceKm, double Power);
+	/// The visor's wiper each frame: `Passes` it has begun (two a sweep,
+	/// out and back), the latest one's glass nearly dry, and whether the
+	/// glass is in view (no wiper heard in the chase or top-down view). A
+	/// pass plays `wiper`, or `wiperdry` when dry, in your ear.
+	void Wipers(int64 Passes, bool bDry, bool bHeard);
 
 	// The MMORPG's moments (docs/mmorpg-m7.md J1).
 	/// The ringshadow sweep at the ears (docs/weather.md), each frame:
@@ -490,6 +503,8 @@ private:
 	bool bShelterWanted = false;
 	/// 0 out in the rain, 1 in the hall (eased).
 	float Indoors = 0.f;
+	/// The wiper's passes heard so far (-1: none yet seen).
+	int64 WiperPasses = -1;
 	/// The moments: the ringshadow at the ears and its fades, the falls
 	/// heard (streaks started, booms due) and their hot craters.
 	FShadowHear Shadow;

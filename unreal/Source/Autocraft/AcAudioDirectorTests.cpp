@@ -12,6 +12,7 @@
 #include "Rules.h"
 #include "Simulation.h"
 #include "Types.h"
+#include "Wipers.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -553,6 +554,50 @@ bool FAcAudioShelterTest::RunTest(const FString&)
 	const std::vector<FAcSoundCue> CuesOut = R.TakeCues();
 	const FAcSoundCue* CrackOut = First(CuesOut, "crack");
 	TestTrue(TEXT("the thunder unchanged in the hall"), CrackOut && CrackInVolume > 0.f && FMath::IsNearlyEqual(CrackOut->Volume, CrackInVolume));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcAudioWipersTest, "Autocraft.Audio.Rules.Wipers", Flags)
+bool FAcAudioWipersTest::RunTest(const FString&)
+{
+	// docs/weather.md: the visor's wiper is heard a pass at a time, out and
+	// back, in your ear; a dry pass squeaks; not heard off the glass.
+	FAcAudioRules R;
+	R.Variants = [](FName) { return 1; };
+	R.TakeCues();
+	R.Wipers(3, false, true);
+	TestEqual(TEXT("passes from before the first look are not heard"), static_cast<int32>(R.TakeCues().size()), 0);
+	R.Wipers(4, false, true);
+	std::vector<FAcSoundCue> Cues = R.TakeCues();
+	const FAcSoundCue* Pass = First(Cues, "wiper");
+	TestTrue(TEXT("a pass: rubber on wet glass, in your ear"), Cues.size() == 1 && Pass && Pass->Pool == EAcSoundPool::InEar);
+	TestTrue(TEXT("no louder than a minigun"), Pass && Pass->Volume <= AcSound::MinigunGain);
+	R.Wipers(4, false, true);
+	TestEqual(TEXT("no new pass, no sound"), static_cast<int32>(R.TakeCues().size()), 0);
+	R.Wipers(5, true, true);
+	Cues = R.TakeCues();
+	TestTrue(TEXT("a dry pass squeaks"), Cues.size() == 1 && First(Cues, "wiperdry"));
+	R.Wipers(6, false, false);
+	TestEqual(TEXT("off the glass (chase or top-down view): not heard"), static_cast<int32>(R.TakeCues().size()), 0);
+	R.Wipers(7, false, true);
+	TestEqual(TEXT("back on the glass: the next pass heard"), Count(R.TakeCues(), "wiper"), 1);
+
+	// With the rule: a storm's passes each heard, then the rain stops and the
+	// last two sweeps, the last one dry.
+	FAcAudioRules Q;
+	Q.Variants = [](FName) { return 1; };
+	ac::Wipers W;
+	int32 Wet = 0, Dry = 0;
+	for (double T = 0; T < 12; T += 1.0 / 60)
+	{
+		W.update(T, T < 6 ? 1.0 : 0.0);
+		Q.Wipers(W.passes(), W.dry(), true);
+		const std::vector<FAcSoundCue> C = Q.TakeCues();
+		Wet += Count(C, "wiper");
+		Dry += Count(C, "wiperdry");
+	}
+	TestEqual(TEXT("every pass heard but the first look's"), Wet + Dry, static_cast<int32>(W.passes()) - 1);
+	TestEqual(TEXT("the last sweep squeaks out and back"), Dry, 2);
 	return true;
 }
 

@@ -643,6 +643,17 @@ void FAcAudioRules::Thunder(const double DistanceKm, const double Power)
 	OneShot(bClose ? FName("crack") : FName("thunder"), ac::Vec2(), AcSound::ThunderGain * static_cast<float>(Power) * Near, EAcSoundPool::InEar);
 }
 
+void FAcAudioRules::Wipers(const int64 Passes, const bool bDry, const bool bHeard)
+{
+	// One sound a pass begun since the last frame (passes from before the
+	// first look are not heard).
+	if (bHeard && WiperPasses >= 0 && Passes > WiperPasses)
+	{
+		OneShot(bDry ? FName("wiperdry") : FName("wiper"), {}, bDry ? AcSound::WiperDryGain : AcSound::WiperGain, EAcSoundPool::InEar);
+	}
+	WiperPasses = Passes;
+}
+
 void FAcAudioRules::Ringshadow(const FShadowHear& H)
 {
 	Shadow = H;
@@ -1703,6 +1714,7 @@ void UAcAudioDirector::OnFrame(const FAcFrame& Frame)
 		if (T < ThunderHeardTo || T - ThunderHeardTo > 30.0) ThunderHeardTo = T;
 		for (const ac::LightningStrike& S : Weather->Thunder(ThunderHeardTo, T)) Brain.Thunder(S.distanceKm, S.power);
 		ThunderHeardTo = T;
+		Brain.Wipers(Weather->Wipers().passes(), Weather->Wipers().dry(), Weather->GlassShown());
 		for (const FAcSoundCue& Cue : Brain.TakeCues()) Play(Cue);
 	}
 	HearMoments(*Sim);
