@@ -120,9 +120,10 @@ def make_mpc():
 
 # The weather on hulls (docs/weather.md): rain darkens painted metal and
 # makes it glossier, its top faces the most.
+# Wet hulls, top faces most; dry in a Citadel's hall (`Shelter`, below).
 WET_HLSL = """
 float up = 0.5 + 0.5 * saturate(N.z);
-float w = saturate(Wet) * up;
+float w = saturate(Wet) * up * (1.0 - Shelter);
 Rough = lerp(R, R * 0.45, w);
 return C * lerp(1.0, 0.72, w);
 """
@@ -293,7 +294,14 @@ def build_master(path, kind, mpc, weather=None):
         e3 = g.binop(unreal.MaterialExpressionAdd, e3, make_resource_materials.hull_env(g, base_color, metallic, roughness))
         rough_out, rough_pin = roughness, ""
         if weather is not None:
-            wet = g.custom("AcWet", WET_HLSL, ["C", "R", "Wet", "N"])
+            # Dry under a roof: 0 inside a shelter box (AcShelter.h).
+            sheltered = make_resource_materials.shelter_inputs(g, weather)
+            shelter = g.custom("AcShelter", make_resource_materials.shelter_hlsl("P") + "return shelter;",
+                               ["P"] + [n for n, _, _ in sheltered], unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+            g.link(g.node(unreal.MaterialExpressionWorldPosition), "", shelter, "P")
+            for n, src, pin in sheltered:
+                g.link(src, pin, shelter, n)
+            wet = g.custom("AcWet", WET_HLSL, ["C", "R", "Wet", "N", "Shelter"])
             o = unreal.CustomOutput()
             o.set_editor_property("output_name", "Rough")
             o.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
@@ -302,6 +310,7 @@ def build_master(path, kind, mpc, weather=None):
             g.link(roughness, "", wet, "R")
             g.link(g.mpc(weather, "Wetness"), "", wet, "Wet")
             g.link(g.node(unreal.MaterialExpressionVertexNormalWS), "", wet, "N")
+            g.link(shelter, "", wet, "Shelter")
             base_color, rough_out, rough_pin = wet, wet, "Rough"
         g.out(base_color, "", unreal.MaterialProperty.MP_BASE_COLOR)
         g.out(metallic, "", unreal.MaterialProperty.MP_METALLIC)

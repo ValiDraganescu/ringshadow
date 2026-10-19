@@ -15,7 +15,10 @@ What it makes:
   the ringshadow's band (`SweepDirX`, `SweepDirY`, `SweepLead`, `SweepTrail`,
   `SweepSoft`: AAcRingshadow), under which ore veins and well rims flare;
   `HullEnv` (0.6), how much of the Swift studio sky M_Hull's metals mirror
-  on top of Lumen (`hull_env`, the chrome fix; 0 turns it off).
+  on top of Lumen (`hull_env`, the chrome fix; 0 turns it off);
+  the shelter boxes (`Shelter0..3`, `ShelterLow`, `ShelterHigh`:
+  AAcWeather, AcShelter.h), where the rain, the wet hulls and the wet ground
+  leave a Citadel's hall dry (`shelter_hlsl`).
 - /Game/Materials/M_Opal: Stardust Ore (docs/naming.md, "How they look").
   Near-black basalt run through with thin opal veins (bold veins and
   hairlines, isolines of a warped noise) whose thin-film hue (teal, violet,
@@ -99,25 +102,52 @@ def make_world_mpc():
     wanted = (("Dark", 0.0), ("HullEnv", 0.6), ("Wetness", 0.0),
               ("SweepDirX", 1.0), ("SweepDirY", 0.0), ("SweepLead", -1.0e6), ("SweepTrail", -1.0e6),
               ("SweepSoft", 16.0), ("RingOn", 0.0), ("RingOff", 30.0), ("RingHalf", 6.0))
-    kept = list(mpc.get_editor_property("scalar_parameters"))
-    have = [str(x.get_editor_property("parameter_name")) for x in kept]
-    if have == [n for n, _ in wanted]:
-        return mpc
-    # Rewriting a parameter gives it a new id, which would leave every
-    # material compiled against the old one stale: keep the ones there and
-    # add only the missing ones at the end.
-    if have != [n for n, _ in wanted][:len(have)]:
-        kept = []
-    scalars = kept
-    for name, value in wanted[len(kept):]:
-        s = unreal.CollectionScalarParameter()
-        s.set_editor_property("parameter_name", name)
-        s.set_editor_property("default_value", value)
-        scalars.append(s)
-    mpc.set_editor_property("scalar_parameters", scalars)
-    EAL.set_metadata_tag(mpc, "AcMadeBy", "Tools/Editor/make_resource_materials.py")
-    EAL.save_loaded_asset(mpc)
+    # The shelter boxes (AcShelter.h): each Citadel hall's centre x, y and
+    # half sides x, y (world cm); the four boxes' bottoms and tops (cm).
+    wanted_vectors = tuple((name, unreal.LinearColor(0, 0, 0, 0)) for name in SHELTER_VECTORS)
+    changed = False
+    for prop, cls, want in (("scalar_parameters", unreal.CollectionScalarParameter, wanted),
+                            ("vector_parameters", unreal.CollectionVectorParameter, wanted_vectors)):
+        kept = list(mpc.get_editor_property(prop))
+        have = [str(x.get_editor_property("parameter_name")) for x in kept]
+        if have == [n for n, _ in want]:
+            continue
+        # Rewriting a parameter gives it a new id, which would leave every
+        # material compiled against the old one stale: keep the ones there and
+        # add only the missing ones at the end.
+        if have != [n for n, _ in want][:len(have)]:
+            kept = []
+        params = kept
+        for name, value in want[len(kept):]:
+            p = cls()
+            p.set_editor_property("parameter_name", name)
+            p.set_editor_property("default_value", value)
+            params.append(p)
+        mpc.set_editor_property(prop, params)
+        changed = True
+    if changed:
+        EAL.set_metadata_tag(mpc, "AcMadeBy", "Tools/Editor/make_resource_materials.py")
+        EAL.save_loaded_asset(mpc)
     return mpc
+
+
+SHELTER_VECTORS = ("Shelter0", "Shelter1", "Shelter2", "Shelter3", "ShelterLow", "ShelterHigh")
+
+
+def shelter_inputs(g, mpc):
+    """The shelter boxes' MPC_AcWorld parameters as Custom node inputs
+    [(name, node, pin)], for `shelter_hlsl`."""
+    return [(name, g.mpc(mpc, name), "") for name in SHELTER_VECTORS]
+
+
+def shelter_hlsl(p, out="shelter"):
+    """HLSL setting `out` to 1 where the world position `p` (cm) is in a
+    Citadel's hall (a shelter box: AcShelter.h), else 0. The Custom node
+    needs `shelter_inputs`; an unused box has half sides 0 and holds
+    nothing."""
+    terms = ["(all(abs(%s.xy - Shelter%d.xy) < Shelter%d.zw) && %s.z > ShelterLow.%s && %s.z < ShelterHigh.%s)"
+             % (p, k, k, p, c, p, c) for k, c in enumerate("xyzw")]
+    return "float %s = (%s) ? 1.0 : 0.0;\n" % (out, "\n    || ".join(terms))
 
 
 # --- shared graph helpers ----------------------------------------------------

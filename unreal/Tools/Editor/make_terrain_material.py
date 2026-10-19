@@ -27,14 +27,23 @@ Layers meet by height (the higher grain wins). Within 12 m the ground has
 parallax; AcTerrain's relief bake (occlusion, curvature) darkens hollows
 and cliff feet. The splat map, the palettes' tint and effects, the wet
 ground, the haze and WallZ are set by AcTerrain, AcDaylight and AcGroundLook.
+The ground is dry in a Citadel's hall (MPC_AcWorld's shelter boxes, AcShelter.h:
+no wetness, puddles or rings where it shows through the floor).
+
+Without the sources (they are git-ignored: a worktree has none) the arrays
+and the layers' means are kept as they are and only the material is rebuilt.
 
 Run it headless through the one hidden-run slot:
   uv run unreal/Tools/hidden_run.py --out unreal/Saved/Terrain --python unreal/Tools/Editor/make_terrain_material.py
 """
 import json
 import os
+import sys
 
 import unreal
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import make_resource_materials as RM  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SRC = os.path.join(ROOT, "Content-src", "terrain")
@@ -482,7 +491,10 @@ float3 nTop = normalize(wn + float3(dn, 0.0) * Detail);
 float3 nRock = normalize(wn + dRock * Detail * 1.3);
 float3 n = normalize(lerp(nTop, nRock, rockW));
 
-// Wet ground (AcWeather, docs/weather.md): as M_Terrain.
+// Wet ground (AcWeather, docs/weather.md): as M_Terrain. Dry in a
+// Citadel's hall (AcShelter.h): no wetness, puddles or rings.
+%SHELTER%Wetness *= 1.0 - shelter;
+RainRate *= 1.0 - shelter;
 float wet = Wetness * (1.0 - fade) * (1.0 - rockW * 0.6);
 float puddle = 0.0;
 if (wet > 0.0) {
@@ -533,7 +545,7 @@ return c * (1.0 - fade);
 """
 
 
-def build_material(arrays):
+def build_material(arrays, means):
     path = f"{LAB_DIR}/{MAT_NAME}"
     # Made fresh each time: a material rebuilt in place keeps its old
     # textures among its dependencies (the old M_Terrain's, long gone).
@@ -549,7 +561,7 @@ def build_material(arrays):
         return mel.create_material_expression(mat, cls, x, y)
 
     custom = node(unreal.MaterialExpressionCustom, -300, 0)
-    custom.set_editor_property("code", HLSL)
+    custom.set_editor_property("code", HLSL.replace("%SHELTER%", RM.shelter_hlsl("WP")))
     custom.set_editor_property("description", "Terrain lab ground shader")
     custom.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
     outputs = []
@@ -565,6 +577,12 @@ def build_material(arrays):
     vn = node(unreal.MaterialExpressionVertexNormalWS, -900, -400)
     cam = node(unreal.MaterialExpressionCameraPositionWS, -900, -340)
     sources = [("WP", wp), ("VN", vn), ("Cam", cam)]
+    world = RM.make_world_mpc()
+    for name in RM.SHELTER_VECTORS:
+        m = node(unreal.MaterialExpressionCollectionParameter, -900, -520)
+        m.set_editor_property("collection", world)
+        m.set_editor_property("parameter_name", name)
+        sources.append((name, m))
     y = -260
 
     def tex_param(input_name, param, texture, sampler):
@@ -648,8 +666,7 @@ def build_material(arrays):
     sources.append(("RockColour", vec_param("RockColour", (0.1, 0.078, 0.052, 1.0))))
     # How much of each texture's own light and dark shows round the colour:
     # dirt, grass (a soft set: pushed), highland, rock.
-    means = json.load(open(os.path.join(SRC, "means.json")))
-    for name, layer in (("MeanDirt", "Dirt"), ("MeanGrass", "Grass"), ("MeanHigh", "Highland"), ("MeanRock", "Rock")):
+    for name, layer in MEANS:
         sources.append((name, vec_param(name, (*means[layer], 1.0))))
     sources.append(("LayerDetail", vec_param("LayerDetail", (0.6, 2.4, 0.7, 1.2))))
     sources.append(("T", node(unreal.MaterialExpressionTime, -900, y)))
@@ -678,7 +695,31 @@ def build_material(arrays):
     return mat
 
 
+MEANS = (("MeanDirt", "Dirt"), ("MeanGrass", "Grass"), ("MeanHigh", "Highland"), ("MeanRock", "Rock"))
+
+
+def kept_means():
+    """The layers' means as the material has them now (means.json missing)."""
+    old = unreal.load_asset(f"{LAB_DIR}/{MAT_NAME}")
+    if old is None:
+        raise RuntimeError(f"no {SRC}/means.json and no {LAB_DIR}/{MAT_NAME}: run terrain_textures.py first")
+    out = {}
+    for name, layer in MEANS:
+        c = mel.get_material_default_vector_parameter_value(old, name)
+        out[layer] = [c.r, c.g, c.b]
+    return out
+
+
 def main():
+    if not os.path.exists(os.path.join(SRC, "means.json")):
+        # A worktree without the sources: the arrays and means as they are.
+        means = kept_means()
+        arrays = {"CH": unreal.load_asset(f"{TEX_DIR}/T_TerrainCH"), "NR": unreal.load_asset(f"{TEX_DIR}/T_TerrainNR")}
+        unreal.log(f"make_terrain_material: no sources in {SRC}: the texture arrays kept, means {means}")
+        mat = build_material(arrays, means)
+        unreal.log(f"make_terrain_material: built {mat.get_path_name()}")
+        return
+    means = json.load(open(os.path.join(SRC, "means.json")))
     slices = import_slices()
     arrays = {
         "CH": make_array("T_TerrainCH", slices["CH"], True),
@@ -690,7 +731,7 @@ def main():
         arr.set_editor_property("source_textures", [], unreal.PropertyAccessChangeNotifyMode.NEVER)
         assets.save_loaded_asset(arr, only_if_is_dirty=False)
     assets.delete_directory(SLICE_DIR)
-    mat = build_material(arrays)
+    mat = build_material(arrays, means)
     unreal.log(f"make_terrain_material: built {mat.get_path_name()}")
 
 

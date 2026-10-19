@@ -21,7 +21,11 @@ shader:
 - opens it into a streak along the fall, facing the camera, `RainOff.w`
   cm wide per cm of distance (a pixel or two at any distance),
 - collapses it to a point when its number is above the rain rate
-  (`RainC.w`), so light rain shows a few, a storm all of them.
+  (`RainC.w`), so light rain shows a few, a storm all of them,
+- and when its middle or either end is in a Citadel's hall (a shelter
+  box, MPC_AcWorld `Shelter0..3`, `ShelterLow`, `ShelterHigh`: AcShelter.h),
+  so no rain falls indoors and, seen through the open door, it stops at the
+  doorway; it still falls on the roof and past the walls.
 The pixel shader tapers it (thin ends, soft sides), fades it near the
 camera and at the box's edges, and colours it with `RainColor` (rgb lit
 by the sky and the lightning, a alpha).
@@ -83,6 +87,9 @@ float len = Box.w * (0.6 + 0.8 * frac(id * 7.31));
 float2 uv = UV - 0.5;
 float3 pos = ctr + ax * (uv.y * len) + side * (uv.x * w);
 pos = id < C.w ? pos : ctr;
+// Not in a Citadel's hall: its middle and both ends (AcShelter.h).
+float3 e0 = ctr + ax * (len * 0.5), e1 = ctr - ax * (len * 0.5);
+%SHELTER%pos = shelter + shelterTop + shelterBottom > 0.0 ? ctr : pos;
 return pos - W;
 """
 
@@ -101,6 +108,7 @@ return Color.rgb;
 
 
 def build():
+    world = RM.make_world_mpc()
     mat, g = RM.new_master(RAIN, unreal.MaterialShadingModel.MSM_UNLIT, unreal.BlendMode.BLEND_TRANSLUCENT)
     mat.set_editor_property("two_sided", True)
     uv = g.node(unreal.MaterialExpressionTextureCoordinate)
@@ -116,7 +124,8 @@ def build():
     colour = g.node(unreal.MaterialExpressionVectorParameter, parameter_name="RainColor",
                     default_value=unreal.LinearColor(0.5, 0.55, 0.6, 0.3), group="Ac")
 
-    wpo = RM.custom(g, "AcRainFall", WPO_HLSL, [
+    shelter = RM.shelter_hlsl("ctr") + RM.shelter_hlsl("e0", "shelterTop") + RM.shelter_hlsl("e1", "shelterBottom")
+    wpo = RM.custom(g, "AcRainFall", WPO_HLSL.replace("%SHELTER%", shelter), [
         ("L", RM.local_position(g), ""),
         ("W", g.node(unreal.MaterialExpressionWorldPosition), ""),
         ("UV", uv, ""),
@@ -125,7 +134,7 @@ def build():
         ("Box", box, "RGBA"),
         ("Off", off, "RGBA"),
         ("Vel", vel, "RGBA"),
-    ])
+    ] + RM.shelter_inputs(g, world))
     g.out(wpo, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
 
     col = RM.custom(g, "AcRainColour", COLOUR_HLSL, [
