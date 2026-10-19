@@ -71,8 +71,9 @@ the units act; a round fired inside the step flies from its own moment):
 every round flies to the step's end on `roundAt`, and the segment it flew
 is swept against: units (an upright cylinder of the kind's radius and
 `UnitStats::height`, 1.5 unless the row says otherwise: the Matriarch 5;
-a flyer's centred on its height over the ground, `UnitStats::hover`:
-Dropship 2.4, Kestrel 2.1, Peregrine 1.9, a Gloamwing's `Bug::height`;
+a flyer's centred on its height over the ground (`Unit::bodyHeight`),
+`UnitStats::hover`: Dropship 2.4, Kestrel 2.1, Peregrine 1.9, a
+Gloamwing's `Bug::height`, in its dive too, never below the ground;
 units aboard, in a Bastion or Derrick, at a gun or sheltered in the hall
 are never struck), structures (a complete hall Citadel's slabs: walls,
 the door while shut, the roof; any other its bounding square by its body
@@ -150,6 +151,26 @@ before) and each gun turns `gunArcHalf` 135° either side of its corner
 each face's middle blind): the rounds meet flat ground about 3 cells out
 from the wall's foot, along both its walls (test
 `gun_reachesTheFootOfItsWall`).
+
+### Range and line of sight: the body at its height
+
+Every weapon aims at its target's body where it is now (C3, the user's
+case of 2026-10-19: the Sentinel's missiles flew under the Brood's
+flyers). The core has one rule, `Unit::bodyHeight`, cells over the
+ground: a flyer at its hover, a Gloamwing at its `Bug::height` whether
+it hovers or dives (its dive counts as ground for who may shoot it, not
+for where its body is), anything else at half its height.
+`Simulation::aimHeight` reads it for the gatling's ballistic solve and
+the Sentinel's pods (`Defence::sentinelPitch`, sent on the structure's
+`pitch`), and the rounds' hit cylinders are centred on it, so the aim
+follows a diving Gloamwing down shot by shot. The game's shots, streaks
+and missiles end on the drawn body (`UAcEffects::Body`: the kind's
+`BodyPart`, the strategy flyers' `body`, the Gloamwing's `thorax`, as it
+bobs and dives; not drawn, the core's height, never the ground), and the
+units' turrets pose onto `AcPose::BodyHeight`. Tests: core
+`aim_*` (AimTests.cpp), game `Autocraft.Aim.Body`,
+`Autocraft.Aim.SentinelPods`; pictures `-AcMmoShotsC3Aim`
+(art/models/sentinel/c3-aim).
 
 ## 2. The minigun look (model)
 
