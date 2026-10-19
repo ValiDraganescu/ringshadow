@@ -11,6 +11,10 @@
 //             the lift, the dash and the approach seen through the
 //             windshield in first person; landed, E at the post lowers the
 //             ramp and the pilot walks out onto the pad.
+//   mmoferrymule  the same rig and a Mule beside the pilot (`mule here`);
+//             the Dropship called and down, the pilot climbs onto its Mule
+//             and drives it round the ship and up the ramp into the bay: the
+//             Mule fits (inside the bay's walls, its rider aboard).
 // With -AcMmoShots=DIR -AcMmoShotsFerry, PNGs of its moments (ferry-N-*.png).
 // -AcMmoWeather=rain|storm for the windshield's rain and wipers.
 //
@@ -29,6 +33,7 @@
 #include "AcSpace.h"
 #include "SAcWorldMap.h"
 
+#include "Mule.h"
 #include "Rules.h"
 #include "Shuttle.h"
 #include "Simulation.h"
@@ -121,9 +126,10 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 	auto Seated = [&] {
 		return Mmo && Pilot && Mmo->Driven() && Pilot->Driving() && Pilot->Driven() == *Mmo->Driven() && PC && PC->GetPawn() == Pilot;
 	};
-	if (Step != TEXT("mmoferry"))
+	const bool bMule = Step == TEXT("mmoferrymule");
+	if (Step != TEXT("mmoferry") && !bMule)
 	{
-		Check(false, FString::Printf(TEXT("no ferry step %s (mmoferry)"), *Step));
+		Check(false, FString::Printf(TEXT("no ferry step %s (mmoferry, mmoferrymule)"), *Step));
 		NextStep();
 		return;
 	}
@@ -140,7 +146,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (Seated() && !Mmo->Travelling() && Mmo->Here() && Since() > 1.0)
 		{
 			// A Landing Pad under the pilot, one in Cold Fork (seen), MH to fly.
-			Check(Mmo->DevClock(TEXT("ferry pad here\nferry pad cold-fork\nferry mh 200")),
+			Check(Mmo->DevClock(bMule ? TEXT("ferry pad here\nferry pad cold-fork\nferry mh 200\nmule here") : TEXT("ferry pad here\nferry pad cold-fork\nferry mh 200")),
 				TEXT("ferry: the server puts up two Landing Pads and fills the MH (dev)"));
 			Advance();
 		}
@@ -253,6 +259,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 				Check(Mmo->ShuttleRefusal().IsEmpty(), FString::Printf(TEXT("ferry: the call kept (%s)"), *Mmo->ShuttleRefusal()));
 				Picture(TEXT("ferry-1-landed"));
 				Advance();
+				if (bMule) T.Phase = 20;
 			}
 		}
 		else Waited(TEXT("the Dropship down with its ramp lowered"), LandSeconds);
@@ -459,6 +466,111 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		}
 		else Waited(TEXT("down the ramp"), WalkSeconds);
 		return;
+	case 20:
+	{
+		// mmoferrymule: to the Mule's perch, onto it (a take, as E at the perch).
+		const TOptional<int64> Own = Mmo->OwnMule();
+		const ac::Unit* Mule = Own ? M->unit(*Own) : nullptr;
+		if (!Mule)
+		{
+			Waited(TEXT("mule: the pilot's Mule here"), AskSeconds);
+			return;
+		}
+		if (U->id == Mule->id)
+		{
+			Run.Leg = 0;
+			Advance();
+			return;
+		}
+		if (!Run.bPressed)
+		{
+			const ac::Vec2 Perch = ac::Mule::perch(*Mule);
+			const ac::Vec2 D = Perch - U->position;
+			if (ac::length(D) > 1.2)
+			{
+				Pilot->SetTestInput(FVector2D(0, -1), std::atan2(D.y, D.x));
+				Waited(TEXT("mule: at its perch"), WalkSeconds);
+				return;
+			}
+			Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
+			Mmo->Want(Mule->id);
+			Run.bPressed = true;
+			T.PhaseAt = Now;
+		}
+		Waited(TEXT("mule: driving it"), 20);
+		return;
+	}
+	case 21:
+	{
+		// Round the ship to behind its ramp, then straight up into the bay,
+		// the look along the hull (a vehicle turns toward the look).
+		if (!Ship) break;
+		const double Foot = ac::ShuttleBay::rampFoot();
+		const double Side = Local.y >= 0 ? 4.2 : -4.2;
+		auto Drive = [&](const ac::Vec2 To, const double Near) {
+			const ac::Vec2 Goal = ac::ShuttleBay::world(*Ship, To);
+			const ac::Vec2 D = Goal - U->position;
+			if (ac::length(D) <= Near) return true;
+			// A vehicle steers on the sideways keys (`pilotFace`: toward a
+			// growing heading on the right key), the forward key drives.
+			const double Err = std::remainder(std::atan2(D.y, D.x) - U->heading, 2.0 * UE_DOUBLE_PI);
+			Pilot->SetTestInput(FVector2D(FMath::Clamp(Err * 2.0, -1.0, 1.0), FMath::Abs(Err) > 1.4 ? -0.3 : -1.0), U->heading);
+			return false;
+		};
+		{
+			static double LoggedAt = 0;
+			if (Now - LoggedAt > 1.0)
+			{
+				LoggedAt = Now;
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: ferry: the Mule at (%.2f, %.2f) in the ship's frame, leg %d"), Local.x, Local.y, Run.Leg);
+			}
+		}
+		// By where it is (a vehicle overshoots a point): out from beside the
+		// ship, back along its side past the ramp's foot, then onto the axis
+		// behind the ramp and up it, chasing a point 3 cells ahead on the axis.
+		if (Run.Leg == 4)
+		{
+			Pilot->SetTestInput(FVector2D::ZeroVector, Ship->heading);
+			if (Settle(3.0)) Finish();
+			return;
+		}
+		const bool bBehind = Local.x < Foot - 3.0;
+		const bool bAxis = Run.Leg >= 3 || ac::ShuttleBay::onRamp(Local) || ac::ShuttleBay::inBay(Local);
+		if (bAxis) Run.Leg = 3;
+		else if (bBehind) Run.Leg = 2;
+		else if (FMath::Abs(Local.y) >= 3.6) Run.Leg = 1;
+		else Run.Leg = 0;
+		bool bIn = false;
+		if (Run.Leg == 0) Drive(ac::Vec2(Local.x - 2.0, Side), 0.0);
+		else if (Run.Leg == 1) Drive(ac::Vec2(Foot - 5.0, Side), 0.0);
+		else if (Run.Leg == 2 && FMath::Abs(Local.y) > 0.25) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot - 3.5), 0.0), 0.0);
+		else if (Local.x < 0.4) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot), 0.0), 0.0), Run.Leg = 3;
+		else bIn = true;
+		if (bIn)
+		{
+			Pilot->SetTestInput(FVector2D::ZeroVector, Ship->heading);
+			if (Settle(1.5))
+			{
+				const ac::Unit* Rider = nullptr;
+				for (const ac::Unit& V : S->state.units)
+				{
+					if (V.kind == ac::UnitKind::prospector && V.task == ac::Unit::Task::aboard && V.structure == U->id) Rider = &V;
+				}
+				Check(U->kind == ac::UnitKind::mule && ac::ShuttleBay::inBay(Local, 0.0),
+					FString::Printf(TEXT("mule: driven up the ramp into the bay (at %.2f, %.2f)"), Local.x, Local.y));
+				Check(ac::ShuttleBay::inBay(Local + ac::Vec2(-1.5, 0.0)) && ac::ShuttleBay::inBay(Local + ac::Vec2(1.5, 0.0))
+						&& FMath::Abs(Local.y) + 0.79 <= ac::ShuttleBay::halfWide,
+					FString::Printf(TEXT("mule: the whole Mule inside the bay's walls (at %.2f, %.2f)"), Local.x, Local.y));
+				Check(Rider != nullptr, TEXT("mule: its driver on the perch"));
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: ferry: in the bay on the Mule the prompt reads \"%s\""), *Prompt);
+				Picture(TEXT("ferry-mule-bay"));
+				Run.Leg = 4;
+			}
+			return;
+		}
+		Waited(FString::Printf(TEXT("mule: driven into the bay (at %.2f, %.2f, leg %d)"), Local.x, Local.y, Run.Leg), WalkSeconds * 2);
+		return;
+	}
 	default:
 		Finish();
 		return;

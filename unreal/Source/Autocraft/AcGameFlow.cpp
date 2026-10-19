@@ -2179,7 +2179,7 @@ void UAcGameFlowSubsystem::TickFlowTest()
 		TickMmoVisorFlow(Step);
 		return;
 	}
-	if (Step == TEXT("mmoferry"))
+	if (Step == TEXT("mmoferry") || Step == TEXT("mmoferrymule"))
 	{
 		TickMmoFerryFlow(Step);
 		return;
