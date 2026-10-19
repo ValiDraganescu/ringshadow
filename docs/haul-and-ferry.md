@@ -173,6 +173,91 @@ The flight becomes the player's, in steps:
 
 The frontier pilots keep flying: the server presses the buttons for them.
 
+### How it is built (c4-ship-sim)
+
+**The ship.** `ac::Shuttle` (Types.h) in `GameState::shuttles`: not a unit
+or a building. Its frame is a point on the pad with a heading
+(`position`, `heading`, `ground`); the bay's walls stand there through the
+whole flight, so the riders keep ordinary unit positions and walk the bay with
+the core's own pilot walk. The frame moves to the target pad at the dash's
+end, the riders with it, each where it stood in the bay. Its `stage`
+(descend, ground, lift, turns, dash, approach, depart) and `clock`, the ramp
+(`Door`: 0 shut … 1 down, and the way it moves), the flight's `plan` and its
+two pads (`from`, `to`, in the region's frame), the `riders` from the lift
+to the touch down. Not saved: a pilot saved in flight comes back on the target
+pad, as before.
+
+**The shape** (`ShuttleBay`, Shuttle.h; ship frame: +x the nose, +y its
+left, z up from the ground under the landed ship; c4-ship-look's model's
+numbers): the deck at z 0.5; inside x −2.5 … 2.36 (the bay 4 long and the
+cockpit nook up to the console's face), y −1 … 1, 2 tall; the hull from the
+jambs at x −2.72 to the nose tip at 4.1, the nacelles out to ±2.48; the nose
+block from x 2.62; the console x 2.36 … 2.68, |y| < 0.96; the ramp post in
+its niche x −2.42 … −2.10, y −1.10 … −0.88; the ramp hinged at x −2.5,
+z 0.5, 2 long, its foot on the ground at x −4.44, shut as a slab
+x −2.70 … −2.50. The ramp button at (−2.26, −0.84, 1.13), the take-off
+button at (2.50, 0, 1.44). `ShuttleBay::footprint()` gives the cameras the
+same slabs; `ShuttleBay::floor` the deck's and the ramp's height to stand a
+rider on.
+
+**The pose** (`shuttlePose`, Shuttle.h): F2's path, moved from the client
+into the core: down onto the pad from high behind it, on the pad, up off it,
+two banking turns from its heading onto the way to the target pad, the dash,
+the approach (landing with its nose along the way), lifting away empty. The
+client calls it every frame with its own clock between snapshots.
+
+**The walk.** `Simulation::pilotCanStand` asks the ships first
+(`shuttleWalk`): the hull's sides, the nose, the console, the post and the
+shut ramp (walkable from open 0.95, as the Citadel's door) block; on the
+deck or a ramp that is down the ground under it does not matter. A rider in
+flight walks only in its bay. The AI's grid has a grounded ship's hull and
+ramp solid (the Brood and the mercenaries never walk in); nobody aboard is
+pushed out; nobody aboard crosses a region's edge on foot.
+
+**The steps.** Call: the request `CallShuttle` (the pad the pilot stands
+on, Pad link's reach), the ramp toward the caller, turned a quarter at a time
+until the hull and the ramp lie inside the region; one ship to a pad ("The
+Dropship is on its way", "The Dropship is here"). Its touch down moves
+whoever stands under the hull out by its nearest side. Ramp: the request
+`Ramp { open }`, within 1.5 cells of the ramp button inside (*assumed*);
+refused "Someone is on the ramp", "Too far from the ramp button", "Wait for
+the landing". Take-off: today's `Fly { region, pad }`, from within 1.5 cells
+of the take-off button (*assumed*), the ramp fully shut ("Close the ramp
+first"); the one who presses pays (half from a Spacedock, nothing with
+Ringwalker, as F2); everyone whose middle is in the bay rides. In flight
+every rider is untouchable (`Simulation::sheltered`), builds and demolishes
+nothing ("In flight"). At the dash's end the server moves the ship and its
+riders into the target region (each human's region change, its inputs
+walking on; a frontier pilot's unit; anything else aboard as it stands). It
+touches down with the ramp shut. Leave: nobody in the bay or on the ramp for
+5 s (60 s after a call that nobody boarded; *assumed*), the ramp shuts (3 s,
+*assumed*; it opens again for anyone who comes), it lifts away over 6 s and
+is gone.
+
+**Wire** (protocol 42; 41 and the requests 26, 27 and the event 23 kept for
+the Mule): `Snapshot::shuttles`, the region's ships whole in every message's
+header (one bit when there are none), into the mirror's state;
+`RequestMessage::CallShuttle` (28), `RequestMessage::Ramp` (29);
+`Client::callShuttle()`, `Client::ramp(bool)`; the World message's
+`flyingTo` names the target region for a rider from the lift to the touch
+down (the client builds that ground ahead). Its `ferry` and the sky's
+`Human::ferry` are no longer filled.
+
+**Frontier pilots** (docs/frontier.md): live, they call the ship and the
+server presses the buttons for them; booked, they fly as before.
+
+**Dev lines** (`ferry ...`): `pads` (a Landing Pad under the pilot, one in a
+region next door, seen, 200 MH; the reply names the target), `call`,
+`board` (a ship on the pad at once, shut, the Prospector at its take-off
+button), `ramp open|shut`.
+
+**Tests.** Core: ShuttleTests.cpp (the shape, the landing, the walk up the
+ramp, the ramp's and the take-off's refusals, the riders untouchable, a hop
+carrying its riders, the waits, the pose, the AI's grid). Net:
+ShuttleWireTests.cpp. Server: ShuttleTests.cpp (two riders, refusals, the
+World message), RolesTests' and WorldTests' flights, FrontierTests'
+`Frontier_fliesTheWalkInDropshipWhereSeen`, the end-to-end world flight.
+
 ## 4. The look (game)
 
 - The Dropship model: today's, scaled up with a ramp that hinges down,
