@@ -102,7 +102,7 @@ std::string WorldMap::devFerry(const std::string& line) {
                 ship = &s;
         if (!ship) return "dev: ferry mule: no Dropship on a pad here";
         Unit& m = sim.state.units[size_t(*mi)];
-        m.position = ShuttleBay::world(*ship, Vec2(ShuttleBay::rampFoot() - 3.5, 0));
+        m.position = ShuttleBay::world(*ship, Vec2(ShuttleBay::rampFoot() - 2.0, 0));
         m.heading = ship->heading;
         // Beside the perch on the Mule's left, clear of its box, within reach.
         Unit& u = sim.state.units[size_t(*ui)];
@@ -135,11 +135,11 @@ std::string WorldMap::devFerry(const std::string& line) {
             ship->stage = Shuttle::Stage::ground;
             ship->clock = 0;
             ship->ramp = Door{0, false};
-            u.position = ShuttleBay::world(*ship, Vec2(1.6, 0));
+            u.position = ShuttleBay::world(*ship, ShuttleBay::helmStand);
             u.heading = ship->heading;
             return "dev: ferry: aboard the Dropship at its take-off button";
         }
-        u.position = ShuttleBay::world(*ship, Vec2(-1.7, -0.4));
+        u.position = ShuttleBay::world(*ship, ShuttleBay::rampStand);
         const auto why = sim.ramp(u.id, ship->id, arg != "shut");
         return why ? "dev: ferry ramp: " + *why : "dev: ferry: the ramp " + std::string(arg != "shut" ? "lowers" : "shuts");
     }

@@ -41,8 +41,8 @@ bool bodyReaches(const Shuttle& s, const Unit& u, const Block& b) { return Act::
 bool bodyOverRamp(const Shuttle& s, const Unit& u) {
     const Block body = bodyIn(s, u);
     const Slab box = body.bounds();
-    return box.min.x < ShuttleBay::rear - 0.05 && box.max.x > ShuttleBay::rampFoot() && box.min.y < ShuttleBay::halfWide &&
-           box.max.y > -ShuttleBay::halfWide;
+    return box.min.x < ShuttleBay::rear - 0.05 && box.max.x > ShuttleBay::rampFoot() && box.min.y < ShuttleBay::rampHalfWide &&
+           box.max.y > -ShuttleBay::rampHalfWide;
 }
 
 } // namespace
@@ -165,14 +165,26 @@ void Simulation::clearShuttlePad(const Shuttle& s) {
         const double r = Rules::radius(u.kind) + 0.05;
         const Vec2 l = B::local(s, u.position);
         if (!(l.x > B::hullRear - r && l.x < B::hullFront + r && std::abs(l.y) < B::hullHalfWide + r)) continue;
-        // Out by the nearest side of the hull.
-        const double side = B::hullHalfWide + r - std::abs(l.y);
-        const double back = l.x - (B::hullRear - r);
-        const double ahead = B::hullFront + r - l.x;
-        Vec2 out = l;
-        if (side <= back && side <= ahead) out.y = (l.y < 0 ? -1 : 1) * (B::hullHalfWide + r);
-        else if (back <= ahead) out.x = B::hullRear - r;
-        else out.x = B::hullFront + r;
+        // Out by the nearest side of the hull that keeps it on the region's
+        // ground (a pad by the region's edge: never pushed over it).
+        const double near = l.y < 0 ? -1 : 1;
+        std::pair<double, Vec2> ways[4] = {
+            {B::hullHalfWide + r - std::abs(l.y), Vec2(l.x, near * (B::hullHalfWide + r))},
+            {B::hullHalfWide + r + std::abs(l.y), Vec2(l.x, -near * (B::hullHalfWide + r))},
+            {l.x - (B::hullRear - r), Vec2(B::hullRear - r, l.y)},
+            {B::hullFront + r - l.x, Vec2(B::hullFront + r, l.y)},
+        };
+        std::sort(std::begin(ways), std::end(ways), [](const auto& a, const auto& b) { return a.first < b.first; });
+        Vec2 out = ways[0].second;
+        if (map)
+            for (const auto& [far, to] : ways) {
+                const Vec2 q = B::world(s, to);
+                const GroundRect& g = map->bounds;
+                if (q.x > g.minX + 1 && q.x < g.maxX - 1 && q.y > g.minZ + 1 && q.y < g.maxZ - 1) {
+                    out = to;
+                    break;
+                }
+            }
         u.position = B::world(s, out);
         u.goal = std::nullopt;
         u.waypoints = std::nullopt;

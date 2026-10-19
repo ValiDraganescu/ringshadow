@@ -117,18 +117,16 @@ std::optional<std::string> WorldMap::callShuttle(PilotId pilot) {
         const Shuttle* s = sim.shuttle(*id);
         return std::string(s && s->stage == Shuttle::Stage::descend ? "The Dropship is on its way" : "The Dropship is here");
     }
-    // Its ramp toward the caller: the nose points from the caller over the
-    // pad (on the pad's middle: the way the caller looks, turned round);
-    // turned a quarter at a time until its hull and ramp lie inside the
-    // region's ground, when one way does.
-    const Vec2 d = pad->at - u->position;
-    const double toward = length(d) > 0.5 ? std::atan2(d.y, d.x) : u->heading + pi;
-    double heading = toward;
+    // Aligned with the pad, its ramp to the pad's front and the hull
+    // centred on it (`ShuttleBay::onPad`); turned a quarter at a time when
+    // its hull and ramp would not lie inside the region's ground, when one
+    // way does.
+    double heading = ShuttleBay::padHeading;
     if (sim.map)
         for (int k = 0; k < 4; k++) {
             Shuttle probe;
-            probe.position = pad->at;
-            probe.heading = toward + k * pi / 2;
+            probe.heading = ShuttleBay::padHeading + k * pi / 2;
+            probe.position = ShuttleBay::onPad(pad->at, probe.heading);
             const GroundRect b = sim.map->bounds;
             bool inside = true;
             for (const Vec2 c : {Vec2(ShuttleBay::rampFoot(), ShuttleBay::hullHalfWide), Vec2(ShuttleBay::rampFoot(), -ShuttleBay::hullHalfWide),
@@ -143,7 +141,7 @@ std::optional<std::string> WorldMap::callShuttle(PilotId pilot) {
         }
     ShuttleTrip t;
     t.region = p->region;
-    t.id = sim.callShuttle(pad->at, heading);
+    t.id = sim.callShuttle(ShuttleBay::onPad(pad->at, heading), heading);
     t.pad = pad->building;
     t.padKind = pad->kind;
     t.padName = pad->name;
@@ -169,7 +167,7 @@ std::optional<std::string> WorldMap::launch(ShuttleTrip& t, int64_t unit, const 
     Simulation& sim = here.simulation();
     // The target pad on this region's ground (the world's grid), its height
     // its own ground's.
-    const Vec2 there = groundIn(target.region, target.at, t.region);
+    const Vec2 there = ShuttleBay::onPad(groundIn(target.region, target.at, t.region));
     const double z = regions_[target.region]->simulation().groundZ(target.at);
     if (auto why = sim.takeOff(unit, t.id, plan, Vec3(there.x, there.y, z), target.region == t.region)) return why;
     t.to = target.region;
@@ -200,12 +198,12 @@ void WorldMap::shuttleSwitch(ShuttleTrip& t) {
     // ends on the target region's ground.
     Shuttle there = ship;
     there.id = sb.state.nextShuttle++;
-    there.position = t.toAt;
     there.heading = shuttleLandingHeading(ship);
+    there.position = ShuttleBay::onPad(t.toAt, there.heading);
     there.ground = sb.groundZ(t.toAt);
     const Vec2 shift = groundIn(from, Vec2(0, 0), to);
     there.from = ship.from + Vec3(shift.x, shift.y, 0);
-    there.to = Vec3(t.toAt.x, t.toAt.y, there.ground);
+    there.to = Vec3(there.position.x, there.position.y, there.ground);
     there.riders.clear();
     sb.state.shuttles.push_back(there);
     const double turn = there.heading - ship.heading;
@@ -344,10 +342,9 @@ bool WorldMap::frontierCall(FrontierPilot& f, const LandingPad& from, size_t to)
     Simulation& sim = regions_[f.region]->simulation();
     std::optional<int64_t> ship = shuttleAt(f.region, from.building);
     if (!ship) {
-        const Vec2 d = from.at - u->position;
         ShuttleTrip t;
         t.region = f.region;
-        t.id = sim.callShuttle(from.at, length(d) > 0.5 ? std::atan2(d.y, d.x) : u->heading + pi);
+        t.id = sim.callShuttle(ShuttleBay::onPad(from.at), ShuttleBay::padHeading);
         t.pad = from.building;
         t.padKind = from.kind;
         t.padName = from.name;
@@ -400,7 +397,7 @@ bool WorldMap::frontierRide(FrontierPilot& f, double dt) {
         r.since = 0;
     };
     // Where it stands to press each (in the bay, clear of the opening).
-    const Vec2 rampButton(-1.7, -0.4), console(B::takeOffButton.x - 0.9, 0);
+    const Vec2 rampButton = B::rampStand, console = B::helmStand;
     switch (r.step) {
     case Step::called:
         if (s->grounded() && s->ramp.open >= B::rampDown) next(Step::walkIn);
@@ -412,7 +409,9 @@ bool WorldMap::frontierRide(FrontierPilot& f, double dt) {
         const double foot = B::rampFoot() - 1.2;
         if (B::inBay(l) || B::onRamp(l)) {
             if (walkTo(rampButton)) next(Step::shut);
-        } else if (l.x > foot) {
+        } else if (l.x < B::rear && std::abs(l.y) < 0.01) {
+            walkTo(Vec2(B::rear + 0.5, 0));
+        } else if (l.x > foot + 0.01) {
             walkTo(Vec2(foot, (l.y < 0 ? -1 : 1) * (B::hullHalfWide + 1)));
         } else {
             walkTo(Vec2(foot, 0));

@@ -37,9 +37,11 @@ double wrap(double a) {
 
 /// The flight's way (as F2's cinematic flight drew it, in cells with z up):
 /// from the boarding pad `a` (the ship's heading `g` there) to the target
-/// pad `b`. `t`: seconds since the lift began.
+/// pad `b`, where it lands with its nose along `land` (aligned with the pad:
+/// the approach comes in along the pad's axis). `t`: seconds since the lift
+/// began.
 struct Way {
-    Vec3 a, b, g;
+    Vec3 a, b, g, land;
     Ferry::Plan plan;
 
     Vec3 way() const {
@@ -62,7 +64,7 @@ struct Way {
         p[3] = p[0] + up(22) + g * 20 + w * 26;
         p[2] = p[3] - w * 16 - up(4);
     }
-    Vec3 approachFrom() const { return b - way() * 60 + up(40); }
+    Vec3 approachFrom() const { return b - land * 60 + up(40); }
     Vec3 dashOut() const {
         Vec3 p[4];
         turnPoints(p);
@@ -71,7 +73,9 @@ struct Way {
     Vec3 dashIn() const {
         Vec3 p[4];
         turnPoints(p);
-        return way() * (len(p[3] - approachFrom()) * 0.9) - up(4);
+        // Onto the pad's axis near the end: a target behind its way swings
+        // round over the last stretch, not in a loop as wide as the flight.
+        return land * std::min(len(p[3] - approachFrom()) * 0.9, 120.0) - up(4);
     }
 
     Vec3 pos(double t) const {
@@ -110,15 +114,15 @@ struct Way {
         const double h = 0.05;
         auto velocity = [&](double q) { return pos(std::min(q + h, end() - 0.3)) - pos(std::min(q - h, end() - 0.4)); };
         const Vec3 wv = way();
-        const double wayYaw = std::atan2(wv.y, wv.x);
+        const double wayYaw = std::atan2(wv.y, wv.x), landYaw = std::atan2(land.y, land.x);
         auto yawAt = [&](double q) {
             const Vec3 v = velocity(q);
             return len(flat(v)) > 0.02 ? std::atan2(v.y, v.x) : wayYaw;
         };
         const Vec3 v = velocity(t);
         const double f = len(flat(v));
-        // The touch down: its nose on the way it lands along.
-        out.yaw = t >= dashEnd() ? wayYaw : f > 0.02 ? std::atan2(v.y, v.x) : wayYaw;
+        // The touch down: its nose along the pad it lands on.
+        out.yaw = t >= dashEnd() ? landYaw : f > 0.02 ? std::atan2(v.y, v.x) : wayYaw;
         out.pitch = f > 0.02 ? std::max(-15.0, std::min(18.0, std::atan2(v.z, f) * 180 / pi * 0.5)) * pi / 180 : 0;
         const double rate = wrap(yawAt(t + 0.15) - yawAt(t - 0.15)) / 0.3;
         out.roll = std::max(-40.0 * pi / 180, std::min(40.0 * pi / 180, rate * 0.6));
@@ -127,7 +131,8 @@ struct Way {
 };
 
 Way wayOf(const Shuttle& s) {
-    return Way{s.from, s.to, Vec3(std::cos(s.fromHeading), std::sin(s.fromHeading), 0), s.plan};
+    const double h = shuttleLandingHeading(s);
+    return Way{s.from, s.to, Vec3(std::cos(s.fromHeading), std::sin(s.fromHeading), 0), Vec3(std::cos(h), std::sin(h), 0), s.plan};
 }
 
 Block box(double x0, double x1, double y0, double y1, double z0, double z1) {
@@ -135,18 +140,24 @@ Block box(double x0, double x1, double y0, double y1, double z0, double z1) {
 }
 
 /// The solids a walker meets (the shut ramp last).
-const std::array<Block, 6>& solids() {
+const std::array<Block, 10>& solids() {
     using B = ShuttleBay;
-    static const std::array<Block, 6> all{
-        // The sides (the walls, the jambs, the nacelles) and the nose.
-        box(B::hullRear, B::hullFront, B::halfWide, B::hullHalfWide, 0, B::roofTop),
-        box(B::hullRear, B::hullFront, -B::hullHalfWide, -B::halfWide, 0, B::roofTop),
-        box(B::noseFrom, B::hullFront, -B::halfWide, B::halfWide, 0, B::roofTop),
-        // The console under the windshield, the ramp post in its niche.
-        box(B::front, 2.68, -0.96, 0.96, B::deck, 1.08),
-        box(-2.42, -2.10, -1.10, -0.88, B::deck, 1.78),
+    static const std::array<Block, 10> all{
+        // The sides (the walls and the chines) back from the nose block.
+        box(B::hullRear, B::noseFrom, B::halfWide, B::hullHalfWide, 0, B::roofTop),
+        box(B::hullRear, B::noseFrom, -B::hullHalfWide, -B::halfWide, 0, B::roofTop),
+        // The jambs either side of the opening.
+        box(B::hullRear, B::rear, B::rampHalfWide, B::halfWide, 0, B::roofTop),
+        box(B::hullRear, B::rear, -B::halfWide, -B::rampHalfWide, 0, B::roofTop),
+        // The nose, narrowing in steps to its tip (the model's plan).
+        box(B::noseFrom, 7.3, -B::hullHalfWide, B::hullHalfWide, 0, B::roofTop),
+        box(7.3, 8.2, -2.0, 2.0, 0, 3.2),
+        box(8.2, B::hullFront, -1.15, 1.15, 0, 1.4),
+        // The console under the windshield, the ramp post beside the jamb.
+        box(B::front, B::noseFrom, -1.6, 1.6, B::deck, B::deck + 0.58),
+        box(B::rear + 0.08, B::rear + 0.40, -2.10, -1.88, B::deck, B::deck + 1.28),
         // The ramp shut in the opening.
-        box(-2.70, B::rear, -B::halfWide, B::halfWide, 0, B::ceiling),
+        box(B::hullRear, B::rear, -B::rampHalfWide, B::rampHalfWide, 0, B::ceiling),
     };
     return all;
 }
@@ -154,6 +165,8 @@ const std::array<Block, 6>& solids() {
 } // namespace
 
 double ShuttleBay::rampFoot() { return rear - std::sqrt(rampLength * rampLength - deck * deck); }
+
+Vec2 ShuttleBay::onPad(Vec2 padCentre, double heading) { return padCentre - Vec2(std::cos(heading), std::sin(heading)) * hullMiddle(); }
 
 Vec2 ShuttleBay::local(const Shuttle& s, Vec2 p) {
     const Vec2 d = p - s.position;
@@ -171,7 +184,7 @@ bool ShuttleBay::inBay(Vec2 l, double grow) {
 }
 
 bool ShuttleBay::onRamp(Vec2 l, double grow) {
-    return l.x > rampFoot() - grow && l.x <= rear + grow && std::abs(l.y) < halfWide + grow;
+    return l.x > rampFoot() - grow && l.x <= rear + grow && std::abs(l.y) < rampHalfWide + grow;
 }
 
 bool ShuttleBay::covers(Vec2 l, double grow) {
@@ -182,7 +195,7 @@ bool ShuttleBay::covers(Vec2 l, double grow) {
 double ShuttleBay::floor(Vec2 l, double rampOpen) {
     if (inBay(l)) return deck;
     if (!onRamp(l) || l.x > rear) return 0;
-    // The ramp turns 104.5° about its hinge from upright to lying down: its
+    // The ramp turns 103.3° about its hinge from upright to lying down: its
     // slope below the level, and the height over the ground at `l`.
     const double down = std::asin(deck / rampLength);
     const double angle = (pi / 2) - clamp01(rampOpen) * (pi / 2 + down);
@@ -191,7 +204,7 @@ double ShuttleBay::floor(Vec2 l, double rampOpen) {
 }
 
 std::optional<Block> ShuttleBay::solidAt(Vec2 l, double grow, bool rampIsDown) {
-    const std::array<Block, 6>& all = solids();
+    const std::array<Block, 10>& all = solids();
     for (size_t i = 0; i < all.size(); i++) {
         if (i == all.size() - 1 && rampIsDown) break;
         if (all[i].contains(l, grow)) return all[i];
@@ -202,17 +215,22 @@ std::optional<Block> ShuttleBay::solidAt(Vec2 l, double grow, bool rampIsDown) {
 const Footprint& ShuttleBay::footprint() {
     static const Footprint f = [] {
         Footprint out;
-        out.radius = std::max({hullFront, -hullRear, hullHalfWide});
-        const std::array<Block, 6>& all = solids();
-        for (size_t i = 0; i < 3; i++) out.walls.push_back(all[i].bounds());
+        out.radius = std::max({std::hypot(hullFront, hullHalfWide), std::hypot(hullRear, hullHalfWide), std::hypot(rampFoot(), rampHalfWide),
+                               std::hypot(nacelleRear, nacelleHalfWide)});
+        const std::array<Block, 10>& all = solids();
+        for (size_t i = 0; i < 7; i++) out.walls.push_back(all[i].bounds());
         // The deck under the bay and over the ramp's hinge, the ceiling.
-        out.walls.push_back(Slab{Vec2(rear, -halfWide), Vec2(noseFrom, halfWide), 0.25, deck});
+        out.walls.push_back(Slab{Vec2(rear, -halfWide), Vec2(noseFrom, halfWide), deck - 0.25, deck});
         out.walls.push_back(Slab{Vec2(hullRear, -halfWide), Vec2(noseFrom, halfWide), ceiling, roofTop});
-        out.door = Slab{Vec2(-2.70, -0.98), Vec2(rear, 0.98), 0.52, 2.48};
+        // The nacelles and their pylons, high over the walkers.
+        for (const double s : {1.0, -1.0})
+            out.walls.push_back(Slab{Vec2(nacelleRear, s > 0 ? hullHalfWide - 0.3 : -nacelleHalfWide),
+                                     Vec2(nacelleFront, s > 0 ? nacelleHalfWide : -hullHalfWide + 0.3), nacelleUnder, roofTop + 0.4});
+        out.door = Slab{Vec2(hullRear + 0.05, -rampHalfWide + 0.02), Vec2(rear, rampHalfWide - 0.02), deck + 0.02, ceiling - 0.02};
         out.interior = Slab{Vec2(rear, -halfWide), Vec2(front, halfWide), deck, ceiling};
         out.roof = Slab{Vec2(rear, -halfWide), Vec2(front, halfWide), ceiling, roofTop};
-        out.furniture.push_back(all[3]);
-        out.furniture.push_back(all[4]);
+        out.furniture.push_back(all[7]);
+        out.furniture.push_back(all[8]);
         return out;
     }();
     return f;
@@ -231,10 +249,7 @@ double shuttleStageSeconds(const Shuttle& s, Shuttle::Stage stage) {
     return 0;
 }
 
-double shuttleLandingHeading(const Shuttle& s) {
-    const Vec3 w = wayOf(s).way();
-    return std::atan2(w.y, w.x);
-}
+double shuttleLandingHeading(const Shuttle&) { return ShuttleBay::padHeading; }
 
 ShuttlePose shuttlePose(const Shuttle& s) { return shuttlePose(s, s.stage, s.clock); }
 

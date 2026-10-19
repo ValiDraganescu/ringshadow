@@ -578,7 +578,8 @@ TEST(Frontier_fliesTheWalkInDropshipWhereSeen) {
     const auto u = w.region(home).simulation().state.unit(*f.unit);
     ASSERT_TRUE(u.has_value());
     EXPECT_TRUE(!w.region(home).simulation().aboard(*u));
-    EXPECT_TRUE(distance(u->position, structure(w, home, *there)->position) < 8);
+    // Off the pad's front, behind the ramp's foot.
+    EXPECT_TRUE(distance(u->position, structure(w, home, *there)->position) < ShuttleBay::hullMiddle() - ShuttleBay::rampFoot() + 3);
     EXPECT_TRUE(f.progress.regions.count(w.loaded()->regions[home].file.id) == 1);
     stepFor(w, ShuttleBay::leaveSeconds + ShuttleBay::rampSeconds + ShuttleBay::departSeconds + 1);
     EXPECT_TRUE(w.region(home).simulation().state.shuttles.empty());

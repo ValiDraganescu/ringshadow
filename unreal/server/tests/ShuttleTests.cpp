@@ -63,7 +63,7 @@ Vec2 rig(WorldMap& w) {
     Vec2 here{0, 0}, there{0, 0};
     for (const LandingPad& o : w.landingPads()) (o.region == fork ? there : here) = o.at;
     drivenBy(w, a)->position = here;
-    drivenBy(w, b)->position = here + Vec2(-9, 0);
+    drivenBy(w, b)->position = here + Vec2(-14, 0);
     w.step();
     return there;
 }
@@ -79,7 +79,7 @@ TEST(shuttle_two_pilots_ride_one_ship) {
     ASSERT_TRUE(!w.callShuttle(a));
     run(w, Ferry::descend + ShuttleBay::rampSeconds + 0.2);
     standIn(w, a, kAtRampButton);
-    standIn(w, b, Vec2(-0.5, 0.5));
+    standIn(w, b, Vec2(-0.5, 1.5));
     ASSERT_TRUE(!w.shuttleRamp(a, false));
     run(w, ShuttleBay::rampSeconds + 0.2);
     standIn(w, b, kAtConsole);
@@ -108,7 +108,7 @@ TEST(shuttle_two_pilots_ride_one_ship) {
     const Shuttle& t = *w.region(fork).simulation().shuttle(now->second);
     EXPECT_TRUE(distance(ShuttleBay::local(t, drivenBy(w, a)->position), la) < 0.05);
     EXPECT_TRUE(distance(ShuttleBay::local(t, drivenBy(w, b)->position), lb) < 0.05);
-    EXPECT_TRUE(distance(t.position, there) < 1e-6);
+    EXPECT_TRUE(distance(t.position, ShuttleBay::onPad(there)) < 1e-6);
     run(w, plan.approach + 0.2);
     EXPECT_TRUE(!w.flying(a) && !w.flying(b));
     EXPECT_TRUE(w.progress(a)->pads.count("cold-fork/Landing Pad 1") == 1);
@@ -129,10 +129,10 @@ TEST(shuttle_ramp_build_and_world_message) {
     ASSERT_TRUE(!w.callShuttle(a));
     run(w, Ferry::descend + ShuttleBay::rampSeconds + 0.2);
     standIn(w, a, kAtRampButton);
-    standIn(w, b, Vec2(-3.6, 0.2));
+    standIn(w, b, Vec2(ShuttleBay::rear - 1.2, 0.2));
     EXPECT_EQ(w.shuttleRamp(a, false).value_or(""), std::string("Someone is on the ramp"));
     EXPECT_EQ(w.shuttleRamp(b, false).value_or(""), std::string("Too far from the ramp button"));
-    standIn(w, b, Vec2(-9, 0));
+    standIn(w, b, Vec2(ShuttleBay::rampFoot() - 3, 0));
     ASSERT_TRUE(!w.shuttleRamp(a, false));
     run(w, ShuttleBay::rampSeconds + 0.2);
     // Shut: B outside can't come in; nor open it from outside.
@@ -171,7 +171,7 @@ TEST(shuttle_mule_rides_with_its_driver) {
     Simulation& sim = w.regionOf(a)->simulation();
     auto unit = [&](int64_t id) { return &sim.state.units[size_t(*sim.unitIndex(id))]; };
     // On the Mule in the bay by the ramp button, the ramp shut from it.
-    unit(mule)->position = ShuttleBay::world(*s, Vec2(-0.95, 0));
+    unit(mule)->position = ShuttleBay::world(*s, Vec2(ShuttleBay::rear + Mule::length / 2 + 0.05, -0.4));
     unit(mule)->heading = s->heading;
     unit(mule)->haul = Haul{300, 12};
     unit(prospector)->position = Mule::perch(*unit(mule));
@@ -182,7 +182,7 @@ TEST(shuttle_mule_rides_with_its_driver) {
     run(w, ShuttleBay::rampSeconds + 0.2);
     // Up to the console on it, and off.
     s = nearestShip(w, a);
-    unit(mule)->position = ShuttleBay::world(*s, Vec2(0.8, 0));
+    unit(mule)->position = ShuttleBay::world(*s, Vec2(ShuttleBay::front - Mule::length / 2 - 0.06, 0));
     unit(prospector)->position = Mule::perch(*unit(mule));
     w.step();
     ASSERT_TRUE(!w.fly(a, "cold-fork", "Landing Pad 1"));
@@ -229,13 +229,17 @@ TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
     const Shuttle* s = nearestShip(w, a);
     ASSERT_TRUE(s != nullptr);
     const Vec2 l = ShuttleBay::local(*s, drivenBy(w, a)->position);
-    EXPECT_NEAR(l.x, ShuttleBay::rampFoot() - 3.5, 1e-6);
+    EXPECT_NEAR(l.x, ShuttleBay::rampFoot() - 2.0, 1e-6);
     EXPECT_NEAR(l.y, 0, 1e-6);
     // Straight on, up the ramp, until its tail is in (its middle past
-    // −0.9; the ramp button is in reach until its middle passes 0.74).
+    // the opening by half its length; the ramp button is in reach until its
+    // middle passes `button`: its tail within reach across the gap to the post).
     const int64_t mule = *w.regionOf(a)->driving(a);
     const double heading = s->heading;
-    for (int i = 0; i < 60 * 12 && ShuttleBay::local(*nearestShip(w, a), drivenBy(w, a)->position).x < -0.6; i++) {
+    const double tailIn = ShuttleBay::rear + Mule::length / 2 + 0.05;
+    const double dy = std::abs(ShuttleBay::rampButton.y) - Mule::width / 2;
+    const double button = ShuttleBay::rampButton.x + std::sqrt(ShuttleBay::reach * ShuttleBay::reach - dy * dy) + Mule::length / 2;
+    for (int i = 0; i < 60 * 12 && ShuttleBay::local(*nearestShip(w, a), drivenBy(w, a)->position).x < tailIn; i++) {
         PilotInput in;
         in.tick = w.regionOf(a)->lastInputTick(a) + 1;
         in.visit = w.visit(a);
@@ -255,6 +259,6 @@ TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
     ASSERT_TRUE(*w.regionOf(a)->driving(a) == mule);
     const Vec2 in = ShuttleBay::local(*nearestShip(w, a), drivenBy(w, a)->position);
     std::printf("  stopped at %.2f %.2f\n", in.x, in.y);
-    EXPECT_TRUE(ShuttleBay::inBay(in) && in.x > -1.0 && in.x < 0.74);
+    EXPECT_TRUE(ShuttleBay::inBay(in) && in.x > tailIn - 0.05 && in.x < button);
     EXPECT_TRUE(!w.shuttleRamp(a, false));
 }

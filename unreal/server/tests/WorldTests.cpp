@@ -510,7 +510,8 @@ TEST(world_flight_from_pad_to_pad) {
     EXPECT_TRUE(!w.flying(me));
     const Unit* u = drivenUnit(w, me);
     ASSERT_TRUE(u != nullptr);
-    EXPECT_TRUE(distance(u->position, there) < 3);
+    // At the console of the ship landed on the pad (its hull centred there).
+    EXPECT_TRUE(distance(u->position, there) < ShuttleBay::front);
     EXPECT_EQ(u->carrying, int64_t(4));
     EXPECT_EQ(w.wallet(me)->ore, int64_t(555));
     EXPECT_EQ(unitsEverywhere(w), size_t(1));

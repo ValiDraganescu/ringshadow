@@ -69,8 +69,8 @@ inline void standIn(WorldMap& w, PilotId p, Vec2 local) {
 
 /// Where a Prospector stands to press the ramp button, and the take-off
 /// button (the ship's frame).
-inline constexpr Vec2 kAtRampButton{-1.7, -0.4};
-inline constexpr Vec2 kAtConsole{1.6, 0};
+inline constexpr Vec2 kAtRampButton = ShuttleBay::rampStand;
+inline constexpr Vec2 kAtConsole = ShuttleBay::helmStand;
 
 /// Call, land, in, shut, to the console. The refusal on the way, or nil:
 /// ready for `WorldMap::fly`.

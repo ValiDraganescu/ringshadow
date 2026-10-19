@@ -34,8 +34,9 @@ public:
     /// The flight's frame moves to the target pad: `at` facing `heading`,
     /// its ground `ground`, with its riders where they stand in the bay.
     void moveShuttle(Shuttle& s, Vec2 at, double heading, double ground);
-    /// Units of `s`'s hull (and its ramp's strip) out to its nearest side,
-    /// all but its riders (the touch down).
+    /// Units of `s`'s hull (and its ramp's strip) out to its nearest side
+    /// that stays on the region's ground, all but its riders (the touch
+    /// down).
     void clearShuttlePad(const Shuttle& s);
 
     /// Each step: the stages' clocks, the ramps, the riders, a hop's frame

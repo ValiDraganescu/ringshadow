@@ -533,10 +533,11 @@ TEST(roles_flight_between_landing_pads) {
     ASSERT_TRUE(now.has_value() && now->first == fork);
     const Shuttle& s = *simOf(w, me).shuttle(now->second);
     EXPECT_TRUE(s.stage == Shuttle::Stage::approach && s.rides(drivenUnit(w, me)->id));
-    EXPECT_TRUE(distance(s.position, there) < 1e-6);
+    EXPECT_TRUE(distance(s.position, ShuttleBay::onPad(there)) < 1e-6);
     const Vec2 after = ShuttleBay::local(s, drivenUnit(w, me)->position);
     EXPECT_TRUE(distance(before, after) < 0.05);
-    EXPECT_TRUE(std::abs(s.to.x - there.x) < 1e-6 && std::abs(s.to.y - there.y) < 1e-6);
+    const Vec2 landing = ShuttleBay::onPad(there);
+    EXPECT_TRUE(std::abs(s.to.x - landing.x) < 1e-6 && std::abs(s.to.y - landing.y) < 1e-6);
     // Nobody left behind in the start region: the ship went with it.
     EXPECT_TRUE(w.start().simulation().state.shuttles.empty());
     // The touch down: on the target pad, the ramp shut, riding no more.
@@ -615,7 +616,7 @@ TEST(roles_spacedock_halves_the_price) {
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(80));
     shuttletest::run(w, shuttletest::flightSeconds(Ferry::plan(2)) + 0.2);
     ASSERT_TRUE(drivenUnit(w, me) != nullptr);
-    EXPECT_TRUE(distance(drivenUnit(w, me)->position, dockAt) < Rules::radius(StructureKind::spacedock) + 3);
+    EXPECT_TRUE(distance(drivenUnit(w, me)->position, dockAt) < Rules::radius(StructureKind::spacedock) + ShuttleBay::front);
 }
 
 // Ringwalker: flights cost no MH, from any Landing Pad, and the Dropship
