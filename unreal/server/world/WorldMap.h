@@ -1048,6 +1048,22 @@ public:
     /// section 4). The reason when refused (it knows the kind, or holds no
     /// copy).
     std::optional<std::string> learn(PilotId pilot, StructureKind kind);
+    /// C3: the pilot demolishes building `structure` of the realm in its
+    /// region (WorldDemolish.cpp, docs/guns-and-practice.md "Limits per
+    /// region and demolish"), finished or a scaffold: driving, within the
+    /// repair reach of its unit (`Simulation::demolishReach`, and
+    /// `demolishSlack`); from the top-down view (nothing driven), anywhere
+    /// in the region. Half its price comes back to the pilot's own wallet
+    /// (`Simulation::salvage`); the building leaves at once (its shatter,
+    /// the `Demolished` event to the pilot), and the region's count for its
+    /// limit falls. Refused: the realm's last finished Citadel (a home must
+    /// remain), a Citadel with someone in its hall or at its guns
+    /// (`Simulation::demolishRefusal`). A frontier pilot working on it
+    /// stops. Frontier pilots never demolish.
+    std::optional<std::string> demolish(PilotId pilot, int64_t structure);
+    /// How far past the repair reach a demolish may be asked from, in
+    /// cells: the unit moves on while the request travels.
+    static constexpr double demolishSlack = 1.5;
     /// The world's clock when the pilot's `item` is ready again (nil: now).
     std::optional<double> itemReady(PilotId pilot, Item item) const;
 

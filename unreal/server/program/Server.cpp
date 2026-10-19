@@ -578,6 +578,10 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
         // C2: a building learned from a blueprint copy held, once.
         what = "learn the " + Simulation::title(ln->kind);
         why = world_.learn(pilot, ln->kind);
+    } else if (const auto* dm = std::get_if<net::RequestMessage::Demolish>(&m.what)) {
+        // C3: a realm building in the pilot's region taken down, half its price back.
+        what = "demolish building " + std::to_string(dm->structure);
+        why = world_.demolish(pilot, dm->structure);
     } else if (const auto* ut = std::get_if<net::RequestMessage::UpgradeTurret>(&m.what)) {
         what = "upgrade turret " + std::to_string(ut->turret) + "'s " + std::string(rawValue(ut->stat));
         why = world_.upgradeTurret(pilot, ut->turret, ut->stat);

@@ -331,6 +331,12 @@ std::optional<std::string> Region::build(PilotId pilot, StructureKind kind, Vec2
     });
 }
 
+bool Region::demolish(PilotId pilot, int64_t structure, Price refund) {
+    if (!sim_.demolish(structure, refund)) return false;
+    demolishedBy_[structure] = pilot;
+    return true;
+}
+
 std::optional<int64_t> Region::driving(PilotId pilot) const {
     const auto it = pilots_.find(pilot);
     return it == pilots_.end() ? std::nullopt : it->second.drives;
@@ -447,6 +453,11 @@ void Region::step() {
         for (const GameEvent& e : events) {
             // A level up is the driver's own, not every pilot's of the side.
             if (e.is<GameEvent::LeveledUp>() && driver != id) continue;
+            // C3: what a demolish gave back, to the pilot it went to.
+            if (const auto* d = e.as<GameEvent::Demolished>()) {
+                if (const auto by = demolishedBy_.find(d->structure); by != demolishedBy_.end() && by->second == id) seat.events.push_back(e);
+                continue;
+            }
             std::optional<int64_t> shooter;
             if (const auto* i = e.as<GameEvent::Impact>())
                 if (const auto r = rounds_.find(i->round); r != rounds_.end()) shooter = r->second.first;
@@ -455,8 +466,10 @@ void Region::step() {
         if (seat.events.size() > maxEvents)
             seat.events.erase(seat.events.begin(), seat.events.begin() + static_cast<long>(seat.events.size() - maxEvents));
     }
-    for (const GameEvent& e : events)
+    for (const GameEvent& e : events) {
         if (const auto* i = e.as<GameEvent::Impact>()) rounds_.erase(i->round);
+        if (const auto* d = e.as<GameEvent::Demolished>()) demolishedBy_.erase(d->structure);
+    }
     std::erase_if(rounds_, [&](const auto& r) { return sim_.state.time - r.second.second > Rules::roundLife + 1; });
     // The victory lap, then the next game on the same map.
     if (sim_.state.endedAt && sim_.state.time - *sim_.state.endedAt >= Rules::victoryLap) {

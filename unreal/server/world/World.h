@@ -177,6 +177,10 @@ public:
     /// driving, a kind a Prospector cannot build, too far from the spot, or
     /// the core's (the price, the ground, something in the way).
     std::optional<std::string> build(PilotId pilot, StructureKind kind, Vec2 at);
+    /// C3: building `structure` demolished by `pilot` (`Simulation::demolish`
+    /// with `refund`): its Destroyed goes to everyone who may know, its
+    /// Demolished to `pilot` alone. False: no such building.
+    bool demolish(PilotId pilot, int64_t structure, Price refund);
     /// How far past where the game holds a building out (`buildReach`) the
     /// spot may be, in cells: the unit moves on while the request travels.
     static constexpr double buildSlack = 3.0;
@@ -272,6 +276,8 @@ private:
     std::map<PilotId, Seat> pilots_;
     bool daylight_ = true;
     std::vector<GameEvent> lastEvents_;
+    /// C3: who demolished a building, until its Demolished is sent.
+    std::unordered_map<int64_t, PilotId> demolishedBy_;
     /// C2: the rounds in flight, by id: who fired each and when (`Fired`),
     /// so its `Impact` reaches whoever may know the shooter. Dropped at the
     /// impact, or past `Rules::roundLife`.
