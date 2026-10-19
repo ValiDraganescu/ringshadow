@@ -728,8 +728,10 @@ void AAcPilotPawn::Press(const bool bDown, const bool bKeyE)
 	{
 		const ac::Simulation& S = Sim->Simulation();
 		// C4, first: the Mule (climb on and off, fill it) and the Foundry's
-		// Mule to buy (AcMuleAct.h).
-		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && !S.pilotTarget(*U))
+		// Mule to buy (AcMuleAct.h). Driving it, a Dropship's button or a
+		// Citadel's door with the crosshair on it comes first (below).
+		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && !S.pilotTarget(*U)
+			&& !(U->kind == ac::UnitKind::mule && (AcShuttleAct::Find(S, *U) || AcCitadelAct::Find(S, *U))))
 		{
 			if (const TOptional<AcMuleAct::FAct> A = AcMuleAct::Find(S, *U, AcMuleAct::OwnOf(Mmo)))
 			{
@@ -1399,6 +1401,34 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	SetActorLocationAndRotation(View, ViewRot);
 	LastEye = At;
 	LastRotation = Rot;
+	// C4: driving a Mule, what the crosshair is on: a Dropship's button, a
+	// Citadel's door (E works it then; else E climbs off; AcShuttleAct.h).
+	{
+		AcShuttleAct::FDriverAim Aim;
+		if (U.kind == ac::UnitKind::mule)
+		{
+			const FVector Dir = Rot.GetForwardVector();
+			if (Ship)
+			{
+				auto Button = [&](const ac::Vec3& B) { return Ship->Placement.TransformPosition(FVector(AcSpace::ToCm(B.x), AcSpace::ToCm(B.y), AcSpace::ToCm(B.z))); };
+				Aim.bRampButton = AcShuttleAct::Aims(At, Dir, Button(ac::ShuttleBay::rampButton), 10.0);
+				Aim.bTakeOffButton = !Aim.bRampButton && AcShuttleAct::Aims(At, Dir, Button(ac::ShuttleBay::takeOffButton), 10.0);
+			}
+			for (const ac::Structure& C : S.state.structures)
+			{
+				const ac::Footprint& F = ac::Rules::footprint(C.kind);
+				if (C.kind != ac::StructureKind::citadel || !C.complete() || !F.door || ac::distance(C.position, U.position) > 20.0) continue;
+				// The door's slab and its panels beside it, grown a little.
+				const double G = GroundAt(GetWorld(), C.position);
+				const FBox Door(AcSpace::ToWorld(C.position + F.door->min, G + F.door->z0) - FVector(80, 80, 0),
+					AcSpace::ToWorld(C.position + F.door->max, G + F.door->z1) + FVector(80, 80, 0));
+				FVector Hit, Normal;
+				float Time = 0.f;
+				Aim.bDoor |= FMath::LineExtentBoxIntersection(Door, At, At + Dir * 900.0, FVector::ZeroVector, Hit, Normal, Time);
+			}
+		}
+		AcShuttleAct::SetDriverAim(Aim);
+	}
 	LastViewYaw = PilotYaw;
 	LastViewPitch = Cam.Pitch;
 	LastPivot = Root.GetTranslation();

@@ -11,10 +11,12 @@
 //             the lift, the dash and the approach seen through the
 //             windshield in first person; landed, E at the post lowers the
 //             ramp and the pilot walks out onto the pad.
-//   mmoferrymule  the same rig and a Mule beside the pilot (`mule here`);
-//             the Dropship called and down, the pilot climbs onto its Mule
-//             and drives it round the ship and up the ramp into the bay: the
-//             Mule fits (inside the bay's walls, its rider aboard).
+//   mmoferrymule  the same rig; the Dropship called and down, the pilot's
+//             Mule put on the ship's axis behind its ramp with the pilot on
+//             its perch (`ferry mule`), driven up the ramp into the bay: the
+//             Mule fits (inside the bay's walls, its rider aboard); from the
+//             perch, the crosshair on the ramp post, E closes the ramp (still
+//             driving); the crosshair off the buttons, E would climb off.
 // With -AcMmoShots=DIR -AcMmoShotsFerry, PNGs of its moments (ferry-N-*.png).
 // -AcMmoWeather=rain|storm for the windshield's rain and wipers.
 //
@@ -146,7 +148,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (Seated() && !Mmo->Travelling() && Mmo->Here() && Since() > 1.0)
 		{
 			// A Landing Pad under the pilot, one in Cold Fork (seen), MH to fly.
-			Check(Mmo->DevClock(bMule ? TEXT("ferry pad here\nferry pad cold-fork\nferry mh 200\nmule here") : TEXT("ferry pad here\nferry pad cold-fork\nferry mh 200")),
+			Check(Mmo->DevClock(TEXT("ferry pad here\nferry pad cold-fork\nferry mh 200")),
 				TEXT("ferry: the server puts up two Landing Pads and fills the MH (dev)"));
 			Advance();
 		}
@@ -468,36 +470,23 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		return;
 	case 20:
 	{
-		// mmoferrymule: to the Mule's perch, onto it (a take, as E at the perch).
-		const TOptional<int64> Own = Mmo->OwnMule();
-		const ac::Unit* Mule = Own ? M->unit(*Own) : nullptr;
-		if (!Mule)
+		// mmoferrymule: the pilot's Mule on the ship's axis behind its ramp,
+		// facing it, the pilot on its perch (the server's `ferry mule`).
+		if (!Run.bPressed)
 		{
-			Waited(TEXT("mule: the pilot's Mule here"), AskSeconds);
+			Check(Mmo->DevClock(TEXT("ferry mule")), TEXT("mule: the Mule behind the ramp, the pilot driving it (dev)"));
+			Run.bPressed = true;
+			T.PhaseAt = Now;
 			return;
 		}
-		if (U->id == Mule->id)
+		if (Ship && U->kind == ac::UnitKind::mule && Local.x < ac::ShuttleBay::rampFoot() - 2.0 && FMath::Abs(Local.y) < 0.3)
 		{
-			Run.Leg = 0;
+			Run.Leg = 3;
 			Advance();
 			return;
 		}
-		if (!Run.bPressed)
-		{
-			const ac::Vec2 Perch = ac::Mule::perch(*Mule);
-			const ac::Vec2 D = Perch - U->position;
-			if (ac::length(D) > 1.2)
-			{
-				Pilot->SetTestInput(FVector2D(0, -1), std::atan2(D.y, D.x));
-				Waited(TEXT("mule: at its perch"), WalkSeconds);
-				return;
-			}
-			Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
-			Mmo->Want(Mule->id);
-			Run.bPressed = true;
-			T.PhaseAt = Now;
-		}
-		Waited(TEXT("mule: driving it"), 20);
+		Waited(FString::Printf(TEXT("mule: driving the Mule behind the ramp (a %s at %.2f, %.2f)"), U->kind == ac::UnitKind::mule ? TEXT("Mule") : TEXT("Prospector"),
+			Local.x, Local.y), 20);
 		return;
 	}
 	case 21:
@@ -528,22 +517,65 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		// By where it is (a vehicle overshoots a point): out from beside the
 		// ship, back along its side past the ramp's foot, then onto the axis
 		// behind the ramp and up it, chasing a point 3 cells ahead on the axis.
+		// From the perch: the crosshair on the ramp post, E closes the ramp
+		// (still driving); the crosshair off the buttons, E would climb off.
+		auto AimAt = [&](const ac::Vec3& B) {
+			const AcShuttleView::FShip* F = AcShuttleView::Find(Ship->id);
+			if (!F || !PC || !PC->PlayerCameraManager) return;
+			const FVector To = F->Placement.TransformPosition(FVector(AcSpace::ToCm(B.x), AcSpace::ToCm(B.y), AcSpace::ToCm(B.z)));
+			const FVector D = (To - PC->PlayerCameraManager->GetCameraLocation()).GetSafeNormal();
+			Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.Y, D.X));
+			Pitch(std::asin(FMath::Clamp(D.Z, -1.0, 1.0)));
+		};
 		if (Run.Leg == 4)
 		{
-			Pilot->SetTestInput(FVector2D::ZeroVector, Ship->heading);
-			if (Settle(3.0)) Finish();
+			AimAt(ac::ShuttleBay::rampButton);
+			if (!AcShuttleAct::DriverAim().bRampButton || Prompt != TEXT("E · CLOSE THE RAMP"))
+			{
+				Waited(FString::Printf(TEXT("mule: the crosshair on the ramp post, \"E · CLOSE THE RAMP\" (\"%s\")"), *Prompt), AskSeconds + 10);
+				return;
+			}
+			Check(true, TEXT("mule: from the perch, the crosshair on the ramp post: \"E · CLOSE THE RAMP\""));
+			Press();
+			T.PhaseAt = Now;
+			Run.Leg = 5;
 			return;
 		}
+		if (Run.Leg == 5)
+		{
+			if (Ship->ramp.open <= 0.0 && !Ship->ramp.opening)
+			{
+				Check(U->kind == ac::UnitKind::mule, TEXT("mule: the ramp closed from the perch, still driving the Mule"));
+				Picture(TEXT("ferry-mule-ramp-shut"));
+				Run.Leg = 6;
+				T.PhaseAt = Now;
+			}
+			else Waited(FString::Printf(TEXT("mule: the ramp shut from the perch (%.2f, %s)"), Ship->ramp.open, *Mmo->ShuttleRefusal()), AskSeconds + 10);
+			return;
+		}
+		if (Run.Leg == 6)
+		{
+			Pilot->SetTestInput(FVector2D::ZeroVector, Ship->heading + 0.6);
+			Pitch(0.25);
+			if (Prompt.Contains(TEXT("CLIMB OFF")) && Since() > 1.0)
+			{
+				Check(true, FString::Printf(TEXT("mule: the crosshair off the buttons, E climbs off (\"%s\")"), *Prompt));
+				Finish();
+			}
+			else Waited(FString::Printf(TEXT("mule: off the buttons, \"E · CLIMB OFF\" (\"%s\")"), *Prompt), AskSeconds + 10);
+			return;
+		}
+		// Straight up the ramp, chasing a point 3 cells ahead on the axis.
 		const bool bBehind = Local.x < Foot - 3.0;
 		const bool bAxis = Run.Leg >= 3 || ac::ShuttleBay::onRamp(Local) || ac::ShuttleBay::inBay(Local);
+		// The legs only go forward (a turning vehicle crosses their bounds).
 		if (bAxis) Run.Leg = 3;
-		else if (bBehind) Run.Leg = 2;
-		else if (FMath::Abs(Local.y) >= 3.6) Run.Leg = 1;
-		else Run.Leg = 0;
+		else if (bBehind) Run.Leg = FMath::Max(Run.Leg, 2);
+		else if (FMath::Abs(Local.y) >= 3.6) Run.Leg = FMath::Max(Run.Leg, 1);
 		bool bIn = false;
 		if (Run.Leg == 0) Drive(ac::Vec2(Local.x - 2.0, Side), 0.0);
 		else if (Run.Leg == 1) Drive(ac::Vec2(Foot - 5.0, Side), 0.0);
-		else if (Run.Leg == 2 && FMath::Abs(Local.y) > 0.25) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot - 3.5), 0.0), 0.0);
+		else if (Run.Leg == 2 && (FMath::Abs(Local.y) > 0.25 || Local.x < Foot - 1.0)) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot - 3.5), 0.0), 0.0);
 		else if (Local.x < 0.4) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot), 0.0), 0.0), Run.Leg = 3;
 		else bIn = true;
 		if (bIn)

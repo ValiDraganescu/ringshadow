@@ -10,6 +10,19 @@ namespace
 
 	/// How far (seen from above, cells) `Local` is from the button at `B`.
 	double Off(const ac::Vec2 Local, const ac::Vec3& B) { return ac::distance(Local, ac::Vec2(B.x, B.y)); }
+
+	AcShuttleAct::FDriverAim GAim;
+}
+
+void AcShuttleAct::SetDriverAim(const FDriverAim& Aim) { GAim = Aim; }
+AcShuttleAct::FDriverAim AcShuttleAct::DriverAim() { return GAim; }
+
+bool AcShuttleAct::Aims(const FVector& Eye, const FVector& Dir, const FVector& At, const double ConeDeg, const double Within)
+{
+	const FVector D = At - Eye;
+	const double Len = D.Size();
+	if (Len < 1.0 || Len > Within) return false;
+	return FVector::DotProduct(D / Len, Dir) >= FMath::Cos(FMath::DegreesToRadians(ConeDeg));
 }
 
 FString AcShuttleAct::FAct::Prompt() const
@@ -34,6 +47,25 @@ TOptional<AcShuttleAct::FAct> AcShuttleAct::Find(const ac::Simulation& Sim, cons
 		if (!ac::ShuttleBay::inBay(L) && !S->flying()) return {};
 		FAct A;
 		A.Ship = S->id;
+		// Driving a Mule: only the button the crosshair is on (the reach is
+		// the core's, from the Mule's body: the refusal says when it is far).
+		if (U.kind == ac::UnitKind::mule)
+		{
+			if (GAim.bTakeOffButton)
+			{
+				A.Kind = FAct::EKind::TakeOff;
+				if (const std::optional<std::string> Why = Sim.takeOffRefusal(*S, U)) A.Why = Text(*Why);
+				return A;
+			}
+			if (GAim.bRampButton)
+			{
+				A.Kind = FAct::EKind::Ramp;
+				A.bOpen = !(S->ramp.opening || S->ramp.open >= ac::ShuttleBay::rampDown);
+				if (const std::optional<std::string> Why = Sim.rampRefusal(*S, U, A.bOpen)) A.Why = Text(*Why);
+				return A;
+			}
+			return {};
+		}
 		if (Off(L, ac::ShuttleBay::takeOffButton) <= ac::ShuttleBay::reach)
 		{
 			A.Kind = FAct::EKind::TakeOff;
@@ -50,7 +82,8 @@ TOptional<AcShuttleAct::FAct> AcShuttleAct::Find(const ac::Simulation& Sim, cons
 		}
 		return {};
 	}
-	// On a finished realm Landing Pad with no Dropship on it or coming: call one.
+	// On a finished realm Landing Pad with no Dropship on it or coming: call one (on foot).
+	if (U.kind != ac::UnitKind::prospector) return {};
 	for (const ac::Structure& P : Sim.state.structures)
 	{
 		if (P.kind != ac::StructureKind::landingPad || !P.complete()) continue;

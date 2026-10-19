@@ -1,5 +1,6 @@
 #include "AcCitadelAct.h"
 
+#include "AcShuttleAct.h"
 #include "AcSpace.h"
 
 #include "Defence.h"
@@ -66,7 +67,11 @@ bool AcCitadelAct::AimedAtDoorway(const ac::Footprint& F, const ac::Vec2 Local, 
 TOptional<AcCitadelAct::FAct> AcCitadelAct::Find(const ac::Simulation& Sim, const ac::Unit& U)
 {
 	if (U.task == ac::Unit::Task::atGun) return {};
-	const bool bSheltered = Sim.sheltered(U);
+	// Driving a Mule (C4): only the door, and only with the crosshair on it
+	// (AcShuttleAct::DriverAim); else E climbs off.
+	const bool bMule = U.kind == ac::UnitKind::mule;
+	if (bMule && !AcShuttleAct::DriverAim().bDoor) return {};
+	const bool bSheltered = Sim.sheltered(U) && !bMule;
 	TOptional<FAct> Best;
 	for (const ac::Structure& S : Sim.state.structures)
 	{

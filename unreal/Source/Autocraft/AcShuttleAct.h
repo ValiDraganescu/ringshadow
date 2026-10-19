@@ -10,6 +10,12 @@
 // MMORPG client's requests on it; the buttons' press is drawn
 // (`AcShuttleShip::Pressed`).
 //
+// Driving a Mule (the manager's rule, 2026-10-19), E climbs off unless the
+// crosshair is on a button in reach (the ramp post, the take-off button and
+// its console) or on a Citadel's door: then E works that. The pawn works out
+// what the crosshair is on each frame (`SetDriverAim`); `Find` here and
+// `AcCitadelAct::Find` follow it for a Mule.
+//
 // Plain C++ over `ac::Simulation` (no world).
 #pragma once
 
@@ -46,7 +52,22 @@ namespace AcShuttleAct
 		AUTOCRAFT_API FString Prompt() const;
 	};
 
-	/// The act for unit `U` (a Prospector on foot, or driving its Mule), or unset. The caller
+	/// What the crosshair of a driven Mule is on this frame (the pawn sets it
+	/// on the game thread before the prompt and the key read it).
+	struct FDriverAim
+	{
+		bool bRampButton = false;
+		bool bTakeOffButton = false;
+		bool bDoor = false;
+	};
+	AUTOCRAFT_API void SetDriverAim(const FDriverAim& Aim);
+	AUTOCRAFT_API FDriverAim DriverAim();
+	/// The crosshair's ray (`Eye`, along `Dir`, a unit vector) is on the point
+	/// `At` (world cm): within `ConeDeg` of it and `Within` cm.
+	AUTOCRAFT_API bool Aims(const FVector& Eye, const FVector& Dir, const FVector& At, double ConeDeg = 9.0, double Within = 700.0);
+
+	/// The act for unit `U` (a Prospector on foot, or driving its Mule: then
+	/// only the button its crosshair is on, `DriverAim`), or unset. The caller
 	/// checks first that nothing else takes the key.
 	AUTOCRAFT_API TOptional<FAct> Find(const ac::Simulation& Sim, const ac::Unit& U);
 }

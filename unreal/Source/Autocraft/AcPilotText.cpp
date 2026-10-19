@@ -450,6 +450,12 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 			Info.Prompt = AtShip->Prompt();
 			Info.Tone = AtShip->Why ? EAcTone::Blocked : EAcTone::Ready;
 		}
+		// Driving a Mule: the door with the crosshair on it before climbing off.
+		else if (AtCitadel && U.kind == ac::UnitKind::mule)
+		{
+			Info.Prompt = AtCitadel->Prompt();
+			Info.Tone = AtCitadel->Why ? EAcTone::Blocked : EAcTone::Ready;
+		}
 		else if (AtMule)
 		{
 			Info.Prompt = AtMule->Prompt();
