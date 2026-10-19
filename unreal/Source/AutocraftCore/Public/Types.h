@@ -1278,6 +1278,15 @@ struct Bug {
     bool operator==(const Bug&) const = default;
 };
 
+/// C4: what a Mule holds (`Unit::haul`, `Mule.h`): ore and MH, one each
+/// a unit of its room.
+struct Haul {
+    int64_t ore = 0;
+    int64_t hydrogen = 0;
+    int64_t total() const { return ore + hydrogen; }
+    bool operator==(const Haul&) const = default;
+};
+
 struct AUTOCRAFTCORE_API Unit {
     using Kind = UnitKind;
     enum class Task : uint8_t {
@@ -1400,6 +1409,8 @@ struct AUTOCRAFTCORE_API Unit {
     std::optional<double> struckAt;
     /// A bug of the Brood: its state and its orders.
     std::optional<Bug> bug;
+    /// C4: a Mule's load (`Mule.h`): set on every Mule, nil on the rest.
+    std::optional<Haul> haul;
 
     /// For decoding; Swift has only the init below.
     Unit() = default;
@@ -1415,8 +1426,8 @@ struct AUTOCRAFTCORE_API Unit {
     /// buried or digging out.
     bool planted() const { return Rules::stats(kind).anchors && anchor.value_or(0) > 0; }
     const UnitStats& stats() const { return Rules::stats(kind); }
-    /// Soldiers: everything that is not a Prospector or a bug.
-    bool soldier() const { return kind != Kind::prospector && !brood(); }
+    /// Soldiers: everything that is not a Prospector, a hauler or a bug.
+    bool soldier() const { return kind != Kind::prospector && !brood() && !Rules::stats(kind).hauler; }
     /// A bug of the Brood (docs/creatures.md).
     bool brood() const { return Rules::stats(kind).brood; }
     /// In the air now: a flyer, but a Gloamwing in its dive is at torch
@@ -1848,10 +1859,23 @@ struct GameEvent {
     /// its `Destroyed` comes beside it, for the shatter): `ore` and
     /// `hydrogen` came back to the pilot's wallet.
     struct Demolished { int64_t structure; int64_t ore; int64_t hydrogen; bool operator==(const Demolished&) const = default; };
+    /// C4: Mule `unit`, driven into the hall of the Citadel at `at`, booked
+    /// its whole load to its driver: `ore` and `hydrogen` as counted (XP and
+    /// contracts count them; Stardust heart, Silver tide), `taxOre` and
+    /// `taxHydrogen` the realm's cut of them (the wallet got the rest).
+    struct Booked {
+        int64_t unit;
+        int64_t ore;
+        int64_t hydrogen;
+        Vec2 at;
+        int64_t taxOre;
+        int64_t taxHydrogen;
+        bool operator==(const Booked&) const = default;
+    };
 
     AC_CASES(GameEvent, Deposited, PatchDepleted, PatchRegrown, Trained, ConstructionStarted, Constructed, Shot, Missed,
              Landed, Died, Destroyed, Victory, Researched, Stuck, Trapped, LeveledUp, Blast, Stomp, Fired, Impact,
-             DummyDown, Repaired, Demolished)
+             DummyDown, Repaired, Demolished, Booked)
     bool operator==(const GameEvent&) const = default;
 };
 

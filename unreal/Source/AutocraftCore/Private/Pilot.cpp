@@ -26,7 +26,9 @@ bool Simulation::take(std::optional<int64_t> unit) {
             // Handed back: it finds work, goes home with its load, or rejoins
             // the army by itself.
             Unit u = state.units[*i];
-            if (u.kind == Unit::Kind::prospector && u.task != Unit::Task::mining && u.task != Unit::Task::inDerrick) {
+            // C4: a Prospector on a Mule stays on it (its pilot drives the Mule).
+            const bool riding = ridden(u).has_value();
+            if (u.kind == Unit::Kind::prospector && u.task != Unit::Task::mining && u.task != Unit::Task::inDerrick && !riding) {
                 u.task = Unit::Task::idle;
                 u.timer = 0;
             }
@@ -43,17 +45,20 @@ bool Simulation::take(std::optional<int64_t> unit) {
             // rock, by a building's wall: `pilotCanStand` is closer than the
             // grid's cells): onto the nearest free ground, so the AI walks
             // on from there and `trapped` never takes it for boxed in.
-            if (nav && !u.stats().air && !standsInHall(u) && !nav->walkable(u.position)) {
+            if (nav && !u.stats().air && !riding && !standsInHall(u) && !nav->walkable(u.position)) {
                 if (const auto out = nav->nearestFree(u.position, 3)) u.position = *out;
             }
             if (u.task == Unit::Task::attacking) {
                 u.task = Unit::Task::idle;
                 u.target = std::nullopt;
             }
-            if (u.cargo && !u.cargo->empty()) unload(u);
+            // C4: a Mule's rider climbs off it beside its perch instead.
+            const bool rider = u.kind == Unit::Kind::mule && u.cargo && !u.cargo->empty();
+            if (u.cargo && !u.cargo->empty() && !rider) unload(u);
             // Its pilot's shield goes with the pilot.
             u.shield = std::nullopt;
             state.units[*i] = u;
+            if (rider) muleLeave(u.id);
         }
     }
     pilot = std::nullopt;
@@ -343,8 +348,9 @@ void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
     // Backing up and sidestepping are slower than going ahead.
     const double ahead_ = w.x < 0 ? Pilot::backPace : 1.0;
     const bool slowed = u.slowUntil.value_or(-1) > state.time;
-    const double speed =
-        Rules::speed(u.kind) * rate(Stat::Speed{}, u) * pace * (slowed ? u.slowedTo.value_or(0.5) : 1) * dt;
+    // C4: a hauler drives at its own pace, hero or not.
+    const double boosted = u.stats().hauler ? 1.0 : rate(Stat::Speed{}, u);
+    const double speed = Rules::speed(u.kind) * boosted * pace * (slowed ? u.slowedTo.value_or(0.5) : 1) * dt;
     const Vec2 dir = forward * (w.x * ahead_) + right * (w.y * Pilot::sidePace);
     const Vec2 d = dir * speed;
     if (pilotJumps(u) && pilotJump(u, d)) return;
@@ -749,6 +755,7 @@ std::optional<PilotTarget> Simulation::prospectorTarget(const Unit& u) const {
         if (!patch) return std::nullopt;
         return PilotTarget(PilotTarget::Patch{*patch});
     }
+    if (const auto v = hurtMule(u)) return PilotTarget(PilotTarget::Repair{*v});
     if (const auto v = hurtMachine(u)) return PilotTarget(PilotTarget::Repair{*v});
     // Its own buildings: pick up an abandoned one, or mend a hurt one.
     const Structure* own = nullptr;
@@ -785,6 +792,7 @@ bool Simulation::mending(const Unit& u) const {
 /// own, close and ahead. Nil: nothing to repair there.
 std::optional<PilotTarget> Simulation::pilotRepair(const Unit& u) const {
     if (u.kind != Unit::Kind::prospector) return std::nullopt;
+    if (const auto v = hurtMule(u)) return PilotTarget(PilotTarget::Repair{*v});
     if (const auto v = hurtMachine(u)) return PilotTarget(PilotTarget::Repair{*v});
     const Structure* best = nullptr;
     for (const Structure& s : state.structures) {
@@ -896,6 +904,10 @@ bool Simulation::prospectorBusy(Unit& u, const Pilot& p, double dt, std::vector<
         return true;
     }
     case Unit::Task::repairing: {
+        // C4: a Mule is mended as a building is, paid for.
+        if (u.structure)
+            if (const auto m = unitIndex(*u.structure); m && state.units[size_t(*m)].kind == Unit::Kind::mule)
+                return prospectorMendMule(u, *u.structure, p, dt, events);
         if (u.structure && unitIndex(*u.structure)) return prospectorMend(u, *u.structure, p, dt);
         std::optional<size_t> i;
         if (u.structure) {
@@ -969,9 +981,9 @@ bool Simulation::prospectorMend(Unit& u, int64_t id, const Pilot& p, double dt) 
     return true;
 }
 
-/// A load is dropped off by walking up to one's own Citadel; in a world
-/// also at any finished Hab Dome of its side, the realm's field depots (R1:
-/// every pilot uses every building, whoever built it).
+/// A load is dropped off by walking up to one's own Citadel (R1: every
+/// pilot uses every building, whoever built it). C4: a Hab Dome takes no
+/// loads in a world any more: the Mule hauls them to a Citadel.
 void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
     if (!(u.carrying > 0)) return;
     std::optional<Structure> citadel;
@@ -979,15 +991,6 @@ void Simulation::prospectorDeposit(Unit& u, std::vector<GameEvent>& events) {
         if (NavGrid::insideStructure(u.position, b, pilotDepositReach)) {
             citadel = b;
             break;
-        }
-    }
-    if (!citadel && skilled(u)) {
-        for (const Structure& b : state.structures) {
-            if (b.kind == Structure::Kind::habDome && b.complete() && b.owner == u.owner
-                && NavGrid::insideStructure(u.position, b, pilotDepositReach)) {
-                citadel = b;
-                break;
-            }
         }
     }
     if (!citadel) return;

@@ -94,13 +94,14 @@ TEST(Leveling_theLevelCurveAndItsCap) {
 }
 
 /// Every kind offers one of two at each level from 2 to 10, the doc's
-/// tables in order; every pick does something. The Brood's bugs never level.
+/// tables in order; every pick does something. The Brood's bugs and the
+/// haulers (C4, the Mule) never level.
 TEST(Leveling_theCatalogueHasTwoPicksAtEveryLevelOfEveryKind) {
     size_t players = 0;
-    for (UnitKind k : allCases<UnitKind>()) players += Rules::stats(k).brood ? 0 : 1;
+    for (UnitKind k : allCases<UnitKind>()) players += Rules::stats(k).brood || Rules::stats(k).hauler ? 0 : 1;
     EXPECT_EQ(allCases<Perk>().size(), players * size_t(Leveling::perksPerKind));
     for (UnitKind k : allCases<UnitKind>()) {
-        if (Rules::stats(k).brood) {
+        if (Rules::stats(k).brood || Rules::stats(k).hauler) {
             EXPECT_TRUE(!perkOffer(k, 2).has_value());
             continue;
         }

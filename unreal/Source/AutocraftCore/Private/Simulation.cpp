@@ -245,6 +245,7 @@ std::vector<GameEvent> Simulation::step(double dt) {
     // PathAhead's probe ends with its units: the searches are all asked.
     if (probing) return events;
     if (!puddles.empty()) stepPuddles(dt);
+    stepMules(events);
     if (pilot) {
         pilot->act = false;
         pilot->ability = false;
@@ -956,6 +957,7 @@ Unit Simulation::freshUnit(Unit::Kind kind, int64_t id, int64_t owner_, Vec2 pos
     Unit u(id, kind, owner_, position, heading, task);
     u.hp = maxHP(u);
     if (kind == Unit::Kind::dropship) { u.energy = 50; u.cargo = std::vector<int64_t>{}; }
+    if (kind == Unit::Kind::mule) { u.haul = Haul{}; u.cargo = std::vector<int64_t>{}; }
     if (u.stats().anchors) { u.anchor = 0; u.anchored = false; }
     if (u.stats().turret) u.aim = heading;
     return u;
@@ -2733,6 +2735,8 @@ void Simulation::bury(std::vector<GameEvent>& events) {
                 if (gi && (*state.wells)[*gi].harvester == u.id) (*state.wells)[*gi].harvester = std::nullopt;
             }
             if (u.patch && state.patches[size_t(*u.patch)].miner == u.id) state.patches[size_t(*u.patch)].miner = std::nullopt;
+            // C4: a Mule's rider is set down beside it; its load is lost.
+            muleDown(u);
             if (pilot) refund(u);
             // Second wind: the server brings the pilot back sooner, with
             // part of the cargo.
@@ -2990,6 +2994,8 @@ void Simulation::stepUnit(Unit& u, double dt, std::vector<GameEvent>& events) {
         return;
     }
     if (u.brood()) { stepBug(u, dt, events); return; }
+    // C4: a Mule moves only while driven; its rider rides (`stepMules`).
+    if (u.stats().hauler || ridden(u)) return;
     if (u.soldier()) { stepSoldier(u, dt, events); return; }
     if (u.task == Task::errand) { stepErrand(u, dt, events); return; }
     if (prospectorDefends(u, dt, events)) return;

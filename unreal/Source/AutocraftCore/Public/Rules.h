@@ -23,7 +23,10 @@ enum class UnitKind : uint8_t {
     // stores the index, so inserting a kind renumbers the ones after it there.
     peregrine, atlas, scorpion,
     // The Brood (docs/creatures.md): the MMO's bugs, on their own side.
-    shardling, gloamwing, lodeback, matriarch
+    shardling, gloamwing, lodeback, matriarch,
+    // C4 (docs/haul-and-ferry.md section 2): the MMO's Mule, a hauler the
+    // pilot drives (`UnitStats::hauler`; `Mule.h`).
+    mule
 };
 /// Its place in `allCases`: a case without a payload is stored as
 /// its index in declaration order (`UnitTableTests` checks).
@@ -33,13 +36,13 @@ constexpr int64_t ordinal(UnitKind k) { return static_cast<int64_t>(k); }
 /// (specialised for each enum; the rest are in `Types.h`).
 template <class E> struct EnumInfo;
 template <> struct EnumInfo<UnitKind> {
-    static constexpr std::array<std::string_view, 16> names{
+    static constexpr std::array<std::string_view, 17> names{
         "prospector", "ranger", "comet", "firefly", "juggernaut", "dropship", "longbow", "kestrel", "hailstorm",
-        "peregrine", "atlas", "scorpion", "shardling", "gloamwing", "lodeback", "matriarch"};
+        "peregrine", "atlas", "scorpion", "shardling", "gloamwing", "lodeback", "matriarch", "mule"};
     static constexpr size_t count = names.size();
 };
 // The last kind: move it when you append.
-static_assert(EnumInfo<UnitKind>::count == size_t(UnitKind::matriarch) + 1);
+static_assert(EnumInfo<UnitKind>::count == size_t(UnitKind::mule) + 1);
 
 /// `Structure.Kind`, declared here so `Rules` can take it; `Types.h` nests it
 /// as `Structure::Kind`.
@@ -113,6 +116,10 @@ struct UnitStats {
     std::string_view title;
     /// A bug of the Brood (docs/creatures.md): never trained, never driven.
     bool brood = false;
+    /// C4: a hauler of the MMO's (the Mule, `Mule.h`): bought by a pilot,
+    /// not trained by a building; no leveling picks, no AI; it never
+    /// fights (not a soldier) and moves only while driven.
+    bool hauler = false;
     /// A Dropship takes it aboard (`Rules::boards`). `bio` is what a
     /// Dropship heals and a pilot walks with.
     bool boards = false;
@@ -707,6 +714,16 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
     /* matriarch */ {.hp = 6000, .armor = 3, .speed = 0.8, .radius = 3.5, .damage = 40, .cooldown = 4.0, .range = 3,
                      .armored = true, .bio = true, .hitsGround = true, .hitsAir = true, .falloff = 0,
                      .title = "the Matriarch", .brood = true, .boards = true, .vision = 25, .height = 5},
+    // C4, the Mule (docs/haul-and-ferry.md section 2, `Mule.h`): a six
+    // wheeled hauler the pilot drives standing on its front perch, 30% of
+    // the Prospector's walk; 3.0 long, 1.6 wide (`radius` its half width,
+    // so it fits the Citadel's doorway and the Dropship's bay), its body
+    // 1.4 tall. Bought, not trained: `ore`, `hydrogen` and `trainTime` are
+    // its price and its roll-out.
+    /* mule */ {.hp = 300, .armor = 1, .speed = 0.3 * Rules::prospectorSpeed, .radius = 0.8, .ore = 600, .hydrogen = 150,
+                .trainTime = 20, .armored = true,
+                .title = "Mule", .hauler = true, .machine = true, .drivable = true, .vision = 12, .steers = true,
+                .hullTurnRatePilot = 1.6, .height = 1.4},
 }};
 
 inline constexpr UnitStats UnitStats::minigun{.hp = 45, .speed = 3.15, .radius = 0.375, .supply = 1, .ore = 50, .trainTime = 18,

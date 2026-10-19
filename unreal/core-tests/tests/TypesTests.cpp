@@ -6,9 +6,9 @@
 #include "Types.h"
 
 TEST(types_enums_and_raw_values) {
-    // Every player kind has its picks; the Brood's bugs have none.
+    // Every player kind has its picks; the Brood's bugs and the haulers none.
     size_t players = 0;
-    for (auto k : ac::allCases<ac::UnitKind>()) players += ac::Rules::stats(k).brood ? 0 : 1;
+    for (auto k : ac::allCases<ac::UnitKind>()) players += ac::Rules::stats(k).brood || ac::Rules::stats(k).hauler ? 0 : 1;
     EXPECT_EQ(ac::allCases<ac::Perk>().size(), players * size_t(ac::Leveling::perksPerKind));
     EXPECT_EQ(ac::allCases<ac::UnitKind>().size(), ac::EnumInfo<ac::UnitKind>::count);
     EXPECT_TRUE(ac::rawValue(ac::Unit::Kind::hailstorm) == "hailstorm");

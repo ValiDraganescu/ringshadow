@@ -67,6 +67,7 @@ template <class IO> void fields(IO& io, BuildOrder& v);
 template <class IO> void fields(IO& io, Unit& v);
 template <class IO> void fields(IO& io, Rush& v);
 template <class IO> void fields(IO& io, Burning& v);
+template <class IO> void fields(IO& io, Haul& v);
 template <class IO> void fields(IO& io, Intel& v);
 template <class IO> void fields(IO& io, Intel::Seen& v);
 template <class IO> void fields(IO& io, Directives& v);
@@ -762,6 +763,12 @@ template <class IO> void fields(IO& io, Unit& v) {
     io("stompReady", v.stompReady);
     io("stompedAt", v.stompedAt);
     io("struckAt", v.struckAt);
+    io("haul", v.haul);
+}
+
+template <class IO> void fields(IO& io, Haul& v) {
+    io("ore", v.ore);
+    io("hydrogen", v.hydrogen);
 }
 
 template <class IO> void fields(IO& io, Rush& v) {

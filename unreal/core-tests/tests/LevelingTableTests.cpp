@@ -12,7 +12,8 @@ using namespace ac;
 
 namespace {
 
-bool playerKind(UnitKind k) { return Leveling::machines.contains(k) || Leveling::bio.contains(k); }
+// A hauler (C4, the Mule) has no picks.
+bool playerKind(UnitKind k) { return (Leveling::machines.contains(k) || Leveling::bio.contains(k)) && !Rules::stats(k).hauler; }
 
 std::vector<const PerkRow*> rowsOf(UnitKind k) {
     std::vector<const PerkRow*> out;

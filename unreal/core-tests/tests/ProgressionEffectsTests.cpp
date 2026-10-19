@@ -605,36 +605,29 @@ TEST(ProgressionEffects_worldBuildingPrices) {
     EXPECT_TRUE(!sim.buildRefusal(StructureKind::derrick, 0).has_value());
 }
 
-/// A finished Hab Dome of its side is a field depot in a world, whoever
-/// built it (R1: the realm's): a load walked up to it goes into the wallet,
-/// with its XP. An unfinished one, or with no progress (the strategy game):
-/// nothing.
-TEST(ProgressionEffects_habDomeDepot) {
+/// C4 (docs/haul-and-ferry.md section 2): a Hab Dome takes no loads, in a
+/// world or not, finished or not: the Mule hauls them to a Citadel. The load
+/// stays in the gripper.
+TEST(ProgressionEffects_habDomeTakesNoLoad) {
     auto [sim, prospector, citadel] = driven();
     const auto [me, out] = outside(sim, prospector, citadel);
     Structure dome(801, StructureKind::habDome, 0, me + out * (Rules::radius(StructureKind::habDome) + 0.5));
     sim.state.structures.push_back(dome);
     const int64_t ore = sim.state.players[0].ore;
-    // No progress: only a Citadel takes a load.
     unitRef(sim, prospector).carrying = 25;
     run(sim, 1.0 / 30);
     EXPECT_EQ(sim.state.players[0].ore, ore);
-    // A world: being built, not yet.
+    // A world, the Hab Dome finished and built by another pilot: still none.
     learn(sim, {});
-    sim.state.structures.back().buildLeft = 5;
     run(sim, 1.0 / 30);
     EXPECT_EQ(sim.state.players[0].ore, ore);
-    // Finished, built by another pilot (not in `pilotBuildings`): the depot.
-    sim.state.structures.back().buildLeft = std::nullopt;
-    run(sim, 1.0 / 30);
-    // The realm's tax (C1) at a Hab Dome too: 3 of 25, 2 of 20.
-    EXPECT_EQ(sim.state.players[0].ore, ore + 25 - 3);
-    EXPECT_EQ(unit(sim, prospector).carrying, int64_t(0));
+    EXPECT_EQ(unit(sim, prospector).carrying, int64_t(25));
     unitRef(sim, prospector).carrying = 20;
     unitRef(sim, prospector).hydrogen = true;
     const int64_t mh = sim.state.players[0].hydrogen;
     run(sim, 1.0 / 30);
-    EXPECT_EQ(sim.state.players[0].hydrogen, mh + 20 - 2);
+    EXPECT_EQ(sim.state.players[0].hydrogen, mh);
+    EXPECT_EQ(unit(sim, prospector).carrying, int64_t(20));
 }
 
 /// A world's Lab stands on its own: the Prospector places it and welds it
