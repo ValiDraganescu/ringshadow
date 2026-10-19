@@ -40,6 +40,9 @@ namespace AcShuttleShip
 
 	/// Every ship drawn, made and unmade with the shown state's (game thread).
 	AUTOCRAFT_API void Tick(UWorld* World);
+	/// The wipers of the ship the driven unit is in (its bay, or riding it),
+	/// for the dashboard's WIPERS plate; null: none.
+	AUTOCRAFT_API const ac::Wipers* AboardWipers(UWorld* World);
 	/// The last press of a ship's ramp or take-off button (the pawn's act,
 	/// AcShuttleAct), for the button's press: the real time it was pressed.
 	AUTOCRAFT_API void Pressed(int64 Ship, bool bTakeOff, double At);

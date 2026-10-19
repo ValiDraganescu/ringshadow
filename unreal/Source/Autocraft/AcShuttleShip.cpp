@@ -37,6 +37,8 @@ namespace
 
 	/// The presses heard from the pawn, by ship (real times).
 	TMap<int64, TPair<double, double>> GPresses;
+	/// The ship the driven unit is in this frame (0: none).
+	int64 GEarsIn = 0;
 
 	FVector GlassPoint(const double U, const double V)
 	{
@@ -62,6 +64,16 @@ double AcShuttleShip::Thrust(const uint8 Stage, const double Clock, const double
 	case S::depart: return 1.0;
 	}
 	return 0.1;
+}
+
+const ac::Wipers* AcShuttleShip::AboardWipers(UWorld* World)
+{
+	if (!World || GEarsIn == 0) return nullptr;
+	for (TActorIterator<AAcShuttleShip> It(World); It; ++It)
+	{
+		if (It->ShipId == GEarsIn) return &It->Wiper;
+	}
+	return nullptr;
 }
 
 void AcShuttleShip::Pressed(const int64 Ship, const bool bTakeOff, const double At)
@@ -220,6 +232,7 @@ void AcShuttleShip::Tick(UWorld* World)
 			}
 		}
 	}
+	GEarsIn = EarsIn;
 	std::vector<FAcAudioRules::FShipHear> Heard;
 
 	if (bLive)

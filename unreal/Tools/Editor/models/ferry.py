@@ -113,8 +113,8 @@ m.material("cabinGlow", parent="emissive", color=(0.6, 0.36, 0.12), emissive=(16
 m.material("wallGlow", parent="emissive", color=(0.05, 0.4, 0.45), emissive=(0.3, 3.2, 3.6))
 m.material("rampOpenGlow", parent="emissive", color=(0.6, 0.22, 0.02), emissive=(9.0, 3.0, 0.3))
 m.material("rampShutGlow", parent="emissive", color=(0.05, 0.5, 0.12), emissive=(0.4, 6.0, 0.9))
-m.material("takeoffGlow", parent="emissive", color=(0.08, 0.55, 0.15), emissive=(0.6, 7.0, 1.2))
-m.material("screenGlow", parent="emissive", color=(0.03, 0.12, 0.2), emissive=(0.25, 1.4, 2.4))
+m.material("takeoffGlow", parent="emissive", color=(0.08, 0.55, 0.15), emissive=(0.3, 3.0, 0.5))
+m.material("screenGlow", parent="emissive", color=(0.03, 0.12, 0.2), emissive=(0.1, 0.6, 1.0))
 m.material("windshield", parent="hull", color=(0.55, 0.66, 0.74), roughness=0.04, blend="translucent", opacity=0.1,
            double_sided=True)
 root = m.root
@@ -370,7 +370,7 @@ m.mesh(lamp_shut, "rampShutGlow", [slab(POST[0] - 5, POST[0] + 5, post_face + 8,
 
 # --- the console under the glass: three panels, the big green take-off button, screens ----------------------------------
 CON = (COCK_X, NOSE_X + 6)    # its front and back (x)
-CON_TOP = 128.0
+CON_TOP = 112.0
 m.mesh(root, "hullMid", [slab(CON[0], CON[1], -96, 96, DECK, CON_TOP)])
 m.mesh(root, "hullDark", [slab(CON[0] - 2, CON[0], -80, 80, DECK + 10, CON_TOP - 30)], solid=False)  # the knee panel
 # the sloped desk: up toward the glass
@@ -406,14 +406,14 @@ for k, y in enumerate((-60.0, 60.0)):
     m.mesh(scr, "screenGlow", [box((1, 28, 20), at=tuple(c[i] - 4 * sx[i] for i in range(3)), rot=(-28, 0, 0))], solid=False)
 # the take-off button: a big green mushroom on a hazard-ringed housing in the centre panel
 BTN = desk((CON[0] + CON[1]) / 2, 0, 6)
-m.mesh(root, "hazard", [cyl(15, 3, at=BTN, axis="z", rot=(DESK_ANG, 0, 0), base=True, sides=16)], solid=False)
-m.mesh(root, "chrome", [cyl(11.5, 5, at=desk((CON[0] + CON[1]) / 2, 0, 9), axis="z", rot=(DESK_ANG, 0, 0), base=True,
+m.mesh(root, "hazard", [cyl(12, 3, at=BTN, axis="z", rot=(DESK_ANG, 0, 0), base=True, sides=16)], solid=False)
+m.mesh(root, "chrome", [cyl(9, 5, at=desk((CON[0] + CON[1]) / 2, 0, 9), axis="z", rot=(DESK_ANG, 0, 0), base=True,
                             sides=16)], solid=False)
 tob = m.part("takeoffButton", at=desk((CON[0] + CON[1]) / 2, 0, 14), rot=(DESK_ANG, 0, 0), driver=d(
     "the take-off button: lit green while the ship can take off (landed, the ramp shut), dim otherwise; pushed in "
     "2 cm along its axis for 0.25 s on each press", ("emission", "position")))
-m.mesh(tob, "takeoffGlow", [cyl(9.5, 7, at=desk((CON[0] + CON[1]) / 2, 0, 14), axis="z", rot=(DESK_ANG, 0, 0), base=True,
-                                sides=16, r1=8)], solid=False)
+m.mesh(tob, "takeoffGlow", [cyl(7.5, 6, at=desk((CON[0] + CON[1]) / 2, 0, 14), axis="z", rot=(DESK_ANG, 0, 0), base=True,
+                                sides=16, r1=6.5)], solid=False)
 
 m.write()
 log("ferry: tilt %.1f deg, glass %.0f cm high, the take-off button at %s" % (TILT, GLASS_H, tuple(round(c) for c in BTN)))

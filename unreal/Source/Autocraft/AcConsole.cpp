@@ -7,6 +7,7 @@
 #include "AcPilotText.h"
 #include "AcProgressHud.h"
 #include "AcRtsPawn.h"
+#include "AcShuttleShip.h"
 #include "AcSimSubsystem.h"
 #include "AcWeather.h"
 #include "SAcConsole.h"
@@ -297,7 +298,9 @@ void UAcConsoleSubsystem::OnFrame(const FAcFrame& Frame)
 	if (ConsoleWidget)
 	{
 		const AAcWeather* Weather = AAcWeather::Find(GetWorld());
-		ConsoleWidget->SetWipers(Weather && Weather->GlassShown() ? TOptional<uint8>(uint8(Weather->Wipers().mode())) : TOptional<uint8>());
+		// Aboard a walk-in Dropship: its windshield's wipers (C4).
+		if (const ac::Wipers* Ship = AcShuttleShip::AboardWipers(GetWorld())) ConsoleWidget->SetWipers(TOptional<uint8>(uint8(Ship->mode())));
+		else ConsoleWidget->SetWipers(Weather && Weather->GlassShown() ? TOptional<uint8>(uint8(Weather->Wipers().mode())) : TOptional<uint8>());
 	}
 
 	// GameController.updateSelection: drop a building that died or changed hands.

@@ -26,7 +26,7 @@ FString AcShuttleAct::FAct::Prompt() const
 
 TOptional<AcShuttleAct::FAct> AcShuttleAct::Find(const ac::Simulation& Sim, const ac::Unit& U)
 {
-	if (U.kind != ac::UnitKind::prospector || U.airborne()) return {};
+	if ((U.kind != ac::UnitKind::prospector && U.kind != ac::UnitKind::mule) || U.airborne()) return {};
 	// In a ship (its bay; riding one in flight): its two buttons.
 	if (const ac::Shuttle* S = Sim.aboard(U))
 	{

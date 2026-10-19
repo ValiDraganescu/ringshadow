@@ -46,7 +46,7 @@ namespace AcShuttleAct
 		AUTOCRAFT_API FString Prompt() const;
 	};
 
-	/// The act for unit `U` (a Prospector on foot), or unset. The caller
+	/// The act for unit `U` (a Prospector on foot, or driving its Mule), or unset. The caller
 	/// checks first that nothing else takes the key.
 	AUTOCRAFT_API TOptional<FAct> Find(const ac::Simulation& Sim, const ac::Unit& U);
 }

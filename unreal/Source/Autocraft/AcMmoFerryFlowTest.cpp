@@ -29,6 +29,7 @@
 #include "AcSpace.h"
 #include "SAcWorldMap.h"
 
+#include "Rules.h"
 #include "Shuttle.h"
 #include "Simulation.h"
 
@@ -62,6 +63,9 @@ namespace
 		bool bFlew = false;
 		/// Since when nothing is driven (the region switch in flight).
 		double UnseatedAt = -1;
+		/// The walk in: 0 out to the ship's side, 1 back along it, 2 to the
+		/// ramp's foot, 3 up the ramp.
+		int32 Leg = 0;
 	};
 	FFerryRun Run;
 
@@ -264,17 +268,23 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 				UE_LOG(LogAutocraft, Display, TEXT("flowtest: ferry: walking in, at (%.2f, %.2f) in the ship's frame, ramp %.2f"), Local.x, Local.y, Ship->ramp.open);
 			}
 		}
-		// Pushed off the pad by the landing: out to its side, round the side to
-		// the back, to the ramp's foot, up it.
-		if (Local.x > ac::ShuttleBay::rampFoot() - 0.6 && !ac::ShuttleBay::inBay(Local) && !ac::ShuttleBay::onRamp(Local))
+		// Pushed off the pad by the landing: out to its side, back along the
+		// side, to the ramp's foot, up it (each leg once, in turn).
+		if (Run.Leg == 0 && (Local.x < ac::ShuttleBay::rampFoot() - 0.5 || ac::ShuttleBay::onRamp(Local) || ac::ShuttleBay::inBay(Local))) Run.Leg = 2;
+		const double Side = Local.y >= 0 ? 3.3 : -3.3;
+		if (Run.Leg == 0)
 		{
-			const double Side = Local.y >= 0 ? 3.3 : -3.3;
-			if (FMath::Abs(Local.y) < 3.0) WalkTo(ac::Vec2(Local.x, Side), 0.2);
-			else WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 1.2, Side), 0.4);
-			Waited(FString::Printf(TEXT("round the Dropship to its ramp (at %.2f, %.2f)"), Local.x, Local.y), WalkSeconds);
+			if (FMath::Abs(Local.y) >= 3.0 || WalkTo(ac::Vec2(Local.x, Side), 0.3)) Run.Leg = 1;
+			Waited(FString::Printf(TEXT("out to the Dropship's side (at %.2f, %.2f)"), Local.x, Local.y), WalkSeconds);
 		}
-		else if (Local.x < ac::ShuttleBay::rampFoot() - 0.2 && !ac::ShuttleBay::onRamp(Local) && !WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 0.8, 0.0), 0.3))
+		else if (Run.Leg == 1)
 		{
+			if (WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 1.2, Side), 0.4)) Run.Leg = 2;
+			Waited(FString::Printf(TEXT("back along the Dropship's side (at %.2f, %.2f)"), Local.x, Local.y), WalkSeconds);
+		}
+		else if (Run.Leg == 2)
+		{
+			if (ac::ShuttleBay::onRamp(Local) || ac::ShuttleBay::inBay(Local) || WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 0.8, 0.0), 0.3)) Run.Leg = 3;
 			Waited(FString::Printf(TEXT("to the ramp's foot (at %.2f, %.2f)"), Local.x, Local.y), WalkSeconds);
 		}
 		else if (WalkTo(ac::Vec2(-1.0, 0.0), 0.3))
@@ -307,9 +317,16 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (!Ship) break;
 		if (!Run.bPressed)
 		{
-			if (WalkTo(ac::Vec2(-1.8, -0.35), 0.25) && Settle(1.0))
+			if (WalkTo(ac::Vec2(-1.55, -0.4), 0.2) && Settle(1.0))
 			{
 				Check(Prompt == TEXT("E · CLOSE THE RAMP"), FString::Printf(TEXT("ferry: at the post the prompt closes the ramp (\"%s\")"), *Prompt));
+				for (const ac::Unit& V : S->state.units)
+				{
+					const ac::Vec2 W = ac::ShuttleBay::local(*Ship, V.position);
+					if (ac::ShuttleBay::onRamp(W, ac::Rules::radius(V.kind)))
+						UE_LOG(LogAutocraft, Display, TEXT("flowtest: ferry: on the ramp's strip: #%lld %s at (%.2f, %.2f)"), (long long)V.id,
+							*FString(std::string(ac::rawValue(V.kind)).c_str()), W.x, W.y);
+				}
 				Press();
 			}
 			else Waited(TEXT("at the ramp post"), WalkSeconds);
@@ -362,7 +379,8 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		// The flight, a step back from the console, looking out of the windshield.
 		WalkTo(ac::Vec2(1.25, 0.0), 0.15);
 		Face(0.0);
-		Pitch(-0.08);
+		// High in the dash, a little down onto the land going by.
+		Pitch(Ship && Ship->stage == ac::Shuttle::Stage::dash ? -0.22 : -0.08);
 		if (!Ship)
 		{
 			Waited(TEXT("the Dropship through the region switch"), 10);
@@ -407,7 +425,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (!Ship) break;
 		if (!Run.bPressed)
 		{
-			if (WalkTo(ac::Vec2(-1.8, -0.35), 0.25) && Settle(1.0))
+			if (WalkTo(ac::Vec2(-1.55, -0.4), 0.2) && Settle(1.0))
 			{
 				Check(Prompt == TEXT("E · OPEN THE RAMP"), FString::Printf(TEXT("ferry: landed, the post opens the ramp (\"%s\")"), *Prompt));
 				Press();
