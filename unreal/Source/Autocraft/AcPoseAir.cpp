@@ -305,8 +305,7 @@ namespace
 		{
 			if (const ac::Unit* V = FindUnit(C.State, *U.target))
 			{
-				const double Chest = AcKinds::Look(V->kind).ChestHeight;
-				In.Healing = AcSpace::ToWorld(V->position, C.Ground(V->position) + Chest);
+				In.Healing = AcSpace::ToWorld(V->position, C.Ground(V->position) + AcPose::BodyHeight(*V));
 			}
 		}
 		// The ramp opens after it sets its load down.

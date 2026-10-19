@@ -134,6 +134,21 @@ namespace AcPose
 
 	double Hover(const ac::UnitKind Kind) { return AcKinds::Look(Kind).Hover; }
 
+	double BodyHeight(const ac::Unit& U)
+	{
+		const ac::UnitStats& St = U.stats();
+		return St.air || St.height > 0 ? U.bodyHeight() : AcKinds::Look(U.kind).ChestHeight;
+	}
+
+	FVector BodyPoint(const ac::Unit& U, const FAcModelInfo* Model, const TConstArrayView<FTransform> World, const double GroundCells)
+	{
+		const double Lift = BodyHeight(U);
+		if (!Model || World.Num() == 0) return AcSpace::ToWorld(U.position, GroundCells + Lift);
+		const FName Part = AcKinds::Look(U.kind).BodyPart;
+		if (const int32* I = Part.IsNone() ? nullptr : Model->PartIndex.Find(Part); I && World.IsValidIndex(*I)) return World[*I].GetLocation();
+		return World[0].GetLocation() + FVector(0, 0, AcSpace::ToCm(Lift));
+	}
+
 	double FlightBase(const FAcPoseContext& C)
 	{
 		const ac::Unit& U = *C.Unit;

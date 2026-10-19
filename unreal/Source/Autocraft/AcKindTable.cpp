@@ -34,6 +34,8 @@ namespace
 		L.DeathSound = FName(*(L.Base + TEXT("death")));
 		L.Voice = FName(*(TEXT("v") + L.Base));
 		L.Weapon = {"gun", 0.32f, 9};
+		// A flyer's hull, over its root at its hover.
+		if (ac::Rules::stats(Kind).air) L.BodyPart = TEXT("body");
 		return L;
 	}
 
@@ -257,7 +259,7 @@ namespace
 			L.Hurt = FName(*(L.Base + TEXT("hurt")));
 			L.Idle = FName(*(L.Base + TEXT("idle")));
 			// The Gloamwing's wings and the Matriarch's breath loop.
-			if (L.Kind == K::gloamwing) L.Strike = "gloamwingspit", L.Idle = NAME_None;
+			if (L.Kind == K::gloamwing) L.Strike = "gloamwingspit", L.Idle = NAME_None, L.BodyPart = TEXT("thorax");
 			if (L.Kind == K::matriarch) L.Strike = "matriarchslam", L.Idle = NAME_None;
 			break;
 		}

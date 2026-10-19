@@ -240,6 +240,17 @@ namespace AcPose
 	/// body's rest transform, so the placement stays at the ground. The
 	/// kind row's `Hover`.
 	AUTOCRAFT_API double Hover(ac::UnitKind Kind);
+	/// Where `U`'s body is now over its ground, cells, as every weapon aims
+	/// (`ac::Unit::bodyHeight`, the core's): a flyer at its height (a
+	/// Gloamwing's, lower in its dive), a kind of its own height at half of
+	/// it; a walker at its chest (the kind row's `ChestHeight`, inside the
+	/// core's body). The drawn body is `UAcEffects::Body`.
+	AUTOCRAFT_API double BodyHeight(const ac::Unit& U);
+	/// Where `U`'s body is, cm, in the world (`UAcEffects::Body`): drawn
+	/// (`Model` with its parts' world transforms `World`), its kind's
+	/// `BodyPart`, else its root lifted by `BodyHeight`; not drawn (no
+	/// model), its point `BodyHeight` over the ground `GroundCells`.
+	AUTOCRAFT_API FVector BodyPoint(const ac::Unit& U, const FAcModelInfo* Model, TConstArrayView<FTransform> World, double GroundCells);
 	/// The ground a flyer flies over, smoothed (`GameScene.flightBase`:
 	/// rises early over a cliff ahead, sinks slowly off one). Updates
 	/// `Memory.AirY`; call once a frame per unit (RestUnit does).

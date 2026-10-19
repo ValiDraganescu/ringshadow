@@ -353,8 +353,7 @@ namespace AcNewKindsFxPrivate
 			if (!bDrawn && V->owner != Frame.LocalPlayer) return;
 			FVector From = AcSpace::ToWorld(U.position, Effects->GroundZ(U.position) / Cm + 1.2);
 			if (bDrawn) Effects->PartLocation(U.id, TEXT("launcher"), From);
-			const double Chest = V->stats().air ? AcPose::Hover(V->kind) : 0.62;
-			FVector To = AcSpace::ToWorld(V->position, Effects->GroundZ(V->position) / Cm + Chest);
+			FVector To = Effects->Body(V->id).Get(AcSpace::ToWorld(V->position, Effects->GroundZ(V->position) / Cm + AcPose::BodyHeight(*V)));
 			if (bDrawn)
 			{
 				// Where the launcher's meshes end.

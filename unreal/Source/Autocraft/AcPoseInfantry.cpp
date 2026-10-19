@@ -568,12 +568,9 @@ namespace AcPoseInfantry
 			for (const ac::Unit& V : C.State.units)
 			{
 				if (V.id != Id) continue;
-				// A flyer's hull, hovering over its ground; else the chest.
-				if (ac::Rules::stats(V.kind).air)
-				{
-					return AcSpace::ToWorld(V.position, C.Ground(V.position) + AcPose::Hover(V.kind));
-				}
-				return AcSpace::ToWorld(V.position, C.Ground(V.position) + AcKinds::Look(V.kind).ChestHeight);
+				// Its body at its height now: a flyer's hull, a Gloamwing
+				// hovering or diving, else the chest.
+				return AcSpace::ToWorld(V.position, C.Ground(V.position) + AcPose::BodyHeight(V));
 			}
 			for (const ac::Structure& S : C.State.structures)
 			{

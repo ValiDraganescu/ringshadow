@@ -146,6 +146,11 @@ struct FAcKindLook
 	double Hover = 0;
 	/// Where rounds meet it over its feet (`GameScene.chestHeight`).
 	double ChestHeight = 0.62;
+	/// The part at the middle of its body, where shots end while it is
+	/// drawn (`UAcEffects::Body`): a flyer's hull (`body`), the Gloamwing's
+	/// `thorax`, which its pose lifts to its height. None: its root plus
+	/// `AcPose::BodyHeight`.
+	FName BodyPart;
 
 	// The driven view (`FAcPilotCamera`), SceneKit axes, cells.
 	FVector Eye = FVector(0, 1, 0);

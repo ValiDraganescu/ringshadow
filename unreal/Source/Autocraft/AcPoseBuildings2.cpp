@@ -5,6 +5,7 @@
 #include "AcPilotFlight.h"
 #include "AcSpace.h"
 
+#include "Defence.h"
 #include "Rules.h"
 #include "Types.h"
 
@@ -306,7 +307,7 @@ namespace
 
 	struct FSentinelState : FAcPoseState
 	{
-		double Pod[2] = {0.3, 0.3};
+		double Pod[2] = {ac::Defence::sentinelRest, ac::Defence::sentinelRest};
 	};
 
 	void PoseSentinel(const FAcPoseContext& C, FAcPose& P)
@@ -328,12 +329,15 @@ namespace
 			const double Aim = S.target ? S.aim.value_or(UE_DOUBLE_HALF_PI) : UE_DOUBLE_HALF_PI + 0.6 * std::sin(Ph * 0.35);
 			SetEuler(M, P, Head.Get(M), 0, -Aim, 0);
 		}
+		// The pods pitch onto the target's body at its height (the core's
+		// `Structure::pitch`, `Defence::sentinelPitch`), back to rest with none.
 		FSentinelState& Mem = C.Memory.State<FSentinelState>();
+		const double Pitch = bLive ? S.pitch : ac::Defence::sentinelRest;
 		for (int32 K = 0; K < Pods.Num(M) && K < 2; ++K)
 		{
 			const double Since = C.Time - Last - double(K) * 0.12;
 			if (const int32 F = Flashes(M, K); F != INDEX_NONE) P.Visible[F] = Since >= 0.0 && Since < 0.06;
-			Mem.Pod[K] = Ease(Mem.Pod[K], bTracking ? 0.55 : 0.3, 0.04, C.Dt);
+			Mem.Pod[K] = Ease(Mem.Pod[K], Pitch, 0.1, C.Dt);
 			SetEuler(M, P, Pods(M, K), 0, 0, Mem.Pod[K]);
 		}
 		PoseMarks(C, P, bLive);

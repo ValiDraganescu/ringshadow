@@ -149,16 +149,15 @@ bool UAcEffects::PartMuzzle(const int64 Id, const FName Part, FVector& Out) cons
 	return true;
 }
 
-TOptional<FVector> UAcEffects::AirBody(const int64 Id) const
+TOptional<FVector> UAcEffects::Body(const int64 Id) const
 {
-	// `Trooper.airBody`: a Dropship's or a Kestrel's hull, over its root.
 	const ac::GameState* State = StateOf(Frame, Sim());
 	if (!State) return {};
 	const std::optional<ac::Unit> U = State->unit(Id);
-	if (!U || !ac::Rules::stats(U->kind).air) return {};
-	FVector P;
-	if (PartLocation(Id, TEXT("body"), P)) return P;
-	return {};
+	if (!U) return {};
+	const UAcWorldRenderer* R = Renderer();
+	const FAcModelInfo* M = R ? R->ModelOf(Id) : nullptr;
+	return AcPose::BodyPoint(*U, M, M ? R->PartWorld(Id) : TConstArrayView<FTransform>(), GroundZ(U->position) / Cm);
 }
 
 void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, const double Time)
@@ -179,9 +178,9 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 		if (St && St->kind == ac::StructureKind::sentinel)
 		{
 			// A Sentinel's missiles, a pair from each pod in turn, at the
-			// flyer's hull (they hit at once: fast streaks and a burst).
+			// flyer's body (they hit at once: fast streaks and a burst).
 			SlitShotTimes.FindOrAdd(Unit) = {Time};
-			const FVector To = AirBody(Target).Get(AcSpace::ToWorld(At, GroundZ(At) / Cm + 2));
+			const FVector To = Body(Target).Get(AcSpace::ToWorld(At, GroundZ(At) / Cm + 2));
 			for (int32 K = 0; K < 4; ++K)
 			{
 				FVector From;
@@ -214,7 +213,9 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 	if (const FAcUnitMemory* Mem = R->Memory(Unit)) S.Anchor = FMath::Max(S.Anchor, Mem->AnchorOf);
 	S.bMinigun = HasMinigun(*State, *U);
 	S.bReach = AcKinds::Look(U->kind).bMuzzleReach;
-	if (const std::optional<ac::Unit> TA = State->unit(Target)) S.bAirTarget = ac::Rules::stats(TA->kind).air;
+	// In the air as the core counts it (`Simulation::weapon`): a Gloamwing
+	// in its dive takes a Kestrel's rockets, not its rail.
+	if (const std::optional<ac::Unit> TA = State->unit(Target)) S.bAirTarget = TA->airborne();
 	const TConstArrayView<FTransform> W = R->PartWorld(Unit);
 	S.Position = W.Num() > 0 ? AcSpace::ToSim(W[0].GetLocation()) : U->position;
 	// The driven unit's rounds leave its cockpit's guns, not the hidden model's.
@@ -276,9 +277,9 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 		Height = AcPose::BuildingHeight(TB->kind);
 		To = AcSpace::ToWorld(P, Ground / Cm + 0.5 + 0.5 * Height * (0.5 + 0.5 * std::sin(Time * 37 + double(Unit))));
 	}
-	else if (const TOptional<FVector> Air = AirBody(Target))
+	else if (const TOptional<FVector> B = Body(Target))
 	{
-		To = *Air;
+		To = *B;
 	}
 	else
 	{
@@ -288,27 +289,21 @@ void UAcEffects::Shot(const int64 Unit, const int64 Target, const ac::Vec2 At, c
 	if (S.bDriven && Target == PilotFire.AimOn && PilotFire.Aim) To = *PilotFire.Aim;
 
 	// Grenades and shells home on a unit as it moves, as the damage does.
+	// They keep to where they met it on its body (the driven gun's
+	// crosshair point), as its body moves, climbs or dives.
 	TFunction<TOptional<FVector>()> Track;
 	if (!TB && R->ModelOf(Target))
 	{
-		const std::optional<ac::Unit> TU = State->unit(Target);
-		const bool bAir = TU && ac::Rules::stats(TU->kind).air;
-		const TConstArrayView<FTransform> TW = R->PartWorld(Target);
-		const double Lift = TW.Num() > 0 ? To.Z - TW[0].GetLocation().Z : 0.0;
+		const TOptional<FVector> Was = Body(Target);
+		const FVector Off = Was ? To - *Was : FVector::ZeroVector;
 		TWeakObjectPtr<UAcEffects> Weak(this);
-		Track = [Weak, Target, Lift, bAir]() -> TOptional<FVector>
+		Track = [Weak, Target, Off]() -> TOptional<FVector>
 		{
 			const UAcEffects* E = Weak.Get();
 			const UAcWorldRenderer* WR = E ? E->Renderer() : nullptr;
 			if (!WR || !WR->ModelOf(Target)) return {};
-			if (bAir)
-			{
-				FVector P;
-				return E->PartLocation(Target, TEXT("body"), P) ? TOptional<FVector>(P) : TOptional<FVector>();
-			}
-			const TConstArrayView<FTransform> Now = WR->PartWorld(Target);
-			if (Now.Num() == 0) return {};
-			return Now[0].GetLocation() + FVector(0, 0, Lift);
+			const TOptional<FVector> Now = E->Body(Target);
+			return Now ? TOptional<FVector>(*Now + Off) : TOptional<FVector>();
 		};
 	}
 	Fire(S, To, At, Height, Time, MoveTemp(Track));

@@ -88,8 +88,7 @@ namespace
 			Lock = FMath::Clamp((Now - *U.lockFrom) / 1.0, 0.0, 1.0);
 			if (const std::optional<ac::Unit> V = C.State.unit(*U.lockTarget))
 			{
-				const double Chest = V->stats().air ? AcPose::Hover(V->kind) : 0.62;
-				Aim = AcSpace::ToWorld(V->position, C.Ground(V->position) + Chest);
+				Aim = AcSpace::ToWorld(V->position, C.Ground(V->position) + AcPose::BodyHeight(*V));
 			}
 		}
 

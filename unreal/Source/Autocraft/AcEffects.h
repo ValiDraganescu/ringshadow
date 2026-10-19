@@ -233,6 +233,12 @@ public:
 	/// Where a drawn part is now (its pivot), cm, in the world; false if the
 	/// unit or the part is not drawn.
 	bool PartLocation(int64 Id, FName Part, FVector& Out) const;
+	/// Where unit `Id`'s body is now, cm, in the world: every shot at it
+	/// ends there. Drawn: its kind's `BodyPart` (a flyer's hull, the
+	/// Gloamwing's thorax as it bobs and dives), else its root lifted by
+	/// `AcPose::BodyHeight`; not drawn: its sim point at that height (the
+	/// core's `aimHeight`), never the ground. None: no such unit.
+	TOptional<FVector> Body(int64 Id) const;
 	/// D1, C1: the muzzle of Citadel `St`'s corner turret pointing nearest
 	/// `At` (its shots and misses come from the building, not the gun).
 	bool CitadelMuzzle(const ac::Structure& St, ac::Vec2 At, FVector& Out) const;
@@ -302,7 +308,6 @@ private:
 	struct FShooter;
 	void Fire(const FShooter& S, const FVector& To, ac::Vec2 At, double Height, double Time,
 		TFunction<TOptional<FVector>()> Track);
-	TOptional<FVector> AirBody(int64 Id) const;
 
 	TArray<TUniquePtr<FAcEffectPool>> Pools;
 	FAcEffectPool* TracerPool = nullptr;

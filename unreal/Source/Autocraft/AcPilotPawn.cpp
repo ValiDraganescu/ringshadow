@@ -1461,9 +1461,8 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	{
 		if (const std::optional<ac::Unit> V = S.state.unit(*ScriptAimTarget))
 		{
-			// A flyer at its hover, the rest at the chest.
-			const double Up = ac::Rules::stats(V->kind).air ? AcPose::Hover(V->kind) : AcKinds::Look(V->kind).ChestHeight;
-			AimAt(AcSpace::ToWorld(V->position, GroundAt(GetWorld(), V->position) + Up));
+			// Its body at its height now (a flyer's, a diving Gloamwing's), else the chest.
+			AimAt(AcSpace::ToWorld(V->position, GroundAt(GetWorld(), V->position) + AcPose::BodyHeight(*V)));
 		}
 		if (--ScriptAimRounds == 0) ScriptAimTarget.Reset();
 	}

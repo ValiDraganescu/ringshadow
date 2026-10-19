@@ -139,6 +139,12 @@ bool FAcKindsCompleteTest::RunTest(const FString&)
 		// A player flier hovers in its rest transform; the Gloamwing's pose lifts it itself.
 		if (!bBrood && ac::Rules::stats(K).air && !(L.Hover > 0)) Miss(L, TEXT("Hover"), TEXT("a flier at the ground"));
 		if (!(L.ChestHeight > 0)) Miss(L, TEXT("ChestHeight"), TEXT("not over its feet"));
+		// A flier's shots end on its drawn body (`UAcEffects::Body`), not under it.
+		if (ac::Rules::stats(K).air)
+		{
+			const FAcModelInfo* M = Catalog.Find(FName(*L.Model));
+			if (L.BodyPart.IsNone() || (M && !M->PartIndex.Contains(L.BodyPart))) Miss(L, TEXT("BodyPart"), TEXT("a flier with no body its shots end on"));
+		}
 		if (!(L.MinimapRadius > 0)) Miss(L, TEXT("MinimapRadius"), TEXT("no mark"));
 	}
 	return true;
