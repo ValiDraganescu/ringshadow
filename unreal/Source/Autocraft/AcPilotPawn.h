@@ -225,6 +225,10 @@ public:
 	/// its thing `Id` (0: any), `Index` (INDEX_NONE: any)); false: no such
 	/// box near the driven unit.
 	bool TestLookAtAct(AcActPick::EKind Kind, int64 Id = 0, int32 Index = INDEX_NONE);
+	/// For a test's failure: the crosshair's ray and every act box of
+	/// `Kind` near the driven unit: its gap to the body, where the ray
+	/// enters it and where the world stops the ray (cells).
+	FString ActDebug(AcActPick::EKind Kind) const;
 	/// C3: the building E would demolish now (INDEX_NONE: none), and the
 	/// hold's fill while E is held on it (unset: not held).
 	int64 DemolishTarget() const;

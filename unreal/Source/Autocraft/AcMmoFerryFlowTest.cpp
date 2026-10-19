@@ -386,7 +386,9 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		{
 			if (WalkTo(PostStand, 0.2) && (AimButton(false), Settle(1.0)))
 			{
-				Check(Prompt == TEXT("E · CLOSE THE RAMP"), FString::Printf(TEXT("ferry: at the post the prompt closes the ramp (\"%s\")"), *Prompt));
+				// (The third-person camera eases round onto the post: a while for the aim.)
+				if (Prompt != TEXT("E · CLOSE THE RAMP") && Now - Run.Settled < 1.0 + AskSeconds) return;
+				Check(Prompt == TEXT("E · CLOSE THE RAMP"), FString::Printf(TEXT("ferry: at the post the prompt closes the ramp (\"%s\"; %s)"), *Prompt, *Pilot->ActDebug(AcActPick::EKind::Ramp)));
 				for (const ac::Unit& V : S->state.units)
 				{
 					const ac::Vec2 W = ac::ShuttleBay::local(*Ship, V.position);
@@ -493,7 +495,9 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		{
 			if (WalkTo(PostStand, 0.2) && (AimButton(false), Settle(1.0)))
 			{
-				Check(Prompt == TEXT("E · OPEN THE RAMP"), FString::Printf(TEXT("ferry: landed, the post opens the ramp (\"%s\")"), *Prompt));
+				// (The third-person camera eases round onto the post: a while for the aim.)
+				if (Prompt != TEXT("E · OPEN THE RAMP") && Now - Run.Settled < 1.0 + AskSeconds) return;
+				Check(Prompt == TEXT("E · OPEN THE RAMP"), FString::Printf(TEXT("ferry: landed, the post opens the ramp (\"%s\"; %s)"), *Prompt, *Pilot->ActDebug(AcActPick::EKind::Ramp)));
 				Press();
 			}
 			else Waited(TEXT("at the ramp post after the landing"), WalkSeconds);

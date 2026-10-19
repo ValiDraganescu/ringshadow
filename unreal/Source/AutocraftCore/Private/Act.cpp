@@ -115,7 +115,7 @@ Block Act::rampPostLocal() {
     // meets the lamps' housing first).
     Block b = button(ShuttleBay::rampButton, 0.2);
     b.z0 = ShuttleBay::rampButton.z - 0.25;
-    b.z1 = ShuttleBay::rampButton.z + 0.5;
+    b.z1 = ShuttleBay::rampButton.z + 0.9;
     return b;
 }
 Block Act::takeOffLocal() { return button(ShuttleBay::takeOffButton, 0.2); }

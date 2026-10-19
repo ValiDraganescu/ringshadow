@@ -1124,6 +1124,28 @@ bool AAcPilotPawn::TestLookAtAct(const AcActPick::EKind Kind, const int64 Id, co
 	return false;
 }
 
+FString AAcPilotPawn::ActDebug(const AcActPick::EKind Kind) const
+{
+	const UAcSimSubsystem* Sim = SimOf(this);
+	if (!Driving() || !Sim || !Sim->IsRunning() || !Cross) return TEXT("not driving, or no crosshair");
+	const ac::Simulation& S = Sim->Simulation();
+	const std::optional<ac::Unit> U = S.pilotUnit();
+	if (!U) return TEXT("no unit");
+	const double Len = FVector::Dist(Cross->From, Cross->To);
+	FString Out = FString::Printf(TEXT("ray %.2f cells, stopped at %.2f on #%lld"), AcSpace::ToCells(Len),
+		AcSpace::ToCells(FVector::Dist(Cross->From, Cross->Point)), (long long)Cross->Target);
+	for (const AcActPick::FTarget& T : AcActPick::Targets(S, *U, ActWorld(AcSpace::HeightToSim(RootOf(*U).GetTranslation()))))
+	{
+		if (T.Kind != Kind) continue;
+		const TOptional<double> At = AcActPick::Enters(T, Cross->From, Cross->To);
+		const FVector Mid = T.Frame.GetLocation();
+		Out += FString::Printf(TEXT("; box #%lld/%d gap %.2f, enters %s, its middle %.2f off the ray"), (long long)T.Id, T.Index, T.Gap,
+			At ? *FString::Printf(TEXT("at %.2f"), AcSpace::ToCells(*At * Len)) : TEXT("never"),
+			AcSpace::ToCells(FMath::PointDistToLine(Mid, (Cross->To - Cross->From).GetSafeNormal(), Cross->From)));
+	}
+	return Out;
+}
+
 void AAcPilotPawn::TestLookAt(const FVector& Target)
 {
 	if (!LastEye) return;
