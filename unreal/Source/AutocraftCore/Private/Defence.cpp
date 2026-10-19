@@ -45,6 +45,8 @@ Vec3 Defence::gatlingMuzzle(Vec2 at, double aim, double pitch) {
     return {m.x, m.y, gatlingPivot + gatlingBarrel * std::sin(pitch)};
 }
 
+double Defence::sentinelPitch(double along, double up) { return std::atan2(up - sentinelPivot, ac::max(0.0, along)); }
+
 double Defence::clampAim(int i, double aim) {
     const double rest = cornerAngle(i);
     const double off = std::remainder(aim - rest, 2 * pi);

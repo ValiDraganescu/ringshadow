@@ -56,6 +56,12 @@ bool Unit::airborne() const {
     return !(bug && bug->diveFrom);
 }
 
+double Unit::bodyHeight() const {
+    const UnitStats& st = stats();
+    if (st.air) return bug ? bug->height : st.hover;
+    return (st.height > 0 ? st.height : 1.5) / 2;
+}
+
 namespace {
 
 double paceFor(const Unit& u, double speed) { return std::clamp(speed / std::max(0.01, Rules::speed(u.kind)), 0.05, 1.0); }

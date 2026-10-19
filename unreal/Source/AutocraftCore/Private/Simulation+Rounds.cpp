@@ -164,15 +164,13 @@ void Simulation::stepRounds(double dt, std::vector<GameEvent>& events) {
             || u.task == Unit::Task::atGun) {
             continue;
         }
+        // Its body about where it is now (`Unit::bodyHeight`): a flyer at
+        // its height, diving or not, never below the ground.
         const UnitStats& st = u.stats();
         const double h = st.height > 0 ? st.height : 1.5;
         const double g = groundZ(u.position);
-        if (u.airborne()) {
-            const double alt = g + (u.bug ? u.bug->height : st.hover);
-            bodies.push_back({u.position, st.radius, alt - h / 2, alt + h / 2, i, false});
-        } else {
-            bodies.push_back({u.position, st.radius, g, g + h, i, false});
-        }
+        const double mid = g + u.bodyHeight();
+        bodies.push_back({u.position, st.radius, ac::max(g, mid - h / 2), mid + h / 2, i, false});
     }
     for (size_t i = 0; i < state.structures.size(); i++) {
         const Structure& s = state.structures[i];
@@ -353,11 +351,7 @@ void Simulation::strike(const Round& r, int64_t id) {
 }
 
 double Simulation::aimHeight(int64_t id) const {
-    if (const auto u = state.unit(id)) {
-        const UnitStats& st = u->stats();
-        const double h = st.height > 0 ? st.height : 1.5;
-        return groundZ(u->position) + (u->airborne() ? (u->bug ? u->bug->height : st.hover) : h / 2);
-    }
+    if (const auto u = state.unit(id)) return groundZ(u->position) + u->bodyHeight();
     if (const auto o = state.structure(id)) return groundZ(o->position) + Rules::height(o->kind) / 2;
     return 0;
 }
@@ -407,7 +401,7 @@ void Simulation::stepGatling(Structure& s, const UnitStats& w, double dt, std::v
             Vec2 v{0, 0};
             const double z = aimHeight(*target);
             if (const auto u = state.unit(*target)) {
-                if (u->moving) v = Vec2(std::cos(u->heading), std::sin(u->heading)) * (Rules::speed(u->kind) * (u->bug ? u->bug->pace : 1));
+                if (u->walking()) v = Vec2(std::cos(u->heading), std::sin(u->heading)) * (Rules::speed(u->kind) * (u->bug ? u->bug->pace : 1));
             }
             Vec2 at = t->position;
             for (int k = 0; k < 2; k++) {

@@ -1090,7 +1090,8 @@ struct AUTOCRAFTCORE_API Structure {
     /// the realm's Citadels by the server). Not saved: a loaded one starts shut.
     std::optional<Door> door;
     /// A gatling gun's barrels' pitch, radians up from level (C2: the AI's
-    /// ballistic solve each step; back to level with nothing to shoot).
+    /// ballistic solve each step; back to level with nothing to shoot); a
+    /// Sentinel's pods' onto its target's body (`Defence::sentinelPitch`).
     double pitch = 0;
     /// A gatling gun's heat, barrels and cone (C2; as `CornerGun`'s).
     double heat = 0;
@@ -1421,6 +1422,12 @@ struct AUTOCRAFTCORE_API Unit {
     /// In the air now: a flyer, but a Gloamwing in its dive is at torch
     /// height and counts as ground (`Brood::low`).
     bool airborne() const;
+    /// Where its body's middle is now, cells over the ground: a flyer's
+    /// hull at its hover, a Gloamwing at its height (lower in its dive, when
+    /// it counts as ground), anything else at half its height (1.5 when its
+    /// kind has none). Every weapon aims here (`Simulation::aimHeight`), and
+    /// the game's shots end on the drawn body there (`UAcEffects::Body`).
+    double bodyHeight() const;
     /// Where it looks, world radians: a tank's turret or a Firefly's tail,
     /// else its heading.
     double look() const { return aim ? *aim : heading; }

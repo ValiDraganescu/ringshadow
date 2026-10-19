@@ -108,6 +108,12 @@ struct AUTOCRAFTCORE_API Defence {
     static constexpr double gatlingPitchMin = -60.0 * pi / 180.0;
     static constexpr double gatlingPitchMax = 70.0 * pi / 180.0;
     static Vec3 gatlingMuzzle(Vec2 at, double aim, double pitch);
+    /// A Sentinel's missile pods (the model's `pods_k`): they pitch about
+    /// `sentinelPivot` over its ground, `sentinelRest` up while it watches
+    /// the sky. `sentinelPitch`: radians up from level onto a body `up` over
+    /// its ground and `along` away (`Simulation::aimHeight`).
+    static constexpr double sentinelPivot = 1.17, sentinelRest = 0.3;
+    static double sentinelPitch(double along, double up);
     /// `aim` (world radians) held within gun `i`'s arc, at its hard stops
     /// (no wrap: past a stop it stays at that stop).
     static double clampAim(int i, double aim);

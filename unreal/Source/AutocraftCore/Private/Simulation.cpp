@@ -805,6 +805,16 @@ void Simulation::stepTurret(Structure& s, const UnitStats& w, double dt, std::ve
     s.target = target;
     s.cooldown = cooldown;
     s.aim = aim;
+    if (s.kind == StructureKind::sentinel) {
+        // Its pods pitch onto the target's body at its height now (a flyer
+        // high, lower as it dives), back to rest with none.
+        double want = Defence::sentinelRest;
+        if (target) {
+            if (const auto t = foe(*target, s.owner)) want = Defence::sentinelPitch(distance(s.position, t->position), aimHeight(*target) - groundZ(s.position));
+        }
+        const double turn_ = turretTurnRate * dt;
+        s.pitch += ac::max(-turn_, ac::min(turn_, want - s.pitch));
+    }
 }
 
 std::optional<int64_t> Simulation::gunTarget(const Structure& s, Vec2 at, double edge, const UnitStats& w,

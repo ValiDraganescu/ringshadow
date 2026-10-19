@@ -108,8 +108,9 @@ public:
     /// edge `radius` short of it; nil when out of reach or the ground is in
     /// the way (a gun on a ledge, a bug below its lip).
     std::optional<double> gatlingPitch(const Structure& s, Vec2 at, double z, double radius) const;
-    /// The height a round aims at on unit or building `id`: a ground body's
-    /// middle, a flyer's height, a building's half height.
+    /// The height every weapon aims at on unit or building `id`, now: its
+    /// body's middle (`Unit::bodyHeight`: a flyer at its height, a diving
+    /// Gloamwing lower), a building's half height.
     double aimHeight(int64_t id) const;
     static constexpr double gatlingAimGate = 0.05;
     /// A Target Dummy whose time down is over stands again with full hp and
