@@ -12,6 +12,7 @@
 #include "AcVisor.h"
 #include "AcWeather.h"
 
+#include "Algo/Find.h"
 #include "Components/PointLightComponent.h"
 #include "Components/PostProcessComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -231,6 +232,16 @@ void AcShuttleShip::Tick(UWorld* World)
 			{
 				A = *Found;
 				Have.Remove(S.id);
+			}
+			else if (const TPair<int64, AAcShuttleShip*>* Near = Algo::FindByPredicate(Have, [&](const TPair<int64, AAcShuttleShip*>& H)
+				{ return !AcShuttleView::Find(H.Key) && FVector::Dist(H.Value->GetActorLocation(), F.Placement.GetLocation()) < 5000.0; }))
+			{
+				// The same ship under a new number (the target region's copy at
+				// the switch): kept, its wipers and its glass's water with it.
+				A = Near->Value;
+				Have.Remove(Near->Key);
+				UE_LOG(LogAutocraft, Log, TEXT("shuttle %lld: now %lld"), (long long)A->ShipId, (long long)S.id);
+				A->ShipId = S.id;
 			}
 			else
 			{

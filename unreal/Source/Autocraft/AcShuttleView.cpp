@@ -1,5 +1,7 @@
 #include "AcShuttleView.h"
 
+#include "AcLog.h"
+
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 
@@ -16,6 +18,23 @@ namespace
 		double Clock = 0, At = 0;
 	};
 	TMap<int64, FSeen> GSeen;
+
+	/// The flying ships of the last frame, with the world frame's origin
+	/// their numbers were in (AcSpace::Origin), and when each was last in
+	/// the state: a ship that leaves the state in flight (the switch into the
+	/// target region, its first snapshot there not in yet) is carried on
+	/// from them for `GhostSeconds`, so the ship and the view in it never
+	/// drop out at the seam.
+	struct FFlown
+	{
+		ac::Shuttle Ship;
+		double Clock = 0;
+		ac::Vec2 Origin;
+		double At = 0;
+		bool bGhost = false;
+	};
+	TArray<FFlown> GFlown;
+	constexpr double GhostSeconds = 3.0;
 
 	/// How far ahead of the last snapshot the clock may run (s): a stalled
 	/// connection freezes the ship rather than flying it on alone.
@@ -54,6 +73,61 @@ void AcShuttleView::Update(const ac::GameState& State, const double Now)
 	{
 		if (!Live.Contains(It.Key())) It.RemoveCurrent();
 	}
+
+	// The seam: a ship gone from the state in flight, carried on a moment.
+	TArray<FFlown> Flown;
+	const ac::Vec2 Origin = AcSpace::Origin();
+	for (const FFlown& W : GFlown)
+	{
+		if (Live.Contains(W.Ship.id) || Now - W.At > GhostSeconds) continue;
+		// Its riders on another ship in flight now (the target region's copy): done.
+		bool bCopied = false;
+		for (const FShip& F : GShips)
+		{
+			for (const int64_t R : W.Ship.riders) bCopied |= F.Ship.flying() && F.Ship.rides(R);
+		}
+		if (bCopied) continue;
+		FFlown G = W;
+		if (!G.bGhost)
+		{
+			// Into the world frame's numbers now, its frame onto the target
+			// pad as the simulation moves it at the switch.
+			const ac::Vec2 Shift = W.Origin - Origin;
+			G.Ship.from = G.Ship.from + ac::Vec3(Shift.x, Shift.y, 0);
+			G.Ship.to = G.Ship.to + ac::Vec3(Shift.x, Shift.y, 0);
+			G.Ship.position = ac::Vec2(G.Ship.to.x, G.Ship.to.y);
+			G.Ship.heading = ac::shuttleLandingHeading(G.Ship);
+			G.Ship.ground = G.Ship.to.z;
+			G.Origin = Origin;
+			G.bGhost = true;
+			UE_LOG(LogAutocraft, Log, TEXT("shuttle %lld: carried on over the seam"), (long long)G.Ship.id);
+		}
+		// Its clock on from when it was last seen, through the stages.
+		ac::Shuttle On = G.Ship;
+		double Clock = G.Clock + FMath::Max(0.0, Now - G.At);
+		using EStage = ac::Shuttle::Stage;
+		while (On.stage < EStage::approach && Clock > ac::shuttleStageSeconds(On, On.stage))
+		{
+			Clock -= ac::shuttleStageSeconds(On, On.stage);
+			On.stage = EStage(uint8(On.stage) + 1);
+		}
+		Clock = FMath::Min(Clock, ac::shuttleStageSeconds(On, On.stage));
+		On.clock = Clock;
+		FShip& F = GShips.AddDefaulted_GetRef();
+		F.Ship = On;
+		F.Clock = Clock;
+		F.Pose = ac::shuttlePose(On, On.stage, Clock);
+		F.Frame = FrameTransform(On);
+		F.Placement = PoseTransform(F.Pose);
+		F.Carrier = F.Frame.Inverse() * F.Placement;
+		Flown.Add(G);
+	}
+	for (const FShip& F : GShips)
+	{
+		if (!F.Ship.flying() || !Live.Contains(F.Ship.id)) continue;
+		Flown.Add({F.Ship, F.Clock, Origin, Now, false});
+	}
+	GFlown = MoveTemp(Flown);
 }
 
 void AcShuttleView::Update(const UWorld* World)

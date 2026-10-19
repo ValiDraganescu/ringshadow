@@ -45,7 +45,7 @@
 
 namespace
 {
-	constexpr double SeatSeconds = 20;
+	constexpr double SeatSeconds = 40;
 	constexpr double WalkSeconds = 25;
 	constexpr double AskSeconds = 8;
 	/// The Dropship's call to its ramp down (descend 3 s, the ramp 3 s), with room.
@@ -60,6 +60,8 @@ namespace
 		bool bLiftShot = false, bDashShot = false, bApproachShot = false;
 		/// The target pad's region, seen in flight.
 		bool bFlew = false;
+		/// Since when nothing is driven (the region switch in flight).
+		double UnseatedAt = -1;
 	};
 	FFerryRun Run;
 
@@ -148,9 +150,15 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 	if (!Seated() || !S || !U)
 	{
 		// The region switch in flight: a moment with nothing driven.
-		Waited(TEXT("still driving"), 6);
+		if (Run.UnseatedAt < 0) Run.UnseatedAt = Now;
+		if (Now - Run.UnseatedAt > 6)
+		{
+			Check(false, FString::Printf(TEXT("still driving within 6 s (%s)"), Mmo ? *Mmo->Message() : TEXT("no client")));
+			Finish();
+		}
 		return;
 	}
+	Run.UnseatedAt = -1;
 	const TOptional<FAcPilotInfo>& Info = Overlay ? Overlay->LastInfo() : TOptional<FAcPilotInfo>();
 	const FString Prompt = Info && Info->Prompt ? *Info->Prompt : FString();
 	const TOptional<AcShuttleAct::FAct> Act = AcShuttleAct::Find(*S, *U);
@@ -184,6 +192,8 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		Pilot->Press(false);
 		Run.bPressed = true;
 	};
+	// The look's pitch to `Want` (radians, up +), through the mouse.
+	auto Pitch = [&](const double Want) { Pilot->Look(0.0, (Pilot->ViewPitch() - Want) / 0.0026); };
 	auto FirstPerson = [&](const bool bFirst) {
 		if (Pilot->ChaseEye().IsSet() == bFirst) Pilot->ToggleView();
 	};
@@ -194,14 +204,28 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		const FVector L = F->Placement.InverseTransformPosition(PC->PlayerCameraManager->GetCameraLocation());
 		Where = L.ToCompactString();
 		using B = ac::ShuttleBay;
-		return L.X > AcSpace::ToCm(B::rear) - 5 && L.X < AcSpace::ToCm(B::noseFrom) + 60 && FMath::Abs(L.Y) < AcSpace::ToCm(B::halfWide) + 6
+		// (With the ramp down the boom may reach out of the open back, as far as the hull's end.)
+		const double Back = Ship->ramp.open > 0.0 ? AcSpace::ToCm(B::hullRear) - 30 : AcSpace::ToCm(B::rear) - 5;
+		return L.X > Back && L.X < AcSpace::ToCm(B::noseFrom) + 60 && FMath::Abs(L.Y) < AcSpace::ToCm(B::halfWide) + 6
 			&& L.Z > AcSpace::ToCm(B::deck) && L.Z < AcSpace::ToCm(B::ceiling) + 8;
 	};
 
 	switch (T.Phase)
 	{
 	case 2:
-		// On the pad: the call.
+	{
+		// Onto the pad's middle, then the call.
+		const ac::Structure* Pad = nullptr;
+		for (const ac::Structure& B : S->state.structures)
+		{
+			if (B.kind != ac::StructureKind::landingPad || !B.complete()) continue;
+			if (!Pad || ac::distance(B.position, U->position) < ac::distance(Pad->position, U->position)) Pad = &B;
+		}
+		if (Pad && ac::distance(Pad->position, U->position) < 12 && !WalkTo(Pad->position, 0.3))
+		{
+			Waited(TEXT("onto the Landing Pad"), WalkSeconds);
+			return;
+		}
 		if (Act && Act->Kind == AcShuttleAct::FAct::EKind::Call && !Act->Why && Mmo->HydrogenNow().value_or(0) >= 100 && Settle(1.0))
 		{
 			Check(Prompt == TEXT("E · CALL THE DROPSHIP"), FString::Printf(TEXT("ferry: on the pad the prompt calls the Dropship (\"%s\")"), *Prompt));
@@ -209,17 +233,20 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			Press();
 			Advance();
 		}
-		else Waited(TEXT("on a Landing Pad, the call offered"), AskSeconds);
+		else Waited(FString::Printf(TEXT("on a Landing Pad (%s), the call offered (%s), MH %lld"),
+			Pad ? *FString::Printf(TEXT("%.1f away"), ac::distance(Pad->position, U->position)) : TEXT("none"),
+			Act ? *Act->Prompt() : TEXT("no act"), (long long)Mmo->HydrogenNow().value_or(-1)), WalkSeconds);
 		return;
+	}
 	case 3:
 		// It comes down and lowers its ramp.
 		if (Ship && Ship->grounded() && Ship->ramp.open >= ac::ShuttleBay::rampDown)
 		{
 			Run.Ship = Ship->id;
-			Check(Mmo->ShuttleRefusal().IsEmpty(), FString::Printf(TEXT("ferry: the call kept (%s)"), *Mmo->ShuttleRefusal()));
 			Face(UE_DOUBLE_PI);
 			if (Settle(1.5))
 			{
+				Check(Mmo->ShuttleRefusal().IsEmpty(), FString::Printf(TEXT("ferry: the call kept (%s)"), *Mmo->ShuttleRefusal()));
 				Picture(TEXT("ferry-1-landed"));
 				Advance();
 			}
@@ -229,21 +256,33 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 	case 4:
 		// Round to the ramp's foot, up it, into the bay.
 		if (!Ship) break;
+		{
+			static double LoggedAt = 0;
+			if (Now - LoggedAt > 1.0)
+			{
+				LoggedAt = Now;
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: ferry: walking in, at (%.2f, %.2f) in the ship's frame, ramp %.2f"), Local.x, Local.y, Ship->ramp.open);
+			}
+		}
+		// Pushed off the pad by the landing: out to its side, round the side to
+		// the back, to the ramp's foot, up it.
 		if (Local.x > ac::ShuttleBay::rampFoot() - 0.6 && !ac::ShuttleBay::inBay(Local) && !ac::ShuttleBay::onRamp(Local))
 		{
-			// Beside or ahead of the ship: round its side to the back.
-			WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 1.2, Local.y > 0 ? 3.0 : -3.0), 0.4);
+			const double Side = Local.y >= 0 ? 3.3 : -3.3;
+			if (FMath::Abs(Local.y) < 3.0) WalkTo(ac::Vec2(Local.x, Side), 0.2);
+			else WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 1.2, Side), 0.4);
+			Waited(FString::Printf(TEXT("round the Dropship to its ramp (at %.2f, %.2f)"), Local.x, Local.y), WalkSeconds);
 		}
-		else if (Local.x < ac::ShuttleBay::rampFoot() - 0.2 && !ac::ShuttleBay::onRamp(Local))
+		else if (Local.x < ac::ShuttleBay::rampFoot() - 0.2 && !ac::ShuttleBay::onRamp(Local) && !WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 0.8, 0.0), 0.3))
 		{
-			WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 0.8, 0.0), 0.3);
+			Waited(FString::Printf(TEXT("to the ramp's foot (at %.2f, %.2f)"), Local.x, Local.y), WalkSeconds);
 		}
 		else if (WalkTo(ac::Vec2(-1.0, 0.0), 0.3))
 		{
 			FString Where;
-			Check(ac::ShuttleBay::inBay(Local), FString::Printf(TEXT("ferry: walked up the ramp into the bay (%.2f, %.2f)"), Local.x, Local.y));
 			if (Settle(1.0))
 			{
+				Check(ac::ShuttleBay::inBay(Local), FString::Printf(TEXT("ferry: walked up the ramp into the bay (%.2f, %.2f)"), Local.x, Local.y));
 				Check(CameraInBay(Where), FString::Printf(TEXT("ferry: the third-person camera inside the bay's walls (%s)"), *Where));
 				Picture(TEXT("ferry-2-bay"));
 				Advance();
@@ -293,8 +332,18 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			{
 				Face(0.0);
 				FirstPerson(true);
-				Check(Prompt == TEXT("E · TAKE OFF"), FString::Printf(TEXT("ferry: at the console the prompt takes off (\"%s\")"), *Prompt));
-				Picture(TEXT("ferry-4-console"));
+				Pitch(-0.35);
+				if (Now - Run.Settled < 1.6) return;
+				if (!Run.bLiftShot)
+				{
+					// The console and the windshield, the rain on it: before the press.
+					Check(Prompt == TEXT("E · TAKE OFF"), FString::Printf(TEXT("ferry: at the console the prompt takes off (\"%s\")"), *Prompt));
+					Picture(TEXT("ferry-4-console"));
+					Run.bLiftShot = true;
+					return;
+				}
+				if (Now - Run.Settled < 2.4) return;
+				Run.bLiftShot = false;
 				Press();
 			}
 			else Waited(TEXT("back at the console"), WalkSeconds);
@@ -302,6 +351,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		else if (WorldMapWidget().IsValid() && Since() > 1.0)
 		{
 			Check(true, TEXT("ferry: the take-off button opened the flight menu"));
+			Picture(TEXT("ferry-4-flight-menu"));
 			FlyFromMap(TEXT("cold-fork"), TEXT("Landing Pad 1"));
 			Advance();
 		}
@@ -309,8 +359,10 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		return;
 	case 8:
 	{
-		// The flight, looking out of the windshield.
+		// The flight, a step back from the console, looking out of the windshield.
+		WalkTo(ac::Vec2(1.25, 0.0), 0.15);
 		Face(0.0);
+		Pitch(-0.08);
 		if (!Ship)
 		{
 			Waited(TEXT("the Dropship through the region switch"), 10);
@@ -333,6 +385,8 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			Check(Up > 10.0, FString::Printf(TEXT("ferry: in the dash the ship high over the land (%.1f cells)"), Up));
 			Picture(TEXT("ferry-6-dash"));
 		}
+		// Out of the side pane a moment into the dash.
+		if (Ship->stage == EStage::dash && Run.bDashShot && Ship->clock > 2.2 && Ship->clock < 2.6) Face(0.75);
 		if (Ship->stage == EStage::approach && !Run.bApproachShot && Ship->clock > 1.0)
 		{
 			Run.bApproachShot = true;
@@ -341,6 +395,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (Run.bFlew && Ship->grounded())
 		{
 			Check(Run.bLiftShot && Run.bDashShot && Run.bApproachShot, TEXT("ferry: the lift, the dash and the approach seen"));
+			Run.bApproachShot = false;
 			Advance();
 			return;
 		}
@@ -373,12 +428,14 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (WalkTo(ac::Vec2(ac::ShuttleBay::rampFoot() - 1.0, 0.0), 0.35))
 		{
 			FirstPerson(false);
-			Check(!S->aboard(*U), TEXT("ferry: walked out of the Dropship"));
-			if (Settle(1.5))
+			Face(0.0);
+			if (Settle(1.5) && !Run.bApproachShot)
 			{
+				Check(!S->aboard(*U), TEXT("ferry: walked out of the Dropship"));
 				Picture(TEXT("ferry-9-out"));
-				Finish();
+				Run.bApproachShot = true;
 			}
+			if (Settle(2.5)) Finish();
 		}
 		else Waited(TEXT("down the ramp"), WalkSeconds);
 		return;
