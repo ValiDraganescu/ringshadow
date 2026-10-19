@@ -117,6 +117,11 @@ public:
     /// MuleFill`). Aboard and off: `take` (the Mule, or the own Prospector).
     uint32_t buyMule(int64_t foundry);
     uint32_t muleFill(int64_t mule);
+    /// C4: call the walk-in Dropship down onto the Landing Pad the driven
+    /// unit stands on; the ramp of the one it is in, at the ramp button
+    /// (docs/haul-and-ferry.md section 3). The take-off is `fly`.
+    uint32_t callShuttle();
+    uint32_t ramp(bool open);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

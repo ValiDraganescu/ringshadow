@@ -48,6 +48,8 @@ Snapshot Region::snapshot(PilotId pilot, const InterestParams& params) {
     out.winner = s.winner;
     out.endedAt = s.endedAt;
     out.score = s.score;
+    // C4: the walk-in Dropships here, whole (a handful at most).
+    out.shuttles = s.shuttles;
 
     // What the driven unit fights: what it shoots or aims at, and what
     // shoots at it.

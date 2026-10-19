@@ -385,7 +385,7 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
     ASSERT_TRUE(c.until([&] { return hc.replies.count(no) > 0; }, 3));
     EXPECT_TRUE(!hc.replies[no].done);
     if (FILE* f = std::fopen(control.c_str(), "wb")) {
-        std::fputs("ferry pad here\nferry pad cold-fork\n", f);
+        std::fputs("ferry pad here\nferry pad cold-fork\nferry board\n", f);
         std::fclose(f);
     }
     auto pads = [&](const std::string& id) {
@@ -396,18 +396,23 @@ TEST(e2e_world_spawn_and_fly_to_a_neighbour) {
         return n;
     };
     ASSERT_TRUE(c.until([&] { return pads("start") == 1 && pads("cold-fork") == 1; }, 5));
+    // C4: aboard the Dropship (the dev line), the ramp shut: the take-off.
+    auto ship = [&]() -> const Shuttle* {
+        const auto& all = hc.mirror()->simulation().state.shuttles;
+        return all.empty() ? nullptr : &all.front();
+    };
+    ASSERT_TRUE(c.until([&] { return ship() && ship()->grounded(); }, 5));
     const uint32_t req = hc.fly("cold-fork", "Landing Pad 1");
     ASSERT_TRUE(c.until([&] { return hc.replies.count(req) > 0; }, 3));
     EXPECT_TRUE(hc.replies[req].done);
-    ASSERT_TRUE(c.until([&] { return hc.world()->ferry.has_value(); }, 3));
+    ASSERT_TRUE(c.until([&] { return ship() && ship()->flying(); }, 3));
+    EXPECT_TRUE(ship()->rides(*hc.mirror()->driven()));
+    // The switch at the dash's end: driving in the bay all the way.
     ASSERT_TRUE(c.until([&] { return hc.visit() == 1; }, 20));
-    EXPECT_TRUE(hc.world()->ferry.has_value() && !hc.mirror()->driven());
-    // The touch down. The World message that ends the ferry is reliable, the
-    // snapshot that drives the Prospector is not: under the lag simulator's
-    // loss either comes first, so wait for both (and for the first snapshot's
-    // side before reading the ore).
-    ASSERT_TRUE(c.until([&] { return hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()); }, 10));
-    ASSERT_TRUE(c.until([&] { return !hc.world()->ferry.has_value(); }, 3));
+    ASSERT_TRUE(c.until([&] { return hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()) && ship(); }, 10));
+    EXPECT_TRUE(!hc.world()->ferry.has_value());
+    // The touch down on the target pad, the ramp shut.
+    ASSERT_TRUE(c.until([&] { return ship() && ship()->grounded(); }, 10));
     EXPECT_TRUE(hc.regionChange()->regionId == "cold-fork");
     EXPECT_TRUE(hc.mirror()->matches());
     ASSERT_TRUE(c.until([&] { return hc.mirror()->simulation().state.players.size() == 2; }, 3));

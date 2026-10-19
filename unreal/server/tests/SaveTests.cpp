@@ -12,6 +12,7 @@
 #include "Server.h"
 #include "Leveling.h"
 #include "Session.h"
+#include "ShuttleBoard.h"
 #include "WorldMap.h"
 #include "WorldStore.h"
 #include "rig.h"
@@ -676,7 +677,7 @@ TEST(save_aboard_lands_on_the_target_pad) {
     driven(w, me)->position = here;
     w.step();
     const int64_t before = w.wallet(me)->hydrogen;
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
+    ASSERT_TRUE(!shuttletest::boardAndFly(w, me, "cold-fork", "Landing Pad 1"));
     EXPECT_EQ(w.wallet(me)->hydrogen, before - 15);
     for (int i = 0; i < 120; i++) w.step();
     ASSERT_TRUE(w.flying(me));

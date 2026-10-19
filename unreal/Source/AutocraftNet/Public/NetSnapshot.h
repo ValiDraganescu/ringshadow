@@ -43,6 +43,7 @@ AUTOCRAFTNET_API Structure quantised(const Structure& b);
 AUTOCRAFTNET_API Player quantised(const Player& p);
 AUTOCRAFTNET_API OreDeposit quantised(const OreDeposit& p);
 AUTOCRAFTNET_API Well quantised(const Well& w);
+AUTOCRAFTNET_API Shuttle quantised(const Shuttle& s);
 AUTOCRAFTNET_API FogView quantised(const FogView& f);
 AUTOCRAFTNET_API double quantisedTime(double t);
 

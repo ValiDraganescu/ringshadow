@@ -72,6 +72,8 @@ uint32_t Client::learn(StructureKind kind) { return request(RequestMessage::Lear
 uint32_t Client::demolish(int64_t structure) { return request(RequestMessage::Demolish{structure}); }
 uint32_t Client::buyMule(int64_t foundry) { return request(RequestMessage::BuyMule{foundry}); }
 uint32_t Client::muleFill(int64_t mule) { return request(RequestMessage::MuleFill{mule}); }
+uint32_t Client::callShuttle() { return request(RequestMessage::CallShuttle{}); }
+uint32_t Client::ramp(bool open) { return request(RequestMessage::Ramp{open}); }
 
 uint32_t Client::request(const decltype(RequestMessage::what)& what) {
     RequestMessage m;

@@ -576,6 +576,14 @@ std::optional<std::optional<std::string>> Server::skillTree(const net::RequestMe
         // C1: the realm Citadel's door, opened from either side, closed from inside.
         what = std::string(dr->open ? "open" : "close") + " the Citadel's door";
         why = world_.door(pilot, dr->open);
+    } else if (std::holds_alternative<net::RequestMessage::CallShuttle>(m.what)) {
+        // C4: the walk-in Dropship called down onto the pad the pilot stands on.
+        what = "call the Dropship";
+        why = world_.callShuttle(pilot);
+    } else if (const auto* rp = std::get_if<net::RequestMessage::Ramp>(&m.what)) {
+        // C4: the Dropship's ramp, at its button inside.
+        what = std::string(rp->open ? "lower" : "shut") + " the Dropship's ramp";
+        why = world_.shuttleRamp(pilot, rp->open);
     } else if (const auto* mn = std::get_if<net::RequestMessage::Man>(&m.what)) {
         // C1: a corner gun manned from its station in the hall, or left (-1).
         what = mn->gun < 0 ? std::string("leave the gun") : "man corner gun " + std::to_string(int(mn->gun));

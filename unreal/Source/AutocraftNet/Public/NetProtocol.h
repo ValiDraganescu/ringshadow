@@ -366,6 +366,10 @@ struct Snapshot {
     /// A world's pilot's XP in all (`ProspectorProgress::xp`; nil: not a
     /// world). The rest of its progress comes in Progress messages.
     std::optional<double> xp;
+    /// C4: the region's walk-in Dropships, whole, in every message's header
+    /// (protocol 42): the client's mirror walks in their bays and draws them
+    /// at `shuttlePose` (Shuttle.h).
+    std::vector<Shuttle> shuttles;
 };
 
 // MARK: - Quantising
@@ -461,6 +465,9 @@ struct RequestMessage {
     struct HandBack {
         bool operator==(const HandBack&) const = default;
     };
+    /// C4: from the take-off button of the Dropship the driven unit is in
+    /// (its ramp shut): fly to Landing Pad `pad` of `region`, paying the
+    /// fare (`WorldMap::fly`).
     struct Fly {
         std::string region;
         std::string pad;
@@ -637,6 +644,18 @@ struct RequestMessage {
         int64_t mule = 0;
         bool operator==(const MuleFill&) const = default;
     };
+    /// C4: call the walk-in Dropship down onto the realm Landing Pad the
+    /// driven unit stands on (docs/haul-and-ferry.md section 3). No
+    /// destination and no fare yet.
+    struct CallShuttle {
+        bool operator==(const CallShuttle&) const = default;
+    };
+    /// C4: lower (`open`) or shut the ramp of the Dropship the driven unit is
+    /// in, at its ramp button (`Simulation::rampRefusal`).
+    struct Ramp {
+        bool open = true;
+        bool operator==(const Ramp&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
@@ -645,12 +664,12 @@ struct RequestMessage {
     /// (protocol 21), StartProject 20 (protocol 29), CallHunt 21 (protocol 35),
     /// Door 22 and Man 23 (protocol 36), Learn 24 (protocol 37), Demolish 25
     /// (protocol 40), BuyMule 26 and MuleFill 27 (protocol 41; the Dropship's
-    /// requests from 28, protocol 42); 5 bits hold 32. C4: Take on a Mule
+    /// CallShuttle 28 and Ramp 29, protocol 42); 5 bits hold 32. C4: Take on a Mule
     /// climbs aboard it (a world), Take on the pilot's own Prospector or
     /// HandBack while driving it climbs off.
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
                  MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt, Door, Man, Learn, Demolish, BuyMule,
-                 MuleFill>
+                 MuleFill, CallShuttle, Ramp>
         what;
     bool operator==(const RequestMessage&) const = default;
 };

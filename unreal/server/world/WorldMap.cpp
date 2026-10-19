@@ -3,6 +3,8 @@
 
 #include "WorldMap.h"
 
+#include "Shuttle.h"
+
 #include "Flight.h"
 #include "TerrainField.h"
 
@@ -386,7 +388,7 @@ int64_t WorldMap::visit(PilotId pilot) const {
 
 bool WorldMap::flying(PilotId pilot) const {
     const auto it = pilots_.find(pilot);
-    return it != pilots_.end() && it->second.flight.has_value();
+    return it != pilots_.end() && (it->second.flight.has_value() || riding(pilot));
 }
 
 std::optional<WorldMap::Wallet> WorldMap::wallet(PilotId pilot) const {
@@ -440,7 +442,7 @@ Vec2 openGround(const Simulation& sim, const Unit& u, Vec2 at, double reach) {
     return at;
 }
 
-bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Vec2 at, int64_t lastInput) {
+bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Vec2 at, int64_t lastInput, bool exact) {
     Region& r = *regions_[to];
     // W5: every human drives its own Prospector, another pilot here or not.
     r.join(pilot, lastInput);
@@ -454,7 +456,7 @@ bool WorldMap::arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Ve
     Unit v = u;
     const region::Built& places = *r.places();
     const Simulation& sim = r.simulation();
-    v.position = openGround(sim, v, places.ground(at), 6);
+    v.position = exact ? at : openGround(sim, v, places.ground(at), 6);
     const int64_t id = r.admit(v);
     p.unit = id;
     p.last = places.regionAt(v.position);
@@ -551,7 +553,7 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
     const auto it = pilots_.find(pilot);
     if (it == pilots_.end()) return "not joined";
     PilotState& p = it->second;
-    if (p.flight) return "Aboard the Dropship already";
+    if (p.flight || riding(pilot)) return "In flight";
     const auto to = regionNamed(regionId);
     if (!to) return "No region " + std::string(regionId);
     const WorldRegion& dest = world_->regions[*to];
@@ -565,60 +567,50 @@ std::optional<std::string> WorldMap::fly(PilotId pilot, std::string_view regionI
         return "No " + std::string(padName) + " in " + dest.file.name;
     }
     Region& here = *regions_[p.region];
+    Simulation& sim = here.simulation();
     const auto unit = here.driving(pilot);
-    if (!unit) return "Nothing driven";
-    const auto u = here.simulation().state.unit(*unit);
-    if (!u || !Rules::boards(u->kind)) return "That unit can't board the Dropship";
-    // Standing on a Landing Pad here: within Pad link's reach of its centre
-    // (a Spacedock: also within its edge and `buildingPadReach`).
-    const double reach = padReach(p);
-    const LandingPad* from = nullptr;
-    double best = std::numeric_limits<double>::infinity();
-    for (const LandingPad& o : pads) {
-        if (o.region != p.region) continue;
-        const double d = distance(o.at, u->position);
-        const double within = o.kind == StructureKind::spacedock ? std::max(reach, Rules::radius(o.kind) + WorldRoles::buildingPadReach) : reach;
-        if (d <= within && d < best) {
-            best = d;
-            from = &o;
-        }
-    }
-    if (!from) return std::string("Not at a Landing Pad: stand on one to call the Dropship");
-    if (from->region == target->region && from->building == target->building) return "At " + target->name + " already";
+    const auto u = unit ? sim.state.unit(*unit) : std::nullopt;
+    if (!u) return "Nothing driven";
+    // C4: from the take-off button of the Dropship it is in, the ramp shut.
+    const Shuttle* ship = sim.aboard(*u);
+    const auto trip = ship ? std::find_if(trips_.begin(), trips_.end(), [&](const ShuttleTrip& t) { return t.region == p.region && t.id == ship->id; })
+                           : trips_.end();
+    if (!ship || trip == trips_.end()) return std::string("Board the Dropship first: call it at a Landing Pad");
+    if (auto why = sim.takeOffRefusal(*ship, *u)) return why;
+    if (target->region == trip->region && target->building == trip->pad) return "At " + target->name + " already";
     // The flight's MH (F1): a base and a share a step across the grid; half
     // from a Spacedock, nothing with Ringwalker (F2); half again while the
-    // realm's Beacon burns (R2).
+    // realm's Beacon burns (R2). The one who pressed pays.
     const WorldRegion& origin = world_->regions[p.region];
     const bool ringwalker = p.progress.rank(Skill::ringwalker) > 0;
     const int64_t price = ac::Flight::price(ac::Flight::steps(origin.column, origin.row, dest.column, dest.row),
-                                            from->kind == StructureKind::spacedock, ringwalker,
+                                            trip->padKind == StructureKind::spacedock, ringwalker,
                                             projectOn(RealmProject::Kind::beacon));
     bankOut(p, p.region);
     if (auto why = ac::Flight::refusal(price, p.wallet.hydrogen)) return why;
     p.wallet.hydrogen -= price;
     bankIn(p, p.region);
-    Flight f;
-    f.plan = ferryPlan(p, *to);
-    f.clocks = takeClocks(p.region, *unit);
-    f.unit = *here.release(*unit);
-    p.record = here.levels(pilot);
-    f.from = p.region;
-    f.boarded = from->at;
-    f.to = *to;
-    f.pad = target->name;
-    f.at = target->at;
-    f.started = clock_;
-    const double step = here.description().step;
-    f.switchAt = tick_ + std::max<int64_t>(1, std::llround(f.plan.approachAt() / step));
-    f.landsAt = std::max(f.switchAt, tick_ + std::max<int64_t>(1, std::llround(f.plan.total() / step)));
-    // A hop on the same region's ground: nothing to switch.
-    f.switched = *to == p.region;
-    // Its snapshots follow the pad it boarded at, then the target pad.
-    here.watch(pilot, f.boarded);
-    p.flight = f;
-    p.unit = std::nullopt;
-    p.last = std::nullopt;
-    moves_.push_back(Moved{pilot, std::nullopt});
+    // The target pad on this region's ground (the world's grid), its height
+    // its own ground's.
+    const Vec2 there = groundIn(*to, target->at, p.region);
+    const double z = regions_[*to]->simulation().groundZ(target->at);
+    if (auto why = sim.takeOff(*unit, ship->id, ferryPlan(p, *to), Vec3(there.x, there.y, z), *to == p.region)) return why;
+    ShuttleTrip& t = *trip;
+    t.to = *to;
+    t.toPad = target->name;
+    t.toBuilding = target->building;
+    t.toAt = target->at;
+    t.switched = *to == p.region;
+    t.flying = true;
+    t.humans.clear();
+    const Shuttle* lifted = sim.shuttle(t.id);
+    for (const auto& [id, q] : pilots_)
+        if (lifted && q.region == p.region && !q.flight)
+            if (const auto d = here.driving(id); d && lifted->rides(*d)) {
+                t.humans.push_back(id);
+                // Its World message again: where it flies.
+                moves_.push_back(Moved{id, std::nullopt});
+            }
     feat(pilot, WorldXp::flightFeat);
     return std::nullopt;
 }
@@ -837,6 +829,7 @@ void WorldMap::step() {
             bankOut(p, p.region);
             p.record = regions_[p.region]->levels(id);
         }
+    shuttlesStep();
     crossings();
     landings();
 }
@@ -915,6 +908,8 @@ void WorldMap::crossings() {
         }
         const auto u = here.simulation().state.unit(*unit);
         if (!u) continue;
+        // C4: aboard a Dropship (its bay may hang over the edge): no crossing.
+        if (!here.simulation().state.shuttles.empty() && here.simulation().aboard(*u)) continue;
         const region::Built& places = *here.places();
         const Vec2 at = places.regionAt(u->position);
         const std::optional<Vec2> before = p.last;
@@ -1161,6 +1156,10 @@ std::optional<net::WorldMessage> WorldMap::worldMessage(PilotId pilot) const {
             out.plan = f->plan;
             out.elapsed = clock_ - f->started;
             m.ferry = out;
+        } else if (const ShuttleTrip* t = riderTrip(it->second)) {
+            // C4: riding the walk-in Dropship: where it flies (the client
+            // makes that region's ground ahead).
+            m.flyingTo = int64_t(*t->to);
         }
     }
     return m;

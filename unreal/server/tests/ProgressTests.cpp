@@ -11,6 +11,7 @@
 #include "HeadlessClient.h"
 #include "Rules.h"
 #include "Server.h"
+#include "ShuttleBoard.h"
 #include "WorldMap.h"
 #include "rig.h"
 
@@ -204,9 +205,15 @@ TEST(progress_one_offs_paid_once) {
         return drive(w, me, 0, 180, [&] { return w.visit(me) == v + 1; });
     };
     // From the Landing Pad of the region it is in.
+    // C4: aboard the ship it last landed in, or called at a pad here.
     auto flyTo = [&](const std::string& region, const std::string& pad) {
-        for (const LandingPad& o : w.landingPads())
-            if (o.region == *w.where(me)) drivenUnit(w, me)->position = o.at;
+        if (w.shuttleOf(me)) {
+            shuttletest::standIn(w, me, shuttletest::kAtConsole);
+        } else {
+            for (const LandingPad& o : w.landingPads())
+                if (o.region == *w.where(me)) drivenUnit(w, me)->position = o.at;
+            if (shuttletest::board(w, me)) return false;
+        }
         if (w.fly(me, region, pad)) return false;
         for (int i = 0; i < 60 * 30 && w.flying(me); i++) w.step();
         return !w.flying(me);
@@ -344,7 +351,7 @@ TEST(progress_kept_through_an_edge_and_a_flight) {
     ASSERT_TRUE(padHere.has_value());
     for (const LandingPad& o : w.landingPads())
         if (o.building == *padHere && o.region == *w.where(me)) drivenUnit(w, me)->position = o.at;
-    ASSERT_TRUE(!w.fly(me, first().regions[first().start].file.id, "Landing Pad 1"));
+    ASSERT_TRUE(!shuttletest::boardAndFly(w, me, first().regions[first().start].file.id, "Landing Pad 1"));
     // In flight: still its own, and a request still lands.
     ASSERT_TRUE(!w.spend(me, Skill::quickDrill));
     for (int i = 0; i < 60 * 30 && w.flying(me); i++) w.step();

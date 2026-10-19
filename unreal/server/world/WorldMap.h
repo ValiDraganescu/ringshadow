@@ -758,15 +758,33 @@ public:
     /// The level-up card pick (`Region::pick`). The reason when refused.
     std::optional<std::string> pick(PilotId pilot, UnitKind kind, Perk perk);
 
-    /// F2: call the Dropship at the Landing Pad the driven Prospector stands
-    /// on (within `padReach`, Pad link's reach) and fly to Landing Pad `pad`
-    /// of `region`, a region the pilot has been to. The Prospector boards at
-    /// once (out of its region, untouchable); the pilot moves into the
-    /// target region when the approach starts, and the Prospector stands on
-    /// the target pad at the touch down (`ac::Ferry`). The price is taken at
-    /// the call (`ac::Flight::price`: half from a Spacedock, nothing with
-    /// Ringwalker). The reason when refused.
+    /// C4 (docs/haul-and-ferry.md section 3): the take-off button. The
+    /// pilot's driven unit is in a grounded Dropship's bay at its console,
+    /// the ramp shut (`Simulation::takeOffRefusal`); it flies to Landing Pad
+    /// `pad` of `region`, a region the pilot has been to, everyone in the bay
+    /// aboard. The pilot pays (`ac::Flight::price` from the pad the ship
+    /// stands on: half from a Spacedock, nothing with Ringwalker). At the
+    /// dash's end the ship and its riders move into the target region (each
+    /// human's region change told); it touches down on the target pad with
+    /// the ramp shut. The reason when refused.
     std::optional<std::string> fly(PilotId pilot, std::string_view region, std::string_view pad);
+    /// C4: call the walk-in Dropship down onto the realm Landing Pad the
+    /// driven unit stands on (within `padReach`, Pad link's reach; a
+    /// Spacedock's edge too), its ramp toward the caller. No destination and
+    /// no fare yet. The reason when refused.
+    std::optional<std::string> callShuttle(PilotId pilot);
+    /// C4: the ramp button of the Dropship the driven unit is in
+    /// (`Simulation::ramp`). The reason when refused.
+    std::optional<std::string> shuttleRamp(PilotId pilot, bool open);
+    /// C4: the Dropship the pilot's driven unit is in (riding it in flight,
+    /// or in a grounded one's bay or on its ramp): its region and id. Nil:
+    /// none.
+    std::optional<std::pair<size_t, int64_t>> shuttleOf(PilotId pilot) const;
+    /// C4: the pilot rides a Dropship in flight (`flying` says so too).
+    bool riding(PilotId pilot) const;
+    /// C4: the Dropship that stands on, or comes down onto, Landing Pad
+    /// `pad` of region `r` (its id there; nil: none).
+    std::optional<int64_t> shuttleAt(size_t r, int64_t pad) const;
     /// The pilot's pad reach (Pad link).
     double padReach(PilotId pilot) const;
     /// The flight's plan from the pilot's region to region `to` (its grid
@@ -1881,6 +1899,39 @@ private:
     /// D3). Saved with the building, gone with it.
     std::vector<std::map<int64_t, int64_t>> kills_;
     std::vector<Moved> moves_;
+    /// C4: what the server keeps of each walk-in Dropship beside the
+    /// region's `Shuttle` (WorldShuttle.cpp): where it is (`region`, `id`),
+    /// the pad it stands on or comes down onto, and its flight: the target
+    /// region, pad and its ground point there, who pressed take-off.
+    struct ShuttleTrip {
+        size_t region = 0;
+        int64_t id = 0;
+        int64_t pad = 0;
+        StructureKind padKind = StructureKind::landingPad;
+        std::string padName;
+        std::optional<size_t> to;
+        std::string toPad;
+        int64_t toBuilding = 0;
+        Vec2 toAt{0, 0};
+        bool switched = false;
+        bool flying = false;
+        /// The pilots aboard at take-off (each told of its landing).
+        std::vector<PilotId> humans;
+    };
+    std::vector<ShuttleTrip> trips_;
+    /// Each step after the regions': the ships moved into their target
+    /// regions at the dash's end, the touch downs paid, the gone forgotten.
+    void shuttlesStep();
+    /// The ship of `t` in its region (nil: gone).
+    Shuttle* shipOf(const ShuttleTrip& t);
+    /// The flight `p`'s Prospector rides (nil: none in flight).
+    const ShuttleTrip* riderTrip(const PilotState& p) const;
+    /// Ship `t` and its riders into its target region, the frame on the
+    /// target pad.
+    void shuttleSwitch(ShuttleTrip& t);
+    /// Region `from`'s ground point `g` on region `to`'s ground (the
+    /// world's grid, `net::atlas::layout`).
+    Vec2 groundIn(size_t from, Vec2 g, size_t to) const;
     int64_t tick_ = 0;
     double lastStepMs_ = 0;
     double clock_ = 0;
@@ -1919,8 +1970,9 @@ private:
     std::optional<size_t> neighbour(size_t r, region::Edge e) const;
     /// Puts the pilot and its unit into region `to` at region position `at`
     /// (or the nearest open spot), driving it unless another pilot drives
-    /// there (false). `lastInput`: its inputs carry on from there.
-    bool arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Vec2 at, int64_t lastInput);
+    /// there (false). `lastInput`: its inputs carry on from there. `exact`
+    /// (C4, a Dropship's rider): `at` is a ground point, taken as it is.
+    bool arrive(PilotId pilot, PilotState& p, size_t to, const Unit& u, Vec2 at, int64_t lastInput, bool exact = false);
     /// C4 (WorldMule.cpp): the pilot's driven Mule `mule` and its rider
     /// `rider` (taken out of their region) into region `to` at region
     /// position `at`, the rider on the Mule again, the pilot driving it.

@@ -9,6 +9,7 @@
 #include "test.h"
 
 #include "Rules.h"
+#include "ShuttleBoard.h"
 #include "WorldMap.h"
 
 #include <cmath>
@@ -358,15 +359,6 @@ Vec2 landingPad(WorldMap& w, PilotId p) {
     return at;
 }
 
-/// Is the pilot's Prospector in any region's simulation?
-bool anywhere(WorldMap& w, int64_t kindCount) {
-    int64_t n = 0;
-    for (size_t r = 0; r < w.regionCount(); r++)
-        for (const Unit& u : w.region(r).simulation().state.units)
-            if (u.kind == UnitKind::prospector) n += 1;
-    return n >= kindCount;
-}
-
 } // namespace
 
 // C3: every limit is a region's. Six Gatling Guns of the realm in the start
@@ -442,41 +434,55 @@ TEST(roles_landing_pad_built_and_limited) {
     EXPECT_TRUE(start[2].name == "Landing Pad 2");
 }
 
-// The refusals: not on a Landing Pad, a region not seen yet, no Landing Pad
-// there, a pad that isn't there, the pad it stands on, MH short; a region
+// The refusals (C4: the call at a pad, the take-off at the console): not on
+// a Landing Pad, not aboard, the ramp down, a region not seen yet, no Landing
+// Pad there, a pad that isn't there, the pad it stands on, MH short; a region
 // file's pad is no Landing Pad.
 TEST(roles_flight_refusals) {
     WorldMap w(first(), params());
     w.seat(me, key);
     w.setProgress(me, at(5));
     fill(w, me, 2000, 0);
-    EXPECT_EQ(w.fly(me, "start", "landing").value_or(""), std::string("No Landing Pad in Prospect Landing: build one there first"));
+    EXPECT_EQ(w.callShuttle(me).value_or(""), std::string("Not at a Landing Pad: stand on one to call the Dropship"));
     goTo(w, me, "cold-fork");
     fill(w, me, 2000, 0);
     moveTo(w, me, drivenUnit(w, me)->position + Vec2(0, 10));
-    const Vec2 far = landingPad(w, me);
+    landingPad(w, me);
     goTo(w, me, "start");
     fill(w, me, 2000, 0);
     moveTo(w, me, startPad() + Vec2(0, 10));
     const Vec2 here = landingPad(w, me);
     moveTo(w, me, here + Vec2(0, w.padReach(me) + 0.5));
-    EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 1").value_or(""),
-              std::string("Not at a Landing Pad: stand on one to call the Dropship"));
-    moveTo(w, me, here);
+    EXPECT_EQ(w.callShuttle(me).value_or(""), std::string("Not at a Landing Pad: stand on one to call the Dropship"));
+    EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 1").value_or(""), std::string("Board the Dropship first: call it at a Landing Pad"));
+    moveTo(w, me, here + Vec2(0, 2));
+    ASSERT_TRUE(!w.callShuttle(me));
+    EXPECT_EQ(w.callShuttle(me).value_or(""), std::string("The Dropship is on its way"));
+    shuttletest::run(w, Ferry::descend + ShuttleBay::rampSeconds + 0.2);
+    EXPECT_EQ(w.callShuttle(me).value_or(""), std::string("The Dropship is here"));
+    // In, at the console with the ramp down; at the back of the bay.
+    shuttletest::standIn(w, me, shuttletest::kAtConsole);
+    EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 1").value_or(""), std::string("Close the ramp first"));
+    shuttletest::standIn(w, me, shuttletest::kAtRampButton);
+    ASSERT_TRUE(!w.shuttleRamp(me, false));
+    shuttletest::run(w, ShuttleBay::rampSeconds + 0.2);
+    EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 1").value_or(""), std::string("Too far from the take-off button"));
+    shuttletest::standIn(w, me, shuttletest::kAtConsole);
+    EXPECT_EQ(w.fly(me, "start", "landing").value_or(""), std::string("No landing in Prospect Landing"));
     EXPECT_EQ(w.fly(me, "slag-pockets", "Landing Pad 1").value_or(""),
               std::string("Not discovered yet: Slag Pockets. Go there on foot first"));
     EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 7").value_or(""), std::string("No Landing Pad 7 in Cold Fork"));
     EXPECT_EQ(w.fly(me, "start", "Landing Pad 1").value_or(""), std::string("At Landing Pad 1 already"));
     EXPECT_EQ(w.fly(me, "cold-fork", "Landing Pad 1").value_or(""), std::string("Not enough MH to fly: 15 MH, you have 0"));
-    (void)far;
     EXPECT_TRUE(!w.flying(me));
 }
 
-// The flight: the price taken at the call (10 + 5 a step), the Prospector
-// aboard at once (in no region: nothing can touch it), the pilot moved into
-// the target region when the approach starts with nothing driven (the World
-// message's ferry says where and when), then the Prospector on the target
-// pad at the touch down, a first landing paid once.
+// The flight (C4): called, boarded, shut, launched at the console. The price
+// taken at the take-off (10 + 5 a step); the Prospector still driven, in the
+// bay, untouchable; the ship and the pilot moved into the target region at
+// the dash's end (its region change told), the rider where it stood in the
+// bay; the touch down on the target pad with the ramp shut, a first landing
+// paid once; out by the ramp, and the empty ship lifts away and is gone.
 TEST(roles_flight_between_landing_pads) {
     WorldMap w(first(), params());
     w.seat(me, key);
@@ -488,50 +494,58 @@ TEST(roles_flight_between_landing_pads) {
     goTo(w, me, "start");
     fill(w, me, 2000, 40);
     moveTo(w, me, startPad() + Vec2(0, 10));
-    const Vec2 here = landingPad(w, me);
+    landingPad(w, me);
     const double xp = w.progress(me)->xp;
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
-    EXPECT_TRUE(w.flying(me));
+    ASSERT_TRUE(!shuttletest::boardAndFly(w, me, "cold-fork", "Landing Pad 1"));
+    EXPECT_TRUE(w.flying(me) && w.riding(me));
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(25));
-    EXPECT_TRUE(drivenUnit(w, me) == nullptr);
-    EXPECT_TRUE(!anywhere(w, 1));
-    const auto m = *w.worldMessage(me);
-    ASSERT_TRUE(m.ferry.has_value());
-    EXPECT_EQ(m.ferry->pad, std::string("Landing Pad 1"));
-    EXPECT_EQ(m.ferry->from, int64_t(first().start));
-    EXPECT_TRUE(m.ferry->plan == Ferry::plan(1));
-    const size_t fork = *w.regionNamed("cold-fork");
-    EXPECT_TRUE(length(m.ferry->at - first().regions[fork].built.regionAt(there)) < 1e-9);
-    EXPECT_TRUE(length(m.ferry->boarded - first().regions[first().start].built.regionAt(here)) < 1e-9);
+    ASSERT_TRUE(drivenUnit(w, me) != nullptr);
+    EXPECT_TRUE(simOf(w, me).sheltered(*drivenUnit(w, me)));
     const Ferry::Plan plan = Ferry::plan(1);
-    // Before the approach: still in its region, aboard.
-    wait(w, me, plan.approachAt() - 0.2);
+    const auto ship = w.shuttleOf(me);
+    ASSERT_TRUE(ship.has_value());
+    EXPECT_TRUE(simOf(w, me).shuttle(ship->second)->plan == plan);
+    const Vec2 before = ShuttleBay::local(*simOf(w, me).shuttle(ship->second), drivenUnit(w, me)->position);
+    // Before the dash's end: in its region still, the ship over its pad.
+    shuttletest::run(w, plan.lift + plan.turns + plan.dash - 0.2);
     EXPECT_EQ(*w.where(me), first().start);
-    EXPECT_TRUE(!anywhere(w, 1));
     w.takeMoves();
-    wait(w, me, 0.4);
-    // The approach: in the target region, nothing driven yet; its region
-    // change told.
+    shuttletest::run(w, 0.4);
+    // The approach: in the target region, driving its Prospector in the bay
+    // of the ship on the target pad; its region change told.
+    const size_t fork = *w.regionNamed("cold-fork");
     EXPECT_EQ(*w.where(me), fork);
-    EXPECT_TRUE(w.flying(me) && drivenUnit(w, me) == nullptr);
+    ASSERT_TRUE(drivenUnit(w, me) != nullptr);
+    EXPECT_TRUE(w.riding(me));
     bool changed = false;
     for (const Moved& mv : w.takeMoves()) changed = changed || (mv.pilot == me && mv.change && mv.change->regionId == "cold-fork");
     EXPECT_TRUE(changed);
-    EXPECT_TRUE(w.worldMessage(me)->ferry.has_value());
-    // The touch down: on the target pad.
-    wait(w, me, plan.approach - 0.4);
-    EXPECT_TRUE(w.flying(me));
-    wait(w, me, 0.3);
+    const auto now = w.shuttleOf(me);
+    ASSERT_TRUE(now.has_value() && now->first == fork);
+    const Shuttle& s = *simOf(w, me).shuttle(now->second);
+    EXPECT_TRUE(s.stage == Shuttle::Stage::approach && s.rides(drivenUnit(w, me)->id));
+    EXPECT_TRUE(distance(s.position, there) < 1e-6);
+    const Vec2 after = ShuttleBay::local(s, drivenUnit(w, me)->position);
+    EXPECT_TRUE(distance(before, after) < 0.05);
+    EXPECT_TRUE(std::abs(s.to.x - there.x) < 1e-6 && std::abs(s.to.y - there.y) < 1e-6);
+    // Nobody left behind in the start region: the ship went with it.
+    EXPECT_TRUE(w.start().simulation().state.shuttles.empty());
+    // The touch down: on the target pad, the ramp shut, riding no more.
+    shuttletest::run(w, plan.approach);
     EXPECT_TRUE(!w.flying(me));
-    ASSERT_TRUE(drivenUnit(w, me) != nullptr);
-    EXPECT_TRUE(distance(drivenUnit(w, me)->position, there) < Rules::radius(StructureKind::landingPad) + 1);
-    EXPECT_TRUE(!w.worldMessage(me)->ferry.has_value());
+    const Shuttle& down = *shuttletest::nearestShip(w, me);
+    EXPECT_TRUE(down.grounded() && down.ramp.open == 0.0 && down.riders.empty());
     EXPECT_TRUE(w.progress(me)->pads.count("cold-fork/Landing Pad 1") == 1);
     EXPECT_TRUE(w.progress(me)->xp > xp);
+    // Out, and the ship leaves the pad empty.
+    ASSERT_TRUE(!shuttletest::walkOut(w, me));
+    EXPECT_TRUE(!w.shuttleOf(me).has_value());
+    shuttletest::run(w, ShuttleBay::leaveSeconds + ShuttleBay::rampSeconds + ShuttleBay::departSeconds + 0.5);
+    EXPECT_TRUE(simOf(w, me).state.shuttles.empty());
 }
 
-// Aboard, untouchable: a Prospector at 1 hp that boards comes down whole
-// as it was, never hit; bugs on the pad find nothing to bite.
+// Aboard, untouchable: a Prospector at 1 hp that flies comes down whole as
+// it was, never hit, never down; a hop on the same ground changes no region.
 TEST(roles_flight_aboard_untouchable) {
     WorldMap w(first(), params());
     w.seat(me, key);
@@ -539,19 +553,21 @@ TEST(roles_flight_aboard_untouchable) {
     fill(w, me, 2000, 40);
     moveTo(w, me, startPad() + Vec2(0, 10));
     landingPad(w, me);
-    moveTo(w, me, startPad() + Vec2(12, 10));
+    moveTo(w, me, startPad() + Vec2(16, 10));
     landingPad(w, me);
+    ASSERT_TRUE(!shuttletest::board(w, me));
     drivenUnit(w, me)->hp = 1;
     ASSERT_TRUE(!w.fly(me, "start", "Landing Pad 1"));
     for (int i = 0; i < 40; i++) {
-        wait(w, me, 0.5);
+        shuttletest::run(w, 0.5);
         if (!w.flying(me)) break;
-        EXPECT_TRUE(drivenUnit(w, me) == nullptr && !anywhere(w, 1));
+        ASSERT_TRUE(drivenUnit(w, me) != nullptr);
+        EXPECT_TRUE(simOf(w, me).sheltered(*drivenUnit(w, me)));
+        simOf(w, me).hit(drivenUnit(w, me)->id, 50);
         EXPECT_TRUE(!w.respawning(me).has_value());
     }
     ASSERT_TRUE(!w.flying(me) && drivenUnit(w, me) != nullptr);
     EXPECT_NEAR(drivenUnit(w, me)->hp, 1, 1e-9);
-    // A hop on the same ground: no region change, the full plan's time.
     EXPECT_EQ(*w.where(me), first().start);
 }
 
@@ -574,19 +590,21 @@ TEST(roles_spacedock_halves_the_price) {
     bool named = false;
     for (const LandingPad& o : w.landingPads()) named = named || (o.name == "Spacedock" && o.kind == StructureKind::spacedock);
     EXPECT_TRUE(named);
-    // From its edge: 20 MH to Slag Pockets (two steps), 10 from the dock.
+    // Called from its edge: 20 MH to Slag Pockets (two steps), 10 from the dock.
     moveTo(w, me, dockAt + Vec2(0, Rules::radius(StructureKind::spacedock) + 1));
     fill(w, me, 3000, 100);
-    ASSERT_TRUE(!w.fly(me, "slag-pockets", "Landing Pad 1"));
+    ASSERT_TRUE(!shuttletest::boardAndFly(w, me, "slag-pockets", "Landing Pad 1"));
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(90));
-    wait(w, me, Ferry::plan(2).total() + 0.2);
+    shuttletest::run(w, shuttletest::flightSeconds(Ferry::plan(2)) + 0.2);
     ASSERT_TRUE(!w.flying(me));
     EXPECT_EQ(first().regions[*w.where(me)].file.id, std::string("slag-pockets"));
-    // Back onto the Spacedock: full price from a Landing Pad.
+    // Back onto the Spacedock from the ship standing on the Landing Pad:
+    // full price.
     fill(w, me, 3000, 100);
+    shuttletest::standIn(w, me, shuttletest::kAtConsole);
     ASSERT_TRUE(!w.fly(me, "start", "Spacedock"));
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(80));
-    wait(w, me, Ferry::plan(2).total() + 0.2);
+    shuttletest::run(w, shuttletest::flightSeconds(Ferry::plan(2)) + 0.2);
     ASSERT_TRUE(drivenUnit(w, me) != nullptr);
     EXPECT_TRUE(distance(drivenUnit(w, me)->position, dockAt) < Rules::radius(StructureKind::spacedock) + 3);
 }
@@ -607,9 +625,9 @@ TEST(roles_ringwalker_free_and_faster) {
     landingPad(w, me);
     const Ferry::Plan plan = w.ferryPlan(me, *w.regionNamed("cold-fork"));
     EXPECT_NEAR(plan.total() * 1.3, Ferry::plan(1).total(), 1e-9);
-    ASSERT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
+    ASSERT_TRUE(!shuttletest::boardAndFly(w, me, "cold-fork", "Landing Pad 1"));
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(0));
-    wait(w, me, plan.total() + 0.2);
+    shuttletest::run(w, shuttletest::flightSeconds(plan) + 0.2);
     EXPECT_TRUE(!w.flying(me));
     EXPECT_EQ(first().regions[*w.where(me)].file.id, std::string("cold-fork"));
 }
@@ -633,9 +651,9 @@ TEST(roles_pad_link_and_short_hop) {
     moveTo(w, me, startPad() + Vec2(0, 20));
     const Vec2 pad = landingPad(w, me);
     moveTo(w, me, pad + Vec2(17, 0));
-    EXPECT_TRUE(w.fly(me, "cold-fork", "Landing Pad 1").has_value());
+    EXPECT_TRUE(w.callShuttle(me).has_value());
     moveTo(w, me, pad + Vec2(15.5, 0));
-    EXPECT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
+    EXPECT_TRUE(!w.callShuttle(me));
 }
 
 // Handed back (the camera), its Prospector falls all the same: Down, then

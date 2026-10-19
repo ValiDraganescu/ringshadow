@@ -301,6 +301,47 @@ bool readFog(BitReader& r, std::vector<uint8_t>& cells) {
 
 // MARK: - The header
 
+/// C4: a walk-in Dropship, whole.
+void writeShuttle(BitWriter& w, const Shuttle& x) {
+    writeVarint(w, uint64_t(x.id));
+    Pos{}.write(w, x.position);
+    Angle{}.write(w, x.heading);
+    kCm.write(w, x.ground);
+    Enum<Shuttle::Stage, 3>{}.write(w, x.stage);
+    kMs.write(w, x.clock);
+    kFine.write(w, x.ramp.open);
+    w.writeBool(x.ramp.opening);
+    for (const double v : {x.plan.descend, x.plan.board, x.plan.lift, x.plan.turns, x.plan.dash, x.plan.approach}) kMs.write(w, v);
+    Point{}.write(w, x.from);
+    Point{}.write(w, x.to);
+    Angle{}.write(w, x.fromHeading);
+    w.writeBool(x.hop);
+    Vec<Var>{}.write(w, x.riders);
+    kMs.write(w, x.idle);
+    w.writeBool(x.boarded);
+    w.writeBool(x.leaving);
+}
+
+void readShuttle(BitReader& r, Shuttle& x) {
+    x.id = int64_t(readVarint(r));
+    Pos{}.read(r, x.position);
+    Angle{}.read(r, x.heading);
+    kCm.read(r, x.ground);
+    Enum<Shuttle::Stage, 3>{}.read(r, x.stage);
+    kMs.read(r, x.clock);
+    kFine.read(r, x.ramp.open);
+    x.ramp.opening = r.readBool();
+    for (double* v : {&x.plan.descend, &x.plan.board, &x.plan.lift, &x.plan.turns, &x.plan.dash, &x.plan.approach}) kMs.read(r, *v);
+    Point{}.read(r, x.from);
+    Point{}.read(r, x.to);
+    Angle{}.read(r, x.fromHeading);
+    x.hop = r.readBool();
+    Vec<Var>{}.read(r, x.riders);
+    kMs.read(r, x.idle);
+    x.boarded = r.readBool();
+    x.leaving = r.readBool();
+}
+
 void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_t cells, size_t sites) {
     w.writeU8(static_cast<uint8_t>(MessageType::snapshot));
     writeVarint(w, static_cast<uint64_t>(id));
@@ -392,6 +433,10 @@ void writeHeader(BitWriter& w, int64_t id, size_t part, const Snapshot& s, size_
         }
     }
     Opt<Fixed>{kMs}.write(w, s.xp);
+    // C4: one bit when there are none (most of the world, most of the time).
+    w.writeBool(!s.shuttles.empty());
+    if (!s.shuttles.empty()) writeVarint(w, s.shuttles.size());
+    for (const Shuttle& x : s.shuttles) writeShuttle(w, x);
     writeVarint(w, s.players.size());
     w.writeBool(s.fog != nullptr);
     if (s.fog) {
@@ -435,6 +480,15 @@ Unit quantised(const Unit& u) { return roundTrip(u); }
 Structure quantised(const Structure& b) { return roundTrip(b); }
 OreDeposit quantised(const OreDeposit& p) { return roundTrip(p); }
 Well quantised(const Well& w) { return roundTrip(w); }
+
+Shuttle quantised(const Shuttle& s) {
+    BitWriter w;
+    writeShuttle(w, s);
+    BitReader r(w.bytes().data(), w.bytes().size());
+    Shuttle out;
+    readShuttle(r, out);
+    return out;
+}
 double quantisedTime(double t) { return roundTrip(SiteTime{t}).at; }
 
 Player quantised(const Player& p) {
@@ -969,6 +1023,10 @@ std::optional<SnapshotPart> SnapshotReader::read(const std::vector<uint8_t>& mes
         s.sky = sky;
     }
     Opt<Fixed>{kMs}.read(r, s.xp);
+    const uint64_t shuttles = r.readBool() ? readVarint(r) : 0;
+    if (!r.ok() || shuttles > 64) return std::nullopt;
+    s.shuttles.resize(size_t(shuttles));
+    for (Shuttle& x : s.shuttles) readShuttle(r, x);
     const uint64_t playerCount = readVarint(r);
     const bool fog = r.readBool();
     uint64_t cells = 0, sites = 0;

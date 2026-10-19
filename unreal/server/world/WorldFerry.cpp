@@ -5,6 +5,8 @@
 
 #include "WorldMap.h"
 
+#include "Shuttle.h"
+
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -52,6 +54,59 @@ std::string WorldMap::devFerry(const std::string& line) {
         pushProgress(pilot);
         return "dev: ferry: the wallet holds " + std::to_string(p.wallet.hydrogen) + " MH";
     }
+    // C4: `ferry call`: the Dropship called at the pad under the pilot;
+    // `ferry board`: one on that pad at once (called, down, its ramp shut),
+    // the pilot's Prospector at its take-off button; `ferry ramp open|shut`:
+    // its ramp from the button (the Prospector put there first).
+    // C4: `ferry pads`: the rig for a flight by hand (the mmoferry flow): a
+    // Landing Pad under the pilot, one in a neighbouring region (seen), MH
+    // for the fare. The reply names the target region and pad.
+    if (what == "pads") {
+        const std::string here = devFerry("ferry pad here");
+        if (here.rfind("dev: ferry: ", 0) != 0) return here;
+        std::optional<size_t> next;
+        for (const region::Edge e : {region::Edge::east, region::Edge::south, region::Edge::west, region::Edge::north})
+            if (!next) next = neighbour(p.region, e);
+        if (!next) return "dev: ferry pads: no region next door";
+        const std::string& id = world_->regions[*next].file.id;
+        const std::string there = devFerry("ferry pad " + id);
+        if (there.rfind("dev: ferry: ", 0) != 0) return there;
+        devFerry("ferry mh 200");
+        // "dev: ferry: Landing Pad 1 in cold-fork"
+        const std::string pad = there.substr(std::string("dev: ferry: ").size(), there.rfind(" in ") - std::string("dev: ferry: ").size());
+        return "dev: ferry: pads ready, fly to " + id + " " + pad;
+    }
+    if (what == "call") {
+        const auto why = callShuttle(pilot);
+        return why ? "dev: ferry call: " + *why : "dev: ferry: the Dropship is called";
+    }
+    if (what == "board" || what == "ramp") {
+        Simulation& sim = regions_[p.region]->simulation();
+        const auto unit = regions_[p.region]->driving(pilot);
+        const auto i = unit ? sim.unitIndex(*unit) : std::nullopt;
+        if (!i) return "dev: ferry " + what + ": the pilot drives nothing";
+        Shuttle* ship = nullptr;
+        for (Shuttle& s : sim.state.shuttles)
+            if (!ship || distance(s.position, sim.state.units[size_t(*i)].position) < distance(ship->position, sim.state.units[size_t(*i)].position))
+                ship = &s;
+        if (what == "board" && !ship) {
+            if (const auto why = callShuttle(pilot)) return "dev: ferry board: " + *why;
+            ship = &sim.state.shuttles.back();
+        }
+        if (!ship) return "dev: ferry ramp: no Dropship here";
+        Unit& u = sim.state.units[size_t(*i)];
+        if (what == "board") {
+            ship->stage = Shuttle::Stage::ground;
+            ship->clock = 0;
+            ship->ramp = Door{0, false};
+            u.position = ShuttleBay::world(*ship, Vec2(1.6, 0));
+            u.heading = ship->heading;
+            return "dev: ferry: aboard the Dropship at its take-off button";
+        }
+        u.position = ShuttleBay::world(*ship, Vec2(-1.7, -0.4));
+        const auto why = sim.ramp(u.id, ship->id, arg != "shut");
+        return why ? "dev: ferry ramp: " + *why : "dev: ferry: the ramp " + std::string(arg != "shut" ? "lowers" : "shuts");
+    }
     if (what == "go") {
         const auto r = regionNamed(arg);
         if (!r) return "dev: ferry go: no region " + arg;
@@ -95,7 +150,7 @@ std::string WorldMap::devFerry(const std::string& line) {
             if (o.building == *id && o.region == r) return "dev: ferry: " + o.name + " in " + world_->regions[r].file.id;
         return "dev: ferry: a Landing Pad in " + world_->regions[r].file.id;
     }
-    return "dev: ferry: pad [here|REGION [unseen]] | seen | go REGION | mh N";
+    return "dev: ferry: pad [here|REGION [unseen]] | seen | go REGION | mh N | pads | call | board | ramp open|shut";
 }
 
 } // namespace ac::server

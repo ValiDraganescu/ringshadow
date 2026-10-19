@@ -10,6 +10,7 @@
 #include "Progression.h"
 #include "NetPredictor.h"
 #include "Server.h"
+#include "ShuttleBoard.h"
 #include "TerrainField.h"
 #include "WorldMap.h"
 #include "rig.h"
@@ -381,12 +382,12 @@ TEST(world_flight_between_pads_with_one_id) {
     ASSERT_TRUE(here.has_value() && far.has_value());
     EXPECT_EQ(*here, *far);
     put(w, me, w.start().places()->regionAt(padIn(w, first().start)), 0);
-    EXPECT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
+    EXPECT_TRUE(!shuttletest::boardAndFly(w, me, "cold-fork", "Landing Pad 1"));
     EXPECT_TRUE(w.flying(me));
 }
 
 // A flight's MH (F1, docs/prospector-progression.md "MH sinks"): a base and
-// a share a grid step, taken at the call; refused with the price and the
+// a share a grid step, taken at the take-off (C4); refused with the price and the
 // wallet when it is short, nothing taken and nothing flown (F2: between
 // Landing Pads, the target region seen).
 TEST(world_flight_costs_mh) {
@@ -406,10 +407,11 @@ TEST(world_flight_costs_mh) {
     const int64_t steps = Flight::steps(from.column, from.row, to.column, to.row);
     EXPECT_EQ(steps, int64_t(1));
     EXPECT_EQ(Flight::hydrogen(steps), int64_t(15));
+    ASSERT_TRUE(!shuttletest::board(w, me));
     EXPECT_TRUE(w.fly(me, "cold-fork", "Landing Pad 1") == std::optional<std::string>("Not enough MH to fly: 15 MH, you have 14"));
     EXPECT_TRUE(!w.flying(me));
     EXPECT_EQ(w.start().simulation().state.players[0].hydrogen, int64_t(14));
-    // Paid at the call, the rest lands with it.
+    // Paid at the take-off, the rest lands with it.
     w.start().simulation().state.players[0].hydrogen = 40;
     ASSERT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1"));
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(25));
@@ -461,10 +463,10 @@ TEST(world_cliff_hop_burns_mh) {
     EXPECT_EQ(sim.state.players[0].hydrogen, int64_t(3));
 }
 
-// F2: the Dropship from a Landing Pad to one in another region: the cargo
-// and the wallet go with the pilot, the Prospector out of every region
-// aboard, the region change at the approach (nothing driven yet), the
-// Prospector on the pad at the touch down.
+// F2, C4: the Dropship from a Landing Pad to one in another region: the cargo
+// and the wallet go with the pilot, its Prospector driven in the bay all the
+// way, the region change at the dash's end (the unit driven there at once),
+// the Prospector in the ship's bay on the target pad at the touch down.
 TEST(world_flight_from_pad_to_pad) {
     WorldParams fuel;
     fuel.startHydrogen = 100;  // a flight costs MH (F1)
@@ -478,9 +480,9 @@ TEST(world_flight_from_pad_to_pad) {
     const Vec2 there = padIn(w, fork);
     // Away from the pad: refused; a region file's pad is no Landing Pad.
     put(w, me, w.start().places()->regionAt(padIn(w, first().start)) + Vec2(-12, 0), 0);
-    EXPECT_TRUE(w.fly(me, "cold-fork", "Landing Pad 1") ==
-                std::optional<std::string>("Not at a Landing Pad: stand on one to call the Dropship"));
+    EXPECT_TRUE(w.callShuttle(me) == std::optional<std::string>("Not at a Landing Pad: stand on one to call the Dropship"));
     put(w, me, w.start().places()->regionAt(padIn(w, first().start)) + Vec2(-2.5, 0), 0);
+    ASSERT_TRUE(!shuttletest::board(w, me));
     EXPECT_TRUE(w.fly(me, "nowhere", "Landing Pad 1").has_value());
     EXPECT_TRUE(w.fly(me, "cold-fork", "landing").has_value());
     drivenUnit(w, me)->carrying = 4;
@@ -489,34 +491,33 @@ TEST(world_flight_from_pad_to_pad) {
     w.takeMoves();
     ASSERT_TRUE(!w.fly(me, "cold-fork", "Landing Pad 1").has_value());
     EXPECT_TRUE(w.flying(me));
-    EXPECT_EQ(unitsEverywhere(w), size_t(0));
-    EXPECT_TRUE(w.fly(me, "cold-fork", "Landing Pad 1") == std::optional<std::string>("Aboard the Dropship already"));
+    EXPECT_EQ(unitsEverywhere(w), size_t(1));
+    EXPECT_TRUE(w.fly(me, "cold-fork", "Landing Pad 1") == std::optional<std::string>("In flight"));
     const Ferry::Plan plan = Ferry::plan(1);
-    const int64_t switchTicks = std::llround(plan.approachAt() * 60), landTicks = std::llround(plan.total() * 60);
+    const int64_t switchTicks = std::llround((plan.lift + plan.turns + plan.dash) * 60),
+                  landTicks = std::llround(shuttletest::flightSeconds(plan) * 60);
     for (int64_t i = 0; i < switchTicks - 1; i++) w.step();
     EXPECT_EQ(*w.where(me), first().start);
+    w.step();
     w.step();
     EXPECT_TRUE(w.flying(me));
     ASSERT_TRUE(w.where(me) == w.regionNamed("cold-fork"));
     EXPECT_EQ(w.visit(me), int64_t(1));
-    EXPECT_TRUE(drivenUnit(w, me) == nullptr);
+    EXPECT_TRUE(drivenUnit(w, me) != nullptr);
     EXPECT_EQ(w.regionOf(me)->simulation().state.players[0].ore, int64_t(555));
     EXPECT_EQ(w.start().simulation().state.players[0].ore, int64_t(0));
-    for (int64_t i = switchTicks; i < landTicks; i++) w.step();
+    for (int64_t i = switchTicks + 1; i < landTicks + 2; i++) w.step();
     EXPECT_TRUE(!w.flying(me));
     const Unit* u = drivenUnit(w, me);
     ASSERT_TRUE(u != nullptr);
-    EXPECT_TRUE(distance(u->position, there) < 1.5);
+    EXPECT_TRUE(distance(u->position, there) < 3);
     EXPECT_EQ(u->carrying, int64_t(4));
     EXPECT_EQ(w.wallet(me)->ore, int64_t(555));
     EXPECT_EQ(unitsEverywhere(w), size_t(1));
-    // The call, the region change (at the approach) and the touch down told.
-    const auto moves = w.takeMoves();
-    ASSERT_TRUE(moves.size() == 3);
-    EXPECT_TRUE(!moves[0].change.has_value());
-    ASSERT_TRUE(moves[1].change.has_value());
-    EXPECT_TRUE(moves[1].change->regionId == "cold-fork" && !moves[1].change->driven);
-    EXPECT_TRUE(!moves[2].change.has_value());
+    // The region change told, its unit driven.
+    bool changed = false;
+    for (const Moved& m : w.takeMoves()) changed = changed || (m.change && m.change->regionId == "cold-fork" && m.change->driven);
+    EXPECT_TRUE(changed);
 }
 
 TEST(world_message_has_the_grid_and_where_the_pilot_is) {
@@ -831,7 +832,7 @@ TEST(world_pad_distance_is_the_same_on_client_and_server) {
         ASSERT_TRUE(client.has_value());
         EXPECT_NEAR(client->distance, off, 1e-9);
         EXPECT_NEAR(distance(mine, drivenUnit(w, me)->position), client->distance, 1e-9);
-        const auto refused = w.fly(me, "cold-fork", "Landing Pad 1");
+        const auto refused = w.callShuttle(me);
         EXPECT_TRUE(refused.has_value() == (off > region::padReach));
     }
 }

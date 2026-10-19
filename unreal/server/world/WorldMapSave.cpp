@@ -150,7 +150,17 @@ WorldSave WorldMap::save() const {
         s.hydrogen = p.wallet.hydrogen;
         size_t r = p.region;
         std::optional<int64_t> unit = p.unit;
-        if (p.flight) {
+        // C4: riding a Dropship in flight: saved landed at the target pad.
+        const ShuttleTrip* trip = riderTrip(p);
+        const auto rider = trip ? regions_[p.region]->simulation().state.unit(*p.unit) : std::nullopt;
+        if (trip && rider) {
+            r = *trip->to;
+            unit = regions_[r]->simulation().state.nextID + extra[r]++;
+            SavedUnit u = savedUnit(*rider, p.key);
+            u.id = *unit;
+            u.at = trip->toAt;
+            landing[r].push_back(u);
+        } else if (p.flight) {
             r = p.flight->to;
             unit = regions_[r]->simulation().state.nextID + extra[r]++;
             SavedUnit u = savedUnit(p.flight->unit, p.key);

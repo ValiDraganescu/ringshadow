@@ -969,6 +969,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
     if (const auto* p = std::get_if<RequestMessage::Demolish>(&m.what)) writeSigned(w, p->structure);
     if (const auto* p = std::get_if<RequestMessage::BuyMule>(&m.what)) writeSigned(w, p->foundry);
     if (const auto* p = std::get_if<RequestMessage::MuleFill>(&m.what)) writeSigned(w, p->mule);
+    if (const auto* p = std::get_if<RequestMessage::Ramp>(&m.what)) w.writeBool(p->open);
     return w.bytes();
 }
 
@@ -1133,6 +1134,8 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
     case 25: m.what = RequestMessage::Demolish{readSigned(r)}; break;
     case 26: m.what = RequestMessage::BuyMule{readSigned(r)}; break;
     case 27: m.what = RequestMessage::MuleFill{readSigned(r)}; break;
+    case 28: m.what = RequestMessage::CallShuttle{}; break;
+    case 29: m.what = RequestMessage::Ramp{r.readBool()}; break;
     default: return false;
     }
     return r.ok();

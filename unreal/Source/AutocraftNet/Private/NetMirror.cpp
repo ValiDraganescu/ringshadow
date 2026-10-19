@@ -110,6 +110,8 @@ void Mirror::apply(const SnapshotPart& part) {
             st.heldHour = s.sky->hour();
         }
         if (s.xp) xp_ = s.xp;
+        // C4: the Dropships whole, so the prediction walks in their bays.
+        st.shuttles = s.shuttles;
     }
     for (int64_t id : s.removed) {
         units_.erase(id);
