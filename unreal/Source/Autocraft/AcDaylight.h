@@ -44,7 +44,8 @@
 // game layer passes `ac.DayLength` and `ac.Hour` into the state each step.
 // `GetDark()` is how dark it is for lamps (C6): 0 with the sun up, 1 soon
 // after sunset. `GetSkyTones()` gives the Swift first-person sky tones for
-// the pilot's fog veil (B10, E2).
+// the pilot's fog veil (B10, E2); `ReachAt`, `HazeCap`, `HazeLights` and
+// `VeilFar` how far that veil lets the eye see and what it paints.
 //
 // In the MMORPG mode the clock and the weather are the world's, the
 // server's (`SetWorldSky`, docs/mmorpg-m6.md C1): the hour is
@@ -86,6 +87,14 @@ struct FAcSkyTones
 	double Stars = 0;
 	/// How high the haze rises (degrees) and how far the eye sees (cells).
 	double Rise = 12, Reach = 110;
+	/// How far into the haze the pilot's veil takes the ground past `Reach`
+	/// (`ac.HazeCap`): below 1, every far thing keeps a silhouette.
+	double Cap = 1;
+	/// The most a white lit surface sends back this frame (linear, before
+	/// exposure): the sun, the ringlight and the fill head on plus the sky
+	/// light, with a margin. The veil counts what a pixel shows over its
+	/// base colour times this as emissive.
+	double Lit = 1;
 };
 
 /// The world's sky as the MMORPG server keeps it (`net::Sky`): its clock
@@ -159,6 +168,26 @@ public:
 	/// sky dome (M_AcSky) and the pilot's veil (M_AcPilotVeil) take it: the
 	/// haze tone in linear light (rgb) and how high it rises, degrees (a).
 	FLinearColor GetHazeRise() const;
+
+	/// The pilot's veil over the far ground (docs/weather.md, "The night's
+	/// reach and the far haze"). How far the driven unit's eye sees, cells:
+	/// 110 by day (`Light` 1); by night `ac.NightReach` (70) times `RingAt`:
+	/// about 70 through the evening, 67 at midnight, 44 before dawn as the
+	/// giant's lit face (`GiantLit`) wanes; less in the rain.
+	static double ReachAt(double Light, double GiantLit, double Rain);
+	/// The ringlight's strength with the giant `GiantLit` lit (Update's
+	/// moon: 0.6 + 0.8 · lit), 1 with it 0.9 lit (the evening's, 21:00-23:00).
+	static double RingAt(double GiantLit);
+	/// How far past the reach the veil takes a surface toward the haze
+	/// (`ac.HazeCap`, 0.88): never all the way.
+	static double HazeCap();
+	/// How much of the veil an emissive surface takes (`ac.HazeLights`, 0.5):
+	/// lamps, windows and running lights glow through the haze.
+	static double HazeLights();
+	/// The tone the veil paints the far ground: the sky dome's own haze at
+	/// the horizon (`HazeRise`), so land meets sky without a seam;
+	/// `ac.PilotNightVeil` below 1 darkens it at night (`Dark`).
+	static FLinearColor VeilFar(const FLinearColor& HazeRise, double Dark);
 
 private:
 	void RemoveStandIns();

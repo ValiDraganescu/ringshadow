@@ -41,8 +41,18 @@ namespace
 		TEXT("ac.DayLength"), 600.0f,
 		TEXT("Seconds of game time in one day and night (Daylight.length)."));
 	TAutoConsoleVariable<float> CVarNightReach(
-		TEXT("ac.NightReach"), 26.0f,
-		TEXT("How far a driven unit's eye sees at night, cells (110 by day): the ground is clear to a quarter of it and lost by it."));
+		TEXT("ac.NightReach"), 70.0f,
+		TEXT("How far a driven unit's eye sees under the evening's ringlight (the giant 0.9 lit), cells (110 by day; 67 at midnight, 44 before dawn as the giant wanes): ")
+		TEXT("the ground is clear to a quarter of it and as deep in the haze as it goes (ac.HazeCap) by it."));
+	TAutoConsoleVariable<float> CVarHazeCap(
+		TEXT("ac.HazeCap"), 0.88f,
+		TEXT("How far past the reach the pilot's veil takes a surface toward the sky's haze (1: lost in it; 0.88: a silhouette with some shading)."));
+	TAutoConsoleVariable<float> CVarHazeLights(
+		TEXT("ac.HazeLights"), 0.5f,
+		TEXT("How much of the veil emissive surfaces take (lamps, windows, running lights, the ore's glow; 1: as much as lit ones)."));
+	TAutoConsoleVariable<float> CVarNightVeil(
+		TEXT("ac.PilotNightVeil"), 1.0f,
+		TEXT("How bright the haze the far ground is lost in stays at full night, round a driven unit (1: the sky's own haze at the horizon; 0: black)."));
 	TAutoConsoleVariable<float> CVarShadowStep(
 		TEXT("ac.Daylight.ShadowStepDeg"), 0.5f,
 		TEXT("The shadow-casting lights (the sun, the ringlight) turn in steps of at most this many degrees, fewer near the horizon ")
@@ -448,6 +458,34 @@ FLinearColor AAcDaylight::GetHazeRise() const
 	return H;
 }
 
+double AAcDaylight::RingAt(const double GiantLit)
+{
+	// Through the night the giant goes from 0.92 lit (22:00) to 0.29 (05:00).
+	return (0.6 + 0.8 * FMath::Clamp(GiantLit, 0.0, 1.0)) / (0.6 + 0.8 * 0.9);
+}
+
+double AAcDaylight::ReachAt(const double Light, const double GiantLit, const double Rain)
+{
+	const double Night = FMath::Max(1.0, double(CVarNightReach.GetValueOnGameThread()) * RingAt(GiantLit));
+	return (Night + (110 - Night) * FMath::Clamp(Light, 0.0, 1.0)) * FMath::Lerp(1.0, 0.45, FMath::Clamp(Rain, 0.0, 1.0));
+}
+
+double AAcDaylight::HazeCap()
+{
+	return FMath::Clamp(double(CVarHazeCap.GetValueOnGameThread()), 0.0, 1.0);
+}
+
+double AAcDaylight::HazeLights()
+{
+	return FMath::Clamp(double(CVarHazeLights.GetValueOnGameThread()), 0.0, 1.0);
+}
+
+FLinearColor AAcDaylight::VeilFar(const FLinearColor& HazeRise, const double Dark)
+{
+	const float Keep = float(FMath::Lerp(1.0, double(FMath::Clamp(CVarNightVeil.GetValueOnGameThread(), 0.f, 1.f)), FMath::Clamp(Dark, 0.0, 1.0)));
+	return FLinearColor(HazeRise.R * Keep, HazeRise.G * Keep, HazeRise.B * Keep, HazeRise.A);
+}
+
 AAcDaylight* AAcDaylight::Find(const UWorld* World)
 {
 	if (!World) return nullptr;
@@ -771,11 +809,19 @@ void AAcDaylight::Update(const double Time)
 	Tones.Stars = 1 - Smoothstep(-14, -3, Deg);
 	Tones.Rise = FMath::Lerp(24 + (12 - 24) * Light, 32.0, Gloom);
 	// Night closes in round the driven unit: the ground clear to a quarter
-	// of it (6.5 cells) and lost by 26 (`ac.NightReach`) in the night's blue
-	// haze, so the land near the pilot reads in the ringlight (V2: at 10
-	// cells into near black the night was a void).
-	const double NightReach = FMath::Max(1.0, double(CVarNightReach.GetValueOnGameThread()));
-	Tones.Reach = (NightReach + (110 - NightReach) * Light) * FMath::Lerp(1.0, 0.45, Weather.rain);
+	// of the reach and deep in the haze by it, 70 cells under the evening's
+	// ringlight (`ac.NightReach`, less as the giant wanes toward dawn), so the land near the pilot reads in the
+	// ringlight (V2: at 10 cells into near black the night was a void) and
+	// a Citadel 35 cells off still stands out. Never all the way into the
+	// haze (`ac.HazeCap`): at 26 cells into an opaque dark the far land,
+	// rocks and buildings were one flat band (2026-10-19).
+	Tones.Reach = ReachAt(Light, GiantLit, Weather.rain);
+	Tones.Cap = HazeCap();
+	// A Lambert surface under a directional light sends back its colour ×
+	// lux / π, under the sky light its colour × the sky's radiance (taken as
+	// the horizon's); three times that, so no lit surface reads as a lamp.
+	const FLinearColor SkyRadiance = Lin(Tones.Horizon);
+	Tones.Lit = 3.0 * ((Sun->Intensity + Moon->Intensity + Fill->Intensity) / UE_DOUBLE_PI + SkyLight->Intensity * SkyRadiance.GetLuminance());
 
 	UpdateClouds(Time, SunDir);
 

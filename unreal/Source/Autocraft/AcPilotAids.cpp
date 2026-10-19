@@ -21,8 +21,6 @@ namespace
 {
 	TAutoConsoleVariable<int32> CVarPilotVeil(TEXT("ac.PilotVeil"), 1,
 		TEXT("The fog veil round a driven unit (the far ground lost in the sky): 1 on (on a map with fog), 0 off."));
-	TAutoConsoleVariable<float> CVarNightVeil(TEXT("ac.PilotNightVeil"), 0.45f,
-		TEXT("How bright the haze the ground is lost in stays at full night, round a driven unit (1: the sky's haze; 0: black)."));
 	TAutoConsoleVariable<float> CVarRingGain(TEXT("ac.RangeRingGain"), 1.0f,
 		TEXT("Brightness of the driven unit's range ring (1: the Swift colours)."));
 
@@ -156,17 +154,15 @@ void AAcPilotAids::Veil(const bool bOn, const FVector& Body)
 	const double Reach = Day ? Day->GetSkyTones().Reach : 110.0;
 	VeilMaterial->SetVectorParameterValue(TEXT("Center"),
 		FLinearColor(float(Body.X), float(Body.Y), float(Body.Z), float(AcSpace::ToCm(Reach))));
-	// The haze rising from the horizon, as on the sky dome (B9); at night the
-	// ground is lost in a dim blue (`ac.PilotNightVeil`), so the dark walls
-	// in without a void.
+	// The far ground goes toward the haze rising from the horizon, the sky
+	// dome's own (B9), so land meets sky without a seam; never all the way
+	// (`ac.HazeCap`), and emissive surfaces take half of it (`ac.HazeLights`):
+	// a far building at night is a dark mass with its lamps.
 	if (Day)
 	{
-		FLinearColor Haze = Day->GetHazeRise();
-		const float Keep = float(FMath::Lerp(1.0, double(FMath::Clamp(CVarNightVeil.GetValueOnGameThread(), 0.f, 1.f)), Day->GetDark()));
-		Haze.R *= Keep;
-		Haze.G *= Keep;
-		Haze.B *= Keep;
-		VeilMaterial->SetVectorParameterValue(TEXT("Haze"), Haze);
+		VeilMaterial->SetVectorParameterValue(TEXT("Haze"), AAcDaylight::VeilFar(Day->GetHazeRise(), Day->GetDark()));
+		const FAcSkyTones& T = Day->GetSkyTones();
+		VeilMaterial->SetVectorParameterValue(TEXT("Veil"), FLinearColor(float(T.Cap), float(AAcDaylight::HazeLights()), float(T.Lit), 0.f));
 	}
 }
 

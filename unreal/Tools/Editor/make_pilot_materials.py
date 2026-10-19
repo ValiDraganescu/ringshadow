@@ -17,6 +17,11 @@ Rerunnable: each material's graph is rebuilt from nothing every time.
   itself (farther than 10 km) left alone. Then the
   Swift pilot camera's vignette, `1 - Vignette * (r / r_corner)^2.2` (0.55),
   taken to linear light (^2.2) since this runs before the tonemapper.
+  `Veil`: x how far into the haze the far ground goes at most (`ac.HazeCap`),
+  y how much of the veil emission takes (`ac.HazeLights`), z the most light
+  a lit surface gets (linear): an unlit pixel (the GBuffer's shading model
+  0) is all emission, a lit one emits what it shows over its base colour
+  times z (docs/weather.md, "The night's reach and the far haze").
 
 Run it in the editor (`py "<repo>/unreal/Tools/Editor/make_pilot_materials.py"`),
 or headless while the live editor does not have the assets open:
@@ -32,7 +37,9 @@ assets = unreal.EditorAssetLibrary
 
 VEIL_HLSL = r"""
 float d = length(W - Center.xyz);
-float lost = d < 1.0e6 ? smoothstep(Center.w * 0.25, Center.w, d) : 0.0;
+// Never all the way into the haze (Veil.x, `ac.HazeCap`): every far thing
+// keeps a silhouette with some shading.
+float lost = d < 1.0e6 ? smoothstep(Center.w * 0.25, Center.w, d) * Veil.x : 0.0;
 // Swift's haze rising from the horizon (the sky dome's, M_AcSky): the far
 // ground goes to the same colour as the sky just over it.
 float3 toward = normalize(W - Cam);
@@ -42,7 +49,13 @@ float3 s = lerp(Sky, Haze.rgb, rise) * View.PreExposure;
 float2 ndc = UV * 2.0 - 1.0;
 float2 aspect = float2(Size.x / max(Size.y, 1.0), 1.0);
 float v = saturate(1.0 - Vignette * pow(length(ndc * aspect) / length(aspect), 2.2));
-return lerp(C.rgb, s, lost) * pow(v, 2.2);
+// Lights pierce the haze: what a pixel emits takes Veil.y (`ac.HazeLights`,
+// half) of the veil. An unlit pixel (shading model 0: the lamps, windows,
+// beacons and running lights) is all emission; a lit one emits what it
+// shows over its base colour under the most light a surface gets (Veil.z,
+// linear, pre-exposed here).
+float3 glow = Model.r < 0.5 ? C.rgb : max(C.rgb - Base.rgb * Veil.z * View.PreExposure, 0.0);
+return (lerp(C.rgb - glow, s, lost) + glow * (1.0 - Veil.y * lost)) * pow(v, 2.2);
 """
 
 LOOK_HLSL = r"""
@@ -137,7 +150,14 @@ def build_veil():
     haze4 = node(unreal.MaterialExpressionAppendVector, -550, 600)
     connect(haze_p, "", haze4, "A")
     connect(haze_p, "A", haze4, "B")
-    for name in ("C", "W", "Sky", "UV", "Size", "Center", "Vignette", "Cam", "Haze"):
+    veil_p = node(unreal.MaterialExpressionVectorParameter, -800, 720)
+    veil_p.set_editor_property("parameter_name", "Veil")
+    veil_p.set_editor_property("default_value", unreal.LinearColor(0.88, 0.5, 1.0, 0.0))
+    model = node(unreal.MaterialExpressionSceneTexture, -800, 840)
+    model.set_editor_property("scene_texture_id", unreal.SceneTextureId.PPI_SHADING_MODEL_ID)
+    base = node(unreal.MaterialExpressionSceneTexture, -800, 960)
+    base.set_editor_property("scene_texture_id", unreal.SceneTextureId.PPI_BASE_COLOR)
+    for name in ("C", "W", "Sky", "UV", "Size", "Center", "Vignette", "Cam", "Haze", "Veil", "Model", "Base"):
         ci = unreal.CustomInput()
         ci.set_editor_property("input_name", name)
         inputs.append(ci)
@@ -158,6 +178,9 @@ def build_veil():
     connect(vignette, "", custom, "Vignette")
     connect(cam, "", custom, "Cam")
     connect(haze4, "", custom, "Haze")
+    connect(veil_p, "", custom, "Veil")
+    connect(model, "Color", custom, "Model")
+    connect(base, "Color", custom, "Base")
     if not mel.connect_material_property(custom, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR):
         raise RuntimeError("could not connect emissive")
     mel.recompile_material(mat)
