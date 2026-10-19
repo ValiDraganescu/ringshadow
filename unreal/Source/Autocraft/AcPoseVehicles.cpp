@@ -128,12 +128,30 @@ namespace
 		FAcVehicleFx Fx;
 	};
 
+	/// C4: the front wheels' steer, radians (+ to the right), from the arc
+	/// the unit drives (`ac::Pilot::wheeled`): its heading's turn over the
+	/// distance it rolled since the last frame (`Moved`, negative backing up,
+	/// where the same turn reads the other lock), as a car's front wheels
+	/// stand `Base` ahead of its back axle. Held while it stands (a parked
+	/// car keeps its wheels where they were), eased.
+	double SteerFromArc(double& Steer, TOptional<double>& LastHeading, const double Heading, const double Moved,
+		const double Base, const double Dt)
+	{
+		const double Turned = LastHeading ? Rem2Pi(Heading - *LastHeading) : 0.0;
+		LastHeading = Heading;
+		if (std::abs(Moved) > 1e-4) Steer += (std::atan(Base * Turned / Moved) - Steer) * FMath::Min(1.0, Dt * 12.0);
+		return Steer;
+	}
+
 	struct FFireflyState : FVehicleState
 	{
 		/// `FireflyRoll`: the wheels' drawn roll, carried frame to frame.
 		double Front = 0.0, Rear = 0.0, Smear = 0.0;
 		TOptional<double> Stride;
 		TOptional<ac::Vec2> Position;
+		/// The front wheels' steer (`SteerFromArc`) and the heading it was read at.
+		double Steer = 0.0;
+		TOptional<double> SteerHeading;
 		/// The shot `FlameLength` was last measured for.
 		TOptional<double> SeenShot;
 	};
@@ -519,7 +537,7 @@ namespace
 		// drawn turn is held to 0.35 of a lug a frame (16 alike lugs: more
 		// and the eye pairs each with the wrong one and the wheel crawls or
 		// runs backwards); a smear over the tyres shows the rest. The front
-		// pair steers.
+		// pair steers to the arc it drives (C4); it leans with the turn.
 		const double Steer = FMath::Clamp(TurnIn, -1.0, 1.0);
 		double Moved = S.Stride ? U.stride - *S.Stride : 0.0;
 		if (S.Position && ac::dot(U.position - *S.Position, ac::Vec2(std::cos(U.heading), std::sin(U.heading))) < -1e-4)
@@ -528,6 +546,7 @@ namespace
 		}
 		S.Stride = U.stride;
 		S.Position = U.position;
+		const double Lock = SteerFromArc(S.Steer, S.SteerHeading, U.heading, Moved, AcPoseVehicles::FireflySteerBase, C.Dt);
 		const double Lug = 0.35 * 2 * Pi / double(AcPoseVehicles::FireflyLugs);
 		auto Held = [Lug](const double A) { return FMath::Clamp(A, -Lug, Lug); };
 		S.Front = Rem2Pi(S.Front - Held(Moved / AcPoseVehicles::FireflyFrontRadius));
@@ -554,7 +573,7 @@ namespace
 			if (const int32 St = Steers[I].Get(M); St != INDEX_NONE)
 			{
 				FSkNode N = Rest(M, St);
-				N.Euler.Y = -Steer * 0.45;
+				N.Euler.Y = -Lock;
 				Apply(M, P, St, N);
 			}
 		}
@@ -714,6 +733,9 @@ namespace
 		double Lever[2] = {0.0, 0.0};
 		TOptional<double> Stride;
 		TOptional<ac::Vec2> Position;
+		/// The front wheels' steer (`SteerFromArc`) and the heading it was read at.
+		double Steer = 0.0;
+		TOptional<double> SteerHeading;
 	};
 
 	/// C4 (docs/haul-and-ferry.md section 4; models/mule.py has the parts).
@@ -739,7 +761,8 @@ namespace
 		const double T = C.Time + double(U.id % 97) * 1.618;
 
 		// The wheels roll with the distance driven (back while it reverses),
-		// held to 0.35 of a lug a frame as the Firefly's; the front pair steers.
+		// held to 0.35 of a lug a frame as the Firefly's; the front pair steers
+		// to the arc it drives (C4).
 		double Moved = S.Stride ? U.stride - *S.Stride : 0.0;
 		const bool bBack = S.Position && ac::dot(U.position - *S.Position, ac::Vec2(std::cos(U.heading), std::sin(U.heading))) < -1e-4;
 		if (bBack) Moved = -Moved;
@@ -756,15 +779,16 @@ namespace
 				Apply(M, P, I, N);
 			}
 		}
-		// The turn as a share of the pilot's hull turn (a heading rising turns it right).
-		const double TurnRate = ac::Rules::stats(ac::UnitKind::mule).hullTurnRatePilot;
-		const double Turn = FMath::Clamp(AcPose::Turning(C) / FMath::Max(TurnRate, 0.1), -1.0, 1.0);
+		// The steer (a heading rising turns it right), and as a share of full
+		// lock for the levers.
+		const double Lock = SteerFromArc(S.Steer, S.SteerHeading, U.heading, Moved, AcPoseVehicles::MuleSteerBase, C.Dt);
+		const double Turn = FMath::Clamp(Lock / std::atan(AcPoseVehicles::MuleSteerBase / ac::Rules::muleTurnRadius), -1.0, 1.0);
 		for (const FAcPartIndex& St : Steers)
 		{
 			if (const int32 I = St.Get(M); I != INDEX_NONE)
 			{
 				FSkNode N = Rest(M, I);
-				N.Euler.Y = -Turn * 0.5;
+				N.Euler.Y = -Lock;
 				Apply(M, P, I, N);
 			}
 		}
@@ -851,6 +875,11 @@ namespace AcPoseVehicles
 		const ac::Vec2 Ahead(std::cos(Mule.heading), std::sin(Mule.heading));
 		return FTransform(AcSpace::QuatFromHeading(Mule.heading),
 			AcSpace::ToWorld(Mule.position + Ahead * MuleDriverAhead, Ground + ac::Mule::deck));
+	}
+
+	FTransform MuleRiderOn(const FTransform& MulePlacement)
+	{
+		return FTransform(FVector(AcSpace::ToCm(MuleDriverAhead), 0.0, AcSpace::ToCm(ac::Mule::deck))) * MulePlacement;
 	}
 
 	const FAcVehicleFx* Fx(const ac::UnitKind Kind, const FAcUnitMemory& Memory)

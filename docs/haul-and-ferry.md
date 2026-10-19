@@ -75,8 +75,8 @@ The manager's rulings on the gaps (Q1 to Q6) and what the code settled:
   the Matriarch: 17 kinds, so a kind takes 5 bits on the wire. A new kind
   table flag `hauler`: not Brood, trained by no building (no RTS card, no
   AI), no leveling picks, not a soldier, still while nobody drives it.
-  Drivable, `steers` with no turret (W/S drive, A/D turn the hull at 1.6
-  rad/s), a machine; hp 300, armour 1; 1.182 cells/s (0.3 ×
+  Drivable, `steers` with no turret (W/S drive, A/D steer: since c4-drive
+  it turns as a car, see "The drive" below), a machine; hp 300, armour 1; 1.182 cells/s (0.3 ×
   `Rules::prospectorSpeed`), the driven hero's speed not added. Radius 0.8
   (half its width). Its numbers and points are `Mule.h`: capacity 1000,
   reach 2.0, body 3.0 long × 1.6 wide × 1.4 tall, the perch deck 0.35 up
@@ -452,6 +452,83 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
   in first person it covered the lower middle of the view up to the
   crosshair, and the user ruled 2× on the model and in the cockpit alike.
 
+## The drive (c4-drive, 2026-10-19)
+
+The user, driving the Mule: "The Mule is a car but it does not drive as a
+car, it traverses in place like a tank. To be clear for now and the future:
+wheeled vehicles should drive like wheeled vehicles and tracked vehicles
+should drive like tanks." And: "going on an inclined terrain the vehicles
+should match their normal to the terrain inclination; if the terrain is too
+steep then the vehicles should not be able to climb."
+
+**The rule, for every vehicle now and to come.** A kind says what it runs
+on: `UnitStats::gear` (`RunningGear`: `wheels`, `tracks`, `legs`, `air`;
+core `Rules.h`). Read it from the model: wheels under it drive as a car,
+tracks as a tank; a new vehicle's row sets its gear, its `turnRadius`
+(wheels) and its `wheelbase` (front contact to back), and the drive, the
+AI, the climb limit, the tilt and the steering wheels follow from them.
+
+| Gear | Kinds (by their models) | Turns | Climbs |
+|---|---|---|---|
+| wheels | Firefly (4 wheels), Hailstorm (a half-track: it steers by its front wheels), Mule (6 wheels) | only while rolling, on an arc no tighter than `turnRadius`; backing up the other way | `Rules::wheelsClimb` 25° |
+| tracks | Longbow (four track pods) | on the spot, as before | `Rules::tracksClimb` 35° |
+| legs | Prospector, Ranger, Comet, Juggernaut, Atlas (walker), Scorpion (crawler), the Brood | as before | what it can stand on (as before) |
+| air | Dropship, Kestrel, Peregrine, Gloamwing | as before | – |
+
+Turning radii (`Rules::muleTurnRadius` 4.5, `fireflyTurnRadius` 2.7,
+`hailstormTurnRadius` 3.2: about 1.5 × the length) and the climb limits are
+the user's to tune by feel.
+
+- **The pilot's drive** (`Simulation::pilotFace`, `pilotWalk`; first and
+  third person alike, the client's prediction through the same calls): W/S
+  drive, A/D steer. On wheels the step goes along the arc the steer sets
+  (curvature `steer / turnRadius`), the hull turning by the distance it
+  rolled: nothing at a standstill, nothing while blocked, the other way
+  backing up (a car's geometry). Tracks pivot on A/D at `hullTurnRate`.
+- **The AI** (`Simulation::move` → `roll` for wheels): it steers onto the
+  arc through its target (`ac::steerTo`, `Drive.h`); a target behind it it
+  turns to on full lock; one inside its tightest circle it backs away from on
+  the other lock (a three-point turn). It cuts its path's corners by
+  0.4 × its radius (at most 1.2) rather than back and fill to touch each.
+  `Simulation::turn` turns no wheels on the spot (a wheeled kind at ease
+  keeps its heading).
+- **Too steep** (`Simulation::climbRefused`): a step is refused when, at
+  its end, the ground under the vehicle's front contact rises over its back
+  one (`wheelbase` apart, along the step) steeper than its gear's limit.
+  Down or across always goes. Refused, it stands (wheels and tracks do not
+  crab up a hill; turned across the slope it goes on) and the HUD says "Too
+  steep for its wheels" (or tracks) for 1.5 s (`Simulation::pilotSteep`,
+  `Pilot::tooSteep`). The AI's paths leave such ground out: the nav grid
+  marks each open cell steeper than a gear's limit (`NavGrid::steep`, the
+  slope over 1.5 cells; bits `steepWheels`, `steepTracks` in `passable`),
+  and a vehicle's search and straightening skip them (`NavGrid::steepFor`).
+  The terrain alone counts: a building's floor and the Dropship's ramp are
+  not terrain.
+- **Tilt** (the game): a vehicle is drawn pitched and rolled to the ground
+  under its four contacts (`ac::groundTilt` over `ac::Contacts`, half its
+  `wheelbase` ahead and behind, 0.8 of its radius to each side: a crest or
+  a ditch reads as its wheels feel it), eased over a tenth of a second
+  (`AcPose::VehicleTilt`, in `RestUnit`). The Mule's rider stands on the
+  perch as drawn (the renderer re-places riders after the poses). The first
+  person view keeps a level horizon; its eye rides the tilted hull.
+- **Steering wheels**: the Mule's and the Firefly's front pairs steer to the
+  arc they drive, `atan(base × turn / distance)` (`SteerFromArc`; bases
+  1.65 and 1.02, axle to axle), held while parked; the Mule's levers follow
+  the steer as a share of full lock.
+- **Regions** (`server/tests/DriveRegionTests.cpp`): in every region the
+  Mule reaches each pad and opening a walker reaches; 0.8 to 4.1% of the
+  open ground is too steep for wheels. Two sites are not on wheels: the
+  Dust vault (dust-terraces, a cliff-hop vault) and the Lander wreck
+  (start).
+- **Tests**: core `DriveTests.cpp` (the gear of every kind; no turn at a
+  standstill; the turning circle; reverse; tracks pivot; the AI reaching a
+  point behind without pivoting, the Mule backing and filling; the tilt on
+  a plane; too steep refused, allowed below, down and across; the AI's
+  paths off too steep ground); `PilotTests_fireflySteersOnlyWhileRolling`.
+  The simulation goldens `skirmish` and `playground` were re-recorded: their
+  Fireflies and Hailstorm drive on wheels now (`duel` and `mining` are as
+  they were).
+
 ## 5. Workers
 
 | Worker | Scope |
@@ -461,3 +538,4 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
 | c4-mule-look | Section 4's Mule: the model, the screen, the heap, the HUD, the game's drive and E acts on the sim's requests |
 | c4-ship-sim | Section 3: core, net, server, the frontier pilots, tests |
 | c4-ship-look | Section 4's Dropship: the model, the bay, the buttons, the windshield and wipers, the camera aboard, the view out in flight |
+| c4-drive | "The drive": wheels drive as cars, tracks as tanks; the climb limit; the tilt on the ground |

@@ -542,6 +542,13 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 			Info.Tone = EAcTone::Blocked;
 		}
 	}
+	// C4: a vehicle refused a climb too steep for its wheels or tracks: why,
+	// for a moment after each try.
+	if (Sim.pilotSteep && S.time - *Sim.pilotSteep < 1.5)
+	{
+		Info.Prompt = FString(UTF8_TO_TCHAR(ac::Pilot::tooSteep(U.kind)));
+		Info.Tone = EAcTone::Blocked;
+	}
 	// The building being welded, or a scaffold close by: its progress on the
 	// work ring and the dashboard (up close its life bar is out of view;
 	// docs/mmorpg-m5.md, E3).

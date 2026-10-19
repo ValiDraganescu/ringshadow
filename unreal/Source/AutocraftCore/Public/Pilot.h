@@ -98,6 +98,9 @@ struct Pilot {
     static bool wheeled(UnitKind k) { return Rules::stats(k).gear == RunningGear::wheels; }
     /// A wheeled kind's tightest arc, cells.
     static double turnRadius(UnitKind k) { return Rules::stats(k).turnRadius; }
+    /// What the driver is told when ground is too steep to climb
+    /// (`Simulation::pilotSteep`).
+    static const char* tooSteep(UnitKind k) { return wheeled(k) ? "Too steep for its wheels" : "Too steep for its tracks"; }
     /// How fast A/D turn a vehicle's hull, radians a second.
     static double hullTurnRate(UnitKind k) {
         const double rate = Rules::stats(k).hullTurnRatePilot;

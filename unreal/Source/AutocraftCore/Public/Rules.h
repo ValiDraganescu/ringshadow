@@ -684,7 +684,7 @@ inline constexpr std::array<UnitStats, EnumInfo<UnitKind>::count> UnitStats::byK
     /* firefly */ {.hp = 90, .speed = 5.95, .radius = 0.625, .supply = 2, .ore = 100, .trainTime = 21,
                    .damage = 8, .bonusVsLight = 6, .cooldown = 1.79, .range = 5, .light = true, .hitsGround = true, .falloff = 0,
                    .title = "Firefly", .machine = true, .drivable = true, .trainedBy = StructureKind::foundry, .vision = 14, .shotFlightBase = 0.09, .turret = true, .turretRateAi = 6, .turretRatePilot = 3.5, .steers = true, .hullTurnRateAi = 9, .hullTurnRatePilot = 3,
-                   .gear = RunningGear::wheels, .turnRadius = Rules::fireflyTurnRadius, .wheelbase = 1.04},
+                   .gear = RunningGear::wheels, .turnRadius = Rules::fireflyTurnRadius, .wheelbase = 1.02},
     // Breacher grenades, 10 (+10 armoured); each hit slows.
     /* juggernaut */ {.hp = 125, .armor = 1, .speed = 3.15, .radius = 0.5625, .supply = 2, .ore = 100, .hydrogen = 25,
                       .trainTime = 21, .damage = 10, .bonusVsArmored = 10, .cooldown = 1.07, .range = 6, .armored = true,

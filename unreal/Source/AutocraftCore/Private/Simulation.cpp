@@ -1,6 +1,8 @@
 // Port of Sources/GameCore/Simulation.swift.
 #include "Simulation.h"
 
+#include "Drive.h"
+
 #include "Brood.h"
 #include "Defence.h"
 
@@ -3573,35 +3575,17 @@ bool Simulation::move(Unit& u, Vec2 target_, double stopAt, double dt) const {
 
 /// C4: a wheeled kind's way to `target`, as a car drives it (docs/haul-and-
 /// ferry.md "The drive"): it turns only as it rolls, on arcs no tighter than
-/// its `turnRadius`. Ahead, it steers onto the arc through the target (full
-/// lock when that is tighter, or the target is behind); a target inside its
-/// tightest circle on that side, which no forward arc reaches, it backs
-/// away from on the other lock, the nose swinging toward it (a three-point
-/// turn), until the target is outside. A step into something solid goes
-/// straight at the target instead, as `move`'s does. True on arrival.
+/// its `turnRadius`, ahead or backing up as `steerTo` says (a three-point
+/// turn for a target inside its tightest circle). A step into something
+/// solid goes straight at the target instead, as `move`'s does. True on
+/// arrival.
 bool Simulation::roll(Unit& u, Vec2 target_, double stopAt, double dt) const {
     const Vec2 d = target_ - u.position;
     const double dist = length(d);
     if (dist <= stopAt + 1e-6) return true;
-    const double radius = Pilot::turnRadius(u.kind);
     const double h = u.heading;
-    const Vec2 ahead(std::cos(h), std::sin(h)), right(-std::sin(h), std::cos(h));
-    const double along = dot(d, ahead), side = dot(d, right);
-    // The side it turns to: the target's (dead behind: the right).
-    const double toward = side < 0 ? -1.0 : 1.0;
-    const Vec2 centre = u.position + right * (toward * radius);
-    const bool inside = distance(target_, centre) < radius;
-    double curve;
-    double way = 1;
-    if (inside) {
-        way = -1;
-        curve = -toward / radius;
-    } else if (along <= 0) {
-        curve = toward / radius;
-    } else {
-        // The arc tangent to its heading through the target.
-        curve = max(-1.0 / radius, min(1.0 / radius, 2 * side / (dist * dist)));
-    }
+    const SteerTo s = steerTo(u.position, h, target_, Pilot::turnRadius(u.kind));
+    const double way = s.way, curve = s.steer / Pilot::turnRadius(u.kind);
     const bool slowed = u.slowUntil.value_or(-1) > state.time;
     const double speed = Rules::speed(u.kind) * rate(Stat::Speed{}, u) * (way < 0 ? Pilot::backPace : 1.0)
                          * (slowed ? u.slowedTo.value_or(0.5) : 1);

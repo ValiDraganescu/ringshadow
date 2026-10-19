@@ -52,4 +52,30 @@ GroundTilt groundTilt(const Height& height, Vec2 at, double heading, const Conta
     return t;
 }
 
+/// How a car-like vehicle at `at` facing `heading` (its tightest arc
+/// `radius`) makes for `target`: `way` 1 ahead or -1 back, `steer` -1 (full
+/// left) to 1 (full right), its arc's curvature `steer / radius`. Ahead, it
+/// steers onto the arc through the target (full lock when that is tighter,
+/// or the target is behind); a target inside its tightest circle on that
+/// side, which no forward arc reaches, it backs away from on the other
+/// lock, the nose swinging toward it (a three-point turn), until the
+/// target is outside. `Simulation::roll` (the AI) drives by it.
+struct SteerTo {
+    double way = 1, steer = 0;
+    bool operator==(const SteerTo&) const = default;
+};
+inline SteerTo steerTo(Vec2 at, double heading, Vec2 target, double radius) {
+    const Vec2 d = target - at;
+    const double dist = length(d);
+    if (!(dist > 1e-9) || !(radius > 0)) return SteerTo{};
+    const Vec2 ahead(std::cos(heading), std::sin(heading)), right(-std::sin(heading), std::cos(heading));
+    const double along = dot(d, ahead), side = dot(d, right);
+    // The side it turns to: the target's (dead behind: the right).
+    const double toward = side < 0 ? -1.0 : 1.0;
+    if (distance(target, at + right * (toward * radius)) < radius) return SteerTo{-1, -toward};
+    if (along <= 0) return SteerTo{1, toward};
+    // The arc tangent to its heading through the target.
+    return SteerTo{1, std::clamp(2 * side * radius / (dist * dist), -1.0, 1.0)};
+}
+
 } // namespace ac

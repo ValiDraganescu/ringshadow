@@ -32,6 +32,7 @@
 #include "AcSpace.h"
 #include "AcTerrain.h"
 
+#include "Drive.h"
 #include "Mule.h"
 #include "Rules.h"
 #include "Simulation.h"
@@ -179,16 +180,17 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 		const ac::Vec2 D = To - U->position;
 		Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x));
 	};
-	// Drive the Mule (it steers: W ahead, A/D turn its hull) to a world point.
+	// Drive the Mule to a world point as a car (C4: W/S drive, A/D steer
+	// while it rolls; `ac::steerTo` backs and fills for a point inside its
+	// tightest circle).
 	auto DriveTo = [&](const ac::Vec2 To, const double Near) {
-		const ac::Vec2 D = To - U->position;
-		if (ac::length(D) <= Near)
+		if (ac::distance(To, U->position) <= Near)
 		{
 			Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
 			return true;
 		}
-		const double Off = std::remainder(std::atan2(D.y, D.x) - U->heading, 2.0 * UE_DOUBLE_PI);
-		Pilot->SetTestInput(FVector2D(FMath::Clamp(Off * 2.5, -1.0, 1.0), std::abs(Off) < 1.2 ? -1.0 : 0.0), Pilot->Yaw());
+		const ac::SteerTo S = ac::steerTo(U->position, U->heading, To, ac::Pilot::turnRadius(U->kind));
+		Pilot->SetTestInput(FVector2D(S.steer, -S.way), Pilot->Yaw());
 		return false;
 	};
 	auto Settle = [&](const double Seconds) {

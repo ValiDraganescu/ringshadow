@@ -850,6 +850,30 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 	const ac::Ringshadow::Band* Sweep = Ringshadow ? Ringshadow->SweepBand() : nullptr;
 	const bool bForceAnimated = CVarForceAnimated.GetValueOnGameThread() != 0;
 	std::atomic<int32> Posed{0};
+	// The parts' world transforms from the pose.
+	auto Compose = [](FObject& O, const FAcModelInfo& Model)
+	{
+		const int32 N = Model.Parts.Num();
+		O.World.SetNumUninitialized(N);
+		for (int32 P = 0; P < N; ++P)
+		{
+			const int32 Parent = Model.Parts[P].Parent;
+			if (Parent != INDEX_NONE)
+			{
+				O.World[P] = O.Pose.Local[P] * O.World[Parent];
+				// A part is drawn only while it and every part above it are
+				// visible: a pose that shows a part starting hidden must show
+				// its hidden parents too (the Citadel's turretCradles_k carry
+				// the barrels, tips, muzzle ring and flashes;
+				// Autocraft.Pose.CitadelTurretsShown).
+				O.Pose.Visible[P] = O.Pose.Visible[P] && O.Pose.Visible[Parent];
+			}
+			else
+			{
+				O.World[P] = O.Pose.Local[P] * O.Pose.Placement;
+			}
+		}
+	};
 	auto PoseOne = [&](const int32 I)
 	{
 		FObject& O = *Objects[I];
@@ -912,26 +936,7 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 		O.bFrozenDrawn = O.bFrozen;
 		if (!bMoved || O.Pose.bHidden) return;
 		O.LastPlacement = O.Pose.Placement;
-		const int32 N = Model.Parts.Num();
-		O.World.SetNumUninitialized(N);
-		for (int32 P = 0; P < N; ++P)
-		{
-			const int32 Parent = Model.Parts[P].Parent;
-			if (Parent != INDEX_NONE)
-			{
-				O.World[P] = O.Pose.Local[P] * O.World[Parent];
-				// A part is drawn only while it and every part above it are
-				// visible: a pose that shows a part starting hidden must show
-				// its hidden parents too (the Citadel's turretCradles_k carry
-				// the barrels, tips, muzzle ring and flashes;
-				// Autocraft.Pose.CitadelTurretsShown).
-				O.Pose.Visible[P] = O.Pose.Visible[P] && O.Pose.Visible[Parent];
-			}
-			else
-			{
-				O.World[P] = O.Pose.Local[P] * O.Pose.Placement;
-			}
-		}
+		Compose(O, Model);
 		Posed.fetch_add(1, std::memory_order_relaxed);
 	};
 	if (CVarParallel.GetValueOnGameThread() != 0 && Objects.Num() > 64)
@@ -941,6 +946,22 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 	else
 	{
 		for (int32 I = 0; I < Objects.Num(); ++I) PoseOne(I);
+	}
+	// C4: a Mule's rider stands on its perch as the Mule is drawn this frame,
+	// pitched and rolled to the ground (posed beside it in parallel, it could
+	// not read that): what its own pose added, put on the drawn perch.
+	for (const TPair<int64, const ac::Unit*>& R : MuleOfRider)
+	{
+		const int32* Ri = ObjectIndex.Find(R.Key);
+		const int32* Mi = ObjectIndex.Find(R.Value->id);
+		if (!Ri || !Mi) continue;
+		FObject& O = *Objects[*Ri];
+		if (O.Pose.bHidden || !O.bUnit) continue;
+		const FTransform Flat = AcPoseVehicles::MuleRiderPlacement(*R.Value, Field->height(R.Value->position));
+		O.Pose.Placement = O.Pose.Placement.GetRelativeTransform(Flat) * AcPoseVehicles::MuleRiderOn(Objects[*Mi]->Pose.Placement);
+		O.LastPlacement = O.Pose.Placement;
+		O.bChanged = true;
+		Compose(O, *O.Layout->Model);
 	}
 	const double T2 = FPlatformTime::Seconds();
 

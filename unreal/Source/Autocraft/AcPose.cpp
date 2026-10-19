@@ -181,6 +181,27 @@ namespace AcPose
 		return C.Memory.TurnRate;
 	}
 
+	TOptional<ac::GroundTilt> VehicleTilt(const FAcPoseContext& C)
+	{
+		const ac::Unit& U = *C.Unit;
+		const std::optional<ac::Contacts> Contacts = ac::Contacts::of(U.kind);
+		if (!Contacts) return {};
+		const ac::GroundTilt Want = ac::groundTilt([&C](const ac::Vec2 P) { return C.Ground(P); }, U.position, U.heading, *Contacts);
+		ac::GroundTilt T = C.Memory.Tilt.Get(Want);
+		const double K = FMath::Min(1.0, C.Dt * 10.0);
+		T.pitch += (Want.pitch - T.pitch) * K;
+		T.roll += (Want.roll - T.roll) * K;
+		T.lift += (Want.lift - T.lift) * K;
+		C.Memory.Tilt = T;
+		return T;
+	}
+
+	FQuat TiltQuat(const ac::GroundTilt& T)
+	{
+		// UE's pitch is nose up; its roll turns the right side down.
+		return FRotator(FMath::RadiansToDegrees(T.pitch), 0.0, -FMath::RadiansToDegrees(T.roll)).Quaternion();
+	}
+
 	void RestUnit(const FAcPoseContext& C, FAcPose& P)
 	{
 		P.Reset(C.Model);
@@ -189,7 +210,13 @@ namespace AcPose
 		if (U.stats().air) Y = FlightBase(C);
 		else if (U.kind == ac::UnitKind::comet) Y = FlightY(C);
 		else Y = C.Ground(U.position);
-		P.Placement = FTransform(AcSpace::QuatFromHeading(U.heading), AcSpace::ToWorld(U.position, Y));
+		FQuat Q = AcSpace::QuatFromHeading(U.heading);
+		if (const TOptional<ac::GroundTilt> T = VehicleTilt(C))
+		{
+			Q = Q * TiltQuat(*T);
+			Y += T->lift;
+		}
+		P.Placement = FTransform(Q, AcSpace::ToWorld(U.position, Y));
 	}
 
 	void RestStructure(const FAcPoseContext& C, FAcPose& P)

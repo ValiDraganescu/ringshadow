@@ -86,4 +86,12 @@ namespace AcPoseVehicles
 	/// Its rider drawn on the perch: the Mule's placement (`ground` its
 	/// ground height, cells) moved to the driver's feet, facing the Mule's way.
 	AUTOCRAFT_API FTransform MuleRiderPlacement(const ac::Unit& Mule, double Ground);
+	/// The same on the Mule as drawn (`MulePlacement`, its model's root:
+	/// pitched and rolled on the ground, C4).
+	AUTOCRAFT_API FTransform MuleRiderOn(const FTransform& MulePlacement);
+	/// C4: from the Mule's front axle to the middle of its back tandem, and
+	/// the Firefly's axle to axle, cells (models/mule.py AXLES; the
+	/// Firefly's catalog): the base its front wheels steer against.
+	inline constexpr double MuleSteerBase = 1.65;
+	inline constexpr double FireflySteerBase = 1.02;
 }

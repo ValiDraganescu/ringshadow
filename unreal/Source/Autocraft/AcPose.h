@@ -41,6 +41,7 @@
 #include "CoreMinimal.h"
 #include "Templates/UniquePtr.h"
 
+#include "Drive.h"
 #include "Ringshadow.h"
 #include "Rules.h"
 #include "SimdMath.h"
@@ -81,6 +82,9 @@ struct FAcUnitMemory
 	double TurnRate = 0.0;
 	/// A flyer's smoothed ground height under it, cells (`airY`).
 	TOptional<double> AirY;
+	/// C4: a ground vehicle's pitch, roll and lift on the ground under its
+	/// contacts (`ac::groundTilt`), eased (`AcPose::VehicleTilt`).
+	TOptional<ac::GroundTilt> Tilt;
 	/// A Dropship's load last frame and when it last unloaded.
 	TOptional<int32> CargoCount;
 	TOptional<double> UnloadedAt;
@@ -220,8 +224,9 @@ namespace AcPose
 
 	/// The rest pose every model gets first (the fallback): `Reset`, then
 	/// the placement. Units: on the ground at `position`, turned by
-	/// `heading`; flyers over `FlightBase`; a Comet mid-jump at `FlightY`.
-	/// Buildings: on the ground, sunk by `ConstructionSink` while built.
+	/// `heading`; flyers over `FlightBase`; a Comet mid-jump at `FlightY`;
+	/// a vehicle on wheels or tracks pitched and rolled to the ground under
+	/// it (`VehicleTilt`, C4). Buildings: on the ground, sunk by `ConstructionSink` while built.
 	AUTOCRAFT_API void RestUnit(const FAcPoseContext& Context, FAcPose& Pose);
 	AUTOCRAFT_API void RestStructure(const FAcPoseContext& Context, FAcPose& Pose);
 
@@ -257,6 +262,14 @@ namespace AcPose
 	AUTOCRAFT_API double FlightBase(const FAcPoseContext& Context);
 	/// A Comet's feet mid-jump (`GameScene.flightY`), else the ground.
 	AUTOCRAFT_API double FlightY(const FAcPoseContext& Context);
+	/// C4: a ground vehicle's body on the ground under its wheels or tracks
+	/// (`ac::groundTilt` over its `ac::Contacts`), eased over about a tenth
+	/// of a second so a bump does not jerk it; nil for legs and the air.
+	/// Updates `Memory.Tilt`; call once a frame per unit (RestUnit does).
+	AUTOCRAFT_API TOptional<ac::GroundTilt> VehicleTilt(const FAcPoseContext& Context);
+	/// The rotation of a body pitched and rolled by `Tilt`, in its own
+	/// frame (put the heading's turn after it).
+	AUTOCRAFT_API FQuat TiltQuat(const ac::GroundTilt& Tilt);
 	/// Smoothed turn rate, rad/s (`GameScene.turning`). Updates the memory:
 	/// call once a frame per unit.
 	AUTOCRAFT_API double Turning(const FAcPoseContext& Context);
