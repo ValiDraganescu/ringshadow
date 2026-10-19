@@ -948,8 +948,9 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 		for (int32 I = 0; I < Objects.Num(); ++I) PoseOne(I);
 	}
 	// C4: a Mule's rider stands on its perch as the Mule is drawn this frame,
-	// pitched and rolled to the ground (posed beside it in parallel, it could
-	// not read that): what its own pose added, put on the drawn perch.
+	// pitched and rolled to the ground, on a Dropship's deck or ramp, carried
+	// in its flight (posed beside it in parallel, it could not read that; its
+	// own pose leaves its placement alone).
 	for (const TPair<int64, const ac::Unit*>& R : MuleOfRider)
 	{
 		const int32* Ri = ObjectIndex.Find(R.Key);
@@ -957,8 +958,7 @@ void UAcWorldRenderer::Sync(const FAcFrame& Frame)
 		if (!Ri || !Mi) continue;
 		FObject& O = *Objects[*Ri];
 		if (O.Pose.bHidden || !O.bUnit) continue;
-		const FTransform Flat = AcPoseVehicles::MuleRiderPlacement(*R.Value, Field->height(R.Value->position));
-		O.Pose.Placement = O.Pose.Placement.GetRelativeTransform(Flat) * AcPoseVehicles::MuleRiderOn(Objects[*Mi]->Pose.Placement);
+		O.Pose.Placement = AcPoseVehicles::MuleRiderOn(Objects[*Mi]->Pose.Placement);
 		O.LastPlacement = O.Pose.Placement;
 		O.bChanged = true;
 		Compose(O, *O.Layout->Model);

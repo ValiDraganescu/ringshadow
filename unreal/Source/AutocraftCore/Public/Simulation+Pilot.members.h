@@ -58,7 +58,8 @@ public:
     /// (`Rules::climb`): at `to`, the ground under its front contact rises
     /// over its back one (`UnitStats::wheelbase` apart, along the step) by
     /// more than the limit's pitch. Down or across is never refused, nor
-    /// legs and the air, nor anything without a terrain.
+    /// legs and the air, nor anything without a terrain, nor a step onto a
+    /// Dropship's deck or ramp.
     bool climbRefused(const Unit& u, Vec2 from, Vec2 to) const;
     /// The ground's pitch under `u` standing at `p` along `dir` (a unit
     /// vector): rise over its contacts' span, as a slope (tan of the angle).

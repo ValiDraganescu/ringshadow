@@ -502,14 +502,16 @@ the user's to tune by feel.
   marks each open cell steeper than a gear's limit (`NavGrid::steep`, the
   slope over 1.5 cells; bits `steepWheels`, `steepTracks` in `passable`),
   and a vehicle's search and straightening skip them (`NavGrid::steepFor`).
-  The terrain alone counts: a building's floor and the Dropship's ramp are
-  not terrain.
+  The terrain alone counts: a step onto the Dropship's deck or ramp is
+  never refused (its ramp rises 14.5°), nor one aboard.
 - **Tilt** (the game): a vehicle is drawn pitched and rolled to the ground
   under its four contacts (`ac::groundTilt` over `ac::Contacts`, half its
   `wheelbase` ahead and behind, 0.8 of its radius to each side: a crest or
   a ditch reads as its wheels feel it), eased over a tenth of a second
-  (`AcPose::VehicleTilt`, in `RestUnit`). The Mule's rider stands on the
-  perch as drawn (the renderer re-places riders after the poses). The first
+  (`AcPose::VehicleTilt`, in `RestUnit`); a contact on a Dropship's deck
+  or ramp reads the ship's floor, so the Mule pitches up the ramp. The
+  Mule's rider stands on the perch as drawn, on the deck and in flight too
+  (the renderer re-places riders after the poses). The first
   person view keeps a level horizon; its eye rides the tilted hull.
 - **Steering wheels**: the Mule's and the Firefly's front pairs steer to the
   arc they drive, `atan(base × turn / distance)` (`SteerFromArc`; bases

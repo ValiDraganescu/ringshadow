@@ -2,6 +2,7 @@
 
 #include "AcModelCatalog.h"
 #include "AcKindTable.h"
+#include "AcShuttleView.h"
 #include "AcSpace.h"
 
 #include "Rules.h"
@@ -186,7 +187,20 @@ namespace AcPose
 		const ac::Unit& U = *C.Unit;
 		const std::optional<ac::Contacts> Contacts = ac::Contacts::of(U.kind);
 		if (!Contacts) return {};
-		const ac::GroundTilt Want = ac::groundTilt([&C](const ac::Vec2 P) { return C.Ground(P); }, U.position, U.heading, *Contacts);
+		// Under each contact: a Dropship's deck or ramp where one is (on the
+		// pad, or the ship it rides: its frame's height), else the terrain.
+		auto Under = [&C, &U](const ac::Vec2 P)
+		{
+			for (const AcShuttleView::FShip& F : AcShuttleView::Ships())
+			{
+				const ac::Shuttle& S = F.Ship;
+				if (S.flying() ? !S.rides(U.id) : !S.grounded()) continue;
+				const ac::Vec2 L = ac::ShuttleBay::local(S, P);
+				if (ac::ShuttleBay::inBay(L) || ac::ShuttleBay::onRamp(L)) return S.ground + ac::ShuttleBay::floor(L, S.ramp.open);
+			}
+			return C.Ground(P);
+		};
+		const ac::GroundTilt Want = ac::groundTilt(Under, U.position, U.heading, *Contacts);
 		ac::GroundTilt T = C.Memory.Tilt.Get(Want);
 		const double K = FMath::Min(1.0, C.Dt * 10.0);
 		T.pitch += (Want.pitch - T.pitch) * K;

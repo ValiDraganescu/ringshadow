@@ -379,6 +379,8 @@ void Simulation::pilotWalk(Unit& u, Vec2 walk, double dt) {
 bool Simulation::climbRefused(const Unit& u, Vec2 from, Vec2 to) const {
     const std::optional<double> limit = Rules::climb(u.kind);
     if (!limit || !field) return false;
+    // A Dropship's deck and ramp are no terrain (C4): they take it.
+    if (aboard(u) || shuttleWalk(u, to, Rules::radius(u.kind) * 0.8) == ShuttleWalk::deck) return false;
     const Vec2 d = to - from;
     const double len = length(d);
     if (!(len > 1e-9)) return false;
