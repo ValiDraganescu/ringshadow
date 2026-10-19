@@ -2524,16 +2524,20 @@ void Simulation::hit(int64_t id, double damage_, bool slow, const Unit* shooter)
 }
 
 /// Ground soldiers and the Brood (C5) never stand inside each other:
-/// overlapping pairs step apart onto walkable ground (Prospectors mine
-/// through one another; an anchored Longbow stands firm and the others step
-/// around it). A driven unit is no part of it: it holds the others off
-/// (`holdOff`) and walks out of them itself (`bodyPush`).
+/// overlapping pairs step apart onto walkable ground (an anchored Longbow
+/// stands firm and the others step around it). In a world (`inWorld`, C5)
+/// the Prospectors too, the frontier pilots'; the strategy game's
+/// Prospectors mine through one another. A driven unit is no part of it: it
+/// holds the others off (`holdOff`) and walks out of them itself
+/// (`bodyPush`).
 void Simulation::separate() {
     std::vector<size_t> army;
+    const bool world = inWorld();
     for (size_t k = 0; k < state.units.size(); k++) {
         const Unit& u = state.units[k];
-        if ((u.soldier() || u.brood()) && !u.stats().air && u.task != Unit::Task::inBastion && u.task != Unit::Task::aboard
-            && !u.jumpFrom && !piloted(u.id)) {
+        if ((u.soldier() || u.brood() || (world && u.kind == Unit::Kind::prospector)) && !u.stats().air
+            && u.task != Unit::Task::inBastion && u.task != Unit::Task::aboard && u.task != Unit::Task::inDerrick && !u.jumpFrom
+            && !piloted(u.id)) {
             army.push_back(k);
         }
     }

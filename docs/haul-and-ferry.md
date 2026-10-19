@@ -582,7 +582,8 @@ not make sense to pass through is not passed through.
   (`bodyPushPace`, `bodyPush`, at the start of `pilotWalk`, standing still
   too), straight out or turned up to 90° onto ground it can stand on.
 - **The AI's units.** `Simulation::separate` (the AI's push apart after
-  each step) now takes the Brood too, and no longer the driven unit: its
+  each step) now takes the Brood too, in a world (`inWorld`) the AI's
+  Prospectors (the frontier pilots') too, and no longer the driven unit: its
   own walk keeps it out of the others, and the others are held off it.
   After it, `holdOff`: the bodies the AI never moves (a driven unit, a Mule
   parked or driven) put any other ground unit inside them out at their
@@ -595,9 +596,9 @@ not make sense to pass through is not passed through.
   perch (1.33 off its axis, clear of the box), the Mule rolling out of the
   Foundry's door (0.2 clear of the wall; anyone there is pushed out), the
   Mule up the ramp into the bay.
-- **Left passable.** AI Prospectors pass each other and the AI's soldiers
-  as before (the classic RTS worker crowd at the ore; the RTS mode's
-  economy and goldens hang on it); flyers over everything; a buried
+- **Left passable.** In the strategy game only, the AI's Prospectors pass
+  each other and its soldiers as before (the classic RTS worker crowd at
+  the ore; its economy and goldens hang on it); flyers over everything; a buried
   Scorpion; the Brood's nest mound and tunnel mouths and the build spots'
   markers (walked over by design). The Dropship's bay is 2.0 wide: a walker
   cannot pass a Mule parked in it (c5-ship widens it).
@@ -608,7 +609,7 @@ not make sense to pass through is not passed through.
   Scorpion and a rider no bodies; pushed out of a Mule, a Mule rolled out
   onto the pilot, a Mule driven out of another; the Mule's nose at a wall;
   an AI Ranger held off the pilot, two bugs apart; the Dropship's hull from
-  outside); `MuleTests_mule_boardRideAndLeave` now puts its second
+  outside; the AI's Prospectors apart in a world, not in the strategy game); `MuleTests_mule_boardRideAndLeave` now puts its second
   Prospector beside the perch, not inside the Mule.
 
 ## 5. Workers

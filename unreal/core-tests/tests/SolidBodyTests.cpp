@@ -269,3 +269,18 @@ TEST(solid_dropshipHullFromOutside) {
     EXPECT_TRUE(l.y > ShuttleBay::hullHalfWide);
     EXPECT_TRUE(!ShuttleBay::inBay(l));
 }
+
+/// In a world the AI's Prospectors (the frontier pilots') step apart as
+/// soldiers do; the strategy game's mine through one another.
+TEST(solid_worldProspectorsStepApart) {
+    for (const bool world : {true, false}) {
+        Field f = field(kField + Vec2(0, 10));
+        if (world) f.sim.xpScale = 0.5;
+        const int64_t a = put(f.sim, UnitKind::prospector, kField);
+        const int64_t b = put(f.sim, UnitKind::prospector, kField + Vec2(0.1, 0));
+        steps(f.sim, 1);
+        const double apart = distance(unitOf(f.sim, a).position, unitOf(f.sim, b).position);
+        if (world) EXPECT_TRUE(apart > 0.5);
+        else EXPECT_NEAR(apart, 0.1, 1e-9);
+    }
+}
