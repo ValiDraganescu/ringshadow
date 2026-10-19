@@ -287,7 +287,9 @@ its Prospector on foot beside the perch: the game takes it).
 
 **Tests.** Core: ShuttleTests.cpp (the shape, the landing, the walk up the
 ramp, the ramp's and the take-off's refusals, the riders untouchable, a hop
-carrying its riders, the waits, the pose, the AI's grid). Net:
+carrying its riders, the waits, the pose with the approach along the pad's
+axis and `onPad`, the AI's grid). Game: `Autocraft.Weather.Shelter.ShipBay`
+(the dry box under the swept glass). Net:
 ShuttleWireTests.cpp. Server: ShuttleTests.cpp (two riders, refusals, the
 World message), RolesTests' and WorldTests' flights, FrontierTests'
 `Frontier_fliesTheWalkInDropshipWhereSeen`, the end-to-end world flight.
