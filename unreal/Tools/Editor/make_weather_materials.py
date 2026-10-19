@@ -155,8 +155,18 @@ def build():
 
 LENS_HLSL = r"""
 struct AcGlassFns {
-    float h(float2 p) { return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
-    float h3(float3 p) { return frac(sin(dot(p, float3(127.1, 311.7, 74.7))) * 43758.5453); }
+    // An integer hash (0-1) of three whole numbers and a salt: exact on
+    // every GPU, unlike a sine hash, whose large arguments differ.
+    uint mix32(uint x) {
+        x ^= x >> 16; x *= 0x7feb352dU; x ^= x >> 15; x *= 0x846ca68bU; x ^= x >> 16;
+        return x;
+    }
+    float H(float a, float b, float c, uint salt) {
+        uint x = mix32(uint(int(a)) + salt * 0x9e3779b9U);
+        x = mix32(x ^ uint(int(b)) * 0x85ebca6bU);
+        x = mix32(x ^ uint(int(c)) * 0xc2b2ae35U);
+        return float(x >> 8) * (1.0 / 16777216.0);
+    }
     // Value noise; its lattice wraps every 256 (the flow's clock does too).
     float vn(float2 p) {
         float2 i = floor(p);
@@ -164,7 +174,7 @@ struct AcGlassFns {
         f = f * f * (3.0 - 2.0 * f);
         float2 a = fmod(i, 256.0);
         float2 b = fmod(i + 1.0, 256.0);
-        return lerp(lerp(h(a), h(float2(b.x, a.y)), f.x), lerp(h(float2(a.x, b.y)), h(b), f.x), f.y);
+        return lerp(lerp(H(a.x, a.y, 0.0, 30U), H(b.x, a.y, 0.0, 30U), f.x), lerp(H(a.x, b.y, 0.0, 30U), H(b.x, b.y, 0.0, 30U), f.x), f.y);
     }
     // Where the blade last crossed glass point q: x how long ago (s), y the
     // water landed there since, z the pass that wiped it (a seed; -1 never).
@@ -233,16 +243,16 @@ float2 rn = float2(0.0, 0.0);
 float rs = 0.0;
 [unroll] for (int dl = -1; dl <= 1; dl++) {
     float lane = floor(u / LW) + float(dl);
-    float hl = G.h(float2(lane, 7.7));
+    float hl = G.H(lane, 0.0, 0.0, 1U);
     [unroll] for (int j = 0; j < 2; j++) {
         float slot = floor(T / P - hl) - float(j);
-        float age = T - (slot + hl + 0.6 * G.h(float2(slot, lane * 1.37))) * P;
+        float age = T - (slot + hl + 0.6 * G.H(slot, lane, 0.0, 2U)) * P;
         if (age < 0.0) continue;
-        float density = saturate((G.Landing(age, Hist) - 0.2) * 0.45);
-        if (G.h(float2(lane, slot)) >= density) continue;
-        float big = G.h(float2(slot * 1.7, lane));
-        float x0 = (lane + 0.3 + 0.4 * G.h(float2(lane, slot * 2.3))) * LW;
-        float y0 = -0.05 + 0.8 * G.h(float2(slot * 3.1, lane + 0.5));
+        float density = 0.6 * saturate((G.Landing(age, Hist) - 0.2) * 0.45);
+        if (G.H(lane, slot, 0.0, 3U) >= density) continue;
+        float big = G.H(slot, lane, 0.0, 4U);
+        float x0 = (lane + 0.3 + 0.4 * G.H(lane, slot, 0.0, 5U)) * LW;
+        float y0 = -0.05 + 0.8 * G.H(slot, lane, 0.0, 6U);
         float hold = 0.3 + 0.9 * big * (1.0 - 0.6 * sheet);
         float V = 0.16 + 0.22 * big + 0.3 * sheet;
         float run = max(age - hold, 0.0);
@@ -252,17 +262,17 @@ float rs = 0.0;
         if (q.y < y0 - hr || q.y > yH + hr * 1.6) continue;
         float amp = LW * 0.32;
         float zz = q.y * 18.0 + big * 40.0;
-        float n0 = G.h(float2(lane * 3.1 + floor(zz), slot));
-        float n1 = G.h(float2(lane * 3.1 + floor(zz) + 1.0, slot));
+        float n0 = G.H(lane, floor(zz), slot, 7U);
+        float n1 = G.H(lane, floor(zz) + 1.0, slot, 7U);
         float fz = frac(zz);
         float xp = x0 + (lerp(n0, n1, lerp(fz, fz * fz * (3.0 - 2.0 * fz), 0.4)) - 0.5) * 2.0 * amp;
         float slope = (n1 - n0) * 2.0 * amp * 18.0;
         float zh = yH * 18.0 + big * 40.0;
         float fh = frac(zh);
-        float xh = x0 + (lerp(G.h(float2(lane * 3.1 + floor(zh), slot)), G.h(float2(lane * 3.1 + floor(zh) + 1.0, slot)), lerp(fh, fh * fh * (3.0 - 2.0 * fh), 0.4)) - 0.5) * 2.0 * amp;
+        float xh = x0 + (lerp(G.H(lane, floor(zh), slot, 7U), G.H(lane, floor(zh) + 1.0, slot, 7U), lerp(fh, fh * fh * (3.0 - 2.0 * fh), 0.4)) - 0.5) * 2.0 * amp;
         // Swept away: the blade passed its head since it was born.
         if (G.Wipe(float2(xh + shear * yH, yH), A, B, Seed, Arc).x < age) continue;
-        float tw = LW * (0.035 + 0.04 * big) * (1.0 + 3.0 * sheet);
+        float tw = LW * (0.035 + 0.05 * big) * (1.0 + 2.5 * sheet);
         if (q.y <= yH) {
             // The track, laid as the head passed; thinner as it ages.
             float laid = age - hold - (q.y - y0) / V;
@@ -288,7 +298,8 @@ if (field < 0.0) {
     float3 n3 = float3(n2, sqrt(max(1.0 - dd, 0.0)));
     off = -n2 * rs * 3.2;
     rim = smoothstep(0.55, 1.0, dd) * 0.9;
-    spec = pow(saturate(dot(n3, Lt)), 40.0) * 1.1;
+    // A running stream catches the light along its crest.
+    spec = pow(saturate(dot(n3, Lt)), 40.0) * 1.1 + 0.12 * (1.0 - smoothstep(0.0, 0.35, abs(n2.x + 0.3)));
     wet = 1.0;
 }
 
@@ -297,17 +308,20 @@ if (field < 0.0) {
 // lands; at the end of its life a heavy one slides off and a new one lands.
 // A runner's track keeps only the small ones.
 [unroll] for (int L = 0; L < 3; L++) {
-    float cells = L == 0 ? 40.0 : (L == 1 ? 17.0 : 8.0);
-    float Wl = L == 0 ? 0.7 : (L == 1 ? 1.8 : 4.0);
+    float cells = L == 0 ? 55.0 : (L == 1 ? 24.0 : 11.0);
+    // The water before the first of a size lands (the glass clear behind
+    // the blade a moment), and then on average for a cell's bead.
+    float W0 = L == 0 ? 0.1 : (L == 1 ? 0.3 : 1.0);
+    float Wl = L == 0 ? 1.0 : (L == 1 ? 2.5 : 6.0);
     float Cl = L == 0 ? 2.0 : (L == 1 ? 3.0 : 5.0);
-    float Rl = L == 0 ? 0.3 : (L == 1 ? 0.34 : 0.38);
-    float K = L == 0 ? 2.2 : (L == 1 ? 3.0 : 3.8);
+    float Rl = L == 0 ? 0.26 : (L == 1 ? 0.32 : 0.36);
+    float K = L == 0 ? 4.0 : (L == 1 ? 6.0 : 8.0);
     if (L > 0 && trailNear > 0.6) continue;
     float2 p = q * cells + float(L) * 7.31;
     float2 ci = floor(p);
     float2 f = frac(p) - 0.5;
     float3 wc = G.Wipe((ci + 0.5 - float(L) * 7.31) / cells, A, B, Seed, Arc);
-    float thr = -Wl * log(1.0 - 0.985 * G.h3(float3(ci, wc.z + float(L) * 13.0)));
+    float thr = W0 - Wl * log(1.0 - 0.985 * G.H(ci.x, ci.y, wc.z, 10U + uint(L)));
     if (L == 0) thr *= 1.0 - 0.7 * trailNear;
     float m = wc.y - thr;
     if (m <= 0.0) continue;
@@ -315,20 +329,22 @@ if (field < 0.0) {
     m -= k * Cl;
     // Landed before the blade passed this pixel: gone with it.
     if (m > wp + 0.02) continue;
-    float hk = G.h3(float3(ci, wc.z * 3.1 + k * 17.0 + float(L)));
+    float hk = G.H(ci.x, ci.y, wc.z * 64.0 + k, 13U + uint(L));
     float grow = smoothstep(0.0, Cl * 0.7, m);
     float slide = saturate((m / Cl - 0.88) / 0.12);
-    float r = Rl * (0.5 + 0.5 * hk) * (0.45 + 0.55 * grow) * (1.0 - 0.4 * slide);
-    float2 c = (float2(G.h3(float3(ci, k + 3.1)), G.h3(float3(ci, k + 7.9))) - 0.5) * 2.0 * (0.5 - r);
+    float r = Rl * (0.4 + 0.6 * hk) * (0.7 + 0.3 * grow) * (1.0 - 0.4 * slide);
+    float2 c = (float2(G.H(ci.x, ci.y, wc.z * 64.0 + k, 16U + uint(L)), G.H(ci.x, ci.y, wc.z * 64.0 + k, 19U + uint(L))) - 0.5) * 2.0 * (0.5 - r);
     c.y += slide * slide * 0.5;
     float2 d = (f - c) / r;
     d.y *= d.y < 0.0 ? 1.08 : lerp(1.0, 0.82, grow * float(L) * 0.5);
     float dd = dot(d, d);
     if (dd < 1.0) {
         float3 n3 = float3(d, sqrt(1.0 - dd));
-        off = -d * (r / cells) * K;
-        rim = smoothstep(0.5, 1.0, dd) * (L == 0 ? 0.6 : 0.85);
-        spec = pow(saturate(dot(n3, Lt)), 50.0) * (L == 0 ? 0.5 : 1.0);
+        // A wide-angle lens: the scene round it small and upside down, the
+        // sky above showing in its lower half.
+        off = -d * (r / cells) * K - float2(0.0, (r / cells) * K * 0.5);
+        rim = smoothstep(0.72, 1.0, dd) * (L == 0 ? 0.5 : 0.7);
+        spec = pow(saturate(dot(n3, Lt)), 60.0) * (L == 0 ? 0.6 : 1.2) + 0.025;
         wet = 1.0;
     }
 }
@@ -344,7 +360,7 @@ if (fa > 0.01) {
     float nx = G.vn(fq + float2(e, 0.0)) + 0.45 * G.vn(fq2 + float2(e * 2.5, 0.0));
     float ny = G.vn(fq + float2(0.0, e)) + 0.45 * G.vn(fq2 + float2(0.0, e * 2.3));
     float2 g = float2(nx - n, ny - n) / e;
-    off += g * 0.0035 * fa;
+    off += g * 0.009 * fa;
     smear = fa;
     wet = max(wet, fa * 0.6);
     spec += pow(saturate(0.5 + 0.12 * (g.y - g.x)), 8.0) * 0.5 * fa;
@@ -363,24 +379,25 @@ float bw = Blade.w * lerp(0.65, 1.0, smoothstep(0.22 * R, 0.3 * R, s)) * (1.0 - 
 float along = step(0.0, s) * (1.0 - smoothstep(R, R + 0.006, s));
 if (mv != 0.0 && along > 0.0 && s > 0.03) {
     float prog = mv > 0.0 ? saturate((th - Arc.z) / (Arc.w - Arc.z)) : saturate((Arc.w - th) / (Arc.w - Arc.z));
-    float load = saturate(wp / 3.0) * (0.35 + 0.65 * prog);
-    float rw = 0.003 + 0.014 * load;
+    float load = saturate(wp / 1.5) * (0.4 + 0.6 * prog);
+    float rw = 0.004 + 0.02 * load;
     float ahead = dn * mv - bw;
     if (ahead > 0.0 && ahead < rw && load > 0.02) {
         float x = ahead / rw * 2.0 - 1.0;
-        off = nrm * mv * x * rw * 3.0;
+        off = nrm * mv * x * rw * 5.0;
         rim = smoothstep(0.5, 1.0, x * x) * 0.8;
-        spec = pow(saturate(1.0 - abs(x + 0.3) * 2.5), 3.0) * (0.6 + 0.8 * load);
+        spec = pow(saturate(1.0 - abs(x + 0.3) * 2.5), 3.0) * (0.9 + 1.2 * load);
         wet = 1.0;
         smear = 0.0;
     }
 }
 if (wpix.z >= 0.0 && apix < Blade.z) {
     float sm = 1.0 - apix / Blade.z;
-    sm *= sm;
-    float st = G.h(float2(floor(length(rel) * 900.0), 3.3));
-    off += normalize(rel) * (st - 0.5) * 0.002 * sm;
-    spec += smoothstep(0.55, 0.9, st) * sm * 0.12;
+    sm *= sm * sm;
+    // Streaks along the blade's path, broken and uneven.
+    float st = G.H(floor(length(rel) * 420.0), floor(atan2(rel.x, -rel.y) * 24.0), 0.0, 40U);
+    off += normalize(rel) * (st - 0.5) * 0.0006 * sm;
+    spec += smoothstep(0.75, 1.0, st) * sm * 0.02;
 }
 
 // The scene through the water.
@@ -397,15 +414,15 @@ col += sky * spec * glitter;
 
 // The blade over the glass: its soft shadow, the dark arm and blade, the
 // rubber's wet lip on the side it moves toward.
-float2 relS = rel - float2(0.008, 0.012);
+float2 relS = rel - float2(0.006, 0.009);
 float sS = dot(relS, dir);
-float shadow = step(0.0, sS) * (1.0 - smoothstep(R - 0.02, R + 0.02, sS)) * (1.0 - smoothstep(bw, bw + 0.02, abs(dot(relS, nrm))));
-col *= 1.0 - 0.45 * shadow;
+float shadow = step(0.0, sS) * (1.0 - smoothstep(R - 0.02, R + 0.02, sS)) * (1.0 - smoothstep(bw * 0.6, bw + 0.012, abs(dot(relS, nrm))));
+col *= 1.0 - 0.35 * shadow;
 float body = along * (1.0 - smoothstep(bw - 0.002, bw + 0.002, abs(dn)));
 float lead = dn * (mv != 0.0 ? mv : 1.0);
 float lip = along * smoothstep(bw - 0.0035, bw - 0.0015, lead) * (1.0 - smoothstep(bw - 0.0005, bw + 0.0015, lead));
 float edge = along * smoothstep(bw - 0.0025, bw - 0.0012, -lead) * (1.0 - smoothstep(bw - 0.0006, bw + 0.001, -lead));
-float3 bladeCol = float3(0.012, 0.013, 0.015) + sky * (0.03 + 0.3 * lip + 0.08 * edge) * glitter;
+float3 bladeCol = float3(0.008, 0.008, 0.009) + sky * (0.012 + 0.12 * lip + 0.03 * edge) * glitter;
 return lerp(col, bladeCol, body);
 """
 
