@@ -615,15 +615,24 @@ struct RequestMessage {
         StructureKind kind = StructureKind::citadel;
         bool operator==(const Learn&) const = default;
     };
+    /// C3: demolish building `structure` of the realm in the pilot's region,
+    /// within the repair reach of the driven unit, or from the top-down
+    /// view; half its price back to the pilot's wallet
+    /// (docs/guns-and-practice.md, "Limits per region and demolish").
+    struct Demolish {
+        int64_t structure = 0;
+        bool operator==(const Demolish&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
     /// 14, Use 15, MissionAsk 16 (protocol 16), UpgradeCitadel 17 (protocol
     /// 20; kept for it since 18), Merc 18 (protocol 19), UpgradeTurret 19
     /// (protocol 21), StartProject 20 (protocol 29), CallHunt 21 (protocol 35),
-    /// Door 22 and Man 23 (protocol 36), Learn 24 (protocol 37); 5 bits hold 32.
+    /// Door 22 and Man 23 (protocol 36), Learn 24 (protocol 37), Demolish 25
+    /// (protocol 40); 5 bits hold 32.
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt, Door, Man, Learn>
+                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt, Door, Man, Learn, Demolish>
         what;
     bool operator==(const RequestMessage&) const = default;
 };

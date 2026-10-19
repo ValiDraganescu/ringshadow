@@ -1078,6 +1078,49 @@ std::optional<std::string> Simulation::buildRefusal(Structure::Kind kind, int64_
     return std::nullopt;
 }
 
+// MARK: - Demolish (C3)
+
+Price Simulation::salvage(StructureKind kind, bool world) {
+    const double ore = double(world ? Progression::worldOre(kind) : Rules::cost(kind));
+    const double hydrogen = double(world ? Progression::worldHydrogen(kind) : Rules::hydrogenCost(kind));
+    return Price{static_cast<int64_t>(std::floor(ore * Rules::salvageShare + 1e-9)),
+                 static_cast<int64_t>(std::floor(hydrogen * Rules::salvageShare + 1e-9))};
+}
+
+bool Simulation::demolishReach(const Unit& by, const Structure& s, double slack) const {
+    return NavGrid::insideStructure(by.position, s, workReach(by) + slack);
+}
+
+std::optional<std::string> Simulation::demolishRefusal(const Structure& s) const {
+    if (s.kind != StructureKind::citadel) return std::nullopt;
+    // A home with someone in it stays: in its hall or doorway, or at a gun.
+    if (s.guns)
+        for (const auto& g : *s.guns)
+            if (g.gunner) return std::string("Someone is at its guns");
+    const Footprint& f = Rules::footprint(s.kind);
+    for (const Unit& v : state.units) {
+        if (!(v.hp > 0) || v.airborne()) continue;
+        if (v.task == Unit::Task::atGun && v.structure == s.id) return std::string("Someone is at its guns");
+        if (f.interior && NavGrid::insideStructure(v.position, s, 0) && !f.blocks(v.position - s.position, true, 0))
+            return std::string("Someone is inside");
+    }
+    return std::nullopt;
+}
+
+bool Simulation::demolish(int64_t id, Price refund) {
+    const auto it = std::find_if(state.structures.begin(), state.structures.end(), [&](const Structure& s) { return s.id == id; });
+    if (it == state.structures.end()) return false;
+    const Structure s = *it;
+    state.structures.erase(it);
+    leave(s);
+    between.push_back(GameEvent::Destroyed{s.id, s.kind, s.owner, s.position});
+    between.push_back(GameEvent::Demolished{s.id, refund.ore, refund.hydrogen});
+    reindex();
+    refreshSupply();
+    refreshNav();
+    return true;
+}
+
 /// Where a building of `kind` would stand if placed near `p`: on the
 /// build grid (whole cells for odd sizes, cell corners for even), and a
 /// Derrick on the well nearest `p` (within 4 cells).

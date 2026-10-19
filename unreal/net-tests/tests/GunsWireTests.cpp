@@ -53,9 +53,10 @@ size_t eventBits(const GameEvent& e) {
 TEST(guns_protocol_is_37_and_the_widths_hold) {
     EXPECT_TRUE(kProtocolVersion >= uint16_t(37));
     // Learn is request 24 of the 5-bit index; three events past the 18
-    // (and protocol 39's Repaired after them).
-    EXPECT_EQ(std::variant_size_v<decltype(RequestMessage::what)>, size_t(25));
-    EXPECT_EQ(std::variant_size_v<GameEvent::Value>, size_t(22));
+    // (and protocol 39's Repaired after them, protocol 40's Demolish and
+    // Demolished).
+    EXPECT_EQ(std::variant_size_v<decltype(RequestMessage::what)>, size_t(26));
+    EXPECT_EQ(std::variant_size_v<GameEvent::Value>, size_t(23));
     EXPECT_TRUE(std::variant_size_v<GameEvent::Value> <= size_t(32));
     // The dummy is the 12th kind; the kind stays 4 bits.
     EXPECT_EQ(codec::kStructureKindCount, size_t(12));

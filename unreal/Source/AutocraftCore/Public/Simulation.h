@@ -468,6 +468,10 @@ public:
     /// Remove the dead and the destroyed, and end the game when one player
     /// is left with buildings.
     void bury(std::vector<GameEvent>& events);
+    /// What a building going leaves behind set right (`bury`, `demolish`):
+    /// Prospectors inside a Derrick or working on it step off, its well is
+    /// free, an add-on's host bare, a Bastion's crew out around it.
+    void leave(const Structure& s);
     /// Dry patches grow back `Rules.regrowDelay` after running out.
     void regrow(std::vector<GameEvent>& events);
     /// False: no patch grows back by the game's rule. The MMORPG's server

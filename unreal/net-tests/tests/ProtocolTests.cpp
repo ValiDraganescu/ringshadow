@@ -306,6 +306,7 @@ TEST(protocol_events_round_trip_every_kind) {
         G(G::Impact{4, Vec3(39.5, -20.5, 0.75), G::Impact::What::unit, 19}),
         G(G::DummyDown{20, 37}),
         G(G::Repaired{21, 22, 3, 1}),
+        G(G::Demolished{23, 37, 12}),
     };
     EXPECT_EQ(all.size(), std::variant_size_v<GameEvent::Value>);
     const auto messages = encodeEvents(77, all);

@@ -1844,10 +1844,14 @@ struct GameEvent {
     /// Unit `by` mending building `structure` paid for it: `ore` and
     /// `hydrogen` whole units this step (`Simulation::payRepair`).
     struct Repaired { int64_t structure; int64_t by; int64_t ore; int64_t hydrogen; bool operator==(const Repaired&) const = default; };
+    /// C3: a pilot demolished building `structure` (`Simulation::demolish`;
+    /// its `Destroyed` comes beside it, for the shatter): `ore` and
+    /// `hydrogen` came back to the pilot's wallet.
+    struct Demolished { int64_t structure; int64_t ore; int64_t hydrogen; bool operator==(const Demolished&) const = default; };
 
     AC_CASES(GameEvent, Deposited, PatchDepleted, PatchRegrown, Trained, ConstructionStarted, Constructed, Shot, Missed,
              Landed, Died, Destroyed, Victory, Researched, Stuck, Trapped, LeveledUp, Blast, Stomp, Fired, Impact,
-             DummyDown, Repaired)
+             DummyDown, Repaired, Demolished)
     bool operator==(const GameEvent&) const = default;
 };
 

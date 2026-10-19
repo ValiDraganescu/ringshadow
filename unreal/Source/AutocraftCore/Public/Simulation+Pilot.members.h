@@ -197,6 +197,30 @@ public:
     /// started.
     std::optional<std::string> pilotBuild(Structure::Kind kind, Vec2 p);
 
+    // MARK: - Demolish (C3, docs/guns-and-practice.md "Limits per region and demolish")
+
+    /// What demolishing a `kind` gives back, ore and MH: `Rules::salvageShare`
+    /// of its build price (the world's prices with `world`), whole units
+    /// rounded down. The price is paid in full when it is placed, so a
+    /// scaffold gives back as much as a finished building.
+    static Price salvage(StructureKind kind, bool world);
+    /// Unit `by` reaches building `s` to demolish it: the repair reach
+    /// (`workReach` from the building's edge, `NavGrid::insideStructure`)
+    /// and `slack` more.
+    bool demolishReach(const Unit& by, const Structure& s, double slack = 0) const;
+    /// Why building `s` can't be demolished now, or nil: a Citadel with a
+    /// unit standing in its hall or doorway or at one of its guns. The
+    /// server checks the rest (the realm's, its last Citadel, the reach).
+    std::optional<std::string> demolishRefusal(const Structure& s) const;
+    /// Building `id` leaves at once, as a fallen one does (the units in or
+    /// at it step off, its well and add-on freed), with `Destroyed` (its
+    /// shatter) and `Demolished{id, refund}`, which go out with the next
+    /// step's events (`between`). Pays nothing. False: no such building.
+    bool demolish(int64_t id, Price refund);
+    /// Events made between steps (a demolish): the next `step` sends them
+    /// first.
+    std::vector<GameEvent> between;
+
     /// A building's name as the game writes it.
     static std::string title(Structure::Kind k);
 

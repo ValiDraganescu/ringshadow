@@ -520,6 +520,7 @@ void writeEvent(BitWriter& w, const GameEvent& e) {
             else if constexpr (std::is_same_v<E, G::Impact>) { id(x.round); point.write(w, x.at); w.writeBits(uint64_t(x.what), 2); id(x.victim); }
             else if constexpr (std::is_same_v<E, G::DummyDown>) { id(x.id); id(x.hits); }
             else if constexpr (std::is_same_v<E, G::Repaired>) { id(x.structure); id(x.by); id(x.ore); id(x.hydrogen); }
+            else if constexpr (std::is_same_v<E, G::Demolished>) { id(x.structure); id(x.ore); id(x.hydrogen); }
             else static_assert(sizeof(E) == 0, "every event has its encoding");
         },
         e.value);
@@ -583,6 +584,12 @@ bool readEvent(BitReader& r, GameEvent& e) {
         const auto by = id();
         const auto ore = id();
         e = GameEvent(GameEvent::Repaired{s, by, ore, id()});
+        break;
+    }
+    case 22: {
+        const auto s = id();
+        const auto ore = id();
+        e = GameEvent(GameEvent::Demolished{s, ore, id()});
         break;
     }
     default: return false;
@@ -949,6 +956,7 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
     if (const auto* p = std::get_if<RequestMessage::Man>(&m.what))
         w.writeBits(uint64_t(std::clamp<int>(p->gun, -1, 3) + 1), 3);
     if (const auto* p = std::get_if<RequestMessage::Learn>(&m.what)) w.writeBits(uint64_t(p->kind), codec::kStructureKindBits);
+    if (const auto* p = std::get_if<RequestMessage::Demolish>(&m.what)) writeSigned(w, p->structure);
     return w.bytes();
 }
 
@@ -1110,6 +1118,7 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         m.what = RequestMessage::Learn{static_cast<StructureKind>(kind)};
         break;
     }
+    case 25: m.what = RequestMessage::Demolish{readSigned(r)}; break;
     default: return false;
     }
     return r.ok();

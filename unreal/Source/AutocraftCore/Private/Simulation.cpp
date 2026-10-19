@@ -167,7 +167,8 @@ void Simulation::refreshNav() {
 
 /// Step by `dt` real seconds; returns what happened for the renderer.
 std::vector<GameEvent> Simulation::step(double dt) {
-    std::vector<GameEvent> events;
+    std::vector<GameEvent> events = std::move(between);
+    between.clear();
     pathsStarted = 0;
     using Clock = std::chrono::steady_clock;
     auto ms = [](Clock::time_point a) { return std::chrono::duration<double, std::milli>(Clock::now() - a).count(); };
@@ -2772,34 +2773,7 @@ void Simulation::bury(std::vector<GameEvent>& events) {
     const std::vector<Structure> structures = state.structures;
     for (const auto& s : structures) {
         if (!(s.hp <= 0) || lies(s)) continue;
-        // Prospectors inside a fallen Derrick come out; a fallen Lab
-        // leaves its building bare.
-        for (auto& v : state.units) {
-            if (!(v.structure == s.id && v.task != Unit::Task::inBastion)) continue;
-            if (v.task == Unit::Task::inDerrick) {
-                const Vec2 door = s.position + Vec2(0, Rules::radius(s.kind) + 0.6);
-                v.position = nav ? nav->nearestFree(door).value_or(s.position) : s.position;
-            }
-            if (v.kind == Unit::Kind::prospector) { v.task = Unit::Task::idle; v.structure = std::nullopt; }
-        }
-        if (state.wells) {
-            for (auto& g : *state.wells) {
-                if (distance(g.position, s.position) < 0.5) { g.harvester = std::nullopt; break; }
-            }
-        }
-        for (auto& o : state.structures) if (o.addon == s.id) o.addon = std::nullopt;
-        // Rangers in a fallen Bastion climb out around it.
-        const std::vector<int64_t> crew = s.crew.value_or(std::vector<int64_t>{});
-        for (size_t k = 0; k < crew.size(); k++) {
-            std::optional<size_t> i;
-            for (size_t j = 0; j < state.units.size(); j++) if (state.units[j].id == crew[k]) { i = j; break; }
-            if (!i) continue;
-            const double a = static_cast<double>(k) * 1.6;
-            const Vec2 p = s.position + Vec2(std::cos(a), std::sin(a)) * (Rules::radius(s.kind) + 0.6);
-            state.units[*i].position = nav ? nav->nearestFree(p).value_or(p) : p;
-            state.units[*i].task = Unit::Task::toRally;
-            state.units[*i].structure = std::nullopt;
-        }
+        leave(s);
         events.push_back(GameEvent::Destroyed{s.id, s.kind, s.owner, s.position});
     }
     std::erase_if(state.structures, [&](const Structure& s) { return s.hp <= 0 && !lies(s); });
@@ -2822,6 +2796,37 @@ void Simulation::bury(std::vector<GameEvent>& events) {
             if (state.allied(p, *w)) state.score[size_t(p)] += 1;
         }
         events.push_back(GameEvent::Victory{*w});
+    }
+}
+
+void Simulation::leave(const Structure& s) {
+    // Prospectors inside a fallen Derrick come out; a fallen Lab
+    // leaves its building bare.
+    for (auto& v : state.units) {
+        if (!(v.structure == s.id && v.task != Unit::Task::inBastion)) continue;
+        if (v.task == Unit::Task::inDerrick) {
+            const Vec2 door = s.position + Vec2(0, Rules::radius(s.kind) + 0.6);
+            v.position = nav ? nav->nearestFree(door).value_or(s.position) : s.position;
+        }
+        if (v.kind == Unit::Kind::prospector) { v.task = Unit::Task::idle; v.structure = std::nullopt; }
+    }
+    if (state.wells) {
+        for (auto& g : *state.wells) {
+            if (distance(g.position, s.position) < 0.5) { g.harvester = std::nullopt; break; }
+        }
+    }
+    for (auto& o : state.structures) if (o.addon == s.id) o.addon = std::nullopt;
+    // Rangers in a fallen Bastion climb out around it.
+    const std::vector<int64_t> crew = s.crew.value_or(std::vector<int64_t>{});
+    for (size_t k = 0; k < crew.size(); k++) {
+        std::optional<size_t> i;
+        for (size_t j = 0; j < state.units.size(); j++) if (state.units[j].id == crew[k]) { i = j; break; }
+        if (!i) continue;
+        const double a = static_cast<double>(k) * 1.6;
+        const Vec2 p = s.position + Vec2(std::cos(a), std::sin(a)) * (Rules::radius(s.kind) + 0.6);
+        state.units[*i].position = nav ? nav->nearestFree(p).value_or(p) : p;
+        state.units[*i].task = Unit::Task::toRally;
+        state.units[*i].structure = std::nullopt;
     }
 }
 

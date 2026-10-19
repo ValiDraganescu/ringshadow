@@ -420,6 +420,14 @@ struct AUTOCRAFTCORE_API Rules {
     /// building's whole bar costs this share of its build price, ore and MH
     /// (half the bar, a quarter), paid in whole units as the debt crosses them.
     static constexpr double repairShare = 0.5;
+    /// A building demolished by a pilot (C3, docs/guns-and-practice.md
+    /// "Limits per region and demolish") gives back this share of its build
+    /// price, ore and MH, finished or a scaffold: the price was paid in full
+    /// when it was placed (`Simulation::salvage`).
+    static constexpr double salvageShare = 0.5;
+    /// How long the pilot holds E on a building to demolish it, seconds;
+    /// let go sooner and nothing happens.
+    static constexpr double demolishHold = 1.5;
     /// What a Dropship takes aboard: the infantry (bio units), and the
     /// Scorpion, which the harass AI carries to the enemy's ore lines. An
     /// Atlas would need more slots than any Dropship has.
